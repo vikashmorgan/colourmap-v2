@@ -15,7 +15,7 @@ The product is not a meditation app (pure stillness) or a productivity tool (pur
 
 ## Target User
 
-Me. Someone who takes action and has aspirations but lacks a feedback loop between the two. The pain isn't a single bad moment — it's the persistent absence of a tool that connects who you're becoming with what you're doing. Current alternatives either encourage navel-gazing (obsessive journaling), are disconnected from action (meditation apps), or are pure numbing (Instagram). None of them close the loop between actions and aspirations.
+Us. Someone who takes action and has aspirations but lacks a feedback loop between the two. The pain isn't a single bad moment — it's the persistent absence of a tool that connects who you're becoming with what you're doing. Current alternatives either encourage navel-gazing (obsessive journaling), are disconnected from action (meditation apps), or are pure numbing (Instagram). None of them close the loop between actions and aspirations.
 
 ## Current Alternative
 
