@@ -1,19 +1,94 @@
+import { AuthSessionMissingError } from '@supabase/supabase-js';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { createClient, getUser } = vi.hoisted(() => {
+  const getUser = vi.fn();
+  const createClient = vi.fn(async () => ({
+    auth: {
+      getUser,
+    },
+  }));
+
+  return {
+    createClient,
+    getUser,
+  };
+});
+
+const { redirect } = vi.hoisted(() => ({
+  redirect: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  redirect,
+}));
+
+vi.mock('@/lib/supabase/server', () => ({
+  createClient,
+}));
 
 import AppLayout from './layout';
 
 describe('AppLayout', () => {
-  it('renders the product shell navigation and children', () => {
-    const html = renderToStaticMarkup(
+  beforeEach(() => {
+    createClient.mockClear();
+    getUser.mockReset();
+    redirect.mockReset();
+    getUser.mockResolvedValue({
+      data: {
+        user: {
+          email: 'martin@example.com',
+        },
+      },
+      error: null,
+    });
+  });
+
+  it('renders the authenticated shell navigation and children', async () => {
+    const layout = await AppLayout({
+      children: <div>Child section</div>,
+    });
+    const html = renderToStaticMarkup(layout);
+
+    expect(html).toContain('Signed in as martin@example.com');
+    expect(html).toContain('Cockpit');
+    expect(html).toContain('Sign out');
+    expect(html).toContain('Child section');
+  });
+
+  it('redirects unauthenticated visitors to the login page', async () => {
+    getUser.mockResolvedValue({
+      data: {
+        user: null,
+      },
+      error: null,
+    });
+    redirect.mockImplementation(() => {
+      throw new Error('NEXT_REDIRECT');
+    });
+
+    await expect(
       AppLayout({
         children: <div>Child section</div>,
       }),
-    );
+    ).rejects.toThrow('NEXT_REDIRECT');
 
-    expect(html).toContain('Product scaffold');
-    expect(html).toContain('Cockpit');
-    expect(html).toContain('Login');
-    expect(html).toContain('Child section');
+    expect(redirect).toHaveBeenCalledWith('/login');
+  });
+
+  it('redirects when Supabase reports a missing session', async () => {
+    getUser.mockRejectedValue(new AuthSessionMissingError());
+    redirect.mockImplementation(() => {
+      throw new Error('NEXT_REDIRECT');
+    });
+
+    await expect(
+      AppLayout({
+        children: <div>Child section</div>,
+      }),
+    ).rejects.toThrow('NEXT_REDIRECT');
+
+    expect(redirect).toHaveBeenCalledWith('/login');
   });
 });
