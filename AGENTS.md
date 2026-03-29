@@ -25,6 +25,7 @@ Senior staff engineer pairing mode. Push back on bad ideas, challenge assumption
 - `rules/stack.md` — default stack, tooling, naming, coding standards
 - `rules/architecture.md` — server/client boundaries, project tiers, folder layout
 - `rules/workflow.md` — planning, verification, delegation, commit discipline
+- `rules/testing.md` — 100% coverage goal, test-every-change policy
 - `rules/design.md` — visual design guardrails for UI work
 
 ## Skills
