@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design Audit"
+  short_description: "Audit a live page against the 15 consensus design principles."
+  default_prompt: "Use $design-audit to audit this page against the consensus design principles."

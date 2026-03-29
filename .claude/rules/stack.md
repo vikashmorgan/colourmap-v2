@@ -1,0 +1,1 @@
+../../rules/stack.md

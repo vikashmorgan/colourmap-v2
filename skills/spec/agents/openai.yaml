@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spec"
+  short_description: "Shape a vague idea into a buildable product spec."
+  default_prompt: "Use $spec to turn this idea into a concrete `docs/product.md` and feature specs in `docs/specs/`."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design Review"
+  short_description: "Review UI work for real UX and design problems."
+  default_prompt: "Use $design-review to audit this screen or flow before shipping."
