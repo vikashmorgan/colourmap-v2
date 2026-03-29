@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { cookieStore, cookies, createServerClient } = vi.hoisted(() => ({
   cookieStore: {
@@ -22,6 +22,8 @@ vi.mock('@supabase/ssr', () => ({
 import { createClient } from './server';
 
 describe('createClient', () => {
+  const ORIGINAL_ENV = { ...process.env };
+
   beforeEach(() => {
     cookies.mockClear();
     createServerClient.mockClear();
@@ -29,6 +31,11 @@ describe('createClient', () => {
     cookieStore.set.mockReset();
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_test';
+    delete process.env.DEV_BYPASS_AUTH;
+  });
+
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
   });
 
   it('wires the server client to the Next cookie store', async () => {
@@ -68,5 +75,20 @@ describe('createClient', () => {
         },
       ]),
     ).not.toThrow();
+  });
+
+  it('returns a dev client with a fake user when DEV_BYPASS_AUTH is set', async () => {
+    process.env.DEV_BYPASS_AUTH = 'true';
+
+    const client = await createClient();
+    const { data, error } = await client.auth.getUser();
+
+    expect(data.user).toMatchObject({
+      id: '00000000-0000-0000-0000-000000000000',
+      email: 'dev@localhost',
+    });
+    expect(error).toBeNull();
+    expect(createServerClient).not.toHaveBeenCalled();
+    expect(cookies).not.toHaveBeenCalled();
   });
 });

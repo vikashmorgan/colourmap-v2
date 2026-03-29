@@ -1,3 +1,5 @@
+import CheckInForm from '@/components/CheckInForm';
+
 export default function CockpitPage() {
   return (
     <main className="space-y-10">
@@ -16,12 +18,7 @@ export default function CockpitPage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-3xl border border-dashed border-border bg-card/50 p-6">
-          <h2 className="text-lg font-medium">Latest check-in</h2>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Placeholder state until the first check-in flow is implemented.
-          </p>
-        </div>
+        <CheckInForm />
         <div className="rounded-3xl border border-dashed border-border bg-card/50 p-6">
           <h2 className="text-lg font-medium">Life scan radar</h2>
           <p className="mt-3 text-sm text-muted-foreground">
