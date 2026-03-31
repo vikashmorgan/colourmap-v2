@@ -31,11 +31,13 @@ Senior staff engineer pairing mode. Push back on bad ideas, challenge assumption
 ## Skills
 
 - `spec` — shape or update `docs/product.md` and `docs/specs/` before implementation
-- `implementation-planning-partner` — turn product intent into an execution-ready build plan
 - `shadcn` — add, update, and compose shadcn/ui components
 - `design-audit` — audit a live page against the 15 consensus design principles
-- `design-review` — audit UI work against product intent and design guardrails
 - `review` — review code changes for bugs, regressions, and missing tests
+- `web-design-guidelines` — audit UI code against 100+ accessibility, performance, and UX rules
+- `frontend-design` — create distinctive, production-grade frontend interfaces
+- `composition-patterns` — React composition patterns: compound components, context state, explicit variants
+- `discuss` — Socratic dialogue for sharpening fuzzy problems before acting
 
 ## Agent Wiring
 
