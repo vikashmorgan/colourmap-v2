@@ -16,6 +16,10 @@ vi.mock('@/components/CheckInHistory', () => ({
   ),
 }));
 
+vi.mock('@/components/MissionTracker', () => ({
+  default: () => <div data-testid="mission-tracker">MissionTracker</div>,
+}));
+
 import CockpitPage from './page';
 
 describe('CockpitPage', () => {
@@ -23,12 +27,12 @@ describe('CockpitPage', () => {
     cleanup();
   });
 
-  it('renders the cockpit content with check-in form, history, and life scan placeholder', () => {
+  it('renders the cockpit with check-in form, history, and mission tracker', () => {
     render(<CockpitPage />);
 
     expect(screen.getByText('Your life balance will land here.')).toBeDefined();
     expect(screen.getByTestId('check-in-form')).toBeDefined();
     expect(screen.getByTestId('check-in-history')).toBeDefined();
-    expect(screen.getByText('Life scan radar')).toBeDefined();
+    expect(screen.getByTestId('mission-tracker')).toBeDefined();
   });
 });

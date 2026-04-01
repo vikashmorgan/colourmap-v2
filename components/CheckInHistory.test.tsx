@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import CheckInHistory from './CheckInHistory';
@@ -53,39 +54,67 @@ describe('CheckInHistory', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders the check-in log heading', async () => {
-    render(<CheckInHistory refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Check-in log')).toBeDefined();
-    });
-  });
-
-  it('shows emotional word and time for each entry', async () => {
+  it('renders collapsed pill showing latest check-in', async () => {
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
       expect(screen.getByText('Alive')).toBeDefined();
-      expect(screen.getByText('Still')).toBeDefined();
-      expect(screen.getByText('Crushed')).toBeDefined();
+      expect(screen.getByText('3 check-ins')).toBeDefined();
     });
   });
 
-  it('shows notes when present', async () => {
+  it('is collapsed by default', async () => {
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      expect(screen.getByText('feeling great')).toBeDefined();
-      expect(screen.getByText('rough day')).toBeDefined();
+      expect(screen.getByText('Alive')).toBeDefined();
     });
+
+    expect(screen.queryByText('Today')).toBeNull();
   });
 
-  it('shows tags when present', async () => {
+  it('expands to show full log when clicked', async () => {
+    const user = userEvent.setup();
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Work')).toBeDefined();
+      expect(screen.getByText('Alive')).toBeDefined();
     });
+
+    await user.click(screen.getByRole('button', { expanded: false }));
+
+    expect(screen.getByText('Today')).toBeDefined();
+    expect(screen.getByText('Yesterday')).toBeDefined();
+    expect(screen.getByText('feeling great')).toBeDefined();
+    expect(screen.getByText('rough day')).toBeDefined();
+  });
+
+  it('collapses when clicked again', async () => {
+    const user = userEvent.setup();
+    render(<CheckInHistory refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Alive')).toBeDefined();
+    });
+
+    const pill = screen.getByRole('button', { expanded: false });
+    await user.click(pill);
+    expect(screen.getByText('Today')).toBeDefined();
+
+    await user.click(screen.getByRole('button', { expanded: true }));
+    expect(screen.queryByText('Today')).toBeNull();
+  });
+
+  it('shows tags in expanded entries', async () => {
+    const user = userEvent.setup();
+    render(<CheckInHistory refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Alive')).toBeDefined();
+    });
+
+    await user.click(screen.getByRole('button', { expanded: false }));
+    expect(screen.getByText('Work')).toBeDefined();
   });
 
   it('shows loading skeleton initially', () => {
@@ -125,15 +154,6 @@ describe('CheckInHistory', () => {
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  it('groups entries by date', async () => {
-    render(<CheckInHistory refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Today')).toBeDefined();
-      expect(screen.getByText('Yesterday')).toBeDefined();
     });
   });
 });

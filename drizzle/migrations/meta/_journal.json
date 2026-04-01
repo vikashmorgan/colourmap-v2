@@ -15,6 +15,13 @@
       "when": 1774993017168,
       "tag": "0001_flimsy_yellow_claw",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775028836780,
+      "tag": "0002_plain_korg",
+      "breakpoints": true
     }
   ]
 }

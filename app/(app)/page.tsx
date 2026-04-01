@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import CheckInForm from '@/components/CheckInForm';
 import CheckInHistory from '@/components/CheckInHistory';
+import MissionTracker from '@/components/MissionTracker';
 
 export default function CockpitPage() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -17,9 +18,7 @@ export default function CockpitPage() {
             Your life balance will land here.
           </h1>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            This placeholder marks the authenticated product surface. Future work can replace it
-            with the radar chart, current emotional state, and live Supabase-backed data flow from
-            the V1 specs.
+            Check in, track your missions, and see how you're moving.
           </p>
         </div>
       </section>
@@ -29,11 +28,8 @@ export default function CockpitPage() {
           <CheckInForm onCheckInComplete={() => setRefreshKey((k) => k + 1)} />
           <CheckInHistory refreshKey={refreshKey} />
         </div>
-        <div className="rounded-3xl border border-dashed border-border bg-card/50 p-6">
-          <h2 className="text-lg font-medium">Life scan radar</h2>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Placeholder state until the stepped life scan and cockpit visualization land.
-          </p>
+        <div className="space-y-4">
+          <MissionTracker />
         </div>
       </section>
     </main>

@@ -1,4 +1,4 @@
-import { integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 export const checkIns = pgTable('check_ins', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -6,6 +6,14 @@ export const checkIns = pgTable('check_ins', {
   sliderValue: integer('slider_value').notNull(),
   note: text('note'),
   tags: text('tags').array(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const missions = pgTable('missions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  title: text('title').notNull(),
+  completed: boolean('completed').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

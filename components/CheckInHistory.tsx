@@ -61,6 +61,7 @@ interface CheckInHistoryProps {
 export default function CheckInHistory({ refreshKey }: CheckInHistoryProps) {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -95,52 +96,88 @@ export default function CheckInHistory({ refreshKey }: CheckInHistoryProps) {
 
   if (entries.length === 0) return null;
 
+  const latest = entries[0];
   const grouped = groupByDate(entries);
 
   return (
-    <div className="space-y-6">
-      <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Check-in log</p>
-      {[...grouped.entries()].map(([dateKey, dayEntries]) => (
-        <div key={dateKey} className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">
-            {formatDate(dayEntries[0].createdAt)}
-          </p>
-          <div className="space-y-2">
-            {dayEntries.map((entry) => (
-              <div
-                key={entry.id}
-                className="flex items-start gap-3 rounded-2xl border border-border bg-card/80 px-4 py-3"
-              >
-                <div
-                  className="mt-1 h-3 w-3 shrink-0 rounded-full"
-                  style={{ backgroundColor: getDotColor(entry.sliderValue) }}
-                />
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="text-sm font-medium">{getEmotionalWord(entry.sliderValue)}</p>
-                    <p className="shrink-0 text-xs text-muted-foreground">
-                      {formatTime(entry.createdAt)}
-                    </p>
-                  </div>
-                  {entry.note && <p className="text-sm text-muted-foreground">{entry.note}</p>}
-                  {entry.tags && entry.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {entry.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+    <div className="space-y-2">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card/80 px-4 py-3 text-left transition-colors hover:bg-card"
+      >
+        <div
+          className="h-3 w-3 shrink-0 rounded-full"
+          style={{ backgroundColor: getDotColor(latest.sliderValue) }}
+        />
+        <div className="flex-1 min-w-0">
+          <span className="text-sm font-medium">{getEmotionalWord(latest.sliderValue)}</span>
+          <span className="ml-2 text-xs text-muted-foreground">{formatTime(latest.createdAt)}</span>
+          {latest.note && (
+            <span className="ml-2 text-xs text-muted-foreground truncate">— {latest.note}</span>
+          )}
         </div>
-      ))}
+        <span className="text-xs text-muted-foreground">
+          {entries.length} check-in{entries.length !== 1 ? 's' : ''}
+        </span>
+        <svg
+          aria-hidden="true"
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="space-y-4 pt-2">
+          {[...grouped.entries()].map(([dateKey, dayEntries]) => (
+            <div key={dateKey} className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                {formatDate(dayEntries[0].createdAt)}
+              </p>
+              <div className="space-y-2">
+                {dayEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-start gap-3 rounded-2xl border border-border bg-card/80 px-4 py-3"
+                  >
+                    <div
+                      className="mt-1 h-3 w-3 shrink-0 rounded-full"
+                      style={{ backgroundColor: getDotColor(entry.sliderValue) }}
+                    />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="text-sm font-medium">{getEmotionalWord(entry.sliderValue)}</p>
+                        <p className="shrink-0 text-xs text-muted-foreground">
+                          {formatTime(entry.createdAt)}
+                        </p>
+                      </div>
+                      {entry.note && <p className="text-sm text-muted-foreground">{entry.note}</p>}
+                      {entry.tags && entry.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {entry.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
