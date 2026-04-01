@@ -6,6 +6,7 @@ export const checkIns = pgTable('check_ins', {
   sliderValue: integer('slider_value').notNull(),
   note: text('note'),
   tags: text('tags').array(),
+  missionId: uuid('mission_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

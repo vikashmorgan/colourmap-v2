@@ -20,6 +20,7 @@ describe('createCheckIn', () => {
     sliderValue: 72,
     note: 'feeling good',
     tags: null,
+    missionId: null,
     createdAt: new Date('2026-03-29T10:00:00Z'),
   };
 
@@ -38,6 +39,7 @@ describe('createCheckIn', () => {
       sliderValue: 72,
       note: 'feeling good',
       tags: null,
+      missionId: null,
     });
     expect(result).toEqual(fakeRow);
   });
@@ -50,6 +52,7 @@ describe('createCheckIn', () => {
       sliderValue: 50,
       note: null,
       tags: null,
+      missionId: null,
     });
   });
 
@@ -61,6 +64,7 @@ describe('createCheckIn', () => {
       sliderValue: 50,
       note: null,
       tags: null,
+      missionId: null,
     });
   });
 
@@ -72,6 +76,7 @@ describe('createCheckIn', () => {
       sliderValue: 50,
       note: null,
       tags: null,
+      missionId: null,
     });
   });
 
@@ -83,6 +88,7 @@ describe('createCheckIn', () => {
       sliderValue: 50,
       note: null,
       tags: null,
+      missionId: null,
     });
   });
 
@@ -94,6 +100,7 @@ describe('createCheckIn', () => {
       sliderValue: 50,
       note: 'hello',
       tags: null,
+      missionId: null,
     });
   });
 
@@ -107,6 +114,7 @@ describe('createCheckIn', () => {
       sliderValue: 50,
       note: 'a'.repeat(500),
       tags: null,
+      missionId: null,
     });
   });
 
@@ -142,6 +150,7 @@ describe('createCheckIn', () => {
       sliderValue: 0,
       note: null,
       tags: null,
+      missionId: null,
     });
   });
 
@@ -153,6 +162,7 @@ describe('createCheckIn', () => {
       sliderValue: 100,
       note: null,
       tags: null,
+      missionId: null,
     });
   });
 
@@ -171,6 +181,7 @@ describe('createCheckIn', () => {
       sliderValue: 50,
       note: null,
       tags: ['Work', 'Body'],
+      missionId: null,
     });
   });
 
@@ -182,6 +193,7 @@ describe('createCheckIn', () => {
       sliderValue: 50,
       note: null,
       tags: ['Work'],
+      missionId: null,
     });
   });
 
@@ -193,6 +205,7 @@ describe('createCheckIn', () => {
       sliderValue: 50,
       note: null,
       tags: null,
+      missionId: null,
     });
   });
 
@@ -204,6 +217,7 @@ describe('createCheckIn', () => {
       sliderValue: 50,
       note: null,
       tags: null,
+      missionId: null,
     });
   });
 
@@ -215,6 +229,7 @@ describe('createCheckIn', () => {
       sliderValue: 50,
       note: null,
       tags: null,
+      missionId: null,
     });
   });
 });

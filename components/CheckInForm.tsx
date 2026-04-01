@@ -12,14 +12,21 @@ import ReflectionMoment from './ReflectionMoment';
 
 const TAGS = ['Work', 'Body', 'Relationships', 'Creative', 'General'] as const;
 
+interface MissionSummary {
+  id: string;
+  title: string;
+}
+
 interface CheckInFormProps {
+  missions?: MissionSummary[];
   onCheckInComplete?: () => void;
 }
 
-export default function CheckInForm({ onCheckInComplete }: CheckInFormProps) {
+export default function CheckInForm({ missions = [], onCheckInComplete }: CheckInFormProps) {
   const [sliderValue, setSliderValue] = useState(50);
   const [note, setNote] = useState('');
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+  const [selectedMission, setSelectedMission] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reflectionWord, setReflectionWord] = useState<string | null>(null);
@@ -51,6 +58,7 @@ export default function CheckInForm({ onCheckInComplete }: CheckInFormProps) {
           sliderValue,
           note: note.trim() || null,
           tags: selectedTags.size > 0 ? [...selectedTags] : null,
+          missionId: selectedMission,
         }),
       });
 
@@ -74,6 +82,7 @@ export default function CheckInForm({ onCheckInComplete }: CheckInFormProps) {
     setSliderValue(50);
     setNote('');
     setSelectedTags(new Set());
+    setSelectedMission(null);
     onCheckInComplete?.();
   }
 
@@ -114,6 +123,27 @@ export default function CheckInForm({ onCheckInComplete }: CheckInFormProps) {
           }}
         />
       </div>
+
+      {/* Mission selector */}
+      {missions.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {missions.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              aria-pressed={selectedMission === m.id}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                selectedMission === m.id
+                  ? 'bg-[#5C3018] text-[#F5DEB8]'
+                  : 'border border-border bg-card text-muted-foreground hover:bg-accent'
+              }`}
+              onClick={() => setSelectedMission(selectedMission === m.id ? null : m.id)}
+            >
+              {m.title.length > 20 ? `${m.title.slice(0, 20)}...` : m.title}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {TAGS.map((tag) => (

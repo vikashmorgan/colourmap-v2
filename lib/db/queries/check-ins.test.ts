@@ -21,6 +21,7 @@ describe('insertCheckIn', () => {
     sliderValue: 72,
     note: 'feeling good',
     tags: ['Work'],
+    missionId: null,
     createdAt: new Date('2026-03-29T10:00:00Z'),
   };
 
@@ -37,6 +38,7 @@ describe('insertCheckIn', () => {
       sliderValue: 72,
       note: 'feeling good',
       tags: ['Work'],
+      missionId: null,
     });
 
     expect(insert).toHaveBeenCalledTimes(1);
@@ -45,6 +47,7 @@ describe('insertCheckIn', () => {
       sliderValue: 72,
       note: 'feeling good',
       tags: ['Work'],
+      missionId: null,
     });
     expect(returning).toHaveBeenCalledTimes(1);
     expect(result).toEqual(fakeRow);
@@ -58,6 +61,7 @@ describe('insertCheckIn', () => {
       sliderValue: 50,
       note: null,
       tags: null,
+      missionId: null,
     });
 
     expect(values).toHaveBeenCalledWith({
@@ -65,6 +69,7 @@ describe('insertCheckIn', () => {
       sliderValue: 50,
       note: null,
       tags: null,
+      missionId: null,
     });
     expect(result.note).toBeNull();
     expect(result.tags).toBeNull();
@@ -81,7 +86,15 @@ describe('insertCheckIn', () => {
 
 describe('getRecentCheckIns', () => {
   const fakeRows = [
-    { id: '1', userId: 'user-1', sliderValue: 50, note: null, tags: null, createdAt: new Date() },
+    {
+      id: '1',
+      userId: 'user-1',
+      sliderValue: 50,
+      note: null,
+      tags: null,
+      missionId: null,
+      createdAt: new Date(),
+    },
   ];
 
   beforeEach(() => {

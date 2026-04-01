@@ -13,7 +13,12 @@ export class CheckInValidationError extends Error {
 
 export async function createCheckIn(
   userId: string,
-  input: { sliderValue: number; note?: string | null; tags?: string[] | null },
+  input: {
+    sliderValue: number;
+    note?: string | null;
+    tags?: string[] | null;
+    missionId?: string | null;
+  },
 ): Promise<CheckIn> {
   const { sliderValue } = input;
 
@@ -38,5 +43,7 @@ export async function createCheckIn(
     tags = valid.length > 0 ? valid : null;
   }
 
-  return insertCheckIn(getDb(), { userId, sliderValue, note, tags });
+  const missionId = typeof input.missionId === 'string' ? input.missionId : null;
+
+  return insertCheckIn(getDb(), { userId, sliderValue, note, tags, missionId });
 }

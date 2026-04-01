@@ -12,6 +12,7 @@ describe('schema', () => {
     expect(checkIns).toHaveProperty('sliderValue');
     expect(checkIns).toHaveProperty('note');
     expect(checkIns).toHaveProperty('tags');
+    expect(checkIns).toHaveProperty('missionId');
     expect(missions).toHaveProperty('title');
     expect(missions).toHaveProperty('description');
     expect(missions).toHaveProperty('blocking');

@@ -131,7 +131,12 @@ describe('CheckInForm', () => {
     expect(fetch).toHaveBeenCalledWith('/api/check-ins', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sliderValue: 72, note: 'feeling good', tags: ['Work'] }),
+      body: JSON.stringify({
+        sliderValue: 72,
+        note: 'feeling good',
+        tags: ['Work'],
+        missionId: null,
+      }),
     });
   });
 
@@ -145,7 +150,7 @@ describe('CheckInForm', () => {
     expect(fetch).toHaveBeenCalledWith('/api/check-ins', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sliderValue: 50, note: null, tags: null }),
+      body: JSON.stringify({ sliderValue: 50, note: null, tags: null, missionId: null }),
     });
   });
 

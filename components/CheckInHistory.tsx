@@ -9,7 +9,13 @@ interface HistoryEntry {
   sliderValue: number;
   note: string | null;
   tags: string[] | null;
+  missionId: string | null;
   createdAt: string;
+}
+
+interface MissionSummary {
+  id: string;
+  title: string;
 }
 
 function getDotColor(value: number): string {
@@ -56,12 +62,15 @@ function groupByDate(entries: HistoryEntry[]): Map<string, HistoryEntry[]> {
 
 interface CheckInHistoryProps {
   refreshKey: number;
+  missions?: MissionSummary[];
 }
 
-export default function CheckInHistory({ refreshKey }: CheckInHistoryProps) {
+export default function CheckInHistory({ refreshKey, missions = [] }: CheckInHistoryProps) {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+
+  const missionMap = new Map(missions.map((m) => [m.id, m.title]));
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -146,6 +155,9 @@ export default function CheckInHistory({ refreshKey }: CheckInHistoryProps) {
                           {formatTime(entry.createdAt)}
                         </p>
                       </div>
+                      {entry.missionId && missionMap.get(entry.missionId) && (
+                        <p className="text-xs text-[#5C3018]">{missionMap.get(entry.missionId)}</p>
+                      )}
                       {entry.note && <p className="text-sm text-muted-foreground">{entry.note}</p>}
                       {entry.tags && entry.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1">

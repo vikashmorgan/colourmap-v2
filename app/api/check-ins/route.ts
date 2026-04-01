@@ -40,10 +40,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'sliderValue is required' }, { status: 400 });
   }
 
-  const { sliderValue, note, tags } = body as {
+  const { sliderValue, note, tags, missionId } = body as {
     sliderValue: unknown;
     note?: unknown;
     tags?: unknown;
+    missionId?: unknown;
   };
 
   if (typeof sliderValue !== 'number') {
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
       sliderValue,
       note: typeof note === 'string' ? note : null,
       tags: Array.isArray(tags) ? tags : null,
+      missionId: typeof missionId === 'string' ? missionId : null,
     });
     return NextResponse.json(checkIn, { status: 201 });
   } catch (error) {

@@ -66,7 +66,7 @@ describe('MissionTracker', () => {
   });
 
   it('renders heading', async () => {
-    render(<MissionTracker />);
+    render(<MissionTracker refreshKey={0} />);
 
     await waitFor(() => {
       expect(screen.getByText('Current Mission')).toBeDefined();
@@ -74,7 +74,7 @@ describe('MissionTracker', () => {
   });
 
   it('shows active and completed missions', async () => {
-    render(<MissionTracker />);
+    render(<MissionTracker refreshKey={0} />);
 
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
@@ -83,7 +83,7 @@ describe('MissionTracker', () => {
   });
 
   it('shows preview text when collapsed', async () => {
-    render(<MissionTracker />);
+    render(<MissionTracker refreshKey={0} />);
 
     await waitFor(() => {
       expect(screen.getByText('Need to fix auth flow')).toBeDefined();
@@ -92,7 +92,7 @@ describe('MissionTracker', () => {
 
   it('expands card showing collapsible fields', async () => {
     const user = userEvent.setup();
-    render(<MissionTracker />);
+    render(<MissionTracker refreshKey={0} />);
 
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
@@ -107,7 +107,7 @@ describe('MissionTracker', () => {
 
   it('opens Objective field to show input', async () => {
     const user = userEvent.setup();
-    render(<MissionTracker />);
+    render(<MissionTracker refreshKey={0} />);
 
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
@@ -121,7 +121,7 @@ describe('MissionTracker', () => {
 
   it('opens Challenge field to show input', async () => {
     const user = userEvent.setup();
-    render(<MissionTracker />);
+    render(<MissionTracker refreshKey={0} />);
 
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
@@ -135,7 +135,7 @@ describe('MissionTracker', () => {
 
   it('adds a new mission and auto-expands', async () => {
     const user = userEvent.setup();
-    render(<MissionTracker />);
+    render(<MissionTracker refreshKey={0} />);
 
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
@@ -153,7 +153,7 @@ describe('MissionTracker', () => {
 
   it('shows field preview when collapsed', async () => {
     const user = userEvent.setup();
-    render(<MissionTracker />);
+    render(<MissionTracker refreshKey={0} />);
 
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
@@ -168,7 +168,7 @@ describe('MissionTracker', () => {
 
   it('toggles mission completion', async () => {
     const user = userEvent.setup();
-    render(<MissionTracker />);
+    render(<MissionTracker refreshKey={0} />);
 
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
@@ -184,7 +184,7 @@ describe('MissionTracker', () => {
 
   it('deletes a mission', async () => {
     const user = userEvent.setup();
-    render(<MissionTracker />);
+    render(<MissionTracker refreshKey={0} />);
 
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
@@ -209,7 +209,7 @@ describe('MissionTracker', () => {
       ),
     );
 
-    render(<MissionTracker />);
+    render(<MissionTracker refreshKey={0} />);
 
     await waitFor(() => {
       expect(screen.getByText('No missions yet. What are you working toward?')).toBeDefined();

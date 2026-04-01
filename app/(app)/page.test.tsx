@@ -1,19 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/components/CheckInForm', () => ({
-  default: ({ onCheckInComplete }: { onCheckInComplete?: () => void }) => (
-    <button type="button" data-testid="check-in-form" onClick={onCheckInComplete}>
-      CheckInForm
-    </button>
-  ),
+  default: () => <div data-testid="check-in-form">CheckInForm</div>,
 }));
 
 vi.mock('@/components/CheckInHistory', () => ({
-  default: ({ refreshKey }: { refreshKey: number }) => (
-    <div data-testid="check-in-history">History {refreshKey}</div>
-  ),
+  default: () => <div data-testid="check-in-history">History</div>,
 }));
 
 vi.mock('@/components/MissionTracker', () => ({
@@ -27,8 +21,16 @@ vi.mock('@/components/BackOfMind', () => ({
 import CockpitPage from './page';
 
 describe('CockpitPage', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })),
+    );
+  });
+
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
   it('renders all sections', () => {

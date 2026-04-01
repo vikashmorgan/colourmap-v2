@@ -67,6 +67,7 @@ describe('POST /api/check-ins', () => {
       sliderValue: 72,
       note: 'feeling good',
       tags: null,
+      missionId: null,
     });
   });
 
@@ -78,6 +79,7 @@ describe('POST /api/check-ins', () => {
       sliderValue: 50,
       note: null,
       tags: null,
+      missionId: null,
     });
   });
 
@@ -89,6 +91,7 @@ describe('POST /api/check-ins', () => {
       sliderValue: 50,
       note: null,
       tags: ['Work', 'Body'],
+      missionId: null,
     });
   });
 
@@ -156,6 +159,7 @@ describe('POST /api/check-ins', () => {
       sliderValue: 50,
       note: null,
       tags: null,
+      missionId: null,
     });
   });
 });

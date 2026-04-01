@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { getEmotionalWord } from '@/lib/emotional-vocabulary';
+
 interface Mission {
   id: string;
   title: string;
@@ -12,13 +14,49 @@ interface Mission {
   createdAt: string;
 }
 
+interface LinkedCheckIn {
+  id: string;
+  sliderValue: number;
+  note: string | null;
+  createdAt: string;
+}
+
 function getPreview(mission: Mission): string | null {
   if (mission.blocking?.trim()) return mission.blocking.trim();
   if (mission.nextStep?.trim()) return mission.nextStep.trim();
   return null;
 }
 
-export default function MissionTracker() {
+function formatTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatShortDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  if (
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear()
+  ) {
+    return formatTime(dateStr);
+  }
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function getDotColor(value: number): string {
+  if (value <= 25) return 'hsl(220 15% 55%)';
+  if (value <= 62) return 'hsl(40 15% 55%)';
+  return 'hsl(25 70% 55%)';
+}
+
+interface MissionTrackerProps {
+  onMissionsChange?: () => void;
+  refreshKey?: number;
+}
+
+export default function MissionTracker({ onMissionsChange, refreshKey = 0 }: MissionTrackerProps) {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState('');
@@ -57,6 +95,7 @@ export default function MissionTracker() {
         setNewTitle('');
         setShowAddInput(false);
         setExpandedId(mission.id);
+        onMissionsChange?.();
       }
     } finally {
       setAdding(false);
@@ -76,6 +115,7 @@ export default function MissionTracker() {
     setMissions((prev) => prev.filter((m) => m.id !== id));
     if (expandedId === id) setExpandedId(null);
     await fetch(`/api/missions/${id}`, { method: 'DELETE' });
+    onMissionsChange?.();
   }
 
   function handleFieldUpdate(id: string, field: string, value: string | null) {
@@ -152,6 +192,7 @@ export default function MissionTracker() {
               onToggleComplete={() => handleToggle(mission.id, true)}
               onDelete={() => handleDelete(mission.id)}
               onFieldUpdate={(field, value) => handleFieldUpdate(mission.id, field, value)}
+              refreshKey={refreshKey}
             />
           ))}
 
@@ -169,6 +210,7 @@ export default function MissionTracker() {
                   onToggleComplete={() => handleToggle(mission.id, false)}
                   onDelete={() => handleDelete(mission.id)}
                   onFieldUpdate={(field, value) => handleFieldUpdate(mission.id, field, value)}
+                  refreshKey={refreshKey}
                 />
               ))}
             </div>
@@ -186,6 +228,7 @@ interface MissionCardProps {
   onToggleComplete: () => void;
   onDelete: () => void;
   onFieldUpdate: (field: string, value: string | null) => void;
+  refreshKey: number;
 }
 
 function MissionCard({
@@ -195,9 +238,21 @@ function MissionCard({
   onToggleComplete,
   onDelete,
   onFieldUpdate,
+  refreshKey,
 }: MissionCardProps) {
   const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [openField, setOpenField] = useState<string | null>(null);
+  const [linkedCheckIns, setLinkedCheckIns] = useState<LinkedCheckIn[]>([]);
+  const lastLoadKey = useRef(-1);
+
+  useEffect(() => {
+    if (openField === 'checkins' && lastLoadKey.current !== refreshKey) {
+      lastLoadKey.current = refreshKey;
+      fetch(`/api/missions/${mission.id}/check-ins`)
+        .then((res) => (res.ok ? res.json() : []))
+        .then(setLinkedCheckIns);
+    }
+  }, [openField, refreshKey, mission.id]);
 
   function save(field: string, value: string) {
     const existing = saveTimers.current.get(field);
@@ -306,6 +361,58 @@ function MissionCard({
             onChange={(v) => handleChange('description', v)}
             multiline
           />
+
+          {/* Linked check-ins */}
+          <div className="border-t border-border/50 py-2">
+            <button
+              type="button"
+              className="flex w-full items-center gap-1.5 text-xs transition-colors hover:text-foreground"
+              onClick={() => setOpenField(openField === 'checkins' ? null : 'checkins')}
+            >
+              <svg
+                aria-hidden="true"
+                className={`h-3 w-3 shrink-0 transition-transform ${openField === 'checkins' ? 'rotate-90' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              <span className="font-medium uppercase tracking-wider text-muted-foreground">
+                Check-ins
+              </span>
+              {linkedCheckIns.length > 0 && openField !== 'checkins' && (
+                <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal">
+                  {linkedCheckIns.length}
+                </span>
+              )}
+            </button>
+            {openField === 'checkins' && (
+              <div className="mt-2 space-y-1.5">
+                {linkedCheckIns.length === 0 && (
+                  <p className="text-xs text-muted-foreground py-1">
+                    No check-ins linked yet. Tag this mission when you check in.
+                  </p>
+                )}
+                {linkedCheckIns.map((ci) => (
+                  <div key={ci.id} className="flex items-center gap-2 py-1">
+                    <div
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: getDotColor(ci.sliderValue) }}
+                    />
+                    <span className="text-xs font-medium">{getEmotionalWord(ci.sliderValue)}</span>
+                    {ci.note && (
+                      <span className="text-xs text-muted-foreground truncate">— {ci.note}</span>
+                    )}
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                      {formatShortDate(ci.createdAt)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
