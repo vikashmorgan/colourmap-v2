@@ -260,9 +260,10 @@ describe('CheckInForm', () => {
     });
   });
 
-  it('renders centered Check In title', () => {
+  it('renders the slider and submit button', () => {
     render(<CheckInForm />);
 
-    expect(screen.getByText('Check In')).toBeDefined();
+    expect(screen.getByTestId('slider')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Check in' })).toBeDefined();
   });
 });

@@ -22,6 +22,17 @@ vi.mock('@/components/CockpitSection', () => ({
   default: () => <div data-testid="cockpit-sections">Sections</div>,
 }));
 
+vi.mock('@/components/CollapsibleCard', () => ({
+  default: ({
+    title,
+    children,
+  }: {
+    title: string;
+    children: React.ReactNode;
+    defaultOpen?: boolean;
+  }) => <div data-testid={`card-${title.toLowerCase().replace(/\s+/g, '-')}`}>{children}</div>,
+}));
+
 import CockpitPage from './page';
 
 describe('CockpitPage', () => {

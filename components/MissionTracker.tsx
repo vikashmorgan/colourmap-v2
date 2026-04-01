@@ -126,13 +126,12 @@ export default function MissionTracker({ onMissionsChange, refreshKey = 0 }: Mis
   const done = missions.filter((m) => m.completed);
 
   return (
-    <div className="rounded-3xl border border-border bg-card p-6 space-y-4">
-      <div className="relative flex items-center justify-center">
-        <p className="text-sm font-semibold uppercase tracking-[0.24em]">Current Mission</p>
+    <div className="space-y-4">
+      <div className="flex justify-end">
         <button
           type="button"
           aria-label="Add mission"
-          className="absolute right-0 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           onClick={() => setShowAddInput(!showAddInput)}
         >
           <svg

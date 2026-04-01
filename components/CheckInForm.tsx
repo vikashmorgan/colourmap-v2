@@ -91,12 +91,7 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-3xl border border-border bg-card p-6 space-y-6"
-    >
-      <p className="text-sm font-semibold uppercase tracking-[0.24em] text-center">Check In</p>
-
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-3">
         <Label htmlFor="check-in-slider">How are you feeling?</Label>
 

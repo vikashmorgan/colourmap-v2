@@ -43,11 +43,11 @@ describe('BackOfMind', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders the heading', async () => {
+  it('renders items', async () => {
     render(<BackOfMind />);
 
     await waitFor(() => {
-      expect(screen.getByText('Back of my mind')).toBeDefined();
+      expect(screen.getByText('Call dentist')).toBeDefined();
     });
   });
 

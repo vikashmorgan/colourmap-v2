@@ -65,11 +65,11 @@ describe('MissionTracker', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders heading', async () => {
+  it('renders mission list', async () => {
     render(<MissionTracker refreshKey={0} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Current Mission')).toBeDefined();
+      expect(screen.getByText('Ship V1')).toBeDefined();
     });
   });
 

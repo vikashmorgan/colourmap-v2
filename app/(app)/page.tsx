@@ -6,6 +6,7 @@ import BackOfMind from '@/components/BackOfMind';
 import CheckInForm from '@/components/CheckInForm';
 import CheckInHistory from '@/components/CheckInHistory';
 import CockpitSections from '@/components/CockpitSection';
+import CollapsibleCard from '@/components/CollapsibleCard';
 import MissionTracker from '@/components/MissionTracker';
 
 interface MissionSummary {
@@ -41,12 +42,21 @@ export default function CockpitPage() {
     <main className="space-y-10">
       <section className="grid gap-4 md:grid-cols-2">
         <div className="space-y-4">
-          <CheckInForm missions={missions} onCheckInComplete={() => setRefreshKey((k) => k + 1)} />
+          <CollapsibleCard title="Check In" defaultOpen>
+            <CheckInForm
+              missions={missions}
+              onCheckInComplete={() => setRefreshKey((k) => k + 1)}
+            />
+          </CollapsibleCard>
           <CheckInHistory refreshKey={refreshKey} missions={missions} />
         </div>
         <div className="space-y-4">
-          <MissionTracker onMissionsChange={fetchMissions} refreshKey={refreshKey} />
-          <BackOfMind />
+          <CollapsibleCard title="Current Mission" defaultOpen>
+            <MissionTracker onMissionsChange={fetchMissions} refreshKey={refreshKey} />
+          </CollapsibleCard>
+          <CollapsibleCard title="Back of my mind">
+            <BackOfMind />
+          </CollapsibleCard>
           <CockpitSections />
         </div>
       </section>

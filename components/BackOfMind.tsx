@@ -70,13 +70,12 @@ export default function BackOfMind() {
   const done = items.filter((i) => i.done);
 
   return (
-    <div className="rounded-3xl border border-border bg-card p-6 space-y-4">
-      <div className="relative flex items-center justify-center">
-        <p className="text-sm font-semibold uppercase tracking-[0.24em]">Back of my mind</p>
+    <div className="space-y-4">
+      <div className="flex justify-end">
         <button
           type="button"
           aria-label="Add item"
-          className="absolute right-0 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           onClick={() => setShowAddInput(!showAddInput)}
         >
           <svg
