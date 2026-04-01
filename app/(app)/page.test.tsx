@@ -18,6 +18,10 @@ vi.mock('@/components/BackOfMind', () => ({
   default: () => <div data-testid="back-of-mind">BackOfMind</div>,
 }));
 
+vi.mock('@/components/CockpitSection', () => ({
+  default: () => <div data-testid="cockpit-sections">Sections</div>,
+}));
+
 import CockpitPage from './page';
 
 describe('CockpitPage', () => {
@@ -40,5 +44,6 @@ describe('CockpitPage', () => {
     expect(screen.getByTestId('check-in-history')).toBeDefined();
     expect(screen.getByTestId('mission-tracker')).toBeDefined();
     expect(screen.getByTestId('back-of-mind')).toBeDefined();
+    expect(screen.getByTestId('cockpit-sections')).toBeDefined();
   });
 });

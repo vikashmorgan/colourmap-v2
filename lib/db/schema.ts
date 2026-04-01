@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, date, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 export const checkIns = pgTable('check_ins', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -32,9 +32,42 @@ export const backlog = pgTable('backlog', {
 export const lifeScans = pgTable('life_scans', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').notNull(),
-  body: integer('body'),
-  mind: integer('mind'),
-  relationships: integer('relationships'),
-  purpose: integer('purpose'),
+  door: text('door').notNull(),
+  sliders: jsonb('sliders').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const scanReflections = pgTable('scan_reflections', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  scanGroup: uuid('scan_group').notNull(),
+  question: text('question').notNull(),
+  answer: text('answer').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const cockpitSections = pgTable('cockpit_sections', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  name: text('name').notNull(),
+  position: integer('position').default(0).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const sectionTrackers = pgTable('section_trackers', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  sectionId: uuid('section_id').notNull(),
+  label: text('label').notNull(),
+  type: text('type').notNull(),
+  position: integer('position').default(0).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const dailyTrackerEntries = pgTable('daily_tracker_entries', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  trackerId: uuid('tracker_id').notNull(),
+  userId: uuid('user_id').notNull(),
+  date: date('date').notNull(),
+  value: integer('value').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });

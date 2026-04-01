@@ -44,6 +44,9 @@ export default async function AppLayout({
             <Link className="transition-colors hover:text-foreground" href="/">
               Cockpit
             </Link>
+            <Link className="transition-colors hover:text-foreground" href="/life-scan">
+              Life Scan
+            </Link>
             <form action="/logout" method="post">
               <button className="transition-colors hover:text-foreground" type="submit">
                 Sign out

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import BackOfMind from '@/components/BackOfMind';
 import CheckInForm from '@/components/CheckInForm';
 import CheckInHistory from '@/components/CheckInHistory';
+import CockpitSections from '@/components/CockpitSection';
 import MissionTracker from '@/components/MissionTracker';
 
 interface MissionSummary {
@@ -36,24 +37,17 @@ export default function CockpitPage() {
     fetchMissions();
   }, [fetchMissions]);
 
-  function handleCheckInComplete() {
-    setRefreshKey((k) => k + 1);
-  }
-
-  function handleMissionsChange() {
-    fetchMissions();
-  }
-
   return (
     <main className="space-y-10">
       <section className="grid gap-4 md:grid-cols-2">
         <div className="space-y-4">
-          <CheckInForm missions={missions} onCheckInComplete={handleCheckInComplete} />
+          <CheckInForm missions={missions} onCheckInComplete={() => setRefreshKey((k) => k + 1)} />
           <CheckInHistory refreshKey={refreshKey} missions={missions} />
         </div>
         <div className="space-y-4">
-          <MissionTracker onMissionsChange={handleMissionsChange} refreshKey={refreshKey} />
+          <MissionTracker onMissionsChange={fetchMissions} refreshKey={refreshKey} />
           <BackOfMind />
+          <CockpitSections />
         </div>
       </section>
     </main>
