@@ -25,6 +25,8 @@ interface CheckInFormProps {
 export default function CheckInForm({ missions = [], onCheckInComplete }: CheckInFormProps) {
   const [sliderValue, setSliderValue] = useState(50);
   const [note, setNote] = useState('');
+  const [challenge, setChallenge] = useState('');
+  const [showChallenge, setShowChallenge] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [selectedMission, setSelectedMission] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,7 +58,10 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sliderValue,
-          note: note.trim() || null,
+          note:
+            [challenge.trim() ? `[Challenge] ${challenge.trim()}` : '', note.trim()]
+              .filter(Boolean)
+              .join('\n') || null,
           tags: selectedTags.size > 0 ? [...selectedTags] : null,
           missionId: selectedMission,
         }),
@@ -81,6 +86,8 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
     setReflectionWord(null);
     setSliderValue(50);
     setNote('');
+    setChallenge('');
+    setShowChallenge(false);
     setSelectedTags(new Set());
     setSelectedMission(null);
     onCheckInComplete?.();
@@ -156,6 +163,37 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
             {tag}
           </button>
         ))}
+      </div>
+
+      {/* Challenge */}
+      <div>
+        <button
+          type="button"
+          className="flex items-center gap-2 text-xs transition-colors hover:text-foreground"
+          onClick={() => setShowChallenge(!showChallenge)}
+        >
+          <span className="h-2.5 w-2.5 rounded-full bg-[#E0844A]" />
+          <span
+            className={`font-medium uppercase tracking-wider ${challenge.trim() ? 'text-[#E0844A]' : 'text-muted-foreground'}`}
+          >
+            Challenge
+          </span>
+          {challenge.trim() && !showChallenge && (
+            <span className="text-muted-foreground font-normal normal-case tracking-normal truncate">
+              — {challenge.trim().slice(0, 30)}
+              {challenge.trim().length > 30 ? '...' : ''}
+            </span>
+          )}
+        </button>
+        {showChallenge && (
+          <input
+            type="text"
+            placeholder="What's blocking you right now?"
+            value={challenge}
+            onChange={(e) => setChallenge(e.target.value)}
+            className="mt-2 w-full rounded-xl border border-[#E0844A]/30 bg-[#E0844A]/5 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#E0844A]/30"
+          />
+        )}
       </div>
 
       <div className="space-y-3">
