@@ -100,8 +100,8 @@ describe('MissionTracker', () => {
 
     await user.click(screen.getByText('Ship V1'));
 
-    expect(screen.getByText('Next step')).toBeDefined();
-    expect(screen.getByText('Blocking')).toBeDefined();
+    expect(screen.getByText('Objective')).toBeDefined();
+    expect(screen.getByText('Challenge')).toBeDefined();
     expect(screen.getByDisplayValue('Write the login test')).toBeDefined();
     expect(screen.getByDisplayValue('Need to fix auth flow')).toBeDefined();
   });
@@ -133,7 +133,7 @@ describe('MissionTracker', () => {
 
     await waitFor(() => {
       expect(screen.getByText('New mission')).toBeDefined();
-      expect(screen.getByText('Next step')).toBeDefined();
+      expect(screen.getByText('Objective')).toBeDefined();
     });
   });
 

@@ -268,49 +268,46 @@ function MissionCard({
       {/* Expanded body */}
       {expanded && (
         <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
-          {/* Two zones: next step + blocker */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            {/* What's moving */}
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Next step
-              </p>
-              <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2">
-                <span className="text-muted-foreground" aria-hidden="true">
-                  →
-                </span>
-                <input
-                  type="text"
-                  placeholder="One thing to move forward"
-                  value={mission.nextStep ?? ''}
-                  onChange={(e) => handleChange('nextStep', e.target.value)}
-                  className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
-                />
-              </div>
+          {/* Objective */}
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Objective
+            </p>
+            <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2">
+              <span className="text-muted-foreground" aria-hidden="true">
+                →
+              </span>
+              <input
+                type="text"
+                placeholder="What does done look like?"
+                value={mission.nextStep ?? ''}
+                onChange={(e) => handleChange('nextStep', e.target.value)}
+                className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+              />
             </div>
+          </div>
 
-            {/* What's stuck */}
-            <div className="space-y-1.5">
-              <p
-                className={`text-xs font-medium uppercase tracking-wider ${
-                  hasBlocker ? 'text-[#D4605A]' : 'text-muted-foreground'
-                }`}
-              >
-                Blocking
-              </p>
-              <div
-                className={`rounded-xl border px-3 py-2 ${
-                  hasBlocker ? 'border-[#D4605A]/30 bg-[#D4605A]/5' : 'border-border'
-                }`}
-              >
-                <input
-                  type="text"
-                  placeholder="What's in the way?"
-                  value={mission.blocking ?? ''}
-                  onChange={(e) => handleChange('blocking', e.target.value)}
-                  className="w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
-                />
-              </div>
+          {/* Challenge */}
+          <div className="space-y-1.5">
+            <p
+              className={`text-xs font-medium uppercase tracking-wider ${
+                hasBlocker ? 'text-[#D4605A]' : 'text-muted-foreground'
+              }`}
+            >
+              Challenge
+            </p>
+            <div
+              className={`rounded-xl border px-3 py-2 ${
+                hasBlocker ? 'border-[#D4605A]/30 bg-[#D4605A]/5' : 'border-border'
+              }`}
+            >
+              <input
+                type="text"
+                placeholder="What's making this hard?"
+                value={mission.blocking ?? ''}
+                onChange={(e) => handleChange('blocking', e.target.value)}
+                className="w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+              />
             </div>
           </div>
 

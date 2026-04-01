@@ -87,7 +87,7 @@
 .golden {
   --background: #e8c97a;
   --foreground: #2a1a06;
-  --card: #fff3c4;
+  --card: rgba(255, 243, 196, 0.7);
   --card-foreground: #2a1a06;
   --popover: #fff3c4;
   --popover-foreground: #2a1a06;
@@ -95,13 +95,13 @@
   --primary-foreground: #fff3c4;
   --secondary: #f0dca0;
   --secondary-foreground: #2a1a06;
-  --muted: #f0dca0;
+  --muted: rgba(240, 220, 160, 0.5);
   --muted-foreground: #7a4a18;
   --accent: #c4a060;
   --accent-foreground: #2a1a06;
   --destructive: #d4605a;
-  --border: rgba(160, 110, 40, 0.28);
-  --input: rgba(160, 110, 40, 0.28);
+  --border: rgba(160, 110, 40, 0.15);
+  --input: rgba(160, 110, 40, 0.12);
   --ring: #a86a28;
   --sidebar: #f0dca0;
   --sidebar-foreground: #2a1a06;
