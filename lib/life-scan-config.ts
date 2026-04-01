@@ -50,7 +50,7 @@ export const DOORS: Door[] = [
 export const UNIVERSAL_QUESTIONS = [
   'What is weighing you down right now?',
   'What are you most afraid of?',
-  'What is your biggest weakness? How does it show up in your daily life?',
+  'How can you act on it?',
   "What don't you want in your life anymore?",
   'What is flowing? What feels good right now?',
 ];

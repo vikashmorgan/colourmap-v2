@@ -3,6 +3,10 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('@/components/CheckInAnalysis', () => ({
+  default: () => <div data-testid="analysis">Analysis</div>,
+}));
+
 import CheckInHistory from './CheckInHistory';
 
 const now = new Date('2026-03-31T14:00:00Z');

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import CheckInAnalysis from '@/components/CheckInAnalysis';
 import { getEmotionalWord } from '@/lib/emotional-vocabulary';
 
 interface HistoryEntry {
@@ -177,6 +178,8 @@ export default function CheckInHistory({ refreshKey, missions = [] }: CheckInHis
               </div>
             </div>
           ))}
+
+          <CheckInAnalysis hasEntries={entries.length > 0} />
         </div>
       )}
     </div>
