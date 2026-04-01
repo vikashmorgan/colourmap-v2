@@ -2,6 +2,7 @@ import { isAuthSessionMissingError } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import ThemeSwitcher from '@/components/ThemeSwitcher';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function AppLayout({
@@ -39,6 +40,7 @@ export default async function AppLayout({
             </p>
           </div>
           <nav className="flex items-center gap-4 text-sm text-muted-foreground">
+            <ThemeSwitcher />
             <Link className="transition-colors hover:text-foreground" href="/">
               Cockpit
             </Link>
