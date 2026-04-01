@@ -54,12 +54,12 @@ describe('CheckInHistory', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders collapsed pill showing latest check-in', async () => {
+  it('renders collapsed pill with title', async () => {
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Alive')).toBeDefined();
-      expect(screen.getByText('3 check-ins')).toBeDefined();
+      expect(screen.getByText('Recent reflections')).toBeDefined();
+      expect(screen.getByText('(3)')).toBeDefined();
     });
   });
 
@@ -67,7 +67,7 @@ describe('CheckInHistory', () => {
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Alive')).toBeDefined();
+      expect(screen.getByText('Recent reflections')).toBeDefined();
     });
 
     expect(screen.queryByText('Today')).toBeNull();
@@ -78,7 +78,7 @@ describe('CheckInHistory', () => {
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Alive')).toBeDefined();
+      expect(screen.getByText('Recent reflections')).toBeDefined();
     });
 
     await user.click(screen.getByRole('button', { expanded: false }));
@@ -94,7 +94,7 @@ describe('CheckInHistory', () => {
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Alive')).toBeDefined();
+      expect(screen.getByText('Recent reflections')).toBeDefined();
     });
 
     const pill = screen.getByRole('button', { expanded: false });
@@ -110,7 +110,7 @@ describe('CheckInHistory', () => {
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Alive')).toBeDefined();
+      expect(screen.getByText('Recent reflections')).toBeDefined();
     });
 
     await user.click(screen.getByRole('button', { expanded: false }));

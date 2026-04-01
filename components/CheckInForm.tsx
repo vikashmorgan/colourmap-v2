@@ -158,7 +158,11 @@ export default function CheckInForm({ onCheckInComplete }: CheckInFormProps) {
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <Button type="submit" disabled={!hasMoved || isSubmitting} className="w-full">
+      <Button
+        type="submit"
+        disabled={!hasMoved || isSubmitting}
+        className="w-full bg-[#5C3018] text-[#F5DEB8] hover:bg-[#4A2810]"
+      >
         {isSubmitting ? 'Saving...' : 'Check in'}
       </Button>
     </form>

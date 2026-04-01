@@ -14,7 +14,17 @@ export const missions = pgTable('missions', {
   userId: uuid('user_id').notNull(),
   title: text('title').notNull(),
   description: text('description'),
+  blocking: text('blocking'),
+  nextStep: text('next_step'),
   completed: boolean('completed').default(false).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const backlog = pgTable('backlog', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  title: text('title').notNull(),
+  done: boolean('done').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

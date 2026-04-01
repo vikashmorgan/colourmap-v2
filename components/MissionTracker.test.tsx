@@ -10,6 +10,8 @@ const fakeMissions = [
     id: '1',
     title: 'Ship V1',
     description: 'Launch the first version',
+    blocking: 'Need to fix auth flow',
+    nextStep: 'Write the login test',
     completed: false,
     createdAt: '2026-03-31T10:00:00Z',
   },
@@ -17,6 +19,8 @@ const fakeMissions = [
     id: '2',
     title: 'Old task',
     description: null,
+    blocking: null,
+    nextStep: null,
     completed: true,
     createdAt: '2026-03-30T10:00:00Z',
   },
@@ -35,6 +39,8 @@ describe('MissionTracker', () => {
                 id: '3',
                 title: 'New mission',
                 description: null,
+                blocking: null,
+                nextStep: null,
                 completed: false,
                 createdAt: '2026-03-31T14:00:00Z',
               }),
@@ -63,7 +69,7 @@ describe('MissionTracker', () => {
     render(<MissionTracker />);
 
     await waitFor(() => {
-      expect(screen.getByText('Missions')).toBeDefined();
+      expect(screen.getByText('Current Mission')).toBeDefined();
     });
   });
 
@@ -74,6 +80,32 @@ describe('MissionTracker', () => {
       expect(screen.getByText('Ship V1')).toBeDefined();
       expect(screen.getByText('Old task')).toBeDefined();
     });
+  });
+
+  it('shows blocked badge when collapsed', async () => {
+    render(<MissionTracker />);
+
+    await waitFor(() => {
+      expect(screen.getByText('blocked')).toBeDefined();
+    });
+  });
+
+  it('expands card to show three sections', async () => {
+    const user = userEvent.setup();
+    render(<MissionTracker />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Ship V1')).toBeDefined();
+    });
+
+    await user.click(screen.getByText('Ship V1'));
+
+    expect(screen.getByText('Objective')).toBeDefined();
+    expect(screen.getByText('Blocking')).toBeDefined();
+    expect(screen.getByText('Next step')).toBeDefined();
+    expect(screen.getByDisplayValue('Launch the first version')).toBeDefined();
+    expect(screen.getByDisplayValue('Need to fix auth flow')).toBeDefined();
+    expect(screen.getByDisplayValue('Write the login test')).toBeDefined();
   });
 
   it('adds a new mission and auto-expands it', async () => {
@@ -90,21 +122,8 @@ describe('MissionTracker', () => {
 
     await waitFor(() => {
       expect(screen.getByText('New mission')).toBeDefined();
-      expect(screen.getByPlaceholderText('Add details about this mission...')).toBeDefined();
+      expect(screen.getByText('Objective')).toBeDefined();
     });
-  });
-
-  it('expands a mission card to show description area', async () => {
-    const user = userEvent.setup();
-    render(<MissionTracker />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Ship V1')).toBeDefined();
-    });
-
-    await user.click(screen.getByText('Ship V1'));
-
-    expect(screen.getByDisplayValue('Launch the first version')).toBeDefined();
   });
 
   it('toggles mission completion', async () => {

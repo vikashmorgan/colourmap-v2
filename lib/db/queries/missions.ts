@@ -29,7 +29,12 @@ export async function updateMission(
   db: PostgresJsDatabase<typeof schema>,
   userId: string,
   missionId: string,
-  data: { completed?: boolean; description?: string | null },
+  data: {
+    completed?: boolean;
+    description?: string | null;
+    blocking?: string | null;
+    nextStep?: string | null;
+  },
 ): Promise<Mission | null> {
   const [row] = await db
     .update(missions)

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import BackOfMind from '@/components/BackOfMind';
 import CheckInForm from '@/components/CheckInForm';
 import CheckInHistory from '@/components/CheckInHistory';
 import MissionTracker from '@/components/MissionTracker';
@@ -30,6 +31,7 @@ export default function CockpitPage() {
         </div>
         <div className="space-y-4">
           <MissionTracker />
+          <BackOfMind />
         </div>
       </section>
     </main>

@@ -6,6 +6,8 @@ interface Mission {
   id: string;
   title: string;
   description: string | null;
+  blocking: string | null;
+  nextStep: string | null;
   completed: boolean;
   createdAt: string;
 }
@@ -68,12 +70,18 @@ export default function MissionTracker() {
     await fetch(`/api/missions/${id}`, { method: 'DELETE' });
   }
 
+  function handleFieldUpdate(id: string, field: string, value: string | null) {
+    setMissions((prev) => prev.map((m) => (m.id === id ? { ...m, [field]: value } : m)));
+  }
+
   const active = missions.filter((m) => !m.completed);
   const done = missions.filter((m) => m.completed);
 
   return (
     <div className="rounded-3xl border border-border bg-card p-6 space-y-4">
-      <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Missions</p>
+      <p className="text-sm font-semibold uppercase tracking-[0.24em] text-center">
+        Current Mission
+      </p>
 
       <form onSubmit={handleAdd} className="flex gap-2">
         <input
@@ -86,7 +94,7 @@ export default function MissionTracker() {
         <button
           type="submit"
           disabled={!newTitle.trim() || adding}
-          className="rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          className="rounded-xl bg-[#5C3018] px-3 py-2 text-sm font-medium text-[#F5DEB8] transition-colors hover:bg-[#4A2810] disabled:opacity-50"
         >
           {adding ? '...' : 'Add'}
         </button>
@@ -114,11 +122,7 @@ export default function MissionTracker() {
               onToggleExpand={() => setExpandedId(expandedId === mission.id ? null : mission.id)}
               onToggleComplete={() => handleToggle(mission.id, true)}
               onDelete={() => handleDelete(mission.id)}
-              onUpdateDescription={(desc) => {
-                setMissions((prev) =>
-                  prev.map((m) => (m.id === mission.id ? { ...m, description: desc } : m)),
-                );
-              }}
+              onFieldUpdate={(field, value) => handleFieldUpdate(mission.id, field, value)}
             />
           ))}
 
@@ -135,11 +139,7 @@ export default function MissionTracker() {
                   }
                   onToggleComplete={() => handleToggle(mission.id, false)}
                   onDelete={() => handleDelete(mission.id)}
-                  onUpdateDescription={(desc) => {
-                    setMissions((prev) =>
-                      prev.map((m) => (m.id === mission.id ? { ...m, description: desc } : m)),
-                    );
-                  }}
+                  onFieldUpdate={(field, value) => handleFieldUpdate(mission.id, field, value)}
                 />
               ))}
             </div>
@@ -156,7 +156,7 @@ interface MissionCardProps {
   onToggleExpand: () => void;
   onToggleComplete: () => void;
   onDelete: () => void;
-  onUpdateDescription: (description: string | null) => void;
+  onFieldUpdate: (field: string, value: string | null) => void;
 }
 
 function MissionCard({
@@ -165,29 +165,42 @@ function MissionCard({
   onToggleExpand,
   onToggleComplete,
   onDelete,
-  onUpdateDescription,
+  onFieldUpdate,
 }: MissionCardProps) {
-  const [descDraft, setDescDraft] = useState(mission.description ?? '');
-  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  function handleDescChange(value: string) {
-    setDescDraft(value);
-    onUpdateDescription(value || null);
+  function handleChange(field: 'description' | 'blocking' | 'nextStep', value: string) {
+    onFieldUpdate(field, value || null);
 
-    if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    saveTimeout.current = setTimeout(() => {
-      fetch(`/api/missions/${mission.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: value || null }),
-      });
-    }, 800);
+    const existing = saveTimers.current.get(field);
+    if (existing) clearTimeout(existing);
+
+    saveTimers.current.set(
+      field,
+      setTimeout(() => {
+        fetch(`/api/missions/${mission.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [field]: value || null }),
+        });
+      }, 800),
+    );
   }
+
+  const hasBlocker = mission.blocking && mission.blocking.trim().length > 0;
+  const hasNextStep = mission.nextStep && mission.nextStep.trim().length > 0;
 
   return (
     <div
-      className={`rounded-2xl border border-border transition-all ${mission.completed ? 'opacity-60' : ''}`}
+      className={`rounded-2xl border transition-all ${
+        mission.completed
+          ? 'border-border/50 opacity-60'
+          : hasBlocker
+            ? 'border-destructive/30'
+            : 'border-border'
+      }`}
     >
+      {/* Header row */}
       <div className="flex items-center gap-3 px-4 py-3">
         <button
           type="button"
@@ -212,6 +225,16 @@ function MissionCard({
         >
           {mission.title}
         </button>
+        {!expanded && hasBlocker && (
+          <span className="shrink-0 rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
+            blocked
+          </span>
+        )}
+        {!expanded && hasNextStep && !hasBlocker && (
+          <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-xs text-accent-foreground">
+            next step
+          </span>
+        )}
         <button
           type="button"
           aria-label={`Delete "${mission.title}"`}
@@ -222,17 +245,64 @@ function MissionCard({
         </button>
       </div>
 
+      {/* Expanded card body */}
       {expanded && (
-        <div className="border-t border-border px-4 py-3">
-          <textarea
-            placeholder="Add details about this mission..."
-            value={descDraft}
-            onChange={(e) => handleDescChange(e.target.value)}
-            className="w-full resize-none rounded-lg border-none bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
-            rows={3}
+        <div className="border-t border-border space-y-0">
+          {/* Objective */}
+          <MissionField
+            label="Objective"
+            placeholder="What are you trying to achieve?"
+            value={mission.description ?? ''}
+            onChange={(v) => handleChange('description', v)}
+          />
+
+          {/* Blocking */}
+          <MissionField
+            label="Blocking"
+            placeholder="What's in the way right now?"
+            value={mission.blocking ?? ''}
+            onChange={(v) => handleChange('blocking', v)}
+            accent={hasBlocker ? 'destructive' : undefined}
+          />
+
+          {/* Next step */}
+          <MissionField
+            label="Next step"
+            placeholder="The smallest thing that moves this forward"
+            value={mission.nextStep ?? ''}
+            onChange={(v) => handleChange('nextStep', v)}
           />
         </div>
       )}
+    </div>
+  );
+}
+
+interface MissionFieldProps {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+  accent?: 'destructive';
+}
+
+function MissionField({ label, placeholder, value, onChange, accent }: MissionFieldProps) {
+  return (
+    <div className="border-t border-border/50 px-4 py-3 space-y-1">
+      <p
+        className={`text-xs font-medium uppercase tracking-wider ${
+          accent === 'destructive' && value ? 'text-destructive' : 'text-muted-foreground'
+        }`}
+      >
+        {label}
+      </p>
+      <textarea
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full resize-none rounded-lg border-none bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+        rows={2}
+      />
     </div>
   );
 }

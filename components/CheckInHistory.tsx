@@ -96,7 +96,6 @@ export default function CheckInHistory({ refreshKey }: CheckInHistoryProps) {
 
   if (entries.length === 0) return null;
 
-  const latest = entries[0];
   const grouped = groupByDate(entries);
 
   return (
@@ -105,22 +104,12 @@ export default function CheckInHistory({ refreshKey }: CheckInHistoryProps) {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card/80 px-4 py-3 text-left transition-colors hover:bg-card"
+        className="flex w-full items-center justify-center gap-3 rounded-2xl border border-border bg-card/80 px-4 py-3 transition-colors hover:bg-card"
       >
-        <div
-          className="h-3 w-3 shrink-0 rounded-full"
-          style={{ backgroundColor: getDotColor(latest.sliderValue) }}
-        />
-        <div className="flex-1 min-w-0">
-          <span className="text-sm font-medium">{getEmotionalWord(latest.sliderValue)}</span>
-          <span className="ml-2 text-xs text-muted-foreground">{formatTime(latest.createdAt)}</span>
-          {latest.note && (
-            <span className="ml-2 text-xs text-muted-foreground truncate">— {latest.note}</span>
-          )}
-        </div>
-        <span className="text-xs text-muted-foreground">
-          {entries.length} check-in{entries.length !== 1 ? 's' : ''}
-        </span>
+        <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
+          Recent reflections
+        </p>
+        <span className="text-xs text-muted-foreground">({entries.length})</span>
         <svg
           aria-hidden="true"
           className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}

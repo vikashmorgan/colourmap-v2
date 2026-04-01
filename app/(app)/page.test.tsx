@@ -20,6 +20,10 @@ vi.mock('@/components/MissionTracker', () => ({
   default: () => <div data-testid="mission-tracker">MissionTracker</div>,
 }));
 
+vi.mock('@/components/BackOfMind', () => ({
+  default: () => <div data-testid="back-of-mind">BackOfMind</div>,
+}));
+
 import CockpitPage from './page';
 
 describe('CockpitPage', () => {
@@ -27,12 +31,13 @@ describe('CockpitPage', () => {
     cleanup();
   });
 
-  it('renders the cockpit with check-in form, history, and mission tracker', () => {
+  it('renders the cockpit with all sections', () => {
     render(<CockpitPage />);
 
     expect(screen.getByText('Your life balance will land here.')).toBeDefined();
     expect(screen.getByTestId('check-in-form')).toBeDefined();
     expect(screen.getByTestId('check-in-history')).toBeDefined();
     expect(screen.getByTestId('mission-tracker')).toBeDefined();
+    expect(screen.getByTestId('back-of-mind')).toBeDefined();
   });
 });
