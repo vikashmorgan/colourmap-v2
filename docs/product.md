@@ -33,6 +33,14 @@ The check-in is the atomic unit of value. It serves two purposes: data input for
 2. **Life Scan** — Step through 4 life categories (Body, Mind, Relationships, Purpose), rating what's blocking vs flowing. [Spec](specs/life-scan.md)
 3. **Cockpit** — Radar chart showing life balance + current emotional state in one glance. [Spec](specs/cockpit.md)
 
+## V1.1 Features (Check-in Enhancements)
+
+4. **Emotional Vocabulary** — Poetic words that shift as the slider moves, turning a number into self-recognition. [Spec](specs/emotional-vocabulary.md)
+5. **Post-Submit Reflection** — A 6-second breath moment after checking in, honoring the practice. [Spec](specs/post-submit-reflection.md)
+6. **Check-in History** — Last 7 check-ins as colored dots below the form. Tap for detail. [Spec](specs/check-in-history.md)
+7. **Context Tags** — Optional tappable tags (Work, Body, Relationships, Creative, General) for structured context. [Spec](specs/context-tags.md)
+8. **Time-of-Day Awareness** — Greeting and label shift based on morning/afternoon/evening/late night. [Spec](specs/time-of-day-awareness.md)
+
 ## Non-Goals (V1)
 
 - User-facing AI features (no "AI says..." reflections or suggestions)

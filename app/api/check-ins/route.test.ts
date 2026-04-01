@@ -16,10 +16,20 @@ const { createCheckIn, CheckInValidationError } = vi.hoisted(() => {
   return { createCheckIn, CheckInValidationError };
 });
 
+const { getRecentCheckIns } = vi.hoisted(() => ({
+  getRecentCheckIns: vi.fn(),
+}));
+
+const { getDb } = vi.hoisted(() => ({
+  getDb: vi.fn(() => 'db-instance'),
+}));
+
 vi.mock('@/lib/supabase/server', () => ({ createClient }));
 vi.mock('@/lib/services/check-ins', () => ({ createCheckIn, CheckInValidationError }));
+vi.mock('@/lib/db/queries/check-ins', () => ({ getRecentCheckIns }));
+vi.mock('@/lib/db/client', () => ({ getDb }));
 
-import { POST } from './route';
+import { GET, POST } from './route';
 
 function makeRequest(body?: unknown) {
   return new Request('http://localhost/api/check-ins', {
@@ -29,16 +39,17 @@ function makeRequest(body?: unknown) {
   });
 }
 
-describe('POST /api/check-ins', () => {
-  const fakeUser = { id: 'user-1', email: 'test@example.com' };
-  const fakeCheckIn = {
-    id: '00000000-0000-0000-0000-000000000001',
-    userId: 'user-1',
-    sliderValue: 72,
-    note: 'feeling good',
-    createdAt: '2026-03-29T10:00:00.000Z',
-  };
+const fakeUser = { id: 'user-1', email: 'test@example.com' };
+const fakeCheckIn = {
+  id: '00000000-0000-0000-0000-000000000001',
+  userId: 'user-1',
+  sliderValue: 72,
+  note: 'feeling good',
+  tags: null,
+  createdAt: '2026-03-29T10:00:00.000Z',
+};
 
+describe('POST /api/check-ins', () => {
   beforeEach(() => {
     createClient.mockClear();
     getUser.mockReset();
@@ -55,6 +66,7 @@ describe('POST /api/check-ins', () => {
     expect(createCheckIn).toHaveBeenCalledWith('user-1', {
       sliderValue: 72,
       note: 'feeling good',
+      tags: null,
     });
   });
 
@@ -65,6 +77,18 @@ describe('POST /api/check-ins', () => {
     expect(createCheckIn).toHaveBeenCalledWith('user-1', {
       sliderValue: 50,
       note: null,
+      tags: null,
+    });
+  });
+
+  it('passes tags to service', async () => {
+    const response = await POST(makeRequest({ sliderValue: 50, tags: ['Work', 'Body'] }));
+
+    expect(response.status).toBe(201);
+    expect(createCheckIn).toHaveBeenCalledWith('user-1', {
+      sliderValue: 50,
+      note: null,
+      tags: ['Work', 'Body'],
     });
   });
 
@@ -131,6 +155,45 @@ describe('POST /api/check-ins', () => {
     expect(createCheckIn).toHaveBeenCalledWith('user-1', {
       sliderValue: 50,
       note: null,
+      tags: null,
     });
+  });
+});
+
+describe('GET /api/check-ins', () => {
+  beforeEach(() => {
+    createClient.mockClear();
+    getUser.mockReset();
+    getRecentCheckIns.mockReset();
+    getDb.mockClear();
+    getUser.mockResolvedValue({ data: { user: fakeUser } });
+    getRecentCheckIns.mockResolvedValue([fakeCheckIn]);
+  });
+
+  it('returns recent check-ins for authenticated user', async () => {
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([fakeCheckIn]);
+    expect(getRecentCheckIns).toHaveBeenCalledWith('db-instance', 'user-1');
+  });
+
+  it('returns 401 when user is not authenticated', async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+
+    const response = await GET();
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'Unauthorized' });
+    expect(getRecentCheckIns).not.toHaveBeenCalled();
+  });
+
+  it('returns empty array when no check-ins exist', async () => {
+    getRecentCheckIns.mockResolvedValue([]);
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([]);
   });
 });

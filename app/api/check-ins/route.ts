@@ -1,7 +1,23 @@
 import { NextResponse } from 'next/server';
 
+import { getDb } from '@/lib/db/client';
+import { getRecentCheckIns } from '@/lib/db/queries/check-ins';
 import { CheckInValidationError, createCheckIn } from '@/lib/services/check-ins';
 import { createClient } from '@/lib/supabase/server';
+
+export async function GET() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const checkIns = await getRecentCheckIns(getDb(), user.id);
+  return NextResponse.json(checkIns);
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -24,7 +40,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'sliderValue is required' }, { status: 400 });
   }
 
-  const { sliderValue, note } = body as { sliderValue: unknown; note?: unknown };
+  const { sliderValue, note, tags } = body as {
+    sliderValue: unknown;
+    note?: unknown;
+    tags?: unknown;
+  };
 
   if (typeof sliderValue !== 'number') {
     return NextResponse.json({ error: 'sliderValue must be a number' }, { status: 400 });
@@ -34,6 +54,7 @@ export async function POST(request: Request) {
     const checkIn = await createCheckIn(user.id, {
       sliderValue,
       note: typeof note === 'string' ? note : null,
+      tags: Array.isArray(tags) ? tags : null,
     });
     return NextResponse.json(checkIn, { status: 201 });
   } catch (error) {

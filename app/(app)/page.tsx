@@ -1,6 +1,13 @@
+'use client';
+
+import { useState } from 'react';
+
 import CheckInForm from '@/components/CheckInForm';
+import CheckInHistory from '@/components/CheckInHistory';
 
 export default function CockpitPage() {
+  const [refreshKey, setRefreshKey] = useState(0);
+
   return (
     <main className="space-y-10">
       <section className="space-y-4">
@@ -18,7 +25,10 @@ export default function CockpitPage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
-        <CheckInForm />
+        <div className="space-y-4">
+          <CheckInForm onCheckInComplete={() => setRefreshKey((k) => k + 1)} />
+          <CheckInHistory refreshKey={refreshKey} />
+        </div>
         <div className="rounded-3xl border border-dashed border-border bg-card/50 p-6">
           <h2 className="text-lg font-medium">Life scan radar</h2>
           <p className="mt-3 text-sm text-muted-foreground">

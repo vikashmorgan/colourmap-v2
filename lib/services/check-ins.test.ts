@@ -19,6 +19,7 @@ describe('createCheckIn', () => {
     userId: 'user-1',
     sliderValue: 72,
     note: 'feeling good',
+    tags: null,
     createdAt: new Date('2026-03-29T10:00:00Z'),
   };
 
@@ -36,6 +37,7 @@ describe('createCheckIn', () => {
       userId: 'user-1',
       sliderValue: 72,
       note: 'feeling good',
+      tags: null,
     });
     expect(result).toEqual(fakeRow);
   });
@@ -47,6 +49,7 @@ describe('createCheckIn', () => {
       userId: 'user-1',
       sliderValue: 50,
       note: null,
+      tags: null,
     });
   });
 
@@ -57,6 +60,7 @@ describe('createCheckIn', () => {
       userId: 'user-1',
       sliderValue: 50,
       note: null,
+      tags: null,
     });
   });
 
@@ -67,6 +71,7 @@ describe('createCheckIn', () => {
       userId: 'user-1',
       sliderValue: 50,
       note: null,
+      tags: null,
     });
   });
 
@@ -77,6 +82,7 @@ describe('createCheckIn', () => {
       userId: 'user-1',
       sliderValue: 50,
       note: null,
+      tags: null,
     });
   });
 
@@ -87,6 +93,7 @@ describe('createCheckIn', () => {
       userId: 'user-1',
       sliderValue: 50,
       note: 'hello',
+      tags: null,
     });
   });
 
@@ -99,6 +106,7 @@ describe('createCheckIn', () => {
       userId: 'user-1',
       sliderValue: 50,
       note: 'a'.repeat(500),
+      tags: null,
     });
   });
 
@@ -133,6 +141,7 @@ describe('createCheckIn', () => {
       userId: 'user-1',
       sliderValue: 0,
       note: null,
+      tags: null,
     });
   });
 
@@ -143,6 +152,7 @@ describe('createCheckIn', () => {
       userId: 'user-1',
       sliderValue: 100,
       note: null,
+      tags: null,
     });
   });
 
@@ -150,5 +160,61 @@ describe('createCheckIn', () => {
     insertCheckIn.mockRejectedValue(new Error('db error'));
 
     await expect(createCheckIn('user-1', { sliderValue: 50 })).rejects.toThrow('db error');
+  });
+
+  // Tags tests
+  it('passes valid tags through', async () => {
+    await createCheckIn('user-1', { sliderValue: 50, tags: ['Work', 'Body'] });
+
+    expect(insertCheckIn).toHaveBeenCalledWith('db-instance', {
+      userId: 'user-1',
+      sliderValue: 50,
+      note: null,
+      tags: ['Work', 'Body'],
+    });
+  });
+
+  it('filters out invalid tags', async () => {
+    await createCheckIn('user-1', { sliderValue: 50, tags: ['Work', 'InvalidTag'] });
+
+    expect(insertCheckIn).toHaveBeenCalledWith('db-instance', {
+      userId: 'user-1',
+      sliderValue: 50,
+      note: null,
+      tags: ['Work'],
+    });
+  });
+
+  it('converts empty tags array to null', async () => {
+    await createCheckIn('user-1', { sliderValue: 50, tags: [] });
+
+    expect(insertCheckIn).toHaveBeenCalledWith('db-instance', {
+      userId: 'user-1',
+      sliderValue: 50,
+      note: null,
+      tags: null,
+    });
+  });
+
+  it('converts all-invalid tags to null', async () => {
+    await createCheckIn('user-1', { sliderValue: 50, tags: ['Nope', 'Bad'] });
+
+    expect(insertCheckIn).toHaveBeenCalledWith('db-instance', {
+      userId: 'user-1',
+      sliderValue: 50,
+      note: null,
+      tags: null,
+    });
+  });
+
+  it('converts null tags to null', async () => {
+    await createCheckIn('user-1', { sliderValue: 50, tags: null });
+
+    expect(insertCheckIn).toHaveBeenCalledWith('db-instance', {
+      userId: 'user-1',
+      sliderValue: 50,
+      note: null,
+      tags: null,
+    });
   });
 });

@@ -2,6 +2,7 @@ import { getDb } from '@/lib/db/client';
 import { type CheckIn, insertCheckIn } from '@/lib/db/queries/check-ins';
 
 const MAX_NOTE_LENGTH = 500;
+const ALLOWED_TAGS = ['Work', 'Body', 'Relationships', 'Creative', 'General'] as const;
 
 export class CheckInValidationError extends Error {
   constructor(message: string) {
@@ -12,7 +13,7 @@ export class CheckInValidationError extends Error {
 
 export async function createCheckIn(
   userId: string,
-  input: { sliderValue: number; note?: string | null },
+  input: { sliderValue: number; note?: string | null; tags?: string[] | null },
 ): Promise<CheckIn> {
   const { sliderValue } = input;
 
@@ -28,5 +29,14 @@ export async function createCheckIn(
     }
   }
 
-  return insertCheckIn(getDb(), { userId, sliderValue, note });
+  let tags: string[] | null = null;
+  if (Array.isArray(input.tags) && input.tags.length > 0) {
+    const valid = input.tags.filter(
+      (t): t is string =>
+        typeof t === 'string' && ALLOWED_TAGS.includes(t as (typeof ALLOWED_TAGS)[number]),
+    );
+    tags = valid.length > 0 ? valid : null;
+  }
+
+  return insertCheckIn(getDb(), { userId, sliderValue, note, tags });
 }

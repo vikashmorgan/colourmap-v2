@@ -9,6 +9,7 @@ describe('schema', () => {
     expect(getTableName(lifeScans)).toBe('life_scans');
     expect(checkIns).toHaveProperty('sliderValue');
     expect(checkIns).toHaveProperty('note');
+    expect(checkIns).toHaveProperty('tags');
     expect(lifeScans).toHaveProperty('body');
     expect(lifeScans).toHaveProperty('relationships');
     expect(lifeScans).toHaveProperty('purpose');
