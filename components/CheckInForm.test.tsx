@@ -78,17 +78,8 @@ describe('CheckInForm', () => {
     expect(screen.getByText('Light / Expansive')).toBeDefined();
   });
 
-  it('disables the submit button initially', () => {
+  it('submit button is enabled by default (Still is valid)', () => {
     render(<CheckInForm />);
-
-    const button = screen.getByRole('button', { name: 'Check in' });
-    expect(button).toHaveProperty('disabled', true);
-  });
-
-  it('enables the submit button after the slider is moved', () => {
-    render(<CheckInForm />);
-
-    act(() => capturedOnValueChange?.([72]));
 
     const button = screen.getByRole('button', { name: 'Check in' });
     expect(button).toHaveProperty('disabled', false);
@@ -190,7 +181,7 @@ describe('CheckInForm', () => {
     });
 
     expect((screen.getByTestId('slider') as HTMLInputElement).value).toBe('50');
-    expect(screen.getByRole('button', { name: 'Check in' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Check in' })).toHaveProperty('disabled', false);
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
@@ -264,11 +255,9 @@ describe('CheckInForm', () => {
     });
   });
 
-  it('shows time-of-day greeting', () => {
+  it('renders centered Check In title', () => {
     render(<CheckInForm />);
 
-    // The greeting is set via useEffect, so it will appear after mount
-    // We just verify the form renders without hydration issues
-    expect(screen.getByTestId('slider')).toBeDefined();
+    expect(screen.getByText('Check In')).toBeDefined();
   });
 });

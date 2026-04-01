@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { getEmotionalWord } from '@/lib/emotional-vocabulary';
-import { getTimeOfDay } from '@/lib/time-of-day';
 
 import ReflectionMoment from './ReflectionMoment';
 
@@ -19,21 +18,11 @@ interface CheckInFormProps {
 
 export default function CheckInForm({ onCheckInComplete }: CheckInFormProps) {
   const [sliderValue, setSliderValue] = useState(50);
-  const [hasMoved, setHasMoved] = useState(false);
   const [note, setNote] = useState('');
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reflectionWord, setReflectionWord] = useState<string | null>(null);
-
-  const [greeting, setGreeting] = useState('');
-  const [sliderLabel, setSliderLabel] = useState('How are you feeling?');
-
-  useEffect(() => {
-    const tod = getTimeOfDay(new Date().getHours());
-    setGreeting(tod.greeting);
-    setSliderLabel(tod.label);
-  }, []);
 
   const emotionalWord = getEmotionalWord(sliderValue);
 
@@ -83,7 +72,6 @@ export default function CheckInForm({ onCheckInComplete }: CheckInFormProps) {
   function handleReflectionDismiss() {
     setReflectionWord(null);
     setSliderValue(50);
-    setHasMoved(false);
     setNote('');
     setSelectedTags(new Set());
     onCheckInComplete?.();
@@ -98,9 +86,10 @@ export default function CheckInForm({ onCheckInComplete }: CheckInFormProps) {
       onSubmit={handleSubmit}
       className="rounded-3xl border border-border bg-card p-6 space-y-6"
     >
+      <p className="text-sm font-semibold uppercase tracking-[0.24em] text-center">Check In</p>
+
       <div className="space-y-3">
-        {greeting && <p className="text-sm text-muted-foreground">{greeting}</p>}
-        <Label htmlFor="check-in-slider">{sliderLabel}</Label>
+        <Label htmlFor="check-in-slider">How are you feeling?</Label>
 
         <p
           className="text-3xl font-semibold tracking-tight text-center transition-opacity duration-300"
@@ -122,7 +111,6 @@ export default function CheckInForm({ onCheckInComplete }: CheckInFormProps) {
           onValueChange={(value) => {
             const v = Array.isArray(value) ? value[0] : value;
             setSliderValue(v);
-            if (!hasMoved) setHasMoved(true);
           }}
         />
       </div>
@@ -160,7 +148,7 @@ export default function CheckInForm({ onCheckInComplete }: CheckInFormProps) {
 
       <Button
         type="submit"
-        disabled={!hasMoved || isSubmitting}
+        disabled={isSubmitting}
         className="w-full bg-[#5C3018] text-[#F5DEB8] hover:bg-[#4A2810]"
       >
         {isSubmitting ? 'Saving...' : 'Check in'}
