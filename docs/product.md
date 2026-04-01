@@ -49,19 +49,40 @@ The cockpit has two sides: **feeling** (left) and **doing** (right). They sit si
 
 ## Next Layer (V2)
 
-- **Life Scan** — Step through 4 life categories (Body, Mind, Relationships, Purpose), rating what's blocking vs flowing. Deeper layer for life direction, not daily tasks. [Spec](specs/life-scan.md)
-- **Cockpit Radar** — Visual radar chart showing life balance from life scan data + emotional state from check-ins. [Spec](specs/cockpit.md)
+### The Deep Layer
+
+7. **Life Scan** — Guided self-assessment through 3 Doors (Feeling, Doing, Sharing). Bipolar sliders map your current state, reflective questions dig into what's blocking you and what you're afraid of. Generates a personal improvement program. Separate page from the cockpit. [Spec](specs/life-scan.md)
+
+### The Action Layer
+
+8. **Custom Cockpit Sections** — Personal tracker cards (check/scale/counter) that turn life scan insights into daily habits. Pre-built from scan results or designed from scratch. Default sections (Body, Focus) ship on day 1. [Spec](specs/custom-sections.md)
+
+### The Visual Layer
+
+9. **Cockpit Radar** — Visual radar chart showing life balance from life scan data + emotional state from check-ins. [Spec](specs/cockpit.md)
+
+## Architecture
+
+```
+Life Scan (deep, periodic)     →  reveals what's blocking / flowing
+  ↓ generates
+Custom Sections (daily)        →  tracks improvement actions
+  ↕ lives alongside
+Check-in + Missions (daily)    →  feeling + doing side by side
+  ↓ accumulates into
+Cockpit Radar (visual)         →  patterns emerge over time
+```
+
+The life scan is the diagnostic. The cockpit sections are the program. The check-in is the daily temperature. The radar is the long view.
 
 ## Non-Goals
 
-- User-facing AI features
 - Voice input
-- Habit tracking or streak mechanics
-- Category customization
+- Streak mechanics or guilt
 - Social features
 - Notifications or reminders
 - Data export
-- Onboarding flow
+- Onboarding wizard
 
 ## Key Decisions
 
