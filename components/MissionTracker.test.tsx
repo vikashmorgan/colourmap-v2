@@ -6,8 +6,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import MissionTracker from './MissionTracker';
 
 const fakeMissions = [
-  { id: '1', title: 'Ship V1', completed: false, createdAt: '2026-03-31T10:00:00Z' },
-  { id: '2', title: 'Old task', completed: true, createdAt: '2026-03-30T10:00:00Z' },
+  {
+    id: '1',
+    title: 'Ship V1',
+    description: 'Launch the first version',
+    completed: false,
+    createdAt: '2026-03-31T10:00:00Z',
+  },
+  {
+    id: '2',
+    title: 'Old task',
+    description: null,
+    completed: true,
+    createdAt: '2026-03-30T10:00:00Z',
+  },
 ];
 
 describe('MissionTracker', () => {
@@ -22,6 +34,7 @@ describe('MissionTracker', () => {
               Promise.resolve({
                 id: '3',
                 title: 'New mission',
+                description: null,
                 completed: false,
                 createdAt: '2026-03-31T14:00:00Z',
               }),
@@ -63,7 +76,7 @@ describe('MissionTracker', () => {
     });
   });
 
-  it('adds a new mission', async () => {
+  it('adds a new mission and auto-expands it', async () => {
     const user = userEvent.setup();
     render(<MissionTracker />);
 
@@ -77,7 +90,21 @@ describe('MissionTracker', () => {
 
     await waitFor(() => {
       expect(screen.getByText('New mission')).toBeDefined();
+      expect(screen.getByPlaceholderText('Add details about this mission...')).toBeDefined();
     });
+  });
+
+  it('expands a mission card to show description area', async () => {
+    const user = userEvent.setup();
+    render(<MissionTracker />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Ship V1')).toBeDefined();
+    });
+
+    await user.click(screen.getByText('Ship V1'));
+
+    expect(screen.getByDisplayValue('Launch the first version')).toBeDefined();
   });
 
   it('toggles mission completion', async () => {

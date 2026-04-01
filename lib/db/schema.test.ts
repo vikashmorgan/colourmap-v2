@@ -12,6 +12,7 @@ describe('schema', () => {
     expect(checkIns).toHaveProperty('note');
     expect(checkIns).toHaveProperty('tags');
     expect(missions).toHaveProperty('title');
+    expect(missions).toHaveProperty('description');
     expect(missions).toHaveProperty('completed');
     expect(lifeScans).toHaveProperty('body');
     expect(lifeScans).toHaveProperty('relationships');

@@ -25,15 +25,15 @@ export async function getMissions(
     .orderBy(desc(missions.createdAt));
 }
 
-export async function toggleMission(
+export async function updateMission(
   db: PostgresJsDatabase<typeof schema>,
   userId: string,
   missionId: string,
-  completed: boolean,
+  data: { completed?: boolean; description?: string | null },
 ): Promise<Mission | null> {
   const [row] = await db
     .update(missions)
-    .set({ completed })
+    .set(data)
     .where(and(eq(missions.id, missionId), eq(missions.userId, userId)))
     .returning();
   return row ?? null;

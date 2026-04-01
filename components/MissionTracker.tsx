@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface Mission {
   id: string;
   title: string;
+  description: string | null;
   completed: boolean;
   createdAt: string;
 }
@@ -14,6 +15,7 @@ export default function MissionTracker() {
   const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState('');
   const [adding, setAdding] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchMissions = useCallback(async () => {
     try {
@@ -44,6 +46,7 @@ export default function MissionTracker() {
         const mission = await res.json();
         setMissions((prev) => [mission, ...prev]);
         setNewTitle('');
+        setExpandedId(mission.id);
       }
     } finally {
       setAdding(false);
@@ -61,6 +64,7 @@ export default function MissionTracker() {
 
   async function handleDelete(id: string) {
     setMissions((prev) => prev.filter((m) => m.id !== id));
+    if (expandedId === id) setExpandedId(null);
     await fetch(`/api/missions/${id}`, { method: 'DELETE' });
   }
 
@@ -103,57 +107,130 @@ export default function MissionTracker() {
           )}
 
           {active.map((mission) => (
-            <div
+            <MissionCard
               key={mission.id}
-              className="flex items-center gap-3 rounded-xl border border-border px-3 py-2.5"
-            >
-              <button
-                type="button"
-                aria-label={`Mark "${mission.title}" as complete`}
-                className="h-5 w-5 shrink-0 rounded-full border-2 border-muted-foreground transition-colors hover:border-primary"
-                onClick={() => handleToggle(mission.id, true)}
-              />
-              <span className="flex-1 text-sm">{mission.title}</span>
-              <button
-                type="button"
-                aria-label={`Delete "${mission.title}"`}
-                className="shrink-0 text-xs text-muted-foreground transition-colors hover:text-destructive"
-                onClick={() => handleDelete(mission.id)}
-              >
-                ✕
-              </button>
-            </div>
+              mission={mission}
+              expanded={expandedId === mission.id}
+              onToggleExpand={() => setExpandedId(expandedId === mission.id ? null : mission.id)}
+              onToggleComplete={() => handleToggle(mission.id, true)}
+              onDelete={() => handleDelete(mission.id)}
+              onUpdateDescription={(desc) => {
+                setMissions((prev) =>
+                  prev.map((m) => (m.id === mission.id ? { ...m, description: desc } : m)),
+                );
+              }}
+            />
           ))}
 
           {done.length > 0 && (
             <div className="space-y-2 pt-2">
               <p className="text-xs text-muted-foreground">Done ({done.length})</p>
               {done.map((mission) => (
-                <div
+                <MissionCard
                   key={mission.id}
-                  className="flex items-center gap-3 rounded-xl border border-border/50 px-3 py-2.5 opacity-60"
-                >
-                  <button
-                    type="button"
-                    aria-label={`Mark "${mission.title}" as incomplete`}
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs"
-                    onClick={() => handleToggle(mission.id, false)}
-                  >
-                    ✓
-                  </button>
-                  <span className="flex-1 text-sm line-through">{mission.title}</span>
-                  <button
-                    type="button"
-                    aria-label={`Delete "${mission.title}"`}
-                    className="shrink-0 text-xs text-muted-foreground transition-colors hover:text-destructive"
-                    onClick={() => handleDelete(mission.id)}
-                  >
-                    ✕
-                  </button>
-                </div>
+                  mission={mission}
+                  expanded={expandedId === mission.id}
+                  onToggleExpand={() =>
+                    setExpandedId(expandedId === mission.id ? null : mission.id)
+                  }
+                  onToggleComplete={() => handleToggle(mission.id, false)}
+                  onDelete={() => handleDelete(mission.id)}
+                  onUpdateDescription={(desc) => {
+                    setMissions((prev) =>
+                      prev.map((m) => (m.id === mission.id ? { ...m, description: desc } : m)),
+                    );
+                  }}
+                />
               ))}
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface MissionCardProps {
+  mission: Mission;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onToggleComplete: () => void;
+  onDelete: () => void;
+  onUpdateDescription: (description: string | null) => void;
+}
+
+function MissionCard({
+  mission,
+  expanded,
+  onToggleExpand,
+  onToggleComplete,
+  onDelete,
+  onUpdateDescription,
+}: MissionCardProps) {
+  const [descDraft, setDescDraft] = useState(mission.description ?? '');
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleDescChange(value: string) {
+    setDescDraft(value);
+    onUpdateDescription(value || null);
+
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => {
+      fetch(`/api/missions/${mission.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: value || null }),
+      });
+    }, 800);
+  }
+
+  return (
+    <div
+      className={`rounded-2xl border border-border transition-all ${mission.completed ? 'opacity-60' : ''}`}
+    >
+      <div className="flex items-center gap-3 px-4 py-3">
+        <button
+          type="button"
+          aria-label={
+            mission.completed
+              ? `Mark "${mission.title}" as incomplete`
+              : `Mark "${mission.title}" as complete`
+          }
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+            mission.completed
+              ? 'border-primary bg-primary text-primary-foreground text-xs'
+              : 'border-muted-foreground hover:border-primary'
+          }`}
+          onClick={onToggleComplete}
+        >
+          {mission.completed && '✓'}
+        </button>
+        <button
+          type="button"
+          className={`flex-1 text-left text-sm ${mission.completed ? 'line-through' : 'font-medium'}`}
+          onClick={onToggleExpand}
+        >
+          {mission.title}
+        </button>
+        <button
+          type="button"
+          aria-label={`Delete "${mission.title}"`}
+          className="shrink-0 text-xs text-muted-foreground transition-colors hover:text-destructive"
+          onClick={onDelete}
+        >
+          ✕
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="border-t border-border px-4 py-3">
+          <textarea
+            placeholder="Add details about this mission..."
+            value={descDraft}
+            onChange={(e) => handleDescChange(e.target.value)}
+            className="w-full resize-none rounded-lg border-none bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+            rows={3}
+          />
         </div>
       )}
     </div>

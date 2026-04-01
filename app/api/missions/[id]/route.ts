@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { removeMission, updateMissionStatus } from '@/lib/services/missions';
+import { removeMission, updateMissionFields } from '@/lib/services/missions';
 import { createClient } from '@/lib/supabase/server';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -22,16 +22,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  if (typeof body !== 'object' || body === null || !('completed' in body)) {
-    return NextResponse.json({ error: 'completed is required' }, { status: 400 });
+  if (typeof body !== 'object' || body === null) {
+    return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
 
-  const { completed } = body as { completed: unknown };
-  if (typeof completed !== 'boolean') {
-    return NextResponse.json({ error: 'completed must be a boolean' }, { status: 400 });
+  const { completed, description } = body as { completed?: unknown; description?: unknown };
+
+  const data: { completed?: boolean; description?: string | null } = {};
+  if (typeof completed === 'boolean') data.completed = completed;
+  if (typeof description === 'string' || description === null) data.description = description;
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
   }
 
-  const mission = await updateMissionStatus(user.id, id, completed);
+  const mission = await updateMissionFields(user.id, id, data);
   if (!mission) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }

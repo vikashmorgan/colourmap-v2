@@ -13,6 +13,7 @@ export const missions = pgTable('missions', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').notNull(),
   title: text('title').notNull(),
+  description: text('description'),
   completed: boolean('completed').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
