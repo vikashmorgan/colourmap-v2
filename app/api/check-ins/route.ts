@@ -15,7 +15,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const checkIns = await getRecentCheckIns(getDb(), user.id);
+  const checkIns = await getRecentCheckIns(getDb(), user.id, 50);
   return NextResponse.json(checkIns);
 }
 

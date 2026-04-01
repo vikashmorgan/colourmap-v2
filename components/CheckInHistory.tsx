@@ -8,6 +8,7 @@ interface HistoryEntry {
   id: string;
   sliderValue: number;
   note: string | null;
+  tags: string[] | null;
   createdAt: string;
 }
 
@@ -17,18 +18,40 @@ function getDotColor(value: number): string {
   return 'hsl(25 70% 55%)';
 }
 
-function getRelativeTime(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diffMs = now - then;
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDays = Math.floor(diffHr / 24);
-  if (diffDays === 1) return 'yesterday';
-  return `${diffDays} days ago`;
+function formatTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  if (isToday) return 'Today';
+  if (isYesterday) return 'Yesterday';
+  return date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function groupByDate(entries: HistoryEntry[]): Map<string, HistoryEntry[]> {
+  const groups = new Map<string, HistoryEntry[]>();
+  for (const entry of entries) {
+    const key = new Date(entry.createdAt).toLocaleDateString();
+    const group = groups.get(key) ?? [];
+    group.push(entry);
+    groups.set(key, group);
+  }
+  return groups;
 }
 
 interface CheckInHistoryProps {
@@ -38,7 +61,6 @@ interface CheckInHistoryProps {
 export default function CheckInHistory({ refreshKey }: CheckInHistoryProps) {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -53,7 +75,6 @@ export default function CheckInHistory({ refreshKey }: CheckInHistoryProps) {
   }, []);
 
   useEffect(() => {
-    // refreshKey triggers refetch after new check-in
     void refreshKey;
     fetchHistory();
   }, [fetchHistory, refreshKey]);
@@ -74,44 +95,52 @@ export default function CheckInHistory({ refreshKey }: CheckInHistoryProps) {
 
   if (entries.length === 0) return null;
 
-  const dots = [...entries].reverse();
+  const grouped = groupByDate(entries);
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-center gap-3 py-4">
-        {dots.length > 1 && (
-          <div
-            className="absolute h-px bg-border"
-            style={{ width: `${(dots.length - 1) * 28}px` }}
-          />
-        )}
-        {dots.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            aria-label={`Check-in: ${getEmotionalWord(entry.sliderValue)}`}
-            className="relative h-3.5 w-3.5 rounded-full transition-transform hover:scale-125 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            style={{ backgroundColor: getDotColor(entry.sliderValue) }}
-            onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
-          />
-        ))}
-      </div>
-      {expandedId &&
-        (() => {
-          const entry = entries.find((e) => e.id === expandedId);
-          if (!entry) return null;
-          return (
-            <div className="rounded-2xl border border-border bg-card/80 px-4 py-3 text-center text-sm space-y-1">
-              <p className="font-medium">{getEmotionalWord(entry.sliderValue)}</p>
-              {entry.note && (
-                <p className="text-muted-foreground">
-                  {entry.note.length > 100 ? `${entry.note.slice(0, 100)}…` : entry.note}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground">{getRelativeTime(entry.createdAt)}</p>
-            </div>
-          );
-        })()}
+    <div className="space-y-6">
+      <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Check-in log</p>
+      {[...grouped.entries()].map(([dateKey, dayEntries]) => (
+        <div key={dateKey} className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">
+            {formatDate(dayEntries[0].createdAt)}
+          </p>
+          <div className="space-y-2">
+            {dayEntries.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex items-start gap-3 rounded-2xl border border-border bg-card/80 px-4 py-3"
+              >
+                <div
+                  className="mt-1 h-3 w-3 shrink-0 rounded-full"
+                  style={{ backgroundColor: getDotColor(entry.sliderValue) }}
+                />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-sm font-medium">{getEmotionalWord(entry.sliderValue)}</p>
+                    <p className="shrink-0 text-xs text-muted-foreground">
+                      {formatTime(entry.createdAt)}
+                    </p>
+                  </div>
+                  {entry.note && <p className="text-sm text-muted-foreground">{entry.note}</p>}
+                  {entry.tags && entry.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {entry.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

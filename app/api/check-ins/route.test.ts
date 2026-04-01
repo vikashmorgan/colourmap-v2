@@ -175,7 +175,7 @@ describe('GET /api/check-ins', () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual([fakeCheckIn]);
-    expect(getRecentCheckIns).toHaveBeenCalledWith('db-instance', 'user-1');
+    expect(getRecentCheckIns).toHaveBeenCalledWith('db-instance', 'user-1', 50);
   });
 
   it('returns 401 when user is not authenticated', async () => {

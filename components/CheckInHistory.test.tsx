@@ -1,18 +1,42 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import CheckInHistory from './CheckInHistory';
 
+const now = new Date('2026-03-31T14:00:00Z');
+
 const fakeEntries = [
-  { id: '1', sliderValue: 10, note: 'rough day', createdAt: '2026-03-30T08:00:00Z' },
-  { id: '2', sliderValue: 50, note: null, createdAt: '2026-03-30T12:00:00Z' },
-  { id: '3', sliderValue: 80, note: 'feeling great', createdAt: '2026-03-30T18:00:00Z' },
+  {
+    id: '3',
+    sliderValue: 80,
+    note: 'feeling great',
+    tags: ['Work'],
+    createdAt: '2026-03-31T12:00:00Z',
+  },
+  { id: '2', sliderValue: 50, note: null, tags: null, createdAt: '2026-03-31T08:00:00Z' },
+  { id: '1', sliderValue: 10, note: 'rough day', tags: null, createdAt: '2026-03-30T18:00:00Z' },
 ];
 
 describe('CheckInHistory', () => {
   beforeEach(() => {
+    vi.stubGlobal(
+      'Date',
+      class extends Date {
+        constructor(...args: ConstructorParameters<typeof Date>) {
+          if (args.length === 0) {
+            super(now.toISOString());
+          } else {
+            // @ts-expect-error -- spread into Date constructor
+            super(...args);
+          }
+        }
+
+        static override now() {
+          return now.getTime();
+        }
+      },
+    );
     vi.stubGlobal(
       'fetch',
       vi.fn(() =>
@@ -29,12 +53,38 @@ describe('CheckInHistory', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders dots for each check-in', async () => {
+  it('renders the check-in log heading', async () => {
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      const dots = screen.getAllByRole('button');
-      expect(dots).toHaveLength(3);
+      expect(screen.getByText('Check-in log')).toBeDefined();
+    });
+  });
+
+  it('shows emotional word and time for each entry', async () => {
+    render(<CheckInHistory refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Alive')).toBeDefined();
+      expect(screen.getByText('Still')).toBeDefined();
+      expect(screen.getByText('Crushed')).toBeDefined();
+    });
+  });
+
+  it('shows notes when present', async () => {
+    render(<CheckInHistory refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('feeling great')).toBeDefined();
+      expect(screen.getByText('rough day')).toBeDefined();
+    });
+  });
+
+  it('shows tags when present', async () => {
+    render(<CheckInHistory refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Work')).toBeDefined();
     });
   });
 
@@ -58,71 +108,10 @@ describe('CheckInHistory', () => {
     const { container } = render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      expect(container.querySelector('[aria-label="Loading history"]')).toBeNull();
+      expect(container.querySelector('[role="status"]')).toBeNull();
     });
 
     expect(container.children).toHaveLength(0);
-  });
-
-  it('shows tooltip with word and note when dot is clicked', async () => {
-    const user = userEvent.setup();
-    render(<CheckInHistory refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getAllByRole('button')).toHaveLength(3);
-    });
-
-    // Dots are rendered chronologically (oldest left, newest right)
-    // fakeEntries[2] (sliderValue: 80, "Alive") is newest → rightmost dot
-    const aliveDot = screen.getByLabelText('Check-in: Alive');
-    await user.click(aliveDot);
-
-    expect(screen.getByText('Alive')).toBeDefined();
-    expect(screen.getByText('feeling great')).toBeDefined();
-  });
-
-  it('closes tooltip when clicking the same dot again', async () => {
-    const user = userEvent.setup();
-    render(<CheckInHistory refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getAllByRole('button')).toHaveLength(3);
-    });
-
-    const aliveDot = screen.getByLabelText('Check-in: Alive');
-    await user.click(aliveDot);
-    expect(screen.getByText('Alive')).toBeDefined();
-
-    await user.click(aliveDot);
-    expect(screen.queryByText('Alive')).toBeNull();
-  });
-
-  it('truncates long notes to 100 characters', async () => {
-    const longNote = 'a'.repeat(150);
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () =>
-            Promise.resolve([
-              { id: '1', sliderValue: 50, note: longNote, createdAt: '2026-03-30T12:00:00Z' },
-            ]),
-        }),
-      ),
-    );
-
-    const user = userEvent.setup();
-    render(<CheckInHistory refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getAllByRole('button')).toHaveLength(1);
-    });
-
-    await user.click(screen.getByRole('button'));
-
-    const noteEl = screen.getByText(`${'a'.repeat(100)}…`);
-    expect(noteEl).toBeDefined();
   });
 
   it('refetches when refreshKey changes', async () => {
@@ -136,6 +125,15 @@ describe('CheckInHistory', () => {
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('groups entries by date', async () => {
+    render(<CheckInHistory refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Today')).toBeDefined();
+      expect(screen.getByText('Yesterday')).toBeDefined();
     });
   });
 });
