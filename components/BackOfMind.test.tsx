@@ -68,6 +68,7 @@ describe('BackOfMind', () => {
       expect(screen.getByText('Call dentist')).toBeDefined();
     });
 
+    await user.click(screen.getByLabelText('Add item'));
     await user.type(screen.getByPlaceholderText("What's lingering?"), 'New item');
     await user.click(screen.getByRole('button', { name: 'Add' }));
 

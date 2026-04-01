@@ -12,13 +12,6 @@ interface Mission {
   createdAt: string;
 }
 
-function getStatusColor(mission: Mission): string {
-  if (mission.completed) return 'bg-primary/40';
-  if (mission.blocking?.trim()) return 'bg-[#D4605A]';
-  if (mission.nextStep?.trim()) return 'bg-[#5BB848]';
-  return 'bg-muted-foreground/40';
-}
-
 function getPreview(mission: Mission): string | null {
   if (mission.blocking?.trim()) return mission.blocking.trim();
   if (mission.nextStep?.trim()) return mission.nextStep.trim();
@@ -30,6 +23,7 @@ export default function MissionTracker() {
   const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState('');
   const [adding, setAdding] = useState(false);
+  const [showAddInput, setShowAddInput] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchMissions = useCallback(async () => {
@@ -61,6 +55,7 @@ export default function MissionTracker() {
         const mission = await res.json();
         setMissions((prev) => [mission, ...prev]);
         setNewTitle('');
+        setShowAddInput(false);
         setExpandedId(mission.id);
       }
     } finally {
@@ -92,26 +87,47 @@ export default function MissionTracker() {
 
   return (
     <div className="rounded-3xl border border-border bg-card p-6 space-y-4">
-      <p className="text-sm font-semibold uppercase tracking-[0.24em] text-center">
-        Current Mission
-      </p>
-
-      <form onSubmit={handleAdd} className="flex gap-2">
-        <input
-          type="text"
-          placeholder="Add a mission..."
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        />
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold uppercase tracking-[0.24em]">Current Mission</p>
         <button
-          type="submit"
-          disabled={!newTitle.trim() || adding}
-          className="rounded-xl bg-[#5C3018] px-3 py-2 text-sm font-medium text-[#F5DEB8] transition-colors hover:bg-[#4A2810] disabled:opacity-50"
+          type="button"
+          aria-label="Add mission"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          onClick={() => setShowAddInput(!showAddInput)}
         >
-          {adding ? '...' : 'Add'}
+          <svg
+            aria-hidden="true"
+            className={`h-4 w-4 transition-transform ${showAddInput ? 'rotate-45' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" />
+          </svg>
         </button>
-      </form>
+      </div>
+
+      {showAddInput && (
+        <form onSubmit={handleAdd} className="flex gap-2">
+          <input
+            type="text"
+            placeholder="What's the mission?"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            // biome-ignore lint/a11y/noAutofocus: intentional focus on reveal
+            autoFocus
+          />
+          <button
+            type="submit"
+            disabled={!newTitle.trim() || adding}
+            className="rounded-xl bg-[#5C3018] px-3 py-2 text-sm font-medium text-[#F5DEB8] transition-colors hover:bg-[#4A2810] disabled:opacity-50"
+          >
+            {adding ? '...' : 'Add'}
+          </button>
+        </form>
+      )}
 
       {loading ? (
         <div className="space-y-2">
@@ -181,7 +197,7 @@ function MissionCard({
   onFieldUpdate,
 }: MissionCardProps) {
   const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const [showContext, setShowContext] = useState(false);
+  const [openField, setOpenField] = useState<string | null>(null);
 
   function save(field: string, value: string) {
     const existing = saveTimers.current.get(field);
@@ -241,10 +257,6 @@ function MissionCard({
           className="flex flex-1 items-center gap-2 text-left min-w-0"
           onClick={onToggleExpand}
         >
-          <div
-            className={`h-2.5 w-2.5 shrink-0 rounded-full ${getStatusColor(mission)}`}
-            aria-hidden="true"
-          />
           <div className="min-w-0 flex-1">
             <p className={`text-sm truncate ${mission.completed ? 'line-through' : 'font-medium'}`}>
               {mission.title}
@@ -265,86 +277,113 @@ function MissionCard({
         </button>
       </div>
 
-      {/* Expanded body */}
+      {/* Expanded body — all fields collapsible */}
       {expanded && (
-        <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
-          {/* Objective */}
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Objective
-            </p>
-            <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2">
-              <span className="text-muted-foreground" aria-hidden="true">
-                →
-              </span>
-              <input
-                type="text"
-                placeholder="What does done look like?"
-                value={mission.nextStep ?? ''}
-                onChange={(e) => handleChange('nextStep', e.target.value)}
-                className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Challenge */}
-          <div className="space-y-1.5">
-            <p
-              className={`text-xs font-medium uppercase tracking-wider ${
-                hasBlocker ? 'text-[#D4605A]' : 'text-muted-foreground'
-              }`}
-            >
-              Challenge
-            </p>
-            <div
-              className={`rounded-xl border px-3 py-2 ${
-                hasBlocker ? 'border-[#D4605A]/30 bg-[#D4605A]/5' : 'border-border'
-              }`}
-            >
-              <input
-                type="text"
-                placeholder="What's making this hard?"
-                value={mission.blocking ?? ''}
-                onChange={(e) => handleChange('blocking', e.target.value)}
-                className="w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* More context — collapsible */}
-          <div>
-            <button
-              type="button"
-              className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-              onClick={() => setShowContext(!showContext)}
-            >
-              <svg
-                aria-hidden="true"
-                className={`h-3 w-3 transition-transform ${showContext ? 'rotate-90' : ''}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-              More context
-              {mission.description?.trim() && !showContext && (
-                <span className="ml-1 h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
-              )}
-            </button>
-            {showContext && (
-              <textarea
-                placeholder="Background, notes, links..."
-                value={mission.description ?? ''}
-                onChange={(e) => handleChange('description', e.target.value)}
-                className="mt-2 w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                rows={3}
-              />
-            )}
-          </div>
+        <div className="border-t border-border px-4 pb-3 pt-2">
+          <CollapsibleField
+            label="Objective"
+            value={mission.nextStep ?? ''}
+            placeholder="Define the target"
+            open={openField === 'nextStep'}
+            onToggle={() => setOpenField(openField === 'nextStep' ? null : 'nextStep')}
+            onChange={(v) => handleChange('nextStep', v)}
+          />
+          <CollapsibleField
+            label="Challenge"
+            value={mission.blocking ?? ''}
+            placeholder="What's making this hard?"
+            open={openField === 'blocking'}
+            onToggle={() => setOpenField(openField === 'blocking' ? null : 'blocking')}
+            onChange={(v) => handleChange('blocking', v)}
+            accent={hasBlocker}
+          />
+          <CollapsibleField
+            label="Notes"
+            value={mission.description ?? ''}
+            placeholder="Background, links..."
+            open={openField === 'description'}
+            onToggle={() => setOpenField(openField === 'description' ? null : 'description')}
+            onChange={(v) => handleChange('description', v)}
+            multiline
+          />
         </div>
       )}
+    </div>
+  );
+}
+
+interface CollapsibleFieldProps {
+  label: string;
+  value: string;
+  placeholder: string;
+  open: boolean;
+  onToggle: () => void;
+  onChange: (value: string) => void;
+  accent?: boolean;
+  multiline?: boolean;
+}
+
+function CollapsibleField({
+  label,
+  value,
+  placeholder,
+  open,
+  onToggle,
+  onChange,
+  accent,
+  multiline,
+}: CollapsibleFieldProps) {
+  const hasValue = value.trim().length > 0;
+
+  return (
+    <div className="border-t border-border/50 py-2">
+      <button
+        type="button"
+        className="flex w-full items-center gap-1.5 text-xs transition-colors hover:text-foreground"
+        onClick={onToggle}
+      >
+        <svg
+          aria-hidden="true"
+          className={`h-3 w-3 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+        <span
+          className={`font-medium uppercase tracking-wider ${
+            accent && hasValue ? 'text-[#D4605A]' : 'text-muted-foreground'
+          }`}
+        >
+          {label}
+        </span>
+        {hasValue && !open && (
+          <span className="ml-auto truncate text-muted-foreground font-normal normal-case tracking-normal">
+            {value.trim().slice(0, 40)}
+            {value.trim().length > 40 ? '...' : ''}
+          </span>
+        )}
+      </button>
+      {open &&
+        (multiline ? (
+          <textarea
+            placeholder={placeholder}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="mt-2 w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            rows={3}
+          />
+        ) : (
+          <input
+            type="text"
+            placeholder={placeholder}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="mt-2 w-full rounded-xl border border-border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        ))}
     </div>
   );
 }

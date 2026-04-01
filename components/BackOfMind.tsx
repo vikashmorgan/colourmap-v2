@@ -14,6 +14,7 @@ export default function BackOfMind() {
   const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState('');
   const [adding, setAdding] = useState(false);
+  const [showAddInput, setShowAddInput] = useState(false);
 
   const fetchItems = useCallback(async () => {
     try {
@@ -44,6 +45,7 @@ export default function BackOfMind() {
         const item = await res.json();
         setItems((prev) => [item, ...prev]);
         setNewTitle('');
+        setShowAddInput(false);
       }
     } finally {
       setAdding(false);
@@ -69,26 +71,47 @@ export default function BackOfMind() {
 
   return (
     <div className="rounded-3xl border border-border bg-card p-6 space-y-4">
-      <p className="text-sm font-semibold uppercase tracking-[0.24em] text-center">
-        Back of my mind
-      </p>
-
-      <form onSubmit={handleAdd} className="flex gap-2">
-        <input
-          type="text"
-          placeholder="What's lingering?"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        />
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold uppercase tracking-[0.24em]">Back of my mind</p>
         <button
-          type="submit"
-          disabled={!newTitle.trim() || adding}
-          className="rounded-xl bg-[#5C3018] px-3 py-2 text-sm font-medium text-[#F5DEB8] transition-colors hover:bg-[#4A2810] disabled:opacity-50"
+          type="button"
+          aria-label="Add item"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          onClick={() => setShowAddInput(!showAddInput)}
         >
-          {adding ? '...' : 'Add'}
+          <svg
+            aria-hidden="true"
+            className={`h-4 w-4 transition-transform ${showAddInput ? 'rotate-45' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" />
+          </svg>
         </button>
-      </form>
+      </div>
+
+      {showAddInput && (
+        <form onSubmit={handleAdd} className="flex gap-2">
+          <input
+            type="text"
+            placeholder="What's lingering?"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            // biome-ignore lint/a11y/noAutofocus: intentional focus on reveal
+            autoFocus
+          />
+          <button
+            type="submit"
+            disabled={!newTitle.trim() || adding}
+            className="rounded-xl bg-[#5C3018] px-3 py-2 text-sm font-medium text-[#F5DEB8] transition-colors hover:bg-[#4A2810] disabled:opacity-50"
+          >
+            {adding ? '...' : 'Add'}
+          </button>
+        </form>
+      )}
 
       {loading ? (
         <div className="space-y-2">
