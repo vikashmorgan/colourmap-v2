@@ -87,12 +87,12 @@ export default function MissionTracker() {
 
   return (
     <div className="rounded-3xl border border-border bg-card p-6 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="relative flex items-center justify-center">
         <p className="text-sm font-semibold uppercase tracking-[0.24em]">Current Mission</p>
         <button
           type="button"
           aria-label="Add mission"
-          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="absolute right-0 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           onClick={() => setShowAddInput(!showAddInput)}
         >
           <svg
