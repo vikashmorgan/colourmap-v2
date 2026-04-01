@@ -31,10 +31,9 @@ describe('CockpitPage', () => {
     cleanup();
   });
 
-  it('renders the cockpit with all sections', () => {
+  it('renders all sections', () => {
     render(<CockpitPage />);
 
-    expect(screen.getByText('Your life balance will land here.')).toBeDefined();
     expect(screen.getByTestId('check-in-form')).toBeDefined();
     expect(screen.getByTestId('check-in-history')).toBeDefined();
     expect(screen.getByTestId('mission-tracker')).toBeDefined();

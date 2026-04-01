@@ -12,18 +12,6 @@ export default function CockpitPage() {
 
   return (
     <main className="space-y-10">
-      <section className="space-y-4">
-        <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Cockpit</p>
-        <div className="space-y-3">
-          <h1 className="text-4xl font-semibold tracking-tight">
-            Your life balance will land here.
-          </h1>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            Check in, track your missions, and see how you're moving.
-          </p>
-        </div>
-      </section>
-
       <section className="grid gap-4 md:grid-cols-2">
         <div className="space-y-4">
           <CheckInForm onCheckInComplete={() => setRefreshKey((k) => k + 1)} />

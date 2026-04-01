@@ -12,6 +12,19 @@ interface Mission {
   createdAt: string;
 }
 
+function getStatusColor(mission: Mission): string {
+  if (mission.completed) return 'bg-primary/40';
+  if (mission.blocking?.trim()) return 'bg-[#D4605A]';
+  if (mission.nextStep?.trim()) return 'bg-[#5BB848]';
+  return 'bg-muted-foreground/40';
+}
+
+function getPreview(mission: Mission): string | null {
+  if (mission.blocking?.trim()) return mission.blocking.trim();
+  if (mission.nextStep?.trim()) return mission.nextStep.trim();
+  return null;
+}
+
 export default function MissionTracker() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +116,7 @@ export default function MissionTracker() {
       {loading ? (
         <div className="space-y-2">
           {[0, 1, 2].map((i) => (
-            <div key={`skeleton-${i}`} className="h-10 rounded-xl bg-muted animate-pulse" />
+            <div key={`skeleton-${i}`} className="h-12 rounded-2xl bg-muted animate-pulse" />
           ))}
         </div>
       ) : (
@@ -168,10 +181,9 @@ function MissionCard({
   onFieldUpdate,
 }: MissionCardProps) {
   const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const [showContext, setShowContext] = useState(false);
 
-  function handleChange(field: 'description' | 'blocking' | 'nextStep', value: string) {
-    onFieldUpdate(field, value || null);
-
+  function save(field: string, value: string) {
     const existing = saveTimers.current.get(field);
     if (existing) clearTimeout(existing);
 
@@ -187,8 +199,13 @@ function MissionCard({
     );
   }
 
-  const hasBlocker = mission.blocking && mission.blocking.trim().length > 0;
-  const hasNextStep = mission.nextStep && mission.nextStep.trim().length > 0;
+  function handleChange(field: 'description' | 'blocking' | 'nextStep', value: string) {
+    onFieldUpdate(field, value || null);
+    save(field, value);
+  }
+
+  const preview = getPreview(mission);
+  const hasBlocker = Boolean(mission.blocking?.trim());
 
   return (
     <div
@@ -196,11 +213,11 @@ function MissionCard({
         mission.completed
           ? 'border-border/50 opacity-60'
           : hasBlocker
-            ? 'border-destructive/30'
+            ? 'border-[#D4605A]/30'
             : 'border-border'
       }`}
     >
-      {/* Header row */}
+      {/* Collapsed header */}
       <div className="flex items-center gap-3 px-4 py-3">
         <button
           type="button"
@@ -218,23 +235,26 @@ function MissionCard({
         >
           {mission.completed && '✓'}
         </button>
+
         <button
           type="button"
-          className={`flex-1 text-left text-sm ${mission.completed ? 'line-through' : 'font-medium'}`}
+          className="flex flex-1 items-center gap-2 text-left min-w-0"
           onClick={onToggleExpand}
         >
-          {mission.title}
+          <div
+            className={`h-2.5 w-2.5 shrink-0 rounded-full ${getStatusColor(mission)}`}
+            aria-hidden="true"
+          />
+          <div className="min-w-0 flex-1">
+            <p className={`text-sm truncate ${mission.completed ? 'line-through' : 'font-medium'}`}>
+              {mission.title}
+            </p>
+            {!expanded && preview && (
+              <p className="text-xs text-muted-foreground truncate">{preview}</p>
+            )}
+          </div>
         </button>
-        {!expanded && hasBlocker && (
-          <span className="shrink-0 rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
-            blocked
-          </span>
-        )}
-        {!expanded && hasNextStep && !hasBlocker && (
-          <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-xs text-accent-foreground">
-            next step
-          </span>
-        )}
+
         <button
           type="button"
           aria-label={`Delete "${mission.title}"`}
@@ -245,64 +265,89 @@ function MissionCard({
         </button>
       </div>
 
-      {/* Expanded card body */}
+      {/* Expanded body */}
       {expanded && (
-        <div className="border-t border-border space-y-0">
-          {/* Objective */}
-          <MissionField
-            label="Objective"
-            placeholder="What are you trying to achieve?"
-            value={mission.description ?? ''}
-            onChange={(v) => handleChange('description', v)}
-          />
+        <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
+          {/* Two zones: next step + blocker */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {/* What's moving */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Next step
+              </p>
+              <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2">
+                <span className="text-muted-foreground" aria-hidden="true">
+                  →
+                </span>
+                <input
+                  type="text"
+                  placeholder="One thing to move forward"
+                  value={mission.nextStep ?? ''}
+                  onChange={(e) => handleChange('nextStep', e.target.value)}
+                  className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+                />
+              </div>
+            </div>
 
-          {/* Blocking */}
-          <MissionField
-            label="Blocking"
-            placeholder="What's in the way right now?"
-            value={mission.blocking ?? ''}
-            onChange={(v) => handleChange('blocking', v)}
-            accent={hasBlocker ? 'destructive' : undefined}
-          />
+            {/* What's stuck */}
+            <div className="space-y-1.5">
+              <p
+                className={`text-xs font-medium uppercase tracking-wider ${
+                  hasBlocker ? 'text-[#D4605A]' : 'text-muted-foreground'
+                }`}
+              >
+                Blocking
+              </p>
+              <div
+                className={`rounded-xl border px-3 py-2 ${
+                  hasBlocker ? 'border-[#D4605A]/30 bg-[#D4605A]/5' : 'border-border'
+                }`}
+              >
+                <input
+                  type="text"
+                  placeholder="What's in the way?"
+                  value={mission.blocking ?? ''}
+                  onChange={(e) => handleChange('blocking', e.target.value)}
+                  className="w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
 
-          {/* Next step */}
-          <MissionField
-            label="Next step"
-            placeholder="The smallest thing that moves this forward"
-            value={mission.nextStep ?? ''}
-            onChange={(v) => handleChange('nextStep', v)}
-          />
+          {/* More context — collapsible */}
+          <div>
+            <button
+              type="button"
+              className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => setShowContext(!showContext)}
+            >
+              <svg
+                aria-hidden="true"
+                className={`h-3 w-3 transition-transform ${showContext ? 'rotate-90' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              More context
+              {mission.description?.trim() && !showContext && (
+                <span className="ml-1 h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
+              )}
+            </button>
+            {showContext && (
+              <textarea
+                placeholder="Background, notes, links..."
+                value={mission.description ?? ''}
+                onChange={(e) => handleChange('description', e.target.value)}
+                className="mt-2 w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                rows={3}
+              />
+            )}
+          </div>
         </div>
       )}
-    </div>
-  );
-}
-
-interface MissionFieldProps {
-  label: string;
-  placeholder: string;
-  value: string;
-  onChange: (value: string) => void;
-  accent?: 'destructive';
-}
-
-function MissionField({ label, placeholder, value, onChange, accent }: MissionFieldProps) {
-  return (
-    <div className="border-t border-border/50 px-4 py-3 space-y-1">
-      <p
-        className={`text-xs font-medium uppercase tracking-wider ${
-          accent === 'destructive' && value ? 'text-destructive' : 'text-muted-foreground'
-        }`}
-      >
-        {label}
-      </p>
-      <textarea
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full resize-none rounded-lg border-none bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
-        rows={2}
-      />
     </div>
   );
 }
