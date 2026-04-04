@@ -1,123 +1,73 @@
 # Journey
 
-> The narrative layer that turns data into story — archetypes, chapters, tones, and a companion that reflects your path back to you.
+> The narrative layer that turns data into story — archetypes, tones, maps, and a companion that reflects your path.
 
 ## Context
 
-Check-ins accumulate but never synthesize into meaning. The user has 50 check-ins, 3 missions, FGAC entries, pulse data — but no story. No "here's who you are right now" or "here's how you've changed." The Journey page transforms raw emotional data into a personal narrative using archetypes, a choosable voice, and an AI cat companion.
+Check-ins accumulate but never synthesize into meaning. The Journey page transforms raw emotional data into a personal narrative. Check In is clarity. Journey is style — same data, reframed through archetype and tone.
 
 ## Core Components
 
 ### 1. Tone System (5 voices)
 
-The user chooses how they want the app to talk to them. This affects all AI output on the Journey page and can extend to other AI features.
+Collapsible picker. Shows active tone as small pill. Tap to expand all 5 options.
 
-- **Cowboy** (Dusty) — Laconic, honest, earthy metaphors. Short sentences.
-- **Warrior** (Ronin) — Disciplined, martial, respectful. Honor-based.
-- **Princess** (Luna) — Graceful, poetic, nurturing. Inner kingdom metaphors.
-- **Mythologic** (Oracle) — Symbolic, archetypal, layered. Myth references.
-- **Practical** (Pixel) — Data-driven, structured. No metaphors. Numbers.
+- **Cowboy** (The Cowboy) — Laconic, honest, earthy metaphors
+- **Warrior** (The Warrior) — Disciplined, martial, respectful
+- **Princess** (The Guide) — Graceful, poetic, nurturing
+- **Mythologic** (The Oracle) — Symbolic, archetypal, layered
+- **Practical** (The Analyst) — Data-driven, structured, no metaphors
 
-**Behavior:**
-- Tone persists in localStorage
-- Each tone has a cat name, role description, icon, and color
-- AI prompts include tone-specific voice instructions
-- Tone colors the UI accent throughout the Journey page
+Tone persists in localStorage. Colors the UI accent and all AI output.
 
 ### 2. Archetype System
 
-**Main Archetype** — One of 5, computed from user data:
-- **The Seeker** — High confusion FGAC, many fears, searching orientation
-- **The Builder** — Above-average slider, strong structure pulse, many strengths
-- **The Healer** — Gratitude entries, fear work, body focus
-- **The Warrior** — High courage/willingness, facing avoidance directly
-- **The Artist** — Creative tags, wide emotional range, notebook activity
+5 main archetypes, selectable. App suggests one from data, user chooses.
 
-**Inner Archetypes** — One per category (Feeling/Doing/Sharing), each with a strength bar:
+- **The Artist** (purple) — Feeling deeply, chaos as canvas
+- **The Architect** (ochre) — Building order from chaos
+- **The Psychologist** (blue) — Understanding patterns beneath
+- **The Warrior** (red) — Facing what others avoid
+- **The Alchemist** (green) — Turning lead into gold
 
-| Category | Archetypes |
-|----------|-----------|
-| Feeling | The Observer, The Empath, The Stoic, The Phoenix |
-| Doing | The Architect, The Explorer, The Monk, The Rebel |
-| Sharing | The Anchor, The Mirror, The Torch, The Lone Wolf |
-
-**Behavior:**
-- Archetype computed client-side from check-in patterns + life scan answers
-- Displayed as a large centered card (main) + 3 smaller grid cards (inner)
-- Recalculates on each page visit — archetypes shift as data shifts
-- Strength bars show how strongly the data supports each inner archetype
+Inner archetypes per category (Feeling/Doing/Sharing) shown as compact horizontal row.
 
 ### 3. Chapter System
 
-**Behavior:**
-- Current chapter title displayed prominently, editable on click
-- Saved to life_scan_answers as `chapter_title`
-- Shows emotional center (average emotional word) and check-in count
-- Future: AI-suggested chapter names, chapter history timeline, auto-detection of emotional shifts
+Editable title, centered. Saved to life_scan_answers.
 
-### 4. Cat Companion
+### 4. Soul Map
 
-**Behavior:**
-- "Reflect on my journey" button sends context (archetype, chapter, emotional center, check-in count) to AI
-- AI responds in the chosen tone voice, 3-4 sentences
-- Streamed via `useCompletion` from `@ai-sdk/react`
-- API route at `/api/journey/reflect` fetches full user context (check-ins, life scan, missions)
-- Cat companion also activated by the Dark Period card
+See [soul-map.md](soul-map.md).
 
-### 5. Dark Period Protocol
+### 5. Personality Map
 
-**Behavior:**
-- "Need support?" collapsible card at the bottom of Journey
-- Opens to 5 structured questions:
-  1. How dark? (Shadow / Heavy / Fog / Storm / Abyss)
-  2. What triggered this? (free text)
-  3. Have you been here before? (First time / Sometimes / Often / Cycle)
-  4. What has helped before? (free text)
-  5. What do you need right now? (free text)
-- After 3+ answers, "Talk to [cat name]" button sends all answers to the AI companion
-- AI responds with compassion in the chosen tone — acknowledges the darkness, names what it sees, does not prescribe
+See [personality-map.md](personality-map.md).
 
-### 6. Personality Map (planned)
+### 6. Life Timeline
 
-**Vision:**
-- Map the fragments of your personality as named entities
-- Each fragment has traits, triggers, strengths, and shadows
-- Inspired by IFS (Internal Family Systems): parts of you that protect, manage, and exile
-- Visual representation as a constellation or territory map
-- AI helps name and understand your fragments through guided questions
+See [life-timeline.md](life-timeline.md).
 
-## States & Edge Cases
+### 7. Cat Companion
 
-- **No check-ins yet** — Show default Seeker archetype with "Check in to discover your archetype" message
-- **Only 1-2 check-ins** — Archetype computation uses defaults heavily; show "Early days" label
-- **Tone change** — UI colors update immediately; next AI interaction uses new tone
-- **Dark period with no data** — Cat companion responds generically with warmth
-- **Chapter not set** — Shows "Untitled chapter" as clickable placeholder
-- **AI failure** — Show "Connection lost" message, hide loading dots
+AI reflection partner. "Reflect on my journey" sends context to Claude Haiku. Responds in chosen tone voice, 3-4 sentences.
+
+### 8. Logbook
+
+Structured dark period support. 5 questions: how dark (Shadow/Heavy/Fog/Storm/Abyss), trigger, recurrence (First time/Sometimes/Often/Cycle), what helps, what you need.
+
+**Memory system**: saves past entries in localStorage. "Look up — you have been here before" opens The Heavens view showing: what brought you back, past triggers as pills, history strip. AI companion receives past wisdom as context.
+
+## Page Flow
+
+Title → Tone (collapsible) → Chapter → Archetype (single card, expandable picker) → Inner Archetypes (compact row) → Soul Map (clickable territories) → Personality Map → Life Timeline → Cat Companion → Logbook
 
 ## Done When
 
-- User can choose from 5 tones and the choice persists
-- Main archetype displays correctly based on check-in patterns
-- 3 inner archetypes display with strength bars
-- Chapter title is editable and saves
-- Cat companion streams a tone-appropriate reflection
-- Dark period card collects answers and feeds them to AI
-- All AI responses respect the "cockpit not coach" principle — observe, don't prescribe
-
-## Dependencies
-
-- `/api/check-ins` — recent check-ins for archetype computation
-- `/api/life-scan-answers` — fears, strengths, vision for AI context
-- `/api/journey/reflect` — AI reflection endpoint
-- `@ai-sdk/react` `useCompletion` — streaming
-- `lib/emotional-vocabulary` — emotional word mapping
-
-## Future Extensions
-
-- **Soul Cartography** — Topographic map of emotional territories (fear canyons, strength mountains, vision horizons)
-- **Weekly/Monthly/Yearly evolution views** — Emotion river, chapter timeline, mission arcs
-- **Card system** — Daily action cards drawn from archetype + current challenges
-- **Cat visuals** — Illustrated cat taking on archetype forms (wizard, boxer, warrior, queen)
-- **Personality fragments** — IFS-inspired part mapping with AI-guided discovery
-- **Hero's Quest progression** — Automatic quest phase detection (Ordinary World → Call → Threshold → Tests → Ordeal → Reward → Return)
+- All 8 components render and function
+- Tone, archetype, chapter persist
+- Soul map territories are clickable and writable
+- Personality parts save with needs/triggers/strength
+- Life timeline supports add/drag/zoom
+- Logbook saves history and shows past wisdom
+- Cat companion streams tone-appropriate reflections

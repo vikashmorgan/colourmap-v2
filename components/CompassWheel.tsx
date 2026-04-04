@@ -40,7 +40,7 @@ const WHEELS = [
     id: 'sharing',
     name: 'Sharing',
     segments: ['Love', 'Friends', 'Network', 'Family'],
-    colors: ['#A8C8E0', '#90B0D0'],
+    colors: ['#8AB8D8', '#5A9AC0'],
   },
 ];
 

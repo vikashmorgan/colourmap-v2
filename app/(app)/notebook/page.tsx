@@ -100,7 +100,6 @@ interface Notebook {
   id: string;
   label: string;
   color: string;
-  icon: string;
   isMusic?: boolean;
 }
 
@@ -123,15 +122,15 @@ const NOTE_FONTS = [
 ];
 
 const DEFAULT_NOTEBOOKS: Notebook[] = [
-  { id: 'notes', label: 'Notes', color: '#C4A060', icon: '📝' },
-  { id: 'ideas', label: 'Ideas', color: '#E0844A', icon: '💡' },
-  { id: 'journal', label: 'Journal', color: '#7A8A50', icon: '📖' },
-  { id: 'tasks', label: 'Tasks', color: '#3A8AC4', icon: '✓' },
-  { id: 'song_ideas', label: 'Songs', color: '#9B6BA0', icon: '♪', isMusic: true },
-  { id: 'projects', label: 'Projects', color: '#3A8AC4', icon: '🎵', isMusic: true },
-  { id: 'rhymes', label: 'Rhymes', color: '#D4605A', icon: '✎', isMusic: true },
-  { id: 'practice_log', label: 'Practice', color: '#7A8A50', icon: '🎸', isMusic: true },
-  { id: 'errors', label: 'Lessons', color: '#D45050', icon: '⚡', isMusic: true },
+  { id: 'notes', label: 'Notes', color: '#C4A060' },
+  { id: 'ideas', label: 'Ideas', color: '#E0844A' },
+  { id: 'journal', label: 'Journal', color: '#7A8A50' },
+  { id: 'tasks', label: 'Tasks', color: '#3A8AC4' },
+  { id: 'song_ideas', label: 'Songs', color: '#9B6BA0', isMusic: true },
+  { id: 'projects', label: 'Projects', color: '#3A8AC4', isMusic: true },
+  { id: 'rhymes', label: 'Rhymes', color: '#D4605A', isMusic: true },
+  { id: 'practice_log', label: 'Practice', color: '#7A8A50', isMusic: true },
+  { id: 'errors', label: 'Lessons', color: '#D45050', isMusic: true },
 ];
 
 const NOTEBOOK_STORAGE = 'colourmap:notebooks-v2';
@@ -555,7 +554,10 @@ export default function NotebookPage() {
                   borderLeft: isActive ? `3px solid ${nb.color}` : '3px solid transparent',
                 }}
               >
-                <span className="text-sm">{nb.icon}</span>
+                <div
+                  className="h-3 w-3 rounded-full shrink-0"
+                  style={{ background: nb.color, opacity: isActive ? 0.8 : 0.3 }}
+                />
                 <div className="flex-1 min-w-0">
                   <p
                     className="text-[11px] font-medium truncate"
@@ -608,10 +610,7 @@ export default function NotebookPage() {
                 disabled={!newNbName.trim()}
                 onClick={() => {
                   const id = newNbName.trim().toLowerCase().replace(/\s+/g, '_');
-                  saveNotebooks([
-                    ...notebooks,
-                    { id, label: newNbName.trim(), color: newNbColor, icon: '📄' },
-                  ]);
+                  saveNotebooks([...notebooks, { id, label: newNbName.trim(), color: newNbColor }]);
                   setActiveNotebook(id);
                   setNewNbName('');
                   setShowAddNotebook(false);
@@ -629,7 +628,10 @@ export default function NotebookPage() {
         <div className="flex-1 min-w-0 space-y-3">
           {/* Notebook header */}
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-xl">{activeNb?.icon}</span>
+            <div
+              className="h-4 w-4 rounded-full"
+              style={{ background: activeNb?.color, opacity: 0.6 }}
+            />
             <h2 className="text-lg font-serif" style={{ color: activeNb?.color }}>
               {activeNb?.label}
             </h2>
@@ -671,7 +673,10 @@ export default function NotebookPage() {
           {/* Notes list */}
           {filtered.length === 0 && (
             <div className="text-center py-12">
-              <span className="text-3xl opacity-10">{activeNb?.icon}</span>
+              <div
+                className="h-8 w-8 rounded-full mx-auto"
+                style={{ background: activeNb?.color, opacity: 0.1 }}
+              />
               <p className="text-sm text-muted-foreground/30 mt-2">No notes yet</p>
             </div>
           )}
