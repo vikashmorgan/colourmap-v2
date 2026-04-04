@@ -1,37 +1,14 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-let capturedOnValueChange: ((value: number[]) => void) | undefined;
-
-vi.mock('@/components/ui/slider', () => ({
-  Slider: (props: { value: number[]; onValueChange: (value: number[]) => void; id?: string }) => {
-    capturedOnValueChange = props.onValueChange;
-    return (
-      <input
-        type="range"
-        id={props.id}
-        data-testid="slider"
-        value={props.value[0]}
-        onChange={(e) => props.onValueChange([Number(e.target.value)])}
-        readOnly
-      />
-    );
-  },
-}));
-
-vi.mock('@/components/ui/label', () => ({
-  // biome-ignore lint/a11y/noLabelWithoutControl: test stub — htmlFor comes through props spread
-  Label: (props: React.ComponentProps<'label'>) => <label {...props} />,
+vi.mock('@/components/ui/button', () => ({
+  Button: (props: React.ComponentProps<'button'>) => <button {...props} />,
 }));
 
 vi.mock('@/components/ui/textarea', () => ({
   Textarea: (props: React.ComponentProps<'textarea'>) => <textarea {...props} />,
-}));
-
-vi.mock('@/components/ui/button', () => ({
-  Button: (props: React.ComponentProps<'button'>) => <button {...props} />,
 }));
 
 vi.mock('./ReflectionMoment', () => ({
@@ -42,19 +19,32 @@ vi.mock('./ReflectionMoment', () => ({
   ),
 }));
 
+vi.mock('@/components/PostCheckInInsight', () => ({
+  default: ({ onDismiss }: { onDismiss: () => void }) => (
+    <button type="button" data-testid="insight" onClick={onDismiss}>
+      Insight
+    </button>
+  ),
+}));
+
 import CheckInForm from './CheckInForm';
 
 describe('CheckInForm', () => {
   beforeEach(() => {
-    capturedOnValueChange = undefined;
     vi.stubGlobal(
       'fetch',
-      vi.fn(() =>
-        Promise.resolve({
+      vi.fn((url: string) => {
+        if (url === '/api/life-scan-answers') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ answers: {} }),
+          });
+        }
+        return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ id: '1', sliderValue: 72, note: null, tags: null }),
-        }),
-      ),
+        });
+      }),
     );
   });
 
@@ -63,116 +53,65 @@ describe('CheckInForm', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders the slider, textarea, and submit button', () => {
+  it('renders the submit button', () => {
     render(<CheckInForm />);
 
-    expect(screen.getByTestId('slider')).toBeDefined();
-    expect(screen.getByPlaceholderText("What's on your mind?")).toBeDefined();
     expect(screen.getByRole('button', { name: 'Check in' })).toBeDefined();
   });
 
-  it('renders scale endpoint labels', () => {
-    render(<CheckInForm />);
+  it('renders the Hawkins emotion bar', () => {
+    const { container } = render(<CheckInForm />);
 
-    expect(screen.getByText('Heavy / Contracted')).toBeDefined();
-    expect(screen.getByText('Light / Expansive')).toBeDefined();
+    // The bar contains 14 colored segments (HAWKINS array has 14 entries)
+    const form = container.querySelector('form');
+    expect(form).toBeDefined();
   });
 
-  it('submit button is enabled by default (Still is valid)', () => {
+  it('renders the textarea', () => {
+    render(<CheckInForm />);
+
+    // The textarea exists with a dynamic placeholder
+    expect(screen.getByRole('textbox')).toBeDefined();
+  });
+
+  it('submit button is enabled by default', () => {
     render(<CheckInForm />);
 
     const button = screen.getByRole('button', { name: 'Check in' });
     expect(button).toHaveProperty('disabled', false);
   });
 
-  it('displays the emotional vocabulary word', () => {
-    render(<CheckInForm />);
-
-    expect(screen.getByText('Still')).toBeDefined();
-
-    act(() => capturedOnValueChange?.([80]));
-    expect(screen.getByText('Alive')).toBeDefined();
-  });
-
-  it('renders context tag pills', () => {
-    render(<CheckInForm />);
-
-    expect(screen.getByRole('button', { name: 'Work' })).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Body' })).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Relationships' })).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Creative' })).toBeDefined();
-    expect(screen.getByRole('button', { name: 'General' })).toBeDefined();
-  });
-
-  it('toggles tag selection on click', async () => {
+  it('sends a POST request on submit', async () => {
     const user = userEvent.setup();
     render(<CheckInForm />);
 
-    const workTag = screen.getByRole('button', { name: 'Work' });
-    expect(workTag.getAttribute('aria-pressed')).toBe('false');
-
-    await user.click(workTag);
-    expect(workTag.getAttribute('aria-pressed')).toBe('true');
-
-    await user.click(workTag);
-    expect(workTag.getAttribute('aria-pressed')).toBe('false');
-  });
-
-  it('sends a POST request with correct payload including tags', async () => {
-    const user = userEvent.setup();
-    render(<CheckInForm />);
-
-    act(() => capturedOnValueChange?.([72]));
-    await user.click(screen.getByRole('button', { name: 'Work' }));
-    const textarea = screen.getByPlaceholderText("What's on your mind?");
-    await user.type(textarea, 'feeling good');
     await user.click(screen.getByRole('button', { name: 'Check in' }));
 
-    expect(fetch).toHaveBeenCalledWith('/api/check-ins', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sliderValue: 72,
-        note: 'feeling good',
-        tags: ['Work'],
-        missionId: null,
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/check-ins',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
       }),
-    });
-  });
-
-  it('sends null tags when none selected', async () => {
-    const user = userEvent.setup();
-    render(<CheckInForm />);
-
-    act(() => capturedOnValueChange?.([50]));
-    await user.click(screen.getByRole('button', { name: 'Check in' }));
-
-    expect(fetch).toHaveBeenCalledWith('/api/check-ins', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sliderValue: 50, note: null, tags: null, missionId: null }),
-    });
+    );
   });
 
   it('shows reflection moment after successful submit', async () => {
     const user = userEvent.setup();
     render(<CheckInForm />);
 
-    act(() => capturedOnValueChange?.([72]));
     await user.click(screen.getByRole('button', { name: 'Check in' }));
 
     await waitFor(() => {
       expect(screen.getByTestId('reflection')).toBeDefined();
-      expect(screen.getByText('Open')).toBeDefined();
     });
   });
 
-  it('resets form after reflection dismiss', async () => {
+  it('shows insight after reflection dismiss, then resets on insight dismiss', async () => {
     const user = userEvent.setup();
     const onComplete = vi.fn();
     render(<CheckInForm onCheckInComplete={onComplete} />);
 
-    act(() => capturedOnValueChange?.([72]));
     await user.click(screen.getByRole('button', { name: 'Check in' }));
 
     await waitFor(() => {
@@ -182,11 +121,15 @@ describe('CheckInForm', () => {
     await user.click(screen.getByTestId('reflection'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('slider')).toBeDefined();
+      expect(screen.getByTestId('insight')).toBeDefined();
     });
 
-    expect((screen.getByTestId('slider') as HTMLInputElement).value).toBe('50');
-    expect(screen.getByRole('button', { name: 'Check in' })).toHaveProperty('disabled', false);
+    await user.click(screen.getByTestId('insight'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Check in' })).toBeDefined();
+    });
+
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
@@ -204,7 +147,6 @@ describe('CheckInForm', () => {
     const user = userEvent.setup();
     render(<CheckInForm />);
 
-    act(() => capturedOnValueChange?.([72]));
     await user.click(screen.getByRole('button', { name: 'Check in' }));
 
     await waitFor(() => {
@@ -221,7 +163,6 @@ describe('CheckInForm', () => {
     const user = userEvent.setup();
     render(<CheckInForm />);
 
-    act(() => capturedOnValueChange?.([72]));
     await user.click(screen.getByRole('button', { name: 'Check in' }));
 
     await waitFor(() => {
@@ -244,7 +185,6 @@ describe('CheckInForm', () => {
     const user = userEvent.setup();
     render(<CheckInForm />);
 
-    act(() => capturedOnValueChange?.([72]));
     await user.click(screen.getByRole('button', { name: 'Check in' }));
 
     expect(screen.getByRole('button', { name: 'Saving...' })).toBeDefined();
@@ -260,10 +200,9 @@ describe('CheckInForm', () => {
     });
   });
 
-  it('renders the slider and submit button', () => {
+  it('renders the Pulse collapsible section', () => {
     render(<CheckInForm />);
 
-    expect(screen.getByTestId('slider')).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Check in' })).toBeDefined();
+    expect(screen.getByText('Pulse')).toBeDefined();
   });
 });

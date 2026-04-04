@@ -82,14 +82,6 @@ describe('MissionTracker', () => {
     });
   });
 
-  it('shows preview text when collapsed', async () => {
-    render(<MissionTracker refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Need to fix auth flow')).toBeDefined();
-    });
-  });
-
   it('expands card showing collapsible fields', async () => {
     const user = userEvent.setup();
     render(<MissionTracker refreshKey={0} />);
@@ -100,12 +92,12 @@ describe('MissionTracker', () => {
 
     await user.click(screen.getByText('Ship V1'));
 
-    expect(screen.getByText('Objective')).toBeDefined();
+    expect(screen.getByText('Objectives')).toBeDefined();
     expect(screen.getByText('Challenge')).toBeDefined();
-    expect(screen.getByText('Notes')).toBeDefined();
+    expect(screen.getByText('Categories')).toBeDefined();
   });
 
-  it('opens Objective field to show input', async () => {
+  it('opens Objectives field to show items', async () => {
     const user = userEvent.setup();
     render(<MissionTracker refreshKey={0} />);
 
@@ -114,9 +106,9 @@ describe('MissionTracker', () => {
     });
 
     await user.click(screen.getByText('Ship V1'));
-    await user.click(screen.getByText('Objective'));
+    await user.click(screen.getByText('Objectives'));
 
-    expect(screen.getByDisplayValue('Write the login test')).toBeDefined();
+    expect(screen.getByText('Write the login test')).toBeDefined();
   });
 
   it('opens Challenge field to show input', async () => {
@@ -128,7 +120,7 @@ describe('MissionTracker', () => {
     });
 
     await user.click(screen.getByText('Ship V1'));
-    await user.click(screen.getByText('Challenge'));
+    await user.click(screen.getByText(/Challenge/));
 
     expect(screen.getByDisplayValue('Need to fix auth flow')).toBeDefined();
   });
@@ -146,12 +138,12 @@ describe('MissionTracker', () => {
     await user.click(screen.getByRole('button', { name: 'Add' }));
 
     await waitFor(() => {
-      expect(screen.getByText('New mission')).toBeDefined();
-      expect(screen.getByText('Objective')).toBeDefined();
+      expect(screen.getByDisplayValue('New mission')).toBeDefined();
+      expect(screen.getByText('Objectives')).toBeDefined();
     });
   });
 
-  it('shows field preview when collapsed', async () => {
+  it('shows field preview when expanded', async () => {
     const user = userEvent.setup();
     render(<MissionTracker refreshKey={0} />);
 
@@ -161,9 +153,9 @@ describe('MissionTracker', () => {
 
     await user.click(screen.getByText('Ship V1'));
 
-    // Objective and Challenge show truncated preview when closed
-    expect(screen.getByText('Write the login test')).toBeDefined();
-    expect(screen.getByText('Need to fix auth flow')).toBeDefined();
+    // Objectives shows count when closed, Challenge shows preview when closed
+    expect(screen.getByText(/Challenge/)).toBeDefined();
+    expect(screen.getByText(/Need to fix auth flow/)).toBeDefined();
   });
 
   it('toggles mission completion', async () => {
@@ -174,7 +166,9 @@ describe('MissionTracker', () => {
       expect(screen.getByText('Ship V1')).toBeDefined();
     });
 
-    await user.click(screen.getByLabelText('Mark "Ship V1" as complete'));
+    // Need to expand the card first to see the Complete button
+    await user.click(screen.getByText('Ship V1'));
+    await user.click(screen.getByText('✓ Complete'));
 
     expect(fetch).toHaveBeenCalledWith(
       '/api/missions/1',
@@ -190,7 +184,9 @@ describe('MissionTracker', () => {
       expect(screen.getByText('Ship V1')).toBeDefined();
     });
 
-    await user.click(screen.getByLabelText('Delete "Ship V1"'));
+    // Need to expand the card first to see the Delete button
+    await user.click(screen.getByText('Ship V1'));
+    await user.click(screen.getByText('✕ Delete'));
 
     expect(fetch).toHaveBeenCalledWith(
       '/api/missions/1',

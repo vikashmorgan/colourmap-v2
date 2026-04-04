@@ -28,6 +28,30 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient,
 }));
 
+vi.mock('@/components/NavLinks', () => ({
+  default: () => <nav data-testid="nav-links">NavLinks</nav>,
+}));
+
+vi.mock('@/components/StepBack', () => ({
+  default: () => <span data-testid="step-back">StepBack</span>,
+}));
+
+vi.mock('@/components/ThemeSwitcher', () => ({
+  default: () => <div data-testid="theme-switcher">ThemeSwitcher</div>,
+}));
+
+vi.mock('@/components/ViewModeContext', () => ({
+  ViewModeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@/components/ViewModeSwitcher', () => ({
+  default: () => <div data-testid="view-mode-switcher">ViewModeSwitcher</div>,
+}));
+
+vi.mock('./AppShell', () => ({
+  default: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
+}));
+
 import AppLayout from './layout';
 
 describe('AppLayout', () => {
@@ -51,8 +75,8 @@ describe('AppLayout', () => {
     });
     const html = renderToStaticMarkup(layout);
 
-    expect(html).toContain('Signed in as martin@example.com');
-    expect(html).toContain('Cockpit');
+    expect(html).toContain('martin@example.com');
+    expect(html).toContain('Colourmap');
     expect(html).toContain('Sign out');
     expect(html).toContain('Child section');
   });

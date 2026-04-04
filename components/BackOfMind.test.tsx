@@ -51,13 +51,20 @@ describe('BackOfMind', () => {
     });
   });
 
-  it('shows pending and done items', async () => {
+  it('shows pending items and done items behind Cleared section', async () => {
+    const user = userEvent.setup();
     render(<BackOfMind />);
 
     await waitFor(() => {
       expect(screen.getByText('Call dentist')).toBeDefined();
-      expect(screen.getByText('Return package')).toBeDefined();
     });
+
+    // Done item is hidden behind collapsible "Cleared" section
+    expect(screen.queryByText('Return package')).toBeNull();
+    expect(screen.getByText('Cleared (1) +')).toBeDefined();
+
+    await user.click(screen.getByText('Cleared (1) +'));
+    expect(screen.getByText('Return package')).toBeDefined();
   });
 
   it('adds a new item', async () => {

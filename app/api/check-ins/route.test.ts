@@ -68,6 +68,8 @@ describe('POST /api/check-ins', () => {
       note: 'feeling good',
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -80,6 +82,8 @@ describe('POST /api/check-ins', () => {
       note: null,
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -92,6 +96,8 @@ describe('POST /api/check-ins', () => {
       note: null,
       tags: ['Work', 'Body'],
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -160,6 +166,8 @@ describe('POST /api/check-ins', () => {
       note: null,
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 });

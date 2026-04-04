@@ -40,6 +40,8 @@ describe('createCheckIn', () => {
       note: 'feeling good',
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
     expect(result).toEqual(fakeRow);
   });
@@ -53,6 +55,8 @@ describe('createCheckIn', () => {
       note: null,
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -65,6 +69,8 @@ describe('createCheckIn', () => {
       note: null,
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -77,6 +83,8 @@ describe('createCheckIn', () => {
       note: null,
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -89,6 +97,8 @@ describe('createCheckIn', () => {
       note: null,
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -101,6 +111,8 @@ describe('createCheckIn', () => {
       note: 'hello',
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -115,6 +127,8 @@ describe('createCheckIn', () => {
       note: 'a'.repeat(500),
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -151,6 +165,8 @@ describe('createCheckIn', () => {
       note: null,
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -163,6 +179,8 @@ describe('createCheckIn', () => {
       note: null,
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -182,6 +200,8 @@ describe('createCheckIn', () => {
       note: null,
       tags: ['Work', 'Body'],
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -194,6 +214,8 @@ describe('createCheckIn', () => {
       note: null,
       tags: ['Work'],
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -206,6 +228,8 @@ describe('createCheckIn', () => {
       note: null,
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -218,6 +242,8 @@ describe('createCheckIn', () => {
       note: null,
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 
@@ -230,6 +256,8 @@ describe('createCheckIn', () => {
       note: null,
       tags: null,
       missionId: null,
+      emotionName: null,
+      emotionColor: null,
     });
   });
 });

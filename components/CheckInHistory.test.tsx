@@ -83,8 +83,7 @@ describe('CheckInHistory', () => {
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Recent reflections')).toBeDefined();
-      expect(screen.getByText('(3)')).toBeDefined();
+      expect(screen.getByText('Recent Reflections')).toBeDefined();
     });
   });
 
@@ -92,24 +91,25 @@ describe('CheckInHistory', () => {
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Recent reflections')).toBeDefined();
+      expect(screen.getByText('Recent Reflections')).toBeDefined();
     });
 
-    expect(screen.queryByText('Today')).toBeNull();
+    expect(screen.queryByText(/Today/)).toBeNull();
   });
 
-  it('expands to show full log when clicked', async () => {
+  it('expands to show timeline when clicked', async () => {
     const user = userEvent.setup();
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Recent reflections')).toBeDefined();
+      expect(screen.getByText('Recent Reflections')).toBeDefined();
     });
 
     await user.click(screen.getByRole('button', { expanded: false }));
 
-    expect(screen.getByText('Today')).toBeDefined();
-    expect(screen.getByText('Yesterday')).toBeDefined();
+    // Date groups show "Today — N check-ins, mostly <word>"
+    expect(screen.getByText(/Today/)).toBeDefined();
+    expect(screen.getByText(/Yesterday/)).toBeDefined();
     expect(screen.getByText('feeling great')).toBeDefined();
     expect(screen.getByText('rough day')).toBeDefined();
   });
@@ -119,15 +119,15 @@ describe('CheckInHistory', () => {
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Recent reflections')).toBeDefined();
+      expect(screen.getByText('Recent Reflections')).toBeDefined();
     });
 
     const pill = screen.getByRole('button', { expanded: false });
     await user.click(pill);
-    expect(screen.getByText('Today')).toBeDefined();
+    expect(screen.getByText(/Today/)).toBeDefined();
 
     await user.click(screen.getByRole('button', { expanded: true }));
-    expect(screen.queryByText('Today')).toBeNull();
+    expect(screen.queryByText(/Today/)).toBeNull();
   });
 
   it('shows tags in expanded entries', async () => {
@@ -135,7 +135,7 @@ describe('CheckInHistory', () => {
     render(<CheckInHistory refreshKey={0} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Recent reflections')).toBeDefined();
+      expect(screen.getByText('Recent Reflections')).toBeDefined();
     });
 
     await user.click(screen.getByRole('button', { expanded: false }));

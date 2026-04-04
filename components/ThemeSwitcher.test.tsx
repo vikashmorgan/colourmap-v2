@@ -8,6 +8,7 @@ import ThemeSwitcher from './ThemeSwitcher';
 describe('ThemeSwitcher', () => {
   beforeEach(() => {
     document.documentElement.className = '';
+    document.documentElement.style.cssText = '';
     vi.stubGlobal('localStorage', {
       getItem: vi.fn(() => null),
       setItem: vi.fn(),
@@ -19,26 +20,29 @@ describe('ThemeSwitcher', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders three theme buttons', () => {
+  it('renders the Design toggle button', () => {
     render(<ThemeSwitcher />);
 
-    expect(screen.getByLabelText('Switch to Paper theme')).toBeDefined();
-    expect(screen.getByLabelText('Switch to Golden theme')).toBeDefined();
-    expect(screen.getByLabelText('Switch to Night theme')).toBeDefined();
+    expect(screen.getByText('Design')).toBeDefined();
   });
 
-  it('defaults to Paper theme', () => {
+  it('shows color theme options when opened', async () => {
+    const user = userEvent.setup();
     render(<ThemeSwitcher />);
 
-    const paper = screen.getByLabelText('Switch to Paper theme');
-    expect(paper.getAttribute('aria-pressed')).toBe('true');
+    await user.click(screen.getByText('Design'));
+
+    expect(screen.getByText('Paper')).toBeDefined();
+    expect(screen.getByText('Golden')).toBeDefined();
+    expect(screen.getByText('Night')).toBeDefined();
   });
 
   it('switches to Golden theme on click', async () => {
     const user = userEvent.setup();
     render(<ThemeSwitcher />);
 
-    await user.click(screen.getByLabelText('Switch to Golden theme'));
+    await user.click(screen.getByText('Design'));
+    await user.click(screen.getByText('Golden'));
 
     expect(document.documentElement.classList.contains('golden')).toBe(true);
     expect(localStorage.setItem).toHaveBeenCalledWith('colourmap-theme', 'golden');
@@ -48,7 +52,8 @@ describe('ThemeSwitcher', () => {
     const user = userEvent.setup();
     render(<ThemeSwitcher />);
 
-    await user.click(screen.getByLabelText('Switch to Night theme'));
+    await user.click(screen.getByText('Design'));
+    await user.click(screen.getByText('Night'));
 
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     expect(localStorage.setItem).toHaveBeenCalledWith('colourmap-theme', 'night');
@@ -58,10 +63,16 @@ describe('ThemeSwitcher', () => {
     const user = userEvent.setup();
     render(<ThemeSwitcher />);
 
-    await user.click(screen.getByLabelText('Switch to Night theme'));
+    // Apply Night theme
+    await user.click(screen.getByText('Design'));
+    await user.click(screen.getByText('Night'));
     expect(document.documentElement.classList.contains('dark')).toBe(true);
 
-    await user.click(screen.getByLabelText('Switch to Golden theme'));
+    // Menu may close after click, reopen and switch to Golden
+    if (!screen.queryByText('Golden')) {
+      await user.click(screen.getByText('Design'));
+    }
+    await user.click(screen.getByText('Golden'));
     expect(document.documentElement.classList.contains('dark')).toBe(false);
     expect(document.documentElement.classList.contains('golden')).toBe(true);
   });
@@ -71,5 +82,18 @@ describe('ThemeSwitcher', () => {
     render(<ThemeSwitcher />);
 
     expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
+
+  it('shows Typography tab when clicked', async () => {
+    const user = userEvent.setup();
+    render(<ThemeSwitcher />);
+
+    await user.click(screen.getByText('Design'));
+    await user.click(screen.getByText('Typography'));
+
+    expect(screen.getByText('Normal')).toBeDefined();
+    expect(screen.getByText('Cowboy')).toBeDefined();
+    expect(screen.getByText('Groovy')).toBeDefined();
+    expect(screen.getByText('Minimal')).toBeDefined();
   });
 });
