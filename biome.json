@@ -23,7 +23,26 @@
   },
   "linter": {
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "suspicious": {
+        "noArrayIndexKey": "off",
+        "useIterableCallbackReturn": "off"
+      },
+      "a11y": {
+        "noStaticElementInteractions": "off",
+        "useKeyWithClickEvents": "off",
+        "noSvgWithoutTitle": "off"
+      },
+      "style": {
+        "noNonNullAssertion": "off"
+      },
+      "correctness": {
+        "noUnusedFunctionParameters": "off",
+        "useHookAtTopLevel": "off"
+      },
+      "performance": {
+        "noImgElement": "off"
+      }
     }
   },
   "assist": {

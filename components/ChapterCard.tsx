@@ -29,7 +29,10 @@ export default function ChapterCard({ initial }: { initial?: string }) {
     return (
       <button
         type="button"
-        onClick={() => { setEditing(true); setTimeout(() => inputRef.current?.focus(), 50); }}
+        onClick={() => {
+          setEditing(true);
+          setTimeout(() => inputRef.current?.focus(), 50);
+        }}
         className="w-full text-center py-1"
       >
         <span className="text-[11px] uppercase tracking-widest text-muted-foreground/30 hover:text-muted-foreground/50 transition-colors">
@@ -46,26 +49,45 @@ export default function ChapterCard({ initial }: { initial?: string }) {
           ref={inputRef}
           type="text"
           value={title}
-          onChange={e => setTitle(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && title.trim()) save(); if (e.key === 'Escape') setEditing(false); }}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && title.trim()) save();
+            if (e.key === 'Escape') setEditing(false);
+          }}
           placeholder="Chapter title..."
           className="bg-transparent text-center text-sm font-semibold outline-none placeholder:text-muted-foreground/30"
           style={{ color: '#5C3018' }}
-          autoFocus
         />
-        <button type="button" onClick={save}
-          className="text-[10px] font-medium" style={{ color: '#5C3018' }}>Save</button>
+        <button
+          type="button"
+          onClick={save}
+          className="text-[10px] font-medium"
+          style={{ color: '#5C3018' }}
+        >
+          Save
+        </button>
       </div>
     );
   }
 
   return (
     <div className="text-center">
-      <button type="button" onClick={() => { setEditing(true); setTimeout(() => inputRef.current?.focus(), 50); }}
-        className="text-sm font-semibold transition-colors hover:opacity-60" style={{ color: '#5C3018' }}>
+      <button
+        type="button"
+        onClick={() => {
+          setEditing(true);
+          setTimeout(() => inputRef.current?.focus(), 50);
+        }}
+        className="text-sm font-semibold transition-colors hover:opacity-60"
+        style={{ color: '#5C3018' }}
+      >
         {title}
       </button>
-      {saved && <p className="text-[10px] mt-0.5" style={{ color: '#C4A060' }}>saved</p>}
+      {saved && (
+        <p className="text-[10px] mt-0.5" style={{ color: '#C4A060' }}>
+          saved
+        </p>
+      )}
     </div>
   );
 }

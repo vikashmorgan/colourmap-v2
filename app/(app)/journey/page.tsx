@@ -216,7 +216,9 @@ function loadDarkHistory(): DarkPeriodEntry[] {
   try {
     const saved = localStorage.getItem(DARK_STORAGE);
     if (saved) return JSON.parse(saved);
-  } catch { /* */ }
+  } catch {
+    /* */
+  }
   return [];
 }
 
@@ -238,9 +240,17 @@ function DarkPeriodCard({
   }, []);
 
   const questions = [
-    { key: 'darkness', label: 'How dark does it feel right now?', levels: ['Shadow', 'Heavy', 'Fog', 'Storm', 'Abyss'] },
+    {
+      key: 'darkness',
+      label: 'How dark does it feel right now?',
+      levels: ['Shadow', 'Heavy', 'Fog', 'Storm', 'Abyss'],
+    },
     { key: 'trigger', label: 'What triggered this?', placeholder: 'Name it...' },
-    { key: 'recurrence', label: 'Have you been here before?', levels: ['First time', 'Sometimes', 'Often', 'Cycle'] },
+    {
+      key: 'recurrence',
+      label: 'Have you been here before?',
+      levels: ['First time', 'Sometimes', 'Often', 'Cycle'],
+    },
     { key: 'helps', label: 'What has helped before?', placeholder: 'Even small things...' },
     { key: 'need', label: 'What do you need right now?', placeholder: 'One thing...' },
   ];
@@ -268,8 +278,11 @@ function DarkPeriodCard({
 
   return (
     <div className="rounded-2xl border border-border/50 overflow-hidden">
-      <button type="button" onClick={() => setOpen(!open)}
-        className="w-full px-4 py-3 text-left flex items-center gap-3 transition-colors hover:bg-card/50">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full px-4 py-3 text-left flex items-center gap-3 transition-colors hover:bg-card/50"
+      >
         <div className="h-3 w-3 rounded-full" style={{ background: '#D4605A', opacity: 0.4 }} />
         <span className="text-sm font-serif" style={{ color: '#D4605A80' }}>
           {open ? 'Logbook — facing the dark' : 'Logbook'}
@@ -286,10 +299,16 @@ function DarkPeriodCard({
           {/* Past wisdom — "The Heavens" view */}
           {history.length > 0 && (
             <div>
-              <button type="button" onClick={() => setShowHeavens(!showHeavens)}
+              <button
+                type="button"
+                onClick={() => setShowHeavens(!showHeavens)}
                 className="w-full flex items-center gap-2 py-2 transition-colors"
-                style={{ color: '#3A8AC480' }}>
-                <div className="h-2 w-2 rotate-45 rounded-[1px]" style={{ background: '#3A8AC4', opacity: 0.3 }} />
+                style={{ color: '#3A8AC480' }}
+              >
+                <div
+                  className="h-2 w-2 rotate-45 rounded-[1px]"
+                  style={{ background: '#3A8AC4', opacity: 0.3 }}
+                />
                 <span className="text-[11px] font-serif">
                   {showHeavens ? 'The view from above' : 'Look up — you have been here before'}
                 </span>
@@ -298,13 +317,20 @@ function DarkPeriodCard({
                 <div className="space-y-3 pt-1 animate-in fade-in duration-300">
                   {/* What helped before */}
                   {pastHelps.length > 0 && (
-                    <div className="rounded-xl p-3" style={{ background: '#3A8AC406', border: '1px solid #3A8AC415' }}>
+                    <div
+                      className="rounded-xl p-3"
+                      style={{ background: '#3A8AC406', border: '1px solid #3A8AC415' }}
+                    >
                       <p className="text-[10px] font-medium mb-2" style={{ color: '#3A8AC490' }}>
                         What brought you back before
                       </p>
                       <div className="space-y-1">
                         {pastHelps.slice(0, 5).map((help, i) => (
-                          <p key={i} className="text-xs leading-relaxed" style={{ color: '#3A8AC4aa' }}>
+                          <p
+                            key={i}
+                            className="text-xs leading-relaxed"
+                            style={{ color: '#3A8AC4aa' }}
+                          >
                             {help}
                           </p>
                         ))}
@@ -314,14 +340,24 @@ function DarkPeriodCard({
 
                   {/* Pattern recognition */}
                   {pastTriggers.length > 1 && (
-                    <div className="rounded-xl p-3" style={{ background: '#9B6BA006', border: '1px solid #9B6BA015' }}>
+                    <div
+                      className="rounded-xl p-3"
+                      style={{ background: '#9B6BA006', border: '1px solid #9B6BA015' }}
+                    >
                       <p className="text-[10px] font-medium mb-2" style={{ color: '#9B6BA090' }}>
                         What has triggered this before
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {pastTriggers.slice(0, 6).map((trigger, i) => (
-                          <span key={i} className="px-2 py-0.5 rounded-lg text-[10px]"
-                            style={{ background: '#9B6BA010', color: '#9B6BA0', border: '1px solid #9B6BA020' }}>
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 rounded-lg text-[10px]"
+                            style={{
+                              background: '#9B6BA010',
+                              color: '#9B6BA0',
+                              border: '1px solid #9B6BA020',
+                            }}
+                          >
                             {trigger}
                           </span>
                         ))}
@@ -332,15 +368,22 @@ function DarkPeriodCard({
                   {/* Timeline */}
                   <div className="space-y-1">
                     <p className="text-[10px] font-medium" style={{ color: '#5C301840' }}>
-                      Your history — {darkPeriodCount} dark {darkPeriodCount === 1 ? 'period' : 'periods'}, and you came back every time
+                      Your history — {darkPeriodCount} dark{' '}
+                      {darkPeriodCount === 1 ? 'period' : 'periods'}, and you came back every time
                     </p>
                     <div className="flex gap-1">
                       {history.slice(0, 12).map((entry, i) => {
-                        const level = ['Shadow', 'Heavy', 'Fog', 'Storm', 'Abyss'].indexOf(entry.darkness);
+                        const level = ['Shadow', 'Heavy', 'Fog', 'Storm', 'Abyss'].indexOf(
+                          entry.darkness,
+                        );
                         const opacity = 0.2 + (level / 4) * 0.6;
                         return (
-                          <div key={i} className="h-3 flex-1 rounded-sm" style={{ background: '#D4605A', opacity }}
-                            title={`${new Date(entry.date).toLocaleDateString()} — ${entry.darkness}`} />
+                          <div
+                            key={i}
+                            className="h-3 flex-1 rounded-sm"
+                            style={{ background: '#D4605A', opacity }}
+                            title={`${new Date(entry.date).toLocaleDateString()} — ${entry.darkness}`}
+                          />
                         );
                       })}
                     </div>
@@ -353,27 +396,35 @@ function DarkPeriodCard({
           {/* Current dark period questions */}
           {questions.map((q) => (
             <div key={q.key} className="space-y-1.5">
-              <p className="text-[11px] font-medium" style={{ color: '#D4605A90' }}>{q.label}</p>
+              <p className="text-[11px] font-medium" style={{ color: '#D4605A90' }}>
+                {q.label}
+              </p>
               {q.levels ? (
                 <div className="flex gap-1.5">
                   {q.levels.map((level) => (
-                    <button key={level} type="button"
+                    <button
+                      key={level}
+                      type="button"
                       onClick={() => setAnswers((prev) => ({ ...prev, [q.key]: level }))}
                       className="px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all"
                       style={{
                         background: answers[q.key] === level ? '#D4605A18' : '#D4605A06',
                         color: answers[q.key] === level ? '#D4605A' : '#D4605A50',
                         border: `1px solid ${answers[q.key] === level ? '#D4605A35' : '#D4605A10'}`,
-                      }}>
+                      }}
+                    >
                       {level}
                     </button>
                   ))}
                 </div>
               ) : (
-                <input type="text" value={answers[q.key] || ''}
+                <input
+                  type="text"
+                  value={answers[q.key] || ''}
                   onChange={(e) => setAnswers((prev) => ({ ...prev, [q.key]: e.target.value }))}
                   placeholder={q.placeholder}
-                  className="w-full rounded-lg border border-[#D4605A15] bg-[#D4605A03] px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/30" />
+                  className="w-full rounded-lg border border-[#D4605A15] bg-[#D4605A03] px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/30"
+                />
               )}
             </div>
           ))}
@@ -381,29 +432,41 @@ function DarkPeriodCard({
           {/* Actions */}
           {Object.keys(answers).length >= 3 && (
             <div className="flex gap-2">
-              <button type="button" onClick={() => {
-                saveEntry();
-                const summary = Object.entries(answers).map(([k, v]) => `${k}: ${v}`).join('\n');
-                const historyContext = pastHelps.length > 0
-                  ? `\n\nWhat has helped them before: ${pastHelps.join(', ')}`
-                  : '';
-                const patternContext = pastTriggers.length > 1
-                  ? `\n\nPast triggers: ${pastTriggers.join(', ')}`
-                  : '';
-                onReflect(`The user is going through a difficult time. Here is what they shared:\n${summary}${historyContext}${patternContext}\n\nThis is dark period #${darkPeriodCount + 1}. Help them find their way back to the light. Acknowledge the darkness. If they have past wisdom, remind them of it gently. Be warm, not clinical.`);
-              }}
+              <button
+                type="button"
+                onClick={() => {
+                  saveEntry();
+                  const summary = Object.entries(answers)
+                    .map(([k, v]) => `${k}: ${v}`)
+                    .join('\n');
+                  const historyContext =
+                    pastHelps.length > 0
+                      ? `\n\nWhat has helped them before: ${pastHelps.join(', ')}`
+                      : '';
+                  const patternContext =
+                    pastTriggers.length > 1 ? `\n\nPast triggers: ${pastTriggers.join(', ')}` : '';
+                  onReflect(
+                    `The user is going through a difficult time. Here is what they shared:\n${summary}${historyContext}${patternContext}\n\nThis is dark period #${darkPeriodCount + 1}. Help them find their way back to the light. Acknowledge the darkness. If they have past wisdom, remind them of it gently. Be warm, not clinical.`,
+                  );
+                }}
                 className="flex-1 py-2 rounded-xl text-sm font-medium transition-all"
-                style={{ background: '#D4605A15', color: '#D4605A', border: '1px solid #D4605A25' }}>
+                style={{ background: '#D4605A15', color: '#D4605A', border: '1px solid #D4605A25' }}
+              >
                 Talk to {tone.catName}
               </button>
               {!saved && (
-                <button type="button" onClick={saveEntry}
-                  className="px-3 py-2 rounded-xl text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors border border-border/30">
+                <button
+                  type="button"
+                  onClick={saveEntry}
+                  className="px-3 py-2 rounded-xl text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors border border-border/30"
+                >
                   Save
                 </button>
               )}
               {saved && (
-                <span className="px-3 py-2 text-[10px]" style={{ color: '#7AAA58' }}>Saved</span>
+                <span className="px-3 py-2 text-[10px]" style={{ color: '#7AAA58' }}>
+                  Saved
+                </span>
               )}
             </div>
           )}
@@ -569,14 +632,27 @@ export default function JourneyPage() {
         return (
           <div className="flex justify-center">
             {!toneOpen ? (
-              <button type="button" onClick={() => setToneOpen(true)}
+              <button
+                type="button"
+                onClick={() => setToneOpen(true)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all"
-                style={{ background: `${activeTone.color}08`, border: `1px solid ${activeTone.color}15` }}>
-                <span className="flex h-4 w-4 items-center justify-center rotate-45 rounded-[1.5px] text-[7px] font-bold"
-                  style={{ background: `${activeTone.color}25`, color: activeTone.color }}>
+                style={{
+                  background: `${activeTone.color}08`,
+                  border: `1px solid ${activeTone.color}15`,
+                }}
+              >
+                <span
+                  className="flex h-4 w-4 items-center justify-center rotate-45 rounded-[1.5px] text-[7px] font-bold"
+                  style={{ background: `${activeTone.color}25`, color: activeTone.color }}
+                >
                   <span className="-rotate-45">{activeTone.icon}</span>
                 </span>
-                <span className="text-[10px] font-medium" style={{ color: `${activeTone.color}80` }}>{activeTone.label}</span>
+                <span
+                  className="text-[10px] font-medium"
+                  style={{ color: `${activeTone.color}80` }}
+                >
+                  {activeTone.label}
+                </span>
               </button>
             ) : (
               <div className="space-y-2 animate-in fade-in duration-150">
@@ -584,21 +660,45 @@ export default function JourneyPage() {
                   {TONES.map((t) => {
                     const isActive = tone === t.id;
                     return (
-                      <button key={t.id} type="button"
-                        onClick={() => { selectTone(t.id); setToneOpen(false); }}
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          selectTone(t.id);
+                          setToneOpen(false);
+                        }}
                         className="flex flex-col items-center gap-1 px-2.5 py-1.5 rounded-xl transition-all"
-                        style={{ background: isActive ? `${t.color}15` : 'transparent', border: `1.5px solid ${isActive ? t.color : `${t.color}15`}` }}>
-                        <span className="flex h-5 w-5 items-center justify-center rotate-45 rounded-[2px] text-[8px] font-bold"
-                          style={{ background: isActive ? `${t.color}25` : `${t.color}10`, color: isActive ? t.color : `${t.color}50` }}>
+                        style={{
+                          background: isActive ? `${t.color}15` : 'transparent',
+                          border: `1.5px solid ${isActive ? t.color : `${t.color}15`}`,
+                        }}
+                      >
+                        <span
+                          className="flex h-5 w-5 items-center justify-center rotate-45 rounded-[2px] text-[8px] font-bold"
+                          style={{
+                            background: isActive ? `${t.color}25` : `${t.color}10`,
+                            color: isActive ? t.color : `${t.color}50`,
+                          }}
+                        >
                           <span className="-rotate-45">{t.icon}</span>
                         </span>
-                        <span className="text-[8px] font-medium" style={{ color: isActive ? t.color : `${t.color}50` }}>{t.label}</span>
+                        <span
+                          className="text-[8px] font-medium"
+                          style={{ color: isActive ? t.color : `${t.color}50` }}
+                        >
+                          {t.label}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
-                <button type="button" onClick={() => setToneOpen(false)}
-                  className="w-full text-[9px] text-muted-foreground/30 text-center">close</button>
+                <button
+                  type="button"
+                  onClick={() => setToneOpen(false)}
+                  className="w-full text-[9px] text-muted-foreground/30 text-center"
+                >
+                  close
+                </button>
               </div>
             )}
           </div>
@@ -616,16 +716,20 @@ export default function JourneyPage() {
                 value={chapterTitle}
                 onChange={(e) => setChapterTitle(e.target.value)}
                 onBlur={() => saveChapter(chapterTitle)}
-                onKeyDown={(e) => { if (e.key === 'Enter') saveChapter(chapterTitle); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveChapter(chapterTitle);
+                }}
                 className="text-center text-lg bg-transparent outline-none border-b font-serif w-full"
                 style={{ color: activeTone.color, borderColor: `${activeTone.color}30` }}
                 placeholder="Name this chapter..."
-                autoFocus
               />
             ) : (
-              <button type="button" onClick={() => setEditingChapter(true)}
+              <button
+                type="button"
+                onClick={() => setEditingChapter(true)}
                 className="text-lg font-serif transition-colors hover:opacity-70"
-                style={{ color: activeTone.color }}>
+                style={{ color: activeTone.color }}
+              >
                 {chapterTitle || 'Untitled chapter'}
               </button>
             )}
@@ -636,13 +740,24 @@ export default function JourneyPage() {
             const [showPicker, setShowPicker] = [archetypePickerOpen, setArchetypePickerOpen];
             return (
               <div className="space-y-3">
-                <button type="button" onClick={() => setShowPicker(!showPicker)}
+                <button
+                  type="button"
+                  onClick={() => setShowPicker(!showPicker)}
                   className="w-full rounded-2xl border p-5 text-center space-y-2 transition-all"
-                  style={{ borderColor: `${archetype.main.color}25`, background: `${archetype.main.color}06` }}>
+                  style={{
+                    borderColor: `${archetype.main.color}25`,
+                    background: `${archetype.main.color}06`,
+                  }}
+                >
                   <div className="flex items-center justify-center gap-3">
-                    <div className="h-8 w-8 flex items-center justify-center rotate-45 rounded-[3px]"
-                      style={{ background: `${archetype.main.color}30` }}>
-                      <span className="-rotate-45 text-sm font-bold" style={{ color: archetype.main.color }}>
+                    <div
+                      className="h-8 w-8 flex items-center justify-center rotate-45 rounded-[3px]"
+                      style={{ background: `${archetype.main.color}30` }}
+                    >
+                      <span
+                        className="-rotate-45 text-sm font-bold"
+                        style={{ color: archetype.main.color }}
+                      >
                         {archetype.main.name.split(' ')[1][0]}
                       </span>
                     </div>
@@ -650,7 +765,10 @@ export default function JourneyPage() {
                       {archetype.main.name}
                     </p>
                   </div>
-                  <p className="text-sm leading-relaxed" style={{ color: `${archetype.main.color}80` }}>
+                  <p
+                    className="text-sm leading-relaxed"
+                    style={{ color: `${archetype.main.color}80` }}
+                  >
                     {archetype.main.desc}
                   </p>
                 </button>
@@ -662,7 +780,9 @@ export default function JourneyPage() {
                       {MAIN_ARCHETYPES.map((a) => {
                         const isActive = archetype.main.id === a.id;
                         return (
-                          <button key={a.id} type="button"
+                          <button
+                            key={a.id}
+                            type="button"
                             onClick={() => {
                               setChosenArchetypeId(a.id);
                               localStorage.setItem('colourmap-journey-archetype', a.id);
@@ -672,33 +792,56 @@ export default function JourneyPage() {
                             style={{
                               background: isActive ? `${a.color}15` : 'transparent',
                               border: `1.5px solid ${isActive ? a.color : `${a.color}12`}`,
-                            }}>
-                            <div className="h-6 w-6 flex items-center justify-center rotate-45 rounded-[2px]"
-                              style={{ background: isActive ? `${a.color}30` : `${a.color}10` }}>
-                              <span className="-rotate-45 text-[10px] font-bold" style={{ color: isActive ? a.color : `${a.color}50` }}>
+                            }}
+                          >
+                            <div
+                              className="h-6 w-6 flex items-center justify-center rotate-45 rounded-[2px]"
+                              style={{ background: isActive ? `${a.color}30` : `${a.color}10` }}
+                            >
+                              <span
+                                className="-rotate-45 text-[10px] font-bold"
+                                style={{ color: isActive ? a.color : `${a.color}50` }}
+                              >
                                 {a.name.split(' ')[1][0]}
                               </span>
                             </div>
-                            <span className="text-[10px] font-medium" style={{ color: isActive ? a.color : `${a.color}50` }}>
+                            <span
+                              className="text-[10px] font-medium"
+                              style={{ color: isActive ? a.color : `${a.color}50` }}
+                            >
                               {a.name.split(' ')[1]}
                             </span>
                           </button>
                         );
                       })}
                     </div>
-                    <button type="button" onClick={() => setShowPicker(false)}
-                      className="w-full text-[10px] text-muted-foreground/30 text-center py-1">close</button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPicker(false)}
+                      className="w-full text-[10px] text-muted-foreground/30 text-center py-1"
+                    >
+                      close
+                    </button>
                   </div>
                 )}
 
                 {/* Inner archetypes — compact row */}
                 <div className="flex gap-2 justify-center">
                   {archetype.inner.map((inner) => (
-                    <div key={inner.category} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
-                      style={{ background: `${inner.color}08` }}>
-                      <div className="h-2 w-2 rounded-full" style={{ background: inner.color, opacity: 0.6 }} />
+                    <div
+                      key={inner.category}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
+                      style={{ background: `${inner.color}08` }}
+                    >
+                      <div
+                        className="h-2 w-2 rounded-full"
+                        style={{ background: inner.color, opacity: 0.6 }}
+                      />
                       <span className="text-[10px]" style={{ color: `${inner.color}80` }}>
-                        {inner.category}: <span className="font-medium" style={{ color: inner.color }}>{inner.archetype.replace('The ', '')}</span>
+                        {inner.category}:{' '}
+                        <span className="font-medium" style={{ color: inner.color }}>
+                          {inner.archetype.replace('The ', '')}
+                        </span>
                       </span>
                     </div>
                   ))}
@@ -742,61 +885,118 @@ export default function JourneyPage() {
           onSelectTerritory={(id) => setSelectedTerritory(selectedTerritory === id ? null : id)}
         />
         {/* Territory detail panel */}
-        {selectedTerritory && (() => {
-          const TERRITORY_INFO: Record<string, { color: string; question: string; placeholder: string }> = {
-            emotions: { color: '#9B6BA0', question: 'What are you feeling right now?', placeholder: 'Name it...' },
-            strengths: { color: '#7A8A50', question: 'What strength do you want to develop?', placeholder: 'Name a strength...' },
-            fears: { color: '#D45050', question: 'What are you afraid of?', placeholder: 'Name the fear...' },
-            vision: { color: '#3AA8A0', question: 'Where are you heading?', placeholder: 'Describe your direction...' },
-            energy: { color: '#E0844A', question: 'What gives you energy?', placeholder: 'What charges you...' },
-            body: { color: '#D4605A', question: 'How does your body feel?', placeholder: 'Check in with your body...' },
-            shadows: { color: '#5A7A8A', question: 'What are you avoiding?', placeholder: 'What hides in the shadows...' },
-            gratitude: { color: '#7AAA58', question: 'What are you grateful for?', placeholder: 'Name it...' },
-          };
-          const info = TERRITORY_INFO[selectedTerritory];
-          if (!info) return null;
-          return (
-            <div className="rounded-xl border p-4 space-y-2 animate-in fade-in duration-150"
-              style={{ borderColor: `${info.color}30`, background: `${info.color}05` }}>
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium" style={{ color: info.color }}>
-                  {selectedTerritory.charAt(0).toUpperCase() + selectedTerritory.slice(1)}
+        {selectedTerritory &&
+          (() => {
+            const TERRITORY_INFO: Record<
+              string,
+              { color: string; question: string; placeholder: string }
+            > = {
+              emotions: {
+                color: '#9B6BA0',
+                question: 'What are you feeling right now?',
+                placeholder: 'Name it...',
+              },
+              strengths: {
+                color: '#7A8A50',
+                question: 'What strength do you want to develop?',
+                placeholder: 'Name a strength...',
+              },
+              fears: {
+                color: '#D45050',
+                question: 'What are you afraid of?',
+                placeholder: 'Name the fear...',
+              },
+              vision: {
+                color: '#3AA8A0',
+                question: 'Where are you heading?',
+                placeholder: 'Describe your direction...',
+              },
+              energy: {
+                color: '#E0844A',
+                question: 'What gives you energy?',
+                placeholder: 'What charges you...',
+              },
+              body: {
+                color: '#D4605A',
+                question: 'How does your body feel?',
+                placeholder: 'Check in with your body...',
+              },
+              shadows: {
+                color: '#5A7A8A',
+                question: 'What are you avoiding?',
+                placeholder: 'What hides in the shadows...',
+              },
+              gratitude: {
+                color: '#7AAA58',
+                question: 'What are you grateful for?',
+                placeholder: 'Name it...',
+              },
+            };
+            const info = TERRITORY_INFO[selectedTerritory];
+            if (!info) return null;
+            return (
+              <div
+                className="rounded-xl border p-4 space-y-2 animate-in fade-in duration-150"
+                style={{ borderColor: `${info.color}30`, background: `${info.color}05` }}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium" style={{ color: info.color }}>
+                    {selectedTerritory.charAt(0).toUpperCase() + selectedTerritory.slice(1)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTerritory(null)}
+                    className="text-[10px] text-muted-foreground/30 hover:text-muted-foreground"
+                  >
+                    x
+                  </button>
+                </div>
+                <p className="text-[11px]" style={{ color: `${info.color}80` }}>
+                  {info.question}
                 </p>
-                <button type="button" onClick={() => setSelectedTerritory(null)}
-                  className="text-[10px] text-muted-foreground/30 hover:text-muted-foreground">x</button>
-              </div>
-              <p className="text-[11px]" style={{ color: `${info.color}80` }}>{info.question}</p>
-              <input type="text" placeholder={info.placeholder}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
-                    const val = (e.target as HTMLInputElement).value.trim();
-                    const key = selectedTerritory === 'fears' ? 'block_fears_list'
-                      : selectedTerritory === 'strengths' ? 'flow_strengths_list'
-                      : selectedTerritory === 'energy' ? 'flow_energy_list'
-                      : selectedTerritory === 'vision' ? 'vision_where' : '';
-                    if (key) {
-                      const current = answers[key] || '';
-                      const updated = key === 'vision_where' ? val : (current ? `${current}|||${val}` : val);
-                      setAnswers((prev) => ({ ...prev, [key]: updated }));
-                      fetch('/api/life-scan-answers', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ answers: { [key]: updated } }),
-                      });
+                <input
+                  type="text"
+                  placeholder={info.placeholder}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                      const val = (e.target as HTMLInputElement).value.trim();
+                      const key =
+                        selectedTerritory === 'fears'
+                          ? 'block_fears_list'
+                          : selectedTerritory === 'strengths'
+                            ? 'flow_strengths_list'
+                            : selectedTerritory === 'energy'
+                              ? 'flow_energy_list'
+                              : selectedTerritory === 'vision'
+                                ? 'vision_where'
+                                : '';
+                      if (key) {
+                        const current = answers[key] || '';
+                        const updated =
+                          key === 'vision_where' ? val : current ? `${current}|||${val}` : val;
+                        setAnswers((prev) => ({ ...prev, [key]: updated }));
+                        fetch('/api/life-scan-answers', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ answers: { [key]: updated } }),
+                        });
+                      }
+                      (e.target as HTMLInputElement).value = '';
                     }
-                    (e.target as HTMLInputElement).value = '';
-                  }
-                }}
-                className="w-full rounded-lg border px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/30"
-                style={{ borderColor: `${info.color}15`, background: `${info.color}03` }} />
-            </div>
-          );
-        })()}
+                  }}
+                  className="w-full rounded-lg border px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/30"
+                  style={{ borderColor: `${info.color}15`, background: `${info.color}03` }}
+                />
+              </div>
+            );
+          })()}
       </div>
 
       {/* ========== PERSONALITY MAP ========== */}
       <div className="space-y-2">
-        <p className="text-[10px] text-center text-muted-foreground/40 uppercase tracking-widest">Your inner parts</p>
+        <p className="text-[10px] text-center text-muted-foreground/40 uppercase tracking-widest">
+          Your inner parts
+        </p>
         <PersonalityMap />
       </div>
 

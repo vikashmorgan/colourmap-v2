@@ -127,41 +127,51 @@ export default function BackOfMind() {
           )}
 
           {pending.map((item) => (
-            <BacklogItemRow key={item.id} item={item}
+            <BacklogItemRow
+              key={item.id}
+              item={item}
               onToggle={(done) => handleToggle(item.id, done)}
               onDelete={() => handleDelete(item.id)}
               onNotesChange={(notes) => {
-                setItems(prev => prev.map(i => i.id === item.id ? { ...i, notes } : i));
-              }} />
+                setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, notes } : i)));
+              }}
+            />
           ))}
 
           {done.length > 0 && (
             <div className="pt-2 space-y-1">
-              <button type="button" onClick={() => setShowCleared(!showCleared)}
-                className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+              <button
+                type="button"
+                onClick={() => setShowCleared(!showCleared)}
+                className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+              >
                 Cleared ({done.length}) {showCleared ? '−' : '+'}
               </button>
-              {showCleared && done.map((item) => (
-                <div key={item.id} className="flex items-center gap-2 py-1 opacity-50 animate-in fade-in duration-150">
-                  <button
-                    type="button"
-                    aria-label={`Undo "${item.title}"`}
-                    className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-primary bg-primary text-primary-foreground text-xs"
-                    onClick={() => handleToggle(item.id, false)}
+              {showCleared &&
+                done.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-2 py-1 opacity-50 animate-in fade-in duration-150"
                   >
-                    ✓
-                  </button>
-                  <span className="flex-1 text-sm line-through">{item.title}</span>
-                  <button
-                    type="button"
-                    aria-label={`Remove "${item.title}"`}
-                    className="shrink-0 text-xs text-muted-foreground transition-colors hover:text-destructive"
-                    onClick={() => handleDelete(item.id)}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
+                    <button
+                      type="button"
+                      aria-label={`Undo "${item.title}"`}
+                      className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-primary bg-primary text-primary-foreground text-xs"
+                      onClick={() => handleToggle(item.id, false)}
+                    >
+                      ✓
+                    </button>
+                    <span className="flex-1 text-sm line-through">{item.title}</span>
+                    <button
+                      type="button"
+                      aria-label={`Remove "${item.title}"`}
+                      className="shrink-0 text-xs text-muted-foreground transition-colors hover:text-destructive"
+                      onClick={() => handleDelete(item.id)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
             </div>
           )}
         </div>
@@ -170,7 +180,12 @@ export default function BackOfMind() {
   );
 }
 
-function BacklogItemRow({ item, onToggle, onDelete, onNotesChange }: {
+function BacklogItemRow({
+  item,
+  onToggle,
+  onDelete,
+  onNotesChange,
+}: {
   item: BacklogItem;
   onToggle: (done: boolean) => void;
   onDelete: () => void;
@@ -191,7 +206,10 @@ function BacklogItemRow({ item, onToggle, onDelete, onNotesChange }: {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: val.trim() || null }),
-      }).then(() => { setSaved(true); setTimeout(() => setSaved(false), 1500); });
+      }).then(() => {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1500);
+      });
     }, 800);
   }
 
@@ -200,29 +218,38 @@ function BacklogItemRow({ item, onToggle, onDelete, onNotesChange }: {
   return (
     <div className="group">
       <div className="flex items-center gap-2 py-1.5">
-        <button type="button" aria-label={`Mark "${item.title}" as done`}
+        <button
+          type="button"
+          aria-label={`Mark "${item.title}" as done`}
           className="h-4 w-4 shrink-0 rounded border border-muted-foreground transition-colors hover:border-primary"
-          onClick={() => onToggle(true)} />
-        <button type="button" onClick={() => setOpen(!open)}
-          className="flex-1 text-sm text-left">
+          onClick={() => onToggle(true)}
+        />
+        <button type="button" onClick={() => setOpen(!open)} className="flex-1 text-sm text-left">
           {item.title}
           {hasNotes && !open && <span className="text-muted-foreground/30 ml-1">•</span>}
         </button>
-        <button type="button" aria-label={`Remove "${item.title}"`}
+        <button
+          type="button"
+          aria-label={`Remove "${item.title}"`}
           className="shrink-0 text-xs text-muted-foreground/0 group-hover:text-muted-foreground/40 hover:!text-destructive transition-colors"
-          onClick={onDelete}>✕</button>
+          onClick={onDelete}
+        >
+          ✕
+        </button>
       </div>
       {open && (
         <div className="ml-6 pb-2 relative animate-in fade-in duration-150">
           <textarea
             value={notesVal}
-            onChange={e => handleNotesChange(e.target.value)}
+            onChange={(e) => handleNotesChange(e.target.value)}
             placeholder="Add more details..."
             rows={2}
             className="w-full resize-none rounded-xl border border-border bg-background/60 px-3 py-2 text-sm placeholder:text-muted-foreground/40 outline-none"
           />
           {saved && (
-            <span className="absolute right-3 top-2 text-[10px]" style={{ color: '#C4A060' }}>saved</span>
+            <span className="absolute right-3 top-2 text-[10px]" style={{ color: '#C4A060' }}>
+              saved
+            </span>
           )}
         </div>
       )}

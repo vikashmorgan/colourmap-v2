@@ -88,7 +88,7 @@ const INNER_TRACKERS = [
     questions: [
       'What are you afraid of today?',
       'What would happen if it came true?',
-      'What\'s one small thing you can face right now?',
+      "What's one small thing you can face right now?",
     ],
     color: '#D45050',
     logKey: 'overview_Attitude_log',
@@ -110,7 +110,7 @@ const INNER_TRACKERS = [
     questions: [
       'What do you keep pushing back?',
       'What happens if you keep avoiding it?',
-      'What\'s the smallest first step?',
+      "What's the smallest first step?",
     ],
     color: '#E0844A',
     logKey: 'overview_Attitude_log',
@@ -128,7 +128,7 @@ const INNER_TRACKERS = [
   },
 ] as const;
 
-const TAGS = [
+const _TAGS = [
   {
     id: 'Work',
     color: '#E0844A',
@@ -184,7 +184,7 @@ function nowTime(): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-function NoteLog({
+function _NoteLog({
   note,
   setNote,
   trackerValues,
@@ -441,12 +441,12 @@ function PulseSlider({
 export default function CheckInForm({ missions = [], onCheckInComplete }: CheckInFormProps) {
   const [sliderValue, setSliderValue] = useState(50);
   const [note, setNote] = useState('');
-  const [challenge, setChallenge] = useState('');
-  const [showChallenge, setShowChallenge] = useState(false);
+  const [_challenge, setChallenge] = useState('');
+  const [_showChallenge, setShowChallenge] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
-  const [tagSliders, setTagSliders] = useState<Record<string, number>>({});
-  const [tagNotes, setTagNotes] = useState<Record<string, string>>({});
-  const [showTagPicker, setShowTagPicker] = useState(false);
+  const [_tagSliders, setTagSliders] = useState<Record<string, number>>({});
+  const [_tagNotes, setTagNotes] = useState<Record<string, string>>({});
+  const [_showTagPicker, _setShowTagPicker] = useState(false);
   const [selectedMission, setSelectedMission] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -464,9 +464,9 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
     structure: 50,
   });
 
-  const emotionalWord = getEmotionalWord(sliderValue);
+  const _emotionalWord = getEmotionalWord(sliderValue);
 
-  function toggleTag(tag: string) {
+  function _toggleTag(tag: string) {
     setSelectedTags((prev) => {
       const next = new Set(prev);
       if (next.has(tag)) {
@@ -507,7 +507,7 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
                 }),
               // Inner trackers (FGAC) — all question answers
               ...INNER_TRACKERS.filter((t) => trackerValues[t.id]?.trim()).map((t) => {
-                const keys = t.questions.map((_, i) => i === 0 ? t.id : `${t.id}_${i + 1}`);
+                const keys = t.questions.map((_, i) => (i === 0 ? t.id : `${t.id}_${i + 1}`));
                 const answers = keys.map((k) => trackerValues[k]?.trim()).filter(Boolean);
                 return `[${t.label}] ${answers.join(' → ')}`;
               }),
@@ -551,7 +551,7 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
         const logUpdates: Record<string, string[]> = {};
         for (const t of trackerEntries) {
           if (!logUpdates[t.logKey]) logUpdates[t.logKey] = [];
-          const keys = t.questions.map((_, i) => i === 0 ? t.id : `${t.id}_${i + 1}`);
+          const keys = t.questions.map((_, i) => (i === 0 ? t.id : `${t.id}_${i + 1}`));
           const answers = keys.map((k) => trackerValues[k]?.trim()).filter(Boolean);
           logUpdates[t.logKey].push(`[${t.label}] ${answers.join(' → ')}`);
         }
@@ -853,15 +853,19 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
       {/* Inner trackers (FGAC) — behind losange toggle */}
       <div className="space-y-2">
         <div className="flex items-center justify-center">
-          <button type="button"
+          <button
+            type="button"
             onClick={() => setOpenTracker(openTracker ? null : INNER_TRACKERS[0].id)}
             className="flex h-4 w-4 items-center justify-center rotate-45 transition-all hover:scale-110"
             style={{
               background: openTracker ? '#C4A060' : '#C4A06035',
               borderRadius: 1.5,
-            }}>
-            <span className="text-[7px] leading-none -rotate-45 font-bold"
-              style={{ color: openTracker ? '#fff' : '#C4A060' }}>
+            }}
+          >
+            <span
+              className="text-[7px] leading-none -rotate-45 font-bold"
+              style={{ color: openTracker ? '#fff' : '#C4A060' }}
+            >
               {openTracker ? '−' : '+'}
             </span>
           </button>
@@ -879,7 +883,11 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
                     onClick={() => setOpenTracker(isActive ? null : t.id)}
                     className="rounded-full px-3 py-1 text-[11px] font-medium transition-all"
                     style={{
-                      background: isActive ? `${t.color}18` : hasValue ? `${t.color}10` : `${t.color}06`,
+                      background: isActive
+                        ? `${t.color}18`
+                        : hasValue
+                          ? `${t.color}10`
+                          : `${t.color}06`,
                       color: isActive ? t.color : hasValue ? t.color : `${t.color}70`,
                       border: `1px solid ${isActive ? `${t.color}35` : hasValue ? `${t.color}25` : `${t.color}15`}`,
                     }}
@@ -893,12 +901,13 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
             {(() => {
               const t = INNER_TRACKERS.find((t) => t.id === openTracker);
               if (!t) return null;
-              const keys = t.questions.map((_, i) => i === 0 ? t.id : `${t.id}_${i + 1}`);
+              const keys = t.questions.map((_, i) => (i === 0 ? t.id : `${t.id}_${i + 1}`));
               // Only show questions that have been explicitly unlocked (key exists in trackerValues)
               const unlockedCount = keys.filter((k) => k in trackerValues).length;
               const visibleCount = Math.max(1, unlockedCount);
               const lastKey = keys[visibleCount - 1];
-              const canUnlockNext = visibleCount < t.questions.length && trackerValues[lastKey]?.trim();
+              const canUnlockNext =
+                visibleCount < t.questions.length && trackerValues[lastKey]?.trim();
               return (
                 <div className="space-y-1">
                   {t.questions.slice(0, visibleCount).map((q, i) => {
@@ -909,14 +918,19 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
                         <input
                           type="text"
                           value={trackerValues[key] || ''}
-                          onChange={(e) => setTrackerValues((prev) => ({ ...prev, [key]: e.target.value }))}
+                          onChange={(e) =>
+                            setTrackerValues((prev) => ({ ...prev, [key]: e.target.value }))
+                          }
                           placeholder={q}
                           className="w-full rounded-lg border px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/40"
                           style={{ borderColor: `${t.color}25`, background: `${t.color}05` }}
                         />
                         {showLosange && (
                           <div className="flex justify-center py-2">
-                            <div className="h-2 w-2 rotate-45 rounded-[1px]" style={{ background: t.color, opacity: 0.2 }} />
+                            <div
+                              className="h-2 w-2 rotate-45 rounded-[1px]"
+                              style={{ background: t.color, opacity: 0.2 }}
+                            />
                           </div>
                         )}
                       </div>
@@ -924,11 +938,20 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
                   })}
                   {canUnlockNext && (
                     <div className="flex justify-center py-2">
-                      <button type="button"
-                        onClick={() => setTrackerValues((prev) => ({ ...prev, [keys[visibleCount]]: '' }))}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setTrackerValues((prev) => ({ ...prev, [keys[visibleCount]]: '' }))
+                        }
                         className="flex h-3.5 w-3.5 items-center justify-center rotate-45 transition-all hover:scale-125"
-                        style={{ background: `${t.color}30`, borderRadius: 1.5 }}>
-                        <span className="text-[6px] leading-none -rotate-45 font-bold" style={{ color: t.color }}>+</span>
+                        style={{ background: `${t.color}30`, borderRadius: 1.5 }}
+                      >
+                        <span
+                          className="text-[6px] leading-none -rotate-45 font-bold"
+                          style={{ color: t.color }}
+                        >
+                          +
+                        </span>
                       </button>
                     </div>
                   )}

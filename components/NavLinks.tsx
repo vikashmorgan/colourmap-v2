@@ -82,7 +82,12 @@ export default function NavLinks() {
             borderRadius: 2,
           }}
         >
-          <span className="text-[9px] leading-none -rotate-45 font-bold" style={{ color: isMoreActive ? '#fff' : '#C4A060' }}>+</span>
+          <span
+            className="text-[9px] leading-none -rotate-45 font-bold"
+            style={{ color: isMoreActive ? '#fff' : '#C4A060' }}
+          >
+            +
+          </span>
         </button>
 
         {moreOpen && (

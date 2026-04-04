@@ -10,7 +10,9 @@ export default function ExtrasPage() {
       </p>
 
       <div className="rounded-3xl border border-border bg-card p-6">
-        <p className="text-xs font-semibold text-center uppercase tracking-widest text-muted-foreground mb-4">Quick Scan</p>
+        <p className="text-xs font-semibold text-center uppercase tracking-widest text-muted-foreground mb-4">
+          Quick Scan
+        </p>
         <QuickScan />
       </div>
     </main>

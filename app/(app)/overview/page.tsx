@@ -28,15 +28,17 @@ export default function OverviewPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/life-scan-answers').then(r => r.ok ? r.json() : { answers: {} }),
-      fetch('/api/check-ins').then(r => r.ok ? r.json() : []),
-      fetch('/api/missions').then(r => r.ok ? r.json() : []),
-    ]).then(([scanData, ciData, mData]) => {
-      setAnswers(scanData.answers || {});
-      setCheckIns(Array.isArray(ciData) ? ciData.slice(0, 10) : []);
-      setMissions(Array.isArray(mData) ? mData : []);
-      setLoaded(true);
-    }).catch(() => setLoaded(true));
+      fetch('/api/life-scan-answers').then((r) => (r.ok ? r.json() : { answers: {} })),
+      fetch('/api/check-ins').then((r) => (r.ok ? r.json() : [])),
+      fetch('/api/missions').then((r) => (r.ok ? r.json() : [])),
+    ])
+      .then(([scanData, ciData, mData]) => {
+        setAnswers(scanData.answers || {});
+        setCheckIns(Array.isArray(ciData) ? ciData.slice(0, 10) : []);
+        setMissions(Array.isArray(mData) ? mData : []);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
   }, []);
 
   const fears = (answers.block_fears_list || '').split('|||').filter(Boolean);
@@ -47,7 +49,7 @@ export default function OverviewPage() {
   const visionText = (answers.vision_where || '').trim();
   const firstMove = (answers.vision_first || '').trim();
 
-  const todayCheckIns = checkIns.filter(ci => {
+  const todayCheckIns = checkIns.filter((ci) => {
     const d = new Date(ci.createdAt);
     const now = new Date();
     return d.toDateString() === now.toDateString();
@@ -68,19 +70,29 @@ export default function OverviewPage() {
       <ChapterCard initial={answers.chapter_title} />
 
       {/* Compass Wheel — pulls all data */}
-      <CompassWheel data={{
-        latestCheckIn,
-        todayCheckIns: todayCheckIns.map(ci => ({ sliderValue: ci.sliderValue, createdAt: ci.createdAt })),
-        fears,
-        weaknesses,
-        strengths,
-        working,
-        energy,
-        visionText,
-        firstMove,
-        visionWho: (answers.vision_who || '').trim() || undefined,
-        missions: missions.map(m => ({ id: m.id, title: m.title, blocking: m.blocking, completed: m.completed })),
-      }} />
+      <CompassWheel
+        data={{
+          latestCheckIn,
+          todayCheckIns: todayCheckIns.map((ci) => ({
+            sliderValue: ci.sliderValue,
+            createdAt: ci.createdAt,
+          })),
+          fears,
+          weaknesses,
+          strengths,
+          working,
+          energy,
+          visionText,
+          firstMove,
+          visionWho: (answers.vision_who || '').trim() || undefined,
+          missions: missions.map((m) => ({
+            id: m.id,
+            title: m.title,
+            blocking: m.blocking,
+            completed: m.completed,
+          })),
+        }}
+      />
     </main>
   );
 }

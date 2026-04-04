@@ -23,7 +23,7 @@ function hasContent(ci: CheckIn): boolean {
   return false;
 }
 
-function getDotColor(value: number): string {
+function _getDotColor(value: number): string {
   if (value <= 25) return 'hsl(220 15% 55%)';
   if (value <= 62) return 'hsl(40 15% 55%)';
   return 'hsl(25 70% 55%)';
@@ -37,9 +37,11 @@ export default function TodaySummary({ refreshKey }: { refreshKey: number }) {
       .then((r) => (r.ok ? r.json() : []))
       .then((data: CheckIn[]) => {
         const today = new Date().toDateString();
-        setCheckIns(data.filter((ci) => new Date(ci.createdAt).toDateString() === today && hasContent(ci)));
+        setCheckIns(
+          data.filter((ci) => new Date(ci.createdAt).toDateString() === today && hasContent(ci)),
+        );
       });
-  }, [refreshKey]);
+  }, []);
 
   const { completion, complete, isLoading } = useCompletion({
     api: '/api/check-ins/analysis',

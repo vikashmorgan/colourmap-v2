@@ -105,9 +105,7 @@ export default function ThemeSwitcher() {
                   key={theme.id}
                   type="button"
                   className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-colors ${
-                    colorActive === theme.id
-                      ? 'bg-accent font-medium'
-                      : 'hover:bg-accent/50'
+                    colorActive === theme.id ? 'bg-accent font-medium' : 'hover:bg-accent/50'
                   }`}
                   onClick={() => {
                     setColorActive(theme.id);
@@ -132,19 +130,14 @@ export default function ThemeSwitcher() {
                   key={typo.id}
                   type="button"
                   className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-colors ${
-                    typoActive === typo.id
-                      ? 'bg-accent font-medium'
-                      : 'hover:bg-accent/50'
+                    typoActive === typo.id ? 'bg-accent font-medium' : 'hover:bg-accent/50'
                   }`}
                   onClick={() => {
                     setTypoActive(typo.id);
                     applyTypoTheme(typo.id);
                   }}
                 >
-                  <span
-                    className="text-sm w-6 text-center"
-                    style={{ fontFamily: typo.font }}
-                  >
+                  <span className="text-sm w-6 text-center" style={{ fontFamily: typo.font }}>
                     {typo.preview}
                   </span>
                   <span>{typo.label}</span>

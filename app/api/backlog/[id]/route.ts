@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server';
-
 import { and, eq } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
 
 import { getDb } from '@/lib/db/client';
 import { deleteBacklogItem, toggleBacklogItem } from '@/lib/db/queries/backlog';
@@ -35,7 +34,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   // Update notes
   if (typeof notes === 'string' || notes === null) {
     const db = getDb();
-    const [updated] = await db.update(backlog)
+    const [updated] = await db
+      .update(backlog)
       .set({ notes: notes as string | null })
       .where(and(eq(backlog.id, id), eq(backlog.userId, user.id)))
       .returning();

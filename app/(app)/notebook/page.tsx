@@ -813,7 +813,7 @@ export default function NotebookPage() {
                                     onInput={(e) => {
                                       const t = e.target as HTMLTextAreaElement;
                                       t.style.height = 'auto';
-                                      t.style.height = t.scrollHeight + 'px';
+                                      t.style.height = `${t.scrollHeight}px`;
                                     }}
                                   />
                                   <textarea
@@ -825,7 +825,7 @@ export default function NotebookPage() {
                                     onInput={(e) => {
                                       const t = e.target as HTMLTextAreaElement;
                                       t.style.height = 'auto';
-                                      t.style.height = t.scrollHeight + 'px';
+                                      t.style.height = `${t.scrollHeight}px`;
                                     }}
                                   />
                                 </>
@@ -868,9 +868,8 @@ export default function NotebookPage() {
                           onInput={(e) => {
                             const t = e.target as HTMLTextAreaElement;
                             t.style.height = 'auto';
-                            t.style.height = t.scrollHeight + 'px';
+                            t.style.height = `${t.scrollHeight}px`;
                           }}
-                          autoFocus
                         />
                       ) : (
                         <div

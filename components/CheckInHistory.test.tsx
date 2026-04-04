@@ -22,8 +22,26 @@ const fakeEntries = [
     emotionColor: null,
     createdAt: '2026-03-31T12:00:00Z',
   },
-  { id: '2', sliderValue: 50, note: null, tags: null, missionId: null, emotionName: null, emotionColor: null, createdAt: '2026-03-31T08:00:00Z' },
-  { id: '1', sliderValue: 10, note: 'rough day', tags: null, missionId: null, emotionName: null, emotionColor: null, createdAt: '2026-03-30T18:00:00Z' },
+  {
+    id: '2',
+    sliderValue: 50,
+    note: null,
+    tags: null,
+    missionId: null,
+    emotionName: null,
+    emotionColor: null,
+    createdAt: '2026-03-31T08:00:00Z',
+  },
+  {
+    id: '1',
+    sliderValue: 10,
+    note: 'rough day',
+    tags: null,
+    missionId: null,
+    emotionName: null,
+    emotionColor: null,
+    createdAt: '2026-03-30T18:00:00Z',
+  },
 ];
 
 describe('CheckInHistory', () => {

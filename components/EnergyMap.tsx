@@ -10,7 +10,7 @@ interface CheckIn {
   createdAt: string;
 }
 
-function getDotColor(value: number): string {
+function _getDotColor(value: number): string {
   if (value <= 25) return 'hsl(220 15% 55%)';
   if (value <= 62) return 'hsl(40 15% 55%)';
   return 'hsl(25 70% 55%)';
@@ -27,8 +27,16 @@ interface EnergyEntry {
   category?: string;
 }
 
-const ENERGY_COLORS = ['#D08040', '#C88C48', '#C49850', '#C4A048', '#A8AC58', '#90B060', '#80B868'];
-const ENERGY_LABELS = ['Empty', 'Low', 'Tired', 'OK', 'Good', 'High', 'Peak'];
+const _ENERGY_COLORS = [
+  '#D08040',
+  '#C88C48',
+  '#C49850',
+  '#C4A048',
+  '#A8AC58',
+  '#90B060',
+  '#80B868',
+];
+const _ENERGY_LABELS = ['Empty', 'Low', 'Tired', 'OK', 'Good', 'High', 'Peak'];
 const ACTIVITY_COLORS: Record<string, string> = {
   'Morning walk': '#80B868',
   Yoga: '#90B0D0',
@@ -76,7 +84,7 @@ function todayKey(): string {
   return `energy_map_${new Date().toISOString().split('T')[0]}`;
 }
 
-function timeToMinutes(t: string): number {
+function _timeToMinutes(t: string): number {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 }
@@ -99,7 +107,7 @@ export default function EnergyMap() {
   const [entryNote, setEntryNote] = useState('');
   const [foods, setFoods] = useState<string[]>([]);
   const [newFood, setNewFood] = useState('');
-  const [foodsOpen, setFoodsOpen] = useState(false);
+  const [_foodsOpen, _setFoodsOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [paintStart, setPaintStart] = useState<number | null>(null);
   const [paintEnd, setPaintEnd] = useState<number | null>(null);
@@ -196,7 +204,7 @@ export default function EnergyMap() {
     });
   }
 
-  function addFood() {
+  function _addFood() {
     if (!newFood.trim() || foods.includes(newFood.trim())) return;
     saveFoods([...foods, newFood.trim()]);
     setNewFood('');
@@ -223,7 +231,7 @@ export default function EnergyMap() {
   const [showAllHours, setShowAllHours] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dropHour, setDropHour] = useState<number | null>(null);
-  const [resizingIdx, setResizingIdx] = useState<number | null>(null);
+  const [_resizingIdx, setResizingIdx] = useState<number | null>(null);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const resizeStartY = useRef<number>(0);
   const resizeStartDur = useRef<number>(1);
@@ -324,34 +332,60 @@ export default function EnergyMap() {
     const startItems = hourItems.filter((i) => i.isStart);
     if (startItems.length > 0) {
       const e = startItems[0].entry;
-      return { hour: h, activity: e.activity, color: getActivityColor(e.activity, e.color, e.category), filled: true };
+      return {
+        hour: h,
+        activity: e.activity,
+        color: getActivityColor(e.activity, e.color, e.category),
+        filled: true,
+      };
     }
     const contItems = hourItems.filter((i) => !i.isStart);
     if (contItems.length > 0) {
       const e = contItems[0].entry;
-      return { hour: h, activity: e.activity, color: getActivityColor(e.activity, e.color, e.category), filled: true };
+      return {
+        hour: h,
+        activity: e.activity,
+        color: getActivityColor(e.activity, e.color, e.category),
+        filled: true,
+      };
     }
     return { hour: h, activity: '', color: '#C4A06010', filled: false };
-  }).filter((h) => h.hour <= Math.max(currentHour + 2, entries.reduce((max, e) => Math.max(max, parseInt(e.time.split(':')[0], 10) + (e.duration || 1) - 1), 0) + 1));
+  }).filter(
+    (h) =>
+      h.hour <=
+      Math.max(
+        currentHour + 2,
+        entries.reduce(
+          (max, e) => Math.max(max, parseInt(e.time.split(':')[0], 10) + (e.duration || 1) - 1),
+          0,
+        ) + 1,
+      ),
+  );
 
   return (
     <div className="space-y-2">
       {/* View toggle */}
       <div className="flex justify-end gap-1">
-        <button type="button" onClick={() => setViewMode('list')}
+        <button
+          type="button"
+          onClick={() => setViewMode('list')}
           className="text-[9px] px-2 py-0.5 rounded-full transition-all"
           style={{
             background: viewMode === 'list' ? '#C4A06020' : 'transparent',
             color: viewMode === 'list' ? '#5C3018' : '#5C301840',
-          }}>
+          }}
+        >
           List
         </button>
-        <button type="button" onClick={() => setViewMode('energy')}
+        <button
+          type="button"
+          onClick={() => setViewMode('energy')}
           className="text-[9px] px-2 py-0.5 rounded-full transition-all"
           style={{
             background: viewMode === 'energy' ? '#C4A06020' : 'transparent',
             color: viewMode === 'energy' ? '#5C3018' : '#5C301840',
-          }}>
+          }}
+        >
           Energy
         </button>
       </div>
@@ -416,7 +450,7 @@ export default function EnergyMap() {
               type="button"
               onClick={() => {
                 // Set category on add — store temporarily
-                const updated = [...entries];
+                const _updated = [...entries];
                 // Just visual hint for now
               }}
               className="rounded-full px-2.5 py-0.5 text-[9px] font-medium whitespace-nowrap shrink-0 transition-all"
@@ -433,260 +467,347 @@ export default function EnergyMap() {
       )}
 
       {/* Energy strip view */}
-      {viewMode === 'energy' && (() => {
-        // Build mountain data — each hour gets stacked layers of activities
-        const mountainHeight = 80;
-        const layerHeight = 16;
-        const hours = energyStrip;
-        const width = hours.length;
+      {viewMode === 'energy' &&
+        (() => {
+          // Build mountain data — each hour gets stacked layers of activities
+          const _mountainHeight = 80;
+          const layerHeight = 16;
+          const hours = energyStrip;
+          const width = hours.length;
 
-        // Get unique activities in order of first appearance
-        const activityOrder: string[] = [];
-        const activityColors: Record<string, string> = {};
-        for (const e of entries) {
-          if (!activityOrder.includes(e.activity)) {
-            activityOrder.push(e.activity);
-            activityColors[e.activity] = getActivityColor(e.activity, e.color, e.category);
-          }
-        }
-
-        // For each hour, determine which activities are active
-        const hourLayers: { activity: string; color: string }[][] = hours.map((seg) => {
-          if (!seg.filled) return [];
-          const hourItems = (entriesByHour.get(seg.hour) || []);
-          const layers: { activity: string; color: string }[] = [];
-          for (const item of hourItems) {
-            const act = item.entry.activity;
-            const color = getActivityColor(act, item.entry.color, item.entry.category);
-            if (!layers.some((l) => l.activity === act)) {
-              layers.push({ activity: act, color });
+          // Get unique activities in order of first appearance
+          const activityOrder: string[] = [];
+          const activityColors: Record<string, string> = {};
+          for (const e of entries) {
+            if (!activityOrder.includes(e.activity)) {
+              activityOrder.push(e.activity);
+              activityColors[e.activity] = getActivityColor(e.activity, e.color, e.category);
             }
           }
-          return layers;
-        });
 
-        // Max layers for scaling
-        const maxLayers = Math.max(1, ...hourLayers.map((l) => l.length));
-        const svgHeight = maxLayers * layerHeight + 8;
-
-        // Build SVG paths — one path per activity layer, using smooth curves
-        const paths: { activity: string; color: string; d: string }[] = [];
-        for (let layerIdx = 0; layerIdx < maxLayers; layerIdx++) {
-          // For each hour, get the color at this layer level
-          const segments: { x: number; color: string; active: boolean }[] = hours.map((_, hi) => {
-            const layers = hourLayers[hi];
-            if (layerIdx < layers.length) {
-              return { x: hi, color: layers[layerIdx].color, active: true };
+          // For each hour, determine which activities are active
+          const hourLayers: { activity: string; color: string }[][] = hours.map((seg) => {
+            if (!seg.filled) return [];
+            const hourItems = entriesByHour.get(seg.hour) || [];
+            const layers: { activity: string; color: string }[] = [];
+            for (const item of hourItems) {
+              const act = item.entry.activity;
+              const color = getActivityColor(act, item.entry.color, item.entry.category);
+              if (!layers.some((l) => l.activity === act)) {
+                layers.push({ activity: act, color });
+              }
             }
-            return { x: hi, color: '#C4A06008', active: false };
+            return layers;
           });
 
-          // Group consecutive active segments by same color
-          let i = 0;
-          while (i < segments.length) {
-            if (!segments[i].active) { i++; continue; }
-            const color = segments[i].color;
-            const startX = i;
-            while (i < segments.length && segments[i].active && segments[i].color === color) i++;
-            const endX = i - 1;
+          // Max layers for scaling
+          const maxLayers = Math.max(1, ...hourLayers.map((l) => l.length));
+          const svgHeight = maxLayers * layerHeight + 8;
 
-            const yBottom = svgHeight;
-            const yTop = svgHeight - (layerIdx + 1) * layerHeight;
-
-            // Smooth mountain shape
-            const x1 = (startX / width) * 100;
-            const x2 = ((endX + 1) / width) * 100;
-            const xMid = (x1 + x2) / 2;
-            const peakY = yTop - 4; // slight peak
-
-            paths.push({
-              activity: '',
-              color,
-              d: `M ${x1} ${yBottom} Q ${x1} ${yTop} ${xMid} ${peakY} Q ${x2} ${yTop} ${x2} ${yBottom} Z`,
+          // Build SVG paths — one path per activity layer, using smooth curves
+          const paths: { activity: string; color: string; d: string }[] = [];
+          for (let layerIdx = 0; layerIdx < maxLayers; layerIdx++) {
+            // For each hour, get the color at this layer level
+            const segments: { x: number; color: string; active: boolean }[] = hours.map((_, hi) => {
+              const layers = hourLayers[hi];
+              if (layerIdx < layers.length) {
+                return { x: hi, color: layers[layerIdx].color, active: true };
+              }
+              return { x: hi, color: '#C4A06008', active: false };
             });
-          }
-        }
 
-        return (
-          <div className="space-y-2">
-            {/* Mountain SVG */}
-            <svg viewBox={`0 0 100 ${svgHeight}`} className="w-full" style={{ height: svgHeight }} preserveAspectRatio="none">
-              {paths.map((p, i) => (
-                <path key={i} d={p.d} fill={p.color} opacity={0.55} />
-              ))}
-              {/* Current hour marker */}
-              {(() => {
-                const cidx = hours.findIndex((h) => h.hour === currentHour);
-                if (cidx < 0) return null;
-                const cx = ((cidx + 0.5) / width) * 100;
-                return <line x1={cx} y1={0} x2={cx} y2={svgHeight} stroke="#D4605A" strokeWidth={0.3} opacity={0.5} />;
-              })()}
-            </svg>
-            {/* Hour labels */}
-            <div className="flex">
-              {hours.map((seg) => (
-                <div key={seg.hour} className="flex-1 text-center">
-                  <span className="text-[8px]" style={{ color: seg.hour === currentHour ? '#D4605A' : '#5C301825' }}>{seg.hour}</span>
-                </div>
-              ))}
+            // Group consecutive active segments by same color
+            let i = 0;
+            while (i < segments.length) {
+              if (!segments[i].active) {
+                i++;
+                continue;
+              }
+              const color = segments[i].color;
+              const startX = i;
+              while (i < segments.length && segments[i].active && segments[i].color === color) i++;
+              const endX = i - 1;
+
+              const yBottom = svgHeight;
+              const yTop = svgHeight - (layerIdx + 1) * layerHeight;
+
+              // Smooth mountain shape
+              const x1 = (startX / width) * 100;
+              const x2 = ((endX + 1) / width) * 100;
+              const xMid = (x1 + x2) / 2;
+              const peakY = yTop - 4; // slight peak
+
+              paths.push({
+                activity: '',
+                color,
+                d: `M ${x1} ${yBottom} Q ${x1} ${yTop} ${xMid} ${peakY} Q ${x2} ${yTop} ${x2} ${yBottom} Z`,
+              });
+            }
+          }
+
+          return (
+            <div className="space-y-2">
+              {/* Mountain SVG */}
+              <svg
+                viewBox={`0 0 100 ${svgHeight}`}
+                className="w-full"
+                style={{ height: svgHeight }}
+                preserveAspectRatio="none"
+              >
+                {paths.map((p, i) => (
+                  <path key={i} d={p.d} fill={p.color} opacity={0.55} />
+                ))}
+                {/* Current hour marker */}
+                {(() => {
+                  const cidx = hours.findIndex((h) => h.hour === currentHour);
+                  if (cidx < 0) return null;
+                  const cx = ((cidx + 0.5) / width) * 100;
+                  return (
+                    <line
+                      x1={cx}
+                      y1={0}
+                      x2={cx}
+                      y2={svgHeight}
+                      stroke="#D4605A"
+                      strokeWidth={0.3}
+                      opacity={0.5}
+                    />
+                  );
+                })()}
+              </svg>
+              {/* Hour labels */}
+              <div className="flex">
+                {hours.map((seg) => (
+                  <div key={seg.hour} className="flex-1 text-center">
+                    <span
+                      className="text-[8px]"
+                      style={{ color: seg.hour === currentHour ? '#D4605A' : '#5C301825' }}
+                    >
+                      {seg.hour}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {/* Legend */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {activityOrder.map((name) => (
+                  <div key={name} className="flex items-center gap-1">
+                    <div
+                      className="h-2 w-2 rounded-sm"
+                      style={{ background: activityColors[name], opacity: 0.6 }}
+                    />
+                    <span className="text-[9px] text-muted-foreground/50">{name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            {/* Legend */}
-            <div className="flex flex-wrap gap-2 pt-1">
-              {activityOrder.map((name) => (
-                <div key={name} className="flex items-center gap-1">
-                  <div className="h-2 w-2 rounded-sm" style={{ background: activityColors[name], opacity: 0.6 }} />
-                  <span className="text-[9px] text-muted-foreground/50">{name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {/* Full day list view */}
-      {viewMode === 'list' && (() => {
-        const lastEntryHour = entries.reduce((max, e) => {
-          const h = parseInt(e.time.split(':')[0], 10) + (e.duration || 1) - 1;
-          return Math.max(max, h);
-        }, 0);
-        const cutoff = Math.max(currentHour + 2, lastEntryHour + 1);
-        const visibleHours = showAllHours ? HOURS : HOURS.filter((h) => h <= cutoff);
-        const hiddenCount = HOURS.length - visibleHours.length;
-        return (
-          <>
-            <div className="flex">
-              {/* Time labels — left */}
-              <div className="w-8 shrink-0">
-                {visibleHours.map((h) => {
-                  const isCurrent = h === currentHour;
-                  const hasEntries = (entriesByHour.get(h) || []).length > 0;
-                  return (
-                    <div
-                      key={h}
-                      className="flex items-start justify-end pr-2"
-                      style={{ minHeight: hasEntries ? 30 : 20 }}
-                    >
-                      <span
-                        className={`text-[10px] pt-1 ${isCurrent ? 'font-bold' : 'font-medium'}`}
-                        style={{ color: isCurrent ? '#D4605A' : '#5C301835' }}
-                      >
-                        {h}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Entries column */}
-              <div className="flex-1 border-l" style={{ borderColor: '#C4A06010' }}>
-                {visibleHours.map((h) => {
-                  const hourEntries = entriesByHour.get(h) || [];
-                  const isCurrent = h === currentHour;
-                  const isDropTarget = dropHour === h && dragIdx !== null;
-                  const isEmpty = hourEntries.length === 0;
-                  const isPaintTarget =
-                    paintMin !== null && paintMax !== null && h >= paintMin && h <= paintMax;
-                  const hasContinuation = hourEntries.some(
-                    (item) => !item.isEnd && (item.isStart || !item.isEnd),
-                  );
-                  const isContinuation = hourEntries.some((item) => !item.isStart);
-                  return (
-                    <div
-                      key={h}
-                      className={`transition-colors select-none relative ${hasContinuation || isContinuation ? '' : 'border-b'} ${isDropTarget ? 'bg-[#C4A06010]' : ''} ${isPaintTarget ? 'bg-[#C4A06018]' : ''}`}
-                      style={{
-                        minHeight: isEmpty ? 20 : 30,
-                        borderColor: isPaintTarget ? '#C4A06020' : '#C4A06006',
-                        opacity: h > currentHour + 2 ? 0.2 : 1,
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setDropHour(h);
-                      }}
-                      onDrop={() => handleDropOnHour(h)}
-                      onMouseDown={(e) => {
-                        if (isEmpty && e.button === 0) {
-                          e.preventDefault();
-                          handlePaintStart(h);
-                        }
-                      }}
-                      onMouseEnter={() => handlePaintMove(h)}
-                      onMouseUp={() => {
-                        if (isPainting.current) {
-                          handlePaintEnd();
-                        }
-                      }}
-                      onClick={() => {
-                        if (isEmpty && !adding && !isPainting.current && paintStart === null) {
-                          setActivity('');
-                          setTime(`${String(h).padStart(2, '0')}:00`);
-                          setDuration(1);
-                          setAdding(true);
-                        }
-                      }}
-                    >
-                      {isCurrent && (
-                        <div
-                          className="absolute top-0 left-0 right-0 h-px"
-                          style={{ background: '#D4605A40' }}
-                        />
-                      )}
+      {viewMode === 'list' &&
+        (() => {
+          const lastEntryHour = entries.reduce((max, e) => {
+            const h = parseInt(e.time.split(':')[0], 10) + (e.duration || 1) - 1;
+            return Math.max(max, h);
+          }, 0);
+          const cutoff = Math.max(currentHour + 2, lastEntryHour + 1);
+          const visibleHours = showAllHours ? HOURS : HOURS.filter((h) => h <= cutoff);
+          const hiddenCount = HOURS.length - visibleHours.length;
+          return (
+            <>
+              <div className="flex">
+                {/* Time labels — left */}
+                <div className="w-8 shrink-0">
+                  {visibleHours.map((h) => {
+                    const isCurrent = h === currentHour;
+                    const hasEntries = (entriesByHour.get(h) || []).length > 0;
+                    return (
                       <div
-                        className={`flex flex-wrap gap-1 py-0.5 ${isEmpty ? 'min-h-[20px]' : 'min-h-[30px]'}`}
+                        key={h}
+                        className="flex items-start justify-end pr-2"
+                        style={{ minHeight: hasEntries ? 30 : 20 }}
                       >
-                        {hourEntries.map((item, ei) => {
-                          const { entry: e, idx: globalIdx, isStart, isEnd } = item;
-                          const color = getActivityColor(e.activity, e.color, e.category);
-                          const isDragging = dragIdx === globalIdx;
-                          const isSelected = selectedIdx === globalIdx;
-                          const dur = e.duration || 1;
+                        <span
+                          className={`text-[10px] pt-1 ${isCurrent ? 'font-bold' : 'font-medium'}`}
+                          style={{ color: isCurrent ? '#D4605A' : '#5C301835' }}
+                        >
+                          {h}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
 
-                          if (!isStart) {
+                {/* Entries column */}
+                <div className="flex-1 border-l" style={{ borderColor: '#C4A06010' }}>
+                  {visibleHours.map((h) => {
+                    const hourEntries = entriesByHour.get(h) || [];
+                    const isCurrent = h === currentHour;
+                    const isDropTarget = dropHour === h && dragIdx !== null;
+                    const isEmpty = hourEntries.length === 0;
+                    const isPaintTarget =
+                      paintMin !== null && paintMax !== null && h >= paintMin && h <= paintMax;
+                    const hasContinuation = hourEntries.some(
+                      (item) => !item.isEnd && (item.isStart || !item.isEnd),
+                    );
+                    const isContinuation = hourEntries.some((item) => !item.isStart);
+                    return (
+                      <div
+                        key={h}
+                        className={`transition-colors select-none relative ${hasContinuation || isContinuation ? '' : 'border-b'} ${isDropTarget ? 'bg-[#C4A06010]' : ''} ${isPaintTarget ? 'bg-[#C4A06018]' : ''}`}
+                        style={{
+                          minHeight: isEmpty ? 20 : 30,
+                          borderColor: isPaintTarget ? '#C4A06020' : '#C4A06006',
+                          opacity: h > currentHour + 2 ? 0.2 : 1,
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setDropHour(h);
+                        }}
+                        onDrop={() => handleDropOnHour(h)}
+                        onMouseDown={(e) => {
+                          if (isEmpty && e.button === 0) {
+                            e.preventDefault();
+                            handlePaintStart(h);
+                          }
+                        }}
+                        onMouseEnter={() => handlePaintMove(h)}
+                        onMouseUp={() => {
+                          if (isPainting.current) {
+                            handlePaintEnd();
+                          }
+                        }}
+                        onClick={() => {
+                          if (isEmpty && !adding && !isPainting.current && paintStart === null) {
+                            setActivity('');
+                            setTime(`${String(h).padStart(2, '0')}:00`);
+                            setDuration(1);
+                            setAdding(true);
+                          }
+                        }}
+                      >
+                        {isCurrent && (
+                          <div
+                            className="absolute top-0 left-0 right-0 h-px"
+                            style={{ background: '#D4605A40' }}
+                          />
+                        )}
+                        <div
+                          className={`flex flex-wrap gap-1 py-0.5 ${isEmpty ? 'min-h-[20px]' : 'min-h-[30px]'}`}
+                        >
+                          {hourEntries.map((item, ei) => {
+                            const { entry: e, idx: globalIdx, isStart, isEnd } = item;
+                            const color = getActivityColor(e.activity, e.color, e.category);
+                            const isDragging = dragIdx === globalIdx;
+                            const isSelected = selectedIdx === globalIdx;
+                            const dur = e.duration || 1;
+
+                            if (!isStart) {
+                              return (
+                                <div
+                                  key={ei}
+                                  className={`flex-1 min-h-[28px] ${isEnd ? 'rounded-b-lg' : ''}`}
+                                  style={{
+                                    background: `${color}10`,
+                                    borderTop: 'none',
+                                  }}
+                                />
+                              );
+                            }
+
                             return (
                               <div
                                 key={ei}
-                                className={`flex-1 min-h-[28px] ${isEnd ? 'rounded-b-lg' : ''}`}
-                                style={{
-                                  background: `${color}10`,
-                                  borderTop: 'none',
+                                draggable
+                                onDragStart={() => setDragIdx(globalIdx)}
+                                onDragEnd={() => {
+                                  setDragIdx(null);
+                                  setDropHour(null);
                                 }}
-                              />
-                            );
-                          }
-
-                          return (
-                            <div
-                              key={ei}
-                              draggable
-                              onDragStart={() => setDragIdx(globalIdx)}
-                              onDragEnd={() => {
-                                setDragIdx(null);
-                                setDropHour(null);
-                              }}
-                              className={`flex-1 group cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30' : ''}`}
-                            >
-                              <div
-                                className={`overflow-hidden transition-all ${isSelected ? 'ring-1' : ''} ${dur > 1 ? 'rounded-t-lg' : 'rounded-lg'}`}
-                                style={{
-                                  background: `${color}15`,
-                                  outline: isSelected ? `1px solid ${color}40` : 'none',
-                                }}
-                                onClick={(ev) => {
-                                  ev.stopPropagation();
-                                  setSelectedIdx(isSelected ? null : globalIdx);
-                                }}
+                                className={`flex-1 group cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30' : ''}`}
                               >
-                                <div className="px-3 pt-1.5 pb-1">
-                                  <div className="flex items-center justify-between">
+                                <div
+                                  className={`overflow-hidden transition-all ${isSelected ? 'ring-1' : ''} ${dur > 1 ? 'rounded-t-lg' : 'rounded-lg'}`}
+                                  style={{
+                                    background: `${color}15`,
+                                    outline: isSelected ? `1px solid ${color}40` : 'none',
+                                  }}
+                                  onClick={(ev) => {
+                                    ev.stopPropagation();
+                                    setSelectedIdx(isSelected ? null : globalIdx);
+                                  }}
+                                >
+                                  <div className="px-3 pt-1.5 pb-1">
+                                    <div className="flex items-center justify-between">
+                                      {isSelected ? (
+                                        <input
+                                          type="text"
+                                          value={e.activity}
+                                          onChange={(ev) => {
+                                            const updated = [...entries];
+                                            updated[globalIdx] = {
+                                              ...updated[globalIdx],
+                                              activity: ev.target.value,
+                                            };
+                                            setEntries(updated);
+                                          }}
+                                          onBlur={() => save(entries)}
+                                          onKeyDown={(ev) => {
+                                            if (ev.key === 'Enter')
+                                              (ev.target as HTMLInputElement).blur();
+                                          }}
+                                          onClick={(ev) => ev.stopPropagation()}
+                                          className="text-[11px] font-semibold bg-transparent outline-none border-b flex-1"
+                                          style={{ color, borderColor: `${color}30` }}
+                                        />
+                                      ) : (
+                                        <span
+                                          className="text-[11px] font-semibold"
+                                          style={{ color }}
+                                        >
+                                          {e.activity}
+                                        </span>
+                                      )}
+                                      {isSelected && (
+                                        <button
+                                          type="button"
+                                          onClick={(ev) => {
+                                            ev.stopPropagation();
+                                            setSelectedIdx(null);
+                                          }}
+                                          className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground ml-2 shrink-0"
+                                        >
+                                          ✕
+                                        </button>
+                                      )}
+                                      <div className="flex items-center gap-1.5">
+                                        {e.category && (
+                                          <span className="text-[8px] text-muted-foreground/40">
+                                            {e.category}
+                                          </span>
+                                        )}
+                                        {e.tag === 'good' && (
+                                          <span className="text-[9px]" style={{ color: '#80B868' }}>
+                                            ✦
+                                          </span>
+                                        )}
+                                        {e.tag === 'drop' && (
+                                          <span className="text-[9px]" style={{ color: '#D08040' }}>
+                                            ▾
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
                                     {isSelected ? (
                                       <input
                                         type="text"
-                                        value={e.activity}
+                                        value={e.note}
                                         onChange={(ev) => {
                                           const updated = [...entries];
                                           updated[globalIdx] = {
                                             ...updated[globalIdx],
-                                            activity: ev.target.value,
+                                            note: ev.target.value,
                                           };
                                           setEntries(updated);
                                         }}
@@ -696,242 +817,191 @@ export default function EnergyMap() {
                                             (ev.target as HTMLInputElement).blur();
                                         }}
                                         onClick={(ev) => ev.stopPropagation()}
-                                        className="text-[11px] font-semibold bg-transparent outline-none border-b flex-1"
-                                        style={{ color, borderColor: `${color}30` }}
+                                        placeholder="Add a note..."
+                                        className="text-[9px] text-muted-foreground/60 italic mt-0.5 bg-transparent outline-none w-full placeholder:text-muted-foreground/25"
                                       />
                                     ) : (
-                                      <span className="text-[11px] font-semibold" style={{ color }}>
-                                        {e.activity}
-                                      </span>
+                                      e.note && (
+                                        <p className="text-[9px] text-muted-foreground/40 italic mt-0.5">
+                                          {e.note}
+                                        </p>
+                                      )
                                     )}
-                                    {isSelected && (
-                                      <button
-                                        type="button"
-                                        onClick={(ev) => {
-                                          ev.stopPropagation();
-                                          setSelectedIdx(null);
-                                        }}
-                                        className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground ml-2 shrink-0"
-                                      >
-                                        ✕
-                                      </button>
-                                    )}
-                                    <div className="flex items-center gap-1.5">
-                                      {e.category && (
-                                        <span className="text-[8px] text-muted-foreground/40">
-                                          {e.category}
-                                        </span>
-                                      )}
-                                      {e.tag === 'good' && (
-                                        <span className="text-[9px]" style={{ color: '#80B868' }}>
-                                          ✦
-                                        </span>
-                                      )}
-                                      {e.tag === 'drop' && (
-                                        <span className="text-[9px]" style={{ color: '#D08040' }}>
-                                          ▾
-                                        </span>
-                                      )}
-                                    </div>
                                   </div>
-                                  {isSelected ? (
-                                    <input
-                                      type="text"
-                                      value={e.note}
-                                      onChange={(ev) => {
-                                        const updated = [...entries];
-                                        updated[globalIdx] = {
-                                          ...updated[globalIdx],
-                                          note: ev.target.value,
-                                        };
-                                        setEntries(updated);
-                                      }}
-                                      onBlur={() => save(entries)}
-                                      onKeyDown={(ev) => {
-                                        if (ev.key === 'Enter')
-                                          (ev.target as HTMLInputElement).blur();
-                                      }}
+
+                                  {/* Edit panel — shows when selected */}
+                                  {isSelected && (
+                                    <div
+                                      className="px-3 pb-2 space-y-2 animate-in fade-in duration-150"
                                       onClick={(ev) => ev.stopPropagation()}
-                                      placeholder="Add a note..."
-                                      className="text-[9px] text-muted-foreground/60 italic mt-0.5 bg-transparent outline-none w-full placeholder:text-muted-foreground/25"
-                                    />
-                                  ) : (
-                                    e.note && (
-                                      <p className="text-[9px] text-muted-foreground/40 italic mt-0.5">
-                                        {e.note}
-                                      </p>
-                                    )
-                                  )}
-                                </div>
+                                    >
+                                      {/* Color picker */}
+                                      <div className="flex items-center gap-1.5">
+                                        {COLOR_PALETTE.map((c) => (
+                                          <button
+                                            key={c}
+                                            type="button"
+                                            onClick={() => {
+                                              const updated = [...entries];
+                                              updated[globalIdx] = {
+                                                ...updated[globalIdx],
+                                                color: c,
+                                              };
+                                              save(updated);
+                                            }}
+                                            className="transition-transform hover:scale-125"
+                                            style={{
+                                              width: 14,
+                                              height: 14,
+                                              borderRadius: 3,
+                                              background: c,
+                                              opacity: e.color === c ? 1 : 0.4,
+                                              outline: e.color === c ? `2px solid ${c}` : 'none',
+                                              outlineOffset: 1,
+                                            }}
+                                          />
+                                        ))}
+                                      </div>
 
-                                {/* Edit panel — shows when selected */}
-                                {isSelected && (
-                                  <div
-                                    className="px-3 pb-2 space-y-2 animate-in fade-in duration-150"
-                                    onClick={(ev) => ev.stopPropagation()}
-                                  >
-                                    {/* Color picker */}
-                                    <div className="flex items-center gap-1.5">
-                                      {COLOR_PALETTE.map((c) => (
-                                        <button
-                                          key={c}
-                                          type="button"
-                                          onClick={() => {
-                                            const updated = [...entries];
-                                            updated[globalIdx] = {
-                                              ...updated[globalIdx],
-                                              color: c,
-                                            };
-                                            save(updated);
-                                          }}
-                                          className="transition-transform hover:scale-125"
-                                          style={{
-                                            width: 14,
-                                            height: 14,
-                                            borderRadius: 3,
-                                            background: c,
-                                            opacity: e.color === c ? 1 : 0.4,
-                                            outline: e.color === c ? `2px solid ${c}` : 'none',
-                                            outlineOffset: 1,
-                                          }}
-                                        />
-                                      ))}
-                                    </div>
+                                      {/* Category */}
+                                      <div className="flex flex-wrap gap-1">
+                                        {CATEGORIES.map((cat) => (
+                                          <button
+                                            key={cat}
+                                            type="button"
+                                            onClick={() => {
+                                              const updated = [...entries];
+                                              updated[globalIdx] = {
+                                                ...updated[globalIdx],
+                                                category: e.category === cat ? undefined : cat,
+                                              };
+                                              save(updated);
+                                            }}
+                                            className="rounded-full px-2.5 py-0.5 text-[9px] font-medium transition-all"
+                                            style={{
+                                              background:
+                                                e.category === cat
+                                                  ? `${CATEGORY_COLORS[cat]}20`
+                                                  : `${CATEGORY_COLORS[cat]}06`,
+                                              color:
+                                                e.category === cat
+                                                  ? CATEGORY_COLORS[cat]
+                                                  : `${CATEGORY_COLORS[cat]}70`,
+                                              border: `1px solid ${e.category === cat ? `${CATEGORY_COLORS[cat]}35` : `${CATEGORY_COLORS[cat]}15`}`,
+                                            }}
+                                          >
+                                            {cat}
+                                          </button>
+                                        ))}
+                                      </div>
 
-                                    {/* Category */}
-                                    <div className="flex flex-wrap gap-1">
-                                      {CATEGORIES.map((cat) => (
-                                        <button
-                                          key={cat}
-                                          type="button"
-                                          onClick={() => {
-                                            const updated = [...entries];
-                                            updated[globalIdx] = {
-                                              ...updated[globalIdx],
-                                              category: e.category === cat ? undefined : cat,
-                                            };
-                                            save(updated);
-                                          }}
-                                          className="rounded-full px-2.5 py-0.5 text-[9px] font-medium transition-all"
-                                          style={{
-                                            background:
-                                              e.category === cat ? `${CATEGORY_COLORS[cat]}20` : `${CATEGORY_COLORS[cat]}06`,
-                                            color: e.category === cat ? CATEGORY_COLORS[cat] : `${CATEGORY_COLORS[cat]}70`,
-                                            border: `1px solid ${e.category === cat ? `${CATEGORY_COLORS[cat]}35` : `${CATEGORY_COLORS[cat]}15`}`,
-                                          }}
-                                        >
-                                          {cat}
-                                        </button>
-                                      ))}
-                                    </div>
-
-                                    {/* Tags + delete */}
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex gap-1.5">
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            const updated = [...entries];
-                                            updated[globalIdx] = {
-                                              ...updated[globalIdx],
-                                              tag: e.tag === 'good' ? null : 'good',
-                                            };
-                                            save(updated);
-                                          }}
-                                          className="rounded-full px-2 py-0.5 text-[9px]"
-                                          style={{
-                                            color: e.tag === 'good' ? '#80B868' : '#80B86850',
-                                            background:
-                                              e.tag === 'good' ? '#80B86815' : 'transparent',
-                                          }}
-                                        >
-                                          ✦ works
-                                        </button>
+                                      {/* Tags + delete */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex gap-1.5">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const updated = [...entries];
+                                              updated[globalIdx] = {
+                                                ...updated[globalIdx],
+                                                tag: e.tag === 'good' ? null : 'good',
+                                              };
+                                              save(updated);
+                                            }}
+                                            className="rounded-full px-2 py-0.5 text-[9px]"
+                                            style={{
+                                              color: e.tag === 'good' ? '#80B868' : '#80B86850',
+                                              background:
+                                                e.tag === 'good' ? '#80B86815' : 'transparent',
+                                            }}
+                                          >
+                                            ✦ works
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const updated = [...entries];
+                                              updated[globalIdx] = {
+                                                ...updated[globalIdx],
+                                                tag: e.tag === 'drop' ? null : 'drop',
+                                              };
+                                              save(updated);
+                                            }}
+                                            className="rounded-full px-2 py-0.5 text-[9px]"
+                                            style={{
+                                              color: e.tag === 'drop' ? '#D08040' : '#D0804050',
+                                              background:
+                                                e.tag === 'drop' ? '#D0804015' : 'transparent',
+                                            }}
+                                          >
+                                            ▾ drops
+                                          </button>
+                                        </div>
                                         <button
                                           type="button"
                                           onClick={() => {
-                                            const updated = [...entries];
-                                            updated[globalIdx] = {
-                                              ...updated[globalIdx],
-                                              tag: e.tag === 'drop' ? null : 'drop',
-                                            };
-                                            save(updated);
+                                            removeEntry(globalIdx);
+                                            setSelectedIdx(null);
                                           }}
-                                          className="rounded-full px-2 py-0.5 text-[9px]"
-                                          style={{
-                                            color: e.tag === 'drop' ? '#D08040' : '#D0804050',
-                                            background:
-                                              e.tag === 'drop' ? '#D0804015' : 'transparent',
-                                          }}
+                                          className="text-[9px] text-muted-foreground/40 hover:text-destructive transition-colors"
                                         >
-                                          ▾ drops
+                                          delete
                                         </button>
                                       </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          removeEntry(globalIdx);
-                                          setSelectedIdx(null);
-                                        }}
-                                        className="text-[9px] text-muted-foreground/40 hover:text-destructive transition-colors"
-                                      >
-                                        delete
-                                      </button>
                                     </div>
-                                  </div>
-                                )}
+                                  )}
 
-                                {/* Drag resize handle */}
-                                <div
-                                  className="h-2 cursor-ns-resize flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                  style={{ background: `${color}08` }}
-                                  onMouseDown={(ev) => {
-                                    ev.stopPropagation();
-                                    ev.preventDefault();
-                                    handleResizeStart(globalIdx, ev.clientY);
-                                  }}
-                                  onTouchStart={(ev) => {
-                                    ev.stopPropagation();
-                                    handleResizeStart(globalIdx, ev.touches[0].clientY);
-                                  }}
-                                >
-                                  <div className="flex gap-[3px]">
-                                    <div
-                                      className="h-[4px] w-[4px] rounded-full"
-                                      style={{ background: '#E0844A', opacity: 0.4 }}
-                                    />
-                                    <div
-                                      className="h-[4px] w-[4px] rounded-full"
-                                      style={{ background: '#E0844A', opacity: 0.4 }}
-                                    />
-                                    <div
-                                      className="h-[4px] w-[4px] rounded-full"
-                                      style={{ background: '#E0844A', opacity: 0.4 }}
-                                    />
+                                  {/* Drag resize handle */}
+                                  <div
+                                    className="h-2 cursor-ns-resize flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                    style={{ background: `${color}08` }}
+                                    onMouseDown={(ev) => {
+                                      ev.stopPropagation();
+                                      ev.preventDefault();
+                                      handleResizeStart(globalIdx, ev.clientY);
+                                    }}
+                                    onTouchStart={(ev) => {
+                                      ev.stopPropagation();
+                                      handleResizeStart(globalIdx, ev.touches[0].clientY);
+                                    }}
+                                  >
+                                    <div className="flex gap-[3px]">
+                                      <div
+                                        className="h-[4px] w-[4px] rounded-full"
+                                        style={{ background: '#E0844A', opacity: 0.4 }}
+                                      />
+                                      <div
+                                        className="h-[4px] w-[4px] rounded-full"
+                                        style={{ background: '#E0844A', opacity: 0.4 }}
+                                      />
+                                      <div
+                                        className="h-[4px] w-[4px] rounded-full"
+                                        style={{ background: '#E0844A', opacity: 0.4 }}
+                                      />
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-            {hiddenCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowAllHours(!showAllHours)}
-                className="w-full text-[10px] text-muted-foreground/30 hover:text-muted-foreground/50 transition-colors py-1 text-center"
-              >
-                {showAllHours ? 'Show less' : `${hiddenCount} more hours`}
-              </button>
-            )}
-          </>
-        );
-      })()}
+              {hiddenCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllHours(!showAllHours)}
+                  className="w-full text-[10px] text-muted-foreground/30 hover:text-muted-foreground/50 transition-colors py-1 text-center"
+                >
+                  {showAllHours ? 'Show less' : `${hiddenCount} more hours`}
+                </button>
+              )}
+            </>
+          );
+        })()}
     </div>
   );
 }

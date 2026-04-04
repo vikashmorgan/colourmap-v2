@@ -8,7 +8,9 @@ import { createClient } from '@/lib/supabase/server';
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
@@ -23,7 +25,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const db = getDb();
-  const [updated] = await db.update(checkIns)
+  const [updated] = await db
+    .update(checkIns)
     .set(updates)
     .where(and(eq(checkIns.id, id), eq(checkIns.userId, user.id)))
     .returning();
@@ -31,10 +34,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   return NextResponse.json(updated);
 }
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const db = getDb();

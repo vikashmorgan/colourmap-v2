@@ -4,7 +4,11 @@ import { createContext, useContext, useEffect, useState } from 'react';
 
 type ViewMode = 'desktop' | 'phone';
 
-const ViewModeContext = createContext<{ mode: ViewMode; mounted: boolean; setMode: (m: ViewMode) => void }>({
+const ViewModeContext = createContext<{
+  mode: ViewMode;
+  mounted: boolean;
+  setMode: (m: ViewMode) => void;
+}>({
   mode: 'desktop',
   mounted: false,
   setMode: () => {},

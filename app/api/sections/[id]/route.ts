@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server';
-
 import { and, eq } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
 
 import { getDb } from '@/lib/db/client';
 import { deleteSection, insertTracker } from '@/lib/db/queries/cockpit-sections';
@@ -9,7 +8,9 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
@@ -19,7 +20,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const db = getDb();
-  await db.update(cockpitSections)
+  await db
+    .update(cockpitSections)
     .set({ name: body.name.trim() })
     .where(and(eq(cockpitSections.id, id), eq(cockpitSections.userId, user.id)));
 
@@ -49,7 +51,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
 
-  const { deleteTrackerId, label, type } = body as { deleteTrackerId?: string; label?: string; type?: string };
+  const { deleteTrackerId, label, type } = body as {
+    deleteTrackerId?: string;
+    label?: string;
+    type?: string;
+  };
 
   // Delete a tracker
   if (deleteTrackerId) {

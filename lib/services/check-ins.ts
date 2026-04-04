@@ -50,5 +50,13 @@ export async function createCheckIn(
   const emotionName = typeof input.emotionName === 'string' ? input.emotionName : null;
   const emotionColor = typeof input.emotionColor === 'string' ? input.emotionColor : null;
 
-  return insertCheckIn(getDb(), { userId, sliderValue, note, tags, missionId, emotionName, emotionColor });
+  return insertCheckIn(getDb(), {
+    userId,
+    sliderValue,
+    note,
+    tags,
+    missionId,
+    emotionName,
+    emotionColor,
+  });
 }

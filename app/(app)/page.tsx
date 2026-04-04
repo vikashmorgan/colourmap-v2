@@ -10,7 +10,6 @@ import CockpitSections from '@/components/CockpitSection';
 import CollapsibleCard from '@/components/CollapsibleCard';
 import EnergyMap from '@/components/EnergyMap';
 import MissionTracker from '@/components/MissionTracker';
-import TodaySummary from '@/components/TodaySummary';
 import { useViewMode } from '@/components/ViewModeContext';
 
 interface MissionSummary {
@@ -127,7 +126,7 @@ export default function CockpitPage() {
     programs: <CockpitSections />,
   };
 
-  function renderColumn(col: 'left' | 'right') {
+  function _renderColumn(col: 'left' | 'right') {
     const items = layout[col];
     return (
       <div className="space-y-4">
@@ -237,7 +236,6 @@ export default function CockpitPage() {
           <CheckInHistory refreshKey={refreshKey} missions={missions} />
         </>
       ) : (
-        <>
         <section className="grid gap-4 md:grid-cols-2">
           {(['left', 'right'] as const).map((col) => (
             <div
@@ -274,11 +272,19 @@ export default function CockpitPage() {
                     draggable
                     onDragStart={(e) => {
                       const target = e.target as HTMLElement;
-                      const isInteractive = target.closest('input, textarea, button, [data-no-drag], [style*="touch-action"]');
-                      if (isInteractive) { e.preventDefault(); return; }
+                      const isInteractive = target.closest(
+                        'input, textarea, button, [data-no-drag], [style*="touch-action"]',
+                      );
+                      if (isInteractive) {
+                        e.preventDefault();
+                        return;
+                      }
                       dragFrom.current = { col, idx };
                     }}
-                    onDragEnd={() => { dragFrom.current = null; setDragOver(null); }}
+                    onDragEnd={() => {
+                      dragFrom.current = null;
+                      setDragOver(null);
+                    }}
                   >
                     {boxes[id]}
                   </div>
@@ -287,8 +293,6 @@ export default function CockpitPage() {
             </div>
           ))}
         </section>
-
-        </>
       )}
     </main>
   );

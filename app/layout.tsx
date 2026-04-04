@@ -1,5 +1,13 @@
 import type { Metadata } from 'next';
-import { Geist, Playfair_Display, Courier_Prime, Outfit, Righteous, Caveat, Kalam } from 'next/font/google';
+import {
+  Caveat,
+  Courier_Prime,
+  Geist,
+  Kalam,
+  Outfit,
+  Playfair_Display,
+  Righteous,
+} from 'next/font/google';
 import './globals.css';
 
 import { cn } from '@/lib/utils';
@@ -57,7 +65,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn('font-sans', geist.variable, playfair.variable, courier.variable, outfit.variable, righteous.variable, caveat.variable, kalam.variable)}>
+    <html
+      lang="en"
+      className={cn(
+        'font-sans',
+        geist.variable,
+        playfair.variable,
+        courier.variable,
+        outfit.variable,
+        righteous.variable,
+        caveat.variable,
+        kalam.variable,
+      )}
+    >
       <body className="min-h-screen bg-background text-foreground antialiased">{children}</body>
     </html>
   );

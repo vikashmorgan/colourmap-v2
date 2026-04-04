@@ -39,24 +39,32 @@ export default async function AppLayout({
       <div className="min-h-screen bg-background">
         <header className="border-b border-border">
           <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-3">
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <p className="text-[15px] font-normal tracking-[0.08em] font-serif" style={{ color: '#5C3018' }}>Colourmap</p>
-                  <StepBack />
-                </div>
-                <p className="text-[10px] text-muted-foreground/50">
-                  {user.email ?? 'your Google account'}
+            <div>
+              <div className="flex items-center gap-2.5">
+                <p
+                  className="text-[15px] font-normal tracking-[0.08em] font-serif"
+                  style={{ color: '#5C3018' }}
+                >
+                  Colourmap
                 </p>
+                <StepBack />
               </div>
-              <div className="flex items-center gap-3">
-                <ViewModeSwitcher />
-                <ThemeSwitcher />
-                <form action="/logout" method="post">
-                  <button className="text-[10px] text-muted-foreground transition-colors hover:text-foreground" type="submit">
-                    Sign out
-                  </button>
-                </form>
-              </div>
+              <p className="text-[10px] text-muted-foreground/50">
+                {user.email ?? 'your Google account'}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <ViewModeSwitcher />
+              <ThemeSwitcher />
+              <form action="/logout" method="post">
+                <button
+                  className="text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+                  type="submit"
+                >
+                  Sign out
+                </button>
+              </form>
+            </div>
           </div>
           <NavLinks />
         </header>

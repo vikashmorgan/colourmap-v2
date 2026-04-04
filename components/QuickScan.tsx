@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const DOTS = [
   { id: 'blocks', color: '#D4605A', label: 'Blocks' },
@@ -14,8 +14,8 @@ export default function QuickScan() {
 
   useEffect(() => {
     fetch('/api/life-scan-answers')
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.answers && typeof data.answers === 'object') {
           setAnswers(data.answers);
         } else {
@@ -33,7 +33,7 @@ export default function QuickScan() {
   return (
     <div className="space-y-4">
       <div className="flex justify-center gap-10">
-        {DOTS.map(dot => {
+        {DOTS.map((dot) => {
           let count = 0;
           let subtitle = '';
           if (dot.id === 'blocks') {
@@ -48,14 +48,20 @@ export default function QuickScan() {
 
           return (
             <div key={dot.id} className="flex flex-col items-center gap-1.5">
-              <div className="rounded-full flex items-center justify-center"
+              <div
+                className="rounded-full flex items-center justify-center"
                 style={{
-                  width: 48, height: 48,
+                  width: 48,
+                  height: 48,
                   backgroundColor: dot.color,
-                  opacity: (dot.id === 'blocks' && fears.length > 0) ||
-                           (dot.id === 'flow' && strengths.length > 0) ||
-                           (dot.id === 'vision' && visionFilled) ? 0.7 : 0.3,
-                }}>
+                  opacity:
+                    (dot.id === 'blocks' && fears.length > 0) ||
+                    (dot.id === 'flow' && strengths.length > 0) ||
+                    (dot.id === 'vision' && visionFilled)
+                      ? 0.7
+                      : 0.3,
+                }}
+              >
                 {dot.id === 'blocks' && fears.length > 0 && (
                   <span className="text-white text-xs font-bold">{fears.length}</span>
                 )}
@@ -66,8 +72,10 @@ export default function QuickScan() {
                   <span className="text-white text-xs font-bold">&#10003;</span>
                 )}
               </div>
-              <span className="text-[10px] font-semibold uppercase tracking-widest"
-                style={{ color: `${dot.color}80` }}>
+              <span
+                className="text-[10px] font-semibold uppercase tracking-widest"
+                style={{ color: `${dot.color}80` }}
+              >
                 {dot.label}
               </span>
               <span className="text-[9px] text-muted-foreground">{subtitle}</span>
@@ -78,8 +86,10 @@ export default function QuickScan() {
 
       {!hasData && answers !== null && (
         <div className="text-center">
-          <Link href="/life-scan"
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
+          <Link
+            href="/life-scan"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+          >
             Start your Life Scan
           </Link>
         </div>
