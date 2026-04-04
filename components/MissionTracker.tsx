@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { getEmotionalWord } from '@/lib/emotional-vocabulary';
 
+// ============================================================
+// TYPES
+// ============================================================
+
 interface Mission {
   id: string;
   title: string;
@@ -21,16 +25,36 @@ interface LinkedCheckIn {
   createdAt: string;
 }
 
-function getPreview(mission: Mission): string | null {
-  if (mission.blocking?.trim()) return mission.blocking.trim();
-  if (mission.nextStep?.trim()) return mission.nextStep.trim();
-  return null;
+// ============================================================
+// MISSION COLORS — stored in localStorage
+// ============================================================
+
+const MISSION_COLORS = [
+  '#C4A060',
+  '#9B6BA0',
+  '#3A8AC4',
+  '#E0844A',
+  '#7A8A50',
+  '#D4605A',
+  '#C88820',
+  '#3AA8A0',
+];
+
+function getMissionColor(id: string): string {
+  try {
+    return localStorage.getItem(`mission_color_${id}`) || '#C4A060';
+  } catch {
+    return '#C4A060';
+  }
 }
 
-function formatTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+function setMissionColor(id: string, color: string) {
+  localStorage.setItem(`mission_color_${id}`, color);
 }
+
+// ============================================================
+// HELPERS
+// ============================================================
 
 function formatShortDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -40,7 +64,7 @@ function formatShortDate(dateStr: string): string {
     date.getMonth() === now.getMonth() &&
     date.getFullYear() === now.getFullYear()
   ) {
-    return formatTime(dateStr);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
   return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
@@ -50,6 +74,14 @@ function getDotColor(value: number): string {
   if (value <= 62) return 'hsl(40 15% 55%)';
   return 'hsl(25 70% 55%)';
 }
+
+function daysSince(dateStr: string): number {
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
 
 interface MissionTrackerProps {
   onMissionsChange?: () => void;
@@ -61,15 +93,13 @@ export default function MissionTracker({ onMissionsChange, refreshKey = 0 }: Mis
   const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState('');
   const [adding, setAdding] = useState(false);
-  const [showAddInput, setShowAddInput] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showDone, setShowDone] = useState(false);
 
   const fetchMissions = useCallback(async () => {
     try {
       const res = await fetch('/api/missions');
-      if (res.ok) {
-        setMissions(await res.json());
-      }
+      if (res.ok) setMissions(await res.json());
     } finally {
       setLoading(false);
     }
@@ -93,7 +123,6 @@ export default function MissionTracker({ onMissionsChange, refreshKey = 0 }: Mis
         const mission = await res.json();
         setMissions((prev) => [mission, ...prev]);
         setNewTitle('');
-        setShowAddInput(false);
         setExpandedId(mission.id);
         onMissionsChange?.();
       }
@@ -125,93 +154,103 @@ export default function MissionTracker({ onMissionsChange, refreshKey = 0 }: Mis
   const active = missions.filter((m) => !m.completed);
   const done = missions.filter((m) => m.completed);
 
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[0, 1].map((i) => (
+          <div key={`skeleton-${i}`} className="h-16 rounded-2xl bg-muted animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <button
-          type="button"
-          aria-label="Add mission"
-          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          onClick={() => setShowAddInput(!showAddInput)}
-        >
-          <svg
-            aria-hidden="true"
-            className={`h-4 w-4 transition-transform ${showAddInput ? 'rotate-45' : ''}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" />
-          </svg>
-        </button>
-      </div>
-
-      {showAddInput && (
-        <form onSubmit={handleAdd} className="flex gap-2">
-          <input
-            type="text"
-            placeholder="What's the mission?"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            // biome-ignore lint/a11y/noAutofocus: intentional focus on reveal
-            autoFocus
-          />
+      {/* Add mission — always visible input */}
+      <form onSubmit={handleAdd} className="flex gap-2">
+        <input
+          type="text"
+          placeholder="New mission..."
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          className="flex-1 rounded-xl border px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground/30"
+          style={{ borderColor: '#C4A06015', background: '#C4A06003' }}
+        />
+        {newTitle.trim() && (
           <button
             type="submit"
-            disabled={!newTitle.trim() || adding}
-            className="rounded-xl bg-[#5C3018] px-3 py-2 text-sm font-medium text-[#F5DEB8] transition-colors hover:bg-[#4A2810] disabled:opacity-50"
+            disabled={adding}
+            className="rounded-xl px-4 py-2.5 text-sm font-medium transition-all"
+            style={{ color: '#5C3018', background: '#5C301810' }}
           >
             {adding ? '...' : 'Add'}
           </button>
-        </form>
+        )}
+      </form>
+
+      {/* Active missions */}
+      {active.length === 0 && done.length === 0 && (
+        <p className="text-sm text-muted-foreground/40 text-center py-8">
+          No missions yet. What are you working toward?
+        </p>
       )}
 
-      {loading ? (
-        <div className="space-y-2">
-          {[0, 1, 2].map((i) => (
-            <div key={`skeleton-${i}`} className="h-12 rounded-2xl bg-muted animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {active.length === 0 && done.length === 0 && (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              No missions yet. What are you working toward?
-            </p>
-          )}
+      <div className="space-y-2">
+        {active.map((mission) => (
+          <MissionCard
+            key={mission.id}
+            mission={mission}
+            expanded={expandedId === mission.id}
+            onToggleExpand={() => setExpandedId(expandedId === mission.id ? null : mission.id)}
+            onToggleComplete={() => handleToggle(mission.id, true)}
+            onDelete={() => handleDelete(mission.id)}
+            onFieldUpdate={(field, value) => handleFieldUpdate(mission.id, field, value)}
+            refreshKey={refreshKey}
+          />
+        ))}
+      </div>
 
-          {active.map((mission) => (
-            <MissionCard
-              key={mission.id}
-              mission={mission}
-              expanded={expandedId === mission.id}
-              onToggleExpand={() => setExpandedId(expandedId === mission.id ? null : mission.id)}
-              onToggleComplete={() => handleToggle(mission.id, true)}
-              onDelete={() => handleDelete(mission.id)}
-              onFieldUpdate={(field, value) => handleFieldUpdate(mission.id, field, value)}
-              refreshKey={refreshKey}
-            />
-          ))}
-
-          {done.length > 0 && (
-            <div className="space-y-2 pt-2">
-              <p className="text-xs text-muted-foreground">Done ({done.length})</p>
-              {done.map((mission) => (
-                <MissionCard
-                  key={mission.id}
-                  mission={mission}
-                  expanded={expandedId === mission.id}
-                  onToggleExpand={() =>
-                    setExpandedId(expandedId === mission.id ? null : mission.id)
-                  }
-                  onToggleComplete={() => handleToggle(mission.id, false)}
-                  onDelete={() => handleDelete(mission.id)}
-                  onFieldUpdate={(field, value) => handleFieldUpdate(mission.id, field, value)}
-                  refreshKey={refreshKey}
-                />
-              ))}
+      {/* Done missions — collapsible */}
+      {done.length > 0 && (
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={() => setShowDone(!showDone)}
+            className="text-xs text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors"
+          >
+            Completed ({done.length}) {showDone ? '−' : '+'}
+          </button>
+          {showDone && (
+            <div className="space-y-1.5 pt-2 animate-in fade-in duration-150">
+              {done.map((mission) => {
+                const color = getMissionColor(mission.id);
+                return (
+                  <div
+                    key={mission.id}
+                    className="flex items-center gap-3 px-3 py-2 rounded-xl"
+                    style={{ background: `${color}06` }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleToggle(mission.id, false)}
+                      className="h-4 w-4 rounded-full border-2 flex items-center justify-center text-[8px] shrink-0"
+                      style={{ borderColor: color, color, background: `${color}20` }}
+                    >
+                      done
+                    </button>
+                    <span className="text-sm line-through text-muted-foreground/50 flex-1">
+                      {mission.title}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(mission.id)}
+                      className="text-[10px] text-muted-foreground/20 hover:text-destructive transition-colors"
+                    >
+                      x
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -219,6 +258,10 @@ export default function MissionTracker({ onMissionsChange, refreshKey = 0 }: Mis
     </div>
   );
 }
+
+// ============================================================
+// MISSION CARD
+// ============================================================
 
 interface MissionCardProps {
   mission: Mission;
@@ -243,6 +286,12 @@ function MissionCard({
   const [openField, setOpenField] = useState<string | null>(null);
   const [linkedCheckIns, setLinkedCheckIns] = useState<LinkedCheckIn[]>([]);
   const lastLoadKey = useRef(-1);
+  const [color, setColor] = useState('#C4A060');
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  useEffect(() => {
+    setColor(getMissionColor(mission.id));
+  }, [mission.id]);
 
   useEffect(() => {
     if (openField === 'checkins' && lastLoadKey.current !== refreshKey) {
@@ -256,7 +305,6 @@ function MissionCard({
   function save(field: string, value: string) {
     const existing = saveTimers.current.get(field);
     if (existing) clearTimeout(existing);
-
     saveTimers.current.set(
       field,
       setTimeout(() => {
@@ -274,346 +322,267 @@ function MissionCard({
     save(field, value);
   }
 
-  const _preview = getPreview(mission);
+  const objectives = (mission.nextStep || '').split('\n').filter((s) => s.trim());
   const hasBlocker = Boolean(mission.blocking?.trim());
+  const days = daysSince(mission.createdAt);
 
-  return (
-    <div
-      className={`rounded-2xl border transition-all ${
-        mission.completed
-          ? 'border-border/50 opacity-60'
-          : hasBlocker
-            ? 'border-[#D4605A]/30'
-            : 'border-border'
-      }`}
-    >
-      {/* Header — click to expand/collapse */}
-      {!expanded && (
-        <button
-          type="button"
-          className="flex w-full items-center gap-3 px-4 py-3 text-left"
-          onClick={onToggleExpand}
-        >
-          <div className="min-w-0 flex-1">
-            <p
-              className={`text-sm truncate ${mission.completed ? 'line-through text-muted-foreground' : 'font-medium'}`}
-            >
-              {mission.title}
-            </p>
-          </div>
-          <span className="text-xs text-muted-foreground">{mission.completed ? '✓' : '›'}</span>
-        </button>
-      )}
-
-      {/* Expanded body */}
-      {expanded && (
-        <div className="px-4 pb-3 pt-2">
-          {/* Editable title — click to collapse */}
-          <div className="py-2 flex items-center gap-2">
-            <input
-              type="text"
-              value={mission.title}
-              onChange={(e) => {
-                onFieldUpdate('title', e.target.value);
-                save('title', e.target.value);
-              }}
-              className="flex-1 text-sm font-medium bg-transparent outline-none focus:ring-0 p-0"
-              style={{ borderBottom: '1px dashed hsl(var(--border))' }}
-              onFocus={(e) => {
-                e.target.style.borderBottom = '1px solid hsl(var(--border))';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderBottom = '1px solid transparent';
-              }}
-            />
-            <button
-              type="button"
-              onClick={onToggleExpand}
-              className="text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0"
-            >
-              ▴
-            </button>
-          </div>
-          {/* Objectives — multiple, stacked */}
-          <div className="border-t border-border/50 py-2">
-            <button
-              type="button"
-              className="flex w-full items-center gap-1.5 text-xs transition-colors hover:text-foreground"
-              onClick={() => setOpenField(openField === 'objectives' ? null : 'objectives')}
-            >
-              <svg
-                aria-hidden="true"
-                className={`h-3 w-3 shrink-0 transition-transform ${openField === 'objectives' ? 'rotate-90' : ''}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-              <span className="font-medium uppercase tracking-wider text-foreground">
-                Objectives
-              </span>
-              {(() => {
-                const objs = (mission.nextStep || '').split('\n').filter((s) => s.trim());
-                return objs.length > 0 && openField !== 'objectives' ? (
-                  <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal">
-                    {objs.length}
-                  </span>
-                ) : null;
-              })()}
-            </button>
-            {openField === 'objectives' && (
-              <div className="mt-2 space-y-1.5">
-                {(mission.nextStep || '')
-                  .split('\n')
-                  .filter((s) => s.trim())
-                  .map((obj, i) => (
-                    <div key={i} className="flex items-center gap-2 py-1 group">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#5C3018] opacity-30 flex-shrink-0" />
-                      <span className="text-sm flex-1">{obj}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const lines = (mission.nextStep || '')
-                            .split('\n')
-                            .filter((s) => s.trim());
-                          lines.splice(i, 1);
-                          handleChange('nextStep', lines.join('\n'));
-                        }}
-                        className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const input = (e.target as HTMLFormElement).elements.namedItem(
-                      'newObj',
-                    ) as HTMLInputElement;
-                    if (!input.value.trim()) return;
-                    const current = (mission.nextStep || '').trim();
-                    handleChange(
-                      'nextStep',
-                      current ? `${current}\n${input.value.trim()}` : input.value.trim(),
-                    );
-                    input.value = '';
-                  }}
-                  className="flex gap-2 pt-1"
-                >
-                  <input
-                    name="newObj"
-                    type="text"
-                    placeholder="Add an objective..."
-                    className="flex-1 rounded-lg border border-border bg-transparent px-2.5 py-1.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  <button type="submit" className="text-xs font-medium text-[#5C3018] px-2">
-                    Add
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
-          <CollapsibleField
-            label="Challenge"
-            value={mission.blocking ?? ''}
-            placeholder="What's making this hard?"
-            open={openField === 'blocking'}
-            onToggle={() => setOpenField(openField === 'blocking' ? null : 'blocking')}
-            onChange={(v) => handleChange('blocking', v)}
-            accent={hasBlocker}
-          />
-          {/* Categories — structured workspace */}
-          <MissionCategories
-            value={mission.description ?? ''}
-            onChange={(v) => handleChange('description', v)}
-            open={openField === 'description'}
-            onToggle={() => setOpenField(openField === 'description' ? null : 'description')}
-          />
-
-          {/* Linked check-ins */}
-          <div className="border-t border-border/50 py-2">
-            <button
-              type="button"
-              className="flex w-full items-center gap-1.5 text-xs transition-colors hover:text-foreground"
-              onClick={() => setOpenField(openField === 'checkins' ? null : 'checkins')}
-            >
-              <svg
-                aria-hidden="true"
-                className={`h-3 w-3 shrink-0 transition-transform ${openField === 'checkins' ? 'rotate-90' : ''}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-              <span className="font-medium uppercase tracking-wider text-muted-foreground">
-                Check-ins
-              </span>
-              {linkedCheckIns.length > 0 && openField !== 'checkins' && (
-                <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal">
-                  {linkedCheckIns.length}
+  // ---- COLLAPSED ----
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={onToggleExpand}
+        className="w-full rounded-2xl border px-4 py-3 text-left transition-all hover:shadow-sm"
+        style={{ borderColor: `${color}20`, borderLeft: `4px solid ${color}50` }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{mission.title}</p>
+            <div className="flex items-center gap-3 mt-1">
+              {objectives.length > 0 && (
+                <span className="text-[10px] text-muted-foreground/40">
+                  {objectives.length} objective{objectives.length > 1 ? 's' : ''}
                 </span>
               )}
-            </button>
-            {openField === 'checkins' && (
-              <div className="mt-2 space-y-1.5">
-                {linkedCheckIns.length === 0 && (
-                  <p className="text-xs text-muted-foreground py-1">
-                    No check-ins linked yet. Tag this mission when you check in.
-                  </p>
-                )}
-                {linkedCheckIns.map((ci) => (
-                  <div key={ci.id} className="flex items-center gap-2 py-1">
-                    <div
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: getDotColor(ci.sliderValue) }}
-                    />
-                    <span className="text-xs font-medium">{getEmotionalWord(ci.sliderValue)}</span>
-                    {ci.note && (
-                      <span className="text-xs text-muted-foreground truncate">— {ci.note}</span>
-                    )}
-                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                      {formatShortDate(ci.createdAt)}
-                    </span>
-                  </div>
+              {hasBlocker && (
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded"
+                  style={{ color: '#D4605A', background: '#D4605A10' }}
+                >
+                  blocked
+                </span>
+              )}
+              <span className="text-[10px] text-muted-foreground/25">
+                {days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days}d ago`}
+              </span>
+            </div>
+          </div>
+        </div>
+      </button>
+    );
+  }
+
+  // ---- EXPANDED ----
+  return (
+    <div
+      className="rounded-2xl border overflow-hidden transition-all"
+      style={{ borderColor: `${color}30`, borderLeft: `4px solid ${color}` }}
+    >
+      {/* Header */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-start gap-3">
+          {/* Color dot + picker */}
+          <div className="relative mt-1">
+            <button
+              type="button"
+              onClick={() => setShowColorPicker(!showColorPicker)}
+              className="h-4 w-4 rounded-full transition-all hover:scale-125 shrink-0"
+              style={{ background: color }}
+            />
+            {showColorPicker && (
+              <div className="absolute top-6 left-0 z-50 flex gap-1.5 p-2 rounded-lg border border-border bg-card shadow-lg animate-in fade-in duration-100">
+                {MISSION_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => {
+                      setColor(c);
+                      setMissionColor(mission.id, c);
+                      setShowColorPicker(false);
+                    }}
+                    className="h-4 w-4 rounded-full transition-all hover:scale-125"
+                    style={{ background: c, opacity: color === c ? 1 : 0.35 }}
+                  />
                 ))}
               </div>
             )}
           </div>
 
-          {/* Actions — complete + delete */}
-          <div className="flex items-center justify-between pt-3 border-t border-border/50">
-            <button
-              type="button"
-              onClick={onDelete}
-              className="text-xs text-muted-foreground/40 hover:text-destructive transition-colors"
-            >
-              ✕ Delete
-            </button>
-            <button
-              type="button"
-              onClick={onToggleComplete}
-              className="text-xs font-medium transition-colors"
-              style={{ color: '#5C3018' }}
-            >
-              {mission.completed ? 'Reopen' : '✓ Complete'}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface CollapsibleFieldProps {
-  label: string;
-  value: string;
-  placeholder: string;
-  open: boolean;
-  onToggle: () => void;
-  onChange: (value: string) => void;
-  accent?: boolean;
-  multiline?: boolean;
-}
-
-function CollapsibleField({
-  label,
-  value,
-  placeholder,
-  open,
-  onToggle,
-  onChange,
-  accent,
-  multiline,
-}: CollapsibleFieldProps) {
-  const hasValue = value.trim().length > 0;
-  const [showSaved, setShowSaved] = useState(false);
-  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function handleChange(newValue: string) {
-    onChange(newValue);
-    if (savedTimer.current) clearTimeout(savedTimer.current);
-    setShowSaved(false);
-    savedTimer.current = setTimeout(() => {
-      if (newValue.trim()) {
-        setShowSaved(true);
-        setTimeout(() => setShowSaved(false), 2000);
-      }
-    }, 900);
-  }
-
-  return (
-    <div className="pt-2">
-      <button
-        type="button"
-        className={`w-full rounded-xl px-3.5 py-2.5 text-left transition-all ${
-          open ? 'bg-accent/30' : 'hover:bg-accent/20'
-        }`}
-        style={
-          accent && hasValue
-            ? { background: '#D4605A10', border: '1px solid #D4605A20' }
-            : undefined
-        }
-        onClick={onToggle}
-      >
-        <div className="flex items-center gap-2">
-          <span
-            className={`text-xs font-semibold uppercase tracking-wider ${
-              accent && hasValue
-                ? 'text-[#D4605A]'
-                : hasValue
-                  ? 'text-foreground'
-                  : 'text-muted-foreground/60'
-            }`}
-          >
-            {label}
-          </span>
-          {hasValue && !open && (
-            <span className="text-xs text-muted-foreground font-normal normal-case tracking-normal truncate flex-1">
-              — {value.trim().slice(0, 40)}
-              {value.trim().length > 40 ? '...' : ''}
-            </span>
-          )}
-        </div>
-      </button>
-      {open && (
-        <div className="mt-2 px-1 relative">
-          <textarea
-            placeholder={placeholder}
-            value={value}
+          {/* Editable title */}
+          <input
+            type="text"
+            value={mission.title}
             onChange={(e) => {
-              handleChange(e.target.value);
-              e.target.style.height = 'auto';
-              e.target.style.height = `${e.target.scrollHeight}px`;
+              onFieldUpdate('title', e.target.value);
+              save('title', e.target.value);
             }}
-            onFocus={(e) => {
-              e.target.style.height = 'auto';
-              e.target.style.height = `${e.target.scrollHeight}px`;
-            }}
-            className="w-full resize-none rounded-xl border border-border bg-transparent px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            rows={2}
-            style={{ minHeight: 48, overflow: 'hidden' }}
+            className="flex-1 text-base font-medium bg-transparent outline-none font-serif"
+            style={{ color }}
           />
-          {showSaved && (
-            <span
-              className="absolute right-3 top-3 text-[10px] font-medium animate-in fade-in duration-200"
-              style={{ color: '#C4A060' }}
-            >
-              saved
-            </span>
-          )}
+
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            className="text-xs text-muted-foreground/30 hover:text-muted-foreground shrink-0 mt-1"
+          >
+            x
+          </button>
         </div>
-      )}
+
+        <p className="text-[10px] text-muted-foreground/30 mt-1 pl-7">
+          Started{' '}
+          {new Date(mission.createdAt).toLocaleDateString([], {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          })}
+          {days > 0 ? ` · ${days} days` : ''}
+        </p>
+      </div>
+
+      {/* Objectives */}
+      <div className="px-4 py-3 border-t" style={{ borderColor: `${color}10` }}>
+        <p
+          className="text-[10px] font-medium uppercase tracking-wider mb-2"
+          style={{ color: `${color}80` }}
+        >
+          Objectives {objectives.length > 0 && `(${objectives.length})`}
+        </p>
+        <div className="space-y-1.5">
+          {objectives.map((obj, i) => (
+            <div key={i} className="flex items-start gap-2 group">
+              <div
+                className="h-1.5 w-1.5 rounded-full mt-1.5 shrink-0"
+                style={{ background: color, opacity: 0.4 }}
+              />
+              <span className="text-sm flex-1 leading-relaxed">{obj}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const lines = objectives.slice();
+                  lines.splice(i, 1);
+                  handleChange('nextStep', lines.join('\n'));
+                }}
+                className="text-[10px] text-muted-foreground/0 group-hover:text-muted-foreground/40 hover:!text-destructive transition-all shrink-0"
+              >
+                x
+              </button>
+            </div>
+          ))}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const input = (e.target as HTMLFormElement).elements.namedItem(
+                'newObj',
+              ) as HTMLInputElement;
+              if (!input.value.trim()) return;
+              const current = (mission.nextStep || '').trim();
+              handleChange(
+                'nextStep',
+                current ? `${current}\n${input.value.trim()}` : input.value.trim(),
+              );
+              input.value = '';
+            }}
+            className="flex gap-2"
+          >
+            <input
+              name="newObj"
+              type="text"
+              placeholder="Add objective..."
+              className="flex-1 rounded-lg border bg-transparent px-2.5 py-1.5 text-xs outline-none placeholder:text-muted-foreground/25"
+              style={{ borderColor: `${color}12` }}
+            />
+          </form>
+        </div>
+      </div>
+
+      {/* Challenge */}
+      <div className="px-4 py-3 border-t" style={{ borderColor: `${color}10` }}>
+        <p
+          className="text-[10px] font-medium uppercase tracking-wider mb-2"
+          style={{ color: hasBlocker ? '#D4605A80' : `${color}40` }}
+        >
+          Challenge
+        </p>
+        <textarea
+          value={mission.blocking || ''}
+          onChange={(e) => handleChange('blocking', e.target.value)}
+          placeholder="What's making this hard?"
+          rows={1}
+          className="w-full rounded-lg border bg-transparent px-2.5 py-1.5 text-sm resize-none outline-none placeholder:text-muted-foreground/25"
+          style={{
+            borderColor: hasBlocker ? '#D4605A20' : `${color}10`,
+            background: hasBlocker ? '#D4605A04' : 'transparent',
+          }}
+          onInput={(e) => {
+            const t = e.target as HTMLTextAreaElement;
+            t.style.height = 'auto';
+            t.style.height = `${t.scrollHeight}px`;
+          }}
+        />
+      </div>
+
+      {/* Categories */}
+      <MissionCategories
+        value={mission.description || ''}
+        onChange={(v) => handleChange('description', v)}
+        color={color}
+      />
+
+      {/* Check-ins */}
+      <div className="px-4 py-3 border-t" style={{ borderColor: `${color}10` }}>
+        <button
+          type="button"
+          onClick={() => setOpenField(openField === 'checkins' ? null : 'checkins')}
+          className="text-[10px] font-medium uppercase tracking-wider transition-colors"
+          style={{ color: `${color}40` }}
+        >
+          Check-ins {linkedCheckIns.length > 0 && `(${linkedCheckIns.length})`}{' '}
+          {openField === 'checkins' ? '−' : '+'}
+        </button>
+        {openField === 'checkins' && (
+          <div className="mt-2 space-y-1 animate-in fade-in duration-150">
+            {linkedCheckIns.length === 0 && (
+              <p className="text-xs text-muted-foreground/30">No check-ins linked yet</p>
+            )}
+            {linkedCheckIns.map((ci) => (
+              <div key={ci.id} className="flex items-center gap-2 py-1">
+                <div
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: getDotColor(ci.sliderValue) }}
+                />
+                <span className="text-xs font-medium">{getEmotionalWord(ci.sliderValue)}</span>
+                {ci.note && (
+                  <span className="text-xs text-muted-foreground/40 truncate flex-1">
+                    — {ci.note.slice(0, 40)}
+                  </span>
+                )}
+                <span className="text-[10px] text-muted-foreground/25 shrink-0">
+                  {formatShortDate(ci.createdAt)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div
+        className="px-4 py-3 border-t flex items-center justify-between"
+        style={{ borderColor: `${color}10` }}
+      >
+        <button
+          type="button"
+          onClick={onDelete}
+          className="text-[10px] text-muted-foreground/25 hover:text-destructive transition-colors"
+        >
+          Delete
+        </button>
+        <button
+          type="button"
+          onClick={onToggleComplete}
+          className="text-xs font-medium px-3 py-1 rounded-lg transition-all"
+          style={{ color, background: `${color}10` }}
+        >
+          Complete
+        </button>
+      </div>
     </div>
   );
 }
 
 // ============================================================
-// MISSION CATEGORIES — structured workspace within a mission
+// MISSION CATEGORIES
 // ============================================================
 
 const CATEGORY_COLORS = [
@@ -636,11 +605,10 @@ interface ParsedCategory {
 function parseCategories(raw: string): ParsedCategory[] {
   if (!raw.trim()) return [];
   const cats: ParsedCategory[] = [];
-  const sections = raw.split('|||CAT:');
-  for (const section of sections) {
+  for (const section of raw.split('|||CAT:')) {
     if (!section.trim()) continue;
-    const newlineIdx = section.indexOf('\n');
-    if (newlineIdx === -1) {
+    const nl = section.indexOf('\n');
+    if (nl === -1) {
       const [name, color] = section.split('|||COLOR:');
       cats.push({
         name: (name || '').trim(),
@@ -648,16 +616,14 @@ function parseCategories(raw: string): ParsedCategory[] {
         items: [],
       });
     } else {
-      const header = section.slice(0, newlineIdx);
-      const [name, color] = header.split('|||COLOR:');
-      const items = section
-        .slice(newlineIdx + 1)
-        .split('\n')
-        .filter((l) => l.trim());
+      const [name, color] = section.slice(0, nl).split('|||COLOR:');
       cats.push({
         name: (name || '').trim(),
         color: (color || CATEGORY_COLORS[cats.length % CATEGORY_COLORS.length]).trim(),
-        items,
+        items: section
+          .slice(nl + 1)
+          .split('\n')
+          .filter((l) => l.trim()),
       });
     }
   }
@@ -671,13 +637,11 @@ function serializeCategories(cats: ParsedCategory[]): string {
 function MissionCategories({
   value,
   onChange,
-  open,
-  onToggle,
+  color,
 }: {
   value: string;
   onChange: (v: string) => void;
-  open: boolean;
-  onToggle: () => void;
+  color: string;
 }) {
   const [categories, setCategories] = useState<ParsedCategory[]>([]);
   const [addingCat, setAddingCat] = useState(false);
@@ -702,200 +666,170 @@ function MissionCategories({
     setExpandedCat(newCatName.trim());
   }
 
-  function addItem(catIdx: number, text: string) {
-    const updated = [...categories];
-    updated[catIdx] = { ...updated[catIdx], items: [...updated[catIdx].items, `- ${text}`] };
-    save(updated);
-  }
-
-  function removeItem(catIdx: number, itemIdx: number) {
-    const updated = [...categories];
-    updated[catIdx] = {
-      ...updated[catIdx],
-      items: updated[catIdx].items.filter((_, i) => i !== itemIdx),
-    };
-    save(updated);
-  }
-
-  const catCount = categories.length;
-  const itemCount = categories.reduce((s, c) => s + c.items.length, 0);
-
   return (
-    <div className="border-t border-border/50 py-2">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center gap-1.5 text-xs transition-colors hover:text-foreground"
-      >
-        <svg
-          aria-hidden="true"
-          className={`h-3 w-3 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
+    <div className="px-4 py-3 border-t" style={{ borderColor: `${color}10` }}>
+      <div className="flex items-center gap-2 mb-2">
+        <p
+          className="text-[10px] font-medium uppercase tracking-wider"
+          style={{ color: `${color}60` }}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
-        <span className="font-medium uppercase tracking-wider text-foreground">Categories</span>
-        {catCount > 0 && !open && (
-          <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal">
-            {catCount} cat, {itemCount} items
+          Categories {categories.length > 0 && `(${categories.length})`}
+        </p>
+        <button
+          type="button"
+          onClick={() => setAddingCat(!addingCat)}
+          className="flex h-3.5 w-3.5 items-center justify-center rotate-45 rounded-[1.5px] transition-all hover:scale-110"
+          style={{ background: addingCat ? color : `${color}25` }}
+        >
+          <span
+            className="-rotate-45 text-[7px] font-bold"
+            style={{ color: addingCat ? '#fff' : color }}
+          >
+            +
           </span>
-        )}
-      </button>
+        </button>
+      </div>
 
-      {open && (
-        <div className="mt-3 space-y-2">
-          {/* Category pills */}
-          <div className="flex gap-1.5 flex-wrap">
-            {categories.map((cat) => (
-              <button
-                key={cat.name}
-                type="button"
-                onClick={() => setExpandedCat(expandedCat === cat.name ? null : cat.name)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all"
-                style={{
-                  background: expandedCat === cat.name ? `${cat.color}18` : `${cat.color}08`,
-                  color: expandedCat === cat.name ? cat.color : `${cat.color}70`,
-                  border: `1px solid ${expandedCat === cat.name ? `${cat.color}35` : `${cat.color}12`}`,
-                }}
-              >
-                <div
-                  className="h-2 w-2 rounded-full"
-                  style={{ background: cat.color, opacity: expandedCat === cat.name ? 0.8 : 0.4 }}
-                />
-                {cat.name}
-                <span className="text-[9px] opacity-50">{cat.items.length}</span>
-              </button>
-            ))}
+      {/* Category pills */}
+      {categories.length > 0 && (
+        <div className="flex gap-1.5 flex-wrap mb-2">
+          {categories.map((cat) => (
             <button
+              key={cat.name}
               type="button"
-              onClick={() => setAddingCat(!addingCat)}
-              className="flex h-4 w-4 items-center justify-center rotate-45 rounded-[1.5px] self-center transition-all hover:scale-110"
-              style={{ background: addingCat ? '#C4A060' : '#C4A06030' }}
+              onClick={() => setExpandedCat(expandedCat === cat.name ? null : cat.name)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all"
+              style={{
+                background: expandedCat === cat.name ? `${cat.color}18` : `${cat.color}08`,
+                color: expandedCat === cat.name ? cat.color : `${cat.color}70`,
+                border: `1px solid ${expandedCat === cat.name ? `${cat.color}35` : `${cat.color}12`}`,
+              }}
             >
-              <span
-                className="-rotate-45 text-[7px] font-bold"
-                style={{ color: addingCat ? '#fff' : '#C4A060' }}
-              >
-                +
-              </span>
-            </button>
-          </div>
-
-          {/* Add category form */}
-          {addingCat && (
-            <div className="flex items-center gap-2 animate-in fade-in duration-150">
-              <input
-                type="text"
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') addCategory();
-                }}
-                placeholder="Category name..."
-                className="flex-1 rounded-lg border border-border/30 bg-transparent px-2.5 py-1.5 text-xs outline-none placeholder:text-muted-foreground/30"
+              <div
+                className="h-2 w-2 rounded-full"
+                style={{ background: cat.color, opacity: expandedCat === cat.name ? 0.8 : 0.4 }}
               />
-              <div className="flex gap-1">
-                {CATEGORY_COLORS.slice(0, 6).map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setNewCatColor(c)}
-                    className="h-3.5 w-3.5 rounded-full transition-all hover:scale-125"
-                    style={{ background: c, opacity: newCatColor === c ? 1 : 0.25 }}
-                  />
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={addCategory}
-                disabled={!newCatName.trim()}
-                className="text-[10px] font-medium disabled:opacity-30"
-                style={{ color: newCatColor }}
-              >
-                Add
-              </button>
-            </div>
-          )}
-
-          {/* Expanded category */}
-          {expandedCat &&
-            (() => {
-              const catIdx = categories.findIndex((c) => c.name === expandedCat);
-              if (catIdx === -1) return null;
-              const cat = categories[catIdx];
-              return (
-                <div
-                  className="rounded-xl border p-3 space-y-2 animate-in fade-in duration-150"
-                  style={{ borderColor: `${cat.color}25`, background: `${cat.color}04` }}
-                >
-                  {cat.items.map((item, i) => (
-                    <div key={i} className="flex items-start gap-2 group">
-                      <div
-                        className="h-1.5 w-1.5 rounded-full mt-1.5 shrink-0"
-                        style={{ background: cat.color, opacity: 0.5 }}
-                      />
-                      <span className="text-xs flex-1 leading-relaxed">
-                        {item.replace(/^- /, '')}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeItem(catIdx, i)}
-                        className="text-[9px] text-muted-foreground/0 group-hover:text-muted-foreground/40 hover:!text-destructive transition-all shrink-0"
-                      >
-                        x
-                      </button>
-                    </div>
-                  ))}
-                  {cat.items.length === 0 && (
-                    <p className="text-[10px] text-muted-foreground/30">No items yet</p>
-                  )}
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const input = (e.target as HTMLFormElement).elements.namedItem(
-                        'newItem',
-                      ) as HTMLInputElement;
-                      if (!input.value.trim()) return;
-                      addItem(catIdx, input.value.trim());
-                      input.value = '';
-                    }}
-                    className="flex gap-2"
-                  >
-                    <input
-                      name="newItem"
-                      type="text"
-                      placeholder="Add item..."
-                      className="flex-1 rounded-lg border bg-transparent px-2.5 py-1.5 text-xs outline-none placeholder:text-muted-foreground/30"
-                      style={{ borderColor: `${cat.color}15` }}
-                    />
-                    <button
-                      type="submit"
-                      className="text-[10px] font-medium"
-                      style={{ color: cat.color }}
-                    >
-                      Add
-                    </button>
-                  </form>
-                  <div className="flex justify-end pt-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        save(categories.filter((_, i) => i !== catIdx));
-                        setExpandedCat(null);
-                      }}
-                      className="text-[9px] text-muted-foreground/25 hover:text-destructive transition-colors"
-                    >
-                      delete category
-                    </button>
-                  </div>
-                </div>
-              );
-            })()}
+              {cat.name}
+              <span className="text-[9px] opacity-50">{cat.items.length}</span>
+            </button>
+          ))}
         </div>
       )}
+
+      {/* Add category form */}
+      {addingCat && (
+        <div className="flex items-center gap-2 mb-2 animate-in fade-in duration-150">
+          <input
+            type="text"
+            value={newCatName}
+            onChange={(e) => setNewCatName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') addCategory();
+            }}
+            placeholder="Category name..."
+            className="flex-1 rounded-lg border border-border/30 bg-transparent px-2.5 py-1.5 text-xs outline-none placeholder:text-muted-foreground/25"
+            autoFocus
+          />
+          <div className="flex gap-1">
+            {CATEGORY_COLORS.slice(0, 6).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setNewCatColor(c)}
+                className="h-3.5 w-3.5 rounded-full transition-all hover:scale-125"
+                style={{ background: c, opacity: newCatColor === c ? 1 : 0.25 }}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={addCategory}
+            disabled={!newCatName.trim()}
+            className="text-[10px] font-medium disabled:opacity-30"
+            style={{ color: newCatColor }}
+          >
+            Add
+          </button>
+        </div>
+      )}
+
+      {/* Expanded category */}
+      {expandedCat &&
+        (() => {
+          const catIdx = categories.findIndex((c) => c.name === expandedCat);
+          if (catIdx === -1) return null;
+          const cat = categories[catIdx];
+          return (
+            <div
+              className="rounded-xl border p-3 space-y-2 animate-in fade-in duration-150"
+              style={{ borderColor: `${cat.color}20`, background: `${cat.color}04` }}
+            >
+              {cat.items.map((item, i) => (
+                <div key={i} className="flex items-start gap-2 group">
+                  <div
+                    className="h-1.5 w-1.5 rounded-full mt-1.5 shrink-0"
+                    style={{ background: cat.color, opacity: 0.5 }}
+                  />
+                  <span className="text-xs flex-1 leading-relaxed">{item.replace(/^- /, '')}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...categories];
+                      updated[catIdx] = {
+                        ...updated[catIdx],
+                        items: updated[catIdx].items.filter((_, j) => j !== i),
+                      };
+                      save(updated);
+                    }}
+                    className="text-[9px] text-muted-foreground/0 group-hover:text-muted-foreground/40 hover:!text-destructive transition-all shrink-0"
+                  >
+                    x
+                  </button>
+                </div>
+              ))}
+              {cat.items.length === 0 && (
+                <p className="text-[10px] text-muted-foreground/25">No items yet</p>
+              )}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const input = (e.target as HTMLFormElement).elements.namedItem(
+                    'newItem',
+                  ) as HTMLInputElement;
+                  if (!input.value.trim()) return;
+                  const updated = [...categories];
+                  updated[catIdx] = {
+                    ...updated[catIdx],
+                    items: [...updated[catIdx].items, `- ${input.value.trim()}`],
+                  };
+                  save(updated);
+                  input.value = '';
+                }}
+                className="flex gap-2"
+              >
+                <input
+                  name="newItem"
+                  type="text"
+                  placeholder="Add item..."
+                  className="flex-1 rounded-lg border bg-transparent px-2.5 py-1.5 text-xs outline-none placeholder:text-muted-foreground/25"
+                  style={{ borderColor: `${cat.color}12` }}
+                />
+              </form>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    save(categories.filter((_, i) => i !== catIdx));
+                    setExpandedCat(null);
+                  }}
+                  className="text-[9px] text-muted-foreground/20 hover:text-destructive transition-colors"
+                >
+                  delete category
+                </button>
+              </div>
+            </div>
+          );
+        })()}
     </div>
   );
 }

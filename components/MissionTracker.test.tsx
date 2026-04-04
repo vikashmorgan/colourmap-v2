@@ -67,7 +67,6 @@ describe('MissionTracker', () => {
 
   it('renders mission list', async () => {
     render(<MissionTracker refreshKey={0} />);
-
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
     });
@@ -75,101 +74,68 @@ describe('MissionTracker', () => {
 
   it('shows active and completed missions', async () => {
     render(<MissionTracker refreshKey={0} />);
-
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
-      expect(screen.getByText('Old task')).toBeDefined();
     });
+    // Done missions are collapsed by default
+    expect(screen.getByText(/Completed \(1\)/)).toBeDefined();
   });
 
-  it('expands card showing collapsible fields', async () => {
+  it('expands card showing sections', async () => {
     const user = userEvent.setup();
     render(<MissionTracker refreshKey={0} />);
-
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
     });
-
     await user.click(screen.getByText('Ship V1'));
-
-    expect(screen.getByText('Objectives')).toBeDefined();
-    expect(screen.getByText('Challenge')).toBeDefined();
-    expect(screen.getByText('Categories')).toBeDefined();
+    // Expanded card shows Objectives, Challenge, Categories sections
+    expect(screen.getByText(/Objectives/)).toBeDefined();
+    expect(screen.getByText(/Challenge/)).toBeDefined();
+    expect(screen.getByText(/Categories/)).toBeDefined();
   });
 
-  it('opens Objectives field to show items', async () => {
+  it('shows objectives when expanded', async () => {
     const user = userEvent.setup();
     render(<MissionTracker refreshKey={0} />);
-
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
     });
-
     await user.click(screen.getByText('Ship V1'));
-    await user.click(screen.getByText('Objectives'));
-
+    // Objectives are visible directly (not behind a toggle anymore)
     expect(screen.getByText('Write the login test')).toBeDefined();
   });
 
-  it('opens Challenge field to show input', async () => {
+  it('shows challenge when expanded', async () => {
     const user = userEvent.setup();
     render(<MissionTracker refreshKey={0} />);
-
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
     });
-
     await user.click(screen.getByText('Ship V1'));
-    await user.click(screen.getByText(/Challenge/));
-
     expect(screen.getByDisplayValue('Need to fix auth flow')).toBeDefined();
   });
 
   it('adds a new mission and auto-expands', async () => {
     const user = userEvent.setup();
     render(<MissionTracker refreshKey={0} />);
-
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
     });
-
-    await user.click(screen.getByLabelText('Add mission'));
-    await user.type(screen.getByPlaceholderText("What's the mission?"), 'New mission');
+    await user.type(screen.getByPlaceholderText('New mission...'), 'New mission');
     await user.click(screen.getByRole('button', { name: 'Add' }));
-
     await waitFor(() => {
       expect(screen.getByDisplayValue('New mission')).toBeDefined();
-      expect(screen.getByText('Objectives')).toBeDefined();
     });
-  });
-
-  it('shows field preview when expanded', async () => {
-    const user = userEvent.setup();
-    render(<MissionTracker refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Ship V1')).toBeDefined();
-    });
-
-    await user.click(screen.getByText('Ship V1'));
-
-    // Objectives shows count when closed, Challenge shows preview when closed
-    expect(screen.getByText(/Challenge/)).toBeDefined();
-    expect(screen.getByText(/Need to fix auth flow/)).toBeDefined();
   });
 
   it('toggles mission completion', async () => {
     const user = userEvent.setup();
     render(<MissionTracker refreshKey={0} />);
-
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
     });
-
-    // Need to expand the card first to see the Complete button
     await user.click(screen.getByText('Ship V1'));
-    await user.click(screen.getByText('✓ Complete'));
-
+    await user.click(screen.getByText('Complete'));
     expect(fetch).toHaveBeenCalledWith(
       '/api/missions/1',
       expect.objectContaining({ method: 'PATCH' }),
@@ -179,15 +145,11 @@ describe('MissionTracker', () => {
   it('deletes a mission', async () => {
     const user = userEvent.setup();
     render(<MissionTracker refreshKey={0} />);
-
     await waitFor(() => {
       expect(screen.getByText('Ship V1')).toBeDefined();
     });
-
-    // Need to expand the card first to see the Delete button
     await user.click(screen.getByText('Ship V1'));
-    await user.click(screen.getByText('✕ Delete'));
-
+    await user.click(screen.getByText('Delete'));
     expect(fetch).toHaveBeenCalledWith(
       '/api/missions/1',
       expect.objectContaining({ method: 'DELETE' }),
@@ -197,16 +159,9 @@ describe('MissionTracker', () => {
   it('shows empty state', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([]),
-        }),
-      ),
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })),
     );
-
     render(<MissionTracker refreshKey={0} />);
-
     await waitFor(() => {
       expect(screen.getByText('No missions yet. What are you working toward?')).toBeDefined();
     });
