@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 
+import { and, eq } from 'drizzle-orm';
+
 import { getDb } from '@/lib/db/client';
 import { deleteBacklogItem, toggleBacklogItem } from '@/lib/db/queries/backlog';
+import { backlog } from '@/lib/db/schema';
 import { createClient } from '@/lib/supabase/server';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -23,21 +26,31 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  if (typeof body !== 'object' || body === null || !('done' in body)) {
-    return NextResponse.json({ error: 'done is required' }, { status: 400 });
+  if (typeof body !== 'object' || body === null) {
+    return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
 
-  const { done } = body as { done: unknown };
-  if (typeof done !== 'boolean') {
-    return NextResponse.json({ error: 'done must be a boolean' }, { status: 400 });
+  const { done, notes } = body as { done?: unknown; notes?: unknown };
+
+  // Update notes
+  if (typeof notes === 'string' || notes === null) {
+    const db = getDb();
+    const [updated] = await db.update(backlog)
+      .set({ notes: notes as string | null })
+      .where(and(eq(backlog.id, id), eq(backlog.userId, user.id)))
+      .returning();
+    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (done === undefined) return NextResponse.json(updated);
   }
 
-  const item = await toggleBacklogItem(getDb(), user.id, id, done);
-  if (!item) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  // Toggle done
+  if (typeof done === 'boolean') {
+    const item = await toggleBacklogItem(getDb(), user.id, id, done);
+    if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return NextResponse.json(item);
   }
 
-  return NextResponse.json(item);
+  return NextResponse.json({ error: 'No valid fields' }, { status: 400 });
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {

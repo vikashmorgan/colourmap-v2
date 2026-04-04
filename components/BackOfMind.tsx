@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface BacklogItem {
   id: string;
   title: string;
+  notes: string | null;
   done: boolean;
   createdAt: string;
 }
@@ -15,6 +16,7 @@ export default function BackOfMind() {
   const [newTitle, setNewTitle] = useState('');
   const [adding, setAdding] = useState(false);
   const [showAddInput, setShowAddInput] = useState(false);
+  const [showCleared, setShowCleared] = useState(false);
 
   const fetchItems = useCallback(async () => {
     try {
@@ -125,30 +127,22 @@ export default function BackOfMind() {
           )}
 
           {pending.map((item) => (
-            <div key={item.id} className="flex items-center gap-2 py-1.5">
-              <button
-                type="button"
-                aria-label={`Mark "${item.title}" as done`}
-                className="h-4 w-4 shrink-0 rounded border border-muted-foreground transition-colors hover:border-primary"
-                onClick={() => handleToggle(item.id, true)}
-              />
-              <span className="flex-1 text-sm">{item.title}</span>
-              <button
-                type="button"
-                aria-label={`Remove "${item.title}"`}
-                className="shrink-0 text-xs text-muted-foreground transition-colors hover:text-destructive opacity-0 group-hover:opacity-100"
-                onClick={() => handleDelete(item.id)}
-              >
-                ✕
-              </button>
-            </div>
+            <BacklogItemRow key={item.id} item={item}
+              onToggle={(done) => handleToggle(item.id, done)}
+              onDelete={() => handleDelete(item.id)}
+              onNotesChange={(notes) => {
+                setItems(prev => prev.map(i => i.id === item.id ? { ...i, notes } : i));
+              }} />
           ))}
 
           {done.length > 0 && (
             <div className="pt-2 space-y-1">
-              <p className="text-xs text-muted-foreground">Cleared ({done.length})</p>
-              {done.map((item) => (
-                <div key={item.id} className="flex items-center gap-2 py-1 opacity-50">
+              <button type="button" onClick={() => setShowCleared(!showCleared)}
+                className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+                Cleared ({done.length}) {showCleared ? '−' : '+'}
+              </button>
+              {showCleared && done.map((item) => (
+                <div key={item.id} className="flex items-center gap-2 py-1 opacity-50 animate-in fade-in duration-150">
                   <button
                     type="button"
                     aria-label={`Undo "${item.title}"`}
@@ -169,6 +163,66 @@ export default function BackOfMind() {
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BacklogItemRow({ item, onToggle, onDelete, onNotesChange }: {
+  item: BacklogItem;
+  onToggle: (done: boolean) => void;
+  onDelete: () => void;
+  onNotesChange: (notes: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [notesVal, setNotesVal] = useState(item.notes || '');
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  function handleNotesChange(val: string) {
+    setNotesVal(val);
+    onNotesChange(val);
+    setSaved(false);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      fetch(`/api/backlog/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: val.trim() || null }),
+      }).then(() => { setSaved(true); setTimeout(() => setSaved(false), 1500); });
+    }, 800);
+  }
+
+  const hasNotes = !!(item.notes?.trim() || notesVal.trim());
+
+  return (
+    <div className="group">
+      <div className="flex items-center gap-2 py-1.5">
+        <button type="button" aria-label={`Mark "${item.title}" as done`}
+          className="h-4 w-4 shrink-0 rounded border border-muted-foreground transition-colors hover:border-primary"
+          onClick={() => onToggle(true)} />
+        <button type="button" onClick={() => setOpen(!open)}
+          className="flex-1 text-sm text-left">
+          {item.title}
+          {hasNotes && !open && <span className="text-muted-foreground/30 ml-1">•</span>}
+        </button>
+        <button type="button" aria-label={`Remove "${item.title}"`}
+          className="shrink-0 text-xs text-muted-foreground/0 group-hover:text-muted-foreground/40 hover:!text-destructive transition-colors"
+          onClick={onDelete}>✕</button>
+      </div>
+      {open && (
+        <div className="ml-6 pb-2 relative animate-in fade-in duration-150">
+          <textarea
+            value={notesVal}
+            onChange={e => handleNotesChange(e.target.value)}
+            placeholder="Add more details..."
+            rows={2}
+            className="w-full resize-none rounded-xl border border-border bg-background/60 px-3 py-2 text-sm placeholder:text-muted-foreground/40 outline-none"
+          />
+          {saved && (
+            <span className="absolute right-3 top-2 text-[10px]" style={{ color: '#C4A060' }}>saved</span>
           )}
         </div>
       )}

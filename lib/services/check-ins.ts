@@ -18,6 +18,8 @@ export async function createCheckIn(
     note?: string | null;
     tags?: string[] | null;
     missionId?: string | null;
+    emotionName?: string | null;
+    emotionColor?: string | null;
   },
 ): Promise<CheckIn> {
   const { sliderValue } = input;
@@ -45,5 +47,8 @@ export async function createCheckIn(
 
   const missionId = typeof input.missionId === 'string' ? input.missionId : null;
 
-  return insertCheckIn(getDb(), { userId, sliderValue, note, tags, missionId });
+  const emotionName = typeof input.emotionName === 'string' ? input.emotionName : null;
+  const emotionColor = typeof input.emotionColor === 'string' ? input.emotionColor : null;
+
+  return insertCheckIn(getDb(), { userId, sliderValue, note, tags, missionId, emotionName, emotionColor });
 }

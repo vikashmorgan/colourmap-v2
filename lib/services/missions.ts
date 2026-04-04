@@ -44,6 +44,7 @@ export async function updateMissionFields(
     description?: string | null;
     blocking?: string | null;
     nextStep?: string | null;
+    title?: string;
   },
 ): Promise<Mission | null> {
   const update: {
@@ -51,11 +52,13 @@ export async function updateMissionFields(
     description?: string | null;
     blocking?: string | null;
     nextStep?: string | null;
+    title?: string;
   } = {};
   if (data.completed !== undefined) update.completed = data.completed;
   if (data.description !== undefined) update.description = trimField(data.description);
   if (data.blocking !== undefined) update.blocking = trimField(data.blocking);
   if (data.nextStep !== undefined) update.nextStep = trimField(data.nextStep);
+  if (data.title !== undefined) update.title = data.title.trim().slice(0, MAX_TITLE_LENGTH);
   return updateMission(getDb(), userId, missionId, update);
 }
 

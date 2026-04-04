@@ -22,7 +22,7 @@ export default function CollapsibleCard({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full rounded-2xl border border-border bg-card/80 px-4 py-3 text-sm font-semibold uppercase tracking-[0.24em] text-center transition-colors hover:bg-card"
+        className="w-full rounded-2xl border border-border bg-card/80 px-4 py-3 text-[15px] font-normal tracking-[0.08em] text-center transition-colors hover:bg-card cursor-pointer font-serif"
       >
         {title}
       </button>
@@ -35,7 +35,7 @@ export default function CollapsibleCard({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-sm font-semibold uppercase tracking-[0.24em] transition-colors hover:text-muted-foreground"
+          className="text-[15px] font-normal tracking-[0.08em] transition-colors hover:text-muted-foreground cursor-pointer font-serif"
         >
           {title}
         </button>

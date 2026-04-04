@@ -8,7 +8,7 @@ export function getTimeOfDay(hour: number): TimeOfDay {
     return { greeting: 'Good morning.', label: 'How are you starting the day?' };
   }
   if (hour >= 12 && hour < 17) {
-    return { greeting: 'Good afternoon.', label: 'Where are you at?' };
+    return { greeting: 'Good afternoon.', label: 'How is the day going?' };
   }
   if (hour >= 17 && hour < 22) {
     return { greeting: 'Winding down.', label: 'How are you feeling?' };

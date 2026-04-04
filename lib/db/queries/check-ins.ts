@@ -14,6 +14,8 @@ export async function insertCheckIn(
     note: string | null;
     tags: string[] | null;
     missionId: string | null;
+    emotionName?: string | null;
+    emotionColor?: string | null;
   },
 ): Promise<CheckIn> {
   const [row] = await db.insert(checkIns).values(data).returning();

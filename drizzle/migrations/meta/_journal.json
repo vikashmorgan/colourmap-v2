@@ -43,6 +43,13 @@
       "when": 1775032236045,
       "tag": "0005_serious_proemial_gods",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775200000000,
+      "tag": "0006_add_emotion_fields",
+      "breakpoints": true
     }
   ]
 }

@@ -79,7 +79,7 @@ describe('insertCheckIn', () => {
     returning.mockRejectedValue(new Error('connection failed'));
 
     await expect(
-      insertCheckIn(db, { userId: 'user-1', sliderValue: 50, note: null, tags: null }),
+      insertCheckIn(db, { userId: 'user-1', sliderValue: 50, note: null, tags: null, missionId: null }),
     ).rejects.toThrow('connection failed');
   });
 });

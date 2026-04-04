@@ -26,11 +26,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
 
-  const { completed, description, blocking, nextStep } = body as {
+  const { completed, description, blocking, nextStep, title } = body as {
     completed?: unknown;
     description?: unknown;
     blocking?: unknown;
     nextStep?: unknown;
+    title?: unknown;
   };
 
   const data: {
@@ -38,12 +39,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     description?: string | null;
     blocking?: string | null;
     nextStep?: string | null;
+    title?: string;
   } = {};
 
   if (typeof completed === 'boolean') data.completed = completed;
   if (typeof description === 'string' || description === null) data.description = description;
   if (typeof blocking === 'string' || blocking === null) data.blocking = blocking;
   if (typeof nextStep === 'string' || nextStep === null) data.nextStep = nextStep;
+  if (typeof title === 'string' && title.trim()) data.title = title;
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
