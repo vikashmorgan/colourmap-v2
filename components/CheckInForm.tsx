@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useCheckIn } from '@/components/CheckInContext';
 import PostCheckInInsight from '@/components/PostCheckInInsight';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -439,7 +440,12 @@ function PulseSlider({
 }
 
 export default function CheckInForm({ missions = [], onCheckInComplete }: CheckInFormProps) {
-  const [sliderValue, setSliderValue] = useState(50);
+  const checkInCtx = useCheckIn();
+  const sliderValue = checkInCtx.sliderValue;
+  const setSliderValue = checkInCtx.setSliderValue;
+  const barActive = checkInCtx.barActive;
+  const setBarActive = checkInCtx.setBarActive;
+
   const [note, setNote] = useState('');
   const [_challenge, setChallenge] = useState('');
   const [_showChallenge, setShowChallenge] = useState(false);
@@ -454,7 +460,6 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
   const [insightCheckInId, setInsightCheckInId] = useState<string | null>(null);
   const [insightColor, setInsightColor] = useState('#C4A060');
   const [showPulse, setShowPulse] = useState(false);
-  const [barActive, setBarActive] = useState(false);
   const [showDesc, setShowDesc] = useState(false);
   const [openTracker, setOpenTracker] = useState<string | null>(null);
   const [trackerValues, setTrackerValues] = useState<Record<string, string>>({});
@@ -616,8 +621,10 @@ export default function CheckInForm({ missions = [], onCheckInComplete }: CheckI
     setOpenTracker(null);
     setTrackerValues({});
     setPulseDots({ body: 50, attitude: 50, structure: 50 });
+    checkInCtx.setInsightText(null);
+    checkInCtx.setIsLoadingInsight(false);
     onCheckInComplete?.();
-  }, [onCheckInComplete]);
+  }, [onCheckInComplete, checkInCtx, setBarActive, setSliderValue]);
 
   if (reflectionWord) {
     return <ReflectionMoment word={reflectionWord} onDismiss={handleReflectionDismiss} />;

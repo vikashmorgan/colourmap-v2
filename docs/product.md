@@ -50,8 +50,9 @@ Phone: Check In · Cockpit · Missions · Journey · Notebook · ◇
 ### Feeling (left column)
 
 1. **Check-in** — Hawkins-inspired emotional bar with contextual note prompts that change based on emotional level. FGAC trackers (Fear/Gratitude/Avoidance/Confusion) behind a losange toggle with progressive 3-question chains and losange separators. Pulse dots (Body/Attitude/Structure) collapsible. [Spec](specs/check-in.md)
-2. **After-Check-in AI Insight** — 2-sentence streamed reflection from Claude Haiku using current + previous check-ins + life scan context. Appears after the breath moment, auto-dismisses in 12s. [Spec](specs/post-submit-reflection.md)
-3. **Check-in History (Reflections)** — Timeline spine with colored dots, emotion-tinted rows, day sparkline SVG, FGAC chips, emotion clustering (xN), line-clamp notes, enhanced date headers. [Spec](specs/check-in-history.md)
+2. **Cat Mirror** — The cockpit cat as a living emotional mirror. 7 SVG poses mapped to Hawkins bands, concentric aura ring that shifts color with the slider, losange accents at cardinal points, speech bubble showing emotional vocabulary word (live) then AI insight (post-submit). Sits below Check-in, above History. Replaces static CockpitCat and absorbs PostCheckInInsight. [Spec](specs/cat-mirror.md)
+3. **After-Check-in AI Insight** — 2-sentence streamed reflection from Claude Haiku using current + previous check-ins + life scan context. Now delivered through the Cat Mirror speech bubble. [Spec](specs/post-submit-reflection.md)
+4. **Check-in History (Reflections)** — Timeline spine with colored dots, emotion-tinted rows, day sparkline SVG, FGAC chips, emotion clustering (xN), line-clamp notes, enhanced date headers. [Spec](specs/check-in-history.md)
 
 ### Doing (right column)
 

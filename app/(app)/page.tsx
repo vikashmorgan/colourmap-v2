@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import BackOfMind from '@/components/BackOfMind';
+import CatMirror from '@/components/CatMirror';
+import { CheckInProvider } from '@/components/CheckInContext';
 import CheckInForm from '@/components/CheckInForm';
 import CheckInHistory from '@/components/CheckInHistory';
-import CockpitCat from '@/components/CockpitCat';
 import CockpitSections from '@/components/CockpitSection';
 import CollapsibleCard from '@/components/CollapsibleCard';
 import EnergyMap from '@/components/EnergyMap';
@@ -17,8 +18,8 @@ interface MissionSummary {
   title: string;
 }
 
-const DEFAULT_LEFT = ['check-in', 'history'];
-const DEFAULT_RIGHT = ['energy', 'mission', 'cat', 'back-of-mind', 'programs'];
+const DEFAULT_LEFT = ['check-in', 'cat-mirror', 'history'];
+const DEFAULT_RIGHT = ['energy', 'mission', 'back-of-mind', 'programs'];
 const STORAGE_KEY = 'colourmap:cockpit-layout';
 
 const ALL_ITEMS = [...DEFAULT_LEFT, ...DEFAULT_RIGHT];
@@ -106,6 +107,7 @@ export default function CockpitPage() {
         <CheckInForm missions={missions} onCheckInComplete={() => setRefreshKey((k) => k + 1)} />
       </CollapsibleCard>
     ),
+    'cat-mirror': <CatMirror />,
     history: <CheckInHistory refreshKey={refreshKey} missions={missions} />,
     energy: (
       <CollapsibleCard title="Day Map" defaultOpen>
@@ -117,7 +119,6 @@ export default function CockpitPage() {
         <MissionTracker onMissionsChange={fetchMissions} refreshKey={refreshKey} />
       </CollapsibleCard>
     ),
-    cat: <CockpitCat />,
     'back-of-mind': (
       <CollapsibleCard title="Checklist">
         <BackOfMind />
@@ -141,159 +142,167 @@ export default function CockpitPage() {
   const isPhone = mode === 'phone';
 
   return (
-    <main className={isPhone ? 'space-y-6' : 'space-y-10'}>
-      {isPhone ? (
-        <>
-          {/* Check In */}
-          <div>
-            <CheckInForm
-              missions={missions}
-              onCheckInComplete={() => setRefreshKey((k) => k + 1)}
-            />
-          </div>
-
-          {/* Diamond divider */}
-          <div className="flex items-center justify-center gap-3">
-            <div className="flex-1 h-px bg-[#E0844A]/15" />
-            <div
-              className="h-2.5 w-2.5 rotate-45 rounded-[1px]"
-              style={{ background: '#E0844A', opacity: 0.3 }}
-            />
-            <div className="flex-1 h-px bg-[#E0844A]/15" />
-          </div>
-
-          {/* Cockpit — right after check-in */}
-          <div id="cockpit" className="rounded-2xl border border-border bg-card/80 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setCockpitOpen(!cockpitOpen)}
-              className="w-full px-4 py-3 text-[15px] font-normal tracking-[0.08em] text-center transition-colors hover:bg-card font-serif"
-            >
-              Cockpit
-            </button>
-            {cockpitOpen && (
-              <div className="px-4 pb-4 space-y-4 animate-in fade-in duration-200">
-                <MissionTracker onMissionsChange={fetchMissions} refreshKey={refreshKey} />
-
-                <div className="flex items-center justify-center">
-                  <div
-                    className="h-1.5 w-1.5 rotate-45 rounded-[0.5px]"
-                    style={{ background: '#C4A060', opacity: 0.2 }}
-                  />
-                </div>
-
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setBomOpen(!bomOpen)}
-                    className="w-full rounded-xl border border-border/50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-center text-muted-foreground/60 transition-colors hover:text-muted-foreground"
-                  >
-                    Checklist
-                  </button>
-                  {bomOpen && (
-                    <div className="pt-3 animate-in fade-in duration-150">
-                      <BackOfMind />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-center">
-                  <div
-                    className="h-1.5 w-1.5 rotate-45 rounded-[0.5px]"
-                    style={{ background: '#C4A060', opacity: 0.2 }}
-                  />
-                </div>
-
-                <CockpitSections />
-              </div>
-            )}
-          </div>
-
-          {/* Diamond divider */}
-          <div className="flex items-center justify-center gap-3">
-            <div className="flex-1 h-px bg-[#C4A060]/15" />
-            <div
-              className="h-2.5 w-2.5 rotate-45 rounded-[1px]"
-              style={{ background: '#C4A060', opacity: 0.2 }}
-            />
-            <div className="flex-1 h-px bg-[#C4A060]/15" />
-          </div>
-
-          {/* Day Map */}
-          <EnergyMap />
-
-          {/* Diamond divider */}
-          <div className="flex items-center justify-center gap-3">
-            <div className="flex-1 h-px bg-[#C4A060]/15" />
-            <div
-              className="h-2.5 w-2.5 rotate-45 rounded-[1px]"
-              style={{ background: '#C4A060', opacity: 0.2 }}
-            />
-            <div className="flex-1 h-px bg-[#C4A060]/15" />
-          </div>
-
-          {/* Recent */}
-          <CheckInHistory refreshKey={refreshKey} missions={missions} />
-        </>
-      ) : (
-        <section className="grid gap-4 md:grid-cols-2">
-          {(['left', 'right'] as const).map((col) => (
-            <div
-              key={col}
-              className="space-y-4"
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver({ col, idx: layout[col].length });
-              }}
-              onDrop={() => handleDrop(col, layout[col].length)}
-            >
-              {layout[col].map((id, idx) => (
-                <div
-                  key={id}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setDragOver({ col, idx });
-                  }}
-                  onDrop={(e) => {
-                    e.stopPropagation();
-                    handleDrop(col, idx);
-                  }}
-                  className={
-                    dragOver?.col === col &&
-                    dragOver?.idx === idx &&
-                    dragFrom.current &&
-                    !(dragFrom.current.col === col && dragFrom.current.idx === idx)
-                      ? 'border-t-2 border-[#C4A060]/50 pt-1'
-                      : ''
-                  }
-                >
-                  <div
-                    draggable
-                    onDragStart={(e) => {
-                      const target = e.target as HTMLElement;
-                      const isInteractive = target.closest(
-                        'input, textarea, button, [data-no-drag], [style*="touch-action"]',
-                      );
-                      if (isInteractive) {
-                        e.preventDefault();
-                        return;
-                      }
-                      dragFrom.current = { col, idx };
-                    }}
-                    onDragEnd={() => {
-                      dragFrom.current = null;
-                      setDragOver(null);
-                    }}
-                  >
-                    {boxes[id]}
-                  </div>
-                </div>
-              ))}
+    <CheckInProvider>
+      <main className={isPhone ? 'space-y-6' : 'space-y-10'}>
+        {isPhone ? (
+          <>
+            {/* Check In */}
+            <div>
+              <CheckInForm
+                missions={missions}
+                onCheckInComplete={() => setRefreshKey((k) => k + 1)}
+              />
             </div>
-          ))}
-        </section>
-      )}
-    </main>
+
+            {/* Cat Mirror */}
+            <CatMirror />
+
+            {/* Diamond divider */}
+            <div className="flex items-center justify-center gap-3">
+              <div className="flex-1 h-px bg-[#E0844A]/15" />
+              <div
+                className="h-2.5 w-2.5 rotate-45 rounded-[1px]"
+                style={{ background: '#E0844A', opacity: 0.3 }}
+              />
+              <div className="flex-1 h-px bg-[#E0844A]/15" />
+            </div>
+
+            {/* Cockpit — right after check-in */}
+            <div
+              id="cockpit"
+              className="rounded-2xl border border-border bg-card/80 overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={() => setCockpitOpen(!cockpitOpen)}
+                className="w-full px-4 py-3 text-[15px] font-normal tracking-[0.08em] text-center transition-colors hover:bg-card font-serif"
+              >
+                Cockpit
+              </button>
+              {cockpitOpen && (
+                <div className="px-4 pb-4 space-y-4 animate-in fade-in duration-200">
+                  <MissionTracker onMissionsChange={fetchMissions} refreshKey={refreshKey} />
+
+                  <div className="flex items-center justify-center">
+                    <div
+                      className="h-1.5 w-1.5 rotate-45 rounded-[0.5px]"
+                      style={{ background: '#C4A060', opacity: 0.2 }}
+                    />
+                  </div>
+
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setBomOpen(!bomOpen)}
+                      className="w-full rounded-xl border border-border/50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-center text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+                    >
+                      Checklist
+                    </button>
+                    {bomOpen && (
+                      <div className="pt-3 animate-in fade-in duration-150">
+                        <BackOfMind />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-center">
+                    <div
+                      className="h-1.5 w-1.5 rotate-45 rounded-[0.5px]"
+                      style={{ background: '#C4A060', opacity: 0.2 }}
+                    />
+                  </div>
+
+                  <CockpitSections />
+                </div>
+              )}
+            </div>
+
+            {/* Diamond divider */}
+            <div className="flex items-center justify-center gap-3">
+              <div className="flex-1 h-px bg-[#C4A060]/15" />
+              <div
+                className="h-2.5 w-2.5 rotate-45 rounded-[1px]"
+                style={{ background: '#C4A060', opacity: 0.2 }}
+              />
+              <div className="flex-1 h-px bg-[#C4A060]/15" />
+            </div>
+
+            {/* Day Map */}
+            <EnergyMap />
+
+            {/* Diamond divider */}
+            <div className="flex items-center justify-center gap-3">
+              <div className="flex-1 h-px bg-[#C4A060]/15" />
+              <div
+                className="h-2.5 w-2.5 rotate-45 rounded-[1px]"
+                style={{ background: '#C4A060', opacity: 0.2 }}
+              />
+              <div className="flex-1 h-px bg-[#C4A060]/15" />
+            </div>
+
+            {/* Recent */}
+            <CheckInHistory refreshKey={refreshKey} missions={missions} />
+          </>
+        ) : (
+          <section className="grid gap-4 md:grid-cols-2">
+            {(['left', 'right'] as const).map((col) => (
+              <div
+                key={col}
+                className="space-y-4"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver({ col, idx: layout[col].length });
+                }}
+                onDrop={() => handleDrop(col, layout[col].length)}
+              >
+                {layout[col].map((id, idx) => (
+                  <div
+                    key={id}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragOver({ col, idx });
+                    }}
+                    onDrop={(e) => {
+                      e.stopPropagation();
+                      handleDrop(col, idx);
+                    }}
+                    className={
+                      dragOver?.col === col &&
+                      dragOver?.idx === idx &&
+                      dragFrom.current &&
+                      !(dragFrom.current.col === col && dragFrom.current.idx === idx)
+                        ? 'border-t-2 border-[#C4A060]/50 pt-1'
+                        : ''
+                    }
+                  >
+                    <div
+                      draggable
+                      onDragStart={(e) => {
+                        const target = e.target as HTMLElement;
+                        const isInteractive = target.closest(
+                          'input, textarea, button, [data-no-drag], [style*="touch-action"]',
+                        );
+                        if (isInteractive) {
+                          e.preventDefault();
+                          return;
+                        }
+                        dragFrom.current = { col, idx };
+                      }}
+                      onDragEnd={() => {
+                        dragFrom.current = null;
+                        setDragOver(null);
+                      }}
+                    >
+                      {boxes[id]}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </section>
+        )}
+      </main>
+    </CheckInProvider>
   );
 }
