@@ -37,17 +37,31 @@ create index if not exists voice_notes_pending_idx
 
 alter table public.voice_notes enable row level security;
 
-create policy voice_notes_select_own on public.voice_notes
-  for select using (auth.uid() = user_id);
+-- Postgres has no CREATE POLICY IF NOT EXISTS. Without this guard a migration
+-- that failed halfway could never be re-run, which is the worst possible state
+-- for a table that is meant to make things unloseable.
+do $$
+begin
+  if not exists (select 1 from pg_policies where policyname = 'voice_notes_select_own') then
+    create policy voice_notes_select_own on public.voice_notes
+      for select using (auth.uid() = user_id);
+  end if;
 
-create policy voice_notes_insert_own on public.voice_notes
-  for insert with check (auth.uid() = user_id);
+  if not exists (select 1 from pg_policies where policyname = 'voice_notes_insert_own') then
+    create policy voice_notes_insert_own on public.voice_notes
+      for insert with check (auth.uid() = user_id);
+  end if;
 
-create policy voice_notes_update_own on public.voice_notes
-  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  if not exists (select 1 from pg_policies where policyname = 'voice_notes_update_own') then
+    create policy voice_notes_update_own on public.voice_notes
+      for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  end if;
 
--- Deleting a voice note must also delete its audio, and that cannot be done
--- from SQL. The app removes the object first and the row second, so a delete
--- policy exists; what it must never become is a bulk delete.
-create policy voice_notes_delete_own on public.voice_notes
-  for delete using (auth.uid() = user_id);
+  -- Deleting a voice note must also delete its audio, and that cannot be done
+  -- from SQL. The app removes the object first and the row second, so a delete
+  -- policy exists; what it must never become is a bulk delete.
+  if not exists (select 1 from pg_policies where policyname = 'voice_notes_delete_own') then
+    create policy voice_notes_delete_own on public.voice_notes
+      for delete using (auth.uid() = user_id);
+  end if;
+end $$;
