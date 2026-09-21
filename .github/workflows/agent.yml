@@ -1,0 +1,201 @@
+# The agent, run on GitHub's machines rather than yours.
+#
+# `digest.yml` deliberately is not this: it reads four tables and writes one
+# paragraph, and its worst failure is a wrong paragraph. This one writes code,
+# so it is a separate workflow with separate permissions, which is the split
+# that file already asked for.
+#
+# THE ONE RULE
+#
+# It opens a pull request. It never merges. Not because merging is hard, but
+# because this is the only place a person is still in the loop: a queue filled
+# by voice will one day contain a misheard note, and the PR is where that gets
+# caught. Every other safety here is replaceable; this one is the design.
+#
+# HOW IT STARTS
+#
+#   workflow_dispatch     you press Run, from the GitHub app on the phone
+#   repository_dispatch   Colour Brain calls the API and it starts in seconds
+#   schedule              nobody pressed anything and the queue is not empty
+#
+# The schedule is commented out on purpose. An agent that runs unattended
+# before anybody has watched it run once is how a repository fills with
+# plausible nonsense at 6am. Turn it on after the first few PRs are good.
+
+name: agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'What to work on. Leave empty to take the top of the mission queue.'
+        type: string
+        required: false
+      limit:
+        description: 'How many missions to take'
+        type: number
+        default: 1
+  repository_dispatch:
+    # Colour Brain sends this. The payload carries the same two fields.
+    types: [brain-task]
+
+  # schedule:
+  #   - cron: '0 5 * * *'   # see the note above before enabling
+
+# Enough to push a branch and open a PR, and nothing else. In particular no
+# `actions: write` — a job that can rewrite workflows can remove its own
+# guardrails, and this one is allowed to write code precisely because it
+# cannot change the rules it runs under.
+permissions:
+  contents: write
+  pull-requests: write
+
+# One agent at a time. Two of them on the same queue would each claim the same
+# mission and open two PRs for one piece of work.
+concurrency:
+  group: agent
+  cancel-in-progress: false
+
+jobs:
+  work:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: the agent reads recent commits to see how this
+          # repository actually writes things, which a shallow clone hides.
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Name the branch
+        id: naming
+        run: |
+          echo "branch=agent/$(date -u +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Read the queue
+        id: queue
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BRAIN_USER_ID: ${{ secrets.BRAIN_USER_ID }}
+        run: |
+          # The same reader the terminal uses. One window, one question, and
+          # no --everything — the rules that script enforces do not relax
+          # because the caller is a robot.
+          bun scripts/brain-read.ts missions --limit "${{ inputs.limit || github.event.client_payload.limit || 1 }}" > queue.txt || true
+          echo "--- queue ---"
+          cat queue.txt
+
+      - name: Work
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TASK: ${{ inputs.task || github.event.client_payload.task }}
+        run: |
+          if [ -z "${ANTHROPIC_API_KEY}" ]; then
+            echo "::error::ANTHROPIC_API_KEY is not set. Add it in Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+          bun add -g @anthropic-ai/claude-code
+
+          # --print runs once and exits rather than waiting for a terminal
+          # nobody is sitting at. The prompt carries the queue as text, so
+          # the agent never needs database credentials of its own.
+          claude --print --permission-mode acceptEdits "$(cat <<PROMPT
+          You are working in this repository on a machine with no person at it.
+
+          Read AGENTS.md and follow it. In particular: read the relevant spec in
+          docs/specs/ before implementing, write tests for what you change, and
+          update the spec in the same change when behaviour changes.
+
+          The task:
+          ${TASK:-Take the top item from the mission queue below.}
+
+          The mission queue:
+          $(cat queue.txt)
+
+          Make the change, run the tests, and stop. Do not commit, do not push,
+          and do not open a pull request — the workflow does that, so that what
+          gets proposed is exactly what you left in the working tree.
+
+          If the task is unclear, or if doing it would need a decision that is
+          not yours to make, change nothing and write your question into
+          AGENT_NOTES.md instead. A question is a better outcome than a guess.
+          PROMPT
+          )"
+
+      - name: Verify before proposing anything
+        id: verify
+        run: |
+          # A PR that fails its own checks wastes the one review a person is
+          # going to give it from a phone. Failures do not stop the PR, they
+          # are written into it — a broken attempt is still evidence, and
+          # hiding it would leave the queue looking mysteriously idle.
+          {
+            echo "lint<<EOF"; bun run lint 2>&1 | tail -20 || true; echo "EOF"
+            echo "typecheck<<EOF"; bun run typecheck 2>&1 | tail -20 || true; echo "EOF"
+            echo "test<<EOF"; bun run test 2>&1 | tail -20 || true; echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Propose it
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.naming.outputs.branch }}
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Nothing changed. The queue was empty, or the agent asked a question instead."
+            exit 0
+          fi
+
+          git config user.name 'colour-brain-agent'
+          git config user.email 'agent@users.noreply.github.com'
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "agent: $(echo "${{ inputs.task || github.event.client_payload.task || 'top of the mission queue' }}" | head -c 60)"
+          git push -u origin "$BRANCH"
+
+          gh pr create \
+            --title "agent: $(echo "${{ inputs.task || github.event.client_payload.task || 'from the mission queue' }}" | head -c 60)" \
+            --body "$(cat <<BODY
+          Opened by the agent workflow. **Nothing here has been reviewed by a person.**
+
+          ### What it was asked
+          \`\`\`
+          ${{ inputs.task || github.event.client_payload.task || 'Take the top item from the mission queue.' }}
+          \`\`\`
+
+          ### Checks, as they actually ran
+          <details><summary>lint</summary>
+
+          \`\`\`
+          ${{ steps.verify.outputs.lint }}
+          \`\`\`
+          </details>
+
+          <details><summary>typecheck</summary>
+
+          \`\`\`
+          ${{ steps.verify.outputs.typecheck }}
+          \`\`\`
+          </details>
+
+          <details><summary>test</summary>
+
+          \`\`\`
+          ${{ steps.verify.outputs.test }}
+          \`\`\`
+          </details>
+
+          ---
+
+          Read the diff before merging. A queue filled by voice will eventually
+          contain a misheard note, and this pull request is the only place that
+          gets caught.
+          BODY
+          )"
