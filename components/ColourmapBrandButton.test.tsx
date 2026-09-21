@@ -75,3 +75,40 @@ describe('ColourmapBrandButton', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
+
+describe('the door to the admin document', () => {
+  afterEach(cleanup);
+
+  it('is behind the title, where you already press to ask where you stand', () => {
+    render(<ColourmapBrandButton />);
+
+    /* Not reachable until the dialog is open — the title is the only way in. */
+    expect(screen.queryByRole('link', { name: /ce que tu dois faire/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Colour Brain' }));
+
+    expect(screen.getByRole('link', { name: /ce que tu dois faire/i })).toBeDefined();
+  });
+
+  it('points at a URL rather than a file, so the phone can reach it', () => {
+    /*
+     * The document lives on the Desktop and is deployed from there. A file://
+     * path would work on exactly one machine, which is the machine this whole
+     * workflow exists to stop depending on.
+     */
+    render(<ColourmapBrandButton />);
+    fireEvent.click(screen.getByRole('button', { name: 'Colour Brain' }));
+
+    const link = screen.getByRole('link', { name: /ce que tu dois faire/i });
+    expect(link.getAttribute('href')).toMatch(/^https:\/\//);
+  });
+
+  it('opens in its own tab without handing over the opener', () => {
+    render(<ColourmapBrandButton />);
+    fireEvent.click(screen.getByRole('button', { name: 'Colour Brain' }));
+
+    const link = screen.getByRole('link', { name: /ce que tu dois faire/i });
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toContain('noreferrer');
+  });
+});
