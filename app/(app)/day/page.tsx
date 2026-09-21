@@ -16,6 +16,7 @@ import InfographicsView from '@/components/InfographicsView';
 import InnerWork from '@/components/InnerWork';
 import LearningHub from '@/components/LearningHub';
 import MissionDesignSwitcher from '@/components/MissionDesignSwitcher';
+import MissionTracker from '@/components/MissionTracker';
 import Overview2 from '@/components/Overview2';
 import TodaysField from '@/components/TodaysField';
 import { hydrate } from '@/lib/sync';
@@ -925,6 +926,18 @@ function DayContent() {
                 </>
               ) : (
                 <>
+                  {/*
+                   * The real missions, at the top of the lane that is named
+                   * after them.
+                   *
+                   * /api/missions has had full CRUD and MissionTracker has had
+                   * tests for months, and nothing rendered it — the MISSIONS
+                   * lane showed doing-cards out of prefs instead, which are a
+                   * different concept in a different store. So there was no way
+                   * to write a mission from a phone, and the terminal's reader
+                   * had nothing to read.
+                   */}
+                  <MissionTracker />
                   <MissionDesignSwitcher
                     beforeContent={
                       <>
