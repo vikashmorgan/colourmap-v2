@@ -22,6 +22,7 @@
 
 import { useEffect, useState } from 'react';
 
+import AppConstellation from '@/components/AppConstellation';
 import LatticeTree from '@/components/LatticeTree';
 import { BRANCH_HUE, BRANCHES } from '@/lib/branches';
 
@@ -30,6 +31,7 @@ export const DOCK_HEIGHT = 44;
 
 export default function BrainDock() {
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<'life' | 'apps'>('life');
 
   /* Escape closes it. A panel with no keyboard way out is a trap. */
   useEffect(() => {
@@ -66,8 +68,47 @@ export default function BrainDock() {
             overflowY: 'auto',
           }}
         >
-          <div style={{ maxWidth: 420, margin: '0 auto' }}>
-            <LatticeTree />
+          <div style={{ maxWidth: 420, margin: '0 auto', display: 'grid', gap: 10 }}>
+            {/*
+             * TWO FIGURES, ONE BAND.
+             *
+             * The dock answers "where am I in all this", and there turned out
+             * to be two honest answers: the life, and the software the life is
+             * being built out of. They are different questions — a branch says
+             * which part of a life a thing belongs to, the constellation says
+             * what leans on what and how far from real it is — so they get
+             * different figures rather than one forced to do both.
+             *
+             * A toggle rather than a second dock, because two permanent bands
+             * along the bottom is furniture competing with the page.
+             */}
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+              {(['life', 'apps'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setView(value)}
+                  aria-pressed={view === value}
+                  style={{
+                    minHeight: 30,
+                    padding: '5px 14px',
+                    borderRadius: 999,
+                    border: '1px solid var(--border)',
+                    background: view === value ? 'var(--secondary)' : 'transparent',
+                    color: 'inherit',
+                    fontFamily: 'var(--font-serif)',
+                    fontSize: 12,
+                    fontWeight: view === value ? 700 : 500,
+                    letterSpacing: '0.04em',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {value === 'life' ? 'The life' : 'The apps'}
+                </button>
+              ))}
+            </div>
+
+            {view === 'life' ? <LatticeTree /> : <AppConstellation />}
           </div>
         </div>
       )}
