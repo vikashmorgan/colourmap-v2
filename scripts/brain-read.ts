@@ -30,6 +30,18 @@
  * Each command answers one question and takes a window. There is deliberately
  * no `--everything`: a journal is the most personal data its owner holds, and
  * "it was easy" is not a reason to read all of it.
+ *
+ * WHY THE ARGUMENT LOGIC IS PURE AND EXPORTED.
+ *
+ * The first version parsed `process.argv` inside each function and was tested
+ * by spawning the CLI. Those tests passed and reported ZERO coverage, because
+ * a subprocess is invisible to the instrumenter — which took `policy-scripts`
+ * under its threshold and broke the build on `main`.
+ *
+ * Parsing is now pure functions over an argv array, unit-tested in process,
+ * and the CLI is a thin shell around them. The subprocess tests stay for the
+ * refusals, because a refusal that only works when called as a function is not
+ * a refusal.
  */
 
 import { and, desc, eq, gte } from 'drizzle-orm';
@@ -37,11 +49,11 @@ import { and, desc, eq, gte } from 'drizzle-orm';
 import { getDb } from '@/lib/db/client';
 import { checkIns, missions, notebookEntries } from '@/lib/db/schema';
 
-type Command = 'notes' | 'checkins' | 'missions' | 'silence';
+export type Command = 'notes' | 'checkins' | 'missions' | 'silence';
 
-const COMMANDS: Command[] = ['notes', 'checkins', 'missions', 'silence'];
+export const COMMANDS: Command[] = ['notes', 'checkins', 'missions', 'silence'];
 
-const USAGE = `
+export const USAGE = `
 brain-read — read the record, so the terminal can think about it
 
   bun scripts/brain-read.ts notes    [--since YYYY-MM-DD | --days N] [--last N]
@@ -53,22 +65,34 @@ Needs DATABASE_URL and BRAIN_USER_ID in .env.local.
 There is no --everything, on purpose.
 `;
 
-function fail(message: string): never {
-  console.error(message);
-  process.exit(1);
+/** Thrown for anything the caller got wrong. The CLI turns it into an exit. */
+export class ReaderError extends Error {}
+
+export function flag(name: string, argv: string[]): string | undefined {
+  const at = argv.indexOf(`--${name}`);
+  if (at === -1) return undefined;
+  return argv[at + 1];
+}
+
+export function has(name: string, argv: string[]): boolean {
+  return argv.includes(`--${name}`);
+}
+
+export function isCommand(value: string | undefined): value is Command {
+  return value !== undefined && (COMMANDS as string[]).includes(value);
 }
 
 /**
  * Whose record this is.
  *
  * Required rather than inferred. Picking "the only user" works right up until
- * the database has two, and then it silently reads somebody else's journal —
+ * the database has two, and then it silently reads someone else's journal —
  * which is the one failure mode this script must never have.
  */
-function userId(): string {
-  const id = process.env.BRAIN_USER_ID;
+export function userIdFrom(env: { BRAIN_USER_ID?: string }): string {
+  const id = env.BRAIN_USER_ID;
   if (!id) {
-    fail(
+    throw new ReaderError(
       'BRAIN_USER_ID is not set.\n' +
         'Add it to .env.local. It is required rather than inferred: guessing the user\n' +
         'is fine until the database has two, and then it reads the wrong journal.',
@@ -77,47 +101,63 @@ function userId(): string {
   return id;
 }
 
-function flag(name: string): string | undefined {
-  const at = process.argv.indexOf(`--${name}`);
-  if (at === -1) return undefined;
-  return process.argv[at + 1];
-}
-
-function has(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
-
 /** The window to read. A month by default, which is about as much as stays readable. */
-function since(): Date {
-  const explicit = flag('since');
+export function windowStart(argv: string[], now: number = Date.now()): Date {
+  const explicit = flag('since', argv);
   if (explicit) {
     const parsed = new Date(explicit);
-    if (Number.isNaN(parsed.getTime())) fail(`--since ${explicit} is not a date.`);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new ReaderError(`--since ${explicit} is not a date.`);
+    }
     return parsed;
   }
-  const days = Number(flag('days') ?? 30);
-  if (!Number.isFinite(days) || days <= 0) fail('--days must be a positive number.');
-  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const days = Number(flag('days', argv) ?? 30);
+  if (!Number.isFinite(days) || days <= 0) {
+    throw new ReaderError('--days must be a positive number.');
+  }
+  return new Date(now - days * 24 * 60 * 60 * 1000);
 }
 
-function limit(fallback: number): number {
-  const raw = flag('last');
+/** Capped, so no flag turns a windowed read into the bulk dump this refuses. */
+export function readLimit(fallback: number, argv: string[]): number {
+  const raw = flag('last', argv);
   if (raw === undefined) return fallback;
+
   const n = Number(raw);
-  if (!Number.isFinite(n) || n <= 0) fail('--last must be a positive number.');
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new ReaderError('--last must be a positive number.');
+  }
   return Math.min(n, 200);
 }
 
-function day(at: Date): string {
+export function assertNoBulkDump(argv: string[]): void {
+  if (has('everything', argv)) {
+    throw new ReaderError(
+      'There is no --everything.\n' +
+        'Each command answers one question and takes a window. A journal is the most\n' +
+        'personal data you hold, and "it was easy" is not a reason to read all of it.',
+    );
+  }
+}
+
+export function day(at: Date): string {
   return at.toISOString().slice(0, 10);
 }
 
-function daysAgo(at: Date): number {
-  return Math.floor((Date.now() - at.getTime()) / (24 * 60 * 60 * 1000));
+export function daysAgo(at: Date, now: number = Date.now()): number {
+  return Math.floor((now - at.getTime()) / (24 * 60 * 60 * 1000));
 }
 
-async function readNotes(): Promise<void> {
-  const from = since();
+/** How many of a set of rows carried words rather than only a number. */
+export function withWords(
+  rows: { note?: string | null; challenge?: string | null; flow?: string | null }[],
+): number {
+  return rows.filter((row) => row.note || row.challenge || row.flow).length;
+}
+
+async function readNotes(argv: string[], who: string): Promise<void> {
+  const from = windowStart(argv);
   const rows = await getDb()
     .select({
       createdAt: notebookEntries.createdAt,
@@ -127,9 +167,9 @@ async function readNotes(): Promise<void> {
       tags: notebookEntries.tags,
     })
     .from(notebookEntries)
-    .where(and(eq(notebookEntries.userId, userId()), gte(notebookEntries.createdAt, from)))
+    .where(and(eq(notebookEntries.userId, who), gte(notebookEntries.createdAt, from)))
     .orderBy(desc(notebookEntries.createdAt))
-    .limit(limit(50));
+    .limit(readLimit(50, argv));
 
   console.log(`# notes — ${rows.length} since ${day(from)}\n`);
 
@@ -144,8 +184,8 @@ async function readNotes(): Promise<void> {
   }
 }
 
-async function readCheckins(): Promise<void> {
-  const from = since();
+async function readCheckins(argv: string[], who: string): Promise<void> {
+  const from = windowStart(argv);
   const rows = await getDb()
     .select({
       createdAt: checkIns.createdAt,
@@ -156,9 +196,9 @@ async function readCheckins(): Promise<void> {
       flow: checkIns.flow,
     })
     .from(checkIns)
-    .where(and(eq(checkIns.userId, userId()), gte(checkIns.createdAt, from)))
+    .where(and(eq(checkIns.userId, who), gte(checkIns.createdAt, from)))
     .orderBy(desc(checkIns.createdAt))
-    .limit(limit(60));
+    .limit(readLimit(60, argv));
 
   console.log(`# check-ins — ${rows.length} since ${day(from)}\n`);
   console.log('date       | val | emotion        | note');
@@ -172,16 +212,15 @@ async function readCheckins(): Promise<void> {
   }
 
   /*
-   * No average, deliberately. One number over a month of moods looks like
+   * No average, deliberately. One number across a month of moods looks like
    * insight and answers no question anybody standing in front of their own
    * record is actually asking.
    */
-  const written = rows.filter((row) => row.note || row.challenge || row.flow).length;
-  console.log(`\n${written} of ${rows.length} carried words as well as a number.`);
+  console.log(`\n${withWords(rows)} of ${rows.length} carried words as well as a number.`);
 }
 
-async function readMissions(): Promise<void> {
-  const openOnly = !has('all');
+async function readMissions(argv: string[], who: string): Promise<void> {
+  const openOnly = !has('all', argv);
   const rows = await getDb()
     .select({
       createdAt: missions.createdAt,
@@ -194,11 +233,11 @@ async function readMissions(): Promise<void> {
     .from(missions)
     .where(
       openOnly
-        ? and(eq(missions.userId, userId()), eq(missions.completed, false))
-        : eq(missions.userId, userId()),
+        ? and(eq(missions.userId, who), eq(missions.completed, false))
+        : eq(missions.userId, who),
     )
     .orderBy(desc(missions.createdAt))
-    .limit(limit(100));
+    .limit(readLimit(100, argv));
 
   console.log(`# missions — ${rows.length} ${openOnly ? 'open' : 'total'}\n`);
 
@@ -218,30 +257,23 @@ async function readMissions(): Promise<void> {
 /**
  * What has gone quiet.
  *
- * The one thing a query sees that rereading cannot. Absence is invisible when
- * you scroll and obvious when you count, which is why
- * `docs/specs/integrated-system.md` names it as the reason the weekly session
- * is worth having at all.
- *
  * THIS REPORTS LESS THAN IT WANTS TO, AND SAYS SO.
  *
  * The first version asked which BRANCH had gone quiet, by reading a route off
  * `day_events`. That column does not exist — `day_events` carries a date, a
- * type and a payload, and nothing in this database records which part of a life
- * was worked in. The figure can colour a branch by how many surfaces it owns;
- * it cannot colour one by how recently it moved.
+ * type and a payload, and nothing in this database records which part of a
+ * life was worked in.
  *
  * That gap is the finding, not a reason to fake the answer. It is also exactly
  * what the missions work in `integrated-system.md` needs in order to show
- * "moving" and "stalled" — so it is named here rather than papered over.
+ * "moving" and "stalled", so it is named here rather than papered over.
  */
-async function readSilence(): Promise<void> {
-  const from = since();
+async function readSilence(argv: string[], who: string): Promise<void> {
+  const from = windowStart(argv);
   const db = getDb();
-  const who = userId();
 
   const [lastNote] = await db
-    .select({ createdAt: notebookEntries.createdAt, category: notebookEntries.category })
+    .select({ createdAt: notebookEntries.createdAt })
     .from(notebookEntries)
     .where(eq(notebookEntries.userId, who))
     .orderBy(desc(notebookEntries.createdAt))
@@ -255,7 +287,7 @@ async function readSilence(): Promise<void> {
     .limit(1);
 
   const [lastMission] = await db
-    .select({ createdAt: missions.createdAt, title: missions.title })
+    .select({ createdAt: missions.createdAt })
     .from(missions)
     .where(eq(missions.userId, who))
     .orderBy(desc(missions.createdAt))
@@ -279,8 +311,10 @@ async function readSilence(): Promise<void> {
   line('Check-in', lastCheckIn?.createdAt);
   line('Mission', lastMission?.createdAt);
 
-  /* Categories are what the notebook actually files by, so they are what can
-   * honestly be counted. They are not branches and are not pretended to be. */
+  /*
+   * Categories are what the notebook actually files by, so they are what can
+   * honestly be counted. They are not branches and are not pretended to be.
+   */
   const byCategory = new Map<string, Date>();
   for (const row of recentNotes) {
     if (!byCategory.has(row.category)) byCategory.set(row.category, row.createdAt);
@@ -304,21 +338,15 @@ async function readSilence(): Promise<void> {
   );
 }
 
-async function main(): Promise<void> {
-  const command = process.argv[2] as Command | undefined;
+export async function run(argv: string[], env: { BRAIN_USER_ID?: string }): Promise<number> {
+  const command = argv[2];
 
-  if (!command || !COMMANDS.includes(command)) {
+  if (!isCommand(command)) {
     console.log(USAGE);
-    process.exit(command ? 1 : 0);
+    return command === undefined ? 0 : 1;
   }
 
-  if (has('everything')) {
-    fail(
-      'There is no --everything.\n' +
-        'Each command answers one question and takes a window. A journal is the most\n' +
-        'personal data you hold, and "it was easy" is not a reason to read all of it.',
-    );
-  }
+  assertNoBulkDump(argv);
 
   /*
    * Resolved here, before any reader touches getDb().
@@ -328,16 +356,26 @@ async function main(): Promise<void> {
    * the less important of the two problems. Whose record this is outranks
    * whether the database is reachable.
    */
-  userId();
+  const who = userIdFrom(env);
 
-  if (command === 'notes') await readNotes();
-  else if (command === 'checkins') await readCheckins();
-  else if (command === 'missions') await readMissions();
-  else await readSilence();
+  if (command === 'notes') await readNotes(argv, who);
+  else if (command === 'checkins') await readCheckins(argv, who);
+  else if (command === 'missions') await readMissions(argv, who);
+  else await readSilence(argv, who);
 
-  process.exit(0);
+  return 0;
 }
 
-main().catch((error: unknown) => {
-  fail(`brain-read failed: ${error instanceof Error ? error.message : String(error)}`);
-});
+/* The CLI shell. Everything above is callable without it. */
+if (process.argv[1]?.includes('brain-read')) {
+  run(process.argv, { BRAIN_USER_ID: process.env.BRAIN_USER_ID })
+    .then((code) => process.exit(code))
+    .catch((error: unknown) => {
+      console.error(
+        error instanceof ReaderError
+          ? error.message
+          : `brain-read failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      process.exit(1);
+    });
+}
