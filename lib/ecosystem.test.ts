@@ -100,8 +100,28 @@ describe('what the figure admits', () => {
     expect(leanedOnBy('brain')).toBeGreaterThan(0);
   });
 
-  it('knows exactly one thing is reachable by anyone else', () => {
-    expect(atStage('live').map((app) => app.id)).toEqual(['brain']);
-    expect(unreachable()).toHaveLength(APPS.length - 1);
+  it('knows which things anyone else could reach today', () => {
+    /*
+     * Chill Machine was listed here as sketched, with no repository and a next
+     * step of deciding whether it should exist. It already existed and was
+     * three commands from live — which is the failure a map of several
+     * projects is meant to prevent, made by the map.
+     */
+    expect(
+      atStage('live')
+        .map((app) => app.id)
+        .sort(),
+    ).toEqual(['brain', 'chill']);
+    expect(unreachable()).toHaveLength(APPS.length - 2);
+  });
+
+  it('gives every app with a repository a real one on disk', () => {
+    /* The rule that would have caught the Chill Machine mistake. */
+    const known = ['colourmap-v2', 'shipping-map', 'milanmap', 'chill-machine'];
+
+    for (const app of APPS) {
+      if (!app.repo) continue;
+      expect(known, `${app.id} points at a repo nobody has`).toContain(app.repo);
+    }
   });
 });

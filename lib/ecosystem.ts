@@ -36,7 +36,7 @@
  * nothing pointing at it, which is the question worth asking about any project.
  */
 
-export const APP_IDS = ['brain', 'shipping', 'mesh', 'network', 'studio', 'sound'] as const;
+export const APP_IDS = ['brain', 'shipping', 'mesh', 'network', 'digital', 'chill'] as const;
 
 export type AppId = (typeof APP_IDS)[number];
 
@@ -105,20 +105,41 @@ export const APPS: App[] = [
     next: 'Twenty interviews. They produce the map rather than the other way round.',
   },
   {
-    id: 'studio',
-    name: 'Colour Studio',
-    purpose: 'The generative visual work, out of the life organiser it is currently living inside.',
+    id: 'digital',
+    name: 'Digital Art',
+    /*
+     * Named by its owner, not by me. I called this "Colour Studio" and
+     * described it as "the generative visual work", which is a category rather
+     * than a purpose — it says what kind of thing it is and nothing about what
+     * it is for. The geometry builder feeds projections, and that is the fact
+     * that decides what it needs to be good at.
+     */
+    purpose: 'The geometry builder, for work that ends up projected.',
     stage: 'sketched',
     repo: null,
     next: 'Extract ten surfaces out of Colour Brain, which is most of its Art branch.',
   },
   {
-    id: 'sound',
-    name: 'Colour Sound',
-    purpose: 'Music and sound, including the beds that end up in Ableton.',
-    stage: 'sketched',
-    repo: null,
-    next: 'Decide whether it is its own app or a room inside Studio.',
+    id: 'chill',
+    name: 'Chill Machine',
+    /*
+     * THE ONE THIS FIGURE GOT MOST WRONG.
+     *
+     * This was listed as "Colour Sound", sketched, no repository, with a next
+     * step of deciding whether it should exist at all. It already existed, had
+     * its own repository, and was three commands from being live — which it
+     * now is.
+     *
+     * That is exactly the failure a map of four projects is supposed to
+     * prevent, and the map made it: a thing gets specced under an invented
+     * name while the real version sits in a folder nobody listed. The rule
+     * that would have caught it is simple enough to state — check the disk
+     * before adding a node.
+     */
+    purpose: 'Generated ambient beds — the brown noise that ends up in Ableton.',
+    stage: 'live',
+    repo: 'chill-machine',
+    next: 'Add a manifest so it opens from the home screen without browser chrome.',
   },
 ];
 
@@ -154,19 +175,14 @@ export const LINKS: Link[] = [
     carries: 'Missions. Research intentions live in the Professional half of Admin.',
   },
   {
-    from: 'studio',
+    from: 'digital',
     to: 'brain',
     carries: 'Finished pieces, so Art has something true to show.',
   },
   {
-    from: 'sound',
+    from: 'chill',
     to: 'brain',
-    carries: 'Finished tracks, same shape as Studio.',
-  },
-  {
-    from: 'sound',
-    to: 'studio',
-    carries: 'A shared shell, if Sound turns out to be a room rather than an app.',
+    carries: 'Finished beds, same shape as Digital Art.',
   },
 ];
 
