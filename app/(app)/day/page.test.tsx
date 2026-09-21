@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import DayPage from './page';
@@ -31,6 +31,13 @@ vi.mock('@/components/MissionDesignSwitcher', () => ({
     </div>
   ),
 }));
+/*
+ * Stubbed like every other child here, and for a sharper reason than the rest:
+ * the real MissionTracker fetches /api/missions on mount, and jsdom cannot
+ * parse a relative URL. Unstubbed it throws an unhandled rejection that leaves
+ * every test passing and vitest exiting 1 — green output, red build.
+ */
+vi.mock('@/components/MissionTracker', () => ({ default: () => <div>mission tracker</div> }));
 vi.mock('@/components/Overview2', () => ({ default: () => <div>overview</div> }));
 vi.mock('@/components/TodaysField', () => ({ default: () => <div>today field</div> }));
 vi.mock('@/components/DayTabs', () => ({
@@ -56,6 +63,18 @@ describe('DayPage sober lane banners', () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+  });
+
+  it('puts the missions in the lane named after them', () => {
+    /*
+     * /api/missions had full CRUD and MissionTracker had tests, and nothing
+     * rendered it — the MISSIONS lane showed doing-cards out of prefs instead.
+     * That meant no way to write a mission from a phone and nothing for the
+     * terminal's reader to read. This is the guard against it drifting back.
+     */
+    render(<DayPage />);
+
+    expect(screen.getByText('mission tracker')).toBeDefined();
   });
 
   it('renders contained sober banners for Missions and Progress', () => {
