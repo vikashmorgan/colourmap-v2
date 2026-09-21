@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import ActiveCompartments from '@/components/ActiveCompartments';
 import ArchetypeBridge from '@/components/ArchetypeBridge';
-import BranchTree from '@/components/BranchTree';
 import CheckInPing from '@/components/CheckInPing';
 import ColourMapPanel from '@/components/ColourMapPanel';
 import DailyRituals from '@/components/DailyRituals';
@@ -759,8 +758,6 @@ function DayContent() {
       style={{ paddingTop: imageBackedFocus ? 0 : 12, paddingBottom: 36 }}
     >
       <FirstRunOnboarding />
-      {/* The index of the whole, before the day it opens onto. */}
-      <BranchTree />
       {!imageBackedFocus && <TodaysField />}
       {!imageBackedFocus && <CheckInPing />}
       {starsOpen && <IdeaConstellation onClose={() => setStarsOpen(false)} />}

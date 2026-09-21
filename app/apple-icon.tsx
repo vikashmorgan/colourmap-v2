@@ -9,7 +9,7 @@ export const contentType = 'image/png';
  * THE ICON IS THE MODEL, NOT A LOGO.
  *
  * Three marks around a still centre — the same shape `lib/branches.ts`
- * describes and `components/BranchTree.tsx` draws, at the smallest size it
+ * describes and `components/LatticeTree.tsx` draws, at the smallest size it
  * survives. The hues are imported rather than retyped, so renaming a branch
  * colour changes the icon too and the two can never drift.
  *
