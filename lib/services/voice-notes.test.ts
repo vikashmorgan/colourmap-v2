@@ -7,12 +7,18 @@ const selectFrom = vi.fn(() => ({ where: selectWhere }));
 const select = vi.fn(() => ({ from: selectFrom }));
 
 const insertReturning = vi.fn();
-const insertValues = vi.fn(() => ({ returning: insertReturning }));
+/*
+ * The mock factories take a typed argument on purpose. Without it vi.fn
+ * infers a zero-length parameter tuple, and every `mock.calls[0][0]` in this
+ * file becomes a type error under noUncheckedIndexedAccess — which is exactly
+ * how these assertions read what the service wrote.
+ */
+const insertValues = vi.fn((_values: Record<string, unknown>) => ({ returning: insertReturning }));
 const insert = vi.fn(() => ({ values: insertValues }));
 
 const updateReturning = vi.fn();
 const updateWhere = vi.fn(() => ({ returning: updateReturning }));
-const updateSet = vi.fn(() => ({ where: updateWhere }));
+const updateSet = vi.fn((_set: Record<string, unknown>) => ({ where: updateWhere }));
 const update = vi.fn(() => ({ set: updateSet }));
 
 const deleteReturning = vi.fn();
