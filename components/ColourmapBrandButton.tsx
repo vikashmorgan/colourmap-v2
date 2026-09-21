@@ -286,7 +286,7 @@ export default function ColourmapBrandButton({ initials, email }: ColourmapBrand
         style={{ background: 'none', border: 'none', padding: 0 }}
         aria-haspopup="dialog"
         aria-expanded={open}
-        title="About Colourmap"
+        title="About Colour Brain"
       >
         {/* Invisible spacer matching the star width — keeps "Colourmap" text visually centred */}
         <span
@@ -297,7 +297,7 @@ export default function ColourmapBrandButton({ initials, email }: ColourmapBrand
           className="text-[22px] font-bold tracking-[0.08em] font-serif text-center"
           style={{ color: 'var(--header-text, #C8A858)' }}
         >
-          Colourmap
+          Colour Brain
         </p>
         <svg width={18} height={18} viewBox="0 0 20 20" style={{ marginTop: 3 }} aria-hidden="true">
           {(() => {
@@ -330,7 +330,7 @@ export default function ColourmapBrandButton({ initials, email }: ColourmapBrand
           ref={overlayRef}
           role="dialog"
           aria-modal="true"
-          aria-label="About Colourmap"
+          aria-label="About Colour Brain"
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{
             background: 'rgba(26, 13, 4, 0.55)',
@@ -369,7 +369,7 @@ export default function ColourmapBrandButton({ initials, email }: ColourmapBrand
                 className="font-normal tracking-[0.1em]"
                 style={{ fontSize: 26, color: '#B33A2B', fontStyle: 'italic' }}
               >
-                Colourmap
+                Colour Brain
               </p>
               <svg width={20} height={20} viewBox="0 0 20 20" aria-hidden="true">
                 {(() => {
@@ -520,7 +520,7 @@ export default function ColourmapBrandButton({ initials, email }: ColourmapBrand
                       opacity: 0.82,
                     }}
                   >
-                    Developing areas of Colourmap.
+                    Developing areas of Colour Brain.
                   </p>
                 </div>
                 <button
