@@ -420,3 +420,37 @@ export const userPrefs = pgTable('user_prefs', {
   value: jsonb('value').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+/*
+ * VOICE NOTES — THE AUDIO IS THE RECORD, THE TRANSCRIPT IS A DERIVATIVE.
+ *
+ * The previous design transcribed in the browser with the Web Speech API and
+ * stored only the text. That made capture able to fail: a bad transcription,
+ * an unsupported browser, a dropped connection, and the thought was simply
+ * gone. On iOS the microphone did not render at all, which is where this app
+ * is actually used.
+ *
+ * So the row is created the moment audio lands in storage, before anybody has
+ * tried to understand it. `transcript` is nullable on purpose — a note with no
+ * transcript is a real, complete, replayable note that has not been read yet.
+ * Transcription can fail, be retried, or be replaced with a better model, and
+ * none of that can lose what was said.
+ */
+export const voiceNotes = pgTable('voice_notes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  /** Path inside the Supabase storage bucket. The note itself. */
+  storagePath: text('storage_path').notNull(),
+  durationSecs: integer('duration_secs'),
+  /** 'captured' | 'transcribing' | 'transcribed' | 'failed' */
+  status: text('status').notNull().default('captured'),
+  transcript: text('transcript'),
+  /** What the model heard it in. Not asserted up front — it is detected. */
+  lang: text('lang'),
+  /** Which branch of the tree this belongs to, once something has read it. */
+  branch: text('branch'),
+  /** Why transcription failed, kept so a retry is an informed decision. */
+  error: text('error'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  transcribedAt: timestamp('transcribed_at', { withTimezone: true }),
+});
