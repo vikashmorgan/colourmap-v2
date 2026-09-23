@@ -44,14 +44,14 @@
  * a refusal.
  */
 
-import { and, desc, eq, gte } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray } from 'drizzle-orm';
 
 import { getDb } from '@/lib/db/client';
-import { checkIns, missions, notebookEntries } from '@/lib/db/schema';
+import { checkIns, missions, notebookEntries, prompts } from '@/lib/db/schema';
 
-export type Command = 'notes' | 'checkins' | 'missions' | 'silence';
+export type Command = 'notes' | 'checkins' | 'missions' | 'prompts' | 'silence';
 
-export const COMMANDS: Command[] = ['notes', 'checkins', 'missions', 'silence'];
+export const COMMANDS: Command[] = ['notes', 'checkins', 'missions', 'prompts', 'silence'];
 
 export const USAGE = `
 brain-read — read the record, so the terminal can think about it
@@ -59,6 +59,7 @@ brain-read — read the record, so the terminal can think about it
   bun scripts/brain-read.ts notes    [--since YYYY-MM-DD | --days N] [--last N]
   bun scripts/brain-read.ts checkins [--since YYYY-MM-DD | --days N] [--last N]
   bun scripts/brain-read.ts missions [--all]
+  bun scripts/brain-read.ts prompts [--all]
   bun scripts/brain-read.ts silence  [--days N]
 
 Needs DATABASE_URL and BRAIN_USER_ID in .env.local.
@@ -252,6 +253,46 @@ async function readMissions(argv: string[], who: string): Promise<void> {
   }
 
   if (rows.length === 0) console.log('(nothing open)');
+}
+
+async function readPrompts(argv: string[], who: string): Promise<void> {
+  const openOnly = !has('all', argv);
+  const rows = await getDb()
+    .select({
+      createdAt: prompts.createdAt,
+      body: prompts.body,
+      status: prompts.status,
+      prUrl: prompts.prUrl,
+      note: prompts.note,
+    })
+    .from(prompts)
+    .where(
+      openOnly
+        ? and(eq(prompts.userId, who), inArray(prompts.status, ['queued', 'taken']))
+        : eq(prompts.userId, who),
+    )
+    /*
+     * OLDEST FIRST, unlike everything else in this file.
+     *
+     * A queue read newest-first is a stack, and the thing written at midnight
+     * when it mattered most sinks under everything written since. This is the
+     * one list where the order is the point.
+     */
+    .orderBy(prompts.createdAt)
+    .limit(readLimit(50, argv));
+
+  console.log(`# prompts — ${rows.length} ${openOnly ? 'open' : 'total'}
+`);
+
+  for (const row of rows) {
+    console.log(`## ${row.status}  ·  ${day(row.createdAt)} (${daysAgo(row.createdAt)}d ago)`);
+    console.log(row.body);
+    if (row.note) console.log(`note: ${row.note}`);
+    if (row.prUrl) console.log(`shipped: ${row.prUrl}`);
+    console.log('');
+  }
+
+  if (rows.length === 0) console.log('(nothing queued)');
 }
 
 /**

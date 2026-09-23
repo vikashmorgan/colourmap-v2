@@ -1,0 +1,11 @@
+import { chromium } from '@playwright/test';
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+const page = await ctx.newPage();
+const msgs = [];
+page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') msgs.push(`${m.type()}: ${m.text()}`); });
+page.on('pageerror', (e) => msgs.push(`pageerror: ${e.message}`));
+await page.goto('http://localhost:3001/network', { waitUntil: 'networkidle' });
+await page.waitForTimeout(1500);
+await browser.close();
+console.log(msgs.length ? msgs.join('\n---\n') : 'console clean');

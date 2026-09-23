@@ -1,0 +1,469 @@
+                         The Chartjunk Debate
+
+                       A Close Examination of Recent Findings
+
+                                         Stephen Few, Perceptual Edge
+                                   Visual Business Intelligence Newsletter
+
+                                            April, May, and June 2011
+
+In his first book, The Visual Display of Quantitative Information (1983), Edward Tufte introduced the term
+"chartjunk." Ever since, people involved in data presentation have used this term to condemn what they
+perceive as flaws of various types in graphs. Let's remind ourselves of how Tufte defined the term originally.
+
+     The interior decoration of graphics generates a lot of ink that does not tell the viewer anything new...
+     Regardless of its cause, it is all non-data-ink or redundant data-ink, and it is often chartjunk. (The
+     Visual Display of Quantitative Information, p. 107)
+
+     Fortunately most chartjunk does not involve artistic considerations. It is simply conventional graphic
+     paraphernalia routinely added to every display that passes by: over-busy grid lines and excess ticks,
+     redundant representations of the simplest data, the debris of computer plotting, and many of the
+     devices generating design variation. (ibid, p. 107)
+
+     Chartjunk does not achieve the goals of its propagators. The overwhelming fact of data graphics is that
+     they stand or fall on their content, gracefully displayed. (ibid, p.121)
+
+     Chartjunk can turn bores into disasters, but it can never rescue a thin data set. The best designs...
+     are intriguing and curiosity-provoking, drawing the viewer into the wonder of the data, sometimes by
+     narrative power, sometimes by immense detail, and sometimes by elegant presentation of simple but
+     interesting data. (ibid, p. 121)
+
+According to Tufte, chartjunk consists of non-data and redundant data elements in a graph. It comes in various
+types: sometimes artistic decoration, but more often in the form of conventional graphical elements that are
+unnecessary in that they add no value. Chartjunk is not informative and is often harmful.
+
+I agree with Tufte's basic assessment, but we differ somewhat in our understanding of what qualifies as useful
+expressions of information. Embellishments can at times, when properly chosen and designed, represent
+information redundantly in useful ways, and even when they aren't information in and of themselves, can
+meaningfully support the display of information. Had Tufte said nothing more than the paragraphs above,
+chartjunk might have never become the rallying cry of a vicious debate that has raged for years. In 1990,
+however, he published his second book, Envisioning Information, and included a chart that was designed by
+Nigel Holmes about the price of diamonds, which appears on the next page.
+
+Copyright © 2011 Stephen Few, Perceptual Edge  Page 1 of 11
+Here's what he said about it:
+
+Consider this unsavory exhibit at right­chockablock with cliché and stereotype, coarse humor, and
+a content-empty third dimension. It is the product of a visual sensitivity in which a thigh-graph with a
+fishnet-stocking grid counts as a Creative Concept. Everything counts, but nothing matters. The data-
+thin (and thus uncontextual) chart mixes up changes in the value of money with changes in diamond
+prices, a crucial confusion because the graph chronicles a time of high inflation.
+
+Lurking behind chartjunk is contempt both for the information and for the audience. Chartjunk
+promoters imagine that numbers and details are boring, dull, and tedious, requiring ornament to
+enliven. Cosmetic decoration, which frequently distorts the data, will never salvage an underlying
+lack of content. If the numbers are boring, then you've got the wrong numbers. Credibility vanishes in
+clouds of chartjunk; who would trust a chart that looks like a video game?
+
+Worse is contempt for our audience, designing as if readers were obtuse and uncaring. In fact,
+consumers of graphics are often more intelligent about the information at hand than those who
+fabricate the data decoration. And, no matter what, the operating moral premise of information design
+should be that our readers are alert and caring; they may be busy, eager to get on with it, but they
+are not stupid. Clarity and simplicity are completely opposite simple-mindedness. Disrespect for the
+audience will leak through, damaging communication. What E. B. White said of writing is equally true
+for information design: "No one can write decently who is distrustful of the reader's intelligence, or
+whose attitude is patronizing."
+
+(Edward Tufte, Envisioning Information, Graphics Press, 1990, p.34-35)
+
+And people think I'm harsh! These were fighting words. It isn't hard to imagine how Holmes felt about this. In
+Holmes' mind, Tufte became his nemesis and ever after these titans came to embody two sides of a debate
+that has raged for years. Unfortunately, this debate has rarely been conducted in a rational, evidence-based
+manner. It has mostly been fueled by people's blind commitment to one camp or the other: two armies
+hunkered down in their trenches lobbing insults at the enemy like flaming balls of napalm.
+
+Copyright © 2011 Stephen Few, Perceptual Edge                           Page 2 of 11
+A study by Scott Bateman, Regan L. Mandryk, Carl Gutwin, Aaron Genest, David McDine, and Christopher
+Brooks of the University of Saskatchewan titled "Useful Junk? The Effects of Visual Embellishment on
+Comprehension and Memorability of Charts" recently entered the field of battle as a potentially refreshing
+alternative. To use it as a constructive contribution to the debate, it's important that we understand what it
+actually says and the validity of its findings.
+
+Since this study was made public, it has created a fair degree of buzz. Proponents of artistic visualizations
+of all types, whether similar in approach to Nigel Holmes' or not, have used this study to defend their work.
+Holmes himself declared this study a victory for his cause. Some in the embellishment camp have exceeded
+the study's reach by using it to justify design practices that research has firmly established as harmful and
+ineffective. Little of what it's been used to support, however, is justified.
+
+The Study
+
+This research was designed to test the influence of chartjunk vs. plain ("minimalist") graphs on two effects:
+comprehension and recall. Fourteen data visualizations were used, each consisting of two versions: one
+"embellished" and one "plain." Twenty participants were recruited from the university. Each of the participants
+was shown all 14 charts, but only one version of each (7 embellished and 7 plain). For the comprehension
+part of the study--what the researchers called "reading and description"--participants viewed the charts one
+at a time on a computer screen and followed the instructions of a tester who sat with them. For each chart,
+participants were asked to answer the four following questions, further assisted by supplementary prompts as
+needed:
+
+Topic    Question                              Supplementary Prompt
+
+Subject  What is the chart about?              Tell me about the basic subject of the chart.
+
+Values   What are the displayed categories     Tell me how the chart is organized and any relevant
+         and values?                           values.
+
+Trend    What is the basic trend of the graph? Tell me whether the chart shows any changes and
+                                                             describe these changes.
+
+Value Message Is the author trying to communicate Is the author trying to get across a specific point or
+                       some message through the chart? is he or she merely presenting objective information.
+
+For the recall part of the study, participants were divided into two groups: 10 were tested for immediate recall
+and 10 for long-term recall (two to three weeks later). In both cases participants were asked to recall as
+many of the charts as possible. Afterwards, for each that they recalled, the tester asked them the same four
+questions above and recorded what they correctly remembered. Following this, the tester then reminded the
+participant about the charts that they failed to recall and asked the four questions about those charts as well.
+
+The Findings
+
+In the Abstract section that begins the published paper, the researchers summarized their findings as follows:
+
+     We found that people's accuracy in describing the embellished charts was no worse than for plain
+     charts, and that their recall after a two-to-three-week gap was significantly better. Although we are
+     cautious about recommending that all charts be produced in this style, our results question some of the
+     premises of the minimalist approach to chart design.
+
+Allow me to restate the findings with relevant qualifications:
+
+     When a simple message--one that could be expressed verbally in a single sentence--is presented in
+     a chart that includes embellishments relevant to that message, along with quantitative values that are
+     related to but incidental to the message, then a reader will comprehend the message as well as he
+     would had the graph lacked embellishment and will also better recall the basic subject of the chart and
+     pattern in the data two or three weeks later, but no better soon afterwards.
+
+Copyright © 2011 Stephen Few, Perceptual Edge                        Page 3 of 11
+That's a mouthful, but it more fully describes the study's finding. It isn't surprising that we can usually recall an
+image that expresses a clever and entertaining visual metaphor better than we can recall an unembellished
+chart. Research has clued us into this for many years. Recalling the embellished chart better is only useful,
+however, to the degree that it conveys the message. In the case of Holmes' charts--those used in this study at
+least--the embellishments do in fact support the message and therefore serve as a useful mnemonic device.
+The application of this, however, is quite limited in scope. To the credit of the researchers, they suggested that
+"some charts and some topics may not be amenable to Holmes-style visual presentations." How true.
+
+Two additional findings were reported in the study that weren't mentioned in the abstract:
+
+     1. "Participants saw value messages in the Holmes charts significantly more often than in the plain
+          charts."
+
+     2. "Participants found the Holmes charts more attractive, most enjoyed them, and found that they were
+          easiest and fastest to remember."
+
+Again, there are no surprises here.
+
+In their conclusion, the researchers overreached when they stated: "Many experts suggest that visual
+embellishments and `chart junk' cause interpretation problems and should be removed from all information
+charts, but many examples exist of embellished charts that seem to be successful." Many examples? Actually,
+the examples in this study consisted only of a few embellished charts created by one person--Nigel Holmes--
+and they only succeed for an extremely specific, quite limited purpose.
+
+Methodological Shortcomings
+
+Beyond the expected finding stated above, this study is interesting as an example of methodological failures
+that are all too common in research. Built into it was the following set of inappropriate assumptions:
+
+     1. The purpose for which the charts in the test were used is typical of the way quantitative graphs are
+          used in the real world.
+
+     2. The embellished charts by Nigel Holmes' represent extreme examples of chartjunk.
+
+     3. The plain charts were designed in the manner that proponents of graphical "minimalism" advocate.
+
+     4. A study involving 20 university students can produce trustworthy results.
+
+     5. This study identified relevant factors and adequately controlled them.
+
+Typical Uses of Quantitative Graphs
+
+Embellished charts like those used in this study are only typical of a few news publications, probably best
+represented by that litterer of hotel hallways, USA Today. This type of embellishment, however, is not at all
+typical of quantitative graphs as they're used elsewhere, although some infographics of the non-journalistic
+type have adopted aspects of this style in recent years. The embellished charts that were used in this study
+exhibited the following characteristics:
+
+     1. The chart communicates an extremely simple, brief message; one that could be stated in words as a
+          single sentence and in fact is summed up in the chart's title.
+
+     2. The chart contains a small set of quantitative values, which illustrates the message.
+
+     3. The embellishment is tied metaphorically to the message of the chart.
+
+     4. The chart is designed by a talented graphic artist.
+
+These characteristics describe few of the graphs that are produced in the world and serve a different purpose
+than most. They are designed to catch the reader's eye, entertain, and make a simple point quickly. The values
+contained in the graph are incidental to its purpose; certainly not intended for close inspection. Because the
+
+Copyright © 2011 Stephen Few, Perceptual Edge  Page 4 of 11
+embellishments are visual, play a role in communicating the message, and are designed by a talented graphic
+artist, we tend to remember charts of this type. To the degree that the message is important and the information
+contained in the message is sufficient, the fact that these charts are memorable is useful. When the message
+is important, but greater understanding is needed, however, these charts fail. When charts of this type are
+promoted as examples of the way data visualization for other purposes should be designed, they are harmful.
+
+The following two examples illustrate how graphs are more typically used in the world:
+
+                                                                2010 Sales
+
+USD                           West                              Central                       East
+7000
+6500                                                                                                            Product Type
+6000
+5500                                                                                                               Espresso
+5000                                                                                                               Cof f ee
+                                                                                                                   Herbal Tea
+                                                                                                                   Tea
+
+4500 Average
+4000
+
+3500
+
+3000
+
+2500
+
+2000
+
+1500  Feb Apr Jun Aug Oct Dec Feb Apr Jun Aug Oct Dec Feb Apr Jun Aug Oct Dec
+
+            Product                       West                           2010 Sales                       East
+          Columbian
+                                                                               Central
+               Lemon
+      Caf f e Mocha           20K    40K        0K 10K 20K 0K   20K      40K  0K 10K 20K 0K   20K    40K        0K 10K 20K
+  Decaf Espresso                                       Prof it                       Prof it                           Prof it
+
+         Chamomile
+          Darjeeling
+           Earl Grey
+
+Decaf Irish Cream
+         Caf f e Latte
+                  Mint
+          Green Tea
+            Amaretto
+
+Regular Espresso
+
+                          0K
+
+                              Sales                             Sales                         Sales
+
+              Average
+
+When graphs are used in this more typical manner, they should exhibit the following characteristics:
+
+     1. Present all the data that is needed for the audience to see and understand what's meaningful.
+
+     2. Present nothing that isn't needed.
+
+     3. Represent data accurately.
+
+     4. Represent data in a way that is easy for the eyes to perceive and the brain to interpret.
+
+     5. Provide appropriate context for interpreting the meaning of the data.
+
+No one graph can display the full story that lives in a set of data, but it should provide the richest view possible
+for understanding what matters. Look at the graph above and try to imagine how this story might be told using
+a chart that's embellished in the way that was used in the chartjunk study. I can't imagine that Nigel Holmes
+would ever propose that a chart of that type should be used to examine the data in the salary graph above.
+I suspect that he understands the limited purpose for which embellishments of this type are useful. Holmes'
+charts vs. simple charts engage our eyes and brains in different ways: Holmes' into the metaphor and well-
+designed plain charts into the details.
+
+Copyright © 2011 Stephen Few, Perceptual Edge                                                                   Page 5 of 11
+Extreme Embellishment
+
+The researchers stated: "In our study we intentionally chose the most extreme type of visual embellishment
+that we could, namely, the full cartoon imagery used by Holmes." Actually, Holmes' style embellishments are
+not an extreme example of the kind of chartjunk that is commonly found in graphs. Rather, they are well-
+executed examples of a particular style of embellishment (not entirely chartjunk) that is not at all typical outside
+of a few publications like USA Today.
+
+Here's an extreme example of typical chartjunk:
+
+Trust me when I say that I've seen a lot worse. To produce this example, I merely took advantage of handy
+features in tools like Excel that people commonly use to unintentionally render simple quantitative messages
+completely incomprehensible. Photos, decorative fonts, 3D objects and perspective, gradients of color in the
+background, unnecessary grid lines made worse by making them dark, and artsy texture patterns are all readily
+available, to name a few. Below is another version of this graph, without embellishment:
+
+Is there any question that the embellished version would be much harder and less efficient to read and
+understand, compared to the plain version?
+
+Copyright © 2011 Stephen Few, Perceptual Edge  Page 6 of 11
+Well Designed Simplicity
+
+The plain charts used in this study were in fact plain ugly. In addition to being stripped of nonessential ink, the
+plain charts ignored basic principles of design, resulting in displays that were unnecessarily hard on the eyes.
+
+By displaying bar outlines only (no fill color) and enclosing the chart as a whole in a border of equal salience
+as the bar outlines, an uncomfortable visual effect is created. Below is a better-designed version of the same
+chart:
+
+                                               Employment Costs for a Steelworker per Hour
+
+                                                      Average of first 9 months of 1982 in U.S. Dollars
+
+                      0                        5  10  15  20                                             25
+
+United States $23.99
+
+West Germany $13.45
+
+France $12.37
+
+Japan $11.08
+
+Britain $9.32
+
+                                  South Korea $2.39
+
+Now, when we compare this plain version to the embellished version on the following page, it isn't hard to
+understand why the embellished image might stick in our heads longer and why both charts do an equal
+job of communicating the basic message that steelworkers are paid a lot more in the United States than
+elsewhere, especially in South Korea. But if we want to dig further and compare the values, we can only use
+the embellished version to do this by reading the numbers, for the graphical elements fail this test.
+
+Copyright © 2011 Stephen Few, Perceptual Edge                                                                Page 7 of 11
+Some of the plain charts in the study were designed in confusing ways, such as the line graph below that
+connects positive and negative values without showing a reference line for zero:
+
+Here's a properly designed plain version:
+
+                                         Over Their Own Barrel
+
+                  OPEC's Current International Account Balance in Billions of Dollars
+120
+
+100
+
+80
+
+60
+
+40
+
+20
+
+0
+
+-20  1976                                      1977  1978  1979  1980  1981            1982
+                                                           Year
+
+Copyright © 2011 Stephen Few, Perceptual Edge                                                Page 8 of 11
+Some of the plain charts were displayed in ways that most advocates of simplicity, including Tufte and me,
+would never tolerate, such as the following pie chart.
+
+The following bar graph displays the same data in a simpler, more understandable, and more visually pleasing
+way:
+
+                                                      The Cosmetics Dollar
+
+                             Cents                    Where It Goes
+
+                             per $
+
+Manufacturer 60 0%                                5%  10% 15% 20% 25% 30% 35% 40%
+
+Salaries, wages, and administration 19
+
+Packaging 11
+
+Promotion 10
+
+Pretax profit 10
+
+Ingredients                                    8
+
+Interest and other expenses                    2
+
+                         Retailier
+
+Heat, light, salaies, wages and profits 40
+
+It's interesting to note that the researchers chose to use simple, unembellished graphs to report their results.
+The following graph was used to show that "for participants in the immediate recall group, there were no
+differences in the required amount of prompting to recall subjects of the charts (t9=1.41, p=.097), categories
+in the charts (t9=0.32, p=.379), or trends of the charts (t9=-0.32, p=.379) depending on whether or not charts
+contained visual embellishments."
+
+Copyright © 2011 Stephen Few, Perceptual Edge                                      Page 9 of 11
+Small, Unrepresentative Test Groups
+
+When research studies rely on a tiny group of test subjects and aren't careful to select a sample that represents
+the larger population to which their findings are meant to apply, they can't be taken seriously. At best we can
+treat the findings as suggestive of what might be true, but not conclusive.
+
+Several problems in this study's design and in the way it was conducted raise flags of concern. Kaiser Fung
+has done a fine job of identifying and describing them in his Junk Charts blog, so I won't reproduce his work
+here.
+
+Unconsidered and Uncontrolled Factors
+
+Three factors in particular come to mind that should have been taken into account and controlled in this study:
+
+     · Characteristics of a representative sample of quantitative graph users
+
+     · Different purposes for which people use quantitative graphs
+
+     · Different types of chart embellishment
+
+The study suffered from ignoring these factors, producing results that cannot be trusted, despite the fact that
+they are probably true, and cannot be used to evaluate the effects of chartjunk on most of the quantitative
+graphs that are used in the world.
+
+What Really Qualifies As Chartjunk?
+
+Tufte's term "chartjunk" is perhaps a little too loosely defined. In my opinion, nothing that supports the chart's
+message in a meaningful way is junk. Sometimes more than minimal ink and sometimes even redundant
+content is needed to communicate a chart's message and drive it home. By defining chartjunk too broadly,
+Tufte to some degree invited the heated controversy that has raged ever since.
+
+The fundamental issue is whether embellishments support the data or to some degree distract from it or
+distort it. Embellishments that represent data, even metaphorically, can themselves qualify as "data ink."
+Embellishments that are not data in themselves can sometimes support the display of data in a useful manner.
+
+Graphical embellishments can support the effectiveness of a data visualization in three potential ways: 1) by
+engaging the interest of the reader (i.e., getting them to read the content), 2) by drawing the reader's attention
+to particular items that merit emphasis, and 3) by making the message more memorable. Embellishments only
+enhance effectiveness, however, if they refrain from undermining the message by significantly distracting from
+it or misrepresenting it.
+
+Copyright © 2011 Stephen Few, Perceptual Edge  Page 10 of 11
+Tangential Benefits of this Study
+
+This study contributes to data visualization research in the following ways:
+     1. It reminds us that simple messages can at times be presented in a more engaging and memorable
+          manner through the use of properly designed embellishments.
+     2. It prompts us to define "chartjunk" more precisely. Embellishments are not always useless or
+          damaging.
+     3. It prompts us to categorize chart embellishments into various types and to test their effects individually.
+
+Future research can help us better understand the relative benefits of embellished vs. unembellished graphs.
+Until then, and perhaps forever, the debate will continue.
+
+Note of Gratitude
+
+I want to thank Scott Bateman of the research team for graciously supporting my efforts to write this article.
+Though he surely knows that I am not a fan of chartjunk, he provided me with his research data and answered
+all of my questions, without reservation. This openness to other perspectives is a sign of a fine researcher.
+
+Discuss this Article
+
+Share your thoughts about this article by visiting The Chartjunk Debate thread in our discussion forum.
+
+About the Author
+
+Stephen Few has worked for over 25 years as an IT innovator, consultant, and teacher. Today, as Principal
+of the consultancy Perceptual Edge, Stephen focuses on data visualization for analyzing and communicating
+quantitative business information. He provides training and consulting services, writes the quarterly Visual
+Business Intelligence Newsletter, and speaks frequently at conferences. He is the author of three books: Show
+Me the Numbers: Designing Tables and Graphs to Enlighten, Information Dashboard Design: The Effective
+Visual Communication of Data, and Now You See It: Simple Visualization Techniques for Quantitative Analysis.
+You can learn more about Stephen's work and access an entire library of articles at www.perceptualedge.com.
+Between articles, you can read Stephen's thoughts on the industry in his blog.
+
+Copyright © 2011 Stephen Few, Perceptual Edge  Page 11 of 11
+

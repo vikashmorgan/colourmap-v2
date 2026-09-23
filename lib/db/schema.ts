@@ -454,3 +454,30 @@ export const voiceNotes = pgTable('voice_notes', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   transcribedAt: timestamp('transcribed_at', { withTimezone: true }),
 });
+
+/*
+ * THE PROMPT QUEUE — what to build, kept apart from what to do.
+ *
+ * `missions` is Victor's own list. This is the list of things to build. They
+ * are the same shape and different work, and holding both in one table made
+ * the mission list two-thirds noise to the person reading it.
+ *
+ * The real argument for a second table rather than a flag is the lifecycle: a
+ * mission is done when a person did it, a prompt is done when code shipped,
+ * and a prompt carries the pull request that answered it.
+ *
+ * Notes from the same panel go to `notebookEntries`, not here. One notebook,
+ * two doors into it.
+ */
+export const prompts = pgTable('prompts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  body: text('body').notNull(),
+  /** 'queued' | 'taken' | 'done' | 'parked' */
+  status: text('status').notNull().default('queued'),
+  /** Where the answer landed. Null until something ships. */
+  prUrl: text('pr_url'),
+  note: text('note'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  doneAt: timestamp('done_at', { withTimezone: true }),
+});
