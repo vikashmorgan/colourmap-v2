@@ -1,0 +1,9 @@
+
+ RUN  v4.1.2 C:/Users/victor/colourmap-v2
+
+
+ Test Files  147 passed (147)
+      Tests  817 passed (817)
+   Start at  02:33:26
+   Duration  81.98s (transform 20.23s, setup 4.31s, import 179.34s, tests 159.80s, environment 706.73s)
+

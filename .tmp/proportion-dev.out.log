@@ -1,0 +1,11 @@
+
+> colourmap-v2@0.1.0 dev
+> bun scripts/gen-changelog.ts && next dev
+
+gen-changelog: wrote 30 entries (branch: fix/proportion-buddy-image-controls, head: 762ee18)
+▲ Next.js 16.2.1 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://10.168.1.119:3001
+- Environments: .env.local
+✓ Ready in 1068ms
+[?25h

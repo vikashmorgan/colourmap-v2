@@ -5,10 +5,10 @@ import ColourmapBrandButton from '@/components/ColourmapBrandButton';
 import ConditionalTopNav from '@/components/ConditionalTopNav';
 import DevBranchHud from '@/components/DevBranchHud';
 import FeedbackOverlay from '@/components/FeedbackOverlay';
-import GlobalAIPresence from '@/components/GlobalAIPresence';
 import MiniPlayer from '@/components/MiniPlayer';
 import MobileViewportBoot from '@/components/MobileViewportBoot';
 import PhoneFrame from '@/components/PhoneFrame';
+import PresenceSheet from '@/components/PresenceSheet';
 import { StyleProvider } from '@/components/StyleContext';
 import ThemeSwitcher from '@/components/ThemeSwitcher';
 import { ViewModeProvider } from '@/components/ViewModeContext';
@@ -124,7 +124,7 @@ export default async function AppLayout({
             </div>
           </PhoneFrame>
           <MiniPlayer />
-          <GlobalAIPresence />
+          <PresenceSheet />
           <FeedbackOverlay />
           <DevBranchHud />
         </SoundSessionProvider>
