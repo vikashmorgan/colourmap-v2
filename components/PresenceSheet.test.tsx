@@ -158,7 +158,7 @@ describe('titling a fragment', () => {
   });
 
   it('cuts a long line at a word, not mid-word', () => {
-    const long = 'a'.repeat(20) + ' ' + 'b'.repeat(70);
+    const long = `${'a'.repeat(20)} ${'b'.repeat(70)}`;
     const title = titleFrom(long);
 
     expect(title.length).toBeLessThanOrEqual(61);

@@ -402,6 +402,7 @@ export async function run(argv: string[], env: { BRAIN_USER_ID?: string }): Prom
   if (command === 'notes') await readNotes(argv, who);
   else if (command === 'checkins') await readCheckins(argv, who);
   else if (command === 'missions') await readMissions(argv, who);
+  else if (command === 'prompts') await readPrompts(argv, who);
   else await readSilence(argv, who);
 
   return 0;
