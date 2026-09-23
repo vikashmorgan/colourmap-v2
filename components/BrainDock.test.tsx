@@ -50,3 +50,43 @@ describe('the band along the bottom', () => {
     expect(screen.queryByText('Part of life')).toBeNull();
   });
 });
+
+describe('two figures in one band', () => {
+  it('opens on the life, because that is what the product is about', () => {
+    render(<BrainDock />);
+    fireEvent.click(screen.getByRole('button', { name: /All one brain/ }));
+
+    expect(screen.getByText('Part of life')).toBeDefined();
+    expect(screen.queryByTestId('app-constellation')).toBeNull();
+  });
+
+  it('switches to the apps and back', () => {
+    /*
+     * Two honest answers to "where am I in all this": the life, and the
+     * software the life is being built out of. Different questions, so
+     * different figures rather than one forced to do both.
+     */
+    render(<BrainDock />);
+    fireEvent.click(screen.getByRole('button', { name: /All one brain/ }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'The apps' }));
+    expect(screen.getByTestId('app-constellation')).toBeDefined();
+    expect(screen.queryByText('Part of life')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'The life' }));
+    expect(screen.getByText('Part of life')).toBeDefined();
+  });
+
+  it('names what is floating rather than leaving it as a quiet dot', () => {
+    /* An isolated project is either the next thing to connect or the next
+     * thing to stop. A dot is easy to look past; a sentence is not. */
+    render(<BrainDock />);
+    fireEvent.click(screen.getByRole('button', { name: /All one brain/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'The apps' }));
+
+    const floating = screen.getByText(/Floating/i).closest('p');
+
+    expect(floating?.textContent).toMatch(/ColourMesh/);
+    expect(floating?.textContent).toMatch(/nothing depends on it/i);
+  });
+});

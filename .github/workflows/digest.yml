@@ -1,0 +1,73 @@
+# The digest, run on GitHub's machines rather than yours.
+#
+# This is the whole point of the workflow: the laptop can be shut and the loop
+# still closes. Phone writes a mission into Supabase, this reads it on a
+# schedule, and the app shows what came back.
+#
+# WHAT THIS DELIBERATELY IS NOT
+#
+# It is not an agent. It has no repository write access, opens no pull
+# requests, and changes no code. It reads four tables and writes one paragraph
+# into `digests`. A job that runs unattended should have the smallest blast
+# radius that still does something useful, and the worst failure here is a
+# wrong paragraph.
+#
+# Escalating to something that writes code is a separate workflow with separate
+# permissions, and it should stay separate.
+
+name: digest
+
+on:
+  schedule:
+    # 06:00 UTC on Mondays — before the week starts rather than after it ends,
+    # because a summary you read on Sunday night changes nothing.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Print the digest without writing it'
+        type: boolean
+        default: false
+
+# Read-only. The token cannot push, and saying so here means nobody has to
+# take it on trust from the job's contents.
+permissions:
+  contents: read
+
+concurrency:
+  group: digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Check the secrets exist before doing anything slow
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BRAIN_USER_ID: ${{ secrets.BRAIN_USER_ID }}
+        run: |
+          missing=""
+          [ -z "$DATABASE_URL" ]  && missing="$missing DATABASE_URL"
+          [ -z "$BRAIN_USER_ID" ] && missing="$missing BRAIN_USER_ID"
+          if [ -n "$missing" ]; then
+            echo "Missing repository secrets:$missing"
+            echo "Set them with: gh secret set <NAME>"
+            exit 1
+          fi
+          echo "secrets present"
+
+      - name: Write the digest
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BRAIN_USER_ID: ${{ secrets.BRAIN_USER_ID }}
+          DIGEST_SOURCE: github-actions
+          DIGEST_DRY_RUN: ${{ inputs.dry_run }}
+        run: bun scripts/brain-digest.ts

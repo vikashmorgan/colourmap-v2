@@ -43,6 +43,25 @@ export const checkIns = pgTable('check_ins', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+/*
+ * A mission is a thing you intend to do, written from wherever you are.
+ *
+ * The four columns added below are what let the tree show STATE rather than
+ * only structure. Today the figure counts routes, which is true and static;
+ * with these it can say what is moving, what has stalled and what is close.
+ *
+ * `branch` is the one that needs defending. `lib/branches.ts` holds the rule
+ * that A BRANCH IS COMPUTED, NEVER STORED — nothing is filed anywhere, and
+ * which branch a thing appears under is a pure function over what it is.
+ *
+ * A mission is the exception, and it is not a contradiction. A route has a
+ * path the function can read; a sentence you typed on a phone has nothing to
+ * compute from. Guessing "Corriger Sanitas" into Admin from its text would be
+ * a classifier pretending to be a rule. So the person says, once, and the
+ * column holds the answer — which is storage of a STATEMENT, not filing of an
+ * item. Leave it null and the mission simply belongs to no branch, which is
+ * also true of plenty of things.
+ */
 export const missions = pgTable('missions', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').notNull(),
@@ -51,6 +70,43 @@ export const missions = pgTable('missions', {
   blocking: text('blocking'),
   nextStep: text('next_step'),
   completed: boolean('completed').default(false).notNull(),
+  /** 'art' | 'admin' | 'energy', or null for a mission that belongs to none. */
+  branch: text('branch'),
+  /** A date, not a timestamp: "the 30th" is the fact, not 09:00 on the 30th. */
+  dueOn: date('due_on'),
+  /**
+   * When something real last happened to this mission.
+   *
+   * The whole honesty of "actively growing" rests on this column. It is set by
+   * a recorded event — an edit, a status write-back from the terminal — and
+   * never by opening the app or looking at the mission. Movement has to be a
+   * fact or the tree is decoration.
+   */
+  movedAt: timestamp('moved_at', { withTimezone: true }),
+  /** Free text from whatever did the work, so the app can show why it moved. */
+  movedNote: text('moved_note'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * What the scheduled reader wrote back.
+ *
+ * Deliberately NOT the notebook. `docs/specs/integrated-system.md` is explicit
+ * that the notebook's entire value is that nobody has edited it, so anything
+ * generated lands in its own table and the app shows it as generated.
+ *
+ * One row per run. Short, replaceable, and safe to delete — none of this is a
+ * record of what the person thought.
+ */
+export const digests = pgTable('digests', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  /** 'weekly' today. Room for others without a migration. */
+  kind: text('kind').notNull().default('weekly'),
+  /** The rendered text, exactly as the terminal would have printed it. */
+  body: text('body').notNull(),
+  /** Where it ran, so a surprising digest can be traced. */
+  source: text('source').notNull().default('github-actions'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
