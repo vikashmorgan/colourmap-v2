@@ -142,3 +142,49 @@ The AI assistant can support missions through confirmable actions:
 - Create a weekly mission summary.
 
 The assistant must ask before writing changes. It can propose: "I can turn this into three missions: Shoulder, Admin, Music. Save these?" The user confirms or edits.
+
+---
+
+## Standing dates — the admin the app has to remember for you
+
+Some obligations are not missions. A mission is something you could do today. These are things that
+**cannot be done yet** and that become worthless if the date passes unnoticed.
+
+They need a different treatment for a specific reason: a to-do list shows them constantly and you
+learn to scroll past them, or it hides them until they are due and nothing surfaces them in time.
+Both fail. A standing date is stored once, stays silent, and speaks in a window before it lands.
+
+Recorded here rather than only in a database because `0021_mission_movement_and_digests.sql` — which
+adds `due_on` to missions — has not been run. Until it has, this file is the record, and that is
+the honest place for it. When the migration runs these become rows, and this section becomes the
+seed list rather than the storage.
+
+| Date | What | Why it is easy to lose |
+| --- | --- | --- |
+| **2027-09-07** | **Re-file the ALJF caution claim — CHF 520.** Write to `ca@aljf.ch`, copy `aljfcompta@gmail.com` and `comite@aljf.ch`, with bank details. | Nothing is automatic. A claim filed on 2026-09-18 was refused as premature, so the obvious mental note — *"I already asked"* — is exactly the wrong one. Eleven months of silence, then one day it is claimable. |
+| **2026-11-30** | Subside d'assurance-maladie 2027. Strict deadline. | CHF 4 176 turns on it, and it depends on being registered in Pregny-Chambésy first — so the real deadline is earlier than the stated one. |
+| **2026-12-14** | Attestation LAMal for the school, requested from Sanitas. | Needs an unpaid-balance check first; a March invoice left open would block it. |
+
+### What makes a standing date, and what does not
+
+A standing date has all three:
+
+- **A fixed date that cannot be brought forward.** If you could do it sooner, it is a mission.
+- **A real cost if missed**, nameable in money, a document, or a status.
+- **Nobody else will chase it.** An invoice chases itself. An association holding CHF 520 for a
+  year does not.
+
+Everything else is a mission and belongs in the ordinary queue.
+
+### The reminder window
+
+`scripts/brain-digest.ts` already carries `SOON_WITHIN_DAYS = 14`, which is right for a mission with
+a due date and wrong for these. Fourteen days' notice on a date eleven months away means the record
+sits silent for three hundred and thirty days and then depends entirely on one digest being read.
+
+**Two windows, not one.** A far horizon (roughly a month out) says *this is coming and here is what
+it needs*. A near one (about a week) says *now*. The first exists so the second is never the first
+you hear of it.
+
+Deliberately not built yet. It needs `due_on`, which needs the migration, and inventing a second
+reminder mechanism before the first one has rows would be building on nothing.
