@@ -163,7 +163,45 @@ seed list rather than the storage.
 | --- | --- | --- |
 | **2027-09-07** | **Re-file the ALJF caution claim — CHF 520.** Write to `ca@aljf.ch`, copy `aljfcompta@gmail.com` and `comite@aljf.ch`, with bank details. | Nothing is automatic. A claim filed on 2026-09-18 was refused as premature, so the obvious mental note — *"I already asked"* — is exactly the wrong one. Eleven months of silence, then one day it is claimable. |
 | **2026-11-30** | Subside d'assurance-maladie 2027. Strict deadline. | CHF 4 176 turns on it, and it depends on being registered in Pregny-Chambésy first — so the real deadline is earlier than the stated one. |
-| **2026-12-14** | Attestation LAMal for the school, requested from Sanitas. | Needs an unpaid-balance check first; a March invoice left open would block it. |
+| ~~**2026-12-14**~~ | ~~Attestation LAMal for the school, requested from Sanitas.~~ **Done 2026-09-29**: Sanitas sent it, and it was forwarded to Ines at Albert School the same day. | Kept, struck through, so the row is not re-added from memory. |
+
+### Open missions, until the app can hold them
+
+Missions belong in the app's queue, not in this file. But the first one below asks whether the app's
+database holds anything at all, so it cannot yet be trusted to hold its own to-do list. Until that
+is answered, the missions are written here.
+
+**1. Check that Colour Brain's data is in the transferred Supabase project** (added 2026-09-29).
+Martin transferred the Colourmap project into Colour Studios on 2026-09-17. Nothing since has shown
+the check-ins, notebook and missions arriving with it, and the live site may be connected to a
+different, empty project created by the Vercel integration.
+
+- Supabase dashboard → organisation **Colour Studios** → project **colourmap-v2**. Match the ref
+  `fevcidpzanghmxtbkmck` in the address bar, not the name: the decoy *Colour Map* looks the same.
+- **SQL Editor**, run:
+
+  ```sql
+  select 'auth.users' as t, count(*) from auth.users
+  union all select 'check_ins', count(*) from public.check_ins
+  union all select 'notebook_entries', count(*) from public.notebook_entries
+  union all select 'missions', count(*) from public.missions;
+  ```
+
+  If a table name errors: `select table_name from information_schema.tables where table_schema = 'public';`
+- **Authentication → Users**: your Google account should be there.
+- Vercel → **colourbrain** → Settings → Environment Variables → `NEXT_PUBLIC_SUPABASE_URL` should be
+  `https://fevcidpzanghmxtbkmck.supabase.co`.
+
+Reading the result: real counts plus your user means the data made it, and an empty-looking app is
+a connection setting. Zero or near-zero means it did not, and the question is with Martin. He was
+emailed on 2026-09-29 (same thread as the transfer) with the same counts to run and a request for
+any data kept outside Supabase, including browser storage on his old laptop.
+
+**2. Register in Pregny-Chambésy.** This is what the 2026-11-30 subsidy date above hangs on.
+Formulaire A signed, ID card front and back, the Echichens attestation de départ (received
+2026-09-28), and an attestation d'hébergement signed by both parents with copies of their IDs.
+Ask for arrival on **7 September**, the Echichens departure date, so there is no gap in Swiss
+domicile. No acte d'origine is needed: the family is from the canton of Geneva.
 
 ### What makes a standing date, and what does not
 
