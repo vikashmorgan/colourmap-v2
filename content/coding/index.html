@@ -292,9 +292,9 @@ details.solution .ex-why { margin-top: 12px; }
 .filter.f-mid[aria-pressed="true"] { background: var(--mid-c); border-color: var(--mid-c); color: var(--ground); }
 .filter.f-late[aria-pressed="true"] { background: var(--late-c); border-color: var(--late-c); color: var(--ground); }
 .filter[data-filter="all"][aria-pressed="true"], .filter[data-filter="none"][aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--ground); }
-.item[data-mark="got"] { box-shadow: inset 0 0 0 2px var(--ok-c); }
-.item[data-mark="mid"] { box-shadow: inset 0 0 0 2px var(--mid-c); }
-.item[data-mark="late"] { box-shadow: inset 0 0 0 2px var(--late-c); }
+.item[data-mark="got"] { box-shadow: inset 0 0 0 2px var(--ok-c), 0 0 0 1px var(--ok-c); }
+.item[data-mark="mid"] { box-shadow: inset 0 0 0 2px var(--mid-c), 0 0 0 1px var(--mid-c); }
+.item[data-mark="late"] { box-shadow: inset 0 0 0 2px var(--late-c), 0 0 0 1px var(--late-c); }
 .progress-bar { display: grid; gap: 8px; margin-block: 8px 16px; }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; }
 .filter { min-height: 40px; padding: 6px 14px; font-size: 14px; }
@@ -318,7 +318,7 @@ details.solution .ex-why { margin-top: 12px; }
 .mark:hover::before, .mark:focus-visible::before { opacity: .9; transform: scale(1.15); }
 .mark[aria-pressed="true"]::before { background: var(--dot); opacity: 1; }
 .m-got, .d-got { --dot: var(--ok-c); } .m-mid, .d-mid { --dot: var(--mid-c); } .m-late, .d-late { --dot: var(--late-c); }
-.item[data-mark] { box-shadow: none; }
+
 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--dot); margin-right: 6px; vertical-align: 1px; }
 /* Short examples wrap instead of scrolling sideways: no scrollbar inside a box. */
 .item pre, .tool pre, .ex-why pre { white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: hidden; }
