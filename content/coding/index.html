@@ -428,6 +428,11 @@ pre.vocab-ex { margin: 4px 0 2px; background: var(--code-bg); border-radius: 6px
 .item:hover .resize-handle::after, .resize-handle.dragging::after { opacity: .55; }
 .item.resizing { outline: 2px dashed color-mix(in srgb, var(--box-text) 50%, transparent); outline-offset: 2px; }
 
+/* Back to Colour Brain (shown only when served there). */
+.brand-wrap { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.back-brain { font: 600 14px var(--body); color: var(--ink); text-decoration: none; border: 1px solid var(--rule); background: var(--panel); border-radius: 999px; padding: 8px 16px; min-height: 40px; display: inline-flex; align-items: center; }
+.back-brain:hover { border-color: var(--accent); color: var(--accent); }
+
 .gap-note { margin-top: 48px; font-family: var(--mono); font-size: 13px; color: var(--muted); border-top: 1px dashed var(--rule); padding-top: 12px; }
 
 @media (max-width: 860px) {
@@ -446,7 +451,7 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
 
 <header class="top">
   <div class="wrap">
-    <div class="brand">explorer.py <span>· Terminal Data Explorer</span></div>
+    <div class="brand-wrap"><a class="back-brain" id="back-brain" href="/" hidden>← Brain</a><div class="brand">explorer.py <span>· Terminal Data Explorer</span></div></div>
     <div class="tabs" role="tablist" aria-label="Pages">
       <button id="tab-map" role="tab" aria-selected="true" aria-controls="page-map">Code map</button>
       <button id="tab-tools" role="tab" aria-selected="false" aria-controls="page-tools">Python toolkit</button>
@@ -1962,6 +1967,8 @@ async function initSlides() {
 }
 
 allItems().forEach((it, i) => { it.id = `box-${i}`; });
+/* Inside Colour Brain, a way back to the rest of the app. */
+if (ON_COLOUR_BRAIN) document.getElementById('back-brain').hidden = false;
 /* Expanding a box: full width of its row. The button keeps it open; opening
    More widens it too, and closing More narrows it again unless the button was used. */
 function setWide(item, wide) {
