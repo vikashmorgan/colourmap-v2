@@ -16,7 +16,8 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
 - **Python toolkit** — every Python feature the project uses, in learning order.
 - **Lessons** — sessions 1, 2, 3, 4, 6 and 7 (there was no session 5), each a closed box until opened. Inside: groups of boxes, one box per function or idea, numbered `session.box` (e.g. 3.12). Each box has a short explanation, an example, a **More** panel with a longer explanation and a run-checked example, and a link to its slide.
 - **Exercises** — session 3's warm-up and twelve extra exercises, session 4's three practice-lab exercises. Each opens on its own; its solution sits behind a second toggle.
-- **Vocabulary** — the end-of-session vocabulary of each session; a word jumps to the box that explains it.
+- **Vocabulary** — the end-of-session vocabulary of each session, each word with an example; a word jumps to the box that explains it.
+- **The term in colour** — inside each box, the function or keyword it explains is highlighted wherever it appears in the examples and the text, so the eye finds what is being explained.
 - **Review** — every question, comment, Confused and No-time box, grouped in one place.
 
 ## Marks and notes
