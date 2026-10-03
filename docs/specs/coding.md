@@ -15,7 +15,7 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
 - **Code map** — each option of the project brief matched to the functions of his `explorer.py`, code beside a plain explanation.
 - **Python toolkit** — every Python feature the project uses, in learning order.
 - **Lessons** — sessions 1, 2, 3, 4, 6 and 7 (there was no session 5), each a closed box until opened. Inside: groups of boxes, one box per function or idea, numbered `session.box` (e.g. 3.12). Each box has a short explanation, an example, a **More** panel with a longer explanation and a run-checked example, and a link to its slide.
-- **Examples** — session 4 has ten small worked examples, one idea each, run-checked. Numbered markers on the lines that matter open short comments explaining what happens there.
+- **Examples** — sessions 4, 6 and 7 each have ten small worked examples, one idea each, run-checked. Numbered markers on the lines that matter open short comments explaining what happens there.
 - **Exercises** — session 3's warm-up and twelve extra exercises, session 4's three practice-lab exercises. Each opens on its own; its solution sits behind a second toggle.
 - **Vocabulary** — the end-of-session vocabulary of each session, each word with an example; a word jumps to the box that explains it.
 - **Wider boxes** — a box can be widened: the expand button makes it the full row, dragging its right edge widens it column by column, and opening More widens it on its own. Once a box is wide enough, More lays the explanation beside the example.
