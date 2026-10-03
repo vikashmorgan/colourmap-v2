@@ -226,7 +226,9 @@ details.lesson > summary .lesson-num {
   min-width: 44px; height: 44px; display: inline-grid; place-items: center; font-size: 22px;
 }
 details.lesson > summary::after { color: var(--sess, var(--accent)) !important; }
-details.lesson > summary:hover h2 { color: var(--sess, var(--accent)) !important; }
+/* Session titles carry their session colour all the time; hover only adds an underline. */
+details.lesson > summary h2 { color: var(--sess, var(--accent)); }
+details.lesson > summary:hover h2 { color: var(--sess, var(--accent)) !important; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 5px; }
 #lesson-index a { border: 2px solid var(--sess, var(--rule)); border-radius: 999px; background: color-mix(in srgb, var(--sess, var(--accent)) 16%, var(--panel)); }
 #lesson-index a .n { background: var(--sess, var(--accent)); color: var(--ground); border-radius: 6px; padding: 1px 7px; }
 .here-session { color: var(--sess, var(--ink)); }
