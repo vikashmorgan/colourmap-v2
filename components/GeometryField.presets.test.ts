@@ -15,6 +15,20 @@ describe('GeometryField featured presets', () => {
     expect(names.indexOf('Dot Tunnel')).toBeGreaterThan(names.indexOf('Entropy 3D'));
   });
 
+  it('lists the unfinished Star Sand Lines last, under In Progress, not in Good Ones', () => {
+    const names = featuredNames();
+    const inProgress = FEATURED_PRESETS.findIndex(
+      (item) => 'header' in item && item.header === 'In Progress / To Develop',
+    );
+    const starSand = FEATURED_PRESETS.findIndex(
+      (item) => 'name' in item && item.name === 'Star Sand Lines',
+    );
+
+    expect(names.filter((name) => name === 'Star Sand Lines')).toHaveLength(1);
+    expect(names.at(-1)).toBe('Star Sand Lines');
+    expect(starSand).toBeGreaterThan(inProgress);
+  });
+
   it('keeps Swirl Dot Tunnel bright enough for the good list', () => {
     expect(PRESETS['Swirl Dot Tunnel'].preset).toBe('Golden Source');
     expect(PRESETS['Swirl Dot Tunnel'].glow).toBeGreaterThanOrEqual(8);

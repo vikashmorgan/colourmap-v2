@@ -5,6 +5,12 @@
 
 Geometry Field is the immersive visual-program surface for sacred geometry, particle currents, self-map forms, and future music-reactive play. It belongs to the Creative Lab visual layer described in `three-app-architecture.md`.
 
+## Surface: Builder only (2026-10-03)
+
+The nav tab is named **AI Projections** (it was **Art**). The panel shows one tab, **Builder**. Music Visuals, Journeys and the Figures link are hidden, not removed: their code and presets are untouched, and each comes back by restoring its tab pill. Sections below that describe Music Visuals or Journeys describe that hidden code.
+
+**Star Sand Lines** is unfinished, so it sits at the bottom of the preset list, last under **In Progress / To Develop**, not in **Good Ones**.
+
 ## Current Flow Textures
 
 The Current family uses dot fields to reveal hidden motion patterns before and during touch. Touch should deform the particles directly; it should not add unrelated large center rings that visually compete with the field.
@@ -359,3 +365,7 @@ Geometry Field supports a first local DJ/projection workflow:
 This seed is intentionally local and lightweight. Later versions may replace polling with WebSocket,
 MIDI, Ableton Link, OSC, or DJ software metadata, but the crowd-facing projection must remain a clean
 fullscreen output separate from the controller.
+
+## Reflection
+
+- **2026-10-03.** Four tabs (Builder, Music Visuals, Journeys, Figures) asked a first-time viewer to choose before seeing anything. Narrowed to Builder only and renamed the tab from Art to AI Projections; the other tabs are hidden rather than deleted so they can return one at a time once each is ready. Star Sand Lines moved out of Good Ones because it is unfinished.
