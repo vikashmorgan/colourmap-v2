@@ -415,9 +415,16 @@ pre.vocab-ex { margin: 4px 0 2px; background: var(--code-bg); border-radius: 6px
 .expand-btn:hover, .expand-btn:focus-visible { opacity: 1; background: color-mix(in srgb, var(--box-text) 12%, transparent); }
 .item h4 .tag + .expand-btn { margin-left: 6px; }
 .lgroup .item.wide { grid-column: 1 / -1; }
-.item.wide .more-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 24px; align-items: start; }
-.item.wide .more-text { font-size: 15.5px; margin-top: 4px; }
-@media (max-width: 700px) { .item.wide .more-body { grid-template-columns: 1fr; } }
+.lgroup .item { container-type: inline-size; }
+@container (min-width: 600px) {
+  .more-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px 24px; align-items: start; }
+  .more-text { font-size: 15.5px; margin-top: 4px; }
+}
+/* The drag handle on the right edge: pull to widen the box by whole columns. */
+.resize-handle { position: absolute; top: 10px; bottom: 10px; right: -5px; width: 10px; cursor: ew-resize; border-radius: 6px; touch-action: none; }
+.resize-handle::after { content: ''; position: absolute; top: 50%; left: 3px; width: 4px; height: 36px; margin-top: -18px; border-radius: 4px; background: var(--box-text); opacity: .18; transition: opacity .15s; }
+.item:hover .resize-handle::after, .resize-handle.dragging::after { opacity: .55; }
+.item.resizing { outline: 2px dashed color-mix(in srgb, var(--box-text) 50%, transparent); outline-offset: 2px; }
 
 .gap-note { margin-top: 48px; font-family: var(--mono); font-size: 13px; color: var(--muted); border-top: 1px dashed var(--rule); padding-top: 12px; }
 
@@ -1568,7 +1575,7 @@ for (const L of LESSONS) {
     const used = inProject(n);
     const key = `s${L.session}|${n}`;
     const num = `${L.session}.${++boxNo}`;
-    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><p>${esc(t)}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key]) : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" aria-pressed="false" aria-label="Got it" title="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" aria-pressed="false" aria-label="Confused" title="Confused"></button><button type="button" class="mark m-late" data-mark="late" aria-pressed="false" aria-label="No time" title="No time"></button><button type="button" class="note-dot" aria-pressed="false" aria-label="Write a question or comment" title="Question or comment"></button></div></article>`;
+    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><span class="resize-handle" aria-hidden="true" title="Drag to widen"></span><p>${esc(t)}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key]) : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" aria-pressed="false" aria-label="Got it" title="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" aria-pressed="false" aria-label="Confused" title="Confused"></button><button type="button" class="mark m-late" data-mark="late" aria-pressed="false" aria-label="No time" title="No time"></button><button type="button" class="note-dot" aria-pressed="false" aria-label="Write a question or comment" title="Question or comment"></button></div></article>`;
   }).join('')}</div></div>`).join('');
   const notes = (L.pitfalls && L.pitfalls.length ? `<div class="note-box pit"><h4>Watch out</h4><ul>${L.pitfalls.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '') +
     (L.extra && !L.extraExercises ? `<div class="note-box extra"><h4>Extra exercises</h4>${esc(L.extra)}</div>` : '');
@@ -1956,6 +1963,7 @@ allItems().forEach((it, i) => { it.id = `box-${i}`; });
 /* Expanding a box: full width of its row. The button keeps it open; opening
    More widens it too, and closing More narrows it again unless the button was used. */
 function setWide(item, wide) {
+  item.style.gridColumn = '';
   item.classList.toggle('wide', wide);
   item.querySelector('.expand-btn').setAttribute('aria-pressed', String(wide));
 }
@@ -1968,11 +1976,46 @@ lessonsEl.addEventListener('click', e => {
   setWide(item, wide);
   if (wide) item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 });
+/* Drag the right edge of a box to make it span more (or fewer) columns of its row. */
+lessonsEl.addEventListener('pointerdown', e => {
+  const handle = e.target.closest('.resize-handle');
+  if (!handle) return;
+  e.preventDefault();
+  const item = handle.closest('.item');
+  const grid = item.parentElement;
+  const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+  const gap = parseFloat(getComputedStyle(grid).columnGap) || 0;
+  const colW = (grid.clientWidth - gap * (cols - 1)) / cols;
+  const startX = e.clientX;
+  const startW = item.getBoundingClientRect().width;
+  handle.setPointerCapture(e.pointerId);
+  handle.classList.add('dragging');
+  item.classList.add('resizing');
+  const onMove = ev => {
+    const target = startW + (ev.clientX - startX);
+    const span = Math.max(1, Math.min(cols, Math.round((target + gap) / (colW + gap))));
+    item.classList.remove('wide');
+    item.style.gridColumn = span >= cols ? '1 / -1' : `span ${span}`;
+    item.dataset.pinned = span > 1 ? '1' : '';
+    item.querySelector('.expand-btn').setAttribute('aria-pressed', String(span >= cols));
+  };
+  const onUp = () => {
+    handle.classList.remove('dragging');
+    item.classList.remove('resizing');
+    handle.removeEventListener('pointermove', onMove);
+    handle.removeEventListener('pointerup', onUp);
+    handle.removeEventListener('pointercancel', onUp);
+  };
+  handle.addEventListener('pointermove', onMove);
+  handle.addEventListener('pointerup', onUp);
+  handle.addEventListener('pointercancel', onUp);
+});
+
 lessonsEl.addEventListener('toggle', e => {
   const more = e.target;
   if (!more.matches || !more.matches('details.more')) return;
   const item = more.closest('.item');
-  if (more.open) { setWide(item, true); item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  if (more.open) { if (!item.dataset.pinned) setWide(item, true); item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
   else if (!item.dataset.pinned) setWide(item, false);
 }, true);
 /* A vocabulary word jumps to the box that explains it, in whatever session it lives. */

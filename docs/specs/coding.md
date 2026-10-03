@@ -17,6 +17,7 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
 - **Lessons** — sessions 1, 2, 3, 4, 6 and 7 (there was no session 5), each a closed box until opened. Inside: groups of boxes, one box per function or idea, numbered `session.box` (e.g. 3.12). Each box has a short explanation, an example, a **More** panel with a longer explanation and a run-checked example, and a link to its slide.
 - **Exercises** — session 3's warm-up and twelve extra exercises, session 4's three practice-lab exercises. Each opens on its own; its solution sits behind a second toggle.
 - **Vocabulary** — the end-of-session vocabulary of each session, each word with an example; a word jumps to the box that explains it.
+- **Wider boxes** — a box can be widened: the expand button makes it the full row, dragging its right edge widens it column by column, and opening More widens it on its own. Once a box is wide enough, More lays the explanation beside the example.
 - **The term in colour** — inside each box, the function or keyword it explains is highlighted wherever it appears in the examples and the text, so the eye finds what is being explained.
 - **Review** — every question, comment, Confused and No-time box, grouped in one place.
 
