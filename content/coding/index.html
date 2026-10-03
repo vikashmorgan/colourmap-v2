@@ -449,7 +449,11 @@ pre.vocab-ex { margin: 4px 0 2px; background: var(--code-bg); border-radius: 6px
 
 /* Worked examples */
 .example-code { margin: 0; background: var(--code-bg); border-radius: 8px; padding: 12px 14px; font: 13.5px/1.7 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
-.ln-badge { font: 600 11px var(--mono); width: 20px; height: 20px; border-radius: 50%; border: 0; background: var(--q-c); color: var(--ground); cursor: pointer; vertical-align: 1px; margin-left: 6px; padding: 0; }
+.ln-badge { font: 600 11px var(--mono); width: 20px; height: 20px; border-radius: 50%; border: 0; background: var(--q-c); color: var(--ground); cursor: pointer; padding: 0; }
+.example-code { padding-left: 8px; }
+.ex-line { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: start; }
+.ex-line .gutter { display: flex; justify-content: center; padding-top: 2px; }
+.ex-line .src { white-space: pre-wrap; overflow-wrap: anywhere; }
 .cmt-list { display: grid; gap: 6px; }
 details.cmt { border-radius: 8px; background: color-mix(in srgb, var(--q-c) 10%, transparent); }
 details.cmt > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 7px 12px; min-height: 36px; }
@@ -1646,7 +1650,8 @@ function exampleCard(x, n, id) {
     const at = lines.findIndex(l => l.includes(snippet));
     if (at >= 0 && !markerAt.has(at)) markerAt.set(at, i + 1);
   });
-  const code = lines.map((l, i) => highlightLine(l) + (markerAt.has(i) ? ` <button type="button" class="ln-badge" data-cmt="${id}-c${markerAt.get(i)}">${markerAt.get(i)}</button>` : '')).join('\n');
+  // Each line gets a fixed left gutter; a commented line shows its number there.
+  const code = lines.map((l, i) => `<span class="ex-line"><span class="gutter">${markerAt.has(i) ? `<button type="button" class="ln-badge" data-cmt="${id}-c${markerAt.get(i)}">${markerAt.get(i)}</button>` : ''}</span><span class="src">${highlightLine(l) || ' '}</span></span>`).join('');
   return `<details class="exercise example-card" id="${id}">
     <summary><span class="ex-num">${n}</span><span class="ex-title">${esc(x.title)}</span><span class="ex-level">${esc(x.concept)}</span></summary>
     <div class="ex-body">
@@ -1744,9 +1749,9 @@ function updateHere() {
   let section = '';
   if (lesson.open) {
     for (const s of lesson.querySelectorAll('[data-here]')) if (s.getBoundingClientRect().top <= probe) section = s.dataset.here;
-    const set = lesson.querySelector('details.ex-set');
-    if (set && set.open && set.getBoundingClientRect().top <= probe) {
-      for (const x of set.querySelectorAll('details.exercise')) if (x.getBoundingClientRect().top <= probe) section = 'Exercises › ' + x.querySelector('.ex-num').textContent + '. ' + x.querySelector('.ex-title').textContent;
+    for (const set of lesson.querySelectorAll('details.ex-set')) {
+      if (!set.open || set.getBoundingClientRect().top > probe) continue;
+      for (const x of set.querySelectorAll('details.exercise')) if (x.getBoundingClientRect().top <= probe) section = set.dataset.here + ' › ' + x.querySelector('.ex-num').textContent + '. ' + x.querySelector('.ex-title').textContent;
     }
   }
   let boxNum = '';
