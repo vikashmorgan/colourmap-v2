@@ -181,7 +181,9 @@ details.output summary { cursor: pointer; font-size: 14px; color: var(--accent);
 .lgroup .item { background: var(--tint, var(--panel)); border-color: color-mix(in srgb, var(--ink) 10%, var(--tint, var(--panel))); }
 .lgroup .item pre { background: color-mix(in srgb, var(--panel) 70%, var(--tint, var(--panel))); }
 .lgroup h3 { font-family: var(--display); font-weight: 600; font-size: 19px; margin: 0 0 12px; }
-.items { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+/* A row of boxes always fills the width: a last row of two or three stretches like a row of four. */
+.items { display: flex; flex-wrap: wrap; gap: 10px; }
+.items > .item { flex: 1 1 260px; min-width: 0; }
 .item { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; align-content: start; }
 .item.used { border-color: color-mix(in srgb, var(--accent) 55%, var(--rule)); }
 .item h4 { margin: 0; font: 600 14px var(--mono); display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
@@ -420,7 +422,7 @@ pre.vocab-ex { margin: 4px 0 2px; background: var(--code-bg); border-radius: 6px
 .expand-btn[aria-pressed="true"]::before { content: '⤡'; }
 .expand-btn:hover, .expand-btn:focus-visible { opacity: 1; background: color-mix(in srgb, var(--box-text) 12%, transparent); }
 .item h4 .tag + .expand-btn { margin-left: 6px; }
-.lgroup .item.wide { grid-column: 1 / -1; }
+.lgroup .item.wide { flex-basis: 100%; }
 .lgroup .item { container-type: inline-size; }
 @container (min-width: 600px) {
   .more-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px 24px; align-items: start; }
@@ -2096,7 +2098,7 @@ if (ON_COLOUR_BRAIN) document.getElementById('back-brain').hidden = false;
 /* Expanding a box: full width of its row. The button keeps it open; opening
    More widens it too, and closing More narrows it again unless the button was used. */
 function setWide(item, wide) {
-  item.style.gridColumn = '';
+  item.style.flex = '';
   item.classList.toggle('wide', wide);
   item.querySelector('.expand-btn').setAttribute('aria-pressed', String(wide));
 }
@@ -2116,8 +2118,8 @@ lessonsEl.addEventListener('pointerdown', e => {
   e.preventDefault();
   const item = handle.closest('.item');
   const grid = item.parentElement;
-  const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
   const gap = parseFloat(getComputedStyle(grid).columnGap) || 0;
+  const cols = Math.max(1, Math.floor((grid.clientWidth + gap) / (260 + gap)));
   const colW = (grid.clientWidth - gap * (cols - 1)) / cols;
   const startX = e.clientX;
   const startW = item.getBoundingClientRect().width;
@@ -2128,7 +2130,7 @@ lessonsEl.addEventListener('pointerdown', e => {
     const target = startW + (ev.clientX - startX);
     const span = Math.max(1, Math.min(cols, Math.round((target + gap) / (colW + gap))));
     item.classList.remove('wide');
-    item.style.gridColumn = span >= cols ? '1 / -1' : `span ${span}`;
+    item.style.flex = span >= cols ? '1 1 100%' : `0 0 ${Math.round(span * colW + (span - 1) * gap)}px`;
     item.dataset.pinned = span > 1 ? '1' : '';
     item.querySelector('.expand-btn').setAttribute('aria-pressed', String(span >= cols));
   };
