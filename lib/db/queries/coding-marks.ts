@@ -1,9 +1,15 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { createClient } from '@/lib/supabase/server';
 
-import { getDb } from '@/lib/db/client';
-import { codingMarks } from '@/lib/db/schema';
-
-export type CodingMarkRow = typeof codingMarks.$inferSelect;
+/*
+ * Coding marks go through the signed-in user's Supabase client, not the
+ * Drizzle connection.
+ *
+ * Why: the live deployment's DATABASE_URL was unusable on 2026-10-03 (the
+ * function logged "Missing required environment variable: DATABASE_URL")
+ * while the Supabase URL and publishable key worked, as the slide uploads
+ * proved. Going through the user's own session also means the table's RLS
+ * policies are what stand between users, not only the `user_id` filter here.
+ */
 
 export type CodingBoxEntry = {
   itemKey: string;
@@ -12,48 +18,50 @@ export type CodingBoxEntry = {
   noteKind: string | null;
 };
 
-export async function getMarksByUser(userId: string) {
-  const db = getDb();
-  return db
-    .select({
-      itemKey: codingMarks.itemKey,
-      mark: codingMarks.mark,
-      note: codingMarks.note,
-      noteKind: codingMarks.noteKind,
-    })
-    .from(codingMarks)
-    .where(eq(codingMarks.userId, userId));
+type Row = { item_key: string; mark: string | null; note: string | null; note_kind: string | null };
+
+const TABLE = 'coding_marks';
+
+export async function getMarksByUser(userId: string): Promise<CodingBoxEntry[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('item_key, mark, note, note_kind')
+    .eq('user_id', userId);
+  if (error) throw new Error(`coding_marks read failed: ${error.message}`);
+  return ((data ?? []) as Row[]).map((r) => ({
+    itemKey: r.item_key,
+    mark: r.mark,
+    note: r.note,
+    noteKind: r.note_kind,
+  }));
 }
 
 /** Save boxes in one statement. (user_id, item_key) is unique in the migration. */
 export async function upsertBoxes(userId: string, entries: CodingBoxEntry[]) {
   if (entries.length === 0) return;
-  const db = getDb();
-  await db
-    .insert(codingMarks)
-    .values(
-      entries.map((e) => ({
-        userId,
-        itemKey: e.itemKey,
-        mark: e.mark,
-        note: e.note,
-        noteKind: e.noteKind,
-      })),
-    )
-    .onConflictDoUpdate({
-      target: [codingMarks.userId, codingMarks.itemKey],
-      set: {
-        mark: sql`excluded.mark`,
-        note: sql`excluded.note`,
-        noteKind: sql`excluded.note_kind`,
-        updatedAt: sql`now()`,
-      },
-    });
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+  const { error } = await supabase.from(TABLE).upsert(
+    entries.map((e) => ({
+      user_id: userId,
+      item_key: e.itemKey,
+      mark: e.mark,
+      note: e.note,
+      note_kind: e.noteKind,
+      updated_at: now,
+    })),
+    { onConflict: 'user_id,item_key' },
+  );
+  if (error) throw new Error(`coding_marks write failed: ${error.message}`);
 }
 
 export async function deleteBox(userId: string, itemKey: string) {
-  const db = getDb();
-  await db
-    .delete(codingMarks)
-    .where(and(eq(codingMarks.userId, userId), eq(codingMarks.itemKey, itemKey)));
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from(TABLE)
+    .delete()
+    .eq('user_id', userId)
+    .eq('item_key', itemKey);
+  if (error) throw new Error(`coding_marks delete failed: ${error.message}`);
 }
