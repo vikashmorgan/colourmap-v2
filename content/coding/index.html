@@ -451,7 +451,11 @@ pre.vocab-ex { margin: 4px 0 2px; background: var(--code-bg); border-radius: 6px
 
 /* Worked examples */
 .example-code { margin: 0; background: var(--code-bg); border-radius: 8px; padding: 12px 14px; font: 13.5px/1.7 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
-.ln-badge { font: 600 11px var(--mono); width: 20px; height: 20px; border-radius: 50%; border: 0; background: var(--q-c); color: var(--ground); cursor: pointer; padding: 0; }
+/* Beside the code the markers stay quiet: an outline and a faint number, so the
+   code keeps the eye. They fill in on hover; the comment rows below keep the
+   filled version. */
+.ln-badge { font: 600 10.5px var(--mono); width: 19px; height: 19px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--q-c) 45%, transparent); background: transparent; color: color-mix(in srgb, var(--q-c) 75%, transparent); cursor: pointer; padding: 0; transition: background .15s, color .15s; }
+.ln-badge:hover, .ln-badge:focus-visible { background: var(--q-c); color: var(--ground); border-color: var(--q-c); }
 .example-code { padding-left: 8px; }
 .ex-line { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: start; }
 .ex-line .gutter { display: flex; justify-content: center; padding-top: 2px; }
