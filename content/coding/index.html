@@ -408,6 +408,17 @@ mark.term { background: color-mix(in srgb, var(--mid-c) 34%, transparent); color
 pre mark.term { font-weight: 700; }
 pre.vocab-ex { margin: 4px 0 2px; background: var(--code-bg); border-radius: 6px; padding: 6px 9px; font: 12.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 
+/* Expanded box: the whole row, with More laid out side by side. */
+.expand-btn { margin-left: auto; width: 26px; height: 26px; flex: none; border: 0; background: none; color: var(--box-text); opacity: .45; cursor: pointer; border-radius: 6px; display: grid; place-items: center; font: 600 15px var(--body); }
+.expand-btn::before { content: '⤢'; }
+.expand-btn[aria-pressed="true"]::before { content: '⤡'; }
+.expand-btn:hover, .expand-btn:focus-visible { opacity: 1; background: color-mix(in srgb, var(--box-text) 12%, transparent); }
+.item h4 .tag + .expand-btn { margin-left: 6px; }
+.lgroup .item.wide { grid-column: 1 / -1; }
+.item.wide .more-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 24px; align-items: start; }
+.item.wide .more-text { font-size: 15.5px; margin-top: 4px; }
+@media (max-width: 700px) { .item.wide .more-body { grid-template-columns: 1fr; } }
+
 .gap-note { margin-top: 48px; font-family: var(--mono); font-size: 13px; color: var(--muted); border-top: 1px dashed var(--rule); padding-top: 12px; }
 
 @media (max-width: 860px) {
@@ -1491,9 +1502,13 @@ function vocabExample(w) {
 
 function moreBlock(m) {
   return `<details class="more"><summary>More</summary>
-    <p class="more-text">${esc(m.more)}</p>
-    ${m.example ? `<div class="more-ex"><span class="more-label">Example</span><pre><code>${highlight(m.example)}</code></pre></div>` : ''}
-    ${m.output ? `<div class="more-ex"><span class="more-label">Output</span><pre class="more-out">${esc(m.output)}</pre></div>` : ''}
+    <div class="more-body">
+      <p class="more-text">${esc(m.more)}</p>
+      <div class="more-side">
+        ${m.example ? `<div class="more-ex"><span class="more-label">Example</span><pre><code>${highlight(m.example)}</code></pre></div>` : ''}
+        ${m.output ? `<div class="more-ex"><span class="more-label">Output</span><pre class="more-out">${esc(m.output)}</pre></div>` : ''}
+      </div>
+    </div>
   </details>`;
 }
 
@@ -1553,7 +1568,7 @@ for (const L of LESSONS) {
     const used = inProject(n);
     const key = `s${L.session}|${n}`;
     const num = `${L.session}.${++boxNo}`;
-    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}</h4><p>${esc(t)}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key]) : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" aria-pressed="false" aria-label="Got it" title="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" aria-pressed="false" aria-label="Confused" title="Confused"></button><button type="button" class="mark m-late" data-mark="late" aria-pressed="false" aria-label="No time" title="No time"></button><button type="button" class="note-dot" aria-pressed="false" aria-label="Write a question or comment" title="Question or comment"></button></div></article>`;
+    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><p>${esc(t)}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key]) : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" aria-pressed="false" aria-label="Got it" title="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" aria-pressed="false" aria-label="Confused" title="Confused"></button><button type="button" class="mark m-late" data-mark="late" aria-pressed="false" aria-label="No time" title="No time"></button><button type="button" class="note-dot" aria-pressed="false" aria-label="Write a question or comment" title="Question or comment"></button></div></article>`;
   }).join('')}</div></div>`).join('');
   const notes = (L.pitfalls && L.pitfalls.length ? `<div class="note-box pit"><h4>Watch out</h4><ul>${L.pitfalls.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '') +
     (L.extra && !L.extraExercises ? `<div class="note-box extra"><h4>Extra exercises</h4>${esc(L.extra)}</div>` : '');
@@ -1938,6 +1953,28 @@ async function initSlides() {
 }
 
 allItems().forEach((it, i) => { it.id = `box-${i}`; });
+/* Expanding a box: full width of its row. The button keeps it open; opening
+   More widens it too, and closing More narrows it again unless the button was used. */
+function setWide(item, wide) {
+  item.classList.toggle('wide', wide);
+  item.querySelector('.expand-btn').setAttribute('aria-pressed', String(wide));
+}
+lessonsEl.addEventListener('click', e => {
+  const b = e.target.closest('.expand-btn');
+  if (!b) return;
+  const item = b.closest('.item');
+  const wide = !item.classList.contains('wide');
+  item.dataset.pinned = wide ? '1' : '';
+  setWide(item, wide);
+  if (wide) item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+});
+lessonsEl.addEventListener('toggle', e => {
+  const more = e.target;
+  if (!more.matches || !more.matches('details.more')) return;
+  const item = more.closest('.item');
+  if (more.open) { setWide(item, true); item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  else if (!item.dataset.pinned) setWide(item, false);
+}, true);
 /* A vocabulary word jumps to the box that explains it, in whatever session it lives. */
 lessonsEl.addEventListener('click', e => {
   const b = e.target.closest('[data-goto]');
