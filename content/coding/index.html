@@ -583,7 +583,6 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
         <button type="button" class="filter f-solid" data-filter="solid" aria-pressed="false"><i class="dot d-solid"></i>Solid <b data-count="solid">0</b></button>
         <button type="button" class="filter f-got" data-filter="got" aria-pressed="false"><i class="dot d-got"></i>Got it <b data-count="got">0</b></button>
         <button type="button" class="filter f-mid" data-filter="mid" aria-pressed="false"><i class="dot d-mid"></i>Confused <b data-count="mid">0</b></button>
-        <button type="button" class="filter f-late" data-filter="late" aria-pressed="false"><i class="dot d-late"></i>No time <b data-count="late">0</b></button>
         <button type="button" class="filter" data-filter="none" aria-pressed="false">Not marked <b data-count="none">0</b></button>
       </div>
       <div class="slides-panel" id="slides-panel" hidden></div>
@@ -596,7 +595,7 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
     <div class="intro">
       <span class="eyebrow">Page 4 · Your review</span>
       <h1>Everything you flagged, in one place.</h1>
-      <p>Your questions, your comments, and every box you marked Confused or No time, grouped together. Each one links back to its box in Lessons.</p>
+      <p>Your questions, your comments, and every box you marked Confused, grouped together. Each one links back to its box in Lessons.</p>
     </div>
     <div id="review"></div>
   </section>
@@ -1694,7 +1693,7 @@ for (const L of LESSONS) {
     const used = inProject(n);
     const key = `s${L.session}|${n}`;
     const num = `${L.session}.${++boxNo}`;
-    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><span class="resize-handle" aria-hidden="true" title="Drag to widen"></span><p>${esc(t)}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key]) : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-solid" data-mark="solid" data-label="Solid" aria-pressed="false" aria-label="Solid: I own it"></button><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button><button type="button" class="note-dot" data-label="Question or comment" aria-pressed="false" aria-label="Write a question or comment"></button></div></article>`;
+    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><span class="resize-handle" aria-hidden="true" title="Drag to widen"></span><p>${esc(t)}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key]) : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-solid" data-mark="solid" data-label="Solid" aria-pressed="false" aria-label="Solid: I own it"></button><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="note-dot" data-label="Question or comment" aria-pressed="false" aria-label="Write a question or comment"></button></div></article>`;
   }).join('')}</div></div>`).join('');
   const notes = (L.pitfalls && L.pitfalls.length ? `<div class="note-box pit"><h4>Watch out</h4><ul>${L.pitfalls.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '') +
     (L.extra && !L.extraExercises ? `<div class="note-box extra"><h4>Extra exercises</h4>${esc(L.extra)}</div>` : '');
@@ -1869,7 +1868,8 @@ const itemByKey = key => allItems().find(i => i.dataset.key === key);
 
 function paintItem(item) {
   const key = item.dataset.key;
-  const m = marks[key] || '';
+  // "late" (No time) was retired; an old one shows as unmarked.
+  const m = marks[key] && marks[key] !== 'late' ? marks[key] : '';
   item.dataset.mark = m;
   for (const b of item.querySelectorAll('.mark')) b.setAttribute('aria-pressed', String(b.dataset.mark === m));
   const note = notes[key];
@@ -1887,17 +1887,16 @@ function paintAll() { for (const it of allItems()) paintItem(it); refreshCounts(
 
 function refreshCounts() {
   const items = allItems();
-  const total = { solid: 0, got: 0, mid: 0, late: 0, none: 0 };
-  for (const it of items) total[it.dataset.mark || 'none']++;
+  const total = { solid: 0, got: 0, mid: 0, none: 0 };
+  for (const it of items) total[it.dataset.mark in total ? it.dataset.mark : 'none']++;
   for (const [k, v] of Object.entries(total)) document.querySelector(`[data-count="${k}"]`).textContent = v;
   for (const lesson of lessonsEl.querySelectorAll('details.lesson')) {
     const its = [...lesson.querySelectorAll('.item[data-key]')];
     const solid = its.filter(i => i.dataset.mark === 'solid').length;
     const got = its.filter(i => i.dataset.mark === 'got').length + solid;
     const mid = its.filter(i => i.dataset.mark === 'mid').length;
-    const late = its.filter(i => i.dataset.mark === 'late').length;
     const q = its.filter(i => notes[i.dataset.key]).length;
-    lesson.querySelector('.sess-progress').innerHTML = `<span class="pg-bar"><i style="width:${(got / its.length * 100).toFixed(1)}%"></i></span><span>${got}/${its.length} got it${solid ? ` · <b class="pg-solid">${solid} solid</b>` : ''}</span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${late ? `<span class="pg-late">${late} no time</span>` : ''}${q ? `<span class="pg-note">${q} note${q > 1 ? 's' : ''}</span>` : ''}`;
+    lesson.querySelector('.sess-progress').innerHTML = `<span class="pg-bar"><i style="width:${(got / its.length * 100).toFixed(1)}%"></i></span><span>${got}/${its.length} got it${solid ? ` · <b class="pg-solid">${solid} solid</b>` : ''}</span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${q ? `<span class="pg-note">${q} note${q > 1 ? 's' : ''}</span>` : ''}`;
   }
 }
 function applyFilter() {
@@ -2027,13 +2026,12 @@ function renderReview() {
     ['Questions', 'question', keys.filter(k => notes[k] && notes[k].kind === 'question')],
     ['Comments', 'comment', keys.filter(k => notes[k] && notes[k].kind === 'comment')],
     ['Confused', 'mid', keys.filter(k => marks[k] === 'mid')],
-    ['No time', 'late', keys.filter(k => marks[k] === 'late')],
   ];
   const total = groups.reduce((n, g) => n + g[2].length, 0);
   document.getElementById('review-count').textContent = total ? String(total) : '';
   const el = document.getElementById('review');
   if (!total) {
-    el.innerHTML = '<p class="rv-empty">Nothing here yet. In Lessons, tap the small dots on the right of a box: the top three mark it Got it, Confused or No time, and the bottom one writes a question or a comment. They all gather here.</p>';
+    el.innerHTML = '<p class="rv-empty">Nothing here yet. In Lessons, tap the small dots on the right of a box: the top ones mark it Solid, Got it or Confused, and the bottom one writes a question or a comment. They all gather here.</p>';
     return;
   }
   el.innerHTML = groups.filter(g => g[2].length).map(([title, cls, ks]) => `<section class="rv-group rv-${cls}"><h2><i class="dot"></i>${title} <b>${ks.length}</b></h2><div class="rv-list">${ks.map(reviewEntry).join('')}</div></section>`).join('');

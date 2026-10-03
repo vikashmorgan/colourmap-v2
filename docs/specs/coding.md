@@ -26,7 +26,7 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
 
 Each box can carry:
 
-- a **mark**: *Solid* (`solid`, owned), *Got it* (`got`), *Confused* (`mid`) or *No time* (`late`) — small dots on the side of the box, each naming itself in a coloured pill on hover;
+- a **mark**: *Solid* (`solid`, owned), *Got it* (`got`) or *Confused* (`mid`) — small dots on the side of the box, each naming itself in a coloured pill on hover. (*No time*, `late`, was retired from the page; old `late` rows stay in the table and show as unmarked.)
 - a **note**: a question or a comment, written from a fourth dot.
 
 Rules:
@@ -57,6 +57,8 @@ Which page a box came from was found by searching each session's PDF text for th
 Edit the standalone copy, then copy `index.html` into `content/coding/index.html` in the same change. The route reads the file at request time.
 
 ## Reflection
+
+- **2026-10-03.** *No time* was dropped: it was not a level of understanding, and Victor found it unnecessary. The database still accepts it so nothing recorded is lost.
 
 - **2026-10-03.** *Got it* covered both "I followed it" and "I own it". A fourth level, *Solid*, in a clearer green, now marks the second; migration 0024 widens the allowed marks.
 
