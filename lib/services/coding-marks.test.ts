@@ -51,6 +51,13 @@ describe('coding marks service', () => {
     ]);
   });
 
+  it('accepts the solid level', async () => {
+    await saveBox('user-1', 's4|def', 'solid', null);
+    expect(upsertBoxes).toHaveBeenCalledWith('user-1', [
+      { itemKey: 's4|def', mark: 'solid', note: null, noteKind: null },
+    ]);
+  });
+
   it('saves a comment without a mark', async () => {
     await saveBox('user-1', 's3|while', null, comment('Loops until the condition is false'));
     expect(upsertBoxes).toHaveBeenCalledWith('user-1', [

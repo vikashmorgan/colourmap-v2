@@ -3,8 +3,8 @@ import { deleteBox, getMarksByUser, upsertBoxes } from '@/lib/db/queries/coding-
 /*
  * MARKS AND NOTES ON THE CODING STUDY PAGE.
  *
- * Each box on /coding can carry a mark — "got" (understood), "mid" (confused),
- * "late" (no time yet) — and a note: the user's own question or comment about
+ * Each box on /coding can carry a mark — "solid" (owned), "got" (understood),
+ * "mid" (confused), "late" (no time yet) — and a note: the user's own question or comment about
  * it. The page keeps its own copy in the browser; this is the copy that
  * follows the signed-in user between devices.
  *
@@ -16,7 +16,7 @@ import { deleteBox, getMarksByUser, upsertBoxes } from '@/lib/db/queries/coding-
  * bounded text with a kind.
  */
 
-export const MARKS = ['got', 'mid', 'late'] as const;
+export const MARKS = ['solid', 'got', 'mid', 'late'] as const;
 export type Mark = (typeof MARKS)[number];
 export const NOTE_KINDS = ['question', 'comment'] as const;
 export type NoteKind = (typeof NOTE_KINDS)[number];
@@ -48,7 +48,8 @@ function checkKey(key: unknown): string {
 
 function checkMark(mark: unknown): Mark | null {
   if (mark === null || mark === undefined) return null;
-  if (!isMark(mark)) throw new CodingMarkValidationError('mark must be got, mid, late or null');
+  if (!isMark(mark))
+    throw new CodingMarkValidationError('mark must be solid, got, mid, late or null');
   return mark;
 }
 

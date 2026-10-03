@@ -78,10 +78,12 @@ describe('coding marks route', () => {
   });
 
   it('answers 400 for invalid input and for a body that is not JSON', async () => {
-    saveBox.mockRejectedValue(new CodingMarkValidationError('mark must be got, mid, late or null'));
+    saveBox.mockRejectedValue(
+      new CodingMarkValidationError('mark must be solid, got, mid, late or null'),
+    );
     const bad = await PUT(send('PUT', { key: 's3|while', mark: 'maybe' }));
     expect(bad.status).toBe(400);
-    expect(await bad.json()).toEqual({ error: 'mark must be got, mid, late or null' });
+    expect(await bad.json()).toEqual({ error: 'mark must be solid, got, mid, late or null' });
 
     const notJson = await PUT(send('PUT', '{not json'));
     expect(notJson.status).toBe(400);

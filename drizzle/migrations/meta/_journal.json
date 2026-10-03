@@ -169,6 +169,13 @@
       "when": 1775200000017,
       "tag": "0023_coding_marks",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1775200000018,
+      "tag": "0024_coding_marks_solid",
+      "breakpoints": true
     }
   ]
 }
