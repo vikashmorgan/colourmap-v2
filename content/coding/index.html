@@ -336,11 +336,6 @@ details.solution .ex-why { margin-top: 12px; }
 .here-box { font: 600 12px var(--mono); border: 1px solid var(--rule); border-radius: 6px; padding: 1px 7px; margin-left: 4px; }
 
 /* The note dot: under the three mark dots, a little apart. */
-.note-dot { width: 26px; height: 26px; margin-top: 6px; padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; display: grid; place-items: center; }
-.note-dot::before { content: ''; width: 10px; height: 10px; border-radius: 3px; border: 1.5px dashed var(--q-c); opacity: .5; transition: opacity .15s, transform .15s; }
-.note-dot:hover::before, .note-dot:focus-visible::before { opacity: .95; transform: scale(1.15); }
-.note-dot[data-kind="question"]::before { background: var(--q-c); border-style: solid; opacity: 1; }
-.note-dot[data-kind="comment"]::before { background: var(--c-c); border: 1.5px solid var(--c-c); opacity: 1; }
 .note-shown { font-size: 14px; color: var(--box-text); border-radius: 8px; padding: 6px 10px; background: color-mix(in srgb, var(--q-c) 16%, transparent); }
 .note-shown[data-kind="comment"] { background: color-mix(in srgb, var(--c-c) 18%, transparent); }
 .note-label { display: block; font: 600 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; opacity: .75; margin-bottom: 2px; }
@@ -488,15 +483,20 @@ pre, .terminal { zoom: var(--code-zoom); }
 .size-reset { justify-self: end; font: 600 13px var(--body); color: var(--accent); background: none; border: 0; cursor: pointer; min-height: 32px; }
 
 /* Hovering a dot shows its name in a small pill of its own colour. */
-.mark, .note-dot { position: relative; }
-.mark::after, .note-dot::after {
+.mark { position: relative; }
+.mark::after {
   content: attr(data-label); position: absolute; right: calc(100% + 4px); top: 50%; transform: translate(4px, -50%);
   white-space: nowrap; font: 600 12px var(--body); padding: 3px 10px; border-radius: 999px;
   background: var(--dot, var(--q-c)); color: var(--ground); opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; z-index: 3;
 }
-.note-dot::after { background: var(--q-c); }
-.mark:hover::after, .mark:focus-visible::after, .note-dot:hover::after, .note-dot:focus-visible::after { opacity: 1; transform: translate(0, -50%); }
+.mark:hover::after, .mark:focus-visible::after { opacity: 1; transform: translate(0, -50%); }
 .pg-solid { color: var(--solid-c); }
+
+/* Question or comment: a quiet button at the bottom of the box. */
+.note-dot { justify-self: start; display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 3px 11px; min-height: 30px; border-radius: 999px; border: 1px dashed color-mix(in srgb, var(--q-c) 55%, transparent); background: none; color: var(--box-text); opacity: .7; font: 600 12.5px var(--body); cursor: pointer; }
+.note-dot::before { content: '✎'; color: var(--q-c); }
+.note-dot:hover, .note-dot:focus-visible { opacity: 1; border-style: solid; }
+.note-dot[aria-pressed="true"] { opacity: .9; border-style: solid; border-color: color-mix(in srgb, var(--q-c) 70%, transparent); }
 
 .gap-note { margin-top: 48px; font-family: var(--mono); font-size: 13px; color: var(--muted); border-top: 1px dashed var(--rule); padding-top: 12px; }
 
@@ -583,7 +583,6 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
         <button type="button" class="filter f-solid" data-filter="solid" aria-pressed="false"><i class="dot d-solid"></i>Solid <b data-count="solid">0</b></button>
         <button type="button" class="filter f-got" data-filter="got" aria-pressed="false"><i class="dot d-got"></i>Got it <b data-count="got">0</b></button>
         <button type="button" class="filter f-mid" data-filter="mid" aria-pressed="false"><i class="dot d-mid"></i>Confused <b data-count="mid">0</b></button>
-        <button type="button" class="filter f-late" data-filter="late" aria-pressed="false"><i class="dot d-late"></i>No time <b data-count="late">0</b></button>
         <button type="button" class="filter" data-filter="none" aria-pressed="false">Not marked <b data-count="none">0</b></button>
       </div>
       <div class="slides-panel" id="slides-panel" hidden></div>
@@ -596,7 +595,7 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
     <div class="intro">
       <span class="eyebrow">Page 4 · Your review</span>
       <h1>Everything you flagged, in one place.</h1>
-      <p>Your questions, your comments, and every box you marked Confused or No time, grouped together. Each one links back to its box in Lessons.</p>
+      <p>Your questions, your comments, and every box you marked Confused, grouped together. Each one links back to its box in Lessons.</p>
     </div>
     <div id="review"></div>
   </section>
@@ -1694,7 +1693,7 @@ for (const L of LESSONS) {
     const used = inProject(n);
     const key = `s${L.session}|${n}`;
     const num = `${L.session}.${++boxNo}`;
-    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><span class="resize-handle" aria-hidden="true" title="Drag to widen"></span><p>${esc(t)}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key]) : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-solid" data-mark="solid" data-label="Solid" aria-pressed="false" aria-label="Solid: I own it"></button><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button><button type="button" class="note-dot" data-label="Question or comment" aria-pressed="false" aria-label="Write a question or comment"></button></div></article>`;
+    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><span class="resize-handle" aria-hidden="true" title="Drag to widen"></span><p>${esc(t)}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key]) : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<button type="button" class="note-dot" aria-pressed="false">Question or comment</button><div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-solid" data-mark="solid" data-label="Solid" aria-pressed="false" aria-label="Solid: I own it"></button><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button></div></article>`;
   }).join('')}</div></div>`).join('');
   const notes = (L.pitfalls && L.pitfalls.length ? `<div class="note-box pit"><h4>Watch out</h4><ul>${L.pitfalls.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '') +
     (L.extra && !L.extraExercises ? `<div class="note-box extra"><h4>Extra exercises</h4>${esc(L.extra)}</div>` : '');
@@ -1869,16 +1868,18 @@ const itemByKey = key => allItems().find(i => i.dataset.key === key);
 
 function paintItem(item) {
   const key = item.dataset.key;
-  const m = marks[key] || '';
+  // "late" (No time) was retired; an old one shows as unmarked.
+  const m = marks[key] && marks[key] !== 'late' ? marks[key] : '';
   item.dataset.mark = m;
   for (const b of item.querySelectorAll('.mark')) b.setAttribute('aria-pressed', String(b.dataset.mark === m));
   const note = notes[key];
   const dot = item.querySelector('.note-dot');
   dot.dataset.kind = note ? note.kind : '';
   dot.setAttribute('aria-pressed', String(!!note));
+  dot.textContent = note ? (note.kind === 'question' ? 'Edit question' : 'Edit comment') : 'Question or comment';
   let shown = item.querySelector('.note-shown');
   if (note) {
-    if (!shown) { shown = document.createElement('div'); shown.className = 'note-shown'; item.querySelector('.marks').before(shown); }
+    if (!shown) { shown = document.createElement('div'); shown.className = 'note-shown'; dot.before(shown); }
     shown.dataset.kind = note.kind;
     shown.innerHTML = `<span class="note-label">${note.kind === 'question' ? 'Your question' : 'Your comment'}</span>${esc(note.text)}`;
   } else if (shown) shown.remove();
@@ -1887,17 +1888,16 @@ function paintAll() { for (const it of allItems()) paintItem(it); refreshCounts(
 
 function refreshCounts() {
   const items = allItems();
-  const total = { solid: 0, got: 0, mid: 0, late: 0, none: 0 };
-  for (const it of items) total[it.dataset.mark || 'none']++;
+  const total = { solid: 0, got: 0, mid: 0, none: 0 };
+  for (const it of items) total[it.dataset.mark in total ? it.dataset.mark : 'none']++;
   for (const [k, v] of Object.entries(total)) document.querySelector(`[data-count="${k}"]`).textContent = v;
   for (const lesson of lessonsEl.querySelectorAll('details.lesson')) {
     const its = [...lesson.querySelectorAll('.item[data-key]')];
     const solid = its.filter(i => i.dataset.mark === 'solid').length;
     const got = its.filter(i => i.dataset.mark === 'got').length + solid;
     const mid = its.filter(i => i.dataset.mark === 'mid').length;
-    const late = its.filter(i => i.dataset.mark === 'late').length;
     const q = its.filter(i => notes[i.dataset.key]).length;
-    lesson.querySelector('.sess-progress').innerHTML = `<span class="pg-bar"><i style="width:${(got / its.length * 100).toFixed(1)}%"></i></span><span>${got}/${its.length} got it${solid ? ` · <b class="pg-solid">${solid} solid</b>` : ''}</span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${late ? `<span class="pg-late">${late} no time</span>` : ''}${q ? `<span class="pg-note">${q} note${q > 1 ? 's' : ''}</span>` : ''}`;
+    lesson.querySelector('.sess-progress').innerHTML = `<span class="pg-bar"><i style="width:${(got / its.length * 100).toFixed(1)}%"></i></span><span>${got}/${its.length} got it${solid ? ` · <b class="pg-solid">${solid} solid</b>` : ''}</span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${q ? `<span class="pg-note">${q} note${q > 1 ? 's' : ''}</span>` : ''}`;
   }
 }
 function applyFilter() {
@@ -1963,7 +1963,7 @@ function openEditor(item) {
     <div class="note-actions"><button type="button" class="note-save">Save</button>${notes[key] ? '<button type="button" class="note-delete">Delete</button>' : ''}<button type="button" class="note-cancel">Cancel</button></div>`;
   ed.querySelector('textarea').value = note.text;
   ed.dataset.kind = note.kind;
-  item.append(ed);
+  item.querySelector('.note-dot').after(ed);
   ed.querySelector('textarea').focus();
 }
 function setNote(key, text, kind) {
@@ -2027,13 +2027,12 @@ function renderReview() {
     ['Questions', 'question', keys.filter(k => notes[k] && notes[k].kind === 'question')],
     ['Comments', 'comment', keys.filter(k => notes[k] && notes[k].kind === 'comment')],
     ['Confused', 'mid', keys.filter(k => marks[k] === 'mid')],
-    ['No time', 'late', keys.filter(k => marks[k] === 'late')],
   ];
   const total = groups.reduce((n, g) => n + g[2].length, 0);
   document.getElementById('review-count').textContent = total ? String(total) : '';
   const el = document.getElementById('review');
   if (!total) {
-    el.innerHTML = '<p class="rv-empty">Nothing here yet. In Lessons, tap the small dots on the right of a box: the top three mark it Got it, Confused or No time, and the bottom one writes a question or a comment. They all gather here.</p>';
+    el.innerHTML = '<p class="rv-empty">Nothing here yet. In Lessons, tap the small dots on the right of a box: the top ones mark it Solid, Got it or Confused, and the bottom one writes a question or a comment. They all gather here.</p>';
     return;
   }
   el.innerHTML = groups.filter(g => g[2].length).map(([title, cls, ks]) => `<section class="rv-group rv-${cls}"><h2><i class="dot"></i>${title} <b>${ks.length}</b></h2><div class="rv-list">${ks.map(reviewEntry).join('')}</div></section>`).join('');
@@ -2145,6 +2144,32 @@ lessonsEl.addEventListener('pointerdown', e => {
   handle.addEventListener('pointerup', onUp);
   handle.addEventListener('pointercancel', onUp);
 });
+
+/* Keep the page calm: one More open at a time, and an open one closes itself
+   once its box has been out of view for a few seconds. */
+const AWAY_MS = 6000;
+let openMore = null;
+let awayTimer = null;
+const moreWatcher = new IntersectionObserver(entries => {
+  for (const entry of entries) {
+    if (!openMore || entry.target !== openMore.closest('.item')) continue;
+    clearTimeout(awayTimer);
+    if (!entry.isIntersecting) awayTimer = setTimeout(() => { if (openMore) openMore.open = false; }, AWAY_MS);
+  }
+});
+lessonsEl.addEventListener('toggle', e => {
+  const m = e.target;
+  if (!m.matches || !m.matches('details.more')) return;
+  if (m.open) {
+    if (openMore && openMore !== m) openMore.open = false;
+    openMore = m;
+    moreWatcher.observe(m.closest('.item'));
+  } else if (openMore === m) {
+    moreWatcher.unobserve(m.closest('.item'));
+    clearTimeout(awayTimer);
+    openMore = null;
+  }
+}, true);
 
 lessonsEl.addEventListener('toggle', e => {
   const more = e.target;
