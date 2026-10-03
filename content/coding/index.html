@@ -433,6 +433,18 @@ pre.vocab-ex { margin: 4px 0 2px; background: var(--code-bg); border-radius: 6px
 .back-brain { font: 600 14px var(--body); color: var(--ink); text-decoration: none; border: 1px solid var(--rule); background: var(--panel); border-radius: 999px; padding: 8px 16px; min-height: 40px; display: inline-flex; align-items: center; }
 .back-brain:hover { border-color: var(--accent); color: var(--accent); }
 
+/* More, in pieces: the definition in full ink, the use in a softer tone, the
+   mistake on a light warm wash with its own small label. */
+.more-text { display: grid; gap: 8px; margin: 4px 0 10px; }
+.more-text .seg { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--box-text); }
+.more-text .seg-what { font-weight: 600; }
+.more-text .seg-use { opacity: .82; }
+.more-text .seg + .seg-use { padding-top: 8px; border-top: 1px dashed color-mix(in srgb, var(--box-text) 22%, transparent); }
+.more-text .seg-warn { background: color-mix(in srgb, var(--mid-c) 16%, transparent); border-radius: 8px; padding: 6px 10px; }
+.seg-label { display: block; font: 600 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--mid-c); margin-bottom: 2px; }
+.more-ex:first-child .more-label { color: var(--q-c); }
+.more-ex + .more-ex .more-label { color: var(--ok-c); }
+
 .gap-note { margin-top: 48px; font-family: var(--mono); font-size: 13px; color: var(--muted); border-top: 1px dashed var(--rule); padding-top: 12px; }
 
 @media (max-width: 860px) {
@@ -1514,10 +1526,22 @@ function vocabExample(w) {
   return `<pre class="vocab-ex" data-term="${esc(w.term)}" data-box="${esc(w.key ? w.key.split('|').slice(1).join('|') : '')}"><code>${highlight(code)}</code></pre>`;
 }
 
+/* The More text arrives as 2-4 sentences: what it is, when you use it, and a
+   common mistake. Split into those parts so it reads in pieces, not a block. */
+const WARN_RE = /mistake|careful|forget|forgetting|never |don't|do not|instead of|wrong|error if|crash/i;
+function moreSegments(text) {
+  const sentences = text.split(/(?<=[.!?])\s+(?=[A-Z0-9"'(`.])/).filter(Boolean);
+  return sentences.map((sentence, i) => {
+    const role = WARN_RE.test(sentence) && i > 0 ? 'warn' : i === 0 ? 'what' : 'use';
+    const label = role === 'what' ? '' : role === 'warn' ? 'Watch out' : '';
+    return `<p class="seg seg-${role}">${label ? `<span class="seg-label">${label}</span>` : ''}${esc(sentence)}</p>`;
+  }).join('');
+}
+
 function moreBlock(m) {
   return `<details class="more"><summary>More</summary>
     <div class="more-body">
-      <p class="more-text">${esc(m.more)}</p>
+      <div class="more-text">${moreSegments(m.more)}</div>
       <div class="more-side">
         ${m.example ? `<div class="more-ex"><span class="more-label">Example</span><pre><code>${highlight(m.example)}</code></pre></div>` : ''}
         ${m.output ? `<div class="more-ex"><span class="more-label">Output</span><pre class="more-out">${esc(m.output)}</pre></div>` : ''}
