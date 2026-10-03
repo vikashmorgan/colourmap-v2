@@ -47,11 +47,11 @@
 import { and, desc, eq, gte } from 'drizzle-orm';
 
 import { getDb } from '@/lib/db/client';
-import { checkIns, missions, notebookEntries } from '@/lib/db/schema';
+import { checkIns, codingMarks, missions, notebookEntries } from '@/lib/db/schema';
 
-export type Command = 'notes' | 'checkins' | 'missions' | 'silence';
+export type Command = 'notes' | 'checkins' | 'missions' | 'silence' | 'coding';
 
-export const COMMANDS: Command[] = ['notes', 'checkins', 'missions', 'silence'];
+export const COMMANDS: Command[] = ['notes', 'checkins', 'missions', 'silence', 'coding'];
 
 export const USAGE = `
 brain-read — read the record, so the terminal can think about it
@@ -60,6 +60,7 @@ brain-read — read the record, so the terminal can think about it
   bun scripts/brain-read.ts checkins [--since YYYY-MM-DD | --days N] [--last N]
   bun scripts/brain-read.ts missions [--all]
   bun scripts/brain-read.ts silence  [--days N]
+  bun scripts/brain-read.ts coding
 
 Needs DATABASE_URL and BRAIN_USER_ID in .env.local.
 There is no --everything, on purpose.
@@ -154,6 +155,85 @@ export function withWords(
   rows: { note?: string | null; challenge?: string | null; flow?: string | null }[],
 ): number {
   return rows.filter((row) => row.note || row.challenge || row.flow).length;
+}
+
+export type CodingRow = {
+  itemKey: string;
+  mark: string | null;
+  note: string | null;
+  noteKind: string | null;
+  updatedAt: Date;
+};
+
+/** "s3|while" → "Session 3 · while". */
+export function codingBox(itemKey: string): string {
+  const bar = itemKey.indexOf('|');
+  const session = itemKey.slice(0, bar).replace(/^s/, '');
+  return bar > 0 ? `Session ${session} · ${itemKey.slice(bar + 1)}` : itemKey;
+}
+
+/*
+ * The coding study page's questions, comments and flags, grouped the way the
+ * page's own Review tab groups them. Questions first: they are what is waiting
+ * for an answer.
+ */
+export function codingReport(rows: CodingRow[]): string {
+  const sorted = [...rows].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+  const section = (title: string, picked: CodingRow[], withNote: boolean) => {
+    if (picked.length === 0) return [];
+    return [
+      `## ${title} (${picked.length})`,
+      ...picked.map((r) =>
+        withNote && r.note
+          ? `- ${codingBox(r.itemKey)} — ${day(r.updatedAt)}\n  ${r.note.replace(/\n/g, '\n  ')}`
+          : `- ${codingBox(r.itemKey)}${r.note ? ` (note: ${r.noteKind})` : ''}`,
+      ),
+      '',
+    ];
+  };
+  const lines = [
+    `# coding — ${rows.length} boxes with a mark or a note\n`,
+    ...section(
+      'Questions',
+      sorted.filter((r) => r.note && r.noteKind === 'question'),
+      true,
+    ),
+    ...section(
+      'Comments',
+      sorted.filter((r) => r.note && r.noteKind === 'comment'),
+      true,
+    ),
+    ...section(
+      'Confused',
+      sorted.filter((r) => r.mark === 'mid'),
+      false,
+    ),
+    ...section(
+      'No time',
+      sorted.filter((r) => r.mark === 'late'),
+      false,
+    ),
+  ];
+  const got = rows.filter((r) => r.mark === 'got').length;
+  lines.push(`Got it: ${got} boxes.`);
+  if (rows.length === 0) lines.push('(nothing marked or written on the coding page yet)');
+  return lines.join('\n');
+}
+
+async function readCoding(who: string): Promise<void> {
+  const rows = await getDb()
+    .select({
+      itemKey: codingMarks.itemKey,
+      mark: codingMarks.mark,
+      note: codingMarks.note,
+      noteKind: codingMarks.noteKind,
+      updatedAt: codingMarks.updatedAt,
+    })
+    .from(codingMarks)
+    .where(eq(codingMarks.userId, who))
+    .orderBy(desc(codingMarks.updatedAt))
+    .limit(1000);
+  console.log(codingReport(rows));
 }
 
 async function readNotes(argv: string[], who: string): Promise<void> {
@@ -361,6 +441,7 @@ export async function run(argv: string[], env: { BRAIN_USER_ID?: string }): Prom
   if (command === 'notes') await readNotes(argv, who);
   else if (command === 'checkins') await readCheckins(argv, who);
   else if (command === 'missions') await readMissions(argv, who);
+  else if (command === 'coding') await readCoding(who);
   else await readSilence(argv, who);
 
   return 0;
