@@ -215,7 +215,8 @@ export function codingReport(rows: CodingRow[]): string {
     ),
   ];
   const got = rows.filter((r) => r.mark === 'got').length;
-  lines.push(`Got it: ${got} boxes.`);
+  const solid = rows.filter((r) => r.mark === 'solid').length;
+  lines.push(`Got it: ${got} boxes. Solid: ${solid}.`);
   if (rows.length === 0) lines.push('(nothing marked or written on the coding page yet)');
   return lines.join('\n');
 }

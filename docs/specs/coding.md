@@ -26,7 +26,7 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
 
 Each box can carry:
 
-- a **mark**: *Got it* (`got`), *Confused* (`mid`) or *No time* (`late`) — three small dots on the side of the box;
+- a **mark**: *Solid* (`solid`, owned), *Got it* (`got`), *Confused* (`mid`) or *No time* (`late`) — small dots on the side of the box, each naming itself in a coloured pill on hover;
 - a **note**: a question or a comment, written from a fourth dot.
 
 Rules:
@@ -57,5 +57,7 @@ Which page a box came from was found by searching each session's PDF text for th
 Edit the standalone copy, then copy `index.html` into `content/coding/index.html` in the same change. The route reads the file at request time.
 
 ## Reflection
+
+- **2026-10-03.** *Got it* covered both "I followed it" and "I own it". A fourth level, *Solid*, in a clearer green, now marks the second; migration 0024 widens the allowed marks.
 
 - **2026-10-03.** First built as a standalone static site with marks in localStorage only. That could not follow Victor between phone and laptop, so it moved behind Colour Brain's existing Google login and Supabase rather than standing up a second auth setup. Slides were first planned to ship with the page; the repository being public ruled that out, so they became per-user private uploads.

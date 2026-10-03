@@ -240,7 +240,7 @@ describe('reading the coding page', () => {
     expect(text).toContain('- Session 2 · .split() — 2026-10-01\n  Like cutting a CSV line');
     expect(text).toContain('## Confused (1)\n- Session 3 · if');
     expect(text).toContain('## No time (1)\n- Session 4 · def');
-    expect(text).toContain('Got it: 2 boxes.');
+    expect(text).toContain('Got it: 2 boxes. Solid: 0.');
   });
 
   it('says so when nothing has been marked', () => {
