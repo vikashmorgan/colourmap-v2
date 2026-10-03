@@ -369,9 +369,11 @@ details.solution .ex-why { margin-top: 12px; }
 .rv-empty { color: var(--muted); max-width: 60ch; font-size: 16px; }
 
 /* More: the longer explanation under a box, closed until asked for. */
-details.more > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font: 600 13px var(--body); color: var(--box-text); opacity: .8; min-height: 30px; }
+details.more > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; width: fit-content; margin: 6px auto 0; padding: 4px 16px; min-height: 32px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--box-text) 40%, transparent); background: color-mix(in srgb, var(--box-text) 8%, transparent); font: 600 13px var(--body); color: var(--box-text); opacity: .85; }
+details.more > summary:hover { opacity: 1; background: color-mix(in srgb, var(--box-text) 16%, transparent); }
+details.more[open] > summary { margin-bottom: 8px; }
 details.more > summary::-webkit-details-marker { display: none; }
-details.more > summary::before { content: '+'; font: 600 14px var(--mono); width: 18px; height: 18px; display: inline-grid; place-items: center; border-radius: 50%; border: 1px solid currentColor; }
+details.more > summary::before { content: '+'; font: 600 15px var(--mono); }
 details.more[open] > summary::before { content: '−'; }
 details.more[open] > summary { opacity: 1; }
 .more-text { margin: 4px 0 8px; font-size: 14.5px; color: var(--box-text); }
