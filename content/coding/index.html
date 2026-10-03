@@ -459,6 +459,20 @@ details.cmt[open] > summary::after { content: '−'; }
 details.cmt p { margin: 0; padding: 0 12px 10px 42px; font-size: 15px; line-height: 1.55; }
 details.cmt p code { font: 13px var(--mono); background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
 
+/* Text size: the page body scales with --text-zoom, code on top of that with --code-zoom. */
+:root { --text-zoom: 1; --code-zoom: 1.15; }
+main.wrap { zoom: var(--text-zoom); }
+.here { zoom: var(--text-zoom); }
+pre, .terminal { zoom: var(--code-zoom); }
+.size-wrap { position: relative; margin-left: 12px; }
+.size-btn { font: 700 16px var(--display); color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 999px; width: 44px; height: 44px; cursor: pointer; }
+.size-btn[aria-expanded="true"], .size-btn:hover { border-color: var(--accent); color: var(--accent); }
+.size-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; display: grid; gap: 10px; width: 240px; box-shadow: 0 10px 30px color-mix(in srgb, var(--ink) 18%, transparent); }
+.size-row { display: grid; grid-template-columns: 1fr 34px 52px 34px; align-items: center; gap: 6px; font-size: 14px; }
+.size-row button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--rule); background: var(--ground); color: var(--ink); font: 600 18px var(--body); cursor: pointer; }
+.size-row b { text-align: center; font: 600 13px var(--mono); }
+.size-reset { justify-self: end; font: 600 13px var(--body); color: var(--accent); background: none; border: 0; cursor: pointer; min-height: 32px; }
+
 .gap-note { margin-top: 48px; font-family: var(--mono); font-size: 13px; color: var(--muted); border-top: 1px dashed var(--rule); padding-top: 12px; }
 
 @media (max-width: 860px) {
@@ -483,6 +497,14 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
       <button id="tab-tools" role="tab" aria-selected="false" aria-controls="page-tools">Python toolkit</button>
       <button id="tab-lessons" role="tab" aria-selected="false" aria-controls="page-lessons">Lessons</button>
       <button id="tab-review" role="tab" aria-selected="false" aria-controls="page-review">Review <b class="tab-count" id="review-count"></b></button>
+    </div>
+    <div class="size-wrap">
+      <button type="button" class="size-btn" id="size-btn" aria-expanded="false" aria-controls="size-panel" title="Text size">Aa</button>
+      <div class="size-panel" id="size-panel" role="dialog" aria-label="Text size" hidden>
+        <div class="size-row"><span>Text size</span><button type="button" data-size="text" data-step="-1" aria-label="Smaller text">−</button><b id="size-text">100%</b><button type="button" data-size="text" data-step="1" aria-label="Bigger text">+</button></div>
+        <div class="size-row"><span>Code size</span><button type="button" data-size="code" data-step="-1" aria-label="Smaller code">−</button><b id="size-code">115%</b><button type="button" data-size="code" data-step="1" aria-label="Bigger code">+</button></div>
+        <button type="button" class="size-reset" id="size-reset">Reset</button>
+      </div>
     </div>
   </div>
   <div class="here wrap" id="here" aria-live="polite" hidden></div>
@@ -2117,6 +2139,40 @@ lessonsEl.addEventListener('click', e => {
 initSlides();
 paintAll();
 startSync();
+
+/* ---------- Text size, for late nights ---------- */
+const SIZE_KEY = 'coding-text-size';
+const TEXT_STEPS = [90, 100, 110, 120, 135, 150, 170];
+const CODE_STEPS = [100, 115, 130, 145, 160, 180];
+let sizes = { text: 100, code: 115 };
+try { sizes = { ...sizes, ...JSON.parse(localStorage.getItem(SIZE_KEY) || '{}') }; } catch (e) {}
+function applySizes() {
+  document.documentElement.style.setProperty('--text-zoom', String(sizes.text / 100));
+  document.documentElement.style.setProperty('--code-zoom', String(sizes.code / 100));
+  document.getElementById('size-text').textContent = `${sizes.text}%`;
+  document.getElementById('size-code').textContent = `${sizes.code}%`;
+  try { localStorage.setItem(SIZE_KEY, JSON.stringify(sizes)); } catch (e) {}
+}
+applySizes();
+const sizeBtn = document.getElementById('size-btn');
+const sizePanel = document.getElementById('size-panel');
+sizeBtn.addEventListener('click', () => {
+  sizePanel.hidden = !sizePanel.hidden;
+  sizeBtn.setAttribute('aria-expanded', String(!sizePanel.hidden));
+});
+sizePanel.addEventListener('click', e => {
+  if (e.target.id === 'size-reset') { sizes = { text: 100, code: 115 }; applySizes(); return; }
+  const b = e.target.closest('[data-size]');
+  if (!b) return;
+  const steps = b.dataset.size === 'text' ? TEXT_STEPS : CODE_STEPS;
+  const i = steps.indexOf(sizes[b.dataset.size]);
+  const next = steps[Math.max(0, Math.min(steps.length - 1, (i < 0 ? 1 : i) + Number(b.dataset.step)))];
+  sizes[b.dataset.size] = next;
+  applySizes();
+});
+document.addEventListener('click', e => {
+  if (!sizePanel.hidden && !e.target.closest('.size-wrap')) { sizePanel.hidden = true; sizeBtn.setAttribute('aria-expanded', 'false'); }
+});
 
 /* ---------- Tabs ---------- */
 const tabs = { map: [document.getElementById('tab-map'), document.getElementById('page-map')], tools: [document.getElementById('tab-tools'), document.getElementById('page-tools')], lessons: [document.getElementById('tab-lessons'), document.getElementById('page-lessons')], review: [document.getElementById('tab-review'), document.getElementById('page-review')] };
