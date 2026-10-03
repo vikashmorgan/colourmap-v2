@@ -11,7 +11,7 @@ const PRIMARY_LINKS: { href: string; label: string }[] = [
   { href: '/ai', label: 'AI' },
   { href: '/notebook', label: 'Notes' },
   { href: '/education', label: 'Education' },
-  { href: '/geometry-field', label: 'Art' },
+  { href: '/geometry-field', label: 'AI Projections' },
 ];
 
 const PHONE_PRIMARY_LINKS = PRIMARY_LINKS;

@@ -13981,7 +13981,6 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Flow Sacred', tag: 'FLOW' },
   { name: 'Magnetic Sands 2', tag: 'FLOW' },
   { name: 'Butterfly', tag: 'FLOW' },
-  { name: 'Star Sand Lines', tag: 'FLOW' },
   { name: 'Golden Flow', tag: 'FLOW' },
   { name: 'Gravity', tag: 'TOP' },
   { name: 'Fire', tag: 'TOP' },
@@ -14066,6 +14065,8 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Tree of Life', tag: 'TREE' },
   { name: 'Tangka Lotus', tag: 'TIB' },
   { name: 'Matrix Rain', tag: 'DOT' },
+  // Moved here from Good Ones on 3 Oct 2026: the trip is not finished yet.
+  { name: 'Star Sand Lines', tag: 'FLOW' },
 ];
 
 // Diaporama — a generated "play all" program: every featured preset in list
@@ -22807,10 +22808,10 @@ export default function GeometryField() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {/* Builder only for now (3 Oct 2026). Music Visuals, Journeys and
+                    Figures are hidden, not deleted: their code is untouched, so
+                    bringing a tab back is restoring its pill line. */}
                 {pill('Builder', tab === 'builder', () => setTab('builder'), true)}
-                {pill('Music Visuals', tab === 'music', () => setTab('music'), true)}
-                {pill('Journeys', tab === 'journey', () => setTab('journey'), true)}
-                {pill('Figures', false, () => window.location.assign('/figures'), true)}
               </div>
               <button
                 type="button"
