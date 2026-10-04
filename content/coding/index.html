@@ -178,7 +178,7 @@ details.output summary { cursor: pointer; font-size: 14px; color: var(--accent);
 /* Each group's boxes take their own light tint, so one topic visibly ends
    before the next begins. The page behind them stays plain. */
 .lgroup { --tint: oklch(var(--tint-l) var(--tint-c) var(--h, 250) / var(--tint-a)); }
-.lgroup .item { background: var(--tint, var(--panel)); border-color: color-mix(in srgb, var(--ink) 10%, var(--tint, var(--panel))); }
+.lgroup .item { background: var(--tint, var(--panel)); border-color: transparent; }
 .lgroup .item pre { background: color-mix(in srgb, var(--panel) 70%, var(--tint, var(--panel))); }
 .lgroup h3 { font-family: var(--display); font-weight: 600; font-size: 19px; margin: 0 0 12px; }
 /* A row of boxes always fills the width: a last row of two or three stretches like a row of four. */
