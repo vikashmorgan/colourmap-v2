@@ -367,6 +367,13 @@ details.solution .ex-why { margin-top: 12px; }
 .rv-note { margin: 0; font-size: 15px; border-radius: 8px; padding: 6px 10px; background: color-mix(in srgb, var(--q-c) 16%, transparent); }
 .rv-note[data-kind="comment"] { background: color-mix(in srgb, var(--c-c) 18%, transparent); }
 .rv-empty { color: var(--muted); max-width: 60ch; font-size: 16px; }
+/* Questions and comments read as one aligned column: place on the left, note and answer on the right. */
+.rv-question .rv-list, .rv-comment .rv-list { grid-template-columns: minmax(0, 900px); }
+.rv-qa { grid-template-columns: 4.5em minmax(0, 1fr); column-gap: 14px; }
+.rv-place { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding-top: 4px; }
+.rv-main { display: grid; gap: 8px; min-width: 0; }
+.rv-sub { font: 500 13px var(--body); color: var(--muted); margin-left: 4px; }
+.rv-wait { margin: 0; font-size: 13.5px; color: var(--muted); font-style: italic; }
 
 /* More: the longer explanation under a box, closed until asked for. */
 details.more > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; width: fit-content; margin: 6px auto 0; padding: 4px 16px; min-height: 32px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--box-text) 40%, transparent); background: color-mix(in srgb, var(--box-text) 8%, transparent); font: 600 13px var(--body); color: var(--box-text); opacity: .85; }
@@ -598,7 +605,7 @@ details.pstep[open] > summary::after { content: '−'; }
 .lchip:hover, .lchip:focus-visible, .lchip[aria-expanded="true"] { background: color-mix(in srgb, var(--chip) 30%, var(--panel)); }
 
 details.prun > summary { cursor: pointer; font-size: 14px; color: var(--sess); font-weight: 600; min-height: 36px; display: inline-flex; align-items: center; gap: 8px; }
-details.prun .terminal { max-height: 420px; overflow: auto; }
+details.prun .terminal { overflow-x: auto; }
 .terminal .ans { color: #f4d27a; font-weight: 700; }
 .terminal .t-menu { color: #7d8796; font-style: italic; }
 .pstep-size { font: 12.5px var(--mono); color: var(--muted); }
@@ -686,7 +693,9 @@ details.fullcode .mission-tag { background: var(--ink); }
 .note-line:hover { background: color-mix(in srgb, oklch(0.72 0.08 60) 45%, transparent); }
 .line-pick { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
 .line-pick select { flex: 1; min-width: 0; min-height: 36px; font: 13px var(--mono); color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 4px 8px; }
-.codeview pre .line-host { white-space: normal; font: 15px/1.5 var(--body); margin: 4px 0 10px; }
+.codeview pre .line-host, .codeview .terminal .line-host { white-space: normal; font: 15px/1.5 var(--body); margin: 4px 0 10px; color: var(--ink); }
+.tview .terminal .ldot { margin-right: 8px; }
+@media (hover: none) { .tview .ldot { border-color: color-mix(in srgb, var(--line-dot) 35%, transparent); } }
 .line-host { display: grid; gap: 6px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--line-dot, var(--q-c)) 12%, var(--panel)); scroll-margin-top: 140px; }
 .line-ref { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
 .line-tag { font: 600 12px var(--mono); color: var(--q-c); }
@@ -855,7 +864,7 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
     <div class="intro">
       <span class="eyebrow">Page 4 · Your review</span>
       <h1>Everything you flagged, in one place.</h1>
-      <p>Your questions, your comments, and every box you marked Confused or No time, grouped together. Each one links back to its box in Lessons.</p>
+      <p>Every question and comment, in the order of the page: Project 1 step by step, then the lessons box by box. Each answer sits right under its question, here and where you asked it. Then every box you marked Confused or No time.</p>
     </div>
     <div id="review"></div>
   </section>
@@ -1516,13 +1525,18 @@ function codeWithAdds(code, added) {
   }).join('');
 }
 // The user's answers stand out from what the program prints; later menus fold into one line.
-function terminalHtml(out) {
-  return out.split('\n').map(line => {
-    if (line === '@@MENU@@') return '<span class="t-menu">   … the menu again …</span>';
-    const m = line.match(/^(Choose: |Search for: |> |.*\(y\/n\): )(.*)$/);
-    if (m) return `<span class="you">${esc(m[1])}</span><span class="ans">${m[2] ? esc(m[2]) : '⏎ (just Enter)'}</span>`;
-    return esc(line);
-  }).join('\n');
+const MENU_AGAIN = '   … the menu again …';
+function terminalLine(line) {
+  if (line === '@@MENU@@') return `<span class="t-menu">${MENU_AGAIN}</span>`;
+  const m = line.match(/^(Choose: |Search for: |> |.*\(y\/n\): )(.*)$/);
+  if (m) return `<span class="you">${esc(m[1])}</span><span class="ans">${m[2] ? esc(m[2]) : '⏎ (just Enter)'}</span>`;
+  return esc(line);
+}
+// Terminal output takes notes too: each line has a dot on its left, like the code.
+function terminalHtml(out, step) {
+  const lines = out.split('\n');
+  const body = lines.map((line, i) => `<span class="cl" data-line="${i + 1}"><span class="ldot" title="Question or comment on this output line"></span>${terminalLine(line)}\n</span>`).join('');
+  return `<div class="codeview tview" data-kind="T" data-step="${step}" data-first="1" data-last="${lines.length}"><div class="terminal">${body}</div></div>`;
 }
 
 // Code with clickable line numbers. A number is a line of the whole program as it
@@ -1554,26 +1568,39 @@ function cardCode(n, b) {
   return codeView(b.code, n, full.slice(0, at).split('\n').length, b.added, '');
 }
 const LINE_KEY = /^p1\|s(\d+)\|L(\d+)$/;
+// A spot in the project: a line of code (L) or a line of terminal output (T).
+const SPOT_KEY = /^p1\|s(\d+)\|([LT])(\d+)$/;
+function parseSpot(key) {
+  const r = SPOT_KEY.exec(key);
+  return r && { step: Number(r[1]), kind: r[2], line: Number(r[3]) };
+}
+function spotText(s) {
+  if (s.kind === 'L') return PROJECT_FULL[s.step - 1].code.split('\n')[s.line - 1] || '';
+  const out = PROJECT_STEPS[s.step - 1].output.split('\n')[s.line - 1] || '';
+  return out === '@@MENU@@' ? MENU_AGAIN.trim() : out;
+}
 function makeLineHost(key, vi) {
-  const [, step, line] = LINE_KEY.exec(key);
-  const text = PROJECT_FULL[step - 1].code.split('\n')[line - 1] || '';
+  const s = parseSpot(key);
   const h = document.createElement('div');
   h.className = 'line-host';
-  h.dataset.key = key; h.dataset.step = step; h.dataset.line = line;
-  h.id = `lh-${vi}-${line}`;
-  h.innerHTML = `<div class="line-ref"><span class="line-tag">Line ${line}</span><code>${highlightLine(text.trim()) || ''}</code></div><button type="button" class="note-dot" aria-pressed="false">Question or comment</button>`;
+  h.dataset.key = key; h.dataset.step = s.step; h.dataset.line = s.line; h.dataset.kind = s.kind;
+  h.id = `lh-${vi}-${s.line}`;
+  const text = spotText(s);
+  const shown = s.kind === 'L' ? (highlightLine(text.trim()) || '') : esc(text.trim());
+  h.innerHTML = `<div class="line-ref"><span class="line-tag">${s.kind === 'L' ? 'Line' : 'Output line'} ${s.line}</span><code>${shown}</code></div><button type="button" class="note-dot" aria-pressed="false">Question or comment</button>`;
   return h;
 }
 // A line with notes keeps a dot on its left: muted orange while waiting, green once
 // answered and read. Its notes sit folded right under the line; the dot opens them.
 function syncLineHosts(force) {
-  const keys = new Set(noteList.map(n => n.key).filter(k => LINE_KEY.test(k)));
+  const keys = new Set(noteList.map(n => n.key).filter(k => SPOT_KEY.test(k)));
   document.querySelectorAll('#page-project .codeview').forEach((view, vi) => {
     const step = Number(view.dataset.step), first = Number(view.dataset.first), last = Number(view.dataset.last);
+    const kind = view.dataset.kind || 'L';
     const want = new Set();
     for (const k of keys) {
-      const [, s, l] = LINE_KEY.exec(k);
-      if (Number(s) === step && Number(l) >= first && Number(l) <= last) want.add(k);
+      const s = parseSpot(k);
+      if (s.step === step && s.kind === kind && s.line >= first && s.line <= last) want.add(k);
     }
     if (force && force.view === view) want.add(force.key);
     for (const h of view.querySelectorAll('.line-host')) if (!want.has(h.dataset.key) && !h.querySelector('.note-editor')) h.remove();
@@ -1581,13 +1608,13 @@ function syncLineHosts(force) {
       if (view.querySelector(`.line-host[data-key="${CSS.escape(k)}"]`)) continue;
       const host = makeLineHost(k, vi);
       host.hidden = true;
-      view.querySelector(`.cl[data-line="${LINE_KEY.exec(k)[2]}"]`).after(host);
+      view.querySelector(`.cl[data-line="${parseSpot(k).line}"]`).after(host);
     }
     for (const cl of view.querySelectorAll('.cl.has-note')) cl.classList.remove('has-note', 'done');
     for (const k of want) {
       const list = notesOf(k);
       if (!list.length) continue;
-      const cl = view.querySelector(`.cl[data-line="${LINE_KEY.exec(k)[2]}"]`);
+      const cl = view.querySelector(`.cl[data-line="${parseSpot(k).line}"]`);
       cl.classList.add('has-note');
       cl.classList.toggle('done', list.every(n => noteState(n) === 'done'));
     }
@@ -1625,7 +1652,7 @@ projectEl.addEventListener('click', e => {
   if (!hit) return;
   const view = hit.closest('.codeview');
   const line = hit.closest('.cl').dataset.line;
-  const key = `p1|s${view.dataset.step}|L${line}`;
+  const key = `p1|s${view.dataset.step}|${view.dataset.kind || 'L'}${line}`;
   const open = view.querySelector(`.line-host[data-key="${CSS.escape(key)}"]`);
   // A second tap folds the line's notes away again, unless something is being written.
   if (open && !open.hidden && !open.querySelector('.note-editor')) { open.hidden = true; return; }
@@ -1672,7 +1699,7 @@ for (const s of PROJECT_STEPS) {
         ${stepFull(s.n)}
         <p class="pstep-brief"><span class="spec-label">The brief says</span>${esc(s.brief)}</p>
         ${cards}
-        <details class="prun"><summary>▶ Run it: what the terminal shows <span class="pstep-size">explorer.py is now ${s.lines} lines</span></summary><div class="terminal">${terminalHtml(s.output)}</div></details>
+        <details class="prun"><summary>▶ Run it: what the terminal shows <span class="pstep-size">explorer.py is now ${s.lines} lines</span></summary>${terminalHtml(s.output, s.n)}</details>
         <p class="pstep-say"><span class="spec-label">Say it on Tuesday</span>${esc(s.say)}</p>
       </div>
     </details>`);
@@ -2095,7 +2122,8 @@ function boxHead(item) {
   if (item.id === 'nb-host') return { sess: 'var(--muted)', name: 'Project 1 · notebook', num: 'NB', text: '' };
   if (item.classList.contains('line-host')) {
     const st = PROJECT_STEPS[item.dataset.step - 1];
-    return { sess: stepColour(st.n), name: `Step ${st.n} · ${st.title} · line ${item.dataset.line}`, num: `L${item.dataset.line}`, text: item.querySelector('.line-ref code').textContent };
+    const out = item.dataset.kind === 'T';
+    return { sess: stepColour(st.n), name: `Step ${st.n} · ${st.title} · ${out ? 'output line' : 'line'} ${item.dataset.line}`, num: `${out ? 'T' : 'L'}${item.dataset.line}`, text: item.querySelector('.line-ref code').textContent };
   }
   if (item.classList.contains('pcard')) {
     const step = item.closest('details.pstep');
@@ -2110,10 +2138,14 @@ function reviewNote(n) {
   const item = itemByKey(n.key);
   if (!item) return '';
   const h = boxHead(item);
-  return `<article class="rv-entry" style="--sess: ${h.sess}">
-    <div class="rv-top"><i class="state-dot ${noteState(n)}"></i><span class="rv-sess">${h.num}</span><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">${item.closest('#page-project') ? 'Open in project ›' : 'Open in lesson ›'}</button></div>
-    <p class="rv-note" data-kind="${n.kind}">${esc(n.body)}</p>
-    ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : `<button type="button" class="note-read" data-ref="${esc(noteRef(n))}">Got it, mark read</button>`}</div>` : ''}
+  // One row per note: where it is on the left, the note and its answer aligned on the right.
+  return `<article class="rv-entry rv-qa" style="--sess: ${h.sess}">
+    <div class="rv-place"><span class="rv-sess">${h.num}</span><i class="state-dot ${noteState(n)}"></i></div>
+    <div class="rv-main">
+      <div class="rv-top"><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">${item.closest('#page-project') ? 'Open in project ›' : 'Open in lesson ›'}</button></div>
+      <p class="rv-note" data-kind="${n.kind}">${esc(n.body)}</p>
+      ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : `<button type="button" class="note-read" data-ref="${esc(noteRef(n))}">Got it, mark read</button>`}</div>` : (n.kind === 'question' ? '<p class="rv-wait">Waiting for an answer</p>' : '')}
+    </div>
   </article>`;
 }
 function reviewBox(key) {
@@ -2126,10 +2158,16 @@ function reviewBox(key) {
   </article>`;
 }
 function renderReview() {
-  const keys = noteHosts().map(i => i.dataset.key);
+  const hosts = noteHosts();
+  const keys = [...new Set(hosts.map(i => i.dataset.key))];
+  // Notes read in the order of the page: Project 1 step by step, then the lessons box by box.
+  const place = new Map();
+  hosts.forEach((h, i) => { if (!place.has(h.dataset.key)) place.set(h.dataset.key, i); });
   const byNewest = (a, b) => String(b.createdAt || b.localId || '').localeCompare(String(a.createdAt || a.localId || ''));
-  const questions = noteList.filter(n => n.kind === 'question').sort(byNewest);
-  const comments = noteList.filter(n => n.kind === 'comment').sort(byNewest);
+  const byPlace = (a, b) => ((place.get(a.key) ?? 1e9) - (place.get(b.key) ?? 1e9)) || byNewest(a, b);
+  const questions = noteList.filter(n => n.kind === 'question').sort(byPlace);
+  const comments = noteList.filter(n => n.kind === 'comment').sort(byPlace);
+  const answered = questions.filter(n => n.answer).length;
   const confused = keys.filter(k => marks[k] === 'mid');
   const noTime = keys.filter(k => marks[k] === 'late');
   const waiting = noteList.filter(n => noteState(n) === 'waiting' && n.answer).length;
@@ -2141,8 +2179,8 @@ function renderReview() {
     el.innerHTML = '<p class="rv-empty">Nothing here yet. In Lessons, the three dots on the side of a box mark it Got it, Confused or No time, and the button at the bottom adds a question or a comment. They all gather here.</p>';
     return;
   }
-  const group = (title, cls, html, n) => n ? `<section class="rv-group rv-${cls}"><h2><i class="dot"></i>${title} <b>${n}</b></h2><div class="rv-list">${html}</div></section>` : '';
-  el.innerHTML = group('Questions', 'question', questions.map(reviewNote).join(''), questions.length)
+  const group = (title, cls, html, n, sub) => n ? `<section class="rv-group rv-${cls}"><h2><i class="dot"></i>${title} <b>${n}</b>${sub ? `<span class="rv-sub">${sub}</span>` : ''}</h2><div class="rv-list">${html}</div></section>` : '';
+  el.innerHTML = group('Questions', 'question', questions.map(reviewNote).join(''), questions.length, `${answered} answered · ${questions.length - answered} waiting`)
     + group('Comments', 'comment', comments.map(reviewNote).join(''), comments.length)
     + group('Confused', 'mid', confused.map(reviewBox).join(''), confused.length)
     + group('No time', 'late', noTime.map(reviewBox).join(''), noTime.length);

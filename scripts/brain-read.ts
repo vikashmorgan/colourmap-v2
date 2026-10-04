@@ -181,8 +181,10 @@ export function codingBox(itemKey: string): string {
   const book = /^p(\d+)\|notebook$/.exec(itemKey);
   if (book) return `Project ${book[1]} · notebook`;
   // A line of the project's code: p<project>|s<step>|L<line>.
-  const line = /^p(\d+)\|s(\d+)\|L(\d+)$/.exec(itemKey);
-  if (line) return `Project ${line[1]} · step ${line[2]} · line ${line[3]}`;
+  // T is a line of the step's terminal output rather than of its code.
+  const line = /^p(\d+)\|s(\d+)\|([LT])(\d+)$/.exec(itemKey);
+  if (line)
+    return `Project ${line[1]} · step ${line[2]} · ${line[3] === 'T' ? 'output line' : 'line'} ${line[4]}`;
   // Project cards: p<project>|<step>|<name>.
   const card = /^p(\d+)\|(\d+)\|(.+)$/.exec(itemKey);
   if (card) return `Project ${card[1]} · step ${card[2]} · ${card[3]}`;
