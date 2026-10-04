@@ -177,6 +177,9 @@ export type CodingNote = {
 
 /** "s3|while" → "Session 3 · while". */
 export function codingBox(itemKey: string): string {
+  // A line of the project's code: p<project>|s<step>|L<line>.
+  const line = /^p(\d+)\|s(\d+)\|L(\d+)$/.exec(itemKey);
+  if (line) return `Project ${line[1]} · step ${line[2]} · line ${line[3]}`;
   // Project cards: p<project>|<step>|<name>.
   const card = /^p(\d+)\|(\d+)\|(.+)$/.exec(itemKey);
   if (card) return `Project ${card[1]} · step ${card[2]} · ${card[3]}`;
