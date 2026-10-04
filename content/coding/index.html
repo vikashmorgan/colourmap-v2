@@ -178,16 +178,15 @@ details.output summary { cursor: pointer; font-size: 14px; color: var(--accent);
 /* Each group's boxes take their own light tint, so one topic visibly ends
    before the next begins. The page behind them stays plain. */
 .lgroup { --tint: oklch(var(--tint-l) var(--tint-c) var(--h, 250) / var(--tint-a)); }
-.lgroup .item { background: var(--tint, var(--panel)); border-color: color-mix(in srgb, var(--ink) 10%, var(--tint, var(--panel))); }
+.lgroup .item { background: var(--tint, var(--panel)); border-color: transparent; }
 .lgroup .item pre { background: color-mix(in srgb, var(--panel) 70%, var(--tint, var(--panel))); }
 .lgroup h3 { font-family: var(--display); font-weight: 600; font-size: 19px; margin: 0 0 12px; }
 /* A row of boxes always fills the width: a last row of two or three stretches like a row of four. */
 .items { display: flex; flex-wrap: wrap; gap: 10px; }
 .items > .item { flex: 1 1 260px; min-width: 0; }
 .item { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; align-content: start; }
-.item.used { border-color: color-mix(in srgb, var(--accent) 55%, var(--rule)); }
 .item h4 { margin: 0; font: 600 14px var(--mono); display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.item h4 .tag { font: 600 11px var(--body); color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.item h4 .tag { font: 500 11px var(--body); color: var(--box-text, var(--muted)); opacity: .7; white-space: nowrap; }
 .item p { margin: 0; font-size: 14.5px; color: var(--muted); }
 .item pre { margin: 0; background: var(--code-bg); border-radius: 6px; padding: 7px 10px; font: 12.5px/1.5 var(--mono); overflow-x: auto; }
 .side-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 16px; }
@@ -631,7 +630,7 @@ details.fullcode .mission-tag { background: var(--ink); }
 
 /* A lesson box, popped over the project page. */
 .lpop { position: fixed; z-index: 60; right: 16px; top: 96px; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 120px); overflow: auto;
-  background: var(--ground); border: 2px solid var(--sess); border-radius: 16px; box-shadow: 0 18px 48px rgb(0 0 0 / .35); }
+  background: var(--ground); border: 1px solid color-mix(in srgb, var(--sess) 60%, transparent); border-radius: 16px; box-shadow: 0 18px 48px rgb(0 0 0 / .35); }
 .lpop-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; background: color-mix(in srgb, var(--sess) 22%, var(--ground)); }
 .lpop-where { font: 600 13px var(--mono); color: var(--sess); margin-right: auto; }
 .lpop-go, .lpop-close { min-height: 36px; border-radius: 999px; border: 1px solid var(--sess); background: var(--panel); color: var(--ink); cursor: pointer; font: 600 13px var(--display); padding: 4px 12px; }
@@ -660,6 +659,19 @@ details.fullcode .mission-tag { background: var(--ink); }
 .lchip[data-mark="late"] { --dot: var(--late-c); }
 #lpop .item { min-height: 0; }
 #lpop .resize-handle, #lpop .expand-btn { display: none; }
+/* Line numbers you can tap, and the questions on a line. */
+.codeview .ln { display: inline-block; min-width: 2.6em; padding-right: .9em; margin-left: -0.4em; text-align: right; color: var(--muted); opacity: .5; cursor: pointer; user-select: none; border-radius: 4px; }
+.codeview .ln:hover, .codeview .ln:focus-visible { opacity: 1; color: var(--q-c); }
+.codeview .ln.has-note { opacity: 1; color: #e08a3c; font-weight: 700; }
+.codeview .ln.has-note.done { color: var(--ok-c); }
+.line-notes { display: grid; gap: 8px; padding: 0 12px 12px; }
+.line-notes:empty { display: none; }
+.line-host { display: grid; gap: 6px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--q-c) 8%, var(--panel)); scroll-margin-top: 140px; }
+.line-ref { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.line-tag { font: 600 12px var(--mono); color: var(--q-c); }
+.line-ref code { font: 12.5px var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.line-host .note-dot { margin-top: 0; }
+.line-host.flash { outline: 2px solid var(--q-c); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 /* Last, so no later "font" shorthand can bring the joined operator symbols back. */
 body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-name { font-variant-ligatures: none; font-feature-settings: "calt" 0, "liga" 0; }
@@ -744,7 +756,7 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
       <summary><span class="mission-tag">The full program</span><span class="mission-title">explorer.py, all <span id="full-lines"></span> lines, as you hand it in</span></summary>
       <div class="full-body">
         <div class="handin-actions"><button type="button" class="dl-final">Download explorer.py</button><button type="button" class="copy-final">Copy the whole program</button><span class="final-status" role="status"></span></div>
-        <pre class="full-pre"><code id="full-code"></code></pre>
+        <div id="full-code"></div>
       </div>
     </details>
 
@@ -1471,6 +1483,77 @@ function terminalHtml(out) {
   }).join('\n');
 }
 
+// Code with clickable line numbers. A number is a line of the whole program as it
+// stands after that step, so "line 42" means the same line in a card and in the
+// step's whole program. Tapping it writes a question about that line.
+function lineView(code, first, added) {
+  return code.split('\n').map((l, i) => {
+    const x = first + i;
+    const h = `<span class="ln" data-line="${x}" title="Ask about line ${x}">${x}</span>${highlightLine(l) || ' '}`;
+    return added && added.includes(i + 1) ? `<span class="addline">${h}</span>` : h;
+  }).join('\n');
+}
+function codeView(code, n, first, added, preClass) {
+  const last = first + code.split('\n').length - 1;
+  return `<div class="codeview" data-step="${n}" data-first="${first}" data-last="${last}"><pre${preClass ? ` class="${preClass}"` : ''}><code>${lineView(code, first, added)}</code></pre><div class="line-notes"></div></div>`;
+}
+function cardCode(n, b) {
+  const full = PROJECT_FULL[n - 1].code;
+  const at = full.indexOf(b.code);
+  if (at < 0) return `<pre><code>${codeWithAdds(b.code, b.added)}</code></pre>`;
+  return codeView(b.code, n, full.slice(0, at).split('\n').length, b.added, '');
+}
+const LINE_KEY = /^p1\|s(\d+)\|L(\d+)$/;
+function makeLineHost(key, vi) {
+  const [, step, line] = LINE_KEY.exec(key);
+  const text = PROJECT_FULL[step - 1].code.split('\n')[line - 1] || '';
+  const h = document.createElement('div');
+  h.className = 'line-host';
+  h.dataset.key = key; h.dataset.step = step; h.dataset.line = line;
+  h.id = `lh-${vi}-${line}`;
+  h.innerHTML = `<div class="line-ref"><span class="line-tag">Line ${line}</span><code>${highlightLine(text.trim()) || ''}</code></div><button type="button" class="note-dot" aria-pressed="false">Question or comment</button>`;
+  return h;
+}
+// Every code view shows a box for each of its lines that has notes, in line order,
+// and colours those line numbers: orange while waiting, green once answered and read.
+function syncLineHosts(force) {
+  const keys = new Set(noteList.map(n => n.key).filter(k => LINE_KEY.test(k)));
+  document.querySelectorAll('#page-project .codeview').forEach((view, vi) => {
+    const step = Number(view.dataset.step), first = Number(view.dataset.first), last = Number(view.dataset.last);
+    const box = view.querySelector('.line-notes');
+    const want = new Set();
+    for (const k of keys) {
+      const [, s, l] = LINE_KEY.exec(k);
+      if (Number(s) === step && Number(l) >= first && Number(l) <= last) want.add(k);
+    }
+    if (force && force.view === view) want.add(force.key);
+    for (const h of [...box.children]) if (!want.has(h.dataset.key) && !h.querySelector('.note-editor')) h.remove();
+    for (const k of want) if (!box.querySelector(`[data-key="${CSS.escape(k)}"]`)) box.append(makeLineHost(k, vi));
+    [...box.children].sort((a, b) => a.dataset.line - b.dataset.line).forEach(h => box.append(h));
+    if (!keys.size && !force) { for (const ln of view.querySelectorAll('.ln.has-note')) ln.classList.remove('has-note', 'done'); return; }
+    for (const ln of view.querySelectorAll('.ln')) {
+      const list = notesOf(`p1|s${step}|L${ln.dataset.line}`);
+      ln.classList.toggle('has-note', list.length > 0);
+      ln.classList.toggle('done', list.length > 0 && list.every(n => noteState(n) === 'done'));
+    }
+  });
+}
+function paintKey(key) {
+  syncLineHosts();
+  for (const h of noteHosts()) if (h.dataset.key === key) paintItem(h);
+}
+projectEl.addEventListener('click', e => {
+  const ln = e.target.closest('.codeview .ln');
+  if (!ln) return;
+  const view = ln.closest('.codeview');
+  const key = `p1|s${view.dataset.step}|L${ln.dataset.line}`;
+  syncLineHosts({ view, key });
+  const host = view.querySelector(`.line-host[data-key="${CSS.escape(key)}"]`);
+  paintItem(host);
+  openEditor(host, null);
+  host.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+});
+
 function numbered(code, added) {
   return code.split('\n').map((l, i) => {
     const h = `<span class="ln">${i + 1}</span>${highlightLine(l) || ' '}`;
@@ -1482,7 +1565,7 @@ function stepFull(n) {
   const lines = f.code.split('\n').length;
   const note = n === 1 ? 'the first version' : `${f.added.length} lines new in this step, marked +`;
   return `<details class="stepfull"><summary><span class="stepfull-tag">Whole program</span>explorer.py after step ${n} · ${lines} lines · ${note}</summary>
-      <pre class="full-pre"><code>${numbered(f.code, f.added)}</code></pre></details>`;
+      ${codeView(f.code, n, 1, f.added, 'full-pre')}</details>`;
 }
 
 for (const s of PROJECT_STEPS) {
@@ -1490,7 +1573,7 @@ for (const s of PROJECT_STEPS) {
   stepIndex.insertAdjacentHTML('beforeend', `<a href="#step-${s.n}" data-open="step-${s.n}" style="--sess: ${col}"><span class="n">${s.n}</span>${esc(s.title)}</a>`);
   const cards = s.blocks.map((b, i) => `
     <article class="fn pcard" id="${cardId(s.n, b.name)}" data-key="${esc(noteKeyOf(s.n, b.name))}" data-step="${s.n}" data-name="${esc(b.name)}" data-pos="${i + 1}/${s.blocks.length}">
-      <div class="code"><div class="code-name"><span><span class="pcard-num">${i + 1}/${s.blocks.length}</span>${esc(b.name)}</span><span class="kind">${esc(b.kind)}</span></div><pre><code>${codeWithAdds(b.code, b.added)}</code></pre></div>
+      <div class="code"><div class="code-name"><span><span class="pcard-num">${i + 1}/${s.blocks.length}</span>${esc(b.name)}</span><span class="kind">${esc(b.kind)}</span></div>${cardCode(s.n, b)}</div>
       <div class="explain">
         <p class="what">${b.what}</p>
         ${b.steps.length ? `<ol>${b.steps.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}
@@ -1538,8 +1621,7 @@ document.getElementById('final-lines').textContent = String(FINAL_CODE.split('\n
 // The whole file, numbered, in the box at the top of the page.
 const FINAL_LINES = FINAL_CODE.replace(/\n$/, '').split('\n');
 document.getElementById('full-lines').textContent = String(FINAL_LINES.length);
-document.getElementById('full-code').innerHTML = FINAL_LINES
-  .map((l, i) => `<span class="ln">${i + 1}</span>${highlightLine(l) || ' '}`).join('\n');
+document.getElementById('full-code').innerHTML = codeView(FINAL_LINES.join('\n'), 10, 1, [], 'full-pre');
 // Download and copy, from the top box or from Hand it in.
 projectEl.addEventListener('click', e => {
   const dl = e.target.closest('.dl-final');
@@ -1653,7 +1735,7 @@ const savedNote = document.getElementById('saved-note');
 
 const allItems = () => [...lessonsEl.querySelectorAll('.item[data-key]')];
 // Everything that can hold notes: the lesson boxes and the project cards.
-const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #steps .pcard[data-key]')];
+const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #steps .pcard[data-key], #page-project .line-host[data-key]')];
 const itemByKey = key => noteHosts().find(i => i.dataset.key === key);
 const notesOf = key => noteList.filter(n => n.key === key);
 const noteRef = n => n.id || n.localId;
@@ -1687,7 +1769,7 @@ function paintItem(item) {
   dot.setAttribute('aria-pressed', String(list.length > 0));
   dot.textContent = list.length ? 'Add another question or comment' : 'Question or comment';
 }
-function paintAll() { for (const it of noteHosts()) paintItem(it); refreshCounts(); renderReview(); if (activeFilter !== 'all') applyFilter(); }
+function paintAll() { syncLineHosts(); for (const it of noteHosts()) paintItem(it); refreshCounts(); renderReview(); if (activeFilter !== 'all') applyFilter(); }
 
 function refreshCounts() {
   refreshSteps();
@@ -1787,7 +1869,7 @@ function openEditor(item, ref) {
       <button type="button" role="radio" data-kind="question" aria-checked="${kind === 'question'}">Question</button>
       <button type="button" role="radio" data-kind="comment" aria-checked="${kind === 'comment'}">Comment</button>
     </div>
-    <textarea rows="3" maxlength="2000" aria-label="Your note" placeholder="Write your question or comment about this box"></textarea>
+    <textarea rows="3" maxlength="2000" aria-label="Your note" placeholder="Write your question or comment"></textarea>
     <div class="note-actions"><button type="button" class="note-save">Save</button><button type="button" class="note-cancel">Cancel</button></div>`;
   ed.querySelector('textarea').value = existing ? existing.body : '';
   const anchor = ref ? item.querySelector(`.note-shown[data-ref="${CSS.escape(ref)}"]`) : item.querySelector('.note-dot');
@@ -1813,21 +1895,21 @@ async function saveNote(key, ref, body, kind) {
       catch (e) { syncProblem('Could not save the note to your account; it is kept in this browser.'); }
     }
   }
-  saveLocal(); paintItem(itemByKey(key)); refreshCounts(); renderReview();
+  saveLocal(); paintKey(key); refreshCounts(); renderReview();
 }
 function deleteNote(key, ref) {
   const n = findNote(ref);
   if (!n) return;
   noteList = noteList.filter(x => x !== n);
   if (notesSynced && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'DELETE' }).catch(() => syncProblem('Offline: deleted here; reload online to delete it from your account.'));
-  saveLocal(); paintItem(itemByKey(key)); refreshCounts(); renderReview();
+  saveLocal(); paintKey(key); refreshCounts(); renderReview();
 }
 function markRead(ref) {
   const n = findNote(ref);
   if (!n) return;
   n.readAt = new Date().toISOString();
   if (notesSynced && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ read: true }) }).catch(() => {});
-  saveLocal(); const item = itemByKey(n.key); if (item) paintItem(item); refreshCounts(); renderReview();
+  saveLocal(); paintKey(n.key); refreshCounts(); renderReview();
 }
 
 function onNoteClick(e) {
@@ -1841,7 +1923,7 @@ function onNoteClick(e) {
     if (activeFilter !== 'all') applyFilter();
     return;
   }
-  const item = e.target.closest('.item[data-key], .pcard');
+  const item = e.target.closest('.line-host, .item[data-key], .pcard');
   if (!item) return;
   const key = item.dataset.key;
   if (e.target.closest('.note-dot')) { openEditor(item, null); return; }
@@ -1865,7 +1947,7 @@ function onNoteClick(e) {
     return;
   }
   if (e.target.closest('.note-save')) { saveNote(key, ed.dataset.ref || null, ed.querySelector('textarea').value, ed.dataset.kind); closeEditor(); }
-  else if (e.target.closest('.note-cancel')) closeEditor();
+  else if (e.target.closest('.note-cancel')) { closeEditor(); syncLineHosts(); }
 }
 lessonsEl.addEventListener('click', onNoteClick);
 projectEl.addEventListener('click', onNoteClick);
@@ -1878,6 +1960,10 @@ document.getElementById('progress-bar').addEventListener('click', e => {
 
 /* ---------- Review: questions, comments, confused and no time, together ---------- */
 function boxHead(item) {
+  if (item.classList.contains('line-host')) {
+    const st = PROJECT_STEPS[item.dataset.step - 1];
+    return { sess: stepColour(st.n), name: `Step ${st.n} · ${st.title} · line ${item.dataset.line}`, num: `L${item.dataset.line}`, text: item.querySelector('.line-ref code').textContent };
+  }
   if (item.classList.contains('pcard')) {
     const step = item.closest('details.pstep');
     return { sess: step.style.getPropertyValue('--sess'), name: `${step.dataset.title} · ${item.dataset.name}`, num: `P${item.dataset.step}`, text: item.querySelector('.what').textContent };
@@ -1892,7 +1978,7 @@ function reviewNote(n) {
   if (!item) return '';
   const h = boxHead(item);
   return `<article class="rv-entry" style="--sess: ${h.sess}">
-    <div class="rv-top"><i class="state-dot ${noteState(n)}"></i><span class="rv-sess">${h.num}</span><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">${item.classList.contains('pcard') ? 'Open in project ›' : 'Open in lesson ›'}</button></div>
+    <div class="rv-top"><i class="state-dot ${noteState(n)}"></i><span class="rv-sess">${h.num}</span><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">${item.closest('#page-project') ? 'Open in project ›' : 'Open in lesson ›'}</button></div>
     <p class="rv-note" data-kind="${n.kind}">${esc(n.body)}</p>
     ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : `<button type="button" class="note-read" data-ref="${esc(noteRef(n))}">Got it, mark read</button>`}</div>` : ''}
   </article>`;
@@ -1902,7 +1988,7 @@ function reviewBox(key) {
   if (!item) return '';
   const h = boxHead(item);
   return `<article class="rv-entry" style="--sess: ${h.sess}">
-    <div class="rv-top"><span class="rv-sess">${h.num}</span><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">${item.classList.contains('pcard') ? 'Open in project ›' : 'Open in lesson ›'}</button></div>
+    <div class="rv-top"><span class="rv-sess">${h.num}</span><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">${item.closest('#page-project') ? 'Open in project ›' : 'Open in lesson ›'}</button></div>
     <p class="rv-text">${esc(h.text)}</p>
   </article>`;
 }
