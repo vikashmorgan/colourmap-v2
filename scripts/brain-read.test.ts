@@ -193,6 +193,10 @@ describe('reading the coding page', () => {
     expect(codingBox('s3|while')).toBe('Session 3 · while');
     expect(codingBox('s2|.split()')).toBe('Session 2 · .split()');
     expect(codingBox('no-bar')).toBe('no-bar');
+    expect(codingBox('p1|3|clean()')).toBe('Project 1 · step 3 · clean()');
+    expect(codingBox('p1|9|get_title(), get_year(), get_pages()')).toBe(
+      'Project 1 · step 9 · get_title(), get_year(), get_pages()',
+    );
   });
 
   it('groups questions, comments, confused and no-time, questions first and newest first', () => {

@@ -521,6 +521,103 @@ pre, .terminal { zoom: var(--code-zoom); }
   .level-head { position: static; }
   .spec, details.output, .lesson-head p { grid-column: 1 / -1; }
 }
+/* ---------- Project One: the build, step by step ---------- */
+.add-key { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; font: 700 12px var(--mono); color: var(--ok); background: color-mix(in srgb, var(--ok) 18%, transparent); }
+
+details.mission { border: 2px solid var(--accent); border-radius: 16px; background: color-mix(in srgb, var(--accent) 6%, var(--ground)); overflow: clip; margin-bottom: 24px; }
+details.mission > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; min-height: 48px; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+details.mission > summary::-webkit-details-marker { display: none; }
+details.mission > summary::after { content: '+'; margin-left: auto; font: 600 20px var(--mono); color: var(--accent); }
+details.mission[open] > summary::after { content: '−'; }
+.mission-tag { font: 600 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; background: var(--accent); color: var(--ground); border-radius: 999px; padding: 4px 12px; }
+.mission-title { font-family: var(--display); font-weight: 700; font-size: 20px; }
+.mission-body { padding: 16px; display: grid; gap: 16px; }
+.mission-lead { margin: 0; font-size: 17px; max-width: 70ch; }
+.mission-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 24px; }
+.mission-grid h3 { font-family: var(--display); font-size: 17px; margin: 0 0 8px; color: var(--accent); }
+.mission-grid h3:not(:first-child) { margin-top: 16px; }
+.mission-grid p { margin: 0; font-size: 15px; }
+.mission-opts { border-collapse: collapse; font-size: 15px; width: 100%; }
+.mission-opts td { padding: 6px 8px; vertical-align: top; border-top: 1px solid var(--rule); }
+.mission-opts td:first-child { font: 600 14px var(--mono); color: var(--accent); width: 24px; }
+.mission-opts td:nth-child(2) { width: 72px; }
+.mission-rules { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 15px; }
+.mission-body code { font: 13px var(--mono); background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+.mission-day { background: color-mix(in srgb, var(--mark) 18%, transparent); border-radius: 8px; padding: 10px 12px; margin-top: 16px !important; }
+
+#step-index a { border: 2px solid var(--sess); border-radius: 999px; background: color-mix(in srgb, var(--sess) 14%, var(--panel)); }
+#step-index a .n { background: var(--sess); color: var(--ground); border-radius: 6px; padding: 1px 7px; }
+
+details.pstep { margin-top: 20px; border: 2px solid var(--sess); border-radius: 16px; background: color-mix(in srgb, var(--sess) 6%, var(--ground)); overflow: clip; scroll-margin-top: 120px; }
+details.pstep > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: auto 1fr auto; gap: 4px 14px; align-items: center; padding: 12px 16px; background: color-mix(in srgb, var(--sess) 16%, transparent); }
+details.pstep > summary::-webkit-details-marker { display: none; }
+details.pstep > summary::after { content: '+'; font: 600 22px var(--mono); color: var(--sess); grid-column: 3; grid-row: 1; }
+details.pstep[open] > summary::after { content: '−'; }
+.pstep-num { grid-row: 1 / span 2; font: 600 22px/1 var(--mono); background: var(--sess); color: var(--ground); border-radius: 10px; min-width: 44px; height: 44px; display: grid; place-items: center; }
+.pstep-title { font-family: var(--display); font-weight: 700; font-size: clamp(20px, 2.6vw, 26px); color: var(--sess); line-height: 1.15; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.pstep-opt { font: 600 12px var(--mono); color: var(--ink); border: 1px solid var(--sess); border-radius: 999px; padding: 2px 9px; }
+.pstep-goal { grid-column: 2 / 4; color: var(--box-text, var(--ink)); font-size: 15px; margin: 0; }
+.pstep-body { padding: 8px 16px 24px; display: grid; gap: 16px; }
+.pstep-brief { margin: 8px 0 0; padding: 12px 14px; border-radius: 10px; background: var(--panel); font-size: 15px; max-width: 80ch; }
+.pstep-brief .spec-label, .pstep-say .spec-label { display: block; margin-bottom: 4px; }
+.pstep-say { margin: 0; padding: 12px 14px; border-radius: 10px; background: color-mix(in srgb, var(--sess) 16%, var(--panel)); font-size: 16px; font-style: italic; max-width: 80ch; }
+.pstep-say .spec-label { font-style: normal; color: var(--sess); }
+
+.pcard { margin-top: 0; scroll-margin-top: 120px; border-color: color-mix(in srgb, var(--sess) 40%, var(--rule)); }
+.pcard .code-name { background: color-mix(in srgb, var(--sess) 14%, transparent); }
+.pcard .explain .what { font-size: 18px; }
+.code pre .addline { display: inline-block; min-width: 100%; background: color-mix(in srgb, var(--ok) 16%, transparent); box-shadow: -16px 0 0 color-mix(in srgb, var(--ok) 16%, transparent); position: relative; }
+.code pre .addline::before { content: '+'; position: absolute; left: -13px; color: var(--ok); font-weight: 700; }
+.pcard .note-dot { margin-top: 0; }
+.pcard .note-list { display: grid; gap: 8px; }
+.pcard.flash { outline: 3px solid var(--sess); outline-offset: 2px; }
+
+.lchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lchip { font: 600 12.5px var(--mono); padding: 4px 10px; min-height: 30px; border-radius: 999px; cursor: pointer; color: var(--ink);
+  border: 1px solid var(--chip); background: color-mix(in srgb, var(--chip) 16%, var(--panel)); display: inline-flex; align-items: center; gap: 6px; }
+.lchip b { color: var(--chip); font-weight: 600; }
+.lchip:hover, .lchip:focus-visible, .lchip[aria-expanded="true"] { background: color-mix(in srgb, var(--chip) 30%, var(--panel)); }
+
+details.prun > summary { cursor: pointer; font-size: 14px; color: var(--sess); font-weight: 600; min-height: 36px; display: inline-flex; align-items: center; gap: 8px; }
+details.prun .terminal { max-height: 420px; overflow: auto; }
+.terminal .ans { color: #f4d27a; font-weight: 700; }
+.terminal .t-menu { color: #7d8796; font-style: italic; }
+.pstep-size { font: 12.5px var(--mono); color: var(--muted); }
+
+.handin { margin-top: 48px; padding-top: 16px; border-top: 2px solid var(--ink); display: grid; gap: 12px; }
+.handin h2 { font-family: var(--display); font-size: clamp(24px, 3vw, 32px); margin: 0; }
+.handin h3 { font-family: var(--display); font-size: 19px; margin: 16px 0 0; }
+.handin p { margin: 0; max-width: 70ch; }
+.handin code { font: 13px var(--mono); background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+.handin-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.handin-actions button { font: 600 15px var(--display); min-height: 44px; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--accent); background: var(--panel); color: var(--ink); cursor: pointer; }
+.handin-actions button:hover { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
+#final-status { font-size: 14px; color: var(--ok); }
+
+/* A lesson box, popped over the project page. */
+.lpop { position: fixed; z-index: 60; right: 16px; top: 96px; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 120px); overflow: auto;
+  background: var(--ground); border: 2px solid var(--sess); border-radius: 16px; box-shadow: 0 18px 48px rgb(0 0 0 / .35); }
+.lpop-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; background: color-mix(in srgb, var(--sess) 22%, var(--ground)); }
+.lpop-where { font: 600 13px var(--mono); color: var(--sess); margin-right: auto; }
+.lpop-go, .lpop-close { min-height: 36px; border-radius: 999px; border: 1px solid var(--sess); background: var(--panel); color: var(--ink); cursor: pointer; font: 600 13px var(--display); padding: 4px 12px; }
+.lpop-close { min-width: 36px; font-size: 18px; padding: 0; }
+.lpop-body { padding: 12px; }
+.lpop-body .item { box-shadow: none; }
+@media (max-width: 860px) {
+  .lpop { left: 8px; right: 8px; top: auto; bottom: 8px; width: auto; max-height: 70vh; }
+  details.pstep > summary { grid-template-columns: auto 1fr auto; }
+}
+
+/* The same three dots as a lesson box: Got it, Confused, No time. */
+.pcard { position: relative; }
+.pcard .explain { padding-right: 44px; }
+.pcard[data-mark="got"] { box-shadow: inset 0 0 0 2px var(--ok-c), 0 0 0 1px var(--ok-c); }
+.pcard[data-mark="mid"] { box-shadow: inset 0 0 0 2px var(--mid-box), 0 0 0 1px var(--mid-box); }
+.pcard[data-mark="late"] { box-shadow: inset 0 0 0 2px var(--late-c), 0 0 0 1px var(--late-c); }
+.pstep-progress { grid-column: 2 / 4; margin-top: 4px; }
+#step-index a.done { background: color-mix(in srgb, var(--ok-c) 22%, var(--panel)); border-color: var(--ok-c); }
+#step-index a.done::after { content: '✓'; color: var(--ok-c); font-weight: 700; }
+.pcard .code pre { white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: visible; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 /* Last, so no later "font" shorthand can bring the joined operator symbols back. */
 body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-name { font-variant-ligatures: none; font-feature-settings: "calt" 0, "liga" 0; }
@@ -532,7 +629,7 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
   <div class="wrap">
     <div class="brand-wrap"><a class="back-brain" id="back-brain" href="/" hidden>← Brain</a><div class="brand">explorer.py <span>· Terminal Data Explorer</span></div></div>
     <div class="tabs" role="tablist" aria-label="Pages">
-      <button id="tab-map" role="tab" aria-selected="true" aria-controls="page-map">Code map</button>
+      <button id="tab-project" role="tab" aria-selected="true" aria-controls="page-project">Project 1</button>
       <button id="tab-tools" role="tab" aria-selected="false" aria-controls="page-tools">Python toolkit</button>
       <button id="tab-lessons" role="tab" aria-selected="false" aria-controls="page-lessons">Lessons</button>
       <button id="tab-review" role="tab" aria-selected="false" aria-controls="page-review">Review <b class="tab-count" id="review-count"></b></button>
@@ -550,26 +647,73 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
 </header>
 
 <main class="wrap">
-  <section id="page-map" role="tabpanel" aria-labelledby="tab-map">
+  <section id="page-project" role="tabpanel" aria-labelledby="tab-project">
     <div class="intro">
-      <span class="eyebrow">Page 1 · Project spec → your code</span>
-      <h1>Every option of the brief, matched to the code that does it.</h1>
-      <p>Each section starts with what the project PDF asks for. Below it, every function that answers it: the code on the left, what it does in plain words on the right.</p>
-      <div class="legend"><span><b>Yellow chips</b> name the spec rule a function satisfies.</span><span><b>Green frame</b> marks the one bug that was fixed (option 7).</span></div>
+      <span class="eyebrow">Page 1 · Project One · Terminal Data Explorer</span>
+      <h1>Build explorer.py in ten steps.</h1>
+      <p>Each step adds one piece and runs. Open a step to see the code it adds, what it does, and what the terminal shows when you run it. In <code>main()</code>, the lines marked <span class="add-key">+</span> are the ones that step added. A coloured chip under a function names the lesson box it comes from: tap it and the box opens right here. The ✎ button under each card is for your questions and comments.</p>
     </div>
-    <nav class="index" id="index" aria-label="Options"></nav>
-    <div id="options"></div>
 
-    <section class="option" id="requirements">
-      <div class="option-head">
-        <span class="option-num">§4</span>
-        <h2>Requirements check</h2>
-        <p class="spec">Section 4 of the brief lists rules that apply to the whole program. Here is where each one is met.</p>
+    <details class="mission" id="mission">
+      <summary><span class="mission-tag">The mission</span><span class="mission-title">What the teacher asked for</span></summary>
+      <div class="mission-body">
+        <p class="mission-lead">Write a Python program that runs in the terminal. It <b>downloads</b> data from a public web API, <b>cleans</b> it, <b>saves</b> a copy to a file, and lets the user <b>search, summarise, sort and chart</b> it from a menu. Everything is text: tables and bar charts are made of characters.</p>
+        <div class="mission-grid">
+          <div>
+            <h3>The menu: eight choices</h3>
+            <table class="mission-opts">
+              <tr><td>1</td><td><b>Fetch</b></td><td>Download, clean, keep in memory. Say how many kept and rejected. No internet must not crash it.</td></tr>
+              <tr><td>2</td><td><b>Save</b></td><td>Write the clean records to a JSON file, indented. Say when an old backup is replaced.</td></tr>
+              <tr><td>3</td><td><b>Load</b></td><td>Read the backup back. Works offline. Say so if there is no file.</td></tr>
+              <tr><td>4</td><td><b>Search</b></td><td>Every title containing a word, capitals ignored. Nothing found is normal.</td></tr>
+              <tr><td>5</td><td><b>Summary</b></td><td>A lined-up table with a total and an average. Missing shows as —, never None.</td></tr>
+              <tr><td>6</td><td><b>Chart</b></td><td>Count per category, # bars, biggest first, longest about 30. Top 15, say how many left out.</td></tr>
+              <tr><td>7</td><td><b>Sort</b></td><td>Pick a field, print sorted, reusing option 5's row. Missing values last.</td></tr>
+              <tr><td>0</td><td><b>Quit</b></td><td>If the data is not saved, ask first.</td></tr>
+            </table>
+          </div>
+          <div>
+            <h3>The rules for the whole program</h3>
+            <ul class="mission-rules">
+              <li>Bad input never crashes it: a letter, an empty line, a wrong number, Ctrl-C.</li>
+              <li>Clean once, in one function, <code>clean()</code>. A year is an int or None, never "2012".</li>
+              <li>Reject rows with no title, rows that are not dicts, and duplicates.</li>
+              <li>Open every file with <code>with</code>.</li>
+              <li>Catch named exceptions, never a bare <code>except:</code>.</li>
+              <li>One function, one job.</li>
+              <li>Standard Python plus <code>requests</code>. No plotting libraries.</li>
+            </ul>
+            <h3>The API we use</h3>
+            <p><b>Open Library</b>, the easiest one: books about mountains, with title, authors, year, pages and subjects. No key, no payment.</p>
+            <h3>What to hand in</h3>
+            <ul class="mission-rules">
+              <li><code>explorer.py</code>, the program</li>
+              <li><code>requirements.txt</code>, the one package: requests</li>
+              <li><code>README.md</code>: the API, how to run it, what each option does</li>
+              <li><code>backup.json</code>, so it runs without internet</li>
+            </ul>
+            <p class="mission-day"><b>Tuesday 6 October.</b> You run the program in front of the teacher, then go through the code together. Each step below ends with one sentence you can say.</p>
+          </div>
+        </div>
       </div>
+    </details>
+
+    <nav class="index" id="step-index" aria-label="Steps"></nav>
+    <div id="steps"></div>
+
+    <section class="handin" id="handin">
+      <h2>Hand it in</h2>
+      <p>The finished program is <span id="final-lines"></span> lines. It is in your folder <code>C:\Users\victor\terminal-data-explorer</code>, next to <code>requirements.txt</code>, <code>README.md</code> and a fresh <code>backup.json</code>. You can also take it from here.</p>
+      <div class="handin-actions"><button type="button" id="dl-final">Download explorer.py</button><button type="button" id="copy-final">Copy the whole program</button><span id="final-status" role="status"></span></div>
+      <h3>Checked against the brief</h3>
       <div class="req-wrap"><table class="req" id="req"></table></div>
     </section>
-  </section>
 
+    <div class="lpop" id="lpop" role="dialog" aria-label="Lesson box" hidden>
+      <div class="lpop-top"><span class="lpop-where" id="lpop-where"></span><button type="button" class="lpop-go" id="lpop-go">Open in Lessons ›</button><button type="button" class="lpop-close" id="lpop-close" aria-label="Close">×</button></div>
+      <div class="lpop-body" id="lpop-body"></div>
+    </div>
+  </section>
   <section id="page-tools" role="tabpanel" aria-labelledby="tab-tools" hidden>
     <div class="intro">
       <span class="eyebrow">Page 2 · Everything Python you used</span>
@@ -616,627 +760,13 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
 </main>
 
 <script>
-/* ---------- Page 1 data: spec options and the functions that answer them ---------- */
-const OPTIONS = [
-  {
-    id: 'menu', num: '≡', title: 'The menu and the main loop',
-    spec: 'Show a menu, read the choice, run that option and come back to the menu, <strong>until the user picks 0</strong>. Bad input must never crash the program.',
-    output: `=== DATA EXPLORER =========================
-  1  fetch    Fetch fresh data from the API
-  2  save     Save current data to the backup file
-  ...
-  0  quit     Quit
-===========================================
-<span class="you">Choose: </span>`,
-    fns: [
-      {
-        name: 'NUMBER_TO_NAME', kind: 'constant (dict)',
-        code: `NUMBER_TO_NAME = {
-    "1": "fetch",
-    "2": "save",
-    "3": "load",
-    "4": "search",
-    "5": "summary",
-    "6": "chart",
-    "7": "sort",
-    "0": "quit",
-}`,
-        what: 'A lookup table that turns a menu number into the option\'s name.',
-        steps: ['The user may type <code>4</code> or <code>search</code>; both end up as <code>"search"</code>.', 'The rest of <code>main()</code> then reads like English: <code>if choice == "fetch"</code> instead of <code>if choice == "1"</code>.'],
-        meets: ['Readable code']
-      },
-      {
-        name: 'show_menu()', kind: 'function',
-        code: `def show_menu():
-    """Print the menu."""
-    print()
-    print("=== DATA EXPLORER =========================")
-    print("  1  fetch    Fetch fresh data from the API")
-    print("  2  save     Save current data to the backup file")
-    print("  3  load     Load data from the backup file")
-    print("  4  search   Search")
-    print("  5  summary  Summary report")
-    print("  6  chart    Group and chart")
-    print("  7  sort     List entries, sorted by an attribute")
-    print("  0  quit     Quit")
-    print("===========================================")`,
-        what: 'Prints the menu, nothing else.',
-        steps: ['The empty <code>print()</code> first leaves a blank line, so each answer is easy to find (brief §5).', 'It only prints: reading the choice happens in <code>main()</code>.'],
-        meets: ['Blank line before the menu', 'One function, one job']
-      },
-      {
-        name: 'main()', kind: 'function · the loop',
-        code: `def main():
-    records = []      # the data we are working with, empty at the start
-    unsaved = False   # True when we have data that is not in the backup yet
-
-    while True:
-        show_menu()
-        choice = input("Choose: ").strip().lower()
-        # if they typed a number, swap it for its name. A name stays as it is.
-        choice = NUMBER_TO_NAME.get(choice, choice)
-
-        if choice == "fetch":
-            raw = fetch()
-            if raw is not None:
-                records, rejected = clean(raw)
-                print(f"{len(records)} records loaded, {rejected} rows rejected.")
-                unsaved = True
-
-        elif choice == "load":
-            loaded = load()
-            if loaded is not None:
-                records = loaded
-                unsaved = False    # it came from the backup, so it is already saved
-
-        elif choice == "quit":
-            if confirm_quit(unsaved):
-                print("Bye.")
-                break
-
-        elif choice in ["save", "search", "summary", "chart", "sort"]:
-            # these options all need data first
-            if len(records) == 0:
-                print("No data yet. Fetch it (1) or load the backup (3) first.")
-            elif choice == "save":
-                save(records)
-                unsaved = False
-            elif choice == "search":
-                show_search(records)
-            elif choice == "summary":
-                summary(records)
-            elif choice == "chart":
-                chart(records)
-            elif choice == "sort":
-                show_sorted(records)
-
-        else:
-            print("Please type a number from 0 to 7, or a name like search.")`,
-        what: 'The heart of the program: it loops forever, shows the menu, and sends each choice to the right function.',
-        steps: [
-          'It holds the two pieces of state: <code>records</code> (the data) and <code>unsaved</code> (is there data not yet in the backup?).',
-          '<code>while True</code> repeats until <code>break</code>, which only happens when the user quits.',
-          '<code>.strip().lower()</code> removes spaces and capitals, so <code>" Search "</code> still works.',
-          '<code>NUMBER_TO_NAME.get(choice, choice)</code>: if the choice is a known number, swap it for its name; otherwise keep what was typed.',
-          'Fetch: if <code>fetch()</code> returned data, <code>clean()</code> gives back two values at once (records and rejected count) and the data is marked unsaved.',
-          'Save, search, summary, chart and sort all need data, so one check (<code>len(records) == 0</code>) protects all five.',
-          'Anything else lands in <code>else</code> and prints a helpful message instead of crashing.'
-        ],
-        meets: ['Back to the menu after each option', 'Bad input never crashes', 'Useful messages']
-      },
-      {
-        name: 'start of the program', kind: 'top-level code',
-        code: `try:
-    main()
-except KeyboardInterrupt:
-    # Ctrl-C should not show a traceback
-    print("\\nBye.")`,
-        what: 'Starts the program and catches Ctrl-C.',
-        steps: ['Pressing Ctrl-C raises <code>KeyboardInterrupt</code>. Catching it here prints "Bye." instead of a red traceback.', '<code>\\n</code> starts a new line first, because the cursor is still on the "Choose:" line.'],
-        meets: ['Ctrl-C prints a message, not a traceback']
-      }
-    ]
-  },
-  {
-    id: 'opt1', num: '1', title: 'Fetch',
-    spec: 'Download the data from your API, <strong>clean it</strong>, keep it in memory as a list of dictionaries, and tell the user how many records were kept and how many thrown away. <strong>No internet, a slow server or an odd answer: print a short message, no crash.</strong>',
-    output: `<span class="you">Choose: 1</span>
-Fetching from openlibrary.org ...
-13 records loaded, 3 rows rejected.`,
-    fns: [
-      {
-        name: 'URL', kind: 'constant',
-        code: `URL = "https://openlibrary.org/search.json?q=mountains&fields=title,author_name,first_publish_year,number_of_pages_median,subject&limit=100"`,
-        what: 'The address of the Open Library search the program downloads.',
-        steps: ['<code>q=mountains</code> is the search, <code>limit=100</code> asks for up to 100 books.', '<code>fields=...</code> lists the five fields to send back. The brief warns that without it, pages and subjects are missing.'],
-        meets: ['API with no key', '≥ 20 records, 5 fields']
-      },
-      {
-        name: 'fetch()', kind: 'function',
-        code: `def fetch():
-    """Download the raw books from Open Library. Returns None if it fails."""
-    try:
-        print("Fetching from openlibrary.org ...")
-        r = requests.get(URL, timeout=30)   # no timeout = could wait forever (session 7)
-        r.raise_for_status()                # a 404 or 500 does not raise by itself
-        data = r.json()
-        return data["docs"]                 # the list of books is under "docs"
-    except requests.Timeout:
-        print("The server is too slow, try again later.")
-    except requests.ConnectionError:
-        print("No internet connection.")
-    except requests.HTTPError as e:
-        print(f"The API said no: {e}")
-    except ValueError:
-        print("The answer was not valid JSON.")
-    except KeyError:
-        print("The answer had no 'docs' in it.")
-    return None`,
-        what: 'Downloads the raw books, or returns None with a clear message if anything goes wrong.',
-        steps: [
-          '<code>requests.get(URL, timeout=30)</code> asks the server; after 30 seconds it gives up instead of waiting forever.',
-          '<code>raise_for_status()</code> turns an error page (404, 500) into an exception, because by itself requests treats it as a normal answer.',
-          '<code>r.json()</code> turns the text answer into Python dicts and lists; the books are in the <code>"docs"</code> list.',
-          'Each problem has its own <code>except</code>: too slow, no connection, server refused, not JSON, no "docs". Each prints a different message.',
-          'If an exception happened, the code falls through to <code>return None</code>, which <code>main()</code> checks for.'
-        ],
-        meets: ['Specific exceptions, no bare except', 'Timeout 20–30 s', 'Downloads only, prints no table']
-      },
-      {
-        name: 'to_int()', kind: 'helper',
-        code: `def to_int(value):
-    """Turn a value into an int, or None if it is missing or not a number."""
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except ValueError:
-        return None`,
-        what: 'Safely turns a value into a whole number, or None.',
-        steps: ['Missing (<code>None</code>) stays <code>None</code>.', '<code>int("2012")</code> gives <code>2012</code>; <code>int("abc")</code> raises <code>ValueError</code>, which is caught and becomes <code>None</code>.'],
-        meets: ['A year is an int or None, never "2012"']
-      },
-      {
-        name: 'clean()', kind: 'function',
-        code: `def clean(raw_books: list) -> tuple:
-    """Turn the raw books into clean records and count the rejected ones."""
-    records = []
-    seen = set()     # titles already kept, to catch duplicates
-    rejected = 0
-
-    for book in raw_books:
-        # a row that is not a dict is unusable
-        if not isinstance(book, dict):
-            rejected = rejected + 1
-            continue
-
-        title = book.get("title")
-        # no title (None or "") -> reject
-        if title is None or title.strip() == "":
-            rejected = rejected + 1
-            continue
-
-        # same title twice -> duplicate, keep only the first one
-        if title.lower() in seen:
-            rejected = rejected + 1
-            continue
-        seen.add(title.lower())
-
-        # missing numbers become None, missing lists become []
-        # to_int makes sure a year is always an int, never the string "2012"
-        record = {
-            "title": title.strip(),
-            "authors": book.get("author_name", []),
-            "year": to_int(book.get("first_publish_year")),
-            "pages": to_int(book.get("number_of_pages_median")),
-            "subjects": book.get("subject", []),
-        }
-        records.append(record)
-
-    return records, rejected`,
-        what: 'Turns the messy downloaded rows into clean records, once, and counts the rows it throws away.',
-        steps: [
-          'It goes through every raw row with <code>for</code>.',
-          'Three reasons to reject a row, each adds 1 to <code>rejected</code> and jumps to the next row with <code>continue</code>: not a dict, no title, or a title already seen.',
-          '<code>seen</code> is a set of lowercase titles; checking <code>in seen</code> is how duplicates are caught.',
-          'A kept row becomes a new dict with five fixed keys. <code>.get(key, [])</code> gives an empty list when a list is missing; <code>to_int</code> makes numbers ints or None.',
-          'It returns two things as a tuple: the clean list and the rejected count.'
-        ],
-        meets: ['Clean once, in one function', 'Reject: no title, not a dict, duplicate', 'Keep partial rows with None / []']
-      }
-    ]
-  },
-  {
-    id: 'opt2', num: '2', title: 'Save',
-    spec: 'Write the cleaned records to a JSON file, <strong>indented so a person can read it</strong>. If a backup already exists, tell the user it is being replaced.',
-    output: `<span class="you">Choose: 2</span>
-Replacing the existing backup.
-13 records saved to backup.json.`,
-    fns: [
-      {
-        name: 'BACKUP_FILE', kind: 'constant',
-        code: `BACKUP_FILE = Path("backup.json")`,
-        what: 'The backup file\'s name, written once and shared by save and load.',
-        steps: ['<code>Path</code> (from pathlib) is a file path you can ask questions, like <code>.exists()</code>.'],
-        meets: []
-      },
-      {
-        name: 'save()', kind: 'function',
-        code: `def save(records: list):
-    """Save the records to the backup file as readable JSON."""
-    if BACKUP_FILE.exists():
-        print("Replacing the existing backup.")
-
-    # "w" = write mode, it creates the file or overwrites it
-    with open(BACKUP_FILE, "w", encoding="utf-8") as f:
-        json.dump(records, f, indent=2)   # indent=2 so a person can read the file
-
-    print(f"{len(records)} records saved to {BACKUP_FILE}.")`,
-        what: 'Writes all the records into backup.json.',
-        steps: ['If the file is already there, it says it will be replaced.', '<code>with open(..., "w")</code> opens the file for writing and closes it automatically at the end of the block, even if something fails.', '<code>json.dump(records, f, indent=2)</code> writes the list as JSON, indented by 2 spaces.'],
-        meets: ['Open every file with with', 'Indented JSON', 'Warns about replacing']
-      }
-    ]
-  },
-  {
-    id: 'opt3', num: '3', title: 'Load',
-    spec: 'Read the backup file back into memory. <strong>Must work with the internet off.</strong> If the file does not exist yet, say so.',
-    output: `<span class="you">Choose: 3</span>
-13 records loaded from backup.json.`,
-    fns: [
-      {
-        name: 'load()', kind: 'function',
-        code: `def load():
-    """Load the records from the backup file. Returns None if it fails."""
-    try:
-        with open(BACKUP_FILE, encoding="utf-8") as f:
-            records = json.load(f)
-    except FileNotFoundError:
-        print(f"There is no {BACKUP_FILE} yet. Fetch (1) and save (2) first.")
-        return None
-    except json.JSONDecodeError:
-        print(f"{BACKUP_FILE} is damaged and cannot be read.")
-        return None
-
-    print(f"{len(records)} records loaded from {BACKUP_FILE}.")
-    return records`,
-        what: 'Reads the records back from backup.json, without any internet.',
-        steps: ['<code>json.load(f)</code> turns the file\'s text back into a list of dicts.', 'No file yet: <code>FileNotFoundError</code>, and the message tells the user what to do (fetch, then save).', 'A broken file: <code>json.JSONDecodeError</code>, with its own message.', 'On success it returns the list; <code>main()</code> then marks the data as saved.'],
-        meets: ['Works offline', 'Says when the file is missing', 'Specific exceptions']
-      }
-    ]
-  },
-  {
-    id: 'opt4', num: '4', title: 'Search',
-    spec: 'Ask for a word and show every record whose title contains it. <strong>Upper and lower case should not matter.</strong> Finding nothing is a normal result, not an error.',
-    output: `<span class="you">Choose: 4</span>
-<span class="you">Search for: sand</span>
-2 matches:
-  Wind, Sand and Stars
-  A Sand County Almanac`,
-    fns: [
-      {
-        name: 'search()', kind: 'function · logic',
-        code: `def search(records: list, word: str) -> list:
-    """Return the records whose title contains the word (upper/lower case ignored)."""
-    word = word.lower()
-    matches = []
-    for record in records:
-        if word in record["title"].lower():
-            matches.append(record)
-    return matches`,
-        what: 'Finds the matching records and returns them. It prints nothing.',
-        steps: ['Both the word and each title are made lowercase, so "Sand" and "sand" match.', '<code>word in text</code> is True when the word appears anywhere inside the text.'],
-        meets: ['Case does not matter', 'One function, one job']
-      },
-      {
-        name: 'show_search()', kind: 'function · screen',
-        code: `def show_search(records: list):
-    """Ask for a word and print the matching titles."""
-    word = input("Search for: ").strip()
-    if word == "":
-        print("Please type at least one letter.")
-        return
-
-    matches = search(records, word)
-    # finding nothing is a normal result, not an error
-    if len(matches) == 0:
-        print(f"No books found with '{word}' in the title.")
-        return
-
-    print(f"{len(matches)} matches:")
-    for record in matches:
-        print(f"  {record['title']}")`,
-        what: 'Asks for the word, calls search(), and prints the result.',
-        steps: ['An empty answer gets a message, not a list of every book.', 'Zero matches prints a friendly sentence and returns to the menu.', 'Splitting asking/printing (here) from finding (search) is the "one function, one job" rule.'],
-        meets: ['Nothing found is normal', 'Bad input never crashes']
-      }
-    ]
-  },
-  {
-    id: 'opt5', num: '5', title: 'Summary report',
-    spec: 'Print all records as a table with a header, <strong>columns that line up</strong>, and a summary line (a total, an average or both). <strong>A missing value is shown as —, never None.</strong>',
-    output: `<span class="you">Choose: 5</span>
-
-Title                             Author                   Year  Pages
----------------------------------------------------------------------
-The Living Mountain               Nan Shepherd             1977    108
-Wind, Sand and Stars              Antoine de Saint-Exup…   1939    229
-The Peregrine                     J. A. Baker              1967      —
----------------------------------------------------------------------
-13 records · 11 with a page count · 3,753 pages · average 341.2`,
-    fns: [
-      {
-        name: 'TITLE_WIDTH, AUTHOR_WIDTH, LINE', kind: 'constants',
-        code: `TITLE_WIDTH = 32
-AUTHOR_WIDTH = 22
-LINE = "-" * 69`,
-        what: 'The column widths and the dashed line, defined once.',
-        steps: ['<code>"-" * 69</code> repeats the dash 69 times.', 'Header, rows and the cut length all use these, so changing one number keeps the table aligned.'],
-        meets: ['Lines with "-" * 69']
-      },
-      {
-        name: 'show()', kind: 'helper',
-        code: `def show(value) -> str:
-    """Return the value as text, or a dash if it is missing (never None)."""
-    if value is None:
-        return "—"
-    return str(value)`,
-        what: 'Turns a value into text, and a missing value into a dash.',
-        steps: ['This one helper is why "None" never appears in the table.'],
-        meets: ['Missing shown as —']
-      },
-      {
-        name: 'cut()', kind: 'helper',
-        code: `def cut(text: str, width: int) -> str:
-    """Cut text that is too long for its column and add … at the end."""
-    if len(text) > width:
-        return text[:width - 1] + "…"
-    return text`,
-        what: 'Shortens text that would overflow its column.',
-        steps: ['<code>text[:width - 1]</code> keeps the first width−1 characters; the "…" takes the last place, so the result is exactly <code>width</code> long.'],
-        meets: ['Cut long text']
-      },
-      {
-        name: 'print_header()', kind: 'function',
-        code: `def print_header():
-    """Print the column names and a line under them."""
-    print(f"{'Title':<{TITLE_WIDTH}}  {'Author':<{AUTHOR_WIDTH}}  {'Year':>5}  {'Pages':>5}")
-    print(LINE)`,
-        what: 'Prints the column names and the dashed line under them.',
-        steps: ['<code>:&lt;32</code> pads text to 32 characters, aligned left; <code>:&gt;5</code> aligns right in 5.', 'The width itself comes from a variable: <code>{TITLE_WIDTH}</code> nested inside the format.'],
-        meets: ['Header row', 'Columns line up']
-      },
-      {
-        name: 'print_row()', kind: 'function · shared by 5 and 7',
-        code: `def print_row(record: dict):
-    """Print one book as one line of the table. Options 5 and 7 both use this."""
-    title = cut(record["title"], TITLE_WIDTH)
-    # only the first author, or a dash if there is none
-    if len(record["authors"]) > 0:
-        author = cut(record["authors"][0], AUTHOR_WIDTH)
-    else:
-        author = "—"
-    year = show(record["year"])
-    pages = show(record["pages"])
-    # < pads text on the left, > right-aligns numbers (brief, section 5)
-    print(f"{title:<{TITLE_WIDTH}}  {author:<{AUTHOR_WIDTH}}  {year:>5}  {pages:>5}")`,
-        what: 'Prints one record as one table line.',
-        steps: ['Long titles and authors are cut to fit their column.', 'Only the first author is shown; a book with none gets a dash.', 'Year and pages go through <code>show()</code>, then are right-aligned like numbers should be.'],
-        meets: ['Reused by option 7', 'Numbers right-aligned']
-      },
-      {
-        name: 'summary()', kind: 'function',
-        code: `def summary(records: list):
-    """Print every record as a table with a total and an average at the bottom."""
-    print()
-    print_header()
-
-    total_pages = 0
-    with_pages = 0
-    for record in records:
-        print_row(record)
-        if record["pages"] is not None:
-            total_pages = total_pages + record["pages"]
-            with_pages = with_pages + 1
-
-    print(LINE)
-    if with_pages > 0:
-        average = total_pages / with_pages
-        print(f"{len(records)} records · {with_pages} with a page count · "
-              f"{total_pages:,} pages · average {average:.1f}")
-    else:
-        print(f"{len(records)} records · none with a page count")`,
-        what: 'Prints the full table, then a summary line with the total and the average.',
-        steps: ['While printing each row, it adds up the pages, but only for books that have a page count.', 'The average divides by the books with pages, not by all books, so missing values do not drag it down.', '<code>:,</code> writes 3753 as 3,753 and <code>:.1f</code> keeps one decimal (341.2).', 'If no book has pages it says so, instead of dividing by zero.'],
-        meets: ['Total and average', 'Formatted numbers']
-      }
-    ]
-  },
-  {
-    id: 'opt6', num: '6', title: 'Group and chart',
-    spec: 'Count the records per category and print a <strong>horizontal bar chart, biggest first</strong>, scaled so the longest bar is about 30 characters. Over ~15 categories: show the top 15 and say how many were left out. If the category is a list, say under the chart that one record counts in several bars.',
-    output: `<span class="you">Choose: 6</span>
-
-Books per subject
-Nature                ############################## 5
-Travel                ############################## 5
-Classics              ############ 2
-                      ... and 11 more subjects
-
-A book can have several subjects, so the bars add up to 25, not 13.`,
-    fns: [
-      {
-        name: 'count_subjects()', kind: 'function · logic',
-        code: `def count_subjects(records: list) -> dict:
-    """Count how many books have each subject. One book can count in several subjects."""
-    counts = {}
-    for record in records:
-        for subject in record["subjects"]:
-            counts[subject] = counts.get(subject, 0) + 1
-    return counts`,
-        what: 'Builds a dict: subject → how many books have it.',
-        steps: ['Two loops: every book, then every subject of that book.', '<code>counts.get(subject, 0) + 1</code> reads the current count (0 if new) and adds one.'],
-        meets: ['Count per category']
-      },
-      {
-        name: 'get_count()', kind: 'key helper',
-        code: `def get_count(pair: tuple) -> int:
-    """For sorted(): a pair is (subject, count), sort by the count."""
-    return pair[1]`,
-        what: 'Tells sorted() to sort the (subject, count) pairs by the count.',
-        steps: ['<code>pair[1]</code> is the second item of the pair: the number.'],
-        meets: []
-      },
-      {
-        name: 'chart()', kind: 'function · screen',
-        code: `def chart(records: list):
-    """Print a bar chart of the 15 biggest subjects, biggest first."""
-    counts = count_subjects(records)
-    if len(counts) == 0:
-        print("None of the books have a subject.")
-        return
-
-    pairs = sorted(counts.items(), key=get_count, reverse=True)
-    top = pairs[:15]
-    biggest = top[0][1]
-
-    print()
-    print("Books per subject")
-    for subject, count in top:
-        bar = "#" * round(count / biggest * 30)   # longest bar is 30 characters
-        print(f"{cut(subject, 20):<20}  {bar} {count}")
-
-    left_out = len(pairs) - len(top)
-    if left_out > 0:
-        print(f"{'':<20}  ... and {left_out} more subjects")
-
-    total = 0
-    for subject, count in pairs:
-        total = total + count
-    print()
-    print(f"A book can have several subjects, so the bars add up to {total}, not {len(records)}.")`,
-        what: 'Draws the bar chart of the 15 biggest subjects.',
-        steps: [
-          '<code>counts.items()</code> gives (subject, count) pairs; <code>sorted(..., reverse=True)</code> puts the biggest first.',
-          '<code>pairs[:15]</code> keeps the top 15; <code>top[0][1]</code> is the biggest count.',
-          'Each bar is <code>count / biggest * 30</code> hashes, rounded, so the biggest is always 30 long whatever the numbers are.',
-          'It then says how many subjects were left out, and why the bars add up to more than the number of books.'
-        ],
-        meets: ['Biggest first', 'Scaled to 30', 'Top 15 + left out', 'Explains the list field']
-      }
-    ]
-  },
-  {
-    id: 'opt7', num: '7', title: 'List, sorted',
-    spec: 'Let the user pick a field and print the records sorted by it, <strong>reusing the row function of option 5</strong>. <strong>Records missing the value go at the end</strong> (sorting a list with None raises TypeError). Use a small key function per field.',
-    output: `<span class="you">Choose: 7</span>
-Sort by:  1 title   2 year   3 pages
-<span class="you">> 3</span>
-
-The Worst Journey in the World    Apsley Cherry-Garrard    1922    643
-Arctic Dreams                     Barry Lopez              1986    464
-...
-The Peregrine                     J. A. Baker              1967      —`,
-    fns: [
-      {
-        name: 'get_title() · get_year() · get_pages()', kind: 'key helpers',
-        code: `def get_title(record: dict) -> str:
-    return record["title"].lower()
-
-
-def get_year(record: dict) -> int:
-    return record["year"]
-
-
-def get_pages(record: dict) -> int:
-    return record["pages"]`,
-        what: 'One tiny function per field, so sorted() knows what to compare.',
-        steps: ['You pass the function itself (no brackets) as <code>key=get_year</code>; sorted() calls it on every record.', 'Titles are compared lowercase, so "the" and "The" sort together.'],
-        meets: ['A key function per field']
-      },
-      {
-        name: 'sort_records()', kind: 'function · logic',
-        code: `def sort_records(records: list, field: str) -> list:
-    """Sort by a field. Records missing that field go at the end."""
-    if field == "title":
-        return sorted(records, key=get_title)
-
-    # sorting a list with None in it raises TypeError, so split it in two first
-    with_value = []
-    without_value = []
-    for record in records:
-        if record[field] is None:
-            without_value.append(record)
-        else:
-            with_value.append(record)
-
-    if field == "year":
-        with_value = sorted(with_value, key=get_year)                 # oldest first
-    else:
-        with_value = sorted(with_value, key=get_pages, reverse=True)  # longest first
-
-    return with_value + without_value`,
-        what: 'Returns the records sorted by one field, with missing values last.',
-        steps: ['Titles always exist, so they can be sorted directly.', 'For year and pages, records are split in two lists: with a value and without.', 'Only the first list is sorted (oldest year first, most pages first), then <code>+</code> sticks the missing ones on the end.'],
-        meets: ['Missing values at the end', 'No TypeError from None']
-      },
-      {
-        name: 'show_sorted()', kind: 'function · screen', bug: [6, 8, 10],
-        code: `def show_sorted(records: list):
-    """Ask which field to sort by and print the sorted table."""
-    print("Sort by:  1 title   2 year   3 pages")
-    choice = input("> ").strip()
-
-    if choice == "1":
-        field = "title"
-    elif choice == "2":
-        field = "year"
-    elif choice == "3":
-        field = "pages"
-    else:
-        print("Please type 1, 2 or 3.")
-        return
-
-    print()
-    print_header()
-    for record in sort_records(records, field):
-        print_row(record)    # same row as option 5, so both look the same`,
-        what: 'Asks which field to sort by, then prints the sorted table with the same rows as option 5.',
-        steps: ['It asks for 1, 2 or 3 and turns it into a field name.', 'It reuses <code>print_header()</code> and <code>print_row()</code>, so the table looks exactly like option 5.'],
-        bugNote: 'The highlighted lines are corrected. They used to compare the answer with "fetch", "save" and "load", while this little menu asks for <b>1, 2 or 3</b>, so typing 1, 2 or 3 always printed "Please type 1, 2 or 3." and option 7 never showed a table. A find-and-replace on the main menu probably reached this function too. The old lines were:',
-        bugFix: `    if choice == "fetch":     # wrong: never typed here
-        field = "title"
-    elif choice == "save":
-        field = "year"
-    elif choice == "load":
-        field = "pages"`,
-        meets: ['Reuses the option 5 row']
-      }
-    ]
-  },
-  {
-    id: 'opt0', num: '0', title: 'Quit',
-    spec: 'Leave the program. <strong>If the data in memory has not been saved, warn the user first.</strong>',
-    output: `<span class="you">Choose: 0</span>
-<span class="you">You have unsaved data. Quit anyway? (y/n): y</span>
-Bye.`,
-    fns: [
-      {
-        name: 'confirm_quit()', kind: 'function',
-        code: `def confirm_quit(unsaved: bool) -> bool:
-    """Return True if the program should stop."""
-    if not unsaved:
-        return True
-    answer = input("You have unsaved data. Quit anyway? (y/n): ").strip().lower()
-    return answer == "y"`,
-        what: 'Decides whether the program may stop.',
-        steps: ['Nothing unsaved: quit straight away.', 'Unsaved data: ask, and only a "y" (or "Y") returns True. Anything else keeps the program running.', '<code>main()</code> keeps <code>unsaved</code> up to date: True after fetch, False after save or load.'],
-        meets: ['Warns about unsaved data']
-      }
-    ]
-  }
-];
+/* ---------- Page 1 data: Project One, built in ten real steps ---------- */
+// Each step is a complete program that was run; "output" is what it printed.
+const PROJECT_STEPS = [{"n": 1, "title": "The menu loop", "option": "≡", "goal": "A program that shows the menu, reads a choice and comes back, until 0. Nothing else works yet, and that is fine.", "say": "The program is one loop in main(): show the menu, read the choice, run it, repeat, until the user picks quit.", "brief": "The program shows a menu, reads the user's choice, runs that option and comes back to the menu. It keeps going until the user picks 0.", "blocks": [{"name": "NUMBER_TO_NAME", "kind": "setting", "code": "# the user can type a number or a name. This dict turns a number into its name,\n# so the code below can say \"fetch\" instead of \"1\" and is easier to read.\nNUMBER_TO_NAME = {\n    \"1\": \"fetch\",\n    \"2\": \"save\",\n    \"3\": \"load\",\n    \"4\": \"search\",\n    \"5\": \"summary\",\n    \"6\": \"chart\",\n    \"7\": \"sort\",\n    \"0\": \"quit\",\n}", "what": "A lookup table from menu number to option name.", "steps": ["<code>NUMBER_TO_NAME.get(choice, choice)<\/code>: if the user typed <code>4<\/code> we get <code>\"search\"<\/code>; if they typed <code>search<\/code>, it is not a key, so the default gives the word back unchanged."], "lessons": ["s2|{} (dict)", "s2|.get()"]}, {"name": "show_menu()", "kind": "function", "code": "def show_menu():\n    \"\"\"Print the menu.\"\"\"\n    print()\n    print(\"=== DATA EXPLORER =========================\")\n    print(\"  1  fetch    Fetch fresh data from the API\")\n    print(\"  2  save     Save current data to the backup file\")\n    print(\"  3  load     Load data from the backup file\")\n    print(\"  4  search   Search\")\n    print(\"  5  summary  Summary report\")\n    print(\"  6  chart    Group and chart\")\n    print(\"  7  sort     List entries, sorted by an attribute\")\n    print(\"  0  quit     Quit\")\n    print(\"===========================================\")", "what": "Prints the menu, nothing else.", "steps": ["The empty <code>print()<\/code> leaves a blank line before the menu, so each answer is easy to find (brief §5)."], "lessons": ["s4|def", "s1|print()", "s4|docstring"]}, {"name": "main()", "kind": "the loop", "code": "def main():\n    while True:\n        show_menu()\n        choice = input(\"Choose: \").strip().lower()\n        # if they typed a number, swap it for its name. A name stays as it is.\n        choice = NUMBER_TO_NAME.get(choice, choice)\n\n        if choice == \"quit\":\n            print(\"Bye.\")\n            break\n\n        else:\n            print(\"Please type a number from 0 to 7, or a name like search.\")", "added": [], "what": "The loop that keeps the program alive.", "steps": ["<code>while True<\/code> repeats forever; the only way out is the <code>break<\/code> under quit.", "<code>.strip().lower()<\/code> cleans the answer: <code>\" Search \"<\/code> becomes <code>\"search\"<\/code>.", "Anything not built yet falls into the <code>else<\/code>, which prints a helpful message. Bad input never crashes."], "lessons": ["s3|while True + break", "s2|.strip()", "s3|if", "s3|elif", "s3|else"]}, {"name": "start", "kind": "start", "code": "try:\n    main()\nexcept KeyboardInterrupt:\n    # Ctrl-C should not show a traceback\n    print(\"\\nBye.\")", "what": "Starts the program, and turns Ctrl-C into a calm goodbye instead of a traceback.", "steps": ["Ctrl-C raises <code>KeyboardInterrupt<\/code> wherever the program is. Catching it around <code>main()<\/code> covers every option at once."], "lessons": ["s6|try / except", "s3|KeyboardInterrupt"]}], "output": "=== DATA EXPLORER =========================\n  1  fetch    Fetch fresh data from the API\n  2  save     Save current data to the backup file\n  3  load     Load data from the backup file\n  4  search   Search\n  5  summary  Summary report\n  6  chart    Group and chart\n  7  sort     List entries, sorted by an attribute\n  0  quit     Quit\n===========================================\nChoose: 9\nPlease type a number from 0 to 7, or a name like search.\n@@MENU@@\nChoose: hello\nPlease type a number from 0 to 7, or a name like search.\n@@MENU@@\nChoose: 0\nBye.", "lines": 59}, {"n": 2, "title": "Fetch the data", "option": "1", "goal": "Download the books from Open Library, and survive every way that can fail.", "say": "fetch() asks the API for the books with requests.get and a timeout, and catches each kind of failure separately, so the menu always comes back.", "brief": "Download the data from your API. If there is no internet connection, the server is slow, or it sends back something unexpected, print a short message and go back to the menu. The program must not crash.", "blocks": [{"name": "import requests", "kind": "import", "code": "import requests", "what": "Brings in the requests library, the only package outside standard Python.", "steps": ["It is installed once with <code>pip install requests<\/code> and written in <code>requirements.txt<\/code>."], "lessons": ["s1|import", "s7|pip install"]}, {"name": "URL", "kind": "setting", "code": "# the API address. fields= picks the fields I want, limit=100 means up to 100 books\nURL = \"https://openlibrary.org/search.json?q=mountains&fields=title,author_name,first_publish_year,number_of_pages_median,subject&limit=100\"", "what": "The address of the Open Library search, written once at the top.", "steps": ["Everything after <code>?<\/code> is query parameters: <code>q=mountains<\/code> is the search, <code>fields=<\/code> the five fields, <code>limit=100<\/code> the number of books.", "UPPER_CASE says: a setting, never changed while the program runs."], "lessons": ["s7|query parameter", "s1|= (assignment)"]}, {"name": "fetch()", "kind": "function", "code": "def fetch():\n    \"\"\"Download the raw books from Open Library. Returns None if it fails.\"\"\"\n    try:\n        print(\"Fetching from openlibrary.org ...\")\n        r = requests.get(URL, timeout=30)   # no timeout = could wait forever (session 7)\n        r.raise_for_status()                # a 404 or 500 does not raise by itself\n        data = r.json()\n        return data[\"docs\"]                 # the list of books is under \"docs\"\n    except requests.Timeout:\n        print(\"The server is too slow, try again later.\")\n    except requests.ConnectionError:\n        print(\"No internet connection.\")\n    except requests.HTTPError as e:\n        print(f\"The API said no: {e}\")\n    except ValueError:\n        print(\"The answer was not valid JSON.\")\n    except KeyError:\n        print(\"The answer had no 'docs' in it.\")\n    return None", "what": "Asks Open Library for the books and returns the raw list, or <code>None<\/code> if anything goes wrong.", "steps": ["<code>requests.get<\/code> sends the request. <code>timeout=30<\/code> gives up after 30 seconds instead of waiting forever.", "<code>raise_for_status()<\/code> turns an error page (404, 500) into an exception; without it a failed request looks like a success.", "<code>r.json()<\/code> turns the reply into Python dicts and lists. The books are under the key <code>\"docs\"<\/code>.", "Each <code>except<\/code> names one problem and prints one clear message. Whatever fails, the function reaches <code>return None<\/code> and the menu comes back. The program never crashes."], "lessons": ["s7|requests.get()", "s7|timeout=", "s7|r.raise_for_status()", "s7|r.json()", "s7|requests.Timeout / ConnectionError / HTTPError", "s6|except ... as e", "s4|None (no return)"]}, {"name": "main()", "kind": "main() grows", "code": "def main():\n    while True:\n        show_menu()\n        choice = input(\"Choose: \").strip().lower()\n        # if they typed a number, swap it for its name. A name stays as it is.\n        choice = NUMBER_TO_NAME.get(choice, choice)\n\n        if choice == \"fetch\":\n            raw = fetch()\n            if raw is not None:\n                print(f\"{len(raw)} rows downloaded.\")\n\n        elif choice == \"quit\":\n            print(\"Bye.\")\n            break\n\n        else:\n            print(\"Please type a number from 0 to 7, or a name like search.\")", "added": [8, 9, 10, 11, 12, 13], "what": "main() gets its first real option.", "steps": ["For now it only counts what came back, to prove the download works."], "lessons": []}], "output": "=== DATA EXPLORER =========================\n  1  fetch    Fetch fresh data from the API\n  2  save     Save current data to the backup file\n  3  load     Load data from the backup file\n  4  search   Search\n  5  summary  Summary report\n  6  chart    Group and chart\n  7  sort     List entries, sorted by an attribute\n  0  quit     Quit\n===========================================\nChoose: 1\nFetching from openlibrary.org ...\n100 rows downloaded.\n@@MENU@@\nChoose: 0\nBye.", "lines": 101}, {"n": 3, "title": "Clean it, once", "option": "1", "goal": "Turn the raw rows into clean records: reject the unusable ones, fix the types, fill the gaps.", "say": "clean() runs once: it rejects rows that are not dicts, have no title, or are duplicates, and turns years and pages into int or None.", "brief": "Clean the data once, in one function. Reject rows with no title, rows that are not dictionaries, and duplicates. Keep records that are only missing some fields, and store None (or an empty list) for what is missing.", "blocks": [{"name": "to_int()", "kind": "function", "code": "def to_int(value):\n    \"\"\"Turn a value into an int, or None if it is missing or not a number.\"\"\"\n    if value is None:\n        return None\n    try:\n        return int(value)\n    except ValueError:\n        return None", "what": "Makes sure a year or a page count is a real whole number, or <code>None<\/code>.", "steps": ["Missing stays missing: <code>None<\/code> goes straight back out (a guard clause).", "<code>int(\"2012\")<\/code> gives <code>2012<\/code>. <code>int(\"soon\")<\/code> raises <code>ValueError<\/code>, which we catch and turn into <code>None<\/code>.", "This is the brief's rule: a year is an int or None, never the string \"2012\"."], "lessons": ["s2|float() / int() / str()", "s2|ValueError", "s6|try / except", "s4|guard clause"]}, {"name": "clean()", "kind": "function", "code": "def clean(raw_books: list) -> tuple:\n    \"\"\"Turn the raw books into clean records and count the rejected ones.\"\"\"\n    records = []\n    seen = set()     # titles already kept, to catch duplicates\n    rejected = 0\n\n    for book in raw_books:\n        # a row that is not a dict is unusable\n        if not isinstance(book, dict):\n            rejected = rejected + 1\n            continue\n\n        title = book.get(\"title\")\n        # no title (None or \"\") -> reject\n        if title is None or title.strip() == \"\":\n            rejected = rejected + 1\n            continue\n\n        # same title twice -> duplicate, keep only the first one\n        if title.lower() in seen:\n            rejected = rejected + 1\n            continue\n        seen.add(title.lower())\n\n        # missing numbers become None, missing lists become []\n        # to_int makes sure a year is always an int, never the string \"2012\"\n        record = {\n            \"title\": title.strip(),\n            \"authors\": book.get(\"author_name\", []),\n            \"year\": to_int(book.get(\"first_publish_year\")),\n            \"pages\": to_int(book.get(\"number_of_pages_median\")),\n            \"subjects\": book.get(\"subject\", []),\n        }\n        records.append(record)\n\n    return records, rejected", "what": "Goes through every raw row once, throws away the unusable ones, and builds one clean dict per book.", "steps": ["Three rejections, each followed by <code>continue<\/code> (skip to the next book): not a dict, no title, a title already seen.", "<code>seen<\/code> is a set because we only ask it one question, <em>is this title in here?<\/em>, and sets answer that instantly.", "<code>book.get(\"author_name\", [])<\/code> gives the authors, or an empty list if the field is missing, instead of crashing with KeyError.", "It returns two things at once, a tuple: <code>records, rejected = clean(raw)<\/code>."], "lessons": ["s3|for ... in", "s3|type() / isinstance()", "s3|continue", "s2|set() / {\"a\", \"b\"}", "s2|.add() / .discard()", "s2|.get()", "s2|.append()", "s4|returning a tuple"]}, {"name": "main()", "kind": "main() grows", "code": "def main():\n    records = []      # the data we are working with, empty at the start\n\n    while True:\n        show_menu()\n        choice = input(\"Choose: \").strip().lower()\n        # if they typed a number, swap it for its name. A name stays as it is.\n        choice = NUMBER_TO_NAME.get(choice, choice)\n\n        if choice == \"fetch\":\n            raw = fetch()\n            if raw is not None:\n                records, rejected = clean(raw)\n                print(f\"{len(records)} records loaded, {rejected} rows rejected.\")\n\n        elif choice == \"quit\":\n            print(\"Bye.\")\n            break\n\n        else:\n            print(\"Please type a number from 0 to 7, or a name like search.\")", "added": [2, 3, 13, 14], "what": "main() now keeps the clean records.", "steps": ["<code>records = []<\/code> starts empty, before the loop, so it survives from one menu choice to the next.", "<code>records, rejected = clean(raw)<\/code> unpacks the two things <code>clean()<\/code> returns."], "lessons": ["s2|tuple unpacking", "s4|scope"]}], "output": "=== DATA EXPLORER =========================\n  1  fetch    Fetch fresh data from the API\n  2  save     Save current data to the backup file\n  3  load     Load data from the backup file\n  4  search   Search\n  5  summary  Summary report\n  6  chart    Group and chart\n  7  sort     List entries, sorted by an attribute\n  0  quit     Quit\n===========================================\nChoose: 1\nFetching from openlibrary.org ...\n97 records loaded, 3 rows rejected.\n@@MENU@@\nChoose: 0\nBye.", "lines": 152}, {"n": 4, "title": "Save a backup", "option": "2", "goal": "Write the clean records to backup.json, readable by a person.", "say": "save() writes the list with json.dump and indent=2 inside a with block, and warns when it replaces an old backup.", "brief": "Write the cleaned records to a JSON file, indented so a person can read it. If a backup already exists, tell the user it is being replaced.", "blocks": [{"name": "import json, Path", "kind": "import", "code": "import json\nfrom pathlib import Path", "what": "Two tools from standard Python: <code>json<\/code> writes and reads the backup, <code>Path<\/code> names the file.", "steps": ["<code>from pathlib import Path<\/code> takes just the one name we need, so we write <code>Path<\/code>, not <code>pathlib.Path<\/code>."], "lessons": ["s1|import", "s1|from ... import ...", "s6|JSON"]}, {"name": "BACKUP_FILE", "kind": "setting", "code": "# where option 2 saves the data and option 3 loads it from\nBACKUP_FILE = Path(\"backup.json\")", "what": "The name of the backup file, as a Path.", "steps": ["Save and load both use this one name, so they can never disagree about where the file is."], "lessons": ["s6|Path"]}, {"name": "save()", "kind": "function", "code": "def save(records: list):\n    \"\"\"Save the records to the backup file as readable JSON.\"\"\"\n    if BACKUP_FILE.exists():\n        print(\"Replacing the existing backup.\")\n\n    # \"w\" = write mode, it creates the file or overwrites it\n    with open(BACKUP_FILE, \"w\", encoding=\"utf-8\") as f:\n        json.dump(records, f, indent=2)   # indent=2 so a person can read the file\n\n    print(f\"{len(records)} records saved to {BACKUP_FILE}.\")", "what": "Writes the clean records to <code>backup.json<\/code>.", "steps": ["<code>.exists()<\/code> checks first, so we can say the old backup is being replaced (the brief asks for this).", "<code>with open(..., \"w\")<\/code> opens for writing and closes the file by itself at the end of the block.", "<code>json.dump(records, f, indent=2)<\/code> writes the whole list in one go, indented so a person can read it."], "lessons": ["s6|.exists() / .is_file()", "s6|with open(...) as f:", "s6|\"r\" \"w\" \"a\" \"x\"", "s6|json.dump(obj, f, indent=2)", "s6|encoding=\"utf-8\""]}, {"name": "main()", "kind": "main() grows", "code": "def main():\n    records = []      # the data we are working with, empty at the start\n\n    while True:\n        show_menu()\n        choice = input(\"Choose: \").strip().lower()\n        # if they typed a number, swap it for its name. A name stays as it is.\n        choice = NUMBER_TO_NAME.get(choice, choice)\n\n        if choice == \"fetch\":\n            raw = fetch()\n            if raw is not None:\n                records, rejected = clean(raw)\n                print(f\"{len(records)} records loaded, {rejected} rows rejected.\")\n\n        elif choice == \"quit\":\n            print(\"Bye.\")\n            break\n\n        elif choice == \"save\":\n            # saving needs data first\n            if len(records) == 0:\n                print(\"No data yet. Fetch it (1) or load the backup (3) first.\")\n            else:\n                save(records)\n\n        else:\n            print(\"Please type a number from 0 to 7, or a name like search.\")", "added": [20, 21, 22, 23, 24, 25, 26], "what": "A save branch, with a check first.", "steps": ["Saving with nothing loaded would write an empty file, so <code>len(records) == 0<\/code> is checked first."], "lessons": ["s2|len()"]}], "output": "=== DATA EXPLORER =========================\n  1  fetch    Fetch fresh data from the API\n  2  save     Save current data to the backup file\n  3  load     Load data from the backup file\n  4  search   Search\n  5  summary  Summary report\n  6  chart    Group and chart\n  7  sort     List entries, sorted by an attribute\n  0  quit     Quit\n===========================================\nChoose: 2\nNo data yet. Fetch it (1) or load the backup (3) first.\n@@MENU@@\nChoose: 1\nFetching from openlibrary.org ...\n97 records loaded, 3 rows rejected.\n@@MENU@@\nChoose: 2\n97 records saved to backup.json.\n@@MENU@@\nChoose: 2\nReplacing the existing backup.\n97 records saved to backup.json.\n@@MENU@@\nChoose: 0\nBye.", "lines": 182}, {"n": 5, "title": "Load the backup", "option": "3", "goal": "Read backup.json back in, so the program works with the internet off.", "say": "load() reads the file back with json.load; if there is no file or it is broken, it says so and returns None.", "brief": "Read the backup file back into memory. This option must work with the internet turned off. If the file does not exist yet, say so.", "blocks": [{"name": "load()", "kind": "function", "code": "def load():\n    \"\"\"Load the records from the backup file. Returns None if it fails.\"\"\"\n    try:\n        with open(BACKUP_FILE, encoding=\"utf-8\") as f:\n            records = json.load(f)\n    except FileNotFoundError:\n        print(f\"There is no {BACKUP_FILE} yet. Fetch (1) and save (2) first.\")\n        return None\n    except ValueError:\n        print(f\"{BACKUP_FILE} is damaged and cannot be read.\")\n        return None\n\n    print(f\"{len(records)} records loaded from {BACKUP_FILE}.\")\n    return records", "what": "Reads the backup back into memory. Works with the internet off.", "steps": ["<code>json.load(f)<\/code> is the mirror of <code>json.dump<\/code>: the file becomes the same list of dicts again.", "No file yet is <code>FileNotFoundError<\/code>; a broken file is a <code>ValueError<\/code>. Both get a message and <code>None<\/code>.", "No need to clean again: what we saved was already clean."], "lessons": ["s6|json.load(f)", "s6|try / except", "s1|FileNotFoundError", "s2|ValueError"]}, {"name": "main()", "kind": "main() grows", "code": "def main():\n    records = []      # the data we are working with, empty at the start\n\n    while True:\n        show_menu()\n        choice = input(\"Choose: \").strip().lower()\n        # if they typed a number, swap it for its name. A name stays as it is.\n        choice = NUMBER_TO_NAME.get(choice, choice)\n\n        if choice == \"fetch\":\n            raw = fetch()\n            if raw is not None:\n                records, rejected = clean(raw)\n                print(f\"{len(records)} records loaded, {rejected} rows rejected.\")\n\n        elif choice == \"load\":\n            loaded = load()\n            if loaded is not None:\n                records = loaded\n\n        elif choice == \"quit\":\n            print(\"Bye.\")\n            break\n\n        elif choice == \"save\":\n            # saving needs data first\n            if len(records) == 0:\n                print(\"No data yet. Fetch it (1) or load the backup (3) first.\")\n            else:\n                save(records)\n\n        else:\n            print(\"Please type a number from 0 to 7, or a name like search.\")", "added": [16, 17, 18, 19, 20], "what": "A load branch.", "steps": ["Only if <code>load()<\/code> worked do we replace <code>records<\/code>; a failed load keeps what we had."], "lessons": []}], "output": "=== DATA EXPLORER =========================\n  1  fetch    Fetch fresh data from the API\n  2  save     Save current data to the backup file\n  3  load     Load data from the backup file\n  4  search   Search\n  5  summary  Summary report\n  6  chart    Group and chart\n  7  sort     List entries, sorted by an attribute\n  0  quit     Quit\n===========================================\nChoose: 3\n97 records loaded from backup.json.\n@@MENU@@\nChoose: 0\nBye.", "lines": 208}, {"n": 6, "title": "Search by title", "option": "4", "goal": "Ask for a word and list every title that contains it, ignoring capitals.", "say": "search() returns the matching records and show_search() prints them: one finds, the other displays.", "brief": "Ask for a word and show every record whose title contains it. Upper and lower case should not matter. Finding nothing is a normal result, not an error.", "blocks": [{"name": "search()", "kind": "function", "code": "def search(records: list, word: str) -> list:\n    \"\"\"Return the records whose title contains the word (upper/lower case ignored).\"\"\"\n    word = word.lower()\n    matches = []\n    for record in records:\n        if word in record[\"title\"].lower():\n            matches.append(record)\n    return matches", "what": "Finds the books whose title contains the word, and returns them. It prints nothing.", "steps": ["Both sides go to lowercase, so <code>Sand<\/code>, <code>sand<\/code> and <code>SAND<\/code> all match.", "<code>word in title<\/code> is True when the word appears anywhere inside the title.", "It returns the list instead of printing it: that is the brief's <em>one function, one job<\/em>."], "lessons": ["s2|in", "s3|for ... in", "s2|.append()", "s4|return, don't print"]}, {"name": "show_search()", "kind": "function", "code": "def show_search(records: list):\n    \"\"\"Ask for a word and print the matching titles.\"\"\"\n    word = input(\"Search for: \").strip()\n    if word == \"\":\n        print(\"Please type at least one letter.\")\n        return\n\n    matches = search(records, word)\n    # finding nothing is a normal result, not an error\n    if len(matches) == 0:\n        print(f\"No books found with '{word}' in the title.\")\n        return\n\n    print(f\"{len(matches)} matches:\")\n    for record in matches:\n        print(f\"  {record['title']}\")", "what": "The screen side of search: asks for the word, calls <code>search()<\/code>, prints the titles.", "steps": ["An empty answer is refused politely (bad input never crashes).", "Zero matches gets a friendly sentence: the brief says finding nothing is a normal result.", "Each early <code>return<\/code> is a guard clause: deal with the odd case, leave, and keep the main path flat."], "lessons": ["s2|.strip()", "s4|guard clause", "s1|f-string (f\"...\")", "s4|one job"]}, {"name": "main()", "kind": "main() grows", "code": "def main():\n    records = []      # the data we are working with, empty at the start\n\n    while True:\n        show_menu()\n        choice = input(\"Choose: \").strip().lower()\n        # if they typed a number, swap it for its name. A name stays as it is.\n        choice = NUMBER_TO_NAME.get(choice, choice)\n\n        if choice == \"fetch\":\n            raw = fetch()\n            if raw is not None:\n                records, rejected = clean(raw)\n                print(f\"{len(records)} records loaded, {rejected} rows rejected.\")\n\n        elif choice == \"load\":\n            loaded = load()\n            if loaded is not None:\n                records = loaded\n\n        elif choice == \"quit\":\n            print(\"Bye.\")\n            break\n\n        elif choice in [\"save\", \"search\"]:\n            # these options all need data first\n            if len(records) == 0:\n                print(\"No data yet. Fetch it (1) or load the backup (3) first.\")\n            elif choice == \"save\":\n                save(records)\n            elif choice == \"search\":\n                show_search(records)\n\n        else:\n            print(\"Please type a number from 0 to 7, or a name like search.\")", "added": [25, 26, 29, 31, 32], "what": "The checks get grouped.", "steps": ["Save and search both need data. Instead of writing the same check twice, the options that need data share one branch: <code>elif choice in [...]<\/code>.", "Inside it, the first <code>if<\/code> stops them all when there is no data; the <code>elif<\/code>s below pick the option."], "lessons": ["s2|in"]}], "output": "=== DATA EXPLORER =========================\n  1  fetch    Fetch fresh data from the API\n  2  save     Save current data to the backup file\n  3  load     Load data from the backup file\n  4  search   Search\n  5  summary  Summary report\n  6  chart    Group and chart\n  7  sort     List entries, sorted by an attribute\n  0  quit     Quit\n===========================================\nChoose: 3\n97 records loaded from backup.json.\n@@MENU@@\nChoose: 4\nSearch for: LIFE\n1 matches:\n  A lady's life in the Rocky Mountains\n@@MENU@@\nChoose: 4\nSearch for: zebra\nNo books found with 'zebra' in the title.\n@@MENU@@\nChoose: 4\nSearch for: \nPlease type at least one letter.\n@@MENU@@\nChoose: 0\nBye.", "lines": 243}, {"n": 7, "title": "The summary table", "option": "5", "goal": "Print every record as a lined-up table, with a total and an average at the bottom.", "say": "print_row() prints one book with f-string alignment, summary() loops over all of them and adds up the pages for the last line.", "brief": "Print all records as a table with a header row, columns that line up, and a summary line at the bottom. A missing value is shown as —, never as None.", "blocks": [{"name": "LINE", "kind": "setting", "code": "# the line under the table header and above the totals\nLINE = \"-\" * 69", "what": "A row of 69 dashes, made once and reused.", "steps": ["A string times a number repeats it: <code>\"-\" * 3<\/code> is <code>\"---\"<\/code>."], "lessons": ["s1|* (multiplication)"]}, {"name": "show()", "kind": "function", "code": "def show(value) -> str:\n    \"\"\"Return the value as text, or a dash if it is missing (never None).\"\"\"\n    if value is None:\n        return \"—\"\n    return str(value)", "what": "Turns a value into text for the table, with a dash where it is missing.", "steps": ["The brief: a missing value is shown as —, never as None."], "lessons": ["s2|None / is None", "s2|float() / int() / str()"]}, {"name": "cut()", "kind": "function", "code": "def cut(text: str, width: int) -> str:\n    \"\"\"Cut text that is too long for its column and add … at the end.\"\"\"\n    if len(text) > width:\n        return text[:width - 1] + \"…\"\n    return text", "what": "Shortens text that would not fit its column.", "steps": ["<code>text[:31]<\/code> is a slice: the first 31 characters. Add <code>…<\/code> and it is exactly 32 wide."], "lessons": ["s2|s[start:stop:step]", "s2|len()", "s4|parameter"]}, {"name": "print_header()", "kind": "function", "code": "def print_header():\n    \"\"\"Print the column names and a line under them.\"\"\"\n    print(f\"{'Title':<32}  {'Author':<22}  {'Year':>5}  {'Pages':>5}\")\n    print(LINE)", "what": "Prints the column names, lined up the same way as the rows.", "steps": ["<code>:&lt;32<\/code> pads to 32 characters on the left; <code>:&gt;5<\/code> right-aligns in 5. Numbers read best right-aligned."], "lessons": ["s2|format spec (:.2f)", "s1|f-string (f\"...\")"]}, {"name": "print_row()", "kind": "function", "code": "def print_row(record: dict):\n    \"\"\"Print one book as one line of the table. Options 5 and 7 both use this.\"\"\"\n    title = cut(record[\"title\"], 32)\n    # only the first author, or a dash if there is none\n    if len(record[\"authors\"]) > 0:\n        author = cut(record[\"authors\"][0], 22)\n    else:\n        author = \"—\"\n    year = show(record[\"year\"])\n    pages = show(record[\"pages\"])\n    print(f\"{title:<32}  {author:<22}  {year:>5}  {pages:>5}\")", "what": "Prints one book as one line of the table.", "steps": ["<code>record[\"authors\"][0]<\/code> is the first author: the list, then its first item.", "Options 5 and 7 both call this, so the two tables look the same. The brief asks for exactly that."], "lessons": ["s2|xs[i] and slices", "s3|if", "s3|else", "s2|format spec (:.2f)"]}, {"name": "summary()", "kind": "function", "code": "def summary(records: list):\n    \"\"\"Print every record as a table with a total and an average at the bottom.\"\"\"\n    print()\n    print_header()\n\n    total_pages = 0\n    with_pages = 0\n    for record in records:\n        print_row(record)\n        if record[\"pages\"] is not None:\n            total_pages = total_pages + record[\"pages\"]\n            with_pages = with_pages + 1\n\n    print(LINE)\n    if with_pages > 0:\n        average = total_pages / with_pages\n        print(f\"{len(records)} records · {with_pages} with a page count · \"\n              f\"{total_pages:,} pages · average {average:.1f}\")\n    else:\n        print(f\"{len(records)} records · none with a page count\")", "what": "Option 5: the whole table, then one summary line.", "steps": ["One loop does two jobs at once: prints each row and adds up the pages.", "Books with no page count are skipped in the total, so the average is over the books that have one.", "<code>:,<\/code> writes 3,753 and <code>:.1f<\/code> keeps one decimal (341.2).", "The <code>if with_pages &gt; 0<\/code> check avoids dividing by zero."], "lessons": ["s3|for ... in", "s3|is / is not", "s2|/", "s2|format spec (:.2f)"]}, {"name": "main()", "kind": "main() grows", "code": "def main():\n    records = []      # the data we are working with, empty at the start\n\n    while True:\n        show_menu()\n        choice = input(\"Choose: \").strip().lower()\n        # if they typed a number, swap it for its name. A name stays as it is.\n        choice = NUMBER_TO_NAME.get(choice, choice)\n\n        if choice == \"fetch\":\n            raw = fetch()\n            if raw is not None:\n                records, rejected = clean(raw)\n                print(f\"{len(records)} records loaded, {rejected} rows rejected.\")\n\n        elif choice == \"load\":\n            loaded = load()\n            if loaded is not None:\n                records = loaded\n\n        elif choice == \"quit\":\n            print(\"Bye.\")\n            break\n\n        elif choice in [\"save\", \"search\", \"summary\"]:\n            # these options all need data first\n            if len(records) == 0:\n                print(\"No data yet. Fetch it (1) or load the backup (3) first.\")\n            elif choice == \"save\":\n                save(records)\n            elif choice == \"search\":\n                show_search(records)\n            elif choice == \"summary\":\n                summary(records)\n\n        else:\n            print(\"Please type a number from 0 to 7, or a name like search.\")", "added": [25, 33, 34], "what": "One more name in the list.", "steps": ["Adding an option is now two lines."], "lessons": []}], "output": "=== DATA EXPLORER =========================\n  1  fetch    Fetch fresh data from the API\n  2  save     Save current data to the backup file\n  3  load     Load data from the backup file\n  4  search   Search\n  5  summary  Summary report\n  6  chart    Group and chart\n  7  sort     List entries, sorted by an attribute\n  0  quit     Quit\n===========================================\nChoose: 3\n97 records loaded from backup.json.\n@@MENU@@\nChoose: 5\n\nTitle                             Author                   Year  Pages\n---------------------------------------------------------------------\nMy side of the mountain           Jean Craighead George    1959    177\nAt the Mountains of Madness       H.P. Lovecraft           1968    189\nGo Tell It on the Mountain        James Baldwin            1952    233\nThe Mountain Is You               Brianna Wiest            2020    248\nDer Zauberberg                    Thomas Mann              1924    729\nThe Seven Storey Mountain         Thomas Merton            1948    435\nA Mountain For Luenda             Essie Summers            1983    189\nThe White Mountains (The Tripod…  Sam Youd                 1967    170\nBrokeback Mountain                Annie Proulx             1997     65\nGray Mountain                     John Grisham             2014    468\nWorkbook for the Mountain Is You  Smart Reads              2022      —\nGreen Mountain Man                Janet Dailey             1978    217\nMackenzie's Mountain              Linda Howard             1989    251\nAnd the Mountains Echoed          Khaled Hosseini          2013    430\nCold Mountain                     Charles Frazier          1997    449\nMountains Beyond Mountains        Tracy Kidder             2003    332\nFrightful's Mountain              Jean Craighead George    1999    258\nWhere the Mountain Meets the Mo…  Grace Lin                2009    282\nVampire Mountain                  Darren Shan              2001    199\nThe way to rainy mountain         N. Scott Momaday         1969     88\nDread Mountain (Deltora Quest #…  Emily Rodda              2000    128\nTo the Far Blue Mountains         Louis L'Amour            1976    287\nThe Mountain Valley War           Louis L'Amour            1978    208\nMing Lo Moves the Mountain        Arnold Lobel             1982     32\nMountain Top Mystery              Gertrude Chandler War…   1964    128\nLost mountain                     Abra Taylor              1979    218\nBushranger's Mountain             Gordon Aalborg           1985    186\nEscape to Witch Mountain          Alexander Key            1968    172\nThe Farthest-Away Mountain        Lynne Reid Banks         1976    140\nMountain Laurel (Montgomery)      Jude Deveraux            1990    312\nOn the Far Side of the Mountain   Jean Craighead George    1990    170\nTreasure Mountain                 Louis L'Amour            1972    187\nThe Over-Mountain Man             Emma Goldrick            1986    191\nWhen I Was Young in the Mountai…  Cynthia Rylant           1887     32\nThe Mountain of Adventure         Enid Blyton              1949    222\nMinecraft                         Max Brooks               2021    311\nWild Mountain Thyme               Rosamunde Pilcher        1978    309\nFire on the mountain              Anita Desai              1977    145\nMover of men and mountains        Robert Gilmour LeTour…   1960    293\nDragonwings CD                    Laurence Yep             1975    248\nLonely on the Mountain            Louis L'Amour            1900    194\nShelter Mountain                  Robyn Carr               2007    395\nCat Who Moved a Mountain (Cat W…  Lilian Jackson Braun     1992    261\nFrom the highest mountain         Jeanne Allan             1991    187\nSnuggle Mountain                  Lindsey Lane             2003     31\nLa montagna parlante              Elisabetta Dami          2006    224\nMountain Rose                     Norah Hess               1993    448\nThe first mountain man            William W. Johnstone     1991    320\nBringing the Mountain Home        SueEllen Campbell        1996    118\nMoonrise Over The Mountains       Lilian Peake             1975    186\nScorpion Mountain (Brotherband …  John Flanagan            2014    466\nValley Deep, Mountain High        Anne Mather              1976    187\nThe Mountains Sing                Phan Quế Mai Nguyễn      2020    352\nOn South Mountain                 David Cruise             1997    290\nAstoria                           Washington Irving        1800    414\nClimb every mountain              Lilian Peake             1989    188\nThunder Rolling in the Mountains  Scott O’Dell             1992    144\nOutlaw mountain                   J. A. Jance              1999    384\nMountain of Black Glass           Tad Williams             1999    784\nChina Mountain Zhang              Maureen F. McHugh        1751    320\nThe Secret Mountain               Enid Blyton              1965    156\nThe Black Mountain                Rex Stout                1954    188\nThree Swedish Mountain Men        Lily Gold                2021    346\nMountain Born (Mountain Born #1)  Elizabeth Yates          1943    118\nMoses, man of the mountain        Zora Neale Hurston       1939    351\nThe living mountain               Nan Shepherd             1977    114\nCalifornia and Oregon trail       Francis Parkman          1872    381\nA lady's life in the Rocky Moun…  Isabella L. Bird         1879    296\nClose Range                       Annie Proulx             1999    296\nThe Boy at the Top of the Mount…  John Boyne               2015    257\nMountain Mistress                 Nadine Crenshaw          1987      —\nThe Mystery on Blizzard Mountain  Gertrude Chandler War…   2001    121\nMountain in the Sea               Ray Nayler               2022    464\nMountain Girl Illustrated         Emma Payne Erskine       2019    393\nScorpion Mountain                 John Flanagan            2014    471\nThe Whispering Mountain (Wolves…  Joan Aiken               1968    258\nDragon's Gate (Golden Mountain …  Laurence Yep             1993    335\nThe angry mountain                Hammond Innes            1950    294\nMountains of the mind             Robert Macfarlane        2003    306\nMountain Wild                     Stacey Kayne             2009    280\nThe Secret of Skull Mountain      Leslie McFarlane         1948    177\nA good scent from a strange mou…  Robert Olen Butler       1992    268\nThe mountains of California       John Reid Muir           1894    381\nSpencer's Mountain                Earl Hamner Jr.          1961    251\n山の音                               川端康成                     1954    286\nI bought a mountain               Thomas Firbank           1940    255\nThe bears on Hemlock Mountain     Alice Dalgliesh          2000     62\nCrimson mountain                  Grace Livingston Hill    1942    296\nThe Mystery of Monster Mountain   M. V. Carey              1973    158\nDesert, mountain, sea             Sue Leather              2000     88\nThe Big Rock Candy Mountain       Wallace Stegner          1943    563\nCrackling Mountain and other st…  太宰 治                     1989    255\nBull Mountain                     Brian Panowich           2015    290\nThe fifth mountain                Paulo Coelho             2004    244\nWhen the Tiger Came Down the Mo…  Nghi Vo                  2020    176\nAcross a Hundred Mountains        Reyna Grande             2006    272\nWild Mountain Honey               Carol Finch              1991    479\n---------------------------------------------------------------------\n97 records · 95 with a page count · 25,147 pages · average 264.7\n@@MENU@@\nChoose: 0\nBye.", "lines": 308}, {"n": 8, "title": "Group and chart", "option": "6", "goal": "Count the books per subject and draw the top 15 as # bars, scaled to 30 characters.", "say": "count_subjects() counts with a dict, chart() sorts the counts biggest first and scales each bar to the biggest one.", "brief": "Count the records in each category and print a horizontal bar chart, biggest first. Scale the bars so the longest one is about 30 characters. If there are more than about 15 categories, show the top 15 and say how many were left out.", "blocks": [{"name": "count_subjects()", "kind": "function", "code": "def count_subjects(records: list) -> dict:\n    \"\"\"Count how many books have each subject. One book can count in several subjects.\"\"\"\n    counts = {}\n    for record in records:\n        for subject in record[\"subjects\"]:\n            counts[subject] = counts.get(subject, 0) + 1\n    return counts", "what": "Counts the books per subject, into a dict like <code>{\"Nature\": 5, \"Travel\": 5}<\/code>.", "steps": ["A loop inside a loop: every book, then every subject of that book.", "<code>counts.get(subject, 0) + 1<\/code>: the count so far (0 if this subject is new), plus one."], "lessons": ["s2|{} (dict)", "s2|.get()", "s3|for ... in"]}, {"name": "get_count()", "kind": "function", "code": "def get_count(pair: tuple) -> int:\n    \"\"\"For sorted(): a pair is (subject, count), sort by the count.\"\"\"\n    return pair[1]", "what": "Tells <code>sorted()<\/code> what to sort the pairs by: the count.", "steps": ["A pair looks like <code>(\"Nature\", 5)<\/code>; <code>pair[1]<\/code> is the 5."], "lessons": ["s2|() (tuple)", "s4|function as a value"]}, {"name": "chart()", "kind": "function", "code": "def chart(records: list):\n    \"\"\"Print a bar chart of the 15 biggest subjects, biggest first.\"\"\"\n    counts = count_subjects(records)\n    if len(counts) == 0:\n        print(\"None of the books have a subject.\")\n        return\n\n    pairs = sorted(counts.items(), key=get_count, reverse=True)\n    top = pairs[:15]\n    biggest = top[0][1]\n\n    print()\n    print(\"Books per subject\")\n    for subject, count in top:\n        bar = \"#\" * round(count / biggest * 30)   # longest bar is 30 characters\n        print(f\"{cut(subject, 20):<20}  {bar} {count}\")\n\n    left_out = len(pairs) - len(top)\n    if left_out > 0:\n        print(\" \" * 22 + f\"... and {left_out} more subjects\")\n\n    total = 0\n    for subject, count in pairs:\n        total = total + count\n    print()\n    print(f\"A book can have several subjects, so the bars add up to {total}, not {len(records)}.\")", "what": "Option 6: the 15 biggest subjects as a bar chart made of #.", "steps": ["<code>counts.items()<\/code> gives (subject, count) pairs; <code>sorted(..., key=get_count, reverse=True)<\/code> puts the biggest first.", "<code>pairs[:15]<\/code> keeps the top 15; <code>top[0][1]<\/code> is the biggest count.", "<code>round(count / biggest * 30)<\/code> scales every bar so the longest is 30 characters, whatever the counts.", "The last sentence explains why the bars add up to more than the number of books, as the brief asks."], "lessons": ["s2|sorted()", "s2|.items()", "s4|function as a value", "s2|xs[i] and slices", "s2|round()", "s2|tuple unpacking"]}, {"name": "main()", "kind": "main() grows", "code": "def main():\n    records = []      # the data we are working with, empty at the start\n\n    while True:\n        show_menu()\n        choice = input(\"Choose: \").strip().lower()\n        # if they typed a number, swap it for its name. A name stays as it is.\n        choice = NUMBER_TO_NAME.get(choice, choice)\n\n        if choice == \"fetch\":\n            raw = fetch()\n            if raw is not None:\n                records, rejected = clean(raw)\n                print(f\"{len(records)} records loaded, {rejected} rows rejected.\")\n\n        elif choice == \"load\":\n            loaded = load()\n            if loaded is not None:\n                records = loaded\n\n        elif choice == \"quit\":\n            print(\"Bye.\")\n            break\n\n        elif choice in [\"save\", \"search\", \"summary\", \"chart\"]:\n            # these options all need data first\n            if len(records) == 0:\n                print(\"No data yet. Fetch it (1) or load the backup (3) first.\")\n            elif choice == \"save\":\n                save(records)\n            elif choice == \"search\":\n                show_search(records)\n            elif choice == \"summary\":\n                summary(records)\n            elif choice == \"chart\":\n                chart(records)\n\n        else:\n            print(\"Please type a number from 0 to 7, or a name like search.\")", "added": [25, 35, 36], "what": "One more name in the list.", "steps": [], "lessons": []}], "output": "=== DATA EXPLORER =========================\n  1  fetch    Fetch fresh data from the API\n  2  save     Save current data to the backup file\n  3  load     Load data from the backup file\n  4  search   Search\n  5  summary  Summary report\n  6  chart    Group and chart\n  7  sort     List entries, sorted by an attribute\n  0  quit     Quit\n===========================================\nChoose: 3\n97 records loaded from backup.json.\n@@MENU@@\nChoose: 6\n\nBooks per subject\nFiction               ############################## 63\nChildren's fiction    ############# 27\nJuvenile fiction      ########## 21\nLarge type books      ######## 16\nHistory               ####### 14\nFiction, general      ##### 11\nAdventure and adven…  #### 8\nChildren's stories    ### 7\nFrontier and pionee…  ### 7\nFiction in English    ### 7\nFantasy fiction       ### 7\nBiography             ### 6\nScience fiction       ### 6\nSocial life and cus…  ### 6\nFantasy               ### 6\n                      ... and 775 more subjects\n\nA book can have several subjects, so the bars add up to 1194, not 97.\n@@MENU@@\nChoose: 0\nBye.", "lines": 357}, {"n": 9, "title": "List, sorted", "option": "7", "goal": "Let the user pick title, year or pages, and print the table sorted by it.", "say": "sort_records() splits off the records with a missing value, sorts the rest with a key function, and puts the missing ones at the end.", "brief": "Let the user pick a field and print the records sorted by it. Reuse the function that prints one row in option 5. Records with a missing value go at the end of the list.", "blocks": [{"name": "get_title(), get_year(), get_pages()", "kind": "function", "code": "# one small function per field, to pass to sorted() as key (brief, option 7)\ndef get_title(record: dict) -> str:\n    return record[\"title\"].lower()\n\n\ndef get_year(record: dict) -> int:\n    return record[\"year\"]\n\n\ndef get_pages(record: dict) -> int:\n    return record[\"pages\"]", "what": "Three tiny functions, one per field, for <code>sorted(key=...)<\/code>.", "steps": ["We pass the function's <em>name<\/em>, without brackets: <code>key=get_year<\/code>. <code>sorted()<\/code> calls it on every record.", "The title is lowercased so \"arctic\" and \"Arctic\" sort together."], "lessons": ["s4|function as a value", "s4|type hint", "s4|->"]}, {"name": "sort_records()", "kind": "function", "code": "def sort_records(records: list, field: str) -> list:\n    \"\"\"Sort by a field. Records missing that field go at the end.\"\"\"\n    if field == \"title\":\n        return sorted(records, key=get_title)\n\n    # sorting a list with None in it raises TypeError, so split it in two first\n    with_value = []\n    without_value = []\n    for record in records:\n        if record[field] is None:\n            without_value.append(record)\n        else:\n            with_value.append(record)\n\n    if field == \"year\":\n        with_value = sorted(with_value, key=get_year)                 # oldest first\n    else:\n        with_value = sorted(with_value, key=get_pages, reverse=True)  # longest first\n\n    return with_value + without_value", "what": "Sorts the records by title, year or pages, with missing values at the end.", "steps": ["Python cannot compare <code>None<\/code> with a number (TypeError), so the records are split into two lists first: the brief's own tip.", "Only the list with values is sorted. <code>with_value + without_value<\/code> joins them, missing ones last."], "lessons": ["s2|sorted()", "s4|keyword argument", "s2|None / is None", "s2|TypeError", "s4|guard clause"]}, {"name": "show_sorted()", "kind": "function", "code": "def show_sorted(records: list):\n    \"\"\"Ask which field to sort by and print the sorted table.\"\"\"\n    print(\"Sort by:  1 title   2 year   3 pages\")\n    choice = input(\"> \").strip()\n\n    if choice == \"1\":\n        field = \"title\"\n    elif choice == \"2\":\n        field = \"year\"\n    elif choice == \"3\":\n        field = \"pages\"\n    else:\n        print(\"Please type 1, 2 or 3.\")\n        return\n\n    print()\n    print_header()\n    for record in sort_records(records, field):\n        print_row(record)    # same row as option 5, so both look the same", "what": "Option 7, the screen side: asks for the field, then prints the sorted table.", "steps": ["The answer is compared with <code>\"1\"<\/code>, <code>\"2\"<\/code>, <code>\"3\"<\/code> as text, because <code>input()<\/code> always gives a string.", "It reuses <code>print_header()<\/code> and <code>print_row()<\/code> from option 5."], "lessons": ["s3|if", "s3|elif", "s3|else", "s4|composition"]}, {"name": "main()", "kind": "main() grows", "code": "def main():\n    records = []      # the data we are working with, empty at the start\n\n    while True:\n        show_menu()\n        choice = input(\"Choose: \").strip().lower()\n        # if they typed a number, swap it for its name. A name stays as it is.\n        choice = NUMBER_TO_NAME.get(choice, choice)\n\n        if choice == \"fetch\":\n            raw = fetch()\n            if raw is not None:\n                records, rejected = clean(raw)\n                print(f\"{len(records)} records loaded, {rejected} rows rejected.\")\n\n        elif choice == \"load\":\n            loaded = load()\n            if loaded is not None:\n                records = loaded\n\n        elif choice == \"quit\":\n            print(\"Bye.\")\n            break\n\n        elif choice in [\"save\", \"search\", \"summary\", \"chart\", \"sort\"]:\n            # these options all need data first\n            if len(records) == 0:\n                print(\"No data yet. Fetch it (1) or load the backup (3) first.\")\n            elif choice == \"save\":\n                save(records)\n            elif choice == \"search\":\n                show_search(records)\n            elif choice == \"summary\":\n                summary(records)\n            elif choice == \"chart\":\n                chart(records)\n            elif choice == \"sort\":\n                show_sorted(records)\n\n        else:\n            print(\"Please type a number from 0 to 7, or a name like search.\")", "added": [25, 37, 38], "what": "The last option joins the list.", "steps": [], "lessons": []}], "output": "=== DATA EXPLORER =========================\n  1  fetch    Fetch fresh data from the API\n  2  save     Save current data to the backup file\n  3  load     Load data from the backup file\n  4  search   Search\n  5  summary  Summary report\n  6  chart    Group and chart\n  7  sort     List entries, sorted by an attribute\n  0  quit     Quit\n===========================================\nChoose: 3\n97 records loaded from backup.json.\n@@MENU@@\nChoose: 7\nSort by:  1 title   2 year   3 pages\n> 3\n\nTitle                             Author                   Year  Pages\n---------------------------------------------------------------------\nMountain of Black Glass           Tad Williams             1999    784\nDer Zauberberg                    Thomas Mann              1924    729\nThe Big Rock Candy Mountain       Wallace Stegner          1943    563\nWild Mountain Honey               Carol Finch              1991    479\nScorpion Mountain                 John Flanagan            2014    471\nGray Mountain                     John Grisham             2014    468\nScorpion Mountain (Brotherband …  John Flanagan            2014    466\nMountain in the Sea               Ray Nayler               2022    464\nCold Mountain                     Charles Frazier          1997    449\nMountain Rose                     Norah Hess               1993    448\nThe Seven Storey Mountain         Thomas Merton            1948    435\nAnd the Mountains Echoed          Khaled Hosseini          2013    430\nAstoria                           Washington Irving        1800    414\nShelter Mountain                  Robyn Carr               2007    395\nMountain Girl Illustrated         Emma Payne Erskine       2019    393\nOutlaw mountain                   J. A. Jance              1999    384\nCalifornia and Oregon trail       Francis Parkman          1872    381\nThe mountains of California       John Reid Muir           1894    381\nThe Mountains Sing                Phan Quế Mai Nguyễn      2020    352\nMoses, man of the mountain        Zora Neale Hurston       1939    351\nThree Swedish Mountain Men        Lily Gold                2021    346\nDragon's Gate (Golden Mountain …  Laurence Yep             1993    335\nMountains Beyond Mountains        Tracy Kidder             2003    332\nThe first mountain man            William W. Johnstone     1991    320\nChina Mountain Zhang              Maureen F. McHugh        1751    320\nMountain Laurel (Montgomery)      Jude Deveraux            1990    312\nMinecraft                         Max Brooks               2021    311\nWild Mountain Thyme               Rosamunde Pilcher        1978    309\nMountains of the mind             Robert Macfarlane        2003    306\nA lady's life in the Rocky Moun…  Isabella L. Bird         1879    296\nClose Range                       Annie Proulx             1999    296\nCrimson mountain                  Grace Livingston Hill    1942    296\nThe angry mountain                Hammond Innes            1950    294\nMover of men and mountains        Robert Gilmour LeTour…   1960    293\nOn South Mountain                 David Cruise             1997    290\nBull Mountain                     Brian Panowich           2015    290\nTo the Far Blue Mountains         Louis L'Amour            1976    287\n山の音                               川端康成                     1954    286\nWhere the Mountain Meets the Mo…  Grace Lin                2009    282\nMountain Wild                     Stacey Kayne             2009    280\nAcross a Hundred Mountains        Reyna Grande             2006    272\nA good scent from a strange mou…  Robert Olen Butler       1992    268\nCat Who Moved a Mountain (Cat W…  Lilian Jackson Braun     1992    261\nFrightful's Mountain              Jean Craighead George    1999    258\nThe Whispering Mountain (Wolves…  Joan Aiken               1968    258\nThe Boy at the Top of the Mount…  John Boyne               2015    257\nI bought a mountain               Thomas Firbank           1940    255\nCrackling Mountain and other st…  太宰 治                     1989    255\nMackenzie's Mountain              Linda Howard             1989    251\nSpencer's Mountain                Earl Hamner Jr.          1961    251\nThe Mountain Is You               Brianna Wiest            2020    248\nDragonwings CD                    Laurence Yep             1975    248\nThe fifth mountain                Paulo Coelho             2004    244\nGo Tell It on the Mountain        James Baldwin            1952    233\nLa montagna parlante              Elisabetta Dami          2006    224\nThe Mountain of Adventure         Enid Blyton              1949    222\nLost mountain                     Abra Taylor              1979    218\nGreen Mountain Man                Janet Dailey             1978    217\nThe Mountain Valley War           Louis L'Amour            1978    208\nVampire Mountain                  Darren Shan              2001    199\nLonely on the Mountain            Louis L'Amour            1900    194\nThe Over-Mountain Man             Emma Goldrick            1986    191\nAt the Mountains of Madness       H.P. Lovecraft           1968    189\nA Mountain For Luenda             Essie Summers            1983    189\nClimb every mountain              Lilian Peake             1989    188\nThe Black Mountain                Rex Stout                1954    188\nTreasure Mountain                 Louis L'Amour            1972    187\nFrom the highest mountain         Jeanne Allan             1991    187\nValley Deep, Mountain High        Anne Mather              1976    187\nBushranger's Mountain             Gordon Aalborg           1985    186\nMoonrise Over The Mountains       Lilian Peake             1975    186\nMy side of the mountain           Jean Craighead George    1959    177\nThe Secret of Skull Mountain      Leslie McFarlane         1948    177\nWhen the Tiger Came Down the Mo…  Nghi Vo                  2020    176\nEscape to Witch Mountain          Alexander Key            1968    172\nThe White Mountains (The Tripod…  Sam Youd                 1967    170\nOn the Far Side of the Mountain   Jean Craighead George    1990    170\nThe Mystery of Monster Mountain   M. V. Carey              1973    158\nThe Secret Mountain               Enid Blyton              1965    156\nFire on the mountain              Anita Desai              1977    145\nThunder Rolling in the Mountains  Scott O’Dell             1992    144\nThe Farthest-Away Mountain        Lynne Reid Banks         1976    140\nDread Mountain (Deltora Quest #…  Emily Rodda              2000    128\nMountain Top Mystery              Gertrude Chandler War…   1964    128\nThe Mystery on Blizzard Mountain  Gertrude Chandler War…   2001    121\nBringing the Mountain Home        SueEllen Campbell        1996    118\nMountain Born (Mountain Born #1)  Elizabeth Yates          1943    118\nThe living mountain               Nan Shepherd             1977    114\nThe way to rainy mountain         N. Scott Momaday         1969     88\nDesert, mountain, sea             Sue Leather              2000     88\nBrokeback Mountain                Annie Proulx             1997     65\nThe bears on Hemlock Mountain     Alice Dalgliesh          2000     62\nMing Lo Moves the Mountain        Arnold Lobel             1982     32\nWhen I Was Young in the Mountai…  Cynthia Rylant           1887     32\nSnuggle Mountain                  Lindsey Lane             2003     31\nWorkbook for the Mountain Is You  Smart Reads              2022      —\nMountain Mistress                 Nadine Crenshaw          1987      —\n@@MENU@@\nChoose: 7\nSort by:  1 title   2 year   3 pages\n> 5\nPlease type 1, 2 or 3.\n@@MENU@@\nChoose: 0\nBye.", "lines": 420}, {"n": 10, "title": "Quit safely", "option": "0", "goal": "Warn before quitting if the data in memory was never saved.", "say": "main() keeps an unsaved flag; quit calls confirm_quit(), which only asks when there is something to lose.", "brief": "Leave the program. If the data in memory has not been saved, warn the user first.", "blocks": [{"name": "confirm_quit()", "kind": "function", "code": "def confirm_quit(unsaved: bool) -> bool:\n    \"\"\"Return True if the program should stop.\"\"\"\n    if not unsaved:\n        return True\n    answer = input(\"You have unsaved data. Quit anyway? (y/n): \").strip().lower()\n    return answer == \"y\"", "what": "Decides whether to quit: straight away if everything is saved, otherwise only after a yes.", "steps": ["<code>answer == \"y\"<\/code> is itself True or False, so we can return it directly."], "lessons": ["s3|and / or / not", "s4|guard clause", "s4|int / float / str / bool"]}, {"name": "main()", "kind": "main() grows", "code": "def main():\n    records = []      # the data we are working with, empty at the start\n    unsaved = False   # True when we have data that is not in the backup yet\n\n    while True:\n        show_menu()\n        choice = input(\"Choose: \").strip().lower()\n        # if they typed a number, swap it for its name. A name stays as it is.\n        choice = NUMBER_TO_NAME.get(choice, choice)\n\n        if choice == \"fetch\":\n            raw = fetch()\n            if raw is not None:\n                records, rejected = clean(raw)\n                print(f\"{len(records)} records loaded, {rejected} rows rejected.\")\n                unsaved = True\n\n        elif choice == \"load\":\n            loaded = load()\n            if loaded is not None:\n                records = loaded\n                unsaved = False    # it came from the backup, so it is already saved\n\n        elif choice == \"quit\":\n            if confirm_quit(unsaved):\n                print(\"Bye.\")\n                break\n\n        elif choice in [\"save\", \"search\", \"summary\", \"chart\", \"sort\"]:\n            # these options all need data first\n            if len(records) == 0:\n                print(\"No data yet. Fetch it (1) or load the backup (3) first.\")\n            elif choice == \"save\":\n                save(records)\n                unsaved = False\n            elif choice == \"search\":\n                show_search(records)\n            elif choice == \"summary\":\n                summary(records)\n            elif choice == \"chart\":\n                chart(records)\n            elif choice == \"sort\":\n                show_sorted(records)\n\n        else:\n            print(\"Please type a number from 0 to 7, or a name like search.\")", "added": [3, 16, 22, 25, 26, 27, 35], "what": "main() is finished: it remembers whether the data is saved.", "steps": ["<code>unsaved<\/code> is a True/False flag: True after a fetch, False after a save or a load.", "Quit asks <code>confirm_quit(unsaved)<\/code>, and only breaks out of the loop if it says yes."], "lessons": ["s1|True / False / None"]}], "output": "=== DATA EXPLORER =========================\n  1  fetch    Fetch fresh data from the API\n  2  save     Save current data to the backup file\n  3  load     Load data from the backup file\n  4  search   Search\n  5  summary  Summary report\n  6  chart    Group and chart\n  7  sort     List entries, sorted by an attribute\n  0  quit     Quit\n===========================================\nChoose: 1\nFetching from openlibrary.org ...\n97 records loaded, 3 rows rejected.\n@@MENU@@\nChoose: 0\nYou have unsaved data. Quit anyway? (y/n): n\n@@MENU@@\nChoose: 2\nReplacing the existing backup.\n97 records saved to backup.json.\n@@MENU@@\nChoose: 0\nBye.", "lines": 438}];
+const FINAL_CODE = "import json\nfrom pathlib import Path\n\nimport requests\n\n\n# ============================================================\n# SETTINGS\n# ============================================================\n\n# the API address. fields= picks the fields I want, limit=100 means up to 100 books\nURL = \"https://openlibrary.org/search.json?q=mountains&fields=title,author_name,first_publish_year,number_of_pages_median,subject&limit=100\"\n\n# where option 2 saves the data and option 3 loads it from\nBACKUP_FILE = Path(\"backup.json\")\n\n# the line under the table header and above the totals\nLINE = \"-\" * 69\n\n\n# ============================================================\n# OPTION 1 - FETCH: download the data and clean it\n# ============================================================\n\n\ndef fetch():\n    \"\"\"Download the raw books from Open Library. Returns None if it fails.\"\"\"\n    try:\n        print(\"Fetching from openlibrary.org ...\")\n        r = requests.get(URL, timeout=30)   # no timeout = could wait forever (session 7)\n        r.raise_for_status()                # a 404 or 500 does not raise by itself\n        data = r.json()\n        return data[\"docs\"]                 # the list of books is under \"docs\"\n    except requests.Timeout:\n        print(\"The server is too slow, try again later.\")\n    except requests.ConnectionError:\n        print(\"No internet connection.\")\n    except requests.HTTPError as e:\n        print(f\"The API said no: {e}\")\n    except ValueError:\n        print(\"The answer was not valid JSON.\")\n    except KeyError:\n        print(\"The answer had no 'docs' in it.\")\n    return None\n\n\ndef to_int(value):\n    \"\"\"Turn a value into an int, or None if it is missing or not a number.\"\"\"\n    if value is None:\n        return None\n    try:\n        return int(value)\n    except ValueError:\n        return None\n\n\ndef clean(raw_books: list) -> tuple:\n    \"\"\"Turn the raw books into clean records and count the rejected ones.\"\"\"\n    records = []\n    seen = set()     # titles already kept, to catch duplicates\n    rejected = 0\n\n    for book in raw_books:\n        # a row that is not a dict is unusable\n        if not isinstance(book, dict):\n            rejected = rejected + 1\n            continue\n\n        title = book.get(\"title\")\n        # no title (None or \"\") -> reject\n        if title is None or title.strip() == \"\":\n            rejected = rejected + 1\n            continue\n\n        # same title twice -> duplicate, keep only the first one\n        if title.lower() in seen:\n            rejected = rejected + 1\n            continue\n        seen.add(title.lower())\n\n        # missing numbers become None, missing lists become []\n        # to_int makes sure a year is always an int, never the string \"2012\"\n        record = {\n            \"title\": title.strip(),\n            \"authors\": book.get(\"author_name\", []),\n            \"year\": to_int(book.get(\"first_publish_year\")),\n            \"pages\": to_int(book.get(\"number_of_pages_median\")),\n            \"subjects\": book.get(\"subject\", []),\n        }\n        records.append(record)\n\n    return records, rejected\n\n\n# ============================================================\n# OPTION 2 - SAVE: write the clean records to backup.json\n# ============================================================\n\n\ndef save(records: list):\n    \"\"\"Save the records to the backup file as readable JSON.\"\"\"\n    if BACKUP_FILE.exists():\n        print(\"Replacing the existing backup.\")\n\n    # \"w\" = write mode, it creates the file or overwrites it\n    with open(BACKUP_FILE, \"w\", encoding=\"utf-8\") as f:\n        json.dump(records, f, indent=2)   # indent=2 so a person can read the file\n\n    print(f\"{len(records)} records saved to {BACKUP_FILE}.\")\n\n\n# ============================================================\n# OPTION 3 - LOAD: read the records back from backup.json\n# ============================================================\n\n\ndef load():\n    \"\"\"Load the records from the backup file. Returns None if it fails.\"\"\"\n    try:\n        with open(BACKUP_FILE, encoding=\"utf-8\") as f:\n            records = json.load(f)\n    except FileNotFoundError:\n        print(f\"There is no {BACKUP_FILE} yet. Fetch (1) and save (2) first.\")\n        return None\n    except ValueError:\n        print(f\"{BACKUP_FILE} is damaged and cannot be read.\")\n        return None\n\n    print(f\"{len(records)} records loaded from {BACKUP_FILE}.\")\n    return records\n\n\n# ============================================================\n# OPTION 4 - SEARCH: find books whose title contains a word\n# ============================================================\n\n\ndef search(records: list, word: str) -> list:\n    \"\"\"Return the records whose title contains the word (upper/lower case ignored).\"\"\"\n    word = word.lower()\n    matches = []\n    for record in records:\n        if word in record[\"title\"].lower():\n            matches.append(record)\n    return matches\n\n\ndef show_search(records: list):\n    \"\"\"Ask for a word and print the matching titles.\"\"\"\n    word = input(\"Search for: \").strip()\n    if word == \"\":\n        print(\"Please type at least one letter.\")\n        return\n\n    matches = search(records, word)\n    # finding nothing is a normal result, not an error\n    if len(matches) == 0:\n        print(f\"No books found with '{word}' in the title.\")\n        return\n\n    print(f\"{len(matches)} matches:\")\n    for record in matches:\n        print(f\"  {record['title']}\")\n\n\n# ============================================================\n# OPTION 5 - SUMMARY REPORT: all records as a table\n# ============================================================\n\n\ndef show(value) -> str:\n    \"\"\"Return the value as text, or a dash if it is missing (never None).\"\"\"\n    if value is None:\n        return \"—\"\n    return str(value)\n\n\ndef cut(text: str, width: int) -> str:\n    \"\"\"Cut text that is too long for its column and add … at the end.\"\"\"\n    if len(text) > width:\n        return text[:width - 1] + \"…\"\n    return text\n\n\ndef print_header():\n    \"\"\"Print the column names and a line under them.\"\"\"\n    print(f\"{'Title':<32}  {'Author':<22}  {'Year':>5}  {'Pages':>5}\")\n    print(LINE)\n\n\ndef print_row(record: dict):\n    \"\"\"Print one book as one line of the table. Options 5 and 7 both use this.\"\"\"\n    title = cut(record[\"title\"], 32)\n    # only the first author, or a dash if there is none\n    if len(record[\"authors\"]) > 0:\n        author = cut(record[\"authors\"][0], 22)\n    else:\n        author = \"—\"\n    year = show(record[\"year\"])\n    pages = show(record[\"pages\"])\n    print(f\"{title:<32}  {author:<22}  {year:>5}  {pages:>5}\")\n\n\ndef summary(records: list):\n    \"\"\"Print every record as a table with a total and an average at the bottom.\"\"\"\n    print()\n    print_header()\n\n    total_pages = 0\n    with_pages = 0\n    for record in records:\n        print_row(record)\n        if record[\"pages\"] is not None:\n            total_pages = total_pages + record[\"pages\"]\n            with_pages = with_pages + 1\n\n    print(LINE)\n    if with_pages > 0:\n        average = total_pages / with_pages\n        print(f\"{len(records)} records · {with_pages} with a page count · \"\n              f\"{total_pages:,} pages · average {average:.1f}\")\n    else:\n        print(f\"{len(records)} records · none with a page count\")\n\n\n# ============================================================\n# OPTION 6 - GROUP AND CHART: books per subject as a # bar chart\n# ============================================================\n\n\ndef count_subjects(records: list) -> dict:\n    \"\"\"Count how many books have each subject. One book can count in several subjects.\"\"\"\n    counts = {}\n    for record in records:\n        for subject in record[\"subjects\"]:\n            counts[subject] = counts.get(subject, 0) + 1\n    return counts\n\n\ndef get_count(pair: tuple) -> int:\n    \"\"\"For sorted(): a pair is (subject, count), sort by the count.\"\"\"\n    return pair[1]\n\n\ndef chart(records: list):\n    \"\"\"Print a bar chart of the 15 biggest subjects, biggest first.\"\"\"\n    counts = count_subjects(records)\n    if len(counts) == 0:\n        print(\"None of the books have a subject.\")\n        return\n\n    pairs = sorted(counts.items(), key=get_count, reverse=True)\n    top = pairs[:15]\n    biggest = top[0][1]\n\n    print()\n    print(\"Books per subject\")\n    for subject, count in top:\n        bar = \"#\" * round(count / biggest * 30)   # longest bar is 30 characters\n        print(f\"{cut(subject, 20):<20}  {bar} {count}\")\n\n    left_out = len(pairs) - len(top)\n    if left_out > 0:\n        print(\" \" * 22 + f\"... and {left_out} more subjects\")\n\n    total = 0\n    for subject, count in pairs:\n        total = total + count\n    print()\n    print(f\"A book can have several subjects, so the bars add up to {total}, not {len(records)}.\")\n\n\n# ============================================================\n# OPTION 7 - LIST, SORTED: records sorted by a chosen field\n# ============================================================\n\n\n# one small function per field, to pass to sorted() as key (brief, option 7)\ndef get_title(record: dict) -> str:\n    return record[\"title\"].lower()\n\n\ndef get_year(record: dict) -> int:\n    return record[\"year\"]\n\n\ndef get_pages(record: dict) -> int:\n    return record[\"pages\"]\n\n\ndef sort_records(records: list, field: str) -> list:\n    \"\"\"Sort by a field. Records missing that field go at the end.\"\"\"\n    if field == \"title\":\n        return sorted(records, key=get_title)\n\n    # sorting a list with None in it raises TypeError, so split it in two first\n    with_value = []\n    without_value = []\n    for record in records:\n        if record[field] is None:\n            without_value.append(record)\n        else:\n            with_value.append(record)\n\n    if field == \"year\":\n        with_value = sorted(with_value, key=get_year)                 # oldest first\n    else:\n        with_value = sorted(with_value, key=get_pages, reverse=True)  # longest first\n\n    return with_value + without_value\n\n\ndef show_sorted(records: list):\n    \"\"\"Ask which field to sort by and print the sorted table.\"\"\"\n    print(\"Sort by:  1 title   2 year   3 pages\")\n    choice = input(\"> \").strip()\n\n    if choice == \"1\":\n        field = \"title\"\n    elif choice == \"2\":\n        field = \"year\"\n    elif choice == \"3\":\n        field = \"pages\"\n    else:\n        print(\"Please type 1, 2 or 3.\")\n        return\n\n    print()\n    print_header()\n    for record in sort_records(records, field):\n        print_row(record)    # same row as option 5, so both look the same\n\n\n# ============================================================\n# OPTION 0 - QUIT: warn if the data has not been saved\n# ============================================================\n\n\ndef confirm_quit(unsaved: bool) -> bool:\n    \"\"\"Return True if the program should stop.\"\"\"\n    if not unsaved:\n        return True\n    answer = input(\"You have unsaved data. Quit anyway? (y/n): \").strip().lower()\n    return answer == \"y\"\n\n\n# ============================================================\n# MENU\n# ============================================================\n\n\n# the user can type a number or a name. This dict turns a number into its name,\n# so the code below can say \"fetch\" instead of \"1\" and is easier to read.\nNUMBER_TO_NAME = {\n    \"1\": \"fetch\",\n    \"2\": \"save\",\n    \"3\": \"load\",\n    \"4\": \"search\",\n    \"5\": \"summary\",\n    \"6\": \"chart\",\n    \"7\": \"sort\",\n    \"0\": \"quit\",\n}\n\n\ndef show_menu():\n    \"\"\"Print the menu.\"\"\"\n    print()\n    print(\"=== DATA EXPLORER =========================\")\n    print(\"  1  fetch    Fetch fresh data from the API\")\n    print(\"  2  save     Save current data to the backup file\")\n    print(\"  3  load     Load data from the backup file\")\n    print(\"  4  search   Search\")\n    print(\"  5  summary  Summary report\")\n    print(\"  6  chart    Group and chart\")\n    print(\"  7  sort     List entries, sorted by an attribute\")\n    print(\"  0  quit     Quit\")\n    print(\"===========================================\")\n\n\ndef main():\n    records = []      # the data we are working with, empty at the start\n    unsaved = False   # True when we have data that is not in the backup yet\n\n    while True:\n        show_menu()\n        choice = input(\"Choose: \").strip().lower()\n        # if they typed a number, swap it for its name. A name stays as it is.\n        choice = NUMBER_TO_NAME.get(choice, choice)\n\n        if choice == \"fetch\":\n            raw = fetch()\n            if raw is not None:\n                records, rejected = clean(raw)\n                print(f\"{len(records)} records loaded, {rejected} rows rejected.\")\n                unsaved = True\n\n        elif choice == \"load\":\n            loaded = load()\n            if loaded is not None:\n                records = loaded\n                unsaved = False    # it came from the backup, so it is already saved\n\n        elif choice == \"quit\":\n            if confirm_quit(unsaved):\n                print(\"Bye.\")\n                break\n\n        elif choice in [\"save\", \"search\", \"summary\", \"chart\", \"sort\"]:\n            # these options all need data first\n            if len(records) == 0:\n                print(\"No data yet. Fetch it (1) or load the backup (3) first.\")\n            elif choice == \"save\":\n                save(records)\n                unsaved = False\n            elif choice == \"search\":\n                show_search(records)\n            elif choice == \"summary\":\n                summary(records)\n            elif choice == \"chart\":\n                chart(records)\n            elif choice == \"sort\":\n                show_sorted(records)\n\n        else:\n            print(\"Please type a number from 0 to 7, or a name like search.\")\n\n\n# ============================================================\n# START THE PROGRAM\n# ============================================================\n\n\ntry:\n    main()\nexcept KeyboardInterrupt:\n    # Ctrl-C should not show a traceback\n    print(\"\\nBye.\")\n";
+const stepColour = n => `oklch(var(--sess-l) var(--sess-c) ${255 - (n - 1) * 26})`;
+const cardId = (n, name) => `p${n}-` + name.replace(/\(\)/g, '').split(/[ ,]+/)[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+const noteKeyOf = (n, name) => `p1|${n}|${name}`;
 
 const REQUIREMENTS = [
   ['Bad input never crashes the program', 'Unknown menu choices hit the <code>else</code> in <code>main()</code>; an empty search is refused in <code>show_search()</code>; Ctrl-C is caught around <code>main()</code>.', true],
@@ -1248,7 +778,7 @@ const REQUIREMENTS = [
   ['Catch specific exceptions, never a bare except', '<code>fetch()</code>, <code>to_int()</code>, <code>load()</code> and the start block each name the exception they expect.', true],
   ['One function, one job', 'Logic and screen are split: <code>search</code>/<code>show_search</code>, <code>count_subjects</code>/<code>chart</code>, <code>sort_records</code>/<code>show_sorted</code>.', true],
   ['Standard Python plus requests', 'Imports are only <code>json</code>, <code>pathlib</code> and <code>requests</code>.', true],
-  ['Option 7 works', '<code>show_sorted()</code> now compares the answer with "1", "2" and "3". See the fix in option 7.', true]
+  ['Option 7 works', '<code>show_sorted()</code> compares the answer with "1", "2" and "3". (The copy in your Downloads compared it with "fetch", "save", "load", so option 7 never worked there.)', true]
 ];
 
 /* ---------- Page 2 data: the Python toolkit, in learning order ---------- */
@@ -1257,7 +787,7 @@ const LEVELS = [
     step: 'Step 1', title: 'Talking to the user', note: 'Values, names, and the two functions every terminal program starts with.',
     tools: [
       ['Variables', 'A name that holds a value. Assigning again replaces it.', 'records = []\nunsaved = False', ['main']],
-      ['CONSTANTS', 'By convention, UPPER_CASE names are set once and never changed.', 'TITLE_WIDTH = 32\nLINE = "-" * 69', ['print_header', 'print_row']],
+      ['CONSTANTS', 'By convention, UPPER_CASE names are set once and never changed.', 'BACKUP_FILE = Path("backup.json")\nLINE = "-" * 69', ['save', 'load', 'print_header']],
       ['# comments and """docstrings"""', 'Notes for people. A docstring is the first string in a function and says what it does.', '"""Print the menu."""', ['every function']],
       ['print()', 'Writes text to the terminal. print() with nothing writes an empty line.', 'print("Bye.")', ['show_menu', 'summary', 'chart']],
       ['input()', 'Shows a prompt, waits for the user, and returns what they typed as a string.', 'choice = input("Choose: ")', ['main', 'show_search', 'show_sorted', 'confirm_quit']],
@@ -1276,7 +806,7 @@ const LEVELS = [
       ['Slicing [:n]', 'Takes the first n characters of a string (or items of a list).', 'text[:width - 1] + "…"', ['cut', 'chart']],
       ['str()', 'Turns any value into text.', 'return str(value)', ['show']],
       ['f-strings', 'f"..." puts values inside text with {braces}.', 'f"{len(records)} records saved."', ['save', 'load', 'summary']],
-      ['Alignment :< and :>', 'Pads to a width, left (:<) or right (:>). The width can itself be a variable.', 'f"{title:<{TITLE_WIDTH}}  {year:>5}"', ['print_header', 'print_row', 'chart']],
+      ['Alignment :< and :>', 'Pads to a width, left (:<) or right (:>).', 'f"{title:<32}  {year:>5}"', ['print_header', 'print_row', 'chart']],
       ['Number format :, and :.1f', ':, adds thousands separators; :.1f keeps one decimal.', 'f"{total_pages:,} · {average:.1f}"', ['summary']]
     ]
   },
@@ -1337,10 +867,9 @@ const LEVELS = [
     tools: [
       ['try / except', 'Runs the try block; if a named error happens, runs that except block instead of crashing.', 'try:\n    return int(value)\nexcept ValueError:\n    return None', ['to_int', 'fetch', 'load']],
       ['except ... as e', 'Keeps the error object so its message can be shown.', 'except requests.HTTPError as e:\n    print(f"The API said no: {e}")', ['fetch']],
-      ['ValueError', 'A value of the right type but wrong content, like int("abc") or broken JSON from r.json().', 'except ValueError:', ['to_int', 'fetch']],
+      ['ValueError', 'A value of the right type but wrong content, like int("abc"), or text that is not valid JSON (from r.json() or a damaged backup).', 'except ValueError:', ['to_int', 'fetch', 'load']],
       ['KeyError', 'A dict key that does not exist, like data["docs"] in an odd answer.', 'except KeyError:', ['fetch']],
       ['FileNotFoundError', 'Opening a file that is not there.', 'except FileNotFoundError:', ['load']],
-      ['json.JSONDecodeError', 'The file exists but is not valid JSON.', 'except json.JSONDecodeError:', ['load']],
       ['KeyboardInterrupt', 'Raised when the user presses Ctrl-C.', 'except KeyboardInterrupt:\n    print("\\nBye.")', ['start block']]
     ]
   },
@@ -1397,38 +926,7 @@ function highlight(code, bugLines) {
   }).join('\n');
 }
 
-/* ---------- Render page 1 ---------- */
-function slug(name) { return 'fn-' + name.replace(/\(\)/g, '').split(/[ ·,]+/)[0].toLowerCase(); }
-const index = document.getElementById('index');
-const optionsEl = document.getElementById('options');
-for (const opt of OPTIONS) {
-  const hasBug = opt.fns.some(f => f.bug);
-  index.insertAdjacentHTML('beforeend', `<a href="#${opt.id}" class="${hasBug ? 'has-bug' : ''}"><span class="n">${opt.num}</span>${opt.title}</a>`);
-  const fns = opt.fns.map(f => `
-    <article class="fn${f.bug ? ' bug' : ''}" id="${slug(f.name)}">
-      <div class="code">
-        <div class="code-name"><span>${esc(f.name)}</span><span class="kind">${f.kind}</span></div>
-        <pre><code>${highlight(f.code, f.bug)}</code></pre>
-      </div>
-      <div class="explain">
-        <p class="what">${f.what}</p>
-        <ol>${f.steps.map(s => `<li>${s}</li>`).join('')}</ol>
-        ${f.bugNote ? `<div class="flag"><b>Fixed.</b> ${f.bugNote}<pre>${esc(f.bugFix)}</pre></div>` : ''}
-        ${f.meets.length ? `<div class="meets">${f.meets.map(m => `<span class="chip">${m}</span>`).join('')}</div>` : ''}
-      </div>
-    </article>`).join('');
-  optionsEl.insertAdjacentHTML('beforeend', `
-    <section class="option" id="${opt.id}">
-      <div class="option-head">
-        <span class="option-num">${opt.num}</span>
-        <h2>${opt.title}</h2>
-        <p class="spec"><span class="spec-label">The brief</span>${opt.spec}</p>
-        <details class="output"><summary>Expected output</summary><div class="terminal">${opt.output}</div></details>
-      </div>
-      ${fns}
-    </section>`);
-}
-index.insertAdjacentHTML('beforeend', `<a href="#requirements"><span class="n">§4</span>Requirements</a>`);
+/* ---------- Page 1: the requirements table at the end ---------- */
 document.getElementById('req').innerHTML =
   '<thead><tr><th>Rule in the brief</th><th>Where the code meets it</th><th>Status</th></tr></thead><tbody>' +
   REQUIREMENTS.map(([rule, where, ok]) => `<tr><td>${rule}</td><td>${where}</td><td><span class="status ${ok ? 'ok' : 'no'}">${ok ? '✓ met' : '✗ fix'}</span></td></tr>`).join('') +
@@ -1436,8 +934,9 @@ document.getElementById('req').innerHTML =
 
 /* ---------- Render page 2 ---------- */
 const FN_TARGET = {};
-for (const opt of OPTIONS) for (const f of opt.fns) for (const part of f.name.replace(/\(\)/g, '').split(/\s*[·,]\s*/)) FN_TARGET[part.trim()] = slug(f.name);
-FN_TARGET['start block'] = slug('start of the program');
+// Toolkit cards link to the card that uses them; a later step wins, so main() means the finished one.
+for (const st of PROJECT_STEPS) for (const b of st.blocks) for (const part of b.name.replace(/\(\)/g, '').split(/\s*,\s*/)) FN_TARGET[part.trim()] = cardId(st.n, b.name);
+FN_TARGET['start block'] = FN_TARGET.start;
 const levelsEl = document.getElementById('levels');
 for (const lv of LEVELS) {
   const cards = lv.tools.map(([name, text, ex, used]) => {
@@ -1524,7 +1023,7 @@ Cold days: 3`,
 // The project's code with comments and the text inside strings removed, so a
 // word that only appears in a comment ("traceback") does not count as used.
 // Strings go first, so the "#" in "#" * round(...) is not read as a comment.
-const PROJECT_CODE = OPTIONS.flatMap(o => o.fns.map(f => f.code)).join('\n')
+const PROJECT_CODE = FINAL_CODE
   .replace(/"""[\s\S]*?"""/g, '""')
   .replace(/f?"[^"\n]*"/g, '""')
   .replace(/#.*$/gm, '');
@@ -1777,7 +1276,20 @@ lessonIndex.addEventListener('click', e => {
 
 // "You are here": the session and section under the top bar, updated while scrolling.
 const hereEl = document.getElementById('here');
+function updateHereProject() {
+  const probe = document.querySelector('.top').getBoundingClientRect().bottom + 60;
+  let step = null;
+  for (const d of document.querySelectorAll('#steps details.pstep')) if (d.getBoundingClientRect().top <= probe) step = d;
+  if (!step || step.getBoundingClientRect().bottom < probe) { hereEl.hidden = true; return; }
+  let card = '';
+  if (step.open) for (const c of step.querySelectorAll('.pcard')) if (c.getBoundingClientRect().top <= probe) card = c.dataset.name;
+  hereEl.innerHTML = `<span class="here-session">Project One</span><span class="here-sep">›</span><span class="here-section">${esc(step.dataset.title)}</span>${card ? `<span class="here-sep">›</span><span class="here-section">${esc(card)}</span>` : ''}`;
+  hereEl.style.setProperty('--sess', step.style.getPropertyValue('--sess'));
+  hereEl.hidden = false;
+}
 function updateHere() {
+  const proj = document.getElementById('page-project');
+  if (proj && !proj.hidden) { updateHereProject(); return; }
   const page = document.getElementById('page-lessons');
   if (!page || page.hidden) { hereEl.hidden = true; return; }
   const probe = document.querySelector('.top').getBoundingClientRect().bottom + 60;
@@ -1805,6 +1317,7 @@ window.addEventListener('scroll', () => {
   requestAnimationFrame(() => { hereQueued = false; updateHere(); });
 }, { passive: true });
 lessonsEl.addEventListener('toggle', updateHere, true);
+document.getElementById('steps').addEventListener('toggle', updateHere, true);
 
 /* ---------- Colour the term each box explains ---------- */
 // From a box name like ".split()", "min() / max()" or "== != < <=", the code
@@ -1877,6 +1390,150 @@ for (const pre of lessonsEl.querySelectorAll('pre.vocab-ex')) {
   markIn(pre, termRegex([...termTokens(pre.dataset.term), ...termTokens(pre.dataset.box)]));
 }
 
+/* ---------- Render page 1: Project One, step by step ---------- */
+const stepsEl = document.getElementById('steps');
+const stepIndex = document.getElementById('step-index');
+const projectEl = document.getElementById('page-project');
+const LESSON_BOX = {};
+for (const it of lessonsEl.querySelectorAll('.item[data-key]')) LESSON_BOX[it.dataset.key] = it;
+
+function lchip(key) {
+  const it = LESSON_BOX[key];
+  if (!it) return '';
+  const bar = key.indexOf('|');
+  return `<button type="button" class="lchip" data-lkey="${esc(key)}" style="--chip: ${sessColour(Number(key.slice(1, bar)))}" aria-expanded="false" title="Open lesson box ${it.dataset.num}"><b>${it.dataset.num}</b>${esc(key.slice(bar + 1))}</button>`;
+}
+function codeWithAdds(code, added) {
+  return code.split('\n').map((l, i) => {
+    const h = highlightLine(l) || ' ';
+    return added && added.includes(i + 1) ? `<span class="addline">${h}</span>` : h;
+  }).join('\n');
+}
+// The user's answers stand out from what the program prints; later menus fold into one line.
+function terminalHtml(out) {
+  return out.split('\n').map(line => {
+    if (line === '@@MENU@@') return '<span class="t-menu">   … the menu again …</span>';
+    const m = line.match(/^(Choose: |Search for: |> |.*\(y\/n\): )(.*)$/);
+    if (m) return `<span class="you">${esc(m[1])}</span><span class="ans">${m[2] ? esc(m[2]) : '⏎ (just Enter)'}</span>`;
+    return esc(line);
+  }).join('\n');
+}
+
+for (const s of PROJECT_STEPS) {
+  const col = stepColour(s.n);
+  stepIndex.insertAdjacentHTML('beforeend', `<a href="#step-${s.n}" data-open="step-${s.n}" style="--sess: ${col}"><span class="n">${s.n}</span>${esc(s.title)}</a>`);
+  const cards = s.blocks.map(b => `
+    <article class="fn pcard" id="${cardId(s.n, b.name)}" data-key="${esc(noteKeyOf(s.n, b.name))}" data-step="${s.n}" data-name="${esc(b.name)}">
+      <div class="code"><div class="code-name"><span>${esc(b.name)}</span><span class="kind">${esc(b.kind)}</span></div><pre><code>${codeWithAdds(b.code, b.added)}</code></pre></div>
+      <div class="explain">
+        <p class="what">${b.what}</p>
+        ${b.steps.length ? `<ol>${b.steps.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}
+        ${b.lessons.length ? `<div class="lchips">${b.lessons.map(lchip).join('')}</div>` : ''}
+        <button type="button" class="note-dot" aria-pressed="false">Question or comment</button>
+      </div>
+      <div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button></div>
+    </article>`).join('');
+  stepsEl.insertAdjacentHTML('beforeend', `
+    <details class="pstep" id="step-${s.n}" style="--sess: ${col}" data-title="Step ${s.n} · ${esc(s.title)}">
+      <summary><span class="pstep-num">${s.n}</span><span class="pstep-title">${esc(s.title)}<span class="pstep-opt">${s.option === '≡' ? 'the menu' : 'option ' + s.option}</span></span><p class="pstep-goal">${esc(s.goal)}</p><span class="sess-progress pstep-progress"></span></summary>
+      <div class="pstep-body">
+        <p class="pstep-brief"><span class="spec-label">The brief says</span>${esc(s.brief)}</p>
+        ${cards}
+        <details class="prun"><summary>▶ Run it: what the terminal shows <span class="pstep-size">explorer.py is now ${s.lines} lines</span></summary><div class="terminal">${terminalHtml(s.output)}</div></details>
+        <p class="pstep-say"><span class="spec-label">Say it on Tuesday</span>${esc(s.say)}</p>
+      </div>
+    </details>`);
+}
+// Each step shows how many of its cards are marked Got it; a finished step gets a tick in the index.
+function refreshSteps() {
+  for (const step of document.querySelectorAll('#steps details.pstep')) {
+    const cs = [...step.querySelectorAll('.pcard')];
+    const got = cs.filter(c => c.dataset.mark === 'got').length;
+    const mid = cs.filter(c => c.dataset.mark === 'mid').length;
+    const late = cs.filter(c => c.dataset.mark === 'late').length;
+    step.querySelector('.pstep-progress').innerHTML = `<span class="pg-bar"><i style="width:${(got / cs.length * 100).toFixed(1)}%"></i></span><span>${got}/${cs.length} got it</span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${late ? `<span class="pg-late">${late} no time</span>` : ''}`;
+    const pill = stepIndex.querySelector(`a[data-open="${step.id}"]`);
+    if (pill) pill.classList.toggle('done', got === cs.length);
+  }
+}
+stepIndex.addEventListener('click', e => {
+  const a = e.target.closest('a[data-open]');
+  if (!a) return;
+  e.preventDefault();
+  openTarget(a.dataset.open);
+});
+
+document.getElementById('final-lines').textContent = String(FINAL_CODE.split('\n').length - 1);
+const finalStatus = document.getElementById('final-status');
+document.getElementById('dl-final').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([FINAL_CODE], { type: 'text/x-python' }));
+  a.download = 'explorer.py';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  finalStatus.textContent = 'Downloaded.';
+});
+document.getElementById('copy-final').addEventListener('click', () => {
+  navigator.clipboard.writeText(FINAL_CODE)
+    .then(() => { finalStatus.textContent = 'Copied. Paste it into explorer.py in VS Code.'; })
+    .catch(() => { finalStatus.textContent = 'Copying is blocked here; use Download instead.'; });
+});
+
+/* A lesson box, popped over the project: a copy of the real box, without its marks. */
+const lpop = document.getElementById('lpop');
+const lpopBody = document.getElementById('lpop-body');
+const lpopWhere = document.getElementById('lpop-where');
+const lpopGo = document.getElementById('lpop-go');
+let lpopChip = null;
+function openLesson(chip) {
+  const src = LESSON_BOX[chip.dataset.lkey];
+  if (!src) return;
+  if (lpopChip) lpopChip.setAttribute('aria-expanded', 'false');
+  const copy = src.cloneNode(true);
+  copy.removeAttribute('id'); delete copy.dataset.key; copy.hidden = false;
+  copy.classList.remove('expanded', 'flash');
+  copy.style.removeProperty('flex-basis');
+  for (const x of copy.querySelectorAll('.marks, .note-dot, .note-list, .note-editor, .resize-handle, .expand-btn')) x.remove();
+  const more = copy.querySelector('details.more');
+  if (more) more.open = true;
+  const wrap = document.createElement('div');
+  wrap.className = 'lgroup';
+  wrap.style.setProperty('--h', src.closest('.lgroup').style.getPropertyValue('--h'));
+  wrap.append(copy);
+  lpopBody.replaceChildren(wrap);
+  const key = chip.dataset.lkey;
+  lpop.style.setProperty('--sess', sessColour(Number(key.slice(1, key.indexOf('|')))));
+  lpopWhere.textContent = `${src.closest('details.lesson').dataset.title} · box ${src.dataset.num}`;
+  lpopGo.dataset.target = src.id;
+  lpop.hidden = false;
+  lpopBody.scrollTop = 0;
+  chip.setAttribute('aria-expanded', 'true');
+  lpopChip = chip;
+}
+function closeLesson() {
+  lpop.hidden = true;
+  if (lpopChip) lpopChip.setAttribute('aria-expanded', 'false');
+  lpopChip = null;
+}
+projectEl.addEventListener('click', e => {
+  const chip = e.target.closest('.lchip');
+  if (chip) { if (lpopChip === chip && !lpop.hidden) closeLesson(); else openLesson(chip); return; }
+  if (e.target.closest('#lpop-close')) { closeLesson(); return; }
+  if (e.target.closest('#lpop-go')) {
+    const id = lpopGo.dataset.target;
+    closeLesson();
+    activeFilter = 'all'; applyFilter();
+    showPage('lessons', false);
+    openTarget(id);
+    const item = document.getElementById(id);
+    item.classList.add('flash');
+    setTimeout(() => item.classList.remove('flash'), 1600);
+    return;
+  }
+  if (!lpop.hidden && !e.target.closest('#lpop')) closeLesson();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !lpop.hidden) closeLesson(); });
+
 /* ---------- Marks and notes ---------- */
 // Each box can have a mark (got / mid / late) and a note (a question or a
 // comment). Both live in this browser (localStorage). When the page is served
@@ -1895,7 +1552,9 @@ let activeFilter = 'all';
 const savedNote = document.getElementById('saved-note');
 
 const allItems = () => [...lessonsEl.querySelectorAll('.item[data-key]')];
-const itemByKey = key => allItems().find(i => i.dataset.key === key);
+// Everything that can hold notes: the lesson boxes and the project cards.
+const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #steps .pcard[data-key]')];
+const itemByKey = key => noteHosts().find(i => i.dataset.key === key);
 
 function paintItem(item) {
   const key = item.dataset.key;
@@ -1915,9 +1574,10 @@ function paintItem(item) {
     shown.innerHTML = `<span class="note-label">${note.kind === 'question' ? 'Your question' : 'Your comment'}</span>${esc(note.text)}`;
   } else if (shown) shown.remove();
 }
-function paintAll() { for (const it of allItems()) paintItem(it); refreshCounts(); renderReview(); if (activeFilter !== 'all') applyFilter(); }
+function paintAll() { for (const it of noteHosts()) paintItem(it); refreshCounts(); renderReview(); if (activeFilter !== 'all') applyFilter(); }
 
 function refreshCounts() {
+  refreshSteps();
   const items = allItems();
   const total = { got: 0, mid: 0, late: 0, none: 0 };
   for (const it of items) total[it.dataset.mark in total ? it.dataset.mark : 'none']++;
@@ -1977,7 +1637,7 @@ async function startSync() {
 }
 
 /* The note editor: one at a time, inside the box it belongs to. */
-function closeEditor() { const ed = lessonsEl.querySelector('.note-editor'); if (ed) ed.remove(); }
+function closeEditor() { const ed = document.querySelector('.note-editor'); if (ed) ed.remove(); }
 function openEditor(item) {
   const key = item.dataset.key;
   const open = item.querySelector('.note-editor');
@@ -2004,10 +1664,10 @@ function setNote(key, text, kind) {
   const item = itemByKey(key); paintItem(item); refreshCounts(); renderReview();
 }
 
-lessonsEl.addEventListener('click', e => {
+function onNoteClick(e) {
   const markBtn = e.target.closest('.mark');
   if (markBtn) {
-    const item = markBtn.closest('.item');
+    const item = markBtn.closest('.item, .pcard');
     const key = item.dataset.key;
     if (marks[key] === markBtn.dataset.mark) delete marks[key]; else marks[key] = markBtn.dataset.mark;
     saveLocal(); pushBox(key);
@@ -2016,10 +1676,10 @@ lessonsEl.addEventListener('click', e => {
     return;
   }
   const dot = e.target.closest('.note-dot');
-  if (dot) { openEditor(dot.closest('.item')); return; }
+  if (dot) { openEditor(dot.closest('.item, .pcard')); return; }
   const ed = e.target.closest('.note-editor');
   if (!ed) return;
-  const item = ed.closest('.item');
+  const item = ed.closest('.item, .pcard');
   const pick = e.target.closest('[data-kind]');
   if (pick && pick.closest('.kind-pick')) {
     ed.dataset.kind = pick.dataset.kind;
@@ -2029,7 +1689,9 @@ lessonsEl.addEventListener('click', e => {
   if (e.target.closest('.note-save')) { setNote(item.dataset.key, ed.querySelector('textarea').value, ed.dataset.kind); closeEditor(); }
   else if (e.target.closest('.note-delete')) { setNote(item.dataset.key, '', 'question'); closeEditor(); }
   else if (e.target.closest('.note-cancel')) closeEditor();
-});
+}
+lessonsEl.addEventListener('click', onNoteClick);
+projectEl.addEventListener('click', onNoteClick);
 document.getElementById('progress-bar').addEventListener('click', e => {
   const f = e.target.closest('.filter');
   if (!f) return;
@@ -2038,22 +1700,28 @@ document.getElementById('progress-bar').addEventListener('click', e => {
 });
 
 /* ---------- Review: questions, comments, confused and no time, together ---------- */
+function boxHead(item) {
+  if (item.classList.contains('pcard')) {
+    const step = item.closest('details.pstep');
+    return { sess: step.style.getPropertyValue('--sess'), name: `${step.dataset.title} · ${item.dataset.name}`, num: `P${item.dataset.step}`, text: item.querySelector('.what').textContent };
+  }
+  const lesson = item.closest('details.lesson');
+  const name = item.querySelector('h4 span:not(.box-num):not(.tag)').textContent;
+  return { sess: lesson.style.getPropertyValue('--sess'), name, num: item.dataset.num, text: item.querySelector('p').textContent };
+}
 function reviewEntry(key) {
   const item = itemByKey(key);
   if (!item) return '';
-  const lesson = item.closest('details.lesson');
-  const name = item.querySelector('h4 span:not(.box-num):not(.tag)').textContent;
-  const num = item.dataset.num;
-  const text = item.querySelector('p').textContent;
+  const h = boxHead(item);
   const note = notes[key];
-  return `<article class="rv-entry" style="--sess: ${lesson.style.getPropertyValue('--sess')}">
-    <div class="rv-top"><span class="rv-sess">${num}</span><span class="rv-name">${esc(name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">Open in lesson ›</button></div>
-    <p class="rv-text">${esc(text)}</p>
+  return `<article class="rv-entry" style="--sess: ${h.sess}">
+    <div class="rv-top"><span class="rv-sess">${h.num}</span><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">${item.classList.contains('pcard') ? 'Open in project ›' : 'Open in lesson ›'}</button></div>
+    <p class="rv-text">${esc(h.text)}</p>
     ${note ? `<p class="rv-note" data-kind="${note.kind}"><span class="note-label">${note.kind === 'question' ? 'Your question' : 'Your comment'}</span>${esc(note.text)}</p>` : ''}
   </article>`;
 }
 function renderReview() {
-  const keys = allItems().map(i => i.dataset.key);
+  const keys = noteHosts().map(i => i.dataset.key);
   const groups = [
     ['Questions', 'question', keys.filter(k => notes[k] && notes[k].kind === 'question')],
     ['Comments', 'comment', keys.filter(k => notes[k] && notes[k].kind === 'comment')],
@@ -2072,6 +1740,14 @@ function renderReview() {
 document.getElementById('review').addEventListener('click', e => {
   const b = e.target.closest('[data-open-item]');
   if (!b) return;
+  const target = document.getElementById(b.dataset.openItem);
+  if (target.closest('#page-project')) {
+    showPage('project', false);
+    openTarget(target.id);
+    target.classList.add('flash');
+    setTimeout(() => target.classList.remove('flash'), 1600);
+    return;
+  }
   activeFilter = 'all'; applyFilter();
   showPage('lessons', false);
   openTarget(b.dataset.openItem);
@@ -2260,7 +1936,7 @@ document.addEventListener('click', e => {
 });
 
 /* ---------- Tabs ---------- */
-const tabs = { map: [document.getElementById('tab-map'), document.getElementById('page-map')], tools: [document.getElementById('tab-tools'), document.getElementById('page-tools')], lessons: [document.getElementById('tab-lessons'), document.getElementById('page-lessons')], review: [document.getElementById('tab-review'), document.getElementById('page-review')] };
+const tabs = { project: [document.getElementById('tab-project'), document.getElementById('page-project')], tools: [document.getElementById('tab-tools'), document.getElementById('page-tools')], lessons: [document.getElementById('tab-lessons'), document.getElementById('page-lessons')], review: [document.getElementById('tab-review'), document.getElementById('page-review')] };
 function showPage(name, scroll) {
   for (const [key, [tab, page]] of Object.entries(tabs)) {
     const on = key === name;
@@ -2270,7 +1946,7 @@ function showPage(name, scroll) {
   if (scroll !== false) window.scrollTo(0, 0);
   updateHere();
 }
-tabs.map[0].addEventListener('click', () => showPage('map'));
+tabs.project[0].addEventListener('click', () => showPage('project'));
 tabs.tools[0].addEventListener('click', () => showPage('tools'));
 tabs.lessons[0].addEventListener('click', () => showPage('lessons'));
 tabs.review[0].addEventListener('click', () => showPage('review'));
@@ -2278,15 +1954,15 @@ document.addEventListener('click', e => {
   const a = e.target.closest('[data-jump]');
   if (!a) return;
   e.preventDefault();
-  showPage('map', false);
-  document.getElementById(a.dataset.jump).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showPage('project', false);
+  openTarget(a.dataset.jump);
 });
-let start = 'map';
+let start = 'project';
 if (location.hash === '#toolkit') start = 'tools';
 else if (location.hash === '#lessons') start = 'lessons';
 else if (location.hash === '#review') start = 'review';
-else { try { start = localStorage.getItem('explorer-map-page') || 'map'; } catch (e) {}
-  if (!tabs[start]) start = 'map'; }
+else { try { start = localStorage.getItem('explorer-map-page') || 'project'; } catch (e) {}
+  if (!tabs[start]) start = 'project'; }
 showPage(start, false);
 </script>
 </body>
