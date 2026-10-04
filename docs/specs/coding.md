@@ -35,6 +35,7 @@ Rules:
 - When served from `/coding`, the page loads the account's marks and notes on open. Boxes recorded in this browser before signing in, and absent from the account, are merged up; nothing in the account is overwritten by a merge.
 - Every later change saves the whole box (mark + note) with `PUT /api/coding/marks`. A box with neither is deleted.
 - Keys are `s{session}|{box name}`, so marks survive redeploys of the page as long as a box keeps its name.
+- A note can sit on one line of code. In Project 1 every code line is numbered (as a line of the whole program after that step); tapping a number writes a question or comment on that line, keyed `p1|s{step}|L{line}`. It shows under every view of that code with the line quoted, and the number turns orange, then green once answered and read.
 - Project cards take the same three dots and the same notes. Their keys are `p1|{step}|{name}`. Each step shows how many of its cards are *Got it*; a step with all of them gets a tick in the step index.
 
 Table `coding_marks` (migration `0023_coding_marks.sql`): one row per box with a mark, a note, or both; unique on `(user_id, item_key)`; RLS limits every row to its owner. The database enforces the vocabularies (`got|mid|late`, `question|comment`), that a note always has a kind, and that a row is never empty.
