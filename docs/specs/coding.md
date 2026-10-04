@@ -35,7 +35,9 @@ Rules:
 - When served from `/coding`, the page loads the account's marks and notes on open. Boxes recorded in this browser before signing in, and absent from the account, are merged up; nothing in the account is overwritten by a merge.
 - Every later change saves the whole box (mark + note) with `PUT /api/coding/marks`. A box with neither is deleted.
 - Keys are `s{session}|{box name}`, so marks survive redeploys of the page as long as a box keeps its name.
-- A note can sit on one line of code. In Project 1 every code line is numbered (as a line of the whole program after that step); tapping a number writes a question or comment on that line, keyed `p1|s{step}|L{line}`. It shows under every view of that code with the line quoted, and the number turns orange, then green once answered and read.
+- A switch at the top of Project 1 shows or hides the `#` comments in its code: comment lines, the blank lines that only framed them, and trailing comments go; line numbers keep their values. Remembered on the device.
+- A dot fixed on the right edge of Project 1 opens a **notebook**: running notes on the process, as entries in the same notes table (key `p1|notebook`), so they sync and appear in Review. The dot fills once the notebook has entries.
+- A note can sit on one line of code. In Project 1 every code line is numbered (as a line of the whole program after that step); tapping a number writes a question or comment on that line, keyed `p1|s{step}|L{line}`. A dot left of the line (shown on hover, kept once the line has notes: muted orange while waiting, green once answered and read) opens the notes folded right under that line, in every view of that code; tapping it again folds them away.
 - Project cards take the same three dots and the same notes. Their keys are `p1|{step}|{name}`. Each step shows how many of its cards are *Got it*; a step with all of them gets a tick in the step index.
 
 Table `coding_marks` (migration `0023_coding_marks.sql`): one row per box with a mark, a note, or both; unique on `(user_id, item_key)`; RLS limits every row to its owner. The database enforces the vocabularies (`got|mid|late`, `question|comment`), that a note always has a kind, and that a row is never empty.
@@ -59,6 +61,8 @@ Which page a box came from was found by searching each session's PDF text for th
 Edit the standalone copy, then copy `index.html` into `content/coding/index.html` in the same change. The route reads the file at request time.
 
 ## Reflection
+
+- **2026-10-04.** The section banners (a `# ====` line above and below each `# OPTION n` title) were dropped from the program: they doubled every heading with two lines of noise. The program went from 438 to 416 lines; no line notes existed yet, so none moved.
 
 - **2026-10-04.** One note per box was too few: questions and comments pile up on the same idea. Notes moved to their own table, `coding_notes` (migration 0025), one row per note, with answer and read columns so replies can be shown beside a question without editing it. The old single notes are copied across by the migration and stay in `coding_marks`, unused.
 
