@@ -638,6 +638,13 @@ details.prun .terminal { max-height: 420px; overflow: auto; }
 #step-index a.done { background: color-mix(in srgb, var(--ok-c) 22%, var(--panel)); border-color: var(--ok-c); }
 #step-index a.done::after { content: '✓'; color: var(--ok-c); font-weight: 700; }
 .pcard .code pre { white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: visible; }
+.pcard-num { font: 600 12px var(--mono); color: var(--ground); background: var(--sess); border-radius: 6px; padding: 1px 7px; margin-right: 10px; }
+.lchip[data-mark]:not([data-mark=""])::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--dot); }
+.lchip[data-mark="got"] { --dot: var(--ok-c); }
+.lchip[data-mark="mid"] { --dot: var(--mid-c); }
+.lchip[data-mark="late"] { --dot: var(--late-c); }
+#lpop .item { min-height: 0; }
+#lpop .resize-handle, #lpop .expand-btn { display: none; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 /* Last, so no later "font" shorthand can bring the joined operator symbols back. */
 body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-name { font-variant-ligatures: none; font-feature-settings: "calt" 0, "liga" 0; }
@@ -1302,7 +1309,7 @@ function updateHereProject() {
   for (const d of document.querySelectorAll('#steps details.pstep')) if (d.getBoundingClientRect().top <= probe) step = d;
   if (!step || step.getBoundingClientRect().bottom < probe) { hereEl.hidden = true; return; }
   let card = '';
-  if (step.open) for (const c of step.querySelectorAll('.pcard')) if (c.getBoundingClientRect().top <= probe) card = c.dataset.name;
+  if (step.open) for (const c of step.querySelectorAll('.pcard')) if (c.getBoundingClientRect().top <= probe) card = `${c.dataset.pos} · ${c.dataset.name}`;
   hereEl.innerHTML = `<span class="here-session">Project One</span><span class="here-sep">›</span><span class="here-section">${esc(step.dataset.title)}</span>${card ? `<span class="here-sep">›</span><span class="here-section">${esc(card)}</span>` : ''}`;
   hereEl.style.setProperty('--sess', step.style.getPropertyValue('--sess'));
   hereEl.hidden = false;
@@ -1442,9 +1449,9 @@ function terminalHtml(out) {
 for (const s of PROJECT_STEPS) {
   const col = stepColour(s.n);
   stepIndex.insertAdjacentHTML('beforeend', `<a href="#step-${s.n}" data-open="step-${s.n}" style="--sess: ${col}"><span class="n">${s.n}</span>${esc(s.title)}</a>`);
-  const cards = s.blocks.map(b => `
-    <article class="fn pcard" id="${cardId(s.n, b.name)}" data-key="${esc(noteKeyOf(s.n, b.name))}" data-step="${s.n}" data-name="${esc(b.name)}">
-      <div class="code"><div class="code-name"><span>${esc(b.name)}</span><span class="kind">${esc(b.kind)}</span></div><pre><code>${codeWithAdds(b.code, b.added)}</code></pre></div>
+  const cards = s.blocks.map((b, i) => `
+    <article class="fn pcard" id="${cardId(s.n, b.name)}" data-key="${esc(noteKeyOf(s.n, b.name))}" data-step="${s.n}" data-name="${esc(b.name)}" data-pos="${i + 1}/${s.blocks.length}">
+      <div class="code"><div class="code-name"><span><span class="pcard-num">${i + 1}/${s.blocks.length}</span>${esc(b.name)}</span><span class="kind">${esc(b.kind)}</span></div><pre><code>${codeWithAdds(b.code, b.added)}</code></pre></div>
       <div class="explain">
         <p class="what">${b.what}</p>
         ${b.steps.length ? `<ol>${b.steps.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}
@@ -1466,6 +1473,10 @@ for (const s of PROJECT_STEPS) {
 }
 // Each step shows how many of its cards are marked Got it; a finished step gets a tick in the index.
 function refreshSteps() {
+  for (const chip of document.querySelectorAll('.lchip')) {
+    const m = marks[chip.dataset.lkey] === 'solid' ? 'got' : (marks[chip.dataset.lkey] || '');
+    chip.dataset.mark = m;
+  }
   for (const step of document.querySelectorAll('#steps details.pstep')) {
     const cs = [...step.querySelectorAll('.pcard')];
     const got = cs.filter(c => c.dataset.mark === 'got').length;
@@ -1505,35 +1516,43 @@ const lpopBody = document.getElementById('lpop-body');
 const lpopWhere = document.getElementById('lpop-where');
 const lpopGo = document.getElementById('lpop-go');
 let lpopChip = null;
-function openLesson(chip) {
-  const src = LESSON_BOX[chip.dataset.lkey];
-  if (!src) return;
+// The real box moves into the pop-up and back, so its dots, outline, notes and
+// More all work there exactly as in Lessons: one box, not a copy.
+let lpopHome = null;
+function closeLesson() {
+  if (lpopHome) {
+    const item = lpop.querySelector('.item[data-key]');
+    if (item) lpopHome.replaceWith(item);
+    lpopHome = null;
+  }
+  lpop.hidden = true;
   if (lpopChip) lpopChip.setAttribute('aria-expanded', 'false');
-  const copy = src.cloneNode(true);
-  copy.removeAttribute('id'); delete copy.dataset.key; copy.hidden = false;
-  copy.classList.remove('expanded', 'flash');
-  copy.style.removeProperty('flex-basis');
-  for (const x of copy.querySelectorAll('.marks, .note-dot, .note-list, .note-editor, .resize-handle, .expand-btn')) x.remove();
-  const more = copy.querySelector('details.more');
-  if (more) more.open = true;
+  lpopChip = null;
+}
+function openLesson(chip) {
+  const item = LESSON_BOX[chip.dataset.lkey];
+  if (!item) return;
+  closeLesson();
+  closeEditor();
   const wrap = document.createElement('div');
   wrap.className = 'lgroup';
-  wrap.style.setProperty('--h', src.closest('.lgroup').style.getPropertyValue('--h'));
-  wrap.append(copy);
+  wrap.style.setProperty('--h', item.closest('.lgroup').style.getPropertyValue('--h'));
+  const lesson = item.closest('details.lesson');
+  lpopWhere.textContent = `${lesson.dataset.title} · box ${item.dataset.num}`;
+  lpop.style.setProperty('--sess', lesson.style.getPropertyValue('--sess'));
+  lpopHome = document.createElement('span');
+  lpopHome.hidden = true;
+  item.replaceWith(lpopHome);
+  item.hidden = false;
+  wrap.append(item);
   lpopBody.replaceChildren(wrap);
-  const key = chip.dataset.lkey;
-  lpop.style.setProperty('--sess', sessColour(Number(key.slice(1, key.indexOf('|')))));
-  lpopWhere.textContent = `${src.closest('details.lesson').dataset.title} · box ${src.dataset.num}`;
-  lpopGo.dataset.target = src.id;
+  const more = item.querySelector('details.more');
+  if (more) more.open = true;
+  lpopGo.dataset.target = item.id;
   lpop.hidden = false;
   lpopBody.scrollTop = 0;
   chip.setAttribute('aria-expanded', 'true');
   lpopChip = chip;
-}
-function closeLesson() {
-  lpop.hidden = true;
-  if (lpopChip) lpopChip.setAttribute('aria-expanded', 'false');
-  lpopChip = null;
 }
 projectEl.addEventListener('click', e => {
   const chip = e.target.closest('.lchip');
@@ -1584,7 +1603,7 @@ const savedNote = document.getElementById('saved-note');
 
 const allItems = () => [...lessonsEl.querySelectorAll('.item[data-key]')];
 // Everything that can hold notes: the lesson boxes and the project cards.
-const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #steps .pcard[data-key]')];
+const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #steps .pcard[data-key]')];
 const itemByKey = key => noteHosts().find(i => i.dataset.key === key);
 const notesOf = key => noteList.filter(n => n.key === key);
 const noteRef = n => n.id || n.localId;
@@ -1813,7 +1832,8 @@ function boxHead(item) {
     const step = item.closest('details.pstep');
     return { sess: step.style.getPropertyValue('--sess'), name: `${step.dataset.title} · ${item.dataset.name}`, num: `P${item.dataset.step}`, text: item.querySelector('.what').textContent };
   }
-  const lesson = item.closest('details.lesson');
+  // A box shown in the project's pop-up is away from its session: use where it lives.
+  const lesson = item.closest('details.lesson') || lpopHome.closest('details.lesson');
   const name = item.querySelector('h4 span:not(.box-num):not(.tag)').textContent;
   return { sess: lesson.style.getPropertyValue('--sess'), name, num: item.dataset.num, text: item.querySelector('p').textContent };
 }
@@ -2061,6 +2081,7 @@ document.addEventListener('click', e => {
 /* ---------- Tabs ---------- */
 const tabs = { project: [document.getElementById('tab-project'), document.getElementById('page-project')], tools: [document.getElementById('tab-tools'), document.getElementById('page-tools')], lessons: [document.getElementById('tab-lessons'), document.getElementById('page-lessons')], review: [document.getElementById('tab-review'), document.getElementById('page-review')] };
 function showPage(name, scroll) {
+  if (!lpop.hidden) closeLesson();
   for (const [key, [tab, page]] of Object.entries(tabs)) {
     const on = key === name;
     tab.setAttribute('aria-selected', on); page.hidden = !on;
