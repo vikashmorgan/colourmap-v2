@@ -662,11 +662,14 @@ details.fullcode .mission-tag { background: var(--ink); }
 /* Line numbers you can tap, and the questions on a line. */
 .codeview .ln { display: inline-block; min-width: 2.6em; padding-right: .9em; margin-left: -0.4em; text-align: right; color: var(--muted); opacity: .5; cursor: pointer; user-select: none; border-radius: 4px; }
 .codeview .ln:hover, .codeview .ln:focus-visible { opacity: 1; color: var(--q-c); }
-.codeview .ln.has-note { opacity: 1; color: #e08a3c; font-weight: 700; }
-.codeview .ln.has-note.done { color: var(--ok-c); }
-.line-notes { display: grid; gap: 8px; padding: 0 12px 12px; }
-.line-notes:empty { display: none; }
-.line-host { display: grid; gap: 6px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--q-c) 8%, var(--panel)); scroll-margin-top: 140px; }
+/* The dot left of a line: invisible until hovered, kept once the line has notes. */
+.codeview { --line-dot: oklch(0.72 0.08 60); }
+.codeview .ldot { display: inline-block; width: 9px; height: 9px; margin-right: 2px; border-radius: 50%; border: 1.5px solid transparent; vertical-align: middle; cursor: pointer; }
+.codeview .cl:hover .ldot { border-color: color-mix(in srgb, var(--line-dot) 70%, transparent); }
+.codeview .cl.has-note .ldot { background: var(--line-dot); border-color: var(--line-dot); }
+.codeview .cl.has-note.done .ldot { background: var(--ok-c); border-color: var(--ok-c); }
+.codeview pre .line-host { white-space: normal; font: 15px/1.5 var(--body); margin: 4px 0 10px; }
+.line-host { display: grid; gap: 6px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--line-dot, var(--q-c)) 12%, var(--panel)); scroll-margin-top: 140px; }
 .line-ref { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
 .line-tag { font: 600 12px var(--mono); color: var(--q-c); }
 .line-ref code { font: 12.5px var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -1511,14 +1514,14 @@ function lineView(code, first, added) {
   const ls = code.split('\n');
   return ls.map((l, i) => {
     const x = first + i;
-    let h = `<span class="ln" data-line="${x}" title="Ask about line ${x}">${x}</span>${highlightLine(l) || ' '}`;
+    let h = `<span class="ldot" title="Question or comment on line ${x}"></span><span class="ln" data-line="${x}" title="Question or comment on line ${x}">${x}</span>${highlightLine(l) || ' '}`;
     if (added && added.includes(i + 1)) h = `<span class="addline">${h}</span>`;
-    return `<span class="cl${hideable(ls, i) ? ' cline' : ''}">${h}\n</span>`;
+    return `<span class="cl${hideable(ls, i) ? ' cline' : ''}" data-line="${x}">${h}\n</span>`;
   }).join('');
 }
 function codeView(code, n, first, added, preClass) {
   const last = first + code.split('\n').length - 1;
-  return `<div class="codeview" data-step="${n}" data-first="${first}" data-last="${last}"><pre${preClass ? ` class="${preClass}"` : ''}><code>${lineView(code, first, added)}</code></pre><div class="line-notes"></div></div>`;
+  return `<div class="codeview" data-step="${n}" data-first="${first}" data-last="${last}"><pre${preClass ? ` class="${preClass}"` : ''}><code>${lineView(code, first, added)}</code></pre></div>`;
 }
 function cardCode(n, b) {
   const full = PROJECT_FULL[n - 1].code;
@@ -1537,27 +1540,32 @@ function makeLineHost(key, vi) {
   h.innerHTML = `<div class="line-ref"><span class="line-tag">Line ${line}</span><code>${highlightLine(text.trim()) || ''}</code></div><button type="button" class="note-dot" aria-pressed="false">Question or comment</button>`;
   return h;
 }
-// Every code view shows a box for each of its lines that has notes, in line order,
-// and colours those line numbers: orange while waiting, green once answered and read.
+// A line with notes keeps a dot on its left: muted orange while waiting, green once
+// answered and read. Its notes sit folded right under the line; the dot opens them.
 function syncLineHosts(force) {
   const keys = new Set(noteList.map(n => n.key).filter(k => LINE_KEY.test(k)));
   document.querySelectorAll('#page-project .codeview').forEach((view, vi) => {
     const step = Number(view.dataset.step), first = Number(view.dataset.first), last = Number(view.dataset.last);
-    const box = view.querySelector('.line-notes');
     const want = new Set();
     for (const k of keys) {
       const [, s, l] = LINE_KEY.exec(k);
       if (Number(s) === step && Number(l) >= first && Number(l) <= last) want.add(k);
     }
     if (force && force.view === view) want.add(force.key);
-    for (const h of [...box.children]) if (!want.has(h.dataset.key) && !h.querySelector('.note-editor')) h.remove();
-    for (const k of want) if (!box.querySelector(`[data-key="${CSS.escape(k)}"]`)) box.append(makeLineHost(k, vi));
-    [...box.children].sort((a, b) => a.dataset.line - b.dataset.line).forEach(h => box.append(h));
-    if (!keys.size && !force) { for (const ln of view.querySelectorAll('.ln.has-note')) ln.classList.remove('has-note', 'done'); return; }
-    for (const ln of view.querySelectorAll('.ln')) {
-      const list = notesOf(`p1|s${step}|L${ln.dataset.line}`);
-      ln.classList.toggle('has-note', list.length > 0);
-      ln.classList.toggle('done', list.length > 0 && list.every(n => noteState(n) === 'done'));
+    for (const h of view.querySelectorAll('.line-host')) if (!want.has(h.dataset.key) && !h.querySelector('.note-editor')) h.remove();
+    for (const k of want) {
+      if (view.querySelector(`.line-host[data-key="${CSS.escape(k)}"]`)) continue;
+      const host = makeLineHost(k, vi);
+      host.hidden = true;
+      view.querySelector(`.cl[data-line="${LINE_KEY.exec(k)[2]}"]`).after(host);
+    }
+    for (const cl of view.querySelectorAll('.cl.has-note')) cl.classList.remove('has-note', 'done');
+    for (const k of want) {
+      const list = notesOf(k);
+      if (!list.length) continue;
+      const cl = view.querySelector(`.cl[data-line="${LINE_KEY.exec(k)[2]}"]`);
+      cl.classList.add('has-note');
+      cl.classList.toggle('done', list.every(n => noteState(n) === 'done'));
     }
   });
 }
@@ -1566,14 +1574,19 @@ function paintKey(key) {
   for (const h of noteHosts()) if (h.dataset.key === key) paintItem(h);
 }
 projectEl.addEventListener('click', e => {
-  const ln = e.target.closest('.codeview .ln');
-  if (!ln) return;
-  const view = ln.closest('.codeview');
-  const key = `p1|s${view.dataset.step}|L${ln.dataset.line}`;
+  const hit = e.target.closest('.codeview .ln, .codeview .ldot');
+  if (!hit) return;
+  const view = hit.closest('.codeview');
+  const line = hit.closest('.cl').dataset.line;
+  const key = `p1|s${view.dataset.step}|L${line}`;
+  const open = view.querySelector(`.line-host[data-key="${CSS.escape(key)}"]`);
+  // A second tap folds the line's notes away again, unless something is being written.
+  if (open && !open.hidden && !open.querySelector('.note-editor')) { open.hidden = true; return; }
   syncLineHosts({ view, key });
   const host = view.querySelector(`.line-host[data-key="${CSS.escape(key)}"]`);
+  host.hidden = false;
   paintItem(host);
-  openEditor(host, null);
+  if (!notesOf(key).length) openEditor(host, null);
   host.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 });
 
@@ -2058,6 +2071,7 @@ document.getElementById('review').addEventListener('click', e => {
   const target = document.getElementById(b.dataset.openItem);
   if (target.closest('#page-project')) {
     showPage('project', false);
+    if (target.classList.contains('line-host')) target.hidden = false;
     openTarget(target.id);
     target.classList.add('flash');
     setTimeout(() => target.classList.remove('flash'), 1600);
