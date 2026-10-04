@@ -739,7 +739,7 @@ details.datacode .mission-tag { background: var(--ok-c); }
 .wt-row p { margin: 0; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 /* Last, so no later "font" shorthand can bring the joined operator symbols back. */
-body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-name { font-variant-ligatures: none; font-feature-settings: "calt" 0, "liga" 0; }
+body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-name, body .lchip { font-variant-ligatures: none; font-feature-settings: "calt" 0, "liga" 0; }
 </style>
 </head>
 <body>
@@ -1616,6 +1616,44 @@ const projectEl = document.getElementById('page-project');
 const LESSON_BOX = {};
 for (const it of lessonsEl.querySelectorAll('.item[data-key]')) LESSON_BOX[it.dataset.key] = it;
 
+// Every card links to every lesson box its code uses: the hand-picked ones first, then
+// what is found in the code itself (strings and comments removed, so a word inside a
+// message does not count), in course order.
+const CODE_LESSONS = [
+  [/\bimport\b/, 's1|import'], [/\bfrom\s+\w+\s+import\b/, 's1|from ... import ...'],
+  [/\bprint\(/, 's1|print()'], [/\bf""/, 's1|f-string (f"...")'],
+  [/\b(True|False|None)\b/, 's1|True / False / None'], [/""\s*\*\s*\d/, 's1|* (multiplication)'],  [/\.strip\(\)/, 's2|.strip()'], [/\blen\(/, 's2|len()'], [/\bround\(/, 's2|round()'], [/\bsorted\(/, 's2|sorted()'],
+  [/\[[^\]]*:[^\]]*\]|\[\d+\]/, 's2|xs[i] and slices'], [/\.append\(/, 's2|.append()'],
+  [/=\s*\[\]|\[""/, 's2|[] (list)'], [/=\s*\{|\{\s*""/, 's2|{} (dict)'], [/\w\[""\w*""\]/, 's2|d["key"]'],
+  [/\.get\(/, 's2|.get()'], [/\.items\(\)/, 's2|.items()'], [/\bset\(\)/, 's2|set() / {"a", "b"}'],
+  [/\.add\(/, 's2|.add() / .discard()'], [/^\s*\w+\s*,\s*\w+\s*=|for\s+\w+\s*,\s*\w+\s+in/m, 's2|tuple unpacking'],
+  [/\bint\(/, 's2|float() / int() / str()'], [/\bstr\(/, 's2|float() / int() / str()'],
+  [/\bis\s+(not\s+)?None\b/, 's2|None / is None'], [/:[,.<>]/, 's2|format spec (:.2f)'],
+  [/\b(and|or|not)\b/, 's3|and / or / not'], [/\bis\b/, 's3|is / is not'], [/==|!=|<=|>=/, 's3|== != < <= > >='],
+  [/\bisinstance\(/, 's3|type() / isinstance()'], [/^\s*(if|elif|return)\b[^\n]*\bin\b|\bnot\s+in\b/m, 's3|in / not in'],
+  [/^\s*if\b/m, 's3|if'], [/^\s*elif\b/m, 's3|elif'], [/^\s*else\s*:/m, 's3|else'],
+  [/^\s*for\b.*\bin\b/m, 's3|for ... in'], [/\bwhile\s+True\b/, 's3|while True + break'],
+  [/^\s*break\b/m, 's3|break'], [/^\s*continue\b/m, 's3|continue'], [/\bKeyboardInterrupt\b/, 's3|KeyboardInterrupt'],
+  [/^\s*def\b/m, 's4|def'], [/^\s*return\b/m, 's4|return'], [/^\s*def\s+\w+\([^)]*\w/m, 's4|parameter'],
+  [/^\s*return\s+\w+\s*,/m, 's4|returning a tuple'], [/->/, 's4|->'], [/^\s*def\s+\w+\([^)]*:\s*\w/m, 's4|type hint'],
+  [/^\s*""/m, 's4|docstring'], [/\bkey=\w/, 's4|function as a value'],
+  [/\bwith\s+open\(/, 's6|with open(...) as f:'], [/encoding=/, 's6|encoding="utf-8"'], [/\bPath\(/, 's6|Path'],
+  [/\.exists\(\)/, 's6|.exists() / .is_file()'], [/json\.dump\(/, 's6|json.dump(obj, f, indent=2)'], [/json\.load\(/, 's6|json.load(f)'],
+  [/^\s*try\s*:/m, 's6|try / except'], [/except\s+[\w.]+\s+as\s+\w/, 's6|except ... as e'],
+  [/requests\.get\(/, 's7|requests.get()'], [/timeout=/, 's7|timeout='], [/raise_for_status\(\)/, 's7|r.raise_for_status()'],
+  [/\.json\(\)/, 's7|r.json()'], [/requests\.(Timeout|ConnectionError|HTTPError)/, 's7|requests.Timeout / ConnectionError / HTTPError'],
+];
+function codeOnly(code) {
+  return code.replace(/"""[\s\S]*?"""/g, '""').replace(/f"[^"\n]*"/g, 'f""').replace(/"[^"\n]*"/g, '""').replace(/#.*$/gm, '');
+}
+const boxOrder = key => { const it = LESSON_BOX[key]; const [s, n] = it.dataset.num.split('.').map(Number); return s * 1000 + n; };
+function lessonChips(b) {
+  const code = codeOnly(b.code);
+  const found = CODE_LESSONS.filter(([re]) => re.test(code)).map(([, k]) => k);
+  const keys = [...new Set([...b.lessons, ...found.filter(k => LESSON_BOX[k]).sort((x, y) => boxOrder(x) - boxOrder(y))])];
+  const chips = keys.map(lchip).join('');
+  return chips ? `<div class="lchips">${chips}</div>` : '';
+}
 function lchip(key) {
   const it = LESSON_BOX[key];
   if (!it) return '';
@@ -1794,7 +1832,7 @@ for (const s of PROJECT_STEPS) {
       <div class="explain">
         <p class="what">${b.what}</p>
         ${b.steps.length ? `<ol>${b.steps.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}
-        ${b.lessons.length ? `<div class="lchips">${b.lessons.map(lchip).join('')}</div>` : ''}
+        ${lessonChips(b)}
         <button type="button" class="note-dot" aria-pressed="false">Question or comment</button>
       </div>
       <div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button></div>
