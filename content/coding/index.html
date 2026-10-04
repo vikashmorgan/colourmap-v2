@@ -612,7 +612,14 @@ details.prun .terminal { max-height: 420px; overflow: auto; }
 .handin-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .handin-actions button { font: 600 15px var(--display); min-height: 44px; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--accent); background: var(--panel); color: var(--ink); cursor: pointer; }
 .handin-actions button:hover { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
-#final-status { font-size: 14px; color: var(--ok); }
+.final-status { font-size: 14px; color: var(--ok); }
+details.fullcode { border-color: var(--ink); background: var(--panel); }
+details.fullcode > summary { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+details.fullcode > summary::after { color: var(--ink); }
+details.fullcode .mission-tag { background: var(--ink); }
+.full-body { padding: 16px; display: grid; gap: 12px; }
+.full-pre { margin: 0; background: var(--code-bg); border-radius: 10px; padding: 14px 16px; font: 13px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; counter-reset: none; }
+.full-pre .ln { display: inline-block; width: 3.2em; margin-left: -0.4em; padding-right: 1em; text-align: right; color: var(--muted); opacity: .6; user-select: none; }
 
 /* A lesson box, popped over the project page. */
 .lpop { position: fixed; z-index: 60; right: 16px; top: 96px; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 120px); overflow: auto;
@@ -725,13 +732,21 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
       </div>
     </details>
 
+    <details class="mission fullcode" id="full-program">
+      <summary><span class="mission-tag">The full program</span><span class="mission-title">explorer.py, all <span id="full-lines"></span> lines, as you hand it in</span></summary>
+      <div class="full-body">
+        <div class="handin-actions"><button type="button" class="dl-final">Download explorer.py</button><button type="button" class="copy-final">Copy the whole program</button><span class="final-status" role="status"></span></div>
+        <pre class="full-pre"><code id="full-code"></code></pre>
+      </div>
+    </details>
+
     <nav class="index" id="step-index" aria-label="Steps"></nav>
     <div id="steps"></div>
 
     <section class="handin" id="handin">
       <h2>Hand it in</h2>
       <p>The finished program is <span id="final-lines"></span> lines. It is in your folder <code>C:\Users\victor\terminal-data-explorer</code>, next to <code>requirements.txt</code>, <code>README.md</code> and a fresh <code>backup.json</code>. You can also take it from here.</p>
-      <div class="handin-actions"><button type="button" id="dl-final">Download explorer.py</button><button type="button" id="copy-final">Copy the whole program</button><span id="final-status" role="status"></span></div>
+      <div class="handin-actions"><button type="button" class="dl-final">Download explorer.py</button><button type="button" class="copy-final">Copy the whole program</button><span class="final-status" role="status"></span></div>
       <h3>Checked against the brief</h3>
       <div class="req-wrap"><table class="req" id="req"></table></div>
     </section>
@@ -1495,19 +1510,29 @@ stepIndex.addEventListener('click', e => {
 });
 
 document.getElementById('final-lines').textContent = String(FINAL_CODE.split('\n').length - 1);
-const finalStatus = document.getElementById('final-status');
-document.getElementById('dl-final').addEventListener('click', () => {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([FINAL_CODE], { type: 'text/x-python' }));
-  a.download = 'explorer.py';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  finalStatus.textContent = 'Downloaded.';
-});
-document.getElementById('copy-final').addEventListener('click', () => {
+// The whole file, numbered, in the box at the top of the page.
+const FINAL_LINES = FINAL_CODE.replace(/\n$/, '').split('\n');
+document.getElementById('full-lines').textContent = String(FINAL_LINES.length);
+document.getElementById('full-code').innerHTML = FINAL_LINES
+  .map((l, i) => `<span class="ln">${i + 1}</span>${highlightLine(l) || ' '}`).join('\n');
+// Download and copy, from the top box or from Hand it in.
+projectEl.addEventListener('click', e => {
+  const dl = e.target.closest('.dl-final');
+  const cp = e.target.closest('.copy-final');
+  if (!dl && !cp) return;
+  const status = e.target.closest('.handin-actions').querySelector('.final-status');
+  if (dl) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([FINAL_CODE], { type: 'text/x-python' }));
+    a.download = 'explorer.py';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    status.textContent = 'Downloaded.';
+    return;
+  }
   navigator.clipboard.writeText(FINAL_CODE)
-    .then(() => { finalStatus.textContent = 'Copied. Paste it into explorer.py in VS Code.'; })
-    .catch(() => { finalStatus.textContent = 'Copying is blocked here; use Download instead.'; });
+    .then(() => { status.textContent = 'Copied. Paste it into explorer.py in VS Code.'; })
+    .catch(() => { status.textContent = 'Copying is blocked here; use Download instead.'; });
 });
 
 /* A lesson box, popped over the project: a copy of the real box, without its marks. */
