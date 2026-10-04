@@ -47,7 +47,7 @@
 import { and, desc, eq, gte } from 'drizzle-orm';
 
 import { getDb } from '@/lib/db/client';
-import { checkIns, codingMarks, missions, notebookEntries } from '@/lib/db/schema';
+import { checkIns, codingMarks, codingNotes, missions, notebookEntries } from '@/lib/db/schema';
 
 export type Command = 'notes' | 'checkins' | 'missions' | 'silence' | 'coding';
 
@@ -165,6 +165,16 @@ export type CodingRow = {
   updatedAt: Date;
 };
 
+/** One question or comment from coding_notes (a box can have several). */
+export type CodingNote = {
+  id: string;
+  itemKey: string;
+  kind: string;
+  body: string;
+  createdAt: Date;
+  answer: string | null;
+};
+
 /** "s3|while" → "Session 3 · while". */
 export function codingBox(itemKey: string): string {
   // Project cards: p<project>|<step>|<name>.
@@ -178,49 +188,65 @@ export function codingBox(itemKey: string): string {
 /*
  * The coding study page's questions, comments and flags, grouped the way the
  * page's own Review tab groups them. Questions first: they are what is waiting
- * for an answer.
+ * for an answer, and unanswered ones carry their id so an answer can be filed.
+ *
+ * Notes come from coding_notes. Before that table existed a box held one note
+ * in coding_marks; those are used only when no coding_notes rows are given.
  */
-export function codingReport(rows: CodingRow[]): string {
+export function codingReport(rows: CodingRow[], notes: CodingNote[] = []): string {
   const sorted = [...rows].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-  const section = (title: string, picked: CodingRow[], withNote: boolean) => {
-    if (picked.length === 0) return [];
-    return [
-      `## ${title} (${picked.length})`,
-      ...picked.map((r) =>
-        withNote && r.note
-          ? `- ${codingBox(r.itemKey)} — ${day(r.updatedAt)}\n  ${r.note.replace(/\n/g, '\n  ')}`
-          : `- ${codingBox(r.itemKey)}${r.note ? ` (note: ${r.noteKind})` : ''}`,
-      ),
-      '',
-    ];
-  };
+  const legacy: CodingNote[] = sorted
+    .filter((r) => r.note && r.noteKind)
+    .map((r) => ({
+      id: '',
+      itemKey: r.itemKey,
+      kind: r.noteKind as string,
+      body: r.note as string,
+      createdAt: r.updatedAt,
+      answer: null,
+    }));
+  const all = (notes.length ? notes : legacy).sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  );
+  const noteLines = (title: string, picked: CodingNote[]) =>
+    picked.length === 0
+      ? []
+      : [
+          `## ${title} (${picked.length})`,
+          ...picked.map((n) => {
+            const tag = n.id ? ` [${n.id}]${n.answer ? ' answered' : ''}` : '';
+            return `- ${codingBox(n.itemKey)} — ${day(n.createdAt)}${tag}\n  ${n.body.replace(/\n/g, '\n  ')}`;
+          }),
+          '',
+        ];
+  const markLines = (title: string, picked: CodingRow[]) =>
+    picked.length === 0
+      ? []
+      : [`## ${title} (${picked.length})`, ...picked.map((r) => `- ${codingBox(r.itemKey)}`), ''];
   const lines = [
-    `# coding — ${rows.length} boxes with a mark or a note\n`,
-    ...section(
+    `# coding — ${rows.length} boxes marked, ${all.length} notes\n`,
+    ...noteLines(
       'Questions',
-      sorted.filter((r) => r.note && r.noteKind === 'question'),
-      true,
+      all.filter((n) => n.kind === 'question'),
     ),
-    ...section(
+    ...noteLines(
       'Comments',
-      sorted.filter((r) => r.note && r.noteKind === 'comment'),
-      true,
+      all.filter((n) => n.kind === 'comment'),
     ),
-    ...section(
+    ...markLines(
       'Confused',
       sorted.filter((r) => r.mark === 'mid'),
-      false,
     ),
-    ...section(
+    ...markLines(
       'No time',
       sorted.filter((r) => r.mark === 'late'),
-      false,
     ),
   ];
-  const got = rows.filter((r) => r.mark === 'got').length;
-  const solid = rows.filter((r) => r.mark === 'solid').length;
-  lines.push(`Got it: ${got} boxes. Solid: ${solid}.`);
-  if (rows.length === 0) lines.push('(nothing marked or written on the coding page yet)');
+  const got = rows.filter((r) => r.mark === 'got' || r.mark === 'solid').length;
+  lines.push(`Got it: ${got} boxes.`);
+  if (rows.length === 0 && all.length === 0) {
+    lines.push('(nothing marked or written on the coding page yet)');
+  }
   return lines.join('\n');
 }
 
@@ -237,7 +263,29 @@ async function readCoding(who: string): Promise<void> {
     .where(eq(codingMarks.userId, who))
     .orderBy(desc(codingMarks.updatedAt))
     .limit(1000);
-  console.log(codingReport(rows));
+  /*
+   * coding_notes arrives with migration 0025. Before it is applied the query
+   * fails, and the report falls back to the single notes in coding_marks.
+   */
+  let notes: CodingNote[] = [];
+  try {
+    notes = await getDb()
+      .select({
+        id: codingNotes.id,
+        itemKey: codingNotes.itemKey,
+        kind: codingNotes.kind,
+        body: codingNotes.body,
+        createdAt: codingNotes.createdAt,
+        answer: codingNotes.answer,
+      })
+      .from(codingNotes)
+      .where(eq(codingNotes.userId, who))
+      .orderBy(desc(codingNotes.createdAt))
+      .limit(2000);
+  } catch {
+    console.log('(coding_notes not available yet: showing the older single notes)\n');
+  }
+  console.log(codingReport(rows, notes));
 }
 
 async function readNotes(argv: string[], who: string): Promise<void> {
