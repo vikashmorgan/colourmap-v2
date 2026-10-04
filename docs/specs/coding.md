@@ -26,7 +26,7 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
 
 Each box can carry:
 
-- a **mark**: *Solid* (`solid`, owned), *Got it* (`got`) or *Confused* (`mid`) — small dots on the side of the box, each naming itself in a coloured pill on hover. (*No time*, `late`, was retired from the page; old `late` rows stay in the table and show as unmarked.)
+- a **mark**: *Got it* (`got`, green), *Confused* (`mid`, yellow) or *No time* (`late`, pink-purple) — three small dots on the side of the box, each naming itself in a coloured pill on hover. The database also accepts `solid`, which the page shows as *Got it*.
 - a **note**: a question or a comment, written from a fourth dot.
 
 Rules:
@@ -57,6 +57,8 @@ Which page a box came from was found by searching each session's PDF text for th
 Edit the standalone copy, then copy `index.html` into `content/coding/index.html` in the same change. The route reads the file at request time.
 
 ## Reflection
+
+- **2026-10-04.** Back to three dots. *Solid* (a second green above *Got it*) added confusion rather than a useful distinction, and without *No time* the three-colour scheme Victor found clear was lost. The page shows *Got it*, *Confused*, *No time* again; stored `solid` marks display as *Got it*, so nothing recorded was dropped.
 
 - **2026-10-03.** *No time* was dropped: it was not a level of understanding, and Victor found it unnecessary. The database still accepts it so nothing recorded is lost.
 
