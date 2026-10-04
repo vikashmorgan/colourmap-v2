@@ -502,6 +502,26 @@ pre, .terminal { zoom: var(--code-zoom); }
 .note-dot:hover, .note-dot:focus-visible { opacity: 1; border-style: solid; }
 .note-dot[aria-pressed="true"] { opacity: .9; border-style: solid; border-color: color-mix(in srgb, var(--q-c) 70%, transparent); }
 
+/* Several notes per box: each with a status dot, edit, delete, and room for an answer. */
+.note-list { display: grid; gap: 6px; }
+.note-shown { font-size: 14px; color: var(--box-text); border-radius: 8px; padding: 6px 10px 8px; background: color-mix(in srgb, var(--q-c) 14%, transparent); }
+.note-shown[data-kind="comment"] { background: color-mix(in srgb, var(--c-c) 16%, transparent); }
+.note-head { display: flex; align-items: center; gap: 6px; }
+.note-head .note-label { margin: 0; }
+.note-tools { margin-left: auto; display: flex; gap: 2px; }
+.note-tools button { width: 26px; height: 26px; border: 0; border-radius: 6px; background: none; color: var(--box-text); opacity: .55; cursor: pointer; font: 600 14px var(--body); }
+.note-tools button:hover, .note-tools button:focus-visible { opacity: 1; background: color-mix(in srgb, var(--box-text) 12%, transparent); }
+.note-tools .note-del.armed { width: auto; padding: 0 8px; opacity: 1; color: var(--ground); background: var(--warn); }
+.note-body { white-space: pre-wrap; margin-top: 2px; }
+.state-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; display: inline-block; }
+.state-dot.waiting { background: #e08a3c; }
+.state-dot.done { background: var(--ok-c); }
+.note-answer { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, var(--ok-c) 14%, transparent); display: grid; gap: 4px; font-size: 14.5px; }
+.note-answer > div { white-space: pre-wrap; }
+.note-read { justify-self: start; margin-top: 4px; font: 600 12.5px var(--body); border: 1px solid var(--ok-c); background: none; color: var(--box-text); border-radius: 999px; padding: 3px 12px; min-height: 30px; cursor: pointer; }
+.note-read:hover { background: var(--ok-c); color: var(--ground); }
+.rv-top .state-dot { margin-right: 2px; }
+
 .gap-note { margin-top: 48px; font-family: var(--mono); font-size: 13px; color: var(--muted); border-top: 1px dashed var(--rule); padding-top: 12px; }
 
 @media (max-width: 860px) {
@@ -1854,24 +1874,50 @@ for (const pre of lessonsEl.querySelectorAll('pre.vocab-ex')) {
 }
 
 /* ---------- Marks and notes ---------- */
-// Each box can have a mark (got / mid / late) and a note (a question or a
-// comment). Both live in this browser (localStorage). When the page is served
-// by Colour Brain, /api/coding/marks also exists and they sync to the signed-in
-// account; anywhere else that request fails and nothing else changes.
+// Each box can have a mark (got / mid / late) and any number of notes, each a
+// question or a comment. Everything is kept in this browser (localStorage).
+// When the page is served by Colour Brain, marks sync through /api/coding/marks
+// and notes through /api/coding/notes; anywhere else those requests fail and
+// the page simply keeps its local copy.
 const MARKS_KEY = 'coding-vikash-marks';
-const NOTES_KEY = 'coding-vikash-notes';
+const LEGACY_NOTES_KEY = 'coding-vikash-notes';   // one note per box, before multiple notes
+const NOTES_KEY = 'coding-notes-v2';               // a list of notes
 const SYNC_URL = '/api/coding/marks';
-function readStore(key) { try { return JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (e) { return {}; } }
+const NOTES_URL = '/api/coding/notes';
+function readStore(key, empty) { try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return v ?? empty; } catch (e) { return empty; } }
 function writeStore(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {} }
-let marks = readStore(MARKS_KEY);
-let notes = readStore(NOTES_KEY);
-function saveLocal() { writeStore(MARKS_KEY, marks); writeStore(NOTES_KEY, notes); }
+let marks = readStore(MARKS_KEY, {});
+// The old single notes are kept, untouched, so the marks endpoint never wipes
+// one before the account has its own copy of it.
+const legacyNotes = readStore(LEGACY_NOTES_KEY, {});
+let noteList = readStore(NOTES_KEY, null);
+if (!Array.isArray(noteList)) {
+  noteList = Object.entries(legacyNotes).map(([key, n], i) => ({ localId: `l${Date.now()}${i}`, key, kind: n.kind, body: n.text, answer: null, readAt: null }));
+}
+function saveLocal() { writeStore(MARKS_KEY, marks); writeStore(NOTES_KEY, noteList); }
+saveLocal();
 let synced = false;
+let notesSynced = false;
 let activeFilter = 'all';
 const savedNote = document.getElementById('saved-note');
 
 const allItems = () => [...lessonsEl.querySelectorAll('.item[data-key]')];
 const itemByKey = key => allItems().find(i => i.dataset.key === key);
+const notesOf = key => noteList.filter(n => n.key === key);
+const noteRef = n => n.id || n.localId;
+const findNote = ref => noteList.find(n => noteRef(n) === ref);
+// Orange: waiting (no answer yet, or an answer not yet read). Green: answered and read.
+const noteState = n => (n.answer && n.readAt ? 'done' : 'waiting');
+
+function noteHtml(n) {
+  const label = n.kind === 'question' ? 'Question' : 'Comment';
+  return `<div class="note-shown" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
+      <div class="note-head"><i class="state-dot ${noteState(n)}" title="${noteState(n) === 'done' ? 'Answered and read' : n.answer ? 'Answer waiting to be read' : 'Waiting for an answer'}"></i><span class="note-label">${label}</span>
+        <span class="note-tools"><button type="button" class="note-edit" aria-label="Edit this ${label.toLowerCase()}">✎</button><button type="button" class="note-del" aria-label="Delete this ${label.toLowerCase()}">×</button></span></div>
+      <div class="note-body">${esc(n.body)}</div>
+      ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : '<button type="button" class="note-read">Got it, mark read</button>'}</div>` : ''}
+    </div>`;
+}
 
 function paintItem(item) {
   const key = item.dataset.key;
@@ -1879,17 +1925,15 @@ function paintItem(item) {
   const m = marks[key] === 'solid' ? 'got' : (marks[key] || '');
   item.dataset.mark = m;
   for (const b of item.querySelectorAll('.mark')) b.setAttribute('aria-pressed', String(b.dataset.mark === m));
-  const note = notes[key];
+  const list = notesOf(key);
+  let box = item.querySelector('.note-list');
   const dot = item.querySelector('.note-dot');
-  dot.dataset.kind = note ? note.kind : '';
-  dot.setAttribute('aria-pressed', String(!!note));
-  dot.textContent = note ? (note.kind === 'question' ? 'Edit question' : 'Edit comment') : 'Question or comment';
-  let shown = item.querySelector('.note-shown');
-  if (note) {
-    if (!shown) { shown = document.createElement('div'); shown.className = 'note-shown'; dot.before(shown); }
-    shown.dataset.kind = note.kind;
-    shown.innerHTML = `<span class="note-label">${note.kind === 'question' ? 'Your question' : 'Your comment'}</span>${esc(note.text)}`;
-  } else if (shown) shown.remove();
+  if (list.length) {
+    if (!box) { box = document.createElement('div'); box.className = 'note-list'; dot.before(box); }
+    box.innerHTML = list.map(noteHtml).join('');
+  } else if (box) box.remove();
+  dot.setAttribute('aria-pressed', String(list.length > 0));
+  dot.textContent = list.length ? 'Add another question or comment' : 'Question or comment';
 }
 function paintAll() { for (const it of allItems()) paintItem(it); refreshCounts(); renderReview(); if (activeFilter !== 'all') applyFilter(); }
 
@@ -1903,7 +1947,8 @@ function refreshCounts() {
     const got = its.filter(i => i.dataset.mark === 'got').length;
     const mid = its.filter(i => i.dataset.mark === 'mid').length;
     const late = its.filter(i => i.dataset.mark === 'late').length;
-    const q = its.filter(i => notes[i.dataset.key]).length;
+    const keys = new Set(its.map(i => i.dataset.key));
+    const q = noteList.filter(n => keys.has(n.key)).length;
     lesson.querySelector('.sess-progress').innerHTML = `<span class="pg-bar"><i style="width:${(got / its.length * 100).toFixed(1)}%"></i></span><span>${got}/${its.length} got it</span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${late ? `<span class="pg-late">${late} no time</span>` : ''}${q ? `<span class="pg-note">${q} note${q > 1 ? 's' : ''}</span>` : ''}`;
   }
 }
@@ -1918,15 +1963,23 @@ function applyFilter() {
   for (const b of document.querySelectorAll('.filter')) b.setAttribute('aria-pressed', String(b.dataset.filter === activeFilter));
 }
 
-/* Sync with the account when served by Colour Brain. */
-function pushBox(key) {
+/* ---------- Sync with the account (Colour Brain only) ---------- */
+function syncProblem(message) { savedNote.textContent = message; }
+function pushMark(key) {
   if (!synced) return;
   fetch(SYNC_URL, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key, mark: marks[key] || null, note: notes[key] || null }),
-  }).then(r => { if (!r.ok) savedNote.textContent = 'Could not save to your account just now; it is kept in this browser.'; })
-    .catch(() => { savedNote.textContent = 'Offline: kept in this browser, it will not sync until the page is reloaded online.'; });
+    body: JSON.stringify({ key, mark: marks[key] || null, note: legacyNotes[key] || null }),
+  }).then(r => { if (!r.ok) syncProblem('Could not save to your account just now; it is kept in this browser.'); })
+    .catch(() => syncProblem('Offline: kept in this browser, it will not sync until the page is reloaded online.'));
 }
+async function createNotes(list) {
+  const res = await fetch(NOTES_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: list.map(n => ({ key: n.key, kind: n.kind, body: n.body })) }) });
+  if (!res.ok) throw new Error('notes upload failed');
+  return (await res.json()).notes;
+}
+function fromServer(n) { return { id: n.id, key: n.itemKey, kind: n.kind, body: n.body, answer: n.answer, readAt: n.readAt, createdAt: n.createdAt }; }
+
 async function startSync() {
   // Only Colour Brain serves this page at /coding, and only there does the sync API exist.
   if (!location.pathname.startsWith('/coding')) return;
@@ -1936,48 +1989,92 @@ async function startSync() {
     if (!res.ok || !(res.headers.get('content-type') || '').includes('json')) return;
     server = await res.json();
   } catch (e) { return; }
-  const sMarks = server.marks || {}, sNotes = server.notes || {};
-  // Only boxes the account has nothing for are sent up, so another device's choices are never overwritten.
-  const localOnly = new Set([...Object.keys(marks), ...Object.keys(notes)].filter(k => !(k in sMarks) && !(k in sNotes)));
-  const upMarks = {}, upNotes = {};
-  for (const k of localOnly) { if (marks[k]) upMarks[k] = marks[k]; if (notes[k]) upNotes[k] = notes[k]; }
-  if (localOnly.size) {
-    try { await fetch(SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ marks: upMarks, notes: upNotes }) }); } catch (e) {}
+  const sMarks = server.marks || {};
+  // Marks: only boxes the account has nothing for are sent up, so another device's choices are never overwritten.
+  const upMarks = {};
+  for (const [k, v] of Object.entries(marks)) if (!(k in sMarks)) upMarks[k] = v;
+  if (Object.keys(upMarks).length) {
+    try { await fetch(SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ marks: upMarks }) }); } catch (e) {}
   }
   marks = { ...sMarks, ...upMarks };
-  notes = { ...sNotes, ...upNotes };
-  saveLocal();
   synced = true;
-  savedNote.textContent = 'Synced with your Google account: the same marks and notes on your phone and computer.';
+
+  // Notes: the account's list, plus any note written in this browser before it had an id.
+  try {
+    const res = await fetch(NOTES_URL, { headers: { Accept: 'application/json' } });
+    if (res.ok) {
+      const serverNotes = (await res.json()).notes.map(fromServer);
+      const localOnly = noteList.filter(n => !n.id);
+      // A note copied into the account by the database migration already has a twin there.
+      const twin = n => serverNotes.some(s => s.key === n.key && s.body === n.body && s.kind === n.kind);
+      const toUpload = localOnly.filter(n => !twin(n));
+      const created = toUpload.length ? (await createNotes(toUpload)).map(fromServer) : [];
+      noteList = [...serverNotes, ...created];
+      notesSynced = true;
+    }
+  } catch (e) { /* notes stay local until the next load */ }
+  saveLocal();
+  savedNote.textContent = notesSynced
+    ? 'Synced with your Google account: the same marks and notes on your phone and computer.'
+    : 'Marks synced with your Google account. Notes are kept in this browser for now.';
   paintAll();
 }
 
-/* The note editor: one at a time, inside the box it belongs to. */
+/* ---------- The note editor: one at a time ---------- */
 function closeEditor() { const ed = lessonsEl.querySelector('.note-editor'); if (ed) ed.remove(); }
-function openEditor(item) {
-  const key = item.dataset.key;
-  const open = item.querySelector('.note-editor');
+function openEditor(item, ref) {
   closeEditor();
-  if (open) return;
-  const note = notes[key] || { text: '', kind: 'question' };
+  const existing = ref ? findNote(ref) : null;
+  const kind = existing ? existing.kind : 'question';
   const ed = document.createElement('div');
   ed.className = 'note-editor';
+  ed.dataset.kind = kind;
+  if (ref) ed.dataset.ref = ref;
   ed.innerHTML = `<div class="kind-pick" role="radiogroup" aria-label="Kind of note">
-      <button type="button" role="radio" data-kind="question" aria-checked="${note.kind === 'question'}">Question</button>
-      <button type="button" role="radio" data-kind="comment" aria-checked="${note.kind === 'comment'}">Comment</button>
+      <button type="button" role="radio" data-kind="question" aria-checked="${kind === 'question'}">Question</button>
+      <button type="button" role="radio" data-kind="comment" aria-checked="${kind === 'comment'}">Comment</button>
     </div>
     <textarea rows="3" maxlength="2000" aria-label="Your note" placeholder="Write your question or comment about this box"></textarea>
-    <div class="note-actions"><button type="button" class="note-save">Save</button>${notes[key] ? '<button type="button" class="note-delete">Delete</button>' : ''}<button type="button" class="note-cancel">Cancel</button></div>`;
-  ed.querySelector('textarea').value = note.text;
-  ed.dataset.kind = note.kind;
-  item.querySelector('.note-dot').after(ed);
+    <div class="note-actions"><button type="button" class="note-save">Save</button><button type="button" class="note-cancel">Cancel</button></div>`;
+  ed.querySelector('textarea').value = existing ? existing.body : '';
+  const anchor = ref ? item.querySelector(`.note-shown[data-ref="${CSS.escape(ref)}"]`) : item.querySelector('.note-dot');
+  anchor.after(ed);
   ed.querySelector('textarea').focus();
 }
-function setNote(key, text, kind) {
-  const t = (text || '').trim();
-  if (t) notes[key] = { text: t, kind }; else delete notes[key];
-  saveLocal(); pushBox(key);
-  const item = itemByKey(key); paintItem(item); refreshCounts(); renderReview();
+
+async function saveNote(key, ref, body, kind) {
+  const text = (body || '').trim();
+  if (!text) return;
+  if (ref) {
+    const n = findNote(ref);
+    n.body = text; n.kind = kind;
+    if (notesSynced && n.id) {
+      fetch(`${NOTES_URL}/${n.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body: text, kind }) })
+        .then(r => { if (!r.ok) syncProblem('Could not save that edit to your account; it is kept in this browser.'); }).catch(() => syncProblem('Offline: the edit is kept in this browser.'));
+    }
+  } else {
+    const n = { localId: `l${Date.now()}`, key, kind, body: text, answer: null, readAt: null };
+    noteList.push(n);
+    if (notesSynced) {
+      try { const [row] = await createNotes([n]); Object.assign(n, fromServer(row)); delete n.localId; }
+      catch (e) { syncProblem('Could not save the note to your account; it is kept in this browser.'); }
+    }
+  }
+  saveLocal(); paintItem(itemByKey(key)); refreshCounts(); renderReview();
+}
+function deleteNote(key, ref) {
+  const n = findNote(ref);
+  if (!n) return;
+  noteList = noteList.filter(x => x !== n);
+  if (notesSynced && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'DELETE' }).catch(() => syncProblem('Offline: deleted here; reload online to delete it from your account.'));
+  saveLocal(); paintItem(itemByKey(key)); refreshCounts(); renderReview();
+}
+function markRead(ref) {
+  const n = findNote(ref);
+  if (!n) return;
+  n.readAt = new Date().toISOString();
+  if (notesSynced && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ read: true }) }).catch(() => {});
+  saveLocal(); const item = itemByKey(n.key); if (item) paintItem(item); refreshCounts(); renderReview();
 }
 
 lessonsEl.addEventListener('click', e => {
@@ -1986,24 +2083,35 @@ lessonsEl.addEventListener('click', e => {
     const item = markBtn.closest('.item');
     const key = item.dataset.key;
     if (marks[key] === markBtn.dataset.mark) delete marks[key]; else marks[key] = markBtn.dataset.mark;
-    saveLocal(); pushBox(key);
+    saveLocal(); pushMark(key);
     paintItem(item); refreshCounts(); renderReview();
     if (activeFilter !== 'all') applyFilter();
     return;
   }
-  const dot = e.target.closest('.note-dot');
-  if (dot) { openEditor(dot.closest('.item')); return; }
+  const item = e.target.closest('.item');
+  if (!item) return;
+  const key = item.dataset.key;
+  if (e.target.closest('.note-dot')) { openEditor(item, null); return; }
+  const shown = e.target.closest('.note-shown');
+  if (shown && e.target.closest('.note-edit')) { openEditor(item, shown.dataset.ref); return; }
+  if (shown && e.target.closest('.note-read')) { markRead(shown.dataset.ref); return; }
+  const del = shown && e.target.closest('.note-del');
+  if (del) {
+    // Two taps to delete: the first arms the button for a few seconds.
+    if (del.dataset.armed) { deleteNote(key, shown.dataset.ref); return; }
+    del.dataset.armed = '1'; del.textContent = 'Delete?'; del.classList.add('armed');
+    setTimeout(() => { if (del.isConnected) { delete del.dataset.armed; del.textContent = '×'; del.classList.remove('armed'); } }, 3000);
+    return;
+  }
   const ed = e.target.closest('.note-editor');
   if (!ed) return;
-  const item = ed.closest('.item');
   const pick = e.target.closest('[data-kind]');
   if (pick && pick.closest('.kind-pick')) {
     ed.dataset.kind = pick.dataset.kind;
     for (const b of ed.querySelectorAll('.kind-pick button')) b.setAttribute('aria-checked', String(b === pick));
     return;
   }
-  if (e.target.closest('.note-save')) { setNote(item.dataset.key, ed.querySelector('textarea').value, ed.dataset.kind); closeEditor(); }
-  else if (e.target.closest('.note-delete')) { setNote(item.dataset.key, '', 'question'); closeEditor(); }
+  if (e.target.closest('.note-save')) { saveNote(key, ed.dataset.ref || null, ed.querySelector('textarea').value, ed.dataset.kind); closeEditor(); }
   else if (e.target.closest('.note-cancel')) closeEditor();
 });
 document.getElementById('progress-bar').addEventListener('click', e => {
@@ -2014,38 +2122,55 @@ document.getElementById('progress-bar').addEventListener('click', e => {
 });
 
 /* ---------- Review: questions, comments, confused and no time, together ---------- */
-function reviewEntry(key) {
-  const item = itemByKey(key);
-  if (!item) return '';
+function boxHead(item) {
   const lesson = item.closest('details.lesson');
   const name = item.querySelector('h4 span:not(.box-num):not(.tag)').textContent;
-  const num = item.dataset.num;
-  const text = item.querySelector('p').textContent;
-  const note = notes[key];
-  return `<article class="rv-entry" style="--sess: ${lesson.style.getPropertyValue('--sess')}">
-    <div class="rv-top"><span class="rv-sess">${num}</span><span class="rv-name">${esc(name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">Open in lesson ›</button></div>
-    <p class="rv-text">${esc(text)}</p>
-    ${note ? `<p class="rv-note" data-kind="${note.kind}"><span class="note-label">${note.kind === 'question' ? 'Your question' : 'Your comment'}</span>${esc(note.text)}</p>` : ''}
+  return { sess: lesson.style.getPropertyValue('--sess'), name, num: item.dataset.num, text: item.querySelector('p').textContent };
+}
+function reviewNote(n) {
+  const item = itemByKey(n.key);
+  if (!item) return '';
+  const h = boxHead(item);
+  return `<article class="rv-entry" style="--sess: ${h.sess}">
+    <div class="rv-top"><i class="state-dot ${noteState(n)}"></i><span class="rv-sess">${h.num}</span><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">Open in lesson ›</button></div>
+    <p class="rv-note" data-kind="${n.kind}">${esc(n.body)}</p>
+    ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : `<button type="button" class="note-read" data-ref="${esc(noteRef(n))}">Got it, mark read</button>`}</div>` : ''}
+  </article>`;
+}
+function reviewBox(key) {
+  const item = itemByKey(key);
+  if (!item) return '';
+  const h = boxHead(item);
+  return `<article class="rv-entry" style="--sess: ${h.sess}">
+    <div class="rv-top"><span class="rv-sess">${h.num}</span><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">Open in lesson ›</button></div>
+    <p class="rv-text">${esc(h.text)}</p>
   </article>`;
 }
 function renderReview() {
   const keys = allItems().map(i => i.dataset.key);
-  const groups = [
-    ['Questions', 'question', keys.filter(k => notes[k] && notes[k].kind === 'question')],
-    ['Comments', 'comment', keys.filter(k => notes[k] && notes[k].kind === 'comment')],
-    ['Confused', 'mid', keys.filter(k => marks[k] === 'mid')],
-    ['No time', 'late', keys.filter(k => marks[k] === 'late')],
-  ];
-  const total = groups.reduce((n, g) => n + g[2].length, 0);
-  document.getElementById('review-count').textContent = total ? String(total) : '';
+  const byNewest = (a, b) => String(b.createdAt || b.localId || '').localeCompare(String(a.createdAt || a.localId || ''));
+  const questions = noteList.filter(n => n.kind === 'question').sort(byNewest);
+  const comments = noteList.filter(n => n.kind === 'comment').sort(byNewest);
+  const confused = keys.filter(k => marks[k] === 'mid');
+  const noTime = keys.filter(k => marks[k] === 'late');
+  const waiting = noteList.filter(n => noteState(n) === 'waiting' && n.answer).length;
+  const total = questions.length + comments.length + confused.length + noTime.length;
+  const countEl = document.getElementById('review-count');
+  countEl.textContent = waiting ? `${waiting} new` : (total ? String(total) : '');
   const el = document.getElementById('review');
   if (!total) {
-    el.innerHTML = '<p class="rv-empty">Nothing here yet. In Lessons, tap the small dots on the right of a box: the three dots mark it Got it, Confused or No time, and the button at the bottom writes a question or a comment. They all gather here.</p>';
+    el.innerHTML = '<p class="rv-empty">Nothing here yet. In Lessons, the three dots on the side of a box mark it Got it, Confused or No time, and the button at the bottom adds a question or a comment. They all gather here.</p>';
     return;
   }
-  el.innerHTML = groups.filter(g => g[2].length).map(([title, cls, ks]) => `<section class="rv-group rv-${cls}"><h2><i class="dot"></i>${title} <b>${ks.length}</b></h2><div class="rv-list">${ks.map(reviewEntry).join('')}</div></section>`).join('');
+  const group = (title, cls, html, n) => n ? `<section class="rv-group rv-${cls}"><h2><i class="dot"></i>${title} <b>${n}</b></h2><div class="rv-list">${html}</div></section>` : '';
+  el.innerHTML = group('Questions', 'question', questions.map(reviewNote).join(''), questions.length)
+    + group('Comments', 'comment', comments.map(reviewNote).join(''), comments.length)
+    + group('Confused', 'mid', confused.map(reviewBox).join(''), confused.length)
+    + group('No time', 'late', noTime.map(reviewBox).join(''), noTime.length);
 }
 document.getElementById('review').addEventListener('click', e => {
+  const read = e.target.closest('.note-read');
+  if (read) { markRead(read.dataset.ref); return; }
   const b = e.target.closest('[data-open-item]');
   if (!b) return;
   activeFilter = 'all'; applyFilter();

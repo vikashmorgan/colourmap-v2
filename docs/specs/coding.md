@@ -27,7 +27,7 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
 Each box can carry:
 
 - a **mark**: *Got it* (`got`, green), *Confused* (`mid`, yellow) or *No time* (`late`, pink-purple) — three small dots on the side of the box, each naming itself in a coloured pill on hover. The database also accepts `solid`, which the page shows as *Got it*.
-- a **note**: a question or a comment, written from a fourth dot.
+- **notes**: any number of questions and comments per box, added with the button at the bottom of the box, each edited (✎) or deleted (× then Delete?) on its own. Each note has a status dot: orange while it waits for an answer or the answer is unread, green once answered and marked read. Answers are written from the terminal into the note's `answer` field and never change the note itself.
 
 Rules:
 
@@ -57,6 +57,8 @@ Which page a box came from was found by searching each session's PDF text for th
 Edit the standalone copy, then copy `index.html` into `content/coding/index.html` in the same change. The route reads the file at request time.
 
 ## Reflection
+
+- **2026-10-04.** One note per box was too few: questions and comments pile up on the same idea. Notes moved to their own table, `coding_notes` (migration 0025), one row per note, with answer and read columns so replies can be shown beside a question without editing it. The old single notes are copied across by the migration and stay in `coding_marks`, unused.
 
 - **2026-10-04.** Back to three dots. *Solid* (a second green above *Got it*) added confusion rather than a useful distinction, and without *No time* the three-colour scheme Victor found clear was lost. The page shows *Got it*, *Confused*, *No time* again; stored `solid` marks display as *Got it*, so nothing recorded was dropped.
 

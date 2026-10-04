@@ -234,13 +234,47 @@ describe('reading the coding page', () => {
       },
     ]);
 
-    expect(text).toContain('# coding — 5 boxes');
+    expect(text).toContain('# coding — 5 boxes marked, 2 notes');
     expect(text.indexOf('## Questions (1)')).toBeLessThan(text.indexOf('## Comments (1)'));
     expect(text).toContain('- Session 3 · while — 2026-10-03\n  When does it stop?');
     expect(text).toContain('- Session 2 · .split() — 2026-10-01\n  Like cutting a CSV line');
     expect(text).toContain('## Confused (1)\n- Session 3 · if');
     expect(text).toContain('## No time (1)\n- Session 4 · def');
-    expect(text).toContain('Got it: 2 boxes. Solid: 0.');
+    expect(text).toContain('Got it: 2 boxes.');
+  });
+
+  it('lists every note of a box from coding_notes, with its id', () => {
+    const notes = [
+      {
+        id: 'a1',
+        itemKey: 's3|while',
+        kind: 'question',
+        body: 'When does it stop?',
+        createdAt: at('2026-10-04T09:00:00Z'),
+        answer: null,
+      },
+      {
+        id: 'a2',
+        itemKey: 's3|while',
+        kind: 'question',
+        body: 'Can it run zero times?',
+        createdAt: at('2026-10-04T10:00:00Z'),
+        answer: 'Yes.',
+      },
+      {
+        id: 'a3',
+        itemKey: 's3|while',
+        kind: 'comment',
+        body: 'Like a repeating if',
+        createdAt: at('2026-10-04T11:00:00Z'),
+        answer: null,
+      },
+    ];
+    const text = codingReport([], notes);
+    expect(text).toContain('## Questions (2)');
+    expect(text).toContain('[a1]');
+    expect(text).toContain('[a2] answered');
+    expect(text).toContain('## Comments (1)');
   });
 
   it('says so when nothing has been marked', () => {
