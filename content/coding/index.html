@@ -681,6 +681,11 @@ details.fullcode .mission-tag { background: var(--ink); }
 .codeview .cl:hover .ldot { border-color: color-mix(in srgb, var(--line-dot) 70%, transparent); }
 .codeview .cl.has-note .ldot { background: var(--line-dot); border-color: var(--line-dot); }
 .codeview .cl.has-note.done .ldot { background: var(--ok-c); border-color: var(--ok-c); }
+.codeview .cl.lit { background: color-mix(in srgb, var(--line-dot) 28%, transparent); border-radius: 4px; transition: background .4s; }
+.note-line { font: 600 12px var(--mono); color: var(--ink); background: color-mix(in srgb, oklch(0.72 0.08 60) 28%, transparent); border: 0; border-radius: 999px; padding: 2px 9px; min-height: 24px; cursor: pointer; }
+.note-line:hover { background: color-mix(in srgb, oklch(0.72 0.08 60) 45%, transparent); }
+.line-pick { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+.line-pick select { flex: 1; min-width: 0; min-height: 36px; font: 13px var(--mono); color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 4px 8px; }
 .codeview pre .line-host { white-space: normal; font: 15px/1.5 var(--body); margin: 4px 0 10px; }
 .line-host { display: grid; gap: 6px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--line-dot, var(--q-c)) 12%, var(--panel)); scroll-margin-top: 140px; }
 .line-ref { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
@@ -1588,11 +1593,34 @@ function syncLineHosts(force) {
     }
   });
 }
+// A note can show in several places (its line, its card, each view of the code),
+// so a change repaints every project host; lesson boxes only repaint their own.
 function paintKey(key) {
   syncLineHosts();
-  for (const h of noteHosts()) if (h.dataset.key === key) paintItem(h);
+  for (const h of noteHosts()) if (h.dataset.key === key || h.closest('#page-project')) paintItem(h);
+}
+// A card's notes: its own, then those on its lines, in line order.
+function cardNotes(card) {
+  const own = notesOf(card.dataset.key);
+  const view = card.querySelector('.codeview');
+  if (!view) return own;
+  const step = Number(view.dataset.step), first = Number(view.dataset.first), last = Number(view.dataset.last);
+  const onLines = noteList.map(n => [n, LINE_KEY.exec(n.key)])
+    .filter(([, r]) => r && Number(r[1]) === step && Number(r[2]) >= first && Number(r[2]) <= last)
+    .sort((a, b) => a[1][2] - b[1][2]).map(([n]) => n);
+  return own.concat(onLines);
 }
 projectEl.addEventListener('click', e => {
+  // "Line 51" on a note in a card's right side lights that line in the card's code.
+  const tag = e.target.closest('.note-line');
+  if (tag) {
+    const cl = tag.closest('.pcard').querySelector(`.codeview .cl[data-line="${tag.dataset.line}"]`);
+    if (!cl) return;
+    cl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    cl.classList.add('lit');
+    setTimeout(() => cl.classList.remove('lit'), 1800);
+    return;
+  }
   const hit = e.target.closest('.codeview .ln, .codeview .ldot');
   if (!hit) return;
   const view = hit.closest('.codeview');
@@ -1825,28 +1853,34 @@ const findNote = ref => noteList.find(n => noteRef(n) === ref);
 // Orange: waiting (no answer yet, or an answer not yet read). Green: answered and read.
 const noteState = n => (n.answer && n.readAt ? 'done' : 'waiting');
 
-function noteHtml(n) {
+function noteHtml(n, withLine) {
   const label = n.kind === 'question' ? 'Question' : 'Comment';
+  const onLine = withLine && LINE_KEY.exec(n.key);
   return `<div class="note-shown" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
-      <div class="note-head"><i class="state-dot ${noteState(n)}" title="${noteState(n) === 'done' ? 'Answered and read' : n.answer ? 'Answer waiting to be read' : 'Waiting for an answer'}"></i><span class="note-label">${label}</span>
+      <div class="note-head"><i class="state-dot ${noteState(n)}" title="${noteState(n) === 'done' ? 'Answered and read' : n.answer ? 'Answer waiting to be read' : 'Waiting for an answer'}"></i><span class="note-label">${label}</span>${onLine ? `<button type="button" class="note-line" data-line="${onLine[2]}" title="Show line ${onLine[2]} in the code">Line ${onLine[2]}</button>` : ''}
         <span class="note-tools"><button type="button" class="note-edit" aria-label="Edit this ${label.toLowerCase()}">✎</button><button type="button" class="note-del" aria-label="Delete this ${label.toLowerCase()}">×</button></span></div>
       <div class="note-body">${esc(n.body)}</div>
       ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : '<button type="button" class="note-read">Got it, mark read</button>'}</div>` : ''}
     </div>`;
 }
 
+// Where a host's own notes and button sit: a project card keeps them on its right side.
+const noteScope = item => (item.classList.contains('pcard') ? item.querySelector('.explain') : item);
 function paintItem(item) {
   const key = item.dataset.key;
   // "solid" was tried and dropped; a box marked solid shows as Got it.
   const m = marks[key] === 'solid' ? 'got' : (marks[key] || '');
   item.dataset.mark = m;
   for (const b of item.querySelectorAll('.mark')) b.setAttribute('aria-pressed', String(b.dataset.mark === m));
-  const list = notesOf(key);
-  let box = item.querySelector('.note-list');
-  const dot = item.querySelector('.note-dot');
+  const isCard = item.classList.contains('pcard');
+  const list = isCard ? cardNotes(item) : notesOf(key);
+  // A card's own notes live on its right side; its code holds the line boxes.
+  const scope = noteScope(item);
+  let box = scope.querySelector(':scope > .note-list');
+  const dot = scope.querySelector(':scope > .note-dot');
   if (list.length) {
     if (!box) { box = document.createElement('div'); box.className = 'note-list'; dot.before(box); }
-    box.innerHTML = list.map(noteHtml).join('');
+    box.innerHTML = list.map(n => noteHtml(n, isCard)).join('');
   } else if (box) box.remove();
   dot.setAttribute('aria-pressed', String(list.length > 0));
   dot.textContent = list.length ? 'Add another question or comment' : 'Question or comment';
@@ -1954,7 +1988,17 @@ function openEditor(item, ref) {
     <textarea rows="3" maxlength="2000" aria-label="Your note" placeholder="Write your question or comment"></textarea>
     <div class="note-actions"><button type="button" class="note-save">Save</button><button type="button" class="note-cancel">Cancel</button></div>`;
   ed.querySelector('textarea').value = existing ? existing.body : '';
-  const anchor = ref ? item.querySelector(`.note-shown[data-ref="${CSS.escape(ref)}"]`) : item.querySelector('.note-dot');
+  // A new note on a project card can be about one of its lines; it then also sits on that line's dot.
+  const view = !ref && item.classList.contains('pcard') && item.querySelector('.codeview');
+  if (view) {
+    const step = Number(view.dataset.step), first = Number(view.dataset.first), last = Number(view.dataset.last);
+    const lines = PROJECT_FULL[step - 1].code.split('\n');
+    const opts = [];
+    for (let x = first; x <= last; x++) if (lines[x - 1].trim()) opts.push(`<option value="${x}">Line ${x} · ${esc(lines[x - 1].trim().slice(0, 48))}</option>`);
+    ed.querySelector('textarea').insertAdjacentHTML('beforebegin', `<label class="line-pick"><span>About</span><select><option value="">the whole card</option>${opts.join('')}</select></label>`);
+  }
+  const scope = noteScope(item);
+  const anchor = ref ? scope.querySelector(`:scope > .note-list > .note-shown[data-ref="${CSS.escape(ref)}"]`) : scope.querySelector(':scope > .note-dot');
   anchor.after(ed);
   ed.querySelector('textarea').focus();
 }
@@ -2028,7 +2072,13 @@ function onNoteClick(e) {
     for (const b of ed.querySelectorAll('.kind-pick button')) b.setAttribute('aria-checked', String(b === pick));
     return;
   }
-  if (e.target.closest('.note-save')) { saveNote(key, ed.dataset.ref || null, ed.querySelector('textarea').value, ed.dataset.kind); closeEditor(); }
+  if (e.target.closest('.note-save')) {
+    const pick = ed.querySelector('.line-pick select');
+    const view = pick && pick.value && item.querySelector('.codeview');
+    const target = view ? `p1|s${view.dataset.step}|L${pick.value}` : key;
+    saveNote(target, ed.dataset.ref || null, ed.querySelector('textarea').value, ed.dataset.kind);
+    closeEditor();
+  }
   else if (e.target.closest('.note-cancel')) { closeEditor(); syncLineHosts(); }
 }
 lessonsEl.addEventListener('click', onNoteClick);
