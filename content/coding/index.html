@@ -352,9 +352,12 @@ details.solution .ex-why { margin-top: 12px; }
 .tab-count:empty { display: none; }
 .tab-count { font: 600 11px var(--mono); background: var(--accent); color: var(--ground); border-radius: 999px; padding: 1px 7px; margin-left: 4px; }
 .rv-group { margin-top: 32px; }
-.rv-group h2 { font-family: var(--display); font-size: 24px; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
-.rv-group h2 b { font: 600 13px var(--mono); color: var(--muted); }
-.rv-group h2 .dot { width: 12px; height: 12px; margin: 0; }
+.rv-group h2, .rv-group h3 { font-family: var(--display); font-size: 21px; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
+.rv-part { margin-top: 40px; }
+.rv-part-title { font-family: var(--display); font-size: clamp(26px, 3.4vw, 34px); margin: 0; padding-bottom: 8px; border-bottom: 2px solid var(--ink); }
+.rv-part .rv-group { margin-top: 20px; }
+.rv-group h3 b, .rv-group h2 b { font: 600 13px var(--mono); color: var(--muted); }
+.rv-group h3 .dot, .rv-group h2 .dot { width: 12px; height: 12px; margin: 0; }
 .rv-question .dot { background: var(--q-c); border-radius: 3px; } .rv-comment .dot { background: var(--c-c); border-radius: 3px; }
 .rv-mid .dot { background: var(--mid-c); } .rv-late .dot { background: var(--late-c); }
 .rv-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
@@ -370,6 +373,8 @@ details.solution .ex-why { margin-top: 12px; }
 /* Questions and comments read as one aligned column: place on the left, note and answer on the right. */
 .rv-question .rv-list, .rv-comment .rv-list { grid-template-columns: minmax(0, 900px); }
 .rv-qa { grid-template-columns: 4.5em minmax(0, 1fr); column-gap: 14px; }
+/* Each row is tinted like the box it comes from: a lesson box's own tint, a project step's colour. */
+.rv-entry { background: var(--rv-tint, color-mix(in srgb, var(--sess, var(--panel)) 14%, var(--panel))); border-color: transparent; }
 .rv-place { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding-top: 4px; }
 .rv-main { display: grid; gap: 8px; min-width: 0; }
 .rv-sub { font: 500 13px var(--body); color: var(--muted); margin-left: 4px; }
@@ -714,6 +719,15 @@ details.fullcode .mission-tag { background: var(--ink); }
 .com-label { font: 600 12.5px var(--mono); color: var(--muted); padding: 0 8px; }
 .com-opt { min-height: 36px; padding: 4px 14px; border-radius: 999px; border: 0; background: none; color: var(--ink); font: 600 14px var(--display); cursor: pointer; }
 .com-opt[aria-pressed="true"] { background: color-mix(in srgb, var(--ink) 12%, var(--panel)); }
+details.datacode { border-color: color-mix(in srgb, var(--ok-c) 60%, var(--rule)); background: var(--panel); }
+details.datacode > summary { background: color-mix(in srgb, var(--ok-c) 12%, transparent); }
+details.datacode > summary::after { color: var(--ok-c); }
+details.datacode .mission-tag { background: var(--ok-c); }
+.data-body { max-width: 900px; }
+.data-body p { margin: 0; }
+.data-body h3 { font-family: var(--display); font-size: 18px; margin: 12px 0 0; }
+.data-body code { font: 13px var(--mono); background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+.data-pre { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 /* Last, so no later "font" shorthand can bring the joined operator symbols back. */
 body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-name { font-variant-ligatures: none; font-feature-settings: "calt" 0, "liga" 0; }
@@ -805,6 +819,84 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
       <div class="full-body">
         <div class="handin-actions"><button type="button" class="dl-final">Download explorer.py</button><button type="button" class="copy-final">Copy the whole program</button><span class="final-status" role="status"></span></div>
         <div id="full-code"></div>
+      </div>
+    </details>
+
+    <details class="mission datacode" id="the-data">
+      <summary><span class="mission-tag">The data</span><span class="mission-title">What fetch() brings back, and what clean() keeps</span></summary>
+      <div class="full-body data-body">
+        <p>A real answer from Open Library, fetched on 4 October with the program's own URL. <code>fetch()</code> returns <code>data["docs"]</code>: a <b>list of 100 dictionaries</b>, one per book. In <code>main()</code> that list is called <code>raw</code>; inside <code>clean()</code> the same list is called <code>raw_books</code>. Long subject lists are cut here to keep it readable.</p>
+        <h3>1 · Raw, as fetch() returns it: two of the 100 books</h3>
+        <p>The first book has every field. The second has no <code>number_of_pages_median</code> at all: the key is simply missing.</p>
+        <pre class="full-pre data-pre">[
+  {
+    &quot;author_name&quot;: [
+      &quot;Jean Craighead George&quot;
+    ],
+    &quot;first_publish_year&quot;: 1959,
+    &quot;number_of_pages_median&quot;: 177,
+    &quot;title&quot;: &quot;My side of the mountain&quot;,
+    &quot;subject&quot;: [
+      &quot;Supervivencia (accidentes de aviación, naufragios, etc.)&quot;,
+      &quot;Falcons&quot;,
+      &quot;Spanish language materials&quot;,
+      &quot;Fiction&quot;,
+      &quot;... and 32 more&quot;
+    ]
+  },
+  {
+    &quot;author_name&quot;: [
+      &quot;Smart Reads&quot;
+    ],
+    &quot;first_publish_year&quot;: 2022,
+    &quot;title&quot;: &quot;Workbook for the Mountain Is You&quot;,
+    &quot;subject&quot;: [
+      &quot;Self-help&quot;,
+      &quot;personal development&quot;,
+      &quot;self-awareness&quot;,
+      &quot;self-love&quot;,
+      &quot;... and 7 more&quot;
+    ]
+  }
+]</pre>
+        <h3>2 · The same two books after clean()</h3>
+        <p>Every record now has the same five keys. The missing page count became <code>null</code> in JSON, which is <code>None</code> in Python; a missing list would become <code>[]</code>. Names are the program's own: <code>authors</code>, <code>year</code>, <code>pages</code>.</p>
+        <pre class="full-pre data-pre">[
+  {
+    &quot;title&quot;: &quot;My side of the mountain&quot;,
+    &quot;authors&quot;: [
+      &quot;Jean Craighead George&quot;
+    ],
+    &quot;year&quot;: 1959,
+    &quot;pages&quot;: 177,
+    &quot;subjects&quot;: [
+      &quot;Supervivencia (accidentes de aviación, naufragios, etc.)&quot;,
+      &quot;Falcons&quot;,
+      &quot;Spanish language materials&quot;,
+      &quot;Fiction&quot;,
+      &quot;... and 32 more&quot;
+    ]
+  },
+  {
+    &quot;title&quot;: &quot;Workbook for the Mountain Is You&quot;,
+    &quot;authors&quot;: [
+      &quot;Smart Reads&quot;
+    ],
+    &quot;year&quot;: 2022,
+    &quot;pages&quot;: null,
+    &quot;subjects&quot;: [
+      &quot;Self-help&quot;,
+      &quot;personal development&quot;,
+      &quot;self-awareness&quot;,
+      &quot;self-love&quot;,
+      &quot;... and 7 more&quot;
+    ]
+  }
+]</pre>
+        <h3>3 · The rows clean() rejects: 3</h3>
+        <p>This answer had no empty titles and no rows that were not dictionaries, so all 3 rejections are duplicates. That is the "3 rows rejected" in the terminal.</p>
+        <div class="req-wrap"><table class="req data-rej"><thead><tr><th>Row</th><th>Title</th><th>Why it is rejected</th></tr></thead><tbody><tr><td>61</td><td>At the Mountains of Madness</td><td>duplicate: the same title is already row 1</td></tr><tr><td>76</td><td>Cold Mountain</td><td>duplicate: the same title is already row 14</td></tr><tr><td>95</td><td>Fire on the Mountain</td><td>duplicate: the same title is already row 37</td></tr></tbody></table></div>
+        <p>So <b>100 rows in, 97 records kept</b>. The whole clean list is in <code>backup.json</code> in your folder, written by option 2: open it in VS Code to read every record.</p>
       </div>
     </details>
 
@@ -2137,15 +2229,18 @@ function boxHead(item) {
   }
   // A box shown in the project's pop-up is away from its session: use where it lives.
   const lesson = item.closest('details.lesson') || lpopHome.closest('details.lesson');
+  const group = item.closest('.lgroup') || lpopHome.closest('.lgroup');
   const name = item.querySelector('h4 span:not(.box-num):not(.tag)').textContent;
-  return { sess: lesson.style.getPropertyValue('--sess'), name, num: item.dataset.num, text: item.querySelector('p').textContent };
+  // A lesson's row in Review takes the same tint as the box itself.
+  const tint = `oklch(var(--tint-l) var(--tint-c) ${group.style.getPropertyValue('--h')} / var(--tint-a))`;
+  return { sess: lesson.style.getPropertyValue('--sess'), name, num: item.dataset.num, text: item.querySelector('p').textContent, tint };
 }
 function reviewNote(n) {
   const item = itemByKey(n.key);
   if (!item) return '';
   const h = boxHead(item);
   // One row per note: where it is on the left, the note and its answer aligned on the right.
-  return `<article class="rv-entry rv-qa" data-kind="${n.kind}" style="--sess: ${h.sess}">
+  return `<article class="rv-entry rv-qa" data-kind="${n.kind}" style="--sess: ${h.sess};${h.tint ? ` --rv-tint: ${h.tint};` : ''}">
     <div class="rv-place"><span class="rv-sess">${h.num}</span><i class="state-dot ${noteState(n)}"></i></div>
     <div class="rv-main">
       <div class="rv-top"><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">${item.closest('#page-project') ? 'Open in project ›' : 'Open in lesson ›'}</button></div>
@@ -2158,7 +2253,7 @@ function reviewBox(key) {
   const item = itemByKey(key);
   if (!item) return '';
   const h = boxHead(item);
-  return `<article class="rv-entry" style="--sess: ${h.sess}">
+  return `<article class="rv-entry" style="--sess: ${h.sess};${h.tint ? ` --rv-tint: ${h.tint};` : ''}">
     <div class="rv-top"><span class="rv-sess">${h.num}</span><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">${item.closest('#page-project') ? 'Open in project ›' : 'Open in lesson ›'}</button></div>
     <p class="rv-text">${esc(h.text)}</p>
   </article>`;
@@ -2173,7 +2268,6 @@ function renderReview() {
   const byPlace = (a, b) => ((place.get(a.key) ?? 1e9) - (place.get(b.key) ?? 1e9)) || byNewest(a, b);
   const questions = noteList.filter(n => n.kind === 'question').sort(byPlace);
   const comments = noteList.filter(n => n.kind === 'comment').sort(byPlace);
-  const answered = questions.filter(n => n.answer).length;
   const confused = keys.filter(k => marks[k] === 'mid');
   const noTime = keys.filter(k => marks[k] === 'late');
   const waiting = noteList.filter(n => noteState(n) === 'waiting' && n.answer).length;
@@ -2185,11 +2279,22 @@ function renderReview() {
     el.innerHTML = '<p class="rv-empty">Nothing here yet. In Lessons, the three dots on the side of a box mark it Got it, Confused or No time, and the button at the bottom adds a question or a comment. They all gather here.</p>';
     return;
   }
-  const group = (title, cls, html, n, sub) => n ? `<section class="rv-group rv-${cls}"><h2><i class="dot"></i>${title} <b>${n}</b>${sub ? `<span class="rv-sub">${sub}</span>` : ''}</h2><div class="rv-list">${html}</div></section>` : '';
-  el.innerHTML = group('Questions', 'question', questions.map(reviewNote).join(''), questions.length, `${answered} answered · ${questions.length - answered} waiting`)
-    + group('Comments', 'comment', comments.map(reviewNote).join(''), comments.length)
-    + group('Confused', 'mid', confused.map(reviewBox).join(''), confused.length)
-    + group('No time', 'late', noTime.map(reviewBox).join(''), noTime.length);
+  const group = (title, cls, html, n, sub) => n ? `<section class="rv-group rv-${cls}"><h3><i class="dot"></i>${title} <b>${n}</b>${sub ? `<span class="rv-sub">${sub}</span>` : ''}</h3><div class="rv-list">${html}</div></section>` : '';
+  // Two parts, so the project and the slides read separately; then the marked boxes.
+  const part = (title, qs, cs) => {
+    if (!qs.length && !cs.length) return '';
+    const done = qs.filter(n => n.answer).length;
+    return `<section class="rv-part"><h2 class="rv-part-title">${title}</h2>`
+      + group('Questions', 'question', qs.map(reviewNote).join(''), qs.length, `${done} answered · ${qs.length - done} waiting`)
+      + group('Comments', 'comment', cs.map(reviewNote).join(''), cs.length)
+      + '</section>';
+  };
+  const inProject = n => n.key.startsWith('p1|');
+  el.innerHTML = part('Project 1', questions.filter(inProject), comments.filter(inProject))
+    + part('Lessons', questions.filter(n => !inProject(n)), comments.filter(n => !inProject(n)))
+    + (confused.length || noTime.length ? `<section class="rv-part"><h2 class="rv-part-title">Boxes you marked</h2>`
+      + group('Confused', 'mid', confused.map(reviewBox).join(''), confused.length)
+      + group('No time', 'late', noTime.map(reviewBox).join(''), noTime.length) + '</section>' : '');
 }
 document.getElementById('review').addEventListener('click', e => {
   const read = e.target.closest('.note-read');
