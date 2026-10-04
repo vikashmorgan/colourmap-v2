@@ -728,6 +728,15 @@ details.datacode .mission-tag { background: var(--ok-c); }
 .data-body h3 { font-family: var(--display); font-size: 18px; margin: 12px 0 0; }
 .data-body code { font: 13px var(--mono); background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
 .data-pre { color: var(--ink); }
+/* Walkthrough lines: a light strip on the left; tapping unfolds the explanation. */
+.codeview .cl.wt { position: relative; cursor: pointer; }
+.codeview .cl.wt::before { content: ""; position: absolute; left: -12px; top: -.3em; bottom: -.3em; width: 3px; border-radius: 2px; background: color-mix(in srgb, var(--ok-c) 55%, transparent); }
+.codeview .cl.wt:hover, .codeview .cl.wt-open { background: color-mix(in srgb, var(--ok-c) 10%, transparent); }
+.codeview pre .wt-box { white-space: normal; font: 15px/1.5 var(--body); color: var(--ink); margin: 6px 0 12px; padding: 12px 14px; border-radius: 10px; background: color-mix(in srgb, var(--ok-c) 10%, var(--panel)); display: grid; gap: 10px; }
+.wt-title { font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ok-c); }
+.wt-row { display: grid; gap: 2px; }
+.wt-row code { font: 13px var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.wt-row p { margin: 0; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 /* Last, so no later "font" shorthand can bring the joined operator symbols back. */
 body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-name { font-variant-ligatures: none; font-feature-settings: "calt" 0, "liga" 0; }
@@ -1849,6 +1858,65 @@ projectEl.addEventListener('click', e => {
   navigator.clipboard.writeText(FINAL_CODE)
     .then(() => { status.textContent = 'Copied. Paste it into explorer.py in VS Code.'; })
     .catch(() => { status.textContent = 'Copying is blocked here; use Download instead.'; });
+});
+
+/* Walkthroughs: a block of code explained line by line. Matched by the code itself,
+   so a block keeps its walkthrough in every step and view where it appears. Its
+   lines carry a light strip; tapping one unfolds the explanation under the block. */
+const WALKTHROUGHS = [
+  {
+    id: 'fetch-branch',
+    title: 'What these lines do',
+    lines: [
+      ['if choice == "fetch":', 'Checks whether the menu choice is "fetch". (Typing 1 is turned into "fetch" earlier, by NUMBER_TO_NAME.)'],
+      ['raw = fetch()', 'Calls the fetch() function. If the internet request succeeds, raw gets the list of books. If it fails, raw is None.'],
+      ['if raw is not None:', 'Checks that fetching succeeded. If raw is None, the cleaning steps inside are skipped.'],
+      ['records, rejected = clean(raw)', 'Sends the raw books to clean(). That function returns two things: the cleaned book list and the number of rejected entries. They are stored in records and rejected.'],
+      ['print(f"{len(records)} records loaded, {rejected} rows rejected.")', 'Reports those counts. len(records) counts the cleaned books. With today\'s data clean() keeps 97 books and rejects 3, so the terminal shows: 97 records loaded, 3 rows rejected.'],
+    ],
+  },
+];
+function viewLines(view) {
+  const step = Number(view.dataset.step), first = Number(view.dataset.first), last = Number(view.dataset.last);
+  return PROJECT_FULL[step - 1].code.split('\n').slice(first - 1, last).map(l => l.trim());
+}
+function applyWalkthroughs() {
+  for (const view of projectEl.querySelectorAll('.codeview:not(.tview)')) {
+    const lines = viewLines(view);
+    const first = Number(view.dataset.first);
+    for (const w of WALKTHROUGHS) {
+      const want = w.lines.map(([code]) => code.trim());
+      for (let i = 0; i + want.length <= lines.length; i++) {
+        if (!want.every((c, j) => lines[i + j] === c)) continue;
+        for (let j = 0; j < want.length; j++) {
+          const cl = view.querySelector(`.cl[data-line="${first + i + j}"]`);
+          cl.classList.add('wt');
+          cl.dataset.wt = w.id;
+          cl.dataset.wtEnd = String(first + i + want.length - 1);
+          cl.title = 'Tap to see what these lines do';
+        }
+      }
+    }
+  }
+}
+applyWalkthroughs();
+function toggleWalkthrough(cl) {
+  const view = cl.closest('.codeview');
+  const end = view.querySelector(`.cl[data-line="${cl.dataset.wtEnd}"]`);
+  const open = end.nextElementSibling && end.nextElementSibling.classList.contains('wt-box') ? end.nextElementSibling : null;
+  const lines = [...view.querySelectorAll(`.cl.wt[data-wt-end="${cl.dataset.wtEnd}"]`)];
+  if (open) { open.remove(); lines.forEach(l => l.classList.remove('wt-open')); return; }
+  const w = WALKTHROUGHS.find(x => x.id === cl.dataset.wt);
+  const box = document.createElement('div');
+  box.className = 'wt-box';
+  box.innerHTML = `<div class="wt-title">${esc(w.title)}</div>${w.lines.map(([code, text]) => `<div class="wt-row"><code>${highlightLine(code)}</code><p>${esc(text)}</p></div>`).join('')}`;
+  end.after(box);
+  lines.forEach(l => l.classList.add('wt-open'));
+}
+projectEl.addEventListener('click', e => {
+  const cl = e.target.closest('.codeview .cl.wt');
+  if (!cl || e.target.closest('.ldot, .ln')) return;
+  toggleWalkthrough(cl);
 });
 
 /* A lesson box, popped over the project: a copy of the real box, without its marks. */
