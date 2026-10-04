@@ -12,7 +12,7 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
 
 ## What the page holds
 
-- **Code map** — each option of the project brief matched to the functions of his `explorer.py`, code beside a plain explanation.
+- **Project 1** — the project, `explorer.py`, built in ten steps. A closed **mission** box at the top restates the brief: the eight menu choices, the rules, the API, what to hand in. Each step is a closed, coloured box: the brief's words for it, the code it adds (function by function, code beside a plain explanation, the lines it adds to `main()` marked +), what the terminal printed when that stage ran, and one sentence to say at the oral. Every stage is a complete program that was actually run against the API; nothing on the page is invented output. Under each function, chips name the lesson boxes it uses; a chip opens that box over the page. The program uses only what the sessions taught. The page ends with the finished file (download or copy) and the brief's requirements, checked.
 - **Python toolkit** — every Python feature the project uses, in learning order.
 - **Lessons** — sessions 1, 2, 3, 4, 6 and 7 (there was no session 5), each a closed box until opened. Inside: groups of boxes, one box per function or idea, numbered `session.box` (e.g. 3.12). Each box has a short explanation, an example, a **More** panel with a longer explanation and a run-checked example, and a link to its slide.
 - **Examples** — sessions 4, 6 and 7 each have ten small worked examples, one idea each, run-checked. Numbered markers on the lines that matter open short comments explaining what happens there.
@@ -35,6 +35,7 @@ Rules:
 - When served from `/coding`, the page loads the account's marks and notes on open. Boxes recorded in this browser before signing in, and absent from the account, are merged up; nothing in the account is overwritten by a merge.
 - Every later change saves the whole box (mark + note) with `PUT /api/coding/marks`. A box with neither is deleted.
 - Keys are `s{session}|{box name}`, so marks survive redeploys of the page as long as a box keeps its name.
+- Project cards take the same three dots and the same notes. Their keys are `p1|{step}|{name}`. Each step shows how many of its cards are *Got it*; a step with all of them gets a tick in the step index.
 
 Table `coding_marks` (migration `0023_coding_marks.sql`): one row per box with a mark, a note, or both; unique on `(user_id, item_key)`; RLS limits every row to its owner. The database enforces the vocabularies (`got|mid|late`, `question|comment`), that a note always has a kind, and that a row is never empty.
 
@@ -59,6 +60,8 @@ Edit the standalone copy, then copy `index.html` into `content/coding/index.html
 ## Reflection
 
 - **2026-10-04.** One note per box was too few: questions and comments pile up on the same idea. Notes moved to their own table, `coding_notes` (migration 0025), one row per note, with answer and read columns so replies can be shown beside a question without editing it. The old single notes are copied across by the migration and stay in `coding_marks`, unused.
+
+- **2026-10-04.** The *Code map* explained the finished program option by option. That told Victor what each function does but not how a program like it gets written, which is what the oral asks him to show. It became *Project 1*, the same program built in ten runnable steps, each tied back to the lesson boxes it uses. Two things in the old code were beyond the sessions and were rewritten with what was taught: `json.JSONDecodeError` became `ValueError` (its parent), and the f-string width variable `{title:<{TITLE_WIDTH}}` became the literal `:<32` the brief itself shows.
 
 - **2026-10-04.** Back to three dots. *Solid* (a second green above *Got it*) added confusion rather than a useful distinction, and without *No time* the three-colour scheme Victor found clear was lost. The page shows *Got it*, *Confused*, *No time* again; stored `solid` marks display as *Got it*, so nothing recorded was dropped.
 
