@@ -629,6 +629,19 @@ details.fullcode .mission-tag { background: var(--ink); }
 .full-pre .ln { display: inline-block; width: 3.2em; margin-left: -0.4em; padding-right: 1em; text-align: right; color: var(--muted); opacity: .6; user-select: none; }
 
 /* A lesson box, popped over the project page. */
+/* The notebook dot on the right edge, and the notebook it opens. */
+.nb-dot { position: fixed; z-index: 55; right: 10px; top: 50%; width: 22px; height: 22px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 2px solid color-mix(in srgb, var(--ink) 45%, transparent); background: var(--ground); }
+.nb-dot::after { content: ''; position: absolute; inset: -11px; }
+.nb-dot:hover, .nb-dot[aria-expanded="true"] { border-color: var(--ink); }
+.nb-dot.has-notes { background: color-mix(in srgb, var(--ink) 55%, var(--ground)); }
+.notebook { position: fixed; z-index: 60; right: 16px; top: 96px; bottom: 16px; width: min(440px, calc(100vw - 32px)); overflow: auto;
+  background: var(--ground); border: 1px solid var(--rule); border-radius: 16px; box-shadow: 0 18px 48px rgb(0 0 0 / .35); }
+.nb-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: baseline; gap: 10px; padding: 12px 10px 12px 16px; background: var(--panel); border-bottom: 1px solid var(--rule); }
+.nb-title { font-family: var(--display); font-weight: 700; font-size: 20px; }
+.nb-sub { font-size: 13.5px; color: var(--muted); margin-right: auto; }
+.nb-host { display: grid; gap: 10px; padding: 16px; }
+.nb-host .note-list { display: grid; gap: 10px; }
 .lpop { position: fixed; z-index: 60; right: 16px; top: 96px; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 120px); overflow: auto;
   background: var(--ground); border: 1px solid color-mix(in srgb, var(--sess) 60%, transparent); border-radius: 16px; box-shadow: 0 18px 48px rgb(0 0 0 / .35); }
 .lpop-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; background: color-mix(in srgb, var(--sess) 22%, var(--ground)); }
@@ -786,6 +799,12 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
       <h3>Checked against the brief</h3>
       <div class="req-wrap"><table class="req" id="req"></table></div>
     </section>
+
+    <button type="button" class="nb-dot" id="nb-dot" aria-expanded="false" aria-controls="notebook" title="Notebook: your notes on the process"></button>
+    <aside class="notebook" id="notebook" aria-label="Notebook" hidden>
+      <div class="nb-top"><span class="nb-title">Notebook</span><span class="nb-sub">Your notes on the process</span><button type="button" class="lpop-close" id="nb-close" aria-label="Close the notebook">×</button></div>
+      <div class="nb-host" id="nb-host" data-key="p1|notebook"><button type="button" class="note-dot" aria-pressed="false">Question or comment</button></div>
+    </aside>
 
     <div class="lpop" id="lpop" role="dialog" aria-label="Lesson box" hidden>
       <div class="lpop-top"><span class="lpop-where" id="lpop-where"></span><button type="button" class="lpop-go" id="lpop-go">Open in Lessons ›</button><button type="button" class="lpop-close" id="lpop-close" aria-label="Close">×</button></div>
@@ -1632,6 +1651,7 @@ for (const s of PROJECT_STEPS) {
 }
 // Each step shows how many of its cards are marked Got it; a finished step gets a tick in the index.
 function refreshSteps() {
+  nbDot.classList.toggle('has-notes', notesOf('p1|notebook').length > 0);
   for (const chip of document.querySelectorAll('.lchip')) {
     const m = marks[chip.dataset.lkey] === 'solid' ? 'got' : (marks[chip.dataset.lkey] || '');
     chip.dataset.mark = m;
@@ -1697,7 +1717,20 @@ function closeLesson() {
   if (lpopChip) lpopChip.setAttribute('aria-expanded', 'false');
   lpopChip = null;
 }
+// The notebook: one running set of notes on the process, behind a dot on the right.
+const notebook = document.getElementById('notebook');
+const nbDot = document.getElementById('nb-dot');
+function setNotebook(open) {
+  if (open && !lpop.hidden) closeLesson();
+  notebook.hidden = !open;
+  nbDot.setAttribute('aria-expanded', String(open));
+}
+nbDot.addEventListener('click', () => setNotebook(notebook.hidden));
+document.getElementById('nb-close').addEventListener('click', () => setNotebook(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !notebook.hidden) setNotebook(false); });
+
 function openLesson(chip) {
+  if (!notebook.hidden) setNotebook(false);
   const item = LESSON_BOX[chip.dataset.lkey];
   if (!item) return;
   closeLesson();
@@ -1784,7 +1817,7 @@ const savedNote = document.getElementById('saved-note');
 
 const allItems = () => [...lessonsEl.querySelectorAll('.item[data-key]')];
 // Everything that can hold notes: the lesson boxes and the project cards.
-const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #steps .pcard[data-key], #page-project .line-host[data-key]')];
+const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #steps .pcard[data-key], #page-project .line-host[data-key], #nb-host')];
 const itemByKey = key => noteHosts().find(i => i.dataset.key === key);
 const notesOf = key => noteList.filter(n => n.key === key);
 const noteRef = n => n.id || n.localId;
@@ -1972,7 +2005,7 @@ function onNoteClick(e) {
     if (activeFilter !== 'all') applyFilter();
     return;
   }
-  const item = e.target.closest('.line-host, .item[data-key], .pcard');
+  const item = e.target.closest('.line-host, .nb-host, .item[data-key], .pcard');
   if (!item) return;
   const key = item.dataset.key;
   if (e.target.closest('.note-dot')) { openEditor(item, null); return; }
@@ -2009,6 +2042,7 @@ document.getElementById('progress-bar').addEventListener('click', e => {
 
 /* ---------- Review: questions, comments, confused and no time, together ---------- */
 function boxHead(item) {
+  if (item.id === 'nb-host') return { sess: 'var(--muted)', name: 'Project 1 · notebook', num: 'NB', text: '' };
   if (item.classList.contains('line-host')) {
     const st = PROJECT_STEPS[item.dataset.step - 1];
     return { sess: stepColour(st.n), name: `Step ${st.n} · ${st.title} · line ${item.dataset.line}`, num: `L${item.dataset.line}`, text: item.querySelector('.line-ref code').textContent };
@@ -2072,6 +2106,7 @@ document.getElementById('review').addEventListener('click', e => {
   if (target.closest('#page-project')) {
     showPage('project', false);
     if (target.classList.contains('line-host')) target.hidden = false;
+    if (target.id === 'nb-host') { setNotebook(true); return; }
     openTarget(target.id);
     target.classList.add('flash');
     setTimeout(() => target.classList.remove('flash'), 1600);
