@@ -374,7 +374,8 @@ details.more > summary { list-style: none; cursor: pointer; display: flex; align
 details.more > summary:hover { opacity: 1; background: color-mix(in srgb, var(--box-text) 16%, transparent); }
 details.more[open] > summary { margin-bottom: 8px; }
 details.more > summary::-webkit-details-marker { display: none; }
-details.more > summary::before { content: '+'; font: 600 15px var(--mono); }
+details.more > summary::before { content: '+'; font: 600 17px/1 var(--mono); }
+details.more > summary { min-width: 46px; padding: 3px 14px; }
 details.more[open] > summary::before { content: '−'; }
 details.more[open] > summary { opacity: 1; }
 .more-text { margin: 4px 0 8px; font-size: 14.5px; color: var(--box-text); }
@@ -384,6 +385,9 @@ details.more[open] > summary { opacity: 1; }
 .more-out { color: var(--box-text); opacity: .9; }
 
 /* Source links and the upload panel (Colour Brain only). */
+/* On a box the page number sits quietly in the bottom-right corner. */
+.lgroup .item > .slide-link { position: absolute; right: 36px; bottom: 8px; }
+.lgroup .item:has(> .slide-link) { padding-bottom: 30px; }
 .slide-link { justify-self: start; font: 600 12px var(--mono); color: var(--box-text); opacity: .75; text-decoration: none; border-bottom: 1px dotted currentColor; }
 .slide-link:hover { opacity: 1; }
 .ex-body .slide-link { color: var(--accent); }
@@ -1556,7 +1560,7 @@ const ON_COLOUR_BRAIN = location.pathname.startsWith('/coding');
 const slideHref = (file, page) => `/api/coding/slides/${encodeURIComponent(file)}#page=${page}`;
 function slideLink(file, page, label) {
   if (!ON_COLOUR_BRAIN || !file || !page) return '';
-  return `<a class="slide-link" href="${slideHref(file, page)}" target="_blank" rel="noopener" title="Open ${esc(file)} on page ${page}">${label || 'slide'} p. ${page}</a>`;
+  return `<a class="slide-link" href="${slideHref(file, page)}" target="_blank" rel="noopener" title="Open ${esc(file)} on page ${page}">${label ? `${label} ` : ''}p. ${page}</a>`;
 }
 
 /* The 12 exercises of session3Extra.pdf. Every solution was run and its output
@@ -1608,7 +1612,7 @@ function moreSegments(text) {
 }
 
 function moreBlock(m) {
-  return `<details class="more"><summary>More</summary>
+  return `<details class="more"><summary aria-label="More" title="More"></summary>
     <div class="more-body">
       <div class="more-text">${moreSegments(m.more)}</div>
       <div class="more-side">
