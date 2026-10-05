@@ -74,6 +74,8 @@ Edit the standalone copy, then copy `index.html` into `content/coding/index.html
 
 ## Reflection
 
+- **2026-10-05.** A second round, the names Victor had asked about in his questions: `with_pages` → `books_with_pages`, `cut()` → `shorten()`, `show()` → `value_or_dash()`, `LINE` → `TABLE_LINE`, `get_count()` → `count_of_pair()`, `NUMBER_TO_NAME` → `MENU_NUMBERS`, `counts` → `subject_counts`, `pairs`/`top` → `subject_pairs`/`top_15`, `biggest` → `biggest_count`, `field` → `sort_by`, `with_value`/`without_value` → `books_with_value`/`books_missing_value`, `loaded` → `loaded_book_list`. A name now says what it holds. Plain English words in messages and docstrings ("the 15 biggest subjects", "sort by a field") stay as they are.
+
 - **2026-10-05.** `records`, `record`, `book` and `raw`/`raw_books` named nearly the same thing four ways, and `records`/`record` differed by one letter. Victor found it confusing, so everything is a book now: `raw_book_list` (the list from the API, in `main()` and `clean()`), `raw_book` (one of them), `book_list` (the clean books) and `book` (one clean book); `sort_records()` became `sort_books()`. Chosen over `books` so the list never reads like the single `book`. Renamed in all ten steps, the cards, the full program, the toolkit, the walkthrough, the data box and the terminal output ("97 books loaded"); no line moved, so line notes stay put. The teacher's brief keeps its own word, "records", and so do the notes and answers already written.
 
 - **2026-10-04.** The section banners (a `# ====` line above and below each `# OPTION n` title) were dropped from the program: they doubled every heading with two lines of noise. The program went from 438 to 416 lines; no line notes existed yet, so none moved.
