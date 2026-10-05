@@ -1534,10 +1534,22 @@ for (const L of LESSONS) {
 }
 
 // Opening a session from the index, or from a #s3 link, opens it before scrolling.
+// Opens every box around an element. Project steps open one at a time: opening one
+// closes the others, so the page never grows into ten open steps.
+function openAround(el) {
+  for (let node = el; node; node = node.parentElement) {
+    if (node.tagName !== 'DETAILS') continue;
+    if (node.matches('details.pstep')) soloStep(node);
+    node.open = true;
+  }
+}
+function soloStep(step) {
+  for (const other of document.querySelectorAll('#steps details.pstep[open]')) if (other !== step) other.open = false;
+}
 function openTarget(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  for (let node = el; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
+  openAround(el);
   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 lessonIndex.addEventListener('click', e => {
@@ -1925,7 +1937,7 @@ function goToSpot(key) {
   const s = parseSpot(key);
   const view = viewWithLine(s.step, s.line);
   if (!view) return;
-  for (let node = view; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
+  openAround(view);
   const host = openSpot(view, key, false);
   host.scrollIntoView({ block: 'center', behavior: 'smooth' });
   host.classList.add('flash');
@@ -1972,6 +1984,16 @@ for (const s of PROJECT_STEPS) {
       </div>
     </details>`);
 }
+// Opening a step by its title closes the others. The ones above it would pull it up
+// as they close, so the page scrolls by the same amount and the title stays under the finger.
+stepsEl.addEventListener('toggle', e => {
+  const step = e.target;
+  if (!step.matches('details.pstep') || !step.open) return;
+  const before = step.getBoundingClientRect().top;
+  soloStep(step);
+  const shift = step.getBoundingClientRect().top - before;
+  if (shift) scrollBy(0, shift);
+}, true);
 // Each step shows how many of its cards are marked Got it; a finished step gets a tick in the index.
 function refreshSteps() {
   nbDot.classList.toggle('has-notes', notesOf('p1|notebook').length > 0);
@@ -2374,7 +2396,7 @@ projectEl.addEventListener('click', e => {
     if (!view.querySelector(`.cl[data-line="${x}"]`)) view = viewWithLine(Number(view.dataset.step), x);
     const cl = view && view.querySelector(`.cl[data-line="${x}"]`);
     if (!cl) return;
-    for (let node = view; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
+    openAround(view);
     hideTerm();
     cl.scrollIntoView({ block: 'center', behavior: 'smooth' });
     cl.classList.add('lit');
