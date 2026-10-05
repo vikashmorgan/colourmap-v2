@@ -114,6 +114,11 @@ details.output summary { cursor: pointer; font-size: 14px; color: var(--accent);
   font: 13px/1.5 var(--mono); overflow-x: auto; white-space: pre;
 }
 .terminal .you { color: #e7c25c; }
+/* What a project card's own code prints, beside its explanation. */
+.card-term { margin-top: 12px; display: grid; gap: 4px; }
+.ct-label { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.card-term .terminal { margin: 0; padding: 10px 12px; font-size: 12px; }
+.ct-more { font-size: 12.5px; color: var(--muted); }
 
 /* Function row: code left, explanation right */
 .fn { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 0; margin-top: 20px; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--panel); }
@@ -2037,8 +2042,85 @@ function stepFull(n) {
       ${codeView(f.code, n, 1, f.added, 'full-pre')}</details>`;
 }
 
+// What a card's own code prints, taken from the step's real terminal output: each
+// print() and input() in the card becomes a pattern ({...} = any text; a width such as
+// :<32 = exactly that many characters), and the output lines it matches are shown on
+// the card's right. A pattern made only of placeholders (print_row's columns) claims
+// only the lines no wordier pattern of the same step already explains.
+const escRe2 = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function printPattern(lit, open) {
+  let re = '', literal = 0, i = 0;
+  while (i < lit.length) {
+    if (lit[i] === '{') {
+      const j = lit.indexOf('}', i);
+      const field = lit.slice(i, j + 1);
+      // {'Title':<32} is fixed text padded to its width: known exactly.
+      const quoted = /^\{(['"])(.*?)\1(?::([<>^]?)(\d+))?\}$/.exec(field);
+      const spec = /:[<>^]?(\d+)\}?$/.exec(field);
+      if (quoted) {
+        const w = Number(quoted[4] || 0), t = quoted[2];
+        const padded = quoted[3] === '>' ? t.padStart(w) : t.padEnd(w);
+        re += escRe2(padded);
+        literal += t.replace(/\s/g, '').length;
+      } else re += spec ? `.{${spec[1]}}` : '.+?';
+      i = j + 1;
+    } else {
+      if (lit[i].trim()) literal++;
+      re += escRe2(lit[i]);
+      i++;
+    }
+  }
+  return { re: new RegExp(`^${re}${open ? '' : '$'}`), specific: literal >= 3 };
+}
+function codePatterns(code, program) {
+  const pats = [];
+  for (const line of code.split('\n')) {
+    const call = /\b(print|input)\((f?)(["'])(.*?)\3(\s*\))?/.exec(line);
+    if (call) {
+      const lit = call[2] ? call[4] : call[4].replace(/[{}]/g, m => m + m);
+      const p = printPattern(call[1] === 'input' ? `${lit}{x}` : lit, !call[5]);
+      if (call[1] === 'input') p.re = new RegExp(p.re.source.replace(/\.\+\?\$$/, '.*$'));
+      pats.push(p);
+      continue;
+    }
+    // print(NAME) where NAME = "-" * 69 at the top of the program
+    const named = /\bprint\(([A-Z_]+)\)/.exec(line);
+    if (named) {
+      const def = new RegExp(`^${named[1]} = "(.)" \\* (\\d+)`, 'm').exec(program);
+      if (def) pats.push({ re: new RegExp(`^${escRe2(def[1])}{${def[2]}}$`), specific: true });
+    }
+  }
+  return pats;
+}
+const TERM_SHOW = 4;
+function cardTerminals(s) {
+  const out = s.output.split('\n');
+  const program = PROJECT_FULL[s.n - 1].code;
+  const per = s.blocks.map(b => codePatterns(b.code, program));
+  // Lines a wordy print anywhere in the program explains (the menu, the header…),
+  // so a placeholder-only print does not claim them.
+  const explained = new Set();
+  const all = codePatterns(program, program).filter(p => p.specific);
+  out.forEach((l, i) => { if (all.some(p => p.re.test(l))) explained.add(i); });
+  return per.map(pats => {
+    const lines = [];
+    out.forEach((l, i) => {
+      if (l === '@@MENU@@' || !l.trim() || lines.includes(l)) return;
+      if (pats.some(p => p.re.test(l) && (p.specific || !explained.has(i)))) lines.push(l);
+    });
+    return lines;
+  });
+}
+function cardTerminalHtml(lines) {
+  if (!lines.length) return '';
+  const shown = lines.slice(0, TERM_SHOW).map(l => terminalLine(l)).join('\n');
+  const more = lines.length > TERM_SHOW ? `<span class="ct-more">… and ${lines.length - TERM_SHOW} more line${lines.length - TERM_SHOW > 1 ? 's' : ''} like these</span>` : '';
+  return `<div class="card-term"><span class="ct-label">In the terminal</span><pre class="terminal">${shown}</pre>${more}</div>`;
+}
+
 for (const s of PROJECT_STEPS) {
   const col = stepColour(s.n);
+  const terms = cardTerminals(s);
   stepIndex.insertAdjacentHTML('beforeend', `<a href="#step-${s.n}" data-open="step-${s.n}" style="--sess: ${col}"><span class="n">${s.n}</span>${esc(s.title)}<i class="state-dot step-q" hidden></i></a>`);
   const cards = s.blocks.map((b, i) => `
     <article class="fn pcard" id="${cardId(s.n, b.name)}" data-key="${esc(noteKeyOf(s.n, b.name))}" data-step="${s.n}" data-name="${esc(b.name)}" data-pos="${i + 1}/${s.blocks.length}">
@@ -2046,6 +2128,7 @@ for (const s of PROJECT_STEPS) {
       <div class="explain">
         <p class="what">${b.what}</p>
         ${b.steps.length ? `<ol>${b.steps.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}
+        ${cardTerminalHtml(terms[i])}
         ${lessonChips(b)}
         <button type="button" class="note-dot" aria-pressed="false">Question or comment</button>
       </div>
