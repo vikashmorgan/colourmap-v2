@@ -1298,10 +1298,20 @@ export default function NotebookPage() {
                       {/* ---- EXPANDED ---- */}
                       {isExpanded && (
                         <div className="animate-in fade-in duration-200">
-                          {/* Title bar + close */}
+                          {/* Title bar + close. A tap anywhere on the bar outside the
+                              title and its buttons folds the note again, so a note
+                              read is closed where the eye already is. The title keeps
+                              to the width of its text so the bar has room to tap;
+                              keyboard users have the close button. */}
                           <div
-                            className="px-4 pt-3 pb-2 flex items-center gap-3"
+                            className="px-4 pt-3 pb-2 flex items-center gap-3 cursor-pointer"
                             style={{ borderBottom: `1px solid ${color}15` }}
+                            title="Tap to close"
+                            onClick={(e) => {
+                              if ((e.target as HTMLElement).closest('input, button')) return;
+                              setExpandedId(null);
+                              setEditingId(null);
+                            }}
                           >
                             <div
                               className="w-2 h-8 rounded-full shrink-0"
@@ -1311,8 +1321,9 @@ export default function NotebookPage() {
                               type="text"
                               value={entry.title}
                               onChange={(e) => updateLocal(entry.id, 'title', e.target.value)}
-                              className="flex-1 bg-transparent outline-none"
+                              className="min-w-[4ch] max-w-full bg-transparent outline-none cursor-text"
                               style={{
+                                fieldSizing: 'content',
                                 color: '#5C3018',
                                 fontFamily: 'var(--font-serif)',
                                 fontSize: '17px',
