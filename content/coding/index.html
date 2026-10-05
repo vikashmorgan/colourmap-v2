@@ -529,6 +529,14 @@ pre, .terminal { zoom: var(--code-zoom); }
 .note-shown[data-kind="comment"] { background: color-mix(in srgb, var(--c-c) 16%, transparent); }
 .note-head { display: flex; align-items: center; gap: 6px; }
 .note-head .note-label { margin: 0; }
+.note-mark { display: inline-flex; align-items: center; gap: 6px; }
+.note-mark-btn { font: inherit; color: inherit; background: none; border: 0; border-radius: 999px; padding: 3px 8px 3px 4px; margin: -3px 0 -3px -4px; min-height: 28px; cursor: pointer; }
+.note-mark-btn:hover, .note-mark-btn:focus-visible { background: color-mix(in srgb, var(--dot-c, var(--q-c)) 16%, transparent); }
+[data-kind="question"] .note-mark { --dot-c: var(--q-c); }
+[data-kind="comment"] .note-mark { --dot-c: var(--c-c); }
+/* An empty ring says "not read yet"; it becomes a check once read. */
+.note-check-todo { width: 13px; height: 13px; border-radius: 50%; border: 1.5px dashed var(--dot-c, var(--q-c)); opacity: .7; }
+.note-check { font: 700 14px/1 var(--body); color: var(--dot-c, var(--q-c)); }
 .note-tools { margin-left: auto; display: flex; gap: 2px; }
 .note-tools button { width: 26px; height: 26px; border: 0; border-radius: 6px; background: none; color: var(--box-text); opacity: .55; cursor: pointer; font: 600 14px var(--body); }
 .note-tools button:hover, .note-tools button:focus-visible { opacity: 1; background: color-mix(in srgb, var(--box-text) 12%, transparent); }
@@ -2463,11 +2471,19 @@ const findNote = ref => noteList.find(n => noteRef(n) === ref);
 // Orange: waiting (no answer yet, or an answer not yet read). Green: answered and read.
 const noteState = n => (n.answer && n.readAt ? 'done' : 'waiting');
 
+// The dot and label of a note. With an unread answer they are one button: tapping it
+// marks the answer read, right where the eye is. Once read, a check in the note's colour.
+function noteMark(n, label) {
+  const dot = `<i class="state-dot ${noteState(n)}"></i><span class="note-label">${label}</span>`;
+  if (!n.answer) return `<span class="note-mark" title="Waiting for an answer">${dot}</span>`;
+  if (n.readAt) return `<span class="note-mark" title="Answered and read">${dot}<span class="note-check" aria-label="answer read">✓</span></span>`;
+  return `<button type="button" class="note-mark note-mark-btn" title="Tap once you have read the answer">${dot}<span class="note-check-todo" aria-hidden="true"></span></button>`;
+}
 function noteHtml(n, withLine) {
   const label = n.kind === 'question' ? 'Question' : 'Comment';
   const onLine = withLine && LINE_KEY.exec(n.key);
   return `<div class="note-shown" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
-      <div class="note-head"><i class="state-dot ${noteState(n)}" title="${noteState(n) === 'done' ? 'Answered and read' : n.answer ? 'Answer waiting to be read' : 'Waiting for an answer'}"></i><span class="note-label">${label}</span>${onLine ? `<button type="button" class="note-line" data-line="${onLine[2]}" title="Show line ${onLine[2]} in the code">Line ${onLine[2]}</button>` : ''}
+      <div class="note-head">${noteMark(n, label)}${onLine ? `<button type="button" class="note-line" data-line="${onLine[2]}" title="Show line ${onLine[2]} in the code">Line ${onLine[2]}</button>` : ''}
         <span class="note-tools"><button type="button" class="note-edit" aria-label="Edit this ${label.toLowerCase()}">✎</button><button type="button" class="note-del" aria-label="Delete this ${label.toLowerCase()}">×</button></span></div>
       <div class="note-body">${esc(n.body)}</div>
       ${n.answer ? (withLine ? `<details class="ans-fold" data-ref="${esc(noteRef(n))}"${openAnswers.has(noteRef(n)) ? ' open' : ''}><summary>Answer${n.readAt ? '' : ' <span class="ans-new">· new</span>'}</summary>${answerHtml(n)}</details>` : answerHtml(n)) : ''}
@@ -2490,7 +2506,7 @@ function echoHtml(n) {
   const s = parseSpot(n.key);
   const label = n.kind === 'question' ? 'Question' : 'Comment';
   return `<div class="note-shown note-echo" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
-      <div class="note-head"><i class="state-dot ${noteState(n)}"></i><span class="note-label">${label}</span><button type="button" class="note-line note-from" data-key="${esc(n.key)}" title="Go to where you asked it">Step ${s.step} · line ${s.line} ›</button></div>
+      <div class="note-head">${noteMark(n, label)}<button type="button" class="note-line note-from" data-key="${esc(n.key)}" title="Go to where you asked it">Step ${s.step} · line ${s.line} ›</button></div>
       <div class="note-body">${esc(n.body)}</div>
       ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : '<button type="button" class="note-read">Got it, mark read</button>'}</div>` : ''}
     </div>`;
@@ -2697,7 +2713,7 @@ function onNoteClick(e) {
   if (e.target.closest('.note-dot')) { openEditor(item, null); return; }
   const shown = e.target.closest('.note-shown');
   if (shown && e.target.closest('.note-edit')) { openEditor(item, shown.dataset.ref); return; }
-  if (shown && e.target.closest('.note-read')) {
+  if (shown && e.target.closest('.note-read, .note-mark-btn')) {
     openAnswers.delete(shown.dataset.ref);   // a read answer folds back on its card
     markRead(shown.dataset.ref);
     // Once every answer in a line's box is read, the box folds away by itself.
