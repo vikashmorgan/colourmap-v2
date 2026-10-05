@@ -715,6 +715,36 @@ details.fullcode .mission-tag { background: var(--ink); }
 /* Hiding comments: whole comment lines go, trailing comments go, numbers keep their values. */
 #page-project.hide-com .cline { display: none; }
 #page-project.hide-com .codeview .c, #page-project.hide-com .pcard pre .c { display: none; }
+/* Where you asked: a dot and a count on a card, a step and its index pill. */
+.card-q { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; font: 600 12px var(--mono); color: var(--q-c); }
+.card-q[data-kind="comment"] { color: var(--c-c); }
+.card-q[hidden] { display: none; }
+.pg-q { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--q-c); }
+.pg-q[data-kind="comment"] { color: var(--c-c); }
+.step-q { margin-left: 2px; }
+.step-q[data-kind="comment"] { --dot-c: var(--c-c); }
+.step-q[hidden] { display: none; }
+.note-echo { opacity: .92; }
+.note-echo .note-from { background: color-mix(in srgb, var(--q-c) 16%, transparent); }
+/* Explain words: hover a name in the project's code to see what it is and where it is used. */
+#page-project.terms-on .codeview .w { cursor: help; border-radius: 3px; }
+#page-project.terms-on .codeview .w:hover, #page-project .codeview .w.tb-on { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+#page-project .codeview .cl.tb-use { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+#term-bubble { position: fixed; z-index: 60; width: min(400px, calc(100vw - 24px)); max-height: min(70vh, 520px); overflow: auto; padding: 14px 16px; border-radius: 14px; background: var(--panel); color: var(--ink); border: 1px solid var(--rule); box-shadow: 0 10px 30px rgb(0 0 0 / .22); font-size: 14.5px; line-height: 1.45; display: grid; gap: 8px; }
+#term-bubble[hidden] { display: none; }
+.tb-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.tb-term { font: 700 16px var(--mono); color: var(--accent); }
+.tb-kind { font: 600 12px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.tb-def { margin: 0; }
+.tb-sig { display: block; font: 13px var(--mono); background: var(--accent-soft); border-radius: 6px; padding: 4px 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tb-sum { font-size: 13.5px; color: var(--muted); margin: 0; }
+.tb-grp { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.tb-fn { font: 600 12.5px var(--mono); margin-right: 4px; min-width: 7.5em; }
+.tb-go { font: 12.5px var(--mono); min-width: 32px; min-height: 26px; padding: 0 6px; border-radius: 6px; border: 1px solid var(--rule); background: var(--ground); color: var(--ink); cursor: pointer; }
+.tb-go:hover { border-color: var(--accent); }
+.tb-go[aria-current="true"] { background: var(--accent); color: var(--ground); border-color: var(--accent); }
+.tb-go.tb-set { font-weight: 700; text-decoration: underline; }
+.tb-note { margin: 0; font-size: 13px; color: var(--muted); }
 .com-switch { display: inline-flex; align-items: center; gap: 4px; margin: 0 0 16px; padding: 4px; border: 1px solid var(--rule); border-radius: 999px; background: var(--panel); }
 .com-label { font: 600 12.5px var(--mono); color: var(--muted); padding: 0 8px; }
 .com-opt { min-height: 36px; padding: 4px 14px; border-radius: 999px; border: 0; background: none; color: var(--ink); font: 600 14px var(--display); cursor: pointer; }
@@ -777,6 +807,11 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
       <span class="com-label"># comments in the code</span>
       <button type="button" class="com-opt" data-com="show" aria-pressed="true">Show</button>
       <button type="button" class="com-opt" data-com="hide" aria-pressed="false">Hide</button>
+    </div>
+    <div class="com-switch" id="term-switch" role="group" aria-label="Explain words in the code">
+      <span class="com-label">explain words on hover</span>
+      <button type="button" class="com-opt" data-terms="on" aria-pressed="true">On</button>
+      <button type="button" class="com-opt" data-terms="off" aria-pressed="false">Off</button>
     </div>
 
     <details class="mission" id="mission">
@@ -1106,7 +1141,9 @@ const LEVELS = [
 /* ---------- Tiny Python highlighter ---------- */
 const KW = new Set('def return if elif else for in while break continue try except as with import from not and or is None True False'.split(' '));
 function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-function highlightLine(line) {
+// With words on, every name and keyword is its own span (class w), so the
+// project's code can explain a word on hover; data-o holds the name before a dot.
+function highlightLine(line, words) {
   let out = '', i = 0, afterDef = false;
   while (i < line.length) {
     const ch = line[i];
@@ -1129,9 +1166,14 @@ function highlightLine(line) {
     if (/[A-Za-z_]/.test(ch)) {
       let j = i; while (j < line.length && /[A-Za-z0-9_]/.test(line[j])) j++;
       const w = line.slice(i, j);
-      if (KW.has(w)) { out += '<span class="k">' + w + '</span>'; afterDef = (w === 'def'); }
-      else if (afterDef) { out += '<span class="f">' + w + '</span>'; afterDef = false; }
-      else out += w;
+      let cls = '';
+      if (KW.has(w)) { cls = 'k'; afterDef = (w === 'def'); }
+      else if (afterDef) { cls = 'f'; afterDef = false; }
+      if (words) {
+        const dot = /([A-Za-z_]\w*)?\.$/.exec(line.slice(0, i));
+        const o = dot ? ` data-o="${dot[1] || ''}"` : '';
+        out += `<span class="${cls ? cls + ' ' : ''}w"${o}>${w}</span>`;
+      } else out += cls ? `<span class="${cls}">${w}</span>` : w;
       i = j; continue;
     }
     out += esc(ch); i++;
@@ -1696,14 +1738,16 @@ function lineView(code, first, added) {
   const ls = code.split('\n');
   return ls.map((l, i) => {
     const x = first + i;
-    let h = `<span class="ldot" title="Question or comment on line ${x}"></span><span class="ln" data-line="${x}" title="Question or comment on line ${x}">${x}</span>${highlightLine(l) || ' '}`;
+    let h = `<span class="ldot" title="Question or comment on line ${x}"></span><span class="ln" data-line="${x}" title="Question or comment on line ${x}">${x}</span>${highlightLine(l, true) || ' '}`;
     if (added && added.includes(i + 1)) h = `<span class="addline">${h}</span>`;
     return `<span class="cl${hideable(ls, i) ? ' cline' : ''}" data-line="${x}">${h}\n</span>`;
   }).join('');
 }
 function codeView(code, n, first, added, preClass) {
   const last = first + code.split('\n').length - 1;
-  return `<div class="codeview" data-step="${n}" data-first="${first}" data-last="${last}"><pre${preClass ? ` class="${preClass}"` : ''}><code>${lineView(code, first, added)}</code></pre></div>`;
+  // A whole program (not a card's piece) also shows the notes asked on its lines in other steps.
+  const whole = preClass === 'full-pre' && first === 1 ? ' data-whole="1"' : '';
+  return `<div class="codeview" data-step="${n}" data-first="${first}" data-last="${last}"${whole}><pre${preClass ? ` class="${preClass}"` : ''}><code>${lineView(code, first, added)}</code></pre></div>`;
 }
 function cardCode(n, b) {
   const full = PROJECT_FULL[n - 1].code;
@@ -1736,6 +1780,44 @@ function makeLineHost(key, vi) {
 }
 // A line with notes keeps a dot on its left: muted orange while waiting, green once
 // answered and read. Its notes sit folded right under the line; the dot opens them.
+// Where a line of one step's program sits in another step's program: the two versions
+// are aligned line by line (longest common subsequence), so a line that moved down
+// because code was added above it is still found. 0 means the line is not there.
+const lineMaps = new Map();
+function lineMap(from, to) {
+  const k = `${from}>${to}`;
+  if (lineMaps.has(k)) return lineMaps.get(k);
+  const a = PROJECT_FULL[from - 1].code.split('\n'), b = PROJECT_FULL[to - 1].code.split('\n');
+  const n = a.length, m = b.length, w = m + 1;
+  const L = new Uint16Array((n + 1) * w);
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) {
+    L[i * w + j] = a[i] === b[j] ? L[(i + 1) * w + j + 1] + 1 : Math.max(L[(i + 1) * w + j], L[i * w + j + 1]);
+  }
+  const map = new Array(n + 1).fill(0);
+  for (let i = 0, j = 0; i < n && j < m;) {
+    if (a[i] === b[j]) { map[i + 1] = j + 1; i++; j++; }
+    else if (L[(i + 1) * w + j] >= L[i * w + j + 1]) i++;
+    else j++;
+  }
+  lineMaps.set(k, map);
+  return map;
+}
+// Notes asked on a line in other steps, found on the same line of a whole program:
+// Map(line → [keys]).
+function echoesIn(view, keys) {
+  const out = new Map();
+  if (!view.dataset.whole) return out;
+  const step = Number(view.dataset.step);
+  for (const k of keys) {
+    const s = parseSpot(k);
+    if (s.kind !== 'L' || s.step === step || !notesOf(k).length) continue;
+    const at = lineMap(s.step, step)[s.line];
+    if (!at) continue;
+    if (!out.has(at)) out.set(at, []);
+    out.get(at).push(k);
+  }
+  return out;
+}
 function syncLineHosts(force) {
   const keys = new Set(noteList.map(n => n.key).filter(k => SPOT_KEY.test(k)));
   document.querySelectorAll('#page-project .codeview').forEach((view, vi) => {
@@ -1746,6 +1828,8 @@ function syncLineHosts(force) {
       const s = parseSpot(k);
       if (s.step === step && s.kind === kind && s.line >= first && s.line <= last) want.add(k);
     }
+    const echoes = echoesIn(view, keys);
+    for (const at of echoes.keys()) want.add(`p1|s${step}|L${at}`);
     if (force && force.view === view) want.add(force.key);
     for (const h of view.querySelectorAll('.line-host')) if (!want.has(h.dataset.key) && !h.querySelector('.note-editor')) h.remove();
     for (const k of want) {
@@ -1754,9 +1838,13 @@ function syncLineHosts(force) {
       host.hidden = true;
       view.querySelector(`.cl[data-line="${parseSpot(k).line}"]`).after(host);
     }
+    for (const h of view.querySelectorAll('.line-host')) {
+      const e = h.dataset.kind === 'L' && echoes.get(Number(h.dataset.line));
+      if (e) h.dataset.echo = e.join(' '); else delete h.dataset.echo;
+    }
     for (const cl of view.querySelectorAll('.cl.has-note')) cl.classList.remove('has-note', 'done', 'only-c');
     for (const k of want) {
-      const list = notesOf(k);
+      const list = notesOf(k).concat((echoes.get(parseSpot(k).line) || []).flatMap(notesOf));
       if (!list.length) continue;
       const cl = view.querySelector(`.cl[data-line="${parseSpot(k).line}"]`);
       cl.classList.add('has-note');
@@ -1784,7 +1872,7 @@ function cardNotes(card) {
 }
 projectEl.addEventListener('click', e => {
   // "Line 51" on a note in a card's right side lights that line in the card's code.
-  const tag = e.target.closest('.note-line');
+  const tag = e.target.closest('.note-line:not(.note-from)');
   if (tag) {
     const cl = tag.closest('.pcard').querySelector(`.codeview .cl[data-line="${tag.dataset.line}"]`);
     if (!cl) return;
@@ -1793,6 +1881,9 @@ projectEl.addEventListener('click', e => {
     setTimeout(() => cl.classList.remove('lit'), 1800);
     return;
   }
+  // "From step 3 · line 42" on a note shown in a whole program goes to where it was asked.
+  const from = e.target.closest('.note-from');
+  if (from) { goToSpot(from.dataset.key); return; }
   const hit = e.target.closest('.codeview .ln, .codeview .ldot');
   if (!hit) return;
   const view = hit.closest('.codeview');
@@ -1801,13 +1892,33 @@ projectEl.addEventListener('click', e => {
   const open = view.querySelector(`.line-host[data-key="${CSS.escape(key)}"]`);
   // A second tap folds the line's notes away again, unless something is being written.
   if (open && !open.hidden && !open.querySelector('.note-editor')) { open.hidden = true; return; }
+  openSpot(view, key, true);
+});
+function openSpot(view, key, write) {
   syncLineHosts({ view, key });
   const host = view.querySelector(`.line-host[data-key="${CSS.escape(key)}"]`);
   host.hidden = false;
   paintItem(host);
-  if (!notesOf(key).length) openEditor(host, null);
+  if (write && !notesOf(key).length && !host.dataset.echo) openEditor(host, null);
   host.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-});
+  return host;
+}
+// A line of a step, in the card that holds it (or else that step's whole program).
+function viewWithLine(step, line) {
+  const views = [...projectEl.querySelectorAll(`#step-${step} .codeview:not(.tview)`)];
+  const holds = v => line >= Number(v.dataset.first) && line <= Number(v.dataset.last);
+  return views.find(v => holds(v) && !v.dataset.whole) || views.find(holds);
+}
+function goToSpot(key) {
+  const s = parseSpot(key);
+  const view = viewWithLine(s.step, s.line);
+  if (!view) return;
+  for (let node = view; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
+  const host = openSpot(view, key, false);
+  host.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  host.classList.add('flash');
+  setTimeout(() => host.classList.remove('flash'), 1600);
+}
 
 function numbered(code, added) {
   return code.split('\n').map((l, i) => {
@@ -1825,10 +1936,10 @@ function stepFull(n) {
 
 for (const s of PROJECT_STEPS) {
   const col = stepColour(s.n);
-  stepIndex.insertAdjacentHTML('beforeend', `<a href="#step-${s.n}" data-open="step-${s.n}" style="--sess: ${col}"><span class="n">${s.n}</span>${esc(s.title)}</a>`);
+  stepIndex.insertAdjacentHTML('beforeend', `<a href="#step-${s.n}" data-open="step-${s.n}" style="--sess: ${col}"><span class="n">${s.n}</span>${esc(s.title)}<i class="state-dot step-q" hidden></i></a>`);
   const cards = s.blocks.map((b, i) => `
     <article class="fn pcard" id="${cardId(s.n, b.name)}" data-key="${esc(noteKeyOf(s.n, b.name))}" data-step="${s.n}" data-name="${esc(b.name)}" data-pos="${i + 1}/${s.blocks.length}">
-      <div class="code"><div class="code-name"><span><span class="pcard-num">${i + 1}/${s.blocks.length}</span>${esc(b.name)}</span><span class="kind">${esc(b.kind)}</span></div>${cardCode(s.n, b)}</div>
+      <div class="code"><div class="code-name"><span><span class="pcard-num">${i + 1}/${s.blocks.length}</span>${esc(b.name)}<span class="card-q" hidden></span></span><span class="kind">${esc(b.kind)}</span></div>${cardCode(s.n, b)}</div>
       <div class="explain">
         <p class="what">${b.what}</p>
         ${b.steps.length ? `<ol>${b.steps.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}
@@ -1862,8 +1973,23 @@ function refreshSteps() {
     const mid = cs.filter(c => c.dataset.mark === 'mid').length;
     const late = cs.filter(c => c.dataset.mark === 'late').length;
     step.querySelector('.pstep-progress').innerHTML = `<span class="pg-bar"><i style="width:${(got / cs.length * 100).toFixed(1)}%"></i></span><span>${got}/${cs.length} got it</span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${late ? `<span class="pg-late">${late} no time</span>` : ''}`;
+    // Every question and comment asked anywhere in the step: its cards, its lines, its output.
+    const n = Number(step.id.slice(5));
+    const qs = noteList.filter(x => x.key.startsWith(`p1|${n}|`) || (parseSpot(x.key) || {}).step === n);
+    const kind = qs.some(x => x.kind === 'question') ? 'question' : 'comment';
+    const state = qs.every(x => noteState(x) === 'done') ? 'done' : 'waiting';
+    const qn = qs.filter(x => x.kind === 'question').length, cn = qs.length - qn;
+    const words = [qn && `${qn} question${qn > 1 ? 's' : ''}`, cn && `${cn} comment${cn > 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+    if (qs.length) step.querySelector('.pstep-progress').insertAdjacentHTML('beforeend', `<span class="pg-q" data-kind="${kind}"><i class="state-dot ${state}"></i>${words}</span>`);
     const pill = stepIndex.querySelector(`a[data-open="${step.id}"]`);
-    if (pill) pill.classList.toggle('done', got === cs.length);
+    if (pill) {
+      pill.classList.toggle('done', got === cs.length);
+      const dot = pill.querySelector('.step-q');
+      dot.hidden = !qs.length;
+      dot.className = `state-dot step-q ${state}`;
+      dot.dataset.kind = kind;
+      dot.title = words;
+    }
   }
 }
 stepIndex.addEventListener('click', e => {
@@ -2037,7 +2163,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !lpop.hidd
 const COMMENTS_KEY = 'coding-hide-comments';
 function setComments(hide) {
   projectEl.classList.toggle('hide-com', hide);
-  for (const b of projectEl.querySelectorAll('.com-opt')) b.setAttribute('aria-pressed', String((b.dataset.com === 'hide') === hide));
+  for (const b of projectEl.querySelectorAll('.com-opt[data-com]')) b.setAttribute('aria-pressed', String((b.dataset.com === 'hide') === hide));
   try { localStorage.setItem(COMMENTS_KEY, hide ? '1' : ''); } catch (e) {}
 }
 projectEl.querySelector('.com-switch').addEventListener('click', e => {
@@ -2045,6 +2171,225 @@ projectEl.querySelector('.com-switch').addEventListener('click', e => {
   if (b) setComments(b.dataset.com === 'hide');
 });
 try { setComments(localStorage.getItem(COMMENTS_KEY) === '1'); } catch (e) {}
+
+/* ---------- Explain words: hover a name in the project's code ----------
+   A bubble says what the word is (a function of this program with its docstring,
+   a parameter, a variable, a keyword or a built-in with its lesson box) and every
+   line of this version of the program that uses it, grouped by function, so you
+   see whether it came before or after. Tap a line number to go there. */
+const TERMS_KEY = 'coding-terms-off';
+const WORD_SKIP = new Set('a b x xs d f s e i n obj path mode value key text cond start stop step reader line low high string'.split(' '));
+const LESSON_SHORT = {};
+const LESSON_TERMS = {};
+{
+  const exact = {}, loose = {};
+  for (const l of LESSONS) for (const g of l.groups) for (const [name, short] of g.items) {
+    const key = `s${l.session}|${name}`;
+    if (!LESSON_BOX[key]) continue;
+    LESSON_SHORT[key] = short;
+    const toks = name.match(/\.?[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)?/g) || [];
+    for (const t of toks) {
+      if (WORD_SKIP.has(t)) continue;
+      const into = toks.length === 1 ? exact : loose;
+      if (!(t in into)) into[t] = key;
+      const dot = t.indexOf('.');
+      if (dot > 0 && !(t.slice(dot) in loose)) loose[t.slice(dot)] = key;
+    }
+  }
+  Object.assign(LESSON_TERMS, loose, exact);
+}
+// Words the lessons have no box for, or where a plainer sentence helps.
+const TERM_EXTRA = {
+  input: 'Shows a prompt, waits until the user types something and presses Enter, and returns what they typed, always as a str.',
+  '.lower': 'A str method: returns a copy of the text in lower case. "Rome".lower() gives "rome". The original text does not change.',
+  reverse: 'An option of sorted(): reverse=True sorts from biggest to smallest instead of smallest to biggest.',
+  key: 'An option of sorted() and max(): key=f means "compare the items by f(item)". f is a function, passed without brackets.',
+  json: 'The standard module for JSON: json.dump() writes Python lists and dicts into a file, json.load() reads them back.',
+  requests: 'The package that talks to websites over HTTP (installed with pip install requests). requests.get(url) asks a URL and returns the response.',
+  pathlib: 'The standard module that gives Path, an object for a file or folder path.',
+  tuple: 'A fixed group of values, like ("Fiction", 12). As a type hint it says the function returns several values together.',
+  dict: 'A dictionary: pairs of key and value, like {"Fiction": 12}. As a type hint it says the value is a dict.',
+  list: 'An ordered list of values, like [1, 2, 3]. As a type hint it says the value is a list.',
+};
+const termWorks = new Map();
+function termWork(step) {
+  if (termWorks.has(step)) return termWorks.get(step);
+  const lines = PROJECT_FULL[step - 1].code.split('\n');
+  const bare = lines.map(l => codeOnly(l));
+  const fnOf = [], defs = {};
+  let cur = null;
+  lines.forEach((l, i) => {
+    const m = /^def\s+(\w+)\s*\(([^)]*)\)/.exec(l);
+    if (m) {
+      cur = m[1];
+      const doc = /"""(.*?)"""/.exec(lines[i + 1] || '');
+      defs[cur] = { line: i + 1, sig: l.trim().replace(/:$/, ''), doc: doc ? doc[1] : '', params: m[2].split(',').map(p => p.split(/[:=]/)[0].trim()).filter(Boolean) };
+    } else if (/^[^\s#]/.test(l)) cur = null;
+    fnOf[i] = cur;
+  });
+  const w = { lines, bare, fnOf, defs };
+  termWorks.set(step, w);
+  return w;
+}
+// Every line that uses the word: a plain name, or .word after a dot (any object:
+// every .lower() is the same .lower()).
+function termUses(work, word, obj) {
+  const re = obj === undefined
+    ? new RegExp(`(?<![\\w.])${word}(?!\\w)`)
+    : new RegExp(`\\.${word}(?!\\w)`);
+  const out = [];
+  work.bare.forEach((l, i) => { if (re.test(l)) out.push(i + 1); });
+  return out;
+}
+// Lines in one function (or at top level, fn null) where the name gets a value.
+function termSets(work, word, fn) {
+  const re = new RegExp(`^\\s*(?:[\\w, ]*,\\s*)?${word}\\s*(?:,[\\w, ]*)?(?::[^=]*)?=(?!=)|^\\s*${word}\\s*[-+*/]=|^\\s*for\\s+[\\w, ]*\\b${word}\\b[\\w, ]*\\s+in\\b|\\bas\\s+${word}\\b`);
+  const out = [];
+  work.bare.forEach((l, i) => { if (work.fnOf[i] === fn && re.test(l)) out.push(i + 1); });
+  return out;
+}
+function termInfo(step, line, word, obj) {
+  const work = termWork(step);
+  const fn = work.fnOf[line - 1];
+  const info = { word: obj !== undefined ? `${obj}.${word}` : word, uses: termUses(work, word, obj), sets: [] };
+  const d = obj === undefined && work.defs[word];
+  if (d) {
+    Object.assign(info, { kind: 'function in this program', def: d.doc, sig: d.sig, sets: [d.line] });
+    info.note = `Defined on line ${d.line}${d.line < line ? ', above this one' : d.line > line ? ', below this one' : ''}. The other lines call it.`;
+    return info;
+  }
+  if (obj === undefined && !KW.has(word)) {
+    const own = fn && work.defs[fn];
+    const isParam = own && own.params.includes(word);
+    let sets = termSets(work, word, fn);
+    if (!sets.length && !isParam && fn) sets = termSets(work, word, null);
+    if (isParam || sets.length) {
+      const top = !isParam && work.fnOf[sets[0] - 1] === null;
+      info.kind = isParam ? `parameter of ${fn}()` : top ? (/^[A-Z_0-9]+$/.test(word) ? 'setting at the top' : 'name at top level') : `variable in ${fn}()`;
+      info.sets = isParam ? [own.line, ...sets] : sets;
+      info.def = isParam
+        ? `It gets its value from whoever calls ${fn}(): the value put in this slot of the call.`
+        : `Gets its value on line ${sets[0]}:`;
+      if (!isParam) info.sig = work.lines[sets[0] - 1].trim();
+      if (top) info.note = 'Set once at the top, so every function can read it.';
+      else info.note = `This ${word} lives only inside ${fn}(). A ${word} in another function is a different name.`;
+      return info;
+    }
+  }
+  const lesson = obj !== undefined ? LESSON_TERMS[`${obj}.${word}`] || LESSON_TERMS[`.${word}`] : LESSON_TERMS[word];
+  const extra = obj !== undefined ? TERM_EXTRA[`.${word}`] : TERM_EXTRA[word];
+  info.kind = KW.has(word) ? 'Python keyword' : obj !== undefined ? 'method / attribute' : 'built into Python';
+  info.lesson = lesson;
+  info.def = extra || (lesson ? LESSON_SHORT[lesson] : '');
+  return info;
+}
+const bubble = document.createElement('div');
+bubble.id = 'term-bubble';
+bubble.hidden = true;
+bubble.setAttribute('role', 'dialog');
+bubble.setAttribute('aria-label', 'About this word');
+projectEl.append(bubble);
+let termSrc = null, termTimer = 0, termHide = 0;
+function showTerm(span) {
+  const view = span.closest('.codeview');
+  const step = Number(view.dataset.step), line = Number(span.closest('.cl').dataset.line);
+  const info = termInfo(step, line, span.textContent, span.dataset.o);
+  const work = termWork(step);
+  const before = info.uses.filter(x => x < line).length, after = info.uses.filter(x => x > line).length;
+  const groups = [];
+  for (const x of info.uses) {
+    const fn = work.fnOf[x - 1];
+    const last = groups[groups.length - 1];
+    if (last && last.fn === fn) last.lines.push(x); else groups.push({ fn, lines: [x] });
+  }
+  const sets = new Set(info.sets);
+  const go = x => `<button type="button" class="tb-go${sets.has(x) ? ' tb-set' : ''}" data-go="${x}"${x === line ? ' aria-current="true"' : ''} title="${x === line ? 'This line' : `Go to line ${x}`}${sets.has(x) ? ' · it gets its value here' : ''}">${x}</button>`;
+  bubble.innerHTML = `<div class="tb-head"><code class="tb-term">${esc(info.word)}</code><span class="tb-kind">${esc(info.kind)}</span></div>
+    ${info.def ? `<p class="tb-def">${esc(info.def)}</p>` : ''}
+    ${info.sig ? `<code class="tb-sig">${highlightLine(info.sig)}</code>` : ''}
+    ${info.note ? `<p class="tb-note">${esc(info.note)}</p>` : ''}
+    <p class="tb-sum">explorer.py after step ${step}: on ${info.uses.length} line${info.uses.length === 1 ? '' : 's'}, ${before} before this one and ${after} after${sets.size ? '. <u>Underlined</u>: where it gets its value' : ''}.</p>
+    ${groups.map(g => `<div class="tb-grp"><span class="tb-fn">${g.fn ? esc(g.fn) + '()' : 'top of file'}</span>${g.lines.map(go).join('')}</div>`).join('')}
+    ${info.lesson ? `<div class="lchips">${lchip(info.lesson)}</div>` : ''}`;
+  bubble.hidden = false;
+  if (termSrc) termSrc.classList.remove('tb-on');
+  termSrc = span;
+  span.classList.add('tb-on');
+  markUses(view, info.uses);
+  for (const chip of bubble.querySelectorAll('.lchip')) chip.dataset.mark = marks[chip.dataset.lkey] === 'solid' ? 'got' : (marks[chip.dataset.lkey] || '');
+  placeBubble(span);
+}
+// The lines that use the word get a light tint in the code itself.
+function markUses(view, uses) {
+  for (const c of projectEl.querySelectorAll('.cl.tb-use')) c.classList.remove('tb-use');
+  if (view) for (const x of uses) { const c = view.querySelector(`.cl[data-line="${x}"]`); if (c) c.classList.add('tb-use'); }
+}
+function placeBubble(span) {
+  const r = span.getBoundingClientRect();
+  const bw = bubble.offsetWidth, bh = bubble.offsetHeight;
+  bubble.style.left = `${Math.max(12, Math.min(r.left, innerWidth - bw - 12))}px`;
+  const top = r.top - bh - 10 >= 12 ? r.top - bh - 10 : Math.min(r.bottom + 10, innerHeight - bh - 12);
+  bubble.style.top = `${Math.max(12, top)}px`;
+}
+function hideTerm() {
+  clearTimeout(termTimer);
+  if (bubble.hidden) return;
+  bubble.hidden = true;
+  if (termSrc) termSrc.classList.remove('tb-on');
+  termSrc = null;
+  markUses(null, []);
+}
+const termsOn = () => projectEl.classList.contains('terms-on');
+const canHover = matchMedia('(hover: hover)');
+projectEl.addEventListener('mouseover', e => {
+  if (!termsOn() || !canHover.matches) return;
+  if (e.target.closest('#term-bubble')) { clearTimeout(termHide); return; }
+  const span = e.target.closest('.codeview:not(.tview) .w');
+  if (!span) return;
+  clearTimeout(termHide); clearTimeout(termTimer);
+  if (span !== termSrc) termTimer = setTimeout(() => showTerm(span), 250);
+});
+projectEl.addEventListener('mouseout', e => {
+  if (!e.target.closest('.codeview .w, #term-bubble')) return;
+  clearTimeout(termTimer);
+  termHide = setTimeout(hideTerm, 350);
+});
+projectEl.addEventListener('click', e => {
+  const goBtn = e.target.closest('.tb-go');
+  if (goBtn && termSrc) {
+    const x = Number(goBtn.dataset.go);
+    let view = termSrc.closest('.codeview');
+    if (!view.querySelector(`.cl[data-line="${x}"]`)) view = viewWithLine(Number(view.dataset.step), x);
+    const cl = view && view.querySelector(`.cl[data-line="${x}"]`);
+    if (!cl) return;
+    for (let node = view; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
+    hideTerm();
+    cl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    cl.classList.add('lit');
+    setTimeout(() => cl.classList.remove('lit'), 1800);
+    return;
+  }
+  if (e.target.closest('#term-bubble')) return;
+  // On a touch screen a tap on a word opens the bubble; a tap elsewhere closes it.
+  const span = termsOn() && !canHover.matches && e.target.closest('.codeview:not(.tview) .w');
+  if (span && span !== termSrc) { showTerm(span); return; }
+  hideTerm();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTerm(); });
+addEventListener('scroll', () => { if (termSrc) placeBubble(termSrc); }, { passive: true });
+function setTerms(on) {
+  projectEl.classList.toggle('terms-on', on);
+  for (const b of projectEl.querySelectorAll('.com-opt[data-terms]')) b.setAttribute('aria-pressed', String((b.dataset.terms === 'on') === on));
+  if (!on) hideTerm();
+  try { localStorage.setItem(TERMS_KEY, on ? '' : '1'); } catch (e) {}
+}
+document.getElementById('term-switch').addEventListener('click', e => {
+  const b = e.target.closest('.com-opt');
+  if (b) setTerms(b.dataset.terms === 'on');
+});
+let termsStart = true;
+try { termsStart = localStorage.getItem(TERMS_KEY) !== '1'; } catch (e) {}
+setTerms(termsStart);
 
 /* ---------- Marks and notes ---------- */
 // Each box can have a mark (got / mid / late) and any number of notes, each a
@@ -2095,6 +2440,17 @@ function noteHtml(n, withLine) {
     </div>`;
 }
 
+// A note asked in another step, shown on the same line of a whole program: read here,
+// edited where it was asked.
+function echoHtml(n) {
+  const s = parseSpot(n.key);
+  const label = n.kind === 'question' ? 'Question' : 'Comment';
+  return `<div class="note-shown note-echo" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
+      <div class="note-head"><i class="state-dot ${noteState(n)}"></i><span class="note-label">${label}</span><button type="button" class="note-line note-from" data-key="${esc(n.key)}" title="Go to where you asked it">Step ${s.step} · line ${s.line} ›</button></div>
+      <div class="note-body">${esc(n.body)}</div>
+      ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : '<button type="button" class="note-read">Got it, mark read</button>'}</div>` : ''}
+    </div>`;
+}
 // Where a host's own notes and button sit: a project card keeps them on its right side.
 const noteScope = item => (item.classList.contains('pcard') ? item.querySelector('.explain') : item);
 function paintItem(item) {
@@ -2105,13 +2461,24 @@ function paintItem(item) {
   for (const b of item.querySelectorAll('.mark')) b.setAttribute('aria-pressed', String(b.dataset.mark === m));
   const isCard = item.classList.contains('pcard');
   const list = isCard ? cardNotes(item) : notesOf(key);
+  // In a whole program, a line also shows what was asked on it in other steps.
+  const echo = item.dataset.echo ? item.dataset.echo.split(' ').flatMap(notesOf) : [];
+  if (isCard) {
+    const q = item.querySelector('.card-q');
+    q.hidden = !list.length;
+    if (list.length) {
+      q.dataset.kind = list.some(n => n.kind === 'question') ? 'question' : 'comment';
+      q.innerHTML = `<i class="state-dot ${list.every(n => noteState(n) === 'done') ? 'done' : 'waiting'}"></i>${list.length}`;
+      q.title = `${list.length} question${list.length > 1 ? 's' : ''} or comment${list.length > 1 ? 's' : ''} on this card`;
+    }
+  }
   // A card's own notes live on its right side; its code holds the line boxes.
   const scope = noteScope(item);
   let box = scope.querySelector(':scope > .note-list');
   const dot = scope.querySelector(':scope > .note-dot');
-  if (list.length) {
+  if (list.length || echo.length) {
     if (!box) { box = document.createElement('div'); box.className = 'note-list'; dot.before(box); }
-    box.innerHTML = list.map(n => noteHtml(n, isCard)).join('');
+    box.innerHTML = list.map(n => noteHtml(n, isCard)).join('') + echo.map(echoHtml).join('');
   } else if (box) box.remove();
   dot.setAttribute('aria-pressed', String(list.length > 0));
   dot.textContent = list.length ? 'Add another question or comment' : 'Question or comment';
