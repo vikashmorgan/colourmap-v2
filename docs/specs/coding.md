@@ -24,6 +24,8 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
 
 ## Marks and notes
 
+**Default rule: notes start folded.** Everywhere on the page, a box's questions, comments and answers start folded behind one line that counts them (*2 questions · 1 comment*, plus *n new answers* while some are unread). Tapping it unfolds them and tapping it again folds them, so the boxes stay short and the page keeps its overview. A box stays unfolded after you write a note in it, or when you reach it from Review. The exceptions, opened on purpose and so shown unfolded: a line's box (opened from its dot) and the notebook. A new feature follows this rule unless its spec says otherwise.
+
 Each box can carry:
 
 - a **mark**: *Got it* (`got`, green), *Confused* (`mid`, yellow) or *No time* (`late`, pink-purple) — three small dots on the side of the box, each naming itself in a coloured pill on hover. The database also accepts `solid`, which the page shows as *Got it*.
