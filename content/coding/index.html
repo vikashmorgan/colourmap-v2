@@ -525,6 +525,15 @@ pre, .terminal { zoom: var(--code-zoom); }
 
 /* Several notes per box: each with a status dot, edit, delete, and room for an answer. */
 .note-list { display: grid; gap: 6px; }
+.note-list[hidden] { display: none; }
+/* The folded notes of a box: one line that counts them; tapping it unfolds them. */
+.notes-toggle { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; justify-self: start; margin-top: 6px; min-height: 30px; padding: 3px 12px 3px 10px; border: 1px solid var(--rule); border-radius: 999px; background: var(--panel); color: var(--ink); font: 600 13px var(--body); cursor: pointer; }
+.notes-toggle::before { content: '▸'; font-size: 11px; color: var(--muted); }
+.notes-toggle[aria-expanded="true"]::before { content: '▾'; }
+.notes-toggle:hover { border-color: var(--ink); }
+.nt-sum { display: inline-flex; align-items: center; gap: 6px; color: var(--q-c); }
+.nt-sum[data-kind="comment"] { color: var(--c-c); }
+.nt-new { font: 600 12px var(--mono); color: var(--q-c); }
 .note-shown { font-size: 14px; color: var(--box-text); border-radius: 8px; padding: 6px 10px 8px; background: color-mix(in srgb, var(--q-c) 14%, transparent); }
 .note-shown[data-kind="comment"] { background: color-mix(in srgb, var(--c-c) 16%, transparent); }
 .note-head { display: flex; align-items: center; gap: 6px; }
@@ -2492,6 +2501,16 @@ function noteHtml(n, withLine) {
 function answerHtml(n) {
   return `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : '<button type="button" class="note-read">Got it, mark read</button>'}</div>`;
 }
+// The boxes whose notes are unfolded (by key); every other box shows only the count line.
+const openNoteLists = new Set();
+function notesSummary(list) {
+  const q = list.filter(n => n.kind === 'question').length, c = list.length - q;
+  const fresh = list.filter(n => n.answer && !n.readAt).length;
+  const kind = q ? 'question' : 'comment';
+  const state = list.every(n => noteState(n) === 'done') ? 'done' : 'waiting';
+  const words = [q && `${q} question${q > 1 ? 's' : ''}`, c && `${c} comment${c > 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+  return `<span class="nt-sum" data-kind="${kind}"><i class="state-dot ${state}"></i>${words}</span>${fresh ? `<span class="nt-new">${fresh} new answer${fresh > 1 ? 's' : ''}</span>` : ''}`;
+}
 // Answers a card shows folded; the ones opened stay open across repaints.
 const openAnswers = new Set();
 document.addEventListener('toggle', e => {
@@ -2539,7 +2558,19 @@ function paintItem(item) {
   if (list.length || echo.length) {
     if (!box) { box = document.createElement('div'); box.className = 'note-list'; dot.before(box); }
     box.innerHTML = list.map(n => noteHtml(n, isCard)).join('') + echo.map(echoHtml).join('');
-  } else if (box) box.remove();
+  } else if (box) { box.remove(); box = null; }
+  // A box's notes start folded behind one line that counts them, so the boxes stay
+  // short and the page keeps its overview. A line's box and the notebook are opened
+  // on purpose, so they show their notes straight away.
+  const foldable = !item.classList.contains('line-host') && item.id !== 'nb-host';
+  let tog = scope.querySelector(':scope > .notes-toggle');
+  if (foldable && box) {
+    if (!tog) { tog = document.createElement('button'); tog.type = 'button'; tog.className = 'notes-toggle'; box.before(tog); }
+    const open = openNoteLists.has(key);
+    box.hidden = !open;
+    tog.setAttribute('aria-expanded', String(open));
+    tog.innerHTML = notesSummary(list);
+  } else if (tog) tog.remove();
   dot.setAttribute('aria-pressed', String(list.length > 0));
   dot.textContent = list.length ? 'Add another question or comment' : 'Question or comment';
 }
@@ -2710,6 +2741,11 @@ function onNoteClick(e) {
   const item = e.target.closest('.line-host, .nb-host, .item[data-key], .pcard');
   if (!item) return;
   const key = item.dataset.key;
+  if (e.target.closest('.notes-toggle')) {
+    if (openNoteLists.has(key)) openNoteLists.delete(key); else openNoteLists.add(key);
+    paintItem(item);
+    return;
+  }
   if (e.target.closest('.note-dot')) { openEditor(item, null); return; }
   const shown = e.target.closest('.note-shown');
   if (shown && e.target.closest('.note-edit')) { openEditor(item, shown.dataset.ref); return; }
@@ -2747,6 +2783,7 @@ function onNoteClick(e) {
     const pick = ed.querySelector('.line-pick select');
     const view = pick && pick.value && item.querySelector('.codeview');
     const target = view ? `p1|s${view.dataset.step}|L${pick.value}` : key;
+    openNoteLists.add(key);   // a note just written is shown, not folded away
     saveNote(target, ed.dataset.ref || null, ed.querySelector('textarea').value, ed.dataset.kind);
     closeEditor();
   }
@@ -2858,6 +2895,8 @@ document.getElementById('review').addEventListener('click', e => {
   const b = e.target.closest('[data-open-item]');
   if (!b) return;
   const target = document.getElementById(b.dataset.openItem);
+  // Coming from Review, the box shows the notes it was opened for.
+  if (target.dataset.key && !openNoteLists.has(target.dataset.key)) { openNoteLists.add(target.dataset.key); paintItem(target); }
   if (target.closest('#page-project')) {
     showPage('project', false);
     if (target.classList.contains('line-host')) target.hidden = false;
