@@ -708,6 +708,10 @@ details.fullcode .mission-tag { background: var(--ink); }
 @media (hover: none) { .tview .ldot { border-color: color-mix(in srgb, var(--line-dot) 35%, transparent); } }
 .line-host { display: grid; gap: 6px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--line-dot, var(--q-c)) 12%, var(--panel)); scroll-margin-top: 140px; }
 .line-ref { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+#page-project .line-host { cursor: pointer; }
+#page-project .line-host :is(.note-body, .note-answer div, .line-ref code) { cursor: text; }
+.host-fold { margin-left: auto; font: 600 12px var(--mono); color: var(--muted); background: none; border: 1px solid var(--rule); border-radius: 999px; padding: 2px 10px; min-height: 26px; cursor: pointer; }
+.host-fold:hover { color: var(--ink); border-color: var(--ink); }
 .line-tag { font: 600 12px var(--mono); color: var(--q-c); }
 .line-ref code { font: 12.5px var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 .line-host .note-dot { margin-top: 0; }
@@ -1775,7 +1779,7 @@ function makeLineHost(key, vi) {
   h.id = `lh-${vi}-${s.line}`;
   const text = spotText(s);
   const shown = s.kind === 'L' ? (highlightLine(text.trim()) || '') : esc(text.trim());
-  h.innerHTML = `<div class="line-ref"><span class="line-tag">${s.kind === 'L' ? 'Line' : 'Output line'} ${s.line}</span><code>${shown}</code></div><button type="button" class="note-dot" aria-pressed="false">Question or comment</button>`;
+  h.innerHTML = `<div class="line-ref"><span class="line-tag">${s.kind === 'L' ? 'Line' : 'Output line'} ${s.line}</span><code>${shown}</code><button type="button" class="host-fold" title="Fold (or tap anywhere on the box)">▴ fold</button></div><button type="button" class="note-dot" aria-pressed="false">Question or comment</button>`;
   return h;
 }
 // A line with notes keeps a dot on its left: muted orange while waiting, green once
@@ -2653,7 +2657,19 @@ function onNoteClick(e) {
   if (e.target.closest('.note-dot')) { openEditor(item, null); return; }
   const shown = e.target.closest('.note-shown');
   if (shown && e.target.closest('.note-edit')) { openEditor(item, shown.dataset.ref); return; }
-  if (shown && e.target.closest('.note-read')) { markRead(shown.dataset.ref); return; }
+  if (shown && e.target.closest('.note-read')) {
+    markRead(shown.dataset.ref);
+    // Once every answer in a line's box is read, the box folds away by itself.
+    if (item.classList.contains('line-host') && !item.querySelector('.note-read, .note-editor')) foldHost(item);
+    return;
+  }
+  // A line's box folds with its fold button, or a tap anywhere on it that is not a
+  // button or the editor (and not the end of a text selection).
+  if (item.classList.contains('line-host') && (e.target.closest('.host-fold')
+    || (!e.target.closest('button, a, textarea, select, input, .note-editor') && !String(getSelection())))) {
+    foldHost(item);
+    return;
+  }
   const del = shown && e.target.closest('.note-del');
   if (del) {
     // Two taps to delete: the first arms the button for a few seconds.
@@ -2678,6 +2694,16 @@ function onNoteClick(e) {
     closeEditor();
   }
   else if (e.target.closest('.note-cancel')) { closeEditor(); syncLineHosts(); }
+}
+// Folding keeps the line it belongs to in view, so the eye does not lose its place.
+function foldHost(host) {
+  const cl = host.closest('.codeview').querySelector(`.cl[data-line="${host.dataset.line}"]`);
+  host.hidden = true;
+  if (!cl) return;
+  const r = cl.getBoundingClientRect();
+  if (r.top < 120 || r.bottom > innerHeight) cl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  cl.classList.add('lit');
+  setTimeout(() => cl.classList.remove('lit'), 900);
 }
 lessonsEl.addEventListener('click', onNoteClick);
 projectEl.addEventListener('click', onNoteClick);
