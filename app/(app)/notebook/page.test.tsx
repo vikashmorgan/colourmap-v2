@@ -58,3 +58,23 @@ describe('NotebookPage: closing an open note from its title bar', () => {
     expect(screen.getByDisplayValue('Il cammino')).toBeTruthy();
   });
 });
+
+describe('NotebookPage: notebooks that only exist in the account', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('lists a notebook that has notes even if this device never made it', async () => {
+    localStorage.clear();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => [{ ...ENTRY, id: 'n2', category: 'cammino_del_cuore' }],
+      })),
+    );
+    render(<NotebookPage />);
+    expect(await screen.findByText('Cammino del cuore')).toBeTruthy();
+  });
+});
