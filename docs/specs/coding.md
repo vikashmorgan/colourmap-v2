@@ -74,6 +74,8 @@ Edit the standalone copy, then copy `index.html` into `content/coding/index.html
 
 ## Reflection
 
+- **2026-10-05.** `records`, `record`, `book` and `raw`/`raw_books` named nearly the same thing four ways, and `records`/`record` differed by one letter. Victor found it confusing, so everything is a book now: `raw_book_list` (the list from the API, in `main()` and `clean()`), `raw_book` (one of them), `book_list` (the clean books) and `book` (one clean book); `sort_records()` became `sort_books()`. Chosen over `books` so the list never reads like the single `book`. Renamed in all ten steps, the cards, the full program, the toolkit, the walkthrough, the data box and the terminal output ("97 books loaded"); no line moved, so line notes stay put. The teacher's brief keeps its own word, "records", and so do the notes and answers already written.
+
 - **2026-10-04.** The section banners (a `# ====` line above and below each `# OPTION n` title) were dropped from the program: they doubled every heading with two lines of noise. The program went from 438 to 416 lines; no line notes existed yet, so none moved.
 
 - **2026-10-04.** One note per box was too few: questions and comments pile up on the same idea. Notes moved to their own table, `coding_notes` (migration 0025), one row per note, with answer and read columns so replies can be shown beside a question without editing it. The old single notes are copied across by the migration and stay in `coding_marks`, unused.
