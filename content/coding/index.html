@@ -543,6 +543,14 @@ pre, .terminal { zoom: var(--code-zoom); }
 .state-dot.done { background: transparent; box-shadow: inset 0 0 0 2px var(--dot-c, var(--q-c)); }
 .note-answer { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, var(--ok-c) 14%, transparent); display: grid; gap: 4px; font-size: 14.5px; }
 .note-answer > div { white-space: pre-wrap; }
+/* On a project card's right side an answer starts folded, so the card stays short. */
+.ans-fold { margin-top: 6px; }
+.ans-fold > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 2px 10px; border-radius: 999px; font: 600 12.5px var(--mono); color: var(--ink); background: color-mix(in srgb, var(--ok-c) 16%, transparent); }
+.ans-fold > summary::-webkit-details-marker { display: none; }
+.ans-fold > summary::before { content: '▸'; font-size: 11px; }
+.ans-fold[open] > summary::before { content: '▾'; }
+.ans-fold > summary .ans-new { color: var(--q-c); }
+.ans-fold > .note-answer { margin-top: 6px; }
 .note-read { justify-self: start; margin-top: 4px; font: 600 12.5px var(--body); border: 1px solid var(--ok-c); background: none; color: var(--box-text); border-radius: 999px; padding: 3px 12px; min-height: 30px; cursor: pointer; }
 .note-read:hover { background: var(--ok-c); color: var(--ground); }
 .rv-top .state-dot { margin-right: 2px; }
@@ -2440,9 +2448,19 @@ function noteHtml(n, withLine) {
       <div class="note-head"><i class="state-dot ${noteState(n)}" title="${noteState(n) === 'done' ? 'Answered and read' : n.answer ? 'Answer waiting to be read' : 'Waiting for an answer'}"></i><span class="note-label">${label}</span>${onLine ? `<button type="button" class="note-line" data-line="${onLine[2]}" title="Show line ${onLine[2]} in the code">Line ${onLine[2]}</button>` : ''}
         <span class="note-tools"><button type="button" class="note-edit" aria-label="Edit this ${label.toLowerCase()}">✎</button><button type="button" class="note-del" aria-label="Delete this ${label.toLowerCase()}">×</button></span></div>
       <div class="note-body">${esc(n.body)}</div>
-      ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : '<button type="button" class="note-read">Got it, mark read</button>'}</div>` : ''}
+      ${n.answer ? (withLine ? `<details class="ans-fold" data-ref="${esc(noteRef(n))}"${openAnswers.has(noteRef(n)) ? ' open' : ''}><summary>Answer${n.readAt ? '' : ' <span class="ans-new">· new</span>'}</summary>${answerHtml(n)}</details>` : answerHtml(n)) : ''}
     </div>`;
 }
+function answerHtml(n) {
+  return `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : '<button type="button" class="note-read">Got it, mark read</button>'}</div>`;
+}
+// Answers a card shows folded; the ones opened stay open across repaints.
+const openAnswers = new Set();
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (!d.classList || !d.classList.contains('ans-fold')) return;
+  if (d.open) openAnswers.add(d.dataset.ref); else openAnswers.delete(d.dataset.ref);
+}, true);
 
 // A note asked in another step, shown on the same line of a whole program: read here,
 // edited where it was asked.
@@ -2658,6 +2676,7 @@ function onNoteClick(e) {
   const shown = e.target.closest('.note-shown');
   if (shown && e.target.closest('.note-edit')) { openEditor(item, shown.dataset.ref); return; }
   if (shown && e.target.closest('.note-read')) {
+    openAnswers.delete(shown.dataset.ref);   // a read answer folds back on its card
     markRead(shown.dataset.ref);
     // Once every answer in a line's box is read, the box folds away by itself.
     if (item.classList.contains('line-host') && !item.querySelector('.note-read, .note-editor')) foldHost(item);
