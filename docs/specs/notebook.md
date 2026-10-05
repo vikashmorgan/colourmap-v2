@@ -16,6 +16,7 @@ Life doesn't have compartments. The person writing a song at 10pm is the same pe
 - Add note: input at top, Enter or Add button
 - Each note: title (collapsed pill), click to expand
 - Expanded note shows: editable title, format toolbar, content area, date, delete
+- An expanded note closes with a tap anywhere on its title bar outside the title and the bar's buttons (the title keeps to the width of its text, so there is room to tap); tapping the title still edits it
 
 ## Rich Editing
 
