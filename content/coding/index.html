@@ -689,6 +689,15 @@ details.fullcode .mission-tag { background: var(--ink); }
 /* Line 0 of the full program: questions about the program as a whole. */
 .overall-host { display: grid; gap: 8px; margin: 0 0 12px; padding: 12px 14px; border-radius: 12px; border: 1px dashed color-mix(in srgb, var(--accent) 50%, var(--rule)); background: color-mix(in srgb, var(--accent) 6%, var(--panel)); scroll-margin-top: 140px; }
 .overall-host .note-dot { justify-self: start; margin-top: 0; }
+/* Overall questions answered in a chat, folded like every other note. */
+.ov-faq { display: grid; gap: 6px; }
+.ov-qa { border-radius: 10px; background: color-mix(in srgb, var(--q-c) 10%, var(--panel)); padding: 8px 12px; --dot-c: var(--q-c); }
+.ov-qa > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 15px; min-height: 28px; }
+.ov-qa > summary::-webkit-details-marker { display: none; }
+.ov-qa > summary::after { content: '▸'; margin-left: auto; color: var(--muted); font-size: 12px; }
+.ov-qa[open] > summary::after { content: '▾'; }
+.ov-qa .note-label { margin: 0; }
+.ov-qa .note-answer > div { font-size: 15px; }
 .ov-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 .ov-zero { font: 600 13px var(--mono); color: var(--ground); background: var(--accent); border-radius: 6px; padding: 1px 8px; }
 .ov-title { font-family: var(--display); font-weight: 700; font-size: 17px; }
@@ -908,7 +917,41 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
       <summary><span class="mission-tag">The full program</span><span class="mission-title">explorer.py, all <span id="full-lines"></span> lines, as you hand it in</span></summary>
       <div class="full-body">
         <div class="handin-actions"><button type="button" class="dl-final">Download explorer.py</button><button type="button" class="copy-final">Copy the whole program</button><span class="final-status" role="status"></span></div>
-        <div class="overall-host" id="overall-host" data-key="p1|overall"><div class="ov-head"><span class="ov-zero">0</span><span class="ov-title">Overall questions</span><span class="ov-sub">about the whole program, before line 1</span></div><button type="button" class="note-dot" aria-pressed="false">Question or comment</button></div>
+        <div class="overall-host" id="overall-host" data-key="p1|overall"><div class="ov-head"><span class="ov-zero">0</span><span class="ov-title">Overall questions</span><span class="ov-sub">about the whole program, before line 1</span></div>
+          <div class="ov-faq">
+            <details class="ov-qa"><summary><i class="state-dot done"></i><span class="note-label">Question</span>What is the difference between fetch and save?</summary>
+              <div class="note-answer"><span class="note-label">Answer</span><div>They move the books in opposite directions.
+
+fetch() goes to the internet: it asks Open Library for the books with requests.get(URL) and gives back the raw list (raw). clean() turns it into records. At that moment the books live only in the program's memory: close the program and they are gone.
+
+save() goes to your disk: it writes the records that are in memory into the file backup.json (json.dump). Nothing comes from the internet; the books simply become a file that stays after the program ends.
+
+load() is the way back: it reads backup.json into memory, so the program works with the internet off.
+
+In one line each:
+  fetch: internet → memory
+  save:  memory → file
+  load:  file → memory
+
+That is why the menu asks you to fetch first: save has nothing to write until records exist.</div></div>
+            </details>
+            <details class="ov-qa"><summary><i class="state-dot done"></i><span class="note-label">Question</span>Why do we not use pip (pip.get or similar) to get the files into Python?</summary>
+              <div class="note-answer"><span class="note-label">Answer</span><div>Because pip and the program do two different jobs, at two different moments.
+
+pip is a tool you run once, in the terminal, before the program: pip install requests. It downloads a library (here requests, someone else's code) onto your computer so that import requests works. pip never brings data, and the program never calls pip. There is no pip.get.
+
+The get you are thinking of is requests.get(URL), inside fetch(). That is the library pip installed, now at work while the program runs: it asks the website for the data.
+
+Files on your own computer need neither: Python reads them itself with open() and json.load() (that is load()).
+
+So:
+  pip install requests   → once, installs the tool (session 7)
+  requests.get(URL)      → every fetch, gets the data
+  open() + json.load()   → reads a file already on disk
+
+requirements.txt, which you hand in, simply lists requests so the teacher can run pip install -r requirements.txt and get the same tool.</div></div>
+            </details>
+          </div><button type="button" class="note-dot" aria-pressed="false">Question or comment</button></div>
         <div id="full-code"></div>
       </div>
     </details>
@@ -2318,11 +2361,13 @@ function termWork(step) {
   return w;
 }
 // Every line that uses the word: a plain name, or .word after a dot (any object:
-// every .lower() is the same .lower()).
+// every .lower() is the same .lower()). A module's function (requests.get,
+// json.load) counts only with its module, so a dict's .get is not mistaken for it.
 function termUses(work, word, obj) {
+  const moduleFn = obj && `${obj}.${word}` in LESSON_TERMS;
   const re = obj === undefined
     ? new RegExp(`(?<![\\w.])${word}(?!\\w)`)
-    : new RegExp(`\\.${word}(?!\\w)`);
+    : new RegExp(`${moduleFn ? `(?<![\\w.])${obj}` : ''}\\.${word}(?!\\w)`);
   const out = [];
   work.bare.forEach((l, i) => { if (re.test(l)) out.push(i + 1); });
   return out;
@@ -2394,9 +2439,9 @@ function showTerm(span) {
     ${info.def ? `<p class="tb-def">${esc(info.def)}</p>` : ''}
     ${info.sig ? `<code class="tb-sig">${highlightLine(info.sig)}</code>` : ''}
     ${info.note ? `<p class="tb-note">${esc(info.note)}</p>` : ''}
+    ${info.lesson ? `<div class="lchips">${lchip(info.lesson)}</div>` : ''}
     <p class="tb-sum">explorer.py after step ${step}: on ${info.uses.length} line${info.uses.length === 1 ? '' : 's'}, ${before} before this one and ${after} after${sets.size ? '. <u>Underlined</u>: where it gets its value' : ''}.</p>
-    ${groups.map(g => `<div class="tb-grp"><span class="tb-fn">${g.fn ? esc(g.fn) + '()' : 'top of file'}</span>${g.lines.map(go).join('')}</div>`).join('')}
-    ${info.lesson ? `<div class="lchips">${lchip(info.lesson)}</div>` : ''}`;
+    ${groups.map(g => `<div class="tb-grp"><span class="tb-fn">${g.fn ? esc(g.fn) + '()' : 'top of file'}</span>${g.lines.map(go).join('')}</div>`).join('')}`;
   bubble.hidden = false;
   if (termSrc) termSrc.classList.remove('tb-on');
   termSrc = span;
