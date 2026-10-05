@@ -138,6 +138,12 @@ const DEFAULT_NOTEBOOKS: Notebook[] = [
 const NOTEBOOK_STORAGE = 'colourmap:notebooks-v2';
 const TRASH_STORAGE = 'colourmap:notebook-trash';
 const DELETED_NB_ID = '__deleted__';
+// A notebook's name from its id, the reverse of how a new notebook gets its id
+// ("Cammino del cuore" -> "cammino_del_cuore").
+const notebookLabel = (id: string) => {
+  const words = id.replace(/_/g, ' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
 const TRASH_TTL_DAYS = 14;
 const COLOR_PICKER = [
   '#C4A060',
@@ -536,6 +542,30 @@ export default function NotebookPage() {
     if (entries.length > 0) {
       localStorage.setItem('colourmap:notebook-entries', JSON.stringify(entries));
     }
+  }, [entries]);
+
+  // The list of notebooks is kept per device, but their notes live in the
+  // account. A notebook that has notes and is missing here (made on another
+  // device, or filled from the terminal) is added, named from its id, so no
+  // note ever sits in a notebook this device cannot open.
+  useEffect(() => {
+    setNotebooks((nbs) => {
+      const known = new Set(nbs.map((n) => n.id));
+      const missing = [...new Set(entries.map((e) => e.category))].filter(
+        (id) => id && !known.has(id),
+      );
+      if (missing.length === 0) return nbs;
+      const next = [
+        ...nbs,
+        ...missing.map((id) => ({ id, label: notebookLabel(id), color: '#C4A060' })),
+      ];
+      try {
+        localStorage.setItem(NOTEBOOK_STORAGE, JSON.stringify(next));
+      } catch {
+        /* */
+      }
+      return next;
+    });
   }, [entries]);
 
   function saveNotebooks(nbs: Notebook[]) {
