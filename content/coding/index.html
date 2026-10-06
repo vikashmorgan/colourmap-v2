@@ -891,6 +891,46 @@ It is used for the menu too: MENU_NUMBERS.get(choice, choice) turns "1" into "fe
 
 Rule of thumb: [ ] when the key must be there (after clean(), every book has its five keys, so book["title"] is safe); .get() when it might be missing (raw data, user input).</div></div>
         </details>
+            <details class="ov-qa"><summary><i class="state-dot done"></i><span class="note-label">Question</span>What are an API and a URL?</summary>
+              <div class="note-answer"><span class="note-label">Answer</span><div>A URL is an address on the internet, like a postal address for a page or for data. Yours, in parts:
+
+  https://              how to talk to the website (secure web)
+  openlibrary.org       which website
+  /search.json          which service: search, answering in JSON
+  ?                     "here come my options"
+  q=mountains           the search word
+  fields=title,…        only send me these fields
+  limit=100             at most 100 books
+  &                     separates one option from the next
+
+An API (Application Programming Interface) is a door a website opens for programs instead of people. In a browser, openlibrary.org gives you a page made for your eyes. Through the API, your program gets raw data in JSON, made for code to read.
+
+Like a restaurant: the waiter and the menu are the API. You do not go into the kitchen (their database); you send an order in the agreed format (the URL with its options) and the dish comes back (the JSON).
+
+In the program:
+  r = requests.get(URL, timeout=30)   send the order to the API's address
+  data = r.json()                      the dish: JSON turned into Python
+  return data["docs"]                  the list of books inside it
+
+For the oral: "An API is a website's interface for programs: I send a request to its URL, with options like q=mountains and limit=100, and it answers with data in JSON that my program can read."</div></div>
+            </details>
+            <details class="ov-qa"><summary><i class="state-dot done"></i><span class="note-label">Question</span>What does "memory" mean, as in "fetch brings the books into memory"?</summary>
+              <div class="note-answer"><span class="note-label">Answer</span><div>Memory is the computer's short-term memory (RAM): where a program keeps its variables while it is running. In this program, "in memory" means inside the variable book_list.
+
+  Memory (book_list)                       File (backup.json)
+  inside the running program               on the hard drive
+  gone when you quit the program           stays after you quit
+  filled by fetch() + clean(), or load()   written by save()
+
+That is why there are three options:
+  fetch: internet → memory   (the books are in book_list, but only while the program runs)
+  save:  memory → file       (now they survive after you quit)
+  load:  file → memory       (back into book_list next time, no internet needed)
+
+And it is why the unsaved flag warns you at quit: the books in memory are not in the file yet; quit now and they are lost.
+
+For the oral: "Memory is where the program keeps book_list while it runs. It disappears when the program stops, so save() writes it to backup.json to keep it."</div></div>
+            </details>
         <details class="ov-qa"><summary><i class="state-dot done"></i><span class="note-label">Question</span>What is the difference between fetch and save?</summary>
           <div class="note-answer"><span class="note-label">Answer</span><div>They move the books in opposite directions.
 
