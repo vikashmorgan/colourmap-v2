@@ -774,6 +774,8 @@ details.fullcode .mission-tag { background: var(--ink); }
 .line-host.flash { outline: 2px solid var(--q-c); outline-offset: 2px; }
 /* Hiding comments: whole comment lines go, trailing comments go, numbers keep their values. */
 #page-project.hide-com .cline { display: none; }
+/* The second level also hides the docstrings, the green """…""" lines under each def. */
+#page-project.hide-doc .dline { display: none; }
 #page-project.hide-com .codeview .c, #page-project.hide-com .pcard pre .c { display: none; }
 /* Where you asked: a dot and a count on a card, a step and its index pill. */
 .card-q { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; font: 600 12px var(--mono); color: var(--q-c); }
@@ -864,9 +866,10 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
     </div>
 
     <div class="com-switch" role="group" aria-label="Comments in the code">
-      <span class="com-label"># comments in the code</span>
-      <button type="button" class="com-opt" data-com="show" aria-pressed="true">Show</button>
-      <button type="button" class="com-opt" data-com="hide" aria-pressed="false">Hide</button>
+      <span class="com-label">explanations in the code</span>
+      <button type="button" class="com-opt" data-com="show" aria-pressed="true">Show all</button>
+      <button type="button" class="com-opt" data-com="hide" aria-pressed="false">Hide #</button>
+      <button type="button" class="com-opt" data-com="bare" aria-pressed="false">Hide # and """</button>
     </div>
     <div class="com-switch" id="term-switch" role="group" aria-label="Explain words in the code">
       <span class="com-label">explain words on hover</span>
@@ -1871,7 +1874,7 @@ function codeWithAdds(code, added) {
   return ls.map((l, i) => {
     let h = highlightLine(l) || ' ';
     if (added && added.includes(i + 1)) h = `<span class="addline">${h}</span>`;
-    return `<span class="cl${hideable(ls, i) ? ' cline' : ''}">${h}\n</span>`;
+    return `<span class="cl${hideable(ls, i) ? ' cline' : ''}${isDocLine(ls[i]) ? ' dline' : ''}">${h}\n</span>`;
   }).join('');
 }
 // The user's answers stand out from what the program prints; later menus fold into one line.
@@ -1893,6 +1896,8 @@ function terminalHtml(out, step) {
 // stands after that step, so "line 42" means the same line in a card and in the
 // step's whole program. Tapping it writes a question about that line.
 const isCommentLine = l => /^\s*#/.test(l);
+// A docstring: a line that is only a """…""" string (every docstring here fits on one line).
+const isDocLine = l => /^\s*""".*"""\s*$/.test(l);
 // Hidden with the comments: comment lines, and blank lines that only framed one.
 const hideable = (ls, i) => isCommentLine(ls[i])
   || (ls[i].trim() === '' && (isCommentLine(ls[i - 1] || '') || isCommentLine(ls[i + 1] || '')));
@@ -1904,7 +1909,7 @@ function lineView(code, first, added) {
     const x = first + i;
     let h = `<span class="ldot" title="Question or comment on line ${x}"></span><span class="ln" data-line="${x}" title="Question or comment on line ${x}">${x}</span>${highlightLine(l, true) || ' '}`;
     if (added && added.includes(i + 1)) h = `<span class="addline">${h}</span>`;
-    return `<span class="cl${hideable(ls, i) ? ' cline' : ''}" data-line="${x}">${h}\n</span>`;
+    return `<span class="cl${hideable(ls, i) ? ' cline' : ''}${isDocLine(ls[i]) ? ' dline' : ''}" data-line="${x}">${h}\n</span>`;
   }).join('');
 }
 function codeView(code, n, first, added, preClass) {
@@ -2427,18 +2432,23 @@ projectEl.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !lpop.hidden) closeLesson(); });
 
-// Show or hide the # comments in the project's code; remembered on this device.
+// Three levels, remembered on this device: show everything; hide the # comments;
+// hide the # comments and the docstrings too, leaving the bare code.
 const COMMENTS_KEY = 'coding-hide-comments';
-function setComments(hide) {
-  projectEl.classList.toggle('hide-com', hide);
-  for (const b of projectEl.querySelectorAll('.com-opt[data-com]')) b.setAttribute('aria-pressed', String((b.dataset.com === 'hide') === hide));
-  try { localStorage.setItem(COMMENTS_KEY, hide ? '1' : ''); } catch (e) {}
+function setComments(mode) {
+  projectEl.classList.toggle('hide-com', mode !== 'show');
+  projectEl.classList.toggle('hide-doc', mode === 'bare');
+  for (const b of projectEl.querySelectorAll('.com-opt[data-com]')) b.setAttribute('aria-pressed', String(b.dataset.com === mode));
+  try { localStorage.setItem(COMMENTS_KEY, mode === 'bare' ? '2' : mode === 'hide' ? '1' : ''); } catch (e) {}
 }
 projectEl.querySelector('.com-switch').addEventListener('click', e => {
   const b = e.target.closest('.com-opt');
-  if (b) setComments(b.dataset.com === 'hide');
+  if (b) setComments(b.dataset.com);
 });
-try { setComments(localStorage.getItem(COMMENTS_KEY) === '1'); } catch (e) {}
+try {
+  const saved = localStorage.getItem(COMMENTS_KEY);
+  setComments(saved === '2' ? 'bare' : saved === '1' ? 'hide' : 'show');
+} catch (e) {}
 
 /* ---------- Explain words: hover a name in the project's code ----------
    A bubble says what the word is (a function of this program with its docstring,
