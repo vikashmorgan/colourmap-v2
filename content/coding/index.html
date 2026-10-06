@@ -692,7 +692,7 @@ details.fullcode .mission-tag { background: var(--ink); }
 .nb-host .nb-sub { margin: 0; }
 .nb-host[hidden], .nb-mission[hidden] { display: none; }
 /* Line 0 of the full program: questions about the program as a whole. */
-.overall-host { display: grid; gap: 8px; margin: 0 0 12px; padding: 12px 14px; border-radius: 12px; border: 1px dashed color-mix(in srgb, var(--accent) 50%, var(--rule)); background: color-mix(in srgb, var(--accent) 6%, var(--panel)); scroll-margin-top: 140px; }
+.overall-host { display: grid; gap: 8px; margin: 0 0 24px; padding: 12px 14px; border-radius: 12px; border: 1px dashed color-mix(in srgb, var(--accent) 50%, var(--rule)); background: color-mix(in srgb, var(--accent) 6%, var(--panel)); scroll-margin-top: 140px; }
 .overall-host .note-dot { justify-self: start; margin-top: 0; }
 /* Overall questions answered in a chat, folded like every other note. */
 .ov-faq { display: grid; gap: 6px; }
@@ -874,6 +874,57 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
       <button type="button" class="com-opt" data-terms="off" aria-pressed="false">Off</button>
     </div>
 
+    <div class="overall-host" id="overall-host" data-key="p1|overall"><div class="ov-head"><span class="ov-zero">0</span><span class="ov-title">Overall questions</span><span class="ov-sub">about the whole program and Python in general</span></div>
+      <div class="ov-faq">
+        <details class="ov-qa"><summary><i class="state-dot done"></i><span class="note-label">Question</span>What does .get() do, and why use it instead of [ ]?</summary>
+          <div class="note-answer"><span class="note-label">Answer</span><div>Both read a value from a dictionary by its key. The difference is what happens when the key is missing.
+
+  raw_book["title"]       → the title, or a crash (KeyError) if there is no "title" key
+  raw_book.get("title")   → the title, or None if there is no "title" key
+  raw_book.get("author_name", [])  → the authors, or [] if there are none
+
+So .get() never crashes on a missing key: it gives back None, or the default you put after the comma.
+
+Why the program uses it: the books come from the internet and are not trusted yet. Some have no title, no page count, no authors. With [ ] the whole program would stop on the first incomplete book. With .get() it carries on, and clean() decides what to do: reject a book with no title (None), keep a book with no authors as [] so len() still works.
+
+It is used for the menu too: MENU_NUMBERS.get(choice, choice) turns "1" into "fetch", and gives back what you typed when it is not a number.
+
+Rule of thumb: [ ] when the key must be there (after clean(), every book has its five keys, so book["title"] is safe); .get() when it might be missing (raw data, user input).</div></div>
+        </details>
+        <details class="ov-qa"><summary><i class="state-dot done"></i><span class="note-label">Question</span>What is the difference between fetch and save?</summary>
+          <div class="note-answer"><span class="note-label">Answer</span><div>They move the books in opposite directions.
+
+fetch() goes to the internet: it asks Open Library for the books with requests.get(URL) and gives back the raw list (raw_book_list). clean() turns it into book_list, the clean books. At that moment the books live only in the program's memory: close the program and they are gone.
+
+save() goes to your disk: it writes book_list, the books in memory, into the file backup.json (json.dump). Nothing comes from the internet; the books simply become a file that stays after the program ends.
+
+load() is the way back: it reads backup.json into memory, so the program works with the internet off.
+
+In one line each:
+  fetch: internet → memory
+  save:  memory → file
+  load:  file → memory
+
+That is why the menu asks you to fetch first: save has nothing to write until book_list holds books.</div></div>
+        </details>
+        <details class="ov-qa"><summary><i class="state-dot done"></i><span class="note-label">Question</span>Why do we not use pip (pip.get or similar) to get the files into Python?</summary>
+          <div class="note-answer"><span class="note-label">Answer</span><div>Because pip and the program do two different jobs, at two different moments.
+
+pip is a tool you run once, in the terminal, before the program: pip install requests. It downloads a library (here requests, someone else's code) onto your computer so that import requests works. pip never brings data, and the program never calls pip. There is no pip.get.
+
+The get you are thinking of is requests.get(URL), inside fetch(). That is the library pip installed, now at work while the program runs: it asks the website for the data.
+
+Files on your own computer need neither: Python reads them itself with open() and json.load() (that is load()).
+
+So:
+  pip install requests   → once, installs the tool (session 7)
+  requests.get(URL)      → every fetch, gets the data
+  open() + json.load()   → reads a file already on disk
+
+requirements.txt, which you hand in, simply lists requests so the teacher can run pip install -r requirements.txt and get the same tool.</div></div>
+        </details>
+      </div><button type="button" class="note-dot" aria-pressed="false">Question or comment</button></div>
+
     <details class="mission" id="mission">
       <summary><span class="mission-tag">The mission</span><span class="mission-title">What the teacher asked for</span></summary>
       <div class="mission-body">
@@ -922,41 +973,6 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
       <summary><span class="mission-tag">The full program</span><span class="mission-title">explorer.py, all <span id="full-lines"></span> lines, as you hand it in</span></summary>
       <div class="full-body">
         <div class="handin-actions"><button type="button" class="dl-final">Download explorer.py</button><button type="button" class="copy-final">Copy the whole program</button><span class="final-status" role="status"></span></div>
-        <div class="overall-host" id="overall-host" data-key="p1|overall"><div class="ov-head"><span class="ov-zero">0</span><span class="ov-title">Overall questions</span><span class="ov-sub">about the whole program, before line 1</span></div>
-          <div class="ov-faq">
-            <details class="ov-qa"><summary><i class="state-dot done"></i><span class="note-label">Question</span>What is the difference between fetch and save?</summary>
-              <div class="note-answer"><span class="note-label">Answer</span><div>They move the books in opposite directions.
-
-fetch() goes to the internet: it asks Open Library for the books with requests.get(URL) and gives back the raw list (raw_book_list). clean() turns it into book_list, the clean books. At that moment the books live only in the program's memory: close the program and they are gone.
-
-save() goes to your disk: it writes book_list, the books in memory, into the file backup.json (json.dump). Nothing comes from the internet; the books simply become a file that stays after the program ends.
-
-load() is the way back: it reads backup.json into memory, so the program works with the internet off.
-
-In one line each:
-  fetch: internet → memory
-  save:  memory → file
-  load:  file → memory
-
-That is why the menu asks you to fetch first: save has nothing to write until book_list holds books.</div></div>
-            </details>
-            <details class="ov-qa"><summary><i class="state-dot done"></i><span class="note-label">Question</span>Why do we not use pip (pip.get or similar) to get the files into Python?</summary>
-              <div class="note-answer"><span class="note-label">Answer</span><div>Because pip and the program do two different jobs, at two different moments.
-
-pip is a tool you run once, in the terminal, before the program: pip install requests. It downloads a library (here requests, someone else's code) onto your computer so that import requests works. pip never brings data, and the program never calls pip. There is no pip.get.
-
-The get you are thinking of is requests.get(URL), inside fetch(). That is the library pip installed, now at work while the program runs: it asks the website for the data.
-
-Files on your own computer need neither: Python reads them itself with open() and json.load() (that is load()).
-
-So:
-  pip install requests   → once, installs the tool (session 7)
-  requests.get(URL)      → every fetch, gets the data
-  open() + json.load()   → reads a file already on disk
-
-requirements.txt, which you hand in, simply lists requests so the teacher can run pip install -r requirements.txt and get the same tool.</div></div>
-            </details>
-          </div><button type="button" class="note-dot" aria-pressed="false">Question or comment</button></div>
         <div id="full-code"></div>
       </div>
     </details>
