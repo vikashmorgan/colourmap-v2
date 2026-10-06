@@ -774,7 +774,7 @@ details.fullcode .mission-tag { background: var(--ink); }
 .line-host.flash { outline: 2px solid var(--q-c); outline-offset: 2px; }
 /* Hiding comments: whole comment lines go, trailing comments go, numbers keep their values. */
 #page-project.hide-com .cline { display: none; }
-/* The second level also hides the docstrings, the green """…""" lines under each def. */
+/* Its own switch hides the docstrings, the green """…""" lines under each def. */
 #page-project.hide-doc .dline { display: none; }
 #page-project.hide-com .codeview .c, #page-project.hide-com .pcard pre .c { display: none; }
 /* Where you asked: a dot and a count on a card, a step and its index pill. */
@@ -866,10 +866,14 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
     </div>
 
     <div class="com-switch" role="group" aria-label="Comments in the code">
-      <span class="com-label">explanations in the code</span>
-      <button type="button" class="com-opt" data-com="show" aria-pressed="true">Show all</button>
-      <button type="button" class="com-opt" data-com="hide" aria-pressed="false">Hide #</button>
-      <button type="button" class="com-opt" data-com="bare" aria-pressed="false">Hide # and """</button>
+      <span class="com-label"># comments in the code</span>
+      <button type="button" class="com-opt" data-com="show" aria-pressed="true">Show</button>
+      <button type="button" class="com-opt" data-com="hide" aria-pressed="false">Hide</button>
+    </div>
+    <div class="com-switch" id="doc-switch" role="group" aria-label="Docstrings in the code">
+      <span class="com-label">""" docstrings</span>
+      <button type="button" class="com-opt" data-doc="show" aria-pressed="true">Show</button>
+      <button type="button" class="com-opt" data-doc="hide" aria-pressed="false">Hide</button>
     </div>
     <div class="com-switch" id="term-switch" role="group" aria-label="Explain words in the code">
       <span class="com-label">explain words on hover</span>
@@ -2432,23 +2436,30 @@ projectEl.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !lpop.hidden) closeLesson(); });
 
-// Three levels, remembered on this device: show everything; hide the # comments;
-// hide the # comments and the docstrings too, leaving the bare code.
+// Two separate switches, each remembered on this device: the # comments, and the
+// docstrings (the green """…""" line under each def). Hide both for the bare code.
 const COMMENTS_KEY = 'coding-hide-comments';
-function setComments(mode) {
-  projectEl.classList.toggle('hide-com', mode !== 'show');
-  projectEl.classList.toggle('hide-doc', mode === 'bare');
-  for (const b of projectEl.querySelectorAll('.com-opt[data-com]')) b.setAttribute('aria-pressed', String(b.dataset.com === mode));
-  try { localStorage.setItem(COMMENTS_KEY, mode === 'bare' ? '2' : mode === 'hide' ? '1' : ''); } catch (e) {}
+const DOCS_KEY = 'coding-hide-docstrings';
+function setComments(hide) {
+  projectEl.classList.toggle('hide-com', hide);
+  for (const b of projectEl.querySelectorAll('.com-opt[data-com]')) b.setAttribute('aria-pressed', String((b.dataset.com === 'hide') === hide));
+  try { localStorage.setItem(COMMENTS_KEY, hide ? '1' : ''); } catch (e) {}
+}
+function setDocstrings(hide) {
+  projectEl.classList.toggle('hide-doc', hide);
+  for (const b of projectEl.querySelectorAll('.com-opt[data-doc]')) b.setAttribute('aria-pressed', String((b.dataset.doc === 'hide') === hide));
+  try { localStorage.setItem(DOCS_KEY, hide ? '1' : ''); } catch (e) {}
 }
 projectEl.querySelector('.com-switch').addEventListener('click', e => {
-  const b = e.target.closest('.com-opt');
-  if (b) setComments(b.dataset.com);
+  const b = e.target.closest('.com-opt[data-com]');
+  if (b) setComments(b.dataset.com === 'hide');
 });
-try {
-  const saved = localStorage.getItem(COMMENTS_KEY);
-  setComments(saved === '2' ? 'bare' : saved === '1' ? 'hide' : 'show');
-} catch (e) {}
+document.getElementById('doc-switch').addEventListener('click', e => {
+  const b = e.target.closest('.com-opt[data-doc]');
+  if (b) setDocstrings(b.dataset.doc === 'hide');
+});
+try { setComments(localStorage.getItem(COMMENTS_KEY) === '1'); } catch (e) {}
+try { setDocstrings(localStorage.getItem(DOCS_KEY) === '1'); } catch (e) {}
 
 /* ---------- Explain words: hover a name in the project's code ----------
    A bubble says what the word is (a function of this program with its docstring,
