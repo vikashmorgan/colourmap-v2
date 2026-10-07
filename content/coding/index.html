@@ -1617,7 +1617,7 @@ function kxRegex(classNames) {
   return new RegExp([
     '(?<err>\\b[A-Z]\\w*Error\\b)',
     '(?<code>@dataclass|\\b__\\w+__(?:\\(\\))?|\\b[A-Za-z_]\\w*(?:\\([^()]*\\))?(?:\\.[A-Za-z_]\\w*(?:\\([^()]*\\))?)+|\\b[A-Za-z_]\\w*\\([^()]*\\))',
-    '(?<kw>\\b(?:self|def|return|None|True|False|pass|super)\\b)',
+    '(?<kw>\\b(?:self|def|return|None|True|False|super)\\b)',
     classNames.length ? `(?<cls>\\b(?:${longFirst(classNames)})\\b)` : '(?<cls>(?!))',
     `(?<term>\\b(?:${terms})\\b)`,
     `(?<warn>\\b(?:${warn})\\b)`,
