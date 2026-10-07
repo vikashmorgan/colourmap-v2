@@ -133,6 +133,49 @@ details.output summary { cursor: pointer; font-size: 14px; color: var(--accent);
 .kx-toggle { margin-left: auto; min-height: 30px; padding: 3px 12px; border: 1px solid var(--rule); border-radius: 999px; background: var(--ground); color: var(--ink); font: 600 12.5px var(--body); cursor: pointer; }
 .kx-toggle[aria-pressed="false"] { color: var(--muted); }
 
+/* In the reader the three marks are a labelled row at the top right of the page,
+   not three faint dots floating halfway down a tall page. */
+.rd-page .marks { position: static; order: -1; justify-self: end; transform: none; flex-direction: row; gap: 6px; margin-bottom: -6px; }
+.rd-page .mark { width: auto; height: 32px; padding: 0 12px 0 10px; gap: 6px; display: inline-flex; align-items: center; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--dot) 40%, var(--rule)); background: var(--panel); color: var(--ink); font: 600 12.5px var(--body); }
+.rd-page .mark::before { opacity: .9; }
+.rd-page .mark::after { content: attr(data-label); position: static; transform: none; opacity: 1; background: none; color: inherit; padding: 0; font: inherit; }
+.rd-page .mark:hover::after, .rd-page .mark:focus-visible::after { transform: none; }
+.rd-page .mark:hover { border-color: var(--dot); }
+.rd-page .mark[aria-pressed="true"] { background: color-mix(in srgb, var(--dot) 22%, var(--panel)); border-color: var(--dot); }
+@media (max-width: 760px) { .rd-page .marks { justify-self: start; } }
+
+/* Highlights: light, see-through colours over the text, remembered on the device. */
+mark.hl { --hl: #f2c14e; background: color-mix(in srgb, var(--hl) 34%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; cursor: pointer; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+mark.hl[data-c="green"] { --hl: #6fbf8e; }
+mark.hl[data-c="blue"] { --hl: #7aa6e6; }
+mark.hl[data-c="pink"] { --hl: #e48fb4; }
+pre mark.hl { background: color-mix(in srgb, var(--hl) 30%, transparent); }
+/* The bar that appears over a selection: three highlight colours, and Ask. */
+#sel-bar { position: fixed; z-index: 75; display: flex; align-items: center; gap: 4px; padding: 5px; border-radius: 999px; background: var(--panel); border: 1px solid var(--rule); box-shadow: 0 8px 24px rgb(0 0 0 / .2); }
+#sel-bar[hidden] { display: none; }
+#sel-bar .sb-c { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--panel); background: color-mix(in srgb, var(--hl) 60%, var(--panel)); cursor: pointer; box-shadow: 0 0 0 1px var(--rule); }
+#sel-bar .sb-c:hover { box-shadow: 0 0 0 2px var(--hl); }
+#sel-bar .sb-btn { min-height: 30px; padding: 3px 12px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--q-c) 16%, var(--panel)); color: var(--ink); font: 600 13px var(--body); cursor: pointer; }
+#sel-bar .sb-btn:hover { background: color-mix(in srgb, var(--q-c) 28%, var(--panel)); }
+#sel-bar .sb-com { background: color-mix(in srgb, var(--c-c) 16%, var(--panel)); }
+#sel-bar .sb-com:hover { background: color-mix(in srgb, var(--c-c) 28%, var(--panel)); }
+#sel-bar .sb-sep { width: 1px; height: 20px; background: var(--rule); margin: 0 2px; }
+/* A note about a passage shows that passage above it. */
+.note-quote { margin: 0 0 6px; padding: 3px 10px; border-left: 3px solid color-mix(in srgb, var(--q-c) 60%, transparent); color: var(--muted); font-style: italic; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-editor .note-quote { margin: 0; }
+
+/* Two tall buttons in the empty margin right of the page: back and next, always
+   within reach while reading, with no scrolling to the bottom of a page. */
+.rd-side-nav { position: fixed; z-index: 45; top: 50%; transform: translateY(-50%); right: max(12px, calc((100vw - 1240px) / 2 - 92px)); display: grid; gap: 12px; }
+.rd-side-nav[hidden] { display: none; }
+.rd-flip { width: 64px; height: 190px; padding: 12px 6px; display: grid; grid-template-rows: auto 1fr; justify-items: center; gap: 8px; border: 1px solid color-mix(in srgb, var(--sess) 35%, var(--rule)); border-radius: 16px; background: color-mix(in srgb, var(--sess) 8%, var(--panel)); color: var(--ink); cursor: pointer; box-shadow: 0 4px 14px rgb(0 0 0 / .08); }
+.rd-flip:hover { border-color: var(--sess); background: color-mix(in srgb, var(--sess) 18%, var(--panel)); }
+.rd-flip:disabled { opacity: .35; cursor: default; }
+.rd-side-arrow { font: 700 34px/1 var(--display); color: var(--sess); }
+.rd-side-label { writing-mode: vertical-rl; text-orientation: mixed; font: 600 13px var(--body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-height: 130px; }
+.rd-side-label b { font: 600 11.5px var(--mono); color: var(--muted); margin-bottom: 6px; }
+@media (max-width: 1379px) { .rd-side-nav { display: none; } }
+
 /* ---------- The reader (session 8 onwards) ---------- */
 .reader { display: grid; grid-template-columns: minmax(220px, 280px) 1fr; gap: 20px; align-items: start; }
 .rd-rail { position: sticky; top: 132px; max-height: calc(100vh - 150px); overflow: auto; display: grid; gap: 14px; padding: 4px 6px 12px 0; }
@@ -154,7 +197,7 @@ details.output summary { cursor: pointer; font-size: 14px; color: var(--accent);
 .reader .rd-section:not(:has(.rd-on)) { display: none; }
 .rd-crumb { margin: 0; font: 600 12.5px var(--mono); color: var(--sess); display: flex; gap: 8px; }
 .rd-crumb span { color: var(--muted); }
-.rd-page { position: relative; padding: 20px 64px 20px 22px; gap: 14px; border-radius: 14px; }
+.rd-page { position: relative; padding: 16px 22px 20px; gap: 14px; border-radius: 14px; }
 .rd-page h4 { font-size: 22px; }
 .rd-lead { margin: 0; font-size: 18px; line-height: 1.5; max-width: 70ch; }
 .rd-pattern pre { margin: 4px 0 0; }
@@ -173,7 +216,7 @@ details.output summary { cursor: pointer; font-size: 14px; color: var(--accent);
 @media (max-width: 760px) {
   .reader { grid-template-columns: 1fr; }
   .rd-rail { position: static; max-height: 260px; border: 1px solid var(--rule); border-radius: 12px; padding: 8px; }
-  .rd-page { padding: 16px 52px 16px 16px; }
+  .rd-page { padding: 14px 16px 16px; }
 }
 
 /* Function row: code left, explanation right */
@@ -2602,6 +2645,176 @@ projectEl.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !lpop.hidden) closeLesson(); });
 
+/* ---------- Select a passage: highlight it, or ask a question about it ----------
+   Select text or code in a lesson box, a reader page or a project card and a small
+   bar appears: three light colours to highlight it, and Ask about this. A question
+   is saved on that box or card (on the line, when a single code line is selected),
+   with the passage quoted at its top. Highlights are kept on this device, found
+   again by their text, and removed with a tap on them. */
+const HL_KEY = 'coding-highlights';
+let highlights = [];
+try { highlights = JSON.parse(localStorage.getItem(HL_KEY) || '[]'); } catch (e) {}
+const saveHighlights = () => { try { localStorage.setItem(HL_KEY, JSON.stringify(highlights)); } catch (e) {} };
+const HL_HOST = '.item[data-key], .pcard[data-key]';
+const HL_SKIP = '.note-list, .note-editor, .line-host, .marks, .note-dot, .notes-toggle, .lchips, .card-q, .rd-nav, .expand-btn, .ldot, .ln, .wt-box, #sel-bar';
+function hlTextNodes(host) {
+  const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, {
+    acceptNode: n => (n.parentElement.closest(HL_SKIP) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+  });
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  return nodes;
+}
+// Where a DOM point falls in the host's text, counting only the readable text.
+function hlOffset(nodes, container, offset) {
+  let total = 0;
+  for (const n of nodes) {
+    if (n === container) return total + offset;
+    if (container.nodeType === 1 && container.contains(n)) {
+      const r = document.createRange();
+      r.setStart(container, offset);
+      if (r.comparePoint(n, 0) >= 0) return total;
+    }
+    total += n.nodeValue.length;
+  }
+  return total;
+}
+function hlWrap(host, start, end, attrs) {
+  let pos = 0;
+  for (const n of hlTextNodes(host)) {
+    const len = n.nodeValue.length, a = Math.max(start, pos), b = Math.min(end, pos + len);
+    if (a < b) {
+      let mid = n;
+      if (a > pos) mid = mid.splitText(a - pos);
+      if (b < pos + len) mid.splitText(b - a);
+      const m = document.createElement('mark');
+      m.className = 'hl';
+      for (const [k, v] of Object.entries(attrs)) m.dataset[k] = v;
+      mid.replaceWith(m);
+      m.append(mid);
+    }
+    pos += len;
+    if (pos >= end) break;
+  }
+}
+function hlHostOf(key) { return document.querySelector(`.item[data-key="${CSS.escape(key)}"], .pcard[data-key="${CSS.escape(key)}"]`); }
+function hlApply(h) {
+  const host = hlHostOf(h.key);
+  if (!host) return;
+  const text = hlTextNodes(host).map(n => n.nodeValue).join('');
+  let at = -1;
+  for (let i = 0; i <= h.occ; i++) { at = text.indexOf(h.text, at + 1); if (at < 0) return; }
+  hlWrap(host, at, at + h.text.length, { hid: h.id, c: h.color });
+}
+function hlRemove(id) {
+  for (const m of document.querySelectorAll(`mark.hl[data-hid="${CSS.escape(id)}"]`)) {
+    const parent = m.parentNode;
+    m.replaceWith(...m.childNodes);
+    parent.normalize();
+  }
+  highlights = highlights.filter(h => h.id !== id);
+  saveHighlights();
+}
+highlights.forEach(hlApply);
+
+const selBar = document.createElement('div');
+selBar.id = 'sel-bar';
+selBar.hidden = true;
+selBar.setAttribute('role', 'toolbar');
+selBar.setAttribute('aria-label', 'Selected passage');
+document.body.append(selBar);
+let selInfo = null;
+function selBarAt(rect) {
+  selBar.hidden = false;
+  const w = selBar.offsetWidth, h = selBar.offsetHeight;
+  selBar.style.left = `${Math.max(8, Math.min(rect.left + rect.width / 2 - w / 2, innerWidth - w - 8))}px`;
+  const top = rect.top - h - 8 >= 8 ? rect.top - h - 8 : rect.bottom + 8;
+  selBar.style.top = `${Math.max(8, Math.min(top, innerHeight - h - 8))}px`;
+}
+function hideSelBar() { selBar.hidden = true; selInfo = null; }
+function readSelection() {
+  const sel = getSelection();
+  if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  const range = sel.getRangeAt(0);
+  const el = n => (n.nodeType === 1 ? n : n.parentElement);
+  const a = el(range.startContainer), b = el(range.endContainer);
+  if (!a || !b || a.closest('textarea, input, .note-editor, #sel-bar') || b.closest('textarea, input, .note-editor')) return null;
+  const host = a.closest(HL_HOST);
+  if (!host || host !== b.closest(HL_HOST)) return null;
+  const nodes = hlTextNodes(host);
+  const start = hlOffset(nodes, range.startContainer, range.startOffset);
+  const end = hlOffset(nodes, range.endContainer, range.endOffset);
+  const full = nodes.map(n => n.nodeValue).join('');
+  const text = full.slice(start, end);
+  if (!text.trim() || text.length > 1500) return null;
+  let occ = 0, at = full.indexOf(text);
+  while (at >= 0 && at < start) { occ++; at = full.indexOf(text, at + 1); }
+  // one code line selected in a project card: the question can sit on that line
+  const lineA = a.closest('.codeview .cl[data-line]'), lineB = b.closest('.codeview .cl[data-line]');
+  const line = lineA && lineA === lineB && host.classList.contains('pcard') ? lineA.dataset.line : '';
+  return { host, key: host.dataset.key, start, end, text, occ, line, rect: range.getBoundingClientRect() };
+}
+const HL_COLOURS = [['yellow', '#f2c14e'], ['green', '#6fbf8e'], ['blue', '#7aa6e6'], ['pink', '#e48fb4']];
+function showSelBar() {
+  const info = readSelection();
+  if (!info) { if (!selBar.dataset.hid) hideSelBar(); return; }
+  selInfo = info;
+  delete selBar.dataset.hid;
+  selBar.innerHTML = HL_COLOURS.map(([c, v]) => `<button type="button" class="sb-c" data-colour="${c}" style="--hl: ${v}" title="Highlight (${c})" aria-label="Highlight in ${c}"></button>`).join('')
+    + '<span class="sb-sep"></span><button type="button" class="sb-btn sb-ask" data-kind="question">Question</button><button type="button" class="sb-btn sb-ask sb-com" data-kind="comment">Comment</button>';
+  selBarAt(info.rect);
+}
+// Release the mouse (or the finger) after selecting, and the bar appears.
+const inSelBar = e => !!(e.target.closest && e.target.closest('#sel-bar'));
+document.addEventListener('mouseup', e => { if (!inSelBar(e)) setTimeout(showSelBar, 0); });
+document.addEventListener('touchend', e => { if (!inSelBar(e)) setTimeout(showSelBar, 350); });
+document.addEventListener('keyup', e => { if (e.shiftKey) showSelBar(); });
+document.addEventListener('scroll', () => { if (!selBar.hidden) hideSelBar(); }, { passive: true, capture: true });
+// Keep the selection alive while the bar is used.
+selBar.addEventListener('mousedown', e => e.preventDefault());
+selBar.addEventListener('click', e => {
+  const colour = e.target.closest('.sb-c');
+  if (colour && selInfo) {
+    const h = { id: `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, key: selInfo.key, text: selInfo.text, occ: selInfo.occ, color: colour.dataset.colour };
+    highlights.push(h);
+    saveHighlights();
+    hlWrap(selInfo.host, selInfo.start, selInfo.end, { hid: h.id, c: h.color });
+    getSelection().removeAllRanges();
+    hideSelBar();
+    return;
+  }
+  const ask = e.target.closest('.sb-ask');
+  if (ask && selInfo) {
+    const { host, text, line } = selInfo;
+    getSelection().removeAllRanges();
+    hideSelBar();
+    openEditor(host, null);
+    const ed = host.querySelector('.note-editor');
+    if (!ed) return;
+    ed.dataset.quote = text.trim();
+    ed.dataset.kind = ask.dataset.kind;
+    for (const b of ed.querySelectorAll('.kind-pick button')) b.setAttribute('aria-checked', String(b.dataset.kind === ask.dataset.kind));
+    ed.querySelector('.kind-pick').insertAdjacentHTML('beforebegin', `<blockquote class="note-quote">${esc(text.trim())}</blockquote>`);
+    const pick = ed.querySelector('.line-pick select');
+    if (pick && line && [...pick.options].some(o => o.value === line)) pick.value = line;
+    ed.querySelector('textarea').focus();
+    return;
+  }
+  const rm = e.target.closest('.sb-remove');
+  if (rm) { hlRemove(selBar.dataset.hid); hideSelBar(); }
+});
+// Tap a highlight to remove it.
+document.addEventListener('click', e => {
+  const m = e.target.closest && e.target.closest('mark.hl');
+  if (!m || !getSelection().isCollapsed) return;
+  selBar.dataset.hid = m.dataset.hid;
+  selBar.innerHTML = '<button type="button" class="sb-btn sb-remove">Remove highlight</button>';
+  selBarAt(m.getBoundingClientRect());
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !selBar.hidden) hideSelBar(); });
+// A press anywhere else closes the 'Remove highlight' bar.
+document.addEventListener('mousedown', e => { if (e.target.closest && !e.target.closest('#sel-bar, mark.hl') && selBar.dataset.hid) { delete selBar.dataset.hid; hideSelBar(); } });
+
 /* ---------- The reader: one concept page at a time ---------- */
 const KX_KEY = 'coding-keyword-colours-off';
 function setKeywordColours(on) {
@@ -2632,6 +2845,7 @@ function readerSelect(reader, key) {
   if (next) { nx.textContent = `${label(next)} →`; nx.dataset.key = next.dataset.key; }
   reader.querySelector('.rd-pos').textContent = `${i + 1} of ${links.length}`;
   try { localStorage.setItem(READER_KEY(reader.dataset.session), key); } catch (e) {}
+  if (window.codingSideNav) window.codingSideNav();   // set once the side buttons exist
 }
 function readerGo(reader, key) {
   readerSelect(reader, key);
@@ -2649,6 +2863,43 @@ lessonsEl.addEventListener('click', e => {
   const b = e.target.closest('.rd-link, .rd-prev, .rd-next');
   if (!b || !b.dataset.key) return;
   readerGo(b.closest('.reader'), b.dataset.key);
+});
+// The side buttons follow whichever reader is on screen.
+const sideNav = document.createElement('div');
+sideNav.className = 'rd-side-nav';
+sideNav.hidden = true;
+sideNav.innerHTML = '<button type="button" class="rd-flip" data-dir="prev" aria-label="Previous concept"><span class="rd-side-arrow">‹</span><span class="rd-side-label"></span></button><button type="button" class="rd-flip" data-dir="next" aria-label="Next concept"><span class="rd-side-arrow">›</span><span class="rd-side-label"></span></button>';
+document.body.append(sideNav);
+let sideReader = null;
+function visibleReader() {
+  return [...document.querySelectorAll('.reader')].find(r => {
+    const box = r.getBoundingClientRect();
+    return r.closest('details.lesson').open && !r.closest('[hidden]') && box.top < innerHeight * 0.7 && box.bottom > innerHeight * 0.3;
+  }) || null;
+}
+function syncSideNav() {
+  sideReader = visibleReader();
+  sideNav.hidden = !sideReader;
+  if (!sideReader) return;
+  sideNav.style.setProperty('--sess', sideReader.closest('details.lesson').style.getPropertyValue('--sess'));
+  for (const dir of ['prev', 'next']) {
+    const src = sideReader.querySelector(`.rd-${dir}`), btn = sideNav.querySelector(`[data-dir="${dir}"]`);
+    btn.disabled = src.hidden;
+    btn.dataset.key = src.dataset.key || '';
+    const [num, ...name] = (src.textContent || '').replace(/[←→]/g, '').trim().split(' ');
+    btn.querySelector('.rd-side-label').innerHTML = src.hidden ? '' : `<b>${esc(num)}</b> ${esc(name.join(' '))}`;
+    btn.title = src.hidden ? '' : src.textContent.replace(/[←→]/g, '').trim();
+  }
+}
+let sideTick = 0;
+const queueSideNav = () => { if (!sideTick) sideTick = requestAnimationFrame(() => { sideTick = 0; syncSideNav(); }); };
+window.codingSideNav = queueSideNav;
+addEventListener('scroll', queueSideNav, { passive: true });
+addEventListener('resize', queueSideNav);
+lessonsEl.addEventListener('toggle', queueSideNav, true);
+sideNav.addEventListener('click', e => {
+  const b = e.target.closest('.rd-flip');
+  if (b && !b.disabled && b.dataset.key && sideReader) readerGo(sideReader, b.dataset.key);
 });
 // Left and right arrows turn the page of the reader on screen, unless you are typing.
 document.addEventListener('keydown', e => {
@@ -2976,13 +3227,26 @@ function noteMark(n, label) {
   if (n.readAt) return `<span class="note-mark" title="Answered and read">${dot}<span class="note-check" aria-label="answer read">✓</span></span>`;
   return `<button type="button" class="note-mark note-mark-btn" title="Tap once you have read the answer">${dot}<span class="note-check-todo" aria-hidden="true"></span></button>`;
 }
+// A note asked about a passage keeps the passage at its top, as "> " lines, so the
+// quote travels with the note into Review and into the account with no new column.
+function quoteBody(quote, text) {
+  return quote ? quote.split('\n').map(l => `> ${l}`).join('\n') + '\n\n' + text : text;
+}
+function noteBodyHtml(body) {
+  const lines = String(body).split('\n');
+  let i = 0;
+  while (i < lines.length && lines[i].startsWith('> ')) i++;
+  if (!i) return esc(body);
+  const quote = lines.slice(0, i).map(l => l.slice(2)).join('\n');
+  return `<blockquote class="note-quote">${esc(quote)}</blockquote>${esc(lines.slice(i).join('\n').replace(/^\n+/, ''))}`;
+}
 function noteHtml(n, withLine) {
   const label = n.kind === 'question' ? 'Question' : 'Comment';
   const onLine = withLine && LINE_KEY.exec(n.key);
   return `<div class="note-shown" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
       <div class="note-head">${noteMark(n, label)}${onLine ? `<button type="button" class="note-line" data-line="${onLine[2]}" title="Show line ${onLine[2]} in the code">Line ${onLine[2]}</button>` : ''}
         <span class="note-tools"><button type="button" class="note-edit" aria-label="Edit this ${label.toLowerCase()}">✎</button><button type="button" class="note-del" aria-label="Delete this ${label.toLowerCase()}">×</button></span></div>
-      <div class="note-body">${esc(n.body)}</div>
+      <div class="note-body">${noteBodyHtml(n.body)}</div>
       ${n.answer ? (withLine ? `<details class="ans-fold" data-ref="${esc(noteRef(n))}"${openAnswers.has(noteRef(n)) ? ' open' : ''}><summary>Answer${n.readAt ? '' : ' <span class="ans-new">· new</span>'}</summary>${answerHtml(n)}</details>` : answerHtml(n)) : ''}
     </div>`;
 }
@@ -3014,7 +3278,7 @@ function echoHtml(n) {
   const label = n.kind === 'question' ? 'Question' : 'Comment';
   return `<div class="note-shown note-echo" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
       <div class="note-head">${noteMark(n, label)}<button type="button" class="note-line note-from" data-key="${esc(n.key)}" title="Go to where you asked it">Step ${s.step} · line ${s.line} ›</button></div>
-      <div class="note-body">${esc(n.body)}</div>
+      <div class="note-body">${noteBodyHtml(n.body)}</div>
       ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : '<button type="button" class="note-read">Got it, mark read</button>'}</div>` : ''}
     </div>`;
 }
@@ -3274,7 +3538,7 @@ function onNoteClick(e) {
     const view = pick && pick.value && item.querySelector('.codeview');
     const target = view ? `p1|s${view.dataset.step}|L${pick.value}` : key;
     openNoteLists.add(key);   // a note just written is shown, not folded away
-    saveNote(target, ed.dataset.ref || null, ed.querySelector('textarea').value, ed.dataset.kind);
+    saveNote(target, ed.dataset.ref || null, quoteBody(ed.dataset.quote || '', ed.querySelector('textarea').value), ed.dataset.kind);
     closeEditor();
   }
   else if (e.target.closest('.note-cancel')) { closeEditor(); syncLineHosts(); }
@@ -3328,7 +3592,7 @@ function reviewNote(n) {
     <div class="rv-place"><span class="rv-sess">${h.num}</span><i class="state-dot ${noteState(n)}"></i></div>
     <div class="rv-main">
       <div class="rv-top"><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">${item.closest('#page-project') ? 'Open in project ›' : 'Open in lesson ›'}</button></div>
-      <p class="rv-note" data-kind="${n.kind}">${esc(n.body)}</p>
+      <div class="rv-note" data-kind="${n.kind}">${noteBodyHtml(n.body)}</div>
       ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : `<button type="button" class="note-read" data-ref="${esc(noteRef(n))}">Got it, mark read</button>`}</div>` : (n.kind === 'question' ? '<p class="rv-wait">Waiting for an answer</p>' : '')}
     </div>
   </article>`;
