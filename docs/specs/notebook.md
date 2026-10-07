@@ -42,6 +42,7 @@ Life doesn't have compartments. The person writing a song at 10pm is the same pe
 - Long content auto-grows textarea
 - Font/color/alignment persist per note in localStorage
 - Category with no notes still shows in sidebar
+- The **Art ideas** notebook (`art_ideas`) has its own view: themes, the ideas under each theme, and a picture gallery per idea. See `docs/specs/art-ideas.md`.
 - The list of notebooks is kept per device; a notebook that has notes in the account but is missing on this device is added to the sidebar automatically, named from its id (`cammino_del_cuore` → "Cammino del cuore"), so no note is ever unreachable
 
 ## Done When
