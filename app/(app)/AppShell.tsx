@@ -9,6 +9,7 @@ import GuitarStudio from '@/components/GuitarStudio';
 import NavLinks from '@/components/NavLinks';
 import SoundLab from '@/components/SoundLab';
 import { useViewMode } from '@/components/ViewModeContext';
+import { useSpellCheck } from '@/lib/hooks/use-spell-check';
 
 const SOCIAL_ROUTES = [
   { href: '/circles', label: 'Team' },
@@ -40,6 +41,8 @@ function formatFooterDate(date: Date) {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { mode, navPosition } = useViewMode();
+  // Applies the saved spell-check choice to every page on load.
+  useSpellCheck();
   const pathname = usePathname();
   const onMusic = pathname === '/music';
   const onDay = pathname === '/day';

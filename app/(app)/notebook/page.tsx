@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import ArtIdeas from '@/components/ArtIdeas';
 import MicDot from '@/components/MicDot';
 import MusicRecordings from '@/components/MusicRecordings';
+import { useSpellCheck } from '@/lib/hooks/use-spell-check';
 
 // ============================================================
 // AI GENERATION (preserved from music toolkit)
@@ -463,7 +464,7 @@ export default function NotebookPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [fullViewId, setFullViewId] = useState<string | null>(null);
-  const [spellCheckOn, setSpellCheckOn] = useState(true);
+  const [spellCheckOn, toggleSpellCheck] = useSpellCheck();
   const [newTitle, setNewTitle] = useState('');
   const [adding, setAdding] = useState(false);
   const [showNbMenu, setShowNbMenu] = useState(false);
@@ -1375,7 +1376,7 @@ export default function NotebookPage() {
                               />
                               <button
                                 type="button"
-                                onClick={() => setSpellCheckOn((s) => !s)}
+                                onClick={toggleSpellCheck}
                                 className="flex cursor-pointer items-center justify-center rounded-full px-2.5 py-1 transition-all"
                                 style={{
                                   background: spellCheckOn ? `${color}08` : 'transparent',
@@ -1703,6 +1704,23 @@ export default function NotebookPage() {
                 />
                 <button
                   type="button"
+                  onClick={toggleSpellCheck}
+                  className="flex cursor-pointer items-center justify-center rounded-full px-2.5 py-1.5 transition-all"
+                  style={{
+                    background: spellCheckOn ? `${fColor}10` : 'transparent',
+                    border: `1px solid ${spellCheckOn ? `${fColor}25` : `${fColor}10`}`,
+                    fontFamily: 'var(--font-serif)',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: spellCheckOn ? fColor : `${fColor}60`,
+                  }}
+                  title={spellCheckOn ? 'Spell check on (tap to turn off)' : 'Spell check off'}
+                  aria-pressed={spellCheckOn}
+                >
+                  abc
+                </button>
+                <button
+                  type="button"
                   onClick={() => setFullViewId(null)}
                   className="flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 transition-all"
                   style={{
@@ -1765,8 +1783,7 @@ export default function NotebookPage() {
                               background: `${fColor}04`,
                               paddingRight: lyrics.length > 0 ? 28 : undefined,
                             }}
-                            spellCheck
-                            lang="en-US"
+                            spellCheck={spellCheckOn}
                           />
                           <span style={{ position: 'absolute', right: 8, bottom: 10 }}>
                             <MicDot
@@ -1812,8 +1829,7 @@ export default function NotebookPage() {
                         color: fStyle.color || '#5C3018',
                         paddingRight: (fEntry.content || '').length > 0 ? 28 : undefined,
                       }}
-                      spellCheck
-                      lang="en-US"
+                      spellCheck={spellCheckOn}
                     />
                     <span style={{ position: 'fixed', right: 20, bottom: 24 }}>
                       <MicDot
