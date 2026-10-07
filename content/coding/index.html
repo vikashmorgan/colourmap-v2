@@ -120,6 +120,19 @@ details.output summary { cursor: pointer; font-size: 14px; color: var(--accent);
 .card-term .terminal { margin: 0; padding: 10px 12px; font-size: 12px; }
 .ct-more { font-size: 12.5px; color: var(--muted); }
 
+/* Colour-coded keywords (session 8 onwards): the same colours as in the code. */
+.kx-term { color: var(--sess, var(--accent)); font-weight: 700; }
+.kx-code, .kx-kw, .kx-cls { font: 0.88em var(--mono); padding: 1px 5px; border-radius: 5px; background: var(--code-bg); }
+.kx-code, .kx-cls { color: var(--tok-fn); }
+.kx-cls { font-weight: 700; }
+.kx-kw { color: var(--tok-kw); font-weight: 600; }
+.kx-err, .kx-warn { color: var(--warn); font-weight: 700; }
+.kx-off .kx { color: inherit; font-weight: inherit; background: none; padding: 0; font-family: inherit; font-size: inherit; }
+.kx-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 12px; background: var(--panel); font-size: 13px; }
+.kx-key-title { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); width: 100%; }
+.kx-toggle { margin-left: auto; min-height: 30px; padding: 3px 12px; border: 1px solid var(--rule); border-radius: 999px; background: var(--ground); color: var(--ink); font: 600 12.5px var(--body); cursor: pointer; }
+.kx-toggle[aria-pressed="false"] { color: var(--muted); }
+
 /* ---------- The reader (session 8 onwards) ---------- */
 .reader { display: grid; grid-template-columns: minmax(220px, 280px) 1fr; gap: 20px; align-items: start; }
 .rd-rail { position: sticky; top: 132px; max-height: calc(100vh - 150px); overflow: auto; display: grid; gap: 14px; padding: 4px 6px 12px 0; }
@@ -1584,12 +1597,73 @@ function vocabExample(w) {
 /* The More text arrives as 2-4 sentences: what it is, when you use it, and a
    common mistake. Split into those parts so it reads in pieces, not a block. */
 const WARN_RE = /mistake|careful|forget|forgetting|never |don't|do not|instead of|wrong|error if|crash/i;
-function moreSegments(text) {
+/* Colour-coded keywords (session 8 onwards). A word in a sentence takes the colour it
+   has in the code: Python keywords purple, code and class names blue in the code font,
+   errors and warning words warm red. The ideas of the lesson are bold in the session's
+   colour, only the first time they appear on a page, so a page never turns into a sea
+   of bold. One switch turns the colours off; the words stay as they are. */
+const KX_TERMS = ['class', 'classes', 'object', 'objects', 'instance', 'instances', 'attribute', 'attributes',
+  'instance attribute', 'class attribute', 'method', 'methods', 'blueprint', 'instantiation', 'inheritance',
+  'inherit', 'inherits', 'subclass', 'subclasses', 'base class', 'parent', 'superclass', 'child', 'override',
+  'overrides', 'overriding', 'extending', 'polymorphism', 'composition', 'dunder', 'decorator', 'state',
+  'constant', 'constants', 'counter', 'convention', 'identity', 'equality'];
+const KX_WARN = ['never', 'bug', 'silently', 'silent', 'wrong', 'trap', 'typo', 'forget', 'forgotten', 'mistake', 'misspelt', 'dangerous'];
+const escRe3 = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const capFirst = w => w[0].toUpperCase() + w.slice(1);
+function kxRegex(classNames) {
+  const longFirst = list => [...list].sort((a, b) => b.length - a.length).map(escRe3).join('|');
+  const terms = longFirst(KX_TERMS.flatMap(t => [t, capFirst(t)]));
+  const warn = longFirst(KX_WARN.flatMap(t => [t, capFirst(t)]));
+  return new RegExp([
+    '(?<err>\\b[A-Z]\\w*Error\\b)',
+    '(?<code>@dataclass|\\b__\\w+__(?:\\(\\))?|\\b[A-Za-z_]\\w*(?:\\([^()]*\\))?(?:\\.[A-Za-z_]\\w*(?:\\([^()]*\\))?)+|\\b[A-Za-z_]\\w*\\([^()]*\\))',
+    '(?<kw>\\b(?:self|def|return|None|True|False|pass|super)\\b)',
+    classNames.length ? `(?<cls>\\b(?:${longFirst(classNames)})\\b)` : '(?<cls>(?!))',
+    `(?<term>\\b(?:${terms})\\b)`,
+    `(?<warn>\\b(?:${warn})\\b)`,
+  ].join('|'), 'g');
+}
+// The class names a session's own examples define (Instrument, Metronome…).
+const kxCache = {};
+function kxFor(session) {
+  if (!kxCache[session]) {
+    const names = new Set();
+    for (const [k, m] of Object.entries(MORE)) {
+      if (!k.startsWith(`s${session}|`) || !m.example) continue;
+      for (const c of m.example.matchAll(/^\s*class\s+([A-Z]\w*)/gm)) names.add(c[1]);
+    }
+    kxCache[session] = kxRegex([...names]);
+  }
+  return kxCache[session];
+}
+function keywordHtml(raw, session, seen) {
+  const re = kxFor(session);
+  re.lastIndex = 0;
+  let out = '', last = 0;
+  for (const m of raw.matchAll(re)) {
+    out += esc(raw.slice(last, m.index));
+    last = m.index + m[0].length;
+    const g = m.groups, w = esc(m[0]);
+    if (g.err) out += `<strong class="kx kx-err">${w}</strong>`;
+    else if (g.code) out += `<code class="kx kx-code">${w}</code>`;
+    else if (g.kw) out += `<code class="kx kx-kw">${w}</code>`;
+    else if (g.cls) out += `<code class="kx kx-cls">${w}</code>`;
+    else if (g.warn) out += `<strong class="kx kx-warn">${w}</strong>`;
+    else {
+      const k = m[0].toLowerCase().replace(/(es|s)$/, '');
+      if (seen.has(k)) out += w;
+      else { seen.add(k); out += `<strong class="kx kx-term">${w}</strong>`; }
+    }
+  }
+  return out + esc(raw.slice(last));
+}
+
+function moreSegments(text, rich) {
   const sentences = text.split(/(?<=[.!?])\s+(?=[A-Z0-9"'(`.])/).filter(Boolean);
   return sentences.map((sentence, i) => {
     const role = WARN_RE.test(sentence) && i > 0 ? 'warn' : i === 0 ? 'what' : 'use';
     const label = role === 'what' ? '' : role === 'warn' ? 'Watch out' : '';
-    return `<p class="seg seg-${role}">${label ? `<span class="seg-label">${label}</span>` : ''}${esc(sentence)}</p>`;
+    return `<p class="seg seg-${role}">${label ? `<span class="seg-label">${label}</span>` : ''}${rich ? keywordHtml(sentence, rich.session, rich.seen) : esc(sentence)}</p>`;
   }).join('');
 }
 
@@ -1695,12 +1769,13 @@ function extraCard(x, n, id) {
 function readerPage(L, key, num, n, t, ex) {
   const m = MORE[key];
   const used = inProject(n);
+  const rich = { session: L.session, seen: new Set() };
   return `<article class="item rd-page${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}">
     <h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}</h4>
-    <p class="rd-lead">${esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>
+    <p class="rd-lead">${keywordHtml(t, L.session, rich.seen)}</p>
     ${ex ? `<div class="rd-pattern"><span class="more-label">The pattern</span><pre><code>${highlight(ex)}</code></pre></div>` : ''}
     ${m ? `<div class="rd-body">
-      <div class="rd-text"><span class="more-label">In detail</span><div class="more-text">${moreSegments(m.more)}</div></div>
+      <div class="rd-text"><span class="more-label">In detail</span><div class="more-text">${moreSegments(m.more, rich)}</div></div>
       <div class="rd-side">
         ${m.example ? `<div class="more-ex"><span class="more-label">Worked example</span><pre><code>${highlight(m.example)}</code></pre></div>` : ''}
         ${m.output ? `<div class="more-ex"><span class="more-label">Output</span><pre class="more-out">${esc(m.output)}</pre></div>` : ''}
@@ -1717,7 +1792,7 @@ function readerHtml(L) {
   const rail = secs.map(({ g, gi, items }) => `<div class="rd-sec"><p class="rd-sec-title"><span>§${gi + 1}</span>${esc(g.name)}</p>${items.map(x => `<button type="button" class="rd-link" data-key="${esc(x.key)}"><span class="rd-num">${x.num}</span><span class="rd-name">${esc(x.n)}</span><i class="rd-note" title="Has questions or comments"></i></button>`).join('')}</div>`).join('');
   const pages = secs.map(({ g, gi, items }) => `<div class="lgroup rd-section" data-here="${esc(g.name)}" style="--h: ${groupHue(L.session, gi, L.groups.length).toFixed(0)}"><p class="rd-crumb"><span>§${gi + 1}</span>${esc(g.name)}</p>${items.map(x => readerPage(L, x.key, x.num, x.n, x.t, x.ex)).join('')}</div>`).join('');
   return `<div class="reader" data-session="${L.session}">
-    <nav class="rd-rail" aria-label="Concepts of session ${L.session}">${rail}</nav>
+    <nav class="rd-rail" aria-label="Concepts of session ${L.session}"><div class="kx-key"><span class="kx-key-title">Colours</span><span><strong class="kx kx-term">idea</strong></span><span><code class="kx kx-code">code()</code></span><span><code class="kx kx-kw">self</code></span><span><strong class="kx kx-err">error</strong> / <strong class="kx kx-warn">careful</strong></span><button type="button" class="kx-toggle" aria-pressed="true">Colours on</button></div>${rail}</nav>
     <div class="rd-stage">${pages}
       <div class="rd-nav"><button type="button" class="rd-prev"></button><span class="rd-pos"></span><button type="button" class="rd-next"></button></div>
     </div>
@@ -1734,7 +1809,8 @@ for (const L of LESSONS) {
     const num = `${L.session}.${++boxNo}`;
     return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><span class="resize-handle" aria-hidden="true" title="Drag to widen"></span><p>${esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key], EXTRA[key]) : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<button type="button" class="note-dot" aria-pressed="false">Question or comment</button><div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button></div></article>`;
   }).join('')}</div></div>`).join('');
-  const notes = (L.pitfalls && L.pitfalls.length ? `<div class="note-box pit"><h4>Watch out</h4><ul>${L.pitfalls.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '') +
+  const pit = x => L.layout === 'reader' ? keywordHtml(x, L.session, new Set()) : esc(x);
+  const notes = (L.pitfalls && L.pitfalls.length ? `<div class="note-box pit"><h4>Watch out</h4><ul>${L.pitfalls.map(x => `<li>${pit(x)}</li>`).join('')}</ul></div>` : '') +
     (L.extra && !L.extraExercises ? `<div class="note-box extra"><h4>Extra exercises</h4>${esc(L.extra)}</div>` : '');
 
   let exercises = '';
@@ -2527,6 +2603,17 @@ projectEl.addEventListener('click', e => {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !lpop.hidden) closeLesson(); });
 
 /* ---------- The reader: one concept page at a time ---------- */
+const KX_KEY = 'coding-keyword-colours-off';
+function setKeywordColours(on) {
+  lessonsEl.classList.toggle('kx-off', !on);
+  for (const b of document.querySelectorAll('.kx-toggle')) { b.setAttribute('aria-pressed', String(on)); b.textContent = on ? 'Colours on' : 'Colours off'; }
+  try { localStorage.setItem(KX_KEY, on ? '' : '1'); } catch (e) {}
+}
+lessonsEl.addEventListener('click', e => {
+  const b = e.target.closest('.kx-toggle');
+  if (b) setKeywordColours(b.getAttribute('aria-pressed') !== 'true');
+});
+try { setKeywordColours(localStorage.getItem(KX_KEY) !== '1'); } catch (e) {}
 const READER_KEY = s => `coding-reader-s${s}`;
 function readerLinks(reader) { return [...reader.querySelectorAll('.rd-link')].filter(b => !b.hidden); }
 function readerSelect(reader, key) {
