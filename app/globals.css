@@ -691,3 +691,178 @@ input[type="range"].feedback-slider::-moz-range-thumb {
   border: none;
   cursor: pointer;
 }
+
+/* ---------- The Big Bang (Art, third tab) ----------
+   Above the app shell and the "All one brain" band: the trip is a projection. */
+.bb {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: #040207;
+  color: #f4ead8;
+  overflow: hidden;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+.bb-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.bb-top {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: opacity 0.6s;
+}
+.bb-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.bb-back {
+  color: #f4ead8;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 8px 14px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(20, 14, 24, 0.55);
+  border: 1px solid rgba(244, 234, 216, 0.18);
+}
+.bb-tab-on {
+  background: rgba(244, 234, 216, 0.22);
+  border-color: rgba(244, 234, 216, 0.45);
+}
+.bb-title {
+  font-family: var(--font-serif), serif;
+  font-size: 22px;
+  letter-spacing: 0.02em;
+}
+.bb-step {
+  position: absolute;
+  left: 16px;
+  bottom: 112px;
+  max-width: min(560px, calc(100vw - 32px));
+  transition: opacity 0.8s;
+}
+.bb-step.bb-quiet {
+  opacity: 0.55;
+}
+.bb-step-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.bb-num {
+  color: #120b06;
+  font:
+    600 13px ui-monospace,
+    monospace;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.bb-name {
+  font-family: var(--font-serif), serif;
+  font-size: clamp(22px, 3.6vw, 34px);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.8);
+}
+.bb-line {
+  margin: 6px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: rgba(244, 234, 216, 0.85);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.9);
+  transition: opacity 0.6s;
+}
+.bb-bar {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  display: grid;
+  gap: 10px;
+  transition: opacity 0.6s;
+}
+.bb-segments {
+  display: flex;
+  gap: 3px;
+  height: 26px;
+  align-items: center;
+}
+.bb-seg {
+  flex-basis: 0;
+  height: 26px;
+  padding: 11px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  min-width: 0;
+}
+.bb-seg > span {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 100px transparent;
+}
+.bb-seg::before {
+  content: "";
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(244, 234, 216, 0.16);
+  margin-bottom: -4px;
+}
+.bb-seg-on::before {
+  background: rgba(244, 234, 216, 0.3);
+}
+.bb-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.bb-controls button {
+  min-width: 44px;
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 234, 216, 0.2);
+  background: rgba(20, 14, 24, 0.55);
+  color: #f4ead8;
+  font-size: 14px;
+  cursor: pointer;
+}
+.bb-controls button[aria-pressed="true"] {
+  background: rgba(244, 234, 216, 0.22);
+}
+.bb-time {
+  font:
+    13px ui-monospace,
+    monospace;
+  color: rgba(244, 234, 216, 0.7);
+  margin: 0 6px;
+}
+.bb-speeds {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.bb-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bb-top,
+  .bb-step,
+  .bb-bar,
+  .bb-line {
+    transition: none;
+  }
+}
