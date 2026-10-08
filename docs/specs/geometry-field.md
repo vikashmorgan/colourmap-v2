@@ -7,7 +7,9 @@ Geometry Field is the immersive visual-program surface for sacred geometry, part
 
 ## Surface: Builder only (2026-10-03)
 
-The nav tab is named **AI Projections** (it was **Art**). The panel shows one tab, **Builder**. Music Visuals, Journeys and the Figures link are hidden, not removed: their code and presets are untouched, and each comes back by restoring its tab pill. Sections below that describe Music Visuals or Journeys describe that hidden code.
+The nav tab is named **Art** (it was **AI Projections** from 2026-10-03 to 2026-10-08, and **Art** before that). The panel shows two tabs, **Builder** and **Journeys** (Journeys returned on 2026-10-08 so the Big Bang and Oil Projector journeys can be played). Music Visuals and the Figures link stay hidden, not removed: their code and presets are untouched, and each comes back by restoring its tab pill. Sections below that describe Music Visuals describe that hidden code.
+
+**Top-right controls.** When the panel is closed, the show-controls button sits top-right; in fullscreen an exit (✕) button sits beside it. Nothing the user needs to get out sits at the bottom edge, which belongs to the **All one brain** band.
 
 **Star Sand Lines** is unfinished, so it sits at the bottom of the preset list, last under **In Progress / To Develop**, not in **Good Ones**.
 
@@ -326,6 +328,8 @@ Rules:
 
 ## Future Direction
 
+Math tunnels (soft-edged dive-in series) and a shader-based Liquid family (oil projector, iridescence, lava, fluid) are specced in [math-tunnels-and-liquid-visuals.md](math-tunnels-and-liquid-visuals.md).
+
 Music-reactive variants should be added as explicit presets or modes, not hidden behavior inside every preset. The first shipped seed lives behind the Geometry **Music Visuals** tab, replacing the visible Journey entry for now.
 
 Accepted starter presets:
@@ -368,4 +372,5 @@ fullscreen output separate from the controller.
 
 ## Reflection
 
+- **2026-10-08.** The tab is called **Art** again: the visuals are art, not AI. Journeys is back beside Builder.
 - **2026-10-03.** Four tabs (Builder, Music Visuals, Journeys, Figures) asked a first-time viewer to choose before seeing anything. Narrowed to Builder only and renamed the tab from Art to AI Projections; the other tabs are hidden rather than deleted so they can return one at a time once each is ready. Star Sand Lines moved out of Good Ones because it is unfinished.

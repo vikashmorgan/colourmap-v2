@@ -156,4 +156,38 @@ describe('GeometryField journeys', () => {
     expect(t3.stages.some((s) => s.mode === 'tripnumber3')).toBe(true);
     expect(t3.stages.every((s) => s.mode !== 'kaleidoscope')).toBe(true);
   });
+
+  it('Big Bang dives from a singularity tunnel through inflation to the drift', () => {
+    const bb = JOURNEYS.find((j) => j.name === 'Big Bang');
+    expect(bb).toBeDefined();
+    if (!bb) return;
+    expect(bb.stages.map((s) => s.name)).toEqual([
+      'Singularity',
+      'Inflation',
+      'Plasma Era',
+      'First Stars',
+      'Galaxy Formation',
+      'Galaxy Spiral',
+      'Cosmic Drift',
+    ]);
+    expect(bb.stages[0].mode).toBe('shadertunnel');
+    expect(bb.stages[1].mode).toBe('drostezoom');
+    for (const stage of bb.stages) {
+      expect(PAL[stage.preset], `Big Bang -> ${stage.name}`).toBeDefined();
+    }
+  });
+
+  it('Oil Projector is an oils-only, seamlessly looping journey', () => {
+    const oil = JOURNEYS.find((j) => j.name === 'Oil Projector');
+    expect(oil).toBeDefined();
+    if (!oil) return;
+    const oilModes = ['oilwarp', 'ripplefold', 'thinfilm', 'twooil', 'lavalamp', 'rorschach'];
+    for (const stage of oil.stages) {
+      expect(oilModes).toContain(stage.mode);
+      expect(PAL[stage.preset], `Oil Projector -> ${stage.name}`).toBeDefined();
+    }
+    expect(oil.stages.some((s) => s.mode === 'rorschach')).toBe(true);
+    expect(oil.stages.at(-1)?.mode).toBe(oil.stages[0].mode);
+    expect(oil.stages.at(-1)?.preset).toBe(oil.stages[0].preset);
+  });
 });
