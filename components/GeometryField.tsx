@@ -3871,91 +3871,49 @@ export const JOURNEYS: Journey[] = [
     id: 4,
     name: 'Big Bang',
     icon: '✦',
-    desc: 'Singularity to galaxies — a bright core, exponential inflation, a plasma sea, the first stars, spiral galaxies, then the long drift. Every act dives toward you through soft-edged tunnels.',
+    desc: 'Atoms to galaxies — the full spectrum of cosmic creation in colour',
     stages: [
       {
         name: 'Singularity',
         preset: 'Violet Portal',
-        mode: 'shadertunnel',
+        mode: 'burst',
         duration: 35,
-        symmetry: 8,
-        complexity: 2,
-        glow: 4,
-        breathSpeed: 0.25,
-        intensity: 7,
-        particles: 9,
-        luminous: 1.8,
-        stars: 0,
-      },
-      {
-        name: 'Inflation',
-        preset: 'Golden Source',
-        mode: 'drostezoom',
-        duration: 40,
-        symmetry: 6,
-        complexity: 6,
-        glow: 5,
-        breathSpeed: 0.9,
-        intensity: 8,
-        particles: 4,
-        luminous: 2.8,
+        breathSpeed: 0.5,
+        luminous: 4,
+        particles: 8,
+        glow: 8,
         stars: 2,
       },
       {
-        name: 'Plasma Era',
-        preset: 'Solar Plasma',
-        mode: 'oilwarp',
+        name: 'Chaos Expansion',
+        preset: 'Clifford Dream',
+        mode: 'clifford',
         duration: 40,
-        symmetry: 3,
-        complexity: 6,
-        glow: 2,
-        breathSpeed: 0.4,
-        intensity: 7,
-        particles: 6,
-        luminous: 0.9,
-        stars: 0,
+        breathSpeed: 0.3,
+        luminous: 3,
+        complexity: 8,
+        glow: 6,
       },
       {
-        name: 'First Stars',
-        preset: 'Blue Astral',
-        mode: 'goldenseed',
+        name: 'Stellar Birth',
+        preset: 'Forest Ceremony',
+        mode: 'golden',
         duration: 40,
-        symmetry: 8,
-        complexity: 5,
-        glow: 5,
-        breathSpeed: 0.4,
-        intensity: 8,
-        particles: 3,
-        luminous: 2.4,
+        breathSpeed: 0.22,
+        luminous: 2,
         stars: 5,
+        symmetry: 10,
       },
       {
         name: 'Galaxy Formation',
         preset: 'Cosmic Indigo',
-        mode: 'twistgate',
-        duration: 35,
-        symmetry: 7,
-        complexity: 5,
-        glow: 7,
+        mode: 'kaleidoscope',
+        duration: 40,
+        symmetry: 14,
         breathSpeed: 0.4,
-        intensity: 8,
-        particles: 5,
-        luminous: 2.8,
+        luminous: 3,
         stars: 6,
-      },
-      {
-        name: 'Galaxy Spiral',
-        preset: 'Violet Portal',
-        mode: 'logspiral',
-        duration: 35,
-        symmetry: 4,
-        complexity: 4,
-        glow: 5,
-        breathSpeed: 0.3,
-        intensity: 7,
-        particles: 4,
-        luminous: 1.6,
-        stars: 0,
+        glow: 7,
       },
       {
         name: 'Cosmic Drift',
@@ -14562,6 +14520,130 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'fractalwave', label: '@ Fractal Wave' },
 ];
 
+/*
+ * ART TABS. The panel's programs come in four families, one tab each:
+ * Stars (drawn with dots), Geometry (drawn with lines), Tunnels (every visual
+ * you fly into) and Oils (the liquid shaders). Stars and Geometry come from the
+ * same builder; the split is how a preset is drawn. Sorted 2026-10-08 by
+ * reading each mode's build/draw code for points versus lines.
+ */
+export type ArtTab = 'stars' | 'geometry' | 'tunnels' | 'oils';
+export const ART_TABS: { id: ArtTab; label: string }[] = [
+  { id: 'stars', label: 'Stars' },
+  { id: 'geometry', label: 'Geometry' },
+  { id: 'tunnels', label: 'Tunnels' },
+  { id: 'oils', label: 'Oils' },
+];
+const TUNNEL_TAB_MODES = new Set<Mode>([
+  'tunnel',
+  'linetunnel3d',
+  'dottunnel',
+  'swirldottunnel',
+  'dotroad',
+  'mirrortunnel',
+  'infinitedive',
+  'drostezoom',
+  'twistgate',
+  'goldenseed',
+  'fouriertube',
+  'superrings',
+  'shadertunnel',
+  'logspiral',
+]);
+const STAR_TAB_MODES = new Set<Mode>([
+  'atomicexplosion',
+  'atomlight',
+  'breath',
+  'buddhaboycurrents',
+  'cells',
+  'clifford',
+  'clockorbit3d',
+  'constellation',
+  'current',
+  'current3d',
+  'currentscales',
+  'cyclonetiles',
+  'cymatics1',
+  'cymatics2',
+  'cymatics3',
+  'cymatics4',
+  'dotalchemicalsun',
+  'dotbrain',
+  'dotheart',
+  'dotphoenix',
+  'dotsunfire',
+  'dotsunoutward',
+  'dotwalker',
+  'drift',
+  'eclipse',
+  'eddylace',
+  'embf3d',
+  'embrace',
+  'entropy',
+  'fire',
+  'flowbutterfly',
+  'flowdance',
+  'flowfield',
+  'flowlines',
+  'flowsacred',
+  'flowsands',
+  'flowwalkers',
+  'globe',
+  'gravity',
+  'liquid',
+  'lorenz',
+  'magneticsand',
+  'matrix',
+  'matrix3d',
+  'missionsun',
+  'musicdots',
+  'musiclattice',
+  'musicnebula',
+  'nebula',
+  'neuronweb',
+  'orbit',
+  'plasma',
+  'prism',
+  'prism3d',
+  'pulse',
+  'scriptures',
+  'scripturesjp',
+  'sinmorph3d',
+  'touchpreset',
+  'tripnumber1',
+  'tripnumber1flow',
+  'tripnumber2',
+  'volcano',
+  'wordparticle',
+  'yinyang',
+]);
+export function artTabOf(mode: Mode): ArtTab {
+  if (isOilMode(mode)) return 'oils';
+  if (TUNNEL_TAB_MODES.has(mode)) return 'tunnels';
+  if (STAR_TAB_MODES.has(mode)) return 'stars';
+  return 'geometry';
+}
+
+/** The featured list for one tab: its presets, under the headers that still have any. */
+export function featuredFor(tab: ArtTab): FeaturedItem[] {
+  const out: FeaturedItem[] = [];
+  let header: FeaturedItem | null = null;
+  for (const item of FEATURED_PRESETS) {
+    if ('header' in item) {
+      header = item;
+      continue;
+    }
+    const p = PRESETS[item.name];
+    if (!p || artTabOf(p.mode) !== tab) continue;
+    if (header) {
+      out.push(header);
+      header = null;
+    }
+    out.push(item);
+  }
+  return out;
+}
+
 type FeaturedItem = { name: string; tag: string } | { header: string; dim?: boolean };
 
 export const FEATURED_PRESETS: FeaturedItem[] = [
@@ -19738,7 +19820,9 @@ export default function GeometryField() {
   const [djEnergy, setDjEnergy] = useState({ level: 0, bass: 0, highs: 0 });
   const [open, setOpen] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [tab, setTab] = useState<'builder' | 'music' | 'journey'>('builder');
+  // The four Art tabs; 'music' and 'journey' are hidden panels kept in the code.
+  const [tab, setTab] = useState<ArtTab | 'music' | 'journey'>(() => artTabOf(cfg.mode));
+  const isArtTab = tab === 'stars' || tab === 'geometry' || tab === 'tunnels' || tab === 'oils';
   const [builderView, setBuilderView] = useState<'programs' | 'sliders'>('sliders');
   const [liveMode, setLiveMode] = useState<LiveMode>('studio');
   const [liveStatus, setLiveStatus] = useState('local');
@@ -19785,6 +19869,20 @@ export default function GeometryField() {
       setLiveMode(mode);
       if (mode === 'control') setOpen(true);
 
+      // ?tab=stars|geometry|tunnels|oils opens that Art tab (the Big Bang page links here).
+      const urlTab = ART_TABS.find((t) => t.id === params.get('tab'));
+      if (urlTab && !params.get('preset')) {
+        const first = featuredFor(urlTab.id).find(
+          (i): i is { name: string; tag: string } => 'name' in i,
+        );
+        setTab(urlTab.id);
+        setBuilderView('programs');
+        if (first) {
+          setSelectedPresetName(first.name);
+          setCfg({ ...PRESETS[first.name] });
+        }
+      }
+
       const urlPreset = params.get('preset');
       const requestedPreset =
         urlPreset ?? window.sessionStorage.getItem('colourmap:geometry-preset');
@@ -19795,7 +19893,7 @@ export default function GeometryField() {
           setSelectedPresetName(requestedPreset);
           setCfg({ ...presetCfg });
         }
-        setTab('builder');
+        if (presetCfg) setTab(artTabOf(presetCfg.mode));
         setBuilderView('programs');
         if (urlPreset) {
           params.delete('preset');
@@ -22974,6 +23072,15 @@ export default function GeometryField() {
     'Crystal Globe',
   ]);
 
+  /** Switch Art tab; if what is playing belongs to another tab, start this tab's first preset. */
+  function openArtTab(next: ArtTab) {
+    setTab(next);
+    setBuilderView('programs');
+    if (artTabOf(cfg.mode) === next) return;
+    const first = featuredFor(next).find((i): i is { name: string; tag: string } => 'name' in i);
+    if (first) applyPreset(first.name);
+  }
+
   function applyPreset(name: string) {
     const p = PRESETS[name] ?? PRESETS['Calm Field'];
     setSelectedPresetName(name);
@@ -23499,11 +23606,18 @@ export default function GeometryField() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {/* Builder + Journeys (Journeys back 8 Oct 2026 for Big Bang and
-                    Oil Projector). Music Visuals and Figures stay hidden, not
+                {/* Art: Stars, Geometry, Tunnels, Oils, then the Big Bang trip on its
+                    own page. Music Visuals, Journeys and Figures stay hidden, not
                     deleted: bringing a tab back is restoring its pill line. */}
-                {pill('Builder', tab === 'builder', () => setTab('builder'), true)}
-                {pill('Journeys', tab === 'journey', () => setTab('journey'), true)}
+                {ART_TABS.map(({ id, label }) =>
+                  pill(label, tab === id, () => openArtTab(id), true),
+                )}
+                {pill(
+                  'Big Bang',
+                  false,
+                  () => window.location.assign('/geometry-field/big-bang'),
+                  true,
+                )}
               </div>
               <button
                 type="button"
@@ -23558,7 +23672,7 @@ export default function GeometryField() {
                 </button>
               </div>
             )}
-            {tab === 'builder' && (
+            {isArtTab && (
               <div
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
               >
@@ -23612,8 +23726,8 @@ export default function GeometryField() {
               gap: 8,
             }}
           >
-            {/* ── BUILDER TAB ── */}
-            {tab === 'builder' && (
+            {/* ── ART TABS (Stars, Geometry, Tunnels, Oils) ── */}
+            {isArtTab && (
               <>
                 {/* Programs grid */}
                 {builderView === 'programs' && (
@@ -23623,7 +23737,7 @@ export default function GeometryField() {
                       {(() => {
                         let n = 0;
                         let dim = false;
-                        return FEATURED_PRESETS.map((item, i) => {
+                        return featuredFor(tab as ArtTab).map((item, i) => {
                           if ('header' in item) {
                             dim = item.dim ?? false;
                             return (
@@ -23725,7 +23839,7 @@ export default function GeometryField() {
                       All Programs
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                      {MODES.map(({ mode, label }, idx) => {
+                      {MODES.filter((m) => artTabOf(m.mode) === tab).map(({ mode, label }, idx) => {
                         const isActive = cfg.mode === mode;
                         return (
                           <button

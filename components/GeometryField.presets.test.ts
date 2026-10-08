@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { FEATURED_PRESETS, PRESETS, TRIP1_FLOW_SHAPES } from './GeometryField';
+import {
+  ART_TABS,
+  artTabOf,
+  FEATURED_PRESETS,
+  featuredFor,
+  PRESETS,
+  TRIP1_FLOW_SHAPES,
+} from './GeometryField';
 
 function featuredNames() {
   return FEATURED_PRESETS.flatMap((item) => ('name' in item ? [item.name] : []));
@@ -96,5 +103,34 @@ describe('GeometryField featured presets', () => {
     expect(names('Waves')).toEqual(['Rolling Wave', 'Fractal Wave']);
     expect(PRESETS['Rolling Wave'].mode).toBe('rollingwave');
     expect(PRESETS['Fractal Wave'].mode).toBe('fractalwave');
+  });
+
+  it('splits the Art programs into Stars, Geometry, Tunnels and Oils', () => {
+    expect(ART_TABS.map((t) => t.label)).toEqual(['Stars', 'Geometry', 'Tunnels', 'Oils']);
+    const tabOf = (name: string) => artTabOf(PRESETS[name].mode);
+    expect(tabOf('Magnetic Sand')).toBe('stars');
+    expect(tabOf('Trip Number 1')).toBe('stars');
+    expect(tabOf('Cymatic Sands 1')).toBe('stars');
+    expect(tabOf('Yantra 3D')).toBe('geometry');
+    expect(tabOf('Rolling Wave')).toBe('geometry');
+    expect(tabOf('Dot Tunnel')).toBe('tunnels');
+    expect(tabOf('Golden Zoom')).toBe('tunnels');
+    expect(tabOf('Oil Warp')).toBe('oils');
+    expect(tabOf('Rorschach Oils')).toBe('oils');
+  });
+
+  it('shows every featured preset in exactly one tab, keeping only headers that have presets', () => {
+    const all = featuredNames().filter((n) => PRESETS[n]);
+    const perTab = ART_TABS.map((t) =>
+      featuredFor(t.id).flatMap((i) => ('name' in i ? [i.name] : [])),
+    );
+    expect(perTab.flat().sort()).toEqual([...all].sort());
+    for (const list of perTab) expect(list.length).toBeGreaterThan(0);
+    for (const t of ART_TABS) {
+      const items = featuredFor(t.id);
+      items.forEach((item, k) => {
+        if ('header' in item) expect(items[k + 1] && 'name' in items[k + 1]).toBe(true);
+      });
+    }
   });
 });

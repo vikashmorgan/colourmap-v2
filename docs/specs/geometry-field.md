@@ -7,7 +7,14 @@ Geometry Field is the immersive visual-program surface for sacred geometry, part
 
 ## Surface: Builder only (2026-10-03)
 
-The nav tab is named **Art** (it was **AI Projections** from 2026-10-03 to 2026-10-08, and **Art** before that). The panel shows two tabs, **Builder** and **Journeys** (Journeys returned on 2026-10-08 so the Big Bang and Oil Projector journeys can be played). Music Visuals and the Figures link stay hidden, not removed: their code and presets are untouched, and each comes back by restoring its tab pill. Sections below that describe Music Visuals describe that hidden code.
+The nav tab is named **Art** (it was **AI Projections** from 2026-10-03 to 2026-10-08, and **Art** before that). The panel's tabs are **Stars · Geometry · Tunnels · Oils · Big Bang** (2026-10-08):
+
+- **Stars** and **Geometry** come from the same builder; the split is how a preset is drawn: Stars are the presets drawn with dots (sands, flow fields, dot suns, trips 1–2, nebulae, the Cymatic Sands), Geometry the ones drawn mainly with lines (sacred geometry, Lissajous, knots, yantras, morphs, the Waves).
+- **Tunnels** holds every visual you fly into, old and new; **Oils** the liquid shaders with their sliders.
+- Each tab shows only its own presets and programs, under the same headers as before (a header with nothing in the tab is dropped). Opening a tab whose family is not playing starts its first preset. `?tab=stars|geometry|tunnels|oils` opens a tab directly.
+- **Big Bang** opens the Big Bang trip on its own page (`/geometry-field/big-bang`): one continuous trip of light in sixteen steps, brought over from the standalone Geometry Builder. It covers the whole screen, above the All one brain band, with the same tabs top-left to come back.
+
+Music Visuals, Journeys and the Figures link stay hidden, not removed: their code and presets are untouched, and each comes back by restoring its tab pill.
 
 **Top-right controls.** When the panel is closed, the show-controls button sits top-right; in fullscreen an exit (✕) button sits beside it. Nothing the user needs to get out sits at the bottom edge, which belongs to the **All one brain** band.
 
@@ -372,5 +379,5 @@ fullscreen output separate from the controller.
 
 ## Reflection
 
-- **2026-10-08.** The tab is called **Art** again: the visuals are art, not AI. Journeys is back beside Builder.
+- **2026-10-08.** The tab is called **Art** again: the visuals are art, not AI. The panel splits into Stars, Geometry, Tunnels and Oils, and the Big Bang trip becomes its fifth tab. The Big Bang journey (hidden with Journeys) keeps its original stages.
 - **2026-10-03.** Four tabs (Builder, Music Visuals, Journeys, Figures) asked a first-time viewer to choose before seeing anything. Narrowed to Builder only and renamed the tab from Art to AI Projections; the other tabs are hidden rather than deleted so they can return one at a time once each is ready. Star Sand Lines moved out of Good Ones because it is unfinished.
