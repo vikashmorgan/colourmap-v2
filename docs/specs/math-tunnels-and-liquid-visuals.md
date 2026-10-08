@@ -142,3 +142,9 @@ A **Waves** category draws the sea as thin parallel lines and bends them with tw
 
 - **Rolling Wave** (freestyle): Waves sets how many twirls ride an organic swell. Each curls up, travels, crashes into foam and lets go, with its size, strength, height and timing drawn fresh every cycle: it never repeats.
 - **Fractal Wave** (Hokusai and sacred numbers): the water is rings inside an invisible circle that only sets where the sea ends. Claws roll around the circle; each carries smaller claws placed by the golden angle and shrinking by the golden ratio (Depth sets how many).
+
+## Thangka (2026-10-08)
+
+**Thangka** (Oils tab) is a generated Tibetan mandala with liquid oil moving inside its geometry. From the rim in: a ring of flames, a ring of vajras, a ring of lotus petals, a courtyard, the square palace with a **T-shaped gate on each side** and nested walls, split into quadrants by its diagonals, an inner lotus, and an **empty centre** (no centre symbol). Each compartment flows on its own; colour is set **per ring, never per quadrant**, so the mandala stays balanced. Fine gold lines sit on every border. It does not pulse.
+
+**New thangka** (on the sliders view) rolls a new design within the rules: flame count (16/24/32), vajras (24/36/48), outer petals (8/16/32), inner petals (8/16), palace size, gate shape, two to four walls, and the order of colours. Sliders: Detail (oil detail), Flow, Rainbow, Light, Gold (line weight), Bloom, Stars. Presets: Thangka (gold), Thangka Lapis, Thangka Crimson.

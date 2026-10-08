@@ -44,6 +44,8 @@ export interface VisualCfg {
   breathSpeed: number;
   intensity: number;
   particles: number;
+  /** Design seed for generated visuals (the Thangka). */
+  seed?: number;
 }
 
 const LINE_TUNNELS = ['drostezoom', 'twistgate', 'fouriertube', 'superrings'] as const;
@@ -468,6 +470,7 @@ function buildShaderQuad(mode: ShaderVisualMode, pal: PaletteSource): THREE.Grou
       uRainbow: { value: 0 },
       uSwirl: { value: 0.5 },
       uBright: { value: 0.7 },
+      uSeed: { value: 1 },
       uC0: { value: linear(c0) },
       uC1: { value: linear(c1) },
       uC2: { value: linear(c2) },
@@ -494,6 +497,7 @@ export function shaderUniformValues(cfg: VisualCfg) {
     uRainbow: Math.min(1, Math.max(0, cfg.glow / 10)),
     uSwirl: Math.min(1, Math.max(0, cfg.particles / 10)),
     uBright: Math.min(1, Math.max(0, cfg.intensity / 10)),
+    uSeed: cfg.seed ?? 1,
   };
 }
 

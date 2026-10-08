@@ -33,6 +33,7 @@ uniform float uLayers;
 uniform float uRainbow;
 uniform float uSwirl;
 uniform float uBright;
+uniform float uSeed;
 uniform vec3 uC0;
 uniform vec3 uC1;
 uniform vec3 uC2;
@@ -446,6 +447,117 @@ void main() {
 }
 `;
 
+/**
+ * Thangka: a Tibetan mandala drawn as geometry, with liquid oil moving inside
+ * every compartment. From the rim in: a ring of flames, a ring of vajras, a
+ * ring of lotus petals, a courtyard, the square palace with a T-shaped gate on
+ * each side and nested walls (its quadrants split by the diagonals), an inner
+ * lotus, and an empty centre. Every region has its own flow; colour is set per
+ * ring, never per quadrant, so the mandala stays balanced. Fine gold lines sit
+ * on every border. uSeed rolls a new design within those rules: flame, vajra
+ * and petal counts, palace size, gate shape, number of walls, colour order.
+ */
+const THANGKA = /* glsl */ `
+float hs(float k) { return fract(sin((uSeed + k * 17.13) * 91.7) * 43758.5453); }
+
+float sdBox(vec2 p, vec2 b) {
+  vec2 d = abs(p) - b;
+  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+}
+
+// The palace: a square with a T-shaped gate on each side (folded into one side).
+float sdPalace(vec2 p, float s, float gw, float gh) {
+  vec2 q = abs(p);
+  if (q.y > q.x) q = q.yx;
+  float sq = sdBox(q, vec2(s));
+  float stem = sdBox(q - vec2(s + gh * 0.5, 0.0), vec2(gh * 0.5, gw * 0.5));
+  float bar = sdBox(q - vec2(s + gh * 1.25, 0.0), vec2(gh * 0.25, gw));
+  return min(sq, min(stem, bar));
+}
+
+void main() {
+  vec2 p = vP * 1.04;
+  float r = length(p);
+  float a = atan(p.y, p.x);
+  float t = uTime * 0.12;
+
+  float nFl = 16.0 + floor(hs(1.0) * 3.0) * 8.0;
+  float nVj = 24.0 + floor(hs(2.0) * 3.0) * 12.0;
+  float nPe = pow(2.0, 3.0 + floor(hs(3.0) * 3.0));
+  float nIn = hs(4.0) > 0.5 ? 16.0 : 8.0;
+  float s = 0.44 + hs(5.0) * 0.05;
+  float gw = 0.1 + hs(6.0) * 0.06;
+  float gh = 0.045 + hs(7.0) * 0.03;
+  float walls = 2.0 + floor(hs(8.0) * 3.0);
+  float wallW = 0.022;
+
+  const float rOut = 0.98;
+  const float rFl = 0.86;
+  const float rVj = 0.8;
+  const float rLo = 0.72;
+  const float rIn = 0.27;
+  const float rInL = 0.19;
+  float flame = rFl + 0.045 * pow(abs(sin(a * nFl * 0.5)), 0.7);
+  float petal = rLo + (rVj - rLo) * pow(abs(cos(a * nPe * 0.5)), 0.5);
+  float petalIn = rInL + (rIn - rInL) * pow(abs(cos(a * nIn * 0.5)), 0.5);
+  float palace = sdPalace(p, s, gw, gh);
+
+  // Which compartment this pixel is in.
+  float id = 0.0;
+  if (r > rOut) id = -1.0;
+  else if (r > flame) id = 1.0;
+  else if (r > rVj) id = 2.0;
+  else if (r > petal) id = 3.0;
+  else if (r > rLo) id = 4.0;
+  else if (palace > 0.0) id = 5.0;
+  else if (palace > -wallW * walls) id = 6.0 + floor(-palace / wallW);
+  else if (r > rIn) id = 11.0;
+  else if (r > petalIn) id = 12.0;
+  else if (r > rInL) id = 13.0;
+  else id = 14.0;
+
+  // Gold lines on every border.
+  float d = abs(r - rOut);
+  d = min(d, abs(r - flame));
+  d = min(d, abs(r - (rFl + 0.09 * pow(abs(sin(a * nFl * 0.5 + 1.5708)), 1.6))) + step(r, rFl) * 9.0);
+  d = min(d, abs(r - rVj));
+  if (id == 2.0) {
+    float seg = TAU / nVj;
+    d = min(d, abs(mod(a, seg) - seg * 0.5) * r);
+  }
+  d = min(d, abs(r - petal) + step(rVj, r) * 9.0);
+  d = min(d, abs(r - rLo));
+  d = min(d, abs(palace));
+  for (int k = 1; k < 5; k++) {
+    if (float(k) > walls) break;
+    d = min(d, abs(palace + wallW * float(k)) + step(0.0, palace) * 9.0);
+  }
+  if (id == 11.0) d = min(d, abs(abs(p.x) - abs(p.y)) * 0.7071);
+  d = min(d, abs(r - rIn));
+  d = min(d, abs(r - petalIn) + step(rIn, r) * 9.0);
+  d = min(d, abs(r - rInL));
+  float aa = fwidth(r) * 1.2 + 0.0008;
+  float w = 0.0022 + uSwirl * 0.006;
+  float line = 1.0 - smoothstep(w, w + aa, d);
+
+  // The oil: each compartment flows on its own; colour by ring, never by quadrant.
+  vec2 q = p * 2.2;
+  float oct = clamp(uLayers, 2.0, 7.0);
+  vec2 warp = vec2(fbm(q + vec2(t, id * 1.7), oct), fbm(q + vec2(-t, id * 2.3 + 4.0), oct));
+  float f = fbm(q + warp * 2.2 + id * 3.1, oct);
+  float tone = fract(id * 0.618034 + hs(9.0));
+  vec3 col = pal(tone + f * 0.35) * (0.25 + 0.75 * f);
+  // Gaps between petals and the courtyard sit back, so the forms read.
+  if (id == 3.0 || id == 5.0 || id == 13.0) col *= 0.45;
+
+  vec3 gold = mix(uC2, vec3(1.0, 0.78, 0.38), 0.65) * 0.8;
+  col = mix(col, gold, line);
+  if (id < 0.0) col = uC0 * 0.25 * (1.0 - smoothstep(rOut, 1.3, r));
+  col *= rimFade(r, 1.1, 1.35) * (0.2 + uBright * 0.75);
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
+
 export const SHADER_FRAGMENTS = {
   shadertunnel: COMMON + SHADER_TUNNEL,
   logspiral: COMMON + LOG_SPIRAL,
@@ -457,6 +569,7 @@ export const SHADER_FRAGMENTS = {
   rorschach: COMMON + RORSCHACH,
   rollingwave: COMMON + WAVE_COMMON + ROLLING_WAVE,
   fractalwave: COMMON + WAVE_COMMON + FRACTAL_WAVE,
+  thangka: COMMON + THANGKA,
 } as const;
 
 export type ShaderVisualMode = keyof typeof SHADER_FRAGMENTS;
@@ -469,6 +582,7 @@ export const SHADER_UNIFORM_NAMES = [
   'uRainbow',
   'uSwirl',
   'uBright',
+  'uSeed',
   'uC0',
   'uC1',
   'uC2',
@@ -483,6 +597,7 @@ export const OIL_MODES = [
   'twooil',
   'lavalamp',
   'rorschach',
+  'thangka',
 ] as const;
 
 export function isShaderVisualMode(mode: string): mode is ShaderVisualMode {
