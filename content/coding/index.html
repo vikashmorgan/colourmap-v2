@@ -133,16 +133,14 @@ details.output summary { cursor: pointer; font-size: 14px; color: var(--accent);
 .kx-toggle { margin-left: auto; min-height: 30px; padding: 3px 12px; border: 1px solid var(--rule); border-radius: 999px; background: var(--ground); color: var(--ink); font: 600 12.5px var(--body); cursor: pointer; }
 .kx-toggle[aria-pressed="false"] { color: var(--muted); }
 
-/* In the reader the three marks are a labelled row at the top right of the page,
-   not three faint dots floating halfway down a tall page. */
-.rd-page .marks { position: static; order: -1; justify-self: end; transform: none; flex-direction: row; gap: 6px; margin-bottom: -6px; }
-.rd-page .mark { width: auto; height: 32px; padding: 0 12px 0 10px; gap: 6px; display: inline-flex; align-items: center; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--dot) 40%, var(--rule)); background: var(--panel); color: var(--ink); font: 600 12.5px var(--body); }
-.rd-page .mark::before { opacity: .9; }
-.rd-page .mark::after { content: attr(data-label); position: static; transform: none; opacity: 1; background: none; color: inherit; padding: 0; font: inherit; }
-.rd-page .mark:hover::after, .rd-page .mark:focus-visible::after { transform: none; }
-.rd-page .mark:hover { border-color: var(--dot); }
-.rd-page .mark[aria-pressed="true"] { background: color-mix(in srgb, var(--dot) 22%, var(--panel)); border-color: var(--dot); }
-@media (max-width: 760px) { .rd-page .marks { justify-self: start; } }
+/* In the reader the three marks are the same dots as a lesson box, larger, in a row
+   at the top right of the page (not floating halfway down a tall page). Hovering a
+   dot names it in a pill below it, so the pill never covers the next dot. */
+.rd-page .marks { position: static; order: -1; justify-self: end; transform: none; flex-direction: row; gap: 4px; margin-bottom: -6px; }
+.rd-page .mark { width: 38px; height: 38px; }
+.rd-page .mark::before { width: 20px; height: 20px; border-width: 2px; opacity: .55; }
+.rd-page .mark::after { right: auto; left: 50%; top: calc(100% + 2px); transform: translate(-50%, -4px); }
+.rd-page .mark:hover::after, .rd-page .mark:focus-visible::after { transform: translate(-50%, 0); }
 
 /* Highlights: light, see-through colours over the text, remembered on the device. */
 mark.hl { --hl: #f2c14e; background: color-mix(in srgb, var(--hl) 34%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; cursor: pointer; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
@@ -439,7 +437,7 @@ details.solution .ex-why { margin-top: 12px; }
 .mark { width: 26px; height: 26px; min-height: 0; padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; display: grid; place-items: center; }
 .mark::before { content: ''; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--dot, var(--muted)); opacity: .45; transition: opacity .15s, transform .15s; }
 .mark:hover::before, .mark:focus-visible::before { opacity: .9; transform: scale(1.15); }
-.mark[aria-pressed="true"]::before { background: var(--dot); opacity: 1; }
+.mark[aria-pressed="true"]::before { background: var(--dot); opacity: 1; transition: none; }
 .m-solid, .d-solid { --dot: var(--solid-c); } .m-got, .d-got { --dot: var(--ok-c); } .m-mid, .d-mid { --dot: var(--mid-c); } .m-late, .d-late { --dot: var(--late-c); }
 
 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--dot); margin-right: 6px; vertical-align: 1px; }
@@ -3545,15 +3543,36 @@ function markRead(ref) {
   saveLocal(); paintKey(n.key); refreshCounts(); renderReview();
 }
 
+// Several quick taps share one round of the slow work, after the next paint.
+const pendingMarks = new Map();
+let markWorkQueued = false;
+function queueMarkWork(key, item) {
+  pendingMarks.set(key, item);
+  if (markWorkQueued) return;
+  markWorkQueued = true;
+  requestAnimationFrame(() => setTimeout(() => {
+    markWorkQueued = false;
+    const done = [...pendingMarks];
+    pendingMarks.clear();
+    saveLocal();
+    for (const [k, it] of done) { pushMark(k); paintItem(it); }
+    refreshCounts(); renderReview();
+    if (activeFilter !== 'all') applyFilter();
+  }, 0));
+}
+
 function onNoteClick(e) {
   const markBtn = e.target.closest('.mark');
   if (markBtn) {
     const item = markBtn.closest('.item, .pcard');
     const key = item.dataset.key;
     if (marks[key] === markBtn.dataset.mark) delete marks[key]; else marks[key] = markBtn.dataset.mark;
-    saveLocal(); pushMark(key);
-    paintItem(item); refreshCounts(); renderReview();
-    if (activeFilter !== 'all') applyFilter();
+    // Fill the dot in this frame. Saving, the counts, the readers and the Review
+    // list are slow on a page this size, so they follow once the dot is painted.
+    const m = marks[key] || '';
+    item.dataset.mark = m;
+    for (const b of item.querySelectorAll('.mark')) b.setAttribute('aria-pressed', String(b.dataset.mark === m));
+    queueMarkWork(key, item);
     return;
   }
   const item = e.target.closest('.line-host, .nb-host, .overall-host, .item[data-key], .pcard');
