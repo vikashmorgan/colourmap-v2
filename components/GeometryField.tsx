@@ -9,6 +9,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 
 import { isOilMode, isShaderVisualMode } from '@/lib/visual-shaders';
 
+import { buildCymatics, isCymaticsMode, updateCymatics } from './geometry-cymatics';
 import {
   buildGeometryVisual,
   isGeometryVisualMode,
@@ -162,7 +163,12 @@ type Mode =
   | 'thinfilm'
   | 'twooil'
   | 'lavalamp'
-  | 'rorschach';
+  | 'rorschach'
+  // Magnetic Sands 1–4 — cymatics (components/geometry-cymatics.ts)
+  | 'cymatics1'
+  | 'cymatics2'
+  | 'cymatics3'
+  | 'cymatics4';
 
 interface Pal {
   bg0: string;
@@ -3560,6 +3566,54 @@ export const PRESETS: Record<string, Cfg> = {
     stars: 0,
     mode: 'rorschach',
   },
+  'Cymatic Sands 1': {
+    preset: 'Golden Source',
+    symmetry: 6,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'cymatics1',
+  },
+  'Cymatic Sands 2': {
+    preset: 'Pale Gold',
+    symmetry: 6,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'cymatics2',
+  },
+  'Cymatic Sands 3': {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 5,
+    glow: 4,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.4,
+    stars: 3,
+    mode: 'cymatics3',
+  },
+  'Cymatic Sands 4': {
+    preset: 'Violet Portal',
+    symmetry: 6,
+    complexity: 5,
+    glow: 4,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.4,
+    stars: 3,
+    mode: 'cymatics4',
+  },
 };
 
 /* ── Journey system ─────────────────────────────────────────── */
@@ -6892,6 +6946,7 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
   if (isGeometryVisualMode(cfg.mode)) {
     return buildGeometryVisual(cfg, PAL[cfg.preset] ?? PAL['Calm Field']);
   }
+  if (isCymaticsMode(cfg.mode)) return buildCymatics(cfg);
   switch (cfg.mode) {
     case 'burst':
       return buildBurst(cfg, R);
@@ -7102,6 +7157,10 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
 function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R: number): void {
   if (isGeometryVisualMode(cfg.mode)) {
     updateGeometryVisual(group, cfg, PAL[cfg.preset] ?? PAL['Calm Field'], t, R);
+    return;
+  }
+  if (isCymaticsMode(cfg.mode)) {
+    updateCymatics(group, cfg, PAL[cfg.preset] ?? PAL['Calm Field'], t, R);
     return;
   }
   switch (cfg.mode) {
@@ -11436,9 +11495,17 @@ function buildCurrentTexture(cfg: Cfg, R: number): THREE.Group {
   geo.setAttribute('position', posAttr);
 
   const isNewSandMode = cfg.mode === 'eclipse' || cfg.mode === 'gravity' || cfg.mode === 'fire';
+  // Magnetic Sand moves a fraction of a pixel per frame at its slow speed; a
+  // 1.55px dot snaps pixel to pixel there, a 2px soft dot glides between them.
   const pointSize =
-    cfg.mode === 'fire' ? 2.8 : cfg.mode === 'eclipse' || cfg.mode === 'gravity' ? 2.25 : 1.55;
-  const pointOpacity = isNewSandMode ? 0.86 : 0.7;
+    cfg.mode === 'fire'
+      ? 2.8
+      : cfg.mode === 'eclipse' || cfg.mode === 'gravity'
+        ? 2.25
+        : cfg.mode === 'magneticsand'
+          ? 2
+          : 1.55;
+  const pointOpacity = isNewSandMode ? 0.86 : cfg.mode === 'magneticsand' ? 0.6 : 0.7;
   const pts = new THREE.Points(
     geo,
     circlePtsMat(hdrColor([rr, gg, bb], iF, isNewSandMode ? 3.1 : 2.45), pointSize, pointOpacity),
@@ -11495,6 +11562,7 @@ function buildCurrentTexture(cfg: Cfg, R: number): THREE.Group {
       ring.scale.setScalar(hollow);
       ring.userData.tag = 'currentTextureAnchor';
       ring.userData.baseScale = [hollow, hollow];
+      ring.userData.gravitySide = side;
       group.add(ring);
     }
   } else if (cfg.mode === 'fire') {
@@ -11545,6 +11613,23 @@ function buildCurrentTexture(cfg: Cfg, R: number): THREE.Group {
   }
 
   return group;
+}
+
+// Gravity's two cores: where they started (±0.32R, ∓0.06R), slowly orbiting
+// the centre as a pair so the circles between them keep turning.
+const GRAVITY_CORE_ANGLE = Math.atan2(-0.06, 0.32);
+const GRAVITY_CORE_DIST = Math.hypot(0.32, 0.06);
+export function gravityCores(
+  tSlow: number,
+  R: number,
+): [{ x: number; y: number }, { x: number; y: number }] {
+  const a = GRAVITY_CORE_ANGLE + tSlow * 0.08;
+  const x = Math.cos(a) * GRAVITY_CORE_DIST * R;
+  const y = Math.sin(a) * GRAVITY_CORE_DIST * R;
+  return [
+    { x, y },
+    { x: -x, y: -y },
+  ];
 }
 
 function currentTextureVector(
@@ -11612,22 +11697,21 @@ function currentTextureVector(
   }
 
   if (mode === 'gravity') {
-    const coreA = { x: R * 0.32, y: -R * 0.06 };
-    const coreB = { x: -R * 0.32, y: R * 0.06 };
-    const da = Math.hypot(x - coreA.x, y - coreA.y);
-    const db = Math.hypot(x - coreB.x, y - coreB.y);
-    const core = da <= db ? coreA : coreB;
-    const dx = x - core.x;
-    const dy = y - core.y;
-    const d = Math.sqrt(dx * dx + dy * dy) + 1;
-    const swirlDir = core === coreA ? 1 : -1;
-    const pull =
-      core === coreA ? { x: coreB.x - x, y: coreB.y - y } : { x: coreA.x - x, y: coreA.y - y };
-    const pd = Math.hypot(pull.x, pull.y) + 1;
-    const orbit = 0.78 + Math.sin(tSlow * 0.5 + d * 0.014) * 0.1;
+    // Like the original Magnetic Sand: sand runs along the circles of two
+    // magnetic poles (here the two hollow cores), which slowly orbit each other.
+    const [coreA, coreB] = gravityCores(tSlow, R);
+    const ax = x - coreA.x;
+    const ay = y - coreA.y;
+    const bx = x - coreB.x;
+    const by = y - coreB.y;
+    const a2 = ax * ax + ay * ay + R * 9;
+    const b2 = bx * bx + by * by + R * 9;
+    const fx = ax / a2 - bx / b2;
+    const fy = ay / a2 - by / b2;
+    const angle = Math.atan2(fy, fx) + Math.PI / 2;
     return {
-      x: (-dy / d) * orbit * swirlDir + (pull.x / pd) * 0.16,
-      y: (dx / d) * orbit * swirlDir + (pull.y / pd) * 0.16,
+      x: Math.cos(angle) * 0.85 + Math.sin(y * 0.015 + tSlow) * 0.15,
+      y: Math.sin(angle) * 0.85 + Math.cos(x * 0.015 - tSlow) * 0.15,
     };
   }
 
@@ -11841,8 +11925,7 @@ function updateCurrentTexture(group: THREE.Group, cfg: Cfg, t: number, R: number
           Math.abs(nx) > R * (0.14 + 0.5 * fireTaper) ||
           Math.random() < 0.002);
       const r2 = nx * nx + ny * ny;
-      const gravityCoreA = { x: R * 0.32, y: -R * 0.06 };
-      const gravityCoreB = { x: -R * 0.32, y: R * 0.06 };
+      const [gravityCoreA, gravityCoreB] = gravityCores(tSlow, R);
       const gravityHollow = R * (0.13 + cfg.glow * 0.008);
       const tooCloseToGravityCore =
         cfg.mode === 'gravity' &&
@@ -11907,6 +11990,12 @@ function updateCurrentTexture(group: THREE.Group, cfg: Cfg, t: number, R: number
       const [sx, sy] = child.userData.baseScale as [number, number];
       const pulse = 1 + Math.sin(t * 0.0011 * speed) * 0.025;
       child.scale.set(sx * pulse, sy * pulse, 1);
+      const side = child.userData.gravitySide as number | undefined;
+      if (side !== undefined) {
+        // The hollow rings ride on the moving cores.
+        const [core] = gravityCores(t * 0.00055 * speed, R);
+        child.position.set(core.x * side, core.y * side, 0.02);
+      }
       updateMat(child, baseRgb, iF, 2.55);
     } else if (tag === 'eclipseCorona') {
       const pts = child as THREE.Points;
@@ -13539,6 +13628,16 @@ const DEFAULT_SLIDERS: SliderDef[] = [
   { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
 ];
 
+const CYMATIC_SLIDERS: SliderDef[] = [
+  { key: 'complexity', label: 'Frequency', min: 1, max: 10, step: 0.5 },
+  { key: 'breathSpeed', label: 'Loop Speed', min: 0.05, max: 1.5, step: 0.05 },
+  { key: 'glow', label: 'Rainbow', min: 0, max: 10, step: 0.5 },
+  { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+  { key: 'particles', label: 'Sand', min: 0, max: 10, step: 1 },
+  { key: 'luminous', label: 'Grain Size', min: 0, max: 5, step: 0.1 },
+  { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+];
+
 const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
   flowfield: [
     { key: 'symmetry', label: 'Gravity Wells', min: 4, max: 24, step: 1 },
@@ -14114,6 +14213,11 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
   thinfilm: visualSliders(['Scale', 1, 12], ['Layers', 2, 8], 'Warp', 'Flow', 3),
   twooil: visualSliders(['Scale', 1, 12], ['Layers', 2, 7], 'Swirl', 'Flow', 3),
   lavalamp: visualSliders(['Scale', 1, 12], ['Blobs', 1, 10], 'Colour Mix', 'Flow', 3),
+  // Magnetic Sands 1–4 (cymatics): no symmetry; the plate's own modes set it.
+  cymatics1: CYMATIC_SLIDERS,
+  cymatics2: CYMATIC_SLIDERS,
+  cymatics3: CYMATIC_SLIDERS,
+  cymatics4: CYMATIC_SLIDERS,
   rorschach: visualSliders(['Mirrors', 2, 12], ['Layers', 2, 8], 'Spread', 'Flow', 3),
 };
 
@@ -14269,6 +14373,10 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   twooil: 'Two Oil Projector',
   lavalamp: 'Lava Lamp',
   rorschach: 'Rorschach Oils',
+  cymatics1: 'Cymatic Sands 1',
+  cymatics2: 'Cymatic Sands 2',
+  cymatics3: 'Cymatic Sands 3',
+  cymatics4: 'Cymatic Sands 4',
 };
 
 const MODES: { mode: Mode; label: string }[] = [
@@ -14415,6 +14523,10 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'twooil', label: '◐ Two Oils' },
   { mode: 'lavalamp', label: '● Lava Lamp' },
   { mode: 'rorschach', label: '⧓ Rorschach' },
+  { mode: 'cymatics1', label: '◎ Cymatic Sands 1' },
+  { mode: 'cymatics2', label: '⊞ Cymatic Sands 2' },
+  { mode: 'cymatics3', label: '◎³ Cymatic Sands 3' },
+  { mode: 'cymatics4', label: '◉³ Cymatic Sands 4' },
 ];
 
 type FeaturedItem = { name: string; tag: string } | { header: string; dim?: boolean };
@@ -14519,6 +14631,11 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Lava Lamp', tag: 'OIL' },
   { name: 'Rorschach Oils', tag: 'MIRROR' },
   { name: 'Mirror Oils', tag: 'MIRROR' },
+  { header: 'Magnetic Sands' },
+  { name: 'Cymatic Sands 1', tag: 'CIRCLE' },
+  { name: 'Cymatic Sands 2', tag: 'SQUARE' },
+  { name: 'Cymatic Sands 3', tag: '3D' },
+  { name: 'Cymatic Sands 4', tag: 'SPHERE' },
   { header: 'In Progress / To Develop', dim: true },
   { name: 'Chrysalis', tag: 'MORPH' },
   { name: 'Metamorph', tag: 'MORPH' },
@@ -15691,9 +15808,11 @@ const FLOW_MOVEMENTS_DANCE = [
 ];
 
 // Magnetic Sands 2 — a long, sandy game of chaos and order: dense dots melt
-// from waves to ripples to a vortex, fold through figure-8 dunes, and re-form.
+// from ripples to rose rings, a vortex and the seed of life, fold through
+// figure-8 dunes, and re-form. Every act is circular and symmetric (the old
+// horizontal sine "sand waves" act broke the circular flow, so it is gone).
 // High wob gives the grainy banding; two lemniscate acts give the double loop.
-function flowSandsFormation(
+export function flowSandsFormation(
   f: number,
   i: number,
   hx: number,
@@ -15713,13 +15832,23 @@ function flowSandsFormation(
     const a = (u2 * nR - ring) * Math.PI * 2 + ga * 0.15;
     return [Math.cos(a) * rr, Math.sin(a) * rr];
   }
-  if (f === 1) {
-    // Sand waves — horizontal flowing bands
-    const rows = 9;
-    const row = Math.floor(u * rows);
-    const fx = (((i * 0.61803398875) % 1) - 0.5) * R * 1.9;
-    const fy = ((row + 0.5) / rows - 0.5) * R * 1.7 + Math.sin((fx / R) * 3) * R * 0.12;
-    return [fx, fy];
+  if (f === 6) {
+    // Rose rings — concentric rings, each with six soft petals
+    const nR = 8;
+    const ring = Math.floor(u * nR);
+    const a = (u * nR - ring) * Math.PI * 2;
+    const rr = ((ring + 0.55) / nR) * R * 0.88 * (1 + 0.1 * Math.cos(6 * a + ring * 0.5));
+    return [Math.cos(a) * rr, Math.sin(a) * rr];
+  }
+  if (f === 7) {
+    // Seed of life — seven full circles: one centred, six around it
+    const c = i % 7;
+    const cr = R * 0.42;
+    const ca = (c / 6) * Math.PI * 2;
+    const cx = c === 0 ? 0 : Math.cos(ca) * cr;
+    const cy = c === 0 ? 0 : Math.sin(ca) * cr;
+    const a = ((i * 0.61803398875) % 1) * Math.PI * 2;
+    return [cx + Math.cos(a) * cr, cy + Math.sin(a) * cr];
   }
   if (f === 2) {
     // Ripple rings — dense concentric bands
@@ -15747,18 +15876,18 @@ function flowSandsFormation(
 }
 
 // 12 acts (~15 min) — long enough to keep surprising guests.
-const FLOW_MOVEMENTS_SANDS = [
+export const FLOW_MOVEMENTS_SANDS = [
   { form: 5, spring: 0.05, swirl: 0.4, flow: 0.6, breath: 0.3, wob: 0.5 },
-  { form: 1, spring: 0.06, swirl: 0.25, flow: 0.5, breath: 0.25, wob: 0.7 },
+  { form: 6, spring: 0.06, swirl: 0.25, flow: 0.5, breath: 0.25, wob: 0.7 }, // rose rings
   { form: 2, spring: 0.07, swirl: 0.3, flow: 0.45, breath: 0.2, wob: 0.9 },
   { form: 4, spring: 0.05, swirl: 0.7, flow: 0.7, breath: 0.35, wob: 0.4 }, // double loop
   { form: 3, spring: 0.05, swirl: 0.9, flow: 0.75, breath: 0.3, wob: 0.3 },
-  { form: 1, spring: 0.06, swirl: 0.3, flow: 0.55, breath: 0.3, wob: 0.8 },
+  { form: 7, spring: 0.06, swirl: 0.3, flow: 0.55, breath: 0.3, wob: 0.8 }, // seed of life
   { form: 5, spring: 0.05, swirl: 0.5, flow: 0.6, breath: 0.4, wob: 0.5 },
   { form: 4, spring: 0.05, swirl: 0.8, flow: 0.72, breath: 0.35, wob: 0.4 }, // double loop
   { form: 2, spring: 0.07, swirl: 0.35, flow: 0.5, breath: 0.25, wob: 0.95 },
   { form: 3, spring: 0.05, swirl: 1.0, flow: 0.8, breath: 0.3, wob: 0.3 },
-  { form: 1, spring: 0.06, swirl: 0.28, flow: 0.5, breath: 0.25, wob: 0.7 },
+  { form: 6, spring: 0.06, swirl: 0.28, flow: 0.5, breath: 0.25, wob: 0.7 }, // rose rings
   { form: 5, spring: 0.05, swirl: 0.45, flow: 0.6, breath: 0.35, wob: 0.5 },
 ];
 
@@ -16005,6 +16134,7 @@ function updateFlowField(group: THREE.Group, cfg: Cfg, t: number, R: number): vo
     const wobW = lerp(MA.wob, MB.wob, mf);
     const formA = MA.form;
     const formB = MB.form;
+    const symmetricSands = cfg.mode === 'flowsands';
     const hueCycle = (mClock * 0.1) % 1;
 
     for (let i = 0; i < FLOW_FIELD_COUNT; i++) {
@@ -16026,15 +16156,29 @@ function updateFlowField(group: THREE.Group, cfg: Cfg, t: number, R: number): vo
       let tx = bx * ca - by * sa;
       let ty = bx * sa + by * ca;
 
-      // Organic flow drift of the target, weighted by the movement.
-      tx += Math.sin(ty * 0.011 + ph * 2 + s0 * 6) * R * 0.07 * turb * flowW;
-      ty += Math.cos(tx * 0.011 - ph * 2 + s0 * 6) * R * 0.07 * turb * flowW;
+      // Organic flow drift of the target, weighted by the movement. Magnetic
+      // Sands 2 drifts only in and out, so its rings stay round and whole.
+      if (symmetricSands) {
+        const dr = Math.hypot(tx, ty) + 0.0001;
+        const k = 1 + Math.sin((dr / R) * 5 - ph * 2 + s0 * 0.6) * 0.05 * turb * flowW;
+        tx *= k;
+        ty *= k;
+      } else {
+        tx += Math.sin(ty * 0.011 + ph * 2 + s0 * 6) * R * 0.07 * turb * flowW;
+        ty += Math.cos(tx * 0.011 - ph * 2 + s0 * 6) * R * 0.07 * turb * flowW;
+      }
 
       // Gravity wells orbiting on ellipses — swirl the target locally (eddies).
+      // Magnetic Sands 2 spaces them evenly on one circle, so every eddy has a
+      // twin and no ring is dragged open into a C.
       for (let k = 0; k < wells; k++) {
-        const kp = ph * (0.6 + k * 0.27) + (k / wells) * Math.PI * 2;
-        const gx = Math.cos(kp) * R * (0.34 + 0.1 * k);
-        const gy = Math.sin(kp * 1.3) * R * (0.2 + 0.06 * k);
+        const kp = symmetricSands
+          ? ph * 0.6 + (k / wells) * Math.PI * 2
+          : ph * (0.6 + k * 0.27) + (k / wells) * Math.PI * 2;
+        const gx = Math.cos(kp) * R * (symmetricSands ? 0.42 : 0.34 + 0.1 * k);
+        const gy = symmetricSands
+          ? Math.sin(kp) * R * 0.42
+          : Math.sin(kp * 1.3) * R * (0.2 + 0.06 * k);
         const dx = tx - gx;
         const dy = ty - gy;
         const d2 = dx * dx + dy * dy + R * R * 0.02;

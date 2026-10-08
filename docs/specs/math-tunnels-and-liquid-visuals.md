@@ -118,3 +118,20 @@ A new **Oil Projector** journey: Oil Warp → Thin Film → Two Oils → Ripple 
 
 - `docs/specs/geometry-field.md` (mode system, Forward Journey Presets)
 - `docs/specs/festival-visuals-backlog.md` (BPM reactive, perf on projection)
+
+## Magnetic Sands (cymatics) and sand fixes (2026-10-08)
+
+A **Magnetic Sands** category holds four cymatic visuals. Sand on a vibrating plate is shaken where the plate moves and comes to rest on its still (nodal) lines; the plate slowly changes mode and the sand flows to the new figure, in an endless loop.
+
+- **Cymatic Sands 1**: circular drum modes (Bessel rings and petals), 2D, the figure slowly turning.
+- **Cymatic Sands 2**: square Chladni figures inside a circle, the figure turning so the sand swirls after it.
+- **Cymatic Sands 3**: the circular plate in 3D, tilting and precessing; loose sand is lifted by the wave.
+- **Cymatic Sands 4**: sand on a vibrating sphere (spherical harmonics), rotating on a nodding axis.
+
+Sliders: Frequency, Loop Speed, Rainbow, Light, Sand, Grain Size, Stars. Sand gathers on the lines within ~4 seconds and stays there through each change.
+
+Fixes to existing sands:
+
+- **Magnetic Sands 2** dropped its horizontal sine "sand waves" act (it broke the circular flow). Rose rings and the seed of life (seven whole circles) replace it, its eddies sit evenly on one circle and its drift only breathes in and out, so rings stay round and whole (no C shapes).
+- **Gravity** now flows like the original Magnetic Sand: along the circles of two magnetic poles (its hollow cores), which slowly orbit each other.
+- **Magnetic Sand** (the original) is unchanged in motion; its grain is 2px instead of 1.55px so its slow drift glides instead of stepping.
