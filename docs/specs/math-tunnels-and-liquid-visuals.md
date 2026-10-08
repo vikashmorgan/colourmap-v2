@@ -148,3 +148,11 @@ A **Waves** category draws the sea as thin parallel lines and bends them with tw
 **Thangka** (Oils tab) is a generated Tibetan mandala with liquid oil moving inside its geometry. From the rim in: a ring of flames, a ring of vajras, a ring of lotus petals, a courtyard, the square palace with a **T-shaped gate on each side** and nested walls, split into quadrants by its diagonals, an inner lotus, and an **empty centre** (no centre symbol). Each compartment flows on its own; colour is set **per ring, never per quadrant**, so the mandala stays balanced. Fine gold lines sit on every border. It does not pulse.
 
 **New thangka** (on the sliders view) rolls a new design within the rules: flame count (16/24/32), vajras (24/36/48), outer petals (8/16/32), inner petals (8/16), palace size, gate shape, two to four walls, and the order of colours. Sliders: Detail (oil detail), Flow, Rainbow, Light, Gold (line weight), Bloom, Stars. Presets: Thangka (gold), Thangka Lapis, Thangka Crimson.
+
+## Oil colours, oil sliders and the Lava Lamp (2026-10-08)
+
+**Colours.** On the sliders view of every oil, a **Colours** panel chooses the colours inside. Each oil is painted from four colours: **Liquid** (the ground), **Oil 1**, **Light**, **Oil 2**. Palette chips set all four at once (Lava, Ocean, Psychedelic, Sunset, Forest, Gold, Tangka, Rose, Mono), each shown with its swatches; each colour can then be changed on its own with a colour picker. **Preset** goes back to the preset's own palette. Chosen colours stay while moving from oil to oil. Picking a palette turns the Rainbow shift down so the colours show as chosen (not on Thin Film, whose rainbow is its iridescence).
+
+**Sliders.** Every oil now shows Flow first, then its shape (Zoom, Folds, Mirrors or Blob Size), its detail, its own extra (Warp, Waves, Swirl, Heat, Spread or Gold), the colour shift (Rainbow, or Iridescence on Thin Film), Light and Bloom. No Stars slider on oils: an oil is a liquid surface.
+
+**Lava Lamp**, rebuilt: wax is heated by the lamp at the bottom, rises, stretches while it moves, cools at the top and sinks again, slow at both ends and quick in the middle. Blobs merge and split, rest in a heated pool at the bottom, and are shaded as soft 3D bodies lit from below with a thin glowing rim. Sliders: Flow, Blob Size, Blobs, Heat, Rainbow, Light, Bloom. Starts in the Lava palette.

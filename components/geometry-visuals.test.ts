@@ -1,4 +1,4 @@
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 
 import { OIL_MODES } from '@/lib/visual-shaders';
@@ -6,6 +6,7 @@ import { OIL_MODES } from '@/lib/visual-shaders';
 import {
   buildGeometryVisual,
   isGeometryVisualMode,
+  oilStopsFrom,
   shaderUniformValues,
   TUNNEL_MODES,
   updateGeometryVisual,
@@ -116,5 +117,26 @@ describe('geometry visuals', () => {
     expect(u.uRainbow).toBe(1);
     expect(u.uSwirl).toBe(0);
     expect(u.uSym).toBe(1);
+  });
+
+  it('paints an oil in the four chosen colours, and back in the palette when cleared', () => {
+    const c = cfg('lavalamp');
+    const g = buildGeometryVisual(c, PAL);
+    const u = ((g.children[0] as THREE.Mesh).material as THREE.ShaderMaterial).uniforms;
+    updateGeometryVisual(g, c, PAL, 16, 300);
+    const paletteGround = (u.uC0.value as THREE.Color).getHex();
+    const chosen = { ...c, oilColors: ['#000000', '#ff0000', '#ffffff', '#0000ff'] };
+    updateGeometryVisual(g, chosen, PAL, 32, 300);
+    expect((u.uC1.value as THREE.Color).getHexString(THREE.SRGBColorSpace)).toBe('ff0000');
+    expect((u.uC3.value as THREE.Color).getHexString(THREE.SRGBColorSpace)).toBe('0000ff');
+    updateGeometryVisual(g, c, PAL, 48, 300);
+    expect((u.uC0.value as THREE.Color).getHex()).toBe(paletteGround);
+  });
+
+  it('only accepts four well-formed colours', () => {
+    expect(oilStopsFrom(undefined)).toBeNull();
+    expect(oilStopsFrom(['#000000'])).toBeNull();
+    expect(oilStopsFrom(['#000000', '#fff', '#000000', '#000000'])).toBeNull();
+    expect(oilStopsFrom(['#000000', '#ff0000', '#ffffff', '#0000ff'])?.[1]).toEqual([1, 0, 0]);
   });
 });

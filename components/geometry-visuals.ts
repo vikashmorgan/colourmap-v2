@@ -21,6 +21,7 @@ import {
   goldenHue,
   oilPaletteStops,
   type PaletteSource,
+  parseCssColor,
   polygonRadius,
   type Rgb,
   recycledDepth,
@@ -46,6 +47,8 @@ export interface VisualCfg {
   particles: number;
   /** Design seed for generated visuals (the Thangka). */
   seed?: number;
+  /** Chosen oil colours (four hex stops), overriding the palette's. */
+  oilColors?: readonly string[];
 }
 
 const LINE_TUNNELS = ['drostezoom', 'twistgate', 'fouriertube', 'superrings'] as const;
@@ -484,8 +487,16 @@ function buildShaderQuad(mode: ShaderVisualMode, pal: PaletteSource): THREE.Grou
   // Draw first so stars and other layers sit on top of the colour field.
   quad.renderOrder = -10;
   quad.userData.tag = 'visualShader';
+  quad.userData.paletteStops = [c0, c1, c2, c3];
   group.add(quad);
   return group;
+}
+
+/** Four chosen hex colours as shader stops, or null when none (or malformed) are set. */
+export function oilStopsFrom(colors: readonly string[] | undefined): Rgb[] | null {
+  if (!colors || colors.length !== 4) return null;
+  if (!colors.every((c) => /^#[0-9a-f]{6}$/i.test(c))) return null;
+  return colors.map(parseCssColor);
 }
 
 /** Slider → uniform mapping, shared by build tests and the frame update. */
@@ -508,6 +519,15 @@ function updateShaderQuad(group: THREE.Group, cfg: VisualCfg, t: number, R: numb
   u.uTime.value = phaseFor(cfg.mode, t, cfg.breathSpeed);
   for (const [name, value] of Object.entries(shaderUniformValues(cfg))) {
     u[name].value = value;
+  }
+  // Chosen colours win over the palette; clearing them brings the palette back.
+  const key = cfg.oilColors?.join(',') ?? '';
+  if (quad.userData.colourKey !== key) {
+    quad.userData.colourKey = key;
+    const stops = oilStopsFrom(cfg.oilColors) ?? (quad.userData.paletteStops as Rgb[]);
+    stops.forEach((stop, i) => {
+      (u[`uC${i}`].value as THREE.Color).setRGB(stop[0], stop[1], stop[2], THREE.SRGBColorSpace);
+    });
   }
 }
 
