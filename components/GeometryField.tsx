@@ -201,6 +201,8 @@ interface Cfg {
   danceAmount?: number;
   /** Design seed for generated visuals (the Thangka): "New thangka" rolls it. */
   seed?: number;
+  /** The four colours inside an oil, chosen by the user; unset = from the palette. */
+  oilColors?: string[];
 }
 
 interface Dot {
@@ -3539,15 +3541,16 @@ export const PRESETS: Record<string, Cfg> = {
   },
   'Lava Lamp': {
     preset: 'Deep Crimson',
-    symmetry: 4,
-    complexity: 6,
-    glow: 3,
-    breathSpeed: 0.35,
+    symmetry: 5,
+    complexity: 7,
+    glow: 0,
+    breathSpeed: 0.4,
     intensity: 7,
     particles: 5,
     luminous: 0.9,
     stars: 0,
     mode: 'lavalamp',
+    oilColors: ['#1a0505', '#d4301c', '#ffd27a', '#ff7a1a'],
   },
   'Rorschach Oils': {
     preset: 'Violet Portal',
@@ -14236,11 +14239,11 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
   shadertunnel: visualSliders(['Ribs', 1, 16], ['Twist', 0, 10], 'Core'),
   logspiral: visualSliders(['Arms', 1, 12], ['Wind', 0, 10], 'Core'),
   // Oils
-  oilwarp: visualSliders(['Scale', 1, 12], ['Layers', 2, 8], 'Swirl', 'Flow', 3),
-  ripplefold: visualSliders(['Scale', 1, 12], ['Folds', 1, 10], 'Swirl', 'Flow', 3),
-  thinfilm: visualSliders(['Scale', 1, 12], ['Layers', 2, 8], 'Warp', 'Flow', 3),
-  twooil: visualSliders(['Scale', 1, 12], ['Layers', 2, 7], 'Swirl', 'Flow', 3),
-  lavalamp: visualSliders(['Scale', 1, 12], ['Blobs', 1, 10], 'Colour Mix', 'Flow', 3),
+  oilwarp: oilSliders(['Zoom', 1, 12], ['Detail', 2, 8], 'Warp', 'Rainbow'),
+  ripplefold: oilSliders(['Zoom', 1, 12], ['Folds', 1, 10], 'Waves', 'Rainbow'),
+  thinfilm: oilSliders(['Zoom', 1, 12], ['Detail', 2, 8], 'Warp', 'Iridescence'),
+  twooil: oilSliders(['Zoom', 1, 12], ['Detail', 2, 7], 'Swirl', 'Rainbow'),
+  lavalamp: oilSliders(['Blob Size', 1, 12], ['Blobs', 1, 10], 'Heat', 'Rainbow'),
   // Magnetic Sands 1–4 (cymatics): no symmetry; the plate's own modes set it.
   cymatics1: CYMATIC_SLIDERS,
   cymatics2: CYMATIC_SLIDERS,
@@ -14249,15 +14252,14 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
   rollingwave: visualSliders(['Waves', 2, 6], ['Lines', 1, 10], 'Texture', 'Speed', 3),
   fractalwave: visualSliders(['Claws', 1, 6], ['Depth', 1, 10], 'Texture', 'Speed', 3),
   thangka: [
-    { key: 'complexity', label: 'Detail', min: 2, max: 7, step: 0.5 },
     { key: 'breathSpeed', label: 'Flow', min: 0.05, max: 1.5, step: 0.05 },
-    { key: 'glow', label: 'Rainbow', min: 0, max: 10, step: 0.5 },
-    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'complexity', label: 'Detail', min: 2, max: 7, step: 0.5 },
     { key: 'particles', label: 'Gold', min: 0, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Rainbow', min: 0, max: 10, step: 0.5 },
+    { key: 'intensity', label: 'Light', min: 1, max: 10, step: 0.5 },
     { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
-    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
   ],
-  rorschach: visualSliders(['Mirrors', 2, 12], ['Layers', 2, 8], 'Spread', 'Flow', 3),
+  rorschach: oilSliders(['Mirrors', 2, 12], ['Detail', 2, 8], 'Spread', 'Rainbow'),
 };
 
 // Shared slider shape for the Tunnels and Oils families: Glow is the
@@ -14280,6 +14282,44 @@ function visualSliders(
     { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
   ];
 }
+
+// Oils: Flow first (it is what you reach for), then shape, detail, the oil's own
+// extra, colour shift, light and bloom. No Stars: an oil is a liquid surface.
+function oilSliders(
+  [shapeLabel, shapeMin, shapeMax]: [string, number, number],
+  [detailLabel, detailMin, detailMax]: [string, number, number],
+  extraLabel: string,
+  shiftLabel: string,
+): SliderDef[] {
+  return [
+    { key: 'breathSpeed', label: 'Flow', min: 0.05, max: 1.5, step: 0.05 },
+    { key: 'symmetry', label: shapeLabel, min: shapeMin, max: shapeMax, step: 1 },
+    { key: 'complexity', label: detailLabel, min: detailMin, max: detailMax, step: 0.5 },
+    { key: 'particles', label: extraLabel, min: 0, max: 10, step: 0.5 },
+    { key: 'glow', label: shiftLabel, min: 0, max: 10, step: 0.5 },
+    { key: 'intensity', label: 'Light', min: 1, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
+  ];
+}
+
+/*
+ * OIL COLOURS. Each oil is painted from four colours, in this order: the
+ * liquid (ground), the first oil, the light, the second oil. A palette sets all
+ * four; each can then be changed on its own. Chosen colours stay when you move
+ * from one oil to another.
+ */
+export const OIL_COLOUR_ROLES = ['Liquid', 'Oil 1', 'Light', 'Oil 2'] as const;
+export const OIL_PALETTES: { name: string; colors: [string, string, string, string] }[] = [
+  { name: 'Lava', colors: ['#1a0505', '#d4301c', '#ffd27a', '#ff7a1a'] },
+  { name: 'Ocean', colors: ['#020c1a', '#0e6e9a', '#d8f4ff', '#18b8a8'] },
+  { name: 'Psychedelic', colors: ['#12021e', '#b21fd6', '#f8ff8a', '#18e0c8'] },
+  { name: 'Sunset', colors: ['#140820', '#d8456e', '#ffd48a', '#ff8a3c'] },
+  { name: 'Forest', colors: ['#03100a', '#2f7a3c', '#f2e6b0', '#b89a2a'] },
+  { name: 'Gold', colors: ['#120a02', '#a8741c', '#fff0c0', '#e0b040'] },
+  { name: 'Tangka', colors: ['#0a0614', '#1f4fa8', '#f6c64a', '#c0262e'] },
+  { name: 'Rose', colors: ['#160610', '#c23a74', '#ffe0ec', '#f08aa8'] },
+  { name: 'Mono', colors: ['#050505', '#6a6a72', '#f4f4f6', '#a8a8b0'] },
+];
 
 function slidersFor(mode: Mode): SliderDef[] {
   return MODE_SLIDERS[mode] ?? DEFAULT_SLIDERS;
@@ -17522,6 +17562,123 @@ function updateTriangleYantraTrip(group: THREE.Group, cfg: Cfg, t: number, R: nu
 
 const BUDDHA_BOY_POINTS = 1700;
 const BUDDHA_BOY_TIDE_POINTS = 900;
+/** The colours inside an oil: palette chips, then each of the four colours on its own. */
+function OilColours({
+  colors,
+  accent,
+  accentMid,
+  dim,
+  onChange,
+}: {
+  colors: string[] | undefined;
+  accent: string;
+  accentMid: string;
+  dim: string;
+  onChange: (colors: string[] | undefined) => void;
+}) {
+  const current = colors ?? null;
+  const label: CSSProperties = {
+    fontFamily: 'var(--font-serif)',
+    fontSize: 9,
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    color: dim,
+  };
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      <span style={label}>Colours</span>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <button
+          type="button"
+          onClick={() => onChange(undefined)}
+          aria-pressed={!current}
+          style={{
+            border: `1px solid ${!current ? accent : accentMid}`,
+            borderRadius: 99,
+            background: 'transparent',
+            color: accent,
+            fontFamily: 'var(--font-serif)',
+            fontSize: 10,
+            padding: '5px 10px',
+            cursor: 'pointer',
+          }}
+        >
+          Preset
+        </button>
+        {OIL_PALETTES.map((p) => {
+          const on = current?.join() === p.colors.join();
+          return (
+            <button
+              type="button"
+              key={p.name}
+              onClick={() => onChange([...p.colors])}
+              aria-pressed={on}
+              title={p.name}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                border: `1px solid ${on ? accent : accentMid}`,
+                borderRadius: 99,
+                background: 'transparent',
+                color: accent,
+                fontFamily: 'var(--font-serif)',
+                fontSize: 10,
+                padding: '4px 9px 4px 5px',
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ display: 'inline-flex' }}>
+                {p.colors.map((c, i) => (
+                  <span
+                    key={`${p.name}-${i}`}
+                    style={{
+                      width: 11,
+                      height: 11,
+                      borderRadius: 99,
+                      background: c,
+                      marginLeft: i ? -3 : 0,
+                      boxShadow: '0 0 0 1px rgba(0,0,0,0.35)',
+                    }}
+                  />
+                ))}
+              </span>
+              {p.name}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+        {OIL_COLOUR_ROLES.map((role, i) => (
+          <label key={role} style={{ display: 'grid', gap: 3, justifyItems: 'center' }}>
+            <input
+              type="color"
+              value={current?.[i] ?? OIL_PALETTES[0].colors[i]}
+              onChange={(e) => {
+                const next = [...(current ?? OIL_PALETTES[0].colors)];
+                next[i] = e.target.value;
+                onChange(next);
+              }}
+              aria-label={`${role} colour`}
+              style={{
+                width: 36,
+                height: 28,
+                padding: 0,
+                border: `1px solid ${accentMid}`,
+                borderRadius: 8,
+                background: 'transparent',
+                cursor: 'pointer',
+                opacity: current ? 1 : 0.55,
+              }}
+            />
+            <span style={label}>{role}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function topRightButtonStyle(accent: string, border: string): CSSProperties {
   return {
     width: 30,
@@ -23145,6 +23302,9 @@ export default function GeometryField() {
       ...p,
       preset: COLOUR_PRESET_NAMES.has(name) ? p.preset : (p.preset ?? prev.preset),
       luminous: Math.min(1.5, p.luminous),
+      // Chosen oil colours stay while you move from oil to oil.
+      oilColors:
+        isOilMode(p.mode) && isOilMode(prev.mode) ? (p.oilColors ?? prev.oilColors) : p.oilColors,
     }));
   }
 
@@ -23946,6 +24106,26 @@ export default function GeometryField() {
                 {/* Sliders + actions */}
                 {builderView === 'sliders' && (
                   <>
+                    {artTabOf(cfg.mode) === 'oils' && (
+                      <OilColours
+                        colors={cfg.oilColors}
+                        accent={accent}
+                        accentMid={accentMid}
+                        dim={`rgba(${pr},${pg},${pb},0.6)`}
+                        onChange={(oilColors) =>
+                          setCfg((prev) => ({
+                            ...prev,
+                            oilColors,
+                            // Chosen colours show as chosen: the rainbow shift steps back
+                            // (except Thin Film, whose rainbow is its iridescence).
+                            glow:
+                              oilColors && prev.mode !== 'thinfilm'
+                                ? Math.min(prev.glow, 1)
+                                : prev.glow,
+                          }))
+                        }
+                      />
+                    )}
                     {cfg.mode === 'thangka' && (
                       <button
                         type="button"

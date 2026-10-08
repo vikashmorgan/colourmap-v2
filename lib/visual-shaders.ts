@@ -247,38 +247,70 @@ void main() {
 }
 `;
 
-/** Metaballs rising and sinking: a lava lamp. */
+/**
+ * Lava lamp. Wax is heated by the lamp at the bottom, rises, stretches while it
+ * moves, cools at the top and sinks again: slow at both ends, quick in the
+ * middle, like real wax. Blobs merge and split (metaballs), sit in a heated
+ * pool at the bottom, and are shaded as soft 3D bodies lit from below, with a
+ * glowing edge where the wax is thin. Colours: liquid = colour 1, wax =
+ * colours 2 and 4, lamp light = colour 3.
+ *   uScale = blob size, uLayers = number of blobs, uSwirl = heat.
+ */
 const LAVA_LAMP = /* glsl */ `
 void main() {
-  vec2 p = vP / max(0.6, uScale * 0.7);
-  float t = uTime * 0.25;
-  float field = 0.0;
-  float hue = 0.0;
+  vec2 p = vP * 1.05;
+  float t = uTime * 0.22;
   float count = clamp(uLayers + 2.0, 3.0, 12.0);
+  float size = 0.55 + uScale * 0.3;
+  float heat = 0.4 + uSwirl * 1.2;
+  float field = 0.0;
+  vec2 grad = vec2(0.0);
+  float tone = 0.0;
   for (int i = 0; i < 12; i++) {
     if (float(i) >= count) break;
     float fi = float(i);
-    vec2 c = vec2(
-      sin(t * (0.21 + fi * 0.031) + fi * 2.4) * 0.65,
-      sin(t * (0.13 + fi * 0.023) + fi * 1.7) * 0.85
-    );
-    float rad = 0.2 + 0.07 * sin(fi * 3.1 + t * 0.4);
-    vec2 d = p - c;
-    float k = rad * rad / (dot(d, d) + 0.0004);
+    float h0 = hash(vec2(fi, 1.7));
+    float h1v = hash(vec2(fi, 4.3));
+    float h2 = hash(vec2(fi, 8.9));
+    float ph = t * heat * (0.35 + 0.25 * h0) + h1v * 6.2832;
+    float y = mix(-0.78, 0.78, 0.5 - 0.5 * cos(ph));
+    float moving = abs(sin(ph));
+    float x = (h2 - 0.5) * 0.85 + 0.1 * sin(ph * 0.7 + fi * 2.1);
+    float rad = (0.08 + 0.07 * h0) * size;
+    vec2 d = p - vec2(x, y);
+    d.y /= 1.0 + 0.7 * moving * uSwirl;
+    float dd = dot(d, d) + 0.0004;
+    float k = rad * rad / dd;
     field += k;
-    hue += k * fi * 0.618034;
+    grad += -2.0 * k * d / dd;
+    tone += k * h1v;
   }
-  hue = fract(hue / max(field, 0.0001));
-  float inside = smoothstep(0.85, 1.15, field);
-  float halo = clamp(field * 0.35, 0.0, 1.0);
+  float pool = 0.01 * size / max(0.02, p.y + 0.98);
+  tone = tone / max(field, 0.0001);
+  field += pool;
 
-  vec3 ground = mix(uC0, uC1 * 0.25, 0.5 + 0.5 * vP.y * 0.4);
-  vec3 wax = pal(hue * (0.35 + uSwirl * 0.65) + 0.3) * (0.7 + 0.5 * smoothstep(1.1, 2.6, field));
-  vec3 col = ground + uC1 * halo * 0.25;
-  col = mix(col, wax, inside);
+  float inside = smoothstep(0.92, 1.08, field);
+  // The surface normal from the field's slope, eased by the field so the body
+  // reads as one smooth mass (raw slopes dimple at every blob's centre).
+  vec2 slope = -grad / (field * field + 0.2) * 0.35;
+  slope *= min(1.0, 0.9 / max(length(slope), 0.0001));
+  vec3 n = normalize(vec3(slope, 1.0));
+  vec3 l = normalize(vec3(0.0, -0.7, 0.7));
+  float diff = clamp(dot(n, l), 0.0, 1.0);
+  float spec = pow(clamp(dot(reflect(-l, n), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 18.0);
+  // A thin glowing rim where the wax is thinnest, like light through wax.
+  float edge = 1.0 - smoothstep(1.0, 1.3, field);
+  vec3 wax = mix(uC1, uC3, smoothstep(0.2, 0.8, tone));
+  wax = wax * (0.5 + 0.65 * diff) + uC2 * (spec * 0.45 + edge * 0.22);
+
+  float lamp = smoothstep(0.9, -1.0, p.y);
+  vec3 liquid = uC0 * (0.35 + 0.9 * lamp) + uC2 * 0.08 * lamp;
+  liquid += mix(uC1, uC3, 0.5) * 0.22 * clamp(field * 0.45, 0.0, 1.0);
+  vec3 col = mix(liquid, wax, inside);
+  col = mix(col, pal(tone + 0.2), uRainbow * inside * 0.6);
 
   float r = length(vP);
-  col *= mix(0.15, 1.0, rimFade(r, 0.9, 2.1)) * (0.3 + uBright * 1.1);
+  col *= rimFade(r, 0.92, 1.25) * (0.25 + uBright * 0.9);
   gl_FragColor = vec4(col, 1.0);
 }
 `;

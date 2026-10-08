@@ -5,6 +5,7 @@ import {
   artTabOf,
   FEATURED_PRESETS,
   featuredFor,
+  OIL_PALETTES,
   PRESETS,
   TRIP1_FLOW_SHAPES,
 } from './GeometryField';
@@ -143,5 +144,15 @@ describe('GeometryField featured presets', () => {
       ['Thangka', 'Thangka Lapis', 'Thangka Crimson'].map((n) => PRESETS[n].seed),
     );
     expect(seeds.size).toBe(3);
+  });
+
+  it('offers oil palettes of four valid colours each, and the Lava Lamp starts in Lava', () => {
+    expect(OIL_PALETTES.length).toBeGreaterThanOrEqual(8);
+    for (const p of OIL_PALETTES) {
+      expect(p.colors).toHaveLength(4);
+      for (const c of p.colors) expect(c).toMatch(/^#[0-9a-f]{6}$/i);
+    }
+    const lava = OIL_PALETTES.find((p) => p.name === 'Lava');
+    expect(PRESETS['Lava Lamp'].oilColors).toEqual(lava?.colors);
   });
 });
