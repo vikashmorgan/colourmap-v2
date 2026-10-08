@@ -135,3 +135,10 @@ Fixes to existing sands:
 - **Magnetic Sands 2** dropped its horizontal sine "sand waves" act (it broke the circular flow). Rose rings and the seed of life (seven whole circles) replace it, its eddies sit evenly on one circle and its drift only breathes in and out, so rings stay round and whole (no C shapes).
 - **Gravity** now flows like the original Magnetic Sand: along the circles of two magnetic poles (its hollow cores), which slowly orbit each other.
 - **Magnetic Sand** (the original) is unchanged in motion; its grain is 2px instead of 1.55px so its slow drift glides instead of stepping.
+
+## Waves (2026-10-08)
+
+A **Waves** category draws the sea as thin parallel lines and bends them with twirls (a rotation that fades with distance from a centre), so lines curl into breaking lips the way Hokusai drew them.
+
+- **Rolling Wave** (freestyle): Waves sets how many twirls ride an organic swell. Each curls up, travels, crashes into foam and lets go, with its size, strength, height and timing drawn fresh every cycle: it never repeats.
+- **Fractal Wave** (Hokusai and sacred numbers): the water is rings inside an invisible circle that only sets where the sea ends. Claws roll around the circle; each carries smaller claws placed by the golden angle and shrinking by the golden ratio (Depth sets how many).

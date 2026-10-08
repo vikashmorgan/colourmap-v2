@@ -321,6 +321,131 @@ void main() {
 }
 `;
 
+/*
+ * Waves. The sea is drawn as thin parallel lines; "twirls" (a rotation that
+ * fades with distance from a centre) bend those lines into curling lips, the
+ * way Hokusai drew the claws of a breaking wave.
+ */
+const WAVE_COMMON = /* glsl */ `
+float h1(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+
+vec2 twirl(vec2 p, vec2 c, float strength, float radius) {
+  vec2 d = p - c;
+  float a = strength * exp(-dot(d, d) / (radius * radius));
+  float cs = cos(a), sn = sin(a);
+  return c + vec2(cs * d.x - sn * d.y, sn * d.x + cs * d.y);
+}
+
+// Antialiased line at every integer of v.
+float waveLine(float v) {
+  float d = abs(fract(v + 0.5) - 0.5);
+  float fw = fwidth(v);
+  return 1.0 - smoothstep(fw * 0.5, fw * 1.5 + 0.008, d);
+}
+`;
+
+/**
+ * Rolling Wave (freestyle): a few twirls ride an organic swell. Each one
+ * curls up, travels, crashes into foam and lets go; its size, strength,
+ * height and timing are drawn fresh every cycle, so the sea never repeats.
+ */
+const ROLLING_WAVE = /* glsl */ `
+void main() {
+  vec2 p = vP * 1.1;
+  float t = uTime;
+  vec2 q = p;
+  float foam = 0.0;
+  float n = clamp(uSym, 2.0, 6.0);
+  for (int i = 0; i < 6; i++) {
+    if (float(i) >= n) break;
+    float fi = float(i);
+    float period = 7.0 + fi * 2.3 + h1(fi) * 3.0;
+    float u = t / period + h1(fi + 7.0);
+    float cyc = floor(u);
+    float life = fract(u);
+    float seed = cyc * 13.0 + fi * 7.0;
+    float rad = 0.22 + h1(seed + 2.0) * 0.25;
+    float smax = 3.0 + h1(seed + 3.0) * 3.5;
+    float env = sin(3.14159 * life);
+    env *= env;
+    vec2 c = vec2(
+      -0.95 + h1(seed) * 0.8 + life * (0.7 + h1(seed + 5.0) * 0.5),
+      -0.35 + h1(seed + 1.0) * 0.7 + 0.08 * sin(life * 3.14159)
+    );
+    // Negative = clockwise: the lip curls forward as the wave runs right.
+    q = twirl(q, c, -smax * env, rad * (0.7 + 0.5 * life));
+    float dc = length(p - c) / rad;
+    foam += smoothstep(0.55, 1.0, life) * exp(-dc * dc * 1.5);
+  }
+  float swell = 0.09 * sin(1.6 * q.x + t * 0.5) + 0.05 * sin(3.3 * q.x - t * 0.37 + 1.3)
+    + 0.03 * sin(5.1 * q.x + t * 0.8);
+  float dens = 6.0 + uLayers * 1.4;
+  float v = (q.y + swell) * dens + fbm(q * 1.5 + t * 0.05, 3.0) * 0.6 * uSwirl;
+  float line = waveLine(v);
+  float level = floor(v + 0.5);
+
+  vec3 water = mix(uC0, uC1 * 0.3, 0.5 + 0.5 * sin(level * 0.7));
+  vec3 col = water * 0.45 + pal(fract(level * 0.08) + 0.2) * line;
+  float sparkle = smoothstep(0.55, 0.9, noise(p * 40.0 + t * 2.0));
+  col += uC2 * clamp(foam, 0.0, 1.0) * (0.25 + 0.9 * sparkle);
+
+  col *= rimFade(length(vP), 0.85, 1.25) * (0.3 + uBright * 1.1);
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
+
+/**
+ * Fractal Wave (Hokusai + sacred numbers): the water is rings inside an
+ * invisible circle. Big claws (Symmetry of them) roll around the circle;
+ * each carries smaller claws placed by the golden angle and shrinking by the
+ * golden ratio, so every curl holds smaller curls, like Hokusai's foam.
+ */
+const FRACTAL_WAVE = /* glsl */ `
+void main() {
+  vec2 p = vP * 1.05;
+  float t = uTime;
+  const float PHI = 1.6180339887;
+  const float GA = 2.39996323;
+  float claws = clamp(uSym, 1.0, 6.0);
+  float kids = clamp(floor(uLayers * 0.8) + 1.0, 2.0, 8.0);
+  vec2 q = p;
+  float foam = 0.0;
+  for (int m = 0; m < 6; m++) {
+    if (float(m) >= claws) break;
+    float fm = float(m);
+    float ang = t * 0.12 + fm * TAU / claws;
+    vec2 c0 = 0.48 * vec2(cos(ang), sin(ang));
+    float breathe = 0.75 + 0.25 * sin(t * 0.5 + fm * PHI * 2.0);
+    float rad0 = 0.34;
+    q = twirl(q, c0, -4.2 * breathe, rad0);
+    for (int k = 1; k < 9; k++) {
+      if (float(k) > kids) break;
+      float fk = float(k);
+      float sc = pow(PHI, -fk * 0.6);
+      float a = fk * GA + ang + t * 0.25;
+      vec2 ck = c0 + vec2(cos(a), sin(a)) * rad0 * 1.1 * pow(PHI, -fk * 0.35);
+      float sk = -4.0 * breathe * (0.8 + 0.2 * sin(t * 0.7 + fk * PHI));
+      float rk = rad0 * sc * 0.8;
+      q = twirl(q, ck, sk, rk);
+      vec2 dk = p - ck;
+      foam += exp(-dot(dk, dk) / (rk * rk * 0.08)) * 0.5;
+    }
+  }
+  float dens = 7.0 + uLayers * 1.2;
+  float v = length(q) * dens - t * 0.4 + fbm(q * 2.0 + t * 0.03, 3.0) * 0.4 * uSwirl;
+  float line = waveLine(v);
+  float level = floor(v + 0.5);
+
+  vec3 water = mix(uC0, uC1 * 0.3, 0.5 + 0.5 * sin(level * 0.9));
+  vec3 col = water * 0.45 + pal(fract(level * 0.07) + 0.15) * line;
+  col += uC2 * clamp(foam, 0.0, 1.0) * 0.8;
+
+  // The circle is never drawn; it only sets where the sea ends.
+  col *= rimFade(length(vP), 0.8, 1.02) * (0.3 + uBright * 1.1);
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
+
 export const SHADER_FRAGMENTS = {
   shadertunnel: COMMON + SHADER_TUNNEL,
   logspiral: COMMON + LOG_SPIRAL,
@@ -330,6 +455,8 @@ export const SHADER_FRAGMENTS = {
   twooil: COMMON + TWO_OIL,
   lavalamp: COMMON + LAVA_LAMP,
   rorschach: COMMON + RORSCHACH,
+  rollingwave: COMMON + WAVE_COMMON + ROLLING_WAVE,
+  fractalwave: COMMON + WAVE_COMMON + FRACTAL_WAVE,
 } as const;
 
 export type ShaderVisualMode = keyof typeof SHADER_FRAGMENTS;

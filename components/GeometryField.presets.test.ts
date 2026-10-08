@@ -77,4 +77,24 @@ describe('GeometryField featured presets', () => {
     expect(TRIP1_FLOW_SHAPES).not.toContain(7);
     expect(TRIP1_FLOW_SHAPES).toHaveLength(8);
   });
+
+  it('keeps Magnetic Sands and Waves as their own categories', () => {
+    const names = (header: string) => {
+      const start = FEATURED_PRESETS.findIndex((i) => 'header' in i && i.header === header);
+      const rest = FEATURED_PRESETS.slice(start + 1);
+      const end = rest.findIndex((i) => 'header' in i);
+      return rest
+        .slice(0, end === -1 ? undefined : end)
+        .flatMap((i) => ('name' in i ? [i.name] : []));
+    };
+    expect(names('Magnetic Sands')).toEqual([
+      'Cymatic Sands 1',
+      'Cymatic Sands 2',
+      'Cymatic Sands 3',
+      'Cymatic Sands 4',
+    ]);
+    expect(names('Waves')).toEqual(['Rolling Wave', 'Fractal Wave']);
+    expect(PRESETS['Rolling Wave'].mode).toBe('rollingwave');
+    expect(PRESETS['Fractal Wave'].mode).toBe('fractalwave');
+  });
 });

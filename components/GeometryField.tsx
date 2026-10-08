@@ -168,7 +168,10 @@ type Mode =
   | 'cymatics1'
   | 'cymatics2'
   | 'cymatics3'
-  | 'cymatics4';
+  | 'cymatics4'
+  // Waves — rolling, curling linework (lib/visual-shaders.ts)
+  | 'rollingwave'
+  | 'fractalwave';
 
 interface Pal {
   bg0: string;
@@ -3613,6 +3616,30 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 2.4,
     stars: 3,
     mode: 'cymatics4',
+  },
+  'Rolling Wave': {
+    preset: 'Blue Astral',
+    symmetry: 4,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.5,
+    intensity: 8,
+    particles: 4,
+    luminous: 1.2,
+    stars: 0,
+    mode: 'rollingwave',
+  },
+  'Fractal Wave': {
+    preset: 'Blue Astral',
+    symmetry: 3,
+    complexity: 5,
+    glow: 2,
+    breathSpeed: 0.4,
+    intensity: 8,
+    particles: 3,
+    luminous: 1.2,
+    stars: 0,
+    mode: 'fractalwave',
   },
 };
 
@@ -14218,6 +14245,8 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
   cymatics2: CYMATIC_SLIDERS,
   cymatics3: CYMATIC_SLIDERS,
   cymatics4: CYMATIC_SLIDERS,
+  rollingwave: visualSliders(['Waves', 2, 6], ['Lines', 1, 10], 'Texture', 'Speed', 3),
+  fractalwave: visualSliders(['Claws', 1, 6], ['Depth', 1, 10], 'Texture', 'Speed', 3),
   rorschach: visualSliders(['Mirrors', 2, 12], ['Layers', 2, 8], 'Spread', 'Flow', 3),
 };
 
@@ -14377,6 +14406,8 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   cymatics2: 'Cymatic Sands 2',
   cymatics3: 'Cymatic Sands 3',
   cymatics4: 'Cymatic Sands 4',
+  rollingwave: 'Rolling Wave',
+  fractalwave: 'Fractal Wave',
 };
 
 const MODES: { mode: Mode; label: string }[] = [
@@ -14527,6 +14558,8 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'cymatics2', label: '⊞ Cymatic Sands 2' },
   { mode: 'cymatics3', label: '◎³ Cymatic Sands 3' },
   { mode: 'cymatics4', label: '◉³ Cymatic Sands 4' },
+  { mode: 'rollingwave', label: '∿ Rolling Wave' },
+  { mode: 'fractalwave', label: '@ Fractal Wave' },
 ];
 
 type FeaturedItem = { name: string; tag: string } | { header: string; dim?: boolean };
@@ -14636,6 +14669,9 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Cymatic Sands 2', tag: 'SQUARE' },
   { name: 'Cymatic Sands 3', tag: '3D' },
   { name: 'Cymatic Sands 4', tag: 'SPHERE' },
+  { header: 'Waves' },
+  { name: 'Rolling Wave', tag: 'FREE' },
+  { name: 'Fractal Wave', tag: 'HOKUSAI' },
   { header: 'In Progress / To Develop', dim: true },
   { name: 'Chrysalis', tag: 'MORPH' },
   { name: 'Metamorph', tag: 'MORPH' },
