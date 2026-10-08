@@ -1,11 +1,19 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+
+import { isOilMode, isShaderVisualMode } from '@/lib/visual-shaders';
+
+import {
+  buildGeometryVisual,
+  isGeometryVisualMode,
+  updateGeometryVisual,
+} from './geometry-visuals';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -92,6 +100,7 @@ type Mode =
   | 'linetunnel3d'
   | 'dotroad'
   | 'tripnumber1'
+  | 'tripnumber1flow'
   | 'tripnumber2'
   | 'tripnumber3'
   | 'buddhaboycurrents'
@@ -138,7 +147,22 @@ type Mode =
   | 'clockorbit3d'
   | 'musicdots'
   | 'musicnebula'
-  | 'musiclattice';
+  | 'musiclattice'
+  // Tunnels — math series you dive into (components/geometry-visuals.ts)
+  | 'drostezoom'
+  | 'twistgate'
+  | 'goldenseed'
+  | 'fouriertube'
+  | 'superrings'
+  | 'shadertunnel'
+  | 'logspiral'
+  // Oils — full-screen liquid shaders
+  | 'oilwarp'
+  | 'ripplefold'
+  | 'thinfilm'
+  | 'twooil'
+  | 'lavalamp'
+  | 'rorschach';
 
 interface Pal {
   bg0: string;
@@ -965,6 +989,18 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 2.8,
     stars: 3,
     mode: 'tripnumber1',
+  },
+  'Trip Number 1 Flow': {
+    preset: 'Golden Source',
+    symmetry: 10,
+    complexity: 7.6,
+    glow: 6.8,
+    breathSpeed: 0.34,
+    intensity: 8.4,
+    particles: 9,
+    luminous: 2.8,
+    stars: 3,
+    mode: 'tripnumber1flow',
   },
   'Trip Number 2': {
     preset: 'Amber Dust',
@@ -3355,6 +3391,175 @@ export const PRESETS: Record<string, Cfg> = {
     stars: 2,
     mode: 'sinmorph3d',
   },
+  // ── Tunnels + Oils (docs/specs/math-tunnels-and-liquid-visuals.md) ──
+  'Golden Zoom': {
+    preset: 'Golden Source',
+    symmetry: 6,
+    complexity: 5,
+    glow: 4,
+    breathSpeed: 0.5,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.6,
+    stars: 3,
+    mode: 'drostezoom',
+  },
+  'Twisted Gate': {
+    preset: 'Violet Portal',
+    symmetry: 6,
+    complexity: 4,
+    glow: 6,
+    breathSpeed: 0.45,
+    intensity: 8,
+    particles: 4,
+    luminous: 2.8,
+    stars: 4,
+    mode: 'twistgate',
+  },
+  'Golden Seed Tunnel': {
+    preset: 'Golden Source',
+    symmetry: 8,
+    complexity: 5,
+    glow: 5,
+    breathSpeed: 0.4,
+    intensity: 8,
+    particles: 4,
+    luminous: 2.4,
+    stars: 3,
+    mode: 'goldenseed',
+  },
+  'Fourier Tube': {
+    preset: 'Blue Astral',
+    symmetry: 8,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 0.4,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.6,
+    stars: 4,
+    mode: 'fouriertube',
+  },
+  'Superformula Rings': {
+    preset: 'Cosmic Indigo',
+    symmetry: 5,
+    complexity: 5,
+    glow: 7,
+    breathSpeed: 0.4,
+    intensity: 8,
+    particles: 3,
+    luminous: 2.6,
+    stars: 4,
+    mode: 'superrings',
+  },
+  'Shader Tunnel': {
+    preset: 'Warp Drive',
+    symmetry: 8,
+    complexity: 3,
+    glow: 6,
+    breathSpeed: 0.5,
+    intensity: 7,
+    particles: 3,
+    luminous: 1.8,
+    stars: 0,
+    mode: 'shadertunnel',
+  },
+  'Log Spiral Wormhole': {
+    preset: 'DMT Vision',
+    symmetry: 5,
+    complexity: 4,
+    glow: 5,
+    breathSpeed: 0.4,
+    intensity: 7,
+    particles: 4,
+    luminous: 1.6,
+    stars: 0,
+    mode: 'logspiral',
+  },
+  'Oil Warp': {
+    preset: 'Violet Portal',
+    symmetry: 4,
+    complexity: 6,
+    glow: 3,
+    breathSpeed: 0.35,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'oilwarp',
+  },
+  'Ripple Fold': {
+    preset: 'Deep Crimson',
+    symmetry: 5,
+    complexity: 7,
+    glow: 3,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 4,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'ripplefold',
+  },
+  'Thin Film': {
+    preset: 'Liquid Pearl',
+    symmetry: 4,
+    complexity: 5,
+    glow: 8,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'thinfilm',
+  },
+  'Two Oil Projector': {
+    preset: 'Solar Plasma',
+    symmetry: 4,
+    complexity: 5,
+    glow: 2,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 4,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'twooil',
+  },
+  'Lava Lamp': {
+    preset: 'Deep Crimson',
+    symmetry: 4,
+    complexity: 6,
+    glow: 3,
+    breathSpeed: 0.35,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.9,
+    stars: 0,
+    mode: 'lavalamp',
+  },
+  'Rorschach Oils': {
+    preset: 'Violet Portal',
+    symmetry: 2,
+    complexity: 6,
+    glow: 4,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'rorschach',
+  },
+  'Mirror Oils': {
+    preset: 'DMT Vision',
+    symmetry: 6,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'rorschach',
+  },
 };
 
 /* ── Journey system ─────────────────────────────────────────── */
@@ -3585,49 +3790,91 @@ export const JOURNEYS: Journey[] = [
     id: 4,
     name: 'Big Bang',
     icon: '✦',
-    desc: 'Atoms to galaxies — the full spectrum of cosmic creation in colour',
+    desc: 'Singularity to galaxies — a bright core, exponential inflation, a plasma sea, the first stars, spiral galaxies, then the long drift. Every act dives toward you through soft-edged tunnels.',
     stages: [
       {
         name: 'Singularity',
         preset: 'Violet Portal',
-        mode: 'burst',
+        mode: 'shadertunnel',
         duration: 35,
-        breathSpeed: 0.5,
-        luminous: 4,
-        particles: 8,
-        glow: 8,
+        symmetry: 8,
+        complexity: 2,
+        glow: 4,
+        breathSpeed: 0.25,
+        intensity: 7,
+        particles: 9,
+        luminous: 1.8,
+        stars: 0,
+      },
+      {
+        name: 'Inflation',
+        preset: 'Golden Source',
+        mode: 'drostezoom',
+        duration: 40,
+        symmetry: 6,
+        complexity: 6,
+        glow: 5,
+        breathSpeed: 0.9,
+        intensity: 8,
+        particles: 4,
+        luminous: 2.8,
         stars: 2,
       },
       {
-        name: 'Chaos Expansion',
-        preset: 'Clifford Dream',
-        mode: 'clifford',
+        name: 'Plasma Era',
+        preset: 'Solar Plasma',
+        mode: 'oilwarp',
         duration: 40,
-        breathSpeed: 0.3,
-        luminous: 3,
-        complexity: 8,
-        glow: 6,
+        symmetry: 3,
+        complexity: 6,
+        glow: 2,
+        breathSpeed: 0.4,
+        intensity: 7,
+        particles: 6,
+        luminous: 0.9,
+        stars: 0,
       },
       {
-        name: 'Stellar Birth',
-        preset: 'Forest Ceremony',
-        mode: 'golden',
+        name: 'First Stars',
+        preset: 'Blue Astral',
+        mode: 'goldenseed',
         duration: 40,
-        breathSpeed: 0.22,
-        luminous: 2,
+        symmetry: 8,
+        complexity: 5,
+        glow: 5,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 3,
+        luminous: 2.4,
         stars: 5,
-        symmetry: 10,
       },
       {
         name: 'Galaxy Formation',
         preset: 'Cosmic Indigo',
-        mode: 'kaleidoscope',
-        duration: 40,
-        symmetry: 14,
-        breathSpeed: 0.4,
-        luminous: 3,
-        stars: 6,
+        mode: 'twistgate',
+        duration: 35,
+        symmetry: 7,
+        complexity: 5,
         glow: 7,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 5,
+        luminous: 2.8,
+        stars: 6,
+      },
+      {
+        name: 'Galaxy Spiral',
+        preset: 'Violet Portal',
+        mode: 'logspiral',
+        duration: 35,
+        symmetry: 4,
+        complexity: 4,
+        glow: 5,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 4,
+        luminous: 1.6,
+        stars: 0,
       },
       {
         name: 'Cosmic Drift',
@@ -6243,6 +6490,126 @@ export const JOURNEYS: Journey[] = [
       },
     ],
   },
+  {
+    id: 27,
+    name: 'Oil Projector',
+    icon: 'OIL',
+    desc: 'The liquid light show — warped oils, a soap-film slick, two coloured oils turning in a lens circle, marbled folds, a lava lamp and mirrored Rorschach inkblots, flowing back into the first oil. ~8.5-minute loop.',
+    stages: [
+      {
+        name: 'Oil Warp',
+        preset: 'Violet Portal',
+        mode: 'oilwarp',
+        duration: 70,
+        symmetry: 4,
+        complexity: 6,
+        glow: 3,
+        breathSpeed: 0.35,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Thin Film',
+        preset: 'Liquid Pearl',
+        mode: 'thinfilm',
+        duration: 60,
+        symmetry: 4,
+        complexity: 5,
+        glow: 8,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Two Oils',
+        preset: 'Solar Plasma',
+        mode: 'twooil',
+        duration: 70,
+        symmetry: 4,
+        complexity: 5,
+        glow: 2,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 4,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Ripple Fold',
+        preset: 'Deep Crimson',
+        mode: 'ripplefold',
+        duration: 60,
+        symmetry: 5,
+        complexity: 7,
+        glow: 3,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 4,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Lava Lamp',
+        preset: 'Deep Crimson',
+        mode: 'lavalamp',
+        duration: 70,
+        symmetry: 4,
+        complexity: 6,
+        glow: 3,
+        breathSpeed: 0.35,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.9,
+        stars: 0,
+      },
+      {
+        name: 'Rorschach',
+        preset: 'Violet Portal',
+        mode: 'rorschach',
+        duration: 60,
+        symmetry: 2,
+        complexity: 6,
+        glow: 4,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Mirror Oils',
+        preset: 'DMT Vision',
+        mode: 'rorschach',
+        duration: 60,
+        symmetry: 6,
+        complexity: 6,
+        glow: 4,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Oil Return',
+        preset: 'Violet Portal',
+        mode: 'oilwarp',
+        duration: 60,
+        symmetry: 4,
+        complexity: 6,
+        glow: 3,
+        breathSpeed: 0.35,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+    ],
+  },
 ];
 
 /* ── Particle helpers ───────────────────────────────────────── */
@@ -6522,6 +6889,9 @@ function updateRippleRings(
 /* ── Build + update dispatch ────────────────────────────────── */
 
 function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
+  if (isGeometryVisualMode(cfg.mode)) {
+    return buildGeometryVisual(cfg, PAL[cfg.preset] ?? PAL['Calm Field']);
+  }
   switch (cfg.mode) {
     case 'burst':
       return buildBurst(cfg, R);
@@ -6647,6 +7017,7 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
 
     case 'embrace':
     case 'tripnumber1':
+    case 'tripnumber1flow':
       return buildDotSymbolField(cfg, R);
     case 'dottunnel':
     case 'swirldottunnel':
@@ -6729,6 +7100,10 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
 }
 
 function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R: number): void {
+  if (isGeometryVisualMode(cfg.mode)) {
+    updateGeometryVisual(group, cfg, PAL[cfg.preset] ?? PAL['Calm Field'], t, R);
+    return;
+  }
   switch (cfg.mode) {
     case 'burst':
       updateBurst(group, cfg, t, R);
@@ -6905,6 +7280,7 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
 
     case 'embrace':
     case 'tripnumber1':
+    case 'tripnumber1flow':
       updateDotSymbolField(group, cfg, t, R);
       break;
     case 'dottunnel':
@@ -13660,6 +14036,15 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'particles', label: 'Dots', min: 1, max: 10, step: 1 },
     { key: 'luminous', label: 'Bloom', min: 0, max: 5, step: 0.1 },
   ],
+  // No Sacred Count: it only shaped the sliced petals the Flow trip leaves out.
+  tripnumber1flow: [
+    { key: 'complexity', label: 'Metamorphosis', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Void / Bloom', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Trip Speed', min: 0.05, max: 1.2, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Dots', min: 1, max: 10, step: 1 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 5, step: 0.1 },
+  ],
   tripnumber2: [
     { key: 'symmetry', label: 'Mirrors', min: 3, max: 14, step: 1 },
     { key: 'complexity', label: 'Desert Chaos', min: 1, max: 10, step: 0.5 },
@@ -13715,7 +14100,43 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'luminous', label: 'Bloom', min: 0, max: 5, step: 0.1 },
     { key: 'complexity', label: 'Density', min: 1, max: 10, step: 1 },
   ],
+  // Tunnels
+  drostezoom: visualSliders(['Sides', 3, 16], ['Density', 1, 10], 'Twist'),
+  twistgate: visualSliders(['Sides', 3, 16], ['Twist', 0, 10], 'Curve'),
+  goldenseed: visualSliders(['Arms', 3, 16], ['Winding', 0, 10], 'Curve'),
+  fouriertube: visualSliders(['Ribs', 3, 16], ['Wobble', 0, 10], 'Curve'),
+  superrings: visualSliders(['Points', 3, 16], ['Morph', 0, 10], 'Curve'),
+  shadertunnel: visualSliders(['Ribs', 1, 16], ['Twist', 0, 10], 'Core'),
+  logspiral: visualSliders(['Arms', 1, 12], ['Wind', 0, 10], 'Core'),
+  // Oils
+  oilwarp: visualSliders(['Scale', 1, 12], ['Layers', 2, 8], 'Swirl', 'Flow', 3),
+  ripplefold: visualSliders(['Scale', 1, 12], ['Folds', 1, 10], 'Swirl', 'Flow', 3),
+  thinfilm: visualSliders(['Scale', 1, 12], ['Layers', 2, 8], 'Warp', 'Flow', 3),
+  twooil: visualSliders(['Scale', 1, 12], ['Layers', 2, 7], 'Swirl', 'Flow', 3),
+  lavalamp: visualSliders(['Scale', 1, 12], ['Blobs', 1, 10], 'Colour Mix', 'Flow', 3),
+  rorschach: visualSliders(['Mirrors', 2, 12], ['Layers', 2, 8], 'Spread', 'Flow', 3),
 };
+
+// Shared slider shape for the Tunnels and Oils families: Glow is the
+// rainbow mix, Particles is the mode's extra (curve, core, swirl).
+function visualSliders(
+  [symLabel, symMin, symMax]: [string, number, number],
+  [cxLabel, cxMin, cxMax]: [string, number, number],
+  extraLabel: string,
+  speedLabel = 'Speed',
+  bloomMax = 5,
+): SliderDef[] {
+  return [
+    { key: 'symmetry', label: symLabel, min: symMin, max: symMax, step: 1 },
+    { key: 'complexity', label: cxLabel, min: cxMin, max: cxMax, step: 0.5 },
+    { key: 'glow', label: 'Rainbow', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: speedLabel, min: 0.05, max: 1.5, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: extraLabel, min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: bloomMax, step: 0.1 },
+    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+  ];
+}
 
 function slidersFor(mode: Mode): SliderDef[] {
   return MODE_SLIDERS[mode] ?? DEFAULT_SLIDERS;
@@ -13804,6 +14225,7 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   dotroad: 'Dot Road',
 
   tripnumber1: 'Trip Number 1',
+  tripnumber1flow: 'Trip Number 1 Flow',
   tripnumber2: 'Trip Number 2',
   tripnumber3: 'Trip Number 3',
   buddhaboycurrents: 'Buddha Boy Currents',
@@ -13834,6 +14256,19 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   infinitedive: 'Infinite Dive',
   clockorbit3d: 'Clock Orbit',
   chaostrisphere: 'Chaos Tri Sphere',
+  drostezoom: 'Golden Zoom',
+  twistgate: 'Twisted Gate',
+  goldenseed: 'Golden Seed Tunnel',
+  fouriertube: 'Fourier Tube',
+  superrings: 'Superformula Rings',
+  shadertunnel: 'Shader Tunnel',
+  logspiral: 'Log Spiral Wormhole',
+  oilwarp: 'Oil Warp',
+  ripplefold: 'Ripple Fold',
+  thinfilm: 'Thin Film',
+  twooil: 'Two Oil Projector',
+  lavalamp: 'Lava Lamp',
+  rorschach: 'Rorschach Oils',
 };
 
 const MODES: { mode: Mode; label: string }[] = [
@@ -13945,6 +14380,7 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'dotroad', label: 'Dot Road' },
 
   { mode: 'tripnumber1', label: 'Trip Number 1' },
+  { mode: 'tripnumber1flow', label: 'Trip Number 1 Flow' },
   { mode: 'tripnumber2', label: 'Trip Number 2' },
   { mode: 'tripnumber3', label: 'Trip Number 3' },
   { mode: 'buddhaboycurrents', label: 'Buddha Boy Currents' },
@@ -13966,6 +14402,19 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'entropy', label: '⋮ Entropy' },
   { mode: 'entropy3d', label: '⋮³ Entropy 3D' },
   { mode: 'embf3d', label: '◎ EMBF 3D' },
+  { mode: 'drostezoom', label: 'φ Golden Zoom' },
+  { mode: 'twistgate', label: '⬡ Twisted Gate' },
+  { mode: 'goldenseed', label: 'φ Seed Tunnel' },
+  { mode: 'fouriertube', label: '∿ Fourier Tube' },
+  { mode: 'superrings', label: '✦ Superformula' },
+  { mode: 'shadertunnel', label: '⊙ Shader Tunnel' },
+  { mode: 'logspiral', label: '@ Log Spiral' },
+  { mode: 'oilwarp', label: '〰 Oil Warp' },
+  { mode: 'ripplefold', label: '〰 Ripple Fold' },
+  { mode: 'thinfilm', label: '◌ Thin Film' },
+  { mode: 'twooil', label: '◐ Two Oils' },
+  { mode: 'lavalamp', label: '● Lava Lamp' },
+  { mode: 'rorschach', label: '⧓ Rorschach' },
 ];
 
 type FeaturedItem = { name: string; tag: string } | { header: string; dim?: boolean };
@@ -13975,6 +14424,7 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Magnetic Sand', tag: 'CURRENT' },
   { name: 'Dot Walker', tag: 'CHAR' },
   { name: 'Trip Number 1', tag: 'TRIP' },
+  { name: 'Trip Number 1 Flow', tag: 'TRIP' },
   { name: 'Trip Number 2', tag: 'DROP' },
   { name: 'Trip Number 3', tag: 'TRI' },
   { name: 'Flow Field', tag: 'FLOW' },
@@ -14053,6 +14503,22 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Dot Tunnel', tag: 'DEPTH' },
   { name: 'Random Burst', tag: 'CHAOS' },
   { name: 'Starflow Galaxy', tag: 'MUSIC' },
+  { header: 'Tunnels' },
+  { name: 'Golden Zoom', tag: 'ZOOM' },
+  { name: 'Twisted Gate', tag: 'GATE' },
+  { name: 'Golden Seed Tunnel', tag: 'SEED' },
+  { name: 'Fourier Tube', tag: 'TUBE' },
+  { name: 'Superformula Rings', tag: 'RINGS' },
+  { name: 'Shader Tunnel', tag: 'SHADER' },
+  { name: 'Log Spiral Wormhole', tag: 'SPIRAL' },
+  { header: 'Oils' },
+  { name: 'Oil Warp', tag: 'OIL' },
+  { name: 'Ripple Fold', tag: 'OIL' },
+  { name: 'Thin Film', tag: 'OIL' },
+  { name: 'Two Oil Projector', tag: 'OIL' },
+  { name: 'Lava Lamp', tag: 'OIL' },
+  { name: 'Rorschach Oils', tag: 'MIRROR' },
+  { name: 'Mirror Oils', tag: 'MIRROR' },
   { header: 'In Progress / To Develop', dim: true },
   { name: 'Chrysalis', tag: 'MORPH' },
   { name: 'Metamorph', tag: 'MORPH' },
@@ -15859,6 +16325,13 @@ function buildDotSymbolField(cfg: Cfg, R: number): THREE.Group {
   return group;
 }
 
+// Trip Number 1 cycles ten dot shapes. The Flow variant drops the two that
+// cut the field into pieces — 6 (petals sliced into sectors) and 7 (stacked
+// ring slices) — so it only flows: eye, burst, twin swirl, spiral, sun,
+// butterfly, tunnel, heart.
+const TRIP1_SHAPES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+export const TRIP1_FLOW_SHAPES = [0, 1, 2, 3, 4, 5, 8, 9];
+
 function updateDotSymbolField(group: THREE.Group, cfg: Cfg, t: number, R: number): void {
   const pal = PAL[cfg.preset] ?? PAL['Golden Source'];
   const phase = t * 0.001 * cfg.breathSpeed;
@@ -16125,9 +16598,10 @@ function updateDotSymbolField(group: THREE.Group, cfg: Cfg, t: number, R: number
           (centerY + ry * bodyBreath) * Math.cos(orbit) +
           Math.sin(a - phase) * swirl;
         z = Math.sin(phase * 1.25 + a + w * TAU) * R * (0.025 + cfg.luminous * 0.006);
-      } else if (i < dotLimit && cfg.mode === 'tripnumber1') {
+      } else if (i < dotLimit && (cfg.mode === 'tripnumber1' || cfg.mode === 'tripnumber1flow')) {
         const journey = (phase * 0.052) % 1;
-        const totalPhases = 10;
+        const shapes = cfg.mode === 'tripnumber1flow' ? TRIP1_FLOW_SHAPES : TRIP1_SHAPES;
+        const totalPhases = shapes.length;
         const raw = journey * totalPhases;
         const stage = Math.floor(raw) % totalPhases;
         const blend = smoothstep(raw - Math.floor(raw));
@@ -16242,8 +16716,8 @@ function updateDotSymbolField(group: THREE.Group, cfg: Cfg, t: number, R: number
           ];
         };
 
-        const p1 = shapePoint(stage);
-        const p2 = shapePoint((stage + 1) % totalPhases);
+        const p1 = shapePoint(shapes[stage]);
+        const p2 = shapePoint(shapes[(stage + 1) % totalPhases]);
         x = lerp(p1[0], p2[0], blend);
         y = lerp(p1[1], p2[1], blend);
         z = lerp(p1[2], p2[2], blend);
@@ -16729,6 +17203,25 @@ function updateTriangleYantraTrip(group: THREE.Group, cfg: Cfg, t: number, R: nu
 
 const BUDDHA_BOY_POINTS = 1700;
 const BUDDHA_BOY_TIDE_POINTS = 900;
+function topRightButtonStyle(accent: string, border: string): CSSProperties {
+  return {
+    width: 30,
+    height: 30,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(8,6,4,0.45)',
+    border: `1px solid ${border}`,
+    borderRadius: 99,
+    color: accent,
+    fontSize: 12,
+    lineHeight: 1,
+    cursor: 'pointer',
+    backdropFilter: 'blur(6px)',
+    opacity: 0.7,
+  };
+}
+
 const DANCE_MOVES: { key: DanceMove; label: string }[] = [
   { key: 'still', label: 'Still' },
   { key: 'breath', label: 'Breath' },
@@ -19064,6 +19557,7 @@ export default function GeometryField() {
   const [djError, setDjError] = useState('');
   const [djEnergy, setDjEnergy] = useState({ level: 0, bass: 0, highs: 0 });
   const [open, setOpen] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [tab, setTab] = useState<'builder' | 'music' | 'journey'>('builder');
   const [builderView, setBuilderView] = useState<'programs' | 'sliders'>('sliders');
   const [liveMode, setLiveMode] = useState<LiveMode>('studio');
@@ -19401,8 +19895,11 @@ export default function GeometryField() {
       renderer.setClearColor(clearColorRef.current, 1);
 
       // Bloom from luminous slider
-      bloomPass.strength = currentCfg.luminous * 0.28;
-      bloomPass.threshold = 0.05;
+      // Full-screen shader fields would wash out under the default bloom,
+      // so they bloom only their brightest highlights.
+      const shaderField = isShaderVisualMode(currentCfg.mode);
+      bloomPass.strength = currentCfg.luminous * (shaderField ? 0.12 : 0.28);
+      bloomPass.threshold = shaderField ? 0.55 : 0.05;
       bloomPass.radius = 0.4 + currentCfg.luminous * 0.04;
 
       // Rebuild stars when count or viewport changes
@@ -19415,7 +19912,8 @@ export default function GeometryField() {
         starsGroupRef.current = buildStars(
           // Every preset shows a background starfield by default — floor the
           // count so even stars=0 presets keep a gentle field; the slider adds more.
-          Math.max(3, currentCfg.stars),
+          // Oils are a liquid surface, not space: their stars are opt-in.
+          isOilMode(currentCfg.mode) ? currentCfg.stars : Math.max(3, currentCfg.stars),
           W,
           H,
           currentCfg.preset,
@@ -22352,6 +22850,14 @@ export default function GeometryField() {
     a.click();
   }
 
+  // Track real fullscreen so the exit control lives top-right, clear of the
+  // "All one brain" band along the bottom.
+  useEffect(() => {
+    const sync = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, []);
+
   function handleFullscreen() {
     const el = wrapperRef.current;
     if (!el) return;
@@ -22414,7 +22920,7 @@ export default function GeometryField() {
         display: 'flex',
         flexDirection: 'column',
         width: '100%',
-        height: isProjectionMode ? '100svh' : 'calc(100svh - 92px)',
+        height: isProjectionMode || isFullscreen ? '100svh' : 'calc(100svh - 92px)',
         minHeight: 0,
         position: isProjectionMode ? 'fixed' : undefined,
         inset: isProjectionMode ? 0 : undefined,
@@ -22634,37 +23140,42 @@ export default function GeometryField() {
           </div>
         )}
 
-        {/* Show-controls — a tiny discrete arrow, bottom-right, when the panel
-        is closed (display mode), so the visual stays clean while projecting. */}
-        {!open && !isProjectionMode && (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            title="Show controls"
-            aria-label="Show controls"
+        {/* Top-right controls — always reachable: the bottom edge belongs to
+        the "All one brain" band, which would cover anything placed there. */}
+        {!isProjectionMode && (!open || isFullscreen) && (
+          <div
             style={{
               position: 'absolute',
-              bottom: 10,
+              top: 10,
               right: 10,
-              width: 26,
-              height: 26,
+              zIndex: 22,
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(8,6,4,0.32)',
-              border: `1px solid ${accentMid}`,
-              borderRadius: 99,
-              color: accent,
-              fontSize: 11,
-              lineHeight: 1,
-              cursor: 'pointer',
-              backdropFilter: 'blur(6px)',
-              opacity: 0.45,
-              zIndex: 20,
+              gap: 6,
             }}
           >
-            ◤
-          </button>
+            {!open && (
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                title="Show controls"
+                aria-label="Show controls"
+                style={topRightButtonStyle(accent, accentMid)}
+              >
+                ◤
+              </button>
+            )}
+            {isFullscreen && (
+              <button
+                type="button"
+                onClick={() => document.exitFullscreen?.()}
+                title="Exit fullscreen"
+                aria-label="Exit fullscreen"
+                style={topRightButtonStyle(accent, accentMid)}
+              >
+                ✕
+              </button>
+            )}
+          </div>
         )}
 
         {!isProjectionMode && open && (
@@ -22808,10 +23319,11 @@ export default function GeometryField() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {/* Builder only for now (3 Oct 2026). Music Visuals, Journeys and
-                    Figures are hidden, not deleted: their code is untouched, so
-                    bringing a tab back is restoring its pill line. */}
+                {/* Builder + Journeys (Journeys back 8 Oct 2026 for Big Bang and
+                    Oil Projector). Music Visuals and Figures stay hidden, not
+                    deleted: bringing a tab back is restoring its pill line. */}
                 {pill('Builder', tab === 'builder', () => setTab('builder'), true)}
+                {pill('Journeys', tab === 'journey', () => setTab('journey'), true)}
               </div>
               <button
                 type="button"

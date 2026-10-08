@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { FEATURED_PRESETS, PRESETS } from './GeometryField';
+import { FEATURED_PRESETS, PRESETS, TRIP1_FLOW_SHAPES } from './GeometryField';
 
 function featuredNames() {
   return FEATURED_PRESETS.flatMap((item) => ('name' in item ? [item.name] : []));
@@ -40,5 +40,41 @@ describe('GeometryField featured presets', () => {
     // Toned down to match the other presets' light (was glow 8.2 / luminous 4.2).
     expect(PRESETS['Atomic Explosion'].glow).toBeLessThanOrEqual(6);
     expect(PRESETS['Atomic Explosion'].luminous).toBeLessThanOrEqual(3.2);
+  });
+
+  it('groups the math tunnels and the oils into their own categories', () => {
+    const section = (header: string) => {
+      const start = FEATURED_PRESETS.findIndex((i) => 'header' in i && i.header === header);
+      const rest = FEATURED_PRESETS.slice(start + 1);
+      const end = rest.findIndex((i) => 'header' in i);
+      return rest
+        .slice(0, end === -1 ? undefined : end)
+        .flatMap((i) => ('name' in i ? [i.name] : []));
+    };
+    const tunnels = section('Tunnels');
+    const oils = section('Oils');
+    expect(tunnels).toContain('Golden Zoom');
+    expect(tunnels).toContain('Shader Tunnel');
+    expect(oils).toEqual(
+      expect.arrayContaining(['Oil Warp', 'Two Oil Projector', 'Lava Lamp', 'Rorschach Oils']),
+    );
+    expect(oils.some((n) => tunnels.includes(n))).toBe(false);
+    for (const name of [...tunnels, ...oils]) expect(PRESETS[name], name).toBeDefined();
+  });
+
+  it('Rorschach Oils is a two-mirror inkblot, Mirror Oils a kaleidoscope', () => {
+    expect(PRESETS['Rorschach Oils'].mode).toBe('rorschach');
+    expect(PRESETS['Rorschach Oils'].symmetry).toBe(2);
+    expect(PRESETS['Mirror Oils'].symmetry).toBeGreaterThan(2);
+  });
+
+  it('Trip Number 1 Flow sits next to Trip Number 1 and drops the sliced shapes', () => {
+    const names = featuredNames();
+    expect(names.indexOf('Trip Number 1 Flow')).toBe(names.indexOf('Trip Number 1') + 1);
+    expect(PRESETS['Trip Number 1 Flow'].mode).toBe('tripnumber1flow');
+    // 6 = petals sliced into sectors, 7 = stacked ring slices.
+    expect(TRIP1_FLOW_SHAPES).not.toContain(6);
+    expect(TRIP1_FLOW_SHAPES).not.toContain(7);
+    expect(TRIP1_FLOW_SHAPES).toHaveLength(8);
   });
 });
