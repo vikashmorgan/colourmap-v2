@@ -133,4 +133,15 @@ describe('GeometryField featured presets', () => {
       });
     }
   });
+
+  it('puts the Thangka with the oils, each preset with its own design seed', () => {
+    for (const name of ['Thangka', 'Thangka Lapis', 'Thangka Crimson']) {
+      expect(PRESETS[name].mode).toBe('thangka');
+      expect(artTabOf(PRESETS[name].mode)).toBe('oils');
+    }
+    const seeds = new Set(
+      ['Thangka', 'Thangka Lapis', 'Thangka Crimson'].map((n) => PRESETS[n].seed),
+    );
+    expect(seeds.size).toBe(3);
+  });
 });

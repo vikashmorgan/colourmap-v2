@@ -1,6 +1,6 @@
 'use client';
 
-import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type CSSProperties, Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
@@ -171,7 +171,9 @@ type Mode =
   | 'cymatics4'
   // Waves — rolling, curling linework (lib/visual-shaders.ts)
   | 'rollingwave'
-  | 'fractalwave';
+  | 'fractalwave'
+  // Thangka — a generated Tibetan mandala with oil moving in its compartments
+  | 'thangka';
 
 interface Pal {
   bg0: string;
@@ -197,6 +199,8 @@ interface Cfg {
   danceMove?: DanceMove;
   danceBpm?: number;
   danceAmount?: number;
+  /** Design seed for generated visuals (the Thangka): "New thangka" rolls it. */
+  seed?: number;
 }
 
 interface Dot {
@@ -3568,6 +3572,45 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 0.8,
     stars: 0,
     mode: 'rorschach',
+  },
+  Thangka: {
+    preset: 'Tangka Gold',
+    symmetry: 4,
+    complexity: 5,
+    glow: 2,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 3,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'thangka',
+    seed: 7,
+  },
+  'Thangka Lapis': {
+    preset: 'Tangka Lapis',
+    symmetry: 4,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 3,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'thangka',
+    seed: 23,
+  },
+  'Thangka Crimson': {
+    preset: 'Tangka Crimson',
+    symmetry: 4,
+    complexity: 5,
+    glow: 2,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 3,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'thangka',
+    seed: 41,
   },
   'Cymatic Sands 1': {
     preset: 'Golden Source',
@@ -14205,6 +14248,15 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
   cymatics4: CYMATIC_SLIDERS,
   rollingwave: visualSliders(['Waves', 2, 6], ['Lines', 1, 10], 'Texture', 'Speed', 3),
   fractalwave: visualSliders(['Claws', 1, 6], ['Depth', 1, 10], 'Texture', 'Speed', 3),
+  thangka: [
+    { key: 'complexity', label: 'Detail', min: 2, max: 7, step: 0.5 },
+    { key: 'breathSpeed', label: 'Flow', min: 0.05, max: 1.5, step: 0.05 },
+    { key: 'glow', label: 'Rainbow', min: 0, max: 10, step: 0.5 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Gold', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
+    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+  ],
   rorschach: visualSliders(['Mirrors', 2, 12], ['Layers', 2, 8], 'Spread', 'Flow', 3),
 };
 
@@ -14360,6 +14412,7 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   twooil: 'Two Oil Projector',
   lavalamp: 'Lava Lamp',
   rorschach: 'Rorschach Oils',
+  thangka: 'Thangka',
   cymatics1: 'Cymatic Sands 1',
   cymatics2: 'Cymatic Sands 2',
   cymatics3: 'Cymatic Sands 3',
@@ -14512,6 +14565,7 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'twooil', label: '◐ Two Oils' },
   { mode: 'lavalamp', label: '● Lava Lamp' },
   { mode: 'rorschach', label: '⧓ Rorschach' },
+  { mode: 'thangka', label: '☸ Thangka' },
   { mode: 'cymatics1', label: '◎ Cymatic Sands 1' },
   { mode: 'cymatics2', label: '⊞ Cymatic Sands 2' },
   { mode: 'cymatics3', label: '◎³ Cymatic Sands 3' },
@@ -14746,6 +14800,9 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Lava Lamp', tag: 'OIL' },
   { name: 'Rorschach Oils', tag: 'MIRROR' },
   { name: 'Mirror Oils', tag: 'MIRROR' },
+  { name: 'Thangka', tag: 'MANDALA' },
+  { name: 'Thangka Lapis', tag: 'MANDALA' },
+  { name: 'Thangka Crimson', tag: 'MANDALA' },
   { header: 'Magnetic Sands' },
   { name: 'Cymatic Sands 1', tag: 'CIRCLE' },
   { name: 'Cymatic Sands 2', tag: 'SQUARE' },
@@ -23609,9 +23666,11 @@ export default function GeometryField() {
                 {/* Art: Stars, Geometry, Tunnels, Oils, then the Big Bang trip on its
                     own page. Music Visuals, Journeys and Figures stay hidden, not
                     deleted: bringing a tab back is restoring its pill line. */}
-                {ART_TABS.map(({ id, label }) =>
-                  pill(label, tab === id, () => openArtTab(id), true),
-                )}
+                {ART_TABS.map(({ id, label }) => (
+                  <Fragment key={id}>
+                    {pill(label, tab === id, () => openArtTab(id), true)}
+                  </Fragment>
+                ))}
                 {pill(
                   'Big Bang',
                   false,
@@ -23887,6 +23946,27 @@ export default function GeometryField() {
                 {/* Sliders + actions */}
                 {builderView === 'sliders' && (
                   <>
+                    {cfg.mode === 'thangka' && (
+                      <button
+                        type="button"
+                        onClick={() => update('seed', Math.floor(Math.random() * 100000) + 1)}
+                        style={{
+                          alignSelf: 'flex-start',
+                          background: accentFaint,
+                          border: `1px solid ${accentMid}`,
+                          borderRadius: 99,
+                          padding: '7px 16px',
+                          color: accent,
+                          fontFamily: 'var(--font-serif)',
+                          fontSize: 11,
+                          letterSpacing: '0.1em',
+                          textTransform: 'uppercase',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ☸ New thangka
+                      </button>
+                    )}
                     <div
                       style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 20px' }}
                     >
