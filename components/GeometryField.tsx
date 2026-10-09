@@ -1,11 +1,26 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type CSSProperties, Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+
+import { isOilMode, isShaderVisualMode } from '@/lib/visual-shaders';
+
+import {
+  buildBigBangStars,
+  isBigBangStarMode,
+  TIMER_OFF,
+  updateBigBangStars,
+} from './geometry-bigbang-stars';
+import { buildCymatics, isCymaticsMode, updateCymatics } from './geometry-cymatics';
+import {
+  buildGeometryVisual,
+  isGeometryVisualMode,
+  updateGeometryVisual,
+} from './geometry-visuals';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -92,6 +107,7 @@ type Mode =
   | 'linetunnel3d'
   | 'dotroad'
   | 'tripnumber1'
+  | 'tripnumber1flow'
   | 'tripnumber2'
   | 'tripnumber3'
   | 'buddhaboycurrents'
@@ -138,7 +154,38 @@ type Mode =
   | 'clockorbit3d'
   | 'musicdots'
   | 'musicnebula'
-  | 'musiclattice';
+  | 'musiclattice'
+  // Tunnels — math series you dive into (components/geometry-visuals.ts)
+  | 'drostezoom'
+  | 'twistgate'
+  | 'goldenseed'
+  | 'fouriertube'
+  | 'superrings'
+  | 'shadertunnel'
+  | 'logspiral'
+  // Oils — full-screen liquid shaders
+  | 'oilwarp'
+  | 'ripplefold'
+  | 'thinfilm'
+  | 'twooil'
+  | 'lavalamp'
+  | 'rorschach'
+  // Magnetic Sands 1–4 — cymatics (components/geometry-cymatics.ts)
+  | 'cymatics1'
+  | 'cymatics2'
+  | 'cymatics3'
+  | 'cymatics4'
+  // Waves — rolling, curling linework (lib/visual-shaders.ts)
+  | 'rollingwave'
+  | 'fractalwave'
+  // Thangka — a generated Tibetan mandala with oil moving in its compartments
+  | 'thangka'
+  // Big Bang moments as Stars (components/geometry-bigbang-stars.ts)
+  | 'bbpulse'
+  | 'bbtunnel'
+  | 'bbflower'
+  | 'bbocean'
+  | 'bbfractal';
 
 interface Pal {
   bg0: string;
@@ -164,6 +211,10 @@ interface Cfg {
   danceMove?: DanceMove;
   danceBpm?: number;
   danceAmount?: number;
+  /** Design seed for generated visuals (the Thangka): "New thangka" rolls it. */
+  seed?: number;
+  /** The four colours inside an oil, chosen by the user; unset = from the palette. */
+  oilColors?: string[];
 }
 
 interface Dot {
@@ -965,6 +1016,18 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 2.8,
     stars: 3,
     mode: 'tripnumber1',
+  },
+  'Trip Number 1 Flow': {
+    preset: 'Golden Source',
+    symmetry: 10,
+    complexity: 7.6,
+    glow: 6.8,
+    breathSpeed: 0.34,
+    intensity: 8.4,
+    particles: 9,
+    luminous: 2.8,
+    stars: 3,
+    mode: 'tripnumber1flow',
   },
   'Trip Number 2': {
     preset: 'Amber Dust',
@@ -3354,6 +3417,347 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 3,
     stars: 2,
     mode: 'sinmorph3d',
+  },
+  // ── Tunnels + Oils (docs/specs/math-tunnels-and-liquid-visuals.md) ──
+  'Golden Zoom': {
+    preset: 'Golden Source',
+    symmetry: 6,
+    complexity: 5,
+    glow: 4,
+    breathSpeed: 0.5,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.6,
+    stars: 3,
+    mode: 'drostezoom',
+  },
+  'Twisted Gate': {
+    preset: 'Violet Portal',
+    symmetry: 6,
+    complexity: 4,
+    glow: 6,
+    breathSpeed: 0.45,
+    intensity: 8,
+    particles: 4,
+    luminous: 2.8,
+    stars: 4,
+    mode: 'twistgate',
+  },
+  'Golden Seed Tunnel': {
+    preset: 'Golden Source',
+    symmetry: 8,
+    complexity: 5,
+    glow: 5,
+    breathSpeed: 0.4,
+    intensity: 8,
+    particles: 4,
+    luminous: 2.4,
+    stars: 3,
+    mode: 'goldenseed',
+  },
+  'Fourier Tube': {
+    preset: 'Blue Astral',
+    symmetry: 8,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 0.4,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.6,
+    stars: 4,
+    mode: 'fouriertube',
+  },
+  'Superformula Rings': {
+    preset: 'Cosmic Indigo',
+    symmetry: 5,
+    complexity: 5,
+    glow: 7,
+    breathSpeed: 0.4,
+    intensity: 8,
+    particles: 3,
+    luminous: 2.6,
+    stars: 4,
+    mode: 'superrings',
+  },
+  'Shader Tunnel': {
+    preset: 'Warp Drive',
+    symmetry: 8,
+    complexity: 3,
+    glow: 6,
+    breathSpeed: 0.5,
+    intensity: 7,
+    particles: 3,
+    luminous: 1.8,
+    stars: 0,
+    mode: 'shadertunnel',
+  },
+  'Log Spiral Wormhole': {
+    preset: 'DMT Vision',
+    symmetry: 5,
+    complexity: 4,
+    glow: 5,
+    breathSpeed: 0.4,
+    intensity: 7,
+    particles: 4,
+    luminous: 1.6,
+    stars: 0,
+    mode: 'logspiral',
+  },
+  'Oil Warp': {
+    preset: 'Violet Portal',
+    symmetry: 4,
+    complexity: 6,
+    glow: 3,
+    breathSpeed: 0.35,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'oilwarp',
+  },
+  'Ripple Fold': {
+    preset: 'Deep Crimson',
+    symmetry: 5,
+    complexity: 7,
+    glow: 3,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 4,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'ripplefold',
+  },
+  'Thin Film': {
+    preset: 'Liquid Pearl',
+    symmetry: 4,
+    complexity: 5,
+    glow: 8,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'thinfilm',
+  },
+  'Two Oil Projector': {
+    preset: 'Solar Plasma',
+    symmetry: 4,
+    complexity: 5,
+    glow: 2,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 4,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'twooil',
+  },
+  'Lava Lamp': {
+    preset: 'Deep Crimson',
+    symmetry: 5,
+    complexity: 7,
+    glow: 0,
+    breathSpeed: 0.4,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.9,
+    stars: 0,
+    mode: 'lavalamp',
+    oilColors: ['#1a0505', '#d4301c', '#ffd27a', '#ff7a1a'],
+  },
+  'Rorschach Oils': {
+    preset: 'Violet Portal',
+    symmetry: 2,
+    complexity: 6,
+    glow: 4,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'rorschach',
+  },
+  'Mirror Oils': {
+    preset: 'DMT Vision',
+    symmetry: 6,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'rorschach',
+  },
+  Thangka: {
+    preset: 'Tangka Gold',
+    symmetry: 4,
+    complexity: 5,
+    glow: 2,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 3,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'thangka',
+    seed: 7,
+  },
+  'Thangka Lapis': {
+    preset: 'Tangka Lapis',
+    symmetry: 4,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 3,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'thangka',
+    seed: 23,
+  },
+  'Thangka Crimson': {
+    preset: 'Tangka Crimson',
+    symmetry: 4,
+    complexity: 5,
+    glow: 2,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 3,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'thangka',
+    seed: 41,
+  },
+  Pulse: {
+    preset: 'Amber Dust',
+    symmetry: 14,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbpulse',
+  },
+  'Prism Tunnel': {
+    preset: 'Golden Source',
+    symmetry: 6,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbtunnel',
+  },
+  'Flower Symmetry': {
+    preset: 'Rainbow Mist',
+    symmetry: 8,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbflower',
+  },
+  'Ocean of Life': {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbocean',
+  },
+  'Fractal Break': {
+    preset: 'Amber Dust',
+    symmetry: 14,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbfractal',
+  },
+  'Cymatic Sands 1': {
+    preset: 'Golden Source',
+    symmetry: 6,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'cymatics1',
+  },
+  'Cymatic Sands 2': {
+    preset: 'Pale Gold',
+    symmetry: 6,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'cymatics2',
+  },
+  'Cymatic Sands 3': {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 5,
+    glow: 4,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.4,
+    stars: 3,
+    mode: 'cymatics3',
+  },
+  'Cymatic Sands 4': {
+    preset: 'Violet Portal',
+    symmetry: 6,
+    complexity: 5,
+    glow: 4,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.4,
+    stars: 3,
+    mode: 'cymatics4',
+  },
+  'Rolling Wave': {
+    preset: 'Blue Astral',
+    symmetry: 4,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.5,
+    intensity: 8,
+    particles: 4,
+    luminous: 1.2,
+    stars: 0,
+    mode: 'rollingwave',
+  },
+  'Fractal Wave': {
+    preset: 'Blue Astral',
+    symmetry: 3,
+    complexity: 5,
+    glow: 2,
+    breathSpeed: 0.4,
+    intensity: 8,
+    particles: 3,
+    luminous: 1.2,
+    stars: 0,
+    mode: 'fractalwave',
   },
 };
 
@@ -6243,6 +6647,126 @@ export const JOURNEYS: Journey[] = [
       },
     ],
   },
+  {
+    id: 27,
+    name: 'Oil Projector',
+    icon: 'OIL',
+    desc: 'The liquid light show — warped oils, a soap-film slick, two coloured oils turning in a lens circle, marbled folds, a lava lamp and mirrored Rorschach inkblots, flowing back into the first oil. ~8.5-minute loop.',
+    stages: [
+      {
+        name: 'Oil Warp',
+        preset: 'Violet Portal',
+        mode: 'oilwarp',
+        duration: 70,
+        symmetry: 4,
+        complexity: 6,
+        glow: 3,
+        breathSpeed: 0.35,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Thin Film',
+        preset: 'Liquid Pearl',
+        mode: 'thinfilm',
+        duration: 60,
+        symmetry: 4,
+        complexity: 5,
+        glow: 8,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Two Oils',
+        preset: 'Solar Plasma',
+        mode: 'twooil',
+        duration: 70,
+        symmetry: 4,
+        complexity: 5,
+        glow: 2,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 4,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Ripple Fold',
+        preset: 'Deep Crimson',
+        mode: 'ripplefold',
+        duration: 60,
+        symmetry: 5,
+        complexity: 7,
+        glow: 3,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 4,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Lava Lamp',
+        preset: 'Deep Crimson',
+        mode: 'lavalamp',
+        duration: 70,
+        symmetry: 4,
+        complexity: 6,
+        glow: 3,
+        breathSpeed: 0.35,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.9,
+        stars: 0,
+      },
+      {
+        name: 'Rorschach',
+        preset: 'Violet Portal',
+        mode: 'rorschach',
+        duration: 60,
+        symmetry: 2,
+        complexity: 6,
+        glow: 4,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Mirror Oils',
+        preset: 'DMT Vision',
+        mode: 'rorschach',
+        duration: 60,
+        symmetry: 6,
+        complexity: 6,
+        glow: 4,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Oil Return',
+        preset: 'Violet Portal',
+        mode: 'oilwarp',
+        duration: 60,
+        symmetry: 4,
+        complexity: 6,
+        glow: 3,
+        breathSpeed: 0.35,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+    ],
+  },
 ];
 
 /* ── Particle helpers ───────────────────────────────────────── */
@@ -6522,6 +7046,11 @@ function updateRippleRings(
 /* ── Build + update dispatch ────────────────────────────────── */
 
 function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
+  if (isGeometryVisualMode(cfg.mode)) {
+    return buildGeometryVisual(cfg, PAL[cfg.preset] ?? PAL['Calm Field']);
+  }
+  if (isCymaticsMode(cfg.mode)) return buildCymatics(cfg);
+  if (isBigBangStarMode(cfg.mode)) return buildBigBangStars();
   switch (cfg.mode) {
     case 'burst':
       return buildBurst(cfg, R);
@@ -6647,6 +7176,7 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
 
     case 'embrace':
     case 'tripnumber1':
+    case 'tripnumber1flow':
       return buildDotSymbolField(cfg, R);
     case 'dottunnel':
     case 'swirldottunnel':
@@ -6729,6 +7259,18 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
 }
 
 function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R: number): void {
+  if (isGeometryVisualMode(cfg.mode)) {
+    updateGeometryVisual(group, cfg, PAL[cfg.preset] ?? PAL['Calm Field'], t, R);
+    return;
+  }
+  if (isCymaticsMode(cfg.mode)) {
+    updateCymatics(group, cfg, PAL[cfg.preset] ?? PAL['Calm Field'], t, R);
+    return;
+  }
+  if (isBigBangStarMode(cfg.mode)) {
+    updateBigBangStars(group, cfg, t, R);
+    return;
+  }
   switch (cfg.mode) {
     case 'burst':
       updateBurst(group, cfg, t, R);
@@ -6905,6 +7447,7 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
 
     case 'embrace':
     case 'tripnumber1':
+    case 'tripnumber1flow':
       updateDotSymbolField(group, cfg, t, R);
       break;
     case 'dottunnel':
@@ -11060,9 +11603,17 @@ function buildCurrentTexture(cfg: Cfg, R: number): THREE.Group {
   geo.setAttribute('position', posAttr);
 
   const isNewSandMode = cfg.mode === 'eclipse' || cfg.mode === 'gravity' || cfg.mode === 'fire';
+  // Magnetic Sand moves a fraction of a pixel per frame at its slow speed; a
+  // 1.55px dot snaps pixel to pixel there, a 2px soft dot glides between them.
   const pointSize =
-    cfg.mode === 'fire' ? 2.8 : cfg.mode === 'eclipse' || cfg.mode === 'gravity' ? 2.25 : 1.55;
-  const pointOpacity = isNewSandMode ? 0.86 : 0.7;
+    cfg.mode === 'fire'
+      ? 2.8
+      : cfg.mode === 'eclipse' || cfg.mode === 'gravity'
+        ? 2.25
+        : cfg.mode === 'magneticsand'
+          ? 2
+          : 1.55;
+  const pointOpacity = isNewSandMode ? 0.86 : cfg.mode === 'magneticsand' ? 0.6 : 0.7;
   const pts = new THREE.Points(
     geo,
     circlePtsMat(hdrColor([rr, gg, bb], iF, isNewSandMode ? 3.1 : 2.45), pointSize, pointOpacity),
@@ -11119,6 +11670,7 @@ function buildCurrentTexture(cfg: Cfg, R: number): THREE.Group {
       ring.scale.setScalar(hollow);
       ring.userData.tag = 'currentTextureAnchor';
       ring.userData.baseScale = [hollow, hollow];
+      ring.userData.gravitySide = side;
       group.add(ring);
     }
   } else if (cfg.mode === 'fire') {
@@ -11169,6 +11721,23 @@ function buildCurrentTexture(cfg: Cfg, R: number): THREE.Group {
   }
 
   return group;
+}
+
+// Gravity's two cores: where they started (±0.32R, ∓0.06R), slowly orbiting
+// the centre as a pair so the circles between them keep turning.
+const GRAVITY_CORE_ANGLE = Math.atan2(-0.06, 0.32);
+const GRAVITY_CORE_DIST = Math.hypot(0.32, 0.06);
+export function gravityCores(
+  tSlow: number,
+  R: number,
+): [{ x: number; y: number }, { x: number; y: number }] {
+  const a = GRAVITY_CORE_ANGLE + tSlow * 0.08;
+  const x = Math.cos(a) * GRAVITY_CORE_DIST * R;
+  const y = Math.sin(a) * GRAVITY_CORE_DIST * R;
+  return [
+    { x, y },
+    { x: -x, y: -y },
+  ];
 }
 
 function currentTextureVector(
@@ -11236,22 +11805,21 @@ function currentTextureVector(
   }
 
   if (mode === 'gravity') {
-    const coreA = { x: R * 0.32, y: -R * 0.06 };
-    const coreB = { x: -R * 0.32, y: R * 0.06 };
-    const da = Math.hypot(x - coreA.x, y - coreA.y);
-    const db = Math.hypot(x - coreB.x, y - coreB.y);
-    const core = da <= db ? coreA : coreB;
-    const dx = x - core.x;
-    const dy = y - core.y;
-    const d = Math.sqrt(dx * dx + dy * dy) + 1;
-    const swirlDir = core === coreA ? 1 : -1;
-    const pull =
-      core === coreA ? { x: coreB.x - x, y: coreB.y - y } : { x: coreA.x - x, y: coreA.y - y };
-    const pd = Math.hypot(pull.x, pull.y) + 1;
-    const orbit = 0.78 + Math.sin(tSlow * 0.5 + d * 0.014) * 0.1;
+    // Like the original Magnetic Sand: sand runs along the circles of two
+    // magnetic poles (here the two hollow cores), which slowly orbit each other.
+    const [coreA, coreB] = gravityCores(tSlow, R);
+    const ax = x - coreA.x;
+    const ay = y - coreA.y;
+    const bx = x - coreB.x;
+    const by = y - coreB.y;
+    const a2 = ax * ax + ay * ay + R * 9;
+    const b2 = bx * bx + by * by + R * 9;
+    const fx = ax / a2 - bx / b2;
+    const fy = ay / a2 - by / b2;
+    const angle = Math.atan2(fy, fx) + Math.PI / 2;
     return {
-      x: (-dy / d) * orbit * swirlDir + (pull.x / pd) * 0.16,
-      y: (dx / d) * orbit * swirlDir + (pull.y / pd) * 0.16,
+      x: Math.cos(angle) * 0.85 + Math.sin(y * 0.015 + tSlow) * 0.15,
+      y: Math.sin(angle) * 0.85 + Math.cos(x * 0.015 - tSlow) * 0.15,
     };
   }
 
@@ -11465,8 +12033,7 @@ function updateCurrentTexture(group: THREE.Group, cfg: Cfg, t: number, R: number
           Math.abs(nx) > R * (0.14 + 0.5 * fireTaper) ||
           Math.random() < 0.002);
       const r2 = nx * nx + ny * ny;
-      const gravityCoreA = { x: R * 0.32, y: -R * 0.06 };
-      const gravityCoreB = { x: -R * 0.32, y: R * 0.06 };
+      const [gravityCoreA, gravityCoreB] = gravityCores(tSlow, R);
       const gravityHollow = R * (0.13 + cfg.glow * 0.008);
       const tooCloseToGravityCore =
         cfg.mode === 'gravity' &&
@@ -11531,6 +12098,12 @@ function updateCurrentTexture(group: THREE.Group, cfg: Cfg, t: number, R: number
       const [sx, sy] = child.userData.baseScale as [number, number];
       const pulse = 1 + Math.sin(t * 0.0011 * speed) * 0.025;
       child.scale.set(sx * pulse, sy * pulse, 1);
+      const side = child.userData.gravitySide as number | undefined;
+      if (side !== undefined) {
+        // The hollow rings ride on the moving cores.
+        const [core] = gravityCores(t * 0.00055 * speed, R);
+        child.position.set(core.x * side, core.y * side, 0.02);
+      }
       updateMat(child, baseRgb, iF, 2.55);
     } else if (tag === 'eclipseCorona') {
       const pts = child as THREE.Points;
@@ -13163,6 +13736,16 @@ const DEFAULT_SLIDERS: SliderDef[] = [
   { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
 ];
 
+const CYMATIC_SLIDERS: SliderDef[] = [
+  { key: 'complexity', label: 'Frequency', min: 1, max: 10, step: 0.5 },
+  { key: 'breathSpeed', label: 'Loop Speed', min: 0.05, max: 1.5, step: 0.05 },
+  { key: 'glow', label: 'Rainbow', min: 0, max: 10, step: 0.5 },
+  { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+  { key: 'particles', label: 'Sand', min: 0, max: 10, step: 1 },
+  { key: 'luminous', label: 'Grain Size', min: 0, max: 5, step: 0.1 },
+  { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+];
+
 const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
   flowfield: [
     { key: 'symmetry', label: 'Gravity Wells', min: 4, max: 24, step: 1 },
@@ -13660,6 +14243,15 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'particles', label: 'Dots', min: 1, max: 10, step: 1 },
     { key: 'luminous', label: 'Bloom', min: 0, max: 5, step: 0.1 },
   ],
+  // No Sacred Count: it only shaped the sliced petals the Flow trip leaves out.
+  tripnumber1flow: [
+    { key: 'complexity', label: 'Metamorphosis', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Void / Bloom', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Trip Speed', min: 0.05, max: 1.2, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Dots', min: 1, max: 10, step: 1 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 5, step: 0.1 },
+  ],
   tripnumber2: [
     { key: 'symmetry', label: 'Mirrors', min: 3, max: 14, step: 1 },
     { key: 'complexity', label: 'Desert Chaos', min: 1, max: 10, step: 0.5 },
@@ -13715,7 +14307,115 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'luminous', label: 'Bloom', min: 0, max: 5, step: 0.1 },
     { key: 'complexity', label: 'Density', min: 1, max: 10, step: 1 },
   ],
+  // Tunnels
+  drostezoom: visualSliders(['Sides', 3, 16], ['Density', 1, 10], 'Twist'),
+  twistgate: visualSliders(['Sides', 3, 16], ['Twist', 0, 10], 'Curve'),
+  goldenseed: visualSliders(['Arms', 3, 16], ['Winding', 0, 10], 'Curve'),
+  fouriertube: visualSliders(['Ribs', 3, 16], ['Wobble', 0, 10], 'Curve'),
+  superrings: visualSliders(['Points', 3, 16], ['Morph', 0, 10], 'Curve'),
+  shadertunnel: visualSliders(['Ribs', 1, 16], ['Twist', 0, 10], 'Core'),
+  logspiral: visualSliders(['Arms', 1, 12], ['Wind', 0, 10], 'Core'),
+  // Oils
+  oilwarp: oilSliders(['Zoom', 1, 12], ['Detail', 2, 8], 'Warp', 'Rainbow'),
+  ripplefold: oilSliders(['Zoom', 1, 12], ['Folds', 1, 10], 'Waves', 'Rainbow'),
+  thinfilm: oilSliders(['Zoom', 1, 12], ['Detail', 2, 8], 'Warp', 'Iridescence'),
+  twooil: oilSliders(['Zoom', 1, 12], ['Detail', 2, 7], 'Swirl', 'Rainbow'),
+  lavalamp: oilSliders(['Blob Size', 1, 12], ['Blobs', 1, 10], 'Heat', 'Rainbow'),
+  // Magnetic Sands 1–4 (cymatics): no symmetry; the plate's own modes set it.
+  cymatics1: CYMATIC_SLIDERS,
+  cymatics2: CYMATIC_SLIDERS,
+  cymatics3: CYMATIC_SLIDERS,
+  cymatics4: CYMATIC_SLIDERS,
+  rollingwave: visualSliders(['Waves', 2, 6], ['Lines', 1, 10], 'Texture', 'Speed', 3),
+  fractalwave: visualSliders(['Claws', 1, 6], ['Depth', 1, 10], 'Texture', 'Speed', 3),
+  bbpulse: bigBangSliders('Folds', 4, 24),
+  bbtunnel: bigBangSliders('Prisms', 3, 9),
+  bbflower: bigBangSliders('Petals', 3, 34),
+  bbocean: bigBangSliders(null),
+  bbfractal: bigBangSliders('Folds', 4, 24),
+  thangka: [
+    { key: 'breathSpeed', label: 'Flow', min: 0.05, max: 1.5, step: 0.05 },
+    { key: 'complexity', label: 'Detail', min: 2, max: 7, step: 0.5 },
+    { key: 'particles', label: 'Gold', min: 0, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Rainbow', min: 0, max: 10, step: 0.5 },
+    { key: 'intensity', label: 'Light', min: 1, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
+  ],
+  rorschach: oilSliders(['Mirrors', 2, 12], ['Detail', 2, 8], 'Spread', 'Rainbow'),
 };
+
+// Shared slider shape for the Tunnels and Oils families: Glow is the
+// rainbow mix, Particles is the mode's extra (curve, core, swirl).
+function visualSliders(
+  [symLabel, symMin, symMax]: [string, number, number],
+  [cxLabel, cxMin, cxMax]: [string, number, number],
+  extraLabel: string,
+  speedLabel = 'Speed',
+  bloomMax = 5,
+): SliderDef[] {
+  return [
+    { key: 'symmetry', label: symLabel, min: symMin, max: symMax, step: 1 },
+    { key: 'complexity', label: cxLabel, min: cxMin, max: cxMax, step: 0.5 },
+    { key: 'glow', label: 'Rainbow', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: speedLabel, min: 0.05, max: 1.5, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: extraLabel, min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: bloomMax, step: 0.1 },
+    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+  ];
+}
+
+// Oils: Flow first (it is what you reach for), then shape, detail, the oil's own
+// extra, colour shift, light and bloom. No Stars: an oil is a liquid surface.
+function oilSliders(
+  [shapeLabel, shapeMin, shapeMax]: [string, number, number],
+  [detailLabel, detailMin, detailMax]: [string, number, number],
+  extraLabel: string,
+  shiftLabel: string,
+): SliderDef[] {
+  return [
+    { key: 'breathSpeed', label: 'Flow', min: 0.05, max: 1.5, step: 0.05 },
+    { key: 'symmetry', label: shapeLabel, min: shapeMin, max: shapeMax, step: 1 },
+    { key: 'complexity', label: detailLabel, min: detailMin, max: detailMax, step: 0.5 },
+    { key: 'particles', label: extraLabel, min: 0, max: 10, step: 0.5 },
+    { key: 'glow', label: shiftLabel, min: 0, max: 10, step: 0.5 },
+    { key: 'intensity', label: 'Light', min: 1, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
+  ];
+}
+
+/*
+ * OIL COLOURS. Each oil is painted from four colours, in this order: the
+ * liquid (ground), the first oil, the light, the second oil. A palette sets all
+ * four; each can then be changed on its own. Chosen colours stay when you move
+ * from one oil to another.
+ */
+export const OIL_COLOUR_ROLES = ['Liquid', 'Oil 1', 'Light', 'Oil 2'] as const;
+export const OIL_PALETTES: { name: string; colors: [string, string, string, string] }[] = [
+  { name: 'Lava', colors: ['#1a0505', '#d4301c', '#ffd27a', '#ff7a1a'] },
+  { name: 'Ocean', colors: ['#020c1a', '#0e6e9a', '#d8f4ff', '#18b8a8'] },
+  { name: 'Psychedelic', colors: ['#12021e', '#b21fd6', '#f8ff8a', '#18e0c8'] },
+  { name: 'Sunset', colors: ['#140820', '#d8456e', '#ffd48a', '#ff8a3c'] },
+  { name: 'Forest', colors: ['#03100a', '#2f7a3c', '#f2e6b0', '#b89a2a'] },
+  { name: 'Gold', colors: ['#120a02', '#a8741c', '#fff0c0', '#e0b040'] },
+  { name: 'Tangka', colors: ['#0a0614', '#1f4fa8', '#f6c64a', '#c0262e'] },
+  { name: 'Rose', colors: ['#160610', '#c23a74', '#ffe0ec', '#f08aa8'] },
+  { name: 'Mono', colors: ['#050505', '#6a6a72', '#f4f4f6', '#a8a8b0'] },
+];
+
+// Big Bang moments: their shape count, the Timer (fully left = off; 10–30 s =
+// explode and gather back on that rhythm), speed, light, dots, glow, stars.
+function bigBangSliders(shape: string | null, min = 3, max = 24): SliderDef[] {
+  return [
+    ...(shape ? [{ key: 'symmetry' as const, label: shape, min, max, step: 1 }] : []),
+    { key: 'complexity', label: 'Timer', min: 9, max: 30, step: 1 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.2, max: 2, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 1, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Dots', min: 0, max: 10, step: 1 },
+    { key: 'luminous', label: 'Glow', min: 0, max: 5, step: 0.1 },
+    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+  ];
+}
 
 function slidersFor(mode: Mode): SliderDef[] {
   return MODE_SLIDERS[mode] ?? DEFAULT_SLIDERS;
@@ -13804,6 +14504,7 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   dotroad: 'Dot Road',
 
   tripnumber1: 'Trip Number 1',
+  tripnumber1flow: 'Trip Number 1 Flow',
   tripnumber2: 'Trip Number 2',
   tripnumber3: 'Trip Number 3',
   buddhaboycurrents: 'Buddha Boy Currents',
@@ -13834,6 +14535,31 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   infinitedive: 'Infinite Dive',
   clockorbit3d: 'Clock Orbit',
   chaostrisphere: 'Chaos Tri Sphere',
+  drostezoom: 'Golden Zoom',
+  twistgate: 'Twisted Gate',
+  goldenseed: 'Golden Seed Tunnel',
+  fouriertube: 'Fourier Tube',
+  superrings: 'Superformula Rings',
+  shadertunnel: 'Shader Tunnel',
+  logspiral: 'Log Spiral Wormhole',
+  oilwarp: 'Oil Warp',
+  ripplefold: 'Ripple Fold',
+  thinfilm: 'Thin Film',
+  twooil: 'Two Oil Projector',
+  lavalamp: 'Lava Lamp',
+  rorschach: 'Rorschach Oils',
+  thangka: 'Thangka',
+  bbpulse: 'Pulse',
+  bbtunnel: 'Prism Tunnel',
+  bbflower: 'Flower Symmetry',
+  bbocean: 'Ocean of Life',
+  bbfractal: 'Fractal Break',
+  cymatics1: 'Cymatic Sands 1',
+  cymatics2: 'Cymatic Sands 2',
+  cymatics3: 'Cymatic Sands 3',
+  cymatics4: 'Cymatic Sands 4',
+  rollingwave: 'Rolling Wave',
+  fractalwave: 'Fractal Wave',
 };
 
 const MODES: { mode: Mode; label: string }[] = [
@@ -13945,6 +14671,7 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'dotroad', label: 'Dot Road' },
 
   { mode: 'tripnumber1', label: 'Trip Number 1' },
+  { mode: 'tripnumber1flow', label: 'Trip Number 1 Flow' },
   { mode: 'tripnumber2', label: 'Trip Number 2' },
   { mode: 'tripnumber3', label: 'Trip Number 3' },
   { mode: 'buddhaboycurrents', label: 'Buddha Boy Currents' },
@@ -13966,7 +14693,161 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'entropy', label: '⋮ Entropy' },
   { mode: 'entropy3d', label: '⋮³ Entropy 3D' },
   { mode: 'embf3d', label: '◎ EMBF 3D' },
+  { mode: 'drostezoom', label: 'φ Golden Zoom' },
+  { mode: 'twistgate', label: '⬡ Twisted Gate' },
+  { mode: 'goldenseed', label: 'φ Seed Tunnel' },
+  { mode: 'fouriertube', label: '∿ Fourier Tube' },
+  { mode: 'superrings', label: '✦ Superformula' },
+  { mode: 'shadertunnel', label: '⊙ Shader Tunnel' },
+  { mode: 'logspiral', label: '@ Log Spiral' },
+  { mode: 'oilwarp', label: '〰 Oil Warp' },
+  { mode: 'ripplefold', label: '〰 Ripple Fold' },
+  { mode: 'thinfilm', label: '◌ Thin Film' },
+  { mode: 'twooil', label: '◐ Two Oils' },
+  { mode: 'lavalamp', label: '● Lava Lamp' },
+  { mode: 'rorschach', label: '⧓ Rorschach' },
+  { mode: 'thangka', label: '☸ Thangka' },
+  { mode: 'bbpulse', label: '✦ Pulse' },
+  { mode: 'bbtunnel', label: '△ Prism Tunnel' },
+  { mode: 'bbflower', label: '✿ Flower Symmetry' },
+  { mode: 'bbocean', label: '∿ Ocean of Life' },
+  { mode: 'bbfractal', label: '△ Fractal Break' },
+  { mode: 'cymatics1', label: '◎ Cymatic Sands 1' },
+  { mode: 'cymatics2', label: '⊞ Cymatic Sands 2' },
+  { mode: 'cymatics3', label: '◎³ Cymatic Sands 3' },
+  { mode: 'cymatics4', label: '◉³ Cymatic Sands 4' },
+  { mode: 'rollingwave', label: '∿ Rolling Wave' },
+  { mode: 'fractalwave', label: '@ Fractal Wave' },
 ];
+
+/*
+ * ART TABS. The panel's programs come in four families, one tab each:
+ * Stars (drawn with dots), Geometry (drawn with lines), Tunnels (every visual
+ * you fly into) and Oils (the liquid shaders). Stars and Geometry come from the
+ * same builder; the split is how a preset is drawn. Sorted 2026-10-08 by
+ * reading each mode's build/draw code for points versus lines.
+ */
+export type ArtTab = 'stars' | 'geometry' | 'tunnels' | 'oils';
+export const ART_TABS: { id: ArtTab; label: string }[] = [
+  { id: 'stars', label: 'Stars' },
+  { id: 'geometry', label: 'Geometry' },
+  { id: 'tunnels', label: 'Tunnels' },
+  { id: 'oils', label: 'Oils' },
+];
+const TUNNEL_TAB_MODES = new Set<Mode>([
+  'tunnel',
+  'linetunnel3d',
+  'dottunnel',
+  'swirldottunnel',
+  'dotroad',
+  'mirrortunnel',
+  'infinitedive',
+  'drostezoom',
+  'twistgate',
+  'goldenseed',
+  'fouriertube',
+  'superrings',
+  'shadertunnel',
+  'logspiral',
+]);
+const STAR_TAB_MODES = new Set<Mode>([
+  'atomicexplosion',
+  'atomlight',
+  'breath',
+  'buddhaboycurrents',
+  'cells',
+  'clifford',
+  'clockorbit3d',
+  'constellation',
+  'current',
+  'current3d',
+  'currentscales',
+  'cyclonetiles',
+  'cymatics1',
+  'cymatics2',
+  'cymatics3',
+  'cymatics4',
+  'dotalchemicalsun',
+  'dotbrain',
+  'dotheart',
+  'dotphoenix',
+  'dotsunfire',
+  'dotsunoutward',
+  'dotwalker',
+  'drift',
+  'eclipse',
+  'eddylace',
+  'embf3d',
+  'embrace',
+  'entropy',
+  'fire',
+  'flowbutterfly',
+  'flowdance',
+  'flowfield',
+  'flowlines',
+  'flowsacred',
+  'flowsands',
+  'flowwalkers',
+  'globe',
+  'gravity',
+  'liquid',
+  'lorenz',
+  'magneticsand',
+  'matrix',
+  'matrix3d',
+  'missionsun',
+  'musicdots',
+  'musiclattice',
+  'musicnebula',
+  'nebula',
+  'neuronweb',
+  'orbit',
+  'plasma',
+  'prism',
+  'prism3d',
+  'pulse',
+  'scriptures',
+  'scripturesjp',
+  'sinmorph3d',
+  'touchpreset',
+  'tripnumber1',
+  'tripnumber1flow',
+  'tripnumber2',
+  'volcano',
+  'wordparticle',
+  'yinyang',
+  'bbpulse',
+  'bbtunnel',
+  'bbflower',
+  'bbocean',
+  'bbfractal',
+]);
+export function artTabOf(mode: Mode): ArtTab {
+  if (isOilMode(mode)) return 'oils';
+  if (TUNNEL_TAB_MODES.has(mode)) return 'tunnels';
+  if (STAR_TAB_MODES.has(mode)) return 'stars';
+  return 'geometry';
+}
+
+/** The featured list for one tab: its presets, under the headers that still have any. */
+export function featuredFor(tab: ArtTab): FeaturedItem[] {
+  const out: FeaturedItem[] = [];
+  let header: FeaturedItem | null = null;
+  for (const item of FEATURED_PRESETS) {
+    if ('header' in item) {
+      header = item;
+      continue;
+    }
+    const p = PRESETS[item.name];
+    if (!p || artTabOf(p.mode) !== tab) continue;
+    if (header) {
+      out.push(header);
+      header = null;
+    }
+    out.push(item);
+  }
+  return out;
+}
 
 type FeaturedItem = { name: string; tag: string } | { header: string; dim?: boolean };
 
@@ -13975,6 +14856,7 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Magnetic Sand', tag: 'CURRENT' },
   { name: 'Dot Walker', tag: 'CHAR' },
   { name: 'Trip Number 1', tag: 'TRIP' },
+  { name: 'Trip Number 1 Flow', tag: 'TRIP' },
   { name: 'Trip Number 2', tag: 'DROP' },
   { name: 'Trip Number 3', tag: 'TRI' },
   { name: 'Flow Field', tag: 'FLOW' },
@@ -14053,6 +14935,39 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Dot Tunnel', tag: 'DEPTH' },
   { name: 'Random Burst', tag: 'CHAOS' },
   { name: 'Starflow Galaxy', tag: 'MUSIC' },
+  { header: 'Tunnels' },
+  { name: 'Golden Zoom', tag: 'ZOOM' },
+  { name: 'Twisted Gate', tag: 'GATE' },
+  { name: 'Golden Seed Tunnel', tag: 'SEED' },
+  { name: 'Fourier Tube', tag: 'TUBE' },
+  { name: 'Superformula Rings', tag: 'RINGS' },
+  { name: 'Shader Tunnel', tag: 'SHADER' },
+  { name: 'Log Spiral Wormhole', tag: 'SPIRAL' },
+  { header: 'Oils' },
+  { name: 'Oil Warp', tag: 'OIL' },
+  { name: 'Ripple Fold', tag: 'OIL' },
+  { name: 'Thin Film', tag: 'OIL' },
+  { name: 'Two Oil Projector', tag: 'OIL' },
+  { name: 'Lava Lamp', tag: 'OIL' },
+  { name: 'Rorschach Oils', tag: 'MIRROR' },
+  { name: 'Mirror Oils', tag: 'MIRROR' },
+  { name: 'Thangka', tag: 'MANDALA' },
+  { name: 'Thangka Lapis', tag: 'MANDALA' },
+  { name: 'Thangka Crimson', tag: 'MANDALA' },
+  { header: 'Big Bang' },
+  { name: 'Pulse', tag: 'SAND' },
+  { name: 'Fractal Break', tag: 'FRACTAL' },
+  { name: 'Flower Symmetry', tag: 'FLOWER' },
+  { name: 'Prism Tunnel', tag: 'TUNNEL' },
+  { name: 'Ocean of Life', tag: 'LIFE' },
+  { header: 'Magnetic Sands' },
+  { name: 'Cymatic Sands 1', tag: 'CIRCLE' },
+  { name: 'Cymatic Sands 2', tag: 'SQUARE' },
+  { name: 'Cymatic Sands 3', tag: '3D' },
+  { name: 'Cymatic Sands 4', tag: 'SPHERE' },
+  { header: 'Waves' },
+  { name: 'Rolling Wave', tag: 'FREE' },
+  { name: 'Fractal Wave', tag: 'HOKUSAI' },
   { header: 'In Progress / To Develop', dim: true },
   { name: 'Chrysalis', tag: 'MORPH' },
   { name: 'Metamorph', tag: 'MORPH' },
@@ -15225,9 +16140,11 @@ const FLOW_MOVEMENTS_DANCE = [
 ];
 
 // Magnetic Sands 2 — a long, sandy game of chaos and order: dense dots melt
-// from waves to ripples to a vortex, fold through figure-8 dunes, and re-form.
+// from ripples to rose rings, a vortex and the seed of life, fold through
+// figure-8 dunes, and re-form. Every act is circular and symmetric (the old
+// horizontal sine "sand waves" act broke the circular flow, so it is gone).
 // High wob gives the grainy banding; two lemniscate acts give the double loop.
-function flowSandsFormation(
+export function flowSandsFormation(
   f: number,
   i: number,
   hx: number,
@@ -15247,13 +16164,23 @@ function flowSandsFormation(
     const a = (u2 * nR - ring) * Math.PI * 2 + ga * 0.15;
     return [Math.cos(a) * rr, Math.sin(a) * rr];
   }
-  if (f === 1) {
-    // Sand waves — horizontal flowing bands
-    const rows = 9;
-    const row = Math.floor(u * rows);
-    const fx = (((i * 0.61803398875) % 1) - 0.5) * R * 1.9;
-    const fy = ((row + 0.5) / rows - 0.5) * R * 1.7 + Math.sin((fx / R) * 3) * R * 0.12;
-    return [fx, fy];
+  if (f === 6) {
+    // Rose rings — concentric rings, each with six soft petals
+    const nR = 8;
+    const ring = Math.floor(u * nR);
+    const a = (u * nR - ring) * Math.PI * 2;
+    const rr = ((ring + 0.55) / nR) * R * 0.88 * (1 + 0.1 * Math.cos(6 * a + ring * 0.5));
+    return [Math.cos(a) * rr, Math.sin(a) * rr];
+  }
+  if (f === 7) {
+    // Seed of life — seven full circles: one centred, six around it
+    const c = i % 7;
+    const cr = R * 0.42;
+    const ca = (c / 6) * Math.PI * 2;
+    const cx = c === 0 ? 0 : Math.cos(ca) * cr;
+    const cy = c === 0 ? 0 : Math.sin(ca) * cr;
+    const a = ((i * 0.61803398875) % 1) * Math.PI * 2;
+    return [cx + Math.cos(a) * cr, cy + Math.sin(a) * cr];
   }
   if (f === 2) {
     // Ripple rings — dense concentric bands
@@ -15281,18 +16208,18 @@ function flowSandsFormation(
 }
 
 // 12 acts (~15 min) — long enough to keep surprising guests.
-const FLOW_MOVEMENTS_SANDS = [
+export const FLOW_MOVEMENTS_SANDS = [
   { form: 5, spring: 0.05, swirl: 0.4, flow: 0.6, breath: 0.3, wob: 0.5 },
-  { form: 1, spring: 0.06, swirl: 0.25, flow: 0.5, breath: 0.25, wob: 0.7 },
+  { form: 6, spring: 0.06, swirl: 0.25, flow: 0.5, breath: 0.25, wob: 0.7 }, // rose rings
   { form: 2, spring: 0.07, swirl: 0.3, flow: 0.45, breath: 0.2, wob: 0.9 },
   { form: 4, spring: 0.05, swirl: 0.7, flow: 0.7, breath: 0.35, wob: 0.4 }, // double loop
   { form: 3, spring: 0.05, swirl: 0.9, flow: 0.75, breath: 0.3, wob: 0.3 },
-  { form: 1, spring: 0.06, swirl: 0.3, flow: 0.55, breath: 0.3, wob: 0.8 },
+  { form: 7, spring: 0.06, swirl: 0.3, flow: 0.55, breath: 0.3, wob: 0.8 }, // seed of life
   { form: 5, spring: 0.05, swirl: 0.5, flow: 0.6, breath: 0.4, wob: 0.5 },
   { form: 4, spring: 0.05, swirl: 0.8, flow: 0.72, breath: 0.35, wob: 0.4 }, // double loop
   { form: 2, spring: 0.07, swirl: 0.35, flow: 0.5, breath: 0.25, wob: 0.95 },
   { form: 3, spring: 0.05, swirl: 1.0, flow: 0.8, breath: 0.3, wob: 0.3 },
-  { form: 1, spring: 0.06, swirl: 0.28, flow: 0.5, breath: 0.25, wob: 0.7 },
+  { form: 6, spring: 0.06, swirl: 0.28, flow: 0.5, breath: 0.25, wob: 0.7 }, // rose rings
   { form: 5, spring: 0.05, swirl: 0.45, flow: 0.6, breath: 0.35, wob: 0.5 },
 ];
 
@@ -15539,6 +16466,7 @@ function updateFlowField(group: THREE.Group, cfg: Cfg, t: number, R: number): vo
     const wobW = lerp(MA.wob, MB.wob, mf);
     const formA = MA.form;
     const formB = MB.form;
+    const symmetricSands = cfg.mode === 'flowsands';
     const hueCycle = (mClock * 0.1) % 1;
 
     for (let i = 0; i < FLOW_FIELD_COUNT; i++) {
@@ -15560,15 +16488,29 @@ function updateFlowField(group: THREE.Group, cfg: Cfg, t: number, R: number): vo
       let tx = bx * ca - by * sa;
       let ty = bx * sa + by * ca;
 
-      // Organic flow drift of the target, weighted by the movement.
-      tx += Math.sin(ty * 0.011 + ph * 2 + s0 * 6) * R * 0.07 * turb * flowW;
-      ty += Math.cos(tx * 0.011 - ph * 2 + s0 * 6) * R * 0.07 * turb * flowW;
+      // Organic flow drift of the target, weighted by the movement. Magnetic
+      // Sands 2 drifts only in and out, so its rings stay round and whole.
+      if (symmetricSands) {
+        const dr = Math.hypot(tx, ty) + 0.0001;
+        const k = 1 + Math.sin((dr / R) * 5 - ph * 2 + s0 * 0.6) * 0.05 * turb * flowW;
+        tx *= k;
+        ty *= k;
+      } else {
+        tx += Math.sin(ty * 0.011 + ph * 2 + s0 * 6) * R * 0.07 * turb * flowW;
+        ty += Math.cos(tx * 0.011 - ph * 2 + s0 * 6) * R * 0.07 * turb * flowW;
+      }
 
       // Gravity wells orbiting on ellipses — swirl the target locally (eddies).
+      // Magnetic Sands 2 spaces them evenly on one circle, so every eddy has a
+      // twin and no ring is dragged open into a C.
       for (let k = 0; k < wells; k++) {
-        const kp = ph * (0.6 + k * 0.27) + (k / wells) * Math.PI * 2;
-        const gx = Math.cos(kp) * R * (0.34 + 0.1 * k);
-        const gy = Math.sin(kp * 1.3) * R * (0.2 + 0.06 * k);
+        const kp = symmetricSands
+          ? ph * 0.6 + (k / wells) * Math.PI * 2
+          : ph * (0.6 + k * 0.27) + (k / wells) * Math.PI * 2;
+        const gx = Math.cos(kp) * R * (symmetricSands ? 0.42 : 0.34 + 0.1 * k);
+        const gy = symmetricSands
+          ? Math.sin(kp) * R * 0.42
+          : Math.sin(kp * 1.3) * R * (0.2 + 0.06 * k);
         const dx = tx - gx;
         const dy = ty - gy;
         const d2 = dx * dx + dy * dy + R * R * 0.02;
@@ -15859,6 +16801,13 @@ function buildDotSymbolField(cfg: Cfg, R: number): THREE.Group {
   return group;
 }
 
+// Trip Number 1 cycles ten dot shapes. The Flow variant drops the two that
+// cut the field into pieces — 6 (petals sliced into sectors) and 7 (stacked
+// ring slices) — so it only flows: eye, burst, twin swirl, spiral, sun,
+// butterfly, tunnel, heart.
+const TRIP1_SHAPES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+export const TRIP1_FLOW_SHAPES = [0, 1, 2, 3, 4, 5, 8, 9];
+
 function updateDotSymbolField(group: THREE.Group, cfg: Cfg, t: number, R: number): void {
   const pal = PAL[cfg.preset] ?? PAL['Golden Source'];
   const phase = t * 0.001 * cfg.breathSpeed;
@@ -16125,9 +17074,10 @@ function updateDotSymbolField(group: THREE.Group, cfg: Cfg, t: number, R: number
           (centerY + ry * bodyBreath) * Math.cos(orbit) +
           Math.sin(a - phase) * swirl;
         z = Math.sin(phase * 1.25 + a + w * TAU) * R * (0.025 + cfg.luminous * 0.006);
-      } else if (i < dotLimit && cfg.mode === 'tripnumber1') {
+      } else if (i < dotLimit && (cfg.mode === 'tripnumber1' || cfg.mode === 'tripnumber1flow')) {
         const journey = (phase * 0.052) % 1;
-        const totalPhases = 10;
+        const shapes = cfg.mode === 'tripnumber1flow' ? TRIP1_FLOW_SHAPES : TRIP1_SHAPES;
+        const totalPhases = shapes.length;
         const raw = journey * totalPhases;
         const stage = Math.floor(raw) % totalPhases;
         const blend = smoothstep(raw - Math.floor(raw));
@@ -16242,8 +17192,8 @@ function updateDotSymbolField(group: THREE.Group, cfg: Cfg, t: number, R: number
           ];
         };
 
-        const p1 = shapePoint(stage);
-        const p2 = shapePoint((stage + 1) % totalPhases);
+        const p1 = shapePoint(shapes[stage]);
+        const p2 = shapePoint(shapes[(stage + 1) % totalPhases]);
         x = lerp(p1[0], p2[0], blend);
         y = lerp(p1[1], p2[1], blend);
         z = lerp(p1[2], p2[2], blend);
@@ -16729,6 +17679,142 @@ function updateTriangleYantraTrip(group: THREE.Group, cfg: Cfg, t: number, R: nu
 
 const BUDDHA_BOY_POINTS = 1700;
 const BUDDHA_BOY_TIDE_POINTS = 900;
+/** The colours inside an oil: palette chips, then each of the four colours on its own. */
+function OilColours({
+  colors,
+  accent,
+  accentMid,
+  dim,
+  onChange,
+}: {
+  colors: string[] | undefined;
+  accent: string;
+  accentMid: string;
+  dim: string;
+  onChange: (colors: string[] | undefined) => void;
+}) {
+  const current = colors ?? null;
+  const label: CSSProperties = {
+    fontFamily: 'var(--font-serif)',
+    fontSize: 9,
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    color: dim,
+  };
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      <span style={label}>Colours</span>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <button
+          type="button"
+          onClick={() => onChange(undefined)}
+          aria-pressed={!current}
+          style={{
+            border: `1px solid ${!current ? accent : accentMid}`,
+            borderRadius: 99,
+            background: 'transparent',
+            color: accent,
+            fontFamily: 'var(--font-serif)',
+            fontSize: 10,
+            padding: '5px 10px',
+            cursor: 'pointer',
+          }}
+        >
+          Preset
+        </button>
+        {OIL_PALETTES.map((p) => {
+          const on = current?.join() === p.colors.join();
+          return (
+            <button
+              type="button"
+              key={p.name}
+              onClick={() => onChange([...p.colors])}
+              aria-pressed={on}
+              title={p.name}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                border: `1px solid ${on ? accent : accentMid}`,
+                borderRadius: 99,
+                background: 'transparent',
+                color: accent,
+                fontFamily: 'var(--font-serif)',
+                fontSize: 10,
+                padding: '4px 9px 4px 5px',
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ display: 'inline-flex' }}>
+                {p.colors.map((c, i) => (
+                  <span
+                    key={`${p.name}-${i}`}
+                    style={{
+                      width: 11,
+                      height: 11,
+                      borderRadius: 99,
+                      background: c,
+                      marginLeft: i ? -3 : 0,
+                      boxShadow: '0 0 0 1px rgba(0,0,0,0.35)',
+                    }}
+                  />
+                ))}
+              </span>
+              {p.name}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+        {OIL_COLOUR_ROLES.map((role, i) => (
+          <label key={role} style={{ display: 'grid', gap: 3, justifyItems: 'center' }}>
+            <input
+              type="color"
+              value={current?.[i] ?? OIL_PALETTES[0].colors[i]}
+              onChange={(e) => {
+                const next = [...(current ?? OIL_PALETTES[0].colors)];
+                next[i] = e.target.value;
+                onChange(next);
+              }}
+              aria-label={`${role} colour`}
+              style={{
+                width: 36,
+                height: 28,
+                padding: 0,
+                border: `1px solid ${accentMid}`,
+                borderRadius: 8,
+                background: 'transparent',
+                cursor: 'pointer',
+                opacity: current ? 1 : 0.55,
+              }}
+            />
+            <span style={label}>{role}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function topRightButtonStyle(accent: string, border: string): CSSProperties {
+  return {
+    width: 30,
+    height: 30,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(8,6,4,0.45)',
+    border: `1px solid ${border}`,
+    borderRadius: 99,
+    color: accent,
+    fontSize: 12,
+    lineHeight: 1,
+    cursor: 'pointer',
+    backdropFilter: 'blur(6px)',
+    opacity: 0.7,
+  };
+}
+
 const DANCE_MOVES: { key: DanceMove; label: string }[] = [
   { key: 'still', label: 'Still' },
   { key: 'breath', label: 'Breath' },
@@ -19064,7 +20150,10 @@ export default function GeometryField() {
   const [djError, setDjError] = useState('');
   const [djEnergy, setDjEnergy] = useState({ level: 0, bass: 0, highs: 0 });
   const [open, setOpen] = useState(true);
-  const [tab, setTab] = useState<'builder' | 'music' | 'journey'>('builder');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  // The four Art tabs; 'music' and 'journey' are hidden panels kept in the code.
+  const [tab, setTab] = useState<ArtTab | 'music' | 'journey'>(() => artTabOf(cfg.mode));
+  const isArtTab = tab === 'stars' || tab === 'geometry' || tab === 'tunnels' || tab === 'oils';
   const [builderView, setBuilderView] = useState<'programs' | 'sliders'>('sliders');
   const [liveMode, setLiveMode] = useState<LiveMode>('studio');
   const [liveStatus, setLiveStatus] = useState('local');
@@ -19111,6 +20200,20 @@ export default function GeometryField() {
       setLiveMode(mode);
       if (mode === 'control') setOpen(true);
 
+      // ?tab=stars|geometry|tunnels|oils opens that Art tab (the Big Bang page links here).
+      const urlTab = ART_TABS.find((t) => t.id === params.get('tab'));
+      if (urlTab && !params.get('preset')) {
+        const first = featuredFor(urlTab.id).find(
+          (i): i is { name: string; tag: string } => 'name' in i,
+        );
+        setTab(urlTab.id);
+        setBuilderView('programs');
+        if (first) {
+          setSelectedPresetName(first.name);
+          setCfg({ ...PRESETS[first.name] });
+        }
+      }
+
       const urlPreset = params.get('preset');
       const requestedPreset =
         urlPreset ?? window.sessionStorage.getItem('colourmap:geometry-preset');
@@ -19121,7 +20224,7 @@ export default function GeometryField() {
           setSelectedPresetName(requestedPreset);
           setCfg({ ...presetCfg });
         }
-        setTab('builder');
+        if (presetCfg) setTab(artTabOf(presetCfg.mode));
         setBuilderView('programs');
         if (urlPreset) {
           params.delete('preset');
@@ -19401,8 +20504,11 @@ export default function GeometryField() {
       renderer.setClearColor(clearColorRef.current, 1);
 
       // Bloom from luminous slider
-      bloomPass.strength = currentCfg.luminous * 0.28;
-      bloomPass.threshold = 0.05;
+      // Full-screen shader fields would wash out under the default bloom,
+      // so they bloom only their brightest highlights.
+      const shaderField = isShaderVisualMode(currentCfg.mode);
+      bloomPass.strength = currentCfg.luminous * (shaderField ? 0.12 : 0.28);
+      bloomPass.threshold = shaderField ? 0.55 : 0.05;
       bloomPass.radius = 0.4 + currentCfg.luminous * 0.04;
 
       // Rebuild stars when count or viewport changes
@@ -19415,7 +20521,8 @@ export default function GeometryField() {
         starsGroupRef.current = buildStars(
           // Every preset shows a background starfield by default — floor the
           // count so even stars=0 presets keep a gentle field; the slider adds more.
-          Math.max(3, currentCfg.stars),
+          // Oils are a liquid surface, not space: their stars are opt-in.
+          isOilMode(currentCfg.mode) ? currentCfg.stars : Math.max(3, currentCfg.stars),
           W,
           H,
           currentCfg.preset,
@@ -22296,6 +23403,15 @@ export default function GeometryField() {
     'Crystal Globe',
   ]);
 
+  /** Switch Art tab; if what is playing belongs to another tab, start this tab's first preset. */
+  function openArtTab(next: ArtTab) {
+    setTab(next);
+    setBuilderView('programs');
+    if (artTabOf(cfg.mode) === next) return;
+    const first = featuredFor(next).find((i): i is { name: string; tag: string } => 'name' in i);
+    if (first) applyPreset(first.name);
+  }
+
   function applyPreset(name: string) {
     const p = PRESETS[name] ?? PRESETS['Calm Field'];
     setSelectedPresetName(name);
@@ -22303,6 +23419,9 @@ export default function GeometryField() {
       ...p,
       preset: COLOUR_PRESET_NAMES.has(name) ? p.preset : (p.preset ?? prev.preset),
       luminous: Math.min(1.5, p.luminous),
+      // Chosen oil colours stay while you move from oil to oil.
+      oilColors:
+        isOilMode(p.mode) && isOilMode(prev.mode) ? (p.oilColors ?? prev.oilColors) : p.oilColors,
     }));
   }
 
@@ -22351,6 +23470,14 @@ export default function GeometryField() {
     a.href = c.toDataURL('image/png');
     a.click();
   }
+
+  // Track real fullscreen so the exit control lives top-right, clear of the
+  // "All one brain" band along the bottom.
+  useEffect(() => {
+    const sync = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, []);
 
   function handleFullscreen() {
     const el = wrapperRef.current;
@@ -22414,7 +23541,7 @@ export default function GeometryField() {
         display: 'flex',
         flexDirection: 'column',
         width: '100%',
-        height: isProjectionMode ? '100svh' : 'calc(100svh - 92px)',
+        height: isProjectionMode || isFullscreen ? '100svh' : 'calc(100svh - 92px)',
         minHeight: 0,
         position: isProjectionMode ? 'fixed' : undefined,
         inset: isProjectionMode ? 0 : undefined,
@@ -22634,37 +23761,42 @@ export default function GeometryField() {
           </div>
         )}
 
-        {/* Show-controls — a tiny discrete arrow, bottom-right, when the panel
-        is closed (display mode), so the visual stays clean while projecting. */}
-        {!open && !isProjectionMode && (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            title="Show controls"
-            aria-label="Show controls"
+        {/* Top-right controls — always reachable: the bottom edge belongs to
+        the "All one brain" band, which would cover anything placed there. */}
+        {!isProjectionMode && (!open || isFullscreen) && (
+          <div
             style={{
               position: 'absolute',
-              bottom: 10,
+              top: 10,
               right: 10,
-              width: 26,
-              height: 26,
+              zIndex: 22,
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(8,6,4,0.32)',
-              border: `1px solid ${accentMid}`,
-              borderRadius: 99,
-              color: accent,
-              fontSize: 11,
-              lineHeight: 1,
-              cursor: 'pointer',
-              backdropFilter: 'blur(6px)',
-              opacity: 0.45,
-              zIndex: 20,
+              gap: 6,
             }}
           >
-            ◤
-          </button>
+            {!open && (
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                title="Show controls"
+                aria-label="Show controls"
+                style={topRightButtonStyle(accent, accentMid)}
+              >
+                ◤
+              </button>
+            )}
+            {isFullscreen && (
+              <button
+                type="button"
+                onClick={() => document.exitFullscreen?.()}
+                title="Exit fullscreen"
+                aria-label="Exit fullscreen"
+                style={topRightButtonStyle(accent, accentMid)}
+              >
+                ✕
+              </button>
+            )}
+          </div>
         )}
 
         {!isProjectionMode && open && (
@@ -22808,10 +23940,20 @@ export default function GeometryField() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {/* Builder only for now (3 Oct 2026). Music Visuals, Journeys and
-                    Figures are hidden, not deleted: their code is untouched, so
-                    bringing a tab back is restoring its pill line. */}
-                {pill('Builder', tab === 'builder', () => setTab('builder'), true)}
+                {/* Art: Stars, Geometry, Tunnels, Oils, then the Big Bang trip on its
+                    own page. Music Visuals, Journeys and Figures stay hidden, not
+                    deleted: bringing a tab back is restoring its pill line. */}
+                {ART_TABS.map(({ id, label }) => (
+                  <Fragment key={id}>
+                    {pill(label, tab === id, () => openArtTab(id), true)}
+                  </Fragment>
+                ))}
+                {pill(
+                  'Big Bang',
+                  false,
+                  () => window.location.assign('/geometry-field/big-bang'),
+                  true,
+                )}
               </div>
               <button
                 type="button"
@@ -22866,7 +24008,7 @@ export default function GeometryField() {
                 </button>
               </div>
             )}
-            {tab === 'builder' && (
+            {isArtTab && (
               <div
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
               >
@@ -22920,8 +24062,8 @@ export default function GeometryField() {
               gap: 8,
             }}
           >
-            {/* ── BUILDER TAB ── */}
-            {tab === 'builder' && (
+            {/* ── ART TABS (Stars, Geometry, Tunnels, Oils) ── */}
+            {isArtTab && (
               <>
                 {/* Programs grid */}
                 {builderView === 'programs' && (
@@ -22931,7 +24073,7 @@ export default function GeometryField() {
                       {(() => {
                         let n = 0;
                         let dim = false;
-                        return FEATURED_PRESETS.map((item, i) => {
+                        return featuredFor(tab as ArtTab).map((item, i) => {
                           if ('header' in item) {
                             dim = item.dim ?? false;
                             return (
@@ -23033,7 +24175,7 @@ export default function GeometryField() {
                       All Programs
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                      {MODES.map(({ mode, label }, idx) => {
+                      {MODES.filter((m) => artTabOf(m.mode) === tab).map(({ mode, label }, idx) => {
                         const isActive = cfg.mode === mode;
                         return (
                           <button
@@ -23081,6 +24223,47 @@ export default function GeometryField() {
                 {/* Sliders + actions */}
                 {builderView === 'sliders' && (
                   <>
+                    {artTabOf(cfg.mode) === 'oils' && (
+                      <OilColours
+                        colors={cfg.oilColors}
+                        accent={accent}
+                        accentMid={accentMid}
+                        dim={`rgba(${pr},${pg},${pb},0.6)`}
+                        onChange={(oilColors) =>
+                          setCfg((prev) => ({
+                            ...prev,
+                            oilColors,
+                            // Chosen colours show as chosen: the rainbow shift steps back
+                            // (except Thin Film, whose rainbow is its iridescence).
+                            glow:
+                              oilColors && prev.mode !== 'thinfilm'
+                                ? Math.min(prev.glow, 1)
+                                : prev.glow,
+                          }))
+                        }
+                      />
+                    )}
+                    {cfg.mode === 'thangka' && (
+                      <button
+                        type="button"
+                        onClick={() => update('seed', Math.floor(Math.random() * 100000) + 1)}
+                        style={{
+                          alignSelf: 'flex-start',
+                          background: accentFaint,
+                          border: `1px solid ${accentMid}`,
+                          borderRadius: 99,
+                          padding: '7px 16px',
+                          color: accent,
+                          fontFamily: 'var(--font-serif)',
+                          fontSize: 11,
+                          letterSpacing: '0.1em',
+                          textTransform: 'uppercase',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ☸ New thangka
+                      </button>
+                    )}
                     <div
                       style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 20px' }}
                     >
@@ -23113,7 +24296,13 @@ export default function GeometryField() {
                                   color: accent,
                                 }}
                               >
-                                {step < 1 ? val.toFixed(2) : Math.round(val)}
+                                {label === 'Timer'
+                                  ? val <= TIMER_OFF
+                                    ? 'Off'
+                                    : `${Math.round(val)}s`
+                                  : step < 1
+                                    ? val.toFixed(2)
+                                    : Math.round(val)}
                               </span>
                             </div>
                             <input

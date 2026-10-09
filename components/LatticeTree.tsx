@@ -388,7 +388,12 @@ function BranchGroup({
                   const lift = leafIndex % 2 === 0 ? -12 : 15;
 
                   return (
-                    <g key={leaf.slug}>
+                    /*
+                     * A LEAF OPENS ITS SPACE (2026-10-09). Branches still only
+                     * focus the figure; the specific thing at the tip is a place,
+                     * and tapping it goes there.
+                     */
+                    <a key={leaf.slug} href={leaf.slug} aria-label={`Open ${leaf.label}`}>
                       <line
                         x1={at.x}
                         y1={at.y}
@@ -408,7 +413,7 @@ function BranchGroup({
                        * picture of data rather than a reading of it.
                        */}
                       <Plate x={tip.x} y={tip.y + lift} text={leaf.label} muted size={9} />
-                    </g>
+                    </a>
                   );
                 })}
 

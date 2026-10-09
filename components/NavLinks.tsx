@@ -16,7 +16,7 @@ const PRIMARY_LINKS: { href: string; label: string; plain?: boolean }[] = [
   { href: '/ai', label: 'AI' },
   { href: '/notebook', label: 'Notes' },
   { href: '/education', label: 'Education' },
-  { href: '/geometry-field', label: 'AI Projections' },
+  { href: '/geometry-field', label: 'Art' },
   { href: '/coding', label: 'Coding', plain: true },
 ];
 

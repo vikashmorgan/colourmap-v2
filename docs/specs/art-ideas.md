@@ -31,3 +31,13 @@ A space where Victor visualises his next moves in art: the themes he is reflecti
 
 - Themes, ideas under each theme, and a gallery per idea work on phone and laptop.
 - Tests: `lib/art/gallery.test.ts`, `app/api/art/gallery/[ideaId]/route.test.ts`, `components/ArtIdeas.test.tsx`.
+
+## Collections — AI Sculptures · Flow (2026-10-09)
+
+A **collection** is a finished body of work with a space of its own, opened from the **Art** branch of the All one brain tree. Leaves of the tree now open their space when tapped (branches still only focus the figure).
+
+**AI Sculptures · Flow** (`/art/flow`) is the first. Its 22 pictures live in Google Drive (*My art › AI - Sculptures - Flow collection*) and are shown from Drive's own thumbnails, so they appear only for the signed-in owner and nothing is copied or made public. The Drive folder stays where the collection is kept and added to.
+
+**Aim:** go from AI images to real 3D videos and 3D assets, then 3D print them with extrusion methods, so art reaches clients without anything being built by hand. **Final mission:** a real 3D gallery space, with the sculptures in different materials, that visitors can walk through.
+
+Path shown on the page: AI images → 3D videos → 3D assets → 3D print (extrusion) → delivered to clients → 3D gallery to walk through.
