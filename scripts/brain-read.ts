@@ -47,11 +47,11 @@
 import { and, desc, eq, gte } from 'drizzle-orm';
 
 import { getDb } from '@/lib/db/client';
-import { checkIns, missions, notebookEntries } from '@/lib/db/schema';
+import { checkIns, codingMarks, codingNotes, missions, notebookEntries } from '@/lib/db/schema';
 
-export type Command = 'notes' | 'checkins' | 'missions' | 'silence';
+export type Command = 'notes' | 'checkins' | 'missions' | 'silence' | 'coding';
 
-export const COMMANDS: Command[] = ['notes', 'checkins', 'missions', 'silence'];
+export const COMMANDS: Command[] = ['notes', 'checkins', 'missions', 'silence', 'coding'];
 
 export const USAGE = `
 brain-read — read the record, so the terminal can think about it
@@ -60,6 +60,7 @@ brain-read — read the record, so the terminal can think about it
   bun scripts/brain-read.ts checkins [--since YYYY-MM-DD | --days N] [--last N]
   bun scripts/brain-read.ts missions [--all]
   bun scripts/brain-read.ts silence  [--days N]
+  bun scripts/brain-read.ts coding
 
 Needs DATABASE_URL and BRAIN_USER_ID in .env.local.
 There is no --everything, on purpose.
@@ -154,6 +155,145 @@ export function withWords(
   rows: { note?: string | null; challenge?: string | null; flow?: string | null }[],
 ): number {
   return rows.filter((row) => row.note || row.challenge || row.flow).length;
+}
+
+export type CodingRow = {
+  itemKey: string;
+  mark: string | null;
+  note: string | null;
+  noteKind: string | null;
+  updatedAt: Date;
+};
+
+/** One question or comment from coding_notes (a box can have several). */
+export type CodingNote = {
+  id: string;
+  itemKey: string;
+  kind: string;
+  body: string;
+  createdAt: Date;
+  answer: string | null;
+};
+
+/** "s3|while" → "Session 3 · while". */
+export function codingBox(itemKey: string): string {
+  // The project's notebook: p<project>|notebook.
+  const book = /^p(\d+)\|notebook$/.exec(itemKey);
+  if (book) return `Project ${book[1]} · notebook`;
+  // A line of the project's code: p<project>|s<step>|L<line>.
+  // T is a line of the step's terminal output rather than of its code.
+  const line = /^p(\d+)\|s(\d+)\|([LT])(\d+)$/.exec(itemKey);
+  if (line)
+    return `Project ${line[1]} · step ${line[2]} · ${line[3] === 'T' ? 'output line' : 'line'} ${line[4]}`;
+  // Project cards: p<project>|<step>|<name>.
+  const card = /^p(\d+)\|(\d+)\|(.+)$/.exec(itemKey);
+  if (card) return `Project ${card[1]} · step ${card[2]} · ${card[3]}`;
+  const bar = itemKey.indexOf('|');
+  const session = itemKey.slice(0, bar).replace(/^s/, '');
+  return bar > 0 ? `Session ${session} · ${itemKey.slice(bar + 1)}` : itemKey;
+}
+
+/*
+ * The coding study page's questions, comments and flags, grouped the way the
+ * page's own Review tab groups them. Questions first: they are what is waiting
+ * for an answer, and unanswered ones carry their id so an answer can be filed.
+ *
+ * Notes come from coding_notes. Before that table existed a box held one note
+ * in coding_marks; those are used only when no coding_notes rows are given.
+ */
+export function codingReport(rows: CodingRow[], notes: CodingNote[] = []): string {
+  const sorted = [...rows].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+  const legacy: CodingNote[] = sorted
+    .filter((r) => r.note && r.noteKind)
+    .map((r) => ({
+      id: '',
+      itemKey: r.itemKey,
+      kind: r.noteKind as string,
+      body: r.note as string,
+      createdAt: r.updatedAt,
+      answer: null,
+    }));
+  const all = (notes.length ? notes : legacy).sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  );
+  const noteLines = (title: string, picked: CodingNote[]) =>
+    picked.length === 0
+      ? []
+      : [
+          `## ${title} (${picked.length})`,
+          ...picked.map((n) => {
+            const tag = n.id ? ` [${n.id}]${n.answer ? ' answered' : ''}` : '';
+            return `- ${codingBox(n.itemKey)} — ${day(n.createdAt)}${tag}\n  ${n.body.replace(/\n/g, '\n  ')}`;
+          }),
+          '',
+        ];
+  const markLines = (title: string, picked: CodingRow[]) =>
+    picked.length === 0
+      ? []
+      : [`## ${title} (${picked.length})`, ...picked.map((r) => `- ${codingBox(r.itemKey)}`), ''];
+  const lines = [
+    `# coding — ${rows.length} boxes marked, ${all.length} notes\n`,
+    ...noteLines(
+      'Questions',
+      all.filter((n) => n.kind === 'question'),
+    ),
+    ...noteLines(
+      'Comments',
+      all.filter((n) => n.kind === 'comment'),
+    ),
+    ...markLines(
+      'Confused',
+      sorted.filter((r) => r.mark === 'mid'),
+    ),
+    ...markLines(
+      'No time',
+      sorted.filter((r) => r.mark === 'late'),
+    ),
+  ];
+  const got = rows.filter((r) => r.mark === 'got' || r.mark === 'solid').length;
+  lines.push(`Got it: ${got} boxes.`);
+  if (rows.length === 0 && all.length === 0) {
+    lines.push('(nothing marked or written on the coding page yet)');
+  }
+  return lines.join('\n');
+}
+
+async function readCoding(who: string): Promise<void> {
+  const rows = await getDb()
+    .select({
+      itemKey: codingMarks.itemKey,
+      mark: codingMarks.mark,
+      note: codingMarks.note,
+      noteKind: codingMarks.noteKind,
+      updatedAt: codingMarks.updatedAt,
+    })
+    .from(codingMarks)
+    .where(eq(codingMarks.userId, who))
+    .orderBy(desc(codingMarks.updatedAt))
+    .limit(1000);
+  /*
+   * coding_notes arrives with migration 0025. Before it is applied the query
+   * fails, and the report falls back to the single notes in coding_marks.
+   */
+  let notes: CodingNote[] = [];
+  try {
+    notes = await getDb()
+      .select({
+        id: codingNotes.id,
+        itemKey: codingNotes.itemKey,
+        kind: codingNotes.kind,
+        body: codingNotes.body,
+        createdAt: codingNotes.createdAt,
+        answer: codingNotes.answer,
+      })
+      .from(codingNotes)
+      .where(eq(codingNotes.userId, who))
+      .orderBy(desc(codingNotes.createdAt))
+      .limit(2000);
+  } catch {
+    console.log('(coding_notes not available yet: showing the older single notes)\n');
+  }
+  console.log(codingReport(rows, notes));
 }
 
 async function readNotes(argv: string[], who: string): Promise<void> {
@@ -361,6 +501,7 @@ export async function run(argv: string[], env: { BRAIN_USER_ID?: string }): Prom
   if (command === 'notes') await readNotes(argv, who);
   else if (command === 'checkins') await readCheckins(argv, who);
   else if (command === 'missions') await readMissions(argv, who);
+  else if (command === 'coding') await readCoding(who);
   else await readSilence(argv, who);
 
   return 0;

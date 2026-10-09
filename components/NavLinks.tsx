@@ -6,12 +6,18 @@ import { useEffect, useRef } from 'react';
 
 import { useViewMode } from './ViewModeContext';
 
-const PRIMARY_LINKS: { href: string; label: string }[] = [
+/*
+ * `plain` links leave the app: /coding is a whole standalone page served by a
+ * route handler, not an app screen, so it gets an ordinary <a> rather than a
+ * client-side <Link> navigation.
+ */
+const PRIMARY_LINKS: { href: string; label: string; plain?: boolean }[] = [
   { href: '/day', label: 'Focus' },
   { href: '/ai', label: 'AI' },
   { href: '/notebook', label: 'Notes' },
   { href: '/education', label: 'Education' },
   { href: '/geometry-field', label: 'Art' },
+  { href: '/coding', label: 'Coding', plain: true },
 ];
 
 const PHONE_PRIMARY_LINKS = PRIMARY_LINKS;
@@ -62,6 +68,25 @@ export default function NavLinks() {
               typeof window !== 'undefined' &&
               window.location.hash === link.href.slice(1)
             : pathname === link.href;
+          const linkStyle = {
+            fontSize: 16,
+            fontFamily: 'var(--font-serif)',
+            color: 'var(--header-text, #7A5438)',
+            fontWeight: isActive ? 800 : 700,
+            letterSpacing: '0.08em',
+          };
+          if (link.plain) {
+            return (
+              <a
+                key={link.href}
+                href={link.href}
+                className="shrink-0 whitespace-nowrap transition-colors tracking-[0.04em]"
+                style={linkStyle}
+              >
+                {link.label}
+              </a>
+            );
+          }
           return (
             <Link
               key={link.href}
@@ -74,13 +99,7 @@ export default function NavLinks() {
                   : undefined
               }
               className="shrink-0 whitespace-nowrap transition-colors tracking-[0.04em]"
-              style={{
-                fontSize: 16,
-                fontFamily: 'var(--font-serif)',
-                color: 'var(--header-text, #7A5438)',
-                fontWeight: isActive ? 800 : 700,
-                letterSpacing: '0.08em',
-              }}
+              style={linkStyle}
             >
               {link.label}
               {isActive && (

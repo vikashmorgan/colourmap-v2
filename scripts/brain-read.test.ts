@@ -27,6 +27,8 @@ vi.mock('@/lib/db/client', () => {
 import {
   assertNoBulkDump,
   COMMANDS,
+  codingBox,
+  codingReport,
   day,
   daysAgo,
   flag,
@@ -181,6 +183,128 @@ describe('small readings', () => {
     for (const command of COMMANDS) expect(USAGE).toContain(command);
     expect(USAGE).toContain('DATABASE_URL');
     expect(USAGE).toContain('BRAIN_USER_ID');
+  });
+});
+
+describe('reading the coding page', () => {
+  const at = (iso: string) => new Date(iso);
+
+  it('names a box by session and title', () => {
+    expect(codingBox('s3|while')).toBe('Session 3 · while');
+    expect(codingBox('s2|.split()')).toBe('Session 2 · .split()');
+    expect(codingBox('no-bar')).toBe('no-bar');
+    expect(codingBox('p1|3|clean()')).toBe('Project 1 · step 3 · clean()');
+    expect(codingBox('p1|s3|L48')).toBe('Project 1 · step 3 · line 48');
+    expect(codingBox('p1|s6|T12')).toBe('Project 1 · step 6 · output line 12');
+    expect(codingBox('p1|notebook')).toBe('Project 1 · notebook');
+    expect(codingBox('p1|9|get_title(), get_year(), get_pages()')).toBe(
+      'Project 1 · step 9 · get_title(), get_year(), get_pages()',
+    );
+  });
+
+  it('groups questions, comments, confused and no-time, questions first and newest first', () => {
+    const text = codingReport([
+      {
+        itemKey: 's3|if',
+        mark: 'mid',
+        note: null,
+        noteKind: null,
+        updatedAt: at('2026-10-02T10:00:00Z'),
+      },
+      {
+        itemKey: 's3|while',
+        mark: null,
+        note: 'When does it stop?',
+        noteKind: 'question',
+        updatedAt: at('2026-10-03T10:00:00Z'),
+      },
+      {
+        itemKey: 's2|.split()',
+        mark: 'got',
+        note: 'Like cutting a CSV line',
+        noteKind: 'comment',
+        updatedAt: at('2026-10-01T10:00:00Z'),
+      },
+      {
+        itemKey: 's4|def',
+        mark: 'late',
+        note: null,
+        noteKind: null,
+        updatedAt: at('2026-10-01T09:00:00Z'),
+      },
+      {
+        itemKey: 's1|print()',
+        mark: 'got',
+        note: null,
+        noteKind: null,
+        updatedAt: at('2026-09-30T09:00:00Z'),
+      },
+    ]);
+
+    expect(text).toContain('# coding — 5 boxes marked, 2 notes');
+    expect(text.indexOf('## Questions (1)')).toBeLessThan(text.indexOf('## Comments (1)'));
+    expect(text).toContain('- Session 3 · while — 2026-10-03\n  When does it stop?');
+    expect(text).toContain('- Session 2 · .split() — 2026-10-01\n  Like cutting a CSV line');
+    expect(text).toContain('## Confused (1)\n- Session 3 · if');
+    expect(text).toContain('## No time (1)\n- Session 4 · def');
+    expect(text).toContain('Got it: 2 boxes.');
+  });
+
+  it('lists every note of a box from coding_notes, with its id', () => {
+    const notes = [
+      {
+        id: 'a1',
+        itemKey: 's3|while',
+        kind: 'question',
+        body: 'When does it stop?',
+        createdAt: at('2026-10-04T09:00:00Z'),
+        answer: null,
+      },
+      {
+        id: 'a2',
+        itemKey: 's3|while',
+        kind: 'question',
+        body: 'Can it run zero times?',
+        createdAt: at('2026-10-04T10:00:00Z'),
+        answer: 'Yes.',
+      },
+      {
+        id: 'a3',
+        itemKey: 's3|while',
+        kind: 'comment',
+        body: 'Like a repeating if',
+        createdAt: at('2026-10-04T11:00:00Z'),
+        answer: null,
+      },
+    ];
+    const text = codingReport([], notes);
+    expect(text).toContain('## Questions (2)');
+    expect(text).toContain('[a1]');
+    expect(text).toContain('[a2] answered');
+    expect(text).toContain('## Comments (1)');
+  });
+
+  it('says so when nothing has been marked', () => {
+    expect(codingReport([])).toContain('nothing marked or written on the coding page yet');
+  });
+
+  it('reads the user own rows through run', async () => {
+    rows.push([
+      {
+        itemKey: 's3|while',
+        mark: 'mid',
+        note: 'Why?',
+        noteKind: 'question',
+        updatedAt: at('2026-10-03T10:00:00Z'),
+      },
+    ]);
+    const output = captured();
+
+    await run(argv('coding'), WHO);
+
+    const text = output();
+    expect(text).toContain('## Questions (1)');
+    expect(text).toContain('## Confused (1)');
   });
 });
 

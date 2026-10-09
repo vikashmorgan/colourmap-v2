@@ -454,3 +454,48 @@ export const voiceNotes = pgTable('voice_notes', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   transcribedAt: timestamp('transcribed_at', { withTimezone: true }),
 });
+
+/*
+ * CODING MARKS — the study page at /coding.
+ *
+ * One row per box the user has done something with: a mark ("got" =
+ * understood, "mid" = confused, "late" = no time yet), a note (a question or a
+ * comment), or both. A row with neither is deleted rather than kept empty. `item_key` is
+ * the page's own key for a box, e.g. "s3|while", so marks survive the page
+ * being redeployed.
+ *
+ * (user_id, item_key) is unique in the migration; that is what lets a box be
+ * saved with one upsert.
+ */
+export const codingMarks = pgTable('coding_marks', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  itemKey: text('item_key').notNull(),
+  /** 'got' | 'mid' | 'late', or null when the box only has a question */
+  mark: text('mark'),
+  /** The user's own words about this box */
+  note: text('note'),
+  /** 'question' | 'comment': what kind of note it is. Null when there is no note. */
+  noteKind: text('note_kind'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/*
+ * CODING NOTES — any number of questions and comments per box of /coding.
+ * `answer` holds a reply written from the terminal; it sits beside the note
+ * and never replaces the user's own words. `read_at` is when the user marked
+ * that answer read.
+ */
+export const codingNotes = pgTable('coding_notes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  itemKey: text('item_key').notNull(),
+  /** 'question' | 'comment' */
+  kind: text('kind').notNull(),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  answer: text('answer'),
+  answeredAt: timestamp('answered_at', { withTimezone: true }),
+  readAt: timestamp('read_at', { withTimezone: true }),
+});
