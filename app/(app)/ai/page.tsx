@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 const AI_SECTIONS = [
   {
     title: 'Talk now',
@@ -105,6 +107,35 @@ export default function AIPage() {
           </article>
         ))}
       </section>
+
+      {/* Notes on challenging AI rather than trusting it: why the real tools still matter. */}
+      <Link
+        href="/ai/why-learn"
+        className="block border px-5 py-4"
+        style={{
+          borderColor: 'var(--ai-surface-accent, rgba(196,160,96,0.5))',
+          background: 'var(--ai-surface-raised, rgba(255,248,224,0.62))',
+          borderRadius: 8,
+          textDecoration: 'none',
+        }}
+      >
+        <p
+          className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+          style={{ color: 'var(--ai-surface-muted, rgba(122,84,56,0.5))' }}
+        >
+          Notes
+        </p>
+        <h2
+          className="mt-1 text-xl font-semibold"
+          style={{ color: 'var(--ai-surface-text, #5C3018)', fontFamily: 'var(--font-serif)' }}
+        >
+          Why learn the real tools →
+        </h2>
+        <p className="mt-2 text-sm leading-6" style={{ color: 'var(--ai-surface-muted, #6F5138)' }}>
+          AI made mediocrity cheaper. Its assumptions add up. The art is to check and challenge the
+          code, so we learn coding, SQL and the rest.
+        </p>
+      </Link>
 
       <p
         className="px-2 text-center text-xs leading-5"
