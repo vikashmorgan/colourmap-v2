@@ -395,10 +395,11 @@ describe('BuildLab', () => {
       const url = String(input);
       if (url.includes('/api/build-lab/queue') && url.includes('/queue/')) {
         const body = init?.body ? JSON.parse(String(init.body)) : {};
+        const missionId = url.split('/').pop() ?? 'queue-a';
         return Promise.resolve(
           new Response(
             JSON.stringify({
-              id: 'queue-a',
+              id: missionId,
               title: body.title ?? 'First queue item',
               channelId: 'dot-walker',
               agentId: 'codex',
