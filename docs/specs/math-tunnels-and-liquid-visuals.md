@@ -156,3 +156,15 @@ A **Waves** category draws the sea as thin parallel lines and bends them with tw
 **Sliders.** Every oil now shows Flow first, then its shape (Zoom, Folds, Mirrors or Blob Size), its detail, its own extra (Warp, Waves, Swirl, Heat, Spread or Gold), the colour shift (Rainbow, or Iridescence on Thin Film), Light and Bloom. No Stars slider on oils: an oil is a liquid surface.
 
 **Lava Lamp**, rebuilt: wax is heated by the lamp at the bottom, rises, stretches while it moves, cools at the top and sinks again, slow at both ends and quick in the middle. Blobs merge and split, rest in a heated pool at the bottom, and are shaded as soft 3D bodies lit from below with a thin glowing rim. Sliders: Flow, Blob Size, Blobs, Heat, Rainbow, Light, Bloom. Starts in the Lava palette.
+
+## Big Bang moments as Stars (2026-10-08)
+
+Five steps of the Big Bang trip stand on their own as **Stars** presets, under a **Big Bang** header, drawn with the trip's own maths, camera and colours (`components/geometry-bigbang-stars.ts`, using `lib/bigbang.ts`):
+
+- **Pulse**: the fractal sand, pulsing outward. **Folds** sets its symmetry (the trip uses 14).
+- **Fractal Break**: the Sierpinski fractal holds, breaks into the pulse sand (each grain leaving at its own golden-ratio moment), holds as sand, and gathers back into the fractal, in a loop. Folds sets the sand's symmetry.
+- **Flower Symmetry** (the trip's *growing symmetry*): the rose with a **fixed petal count**, set by the **Petals** slider. It does not grow or gather.
+- **Prism Tunnel**: the golden prism tunnel. **Prisms** sets how many to a ring. Dots fade softly as they near the camera, far away, and at the screen's edge, so nothing vanishes in a block.
+- **Ocean of Life**: the swimmers on their currents, already fully formed (no opening phase).
+
+**Timer** on all five: fully left is **Off**; from 10 to 30 seconds, the whole shape holds for that long, then explodes outward and gathers itself back together (six seconds, grains leaving and returning at their own moments), and the loop starts again. Other sliders: Speed, Light, Dots, Glow, Stars.

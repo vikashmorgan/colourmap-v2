@@ -9,6 +9,12 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 
 import { isOilMode, isShaderVisualMode } from '@/lib/visual-shaders';
 
+import {
+  buildBigBangStars,
+  isBigBangStarMode,
+  TIMER_OFF,
+  updateBigBangStars,
+} from './geometry-bigbang-stars';
 import { buildCymatics, isCymaticsMode, updateCymatics } from './geometry-cymatics';
 import {
   buildGeometryVisual,
@@ -173,7 +179,13 @@ type Mode =
   | 'rollingwave'
   | 'fractalwave'
   // Thangka — a generated Tibetan mandala with oil moving in its compartments
-  | 'thangka';
+  | 'thangka'
+  // Big Bang moments as Stars (components/geometry-bigbang-stars.ts)
+  | 'bbpulse'
+  | 'bbtunnel'
+  | 'bbflower'
+  | 'bbocean'
+  | 'bbfractal';
 
 interface Pal {
   bg0: string;
@@ -3615,6 +3627,66 @@ export const PRESETS: Record<string, Cfg> = {
     mode: 'thangka',
     seed: 41,
   },
+  Pulse: {
+    preset: 'Amber Dust',
+    symmetry: 14,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbpulse',
+  },
+  'Prism Tunnel': {
+    preset: 'Golden Source',
+    symmetry: 6,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbtunnel',
+  },
+  'Flower Symmetry': {
+    preset: 'Rainbow Mist',
+    symmetry: 8,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbflower',
+  },
+  'Ocean of Life': {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbocean',
+  },
+  'Fractal Break': {
+    preset: 'Amber Dust',
+    symmetry: 14,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbfractal',
+  },
   'Cymatic Sands 1': {
     preset: 'Golden Source',
     symmetry: 6,
@@ -6978,6 +7050,7 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
     return buildGeometryVisual(cfg, PAL[cfg.preset] ?? PAL['Calm Field']);
   }
   if (isCymaticsMode(cfg.mode)) return buildCymatics(cfg);
+  if (isBigBangStarMode(cfg.mode)) return buildBigBangStars();
   switch (cfg.mode) {
     case 'burst':
       return buildBurst(cfg, R);
@@ -7192,6 +7265,10 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
   }
   if (isCymaticsMode(cfg.mode)) {
     updateCymatics(group, cfg, PAL[cfg.preset] ?? PAL['Calm Field'], t, R);
+    return;
+  }
+  if (isBigBangStarMode(cfg.mode)) {
+    updateBigBangStars(group, cfg, t, R);
     return;
   }
   switch (cfg.mode) {
@@ -14251,6 +14328,11 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
   cymatics4: CYMATIC_SLIDERS,
   rollingwave: visualSliders(['Waves', 2, 6], ['Lines', 1, 10], 'Texture', 'Speed', 3),
   fractalwave: visualSliders(['Claws', 1, 6], ['Depth', 1, 10], 'Texture', 'Speed', 3),
+  bbpulse: bigBangSliders('Folds', 4, 24),
+  bbtunnel: bigBangSliders('Prisms', 3, 9),
+  bbflower: bigBangSliders('Petals', 3, 34),
+  bbocean: bigBangSliders(null),
+  bbfractal: bigBangSliders('Folds', 4, 24),
   thangka: [
     { key: 'breathSpeed', label: 'Flow', min: 0.05, max: 1.5, step: 0.05 },
     { key: 'complexity', label: 'Detail', min: 2, max: 7, step: 0.5 },
@@ -14320,6 +14402,20 @@ export const OIL_PALETTES: { name: string; colors: [string, string, string, stri
   { name: 'Rose', colors: ['#160610', '#c23a74', '#ffe0ec', '#f08aa8'] },
   { name: 'Mono', colors: ['#050505', '#6a6a72', '#f4f4f6', '#a8a8b0'] },
 ];
+
+// Big Bang moments: their shape count, the Timer (fully left = off; 10–30 s =
+// explode and gather back on that rhythm), speed, light, dots, glow, stars.
+function bigBangSliders(shape: string | null, min = 3, max = 24): SliderDef[] {
+  return [
+    ...(shape ? [{ key: 'symmetry' as const, label: shape, min, max, step: 1 }] : []),
+    { key: 'complexity', label: 'Timer', min: 9, max: 30, step: 1 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.2, max: 2, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 1, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Dots', min: 0, max: 10, step: 1 },
+    { key: 'luminous', label: 'Glow', min: 0, max: 5, step: 0.1 },
+    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+  ];
+}
 
 function slidersFor(mode: Mode): SliderDef[] {
   return MODE_SLIDERS[mode] ?? DEFAULT_SLIDERS;
@@ -14453,6 +14549,11 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   lavalamp: 'Lava Lamp',
   rorschach: 'Rorschach Oils',
   thangka: 'Thangka',
+  bbpulse: 'Pulse',
+  bbtunnel: 'Prism Tunnel',
+  bbflower: 'Flower Symmetry',
+  bbocean: 'Ocean of Life',
+  bbfractal: 'Fractal Break',
   cymatics1: 'Cymatic Sands 1',
   cymatics2: 'Cymatic Sands 2',
   cymatics3: 'Cymatic Sands 3',
@@ -14606,6 +14707,11 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'lavalamp', label: '● Lava Lamp' },
   { mode: 'rorschach', label: '⧓ Rorschach' },
   { mode: 'thangka', label: '☸ Thangka' },
+  { mode: 'bbpulse', label: '✦ Pulse' },
+  { mode: 'bbtunnel', label: '△ Prism Tunnel' },
+  { mode: 'bbflower', label: '✿ Flower Symmetry' },
+  { mode: 'bbocean', label: '∿ Ocean of Life' },
+  { mode: 'bbfractal', label: '△ Fractal Break' },
   { mode: 'cymatics1', label: '◎ Cymatic Sands 1' },
   { mode: 'cymatics2', label: '⊞ Cymatic Sands 2' },
   { mode: 'cymatics3', label: '◎³ Cymatic Sands 3' },
@@ -14710,6 +14816,11 @@ const STAR_TAB_MODES = new Set<Mode>([
   'volcano',
   'wordparticle',
   'yinyang',
+  'bbpulse',
+  'bbtunnel',
+  'bbflower',
+  'bbocean',
+  'bbfractal',
 ]);
 export function artTabOf(mode: Mode): ArtTab {
   if (isOilMode(mode)) return 'oils';
@@ -14843,6 +14954,12 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Thangka', tag: 'MANDALA' },
   { name: 'Thangka Lapis', tag: 'MANDALA' },
   { name: 'Thangka Crimson', tag: 'MANDALA' },
+  { header: 'Big Bang' },
+  { name: 'Pulse', tag: 'SAND' },
+  { name: 'Fractal Break', tag: 'FRACTAL' },
+  { name: 'Flower Symmetry', tag: 'FLOWER' },
+  { name: 'Prism Tunnel', tag: 'TUNNEL' },
+  { name: 'Ocean of Life', tag: 'LIFE' },
   { header: 'Magnetic Sands' },
   { name: 'Cymatic Sands 1', tag: 'CIRCLE' },
   { name: 'Cymatic Sands 2', tag: 'SQUARE' },
@@ -24179,7 +24296,13 @@ export default function GeometryField() {
                                   color: accent,
                                 }}
                               >
-                                {step < 1 ? val.toFixed(2) : Math.round(val)}
+                                {label === 'Timer'
+                                  ? val <= TIMER_OFF
+                                    ? 'Off'
+                                    : `${Math.round(val)}s`
+                                  : step < 1
+                                    ? val.toFixed(2)
+                                    : Math.round(val)}
                               </span>
                             </div>
                             <input

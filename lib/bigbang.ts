@@ -289,7 +289,7 @@ function gauss(p: Particle, salt: number): number {
 /* ---------- triangles ---------- */
 
 /** Vertices of an equilateral triangle of circumradius r, turned by a. */
-function triangle(r: number, a: number): [number, number][] {
+export function triangle(r: number, a: number): [number, number][] {
   return [0, 1, 2].map((k) => [
     Math.cos(a + (k * TAU) / 3 + Math.PI / 2) * r,
     Math.sin(a + (k * TAU) / 3 + Math.PI / 2) * r,
@@ -511,7 +511,7 @@ export function target(k: number, p: Particle, u: number, t: number): Vec3 {
 }
 
 /** A point on the nine edges of a triangular prism of height h, centred on z = 0. */
-function prismPoint(tri: [number, number][], h: number, p: Particle): Vec3 {
+export function prismPoint(tri: [number, number][], h: number, p: Particle): Vec3 {
   const e = Math.floor(p.c * 9);
   const s = frac(p.c * 9);
   if (e < 6) {
@@ -571,7 +571,7 @@ export function sierpinskiTri(x: number, levels: number): [number, number] {
 }
 
 /** Fractal sand: a Sierpinski triangle folded into n mirrored sectors, pulsing. */
-function fractalSand(p: Particle, t: number, n: number, pulse: number): Vec3 {
+export function fractalSand(p: Particle, t: number, n: number, pulse: number): Vec3 {
   const [fx, fy] = sierpinskiTri(p.a, 9);
   const sector = Math.floor(p.b * n);
   const mirror = sector % 2 === 1 ? -1 : 1;
@@ -586,7 +586,7 @@ function fractalSand(p: Particle, t: number, n: number, pulse: number): Vec3 {
 }
 
 /** A rose of n petals, filled like sand, turning on a golden spiral. */
-function rose(p: Particle, t: number, n: number): Vec3 {
+export function rose(p: Particle, t: number, n: number): Vec3 {
   const th = p.a * TAU + 0.06 * t;
   const petal = Math.abs(Math.cos((n * th) / 2)) ** 0.7;
   const r = 24 * (0.25 + 0.75 * petal) * Math.sqrt(p.c);
@@ -689,7 +689,7 @@ function microbePoint(p: Particle, u: number, t: number): Vec3 {
 }
 
 /** Swimmers on three great circular currents: a dense head and a beating tail. */
-function swimmerPoint(p: Particle, u: number, t: number): Vec3 {
+export function swimmerPoint(p: Particle, u: number, t: number): Vec3 {
   const S = 160;
   const s = Math.floor(p.a * S);
   const current = s % 3;
