@@ -22,7 +22,6 @@ Historical rollout notes live elsewhere and are not the source of truth.
 These guardrails propagate to other collaborators through the repo itself.
 
 - `AGENTS.md` is the top-level runtime instruction source.
-- `CLAUDE.md` symlinks to `AGENTS.md`.
 - `.codex/AGENTS.md` symlinks to `AGENTS.md`.
 - `.claude/rules/*` symlink to `rules/*.md`.
 - `.codex/rules/*` symlink to `rules/*.md`.
@@ -260,7 +259,7 @@ Protected coverage paths currently include:
 - every `rules/*.md` file is listed in `AGENTS.md`
 - every `skills/*` directory is listed in `AGENTS.md`
 - cross-file references resolve
-- `CLAUDE.md` and `.codex/AGENTS.md` symlink correctly
+- `.codex/AGENTS.md` symlinks correctly
 - runtime rule and skill symlinks point to canonical repo files
 
 ### Browser Checks

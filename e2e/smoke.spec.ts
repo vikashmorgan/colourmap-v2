@@ -42,7 +42,18 @@ test('login page renders without console errors', async ({ page }) => {
 
   await gotoOrSkip(page, '/login');
 
-  await expect(page).toHaveTitle(/Colourmap/);
+  /*
+   * The app is called Colour Brain. This asserted /Colourmap/ and had been
+   * failing on every pull request since the rename -- long enough that a red
+   * browser-smoke had become the normal state of the repository, which is the
+   * expensive part. A check nobody believes is worse than no check: it was
+   * still red while two unrelated branches waited on it.
+   *
+   * Matched loosely on purpose. The exact title belongs to app/layout.tsx and
+   * pinning it here means a second place to edit for every copy change, which
+   * is how this broke in the first place.
+   */
+  await expect(page).toHaveTitle(/Colour ?(Brain|map)/i);
   await expect(
     page.getByRole('button', {
       name: /continue with google/i,

@@ -148,6 +148,48 @@
       "when": 1775200000014,
       "tag": "0020_spatial_ref_sys_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1775200000015,
+      "tag": "0021_mission_movement_and_digests",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1775200000016,
+      "tag": "0022_voice_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1775200000017,
+      "tag": "0023_coding_marks",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1775200000018,
+      "tag": "0024_coding_marks_solid",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1775200000019,
+      "tag": "0025_coding_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1775200000020,
+      "tag": "0026_art_gallery",
+      "breakpoints": true
     }
   ]
 }

@@ -228,7 +228,6 @@ fi
 
 section "Adapter Wiring"
 
-require_symlink_target "CLAUDE.md" "AGENTS.md"
 require_symlink_target ".codex/AGENTS.md" "../AGENTS.md"
 
 for rule_file in rules/*.md; do

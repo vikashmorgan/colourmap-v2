@@ -1,5 +1,12 @@
 'use client';
 
+/*
+ * The admin document, published as a private page so the phone can reach it.
+ * A file on the Desktop cannot be opened from a deployed app, which is the
+ * whole reason this is a URL and not a path.
+ */
+const ADMIN_DOC = 'https://claude.ai/code/artifact/454aa63d-d109-41b6-8317-4cb75dafe7e1';
+
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
@@ -286,7 +293,7 @@ export default function ColourmapBrandButton({ initials, email }: ColourmapBrand
         style={{ background: 'none', border: 'none', padding: 0 }}
         aria-haspopup="dialog"
         aria-expanded={open}
-        title="About Colourmap"
+        title="About Colour Brain"
       >
         {/* Invisible spacer matching the star width — keeps "Colourmap" text visually centred */}
         <span
@@ -297,7 +304,7 @@ export default function ColourmapBrandButton({ initials, email }: ColourmapBrand
           className="text-[22px] font-bold tracking-[0.08em] font-serif text-center"
           style={{ color: 'var(--header-text, #C8A858)' }}
         >
-          Colourmap
+          Colour Brain
         </p>
         <svg width={18} height={18} viewBox="0 0 20 20" style={{ marginTop: 3 }} aria-hidden="true">
           {(() => {
@@ -330,7 +337,7 @@ export default function ColourmapBrandButton({ initials, email }: ColourmapBrand
           ref={overlayRef}
           role="dialog"
           aria-modal="true"
-          aria-label="About Colourmap"
+          aria-label="About Colour Brain"
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{
             background: 'rgba(26, 13, 4, 0.55)',
@@ -369,7 +376,7 @@ export default function ColourmapBrandButton({ initials, email }: ColourmapBrand
                 className="font-normal tracking-[0.1em]"
                 style={{ fontSize: 26, color: '#B33A2B', fontStyle: 'italic' }}
               >
-                Colourmap
+                Colour Brain
               </p>
               <svg width={20} height={20} viewBox="0 0 20 20" aria-hidden="true">
                 {(() => {
@@ -409,6 +416,59 @@ export default function ColourmapBrandButton({ initials, email }: ColourmapBrand
               className="mb-5"
               style={{ height: 1, background: 'var(--border)' }}
             />
+
+            {/*
+              THE DOOR TO THE ADMIN DOCUMENT.
+
+              It lives here rather than in the navigation because it is not a
+              surface of this app — it is the running account of everything
+              outside it: the paperwork, the critical path, the two mails
+              already written. The title is where you press when you want to
+              know where you stand, which is the same question.
+
+              An external link rather than a page. The document is written and
+              rewritten by hand as reality changes, and rebuilding it as React
+              would mean keeping two copies of the same truth.
+            */}
+            <a
+              href={ADMIN_DOC}
+              target="_blank"
+              rel="noreferrer"
+              className="mb-5 flex items-center gap-3 rounded-2xl px-4 py-3 no-underline transition-opacity hover:opacity-85"
+              style={{ background: '#C4A06010', border: '1px solid #C4A06028' }}
+            >
+              <span
+                aria-hidden="true"
+                className="flex shrink-0 items-center justify-center rounded-full"
+                style={{
+                  width: 36,
+                  height: 36,
+                  background: '#C4A06028',
+                  border: '1px solid #C4A06055',
+                  fontSize: 16,
+                }}
+              >
+                ↗
+              </span>
+              <span className="min-w-0 flex-1">
+                <span
+                  className="block"
+                  style={{
+                    fontFamily: 'var(--font-serif)',
+                    fontSize: 15,
+                    color: 'var(--foreground)',
+                  }}
+                >
+                  Ce que tu dois faire
+                </span>
+                <span
+                  className="block"
+                  style={{ fontSize: 12, lineHeight: 1.45, color: 'var(--muted-foreground)' }}
+                >
+                  Le suivi admin, le chemin critique, et comment travailler depuis le téléphone.
+                </span>
+              </span>
+            </a>
 
             {/* Signed-in user — initials + email + sign-out. Lives
                 here (in the title's modal) instead of as a standalone
@@ -520,7 +580,7 @@ export default function ColourmapBrandButton({ initials, email }: ColourmapBrand
                       opacity: 0.82,
                     }}
                   >
-                    Developing areas of Colourmap.
+                    Developing areas of Colour Brain.
                   </p>
                 </div>
                 <button

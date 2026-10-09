@@ -51,7 +51,6 @@ The agent must never push directly to `main`. All work goes through a branch and
 
 `AGENTS.md` is the single source of truth. Runtime-specific files symlink to it:
 
-- `CLAUDE.md` → `AGENTS.md`
 - `.claude/rules/` → symlinks to `rules/*.md`
 - `.claude/skills/` → symlinks to `skills/*/`
 - `.codex/AGENTS.md` → `AGENTS.md`

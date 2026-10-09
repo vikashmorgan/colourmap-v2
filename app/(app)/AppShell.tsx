@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import BrainDock from '@/components/BrainDock';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import GuitarStudio from '@/components/GuitarStudio';
 import NavLinks from '@/components/NavLinks';
@@ -167,6 +168,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </p>
         )}
       </div>
+
+      {/*
+        The index of the whole, present on every surface. It is furniture
+        rather than a feature — see components/BrainDock.tsx.
+      */}
+      <BrainDock />
 
       {/* Bottom nav — shown when navPosition='bottom' */}
       {navPosition === 'bottom' && (
