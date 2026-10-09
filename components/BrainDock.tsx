@@ -18,6 +18,10 @@
  * Tapping a branch does not take you anywhere. The dock answers "where am I in
  * all this", and a control that answers that question by moving you somewhere
  * else has changed the subject. Navigation lives in the nav.
+ *
+ * The one exception, since 2026-10-09: a LEAF, the specific thing at the tip
+ * of a branch, opens its space when tapped (the AI Sculptures · Flow
+ * collection was the first thing asked to open from here).
  */
 
 import { useEffect, useState } from 'react';

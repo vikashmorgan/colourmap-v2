@@ -136,6 +136,8 @@ export const GROUPINGS: Grouping[] = [
     branch: 'art',
     label: 'Visual',
     routes: [
+      // Collections first, so they are always among the leaves the tree shows.
+      '/art/flow',
       '/geometry-field',
       '/figures',
       '/figure-stars',
