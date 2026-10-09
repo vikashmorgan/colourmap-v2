@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import type { CompassAxis, LifeCategoryLike } from '@/components/CategoryTagPicker';
 import CategoryTagPicker from '@/components/CategoryTagPicker';
 import MicDot from '@/components/MicDot';
+import { useSpellCheck } from '@/lib/hooks/use-spell-check';
 
 /* ═══════════════════════════════════════════════════════════
    DAILY OBJECTIVES — today's list + push for tomorrow.
@@ -118,7 +119,7 @@ export default function DailyObjectives() {
   const [slidersOpenId, setSlidersOpenId] = useState<string | null>(null);
   const [draggedTodayId, setDraggedTodayId] = useState<string | null>(null);
   const [dragOverTodayId, setDragOverTodayId] = useState<string | null>(null);
-  const [noteSpell, setNoteSpell] = useState(false);
+  const [noteSpell, toggleNoteSpell] = useSpellCheck();
 
   const persistTodayObjectives = (next: TodoItem[]) => {
     setTodayObjectives(next);
@@ -635,7 +636,7 @@ export default function DailyObjectives() {
                           />
                           <button
                             type="button"
-                            onClick={() => setNoteSpell((v) => !v)}
+                            onClick={toggleNoteSpell}
                             title={
                               noteSpell
                                 ? 'Spell check on — click to turn off'

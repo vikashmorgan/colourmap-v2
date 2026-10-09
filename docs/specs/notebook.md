@@ -26,6 +26,7 @@ Life doesn't have compartments. The person writing a song at 10pm is the same pe
 - Font selector: Default, Serif (Playfair), Mono (Courier), Handwritten (Caveat), Sketch (Kalam)
 - Per-note styling persisted in localStorage
 - Markdown-lite preview when not editing (bold, italic, headings, lists render)
+- Spell check: **off by default** (Italian and English are both written here). The *abc* button, in an open note, in full view and on Day's objective notes, turns it on or off for the whole app; the choice is remembered on the device (`cb-spellcheck`) and applied to `<html spellcheck>`, so every text field without its own setting follows it.
 
 ## Music Toolkit
 
