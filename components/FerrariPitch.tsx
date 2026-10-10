@@ -4,6 +4,8 @@ import {
   FERRARI_AVOID,
   FERRARI_CONTEXT,
   FERRARI_DINO,
+  FERRARI_FELT,
+  FERRARI_IMMERSIVE,
   FERRARI_PROJECT,
   FERRARI_QUESTIONS,
   FERRARI_QUOTES,
@@ -197,6 +199,25 @@ export default function FerrariPitch() {
             <a href={FERRARI_PROJECT.link} style={{ color: RED, fontSize: 14, fontWeight: 600 }}>
               See the collection →
             </a>
+          </div>
+        </Section>
+
+        <Section kicker="Section 5 · a small part" title={FERRARI_FELT}>
+          <div style={{ ...card, display: 'grid', gap: 12 }}>
+            <p style={{ margin: 0, fontSize: 16, lineHeight: 1.6 }}>{FERRARI_IMMERSIVE.intro}</p>
+            <ul
+              aria-label="The senses"
+              style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8 }}
+            >
+              {FERRARI_IMMERSIVE.senses.map((s) => (
+                <li key={s.sense} style={{ fontSize: 15.5, lineHeight: 1.55 }}>
+                  <strong style={{ color: RED }}>{s.sense}.</strong> {s.idea}
+                </li>
+              ))}
+            </ul>
+            <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: MUTED }}>
+              {FERRARI_IMMERSIVE.link}
+            </p>
           </div>
         </Section>
 

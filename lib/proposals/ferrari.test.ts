@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { FERRARI_PROJECT, FERRARI_QUOTES, FERRARI_SECTIONS, FERRARI_WORDS } from './ferrari';
+import {
+  FERRARI_FELT,
+  FERRARI_IMMERSIVE,
+  FERRARI_PROJECT,
+  FERRARI_QUOTES,
+  FERRARI_SECTIONS,
+  FERRARI_WORDS,
+} from './ferrari';
 
 describe('Ferrari pitch content', () => {
   it('has six movements, numbered in order', () => {
@@ -21,5 +28,16 @@ describe('Ferrari pitch content', () => {
   it('puts the Flow collection forward as the project, ending in the walkable gallery', () => {
     expect(FERRARI_PROJECT.steps.at(-1)).toBe('3D gallery to walk through');
     expect(FERRARI_PROJECT.link).toBe('/art/flow');
+  });
+
+  it('says Ferrari is felt, and dives in through every sense', () => {
+    expect(FERRARI_FELT).toBe('Ferrari is not only seen. It is felt.');
+    expect(FERRARI_IMMERSIVE.senses.map((s) => s.sense)).toEqual([
+      'Sound',
+      'Scent',
+      'Touch',
+      'Sight',
+      'AI',
+    ]);
   });
 });

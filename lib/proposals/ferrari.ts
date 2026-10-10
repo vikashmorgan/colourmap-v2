@@ -90,6 +90,43 @@ export const FERRARI_PROJECT = {
   link: '/art/flow',
 };
 
+/** The line the immersive idea hangs on. */
+export const FERRARI_FELT = 'Ferrari is not only seen. It is felt.';
+
+export type Sense = { sense: string; idea: string };
+
+/**
+ * A small part of the pitch: a museum room you dive into rather than look at,
+ * every sense carrying the same story, with AI to compose and adapt it.
+ */
+export const FERRARI_IMMERSIVE = {
+  intro:
+    'In the museums a Ferrari stands behind a rope, to be looked at. What made it a Ferrari was never only visible: the sound, the heat, the smell of the workshop and the track. An immersive room lets visitors dive into that experience instead of reading about it.',
+  senses: [
+    {
+      sense: 'Sound',
+      idea: 'Engine notes from the archive, a V12 at idle, the Dino V6, a lap at Fiorano, cleaned up with AI and placed in space, so each engine on display breathes as you walk past it.',
+    },
+    {
+      sense: 'Scent',
+      idea: 'Perfumes composed with a perfumer, one for each room: hot oil and fuel in the workshop, cockpit leather, rubber and warm asphalt on the track, Maranello after rain.',
+    },
+    {
+      sense: 'Touch',
+      idea: 'The low frequencies of the engine carried through the floor, and a cast aluminium part you are allowed to lay a hand on.',
+    },
+    {
+      sense: 'Sight',
+      idea: 'Generative visuals that move with the sound, light and colour flowing from the engine note, so the room is never quite the same twice.',
+    },
+    {
+      sense: 'AI',
+      idea: 'The room adapts to each visitor: choose an era or a car, and a guide tells the story of a part, its engineers, and the race it was built for.',
+    },
+  ] satisfies Sense[],
+  link: 'It meets the Out of the Box proposal: real components, each one standing in a room with its own sound and scent, a living museum.',
+};
+
 export const FERRARI_QUESTIONS = [
   "Where does Ferrari's technique end and its spirit begin, or is that border the point?",
   'How does a brand stay brave as it grows, without losing its roots?',
@@ -129,4 +166,5 @@ export const FERRARI_TODO = [
   'Check the Dino dates against Ferrari’s own history pages',
   'Choose the format (slides, booklet or spoken) and the length',
   'Add the application details: role, contact, deadline',
+  'Decide whether the immersive room joins the pitch or stays a next step',
 ];
