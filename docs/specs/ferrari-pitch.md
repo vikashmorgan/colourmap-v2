@@ -4,6 +4,8 @@
 
 **Status:** Draft outline, 2026-10-09. Quotes still to be checked against primary sources before anything is printed (see *Quotes*).
 
+**The working page:** `/proposal/ferrari` in Colour Brain (cream, one touch of Ferrari red), added 2026-10-10. Its words live in `lib/proposals/ferrari.ts`. It proposes the **AI Sculptures · Flow** collection as the project in section 5: AI images → 3D videos → 3D assets → 3D print (extrusion) → delivered to clients → a 3D gallery to walk through, as technique and spirit in one process.
+
 ## Context
 
 The world is changing fast. In this new future, innovation is not a department but a **mindset, a way of life**: a way of staying brave while staying connected to one's roots. The pitch argues that art can reflect a brand's philosophy, and that the artist's way of working, slow and deliberate thinking before bold making, mirrors Ferrari's own union of technique and spirit.
