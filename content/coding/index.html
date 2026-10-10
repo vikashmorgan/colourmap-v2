@@ -66,8 +66,8 @@ body { margin: 0; background: var(--ground); color: var(--ink); font-family: var
 /* Top bar with the two pages */
 .top {
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
-  background: color-mix(in srgb, var(--ground) 92%, transparent);
-  backdrop-filter: blur(6px);
+  /* Solid: a see-through header let the page show through it while scrolling. */
+  background: var(--ground);
   border-bottom: 1px solid var(--rule);
 }
 .top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 12px; flex-wrap: wrap; }
@@ -394,7 +394,10 @@ details.solution .fn { margin-top: 10px; }
 details.solution .ex-why { margin-top: 12px; }
 
 /* "You are here" strip under the top bar on the Lessons page. */
-.top .here { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; justify-content: flex-start; padding-block: 8px; border-top: 1px solid var(--rule); font-size: 14px; }
+.top .here { display: flex; flex-wrap: nowrap; gap: 6px 10px; align-items: center; justify-content: flex-start; min-height: 40px; padding-block: 6px; border-top: 1px solid var(--rule); font-size: 14px; white-space: nowrap; overflow: hidden; }
+/* One line, always the same height, so the header never changes size under the reader. */
+.top .here > span { flex: none; }
+.top .here > .here-section { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .top .here[hidden] { display: none; }
 .here-session { font-weight: 700; }
 .here-sep { color: var(--muted); }
@@ -1982,27 +1985,42 @@ lessonIndex.addEventListener('click', e => {
 });
 
 // "You are here": the session and section under the top bar, updated while scrolling.
+// The probe is measured from the top bar's first row, not the whole header: the here
+// line lives inside the header, so measuring from the header's bottom moved the probe
+// every time the line appeared or vanished, and it blinked on and off at boundaries.
 const hereEl = document.getElementById('here');
+const HERE_ROOM = 40 + 60;
+const hereProbe = () => document.querySelector('.top > .wrap').getBoundingClientRect().bottom + HERE_ROOM;
+let hereShown = '';
+function showHere(html, sess) {
+  if (html === hereShown && !hereEl.hidden) return;   // nothing changed: leave the DOM alone
+  hereShown = html;
+  hereEl.innerHTML = html;
+  hereEl.style.setProperty('--sess', sess);
+  hereEl.hidden = false;
+}
+function hideHere() { hereShown = ''; hereEl.hidden = true; }
 function updateHereProject() {
-  const probe = document.querySelector('.top').getBoundingClientRect().bottom + 60;
+  const probe = hereProbe();
   let step = null;
   for (const d of document.querySelectorAll('#steps details.pstep')) if (d.getBoundingClientRect().top <= probe) step = d;
-  if (!step || step.getBoundingClientRect().bottom < probe) { hereEl.hidden = true; return; }
+  // Always one line on this page (the step last passed, or the page name), so the
+  // header keeps its height and nothing jumps between steps.
+  if (!step) { showHere('<span class="here-session">Project One</span>', ''); return; }
   let card = '';
   if (step.open) for (const c of step.querySelectorAll('.pcard')) if (c.getBoundingClientRect().top <= probe) card = `${c.dataset.pos} · ${c.dataset.name}`;
-  hereEl.innerHTML = `<span class="here-session">Project One</span><span class="here-sep">›</span><span class="here-section">${esc(step.dataset.title)}</span>${card ? `<span class="here-sep">›</span><span class="here-section">${esc(card)}</span>` : ''}`;
-  hereEl.style.setProperty('--sess', step.style.getPropertyValue('--sess'));
-  hereEl.hidden = false;
+  showHere(`<span class="here-session">Project One</span><span class="here-sep">›</span><span class="here-section">${esc(step.dataset.title)}</span>${card ? `<span class="here-sep">›</span><span class="here-section">${esc(card)}</span>` : ''}`, step.style.getPropertyValue('--sess'));
 }
 function updateHere() {
   const proj = document.getElementById('page-project');
   if (proj && !proj.hidden) { updateHereProject(); return; }
   const page = document.getElementById('page-lessons');
-  if (!page || page.hidden) { hereEl.hidden = true; return; }
-  const probe = document.querySelector('.top').getBoundingClientRect().bottom + 60;
+  if (!page || page.hidden) { hideHere(); return; }
+  const probe = hereProbe();
   let lesson = null;
   for (const l of lessonsEl.querySelectorAll('details.lesson')) if (l.getBoundingClientRect().top <= probe) lesson = l;
-  if (!lesson || lesson.getBoundingClientRect().bottom < probe) { hereEl.hidden = true; return; }
+  // As on the project page: between two sessions the one last passed stays named.
+  if (!lesson) { showHere('<span class="here-session">Lessons</span>', ''); return; }
   let section = '';
   if (lesson.open) {
     for (const s of lesson.querySelectorAll('[data-here]')) if (s.getClientRects().length && s.getBoundingClientRect().top <= probe) section = s.dataset.here;
@@ -2013,9 +2031,7 @@ function updateHere() {
   }
   let boxNum = '';
   if (lesson.open) for (const it of lesson.querySelectorAll('.item[data-num]')) if (!it.hidden && it.getClientRects().length && it.getBoundingClientRect().top <= probe) boxNum = it.dataset.num;
-  hereEl.innerHTML = `<span class="here-session">${lesson.dataset.title}</span>${section ? `<span class="here-sep">›</span><span class="here-section">${esc(section)}</span>` : ''}${boxNum ? `<span class="here-box">${boxNum}</span>` : ''}`;
-  hereEl.style.setProperty('--sess', lesson.style.getPropertyValue('--sess'));
-  hereEl.hidden = false;
+  showHere(`<span class="here-session">${lesson.dataset.title}</span>${section ? `<span class="here-sep">›</span><span class="here-section">${esc(section)}</span>` : ''}${boxNum ? `<span class="here-box">${boxNum}</span>` : ''}`, lesson.style.getPropertyValue('--sess'));
 }
 let hereQueued = false;
 window.addEventListener('scroll', () => {
