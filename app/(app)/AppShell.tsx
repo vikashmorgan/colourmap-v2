@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import BrainDock from '@/components/BrainDock';
+import ChillSongs from '@/components/ChillSongs';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import GuitarStudio from '@/components/GuitarStudio';
 import NavLinks from '@/components/NavLinks';
@@ -17,7 +18,7 @@ const SOCIAL_ROUTES = [
   { href: '/chat', label: 'Chat' },
 ];
 
-type MusicSection = 'makers' | 'guitar';
+type MusicSection = 'makers' | 'guitar' | 'songs';
 
 function formatFooterDate(date: Date) {
   const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -73,12 +74,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             display:none hides it but never unmounts — audio survives
             route changes. Only visible when on /music. */}
         <div style={{ display: onMusic ? 'block' : 'none' }}>
-          {/* Music top-nav: Music Studio · Guitar Studio */}
+          {/* Music top-nav: Music Studio · Guitar Studio · Songs */}
           <div className="flex items-center justify-center gap-8 pb-1 mb-4">
             {(
               [
                 { id: 'makers', label: 'Music Studio' },
                 { id: 'guitar', label: 'Guitar Studio' },
+                { id: 'songs', label: 'Songs' },
               ] as { id: MusicSection; label: string }[]
             ).map(({ id, label }) => (
               <button
@@ -111,6 +113,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {musicSection === 'guitar' && (
             <GuitarStudio onShowRecordingsSection={showRecordingsSection} />
           )}
+          {/* Songs: the Chill Machine piano in a frame, its song library kept in the account. */}
+          {musicSection === 'songs' && <ChillSongs />}
         </div>
 
         {/* Social sub-navigation — shown on /circles, /sparks, /chat */}
