@@ -16,7 +16,9 @@ export const SLIDE_FILES = [
   'Session6.pdf',
   'Session7.pdf',
   'Session8.pdf',
-  // Second course, session 2 (binary search and trees), shown as Recursion 2.
+  // Second course: session 1 (recursion) and session 2 (binary search and trees),
+  // shown as Recursion 1 and Recursion 2.
+  'Recursion1.pdf',
   'Recursion2.pdf',
 ] as const;
 

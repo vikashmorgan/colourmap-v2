@@ -825,6 +825,33 @@ details.fullcode .mission-tag { background: var(--ink); }
 /* A lesson's own overall questions, in the session's colour. */
 .lesson-overall { margin: 4px 0 18px; border-color: color-mix(in srgb, var(--sess) 55%, var(--rule)); background: color-mix(in srgb, var(--sess) 7%, var(--panel)); }
 .lesson-overall .ov-zero { background: var(--sess); }
+/* The original slides, one at a time, each with its own questions and comments. */
+details.sv { margin: 0 0 18px; border: 2px solid var(--sess, var(--accent)); border-radius: 12px; background: var(--panel); scroll-margin-top: 120px; }
+details.sv > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 12px 16px; }
+details.sv > summary::-webkit-details-marker { display: none; }
+details.sv > summary::after { content: '▸'; margin-left: auto; color: var(--muted); }
+details.sv[open] > summary::after { content: '▾'; }
+.sv-body { display: grid; gap: 12px; padding: 0 16px 16px; }
+.sv-sum { display: grid; gap: 6px; }
+.sv-sum-row { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; width: 100%; text-align: left; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 10px; background: var(--ground); color: var(--ink); font: 14.5px/1.45 var(--body); cursor: pointer; }
+.sv-sum-row:hover { border-color: var(--sess, var(--accent)); }
+.sv-sum-num { font: 600 12px var(--mono); color: var(--ground); background: var(--sess, var(--accent)); border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
+.sv-sum-text { display: grid; gap: 2px; }
+.sv-sum-text small { color: var(--muted); }
+.sv-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sv-bar button, .sv-bar a { min-height: 40px; padding: 6px 14px; border: 1px solid var(--rule); border-radius: 999px; background: var(--ground); color: var(--ink); font: 600 14px var(--body); cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+.sv-bar button:disabled { opacity: .4; cursor: default; }
+.sv-bar input { width: 4.2em; min-height: 40px; padding: 4px 8px; border: 1px solid var(--rule); border-radius: 10px; background: var(--ground); color: var(--ink); font: 600 14px var(--mono); text-align: center; }
+.sv-bar .sv-of { font: 600 13px var(--mono); color: var(--muted); }
+.sv-bar .sv-open { margin-left: auto; }
+.sv-stage { position: relative; display: grid; place-items: center; min-height: 240px; border-radius: 10px; background: #fff; border: 1px solid var(--rule); overflow: hidden; }
+.sv-stage canvas { display: block; width: auto; height: auto; max-width: 100%; max-height: 72vh; }
+.sv-msg { padding: 24px; color: #555; text-align: center; }
+.slide-host { display: grid; gap: 8px; padding: 10px 12px; border-radius: 10px; border: 1px dashed color-mix(in srgb, var(--sess, var(--accent)) 55%, var(--rule)); background: color-mix(in srgb, var(--sess, var(--accent)) 6%, var(--ground)); }
+.slide-host .note-dot { justify-self: start; margin-top: 0; }
+.slide-host .sv-host-title { font: 600 12px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.slide-host.flash { outline: 3px solid var(--sess, var(--accent)); outline-offset: 2px; }
+.slides-pick { display: inline-flex; }
 /* The mission, a copy of the brief at the top of Project 1, one tap away from anywhere. */
 .nb-mission { padding: 16px; display: grid; gap: 16px; }
 .nb-mission .mission-grid { grid-template-columns: 1fr; gap: 16px; }
@@ -1645,7 +1672,7 @@ LESSONS.push(S8_LESSON);
 // their session ids, 9 and 10, only key the marks and notes.
 /* Recursion 1 (session id 9, shown as R1): the reader layout, as session 8.
    Every example's output was produced by running it. */
-const S9_LESSON = {"session": 9, "label": "R1", "title": "Recursion 1", "layout": "reader", "oneLine": "A function that solves a problem by solving a smaller copy of it.", "slides": null, "groups": [{"name": "What recursion is", "items": [["recursion", "A function that calls itself on a smaller version of the same problem, until the problem is small enough to answer outright.", "def countdown(n):\n    if n == 0:\n        return\n    countdown(n - 1)"], ["base case (rule 1)", "The case small enough to answer without calling yourself. Every recursive function needs at least one, and it is tested first.", "if not word:\n    return [\"\"]"], ["smaller problem (rule 2)", "Each recursive call must work on a strictly smaller input, so the calls are guaranteed to reach the base case.", "return count(l[0], x) + count(l[1:], x)"], ["trust the recursive call", "Assume the call on the smaller input already returns the right answer, and only ask: how do I build my answer from it?", "rest = anagrams(word[1:])   # trust it"]]}, {"name": "The call stack", "items": [["call stack and frames", "Every call gets its own frame: its own copy of the parameters and local variables. The frames pile up until the base case answers.", ""], ["unwinding: the combine step", "The work written after the recursive call runs on the way back up, once the smaller answer has arrived.", "return word[i] + tail"], ["RecursionError", "Python stops a recursion that goes about 1000 calls deep and raises RecursionError: almost always a missing or unreachable base case.", "RecursionError: maximum recursion depth exceeded"]]}, {"name": "Recursion on lists", "items": [["head and tail", "A list is its first item l[0] and the rest l[1:]. Handle the head, recurse on the tail.", "first, rest = items[0], items[1:]"], ["nested lists", "A nested list is either a single value or a list of nested lists. That two-way definition is exactly what recursion handles.", "if isinstance(l, int):\n    ..."], ["counting occurrences", "Your count_occurrencies: a number counts 1 or 0; an empty list counts 0; any other list is the count in its head plus the count in its tail.", "return count_occurrencies(l[0], x) + count_occurrencies(l[1:], x)"], ["depth of a nested list", "How deep is it? A value is depth 0; a list is 1 + the deepest of its items.", "1 + max(depth(item) for item in l)"]]}, {"name": "Building every answer", "items": [["returning a list of results", "Some recursions return all the answers: the smaller call returns a list, and you build a longer list from it.", "result = []\nfor tail in anagrams(rest):\n    result.append(word[i] + tail)"], ["anagrams: fix one letter", "Every anagram starts with some letter. Pick each letter in turn as the first, and put every anagram of the remaining letters after it.", "for i in range(len(word)):\n    rest = word[:i] + word[i+1:]"], ["anagrams: insert a letter everywhere", "The other way round: take every anagram of the tail, and slide the first letter into every position of it.", "for anagram in anagrams(word[1:]):\n    for i in range(len(anagram) + 1): ..."], ["how fast the answers grow", "A word of n different letters has n! anagrams: 3 letters give 6, 8 letters 40 320, 12 letters nearly half a billion.", "len(anagrams(\"abcd\"))   # 24"]]}, {"name": "Recursion or a loop?", "items": [["when recursion fits", "Reach for recursion when the data branches: nested lists, trees, folders, every arrangement. For a flat list, a loop is simpler.", ""]]}], "pitfalls": ["No base case, or one that is never reached: RecursionError.", "Test the base case first, before any line that would fail on the smallest input (len() of an int, items[0] of an empty list).", "Every call must get a strictly smaller input. Test with sizes 0, 1 and 2.", "When the recursion returns a list, the base case returns a list with the smallest answer ([\"\"] or [[]]), never [].", "Return the result; do not just print it inside the recursion, or the caller has nothing to build on.", "Slicing (items[1:]) copies the list at every level: fine for small data, wasteful for large data."], "extra": ""};
+const S9_LESSON = {"session": 9, "label": "R1", "title": "Recursion 1", "layout": "reader", "oneLine": "A function that solves a problem by solving a smaller copy of it.", "slides": "Recursion1.pdf", "groups": [{"name": "What recursion is", "items": [["recursion", "A function that calls itself on a smaller version of the same problem, until the problem is small enough to answer outright.", "def countdown(n):\n    if n == 0:\n        return\n    countdown(n - 1)"], ["base case (rule 1)", "The case small enough to answer without calling yourself. Every recursive function needs at least one, and it is tested first.", "if not word:\n    return [\"\"]"], ["smaller problem (rule 2)", "Each recursive call must work on a strictly smaller input, so the calls are guaranteed to reach the base case.", "return count(l[0], x) + count(l[1:], x)"], ["trust the recursive call", "Assume the call on the smaller input already returns the right answer, and only ask: how do I build my answer from it?", "rest = anagrams(word[1:])   # trust it"]]}, {"name": "The call stack", "items": [["call stack and frames", "Every call gets its own frame: its own copy of the parameters and local variables. The frames pile up until the base case answers.", ""], ["unwinding: the combine step", "The work written after the recursive call runs on the way back up, once the smaller answer has arrived.", "return word[i] + tail"], ["RecursionError", "Python stops a recursion that goes about 1000 calls deep and raises RecursionError: almost always a missing or unreachable base case.", "RecursionError: maximum recursion depth exceeded"]]}, {"name": "Recursion on lists", "items": [["head and tail", "A list is its first item l[0] and the rest l[1:]. Handle the head, recurse on the tail.", "first, rest = items[0], items[1:]"], ["nested lists", "A nested list is either a single value or a list of nested lists. That two-way definition is exactly what recursion handles.", "if isinstance(l, int):\n    ..."], ["counting occurrences", "Your count_occurrencies: a number counts 1 or 0; an empty list counts 0; any other list is the count in its head plus the count in its tail.", "return count_occurrencies(l[0], x) + count_occurrencies(l[1:], x)"], ["depth of a nested list", "How deep is it? A value is depth 0; a list is 1 + the deepest of its items.", "1 + max(depth(item) for item in l)"]]}, {"name": "Building every answer", "items": [["returning a list of results", "Some recursions return all the answers: the smaller call returns a list, and you build a longer list from it.", "result = []\nfor tail in anagrams(rest):\n    result.append(word[i] + tail)"], ["anagrams: fix one letter", "Every anagram starts with some letter. Pick each letter in turn as the first, and put every anagram of the remaining letters after it.", "for i in range(len(word)):\n    rest = word[:i] + word[i+1:]"], ["anagrams: insert a letter everywhere", "The other way round: take every anagram of the tail, and slide the first letter into every position of it.", "for anagram in anagrams(word[1:]):\n    for i in range(len(anagram) + 1): ..."], ["how fast the answers grow", "A word of n different letters has n! anagrams: 3 letters give 6, 8 letters 40 320, 12 letters nearly half a billion.", "len(anagrams(\"abcd\"))   # 24"]]}, {"name": "Recursion or a loop?", "items": [["when recursion fits", "Reach for recursion when the data branches: nested lists, trees, folders, every arrangement. For a flat list, a loop is simpler.", ""]]}], "pitfalls": ["No base case, or one that is never reached: RecursionError.", "Test the base case first, before any line that would fail on the smallest input (len() of an int, items[0] of an empty list).", "Every call must get a strictly smaller input. Test with sizes 0, 1 and 2.", "When the recursion returns a list, the base case returns a list with the smallest answer ([\"\"] or [[]]), never [].", "Return the result; do not just print it inside the recursion, or the caller has nothing to build on.", "Slicing (items[1:]) copies the list at every level: fine for small data, wasteful for large data."], "extra": ""};
 Object.assign(MORE, {"s9|recursion": {"more": "Recursion is a way of describing a problem in terms of itself: the answer for n is built from the answer for something smaller. It is not a new Python feature; a function is allowed to call any function, including itself. You use it when the data or the problem has the same shape at every level: a list is a first item and a smaller list, a folder holds folders. Forgetting to make the problem smaller is the classic mistake: the function calls itself forever until Python stops it.", "example": "def countdown(n):\n    if n == 0:\n        print(\"lift off\")\n        return\n    print(n)\n    countdown(n - 1)\n\ncountdown(3)", "output": "3\n2\n1\nlift off"}, "s9|base case (rule 1)": {"more": "The base case is where the recursion stops: an empty list, a number reaching zero, a single letter. It must return a real answer, not just stop, because every call above it builds on that answer. Put the test at the top of the function, before anything that could fail on the smallest input. If you forget it, or it can never be reached, the result is a RecursionError.", "example": "def total(numbers):\n    if not numbers:              # base case: an empty list sums to 0\n        return 0\n    return numbers[0] + total(numbers[1:])\n\nprint(total([]))\nprint(total([4, 5, 6]))", "output": "0\n15"}, "s9|smaller problem (rule 2)": {"more": "Smaller can mean a shorter list, a shorter word, a smaller number or a narrower window of indexes. Check it in one sentence: every call removes at least one element. If one call can receive the same input it was given, the recursion never ends. Test on inputs of size zero, one and two: that is where these bugs show.", "example": "def length(items):\n    if not items:\n        return 0\n    return 1 + length(items[1:])   # one element shorter every call\n\nprint(length([\"a\", \"b\", \"c\", \"d\"]))", "output": "4"}, "s9|trust the recursive call": {"more": "This is the step that makes recursion feel like magic. You do not trace every level in your head; you check that the base case is right, and that if the smaller call is right, your combine step makes this call right too. That two-line argument is a complete proof (mathematicians call it induction). Tracing every frame by hand is useful once, to see it work, but never needed to write the code.", "example": "def reverse(word):\n    if len(word) <= 1:\n        return word\n    rest = reverse(word[1:])      # trust: the tail, reversed\n    return rest + word[0]         # build my answer from it\n\nprint(reverse(\"python\"))", "output": "nohtyp"}, "s9|call stack and frames": {"more": "When a function calls itself, the first call is paused, not replaced. Python keeps each paused call in a frame on the call stack, with its own n or its own list. The deepest frame answers first, then each paused frame resumes where it stopped. Seeing the indentation of a trace is the quickest way to understand it.", "example": "def depth(n, indent=0):\n    print(\"  \" * indent + f\"call depth({n})\")\n    if n == 0:\n        return 0\n    result = 1 + depth(n - 1, indent + 1)\n    print(\"  \" * indent + f\"depth({n}) returns {result}\")\n    return result\n\ndepth(3)", "output": "call depth(3)\n  call depth(2)\n    call depth(1)\n      call depth(0)\n    depth(1) returns 1\n  depth(2) returns 2\ndepth(3) returns 3"}, "s9|unwinding: the combine step": {"more": "The way down only splits the problem; the way back up builds the answer. In total(numbers) the additions happen while the frames unwind: 6, then 5 + 6, then 4 + 11. Code before the call runs in calling order, code after it in reverse order. That is why printing after the call prints backwards.", "example": "def show(items):\n    if not items:\n        return\n    print(\"down\", items[0])\n    show(items[1:])\n    print(\"up  \", items[0])\n\nshow([1, 2, 3])", "output": "down 1\ndown 2\ndown 3\nup   3\nup   2\nup   1"}, "s9|RecursionError": {"more": "The limit protects the program from filling memory with frames. When you see this error, look for a call that does not shrink its input, or a base case that is tested after the line that fails. Raising the limit is rarely the fix; a loop or a smaller depth is. A list of a few thousand items processed one element per call can hit the limit, which is one reason loops stay useful.", "example": "def broken(n):\n    return broken(n - 1)          # no base case\n\ntry:\n    broken(5)\nexcept RecursionError as error:\n    print(\"RecursionError:\", error)", "output": "RecursionError: maximum recursion depth exceeded"}, "s9|head and tail": {"more": "This is the most common shape for recursion on a sequence: do something with one element, let the recursive call handle all the others. The empty list is the natural base case. Each slice items[1:] builds a new list, which is fine for small data but costs a copy at every level.", "example": "def biggest(numbers):\n    if len(numbers) == 1:\n        return numbers[0]\n    best_of_rest = biggest(numbers[1:])\n    return numbers[0] if numbers[0] > best_of_rest else best_of_rest\n\nprint(biggest([3, 9, 4, 7]))", "output": "9"}, "s9|nested lists": {"more": "A loop can only walk one level: it cannot know how deep the next item goes. Recursion asks of each item: is it a plain value (answer directly) or a list (call myself on it)? isinstance(x, list) or isinstance(x, int) is the test that picks the branch. A nested list is a tree, which is where Recursion 2 continues.", "example": "def flatten(items):\n    flat = []\n    for item in items:\n        if isinstance(item, list):\n            flat += flatten(item)     # a list: recurse\n        else:\n            flat.append(item)         # a value: keep it\n    return flat\n\nprint(flatten([3, [7, 3, [3, 9]]]))", "output": "[3, 7, 3, 3, 9]"}, "s9|counting occurrences": {"more": "This function has two base cases: a plain integer, and an empty list. The recursive case splits the list into head and tail and adds the two counts, and the head may itself be a list, so the same function dives into it. Test the integer case first: len() of an integer is a TypeError.", "example": "def count_occurrencies(l, x):\n    if isinstance(l, int):\n        return 1 if l == x else 0\n    if len(l) == 0:\n        return 0\n    return count_occurrencies(l[0], x) + count_occurrencies(l[1:], x)\n\nl = [3, [7, 3, [3, 9]]]\nprint(count_occurrencies(l, 3))\nprint(count_occurrencies(l, 7))\nprint(count_occurrencies(l, 5))", "output": "3\n1\n0"}, "s9|depth of a nested list": {"more": "Same two-way shape as counting, with max instead of +. It answers questions a loop cannot: how many levels of folders, how deep a comment thread goes. Watch out for the empty list: max() of nothing is a ValueError, so give it a default.", "example": "def depth(l):\n    if not isinstance(l, list):\n        return 0\n    return 1 + max((depth(item) for item in l), default=0)\n\nprint(depth(5))\nprint(depth([3, [7, 3, [3, 9]]]))", "output": "0\n3"}, "s9|returning a list of results": {"more": "Instead of one number, the recursive call hands back a list of partial answers. You loop over them and extend each one with your own piece. The base case must return a list too: a list holding the smallest answer, not an empty list, or nothing is ever built.", "example": "def subsets(items):\n    if not items:\n        return [[]]                  # one subset: the empty one\n    rest = subsets(items[1:])\n    return rest + [[items[0]] + s for s in rest]\n\nprint(subsets([\"a\", \"b\", \"c\"]))", "output": "[[], ['c'], ['b'], ['b', 'c'], ['a'], ['a', 'c'], ['a', 'b'], ['a', 'b', 'c']]"}, "s9|anagrams: fix one letter": {"more": "This is the second version in your anagrams.py. word[:i] + word[i+1:] is the word with letter i removed: strictly shorter, so the recursion ends. The base case is a word of one letter (or none), whose only anagram is itself. The loop goes over the choices, the recursion goes over the positions.", "example": "def anagrams(word):\n    if len(word) <= 1:\n        return [word]\n    result = []\n    for i in range(len(word)):\n        rest = word[:i] + word[i+1:]\n        for tail in anagrams(rest):\n            result.append(word[i] + tail)\n    return result\n\nprint(anagrams(\"cat\"))", "output": "['cat', 'cta', 'act', 'atc', 'tca', 'tac']"}, "s9|anagrams: insert a letter everywhere": {"more": "Your first version is a close cousin: it puts the first letter at each position and moves the letter it displaces to the end, which gives the same six answers for cat. Both versions are correct and give the same answers in a different order. This one recurses on word[1:] once, then inserts word[0] at each of the len + 1 positions. Its base case is the empty word, whose only anagram is the empty string: [\"\"], not [], or no word is ever built. String slicing does the insertion in one line.", "example": "def anagrams(word):\n    if not word:\n        return [\"\"]\n    result = []\n    for tail in anagrams(word[1:]):\n        for i in range(len(tail) + 1):\n            result.append(tail[:i] + word[0] + tail[i:])\n    return result\n\nprint(anagrams(\"cat\"))", "output": "['cat', 'act', 'atc', 'cta', 'tca', 'tac']"}, "s9|how fast the answers grow": {"more": "The recursion itself is not slow; the number of answers is huge. When letters repeat, some anagrams repeat too: set() removes the duplicates. Generating every arrangement is fine for a word, never for a long list: count before you generate.", "example": "from math import factorial\n\ndef anagrams(word):\n    if len(word) <= 1:\n        return [word]\n    return [word[i] + t for i in range(len(word)) for t in anagrams(word[:i] + word[i+1:])]\n\nfor w in [\"ab\", \"abc\", \"abcd\", \"noon\"]:\n    print(w, len(anagrams(w)), factorial(len(w)), len(set(anagrams(w))))", "output": "ab 2 2 2\nabc 6 6 6\nabcd 24 24 24\nnoon 24 24 6"}, "s9|when recursion fits": {"more": "A loop keeps one position and moves forward. When there are several directions to follow, something has to remember the ones not taken yet, and the call stack does that for free. Summing a flat list recursively works but teaches nothing a loop does not do better. Recursion 2 shows the two problems where it is not a style choice: binary search and trees.", "example": "def total_loop(numbers):\n    s = 0\n    for n in numbers:\n        s += n\n    return s\n\ndef total_nested(items):\n    if isinstance(items, int):\n        return items\n    return sum(total_nested(i) for i in items)\n\nprint(total_loop([3, 7, 3, 3, 9]))\nprint(total_nested([3, [7, 3, [3, 9]]]))", "output": "25\n25"}});
 VOCAB['9'] = [{"term": "recursion", "definition": "A function that solves a problem by calling itself on a smaller version of it.", "page": null, "key": "s9|recursion"}, {"term": "base case", "definition": "The input small enough to answer without another call; it stops the recursion.", "page": null, "key": "s9|base case (rule 1)"}, {"term": "recursive case", "definition": "The branch that calls the function again on a smaller input.", "page": null, "key": "s9|smaller problem (rule 2)"}, {"term": "call stack", "definition": "The pile of paused calls, one frame each, waiting for the deeper call to answer.", "page": null, "key": "s9|call stack and frames"}, {"term": "frame", "definition": "One call's own copy of its parameters and local variables.", "page": null, "key": "s9|call stack and frames"}, {"term": "unwinding", "definition": "The way back up: each paused call resumes and combines the answer it received.", "page": null, "key": "s9|unwinding: the combine step"}, {"term": "RecursionError", "definition": "Raised when calls go about 1000 deep; usually a missing base case.", "page": null, "key": "s9|RecursionError"}, {"term": "nested list", "definition": "A list whose items may themselves be lists, to any depth.", "page": null, "key": "s9|nested lists"}, {"term": "permutation", "definition": "One ordering of a set of items; an anagram is a permutation of letters.", "page": null, "key": "s9|anagrams: fix one letter"}];
 S9_LESSON.extraExercises = [{"level": "Level 1 · Warm-up", "title": "Count occurrences in a nested list", "filename": "count_occurrencies.py", "given": "l = [3, [7, 3, [3, 9]]]", "tasks": ["Write count_occurrencies(l, x) that counts how many times x appears in l, at any depth.", "Base case 1: l is a single integer, so it counts 1 if it equals x, else 0.", "Base case 2: l is an empty list, so it counts 0.", "Recursive case: the count in the head l[0] plus the count in the tail l[1:].", "Print the counts of 3, 7 and 5."], "solution": "def count_occurrencies(l, x: int) -> int:\n    \"\"\"How many times x appears in l, at any depth.\"\"\"\n    if isinstance(l, int):\n        return 1 if l == x else 0\n    if len(l) == 0:\n        return 0\n    return count_occurrencies(l[0], x) + count_occurrencies(l[1:], x)\n\n\nl = [3, [7, 3, [3, 9]]]\nprint(\"count of 3:\", count_occurrencies(l, 3))\nprint(\"count of 7:\", count_occurrencies(l, 7))\nprint(\"count of 5:\", count_occurrencies(l, 5))\n", "steps": ["The integer test comes first: <code>len()</code> of an integer would be a <code>TypeError</code>.", "An empty list counts 0 and stops the recursion on the tail.", "<code>l[0]</code> may itself be a list, so the same function dives into it; <code>l[1:]</code> is one item shorter.", "Your file also had <code>from itertools import count</code> and a <code>print(l)</code> inside the function: both can go."], "expected": "count of 3: 3\ncount of 7: 1\ncount of 5: 0", "expectedFromSlide": false, "page": null, "file": null}, {"level": "Level 2 · Core", "title": "All the anagrams of a word", "filename": "anagrams.py", "given": "", "tasks": ["Write anagrams(word) returning a list of every arrangement of its letters.", "Base case: a word of one letter (or none) has one anagram, itself.", "Recursive case: each letter in turn as the first, followed by every anagram of the other letters.", "Print the anagrams of \"cat\", and how many \"abcd\" has.", "Stretch: write the second way, inserting the first letter into every position of each anagram of the rest."], "solution": "def anagrams(word: str) -> list:\n    \"\"\"Every arrangement of the letters of word.\"\"\"\n    if len(word) <= 1:\n        return [word]\n    result = []\n    for i in range(len(word)):\n        rest = word[:i] + word[i + 1:]\n        for tail in anagrams(rest):\n            result.append(word[i] + tail)\n    return result\n\n\ndef anagrams_insert(word: str) -> list:\n    \"\"\"The same, by sliding the first letter into every position.\"\"\"\n    if not word:\n        return [\"\"]\n    result = []\n    for tail in anagrams_insert(word[1:]):\n        for i in range(len(tail) + 1):\n            result.append(tail[:i] + word[0] + tail[i:])\n    return result\n\n\nprint(anagrams(\"cat\"))\nprint(len(anagrams(\"abcd\")))\nprint(sorted(anagrams_insert(\"cat\")) == sorted(anagrams(\"cat\")))\n", "steps": ["<code>word[:i] + word[i + 1:]</code> is the word without letter i: strictly shorter.", "The loop goes over the choices of first letter; the recursion fills the remaining positions.", "The insert version's base case is <code>[\"\"]</code>, a list with the empty word, not <code>[]</code>, or nothing is ever built.", "Your first version also works: it places the first letter at position i and moves the displaced letter to the end, through a list copy. Slicing <code>tail[:i] + word[0] + tail[i:]</code> inserts in one line."], "expected": "['cat', 'cta', 'act', 'atc', 'tca', 'tac']\n24\nTrue", "expectedFromSlide": false, "page": null, "file": null}, {"level": "Level 3 · Stretch", "title": "Flatten and measure a nested list", "filename": "nested.py", "given": "l = [3, [7, 3, [3, 9]], []]", "tasks": ["Write flatten(l) returning every integer of l in one flat list, in order.", "Write depth(l): an integer is depth 0, a list is 1 + the deepest of its items (an empty list is depth 1).", "Write total(l), the sum of every integer, recursively.", "Print the three results."], "solution": "def flatten(l) -> list:\n    if isinstance(l, int):\n        return [l]\n    flat = []\n    for item in l:\n        flat += flatten(item)\n    return flat\n\n\ndef depth(l) -> int:\n    if isinstance(l, int):\n        return 0\n    return 1 + max((depth(item) for item in l), default=0)\n\n\ndef total(l) -> int:\n    if isinstance(l, int):\n        return l\n    return sum(total(item) for item in l)\n\n\nl = [3, [7, 3, [3, 9]], []]\nprint(flatten(l))\nprint(depth(l))\nprint(total(l))\n", "steps": ["Same two-way shape in all three: an integer answers directly, a list asks each of its items.", "<code>default=0</code> keeps <code>max()</code> from failing on an empty list.", "Only the combine step changes: <code>+=</code> for flatten, <code>max</code> for depth, <code>sum</code> for total."], "expected": "[3, 7, 3, 3, 9]\n3\n25", "expectedFromSlide": false, "page": null, "file": null}];
@@ -1921,6 +1948,31 @@ function lessonOverall(L) {
   return `<div class="overall-host lesson-overall" data-key="s${L.session}|overall" data-here="Overall questions"><div class="ov-head"><span class="ov-zero">0</span><span class="ov-title">Overall questions</span><span class="ov-sub">about ${esc(L.title)} as a whole: anything general, before or after the slides</span></div><button type="button" class="note-dot" aria-pressed="false">Question or comment</button></div>`;
 }
 
+/* THE ORIGINAL SLIDES, inside the lesson. Asked for 2026-10-10: "if I don't like the
+   slides you made, I can go to the original slides and comment from there, and see all
+   my slide comments and questions together at the top."
+
+   A closed panel under the overall questions. It lists every slide you have written
+   on (click one to go to it), then shows the deck one slide at a time, drawn with
+   pdf.js from your private upload, with its own question-or-comment spot. That spot
+   is a note host like any box; its key follows the slide shown (s10|slide:17), so
+   notes on a slide are saved, answered and listed in Review like every other note,
+   and "Open in lesson" from Review comes back to that slide. Only on Colour Brain,
+   where the slides are. */
+function slideViewerHtml(L) {
+  const file = lessonSlides(L);
+  if (!ON_COLOUR_BRAIN || !file) return '';
+  return `<details class="sv" id="sv-s${L.session}" data-session="${L.session}" data-file="${esc(file)}" data-page="1" data-here="Original slides">
+    <summary><span class="ov-title">Original slides</span><span class="ov-sub">${esc(file)} · work through them and comment on any slide</span><span class="sv-count"></span></summary>
+    <div class="sv-body">
+      <div class="sv-sum"></div>
+      <div class="sv-bar"><button type="button" class="sv-prev">‹ Previous</button><input class="sv-page" inputmode="numeric" aria-label="Slide number" value="1"><span class="sv-of"></span><button type="button" class="sv-next">Next ›</button><a class="sv-open" target="_blank" rel="noopener">Open the PDF ↗</a></div>
+      <div class="sv-stage"><p class="sv-msg">Opening the slides…</p></div>
+      <div class="slide-host" id="slide-host-s${L.session}" data-key="s${L.session}|slide:1"><span class="sv-host-title">Slide 1 · your questions and comments</span><button type="button" class="note-dot" aria-pressed="false">Question or comment</button></div>
+    </div>
+  </details>`;
+}
+
 for (const L of LESSONS) {
   if (L.session === 6) lessonsEl.insertAdjacentHTML('beforeend', '<p class="gap-note">There was no session 5.</p>');
   lessonIndex.insertAdjacentHTML('beforeend', `<a href="#s${L.session}" data-open="s${L.session}" style="--sess: ${sessColour(L.session)}"><span class="n">${lessonNum(L)}</span>${esc(L.title)}</a>`);
@@ -1963,7 +2015,7 @@ for (const L of LESSONS) {
     </details>` : '';
   lessonsEl.insertAdjacentHTML('beforeend', `<details class="lesson" id="s${L.session}" data-title="${L.label ? esc(L.title) : `Session ${L.session} · ${esc(L.title)}`}" style="--sess: ${sessColour(L.session)}">
     <summary class="lesson-head"><span class="lesson-num">${lessonNum(L)}</span><h2>${esc(L.title)}</h2><p>${esc(L.oneLine)}</p><span class="sess-progress" data-progress="s${L.session}"></span></summary>
-    <div class="lesson-body">${lessonOverall(L)}<div class="lesson-groups">${groups}</div>${notes ? `<div class="side-notes" data-here="Watch out">${notes}</div>` : ''}${vocab}${examples}${exercises}</div>
+    <div class="lesson-body">${lessonOverall(L)}${slideViewerHtml(L)}<div class="lesson-groups">${groups}</div>${notes ? `<div class="side-notes" data-here="Watch out">${notes}</div>` : ''}${vocab}${examples}${exercises}</div>
   </details>`);
 }
 
@@ -3328,8 +3380,11 @@ const savedNote = document.getElementById('saved-note');
 
 const allItems = () => [...lessonsEl.querySelectorAll('.item[data-key]')];
 // Everything that can hold notes: the lesson boxes and the project cards.
-const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #overall-host, #lessons .lesson-overall, #steps .pcard[data-key], #page-project .line-host[data-key], #nb-host')];
-const itemByKey = key => noteHosts().find(i => i.dataset.key === key);
+const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #overall-host, #lessons .lesson-overall, #lessons .slide-host, #steps .pcard[data-key], #page-project .line-host[data-key], #nb-host')];
+// A slide's notes belong to the lesson's one slide spot, whichever slide it shows now.
+const SLIDE_KEY = /^s(\d+)\|slide:(\d+)$/;
+const itemByKey = key => noteHosts().find(i => i.dataset.key === key)
+  || (SLIDE_KEY.test(key) ? document.getElementById(`slide-host-s${key.match(SLIDE_KEY)[1]}`) : undefined);
 const notesOf = key => noteList.filter(n => n.key === key);
 const noteRef = n => n.id || n.localId;
 const findNote = ref => noteList.find(n => noteRef(n) === ref);
@@ -3630,7 +3685,7 @@ function onNoteClick(e) {
     queueMarkWork(key, item);
     return;
   }
-  const item = e.target.closest('.line-host, .nb-host, .overall-host, .item[data-key], .pcard');
+  const item = e.target.closest('.line-host, .nb-host, .overall-host, .slide-host, .item[data-key], .pcard');
   if (!item) return;
   const key = item.dataset.key;
   if (e.target.closest('.notes-toggle')) {
@@ -3701,9 +3756,14 @@ document.getElementById('progress-bar').addEventListener('click', e => {
 });
 
 /* ---------- Review: questions, comments, confused and no time, together ---------- */
-function boxHead(item) {
+function boxHead(item, forKey) {
   if (item.id === 'nb-host') return { sess: 'var(--muted)', name: 'Project 1 · notebook', num: 'NB', text: '' };
   if (item.id === 'overall-host') return { sess: 'var(--accent)', name: 'Project 1 · overall questions on the whole program', num: '0', text: '' };
+  if (item.classList.contains('slide-host')) {
+    const lesson = item.closest('details.lesson');
+    const page = (forKey || item.dataset.key).match(SLIDE_KEY)?.[2] ?? '?';
+    return { sess: lesson.style.getPropertyValue('--sess'), name: `${lesson.dataset.title} · original slide ${page}`, num: `p${page}`, text: '' };
+  }
   if (item.classList.contains('lesson-overall')) {
     const lesson = item.closest('details.lesson');
     return { sess: lesson.style.getPropertyValue('--sess'), name: `${lesson.dataset.title} · overall questions`, num: '0', text: '' };
@@ -3728,12 +3788,13 @@ function boxHead(item) {
 function reviewNote(n) {
   const item = itemByKey(n.key);
   if (!item) return '';
-  const h = boxHead(item);
+  const h = boxHead(item, n.key);
+  const slide = n.key.match(SLIDE_KEY)?.[2];
   // One row per note: where it is on the left, the note and its answer aligned on the right.
   return `<article class="rv-entry rv-qa" data-kind="${n.kind}" style="--sess: ${h.sess};${h.tint ? ` --rv-tint: ${h.tint};` : ''}">
     <div class="rv-place"><span class="rv-sess">${h.num}</span><i class="state-dot ${noteState(n)}"></i></div>
     <div class="rv-main">
-      <div class="rv-top"><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}">${item.closest('#page-project') ? 'Open in project ›' : 'Open in lesson ›'}</button></div>
+      <div class="rv-top"><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}"${slide ? ` data-slide="${slide}"` : ''}>${item.closest('#page-project') ? 'Open in project ›' : slide ? `Open slide ${slide} ›` : 'Open in lesson ›'}</button></div>
       <div class="rv-note" data-kind="${n.kind}">${noteBodyHtml(n.body)}</div>
       ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : `<button type="button" class="note-read" data-ref="${esc(noteRef(n))}">Got it, mark read</button>`}</div>` : (n.kind === 'question' ? '<p class="rv-wait">Waiting for an answer</p>' : '')}
     </div>
@@ -3749,6 +3810,7 @@ function reviewBox(key) {
   </article>`;
 }
 function renderReview() {
+  renderSlideSummaries();
   const hosts = noteHosts();
   const keys = [...new Set(hosts.map(i => i.dataset.key))];
   // Notes read in the order of the page: Project 1 step by step, then the lessons box by box.
@@ -3792,6 +3854,11 @@ document.getElementById('review').addEventListener('click', e => {
   const b = e.target.closest('[data-open-item]');
   if (!b) return;
   const target = document.getElementById(b.dataset.openItem);
+  if (b.dataset.slide && target.classList.contains('slide-host')) {
+    const sv = target.closest('details.sv');
+    sv.open = true;
+    svGo(sv, Number(b.dataset.slide));
+  }
   // Coming from Review, the box shows the notes it was opened for.
   if (target.dataset.key && !openNoteLists.has(target.dataset.key)) { openNoteLists.add(target.dataset.key); paintItem(target); }
   if (target.closest('#page-project')) {
@@ -3811,6 +3878,120 @@ document.getElementById('review').addEventListener('click', e => {
   setTimeout(() => item.classList.remove('flash'), 1600);
 });
 
+/* ---------- The original slides viewer (see slideViewerHtml) ---------- */
+const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168';
+let pdfjsReady = null;
+function loadPdfjs() {
+  // Loaded only when a deck is first opened. The worker is started from a small
+  // same-origin module that imports the real one, since a worker cannot be loaded
+  // straight from another origin.
+  pdfjsReady ??= import(`${PDFJS}/pdf.min.mjs`).then(lib => {
+    const boot = new Blob([`import "${PDFJS}/pdf.worker.min.mjs";`], { type: 'text/javascript' });
+    lib.GlobalWorkerOptions.workerPort = new Worker(URL.createObjectURL(boot), { type: 'module' });
+    return lib;
+  });
+  return pdfjsReady;
+}
+const pdfDocs = new Map();
+const slidesState = { uploaded: null };
+function pdfFor(file) {
+  if (!pdfDocs.has(file)) {
+    pdfDocs.set(file, loadPdfjs().then(lib => lib.getDocument({ url: `/api/coding/slides/${encodeURIComponent(file)}` }).promise)
+      .catch(err => { pdfDocs.delete(file); throw err; }));
+  }
+  return pdfDocs.get(file);
+}
+async function svRender(sv) {
+  const file = sv.dataset.file;
+  const stage = sv.querySelector('.sv-stage');
+  if (slidesState.uploaded && !slidesState.uploaded.includes(file)) {
+    stage.innerHTML = `<p class="sv-msg">Upload ${esc(file)} first, from "Upload slides" at the top of Lessons. It stays private to you.</p>`;
+    return;
+  }
+  const want = Number(sv.dataset.page);
+  try {
+    const doc = await pdfFor(file);
+    const page = Math.min(Math.max(1, want), doc.numPages);
+    sv.dataset.pages = String(doc.numPages);
+    sv.querySelector('.sv-of').textContent = `of ${doc.numPages}`;
+    sv.querySelector('.sv-prev').disabled = page <= 1;
+    sv.querySelector('.sv-next').disabled = page >= doc.numPages;
+    const pdfPage = await doc.getPage(page);
+    if (Number(sv.dataset.page) !== page) return;   // flipped on meanwhile
+    const width = Math.max(320, stage.clientWidth || 800);
+    const base = pdfPage.getViewport({ scale: 1 });
+    const viewport = pdfPage.getViewport({ scale: (width / base.width) * Math.min(window.devicePixelRatio || 1, 2) });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    canvas.setAttribute('aria-label', `Slide ${page} of ${doc.numPages}`);
+    await pdfPage.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    if (Number(sv.dataset.page) !== page) return;
+    stage.replaceChildren(canvas);
+  } catch (err) {
+    stage.innerHTML = `<p class="sv-msg">The slides could not be opened here. <a href="${slideHref(file, want)}" target="_blank" rel="noopener">Open the PDF instead ↗</a></p>`;
+  }
+}
+function svGo(sv, page) {
+  const pages = Number(sv.dataset.pages) || Infinity;
+  const p = Math.min(Math.max(1, Math.round(page) || 1), pages);
+  sv.dataset.page = String(p);
+  sv.querySelector('.sv-page').value = String(p);
+  sv.querySelector('.sv-open').href = slideHref(sv.dataset.file, p);
+  const host = sv.querySelector('.slide-host');
+  host.dataset.key = `s${sv.dataset.session}|slide:${p}`;
+  host.querySelector('.sv-host-title').textContent = `Slide ${p} · your questions and comments`;
+  paintItem(host);
+  svRender(sv);
+}
+function renderSlideSummaries() {
+  for (const sv of document.querySelectorAll('details.sv')) {
+    const prefix = `s${sv.dataset.session}|slide:`;
+    const bySlide = new Map();
+    for (const n of noteList) {
+      if (!n.key.startsWith(prefix)) continue;
+      const p = Number(n.key.slice(prefix.length));
+      if (!bySlide.has(p)) bySlide.set(p, []);
+      bySlide.get(p).push(n);
+    }
+    const pages = [...bySlide.keys()].sort((a, b) => a - b);
+    const total = pages.reduce((t, p) => t + bySlide.get(p).length, 0);
+    sv.querySelector('.sv-count').textContent = total ? `${total} note${total > 1 ? 's' : ''} on ${pages.length} slide${pages.length > 1 ? 's' : ''}` : '';
+    sv.querySelector('.sv-sum').innerHTML = pages.length
+      ? `<span class="more-label">Your slide questions and comments</span>` + pages.map(p => {
+        const ns = bySlide.get(p);
+        const q = ns.filter(n => n.kind === 'question').length;
+        const first = String(ns[0].body || '').replace(/^>.*$/gm, '').trim().split('\n')[0];
+        return `<button type="button" class="sv-sum-row" data-page="${p}"><span class="sv-sum-num">Slide ${p}</span><span class="sv-sum-text"><span>${esc(first.slice(0, 140))}</span><small>${q ? `${q} question${q > 1 ? 's' : ''}` : ''}${q && ns.length > q ? ' · ' : ''}${ns.length > q ? `${ns.length - q} comment${ns.length - q > 1 ? 's' : ''}` : ''}${ns.some(n => n.answer && !n.readAt) ? ' · new answer' : ''}</small></span></button>`;
+      }).join('')
+      : '';
+  }
+}
+lessonsEl.addEventListener('toggle', e => {
+  const sv = e.target;
+  if (!(sv instanceof HTMLElement) || !sv.matches('details.sv') || !sv.open) return;
+  if (!sv.dataset.started) { sv.dataset.started = '1'; svGo(sv, Number(sv.dataset.page)); }
+}, true);
+lessonsEl.addEventListener('click', e => {
+  const sv = e.target.closest('details.sv');
+  if (!sv) return;
+  if (e.target.closest('.sv-prev')) svGo(sv, Number(sv.dataset.page) - 1);
+  else if (e.target.closest('.sv-next')) svGo(sv, Number(sv.dataset.page) + 1);
+  else if (e.target.closest('.sv-sum-row')) {
+    svGo(sv, Number(e.target.closest('.sv-sum-row').dataset.page));
+    sv.querySelector('.sv-stage').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+});
+lessonsEl.addEventListener('change', e => {
+  if (!e.target.matches('.sv-page')) return;
+  svGo(e.target.closest('details.sv'), Number(e.target.value));
+});
+let svResize = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(svResize);
+  svResize = setTimeout(() => { for (const sv of document.querySelectorAll('details.sv[open][data-started]')) svRender(sv); }, 250);
+});
+
 /* Upload slides once, into private storage, so the slide links open. */
 async function initSlides() {
   if (!ON_COLOUR_BRAIN) return;
@@ -3824,12 +4005,33 @@ async function initSlides() {
   const render = () => {
     const missing = state.expected.filter(f => !state.uploaded.includes(f));
     panel.innerHTML = `<span class="slides-count">Slides: ${state.uploaded.length}/${state.expected.length} uploaded</span>
-      ${missing.length ? `<label class="slides-upload">Upload slides<input type="file" id="slides-input" accept="application/pdf" multiple></label><span class="slides-hint">Pick the PDFs from your Downloads (${missing.join(', ')}). They stay private to you.</span>` : '<span class="slides-hint">Every "slide p." link opens the PDF on that page.</span>'}
+      ${missing.map(f => `<label class="slides-upload slides-pick">Upload ${esc(f)}<input type="file" class="slides-one" data-name="${esc(f)}" accept="application/pdf"></label>`).join(' ')}
+      ${missing.length ? `<label class="slides-upload">Upload several<input type="file" id="slides-input" accept="application/pdf" multiple></label><span class="slides-hint">Pick the PDFs from your Downloads (${missing.join(', ')}). They stay private to you.</span>` : '<span class="slides-hint">Every "slide p." link opens the PDF on that page.</span>'}
       <span class="slides-status" id="slides-status"></span>`;
     panel.hidden = false;
   };
   render();
+  slidesState.uploaded = state.uploaded;
   panel.addEventListener('change', async e => {
+    // One deck at a time: the file picked is stored under the deck's name, so a
+    // download called "Session2 (2).pdf" can go in as Recursion2.pdf.
+    if (e.target.classList.contains('slides-one')) {
+      const file = e.target.files[0];
+      const name = e.target.dataset.name;
+      const status = document.getElementById('slides-status');
+      if (!file) return;
+      status.textContent = `Uploading ${file.name} as ${name}…`;
+      const form = new FormData(); form.set('file', file, name);
+      try {
+        const res = await fetch('/api/coding/slides', { method: 'POST', body: form });
+        if (!res.ok) { status.textContent = `${name}: ${(await res.json()).error || 'upload failed'}`; return; }
+        if (!state.uploaded.includes(name)) state.uploaded.push(name);
+        pdfDocs.delete(name);
+        for (const sv of document.querySelectorAll(`details.sv[data-file="${CSS.escape(name)}"][data-started]`)) svRender(sv);
+      } catch (err) { status.textContent = `${name}: upload failed, check the connection.`; return; }
+      render();
+      return;
+    }
     if (e.target.id !== 'slides-input') return;
     const status = document.getElementById('slides-status');
     for (const file of e.target.files) {
