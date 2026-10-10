@@ -16,6 +16,8 @@ export const SLIDE_FILES = [
   'Session6.pdf',
   'Session7.pdf',
   'Session8.pdf',
+  // Second course, session 2 (binary search and trees), shown as Recursion 2.
+  'Recursion2.pdf',
 ] as const;
 
 export type SlideFile = (typeof SLIDE_FILES)[number];
