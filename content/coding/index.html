@@ -822,6 +822,9 @@ details.fullcode .mission-tag { background: var(--ink); }
 .ov-title { font-family: var(--display); font-weight: 700; font-size: 17px; }
 .ov-sub { font-size: 13.5px; color: var(--muted); }
 .overall-host.flash { outline: 3px solid var(--accent); outline-offset: 2px; }
+/* A lesson's own overall questions, in the session's colour. */
+.lesson-overall { margin: 4px 0 18px; border-color: color-mix(in srgb, var(--sess) 55%, var(--rule)); background: color-mix(in srgb, var(--sess) 7%, var(--panel)); }
+.lesson-overall .ov-zero { background: var(--sess); }
 /* The mission, a copy of the brief at the top of Project 1, one tap away from anywhere. */
 .nb-mission { padding: 16px; display: grid; gap: 16px; }
 .nb-mission .mission-grid { grid-template-columns: 1fr; gap: 16px; }
@@ -1911,6 +1914,13 @@ function readerHtml(L) {
   </div>`;
 }
 
+/* Line 0 of every lesson, as on Project 1: one place for questions and comments about
+   the session as a whole, above all the slides. A note host like any box (key s8|overall),
+   so its notes are saved, answered, read and listed in Review the same way. */
+function lessonOverall(L) {
+  return `<div class="overall-host lesson-overall" data-key="s${L.session}|overall" data-here="Overall questions"><div class="ov-head"><span class="ov-zero">0</span><span class="ov-title">Overall questions</span><span class="ov-sub">about ${esc(L.title)} as a whole: anything general, before or after the slides</span></div><button type="button" class="note-dot" aria-pressed="false">Question or comment</button></div>`;
+}
+
 for (const L of LESSONS) {
   if (L.session === 6) lessonsEl.insertAdjacentHTML('beforeend', '<p class="gap-note">There was no session 5.</p>');
   lessonIndex.insertAdjacentHTML('beforeend', `<a href="#s${L.session}" data-open="s${L.session}" style="--sess: ${sessColour(L.session)}"><span class="n">${lessonNum(L)}</span>${esc(L.title)}</a>`);
@@ -1953,7 +1963,7 @@ for (const L of LESSONS) {
     </details>` : '';
   lessonsEl.insertAdjacentHTML('beforeend', `<details class="lesson" id="s${L.session}" data-title="${L.label ? esc(L.title) : `Session ${L.session} · ${esc(L.title)}`}" style="--sess: ${sessColour(L.session)}">
     <summary class="lesson-head"><span class="lesson-num">${lessonNum(L)}</span><h2>${esc(L.title)}</h2><p>${esc(L.oneLine)}</p><span class="sess-progress" data-progress="s${L.session}"></span></summary>
-    <div class="lesson-body"><div class="lesson-groups">${groups}</div>${notes ? `<div class="side-notes" data-here="Watch out">${notes}</div>` : ''}${vocab}${examples}${exercises}</div>
+    <div class="lesson-body">${lessonOverall(L)}<div class="lesson-groups">${groups}</div>${notes ? `<div class="side-notes" data-here="Watch out">${notes}</div>` : ''}${vocab}${examples}${exercises}</div>
   </details>`);
 }
 
@@ -3318,7 +3328,7 @@ const savedNote = document.getElementById('saved-note');
 
 const allItems = () => [...lessonsEl.querySelectorAll('.item[data-key]')];
 // Everything that can hold notes: the lesson boxes and the project cards.
-const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #overall-host, #steps .pcard[data-key], #page-project .line-host[data-key], #nb-host')];
+const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #overall-host, #lessons .lesson-overall, #steps .pcard[data-key], #page-project .line-host[data-key], #nb-host')];
 const itemByKey = key => noteHosts().find(i => i.dataset.key === key);
 const notesOf = key => noteList.filter(n => n.key === key);
 const noteRef = n => n.id || n.localId;
@@ -3694,6 +3704,10 @@ document.getElementById('progress-bar').addEventListener('click', e => {
 function boxHead(item) {
   if (item.id === 'nb-host') return { sess: 'var(--muted)', name: 'Project 1 · notebook', num: 'NB', text: '' };
   if (item.id === 'overall-host') return { sess: 'var(--accent)', name: 'Project 1 · overall questions on the whole program', num: '0', text: '' };
+  if (item.classList.contains('lesson-overall')) {
+    const lesson = item.closest('details.lesson');
+    return { sess: lesson.style.getPropertyValue('--sess'), name: `${lesson.dataset.title} · overall questions`, num: '0', text: '' };
+  }
   if (item.classList.contains('line-host')) {
     const st = PROJECT_STEPS[item.dataset.step - 1];
     const out = item.dataset.kind === 'T';
