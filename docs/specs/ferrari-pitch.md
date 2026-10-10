@@ -37,6 +37,18 @@ The world is changing fast. In this new future, innovation is not a department b
 | 5 | **The spirit made visible** | What will people feel? | Art reflects the brand's philosophy. The spirit is innovation, boldness, courage, and standing up for our highest potential and our dreams: ambition, focus, passion and drive, made visible. The project itself is shown here. |
 | 6 | **Discussion** | Where do we go together? | Open questions, so the pitch ends as a conversation rather than a sale. |
 
+## Felt, not only seen (a small part)
+
+Added 2026-10-10. **"Ferrari is not only seen. It is felt."** A small part of section 5, not a new movement: an immersive room for the museums (Maranello, Modena) that visitors dive into instead of looking at a car behind a rope.
+
+- **Sound:** archive engine notes (a V12 at idle, the Dino V6, a lap at Fiorano), cleaned up with AI and placed in space, so each engine breathes as you pass.
+- **Scent:** perfumes composed with a perfumer, one per room: hot oil and fuel, cockpit leather, rubber and warm asphalt, Maranello after rain.
+- **Touch:** the engine's low frequencies through the floor; a cast aluminium part you may lay a hand on.
+- **Sight:** generative visuals that move with the sound, so the room is never quite the same twice.
+- **AI:** the room adapts to each visitor; choose an era or a car and a guide tells the story of a part.
+
+It meets the Out of the Box proposal (outofthebox-art.vercel.app): real components, each standing in a room with its own sound and scent, a living museum. Open: whether it joins the pitch or stays a next step.
+
 ## Discussion questions
 
 1. Where does Ferrari's technique end and its spirit begin, or is that border the point?

@@ -1,7 +1,13 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { FERRARI_QUOTES, FERRARI_SECTIONS, FERRARI_THESIS } from '@/lib/proposals/ferrari';
+import {
+  FERRARI_FELT,
+  FERRARI_IMMERSIVE,
+  FERRARI_QUOTES,
+  FERRARI_SECTIONS,
+  FERRARI_THESIS,
+} from '@/lib/proposals/ferrari';
 
 import FerrariPitchPage from './page';
 
@@ -27,5 +33,12 @@ describe('Ferrari pitch page', () => {
     for (const q of FERRARI_QUOTES) expect(screen.getByText(`“${q.text}”`)).toBeDefined();
     expect(screen.getByText(/I don't sell cars; I sell engines\./)).toBeDefined();
     expect(screen.getByRole('heading', { level: 2, name: 'To finish' })).toBeDefined();
+  });
+
+  it('adds the felt line and the immersive museum room', () => {
+    render(<FerrariPitchPage />);
+    expect(screen.getByRole('heading', { level: 2, name: FERRARI_FELT })).toBeDefined();
+    const senses = screen.getByRole('list', { name: 'The senses' });
+    expect(senses.querySelectorAll('li')).toHaveLength(FERRARI_IMMERSIVE.senses.length);
   });
 });
