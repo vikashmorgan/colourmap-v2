@@ -1910,9 +1910,9 @@ function readerPage(L, key, num, n, t, ex) {
         ${m.output ? `<div class="more-ex"><span class="more-label">Output</span><pre class="more-out">${esc(m.output)}</pre></div>` : ''}
       </div>
     </div>` : ''}
+    <button type="button" class="note-dot" aria-pressed="false">Question or comment</button>
     <div class="rd-foot">${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}${SLIDES[key] && ON_COLOUR_BRAIN ? `<button type="button" class="rd-show-slide" data-file="${esc(SLIDES[key].file)}" data-page="${SLIDES[key].page}" aria-expanded="false">Show the slide here</button>` : ''}</div>
     ${SLIDES[key] && ON_COLOUR_BRAIN ? '<div class="rd-slide" hidden></div>' : ''}
-    <button type="button" class="note-dot" aria-pressed="false">Question or comment</button>
     <div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button></div>
   </article>`;
 }
