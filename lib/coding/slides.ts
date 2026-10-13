@@ -20,6 +20,8 @@ export const SLIDE_FILES = [
   // shown as Recursion 1 and Recursion 2.
   'Recursion1.pdf',
   'Recursion2.pdf',
+  // Second course, session 4 (algorithmic complexity), shown as Recursion 4.
+  'Recursion4.pdf',
 ] as const;
 
 export type SlideFile = (typeof SLIDE_FILES)[number];
