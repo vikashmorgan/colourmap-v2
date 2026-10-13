@@ -410,3 +410,13 @@ Chaos Field and Quantum Chaos moved to numbers 3 and 4 in Stars (among the best)
 ## One Flame (2026-10-13)
 
 "Just fire, just one flame floating. Default red with golden tips, orange in the middle, but it can also go purple or other colours. Aim for the feeling of real fire, with the stars going up." **One Flame** sits third under Good Ones, after Sauron's Eye. The flame is thousands of short-lived embers born in a small bed at its foot: heat lifts them faster as they rise, they are drawn toward the middle so the flame narrows to a tip, and a sway travelling up the flame makes it lick and flicker. Each ember changes colour as it rises and cools (base, middle, tip, fading out) and the hot core burns brighter than the edges. Now and then a spark breaks free and climbs up the sky, twinkling and cooling, like a star going up. The flame floats, with no wick, in a soft warm light, breathing slowly in height. Sliders: Fire Colour (0 red–orange–gold, 1 purple, 2 blue, 3 green, 4 rose, 5 white-gold, 6 turquoise), Flame Height, Golden Tips, Sparks, Flicker, Bright.
+
+## Sacred Figures and Sacred Dancers (2026-10-13)
+
+"A series of 10 sacred figures inspired by holy Indian and Tibetan poses of the gods, like the one with many arms meditating or Shiva Nataraja, one preset with the 10 chosen on a slider like the Dot Walker." And: "like the Dot Walker but more enriched, inspired by the quantum liquids, more dots, more substance, that liquid movement like a dance, a figure dancing. Do 5 of them." Two presets in Stars, after One Flame, drawn from `lib/sacred-figures.ts`.
+
+**Sacred Figures** (Figure 1-10): the Buddha in meditation, the thousand-armed Avalokiteshvara (a fan of arms rippling, eleven heads), Shiva Nataraja (dancing in his ring of fire, locks flying), Ganesha, Green Tara, Vishnu (discus, conch, mace), Durga (eight arms and the trident), Krishna with the flute, Lakshmi on the lotus (gold falling from her hand), Shiva in meditation (moon, third eye, the Ganga, the trident). They breathe and sway; the many arms move in slow waves.
+
+**Sacred Dancers** (Dancer 1-5): Bharatanatyam, the whirling dervish, Tandava (Shiva's cosmic dance), Cham (the Tibetan masked dance, long sleeves), Odissi (the flowing goddess).
+
+Each figure is up to ten thousand dots scattered over its body (bones, discs, rings). Every dot eases after its place at its own pace, so the body moves like a liquid and a dancer leaves a flowing wake; a current stirs the dots, and a wave of light runs out from the heart. Sliders: Figure / Dancer, Liquid, Glint, Dots, Breath / Tempo, Bright. The figure's name is written faintly beneath it.

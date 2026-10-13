@@ -7,6 +7,14 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
+import {
+  DANCER_NAMES,
+  dancer,
+  dotAt,
+  FIGURE_NAMES,
+  figure,
+  sampleDots,
+} from '@/lib/sacred-figures';
 import { isOilMode, isShaderVisualMode } from '@/lib/visual-shaders';
 
 import {
@@ -190,6 +198,9 @@ type Mode =
   | 'sauroneye'
   // One Flame — a single flame floating, sparks rising from it like stars
   | 'oneflame'
+  // Sacred Figures / Sacred Dancers — gods and dancers of liquid light (lib/sacred-figures.ts)
+  | 'sacredfigures'
+  | 'sacreddancers'
   // Waves — rolling, curling linework (lib/visual-shaders.ts)
   | 'rollingwave'
   | 'fractalwave'
@@ -2496,6 +2507,30 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 2.6,
     stars: 0,
     mode: 'currentliquid',
+  },
+  'Sacred Figures': {
+    preset: 'Golden Source',
+    symmetry: 3,
+    complexity: 5,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 5,
+    stars: 0,
+    mode: 'sacredfigures',
+  },
+  'Sacred Dancers': {
+    preset: 'Golden Source',
+    symmetry: 1,
+    complexity: 6,
+    glow: 6,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 5,
+    stars: 0,
+    mode: 'sacreddancers',
   },
   'One Flame': {
     preset: 'Deep Current',
@@ -7373,6 +7408,8 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
     case 'musicliquid':
     case 'sauroneye':
     case 'oneflame':
+    case 'sacredfigures':
+    case 'sacreddancers':
       return buildCanvasMode(cfg, R);
     case 'sinmorph3d':
       return buildSinMorph3D(cfg, R);
@@ -7669,6 +7706,8 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
     case 'musicliquid':
     case 'sauroneye':
     case 'oneflame':
+    case 'sacredfigures':
+    case 'sacreddancers':
       updateCanvasMode(group, cfg, t, R);
       break;
     case 'sinmorph3d':
@@ -14437,6 +14476,22 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'breathSpeed', label: 'Speed', min: 0.05, max: 2.0, step: 0.05 },
     { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
   ],
+  sacredfigures: [
+    { key: 'symmetry', label: 'Figure 1-10', min: 1, max: 10, step: 1 },
+    { key: 'complexity', label: 'Liquid', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Glint', min: 0, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Dots', min: 1, max: 10, step: 1 },
+    { key: 'breathSpeed', label: 'Breath', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  sacreddancers: [
+    { key: 'symmetry', label: 'Dancer 1-5', min: 1, max: 5, step: 1 },
+    { key: 'complexity', label: 'Liquid', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Glint', min: 0, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Dots', min: 1, max: 10, step: 1 },
+    { key: 'breathSpeed', label: 'Tempo', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
   oneflame: [
     { key: 'particles', label: 'Fire Colour', min: 0, max: 6, step: 1 },
     { key: 'symmetry', label: 'Flame Height', min: 1, max: 10, step: 0.5 },
@@ -14860,6 +14915,8 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   musicliquid: 'Music Liquid Chaos',
   sauroneye: "Sauron's Eye",
   oneflame: 'One Flame',
+  sacredfigures: 'Sacred Figures',
+  sacreddancers: 'Sacred Dancers',
   matrix: 'Matrix Rain',
   matrix3d: 'Matrix Rain',
   pulse: 'Rorschach Pulse',
@@ -15033,6 +15090,8 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'musicliquid', label: '♪ Music Liquid Chaos' },
   { mode: 'sauroneye', label: "◉ Sauron's Eye" },
   { mode: 'oneflame', label: '🜂 One Flame' },
+  { mode: 'sacredfigures', label: '☸ Sacred Figures' },
+  { mode: 'sacreddancers', label: '☸ Sacred Dancers' },
   { mode: 'plasma', label: '☀ Plasma' },
   { mode: 'nebula', label: 'Nebula' },
 
@@ -15159,6 +15218,8 @@ const STAR_TAB_MODES = new Set<Mode>([
   'musicliquid',
   'sauroneye',
   'oneflame',
+  'sacredfigures',
+  'sacreddancers',
   'currentscales',
   'cyclonetiles',
   'cymatics1',
@@ -15257,6 +15318,9 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: "Sauron's Eye", tag: 'FIRE' },
   // 13 Oct 2026: "just one flame floating … red with golden tips, orange in the middle … the stars going up."
   { name: 'One Flame', tag: 'FIRE' },
+  // 13 Oct 2026: ten sacred figures of the Indian and Tibetan gods, and five sacred dancers.
+  { name: 'Sacred Figures', tag: 'SACRED' },
+  { name: 'Sacred Dancers', tag: 'SACRED' },
   { name: 'Magnetic Sand', tag: 'CURRENT' },
   { name: 'Dot Walker', tag: 'CHAR' },
   // 13 Oct 2026: among the best, so third and fourth in Stars.
@@ -21270,7 +21334,9 @@ export default function GeometryField() {
       cfg.mode === 'musiclattice' ||
       cfg.mode === 'musicliquid' ||
       cfg.mode === 'sauroneye' ||
-      cfg.mode === 'oneflame';
+      cfg.mode === 'oneflame' ||
+      cfg.mode === 'sacredfigures' ||
+      cfg.mode === 'sacreddancers';
     if (!isCanvasMode) {
       canvasModeActiveRef.current = false;
       cancelAnimationFrame(canvasModeAnimRef.current);
@@ -21308,6 +21374,113 @@ export default function GeometryField() {
       const bgB = parseInt(h.slice(4, 6), 16);
       ctx.fillStyle = `rgb(${bgR},${bgG},${bgB})`;
       ctx.fillRect(0, 0, mc.width, mc.height);
+    }
+
+    /* ── SACRED FIGURES / SACRED DANCERS — gods and dancers of liquid light ──
+     *
+     * Asked for 2026-10-13: ten sacred figures of the Indian and Tibetan gods
+     * (the thousand-armed one meditating, Shiva Nataraja …) chosen on a slider,
+     * and five dancers "like the Dot Walker but more enriched, inspired by the
+     * quantum liquids: more dots, more substance, the liquid movement like a
+     * dance." The shapes are lib/sacred-figures.ts. Thousands of dots are
+     * scattered over a figure; each eases after its place at its own pace (the
+     * Liquid slider), so the body moves like a liquid and a dancer leaves a
+     * flowing wake; a current stirs them a little; a wave of light runs out
+     * from the heart through the figure like the Liquid Chaos crest. The
+     * figure's name is written faintly beneath it.
+     */
+    if (cfg.mode === 'sacredfigures' || cfg.mode === 'sacreddancers') {
+      const dancing = cfg.mode === 'sacreddancers';
+      const index = dancing
+        ? Math.max(0, Math.min(4, Math.round(cfg.symmetry) - 1))
+        : Math.max(0, Math.min(9, Math.round(cfg.symmetry) - 1));
+      const shapesAt = (time: number) => (dancing ? dancer(index, time) : figure(index, time));
+      const name = dancing ? DANCER_NAMES[index] : FIGURE_NAMES[index];
+      const n = Math.round(lerp(3000, dancing ? 10000 : 9000, (cfg.glow - 1) / 9));
+      const seeds = sampleDots(shapesAt(0), n, Math.random);
+      const px = new Float32Array(n);
+      const py = new Float32Array(n);
+      const liquidF = cfg.complexity / 10;
+      const glintF = cfg.luminous / 10;
+      let first = true;
+      let last = performance.now();
+      let clock = 0;
+      const [cr, cg, cb] = [
+        Math.min(255, pr * 0.55 + 150),
+        Math.min(255, pg * 0.55 + 125),
+        Math.min(255, pb * 0.5 + 80),
+      ];
+
+      function drawSacred() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.05, (now - last) / 1000) * speed;
+        last = now;
+        clock += dt;
+        const W = mc!.width;
+        const H = mc!.height;
+        const scale = Math.min(W, H) * 0.44;
+        const cx = W / 2;
+        const cy = H * 0.5;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const size = Math.max(1, 1.05 * dpr);
+        const shapes = shapesAt(clock);
+        const w = Math.PI * 2 * 0.45 * clock;
+
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = `rgba(2, 2, 4, ${dancing ? 0.2 : 0.3})`;
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+
+        for (let i = 0; i < n; i++) {
+          const d = seeds[i];
+          const [tx, ty] = dotAt(shapes[d.shape], d);
+          // The current stirs each dot a little round its place.
+          const stir = 0.012 + 0.03 * liquidF;
+          const sx = tx + Math.sin(ty * 9 + clock * 1.7 + d.drift * 6) * stir;
+          const sy = ty + Math.cos(tx * 9 - clock * 1.3 + d.drift * 5) * stir;
+          if (first) {
+            px[i] = sx;
+            py[i] = sy;
+          } else {
+            // Each dot eases after its place at its own pace: liquid.
+            const k = lerp(18, 2.2 + d.drift * 3, liquidF);
+            const f = Math.min(1, dt * k);
+            px[i] += (sx - px[i]) * f;
+            py[i] += (sy - py[i]) * f;
+          }
+          const x = px[i];
+          const y = py[i];
+          // A wave of light running out from the heart.
+          const r = Math.hypot(x, y - 0.12);
+          const wave = Math.sin(w - 7.5 * r);
+          const crest = Math.max(0, wave) * glintF;
+          const glow = (0.5 + 0.35 * Math.sin(d.drift * 40 + clock * 2) * 0.3 + 0.9 * crest) * iF;
+          const rr = Math.round(pr + (cr - pr) * crest);
+          const gg = Math.round(pg + (cg - pg) * crest);
+          const bb = Math.round(pb + (cb - pb) * crest);
+          const sxp = cx + x * scale;
+          const syp = cy - y * scale;
+          ctx!.fillStyle = `rgba(${rr}, ${gg}, ${bb}, ${0.08 * glow})`;
+          ctx!.fillRect(sxp - size * 1.6, syp - size * 1.6, size * 3.2, size * 3.2);
+          ctx!.fillStyle = `rgba(${rr}, ${gg}, ${bb}, ${Math.min(1, 0.62 * glow)})`;
+          ctx!.fillRect(sxp - size / 2, syp - size / 2, size, size);
+        }
+        first = false;
+
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.font = `${Math.round(11 * dpr)}px serif`;
+        ctx!.textAlign = 'center';
+        ctx!.fillStyle = `rgba(${pr}, ${pg}, ${pb}, 0.45)`;
+        ctx!.fillText(`${index + 1} · ${name}`, cx, cy + scale * 1.07);
+        canvasModeAnimRef.current = requestAnimationFrame(drawSacred);
+      }
+      drawSacred();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
     }
 
     /* ── ONE FLAME — a single flame floating, its sparks rising like stars ──
@@ -24666,7 +24839,9 @@ export default function GeometryField() {
           cfg.mode === 'musiclattice' ||
           cfg.mode === 'musicliquid' ||
           cfg.mode === 'sauroneye' ||
-          cfg.mode === 'oneflame') && (
+          cfg.mode === 'oneflame' ||
+          cfg.mode === 'sacredfigures' ||
+          cfg.mode === 'sacreddancers') && (
           <canvas
             ref={matrixCanvasRef}
             style={{
