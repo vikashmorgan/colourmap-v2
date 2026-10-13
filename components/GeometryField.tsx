@@ -16,6 +16,7 @@ import {
   updateBigBangStars,
 } from './geometry-bigbang-stars';
 import { buildCymatics, isCymaticsMode, updateCymatics } from './geometry-cymatics';
+import { buildLiquidSeries, isLiquidMode, updateLiquidSeries } from './geometry-liquid';
 import {
   buildGeometryVisual,
   isGeometryVisualMode,
@@ -175,6 +176,11 @@ type Mode =
   | 'cymatics2'
   | 'cymatics3'
   | 'cymatics4'
+  // Liquid 1–3 — the Pulse's liquid ripple, in lines (components/geometry-liquid.ts)
+  | 'liquid1'
+  | 'liquid2'
+  | 'liquid3'
+  | 'liquid4'
   // Waves — rolling, curling linework (lib/visual-shaders.ts)
   | 'rollingwave'
   | 'fractalwave'
@@ -3735,6 +3741,54 @@ export const PRESETS: Record<string, Cfg> = {
     stars: 3,
     mode: 'cymatics4',
   },
+  'Liquid 1': {
+    preset: 'Amber Dust',
+    symmetry: 12,
+    complexity: 7,
+    glow: 2,
+    breathSpeed: 0.8,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.4,
+    stars: 2,
+    mode: 'liquid1',
+  },
+  'Liquid 2': {
+    preset: 'Violet Portal',
+    symmetry: 7,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 0.7,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.6,
+    stars: 2,
+    mode: 'liquid2',
+  },
+  'Liquid 3': {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.8,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.8,
+    stars: 3,
+    mode: 'liquid3',
+  },
+  'Liquid 4': {
+    preset: 'Prism Warm',
+    symmetry: 9,
+    complexity: 6,
+    glow: 0,
+    breathSpeed: 0.7,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.6,
+    stars: 3,
+    mode: 'liquid4',
+  },
   'Rolling Wave': {
     preset: 'Blue Astral',
     symmetry: 4,
@@ -7050,6 +7104,7 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
     return buildGeometryVisual(cfg, PAL[cfg.preset] ?? PAL['Calm Field']);
   }
   if (isCymaticsMode(cfg.mode)) return buildCymatics(cfg);
+  if (isLiquidMode(cfg.mode)) return buildLiquidSeries();
   if (isBigBangStarMode(cfg.mode)) return buildBigBangStars();
   switch (cfg.mode) {
     case 'burst':
@@ -7265,6 +7320,10 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
   }
   if (isCymaticsMode(cfg.mode)) {
     updateCymatics(group, cfg, PAL[cfg.preset] ?? PAL['Calm Field'], t, R);
+    return;
+  }
+  if (isLiquidMode(cfg.mode)) {
+    updateLiquidSeries(group, cfg, (PAL[cfg.preset] ?? PAL['Calm Field']).rgb, t, R);
     return;
   }
   if (isBigBangStarMode(cfg.mode)) {
@@ -13736,6 +13795,16 @@ const DEFAULT_SLIDERS: SliderDef[] = [
   { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
 ];
 
+const LIQUID_SLIDERS: SliderDef[] = [
+  { key: 'symmetry', label: 'Folds', min: 3, max: 24, step: 1 },
+  { key: 'complexity', label: 'Detail', min: 1, max: 10, step: 1 },
+  { key: 'luminous', label: 'Ripple', min: 0, max: 5, step: 0.1 },
+  { key: 'breathSpeed', label: 'Flow Speed', min: 0.05, max: 2, step: 0.05 },
+  { key: 'glow', label: 'Colour Spread', min: 0, max: 10, step: 0.5 },
+  { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+  { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+];
+
 const CYMATIC_SLIDERS: SliderDef[] = [
   { key: 'complexity', label: 'Frequency', min: 1, max: 10, step: 0.5 },
   { key: 'breathSpeed', label: 'Loop Speed', min: 0.05, max: 1.5, step: 0.05 },
@@ -14326,6 +14395,11 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
   cymatics2: CYMATIC_SLIDERS,
   cymatics3: CYMATIC_SLIDERS,
   cymatics4: CYMATIC_SLIDERS,
+  // Liquid 1–3: Folds, Detail and how strong the ripple is.
+  liquid1: LIQUID_SLIDERS,
+  liquid2: LIQUID_SLIDERS,
+  liquid3: LIQUID_SLIDERS,
+  liquid4: LIQUID_SLIDERS,
   rollingwave: visualSliders(['Waves', 2, 6], ['Lines', 1, 10], 'Texture', 'Speed', 3),
   fractalwave: visualSliders(['Claws', 1, 6], ['Depth', 1, 10], 'Texture', 'Speed', 3),
   bbpulse: bigBangSliders('Folds', 4, 24),
@@ -14558,6 +14632,10 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   cymatics2: 'Cymatic Sands 2',
   cymatics3: 'Cymatic Sands 3',
   cymatics4: 'Cymatic Sands 4',
+  liquid1: 'Liquid 1',
+  liquid2: 'Liquid 2',
+  liquid3: 'Liquid 3',
+  liquid4: 'Liquid 4',
   rollingwave: 'Rolling Wave',
   fractalwave: 'Fractal Wave',
 };
@@ -14716,6 +14794,10 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'cymatics2', label: '⊞ Cymatic Sands 2' },
   { mode: 'cymatics3', label: '◎³ Cymatic Sands 3' },
   { mode: 'cymatics4', label: '◉³ Cymatic Sands 4' },
+  { mode: 'liquid1', label: '≋ Liquid 1' },
+  { mode: 'liquid2', label: '≋ Liquid 2' },
+  { mode: 'liquid3', label: '≋ Liquid 3' },
+  { mode: 'liquid4', label: '≋ Liquid 4' },
   { mode: 'rollingwave', label: '∿ Rolling Wave' },
   { mode: 'fractalwave', label: '@ Fractal Wave' },
 ];
@@ -14860,9 +14942,7 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Trip Number 2', tag: 'DROP' },
   { name: 'Trip Number 3', tag: 'TRI' },
   { name: 'Flow Field', tag: 'FLOW' },
-  { name: 'Flow Sacred', tag: 'FLOW' },
   { name: 'Magnetic Sands 2', tag: 'FLOW' },
-  { name: 'Butterfly', tag: 'FLOW' },
   { name: 'Golden Flow', tag: 'FLOW' },
   { name: 'Gravity', tag: 'TOP' },
   { name: 'Fire', tag: 'TOP' },
@@ -14965,10 +15045,19 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Cymatic Sands 2', tag: 'SQUARE' },
   { name: 'Cymatic Sands 3', tag: '3D' },
   { name: 'Cymatic Sands 4', tag: 'SPHERE' },
+  { header: 'Liquid' },
+  { name: 'Liquid 1', tag: 'WEB' },
+  { name: 'Liquid 2', tag: 'ROSE' },
+  { name: 'Liquid 3', tag: 'POND' },
+  { name: 'Liquid 4', tag: 'PRISM' },
   { header: 'Waves' },
   { name: 'Rolling Wave', tag: 'FREE' },
   { name: 'Fractal Wave', tag: 'HOKUSAI' },
   { header: 'In Progress / To Develop', dim: true },
+  // Moved here 13 Oct 2026: their flowers and shapes are cut on the right, not
+  // complete in their circle. Back to Good Ones once they fit.
+  { name: 'Flow Sacred', tag: 'FLOW' },
+  { name: 'Butterfly', tag: 'FLOW' },
   { name: 'Chrysalis', tag: 'MORPH' },
   { name: 'Metamorph', tag: 'MORPH' },
   { name: 'Mirror Tunnel', tag: 'DEPTH' },
