@@ -181,6 +181,9 @@ type Mode =
   | 'liquid2'
   | 'liquid3'
   | 'liquid4'
+  // Liquid Chaos 2D / 3D — Chaos Field and Quantum Chaos with the Pulse's liquid wave
+  | 'currentliquid'
+  | 'current3dliquid'
   // Waves — rolling, curling linework (lib/visual-shaders.ts)
   | 'rollingwave'
   | 'fractalwave'
@@ -2475,6 +2478,30 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 4,
     stars: 0,
     mode: 'current3d',
+  },
+  'Liquid Chaos': {
+    preset: 'Deep Current',
+    symmetry: 8,
+    complexity: 9,
+    glow: 6,
+    breathSpeed: 1.4,
+    intensity: 9,
+    particles: 0,
+    luminous: 2.6,
+    stars: 0,
+    mode: 'currentliquid',
+  },
+  'Liquid Quantum': {
+    preset: 'Clifford Dream',
+    symmetry: 7,
+    complexity: 8,
+    glow: 7,
+    breathSpeed: 1.1,
+    intensity: 9,
+    particles: 0,
+    luminous: 2.8,
+    stars: 0,
+    mode: 'current3dliquid',
   },
   'Emotion Field': {
     preset: 'Calm Field',
@@ -7208,6 +7235,10 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
       return buildGlobe(cfg, R);
     case 'current3d':
       return buildCurrent3D(cfg, R);
+    case 'currentliquid':
+      return buildCurrentLiquid(cfg, R, false);
+    case 'current3dliquid':
+      return buildCurrentLiquid(cfg, R, true);
     case 'matrix':
       return buildMatrix(cfg, R);
     case 'matrix3d':
@@ -7476,6 +7507,10 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
       break;
     case 'current3d':
       updateCurrent3D(group, cfg, t, R);
+      break;
+    case 'currentliquid':
+    case 'current3dliquid':
+      updateCurrentLiquid(group, cfg, t, R);
       break;
     case 'matrix':
       updateMatrix(group, cfg, t, R);
@@ -12769,6 +12804,185 @@ function updateCurrent3D(group: THREE.Group, cfg: Cfg, t: number, R: number): vo
   }
 }
 
+/* ── LIQUID CHAOS — Chaos Field and Quantum Chaos, made liquid ─────
+ *
+ * Asked for 2026-10-13: "imagine the quant ones but with liquid effects." The
+ * dots drift through exactly the same divergence-free currents as Chaos Field
+ * (2D) and Quantum Chaos (3D); what changes is where they are DRAWN. The Big
+ * Bang Pulse's liquid wave runs outward through the cloud: the radius swells
+ * and sinks with sin(ωt − k·r), the cloud swirls a little with a second wave,
+ * and every dot glints and warms as a crest passes, so the current looks like
+ * a liquid surface catching light rather than dust. The fluid positions are
+ * kept apart from the drawn ones, so the current itself is never disturbed.
+ */
+function buildCurrentLiquid(cfg: Cfg, R: number, is3d: boolean): THREE.Group {
+  const TAU = Math.PI * 2;
+  const iF = cfg.intensity / 10;
+  const count = Math.max(800, Math.round(lerp(is3d ? 2200 : 1400, is3d ? 5200 : 3600, iF)));
+  const group = new THREE.Group();
+  const fluid = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    if (is3d) {
+      const theta = Math.random() * TAU;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = Math.cbrt(Math.random()) * R * 0.88;
+      fluid[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      fluid[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      fluid[i * 3 + 2] = r * Math.cos(phi);
+    } else {
+      const a = Math.random() * TAU;
+      const r = Math.sqrt(Math.random()) * R * 0.9;
+      fluid[i * 3] = Math.cos(a) * r;
+      fluid[i * 3 + 1] = Math.sin(a) * r;
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  const posAttr = new THREE.BufferAttribute(new Float32Array(count * 3), 3);
+  posAttr.setUsage(THREE.DynamicDrawUsage);
+  geo.setAttribute('position', posAttr);
+  const colAttr = new THREE.BufferAttribute(new Float32Array(count * 3), 3);
+  colAttr.setUsage(THREE.DynamicDrawUsage);
+  geo.setAttribute('color', colAttr);
+  const mat = new THREE.PointsMaterial({
+    size: is3d ? 1.8 : 2.1,
+    map: getCircleTex(),
+    vertexColors: true,
+    sizeAttenuation: false,
+    transparent: true,
+    opacity: 0.85,
+    alphaTest: 0.01,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const pts = new THREE.Points(geo, mat);
+  pts.userData.tag = 'currentLiquid';
+  pts.userData.count = count;
+  pts.userData.fluid = fluid;
+  pts.userData.is3d = is3d;
+  pts.userData.prevT = -1;
+  pts.userData.clock = 0;
+  group.add(pts);
+  return group;
+}
+
+function updateCurrentLiquid(group: THREE.Group, cfg: Cfg, t: number, R: number): void {
+  const TAU = Math.PI * 2;
+  const iF = cfg.intensity / 10;
+  const glowF = cfg.glow / 10;
+  const speed = cfg.breathSpeed * 0.7;
+  const freq = (Math.max(1, Math.round(cfg.symmetry)) * Math.PI) / Math.max(R, 1);
+  const pal = PAL[cfg.preset] ?? PAL['Calm Field'];
+  const base = pal.rgb;
+  // The ripple's strength rides on Luminous, like the Liquid series' Ripple.
+  const ripple = Math.min(1.6, 0.25 + cfg.luminous * 0.3);
+  const light = iF * 2.2;
+
+  for (const child of group.children) {
+    if ((child.userData.tag as string) !== 'currentLiquid') continue;
+    const pts = child as THREE.Points;
+    const is3d = child.userData.is3d as boolean;
+    const fluid = child.userData.fluid as Float32Array;
+    const count = child.userData.count as number;
+    const pos = (pts.geometry.getAttribute('position') as THREE.BufferAttribute)
+      .array as Float32Array;
+    const col = (pts.geometry.getAttribute('color') as THREE.BufferAttribute).array as Float32Array;
+    const prevT = child.userData.prevT as number;
+    const dt = prevT < 0 ? 16 : Math.min(t - prevT, 32);
+    child.userData.prevT = t;
+    child.userData.clock =
+      (child.userData.clock as number) + (dt / 1000) * (0.4 + cfg.breathSpeed * 0.6);
+    const s = child.userData.clock as number;
+    const w = TAU * 0.45 * s;
+    const k = 8.6 / R;
+    const R2 = R * R * (is3d ? 0.84 : 0.88);
+    const amp = R * (is3d ? 0.011 : 0.014) * speed * (dt / 16);
+    const ts = t * (is3d ? 0.00035 : 0.0005) * speed;
+    const f = freq;
+    // Warm crest colour: the palette pushed toward white-gold where the wave peaks.
+    const crest = [
+      Math.min(255, base[0] * 0.6 + 140),
+      Math.min(255, base[1] * 0.6 + 110),
+      Math.min(255, base[2] * 0.5 + 60),
+    ];
+
+    for (let i = 0; i < count; i++) {
+      const j = i * 3;
+      let x = fluid[j];
+      let y = fluid[j + 1];
+      let z = fluid[j + 2];
+      // 1. The current, exactly as in Chaos Field / Quantum Chaos.
+      if (is3d) {
+        x += (Math.cos(z * f + ts * 0.7) * f - Math.cos(y * f + ts) * f) * amp;
+        y += (Math.cos(x * f + ts * 0.5) * f - Math.cos(z * f + ts * 0.7) * f) * amp;
+        z += (Math.cos(y * f + ts) * f - Math.cos(x * f + ts * 0.5) * f) * amp;
+        if (x * x + y * y + z * z > R2) {
+          const theta = Math.random() * TAU;
+          const phi = Math.acos(2 * Math.random() - 1);
+          const r = Math.cbrt(Math.random() * 0.5) * R * 0.62;
+          x = r * Math.sin(phi) * Math.cos(theta);
+          y = r * Math.sin(phi) * Math.sin(theta);
+          z = r * Math.cos(phi);
+        }
+      } else {
+        const vx = Math.sin(x * f) * Math.cos(y * f + ts) * amp;
+        const vy = -Math.cos(x * f) * Math.sin(y * f + ts) * amp;
+        x += vx;
+        y += vy;
+        if (x * x + y * y > R2) {
+          const a = Math.random() * TAU;
+          const r = Math.sqrt(Math.random() * 0.5) * R * 0.55;
+          x = Math.cos(a) * r;
+          y = Math.sin(a) * r;
+        }
+      }
+      if (_distortActive) {
+        const fo = fingerForce(x, y, z, R * 0.55);
+        x += fo.x * (0.7 + speed);
+        y += fo.y * (0.7 + speed);
+        z += fo.z * (0.7 + speed);
+      }
+      fluid[j] = x;
+      fluid[j + 1] = y;
+      fluid[j + 2] = z;
+
+      // 2. The liquid: where the dot is drawn. The Pulse's wave swells the radius
+      //    outward, a second wave swirls it, and a third lifts it in depth.
+      const rho = is3d ? Math.sqrt(x * x + y * y + z * z) : Math.sqrt(x * x + y * y);
+      // 2D: the Pulse's rings running outward. 3D: rings seen through a sphere overlap
+      // and blur, so the wave rolls across it instead, in wavy bands like light on liquid.
+      const wave = is3d
+        ? Math.sin(w - k * 1.5 * (y + 0.35 * R * Math.sin((x / R) * 3 + s * 0.6)))
+        : Math.sin(w - k * rho);
+      const grow = 1 + ripple * (is3d ? 0.17 : 0.12) * wave;
+      const swirl = ripple * 0.22 * Math.sin(6 * (rho / R) - w * 0.8) * (rho / R);
+      const cs = Math.cos(swirl);
+      const sn = Math.sin(swirl);
+      const dx = (x * cs - y * sn) * grow;
+      const dy = (x * sn + y * cs) * grow;
+      pos[j] = dx;
+      pos[j + 1] = dy;
+      pos[j + 2] = is3d ? z * grow : R * ripple * 0.06 * Math.sin(rho * k * 1.2 - s * 1.2);
+
+      // 3. The light: bright and warm on the crest, deeper in the trough.
+      // In 3D the troughs go darker, so the rings of the wave show through the sphere.
+      const glint = is3d
+        ? 0.3 + 0.95 * Math.max(0, wave) ** 1.5
+        : 0.62 + 0.48 * Math.max(0, wave) + 0.1 * wave;
+      const warm = Math.max(0, wave) * (0.35 + glowF * 0.5);
+      const scale = (light * glint) / 255;
+      col[j] = (base[0] * (1 - warm) + crest[0] * warm) * scale;
+      col[j + 1] = (base[1] * (1 - warm) + crest[1] * warm) * scale;
+      col[j + 2] = (base[2] * (1 - warm) + crest[2] * warm) * scale;
+    }
+    pts.geometry.getAttribute('position').needsUpdate = true;
+    pts.geometry.getAttribute('color').needsUpdate = true;
+    if (is3d) {
+      group.rotation.y += 0.00022 * speed * (dt / 16);
+      group.rotation.x += 0.00011 * speed * (dt / 16);
+    }
+  }
+}
+
 /* ── MATRIX mode — canvas overlay carries all rendering ──────── */
 
 const MATRIX_COLS = 48;
@@ -14167,6 +14381,21 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
     { key: 'luminous', label: 'Bloom', min: 0, max: 5, step: 0.1 },
   ],
+  // Liquid Chaos 2D / 3D: the current's sliders, with Luminous as the ripple.
+  currentliquid: [
+    { key: 'symmetry', label: 'Turbulence', min: 1, max: 12, step: 1 },
+    { key: 'luminous', label: 'Ripple', min: 0, max: 5, step: 0.1 },
+    { key: 'glow', label: 'Crest Warmth', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.05, max: 2.0, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  current3dliquid: [
+    { key: 'symmetry', label: 'Turbulence', min: 1, max: 12, step: 1 },
+    { key: 'luminous', label: 'Ripple', min: 0, max: 5, step: 0.1 },
+    { key: 'glow', label: 'Crest Warmth', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.05, max: 2.0, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
   matrix: [
     { key: 'complexity', label: 'Tail Length', min: 1, max: 10, step: 1 },
     { key: 'glow', label: 'Colour', min: 0, max: 10, step: 0.5 },
@@ -14554,6 +14783,8 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   nebula: 'Nebula Veil',
   globe: 'Emotion Globe',
   current3d: 'Current 3D',
+  currentliquid: 'Liquid Chaos',
+  current3dliquid: 'Liquid Quantum',
   matrix: 'Matrix Rain',
   matrix3d: 'Matrix Rain',
   pulse: 'Rorschach Pulse',
@@ -14722,6 +14953,8 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'gravity', label: 'Gravity' },
   { mode: 'fire', label: 'Fire' },
   { mode: 'current3d', label: '∿³ Current 3D' },
+  { mode: 'currentliquid', label: '≋ Liquid Chaos' },
+  { mode: 'current3dliquid', label: '≋³ Liquid Quantum' },
   { mode: 'plasma', label: '☀ Plasma' },
   { mode: 'nebula', label: 'Nebula' },
 
@@ -14843,6 +15076,8 @@ const STAR_TAB_MODES = new Set<Mode>([
   'constellation',
   'current',
   'current3d',
+  'currentliquid',
+  'current3dliquid',
   'currentscales',
   'cyclonetiles',
   'cymatics1',
@@ -14940,6 +15175,8 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   // 13 Oct 2026: among the best, so third and fourth in Stars.
   { name: 'Chaos Field', tag: 'CHAOS' },
   { name: 'Quantum Chaos', tag: 'CHAOS' },
+  { name: 'Liquid Chaos', tag: 'LIQUID' },
+  { name: 'Liquid Quantum', tag: 'LIQUID' },
   { name: 'Trip Number 1', tag: 'TRIP' },
   { name: 'Trip Number 1 Flow', tag: 'TRIP' },
   { name: 'Trip Number 2', tag: 'DROP' },
