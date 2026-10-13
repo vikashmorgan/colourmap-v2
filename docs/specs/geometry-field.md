@@ -398,3 +398,7 @@ Also on 2026-10-13: **Flow Sacred** and **Butterfly** moved from Good Ones to *I
 ## Liquid Chaos and Liquid Quantum (2026-10-13)
 
 Chaos Field and Quantum Chaos moved to numbers 3 and 4 in Stars (among the best), and two liquid versions follow them as 5 and 6. The dots drift through exactly the same divergence-free currents; only where they are drawn changes. **Liquid Chaos** (2D, Deep Current) runs the Pulse's wave outward through the cloud: the radius swells and sinks, a second wave swirls it, and dots glint and warm on the crest. **Liquid Quantum** (3D, Clifford Dream) rolls the wave across the sphere in wavy bands instead, because rings seen through a sphere overlap and blur; the troughs go dark so the bands read like light on liquid. Sliders: Turbulence, Ripple, Crest Warmth, Speed, Bright.
+
+## Music Liquid Chaos (2026-10-13)
+
+"That liquid chaos from Music is amazing, use it as a star preset." The Music page's magic-mode Liquid chaos (Chill Machine's LiquidField) now lives in Stars as **Music Liquid Chaos**, first under Good Ones. Dots drift through the same divergence-free current, the Pulse's wave runs gently outward, and drops of colour fall into the liquid as rings that lift and light the dots they pass, leaving a soft trail. On the piano every note was a drop; here they fall on their own at a calm, uneven rhythm, walking up and down the keys in the piano's note colours, and a beat from the app's music adds one. The current takes the palette's colour (Deep Current). Sliders: Turbulence, Drops, Ripple, Density, Speed, Bright.
