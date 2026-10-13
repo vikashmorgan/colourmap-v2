@@ -186,6 +186,10 @@ type Mode =
   | 'current3dliquid'
   // Music Liquid Chaos — the Music page's magic-mode liquid, drops falling on their own
   | 'musicliquid'
+  // Sauron's Eye — a lidless eye wreathed in fire, a cat's-eye slit at its heart
+  | 'sauroneye'
+  // One Flame — a single flame floating, sparks rising from it like stars
+  | 'oneflame'
   // Waves — rolling, curling linework (lib/visual-shaders.ts)
   | 'rollingwave'
   | 'fractalwave'
@@ -2492,6 +2496,30 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 2.6,
     stars: 0,
     mode: 'currentliquid',
+  },
+  'One Flame': {
+    preset: 'Deep Current',
+    symmetry: 6,
+    complexity: 7,
+    glow: 6,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 5,
+    stars: 0,
+    mode: 'oneflame',
+  },
+  "Sauron's Eye": {
+    preset: 'Deep Current',
+    symmetry: 6,
+    complexity: 7,
+    glow: 7,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 1,
+    stars: 0,
+    mode: 'sauroneye',
   },
   'Music Liquid Chaos': {
     preset: 'Deep Current',
@@ -7343,6 +7371,8 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
     case 'musicnebula':
     case 'musiclattice':
     case 'musicliquid':
+    case 'sauroneye':
+    case 'oneflame':
       return buildCanvasMode(cfg, R);
     case 'sinmorph3d':
       return buildSinMorph3D(cfg, R);
@@ -7637,6 +7667,8 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
     case 'musicnebula':
     case 'musiclattice':
     case 'musicliquid':
+    case 'sauroneye':
+    case 'oneflame':
       updateCanvasMode(group, cfg, t, R);
       break;
     case 'sinmorph3d':
@@ -14405,6 +14437,22 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'breathSpeed', label: 'Speed', min: 0.05, max: 2.0, step: 0.05 },
     { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
   ],
+  oneflame: [
+    { key: 'particles', label: 'Fire Colour', min: 0, max: 6, step: 1 },
+    { key: 'symmetry', label: 'Flame Height', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Golden Tips', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Sparks', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Flicker', min: 0.2, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  sauroneye: [
+    { key: 'symmetry', label: 'Flame Height', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Golden Tips', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Pupil', min: 0.2, max: 3, step: 0.1 },
+    { key: 'complexity', label: 'Fire Density', min: 1, max: 10, step: 1 },
+    { key: 'breathSpeed', label: 'Flicker', min: 0.2, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
   musicliquid: [
     { key: 'symmetry', label: 'Turbulence', min: 2, max: 12, step: 0.5 },
     { key: 'glow', label: 'Drops', min: 0, max: 10, step: 0.5 },
@@ -14810,6 +14858,8 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   currentliquid: 'Liquid Chaos',
   current3dliquid: 'Liquid Quantum',
   musicliquid: 'Music Liquid Chaos',
+  sauroneye: "Sauron's Eye",
+  oneflame: 'One Flame',
   matrix: 'Matrix Rain',
   matrix3d: 'Matrix Rain',
   pulse: 'Rorschach Pulse',
@@ -14981,6 +15031,8 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'currentliquid', label: '≋ Liquid Chaos' },
   { mode: 'current3dliquid', label: '≋³ Liquid Quantum' },
   { mode: 'musicliquid', label: '♪ Music Liquid Chaos' },
+  { mode: 'sauroneye', label: "◉ Sauron's Eye" },
+  { mode: 'oneflame', label: '🜂 One Flame' },
   { mode: 'plasma', label: '☀ Plasma' },
   { mode: 'nebula', label: 'Nebula' },
 
@@ -15105,6 +15157,8 @@ const STAR_TAB_MODES = new Set<Mode>([
   'currentliquid',
   'current3dliquid',
   'musicliquid',
+  'sauroneye',
+  'oneflame',
   'currentscales',
   'cyclonetiles',
   'cymatics1',
@@ -15199,6 +15253,10 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { header: 'Good Ones' },
   // 13 Oct 2026: "that liquid chaos from Music is amazing, use it as a star preset." First.
   { name: 'Music Liquid Chaos', tag: 'LIQUID' },
+  // 13 Oct 2026: "a Sauron's eye … red, the tips more golden, like real fire, with the cat's eye in the centre."
+  { name: "Sauron's Eye", tag: 'FIRE' },
+  // 13 Oct 2026: "just one flame floating … red with golden tips, orange in the middle … the stars going up."
+  { name: 'One Flame', tag: 'FIRE' },
   { name: 'Magnetic Sand', tag: 'CURRENT' },
   { name: 'Dot Walker', tag: 'CHAR' },
   // 13 Oct 2026: among the best, so third and fourth in Stars.
@@ -21210,7 +21268,9 @@ export default function GeometryField() {
       cfg.mode === 'musicdots' ||
       cfg.mode === 'musicnebula' ||
       cfg.mode === 'musiclattice' ||
-      cfg.mode === 'musicliquid';
+      cfg.mode === 'musicliquid' ||
+      cfg.mode === 'sauroneye' ||
+      cfg.mode === 'oneflame';
     if (!isCanvasMode) {
       canvasModeActiveRef.current = false;
       cancelAnimationFrame(canvasModeAnimRef.current);
@@ -21248,6 +21308,423 @@ export default function GeometryField() {
       const bgB = parseInt(h.slice(4, 6), 16);
       ctx.fillStyle = `rgb(${bgR},${bgG},${bgB})`;
       ctx.fillRect(0, 0, mc.width, mc.height);
+    }
+
+    /* ── ONE FLAME — a single flame floating, its sparks rising like stars ──
+     *
+     * Asked for 2026-10-13: "just fire, just one flame floating. Default red
+     * with golden tips, orange in the middle, but it can also go purple or other
+     * colours. Aim for the feeling of real fire, with the stars going up."
+     * The flame is thousands of short-lived embers born in a small bed at its
+     * foot. Heat lifts them, faster as they rise (buoyancy); they are drawn in
+     * toward the middle so the flame narrows to a tip, and a sway that travels
+     * up the flame makes it lick and flicker, as real flames do. Each ember
+     * changes colour as it rises and cools: the fire's base colour (red), then
+     * its middle (orange), then its tip (gold), fading out; the hot core burns
+     * brighter than the edges. Now and then a spark breaks free and climbs on
+     * up the sky, twinkling and cooling, like a star going up. The flame floats:
+     * no wick, a soft warm light round it, a slow breath in its height.
+     * Fire Colour: 0 red–orange–gold, 1 purple, 2 blue, 3 green, 4 rose,
+     * 5 white-gold, 6 turquoise.
+     */
+    if (cfg.mode === 'oneflame') {
+      const TAU = Math.PI * 2;
+      // [hue, saturation, lightness] for the base, the middle and the tip of each fire.
+      const FIRES: [number, number, number][][] = [
+        [
+          [0, 100, 38],
+          [24, 100, 52],
+          [46, 100, 64],
+        ],
+        [
+          [275, 90, 38],
+          [300, 95, 55],
+          [330, 90, 74],
+        ],
+        [
+          [225, 95, 40],
+          [200, 100, 56],
+          [185, 80, 82],
+        ],
+        [
+          [140, 85, 32],
+          [105, 90, 48],
+          [70, 100, 64],
+        ],
+        [
+          [340, 90, 42],
+          [355, 95, 60],
+          [20, 100, 78],
+        ],
+        [
+          [30, 70, 50],
+          [42, 85, 70],
+          [50, 60, 90],
+        ],
+        [
+          [190, 90, 36],
+          [172, 90, 50],
+          [150, 70, 76],
+        ],
+      ];
+      const choice = FIRES[Math.max(0, Math.min(FIRES.length - 1, Math.round(cfg.particles)))];
+      const heightF = cfg.symmetry / 10;
+      const goldF = cfg.glow / 10;
+      const sparkF = cfg.luminous / 10;
+      const flick = speed;
+      type Ember = {
+        x: number;
+        y: number;
+        vx: number;
+        vy: number;
+        age: number;
+        life: number;
+        seed: number;
+        size: number;
+      };
+      type Spark = {
+        x: number;
+        y: number;
+        vx: number;
+        vy: number;
+        age: number;
+        life: number;
+        seed: number;
+      };
+      let embers: Ember[] = [];
+      let sparks: Spark[] = [];
+      let last = performance.now();
+      let clock = 0;
+      let carry = 0;
+      let sparkCarry = 0;
+      const mix = (a: number, b: number, u: number) => a + (b - a) * u;
+      // An ember's colour as it rises: base, middle, tip. Golden Tips moves the tip colour lower.
+      const colourAt = (u: number): [number, number, number] => {
+        const k = Math.min(1, u * (0.85 + goldF * 0.6));
+        const [b, m, t] = choice;
+        if (k < 0.5) {
+          const v = k / 0.5;
+          return [mix(b[0], m[0], v), mix(b[1], m[1], v), mix(b[2], m[2], v)];
+        }
+        const v = (k - 0.5) / 0.5;
+        return [mix(m[0], t[0], v), mix(m[1], t[1], v), mix(m[2], t[2], v)];
+      };
+
+      function drawFlame() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.05, (now - last) / 1000) * flick;
+        last = now;
+        clock += dt;
+        const W = mc!.width;
+        const H = mc!.height;
+        const S = Math.min(W, H);
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        // Floating: the flame drifts a little, and breathes in height.
+        const bx = W / 2 + Math.sin(clock * 0.37) * S * 0.012;
+        const by = H * 0.68 + Math.sin(clock * 0.53) * S * 0.01;
+        const tall = S * (0.28 + 0.32 * heightF) * (0.92 + 0.08 * Math.sin(clock * 1.3));
+        const bed = S * 0.08;
+
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = 'rgba(3, 2, 3, 0.3)';
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+
+        // The warm light round it.
+        const [mh, ms, ml] = choice[1];
+        const g = ctx!.createRadialGradient(
+          bx,
+          by - tall * 0.35,
+          0,
+          bx,
+          by - tall * 0.35,
+          tall * 0.9,
+        );
+        g.addColorStop(0, `hsla(${mh}, ${ms}%, ${ml}%, ${0.05 * iF})`);
+        g.addColorStop(1, 'hsla(0, 0%, 0%, 0)');
+        ctx!.fillStyle = g;
+        ctx!.fillRect(0, 0, W, H);
+
+        // New embers in the bed at the flame's foot.
+        carry += 2200 * dt;
+        while (carry >= 1) {
+          carry -= 1;
+          const a = Math.random() * TAU;
+          const r = Math.sqrt(Math.random());
+          embers.push({
+            // A round bed, so the flame's foot is a teardrop, not a flat line.
+            x: Math.cos(a) * r * bed * 0.85,
+            y: Math.abs(Math.sin(a)) * r * bed * 0.7,
+            vx: 0,
+            vy: -tall * (0.4 + Math.random() * 0.25),
+            age: 0,
+            life: 0.55 + Math.random() * 0.5,
+            seed: Math.random() * TAU,
+            size: (1.4 + Math.random() * 1.8) * dpr,
+          });
+        }
+        if (embers.length > 7000) embers = embers.slice(-7000);
+
+        const keep: Ember[] = [];
+        for (const e of embers) {
+          e.age += dt;
+          if (e.age >= e.life) continue;
+          const u = e.age / e.life;
+          const rise = -e.y / tall;
+          // Buoyancy: heat lifts it, faster as it rises.
+          e.vy -= tall * (1.5 + 0.8 * rise) * dt;
+          // Drawn to the middle, so the flame narrows to a tip...
+          e.vx -= e.x * (1.6 + 6 * rise) * dt;
+          // ...and a sway travelling up the flame makes it lick and flicker.
+          const sway =
+            Math.sin(e.y * (9 / tall) + clock * 7 + 0.6 * Math.sin(clock * 2.3)) +
+            0.5 * Math.sin(e.y * (23 / tall) - clock * 11 + e.seed);
+          e.vx += sway * S * 0.85 * (0.25 + rise) * dt;
+          e.vx *= 1 - 2.2 * dt;
+          e.vy *= 1 - 0.5 * dt;
+          e.x += e.vx * dt;
+          e.y += e.vy * dt;
+          keep.push(e);
+          // The hot core is brighter than the edges.
+          const core = Math.exp(-((e.x / (bed * (1 - 0.6 * Math.min(1, rise)))) ** 2));
+          const [h, sat, l] = colourAt(Math.min(1, 0.8 * Math.max(0, rise) + 0.3 * u));
+          const alpha = Math.sin(Math.PI * Math.min(1, u * 1.15)) ** 0.8 * (0.3 + 0.7 * iF);
+          const light = Math.min(88, l + 8 * core);
+          const size = e.size * (1 - 0.55 * u);
+          const px = bx + e.x;
+          const py = by + e.y;
+          ctx!.fillStyle = `hsla(${h}, ${sat}%, ${l}%, ${0.045 * alpha})`;
+          ctx!.fillRect(px - size * 2.4, py - size * 2.4, size * 4.8, size * 4.8);
+          ctx!.fillStyle = `hsla(${h}, ${sat}%, ${light}%, ${Math.min(1, 0.2 * alpha * (0.55 + 0.45 * core))})`;
+          ctx!.fillRect(px - size / 2, py - size / 2, size, size);
+        }
+        embers = keep;
+
+        // Sparks: now and then one breaks free and climbs up the sky, like a star going up.
+        sparkCarry += (1 + 12 * sparkF) * dt;
+        while (sparkCarry >= 1) {
+          sparkCarry -= 1;
+          sparks.push({
+            x: (Math.random() - 0.5) * bed * 0.8,
+            y: -tall * (0.4 + Math.random() * 0.5),
+            vx: (Math.random() - 0.5) * S * 0.35,
+            vy: -S * (0.12 + Math.random() * 0.22),
+            age: 0,
+            life: 2.5 + Math.random() * 3.5,
+            seed: Math.random() * TAU,
+          });
+        }
+        const keepS: Spark[] = [];
+        for (const sp of sparks) {
+          sp.age += dt;
+          if (sp.age >= sp.life) continue;
+          sp.vx += Math.sin(sp.age * 3 + sp.seed) * S * 0.05 * dt;
+          sp.vy -= S * 0.015 * dt;
+          sp.vx *= 1 - 0.6 * dt;
+          sp.x += sp.vx * dt;
+          sp.y += sp.vy * dt;
+          if (by + sp.y < -10) continue;
+          keepS.push(sp);
+          const u = sp.age / sp.life;
+          // A spark cools from the tip's colour back toward the base's as it climbs.
+          const [h, sat, l] = colourAt(1 - u * 0.7);
+          const tw = 0.6 + 0.4 * Math.sin(sp.age * 14 + sp.seed);
+          const a = (1 - u) * tw * (0.5 + 0.5 * iF);
+          const size = 2 * dpr;
+          const px = bx + sp.x;
+          const py = by + sp.y;
+          ctx!.fillStyle = `hsla(${h}, ${sat}%, ${l}%, ${0.15 * a})`;
+          ctx!.fillRect(px - size * 2, py - size * 2, size * 4, size * 4);
+          ctx!.fillStyle = `hsla(${h}, ${sat}%, ${Math.min(95, l + 20)}%, ${a})`;
+          ctx!.fillRect(px - size / 2, py - size / 2, size, size);
+        }
+        sparks = keepS.length > 600 ? keepS.slice(-600) : keepS;
+
+        canvasModeAnimRef.current = requestAnimationFrame(drawFlame);
+      }
+      drawFlame();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
+    }
+
+    /* ── SAURON'S EYE — a lidless eye wreathed in fire ──────────────
+     *
+     * Asked for 2026-10-13: "a Sauron's eye geometry, with sliders. When red the
+     * tips are more golden, like real fire, with the cat's eye in the centre."
+     * An almond of fire: flames are born on its rim and lick outward and up,
+     * longest at the two corners, swaying as they rise. Like real fire, a flame
+     * is deep red where it is born and turns orange, then gold toward its tip
+     * (Golden Tips sets how far), fading to nothing. Inside, the iris: embers
+     * drawn inward toward the centre, red at the rim and white-gold by the
+     * pupil, which is a cat's vertical slit (Pupil sets its width), black, with
+     * a thin burning edge, breathing slowly wider and narrower.
+     */
+    if (cfg.mode === 'sauroneye') {
+      const TAU = Math.PI * 2;
+      const heightF = cfg.symmetry / 10;
+      const goldF = cfg.glow / 10;
+      const pupilF = cfg.luminous;
+      const flick = speed;
+      const spawnRate = lerp(500, 2600, (cfg.complexity - 1) / 9);
+      type Flame = {
+        x: number;
+        y: number;
+        vx: number;
+        vy: number;
+        age: number;
+        life: number;
+        seed: number;
+        size: number;
+      };
+      let flames: Flame[] = [];
+      const IRIS = Math.round(lerp(700, 1800, (cfg.complexity - 1) / 9));
+      const iris = Array.from({ length: IRIS }, () => ({
+        a: Math.random() * TAU,
+        r: Math.random(),
+        sp: 0.15 + Math.random() * 0.35,
+      }));
+      let last = performance.now();
+      let clock = 0;
+      let carry = 0;
+      // Fire colour by how far along its life a flame is: deep red, orange, then gold at the tip.
+      const fire = (u: number): [number, number, number] => {
+        const tip = Math.min(1, u * (0.9 + goldF * 0.9));
+        const hue = 2 + 46 * tip ** 1.3;
+        const light = 34 + 30 * tip;
+        return [hue, 100, light];
+      };
+
+      function drawEye() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.05, (now - last) / 1000);
+        last = now;
+        clock += dt * flick;
+        const W = mc!.width;
+        const H = mc!.height;
+        const cx = W / 2;
+        const cy = H / 2;
+        const A = Math.min(W, H) * 0.34;
+        const B = A * 0.44;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = 'rgba(4, 2, 2, 0.24)';
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+
+        // The almond: a lens, pointed at the corners.
+        const rim = (t: number): [number, number, number, number] => {
+          const x = A * Math.cos(t);
+          const y = B * Math.sin(t) * (0.55 + 0.45 * Math.abs(Math.sin(t)));
+          const nx = Math.cos(t) / A;
+          const ny = Math.sin(t) / B;
+          const nl = Math.hypot(nx, ny) || 1;
+          return [x, y, nx / nl, ny / nl];
+        };
+
+        // New flames on the rim, more of them and longer at the corners.
+        carry += spawnRate * dt * flick;
+        while (carry >= 1) {
+          carry -= 1;
+          const t = Math.random() * TAU;
+          const [x, y, nx, ny] = rim(t);
+          const corner = Math.abs(Math.cos(t)) ** 3;
+          const sp = A * (0.35 + 0.55 * heightF) * (0.6 + Math.random() * 0.6) * (1 + 1.2 * corner);
+          flames.push({
+            x,
+            y,
+            vx: nx * sp,
+            vy: ny * sp * 0.75 - A * 0.25 * heightF,
+            age: 0,
+            life: (0.45 + 0.6 * heightF) * (0.6 + Math.random() * 0.7),
+            seed: Math.random() * TAU,
+            size: (1.2 + Math.random() * 1.6) * dpr,
+          });
+        }
+        if (flames.length > 9000) flames = flames.slice(-9000);
+
+        const keep: Flame[] = [];
+        for (const fl of flames) {
+          fl.age += dt * flick;
+          if (fl.age >= fl.life) continue;
+          const u = fl.age / fl.life;
+          // Rising and swaying, slowing as the flame thins out at its tip.
+          fl.vx += Math.sin(fl.age * 9 + fl.seed + clock * 2) * A * 0.9 * dt;
+          fl.vy -= A * 0.9 * heightF * dt;
+          fl.vx *= 1 - 1.6 * dt;
+          fl.vy *= 1 - 1.6 * dt;
+          fl.x += fl.vx * dt * flick;
+          fl.y += fl.vy * dt * flick;
+          keep.push(fl);
+          const [h, sat, l] = fire(u);
+          const alpha = (1 - u) ** 1.2 * (0.35 + 0.65 * iF);
+          const size = fl.size * (1 - 0.6 * u);
+          const px = cx + fl.x;
+          const py = cy + fl.y;
+          ctx!.fillStyle = `hsla(${h}, ${sat}%, ${l}%, ${0.1 * alpha})`;
+          ctx!.fillRect(px - size * 2, py - size * 2, size * 4, size * 4);
+          ctx!.fillStyle = `hsla(${h}, ${sat}%, ${Math.min(92, l + 12)}%, ${Math.min(1, 0.75 * alpha)})`;
+          ctx!.fillRect(px - size / 2, py - size / 2, size, size);
+        }
+        flames = keep;
+
+        // The iris: embers drawn in toward the pupil, red outside, white-gold within.
+        for (const e of iris) {
+          e.r -= e.sp * dt * flick * 0.5;
+          e.a += dt * flick * 0.15;
+          if (e.r < 0.08) {
+            e.r = 1;
+            e.a = Math.random() * TAU;
+          }
+          const [rx, ry] = rim(e.a);
+          const sx = cx + rx * e.r * 0.94;
+          const sy = cy + ry * e.r * 0.94;
+          const warm = 1 - e.r;
+          const h = 8 + 44 * warm;
+          const l = 38 + 40 * warm ** 1.5;
+          const a = (0.45 + 0.5 * warm) * (0.4 + 0.6 * iF);
+          const size = (1 + 1.2 * warm) * dpr;
+          ctx!.fillStyle = `hsla(${h}, 100%, ${l}%, ${0.12 * a})`;
+          ctx!.fillRect(sx - size * 2, sy - size * 2, size * 4, size * 4);
+          ctx!.fillStyle = `hsla(${h}, 100%, ${Math.min(94, l + 10)}%, ${a})`;
+          ctx!.fillRect(sx - size / 2, sy - size / 2, size, size);
+        }
+
+        // The cat's eye: a vertical slit, black, breathing, with a burning edge.
+        const pw = A * 0.07 * pupilF * (0.85 + 0.15 * Math.sin(clock * 0.9));
+        const ph = B * 1.02;
+        const slit = () => {
+          ctx!.beginPath();
+          ctx!.moveTo(cx, cy - ph);
+          ctx!.quadraticCurveTo(cx + pw * 2, cy, cx, cy + ph);
+          ctx!.quadraticCurveTo(cx - pw * 2, cy, cx, cy - ph);
+          ctx!.closePath();
+        };
+        ctx!.globalCompositeOperation = 'lighter';
+        slit();
+        ctx!.lineWidth = 6 * dpr;
+        ctx!.strokeStyle = `hsla(40, 100%, 60%, ${0.18 * iF})`;
+        ctx!.stroke();
+        ctx!.globalCompositeOperation = 'source-over';
+        slit();
+        ctx!.fillStyle = '#000';
+        ctx!.fill();
+        ctx!.lineWidth = 1.2 * dpr;
+        ctx!.strokeStyle = `hsla(46, 100%, 70%, ${0.65 * iF})`;
+        ctx!.stroke();
+        canvasModeAnimRef.current = requestAnimationFrame(drawEye);
+      }
+      drawEye();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
     }
 
     /* ── MUSIC LIQUID CHAOS — the Music page's magic-mode liquid, as a star ──
@@ -23616,6 +24093,7 @@ export default function GeometryField() {
     cfg.symmetry,
     cfg.glow,
     cfg.luminous,
+    cfg.particles,
   ]);
 
   function startJourney(id: number) {
@@ -24186,7 +24664,9 @@ export default function GeometryField() {
           cfg.mode === 'musicdots' ||
           cfg.mode === 'musicnebula' ||
           cfg.mode === 'musiclattice' ||
-          cfg.mode === 'musicliquid') && (
+          cfg.mode === 'musicliquid' ||
+          cfg.mode === 'sauroneye' ||
+          cfg.mode === 'oneflame') && (
           <canvas
             ref={matrixCanvasRef}
             style={{
