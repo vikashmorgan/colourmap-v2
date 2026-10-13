@@ -381,3 +381,16 @@ fullscreen output separate from the controller.
 
 - **2026-10-08.** The tab is called **Art** again: the visuals are art, not AI. The panel splits into Stars, Geometry, Tunnels and Oils, and the Big Bang trip becomes its fifth tab. The Big Bang journey (hidden with Journeys) keeps its original stages.
 - **2026-10-03.** Four tabs (Builder, Music Visuals, Journeys, Figures) asked a first-time viewer to choose before seeing anything. Narrowed to Builder only and renamed the tab from Art to AI Projections; the other tabs are hidden rather than deleted so they can return one at a time once each is ready. Star Sand Lines moved out of Good Ones because it is unfinished.
+
+## Liquid 1–4 (2026-10-13)
+
+A Geometry series inspired by the Big Bang **Pulse** and its liquid effect: the same travelling wave (the radius swelling with sin(ωt − k·r) running outward, depth lifting with a second wave, light glinting as the crest passes), drawn in lines on four shapes, each rippled its own way (`components/geometry-liquid.ts`):
+
+- **Liquid 1** · the Pulse's mirrored fractal web (Sierpinski edges in n mirrored sectors), breathing outward. Amber Dust.
+- **Liquid 2** · nested rose petals, stirred: the ripple swirls round the flower and twists the petals. Violet Portal.
+- **Liquid 3** · a seed-of-life lattice laid flat like a pond and seen at an angle; three wandering drops ripple it in 3D. Blue Astral.
+- **Liquid 4** · the Prism 3D look made liquid: spectral rings stacked in depth round a warm core, spectral spokes, every ring flowing and swirling and the stack undulating like a jellyfish, bright enough to bloom.
+
+Sliders: Folds, Detail, Ripple (how strongly it moves), Flow Speed, Colour Spread, Light, Stars. They sit under their own *Liquid* header in the Geometry list.
+
+Also on 2026-10-13: **Flow Sacred** and **Butterfly** moved from Good Ones to *In Progress / To Develop* in Stars, because their flowers and shapes are cut on the right instead of complete in their circle.
