@@ -14937,6 +14937,9 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { header: 'Good Ones' },
   { name: 'Magnetic Sand', tag: 'CURRENT' },
   { name: 'Dot Walker', tag: 'CHAR' },
+  // 13 Oct 2026: among the best, so third and fourth in Stars.
+  { name: 'Chaos Field', tag: 'CHAOS' },
+  { name: 'Quantum Chaos', tag: 'CHAOS' },
   { name: 'Trip Number 1', tag: 'TRIP' },
   { name: 'Trip Number 1 Flow', tag: 'TRIP' },
   { name: 'Trip Number 2', tag: 'DROP' },
@@ -14972,8 +14975,6 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Touch Preset', tag: 'TOUCH' },
 
   { name: 'Outward Sun', tag: 'DOT' },
-  { name: 'Chaos Field', tag: 'CHAOS' },
-  { name: 'Quantum Chaos', tag: 'CHAOS' },
   { name: 'Chaos Triangles', tag: '3D' },
   { name: 'Chaos Tri Sphere', tag: '3D' },
   { name: 'Alchemical Dot Sun', tag: 'DOT' },
