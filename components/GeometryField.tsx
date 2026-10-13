@@ -184,6 +184,8 @@ type Mode =
   // Liquid Chaos 2D / 3D — Chaos Field and Quantum Chaos with the Pulse's liquid wave
   | 'currentliquid'
   | 'current3dliquid'
+  // Music Liquid Chaos — the Music page's magic-mode liquid, drops falling on their own
+  | 'musicliquid'
   // Waves — rolling, curling linework (lib/visual-shaders.ts)
   | 'rollingwave'
   | 'fractalwave'
@@ -2490,6 +2492,18 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 2.6,
     stars: 0,
     mode: 'currentliquid',
+  },
+  'Music Liquid Chaos': {
+    preset: 'Deep Current',
+    symmetry: 7,
+    complexity: 7,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 1,
+    stars: 0,
+    mode: 'musicliquid',
   },
   'Liquid Quantum': {
     preset: 'Clifford Dream',
@@ -7328,6 +7342,7 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
     case 'musicdots':
     case 'musicnebula':
     case 'musiclattice':
+    case 'musicliquid':
       return buildCanvasMode(cfg, R);
     case 'sinmorph3d':
       return buildSinMorph3D(cfg, R);
@@ -7621,6 +7636,7 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
     case 'musicdots':
     case 'musicnebula':
     case 'musiclattice':
+    case 'musicliquid':
       updateCanvasMode(group, cfg, t, R);
       break;
     case 'sinmorph3d':
@@ -14389,6 +14405,14 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'breathSpeed', label: 'Speed', min: 0.05, max: 2.0, step: 0.05 },
     { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
   ],
+  musicliquid: [
+    { key: 'symmetry', label: 'Turbulence', min: 2, max: 12, step: 0.5 },
+    { key: 'glow', label: 'Drops', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Ripple', min: 0, max: 3, step: 0.1 },
+    { key: 'complexity', label: 'Density', min: 1, max: 10, step: 1 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
   current3dliquid: [
     { key: 'symmetry', label: 'Turbulence', min: 1, max: 12, step: 1 },
     { key: 'luminous', label: 'Ripple', min: 0, max: 5, step: 0.1 },
@@ -14785,6 +14809,7 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   current3d: 'Current 3D',
   currentliquid: 'Liquid Chaos',
   current3dliquid: 'Liquid Quantum',
+  musicliquid: 'Music Liquid Chaos',
   matrix: 'Matrix Rain',
   matrix3d: 'Matrix Rain',
   pulse: 'Rorschach Pulse',
@@ -14955,6 +14980,7 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'current3d', label: '∿³ Current 3D' },
   { mode: 'currentliquid', label: '≋ Liquid Chaos' },
   { mode: 'current3dliquid', label: '≋³ Liquid Quantum' },
+  { mode: 'musicliquid', label: '♪ Music Liquid Chaos' },
   { mode: 'plasma', label: '☀ Plasma' },
   { mode: 'nebula', label: 'Nebula' },
 
@@ -15078,6 +15104,7 @@ const STAR_TAB_MODES = new Set<Mode>([
   'current3d',
   'currentliquid',
   'current3dliquid',
+  'musicliquid',
   'currentscales',
   'cyclonetiles',
   'cymatics1',
@@ -15170,6 +15197,8 @@ type FeaturedItem = { name: string; tag: string } | { header: string; dim?: bool
 
 export const FEATURED_PRESETS: FeaturedItem[] = [
   { header: 'Good Ones' },
+  // 13 Oct 2026: "that liquid chaos from Music is amazing, use it as a star preset." First.
+  { name: 'Music Liquid Chaos', tag: 'LIQUID' },
   { name: 'Magnetic Sand', tag: 'CURRENT' },
   { name: 'Dot Walker', tag: 'CHAR' },
   // 13 Oct 2026: among the best, so third and fourth in Stars.
@@ -21180,7 +21209,8 @@ export default function GeometryField() {
       cfg.mode === 'infinitedive' ||
       cfg.mode === 'musicdots' ||
       cfg.mode === 'musicnebula' ||
-      cfg.mode === 'musiclattice';
+      cfg.mode === 'musiclattice' ||
+      cfg.mode === 'musicliquid';
     if (!isCanvasMode) {
       canvasModeActiveRef.current = false;
       cancelAnimationFrame(canvasModeAnimRef.current);
@@ -21218,6 +21248,157 @@ export default function GeometryField() {
       const bgB = parseInt(h.slice(4, 6), 16);
       ctx.fillStyle = `rgb(${bgR},${bgG},${bgB})`;
       ctx.fillRect(0, 0, mc.width, mc.height);
+    }
+
+    /* ── MUSIC LIQUID CHAOS — the Music page's magic-mode liquid, as a star ──
+     *
+     * Asked for 2026-10-13: "that liquid chaos from Music is amazing, use it as
+     * a star preset." Ported from Chill Machine's LiquidField (chaos): dots drift
+     * through a divergence-free current (the curl of sin(fx)·sin(fy + t), so they
+     * swirl and never bunch up), the Pulse's wave runs gently outward through
+     * them, and drops of colour fall into the liquid, each a ring spreading out
+     * that lifts and lights the dots it passes. On the piano every note was a
+     * drop; here they fall on their own, at a calm, uneven rhythm (Drops), and a
+     * beat from the app's music adds one. A soft trail is left on the canvas,
+     * which is what makes it read as liquid.
+     */
+    if (cfg.mode === 'musicliquid') {
+      const TAU = Math.PI * 2;
+      const n = Math.round(lerp(1400, 4600, (cfg.complexity - 1) / 9));
+      const px = new Float32Array(n);
+      const py = new Float32Array(n);
+      const seed = (i: number) => {
+        const a = Math.random() * TAU;
+        const r = Math.sqrt(Math.random()) * 0.92;
+        px[i] = Math.cos(a) * r;
+        py[i] = Math.sin(a) * r;
+      };
+      for (let i = 0; i < n; i++) seed(i);
+      const DROP_LIFE = 3.2;
+      const DROP_SPEED = 0.55;
+      const DROP_WIDTH = 0.09;
+      const dropWave = (d: number, age: number) => {
+        if (age < 0 || age > DROP_LIFE) return 0;
+        const off = d - age * DROP_SPEED;
+        const envelope = Math.exp(-(off * off) / (2 * DROP_WIDTH * DROP_WIDTH));
+        return Math.sin(off * 38) * envelope * (1 - age / DROP_LIFE) ** 1.5;
+      };
+      // The note colours of the piano: round the circle of fifths.
+      const NOTE_HUES = [0, 210, 60, 270, 120, 330, 180, 30, 240, 90, 300, 150];
+      let drops: { x: number; y: number; born: number; hue: number }[] = [];
+      let clock = 0;
+      let nextDrop = 0.6;
+      let lastPulse = 0;
+      let note = 0;
+      let last = performance.now();
+      const f = Math.max(2, cfg.symmetry);
+      const ripple = cfg.luminous;
+      const dropsPerSecond = (cfg.glow / 10) * 1.6;
+      const light = 0.4 + iF * 0.75;
+      const fade = 0.28;
+
+      function drawMusicLiquid() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.05, (now - last) / 1000) * speed;
+        last = now;
+        clock += dt;
+        const s = clock;
+        const W = mc!.width;
+        const H = mc!.height;
+
+        // Drops: on their own, unevenly, and on a beat of the app's music.
+        nextDrop -= dt;
+        const beat = _musicPulse > 0.55 && lastPulse <= 0.55;
+        lastPulse = _musicPulse;
+        if (dropsPerSecond > 0 && (nextDrop <= 0 || beat)) {
+          // A walk up and down the keys, like a hand playing: left low, right high.
+          note = (note + 1 + Math.floor(Math.random() * 5)) % 24;
+          const k = note / 23;
+          drops.push({
+            x: -0.8 + 1.6 * k,
+            y: 0.35 - 0.7 * k + (Math.random() - 0.5) * 0.25,
+            born: s,
+            hue: NOTE_HUES[note % 12],
+          });
+          if (drops.length > 24) drops.shift();
+          nextDrop = (0.35 + Math.random() * 1.3) / Math.max(0.05, dropsPerSecond);
+        }
+        drops = drops.filter((d) => s - d.born < DROP_LIFE);
+
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = `rgba(7, 6, 10, ${fade})`;
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+
+        const scale = Math.min(W, H) * 0.46;
+        const cx = W / 2;
+        const cy = H / 2;
+        const step = dt * 0.12;
+        const size = Math.max(1.2, Math.min(W, H) / 520) * 1.2;
+        const w = TAU * 0.45 * s;
+
+        for (let i = 0; i < n; i++) {
+          // The current carries the fluid.
+          const x0 = px[i];
+          const y0 = py[i];
+          const vx = Math.sin(x0 * f) * Math.cos(y0 * f + s * 0.35);
+          const vy = -Math.cos(x0 * f) * Math.sin(y0 * f + s * 0.35);
+          px[i] = x0 + vx * step;
+          py[i] = y0 + vy * step;
+          if (px[i] * px[i] + py[i] * py[i] > 0.88) seed(i);
+          const x = px[i];
+          const y = py[i];
+
+          // The liquid: the ambient Pulse wave, and every live drop.
+          const r = Math.hypot(x, y);
+          const ambient = Math.sin(w - 8.6 * r);
+          const grow = 1 + ripple * 0.06 * ambient;
+          let dx = x * grow;
+          let dy = y * grow;
+          let lift = 0;
+          let hue = -1;
+          for (const d of drops) {
+            const ex = x - d.x;
+            const ey = y - d.y;
+            const dist = Math.hypot(ex, ey) || 1e-6;
+            const wv = dropWave(dist, s - d.born);
+            if (wv === 0) continue;
+            dx += (ex / dist) * wv * 0.045 * ripple;
+            dy += (ey / dist) * wv * 0.045 * ripple;
+            if (wv > lift) {
+              lift = wv;
+              hue = d.hue;
+            }
+          }
+          const glint = 0.55 + 0.35 * Math.max(0, ambient) + 1.1 * lift;
+          const glow = Math.min(1.8, glint * light);
+          if (glow < 0.08) continue;
+          const lit = lift > 0.15 && hue >= 0;
+          const sx = cx + dx * scale;
+          const sy = cy - dy * scale;
+          if (lit) {
+            ctx!.fillStyle = `hsla(${hue}, 90%, 62%, ${0.1 * glow})`;
+            ctx!.fillRect(sx - size * 1.6, sy - size * 1.6, size * 3.2, size * 3.2);
+            ctx!.fillStyle = `hsla(${hue}, 90%, ${Math.min(90, 62 + 18 * glow)}%, ${Math.min(1, 0.55 * glow)})`;
+          } else {
+            // The current in the palette's own colour.
+            ctx!.fillStyle = `rgba(${pr}, ${pg}, ${pb}, ${0.1 * glow})`;
+            ctx!.fillRect(sx - size * 1.6, sy - size * 1.6, size * 3.2, size * 3.2);
+            const lift2 = Math.min(1, 0.3 * glow);
+            ctx!.fillStyle = `rgba(${Math.round(pr + (255 - pr) * lift2)}, ${Math.round(pg + (255 - pg) * lift2)}, ${Math.round(pb + (255 - pb) * lift2)}, ${Math.min(1, 0.55 * glow)})`;
+          }
+          ctx!.fillRect(sx - size / 2, sy - size / 2, size, size);
+        }
+        ctx!.globalCompositeOperation = 'source-over';
+        canvasModeAnimRef.current = requestAnimationFrame(drawMusicLiquid);
+      }
+      drawMusicLiquid();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
     }
 
     if (cfg.mode === 'musicdots' || cfg.mode === 'musicnebula' || cfg.mode === 'musiclattice') {
@@ -24004,7 +24185,8 @@ export default function GeometryField() {
           cfg.mode === 'infinitedive' ||
           cfg.mode === 'musicdots' ||
           cfg.mode === 'musicnebula' ||
-          cfg.mode === 'musiclattice') && (
+          cfg.mode === 'musiclattice' ||
+          cfg.mode === 'musicliquid') && (
           <canvas
             ref={matrixCanvasRef}
             style={{
