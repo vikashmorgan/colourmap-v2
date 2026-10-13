@@ -394,3 +394,7 @@ A Geometry series inspired by the Big Bang **Pulse** and its liquid effect: the 
 Sliders: Folds, Detail, Ripple (how strongly it moves), Flow Speed, Colour Spread, Light, Stars. They sit under their own *Liquid* header in the Geometry list.
 
 Also on 2026-10-13: **Flow Sacred** and **Butterfly** moved from Good Ones to *In Progress / To Develop* in Stars, because their flowers and shapes are cut on the right instead of complete in their circle.
+
+## Liquid Chaos and Liquid Quantum (2026-10-13)
+
+Chaos Field and Quantum Chaos moved to numbers 3 and 4 in Stars (among the best), and two liquid versions follow them as 5 and 6. The dots drift through exactly the same divergence-free currents; only where they are drawn changes. **Liquid Chaos** (2D, Deep Current) runs the Pulse's wave outward through the cloud: the radius swells and sinks, a second wave swirls it, and dots glint and warm on the crest. **Liquid Quantum** (3D, Clifford Dream) rolls the wave across the sphere in wavy bands instead, because rings seen through a sphere overlap and blur; the troughs go dark so the bands read like light on liquid. Sliders: Turbulence, Ripple, Crest Warmth, Speed, Bright.
