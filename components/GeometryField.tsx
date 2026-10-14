@@ -7,6 +7,8 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
+import { birdTarget, fishTarget, predator, steer, view } from '@/lib/flocks';
+import { mask as flowMask, MASK_NAMES, inside as maskInside } from '@/lib/flow-masks';
 import {
   DANCER_NAMES,
   dancer,
@@ -201,6 +203,10 @@ type Mode =
   // Sacred Figures / Sacred Dancers — gods and dancers of liquid light (lib/sacred-figures.ts)
   | 'sacredfigures'
   | 'sacreddancers'
+  // Murmuration / Fish School — flocks of dots in 3D (lib/flocks.ts); Flow Masks (lib/flow-masks.ts)
+  | 'murmuration'
+  | 'fishschool'
+  | 'flowmasks'
   // Waves — rolling, curling linework (lib/visual-shaders.ts)
   | 'rollingwave'
   | 'fractalwave'
@@ -2507,6 +2513,42 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 2.6,
     stars: 0,
     mode: 'currentliquid',
+  },
+  Murmuration: {
+    preset: 'Golden Source',
+    symmetry: 4,
+    complexity: 7,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 5,
+    stars: 0,
+    mode: 'murmuration',
+  },
+  'Fish School': {
+    preset: 'Deep Current',
+    symmetry: 4,
+    complexity: 7,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 6,
+    stars: 0,
+    mode: 'fishschool',
+  },
+  'Flow Masks': {
+    preset: 'Golden Source',
+    symmetry: 1,
+    complexity: 7,
+    glow: 6,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 7,
+    stars: 0,
+    mode: 'flowmasks',
   },
   'Sacred Figures': {
     preset: 'Golden Source',
@@ -7410,6 +7452,9 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
     case 'oneflame':
     case 'sacredfigures':
     case 'sacreddancers':
+    case 'murmuration':
+    case 'fishschool':
+    case 'flowmasks':
       return buildCanvasMode(cfg, R);
     case 'sinmorph3d':
       return buildSinMorph3D(cfg, R);
@@ -7708,6 +7753,9 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
     case 'oneflame':
     case 'sacredfigures':
     case 'sacreddancers':
+    case 'murmuration':
+    case 'fishschool':
+    case 'flowmasks':
       updateCanvasMode(group, cfg, t, R);
       break;
     case 'sinmorph3d':
@@ -14476,6 +14524,30 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'breathSpeed', label: 'Speed', min: 0.05, max: 2.0, step: 0.05 },
     { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
   ],
+  murmuration: [
+    { key: 'complexity', label: 'Birds', min: 1, max: 10, step: 1 },
+    { key: 'glow', label: 'Turbulence', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Depth', min: 0, max: 10, step: 0.5 },
+    { key: 'symmetry', label: 'Turn', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  fishschool: [
+    { key: 'complexity', label: 'Fish', min: 1, max: 10, step: 1 },
+    { key: 'glow', label: 'Current', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Shimmer', min: 0, max: 10, step: 0.5 },
+    { key: 'symmetry', label: 'Turn', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  flowmasks: [
+    { key: 'symmetry', label: 'Mask 1-10', min: 1, max: 10, step: 1 },
+    { key: 'complexity', label: 'Density', min: 1, max: 10, step: 1 },
+    { key: 'glow', label: 'Rim Light', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Turbulence', min: 1, max: 12, step: 0.5 },
+    { key: 'breathSpeed', label: 'Flow', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
   sacredfigures: [
     { key: 'symmetry', label: 'Figure 1-10', min: 1, max: 10, step: 1 },
     { key: 'complexity', label: 'Liquid', min: 0, max: 10, step: 0.5 },
@@ -14917,6 +14989,9 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   oneflame: 'One Flame',
   sacredfigures: 'Sacred Figures',
   sacreddancers: 'Sacred Dancers',
+  murmuration: 'Murmuration',
+  fishschool: 'Fish School',
+  flowmasks: 'Flow Masks',
   matrix: 'Matrix Rain',
   matrix3d: 'Matrix Rain',
   pulse: 'Rorschach Pulse',
@@ -15092,6 +15167,9 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'oneflame', label: '🜂 One Flame' },
   { mode: 'sacredfigures', label: '☸ Sacred Figures' },
   { mode: 'sacreddancers', label: '☸ Sacred Dancers' },
+  { mode: 'murmuration', label: '⋰ Murmuration' },
+  { mode: 'fishschool', label: '⋰ Fish School' },
+  { mode: 'flowmasks', label: '◕ Flow Masks' },
   { mode: 'plasma', label: '☀ Plasma' },
   { mode: 'nebula', label: 'Nebula' },
 
@@ -15220,6 +15298,9 @@ const STAR_TAB_MODES = new Set<Mode>([
   'oneflame',
   'sacredfigures',
   'sacreddancers',
+  'murmuration',
+  'fishschool',
+  'flowmasks',
   'currentscales',
   'cyclonetiles',
   'cymatics1',
@@ -15321,6 +15402,10 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   // 13 Oct 2026: ten sacred figures of the Indian and Tibetan gods, and five sacred dancers.
   { name: 'Sacred Figures', tag: 'SACRED' },
   { name: 'Sacred Dancers', tag: 'SACRED' },
+  // 13 Oct 2026: a murmuration of small birds, a school of fish, and ten masks of flowing gold.
+  { name: 'Murmuration', tag: 'FLOCK' },
+  { name: 'Fish School', tag: 'FLOCK' },
+  { name: 'Flow Masks', tag: 'MASK' },
   { name: 'Magnetic Sand', tag: 'CURRENT' },
   { name: 'Dot Walker', tag: 'CHAR' },
   // 13 Oct 2026: among the best, so third and fourth in Stars.
@@ -21336,7 +21421,10 @@ export default function GeometryField() {
       cfg.mode === 'sauroneye' ||
       cfg.mode === 'oneflame' ||
       cfg.mode === 'sacredfigures' ||
-      cfg.mode === 'sacreddancers';
+      cfg.mode === 'sacreddancers' ||
+      cfg.mode === 'murmuration' ||
+      cfg.mode === 'fishschool' ||
+      cfg.mode === 'flowmasks';
     if (!isCanvasMode) {
       canvasModeActiveRef.current = false;
       cancelAnimationFrame(canvasModeAnimRef.current);
@@ -21374,6 +21462,257 @@ export default function GeometryField() {
       const bgB = parseInt(h.slice(4, 6), 16);
       ctx.fillStyle = `rgb(${bgR},${bgG},${bgB})`;
       ctx.fillRect(0, 0, mc.width, mc.height);
+    }
+
+    /* ── MURMURATION / FISH SCHOOL — flocks of dots in 3D ─────────────
+     *
+     * Asked for 2026-10-13: "flocks of sparrows made of dots, in 3D, making the
+     * patterns thousands of small birds make: opening, breaking, uniting. And
+     * the same as a school of fish in perpetual movement." lib/flocks.ts: each
+     * bird or fish steers after a target in a moving, changing shape, stirred
+     * by a shared current, with limited speed and turn. The birds fly as one
+     * folding sheet that breathes open and now and then breaks into three and
+     * unites; the fish mill, stream and ball, flashing silver as they turn,
+     * and scatter round a predator. The view turns slowly round them; nearer
+     * dots are larger.
+     */
+    if (cfg.mode === 'murmuration' || cfg.mode === 'fishschool') {
+      const fish = cfg.mode === 'fishschool';
+      const n = Math.round(lerp(fish ? 1200 : 1500, fish ? 6000 : 9000, (cfg.complexity - 1) / 9));
+      const pos = new Float32Array(n * 3);
+      const vel = new Float32Array(n * 3);
+      const rnd = new Float32Array(n * 3);
+      const group = new Uint8Array(n);
+      for (let i = 0; i < n; i++) {
+        // Birds: an offset in a unit ball. Fish: three numbers that place it in each way of moving.
+        if (fish) {
+          rnd[i * 3] = Math.random();
+          rnd[i * 3 + 1] = Math.random();
+          rnd[i * 3 + 2] = Math.random();
+        } else {
+          let x = 0;
+          let y = 0;
+          let z = 0;
+          do {
+            x = Math.random() * 2 - 1;
+            y = Math.random() * 2 - 1;
+            z = Math.random() * 2 - 1;
+          } while (x * x + y * y + z * z > 1);
+          rnd[i * 3] = x;
+          rnd[i * 3 + 1] = y;
+          rnd[i * 3 + 2] = z;
+        }
+        group[i] = i % 3;
+      }
+      const target = (i: number, time: number): [number, number, number] =>
+        fish
+          ? fishTarget(rnd[i * 3], rnd[i * 3 + 1], rnd[i * 3 + 2], time)
+          : birdTarget([rnd[i * 3], rnd[i * 3 + 1], rnd[i * 3 + 2]], group[i], time);
+      for (let i = 0; i < n; i++) {
+        const g = target(i, 0);
+        pos[i * 3] = g[0] + (Math.random() - 0.5) * 0.05;
+        pos[i * 3 + 1] = g[1] + (Math.random() - 0.5) * 0.05;
+        pos[i * 3 + 2] = g[2] + (Math.random() - 0.5) * 0.05;
+      }
+      const flowF = cfg.glow / 10;
+      const depthF = cfg.luminous / 10;
+      const turnF = cfg.symmetry / 10;
+      let last = performance.now();
+      let clock = 0;
+      // Birds in the palette lifted toward white; fish a cool silver over the palette.
+      const lift = (k: number): [number, number, number] => [
+        Math.round(pr + (255 - pr) * k),
+        Math.round(pg + (255 - pg) * k),
+        Math.round(pb + (255 - pb) * k),
+      ];
+
+      function drawFlock() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.04, (now - last) / 1000) * speed;
+        last = now;
+        clock += dt;
+        const W = mc!.width;
+        const H = mc!.height;
+        const scale = Math.min(W, H) * 0.52;
+        const cx = W / 2;
+        const cy = H / 2;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        if (dt > 0) {
+          const time = clock;
+          steer(pos, vel, (i) => target(i, time), time, dt, {
+            pull: fish ? 2.6 : 2.2,
+            flow: (fish ? 0.7 : 1) * (0.3 + flowF * 1.2),
+            turn: fish ? 3.2 : 2.4,
+            vmin: fish ? 0.18 : 0.22,
+            vmax: fish ? 0.95 : 0.85,
+            threat: fish ? predator(time) : null,
+          });
+        }
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = `rgba(2, 3, 6, ${fish ? 0.4 : 0.32})`;
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+        const yaw = clock * 0.06 * turnF * 2;
+        const pitch = 0.28 + 0.08 * Math.sin(clock * 0.07);
+        const base = lift(fish ? 0.45 : 0.25);
+        for (let i = 0; i < n; i++) {
+          const j = i * 3;
+          const p = view([pos[j], pos[j + 1], pos[j + 2]], yaw, pitch);
+          const near = (p[2] + 1) / 2;
+          const size = Math.max(0.8, (0.9 + depthF * 1.6 * near) * dpr);
+          let bright = (0.45 + 0.55 * near) * iF;
+          let rgb = base;
+          if (fish) {
+            // A fish flashes silver when it turns its side to the light.
+            const vx = vel[j];
+            const vz = vel[j + 2];
+            const sp = Math.hypot(vx, vel[j + 1], vz) || 1e-6;
+            const flash = Math.abs((vx * Math.cos(yaw) - vz * Math.sin(yaw)) / sp) ** 6;
+            const shimmer = (cfg.luminous / 10) * flash;
+            bright *= 0.7 + 1.1 * shimmer;
+            rgb = lift(0.45 + 0.5 * shimmer);
+          }
+          const x = cx + p[0] * scale;
+          const y = cy - p[1] * scale;
+          ctx!.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${Math.min(1, 0.7 * bright)})`;
+          if (fish) {
+            // A fish is a short stroke along its way.
+            const q = view(
+              [
+                pos[j] - vel[j] * 0.05,
+                pos[j + 1] - vel[j + 1] * 0.05,
+                pos[j + 2] - vel[j + 2] * 0.05,
+              ],
+              yaw,
+              pitch,
+            );
+            const tx = cx + q[0] * scale;
+            const ty = cy - q[1] * scale;
+            ctx!.fillRect(x - size / 2, y - size / 2, size, size);
+            ctx!.fillRect(
+              (x + tx) / 2 - size * 0.4,
+              (y + ty) / 2 - size * 0.4,
+              size * 0.8,
+              size * 0.8,
+            );
+          } else {
+            ctx!.fillRect(x - size / 2, y - size / 2, size, size);
+          }
+        }
+        canvasModeAnimRef.current = requestAnimationFrame(drawFlock);
+      }
+      drawFlock();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
+    }
+
+    /* ── FLOW MASKS — ten masks of flowing gold ───────────────────────
+     *
+     * Asked for 2026-10-13: "that liquid chaos in gold looks like an African
+     * mask: two big eyes and a mouth, horns, hair, antennae, all in flow. Make
+     * 10 such masks on a slider." lib/flow-masks.ts gives each mask's solids
+     * and holes. Dots are carried through the mask by the Liquid Chaos current;
+     * one that drifts into an eye, the mouth or out of the mask is born again
+     * inside it, so the openings stay dark in moving gold. The rims of the
+     * eyes and mouth catch the light (Rim Light), the Pulse's wave glints
+     * through, and the masks breathe: mouths open and close, horns and hair
+     * sway. The mask's name is written faintly beneath it.
+     */
+    if (cfg.mode === 'flowmasks') {
+      const TAU = Math.PI * 2;
+      const index = Math.max(0, Math.min(9, Math.round(cfg.symmetry) - 1));
+      const name = MASK_NAMES[index];
+      const n = Math.round(lerp(2500, 9000, (cfg.complexity - 1) / 9));
+      const px = new Float32Array(n);
+      const py = new Float32Array(n);
+      const rimF = cfg.glow / 10;
+      const f = cfg.luminous;
+      let last = performance.now();
+      let clock = 0;
+      let m = flowMask(index, 0);
+      const seed = (i: number) => {
+        for (let k = 0; k < 40; k++) {
+          const x = Math.random() * 2.2 - 1.1;
+          const y = Math.random() * 2.2 - 1.1;
+          if (maskInside(m, x, y).in) {
+            px[i] = x;
+            py[i] = y;
+            return;
+          }
+        }
+        px[i] = 0;
+        py[i] = -0.9;
+      };
+      for (let i = 0; i < n; i++) seed(i);
+      const [cr, cg, cb] = [
+        Math.min(255, pr * 0.5 + 150),
+        Math.min(255, pg * 0.5 + 130),
+        Math.min(255, pb * 0.5 + 90),
+      ];
+
+      function drawMask() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.05, (now - last) / 1000) * speed;
+        last = now;
+        clock += dt;
+        m = flowMask(index, clock);
+        const W = mc!.width;
+        const H = mc!.height;
+        const scale = Math.min(W, H) * 0.43;
+        const cx = W / 2;
+        const cy = H / 2;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const size = Math.max(1, 1.15 * dpr);
+        const w = TAU * 0.45 * clock;
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = 'rgba(4, 3, 2, 0.28)';
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < n; i++) {
+          // The current carries the gold through the mask.
+          const x0 = px[i];
+          const y0 = py[i];
+          const vx = Math.sin(x0 * f) * Math.cos(y0 * f + clock * 0.35);
+          const vy = -Math.cos(x0 * f) * Math.sin(y0 * f + clock * 0.35);
+          px[i] = x0 + vx * dt * 0.12;
+          py[i] = y0 + vy * dt * 0.12;
+          const at = maskInside(m, px[i], py[i]);
+          if (!at.in) {
+            seed(i);
+            continue;
+          }
+          const r = Math.hypot(px[i], py[i]);
+          const wave = Math.sin(w - 8.6 * r);
+          const crest = Math.max(0, wave) * 0.6 + at.rim * rimF;
+          const glow = (0.5 + 0.3 * Math.max(0, wave) + 1.1 * at.rim * rimF) * iF;
+          const rr = Math.round(pr + (cr - pr) * Math.min(1, crest));
+          const gg = Math.round(pg + (cg - pg) * Math.min(1, crest));
+          const bb = Math.round(pb + (cb - pb) * Math.min(1, crest));
+          const x = cx + px[i] * scale;
+          const y = cy - py[i] * scale;
+          ctx!.fillStyle = `rgba(${rr}, ${gg}, ${bb}, ${0.08 * glow})`;
+          ctx!.fillRect(x - size * 1.6, y - size * 1.6, size * 3.2, size * 3.2);
+          ctx!.fillStyle = `rgba(${rr}, ${gg}, ${bb}, ${Math.min(1, 0.6 * glow)})`;
+          ctx!.fillRect(x - size / 2, y - size / 2, size, size);
+        }
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.font = `${Math.round(11 * dpr)}px serif`;
+        ctx!.textAlign = 'center';
+        ctx!.fillStyle = `rgba(${pr}, ${pg}, ${pb}, 0.45)`;
+        ctx!.fillText(`${index + 1} · ${name}`, cx, cy + scale * 1.12);
+        canvasModeAnimRef.current = requestAnimationFrame(drawMask);
+      }
+      drawMask();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
     }
 
     /* ── SACRED FIGURES / SACRED DANCERS — gods and dancers of liquid light ──
@@ -24841,7 +25180,10 @@ export default function GeometryField() {
           cfg.mode === 'sauroneye' ||
           cfg.mode === 'oneflame' ||
           cfg.mode === 'sacredfigures' ||
-          cfg.mode === 'sacreddancers') && (
+          cfg.mode === 'sacreddancers' ||
+          cfg.mode === 'murmuration' ||
+          cfg.mode === 'fishschool' ||
+          cfg.mode === 'flowmasks') && (
           <canvas
             ref={matrixCanvasRef}
             style={{
