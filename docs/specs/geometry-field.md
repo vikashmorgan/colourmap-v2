@@ -420,3 +420,13 @@ Chaos Field and Quantum Chaos moved to numbers 3 and 4 in Stars (among the best)
 **Sacred Dancers** (Dancer 1-5): Bharatanatyam, the whirling dervish, Tandava (Shiva's cosmic dance), Cham (the Tibetan masked dance, long sleeves), Odissi (the flowing goddess).
 
 Each figure is up to ten thousand dots scattered over its body (bones, discs, rings). Every dot eases after its place at its own pace, so the body moves like a liquid and a dancer leaves a flowing wake; a current stirs the dots, and a wave of light runs out from the heart. Sliders: Figure / Dancer, Liquid, Glint, Dots, Breath / Tempo, Bright. The figure's name is written faintly beneath it.
+
+## Murmuration, Fish School and Flow Masks (2026-10-13)
+
+"Flocks of sparrows made of dots, in 3D, flying and creating the patterns thousands of small birds make: opening, breaking, uniting. And another the same, as a school of fish in perpetual movement." And: "that liquid chaos in gold looks like an African mask … make 10 such masks on a slider." Three presets in Stars, after the Sacred Dancers.
+
+**Murmuration** (`lib/flocks.ts`): up to nine thousand birds. Each steers after its place in a sheet that turns and folds through the air and breathes open and closed; now and then the flock breaks into three that wheel apart and unite again; a shared current stirs them all. The view turns slowly; nearer birds are larger. Sliders: Birds, Turbulence, Depth, Turn, Speed, Bright.
+
+**Fish School** (`lib/flocks.ts`): up to six thousand fish in perpetual motion: milling round a turning torus, streaming in a long ribbon after a leader, gathering into a ball, each flowing into the next; fish flash silver as they turn, and a predator darts through now and then, the school opening round it and closing behind. Sliders: Fish, Current, Shimmer, Turn, Speed, Bright.
+
+**Flow Masks** (`lib/flow-masks.ts`, Mask 1-10): Horned moon, Long ancestor, Skull, Antennae spirit, Sun mask, Antelope, Heart face, Striped spirit, Horned skull, Flowing-hair spirit. Dots are carried through each mask by the Liquid Chaos current and born again inside it when they drift into an eye or the mouth, so the openings stay dark in moving gold and their rims catch the light. Mouths open and close, horns and hair sway. Sliders: Mask, Density, Rim Light, Turbulence, Flow, Bright.
