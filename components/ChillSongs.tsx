@@ -97,7 +97,9 @@ export default function ChillSongs() {
           ref={frame}
           src={src}
           title="Chill Machine piano and songs"
-          allow="autoplay; midi"
+          // Sound, MIDI out to Omnisphere (Sound: Omnisphere), and fullscreen for the visuals.
+          allow="autoplay; midi; fullscreen"
+          allowFullScreen
           className="w-full rounded-2xl"
           style={{ height: '85vh', border: '1px solid #C4A06033', background: '#16120E' }}
         />
