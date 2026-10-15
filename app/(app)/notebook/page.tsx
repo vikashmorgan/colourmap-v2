@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ArtIdeas from '@/components/ArtIdeas';
+import { ArtPhilosophy, GallerySpace } from '@/components/GallerySpace';
 import MicDot from '@/components/MicDot';
 import MusicRecordings from '@/components/MusicRecordings';
 import { useSpellCheck } from '@/lib/hooks/use-spell-check';
@@ -105,6 +106,7 @@ interface Notebook {
   label: string;
   color: string;
   isMusic?: boolean;
+  isArt?: boolean;
 }
 
 const NOTE_COLORS = [
@@ -125,6 +127,31 @@ const NOTE_FONTS = [
   { id: 'sketch', label: 'Sketch', family: 'var(--font-sketch)' },
 ];
 
+/*
+ * THE ART ZONE (asked for 2026-10-15: "a proper zone in my notes for art ideas,
+ * not the ideas notes, another category"): its own group in the sidebar, like
+ * Music. Art ideas keeps its themes-and-galleries view; Art notes is for
+ * writing about the work; Gallery space is for planning the 3D gallery;
+ * Philosophy holds the statement behind it all.
+ */
+const ART_NOTEBOOKS: Notebook[] = [
+  { id: 'art_ideas', label: 'Art ideas', color: '#C2704A', isArt: true },
+  { id: 'art_notes', label: 'Art notes', color: '#C4A060', isArt: true },
+  { id: 'gallery_space', label: 'Gallery', color: '#7A8AA0', isArt: true },
+  { id: 'art_philosophy', label: 'Philosophy', color: '#9B6BA0', isArt: true },
+];
+
+/**
+ * Every device gets the art zone: the art notebooks are added if missing, and
+ * one already there (Art ideas, made before the zone existed) joins it.
+ */
+function withArtZone(nbs: Notebook[]): Notebook[] {
+  const artIds = new Set(ART_NOTEBOOKS.map((n) => n.id));
+  const marked = nbs.map((n) => (artIds.has(n.id) && !n.isArt ? { ...n, isArt: true } : n));
+  const have = new Set(marked.map((n) => n.id));
+  return [...marked, ...ART_NOTEBOOKS.filter((n) => !have.has(n.id))];
+}
+
 const DEFAULT_NOTEBOOKS: Notebook[] = [
   { id: 'notes', label: 'Notes', color: '#C4A060' },
   { id: 'ideas', label: 'Ideas', color: '#E0844A' },
@@ -135,6 +162,7 @@ const DEFAULT_NOTEBOOKS: Notebook[] = [
   { id: 'practice_log', label: 'Practice', color: '#7A8A50', isMusic: true },
   { id: 'errors', label: 'Lessons', color: '#D45050', isMusic: true },
   { id: 'recordings', label: 'Recordings', color: '#E04878', isMusic: true },
+  ...ART_NOTEBOOKS,
 ];
 
 const NOTEBOOK_STORAGE = 'colourmap:notebooks-v2';
@@ -472,6 +500,7 @@ export default function NotebookPage() {
   const [newNbName, setNewNbName] = useState('');
   const [newNbColor, setNewNbColor] = useState('#C4A060');
   const [showMusic, setShowMusic] = useState(false);
+  const [showArt, setShowArt] = useState(true);
   const [trashEntries, setTrashEntries] = useState<(Entry & { deletedAt: string })[]>([]);
   const [renamingNbId, setRenamingNbId] = useState<string | null>(null);
   const [renameNbValue, setRenameNbValue] = useState('');
@@ -497,7 +526,7 @@ export default function NotebookPage() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(NOTEBOOK_STORAGE);
-      if (saved) setNotebooks(JSON.parse(saved));
+      if (saved) setNotebooks(withArtZone(JSON.parse(saved)));
       const styles = localStorage.getItem('colourmap:note-styles');
       if (styles) setNoteStyles(JSON.parse(styles));
     } catch {
@@ -557,10 +586,10 @@ export default function NotebookPage() {
         (id) => id && !known.has(id),
       );
       if (missing.length === 0) return nbs;
-      const next = [
+      const next = withArtZone([
         ...nbs,
         ...missing.map((id) => ({ id, label: notebookLabel(id), color: '#C4A060' })),
-      ];
+      ]);
       try {
         localStorage.setItem(NOTEBOOK_STORAGE, JSON.stringify(next));
       } catch {
@@ -756,6 +785,61 @@ export default function NotebookPage() {
           : 'New entry...'
     : 'New note...';
 
+  /** One notebook row in a sidebar group (Music, Art). */
+  const groupRow = (nb: Notebook) => {
+    const isActive = activeNotebook === nb.id;
+    const count = entries.filter((e) => e.category === nb.id).length;
+    const isDragging = dragId === nb.id;
+    const isOver = dragOverId === nb.id;
+    return (
+      <button
+        key={nb.id}
+        type="button"
+        draggable
+        onDragStart={() => handleDragStart(nb.id)}
+        onDragOver={(e) => handleDragOver(nb.id, e)}
+        onDrop={() => handleDrop(nb.id)}
+        onDragEnd={handleDragEnd}
+        onClick={() => setActiveNotebook(nb.id)}
+        className="group w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all"
+        style={{
+          background: isActive ? `${nb.color}15` : 'transparent',
+          border: isOver
+            ? `1px solid ${nb.color}60`
+            : isActive
+              ? `1px solid ${nb.color}30`
+              : '1px solid transparent',
+          opacity: isDragging ? 0.35 : 1,
+          cursor: 'grab',
+        }}
+      >
+        <span
+          className="shrink-0 opacity-0 group-hover:opacity-30 transition-opacity select-none"
+          style={{ fontSize: 9, color: nb.color, lineHeight: 1 }}
+        >
+          ⠿
+        </span>
+        <div
+          className="h-3 w-3 rounded-full shrink-0"
+          style={{ background: nb.color, opacity: isActive ? 0.8 : 0.3 }}
+        />
+        <div className="flex-1 min-w-0">
+          <p
+            className="text-xs font-medium truncate"
+            style={{ color: isActive ? nb.color : `${nb.color}80` }}
+          >
+            {nb.label}
+          </p>
+          {count > 0 && (
+            <p className="text-[11px]" style={{ color: `${nb.color}40` }}>
+              {count}
+            </p>
+          )}
+        </div>
+      </button>
+    );
+  };
+
   return (
     <>
       <main className="mx-auto max-w-2xl px-3 py-4 md:px-0 md:py-0">
@@ -842,7 +926,7 @@ export default function NotebookPage() {
                 General
               </p>
               {notebooks
-                .filter((nb) => !nb.isMusic)
+                .filter((nb) => !nb.isMusic && !nb.isArt)
                 .map((nb) => {
                   const isActive = activeNotebook === nb.id;
                   const count = entries.filter((e) => e.category === nb.id).length;
@@ -942,62 +1026,32 @@ export default function NotebookPage() {
                   ▾
                 </span>
               </button>
-              {showMusic &&
-                notebooks
-                  .filter((nb) => nb.isMusic)
-                  .map((nb) => {
-                    const isActive = activeNotebook === nb.id;
-                    const count = entries.filter((e) => e.category === nb.id).length;
-                    const isDragging = dragId === nb.id;
-                    const isOver = dragOverId === nb.id;
-                    return (
-                      <button
-                        key={nb.id}
-                        type="button"
-                        draggable
-                        onDragStart={() => handleDragStart(nb.id)}
-                        onDragOver={(e) => handleDragOver(nb.id, e)}
-                        onDrop={() => handleDrop(nb.id)}
-                        onDragEnd={handleDragEnd}
-                        onClick={() => setActiveNotebook(nb.id)}
-                        className="group w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all"
-                        style={{
-                          background: isActive ? `${nb.color}15` : 'transparent',
-                          border: isOver
-                            ? `1px solid ${nb.color}60`
-                            : isActive
-                              ? `1px solid ${nb.color}30`
-                              : '1px solid transparent',
-                          opacity: isDragging ? 0.35 : 1,
-                          cursor: 'grab',
-                        }}
-                      >
-                        <span
-                          className="shrink-0 opacity-0 group-hover:opacity-30 transition-opacity select-none"
-                          style={{ fontSize: 9, color: nb.color, lineHeight: 1 }}
-                        >
-                          ⠿
-                        </span>
-                        <div
-                          className="h-3 w-3 rounded-full shrink-0"
-                          style={{ background: nb.color, opacity: isActive ? 0.8 : 0.3 }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p
-                            className="text-xs font-medium truncate"
-                            style={{ color: isActive ? nb.color : `${nb.color}80` }}
-                          >
-                            {nb.label}
-                          </p>
-                          {count > 0 && (
-                            <p className="text-[11px]" style={{ color: `${nb.color}40` }}>
-                              {count}
-                            </p>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
+              {showMusic && notebooks.filter((nb) => nb.isMusic).map(groupRow)}
+
+              {/* Art notebooks: the art zone, open by default */}
+              <button
+                type="button"
+                onClick={() => setShowArt((s) => !s)}
+                className="flex w-full cursor-pointer items-center gap-1.5 px-3 pt-3"
+                style={{ background: 'none', border: 'none' }}
+              >
+                <p
+                  className="text-[10px] font-semibold uppercase tracking-wider"
+                  style={{ color: '#C2704A', opacity: 0.6 }}
+                >
+                  Art
+                </p>
+                <span
+                  className="text-[8px] transition-transform duration-200"
+                  style={{
+                    color: '#C2704A60',
+                    transform: showArt ? 'rotate(180deg)' : 'rotate(0deg)',
+                  }}
+                >
+                  ▾
+                </span>
+              </button>
+              {showArt && notebooks.filter((nb) => nb.isArt).map(groupRow)}
 
               {/* Deleted (trash) virtual notebook */}
               {trashEntries.length > 0 && (
@@ -1197,6 +1251,11 @@ export default function NotebookPage() {
                   .map((e) => ({ id: e.id, title: e.title }))}
               />
             )}
+
+            {/* Gallery space: where the 3D gallery stands, and how to market it; notes below */}
+            {activeNotebook === 'gallery_space' && <GallerySpace color={activeNb?.color} />}
+            {/* Philosophy: the statement, in its own panel; notes below */}
+            {activeNotebook === 'art_philosophy' && <ArtPhilosophy color={activeNb?.color} />}
 
             {/* Art ideas — themes, the ideas under each theme, a gallery per idea */}
             {activeNotebook === 'art_ideas' && (

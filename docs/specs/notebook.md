@@ -52,3 +52,7 @@ Life doesn't have compartments. The person writing a song at 10pm is the same pe
 - Music mode preserves all existing song/chord/rhyme functionality
 - AI generation streams results for songs
 - Notes persist in database, styling in localStorage
+
+## The Art zone (2026-10-15)
+
+"A proper zone in my notes for art ideas, not the ideas notes, another category." A third group in the sidebar, **Art**, beside General and Music, open by default. It holds **Art ideas** (the themes-and-galleries view, moved here from General), **Art notes** (plain notes about the work), **Gallery** (the 3D digital gallery: a panel on how far along it is, step by step with a progress bar, and a panel on how to market it and get views, each opening and closing on its own, notes below) and **Philosophy** (the statement behind the work in its own panel: "Making it is statistically impossible … and yet we cannot escape the act of dreaming. The quest for a better tomorrow seems to be a program in my brain."; notes below). Every device gets the zone: the art notebooks are added to a saved list if missing, and an Art ideas notebook made before the zone joins it (`withArtZone`). The gallery's steps live in `components/GallerySpace.tsx` (`PROGRESS`) and are ticked there as the gallery is built.
