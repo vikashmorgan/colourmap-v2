@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 import { useViewMode } from './ViewModeContext';
 
 /*
- * `plain` links leave the app: /coding is a whole standalone page served by a
+ * `plain` links leave the app: /coding and /git are whole standalone pages served by a
  * route handler, not an app screen, so it gets an ordinary <a> rather than a
  * client-side <Link> navigation.
  */
@@ -18,6 +18,7 @@ const PRIMARY_LINKS: { href: string; label: string; plain?: boolean }[] = [
   { href: '/education', label: 'Education' },
   { href: '/geometry-field', label: 'Art' },
   { href: '/coding', label: 'Coding', plain: true },
+  { href: '/git', label: 'Git', plain: true },
 ];
 
 const PHONE_PRIMARY_LINKS = PRIMARY_LINKS;

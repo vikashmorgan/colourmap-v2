@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git · MSE-DIM01-3</title>
+<style>
+  :root {
+    --paper: #f7f3ea;
+    --ink: #2b2620;
+    --soft: #6f665a;
+    --line: #e3dccd;
+    --accent: #8a5a2b;
+    --code: #efe8da;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper: #191714; --ink: #ece6da; --soft: #a49b8d; --line: #34302a; --accent: #d9a46a; --code: #24211d; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 Georgia, 'Times New Roman', serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 18px 80px; }
+  header p { color: var(--soft); margin: 4px 0 0; font-size: 14px; }
+  h1 { font-size: 30px; margin: 0; font-weight: 600; letter-spacing: 0.01em; }
+  h2 { font-size: 20px; margin: 40px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); font-weight: 600; }
+  h3 { font-size: 16px; margin: 0; font-weight: 600; }
+  nav { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 18px 0 0; font: 13px/1.4 system-ui, sans-serif; }
+  nav a { color: var(--accent); text-decoration: none; }
+  a { color: var(--accent); }
+  code, pre { font: 13.5px/1.5 ui-monospace, Menlo, Consolas, monospace; }
+  code { background: var(--code); padding: 1px 5px; border-radius: 4px; }
+  pre { background: var(--code); padding: 12px 14px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
+  .steps { list-style: none; padding: 0; margin: 0; counter-reset: s; }
+  .steps li { position: relative; padding: 10px 0 10px 40px; border-bottom: 1px solid var(--line); }
+  .steps li::before { counter-increment: s; content: counter(s); position: absolute; left: 0; top: 10px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--accent); color: var(--accent); font: 13px/24px system-ui, sans-serif; text-align: center; }
+  .steps .what { color: var(--soft); font-size: 15px; }
+  details { border-bottom: 1px solid var(--line); padding: 10px 0; }
+  details > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::after { content: '+'; color: var(--accent); font-family: system-ui, sans-serif; }
+  details[open] > summary::after { content: '−'; }
+  details .body { padding: 6px 0 4px; color: var(--ink); }
+  .say { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 8px 0 4px; font-style: italic; }
+  dl { margin: 0; }
+  dt { font-weight: 600; margin-top: 12px; }
+  dd { margin: 2px 0 0; color: var(--soft); }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 600; font-family: system-ui, sans-serif; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--soft); }
+  .note { color: var(--soft); font-size: 14px; }
+  footer { margin-top: 48px; color: var(--soft); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Git · the project</h1>
+    <p>MSE-DIM01-3 · Marco Molè · Albert School × Politecnico di Milano</p>
+    <nav>
+      <a href="#built">What you built</a>
+      <a href="#defence">The oral defence</a>
+      <a href="#concepts">Key concepts</a>
+      <a href="#terms">Key terms</a>
+      <a href="#commands">Commands</a>
+      <a href="#check">Check yourself</a>
+    </nav>
+  </header>
+
+  <section id="built">
+    <h2>What you built</h2>
+    <p>One project, <code>dim013-project</code>, built step by step in class. It is graded on its <strong>history</strong>, and you submit the <strong>GitHub URL</strong>, not a zip.</p>
+    <ol class="steps">
+      <li><h3>Skeleton · terminal only</h3><div class="what">Folders <code>data/ src/ tests/</code>, <code>README.md</code>, <code>requirements.txt</code>, the sample CSV, and a hidden <code>.env</code> holding a placeholder key. No mouse.</div></li>
+      <li><h3>On GitHub</h3><div class="what">Git set up, a repository, two commits (<code>chore:</code> then <code>feat:</code> with <code>load_data.py</code>), pushed to a public GitHub repository with a token.</div></li>
+      <li><h3>Branch &amp; merge</h3><div class="what">Two branches changing the same line: one fast-forward, one conflict resolved by hand into a merge commit. Then, in pairs, a pull request reviewed and merged.</div></li>
+      <li><h3>Layout</h3><div class="what">The standard layout (<code>data/raw</code>, <code>data/processed</code>, <code>notebooks/</code>), a real README, and a <code>.gitignore</code> that keeps <code>.env</code> and <code>.venv/</code> out.</div></li>
+      <li><h3>Reproducible</h3><div class="what">A virtual environment, dependencies pinned in <code>requirements.txt</code>, and the proof: a fresh clone that installs and runs.</div></li>
+    </ol>
+  </section>
+
+  <section id="defence">
+    <h2>The oral defence</h2>
+    <p>The teacher checks the definition of done, then you do the fresh clone live. For each point: what to show, and a sentence to say.</p>
+
+    <details open>
+      <summary><span>1 · A Conventional Commits history</span></summary>
+      <div class="body">Show <code>git log --oneline</code>.
+        <p class="say">Every commit is one logical change, named by its type: chore for setup, feat for a new function, fix for a bug, refactor for the same behaviour restructured, docs for documentation.</p></div>
+    </details>
+    <details>
+      <summary><span>2 · The conflict's merge commit</span></summary>
+      <div class="body">Show <code>git log --oneline --graph</code>: the fork and the join.
+        <p class="say">Two branches changed the same line of load_data.py. The first merge was a fast-forward, because main had not moved. The second conflicted, so I kept both edits in one line, removed the markers, and committed: that merge commit has two parents.</p></div>
+    </details>
+    <details>
+      <summary><span>3 · A merged pull request with a review</span></summary>
+      <div class="body">Show the PR on GitHub: the line comment, the answer, the merge.
+        <p class="say">My partner pushed a feature branch to my repository and opened a pull request. I reviewed a specific line, proposing an alternative with a reason; they answered, and I merged it, then pulled it into my main.</p></div>
+    </details>
+    <details>
+      <summary><span>4 · The standard layout</span></summary>
+      <div class="body">Show the repository root on GitHub.
+        <p class="say">Raw data stays untouched in data/raw, cleaned data goes to data/processed, exploration in notebooks, code in src, tests in tests. Empty folders hold a .gitkeep, because Git tracks files, not folders.</p></div>
+    </details>
+    <details>
+      <summary><span>5 · The README</span></summary>
+      <div class="body">Open <code>README.md</code>.
+        <p class="say">It says what the project does, how to install it, how to run it, and how to contribute: someone new can start from it alone.</p></div>
+    </details>
+    <details>
+      <summary><span>6 · The .gitignore</span></summary>
+      <div class="body">Open <code>.gitignore</code>, run <code>git status</code>.
+        <p class="say">It keeps secrets (.env), the environment (.venv/) and clutter (__pycache__, .DS_Store) out of the repository. It does not remove a file already committed: that needs git rm --cached, and a leaked key must be changed.</p></div>
+    </details>
+    <details>
+      <summary><span>7 · A requirements.txt that rebuilds on a fresh clone</span></summary>
+      <div class="body">Do it live:
+<pre>git clone &lt;your-url&gt; dim013-check
+cd dim013-check
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python -m src.load_data data/raw/sample.csv</pre>
+        <p class="say">A new folder and a new environment, nothing from my setup: if the first rows of the CSV print, the project is reproducible.</p></div>
+    </details>
+  </section>
+
+  <section id="concepts">
+    <h2>Key concepts</h2>
+
+    <details open>
+      <summary><span>Why version control</span></summary>
+      <div class="body">Copies like <code>final_v2.py</code>, <code>final_REAL.py</code> record states, never <em>changes</em> or <em>intent</em>: you cannot tell what changed, who changed it, or safely go back. Git gives <strong>history</strong>, <strong>safety</strong> (return to any state) and <strong>collaboration</strong>. Its unit is the <strong>commit</strong>, a named snapshot.</div>
+    </details>
+    <details>
+      <summary><span>The repository and .git</span></summary>
+      <div class="body"><code>git init</code> turns a folder into a repository by creating the hidden <code>.git/</code>, where all history lives. Delete <code>.git/</code>: the files stay, the history is gone.</div>
+    </details>
+    <details>
+      <summary><span>The three areas (and the remote)</span></summary>
+      <div class="body">
+<pre>working directory --add--> staging area --commit--> repository (.git) --push--> remote (GitHub)</pre>
+        The <strong>staging area</strong> is what you have chosen for the next commit: it lets one commit hold exactly one logical change. <code>git status</code> tells you which area each change is in.</div>
+    </details>
+    <details>
+      <summary><span>Conventional Commits</span></summary>
+      <div class="body"><code>&lt;type&gt;: &lt;short description&gt;</code>, lowercase, imperative ("add", not "added"), no final period, about 50 characters.
+        <table>
+          <tr><th>Type</th><th>When</th></tr>
+          <tr><td><code>feat</code></td><td>a new capability</td></tr>
+          <tr><td><code>fix</code></td><td>a bug corrected</td></tr>
+          <tr><td><code>docs</code></td><td>documentation only</td></tr>
+          <tr><td><code>refactor</code></td><td>restructured, same behaviour</td></tr>
+          <tr><td><code>chore</code></td><td>tooling, config, dependencies</td></tr>
+        </table></div>
+    </details>
+    <details>
+      <summary><span>Branches and merging</span></summary>
+      <div class="body">A <strong>branch</strong> is a separate line of work starting from <code>main</code>. Merging brings it back:
+        <ul>
+          <li><strong>Fast-forward:</strong> main had not moved, so Git just moves the label forward. No new commit.</li>
+          <li><strong>Merge commit:</strong> both lines moved; Git joins them with a commit that has two parents.</li>
+          <li><strong>Conflict:</strong> both changed the same line, so Git asks you. Edit the file, delete the <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code> <code>=======</code> <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code> markers, <code>git add</code>, commit.</li>
+        </ul></div>
+    </details>
+    <details>
+      <summary><span>Remotes: push, pull, clone</span></summary>
+      <div class="body"><code>origin</code> is a nickname for the GitHub URL. <code>push</code> sends <em>commits</em> (not files: uncommitted work stays local), <code>pull</code> brings others' commits in, <code>clone</code> copies a whole repository. Your local repository has the full history, so you can work offline. GitHub wants a <strong>token</strong>, not your password.</div>
+    </details>
+    <details>
+      <summary><span>Pull requests and code review (GitHub Flow)</span></summary>
+      <div class="body">Work on a <code>feature/</code> branch, push it, open a <strong>pull request</strong>: a proposal to merge, with a summary, what changed, how to test. The reviewer comments on specific lines with a reason; the author answers with a new commit or a reply. Then it is merged.</div>
+    </details>
+    <details>
+      <summary><span>Secrets and .gitignore</span></summary>
+      <div class="body">Secrets live in <code>.env</code> and must never reach GitHub. Until the <code>.gitignore</code> exists, add files <strong>by name</strong>. A token is a password: never in code, a commit or a chat.</div>
+    </details>
+    <details>
+      <summary><span>Reproducibility: venv and requirements.txt</span></summary>
+      <div class="body">A <strong>virtual environment</strong> (<code>.venv</code>) holds this project's packages, apart from the rest of the computer. <code>pip freeze &gt; requirements.txt</code> pins them, with exact versions. Every new package: install → freeze → commit. Anyone can then rebuild the same environment with <code>pip install -r requirements.txt</code>.</div>
+    </details>
+  </section>
+
+  <section id="terms">
+    <h2>Key terms</h2>
+    <dl>
+      <dt>Repository (repo)</dt><dd>A project folder whose history Git keeps, in <code>.git/</code>.</dd>
+      <dt>Commit</dt><dd>A named snapshot of the project, with author, date, message and a unique hash.</dd>
+      <dt>Hash</dt><dd>A commit's unique id, e.g. <code>7b21e04</code>.</dd>
+      <dt>HEAD</dt><dd>Where you are now. <code>HEAD~1</code> is one commit before.</dd>
+      <dt>Staging area (index)</dt><dd>The changes chosen for the next commit.</dd>
+      <dt>Untracked / tracked</dt><dd>A file Git does not follow yet / one it follows.</dd>
+      <dt>Branch</dt><dd>A movable label on a line of commits; <code>main</code> is the default.</dd>
+      <dt>Fast-forward</dt><dd>A merge that just moves the label, because nothing else happened.</dd>
+      <dt>Merge commit</dt><dd>A commit with two parents, joining two lines of work.</dd>
+      <dt>Conflict</dt><dd>Two branches changed the same line: you choose the result.</dd>
+      <dt>Remote / origin</dt><dd>A copy of the repository on a server; origin is its nickname.</dd>
+      <dt>Push / pull / clone</dt><dd>Send commits up / bring commits down / copy a whole repository.</dd>
+      <dt>Pull request (PR)</dt><dd>A proposal to merge a branch, discussed and reviewed on GitHub.</dd>
+      <dt>Personal access token</dt><dd>A password made for Git: limited permissions, expires.</dd>
+      <dt>.gitignore</dt><dd>Files Git should never track (secrets, environments, clutter).</dd>
+      <dt>.gitkeep</dt><dd>An empty placeholder so an empty folder reaches GitHub.</dd>
+      <dt>.env</dt><dd>A hidden file for secrets such as API keys. Never committed.</dd>
+      <dt>Virtual environment (venv)</dt><dd>A project's own set of Python packages.</dd>
+      <dt>requirements.txt</dt><dd>The pinned list of packages that rebuilds the environment.</dd>
+      <dt>Reproducible</dt><dd>Anyone can clone, install and run it, and get the same result.</dd>
+    </dl>
+  </section>
+
+  <section id="commands">
+    <h2>Commands, by step</h2>
+    <table>
+      <tr><th>Step</th><th>Commands</th></tr>
+      <tr><td>Terminal</td><td><code>pwd</code> <code>ls -la</code> <code>cd</code> <code>mkdir</code> <code>touch</code> <code>cp</code> <code>mv</code></td></tr>
+      <tr><td>Set up</td><td><code>git config --global user.name / user.email</code> <code>git init</code></td></tr>
+      <tr><td>Save</td><td><code>git status</code> <code>git add &lt;file&gt;</code> <code>git commit -m "type: …"</code></td></tr>
+      <tr><td>Read</td><td><code>git log --oneline --graph</code> <code>git diff</code> <code>git diff --staged</code></td></tr>
+      <tr><td>Share</td><td><code>git remote add origin &lt;url&gt;</code> <code>git push -u origin main</code> <code>git pull</code> <code>git clone</code></td></tr>
+      <tr><td>Branch</td><td><code>git checkout -b &lt;name&gt;</code> <code>git checkout main</code> <code>git merge &lt;branch&gt;</code></td></tr>
+      <tr><td>Clean</td><td><code>git rm --cached &lt;file&gt;</code> (untrack, keep on disk)</td></tr>
+      <tr><td>Environment</td><td><code>python -m venv .venv</code> activate <code>pip install</code> <code>pip freeze &gt; requirements.txt</code></td></tr>
+    </table>
+  </section>
+
+  <section id="check">
+    <h2>Check yourself</h2>
+    <p class="note">Say the answer out loud, then open it.</p>
+    <details><summary><span>What did <code>git init</code> create? What if you delete it?</span></summary><div class="body">The hidden <code>.git/</code> folder with the whole history. Delete it: the files stay, the history is gone.</div></details>
+    <details><summary><span>You ran <code>git add README.md</code>. Where is that change?</span></summary><div class="body">In the staging area: it goes into the next commit, not yet into the history.</div></details>
+    <details><summary><span>Why were <code>src/</code> and <code>tests/</code> missing from the first commit?</span></summary><div class="body">Git tracks files, not folders: an empty folder does not exist for Git (hence <code>.gitkeep</code>).</div></details>
+    <details><summary><span>Why add files by name in the first commits?</span></summary><div class="body">So <code>.env</code>, the secret, stays out before the <code>.gitignore</code> exists.</div></details>
+    <details><summary><span>Fast-forward or merge commit: what decides?</span></summary><div class="body">Whether main moved since the branch started. Not moved: fast-forward. Moved: a merge commit with two parents.</div></details>
+    <details><summary><span>Does <code>git push</code> send your saved files?</span></summary><div class="body">No: it sends commits. Changes not committed stay on your computer.</div></details>
+    <details><summary><span>Your .env slipped into a commit. What now?</span></summary><div class="body"><code>git rm --cached .env</code>, add it to <code>.gitignore</code>, commit, and change (rotate) the key, because the old one is in the history.</div></details>
+    <details><summary><span>The fresh clone fails with ModuleNotFoundError. Why?</span></summary><div class="body">A package is missing from <code>requirements.txt</code>. Fix the original: install, freeze, commit, push, clone again.</div></details>
+    <details><summary><span>Which prefix? Renaming variables, output identical.</span></summary><div class="body"><code>refactor</code>. (Adding a <code>--verbose</code> flag: <code>feat</code>. <code>.DS_Store</code> in <code>.gitignore</code>: <code>chore</code>. A crash fixed: <code>fix</code>. A docstring: <code>docs</code>.)</div></details>
+  </section>
+
+  <footer>From the slides “The Project, Step by Step” (37 slides) and “Session 2 · Version Control &amp; Git Fundamentals”, kept in ADMIN · classes - ALBERTS · GIT.</footer>
+</main>
+</body>
+</html>
