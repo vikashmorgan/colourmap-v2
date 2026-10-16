@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Date:** 2026-10-03
-**Route:** `/coding` (signed-in only) · API `/api/coding/marks`, `/api/coding/slides`
+**Route:** `/coding` (signed-in only; reached from School at `/school`) · API `/api/coding/marks`, `/api/coding/slides`
 
 ## Purpose
 

@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Date:** 2026-10-15
-**Where:** `/git` (top navigation: Git) · `content/git/index.html` · `app/git/route.ts`
+**Where:** `/git` (top navigation: School → Git) · `content/git/index.html` · `app/git/route.ts`
 
 ## Purpose
 
