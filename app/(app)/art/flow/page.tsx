@@ -75,6 +75,19 @@ export default function FlowCollectionPage() {
           {flow.images.length} pictures ·{' '}
           <a href={flow.driveFolderUrl} target="_blank" rel="noreferrer" style={{ color: INK }}>
             Open the folder in Drive ↗
+          </a>{' '}
+          ·{' '}
+          <a href="/art/flow/gallery" style={{ color: INK, fontWeight: 600 }}>
+            Walk the gallery in 3D →
+          </a>{' '}
+          ·{' '}
+          <a
+            href="https://vikashmorganart.vercel.app"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: INK }}
+          >
+            Public site ↗
           </a>
         </p>
       </header>
