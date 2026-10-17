@@ -20713,6 +20713,8 @@ export default function GeometryField() {
   const [djError, setDjError] = useState('');
   const [djEnergy, setDjEnergy] = useState({ level: 0, bass: 0, highs: 0 });
   const [open, setOpen] = useState(true);
+  /* ?display=1: the art alone, no controls at all, for projection (the gallery's projection room). */
+  const [displayOnly, setDisplayOnly] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   // The four Art tabs; 'music' and 'journey' are hidden panels kept in the code.
   const [tab, setTab] = useState<ArtTab | 'music' | 'journey'>(() => artTabOf(cfg.mode));
@@ -20762,6 +20764,10 @@ export default function GeometryField() {
       const mode: LiveMode = params.get('control') === '1' ? 'control' : 'studio';
       setLiveMode(mode);
       if (mode === 'control') setOpen(true);
+      if (params.get('display') === '1') {
+        setOpen(false);
+        setDisplayOnly(true);
+      }
 
       // ?tab=stars|geometry|tunnels|oils opens that Art tab (the Big Bang page links here).
       const urlTab = ART_TABS.find((t) => t.id === params.get('tab'));
@@ -25039,10 +25045,10 @@ export default function GeometryField() {
         display: 'flex',
         flexDirection: 'column',
         width: '100%',
-        height: isProjectionMode || isFullscreen ? '100svh' : 'calc(100svh - 92px)',
+        height: isProjectionMode || isFullscreen || displayOnly ? '100svh' : 'calc(100svh - 92px)',
         minHeight: 0,
-        position: isProjectionMode ? 'fixed' : undefined,
-        inset: isProjectionMode ? 0 : undefined,
+        position: isProjectionMode || displayOnly ? 'fixed' : undefined,
+        inset: isProjectionMode || displayOnly ? 0 : undefined,
         zIndex: isProjectionMode ? 2147483000 : undefined,
         borderRadius: 0,
         overflow: 'hidden',
@@ -25269,7 +25275,7 @@ export default function GeometryField() {
 
         {/* Top-right controls — always reachable: the bottom edge belongs to
         the "All one brain" band, which would cover anything placed there. */}
-        {!isProjectionMode && (!open || isFullscreen) && (
+        {!isProjectionMode && !displayOnly && (!open || isFullscreen) && (
           <div
             style={{
               position: 'absolute',

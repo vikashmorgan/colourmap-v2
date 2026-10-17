@@ -31,21 +31,25 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js';
 
 import {
+  CIRCLE_SERIES,
+  CIRCLES,
+  DOOR,
   type Form,
   framePlaces,
   HALL,
-  hallLength,
   MATERIALS,
   type Material,
+  PROJECTIONS,
   plinthPlaces,
+  projectionUrl,
   ROOM_FEELS,
+  ROUND_ROOM,
   type RoomFeel,
-  SCULPTURES,
-  walkable,
+  ringRecipe,
+  rooms,
+  roundRoomPlaces,
+  step,
 } from '@/lib/art/gallery-room';
-
-/** Empty plinths waiting for your own models. */
-const SPARE_PLINTHS = 3;
 
 /** A picture for the walls: where to load it for the wall, large, and where to open it. */
 export type GalleryPicture = { title: string; src: string; large: string; href?: string };
@@ -182,7 +186,241 @@ function fractureGeometry(): THREE.BufferGeometry {
   return geo;
 }
 
-function formMeshes(form: Form): THREE.Mesh[] {
+/** One gold ring: radius, tube, and an optional spin (radians a second, about its own x, y or z). */
+function ring(
+  r: number,
+  tube: number,
+  spin?: { axis: 'x' | 'y' | 'z'; speed: number },
+): THREE.Mesh {
+  const m = new THREE.Mesh(new THREE.TorusGeometry(r, tube, 24, 120));
+  if (spin) m.userData.spin = spin;
+  return m;
+}
+
+/** The seven circles: variations on Ascension's rings. */
+function circleMeshes(variant: number): THREE.Mesh[] {
+  const out: THREE.Mesh[] = [];
+  const at = (m: THREE.Mesh, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) => {
+    m.position.set(x, y, z);
+    m.rotation.set(rx, ry, rz);
+    out.push(m);
+    return m;
+  };
+  switch (variant) {
+    case 0: {
+      // Orbit: three great circles round a small sun.
+      at(ring(0.72, 0.045, { axis: 'y', speed: 0.25 }), 0, 1.05, 0, Math.PI / 2);
+      at(ring(0.72, 0.045, { axis: 'y', speed: -0.18 }), 0, 1.05, 0, 0.5, 0, 0.3);
+      at(ring(0.72, 0.045, { axis: 'y', speed: 0.12 }), 0, 1.05, 0, -0.6, 0.9, 0);
+      at(new THREE.Mesh(new THREE.SphereGeometry(0.17, 32, 20)), 0, 1.05, 0);
+      break;
+    }
+    case 1: {
+      // Spiral: rings climbing a helix.
+      for (let i = 0; i < 9; i++) {
+        const a = i * 0.72;
+        at(
+          ring(0.3, 0.045),
+          Math.cos(a) * 0.32,
+          0.22 + i * 0.21,
+          Math.sin(a) * 0.32,
+          Math.PI / 2 + 0.25,
+          a,
+          0,
+        );
+      }
+      break;
+    }
+    case 2: {
+      // Cascade: rings falling and tilting.
+      for (let i = 0; i < 6; i++) {
+        const r = 0.55 - i * 0.065;
+        at(
+          ring(r, 0.05),
+          (i % 2 ? 1 : -1) * i * 0.06,
+          1.85 - i * 0.3,
+          i * 0.05,
+          Math.PI / 2 - i * 0.22,
+          0,
+          i * 0.15,
+        );
+      }
+      break;
+    }
+    case 3: {
+      // Gyroscope: a ring in a ring in a ring, each on its own axis.
+      at(ring(0.78, 0.05, { axis: 'y', speed: 0.3 }), 0, 1.05, 0);
+      at(ring(0.58, 0.045, { axis: 'x', speed: 0.55 }), 0, 1.05, 0, 0, Math.PI / 2);
+      at(ring(0.38, 0.04, { axis: 'z', speed: 0.9 }), 0, 1.05, 0, Math.PI / 2);
+      at(new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 16)), 0, 1.05, 0);
+      // Its stand.
+      at(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.06, 0.27, 16)), 0, 0.135, 0);
+      break;
+    }
+    case 4: {
+      // Chain: five linked rings, rising.
+      for (let i = 0; i < 5; i++)
+        at(ring(0.27, 0.06), 0, 0.33 + i * 0.4, 0, 0, i % 2 ? Math.PI / 2 : 0, 0);
+      break;
+    }
+    case 5: {
+      // Bloom: eight rings round one axis, opening outward like petals.
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI;
+        const m = at(ring(0.5, 0.035), Math.cos(a) * 0.08, 0.98, Math.sin(a) * 0.08, 0, a, 0);
+        m.rotateX(0.18);
+      }
+      break;
+    }
+    default: {
+      // Infinity: a figure-eight of two rings, a thin third turning round them.
+      at(ring(0.42, 0.055), -0.4, 1.05, 0, 0, 0, 0.25);
+      at(ring(0.42, 0.055), 0.4, 1.05, 0, 0, 0, -0.25);
+      at(ring(0.95, 0.018, { axis: 'z', speed: 0.35 }), 0, 1.05, 0, Math.PI / 2 - 0.25);
+      break;
+    }
+  }
+  return out;
+}
+
+/**
+ * The thirty and the small studies: ten families of ring sculpture, each drawn
+ * from a seed (lib/art/gallery-room.ts, ringRecipe), so every piece differs.
+ * Lighter rings than the seven (fewer segments): there are fifty-four of them.
+ */
+function ringsMeshes(seed: number): THREE.Mesh[] {
+  const r = ringRecipe(seed);
+  const out: THREE.Mesh[] = [];
+  const add = (
+    radius: number,
+    x: number,
+    y: number,
+    z: number,
+    rx: number,
+    ry: number,
+    rz: number,
+    spin?: 'x' | 'y' | 'z',
+  ) => {
+    const m = new THREE.Mesh(new THREE.TorusGeometry(radius, r.tube, 12, 64));
+    m.position.set(x, y, z);
+    m.rotation.set(rx, ry, rz);
+    if (spin && r.spin) m.userData.spin = { axis: spin, speed: r.spin * (out.length % 2 ? -1 : 1) };
+    out.push(m);
+  };
+  const n = r.count;
+  switch (r.family) {
+    case 0: // a tilted stack
+      for (let i = 0; i < n; i++)
+        add(
+          r.radius * (1 - i * 0.06),
+          0,
+          0.3 + i * 0.26,
+          0,
+          Math.PI / 2 + Math.sin(i * r.twist) * r.tilt,
+          i * r.twist,
+          0,
+        );
+      break;
+    case 1: // a helix
+      for (let i = 0; i < n + 3; i++) {
+        const a = i * r.twist;
+        add(
+          r.radius * 0.6,
+          Math.cos(a) * r.radius * 0.6,
+          0.25 + i * 0.18,
+          Math.sin(a) * r.radius * 0.6,
+          Math.PI / 2 + r.tilt * 0.3,
+          a,
+          0,
+        );
+      }
+      break;
+    case 2: // nested, each on its own axis
+      for (let i = 0; i < Math.min(n, 5); i++)
+        add(
+          r.radius * 1.3 * (1 - i * 0.18),
+          0,
+          1,
+          0,
+          (i * Math.PI) / 3,
+          (i * Math.PI) / 4,
+          0,
+          (['x', 'y', 'z'] as const)[i % 3],
+        );
+      break;
+    case 3: // a chain
+      for (let i = 0; i < Math.min(n, 6); i++)
+        add(
+          r.radius * 0.5,
+          Math.sin(i * r.tilt) * 0.12,
+          0.3 + i * r.radius * 0.75,
+          0,
+          0,
+          i % 2 ? Math.PI / 2 : 0,
+          0,
+        );
+      break;
+    case 4: // a bloom round one axis
+      for (let i = 0; i < n + 2; i++) {
+        const a = (i / (n + 2)) * Math.PI;
+        add(r.radius, Math.cos(a) * 0.06, 1, Math.sin(a) * 0.06, r.tilt * 0.3, a, 0);
+      }
+      break;
+    case 5: // an orbit of great circles
+      for (let i = 0; i < Math.min(n, 4); i++)
+        add(r.radius * 1.2, 0, 1, 0, Math.PI / 2 + i * r.twist, i * 0.8, i * 0.4, 'y');
+      break;
+    case 6: // a cascade
+      for (let i = 0; i < n; i++)
+        add(
+          r.radius * (1 - i * 0.08),
+          (i % 2 ? 1 : -1) * i * 0.05,
+          1.8 - i * (1.5 / n),
+          i * 0.04,
+          Math.PI / 2 - i * r.tilt * 0.4,
+          0,
+          i * 0.12,
+        );
+      break;
+    case 7: // standing in a row, smaller and smaller
+      for (let i = 0; i < Math.min(n, 5); i++) {
+        const rr = r.radius * (1 - i * 0.15);
+        add(rr, -0.5 + i * 0.28, rr + 0.05, 0, 0, Math.PI / 2 + i * r.tilt * 0.3, 0);
+      }
+      break;
+    case 8: // a pagoda of flat rings
+      for (let i = 0; i < n; i++)
+        add(
+          r.radius * (i % 2 ? 0.55 : 1) * (1 - i * 0.05),
+          0,
+          0.25 + i * 0.22,
+          0,
+          Math.PI / 2,
+          0,
+          Math.sin(i) * r.tilt * 0.2,
+        );
+      break;
+    default: // a ring of rings
+      for (let i = 0; i < n + 3; i++) {
+        const a = (i / (n + 3)) * Math.PI * 2;
+        add(
+          r.radius * 0.35,
+          Math.cos(a) * r.radius,
+          1 + Math.sin(a) * r.radius,
+          0,
+          0,
+          Math.PI / 2 + r.tilt * 0.5,
+          a,
+        );
+      }
+      break;
+  }
+  return out;
+}
+
+function formMeshes(form: Form, variant = 0, seed = 0): THREE.Mesh[] {
+  if (form === 'circles') return circleMeshes(variant);
+  if (form === 'rings') return ringsMeshes(seed);
   const mesh = (g: THREE.BufferGeometry) => new THREE.Mesh(g);
   switch (form) {
     case 'flow': {
@@ -343,6 +581,7 @@ export default function GalleryRoom({
     setMaterial: (id: string, m: Material | 'own') => void;
     drop: (file: File) => void;
     move: (fwd: number) => void;
+    jump: (room: 'corridor' | 'round' | 'projection') => void;
   } | null>(null);
 
   useEffect(() => {
@@ -351,10 +590,17 @@ export default function GalleryRoom({
     const W = () => mount.clientWidth;
     const H = () => mount.clientHeight;
 
-    const plinthCount = SCULPTURES.length + SPARE_PLINTHS;
-    const length = hallLength(images.length, plinthCount);
-    const frames = framePlaces(images.length, length);
-    const plinths = plinthPlaces(plinthCount, length);
+    // The three rooms: the corridor, the circle room, the projection room.
+    const layout = rooms(images.length);
+    const hall = layout.corridor;
+    const length = layout.length;
+    const roundCentre = layout.roundCentre;
+    const frames = framePlaces(images.length, hall);
+    const row = plinthPlaces(CIRCLES.length, hall);
+    const ring = roundRoomPlaces(CIRCLE_SERIES.length, roundCentre);
+    // The centre of the circle room: the plinth for your own model.
+    const centre = { x: 0, z: roundCentre, size: 1.5 };
+    const plinths: { x: number; z: number; size?: number }[] = [...row, ...ring, centre];
 
     // The picture layer, behind.
     const css = new CSS3DRenderer();
@@ -369,7 +615,8 @@ export default function GalleryRoom({
 
     // The room, in front, transparent where the pictures are.
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+    // Sharp, but not every pixel of a phone's dense screen: the rooms stay smooth.
+    renderer.setPixelRatio(Math.min(window.innerWidth < 700 ? 1.5 : 2, window.devicePixelRatio));
     renderer.setSize(W(), H());
     renderer.setClearColor(0x000000, 0);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -390,7 +637,10 @@ export default function GalleryRoom({
 
     const camera = new THREE.PerspectiveCamera(62, W() / H(), 0.05, 200);
     let px = 0;
-    let pz = 1.6;
+    // ?at=circles opens the gallery at the door of the circle room; ?at=projections, of the projection room.
+    const at = new URLSearchParams(window.location.search).get('at');
+    let pz =
+      at === 'circles' ? layout.round - 1 : at === 'projections' ? layout.projection - 1 : 1.6;
     let yaw = 0; // 0 looks down the hall (+z)
     let pitch = -0.04;
 
@@ -481,13 +731,48 @@ export default function GalleryRoom({
     const plinthMeshes: THREE.Mesh[] = [];
     const plinthMat = new THREE.MeshStandardMaterial({ color: '#f7f5f1', roughness: 0.7 });
     for (const p of plinths) {
-      const plinth = new THREE.Mesh(new THREE.BoxGeometry(1.2, HALL.plinthH, 1.2), plinthMat);
+      const big = p === centre;
+      const w = big ? 1.8 : 1.2;
+      const plinth = new THREE.Mesh(
+        big
+          ? new THREE.CylinderGeometry(0.9, 0.95, HALL.plinthH, 48)
+          : new THREE.BoxGeometry(w, HALL.plinthH, w),
+        plinthMat,
+      );
       plinth.position.set(p.x, HALL.plinthH / 2, p.z);
       scene.add(plinth);
       plinthMeshes.push(plinth);
-      const spot = new THREE.SpotLight('#fff4e0', 40, 9, 0.42, 0.5, 1.6);
-      spot.position.set(p.x, HALL.height - 0.3, p.z - 0.6);
-      spot.target.position.set(p.x, HALL.plinthH + 0.8, p.z);
+    }
+    /*
+     * Few lights, each covering several pieces: every light is worked out for
+     * every pixel, so seven broad ones keep the rooms smooth even on a phone.
+     * Three down the corridor, four over the circle room.
+     */
+    for (let k = 0; k < 3; k++) {
+      const z = (hall / 3) * (k + 0.5);
+      const spot = new THREE.SpotLight('#fff1d6', 55, 22, 0.75, 0.55, 1.3);
+      spot.position.set(0, HALL.height - 0.2, z - 1);
+      spot.target.position.set(0, HALL.plinthH, z + 1);
+      scene.add(spot, spot.target);
+      spots.push(spot);
+    }
+    // The circle room: three golden lights from the centre of the ceiling onto the ring, one on the centre.
+    for (let k = 0; k < 3; k++) {
+      const a = (k / 3) * Math.PI * 2;
+      const spot = new THREE.SpotLight('#ffe2a8', 90, 20, 1.0, 0.6, 1.3);
+      spot.position.set(Math.sin(a) * 3, HALL.height - 0.3, roundCentre - Math.cos(a) * 3);
+      spot.target.position.set(
+        Math.sin(a) * ROUND_ROOM.ring,
+        HALL.plinthH + 0.6,
+        roundCentre - Math.cos(a) * ROUND_ROOM.ring,
+      );
+      scene.add(spot, spot.target);
+      spots.push(spot);
+    }
+    {
+      const spot = new THREE.SpotLight('#fff4e0', 60, 10, 0.35, 0.5, 1.4);
+      spot.position.set(0, HALL.height - 0.2, roundCentre - 0.5);
+      spot.target.position.set(0, HALL.plinthH, roundCentre);
       scene.add(spot, spot.target);
       spots.push(spot);
     }
@@ -517,24 +802,92 @@ export default function GalleryRoom({
         floorMat.map = tex;
       }
       const ceilMat = new THREE.MeshStandardMaterial({ color: look.ceiling, roughness: 0.9 });
-      const floor = new THREE.Mesh(new THREE.PlaneGeometry(HALL.width, length), floorMat);
-      floor.rotation.x = -Math.PI / 2;
-      floor.position.set(0, 0, length / 2);
-      const ceil = new THREE.Mesh(new THREE.PlaneGeometry(HALL.width, length), ceilMat);
-      ceil.rotation.x = Math.PI / 2;
-      ceil.position.set(0, HALL.height, length / 2);
-      shell.add(floor, ceil);
-      for (const side of [-1, 1]) {
-        const wall = new THREE.Mesh(new THREE.PlaneGeometry(length, HALL.height), wallMat);
-        wall.rotation.y = side === -1 ? Math.PI / 2 : -Math.PI / 2;
-        wall.position.set((side * HALL.width) / 2, HALL.height / 2, length / 2);
-        shell.add(wall);
+      const box = (
+        z0: number,
+        z1: number,
+        floorM: THREE.Material,
+        wallM: THREE.Material,
+        ceilM: THREE.Material,
+      ) => {
+        const depth = z1 - z0;
+        const mid = (z0 + z1) / 2;
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(HALL.width, depth), floorM);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.set(0, 0, mid);
+        const ceil = new THREE.Mesh(new THREE.PlaneGeometry(HALL.width, depth), ceilM);
+        ceil.rotation.x = Math.PI / 2;
+        ceil.position.set(0, HALL.height, mid);
+        shell.add(floor, ceil);
+        for (const side of [-1, 1]) {
+          const wall = new THREE.Mesh(new THREE.PlaneGeometry(depth, HALL.height), wallM);
+          wall.rotation.y = side === -1 ? Math.PI / 2 : -Math.PI / 2;
+          wall.position.set((side * HALL.width) / 2, HALL.height / 2, mid);
+          shell.add(wall);
+        }
+      };
+      // A wall across the building at z with a doorway; `facing` +1 faces +z.
+      const doorWall = (z: number, facing: 1 | -1, wallM: THREE.Material) => {
+        const side = (HALL.width - DOOR) / 2;
+        for (const sx of [-1, 1]) {
+          const part = new THREE.Mesh(new THREE.PlaneGeometry(side, HALL.height), wallM);
+          part.position.set(sx * (DOOR / 2 + side / 2), HALL.height / 2, z);
+          if (facing === -1) part.rotation.y = Math.PI;
+          shell.add(part);
+        }
+        const lintel = new THREE.Mesh(new THREE.PlaneGeometry(DOOR, HALL.height - 3.4), wallM);
+        lintel.position.set(0, 3.4 + (HALL.height - 3.4) / 2, z);
+        if (facing === -1) lintel.rotation.y = Math.PI;
+        shell.add(lintel);
+      };
+      // The corridor.
+      box(0, hall, floorMat, wallMat, ceilMat);
+      const start = new THREE.Mesh(new THREE.PlaneGeometry(HALL.width, HALL.height), wallMat);
+      start.position.set(0, HALL.height / 2, 0);
+      shell.add(start);
+      doorWall(hall - 0.01, -1, wallMat);
+      // The circle room: round, its wall curving all the way, broken only by the two doorways.
+      {
+        const R = ROUND_ROOM.radius;
+        const gap = Math.asin(DOOR / 2 / R);
+        const roundWall = (t0: number, t1: number, y0: number, y1: number) => {
+          const g = new THREE.CylinderGeometry(R, R, y1 - y0, 96, 1, true, t0, t1 - t0);
+          const m = new THREE.Mesh(g, wallMat);
+          m.material = wallMat.clone();
+          (m.material as THREE.MeshStandardMaterial).side = THREE.BackSide;
+          m.position.set(0, (y0 + y1) / 2, roundCentre);
+          shell.add(m);
+        };
+        // Three.js measures the angle from +z toward +x: the doorways are at π (the corridor) and 0 (the projections).
+        roundWall(gap, Math.PI - gap, 0, HALL.height);
+        roundWall(Math.PI + gap, 2 * Math.PI - gap, 0, HALL.height);
+        roundWall(-gap, gap, 3.4, HALL.height);
+        roundWall(Math.PI - gap, Math.PI + gap, 3.4, HALL.height);
+        const rf = new THREE.Mesh(new THREE.CircleGeometry(R, 96), floorMat);
+        rf.rotation.x = -Math.PI / 2;
+        rf.position.set(0, 0.002, roundCentre);
+        const rc = new THREE.Mesh(new THREE.CircleGeometry(R, 96), ceilMat);
+        rc.rotation.x = Math.PI / 2;
+        rc.position.set(0, HALL.height, roundCentre);
+        shell.add(rf, rc);
+        // A gold ring inlaid in the floor, inside the twenty-four.
+        const inlay = new THREE.Mesh(
+          new THREE.RingGeometry(ROUND_ROOM.ring - 1.6, ROUND_ROOM.ring - 1.48, 128),
+          new THREE.MeshStandardMaterial({ color: '#d4a64a', metalness: 1, roughness: 0.3 }),
+        );
+        inlay.rotation.x = -Math.PI / 2;
+        inlay.position.set(0, 0.006, roundCentre);
+        shell.add(inlay);
       }
-      for (const end of [0, length]) {
-        const wall = new THREE.Mesh(new THREE.PlaneGeometry(HALL.width, HALL.height), wallMat);
-        wall.position.set(0, HALL.height / 2, end);
-        if (end === length) wall.rotation.y = Math.PI;
-        shell.add(wall);
+      // The projection room: black from floor to ceiling, so the projections glow.
+      {
+        // Unlit: no room light reaches it, whatever the mood, so it stays truly black.
+        const black = new THREE.MeshBasicMaterial({ color: '#030205' });
+        box(layout.projection, length, black, black, black);
+        doorWall(layout.projection + 0.01, 1, black);
+        const end = new THREE.Mesh(new THREE.PlaneGeometry(HALL.width, HALL.height), black);
+        end.rotation.y = Math.PI;
+        end.position.set(0, HALL.height / 2, length);
+        shell.add(end);
       }
       if (look.columns) {
         const colMat = new THREE.MeshStandardMaterial({
@@ -547,7 +900,7 @@ export default function GalleryRoom({
           metalness: 1,
           roughness: 0.3,
         });
-        for (let z = HALL.frameGap / 2 + 1.2; z < length - 1; z += HALL.frameGap) {
+        for (let z = HALL.frameGap / 2 + 1.2; z < hall - 1; z += HALL.frameGap) {
           for (const side of [-1, 1]) {
             const col = new THREE.Mesh(
               new THREE.CylinderGeometry(0.28, 0.32, HALL.height, 24),
@@ -565,7 +918,7 @@ export default function GalleryRoom({
       // Lights along the ceiling (white cube), or none (the dark space lives on its spots).
       if (f === 'white') {
         const panelMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
-        for (let z = 3; z < length; z += 6) {
+        for (let z = 3; z < hall; z += 6) {
           const panel = new THREE.Mesh(new THREE.PlaneGeometry(HALL.width * 0.6, 0.5), panelMat);
           panel.rotation.x = Math.PI / 2;
           panel.position.set(0, HALL.height - 0.01, z);
@@ -625,10 +978,17 @@ export default function GalleryRoom({
       }
       return mat;
     };
-    SCULPTURES.forEach((s, i) => {
-      const p = plinths[i]!;
+    const placed: [(typeof CIRCLES)[number], { x: number; z: number }][] = [
+      ...CIRCLES.map(
+        (s, i) => [s, row[i]!] as [(typeof CIRCLES)[number], { x: number; z: number }],
+      ),
+      ...CIRCLE_SERIES.map(
+        (s, i) => [s, ring[i]!] as [(typeof CIRCLES)[number], { x: number; z: number }],
+      ),
+    ];
+    placed.forEach(([s, p]) => {
       const group = new THREE.Group();
-      const meshes = formMeshes(s.form);
+      const meshes = formMeshes(s.form, s.variant, s.seed);
       for (const m of meshes) {
         m.material = matFor(s.material);
         m.userData.piece = s.id;
@@ -638,21 +998,56 @@ export default function GalleryRoom({
       scene.add(group);
       pieces.push({ id: s.id, name: s.name, line: s.line, material: s.material, group, meshes });
     });
-    // The empty plinths say they are waiting.
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: '#d4a64a',
-      transparent: true,
-      opacity: 0.6,
+
+    /* The projection room: three screens of the Geometry Builder, live, only while you are near. */
+    const screens: { win: THREE.Mesh; frame: HTMLIFrameElement; at: number }[] = [];
+    const SCREENS = [
+      { w: 10, h: 5.625, x: 0, z: length - 0.06, ry: Math.PI },
+      { w: 8, h: 4.5, x: -HALL.width / 2 + 0.06, z: layout.projection + 11, ry: Math.PI / 2 },
+      { w: 8, h: 4.5, x: HALL.width / 2 - 0.06, z: layout.projection + 11, ry: -Math.PI / 2 },
+    ];
+    SCREENS.forEach((sc, i) => {
+      const SPX = 128;
+      const frame = document.createElement('iframe');
+      frame.title = PROJECTIONS[i] as string;
+      frame.allow = 'autoplay; fullscreen';
+      Object.assign(frame.style, {
+        width: `${sc.w * SPX}px`,
+        height: `${sc.h * SPX}px`,
+        border: '0',
+        background: '#000',
+      });
+      const obj = new CSS3DObject(frame);
+      obj.position.set(sc.x, 3, sc.z);
+      obj.rotation.y = sc.ry;
+      obj.scale.setScalar(1 / SPX);
+      cssScene.add(obj);
+      const win = new THREE.Mesh(new THREE.PlaneGeometry(sc.w, sc.h), hole);
+      win.position.set(sc.x, 3, sc.z);
+      win.rotation.y = sc.ry;
+      win.userData.screen = i;
+      scene.add(win);
+      screens.push({ win, frame, at: i });
     });
-    const rings: THREE.Mesh[] = [];
-    for (let i = SCULPTURES.length; i < plinths.length; i++) {
-      const p = plinths[i]!;
-      const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.46, 48), ringMat);
-      ring.rotation.x = -Math.PI / 2;
-      ring.position.set(p.x, HALL.plinthH + 0.005, p.z);
-      scene.add(ring);
-      rings.push(ring);
-    }
+    let screensOn = false;
+    const switchScreens = (on: boolean) => {
+      if (on === screensOn) return;
+      screensOn = on;
+      for (const sc of screens)
+        sc.frame.src = on
+          ? projectionUrl(PROJECTIONS[sc.at % PROJECTIONS.length] as string)
+          : 'about:blank';
+    };
+
+    // The centre plinth says it is waiting for your model.
+    const waiting = new THREE.Mesh(
+      new THREE.RingGeometry(0.62, 0.68, 64),
+      new THREE.MeshBasicMaterial({ color: '#d4a64a', transparent: true, opacity: 0.7 }),
+    );
+    waiting.rotation.x = -Math.PI / 2;
+    waiting.position.set(centre.x, HALL.plinthH + 0.005, centre.z);
+    scene.add(waiting);
+    let yours: Piece | null = null;
 
     function setMaterial(id: string, m: Material | 'own') {
       const piece = pieces.find((p) => p.id === id);
@@ -667,11 +1062,8 @@ export default function GalleryRoom({
     /* Your own models, dropped in. */
     const loader = new GLTFLoader();
     function drop(file: File) {
-      const free = pieces.length < plinths.length ? plinths[pieces.length]! : null;
-      if (!free) {
-        setNote('Every plinth is taken. Reload the room to start again.');
-        return;
-      }
+      // Your model stands on the centre plinth of the circle room (a new one replaces the last).
+      const free = centre;
       const url = URL.createObjectURL(file);
       setNote(`Placing ${file.name}…`);
       loader.load(
@@ -700,23 +1092,29 @@ export default function GalleryRoom({
             m.userData.piece = id;
             meshes.push(m);
           });
+          if (yours) {
+            scene.remove(yours.group);
+            pieces.splice(pieces.indexOf(yours), 1);
+          }
           scene.add(group);
-          const ring = rings[pieces.length - SCULPTURES.length];
-          if (ring) ring.visible = false;
+          waiting.visible = false;
           const name = file.name.replace(/\.(glb|gltf)$/i, '');
-          pieces.push({
+          yours = {
             id,
             name,
-            line: 'Your model, on this plinth for this visit.',
+            line: 'Your model, in the centre of the circle room for this visit.',
             material: 'marble',
             group,
             meshes,
             own,
-          });
+          };
+          pieces.push(yours);
           setMaterial(id, 'marble');
-          setNote(`${name} is on a plinth, in marble. Tap it to change the material.`);
+          setNote(
+            `${name} stands in the centre of the circle room, in marble. Tap it to change the material.`,
+          );
           // Walk the visitor to look at it.
-          pz = Math.max(1, free.z - 4);
+          pz = free.z - 5;
           px = 0;
           yaw = 0;
         },
@@ -784,10 +1182,25 @@ export default function GalleryRoom({
         camera,
       );
       const hit = ray.intersectObjects(
-        [...windows, ...frameMeshes, ...pieces.flatMap((p) => p.meshes), ...plinthMeshes],
+        [
+          ...windows,
+          ...frameMeshes,
+          ...screens.map((sc) => sc.win),
+          ...pieces.flatMap((p) => p.meshes),
+          ...plinthMeshes,
+        ],
         false,
       )[0];
       if (!hit) return;
+      const screen = hit.object.userData.screen as number | undefined;
+      if (screen !== undefined) {
+        const sc = screens[screen]!;
+        sc.at += SCREENS.length;
+        const name = PROJECTIONS[sc.at % PROJECTIONS.length] as string;
+        sc.frame.src = projectionUrl(name);
+        setNote(`Now projecting ${name}.`);
+        return;
+      }
       const pic = hit.object.userData.picture as number | undefined;
       if (pic !== undefined) {
         setPicture(images[pic] ?? null);
@@ -831,8 +1244,23 @@ export default function GalleryRoom({
       move: (f: number) => {
         held = f;
       },
+      jump: (room) => {
+        // Stand just inside the room, looking in.
+        pz =
+          room === 'corridor'
+            ? 1.6
+            : room === 'round'
+              ? layout.round + 1.2
+              : layout.projection + 1.4;
+        px = 0;
+        prev.x = px;
+        prev.z = pz;
+        yaw = 0;
+        pitch = room === 'projection' ? 0.08 : -0.04;
+      },
     };
 
+    const prev = { x: px, z: pz };
     let last = performance.now();
     let raf = 0;
     const loop = (now: number) => {
@@ -847,12 +1275,15 @@ export default function GalleryRoom({
       if (keys.has('KeyD')) side += 1;
       if (keys.has('ArrowLeft')) yaw += dt * 1.6;
       if (keys.has('ArrowRight')) yaw -= dt * 1.6;
-      const speed = 3.2 * dt;
+      const speed = 3.6 * dt;
       px += (Math.sin(yaw) * fwd - Math.cos(yaw) * side) * speed;
       pz += (Math.cos(yaw) * fwd + Math.sin(yaw) * side) * speed;
-      const ok = walkable(px, pz, length, plinths);
+      const ok = step(prev, { x: px, z: pz }, layout, plinths);
       px = ok.x;
       pz = ok.z;
+      prev.x = px;
+      prev.z = pz;
+      switchScreens(pz > layout.projection - 8);
       camera.position.set(px, EYE + Math.sin(now * 0.0016) * 0.008, pz);
       camera.lookAt(
         px + Math.sin(yaw) * Math.cos(pitch),
@@ -860,7 +1291,14 @@ export default function GalleryRoom({
         pz + Math.cos(yaw) * Math.cos(pitch),
       );
       // The sculptures turn, slowly.
-      for (const p of pieces) p.group.rotation.y += dt * 0.12;
+      for (const p of pieces) {
+        p.group.rotation.y += dt * 0.12;
+        // Rings that spin on their own axis (the circles).
+        for (const m of p.meshes) {
+          const spin = m.userData.spin as { axis: 'x' | 'y' | 'z'; speed: number } | undefined;
+          if (spin) m.rotation[spin.axis] += dt * spin.speed;
+        }
+      }
       if (motes) motes.rotation.y = Math.sin(now * 0.00005) * 0.02;
       renderer.render(scene, camera);
       css.render(cssScene, camera);
@@ -974,6 +1412,22 @@ export default function GalleryRoom({
           }}
           aria-label="The room"
         >
+          {(
+            [
+              ['corridor', 'Corridor'],
+              ['round', 'Circle room'],
+              ['projection', 'Projections'],
+            ] as const
+          ).map(([room, label]) => (
+            <button
+              key={room}
+              type="button"
+              onClick={() => api.current?.jump(room)}
+              style={{ ...chip(false), borderStyle: 'dashed' }}
+            >
+              {label}
+            </button>
+          ))}
           {ROOM_FEELS.map((f) => (
             <button
               key={f.id}

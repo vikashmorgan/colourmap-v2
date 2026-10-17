@@ -10,11 +10,14 @@ The collection's final mission: a real 3D art gallery that visitors walk through
 
 ## What it holds
 
-- A long hall. The collection's pictures hang in frames on both long walls; sculptures stand on plinths down the middle, slowly turning under spotlights.
-- Five sculptures of the collection's themes until the real 3D models arrive: Flow (bronze), Total fracture (glass shards, a figure curled in a ball), Wave (marble), Ascension (gold), Lotus (marble). Tap one to change its material: marble, bronze, gold, glass.
-- Three empty plinths: drop a `.glb` (from Tripo or Meshy) on the page and it stands on the next one, scaled and centred, in marble (or its own colours). For this visit only.
-- Three moods: white cube, golden temple (gold walls, marble columns and floor), dark space of light (black, motes of light).
-- Walk with W A S D or the arrows, drag to look, wheel to glide; on a phone, drag and hold the arrows. Tap a picture to see it large.
+Three rooms joined by doorways (the owner's vision, 2026-10-16: "one room for projections; one room, the corridor with 7 sculptures; one room a circle room with the 24 sculptures disposed in a circle"):
+
+- **The corridor:** the collection's pictures on both walls, and the seven gold circle sculptures (Orbit, Spiral, Cascade, Gyroscope, Chain, Bloom, Infinity) down the middle, some with rings spinning on their own axis.
+- **The circle room:** truly round (radius 13 m, wider than the corridor), with twenty-four ring sculptures in a circle. They come from ten families of shape, each drawn from a seed, so all differ: mostly gold, some bronze, some glass. A gold ring is inlaid in the floor. In the centre, the plinth where a dropped `.glb` (Tripo, Meshy) stands for the visit.
+- **The projection room:** unlit black, with three walls projecting the Geometry Builder live (`artprojection.vercel.app/?preset=…&display=1`): Liquid Quantum, Quantum Chaos, Liquid Chaos, Music Liquid Chaos, the Magnetic Sands, Star Sand Lines, Starflow Galaxy, Liquid Pearl. Tap a screen for the next program. The projections load only while you are near the room.
+- Tap a sculpture to change its material (marble, bronze, gold, glass). Three moods: white cube, golden temple, dark space of light.
+- Walk with W A S D or the arrows and drag to look; on a phone, drag and hold the arrows. Walls slide you along rather than stop you. Buttons jump between rooms; `?at=circles` and `?at=projections` open at a room's door.
+- Seven broad spotlights in all, and a capped pixel ratio on phones, so it stays smooth.
 
 ## How the pictures show
 
