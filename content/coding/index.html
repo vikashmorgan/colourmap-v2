@@ -1024,6 +1024,19 @@ details.datacode .mission-tag { background: var(--ok-c); }
 .pm-num { font: 600 13px var(--mono); color: var(--sess); min-width: 3.2em; }
 .pm-title { font-weight: 600; }
 .pm-done { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; border: 1.5px solid var(--rule); color: transparent; }
+/* Come back to this: a big warm yellow dot, shown on the title row so a closed mission says it. */
+/* Always there, beside the done tick and in its format: an empty ring until tapped (2026-10-17: "next to the green ✓ dot, same format"). */
+.pm-flag { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, #e0a526 55%, var(--rule)); background: none; cursor: pointer; padding: 0; flex: none; }
+.pm-flag:hover { border-color: #e0a526; background: color-mix(in srgb, #f2b33d 15%, transparent); }
+.pm-flag[aria-pressed="true"] { border-color: #e7a321; background: radial-gradient(circle at 35% 35%, #ffd36b, #e7a321 70%); }
+.pm-flag + .pm-done { margin-left: 0; }
+.pm-qs { font: 600 12.5px var(--body); color: var(--q-c); border: 1px solid color-mix(in srgb, var(--q-c) 50%, transparent); border-radius: 999px; padding: 1px 9px; }
+.pm-qs[data-kind="comment"] { color: var(--c-c); border-color: color-mix(in srgb, var(--c-c) 50%, transparent); }
+.pm-notes { display: grid; gap: 8px; border-top: 1px solid var(--rule); padding-top: 10px; }
+.pmission.flash { box-shadow: 0 0 0 3px color-mix(in srgb, var(--sess) 45%, transparent); }
+.pl-flags { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffd36b, #e7a321 70%); font: 700 10px/16px var(--body); color: #4a3200; text-align: center; align-self: center; }
+.pp-index a.pp-flagged::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #e7a321; margin-left: 6px; display: inline-block; }
+.rv-flag .dot { background: #e7a321; }
 .pmission.is-done .pm-done { background: var(--ok); border-color: var(--ok); color: #fff; }
 .pmission[open] { border-color: color-mix(in srgb, var(--sess) 45%, var(--rule)); box-shadow: 0 6px 20px rgb(0 0 0 / .06); }
 .pm-body { padding: 4px 16px 16px; display: grid; gap: 12px; }
@@ -3524,7 +3537,7 @@ const savedNote = document.getElementById('saved-note');
 
 const allItems = () => [...lessonsEl.querySelectorAll('.item[data-key]')];
 // Everything that can hold notes: the lesson boxes and the project cards.
-const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #overall-host, #lessons .lesson-overall, #lessons .slide-host, #steps .pcard[data-key], #page-project .line-host[data-key], #nb-host')];
+const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #overall-host, #lessons .lesson-overall, #lessons .slide-host, #steps .pcard[data-key], #page-project .line-host[data-key], #nb-host, #practice .pm-notes[data-key]')];
 // A slide's notes belong to the lesson's one slide spot, whichever slide it shows now.
 const SLIDE_KEY = /^s(\d+)\|slide:(\d+)$/;
 const itemByKey = key => noteHosts().find(i => i.dataset.key === key)
@@ -3641,6 +3654,7 @@ function paintItem(item) {
   } else if (tog) tog.remove();
   dot.setAttribute('aria-pressed', String(list.length > 0));
   dot.textContent = list.length ? 'Add another question or comment' : 'Question or comment';
+  if (item.classList.contains('pm-notes')) paintMissionNotes(item.closest('.pmission'));
 }
 function paintAll() { syncLineHosts(); for (const it of noteHosts()) paintItem(it); refreshCounts(); renderReview(); if (activeFilter !== 'all') applyFilter(); }
 
@@ -3830,7 +3844,7 @@ function onNoteClick(e) {
     queueMarkWork(key, item);
     return;
   }
-  const item = e.target.closest('.line-host, .nb-host, .overall-host, .slide-host, .item[data-key], .pcard');
+  const item = e.target.closest('.line-host, .nb-host, .overall-host, .slide-host, .item[data-key], .pcard, .pm-notes');
   if (!item) return;
   const key = item.dataset.key;
   if (e.target.closest('.notes-toggle')) {
@@ -3902,6 +3916,10 @@ document.getElementById('progress-bar').addEventListener('click', e => {
 
 /* ---------- Review: questions, comments, confused and no time, together ---------- */
 function boxHead(item, forKey) {
+  if (item.classList.contains('pm-notes')) {
+    const mis = item.closest('.pmission');
+    return { sess: mis.style.getPropertyValue('--sess'), name: `Practice ${mis.dataset.id} · ${mis.querySelector('.pm-title').textContent}`, num: mis.dataset.id, text: mis.querySelector('.pm-task').textContent };
+  }
   if (item.id === 'nb-host') return { sess: 'var(--muted)', name: 'Project 1 · notebook', num: 'NB', text: '' };
   if (item.id === 'overall-host') return { sess: 'var(--accent)', name: 'Project 1 · overall questions on the whole program', num: '0', text: '' };
   if (item.classList.contains('slide-host')) {
@@ -3954,6 +3972,13 @@ function reviewBox(key) {
     <p class="rv-text">${esc(h.text)}</p>
   </article>`;
 }
+function reviewFlag(m) {
+  const mis = practiceEl.querySelector(`.pmission[data-id="${m.id}"]`);
+  return `<article class="rv-entry" style="--sess: ${mis.style.getPropertyValue('--sess')}">
+    <div class="rv-top"><span class="rv-sess">${m.id}</span><span class="rv-name">${esc(m.title)}</span><button type="button" class="rv-open" data-open-item="${mis.querySelector('.pm-notes').id}">Open in practice ›</button></div>
+    <p class="rv-text">${esc(mis.querySelector('.pm-task').textContent)}</p>
+  </article>`;
+}
 function renderReview() {
   renderSlideSummaries();
   const hosts = noteHosts();
@@ -3968,7 +3993,9 @@ function renderReview() {
   const confused = keys.filter(k => marks[k] === 'mid');
   const noTime = keys.filter(k => marks[k] === 'late');
   const waiting = noteList.filter(n => noteState(n) === 'waiting' && n.answer).length;
-  const total = questions.length + comments.length + confused.length + noTime.length;
+  // Review can be drawn before Practice exists (on load): then there is nothing to list yet.
+  const flagged = (window.practiceMissions || []).filter(m => marks[`xb|${m.id}`] === 'mid');
+  const total = questions.length + comments.length + confused.length + noTime.length + flagged.length;
   const countEl = document.getElementById('review-count');
   countEl.textContent = waiting ? `${waiting} new` : (total ? String(total) : '');
   const el = document.getElementById('review');
@@ -3987,8 +4014,12 @@ function renderReview() {
       + '</section>';
   };
   const inProject = n => n.key.startsWith('p1|');
+  const inPractice = n => n.key.startsWith('x|');
+  const inLessons = n => !inProject(n) && !inPractice(n);
   el.innerHTML = part('Project 1', questions.filter(inProject), comments.filter(inProject))
-    + part('Lessons', questions.filter(n => !inProject(n)), comments.filter(n => !inProject(n)))
+    + part('Lessons', questions.filter(inLessons), comments.filter(inLessons))
+    + part('Practice', questions.filter(inPractice), comments.filter(inPractice))
+    + (flagged.length ? `<section class="rv-part"><h2 class="rv-part-title">Practice</h2>${group('To come back to', 'flag', flagged.map(reviewFlag).join(''), flagged.length)}</section>` : '')
     + (confused.length || noTime.length ? `<section class="rv-part"><h2 class="rv-part-title">Boxes you marked</h2>`
       + group('Confused', 'mid', confused.map(reviewBox).join(''), confused.length)
       + group('No time', 'late', noTime.map(reviewBox).join(''), noTime.length) + '</section>' : '');
@@ -4006,6 +4037,16 @@ document.getElementById('review').addEventListener('click', e => {
   }
   // Coming from Review, the box shows the notes it was opened for.
   if (target.dataset.key && !openNoteLists.has(target.dataset.key)) { openNoteLists.add(target.dataset.key); paintItem(target); }
+  if (target.closest('#page-practice')) {
+    showPage('practice', false);
+    const mis = target.closest('.pmission');
+    mis.closest('.plevel').open = true;
+    mis.open = true;
+    mis.scrollIntoView({ block: 'start' });
+    mis.classList.add('flash');
+    setTimeout(() => mis.classList.remove('flash'), 1600);
+    return;
+  }
   if (target.closest('#page-project')) {
     showPage('project', false);
     if (target.classList.contains('line-host')) target.hidden = false;
@@ -4396,8 +4437,23 @@ const RUN_LIMIT_MS = 5000;
 const practiceEl = document.getElementById('practice');
 const doneKey = id => `x|${id}`;
 const isDone = id => marks[doneKey(id)] === 'got';
+/*
+ * COME BACK TO THIS (2026-10-17: "a dot to mark that I must go back to it, a
+ * big warm yellow dot, so when the tab is closed I know there is something in
+ * it"). Kept as the mark `mid` under `xb|{mission}`, so it syncs like any mark;
+ * shown on the mission's title row, counted on its level, listed in Review.
+ */
+const flagKey = id => `xb|${id}`;
+const isFlagged = id => marks[flagKey(id)] === 'mid';
+function toggleFlag(id) {
+  if (isFlagged(id)) delete marks[flagKey(id)]; else marks[flagKey(id)] = 'mid';
+  saveLocal(); pushMark(flagKey(id));
+  paintPractice();
+  renderReview();
+}
 let drafts = readStore(DRAFTS_KEY, {});
 const allMissions = PRACTICE.flatMap(l => l.missions.map(m => ({ ...m, level: l.n })));
+window.practiceMissions = allMissions;
 
 /* Python, started on first use. One worker; replaced when a run takes too long. */
 let pyWorker = null, pyReady = null, pyJobs = new Map(), pyNext = 1;
@@ -4545,7 +4601,7 @@ function showOutput(box, r) {
 function missionHtml(m, i, lvl) {
   const code = drafts[m.id] ?? m.start;
   return `<details class="pmission" data-id="${m.id}" style="--sess: var(--sess-${((lvl.n - 1) % 7) + 1})">
-    <summary><span class="pm-num">${m.id}</span><span class="pm-title">${esc(m.title)}</span><span class="pm-done" aria-label="done">✓</span></summary>
+    <summary><span class="pm-num">${m.id}</span><span class="pm-title">${esc(m.title)}</span><span class="pm-qs" hidden></span><button type="button" class="pm-flag" aria-pressed="false" title="Mark: come back to this one"></button><span class="pm-done" aria-label="done">✓</span></summary>
     <div class="pm-body">
       <div class="pm-task">${m.task}</div>
       <div class="pm-work">
@@ -4557,6 +4613,7 @@ function missionHtml(m, i, lvl) {
       </div>
       <details class="pm-help"><summary>Hint</summary><div>${m.hint}</div></details>
       <details class="pm-help pm-sol"><summary>Solution</summary><p class="pm-sol-note">Try first: typing it yourself is what trains the hand. Then compare.</p><pre class="pe-pre">${esc(m.solution)}</pre></details>
+      <div class="pm-notes" id="pmn-${m.id.replace('.', '-')}" data-key="${doneKey(m.id)}"><button type="button" class="note-dot" aria-pressed="false">Question or comment</button></div>
     </div>
   </details>`;
 }
@@ -4572,7 +4629,7 @@ function renderPractice() {
     </details>
     <nav class="index pp-index" aria-label="Levels">${PRACTICE.map(l => `<a href="#plevel-${l.n}" data-level="${l.n}" style="--sess: var(--sess-${((l.n - 1) % 7) + 1})"><span class="n">${l.n}</span> ${esc(l.title)} <b class="pp-lc"></b></a>`).join('')}</nav>
     ${PRACTICE.map(l => `<details class="plevel" id="plevel-${l.n}" data-level="${l.n}" style="--sess: var(--sess-${((l.n - 1) % 7) + 1})">
-      <summary><span class="pl-n">Level ${l.n}</span><span class="pl-title">${esc(l.title)}</span><span class="pl-count"></span></summary>
+      <summary><span class="pl-n">Level ${l.n}</span><span class="pl-title">${esc(l.title)}</span><span class="pl-flags" hidden></span><span class="pl-count"></span></summary>
       <div class="pl-idea"><div><span class="eyebrow">The idea</span><p>${l.idea}</p></div>
         <div class="pl-ex"><pre class="pe-pre">${esc(l.example)}</pre>${l.exampleOut ? `<div class="pe-out-head">Output</div><pre class="pe-pre pl-exout">${esc(l.exampleOut)}</pre>` : ''}</div></div>
       <div class="pl-missions">${l.missions.map((m, i) => missionHtml(m, i, l)).join('')}</div>
@@ -4595,7 +4652,36 @@ function paintPractice() {
     const s = practiceEl.querySelector(`.plevel[data-level="${l.n}"] .pl-count`);
     s.textContent = n === l.missions.length ? 'all done ✓' : txt;
   }
-  for (const el of practiceEl.querySelectorAll('.pmission')) el.classList.toggle('is-done', isDone(el.dataset.id));
+  for (const el of practiceEl.querySelectorAll('.pmission')) {
+    el.classList.toggle('is-done', isDone(el.dataset.id));
+    const f = isFlagged(el.dataset.id);
+    el.classList.toggle('is-flagged', f);
+    const b = el.querySelector('.pm-flag');
+    b.setAttribute('aria-pressed', String(f));
+    b.title = f ? 'Marked to come back to: tap to clear' : 'Mark: come back to this one';
+    b.setAttribute('aria-label', b.title);
+    paintMissionNotes(el);
+  }
+  for (const l of PRACTICE) {
+    const n = l.missions.filter(m => isFlagged(m.id)).length;
+    const s = practiceEl.querySelector(`.plevel[data-level="${l.n}"] .pl-flags`);
+    s.hidden = !n;
+    s.textContent = n > 1 ? String(n) : '';
+    s.title = `${n} to come back to`;
+    const a = practiceEl.querySelector(`.pp-index a[data-level="${l.n}"]`);
+    a.classList.toggle('pp-flagged', n > 0);
+  }
+}
+// The questions and comments of a mission, counted on its title row so a closed mission still says it holds some.
+function paintMissionNotes(el) {
+  const list = notesOf(doneKey(el.dataset.id));
+  const q = el.querySelector('.pm-qs');
+  q.hidden = !list.length;
+  if (list.length) {
+    q.dataset.kind = list.some(n => n.kind === 'question') ? 'question' : 'comment';
+    q.innerHTML = `✎ ${list.length}`;
+    q.title = `${list.length} question${list.length > 1 ? 's' : ''} or comment${list.length > 1 ? 's' : ''}`;
+  }
 }
 const PRAISE = ['Well done.', 'One more step.', 'Nicely done.', 'That works.', 'Good, calmly done.'];
 /*
@@ -4686,7 +4772,10 @@ practiceEl.addEventListener('input', e => {
     writeStore(DRAFTS_KEY, drafts);
   } else if (t.matches('.pe-inputs')) { drafts.playInputs = t.value; writeStore(DRAFTS_KEY, drafts); }
 });
+practiceEl.addEventListener('click', onNoteClick);
 practiceEl.addEventListener('click', e => {
+  const flag = e.target.closest('.pm-flag');
+  if (flag) { e.preventDefault(); toggleFlag(flag.closest('.pmission').dataset.id); return; }
   const run = e.target.closest('.pe-run');
   if (run) { runBox(run.closest('.pmission, .pe-play')); return; }
   const reset = e.target.closest('.pe-reset');
@@ -4732,6 +4821,7 @@ practiceEl.addEventListener('toggle', e => {
   if (d.classList.contains('pe-play') && d.open) { fitEditor(d.querySelector('.pe-code')); startPython().catch(() => {}); }
 }, true);
 renderPractice();
+renderReview();
 
 /* ---------- Day or night ---------- */
 const themeBtn = document.getElementById('theme-btn');
