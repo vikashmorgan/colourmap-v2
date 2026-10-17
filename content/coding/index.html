@@ -1025,9 +1025,10 @@ details.datacode .mission-tag { background: var(--ok-c); }
 .pm-title { font-weight: 600; }
 .pm-done { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; border: 1.5px solid var(--rule); color: transparent; }
 /* Come back to this: a big warm yellow dot, shown on the title row so a closed mission says it. */
-.pm-flag { margin-left: auto; width: 26px; height: 26px; border-radius: 50%; border: 1.5px dashed color-mix(in srgb, #e0a526 60%, var(--rule)); background: none; cursor: pointer; padding: 0; opacity: 0; transition: opacity .15s; }
-.pmission > summary:hover .pm-flag, .pmission[open] .pm-flag, .pm-flag:focus-visible { opacity: .8; }
-.pm-flag[aria-pressed="true"] { opacity: 1; border: 0; background: radial-gradient(circle at 35% 35%, #ffd36b, #e7a321 70%); box-shadow: 0 0 0 4px color-mix(in srgb, #f2b33d 22%, transparent); }
+/* Always there, beside the done tick and in its format: an empty ring until tapped (2026-10-17: "next to the green ✓ dot, same format"). */
+.pm-flag { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, #e0a526 55%, var(--rule)); background: none; cursor: pointer; padding: 0; flex: none; }
+.pm-flag:hover { border-color: #e0a526; background: color-mix(in srgb, #f2b33d 15%, transparent); }
+.pm-flag[aria-pressed="true"] { border-color: #e7a321; background: radial-gradient(circle at 35% 35%, #ffd36b, #e7a321 70%); }
 .pm-flag + .pm-done { margin-left: 0; }
 .pm-qs { font: 600 12.5px var(--body); color: var(--q-c); border: 1px solid color-mix(in srgb, var(--q-c) 50%, transparent); border-radius: 999px; padding: 1px 9px; }
 .pm-qs[data-kind="comment"] { color: var(--c-c); border-color: color-mix(in srgb, var(--c-c) 50%, transparent); }
