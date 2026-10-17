@@ -27,3 +27,7 @@ A sober menu, in the style of the Git page, with one card per class:
 ## Adding a class
 
 Give it its own page and route (as `/git`), then turn its card on the School page into a link. For SQL: `content/sql/index.html`, `app/sql/route.ts`, and the SQL card's `href="/sql"`.
+
+## Day or night
+
+School opens in a beige day mode and has a ☾ Night / ☀ Day button at the top. The choice is stored on the device as `school-theme` and shared with Python and Git, so every School page matches. It no longer follows the computer's dark mode (2026-10-17: "a beige, not black, mode for the overall school app").

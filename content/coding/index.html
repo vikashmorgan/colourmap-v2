@@ -5,16 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Data Explorer Map</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%232f5fa7%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-size=%2716%27 text-anchor=%27middle%27 fill=%27%23f2c14e%27 font-family=%27monospace%27%3Epy%3C/text%3E%3C/svg%3E">
+<script>
+  // Day (beige) or night, the same choice as School and Git (school-theme), remembered on this device. Day by default,
+  // whatever the system says: the page was black on a dark-mode computer, and day is what was asked for (2026-10-17).
+  try { document.documentElement.dataset.theme = localStorage.getItem('school-theme') === 'night' ? 'dark' : 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
 :root {
-  --ground: #eef0ea;
-  --panel: #fafbf7;
+  --ground: #f6f1e6;
+  --panel: #fbf8f1;
   --ink: #1b2330;
   --muted: #6b5d4b;
-  --rule: #d5d9cf;
+  --rule: #e4dccb;
   --accent: #2f5fa7;
   --accent-soft: #dde6f4;
   --mark: #f2c14e;
@@ -22,7 +27,8 @@
   --warn: #b4532a;
   --warn-soft: #f6e1d6;
   --ok: #2f7a4f;
-  --code-bg: #f4f5f0;
+  --code-bg: #efe7d6;
+  --term-bg: #efe7d6; --term-ink: #2b2620;
   --tok-kw: #7a3fa0;
   --tok-str: #2f7a4f;
   --tok-com: #8a8f86;
@@ -619,6 +625,7 @@ main.wrap { zoom: var(--text-zoom); }
 pre, .terminal { zoom: var(--code-zoom); }
 .size-wrap { position: relative; margin-left: 12px; }
 .size-btn { font: 700 16px var(--display); color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 999px; width: 44px; height: 44px; cursor: pointer; }
+.top .wrap > .theme-btn { margin-left: auto; margin-right: -8px; }
 .size-btn[aria-expanded="true"], .size-btn:hover { border-color: var(--accent); color: var(--accent); }
 .size-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; display: grid; gap: 10px; width: 240px; box-shadow: 0 10px 30px color-mix(in srgb, var(--ink) 18%, transparent); }
 .size-row { display: grid; grid-template-columns: 1fr 34px 52px 34px; align-items: center; gap: 6px; font-size: 14px; }
@@ -1036,10 +1043,12 @@ details.datacode .mission-tag { background: var(--ok-c); }
 .pe-status:empty { display: none; }
 .pe-out { margin-top: 8px; }
 .pe-out-head { font: 600 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 8px 0 4px; }
-.pe-pre { font: 14px/1.5 var(--mono); background: #1b2330; color: #e9eef5; border-radius: 10px; padding: 10px 14px; margin: 0; white-space: pre-wrap; overflow-x: auto; }
+.pe-pre { font: 14px/1.5 var(--mono); background: var(--term-bg, #1b2330); color: var(--term-ink, #e9eef5); border-radius: 10px; padding: 10px 14px; margin: 0; white-space: pre-wrap; overflow-x: auto; }
 .pe-want { background: color-mix(in srgb, var(--ok) 14%, var(--code-bg)); color: var(--ink); }
 .pe-none { color: var(--muted); font-style: italic; }
-.pe-pre .pe-none { color: #9aa3b0; }
+.pe-pre .pe-none { color: var(--muted); }
+:root[data-theme="dark"] { --term-bg: #0f1318; --term-ink: #e9eef5; }
+:root[data-theme="dark"] .pe-run, :root[data-theme="dark"] .pe-next:hover { color: #0f1318; }
 .pe-verdict { margin-top: 10px; border-radius: 12px; padding: 12px 14px; }
 .pe-verdict p { margin: 0 0 8px; }
 .pe-verdict p:last-child { margin-bottom: 0; }
@@ -1090,6 +1099,7 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
       <button id="tab-practice" role="tab" aria-selected="false" aria-controls="page-practice">Practice</button>
       <button id="tab-review" role="tab" aria-selected="false" aria-controls="page-review">Review <b class="tab-count" id="review-count"></b></button>
     </div>
+    <button type="button" class="size-btn theme-btn" id="theme-btn" aria-label="Switch between day and night" title="Day or night">☾</button>
     <div class="size-wrap">
       <button type="button" class="size-btn" id="size-btn" aria-expanded="false" aria-controls="size-panel" title="Text size">Aa</button>
       <div class="size-panel" id="size-panel" role="dialog" aria-label="Text size" hidden>
@@ -4681,6 +4691,17 @@ practiceEl.addEventListener('toggle', e => {
   if (d.classList.contains('pe-play') && d.open) { fitEditor(d.querySelector('.pe-code')); startPython().catch(() => {}); }
 }, true);
 renderPractice();
+
+/* ---------- Day or night ---------- */
+const themeBtn = document.getElementById('theme-btn');
+const paintTheme = () => { const night = document.documentElement.dataset.theme === 'dark'; themeBtn.textContent = night ? '☀' : '☾'; themeBtn.setAttribute('aria-label', night ? 'Switch to day' : 'Switch to night'); };
+themeBtn.addEventListener('click', () => {
+  const night = document.documentElement.dataset.theme !== 'dark';
+  document.documentElement.dataset.theme = night ? 'dark' : 'light';
+  try { localStorage.setItem('school-theme', night ? 'night' : 'day'); } catch (e) {}
+  paintTheme();
+});
+paintTheme();
 
 /* ---------- Tabs ---------- */
 const tabs = { project: [document.getElementById('tab-project'), document.getElementById('page-project')], tools: [document.getElementById('tab-tools'), document.getElementById('page-tools')], lessons: [document.getElementById('tab-lessons'), document.getElementById('page-lessons')], practice: [document.getElementById('tab-practice'), document.getElementById('page-practice')], review: [document.getElementById('tab-review'), document.getElementById('page-review')] };

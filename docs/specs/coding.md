@@ -37,6 +37,7 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
   - **Progress.** A passed mission is stored as the mark `got` under the key `x|{mission}` (e.g. `x|5.2`), so it syncs to the account like every other mark; a bar and each level count missions done. Code typed in a mission is kept on the device (`coding-practice-drafts`); *Start again* restores the starting code. One mission is open at a time; the level last opened is remembered on the device.
   - **Free space.** A blank editor at the top, with a box for `input()` answers, to try anything.
   - With five tabs, the tab bar scrolls sideways on a phone and keeps the chosen tab in sight.
+- **Day or night.** The page opens in a beige day mode (the Git page's paper colours), whatever the computer's own setting: it used to follow the system and showed black on a dark-mode computer (changed 2026-10-17 at Victor's request). A ☾ / ☀ button beside the text size switches to night. The choice is stored as `school-theme` (`day` / `night`), shared with School and Git, so the three pages always match.
 - **Review** — every question, comment, Confused and No-time box, grouped in one place.
 
 ## Marks and notes
