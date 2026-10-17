@@ -38,5 +38,9 @@ describe('/coding study page', () => {
     expect(html).toContain('<title>Data Explorer Map</title>');
     // The page syncs through this app's API when served from /coding.
     expect(html).toContain("const SYNC_URL = '/api/coding/marks';");
+    // Practice: the missions page, its missions, and the Python that checks them.
+    expect(html).toContain('id="page-practice"');
+    expect(html).toContain('"id": "11.5"');
+    expect(html).toContain('cdn.jsdelivr.net/pyodide/v0.26.4/full/');
   });
 });

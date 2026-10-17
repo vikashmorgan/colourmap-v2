@@ -5,16 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Data Explorer Map</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%232f5fa7%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-size=%2716%27 text-anchor=%27middle%27 fill=%27%23f2c14e%27 font-family=%27monospace%27%3Epy%3C/text%3E%3C/svg%3E">
+<script>
+  // Day (beige) or night, the same choice as School and Git (school-theme), remembered on this device. Day by default,
+  // whatever the system says: the page was black on a dark-mode computer, and day is what was asked for (2026-10-17).
+  try { document.documentElement.dataset.theme = localStorage.getItem('school-theme') === 'night' ? 'dark' : 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
 :root {
-  --ground: #eef0ea;
-  --panel: #fafbf7;
+  --ground: #f6f1e6;
+  --panel: #fbf8f1;
   --ink: #1b2330;
   --muted: #6b5d4b;
-  --rule: #d5d9cf;
+  --rule: #e4dccb;
   --accent: #2f5fa7;
   --accent-soft: #dde6f4;
   --mark: #f2c14e;
@@ -22,7 +27,8 @@
   --warn: #b4532a;
   --warn-soft: #f6e1d6;
   --ok: #2f7a4f;
-  --code-bg: #f4f5f0;
+  --code-bg: #efe7d6;
+  --term-bg: #efe7d6; --term-ink: #2b2620;
   --tok-kw: #7a3fa0;
   --tok-str: #2f7a4f;
   --tok-com: #8a8f86;
@@ -619,6 +625,7 @@ main.wrap { zoom: var(--text-zoom); }
 pre, .terminal { zoom: var(--code-zoom); }
 .size-wrap { position: relative; margin-left: 12px; }
 .size-btn { font: 700 16px var(--display); color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 999px; width: 44px; height: 44px; cursor: pointer; }
+.top .wrap > .theme-btn { margin-left: auto; margin-right: -8px; }
 .size-btn[aria-expanded="true"], .size-btn:hover { border-color: var(--accent); color: var(--accent); }
 .size-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; display: grid; gap: 10px; width: 240px; box-shadow: 0 10px 30px color-mix(in srgb, var(--ink) 18%, transparent); }
 .size-row { display: grid; grid-template-columns: 1fr 34px 52px 34px; align-items: center; gap: 6px; font-size: 14px; }
@@ -983,6 +990,99 @@ details.datacode .mission-tag { background: var(--ok-c); }
 .wt-row code { font: 13px var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 .wt-row p { margin: 0; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+/* ---------- Practice ---------- */
+.pp-progress { display: flex; align-items: center; gap: 14px; margin-block: 4px 18px; }
+.pp-bar { flex: 1; max-width: 420px; height: 10px; border-radius: 99px; background: var(--rule); overflow: hidden; }
+.pp-bar i { display: block; height: 100%; width: 0; background: var(--ok); border-radius: 99px; transition: width .4s; }
+#pp-count { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.pp-index a.pp-full { border-color: var(--ok); }
+.pp-index .pp-lc { font: 500 12px var(--mono); color: var(--muted); margin-left: 4px; }
+.pp-index a .n { color: var(--sess); }
+.pp-note { margin: 0 0 10px; color: var(--muted); }
+.pe-play { border: 1px dashed var(--rule); border-radius: 14px; padding: 12px 16px; margin-bottom: 20px; background: var(--panel); }
+.pe-play > summary { cursor: pointer; font-weight: 600; }
+.pe-play[open] > summary { margin-bottom: 10px; }
+.pe-play-grid { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 10px; }
+.pe-inputs { font: 14px/1.5 var(--mono); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; background: var(--code-bg); color: var(--ink); resize: vertical; min-height: 132px; }
+.plevel { border: 1px solid color-mix(in srgb, var(--sess) 30%, var(--rule)); border-radius: 16px; margin-bottom: 14px; background: var(--panel); scroll-margin-top: 120px; }
+.plevel > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 12px; padding: 16px 20px; border-radius: 16px; background: color-mix(in srgb, var(--sess) 9%, var(--panel)); }
+.plevel > summary::-webkit-details-marker { display: none; }
+.pl-n { font: 600 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--sess); }
+.pl-title { font: 700 22px/1.2 var(--display); }
+.pl-count { margin-left: auto; font: 500 13px var(--mono); color: var(--muted); }
+.plevel[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.pl-idea { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; padding: 18px 20px; border-bottom: 1px solid var(--rule); }
+.pl-idea p { margin: 6px 0 0; font-size: 16px; line-height: 1.55; }
+.pl-idea .eyebrow { color: var(--sess); }
+.pl-ex .pe-pre { margin: 0; }
+.pl-exout { margin-top: 0; }
+.pl-missions { padding: 12px 14px 16px; display: grid; gap: 8px; }
+.pmission { border: 1px solid var(--rule); border-radius: 12px; background: var(--panel); scroll-margin-top: 120px; }
+.pmission > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.pmission > summary::-webkit-details-marker { display: none; }
+.pmission > summary:hover { background: color-mix(in srgb, var(--sess) 7%, transparent); border-radius: 12px; }
+.pm-num { font: 600 13px var(--mono); color: var(--sess); min-width: 3.2em; }
+.pm-title { font-weight: 600; }
+.pm-done { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; border: 1.5px solid var(--rule); color: transparent; }
+.pmission.is-done .pm-done { background: var(--ok); border-color: var(--ok); color: #fff; }
+.pmission[open] { border-color: color-mix(in srgb, var(--sess) 45%, var(--rule)); box-shadow: 0 6px 20px rgb(0 0 0 / .06); }
+.pm-body { padding: 4px 16px 16px; display: grid; gap: 12px; }
+.pm-task { font-size: 17px; line-height: 1.55; }
+.pm-task pre, .pm-help pre { font: 14px/1.5 var(--mono); background: var(--code-bg); border-radius: 8px; padding: 8px 12px; margin: 8px 0 0; overflow-x: auto; }
+.pm-task code, .pm-help code, .pe-verdict code, .pe-err code, .pl-idea code { font-family: var(--mono); font-size: .92em; background: var(--code-bg); border-radius: 4px; padding: 0 4px; }
+.pe-code { width: 100%; min-height: 132px; font: 15px/1.6 var(--mono); tab-size: 4; padding: 12px 14px; border: 1.5px solid var(--rule); border-radius: 10px; background: var(--code-bg); color: var(--ink); resize: vertical; overflow: auto; white-space: pre; box-sizing: border-box; }
+.pe-code:focus, .pe-inputs:focus { outline: none; border-color: var(--sess, var(--accent)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sess, var(--accent)) 20%, transparent); }
+.pe-bar { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.pe-run { font: 600 15px var(--body); padding: 9px 18px; min-height: 40px; border-radius: 10px; border: 0; background: var(--ok); color: #fff; cursor: pointer; }
+.pe-run:hover { filter: brightness(1.08); }
+.pe-run:disabled { opacity: .6; cursor: progress; }
+.pe-keys { font: 12px var(--mono); color: var(--muted); }
+.pe-reset { margin-left: auto; font: inherit; font-size: 14px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--rule); background: transparent; color: var(--muted); cursor: pointer; }
+.pe-reset:hover { color: var(--ink); border-color: var(--muted); }
+.pe-status { font-size: 14px; color: var(--muted); min-height: 0; }
+.pe-status:empty { display: none; }
+.pe-out { margin-top: 8px; }
+.pe-out-head { font: 600 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 8px 0 4px; }
+.pe-pre { font: 14px/1.5 var(--mono); background: var(--term-bg, #1b2330); color: var(--term-ink, #e9eef5); border-radius: 10px; padding: 10px 14px; margin: 0; white-space: pre-wrap; overflow-x: auto; }
+.pe-want { background: color-mix(in srgb, var(--ok) 14%, var(--code-bg)); color: var(--ink); }
+.pe-none { color: var(--muted); font-style: italic; }
+.pe-pre .pe-none { color: var(--muted); }
+:root[data-theme="dark"] { --term-bg: #0f1318; --term-ink: #e9eef5; }
+:root[data-theme="dark"] .pe-run, :root[data-theme="dark"] .pe-next:hover { color: #0f1318; }
+.pe-verdict { margin-top: 10px; border-radius: 12px; padding: 12px 14px; }
+.pe-verdict p { margin: 0 0 8px; }
+.pe-verdict p:last-child { margin-bottom: 0; }
+.pe-ok { background: color-mix(in srgb, var(--ok) 14%, var(--panel)); border: 1px solid color-mix(in srgb, var(--ok) 45%, var(--rule)); }
+.pe-ok b { color: var(--ok); }
+.pe-no { background: color-mix(in srgb, var(--mark) 18%, var(--panel)); border: 1px solid color-mix(in srgb, var(--mark) 55%, var(--rule)); }
+.pe-next { font: 600 15px var(--body); padding: 9px 16px; border-radius: 10px; border: 1.5px solid var(--ok); background: var(--panel); color: var(--ok); cursor: pointer; }
+.pe-next:hover { background: var(--ok); color: #fff; }
+.pe-err { margin-top: 10px; border-radius: 12px; padding: 12px 14px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--rule)); }
+.pe-err-head { display: flex; gap: 10px; align-items: baseline; color: var(--warn); }
+.pe-err-line { font: 600 13px var(--mono); }
+.pe-err p { margin: 6px 0; }
+/* An error is its own box; the verdict around it adds no second frame. */
+.pe-verdict.pe-bare { padding: 0; background: none; border: 0; }
+.pe-verdict.pe-bare .pe-err { margin-top: 0; }
+/* Five tabs since Practice: on a phone they scroll sideways instead of pushing Review off the screen. */
+@media (max-width: 720px) {
+  .tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { flex: none; white-space: nowrap; padding: 8px 12px; }
+}
+.pe-err-raw { display: block; font: 12px var(--mono); color: var(--muted); background: none !important; padding: 0 !important; }
+.pm-help { border-top: 1px solid var(--rule); padding-top: 8px; }
+.pm-help > summary { cursor: pointer; font-weight: 600; color: var(--muted); }
+.pm-help[open] > summary { color: var(--ink); margin-bottom: 6px; }
+.pm-sol-note { margin: 0 0 6px; font-size: 14px; color: var(--muted); }
+@media (max-width: 720px) {
+  .pl-idea { grid-template-columns: minmax(0, 1fr); }
+  .pe-play-grid { grid-template-columns: minmax(0, 1fr); }
+  .pe-inputs { min-height: 70px; }
+  .pl-title { font-size: 19px; }
+  .pm-body { padding-inline: 12px; }
+  .pe-code { font-size: 14px; }
+}
 /* Last, so no later "font" shorthand can bring the joined operator symbols back. */
 body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-name, body .lchip { font-variant-ligatures: none; font-feature-settings: "calt" 0, "liga" 0; }
 </style>
@@ -996,8 +1096,10 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
       <button id="tab-project" role="tab" aria-selected="true" aria-controls="page-project">Project 1</button>
       <button id="tab-tools" role="tab" aria-selected="false" aria-controls="page-tools">Python toolkit</button>
       <button id="tab-lessons" role="tab" aria-selected="false" aria-controls="page-lessons">Lessons</button>
+      <button id="tab-practice" role="tab" aria-selected="false" aria-controls="page-practice">Practice</button>
       <button id="tab-review" role="tab" aria-selected="false" aria-controls="page-review">Review <b class="tab-count" id="review-count"></b></button>
     </div>
+    <button type="button" class="size-btn theme-btn" id="theme-btn" aria-label="Switch between day and night" title="Day or night">☾</button>
     <div class="size-wrap">
       <button type="button" class="size-btn" id="size-btn" aria-expanded="false" aria-controls="size-panel" title="Text size">Aa</button>
       <div class="size-panel" id="size-panel" role="dialog" aria-label="Text size" hidden>
@@ -1313,9 +1415,18 @@ requirements.txt, which you hand in, simply lists requests so the teacher can ru
     <nav class="index" id="lesson-index" aria-label="Sessions"></nav>
     <div id="lessons"></div>
   </section>
+  <section id="page-practice" role="tabpanel" aria-labelledby="tab-practice" hidden>
+    <div class="intro">
+      <span class="eyebrow">Page 4 · Practice</span>
+      <h1>Write code yourself, one small mission at a time.</h1>
+      <p>Each mission asks for a few lines. Write them in the box, press <b>Run</b> (or Ctrl + Enter) and the page tests your program. Stuck? Open the hint first and the solution last. It starts with a single <code>print</code> and climbs, level by level, to small programs like Project 1. Python runs right here in the page: nothing to install.</p>
+    </div>
+    <div id="practice"></div>
+  </section>
+
   <section id="page-review" role="tabpanel" aria-labelledby="tab-review" hidden>
     <div class="intro">
-      <span class="eyebrow">Page 4 · Your review</span>
+      <span class="eyebrow">Page 5 · Your review</span>
       <h1>Everything you flagged, in one place.</h1>
       <p>Every question and comment, in the order of the page: Project 1 step by step, then the lessons box by box. Each answer sits right under its question, here and where you asked it. Then every box you marked Confused or No time.</p>
     </div>
@@ -3612,6 +3723,7 @@ async function startSync() {
     ? 'Synced with your Google account: the same marks and notes on your phone and computer.'
     : 'Marks synced with your Google account. Notes are kept in this browser for now.';
   paintAll();
+  paintPractice();
 }
 
 /* ---------- The note editor: one at a time ---------- */
@@ -4262,13 +4374,344 @@ document.addEventListener('click', e => {
   if (!sizePanel.hidden && !e.target.closest('.size-wrap')) { sizePanel.hidden = true; sizeBtn.setAttribute('aria-expanded', 'false'); }
 });
 
+
+/* ---------- Practice: write code yourself ---------- */
+// Asked for 2026-10-17: "I just don't know how to start coding … a set of
+// exercises, simple at first, to move on, so I can train my ability to write
+// code." A ladder of small missions, level by level. Each is checked by running
+// the code: real Python (Pyodide) in a worker, so a loop that never ends can be
+// stopped. The missions, their solutions and their checks are run-checked
+// (every solution passes, no starting code does).
+const PRACTICE = [{"n": 1, "title": "First words", "idea": "A program is a list of instructions, read from top to bottom. <code>print()<\/code> shows whatever you put in the brackets. Text goes in quotes; numbers do not.", "example": "print(\"Hello\")\nprint(3 + 4)", "exampleOut": "Hello\n7", "missions": [{"id": "1.1", "title": "Say hello", "task": "Make the program show <code>Hello, world!<\/code>", "start": "# Write your line under this one\n", "hint": "Text goes in quotes inside the brackets: <code>print(\"…\")<\/code>", "solution": "print(\"Hello, world!\")", "runs": [{"expect": "Hello, world!"}], "check": null, "must": [], "mustNot": []}, {"id": "1.2", "title": "Two lines", "task": "Show these two lines, one under the other:<pre>I am learning Python\nOne line at a time<\/pre>", "start": "", "hint": "One <code>print()<\/code> per line.", "solution": "print(\"I am learning Python\")\nprint(\"One line at a time\")", "runs": [{"expect": "I am learning Python\nOne line at a time"}], "check": null, "must": [], "mustNot": []}, {"id": "1.3", "title": "A number", "task": "Show the number <code>7<\/code>. A number needs no quotes.", "start": "", "hint": "<code>print(7)<\/code>", "solution": "print(7)", "runs": [{"expect": "7"}], "check": null, "must": [], "mustNot": [["\"7\"", "Try it without the quotes: 7 is a number, \"7\" is text."], ["'7'", "Try it without the quotes: 7 is a number, '7' is text."]]}, {"id": "1.4", "title": "Python counts for you", "task": "Show the result of <code>12 × 8<\/code>. Do not work it out yourself: let Python do it. (In Python, times is <code>*<\/code>.)", "start": "", "hint": "Put the sum itself in the brackets: <code>print(12 * 8)<\/code>", "solution": "print(12 * 8)", "runs": [{"expect": "96"}], "check": null, "must": [["*", "Let Python multiply: write 12 * 8 in the brackets."]], "mustNot": []}, {"id": "1.5", "title": "Several things on one line", "task": "Show <code>Milan 2026<\/code> by giving <code>print<\/code> two things: the text <code>\"Milan\"<\/code> and the number <code>2026<\/code>, separated by a comma.", "start": "", "hint": "A comma between them: <code>print(\"Milan\", 2026)<\/code>. Python puts a space between them for you.", "solution": "print(\"Milan\", 2026)", "runs": [{"expect": "Milan 2026"}], "check": null, "must": [[",", "Separate the two things with a comma."]], "mustNot": []}, {"id": "1.6", "title": "Fix the bug", "task": "This line is broken. Run it, read the error, then fix it so it shows <code>Hello<\/code>.", "start": "print(\"Hello)\n", "hint": "Text must start <em>and<\/em> end with a quote.", "solution": "print(\"Hello\")", "runs": [{"expect": "Hello"}], "check": null, "must": [], "mustNot": []}]}, {"n": 2, "title": "Variables: boxes with names", "idea": "A variable is a name for a value. <code>=<\/code> puts the value on the right into the name on the left. After that, the name stands for the value.", "example": "age = 25\nprint(age)\nage = age + 1\nprint(age)", "exampleOut": "25\n26", "missions": [{"id": "2.1", "title": "Your first variable", "task": "Make a variable called <code>name<\/code> holding your first name (as text), then print it.", "start": "", "hint": "<code>name = \"Victor\"<\/code> on one line, <code>print(name)<\/code> on the next. No quotes around <code>name<\/code> in the print: you want the box, not the word.", "solution": "name = \"Victor\"\nprint(name)", "runs": [{}], "check": "assert 'name' in dir(), 'Make a variable called name.'\nassert isinstance(name, str) and name.strip(), 'name should hold some text, in quotes.'\nassert out.strip() == name, 'Print the variable: print(name).'", "must": [], "mustNot": []}, {"id": "2.2", "title": "Change what is inside", "task": "The city changes in the middle. Add one line where the comment is, so the program shows <code>Geneva<\/code> then <code>Milan<\/code>.", "start": "city = \"Geneva\"\nprint(city)\n# put Milan into city here\nprint(city)\n", "hint": "Give <code>city<\/code> a new value: <code>city = \"Milan\"<\/code>", "solution": "city = \"Geneva\"\nprint(city)\ncity = \"Milan\"\nprint(city)", "runs": [{"expect": "Geneva\nMilan"}], "check": null, "must": [], "mustNot": [["print(\"Milan\")", "Change the variable instead of printing the word: city = \"Milan\"."]]}, {"id": "2.3", "title": "Maths with names", "task": "3 coffees cost 4 francs each. Make <code>price = 4<\/code> and <code>quantity = 3<\/code>, then a variable <code>total<\/code> that multiplies them. Print <code>total<\/code>.", "start": "price = 4\nquantity = 3\n", "hint": "<code>total = price * quantity<\/code>", "solution": "price = 4\nquantity = 3\ntotal = price * quantity\nprint(total)", "runs": [{"expect": "12"}], "check": "assert 'total' in dir(), 'Make a variable called total.'\nassert total == 12, 'total should be price * quantity.'", "must": [["price * quantity", "Work total out from the two variables: price * quantity."]], "mustNot": []}, {"id": "2.4", "title": "Add to a score", "task": "<code>score<\/code> starts at 10. You win 5 points: add 5 to <code>score<\/code> (using <code>score<\/code> itself), then print it.", "start": "score = 10\n", "hint": "<code>score = score + 5<\/code> means: take the old score, add 5, put the result back. The short way is <code>score += 5<\/code>.", "solution": "score = 10\nscore = score + 5\nprint(score)", "runs": [{"expect": "15"}], "check": "assert score == 15, 'score itself should now hold 15.'", "must": [], "mustNot": [["score = 15", "Add to the score instead of typing the answer: score = score + 5."]]}, {"id": "2.5", "title": "Three kinds of division", "task": "Print, on three lines: <code>7 / 2<\/code>, <code>7 // 2<\/code> and <code>7 % 2<\/code>. Then look at what each one does.", "start": "", "hint": "Three <code>print()<\/code> lines. <code>/<\/code> divides, <code>//<\/code> keeps only the whole part, <code>%<\/code> gives what is left over.", "solution": "print(7 / 2)\nprint(7 // 2)\nprint(7 % 2)", "runs": [{"expect": "3.5\n3\n1"}], "check": null, "must": [], "mustNot": []}]}, {"n": 3, "title": "Text", "idea": "Text is called a <em>string<\/em>. <code>+<\/code> glues strings together. An <em>f-string<\/em>, <code>f\"…\"<\/code>, lets you drop variables into text with <code>{}<\/code>. Methods like <code>.upper()<\/code> are things a string can do.", "example": "name = \"Ada\"\nprint(\"Hi \" + name)\nprint(f\"{name} has {len(name)} letters\")\nprint(name.upper())", "exampleOut": "Hi Ada\nAda has 3 letters\nADA", "missions": [{"id": "3.1", "title": "Glue two words", "task": "With <code>first = \"Ada\"<\/code> and <code>last = \"Lovelace\"<\/code>, print <code>Ada Lovelace<\/code> using <code>+<\/code>. Mind the space.", "start": "first = \"Ada\"\nlast = \"Lovelace\"\n", "hint": "Glue three pieces: <code>first + \" \" + last<\/code>", "solution": "first = \"Ada\"\nlast = \"Lovelace\"\nprint(first + \" \" + last)", "runs": [{"expect": "Ada Lovelace"}], "check": null, "must": [["+", "Glue them with +."]], "mustNot": [["\"Ada Lovelace\"", "Build it from the two variables."]]}, {"id": "3.2", "title": "An f-string", "task": "With <code>name = \"Victor\"<\/code> and <code>age = 25<\/code>, print <code>Victor is 25 years old<\/code> using an f-string.", "start": "name = \"Victor\"\nage = 25\n", "hint": "An <code>f<\/code> just before the quote, and the names in curly brackets: <code>f\"{name} is {age} years old\"<\/code>", "solution": "name = \"Victor\"\nage = 25\nprint(f\"{name} is {age} years old\")", "runs": [{"expect": "Victor is 25 years old"}], "check": null, "must": [["{name}", "Put {name} inside the f-string."], ["{age}", "Put {age} inside the f-string."]], "mustNot": []}, {"id": "3.3", "title": "Shout it", "task": "Print the word in <code>word<\/code> in capital letters, using <code>.upper()<\/code>.", "start": "word = \"milan\"\n", "hint": "<code>print(word.upper())<\/code>", "solution": "word = \"milan\"\nprint(word.upper())", "runs": [{"expect": "MILAN"}], "check": null, "must": [[".upper()", "Use word.upper()."]], "mustNot": []}, {"id": "3.4", "title": "How long?", "task": "Print how many letters are in <code>\"Politecnico\"<\/code>, using <code>len()<\/code>.", "start": "", "hint": "<code>len(\"Politecnico\")<\/code> gives the length. Put it inside <code>print()<\/code>.", "solution": "print(len(\"Politecnico\"))", "runs": [{"expect": "11"}], "check": null, "must": [["len(", "Use len()."]], "mustNot": []}, {"id": "3.5", "title": "Text plus a number", "task": "This crashes, because you cannot glue text and a number with <code>+<\/code>. Fix it so it shows <code>Age: 25<\/code>.", "start": "age = 25\nprint(\"Age: \" + age)\n", "hint": "Turn the number into text with <code>str(age)<\/code>, or use an f-string: <code>f\"Age: {age}\"<\/code>.", "solution": "age = 25\nprint(\"Age: \" + str(age))", "runs": [{"expect": "Age: 25"}], "check": null, "must": [], "mustNot": []}]}, {"n": 4, "title": "Asking the user", "idea": "<code>input(\"question\")<\/code> shows the question, waits for an answer and gives it back as text. To do maths with it, turn it into a number with <code>int()<\/code>. Here, the tests type the answers for you.", "example": "name = input(\"Your name? \")\nyears = int(input(\"Age? \"))\nprint(f\"Hi {name}, next year you are {years + 1}\")", "exampleOut": "Your name? Ada\nAge? 36\nHi Ada, next year you are 37", "missions": [{"id": "4.1", "title": "Ask a name", "task": "Ask <code>What is your name? <\/code> and keep the answer in <code>name<\/code>. Then print <code>Hello, <\/code> followed by the name.", "start": "", "hint": "<code>name = input(\"What is your name? \")<\/code>, then <code>print(\"Hello, \" + name)<\/code>", "solution": "name = input(\"What is your name? \")\nprint(\"Hello, \" + name)", "runs": [{"inputs": ["Ada"], "last": "Hello, Ada"}, {"inputs": ["Victor"], "last": "Hello, Victor"}], "check": null, "must": [], "mustNot": []}, {"id": "4.2", "title": "Double it", "task": "Ask <code>A number: <\/code>, then print that number times two.", "start": "", "hint": "<code>input()<\/code> gives text: <code>\"21\" * 2<\/code> would be <code>\"2121\"<\/code>! Wrap it: <code>n = int(input(\"A number: \"))<\/code>", "solution": "n = int(input(\"A number: \"))\nprint(n * 2)", "runs": [{"inputs": ["21"], "last": "42"}, {"inputs": ["5"], "last": "10"}], "check": null, "must": [], "mustNot": []}, {"id": "4.3", "title": "Year of birth", "task": "Ask <code>How old are you? <\/code>, then print <code>You were born around <\/code> and 2026 minus the age.", "start": "", "hint": "<code>age = int(input(\"How old are you? \"))<\/code>, then an f-string with <code>{2026 - age}<\/code>.", "solution": "age = int(input(\"How old are you? \"))\nprint(f\"You were born around {2026 - age}\")", "runs": [{"inputs": ["25"], "last": "You were born around 2001"}, {"inputs": ["60"], "last": "You were born around 1966"}], "check": null, "must": [], "mustNot": []}]}, {"n": 5, "title": "Decisions", "idea": "<code>if<\/code> runs the indented lines under it only when the condition is true. <code>elif<\/code> tries another condition, <code>else<\/code> catches the rest. Compare with <code>==  !=  &lt;  &gt;  &lt;=  &gt;=<\/code>; join conditions with <code>and<\/code> / <code>or<\/code>.", "example": "temp = 30\nif temp > 25:\n    print(\"Hot\")\nelif temp > 10:\n    print(\"Mild\")\nelse:\n    print(\"Cold\")", "exampleOut": "Hot", "missions": [{"id": "5.1", "title": "Only if", "task": "Ask <code>Temperature: <\/code> (a number). If it is above 25, print <code>Hot day<\/code>. Otherwise print nothing.", "start": "temperature = int(input(\"Temperature: \"))\n", "hint": "Mind the colon and the four spaces:<pre>if temperature &gt; 25:\n    print(\"Hot day\")<\/pre>", "solution": "temperature = int(input(\"Temperature: \"))\nif temperature > 25:\n    print(\"Hot day\")", "runs": [{"inputs": ["30"], "last": "Hot day"}, {"inputs": ["12"], "expect": "Temperature: 12"}], "check": null, "must": [], "mustNot": []}, {"id": "5.2", "title": "Even or odd", "task": "Ask <code>A number: <\/code>. Print <code>even<\/code> if it divides by 2, otherwise <code>odd<\/code>.", "start": "n = int(input(\"A number: \"))\n", "hint": "A number is even when <code>n % 2 == 0<\/code> (nothing left over). Use <code>if<\/code> … <code>else:<\/code>", "solution": "n = int(input(\"A number: \"))\nif n % 2 == 0:\n    print(\"even\")\nelse:\n    print(\"odd\")", "runs": [{"inputs": ["7"], "last": "odd"}, {"inputs": ["10"], "last": "even"}, {"inputs": ["0"], "last": "even"}], "check": null, "must": [], "mustNot": []}, {"id": "5.3", "title": "A grade", "task": "Ask <code>Score: <\/code>. Print <code>A<\/code> for 90 or more, <code>B<\/code> for 70 or more, otherwise <code>C<\/code>.", "start": "score = int(input(\"Score: \"))\n", "hint": "Check the highest first: <code>if score &gt;= 90:<\/code> … <code>elif score &gt;= 70:<\/code> … <code>else:<\/code>", "solution": "score = int(input(\"Score: \"))\nif score >= 90:\n    print(\"A\")\nelif score >= 70:\n    print(\"B\")\nelse:\n    print(\"C\")", "runs": [{"inputs": ["95"], "last": "A"}, {"inputs": ["90"], "last": "A"}, {"inputs": ["75"], "last": "B"}, {"inputs": ["40"], "last": "C"}], "check": null, "must": [], "mustNot": []}, {"id": "5.4", "title": "Log in", "task": "Ask <code>User: <\/code> then <code>Password: <\/code>. Print <code>Welcome<\/code> only if the user is <code>admin<\/code> <em>and<\/em> the password is <code>1234<\/code>; otherwise <code>Access denied<\/code>.", "start": "user = input(\"User: \")\npassword = input(\"Password: \")\n", "hint": "Both must be true: <code>if user == \"admin\" and password == \"1234\":<\/code>", "solution": "user = input(\"User: \")\npassword = input(\"Password: \")\nif user == \"admin\" and password == \"1234\":\n    print(\"Welcome\")\nelse:\n    print(\"Access denied\")", "runs": [{"inputs": ["admin", "1234"], "last": "Welcome"}, {"inputs": ["admin", "0000"], "last": "Access denied"}, {"inputs": ["guest", "1234"], "last": "Access denied"}], "check": null, "must": [], "mustNot": []}]}, {"n": 6, "title": "Lists", "idea": "A list holds several values in order: <code>[1, 2, 3]<\/code>. Positions start at 0: <code>x[0]<\/code> is the first, <code>x[-1]<\/code> the last. <code>.append()<\/code> adds to the end; <code>len()<\/code>, <code>sum()<\/code>, <code>sorted()<\/code> work on the whole list.", "example": "colours = [\"red\", \"blue\"]\ncolours.append(\"green\")\nprint(colours[0], colours[-1], len(colours))", "exampleOut": "red green 3", "missions": [{"id": "6.1", "title": "The first one", "task": "Make a list <code>fruits<\/code> with <code>\"apple\"<\/code>, <code>\"banana\"<\/code>, <code>\"cherry\"<\/code>, then print the first fruit.", "start": "", "hint": "Square brackets, commas between: <code>fruits = [\"apple\", \"banana\", \"cherry\"]<\/code>. The first is <code>fruits[0]<\/code>.", "solution": "fruits = [\"apple\", \"banana\", \"cherry\"]\nprint(fruits[0])", "runs": [{"expect": "apple"}], "check": "assert fruits == ['apple', 'banana', 'cherry'], 'fruits should hold apple, banana, cherry in that order.'", "must": [["fruits[", "Take it out of the list with fruits[…]."]], "mustNot": []}, {"id": "6.2", "title": "The last one", "task": "Print the last fruit, without counting: use a negative position.", "start": "fruits = [\"apple\", \"banana\", \"cherry\"]\n", "hint": "<code>fruits[-1]<\/code> is always the last.", "solution": "fruits = [\"apple\", \"banana\", \"cherry\"]\nprint(fruits[-1])", "runs": [{"expect": "cherry"}], "check": null, "must": [["[-1]", "Use fruits[-1]."]], "mustNot": []}, {"id": "6.3", "title": "A shopping list", "task": "Start from the empty list. Add <code>\"bread\"<\/code> then <code>\"milk\"<\/code> with <code>.append()<\/code>, then print the list.", "start": "shopping = []\n", "hint": "<code>shopping.append(\"bread\")<\/code> adds one item to the end.", "solution": "shopping = []\nshopping.append(\"bread\")\nshopping.append(\"milk\")\nprint(shopping)", "runs": [{"expect": "['bread', 'milk']"}], "check": null, "must": [[".append(", "Add them with .append()."]], "mustNot": []}, {"id": "6.4", "title": "Count and add up", "task": "Print how many numbers are in the list, then (on the next line) their total.", "start": "numbers = [4, 8, 15, 16, 23, 42]\n", "hint": "<code>len(numbers)<\/code> and <code>sum(numbers)<\/code>.", "solution": "numbers = [4, 8, 15, 16, 23, 42]\nprint(len(numbers))\nprint(sum(numbers))", "runs": [{"expect": "6\n108"}], "check": null, "must": [["len(", "Use len()."], ["sum(", "Use sum()."]], "mustNot": []}, {"id": "6.5", "title": "In order", "task": "Print the names sorted alphabetically, with <code>sorted()<\/code>.", "start": "names = [\"Marco\", \"Ada\", \"Zoe\", \"Ines\"]\n", "hint": "<code>print(sorted(names))<\/code>", "solution": "names = [\"Marco\", \"Ada\", \"Zoe\", \"Ines\"]\nprint(sorted(names))", "runs": [{"expect": "['Ada', 'Ines', 'Marco', 'Zoe']"}], "check": null, "must": [["sorted(", "Use sorted()."]], "mustNot": []}, {"id": "6.6", "title": "Is it there?", "task": "Ask <code>Guest: <\/code>. Print <code>On the list<\/code> if the name is in <code>guests<\/code>, otherwise <code>Not invited<\/code>.", "start": "guests = [\"Ada\", \"Marco\", \"Ines\"]\nname = input(\"Guest: \")\n", "hint": "<code>if name in guests:<\/code>", "solution": "guests = [\"Ada\", \"Marco\", \"Ines\"]\nname = input(\"Guest: \")\nif name in guests:\n    print(\"On the list\")\nelse:\n    print(\"Not invited\")", "runs": [{"inputs": ["Marco"], "last": "On the list"}, {"inputs": ["Bob"], "last": "Not invited"}], "check": null, "must": [[" in guests", "Use: name in guests"]], "mustNot": []}]}, {"n": 7, "title": "Repeating: for", "idea": "<code>for x in something:<\/code> runs the indented lines once for each item, with <code>x<\/code> holding the item. <code>range(1, 6)<\/code> gives 1, 2, 3, 4, 5 (it stops <em>before<\/em> 6).", "example": "for n in range(1, 4):\n    print(n, \"x 2 =\", n * 2)", "exampleOut": "1 x 2 = 2\n2 x 2 = 4\n3 x 2 = 6", "missions": [{"id": "7.1", "title": "One by one", "task": "Print each fruit on its own line, with a <code>for<\/code> loop.", "start": "fruits = [\"apple\", \"banana\", \"cherry\"]\n", "hint": "<pre>for fruit in fruits:\n    print(fruit)<\/pre>", "solution": "fruits = [\"apple\", \"banana\", \"cherry\"]\nfor fruit in fruits:\n    print(fruit)", "runs": [{"expect": "apple\nbanana\ncherry"}], "check": null, "must": [["for ", "Use a for loop."]], "mustNot": []}, {"id": "7.2", "title": "Count to five", "task": "Print the numbers 1 to 5, one per line, with <code>for<\/code> and <code>range()<\/code>.", "start": "", "hint": "<code>range(1, 6)<\/code>: it stops before the second number.", "solution": "for n in range(1, 6):\n    print(n)", "runs": [{"expect": "1\n2\n3\n4\n5"}], "check": null, "must": [["range(", "Use range()."]], "mustNot": []}, {"id": "7.3", "title": "Add up 1 to 100", "task": "Add up every number from 1 to 100 with a loop and print the total.", "start": "total = 0\n", "hint": "Inside the loop, <code>total = total + n<\/code>. Print <em>after<\/em> the loop (not indented), so it prints once.", "solution": "total = 0\nfor n in range(1, 101):\n    total = total + n\nprint(total)", "runs": [{"expect": "5050"}], "check": null, "must": [["for ", "Use a for loop."]], "mustNot": [["5050", "Let the loop find it."], ["sum(", "Do it with the loop this time, not sum()."]]}, {"id": "7.4", "title": "Count the long words", "task": "Count how many words have more than 4 letters, and print the count.", "start": "words = [\"sun\", \"python\", \"milan\", \"art\", \"data\", \"school\"]\ncount = 0\n", "hint": "Loop over the words; <code>if len(word) &gt; 4:<\/code> then <code>count += 1<\/code>.", "solution": "words = [\"sun\", \"python\", \"milan\", \"art\", \"data\", \"school\"]\ncount = 0\nfor word in words:\n    if len(word) > 4:\n        count += 1\nprint(count)", "runs": [{"expect": "3"}], "check": null, "must": [["for ", "Use a for loop."]], "mustNot": []}, {"id": "7.5", "title": "Times table", "task": "Ask <code>Table of: <\/code>, then print its table from 1 to 10, like <code>3 x 1 = 3<\/code>.", "start": "n = int(input(\"Table of: \"))\n", "hint": "<pre>for i in range(1, 11):\n    print(f\"{n} x {i} = {n * i}\")<\/pre>", "solution": "n = int(input(\"Table of: \"))\nfor i in range(1, 11):\n    print(f\"{n} x {i} = {n * i}\")", "runs": [{"inputs": ["3"], "has": ["3 x 1 = 3", "3 x 7 = 21", "3 x 10 = 30"]}, {"inputs": ["7"], "has": ["7 x 1 = 7", "7 x 10 = 70"]}], "check": "assert len([l for l in out.splitlines() if ' x ' in l]) == 10, 'Ten lines: from 1 to 10.'", "must": [], "mustNot": []}]}, {"n": 8, "title": "Repeating: while", "idea": "<code>while condition:<\/code> repeats as long as the condition is true. Something inside must change, or it never stops. <code>break<\/code> leaves the loop at once.", "example": "n = 3\nwhile n > 0:\n    print(n)\n    n = n - 1", "exampleOut": "3\n2\n1", "missions": [{"id": "8.1", "title": "Countdown", "task": "Count down from 5 to 1 with <code>while<\/code>, then print <code>Go!<\/code>.", "start": "n = 5\n", "hint": "Inside: print, then <code>n = n - 1<\/code>. <code>Go!<\/code> goes after the loop.", "solution": "n = 5\nwhile n > 0:\n    print(n)\n    n = n - 1\nprint(\"Go!\")", "runs": [{"expect": "5\n4\n3\n2\n1\nGo!"}], "check": null, "must": [["while ", "Use a while loop."]], "mustNot": []}, {"id": "8.2", "title": "Guess the number", "task": "The secret is 7. Keep asking <code>Guess: <\/code>. Print <code>Too low<\/code> or <code>Too high<\/code>, and stop with <code>Correct!<\/code> when it is right.", "start": "secret = 7\n", "hint": "Start with <code>guess = 0<\/code>, then <code>while guess != secret:<\/code> ask, compare, print. <code>Correct!<\/code> after the loop.", "solution": "secret = 7\nguess = 0\nwhile guess != secret:\n    guess = int(input(\"Guess: \"))\n    if guess < secret:\n        print(\"Too low\")\n    elif guess > secret:\n        print(\"Too high\")\nprint(\"Correct!\")", "runs": [{"inputs": ["3", "9", "7"], "has": ["Too low", "Too high"], "last": "Correct!"}, {"inputs": ["7"], "last": "Correct!"}], "check": null, "must": [], "mustNot": []}, {"id": "8.3", "title": "Until you say stop", "task": "Keep asking <code>Word: <\/code> and print each word in capitals. Stop (without printing) when the word is <code>stop<\/code>.", "start": "", "hint": "<pre>while True:\n    word = input(\"Word: \")\n    if word == \"stop\":\n        break\n    print(word.upper())<\/pre>", "solution": "while True:\n    word = input(\"Word: \")\n    if word == \"stop\":\n        break\n    print(word.upper())", "runs": [{"inputs": ["hi", "milan", "stop"], "has": ["HI", "MILAN"]}], "check": "assert 'STOP' not in out, 'Stop before printing stop.'", "must": [], "mustNot": []}]}, {"n": 9, "title": "Functions", "idea": "<code>def name(inputs):<\/code> makes your own command. <code>return<\/code> hands a result back to whoever called it. Write it once, use it many times.", "example": "def double(n):\n    return n * 2\n\nprint(double(4))\nprint(double(10))", "exampleOut": "8\n20", "missions": [{"id": "9.1", "title": "Greet", "task": "Write a function <code>greet(name)<\/code> that <em>returns<\/em> <code>\"Hello, \"<\/code> plus the name. (Returns, not prints.)", "start": "def greet(name):\n    # your line here\n\n\nprint(greet(\"Ada\"))\n", "hint": "<code>return \"Hello, \" + name<\/code>, indented under the <code>def<\/code>.", "solution": "def greet(name):\n    return \"Hello, \" + name\n\n\nprint(greet(\"Ada\"))", "runs": [{}], "check": "assert greet('Ada') == 'Hello, Ada', f'greet(\"Ada\") gave {greet(\"Ada\")!r}, expected \"Hello, Ada\". Did you return it?'\nassert greet('Marco') == 'Hello, Marco', 'Try another name: greet(\"Marco\").'", "must": [], "mustNot": []}, {"id": "9.2", "title": "Square", "task": "Write <code>square(n)<\/code> that returns <code>n<\/code> times itself.", "start": "def square(n):\n    \n", "hint": "<code>return n * n<\/code>", "solution": "def square(n):\n    return n * n", "runs": [{}], "check": "for x, y in [(3, 9), (0, 0), (-4, 16), (10, 100)]:\n    assert square(x) == y, f'square({x}) gave {square(x)!r}, expected {y}.'", "must": [], "mustNot": []}, {"id": "9.3", "title": "Is it even?", "task": "Write <code>is_even(n)<\/code> that returns <code>True<\/code> if <code>n<\/code> is even, else <code>False<\/code>.", "start": "def is_even(n):\n    \n", "hint": "You can return the comparison itself: <code>return n % 2 == 0<\/code>", "solution": "def is_even(n):\n    return n % 2 == 0", "runs": [{}], "check": "for x, y in [(4, True), (7, False), (0, True), (-3, False)]:\n    assert is_even(x) is y, f'is_even({x}) gave {is_even(x)!r}, expected {y}.'", "must": [], "mustNot": []}, {"id": "9.4", "title": "Average", "task": "Write <code>average(numbers)<\/code> that returns the average of a list.", "start": "def average(numbers):\n    \n", "hint": "Total divided by how many: <code>sum(numbers) / len(numbers)<\/code>", "solution": "def average(numbers):\n    return sum(numbers) / len(numbers)", "runs": [{}], "check": "for x, y in [([2, 4], 3), ([10], 10), ([1, 2, 3, 4], 2.5)]:\n    assert average(x) == y, f'average({x}) gave {average(x)!r}, expected {y}.'", "must": [], "mustNot": []}, {"id": "9.5", "title": "The biggest, by hand", "task": "Write <code>biggest(numbers)<\/code> that returns the largest number, <em>without<\/em> using <code>max()<\/code>.", "start": "def biggest(numbers):\n    best = numbers[0]\n    \n", "hint": "Loop over the numbers; whenever one is bigger than <code>best<\/code>, keep it: <code>best = n<\/code>. Return <code>best<\/code> after the loop.", "solution": "def biggest(numbers):\n    best = numbers[0]\n    for n in numbers:\n        if n > best:\n            best = n\n    return best", "runs": [{}], "check": "for x in [[3, 9, 2], [5], [-4, -1, -7], [1, 2, 3, 10]]:\n    assert biggest(x) == max(x), f'biggest({x}) gave {biggest(x)!r}, expected {max(x)}.'", "must": [], "mustNot": [["max(", "Find it without max(): that is the exercise."]]}]}, {"n": 10, "title": "Dictionaries", "idea": "A dictionary stores values under keys: <code>{\"name\": \"Ada\", \"age\": 36}<\/code>. Read with <code>d[\"name\"]<\/code>, add or change with <code>d[\"city\"] = \"London\"<\/code>, loop with <code>for key, value in d.items():<\/code>.", "example": "person = {\"name\": \"Ada\", \"age\": 36}\nperson[\"city\"] = \"London\"\nfor key, value in person.items():\n    print(key, value)", "exampleOut": "name Ada\nage 36\ncity London", "missions": [{"id": "10.1", "title": "Read a value", "task": "Print the person's name from the dictionary.", "start": "person = {\"name\": \"Ada\", \"age\": 36}\n", "hint": "<code>person[\"name\"]<\/code>", "solution": "person = {\"name\": \"Ada\", \"age\": 36}\nprint(person[\"name\"])", "runs": [{"expect": "Ada"}], "check": null, "must": [["person[", "Read it from the dictionary: person[\"name\"]."]], "mustNot": []}, {"id": "10.2", "title": "Add a key", "task": "Add <code>\"city\"<\/code> with the value <code>\"London\"<\/code> to <code>person<\/code>, then print the whole dictionary.", "start": "person = {\"name\": \"Ada\", \"age\": 36}\n", "hint": "<code>person[\"city\"] = \"London\"<\/code>", "solution": "person = {\"name\": \"Ada\", \"age\": 36}\nperson[\"city\"] = \"London\"\nprint(person)", "runs": [{"expect": "{'name': 'Ada', 'age': 36, 'city': 'London'}"}], "check": null, "must": [], "mustNot": []}, {"id": "10.3", "title": "A price list", "task": "Print each item and its price on its own line, like <code>coffee: 4<\/code>.", "start": "prices = {\"coffee\": 4, \"croissant\": 3, \"juice\": 5}\n", "hint": "<pre>for item, price in prices.items():\n    print(f\"{item}: {price}\")<\/pre>", "solution": "prices = {\"coffee\": 4, \"croissant\": 3, \"juice\": 5}\nfor item, price in prices.items():\n    print(f\"{item}: {price}\")", "runs": [{"expect": "coffee: 4\ncroissant: 3\njuice: 5"}], "check": null, "must": [["for ", "Use a for loop."]], "mustNot": []}, {"id": "10.4", "title": "Count the letters", "task": "Write <code>count_letters(word)<\/code> that returns a dictionary of how many times each letter appears. <code>count_letters(\"anna\")<\/code> gives <code>{\"a\": 2, \"n\": 2}<\/code>.", "start": "def count_letters(word):\n    counts = {}\n    \n    return counts\n", "hint": "For each letter: if it is already a key, add 1; else set it to 1. Or in one line: <code>counts[letter] = counts.get(letter, 0) + 1<\/code>", "solution": "def count_letters(word):\n    counts = {}\n    for letter in word:\n        counts[letter] = counts.get(letter, 0) + 1\n    return counts", "runs": [{}], "check": "for w, d in [('anna', {'a': 2, 'n': 2}), ('milan', {'m': 1, 'i': 1, 'l': 1, 'a': 1, 'n': 1}), ('', {})]:\n    assert count_letters(w) == d, f'count_letters({w!r}) gave {count_letters(w)!r}, expected {d}.'", "must": [], "mustNot": []}]}, {"n": 11, "title": "Missions: put it together", "idea": "No new idea here: these use everything above. Read the task twice, write it in small pieces, and run often.", "example": "# 1. read the task\n# 2. write one small piece\n# 3. run it\n# 4. repeat", "exampleOut": "", "missions": [{"id": "11.1", "title": "FizzBuzz", "task": "Print the numbers 1 to 15. But for multiples of 3 print <code>Fizz<\/code>, for multiples of 5 <code>Buzz<\/code>, and for multiples of both <code>FizzBuzz<\/code>.", "start": "", "hint": "Check \"both\" first: <code>if n % 15 == 0<\/code>, then <code>elif n % 3 == 0<\/code>, <code>elif n % 5 == 0<\/code>, <code>else: print(n)<\/code>.", "solution": "for n in range(1, 16):\n    if n % 15 == 0:\n        print(\"FizzBuzz\")\n    elif n % 3 == 0:\n        print(\"Fizz\")\n    elif n % 5 == 0:\n        print(\"Buzz\")\n    else:\n        print(n)", "runs": [{"expect": "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz"}], "check": null, "must": [], "mustNot": []}, {"id": "11.2", "title": "The bill", "task": "Write <code>bill(cart)<\/code>: <code>cart<\/code> is a dictionary of item → price. Return the total. If the total is over 50, take 10% off.", "start": "def bill(cart):\n    \n", "hint": "Add the prices (<code>sum(cart.values())<\/code>); <code>if total &gt; 50: total = total * 0.9<\/code>; return it.", "solution": "def bill(cart):\n    total = sum(cart.values())\n    if total > 50:\n        total = total * 0.9\n    return total", "runs": [{}], "check": "assert bill({'a': 10, 'b': 5}) == 15, f'bill({{\"a\": 10, \"b\": 5}}) gave {bill({\"a\": 10, \"b\": 5})!r}, expected 15.'\nassert abs(bill({'a': 40, 'b': 20}) - 54) < 1e-9, f'Over 50 takes 10% off: 60 should give 54, got {bill({\"a\": 40, \"b\": 20})!r}.'\nassert bill({'a': 50}) == 50, 'Exactly 50 is not over 50: no discount.'\nassert bill({}) == 0, 'An empty cart costs 0.'", "must": [], "mustNot": []}, {"id": "11.3", "title": "Word counter", "task": "Ask <code>Sentence: <\/code>, then print how many words it has, like <code>Words: 5<\/code>.", "start": "", "hint": "<code>sentence.split()<\/code> cuts the text into a list of words; <code>len()<\/code> counts them.", "solution": "sentence = input(\"Sentence: \")\nwords = sentence.split()\nprint(f\"Words: {len(words)}\")", "runs": [{"inputs": ["I am learning Python today"], "last": "Words: 5"}, {"inputs": ["hello"], "last": "Words: 1"}], "check": null, "must": [], "mustNot": []}, {"id": "11.4", "title": "Best student", "task": "Print the name of the student with the highest mark, like <code>Best: Ines<\/code>.", "start": "marks = {\"Marco\": 72, \"Ines\": 91, \"Ada\": 85}\n", "hint": "Keep the best name and mark as you loop over <code>marks.items()<\/code>.", "solution": "marks = {\"Marco\": 72, \"Ines\": 91, \"Ada\": 85}\nbest_name = \"\"\nbest_mark = -1\nfor name, mark in marks.items():\n    if mark > best_mark:\n        best_name = name\n        best_mark = mark\nprint(f\"Best: {best_name}\")", "runs": [{"expect": "Best: Ines"}], "check": null, "must": [], "mustNot": [["\"Best: Ines\"", "Find it in the dictionary rather than typing it."]]}, {"id": "11.5", "title": "A tiny menu", "task": "Like Project 1, in miniature. Loop: ask <code>Choice: <\/code>. <code>1<\/code> asks <code>Item: <\/code> and adds it to a list; <code>2<\/code> prints the list; <code>3<\/code> prints <code>Bye<\/code> and stops.", "start": "items = []\n", "hint": "<pre>while True:\n    choice = input(\"Choice: \")\n    if choice == \"1\":\n        …\n    elif choice == \"2\":\n        print(items)\n    elif choice == \"3\":\n        print(\"Bye\")\n        break<\/pre>", "solution": "items = []\nwhile True:\n    choice = input(\"Choice: \")\n    if choice == \"1\":\n        items.append(input(\"Item: \"))\n    elif choice == \"2\":\n        print(items)\n    elif choice == \"3\":\n        print(\"Bye\")\n        break", "runs": [{"inputs": ["1", "milk", "1", "eggs", "2", "3"], "has": ["['milk', 'eggs']"], "last": "Bye"}, {"inputs": ["2", "3"], "has": ["[]"], "last": "Bye"}], "check": null, "must": [], "mustNot": []}]}];
+const PY_HARNESS = "import builtins, io, json, sys, traceback\n\n\ndef _describe(e):\n    line = getattr(e, 'lineno', None) if isinstance(e, SyntaxError) else None\n    if line is None:\n        for fr in traceback.extract_tb(e.__traceback__):\n            if fr.filename == 'mission.py':\n                line = fr.lineno\n    return {'type': type(e).__name__, 'msg': str(e.msg if isinstance(e, SyntaxError) else e), 'line': line}\n\n\ndef _run(code, inputs, check):\n    buf = io.StringIO()\n    feed = list(inputs)\n\n    def _input(prompt=''):\n        buf.write(str(prompt))\n        if not feed:\n            raise EOFError('the program asked for more input than this test gives')\n        v = feed.pop(0)\n        buf.write(v + '\\n')\n        return v\n\n    def _print(*args, **kw):\n        kw.pop('file', None)\n        kw.pop('flush', None)\n        builtins.print(*args, file=buf, **kw)\n\n    ns = {'__name__': '__main__', 'input': _input, 'print': _print}\n    err = None\n    try:\n        exec(compile(code, 'mission.py', 'exec'), ns)\n    except BaseException as e:  # the learner's program: any error is reported, never raised\n        err = _describe(e)\n    out = buf.getvalue()\n    note = None\n    if check and err is None:\n        ns['out'] = out\n        try:\n            exec(check, ns)\n        except AssertionError as e:\n            note = str(e) or 'Not quite yet.'\n        except NameError as e:\n            name = str(e).split(\"'\")[1] if \"'\" in str(e) else str(e)\n            note = f'Your program has no {name} yet.'\n        except BaseException as e:\n            d = _describe(e)\n            note = f\"Testing your code raised {d['type']}: {d['msg']}\"\n    return json.dumps({'out': out, 'error': err, 'note': note})\n";
+const PYODIDE = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
+const DRAFTS_KEY = 'coding-practice-drafts';
+const PRACTICE_OPEN_KEY = 'coding-practice-open';
+const RUN_LIMIT_MS = 5000;
+const practiceEl = document.getElementById('practice');
+const doneKey = id => `x|${id}`;
+const isDone = id => marks[doneKey(id)] === 'got';
+let drafts = readStore(DRAFTS_KEY, {});
+const allMissions = PRACTICE.flatMap(l => l.missions.map(m => ({ ...m, level: l.n })));
+
+/* Python, started on first use. One worker; replaced when a run takes too long. */
+let pyWorker = null, pyReady = null, pyJobs = new Map(), pyNext = 1;
+function startPython() {
+  if (pyReady) return pyReady;
+  const src = `importScripts('${PYODIDE}pyodide.js');
+let py;
+const ready = loadPyodide({ indexURL: '${PYODIDE}' }).then(p => { py = p; p.runPython(${JSON.stringify(PY_HARNESS)}); postMessage({ ready: true }); })
+  .catch(e => postMessage({ failed: String(e) }));
+onmessage = async e => {
+  await ready;
+  const { id, code, inputs, check } = e.data;
+  py.globals.set('_c', code); py.globals.set('_i', JSON.stringify(inputs)); py.globals.set('_k', check || '');
+  let result;
+  try { result = py.runPython('_run(_c, json.loads(_i), _k)'); } catch (err) { result = JSON.stringify({ out: '', error: { type: 'Error', msg: String(err), line: null }, note: null }); }
+  postMessage({ id, result });
+};`;
+  pyWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+  pyReady = new Promise((resolve, reject) => {
+    pyWorker.onmessage = e => {
+      const d = e.data;
+      if (d.ready) { resolve(); return; }
+      if (d.failed) { reject(new Error(d.failed)); return; }
+      const job = pyJobs.get(d.id);
+      if (job) { pyJobs.delete(d.id); clearTimeout(job.timer); job.resolve(JSON.parse(d.result)); }
+    };
+    pyWorker.onerror = () => reject(new Error('worker'));
+  });
+  pyReady.catch(() => { pyReady = null; });
+  return pyReady;
+}
+function stopPython() {
+  if (pyWorker) pyWorker.terminate();
+  pyWorker = null; pyReady = null;
+  for (const job of pyJobs.values()) { clearTimeout(job.timer); job.resolve({ out: '', error: { type: 'Timeout', msg: '', line: null }, note: null }); }
+  pyJobs.clear();
+}
+async function runPython(code, inputs, check) {
+  await startPython();
+  const id = pyNext++;
+  return new Promise(resolve => {
+    const timer = setTimeout(() => stopPython(), RUN_LIMIT_MS);
+    pyJobs.set(id, { resolve, timer });
+    pyWorker.postMessage({ id, code, inputs: inputs || [], check: check || '' });
+  });
+}
+
+/* Errors, in plain words. */
+function explainError(e) {
+  const m = e.msg || '';
+  const t = e.type;
+  let say;
+  if (t === 'Timeout') say = `Your program ran for more than ${RUN_LIMIT_MS / 1000} seconds, so it was stopped. Usually a <code>while</code> loop whose condition never becomes false: check that something inside the loop changes.`;
+  else if (t === 'EOFError') say = 'Your program asked <code>input()</code> more times than this test types answers. Check that your loop stops when it should.';
+  else if (t === 'IndentationError' && /expected an indented block/.test(m)) say = 'After a line ending with a colon <code>:</code>, the next line must be indented (4 spaces, or the Tab key).';
+  else if (t === 'IndentationError' && /unexpected indent/.test(m)) say = 'This line starts with spaces it should not have. Remove them so it lines up with the line above.';
+  else if (t === 'IndentationError' || t === 'TabError') say = 'The spaces at the start of this line do not line up with the lines around it. Lines in the same block start at the same place.';
+  else if (t === 'SyntaxError' && /unterminated string|EOL while scanning/.test(m)) say = 'A piece of text is missing its closing quote. Every <code>"</code> needs a partner.';
+  else if (t === 'SyntaxError' && /was never closed|unexpected EOF/.test(m)) say = 'A bracket is opened but never closed. Count the <code>(</code> and the <code>)</code>.';
+  else if (t === 'SyntaxError' && /expected ':'/.test(m)) say = 'A line starting with <code>if</code>, <code>elif</code>, <code>else</code>, <code>for</code>, <code>while</code> or <code>def</code> must end with a colon <code>:</code>';
+  else if (t === 'SyntaxError' && /'=' .*'=='|Maybe you meant '=='/.test(m)) say = 'To compare, use <code>==</code> (two signs). One <code>=</code> puts a value into a name.';
+  else if (t === 'SyntaxError') say = 'Python could not read this line. Look for a missing quote, bracket, comma or colon.';
+  else if (t === 'NameError') { const n = (m.match(/'([^']+)'/) || [])[1] || ''; say = `Python does not know the name <code>${esc(n)}</code>. If you meant the text ${esc(n)}, put it in quotes. If it is a variable, check it has a value above this line and is spelled the same way.`; }
+  else if (t === 'TypeError' && /concatenate str/.test(m)) say = 'You cannot glue text and a number with <code>+</code>. Turn the number into text with <code>str()</code>, or use an f-string.';
+  else if (t === 'TypeError' && /'str' and 'int'|'int' and 'str'/.test(m)) say = 'This mixes text and a number. Answers from <code>input()</code> are text: wrap them in <code>int()</code> to do maths.';
+  else if (t === 'TypeError' && /not callable/.test(m)) say = 'Something is used like a function, with brackets, but it is not one. Did a variable take the name of a function?';
+  else if (t === 'TypeError' && /positional argument/.test(m)) say = 'A function got a different number of values than it expects. Compare the brackets in the call with the <code>def</code> line.';
+  else if (t === 'ValueError' && /invalid literal for int/.test(m)) say = '<code>int()</code> got something that is not a whole number.';
+  else if (t === 'IndexError') say = 'That position is not in the list. Positions start at 0; the last one is <code>-1</code>.';
+  else if (t === 'KeyError') say = `That key, ${esc(m)}, is not in the dictionary.`;
+  else if (t === 'ZeroDivisionError') say = 'Something is divided by zero.';
+  else if (t === 'AttributeError') say = 'That value has no such method. Check the spelling (<code>.upper()</code>, <code>.append()</code>) and what kind of value it is.';
+  else say = 'Python stopped here. The message below says why.';
+  const where = e.line ? `<span class="pe-err-line">Line ${e.line}</span>` : '';
+  const raw = t === 'Timeout' ? '' : `<code class="pe-err-raw">${esc(t)}: ${esc(m)}</code>`;
+  return `<div class="pe-err"><div class="pe-err-head">${where}<b>Error</b></div><p>${say}</p>${raw}</div>`;
+}
+
+/* Grading: the same rules the missions were tested with. */
+const normOut = s => s.replace(/\r/g, '').split('\n').map(l => l.replace(/\s+$/, '')).join('\n').replace(/^\n+|\n+$/g, '');
+const stripComments = code => code.split('\n').map(l => l.replace(/#.*$/, '')).join('\n');
+// "When the test typed 7: the last line…", or "The last line…" when nothing is typed.
+const lead = (run, rest) => run.inputs && run.inputs.length ? `When the test typed <b>${run.inputs.map(esc).join('</b>, <b>')}</b>, ${rest}` : rest[0].toUpperCase() + rest.slice(1);
+async function gradeMission(m, code) {
+  let firstOut = null;
+  for (let i = 0; i < m.runs.length; i++) {
+    const run = m.runs[i];
+    const r = await runPython(code, run.inputs, i === 0 ? m.check : '');
+    if (i === 0) firstOut = r;
+    if (r.error) return { ok: false, shown: r, html: explainError(r.error) };
+    const out = normOut(r.out);
+    const lines = out.split('\n').map(l => l.trim());
+    const printed = out ? `<pre class="pe-pre">${esc(out)}</pre>` : '<p class="pe-none">Nothing. Did you forget <code>print()</code>?</p>';
+    if (run.expect !== undefined && out !== normOut(run.expect))
+      return { ok: false, shown: r, html: `<p>Not quite yet. ${lead(run, 'the output should be:')}</p><pre class="pe-pre pe-want">${esc(normOut(run.expect))}</pre><p>Your program printed:</p>${printed}` };
+    if (run.last !== undefined && lines[lines.length - 1] !== run.last)
+      return { ok: false, shown: r, html: `<p>${lead(run, `the last line should be <code>${esc(run.last)}</code>.`)}</p><p>Your program printed:</p>${printed}` };
+    for (const h of run.has || []) if (!lines.includes(h))
+      return { ok: false, shown: r, html: `<p>${lead(run, `the output should have the line <code>${esc(h)}</code>.`)}</p><p>Your program printed:</p>${printed}` };
+    if (r.note) return { ok: false, shown: r, html: `<p>${esc(r.note)}</p>` };
+  }
+  const bare = stripComments(code);
+  for (const [text, msg] of m.must) if (!bare.includes(text)) return { ok: false, shown: firstOut, html: `<p>The output is right. One more thing: ${esc(msg)}</p>` };
+  for (const [text, msg] of m.mustNot) if (bare.includes(text)) return { ok: false, shown: firstOut, html: `<p>The output is right. One more thing: ${esc(msg)}</p>` };
+  return { ok: true, shown: firstOut };
+}
+
+/* The editor: a plain text box that indents like a code editor. */
+function editorKeys(e) {
+  const ta = e.target;
+  const { selectionStart: s, selectionEnd: en, value: v } = ta;
+  const lineStart = v.lastIndexOf('\n', s - 1) + 1;
+  const insert = text => { ta.setRangeText(text, s, en, 'end'); ta.dispatchEvent(new Event('input', { bubbles: true })); };
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); ta.closest('.pmission, .pe-play').querySelector('.pe-run').click(); return; }
+  if (e.key === 'Tab' && !e.shiftKey && s === en) { e.preventDefault(); insert('    '); return; }
+  if (e.key === 'Tab' && e.shiftKey) {
+    e.preventDefault();
+    const lead = v.slice(lineStart).match(/^ {1,4}/);
+    if (lead) { ta.setRangeText('', lineStart, lineStart + lead[0].length, 'preserve'); ta.selectionStart = ta.selectionEnd = Math.max(lineStart, s - lead[0].length); ta.dispatchEvent(new Event('input', { bubbles: true })); }
+    return;
+  }
+  if (e.key === 'Enter' && !e.shiftKey && s === en) {
+    e.preventDefault();
+    const line = v.slice(lineStart, s);
+    let pad = line.match(/^ */)[0];
+    if (/:\s*$/.test(line)) pad += '    ';
+    insert('\n' + pad);
+    return;
+  }
+  if (e.key === 'Backspace' && s === en && s > lineStart) {
+    const before = v.slice(lineStart, s);
+    if (/^ +$/.test(before) && before.length % 4 === 0) { e.preventDefault(); ta.setRangeText('', s - 4, s, 'end'); ta.dispatchEvent(new Event('input', { bubbles: true })); }
+  }
+}
+function fitEditor(ta) { ta.style.height = 'auto'; ta.style.height = `${Math.max(ta.scrollHeight + 2, 132)}px`; }
+const editorHtml = (code, label) => `<textarea class="pe-code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-label="${esc(label)}">${esc(code)}</textarea>`;
+function showOutput(box, r) {
+  const out = box.querySelector('.pe-out');
+  const body = r && r.out ? esc(r.out.replace(/\n$/, '')) : '<span class="pe-none">(nothing printed)</span>';
+  out.innerHTML = `<div class="pe-out-head">Output</div><pre class="pe-pre">${body}</pre>`;
+  out.hidden = false;
+}
+
+/* The page. */
+function missionHtml(m, i, lvl) {
+  const code = drafts[m.id] ?? m.start;
+  return `<details class="pmission" data-id="${m.id}" style="--sess: var(--sess-${((lvl.n - 1) % 7) + 1})">
+    <summary><span class="pm-num">${m.id}</span><span class="pm-title">${esc(m.title)}</span><span class="pm-done" aria-label="done">✓</span></summary>
+    <div class="pm-body">
+      <div class="pm-task">${m.task}</div>
+      <div class="pm-work">
+        ${editorHtml(code, `Your code for mission ${m.id}`)}
+        <div class="pe-bar"><button type="button" class="pe-run">▶ Run</button><span class="pe-keys">Ctrl + Enter</span><button type="button" class="pe-reset">Start again</button></div>
+        <div class="pe-status" aria-live="polite"></div>
+        <div class="pe-out" hidden></div>
+        <div class="pe-verdict" aria-live="polite" hidden></div>
+      </div>
+      <details class="pm-help"><summary>Hint</summary><div>${m.hint}</div></details>
+      <details class="pm-help pm-sol"><summary>Solution</summary><p class="pm-sol-note">Try first: typing it yourself is what trains the hand. Then compare.</p><pre class="pe-pre">${esc(m.solution)}</pre></details>
+    </div>
+  </details>`;
+}
+function renderPractice() {
+  practiceEl.innerHTML = `
+    <div class="pp-progress"><div class="pp-bar"><i id="pp-fill"></i></div><span id="pp-count"></span></div>
+    <details class="pe-play"><summary>Free space: try anything</summary>
+      <p class="pp-note">A blank page to try a line or two. Answers to <code>input()</code> go in the box on the right, one per line.</p>
+      <div class="pe-play-grid">${editorHtml(drafts.play ?? 'print("Hello")\n', 'Free code')}<textarea class="pe-inputs" spellcheck="false" placeholder="answers for input(), one per line" aria-label="Answers for input()">${esc(drafts.playInputs ?? '')}</textarea></div>
+      <div class="pe-bar"><button type="button" class="pe-run">▶ Run</button><span class="pe-keys">Ctrl + Enter</span></div>
+      <div class="pe-status" aria-live="polite"></div>
+      <div class="pe-out" hidden></div>
+    </details>
+    <nav class="index pp-index" aria-label="Levels">${PRACTICE.map(l => `<a href="#plevel-${l.n}" data-level="${l.n}" style="--sess: var(--sess-${((l.n - 1) % 7) + 1})"><span class="n">${l.n}</span> ${esc(l.title)} <b class="pp-lc"></b></a>`).join('')}</nav>
+    ${PRACTICE.map(l => `<details class="plevel" id="plevel-${l.n}" data-level="${l.n}" style="--sess: var(--sess-${((l.n - 1) % 7) + 1})">
+      <summary><span class="pl-n">Level ${l.n}</span><span class="pl-title">${esc(l.title)}</span><span class="pl-count"></span></summary>
+      <div class="pl-idea"><div><span class="eyebrow">The idea</span><p>${l.idea}</p></div>
+        <div class="pl-ex"><pre class="pe-pre">${esc(l.example)}</pre>${l.exampleOut ? `<div class="pe-out-head">Output</div><pre class="pe-pre pl-exout">${esc(l.exampleOut)}</pre>` : ''}</div></div>
+      <div class="pl-missions">${l.missions.map((m, i) => missionHtml(m, i, l)).join('')}</div>
+    </details>`).join('')}`;
+  for (const ta of practiceEl.querySelectorAll('.pe-code')) fitEditor(ta);
+  paintPractice();
+  // Open where you are: the level last open, or the first one not finished.
+  let open = null;
+  try { open = localStorage.getItem(PRACTICE_OPEN_KEY); } catch (e) {}
+  const first = allMissions.find(m => !isDone(m.id));
+  const lvl = open || String(first ? first.level : 1);
+  const d = document.getElementById(`plevel-${lvl}`);
+  if (d) d.open = true;
+}
+function paintPractice() {
+  if (!practiceEl.firstChild) return;
+  const done = allMissions.filter(m => isDone(m.id)).length;
+  document.getElementById('pp-fill').style.width = `${(100 * done) / allMissions.length}%`;
+  document.getElementById('pp-count').textContent = `${done} of ${allMissions.length} missions done`;
+  for (const l of PRACTICE) {
+    const n = l.missions.filter(m => isDone(m.id)).length;
+    const txt = `${n}/${l.missions.length}`;
+    const a = practiceEl.querySelector(`.pp-index a[data-level="${l.n}"]`);
+    a.querySelector('.pp-lc').textContent = txt;
+    a.classList.toggle('pp-full', n === l.missions.length);
+    const s = practiceEl.querySelector(`.plevel[data-level="${l.n}"] .pl-count`);
+    s.textContent = n === l.missions.length ? 'all done ✓' : txt;
+  }
+  for (const el of practiceEl.querySelectorAll('.pmission')) el.classList.toggle('is-done', isDone(el.dataset.id));
+}
+const PRAISE = ['Done!', 'That works.', 'Nicely done.', 'Correct.', 'Yes!', 'Spot on.'];
+async function runBox(box) {
+  const status = box.querySelector('.pe-status');
+  const btn = box.querySelector('.pe-run');
+  const code = box.querySelector('.pe-code').value;
+  btn.disabled = true;
+  const slow = setTimeout(() => { status.textContent = 'Starting Python… the first run takes a few seconds.'; }, 400);
+  try {
+    if (box.classList.contains('pe-play')) {
+      const inputs = box.querySelector('.pe-inputs').value.split('\n').filter((l, i, a) => i < a.length - 1 || l !== '');
+      const r = await runPython(code, inputs, '');
+      showOutput(box, r);
+      if (r.error) box.querySelector('.pe-out').insertAdjacentHTML('beforeend', explainError(r.error));
+      return;
+    }
+    const m = allMissions.find(x => x.id === box.dataset.id);
+    const g = await gradeMission(m, code);
+    showOutput(box, g.shown);
+    const verdict = box.querySelector('.pe-verdict');
+    verdict.hidden = false;
+    if (g.ok) {
+      const next = allMissions[allMissions.indexOf(m) + 1];
+      verdict.className = 'pe-verdict pe-ok';
+      verdict.innerHTML = `<p><b>✓ ${PRAISE[Math.floor(Math.random() * PRAISE.length)]}</b> Mission ${m.id} passed every test.</p>${next ? `<button type="button" class="pe-next" data-next="${next.id}">Next: ${next.id} ${esc(next.title)} →</button>` : '<p>That was the last mission. You can write programs now.</p>'}`;
+      if (!isDone(m.id)) { marks[doneKey(m.id)] = 'got'; saveLocal(); pushMark(doneKey(m.id)); }
+      paintPractice();
+    } else {
+      verdict.className = g.shown && g.shown.error ? 'pe-verdict pe-bare' : 'pe-verdict pe-no';
+      verdict.innerHTML = g.html;
+      if (g.shown && g.shown.error) box.querySelector('.pe-out').hidden = !g.shown.out;
+    }
+  } catch (e) {
+    status.textContent = 'Python could not start. It loads from the internet the first time: check the connection and try again.';
+    return;
+  } finally {
+    clearTimeout(slow);
+    btn.disabled = false;
+  }
+  status.textContent = '';
+}
+practiceEl.addEventListener('keydown', e => { if (e.target.matches('.pe-code')) editorKeys(e); });
+practiceEl.addEventListener('input', e => {
+  const t = e.target;
+  if (t.matches('.pe-code')) {
+    fitEditor(t);
+    const box = t.closest('.pmission');
+    if (box) drafts[box.dataset.id] = t.value; else drafts.play = t.value;
+    writeStore(DRAFTS_KEY, drafts);
+  } else if (t.matches('.pe-inputs')) { drafts.playInputs = t.value; writeStore(DRAFTS_KEY, drafts); }
+});
+practiceEl.addEventListener('click', e => {
+  const run = e.target.closest('.pe-run');
+  if (run) { runBox(run.closest('.pmission, .pe-play')); return; }
+  const reset = e.target.closest('.pe-reset');
+  if (reset) {
+    const box = reset.closest('.pmission');
+    const m = allMissions.find(x => x.id === box.dataset.id);
+    const ta = box.querySelector('.pe-code');
+    ta.value = m.start; delete drafts[m.id]; writeStore(DRAFTS_KEY, drafts); fitEditor(ta);
+    box.querySelector('.pe-out').hidden = true; box.querySelector('.pe-verdict').hidden = true;
+    ta.focus();
+    return;
+  }
+  const next = e.target.closest('.pe-next');
+  if (next) {
+    const target = practiceEl.querySelector(`.pmission[data-id="${next.dataset.next}"]`);
+    const lvl = target.closest('.plevel');
+    lvl.open = true;
+    target.open = true;
+    target.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    setTimeout(() => target.querySelector('.pe-code').focus({ preventScroll: true }), 300);
+    return;
+  }
+  const lv = e.target.closest('.pp-index a');
+  if (lv) {
+    e.preventDefault();
+    const d = document.getElementById(`plevel-${lv.dataset.level}`);
+    d.open = true;
+    d.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+});
+// One mission open at a time, so the page stays short; the level open is remembered.
+practiceEl.addEventListener('toggle', e => {
+  const d = e.target;
+  if (d.classList.contains('pmission') && d.open) {
+    for (const o of practiceEl.querySelectorAll('.pmission[open]')) if (o !== d) o.open = false;
+    fitEditor(d.querySelector('.pe-code'));
+    startPython().catch(() => {});
+  }
+  if (d.classList.contains('plevel') && d.open) { try { localStorage.setItem(PRACTICE_OPEN_KEY, d.dataset.level); } catch (err) {} }
+  if (d.classList.contains('pe-play') && d.open) { fitEditor(d.querySelector('.pe-code')); startPython().catch(() => {}); }
+}, true);
+renderPractice();
+
+/* ---------- Day or night ---------- */
+const themeBtn = document.getElementById('theme-btn');
+const paintTheme = () => { const night = document.documentElement.dataset.theme === 'dark'; themeBtn.textContent = night ? '☀' : '☾'; themeBtn.setAttribute('aria-label', night ? 'Switch to day' : 'Switch to night'); };
+themeBtn.addEventListener('click', () => {
+  const night = document.documentElement.dataset.theme !== 'dark';
+  document.documentElement.dataset.theme = night ? 'dark' : 'light';
+  try { localStorage.setItem('school-theme', night ? 'night' : 'day'); } catch (e) {}
+  paintTheme();
+});
+paintTheme();
+
 /* ---------- Tabs ---------- */
-const tabs = { project: [document.getElementById('tab-project'), document.getElementById('page-project')], tools: [document.getElementById('tab-tools'), document.getElementById('page-tools')], lessons: [document.getElementById('tab-lessons'), document.getElementById('page-lessons')], review: [document.getElementById('tab-review'), document.getElementById('page-review')] };
+const tabs = { project: [document.getElementById('tab-project'), document.getElementById('page-project')], tools: [document.getElementById('tab-tools'), document.getElementById('page-tools')], lessons: [document.getElementById('tab-lessons'), document.getElementById('page-lessons')], practice: [document.getElementById('tab-practice'), document.getElementById('page-practice')], review: [document.getElementById('tab-review'), document.getElementById('page-review')] };
 function showPage(name, scroll) {
   if (!lpop.hidden) closeLesson();
   for (const [key, [tab, page]] of Object.entries(tabs)) {
     const on = key === name;
     tab.setAttribute('aria-selected', on); page.hidden = !on;
+    // On a phone the tabs scroll sideways: keep the chosen one in sight.
+    if (on && tab.parentElement.scrollWidth > tab.parentElement.clientWidth) tab.parentElement.scrollLeft = tab.offsetLeft - (tab.parentElement.clientWidth - tab.offsetWidth) / 2;
   }
   try { localStorage.setItem('explorer-map-page', name); } catch (e) {}
   if (scroll !== false) window.scrollTo(0, 0);
@@ -4277,6 +4720,7 @@ function showPage(name, scroll) {
 tabs.project[0].addEventListener('click', () => showPage('project'));
 tabs.tools[0].addEventListener('click', () => showPage('tools'));
 tabs.lessons[0].addEventListener('click', () => showPage('lessons'));
+tabs.practice[0].addEventListener('click', () => { showPage('practice'); for (const ta of practiceEl.querySelectorAll('.pe-code')) if (ta.offsetParent) fitEditor(ta); });
 tabs.review[0].addEventListener('click', () => showPage('review'));
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-jump]');
@@ -4289,6 +4733,7 @@ let start = 'project';
 if (location.hash === '#toolkit') start = 'tools';
 else if (location.hash === '#lessons') start = 'lessons';
 else if (location.hash === '#review') start = 'review';
+else if (location.hash === '#practice') start = 'practice';
 else { try { start = localStorage.getItem('explorer-map-page') || 'project'; } catch (e) {}
   if (!tabs[start]) start = 'project'; }
 showPage(start, false);

@@ -4,8 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>School · Albert School</title>
+<script>
+  // Day (beige) or night, one choice for every School page (School, Python, Git), remembered on this device. Day by default.
+  try { document.documentElement.dataset.theme = localStorage.getItem('school-theme') || 'day'; } catch (e) {}
+</script>
 <style>
-  :root {
+  /* Day: beige paper, as on the Git page. Night: warm dark. The button at the top switches. */
+  :root, [data-theme="day"] {
     --paper: #f7f3ea;
     --ink: #2b2620;
     --soft: #6f665a;
@@ -13,9 +18,11 @@
     --accent: #8a5a2b;
     --card: #fbf8f1;
   }
-  @media (prefers-color-scheme: dark) {
-    :root { --paper: #191714; --ink: #ece6da; --soft: #a49b8d; --line: #34302a; --accent: #d9a46a; --card: #201d19; }
-  }
+  [data-theme="night"] { --paper: #191714; --ink: #ece6da; --soft: #a49b8d; --line: #34302a; --accent: #d9a46a; --card: #201d19; }
+  .topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+  .topline .back { margin-bottom: 0; }
+  .theme { font: 600 14px system-ui, sans-serif; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; min-height: 36px; cursor: pointer; }
+  .theme:hover { border-color: var(--accent); }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 Georgia, 'Times New Roman', serif; }
   main { max-width: 760px; margin: 0 auto; padding: 28px 18px 80px; }
@@ -43,7 +50,10 @@
 </head>
 <body>
 <main>
-  <a class="back" href="/">← Brain</a>
+  <div class="topline">
+    <a class="back" href="/">← Brain</a>
+    <button class="theme" id="theme" type="button" aria-label="Switch between day and night">☾ Night</button>
+  </div>
   <header>
     <h1>School</h1>
     <p>Albert School × Politecnico di Milano · every class in one place</p>
@@ -87,5 +97,16 @@
 
   <footer>Each class keeps its own page; this is the way in.</footer>
 </main>
+<script>
+  const themeBtn = document.getElementById('theme');
+  const paint = () => { themeBtn.textContent = document.documentElement.dataset.theme === 'night' ? '☀ Day' : '☾ Night'; };
+  themeBtn.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'night' ? 'day' : 'night';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('school-theme', next); } catch (e) {}
+    paint();
+  });
+  paint();
+</script>
 </body>
 </html>
