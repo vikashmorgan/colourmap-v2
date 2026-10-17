@@ -1048,15 +1048,20 @@ details.datacode .mission-tag { background: var(--ok-c); }
 .pe-none { color: var(--muted); font-style: italic; }
 .pe-pre .pe-none { color: var(--muted); }
 :root[data-theme="dark"] { --term-bg: #0f1318; --term-ink: #e9eef5; }
-:root[data-theme="dark"] .pe-run, :root[data-theme="dark"] .pe-next:hover { color: #0f1318; }
+:root[data-theme="dark"] .pe-run { color: #0f1318; }
 .pe-verdict { margin-top: 10px; border-radius: 12px; padding: 12px 14px; }
 .pe-verdict p { margin: 0 0 8px; }
 .pe-verdict p:last-child { margin-bottom: 0; }
-.pe-ok { background: color-mix(in srgb, var(--ok) 14%, var(--panel)); border: 1px solid color-mix(in srgb, var(--ok) 45%, var(--rule)); }
-.pe-ok b { color: var(--ok); }
+.pe-ok { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 4px 2px; background: none; border: 0; animation: pe-calm .8s ease both; }
+.pe-ok-note { color: var(--ok); font-size: 15px; }
+@keyframes pe-calm { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .pe-ok { animation: none; } }
+.pp-sound { margin-left: auto; font: 13px var(--mono); color: var(--muted); background: none; border: 1px solid var(--rule); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.pp-sound:hover { color: var(--ink); border-color: var(--muted); }
+.pp-sound[aria-pressed="false"] { opacity: .65; }
 .pe-no { background: color-mix(in srgb, var(--mark) 18%, var(--panel)); border: 1px solid color-mix(in srgb, var(--mark) 55%, var(--rule)); }
-.pe-next { font: 600 15px var(--body); padding: 9px 16px; border-radius: 10px; border: 1.5px solid var(--ok); background: var(--panel); color: var(--ok); cursor: pointer; }
-.pe-next:hover { background: var(--ok); color: #fff; }
+.pe-next { font: 500 14px var(--body); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--rule); background: none; color: var(--muted); cursor: pointer; }
+.pe-next:hover { color: var(--ink); border-color: var(--ok); }
 .pe-err { margin-top: 10px; border-radius: 12px; padding: 12px 14px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--rule)); }
 .pe-err-head { display: flex; gap: 10px; align-items: baseline; color: var(--warn); }
 .pe-err-line { font: 600 13px var(--mono); }
@@ -4386,7 +4391,7 @@ const PRACTICE = [{"n": 1, "title": "First words", "idea": "A program is a list 
 const PY_HARNESS = "import builtins, io, json, sys, traceback\n\n\ndef _describe(e):\n    line = getattr(e, 'lineno', None) if isinstance(e, SyntaxError) else None\n    if line is None:\n        for fr in traceback.extract_tb(e.__traceback__):\n            if fr.filename == 'mission.py':\n                line = fr.lineno\n    return {'type': type(e).__name__, 'msg': str(e.msg if isinstance(e, SyntaxError) else e), 'line': line}\n\n\ndef _run(code, inputs, check):\n    buf = io.StringIO()\n    feed = list(inputs)\n\n    def _input(prompt=''):\n        buf.write(str(prompt))\n        if not feed:\n            raise EOFError('the program asked for more input than this test gives')\n        v = feed.pop(0)\n        buf.write(v + '\\n')\n        return v\n\n    def _print(*args, **kw):\n        kw.pop('file', None)\n        kw.pop('flush', None)\n        builtins.print(*args, file=buf, **kw)\n\n    ns = {'__name__': '__main__', 'input': _input, 'print': _print}\n    err = None\n    try:\n        exec(compile(code, 'mission.py', 'exec'), ns)\n    except BaseException as e:  # the learner's program: any error is reported, never raised\n        err = _describe(e)\n    out = buf.getvalue()\n    note = None\n    if check and err is None:\n        ns['out'] = out\n        try:\n            exec(check, ns)\n        except AssertionError as e:\n            note = str(e) or 'Not quite yet.'\n        except NameError as e:\n            name = str(e).split(\"'\")[1] if \"'\" in str(e) else str(e)\n            note = f'Your program has no {name} yet.'\n        except BaseException as e:\n            d = _describe(e)\n            note = f\"Testing your code raised {d['type']}: {d['msg']}\"\n    return json.dumps({'out': out, 'error': err, 'note': note})\n";
 const PYODIDE = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
 const DRAFTS_KEY = 'coding-practice-drafts';
-const PRACTICE_OPEN_KEY = 'coding-practice-open';
+const SOUND_KEY = 'coding-practice-sound';
 const RUN_LIMIT_MS = 5000;
 const practiceEl = document.getElementById('practice');
 const doneKey = id => `x|${id}`;
@@ -4557,7 +4562,7 @@ function missionHtml(m, i, lvl) {
 }
 function renderPractice() {
   practiceEl.innerHTML = `
-    <div class="pp-progress"><div class="pp-bar"><i id="pp-fill"></i></div><span id="pp-count"></span></div>
+    <div class="pp-progress"><div class="pp-bar"><i id="pp-fill"></i></div><span id="pp-count"></span><button type="button" class="pp-sound" id="pp-sound" aria-pressed="true"></button></div>
     <details class="pe-play"><summary>Free space: try anything</summary>
       <p class="pp-note">A blank page to try a line or two. Answers to <code>input()</code> go in the box on the right, one per line.</p>
       <div class="pe-play-grid">${editorHtml(drafts.play ?? 'print("Hello")\n', 'Free code')}<textarea class="pe-inputs" spellcheck="false" placeholder="answers for input(), one per line" aria-label="Answers for input()">${esc(drafts.playInputs ?? '')}</textarea></div>
@@ -4574,13 +4579,7 @@ function renderPractice() {
     </details>`).join('')}`;
   for (const ta of practiceEl.querySelectorAll('.pe-code')) fitEditor(ta);
   paintPractice();
-  // Open where you are: the level last open, or the first one not finished.
-  let open = null;
-  try { open = localStorage.getItem(PRACTICE_OPEN_KEY); } catch (e) {}
-  const first = allMissions.find(m => !isDone(m.id));
-  const lvl = open || String(first ? first.level : 1);
-  const d = document.getElementById(`plevel-${lvl}`);
-  if (d) d.open = true;
+  paintSound();
 }
 function paintPractice() {
   if (!practiceEl.firstChild) return;
@@ -4598,7 +4597,45 @@ function paintPractice() {
   }
   for (const el of practiceEl.querySelectorAll('.pmission')) el.classList.toggle('is-done', isDone(el.dataset.id));
 }
-const PRAISE = ['Done!', 'That works.', 'Nicely done.', 'Correct.', 'Yes!', 'Spot on.'];
+const PRAISE = ['Well done.', 'One more step.', 'Nicely done.', 'That works.', 'Good, calmly done.'];
+/*
+ * A passed mission rings a soft chime (2026-10-17: "a small peaceful note when
+ * I pass the mission, not too oppressive"): two quiet bell tones a fifth apart,
+ * slow to fade, made in the page with Web Audio. A switch beside the progress
+ * turns it off, remembered on this device.
+ */
+let soundOn = true;
+try { soundOn = localStorage.getItem(SOUND_KEY) !== 'off'; } catch (e) {}
+let audioCtx = null;
+function chime() {
+  if (!soundOn) return;
+  try {
+    audioCtx ??= new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const t0 = audioCtx.currentTime + 0.02;
+    [[659.25, 0], [987.77, 0.16]].forEach(([freq, delay]) => {
+      for (const [mult, level] of [[1, 0.07], [2, 0.012]]) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq * mult;
+        const t = t0 + delay;
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(level, t + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 1.9);
+      }
+    });
+  } catch (e) { /* no sound on this device: the note on screen is enough */ }
+}
+function paintSound() {
+  const b = document.getElementById('pp-sound');
+  if (!b) return;
+  b.textContent = soundOn ? '♪ Sound on' : '♪ Sound off';
+  b.setAttribute('aria-pressed', String(soundOn));
+}
 async function runBox(box) {
   const status = box.querySelector('.pe-status');
   const btn = box.querySelector('.pe-run');
@@ -4621,7 +4658,8 @@ async function runBox(box) {
     if (g.ok) {
       const next = allMissions[allMissions.indexOf(m) + 1];
       verdict.className = 'pe-verdict pe-ok';
-      verdict.innerHTML = `<p><b>✓ ${PRAISE[Math.floor(Math.random() * PRAISE.length)]}</b> Mission ${m.id} passed every test.</p>${next ? `<button type="button" class="pe-next" data-next="${next.id}">Next: ${next.id} ${esc(next.title)} →</button>` : '<p>That was the last mission. You can write programs now.</p>'}`;
+      verdict.innerHTML = `<span class="pe-ok-note">✓ ${PRAISE[Math.floor(Math.random() * PRAISE.length)]}</span>${next ? `<button type="button" class="pe-next" data-next="${next.id}">Next: ${esc(next.title)} →</button>` : '<span class="pe-ok-note">That was the last mission. You can write programs now.</span>'}`;
+      chime();
       if (!isDone(m.id)) { marks[doneKey(m.id)] = 'got'; saveLocal(); pushMark(doneKey(m.id)); }
       paintPractice();
     } else {
@@ -4671,6 +4709,8 @@ practiceEl.addEventListener('click', e => {
     setTimeout(() => target.querySelector('.pe-code').focus({ preventScroll: true }), 300);
     return;
   }
+  const snd = e.target.closest('#pp-sound');
+  if (snd) { soundOn = !soundOn; try { localStorage.setItem(SOUND_KEY, soundOn ? 'on' : 'off'); } catch (err) {} paintSound(); if (soundOn) chime(); return; }
   const lv = e.target.closest('.pp-index a');
   if (lv) {
     e.preventDefault();
@@ -4687,7 +4727,8 @@ practiceEl.addEventListener('toggle', e => {
     fitEditor(d.querySelector('.pe-code'));
     startPython().catch(() => {});
   }
-  if (d.classList.contains('plevel') && d.open) { try { localStorage.setItem(PRACTICE_OPEN_KEY, d.dataset.level); } catch (err) {} }
+  // One level open at a time, like the missions (2026-10-17: "when I am in one, it closes the others, so it does not get overwhelming").
+  if ((d.classList.contains('plevel') || d.classList.contains('pe-play')) && d.open) for (const o of practiceEl.querySelectorAll('.plevel[open], .pe-play[open]')) if (o !== d) o.open = false;
   if (d.classList.contains('pe-play') && d.open) { fitEditor(d.querySelector('.pe-code')); startPython().catch(() => {}); }
 }, true);
 renderPractice();
