@@ -15,6 +15,16 @@ function featuredNames() {
 }
 
 describe('GeometryField featured presets', () => {
+  it('opens Good Ones with the three Wind presets, one object each, in Stars', () => {
+    const names = featuredNames();
+    expect(names.slice(0, 3)).toEqual(['Wind', 'Wind Wing', 'Wind Body']);
+    expect(['Wind', 'Wind Wing', 'Wind Body'].map((n) => PRESETS[n]?.particles)).toEqual([0, 1, 2]);
+    for (const n of ['Wind', 'Wind Wing', 'Wind Body']) {
+      expect(PRESETS[n]?.mode).toBe('windtunnel');
+      expect(artTabOf('windtunnel')).toBe('stars');
+    }
+  });
+
   it('keeps weaker depth presets at the bottom of the good list and removes Volcano', () => {
     const names = featuredNames();
 

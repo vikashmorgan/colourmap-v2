@@ -18,6 +18,7 @@ import {
   sampleDots,
 } from '@/lib/sacred-figures';
 import { isOilMode, isShaderVisualMode } from '@/lib/visual-shaders';
+import { speedColour, windShape, windVelocity } from '@/lib/wind';
 
 import {
   buildBigBangStars,
@@ -204,6 +205,8 @@ type Mode =
   | 'sacredfigures'
   | 'sacreddancers'
   // Murmuration / Fish School — flocks of dots in 3D (lib/flocks.ts); Flow Masks (lib/flow-masks.ts)
+  // Wind — air passing over an object, left to right: aerodynamics as art (lib/wind.ts)
+  | 'windtunnel'
   | 'murmuration'
   | 'fishschool'
   | 'flowmasks'
@@ -2609,6 +2612,43 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 1,
     stars: 0,
     mode: 'musicliquid',
+  },
+  // Wind (lib/wind.ts): Object picks the shape the air passes over: 0 a sphere, 1 a wing, 2 a streamlined body.
+  Wind: {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 7,
+    glow: 7,
+    breathSpeed: 0.6,
+    intensity: 8,
+    particles: 0,
+    luminous: 7,
+    stars: 0,
+    mode: 'windtunnel',
+  },
+  'Wind Wing': {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 8,
+    glow: 3,
+    breathSpeed: 0.7,
+    intensity: 8,
+    particles: 1,
+    luminous: 8,
+    stars: 0,
+    mode: 'windtunnel',
+  },
+  'Wind Body': {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 9,
+    glow: 5,
+    breathSpeed: 0.65,
+    intensity: 8,
+    particles: 2,
+    luminous: 8,
+    stars: 0,
+    mode: 'windtunnel',
   },
   'Liquid Quantum': {
     preset: 'Clifford Dream',
@@ -7455,6 +7495,7 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
     case 'murmuration':
     case 'fishschool':
     case 'flowmasks':
+    case 'windtunnel':
       return buildCanvasMode(cfg, R);
     case 'sinmorph3d':
       return buildSinMorph3D(cfg, R);
@@ -7756,6 +7797,7 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
     case 'murmuration':
     case 'fishschool':
     case 'flowmasks':
+    case 'windtunnel':
       updateCanvasMode(group, cfg, t, R);
       break;
     case 'sinmorph3d':
@@ -14524,6 +14566,14 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'breathSpeed', label: 'Speed', min: 0.05, max: 2.0, step: 0.05 },
     { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
   ],
+  windtunnel: [
+    { key: 'particles', label: 'Object', min: 0, max: 2, step: 1 },
+    { key: 'complexity', label: 'Smoke Lines', min: 1, max: 10, step: 1 },
+    { key: 'glow', label: 'Turbulence', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Trails', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Wind Speed', min: 0.1, max: 2.0, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
   murmuration: [
     { key: 'complexity', label: 'Birds', min: 1, max: 10, step: 1 },
     { key: 'glow', label: 'Turbulence', min: 0, max: 10, step: 0.5 },
@@ -14989,6 +15039,7 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   oneflame: 'One Flame',
   sacredfigures: 'Sacred Figures',
   sacreddancers: 'Sacred Dancers',
+  windtunnel: 'Wind',
   murmuration: 'Murmuration',
   fishschool: 'Fish School',
   flowmasks: 'Flow Masks',
@@ -15167,6 +15218,7 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'oneflame', label: '🜂 One Flame' },
   { mode: 'sacredfigures', label: '☸ Sacred Figures' },
   { mode: 'sacreddancers', label: '☸ Sacred Dancers' },
+  { mode: 'windtunnel', label: '≫ Wind' },
   { mode: 'murmuration', label: '⋰ Murmuration' },
   { mode: 'fishschool', label: '⋰ Fish School' },
   { mode: 'flowmasks', label: '◕ Flow Masks' },
@@ -15298,6 +15350,7 @@ const STAR_TAB_MODES = new Set<Mode>([
   'oneflame',
   'sacredfigures',
   'sacreddancers',
+  'windtunnel',
   'murmuration',
   'fishschool',
   'flowmasks',
@@ -15393,6 +15446,11 @@ type FeaturedItem = { name: string; tag: string } | { header: string; dim?: bool
 
 export const FEATURED_PRESETS: FeaturedItem[] = [
   { header: 'Good Ones' },
+  // 18 Oct 2026, for the Ferrari project: "a star preset called Wind … currents of wind passing over an
+  // object from its left to its right: aerodynamics, the union of science and art. Later with a car."
+  { name: 'Wind', tag: 'WIND' },
+  { name: 'Wind Wing', tag: 'WIND' },
+  { name: 'Wind Body', tag: 'WIND' },
   // 13 Oct 2026: "that liquid chaos from Music is amazing, use it as a star preset." First.
   { name: 'Music Liquid Chaos', tag: 'LIQUID' },
   // 13 Oct 2026: "a Sauron's eye … red, the tips more golden, like real fire, with the cat's eye in the centre."
@@ -21424,7 +21482,8 @@ export default function GeometryField() {
       cfg.mode === 'sacreddancers' ||
       cfg.mode === 'murmuration' ||
       cfg.mode === 'fishschool' ||
-      cfg.mode === 'flowmasks';
+      cfg.mode === 'flowmasks' ||
+      cfg.mode === 'windtunnel';
     if (!isCanvasMode) {
       canvasModeActiveRef.current = false;
       cancelAnimationFrame(canvasModeAnimRef.current);
@@ -21839,6 +21898,140 @@ export default function GeometryField() {
      * Fire Colour: 0 red–orange–gold, 1 purple, 2 blue, 3 green, 4 rose,
      * 5 white-gold, 6 turquoise.
      */
+    /* ── WIND — air passing over an object, from its left to its right ───
+     *
+     * Asked for 2026-10-18 for the Ferrari project: aerodynamics, the wind
+     * passing over an object, science and art together; later with a car.
+     * Smoke lines, as in a wind tunnel, ride the field of lib/wind.ts: they
+     * stop on the nose, part, speed up over the shoulders and curl into the
+     * wake. Each line is coloured by its speed (slow deep blue, fast white
+     * turning gold), and a warm glow marks the stagnation point, where the
+     * pressure is highest.
+     */
+    if (cfg.mode === 'windtunnel') {
+      const shape = windShape(cfg.particles);
+      const turb = cfg.glow / 10;
+      const fade = 0.2 - 0.17 * Math.min(1, cfg.luminous / 10);
+      const lanes = Math.round(lerp(16, 64, (cfg.complexity - 1) / 9));
+      // As much smoke per area as on a full screen: a small screen (a frame in a room) would otherwise saturate to white.
+      const perLane = () =>
+        70 * Math.max(0.15, Math.min(1.4, (mc!.width * mc!.height) / (1280 * 720)));
+      type Puff = { x: number; y: number; laned: boolean };
+      let puffs: Puff[] = [];
+      let last = performance.now();
+      let clock = 0;
+      const frame = () => {
+        const W = mc!.width;
+        const H = mc!.height;
+        const scale = H / 2.2;
+        return {
+          W,
+          H,
+          scale,
+          cx: W / 2,
+          cy: H / 2,
+          xmin: -W / 2 / scale - 0.05,
+          xmax: W / 2 / scale + 0.05,
+        };
+      };
+      // Most smoke comes from a rake of evenly spaced nozzles on the left; some drifts freely between them.
+      const spawn = (x: number): Puff => {
+        const laned = Math.random() < 0.8;
+        const y = laned
+          ? -1.05 +
+            (2.1 * (Math.floor(Math.random() * lanes) + 0.5)) / lanes +
+            (Math.random() - 0.5) * 0.004
+          : (Math.random() - 0.5) * 2.3;
+        return { x, y, laned };
+      };
+      {
+        const f = frame();
+        for (let i = 0; i < lanes * perLane(); i++) {
+          const p = spawn(f.xmin + Math.random() * (f.xmax - f.xmin));
+          if (shape.sdf(p.x, p.y) > 0.01) puffs.push(p);
+        }
+      }
+      const noseOf = shape.outline.reduce((a, b) => (b[0] < a[0] ? b : a));
+
+      function drawWind() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.033, (now - last) / 1000) * speed;
+        last = now;
+        clock += dt;
+        const f = frame();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const sx = (x: number) => f.cx + x * f.scale;
+        const sy = (y: number) => f.cy - y * f.scale;
+
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = `rgba(3, 5, 10, ${fade})`;
+        ctx!.fillRect(0, 0, f.W, f.H);
+        ctx!.globalCompositeOperation = 'lighter';
+        ctx!.lineWidth = 1.1 * dpr;
+        ctx!.lineCap = 'round';
+
+        const keep: Puff[] = [];
+        for (const p of puffs) {
+          const ox = p.x;
+          const oy = p.y;
+          // Two half steps, so the lines bend smoothly round the nose.
+          let v = windVelocity(shape, p.x, p.y, clock, turb);
+          p.x += v[0] * dt * 0.5;
+          p.y += v[1] * dt * 0.5;
+          v = windVelocity(shape, p.x, p.y, clock, turb);
+          p.x += v[0] * dt * 0.5;
+          p.y += v[1] * dt * 0.5;
+          if (p.x > f.xmax || Math.abs(p.y) > 1.3 || shape.sdf(p.x, p.y) < -0.03) continue;
+          keep.push(p);
+          if (dt === 0) continue;
+          const sp = Math.hypot(v[0], v[1]);
+          const [h, sat, l] = speedColour(sp);
+          ctx!.strokeStyle = `hsla(${h}, ${sat}%, ${l}%, ${(p.laned ? 0.34 : 0.16) * (0.4 + 0.6 * iF)})`;
+          ctx!.beginPath();
+          ctx!.moveTo(sx(ox), sy(oy));
+          ctx!.lineTo(sx(p.x), sy(p.y));
+          ctx!.stroke();
+        }
+        // New smoke at the rake, as much as left the frame.
+        const want = Math.round(lanes * perLane());
+        for (let i = keep.length; i < want; i++) keep.push(spawn(f.xmin + Math.random() * 0.04));
+        puffs = keep;
+
+        // The stagnation point: a warm glow on the nose, where the air stops.
+        ctx!.globalCompositeOperation = 'lighter';
+        const gx = sx(noseOf[0]);
+        const gy = sy(noseOf[1]);
+        const gr = 0.16 * f.scale;
+        const g = ctx!.createRadialGradient(gx, gy, 0, gx, gy, gr);
+        g.addColorStop(0, `hsla(14, 95%, 58%, ${0.16 * iF})`);
+        g.addColorStop(1, 'hsla(14, 95%, 58%, 0)');
+        ctx!.fillStyle = g;
+        ctx!.fillRect(gx - gr, gy - gr, gr * 2, gr * 2);
+
+        // The object: dark, drawn like a figure in a paper, a fine light outline.
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.beginPath();
+        shape.outline.forEach(([x, y], i) =>
+          i ? ctx!.lineTo(sx(x), sy(y)) : ctx!.moveTo(sx(x), sy(y)),
+        );
+        ctx!.closePath();
+        ctx!.fillStyle = '#05070c';
+        ctx!.fill();
+        ctx!.strokeStyle = `rgba(236, 226, 206, ${0.35 + 0.35 * iF})`;
+        ctx!.lineWidth = 1.2 * dpr;
+        ctx!.stroke();
+
+        canvasModeAnimRef.current = requestAnimationFrame(drawWind);
+      }
+      drawWind();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
+    }
+
     if (cfg.mode === 'oneflame') {
       const TAU = Math.PI * 2;
       // [hue, saturation, lightness] for the base, the middle and the tip of each fire.
@@ -25183,7 +25376,8 @@ export default function GeometryField() {
           cfg.mode === 'sacreddancers' ||
           cfg.mode === 'murmuration' ||
           cfg.mode === 'fishschool' ||
-          cfg.mode === 'flowmasks') && (
+          cfg.mode === 'flowmasks' ||
+          cfg.mode === 'windtunnel') && (
           <canvas
             ref={matrixCanvasRef}
             style={{
