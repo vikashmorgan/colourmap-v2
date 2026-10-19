@@ -38,6 +38,8 @@ Four tabs:
 
 The same dot and notebook as Practice: beige paper and brown ink. Its *About* list holds *Overall*, each section and each exercise. It is preselected from what is open (the open card, else the open section, else Overall) and follows the page until chosen by hand. Below it, every note grouped by place, *you are here*, and jump-to links.
 
+- **Bold in notes** (asked for 2026-10-19). In any note box (a question, a comment or the notepad), the **B** button at the box's top right, or Ctrl/Cmd+B, makes the selected text bold or plain again. Notes stay plain text: bold is stored as `**word**` and shown in bold in the notes, the notebook and Review, and in answers written from the terminal.
+
 ## Storage
 
 Three tables, all scoped by RLS to their owner (migration `0027_health.sql`).

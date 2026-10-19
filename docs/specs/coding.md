@@ -84,6 +84,8 @@ The SQL class page (`/sql`, docs/specs/sql-class.md) keeps its marks and notes i
 
 Table `coding_marks` (migration `0023_coding_marks.sql`): one row per box with a mark, a note, or both; unique on `(user_id, item_key)`; RLS limits every row to its owner. The database enforces the vocabularies (`got|mid|late`, `question|comment`), that a note always has a kind, and that a row is never empty.
 
+- **Bold in notes** (asked for 2026-10-19). In any note box (a question, a comment or the notepad), the **B** button at the box's top right, or Ctrl/Cmd+B, makes the selected text bold or plain again. Notes stay plain text: bold is stored as `**word**` and shown in bold in the notes, the notebook and Review, and in answers written from the terminal.
+
 ## Slides
 
 The slides are the teacher's material and this repository is public, so **slides are never committed**. Each user uploads their own copies once, from the upload panel on the Lessons page, into the private Supabase bucket `coding-slides`, under a folder named after their user id. Storage policies confine reads and writes to that folder. Only the twelve known file names are accepted (Session8.pdf added with session 8; Recursion1.pdf, Recursion2.pdf and Recursion4.pdf with the second course).

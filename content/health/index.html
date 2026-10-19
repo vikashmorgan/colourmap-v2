@@ -170,6 +170,9 @@ h2 { font-family: var(--display); font-size: 22px; margin: 28px 0 10px; }
 .note-tools { margin-left: auto; display: flex; gap: 2px; }
 .note-tools button { min-width: 30px; min-height: 30px; border: 0; background: none; color: var(--muted); cursor: pointer; border-radius: 6px; font: 600 13px var(--body); }
 .note-tools button.armed { color: #fff; background: var(--sess-6); padding: 0 8px; }
+.bold-btn { position: fixed; z-index: 80; width: 28px; height: 28px; padding: 0; border-radius: 7px; border: 1px solid var(--rule); background: var(--ground); color: var(--ink); font: 700 14px Georgia, serif; cursor: pointer; opacity: .75; }
+.bold-btn:hover { opacity: 1; border-color: var(--ink); }
+textarea[aria-label="Your note"] { padding-right: 40px !important; }
 .note-body { white-space: pre-wrap; overflow-wrap: anywhere; }
 .note-answer { border-left: 3px solid var(--nc); padding: 4px 0 4px 10px; display: grid; gap: 4px; }
 .note-answer .note-kind { color: var(--ink); }
@@ -556,8 +559,8 @@ const isDone = n => n.kind !== 'question' || (n.answer && n.readAt);
 function noteHtml(n) {
   return `<div class="note${isDone(n) ? ' done' : ''}" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
     <div class="note-head"><span class="note-kind">${KIND[n.kind]}</span><span class="note-tools"><button type="button" class="n-edit" aria-label="Edit">✎</button><button type="button" class="n-del" aria-label="Delete">×</button></span></div>
-    <div class="note-body">${esc(n.body)}</div>
-    ${n.answer ? `<div class="note-answer"><span class="note-kind">Answer</span><div class="note-body">${esc(n.answer)}</div>${n.readAt ? '' : '<button type="button" class="note-read">Got it, mark read</button>'}</div>` : ''}
+    <div class="note-body">${boldHtml(esc(n.body))}</div>
+    ${n.answer ? `<div class="note-answer"><span class="note-kind">Answer</span><div class="note-body">${boldHtml(esc(n.answer))}</div>${n.readAt ? '' : '<button type="button" class="note-read">Got it, mark read</button>'}</div>` : ''}
   </div>`;
 }
 function editorHtml(kind, body) {
@@ -975,6 +978,53 @@ notebook.addEventListener('click', e => {
   if (e.target.closest('.save, .cancel')) setTimeout(renderNotebook, 0);
 });
 nbText.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); document.getElementById('nb-save').click(); } });
+
+/* ---------- Bold in notes ----------
+   Asked for 2026-10-19: "mettre texte en gras" in questions and notepads. Notes stay plain text:
+   bold is written **like this**, shown in bold. In any note box, the B button at its top right
+   or Ctrl/Cmd+B makes the selection bold, or plain again. */
+function boldHtml(html) { return html.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, '<b>$1</b>'); }
+const NOTE_BOX = 'textarea[aria-label="Your note"]';
+function toggleBold(ta) {
+  const a = ta.selectionStart, b = ta.selectionEnd, v = ta.value;
+  ta.focus();
+  if (v.slice(a - 2, a) === '**' && v.slice(b, b + 2) === '**') {
+    ta.setSelectionRange(a - 2, b + 2);
+    if (!document.execCommand('insertText', false, v.slice(a, b))) ta.setRangeText(v.slice(a, b), a - 2, b + 2, 'end');
+    ta.setSelectionRange(a - 2, b - 2);
+  } else {
+    const inner = v.slice(a, b);
+    if (!document.execCommand('insertText', false, `**${inner}**`)) ta.setRangeText(`**${inner}**`, a, b, 'end');
+    ta.setSelectionRange(a + 2, b + 2);
+  }
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+}
+const boldBtn = document.createElement('button');
+boldBtn.type = 'button';
+boldBtn.className = 'bold-btn';
+boldBtn.textContent = 'B';
+boldBtn.title = 'Bold (Ctrl+B)';
+boldBtn.setAttribute('aria-label', 'Bold');
+boldBtn.hidden = true;
+document.body.append(boldBtn);
+let boldFor = null;
+function placeBold() {
+  if (!boldFor || !boldFor.isConnected) { boldBtn.hidden = true; return; }
+  const r = boldFor.getBoundingClientRect();
+  boldBtn.style.top = `${r.top + 5}px`;
+  boldBtn.style.left = `${r.right - 33}px`;
+  boldBtn.hidden = r.bottom < 0 || r.top > innerHeight;
+}
+document.addEventListener('focusin', e => { if (e.target.matches && e.target.matches(NOTE_BOX)) { boldFor = e.target; placeBold(); } });
+document.addEventListener('focusout', e => { if (e.target === boldFor) setTimeout(() => { if (document.activeElement !== boldFor) { boldFor = null; boldBtn.hidden = true; } }, 0); });
+addEventListener('scroll', () => { if (boldFor) placeBold(); }, { passive: true, capture: true });
+addEventListener('resize', () => { if (boldFor) placeBold(); });
+document.addEventListener('input', e => { if (e.target === boldFor) placeBold(); });
+boldBtn.addEventListener('mousedown', e => e.preventDefault());
+boldBtn.addEventListener('click', () => { if (boldFor) toggleBold(boldFor); });
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'b' && e.target.matches && e.target.matches(NOTE_BOX)) { e.preventDefault(); toggleBold(e.target); }
+});
 
 /* ---------- Pages, theme, drawing ---------- */
 function showPage(name) {
