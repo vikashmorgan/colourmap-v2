@@ -33,7 +33,9 @@
   .theme { font: 600 14px system-ui, sans-serif; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; min-height: 36px; cursor: pointer; }
   .theme:hover { border-color: var(--accent); }
   .course { margin: 0; color: var(--soft); font: 13px/1.4 system-ui, sans-serif; letter-spacing: .02em; }
-  h1 { font-size: 32px; font-weight: 600; margin: 26px 0 0; line-height: 1.2; }
+  h1 { font-size: 32px; font-weight: 600; margin: 6px 0 0; line-height: 1.2; }
+  /* Which session you are in: top left, outside the boxes, and it stays while scrolling. */
+  .where { position: sticky; top: 0; z-index: 3; margin: 22px -18px 0;  padding: 8px 18px; background: var(--paper); font: 600 13px/21px  ui-monospace, Consolas, monospace; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
   .lede { margin: 6px 0 0; color: var(--soft); }
 
   /* The three sessions: one shown at a time. */
@@ -41,7 +43,7 @@
   .sess.ref { align-content: start; border-style: dashed; }
   .sess.ref[aria-selected="true"] { border-style: solid; }
   /* Cheat sheet: one line per term, found by typing. */
-  .ref-search { position: sticky; top: 8px; z-index: 2; width: 100%; margin: 18px 0 0; min-height: 42px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 15px system-ui, sans-serif; box-shadow: 0 6px 18px color-mix(in srgb, var(--paper) 80%, transparent); }
+  .ref-search { position: sticky; top: 37px; z-index: 2; width: 100%; margin: 18px 0 0; min-height: 42px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 15px system-ui, sans-serif; box-shadow: 0 6px 18px color-mix(in srgb, var(--paper) 80%, transparent); }
   .ref-search:focus { outline: none; border-color: var(--accent); }
   .ref-group h2 { margin: 28px 0 6px; }
   .ref { margin: 0; display: grid; }
@@ -576,7 +578,7 @@ function sqlHtml(code) {
 function cardHtml(s, c) {
   const key = cardKey(s.n, c.id), m = marks[key] || '';
   return `<article class="card" id="c-${s.n}-${c.id}" data-key="${esc(key)}" data-mark="${m}">
-    <h3><span class="num">${c.num}</span><span>${esc(c.name)}</span></h3>
+    <h3><span class="num">${c.num.split('.')[1]}</span><span>${esc(c.name)}</span></h3>
     <p>${kwText(c.what)}</p>
     ${c.code ? `<pre>${sqlHtml(c.code)}</pre>` : ''}
     ${c.watch ? `<p class="watch"><b>Watch out</b>${kwText(c.watch)}</p>` : ''}
@@ -730,9 +732,9 @@ function paintBars() {
   }
 }
 function renderSession() {
-  if (current === 'ref') { document.getElementById('session').innerHTML = refHtml(); applyHighlights(); return; }
+  if (current === 'ref') { document.getElementById('session').innerHTML = '<p class="where">Cheat sheet</p>' + refHtml(); applyHighlights(); return; }
   const s = SESSIONS.find(x => x.n === current);
-  document.getElementById('session').innerHTML = `<h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
+  document.getElementById('session').innerHTML = `<p class="where">Session ${s.n}</p><h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
     + s.groups.map(g => `<h2>${esc(g.name)}</h2>${g.flow ? `<p class="flow">${g.flow.map(f => `<span>${f}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div>`).join('')
     + `<h2>Practice</h2><p class="group-note">Try each one in DB Browser first, then open the answer.</p><div class="practice">${practiceHtml(s)}</div>`
     + `<h2>To remember</h2><ul class="recap" data-hl="sql|s${s.n}|recap">${s.recap.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`;
