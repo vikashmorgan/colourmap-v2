@@ -1055,6 +1055,19 @@ details.datacode .mission-tag { background: var(--ok-c); }
 .pnb-go .pnb-n { font: 600 12px var(--mono); color: var(--ground); background: var(--sess); border-radius: 6px; padding: 1px 7px; }
 .pnb-here { font: 600 12px var(--body); color: var(--sess); }
 .pnb-empty { margin: 0; color: var(--muted); font-size: 14px; }
+/* Practice's notebook is beige paper with brown ink, in day and night (2026-10-19: "beige or brown, not blue"). */
+#pnb, #pnb-dot { --pnb-bg: #efe5d2; --pnb-top: #e5d6b9; --pnb-brown: #7a5230; --pnb-rule: #d6c3a0; }
+:root[data-theme="dark"] #pnb, :root[data-theme="dark"] #pnb-dot { --pnb-bg: #221c15; --pnb-top: #2c241a; --pnb-brown: #d0a979; --pnb-rule: #45392a; }
+#pnb { background: var(--pnb-bg); border-color: var(--pnb-rule); --rule: var(--pnb-rule); --panel: color-mix(in srgb, var(--pnb-bg) 70%, #fff 30%); }
+:root[data-theme="dark"] #pnb { --panel: color-mix(in srgb, var(--pnb-bg) 85%, #fff 15%); }
+#pnb .nb-top { background: var(--pnb-top); }
+#pnb .nb-title { color: var(--pnb-brown); }
+#pnb .pnb-group { --sess: var(--pnb-brown); }
+#pnb .note-actions .note-save { background: var(--pnb-brown); border-color: var(--pnb-brown); color: var(--pnb-bg); }
+#pnb .line-pick select:focus-visible, #pnb textarea:focus-visible { outline: 2px solid var(--pnb-brown); outline-offset: 1px; }
+#pnb-dot { border-color: color-mix(in srgb, var(--pnb-brown) 70%, transparent); background: var(--pnb-bg); }
+#pnb-dot:hover, #pnb-dot[aria-expanded="true"] { border-color: var(--pnb-brown); }
+#pnb-dot.has-notes { background: var(--pnb-brown); }
 .pl-flags { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffd36b, #e7a321 70%); font: 700 10px/16px var(--body); color: #4a3200; text-align: center; align-self: center; }
 .pp-index a.pp-flagged::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #e7a321; margin-left: 6px; display: inline-block; }
 .rv-flag .dot { background: #e7a321; }
@@ -4955,7 +4968,7 @@ function renderPnb() {
   const byNewest = (a, b) => String(b.createdAt || b.localId || '').localeCompare(String(a.createdAt || a.localId || ''));
   const groups = pnbPlaces().map(p => ({ p, notes: list.filter(n => n.key === p.key).sort(byNewest) })).filter(g => g.notes.length);
   box.innerHTML = groups.length
-    ? groups.map(({ p, notes }) => `<div class="pnb-group${p.key === here ? ' here' : ''}" data-key="${esc(p.key)}" style="--sess: ${p.sess}">
+    ? groups.map(({ p, notes }) => `<div class="pnb-group${p.key === here ? ' here' : ''}" data-key="${esc(p.key)}">
         <div class="pnb-head"><button type="button" class="pnb-go" data-go="${esc(p.key)}"${p.key === 'x|notebook' ? ' disabled' : ` title="Go to ${esc(p.name)}"`}><span class="pnb-n">${esc(p.n)}</span><span class="pnb-name">${esc(p.name)}${p.key === 'x|notebook' ? '' : ' ›'}</span></button>${p.key === here ? '<span class="pnb-here">you are here</span>' : ''}</div>
         <div class="note-list">${notes.map(n => noteHtml(n, false)).join('')}</div>
       </div>`).join('')
