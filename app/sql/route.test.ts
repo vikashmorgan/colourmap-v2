@@ -45,5 +45,8 @@ describe('/sql class page', () => {
     // The cheat sheet: every term from the sessions, searchable, as its own tab.
     expect(html).toContain('const REF = [');
     expect(html).toContain('data-s="ref"');
+    // Overall notes above the sessions, and highlights on the lessons.
+    expect(html).toContain('data-key="sql|notebook"');
+    expect(html).toContain("const HL_KEY = 'sql-highlights';");
   });
 });
