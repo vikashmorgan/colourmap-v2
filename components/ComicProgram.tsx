@@ -64,7 +64,6 @@ const TEXT_ON_IMAGE_PROGRAMS = new Set([
 ]);
 
 const BLANK_BUBBLE_PROGRAMS = new Set(['carl-jung']);
-const JPG_PANEL_PROGRAMS = new Set(['carl-jung', 'struggle-letting-go']);
 const LAYERED_BUBBLE_PROGRAMS = new Set([
   'carl-jung',
   'paulo-freire',
@@ -820,10 +819,8 @@ function PanelImage({
   if (imageStyle && imageStyle !== 'default' && !failed) {
     const extension =
       imageStyle === POSITIVE_OVERLAY_STYLE.key
-        ? (POSITIVE_OVERLAY_PANEL_EXTENSIONS[programKey] ?? 'png')
-        : JPG_PANEL_PROGRAMS.has(programKey)
-          ? 'jpg'
-          : 'png';
+        ? (POSITIVE_OVERLAY_PANEL_EXTENSIONS[programKey] ?? 'jpg')
+        : 'jpg';
     return (
       <img
         src={`/comics/${programKey}/variants/${imageStyle}/panel-${
@@ -844,7 +841,7 @@ function PanelImage({
     );
   }
   if (generatedCount && !failed) {
-    const extension = GENERATED_LAYERED_PANEL_EXTENSIONS[programKey] ?? 'png';
+    const extension = GENERATED_LAYERED_PANEL_EXTENSIONS[programKey] ?? 'jpg';
     return (
       <img
         src={`/comics/${programKey}/generated/panel-${index % generatedCount}.${extension}`}
@@ -871,7 +868,7 @@ function PanelImage({
   if (programKey === 'carl-jung') {
     return <CarlJungBasePanel index={index} color={color} />;
   }
-  const extension = JPG_PANEL_PROGRAMS.has(programKey) ? 'jpg' : 'png';
+  const extension = 'jpg';
   const src = `/comics/${programKey}/panel-${index}.${extension}`;
   if (!failed) {
     return (

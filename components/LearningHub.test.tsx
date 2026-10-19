@@ -63,10 +63,10 @@ describe('LearningHub', () => {
     expect(screen.queryByRole('button', { name: 'atlas' })).toBeNull();
     expect(screen.getByText('start here')).toBeDefined();
     expect(
-      container.querySelector('img[src="/comics/room-to-breathe/panel-2.png"]'),
+      container.querySelector('img[src="/comics/room-to-breathe/panel-2.jpg"]'),
     ).not.toBeNull();
     expect(
-      container.querySelector('img[src="/comics/emotional-intelligence/panel-5.png"]'),
+      container.querySelector('img[src="/comics/emotional-intelligence/panel-5.jpg"]'),
     ).not.toBeNull();
     expect(
       container.querySelector(
@@ -127,7 +127,7 @@ describe('LearningHub', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Begin Emotional Intelligence' }));
 
     expect(screen.getByRole('button', { name: 'Next comic page' })).toBeDefined();
-    const panelImage = container.querySelector('img[src*="/variants/minimal/panel-0.png"]');
+    const panelImage = container.querySelector('img[src*="/variants/minimal/panel-0.jpg"]');
     expect(panelImage).not.toBeNull();
   }, 30000);
 
@@ -220,7 +220,7 @@ describe('LearningHub', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Show second comic image' }));
     const cleanImage = screen.getByRole('img', { name: /Carl Jung comic page 1/i });
-    expect(cleanImage.getAttribute('src')).toBe('/comics/carl-jung/generated/panel-0.png');
+    expect(cleanImage.getAttribute('src')).toBe('/comics/carl-jung/generated/panel-0.jpg');
 
     fireEvent.click(screen.getByRole('button', { name: 'Reveal deeper comic text' }));
     expect(screen.getByText(/They are clues from a deeper field/i)).toBeDefined();
@@ -232,7 +232,7 @@ describe('LearningHub', () => {
       '/comics/carl-jung/variants/no-bubbles/panel-13.jpg',
     );
     expect(
-      container.querySelector('img[src*="/comics/carl-jung/generated/panel-13.png"]'),
+      container.querySelector('img[src*="/comics/carl-jung/generated/panel-13.jpg"]'),
     ).toBeNull();
   });
 
@@ -320,7 +320,7 @@ describe('LearningHub', () => {
     const gandhiImage = screen.getByRole('img', {
       name: /Gandhi & The Power of Small Things comic page 1/i,
     });
-    expect(gandhiImage.getAttribute('src')).toBe('/comics/gandhi/generated/panel-0.png');
+    expect(gandhiImage.getAttribute('src')).toBe('/comics/gandhi/generated/panel-0.jpg');
     expect(screen.queryByText('A life begins unfinished')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Reveal comic text' }));
@@ -345,7 +345,7 @@ describe('LearningHub', () => {
     const clearAllenImage = screen.getByRole('img', {
       name: /Clear & Allen: Organisation As Freedom comic page 1/i,
     });
-    expect(clearAllenImage.getAttribute('src')).toBe('/comics/clear-allen/generated/panel-0.png');
+    expect(clearAllenImage.getAttribute('src')).toBe('/comics/clear-allen/generated/panel-0.jpg');
     expect(screen.queryByText('Part 1: James Clear')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Reveal comic text' }));
