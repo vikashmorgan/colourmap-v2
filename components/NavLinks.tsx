@@ -8,9 +8,9 @@ import { useViewMode } from './ViewModeContext';
 
 /*
  * `plain` links leave the app: /school (the way into every class: Python at
- * /coding, Git at /git, SQL to come) is a whole standalone page served by a
- * route handler, not an app screen, so it gets an ordinary <a> rather than a
- * client-side <Link> navigation.
+ * /coding, Git at /git, SQL to come) and /health (knee, shoulder and feet, day
+ * by day) are whole standalone pages served by route handlers, not app
+ * screens, so they get an ordinary <a> rather than a client-side <Link>.
  */
 const PRIMARY_LINKS: { href: string; label: string; plain?: boolean }[] = [
   { href: '/day', label: 'Focus' },
@@ -19,6 +19,7 @@ const PRIMARY_LINKS: { href: string; label: string; plain?: boolean }[] = [
   { href: '/education', label: 'Education' },
   { href: '/geometry-field', label: 'Art' },
   { href: '/school', label: 'School', plain: true },
+  { href: '/health', label: 'Health', plain: true },
 ];
 
 const PHONE_PRIMARY_LINKS = PRIMARY_LINKS;

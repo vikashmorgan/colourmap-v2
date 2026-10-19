@@ -1,0 +1,1018 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Health</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%237a5230%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%276%27 fill=%27%23efe5d2%27/%3E%3C/svg%3E">
+<script>
+  // Day (beige) or night, remembered on this device. Day by default, like School.
+  try { document.documentElement.dataset.theme = localStorage.getItem('health-theme') === 'night' ? 'dark' : 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Practice's look: beige paper by day, warm dark by night. */
+:root {
+  --ground: #f6f1e6; --panel: #fbf8f1; --ink: #1b2330; --muted: #6b5d4b; --rule: #e4dccb;
+  --accent: #7a5230; --ok: #2f7a4f; --code-bg: #efe7d6;
+  --q-c: #985a22; --c-c: #357a4f; --r-c: #5a5aa0;
+  --sess-1: #b4532a; --sess-2: #2f7a4f; --sess-3: #8a6d1a; --sess-4: #1f7a7a; --sess-5: #7a3fa0; --sess-6: #a1365a;
+  --nb-bg: #efe5d2; --nb-top: #e5d6b9; --nb-brown: #7a5230; --nb-rule: #d6c3a0;
+  --display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #12161d; --panel: #1a2029; --ink: #e6e9ef; --muted: #cfc4b0; --rule: #2c3442;
+  --accent: #d0a979; --ok: #7cc49a; --code-bg: #151a22;
+  --q-c: #e0a06a; --c-c: #86c29f; --r-c: #a9a9ec;
+  --sess-1: #e69a74; --sess-2: #7cc49a; --sess-3: #e0c060; --sess-4: #6fc4c4; --sess-5: #c79be6; --sess-6: #ec8fb0;
+  --nb-bg: #221c15; --nb-top: #2c241a; --nb-brown: #d0a979; --nb-rule: #45392a;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; }
+button { font-family: inherit; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 0 80px; }
+
+/* Top bar */
+.top { position: sticky; top: 0; z-index: 10; background: var(--ground); border-bottom: 1px solid var(--rule); }
+.top .wrap { display: flex; align-items: center; gap: 12px 16px; padding-block: 12px; flex-wrap: wrap; }
+.back { font: 600 13px var(--mono); color: var(--accent); text-decoration: none; letter-spacing: .02em; }
+.tabs { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--rule); border-radius: 999px; background: var(--panel); overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+.tab { min-height: 38px; padding: 6px 16px; border: 0; border-radius: 999px; background: none; color: var(--ink); font: 600 15px var(--body); cursor: pointer; white-space: nowrap; }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--ground); }
+.tab b { font: 600 11px var(--mono); margin-left: 4px; padding: 1px 6px; border-radius: 999px; background: var(--q-c); color: var(--ground); }
+.theme-btn { margin-left: auto; width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); font-size: 17px; cursor: pointer; }
+
+.intro { padding: 28px 0 8px; }
+.eyebrow { font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font-family: var(--display); font-size: clamp(28px, 4.5vw, 40px); line-height: 1.1; margin: 6px 0 10px; }
+.intro p { margin: 0; max-width: 70ch; color: var(--muted); }
+.rule-box { margin: 14px 0 0; padding: 10px 14px; border-radius: 12px; border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--rule)); background: color-mix(in srgb, var(--accent) 6%, var(--panel)); font-size: 15px; max-width: 80ch; }
+h2 { font-family: var(--display); font-size: 22px; margin: 28px 0 10px; }
+
+/* Today: the day, how it feels, the plan */
+.daybar { display: flex; align-items: center; gap: 8px; margin: 18px 0 6px; flex-wrap: wrap; }
+.daybar .d { font: 700 20px var(--display); min-width: 12ch; text-align: center; }
+.pill { min-height: 36px; padding: 4px 14px; border-radius: 999px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); font: 600 14px var(--body); cursor: pointer; }
+.pill:disabled { opacity: .35; cursor: default; }
+.pill.round { width: 38px; padding: 0; font-size: 18px; }
+
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 14px 18px; }
+.feel { display: grid; gap: 12px; }
+.scale-row { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); align-items: center; gap: 10px; }
+.scale-row > span { font-weight: 600; }
+.scale { display: flex; flex-wrap: wrap; gap: 4px; }
+.sc { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--c) 60%, var(--rule)); background: none; color: var(--ink); font: 600 12px var(--mono); cursor: pointer; padding: 0; }
+.sc[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: #fff; }
+.sc:active { background: var(--c); color: #fff; }
+.feel textarea, .nb-write textarea, .n-editor textarea { width: 100%; font: 15px var(--body); color: var(--ink); background: var(--ground); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; resize: vertical; }
+.feel-label { font-weight: 600; display: block; margin-bottom: 4px; }
+.saved { font-size: 13px; color: var(--ok); min-height: 1.2em; margin: 0; }
+.go-easy { margin: 12px 0 0; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--q-c) 12%, var(--panel)); border: 1px solid color-mix(in srgb, var(--q-c) 35%, var(--rule)); font-size: 15px; }
+
+.part { border: 1px solid color-mix(in srgb, var(--sess) 30%, var(--rule)); border-radius: 16px; margin-bottom: 14px; background: var(--panel); overflow: hidden; }
+.part-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 14px 18px; background: color-mix(in srgb, var(--sess) 9%, var(--panel)); }
+.part-head h3 { margin: 0; font: 700 20px var(--display); }
+.part-head .when { font-size: 14px; color: var(--muted); }
+.part-head .count { margin-left: auto; font: 600 13px var(--mono); color: var(--sess); }
+.part-why { margin: 0; padding: 10px 18px 0; font-size: 14.5px; color: var(--muted); }
+.ab { display: flex; gap: 6px; padding: 10px 18px 0; flex-wrap: wrap; align-items: center; }
+.ab button { min-height: 34px; padding: 3px 14px; border-radius: 999px; border: 1px solid var(--rule); background: none; color: var(--ink); font: 600 13.5px var(--body); cursor: pointer; }
+.ab button[aria-pressed="true"] { background: var(--sess); border-color: var(--sess); color: var(--ground); }
+.ab .hint { font-size: 13px; color: var(--muted); }
+.ticks { list-style: none; margin: 0; padding: 8px 10px 12px; display: grid; gap: 2px; }
+.tick { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 10px; }
+.tick:hover { background: color-mix(in srgb, var(--sess) 6%, transparent); }
+.tbox { width: 30px; height: 30px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--sess) 55%, var(--rule)); background: none; cursor: pointer; display: grid; place-items: center; color: transparent; font: 700 15px var(--body); padding: 0; }
+.tbox[aria-pressed="true"], .tbox:active { background: var(--ok); border-color: var(--ok); color: #fff; }
+.tname { font-weight: 600; }
+.tdose { display: block; font-size: 13.5px; color: var(--muted); font-weight: 400; }
+.tick.done .tname { color: var(--muted); }
+.how { font: 600 13px var(--body); color: var(--accent); background: none; border: 0; cursor: pointer; min-height: 32px; white-space: nowrap; }
+
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.wday { border: 1px solid var(--rule); border-radius: 12px; background: var(--panel); padding: 8px 6px; display: grid; gap: 4px; justify-items: center; cursor: pointer; color: var(--ink); font: inherit; }
+.wday[aria-current="date"] { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+.wday .wd { font: 600 12px var(--mono); color: var(--muted); }
+.wbars { display: flex; gap: 3px; align-items: flex-end; height: 34px; }
+.wbars i { width: 7px; border-radius: 3px; background: color-mix(in srgb, var(--c) 25%, transparent); position: relative; overflow: hidden; height: 100%; }
+.wbars i::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: var(--h); background: var(--c); }
+.wpain { font: 600 11px var(--mono); color: var(--muted); white-space: nowrap; }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-top: 8px; }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; background: var(--c); margin-right: 5px; }
+
+/* Plan */
+.plan-part { margin-bottom: 14px; }
+.plan-part .ticks .tick { grid-template-columns: minmax(0, 1fr) auto; }
+
+/* Exercises: sections and cards, one open at a time */
+.sec { border: 1px solid color-mix(in srgb, var(--sess) 30%, var(--rule)); border-radius: 16px; margin-bottom: 14px; background: var(--panel); scroll-margin-top: 120px; }
+.sec > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; padding: 16px 20px; border-radius: 16px; background: color-mix(in srgb, var(--sess) 9%, var(--panel)); }
+.sec > summary::-webkit-details-marker { display: none; }
+.sec[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.sec-n { font: 600 12px var(--mono); color: var(--sess); text-transform: uppercase; letter-spacing: .08em; }
+.sec-title { font: 700 21px var(--display); }
+.sec-qs { margin-left: auto; }
+.sec-sub { margin: 0; padding: 12px 20px 0; color: var(--muted); font-size: 15px; }
+.sec-body { padding: 12px 14px 16px; display: grid; gap: 8px; }
+.sec-notes { padding: 0 6px 6px; }
+.ex { border: 1px solid var(--rule); border-radius: 12px; background: var(--panel); scroll-margin-top: 120px; }
+.ex > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.ex > summary::-webkit-details-marker { display: none; }
+.ex > summary:hover { background: color-mix(in srgb, var(--sess) 7%, transparent); border-radius: 12px; }
+.ex[open] { border-color: color-mix(in srgb, var(--sess) 45%, var(--rule)); box-shadow: 0 6px 20px rgb(0 0 0 / .06); }
+.ex-name { font-weight: 600; font-size: 17px; }
+.ex-dose { font: 600 12.5px var(--mono); color: var(--sess); margin-left: auto; text-align: right; }
+.ex-body { padding: 0 16px 16px; display: grid; gap: 10px; }
+/* Your order (2026-10-19: "move exercise boxes above another, to show my favourites and the ones I don't do"). */
+.ex-move { display: inline-flex; gap: 2px; flex: none; }
+.ex-move button { width: 30px; height: 30px; padding: 0; border-radius: 8px; border: 1px solid transparent; background: none; color: var(--muted); font: 600 15px var(--body); cursor: pointer; }
+.ex-move button:hover, .ex-move button:focus-visible { border-color: var(--rule); color: var(--ink); background: var(--ground); }
+.ex-move button:disabled { opacity: .25; cursor: default; }
+.ex.aside { opacity: .55; border-style: dashed; }
+.ex.aside:hover, .ex.aside[open] { opacity: 1; }
+.aside-tag { font: 600 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.aside-btn { justify-self: start; min-height: 32px; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--rule); background: none; color: var(--muted); font: 600 13px var(--body); cursor: pointer; }
+.aside-btn:hover { color: var(--ink); border-color: var(--muted); }
+.ex.dragging { opacity: .4; }
+.ex.drop-before { box-shadow: 0 -3px 0 var(--sess); }
+.ex.drop-after { box-shadow: 0 3px 0 var(--sess); }
+.order-hint { margin: 0; padding: 0 6px; font-size: 13px; color: var(--muted); }
+.ex-body p { margin: 0; }
+.lbl { display: block; font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--sess); margin-bottom: 2px; }
+.watch { padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--q-c) 9%, transparent); }
+.in-plan { font-size: 13.5px; color: var(--muted); }
+.flash { box-shadow: 0 0 0 3px color-mix(in srgb, var(--sess, var(--accent)) 45%, transparent) !important; }
+.qs { font: 600 12.5px var(--body); color: var(--q-c); border: 1px solid color-mix(in srgb, var(--q-c) 50%, transparent); border-radius: 999px; padding: 1px 9px; }
+.know { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.know h3 { margin: 0 0 6px; font: 700 17px var(--display); }
+.know ul { margin: 0; padding-left: 18px; }
+.know li { margin: 3px 0; }
+.know .urgent { border-color: color-mix(in srgb, var(--sess-6) 50%, var(--rule)); }
+
+/* Notes: question, comment, research */
+.notes { display: grid; gap: 8px; border-top: 1px solid var(--rule); padding-top: 10px; }
+.note-btn { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px; min-height: 32px; border-radius: 999px; border: 1px dashed color-mix(in srgb, var(--q-c) 55%, transparent); background: none; color: var(--ink); opacity: .75; font: 600 13px var(--body); cursor: pointer; }
+.note-btn::before { content: '✎'; color: var(--q-c); }
+.note-btn:hover { opacity: 1; border-style: solid; }
+.note { --nc: var(--q-c); border-radius: 10px; padding: 8px 12px; background: color-mix(in srgb, var(--nc) 10%, var(--panel)); display: grid; gap: 4px; }
+.note[data-kind="comment"] { --nc: var(--c-c); }
+.note[data-kind="research"] { --nc: var(--r-c); }
+.note-head { display: flex; align-items: center; gap: 8px; }
+.note-kind { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--nc); }
+.note-kind::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--nc); margin-right: 6px; vertical-align: 1px; }
+.note.done .note-kind::before { background: none; box-shadow: inset 0 0 0 1.5px var(--nc); }
+.note-tools { margin-left: auto; display: flex; gap: 2px; }
+.note-tools button { min-width: 30px; min-height: 30px; border: 0; background: none; color: var(--muted); cursor: pointer; border-radius: 6px; font: 600 13px var(--body); }
+.note-tools button.armed { color: #fff; background: var(--sess-6); padding: 0 8px; }
+.note-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-answer { border-left: 3px solid var(--nc); padding: 4px 0 4px 10px; display: grid; gap: 4px; }
+.note-answer .note-kind { color: var(--ink); }
+.note-read { justify-self: start; min-height: 30px; padding: 2px 12px; border-radius: 999px; border: 1px solid var(--nc); background: none; color: var(--ink); font: 600 12.5px var(--body); cursor: pointer; }
+.n-editor { display: grid; gap: 8px; }
+.kinds { display: flex; gap: 6px; flex-wrap: wrap; }
+.kinds button { min-height: 34px; padding: 4px 13px; border-radius: 999px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); font: 600 13px var(--body); cursor: pointer; }
+.kinds button[aria-checked="true"] { background: var(--q-c); border-color: var(--q-c); color: var(--ground); }
+.kinds button[data-kind="comment"][aria-checked="true"] { background: var(--c-c); border-color: var(--c-c); }
+.kinds button[data-kind="research"][aria-checked="true"] { background: var(--r-c); border-color: var(--r-c); }
+.acts { display: flex; gap: 6px; }
+.acts button { min-height: 34px; padding: 4px 14px; border-radius: 999px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); font: 600 13px var(--body); cursor: pointer; }
+.acts .save { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+
+/* Notes tab */
+.rv-group { margin-bottom: 18px; }
+.rv-group h3 { font: 700 18px var(--display); margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+.rv-group h3 b { font: 600 12px var(--mono); color: var(--muted); }
+.rv-list { display: grid; gap: 8px; }
+.rv-row { display: grid; grid-template-columns: minmax(0, 13em) minmax(0, 1fr); gap: 12px; align-items: start; }
+.place { justify-self: start; text-align: left; border: 0; background: none; padding: 6px 0; color: var(--ink); font: 600 14px var(--body); cursor: pointer; }
+.place span { display: block; font: 600 11px var(--mono); color: var(--sess, var(--muted)); text-transform: uppercase; letter-spacing: .06em; }
+.place:hover { text-decoration: underline; }
+.timeline { display: grid; gap: 8px; }
+.tl { display: grid; grid-template-columns: 8.5em minmax(0, 1fr); gap: 12px; padding: 10px 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--rule); }
+.tl-day { font: 600 13px var(--mono); color: var(--muted); background: none; border: 0; text-align: left; padding: 0; cursor: pointer; }
+.tl-nums { font: 600 13px var(--mono); color: var(--accent); }
+.tl p { margin: 2px 0 0; white-space: pre-wrap; }
+.empty { color: var(--muted); }
+
+/* The notebook on the right: the same dot and paper as Practice. */
+.nb-dot { position: fixed; z-index: 55; right: 10px; top: 50%; width: 22px; height: 22px; padding: 0; border-radius: 50%; cursor: pointer; border: 2px solid color-mix(in srgb, var(--nb-brown) 70%, transparent); background: var(--nb-bg); }
+.nb-dot::after { content: ''; position: absolute; inset: -11px; }
+.nb-dot:hover, .nb-dot[aria-expanded="true"] { border-color: var(--nb-brown); }
+.nb-dot.has-notes { background: var(--nb-brown); }
+.notebook { position: fixed; z-index: 60; right: 16px; top: 80px; bottom: 16px; width: min(440px, calc(100vw - 32px)); overflow: auto; background: var(--nb-bg); border: 1px solid var(--nb-rule); border-radius: 16px; box-shadow: 0 18px 48px rgb(0 0 0 / .35); --rule: var(--nb-rule); --panel: color-mix(in srgb, var(--nb-bg) 70%, #fff 30%); }
+:root[data-theme="dark"] .notebook { --panel: color-mix(in srgb, var(--nb-bg) 85%, #fff 15%); }
+.nb-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 12px 10px 12px 16px; background: var(--nb-top); border-bottom: 1px solid var(--nb-rule); }
+.nb-title { font: 700 20px var(--display); color: var(--nb-brown); margin-right: auto; }
+.nb-close { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--nb-rule); background: var(--panel); color: var(--ink); font-size: 18px; cursor: pointer; }
+.nb-write { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--nb-rule); }
+.about { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); min-width: 0; }
+.about select { flex: 1; min-width: 0; width: 100%; min-height: 36px; font: 13px var(--mono); color: var(--ink); background: var(--panel); border: 1px solid var(--nb-rule); border-radius: 8px; padding: 4px 8px; }
+.nb-write .acts .save { background: var(--nb-brown); border-color: var(--nb-brown); color: var(--nb-bg); }
+.nb-sum { margin: 0; padding: 12px 16px 0; font-size: 14px; color: var(--muted); }
+.nb-list { display: grid; gap: 10px; padding: 12px 16px 16px; }
+.nb-group { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--nb-rule); background: color-mix(in srgb, var(--nb-brown) 6%, var(--panel)); }
+.nb-group.here { border-color: var(--nb-brown); }
+.nb-go { display: flex; align-items: baseline; gap: 8px; min-height: 32px; padding: 0; border: 0; background: none; color: var(--ink); font: 700 15px var(--display); text-align: left; cursor: pointer; }
+.nb-go .t { font: 600 11px var(--mono); color: var(--nb-bg); background: var(--nb-brown); border-radius: 6px; padding: 1px 7px; text-transform: uppercase; }
+.nb-go:disabled { cursor: default; }
+.nb-here { font: 600 12px var(--body); color: var(--nb-brown); }
+
+.sync { margin-top: 30px; font-size: 13px; color: var(--muted); }
+
+@media (max-width: 640px) {
+  .wrap { padding-inline: 16px; }
+  .scale-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .sc { width: 28px; height: 28px; }
+  .rv-row, .tl { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .week { gap: 3px; }
+  .wpain { font-size: 9.5px; }
+  .tick { grid-template-columns: 36px minmax(0, 1fr) auto; padding: 4px 2px; }
+  .top .tabs { order: 2; width: 100%; }
+  .tab { flex: 1; padding-inline: 8px; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="back" href="/">← Brain</a>
+    <nav class="tabs" role="tablist" aria-label="Health">
+      <button type="button" class="tab" role="tab" id="tab-today" data-page="today" aria-selected="true">Today</button>
+      <button type="button" class="tab" role="tab" id="tab-plan" data-page="plan" aria-selected="false">Plan</button>
+      <button type="button" class="tab" role="tab" id="tab-exercises" data-page="exercises" aria-selected="false">Exercises</button>
+      <button type="button" class="tab" role="tab" id="tab-notes" data-page="notes" aria-selected="false">Notes <b id="notes-count" hidden></b></button>
+    </nav>
+    <button type="button" class="theme-btn" id="theme-btn"></button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="page-today" role="tabpanel" aria-labelledby="tab-today">
+    <div class="intro">
+      <span class="eyebrow">Knee · right shoulder · feet</span>
+      <h1>Today: how it feels, and what you did.</h1>
+      <p class="rule-box"><b>The pain rule.</b> Up to 3/10 during an exercise is fine <i>if</i> it settles within 24 hours. Worse the next morning means it was too much: back off. Slow reps, 3 seconds down. General guidance, not a diagnosis.</p>
+    </div>
+    <div class="daybar">
+      <button type="button" class="pill round" id="day-prev" aria-label="The day before">‹</button>
+      <span class="d" id="day-label"></span>
+      <button type="button" class="pill round" id="day-next" aria-label="The day after">›</button>
+      <button type="button" class="pill" id="day-today">Today</button>
+    </div>
+    <h2>How it feels</h2>
+    <div class="card feel" id="feel"></div>
+    <div id="go-easy"></div>
+    <h2>The plan for the day</h2>
+    <div id="today-parts"></div>
+    <h2>The last seven days</h2>
+    <div class="week" id="week"></div>
+    <div class="legend"><span><i style="--c: var(--sess-3)"></i>Morning</span><span><i style="--c: var(--sess-4)"></i>At school</span><span><i style="--c: var(--sess-1)"></i>Evening</span><span>K · S · F = knee, shoulder, feet (0–10)</span></div>
+  </section>
+
+  <section id="page-plan" role="tabpanel" aria-labelledby="tab-plan" hidden>
+    <div class="intro">
+      <span class="eyebrow">The plan</span>
+      <h1>Morning, at school, evening.</h1>
+      <p>Small and often beats long and rare: tendons like steady, slow, heavier loading, and tight muscles let go with movement spread through the day. The evening alternates A and B so a session stays 20–25 minutes, 4–5 evenings a week. Tap a name to see how it is done.</p>
+    </div>
+    <div id="plan-parts"></div>
+  </section>
+
+  <section id="page-exercises" role="tabpanel" aria-labelledby="tab-exercises" hidden>
+    <div class="intro">
+      <span class="eyebrow">The exercises</span>
+      <h1>Every exercise, what it is for, how to do it.</h1>
+      <p>Open a section, then an exercise. Each one takes questions, comments and things to research. The dot on the right opens the notebook, already set to the exercise you are on.</p>
+    </div>
+    <div id="library"></div>
+  </section>
+
+  <section id="page-notes" role="tabpanel" aria-labelledby="tab-notes" hidden>
+    <div class="intro">
+      <span class="eyebrow">Notes</span>
+      <h1>Questions, research and how it felt.</h1>
+      <p>Everything you wrote, each tagged with the exercise it is about. Questions keep their answers under them. Then every day's numbers and note, newest first.</p>
+    </div>
+    <h2>Overall</h2>
+    <div class="card"><div class="notes" id="overall-notes" data-key="overall" style="border: 0; padding: 0"></div></div>
+    <div id="review"></div>
+    <h2>How it felt</h2>
+    <div class="timeline" id="timeline"></div>
+  </section>
+
+  <p class="sync" id="sync"></p>
+</main>
+
+<button type="button" class="nb-dot" id="nb-dot" aria-expanded="false" aria-controls="notebook" title="Notebook"></button>
+<aside class="notebook" id="notebook" aria-label="Notebook" hidden>
+  <div class="nb-top"><span class="nb-title">Notebook</span><button type="button" class="nb-close" id="nb-close" aria-label="Close the notebook">×</button></div>
+  <div class="nb-write">
+    <label class="about"><span>About</span><select id="nb-about" aria-label="What this note is about"></select></label>
+    <div class="kinds" role="radiogroup" aria-label="Kind of note">
+      <button type="button" role="radio" data-kind="question" aria-checked="true">Question</button>
+      <button type="button" role="radio" data-kind="comment" aria-checked="false">Comment</button>
+      <button type="button" role="radio" data-kind="research" aria-checked="false">Research</button>
+    </div>
+    <textarea id="nb-text" rows="3" maxlength="2000" aria-label="Your note" placeholder="A question, a comment, or something to look into"></textarea>
+    <div class="acts"><button type="button" class="save" id="nb-save">Save</button></div>
+    <p class="saved" id="nb-saved" role="status"></p>
+  </div>
+  <p class="nb-sum" id="nb-sum"></p>
+  <div class="nb-list" id="nb-list"></div>
+</aside>
+
+<script>
+/* ---------- The routine ---------- */
+// Each exercise: what it is, the dose, how, what it is for, what to watch.
+const SECTIONS = [
+  { id: 'knee', title: 'Knee', c: 1, sub: 'Patellar tendon and the kneecap. Strengthen what steers the knee: glute medius, glutes and hamstrings, hips, ankles, quads.', ex: [
+    { id: 'wall-sit', name: 'Wall sit', dose: '4 × 30–45 s', how: 'Back flat against a wall, slide down until the knees are bent about 60°, thighs well above parallel. Knees over the second toe. Hold and breathe.', why: 'Holding a load without moving often calms a patellar tendon within minutes. Fine on painful days too.', watch: 'Not deep. If it climbs above 3/10, come up a little.' },
+    { id: 'side-leg-raise', name: 'Side-lying leg raise', dose: '3 × 12 each', how: 'On your side, bottom knee bent, top leg straight in line with your body, toes slightly down. Lift with the heel leading, 3 seconds down.', why: 'Pure glute medius: the muscle that stops the knee caving in.', watch: 'Do not roll back or swing the leg forward.' },
+    { id: 'clamshell', name: 'Clamshell with band', dose: '3 × 15 each', how: 'On your side, hips and knees bent, band above the knees. Keep the feet together and open the top knee.', why: 'Glute medius and the hip rotators, which line the knee up over the foot.', watch: 'Hips stacked: do not roll back to get the knee higher.' },
+    { id: 'glute-bridge', name: 'Glute bridge → single-leg bridge', dose: '3 × 10', how: 'On your back, knees bent, feet flat. Push through the heels, lift the hips, squeeze the glutes for 2 seconds at the top, lower slowly. Single leg once two legs are easy.', why: 'Glutes and hamstrings, which take load off the front of the knee.', watch: 'Ribs down, no arching the lower back.' },
+    { id: 'side-plank-knees', name: 'Side plank on knees', dose: '3 × 20–30 s each', how: 'On your side, on your forearm, knees bent behind you. Lift the hips into a straight line from knees to head.', why: 'Glute medius and the core together: protects the knee’s alignment.', watch: 'Elbow under the shoulder; shoulder pushed away from the ear.' },
+    { id: 'spanish-squat', name: 'Spanish squat / slow box squat', dose: '3 × 8', how: 'A band behind the knees anchored in front, then sit back with the shins upright. Or sit back slowly to a chair and stand up.', why: 'Loads the quads while sparing the patellar tendon.', watch: 'Knee tracks over the second toe, never caving in. 3 seconds down.' },
+    { id: 'step-down', name: 'Step-down (low step)', dose: '3 × 8 each', how: 'Stand on a low step, slowly lower the other heel to touch the floor, come back up. Check in a mirror.', why: 'Control of the knee on the way down, for stairs and walking downhill.', watch: 'Later: once the others feel easy. The knee stays over the foot.' },
+    { id: 'calf-raise', name: 'Calf raise (straight and bent knee)', dose: '3 × 12 of each', how: 'Near a wall for balance. Rise onto the toes, 3 seconds down. Then the same with the knees slightly bent.', why: 'Ankle strength; the bent-knee version works the soleus, which absorbs shock.', watch: 'Lower slowly; no bouncing.' },
+  ] },
+  { id: 'shoulder', title: 'Right shoulder', c: 2, sub: 'The front is tight and overactive (coracobrachialis, front deltoid, biceps short head, forearm flexors). Strengthen the back: rotator cuff, rear deltoid, triceps, infraspinatus.', ex: [
+    { id: 'band-er', name: 'Band external rotation', dose: '3 × 12–15', how: 'Elbow at 90° by your side with a rolled towel between elbow and ribs. Rotate the forearm out against the band: 2 seconds out, 3 seconds back.', why: 'Infraspinatus, the cuff muscle that holds the head of the arm back in its socket.', watch: 'Shoulder blade down, no shrugging.' },
+    { id: 'side-lying-er', name: 'Side-lying external rotation', dose: '3 × 12', how: 'Lying on the left side, right elbow on your side with a towel under it, 0.5–2 kg (or a water bottle) in the hand. Rotate up, lower slowly.', why: 'Very targeted infraspinatus.', watch: 'Light: the muscle is small. Quality over weight.' },
+    { id: 'y-raise', name: '“Help” raise → Y raise', dose: '3 × 10', how: 'Face down or leaning on a bench, thumbs up, arms in a Y. Lift only to ear height.', why: 'Lower trapezius and serratus: they tilt the shoulder blade back so the front can let go.', watch: 'Shoulders away from the ears.' },
+    { id: 'face-pull', name: 'Band pull-apart / face pull', dose: '3 × 15', how: 'Band anchored at face height, elbows high, pull it towards your face and squeeze the shoulder blades. Or pull a band apart in front of the chest.', why: 'Rear deltoid and middle trapezius: the back of the shoulder.', watch: 'Elbows high; do not lean back.' },
+    { id: 't-raise', name: 'Prone T raise', dose: '3 × 10', how: 'Face down, arms out to the sides, thumbs up. Lift the arms a little and squeeze the shoulder blades together.', why: 'Middle trapezius and rear deltoid.', watch: 'Small lift, slow lowering.' },
+    { id: 'triceps-pushdown', name: 'Triceps band pushdown', dose: '3 × 12', how: 'Band anchored high, elbows pinned by your sides, push down until the arms are straight.', why: 'Triceps: balances a tight biceps at the front.', watch: 'Only the forearms move.' },
+    { id: 'wall-slide', name: 'Wall slide', dose: '2 × 10', how: 'Forearms on a wall, slide them up as far as is comfortable, then down.', why: 'Moves the shoulder overhead with the serratus working.', watch: 'Ribs down; stop before it pinches.' },
+  ] },
+  { id: 'release', title: 'Release the front', c: 6, sub: 'Before the shoulder work, 1–2 minutes each. Letting the tight front go makes room for the back to work.', ex: [
+    { id: 'doorway-stretch', name: 'Doorway pec and biceps stretch', dose: '1–2 min', how: 'Forearm on a door frame at 90°, step through gently. Then a second version with the arm lower and the palm forward, for the biceps.', why: 'Lengthens the chest and the front of the shoulder.', watch: 'A stretch, never pain or tingling.' },
+    { id: 'ball-release', name: 'Ball release', dose: '1–2 min', how: 'A lacrosse or tennis ball against a wall, just below the front of the shoulder (front deltoid, coracobrachialis). Slow, small circles.', why: 'Softens the overactive front muscles.', watch: 'No bruising pressure.' },
+    { id: 'forearm-stretch', name: 'Forearm flexor stretch', dose: '1 min each', how: 'Arm straight, palm up, gently pull the fingers back. Then massage the thumb side of the forearm (brachioradialis).', why: 'The forearm flexors join the tight front chain.', watch: 'Gentle; no numbness.' },
+  ] },
+  { id: 'feet', title: 'Feet', c: 3, sub: 'Very high arches are usually rigid and absorb shock poorly, which travels up to the knees and hips. And cold feet.', ex: [
+    { id: 'short-foot', name: 'Short-foot drill', dose: '3 × 10 s holds', how: 'Grip the floor gently with the ball of the foot and the heel, without curling the toes, as if shortening the foot.', why: 'Wakes the small muscles that hold the arch steady.', watch: 'Toes stay long and relaxed.' },
+    { id: 'single-leg-balance', name: 'Single-leg balance', dose: '3 × 30 s each', how: 'Stand on one foot, knee soft. Later with the eyes closed, or on a pillow.', why: 'Ankle stability and the knee’s control from below.', watch: 'Near a wall at first.' },
+    { id: 'toe-spreads', name: 'Toe spreads / towel scrunches', dose: '2 × 15', how: 'Spread the toes wide and hold, then scrunch a towel towards you with the toes.', why: 'Foot strength and mobility.', watch: '' },
+    { id: 'calf-plantar', name: 'Calf stretch + plantar ball roll', dose: '1 min each', how: 'Calf stretch against a wall, back knee straight then bent. Then roll a ball slowly under the sole.', why: 'High arches often come with tight calves and plantar fascia.', watch: 'Slow pressure, not painful.' },
+    { id: 'ankle-circles', name: 'Ankle circles and quick calf raises', dose: '1–2 min', how: 'Draw slow circles with each ankle, both ways, then a minute of easy calf raises.', why: 'Boosts circulation fast: the quickest fix for cold feet.', watch: '' },
+    { id: 'foot-soak', name: 'Warm foot soak', dose: '10–15 min', how: 'Warm (not hot) water in the evening, ankles covered. Then wool socks.', why: 'Warms cold feet; a calm end to the day.', watch: 'Not too hot if feeling is reduced.' },
+  ] },
+  { id: 'flow', title: 'Flow: qi gong, tai chi, gentle stretches', c: 5, sub: 'Slow movements and breath, to get energy moving through the weak parts. Kept knee-safe: high stance, knees soft and never past the toes, no deep horse stance.', ex: [
+    { id: 'lift-sky', name: 'Holding up the sky', dose: '8 slow breaths', how: 'Feet hip-width, knees soft. Fingers interlaced in front of the belly. Breathe in as the palms rise over the head and turn to the sky; breathe out as the arms float down the sides.', why: 'The first of the Eight Brocades (Ba Duan Jin): opens the chest and the front of the shoulders and lifts the posture.', watch: 'Right arm only as high as is comfortable; ribs down.' },
+    { id: 'separate', name: 'Separating heaven and earth', dose: '6 each side', how: 'One palm pushes up over the head while the other presses down by the hip; switch slowly with the breath.', why: 'Gentle overhead reach and length through the side of the body and the shoulder.', watch: 'Shoulder relaxed, never forced.' },
+    { id: 'draw-bow', name: 'Drawing the bow (high stance)', dose: '4 each side', how: 'Feet a little wider than the hips, knees only slightly bent. One arm points to the side, the other draws back as if pulling a bowstring; open the chest, then return.', why: 'Opens the front of the shoulder and works the back of it (rear deltoid, middle trapezius): the side to strengthen.', watch: 'Knees soft and over the toes; skip the deep horse stance.' },
+    { id: 'wise-owl', name: 'Wise owl looks back', dose: '5 each side', how: 'Arms by your sides. Breathing out, turn the head and upper chest to look behind you, palms turning out; come back breathing in.', why: 'Releases the neck and upper back, and draws the shoulder blades down.', watch: 'Small and slow.' },
+    { id: 'heel-drops', name: 'Rising on the toes, landing softly', dose: '7–14 times', how: 'Rise onto the toes breathing in, lower softly breathing out. The last of the Eight Brocades, done gently.', why: 'Feet and calves, and the circulation that warms cold feet.', watch: 'Lower softly, never drop hard; skip on a sore-tendon day.' },
+    { id: 'weight-shift', name: 'Tai chi weight shift', dose: '2 min', how: 'Feet wider than the hips, knees soft. Slowly move all the weight onto one foot, then the other. Feel the heel, the big toe and the little toe.', why: 'Balance, a steady foot tripod and the knee lined up over it.', watch: 'Knee over the second toe.' },
+    { id: 'cloud-hands', name: 'Cloud hands', dose: '2 min', how: 'Hands drift past the face and the belly in slow circles as the waist turns side to side, with small side steps.', why: 'Easy shoulder movement, coordination and calm.', watch: 'Stay high; move from the waist.' },
+    { id: 'standing-tree', name: 'Standing like a tree', dose: '1–3 min', how: 'Feet hip-width, knees barely bent, arms rounded as if holding a big ball at chest height. Shoulders dropped, breathe low into the belly.', why: 'Calm, and gentle leg endurance.', watch: 'If the knee aches, straighten a little more.' },
+    { id: 'yongquan', name: 'Rubbing the bubbling spring', dose: '1 min each foot', how: 'Rub the sole with the thumb, just behind the ball of the foot (Yongquan, the first kidney point).', why: 'In Chinese medicine it warms and grounds; in practice it warms cold feet. Lovely after the foot soak.', watch: '' },
+    { id: 'hip-flexor', name: 'Standing hip flexor stretch', dose: '30 s each', how: 'A small lunge holding a chair, back knee straight, tuck the pelvis under until the front of the hip stretches.', why: 'Tight hip flexors pull on the knee and the posture.', watch: 'Standing, not kneeling.' },
+    { id: 'hamstring-strap', name: 'Lying hamstring stretch with a strap', dose: '30–45 s each', how: 'On your back, a towel or strap round one foot, raise the straight leg until the back of the thigh stretches.', why: 'Hamstrings that let go take strain off the knee.', watch: 'Other leg relaxed; no bouncing.' },
+  ] },
+  { id: 'school', title: 'At school', c: 4, sub: 'Small things during the day, no equipment, that nobody notices: to relax the tight parts and keep training them.', ex: [
+    { id: 'posture-reset', name: 'Shoulders back and down', dose: '5 breaths, every hour', how: 'Sitting tall, draw the shoulders gently back and down and breathe five times.', why: 'Rounded shoulders keep the front muscles short. This habit matters as much as the exercises.', watch: '' },
+    { id: 'chin-tuck', name: 'Chin tuck', dose: '5 slow', how: 'Glide the chin straight back, making a small double chin, hold 3 seconds.', why: 'Undoes the head-forward desk posture that feeds the tight front.', watch: '' },
+    { id: 'quad-set', name: 'Seated quad set', dose: '10 × 5 s each', how: 'Under the desk, straighten one knee and tighten the thigh for 5 seconds.', why: 'Keeps the quads working without moving the knee: kind to the tendon.', watch: '' },
+    { id: 'ankle-pumps', name: 'Ankle pumps and circles', dose: '20 + 10 circles', how: 'Under the desk, point and flex the feet, then circle the ankles.', why: 'Warms cold feet during long lessons.', watch: '' },
+    { id: 'desk-short-foot', name: 'Short foot in your shoes', dose: '5 × 10 s', how: 'The short-foot drill, sitting, inside your shoes.', why: 'Arch training while you listen.', watch: '' },
+    { id: 'desk-forearm', name: 'Forearm stretch', dose: '30 s each', how: 'After writing or the laptop: arm straight, palm up, fingers gently back.', why: 'The forearm flexors tighten with typing.', watch: '' },
+    { id: 'door-stretch', name: 'Doorway stretch between classes', dose: '30 s', how: 'Any door frame on the way out: forearm on it, step through gently.', why: 'Opens the front of the shoulder after sitting.', watch: '' },
+    { id: 'queue-balance', name: 'Balance while you wait', dose: '30 s each', how: 'In a queue or at the coffee machine, stand on one foot, knee soft.', why: 'Ankle and knee control, hidden in the day.', watch: '' },
+    { id: 'stand-walk', name: 'Stand up and walk', dose: '2 min every 30–45 min', how: 'Get up between lessons and walk. Take the stairs down slowly, or the lift on a sore day.', why: 'Moving keeps the tendon and the hips from stiffening.', watch: 'Lots of stairs down is on the avoid list for now.' },
+    { id: 'desk-breath', name: 'Six slow breaths', dose: '1 min', how: 'Sit tall, hands on the belly, breathe in for 4, out for 6.', why: 'Relaxes the shoulders and the jaw; a reset before a class.', watch: '' },
+  ] },
+];
+// The day in three parts. A dose here can be lighter than the exercise's own.
+const PLAN = [
+  { part: 'am', title: 'Morning', when: '10 minutes, every day', c: 3, why: 'Wake the body slowly, warm the feet, open the front of the shoulder, and calm the knee with one short hold.', items: [
+    ['ankle-circles'], ['lift-sky'], ['separate'], ['wise-owl'], ['short-foot'], ['wall-slide'], ['wall-sit', '2 × 30 s'] ] },
+  { part: 'sc', title: 'At school', when: 'Through the day, no equipment', c: 4, why: 'Relax the tight parts and keep training them in small pieces, without anyone noticing.', items: [
+    ['posture-reset'], ['chin-tuck'], ['quad-set'], ['ankle-pumps'], ['desk-short-foot'], ['desk-forearm'], ['door-stretch'], ['queue-balance'], ['stand-walk'], ['desk-breath'] ] },
+  { part: 'eva', title: 'Evening A · Knee and feet', when: '20–25 minutes', c: 1, why: 'The strength work for the knee, slow and steady, and the feet that carry it.', items: [
+    ['wall-sit'], ['side-leg-raise'], ['clamshell'], ['glute-bridge'], ['side-plank-knees'], ['spanish-squat'], ['calf-raise'], ['single-leg-balance'], ['toe-spreads'] ] },
+  { part: 'evb', title: 'Evening B · Shoulder', when: '20–25 minutes', c: 2, why: 'Release the front first, then strengthen the back of the shoulder.', items: [
+    ['doorway-stretch'], ['ball-release'], ['forearm-stretch'], ['band-er'], ['side-lying-er'], ['y-raise'], ['face-pull'], ['t-raise'], ['triceps-pushdown'], ['draw-bow'] ] },
+  { part: 'wd', title: 'Wind down', when: '5–10 minutes, every evening', c: 5, why: 'Slow movement, long muscles and warm feet before sleep.', items: [
+    ['cloud-hands'], ['weight-shift'], ['standing-tree'], ['hip-flexor'], ['hamstring-strap'], ['calf-plantar'], ['foot-soak'], ['yongquan'] ] },
+];
+const AREAS = [['knee', 'Knee', 'Knee'], ['shoulder', 'Right shoulder', 'Shoulder'], ['feet', 'Feet', 'Feet']];
+const EX = new Map(SECTIONS.flatMap(s => s.ex.map(e => [e.id, { ...e, sec: s }])));
+const sess = c => `var(--sess-${c})`;
+
+/* ---------- Store: this browser first, then the account ---------- */
+const ON_BRAIN = location.pathname.startsWith('/health');
+const LOG_URL = '/api/health/log';
+const NOTES_URL = '/api/health/notes';
+function readStore(key, empty) { try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return v ?? empty; } catch (e) { return empty; } }
+function writeStore(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {} }
+let log = readStore('health-log', {});        // { day: { key: value } }
+let queue = readStore('health-queue', []);    // log changes not yet in the account
+let notes = readStore('health-notes', []);    // { id | localId, key, kind, body, answer, readAt, createdAt }
+let prefs = readStore('health-prefs', {});    // { 'order|knee': 'a,b,c', 'aside|step-down': '1' }
+let prefQueue = readStore('health-prefs-queue', []);
+const PREFS_URL = '/api/health/prefs';
+const syncEl = document.getElementById('sync');
+const saveAll = () => { writeStore('health-log', log); writeStore('health-queue', queue); writeStore('health-notes', notes); writeStore('health-prefs', prefs); writeStore('health-prefs-queue', prefQueue); };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const TODAY = iso(new Date());
+const addDays = (day, n) => { const d = new Date(`${day}T12:00:00`); d.setDate(d.getDate() + n); return iso(d); };
+const dayName = (day, opts) => new Date(`${day}T12:00:00`).toLocaleDateString('en-GB', opts);
+const get = (day, key) => log[day]?.[key];
+
+function setLog(day, key, value) {
+  const v = value == null || value === '' ? null : String(value);
+  if (v === null) { if (log[day]) { delete log[day][key]; if (!Object.keys(log[day]).length) delete log[day]; } }
+  else (log[day] ||= {})[key] = v;
+  queue.push({ day, key, value: v });
+  saveAll();
+  flush();
+}
+let flushing = false;
+async function flush() {
+  if (!ON_BRAIN || flushing || !queue.length) return;
+  flushing = true;
+  const batch = queue.slice(0, 500);
+  try {
+    const r = await fetch(LOG_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries: batch }) });
+    if (!r.ok) throw new Error(String(r.status));
+    queue = queue.slice(batch.length);
+    saveAll();
+    syncEl.textContent = 'Saved to your account.';
+  } catch (e) {
+    syncEl.textContent = 'Offline: kept in this browser, sent when you are back online.';
+  }
+  flushing = false;
+  if (queue.length && syncEl.textContent.startsWith('Saved')) flush();
+}
+function setPref(key, value) {
+  if (value == null || value === '') delete prefs[key]; else prefs[key] = String(value);
+  prefQueue.push({ key, value: prefs[key] ?? null });
+  saveAll();
+  flushPrefs();
+}
+let flushingPrefs = false;
+async function flushPrefs() {
+  if (!ON_BRAIN || flushingPrefs || !prefQueue.length) return;
+  flushingPrefs = true;
+  const batch = prefQueue.slice(0, 200);
+  try {
+    const r = await fetch(PREFS_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prefs: batch }) });
+    if (!r.ok) throw new Error(String(r.status));
+    prefQueue = prefQueue.slice(batch.length);
+    saveAll();
+  } catch (e) { syncEl.textContent = 'Offline: kept in this browser, sent when you are back online.'; }
+  flushingPrefs = false;
+}
+addEventListener('online', flush);
+addEventListener('online', flushPrefs);
+
+async function load() {
+  if (!ON_BRAIN) { syncEl.textContent = 'Saved in this browser.'; return; }
+  try {
+    const [lr, nr, pr] = await Promise.all([fetch(LOG_URL), fetch(NOTES_URL), fetch(PREFS_URL)]);
+    if (!lr.ok || !nr.ok || !pr.ok) throw new Error('load');
+    const fp = {};
+    for (const x of (await pr.json()).prefs) fp[x.key] = x.value;
+    for (const q of prefQueue) { if (q.value === null) delete fp[q.key]; else fp[q.key] = q.value; }
+    prefs = fp;
+    const { entries } = await lr.json();
+    // The account, then the changes this browser has not sent yet on top.
+    const fresh = {};
+    for (const e of entries) (fresh[e.day] ||= {})[e.key] = e.value;
+    for (const q of queue) {
+      if (q.value === null) { if (fresh[q.day]) delete fresh[q.day][q.key]; }
+      else (fresh[q.day] ||= {})[q.key] = q.value;
+    }
+    log = fresh;
+    const server = (await nr.json()).notes.map(fromServer);
+    // Notes written here before signing in or while offline go up once.
+    const local = notes.filter(n => !n.id);
+    if (local.length) {
+      const r = await fetch(NOTES_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: local.map(n => ({ key: n.key, kind: n.kind, body: n.body })) }) });
+      if (r.ok) server.push(...(await r.json()).notes.map(fromServer));
+      else server.push(...local);
+    }
+    notes = server;
+    saveAll();
+    syncEl.textContent = 'Saved to your account.';
+    flush(); flushPrefs();
+  } catch (e) {
+    syncEl.textContent = 'Offline: kept in this browser, sent when you are back online.';
+  }
+  renderAll();
+}
+const fromServer = n => ({ id: n.id, key: n.itemKey, kind: n.kind, body: n.body, answer: n.answer, readAt: n.readAt, createdAt: n.createdAt });
+
+/* ---------- Notes ---------- */
+const noteRef = n => n.id || n.localId;
+const notesOf = key => notes.filter(n => n.key === key);
+const KIND = { question: 'Question', comment: 'Comment', research: 'Research' };
+async function addNote(key, kind, body) {
+  const text = body.trim();
+  if (!text) return;
+  const n = { localId: `l${Date.now()}`, key, kind, body: text, answer: null, readAt: null, createdAt: new Date().toISOString() };
+  notes.push(n);
+  saveAll(); renderNotes();
+  if (!ON_BRAIN) return;
+  try {
+    const r = await fetch(NOTES_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: [{ key, kind, body: text }] }) });
+    if (!r.ok) throw new Error();
+    Object.assign(n, fromServer((await r.json()).notes[0]));
+    delete n.localId;
+    saveAll();
+  } catch (e) { syncEl.textContent = 'Could not save the note to your account; it is kept in this browser.'; }
+}
+function editNote(ref, kind, body) {
+  const n = notes.find(x => noteRef(x) === ref);
+  if (!n || !body.trim()) return;
+  n.kind = kind; n.body = body.trim();
+  saveAll(); renderNotes();
+  if (ON_BRAIN && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, body: n.body }) }).catch(() => { syncEl.textContent = 'Offline: the edit is kept in this browser.'; });
+}
+function deleteNote(ref) {
+  const n = notes.find(x => noteRef(x) === ref);
+  if (!n) return;
+  notes = notes.filter(x => x !== n);
+  saveAll(); renderNotes();
+  if (ON_BRAIN && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'DELETE' }).catch(() => {});
+}
+function markRead(ref) {
+  const n = notes.find(x => noteRef(x) === ref);
+  if (!n) return;
+  n.readAt = new Date().toISOString();
+  saveAll(); renderNotes();
+  if (ON_BRAIN && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ read: true }) }).catch(() => {});
+}
+const isDone = n => n.kind !== 'question' || (n.answer && n.readAt);
+function noteHtml(n) {
+  return `<div class="note${isDone(n) ? ' done' : ''}" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
+    <div class="note-head"><span class="note-kind">${KIND[n.kind]}</span><span class="note-tools"><button type="button" class="n-edit" aria-label="Edit">✎</button><button type="button" class="n-del" aria-label="Delete">×</button></span></div>
+    <div class="note-body">${esc(n.body)}</div>
+    ${n.answer ? `<div class="note-answer"><span class="note-kind">Answer</span><div class="note-body">${esc(n.answer)}</div>${n.readAt ? '' : '<button type="button" class="note-read">Got it, mark read</button>'}</div>` : ''}
+  </div>`;
+}
+function editorHtml(kind, body) {
+  return `<div class="n-editor" data-kind="${kind}">
+    <div class="kinds" role="radiogroup" aria-label="Kind of note">${Object.entries(KIND).map(([k, l]) => `<button type="button" role="radio" data-kind="${k}" aria-checked="${k === kind}">${l}</button>`).join('')}</div>
+    <textarea rows="3" maxlength="2000" aria-label="Your note" placeholder="A question, a comment, or something to look into">${esc(body)}</textarea>
+    <div class="acts"><button type="button" class="save">Save</button><button type="button" class="cancel">Cancel</button></div>
+  </div>`;
+}
+// A host is any element with data-key and class "notes": its notes, then the button.
+function paintHost(host) {
+  const list = notesOf(host.dataset.key);
+  host.innerHTML = list.map(noteHtml).join('') + '<button type="button" class="note-btn">Question, comment or research</button>';
+}
+// One click handler for every host, the notebook's list and the Notes tab.
+document.addEventListener('click', e => {
+  const t = e.target;
+  const kindBtn = t.closest('.n-editor .kinds [data-kind]');
+  if (kindBtn) {
+    const ed = kindBtn.closest('.n-editor');
+    ed.dataset.kind = kindBtn.dataset.kind;
+    for (const b of ed.querySelectorAll('.kinds button')) b.setAttribute('aria-checked', String(b === kindBtn));
+    return;
+  }
+  const host = t.closest('[data-key].notes, .nb-group, .rv-note');
+  if (!host) return;
+  if (t.closest('.note-btn')) {
+    host.querySelector('.n-editor')?.remove();
+    t.closest('.note-btn').insertAdjacentHTML('beforebegin', editorHtml('question', ''));
+    host.querySelector('.n-editor textarea').focus();
+    return;
+  }
+  const note = t.closest('.note');
+  if (note && t.closest('.n-edit')) {
+    const n = notes.find(x => noteRef(x) === note.dataset.ref);
+    note.insertAdjacentHTML('afterend', editorHtml(n.kind, n.body));
+    note.nextElementSibling.dataset.ref = note.dataset.ref;
+    note.hidden = true;
+    note.nextElementSibling.querySelector('textarea').focus();
+    return;
+  }
+  if (note && t.closest('.n-del')) {
+    const b = t.closest('.n-del');
+    if (b.dataset.armed) { deleteNote(note.dataset.ref); return; }
+    b.dataset.armed = '1'; b.textContent = 'Delete?'; b.classList.add('armed');
+    setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = '×'; b.classList.remove('armed'); } }, 3000);
+    return;
+  }
+  if (note && t.closest('.note-read')) { markRead(note.dataset.ref); return; }
+  const ed = t.closest('.n-editor');
+  if (ed && t.closest('.save')) {
+    const body = ed.querySelector('textarea').value;
+    ed.remove();   // first, so the redraw that follows is not held back by an open editor
+    if (ed.dataset.ref) editNote(ed.dataset.ref, ed.dataset.kind, body);
+    else addNote(host.dataset.key, ed.dataset.kind, body);
+    renderNotes();
+    return;
+  }
+  if (ed && t.closest('.cancel')) { ed.remove(); renderNotes(); }
+});
+
+/* ---------- Today ---------- */
+let day = TODAY;
+function renderDay() {
+  document.getElementById('day-label').textContent = day === TODAY ? `Today · ${dayName(day, { day: 'numeric', month: 'short' })}` : dayName(day, { weekday: 'short', day: 'numeric', month: 'short' });
+  document.getElementById('day-next').disabled = day >= TODAY;
+  document.getElementById('day-today').hidden = day === TODAY;
+  renderFeel(); renderToday(); renderWeek();
+}
+const PAIN_C = n => (n <= 3 ? 'var(--ok)' : n <= 5 ? 'var(--sess-3)' : 'var(--sess-1)');
+function renderFeel() {
+  const el = document.getElementById('feel');
+  el.innerHTML = AREAS.map(([a, label]) => {
+    const v = get(day, `pain|${a}`);
+    return `<div class="scale-row"><span>${label}</span><div class="scale" role="group" aria-label="${label}: pain from 0 to 10">${Array.from({ length: 11 }, (_, n) => `<button type="button" class="sc" data-area="${a}" data-n="${n}" aria-pressed="${v === String(n)}" style="--c: ${PAIN_C(n)}">${n}</button>`).join('')}</div></div>`;
+  }).join('') + `<div><label class="feel-label" for="feel-text">How I feel</label><textarea id="feel-text" rows="3" maxlength="2000" placeholder="Morning stiffness, what helped, what made it worse…">${esc(get(day, 'feel') || '')}</textarea><p class="saved" id="feel-saved"></p></div>`;
+  renderGoEasy();
+}
+function renderGoEasy() {
+  const high = AREAS.filter(([a]) => Number(get(day, `pain|${a}`)) >= 4);
+  const up = AREAS.filter(([a]) => get(day, `pain|${a}`) != null && get(addDays(day, -1), `pain|${a}`) != null && Number(get(day, `pain|${a}`)) > Number(get(addDays(day, -1), `pain|${a}`)));
+  const parts = [...new Set([...high, ...up].map(([, l]) => l.toLowerCase()))];
+  document.getElementById('go-easy').innerHTML = parts.length
+    ? `<p class="go-easy"><b>Go easy on the ${parts.join(' and the ')} today.</b> Higher than yesterday, or 4 and above: keep the holds (wall sit, quad sets), the release and the flow, and lighten or skip the strength work for that part.</p>`
+    : '';
+}
+document.getElementById('feel').addEventListener('click', e => {
+  const b = e.target.closest('.sc');
+  if (!b) return;
+  const key = `pain|${b.dataset.area}`;
+  const same = get(day, key) === b.dataset.n;
+  setLog(day, key, same ? null : b.dataset.n);
+  for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(!same && x === b));
+  renderGoEasy(); renderWeek(); renderTimeline();
+});
+let feelTimer = 0;
+document.getElementById('feel').addEventListener('input', e => {
+  if (e.target.id !== 'feel-text') return;
+  clearTimeout(feelTimer);
+  const v = e.target.value, d = day;
+  feelTimer = setTimeout(() => {
+    setLog(d, 'feel', v.trim() || null);
+    const s = document.getElementById('feel-saved');
+    if (s) { s.textContent = 'Saved.'; setTimeout(() => { s.textContent = ''; }, 1500); }
+    renderTimeline();
+  }, 700);
+});
+// Evening: suggest the half not done most recently.
+function lastEvening(before) {
+  for (let i = 1; i <= 14; i++) {
+    const d = addDays(before, -i), l = log[d] || {};
+    const a = Object.keys(l).some(k => k.startsWith('eva|')), b = Object.keys(l).some(k => k.startsWith('evb|'));
+    if (a && !b) return 'eva';
+    if (b && !a) return 'evb';
+  }
+  return null;
+}
+let eveningShown = {};
+function tickRow(part, id, dose) {
+  const e = EX.get(id), on = get(day, `${part}|${id}`) === '1';
+  return `<li class="tick${on ? ' done' : ''}"><button type="button" class="tbox" data-tick="${part}|${id}" aria-pressed="${on}" aria-label="Done: ${esc(e.name)}">✓</button><span class="tname">${esc(e.name)}<span class="tdose">${esc(dose || e.dose)}</span></span><button type="button" class="how" data-how="${id}">How ›</button></li>`;
+}
+function partCount(p) { return p.items.filter(([id]) => get(day, `${p.part}|${id}`) === '1').length; }
+function partHtml(p, extra = '') {
+  return `<div class="part" style="--sess: ${sess(p.c)}" data-part="${p.part}">
+    <div class="part-head"><h3>${esc(p.title)}</h3><span class="when">${esc(p.when)}</span><span class="count">${partCount(p)}/${p.items.length}</span></div>
+    ${extra}<ul class="ticks">${p.items.map(([id, dose]) => tickRow(p.part, id, dose)).join('')}</ul></div>`;
+}
+function renderToday() {
+  const [am, sc, eva, evb, wd] = PLAN;
+  const done = partCount(eva) ? 'eva' : partCount(evb) ? 'evb' : null;
+  const suggested = lastEvening(day) === 'eva' ? 'evb' : 'eva';
+  const show = eveningShown[day] || done || suggested;
+  const ev = show === 'eva' ? eva : evb;
+  const ab = `<div class="ab" role="group" aria-label="Which evening">${[eva, evb].map(p => `<button type="button" data-ev="${p.part}" aria-pressed="${p.part === show}">${p.part === 'eva' ? 'A · Knee and feet' : 'B · Shoulder'}</button>`).join('')}<span class="hint">${show === suggested && !done ? 'suggested: the other one came last' : ''}</span></div>`;
+  document.getElementById('today-parts').innerHTML = partHtml(am) + partHtml(sc)
+    + partHtml({ ...ev, title: 'Evening' }, ab) + partHtml(wd);
+}
+document.getElementById('today-parts').addEventListener('click', e => {
+  const t = e.target.closest('[data-tick]');
+  if (t) {
+    const on = t.getAttribute('aria-pressed') !== 'true';
+    t.setAttribute('aria-pressed', String(on));
+    t.closest('.tick').classList.toggle('done', on);
+    const [part, id] = t.dataset.tick.split('|');
+    setLog(day, `${part}|${id}`, on ? '1' : null);
+    const p = PLAN.find(x => x.part === part);
+    t.closest('.part').querySelector('.count').textContent = `${partCount(p)}/${p.items.length}`;
+    renderWeek();
+    return;
+  }
+  const ev = e.target.closest('[data-ev]');
+  if (ev) { eveningShown[day] = ev.dataset.ev; renderToday(); return; }
+  const how = e.target.closest('[data-how]');
+  if (how) goToExercise(how.dataset.how);
+});
+function renderWeek() {
+  const days = Array.from({ length: 7 }, (_, i) => addDays(day > TODAY ? TODAY : day, i - 6));
+  const frac = (d, parts) => {
+    const ps = PLAN.filter(p => parts.includes(p.part));
+    const total = parts.includes('eva') ? PLAN[2].items.length : ps.reduce((s, p) => s + p.items.length, 0);
+    const n = ps.reduce((s, p) => s + p.items.filter(([id]) => get(d, `${p.part}|${id}`) === '1').length, 0);
+    return Math.min(1, n / total);
+  };
+  document.getElementById('week').innerHTML = days.map(d => {
+    const pain = AREAS.map(([a]) => get(d, `pain|${a}`) ?? '–').join('·');
+    return `<button type="button" class="wday" data-day="${d}"${d === day ? ' aria-current="date"' : ''} title="${dayName(d, { weekday: 'long', day: 'numeric', month: 'long' })}">
+      <span class="wd">${dayName(d, { weekday: 'narrow' })} ${dayName(d, { day: 'numeric' })}</span>
+      <span class="wbars"><i style="--c: var(--sess-3); --h: ${frac(d, ['am']) * 100}%"></i><i style="--c: var(--sess-4); --h: ${frac(d, ['sc']) * 100}%"></i><i style="--c: var(--sess-1); --h: ${frac(d, ['eva', 'evb']) * 100}%"></i></span>
+      <span class="wpain">${pain}</span></button>`;
+  }).join('');
+}
+document.getElementById('week').addEventListener('click', e => { const w = e.target.closest('[data-day]'); if (w) { day = w.dataset.day; renderDay(); } });
+document.getElementById('day-prev').addEventListener('click', () => { day = addDays(day, -1); renderDay(); });
+document.getElementById('day-next').addEventListener('click', () => { if (day < TODAY) { day = addDays(day, 1); renderDay(); } });
+document.getElementById('day-today').addEventListener('click', () => { day = TODAY; renderDay(); });
+
+/* ---------- Plan ---------- */
+function renderPlan() {
+  document.getElementById('plan-parts').innerHTML = PLAN.map(p => `<div class="part plan-part" style="--sess: ${sess(p.c)}">
+    <div class="part-head"><h3>${esc(p.title)}</h3><span class="when">${esc(p.when)}</span></div>
+    <p class="part-why">${esc(p.why)}</p>
+    <ul class="ticks">${p.items.map(([id, dose]) => { const e = EX.get(id); return `<li class="tick"><span class="tname">${esc(e.name)}<span class="tdose">${esc(dose || e.dose)} · ${esc(e.why)}</span></span><button type="button" class="how" data-how="${id}">How ›</button></li>`; }).join('')}</ul>
+  </div>`).join('');
+}
+document.getElementById('plan-parts').addEventListener('click', e => { const h = e.target.closest('[data-how]'); if (h) goToExercise(h.dataset.how); });
+
+/* ---------- Exercises ---------- */
+// A section in your order: the saved order first, any exercise new since then after it,
+// and the ones set aside at the end.
+function orderedEx(s) {
+  const saved = (prefs[`order|${s.id}`] || '').split(',').filter(id => s.ex.some(e => e.id === id));
+  const ids = [...saved, ...s.ex.map(e => e.id).filter(id => !saved.includes(id))];
+  const aside = id => prefs[`aside|${id}`] === '1';
+  return [...ids.filter(id => !aside(id)), ...ids.filter(aside)].map(id => s.ex.find(e => e.id === id));
+}
+// The order is read back from the page, so moving a box and saving are one thing.
+function saveOrder(secEl) {
+  const ids = [...secEl.querySelectorAll('.ex')].map(x => x.dataset.ex);
+  setPref(`order|${secEl.dataset.sec}`, ids.join(','));
+  paintOrder(secEl);
+}
+function paintOrder(secEl) {
+  const exs = [...secEl.querySelectorAll('.ex')];
+  exs.forEach((x, i) => {
+    const aside = prefs[`aside|${x.dataset.ex}`] === '1';
+    x.classList.toggle('aside', aside);
+    x.querySelector('.aside-tag').hidden = !aside;
+    x.querySelector('.aside-btn').textContent = aside ? 'Bring it back' : 'Set aside: I don’t do this one';
+    x.querySelector('[data-move="up"]').disabled = i === 0;
+    x.querySelector('[data-move="down"]').disabled = i === exs.length - 1;
+  });
+}
+const partsOf = id => PLAN.filter(p => p.items.some(([x]) => x === id)).map(p => p.title);
+function renderLibrary() {
+  const wasOpen = { sec: document.querySelector('.sec[open]')?.id, ex: document.querySelector('.ex[open]')?.id };
+  document.getElementById('library').innerHTML = SECTIONS.map((s, i) => `<details class="sec" id="sec-${s.id}" data-sec="${s.id}" style="--sess: ${sess(s.c)}">
+    <summary><span class="sec-n">${i + 1}</span><span class="sec-title">${esc(s.title)}</span><span class="sec-qs qs" hidden></span></summary>
+    <p class="sec-sub">${esc(s.sub)}</p>
+    <div class="sec-body">
+      ${orderedEx(s).map(e => `<details class="ex" id="ex-${e.id}" data-ex="${e.id}">
+        <summary draggable="true"><span class="ex-name">${esc(e.name)}</span><span class="qs" hidden></span><span class="aside-tag" hidden>set aside</span><span class="ex-dose">${esc(e.dose)}</span><span class="ex-move"><button type="button" data-move="up" aria-label="Move ${esc(e.name)} up" title="Move up">↑</button><button type="button" data-move="down" aria-label="Move ${esc(e.name)} down" title="Move down">↓</button></span></summary>
+        <div class="ex-body">
+          <p><span class="lbl">How</span>${esc(e.how)}</p>
+          <p><span class="lbl">What it is for</span>${esc(e.why)}</p>
+          ${e.watch ? `<p class="watch"><span class="lbl">Watch out</span>${esc(e.watch)}</p>` : ''}
+          ${partsOf(e.id).length ? `<p class="in-plan">In the plan: ${esc(partsOf(e.id).join(', '))}</p>` : ''}
+          <button type="button" class="aside-btn" data-aside="${e.id}"></button>
+          <div class="notes" data-key="ex|${e.id}"></div>
+        </div>
+      </details>`).join('')}
+      <p class="order-hint">↑ ↓ (or drag a row) to put your favourites first. <i>Set aside</i>, inside an exercise, sends the ones you don’t do to the end.</p>
+      <div class="notes sec-notes" data-key="sec|${s.id}"></div>
+    </div>
+  </details>`).join('') + `<h2>Good to know</h2><div class="know">
+    <div class="card"><h3>Avoid for now</h3><ul><li>Deep squats with load</li><li>Jumping</li><li>Lots of stairs, and running downhill</li><li>Kneeling</li></ul></div>
+    <div class="card"><h3>Cold feet</h3><ul><li>Wool socks and warm-lined slippers; keep the ankles covered too.</li><li>Calf raises and ankle circles for 1–2 minutes boost circulation fast.</li><li>A warm foot soak, 10–15 minutes in the evening.</li><li>Ginger, warm cooked meals and warm drinks: Western advice and the Chinese-medicine “warming” approach agree.</li><li>If it persists, get checked: thyroid, iron and anaemia, and circulation are common, easy-to-test causes.</li></ul></div>
+    <div class="card"><h3>Slippers for high arches</h3><ul><li>A firm heel cup: the heel does not slide side to side.</li><li>A contoured footbed with real arch support, ideally with a removable insole for your own orthotic.</li><li>A cushioned, slightly thick sole: high arches need shock absorption.</li><li>A closed back or an adjustable strap, not a floppy mule.</li><li>A warm lining (wool or felt).</li><li>Custom insoles from a podiatrist are often the real fix, and move between shoes and slippers.</li></ul></div>
+    <div class="card urgent"><h3>When to see a doctor or physio</h3><ul><li><b>L3/L4:</b> numbness, tingling or weakness in the front of the thigh or knee, or the knee giving way. Any bladder or bowel change is <b>urgent</b>.</li><li>Shoulder: no progress after 6–8 weeks of consistent work, night pain, or loss of strength lifting the arm.</li><li>Knee swelling, locking, or pain that keeps climbing.</li></ul></div>
+  </div>`;
+  for (const sec of document.querySelectorAll(".sec")) paintOrder(sec);
+  // Drawn again after the account loads: keep open what was open.
+  if (wasOpen.sec) { const s = document.getElementById(wasOpen.sec); if (s) s.open = true; }
+  if (wasOpen.ex) { const x = document.getElementById(wasOpen.ex); if (x) x.open = true; }
+}
+const library = document.getElementById('library');
+library.addEventListener('click', e => {
+  const mv = e.target.closest('[data-move]');
+  if (mv) {
+    e.preventDefault();   // a button in the summary must not open or close the box
+    const ex = mv.closest('.ex'), sec = ex.closest('.sec');
+    if (mv.dataset.move === 'up' && ex.previousElementSibling?.matches('.ex')) ex.previousElementSibling.before(ex);
+    if (mv.dataset.move === 'down' && ex.nextElementSibling?.matches('.ex')) ex.nextElementSibling.after(ex);
+    saveOrder(sec);
+    mv.focus();
+    return;
+  }
+  const as = e.target.closest('[data-aside]');
+  if (as) {
+    const ex = as.closest('.ex'), sec = ex.closest('.sec'), id = as.dataset.aside;
+    const nowAside = prefs[`aside|${id}`] !== '1';
+    setPref(`aside|${id}`, nowAside ? '1' : null);
+    // Set aside goes to the end; brought back, it goes just above the first one set aside.
+    const exs = [...sec.querySelectorAll('.ex')];
+    if (nowAside) exs[exs.length - 1].after(ex);
+    else { const first = exs.find(x => x !== ex && x.classList.contains('aside')); if (first) first.before(ex); }
+    saveOrder(sec);
+    ex.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+});
+// Drag a row to a new place in its section (mouse; on a phone the arrows do it).
+let dragged = null;
+library.addEventListener('dragstart', e => {
+  const ex = e.target.closest?.('.ex');
+  if (!ex) return;
+  dragged = ex;
+  ex.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', ex.dataset.ex);
+});
+const clearDrop = () => { for (const x of library.querySelectorAll('.drop-before, .drop-after')) x.classList.remove('drop-before', 'drop-after'); };
+library.addEventListener('dragover', e => {
+  const ex = e.target.closest('.ex');
+  if (!dragged || !ex || ex === dragged || ex.closest('.sec') !== dragged.closest('.sec')) return;
+  e.preventDefault();
+  clearDrop();
+  const r = ex.getBoundingClientRect();
+  ex.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-before' : 'drop-after');
+});
+library.addEventListener('drop', e => {
+  const ex = e.target.closest('.ex');
+  if (!dragged || !ex || ex === dragged) return;
+  e.preventDefault();
+  if (ex.classList.contains('drop-before')) ex.before(dragged); else ex.after(dragged);
+  clearDrop();
+  saveOrder(ex.closest('.sec'));
+});
+library.addEventListener('dragend', () => { if (dragged) dragged.classList.remove('dragging'); dragged = null; clearDrop(); });
+// One section open at a time, one exercise open at a time.
+document.getElementById('library').addEventListener('toggle', e => {
+  const d = e.target;
+  if (!d.open) { followSpot(); return; }
+  const sel = d.classList.contains('sec') ? '.sec[open]' : '.ex[open]';
+  for (const o of document.querySelectorAll(sel)) if (o !== d) o.open = false;
+  followSpot();
+}, true);
+function flash(el) { el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
+function goToExercise(id) {
+  const ex = document.getElementById(`ex-${id}`);
+  showPage('exercises');
+  ex.closest('.sec').open = true;
+  ex.open = true;
+  if (innerWidth < 760) setNotebook(false);
+  ex.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  flash(ex);
+}
+function goToPlace(key) {
+  if (key === 'overall') { showPage('notes'); return; }
+  if (key.startsWith('ex|')) { goToExercise(key.slice(3)); return; }
+  const sec = document.getElementById(`sec-${key.slice(4)}`);
+  showPage('exercises');
+  sec.open = true;
+  if (innerWidth < 760) setNotebook(false);
+  sec.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  flash(sec);
+}
+
+/* ---------- Notes tab ---------- */
+function places() {
+  return [{ key: 'overall', tag: 'All', name: 'Overall', c: null },
+    ...SECTIONS.flatMap(s => [{ key: `sec|${s.id}`, tag: 'Section', name: s.title, c: s.c }, ...s.ex.map(e => ({ key: `ex|${e.id}`, tag: s.title, name: e.name, c: s.c }))])];
+}
+const placeOf = key => places().find(p => p.key === key) || { key, tag: '', name: key, c: null };
+function renderReview() {
+  const order = new Map(places().map((p, i) => [p.key, i]));
+  const by = (a, b) => (order.get(a.key) ?? 1e9) - (order.get(b.key) ?? 1e9) || String(b.createdAt).localeCompare(String(a.createdAt));
+  const row = n => { const p = placeOf(n.key); return `<div class="rv-row"><button type="button" class="place" data-go="${esc(n.key)}"${p.c ? ` style="--sess: ${sess(p.c)}"` : ''}><span>${esc(p.tag)}</span>${esc(p.name)} ›</button><div class="rv-note">${noteHtml(n)}</div></div>`; };
+  const group = (title, list) => list.length ? `<div class="rv-group"><h3>${title} <b>${list.length}</b></h3><div class="rv-list">${list.sort(by).map(row).join('')}</div></div>` : '';
+  const qs = notes.filter(n => n.kind === 'question');
+  const waiting = qs.filter(n => !n.answer), answered = qs.filter(n => n.answer);
+  const html = group('Questions waiting', waiting) + group('Questions answered', answered)
+    + group('To research', notes.filter(n => n.kind === 'research')) + group('Comments', notes.filter(n => n.kind === 'comment'));
+  document.getElementById('review').innerHTML = html ? `<h2>By exercise</h2>${html}` : '';
+  const fresh = notes.filter(n => n.answer && !n.readAt).length;
+  const c = document.getElementById('notes-count');
+  c.hidden = !fresh; c.textContent = fresh ? `${fresh} new` : '';
+}
+document.getElementById('review').addEventListener('click', e => { const g = e.target.closest('.place'); if (g) goToPlace(g.dataset.go); });
+function renderTimeline() {
+  const days = Object.keys(log).filter(d => log[d].feel || AREAS.some(([a]) => log[d][`pain|${a}`] != null)).sort().reverse();
+  document.getElementById('timeline').innerHTML = days.length ? days.map(d => {
+    const nums = AREAS.map(([a, , short]) => log[d][`pain|${a}`] != null ? `${short} ${log[d][`pain|${a}`]}` : '').filter(Boolean).join(' · ');
+    return `<div class="tl"><button type="button" class="tl-day" data-day="${d}">${dayName(d, { weekday: 'short', day: 'numeric', month: 'short' })}</button><div>${nums ? `<span class="tl-nums">${esc(nums)}</span>` : ''}${log[d].feel ? `<p>${esc(log[d].feel)}</p>` : ''}</div></div>`;
+  }).join('') : '<p class="empty">Nothing yet. On Today, tap how each part feels and write a line.</p>';
+}
+document.getElementById('timeline').addEventListener('click', e => { const b = e.target.closest('.tl-day'); if (b) { day = b.dataset.day; showPage('today'); renderDay(); } });
+
+/* ---------- The notebook on the right ---------- */
+const notebook = document.getElementById('notebook');
+const nbDot = document.getElementById('nb-dot');
+const nbAbout = document.getElementById('nb-about');
+const nbText = document.getElementById('nb-text');
+let nbKind = 'question', nbPinned = false;
+nbAbout.innerHTML = places().map(p => `<option value="${esc(p.key)}">${p.key.startsWith('ex|') ? '· ' : ''}${esc(p.key.startsWith('sec|') ? `${p.name} (section)` : p.name)}</option>`).join('');
+// Where you are: the open exercise, else the open section, else overall.
+function currentSpot() {
+  if (document.getElementById('page-exercises').hidden) return 'overall';
+  const ex = document.querySelector('.sec[open] .ex[open]');
+  if (ex) return `ex|${ex.dataset.ex}`;
+  const sec = document.querySelector('.sec[open]');
+  return sec ? `sec|${sec.dataset.sec}` : 'overall';
+}
+function followSpot() { if (!nbPinned) nbAbout.value = currentSpot(); if (!notebook.hidden) renderNotebook(); }
+function setNotebook(open) {
+  notebook.hidden = !open;
+  nbDot.setAttribute('aria-expanded', String(open));
+  if (open) { if (!nbText.value.trim()) nbPinned = false; followSpot(); }
+}
+function renderNotebook() {
+  nbDot.classList.toggle('has-notes', notes.length > 0);
+  if (notebook.hidden) return;
+  const box = document.getElementById('nb-list');
+  if (box.querySelector('.n-editor')) return;
+  const q = notes.filter(n => n.kind === 'question'), r = notes.filter(n => n.kind === 'research'), c = notes.filter(n => n.kind === 'comment');
+  const waiting = q.filter(n => !n.answer).length;
+  document.getElementById('nb-sum').textContent = [q.length && `${q.length} question${q.length > 1 ? 's' : ''}`, waiting && `${waiting} waiting`, r.length && `${r.length} to research`, c.length && `${c.length} comment${c.length > 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+  const here = currentSpot();
+  const groups = places().map(p => ({ p, list: notesOf(p.key).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))) })).filter(g => g.list.length);
+  box.innerHTML = groups.length ? groups.map(({ p, list }) => `<div class="nb-group${p.key === here ? ' here' : ''}">
+      <div><button type="button" class="nb-go" data-go="${esc(p.key)}"><span class="t">${esc(p.tag)}</span><span>${esc(p.name)} ›</span></button>${p.key === here ? ' <span class="nb-here">you are here</span>' : ''}</div>
+      ${list.map(noteHtml).join('')}
+    </div>`).join('') : '<p class="empty">No notes yet. Write one above: it is filed under the exercise you have open.</p>';
+}
+nbDot.addEventListener('click', () => setNotebook(notebook.hidden));
+document.getElementById('nb-close').addEventListener('click', () => setNotebook(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !notebook.hidden) setNotebook(false); });
+nbAbout.addEventListener('change', () => { nbPinned = true; });
+nbText.addEventListener('input', () => { if (nbText.value.trim()) nbPinned = true; });
+notebook.addEventListener('click', e => {
+  const k = e.target.closest('.nb-write .kinds [data-kind]');
+  if (k) { nbKind = k.dataset.kind; for (const b of notebook.querySelectorAll('.nb-write .kinds button')) b.setAttribute('aria-checked', String(b === k)); return; }
+  if (e.target.closest('#nb-save')) {
+    if (!nbText.value.trim()) { nbText.focus(); return; }
+    const label = nbAbout.selectedOptions[0].textContent.replace(/^· /, '');
+    addNote(nbAbout.value, nbKind, nbText.value);
+    nbText.value = ''; nbPinned = false;
+    const s = document.getElementById('nb-saved');
+    s.textContent = `Saved to ${label}.`;
+    setTimeout(() => { if (s.textContent.startsWith('Saved')) s.textContent = ''; }, 2500);
+    followSpot();
+    return;
+  }
+  const go = e.target.closest('.nb-go');
+  if (go) { goToPlace(go.dataset.go); return; }
+  if (e.target.closest('.save, .cancel')) setTimeout(renderNotebook, 0);
+});
+nbText.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); document.getElementById('nb-save').click(); } });
+
+/* ---------- Pages, theme, drawing ---------- */
+function showPage(name) {
+  for (const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', String(t.dataset.page === name));
+  for (const p of document.querySelectorAll('[role="tabpanel"]')) p.hidden = p.id !== `page-${name}`;
+  try { localStorage.setItem('health-page', name); } catch (e) {}
+  scrollTo({ top: 0 });
+  followSpot();
+}
+document.querySelector('.tabs').addEventListener('click', e => { const t = e.target.closest('.tab'); if (t) showPage(t.dataset.page); });
+const themeBtn = document.getElementById('theme-btn');
+const paintTheme = () => { const night = document.documentElement.dataset.theme === 'dark'; themeBtn.textContent = night ? '☀' : '☾'; themeBtn.setAttribute('aria-label', night ? 'Switch to day' : 'Switch to night'); };
+themeBtn.addEventListener('click', () => {
+  const night = document.documentElement.dataset.theme !== 'dark';
+  document.documentElement.dataset.theme = night ? 'dark' : 'light';
+  try { localStorage.setItem('health-theme', night ? 'night' : 'day'); } catch (e) {}
+  paintTheme();
+});
+function renderNotes() {
+  for (const h of document.querySelectorAll('[data-key].notes')) paintHost(h);
+  for (const el of document.querySelectorAll('.ex')) {
+    const n = notesOf(`ex|${el.dataset.ex}`).length, q = el.querySelector('summary .qs');
+    q.hidden = !n; q.textContent = `✎ ${n}`;
+  }
+  for (const el of document.querySelectorAll('.sec')) {
+    const s = SECTIONS.find(x => x.id === el.dataset.sec);
+    const n = notes.filter(x => x.key === `sec|${s.id}` || s.ex.some(e => x.key === `ex|${e.id}`)).length, q = el.querySelector('summary .sec-qs');
+    q.hidden = !n; q.textContent = `✎ ${n}`;
+  }
+  renderReview(); renderNotebook();
+}
+function renderAll() { renderLibrary(); renderDay(); renderNotes(); renderTimeline(); }
+
+paintTheme();
+renderPlan();
+renderAll();
+try { const p = localStorage.getItem('health-page'); if (p && document.getElementById(`page-${p}`)) showPage(p); } catch (e) {}
+load();
+</script>
+</body>
+</html>
