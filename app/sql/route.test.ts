@@ -42,5 +42,8 @@ describe('/sql class page', () => {
     for (const n of [1, 2, 3]) expect(html).toContain(`{ n: ${n}, short:`);
     // Practice answers carry their real output from shopstream.db.
     expect(html).toContain('const PRACTICE = {');
+    // The cheat sheet: every term from the sessions, searchable, as its own tab.
+    expect(html).toContain('const REF = [');
+    expect(html).toContain('data-s="ref"');
   });
 });
