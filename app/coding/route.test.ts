@@ -42,5 +42,8 @@ describe('/coding study page', () => {
     expect(html).toContain('id="page-practice"');
     expect(html).toContain('"id": "11.5"');
     expect(html).toContain('cdn.jsdelivr.net/pyodide/v0.26.4/full/');
+    // Exam practice: the two practice papers, tested like missions.
+    expect(html).toContain('const EXAM = [');
+    expect(html).toContain('p2-B2d');
   });
 });
