@@ -55,7 +55,7 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
 
 Each box can carry:
 
-- a **mark**: *Got it* (`got`, green), *Confused* (`mid`, yellow) or *No time* (`late`, pink-purple) — three dots in a row at the bottom right of the box, each naming itself in a coloured pill on hover. A dot fills the moment it is pressed and stays filled in the same frame; saving and the counts follow just after, so the tap never feels slow. The database also accepts `solid`, which the page shows as *Got it*.
+- a **mark**: *Got it* (`got`, green), *Confused* (`mid`, yellow) or *Confused as fuck* (`late`, pink-purple; called *No time* until 2026-10-19, renamed at Victor's request) — three dots in a row at the bottom right of the box, each naming itself in a coloured pill on hover. A dot fills the moment it is pressed and stays filled in the same frame; saving and the counts follow just after, so the tap never feels slow. The database also accepts `solid`, which the page shows as *Got it*.
 - **notes**: any number of questions and comments per box, added with the button at the bottom of the box, each edited (✎) or deleted (× then Delete?) on its own. Each note has a status dot: orange while it waits for an answer or the answer is unread, green once answered and marked read. Answers are written from the terminal into the note's `answer` field and never change the note itself.
 
 Rules:
