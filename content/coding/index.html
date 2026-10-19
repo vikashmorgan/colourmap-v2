@@ -85,6 +85,11 @@ body { margin: 0; background: var(--ground); color: var(--ink); font-family: var
   padding: 8px 16px; min-height: 40px; cursor: pointer;
 }
 .tabs button[aria-selected="true"] { background: var(--ink); color: var(--ground); }
+/* Project 1, kept but out of the way (2026-10-19): a small + after Review, named once open. */
+.tabs .tab-plus { min-width: 40px; padding-inline: 12px; font-size: 18px; opacity: .7; }
+.tabs .tab-plus:hover { opacity: 1; }
+.tabs .tab-plus[aria-selected="true"] { opacity: 1; font-size: inherit; }
+.tabs .tab-plus[aria-selected="true"]::after { content: ' Project 1'; }
 .tabs button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Page intro */
@@ -479,6 +484,32 @@ details.solution .ex-why { margin-top: 12px; }
 .rv-group { margin-top: 32px; }
 .rv-group h2, .rv-group h3 { font-family: var(--display); font-size: 21px; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
 .rv-part { margin-top: 40px; }
+/* The exam map at the top of Review. */
+.exam-map { margin: 0 0 28px; border: 1px solid var(--rule); border-radius: 16px; background: var(--panel); }
+.exam-map > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 16px 20px; }
+.exam-map > summary::-webkit-details-marker { display: none; }
+.em-title { font-family: var(--display); font-weight: 700; font-size: 22px; }
+.em-sub { font: 600 13px var(--mono); color: var(--muted); }
+.em-note { margin: 0; padding: 0 20px; color: var(--muted); font-size: 15px; }
+.em-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 20px 4px; }
+.em-filters button { min-height: 34px; padding: 4px 13px; border-radius: 999px; border: 1px solid var(--rule); background: var(--ground); color: var(--ink); font: 600 13px var(--body); cursor: pointer; }
+.em-filters button[aria-pressed="true"] { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+.em-filters b { font: 600 11px var(--mono); margin-left: 4px; opacity: .75; }
+.em-list { padding: 8px 20px 18px; display: grid; gap: 16px; }
+.em-deck h3 { margin: 0 0 6px; font: 700 16px var(--display); color: var(--muted); }
+.em-rows { display: grid; gap: 6px; }
+.em-row { display: grid; grid-template-columns: 6.5em minmax(0, 1fr) auto; gap: 4px 12px; align-items: baseline; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--em) 9%, var(--panel)); --em: var(--q-c); }
+.em-row[data-s="exam"] { --em: var(--late-c); }
+.em-row[data-s="remember"] { --em: var(--ok-c); }
+.em-kind { font: 600 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--em); }
+.em-kind::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--em); margin-right: 6px; vertical-align: 1px; }
+.em-what b { display: block; font-weight: 600; }
+.em-what span { font-size: 15px; }
+.em-row .slide-link { justify-self: end; white-space: nowrap; }
+@media (max-width: 640px) {
+  .em-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .em-kind { grid-column: 1 / -1; }
+}
 .rv-part-title { font-family: var(--display); font-size: clamp(26px, 3.4vw, 34px); margin: 0; padding-bottom: 8px; border-bottom: 2px solid var(--ink); }
 .rv-part .rv-group { margin-top: 20px; }
 .rv-group h3 b, .rv-group h2 b { font: 600 13px var(--mono); color: var(--muted); }
@@ -1169,11 +1200,11 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
   <div class="wrap">
     <div class="brand-wrap"><a class="back-brain" id="back-brain" href="/school" hidden>← School</a><div class="brand">explorer.py <span>· Terminal Data Explorer</span></div></div>
     <div class="tabs" role="tablist" aria-label="Pages">
-      <button id="tab-project" role="tab" aria-selected="true" aria-controls="page-project">Project 1</button>
       <button id="tab-tools" role="tab" aria-selected="false" aria-controls="page-tools">Python toolkit</button>
-      <button id="tab-lessons" role="tab" aria-selected="false" aria-controls="page-lessons">Lessons</button>
+      <button id="tab-lessons" role="tab" aria-selected="true" aria-controls="page-lessons">Lessons</button>
       <button id="tab-practice" role="tab" aria-selected="false" aria-controls="page-practice">Practice</button>
-      <button id="tab-review" role="tab" aria-selected="false" aria-controls="page-review">Review <b class="tab-count" id="review-count"></b></button>
+      <button id="tab-review" role="tab" aria-selected="false" aria-controls="page-review">Review</button>
+      <button id="tab-project" class="tab-plus" role="tab" aria-selected="false" aria-controls="page-project" aria-label="Project 1" title="Project 1">+</button>
     </div>
     <button type="button" class="size-btn theme-btn" id="theme-btn" aria-label="Switch between day and night" title="Day or night">☾</button>
     <div class="size-wrap">
@@ -1521,9 +1552,15 @@ requirements.txt, which you hand in, simply lists requests so the teacher can ru
   <section id="page-review" role="tabpanel" aria-labelledby="tab-review" hidden>
     <div class="intro">
       <span class="eyebrow">Page 5 · Your review</span>
-      <h1>Everything you flagged, in one place.</h1>
+      <h1>Review</h1>
       <p>Every question and comment, in the order of the page: Project 1 step by step, then the lessons box by box. Each answer sits right under its question, here and where you asked it. Then every box you marked Confused or No time.</p>
     </div>
+    <details class="exam-map" id="exam-map" open>
+      <summary><span class="em-title">For the exam: what the slides flag</span><span class="em-sub" id="em-sub"></span></summary>
+      <p class="em-note">Every place in the slides where the teacher stops to say <i>this is on the exam</i>, <i>remember this</i> or <i>watch out</i>, in plain words, with its slide one tap away.</p>
+      <div class="em-filters" role="group" aria-label="Show"></div>
+      <div class="em-list" id="em-list"></div>
+    </details>
     <div id="review"></div>
   </section>
 </main>
@@ -3991,6 +4028,31 @@ document.getElementById('progress-bar').addEventListener('click', e => {
   applyFilter();
 });
 
+/* ---------- For the exam: what the slides flag (2026-10-19: "map all the stuff where they said we need to remember, or we will be asked about it, or we should expect it") ----------
+ * Found by reading every page of the Python and recursion slides for the teacher's own signals
+ * (exam, expect, remember, important, careful, common mistake), and written here in plain words,
+ * never quoted: the slides stay private, and each row links to its page. */
+const EXAM_HINTS = [{"f": "Session1.pdf", "p": 5, "s": "exam", "t": "exam format: written, closed book", "w": "The 2-hour exam is on paper with no interpreter, so practise predicting output by reading code."}, {"f": "Session1.pdf", "p": 5, "s": "exam", "t": "exam marking scheme", "w": "Wrong MCQ answers cost 0.5, so leave a blank rather than guess (Part A 30, Part B 10, Part C 60)."}, {"f": "Session1.pdf", "p": 5, "s": "exam", "t": "project grading and oral", "w": "The individual project is marked on correctness, code quality and a 30-mark oral."}, {"f": "Session1.pdf", "p": 20, "s": "remember", "t": "assignment reading", "w": "Assignment is an instruction: the right side is evaluated first, then the name is bound to the result."}, {"f": "Session1.pdf", "p": 42, "s": "watch-out", "t": "terminal: running a script", "w": "Know the three classic errors: wrong folder (No such file), python not on PATH, and hidden .txt extension."}, {"f": "Session1.pdf", "p": 63, "s": "remember", "t": "global installs vs virtual environments", "w": "Two projects needing different package versions clash globally; the fix is a per-project virtual environment."}, {"f": "Session1.pdf", "p": 73, "s": "exam", "t": "reading exercise statements", "w": "Treat each exercise statement like an exam question: read it fully before coding."}, {"f": "Session2.pdf", "p": 13, "s": "remember", "t": "float comparison", "w": "Compare floats with math.isclose (or a tolerance), never ==; round() is for display only."}, {"f": "Session2.pdf", "p": 39, "s": "watch-out", "t": "empty set syntax", "w": "An empty set is set(); {} creates an empty dict. Sets have no indexing."}, {"f": "Session2.pdf", "p": 41, "s": "watch-out", "t": "set limitations", "w": "Sets drop order and duplicate counts, and can only hold immutable values (no lists)."}, {"f": "Session2.pdf", "p": 51, "s": "watch-out", "t": "in-place vs new-object methods", "w": "s.strip() without assigning does nothing; xs = xs.sort() sets xs to None."}, {"f": "Session2.pdf", "p": 60, "s": "remember", "t": "= vs ==", "w": "= binds a name to a value; == asks whether two values are equal."}, {"f": "Session2.pdf", "p": 61, "s": "watch-out", "t": "truthiness of empty values", "w": "Empty containers, 0, '' and None are falsy; any non-empty string, even \"0\", is truthy."}, {"f": "Session3.pdf", "p": 13, "s": "watch-out", "t": "or-condition bug (x == 1 or 2)", "w": "x == 1 or 2 is always true; every side of an or needs its own full comparison, or use x in (1, 2)."}, {"f": "Session3.pdf", "p": 14, "s": "watch-out", "t": "De Morgan's laws", "w": "not (a and b) is not a or not b; pushing not inside flips and/or."}, {"f": "Session3.pdf", "p": 35, "s": "watch-out", "t": "zip with unequal lengths", "w": "zip silently stops at the shorter sequence; check len() if lists must match."}, {"f": "Session3.pdf", "p": 40, "s": "watch-out", "t": "loop pitfalls", "w": "Know the three loop failures: infinite while, off-by-one ranges, and modifying a list while iterating it."}, {"f": "Session4.pdf", "p": 10, "s": "remember", "t": "return vs print", "w": "A function that prints instead of returning gives back None and cannot be reused by other code."}, {"f": "Session4.pdf", "p": 17, "s": "watch-out", "t": "mutable default arguments", "w": "A default list is created once and shared across calls; use None and build the list inside."}, {"f": "Session4.pdf", "p": 18, "s": "remember", "t": "functions as values (key=)", "w": "Recognise max(d, key=d.get): a function name without brackets is the function itself, passed as a value."}, {"f": "Session4.pdf", "p": 26, "s": "watch-out", "t": "shadowing built-ins (LEGB)", "w": "Assigning to a built-in name hides it for the rest of the file (e.g. 'list' object is not callable)."}, {"f": "Session4.pdf", "p": 45, "s": "watch-out", "t": "common function errors", "w": "Know the TypeError (missing arg, not callable, NoneType) and UnboundLocalError causes and fixes."}, {"f": "Session6.pdf", "p": 8, "s": "watch-out", "t": "closing files / with", "w": "Use with open(...) so the file is always closed; manual open/close leaks if you forget close()."}, {"f": "Session6.pdf", "p": 12, "s": "remember", "t": "pathlib path joining", "w": "Build paths with Path objects and the / operator, not string concatenation."}, {"f": "Session6.pdf", "p": 16, "s": "remember", "t": "csv module and newline=\"\"", "w": "Open CSVs with newline=\"\" and use the csv module, since fields can contain commas."}, {"f": "Session6.pdf", "p": 25, "s": "watch-out", "t": "exception handling", "w": "A bare except swallows your own bugs; catch only named exceptions you can describe."}, {"f": "Session7.pdf", "p": 10, "s": "remember", "t": "requests timeout and raise_for_status", "w": "Always pass timeout= and call raise_for_status(); catch Timeout, ConnectionError and HTTPError separately."}, {"f": "Session7.pdf", "p": 11, "s": "watch-out", "t": "empty API results", "w": "200 OK can still carry an empty results list; check before indexing."}, {"f": "Session7.pdf", "p": 17, "s": "remember", "t": "print debugging method", "w": "Debug by stating a belief, measuring it with one print, then moving the print."}, {"f": "Session7.pdf", "p": 22, "s": "watch-out", "t": "pdb commands", "w": "Know n, s, p, c, l, q; in pdb a bare n means next, so use p n to print a variable named n."}, {"f": "Session7.pdf", "p": 35, "s": "remember", "t": "lockfiles / reproducible environments", "w": "pyproject.toml states what you ask for; the lock records exactly what was resolved. Commit both, never edit the lock."}, {"f": "Session8.pdf", "p": 14, "s": "remember", "t": "attribute typos", "w": "Assigning to a misspelt attribute silently creates a new one; set every attribute in __init__."}, {"f": "Session8.pdf", "p": 20, "s": "watch-out", "t": "mutable class attributes", "w": "Lists, dicts and sets as class attributes are shared by all instances; create them in __init__."}, {"f": "Session8.pdf", "p": 23, "s": "watch-out", "t": "methods: defaults and self", "w": "Method defaults follow function rules, including the mutable-default trap; self gets no type hint."}, {"f": "Session8.pdf", "p": 44, "s": "remember", "t": "attribute / method lookup order", "w": "Lookup goes instance, then class, then parent classes; the first match runs."}, {"f": "Session8.pdf", "p": 51, "s": "remember", "t": "OOP recap", "w": "Know the seven recap points: self, attribute lookup, methods return, __repr__, super().__init__(), class vs function."}, {"f": "Recursion1.pdf", "p": 3, "s": "exam", "t": "course exam", "w": "Course 2 ends with a 2-hour closed-book written exam plus oral project defences in session 7."}, {"f": "Recursion1.pdf", "p": 4, "s": "exam", "t": "exam format", "w": "Exam: 15 MCQs (penalty for wrong, 0 for blank), one broken-code question, and exercises on fault-spotting, recursion and rewriting for cost."}, {"f": "Recursion1.pdf", "p": 4, "s": "exam", "t": "oral defence", "w": "The oral (30 marks) is a code-reading conversation: explain why each function is shaped the way it is."}, {"f": "Recursion1.pdf", "p": 24, "s": "watch-out", "t": "missing return in recursion", "w": "The recursive line must start with return, otherwise the function returns None."}, {"f": "Recursion1.pdf", "p": 30, "s": "watch-out", "t": "unreachable / missing base case", "w": "Diagnose RecursionError by the three rules: no base case, argument not shrinking, or floor stepped over."}, {"f": "Recursion1.pdf", "p": 31, "s": "exam", "t": "four checks for a recursive function", "w": "Be able to answer: return without a call? does the argument shrink? can the floor be stepped over? does the recursive line return?"}, {"f": "Recursion1.pdf", "p": 35, "s": "remember", "t": "cost of slicing in recursion", "w": "Each numbers[1:] copies the list, so a slicing recursion costs O(n²) copies in total."}, {"f": "Recursion1.pdf", "p": 43, "s": "remember", "t": "base case / what shrinks / combine step", "w": "For each recursion, name the base case, what shrinks, and the combine step."}, {"f": "Recursion1.pdf", "p": 44, "s": "watch-out", "t": "combine step order", "w": "A reversed combine step gives a wrong answer silently; test on inputs whose answer you know."}, {"f": "Recursion1.pdf", "p": 56, "s": "watch-out", "t": "fixing RecursionError", "w": "Match each symptom to its rule and fix; raise the limit only for legitimately deep structures."}, {"f": "Recursion1.pdf", "p": 68, "s": "watch-out", "t": "flatten combine step", "w": "Use += or extend to splice in the sub-list; append keeps the nesting."}, {"f": "Recursion1.pdf", "p": 69, "s": "exam", "t": "combine step errors", "w": "Most lab errors were in the combine step; that is where marks are won or lost."}, {"f": "Recursion1.pdf", "p": 70, "s": "remember", "t": "recursion recap", "w": "Base case plus smaller problem, one frame per call, answer built on the way up, three rules, RecursionError is your bug."}, {"f": "Recursion1.pdf", "p": 72, "s": "exam", "t": "tracing recursion by hand", "w": "Practise tracing calls like factorial(6) on paper: step, event, depth, what each frame waits for and returns."}, {"f": "Recursion2.pdf", "p": 16, "s": "exam", "t": "binary search with low/high", "w": "Pass low and high indexes instead of slices: no copying, and returned indexes refer to the original list."}, {"f": "Recursion2.pdf", "p": 19, "s": "remember", "t": "binary search base case", "w": "Check low > high first; that empty window is the base case that proves absence."}, {"f": "Recursion2.pdf", "p": 21, "s": "watch-out", "t": "binary search off-by-one (mid vs mid+1)", "w": "Recurse on mid + 1 / mid - 1, not mid, or the window stops shrinking; test windows of size one and two."}, {"f": "Recursion2.pdf", "p": 22, "s": "exam", "t": "binary search precondition vs dict", "w": "Binary search assumes sorted input and fails silently otherwise; explain when it beats a dict or a linear scan."}, {"f": "Recursion2.pdf", "p": 43, "s": "remember", "t": "unbalanced BST", "w": "Sorted insertion turns a BST into a list (O(n)); AVL and red-black trees rebalance to guarantee O(log n)."}, {"f": "Recursion2.pdf", "p": 46, "s": "watch-out", "t": "None base case in tree traversal", "w": "Every tree recursion must check if node is None first, or it raises AttributeError."}, {"f": "Recursion2.pdf", "p": 56, "s": "remember", "t": "binary search & trees recap", "w": "Sorted data needed, log growth, window not slice, absent node is the base case, three traversals, in-order is sorted."}, {"f": "Recursion4.pdf", "p": 13, "s": "watch-out", "t": "what n is in Big O", "w": "Always name what n is: sum_digits is O(d) in the digit count, not the value."}, {"f": "Recursion4.pdf", "p": 14, "s": "exam", "t": "reading Big O off code", "w": "Be able to read the complexity of a function straight from its code (section 3 of Session 4)."}, {"f": "Recursion4.pdf", "p": 19, "s": "remember", "t": "exponential recursion: fib vs hanoi", "w": "fib is exponential through waste (caching fixes it); hanoi is exponential because the answer has 2ⁿ−1 moves."}, {"f": "Recursion4.pdf", "p": 23, "s": "remember", "t": "hidden costs of operations", "w": "x in list is O(n), O(n²) inside a loop; know the costs of set lookup, insert(0), string concatenation, sorted, slicing."}, {"f": "Recursion4.pdf", "p": 24, "s": "watch-out", "t": "list vs set membership", "w": "A list as a 'seen' collection makes the loop quadratic; a set makes it linear."}, {"f": "Recursion4.pdf", "p": 42, "s": "exam", "t": "four sorts complexity table", "w": "Know best, worst and average cases and space for bubble, insertion, merge and quick sort, and what sorted() does."}, {"f": "Recursion4.pdf", "p": 43, "s": "watch-out", "t": "merge step cost", "w": "A cost inside a recursion is paid at every level; the merge must be a linear two-index pass."}, {"f": "Recursion4.pdf", "p": 48, "s": "watch-out", "t": "complexity class vs constants", "w": "Find the complexity class first, then constants; change the class, not the constant."}, {"f": "Recursion4.pdf", "p": 51, "s": "exam", "t": "classifying function complexity", "w": "Phase 1 asks you to give each function's time complexity, say what n is, and justify it in one sentence."}];
+const EM_KIND = { exam: 'Exam', remember: 'Remember', 'watch-out': 'Watch out' };
+const EM_DECK = f => (f.startsWith('Recursion') ? `Recursion ${f.match(/\d+/)[0]}` : `Session ${f.match(/\d+/)[0]}`);
+let emShow = 'all';
+function renderExamMap() {
+  const n = k => EXAM_HINTS.filter(h => h.s === k).length;
+  document.getElementById('em-sub').textContent = `${n('exam')} about the exam · ${n('remember')} to remember · ${n('watch-out')} to watch out for`;
+  document.querySelector('#exam-map .em-filters').innerHTML = [['all', 'All', EXAM_HINTS.length], ['exam', 'Exam', n('exam')], ['remember', 'Remember', n('remember')], ['watch-out', 'Watch out', n('watch-out')]]
+    .map(([k, l, c]) => `<button type="button" data-em="${k}" aria-pressed="${k === emShow}">${l}<b>${c}</b></button>`).join('');
+  const shown = EXAM_HINTS.filter(h => emShow === 'all' || h.s === emShow);
+  const decks = [...new Set(shown.map(h => h.f))];
+  document.getElementById('em-list').innerHTML = decks.map(f => `<section class="em-deck"><h3>${EM_DECK(f)}</h3><div class="em-rows">${shown.filter(h => h.f === f).map(h => `<div class="em-row" data-s="${h.s}"><span class="em-kind">${EM_KIND[h.s]}</span><span class="em-what"><b>${esc(h.t.charAt(0).toUpperCase() + h.t.slice(1))}</b><span>${esc(h.w)}</span></span>${ON_COLOUR_BRAIN ? slideLink(h.f, h.p) : `<span class="em-page">p. ${h.p}</span>`}</div>`).join('')}</div></section>`).join('');
+}
+document.getElementById('exam-map').addEventListener('click', e => {
+  const b = e.target.closest('[data-em]');
+  if (!b) return;
+  emShow = b.dataset.em;
+  renderExamMap();
+});
+renderExamMap();
+
 /* ---------- Review: questions, comments, confused and no time, together ---------- */
 function boxHead(item, forKey) {
   if (item.classList.contains('pm-notes')) {
@@ -4075,8 +4137,6 @@ function renderReview() {
   // Review can be drawn before Practice exists (on load): then there is nothing to list yet.
   const flagged = (window.practiceMissions || []).filter(m => marks[`xb|${m.id}`] === 'mid');
   const total = questions.length + comments.length + confused.length + noTime.length + flagged.length;
-  const countEl = document.getElementById('review-count');
-  countEl.textContent = waiting ? `${waiting} new` : (total ? String(total) : '');
   const el = document.getElementById('review');
   if (!total) {
     renderPnb();
@@ -5093,13 +5153,14 @@ document.addEventListener('click', e => {
   showPage('project', false);
   openTarget(a.dataset.jump);
 });
-let start = 'project';
+let start = 'lessons';
 if (location.hash === '#toolkit') start = 'tools';
 else if (location.hash === '#lessons') start = 'lessons';
 else if (location.hash === '#review') start = 'review';
 else if (location.hash === '#practice') start = 'practice';
-else { try { start = localStorage.getItem('explorer-map-page') || 'project'; } catch (e) {}
-  if (!tabs[start]) start = 'project'; }
+else if (location.hash === '#project') start = 'project';
+else { try { start = localStorage.getItem('explorer-map-page') || 'lessons'; } catch (e) {}
+  if (!tabs[start]) start = 'lessons'; }
 showPage(start, false);
 </script>
 </body>
