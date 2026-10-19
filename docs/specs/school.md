@@ -14,7 +14,7 @@ A sober menu, in the style of the Git page, with one card per class:
 
 - **Python**: Python Fundamentals, Project 1 (`explorer.py`). Opens `/coding` ([spec](coding.md)).
 - **Git**: MSE-DIM01-3. Opens `/git` ([spec](git-class.md)).
-- **SQL**: `/sql`, sessions 1 to 3 (since 2026-10-19; see `docs/specs/sql-class.md`).
+- **SQL**: `/sql`, sessions 1 to 5 (since 2026-10-19, sessions 4 and 5 added the same day; see `docs/specs/sql-class.md`).
 
 ## Rules
 
