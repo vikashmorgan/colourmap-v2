@@ -1034,6 +1034,27 @@ details.datacode .mission-tag { background: var(--ok-c); }
 .pm-qs[data-kind="comment"] { color: var(--c-c); border-color: color-mix(in srgb, var(--c-c) 50%, transparent); }
 .pm-notes { display: grid; gap: 8px; border-top: 1px solid var(--rule); padding-top: 10px; }
 .pmission.flash { box-shadow: 0 0 0 3px color-mix(in srgb, var(--sess) 45%, transparent); }
+/* A level and the free space take notes too, under the idea and under the editor. */
+.pl-notes { display: grid; gap: 8px; }
+.plevel > .pl-notes { padding: 12px 20px; border-bottom: 1px solid var(--rule); }
+.pe-play > .pl-notes { border-top: 1px solid var(--rule); padding-top: 10px; margin-top: 10px; }
+.plevel.flash, .pe-play.flash { box-shadow: 0 0 0 3px color-mix(in srgb, var(--sess, var(--accent)) 45%, transparent); }
+/* Practice's notebook: write about where you are, see every note by place. */
+.pnb-write { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--rule); }
+.pnb-write .line-pick { min-width: 0; }
+.pnb-write .line-pick select { width: 100%; }
+.pnb-write textarea { width: 100%; font: 15px var(--body); color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; resize: vertical; }
+.pnb-saved { margin: 0; min-height: 1.2em; font-size: 13.5px; color: var(--ok); }
+.pnb-sum { margin: 0; padding: 12px 16px 0; font-size: 14px; color: var(--muted); }
+.pnb-list { display: grid; gap: 10px; padding: 12px 16px 16px; }
+.pnb-group { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--rule); background: color-mix(in srgb, var(--sess) 6%, var(--panel)); }
+.pnb-group.here { border-color: color-mix(in srgb, var(--sess) 60%, var(--rule)); }
+.pnb-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.pnb-go { display: flex; align-items: baseline; gap: 8px; min-height: 32px; padding: 0; border: 0; background: none; color: var(--ink); font: 700 15px var(--display); text-align: left; cursor: pointer; }
+.pnb-go:hover .pnb-name { text-decoration: underline; }
+.pnb-go .pnb-n { font: 600 12px var(--mono); color: var(--ground); background: var(--sess); border-radius: 6px; padding: 1px 7px; }
+.pnb-here { font: 600 12px var(--body); color: var(--sess); }
+.pnb-empty { margin: 0; color: var(--muted); font-size: 14px; }
 .pl-flags { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffd36b, #e7a321 70%); font: 700 10px/16px var(--body); color: #4a3200; text-align: center; align-self: center; }
 .pp-index a.pp-flagged::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #e7a321; margin-left: 6px; display: inline-block; }
 .rv-flag .dot { background: #e7a321; }
@@ -1440,6 +1461,24 @@ requirements.txt, which you hand in, simply lists requests so the teacher can ru
       <p>Each mission asks for a few lines. Write them in the box, press <b>Run</b> (or Ctrl + Enter) and the page tests your program. Stuck? Open the hint first and the solution last. It starts with a single <code>print</code> and climbs, level by level, to small programs like Project 1. Python runs right here in the page: nothing to install.</p>
     </div>
     <div id="practice"></div>
+
+    <button type="button" class="nb-dot" id="pnb-dot" aria-expanded="false" aria-controls="pnb" title="Practice notebook"></button>
+    <aside class="notebook" id="pnb" aria-label="Practice notebook" hidden>
+      <div class="nb-top"><span class="nb-title">Notebook</span><button type="button" class="lpop-close" id="pnb-close" aria-label="Close the notebook" style="margin-left: auto">×</button></div>
+      <div class="pnb-write">
+        <label class="line-pick"><span>About</span><select id="pnb-about" aria-label="What this note is about"></select></label>
+        <div class="kind-pick" role="radiogroup" aria-label="Kind of note">
+          <button type="button" role="radio" data-kind="question" aria-checked="true">Question</button>
+          <button type="button" role="radio" data-kind="comment" aria-checked="false">Comment</button>
+        </div>
+        <textarea id="pnb-text" rows="3" maxlength="2000" aria-label="Your note" placeholder="Write your question or comment"></textarea>
+        <div class="note-actions"><button type="button" class="note-save" id="pnb-save">Save</button></div>
+        <p class="pnb-saved" id="pnb-saved" role="status"></p>
+      </div>
+      <p class="pnb-sum" id="pnb-sum"></p>
+      <div class="pnb-list" id="pnb-list"></div>
+      <div id="pnb-host" data-key="x|notebook" hidden><button type="button" class="note-dot" hidden>Question or comment</button></div>
+    </aside>
   </section>
 
   <section id="page-review" role="tabpanel" aria-labelledby="tab-review" hidden>
@@ -3537,7 +3576,7 @@ const savedNote = document.getElementById('saved-note');
 
 const allItems = () => [...lessonsEl.querySelectorAll('.item[data-key]')];
 // Everything that can hold notes: the lesson boxes and the project cards.
-const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #overall-host, #lessons .lesson-overall, #lessons .slide-host, #steps .pcard[data-key], #page-project .line-host[data-key], #nb-host, #practice .pm-notes[data-key]')];
+const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #overall-host, #lessons .lesson-overall, #lessons .slide-host, #steps .pcard[data-key], #page-project .line-host[data-key], #nb-host, #practice .pm-notes[data-key], #practice .pl-notes[data-key], #pnb-host')];
 // A slide's notes belong to the lesson's one slide spot, whichever slide it shows now.
 const SLIDE_KEY = /^s(\d+)\|slide:(\d+)$/;
 const itemByKey = key => noteHosts().find(i => i.dataset.key === key)
@@ -3844,7 +3883,7 @@ function onNoteClick(e) {
     queueMarkWork(key, item);
     return;
   }
-  const item = e.target.closest('.line-host, .nb-host, .overall-host, .slide-host, .item[data-key], .pcard, .pm-notes');
+  const item = e.target.closest('.line-host, .nb-host, .overall-host, .slide-host, .item[data-key], .pcard, .pm-notes, .pl-notes, .pnb-group');
   if (!item) return;
   const key = item.dataset.key;
   if (e.target.closest('.notes-toggle')) {
@@ -3921,6 +3960,8 @@ function boxHead(item, forKey) {
     return { sess: mis.style.getPropertyValue('--sess'), name: `Practice ${mis.dataset.id} · ${mis.querySelector('.pm-title').textContent}`, num: mis.dataset.id, text: mis.querySelector('.pm-task').textContent };
   }
   if (item.id === 'nb-host') return { sess: 'var(--muted)', name: 'Project 1 · notebook', num: 'NB', text: '' };
+  // A level, the free space and Practice in general (their notes are written in the notebook or under the level).
+  if (item.closest('#page-practice')) { const p = pnbPlace(item.dataset.key); return { sess: p.sess, name: `Practice · ${p.name}`, num: p.n, text: '' }; }
   if (item.id === 'overall-host') return { sess: 'var(--accent)', name: 'Project 1 · overall questions on the whole program', num: '0', text: '' };
   if (item.classList.contains('slide-host')) {
     const lesson = item.closest('details.lesson');
@@ -3957,7 +3998,7 @@ function reviewNote(n) {
   return `<article class="rv-entry rv-qa" data-kind="${n.kind}" style="--sess: ${h.sess};${h.tint ? ` --rv-tint: ${h.tint};` : ''}">
     <div class="rv-place"><span class="rv-sess">${h.num}</span><i class="state-dot ${noteState(n)}"></i></div>
     <div class="rv-main">
-      <div class="rv-top"><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}"${slide ? ` data-slide="${slide}"` : ''}>${item.closest('#page-project') ? 'Open in project ›' : slide ? `Open slide ${slide} ›` : 'Open in lesson ›'}</button></div>
+      <div class="rv-top"><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}"${slide ? ` data-slide="${slide}"` : ''}>${item.closest('#page-project') ? 'Open in project ›' : item.closest('#page-practice') ? 'Open in practice ›' : slide ? `Open slide ${slide} ›` : 'Open in lesson ›'}</button></div>
       <div class="rv-note" data-kind="${n.kind}">${noteBodyHtml(n.body)}</div>
       ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : `<button type="button" class="note-read" data-ref="${esc(noteRef(n))}">Got it, mark read</button>`}</div>` : (n.kind === 'question' ? '<p class="rv-wait">Waiting for an answer</p>' : '')}
     </div>
@@ -4000,6 +4041,7 @@ function renderReview() {
   countEl.textContent = waiting ? `${waiting} new` : (total ? String(total) : '');
   const el = document.getElementById('review');
   if (!total) {
+    renderPnb();
     el.innerHTML = '<p class="rv-empty">Nothing here yet. In Lessons, the three dots on the side of a box mark it Got it, Confused or No time, and the button at the bottom adds a question or a comment. They all gather here.</p>';
     return;
   }
@@ -4016,6 +4058,7 @@ function renderReview() {
   const inProject = n => n.key.startsWith('p1|');
   const inPractice = n => n.key.startsWith('x|');
   const inLessons = n => !inProject(n) && !inPractice(n);
+  renderPnb();
   el.innerHTML = part('Project 1', questions.filter(inProject), comments.filter(inProject))
     + part('Lessons', questions.filter(inLessons), comments.filter(inLessons))
     + part('Practice', questions.filter(inPractice), comments.filter(inPractice))
@@ -4039,12 +4082,7 @@ document.getElementById('review').addEventListener('click', e => {
   if (target.dataset.key && !openNoteLists.has(target.dataset.key)) { openNoteLists.add(target.dataset.key); paintItem(target); }
   if (target.closest('#page-practice')) {
     showPage('practice', false);
-    const mis = target.closest('.pmission');
-    mis.closest('.plevel').open = true;
-    mis.open = true;
-    mis.scrollIntoView({ block: 'start' });
-    mis.classList.add('flash');
-    setTimeout(() => mis.classList.remove('flash'), 1600);
+    if (target.id === 'pnb-host') setPnb(true); else goToSpot(target.dataset.key, 'start');
     return;
   }
   if (target.closest('#page-project')) {
@@ -4626,12 +4664,14 @@ function renderPractice() {
       <div class="pe-bar"><button type="button" class="pe-run">▶ Run</button><span class="pe-keys">Ctrl + Enter</span></div>
       <div class="pe-status" aria-live="polite"></div>
       <div class="pe-out" hidden></div>
+      <div class="pl-notes" id="pln-play" data-key="x|play"><button type="button" class="note-dot" aria-pressed="false">Question or comment</button></div>
     </details>
     <nav class="index pp-index" aria-label="Levels">${PRACTICE.map(l => `<a href="#plevel-${l.n}" data-level="${l.n}" style="--sess: var(--sess-${((l.n - 1) % 7) + 1})"><span class="n">${l.n}</span> ${esc(l.title)} <b class="pp-lc"></b></a>`).join('')}</nav>
     ${PRACTICE.map(l => `<details class="plevel" id="plevel-${l.n}" data-level="${l.n}" style="--sess: var(--sess-${((l.n - 1) % 7) + 1})">
       <summary><span class="pl-n">Level ${l.n}</span><span class="pl-title">${esc(l.title)}</span><span class="pl-flags" hidden></span><span class="pl-count"></span></summary>
       <div class="pl-idea"><div><span class="eyebrow">The idea</span><p>${l.idea}</p></div>
         <div class="pl-ex"><pre class="pe-pre">${esc(l.example)}</pre>${l.exampleOut ? `<div class="pe-out-head">Output</div><pre class="pe-pre pl-exout">${esc(l.exampleOut)}</pre>` : ''}</div></div>
+      <div class="pl-notes" id="pln-${l.n}" data-key="x|L${l.n}"><button type="button" class="note-dot" aria-pressed="false">Question or comment</button></div>
       <div class="pl-missions">${l.missions.map((m, i) => missionHtml(m, i, l)).join('')}</div>
     </details>`).join('')}`;
   for (const ta of practiceEl.querySelectorAll('.pe-code')) fitEditor(ta);
@@ -4820,6 +4860,145 @@ practiceEl.addEventListener('toggle', e => {
   if ((d.classList.contains('plevel') || d.classList.contains('pe-play')) && d.open) for (const o of practiceEl.querySelectorAll('.plevel[open], .pe-play[open]')) if (o !== d) o.open = false;
   if (d.classList.contains('pe-play') && d.open) { fitEditor(d.querySelector('.pe-code')); startPython().catch(() => {}); }
 }, true);
+/*
+ * THE PRACTICE NOTEBOOK (2026-10-19: "a notebook on the right that I can open
+ * when I am in practice, and write my comments according to the part of the
+ * app I am in, so I can see the comments and questions and track them").
+ * A dot on the right edge opens it. A note is written about a place, which the
+ * notebook reads from what is open (the mission, else the level, else the free
+ * space), and every Practice note is listed below, grouped by place. The
+ * places are the same keys the page already uses, so a note written here also
+ * shows on its mission and in Review.
+ */
+const levelSess = n => `var(--sess-${((n - 1) % 7) + 1})`;
+function pnbPlaces() {
+  return [
+    { key: 'x|notebook', n: 'P', name: 'Practice in general', sess: 'var(--muted)' },
+    { key: 'x|play', n: 'F', name: 'Free space', sess: 'var(--muted)' },
+    ...PRACTICE.flatMap(l => [
+      { key: `x|L${l.n}`, n: `L${l.n}`, name: `Level ${l.n} · ${l.title}`, sess: levelSess(l.n), level: l.n },
+      ...l.missions.map(m => ({ key: doneKey(m.id), n: m.id, name: m.title, sess: levelSess(l.n), level: l.n, id: m.id })),
+    ]),
+  ];
+}
+function pnbPlace(key) {
+  // The two fixed places are known before the levels exist (Review can be drawn first).
+  if (key === 'x|notebook') return { key, n: 'P', name: 'Practice in general', sess: 'var(--muted)' };
+  if (key === 'x|play') return { key, n: 'F', name: 'Free space', sess: 'var(--muted)' };
+  return pnbPlaces().find(p => p.key === key) || { key, n: '?', name: key, sess: 'var(--muted)' };
+}
+// Where you are: the open mission in the open level, else that level, else the free space.
+function currentSpot() {
+  const lvl = practiceEl.querySelector('.plevel[open]');
+  if (lvl) {
+    const m = lvl.querySelector('.pmission[open]');
+    return m ? doneKey(m.dataset.id) : `x|L${lvl.dataset.level}`;
+  }
+  return practiceEl.querySelector('.pe-play[open]') ? 'x|play' : 'x|notebook';
+}
+const pnb = document.getElementById('pnb');
+const pnbDot = document.getElementById('pnb-dot');
+const pnbAbout = document.getElementById('pnb-about');
+const pnbText = document.getElementById('pnb-text');
+let pnbKind = 'question';
+let pnbPinned = false;   // the place was chosen by hand: stop following the page
+function followSpot() {
+  if (pnbPinned) return;
+  pnbAbout.value = currentSpot();
+}
+function setPnb(open) {
+  pnb.hidden = !open;
+  pnbDot.setAttribute('aria-expanded', String(open));
+  if (!open) return;
+  if (!pnbText.value.trim()) pnbPinned = false;
+  followSpot();
+  renderPnb();
+}
+function goToSpot(key, block = 'center') {
+  if (key === 'x|notebook') return;
+  let el;
+  if (key === 'x|play') el = practiceEl.querySelector('.pe-play');
+  else {
+    const p = pnbPlace(key);
+    if (!p.level) return;
+    const lvl = document.getElementById(`plevel-${p.level}`);
+    lvl.open = true;
+    el = lvl;
+    if (p.id) { el = practiceEl.querySelector(`.pmission[data-id="${p.id}"]`); el.open = true; }
+  }
+  el.open = true;
+  if (innerWidth < 760) setPnb(false);
+  el.scrollIntoView({ block, behavior: 'smooth' });
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1600);
+}
+function renderPnb() {
+  if (!window.practiceMissions || !practiceEl.firstChild) return;
+  const list = noteList.filter(n => n.key.startsWith('x|'));
+  pnbDot.classList.toggle('has-notes', list.length > 0);
+  if (!pnbAbout.options.length) {
+    pnbAbout.innerHTML = pnbPlaces().map(p => `<option value="${esc(p.key)}">${p.id ? `${p.id} · ` : ''}${esc(p.name)}</option>`).join('');
+    followSpot();
+  }
+  if (pnb.hidden) return;
+  // An edit open in the list is not drawn over; the list is drawn again when it closes.
+  const box = document.getElementById('pnb-list');
+  if (box.querySelector('.note-editor')) return;
+  const q = list.filter(n => n.kind === 'question');
+  const waiting = q.filter(n => !n.answer).length;
+  const fresh = list.filter(n => n.answer && !n.readAt).length;
+  document.getElementById('pnb-sum').textContent = list.length
+    ? [q.length && `${q.length} question${q.length === 1 ? '' : 's'}`, waiting && `${waiting} waiting`, fresh && `${fresh} new answer${fresh > 1 ? 's' : ''}`,
+      list.length - q.length && `${list.length - q.length} comment${list.length - q.length === 1 ? '' : 's'}`].filter(Boolean).join(' · ')
+    : '';
+  const here = currentSpot();
+  const byNewest = (a, b) => String(b.createdAt || b.localId || '').localeCompare(String(a.createdAt || a.localId || ''));
+  const groups = pnbPlaces().map(p => ({ p, notes: list.filter(n => n.key === p.key).sort(byNewest) })).filter(g => g.notes.length);
+  box.innerHTML = groups.length
+    ? groups.map(({ p, notes }) => `<div class="pnb-group${p.key === here ? ' here' : ''}" data-key="${esc(p.key)}" style="--sess: ${p.sess}">
+        <div class="pnb-head"><button type="button" class="pnb-go" data-go="${esc(p.key)}"${p.key === 'x|notebook' ? ' disabled' : ` title="Go to ${esc(p.name)}"`}><span class="pnb-n">${esc(p.n)}</span><span class="pnb-name">${esc(p.name)}${p.key === 'x|notebook' ? '' : ' ›'}</span></button>${p.key === here ? '<span class="pnb-here">you are here</span>' : ''}</div>
+        <div class="note-list">${notes.map(n => noteHtml(n, false)).join('')}</div>
+      </div>`).join('')
+    : '<p class="pnb-empty">No notes yet. Write one above: it is filed under the mission you are on, and gathers here with the others.</p>';
+}
+pnbDot.addEventListener('click', () => setPnb(pnb.hidden));
+document.getElementById('pnb-close').addEventListener('click', () => setPnb(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !pnb.hidden) setPnb(false); });
+pnbAbout.addEventListener('change', () => { pnbPinned = true; });
+pnbText.addEventListener('input', () => { if (pnbText.value.trim()) pnbPinned = true; });
+// Opening a level or a mission moves the notebook with you, until you choose a place yourself.
+practiceEl.addEventListener('toggle', () => { if (!pnb.hidden) { followSpot(); renderPnb(); } }, true);
+pnb.addEventListener('click', e => {
+  const pick = e.target.closest('.pnb-write .kind-pick [data-kind]');
+  if (pick) {
+    pnbKind = pick.dataset.kind;
+    for (const b of pnb.querySelectorAll('.pnb-write .kind-pick button')) b.setAttribute('aria-checked', String(b === pick));
+    return;
+  }
+  if (e.target.closest('#pnb-save')) {
+    const text = pnbText.value.trim();
+    if (!text) { pnbText.focus(); return; }
+    const key = pnbAbout.value;
+    openNoteLists.add(key);   // shown on its mission too, not folded away
+    saveNote(key, null, text, pnbKind);
+    pnbText.value = '';
+    pnbPinned = false;
+    const saved = document.getElementById('pnb-saved');
+    saved.textContent = `Saved to ${pnbAbout.selectedOptions[0].textContent}.`;
+    setTimeout(() => { if (saved.textContent.startsWith('Saved')) saved.textContent = ''; }, 2500);
+    followSpot();
+    return;
+  }
+  const go = e.target.closest('.pnb-go');
+  if (go) { goToSpot(go.dataset.go); return; }
+  // The notes themselves: edit, delete and mark read, as everywhere on the page.
+  onNoteClick(e);
+  if (e.target.closest('.note-save, .note-cancel')) renderPnb();
+});
+pnbText.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); document.getElementById('pnb-save').click(); }
+});
+
 renderPractice();
 renderReview();
 
