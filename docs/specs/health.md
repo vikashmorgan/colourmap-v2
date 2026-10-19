@@ -31,6 +31,7 @@ Four tabs:
   - **Go easy:** if any part is 4 or more today, or higher than yesterday, a calm line repeats the pain rule.
 - **Plan.** The three parts of the day explained: what, for how long, and why.
 - **Exercises.** The library, in sections: Knee · Right shoulder · Release the front · Feet · Flow (qi gong, tai chi, gentle stretches) · At school. Each card shows the dose, how to do it, what it is for, and what to watch out for, with the same **Question / Comment / Research** notes as Practice. A closing **Good to know** holds what to avoid for now, cold feet, slippers, and when to see a doctor or physio.
+- **Your order** (asked for 2026-10-19: "allow me to move exercise boxes above another so I can reorder them, to show which are my favourites and which I don't do"). In each section, ↑ ↓ on an exercise's row move it (they work on a phone), and on a computer a row can also be dragged. *Set aside: I don't do this one*, inside an exercise, dims it and sends it to the end with a *set aside* tag; *Bring it back* undoes it. The order and the set-aside ones sync to the account.
 - **Notes.** Everything written, in one place: questions (answered and waiting), things to research, comments, each tagged with its exercise, then every day's feelings as a timeline.
 
 ### The notebook on the right
@@ -39,12 +40,13 @@ The same dot and notebook as Practice: beige paper and brown ink. Its *About* li
 
 ## Storage
 
-Two tables, both scoped by RLS to their owner (migration `0027_health.sql`).
+Three tables, all scoped by RLS to their owner (migration `0027_health.sql`).
 
 - **`health_log`** — one value per user, day and key, unique on `(user_id, day, item_key)`.
   - A tick is `{part}|{exercise}` = `1` (for example `am|lift-sky`, `sc|chin-tuck`, `eva|clamshell`); unticking deletes the row.
   - Pain is `pain|knee`, `pain|shoulder` or `pain|feet` = `0`–`10`.
   - The day's note is `feel` = its text, up to 2000 characters.
+- **`health_prefs`** — standing choices that are not about a day, one value per user and key: `order|{section}` = the exercise ids in order, `aside|{exercise}` = `1`. API `/api/health/prefs` (GET, PUT list).
 - **`health_notes`** — the same shape as `coding_notes`: any number of notes per place, kind `question`, `comment` or `research`. An `answer` written from the terminal sits beside a note and never changes it; `read_at` records when it was read. Keys: `overall`, `sec|{section}`, `ex|{exercise}`.
 
 The browser copy (localStorage) is always written first. Changes made offline wait in a queue and are sent when the page is next online. Served outside Colour Brain, the page works on its own and keeps everything in the browser.

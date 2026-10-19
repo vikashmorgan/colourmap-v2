@@ -531,3 +531,15 @@ export const healthNotes = pgTable('health_notes', {
   answeredAt: timestamp('answered_at', { withTimezone: true }),
   readAt: timestamp('read_at', { withTimezone: true }),
 });
+
+/*
+ * HEALTH PREFS — standing choices on /health that are not about a day: the
+ * order of a section's exercises (`order|knee`) and the ones set aside
+ * (`aside|step-down`). One value per user and key.
+ */
+export const healthPrefs = pgTable('health_prefs', {
+  userId: uuid('user_id').notNull(),
+  itemKey: text('item_key').notNull(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});

@@ -129,6 +129,20 @@ h2 { font-family: var(--display); font-size: 22px; margin: 28px 0 10px; }
 .ex-name { font-weight: 600; font-size: 17px; }
 .ex-dose { font: 600 12.5px var(--mono); color: var(--sess); margin-left: auto; text-align: right; }
 .ex-body { padding: 0 16px 16px; display: grid; gap: 10px; }
+/* Your order (2026-10-19: "move exercise boxes above another, to show my favourites and the ones I don't do"). */
+.ex-move { display: inline-flex; gap: 2px; flex: none; }
+.ex-move button { width: 30px; height: 30px; padding: 0; border-radius: 8px; border: 1px solid transparent; background: none; color: var(--muted); font: 600 15px var(--body); cursor: pointer; }
+.ex-move button:hover, .ex-move button:focus-visible { border-color: var(--rule); color: var(--ink); background: var(--ground); }
+.ex-move button:disabled { opacity: .25; cursor: default; }
+.ex.aside { opacity: .55; border-style: dashed; }
+.ex.aside:hover, .ex.aside[open] { opacity: 1; }
+.aside-tag { font: 600 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.aside-btn { justify-self: start; min-height: 32px; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--rule); background: none; color: var(--muted); font: 600 13px var(--body); cursor: pointer; }
+.aside-btn:hover { color: var(--ink); border-color: var(--muted); }
+.ex.dragging { opacity: .4; }
+.ex.drop-before { box-shadow: 0 -3px 0 var(--sess); }
+.ex.drop-after { box-shadow: 0 3px 0 var(--sess); }
+.order-hint { margin: 0; padding: 0 6px; font-size: 13px; color: var(--muted); }
 .ex-body p { margin: 0; }
 .lbl { display: block; font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--sess); margin-bottom: 2px; }
 .watch { padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--q-c) 9%, transparent); }
@@ -401,8 +415,11 @@ function writeStore(key, value) { try { localStorage.setItem(key, JSON.stringify
 let log = readStore('health-log', {});        // { day: { key: value } }
 let queue = readStore('health-queue', []);    // log changes not yet in the account
 let notes = readStore('health-notes', []);    // { id | localId, key, kind, body, answer, readAt, createdAt }
+let prefs = readStore('health-prefs', {});    // { 'order|knee': 'a,b,c', 'aside|step-down': '1' }
+let prefQueue = readStore('health-prefs-queue', []);
+const PREFS_URL = '/api/health/prefs';
 const syncEl = document.getElementById('sync');
-const saveAll = () => { writeStore('health-log', log); writeStore('health-queue', queue); writeStore('health-notes', notes); };
+const saveAll = () => { writeStore('health-log', log); writeStore('health-queue', queue); writeStore('health-notes', notes); writeStore('health-prefs', prefs); writeStore('health-prefs-queue', prefQueue); };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -436,13 +453,37 @@ async function flush() {
   flushing = false;
   if (queue.length && syncEl.textContent.startsWith('Saved')) flush();
 }
+function setPref(key, value) {
+  if (value == null || value === '') delete prefs[key]; else prefs[key] = String(value);
+  prefQueue.push({ key, value: prefs[key] ?? null });
+  saveAll();
+  flushPrefs();
+}
+let flushingPrefs = false;
+async function flushPrefs() {
+  if (!ON_BRAIN || flushingPrefs || !prefQueue.length) return;
+  flushingPrefs = true;
+  const batch = prefQueue.slice(0, 200);
+  try {
+    const r = await fetch(PREFS_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prefs: batch }) });
+    if (!r.ok) throw new Error(String(r.status));
+    prefQueue = prefQueue.slice(batch.length);
+    saveAll();
+  } catch (e) { syncEl.textContent = 'Offline: kept in this browser, sent when you are back online.'; }
+  flushingPrefs = false;
+}
 addEventListener('online', flush);
+addEventListener('online', flushPrefs);
 
 async function load() {
   if (!ON_BRAIN) { syncEl.textContent = 'Saved in this browser.'; return; }
   try {
-    const [lr, nr] = await Promise.all([fetch(LOG_URL), fetch(NOTES_URL)]);
-    if (!lr.ok || !nr.ok) throw new Error('load');
+    const [lr, nr, pr] = await Promise.all([fetch(LOG_URL), fetch(NOTES_URL), fetch(PREFS_URL)]);
+    if (!lr.ok || !nr.ok || !pr.ok) throw new Error('load');
+    const fp = {};
+    for (const x of (await pr.json()).prefs) fp[x.key] = x.value;
+    for (const q of prefQueue) { if (q.value === null) delete fp[q.key]; else fp[q.key] = q.value; }
+    prefs = fp;
     const { entries } = await lr.json();
     // The account, then the changes this browser has not sent yet on top.
     const fresh = {};
@@ -463,7 +504,7 @@ async function load() {
     notes = server;
     saveAll();
     syncEl.textContent = 'Saved to your account.';
-    flush();
+    flush(); flushPrefs();
   } catch (e) {
     syncEl.textContent = 'Offline: kept in this browser, sent when you are back online.';
   }
@@ -705,22 +746,50 @@ function renderPlan() {
 document.getElementById('plan-parts').addEventListener('click', e => { const h = e.target.closest('[data-how]'); if (h) goToExercise(h.dataset.how); });
 
 /* ---------- Exercises ---------- */
+// A section in your order: the saved order first, any exercise new since then after it,
+// and the ones set aside at the end.
+function orderedEx(s) {
+  const saved = (prefs[`order|${s.id}`] || '').split(',').filter(id => s.ex.some(e => e.id === id));
+  const ids = [...saved, ...s.ex.map(e => e.id).filter(id => !saved.includes(id))];
+  const aside = id => prefs[`aside|${id}`] === '1';
+  return [...ids.filter(id => !aside(id)), ...ids.filter(aside)].map(id => s.ex.find(e => e.id === id));
+}
+// The order is read back from the page, so moving a box and saving are one thing.
+function saveOrder(secEl) {
+  const ids = [...secEl.querySelectorAll('.ex')].map(x => x.dataset.ex);
+  setPref(`order|${secEl.dataset.sec}`, ids.join(','));
+  paintOrder(secEl);
+}
+function paintOrder(secEl) {
+  const exs = [...secEl.querySelectorAll('.ex')];
+  exs.forEach((x, i) => {
+    const aside = prefs[`aside|${x.dataset.ex}`] === '1';
+    x.classList.toggle('aside', aside);
+    x.querySelector('.aside-tag').hidden = !aside;
+    x.querySelector('.aside-btn').textContent = aside ? 'Bring it back' : 'Set aside: I don’t do this one';
+    x.querySelector('[data-move="up"]').disabled = i === 0;
+    x.querySelector('[data-move="down"]').disabled = i === exs.length - 1;
+  });
+}
 const partsOf = id => PLAN.filter(p => p.items.some(([x]) => x === id)).map(p => p.title);
 function renderLibrary() {
+  const wasOpen = { sec: document.querySelector('.sec[open]')?.id, ex: document.querySelector('.ex[open]')?.id };
   document.getElementById('library').innerHTML = SECTIONS.map((s, i) => `<details class="sec" id="sec-${s.id}" data-sec="${s.id}" style="--sess: ${sess(s.c)}">
     <summary><span class="sec-n">${i + 1}</span><span class="sec-title">${esc(s.title)}</span><span class="sec-qs qs" hidden></span></summary>
     <p class="sec-sub">${esc(s.sub)}</p>
     <div class="sec-body">
-      ${s.ex.map(e => `<details class="ex" id="ex-${e.id}" data-ex="${e.id}">
-        <summary><span class="ex-name">${esc(e.name)}</span><span class="qs" hidden></span><span class="ex-dose">${esc(e.dose)}</span></summary>
+      ${orderedEx(s).map(e => `<details class="ex" id="ex-${e.id}" data-ex="${e.id}">
+        <summary draggable="true"><span class="ex-name">${esc(e.name)}</span><span class="qs" hidden></span><span class="aside-tag" hidden>set aside</span><span class="ex-dose">${esc(e.dose)}</span><span class="ex-move"><button type="button" data-move="up" aria-label="Move ${esc(e.name)} up" title="Move up">↑</button><button type="button" data-move="down" aria-label="Move ${esc(e.name)} down" title="Move down">↓</button></span></summary>
         <div class="ex-body">
           <p><span class="lbl">How</span>${esc(e.how)}</p>
           <p><span class="lbl">What it is for</span>${esc(e.why)}</p>
           ${e.watch ? `<p class="watch"><span class="lbl">Watch out</span>${esc(e.watch)}</p>` : ''}
           ${partsOf(e.id).length ? `<p class="in-plan">In the plan: ${esc(partsOf(e.id).join(', '))}</p>` : ''}
+          <button type="button" class="aside-btn" data-aside="${e.id}"></button>
           <div class="notes" data-key="ex|${e.id}"></div>
         </div>
       </details>`).join('')}
+      <p class="order-hint">↑ ↓ (or drag a row) to put your favourites first. <i>Set aside</i>, inside an exercise, sends the ones you don’t do to the end.</p>
       <div class="notes sec-notes" data-key="sec|${s.id}"></div>
     </div>
   </details>`).join('') + `<h2>Good to know</h2><div class="know">
@@ -729,7 +798,64 @@ function renderLibrary() {
     <div class="card"><h3>Slippers for high arches</h3><ul><li>A firm heel cup: the heel does not slide side to side.</li><li>A contoured footbed with real arch support, ideally with a removable insole for your own orthotic.</li><li>A cushioned, slightly thick sole: high arches need shock absorption.</li><li>A closed back or an adjustable strap, not a floppy mule.</li><li>A warm lining (wool or felt).</li><li>Custom insoles from a podiatrist are often the real fix, and move between shoes and slippers.</li></ul></div>
     <div class="card urgent"><h3>When to see a doctor or physio</h3><ul><li><b>L3/L4:</b> numbness, tingling or weakness in the front of the thigh or knee, or the knee giving way. Any bladder or bowel change is <b>urgent</b>.</li><li>Shoulder: no progress after 6–8 weeks of consistent work, night pain, or loss of strength lifting the arm.</li><li>Knee swelling, locking, or pain that keeps climbing.</li></ul></div>
   </div>`;
+  for (const sec of document.querySelectorAll(".sec")) paintOrder(sec);
+  // Drawn again after the account loads: keep open what was open.
+  if (wasOpen.sec) { const s = document.getElementById(wasOpen.sec); if (s) s.open = true; }
+  if (wasOpen.ex) { const x = document.getElementById(wasOpen.ex); if (x) x.open = true; }
 }
+const library = document.getElementById('library');
+library.addEventListener('click', e => {
+  const mv = e.target.closest('[data-move]');
+  if (mv) {
+    e.preventDefault();   // a button in the summary must not open or close the box
+    const ex = mv.closest('.ex'), sec = ex.closest('.sec');
+    if (mv.dataset.move === 'up' && ex.previousElementSibling?.matches('.ex')) ex.previousElementSibling.before(ex);
+    if (mv.dataset.move === 'down' && ex.nextElementSibling?.matches('.ex')) ex.nextElementSibling.after(ex);
+    saveOrder(sec);
+    mv.focus();
+    return;
+  }
+  const as = e.target.closest('[data-aside]');
+  if (as) {
+    const ex = as.closest('.ex'), sec = ex.closest('.sec'), id = as.dataset.aside;
+    const nowAside = prefs[`aside|${id}`] !== '1';
+    setPref(`aside|${id}`, nowAside ? '1' : null);
+    // Set aside goes to the end; brought back, it goes just above the first one set aside.
+    const exs = [...sec.querySelectorAll('.ex')];
+    if (nowAside) exs[exs.length - 1].after(ex);
+    else { const first = exs.find(x => x !== ex && x.classList.contains('aside')); if (first) first.before(ex); }
+    saveOrder(sec);
+    ex.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+});
+// Drag a row to a new place in its section (mouse; on a phone the arrows do it).
+let dragged = null;
+library.addEventListener('dragstart', e => {
+  const ex = e.target.closest?.('.ex');
+  if (!ex) return;
+  dragged = ex;
+  ex.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', ex.dataset.ex);
+});
+const clearDrop = () => { for (const x of library.querySelectorAll('.drop-before, .drop-after')) x.classList.remove('drop-before', 'drop-after'); };
+library.addEventListener('dragover', e => {
+  const ex = e.target.closest('.ex');
+  if (!dragged || !ex || ex === dragged || ex.closest('.sec') !== dragged.closest('.sec')) return;
+  e.preventDefault();
+  clearDrop();
+  const r = ex.getBoundingClientRect();
+  ex.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-before' : 'drop-after');
+});
+library.addEventListener('drop', e => {
+  const ex = e.target.closest('.ex');
+  if (!dragged || !ex || ex === dragged) return;
+  e.preventDefault();
+  if (ex.classList.contains('drop-before')) ex.before(dragged); else ex.after(dragged);
+  clearDrop();
+  saveOrder(ex.closest('.sec'));
+});
+library.addEventListener('dragend', () => { if (dragged) dragged.classList.remove('dragging'); dragged = null; clearDrop(); });
 // One section open at a time, one exercise open at a time.
 document.getElementById('library').addEventListener('toggle', e => {
   const d = e.target;
@@ -880,11 +1006,10 @@ function renderNotes() {
   }
   renderReview(); renderNotebook();
 }
-function renderAll() { renderDay(); renderNotes(); renderTimeline(); }
+function renderAll() { renderLibrary(); renderDay(); renderNotes(); renderTimeline(); }
 
 paintTheme();
 renderPlan();
-renderLibrary();
 renderAll();
 try { const p = localStorage.getItem('health-page'); if (p && document.getElementById(`page-${p}`)) showPage(p); } catch (e) {}
 load();

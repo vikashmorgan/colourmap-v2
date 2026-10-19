@@ -8,6 +8,10 @@
 -- and things to research per place, with an answer written from the terminal
 -- beside a note, never over it.
 --
+-- health_prefs holds standing choices that are not about a day: the order of
+-- the exercises in a section (`order|knee` = 'wall-sit,clamshell,...') and the
+-- ones set aside (`aside|step-down` = '1').
+--
 -- Safe to run twice: everything is "if not exists".
 
 create table if not exists public.health_log (
@@ -40,17 +44,29 @@ create table if not exists public.health_notes (
   constraint health_notes_answer_length check (answer is null or char_length(answer) between 1 and 8000)
 );
 
+create table if not exists public.health_prefs (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  item_key text not null,
+  value text not null,
+  updated_at timestamptz not null default now(),
+
+  primary key (user_id, item_key),
+  constraint health_prefs_item_key_length check (char_length(item_key) between 1 and 100),
+  constraint health_prefs_value_length check (char_length(value) between 1 and 2000)
+);
+
 create index if not exists health_notes_user_item_idx
   on public.health_notes (user_id, item_key, created_at);
 
 alter table public.health_log enable row level security;
 alter table public.health_notes enable row level security;
+alter table public.health_prefs enable row level security;
 
 do $$
 declare
   t text;
 begin
-  foreach t in array array['health_log', 'health_notes'] loop
+  foreach t in array array['health_log', 'health_notes', 'health_prefs'] loop
     if not exists (select 1 from pg_policies where policyname = t || '_select_own') then
       execute format('create policy %I on public.%I for select using (auth.uid() = user_id)', t || '_select_own', t);
     end if;
