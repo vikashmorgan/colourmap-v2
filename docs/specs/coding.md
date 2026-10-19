@@ -74,6 +74,8 @@ Rules:
 - **In the terminal.** A card whose code prints something shows, under its explanation, the lines that code printed when the step ran (the first four, then how many more). They are found automatically in the step's real output: each `print()` and `input()` of the card becomes a pattern, where `{…}` stands for any text and a width such as `:<32` for exactly that many characters. A print made only of such placeholders (a table row) takes only the lines no wordier print of the program already explains. Cards that print nothing (a function that only returns) show no box.
 - Project cards take the same three dots and the same notes. Their keys are `p1|{step}|{name}`. Each step shows how many of its cards are *Got it*; a step with all of them gets a tick in the step index.
 
+The SQL class page (`/sql`, docs/specs/sql-class.md) keeps its marks and notes in the same tables, under keys that start with `sql|`. This page leaves those notes out of its own lists and Review.
+
 Table `coding_marks` (migration `0023_coding_marks.sql`): one row per box with a mark, a note, or both; unique on `(user_id, item_key)`; RLS limits every row to its owner. The database enforces the vocabularies (`got|mid|late`, `question|comment`), that a note always has a kind, and that a row is never empty.
 
 ## Slides
