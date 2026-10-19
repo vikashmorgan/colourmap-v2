@@ -499,3 +499,35 @@ export const codingNotes = pgTable('coding_notes', {
   answeredAt: timestamp('answered_at', { withTimezone: true }),
   readAt: timestamp('read_at', { withTimezone: true }),
 });
+
+/*
+ * HEALTH LOG — the /health page's day by day: a tick (`am|lift-sky` = '1'), a
+ * pain number (`pain|knee` = '0'..'10') or the day's note (`feel`). One value
+ * per user, day and key (unique in migration 0027).
+ */
+export const healthLog = pgTable('health_log', {
+  userId: uuid('user_id').notNull(),
+  day: date('day').notNull(),
+  itemKey: text('item_key').notNull(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/*
+ * HEALTH NOTES — questions, comments and things to research on an exercise, a
+ * section or the whole routine. Same shape as coding_notes: `answer` is written
+ * from the terminal beside the note, `read_at` is when it was read.
+ */
+export const healthNotes = pgTable('health_notes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  itemKey: text('item_key').notNull(),
+  /** 'question' | 'comment' | 'research' */
+  kind: text('kind').notNull(),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  answer: text('answer'),
+  answeredAt: timestamp('answered_at', { withTimezone: true }),
+  readAt: timestamp('read_at', { withTimezone: true }),
+});

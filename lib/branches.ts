@@ -162,7 +162,7 @@ export const GROUPINGS: Grouping[] = [
   /* Energy — what the machine is running on. */
   { branch: 'energy', label: 'Routines', routes: ['/programs'] },
   { branch: 'energy', label: 'Habits', routes: [] },
-  { branch: 'energy', label: 'How the body is', routes: ['/life-scan'] },
+  { branch: 'energy', label: 'How the body is', routes: ['/life-scan', '/health'] },
 ];
 
 /**
