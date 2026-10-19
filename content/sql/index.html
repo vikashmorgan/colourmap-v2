@@ -70,6 +70,10 @@
   .card[data-mark="mid"] { border-color: color-mix(in srgb, var(--mid) 55%, var(--line)); }
   .card[data-mark="late"] { border-color: color-mix(in srgb, var(--late) 55%, var(--line)); }
   .card.flash { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+  /* Overall: questions and comments about the course as a whole, above the sessions. */
+  .card.overall { margin-top: 18px; border-style: dashed; padding-bottom: 12px; }
+  .card.overall h3 { font-size: 16px; }
+  .card.overall .hint { color: var(--soft); font-size: 14.5px; }
   .card h3 { margin: 0; font-size: 17px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
   .num { font: 12px ui-monospace, Consolas, monospace; color: var(--soft); flex: none; }
   .card p { margin: 0; }
@@ -82,15 +86,27 @@
   .note-btn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px; min-height: 30px; border-radius: 999px; border: 1px dashed color-mix(in srgb, var(--q) 55%, transparent); background: none; color: var(--ink); opacity: .7; font: 600 12.5px system-ui, sans-serif; cursor: pointer; }
   .note-btn::before { content: '✎'; color: var(--q); }
   .note-btn:hover, .note-btn[aria-pressed="true"] { opacity: 1; border-style: solid; }
-  .marks { display: flex; margin-left: auto; }
-  .mark { position: relative; width: 30px; height: 30px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
-  .mark::before { content: ''; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--dot); opacity: .45; }
+  .marks { display: flex; gap: 4px; margin-left: auto; }
+  .mark { position: relative; width: 40px; height: 40px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
+  .mark::before { content: ''; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--dot); opacity: .45; }
   .mark:hover::before { opacity: .9; }
   .mark[aria-pressed="true"]::before, .mark:active::before { background: var(--dot); opacity: 1; }
   .mark::after { content: attr(data-label); position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%); white-space: nowrap; font: 600 12px system-ui, sans-serif; padding: 2px 9px; border-radius: 999px; background: var(--dot); color: var(--paper); opacity: 0; pointer-events: none; transition: opacity .15s; }
   .mark:hover::after, .mark:focus-visible::after { opacity: 1; }
   .m-got { --dot: var(--got); } .m-mid { --dot: var(--mid); } .m-late { --dot: var(--late); }
 
+  /* Highlights: light, see-through colours over the text, as on the Python page. */
+  mark.hl { --hl: #f2c14e; background: color-mix(in srgb, var(--hl) 38%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; cursor: pointer; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  mark.hl[data-c="green"] { --hl: #6fbf8e; }
+  mark.hl[data-c="blue"] { --hl: #7aa6e6; }
+  mark.hl[data-c="pink"] { --hl: #e48fb4; }
+  [data-theme="night"] mark.hl { background: color-mix(in srgb, var(--hl) 30%, transparent); }
+  #sel-bar { position: fixed; z-index: 75; display: flex; align-items: center; gap: 4px; padding: 5px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 8px 24px rgb(0 0 0 / .2); }
+  #sel-bar .sb-c { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--card); background: color-mix(in srgb, var(--hl) 60%, var(--card)); cursor: pointer; box-shadow: 0 0 0 1px var(--line); }
+  #sel-bar .sb-c:hover { box-shadow: 0 0 0 2px var(--hl); }
+  #sel-bar .sb-btn { min-height: 30px; padding: 3px 12px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--q) 16%, var(--card)); color: var(--ink); font: 600 13px system-ui, sans-serif; cursor: pointer; }
+  #sel-bar .sb-com { background: color-mix(in srgb, var(--c) 16%, var(--card)); }
+  #sel-bar .sb-sep { width: 1px; height: 20px; background: var(--line); margin: 0 2px; }
   /* Notes: questions and comments */
   .notes { display: grid; gap: 6px; }
   .note { --nc: var(--q); border-radius: 8px; padding: 7px 11px; background: color-mix(in srgb, var(--nc) 9%, transparent); display: grid; gap: 3px; font-family: system-ui, sans-serif; font-size: 14.5px; }
@@ -172,6 +188,12 @@
     <button class="theme" id="theme" type="button"></button>
   </div>
   <p class="course">SQL &amp; Business Intelligence · MSE-DIM01-4 · Albert School × Politecnico di Milano</p>
+  <section class="card overall" data-key="sql|notebook" aria-label="Overall questions and comments">
+    <h3>Overall questions and comments</h3>
+    <p class="hint">For anything about the course as a whole, not one card.</p>
+    <div class="notes"></div>
+    <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button></div>
+  </section>
   <div class="sessions" role="tablist" aria-label="Sessions" id="sessions"></div>
   <div id="session"></div>
   <p class="sync" id="sync"></p>
@@ -489,7 +511,7 @@ function cell(v) { return v === null ? '<span class="null">NULL</span>' : esc(ty
 function practiceHtml(s) {
   return s.practice.map(([id, q], i) => {
     const p = PRACTICE[id];
-    return `<details class="pq"><summary><span class="num">${i + 1}</span><span>${esc(q)}</span></summary>
+    return `<details class="pq" data-hl="sql|p|${esc(id)}"><summary><span class="num">${i + 1}</span><span>${esc(q)}</span></summary>
       <div class="ans"><pre>${sqlHtml(p.sql)}</pre>
         <span class="out-head">Output on shopstream.db · ${p.n} row${p.n === 1 ? '' : 's'}</span>
         <div class="tbl-wrap"><table><thead><tr>${p.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${p.rows.map(r => `<tr>${r.map(v => `<td>${cell(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
@@ -576,7 +598,7 @@ const REF = [
 function refHtml() {
   return `<h1>Cheat sheet</h1><p class="lede">Every keyword and function from sessions 1 to 3, in the order you write a query. The session tag opens its card.</p>
     <input type="search" class="ref-search" id="ref-q" placeholder="Find: join, null, count, %, date…" aria-label="Find a keyword or function" autocomplete="off">
-    <div id="ref-list">${REF.map(g => `<section class="ref-group"><h2>${esc(g.name)}</h2><dl class="ref">${g.items.map(([t, d, ex, n, id]) => `<div class="ref-row" data-text="${esc(`${t} ${d} ${ex}`.toLowerCase())}">
+    <div id="ref-list">${REF.map(g => `<section class="ref-group"><h2>${esc(g.name)}</h2><dl class="ref">${g.items.map(([t, d, ex, n, id]) => `<div class="ref-row" data-hl="sql|ref|${esc(t)}" data-text="${esc(`${t} ${d} ${ex}`.toLowerCase())}">
       <dt>${sqlHtml(t)}</dt><dd><span>${esc(d)}</span>${ex ? `<pre>${sqlHtml(ex)}</pre>` : ''}<button type="button" class="ref-go" data-go="${esc(cardKey(n, id))}">Session ${n} ›</button></dd></div>`).join('')}</dl></section>`).join('')}</div>
     <p class="empty" id="ref-none" hidden>Nothing matches. Try a shorter word.</p>`;
 }
@@ -604,13 +626,14 @@ function paintBars() {
   }
 }
 function renderSession() {
-  if (current === 'ref') { document.getElementById('session').innerHTML = refHtml(); return; }
+  if (current === 'ref') { document.getElementById('session').innerHTML = refHtml(); applyHighlights(); return; }
   const s = SESSIONS.find(x => x.n === current);
   document.getElementById('session').innerHTML = `<h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
     + s.groups.map(g => `<h2>${esc(g.name)}</h2>${g.flow ? `<p class="flow">${g.flow.map(f => `<span>${f}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div>`).join('')
     + `<h2>Practice</h2><p class="group-note">Try each one in DB Browser first, then open the answer.</p><div class="practice">${practiceHtml(s)}</div>`
-    + `<h2>To remember</h2><ul class="recap">${s.recap.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`;
+    + `<h2>To remember</h2><ul class="recap" data-hl="sql|s${s.n}|recap">${s.recap.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`;
   paintNotes();
+  applyHighlights();
 }
 document.getElementById('sessions').addEventListener('click', e => {
   const b = e.target.closest('.sess');
@@ -697,6 +720,163 @@ notebook.addEventListener('click', e => {
   const go = e.target.closest('.nb-go');
   if (go) goTo(go.dataset.go);
 });
+
+/* ---------- Select a passage: highlight it, or ask about it ----------
+   Asked for 2026-10-19: highlight the lessons "with the nice colour options like in
+   the Python part". Select text on a card, a practice question, the recap or a
+   cheat-sheet line and a bar appears: four light colours, and on a card Question and
+   Comment. Highlights are kept on this device, found again by their text after every
+   redraw, and removed with a tap on them. */
+const HL_KEY = 'sql-highlights';
+let highlights = readStore(HL_KEY, []);
+const saveHighlights = () => writeStore(HL_KEY, highlights);
+const HL_HOST = '.card[data-key]:not(.overall), [data-hl]';
+const HL_SKIP = '.notes, .editor, .foot, .marks, .ref-go, .out-head, .more-rows, #sel-bar';
+const hlKeyOf = host => host.dataset.hl || host.dataset.key;
+function hlTextNodes(host) {
+  const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, {
+    acceptNode: n => (n.parentElement.closest(HL_SKIP) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+  });
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  return nodes;
+}
+function hlOffset(nodes, container, offset) {
+  let total = 0;
+  for (const n of nodes) {
+    if (n === container) return total + offset;
+    if (container.nodeType === 1 && container.contains(n)) {
+      const r = document.createRange();
+      r.setStart(container, offset);
+      if (r.comparePoint(n, 0) >= 0) return total;
+    }
+    total += n.nodeValue.length;
+  }
+  return total;
+}
+function hlWrap(host, start, end, attrs) {
+  let pos = 0;
+  for (const n of hlTextNodes(host)) {
+    const len = n.nodeValue.length, a = Math.max(start, pos), b = Math.min(end, pos + len);
+    if (a < b) {
+      let mid = n;
+      if (a > pos) mid = mid.splitText(a - pos);
+      if (b < pos + len) mid.splitText(b - a);
+      const m = document.createElement('mark');
+      m.className = 'hl';
+      for (const [k, v] of Object.entries(attrs)) m.dataset[k] = v;
+      mid.replaceWith(m);
+      m.append(mid);
+    }
+    pos += len;
+    if (pos >= end) break;
+  }
+}
+function hlApply(h) {
+  const host = [...document.querySelectorAll(HL_HOST)].find(x => hlKeyOf(x) === h.key);
+  if (!host || host.querySelector(`mark.hl[data-hid="${CSS.escape(h.id)}"]`)) return;
+  const text = hlTextNodes(host).map(n => n.nodeValue).join('');
+  let at = -1;
+  for (let i = 0; i <= h.occ; i++) { at = text.indexOf(h.text, at + 1); if (at < 0) return; }
+  hlWrap(host, at, at + h.text.length, { hid: h.id, c: h.color });
+}
+function applyHighlights() { highlights.forEach(hlApply); }
+function hlRemove(id) {
+  for (const m of document.querySelectorAll(`mark.hl[data-hid="${CSS.escape(id)}"]`)) {
+    const parent = m.parentNode;
+    m.replaceWith(...m.childNodes);
+    parent.normalize();
+  }
+  highlights = highlights.filter(h => h.id !== id);
+  saveHighlights();
+}
+const selBar = document.createElement('div');
+selBar.id = 'sel-bar';
+selBar.hidden = true;
+selBar.setAttribute('role', 'toolbar');
+selBar.setAttribute('aria-label', 'Selected passage');
+document.body.append(selBar);
+let selInfo = null;
+function selBarAt(rect) {
+  selBar.hidden = false;
+  const w = selBar.offsetWidth, h = selBar.offsetHeight;
+  selBar.style.left = `${Math.max(8, Math.min(rect.left + rect.width / 2 - w / 2, innerWidth - w - 8))}px`;
+  const top = rect.top - h - 8 >= 8 ? rect.top - h - 8 : rect.bottom + 8;
+  selBar.style.top = `${Math.max(8, Math.min(top, innerHeight - h - 8))}px`;
+}
+function hideSelBar() { selBar.hidden = true; selInfo = null; delete selBar.dataset.hid; }
+function readSelection() {
+  const sel = getSelection();
+  if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  const range = sel.getRangeAt(0);
+  const el = n => (n.nodeType === 1 ? n : n.parentElement);
+  const a = el(range.startContainer), b = el(range.endContainer);
+  if (!a || !b || a.closest('textarea, input, .editor, #sel-bar') || b.closest('textarea, input, .editor')) return null;
+  const host = a.closest(HL_HOST);
+  if (!host || host !== b.closest(HL_HOST)) return null;
+  const nodes = hlTextNodes(host);
+  const start = hlOffset(nodes, range.startContainer, range.startOffset);
+  const end = hlOffset(nodes, range.endContainer, range.endOffset);
+  const full = nodes.map(n => n.nodeValue).join('');
+  const text = full.slice(start, end);
+  if (!text.trim() || text.length > 1500) return null;
+  let occ = 0, at = full.indexOf(text);
+  while (at >= 0 && at < start) { occ++; at = full.indexOf(text, at + 1); }
+  return { host, key: hlKeyOf(host), start, end, text, occ, rect: range.getBoundingClientRect() };
+}
+const HL_COLOURS = [['yellow', '#f2c14e'], ['green', '#6fbf8e'], ['blue', '#7aa6e6'], ['pink', '#e48fb4']];
+function showSelBar() {
+  const info = readSelection();
+  if (!info) { if (!selBar.dataset.hid) hideSelBar(); return; }
+  selInfo = info;
+  delete selBar.dataset.hid;
+  const card = info.host.classList.contains('card');
+  selBar.innerHTML = HL_COLOURS.map(([c, v]) => `<button type="button" class="sb-c" data-colour="${c}" style="--hl: ${v}" title="Highlight (${c})" aria-label="Highlight in ${c}"></button>`).join('')
+    + (card ? '<span class="sb-sep"></span><button type="button" class="sb-btn sb-ask" data-kind="question">Question</button><button type="button" class="sb-btn sb-ask sb-com" data-kind="comment">Comment</button>' : '');
+  selBarAt(info.rect);
+}
+const inSelBar = e => !!(e.target.closest && e.target.closest('#sel-bar'));
+document.addEventListener('mouseup', e => { if (!inSelBar(e)) setTimeout(showSelBar, 0); });
+document.addEventListener('touchend', e => { if (!inSelBar(e)) setTimeout(showSelBar, 350); });
+document.addEventListener('keyup', e => { if (e.shiftKey) showSelBar(); });
+document.addEventListener('scroll', () => { if (!selBar.hidden) hideSelBar(); }, { passive: true, capture: true });
+selBar.addEventListener('mousedown', e => e.preventDefault());
+selBar.addEventListener('click', e => {
+  const colour = e.target.closest('.sb-c');
+  if (colour && selInfo) {
+    const h = { id: `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, key: selInfo.key, text: selInfo.text, occ: selInfo.occ, color: colour.dataset.colour };
+    highlights.push(h);
+    saveHighlights();
+    hlWrap(selInfo.host, selInfo.start, selInfo.end, { hid: h.id, c: h.color });
+    getSelection().removeAllRanges();
+    hideSelBar();
+    return;
+  }
+  const ask = e.target.closest('.sb-ask');
+  if (ask && selInfo) {
+    const { host, text } = selInfo;
+    getSelection().removeAllRanges();
+    hideSelBar();
+    host.querySelector('.editor')?.remove();
+    host.querySelector('.notes').insertAdjacentHTML('afterend', editorHtml(ask.dataset.kind, `“${text.trim()}” `));
+    const ta = host.querySelector('.editor textarea');
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+    return;
+  }
+  if (e.target.closest('.sb-remove')) { hlRemove(selBar.dataset.hid); hideSelBar(); }
+});
+// Tap a highlight to remove it.
+document.addEventListener('click', e => {
+  const m = e.target.closest && e.target.closest('mark.hl');
+  if (!m || !getSelection().isCollapsed) return;
+  e.preventDefault();
+  selBar.dataset.hid = m.dataset.hid;
+  selBar.innerHTML = '<button type="button" class="sb-btn sb-remove">Remove highlight</button>';
+  selBarAt(m.getBoundingClientRect());
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !selBar.hidden) hideSelBar(); });
+document.addEventListener('mousedown', e => { if (e.target.closest && !e.target.closest('#sel-bar, mark.hl') && selBar.dataset.hid) hideSelBar(); });
 
 /* ---------- Theme, first drawing ---------- */
 const themeBtn = document.getElementById('theme');
