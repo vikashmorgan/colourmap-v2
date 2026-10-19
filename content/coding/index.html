@@ -945,7 +945,7 @@ details.sv[open] > summary::after { content: '▾'; }
   details.pstep > summary { grid-template-columns: auto 1fr auto; }
 }
 
-/* The same three dots as a lesson box: Got it, Confused, No time. */
+/* The same three dots as a lesson box: Got it, Confused, Confused as fuck. */
 .pcard { position: relative; }
 .pcard .explain { padding-right: 44px; }
 .pcard[data-mark="got"] { box-shadow: inset 0 0 0 2px var(--ok-c), 0 0 0 1px var(--ok-c); }
@@ -1562,7 +1562,7 @@ requirements.txt, which you hand in, simply lists requests so the teacher can ru
         <button type="button" class="filter" data-filter="all" aria-pressed="true">All</button>
         <button type="button" class="filter f-got" data-filter="got" aria-pressed="false"><i class="dot d-got"></i>Got it <b data-count="got">0</b></button>
         <button type="button" class="filter f-mid" data-filter="mid" aria-pressed="false"><i class="dot d-mid"></i>Confused <b data-count="mid">0</b></button>
-        <button type="button" class="filter f-late" data-filter="late" aria-pressed="false"><i class="dot d-late"></i>No time <b data-count="late">0</b></button>
+        <button type="button" class="filter f-late" data-filter="late" aria-pressed="false"><i class="dot d-late"></i>Confused as fuck <b data-count="late">0</b></button>
         <button type="button" class="filter" data-filter="none" aria-pressed="false">Not marked <b data-count="none">0</b></button>
       </div>
       <div class="slides-panel" id="slides-panel" hidden></div>
@@ -1602,7 +1602,7 @@ requirements.txt, which you hand in, simply lists requests so the teacher can ru
     <div class="intro">
       <span class="eyebrow">Page 5 · Your review</span>
       <h1>Review</h1>
-      <p>Every question and comment, in the order of the page: Project 1 step by step, then the lessons box by box. Each answer sits right under its question, here and where you asked it. Then every box you marked Confused or No time.</p>
+      <p>Every question and comment, in the order of the page: Project 1 step by step, then the lessons box by box. Each answer sits right under its question, here and where you asked it. Then every box you marked Confused or Confused as fuck.</p>
     </div>
     <details class="exam-map" id="exam-map" open>
       <summary><span class="em-title">For the exam: what the slides flag</span><span class="em-sub" id="em-sub"></span></summary>
@@ -2221,7 +2221,7 @@ function readerPage(L, key, num, n, t, ex) {
     <button type="button" class="note-dot" aria-pressed="false">Question or comment</button>
     <div class="rd-foot">${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}${SLIDES[key] && ON_COLOUR_BRAIN ? `<button type="button" class="rd-show-slide" data-file="${esc(SLIDES[key].file)}" data-page="${SLIDES[key].page}" aria-expanded="false">Show the slide here</button>` : ''}</div>
     ${SLIDES[key] && ON_COLOUR_BRAIN ? '<div class="rd-slide" hidden></div>' : ''}
-    <div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button></div>
+    <div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="Confused as fuck" aria-pressed="false" aria-label="Confused as fuck"></button></div>
   </article>`;
 }
 function overviewPage(L, o, i) {
@@ -2240,7 +2240,7 @@ function overviewPage(L, o, i) {
     </div>
     <div class="rd-foot">${slideLink(lessonSlides(L), o.page)}${sec ? `<button type="button" class="rd-deeper" data-sec="${o.section}">In detail: §${o.section + 1} ${esc(sec.name)} · ${sec.items.length} concepts →</button>` : `<button type="button" class="rd-deeper" data-sec="0">Start the details: §1 ${esc(L.groups[0].name)} →</button>`}</div>
     <button type="button" class="note-dot" aria-pressed="false">Question or comment</button>
-    <div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button></div>
+    <div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="Confused as fuck" aria-pressed="false" aria-label="Confused as fuck"></button></div>
   </article>`;
 }
 function readerHtml(L) {
@@ -2300,7 +2300,7 @@ for (const L of LESSONS) {
     const used = inProject(n);
     const key = `s${L.session}|${n}`;
     const num = `${L.session}.${++boxNo}`;
-    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><span class="resize-handle" aria-hidden="true" title="Drag to widen"></span><p>${esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key], EXTRA[key]) + '<button type="button" class="more-btn" aria-expanded="false" aria-label="More" title="More">+</button>' : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<button type="button" class="note-dot" aria-pressed="false">Question or comment</button><div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button></div></article>`;
+    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><span class="resize-handle" aria-hidden="true" title="Drag to widen"></span><p>${esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key], EXTRA[key]) + '<button type="button" class="more-btn" aria-expanded="false" aria-label="More" title="More">+</button>' : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<button type="button" class="note-dot" aria-pressed="false">Question or comment</button><div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="Confused as fuck" aria-pressed="false" aria-label="Confused as fuck"></button></div></article>`;
   }).join('')}</div></div>`).join('');
   const pit = x => L.layout === 'reader' ? keywordHtml(x, L.session, new Set()) : esc(x);
   const notes = (L.pitfalls && L.pitfalls.length ? `<div class="note-box pit"><h4>Watch out</h4><ul>${L.pitfalls.map(x => `<li>${pit(x)}</li>`).join('')}</ul></div>` : '') +
@@ -2870,7 +2870,7 @@ for (const s of PROJECT_STEPS) {
         ${lessonChips(b)}
         <button type="button" class="note-dot" aria-pressed="false">Question or comment</button>
       </div>
-      <div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button></div>
+      <div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="Confused as fuck" aria-pressed="false" aria-label="Confused as fuck"></button></div>
     </article>`).join('');
   stepsEl.insertAdjacentHTML('beforeend', `
     <details class="pstep" id="step-${s.n}" style="--sess: ${col}" data-title="Step ${s.n} · ${esc(s.title)}">
@@ -4241,7 +4241,7 @@ function renderReview() {
   const el = document.getElementById('review');
   if (!total) {
     renderPnb();
-    el.innerHTML = '<p class="rv-empty">Nothing here yet. In Lessons, the three dots on the side of a box mark it Got it, Confused or No time, and the button at the bottom adds a question or a comment. They all gather here.</p>';
+    el.innerHTML = '<p class="rv-empty">Nothing here yet. In Lessons, the three dots on the side of a box mark it Got it, Confused or Confused as fuck, and the button at the bottom adds a question or a comment. They all gather here.</p>';
     return;
   }
   const group = (title, cls, html, n, sub) => n ? `<section class="rv-group rv-${cls}"><h3><i class="dot"></i>${title} <b>${n}</b>${sub ? `<span class="rv-sub">${sub}</span>` : ''}</h3><div class="rv-list">${html}</div></section>` : '';
@@ -4264,7 +4264,7 @@ function renderReview() {
     + (flagged.length ? `<section class="rv-part"><h2 class="rv-part-title">Practice</h2>${group('To come back to', 'flag', flagged.map(reviewFlag).join(''), flagged.length)}</section>` : '')
     + (confused.length || noTime.length ? `<section class="rv-part"><h2 class="rv-part-title">Boxes you marked</h2>`
       + group('Confused', 'mid', confused.map(reviewBox).join(''), confused.length)
-      + group('No time', 'late', noTime.map(reviewBox).join(''), noTime.length) + '</section>' : '');
+      + group('Confused as fuck', 'late', noTime.map(reviewBox).join(''), noTime.length) + '</section>' : '');
 }
 document.getElementById('review').addEventListener('click', e => {
   const read = e.target.closest('.note-read');
