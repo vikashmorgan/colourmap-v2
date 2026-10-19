@@ -446,7 +446,7 @@ details.solution .ex-why { margin-top: 12px; }
 .mark { width: 26px; height: 26px; min-height: 0; padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; display: grid; place-items: center; }
 .mark::before { content: ''; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--dot, var(--muted)); opacity: .45; transition: opacity .15s, transform .15s; }
 .mark:hover::before, .mark:focus-visible::before { opacity: .9; transform: scale(1.15); }
-.mark[aria-pressed="true"]::before { background: var(--dot); opacity: 1; transition: none; }
+.mark[aria-pressed="true"]::before, .mark:active::before { background: var(--dot); opacity: 1; transition: none; }
 .m-solid, .d-solid { --dot: var(--solid-c); } .m-got, .d-got { --dot: var(--ok-c); } .m-mid, .d-mid { --dot: var(--mid-c); } .m-late, .d-late { --dot: var(--late-c); }
 
 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--dot); margin-right: 6px; vertical-align: 1px; }
@@ -455,7 +455,7 @@ details.solution .ex-why { margin-top: 12px; }
 
 /* Box numbers: session.box, small and quiet. */
 .item h4 { justify-content: flex-start !important; }
-.box-num { font: 600 11px var(--mono); color: var(--box-text); opacity: .7; background: color-mix(in srgb, var(--box-text) 12%, transparent); border-radius: 6px; padding: 1px 6px; flex: none; }
+.box-num { font: 600 11px var(--mono); color: var(--box-text); opacity: .6; flex: none; }
 .item h4 .tag { margin-left: auto; }
 .here-box { font: 600 12px var(--mono); border: 1px solid var(--rule); border-radius: 6px; padding: 1px 7px; margin-left: 4px; }
 
@@ -534,6 +534,30 @@ details.more[open] > summary { opacity: 1; }
 /* On a box the page number sits quietly in the bottom-right corner. */
 .lgroup .item > .slide-link { position: absolute; right: 36px; bottom: 8px; }
 .lgroup .item:has(> .slide-link) { padding-bottom: 30px; }
+/* A box's foot (2026-10-19): the + and Question or comment as two matching pills on the
+   left, the slide's page beside them, and the three dots, bigger and in a row, on the right. */
+.lgroup .item { display: flex; flex-wrap: wrap; align-content: start; align-items: center; gap: 6px 8px; padding-right: 14px; }
+.lgroup .item > * { flex: 1 1 100%; min-width: 0; }
+.lgroup .item > .resize-handle { flex: none; }
+.lgroup .item > details.more > summary { display: none; }
+.lgroup .item > .more-btn { order: 10; flex: none; }
+.lgroup .item > .note-dot { order: 11; flex: none; margin-top: 0; }
+.lgroup .item > .slide-link { order: 12; flex: none; position: static; }
+.lgroup .item > .marks { order: 13; flex: none; margin-left: auto; position: static; transform: none; flex-direction: row; gap: 0; }
+.lgroup .item > .note-editor { order: 14; }
+.lgroup .item:has(> .slide-link) { padding-bottom: 12px; }
+.lgroup .item .mark { width: 30px; height: 30px; }
+.lgroup .item .mark::before { width: 14px; height: 14px; border-width: 2px; }
+.lgroup .item .mark::after { right: auto; left: 50%; top: auto; bottom: calc(100% + 2px); transform: translate(-50%, 4px); }
+.lgroup .item .mark:hover::after, .lgroup .item .mark:focus-visible::after { transform: translate(-50%, 0); }
+.more-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; padding: 3px 11px; min-height: 30px; border-radius: 999px; border: 1px dashed color-mix(in srgb, var(--q-c) 55%, transparent); background: none; color: var(--box-text); opacity: .7; font: 600 16px/1 var(--mono); cursor: pointer; }
+.more-btn:hover, .more-btn:focus-visible, .more-btn[aria-expanded="true"] { opacity: 1; border-style: solid; }
+/* In a narrow box the foot stays one line: Question or comment shrinks to its ✎ (named on hover). */
+.lgroup .item { container-type: inline-size; }
+@container (max-width: 340px) {
+  .lgroup .item > .note-dot { font-size: 0; gap: 0; min-width: 40px; justify-content: center; }
+  .lgroup .item > .note-dot::before { font-size: 13px; }
+}
 .slide-link { justify-self: start; font: 600 12px var(--mono); color: var(--box-text); opacity: .75; text-decoration: none; border-bottom: 1px dotted currentColor; }
 .slide-link:hover { opacity: 1; }
 .ex-body .slide-link { color: var(--accent); }
@@ -2190,7 +2214,7 @@ for (const L of LESSONS) {
     const used = inProject(n);
     const key = `s${L.session}|${n}`;
     const num = `${L.session}.${++boxNo}`;
-    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><span class="resize-handle" aria-hidden="true" title="Drag to widen"></span><p>${esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key], EXTRA[key]) : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<button type="button" class="note-dot" aria-pressed="false">Question or comment</button><div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button></div></article>`;
+    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><span class="resize-handle" aria-hidden="true" title="Drag to widen"></span><p>${esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key], EXTRA[key]) + '<button type="button" class="more-btn" aria-expanded="false" aria-label="More" title="More">+</button>' : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<button type="button" class="note-dot" aria-pressed="false">Question or comment</button><div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button></div></article>`;
   }).join('')}</div></div>`).join('');
   const pit = x => L.layout === 'reader' ? keywordHtml(x, L.session, new Set()) : esc(x);
   const notes = (L.pitfalls && L.pitfalls.length ? `<div class="note-box pit"><h4>Watch out</h4><ul>${L.pitfalls.map(x => `<li>${pit(x)}</li>`).join('')}</ul></div>` : '') +
@@ -3706,6 +3730,7 @@ function paintItem(item) {
   } else if (tog) tog.remove();
   dot.setAttribute('aria-pressed', String(list.length > 0));
   dot.textContent = list.length ? 'Add another question or comment' : 'Question or comment';
+  dot.title = dot.textContent;
   if (item.classList.contains('pm-notes')) paintMissionNotes(item.closest('.pmission'));
 }
 function paintAll() { syncLineHosts(); for (const it of noteHosts()) paintItem(it); refreshCounts(); renderReview(); if (activeFilter !== 'all') applyFilter(); }
@@ -4421,6 +4446,22 @@ lessonsEl.addEventListener('toggle', e => {
   const item = more.closest('.item');
   if (more.open) { if (!item.dataset.pinned) setWide(item, true); item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
   else if (!item.dataset.pinned) setWide(item, false);
+}, true);
+// The + at a box's foot opens and closes its longer explanation, wherever the box is shown.
+document.addEventListener('click', e => {
+  const b = e.target.closest('.more-btn');
+  if (!b) return;
+  const more = b.parentElement.querySelector(':scope > details.more');
+  if (more) more.open = !more.open;
+});
+document.addEventListener('toggle', e => {
+  const more = e.target;
+  if (!more.matches || !more.matches('details.more')) return;
+  const b = more.parentElement.querySelector(':scope > .more-btn');
+  if (!b) return;
+  b.setAttribute('aria-expanded', String(more.open));
+  b.textContent = more.open ? '−' : '+';
+  b.title = more.open ? 'Less' : 'More';
 }, true);
 /* A vocabulary word jumps to the box that explains it, in whatever session it lives. */
 lessonsEl.addEventListener('click', e => {

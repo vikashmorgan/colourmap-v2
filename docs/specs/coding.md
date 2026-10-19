@@ -43,6 +43,7 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
   - With five tabs, the tab bar scrolls sideways on a phone and keeps the chosen tab in sight.
 - **Day or night.** The page opens in a beige day mode (the Git page's paper colours), whatever the computer's own setting: it used to follow the system and showed black on a dark-mode computer (changed 2026-10-17 at Victor's request). A ☾ / ☀ button beside the text size switches to night. The choice is stored as `school-theme` (`day` / `night`), shared with School and Git, so the three pages always match.
 - **Review** — every question, comment, Confused and No-time box, grouped in one place.
+- **A lesson box's foot** (2026-10-19). One line at the bottom: on the left the **+** (opens the longer explanation, − closes it) and *Question or comment* as two matching dashed pills, then the slide's page; on the right the three mark dots, bigger and in a row. In a narrow box the *Question or comment* pill shrinks to its ✎ so the foot stays one line (named on hover). The box number at the top left is plain text, not a pill.
 - **Progress bars without the count.** A lesson's and a project step's progress is the green bar alone; the *4/31 got it* beside it was taken off to make space (2026-10-19). The count is still there on hover. The Confused and No-time counts stay.
 
 ## Marks and notes
@@ -51,7 +52,7 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
 
 Each box can carry:
 
-- a **mark**: *Got it* (`got`, green), *Confused* (`mid`, yellow) or *No time* (`late`, pink-purple) — three small dots on the side of the box, each naming itself in a coloured pill on hover. A tapped dot fills in the same frame; saving and the counts follow just after, so the tap never feels slow. The database also accepts `solid`, which the page shows as *Got it*.
+- a **mark**: *Got it* (`got`, green), *Confused* (`mid`, yellow) or *No time* (`late`, pink-purple) — three dots in a row at the bottom right of the box, each naming itself in a coloured pill on hover. A dot fills the moment it is pressed and stays filled in the same frame; saving and the counts follow just after, so the tap never feels slow. The database also accepts `solid`, which the page shows as *Got it*.
 - **notes**: any number of questions and comments per box, added with the button at the bottom of the box, each edited (✎) or deleted (× then Delete?) on its own. Each note has a status dot: orange while it waits for an answer or the answer is unread, green once answered and marked read. Answers are written from the terminal into the note's `answer` field and never change the note itself.
 
 Rules:
