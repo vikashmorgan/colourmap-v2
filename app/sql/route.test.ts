@@ -39,7 +39,7 @@ describe('/sql class page', () => {
     // Marks and notes share the coding API, kept apart by their sql| keys.
     expect(html).toContain("const MARKS_URL = '/api/coding/marks';");
     expect(html).toContain("const mine = k => k.startsWith('sql|');");
-    for (const n of [1, 2, 3]) expect(html).toContain(`{ n: ${n}, short:`);
+    for (const n of [1, 2, 3, 4, 5]) expect(html).toContain(`{ n: ${n}, short:`);
     // Practice answers carry their real output from shopstream.db.
     expect(html).toContain('const PRACTICE = {');
     // The cheat sheet: every term from the sessions, searchable, as its own tab.
@@ -48,5 +48,8 @@ describe('/sql class page', () => {
     // Overall notes above the sessions, and highlights on the lessons.
     expect(html).toContain('data-key="sql|notebook"');
     expect(html).toContain("const HL_KEY = 'sql-highlights';");
+    // Sessions 4 and 5, and the keyword peek that opens a cheat-sheet line on hover.
+    expect(html).toContain("{ id: 'top-n',");
+    expect(html).toContain('const PEEK_TERM = {');
   });
 });
