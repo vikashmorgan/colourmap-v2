@@ -107,6 +107,18 @@
   #sel-bar .sb-btn { min-height: 30px; padding: 3px 12px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--q) 16%, var(--card)); color: var(--ink); font: 600 13px system-ui, sans-serif; cursor: pointer; }
   #sel-bar .sb-com { background: color-mix(in srgb, var(--c) 16%, var(--card)); }
   #sel-bar .sb-sep { width: 1px; height: 20px; background: var(--line); margin: 0 2px; }
+  /* Keyword peek: hover a keyword for a moment and its cheat-sheet box opens on the side. */
+  .kw[data-kw], .kw-t { cursor: help; border-radius: 3px; }
+  .kw[data-kw]:hover, .kw-t:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
+  .peek { position: fixed; z-index: 58; right: 44px; top: 96px; width: min(320px, calc(100vw - 32px)); display: grid; gap: 8px; padding: 12px 14px 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--accent); box-shadow: 0 14px 36px rgb(0 0 0 / .22); font-size: 15px; }
+  .peek-top { display: flex; align-items: flex-start; gap: 8px; }
+  .peek-term { margin: 0; font: 600 14.5px/1.45 ui-monospace, 'Cascadia Code', Consolas, monospace; flex: 1; overflow-wrap: anywhere; }
+  .peek-close { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--soft); cursor: pointer; font-size: 16px; }
+  .peek p { margin: 0; }
+  .peek pre { font-size: 12.5px; padding: 6px 10px; }
+  .peek .ref-go { color: var(--accent); }
+  .peek-more { font: 600 12px system-ui, sans-serif; color: var(--soft); }
+  @media (max-width: 900px) { .peek { right: 16px; left: 16px; top: auto; bottom: 16px; width: auto; max-height: 55vh; overflow: auto; } }
   /* Notes: questions and comments */
   .notes { display: grid; gap: 6px; }
   .note { --nc: var(--q); border-radius: 8px; padding: 7px 11px; background: color-mix(in srgb, var(--nc) 9%, transparent); display: grid; gap: 3px; font-family: system-ui, sans-serif; font-size: 14.5px; }
@@ -550,21 +562,24 @@ document.addEventListener('click', e => {
 });
 
 /* ---------- A session ---------- */
-const KW = /\b(SELECT|FROM|WHERE|GROUP BY|HAVING|ORDER BY|LIMIT|DISTINCT|AS|AND|OR|NOT|IN|IS|NULL|BETWEEN|LIKE|CASE|WHEN|THEN|ELSE|END|JOIN|LEFT|RIGHT|FULL|INNER|OUTER|ON|WITH|DESC|ASC|COUNT|SUM|AVG|MIN|MAX|ROUND|COALESCE|LOWER|UPPER|TRIM|LENGTH|SUBSTR|OVER|PARTITION BY|ROW_NUMBER|DENSE_RANK|RANK|LAG|LEAD)\b/g;
+const KW = /\b(SELECT|FROM|WHERE|GROUP BY|HAVING|ORDER BY|LIMIT|DISTINCT|AS|AND|OR|NOT|IN|IS|NULL|BETWEEN|LIKE|CASE|WHEN|THEN|ELSE|END|JOIN|LEFT|RIGHT|FULL|INNER|OUTER|ON|WITH|DESC|ASC|COUNT|SUM|AVG|MIN|MAX|ROUND|COALESCE|LOWER|UPPER|TRIM|LENGTH|SUBSTR|OVER|PARTITION BY|ROW_NUMBER|DENSE_RANK|RANK|LAG|LEAD|strftime)\b/g;
+// Capitalised SQL words in prose: hoverable, but not coloured. Bare IS/IN/ON/OR/AS stay plain text.
+const KW_PROSE = /\b(SELECT|FROM|WHERE|GROUP BY|HAVING|ORDER BY|LIMIT|DISTINCT|BETWEEN|LIKE|CASE|WHEN|JOIN|LEFT JOIN|INNER JOIN|WITH|COUNT|SUM|AVG|MIN|MAX|ROUND|COALESCE|LOWER|UPPER|TRIM|LENGTH|SUBSTR|OVER|PARTITION BY|ROW_NUMBER|DENSE_RANK|RANK|LAG|LEAD|IS NULL|NOT IN|strftime)\b/g;
+function kwText(text) { return esc(text).replace(KW_PROSE, '<span class="kw-t" data-kw="$1">$1</span>'); }
 function sqlHtml(code) {
   return code.split('\n').map(line => {
     const i = line.indexOf('--');
     const head = i < 0 ? line : line.slice(0, i), tail = i < 0 ? '' : line.slice(i);
-    return esc(head).replace(KW, '<span class="kw">$1</span>') + (tail ? `<span class="cm">${esc(tail)}</span>` : '');
+    return esc(head).replace(KW, '<span class="kw" data-kw="$1">$1</span>') + (tail ? `<span class="cm">${esc(tail)}</span>` : '');
   }).join('\n');
 }
 function cardHtml(s, c) {
   const key = cardKey(s.n, c.id), m = marks[key] || '';
   return `<article class="card" id="c-${s.n}-${c.id}" data-key="${esc(key)}" data-mark="${m}">
     <h3><span class="num">${c.num}</span><span>${esc(c.name)}</span></h3>
-    <p>${esc(c.what)}</p>
+    <p>${kwText(c.what)}</p>
     ${c.code ? `<pre>${sqlHtml(c.code)}</pre>` : ''}
-    ${c.watch ? `<p class="watch"><b>Watch out</b>${esc(c.watch)}</p>` : ''}
+    ${c.watch ? `<p class="watch"><b>Watch out</b>${kwText(c.watch)}</p>` : ''}
     <div class="notes"></div>
     <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>
       <span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'No time']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span></div>
@@ -809,6 +824,62 @@ notebook.addEventListener('click', e => {
   const go = e.target.closest('.nb-go');
   if (go) goTo(go.dataset.go);
 });
+
+/* ---------- Keyword peek ----------
+   Asked for 2026-10-19: "when I hover on AS for a second it opens the box of AS on the side;
+   same for CASE WHEN or other similar functions". Hover a keyword in any query (or written in
+   capitals in a card) for 0.6 s, or tap it on a phone: its cheat-sheet line opens in a box at
+   the side, with the link to its card. Escape, × or a click elsewhere closes it. */
+const PEEK_TERM = {
+  SELECT: 'SELECT … FROM', FROM: 'SELECT … FROM', AS: 'AS', DISTINCT: 'DISTINCT', LIMIT: 'LIMIT n',
+  WHERE: 'WHERE', AND: 'AND  OR  NOT', OR: 'AND  OR  NOT', NOT: 'AND  OR  NOT', BETWEEN: 'BETWEEN a AND b',
+  IN: 'IN (…)  NOT IN (…)', 'NOT IN': 'IN (…)  NOT IN (…)', LIKE: 'LIKE  %  _', IS: 'IS NULL  IS NOT NULL', NULL: 'IS NULL  IS NOT NULL', 'IS NULL': 'IS NULL  IS NOT NULL',
+  COALESCE: 'COALESCE(x, fallback)', 'ORDER BY': 'ORDER BY … ASC | DESC', DESC: 'ORDER BY … ASC | DESC', ASC: 'ORDER BY … ASC | DESC',
+  COUNT: 'COUNT(*)', SUM: 'SUM  AVG  MIN  MAX', AVG: 'SUM  AVG  MIN  MAX', MIN: 'SUM  AVG  MIN  MAX', MAX: 'SUM  AVG  MIN  MAX',
+  ROUND: 'ROUND(x, n)', 'GROUP BY': 'GROUP BY', HAVING: 'HAVING', strftime: "strftime('%Y-%m', date)",
+  CASE: 'CASE WHEN … THEN … ELSE … END', WHEN: 'CASE WHEN … THEN … ELSE … END', THEN: 'CASE WHEN … THEN … ELSE … END', ELSE: 'CASE WHEN … THEN … ELSE … END', END: 'CASE WHEN … THEN … ELSE … END',
+  LOWER: 'LOWER(x)  UPPER(x)', UPPER: 'LOWER(x)  UPPER(x)', TRIM: 'TRIM(x)', LENGTH: 'LENGTH(x)', SUBSTR: 'SUBSTR(x, start, length)',
+  JOIN: 'JOIN … ON', INNER: 'JOIN … ON', 'INNER JOIN': 'JOIN … ON', ON: 'ON a.key = b.key', LEFT: 'LEFT JOIN', 'LEFT JOIN': 'LEFT JOIN',
+  RIGHT: 'RIGHT JOIN  FULL OUTER JOIN', FULL: 'RIGHT JOIN  FULL OUTER JOIN', OUTER: 'RIGHT JOIN  FULL OUTER JOIN',
+  WITH: 'WITH name AS (…)', OVER: '… OVER (…)', 'PARTITION BY': 'PARTITION BY', ROW_NUMBER: 'ROW_NUMBER()', RANK: 'RANK()', DENSE_RANK: 'DENSE_RANK()',
+  LAG: 'LAG(x)  LEAD(x)', LEAD: 'LAG(x)  LEAD(x)',
+};
+const refByTerm = term => { for (const g of REF) for (const it of g.items) if (it[0] === term) return it; return null; };
+const peek = document.createElement('aside');
+peek.className = 'peek';
+peek.hidden = true;
+peek.setAttribute('aria-label', 'Keyword');
+document.body.append(peek);
+let peekTimer = 0, peekWord = null;
+function openPeek(word, el) {
+  const it = refByTerm(PEEK_TERM[word]);
+  if (!it) return;
+  const [t, d, ex, n, id] = it;
+  peekWord = el;
+  peek.innerHTML = `<div class="peek-top"><p class="peek-term">${sqlHtml(t)}</p><button type="button" class="peek-close" aria-label="Close">×</button></div>
+    <p>${esc(d)}</p>${ex ? `<pre>${sqlHtml(ex)}</pre>` : ''}
+    <button type="button" class="ref-go" data-go="${esc(cardKey(n, id))}">Session ${n} · open the card ›</button>`;
+  peek.hidden = false;
+}
+function closePeek() { peek.hidden = true; peekWord = null; clearTimeout(peekTimer); }
+const peekTarget = e => e.target.closest && e.target.closest('#session .kw[data-kw], #session .kw-t');
+document.addEventListener('mouseover', e => {
+  const k = peekTarget(e);
+  if (!k || k === peekWord || k.closest('.ref-row')) return;
+  clearTimeout(peekTimer);
+  peekTimer = setTimeout(() => { if (k.matches(':hover') && getSelection().isCollapsed) openPeek(k.dataset.kw, k); }, 600);
+});
+document.addEventListener('mouseout', e => { if (peekTarget(e)) clearTimeout(peekTimer); });
+// A tap (no hover on a phone) opens it at once.
+document.addEventListener('click', e => {
+  if (e.target.closest('.peek-close')) { closePeek(); return; }
+  const go = e.target.closest('.peek .ref-go');
+  if (go) { closePeek(); goTo(go.dataset.go); return; }
+  const k = peekTarget(e);
+  if (k && !k.closest('.ref-row') && getSelection().isCollapsed && !k.closest('summary')) { openPeek(k.dataset.kw, k); return; }
+  if (!peek.hidden && !e.target.closest('.peek')) closePeek();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !peek.hidden) closePeek(); });
 
 /* ---------- Select a passage: highlight it, or ask about it ----------
    Asked for 2026-10-19: highlight the lessons "with the nice colour options like in

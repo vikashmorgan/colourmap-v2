@@ -48,5 +48,8 @@ describe('/sql class page', () => {
     // Overall notes above the sessions, and highlights on the lessons.
     expect(html).toContain('data-key="sql|notebook"');
     expect(html).toContain("const HL_KEY = 'sql-highlights';");
+    // Sessions 4 and 5, and the keyword peek that opens a cheat-sheet line on hover.
+    expect(html).toContain("{ id: 'top-n',");
+    expect(html).toContain('const PEEK_TERM = {');
   });
 });
