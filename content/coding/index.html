@@ -2796,7 +2796,7 @@ function refreshSteps() {
     const got = cs.filter(c => c.dataset.mark === 'got').length;
     const mid = cs.filter(c => c.dataset.mark === 'mid').length;
     const late = cs.filter(c => c.dataset.mark === 'late').length;
-    step.querySelector('.pstep-progress').innerHTML = `<span class="pg-bar"><i style="width:${(got / cs.length * 100).toFixed(1)}%"></i></span><span>${got}/${cs.length} got it</span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${late ? `<span class="pg-late">${late} no time</span>` : ''}`;
+    step.querySelector('.pstep-progress').innerHTML = `<span class="pg-bar" title="${got} of ${cs.length} got it" aria-label="${got} of ${cs.length} got it"><i style="width:${(got / cs.length * 100).toFixed(1)}%"></i></span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${late ? `<span class="pg-late">${late} no time</span>` : ''}`;
     // Every question and comment asked anywhere in the step: its cards, its lines, its output.
     const n = Number(step.id.slice(5));
     const qs = noteList.filter(x => x.key.startsWith(`p1|${n}|`) || (parseSpot(x.key) || {}).step === n);
@@ -3724,7 +3724,7 @@ function refreshCounts() {
     const late = its.filter(i => i.dataset.mark === 'late').length;
     const keys = new Set(its.map(i => i.dataset.key));
     const q = noteList.filter(n => keys.has(n.key)).length;
-    lesson.querySelector('.sess-progress').innerHTML = `<span class="pg-bar"><i style="width:${(got / its.length * 100).toFixed(1)}%"></i></span><span>${got}/${its.length} got it</span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${late ? `<span class="pg-late">${late} no time</span>` : ''}${q ? `<span class="pg-note">${q} note${q > 1 ? 's' : ''}</span>` : ''}`;
+    lesson.querySelector('.sess-progress').innerHTML = `<span class="pg-bar" title="${got} of ${its.length} got it" aria-label="${got} of ${its.length} got it"><i style="width:${(got / its.length * 100).toFixed(1)}%"></i></span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${late ? `<span class="pg-late">${late} no time</span>` : ''}${q ? `<span class="pg-note">${q} note${q > 1 ? 's' : ''}</span>` : ''}`;
   }
 }
 function applyFilter() {

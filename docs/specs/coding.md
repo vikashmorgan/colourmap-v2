@@ -43,6 +43,7 @@ The page itself is a single self-contained HTML file, `content/coding/index.html
   - With five tabs, the tab bar scrolls sideways on a phone and keeps the chosen tab in sight.
 - **Day or night.** The page opens in a beige day mode (the Git page's paper colours), whatever the computer's own setting: it used to follow the system and showed black on a dark-mode computer (changed 2026-10-17 at Victor's request). A ☾ / ☀ button beside the text size switches to night. The choice is stored as `school-theme` (`day` / `night`), shared with School and Git, so the three pages always match.
 - **Review** — every question, comment, Confused and No-time box, grouped in one place.
+- **Progress bars without the count.** A lesson's and a project step's progress is the green bar alone; the *4/31 got it* beside it was taken off to make space (2026-10-19). The count is still there on hover. The Confused and No-time counts stay.
 
 ## Marks and notes
 
