@@ -64,6 +64,7 @@
   .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font: 600 13px ui-monospace, Consolas, monospace; margin: 4px 0 0; }
   .flow span { padding: 3px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
   .flow em { color: var(--soft); font-style: normal; }
+  .flow-label { margin: 10px 0 4px; font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
 
   /* A card: name, what it does, an example, then one quiet line of controls. */
   .cards { display: grid; gap: 10px; }
@@ -265,7 +266,7 @@ const SESSIONS = [
   ], recap: ['A database is related tables, linked by keys.', 'SELECT returns a new table and never changes the source.', 'AS renames, DISTINCT de-duplicates, LIMIT caps.', 'SQL runs FROM → WHERE → SELECT → LIMIT.', 'The dirty country and status values are spotted, and parked for later.'] },
 
   { n: 2, short: 'Filter, sort, aggregate', title: 'Filtering, sorting and aggregation', lede: 'Making a query answer a real question, then checking you can trust the answer.', groups: [
-    { name: 'The shape of a query', flow: ['FROM', 'WHERE', 'GROUP BY', 'HAVING', 'SELECT', 'ORDER BY', 'LIMIT'], cards: [
+    { name: 'The shape of a query', written: ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'HAVING', 'ORDER BY', 'LIMIT'], flow: ['FROM', 'WHERE', 'GROUP BY', 'HAVING', 'SELECT', 'ORDER BY', 'LIMIT'], cards: [
       { id: 'anatomy', name: 'The full skeleton', what: 'Every clause has a place. You rarely need them all, but they always come in this order when written.', code: 'SELECT   columns, aggregates\nFROM     table\nWHERE    row condition\nGROUP BY grouping columns\nHAVING   group condition\nORDER BY sort columns\nLIMIT    n' },
     ] },
     { name: 'Keeping rows: WHERE', cards: [
@@ -286,7 +287,7 @@ const SESSIONS = [
       { id: 'having', name: 'HAVING vs WHERE', what: 'WHERE filters rows before grouping and cannot use COUNT or SUM. HAVING filters groups after grouping and can.', code: "SELECT shipping_country, COUNT(*) AS n\nFROM orders\nWHERE status != 'cancelled'\nGROUP BY shipping_country\nHAVING COUNT(*) > 50;" },
     ] },
     { name: 'CASE: logic inside a query', cards: [
-      { id: 'case', name: 'CASE', what: 'Gives one value per row from conditions: the first WHEN that matches wins. It works in SELECT, WHERE, ORDER BY and GROUP BY.', code: "CASE WHEN total < 100 THEN 'small'\n     WHEN total < 500 THEN 'medium'\n     ELSE 'large'\nEND AS size", watch: 'Without ELSE, unmatched rows get NULL. Put the narrowest condition first.' },
+      { id: 'case', name: 'CASE', what: 'Gives one value per row from conditions: the first WHEN that matches wins. You can put a CASE anywhere a value goes: in SELECT, WHERE, ORDER BY or GROUP BY (this is where it can go, not an order).', code: "CASE WHEN total < 100 THEN 'small'\n     WHEN total < 500 THEN 'medium'\n     ELSE 'large'\nEND AS size", watch: 'Without ELSE, unmatched rows get NULL. Put the narrowest condition first.' },
       { id: 'case-agg', name: 'CASE inside an aggregate', what: 'Counts or sums only the rows that match, so one query answers several questions side by side.', code: "SELECT SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS delivered,\n       SUM(CASE WHEN status = 'delivered' THEN total END)  AS delivered_rev\nFROM orders;" },
       { id: 'case-group', name: 'When CASE needs GROUP BY', what: 'The usual rule: a CASE next to an aggregate is a category, so GROUP BY it. A CASE inside the aggregate needs no GROUP BY; neither does a CASE with no aggregate at all.' },
     ] },
@@ -738,7 +739,7 @@ function renderSession() {
   if (current === 'ref') { document.getElementById('session').innerHTML = '<p class="where">Cheat sheet</p>' + refHtml(); applyHighlights(); return; }
   const s = SESSIONS.find(x => x.n === current);
   document.getElementById('session').innerHTML = `<p class="where">Session ${s.n}</p><h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
-    + s.groups.map(g => `<h2>${esc(g.name)}</h2>${g.flow ? `<p class="flow">${g.flow.map(f => `<span>${f}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div>`).join('')
+    + s.groups.map(g => `<h2>${esc(g.name)}</h2>${g.written ? `<p class="flow-label">You write it</p><p class="flow">${g.written.map(f => `<span>${f}</span>`).join('<em>·</em>')}</p>` : ''}${g.flow ? `<p class="flow-label">SQL runs it</p><p class="flow">${g.flow.map(f => `<span>${f}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div>`).join('')
     + `<h2>Practice</h2><p class="group-note">Try each one in DB Browser first, then open the answer.</p><div class="practice">${practiceHtml(s)}</div>`
     + `<h2>To remember</h2><ul class="recap" data-hl="sql|s${s.n}|recap">${s.recap.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`;
   paintNotes();
