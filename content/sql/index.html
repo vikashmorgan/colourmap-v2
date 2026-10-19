@@ -177,6 +177,17 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .nb-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; padding: 12px 10px 12px 16px; background: var(--nb-top); border-bottom: 1px solid var(--nb-rule); }
   .nb-title { font-size: 20px; font-weight: 600; color: var(--accent); margin-right: auto; }
   .nb-close { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--nb-rule); background: var(--card); color: var(--ink); font-size: 17px; cursor: pointer; }
+  /* Query order, folded at the top of the notepad; open or closed is remembered. */
+  .nb-order { border-bottom: 1px solid var(--nb-rule); }
+  .nb-order > summary { cursor: pointer; list-style: none; display: flex; align-items: center; padding: 10px 16px; font: 600 14px system-ui, sans-serif; color: var(--accent); }
+  .nb-order > summary::-webkit-details-marker { display: none; }
+  .nb-order > summary::after { content: '▸ open'; margin-left: auto; font: 600 12px system-ui, sans-serif; color: var(--soft); }
+  .nb-order[open] > summary::after { content: '× close'; }
+  .nb-order-body { padding: 0 16px 12px; }
+  .nb-order-body .flow-label { margin-top: 4px; }
+  .nb-order-body .flow { gap: 4px; font-size: 12px; }
+  .nb-order-body .flow span { padding: 2px 7px; }
+  .nb-order-why { margin: 8px 0 0; color: var(--soft); font: 13.5px/1.45 system-ui, sans-serif; }
   .nb-write { display: grid; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--nb-rule); }
   .about { display: flex; align-items: center; gap: 8px; font: 14px system-ui, sans-serif; color: var(--soft); min-width: 0; }
   .about select { flex: 1; min-width: 0; width: 100%; min-height: 34px; font: 13px ui-monospace, Consolas, monospace; color: var(--ink); background: var(--card); border: 1px solid var(--nb-rule); border-radius: 8px; padding: 3px 6px; }
@@ -218,6 +229,16 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
 <button type="button" class="nb-dot" id="nb-dot" aria-expanded="false" aria-controls="notebook" title="Notepad"></button>
 <aside class="notebook" id="notebook" aria-label="Notepad" hidden>
   <div class="nb-top"><span class="nb-title">Notepad</span><button type="button" class="nb-close" id="nb-close" aria-label="Close the notepad">×</button></div>
+  <details class="nb-order" id="nb-order">
+    <summary>Query order</summary>
+    <div class="nb-order-body">
+      <p class="flow-label">You write it</p>
+      <p class="flow"><span>SELECT</span><em>·</em><span>FROM</span><em>·</em><span>WHERE</span><em>·</em><span>GROUP BY</span><em>·</em><span>HAVING</span><em>·</em><span>ORDER BY</span><em>·</em><span>LIMIT</span></p>
+      <p class="flow-label">SQL runs it</p>
+      <p class="flow"><span>FROM</span><em>→</em><span>WHERE</span><em>→</em><span>GROUP BY</span><em>→</em><span>HAVING</span><em>→</em><span>SELECT</span><em>→</em><span>ORDER BY</span><em>→</em><span>LIMIT</span></p>
+      <p class="nb-order-why">So WHERE cannot use COUNT or SUM (use HAVING), and a name made with AS in SELECT is not ready in WHERE.</p>
+    </div>
+  </details>
   <div class="nb-write">
     <label class="about"><span>About</span><select id="nb-about" aria-label="What this note is about"></select></label>
     <div class="kinds" role="radiogroup" aria-label="Kind of note">
@@ -757,6 +778,9 @@ document.getElementById('sessions').addEventListener('click', e => {
 });
 
 /* ---------- The notepad on the right ---------- */
+const nbOrder = document.getElementById('nb-order');
+try { nbOrder.open = localStorage.getItem('sql-order-open') === '1'; } catch (e) {}
+nbOrder.addEventListener('toggle', () => { try { localStorage.setItem('sql-order-open', nbOrder.open ? '1' : ''); } catch (e) {} });
 const notebook = document.getElementById('notebook');
 const nbDot = document.getElementById('nb-dot');
 const nbAbout = document.getElementById('nb-about');
