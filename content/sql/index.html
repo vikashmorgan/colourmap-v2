@@ -37,7 +37,20 @@
   .lede { margin: 6px 0 0; color: var(--soft); }
 
   /* The three sessions: one shown at a time. */
-  .sessions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 22px 0 6px; }
+  .sessions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, .8fr); gap: 8px; margin: 22px 0 6px; }
+  .sess.ref { align-content: start; border-style: dashed; }
+  .sess.ref[aria-selected="true"] { border-style: solid; }
+  /* Cheat sheet: one line per term, found by typing. */
+  .ref-search { position: sticky; top: 8px; z-index: 2; width: 100%; margin: 18px 0 0; min-height: 42px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 15px system-ui, sans-serif; box-shadow: 0 6px 18px color-mix(in srgb, var(--paper) 80%, transparent); }
+  .ref-search:focus { outline: none; border-color: var(--accent); }
+  .ref-group h2 { margin: 28px 0 6px; }
+  .ref { margin: 0; display: grid; }
+  .ref-row { display: grid; grid-template-columns: minmax(0, 15em) minmax(0, 1fr); gap: 4px 16px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .ref-row dt { font: 600 14px/1.5 ui-monospace, 'Cascadia Code', Consolas, monospace; overflow-wrap: anywhere; }
+  .ref-row dd { margin: 0; display: grid; gap: 6px; font-size: 15px; }
+  .ref-row dd pre { font-size: 13px; padding: 6px 10px; }
+  .ref-go { justify-self: start; padding: 0; border: 0; background: none; color: var(--soft); font: 600 12px system-ui, sans-serif; cursor: pointer; min-height: 24px; }
+  .ref-go:hover { color: var(--accent); }
   .sess { display: grid; gap: 6px; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); cursor: pointer; font: 14px/1.3 system-ui, sans-serif; }
   .sess b { font: 600 12px ui-monospace, Consolas, monospace; color: var(--accent); }
   .sess[aria-selected="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
@@ -146,6 +159,7 @@
   @media (max-width: 560px) {
     h1 { font-size: 26px; }
     .sessions { grid-template-columns: minmax(0, 1fr); }
+    .ref-row { grid-template-columns: minmax(0, 1fr); }
     .sess { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 10px; }
     .sess .bar { grid-column: 1 / -1; }
   }
@@ -482,10 +496,103 @@ function practiceHtml(s) {
         ${p.n > p.rows.length ? `<span class="more-rows">… and ${p.n - p.rows.length} more</span>` : ''}</div></details>`;
   }).join('');
 }
+/* ---------- Cheat sheet: every keyword and function from sessions 1 to 3 ----------
+ * Asked for 2026-10-19: "a part where I have all the functions or terms to use in SQL,
+ * so I can check it while in class". In the order you write a query; each line links to its card. */
+const REF = [
+  { name: 'The skeleton', items: [
+    ['SELECT … FROM', 'Pick columns from a table. Every query starts here.', 'SELECT first_name, email\nFROM customers;', 1, 'select'],
+    ['*', 'All the columns.', 'SELECT * FROM orders;', 1, 'select'],
+    ['AS', 'Rename a column in the result (quotes allow spaces), or give a table a short name.', 'SELECT price AS "Price (EUR)"', 1, 'as'],
+    ['DISTINCT', 'Each different value once.', 'SELECT DISTINCT country FROM customers;', 1, 'distinct'],
+    ['LIMIT n', 'Only the first n rows. With ORDER BY it makes a "top n".', 'SELECT * FROM orders LIMIT 10;', 1, 'limit'],
+    ['Written order', 'SELECT · FROM · JOIN · WHERE · GROUP BY · HAVING · ORDER BY · LIMIT', '', 2, 'anatomy'],
+    ['Run order', 'FROM · JOIN · WHERE · GROUP BY · HAVING · SELECT · ORDER BY · LIMIT. So no aggregate in WHERE, and no SELECT alias in WHERE.', '', 1, 'order'],
+    ['-- comment', 'Everything after -- on a line is ignored. Used for the quality log.', '-- ISSUE: status has 8 spellings', 2, 'quality-log'],
+  ] },
+  { name: 'Keeping rows: WHERE', items: [
+    ['WHERE', 'Keep only the rows where the condition is true. Runs before grouping.', "WHERE status = 'delivered'", 2, 'where'],
+    ['=  !=  <>  <  >  <=  >=', 'Comparisons. != and <> both mean "not equal". Text goes in single quotes.', 'WHERE total >= 100', 2, 'where'],
+    ['AND  OR  NOT', 'Combine conditions. AND goes before OR, so put OR in parentheses.', "WHERE (status = 'delivered' OR status = 'shipped')\n  AND total > 500", 2, 'and-or'],
+    ['BETWEEN a AND b', 'In a range, both ends included. Works on numbers and on dates written YYYY-MM-DD.', "WHERE order_date BETWEEN '2024-01-01' AND '2024-03-31'", 2, 'between-in'],
+    ['IN (…)  NOT IN (…)', 'Equal to one of a list (or none of it).', "WHERE status IN ('delivered', 'shipped')", 2, 'between-in'],
+    ["LIKE  %  _", 'Text pattern: % is any run of characters (even none), _ exactly one.', "WHERE first_name LIKE 'M%'   -- starts with M\nWHERE city LIKE '%an%'       -- contains an", 2, 'like'],
+  ] },
+  { name: 'NULL, the unknown', items: [
+    ['IS NULL  IS NOT NULL', 'The only way to test for NULL. "= NULL" is never true.', 'WHERE discount IS NULL', 2, 'is-null'],
+    ['COALESCE(x, fallback)', 'The first value that is not NULL. Turns NULL into 0 before a calculation.', 'total - COALESCE(discount, 0) AS net', 2, 'coalesce'],
+    ['NULL in maths', 'Anything + NULL is NULL. Aggregates skip NULLs, so AVG is not always SUM / COUNT(*).', '', 2, 'coalesce'],
+  ] },
+  { name: 'Sorting and summarising', items: [
+    ['ORDER BY … ASC | DESC', 'Sort the result. ASC (small first) is the default; a second column breaks ties.', 'ORDER BY total DESC, order_date ASC', 2, 'order-by'],
+    ['COUNT(*)', 'Number of rows.', 'SELECT COUNT(*) FROM orders;', 2, 'aggregates'],
+    ['COUNT(col)', 'Number of values that are not NULL in that column.', '', 2, 'aggregates'],
+    ['COUNT(DISTINCT col)', 'Number of different values.', 'COUNT(DISTINCT customer_id) AS n_buyers', 2, 'aggregates'],
+    ['SUM  AVG  MIN  MAX', 'Total, mean, smallest, largest of a column.', 'SELECT SUM(total), AVG(total), MIN(total), MAX(total)\nFROM orders;', 2, 'aggregates'],
+    ['ROUND(x, n)', 'Round to n decimals (no n: a whole number).', 'ROUND(AVG(total), 2)', 2, 'aggregates'],
+    ['GROUP BY', 'One row per group; the aggregates are computed per group. Every plain column in SELECT goes in GROUP BY.', 'SELECT shipping_country, SUM(total)\nFROM orders\nGROUP BY shipping_country;', 2, 'group-by'],
+    ['HAVING', 'Filters groups after GROUP BY, so it can use COUNT, SUM… WHERE filters rows before and cannot.', 'GROUP BY shipping_country\nHAVING COUNT(*) > 50', 2, 'having'],
+    ["strftime('%Y-%m', date)", "Pull a part out of a date: %Y year, %m month, %d day. Group by it for a time series.", "SELECT strftime('%Y-%m', order_date) AS ym, COUNT(*)\nFROM orders\nGROUP BY ym;", 2, 'group-month'],
+  ] },
+  { name: 'CASE: logic inside a query', items: [
+    ['CASE WHEN … THEN … ELSE … END', 'An if/else that makes a new column. The first true WHEN wins; no ELSE gives NULL.', "CASE WHEN total < 100 THEN 'small'\n     WHEN total < 500 THEN 'medium'\n     ELSE 'large' END AS size", 2, 'case'],
+    ['SUM(CASE WHEN … THEN 1 ELSE 0 END)', 'Counts the rows that match, next to other counts, in one pass.', "SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS delivered", 2, 'case-agg'],
+    ['CASE and GROUP BY', 'A CASE next to an aggregate is a category, so GROUP BY it. A CASE inside the aggregate needs none.', '', 2, 'case-group'],
+    ['100.0 * … / COUNT(*)', 'A percentage. 100.0, not 100, so the division keeps its decimals.', 'ROUND(100.0 * SUM(CASE WHEN discount IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1)', 2, 'null-rate'],
+  ] },
+  { name: 'Text and cleaning', items: [
+    ['LOWER(x)  UPPER(x)', 'All small or all capital letters, so France, france and FRANCE match.', '', 2, 'clean-strings'],
+    ['TRIM(x)', 'Removes spaces at the start and the end.', 'LOWER(TRIM(country))', 2, 'clean-strings'],
+    ['LENGTH(x)', 'Number of characters. Shows hidden spaces: "Italy " is 6.', 'SELECT country, LENGTH(country) FROM customers;', 2, 'string-tools'],
+    ['SUBSTR(x, start, length)', 'Cut text by position, counting from 1.', "SUBSTR(order_date, 1, 7)   -- '2024-01'", 2, 'string-tools'],
+    ['||', 'Joins text together.', "first_name || ' ' || last_name AS customer", 2, 'string-tools'],
+    ['Find duplicates', 'Group by what should be unique, keep groups with more than one row.', 'SELECT email, COUNT(*)\nFROM customers\nGROUP BY email\nHAVING COUNT(*) > 1;', 2, 'duplicates'],
+    ['Quality log', 'ISSUE · EVIDENCE · DECISION · RISK, written as comments above the cleaning query. Clean in the query, never in the source.', '', 2, 'quality-log'],
+  ] },
+  { name: 'Tables and keys', items: [
+    ['Table · row · column · schema', 'A table holds one kind of thing; a row is one of them; a column one property; the schema is the list of tables and columns.', '', 1, 'tables'],
+    ['Primary key', 'The column that identifies each row: never repeated, never empty.', 'customers.customer_id', 1, 'pk'],
+    ['Foreign key', 'A column pointing to the primary key of another table. What a JOIN follows.', 'orders.customer_id  →  customers.customer_id', 1, 'fk'],
+  ] },
+  { name: 'Joins', items: [
+    ['JOIN … ON', 'INNER JOIN: put two tables side by side, keeping only rows that match on both sides.', 'FROM orders o\nJOIN customers c ON o.customer_id = c.customer_id', 3, 'inner'],
+    ['ON a.key = b.key', 'How rows are matched: usually foreign key = primary key. Several conditions join with AND.', '', 3, 'on'],
+    ['alias.column', 'Short table names (o, c, oi, p). Write every column with its prefix: a name found in both tables is an error without it.', 'SELECT o.order_id, c.country', 3, 'aliases'],
+    ['LEFT JOIN', 'Keeps every row of the left table; where nothing matches, the right side is NULL.', 'FROM customers c\nLEFT JOIN orders o ON c.customer_id = o.customer_id', 3, 'left'],
+    ['LEFT JOIN … WHERE b.id IS NULL', 'Finds what is missing: customers who never ordered.', 'WHERE o.order_id IS NULL', 3, 'missing'],
+    ['RIGHT JOIN  FULL OUTER JOIN', 'RIGHT keeps the whole right table; FULL keeps both sides. Rarely needed: INNER or LEFT do most work.', '', 3, 'right-full'],
+    ['ON vs WHERE on a LEFT JOIN', 'A condition in ON filters the match; the same one in WHERE filters the result and can turn it into an INNER JOIN.', '', 3, 'on-vs-where'],
+    ['Cartesian product', 'Forget the ON and every row pairs with every row. It runs and looks plausible: always write the ON.', 'FROM orders, customers   -- no ON!', 3, 'cartesian'],
+    ['Three tables', 'Chain JOINs, one ON each.', 'FROM order_items oi\nJOIN products p ON oi.product_id = p.product_id\nJOIN orders o   ON oi.order_id   = o.order_id', 3, 'three'],
+    ['GROUP BY the key', 'Per customer totals: GROUP BY customer_id, not the name (two people can share a name).', '', 3, 'group-key'],
+  ] },
+  { name: 'Subqueries and CTEs', items: [
+    ['(SELECT …) as a value', 'A query that returns one value can stand where a number could.', 'WHERE total > (SELECT AVG(total) FROM orders)', 3, 'scalar'],
+    ['FROM (SELECT …) AS name', 'A query read as a table. It needs a name.', 'FROM (SELECT … GROUP BY ym) AS monthly', 3, 'derived'],
+    ['WITH name AS (…)', 'CTE: name a step first, then use it like a table below. Reads top to bottom.', 'WITH monthly AS (\n  SELECT strftime(\'%Y-%m\', order_date) AS ym, SUM(total) AS rev\n  FROM orders GROUP BY ym\n)\nSELECT * FROM monthly;', 3, 'cte'],
+    ['WITH a AS (…), b AS (…)', 'Several steps, separated by commas; each can use the ones before it.', '', 3, 'chain'],
+  ] },
+];
+function refHtml() {
+  return `<h1>Cheat sheet</h1><p class="lede">Every keyword and function from sessions 1 to 3, in the order you write a query. The session tag opens its card.</p>
+    <input type="search" class="ref-search" id="ref-q" placeholder="Find: join, null, count, %, date…" aria-label="Find a keyword or function" autocomplete="off">
+    <div id="ref-list">${REF.map(g => `<section class="ref-group"><h2>${esc(g.name)}</h2><dl class="ref">${g.items.map(([t, d, ex, n, id]) => `<div class="ref-row" data-text="${esc(`${t} ${d} ${ex}`.toLowerCase())}">
+      <dt>${sqlHtml(t)}</dt><dd><span>${esc(d)}</span>${ex ? `<pre>${sqlHtml(ex)}</pre>` : ''}<button type="button" class="ref-go" data-go="${esc(cardKey(n, id))}">Session ${n} ›</button></dd></div>`).join('')}</dl></section>`).join('')}</div>
+    <p class="empty" id="ref-none" hidden>Nothing matches. Try a shorter word.</p>`;
+}
+function filterRef(q) {
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  for (const r of document.querySelectorAll('.ref-row')) r.hidden = !words.every(w => r.dataset.text.includes(w));
+  for (const g of document.querySelectorAll('.ref-group')) g.hidden = !g.querySelector('.ref-row:not([hidden])');
+  document.getElementById('ref-none').hidden = !!document.querySelector('.ref-row:not([hidden])');
+}
+document.getElementById('session').addEventListener('input', e => { if (e.target.id === 'ref-q') filterRef(e.target.value); });
+document.getElementById('session').addEventListener('click', e => { const go = e.target.closest('.ref-go'); if (go) goTo(go.dataset.go); });
 let current = 1;
-try { current = Number(localStorage.getItem('sql-session')) || 1; } catch (e) {}
+try { const saved = localStorage.getItem('sql-session'); current = saved === 'ref' ? 'ref' : Number(saved) || 1; } catch (e) {}
 function renderTabs() {
-  document.getElementById('sessions').innerHTML = SESSIONS.map(s => `<button type="button" class="sess" role="tab" data-s="${s.n}" aria-selected="${s.n === current}"><b>Session ${s.n}</b><span>${esc(s.short)}</span><span class="bar"><i></i></span></button>`).join('');
+  document.getElementById('sessions').innerHTML = SESSIONS.map(s => `<button type="button" class="sess" role="tab" data-s="${s.n}" aria-selected="${s.n === current}"><b>Session ${s.n}</b><span>${esc(s.short)}</span><span class="bar"><i></i></span></button>`).join('')
+    + `<button type="button" class="sess ref" role="tab" data-s="ref" aria-selected="${current === 'ref'}"><b>Cheat sheet</b><span>Every term, findable</span></button>`;
   paintBars();
 }
 function paintBars() {
@@ -497,6 +604,7 @@ function paintBars() {
   }
 }
 function renderSession() {
+  if (current === 'ref') { document.getElementById('session').innerHTML = refHtml(); return; }
   const s = SESSIONS.find(x => x.n === current);
   document.getElementById('session').innerHTML = `<h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
     + s.groups.map(g => `<h2>${esc(g.name)}</h2>${g.flow ? `<p class="flow">${g.flow.map(f => `<span>${f}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div>`).join('')
@@ -507,7 +615,7 @@ function renderSession() {
 document.getElementById('sessions').addEventListener('click', e => {
   const b = e.target.closest('.sess');
   if (!b) return;
-  current = Number(b.dataset.s);
+  current = b.dataset.s === 'ref' ? 'ref' : Number(b.dataset.s);
   try { localStorage.setItem('sql-session', current); } catch (err) {}
   for (const x of document.querySelectorAll('.sess')) x.setAttribute('aria-selected', String(x === b));
   renderSession();
@@ -534,7 +642,8 @@ function currentSpot() {
     const r = c.getBoundingClientRect();
     if (r.bottom > 80 && r.top < innerHeight * 0.6) { best = c; break; }
   }
-  return best ? best.dataset.key : `sql|s${current}`;
+  if (best) return best.dataset.key;
+  return current === 'ref' ? 'sql|notebook' : `sql|s${current}`;
 }
 function followSpot() { if (!nbPinned) nbAbout.value = currentSpot(); if (!notebook.hidden) renderNotebook(); }
 let scrollTimer = 0;
