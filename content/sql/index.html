@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SQL · School</title>
+<script>
+  // Day (beige) or night, one choice for every School page, remembered on this device. Day by default.
+  try { document.documentElement.dataset.theme = localStorage.getItem('school-theme') || 'day'; } catch (e) {}
+</script>
+<style>
+  /* School's paper: beige by day, warm dark by night. Kept sober on purpose: one session at a time. */
+  :root, [data-theme="day"] {
+    --paper: #f7f3ea; --card: #fbf8f1; --ink: #2b2620; --soft: #6f665a; --line: #e3dccd;
+    --accent: #8a5a2b; --code: #efe7d6;
+    --got: #2f7a4f; --mid: #b07a12; --late: #8a5a9e; --q: #985a22; --c: #357a4f;
+    --nb-bg: #efe5d2; --nb-top: #e5d6b9; --nb-rule: #d6c3a0;
+  }
+  [data-theme="night"] {
+    --paper: #191714; --card: #201d19; --ink: #ece6da; --soft: #a49b8d; --line: #34302a;
+    --accent: #d9a46a; --code: #15130f;
+    --got: #7cc49a; --mid: #e0b45a; --late: #c39be0; --q: #e0a06a; --c: #86c29f;
+    --nb-bg: #221c15; --nb-top: #2c241a; --nb-rule: #45392a;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 Georgia, 'Times New Roman', serif; }
+  button, select, textarea { font-family: system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 18px 90px; }
+  .topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .back { font: 600 14px system-ui, sans-serif; color: var(--accent); text-decoration: none; }
+  .theme { font: 600 14px system-ui, sans-serif; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; min-height: 36px; cursor: pointer; }
+  .theme:hover { border-color: var(--accent); }
+  .course { margin: 0; color: var(--soft); font: 13px/1.4 system-ui, sans-serif; letter-spacing: .02em; }
+  h1 { font-size: 32px; font-weight: 600; margin: 26px 0 0; line-height: 1.2; }
+  .lede { margin: 6px 0 0; color: var(--soft); }
+
+  /* The three sessions: one shown at a time. */
+  .sessions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 22px 0 6px; }
+  .sess { display: grid; gap: 6px; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); cursor: pointer; font: 14px/1.3 system-ui, sans-serif; }
+  .sess b { font: 600 12px ui-monospace, Consolas, monospace; color: var(--accent); }
+  .sess[aria-selected="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .bar { height: 4px; border-radius: 99px; background: var(--line); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--got); width: 0; transition: width .3s; }
+
+  h2 { font-size: 21px; font-weight: 600; margin: 34px 0 10px; }
+  .group-note { margin: -4px 0 12px; color: var(--soft); font-size: 15px; }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font: 600 13px ui-monospace, Consolas, monospace; margin: 4px 0 0; }
+  .flow span { padding: 3px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+  .flow em { color: var(--soft); font-style: normal; }
+
+  /* A card: name, what it does, an example, then one quiet line of controls. */
+  .cards { display: grid; gap: 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 10px; display: grid; gap: 8px; scroll-margin-top: 20px; }
+  .card[data-mark="got"] { border-color: color-mix(in srgb, var(--got) 55%, var(--line)); }
+  .card[data-mark="mid"] { border-color: color-mix(in srgb, var(--mid) 55%, var(--line)); }
+  .card[data-mark="late"] { border-color: color-mix(in srgb, var(--late) 55%, var(--line)); }
+  .card.flash { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+  .card h3 { margin: 0; font-size: 17px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
+  .num { font: 12px ui-monospace, Consolas, monospace; color: var(--soft); flex: none; }
+  .card p { margin: 0; }
+  pre { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--code); font: 13.5px/1.55 ui-monospace, 'Cascadia Code', Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .kw { color: var(--accent); font-weight: 600; }
+  .cm { color: var(--soft); }
+  .watch { font-size: 15px; padding: 7px 11px; border-radius: 8px; background: color-mix(in srgb, var(--q) 9%, transparent); }
+  .watch b { font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--q); margin-right: 6px; }
+  .foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .note-btn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px; min-height: 30px; border-radius: 999px; border: 1px dashed color-mix(in srgb, var(--q) 55%, transparent); background: none; color: var(--ink); opacity: .7; font: 600 12.5px system-ui, sans-serif; cursor: pointer; }
+  .note-btn::before { content: '✎'; color: var(--q); }
+  .note-btn:hover, .note-btn[aria-pressed="true"] { opacity: 1; border-style: solid; }
+  .marks { display: flex; margin-left: auto; }
+  .mark { position: relative; width: 30px; height: 30px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
+  .mark::before { content: ''; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--dot); opacity: .45; }
+  .mark:hover::before { opacity: .9; }
+  .mark[aria-pressed="true"]::before, .mark:active::before { background: var(--dot); opacity: 1; }
+  .mark::after { content: attr(data-label); position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%); white-space: nowrap; font: 600 12px system-ui, sans-serif; padding: 2px 9px; border-radius: 999px; background: var(--dot); color: var(--paper); opacity: 0; pointer-events: none; transition: opacity .15s; }
+  .mark:hover::after, .mark:focus-visible::after { opacity: 1; }
+  .m-got { --dot: var(--got); } .m-mid { --dot: var(--mid); } .m-late { --dot: var(--late); }
+
+  /* Notes: questions and comments */
+  .notes { display: grid; gap: 6px; }
+  .note { --nc: var(--q); border-radius: 8px; padding: 7px 11px; background: color-mix(in srgb, var(--nc) 9%, transparent); display: grid; gap: 3px; font-family: system-ui, sans-serif; font-size: 14.5px; }
+  .note[data-kind="comment"] { --nc: var(--c); }
+  .note-head { display: flex; align-items: center; gap: 8px; }
+  .note-kind { font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--nc); }
+  .note-kind::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--nc); margin-right: 6px; vertical-align: 1px; }
+  .note.done .note-kind::before { background: none; box-shadow: inset 0 0 0 1.5px var(--nc); }
+  .tools { margin-left: auto; display: flex; }
+  .tools button { min-width: 28px; min-height: 28px; border: 0; background: none; color: var(--soft); cursor: pointer; border-radius: 6px; font: 600 13px system-ui, sans-serif; }
+  .tools button.armed { background: var(--late); color: var(--paper); padding: 0 8px; }
+  .note-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .answer { border-left: 3px solid var(--nc); padding-left: 9px; margin-top: 2px; }
+  .read { justify-self: start; min-height: 28px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--nc); background: none; color: var(--ink); font: 600 12px system-ui, sans-serif; cursor: pointer; }
+  .editor { display: grid; gap: 7px; }
+  .editor textarea, .nb-write textarea { width: 100%; font: 15px system-ui, sans-serif; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; resize: vertical; }
+  .kinds, .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+  .kinds button, .acts button { min-height: 32px; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 600 13px system-ui, sans-serif; cursor: pointer; }
+  .kinds button[aria-checked="true"] { background: var(--q); border-color: var(--q); color: var(--paper); }
+  .kinds button[data-kind="comment"][aria-checked="true"] { background: var(--c); border-color: var(--c); }
+  .acts .save { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+  /* Practice: the question first, the answer behind a tap. */
+  .practice { display: grid; gap: 8px; }
+  .pq { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 10px 14px; }
+  .pq > summary { cursor: pointer; list-style: none; display: flex; gap: 10px; align-items: baseline; }
+  .pq > summary::-webkit-details-marker { display: none; }
+  .pq > summary::after { content: 'Answer ▸'; margin-left: auto; font: 600 12.5px system-ui, sans-serif; color: var(--accent); white-space: nowrap; }
+  .pq[open] > summary::after { content: 'Hide ▾'; }
+  .pq[open] > summary { margin-bottom: 10px; }
+  .pq .ans { display: grid; gap: 8px; }
+  .out-head { font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+  .tbl-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; font: 13px ui-monospace, Consolas, monospace; }
+  th, td { text-align: left; padding: 3px 12px 3px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--soft); font-weight: 600; }
+  .null { color: var(--soft); font-style: italic; }
+  .more-rows { font: 12.5px system-ui, sans-serif; color: var(--soft); }
+  .recap { margin: 0; padding-left: 20px; }
+  .recap li { margin: 4px 0; }
+  .sync { margin-top: 36px; color: var(--soft); font: 13px system-ui, sans-serif; }
+
+  /* The notepad on the right: the same dot and paper as Practice. */
+  .nb-dot { position: fixed; z-index: 55; right: 10px; top: 50%; width: 22px; height: 22px; padding: 0; border-radius: 50%; cursor: pointer; border: 2px solid color-mix(in srgb, var(--accent) 70%, transparent); background: var(--nb-bg); }
+  .nb-dot::after { content: ''; position: absolute; inset: -11px; }
+  .nb-dot:hover, .nb-dot[aria-expanded="true"] { border-color: var(--accent); }
+  .nb-dot.has-notes { background: var(--accent); }
+  .notebook { position: fixed; z-index: 60; right: 16px; top: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); overflow: auto; background: var(--nb-bg); border: 1px solid var(--nb-rule); border-radius: 16px; box-shadow: 0 18px 48px rgb(0 0 0 / .3); --line: var(--nb-rule); --card: color-mix(in srgb, var(--nb-bg) 70%, #fff 30%); }
+  [data-theme="night"] .notebook { --card: color-mix(in srgb, var(--nb-bg) 85%, #fff 15%); }
+  .nb-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; padding: 12px 10px 12px 16px; background: var(--nb-top); border-bottom: 1px solid var(--nb-rule); }
+  .nb-title { font-size: 20px; font-weight: 600; color: var(--accent); margin-right: auto; }
+  .nb-close { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--nb-rule); background: var(--card); color: var(--ink); font-size: 17px; cursor: pointer; }
+  .nb-write { display: grid; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--nb-rule); }
+  .about { display: flex; align-items: center; gap: 8px; font: 14px system-ui, sans-serif; color: var(--soft); min-width: 0; }
+  .about select { flex: 1; min-width: 0; width: 100%; min-height: 34px; font: 13px ui-monospace, Consolas, monospace; color: var(--ink); background: var(--card); border: 1px solid var(--nb-rule); border-radius: 8px; padding: 3px 6px; }
+  .nb-write .acts .save { background: var(--accent); border-color: var(--accent); }
+  .saved { margin: 0; min-height: 1.2em; font: 13px system-ui, sans-serif; color: var(--got); }
+  .nb-list { display: grid; gap: 10px; padding: 12px 16px 16px; }
+  .nb-group { display: grid; gap: 6px; padding: 9px 11px; border-radius: 12px; border: 1px solid var(--nb-rule); background: var(--card); }
+  .nb-group.here { border-color: var(--accent); }
+  .nb-go { text-align: left; padding: 0; border: 0; background: none; color: var(--ink); font: 600 14px system-ui, sans-serif; cursor: pointer; min-height: 28px; }
+  .nb-go .t { font: 600 11px ui-monospace, Consolas, monospace; color: var(--nb-bg); background: var(--accent); border-radius: 6px; padding: 1px 6px; margin-right: 6px; }
+  .nb-here { font: 600 12px system-ui, sans-serif; color: var(--accent); margin-left: 6px; }
+  .empty { color: var(--soft); font: 14px system-ui, sans-serif; margin: 0; }
+
+  @media (max-width: 560px) {
+    h1 { font-size: 26px; }
+    .sessions { grid-template-columns: minmax(0, 1fr); }
+    .sess { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 10px; }
+    .sess .bar { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="topline">
+    <a class="back" href="/school">← School</a>
+    <button class="theme" id="theme" type="button"></button>
+  </div>
+  <p class="course">SQL &amp; Business Intelligence · MSE-DIM01-4 · Albert School × Politecnico di Milano</p>
+  <div class="sessions" role="tablist" aria-label="Sessions" id="sessions"></div>
+  <div id="session"></div>
+  <p class="sync" id="sync"></p>
+</main>
+
+<button type="button" class="nb-dot" id="nb-dot" aria-expanded="false" aria-controls="notebook" title="Notepad"></button>
+<aside class="notebook" id="notebook" aria-label="Notepad" hidden>
+  <div class="nb-top"><span class="nb-title">Notepad</span><button type="button" class="nb-close" id="nb-close" aria-label="Close the notepad">×</button></div>
+  <div class="nb-write">
+    <label class="about"><span>About</span><select id="nb-about" aria-label="What this note is about"></select></label>
+    <div class="kinds" role="radiogroup" aria-label="Kind of note">
+      <button type="button" role="radio" data-kind="question" aria-checked="true">Question</button>
+      <button type="button" role="radio" data-kind="comment" aria-checked="false">Comment</button>
+    </div>
+    <textarea id="nb-text" rows="3" maxlength="2000" aria-label="Your note" placeholder="A question, or a note to yourself"></textarea>
+    <div class="acts"><button type="button" class="save" id="nb-save">Save</button></div>
+    <p class="saved" id="nb-saved" role="status"></p>
+  </div>
+  <div class="nb-list" id="nb-list"></div>
+</aside>
+
+<script>
+/* ---------- The course, in plain words ----------
+ * Written from the three session decks; the slides themselves stay private.
+ * Every example runs on the course database, shopstream.db. */
+const SESSIONS = [
+  { n: 1, short: 'Relational databases & SELECT', title: 'Relational databases and the SELECT statement', lede: 'From one big spreadsheet to tables you can ask questions.', groups: [
+    { name: 'The relational model', cards: [
+      { id: 'why', name: 'Why SQL', what: 'Data sitting in a file answers nothing. SQL is how you ask it a question. The whole course is one chain: a business question, a query, a result, a decision.' },
+      { id: 'tables', name: 'Tables, rows, columns, schema', what: 'A table holds one kind of thing (customers). A row is one record (one customer). A column is one attribute (country). The schema is all the tables and how they connect.', watch: 'A database is related tables, not one big sheet: each fact lives once, in the right table.' },
+      { id: 'pk', name: 'Primary key', what: 'The column that identifies each row: one per table, never repeated, never empty.', code: 'customers.customer_id   -- one per customer' },
+      { id: 'fk', name: 'Foreign key', what: 'A column that points to the primary key of another table. That pointer is what links tables, and what a JOIN follows in Session 3.', code: 'orders.customer_id  →  customers.customer_id' },
+      { id: 'shopstream', name: 'ShopStream, the course data', what: 'Four tables: customers (254), orders (801), products (40), order_items (1,956). One customer has many orders; one order has many items; each item is one product.' },
+      { id: 'tool', name: 'DB Browser for SQLite', what: 'SQLite is a database in a single file, with no server. DB Browser opens shopstream.db; you write in the Execute SQL tab and run with Ctrl + Enter. What you learn works in PostgreSQL and others too.' },
+    ] },
+    { name: 'Your first queries', cards: [
+      { id: 'select', name: 'SELECT … FROM', what: 'FROM picks the table, SELECT picks the columns, * means all of them. The answer is a new table; the source is never changed.', code: 'SELECT *\nFROM customers;' },
+      { id: 'as', name: 'Choosing columns, renaming with AS', what: 'Ask only for the columns you need. AS renames a column in the result only; double quotes allow spaces and capitals.', code: 'SELECT first_name AS "Name",\n       email      AS "Contact"\nFROM customers;' },
+      { id: 'distinct', name: 'DISTINCT', what: 'Removes duplicate rows from the result: the unique values of a column.', code: 'SELECT DISTINCT country\nFROM customers;', watch: 'Italy, italy, ITALY and "Italy " come back as four countries. Dirty data: notice it now, clean it later.' },
+      { id: 'limit', name: 'LIMIT', what: 'Returns at most n rows. The polite way to look at a big table.', code: 'SELECT *\nFROM orders\nLIMIT 10;', watch: 'Without ORDER BY, which 10 rows you get is not guaranteed.' },
+    ] },
+    { name: 'How SQL runs', flow: ['FROM', 'WHERE', 'SELECT', 'LIMIT'], cards: [
+      { id: 'order', name: 'Written in one order, run in another', what: 'You type SELECT first, but SQL reads FROM first, filters with WHERE, then builds the SELECT, then applies LIMIT.', watch: 'Because SELECT runs late, an alias made in SELECT is not reliably usable in WHERE (SQLite allows it, PostgreSQL does not): repeat the expression. And an aggregate in WHERE, like COUNT(*) > 5, fails everywhere: that is what HAVING is for.' },
+    ] },
+  ], practice: [
+    ['s1-1', 'List the names of every product.'],
+    ['s1-2', 'List the distinct countries of the customers.'],
+    ['s1-3', 'Show first name and email, labelled "Name" and "Contact".'],
+    ['s1-4', 'Show the first 10 orders.'],
+    ['s1-5', 'List every distinct order status.'],
+    ['s1-6', 'List the distinct product categories.'],
+    ['s1-7', 'Product name and price, the first 15, labelled "Product" and "Price (EUR)".'],
+    ['s1-8', 'List the distinct acquisition channels.'],
+  ], recap: ['A database is related tables, linked by keys.', 'SELECT returns a new table and never changes the source.', 'AS renames, DISTINCT de-duplicates, LIMIT caps.', 'SQL runs FROM → WHERE → SELECT → LIMIT.', 'The dirty country and status values are spotted, and parked for later.'] },
+
+  { n: 2, short: 'Filter, sort, aggregate', title: 'Filtering, sorting and aggregation', lede: 'Making a query answer a real question, then checking you can trust the answer.', groups: [
+    { name: 'The shape of a query', flow: ['FROM', 'WHERE', 'GROUP BY', 'HAVING', 'SELECT', 'ORDER BY', 'LIMIT'], cards: [
+      { id: 'anatomy', name: 'The full skeleton', what: 'Every clause has a place. You rarely need them all, but they always come in this order when written.', code: 'SELECT   columns, aggregates\nFROM     table\nWHERE    row condition\nGROUP BY grouping columns\nHAVING   group condition\nORDER BY sort columns\nLIMIT    n' },
+    ] },
+    { name: 'Keeping rows: WHERE', cards: [
+      { id: 'where', name: 'WHERE and comparisons', what: 'Keeps only the rows where the condition is true. = != < > <= >= work on numbers, text and dates.', code: "SELECT * FROM orders\nWHERE total > 500;", watch: "In SQLite dates are text. The 'YYYY-MM-DD' format sorts and compares correctly." },
+      { id: 'between-in', name: 'BETWEEN, IN, NOT IN', what: 'BETWEEN a AND b includes both ends. IN (…) replaces a chain of ORs. NOT IN keeps everything else.', code: "WHERE order_date BETWEEN '2024-01-01' AND '2024-03-31'\nWHERE status IN ('pending', 'returned')", watch: 'NOT IN with a NULL in the list returns no rows at all.' },
+      { id: 'like', name: 'LIKE', what: 'Pattern matching on text: % is any run of characters (even none), _ is exactly one.', code: "WHERE first_name LIKE 'M%'   -- starts with M\nWHERE city LIKE '%an%'       -- contains an" },
+      { id: 'and-or', name: 'AND, OR and parentheses', what: 'AND is evaluated before OR, like × before +. Parentheses say what you mean.', code: "WHERE (status = 'delivered' OR status = 'shipped')\n  AND total > 500", watch: 'Without the parentheses every delivered order is kept whatever its total, and no error tells you.' },
+    ] },
+    { name: 'NULL, the unknown', cards: [
+      { id: 'is-null', name: 'IS NULL', what: 'NULL means unknown: not zero, not empty. Nothing equals NULL, not even NULL, so = NULL matches nothing.', code: 'WHERE discount IS NULL\nWHERE discount IS NOT NULL', watch: '60% of orders have no discount. WHERE discount = NULL quietly returns 0 rows.' },
+      { id: 'coalesce', name: 'COALESCE and NULL in arithmetic', what: 'Any calculation with NULL gives NULL. COALESCE(x, fallback) gives the first value that is not NULL.', code: 'SELECT total - COALESCE(discount, 0) AS net\nFROM orders;', watch: 'Aggregates skip NULLs: AVG ignores them, so AVG is not always SUM / COUNT(*). Decide per column whether NULL really means zero.' },
+    ] },
+    { name: 'Sorting and summarising', cards: [
+      { id: 'order-by', name: 'ORDER BY', what: 'Sorts the result, ascending by default, DESC to reverse. A second key breaks ties. With LIMIT it makes every "top N".', code: 'SELECT customer_id, order_date, total\nFROM orders\nORDER BY total DESC, order_date ASC;' },
+      { id: 'aggregates', name: 'Aggregates', what: 'COUNT, SUM, AVG, MIN, MAX collapse many rows into one value.', code: 'SELECT COUNT(*)                    AS n_orders,\n       COUNT(DISTINCT customer_id) AS n_buyers,\n       ROUND(AVG(total), 2)        AS avg_order\nFROM orders;', watch: 'COUNT(*) counts rows; COUNT(DISTINCT col) counts different values. Here 801 orders, 245 buyers.' },
+      { id: 'group-by', name: 'GROUP BY', what: 'One output row per group: GROUP BY sets the grain.', code: 'SELECT shipping_country,\n       COUNT(*)          AS n_orders,\n       ROUND(SUM(total)) AS revenue\nFROM orders\nGROUP BY shipping_country;', watch: 'Every column in SELECT that is not inside an aggregate must be in GROUP BY.' },
+      { id: 'group-month', name: 'Grouping by month', what: 'strftime pulls the month out of a date, and grouping by it gives a time series.', code: "SELECT strftime('%Y-%m', order_date) AS ym,\n       COUNT(*) AS n_orders\nFROM orders\nGROUP BY ym\nORDER BY ym;" },
+      { id: 'having', name: 'HAVING vs WHERE', what: 'WHERE filters rows before grouping and cannot use COUNT or SUM. HAVING filters groups after grouping and can.', code: "SELECT shipping_country, COUNT(*) AS n\nFROM orders\nWHERE status != 'cancelled'\nGROUP BY shipping_country\nHAVING COUNT(*) > 50;" },
+    ] },
+    { name: 'CASE: logic inside a query', cards: [
+      { id: 'case', name: 'CASE', what: 'Gives one value per row from conditions: the first WHEN that matches wins. It works in SELECT, WHERE, ORDER BY and GROUP BY.', code: "CASE WHEN total < 100 THEN 'small'\n     WHEN total < 500 THEN 'medium'\n     ELSE 'large'\nEND AS size", watch: 'Without ELSE, unmatched rows get NULL. Put the narrowest condition first.' },
+      { id: 'case-agg', name: 'CASE inside an aggregate', what: 'Counts or sums only the rows that match, so one query answers several questions side by side.', code: "SELECT SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS delivered,\n       SUM(CASE WHEN status = 'delivered' THEN total END)  AS delivered_rev\nFROM orders;" },
+      { id: 'case-group', name: 'When CASE needs GROUP BY', what: 'The usual rule: a CASE next to an aggregate is a category, so GROUP BY it. A CASE inside the aggregate needs no GROUP BY; neither does a CASE with no aggregate at all.' },
+    ] },
+    { name: 'Data quality', cards: [
+      { id: 'null-rate', name: 'Measuring NULLs', what: 'The share of missing values, column by column: the start of every audit.', code: 'SELECT ROUND(100.0 * SUM(CASE WHEN discount IS NULL\n                              THEN 1 ELSE 0 END) / COUNT(*), 1) AS null_pct\nFROM orders;', watch: 'Same tool, opposite decisions: a NULL discount means no discount (use 0), a NULL line_total is missing data.' },
+      { id: 'duplicates', name: 'Finding duplicates', what: 'Group by the value that should be unique and keep the groups with more than one row.', code: 'SELECT email, COUNT(*) AS n_accounts\nFROM customers\nGROUP BY email\nHAVING COUNT(*) > 1;', watch: 'A duplicate is a candidate, not a verdict: confirm with a second field before merging.' },
+      { id: 'clean-strings', name: 'LOWER, TRIM, and a CASE map', what: 'LOWER(TRIM(x)) folds case and edge spaces (countries: 20 values become 8). Only an explicit CASE map knows that uk and united kingdom are the same.', watch: 'Clean inside the query, never by editing the source: that keeps the audit trail.' },
+      { id: 'string-tools', name: 'More string tools', what: 'LENGTH shows hidden spaces, || joins text, SUBSTR cuts text by position, LIKE catches spelling variants.', code: "first_name || ' ' || last_name\nSUBSTR(order_date, 1, 7)   -- '2024-01'\nstatus LIKE 'cancel%'" },
+      { id: 'quality-log', name: 'The quality log', what: 'Each cleaning step carries a comment: issue, evidence, decision, risk. A SQL script is documentation too, and this is section 1 of the project.', code: '-- ISSUE:    status has 8 spellings for 5 statuses\n-- EVIDENCE: COUNT(DISTINCT status) = 8\n-- DECISION: LOWER(TRIM()), canceled → cancelled\n-- RISK:     a new spelling would slip through' },
+    ] },
+  ], practice: [
+    ['s2-1', 'How many orders were placed in Q1 2024 with a total above 100?'],
+    ['s2-2', 'Average, minimum and maximum order total.'],
+    ['s2-3', 'The top 5 shipping countries by revenue.'],
+    ['s2-4', 'Orders per status, the most frequent first.'],
+    ['s2-5', 'Months with more than 35 orders, busiest first.'],
+    ['s2-6', 'Bucket orders into small, medium and large with CASE, and count each.'],
+    ['s2-a1', 'Audit: the NULL rate of the discount.'],
+    ['s2-a1b', 'Audit: the NULL rates of customers.country and customers.city.'],
+    ['s2-a2', 'Audit: every email linked to more than one account.'],
+    ['s2-a3', 'Audit: how many country values before and after LOWER(TRIM())?'],
+    ['s2-a3b', 'Audit: the countries after LOWER(TRIM()). Which still need a mapping?'],
+    ['s2-a4', 'Audit: a cleaning CTE that brings status down to its 5 real values, with a quality-log comment.'],
+  ], recap: ['WHERE filters rows, HAVING filters groups.', 'NULL needs IS NULL and COALESCE: nothing equals it, and it spreads through arithmetic.', 'CASE builds categories and powers every cleaning query.', 'Aggregates collapse rows; GROUP BY sets the grain.', 'Audit before you trust: NULL rate, duplicate keys, DISTINCT on dirty columns.', 'Clean in the query, and log the decision.'] },
+
+  { n: 3, short: 'Joins, subqueries, CTEs', title: 'Joins, subqueries and CTEs', lede: 'Bringing tables back together, and building multi-step queries that stay readable.', groups: [
+    { name: 'Joins', cards: [
+      { id: 'why-join', name: 'Why join', what: 'Names live in customers, amounts in orders. One table alone cannot say "revenue by customer"; a join puts the pieces side by side.' },
+      { id: 'on', name: 'The ON condition', what: 'A join follows a foreign key to its primary key. ON says exactly how the rows line up.', code: 'orders.customer_id = customers.customer_id' },
+      { id: 'inner', name: 'INNER JOIN', what: 'Keeps only the rows that match on both sides. JOIN alone means INNER.', code: "SELECT o.order_id,\n       c.first_name || ' ' || c.last_name AS customer,\n       o.total\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id;", watch: '792 of 801 orders come back: 9 orders point to customers that do not exist, and INNER JOIN drops them without a word.' },
+      { id: 'aliases', name: 'Table aliases, qualified columns', what: 'Give each table a short alias (o, c, oi, p) and write every column as alias.column.', watch: 'A column name that exists in both tables is an error without its prefix. Qualify everything, even when it is not ambiguous.' },
+      { id: 'left', name: 'LEFT JOIN', what: 'Keeps every row of the left table; where nothing matches, the right side is NULL. The default for analysis: keep the base, enrich where you can.', code: 'SELECT o.order_id, c.first_name\nFROM orders o\nLEFT JOIN customers c ON o.customer_id = c.customer_id;', watch: 'Which join you use is a business decision: only valid orders (INNER) or all of them (LEFT)?' },
+      { id: 'missing', name: 'Finding what is missing', what: 'LEFT JOIN, then keep the rows where the right side IS NULL: exactly the rows with no match. Customers who never ordered, products never sold.', code: 'SELECT c.first_name, c.country\nFROM customers c\nLEFT JOIN orders o ON c.customer_id = o.customer_id\nWHERE o.order_id IS NULL;' },
+      { id: 'right-full', name: 'RIGHT and FULL OUTER JOIN', what: 'RIGHT keeps the whole right table (a LEFT JOIN with the tables swapped). FULL keeps both sides, for reconciling two lists. Nearly every analysis uses INNER or LEFT.' },
+      { id: 'on-vs-where', name: 'More than one condition in ON', what: 'ON takes any true/false condition, combined with AND.', code: 'JOIN b ON a.customer_id = b.customer_id\n      AND a.year        = b.year', watch: 'On a LEFT JOIN, a condition in ON filters the match, but the same condition in WHERE filters the result and can turn it back into an INNER JOIN.' },
+      { id: 'cartesian', name: 'The Cartesian product', what: 'Forget ON and every row is paired with every row: 801 orders × 254 customers = 203,454 rows of nonsense.', code: 'SELECT *\nFROM orders, customers;   -- no ON!', watch: 'It runs, returns a number and looks plausible. Always write the ON.' },
+      { id: 'three', name: 'Three tables', what: 'Chain the joins, one ON per link.', code: 'SELECT p.category, ROUND(SUM(oi.line_total)) AS revenue\nFROM order_items oi\nJOIN products p ON oi.product_id = p.product_id\nJOIN orders   o ON oi.order_id   = o.order_id\nGROUP BY p.category\nORDER BY revenue DESC;' },
+      { id: 'group-key', name: 'Group by the key, not the name', what: 'Per-customer totals are grouped by customer_id: two different people can share a name.' },
+    ] },
+    { name: 'Subqueries and CTEs', cards: [
+      { id: 'scalar', name: 'A subquery as a value', what: 'A SELECT that returns one value can stand wherever a number could. It is computed fresh, so it updates with the data.', code: 'SELECT order_id, total\nFROM orders\nWHERE total > (SELECT AVG(total) FROM orders);' },
+      { id: 'derived', name: 'A subquery as a table', what: 'Any SELECT in parentheses, with a name, can be read FROM. It works, but nested levels read inside-out.', code: "SELECT ym, revenue\nFROM (SELECT strftime('%Y-%m', order_date) AS ym,\n             SUM(total) AS revenue\n      FROM orders GROUP BY ym) AS monthly\nWHERE revenue > 15000;" },
+      { id: 'cte', name: 'CTE: WITH name AS (…)', what: 'A named step you define first and then use like a table, inside the same query only. Same result as the subquery, read top to bottom, and each step can be run on its own to check it.', code: "WITH monthly AS (\n  SELECT strftime('%Y-%m', order_date) AS ym,\n         SUM(total) AS revenue\n  FROM orders\n  GROUP BY ym\n)\nSELECT ym, revenue\nFROM monthly\nWHERE revenue > 15000;" },
+      { id: 'chain', name: 'Chaining CTEs', what: 'Several CTEs separated by commas, each reading the one before, like a pipeline. The project needs at least one question with two chained CTEs.', code: 'WITH monthly AS (…),\n     top5    AS (SELECT … FROM monthly ORDER BY rev DESC LIMIT 5)\nSELECT * FROM top5;' },
+    ] },
+  ], practice: [
+    ['s3-1', 'Each order with the customer’s full name and country. How many rows, and why not 801?'],
+    ['s3-2', 'Every customer who never placed an order, with their country.'],
+    ['s3-3', 'Revenue per product category, highest first (three tables).'],
+    ['s3-4', 'The five highest-spending customers and their lifetime spend.'],
+    ['s3-5', 'Each category’s revenue and its share of the total.'],
+    ['s3-6', 'The months whose revenue beat the average month.'],
+    ['lab-1', 'Lab: revenue by shipping country, cleaned, for delivered and shipped orders only.'],
+    ['lab-2', 'Lab: the top 10 customers by lifetime value, with country and number of orders.'],
+    ['lab-3', 'Lab: per category, revenue and the number of distinct customers.'],
+    ['lab-4', 'Lab: customers who never ordered, by country. Which market has the most?'],
+  ], recap: ['INNER keeps matches, LEFT keeps the left: the choice is a business decision.', 'LEFT JOIN + IS NULL finds what is missing.', 'Always write the ON, or the rows multiply.', 'A subquery is a query used as a value or a table; a CTE gives it a name.', 'Chain CTEs for multi-step questions, each reading the one before.'] },
+];
+// Each answer was run on shopstream.db; the output is the real one (first rows).
+const PRACTICE = {"s1-1": {"sql": "SELECT product_name\nFROM products;", "cols": ["product_name"], "rows": [["Wireless Earbuds Pro"], ["Bluetooth Speaker"], ["4K Action Camera"], ["Smartwatch Series 5"], ["USB-C Charger 65W"], ["Noise-Cancelling Headphones"], ["Mechanical Keyboard"], ["Laptop Stand Aluminium"]], "n": 40}, "s1-2": {"sql": "SELECT DISTINCT country\nFROM customers;", "cols": ["country"], "rows": [[null], ["France"], ["United Kingdom"], ["Italy "], ["Italy"], ["france"], ["FRANCE"], ["Netherlands"]], "n": 21}, "s1-3": {"sql": "SELECT first_name AS \"Name\",\n       email      AS \"Contact\"\nFROM customers;", "cols": ["Name", "Contact"], "rows": [["Julien", "julien.rizzo@example.com"], ["Chiara", "chiara.sanchez@example.com"], ["Carmen", "carmen.russo@example.com"], ["Pablo", "pablo.greco@example.com"], ["Matteo", "matteo.romano@example.com"], ["Sophie", "sophie.fischer@example.com"], ["Manon", "manon.moretti@example.com"], ["Lena", "lena.lopez@example.com"]], "n": 254}, "s1-4": {"sql": "SELECT *\nFROM orders\nLIMIT 10;", "cols": ["order_id", "customer_id", "order_date", "status", "channel", "total", "discount", "shipping_country"], "rows": [[1, 1, "2024-10-21", "cancelled", "social", 296.0, null, "Italy"], [2, 1, "2024-11-13", "delivered", "Paid Search", 522.0, null, "Italy"], [3, 1, "2024-11-27", "shipped", "Social", 474.0, null, "Italy"], [4, 1, "2025-03-26", "delivered", "Referral", 345.0, null, "Italy"], [5, 1, "2025-06-14", "delivered", "Direct", 1111.0, null, "Italy"], [6, 2, "2025-09-13", "delivered", "referral", 559.0, null, "France"], [7, 2, "2024-11-03", "delivered", "Paid Search", 954.0, null, "France"], [8, 2, "2025-09-14", "cancelled", "Affiliate", 278.0, null, "France"]], "n": 10}, "s1-5": {"sql": "SELECT DISTINCT status\nFROM orders;", "cols": ["status"], "rows": [["cancelled"], ["delivered"], ["shipped"], ["Shipped"], ["returned"], ["pending"], ["Delivered"], ["canceled"]], "n": 8}, "s1-6": {"sql": "SELECT DISTINCT category\nFROM products;", "cols": ["category"], "rows": [["Electronics"], ["Home & Kitchen"], ["Fashion"], ["Beauty"], ["Sports"], ["Books"], ["Toys"]], "n": 7}, "s1-7": {"sql": "SELECT product_name AS \"Product\",\n       price        AS \"Price (EUR)\"\nFROM products\nLIMIT 15;", "cols": ["Product", "Price (EUR)"], "rows": [["Wireless Earbuds Pro", 129.0], ["Bluetooth Speaker", 79.0], ["4K Action Camera", 249.0], ["Smartwatch Series 5", 199.0], ["USB-C Charger 65W", 39.0], ["Noise-Cancelling Headphones", 299.0], ["Mechanical Keyboard", 119.0], ["Laptop Stand Aluminium", 59.0]], "n": 15}, "s1-8": {"sql": "SELECT DISTINCT acquisition_channel\nFROM customers;", "cols": ["acquisition_channel"], "rows": [["Social"], ["Referral"], ["Direct"], ["PAID SEARCH "], ["Organic Search"], ["paid search"], ["Paid Search"], ["Affiliate"]], "n": 14}, "s2-1": {"sql": "SELECT COUNT(*) AS n_orders\nFROM orders\nWHERE order_date BETWEEN '2024-01-01' AND '2024-03-31'\n  AND total > 100;", "cols": ["n_orders"], "rows": [[82]], "n": 1}, "s2-2": {"sql": "SELECT ROUND(AVG(total), 2) AS avg_total,\n       MIN(total) AS min_total,\n       MAX(total) AS max_total\nFROM orders;", "cols": ["avg_total", "min_total", "max_total"], "rows": [[469.07, 29.0, 2298.0]], "n": 1}, "s2-3": {"sql": "SELECT shipping_country,\n       ROUND(SUM(total)) AS revenue\nFROM orders\nGROUP BY shipping_country\nORDER BY revenue DESC\nLIMIT 5;", "cols": ["shipping_country", "revenue"], "rows": [["Italy", 140729.0], ["France", 77801.0], ["United Kingdom", 56611.0], ["Germany", 49416.0], ["Netherlands", 26152.0]], "n": 5}, "s2-4": {"sql": "SELECT status, COUNT(*) AS n\nFROM orders\nGROUP BY status\nORDER BY n DESC;", "cols": ["status", "n"], "rows": [["delivered", 326], ["shipped", 181], ["pending", 86], ["cancelled", 63], ["returned", 44], ["Delivered", 35], ["canceled", 34], ["Shipped", 32]], "n": 8}, "s2-5": {"sql": "SELECT strftime('%Y-%m', order_date) AS ym,\n       COUNT(*) AS n_orders\nFROM orders\nGROUP BY ym\nHAVING COUNT(*) > 35\nORDER BY n_orders DESC;", "cols": ["ym", "n_orders"], "rows": [["2024-08", 56], ["2025-01", 40], ["2024-12", 40], ["2025-08", 39], ["2024-05", 39], ["2024-11", 36], ["2024-06", 36]], "n": 7}, "s2-6": {"sql": "SELECT CASE WHEN total < 100 THEN 'small'\n            WHEN total < 500 THEN 'medium'\n            ELSE 'large' END AS size,\n       COUNT(*) AS n\nFROM orders\nGROUP BY size;", "cols": ["size", "n"], "rows": [["large", 292], ["medium", 424], ["small", 85]], "n": 3}, "s2-a1": {"sql": "SELECT\n  ROUND(100.0 * SUM(CASE WHEN discount IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS discount_null_pct\nFROM orders;", "cols": ["discount_null_pct"], "rows": [[59.9]], "n": 1}, "s2-a1b": {"sql": "SELECT\n  ROUND(100.0 * SUM(CASE WHEN country IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS country_null_pct,\n  ROUND(100.0 * SUM(CASE WHEN city IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS city_null_pct\nFROM customers;", "cols": ["country_null_pct", "city_null_pct"], "rows": [[5.9, 8.3]], "n": 1}, "s2-a2": {"sql": "SELECT email, COUNT(*) AS n_accounts\nFROM customers\nGROUP BY email\nHAVING COUNT(*) > 1\nORDER BY n_accounts DESC;", "cols": ["email", "n_accounts"], "rows": [["hans.martinez@example.com", 3], ["diego.muller@example.com", 3], ["simone.romano@example.com", 2], ["simone.laurent@example.com", 2], ["simone.conti@example.com", 2], ["noah.ferrari@example.com", 2], ["matteo.jones@example.com", 2], ["marco.rizzo@example.com", 2]], "n": 25}, "s2-a3": {"sql": "SELECT COUNT(DISTINCT country) AS raw,\n       COUNT(DISTINCT LOWER(TRIM(country))) AS folded\nFROM customers;", "cols": ["raw", "folded"], "rows": [[20, 8]], "n": 1}, "s2-a3b": {"sql": "SELECT DISTINCT LOWER(TRIM(country)) AS country\nFROM customers\nORDER BY country;", "cols": ["country"], "rows": [[null], ["france"], ["germany"], ["italy"], ["netherlands"], ["spain"], ["u.k."], ["uk"]], "n": 9}, "s2-a4": {"sql": "-- ISSUE:    status has several spellings for 5 real statuses\n-- EVIDENCE: COUNT(DISTINCT status) is higher than 5\n-- DECISION: fold case and spaces, map canceled -> cancelled\n-- RISK:     a new spelling would fall through unmapped\nWITH clean_orders AS (\n  SELECT order_id, total,\n         CASE WHEN LOWER(TRIM(status)) IN ('cancelled', 'canceled') THEN 'cancelled'\n              ELSE LOWER(TRIM(status)) END AS status\n  FROM orders\n)\nSELECT status, COUNT(*) AS n\nFROM clean_orders\nGROUP BY status\nORDER BY n DESC;", "cols": ["status", "n"], "rows": [["delivered", 361], ["shipped", 213], ["cancelled", 97], ["pending", 86], ["returned", 44]], "n": 5}, "s3-1": {"sql": "SELECT o.order_id,\n       c.first_name || ' ' || c.last_name AS customer,\n       c.country, o.total\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id;", "cols": ["order_id", "customer", "country", "total"], "rows": [[1, "Julien Rizzo", null, 296.0], [2, "Julien Rizzo", null, 522.0], [3, "Julien Rizzo", null, 474.0], [4, "Julien Rizzo", null, 345.0], [5, "Julien Rizzo", null, 1111.0], [6, "Chiara Sanchez", "France", 559.0], [7, "Chiara Sanchez", "France", 954.0], [8, "Chiara Sanchez", "France", 278.0]], "n": 792}, "s3-2": {"sql": "SELECT c.first_name || ' ' || c.last_name AS customer,\n       c.country\nFROM customers c\nLEFT JOIN orders o ON c.customer_id = o.customer_id\nWHERE o.order_id IS NULL;", "cols": ["customer", "country"], "rows": [["Giulia Bianchi", "Germany"], ["Sara Rossi", "Germany"], ["Klaus Moretti", "United Kingdom"], ["Lorenzo Bruno", "Netherlands"], ["Antoine Barbieri", "france"], ["Julien Girard", "Germany"], ["Lorenzo Martinez", "UK"], ["Valentina Gallo", "Italy"]], "n": 18}, "s3-3": {"sql": "SELECT p.category,\n       ROUND(SUM(oi.line_total)) AS revenue\nFROM order_items oi\nJOIN products p ON oi.product_id = p.product_id\nWHERE oi.line_total IS NOT NULL\nGROUP BY p.category\nORDER BY revenue DESC;", "cols": ["category", "revenue"], "rows": [["Electronics", 96848.0], ["Home & Kitchen", 86353.0], ["Sports", 51708.0], ["Fashion", 45133.0], ["Beauty", 38556.0], ["Toys", 23783.0], ["Books", 18296.0]], "n": 7}, "s3-4": {"sql": "SELECT c.first_name || ' ' || c.last_name AS customer,\n       ROUND(SUM(o.total)) AS lifetime_value\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nGROUP BY c.customer_id\nORDER BY lifetime_value DESC\nLIMIT 5;", "cols": ["customer", "lifetime_value"], "rows": [["Marco Weber", 4845.0], ["Lorenzo Muller", 4236.0], ["Lucia Petit", 4173.0], ["Sara Sanchez", 4036.0], ["Sophie Gallo", 3924.0]], "n": 5}, "s3-5": {"sql": "WITH cat AS (\n  SELECT p.category, SUM(oi.line_total) AS rev\n  FROM order_items oi\n  JOIN products p ON oi.product_id = p.product_id\n  WHERE oi.line_total IS NOT NULL\n  GROUP BY p.category\n)\nSELECT category, ROUND(rev) AS rev,\n       ROUND(100.0 * rev / (SELECT SUM(rev) FROM cat), 1) AS pct\nFROM cat\nORDER BY rev DESC;", "cols": ["category", "rev", "pct"], "rows": [["Electronics", 96848.0, 26.9], ["Home & Kitchen", 86353.0, 23.9], ["Sports", 51708.0, 14.3], ["Fashion", 45133.0, 12.5], ["Beauty", 38556.0, 10.7], ["Toys", 23783.0, 6.6], ["Books", 18296.0, 5.1]], "n": 7}, "s3-6": {"sql": "WITH monthly AS (\n  SELECT strftime('%Y-%m', order_date) AS ym, SUM(total) AS rev\n  FROM orders\n  GROUP BY ym\n),\nabove AS (\n  SELECT ym, rev FROM monthly\n  WHERE rev > (SELECT AVG(rev) FROM monthly)\n)\nSELECT ym, ROUND(rev) AS rev\nFROM above\nORDER BY rev DESC;", "cols": ["ym", "rev"], "rows": [["2024-08", 29142.0], ["2024-12", 19485.0], ["2025-01", 19253.0], ["2025-10", 17822.0], ["2024-07", 17488.0], ["2025-08", 17288.0], ["2024-04", 16988.0], ["2025-04", 16978.0]], "n": 13}, "lab-1": {"sql": "WITH clean AS (\n  SELECT LOWER(TRIM(shipping_country)) AS country, total,\n         LOWER(TRIM(status)) AS status\n  FROM orders\n)\nSELECT country, ROUND(SUM(total)) AS revenue\nFROM clean\nWHERE status IN ('delivered', 'shipped')\nGROUP BY country\nORDER BY revenue DESC;", "cols": ["country", "revenue"], "rows": [["italy", 96661.0], ["france", 56248.0], ["united kingdom", 40729.0], ["germany", 33399.0], ["netherlands", 21938.0], ["spain", 17952.0]], "n": 6}, "lab-2": {"sql": "SELECT c.first_name || ' ' || c.last_name AS customer,\n       c.country,\n       COUNT(o.order_id) AS n_orders,\n       ROUND(SUM(o.total)) AS lifetime_value\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nGROUP BY c.customer_id\nORDER BY lifetime_value DESC\nLIMIT 10;", "cols": ["customer", "country", "n_orders", "lifetime_value"], "rows": [["Marco Weber", " France", 5, 4845.0], ["Lorenzo Muller", "france", 8, 4236.0], ["Lucia Petit", null, 8, 4173.0], ["Sara Sanchez", "Spain", 5, 4036.0], ["Sophie Gallo", null, 5, 3924.0], ["Luca Durand", "Italy", 8, 3858.0], ["Sara Barbieri", "Italy", 4, 3816.0], ["Simone Conti", "france", 9, 3790.0]], "n": 10}, "lab-3": {"sql": "SELECT p.category,\n       ROUND(SUM(oi.line_total)) AS revenue,\n       COUNT(DISTINCT o.customer_id) AS n_customers\nFROM order_items oi\nJOIN products p ON oi.product_id = p.product_id\nJOIN orders o   ON oi.order_id   = o.order_id\nWHERE oi.line_total IS NOT NULL\nGROUP BY p.category\nORDER BY revenue DESC;", "cols": ["category", "revenue", "n_customers"], "rows": [["Electronics", 96848.0, 174], ["Home & Kitchen", 86353.0, 156], ["Sports", 51708.0, 146], ["Fashion", 45133.0, 166], ["Beauty", 38556.0, 138], ["Toys", 23783.0, 134], ["Books", 18296.0, 128]], "n": 7}, "lab-4": {"sql": "SELECT LOWER(TRIM(c.country)) AS country,\n       COUNT(*) AS dormant\nFROM customers c\nLEFT JOIN orders o ON c.customer_id = o.customer_id\nWHERE o.order_id IS NULL\nGROUP BY LOWER(TRIM(c.country))\nORDER BY dormant DESC;", "cols": ["country", "dormant"], "rows": [["united kingdom", 4], ["italy", 4], ["germany", 3], ["france", 3], ["netherlands", 2], ["uk", 1], ["u.k.", 1]], "n": 7}};
+SESSIONS.forEach(s => { let k = 0; for (const g of s.groups) for (const c of g.cards) c.num = `${s.n}.${++k}`; });
+const cardKey = (s, id) => `sql|s${s}|${id}`;
+
+/* ---------- Store: this browser first, then the account ---------- */
+// The same marks and notes as the Python page, under keys that start with sql|.
+const ON_BRAIN = location.pathname.startsWith('/sql');
+const MARKS_URL = '/api/coding/marks';
+const NOTES_URL = '/api/coding/notes';
+function readStore(key, empty) { try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return v ?? empty; } catch (e) { return empty; } }
+function writeStore(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {} }
+let marks = readStore('sql-marks', {});
+let notes = readStore('sql-notes', []);
+const saveLocal = () => { writeStore('sql-marks', marks); writeStore('sql-notes', notes); };
+const syncEl = document.getElementById('sync');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fromServer = n => ({ id: n.id, key: n.itemKey, kind: n.kind, body: n.body, answer: n.answer, readAt: n.readAt, createdAt: n.createdAt });
+const mine = k => k.startsWith('sql|');
+
+async function load() {
+  if (!ON_BRAIN) { syncEl.textContent = 'Saved in this browser.'; return; }
+  try {
+    const [mr, nr] = await Promise.all([fetch(MARKS_URL), fetch(NOTES_URL)]);
+    if (!mr.ok || !nr.ok) throw new Error('load');
+    const sm = Object.fromEntries(Object.entries((await mr.json()).marks || {}).filter(([k]) => mine(k)));
+    // Marks made here before signing in go up once; the account's own are never overwritten.
+    const up = Object.fromEntries(Object.entries(marks).filter(([k]) => !(k in sm)));
+    if (Object.keys(up).length) fetch(MARKS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ marks: up }) }).catch(() => {});
+    marks = { ...sm, ...up };
+    const server = (await nr.json()).notes.filter(n => mine(n.itemKey)).map(fromServer);
+    const local = notes.filter(n => !n.id);
+    if (local.length) {
+      const r = await fetch(NOTES_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: local.map(n => ({ key: n.key, kind: n.kind, body: n.body })) }) });
+      server.push(...(r.ok ? (await r.json()).notes.map(fromServer) : local));
+    }
+    notes = server;
+    saveLocal();
+    syncEl.textContent = 'Synced with your account: the same on your phone and computer.';
+  } catch (e) { syncEl.textContent = 'Offline: kept in this browser for now.'; }
+  renderSession(); renderNotebook(); paintBars();
+}
+function setMark(key, mark) {
+  if (marks[key] === mark) delete marks[key]; else marks[key] = mark;
+  saveLocal();
+  if (ON_BRAIN) fetch(MARKS_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, mark: marks[key] ?? null, note: null }) })
+    .catch(() => { syncEl.textContent = 'Offline: the mark is kept in this browser.'; });
+}
+
+/* ---------- Notes ---------- */
+const noteRef = n => n.id || n.localId;
+const notesOf = key => notes.filter(n => n.key === key);
+async function addNote(key, kind, body) {
+  const text = body.trim();
+  if (!text) return;
+  const n = { localId: `l${Date.now()}`, key, kind, body: text, answer: null, readAt: null, createdAt: new Date().toISOString() };
+  notes.push(n); saveLocal(); paintNotes();
+  if (!ON_BRAIN) return;
+  try {
+    const r = await fetch(NOTES_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: [{ key, kind, body: text }] }) });
+    if (!r.ok) throw new Error();
+    Object.assign(n, fromServer((await r.json()).notes[0])); delete n.localId; saveLocal();
+  } catch (e) { syncEl.textContent = 'Could not save the note to your account; it is kept in this browser.'; }
+}
+function editNote(ref, kind, body) {
+  const n = notes.find(x => noteRef(x) === ref);
+  if (!n || !body.trim()) return;
+  n.kind = kind; n.body = body.trim(); saveLocal(); paintNotes();
+  if (ON_BRAIN && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, body: n.body }) }).catch(() => {});
+}
+function deleteNote(ref) {
+  const n = notes.find(x => noteRef(x) === ref);
+  if (!n) return;
+  notes = notes.filter(x => x !== n); saveLocal(); paintNotes();
+  if (ON_BRAIN && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'DELETE' }).catch(() => {});
+}
+function markRead(ref) {
+  const n = notes.find(x => noteRef(x) === ref);
+  if (!n) return;
+  n.readAt = new Date().toISOString(); saveLocal(); paintNotes();
+  if (ON_BRAIN && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ read: true }) }).catch(() => {});
+}
+const KIND = { question: 'Question', comment: 'Comment' };
+function noteHtml(n) {
+  const done = n.kind !== 'question' || (n.answer && n.readAt);
+  return `<div class="note${done ? ' done' : ''}" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
+    <div class="note-head"><span class="note-kind">${KIND[n.kind]}</span><span class="tools"><button type="button" class="n-edit" aria-label="Edit">✎</button><button type="button" class="n-del" aria-label="Delete">×</button></span></div>
+    <div class="note-body">${esc(n.body)}</div>
+    ${n.answer ? `<div class="answer"><span class="note-kind">Answer</span><div class="note-body">${esc(n.answer)}</div>${n.readAt ? '' : '<button type="button" class="read">Got it, mark read</button>'}</div>` : ''}
+  </div>`;
+}
+function editorHtml(kind, body) {
+  return `<div class="editor" data-kind="${kind}"><div class="kinds" role="radiogroup" aria-label="Kind of note">${Object.entries(KIND).map(([k, l]) => `<button type="button" role="radio" data-kind="${k}" aria-checked="${k === kind}">${l}</button>`).join('')}</div>
+    <textarea rows="3" maxlength="2000" aria-label="Your note" placeholder="Write your question or comment">${esc(body)}</textarea>
+    <div class="acts"><button type="button" class="save">Save</button><button type="button" class="cancel">Cancel</button></div></div>`;
+}
+function paintNotes() {
+  for (const card of document.querySelectorAll('.card')) {
+    const list = notesOf(card.dataset.key);
+    card.querySelector('.notes').innerHTML = list.map(noteHtml).join('');
+    const b = card.querySelector('.note-btn');
+    b.setAttribute('aria-pressed', String(list.length > 0));
+    b.textContent = list.length ? `Question or comment · ${list.length}` : 'Question or comment';
+  }
+  renderNotebook();
+}
+// One handler for every card and the notepad's list.
+document.addEventListener('click', e => {
+  const t = e.target;
+  const k = t.closest('.editor .kinds [data-kind]');
+  if (k) { const ed = k.closest('.editor'); ed.dataset.kind = k.dataset.kind; for (const b of ed.querySelectorAll('.kinds button')) b.setAttribute('aria-checked', String(b === k)); return; }
+  const host = t.closest('.card, .nb-group');
+  if (!host) return;
+  const m = t.closest('.mark');
+  if (m) {
+    setMark(host.dataset.key, m.dataset.mark);
+    const v = marks[host.dataset.key] || '';
+    host.dataset.mark = v;
+    for (const b of host.querySelectorAll('.mark')) b.setAttribute('aria-pressed', String(b.dataset.mark === v));
+    paintBars();
+    return;
+  }
+  if (t.closest('.note-btn')) {
+    host.querySelector('.editor')?.remove();
+    host.querySelector('.notes').insertAdjacentHTML('afterend', editorHtml('question', ''));
+    host.querySelector('.editor textarea').focus();
+    return;
+  }
+  const note = t.closest('.note');
+  if (note && t.closest('.n-edit')) {
+    const n = notes.find(x => noteRef(x) === note.dataset.ref);
+    note.insertAdjacentHTML('afterend', editorHtml(n.kind, n.body));
+    note.nextElementSibling.dataset.ref = note.dataset.ref;
+    note.hidden = true;
+    note.nextElementSibling.querySelector('textarea').focus();
+    return;
+  }
+  if (note && t.closest('.n-del')) {
+    const b = t.closest('.n-del');
+    if (b.dataset.armed) { deleteNote(note.dataset.ref); return; }
+    b.dataset.armed = '1'; b.textContent = 'Delete?'; b.classList.add('armed');
+    setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = '×'; b.classList.remove('armed'); } }, 3000);
+    return;
+  }
+  if (note && t.closest('.read')) { markRead(note.dataset.ref); return; }
+  const ed = t.closest('.editor');
+  if (ed && t.closest('.save')) {
+    const body = ed.querySelector('textarea').value;
+    ed.remove();
+    if (ed.dataset.ref) editNote(ed.dataset.ref, ed.dataset.kind, body); else addNote(host.dataset.key, ed.dataset.kind, body);
+    paintNotes();
+    return;
+  }
+  if (ed && t.closest('.cancel')) { ed.remove(); paintNotes(); }
+});
+
+/* ---------- A session ---------- */
+const KW = /\b(SELECT|FROM|WHERE|GROUP BY|HAVING|ORDER BY|LIMIT|DISTINCT|AS|AND|OR|NOT|IN|IS|NULL|BETWEEN|LIKE|CASE|WHEN|THEN|ELSE|END|JOIN|LEFT|RIGHT|FULL|INNER|OUTER|ON|WITH|DESC|ASC|COUNT|SUM|AVG|MIN|MAX|ROUND|COALESCE|LOWER|UPPER|TRIM|LENGTH|SUBSTR)\b/g;
+function sqlHtml(code) {
+  return code.split('\n').map(line => {
+    const i = line.indexOf('--');
+    const head = i < 0 ? line : line.slice(0, i), tail = i < 0 ? '' : line.slice(i);
+    return esc(head).replace(KW, '<span class="kw">$1</span>') + (tail ? `<span class="cm">${esc(tail)}</span>` : '');
+  }).join('\n');
+}
+function cardHtml(s, c) {
+  const key = cardKey(s.n, c.id), m = marks[key] || '';
+  return `<article class="card" id="c-${s.n}-${c.id}" data-key="${esc(key)}" data-mark="${m}">
+    <h3><span class="num">${c.num}</span><span>${esc(c.name)}</span></h3>
+    <p>${esc(c.what)}</p>
+    ${c.code ? `<pre>${sqlHtml(c.code)}</pre>` : ''}
+    ${c.watch ? `<p class="watch"><b>Watch out</b>${esc(c.watch)}</p>` : ''}
+    <div class="notes"></div>
+    <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>
+      <span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'No time']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span></div>
+  </article>`;
+}
+function cell(v) { return v === null ? '<span class="null">NULL</span>' : esc(typeof v === 'number' && !Number.isInteger(v) ? String(v) : v); }
+function practiceHtml(s) {
+  return s.practice.map(([id, q], i) => {
+    const p = PRACTICE[id];
+    return `<details class="pq"><summary><span class="num">${i + 1}</span><span>${esc(q)}</span></summary>
+      <div class="ans"><pre>${sqlHtml(p.sql)}</pre>
+        <span class="out-head">Output on shopstream.db · ${p.n} row${p.n === 1 ? '' : 's'}</span>
+        <div class="tbl-wrap"><table><thead><tr>${p.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${p.rows.map(r => `<tr>${r.map(v => `<td>${cell(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+        ${p.n > p.rows.length ? `<span class="more-rows">… and ${p.n - p.rows.length} more</span>` : ''}</div></details>`;
+  }).join('');
+}
+let current = 1;
+try { current = Number(localStorage.getItem('sql-session')) || 1; } catch (e) {}
+function renderTabs() {
+  document.getElementById('sessions').innerHTML = SESSIONS.map(s => `<button type="button" class="sess" role="tab" data-s="${s.n}" aria-selected="${s.n === current}"><b>Session ${s.n}</b><span>${esc(s.short)}</span><span class="bar"><i></i></span></button>`).join('');
+  paintBars();
+}
+function paintBars() {
+  for (const s of SESSIONS) {
+    const cards = s.groups.flatMap(g => g.cards);
+    const got = cards.filter(c => marks[cardKey(s.n, c.id)] === 'got').length;
+    const b = document.querySelector(`.sess[data-s="${s.n}"] .bar i`);
+    if (b) { b.style.width = `${(100 * got) / cards.length}%`; b.parentElement.title = `${got} of ${cards.length} got it`; }
+  }
+}
+function renderSession() {
+  const s = SESSIONS.find(x => x.n === current);
+  document.getElementById('session').innerHTML = `<h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
+    + s.groups.map(g => `<h2>${esc(g.name)}</h2>${g.flow ? `<p class="flow">${g.flow.map(f => `<span>${f}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div>`).join('')
+    + `<h2>Practice</h2><p class="group-note">Try each one in DB Browser first, then open the answer.</p><div class="practice">${practiceHtml(s)}</div>`
+    + `<h2>To remember</h2><ul class="recap">${s.recap.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`;
+  paintNotes();
+}
+document.getElementById('sessions').addEventListener('click', e => {
+  const b = e.target.closest('.sess');
+  if (!b) return;
+  current = Number(b.dataset.s);
+  try { localStorage.setItem('sql-session', current); } catch (err) {}
+  for (const x of document.querySelectorAll('.sess')) x.setAttribute('aria-selected', String(x === b));
+  renderSession();
+  followSpot();
+  scrollTo({ top: 0 });
+});
+
+/* ---------- The notepad on the right ---------- */
+const notebook = document.getElementById('notebook');
+const nbDot = document.getElementById('nb-dot');
+const nbAbout = document.getElementById('nb-about');
+const nbText = document.getElementById('nb-text');
+let nbKind = 'question', nbPinned = false;
+function places() {
+  return [{ key: 'sql|notebook', tag: 'SQL', name: 'The course in general' },
+    ...SESSIONS.flatMap(s => [{ key: `sql|s${s.n}`, tag: `S${s.n}`, name: `Session ${s.n} in general`, s: s.n },
+      ...s.groups.flatMap(g => g.cards.map(c => ({ key: cardKey(s.n, c.id), tag: c.num, name: c.name, s: s.n, id: c.id })))])];
+}
+nbAbout.innerHTML = places().map(p => `<option value="${esc(p.key)}">${p.id ? `${p.tag} · ` : ''}${esc(p.name)}</option>`).join('');
+// Where you are: the card nearest the top of the screen, else the session.
+function currentSpot() {
+  let best = null;
+  for (const c of document.querySelectorAll('.card')) {
+    const r = c.getBoundingClientRect();
+    if (r.bottom > 80 && r.top < innerHeight * 0.6) { best = c; break; }
+  }
+  return best ? best.dataset.key : `sql|s${current}`;
+}
+function followSpot() { if (!nbPinned) nbAbout.value = currentSpot(); if (!notebook.hidden) renderNotebook(); }
+let scrollTimer = 0;
+addEventListener('scroll', () => { clearTimeout(scrollTimer); scrollTimer = setTimeout(() => { if (!notebook.hidden) followSpot(); }, 150); }, { passive: true });
+function setNotebook(open) {
+  notebook.hidden = !open;
+  nbDot.setAttribute('aria-expanded', String(open));
+  if (open) { if (!nbText.value.trim()) nbPinned = false; followSpot(); }
+}
+function renderNotebook() {
+  nbDot.classList.toggle('has-notes', notes.length > 0);
+  if (notebook.hidden) return;
+  const box = document.getElementById('nb-list');
+  if (box.querySelector('.editor')) return;
+  const here = nbAbout.value;
+  const groups = places().map(p => ({ p, list: notesOf(p.key) })).filter(g => g.list.length);
+  box.innerHTML = groups.length ? groups.map(({ p, list }) => `<div class="nb-group${p.key === here ? ' here' : ''}" data-key="${esc(p.key)}">
+      <div><button type="button" class="nb-go" data-go="${esc(p.key)}"><span class="t">${esc(p.tag)}</span>${esc(p.name)}${p.s ? ' ›' : ''}</button>${p.key === here ? '<span class="nb-here">you are here</span>' : ''}</div>
+      <div class="notes">${list.map(noteHtml).join('')}</div></div>`).join('')
+    : '<p class="empty">Nothing yet. Write above: the note is filed under the card you are reading.</p>';
+}
+function goTo(key) {
+  const p = places().find(x => x.key === key);
+  if (!p || !p.s) return;
+  if (p.s !== current) document.querySelector(`.sess[data-s="${p.s}"]`).click();
+  const el = p.id ? document.getElementById(`c-${p.s}-${p.id}`) : document.querySelector('h1');
+  if (innerWidth < 760) setNotebook(false);
+  el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (p.id) { el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
+}
+nbDot.addEventListener('click', () => setNotebook(notebook.hidden));
+document.getElementById('nb-close').addEventListener('click', () => setNotebook(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !notebook.hidden) setNotebook(false); });
+nbAbout.addEventListener('change', () => { nbPinned = true; renderNotebook(); });
+nbText.addEventListener('input', () => { if (nbText.value.trim()) nbPinned = true; });
+nbText.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); document.getElementById('nb-save').click(); } });
+notebook.addEventListener('click', e => {
+  const k = e.target.closest('.nb-write .kinds [data-kind]');
+  if (k) { nbKind = k.dataset.kind; for (const b of notebook.querySelectorAll('.nb-write .kinds button')) b.setAttribute('aria-checked', String(b === k)); return; }
+  if (e.target.closest('#nb-save')) {
+    if (!nbText.value.trim()) { nbText.focus(); return; }
+    const label = nbAbout.selectedOptions[0].textContent;
+    addNote(nbAbout.value, nbKind, nbText.value);
+    nbText.value = ''; nbPinned = false;
+    const s = document.getElementById('nb-saved');
+    s.textContent = `Saved to ${label}.`;
+    setTimeout(() => { if (s.textContent.startsWith('Saved')) s.textContent = ''; }, 2500);
+    followSpot();
+    return;
+  }
+  const go = e.target.closest('.nb-go');
+  if (go) goTo(go.dataset.go);
+});
+
+/* ---------- Theme, first drawing ---------- */
+const themeBtn = document.getElementById('theme');
+const paintTheme = () => { const night = document.documentElement.dataset.theme === 'night'; themeBtn.textContent = night ? '☀ Day' : '☾ Night'; };
+themeBtn.addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'night' ? 'day' : 'night';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('school-theme', next); } catch (e) {}
+  paintTheme();
+});
+paintTheme();
+renderTabs();
+renderSession();
+load();
+</script>
+</body>
+</html>

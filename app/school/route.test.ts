@@ -35,10 +35,10 @@ describe('/school class menu', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('private, no-store');
     expect(html).toContain('<title>School · Albert School</title>');
-    // Each class opens its own page; SQL is announced but not yet a link.
+    // Each class opens its own page: Python, Git and SQL.
     expect(html).toContain('href="/coding"');
     expect(html).toContain('href="/git"');
     expect(html).toContain('<h2>SQL</h2>');
-    expect(html).not.toContain('href="/sql"');
+    expect(html).toContain('href="/sql"');
   });
 });
