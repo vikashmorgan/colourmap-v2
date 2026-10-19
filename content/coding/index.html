@@ -85,6 +85,11 @@ body { margin: 0; background: var(--ground); color: var(--ink); font-family: var
   padding: 8px 16px; min-height: 40px; cursor: pointer;
 }
 .tabs button[aria-selected="true"] { background: var(--ink); color: var(--ground); }
+/* Project 1, kept but out of the way (2026-10-19): a small + after Review, named once open. */
+.tabs .tab-plus { min-width: 40px; padding-inline: 12px; font-size: 18px; opacity: .7; }
+.tabs .tab-plus:hover { opacity: 1; }
+.tabs .tab-plus[aria-selected="true"] { opacity: 1; font-size: inherit; }
+.tabs .tab-plus[aria-selected="true"]::after { content: ' Project 1'; }
 .tabs button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Page intro */
@@ -446,7 +451,7 @@ details.solution .ex-why { margin-top: 12px; }
 .mark { width: 26px; height: 26px; min-height: 0; padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; display: grid; place-items: center; }
 .mark::before { content: ''; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--dot, var(--muted)); opacity: .45; transition: opacity .15s, transform .15s; }
 .mark:hover::before, .mark:focus-visible::before { opacity: .9; transform: scale(1.15); }
-.mark[aria-pressed="true"]::before { background: var(--dot); opacity: 1; transition: none; }
+.mark[aria-pressed="true"]::before, .mark:active::before { background: var(--dot); opacity: 1; transition: none; }
 .m-solid, .d-solid { --dot: var(--solid-c); } .m-got, .d-got { --dot: var(--ok-c); } .m-mid, .d-mid { --dot: var(--mid-c); } .m-late, .d-late { --dot: var(--late-c); }
 
 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--dot); margin-right: 6px; vertical-align: 1px; }
@@ -455,7 +460,7 @@ details.solution .ex-why { margin-top: 12px; }
 
 /* Box numbers: session.box, small and quiet. */
 .item h4 { justify-content: flex-start !important; }
-.box-num { font: 600 11px var(--mono); color: var(--box-text); opacity: .7; background: color-mix(in srgb, var(--box-text) 12%, transparent); border-radius: 6px; padding: 1px 6px; flex: none; }
+.box-num { font: 600 11px var(--mono); color: var(--box-text); opacity: .6; flex: none; }
 .item h4 .tag { margin-left: auto; }
 .here-box { font: 600 12px var(--mono); border: 1px solid var(--rule); border-radius: 6px; padding: 1px 7px; margin-left: 4px; }
 
@@ -479,6 +484,32 @@ details.solution .ex-why { margin-top: 12px; }
 .rv-group { margin-top: 32px; }
 .rv-group h2, .rv-group h3 { font-family: var(--display); font-size: 21px; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
 .rv-part { margin-top: 40px; }
+/* The exam map at the top of Review. */
+.exam-map { margin: 0 0 28px; border: 1px solid var(--rule); border-radius: 16px; background: var(--panel); }
+.exam-map > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 16px 20px; }
+.exam-map > summary::-webkit-details-marker { display: none; }
+.em-title { font-family: var(--display); font-weight: 700; font-size: 22px; }
+.em-sub { font: 600 13px var(--mono); color: var(--muted); }
+.em-note { margin: 0; padding: 0 20px; color: var(--muted); font-size: 15px; }
+.em-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 20px 4px; }
+.em-filters button { min-height: 34px; padding: 4px 13px; border-radius: 999px; border: 1px solid var(--rule); background: var(--ground); color: var(--ink); font: 600 13px var(--body); cursor: pointer; }
+.em-filters button[aria-pressed="true"] { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+.em-filters b { font: 600 11px var(--mono); margin-left: 4px; opacity: .75; }
+.em-list { padding: 8px 20px 18px; display: grid; gap: 16px; }
+.em-deck h3 { margin: 0 0 6px; font: 700 16px var(--display); color: var(--muted); }
+.em-rows { display: grid; gap: 6px; }
+.em-row { display: grid; grid-template-columns: 6.5em minmax(0, 1fr) auto; gap: 4px 12px; align-items: baseline; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--em) 9%, var(--panel)); --em: var(--q-c); }
+.em-row[data-s="exam"] { --em: var(--late-c); }
+.em-row[data-s="remember"] { --em: var(--ok-c); }
+.em-kind { font: 600 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--em); }
+.em-kind::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--em); margin-right: 6px; vertical-align: 1px; }
+.em-what b { display: block; font-weight: 600; }
+.em-what span { font-size: 15px; }
+.em-row .slide-link { justify-self: end; white-space: nowrap; }
+@media (max-width: 640px) {
+  .em-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .em-kind { grid-column: 1 / -1; }
+}
 .rv-part-title { font-family: var(--display); font-size: clamp(26px, 3.4vw, 34px); margin: 0; padding-bottom: 8px; border-bottom: 2px solid var(--ink); }
 .rv-part .rv-group { margin-top: 20px; }
 .rv-group h3 b, .rv-group h2 b { font: 600 13px var(--mono); color: var(--muted); }
@@ -534,6 +565,30 @@ details.more[open] > summary { opacity: 1; }
 /* On a box the page number sits quietly in the bottom-right corner. */
 .lgroup .item > .slide-link { position: absolute; right: 36px; bottom: 8px; }
 .lgroup .item:has(> .slide-link) { padding-bottom: 30px; }
+/* A box's foot (2026-10-19): the + and Question or comment as two matching pills on the
+   left, the slide's page beside them, and the three dots, bigger and in a row, on the right. */
+.lgroup .item { display: flex; flex-wrap: wrap; align-content: start; align-items: center; gap: 6px 8px; padding-right: 14px; }
+.lgroup .item > * { flex: 1 1 100%; min-width: 0; }
+.lgroup .item > .resize-handle { flex: none; }
+.lgroup .item > details.more > summary { display: none; }
+.lgroup .item > .more-btn { order: 10; flex: none; }
+.lgroup .item > .note-dot { order: 11; flex: none; margin-top: 0; }
+.lgroup .item > .slide-link { order: 12; flex: none; position: static; }
+.lgroup .item > .marks { order: 13; flex: none; margin-left: auto; position: static; transform: none; flex-direction: row; gap: 0; }
+.lgroup .item > .note-editor { order: 14; }
+.lgroup .item:has(> .slide-link) { padding-bottom: 12px; }
+.lgroup .item .mark { width: 30px; height: 30px; }
+.lgroup .item .mark::before { width: 14px; height: 14px; border-width: 2px; }
+.lgroup .item .mark::after { right: auto; left: 50%; top: auto; bottom: calc(100% + 2px); transform: translate(-50%, 4px); }
+.lgroup .item .mark:hover::after, .lgroup .item .mark:focus-visible::after { transform: translate(-50%, 0); }
+.more-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; padding: 3px 11px; min-height: 30px; border-radius: 999px; border: 1px dashed color-mix(in srgb, var(--q-c) 55%, transparent); background: none; color: var(--box-text); opacity: .7; font: 600 16px/1 var(--mono); cursor: pointer; }
+.more-btn:hover, .more-btn:focus-visible, .more-btn[aria-expanded="true"] { opacity: 1; border-style: solid; }
+/* In a narrow box the foot stays one line: Question or comment shrinks to its ✎ (named on hover). */
+.lgroup .item { container-type: inline-size; }
+@container (max-width: 340px) {
+  .lgroup .item > .note-dot { font-size: 0; gap: 0; min-width: 40px; justify-content: center; }
+  .lgroup .item > .note-dot::before { font-size: 13px; }
+}
 .slide-link { justify-self: start; font: 600 12px var(--mono); color: var(--box-text); opacity: .75; text-decoration: none; border-bottom: 1px dotted currentColor; }
 .slide-link:hover { opacity: 1; }
 .ex-body .slide-link { color: var(--accent); }
@@ -1034,6 +1089,40 @@ details.datacode .mission-tag { background: var(--ok-c); }
 .pm-qs[data-kind="comment"] { color: var(--c-c); border-color: color-mix(in srgb, var(--c-c) 50%, transparent); }
 .pm-notes { display: grid; gap: 8px; border-top: 1px solid var(--rule); padding-top: 10px; }
 .pmission.flash { box-shadow: 0 0 0 3px color-mix(in srgb, var(--sess) 45%, transparent); }
+/* A level and the free space take notes too, under the idea and under the editor. */
+.pl-notes { display: grid; gap: 8px; }
+.plevel > .pl-notes { padding: 12px 20px; border-bottom: 1px solid var(--rule); }
+.pe-play > .pl-notes { border-top: 1px solid var(--rule); padding-top: 10px; margin-top: 10px; }
+.plevel.flash, .pe-play.flash { box-shadow: 0 0 0 3px color-mix(in srgb, var(--sess, var(--accent)) 45%, transparent); }
+/* Practice's notebook: write about where you are, see every note by place. */
+.pnb-write { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--rule); }
+.pnb-write .line-pick { min-width: 0; }
+.pnb-write .line-pick select { width: 100%; }
+.pnb-write textarea { width: 100%; font: 15px var(--body); color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; resize: vertical; }
+.pnb-saved { margin: 0; min-height: 1.2em; font-size: 13.5px; color: var(--ok); }
+.pnb-sum { margin: 0; padding: 12px 16px 0; font-size: 14px; color: var(--muted); }
+.pnb-list { display: grid; gap: 10px; padding: 12px 16px 16px; }
+.pnb-group { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--rule); background: color-mix(in srgb, var(--sess) 6%, var(--panel)); }
+.pnb-group.here { border-color: color-mix(in srgb, var(--sess) 60%, var(--rule)); }
+.pnb-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.pnb-go { display: flex; align-items: baseline; gap: 8px; min-height: 32px; padding: 0; border: 0; background: none; color: var(--ink); font: 700 15px var(--display); text-align: left; cursor: pointer; }
+.pnb-go:hover .pnb-name { text-decoration: underline; }
+.pnb-go .pnb-n { font: 600 12px var(--mono); color: var(--ground); background: var(--sess); border-radius: 6px; padding: 1px 7px; }
+.pnb-here { font: 600 12px var(--body); color: var(--sess); }
+.pnb-empty { margin: 0; color: var(--muted); font-size: 14px; }
+/* Practice's notebook is beige paper with brown ink, in day and night (2026-10-19: "beige or brown, not blue"). */
+#pnb, #pnb-dot { --pnb-bg: #efe5d2; --pnb-top: #e5d6b9; --pnb-brown: #7a5230; --pnb-rule: #d6c3a0; }
+:root[data-theme="dark"] #pnb, :root[data-theme="dark"] #pnb-dot { --pnb-bg: #221c15; --pnb-top: #2c241a; --pnb-brown: #d0a979; --pnb-rule: #45392a; }
+#pnb { background: var(--pnb-bg); border-color: var(--pnb-rule); --rule: var(--pnb-rule); --panel: color-mix(in srgb, var(--pnb-bg) 70%, #fff 30%); }
+:root[data-theme="dark"] #pnb { --panel: color-mix(in srgb, var(--pnb-bg) 85%, #fff 15%); }
+#pnb .nb-top { background: var(--pnb-top); }
+#pnb .nb-title { color: var(--pnb-brown); }
+#pnb .pnb-group { --sess: var(--pnb-brown); }
+#pnb .note-actions .note-save { background: var(--pnb-brown); border-color: var(--pnb-brown); color: var(--pnb-bg); }
+#pnb .line-pick select:focus-visible, #pnb textarea:focus-visible { outline: 2px solid var(--pnb-brown); outline-offset: 1px; }
+#pnb-dot { border-color: color-mix(in srgb, var(--pnb-brown) 70%, transparent); background: var(--pnb-bg); }
+#pnb-dot:hover, #pnb-dot[aria-expanded="true"] { border-color: var(--pnb-brown); }
+#pnb-dot.has-notes { background: var(--pnb-brown); }
 .pl-flags { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffd36b, #e7a321 70%); font: 700 10px/16px var(--body); color: #4a3200; text-align: center; align-self: center; }
 .pp-index a.pp-flagged::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #e7a321; margin-left: 6px; display: inline-block; }
 .rv-flag .dot { background: #e7a321; }
@@ -1111,11 +1200,11 @@ body code, body pre, body .terminal, body .item h4, body .tool h3, body .code-na
   <div class="wrap">
     <div class="brand-wrap"><a class="back-brain" id="back-brain" href="/school" hidden>← School</a><div class="brand">explorer.py <span>· Terminal Data Explorer</span></div></div>
     <div class="tabs" role="tablist" aria-label="Pages">
-      <button id="tab-project" role="tab" aria-selected="true" aria-controls="page-project">Project 1</button>
       <button id="tab-tools" role="tab" aria-selected="false" aria-controls="page-tools">Python toolkit</button>
-      <button id="tab-lessons" role="tab" aria-selected="false" aria-controls="page-lessons">Lessons</button>
+      <button id="tab-lessons" role="tab" aria-selected="true" aria-controls="page-lessons">Lessons</button>
       <button id="tab-practice" role="tab" aria-selected="false" aria-controls="page-practice">Practice</button>
-      <button id="tab-review" role="tab" aria-selected="false" aria-controls="page-review">Review <b class="tab-count" id="review-count"></b></button>
+      <button id="tab-review" role="tab" aria-selected="false" aria-controls="page-review">Review</button>
+      <button id="tab-project" class="tab-plus" role="tab" aria-selected="false" aria-controls="page-project" aria-label="Project 1" title="Project 1">+</button>
     </div>
     <button type="button" class="size-btn theme-btn" id="theme-btn" aria-label="Switch between day and night" title="Day or night">☾</button>
     <div class="size-wrap">
@@ -1440,14 +1529,38 @@ requirements.txt, which you hand in, simply lists requests so the teacher can ru
       <p>Each mission asks for a few lines. Write them in the box, press <b>Run</b> (or Ctrl + Enter) and the page tests your program. Stuck? Open the hint first and the solution last. It starts with a single <code>print</code> and climbs, level by level, to small programs like Project 1. Python runs right here in the page: nothing to install.</p>
     </div>
     <div id="practice"></div>
+
+    <button type="button" class="nb-dot" id="pnb-dot" aria-expanded="false" aria-controls="pnb" title="Practice notebook"></button>
+    <aside class="notebook" id="pnb" aria-label="Practice notebook" hidden>
+      <div class="nb-top"><span class="nb-title">Notebook</span><button type="button" class="lpop-close" id="pnb-close" aria-label="Close the notebook" style="margin-left: auto">×</button></div>
+      <div class="pnb-write">
+        <label class="line-pick"><span>About</span><select id="pnb-about" aria-label="What this note is about"></select></label>
+        <div class="kind-pick" role="radiogroup" aria-label="Kind of note">
+          <button type="button" role="radio" data-kind="question" aria-checked="true">Question</button>
+          <button type="button" role="radio" data-kind="comment" aria-checked="false">Comment</button>
+        </div>
+        <textarea id="pnb-text" rows="3" maxlength="2000" aria-label="Your note" placeholder="Write your question or comment"></textarea>
+        <div class="note-actions"><button type="button" class="note-save" id="pnb-save">Save</button></div>
+        <p class="pnb-saved" id="pnb-saved" role="status"></p>
+      </div>
+      <p class="pnb-sum" id="pnb-sum"></p>
+      <div class="pnb-list" id="pnb-list"></div>
+      <div id="pnb-host" data-key="x|notebook" hidden><button type="button" class="note-dot" hidden>Question or comment</button></div>
+    </aside>
   </section>
 
   <section id="page-review" role="tabpanel" aria-labelledby="tab-review" hidden>
     <div class="intro">
       <span class="eyebrow">Page 5 · Your review</span>
-      <h1>Everything you flagged, in one place.</h1>
+      <h1>Review</h1>
       <p>Every question and comment, in the order of the page: Project 1 step by step, then the lessons box by box. Each answer sits right under its question, here and where you asked it. Then every box you marked Confused or No time.</p>
     </div>
+    <details class="exam-map" id="exam-map" open>
+      <summary><span class="em-title">For the exam: what the slides flag</span><span class="em-sub" id="em-sub"></span></summary>
+      <p class="em-note">Every place in the slides where the teacher stops to say <i>this is on the exam</i>, <i>remember this</i> or <i>watch out</i>, in plain words, with its slide one tap away.</p>
+      <div class="em-filters" role="group" aria-label="Show"></div>
+      <div class="em-list" id="em-list"></div>
+    </details>
     <div id="review"></div>
   </section>
 </main>
@@ -2138,7 +2251,7 @@ for (const L of LESSONS) {
     const used = inProject(n);
     const key = `s${L.session}|${n}`;
     const num = `${L.session}.${++boxNo}`;
-    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><span class="resize-handle" aria-hidden="true" title="Drag to widen"></span><p>${esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key], EXTRA[key]) : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<button type="button" class="note-dot" aria-pressed="false">Question or comment</button><div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button></div></article>`;
+    return `<article class="item${used ? ' used' : ''}" data-key="${esc(key)}" data-num="${num}"><h4><span class="box-num">${num}</span><span>${esc(n)}</span>${used ? '<span class="tag">in your project</span>' : ''}<button type="button" class="expand-btn" aria-pressed="false" aria-label="Expand this box" title="Expand"></button></h4><span class="resize-handle" aria-hidden="true" title="Drag to widen"></span><p>${esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>${ex ? `<pre><code>${highlight(ex)}</code></pre>` : ''}${MORE[key] ? moreBlock(MORE[key], EXTRA[key]) + '<button type="button" class="more-btn" aria-expanded="false" aria-label="More" title="More">+</button>' : ''}${SLIDES[key] ? slideLink(SLIDES[key].file, SLIDES[key].page) : ''}<button type="button" class="note-dot" aria-pressed="false">Question or comment</button><div class="marks" role="group" aria-label="How well do you know this?"><button type="button" class="mark m-got" data-mark="got" data-label="Got it" aria-pressed="false" aria-label="Got it"></button><button type="button" class="mark m-mid" data-mark="mid" data-label="Confused" aria-pressed="false" aria-label="Confused"></button><button type="button" class="mark m-late" data-mark="late" data-label="No time" aria-pressed="false" aria-label="No time"></button></div></article>`;
   }).join('')}</div></div>`).join('');
   const pit = x => L.layout === 'reader' ? keywordHtml(x, L.session, new Set()) : esc(x);
   const notes = (L.pitfalls && L.pitfalls.length ? `<div class="note-box pit"><h4>Watch out</h4><ul>${L.pitfalls.map(x => `<li>${pit(x)}</li>`).join('')}</ul></div>` : '') +
@@ -2744,7 +2857,7 @@ function refreshSteps() {
     const got = cs.filter(c => c.dataset.mark === 'got').length;
     const mid = cs.filter(c => c.dataset.mark === 'mid').length;
     const late = cs.filter(c => c.dataset.mark === 'late').length;
-    step.querySelector('.pstep-progress').innerHTML = `<span class="pg-bar"><i style="width:${(got / cs.length * 100).toFixed(1)}%"></i></span><span>${got}/${cs.length} got it</span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${late ? `<span class="pg-late">${late} no time</span>` : ''}`;
+    step.querySelector('.pstep-progress').innerHTML = `<span class="pg-bar" title="${got} of ${cs.length} got it" aria-label="${got} of ${cs.length} got it"><i style="width:${(got / cs.length * 100).toFixed(1)}%"></i></span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${late ? `<span class="pg-late">${late} no time</span>` : ''}`;
     // Every question and comment asked anywhere in the step: its cards, its lines, its output.
     const n = Number(step.id.slice(5));
     const qs = noteList.filter(x => x.key.startsWith(`p1|${n}|`) || (parseSpot(x.key) || {}).step === n);
@@ -3537,7 +3650,7 @@ const savedNote = document.getElementById('saved-note');
 
 const allItems = () => [...lessonsEl.querySelectorAll('.item[data-key]')];
 // Everything that can hold notes: the lesson boxes and the project cards.
-const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #overall-host, #lessons .lesson-overall, #lessons .slide-host, #steps .pcard[data-key], #page-project .line-host[data-key], #nb-host, #practice .pm-notes[data-key]')];
+const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #overall-host, #lessons .lesson-overall, #lessons .slide-host, #steps .pcard[data-key], #page-project .line-host[data-key], #nb-host, #practice .pm-notes[data-key], #practice .pl-notes[data-key], #pnb-host')];
 // A slide's notes belong to the lesson's one slide spot, whichever slide it shows now.
 const SLIDE_KEY = /^s(\d+)\|slide:(\d+)$/;
 const itemByKey = key => noteHosts().find(i => i.dataset.key === key)
@@ -3654,6 +3767,7 @@ function paintItem(item) {
   } else if (tog) tog.remove();
   dot.setAttribute('aria-pressed', String(list.length > 0));
   dot.textContent = list.length ? 'Add another question or comment' : 'Question or comment';
+  dot.title = dot.textContent;
   if (item.classList.contains('pm-notes')) paintMissionNotes(item.closest('.pmission'));
 }
 function paintAll() { syncLineHosts(); for (const it of noteHosts()) paintItem(it); refreshCounts(); renderReview(); if (activeFilter !== 'all') applyFilter(); }
@@ -3672,7 +3786,7 @@ function refreshCounts() {
     const late = its.filter(i => i.dataset.mark === 'late').length;
     const keys = new Set(its.map(i => i.dataset.key));
     const q = noteList.filter(n => keys.has(n.key)).length;
-    lesson.querySelector('.sess-progress').innerHTML = `<span class="pg-bar"><i style="width:${(got / its.length * 100).toFixed(1)}%"></i></span><span>${got}/${its.length} got it</span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${late ? `<span class="pg-late">${late} no time</span>` : ''}${q ? `<span class="pg-note">${q} note${q > 1 ? 's' : ''}</span>` : ''}`;
+    lesson.querySelector('.sess-progress').innerHTML = `<span class="pg-bar" title="${got} of ${its.length} got it" aria-label="${got} of ${its.length} got it"><i style="width:${(got / its.length * 100).toFixed(1)}%"></i></span>${mid ? `<span class="pg-mid">${mid} confused</span>` : ''}${late ? `<span class="pg-late">${late} no time</span>` : ''}${q ? `<span class="pg-note">${q} note${q > 1 ? 's' : ''}</span>` : ''}`;
   }
 }
 function applyFilter() {
@@ -3845,7 +3959,7 @@ function onNoteClick(e) {
     queueMarkWork(key, item);
     return;
   }
-  const item = e.target.closest('.line-host, .nb-host, .overall-host, .slide-host, .item[data-key], .pcard, .pm-notes');
+  const item = e.target.closest('.line-host, .nb-host, .overall-host, .slide-host, .item[data-key], .pcard, .pm-notes, .pl-notes, .pnb-group');
   if (!item) return;
   const key = item.dataset.key;
   if (e.target.closest('.notes-toggle')) {
@@ -3915,6 +4029,31 @@ document.getElementById('progress-bar').addEventListener('click', e => {
   applyFilter();
 });
 
+/* ---------- For the exam: what the slides flag (2026-10-19: "map all the stuff where they said we need to remember, or we will be asked about it, or we should expect it") ----------
+ * Found by reading every page of the Python and recursion slides for the teacher's own signals
+ * (exam, expect, remember, important, careful, common mistake), and written here in plain words,
+ * never quoted: the slides stay private, and each row links to its page. */
+const EXAM_HINTS = [{"f": "Session1.pdf", "p": 5, "s": "exam", "t": "exam format: written, closed book", "w": "The 2-hour exam is on paper with no interpreter, so practise predicting output by reading code."}, {"f": "Session1.pdf", "p": 5, "s": "exam", "t": "exam marking scheme", "w": "Wrong MCQ answers cost 0.5, so leave a blank rather than guess (Part A 30, Part B 10, Part C 60)."}, {"f": "Session1.pdf", "p": 5, "s": "exam", "t": "project grading and oral", "w": "The individual project is marked on correctness, code quality and a 30-mark oral."}, {"f": "Session1.pdf", "p": 20, "s": "remember", "t": "assignment reading", "w": "Assignment is an instruction: the right side is evaluated first, then the name is bound to the result."}, {"f": "Session1.pdf", "p": 42, "s": "watch-out", "t": "terminal: running a script", "w": "Know the three classic errors: wrong folder (No such file), python not on PATH, and hidden .txt extension."}, {"f": "Session1.pdf", "p": 63, "s": "remember", "t": "global installs vs virtual environments", "w": "Two projects needing different package versions clash globally; the fix is a per-project virtual environment."}, {"f": "Session1.pdf", "p": 73, "s": "exam", "t": "reading exercise statements", "w": "Treat each exercise statement like an exam question: read it fully before coding."}, {"f": "Session2.pdf", "p": 13, "s": "remember", "t": "float comparison", "w": "Compare floats with math.isclose (or a tolerance), never ==; round() is for display only."}, {"f": "Session2.pdf", "p": 39, "s": "watch-out", "t": "empty set syntax", "w": "An empty set is set(); {} creates an empty dict. Sets have no indexing."}, {"f": "Session2.pdf", "p": 41, "s": "watch-out", "t": "set limitations", "w": "Sets drop order and duplicate counts, and can only hold immutable values (no lists)."}, {"f": "Session2.pdf", "p": 51, "s": "watch-out", "t": "in-place vs new-object methods", "w": "s.strip() without assigning does nothing; xs = xs.sort() sets xs to None."}, {"f": "Session2.pdf", "p": 60, "s": "remember", "t": "= vs ==", "w": "= binds a name to a value; == asks whether two values are equal."}, {"f": "Session2.pdf", "p": 61, "s": "watch-out", "t": "truthiness of empty values", "w": "Empty containers, 0, '' and None are falsy; any non-empty string, even \"0\", is truthy."}, {"f": "Session3.pdf", "p": 13, "s": "watch-out", "t": "or-condition bug (x == 1 or 2)", "w": "x == 1 or 2 is always true; every side of an or needs its own full comparison, or use x in (1, 2)."}, {"f": "Session3.pdf", "p": 14, "s": "watch-out", "t": "De Morgan's laws", "w": "not (a and b) is not a or not b; pushing not inside flips and/or."}, {"f": "Session3.pdf", "p": 35, "s": "watch-out", "t": "zip with unequal lengths", "w": "zip silently stops at the shorter sequence; check len() if lists must match."}, {"f": "Session3.pdf", "p": 40, "s": "watch-out", "t": "loop pitfalls", "w": "Know the three loop failures: infinite while, off-by-one ranges, and modifying a list while iterating it."}, {"f": "Session4.pdf", "p": 10, "s": "remember", "t": "return vs print", "w": "A function that prints instead of returning gives back None and cannot be reused by other code."}, {"f": "Session4.pdf", "p": 17, "s": "watch-out", "t": "mutable default arguments", "w": "A default list is created once and shared across calls; use None and build the list inside."}, {"f": "Session4.pdf", "p": 18, "s": "remember", "t": "functions as values (key=)", "w": "Recognise max(d, key=d.get): a function name without brackets is the function itself, passed as a value."}, {"f": "Session4.pdf", "p": 26, "s": "watch-out", "t": "shadowing built-ins (LEGB)", "w": "Assigning to a built-in name hides it for the rest of the file (e.g. 'list' object is not callable)."}, {"f": "Session4.pdf", "p": 45, "s": "watch-out", "t": "common function errors", "w": "Know the TypeError (missing arg, not callable, NoneType) and UnboundLocalError causes and fixes."}, {"f": "Session6.pdf", "p": 8, "s": "watch-out", "t": "closing files / with", "w": "Use with open(...) so the file is always closed; manual open/close leaks if you forget close()."}, {"f": "Session6.pdf", "p": 12, "s": "remember", "t": "pathlib path joining", "w": "Build paths with Path objects and the / operator, not string concatenation."}, {"f": "Session6.pdf", "p": 16, "s": "remember", "t": "csv module and newline=\"\"", "w": "Open CSVs with newline=\"\" and use the csv module, since fields can contain commas."}, {"f": "Session6.pdf", "p": 25, "s": "watch-out", "t": "exception handling", "w": "A bare except swallows your own bugs; catch only named exceptions you can describe."}, {"f": "Session7.pdf", "p": 10, "s": "remember", "t": "requests timeout and raise_for_status", "w": "Always pass timeout= and call raise_for_status(); catch Timeout, ConnectionError and HTTPError separately."}, {"f": "Session7.pdf", "p": 11, "s": "watch-out", "t": "empty API results", "w": "200 OK can still carry an empty results list; check before indexing."}, {"f": "Session7.pdf", "p": 17, "s": "remember", "t": "print debugging method", "w": "Debug by stating a belief, measuring it with one print, then moving the print."}, {"f": "Session7.pdf", "p": 22, "s": "watch-out", "t": "pdb commands", "w": "Know n, s, p, c, l, q; in pdb a bare n means next, so use p n to print a variable named n."}, {"f": "Session7.pdf", "p": 35, "s": "remember", "t": "lockfiles / reproducible environments", "w": "pyproject.toml states what you ask for; the lock records exactly what was resolved. Commit both, never edit the lock."}, {"f": "Session8.pdf", "p": 14, "s": "remember", "t": "attribute typos", "w": "Assigning to a misspelt attribute silently creates a new one; set every attribute in __init__."}, {"f": "Session8.pdf", "p": 20, "s": "watch-out", "t": "mutable class attributes", "w": "Lists, dicts and sets as class attributes are shared by all instances; create them in __init__."}, {"f": "Session8.pdf", "p": 23, "s": "watch-out", "t": "methods: defaults and self", "w": "Method defaults follow function rules, including the mutable-default trap; self gets no type hint."}, {"f": "Session8.pdf", "p": 44, "s": "remember", "t": "attribute / method lookup order", "w": "Lookup goes instance, then class, then parent classes; the first match runs."}, {"f": "Session8.pdf", "p": 51, "s": "remember", "t": "OOP recap", "w": "Know the seven recap points: self, attribute lookup, methods return, __repr__, super().__init__(), class vs function."}, {"f": "Recursion1.pdf", "p": 3, "s": "exam", "t": "course exam", "w": "Course 2 ends with a 2-hour closed-book written exam plus oral project defences in session 7."}, {"f": "Recursion1.pdf", "p": 4, "s": "exam", "t": "exam format", "w": "Exam: 15 MCQs (penalty for wrong, 0 for blank), one broken-code question, and exercises on fault-spotting, recursion and rewriting for cost."}, {"f": "Recursion1.pdf", "p": 4, "s": "exam", "t": "oral defence", "w": "The oral (30 marks) is a code-reading conversation: explain why each function is shaped the way it is."}, {"f": "Recursion1.pdf", "p": 24, "s": "watch-out", "t": "missing return in recursion", "w": "The recursive line must start with return, otherwise the function returns None."}, {"f": "Recursion1.pdf", "p": 30, "s": "watch-out", "t": "unreachable / missing base case", "w": "Diagnose RecursionError by the three rules: no base case, argument not shrinking, or floor stepped over."}, {"f": "Recursion1.pdf", "p": 31, "s": "exam", "t": "four checks for a recursive function", "w": "Be able to answer: return without a call? does the argument shrink? can the floor be stepped over? does the recursive line return?"}, {"f": "Recursion1.pdf", "p": 35, "s": "remember", "t": "cost of slicing in recursion", "w": "Each numbers[1:] copies the list, so a slicing recursion costs O(n²) copies in total."}, {"f": "Recursion1.pdf", "p": 43, "s": "remember", "t": "base case / what shrinks / combine step", "w": "For each recursion, name the base case, what shrinks, and the combine step."}, {"f": "Recursion1.pdf", "p": 44, "s": "watch-out", "t": "combine step order", "w": "A reversed combine step gives a wrong answer silently; test on inputs whose answer you know."}, {"f": "Recursion1.pdf", "p": 56, "s": "watch-out", "t": "fixing RecursionError", "w": "Match each symptom to its rule and fix; raise the limit only for legitimately deep structures."}, {"f": "Recursion1.pdf", "p": 68, "s": "watch-out", "t": "flatten combine step", "w": "Use += or extend to splice in the sub-list; append keeps the nesting."}, {"f": "Recursion1.pdf", "p": 69, "s": "exam", "t": "combine step errors", "w": "Most lab errors were in the combine step; that is where marks are won or lost."}, {"f": "Recursion1.pdf", "p": 70, "s": "remember", "t": "recursion recap", "w": "Base case plus smaller problem, one frame per call, answer built on the way up, three rules, RecursionError is your bug."}, {"f": "Recursion1.pdf", "p": 72, "s": "exam", "t": "tracing recursion by hand", "w": "Practise tracing calls like factorial(6) on paper: step, event, depth, what each frame waits for and returns."}, {"f": "Recursion2.pdf", "p": 16, "s": "exam", "t": "binary search with low/high", "w": "Pass low and high indexes instead of slices: no copying, and returned indexes refer to the original list."}, {"f": "Recursion2.pdf", "p": 19, "s": "remember", "t": "binary search base case", "w": "Check low > high first; that empty window is the base case that proves absence."}, {"f": "Recursion2.pdf", "p": 21, "s": "watch-out", "t": "binary search off-by-one (mid vs mid+1)", "w": "Recurse on mid + 1 / mid - 1, not mid, or the window stops shrinking; test windows of size one and two."}, {"f": "Recursion2.pdf", "p": 22, "s": "exam", "t": "binary search precondition vs dict", "w": "Binary search assumes sorted input and fails silently otherwise; explain when it beats a dict or a linear scan."}, {"f": "Recursion2.pdf", "p": 43, "s": "remember", "t": "unbalanced BST", "w": "Sorted insertion turns a BST into a list (O(n)); AVL and red-black trees rebalance to guarantee O(log n)."}, {"f": "Recursion2.pdf", "p": 46, "s": "watch-out", "t": "None base case in tree traversal", "w": "Every tree recursion must check if node is None first, or it raises AttributeError."}, {"f": "Recursion2.pdf", "p": 56, "s": "remember", "t": "binary search & trees recap", "w": "Sorted data needed, log growth, window not slice, absent node is the base case, three traversals, in-order is sorted."}, {"f": "Recursion4.pdf", "p": 13, "s": "watch-out", "t": "what n is in Big O", "w": "Always name what n is: sum_digits is O(d) in the digit count, not the value."}, {"f": "Recursion4.pdf", "p": 14, "s": "exam", "t": "reading Big O off code", "w": "Be able to read the complexity of a function straight from its code (section 3 of Session 4)."}, {"f": "Recursion4.pdf", "p": 19, "s": "remember", "t": "exponential recursion: fib vs hanoi", "w": "fib is exponential through waste (caching fixes it); hanoi is exponential because the answer has 2ⁿ−1 moves."}, {"f": "Recursion4.pdf", "p": 23, "s": "remember", "t": "hidden costs of operations", "w": "x in list is O(n), O(n²) inside a loop; know the costs of set lookup, insert(0), string concatenation, sorted, slicing."}, {"f": "Recursion4.pdf", "p": 24, "s": "watch-out", "t": "list vs set membership", "w": "A list as a 'seen' collection makes the loop quadratic; a set makes it linear."}, {"f": "Recursion4.pdf", "p": 42, "s": "exam", "t": "four sorts complexity table", "w": "Know best, worst and average cases and space for bubble, insertion, merge and quick sort, and what sorted() does."}, {"f": "Recursion4.pdf", "p": 43, "s": "watch-out", "t": "merge step cost", "w": "A cost inside a recursion is paid at every level; the merge must be a linear two-index pass."}, {"f": "Recursion4.pdf", "p": 48, "s": "watch-out", "t": "complexity class vs constants", "w": "Find the complexity class first, then constants; change the class, not the constant."}, {"f": "Recursion4.pdf", "p": 51, "s": "exam", "t": "classifying function complexity", "w": "Phase 1 asks you to give each function's time complexity, say what n is, and justify it in one sentence."}];
+const EM_KIND = { exam: 'Exam', remember: 'Remember', 'watch-out': 'Watch out' };
+const EM_DECK = f => (f.startsWith('Recursion') ? `Recursion ${f.match(/\d+/)[0]}` : `Session ${f.match(/\d+/)[0]}`);
+let emShow = 'all';
+function renderExamMap() {
+  const n = k => EXAM_HINTS.filter(h => h.s === k).length;
+  document.getElementById('em-sub').textContent = `${n('exam')} about the exam · ${n('remember')} to remember · ${n('watch-out')} to watch out for`;
+  document.querySelector('#exam-map .em-filters').innerHTML = [['all', 'All', EXAM_HINTS.length], ['exam', 'Exam', n('exam')], ['remember', 'Remember', n('remember')], ['watch-out', 'Watch out', n('watch-out')]]
+    .map(([k, l, c]) => `<button type="button" data-em="${k}" aria-pressed="${k === emShow}">${l}<b>${c}</b></button>`).join('');
+  const shown = EXAM_HINTS.filter(h => emShow === 'all' || h.s === emShow);
+  const decks = [...new Set(shown.map(h => h.f))];
+  document.getElementById('em-list').innerHTML = decks.map(f => `<section class="em-deck"><h3>${EM_DECK(f)}</h3><div class="em-rows">${shown.filter(h => h.f === f).map(h => `<div class="em-row" data-s="${h.s}"><span class="em-kind">${EM_KIND[h.s]}</span><span class="em-what"><b>${esc(h.t.charAt(0).toUpperCase() + h.t.slice(1))}</b><span>${esc(h.w)}</span></span>${ON_COLOUR_BRAIN ? slideLink(h.f, h.p) : `<span class="em-page">p. ${h.p}</span>`}</div>`).join('')}</div></section>`).join('');
+}
+document.getElementById('exam-map').addEventListener('click', e => {
+  const b = e.target.closest('[data-em]');
+  if (!b) return;
+  emShow = b.dataset.em;
+  renderExamMap();
+});
+renderExamMap();
+
 /* ---------- Review: questions, comments, confused and no time, together ---------- */
 function boxHead(item, forKey) {
   if (item.classList.contains('pm-notes')) {
@@ -3922,6 +4061,8 @@ function boxHead(item, forKey) {
     return { sess: mis.style.getPropertyValue('--sess'), name: `Practice ${mis.dataset.id} · ${mis.querySelector('.pm-title').textContent}`, num: mis.dataset.id, text: mis.querySelector('.pm-task').textContent };
   }
   if (item.id === 'nb-host') return { sess: 'var(--muted)', name: 'Project 1 · notebook', num: 'NB', text: '' };
+  // A level, the free space and Practice in general (their notes are written in the notebook or under the level).
+  if (item.closest('#page-practice')) { const p = pnbPlace(item.dataset.key); return { sess: p.sess, name: `Practice · ${p.name}`, num: p.n, text: '' }; }
   if (item.id === 'overall-host') return { sess: 'var(--accent)', name: 'Project 1 · overall questions on the whole program', num: '0', text: '' };
   if (item.classList.contains('slide-host')) {
     const lesson = item.closest('details.lesson');
@@ -3958,7 +4099,7 @@ function reviewNote(n) {
   return `<article class="rv-entry rv-qa" data-kind="${n.kind}" style="--sess: ${h.sess};${h.tint ? ` --rv-tint: ${h.tint};` : ''}">
     <div class="rv-place"><span class="rv-sess">${h.num}</span><i class="state-dot ${noteState(n)}"></i></div>
     <div class="rv-main">
-      <div class="rv-top"><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}"${slide ? ` data-slide="${slide}"` : ''}>${item.closest('#page-project') ? 'Open in project ›' : slide ? `Open slide ${slide} ›` : 'Open in lesson ›'}</button></div>
+      <div class="rv-top"><span class="rv-name">${esc(h.name)}</span><button type="button" class="rv-open" data-open-item="${item.id}"${slide ? ` data-slide="${slide}"` : ''}>${item.closest('#page-project') ? 'Open in project ›' : item.closest('#page-practice') ? 'Open in practice ›' : slide ? `Open slide ${slide} ›` : 'Open in lesson ›'}</button></div>
       <div class="rv-note" data-kind="${n.kind}">${noteBodyHtml(n.body)}</div>
       ${n.answer ? `<div class="note-answer"><span class="note-label">Answer</span><div>${esc(n.answer)}</div>${n.readAt ? '' : `<button type="button" class="note-read" data-ref="${esc(noteRef(n))}">Got it, mark read</button>`}</div>` : (n.kind === 'question' ? '<p class="rv-wait">Waiting for an answer</p>' : '')}
     </div>
@@ -3997,10 +4138,9 @@ function renderReview() {
   // Review can be drawn before Practice exists (on load): then there is nothing to list yet.
   const flagged = (window.practiceMissions || []).filter(m => marks[`xb|${m.id}`] === 'mid');
   const total = questions.length + comments.length + confused.length + noTime.length + flagged.length;
-  const countEl = document.getElementById('review-count');
-  countEl.textContent = waiting ? `${waiting} new` : (total ? String(total) : '');
   const el = document.getElementById('review');
   if (!total) {
+    renderPnb();
     el.innerHTML = '<p class="rv-empty">Nothing here yet. In Lessons, the three dots on the side of a box mark it Got it, Confused or No time, and the button at the bottom adds a question or a comment. They all gather here.</p>';
     return;
   }
@@ -4017,6 +4157,7 @@ function renderReview() {
   const inProject = n => n.key.startsWith('p1|');
   const inPractice = n => n.key.startsWith('x|');
   const inLessons = n => !inProject(n) && !inPractice(n);
+  renderPnb();
   el.innerHTML = part('Project 1', questions.filter(inProject), comments.filter(inProject))
     + part('Lessons', questions.filter(inLessons), comments.filter(inLessons))
     + part('Practice', questions.filter(inPractice), comments.filter(inPractice))
@@ -4040,12 +4181,7 @@ document.getElementById('review').addEventListener('click', e => {
   if (target.dataset.key && !openNoteLists.has(target.dataset.key)) { openNoteLists.add(target.dataset.key); paintItem(target); }
   if (target.closest('#page-practice')) {
     showPage('practice', false);
-    const mis = target.closest('.pmission');
-    mis.closest('.plevel').open = true;
-    mis.open = true;
-    mis.scrollIntoView({ block: 'start' });
-    mis.classList.add('flash');
-    setTimeout(() => mis.classList.remove('flash'), 1600);
+    if (target.id === 'pnb-host') setPnb(true); else goToSpot(target.dataset.key, 'start');
     return;
   }
   if (target.closest('#page-project')) {
@@ -4372,6 +4508,22 @@ lessonsEl.addEventListener('toggle', e => {
   if (more.open) { if (!item.dataset.pinned) setWide(item, true); item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
   else if (!item.dataset.pinned) setWide(item, false);
 }, true);
+// The + at a box's foot opens and closes its longer explanation, wherever the box is shown.
+document.addEventListener('click', e => {
+  const b = e.target.closest('.more-btn');
+  if (!b) return;
+  const more = b.parentElement.querySelector(':scope > details.more');
+  if (more) more.open = !more.open;
+});
+document.addEventListener('toggle', e => {
+  const more = e.target;
+  if (!more.matches || !more.matches('details.more')) return;
+  const b = more.parentElement.querySelector(':scope > .more-btn');
+  if (!b) return;
+  b.setAttribute('aria-expanded', String(more.open));
+  b.textContent = more.open ? '−' : '+';
+  b.title = more.open ? 'Less' : 'More';
+}, true);
 /* A vocabulary word jumps to the box that explains it, in whatever session it lives. */
 lessonsEl.addEventListener('click', e => {
   const b = e.target.closest('[data-goto]');
@@ -4627,12 +4779,14 @@ function renderPractice() {
       <div class="pe-bar"><button type="button" class="pe-run">▶ Run</button><span class="pe-keys">Ctrl + Enter</span></div>
       <div class="pe-status" aria-live="polite"></div>
       <div class="pe-out" hidden></div>
+      <div class="pl-notes" id="pln-play" data-key="x|play"><button type="button" class="note-dot" aria-pressed="false">Question or comment</button></div>
     </details>
     <nav class="index pp-index" aria-label="Levels">${PRACTICE.map(l => `<a href="#plevel-${l.n}" data-level="${l.n}" style="--sess: var(--sess-${((l.n - 1) % 7) + 1})"><span class="n">${l.n}</span> ${esc(l.title)} <b class="pp-lc"></b></a>`).join('')}</nav>
     ${PRACTICE.map(l => `<details class="plevel" id="plevel-${l.n}" data-level="${l.n}" style="--sess: var(--sess-${((l.n - 1) % 7) + 1})">
       <summary><span class="pl-n">Level ${l.n}</span><span class="pl-title">${esc(l.title)}</span><span class="pl-flags" hidden></span><span class="pl-count"></span></summary>
       <div class="pl-idea"><div><span class="eyebrow">The idea</span><p>${l.idea}</p></div>
         <div class="pl-ex"><pre class="pe-pre">${esc(l.example)}</pre>${l.exampleOut ? `<div class="pe-out-head">Output</div><pre class="pe-pre pl-exout">${esc(l.exampleOut)}</pre>` : ''}</div></div>
+      <div class="pl-notes" id="pln-${l.n}" data-key="x|L${l.n}"><button type="button" class="note-dot" aria-pressed="false">Question or comment</button></div>
       <div class="pl-missions">${l.missions.map((m, i) => missionHtml(m, i, l)).join('')}</div>
     </details>`).join('')}`;
   for (const ta of practiceEl.querySelectorAll('.pe-code')) fitEditor(ta);
@@ -4821,6 +4975,145 @@ practiceEl.addEventListener('toggle', e => {
   if ((d.classList.contains('plevel') || d.classList.contains('pe-play')) && d.open) for (const o of practiceEl.querySelectorAll('.plevel[open], .pe-play[open]')) if (o !== d) o.open = false;
   if (d.classList.contains('pe-play') && d.open) { fitEditor(d.querySelector('.pe-code')); startPython().catch(() => {}); }
 }, true);
+/*
+ * THE PRACTICE NOTEBOOK (2026-10-19: "a notebook on the right that I can open
+ * when I am in practice, and write my comments according to the part of the
+ * app I am in, so I can see the comments and questions and track them").
+ * A dot on the right edge opens it. A note is written about a place, which the
+ * notebook reads from what is open (the mission, else the level, else the free
+ * space), and every Practice note is listed below, grouped by place. The
+ * places are the same keys the page already uses, so a note written here also
+ * shows on its mission and in Review.
+ */
+const levelSess = n => `var(--sess-${((n - 1) % 7) + 1})`;
+function pnbPlaces() {
+  return [
+    { key: 'x|notebook', n: 'P', name: 'Practice in general', sess: 'var(--muted)' },
+    { key: 'x|play', n: 'F', name: 'Free space', sess: 'var(--muted)' },
+    ...PRACTICE.flatMap(l => [
+      { key: `x|L${l.n}`, n: `L${l.n}`, name: `Level ${l.n} · ${l.title}`, sess: levelSess(l.n), level: l.n },
+      ...l.missions.map(m => ({ key: doneKey(m.id), n: m.id, name: m.title, sess: levelSess(l.n), level: l.n, id: m.id })),
+    ]),
+  ];
+}
+function pnbPlace(key) {
+  // The two fixed places are known before the levels exist (Review can be drawn first).
+  if (key === 'x|notebook') return { key, n: 'P', name: 'Practice in general', sess: 'var(--muted)' };
+  if (key === 'x|play') return { key, n: 'F', name: 'Free space', sess: 'var(--muted)' };
+  return pnbPlaces().find(p => p.key === key) || { key, n: '?', name: key, sess: 'var(--muted)' };
+}
+// Where you are: the open mission in the open level, else that level, else the free space.
+function currentSpot() {
+  const lvl = practiceEl.querySelector('.plevel[open]');
+  if (lvl) {
+    const m = lvl.querySelector('.pmission[open]');
+    return m ? doneKey(m.dataset.id) : `x|L${lvl.dataset.level}`;
+  }
+  return practiceEl.querySelector('.pe-play[open]') ? 'x|play' : 'x|notebook';
+}
+const pnb = document.getElementById('pnb');
+const pnbDot = document.getElementById('pnb-dot');
+const pnbAbout = document.getElementById('pnb-about');
+const pnbText = document.getElementById('pnb-text');
+let pnbKind = 'question';
+let pnbPinned = false;   // the place was chosen by hand: stop following the page
+function followSpot() {
+  if (pnbPinned) return;
+  pnbAbout.value = currentSpot();
+}
+function setPnb(open) {
+  pnb.hidden = !open;
+  pnbDot.setAttribute('aria-expanded', String(open));
+  if (!open) return;
+  if (!pnbText.value.trim()) pnbPinned = false;
+  followSpot();
+  renderPnb();
+}
+function goToSpot(key, block = 'center') {
+  if (key === 'x|notebook') return;
+  let el;
+  if (key === 'x|play') el = practiceEl.querySelector('.pe-play');
+  else {
+    const p = pnbPlace(key);
+    if (!p.level) return;
+    const lvl = document.getElementById(`plevel-${p.level}`);
+    lvl.open = true;
+    el = lvl;
+    if (p.id) { el = practiceEl.querySelector(`.pmission[data-id="${p.id}"]`); el.open = true; }
+  }
+  el.open = true;
+  if (innerWidth < 760) setPnb(false);
+  el.scrollIntoView({ block, behavior: 'smooth' });
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1600);
+}
+function renderPnb() {
+  if (!window.practiceMissions || !practiceEl.firstChild) return;
+  const list = noteList.filter(n => n.key.startsWith('x|'));
+  pnbDot.classList.toggle('has-notes', list.length > 0);
+  if (!pnbAbout.options.length) {
+    pnbAbout.innerHTML = pnbPlaces().map(p => `<option value="${esc(p.key)}">${p.id ? `${p.id} · ` : ''}${esc(p.name)}</option>`).join('');
+    followSpot();
+  }
+  if (pnb.hidden) return;
+  // An edit open in the list is not drawn over; the list is drawn again when it closes.
+  const box = document.getElementById('pnb-list');
+  if (box.querySelector('.note-editor')) return;
+  const q = list.filter(n => n.kind === 'question');
+  const waiting = q.filter(n => !n.answer).length;
+  const fresh = list.filter(n => n.answer && !n.readAt).length;
+  document.getElementById('pnb-sum').textContent = list.length
+    ? [q.length && `${q.length} question${q.length === 1 ? '' : 's'}`, waiting && `${waiting} waiting`, fresh && `${fresh} new answer${fresh > 1 ? 's' : ''}`,
+      list.length - q.length && `${list.length - q.length} comment${list.length - q.length === 1 ? '' : 's'}`].filter(Boolean).join(' · ')
+    : '';
+  const here = currentSpot();
+  const byNewest = (a, b) => String(b.createdAt || b.localId || '').localeCompare(String(a.createdAt || a.localId || ''));
+  const groups = pnbPlaces().map(p => ({ p, notes: list.filter(n => n.key === p.key).sort(byNewest) })).filter(g => g.notes.length);
+  box.innerHTML = groups.length
+    ? groups.map(({ p, notes }) => `<div class="pnb-group${p.key === here ? ' here' : ''}" data-key="${esc(p.key)}">
+        <div class="pnb-head"><button type="button" class="pnb-go" data-go="${esc(p.key)}"${p.key === 'x|notebook' ? ' disabled' : ` title="Go to ${esc(p.name)}"`}><span class="pnb-n">${esc(p.n)}</span><span class="pnb-name">${esc(p.name)}${p.key === 'x|notebook' ? '' : ' ›'}</span></button>${p.key === here ? '<span class="pnb-here">you are here</span>' : ''}</div>
+        <div class="note-list">${notes.map(n => noteHtml(n, false)).join('')}</div>
+      </div>`).join('')
+    : '<p class="pnb-empty">No notes yet. Write one above: it is filed under the mission you are on, and gathers here with the others.</p>';
+}
+pnbDot.addEventListener('click', () => setPnb(pnb.hidden));
+document.getElementById('pnb-close').addEventListener('click', () => setPnb(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !pnb.hidden) setPnb(false); });
+pnbAbout.addEventListener('change', () => { pnbPinned = true; });
+pnbText.addEventListener('input', () => { if (pnbText.value.trim()) pnbPinned = true; });
+// Opening a level or a mission moves the notebook with you, until you choose a place yourself.
+practiceEl.addEventListener('toggle', () => { if (!pnb.hidden) { followSpot(); renderPnb(); } }, true);
+pnb.addEventListener('click', e => {
+  const pick = e.target.closest('.pnb-write .kind-pick [data-kind]');
+  if (pick) {
+    pnbKind = pick.dataset.kind;
+    for (const b of pnb.querySelectorAll('.pnb-write .kind-pick button')) b.setAttribute('aria-checked', String(b === pick));
+    return;
+  }
+  if (e.target.closest('#pnb-save')) {
+    const text = pnbText.value.trim();
+    if (!text) { pnbText.focus(); return; }
+    const key = pnbAbout.value;
+    openNoteLists.add(key);   // shown on its mission too, not folded away
+    saveNote(key, null, text, pnbKind);
+    pnbText.value = '';
+    pnbPinned = false;
+    const saved = document.getElementById('pnb-saved');
+    saved.textContent = `Saved to ${pnbAbout.selectedOptions[0].textContent}.`;
+    setTimeout(() => { if (saved.textContent.startsWith('Saved')) saved.textContent = ''; }, 2500);
+    followSpot();
+    return;
+  }
+  const go = e.target.closest('.pnb-go');
+  if (go) { goToSpot(go.dataset.go); return; }
+  // The notes themselves: edit, delete and mark read, as everywhere on the page.
+  onNoteClick(e);
+  if (e.target.closest('.note-save, .note-cancel')) renderPnb();
+});
+pnbText.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); document.getElementById('pnb-save').click(); }
+});
+
 renderPractice();
 renderReview();
 
@@ -4861,13 +5154,14 @@ document.addEventListener('click', e => {
   showPage('project', false);
   openTarget(a.dataset.jump);
 });
-let start = 'project';
+let start = 'lessons';
 if (location.hash === '#toolkit') start = 'tools';
 else if (location.hash === '#lessons') start = 'lessons';
 else if (location.hash === '#review') start = 'review';
 else if (location.hash === '#practice') start = 'practice';
-else { try { start = localStorage.getItem('explorer-map-page') || 'project'; } catch (e) {}
-  if (!tabs[start]) start = 'project'; }
+else if (location.hash === '#project') start = 'project';
+else { try { start = localStorage.getItem('explorer-map-page') || 'lessons'; } catch (e) {}
+  if (!tabs[start]) start = 'lessons'; }
 showPage(start, false);
 </script>
 </body>
