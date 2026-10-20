@@ -51,5 +51,8 @@ describe('/sql class page', () => {
     // Sessions 4 and 5, and the keyword peek that opens a cheat-sheet line on hover.
     expect(html).toContain("{ id: 'top-n',");
     expect(html).toContain('const PEEK_TERM = {');
+    // Slides per card and the business case, both read from the user's private files.
+    expect(html).toContain('const SLIDE_OF = {');
+    expect(html).toContain("const CASE_FILE = '/api/coding/slides/SQLBusinessCase.sql';");
   });
 });

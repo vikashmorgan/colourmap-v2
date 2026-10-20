@@ -6,6 +6,7 @@ import {
   MAX_SLIDE_BYTES,
   SLIDE_FILES,
   SLIDES_BUCKET,
+  slideContentType,
   slidePath,
 } from '@/lib/coding/slides';
 import { createClient } from '@/lib/supabase/server';
@@ -14,7 +15,8 @@ import { createClient } from '@/lib/supabase/server';
  * The signed-in user's own copies of the course slides.
  *
  *   GET   → { uploaded: ["Session1.pdf", ...] }
- *   POST  multipart, field "file": upload or replace one slide deck
+ *   POST  multipart, field "file": upload or replace one slide deck (or the
+ *         SQL class's business case, SQLBusinessCase.sql, stored as text)
  *
  * One file per request keeps each upload under the hosting body limit.
  * Storage policies also confine every object to the user's own folder.
@@ -43,7 +45,12 @@ export async function POST(request: Request) {
     if (!isSlideFile(file.name)) {
       return jsonError(`file must be named one of: ${SLIDE_FILES.join(', ')}`, 400);
     }
-    if (file.type && file.type !== 'application/pdf') return jsonError('file must be a PDF', 400);
+    const contentType = slideContentType(file.name);
+    // A .sql file arrives with whatever type the browser guesses (often none);
+    // only the PDFs are checked, and each is stored with its own type.
+    if (contentType === 'application/pdf' && file.type && file.type !== 'application/pdf') {
+      return jsonError('file must be a PDF', 400);
+    }
     if (file.size > MAX_SLIDE_BYTES) return jsonError('file is too large', 413);
 
     const supabase = await createClient();
@@ -51,7 +58,7 @@ export async function POST(request: Request) {
       .from(SLIDES_BUCKET)
       .upload(slidePath(user.id, file.name), file, {
         upsert: true,
-        contentType: 'application/pdf',
+        contentType,
       });
     if (error) return jsonError(error.message, 502);
     return NextResponse.json({ uploaded: file.name }, { status: 201 });

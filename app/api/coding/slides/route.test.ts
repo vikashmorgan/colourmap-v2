@@ -61,6 +61,16 @@ describe('coding slides route', () => {
     });
   });
 
+  it('stores the SQL business case as text, whatever type the browser gave it', async () => {
+    const sqlFile = new File(['SELECT 1;'], 'SQLBusinessCase.sql', { type: '' });
+    const response = await POST(uploadRequest(sqlFile));
+    expect(response.status).toBe(201);
+    expect(upload).toHaveBeenCalledWith('user-1/SQLBusinessCase.sql', expect.any(File), {
+      upsert: true,
+      contentType: 'text/plain',
+    });
+  });
+
   it('rejects a missing file, an unknown name, and a non-PDF', async () => {
     expect((await POST(uploadRequest())).status).toBe(400);
     expect((await POST(uploadRequest(pdf('Session5.pdf')))).status).toBe(400);

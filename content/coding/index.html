@@ -4461,6 +4461,9 @@ async function initSlides() {
     if (!res.ok) return;
     state = await res.json();
   } catch (e) { return; }
+  // The same private folder also holds the SQL class's files (SQL*.pdf, SQLBusinessCase.sql); they belong to /sql.
+  const ours = f => !f.startsWith('SQL');
+  state = { ...state, expected: state.expected.filter(ours), uploaded: state.uploaded.filter(ours) };
   const render = () => {
     const missing = state.expected.filter(f => !state.uploaded.includes(f));
     panel.innerHTML = `<span class="slides-count">Slides: ${state.uploaded.length}/${state.expected.length} uploaded</span>

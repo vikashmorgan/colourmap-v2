@@ -88,7 +88,7 @@ Table `coding_marks` (migration `0023_coding_marks.sql`): one row per box with a
 
 ## Slides
 
-The slides are the teacher's material and this repository is public, so **slides are never committed**. Each user uploads their own copies once, from the upload panel on the Lessons page, into the private Supabase bucket `coding-slides`, under a folder named after their user id. Storage policies confine reads and writes to that folder. Only the twelve known file names are accepted (Session8.pdf added with session 8; Recursion1.pdf, Recursion2.pdf and Recursion4.pdf with the second course).
+The slides are the teacher's material and this repository is public, so **slides are never committed**. Each user uploads their own copies once, from the upload panel on the Lessons page, into the private Supabase bucket `coding-slides`, under a folder named after their user id. Storage policies confine reads and writes to that folder. Only the twelve known file names are accepted (Session8.pdf added with session 8; Recursion1.pdf, Recursion2.pdf and Recursion4.pdf with the second course). The same folder also holds the SQL class's files (`SQL1.pdf` … `SQL5.pdf` and the text file `SQLBusinessCase.sql`, see `docs/specs/sql-class.md`); this page's upload panel leaves those out.
 
 A slide link is `/api/coding/slides/Session3.pdf#page=19`: the route answers with a redirect to a one-hour signed URL, and the browser keeps `#page=19` across the redirect, so the PDF opens on that slide. Slide links and the upload panel appear only when the page is served from Colour Brain.
 

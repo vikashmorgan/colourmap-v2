@@ -22,6 +22,14 @@ export const SLIDE_FILES = [
   'Recursion2.pdf',
   // Second course, session 4 (algorithmic complexity), shown as Recursion 4.
   'Recursion4.pdf',
+  // The SQL class (/sql): its five session decks, and the business case the
+  // page shows as its own tab. The case is plain text (a .sql file).
+  'SQL1.pdf',
+  'SQL2.pdf',
+  'SQL3.pdf',
+  'SQL4.pdf',
+  'SQL5.pdf',
+  'SQLBusinessCase.sql',
 ] as const;
 
 export type SlideFile = (typeof SLIDE_FILES)[number];
@@ -31,6 +39,11 @@ export const MAX_SLIDE_BYTES = 20 * 1024 * 1024;
 
 export function isSlideFile(name: unknown): name is SlideFile {
   return typeof name === 'string' && (SLIDE_FILES as readonly string[]).includes(name);
+}
+
+/** What a file is stored as: the decks are PDFs, the SQL business case is text. */
+export function slideContentType(file: SlideFile) {
+  return file.endsWith('.sql') ? 'text/plain' : 'application/pdf';
 }
 
 export function slidePath(userId: string, file: SlideFile) {
