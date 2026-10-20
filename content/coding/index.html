@@ -151,7 +151,7 @@ details.output summary { cursor: pointer; font-size: 14px; color: var(--accent);
 .rd-page .mark { width: 38px; height: 38px; }
 .rd-page .mark::before { width: 20px; height: 20px; border-width: 2px; opacity: .55; }
 .rd-page .mark::after { right: auto; left: 50%; top: calc(100% + 2px); transform: translate(-50%, -4px); }
-.rd-page .mark:hover::after, .rd-page .mark:focus-visible::after { transform: translate(-50%, 0); }
+.rd-page .mark:hover::after, .rd-page .mark:focus-visible::after, .rd-page .mark:focus::after { transform: translate(-50%, 0); }
 
 /* Highlights: light, see-through colours over the text, remembered on the device. */
 mark.hl { --hl: #f2c14e; background: color-mix(in srgb, var(--hl) 34%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; cursor: pointer; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
@@ -580,7 +580,9 @@ details.more[open] > summary { opacity: 1; }
 .lgroup .item .mark { width: 30px; height: 30px; }
 .lgroup .item .mark::before { width: 14px; height: 14px; border-width: 2px; }
 .lgroup .item .mark::after { right: auto; left: 50%; top: auto; bottom: calc(100% + 2px); transform: translate(-50%, 4px); }
-.lgroup .item .mark:hover::after, .lgroup .item .mark:focus-visible::after { transform: translate(-50%, 0); }
+.lgroup .item .mark:hover::after, .lgroup .item .mark:focus-visible::after, .lgroup .item .mark:focus::after { transform: translate(-50%, 0); }
+.lgroup .item .mark.m-late::after { left: auto; right: 0; transform: translate(0, 4px); }
+.lgroup .item .mark.m-late:hover::after, .lgroup .item .mark.m-late:focus-visible::after, .lgroup .item .mark.m-late:focus::after { transform: translate(0, 0); }
 .more-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; padding: 3px 11px; min-height: 30px; border-radius: 999px; border: 1px dashed color-mix(in srgb, var(--q-c) 55%, transparent); background: none; color: var(--box-text); opacity: .7; font: 600 16px/1 var(--mono); cursor: pointer; }
 .more-btn:hover, .more-btn:focus-visible, .more-btn[aria-expanded="true"] { opacity: 1; border-style: solid; }
 /* In a narrow box the foot stays one line: Question or comment shrinks to its ✎ (named on hover). */
@@ -695,7 +697,7 @@ pre, .terminal { zoom: var(--code-zoom); }
   white-space: nowrap; font: 600 12px var(--body); padding: 3px 10px; border-radius: 999px;
   background: var(--dot, var(--q-c)); color: var(--ground); opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; z-index: 3;
 }
-.mark:hover::after, .mark:focus-visible::after { opacity: 1; transform: translate(0, -50%); }
+.mark:hover::after, .mark:focus-visible::after, .mark:focus::after { opacity: 1; transform: translate(0, -50%); }
 .pg-solid { color: var(--solid-c); }
 
 /* Question or comment: a quiet button at the bottom of the box. */
