@@ -319,6 +319,32 @@
   .code-lines.lit-0 .cl.p0 { background: color-mix(in srgb, #7a7066 22%, transparent); box-shadow: inset 4px 0 0 #7a7066; }
   .code-lines.lit-0 .cl.p0 .cl-tag { color: var(--ink); background: color-mix(in srgb, #7a7066 30%, transparent); padding: 0 6px; border-radius: 4px; }
   .cs-p.p0[open] { border-color: #7a7066; background: color-mix(in srgb, #7a7066 8%, var(--card)); }
+  .gl-p.p1, .cs-p.p1 { --pc: #b5562f; }
+  .gl-p.p2, .cs-p.p2 { --pc: #2f6fa8; }
+  .gl-p.p3, .cs-p.p3 { --pc: #6a8f2c; }
+  .gl-p.p4, .cs-p.p4 { --pc: #8a5a9e; }
+  .gl-p.p5, .cs-p.p5 { --pc: #b0861a; }
+  .gl-p.p6, .cs-p.p6 { --pc: #2e8a86; }
+  .gl-p.p0, .cs-p.p0 { --pc: #7a7066; }
+  /* Problems as coloured pills: at a glance (top) and beside the code. */
+  .glance { margin-top: 18px; display: grid; gap: 8px; }
+  .glance h2 { margin: 0; }
+  .gl-hint { margin: 0; color: var(--soft); font: 13.5px system-ui, sans-serif; }
+  .gl-list { display: grid; gap: 6px; }
+  .gl-p { border-radius: 10px; border: 1px solid color-mix(in srgb, var(--pc) 45%, transparent); background: color-mix(in srgb, var(--pc) 13%, var(--card)); }
+  .gl-p > summary { cursor: pointer; list-style: none; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; align-items: start; padding: 9px 12px; font-size: 15px; }
+  .gl-p > summary::-webkit-details-marker { display: none; }
+  .gl-p > summary b { color: var(--pc); }
+  .gl-n { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--pc); color: #fff; font: 700 12px system-ui, sans-serif; }
+  .gl-p[open] { background: color-mix(in srgb, var(--pc) 20%, var(--card)); border-color: var(--pc); }
+  .gl-sol { margin: 0; padding: 0 12px 10px 46px; font-size: 15px; }
+  .gl-sol b { color: var(--pc); }
+  .gl-ok, .gl-ans { margin: 0; font-size: 14.5px; }
+  .gl-ok { color: var(--soft); }
+  [data-theme="night"] .gl-p > summary b, [data-theme="night"] .gl-sol b { filter: brightness(1.6); }
+  .cs-p { border-color: color-mix(in srgb, var(--pc) 45%, transparent); background: color-mix(in srgb, var(--pc) 13%, var(--card)); }
+  .cs-p > summary > span:last-child { color: var(--ink); }
+  .cs-p[open] { border-color: var(--pc); background: color-mix(in srgb, var(--pc) 20%, var(--card)); }
   /* Keyword peek: hover a keyword for a moment and its cheat-sheet box opens on the side. */
   .kw[data-kw], .kw-t { cursor: help; border-radius: 3px; }
   .kw[data-kw]:hover, .kw-t:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
@@ -1424,8 +1450,17 @@ document.getElementById('session').addEventListener('click', e => {
   n.hidden = !n.hidden;
   row.classList.toggle('on', !n.hidden);
 });
+// The problems at a glance: one coloured pill each; opening it shows its solution in a nutshell.
+function glanceHtml() {
+  const items = PROBLEM_INFO.slice(0, 6).map((p, k) => `<details class="gl-p p${k + 1}"><summary><span class="gl-n">${k + 1}</span><span><b>${esc(p.t)}.</b> ${esc(p.p)}</span></summary>
+    <p class="gl-sol"><b>Solution, in a nutshell.</b> ${esc(p.s)}</p></details>`).join('');
+  const ok = PROBLEM_INFO[6];
+  return `<div class="gl-list">${items}</div>
+    <p class="gl-ok"><b>${esc(ok.t)}:</b> ${esc(ok.s)}</p>
+    <p class="gl-ans"><b>So the answer:</b> Casa Fiori Scuri performed best on Sunday 11 October: €12,180, +14.9% vs the same Sunday last year and +5.0% vs budget, the only venue above both, driven by more guests (covers +15.5%). Over the whole week it ties with Urca (+8.1% each).</p>`;
+}
 // Each study-guide section is its own highlight host, so passages there can be highlighted like a card.
-function caseStudyHtml() { let k = 0; return CASE_STUDY.replace(/<details class="sg-sec"/g, m => `${m} data-hl="sql|case|sg${++k}"`); }
+function caseStudyHtml() { let k = 0; return CASE_STUDY.replace(/^<details class="sg-sec" open><summary>The pitch[\s\S]*?<\/details>/, '').replace(/<details class="sg-sec"/g, m => `${m} data-hl="sql|case|sg${++k}"`); }
 function caseHtml(c) {
   const lines = c.head.split('\n');
   const title = (lines.find(l => /^Business case/i.test(l)) || 'Business case').replace(/^Business case:\s*/i, '').replace(/^./, ch => ch.toUpperCase());
@@ -1434,8 +1469,10 @@ function caseHtml(c) {
   return `<p class="where">Business case</p><h1>${esc(title)}</h1>
     <div class="case-head"><p class="case-meta">${db ? `Database: ${esc(db)}` : ''}${link ? ` · <a href="${esc(link)}" target="_blank" rel="noopener">The Tableau dashboard ›</a>` : ''}</p>
       <p class="case-meta">Every query below is the one we ran. Hover a keyword in it, or a chip under it, to see that function's box from class.</p></div>
-    <details class="sg" open><summary>The pitch, and the study guide</summary><div class="sg-inner">${caseStudyHtml()}</div></details>
-    <details class="sg" data-hl="sql|case|code"><summary>The code, line by line</summary><div class="sg-inner">${codeLinesHtml()}</div></details>
+    <section class="glance" data-hl="sql|case|glance"><h2>The problems, at a glance</h2>
+      <p class="gl-hint">Click a problem for its solution in a nutshell.</p>${glanceHtml()}</section>
+    <details class="sg" open data-hl="sql|case|code"><summary>The code, line by line</summary><div class="sg-inner">${codeLinesHtml()}</div></details>
+    <details class="sg"><summary>Study guide, in detail</summary><div class="sg-inner">${caseStudyHtml()}</div></details>
     <h2>The SQL, step by step</h2>
     <div class="cards" style="margin-top: 18px">${c.steps.map(st => {
       const key = `sql|case|step${st.n}`, mk = marks[key] || '';
