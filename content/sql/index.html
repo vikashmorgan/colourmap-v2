@@ -280,6 +280,45 @@
   .code-lines.only-key .cl:not(.key) { display: none; }
   .code-lines.only-key .cl-gap { display: block; }
   @media (max-width: 560px) { .cl-tag { display: block; margin: 0 0 2px; white-space: normal; } .cl-tag::before { content: '↑ '; } }
+  /* Code, two columns: problems on the left (sticky), the code on the right, lit in each open problem's colour. */
+  .code-wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  @media (min-width: 1000px) {
+    .code-wrap { grid-template-columns: 320px minmax(0, 1fr); width: min(1240px, calc(100vw - 48px)); margin-left: calc(50% - min(620px, 50vw - 24px)); }
+    .code-side { position: sticky; top: 44px; align-self: start; max-height: calc(100vh - 60px); overflow: auto; }
+  }
+  .code-side { display: grid; gap: 6px; align-content: start; }
+  .cs-p { border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+  .cs-p > summary { cursor: pointer; list-style: none; display: flex; gap: 8px; align-items: center; padding: 8px 10px; font: 600 14px/1.3 system-ui, sans-serif; }
+  .cs-p > summary::-webkit-details-marker { display: none; }
+  .cs-p > summary .cl-dot { flex: none; display: inline-grid; place-items: center; margin: 0; }
+  .cs-body { padding: 0 10px 10px; display: grid; gap: 6px; font: 13.5px/1.45 system-ui, sans-serif; }
+  .cs-body p { margin: 0; }
+  .cs-lines { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }
+  .cs-lines li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: start; }
+  .code-side .code-all { justify-self: start; margin: 4px 0 0; }
+  .code-side .code-key { margin: 0 0 4px; }
+  .cl-dot.p0, .code-side .p0 .cl-dot { background: #7a7066; }
+  .code-lines.lit-1 .cl.p1 { background: color-mix(in srgb, #b5562f 22%, transparent); box-shadow: inset 4px 0 0 #b5562f; }
+  .code-lines.lit-1 .cl.p1 .cl-tag { color: var(--ink); background: color-mix(in srgb, #b5562f 30%, transparent); padding: 0 6px; border-radius: 4px; }
+  .cs-p.p1[open] { border-color: #b5562f; background: color-mix(in srgb, #b5562f 8%, var(--card)); }
+  .code-lines.lit-2 .cl.p2 { background: color-mix(in srgb, #2f6fa8 22%, transparent); box-shadow: inset 4px 0 0 #2f6fa8; }
+  .code-lines.lit-2 .cl.p2 .cl-tag { color: var(--ink); background: color-mix(in srgb, #2f6fa8 30%, transparent); padding: 0 6px; border-radius: 4px; }
+  .cs-p.p2[open] { border-color: #2f6fa8; background: color-mix(in srgb, #2f6fa8 8%, var(--card)); }
+  .code-lines.lit-3 .cl.p3 { background: color-mix(in srgb, #6a8f2c 22%, transparent); box-shadow: inset 4px 0 0 #6a8f2c; }
+  .code-lines.lit-3 .cl.p3 .cl-tag { color: var(--ink); background: color-mix(in srgb, #6a8f2c 30%, transparent); padding: 0 6px; border-radius: 4px; }
+  .cs-p.p3[open] { border-color: #6a8f2c; background: color-mix(in srgb, #6a8f2c 8%, var(--card)); }
+  .code-lines.lit-4 .cl.p4 { background: color-mix(in srgb, #8a5a9e 22%, transparent); box-shadow: inset 4px 0 0 #8a5a9e; }
+  .code-lines.lit-4 .cl.p4 .cl-tag { color: var(--ink); background: color-mix(in srgb, #8a5a9e 30%, transparent); padding: 0 6px; border-radius: 4px; }
+  .cs-p.p4[open] { border-color: #8a5a9e; background: color-mix(in srgb, #8a5a9e 8%, var(--card)); }
+  .code-lines.lit-5 .cl.p5 { background: color-mix(in srgb, #b0861a 22%, transparent); box-shadow: inset 4px 0 0 #b0861a; }
+  .code-lines.lit-5 .cl.p5 .cl-tag { color: var(--ink); background: color-mix(in srgb, #b0861a 30%, transparent); padding: 0 6px; border-radius: 4px; }
+  .cs-p.p5[open] { border-color: #b0861a; background: color-mix(in srgb, #b0861a 8%, var(--card)); }
+  .code-lines.lit-6 .cl.p6 { background: color-mix(in srgb, #2e8a86 22%, transparent); box-shadow: inset 4px 0 0 #2e8a86; }
+  .code-lines.lit-6 .cl.p6 .cl-tag { color: var(--ink); background: color-mix(in srgb, #2e8a86 30%, transparent); padding: 0 6px; border-radius: 4px; }
+  .cs-p.p6[open] { border-color: #2e8a86; background: color-mix(in srgb, #2e8a86 8%, var(--card)); }
+  .code-lines.lit-0 .cl.p0 { background: color-mix(in srgb, #7a7066 22%, transparent); box-shadow: inset 4px 0 0 #7a7066; }
+  .code-lines.lit-0 .cl.p0 .cl-tag { color: var(--ink); background: color-mix(in srgb, #7a7066 30%, transparent); padding: 0 6px; border-radius: 4px; }
+  .cs-p.p0[open] { border-color: #7a7066; background: color-mix(in srgb, #7a7066 8%, var(--card)); }
   /* Keyword peek: hover a keyword for a moment and its cheat-sheet box opens on the side. */
   .kw[data-kw], .kw-t { cursor: help; border-radius: 3px; }
   .kw[data-kw]:hover, .kw-t:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
@@ -1318,6 +1357,7 @@ function caseTitle(t) {
 // (the number is the problem in The pitch; a grey dot is a check). Tap a dot to read why.
 const CODE_NOTES = [["LENGTH(venue)", 1, "Audit: LENGTH shows hidden spaces, the first suspect when names do not match.", "check names for hidden spaces"], ["COUNT(*) - COUNT(net_sales)", 0, "Missing values: COUNT(col) skips NULLs, so this difference counts them. Result 0 in every table.", "no missing values"], ["COUNT(DISTINCT date)", 0, "Duplicates: if n_days equals n_rows, no day appears twice. True everywhere.", "no day twice"], ["SUBSTR(date, 1, 4)", 3, "covers holds two years: split it by year to check each one.", "split covers by year"], ["FROM sales_actual\nGROUP BY weekday", 2, "Checks the weekday column: each weekday on two dates, 7 days apart, so it can be trusted for the Sunday match.", "weekday column can be trusted"], ["SELECT COUNT(*) AS matched_rows", 1, "The proof of the problem: a join on the raw names returns 0 rows.", "proof: raw join = 0 rows"], ["CASE venue", 1, "The fix: translate each short name in covers to the name the sales tables use.", "the fix: short name → long name"], ["ELSE venue", 1, "An unknown name is kept as it is, so it would show as unmatched instead of vanishing.", "an unknown name stays visible"], ["COUNT(c.covers) AS n_matched", 1, "The proof the fix works: n_matched = n_rows = 14 for every venue.", "proof: 14 of 14 match"], ["JOIN sales_ly l      ON l.venue = a.venue AND l.weekday = a.weekday", 2, "Last year joined on venue + weekday, not on the date: Sunday meets Sunday.", "last year on weekday, not date"], ["AND l.date = '2025-10-12'", 2, "Keeps last year's Sunday, 12 Oct 2025. (11 Oct 2025 was a Saturday.)", "Sunday 12 Oct 2025, not Sat 11"], ["JOIN covers_clean cl", 3, "covers used a second time, for last year's guests, on last year's date.", "covers again, for last year"], ["ROUND(100.0 * (sales - budget) / budget, 1)", 5, "% vs budget. 100.0 makes the division decimal (SQLite divides whole numbers as whole numbers).", "% vs budget (100.0 → decimals)"], ["ROUND(100.0 * (sales - sales_ly) / sales_ly, 1)", 2, "% vs the same Sunday last year: the headline KPI that picks the winner.", "% vs last year: picks the winner"], ["ROUND(1.0 * sales / covers, 1)", 6, "Spend per cover: sales ÷ guests.", "spend per cover"], ["COUNT(*)               AS n_days", 4, "Should be 7 for every venue: proves no day was lost or doubled by the joins.", "7 days: nothing lost or doubled"], ["SUM(c.covers)           AS covers", 6, "Week totals first; spend per cover is then total ÷ total, never an average of daily ratios.", "totals first, then the ratio"], ["CASE WHEN a.date <= '2026-10-04' THEN 'W40' ELSE 'W41' END AS week", 4, "Each weekday appears twice in 14 days: label the week so each day can find exactly one match.", "label the week (W40 / W41)"], ["LEFT JOIN last_year ly ON ly.venue   = t.venue", 4, "Joined on venue + week + weekday: each day meets the day 364 days earlier, once.", "venue + week + weekday: 1 match"]];
 const PROBLEM_TITLES = ["The same venue has two names", "\"Same day last year\" is not the same date", "One table holds two years", "Each weekday appears twice", "The budget is a weak benchmark", "Some answers are not in the data"];
+const PROBLEM_INFO = [{"t": "The same venue has two names", "p": "covers says CFS, Festa, Urca; the sales tables say Casa Fiori Scuri, Festa Milano, Trattoria dell'Urca. A join only matches equal values, so a join on the names finds nothing: 0 rows, no error.", "s": "A CTE covers_clean translates the short names with a CASE (ELSE keeps an unknown name visible). A LEFT JOIN then proves it: 14 of 14 days match for every venue."}, {"t": "\"Same day last year\" is not the same date", "p": "11 Oct 2025 was a Saturday. Joining on the date one year back would compare our Sunday with a Saturday.", "s": "Last year is joined on venue + weekday, and the WHERE keeps Sunday 12 Oct 2025 (364 days earlier): Sunday meets Sunday. The % vs last year is the KPI that picks the winner."}, {"t": "One table holds two years", "p": "covers has 84 rows: 42 for 2026 and 42 for 2025, in the same columns.", "s": "Checked by splitting on SUBSTR(date, 1, 4). In the Sunday query covers_clean is joined twice: on this year's date (c) and on last year's (cl)."}, {"t": "Each weekday appears twice", "p": "Over 14 days there are two Sundays, two Mondays… so venue + weekday alone would match each day with two days of last year.", "s": "A CASE labels each date W40 or W41, and the table for Tableau joins on venue + week + weekday: exactly one match each. n_days = 7 proves nothing was lost or doubled."}, {"t": "The budget is a weak benchmark", "p": "Urca's Sunday budget (€5,600) was set below what it did the same Sunday last year (€6,500): beating it is easy even while shrinking.", "s": "The % vs budget is shown, but the winner is picked against last year. Casa Fiori Scuri is the only venue above both."}, {"t": "Some answers are not in the data", "p": "No seats, staff costs or food costs: occupancy, labour % and COGS % cannot be computed.", "s": "Only KPIs the data supports: sales, covers, and spend per cover as total ÷ total (never an average of daily ratios)."}, {"t": "Checks that passed", "p": "Could values be missing, or a day appear twice?", "s": "COUNT(*) − COUNT(col) = 0 (no NULLs) and n_rows = n_days (no day twice) in every table."}];
 function codeLinesHtml() {
   const lines = CASE_SQL.split('\n');
   const at = new Map();
@@ -1326,11 +1366,16 @@ function codeLinesHtml() {
     const i = lines.findIndex((l, k) => !l.trim().startsWith('--') && parts.every((p, j) => (lines[k + j] || '').includes(p)) && !at.has(k + parts.length - 1));
     if (i >= 0) at.set(i + parts.length - 1, { n, text, short });
   }
-  // The map: each problem, its colour, and the lines where it is met or solved.
   const byP = new Map();
   for (const [i, note] of [...at].sort((x, y) => x[0] - y[0])) { if (!byP.has(note.n)) byP.set(note.n, []); byP.get(note.n).push(i); }
-  const map = [...byP.keys()].sort((x, y) => (x || 9) - (y || 9)).map(n => `<li class="p${n}"><span class="cl-dot p${n}">${n || '✓'}</span><b>${n ? esc(PROBLEM_TITLES[n - 1]) : 'Checks that passed'}</b><span class="cm-lines">${byP.get(n).map(i => `<button type="button" class="cl-jump" data-i="${i}">${i + 1}</button>`).join(' ')}</span></li>`).join('');
-  let inBlock = false, gap = false;
+  // Left: the problems. Open one to read it and light its lines in the code, in its colour.
+  const side = [1, 2, 3, 4, 5, 6, 0].filter(n => byP.has(n)).map(n => {
+    const info = PROBLEM_INFO[n ? n - 1 : 6];
+    return `<details class="cs-p p${n}" data-p="${n}"><summary><span class="cl-dot p${n}">${n || '✓'}</span><span>${esc(info.t)}</span></summary>
+      <div class="cs-body"><p><b>The problem.</b> ${esc(info.p)}</p><p><b>How the SQL solved it.</b> ${esc(info.s)}</p>
+      <ol class="cs-lines">${byP.get(n).map(i => `<li><button type="button" class="cl-jump" data-i="${i}">${i + 1}</button><span><b>${esc(at.get(i).short)}.</b> ${esc(at.get(i).text)}</span></li>`).join('')}</ol></div></details>`;
+  }).join('');
+  let inBlock = false;
   const rows = lines.map((l, i) => {
     const t = l.trim();
     if (t.startsWith('/*')) inBlock = true;
@@ -1339,22 +1384,29 @@ function codeLinesHtml() {
     const note = at.get(i);
     const dot = note ? `<button type="button" class="cl-dot p${note.n}" data-i="${i}" aria-label="Why this line matters">${note.n || '✓'}</button>` : '<span></span>';
     const tag = note ? `<span class="cl-tag p${note.n}">${esc(note.short)}</span>` : '';
-    return `<div class="cl${cmt ? ' cmt' : ''}${note ? ` key p${note.n}` : ''}" id="cl-${i}" data-i="${i}"><span class="ln">${i + 1}</span>${dot}<span class="src">${cmt ? esc(l) || ' ' : sqlHtml(l) || ' '}${tag}</span>${note ? `<div class="cl-note" hidden>${note.n ? `<b>Problem ${note.n} · ${esc(PROBLEM_TITLES[note.n - 1])}.</b> ` : '<b>Check.</b> '}${esc(note.text)}</div>` : ''}</div>`;
+    return `<div class="cl${cmt ? ' cmt' : ''}${note ? ` key p${note.n}` : ''}" id="cl-${i}" data-i="${i}"><span class="ln">${i + 1}</span>${dot}<span class="src">${cmt ? esc(l) || ' ' : sqlHtml(l) || ' '}${tag}</span>${note ? `<div class="cl-note" hidden>${note.n ? `<b>Problem ${note.n} · ${esc(PROBLEM_INFO[note.n - 1].t)}.</b> ` : '<b>Check.</b> '}${esc(note.text)}</div>` : ''}</div>`;
   });
-  // Between two key lines, a quiet "⋯" stands for the hidden ones when only the key lines are shown.
   const out = [];
-  lines.forEach((l, i) => { if (!at.has(i) && (i === 0 || at.has(i - 1))) out.push(`<div class="cl-gap" aria-hidden="true">⋯</div>`); out.push(rows[i]); });
-  return `<ul class="code-map">${map}</ul>
-    <p class="code-key">The key lines of the project, with what each one does; the colour and number are the problem in The pitch. Tap a dot for the full reason, a line number above to jump there. <button type="button" class="code-all" aria-pressed="false">Show all ${lines.length} lines</button></p>
-    <div class="code-lines only-key">${out.join('')}</div>`;
+  lines.forEach((l, i) => { if (!at.has(i) && (i === 0 || at.has(i - 1))) out.push('<div class="cl-gap" aria-hidden="true">⋯</div>'); out.push(rows[i]); });
+  return `<div class="code-wrap"><aside class="code-side"><p class="code-key">Open a problem: it explains itself and lights its lines in the code, in its colour. Open several to compare. A line number jumps there.</p>${side}
+      <button type="button" class="code-all" aria-pressed="false">Only the key lines</button></aside>
+    <div class="code-lines">${out.join('')}</div></div>`;
 }
+// Opening a problem lights its lines; closing it turns them off.
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (!d.classList || !d.classList.contains('cs-p')) return;
+  const box = d.closest('.code-wrap').querySelector('.code-lines');
+  box.classList.toggle(`lit-${d.dataset.p}`, d.open);
+  if (d.open) { const first = box.querySelector(`.cl.key.p${d.dataset.p}`); if (first && innerWidth > 900) first.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+}, true);
 document.getElementById('session').addEventListener('click', e => {
   const all = e.target.closest('.code-all');
   if (all) {
-    const box = all.closest('.sg-inner').querySelector('.code-lines');
+    const box = all.closest('.code-wrap').querySelector('.code-lines');
     const on = box.classList.toggle('only-key');
-    all.setAttribute('aria-pressed', String(!on));
-    all.textContent = on ? `Show all ${box.querySelectorAll('.cl').length} lines` : 'Show only the key lines';
+    all.setAttribute('aria-pressed', String(on));
+    all.textContent = on ? `Show all ${box.querySelectorAll('.cl').length} lines` : 'Only the key lines';
     return;
   }
   const j = e.target.closest('.cl-jump');
