@@ -53,6 +53,6 @@ describe('/sql class page', () => {
     expect(html).toContain('const PEEK_TERM = {');
     // Slides per card and the business case, both read from the user's private files.
     expect(html).toContain('const SLIDE_OF = {');
-    expect(html).toContain("const CASE_FILE = '/api/coding/slides/SQLBusinessCase.sql';");
+    expect(html).toContain('const CASE_SQL = ');
   });
 });
