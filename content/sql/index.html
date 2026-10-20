@@ -352,6 +352,15 @@
   .ct td, .ct th { white-space: normal; vertical-align: top; padding: 5px 10px 5px 0; }
   .ct td:first-child { white-space: nowrap; }
   .ct-note { margin: 0; color: var(--soft); font: 13.5px/1.5 system-ui, sans-serif; }
+  /* More detail under a line in the problem list. */
+  .cs-more { margin-top: 4px; }
+  .cs-more > summary { cursor: pointer; list-style: none; display: inline-block; padding: 1px 10px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--pc, var(--accent)) 50%, transparent); font: 600 12px system-ui, sans-serif; color: var(--ink); }
+  .cs-more > summary::-webkit-details-marker { display: none; }
+  .cs-more > summary::after { content: ' ▸'; }
+  .cs-more[open] > summary::after { content: ' ▾'; }
+  .cs-more > div { display: grid; gap: 6px; margin-top: 6px; padding: 8px 10px; border-radius: 8px; background: var(--card); }
+  .cs-more p { margin: 0; }
+  .cs-more table { font: 12.5px ui-monospace, Consolas, monospace; }
   /* Keyword peek: hover a keyword for a moment and its cheat-sheet box opens on the side. */
   .kw[data-kw], .kw-t { cursor: help; border-radius: 3px; }
   .kw[data-kw]:hover, .kw-t:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
@@ -1408,6 +1417,8 @@ const CODE_TABLES = `<div class="ct">
   </tbody></table></div>
   <p class="ct-note">Short aliases in the joins: <code>a</code> = sales_actual, <code>b</code> = sales_budget, <code>l</code> / <code>ly</code> = sales_ly, <code>c</code> = this year's covers_clean, <code>cl</code> = last year's covers_clean, <code>s</code> = sales_actual in the checks, <code>t</code> = this_year.</p>
 </div>`;
+// More detail under some lines in the problem list (2026-10-20: line 32, "I haven't understood it").
+const LINE_MORE = {"LENGTH(venue)": "<p><b>What LENGTH does.</b> <code>LENGTH(venue)</code> counts the characters in each venue name: \"Festa Milano\" has 12 (the space counts too).</p><p><b>Why we check it.</b> To SQL, <code>'Casa Fiori Scuri'</code> and <code>'Casa Fiori Scuri '</code> (one space at the end) are two different names, but on screen they look identical. A join on them would quietly miss rows. So before joining, we look at the length of every name: if one venue showed two different lengths, there would be a hidden space or a typo.</p><div class=\"tbl-wrap\"><table><thead><tr><th>venue name</th><th>LENGTH</th></tr></thead><tbody><tr><th colspan=\"2\">in the sales tables</th></tr><tr><td>Casa Fiori Scuri</td><td>16</td></tr><tr><td>Festa Milano</td><td>12</td></tr><tr><td>Trattoria dell'Urca</td><td>19</td></tr><tr><th colspan=\"2\">in covers</th></tr><tr><td>CFS</td><td>3</td></tr><tr><td>Festa</td><td>5</td></tr><tr><td>Urca</td><td>4</td></tr></tbody></table></div><p><b>What we found.</b> In the sales tables each venue has one length, and it is the length of its name: no hidden spaces. In covers the lengths are 3, 5 and 4: not a spacing problem, but different names altogether (CFS, Festa, Urca). That is problem 1, fixed with the CASE in step 2.</p><p><b>Say it like this.</b> \"I checked the length of every venue name first, because a hidden space would break the join without any error. The sales names were clean; covers simply used short names, so I mapped them.\"</p>"};
 const PROBLEM_INFO = [{"t": "The same venue has two names", "p": "covers says CFS, Festa, Urca; the sales tables say Casa Fiori Scuri, Festa Milano, Trattoria dell'Urca. A join only matches equal values, so a join on the names finds nothing: 0 rows, no error.", "s": "A CTE covers_clean translates the short names with a CASE (ELSE keeps an unknown name visible). A LEFT JOIN then proves it: 14 of 14 days match for every venue."}, {"t": "\"Same day last year\" is not the same date", "p": "11 Oct 2025 was a Saturday. Joining on the date one year back would compare our Sunday with a Saturday.", "s": "Last year is joined on venue + weekday, and the WHERE keeps Sunday 12 Oct 2025 (364 days earlier): Sunday meets Sunday. The % vs last year is the KPI that picks the winner."}, {"t": "One table holds two years", "p": "covers has 84 rows: 42 for 2026 and 42 for 2025, in the same columns.", "s": "Checked by splitting on SUBSTR(date, 1, 4). In the Sunday query covers_clean is joined twice: on this year's date (c) and on last year's (cl)."}, {"t": "Each weekday appears twice", "p": "Over 14 days there are two Sundays, two Mondays… so venue + weekday alone would match each day with two days of last year.", "s": "A CASE labels each date W40 or W41, and the table for Tableau joins on venue + week + weekday: exactly one match each. n_days = 7 proves nothing was lost or doubled."}, {"t": "The budget is a weak benchmark", "p": "Urca's Sunday budget (€5,600) was set below what it did the same Sunday last year (€6,500): beating it is easy even while shrinking.", "s": "The % vs budget is shown, but the winner is picked against last year. Casa Fiori Scuri is the only venue above both."}, {"t": "Some answers are not in the data", "p": "No seats, staff costs or food costs: occupancy, labour % and COGS % cannot be computed.", "s": "Only KPIs the data supports: sales, covers, and spend per cover as total ÷ total (never an average of daily ratios)."}, {"t": "Checks that passed", "p": "Could values be missing, or a day appear twice?", "s": "COUNT(*) − COUNT(col) = 0 (no NULLs) and n_rows = n_days (no day twice) in every table."}];
 function codeLinesHtml() {
   const lines = CASE_SQL.split('\n');
@@ -1415,7 +1426,7 @@ function codeLinesHtml() {
   for (const [needle, n, text, short] of CODE_NOTES) {
     const parts = needle.split('\n');
     const i = lines.findIndex((l, k) => !l.trim().startsWith('--') && parts.every((p, j) => (lines[k + j] || '').includes(p)) && !at.has(k + parts.length - 1));
-    if (i >= 0) at.set(i + parts.length - 1, { n, text, short });
+    if (i >= 0) at.set(i + parts.length - 1, { n, text, short, more: LINE_MORE[needle] });
   }
   const byP = new Map();
   for (const [i, note] of [...at].sort((x, y) => x[0] - y[0])) { if (!byP.has(note.n)) byP.set(note.n, []); byP.get(note.n).push(i); }
@@ -1424,7 +1435,7 @@ function codeLinesHtml() {
     const info = PROBLEM_INFO[n ? n - 1 : 6];
     return `<details class="cs-p p${n}" data-p="${n}"><summary><span class="cl-dot p${n}">${n || '✓'}</span><span>${esc(info.t)}</span></summary>
       <div class="cs-body"><p><b>The problem.</b> ${esc(info.p)}</p><p><b>How the SQL solved it.</b> ${esc(info.s)}</p>
-      <ol class="cs-lines">${byP.get(n).map(i => `<li><button type="button" class="cl-jump" data-i="${i}">${i + 1}</button><span><b>${esc(at.get(i).short)}.</b> ${esc(at.get(i).text)}</span></li>`).join('')}</ol></div></details>`;
+      <ol class="cs-lines">${byP.get(n).map(i => `<li><button type="button" class="cl-jump" data-i="${i}">${i + 1}</button><span><b>${esc(at.get(i).short)}.</b> ${esc(at.get(i).text)}${at.get(i).more ? `<details class="cs-more"><summary>More</summary><div>${at.get(i).more}</div></details>` : ''}</span></li>`).join('')}</ol></div></details>`;
   }).join('');
   let inBlock = false;
   const rows = lines.map((l, i) => {
