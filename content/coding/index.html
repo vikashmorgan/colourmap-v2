@@ -1162,18 +1162,18 @@ details.datacode .mission-tag { background: var(--ok-c); }
 .pnb-here { font: 600 12px var(--body); color: var(--sess); }
 .pnb-empty { margin: 0; color: var(--muted); font-size: 14px; }
 /* Practice's notebook is beige paper with brown ink, in day and night (2026-10-19: "beige or brown, not blue"). */
-#pnb, #pnb-dot { --pnb-bg: #efe5d2; --pnb-top: #e5d6b9; --pnb-brown: #7a5230; --pnb-rule: #d6c3a0; }
-:root[data-theme="dark"] #pnb, :root[data-theme="dark"] #pnb-dot { --pnb-bg: #221c15; --pnb-top: #2c241a; --pnb-brown: #d0a979; --pnb-rule: #45392a; }
-#pnb { background: var(--pnb-bg); border-color: var(--pnb-rule); --rule: var(--pnb-rule); --panel: color-mix(in srgb, var(--pnb-bg) 70%, #fff 30%); }
-:root[data-theme="dark"] #pnb { --panel: color-mix(in srgb, var(--pnb-bg) 85%, #fff 15%); }
-#pnb .nb-top { background: var(--pnb-top); }
-#pnb .nb-title { color: var(--pnb-brown); }
-#pnb .pnb-group { --sess: var(--pnb-brown); }
-#pnb .note-actions .note-save { background: var(--pnb-brown); border-color: var(--pnb-brown); color: var(--pnb-bg); }
-#pnb .line-pick select:focus-visible, #pnb textarea:focus-visible { outline: 2px solid var(--pnb-brown); outline-offset: 1px; }
-#pnb-dot { border-color: color-mix(in srgb, var(--pnb-brown) 70%, transparent); background: var(--pnb-bg); }
-#pnb-dot:hover, #pnb-dot[aria-expanded="true"] { border-color: var(--pnb-brown); }
-#pnb-dot.has-notes { background: var(--pnb-brown); }
+#pnb, #pnb-dot, #lnb, #lnb-dot { --pnb-bg: #efe5d2; --pnb-top: #e5d6b9; --pnb-brown: #7a5230; --pnb-rule: #d6c3a0; }
+:root[data-theme="dark"] #pnb, :root[data-theme="dark"] #pnb-dot, :root[data-theme="dark"] #lnb, :root[data-theme="dark"] #lnb-dot { --pnb-bg: #221c15; --pnb-top: #2c241a; --pnb-brown: #d0a979; --pnb-rule: #45392a; }
+#pnb, #lnb { background: var(--pnb-bg); border-color: var(--pnb-rule); --rule: var(--pnb-rule); --panel: color-mix(in srgb, var(--pnb-bg) 70%, #fff 30%); }
+:root[data-theme="dark"] #pnb, :root[data-theme="dark"] #lnb { --panel: color-mix(in srgb, var(--pnb-bg) 85%, #fff 15%); }
+#pnb .nb-top, #lnb .nb-top { background: var(--pnb-top); }
+#pnb .nb-title, #lnb .nb-title { color: var(--pnb-brown); }
+#pnb .pnb-group, #lnb .pnb-group.gen { --sess: var(--pnb-brown); }
+#pnb .note-actions .note-save, #lnb .note-actions .note-save { background: var(--pnb-brown); border-color: var(--pnb-brown); color: var(--pnb-bg); }
+#pnb .line-pick select:focus-visible, #pnb textarea:focus-visible, #lnb .line-pick select:focus-visible, #lnb textarea:focus-visible { outline: 2px solid var(--pnb-brown); outline-offset: 1px; }
+#pnb-dot, #lnb-dot { border-color: color-mix(in srgb, var(--pnb-brown) 70%, transparent); background: var(--pnb-bg); }
+#pnb-dot:hover, #pnb-dot[aria-expanded="true"], #lnb-dot:hover, #lnb-dot[aria-expanded="true"] { border-color: var(--pnb-brown); }
+#pnb-dot.has-notes, #lnb-dot.has-notes { background: var(--pnb-brown); }
 .pl-flags { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffd36b, #e7a321 70%); font: 700 10px/16px var(--body); color: #4a3200; text-align: center; align-self: center; }
 .pp-index a.pp-flagged::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #e7a321; margin-left: 6px; display: inline-block; }
 .rv-flag .dot { background: #e7a321; }
@@ -1572,6 +1572,24 @@ requirements.txt, which you hand in, simply lists requests so the teacher can ru
     </div>
     <nav class="index" id="lesson-index" aria-label="Sessions"></nav>
     <div id="lessons"></div>
+
+    <button type="button" class="nb-dot" id="lnb-dot" aria-expanded="false" aria-controls="lnb" title="Lessons notebook"></button>
+    <aside class="notebook" id="lnb" aria-label="Lessons notebook" hidden>
+      <div class="nb-top"><span class="nb-title">Notebook</span><button type="button" class="lpop-close" id="lnb-close" aria-label="Close the notebook" style="margin-left: auto">×</button></div>
+      <div class="pnb-write">
+        <label class="line-pick"><span>About</span><select id="lnb-about" aria-label="What this note is about"></select></label>
+        <div class="kind-pick" role="radiogroup" aria-label="Kind of note">
+          <button type="button" role="radio" data-kind="question" aria-checked="true">Question</button>
+          <button type="button" role="radio" data-kind="comment" aria-checked="false">Comment</button>
+        </div>
+        <textarea id="lnb-text" rows="3" maxlength="2000" aria-label="Your note" placeholder="Write your question or comment"></textarea>
+        <div class="note-actions"><button type="button" class="note-save" id="lnb-save">Save</button></div>
+        <p class="pnb-saved" id="lnb-saved" role="status"></p>
+      </div>
+      <p class="pnb-sum" id="lnb-sum"></p>
+      <div class="pnb-list" id="lnb-list"></div>
+      <div id="lnb-host" data-key="l|notebook" hidden><button type="button" class="note-dot" hidden>Question or comment</button></div>
+    </aside>
   </section>
   <section id="page-practice" role="tabpanel" aria-labelledby="tab-practice" hidden>
     <div class="intro">
@@ -3705,7 +3723,7 @@ const savedNote = document.getElementById('saved-note');
 
 const allItems = () => [...lessonsEl.querySelectorAll('.item[data-key]')];
 // Everything that can hold notes: the lesson boxes and the project cards.
-const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #overall-host, #lessons .lesson-overall, #lessons .slide-host, #steps .pcard[data-key], #page-project .line-host[data-key], #nb-host, #practice .pm-notes[data-key], #practice .pl-notes[data-key], #pnb-host')];
+const noteHosts = () => [...document.querySelectorAll('#lessons .item[data-key], #lpop .item[data-key], #overall-host, #lessons .lesson-overall, #lessons .slide-host, #steps .pcard[data-key], #page-project .line-host[data-key], #nb-host, #practice .pm-notes[data-key], #practice .pl-notes[data-key], #pnb-host, #lnb-host')];
 // A slide's notes belong to the lesson's one slide spot, whichever slide it shows now.
 const SLIDE_KEY = /^s(\d+)\|slide:(\d+)$/;
 const itemByKey = key => noteHosts().find(i => i.dataset.key === key)
@@ -4163,6 +4181,7 @@ function boxHead(item, forKey) {
     return { sess: mis.style.getPropertyValue('--sess'), name: `Practice ${mis.dataset.id} · ${mis.querySelector('.pm-title').textContent}`, num: mis.dataset.id, text: mis.querySelector('.pm-task').textContent };
   }
   if (item.id === 'nb-host') return { sess: 'var(--muted)', name: 'Project 1 · notebook', num: 'NB', text: '' };
+  if (item.id === 'lnb-host') return { sess: 'var(--muted)', name: 'Lessons · in general', num: 'L', text: '' };
   // A level, the free space and Practice in general (their notes are written in the notebook or under the level).
   if (item.closest('#page-practice')) { const p = pnbPlace(item.dataset.key); return { sess: p.sess, name: `Practice · ${p.name}`, num: p.n, text: '' }; }
   if (item.id === 'overall-host') return { sess: 'var(--accent)', name: 'Project 1 · overall questions on the whole program', num: '0', text: '' };
@@ -4243,6 +4262,7 @@ function renderReview() {
   const el = document.getElementById('review');
   if (!total) {
     renderPnb();
+    renderLnb();
     el.innerHTML = '<p class="rv-empty">Nothing here yet. In Lessons, the three dots on the side of a box mark it Got it, Confused or Confused as fuck, and the button at the bottom adds a question or a comment. They all gather here.</p>';
     return;
   }
@@ -4260,6 +4280,7 @@ function renderReview() {
   const inPractice = n => n.key.startsWith('x|');
   const inLessons = n => !inProject(n) && !inPractice(n);
   renderPnb();
+  renderLnb();
   el.innerHTML = part('Project 1', questions.filter(inProject), comments.filter(inProject))
     + part('Lessons', questions.filter(inLessons), comments.filter(inLessons))
     + part('Practice', questions.filter(inPractice), comments.filter(inPractice))
@@ -4297,6 +4318,7 @@ document.getElementById('review').addEventListener('click', e => {
   }
   activeFilter = 'all'; applyFilter();
   showPage('lessons', false);
+  if (target.id === 'lnb-host') { setLnb(true); return; }
   openTarget(b.dataset.openItem);
   const item = document.getElementById(b.dataset.openItem);
   item.classList.add('flash');
@@ -5338,6 +5360,200 @@ pnb.addEventListener('click', e => {
 });
 pnbText.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); document.getElementById('pnb-save').click(); }
+});
+
+/*
+ * THE LESSONS NOTEBOOK (2026-10-20: "add notebook on the right for all the
+ * lessons"). Practice's notebook, for the Lessons page: a dot on the right edge
+ * opens it, a note is written about a place, and every lesson note is listed
+ * below, grouped by place in page order. The places are the keys the boxes
+ * already use (a box, a session's overall questions, a slide), plus Lessons in
+ * general (`l|notebook`), so a note written here also shows on its box and in
+ * Review. The place follows what you are reading: the box you last clicked if
+ * it is still on screen, else the box under the top bar, else the open
+ * session's overall questions.
+ */
+const isLessonKey = k => /^s\d+\|/.test(k) || k === 'l|notebook';
+function lnbPlaces() {
+  const out = [{ key: 'l|notebook', n: 'L', name: 'Lessons in general', sess: 'var(--muted)', title: '' }];
+  for (const l of lessonsEl.querySelectorAll('details.lesson')) {
+    const sess = l.style.getPropertyValue('--sess');
+    const title = l.dataset.title;
+    out.push({ key: `${l.id}|overall`, n: '0', name: 'Overall questions', sess, title });
+    for (const it of l.querySelectorAll('.item[data-key]')) out.push({ key: it.dataset.key, n: it.dataset.num, name: it.dataset.key.slice(it.dataset.key.indexOf('|') + 1), sess, title });
+  }
+  return out;
+}
+function lnbPlace(key, places = lnbPlaces()) {
+  const p = places.find(x => x.key === key);
+  if (p) return p;
+  const m = key.match(SLIDE_KEY);
+  if (m) {
+    const l = document.getElementById(`s${m[1]}`);
+    return { key, n: `p${m[2]}`, name: `Original slide ${m[2]}`, sess: l ? l.style.getPropertyValue('--sess') : 'var(--muted)', title: l ? l.dataset.title : '' };
+  }
+  return { key, n: '?', name: key, sess: 'var(--muted)', title: '' };
+}
+const lnb = document.getElementById('lnb');
+const lnbDot = document.getElementById('lnb-dot');
+const lnbAbout = document.getElementById('lnb-about');
+const lnbText = document.getElementById('lnb-text');
+let lnbKind = 'question';
+let lnbPinned = false;   // the place was chosen by hand: stop following the page
+let lnbTouched = null;   // the box last clicked
+const onScreen = el => { const r = el.getBoundingClientRect(); return el.getClientRects().length && r.bottom > 0 && r.top < innerHeight; };
+function lessonSpot() {
+  if (lnbTouched && lnbTouched.isConnected && onScreen(lnbTouched)) return lnbTouched.dataset.key;
+  const probe = hereProbe();
+  let lesson = null;
+  for (const l of lessonsEl.querySelectorAll('details.lesson')) if (l.open && l.getBoundingClientRect().top <= probe) lesson = l;
+  lesson = lesson || lessonsEl.querySelector('details.lesson[open]');
+  if (!lesson) return 'l|notebook';
+  let box = null;
+  for (const it of lesson.querySelectorAll('.item[data-num]')) if (!it.hidden && it.getClientRects().length && it.getBoundingClientRect().top <= probe) box = it;
+  return box && onScreen(box) ? box.dataset.key : `${lesson.id}|overall`;
+}
+function lnbOptions() {
+  const places = lnbPlaces();
+  let html = '';
+  let title = null;
+  for (const p of places) {
+    if (p.title !== title) { if (title !== null) html += '</optgroup>'; title = p.title; if (title) html += `<optgroup label="${esc(title)}">`; }
+    html += `<option value="${esc(p.key)}">${p.n === 'L' ? '' : `${esc(p.n)} · `}${esc(p.name)}</option>`;
+  }
+  lnbAbout.innerHTML = html + (title ? '</optgroup>' : '');
+}
+function followLesson() {
+  if (lnbPinned) return;
+  const key = lessonSpot();
+  // A slide spot is not in the list until it holds a note: name its lesson then.
+  lnbAbout.value = key;
+  if (lnbAbout.value !== key) lnbAbout.value = key.replace(/\|slide:\d+$/, '|overall');
+  for (const g of lnb.querySelectorAll('.pnb-group')) {
+    const here = g.dataset.key === lnbAbout.value;
+    g.classList.toggle('here', here);
+    const tag = g.querySelector('.pnb-here');
+    if (here && !tag) g.querySelector('.pnb-head').insertAdjacentHTML('beforeend', '<span class="pnb-here">you are here</span>');
+    if (!here && tag) tag.remove();
+  }
+}
+function setLnb(open) {
+  lnb.hidden = !open;
+  lnbDot.setAttribute('aria-expanded', String(open));
+  if (!open) return;
+  if (!lnbText.value.trim()) lnbPinned = false;
+  if (!lnbAbout.options.length) lnbOptions();
+  renderLnb();
+  followLesson();
+}
+function goToLesson(key) {
+  if (key === 'l|notebook') return;
+  const m = key.match(SLIDE_KEY);
+  let el;
+  if (m) {
+    el = document.getElementById(`slide-host-s${m[1]}`);
+    if (!el) return;
+    const sv = el.closest('details.sv');
+    sv.open = true;
+    svGo(sv, Number(m[2]));
+  } else el = lessonsEl.querySelector(`[data-key="${CSS.escape(key)}"]`);
+  if (!el) return;
+  if (activeFilter !== 'all') { activeFilter = 'all'; applyFilter(); }
+  openAround(el);
+  if (!openNoteLists.has(key)) { openNoteLists.add(key); paintItem(el); }
+  lnbTouched = el.classList.contains('slide-host') ? null : el;
+  if (innerWidth < 760) setLnb(false);
+  el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1600);
+}
+function renderLnb() {
+  // Review can be drawn before this part of the page has run: look the panel up, not its constants.
+  const lnb = document.getElementById('lnb');
+  const list = noteList.filter(n => isLessonKey(n.key));
+  document.getElementById('lnb-dot').classList.toggle('has-notes', list.length > 0);
+  if (lnb.hidden) return;
+  // An edit open in the list is not drawn over; the list is drawn again when it closes.
+  const box = document.getElementById('lnb-list');
+  if (box.querySelector('.note-editor')) return;
+  const q = list.filter(n => n.kind === 'question');
+  const waiting = q.filter(n => !n.answer).length;
+  const fresh = list.filter(n => n.answer && !n.readAt).length;
+  document.getElementById('lnb-sum').textContent = list.length
+    ? [q.length && `${q.length} question${q.length === 1 ? '' : 's'}`, waiting && `${waiting} waiting`, fresh && `${fresh} new answer${fresh > 1 ? 's' : ''}`,
+      list.length - q.length && `${list.length - q.length} comment${list.length - q.length === 1 ? '' : 's'}`].filter(Boolean).join(' · ')
+    : '';
+  const places = lnbPlaces();
+  const order = new Map(places.map((p, i) => [p.key, i]));
+  // A slide's notes sit right after its session's overall questions, in slide order.
+  const rank = k => {
+    if (order.has(k)) return order.get(k);
+    const m = k.match(SLIDE_KEY);
+    return m && order.has(`s${m[1]}|overall`) ? order.get(`s${m[1]}|overall`) + Number(m[2]) / 1e4 : 1e9;
+  };
+  const byNewest = (a, b) => String(b.createdAt || b.localId || '').localeCompare(String(a.createdAt || a.localId || ''));
+  const keys = [...new Set(list.map(n => n.key))].sort((a, b) => rank(a) - rank(b));
+  const here = document.getElementById('lnb-about').value;
+  box.innerHTML = keys.length
+    ? keys.map(k => {
+      const p = lnbPlace(k, places);
+      const gen = k === 'l|notebook';
+      return `<div class="pnb-group${gen ? ' gen' : ''}${k === here ? ' here' : ''}" data-key="${esc(k)}" style="--sess: ${p.sess}">
+        <div class="pnb-head"><button type="button" class="pnb-go" data-go="${esc(k)}"${gen ? ' disabled' : ` title="Go to ${esc(p.name)}"`}><span class="pnb-n">${esc(p.n)}</span><span class="pnb-name">${p.title ? `${esc(p.title)} · ` : ''}${esc(p.name)}${gen ? '' : ' ›'}</span></button>${k === here ? '<span class="pnb-here">you are here</span>' : ''}</div>
+        <div class="note-list">${list.filter(n => n.key === k).sort(byNewest).map(n => noteHtml(n, false)).join('')}</div>
+      </div>`;
+    }).join('')
+    : '<p class="pnb-empty">No notes yet. Write one above: it is filed under the box you are reading, and gathers here with the others.</p>';
+}
+lnbDot.addEventListener('click', () => setLnb(lnb.hidden));
+document.getElementById('lnb-close').addEventListener('click', () => setLnb(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !lnb.hidden) setLnb(false); });
+lnbAbout.addEventListener('change', () => { lnbPinned = true; });
+lnbText.addEventListener('input', () => { if (lnbText.value.trim()) lnbPinned = true; });
+// The notebook moves with you: a click in a box, a session opened, or scrolling.
+lessonsEl.addEventListener('click', e => {
+  const it = e.target.closest('.item[data-key], .lesson-overall');
+  if (it) lnbTouched = it;
+  if (!lnb.hidden) followLesson();
+});
+lessonsEl.addEventListener('toggle', () => { if (!lnb.hidden) followLesson(); }, true);
+let lnbQueued = false;
+window.addEventListener('scroll', () => {
+  if (lnb.hidden || lnbPinned || lnbQueued) return;
+  lnbQueued = true;
+  requestAnimationFrame(() => { lnbQueued = false; followLesson(); });
+}, { passive: true });
+lnb.addEventListener('click', e => {
+  const pick = e.target.closest('.pnb-write .kind-pick [data-kind]');
+  if (pick) {
+    lnbKind = pick.dataset.kind;
+    for (const b of lnb.querySelectorAll('.pnb-write .kind-pick button')) b.setAttribute('aria-checked', String(b === pick));
+    return;
+  }
+  if (e.target.closest('#lnb-save')) {
+    const text = lnbText.value.trim();
+    if (!text) { lnbText.focus(); return; }
+    const key = lnbAbout.value;
+    openNoteLists.add(key);   // shown on its box too, not folded away
+    saveNote(key, null, text, lnbKind);
+    lnbText.value = '';
+    lnbPinned = false;
+    const saved = document.getElementById('lnb-saved');
+    const opt = lnbAbout.selectedOptions[0];
+    const group = opt.parentElement.tagName === 'OPTGROUP' ? `${opt.parentElement.label} · ` : '';
+    saved.textContent = `Saved to ${group}${opt.textContent}.`;
+    setTimeout(() => { if (saved.textContent.startsWith('Saved')) saved.textContent = ''; }, 2500);
+    followLesson();
+    return;
+  }
+  const go = e.target.closest('.pnb-go');
+  if (go) { goToLesson(go.dataset.go); return; }
+  // The notes themselves: edit, delete and mark read, as everywhere on the page.
+  onNoteClick(e);
+  if (e.target.closest('.note-save, .note-cancel')) renderLnb();
+});
+lnbText.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); document.getElementById('lnb-save').click(); }
 });
 
 renderPractice();
