@@ -258,6 +258,28 @@
   .cl-note { grid-column: 3; margin: 2px 10px 6px 0; padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--card); font: 13.5px/1.45 system-ui, sans-serif; white-space: normal; }
   .cl-note b { color: var(--accent); }
   .code-key { margin: 0 0 8px; color: var(--soft); font: 13.5px system-ui, sans-serif; }
+  /* The code at a glance: a colour per problem, a map, short labels, key lines only. */
+  .cl-dot.p1, .code-map .p1 .cl-dot { background: #b5562f; } .cl-tag.p1 { color: #b5562f; }
+  .cl-dot.p2, .code-map .p2 .cl-dot { background: #2f6fa8; } .cl-tag.p2 { color: #2f6fa8; }
+  .cl-dot.p3, .code-map .p3 .cl-dot { background: #6a8f2c; } .cl-tag.p3 { color: #6a8f2c; }
+  .cl-dot.p4, .code-map .p4 .cl-dot { background: #8a5a9e; } .cl-tag.p4 { color: #8a5a9e; }
+  .cl-dot.p5, .code-map .p5 .cl-dot { background: #b0861a; } .cl-tag.p5 { color: #b0861a; }
+  .cl-dot.p6, .code-map .p6 .cl-dot { background: #2e8a86; } .cl-tag.p6 { color: #2e8a86; }
+  [data-theme="night"] .cl-tag { filter: brightness(1.5); }
+  .code-map { list-style: none; margin: 0; padding: 0 0 0 2px; display: grid; gap: 6px; font: 14px system-ui, sans-serif; }
+  .code-map li { display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 8px; align-items: center; }
+  .code-map .cm-lines { grid-column: 2; display: flex; flex-wrap: wrap; gap: 4px; }
+  .cl-jump { min-width: 32px; min-height: 26px; padding: 0 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font: 12px ui-monospace, Consolas, monospace; cursor: pointer; }
+  .cl-jump:hover { border-color: var(--accent); }
+  .code-all { margin-left: 6px; min-height: 28px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 600 12.5px system-ui, sans-serif; cursor: pointer; }
+  .cl-tag { margin-left: 14px; font: 600 12px system-ui, sans-serif; white-space: nowrap; }
+  .cl-tag::before { content: '← '; }
+  .cl.key { background: color-mix(in srgb, var(--card) 70%, transparent); }
+  .cl.flash { outline: 2px solid var(--accent); }
+  .cl-gap { display: none; padding-left: 3.6em; color: var(--soft); line-height: 1.2; }
+  .code-lines.only-key .cl:not(.key) { display: none; }
+  .code-lines.only-key .cl-gap { display: block; }
+  @media (max-width: 560px) { .cl-tag { display: block; margin: 0 0 2px; white-space: normal; } .cl-tag::before { content: '↑ '; } }
   /* Keyword peek: hover a keyword for a moment and its cheat-sheet box opens on the side. */
   .kw[data-kw], .kw-t { cursor: help; border-radius: 3px; }
   .kw[data-kw]:hover, .kw-t:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
@@ -1294,29 +1316,56 @@ function caseTitle(t) {
 }
 // The whole project code, line by line. A numbered dot marks each line where a data problem is met or solved
 // (the number is the problem in The pitch; a grey dot is a check). Tap a dot to read why.
-const CODE_NOTES = [["LENGTH(venue)", 1, "Audit: LENGTH shows hidden spaces, the first suspect when names do not match."], ["COUNT(*) - COUNT(net_sales)", 0, "Missing values: COUNT(col) skips NULLs, so this difference counts them. Result 0 in every table."], ["COUNT(DISTINCT date)", 0, "Duplicates: if n_days equals n_rows, no day appears twice. True everywhere."], ["SUBSTR(date, 1, 4)", 3, "covers holds two years: split it by year to check each one."], ["FROM sales_actual\nGROUP BY weekday", 2, "Checks the weekday column: each weekday on two dates, 7 days apart, so it can be trusted for the Sunday match."], ["SELECT COUNT(*) AS matched_rows", 1, "The proof of the problem: a join on the raw names returns 0 rows."], ["CASE venue", 1, "The fix: translate each short name in covers to the name the sales tables use."], ["ELSE venue", 1, "An unknown name is kept as it is, so it would show as unmatched instead of vanishing."], ["COUNT(c.covers) AS n_matched", 1, "The proof the fix works: n_matched = n_rows = 14 for every venue."], ["JOIN sales_ly l      ON l.venue = a.venue AND l.weekday = a.weekday", 2, "Last year joined on venue + weekday, not on the date: Sunday meets Sunday."], ["AND l.date = '2025-10-12'", 2, "Keeps last year's Sunday, 12 Oct 2025. (11 Oct 2025 was a Saturday.)"], ["JOIN covers_clean cl", 3, "covers used a second time, for last year's guests, on last year's date."], ["ROUND(100.0 * (sales - budget) / budget, 1)", 5, "% vs budget. 100.0 makes the division decimal (SQLite divides whole numbers as whole numbers)."], ["ROUND(100.0 * (sales - sales_ly) / sales_ly, 1)", 2, "% vs the same Sunday last year: the headline KPI that picks the winner."], ["ROUND(1.0 * sales / covers, 1)", 6, "Spend per cover: sales ÷ guests."], ["COUNT(*)               AS n_days", 4, "Should be 7 for every venue: proves no day was lost or doubled by the joins."], ["SUM(c.covers)           AS covers", 6, "Week totals first; spend per cover is then total ÷ total, never an average of daily ratios."], ["CASE WHEN a.date <= '2026-10-04' THEN 'W40' ELSE 'W41' END AS week", 4, "Each weekday appears twice in 14 days: label the week so each day can find exactly one match."], ["LEFT JOIN last_year ly ON ly.venue   = t.venue", 4, "Joined on venue + week + weekday: each day meets the day 364 days earlier, once."]];
+const CODE_NOTES = [["LENGTH(venue)", 1, "Audit: LENGTH shows hidden spaces, the first suspect when names do not match.", "check names for hidden spaces"], ["COUNT(*) - COUNT(net_sales)", 0, "Missing values: COUNT(col) skips NULLs, so this difference counts them. Result 0 in every table.", "no missing values"], ["COUNT(DISTINCT date)", 0, "Duplicates: if n_days equals n_rows, no day appears twice. True everywhere.", "no day twice"], ["SUBSTR(date, 1, 4)", 3, "covers holds two years: split it by year to check each one.", "split covers by year"], ["FROM sales_actual\nGROUP BY weekday", 2, "Checks the weekday column: each weekday on two dates, 7 days apart, so it can be trusted for the Sunday match.", "weekday column can be trusted"], ["SELECT COUNT(*) AS matched_rows", 1, "The proof of the problem: a join on the raw names returns 0 rows.", "proof: raw join = 0 rows"], ["CASE venue", 1, "The fix: translate each short name in covers to the name the sales tables use.", "the fix: short name → long name"], ["ELSE venue", 1, "An unknown name is kept as it is, so it would show as unmatched instead of vanishing.", "an unknown name stays visible"], ["COUNT(c.covers) AS n_matched", 1, "The proof the fix works: n_matched = n_rows = 14 for every venue.", "proof: 14 of 14 match"], ["JOIN sales_ly l      ON l.venue = a.venue AND l.weekday = a.weekday", 2, "Last year joined on venue + weekday, not on the date: Sunday meets Sunday.", "last year on weekday, not date"], ["AND l.date = '2025-10-12'", 2, "Keeps last year's Sunday, 12 Oct 2025. (11 Oct 2025 was a Saturday.)", "Sunday 12 Oct 2025, not Sat 11"], ["JOIN covers_clean cl", 3, "covers used a second time, for last year's guests, on last year's date.", "covers again, for last year"], ["ROUND(100.0 * (sales - budget) / budget, 1)", 5, "% vs budget. 100.0 makes the division decimal (SQLite divides whole numbers as whole numbers).", "% vs budget (100.0 → decimals)"], ["ROUND(100.0 * (sales - sales_ly) / sales_ly, 1)", 2, "% vs the same Sunday last year: the headline KPI that picks the winner.", "% vs last year: picks the winner"], ["ROUND(1.0 * sales / covers, 1)", 6, "Spend per cover: sales ÷ guests.", "spend per cover"], ["COUNT(*)               AS n_days", 4, "Should be 7 for every venue: proves no day was lost or doubled by the joins.", "7 days: nothing lost or doubled"], ["SUM(c.covers)           AS covers", 6, "Week totals first; spend per cover is then total ÷ total, never an average of daily ratios.", "totals first, then the ratio"], ["CASE WHEN a.date <= '2026-10-04' THEN 'W40' ELSE 'W41' END AS week", 4, "Each weekday appears twice in 14 days: label the week so each day can find exactly one match.", "label the week (W40 / W41)"], ["LEFT JOIN last_year ly ON ly.venue   = t.venue", 4, "Joined on venue + week + weekday: each day meets the day 364 days earlier, once.", "venue + week + weekday: 1 match"]];
 const PROBLEM_TITLES = ["The same venue has two names", "\"Same day last year\" is not the same date", "One table holds two years", "Each weekday appears twice", "The budget is a weak benchmark", "Some answers are not in the data"];
 function codeLinesHtml() {
   const lines = CASE_SQL.split('\n');
   const at = new Map();
-  for (const [needle, n, text] of CODE_NOTES) {
+  for (const [needle, n, text, short] of CODE_NOTES) {
     const parts = needle.split('\n');
     const i = lines.findIndex((l, k) => !l.trim().startsWith('--') && parts.every((p, j) => (lines[k + j] || '').includes(p)) && !at.has(k + parts.length - 1));
-    if (i >= 0) at.set(i + parts.length - 1, { n, text });
+    if (i >= 0) at.set(i + parts.length - 1, { n, text, short });
   }
-  let inBlock = false;
-  return `<p class="code-key">Every line of the project. A dot marks a line that meets or solves a data problem; its number is the problem in The pitch (grey: a check). Tap a dot to read why. Keywords open their box from class.</p><div class="code-lines">${lines.map((l, i) => {
+  // The map: each problem, its colour, and the lines where it is met or solved.
+  const byP = new Map();
+  for (const [i, note] of [...at].sort((x, y) => x[0] - y[0])) { if (!byP.has(note.n)) byP.set(note.n, []); byP.get(note.n).push(i); }
+  const map = [...byP.keys()].sort((x, y) => (x || 9) - (y || 9)).map(n => `<li class="p${n}"><span class="cl-dot p${n}">${n || '✓'}</span><b>${n ? esc(PROBLEM_TITLES[n - 1]) : 'Checks that passed'}</b><span class="cm-lines">${byP.get(n).map(i => `<button type="button" class="cl-jump" data-i="${i}">${i + 1}</button>`).join(' ')}</span></li>`).join('');
+  let inBlock = false, gap = false;
+  const rows = lines.map((l, i) => {
     const t = l.trim();
     if (t.startsWith('/*')) inBlock = true;
     const cmt = inBlock || t.startsWith('--');
     if (t.endsWith('*/')) inBlock = false;
     const note = at.get(i);
     const dot = note ? `<button type="button" class="cl-dot p${note.n}" data-i="${i}" aria-label="Why this line matters">${note.n || '✓'}</button>` : '<span></span>';
-    return `<div class="cl${cmt ? ' cmt' : ''}" data-i="${i}"><span class="ln">${i + 1}</span>${dot}<span class="src">${cmt ? esc(l) || ' ' : sqlHtml(l) || ' '}</span>${note ? `<div class="cl-note" hidden>${note.n ? `<b>Problem ${note.n} · ${esc(PROBLEM_TITLES[note.n - 1])}.</b> ` : '<b>Check.</b> '}${esc(note.text)}</div>` : ''}</div>`;
-  }).join('')}</div>`;
+    const tag = note ? `<span class="cl-tag p${note.n}">${esc(note.short)}</span>` : '';
+    return `<div class="cl${cmt ? ' cmt' : ''}${note ? ` key p${note.n}` : ''}" id="cl-${i}" data-i="${i}"><span class="ln">${i + 1}</span>${dot}<span class="src">${cmt ? esc(l) || ' ' : sqlHtml(l) || ' '}${tag}</span>${note ? `<div class="cl-note" hidden>${note.n ? `<b>Problem ${note.n} · ${esc(PROBLEM_TITLES[note.n - 1])}.</b> ` : '<b>Check.</b> '}${esc(note.text)}</div>` : ''}</div>`;
+  });
+  // Between two key lines, a quiet "⋯" stands for the hidden ones when only the key lines are shown.
+  const out = [];
+  lines.forEach((l, i) => { if (!at.has(i) && (i === 0 || at.has(i - 1))) out.push(`<div class="cl-gap" aria-hidden="true">⋯</div>`); out.push(rows[i]); });
+  return `<ul class="code-map">${map}</ul>
+    <p class="code-key">The key lines of the project, with what each one does; the colour and number are the problem in The pitch. Tap a dot for the full reason, a line number above to jump there. <button type="button" class="code-all" aria-pressed="false">Show all ${lines.length} lines</button></p>
+    <div class="code-lines only-key">${out.join('')}</div>`;
 }
 document.getElementById('session').addEventListener('click', e => {
-  const d = e.target.closest('.cl-dot');
+  const all = e.target.closest('.code-all');
+  if (all) {
+    const box = all.closest('.sg-inner').querySelector('.code-lines');
+    const on = box.classList.toggle('only-key');
+    all.setAttribute('aria-pressed', String(!on));
+    all.textContent = on ? `Show all ${box.querySelectorAll('.cl').length} lines` : 'Show only the key lines';
+    return;
+  }
+  const j = e.target.closest('.cl-jump');
+  if (j) {
+    const row = document.getElementById(`cl-${j.dataset.i}`);
+    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    row.classList.add('flash');
+    setTimeout(() => row.classList.remove('flash'), 1400);
+    return;
+  }
+  const d = e.target.closest('.code-lines .cl-dot');
   if (!d) return;
   const row = d.closest('.cl');
   const n = row.querySelector('.cl-note');
