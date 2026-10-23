@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-
+import { clientIp } from '@/lib/api/rate-limit';
 import { jsonError, parseJsonBody } from '@/lib/api/route-helpers';
 import { magicLinkLimiter, magicLinkRedirect, normaliseEmail } from '@/lib/chill/magic-link';
-import { clientIp } from '@/lib/rate-limit';
 import { createClient } from '@/lib/supabase/server';
 
 /*

@@ -1,4 +1,4 @@
-import { createRateLimiter } from '@/lib/rate-limit';
+import { createRateLimiter } from '@/lib/api/rate-limit';
 
 /** Where a Chill Machine magic link lands after the callback. */
 export const CHILL_HOME = '/chill';
