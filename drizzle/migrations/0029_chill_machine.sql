@@ -7,7 +7,8 @@
 --
 -- chill_mixes holds a whole Chill Machine setup as jsonb (layers, palette,
 -- visuals, echo, beats, sections). chill_recordings points at audio files in
--- the private `recordings` bucket under chill/{user_id}/.
+-- the private `recordings` bucket under {user_id}/chill/ (the folder-per-user
+-- storage policies from 0017 keep each player inside their own folder).
 --
 -- Safe to run twice: everything is "if not exists".
 
