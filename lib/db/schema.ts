@@ -364,6 +364,41 @@ export const recordings = pgTable('recordings', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+// ─── Chill Machine (public) ──────────────────────────────────────────────────
+// Spec: docs/specs/chill-machine-public.md. Migration: 0029_chill_machine.sql.
+
+export const chillFeedback = pgTable('chill_feedback', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id'), // null → guest
+  name: text('name'),
+  message: text('message').notNull(),
+  palette: text('palette'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const chillMixes = pgTable('chill_mixes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  title: text('title').notNull(),
+  settings: jsonb('settings').$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type ChillCue = { at: number; label: string };
+
+export const chillRecordings = pgTable('chill_recordings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  title: text('title').notNull(),
+  storagePath: text('storage_path').notNull(),
+  mimeType: text('mime_type').notNull(),
+  durationSecs: integer('duration_secs'),
+  palette: text('palette'),
+  cues: jsonb('cues').$type<ChillCue[]>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // ─── Chat ────────────────────────────────────────────────────────────────────
 
 export type ChatEntityType = 'circle' | 'spark';
