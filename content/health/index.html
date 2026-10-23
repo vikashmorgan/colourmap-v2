@@ -143,6 +143,30 @@ h2 { font-family: var(--display); font-size: 22px; margin: 28px 0 10px; }
 .ex.drop-before { box-shadow: 0 -3px 0 var(--sess); }
 .ex.drop-after { box-shadow: 0 3px 0 var(--sess); }
 .order-hint { margin: 0; padding: 0 6px; font-size: 13px; color: var(--muted); }
+.order-hint a { color: var(--accent); }
+/* Stick figures (2026-10-23): brown ink on paper, motion in the section's colour. */
+.fig { display: block; width: 176px; max-width: 100%; height: auto; color: var(--nb-brown); background: var(--nb-bg); border: 1px solid var(--nb-rule); border-radius: 10px; }
+.fig * { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.fig .fb { stroke: currentColor; stroke-width: 2.2; }
+.fig .ff { opacity: .45; }
+.fig .fp, .fig .fnext { stroke: color-mix(in srgb, currentColor 50%, transparent); stroke-width: 1.3; }
+.fig .fband { stroke: var(--sess, currentColor); stroke-width: 1.4; stroke-dasharray: 3 2.5; }
+.fig .fm { stroke: var(--sess, currentColor); stroke-width: 1.5; }
+.fig .fw { fill: currentColor; stroke: none; }
+.fig.sm { width: 92px; }
+/* Favourites (2026-10-23): the ones you actually do, in your order. */
+.favs { --sess: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--rule)); border-radius: 16px; margin-bottom: 14px; background: var(--panel); scroll-margin-top: 120px; }
+.favs .part-head { border-radius: 16px 16px 0 0; }
+.fav-list { list-style: none; margin: 0; padding: 8px 10px 12px; display: grid; gap: 6px; }
+.fav-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 6px 8px; border-radius: 12px; border: 1px solid var(--rule); background: var(--panel); }
+.fav-row.dragging { opacity: .4; }
+.fav-row.drop-before { box-shadow: 0 -3px 0 var(--accent); }
+.fav-row.drop-after { box-shadow: 0 3px 0 var(--accent); }
+.fav-acts { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; justify-content: flex-end; }
+.fav-empty { margin: 0; padding: 12px 18px 14px; font-size: 14.5px; color: var(--muted); }
+.fav-btn { width: 30px; height: 30px; padding: 0; flex: none; border-radius: 8px; border: 1px solid transparent; background: none; color: var(--muted); font: 600 17px var(--body); line-height: 1; cursor: pointer; }
+.fav-btn[aria-pressed="true"] { color: var(--accent); }
+.fav-btn:hover, .fav-btn:focus-visible { border-color: var(--rule); background: var(--ground); }
 .ex-body p { margin: 0; }
 .lbl { display: block; font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--sess); margin-bottom: 2px; }
 .watch { padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--q-c) 9%, transparent); }
@@ -238,6 +262,9 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .tick { grid-template-columns: 36px minmax(0, 1fr) auto; padding: 4px 2px; }
   .top .tabs { order: 2; width: 100%; }
   .tab { flex: 1; padding-inline: 8px; }
+  .fig.sm { width: 72px; }
+  .fav-row { gap: 8px; padding: 6px; }
+  .fav-acts { max-width: 96px; }
 }
 </style>
 </head>
@@ -293,6 +320,7 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
       <h1>Every exercise, what it is for, how to do it.</h1>
       <p>Open a section, then an exercise. Each one takes questions, comments and things to research. The dot on the right opens the notebook, already set to the exercise you are on.</p>
     </div>
+    <section class="favs" id="favs" aria-labelledby="favs-title"></section>
     <div id="library"></div>
   </section>
 
@@ -409,6 +437,290 @@ const AREAS = [['knee', 'Knee', 'Knee'], ['shoulder', 'Right shoulder', 'Shoulde
 const EX = new Map(SECTIONS.flatMap(s => s.ex.map(e => [e.id, { ...e, sec: s }])));
 const sess = c => `var(--sess-${c})`;
 
+/* ---------- Stick figures (2026-10-23: "stickmen so I understand how to do them") ----------
+   One small drawing system. A pose is joint angles from the hip: 0° points down, 90° forward
+   (to the right), 180° up, -90° back. Limbs are [upper, lower] angles, or { to: [x, y] } to
+   reach a point (x, y from the hip; k flips the bend). Index 0 is the far limb (drawn lighter),
+   1 the near one; in a front view (front: true) 0 is on the left. The figure is set on the
+   floor by its lowest point. Brown ink in currentColor, motion in the section's colour. */
+const FIG = { torso: 30, neck: 9, head: 6.5, arm: [16, 14], leg: [22, 21], foot: 6, floor: 104 };
+const fRad = a => (a * Math.PI) / 180;
+const fAt = (p, a, n) => [p[0] + Math.sin(fRad(a)) * n, p[1] + Math.cos(fRad(a)) * n];
+const fAngle = (p, q) => (Math.atan2(q[0] - p[0], q[1] - p[1]) * 180) / Math.PI;
+function fLimb(o, spec, [l1, l2]) {
+  if (Array.isArray(spec)) { const m = fAt(o, spec[0], l1); return [o, m, fAt(m, spec[1], l2)]; }
+  const t = spec.to, d = Math.min(Math.max(Math.hypot(t[0] - o[0], t[1] - o[1]), Math.abs(l1 - l2) + 0.01), l1 + l2 - 0.01);
+  const bend = (Math.acos((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d)) * 180) / Math.PI;
+  const m = fAt(o, fAngle(o, t) + (spec.k ?? 1) * bend, l1);
+  return [o, m, fAt(m, fAngle(m, t), l2)];
+}
+const SIDE = { a: [[-8, -2], [12, 28]], l: [[-3, 0], [3, 0]] };
+const FRONT = { a: [[-6, -2], [6, 2]], l: [[-2, 0], [2, 0]] };
+function fJoints(o) {
+  const front = !!o.front, t = o.t ?? 180, face = o.face ?? 1, def = front ? FRONT : SIDE;
+  const hip = [0, 0], neck = fAt(hip, t, FIG.torso);
+  let head = fAt(neck, t + (o.hd ?? 0), FIG.neck);
+  if (o.hf) head = fAt(head, t - 90 * face, o.hf);
+  const sh = front ? [fAt(neck, t + 90, 8), fAt(neck, t - 90, 8)] : [neck, neck];
+  const hp = front ? [fAt(hip, t + 90, 5), fAt(hip, t - 90, 5)] : [hip, hip];
+  const arms = [0, 1].map(i => fLimb(sh[i], (o.a ?? def.a)[i], FIG.arm));
+  const legs = [0, 1].map(i => fLimb(hp[i], (o.l ?? def.l)[i], FIG.leg));
+  const fa = o.f ?? (front ? [-80, 80] : [90, 90]);
+  for (const i of [0, 1]) if (fa[i] != null) legs[i].push(fAt(legs[i][2], fa[i], FIG.foot));
+  const nose = o.nose ?? (front ? null : t - 90 * face + (o.hd ?? 0));
+  const J = { hip, neck, head, sh, hp, arms, legs, nose, front };
+  // Onto the floor: the lowest point touches it, or sits `lift` above it (a step, a chair).
+  const pts = [hip, neck, [head[0], head[1] + FIG.head], ...arms.flat(), ...legs.flat()];
+  const dy = o.dy ?? FIG.floor - (o.lift ?? 0) - Math.max(...pts.map(p => p[1]));
+  const mv = p => [p[0], p[1] + dy];
+  return { ...J, hip: mv(hip), neck: mv(neck), head: mv(head), sh: sh.map(mv), hp: hp.map(mv), arms: arms.map(l => l.map(mv)), legs: legs.map(l => l.map(mv)) };
+}
+const fNum = n => Math.round(n * 10) / 10;
+const fPath = pts => `M${pts.map(p => `${fNum(p[0])} ${fNum(p[1])}`).join('L')}`;
+// Props: ['l', x1, y1, x2, y2] a line (wall, floor, chair), ['p', [[x, y], ...]] an open line,
+// ['P', [[x, y], ...]] the same in ink, ['c', x, y, r] a ball, ['w', x, y, r] a weight,
+// ['b', x1, y1, x2, y2] a band, ['m', x1, y1, x2, y2, bend] a motion arrow, ['o', x, y, r] a circling arrow.
+function fArrowHead(tip, from) {
+  const a = fAngle(from, tip);
+  return fPath([fAt(tip, a + 152, 4), tip, fAt(tip, a - 152, 4)]);
+}
+function fProp(q, pts) {
+  const [k, ...v] = q;
+  if (k === 'l' || k === 'b') { pts.push([v[0], v[1]], [v[2], v[3]]); return `<path class="${k === 'l' ? 'fp' : 'fband'}" d="${fPath([[v[0], v[1]], [v[2], v[3]]])}"/>`; }
+  if (k === 'p' || k === 'P') { pts.push(...v[0]); return `<path class="${k === 'p' ? 'fp' : 'fb'}" d="${fPath(v[0])}"/>`; }
+  if (k === 'c' || k === 'w') { pts.push([v[0] - v[2], v[1] - v[2]], [v[0] + v[2], v[1] + v[2]]); return `<circle class="${k === 'c' ? 'fp' : 'fw'}" cx="${fNum(v[0])}" cy="${fNum(v[1])}" r="${v[2]}"/>`; }
+  if (k === 'm') {
+    const [x1, y1, x2, y2, bend = 0] = v, len = Math.hypot(x2 - x1, y2 - y1) || 1;
+    const c = [(x1 + x2) / 2 + ((y2 - y1) / len) * bend, (y1 + y2) / 2 - ((x2 - x1) / len) * bend];
+    pts.push([x1, y1], [x2, y2]);
+    return `<path class="fm" d="M${fNum(x1)} ${fNum(y1)}Q${fNum(c[0])} ${fNum(c[1])} ${fNum(x2)} ${fNum(y2)}${fArrowHead([x2, y2], c)}"/>`;
+  }
+  if (k === 'o') {
+    const [x, y, r] = v, s = fAt([x, y], 200, r), e = fAt([x, y], 140, r);
+    pts.push([x - r, y - r], [x + r, y + r]);
+    return `<path class="fm" d="M${fNum(s[0])} ${fNum(s[1])}A${r} ${r} 0 1 0 ${fNum(e[0])} ${fNum(e[1])}${fArrowHead(e, fAt([x, y], 125, r))}"/>`;
+  }
+  return '';
+}
+function fPose(o) {
+  const pts = [];
+  let out = '';
+  const J = o.body === false ? null : fJoints(o);
+  if (J) {
+    const limb = (l, far) => `<path class="fb${far ? ' ff' : ''}" d="${fPath(l)}"/>`;
+    const far = !J.front;
+    out += limb(J.legs[0], far) + limb(J.arms[0], far);
+    out += `<path class="fb" d="${fPath([J.hip, J.neck])}${J.front ? fPath([J.sh[0], J.sh[1]]) + fPath([J.hp[0], J.hp[1]]) : ''}"/>`;
+    out += `<circle class="fb" cx="${fNum(J.head[0])}" cy="${fNum(J.head[1])}" r="${FIG.head}"/>`;
+    if (J.nose != null) out += `<path class="fb" d="${fPath([fAt(J.head, J.nose, FIG.head), fAt(J.head, J.nose, FIG.head + 2.5)])}"/>`;
+    out += limb(J.legs[1]) + limb(J.arms[1]);
+    pts.push(J.hip, J.neck, [J.head[0] - FIG.head, J.head[1] - FIG.head], [J.head[0] + FIG.head, J.head[1] + FIG.head], ...J.arms.flat(), ...J.legs.flat());
+  }
+  out += (o.props ? o.props(J) : []).map(q => fProp(q, pts)).join('');
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  return { out, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(FIG.floor, ...ys) };
+}
+// Poses side by side, start → end, all at one scale, standing on one floor.
+function figSvg(id, cls = 'fig') {
+  const f = FIGS[id];
+  if (!f) return '';
+  const drawn = f.poses.map(fPose), n = drawn.length, gap = 14, W = 160;
+  const cellW = (W - 8 - gap * (n - 1)) / n;
+  const s = Math.min(1, ...drawn.map(d => Math.min(cellW / (d.x1 - d.x0 || 1), 100 / (d.y1 - d.y0 || 1))));
+  const base = FIG.floor;
+  let body = f.floor === false ? '' : `<path class="fp" d="M4 ${base}H156"/>`;
+  drawn.forEach((d, i) => {
+    const cx = 4 + cellW / 2 + i * (cellW + gap);
+    body += `<g transform="translate(${fNum(cx)} ${base}) scale(${fNum(s * 100) / 100}) translate(${fNum(-(d.x0 + d.x1) / 2)} ${-base})">${d.out}</g>`;
+    if (i < n - 1) { const x = cx + cellW / 2 + 2; body += `<path class="fnext" d="M${fNum(x)} 58H${fNum(x + gap - 4)}${fArrowHead([x + gap - 4, 58], [x, 58])}"/>`; }
+  });
+  return `<svg class="${cls}" viewBox="0 0 160 110" role="img" aria-label="${f.label.replace(/"/g, '&quot;')}">${body}</svg>`;
+}
+// Small helpers for the poses below.
+const wallAt = x => ['l', x, FIG.floor, x, 10];
+const chair = J => { const x = J.hip[0], y = J.hip[1] + 3; return [['l', x - 9, y, x + 9, y], ['l', x - 8, y, x - 8, FIG.floor], ['l', x + 8, y, x + 8, FIG.floor], ['l', x - 9, y, x - 11, y - 26]]; };
+const seat = { t: 180, l: [[86, 4], [92, 0]] };
+const lyingSide = { t: -94, a: [{ to: [-41, -4] }, { to: [-19, 14], k: -1 }], f: [null, null] };
+const FIGS = {
+  // Knee
+  'wall-sit': { label: 'Wall sit: back flat against a wall, slide down until the knees are bent about 60 degrees, thighs above parallel, and hold.', poses: [
+    { props: J => [wallAt(J.hip[0] - 7)] },
+    { a: [[2, 4], [8, 12]], l: [[60, -2], [64, 2]], props: J => [wallAt(J.hip[0] - 7), ['m', J.hip[0] + 6, J.hip[1] - 22, J.hip[0] + 6, J.hip[1] - 10, 0]] },
+  ] },
+  'side-leg-raise': { label: 'Side-lying leg raise: on your side, bottom knee bent, top leg straight; lift it with the heel leading, then lower slowly.', floor: false, poses: [
+    { ...lyingSide, l: [[45, 135], [92, 92]] },
+    { ...lyingSide, l: [[45, 135], [116, 116]], props: J => [['m', J.legs[1][2][0] + 4, J.legs[1][2][1] + 14, J.legs[1][2][0] + 4, J.legs[1][2][1] + 2, -3]] },
+  ] },
+  clamshell: { label: 'Clamshell: on your side, hips and knees bent, band above the knees; feet stay together while the top knee opens up.', floor: false, poses: [
+    { ...lyingSide, l: [[45, 135], [42, 132]], props: J => [['b', J.legs[0][1][0] - 3, J.legs[0][1][1] - 2, J.legs[1][1][0] - 3, J.legs[1][1][1] - 2]] },
+    { ...lyingSide, l: [[45, 135], { to: [30, 1], k: 1 }], props: J => [['b', J.legs[0][1][0] - 3, J.legs[0][1][1] - 2, J.legs[1][1][0] - 3, J.legs[1][1][1] + 2], ['m', J.legs[0][1][0] + 6, J.legs[0][1][1] - 4, J.legs[1][1][0] + 6, J.legs[1][1][1] + 2, -4]] },
+  ] },
+  'glute-bridge': { label: 'Glute bridge: on your back, knees bent, feet flat; push through the heels to lift the hips, squeeze, and lower slowly.', poses: [
+    { t: -90, a: [[92, 90], [96, 90]], l: [{ to: [26, 4] }, { to: [28, 4] }] },
+    { t: -73, a: [[95, 90], [98, 90]], l: [{ to: [22, 13] }, { to: [24, 13] }], props: J => [['m', J.hip[0], J.hip[1] + 12, J.hip[0], J.hip[1] + 2, 0]] },
+  ] },
+  'side-plank-knees': { label: 'Side plank on the knees: on your side on the forearm, knees bent behind; lift the hips into a straight line from knees to head.', poses: [
+    { t: -118, a: [[0, -90], { to: [2, -6], k: -1 }], l: [[95, 150], [97, 152]], f: [null, null] },
+    { t: -108, a: [[0, -90], { to: [2, -6], k: -1 }], l: [[72, 150], [74, 152]], f: [null, null], props: J => [['m', J.hip[0] + 3, J.hip[1] + 13, J.hip[0] + 3, J.hip[1] + 3, 0]] },
+  ] },
+  'spanish-squat': { label: 'Spanish squat: a band behind the knees anchored in front; sit back with the shins upright, then stand up.', poses: [
+    { props: J => [['l', J.hip[0] + 34, FIG.floor, J.hip[0] + 34, J.legs[1][1][1] - 8], ['b', J.legs[1][1][0] + 1, J.legs[1][1][1], J.hip[0] + 34, J.legs[1][1][1]]] },
+    { t: 158, a: [[88, 92], [92, 96]], l: [[74, 2], [78, 4]], props: J => [['l', J.legs[1][1][0] + 18, FIG.floor, J.legs[1][1][0] + 18, J.legs[1][1][1] - 8], ['b', J.legs[1][1][0] + 1, J.legs[1][1][1], J.legs[1][1][0] + 18, J.legs[1][1][1]], ['m', J.hip[0] - 4, J.hip[1] - 14, J.hip[0] - 4, J.hip[1] - 2, 0]] },
+  ] },
+  'step-down': { label: 'Step-down: stand on a low step, bend the standing knee to lower the other heel to the floor in front, and come back up.', poses: [
+    { lift: 13, l: [[-2, 0], [4, 0]], props: J => [['p', [[J.legs[0][2][0] - 12, FIG.floor], [J.legs[0][2][0] - 12, FIG.floor - 13], [J.legs[0][2][0] + 12, FIG.floor - 13], [J.legs[0][2][0] + 12, FIG.floor]]]] },
+    { t: 172, l: [{ to: [-3, 29] }, { to: [11, 41] }], props: J => [['p', [[J.legs[0][2][0] - 12, FIG.floor], [J.legs[0][2][0] - 12, J.legs[0][2][1]], [J.legs[0][2][0] + 12, J.legs[0][2][1]], [J.legs[0][2][0] + 12, FIG.floor]]]] },
+  ] },
+  'calf-raise': { label: 'Calf raise: near a wall for balance, rise onto the toes and lower in 3 seconds; then the same with the knees slightly bent.', poses: [
+    { a: [[-8, -2], [70, 92]], props: J => [wallAt(J.arms[1][2][0] + 1)] },
+    { a: [[-8, -2], [70, 92]], f: [40, 40], props: J => [wallAt(J.arms[1][2][0] + 1), ['m', J.legs[1][2][0] - 5, J.legs[1][2][1] + 2, J.legs[1][2][0] - 5, J.legs[1][2][1] - 8, 0]] },
+    { a: [[-8, -2], [70, 92]], l: [[18, -14], [22, -10]], f: [40, 40], props: J => [wallAt(J.arms[1][2][0] + 1)] },
+  ] },
+  // Right shoulder
+  'band-er': { label: 'Band external rotation: elbow bent at 90 degrees by your side with a towel under it; rotate the forearm out against the band and back.', poses: [
+    { front: true, a: [[4, 70], [-4, -2]], props: J => [['c', J.arms[0][1][0] + 3, J.arms[0][1][1] - 3, 2.5], ['b', J.arms[0][2][0], J.arms[0][2][1], J.hip[0] + 30, J.arms[0][2][1]], ['l', J.hip[0] + 30, FIG.floor, J.hip[0] + 30, J.arms[0][2][1] - 10]] },
+    { front: true, a: [[4, -92], [-4, -2]], props: J => [['c', J.arms[0][1][0] + 3, J.arms[0][1][1] - 3, 2.5], ['b', J.arms[0][2][0], J.arms[0][2][1], J.hip[0] + 30, J.arms[0][2][1]], ['l', J.hip[0] + 30, FIG.floor, J.hip[0] + 30, J.arms[0][2][1] - 10], ['m', J.hip[0] - 2, J.arms[0][2][1] + 5, J.arms[0][2][0] + 2, J.arms[0][2][1] + 5, -4]] },
+  ] },
+  'side-lying-er': { label: 'Side-lying external rotation: lying on the left side, right elbow on your side with a towel under it, a light weight in the hand; rotate the forearm up and lower slowly.', floor: false, poses: [
+    { ...lyingSide, a: [{ to: [-41, -4] }, [88, 0]], l: [[45, 135], [42, 132]], props: J => [['w', J.arms[1][2][0], J.arms[1][2][1] + 1.5, 2.6]] },
+    { ...lyingSide, a: [{ to: [-41, -4] }, [88, 180]], l: [[45, 135], [42, 132]], props: J => [['w', J.arms[1][2][0], J.arms[1][2][1] - 1.5, 2.6], ['m', J.arms[1][1][0] + 9, J.arms[1][1][1] + 8, J.arms[1][1][0] + 9, J.arms[1][1][1] - 10, -5]] },
+  ] },
+  'y-raise': { label: 'Y raise: face down, arms overhead in a Y with the thumbs up; lift the arms to ear height, then lower slowly.', poses: [
+    { t: -90, face: -1, a: [[-80, -86], [-78, -84]], l: [[90, 90], [91, 91]], f: [0, 0] },
+    { t: -90, face: -1, a: [[-126, -126], [-124, -124]], l: [[90, 90], [91, 91]], f: [0, 0], props: J => [['m', J.arms[1][2][0] + 2, J.arms[1][2][1] + 12, J.arms[1][2][0] + 2, J.arms[1][2][1] + 2, -3]] },
+  ] },
+  'face-pull': { label: 'Face pull: band anchored at face height; with the elbows high, pull it towards your face and squeeze the shoulder blades.', poses: [
+    { a: [[100, 100], [98, 98]], props: J => [['l', J.arms[1][2][0] + 22, FIG.floor, J.arms[1][2][0] + 22, J.arms[1][2][1] - 10], ['b', J.arms[1][2][0], J.arms[1][2][1], J.arms[1][2][0] + 22, J.arms[1][2][1]]] },
+    { a: [[-100, 75], [-98, 72]], props: J => [['l', J.hip[0] + 40, FIG.floor, J.hip[0] + 40, J.arms[1][2][1] - 10], ['b', J.arms[1][2][0], J.arms[1][2][1], J.hip[0] + 40, J.arms[1][2][1]], ['m', J.arms[1][2][0] + 16, J.arms[1][2][1] - 6, J.arms[1][2][0] + 4, J.arms[1][2][1] - 6, 0]] },
+  ] },
+  't-raise': { label: 'Prone T raise, seen from above: face down, arms out to the sides with the thumbs up; lift a little and squeeze the shoulder blades together.', floor: false, poses: [
+    { front: true, t: -90, a: [[0, 0], [180, 180]], l: [[92, 90], [88, 90]], f: [null, null] },
+    { front: true, t: -90, a: [[0, 0], [180, 180]], l: [[92, 90], [88, 90]], f: [null, null], props: J => [['m', J.sh[0][0] + 10, J.sh[0][1] + 8, J.sh[0][0] + 10, J.sh[0][1] + 1, 0], ['m', J.sh[1][0] + 10, J.sh[1][1] - 8, J.sh[1][0] + 10, J.sh[1][1] - 1, 0]] },
+  ] },
+  'triceps-pushdown': { label: 'Triceps pushdown: band anchored high, elbows pinned by your sides; push down until the arms are straight.', poses: [
+    { a: [[2, 150], [4, 152]], props: J => [['l', J.hip[0] + 30, FIG.floor, J.hip[0] + 30, J.head[1] - 14], ['b', J.arms[1][2][0], J.arms[1][2][1], J.hip[0] + 30, J.head[1] - 12]] },
+    { a: [[2, 8], [4, 12]], props: J => [['l', J.hip[0] + 30, FIG.floor, J.hip[0] + 30, J.head[1] - 14], ['b', J.arms[1][2][0], J.arms[1][2][1], J.hip[0] + 30, J.head[1] - 12], ['m', J.arms[1][2][0] + 7, J.arms[1][2][1] - 16, J.arms[1][2][0] + 7, J.arms[1][2][1] - 3, 0]] },
+  ] },
+  'wall-slide': { label: 'Wall slide: facing a wall with the forearms on it, slide them up as far as is comfortable, then down.', poses: [
+    { a: [[36, 180], [38, 180]], props: J => [wallAt(J.hip[0] + 11)] },
+    { a: [[140, 178], [142, 178]], props: J => [wallAt(J.hip[0] + 11), ['m', J.hip[0] + 14, J.neck[1] + 4, J.hip[0] + 14, J.neck[1] - 12, 0]] },
+  ] },
+  // Release the front
+  'doorway-stretch': { label: 'Doorway stretch: forearm on the door frame at 90 degrees, step through gently until the front of the chest and shoulder stretch.', poses: [
+    { a: [[-8, -2], [-90, 180]], props: J => [['l', J.arms[1][2][0] - 1, FIG.floor, J.arms[1][2][0] - 1, J.head[1] - 14]] },
+    { t: 172, a: [[-8, -2], [-110, 172]], l: [[-6, 0], [26, -4]], props: J => [['l', J.arms[1][2][0] - 1, FIG.floor, J.arms[1][2][0] - 1, J.head[1] - 14], ['m', J.hip[0] - 8, J.hip[1] - 4, J.hip[0] + 6, J.hip[1] - 4, 0]] },
+  ] },
+  'ball-release': { label: 'Ball release: a ball between the wall and the front of the shoulder; lean in and make slow, small circles.', poses: [
+    { t: 174, a: [[-8, -2], [6, 14]], props: J => [['c', J.neck[0] + 8, J.neck[1] + 6, 3.5], wallAt(J.neck[0] + 12), ['o', J.neck[0] + 8, J.neck[1] + 6, 7]] },
+  ] },
+  'forearm-stretch': { label: 'Forearm flexor stretch: arm straight in front, palm up; with the other hand gently pull the fingers back.', poses: [
+    { a: [{ to: [26, -34], k: -1 }, [90, 90]], props: J => [['P', [J.arms[1][2], fAt(J.arms[1][2], 160, 5)]], ['m', J.arms[1][2][0] + 6, J.arms[1][2][1] - 2, J.arms[1][2][0] + 2, J.arms[1][2][1] - 8, 3]] },
+  ] },
+  // Feet
+  'short-foot': { label: 'Short-foot drill, the foot seen from the side: grip the floor with the ball of the foot and the heel, toes long, so the arch lifts and the foot shortens.', poses: [
+    { body: false, props: () => [['P', [[2, 104], [0, 98], [3, 86], [10, 84], [26, 96], [40, 102], [42, 104], [30, 104], [16, 101], [2, 104]]]] },
+    { body: false, props: () => [['P', [[2, 104], [0, 98], [3, 86], [10, 83], [25, 95], [38, 102], [40, 104], [29, 104], [16, 98], [2, 104]]], ['m', -4, 108, 8, 108, 0], ['m', 36, 108, 24, 108, 0]] },
+  ] },
+  'single-leg-balance': { label: 'Single-leg balance: stand on one foot with the knee soft, the other foot lifted behind; later with the eyes closed.', poses: [
+    { a: [[-30, -20], [30, 40]], l: [[-2, 2], [62, 4]] },
+  ] },
+  'toe-spreads': { label: 'Toe spreads, the foot seen from above: spread the toes wide and hold, then relax them.', floor: false, poses: [
+    { body: false, props: () => [['P', [[12, 104], [7, 99], [6, 88], [5, 76], [8, 68], [16, 64], [26, 66], [30, 72], [28, 86], [22, 99], [18, 104], [12, 104]]], ['P', [[8, 66], [7, 60]]], ['P', [[12, 64], [12, 58]]], ['P', [[17, 64], [17, 58]]], ['P', [[22, 65], [22, 59]]], ['P', [[26, 68], [26, 62]]]] },
+    { body: false, props: () => [['P', [[12, 104], [7, 99], [6, 88], [5, 76], [8, 68], [16, 64], [26, 66], [30, 72], [28, 86], [22, 99], [18, 104], [12, 104]]], ['P', [[8, 66], [3, 61]]], ['P', [[12, 64], [10, 58]]], ['P', [[17, 64], [18, 58]]], ['P', [[22, 65], [25, 60]]], ['P', [[26, 68], [32, 64]]], ['m', 0, 56, -4, 62, -2], ['m', 32, 58, 36, 64, 2]] },
+  ] },
+  'calf-plantar': { label: 'Calf stretch against a wall, back knee straight and heel down; then roll a ball slowly under the sole.', poses: [
+    { t: 160, a: [[100, 160], [96, 158]], l: [{ to: [-18, 41] }, { to: [16, 40] }], props: J => [wallAt(J.arms[1][2][0] + 1)] },
+    { a: [[-8, -2], [12, 28]], l: [[-2, 0], { to: [14, 36] }], f: [90, 80], props: J => [['c', J.legs[1][2][0] + 3, J.legs[1][2][1] + 4.5, 4], ['m', J.legs[1][2][0] - 2, FIG.floor + 4, J.legs[1][2][0] + 10, FIG.floor + 4, 0]] },
+  ] },
+  'ankle-circles': { label: 'Ankle circles: sitting, draw slow circles with each foot, both ways; then a minute of easy calf raises standing.', poses: [
+    { ...seat, l: [[86, 4], [84, 60]], props: J => [...chair(J), ['o', J.legs[1][3][0] + 1, J.legs[1][3][1], 6]] },
+    { f: [40, 40], props: J => [['m', J.legs[1][2][0] - 5, J.legs[1][2][1] + 2, J.legs[1][2][0] - 5, J.legs[1][2][1] - 8, 0]] },
+  ] },
+  'foot-soak': { label: 'Warm foot soak: sitting, both feet in a basin of warm water up over the ankles, for 10 to 15 minutes.', poses: [
+    { ...seat, a: [[30, 80], [34, 84]], props: J => [...chair(J), ['p', [[J.legs[1][2][0] - 12, FIG.floor - 14], [J.legs[1][2][0] - 10, FIG.floor], [J.legs[1][2][0] + 16, FIG.floor], [J.legs[1][2][0] + 18, FIG.floor - 14]]], ['p', [[J.legs[1][2][0] - 11, FIG.floor - 10], [J.legs[1][2][0] - 4, FIG.floor - 12], [J.legs[1][2][0] + 3, FIG.floor - 10], [J.legs[1][2][0] + 10, FIG.floor - 12], [J.legs[1][2][0] + 17, FIG.floor - 10]]]] },
+  ] },
+  // Flow
+  'lift-sky': { label: 'Holding up the sky, from the front: fingers laced in front of the belly; breathe in as the palms rise over the head; breathe out as the arms float down the sides.', poses: [
+    { front: true, a: [{ to: [1, -6], k: 1 }, { to: [-1, -6], k: -1 }] },
+    { front: true, a: [{ to: [1, -62], k: -1 }, { to: [-1, -62], k: 1 }], props: J => [['P', [[J.arms[0][2][0] - 4, J.arms[0][2][1]], [J.arms[1][2][0] + 4, J.arms[1][2][1]]]]] },
+    { front: true, a: [[-32, -28], [32, 28]], props: J => [['m', J.arms[0][2][0] + 4, J.arms[0][2][1] - 6, J.arms[0][2][0] + 4, J.arms[0][2][1] + 6, 0], ['m', J.arms[1][2][0] - 4, J.arms[1][2][1] - 6, J.arms[1][2][0] - 4, J.arms[1][2][1] + 6, 0]] },
+  ] },
+  separate: { label: 'Separating heaven and earth, from the front: one palm pushes up over the head while the other presses down by the hip; switch slowly with the breath.', poses: [
+    { front: true, a: [[-170, -178], [16, 40]], props: J => [['P', [fAt(J.arms[0][2], -90, 3), fAt(J.arms[0][2], 90, 3)]], ['P', [fAt(J.arms[1][2], 40, 3), fAt(J.arms[1][2], 130, 3)]]] },
+    { front: true, a: [[-16, -40], [170, 178]], props: J => [['P', [fAt(J.arms[1][2], -90, 3), fAt(J.arms[1][2], 90, 3)]], ['P', [fAt(J.arms[0][2], -40, 3), fAt(J.arms[0][2], -130, 3)]]] },
+  ] },
+  'draw-bow': { label: 'Drawing the bow, from the front, in a high stance: one arm points to the side, the other draws back across the chest as if pulling a bowstring.', poses: [
+    { front: true, a: [[-92, -92], [104, -52]], l: [[-20, -8], [20, 8]], nose: -90, props: J => [['b', J.arms[0][2][0], J.arms[0][2][1], J.arms[1][2][0], J.arms[1][2][1]]] },
+    { front: true, a: [[-104, 52], [92, 92]], l: [[-20, -8], [20, 8]], nose: 90, props: J => [['b', J.arms[0][2][0], J.arms[0][2][1], J.arms[1][2][0], J.arms[1][2][1]]] },
+  ] },
+  'wise-owl': { label: 'Wise owl looks back, from the front: arms by your sides; breathing out, turn the head and upper chest to look behind you, then come back.', poses: [
+    { front: true },
+    { front: true, nose: -90, a: [[-14, -10], [14, 10]], props: J => [['m', J.head[0] + 9, J.head[1] - 10, J.head[0] - 9, J.head[1] - 10, 5]] },
+  ] },
+  'heel-drops': { label: 'Rising on the toes: breathe in as you rise onto the toes, breathe out as you lower the heels softly.', poses: [
+    { a: [[-6, -2], [8, 4]] },
+    { a: [[-6, -2], [8, 4]], f: [40, 40], props: J => [['m', J.legs[1][2][0] - 5, J.legs[1][2][1] + 2, J.legs[1][2][0] - 5, J.legs[1][2][1] - 8, 0]] },
+    { a: [[-6, -2], [8, 4]], props: J => [['m', J.legs[1][2][0] - 5, J.legs[1][2][1] - 10, J.legs[1][2][0] - 5, J.legs[1][2][1] - 1, 0]] },
+  ] },
+  'weight-shift': { label: 'Tai chi weight shift, from the front: feet wider than the hips, knees soft; slowly move all the weight onto one foot, then the other.', poses: [
+    { front: true, a: [[-20, -10], [20, 10]], l: [{ to: [-4, 41], k: -1 }, { to: [24, 40], k: 1 }] },
+    { front: true, a: [[-20, -10], [20, 10]], l: [{ to: [-24, 40], k: -1 }, { to: [4, 41], k: 1 }], props: J => [['m', J.hip[0] + 10, J.hip[1] - 4, J.hip[0] - 6, J.hip[1] - 4, 0]] },
+  ] },
+  'cloud-hands': { label: 'Cloud hands, from the front: one hand drifts past the face, the other past the belly, as the waist turns side to side.', poses: [
+    { front: true, a: [{ to: [-16, -34], k: 1 }, { to: [6, -8], k: 1 }], l: [[-8, -4], [8, 4]], props: J => [['m', J.head[0] + 12, J.head[1] + 2, J.head[0] - 14, J.head[1] + 2, 6]] },
+    { front: true, a: [{ to: [-6, -8], k: -1 }, { to: [16, -34], k: -1 }], l: [[-8, -4], [8, 4]], props: J => [['m', J.head[0] - 12, J.head[1] + 2, J.head[0] + 14, J.head[1] + 2, -6]] },
+  ] },
+  'standing-tree': { label: 'Standing like a tree, from the front: feet hip-width, knees barely bent, arms rounded as if holding a big ball at chest height.', poses: [
+    { front: true, a: [{ to: [-4, -24], k: -1 }, { to: [4, -24], k: 1 }], l: [{ to: [-8, 41.5], k: -1 }, { to: [8, 41.5], k: 1 }], props: J => [['c', J.hip[0], J.hip[1] - 24, 9]] },
+  ] },
+  yongquan: { label: 'Rubbing the bubbling spring, the sole of the foot: rub with the thumb in small circles just behind the ball of the foot.', floor: false, poses: [
+    { body: false, props: () => [['P', [[12, 104], [7, 99], [6, 88], [5, 76], [8, 68], [16, 64], [26, 66], [30, 72], [28, 86], [22, 99], [18, 104], [12, 104]]], ['P', [[8, 66], [6, 60]]], ['P', [[12, 64], [11, 58]]], ['P', [[17, 64], [17, 58]]], ['P', [[22, 65], [23, 59]]], ['P', [[26, 68], [28, 62]]], ['w', 17, 74, 1.8], ['o', 17, 74, 5]] },
+  ] },
+  'hip-flexor': { label: 'Standing hip flexor stretch: a small lunge holding a chair, back knee straight; tuck the pelvis under until the front of the hip stretches.', poses: [
+    { a: [[-8, -2], { to: [18, -6], k: -1 }], l: [{ to: [-22, 37] }, { to: [16, 41], k: 1 }], props: J => { const x = J.arms[1][2][0] + 1, y = J.arms[1][2][1]; return [['l', x, y, x, FIG.floor], ['l', x, FIG.floor - 20, x + 15, FIG.floor - 20], ['l', x + 15, FIG.floor - 20, x + 15, FIG.floor], ['m', J.hip[0] - 7, J.hip[1] - 8, J.hip[0] - 3, J.hip[1] + 3, 3]]; } },
+  ] },
+  'hamstring-strap': { label: 'Lying hamstring stretch: on your back, a strap round one foot; raise the straight leg until the back of the thigh stretches.', poses: [
+    { t: -90, a: [{ to: [-2, -22], k: 1 }, { to: [0, -20], k: 1 }], l: [[90, 90], [142, 142]], f: [180, 52], props: J => [['b', J.arms[1][2][0], J.arms[1][2][1], J.legs[1][3][0], J.legs[1][3][1]]] },
+  ] },
+  // At school
+  'posture-reset': { label: 'Shoulders back and down: sitting tall, draw the shoulders gently back and down, and breathe.', poses: [
+    { ...seat, t: 166, hf: 3, a: [[50, 92], [54, 96]], props: chair },
+    { ...seat, a: [[2, 60], [6, 64]], props: J => [...chair(J), ['m', J.neck[0] + 5, J.neck[1] - 3, J.neck[0] - 3, J.neck[1] + 5, 3]] },
+  ] },
+  'chin-tuck': { label: 'Chin tuck, from the side: glide the chin straight back, making a small double chin, and hold 3 seconds.', poses: [
+    { ...seat, t: 176, hf: 5, a: [[30, 80], [34, 84]], props: chair },
+    { ...seat, t: 180, hf: -1, a: [[30, 80], [34, 84]], props: J => [...chair(J), ['m', J.head[0] + 14, J.head[1] + 3, J.head[0] + 7, J.head[1] + 3, 0]] },
+  ] },
+  'quad-set': { label: 'Seated quad set: under the desk, straighten one knee and tighten the thigh for 5 seconds.', poses: [
+    { ...seat, a: [[30, 80], [34, 84]], props: J => [...chair(J), ['l', J.hip[0] + 12, J.hip[1] - 12, J.hip[0] + 46, J.hip[1] - 12], ['l', J.hip[0] + 44, J.hip[1] - 12, J.hip[0] + 44, FIG.floor]] },
+    { ...seat, a: [[30, 80], [34, 84]], l: [[86, 4], [90, 88]], f: [90, 170], props: J => [...chair(J), ['l', J.hip[0] + 12, J.hip[1] - 12, J.hip[0] + 46, J.hip[1] - 12], ['l', J.hip[0] + 44, J.hip[1] - 12, J.hip[0] + 44, FIG.floor], ['m', J.legs[1][1][0] - 4, J.legs[1][1][1] + 16, J.legs[1][1][0] + 12, J.legs[1][1][1] + 4, 4]] },
+  ] },
+  'ankle-pumps': { label: 'Ankle pumps: sitting, point the foot down, then pull it up; then circle the ankle.', poses: [
+    { ...seat, l: [[86, 4], [88, 50]], f: [90, 30], props: chair },
+    { ...seat, l: [[86, 4], [88, 50]], f: [90, 150], props: J => [...chair(J), ['m', J.legs[1][3][0] + 3, J.legs[1][3][1] + 9, J.legs[1][3][0] + 3, J.legs[1][3][1] - 2, -4]] },
+  ] },
+  'desk-short-foot': { label: 'Short foot in your shoes: sitting, gently shorten the foot, ball and heel gripping the floor, and hold 10 seconds.', poses: [
+    { ...seat, a: [[30, 80], [34, 84]], props: J => [...chair(J), ['m', J.legs[1][2][0] - 6, FIG.floor + 4, J.legs[1][2][0], FIG.floor + 4, 0], ['m', J.legs[1][3][0] + 6, FIG.floor + 4, J.legs[1][3][0], FIG.floor + 4, 0]] },
+  ] },
+  'desk-forearm': { label: 'Forearm stretch at the desk: arm straight in front, palm up; gently pull the fingers back with the other hand.', poses: [
+    { ...seat, a: [{ to: [26, -34], k: -1 }, [90, 90]], props: J => [...chair(J), ['P', [J.arms[1][2], fAt(J.arms[1][2], 160, 5)]], ['m', J.arms[1][2][0] + 6, J.arms[1][2][1] - 2, J.arms[1][2][0] + 2, J.arms[1][2][1] - 8, 3]] },
+  ] },
+  'door-stretch': { label: 'Doorway stretch: forearm on a door frame, step through gently until the front of the shoulder stretches.', poses: [
+    { t: 172, a: [[-8, -2], [-110, 172]], l: [[-6, 0], [26, -4]], props: J => [['l', J.arms[1][2][0] - 1, FIG.floor, J.arms[1][2][0] - 1, J.head[1] - 14], ['m', J.hip[0] - 8, J.hip[1] - 4, J.hip[0] + 6, J.hip[1] - 4, 0]] },
+  ] },
+  'queue-balance': { label: 'Balance while you wait: stand on one foot, knee soft, the other foot lifted behind.', poses: [
+    { a: [[-6, -2], [8, 4]], l: [[-2, 2], [62, 4]] },
+  ] },
+  'stand-walk': { label: 'Stand up and walk: get up from the chair between lessons and walk for two minutes.', poses: [
+    { ...seat, a: [[30, 80], [34, 84]], props: chair },
+    { t: 176, a: [[30, 60], [-28, -10]], l: [[-22, -6], [24, 6]], f: [90, 90] },
+  ] },
+  'desk-breath': { label: 'Six slow breaths: sitting tall, hands on the belly; breathe in for 4, out for 6.', poses: [
+    { ...seat, a: [{ to: [9, -8], k: -1 }, { to: [10, -10], k: -1 }], props: J => [...chair(J), ['m', J.hip[0] + 13, J.hip[1] - 9, J.hip[0] + 20, J.hip[1] - 9, 0], ['m', J.hip[0] + 26, J.hip[1] - 3, J.hip[0] + 19, J.hip[1] - 3, 0]] },
+  ] },
+};
+/* ---------- Stick figures (end) ---------- */
+
 /* ---------- Store: this browser first, then the account ---------- */
 const ON_BRAIN = location.pathname.startsWith('/health');
 const LOG_URL = '/api/health/log';
@@ -487,6 +799,7 @@ async function load() {
     for (const x of (await pr.json()).prefs) fp[x.key] = x.value;
     for (const q of prefQueue) { if (q.value === null) delete fp[q.key]; else fp[q.key] = q.value; }
     prefs = fp;
+    cleanFavs();
     const { entries } = await lr.json();
     // The account, then the changes this browser has not sent yet on top.
     const fresh = {};
@@ -782,8 +1095,9 @@ function renderLibrary() {
     <p class="sec-sub">${esc(s.sub)}</p>
     <div class="sec-body">
       ${orderedEx(s).map(e => `<details class="ex" id="ex-${e.id}" data-ex="${e.id}">
-        <summary draggable="true"><span class="ex-name">${esc(e.name)}</span><span class="qs" hidden></span><span class="aside-tag" hidden>set aside</span><span class="ex-dose">${esc(e.dose)}</span><span class="ex-move"><button type="button" data-move="up" aria-label="Move ${esc(e.name)} up" title="Move up">↑</button><button type="button" data-move="down" aria-label="Move ${esc(e.name)} down" title="Move down">↓</button></span></summary>
+        <summary draggable="true"><span class="ex-name">${esc(e.name)}</span><span class="qs" hidden></span><span class="aside-tag" hidden>set aside</span><span class="ex-dose">${esc(e.dose)}</span>${favBtn(e)}<span class="ex-move"><button type="button" data-move="up" aria-label="Move ${esc(e.name)} up" title="Move up">↑</button><button type="button" data-move="down" aria-label="Move ${esc(e.name)} down" title="Move down">↓</button></span></summary>
         <div class="ex-body">
+          ${figSvg(e.id)}
           <p><span class="lbl">How</span>${esc(e.how)}</p>
           <p><span class="lbl">What it is for</span>${esc(e.why)}</p>
           ${e.watch ? `<p class="watch"><span class="lbl">Watch out</span>${esc(e.watch)}</p>` : ''}
@@ -792,7 +1106,7 @@ function renderLibrary() {
           <div class="notes" data-key="ex|${e.id}"></div>
         </div>
       </details>`).join('')}
-      <p class="order-hint">↑ ↓ (or drag a row) to put your favourites first. <i>Set aside</i>, inside an exercise, sends the ones you don’t do to the end.</p>
+      <p class="order-hint">↑ ↓ (or drag a row) to put your favourites first. ☆ adds one to <a href="#favs">Favourites</a>, at the top. <i>Set aside</i>, inside an exercise, sends the ones you don’t do to the end.</p>
       <div class="notes sec-notes" data-key="sec|${s.id}"></div>
     </div>
   </details>`).join('') + `<h2>Good to know</h2><div class="know">
@@ -808,6 +1122,8 @@ function renderLibrary() {
 }
 const library = document.getElementById('library');
 library.addEventListener('click', e => {
+  const fv = e.target.closest('[data-fav]');
+  if (fv) { e.preventDefault(); toggleFav(fv.dataset.fav); return; }
   const mv = e.target.closest('[data-move]');
   if (mv) {
     e.preventDefault();   // a button in the summary must not open or close the box
@@ -859,6 +1175,79 @@ library.addEventListener('drop', e => {
   saveOrder(ex.closest('.sec'));
 });
 library.addEventListener('dragend', () => { if (dragged) dragged.classList.remove('dragging'); dragged = null; clearDrop(); });
+
+/* ---------- Favourites ----------
+   Asked for 2026-10-23: "a way where I can select the ones I actually do to do a pack called
+   favourites, that I can reorder on my own." ☆ on any exercise adds it; the pack sits first in
+   Exercises, across all sections, in your order. Kept as one pref, `fav` = the ids in order;
+   an id the library no longer has is dropped. */
+const favIds = () => [...new Set((prefs.fav || '').split(','))].filter(id => EX.has(id));
+const favBtn = e => { const on = favIds().includes(e.id); return `<button type="button" class="fav-btn" data-fav="${e.id}" aria-pressed="${on}" aria-label="${on ? 'Remove' : 'Add'} ${esc(e.name)} ${on ? 'from' : 'to'} Favourites" title="${on ? 'In Favourites' : 'Add to Favourites'}">${on ? '★' : '☆'}</button>`; };
+function setFavs(ids) { setPref('fav', ids.join(',') || null); }
+function toggleFav(id) {
+  const ids = favIds();
+  setFavs(ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+  for (const b of document.querySelectorAll(`[data-fav="${id}"]`)) b.outerHTML = favBtn(EX.get(id));
+  renderFavs();
+}
+// Drop ids the library no longer has, once, so the account forgets them too.
+function cleanFavs() { const clean = favIds().join(','); if ((prefs.fav || '') !== clean) setFavs(favIds()); }
+const favsEl = document.getElementById('favs');
+function renderFavs() {
+  const ids = favIds();
+  favsEl.innerHTML = `<div class="part-head"><h3 id="favs-title">Favourites</h3><span class="when">The ones you actually do, in your order</span></div>`
+    + (ids.length ? `<ol class="fav-list">${ids.map((id, i) => { const e = EX.get(id); return `<li class="fav-row" draggable="true" data-id="${id}" style="--sess: ${sess(e.sec.c)}">
+        ${figSvg(id, 'fig sm')}
+        <span class="tname">${esc(e.name)}<span class="tdose">${esc(e.dose)} · ${esc(e.sec.title)}</span></span>
+        <span class="fav-acts"><button type="button" class="how" data-how="${id}">How ›</button>${favBtn(e)}<span class="ex-move"><button type="button" data-fmove="up" aria-label="Move ${esc(e.name)} up" title="Move up"${i === 0 ? ' disabled' : ''}>↑</button><button type="button" data-fmove="down" aria-label="Move ${esc(e.name)} down" title="Move down"${i === ids.length - 1 ? ' disabled' : ''}>↓</button></span></span>
+      </li>`; }).join('')}</ol>`
+      : '<p class="fav-empty">Tap ☆ on an exercise to keep the ones you actually do here, in your order.</p>');
+}
+// The order is read back from the rows, like Your order.
+function saveFavOrder() {
+  setFavs([...favsEl.querySelectorAll('.fav-row')].map(r => r.dataset.id));
+  renderFavs();
+}
+favsEl.addEventListener('click', e => {
+  const fv = e.target.closest('[data-fav]');
+  if (fv) { toggleFav(fv.dataset.fav); return; }
+  const how = e.target.closest('[data-how]');
+  if (how) { goToExercise(how.dataset.how); return; }
+  const mv = e.target.closest('[data-fmove]');
+  if (!mv) return;
+  const row = mv.closest('.fav-row'), dirUp = mv.dataset.fmove === 'up';
+  if (dirUp && row.previousElementSibling) row.previousElementSibling.before(row);
+  if (!dirUp && row.nextElementSibling) row.nextElementSibling.after(row);
+  saveFavOrder();
+  favsEl.querySelector(`.fav-row[data-id="${row.dataset.id}"] [data-fmove="${dirUp ? 'up' : 'down'}"]`)?.focus();
+});
+let favDragged = null;
+const clearFavDrop = () => { for (const x of favsEl.querySelectorAll('.drop-before, .drop-after')) x.classList.remove('drop-before', 'drop-after'); };
+favsEl.addEventListener('dragstart', e => {
+  const row = e.target.closest?.('.fav-row');
+  if (!row) return;
+  favDragged = row;
+  row.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', row.dataset.id);
+});
+favsEl.addEventListener('dragover', e => {
+  const row = e.target.closest('.fav-row');
+  if (!favDragged || !row || row === favDragged) return;
+  e.preventDefault();
+  clearFavDrop();
+  const r = row.getBoundingClientRect();
+  row.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-before' : 'drop-after');
+});
+favsEl.addEventListener('drop', e => {
+  const row = e.target.closest('.fav-row');
+  if (!favDragged || !row || row === favDragged) return;
+  e.preventDefault();
+  if (row.classList.contains('drop-before')) row.before(favDragged); else row.after(favDragged);
+  favDragged = null;
+  saveFavOrder();
+});
+favsEl.addEventListener('dragend', () => { if (favDragged) favDragged.classList.remove('dragging'); favDragged = null; clearFavDrop(); });
 // One section open at a time, one exercise open at a time.
 document.getElementById('library').addEventListener('toggle', e => {
   const d = e.target;
@@ -1056,10 +1445,11 @@ function renderNotes() {
   }
   renderReview(); renderNotebook();
 }
-function renderAll() { renderLibrary(); renderDay(); renderNotes(); renderTimeline(); }
+function renderAll() { renderFavs(); renderLibrary(); renderDay(); renderNotes(); renderTimeline(); }
 
 paintTheme();
 renderPlan();
+cleanFavs();
 renderAll();
 try { const p = localStorage.getItem('health-page'); if (p && document.getElementById(`page-${p}`)) showPage(p); } catch (e) {}
 load();

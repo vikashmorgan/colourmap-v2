@@ -31,6 +31,15 @@ describe('health prefs service', () => {
     ]);
   });
 
+  it('writes the favourites pack as one ordered list, and clears it', async () => {
+    await writePrefs('user-1', [{ key: 'fav', value: 'wall-slide,clamshell,lift-sky' }]);
+    expect(upsertPrefs).toHaveBeenCalledWith('user-1', [
+      { key: 'fav', value: 'wall-slide,clamshell,lift-sky' },
+    ]);
+    await writePrefs('user-1', [{ key: 'fav', value: null }]);
+    expect(deletePref).toHaveBeenCalledWith('user-1', 'fav');
+  });
+
   it('clears a key on null, the last change winning', async () => {
     await writePrefs('user-1', [
       { key: 'aside|step-down', value: '1' },

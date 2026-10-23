@@ -58,6 +58,13 @@ describe('health prefs route', () => {
     expect(writePrefs).toHaveBeenCalledWith('user-1', entries);
   });
 
+  it('writes the favourites pack', async () => {
+    const entries = [{ key: 'fav', value: 'wall-slide,clamshell' }];
+    const res = await PUT(put({ prefs: entries }));
+    expect(res.status).toBe(200);
+    expect(writePrefs).toHaveBeenCalledWith('user-1', entries);
+  });
+
   it('answers 400 for invalid entries and for a body that is not JSON', async () => {
     writePrefs.mockRejectedValue(new HealthPrefValidationError('key must be 1-100 characters'));
     expect((await PUT(put({ prefs: [{}] }))).status).toBe(400);

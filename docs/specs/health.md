@@ -30,7 +30,9 @@ Four tabs:
   - **The last seven days:** a strip with how much of each part was done and the three pain numbers, so a trend shows without a chart.
   - **Go easy:** if any part is 4 or more today, or higher than yesterday, a calm line repeats the pain rule.
 - **Plan.** The three parts of the day explained: what, for how long, and why.
-- **Exercises.** The library, in sections: Knee · Right shoulder · Release the front · Feet · Flow (qi gong, tai chi, gentle stretches) · At school. Each card shows the dose, how to do it, what it is for, and what to watch out for, with the same **Question / Comment / Research** notes as Practice. A closing **Good to know** holds what to avoid for now, cold feet, slippers, and when to see a doctor or physio.
+- **Exercises.** The library, in sections: Knee · Right shoulder · Release the front · Feet · Flow (qi gong, tai chi, gentle stretches) · At school. Each card shows the dose, a stick figure, how to do it, what it is for, and what to watch out for, with the same **Question / Comment / Research** notes as Practice. A closing **Good to know** holds what to avoid for now, cold feet, slippers, and when to see a doctor or physio.
+- **Stick figures** (asked for 2026-10-23: "can u add the stickmen figures for my health exercises" … "stickmen so I understand how to do them"). Every exercise in every section has one, at the top of its card above *How*, about 160 × 110. One or more poses side by side, start → end, with motion arrows and bands in the section's colour, walls, chairs, steps and balls as light props. The body is brown ink on the notebook's paper, so it reads in day and night mode. Lying-on-the-side exercises (clamshell, side-lying raises) are drawn from the front and slightly above, as physio sheets do; the short-foot drill, toe spreads and the bubbling spring are drawn as a close-up of the foot. Each figure is an inline SVG drawn in code from joint angles (no image files), with `role="img"` and a sentence describing the movement.
+- **Favourites** (asked for 2026-10-23: "a way where i can select the ones i actually do to do a pack called favourites. that i can reorder on my own"). A ☆ on each exercise's row adds it (★ when in), from any section. The **Favourites** pack sits first in Exercises: each exercise with its small figure, dose and section, *How ›* to its card, ★ to take it out, and ↑ ↓ (phone) or drag (computer) to reorder. Empty, it says one quiet line about the ☆. Exercises that leave the library drop out of it on load.
 - **Your order** (asked for 2026-10-19: "allow me to move exercise boxes above another so I can reorder them, to show which are my favourites and which I don't do"). In each section, ↑ ↓ on an exercise's row move it (they work on a phone), and on a computer a row can also be dragged. *Set aside: I don't do this one*, inside an exercise, dims it and sends it to the end with a *set aside* tag; *Bring it back* undoes it. The order and the set-aside ones sync to the account.
 - **Notes.** Everything written, in one place: questions (answered and waiting), things to research, comments, each tagged with its exercise, then every day's feelings as a timeline.
 
@@ -48,7 +50,7 @@ Three tables, all scoped by RLS to their owner (migration `0027_health.sql`).
   - A tick is `{part}|{exercise}` = `1` (for example `am|lift-sky`, `sc|chin-tuck`, `eva|clamshell`); unticking deletes the row.
   - Pain is `pain|knee`, `pain|shoulder` or `pain|feet` = `0`–`10`.
   - The day's note is `feel` = its text, up to 2000 characters.
-- **`health_prefs`** — standing choices that are not about a day, one value per user and key: `order|{section}` = the exercise ids in order, `aside|{exercise}` = `1`. API `/api/health/prefs` (GET, PUT list).
+- **`health_prefs`** — standing choices that are not about a day, one value per user and key: `order|{section}` = the exercise ids in order, `aside|{exercise}` = `1`, `fav` = the Favourites pack's exercise ids in order, comma-separated (deleted when empty). API `/api/health/prefs` (GET, PUT list).
 - **`health_notes`** — the same shape as `coding_notes`: any number of notes per place, kind `question`, `comment` or `research`. An `answer` written from the terminal sits beside a note and never changes it; `read_at` records when it was read. Keys: `overall`, `sec|{section}`, `ex|{exercise}`.
 
 The browser copy (localStorage) is always written first. Changes made offline wait in a queue and are sent when the page is next online. Served outside Colour Brain, the page works on its own and keeps everything in the browser.
@@ -61,9 +63,10 @@ The browser copy (localStorage) is always written first. Changes made offline wa
 
 ## Not yet
 
-- Drawings of each exercise. The routine document refers to `img/*.svg` files that do not exist yet.
+- Favourites as a quick-tick list on Today. Left out for now: a tick there would need its own part key and would count twice in the seven-day strip.
 - A script to write answers into `health_notes.answer`, like `scripts/coding-answer.ts`.
 
 ## Reflection
 
 - **2026-10-19.** First built. Evening is split A/B because the whole routine back to back is about 45 minutes, and the document's own dose is 20–25 minutes, 4–5 days a week. The flow exercises are chosen for the weak parts and kept knee-safe: high stances, knees soft and never past the toes, no deep horse stance.
+- **2026-10-23.** Stick figures for every exercise and a Favourites pack. The figures are drawn in code from joint angles rather than as image files, so a new exercise only needs a few angles, they follow the theme, and a test can check that none is missing. Favourites are one ordered pref (`fav`) rather than one key per exercise, so reordering is a single write.
