@@ -1,8 +1,18 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import BinauralTuner from './BinauralTuner';
+import { ChillAccountProvider } from './ChillAccountContext';
+
+vi.mock('@/lib/chill/account-api', () => ({
+  listMixes: vi.fn(async () => []),
+  listRecordings: vi.fn(async () => []),
+  saveMix: vi.fn(),
+  updateMix: vi.fn(),
+  deleteMix: vi.fn(),
+  deleteRecording: vi.fn(),
+  uploadRecording: vi.fn(),
+}));
 
 vi.mock('@/components/AtomVisualizer', () => ({
   default: () => null,
@@ -92,5 +102,20 @@ describe('BinauralTuner', () => {
     render(<BinauralTuner />);
     fireEvent.click(screen.getByRole('button', { name: /^notes$/i }));
     expect(screen.getByRole('dialog')).toBeDefined();
+  });
+
+  it('asks guests for an optional name in the notepad but not signed-in players', () => {
+    const { unmount } = render(<BinauralTuner />);
+    fireEvent.click(screen.getByRole('button', { name: /^notes$/i }));
+    expect(screen.getByText(/name \(optional\)/i)).toBeDefined();
+    unmount();
+
+    render(
+      <ChillAccountProvider user={{ id: 'u1', email: 'player@example.com' }}>
+        <BinauralTuner />
+      </ChillAccountProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^notes$/i }));
+    expect(screen.queryByText(/name \(optional\)/i)).toBeNull();
   });
 });

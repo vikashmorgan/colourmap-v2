@@ -3,23 +3,28 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import AtomVisualizer, { type VisualizerMode } from '@/components/AtomVisualizer';
+import { useChillAccount } from '@/components/ChillAccountContext';
 import ChillBeats from '@/components/ChillBeats';
 import ChillFeedbackNotepad from '@/components/ChillFeedbackNotepad';
 import ChillGroup, { ChillModule } from '@/components/ChillGroup';
 import ChillRecorder, { ChillRecordButton } from '@/components/ChillRecorder';
+import ChillSavedPanel from '@/components/ChillSavedPanel';
 import ChillSongSections, { ChillSongPosition } from '@/components/ChillSongSections';
 import ChillVisualsPanel, { echoSummary } from '@/components/ChillVisualsPanel';
 import InfoTooltip from '@/components/InfoTooltip';
 import VoiceProviderSelector from '@/components/VoiceProviderSelector';
+import { uploadRecording } from '@/lib/chill/account-api';
 import {
   beatsSummary,
   type ChillBeatSettings,
   loadBeats,
   saveBeats,
+  validateBeats,
 } from '@/lib/chill/beats-settings';
 import { emitChill, pitchToY } from '@/lib/chill/bus';
 import {
   loadSections,
+  parseSections,
   type SectionSnapshot,
   type SongSection,
   saveSections,
@@ -29,6 +34,7 @@ import { getTransport, onTransport } from '@/lib/chill/transport';
 import {
   type ChillVisualSettings,
   loadVisuals,
+  parseVisuals,
   resolveVisualPalette,
   saveVisuals,
 } from '@/lib/chill/visuals';
@@ -2489,10 +2495,17 @@ export default function BinauralTuner() {
   // Recorder taps the master bus; cues come from the song sections.
   const recorder = useAudioRecorder(audioOut?.ctx ?? null, audioOut?.master ?? null);
   const recStartRef = useRef<number | null>(null);
+  const lastCuesRef = useRef<{ at: number; label: string }[]>([]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: recordingCues reads refs and the latest sections
   useEffect(() => {
-    recStartRef.current = recorder.state === 'recording' ? nowAudio() : null;
+    if (recorder.state === 'recording') {
+      recStartRef.current = nowAudio();
+    } else {
+      if (recStartRef.current !== null) lastCuesRef.current = recordingCues();
+      recStartRef.current = null;
+    }
   }, [recorder.state, nowAudio]);
-  const recordingCues = () => {
+  function recordingCues() {
     const t = getTransport();
     const start = recStartRef.current;
     if (!t.playing || t.startTime === null || start === null) return [];
@@ -2500,6 +2513,34 @@ export default function BinauralTuner() {
     return sectionCues(sections, t.bpm)
       .map((c) => ({ at: Math.max(0, c.at + offset), label: c.label }))
       .filter((c, i, all) => i === all.length - 1 || all[i + 1].at > 0);
+  }
+
+  // Signed-in players (public /chill) keep mixes and recordings in their account.
+  const { user } = useChillAccount();
+  const signedIn = user !== null;
+  const saveTake = async (
+    take: { blob: Blob; mimeType: string; durationSecs: number },
+    title: string,
+  ) => {
+    await uploadRecording(take, { title, palette: padPalette.id, cues: lastCuesRef.current });
+  };
+  const mixSettings = (): Record<string, unknown> => ({
+    version: 1,
+    palette: padPalette.id,
+    layers: { ...activeLayers },
+    visuals,
+    beats: { ...beats, on: false },
+    sections,
+  });
+  const loadAccountMix = (mix: Record<string, unknown>) => {
+    if (typeof mix.palette === 'string') setPadPaletteId(getPadPalette(mix.palette).id);
+    if (mix.visuals) updateVisuals(parseVisuals(mix.visuals));
+    if (mix.beats) updateBeats({ ...validateBeats(mix.beats), on: beats.on });
+    const parsed = parseSections(mix.sections);
+    if (parsed) updateSections(parsed);
+    if (mix.layers && typeof mix.layers === 'object') {
+      applySnapshotRef.current({ layers: mix.layers });
+    }
   };
 
   const [notepadOpen, setNotepadOpen] = useState(false);
@@ -3393,12 +3434,13 @@ export default function BinauralTuner() {
         palette={padPalette.id}
         cues={recordingCues}
         recorder={recorder}
+        onSave={signedIn ? saveTake : undefined}
         hideButton
       />
       <ChillFeedbackNotepad
         open={notepadOpen}
         onClose={() => setNotepadOpen(false)}
-        signedIn={false}
+        signedIn={signedIn}
         palette={padPalette.id}
       />
 
@@ -4945,6 +4987,10 @@ export default function BinauralTuner() {
 
           {/* + more — the quieter extras */}
           <ChillGroup id="more" label="+ more" defaultOpen={false}>
+            {/* Saved mixes and recordings — account only; guests see one quiet line */}
+            <ChillModule id="saved" label="saved" defaultOpen={signedIn}>
+              <ChillSavedPanel getSettings={mixSettings} onLoadMix={loadAccountMix} />
+            </ChillModule>
             {/* Collapsible: Genres */}
             <div className="px-2">
               <button

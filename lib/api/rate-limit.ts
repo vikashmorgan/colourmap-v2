@@ -29,6 +29,12 @@ export function createRateLimiter({
       }
       recent.push(now);
       hits.set(key, recent);
+      // Keep the map from growing without bound on a long-lived instance.
+      if (hits.size > 10_000) {
+        for (const [k, times] of hits) {
+          if (times.every((at) => now - at >= windowMs)) hits.delete(k);
+        }
+      }
       return true;
     },
     reset() {

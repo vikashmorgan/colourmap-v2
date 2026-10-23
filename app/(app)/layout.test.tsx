@@ -1,6 +1,6 @@
 import { AuthSessionMissingError } from '@supabase/supabase-js';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { createClient, getUser } = vi.hoisted(() => {
   const getUser = vi.fn();
@@ -157,6 +157,55 @@ describe('AppLayout', () => {
     ).rejects.toThrow('NEXT_REDIRECT');
 
     expect(redirect).toHaveBeenCalledWith('/login');
+  });
+
+  describe('owner lock', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('sends a signed-in non-owner to /chill', async () => {
+      vi.stubEnv('COCKPIT_OWNER_EMAILS', 'owner@example.com');
+      vi.stubEnv('DEV_BYPASS_AUTH', 'false');
+      getHeader.mockReturnValue('/day');
+      redirect.mockImplementation(() => {
+        throw new Error('NEXT_REDIRECT');
+      });
+
+      await expect(AppLayout({ children: <div>Child section</div> })).rejects.toThrow(
+        'NEXT_REDIRECT',
+      );
+      expect(redirect).toHaveBeenCalledWith('/chill');
+    });
+
+    it('lets a listed owner in', async () => {
+      vi.stubEnv('COCKPIT_OWNER_EMAILS', 'Martin@Example.com');
+      vi.stubEnv('DEV_BYPASS_AUTH', 'false');
+
+      const html = renderToStaticMarkup(await AppLayout({ children: <div>Child section</div> }));
+      expect(redirect).not.toHaveBeenCalled();
+      expect(html).toContain('Child section');
+    });
+
+    it('lets a non-owner view visitor paths', async () => {
+      vi.stubEnv('COCKPIT_OWNER_EMAILS', 'owner@example.com');
+      vi.stubEnv('DEV_BYPASS_AUTH', 'false');
+      getHeader.mockReturnValue('/geometry-field');
+
+      const html = renderToStaticMarkup(await AppLayout({ children: <div>Visuals</div> }));
+      expect(redirect).not.toHaveBeenCalled();
+      expect(html).toContain('Visuals');
+    });
+
+    it('fails open when the allowlist is unset', async () => {
+      vi.stubEnv('COCKPIT_OWNER_EMAILS', '');
+      vi.stubEnv('DEV_BYPASS_AUTH', 'false');
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const html = renderToStaticMarkup(await AppLayout({ children: <div>Child section</div> }));
+      expect(redirect).not.toHaveBeenCalled();
+      expect(html).toContain('Child section');
+    });
   });
 
   it('lets a logged-out visitor view the public visuals without redirecting', async () => {

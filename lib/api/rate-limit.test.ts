@@ -18,6 +18,15 @@ describe('createRateLimiter', () => {
     expect(limiter.hit('a', 1000)).toBe(true);
   });
 
+  it('prunes expired keys once the map grows large', () => {
+    const limiter = createRateLimiter({ limit: 1, windowMs: 10 });
+    for (let i = 0; i < 10_001; i++) limiter.hit(`k${i}`, 0);
+    limiter.hit('fresh', 100);
+    // k0 expired and was pruned, so it gets a fresh slot.
+    expect(limiter.hit('k0', 100)).toBe(true);
+    expect(limiter.hit('fresh', 100)).toBe(false);
+  });
+
   it('reset clears every key', () => {
     const limiter = createRateLimiter({ limit: 1, windowMs: 1000 });
     limiter.hit('a', 0);
