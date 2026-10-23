@@ -33,6 +33,6 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     testTimeout: 15000,
     include: ['**/*.{test,spec}.{ts,tsx}'],
-    exclude: [...configDefaults.exclude, 'e2e/**'],
+    exclude: [...configDefaults.exclude, 'e2e/**', '.claude/worktrees/**'],
   },
 });
