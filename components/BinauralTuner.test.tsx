@@ -52,4 +52,27 @@ describe('BinauralTuner', () => {
     expect(screen.getByRole('button', { name: /studio/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /Sleep deep cloud/i })).toBeDefined();
   });
+
+  it('lets the pad colours switch palette and remembers the choice', () => {
+    render(<BinauralTuner />);
+    fireEvent.click(screen.getByRole('button', { name: /^studio$/i }));
+
+    const earth = screen.getByRole('button', { name: 'Earth' });
+    expect(earth.getAttribute('aria-pressed')).toBe('true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rainbow' }));
+
+    expect(screen.getByRole('button', { name: 'Rainbow' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(localStorage.getItem('colourmap:pad-palette')).toBe('rainbow');
+  });
+
+  it('restores a saved palette on load', () => {
+    localStorage.setItem('colourmap:pad-palette', 'night');
+    render(<BinauralTuner />);
+    fireEvent.click(screen.getByRole('button', { name: /^studio$/i }));
+
+    expect(screen.getByRole('button', { name: 'Night' }).getAttribute('aria-pressed')).toBe('true');
+  });
 });

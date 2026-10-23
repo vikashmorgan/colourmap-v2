@@ -7,6 +7,15 @@ import InfoTooltip from '@/components/InfoTooltip';
 import VoiceProviderSelector from '@/components/VoiceProviderSelector';
 import { haptic } from '@/lib/haptics';
 import { useTTS } from '@/lib/hooks/use-tts';
+import {
+  getPadPalette,
+  PAD_PALETTE_LS,
+  PAD_PALETTES,
+  type PadPaletteId,
+  padColor,
+  paletteSwatch,
+  readableInk,
+} from '@/lib/pad-palettes';
 import { playSampledNote, type SamplePackId } from '@/lib/sample-pack';
 
 /* ═══════════════════════════════════════════════════════════
@@ -1544,6 +1553,14 @@ function loadNum(key: string, fallback: number): number {
   }
 }
 
+// Each pad's position in grid order (category by category), so palettes walk
+// their colours across the whole grid and neighbouring pads differ.
+const PAD_GRID_INDEX: Record<string, number> = Object.fromEntries(
+  CATEGORY_ORDER.flatMap((cat) =>
+    ALL_LAYERS.filter((l) => getLayerCategory(l.id) === cat).map((l) => l.id),
+  ).map((id, i) => [id, i]),
+);
+
 // ── Adaptive suggestion from check-in state ──
 function getSuggestion(
   body: number,
@@ -2226,6 +2243,21 @@ export default function BinauralTuner() {
   // Collapsible section state
   const [simpleMode, setSimpleMode] = useState(true);
   const [layersOpen, setLayersOpen] = useState(true);
+  const [padPaletteId, setPadPaletteId] = useState<PadPaletteId>(() => {
+    if (typeof window === 'undefined') return 'earth';
+    try {
+      return getPadPalette(localStorage.getItem(PAD_PALETTE_LS)).id;
+    } catch {
+      return 'earth';
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(PAD_PALETTE_LS, padPaletteId);
+    } catch {}
+  }, [padPaletteId]);
+  const padPalette = getPadPalette(padPaletteId);
+  const tinted = padPalette.id !== 'earth';
   const [harmonicsOpen, setHarmonicsOpen] = useState(false);
   const [sacredOpen, setSacredOpen] = useState(false);
   const [melodiesOpen, setMelodiesOpen] = useState(false);
@@ -4470,11 +4502,47 @@ export default function BinauralTuner() {
                   </span>
                 </div>
 
+                {/* Pad palette — one small swatch dot per colour set */}
+                <fieldset
+                  aria-label="Pad colours"
+                  className="m-0 flex items-center justify-center gap-2.5 border-0 p-0"
+                >
+                  {PAD_PALETTES.map((p) => {
+                    const sw = paletteSwatch(p, Object.values(CATEGORY_COLORS));
+                    const active = p.id === padPaletteId;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        aria-pressed={active}
+                        aria-label={p.label}
+                        title={p.label}
+                        onClick={() => setPadPaletteId(p.id)}
+                        className="cursor-pointer rounded-full transition-transform"
+                        style={{
+                          width: 20,
+                          height: 20,
+                          padding: 0,
+                          background: `conic-gradient(${sw.map((c, i) => `${c} ${(i / sw.length) * 100}% ${((i + 1) / sw.length) * 100}%`).join(', ')})`,
+                          border: 'none',
+                          boxShadow: active
+                            ? '0 0 0 2px #FBF6EC, 0 0 0 3.5px #7A5438'
+                            : '0 0 0 1px #C4A06040',
+                          transform: active ? 'scale(1.1)' : 'none',
+                        }}
+                      />
+                    );
+                  })}
+                </fieldset>
+
                 {/* Category groups — each with a natural-language title + 3-col pad grid */}
                 {CATEGORY_ORDER.map((cat) => {
                   const catLayers = ALL_LAYERS.filter((l) => getLayerCategory(l.id) === cat);
                   if (catLayers.length === 0) return null;
                   const catColor = CATEGORY_COLORS[cat];
+                  const titleColor = tinted
+                    ? readableInk(padColor(padPalette, PAD_GRID_INDEX[catLayers[0].id], catColor))
+                    : catColor;
                   return (
                     <div key={cat} className="space-y-1.5">
                       <p
@@ -4483,7 +4551,7 @@ export default function BinauralTuner() {
                           fontFamily: 'var(--font-serif)',
                           fontSize: '13px',
                           fontWeight: 700,
-                          color: catColor,
+                          color: titleColor,
                           opacity: 1,
                         }}
                       >
@@ -4500,6 +4568,30 @@ export default function BinauralTuner() {
                           const borderAlpha = Math.round(28 + colT * 32)
                             .toString(16)
                             .padStart(2, '0');
+                          const color = padColor(padPalette, PAD_GRID_INDEX[l.id], catColor);
+                          const ink = tinted ? readableInk(color) : color;
+                          const padBg = padPalette.dark
+                            ? isOn
+                              ? color
+                              : `${color}1F`
+                            : isOn
+                              ? padPalette.solid
+                                ? color
+                                : `${color}${tinted ? '55' : bgAlpha}`
+                              : tinted
+                                ? `${color}0A`
+                                : '#C4A06006';
+                          const padText = padPalette.dark
+                            ? isOn
+                              ? '#F5E8C8'
+                              : ink
+                            : isOn
+                              ? padPalette.solid
+                                ? readableInk(color, color)
+                                : ink
+                              : tinted
+                                ? ink
+                                : '#8A6A4A';
                           return (
                             <div key={l.id} className="space-y-1">
                               <button
@@ -4507,8 +4599,8 @@ export default function BinauralTuner() {
                                 onClick={() => toggleLayer(l.id)}
                                 className="w-full cursor-pointer rounded-lg px-2 py-2 text-center transition-all"
                                 style={{
-                                  background: isOn ? `${catColor}${bgAlpha}` : '#C4A06006',
-                                  border: `1px solid ${isOn ? `${catColor}${borderAlpha}` : '#C4A06018'}`,
+                                  background: padBg,
+                                  border: `1px solid ${isOn ? `${color}${borderAlpha}` : tinted ? `${color}30` : '#C4A06018'}`,
                                   minHeight: 40,
                                 }}
                               >
@@ -4517,8 +4609,8 @@ export default function BinauralTuner() {
                                     fontFamily: 'var(--font-serif)',
                                     fontSize: '13px',
                                     fontWeight: isOn ? 700 : 400,
-                                    color: isOn ? catColor : '#8A6A4A',
-                                    opacity: isOn ? 0.6 + colT * 0.4 : 0.65,
+                                    color: padText,
+                                    opacity: tinted ? 1 : isOn ? 0.6 + colT * 0.4 : 0.65,
                                   }}
                                 >
                                   {l.label}
@@ -4589,7 +4681,7 @@ export default function BinauralTuner() {
                                       className="flex-1 rounded-[3px] transition-all"
                                       style={{
                                         height: 18,
-                                        background: catColor,
+                                        background: color,
                                         opacity: i / 4 <= vol ? 0.5 + (i / 4) * 0.45 : 0.1,
                                       }}
                                     />
