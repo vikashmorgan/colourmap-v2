@@ -78,4 +78,14 @@ describe('POST /logout', () => {
     );
     expect(evil.headers.get('location')).toBe('http://localhost/');
   });
+
+  it('falls back to the login page when the form has no next field', async () => {
+    signOut.mockResolvedValue({ error: null });
+    const body = new FormData();
+    body.set('other', 'value');
+
+    const response = await POST(new Request('http://localhost/logout', { method: 'POST', body }));
+
+    expect(response.headers.get('location')).toBe('http://localhost/login');
+  });
 });
