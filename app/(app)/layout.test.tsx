@@ -49,8 +49,8 @@ vi.mock('@/components/ThemeSwitcher', () => ({
   default: () => <div data-testid="theme-switcher">ThemeSwitcher</div>,
 }));
 
-vi.mock('@/components/GlobalAIPresence', () => ({
-  default: () => <div data-testid="global-ai-presence">GlobalAIPresence</div>,
+vi.mock('@/components/PresenceSheet', () => ({
+  default: () => <div data-testid="presence-sheet">PresenceSheet</div>,
 }));
 
 vi.mock('@/components/ViewModeContext', () => ({
@@ -119,7 +119,13 @@ describe('AppLayout', () => {
     expect(html).toContain('Colourmap');
     expect(html).toContain('Sign out');
     expect(html).toContain('Child section');
-    expect(html).toContain('GlobalAIPresence');
+    /*
+     * The dot is mounted in the shell so it is reachable from every surface.
+     * It used to open an AI chat that billed per message; it now opens the
+     * two-door capture sheet, which costs nothing. The mount point is the
+     * same, which is the point — the dot was already muscle memory.
+     */
+    expect(html).toContain('PresenceSheet');
     expect(html).toContain('text-center');
     expect(html).toContain('color:#B33A2B');
   });
