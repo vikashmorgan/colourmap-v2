@@ -4,8 +4,18 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getRequiredEnv } from '@/lib/env';
 
 export async function updateSession(request: NextRequest) {
+  // Forward the request path to server components (the app layout reads
+  // `x-pathname` to allow logged-out "visitor" access to the public visuals at
+  // /geometry-field). Rebuilt after cookie mutations so the refreshed session
+  // cookies are preserved alongside the header.
+  const headersWithPath = () => {
+    const headers = new Headers(request.headers);
+    headers.set('x-pathname', request.nextUrl.pathname);
+    return headers;
+  };
+
   let response = NextResponse.next({
-    request,
+    request: { headers: headersWithPath() },
   });
 
   const supabase = createServerClient(
@@ -22,7 +32,7 @@ export async function updateSession(request: NextRequest) {
           });
 
           response = NextResponse.next({
-            request,
+            request: { headers: headersWithPath() },
           });
 
           cookiesToSet.forEach(({ name, value, options }) => {

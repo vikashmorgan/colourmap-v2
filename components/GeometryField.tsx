@@ -1,11 +1,38 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type CSSProperties, Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+
+import { birdTarget, fishTarget, predator, steer, view } from '@/lib/flocks';
+import { mask as flowMask, MASK_NAMES, inside as maskInside } from '@/lib/flow-masks';
+import {
+  DANCER_NAMES,
+  dancer,
+  dotAt,
+  FIGURE_NAMES,
+  figure,
+  sampleDots,
+} from '@/lib/sacred-figures';
+import { isOilMode, isShaderVisualMode } from '@/lib/visual-shaders';
+import { speedColour, windShape, windVelocity } from '@/lib/wind';
+
+import {
+  buildBigBangStars,
+  isBigBangStarMode,
+  TIMER_OFF,
+  updateBigBangStars,
+} from './geometry-bigbang-stars';
+import { buildCymatics, isCymaticsMode, updateCymatics } from './geometry-cymatics';
+import { buildLiquidSeries, isLiquidMode, updateLiquidSeries } from './geometry-liquid';
+import {
+  buildGeometryVisual,
+  isGeometryVisualMode,
+  updateGeometryVisual,
+} from './geometry-visuals';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -54,6 +81,13 @@ type Mode =
   | 'cyclonetiles'
   | 'eddylace'
   | 'magneticsand'
+  | 'flowfield'
+  | 'flowwalkers'
+  | 'flowsacred'
+  | 'flowdance'
+  | 'flowsands'
+  | 'flowbutterfly'
+  | 'flowlines'
   | 'eclipse'
   | 'yinyang'
   | 'volcano'
@@ -85,6 +119,7 @@ type Mode =
   | 'linetunnel3d'
   | 'dotroad'
   | 'tripnumber1'
+  | 'tripnumber1flow'
   | 'tripnumber2'
   | 'tripnumber3'
   | 'buddhaboycurrents'
@@ -131,7 +166,61 @@ type Mode =
   | 'clockorbit3d'
   | 'musicdots'
   | 'musicnebula'
-  | 'musiclattice';
+  | 'musiclattice'
+  // Tunnels — math series you dive into (components/geometry-visuals.ts)
+  | 'drostezoom'
+  | 'twistgate'
+  | 'goldenseed'
+  | 'fouriertube'
+  | 'superrings'
+  | 'shadertunnel'
+  | 'logspiral'
+  // Oils — full-screen liquid shaders
+  | 'oilwarp'
+  | 'ripplefold'
+  | 'thinfilm'
+  | 'twooil'
+  | 'lavalamp'
+  | 'rorschach'
+  // Magnetic Sands 1–4 — cymatics (components/geometry-cymatics.ts)
+  | 'cymatics1'
+  | 'cymatics2'
+  | 'cymatics3'
+  | 'cymatics4'
+  // Liquid 1–3 — the Pulse's liquid ripple, in lines (components/geometry-liquid.ts)
+  | 'liquid1'
+  | 'liquid2'
+  | 'liquid3'
+  | 'liquid4'
+  // Liquid Chaos 2D / 3D — Chaos Field and Quantum Chaos with the Pulse's liquid wave
+  | 'currentliquid'
+  | 'current3dliquid'
+  // Music Liquid Chaos — the Music page's magic-mode liquid, drops falling on their own
+  | 'musicliquid'
+  // Sauron's Eye — a lidless eye wreathed in fire, a cat's-eye slit at its heart
+  | 'sauroneye'
+  // One Flame — a single flame floating, sparks rising from it like stars
+  | 'oneflame'
+  // Sacred Figures / Sacred Dancers — gods and dancers of liquid light (lib/sacred-figures.ts)
+  | 'sacredfigures'
+  | 'sacreddancers'
+  // Murmuration / Fish School — flocks of dots in 3D (lib/flocks.ts); Flow Masks (lib/flow-masks.ts)
+  // Wind — air passing over an object, left to right: aerodynamics as art (lib/wind.ts)
+  | 'windtunnel'
+  | 'murmuration'
+  | 'fishschool'
+  | 'flowmasks'
+  // Waves — rolling, curling linework (lib/visual-shaders.ts)
+  | 'rollingwave'
+  | 'fractalwave'
+  // Thangka — a generated Tibetan mandala with oil moving in its compartments
+  | 'thangka'
+  // Big Bang moments as Stars (components/geometry-bigbang-stars.ts)
+  | 'bbpulse'
+  | 'bbtunnel'
+  | 'bbflower'
+  | 'bbocean'
+  | 'bbfractal';
 
 interface Pal {
   bg0: string;
@@ -157,6 +246,10 @@ interface Cfg {
   danceMove?: DanceMove;
   danceBpm?: number;
   danceAmount?: number;
+  /** Design seed for generated visuals (the Thangka): "New thangka" rolls it. */
+  seed?: number;
+  /** The four colours inside an oil, chosen by the user; unset = from the palette. */
+  oilColors?: string[];
 }
 
 interface Dot {
@@ -188,7 +281,7 @@ type GeometryLivePayload = {
 
 /* ── Palettes ───────────────────────────────────────────────── */
 
-const PAL: Record<string, Pal> = {
+export const PAL: Record<string, Pal> = {
   'Calm Field': {
     bg0: '#120a04',
     bg1: '#080401',
@@ -914,8 +1007,8 @@ export const PRESETS: Record<string, Cfg> = {
     preset: 'Golden Source',
     symmetry: 13,
     complexity: 8.4,
-    glow: 8.4,
-    breathSpeed: 0.68,
+    glow: 20,
+    breathSpeed: 0.13,
     intensity: 8.8,
     particles: 10,
     luminous: 4.2,
@@ -959,12 +1052,24 @@ export const PRESETS: Record<string, Cfg> = {
     stars: 3,
     mode: 'tripnumber1',
   },
+  'Trip Number 1 Flow': {
+    preset: 'Golden Source',
+    symmetry: 10,
+    complexity: 7.6,
+    glow: 6.8,
+    breathSpeed: 0.34,
+    intensity: 8.4,
+    particles: 9,
+    luminous: 2.8,
+    stars: 3,
+    mode: 'tripnumber1flow',
+  },
   'Trip Number 2': {
     preset: 'Amber Dust',
     symmetry: 9,
     complexity: 6.8,
     glow: 3.2,
-    breathSpeed: 1.18,
+    breathSpeed: 0.2,
     intensity: 9.2,
     particles: 9,
     luminous: 3.6,
@@ -1640,12 +1745,108 @@ export const PRESETS: Record<string, Cfg> = {
     symmetry: 6,
     complexity: 8,
     glow: 3,
-    breathSpeed: 0.35,
+    breathSpeed: 0.1,
     intensity: 8,
     particles: 0,
     luminous: 2,
     stars: 0,
     mode: 'magneticsand',
+  },
+  'Flow Field': {
+    preset: 'Cosmic Indigo',
+    symmetry: 12,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 0.5,
+    intensity: 8,
+    particles: 8,
+    luminous: 3,
+    stars: 3,
+    mode: 'flowfield',
+  },
+  'Flow Walkers': {
+    preset: 'Cosmic Indigo',
+    symmetry: 12,
+    complexity: 5,
+    glow: 4,
+    breathSpeed: 0.5,
+    intensity: 8,
+    particles: 8,
+    luminous: 3,
+    stars: 2,
+    mode: 'flowwalkers',
+  },
+  'Flow Sacred': {
+    preset: 'Violet Portal',
+    symmetry: 12,
+    complexity: 6,
+    glow: 6,
+    breathSpeed: 0.5,
+    intensity: 8,
+    particles: 8,
+    luminous: 3,
+    stars: 3,
+    mode: 'flowsacred',
+  },
+  'Dance Walkers': {
+    preset: 'Rose Quartz',
+    symmetry: 12,
+    complexity: 5,
+    glow: 5,
+    breathSpeed: 0.5,
+    intensity: 8,
+    particles: 9,
+    luminous: 3,
+    stars: 2,
+    mode: 'flowdance',
+  },
+  'Magnetic Sands 2': {
+    preset: 'Amber Dust',
+    symmetry: 14,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 0.45,
+    intensity: 8,
+    particles: 9,
+    luminous: 2.6,
+    stars: 3,
+    mode: 'flowsands',
+  },
+  'Golden Flow': {
+    preset: 'Golden Source',
+    symmetry: 12,
+    complexity: 5,
+    glow: 5,
+    breathSpeed: 0.5,
+    intensity: 8,
+    particles: 8,
+    luminous: 3,
+    stars: 3,
+    mode: 'flowfield',
+  },
+  Butterfly: {
+    preset: 'Rose Quartz',
+    symmetry: 12,
+    complexity: 5,
+    glow: 5,
+    breathSpeed: 0.5,
+    intensity: 8,
+    particles: 9,
+    luminous: 2.8,
+    stars: 3,
+    mode: 'flowbutterfly',
+  },
+  'Star Sand Lines': {
+    preset: 'Cosmic Indigo',
+    symmetry: 12,
+    complexity: 4,
+    glow: 5,
+    breathSpeed: 0.4,
+    intensity: 8,
+    particles: 9,
+    luminous: 2.4,
+    stars: 4,
+    mode: 'flowlines',
   },
   Eclipse: {
     preset: 'Golden Source',
@@ -1687,11 +1888,11 @@ export const PRESETS: Record<string, Cfg> = {
     preset: 'Golden Source',
     symmetry: 12,
     complexity: 8.8,
-    glow: 8.2,
+    glow: 5,
     breathSpeed: 0.3,
-    intensity: 9.4,
+    intensity: 7,
     particles: 2,
-    luminous: 4.2,
+    luminous: 2.8,
     stars: 5,
     mode: 'atomicexplosion',
   },
@@ -1868,9 +2069,9 @@ export const PRESETS: Record<string, Cfg> = {
     preset: 'Fibonacci Bloom',
     symmetry: 12,
     complexity: 7,
-    glow: 7,
+    glow: 4,
     breathSpeed: 0.22,
-    intensity: 9,
+    intensity: 6,
     particles: 5,
     luminous: 2,
     stars: 0,
@@ -2303,6 +2504,163 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 4,
     stars: 0,
     mode: 'current3d',
+  },
+  'Liquid Chaos': {
+    preset: 'Deep Current',
+    symmetry: 8,
+    complexity: 9,
+    glow: 6,
+    breathSpeed: 1.4,
+    intensity: 9,
+    particles: 0,
+    luminous: 2.6,
+    stars: 0,
+    mode: 'currentliquid',
+  },
+  Murmuration: {
+    preset: 'Golden Source',
+    symmetry: 4,
+    complexity: 7,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 5,
+    stars: 0,
+    mode: 'murmuration',
+  },
+  'Fish School': {
+    preset: 'Deep Current',
+    symmetry: 4,
+    complexity: 7,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 6,
+    stars: 0,
+    mode: 'fishschool',
+  },
+  'Flow Masks': {
+    preset: 'Golden Source',
+    symmetry: 1,
+    complexity: 7,
+    glow: 6,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 7,
+    stars: 0,
+    mode: 'flowmasks',
+  },
+  'Sacred Figures': {
+    preset: 'Golden Source',
+    symmetry: 3,
+    complexity: 5,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 5,
+    stars: 0,
+    mode: 'sacredfigures',
+  },
+  'Sacred Dancers': {
+    preset: 'Golden Source',
+    symmetry: 1,
+    complexity: 6,
+    glow: 6,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 5,
+    stars: 0,
+    mode: 'sacreddancers',
+  },
+  'One Flame': {
+    preset: 'Deep Current',
+    symmetry: 6,
+    complexity: 7,
+    glow: 6,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 5,
+    stars: 0,
+    mode: 'oneflame',
+  },
+  "Sauron's Eye": {
+    preset: 'Deep Current',
+    symmetry: 6,
+    complexity: 7,
+    glow: 7,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 1,
+    stars: 0,
+    mode: 'sauroneye',
+  },
+  'Music Liquid Chaos': {
+    preset: 'Deep Current',
+    symmetry: 7,
+    complexity: 7,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 1,
+    stars: 0,
+    mode: 'musicliquid',
+  },
+  // Wind (lib/wind.ts): Object picks the shape the air passes over: 0 a sphere, 1 a wing, 2 a streamlined body.
+  Wind: {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 7,
+    glow: 7,
+    breathSpeed: 0.6,
+    intensity: 8,
+    particles: 0,
+    luminous: 7,
+    stars: 0,
+    mode: 'windtunnel',
+  },
+  'Wind Wing': {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 8,
+    glow: 3,
+    breathSpeed: 0.7,
+    intensity: 8,
+    particles: 1,
+    luminous: 8,
+    stars: 0,
+    mode: 'windtunnel',
+  },
+  'Wind Body': {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 9,
+    glow: 5,
+    breathSpeed: 0.65,
+    intensity: 8,
+    particles: 2,
+    luminous: 8,
+    stars: 0,
+    mode: 'windtunnel',
+  },
+  'Liquid Quantum': {
+    preset: 'Clifford Dream',
+    symmetry: 7,
+    complexity: 8,
+    glow: 7,
+    breathSpeed: 1.1,
+    intensity: 9,
+    particles: 0,
+    luminous: 2.8,
+    stars: 0,
+    mode: 'current3dliquid',
   },
   'Emotion Field': {
     preset: 'Calm Field',
@@ -3204,18 +3562,6 @@ export const PRESETS: Record<string, Cfg> = {
     stars: 2,
     mode: 'eyemorph',
   },
-  'Deep Gaze': {
-    preset: 'Blue Astral',
-    symmetry: 5,
-    complexity: 7,
-    glow: 7,
-    breathSpeed: 0.4,
-    intensity: 8,
-    particles: 2,
-    luminous: 2,
-    stars: 3,
-    mode: 'eyemorph',
-  },
   'Sin Morph': {
     preset: 'Forest Ceremony',
     symmetry: 6,
@@ -3263,6 +3609,395 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 3,
     stars: 2,
     mode: 'sinmorph3d',
+  },
+  // ── Tunnels + Oils (docs/specs/math-tunnels-and-liquid-visuals.md) ──
+  'Golden Zoom': {
+    preset: 'Golden Source',
+    symmetry: 6,
+    complexity: 5,
+    glow: 4,
+    breathSpeed: 0.5,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.6,
+    stars: 3,
+    mode: 'drostezoom',
+  },
+  'Twisted Gate': {
+    preset: 'Violet Portal',
+    symmetry: 6,
+    complexity: 4,
+    glow: 6,
+    breathSpeed: 0.45,
+    intensity: 8,
+    particles: 4,
+    luminous: 2.8,
+    stars: 4,
+    mode: 'twistgate',
+  },
+  'Golden Seed Tunnel': {
+    preset: 'Golden Source',
+    symmetry: 8,
+    complexity: 5,
+    glow: 5,
+    breathSpeed: 0.4,
+    intensity: 8,
+    particles: 4,
+    luminous: 2.4,
+    stars: 3,
+    mode: 'goldenseed',
+  },
+  'Fourier Tube': {
+    preset: 'Blue Astral',
+    symmetry: 8,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 0.4,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.6,
+    stars: 4,
+    mode: 'fouriertube',
+  },
+  'Superformula Rings': {
+    preset: 'Cosmic Indigo',
+    symmetry: 5,
+    complexity: 5,
+    glow: 7,
+    breathSpeed: 0.4,
+    intensity: 8,
+    particles: 3,
+    luminous: 2.6,
+    stars: 4,
+    mode: 'superrings',
+  },
+  'Shader Tunnel': {
+    preset: 'Warp Drive',
+    symmetry: 8,
+    complexity: 3,
+    glow: 6,
+    breathSpeed: 0.5,
+    intensity: 7,
+    particles: 3,
+    luminous: 1.8,
+    stars: 0,
+    mode: 'shadertunnel',
+  },
+  'Log Spiral Wormhole': {
+    preset: 'DMT Vision',
+    symmetry: 5,
+    complexity: 4,
+    glow: 5,
+    breathSpeed: 0.4,
+    intensity: 7,
+    particles: 4,
+    luminous: 1.6,
+    stars: 0,
+    mode: 'logspiral',
+  },
+  'Oil Warp': {
+    preset: 'Violet Portal',
+    symmetry: 4,
+    complexity: 6,
+    glow: 3,
+    breathSpeed: 0.35,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'oilwarp',
+  },
+  'Ripple Fold': {
+    preset: 'Deep Crimson',
+    symmetry: 5,
+    complexity: 7,
+    glow: 3,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 4,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'ripplefold',
+  },
+  'Thin Film': {
+    preset: 'Liquid Pearl',
+    symmetry: 4,
+    complexity: 5,
+    glow: 8,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'thinfilm',
+  },
+  'Two Oil Projector': {
+    preset: 'Solar Plasma',
+    symmetry: 4,
+    complexity: 5,
+    glow: 2,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 4,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'twooil',
+  },
+  'Lava Lamp': {
+    preset: 'Deep Crimson',
+    symmetry: 5,
+    complexity: 7,
+    glow: 0,
+    breathSpeed: 0.4,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.9,
+    stars: 0,
+    mode: 'lavalamp',
+    oilColors: ['#1a0505', '#d4301c', '#ffd27a', '#ff7a1a'],
+  },
+  'Rorschach Oils': {
+    preset: 'Violet Portal',
+    symmetry: 2,
+    complexity: 6,
+    glow: 4,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'rorschach',
+  },
+  'Mirror Oils': {
+    preset: 'DMT Vision',
+    symmetry: 6,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 0.3,
+    intensity: 7,
+    particles: 5,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'rorschach',
+  },
+  Thangka: {
+    preset: 'Tangka Gold',
+    symmetry: 4,
+    complexity: 5,
+    glow: 2,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 3,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'thangka',
+    seed: 7,
+  },
+  'Thangka Lapis': {
+    preset: 'Tangka Lapis',
+    symmetry: 4,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 3,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'thangka',
+    seed: 23,
+  },
+  'Thangka Crimson': {
+    preset: 'Tangka Crimson',
+    symmetry: 4,
+    complexity: 5,
+    glow: 2,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 3,
+    luminous: 0.8,
+    stars: 0,
+    mode: 'thangka',
+    seed: 41,
+  },
+  Pulse: {
+    preset: 'Amber Dust',
+    symmetry: 14,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbpulse',
+  },
+  'Prism Tunnel': {
+    preset: 'Golden Source',
+    symmetry: 6,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbtunnel',
+  },
+  'Flower Symmetry': {
+    preset: 'Rainbow Mist',
+    symmetry: 8,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbflower',
+  },
+  'Ocean of Life': {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbocean',
+  },
+  'Fractal Break': {
+    preset: 'Amber Dust',
+    symmetry: 14,
+    complexity: 9,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'bbfractal',
+  },
+  'Cymatic Sands 1': {
+    preset: 'Golden Source',
+    symmetry: 6,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'cymatics1',
+  },
+  'Cymatic Sands 2': {
+    preset: 'Pale Gold',
+    symmetry: 6,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.2,
+    stars: 2,
+    mode: 'cymatics2',
+  },
+  'Cymatic Sands 3': {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 5,
+    glow: 4,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.4,
+    stars: 3,
+    mode: 'cymatics3',
+  },
+  'Cymatic Sands 4': {
+    preset: 'Violet Portal',
+    symmetry: 6,
+    complexity: 5,
+    glow: 4,
+    breathSpeed: 0.3,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.4,
+    stars: 3,
+    mode: 'cymatics4',
+  },
+  'Liquid 1': {
+    preset: 'Amber Dust',
+    symmetry: 12,
+    complexity: 7,
+    glow: 2,
+    breathSpeed: 0.8,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.4,
+    stars: 2,
+    mode: 'liquid1',
+  },
+  'Liquid 2': {
+    preset: 'Violet Portal',
+    symmetry: 7,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 0.7,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.6,
+    stars: 2,
+    mode: 'liquid2',
+  },
+  'Liquid 3': {
+    preset: 'Blue Astral',
+    symmetry: 6,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.8,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.8,
+    stars: 3,
+    mode: 'liquid3',
+  },
+  'Liquid 4': {
+    preset: 'Prism Warm',
+    symmetry: 9,
+    complexity: 6,
+    glow: 0,
+    breathSpeed: 0.7,
+    intensity: 8,
+    particles: 5,
+    luminous: 2.6,
+    stars: 3,
+    mode: 'liquid4',
+  },
+  'Rolling Wave': {
+    preset: 'Blue Astral',
+    symmetry: 4,
+    complexity: 5,
+    glow: 3,
+    breathSpeed: 0.5,
+    intensity: 8,
+    particles: 4,
+    luminous: 1.2,
+    stars: 0,
+    mode: 'rollingwave',
+  },
+  'Fractal Wave': {
+    preset: 'Blue Astral',
+    symmetry: 3,
+    complexity: 5,
+    glow: 2,
+    breathSpeed: 0.4,
+    intensity: 8,
+    particles: 3,
+    luminous: 1.2,
+    stars: 0,
+    mode: 'fractalwave',
   },
 };
 
@@ -3318,7 +4053,7 @@ function journeyLerpCfg(a: JourneyStage, b: JourneyStage, t: number, tint?: stri
   };
 }
 
-const JOURNEYS: Journey[] = [
+export const JOURNEYS: Journey[] = [
   {
     id: 1,
     name: 'Bloom',
@@ -4000,7 +4735,7 @@ const JOURNEYS: Journey[] = [
       {
         name: 'Desert Cut',
         preset: 'Amber Dust',
-        mode: 'linetunnel3d',
+        mode: 'swirldottunnel',
         duration: 30,
         symmetry: 16,
         complexity: 8.2,
@@ -4038,6 +4773,2237 @@ const JOURNEYS: Journey[] = [
         particles: 5,
         luminous: 3.2,
         stars: 3,
+      },
+    ],
+  },
+  // ── 20-minute projection programs (Reconnect Festival, Gstaad) ──
+  // Long-form journeys that loop seamlessly: each stage morphs into the
+  // next, and the final stage eases back into the first for an endless set.
+  // ~1200s total each. Curated from the strongest presets/modes.
+  {
+    id: 12,
+    name: 'Cathedral of Light',
+    icon: 'LIGHT',
+    desc: '20-minute sacred-geometry ceremony — a Fibonacci seed blooming through rose windows, cathedrals, yantra and a golden mandala, then home. Slow, warm, meditative. Best on a big projector.',
+    stages: [
+      {
+        name: 'Fibonacci Seed',
+        preset: 'Fibonacci Bloom',
+        mode: 'fibonacci',
+        duration: 120,
+        breathSpeed: 0.08,
+        complexity: 5,
+        luminous: 2,
+        glow: 4,
+        stars: 1,
+      },
+      {
+        name: 'Flower of Life',
+        preset: 'Calm Field',
+        mode: 'sacred',
+        duration: 140,
+        symmetry: 12,
+        breathSpeed: 0.1,
+        luminous: 2,
+        particles: 3,
+        glow: 5,
+      },
+      {
+        name: 'Rose Window',
+        preset: 'Sacred Vitral',
+        mode: 'vitral',
+        duration: 140,
+        symmetry: 12,
+        breathSpeed: 0.1,
+        luminous: 2,
+        glow: 4,
+      },
+      {
+        name: 'Gothic Cathedral',
+        preset: 'Sacred Architecture',
+        mode: 'cathedral',
+        duration: 140,
+        symmetry: 10,
+        complexity: 6,
+        breathSpeed: 0.12,
+        luminous: 3,
+        glow: 7,
+      },
+      {
+        name: 'Islamic Court',
+        preset: 'Islamic Garden',
+        mode: 'islamic',
+        duration: 140,
+        symmetry: 12,
+        complexity: 5,
+        breathSpeed: 0.1,
+        luminous: 2,
+        glow: 4,
+      },
+      {
+        name: 'Yantra Fire',
+        preset: 'Yantra Fire',
+        mode: 'yantra',
+        duration: 130,
+        symmetry: 9,
+        complexity: 5,
+        breathSpeed: 0.12,
+        luminous: 2,
+        glow: 5,
+      },
+      {
+        name: 'Golden Mandala',
+        preset: 'Golden Source',
+        mode: 'kaleidoscope',
+        duration: 130,
+        symmetry: 16,
+        breathSpeed: 0.14,
+        luminous: 2,
+        glow: 6,
+      },
+      {
+        name: 'Crystal Orbit',
+        preset: 'Crystal Lattice',
+        mode: 'geodesic',
+        duration: 130,
+        complexity: 5,
+        breathSpeed: 0.12,
+        luminous: 2,
+        glow: 6,
+        stars: 2,
+      },
+      {
+        name: 'Return to Source',
+        preset: 'Fibonacci Bloom',
+        mode: 'fibonacci',
+        duration: 130,
+        breathSpeed: 0.08,
+        complexity: 6,
+        luminous: 1,
+        glow: 4,
+        stars: 1,
+      },
+    ],
+  },
+  {
+    id: 13,
+    name: 'Cosmos Drift',
+    icon: 'COSMOS',
+    desc: '20-minute deep-space drift — stargate, wormhole, strange attractors, galaxy spirals and nebulae. Psychedelic blues and violets. Turn Voice on to let the music push it.',
+    stages: [
+      {
+        name: 'Stargate',
+        preset: 'Warp Drive',
+        mode: 'warp',
+        duration: 120,
+        breathSpeed: 0.4,
+        luminous: 3,
+        stars: 9,
+        glow: 6,
+      },
+      {
+        name: 'Wormhole',
+        preset: 'Warp Tunnel',
+        mode: 'tunnel',
+        duration: 140,
+        breathSpeed: 0.5,
+        luminous: 3,
+        stars: 7,
+        glow: 5,
+      },
+      {
+        name: 'Strange Attractor',
+        preset: 'Cosmic Indigo',
+        mode: 'lorenz',
+        duration: 130,
+        breathSpeed: 0.28,
+        luminous: 3,
+        stars: 5,
+        complexity: 5,
+      },
+      {
+        name: 'Wave Field',
+        preset: 'Blue Astral',
+        mode: 'lissajous',
+        duration: 130,
+        breathSpeed: 0.35,
+        luminous: 3,
+        stars: 7,
+      },
+      {
+        name: 'Galaxy Spiral',
+        preset: 'Violet Portal',
+        mode: 'kaleidoscope',
+        duration: 140,
+        symmetry: 14,
+        breathSpeed: 0.32,
+        luminous: 3,
+        stars: 6,
+        glow: 7,
+      },
+      {
+        name: 'Nebula Veil',
+        preset: 'Cosmic Indigo',
+        mode: 'nebula',
+        duration: 140,
+        breathSpeed: 0.18,
+        luminous: 3,
+        stars: 6,
+        glow: 6,
+      },
+      {
+        name: 'Chaos Bloom',
+        preset: 'Clifford Dream',
+        mode: 'clifford',
+        duration: 130,
+        breathSpeed: 0.26,
+        luminous: 3,
+        complexity: 8,
+        glow: 6,
+      },
+      {
+        name: 'Crystal Fold',
+        preset: '4D Crystal',
+        mode: 'hypercube',
+        duration: 140,
+        breathSpeed: 0.24,
+        luminous: 3,
+        complexity: 8,
+        glow: 7,
+      },
+      {
+        name: 'Deep Drift',
+        preset: 'Warp Tunnel',
+        mode: 'tunnel',
+        duration: 130,
+        breathSpeed: 0.45,
+        luminous: 4,
+        stars: 9,
+        glow: 7,
+      },
+    ],
+  },
+  {
+    id: 14,
+    name: 'Desert Temple',
+    icon: 'DESERT',
+    desc: '20-minute festival drop — amber desert pulse, dust vortices, triangle yantra gates and tunnels. High energy, sound-reactive. Built for the Gstaad night — turn Voice on.',
+    stages: [
+      {
+        name: 'Dawn Pulse',
+        preset: 'Amber Dust',
+        mode: 'tripnumber2',
+        duration: 110,
+        symmetry: 9,
+        complexity: 5.4,
+        glow: 3,
+        breathSpeed: 0.7,
+        intensity: 7.6,
+        particles: 7,
+        luminous: 3.4,
+        stars: 4,
+      },
+      {
+        name: 'Violin Heat',
+        preset: 'Golden Source',
+        mode: 'tripnumber2',
+        duration: 120,
+        symmetry: 11,
+        complexity: 5.6,
+        glow: 2.6,
+        breathSpeed: 0.9,
+        intensity: 8.4,
+        particles: 8,
+        luminous: 4,
+        stars: 5,
+      },
+      {
+        name: 'Dust Vortex',
+        preset: 'Amber Dust',
+        mode: 'swirldottunnel',
+        duration: 120,
+        symmetry: 16,
+        complexity: 7.8,
+        glow: 7,
+        breathSpeed: 0.94,
+        intensity: 8.6,
+        particles: 9,
+        luminous: 3.2,
+        stars: 3,
+      },
+      {
+        name: 'Fire Walk',
+        preset: 'Golden Source',
+        mode: 'dotroad',
+        duration: 120,
+        symmetry: 7,
+        complexity: 7.4,
+        glow: 6.8,
+        breathSpeed: 0.86,
+        intensity: 8.8,
+        particles: 9,
+        luminous: 3.4,
+        stars: 3,
+      },
+      {
+        name: 'Triangle Gate',
+        preset: 'Golden Source',
+        mode: 'tripnumber3',
+        duration: 120,
+        symmetry: 9,
+        complexity: 5.4,
+        glow: 3.8,
+        breathSpeed: 0.82,
+        intensity: 8,
+        particles: 6,
+        luminous: 3,
+        stars: 3,
+      },
+      {
+        name: 'Yantra Lift',
+        preset: 'Amber Dust',
+        mode: 'yantra3d',
+        duration: 130,
+        symmetry: 12,
+        complexity: 7.2,
+        glow: 5.8,
+        breathSpeed: 0.82,
+        intensity: 8.6,
+        particles: 7,
+        luminous: 3.6,
+        stars: 5,
+      },
+      {
+        name: 'Desert Cut',
+        preset: 'Amber Dust',
+        mode: 'swirldottunnel',
+        duration: 120,
+        symmetry: 16,
+        complexity: 8.2,
+        glow: 6.8,
+        breathSpeed: 1.05,
+        intensity: 8.8,
+        particles: 8,
+        luminous: 3.8,
+        stars: 4,
+      },
+      {
+        name: 'Sacred Drop',
+        preset: 'DMT Vision',
+        mode: 'tripnumber3',
+        duration: 130,
+        symmetry: 12,
+        complexity: 8.8,
+        glow: 6.2,
+        breathSpeed: 1.14,
+        intensity: 9.4,
+        particles: 9,
+        luminous: 4.5,
+        stars: 6,
+      },
+      {
+        name: 'Deep Tunnel',
+        preset: 'Warp Tunnel',
+        mode: 'dottunnel',
+        duration: 120,
+        symmetry: 12,
+        complexity: 7,
+        glow: 5.5,
+        breathSpeed: 0.9,
+        intensity: 8.2,
+        particles: 8,
+        luminous: 3.6,
+        stars: 5,
+      },
+      {
+        name: 'Return to Pulse',
+        preset: 'Amber Dust',
+        mode: 'tripnumber2',
+        duration: 110,
+        symmetry: 9,
+        complexity: 5,
+        glow: 3,
+        breathSpeed: 0.66,
+        intensity: 7.4,
+        particles: 6,
+        luminous: 3.4,
+        stars: 4,
+      },
+    ],
+  },
+  {
+    id: 15,
+    name: 'Trip Number 4',
+    icon: 'TRIP4',
+    desc: 'Prisms, ocean currents and a beating heart — kaleidoscope blends and two crazy bursts in between. A long ~8-minute looping trip.',
+    stages: [
+      {
+        name: 'Prism Bloom',
+        preset: 'Prism Rose',
+        mode: 'prism',
+        duration: 55,
+        symmetry: 8,
+        complexity: 6,
+        glow: 7,
+        breathSpeed: 0.5,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Prism Fold',
+        preset: 'Prism Void',
+        mode: 'prism3d',
+        duration: 55,
+        symmetry: 8,
+        complexity: 6,
+        glow: 7,
+        breathSpeed: 0.45,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Kaleido Crystal',
+        preset: 'Prism Ice',
+        mode: 'kaleidoscope',
+        duration: 45,
+        symmetry: 16,
+        glow: 7,
+        breathSpeed: 0.3,
+        luminous: 3,
+        stars: 2,
+      },
+      {
+        name: 'Ocean Drift',
+        preset: 'Deep Current',
+        mode: 'current',
+        duration: 55,
+        symmetry: 4,
+        complexity: 5,
+        glow: 3,
+        breathSpeed: 0.35,
+        intensity: 7,
+        luminous: 2,
+      },
+      {
+        name: 'Cyclone Tiles',
+        preset: 'Deep Current',
+        mode: 'cyclonetiles',
+        duration: 50,
+        symmetry: 8,
+        complexity: 6,
+        glow: 5,
+        breathSpeed: 0.55,
+        intensity: 8,
+        luminous: 2,
+      },
+      {
+        name: 'Storm Surge',
+        preset: 'Cosmic Indigo',
+        mode: 'lorenz',
+        duration: 40,
+        complexity: 7,
+        glow: 5,
+        breathSpeed: 0.5,
+        luminous: 3,
+        stars: 4,
+      },
+      {
+        name: 'Dot Heart',
+        preset: 'Golden Source',
+        mode: 'dotheart',
+        duration: 55,
+        symmetry: 9,
+        complexity: 6.4,
+        glow: 7,
+        breathSpeed: 0.72,
+        intensity: 8,
+        particles: 8,
+        luminous: 3,
+        stars: 1,
+      },
+      {
+        name: 'Warp Bridge',
+        preset: 'Warp Drive',
+        mode: 'warp',
+        duration: 45,
+        breathSpeed: 0.6,
+        glow: 6,
+        luminous: 3,
+        stars: 9,
+      },
+      {
+        name: 'Prism Sands',
+        preset: 'Prism Rose',
+        mode: 'flowsands',
+        duration: 55,
+        symmetry: 14,
+        complexity: 6,
+        glow: 5.5,
+        breathSpeed: 0.45,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Prism Lines',
+        preset: 'Prism Void',
+        mode: 'flowlines',
+        duration: 55,
+        symmetry: 12,
+        complexity: 4,
+        glow: 5.5,
+        breathSpeed: 0.42,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.6,
+        stars: 4,
+      },
+      {
+        name: 'Prism Butterfly',
+        preset: 'Prism Ice',
+        mode: 'flowbutterfly',
+        duration: 55,
+        symmetry: 12,
+        complexity: 5,
+        glow: 5.5,
+        breathSpeed: 0.45,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Prism Return',
+        preset: 'Prism Rose',
+        mode: 'prism',
+        duration: 50,
+        symmetry: 8,
+        complexity: 6,
+        glow: 7,
+        breathSpeed: 0.5,
+        intensity: 8,
+        luminous: 3,
+      },
+    ],
+  },
+  {
+    id: 16,
+    name: 'Trip Number 5',
+    icon: 'WALK',
+    desc: 'The dot-walkers. Each figure enters alone, blends into three, then morphs into the next shape — cycling through all five walkers in a long ~7.5-minute loop.',
+    stages: [
+      {
+        name: 'Walker I · solo',
+        preset: 'Golden Source',
+        mode: 'dotwalker',
+        duration: 45,
+        symmetry: 1,
+        stars: 1,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.7,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Walker I · trio',
+        preset: 'Golden Source',
+        mode: 'dotwalker',
+        duration: 45,
+        symmetry: 1,
+        stars: 3,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.7,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Walker II · solo',
+        preset: 'Amber Dust',
+        mode: 'dotwalker',
+        duration: 45,
+        symmetry: 2,
+        stars: 1,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.72,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Walker II · trio',
+        preset: 'Amber Dust',
+        mode: 'dotwalker',
+        duration: 45,
+        symmetry: 2,
+        stars: 3,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.72,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Walker III · solo',
+        preset: 'Cosmic Indigo',
+        mode: 'dotwalker',
+        duration: 45,
+        symmetry: 3,
+        stars: 1,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.74,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Walker III · trio',
+        preset: 'Cosmic Indigo',
+        mode: 'dotwalker',
+        duration: 45,
+        symmetry: 3,
+        stars: 3,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.74,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Walker IV · solo',
+        preset: 'Forest Ceremony',
+        mode: 'dotwalker',
+        duration: 45,
+        symmetry: 4,
+        stars: 1,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.72,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Walker IV · trio',
+        preset: 'Forest Ceremony',
+        mode: 'dotwalker',
+        duration: 45,
+        symmetry: 4,
+        stars: 3,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.72,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Walker V · solo',
+        preset: 'Violet Portal',
+        mode: 'dotwalker',
+        duration: 45,
+        symmetry: 5,
+        stars: 1,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.74,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Walker V · trio',
+        preset: 'Violet Portal',
+        mode: 'dotwalker',
+        duration: 45,
+        symmetry: 5,
+        stars: 3,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.74,
+        intensity: 8,
+        luminous: 3,
+      },
+    ],
+  },
+  {
+    id: 17,
+    name: 'Trip Number 1',
+    icon: 'TRIP1',
+    desc: 'The golden trip — slow, warm and long. Trip-1 geometry breathing through swirl tunnels, Fibonacci drift, golden shifting sands, an alchemical sun, golden line-works, a golden butterfly and sacred gold, then home. Smooth, fully continuous ~12-minute loop.',
+    stages: [
+      {
+        name: 'Golden Trip',
+        preset: 'Golden Source',
+        mode: 'tripnumber1',
+        duration: 80,
+        symmetry: 10,
+        complexity: 7.6,
+        glow: 6.8,
+        breathSpeed: 0.34,
+        intensity: 8.4,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Swirl Bloom',
+        preset: 'Golden Source',
+        mode: 'swirldottunnel',
+        duration: 70,
+        symmetry: 12,
+        complexity: 7,
+        glow: 6,
+        breathSpeed: 0.42,
+        intensity: 8,
+        particles: 8,
+        luminous: 3,
+        stars: 3,
+      },
+      {
+        name: 'Fibonacci Drift',
+        preset: 'Fibonacci Bloom',
+        mode: 'fibonacci',
+        duration: 70,
+        complexity: 6,
+        glow: 5,
+        breathSpeed: 0.2,
+        intensity: 7,
+        luminous: 2,
+        stars: 2,
+      },
+      {
+        name: 'Golden Sands',
+        preset: 'Golden Source',
+        mode: 'flowsands',
+        duration: 85,
+        symmetry: 14,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Alchemical Sun',
+        preset: 'Golden Source',
+        mode: 'dotalchemicalsun',
+        duration: 70,
+        symmetry: 10,
+        complexity: 7,
+        glow: 6,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 8,
+        luminous: 3,
+        stars: 3,
+      },
+      {
+        name: 'Golden Lines',
+        preset: 'Golden Source',
+        mode: 'flowlines',
+        duration: 80,
+        symmetry: 12,
+        complexity: 4,
+        glow: 6,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.6,
+        stars: 3,
+      },
+      {
+        name: 'Golden Trip II',
+        preset: 'Golden Source',
+        mode: 'tripnumber1',
+        duration: 80,
+        symmetry: 12,
+        complexity: 8,
+        glow: 7,
+        breathSpeed: 0.36,
+        intensity: 8.4,
+        particles: 9,
+        luminous: 3,
+        stars: 3,
+      },
+      {
+        name: 'Golden Butterfly',
+        preset: 'Golden Source',
+        mode: 'flowbutterfly',
+        duration: 75,
+        symmetry: 12,
+        complexity: 5,
+        glow: 6,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Orbital Calm',
+        preset: 'Calm Field',
+        mode: 'orbital',
+        duration: 70,
+        symmetry: 8,
+        glow: 4,
+        breathSpeed: 0.18,
+        intensity: 7,
+        luminous: 2,
+        stars: 4,
+      },
+      {
+        name: 'Sacred Gold',
+        preset: 'Golden Source',
+        mode: 'flowsacred',
+        duration: 75,
+        symmetry: 12,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.38,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Return Trip',
+        preset: 'Golden Source',
+        mode: 'tripnumber1',
+        duration: 70,
+        symmetry: 10,
+        complexity: 7.6,
+        glow: 6.8,
+        breathSpeed: 0.34,
+        intensity: 8.4,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+    ],
+  },
+  {
+    id: 18,
+    name: 'Trip Number 3',
+    icon: 'TRIP3',
+    desc: 'The triangle trip, fully evolved — opens on a single minimal triangle that multiplies, hardens into the angular trip-3 gate, lifts through moving line-works, 3D triangles, yantra and a sacred pyramid, blends into hypercube/prism/tri-sphere, then destructures into sand and re-forms — always anchored in the triangle, sometimes shattering into further shapes. Long, smooth, continuous ~16-minute loop.',
+    stages: [
+      {
+        name: 'One Triangle',
+        preset: 'Golden Source',
+        mode: 'flowsacred',
+        duration: 70,
+        symmetry: 12,
+        complexity: 2,
+        glow: 5,
+        breathSpeed: 0.32,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.6,
+        stars: 3,
+      },
+      {
+        name: 'Triangles Wake',
+        preset: 'Yantra Fire',
+        mode: 'flowsacred',
+        duration: 65,
+        symmetry: 12,
+        complexity: 4,
+        glow: 5.5,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.7,
+        stars: 4,
+      },
+      {
+        name: 'Triangle Gate',
+        preset: 'Golden Source',
+        mode: 'tripnumber3',
+        duration: 60,
+        symmetry: 12,
+        complexity: 7.4,
+        glow: 4.8,
+        breathSpeed: 0.86,
+        intensity: 8.8,
+        particles: 8,
+        luminous: 3.8,
+        stars: 5,
+      },
+      {
+        name: 'Moving Lines',
+        preset: 'Cosmic Indigo',
+        mode: 'flowlines',
+        duration: 65,
+        symmetry: 12,
+        complexity: 4,
+        glow: 5.5,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.6,
+        stars: 4,
+      },
+      {
+        name: 'Triangles 3D',
+        preset: 'Cosmic Indigo',
+        mode: 'chaostri3d',
+        duration: 55,
+        complexity: 8,
+        glow: 5,
+        breathSpeed: 0.6,
+        intensity: 8,
+        luminous: 3,
+        stars: 4,
+      },
+      {
+        name: 'Yantra Lift',
+        preset: 'Yantra Fire',
+        mode: 'yantra3d',
+        duration: 60,
+        symmetry: 12,
+        complexity: 7,
+        glow: 5,
+        breathSpeed: 0.8,
+        intensity: 8.6,
+        luminous: 3.6,
+        stars: 5,
+      },
+      {
+        name: 'Sacred Pyramid',
+        preset: 'Golden Source',
+        mode: 'pyramid3d',
+        duration: 65,
+        symmetry: 12,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.4,
+        intensity: 8.4,
+        luminous: 3.2,
+        stars: 4,
+      },
+      {
+        name: 'Hypercube Fold',
+        preset: '4D Crystal',
+        mode: 'hypercube',
+        duration: 55,
+        complexity: 8,
+        glow: 7,
+        breathSpeed: 0.5,
+        intensity: 8,
+        luminous: 3,
+        stars: 3,
+      },
+      {
+        name: 'Prism Core',
+        preset: 'Prism Void',
+        mode: 'prism3d',
+        duration: 55,
+        symmetry: 8,
+        complexity: 6,
+        glow: 7,
+        breathSpeed: 0.5,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Tri Sphere Blend',
+        preset: 'Violet Portal',
+        mode: 'chaostrisphere',
+        duration: 55,
+        complexity: 8,
+        glow: 6,
+        breathSpeed: 0.5,
+        intensity: 8,
+        luminous: 3,
+        stars: 3,
+      },
+      {
+        name: 'Destructure',
+        preset: 'Cosmic Indigo',
+        mode: 'flowsands',
+        duration: 70,
+        symmetry: 14,
+        complexity: 7,
+        glow: 5.5,
+        breathSpeed: 0.5,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Knot Reform',
+        preset: 'Golden Source',
+        mode: 'tknot3d',
+        duration: 60,
+        symmetry: 16,
+        complexity: 8,
+        glow: 6,
+        breathSpeed: 0.8,
+        intensity: 8.8,
+        luminous: 3.8,
+        stars: 4,
+      },
+      {
+        name: 'Yantra Flow',
+        preset: 'Yantra Fire',
+        mode: 'flowsacred',
+        duration: 65,
+        symmetry: 12,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.5,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 4,
+      },
+      {
+        name: 'Triangle Storm',
+        preset: 'Golden Source',
+        mode: 'tripnumber3',
+        duration: 60,
+        symmetry: 14,
+        complexity: 8.2,
+        glow: 5.2,
+        breathSpeed: 1.0,
+        intensity: 9,
+        particles: 8,
+        luminous: 3.8,
+        stars: 5,
+      },
+      {
+        name: 'Lines Settle',
+        preset: 'Golden Source',
+        mode: 'flowlines',
+        duration: 60,
+        symmetry: 12,
+        complexity: 4,
+        glow: 5.5,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.6,
+        stars: 4,
+      },
+      {
+        name: 'Return to One',
+        preset: 'Golden Source',
+        mode: 'flowsacred',
+        duration: 65,
+        symmetry: 12,
+        complexity: 2,
+        glow: 5,
+        breathSpeed: 0.32,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.6,
+        stars: 3,
+      },
+    ],
+  },
+  {
+    id: 19,
+    name: 'Long Trip',
+    icon: 'LONG',
+    desc: 'Everything, woven into one ~15-minute journey — the golden trip, prisms and ocean, the triangle evolutions, the dot-walkers, a beating heart and a crazy burst, the desert drop, and home. The full set as a single long loop.',
+    stages: [
+      {
+        name: 'Golden Trip',
+        preset: 'Golden Source',
+        mode: 'tripnumber1',
+        duration: 60,
+        symmetry: 10,
+        complexity: 7.6,
+        glow: 6.8,
+        breathSpeed: 0.34,
+        intensity: 8.4,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Swirl Bloom',
+        preset: 'Golden Source',
+        mode: 'swirldottunnel',
+        duration: 55,
+        symmetry: 12,
+        complexity: 7,
+        glow: 6,
+        breathSpeed: 0.42,
+        intensity: 8,
+        particles: 8,
+        luminous: 3,
+        stars: 3,
+      },
+      {
+        name: 'Fibonacci Drift',
+        preset: 'Fibonacci Bloom',
+        mode: 'fibonacci',
+        duration: 55,
+        complexity: 6,
+        glow: 5,
+        breathSpeed: 0.2,
+        intensity: 7,
+        luminous: 2,
+        stars: 2,
+      },
+      {
+        name: 'Prism Bloom',
+        preset: 'Prism Rose',
+        mode: 'prism',
+        duration: 55,
+        symmetry: 8,
+        complexity: 6,
+        glow: 7,
+        breathSpeed: 0.5,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Ocean Drift',
+        preset: 'Deep Current',
+        mode: 'current',
+        duration: 55,
+        symmetry: 4,
+        complexity: 5,
+        glow: 3,
+        breathSpeed: 0.35,
+        intensity: 7,
+        luminous: 2,
+      },
+      {
+        name: 'Triangle Gate',
+        preset: 'Golden Source',
+        mode: 'tripnumber3',
+        duration: 60,
+        symmetry: 12,
+        complexity: 7.4,
+        glow: 4.8,
+        breathSpeed: 0.86,
+        intensity: 8.8,
+        particles: 8,
+        luminous: 3.8,
+        stars: 5,
+      },
+      {
+        name: 'Yantra Lift',
+        preset: 'Yantra Fire',
+        mode: 'yantra3d',
+        duration: 55,
+        symmetry: 12,
+        complexity: 7,
+        glow: 5,
+        breathSpeed: 0.8,
+        intensity: 8.6,
+        luminous: 3.6,
+        stars: 5,
+      },
+      {
+        name: 'Hypercube Fold',
+        preset: '4D Crystal',
+        mode: 'hypercube',
+        duration: 55,
+        complexity: 8,
+        glow: 7,
+        breathSpeed: 0.5,
+        intensity: 8,
+        luminous: 3,
+        stars: 3,
+      },
+      {
+        name: 'Knot Temple',
+        preset: 'Golden Source',
+        mode: 'tknot3d',
+        duration: 55,
+        symmetry: 16,
+        complexity: 8,
+        glow: 6,
+        breathSpeed: 1.0,
+        intensity: 8.8,
+        luminous: 3.8,
+        stars: 4,
+      },
+      {
+        name: 'Walkers Solo',
+        preset: 'Cosmic Indigo',
+        mode: 'dotwalker',
+        duration: 55,
+        symmetry: 3,
+        stars: 1,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.72,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Walkers Trio',
+        preset: 'Forest Ceremony',
+        mode: 'dotwalker',
+        duration: 55,
+        symmetry: 4,
+        stars: 3,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.74,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Dot Heart',
+        preset: 'Golden Source',
+        mode: 'dotheart',
+        duration: 60,
+        symmetry: 9,
+        complexity: 6.4,
+        glow: 7,
+        breathSpeed: 0.72,
+        intensity: 8,
+        particles: 8,
+        luminous: 3,
+        stars: 1,
+      },
+      {
+        name: 'Desert Drop',
+        preset: 'Amber Dust',
+        mode: 'tripnumber2',
+        duration: 55,
+        symmetry: 9,
+        complexity: 6.8,
+        glow: 3.2,
+        breathSpeed: 1.18,
+        intensity: 9.2,
+        particles: 9,
+        luminous: 3.6,
+        stars: 4,
+      },
+      {
+        name: 'Dust Vortex',
+        preset: 'Amber Dust',
+        mode: 'swirldottunnel',
+        duration: 55,
+        symmetry: 16,
+        complexity: 7.8,
+        glow: 7,
+        breathSpeed: 0.94,
+        intensity: 8.6,
+        particles: 9,
+        luminous: 3.2,
+        stars: 3,
+      },
+      {
+        name: 'Golden Return',
+        preset: 'Golden Source',
+        mode: 'tripnumber1',
+        duration: 55,
+        symmetry: 10,
+        complexity: 7.6,
+        glow: 6.8,
+        breathSpeed: 0.34,
+        intensity: 8.4,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+    ],
+  },
+  {
+    id: 20,
+    name: 'Trip Number 6',
+    icon: 'TRIP6',
+    desc: 'A slow, continuous evolution of the 4D crystal — hypercube folding through lattice, torus knot, prism core and wave crystal, then back. Pleasant and transformative.',
+    stages: [
+      {
+        name: '4D Crystal',
+        preset: '4D Crystal',
+        mode: 'hypercube',
+        duration: 80,
+        complexity: 8,
+        glow: 7,
+        breathSpeed: 0.18,
+        intensity: 8,
+        luminous: 3,
+        stars: 2,
+      },
+      {
+        name: 'Crystal Lattice',
+        preset: 'Crystal Lattice',
+        mode: 'geodesic',
+        duration: 75,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.16,
+        intensity: 8,
+        luminous: 3,
+        stars: 2,
+      },
+      {
+        name: 'Torus Crystal',
+        preset: 'Cosmic Indigo',
+        mode: 'tknot3d',
+        duration: 75,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.18,
+        intensity: 8,
+        luminous: 3,
+        stars: 2,
+      },
+      {
+        name: 'Prism Core',
+        preset: 'Prism Void',
+        mode: 'prism3d',
+        duration: 75,
+        symmetry: 8,
+        complexity: 6,
+        glow: 7,
+        breathSpeed: 0.2,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Wave Crystal',
+        preset: 'Blue Astral',
+        mode: 'lissajous3d',
+        duration: 75,
+        complexity: 5,
+        glow: 6,
+        breathSpeed: 0.18,
+        intensity: 8,
+        luminous: 3,
+        stars: 3,
+      },
+      {
+        name: 'Crystal Lines',
+        preset: 'Cosmic Indigo',
+        mode: 'flowlines',
+        duration: 75,
+        symmetry: 12,
+        complexity: 4,
+        glow: 6,
+        breathSpeed: 0.2,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.6,
+        stars: 3,
+      },
+      {
+        name: 'Crystal Sands',
+        preset: 'Crystal Lattice',
+        mode: 'flowsands',
+        duration: 75,
+        symmetry: 14,
+        complexity: 6,
+        glow: 5.5,
+        breathSpeed: 0.22,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 2,
+      },
+      {
+        name: 'Crystal Sacred',
+        preset: 'Blue Astral',
+        mode: 'flowsacred',
+        duration: 75,
+        symmetry: 12,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.2,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Return Crystal',
+        preset: '4D Crystal',
+        mode: 'hypercube',
+        duration: 75,
+        complexity: 8,
+        glow: 7,
+        breathSpeed: 0.18,
+        intensity: 8,
+        luminous: 3,
+        stars: 2,
+      },
+    ],
+  },
+  {
+    id: 21,
+    name: 'Trip Number 7',
+    icon: 'TRIP7',
+    desc: 'Lines that reshape and move — orbital 3D woven through torus knot, rose, helix and wave curves in one continuous, slow, transformative journey.',
+    stages: [
+      {
+        name: 'Orbital Lines',
+        preset: 'Cosmic Indigo',
+        mode: 'orbital3d',
+        duration: 80,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.16,
+        intensity: 8,
+        luminous: 3,
+        stars: 4,
+      },
+      {
+        name: 'Torus Weave',
+        preset: 'Violet Portal',
+        mode: 'tknot3d',
+        duration: 75,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.18,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Rose Lines',
+        preset: 'Blue Astral',
+        mode: 'rose3d',
+        duration: 75,
+        complexity: 5,
+        glow: 6,
+        breathSpeed: 0.16,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Helix Drift',
+        preset: 'Forest Ceremony',
+        mode: 'helix3d',
+        duration: 75,
+        complexity: 5,
+        glow: 5,
+        breathSpeed: 0.18,
+        intensity: 8,
+        luminous: 3,
+        stars: 3,
+      },
+      {
+        name: 'Wave Lines',
+        preset: 'Crystal Lattice',
+        mode: 'lissajous3d',
+        duration: 75,
+        complexity: 5,
+        glow: 6,
+        breathSpeed: 0.16,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Helix Spiral',
+        preset: 'Cosmic Indigo',
+        mode: 'helix3d',
+        duration: 70,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.18,
+        intensity: 8,
+        luminous: 3,
+        stars: 3,
+      },
+      {
+        name: 'Sand Knot',
+        preset: 'Cosmic Indigo',
+        mode: 'flowlines',
+        duration: 75,
+        symmetry: 12,
+        complexity: 4,
+        glow: 6,
+        breathSpeed: 0.2,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.6,
+        stars: 4,
+      },
+      {
+        name: 'Rose Sand Lines',
+        preset: 'Violet Portal',
+        mode: 'flowlines',
+        duration: 75,
+        symmetry: 12,
+        complexity: 4,
+        glow: 6,
+        breathSpeed: 0.2,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.6,
+        stars: 4,
+      },
+      {
+        name: 'Sacred Orbit',
+        preset: 'Blue Astral',
+        mode: 'flowsacred',
+        duration: 70,
+        symmetry: 12,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.2,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Return Orbit',
+        preset: 'Cosmic Indigo',
+        mode: 'orbital3d',
+        duration: 75,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.16,
+        intensity: 8,
+        luminous: 3,
+        stars: 4,
+      },
+    ],
+  },
+  {
+    id: 22,
+    name: 'Mega Trip',
+    icon: 'MEGA',
+    desc: 'Sacred psychedelia, ~13 minutes, continuous and transformative — alchemical dots into heart dots, orbits, living cells and liquid pearl, prism and prism core, cathedral glass and vitral, a rainbow mandala and a bloom field, then home to the dots.',
+    stages: [
+      {
+        name: 'Alchemical Dots',
+        preset: 'Golden Source',
+        mode: 'dotalchemicalsun',
+        duration: 55,
+        symmetry: 10,
+        complexity: 7,
+        glow: 6,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 8,
+        luminous: 3,
+        stars: 2,
+      },
+      {
+        name: 'Heart Dots',
+        preset: 'Rose Quartz',
+        mode: 'dotheart',
+        duration: 55,
+        symmetry: 9,
+        complexity: 6.4,
+        glow: 7,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 8,
+        luminous: 3,
+        stars: 1,
+      },
+      {
+        name: 'Orbital Bloom',
+        preset: 'Violet Portal',
+        mode: 'orbital',
+        duration: 55,
+        symmetry: 10,
+        glow: 6,
+        breathSpeed: 0.2,
+        intensity: 8,
+        luminous: 3,
+        stars: 3,
+      },
+      {
+        name: 'Orbit Rings',
+        preset: 'Cosmic Indigo',
+        mode: 'orbit',
+        duration: 55,
+        glow: 6,
+        breathSpeed: 0.2,
+        intensity: 8,
+        luminous: 3,
+        stars: 4,
+      },
+      {
+        name: 'Orbital 3D',
+        preset: 'Blue Astral',
+        mode: 'orbital3d',
+        duration: 55,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.18,
+        intensity: 8,
+        luminous: 3,
+        stars: 4,
+      },
+      {
+        name: 'Living Cells',
+        preset: 'Cell Biolum',
+        mode: 'cells',
+        duration: 55,
+        complexity: 6,
+        glow: 5,
+        breathSpeed: 0.3,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Liquid Pearl',
+        preset: 'Liquid Pearl',
+        mode: 'liquid',
+        duration: 55,
+        complexity: 6,
+        glow: 5,
+        breathSpeed: 0.3,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Prism Bloom',
+        preset: 'Prism Rose',
+        mode: 'prism',
+        duration: 55,
+        symmetry: 8,
+        complexity: 6,
+        glow: 7,
+        breathSpeed: 0.4,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Prism Core',
+        preset: 'Prism Void',
+        mode: 'prism3d',
+        duration: 55,
+        symmetry: 8,
+        complexity: 6,
+        glow: 7,
+        breathSpeed: 0.4,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Cathedral Glass',
+        preset: 'Sacred Architecture',
+        mode: 'cathedral',
+        duration: 55,
+        symmetry: 10,
+        complexity: 6,
+        glow: 7,
+        breathSpeed: 0.18,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Vitral Window',
+        preset: 'Sacred Vitral',
+        mode: 'vitral',
+        duration: 55,
+        symmetry: 12,
+        glow: 6,
+        breathSpeed: 0.18,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Rainbow Mandala',
+        preset: 'Rainbow Mist',
+        mode: 'kaleidoscope',
+        duration: 55,
+        symmetry: 16,
+        glow: 7,
+        breathSpeed: 0.3,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Bloom Field',
+        preset: 'Fibonacci Bloom',
+        mode: 'bloom',
+        duration: 55,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.3,
+        intensity: 8,
+        luminous: 3,
+        stars: 2,
+      },
+      {
+        name: 'Pearl Sands',
+        preset: 'Liquid Pearl',
+        mode: 'flowsands',
+        duration: 55,
+        symmetry: 14,
+        complexity: 6,
+        glow: 5.5,
+        breathSpeed: 0.35,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Heart Butterfly',
+        preset: 'Rose Quartz',
+        mode: 'flowbutterfly',
+        duration: 55,
+        symmetry: 12,
+        complexity: 5,
+        glow: 6,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Sacred Lines',
+        preset: 'Violet Portal',
+        mode: 'flowlines',
+        duration: 55,
+        symmetry: 12,
+        complexity: 4,
+        glow: 5.5,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.6,
+        stars: 4,
+      },
+      {
+        name: 'Return to Dots',
+        preset: 'Golden Source',
+        mode: 'dotalchemicalsun',
+        duration: 55,
+        symmetry: 10,
+        complexity: 7,
+        glow: 6,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 8,
+        luminous: 3,
+        stars: 2,
+      },
+    ],
+  },
+  {
+    id: 23,
+    name: 'Magnetic Sands',
+    icon: 'SANDS',
+    desc: 'The continuous-transformation trip — built around magnetic sand. Sand fields evolve through scales, cyclone tiles, eddy lace and deep currents, with orbital revolutions and gravity wells. Slow, patterned, endlessly reshaping. ~11-minute loop.',
+    stages: [
+      {
+        name: 'Magnetic Sands',
+        preset: 'Amber Dust',
+        mode: 'magneticsand',
+        duration: 70,
+        complexity: 6,
+        glow: 5,
+        breathSpeed: 0.16,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Sand Scales',
+        preset: 'Terra Globe',
+        mode: 'currentscales',
+        duration: 65,
+        complexity: 6,
+        glow: 5,
+        breathSpeed: 0.18,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Cyclone Tiles',
+        preset: 'Deep Current',
+        mode: 'cyclonetiles',
+        duration: 65,
+        complexity: 6,
+        glow: 5,
+        breathSpeed: 0.2,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Eddy Lace',
+        preset: 'Cosmic Indigo',
+        mode: 'eddylace',
+        duration: 65,
+        complexity: 6,
+        glow: 5,
+        breathSpeed: 0.18,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Deep Current',
+        preset: 'Deep Current',
+        mode: 'current',
+        duration: 65,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.16,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Orbital Revolution',
+        preset: 'Cosmic Indigo',
+        mode: 'orbital3d',
+        duration: 65,
+        complexity: 6,
+        glow: 5,
+        breathSpeed: 0.16,
+        intensity: 8,
+        luminous: 3,
+        stars: 4,
+      },
+      {
+        name: 'Gravity Wells',
+        preset: 'Forest Ceremony',
+        mode: 'gravity',
+        duration: 65,
+        complexity: 6,
+        glow: 5,
+        breathSpeed: 0.18,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Cyclone Storm',
+        preset: 'Amber Dust',
+        mode: 'cyclonetiles',
+        duration: 65,
+        complexity: 7,
+        glow: 6,
+        breathSpeed: 0.22,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Sand Currents',
+        preset: 'Golden Source',
+        mode: 'current',
+        duration: 65,
+        complexity: 5,
+        glow: 4,
+        breathSpeed: 0.16,
+        intensity: 8,
+        luminous: 3,
+      },
+      {
+        name: 'Magnetic Return',
+        preset: 'Amber Dust',
+        mode: 'magneticsand',
+        duration: 65,
+        complexity: 6,
+        glow: 5,
+        breathSpeed: 0.16,
+        intensity: 8,
+        luminous: 3,
+      },
+    ],
+  },
+  {
+    id: 24,
+    name: 'Prism Mega Trip',
+    icon: 'PRISM',
+    desc: 'The colourful sacred-glass journey — prism cores blooming through stained-glass seeds and cathedral light, woven with sacred flow and golden sand. Psychedelic, luminous, continuously transforming. ~9-minute loop.',
+    stages: [
+      {
+        name: 'Prism Core',
+        preset: 'Prism Void',
+        mode: 'prism3d',
+        duration: 75,
+        symmetry: 8,
+        complexity: 7,
+        glow: 6,
+        breathSpeed: 0.3,
+        intensity: 8,
+        particles: 8,
+        luminous: 3,
+        stars: 3,
+      },
+      {
+        name: 'Prism Bloom',
+        preset: 'Prism Rose',
+        mode: 'prism',
+        duration: 70,
+        symmetry: 9,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.28,
+        intensity: 8,
+        luminous: 3,
+        stars: 2,
+      },
+      {
+        name: 'Stained Seed',
+        preset: 'Prism Warm',
+        mode: 'prism',
+        duration: 70,
+        symmetry: 7,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.26,
+        intensity: 8,
+        luminous: 3,
+        stars: 2,
+      },
+      {
+        name: 'Cathedral Light',
+        preset: 'Prism Warm',
+        mode: 'prism',
+        duration: 70,
+        symmetry: 11,
+        complexity: 7,
+        glow: 6.5,
+        breathSpeed: 0.3,
+        intensity: 8.4,
+        luminous: 3,
+        stars: 2,
+      },
+      {
+        name: 'Sacred Weave',
+        preset: 'Violet Portal',
+        mode: 'flowsacred',
+        duration: 75,
+        symmetry: 12,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Rose Prism',
+        preset: 'Prism Rose',
+        mode: 'prism',
+        duration: 70,
+        symmetry: 9,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.28,
+        intensity: 8,
+        luminous: 3,
+        stars: 2,
+      },
+      {
+        name: 'Golden Sands',
+        preset: 'Amber Dust',
+        mode: 'flowsands',
+        duration: 75,
+        symmetry: 14,
+        complexity: 6,
+        glow: 5.5,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Prism Return',
+        preset: 'Prism Void',
+        mode: 'prism3d',
+        duration: 70,
+        symmetry: 8,
+        complexity: 7,
+        glow: 6,
+        breathSpeed: 0.3,
+        intensity: 8,
+        particles: 8,
+        luminous: 3,
+        stars: 3,
+      },
+    ],
+  },
+  {
+    id: 25,
+    name: 'Butterfly Trip',
+    icon: 'FLY',
+    desc: 'The butterfly journey — dots gather into a flapping butterfly, two dancers bloom and merge, the wings spin and divide, then reunite. A soft sacred halo holds it all. Continuous, tender, looping. ~7-minute loop.',
+    stages: [
+      {
+        name: 'Butterfly',
+        preset: 'Rose Quartz',
+        mode: 'flowbutterfly',
+        duration: 75,
+        symmetry: 12,
+        complexity: 5,
+        glow: 5,
+        breathSpeed: 0.45,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Two Dancers',
+        preset: 'Rose Quartz',
+        mode: 'flowdance',
+        duration: 75,
+        symmetry: 12,
+        complexity: 5,
+        glow: 5,
+        breathSpeed: 0.45,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 2,
+      },
+      {
+        name: 'Wing Spin',
+        preset: 'Cosmic Indigo',
+        mode: 'flowbutterfly',
+        duration: 70,
+        symmetry: 12,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.6,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Sacred Halo',
+        preset: 'Violet Portal',
+        mode: 'flowsacred',
+        duration: 70,
+        symmetry: 12,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Butterfly Return',
+        preset: 'Rose Quartz',
+        mode: 'flowbutterfly',
+        duration: 70,
+        symmetry: 12,
+        complexity: 5,
+        glow: 5,
+        breathSpeed: 0.45,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+    ],
+  },
+  {
+    id: 26,
+    name: 'Star Sand Lines',
+    icon: 'LINES',
+    desc: 'The line-art trip — shifting star-sand draws the great line-works out of dots: torus knot, rose, orbital rings and helix, melting from one into the next, threaded with golden sand. Crisp, sacred, continuously transforming. ~8-minute loop.',
+    stages: [
+      {
+        name: 'Torus Knot',
+        preset: 'Cosmic Indigo',
+        mode: 'flowlines',
+        duration: 75,
+        symmetry: 12,
+        complexity: 4,
+        glow: 5,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.4,
+        stars: 4,
+      },
+      {
+        name: 'Rose Line',
+        preset: 'Violet Portal',
+        mode: 'flowlines',
+        duration: 70,
+        symmetry: 12,
+        complexity: 4,
+        glow: 5.5,
+        breathSpeed: 0.42,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.4,
+        stars: 4,
+      },
+      {
+        name: 'Sand Weave',
+        preset: 'Amber Dust',
+        mode: 'flowsands',
+        duration: 75,
+        symmetry: 14,
+        complexity: 6,
+        glow: 5.5,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.8,
+        stars: 3,
+      },
+      {
+        name: 'Orbital Rings',
+        preset: 'Cosmic Indigo',
+        mode: 'flowlines',
+        duration: 70,
+        symmetry: 12,
+        complexity: 4,
+        glow: 5,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.4,
+        stars: 4,
+      },
+      {
+        name: 'Sacred Lines',
+        preset: 'Violet Portal',
+        mode: 'flowsacred',
+        duration: 70,
+        symmetry: 12,
+        complexity: 6,
+        glow: 6,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.6,
+        stars: 3,
+      },
+      {
+        name: 'Knot Return',
+        preset: 'Cosmic Indigo',
+        mode: 'flowlines',
+        duration: 70,
+        symmetry: 12,
+        complexity: 4,
+        glow: 5,
+        breathSpeed: 0.4,
+        intensity: 8,
+        particles: 9,
+        luminous: 2.4,
+        stars: 4,
+      },
+    ],
+  },
+  {
+    id: 27,
+    name: 'Oil Projector',
+    icon: 'OIL',
+    desc: 'The liquid light show — warped oils, a soap-film slick, two coloured oils turning in a lens circle, marbled folds, a lava lamp and mirrored Rorschach inkblots, flowing back into the first oil. ~8.5-minute loop.',
+    stages: [
+      {
+        name: 'Oil Warp',
+        preset: 'Violet Portal',
+        mode: 'oilwarp',
+        duration: 70,
+        symmetry: 4,
+        complexity: 6,
+        glow: 3,
+        breathSpeed: 0.35,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Thin Film',
+        preset: 'Liquid Pearl',
+        mode: 'thinfilm',
+        duration: 60,
+        symmetry: 4,
+        complexity: 5,
+        glow: 8,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Two Oils',
+        preset: 'Solar Plasma',
+        mode: 'twooil',
+        duration: 70,
+        symmetry: 4,
+        complexity: 5,
+        glow: 2,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 4,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Ripple Fold',
+        preset: 'Deep Crimson',
+        mode: 'ripplefold',
+        duration: 60,
+        symmetry: 5,
+        complexity: 7,
+        glow: 3,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 4,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Lava Lamp',
+        preset: 'Deep Crimson',
+        mode: 'lavalamp',
+        duration: 70,
+        symmetry: 4,
+        complexity: 6,
+        glow: 3,
+        breathSpeed: 0.35,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.9,
+        stars: 0,
+      },
+      {
+        name: 'Rorschach',
+        preset: 'Violet Portal',
+        mode: 'rorschach',
+        duration: 60,
+        symmetry: 2,
+        complexity: 6,
+        glow: 4,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Mirror Oils',
+        preset: 'DMT Vision',
+        mode: 'rorschach',
+        duration: 60,
+        symmetry: 6,
+        complexity: 6,
+        glow: 4,
+        breathSpeed: 0.3,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
+      },
+      {
+        name: 'Oil Return',
+        preset: 'Violet Portal',
+        mode: 'oilwarp',
+        duration: 60,
+        symmetry: 4,
+        complexity: 6,
+        glow: 3,
+        breathSpeed: 0.35,
+        intensity: 7,
+        particles: 5,
+        luminous: 0.8,
+        stars: 0,
       },
     ],
   },
@@ -4320,6 +7286,12 @@ function updateRippleRings(
 /* ── Build + update dispatch ────────────────────────────────── */
 
 function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
+  if (isGeometryVisualMode(cfg.mode)) {
+    return buildGeometryVisual(cfg, PAL[cfg.preset] ?? PAL['Calm Field']);
+  }
+  if (isCymaticsMode(cfg.mode)) return buildCymatics(cfg);
+  if (isLiquidMode(cfg.mode)) return buildLiquidSeries();
+  if (isBigBangStarMode(cfg.mode)) return buildBigBangStars();
   switch (cfg.mode) {
     case 'burst':
       return buildBurst(cfg, R);
@@ -4406,6 +7378,14 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
     case 'gravity':
     case 'fire':
       return buildCurrentTexture(cfg, R);
+    case 'flowfield':
+    case 'flowwalkers':
+    case 'flowsacred':
+    case 'flowdance':
+    case 'flowsands':
+    case 'flowbutterfly':
+    case 'flowlines':
+      return buildFlowField(cfg, R);
     case 'plasma':
       return buildPlasma(cfg, R);
     case 'nebula':
@@ -4414,6 +7394,10 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
       return buildGlobe(cfg, R);
     case 'current3d':
       return buildCurrent3D(cfg, R);
+    case 'currentliquid':
+      return buildCurrentLiquid(cfg, R, false);
+    case 'current3dliquid':
+      return buildCurrentLiquid(cfg, R, true);
     case 'matrix':
       return buildMatrix(cfg, R);
     case 'matrix3d':
@@ -4437,6 +7421,7 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
 
     case 'embrace':
     case 'tripnumber1':
+    case 'tripnumber1flow':
       return buildDotSymbolField(cfg, R);
     case 'dottunnel':
     case 'swirldottunnel':
@@ -4502,6 +7487,15 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
     case 'musicdots':
     case 'musicnebula':
     case 'musiclattice':
+    case 'musicliquid':
+    case 'sauroneye':
+    case 'oneflame':
+    case 'sacredfigures':
+    case 'sacreddancers':
+    case 'murmuration':
+    case 'fishschool':
+    case 'flowmasks':
+    case 'windtunnel':
       return buildCanvasMode(cfg, R);
     case 'sinmorph3d':
       return buildSinMorph3D(cfg, R);
@@ -4519,6 +7513,22 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
 }
 
 function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R: number): void {
+  if (isGeometryVisualMode(cfg.mode)) {
+    updateGeometryVisual(group, cfg, PAL[cfg.preset] ?? PAL['Calm Field'], t, R);
+    return;
+  }
+  if (isCymaticsMode(cfg.mode)) {
+    updateCymatics(group, cfg, PAL[cfg.preset] ?? PAL['Calm Field'], t, R);
+    return;
+  }
+  if (isLiquidMode(cfg.mode)) {
+    updateLiquidSeries(group, cfg, (PAL[cfg.preset] ?? PAL['Calm Field']).rgb, t, R);
+    return;
+  }
+  if (isBigBangStarMode(cfg.mode)) {
+    updateBigBangStars(group, cfg, t, R);
+    return;
+  }
   switch (cfg.mode) {
     case 'burst':
       updateBurst(group, cfg, t, R);
@@ -4645,6 +7655,15 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
     case 'fire':
       updateCurrentTexture(group, cfg, t, R);
       break;
+    case 'flowfield':
+    case 'flowwalkers':
+    case 'flowsacred':
+    case 'flowdance':
+    case 'flowsands':
+    case 'flowbutterfly':
+    case 'flowlines':
+      updateFlowField(group, cfg, t, R);
+      break;
     case 'plasma':
       updatePlasma(group, cfg, t, R);
       break;
@@ -4656,6 +7675,10 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
       break;
     case 'current3d':
       updateCurrent3D(group, cfg, t, R);
+      break;
+    case 'currentliquid':
+    case 'current3dliquid':
+      updateCurrentLiquid(group, cfg, t, R);
       break;
     case 'matrix':
       updateMatrix(group, cfg, t, R);
@@ -4686,6 +7709,7 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
 
     case 'embrace':
     case 'tripnumber1':
+    case 'tripnumber1flow':
       updateDotSymbolField(group, cfg, t, R);
       break;
     case 'dottunnel':
@@ -4765,6 +7789,15 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
     case 'musicdots':
     case 'musicnebula':
     case 'musiclattice':
+    case 'musicliquid':
+    case 'sauroneye':
+    case 'oneflame':
+    case 'sacredfigures':
+    case 'sacreddancers':
+    case 'murmuration':
+    case 'fishschool':
+    case 'flowmasks':
+    case 'windtunnel':
       updateCanvasMode(group, cfg, t, R);
       break;
     case 'sinmorph3d':
@@ -8841,9 +11874,17 @@ function buildCurrentTexture(cfg: Cfg, R: number): THREE.Group {
   geo.setAttribute('position', posAttr);
 
   const isNewSandMode = cfg.mode === 'eclipse' || cfg.mode === 'gravity' || cfg.mode === 'fire';
+  // Magnetic Sand moves a fraction of a pixel per frame at its slow speed; a
+  // 1.55px dot snaps pixel to pixel there, a 2px soft dot glides between them.
   const pointSize =
-    cfg.mode === 'fire' ? 2.8 : cfg.mode === 'eclipse' || cfg.mode === 'gravity' ? 2.25 : 1.55;
-  const pointOpacity = isNewSandMode ? 0.86 : 0.7;
+    cfg.mode === 'fire'
+      ? 2.8
+      : cfg.mode === 'eclipse' || cfg.mode === 'gravity'
+        ? 2.25
+        : cfg.mode === 'magneticsand'
+          ? 2
+          : 1.55;
+  const pointOpacity = isNewSandMode ? 0.86 : cfg.mode === 'magneticsand' ? 0.6 : 0.7;
   const pts = new THREE.Points(
     geo,
     circlePtsMat(hdrColor([rr, gg, bb], iF, isNewSandMode ? 3.1 : 2.45), pointSize, pointOpacity),
@@ -8900,6 +11941,7 @@ function buildCurrentTexture(cfg: Cfg, R: number): THREE.Group {
       ring.scale.setScalar(hollow);
       ring.userData.tag = 'currentTextureAnchor';
       ring.userData.baseScale = [hollow, hollow];
+      ring.userData.gravitySide = side;
       group.add(ring);
     }
   } else if (cfg.mode === 'fire') {
@@ -8950,6 +11992,23 @@ function buildCurrentTexture(cfg: Cfg, R: number): THREE.Group {
   }
 
   return group;
+}
+
+// Gravity's two cores: where they started (±0.32R, ∓0.06R), slowly orbiting
+// the centre as a pair so the circles between them keep turning.
+const GRAVITY_CORE_ANGLE = Math.atan2(-0.06, 0.32);
+const GRAVITY_CORE_DIST = Math.hypot(0.32, 0.06);
+export function gravityCores(
+  tSlow: number,
+  R: number,
+): [{ x: number; y: number }, { x: number; y: number }] {
+  const a = GRAVITY_CORE_ANGLE + tSlow * 0.08;
+  const x = Math.cos(a) * GRAVITY_CORE_DIST * R;
+  const y = Math.sin(a) * GRAVITY_CORE_DIST * R;
+  return [
+    { x, y },
+    { x: -x, y: -y },
+  ];
 }
 
 function currentTextureVector(
@@ -9017,22 +12076,21 @@ function currentTextureVector(
   }
 
   if (mode === 'gravity') {
-    const coreA = { x: R * 0.32, y: -R * 0.06 };
-    const coreB = { x: -R * 0.32, y: R * 0.06 };
-    const da = Math.hypot(x - coreA.x, y - coreA.y);
-    const db = Math.hypot(x - coreB.x, y - coreB.y);
-    const core = da <= db ? coreA : coreB;
-    const dx = x - core.x;
-    const dy = y - core.y;
-    const d = Math.sqrt(dx * dx + dy * dy) + 1;
-    const swirlDir = core === coreA ? 1 : -1;
-    const pull =
-      core === coreA ? { x: coreB.x - x, y: coreB.y - y } : { x: coreA.x - x, y: coreA.y - y };
-    const pd = Math.hypot(pull.x, pull.y) + 1;
-    const orbit = 0.78 + Math.sin(tSlow * 0.5 + d * 0.014) * 0.1;
+    // Like the original Magnetic Sand: sand runs along the circles of two
+    // magnetic poles (here the two hollow cores), which slowly orbit each other.
+    const [coreA, coreB] = gravityCores(tSlow, R);
+    const ax = x - coreA.x;
+    const ay = y - coreA.y;
+    const bx = x - coreB.x;
+    const by = y - coreB.y;
+    const a2 = ax * ax + ay * ay + R * 9;
+    const b2 = bx * bx + by * by + R * 9;
+    const fx = ax / a2 - bx / b2;
+    const fy = ay / a2 - by / b2;
+    const angle = Math.atan2(fy, fx) + Math.PI / 2;
     return {
-      x: (-dy / d) * orbit * swirlDir + (pull.x / pd) * 0.16,
-      y: (dx / d) * orbit * swirlDir + (pull.y / pd) * 0.16,
+      x: Math.cos(angle) * 0.85 + Math.sin(y * 0.015 + tSlow) * 0.15,
+      y: Math.sin(angle) * 0.85 + Math.cos(x * 0.015 - tSlow) * 0.15,
     };
   }
 
@@ -9246,8 +12304,7 @@ function updateCurrentTexture(group: THREE.Group, cfg: Cfg, t: number, R: number
           Math.abs(nx) > R * (0.14 + 0.5 * fireTaper) ||
           Math.random() < 0.002);
       const r2 = nx * nx + ny * ny;
-      const gravityCoreA = { x: R * 0.32, y: -R * 0.06 };
-      const gravityCoreB = { x: -R * 0.32, y: R * 0.06 };
+      const [gravityCoreA, gravityCoreB] = gravityCores(tSlow, R);
       const gravityHollow = R * (0.13 + cfg.glow * 0.008);
       const tooCloseToGravityCore =
         cfg.mode === 'gravity' &&
@@ -9312,6 +12369,12 @@ function updateCurrentTexture(group: THREE.Group, cfg: Cfg, t: number, R: number
       const [sx, sy] = child.userData.baseScale as [number, number];
       const pulse = 1 + Math.sin(t * 0.0011 * speed) * 0.025;
       child.scale.set(sx * pulse, sy * pulse, 1);
+      const side = child.userData.gravitySide as number | undefined;
+      if (side !== undefined) {
+        // The hollow rings ride on the moving cores.
+        const [core] = gravityCores(t * 0.00055 * speed, R);
+        child.position.set(core.x * side, core.y * side, 0.02);
+      }
       updateMat(child, baseRgb, iF, 2.55);
     } else if (tag === 'eclipseCorona') {
       const pts = child as THREE.Points;
@@ -9915,6 +12978,185 @@ function updateCurrent3D(group: THREE.Group, cfg: Cfg, t: number, R: number): vo
     updateMat(child, rgb, iF, 2.2);
     group.rotation.y += 0.00022 * speed * (dt / 16);
     group.rotation.x += 0.00011 * speed * (dt / 16);
+  }
+}
+
+/* ── LIQUID CHAOS — Chaos Field and Quantum Chaos, made liquid ─────
+ *
+ * Asked for 2026-10-13: "imagine the quant ones but with liquid effects." The
+ * dots drift through exactly the same divergence-free currents as Chaos Field
+ * (2D) and Quantum Chaos (3D); what changes is where they are DRAWN. The Big
+ * Bang Pulse's liquid wave runs outward through the cloud: the radius swells
+ * and sinks with sin(ωt − k·r), the cloud swirls a little with a second wave,
+ * and every dot glints and warms as a crest passes, so the current looks like
+ * a liquid surface catching light rather than dust. The fluid positions are
+ * kept apart from the drawn ones, so the current itself is never disturbed.
+ */
+function buildCurrentLiquid(cfg: Cfg, R: number, is3d: boolean): THREE.Group {
+  const TAU = Math.PI * 2;
+  const iF = cfg.intensity / 10;
+  const count = Math.max(800, Math.round(lerp(is3d ? 2200 : 1400, is3d ? 5200 : 3600, iF)));
+  const group = new THREE.Group();
+  const fluid = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    if (is3d) {
+      const theta = Math.random() * TAU;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = Math.cbrt(Math.random()) * R * 0.88;
+      fluid[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      fluid[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      fluid[i * 3 + 2] = r * Math.cos(phi);
+    } else {
+      const a = Math.random() * TAU;
+      const r = Math.sqrt(Math.random()) * R * 0.9;
+      fluid[i * 3] = Math.cos(a) * r;
+      fluid[i * 3 + 1] = Math.sin(a) * r;
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  const posAttr = new THREE.BufferAttribute(new Float32Array(count * 3), 3);
+  posAttr.setUsage(THREE.DynamicDrawUsage);
+  geo.setAttribute('position', posAttr);
+  const colAttr = new THREE.BufferAttribute(new Float32Array(count * 3), 3);
+  colAttr.setUsage(THREE.DynamicDrawUsage);
+  geo.setAttribute('color', colAttr);
+  const mat = new THREE.PointsMaterial({
+    size: is3d ? 1.8 : 2.1,
+    map: getCircleTex(),
+    vertexColors: true,
+    sizeAttenuation: false,
+    transparent: true,
+    opacity: 0.85,
+    alphaTest: 0.01,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const pts = new THREE.Points(geo, mat);
+  pts.userData.tag = 'currentLiquid';
+  pts.userData.count = count;
+  pts.userData.fluid = fluid;
+  pts.userData.is3d = is3d;
+  pts.userData.prevT = -1;
+  pts.userData.clock = 0;
+  group.add(pts);
+  return group;
+}
+
+function updateCurrentLiquid(group: THREE.Group, cfg: Cfg, t: number, R: number): void {
+  const TAU = Math.PI * 2;
+  const iF = cfg.intensity / 10;
+  const glowF = cfg.glow / 10;
+  const speed = cfg.breathSpeed * 0.7;
+  const freq = (Math.max(1, Math.round(cfg.symmetry)) * Math.PI) / Math.max(R, 1);
+  const pal = PAL[cfg.preset] ?? PAL['Calm Field'];
+  const base = pal.rgb;
+  // The ripple's strength rides on Luminous, like the Liquid series' Ripple.
+  const ripple = Math.min(1.6, 0.25 + cfg.luminous * 0.3);
+  const light = iF * 2.2;
+
+  for (const child of group.children) {
+    if ((child.userData.tag as string) !== 'currentLiquid') continue;
+    const pts = child as THREE.Points;
+    const is3d = child.userData.is3d as boolean;
+    const fluid = child.userData.fluid as Float32Array;
+    const count = child.userData.count as number;
+    const pos = (pts.geometry.getAttribute('position') as THREE.BufferAttribute)
+      .array as Float32Array;
+    const col = (pts.geometry.getAttribute('color') as THREE.BufferAttribute).array as Float32Array;
+    const prevT = child.userData.prevT as number;
+    const dt = prevT < 0 ? 16 : Math.min(t - prevT, 32);
+    child.userData.prevT = t;
+    child.userData.clock =
+      (child.userData.clock as number) + (dt / 1000) * (0.4 + cfg.breathSpeed * 0.6);
+    const s = child.userData.clock as number;
+    const w = TAU * 0.45 * s;
+    const k = 8.6 / R;
+    const R2 = R * R * (is3d ? 0.84 : 0.88);
+    const amp = R * (is3d ? 0.011 : 0.014) * speed * (dt / 16);
+    const ts = t * (is3d ? 0.00035 : 0.0005) * speed;
+    const f = freq;
+    // Warm crest colour: the palette pushed toward white-gold where the wave peaks.
+    const crest = [
+      Math.min(255, base[0] * 0.6 + 140),
+      Math.min(255, base[1] * 0.6 + 110),
+      Math.min(255, base[2] * 0.5 + 60),
+    ];
+
+    for (let i = 0; i < count; i++) {
+      const j = i * 3;
+      let x = fluid[j];
+      let y = fluid[j + 1];
+      let z = fluid[j + 2];
+      // 1. The current, exactly as in Chaos Field / Quantum Chaos.
+      if (is3d) {
+        x += (Math.cos(z * f + ts * 0.7) * f - Math.cos(y * f + ts) * f) * amp;
+        y += (Math.cos(x * f + ts * 0.5) * f - Math.cos(z * f + ts * 0.7) * f) * amp;
+        z += (Math.cos(y * f + ts) * f - Math.cos(x * f + ts * 0.5) * f) * amp;
+        if (x * x + y * y + z * z > R2) {
+          const theta = Math.random() * TAU;
+          const phi = Math.acos(2 * Math.random() - 1);
+          const r = Math.cbrt(Math.random() * 0.5) * R * 0.62;
+          x = r * Math.sin(phi) * Math.cos(theta);
+          y = r * Math.sin(phi) * Math.sin(theta);
+          z = r * Math.cos(phi);
+        }
+      } else {
+        const vx = Math.sin(x * f) * Math.cos(y * f + ts) * amp;
+        const vy = -Math.cos(x * f) * Math.sin(y * f + ts) * amp;
+        x += vx;
+        y += vy;
+        if (x * x + y * y > R2) {
+          const a = Math.random() * TAU;
+          const r = Math.sqrt(Math.random() * 0.5) * R * 0.55;
+          x = Math.cos(a) * r;
+          y = Math.sin(a) * r;
+        }
+      }
+      if (_distortActive) {
+        const fo = fingerForce(x, y, z, R * 0.55);
+        x += fo.x * (0.7 + speed);
+        y += fo.y * (0.7 + speed);
+        z += fo.z * (0.7 + speed);
+      }
+      fluid[j] = x;
+      fluid[j + 1] = y;
+      fluid[j + 2] = z;
+
+      // 2. The liquid: where the dot is drawn. The Pulse's wave swells the radius
+      //    outward, a second wave swirls it, and a third lifts it in depth.
+      const rho = is3d ? Math.sqrt(x * x + y * y + z * z) : Math.sqrt(x * x + y * y);
+      // 2D: the Pulse's rings running outward. 3D: rings seen through a sphere overlap
+      // and blur, so the wave rolls across it instead, in wavy bands like light on liquid.
+      const wave = is3d
+        ? Math.sin(w - k * 1.5 * (y + 0.35 * R * Math.sin((x / R) * 3 + s * 0.6)))
+        : Math.sin(w - k * rho);
+      const grow = 1 + ripple * (is3d ? 0.17 : 0.12) * wave;
+      const swirl = ripple * 0.22 * Math.sin(6 * (rho / R) - w * 0.8) * (rho / R);
+      const cs = Math.cos(swirl);
+      const sn = Math.sin(swirl);
+      const dx = (x * cs - y * sn) * grow;
+      const dy = (x * sn + y * cs) * grow;
+      pos[j] = dx;
+      pos[j + 1] = dy;
+      pos[j + 2] = is3d ? z * grow : R * ripple * 0.06 * Math.sin(rho * k * 1.2 - s * 1.2);
+
+      // 3. The light: bright and warm on the crest, deeper in the trough.
+      // In 3D the troughs go darker, so the rings of the wave show through the sphere.
+      const glint = is3d
+        ? 0.3 + 0.95 * Math.max(0, wave) ** 1.5
+        : 0.62 + 0.48 * Math.max(0, wave) + 0.1 * wave;
+      const warm = Math.max(0, wave) * (0.35 + glowF * 0.5);
+      const scale = (light * glint) / 255;
+      col[j] = (base[0] * (1 - warm) + crest[0] * warm) * scale;
+      col[j + 1] = (base[1] * (1 - warm) + crest[1] * warm) * scale;
+      col[j + 2] = (base[2] * (1 - warm) + crest[2] * warm) * scale;
+    }
+    pts.geometry.getAttribute('position').needsUpdate = true;
+    pts.geometry.getAttribute('color').needsUpdate = true;
+    if (is3d) {
+      group.rotation.y += 0.00022 * speed * (dt / 16);
+      group.rotation.x += 0.00011 * speed * (dt / 16);
+    }
   }
 }
 
@@ -10944,7 +14186,97 @@ const DEFAULT_SLIDERS: SliderDef[] = [
   { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
 ];
 
+const LIQUID_SLIDERS: SliderDef[] = [
+  { key: 'symmetry', label: 'Folds', min: 3, max: 24, step: 1 },
+  { key: 'complexity', label: 'Detail', min: 1, max: 10, step: 1 },
+  { key: 'luminous', label: 'Ripple', min: 0, max: 5, step: 0.1 },
+  { key: 'breathSpeed', label: 'Flow Speed', min: 0.05, max: 2, step: 0.05 },
+  { key: 'glow', label: 'Colour Spread', min: 0, max: 10, step: 0.5 },
+  { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+  { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+];
+
+const CYMATIC_SLIDERS: SliderDef[] = [
+  { key: 'complexity', label: 'Frequency', min: 1, max: 10, step: 0.5 },
+  { key: 'breathSpeed', label: 'Loop Speed', min: 0.05, max: 1.5, step: 0.05 },
+  { key: 'glow', label: 'Rainbow', min: 0, max: 10, step: 0.5 },
+  { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+  { key: 'particles', label: 'Sand', min: 0, max: 10, step: 1 },
+  { key: 'luminous', label: 'Grain Size', min: 0, max: 5, step: 0.1 },
+  { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+];
+
 const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
+  flowfield: [
+    { key: 'symmetry', label: 'Gravity Wells', min: 4, max: 24, step: 1 },
+    { key: 'complexity', label: 'Turbulence', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Colour Spread', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Flow Speed', min: 0.05, max: 8, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Density', min: 1, max: 10, step: 1 },
+    { key: 'luminous', label: 'Dot Size', min: 0, max: 5, step: 0.1 },
+    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+  ],
+  flowwalkers: [
+    { key: 'symmetry', label: 'Gravity Wells', min: 4, max: 24, step: 1 },
+    { key: 'complexity', label: 'Liquid', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Colour Spread', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Flow Speed', min: 0.05, max: 8, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Density', min: 1, max: 10, step: 1 },
+    { key: 'luminous', label: 'Dot Size', min: 0, max: 5, step: 0.1 },
+    { key: 'stars', label: 'Walkers', min: 1, max: 4, step: 1 },
+  ],
+  flowsacred: [
+    { key: 'symmetry', label: 'Gravity Wells', min: 4, max: 24, step: 1 },
+    { key: 'complexity', label: 'Turbulence', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Colour Spread', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Flow Speed', min: 0.05, max: 8, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Density', min: 1, max: 10, step: 1 },
+    { key: 'luminous', label: 'Dot Size', min: 0, max: 5, step: 0.1 },
+    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+  ],
+  flowdance: [
+    { key: 'symmetry', label: 'Gravity Wells', min: 4, max: 24, step: 1 },
+    { key: 'complexity', label: 'Liquid', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Colour Spread', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Flow Speed', min: 0.05, max: 8, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Density', min: 1, max: 10, step: 1 },
+    { key: 'luminous', label: 'Dot Size', min: 0, max: 5, step: 0.1 },
+    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+  ],
+  flowsands: [
+    { key: 'symmetry', label: 'Gravity Wells', min: 4, max: 24, step: 1 },
+    { key: 'complexity', label: 'Turbulence', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Colour Spread', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Flow Speed', min: 0.05, max: 8, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Density', min: 1, max: 10, step: 1 },
+    { key: 'luminous', label: 'Dot Size', min: 0, max: 5, step: 0.1 },
+    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+  ],
+  flowbutterfly: [
+    { key: 'symmetry', label: 'Gravity Wells', min: 4, max: 24, step: 1 },
+    { key: 'complexity', label: 'Liquid', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Colour Spread', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Flow Speed', min: 0.05, max: 8, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Density', min: 1, max: 10, step: 1 },
+    { key: 'luminous', label: 'Dot Size', min: 0, max: 5, step: 0.1 },
+    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+  ],
+  flowlines: [
+    { key: 'symmetry', label: 'Gravity Wells', min: 4, max: 24, step: 1 },
+    { key: 'complexity', label: 'Turbulence', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Colour Spread', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Flow Speed', min: 0.05, max: 8, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Density', min: 1, max: 10, step: 1 },
+    { key: 'luminous', label: 'Dot Size', min: 0, max: 5, step: 0.1 },
+    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+  ],
   lissajous: [
     { key: 'symmetry', label: 'Copies', min: 1, max: 12, step: 1 },
     { key: 'complexity', label: 'Curves', min: 1, max: 6, step: 1 },
@@ -11226,6 +14558,93 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
     { key: 'luminous', label: 'Bloom', min: 0, max: 5, step: 0.1 },
   ],
+  // Liquid Chaos 2D / 3D: the current's sliders, with Luminous as the ripple.
+  currentliquid: [
+    { key: 'symmetry', label: 'Turbulence', min: 1, max: 12, step: 1 },
+    { key: 'luminous', label: 'Ripple', min: 0, max: 5, step: 0.1 },
+    { key: 'glow', label: 'Crest Warmth', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.05, max: 2.0, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  windtunnel: [
+    { key: 'particles', label: 'Object', min: 0, max: 2, step: 1 },
+    { key: 'complexity', label: 'Smoke Lines', min: 1, max: 10, step: 1 },
+    { key: 'glow', label: 'Turbulence', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Trails', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Wind Speed', min: 0.1, max: 2.0, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  murmuration: [
+    { key: 'complexity', label: 'Birds', min: 1, max: 10, step: 1 },
+    { key: 'glow', label: 'Turbulence', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Depth', min: 0, max: 10, step: 0.5 },
+    { key: 'symmetry', label: 'Turn', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  fishschool: [
+    { key: 'complexity', label: 'Fish', min: 1, max: 10, step: 1 },
+    { key: 'glow', label: 'Current', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Shimmer', min: 0, max: 10, step: 0.5 },
+    { key: 'symmetry', label: 'Turn', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  flowmasks: [
+    { key: 'symmetry', label: 'Mask 1-10', min: 1, max: 10, step: 1 },
+    { key: 'complexity', label: 'Density', min: 1, max: 10, step: 1 },
+    { key: 'glow', label: 'Rim Light', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Turbulence', min: 1, max: 12, step: 0.5 },
+    { key: 'breathSpeed', label: 'Flow', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  sacredfigures: [
+    { key: 'symmetry', label: 'Figure 1-10', min: 1, max: 10, step: 1 },
+    { key: 'complexity', label: 'Liquid', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Glint', min: 0, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Dots', min: 1, max: 10, step: 1 },
+    { key: 'breathSpeed', label: 'Breath', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  sacreddancers: [
+    { key: 'symmetry', label: 'Dancer 1-5', min: 1, max: 5, step: 1 },
+    { key: 'complexity', label: 'Liquid', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Glint', min: 0, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Dots', min: 1, max: 10, step: 1 },
+    { key: 'breathSpeed', label: 'Tempo', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  oneflame: [
+    { key: 'particles', label: 'Fire Colour', min: 0, max: 6, step: 1 },
+    { key: 'symmetry', label: 'Flame Height', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Golden Tips', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Sparks', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Flicker', min: 0.2, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  sauroneye: [
+    { key: 'symmetry', label: 'Flame Height', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Golden Tips', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Pupil', min: 0.2, max: 3, step: 0.1 },
+    { key: 'complexity', label: 'Fire Density', min: 1, max: 10, step: 1 },
+    { key: 'breathSpeed', label: 'Flicker', min: 0.2, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  musicliquid: [
+    { key: 'symmetry', label: 'Turbulence', min: 2, max: 12, step: 0.5 },
+    { key: 'glow', label: 'Drops', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Ripple', min: 0, max: 3, step: 0.1 },
+    { key: 'complexity', label: 'Density', min: 1, max: 10, step: 1 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  current3dliquid: [
+    { key: 'symmetry', label: 'Turbulence', min: 1, max: 12, step: 1 },
+    { key: 'luminous', label: 'Ripple', min: 0, max: 5, step: 0.1 },
+    { key: 'glow', label: 'Crest Warmth', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.05, max: 2.0, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
   matrix: [
     { key: 'complexity', label: 'Tail Length', min: 1, max: 10, step: 1 },
     { key: 'glow', label: 'Colour', min: 0, max: 10, step: 0.5 },
@@ -11338,8 +14757,8 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
   swirldottunnel: [
     { key: 'symmetry', label: 'Rings', min: 6, max: 28, step: 1 },
     { key: 'complexity', label: 'Swirl', min: 1, max: 10, step: 0.5 },
-    { key: 'glow', label: 'Vanish Point', min: 0, max: 10, step: 0.5 },
-    { key: 'breathSpeed', label: 'Forward Speed', min: 0.05, max: 1.5, step: 0.05 },
+    { key: 'glow', label: 'Vanish Point', min: 0, max: 20, step: 0.5 },
+    { key: 'breathSpeed', label: 'Forward Speed', min: 0.05, max: 1.5, step: 0.01 },
     { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
     { key: 'particles', label: 'Dots', min: 1, max: 10, step: 1 },
     { key: 'luminous', label: 'Bloom', min: 0, max: 5, step: 0.1 },
@@ -11371,11 +14790,20 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'particles', label: 'Dots', min: 1, max: 10, step: 1 },
     { key: 'luminous', label: 'Bloom', min: 0, max: 5, step: 0.1 },
   ],
+  // No Sacred Count: it only shaped the sliced petals the Flow trip leaves out.
+  tripnumber1flow: [
+    { key: 'complexity', label: 'Metamorphosis', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Void / Bloom', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: 'Trip Speed', min: 0.05, max: 1.2, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Dots', min: 1, max: 10, step: 1 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 5, step: 0.1 },
+  ],
   tripnumber2: [
     { key: 'symmetry', label: 'Mirrors', min: 3, max: 14, step: 1 },
     { key: 'complexity', label: 'Desert Chaos', min: 1, max: 10, step: 0.5 },
     { key: 'glow', label: 'Heat Colour', min: 0, max: 10, step: 0.5 },
-    { key: 'breathSpeed', label: 'Drop Pulse', min: 0.2, max: 2.2, step: 0.05 },
+    { key: 'breathSpeed', label: 'Drop Pulse', min: 0.1, max: 0.3, step: 0.01 },
     { key: 'intensity', label: 'Rings', min: 1, max: 10, step: 0.5 },
     { key: 'particles', label: 'Dust', min: 1, max: 10, step: 1 },
     { key: 'luminous', label: 'Bloom', min: 0, max: 5, step: 0.1 },
@@ -11426,7 +14854,120 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'luminous', label: 'Bloom', min: 0, max: 5, step: 0.1 },
     { key: 'complexity', label: 'Density', min: 1, max: 10, step: 1 },
   ],
+  // Tunnels
+  drostezoom: visualSliders(['Sides', 3, 16], ['Density', 1, 10], 'Twist'),
+  twistgate: visualSliders(['Sides', 3, 16], ['Twist', 0, 10], 'Curve'),
+  goldenseed: visualSliders(['Arms', 3, 16], ['Winding', 0, 10], 'Curve'),
+  fouriertube: visualSliders(['Ribs', 3, 16], ['Wobble', 0, 10], 'Curve'),
+  superrings: visualSliders(['Points', 3, 16], ['Morph', 0, 10], 'Curve'),
+  shadertunnel: visualSliders(['Ribs', 1, 16], ['Twist', 0, 10], 'Core'),
+  logspiral: visualSliders(['Arms', 1, 12], ['Wind', 0, 10], 'Core'),
+  // Oils
+  oilwarp: oilSliders(['Zoom', 1, 12], ['Detail', 2, 8], 'Warp', 'Rainbow'),
+  ripplefold: oilSliders(['Zoom', 1, 12], ['Folds', 1, 10], 'Waves', 'Rainbow'),
+  thinfilm: oilSliders(['Zoom', 1, 12], ['Detail', 2, 8], 'Warp', 'Iridescence'),
+  twooil: oilSliders(['Zoom', 1, 12], ['Detail', 2, 7], 'Swirl', 'Rainbow'),
+  lavalamp: oilSliders(['Blob Size', 1, 12], ['Blobs', 1, 10], 'Heat', 'Rainbow'),
+  // Magnetic Sands 1–4 (cymatics): no symmetry; the plate's own modes set it.
+  cymatics1: CYMATIC_SLIDERS,
+  cymatics2: CYMATIC_SLIDERS,
+  cymatics3: CYMATIC_SLIDERS,
+  cymatics4: CYMATIC_SLIDERS,
+  // Liquid 1–3: Folds, Detail and how strong the ripple is.
+  liquid1: LIQUID_SLIDERS,
+  liquid2: LIQUID_SLIDERS,
+  liquid3: LIQUID_SLIDERS,
+  liquid4: LIQUID_SLIDERS,
+  rollingwave: visualSliders(['Waves', 2, 6], ['Lines', 1, 10], 'Texture', 'Speed', 3),
+  fractalwave: visualSliders(['Claws', 1, 6], ['Depth', 1, 10], 'Texture', 'Speed', 3),
+  bbpulse: bigBangSliders('Folds', 4, 24),
+  bbtunnel: bigBangSliders('Prisms', 3, 9),
+  bbflower: bigBangSliders('Petals', 3, 34),
+  bbocean: bigBangSliders(null),
+  bbfractal: bigBangSliders('Folds', 4, 24),
+  thangka: [
+    { key: 'breathSpeed', label: 'Flow', min: 0.05, max: 1.5, step: 0.05 },
+    { key: 'complexity', label: 'Detail', min: 2, max: 7, step: 0.5 },
+    { key: 'particles', label: 'Gold', min: 0, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Rainbow', min: 0, max: 10, step: 0.5 },
+    { key: 'intensity', label: 'Light', min: 1, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
+  ],
+  rorschach: oilSliders(['Mirrors', 2, 12], ['Detail', 2, 8], 'Spread', 'Rainbow'),
 };
+
+// Shared slider shape for the Tunnels and Oils families: Glow is the
+// rainbow mix, Particles is the mode's extra (curve, core, swirl).
+function visualSliders(
+  [symLabel, symMin, symMax]: [string, number, number],
+  [cxLabel, cxMin, cxMax]: [string, number, number],
+  extraLabel: string,
+  speedLabel = 'Speed',
+  bloomMax = 5,
+): SliderDef[] {
+  return [
+    { key: 'symmetry', label: symLabel, min: symMin, max: symMax, step: 1 },
+    { key: 'complexity', label: cxLabel, min: cxMin, max: cxMax, step: 0.5 },
+    { key: 'glow', label: 'Rainbow', min: 0, max: 10, step: 0.5 },
+    { key: 'breathSpeed', label: speedLabel, min: 0.05, max: 1.5, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: extraLabel, min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: bloomMax, step: 0.1 },
+    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+  ];
+}
+
+// Oils: Flow first (it is what you reach for), then shape, detail, the oil's own
+// extra, colour shift, light and bloom. No Stars: an oil is a liquid surface.
+function oilSliders(
+  [shapeLabel, shapeMin, shapeMax]: [string, number, number],
+  [detailLabel, detailMin, detailMax]: [string, number, number],
+  extraLabel: string,
+  shiftLabel: string,
+): SliderDef[] {
+  return [
+    { key: 'breathSpeed', label: 'Flow', min: 0.05, max: 1.5, step: 0.05 },
+    { key: 'symmetry', label: shapeLabel, min: shapeMin, max: shapeMax, step: 1 },
+    { key: 'complexity', label: detailLabel, min: detailMin, max: detailMax, step: 0.5 },
+    { key: 'particles', label: extraLabel, min: 0, max: 10, step: 0.5 },
+    { key: 'glow', label: shiftLabel, min: 0, max: 10, step: 0.5 },
+    { key: 'intensity', label: 'Light', min: 1, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
+  ];
+}
+
+/*
+ * OIL COLOURS. Each oil is painted from four colours, in this order: the
+ * liquid (ground), the first oil, the light, the second oil. A palette sets all
+ * four; each can then be changed on its own. Chosen colours stay when you move
+ * from one oil to another.
+ */
+export const OIL_COLOUR_ROLES = ['Liquid', 'Oil 1', 'Light', 'Oil 2'] as const;
+export const OIL_PALETTES: { name: string; colors: [string, string, string, string] }[] = [
+  { name: 'Lava', colors: ['#1a0505', '#d4301c', '#ffd27a', '#ff7a1a'] },
+  { name: 'Ocean', colors: ['#020c1a', '#0e6e9a', '#d8f4ff', '#18b8a8'] },
+  { name: 'Psychedelic', colors: ['#12021e', '#b21fd6', '#f8ff8a', '#18e0c8'] },
+  { name: 'Sunset', colors: ['#140820', '#d8456e', '#ffd48a', '#ff8a3c'] },
+  { name: 'Forest', colors: ['#03100a', '#2f7a3c', '#f2e6b0', '#b89a2a'] },
+  { name: 'Gold', colors: ['#120a02', '#a8741c', '#fff0c0', '#e0b040'] },
+  { name: 'Tangka', colors: ['#0a0614', '#1f4fa8', '#f6c64a', '#c0262e'] },
+  { name: 'Rose', colors: ['#160610', '#c23a74', '#ffe0ec', '#f08aa8'] },
+  { name: 'Mono', colors: ['#050505', '#6a6a72', '#f4f4f6', '#a8a8b0'] },
+];
+
+// Big Bang moments: their shape count, the Timer (fully left = off; 10–30 s =
+// explode and gather back on that rhythm), speed, light, dots, glow, stars.
+function bigBangSliders(shape: string | null, min = 3, max = 24): SliderDef[] {
+  return [
+    ...(shape ? [{ key: 'symmetry' as const, label: shape, min, max, step: 1 }] : []),
+    { key: 'complexity', label: 'Timer', min: 9, max: 30, step: 1 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.2, max: 2, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 1, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Dots', min: 0, max: 10, step: 1 },
+    { key: 'luminous', label: 'Glow', min: 0, max: 5, step: 0.1 },
+    { key: 'stars', label: 'Stars', min: 0, max: 10, step: 1 },
+  ];
+}
 
 function slidersFor(mode: Mode): SliderDef[] {
   return MODE_SLIDERS[mode] ?? DEFAULT_SLIDERS;
@@ -11435,6 +14976,13 @@ function slidersFor(mode: Mode): SliderDef[] {
 /* ── Mode pill definitions ──────────────────────────────────── */
 
 const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
+  flowfield: 'Flow Field',
+  flowwalkers: 'Flow Walkers',
+  flowsacred: 'Flow Sacred',
+  flowdance: 'Dance Walkers',
+  flowsands: 'Magnetic Sands 2',
+  flowbutterfly: 'Butterfly',
+  flowlines: 'Star Sand Lines',
   burst: 'DMT Vision',
   kaleidoscope: 'Cosmic Indigo',
   tunnel: 'Warp Tunnel',
@@ -11484,6 +15032,17 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   nebula: 'Nebula Veil',
   globe: 'Emotion Globe',
   current3d: 'Current 3D',
+  currentliquid: 'Liquid Chaos',
+  current3dliquid: 'Liquid Quantum',
+  musicliquid: 'Music Liquid Chaos',
+  sauroneye: "Sauron's Eye",
+  oneflame: 'One Flame',
+  sacredfigures: 'Sacred Figures',
+  sacreddancers: 'Sacred Dancers',
+  windtunnel: 'Wind',
+  murmuration: 'Murmuration',
+  fishschool: 'Fish School',
+  flowmasks: 'Flow Masks',
   matrix: 'Matrix Rain',
   matrix3d: 'Matrix Rain',
   pulse: 'Rorschach Pulse',
@@ -11508,6 +15067,7 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   dotroad: 'Dot Road',
 
   tripnumber1: 'Trip Number 1',
+  tripnumber1flow: 'Trip Number 1 Flow',
   tripnumber2: 'Trip Number 2',
   tripnumber3: 'Trip Number 3',
   buddhaboycurrents: 'Buddha Boy Currents',
@@ -11538,6 +15098,35 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   infinitedive: 'Infinite Dive',
   clockorbit3d: 'Clock Orbit',
   chaostrisphere: 'Chaos Tri Sphere',
+  drostezoom: 'Golden Zoom',
+  twistgate: 'Twisted Gate',
+  goldenseed: 'Golden Seed Tunnel',
+  fouriertube: 'Fourier Tube',
+  superrings: 'Superformula Rings',
+  shadertunnel: 'Shader Tunnel',
+  logspiral: 'Log Spiral Wormhole',
+  oilwarp: 'Oil Warp',
+  ripplefold: 'Ripple Fold',
+  thinfilm: 'Thin Film',
+  twooil: 'Two Oil Projector',
+  lavalamp: 'Lava Lamp',
+  rorschach: 'Rorschach Oils',
+  thangka: 'Thangka',
+  bbpulse: 'Pulse',
+  bbtunnel: 'Prism Tunnel',
+  bbflower: 'Flower Symmetry',
+  bbocean: 'Ocean of Life',
+  bbfractal: 'Fractal Break',
+  cymatics1: 'Cymatic Sands 1',
+  cymatics2: 'Cymatic Sands 2',
+  cymatics3: 'Cymatic Sands 3',
+  cymatics4: 'Cymatic Sands 4',
+  liquid1: 'Liquid 1',
+  liquid2: 'Liquid 2',
+  liquid3: 'Liquid 3',
+  liquid4: 'Liquid 4',
+  rollingwave: 'Rolling Wave',
+  fractalwave: 'Fractal Wave',
 };
 
 const MODES: { mode: Mode; label: string }[] = [
@@ -11608,6 +15197,13 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'cyclonetiles', label: 'Cyclone Tiles' },
   { mode: 'eddylace', label: 'Eddy Lace' },
   { mode: 'magneticsand', label: 'Magnetic Sand' },
+  { mode: 'flowfield', label: 'Flow Field' },
+  { mode: 'flowwalkers', label: 'Flow Walkers' },
+  { mode: 'flowsacred', label: 'Flow Sacred' },
+  { mode: 'flowdance', label: 'Dance Walkers' },
+  { mode: 'flowsands', label: 'Magnetic Sands 2' },
+  { mode: 'flowbutterfly', label: 'Butterfly' },
+  { mode: 'flowlines', label: 'Star Sand Lines' },
   { mode: 'eclipse', label: 'Eclipse' },
   { mode: 'yinyang', label: 'Yin Yang' },
   { mode: 'volcano', label: 'Volcano' },
@@ -11615,6 +15211,17 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'gravity', label: 'Gravity' },
   { mode: 'fire', label: 'Fire' },
   { mode: 'current3d', label: '∿³ Current 3D' },
+  { mode: 'currentliquid', label: '≋ Liquid Chaos' },
+  { mode: 'current3dliquid', label: '≋³ Liquid Quantum' },
+  { mode: 'musicliquid', label: '♪ Music Liquid Chaos' },
+  { mode: 'sauroneye', label: "◉ Sauron's Eye" },
+  { mode: 'oneflame', label: '🜂 One Flame' },
+  { mode: 'sacredfigures', label: '☸ Sacred Figures' },
+  { mode: 'sacreddancers', label: '☸ Sacred Dancers' },
+  { mode: 'windtunnel', label: '≫ Wind' },
+  { mode: 'murmuration', label: '⋰ Murmuration' },
+  { mode: 'fishschool', label: '⋰ Fish School' },
+  { mode: 'flowmasks', label: '◕ Flow Masks' },
   { mode: 'plasma', label: '☀ Plasma' },
   { mode: 'nebula', label: 'Nebula' },
 
@@ -11642,6 +15249,7 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'dotroad', label: 'Dot Road' },
 
   { mode: 'tripnumber1', label: 'Trip Number 1' },
+  { mode: 'tripnumber1flow', label: 'Trip Number 1 Flow' },
   { mode: 'tripnumber2', label: 'Trip Number 2' },
   { mode: 'tripnumber3', label: 'Trip Number 3' },
   { mode: 'buddhaboycurrents', label: 'Buddha Boy Currents' },
@@ -11663,32 +15271,225 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'entropy', label: '⋮ Entropy' },
   { mode: 'entropy3d', label: '⋮³ Entropy 3D' },
   { mode: 'embf3d', label: '◎ EMBF 3D' },
+  { mode: 'drostezoom', label: 'φ Golden Zoom' },
+  { mode: 'twistgate', label: '⬡ Twisted Gate' },
+  { mode: 'goldenseed', label: 'φ Seed Tunnel' },
+  { mode: 'fouriertube', label: '∿ Fourier Tube' },
+  { mode: 'superrings', label: '✦ Superformula' },
+  { mode: 'shadertunnel', label: '⊙ Shader Tunnel' },
+  { mode: 'logspiral', label: '@ Log Spiral' },
+  { mode: 'oilwarp', label: '〰 Oil Warp' },
+  { mode: 'ripplefold', label: '〰 Ripple Fold' },
+  { mode: 'thinfilm', label: '◌ Thin Film' },
+  { mode: 'twooil', label: '◐ Two Oils' },
+  { mode: 'lavalamp', label: '● Lava Lamp' },
+  { mode: 'rorschach', label: '⧓ Rorschach' },
+  { mode: 'thangka', label: '☸ Thangka' },
+  { mode: 'bbpulse', label: '✦ Pulse' },
+  { mode: 'bbtunnel', label: '△ Prism Tunnel' },
+  { mode: 'bbflower', label: '✿ Flower Symmetry' },
+  { mode: 'bbocean', label: '∿ Ocean of Life' },
+  { mode: 'bbfractal', label: '△ Fractal Break' },
+  { mode: 'cymatics1', label: '◎ Cymatic Sands 1' },
+  { mode: 'cymatics2', label: '⊞ Cymatic Sands 2' },
+  { mode: 'cymatics3', label: '◎³ Cymatic Sands 3' },
+  { mode: 'cymatics4', label: '◉³ Cymatic Sands 4' },
+  { mode: 'liquid1', label: '≋ Liquid 1' },
+  { mode: 'liquid2', label: '≋ Liquid 2' },
+  { mode: 'liquid3', label: '≋ Liquid 3' },
+  { mode: 'liquid4', label: '≋ Liquid 4' },
+  { mode: 'rollingwave', label: '∿ Rolling Wave' },
+  { mode: 'fractalwave', label: '@ Fractal Wave' },
 ];
+
+/*
+ * ART TABS. The panel's programs come in four families, one tab each:
+ * Stars (drawn with dots), Geometry (drawn with lines), Tunnels (every visual
+ * you fly into) and Oils (the liquid shaders). Stars and Geometry come from the
+ * same builder; the split is how a preset is drawn. Sorted 2026-10-08 by
+ * reading each mode's build/draw code for points versus lines.
+ */
+export type ArtTab = 'stars' | 'geometry' | 'tunnels' | 'oils';
+export const ART_TABS: { id: ArtTab; label: string }[] = [
+  { id: 'stars', label: 'Stars' },
+  { id: 'geometry', label: 'Geometry' },
+  { id: 'tunnels', label: 'Tunnels' },
+  { id: 'oils', label: 'Oils' },
+];
+const TUNNEL_TAB_MODES = new Set<Mode>([
+  'tunnel',
+  'linetunnel3d',
+  'dottunnel',
+  'swirldottunnel',
+  'dotroad',
+  'mirrortunnel',
+  'infinitedive',
+  'drostezoom',
+  'twistgate',
+  'goldenseed',
+  'fouriertube',
+  'superrings',
+  'shadertunnel',
+  'logspiral',
+]);
+const STAR_TAB_MODES = new Set<Mode>([
+  'atomicexplosion',
+  'atomlight',
+  'breath',
+  'buddhaboycurrents',
+  'cells',
+  'clifford',
+  'clockorbit3d',
+  'constellation',
+  'current',
+  'current3d',
+  'currentliquid',
+  'current3dliquid',
+  'musicliquid',
+  'sauroneye',
+  'oneflame',
+  'sacredfigures',
+  'sacreddancers',
+  'windtunnel',
+  'murmuration',
+  'fishschool',
+  'flowmasks',
+  'currentscales',
+  'cyclonetiles',
+  'cymatics1',
+  'cymatics2',
+  'cymatics3',
+  'cymatics4',
+  'dotalchemicalsun',
+  'dotbrain',
+  'dotheart',
+  'dotphoenix',
+  'dotsunfire',
+  'dotsunoutward',
+  'dotwalker',
+  'drift',
+  'eclipse',
+  'eddylace',
+  'embf3d',
+  'embrace',
+  'entropy',
+  'fire',
+  'flowbutterfly',
+  'flowdance',
+  'flowfield',
+  'flowlines',
+  'flowsacred',
+  'flowsands',
+  'flowwalkers',
+  'globe',
+  'gravity',
+  'liquid',
+  'lorenz',
+  'magneticsand',
+  'matrix',
+  'matrix3d',
+  'missionsun',
+  'musicdots',
+  'musiclattice',
+  'musicnebula',
+  'nebula',
+  'neuronweb',
+  'orbit',
+  'plasma',
+  'prism',
+  'prism3d',
+  'pulse',
+  'scriptures',
+  'scripturesjp',
+  'sinmorph3d',
+  'touchpreset',
+  'tripnumber1',
+  'tripnumber1flow',
+  'tripnumber2',
+  'volcano',
+  'wordparticle',
+  'yinyang',
+  'bbpulse',
+  'bbtunnel',
+  'bbflower',
+  'bbocean',
+  'bbfractal',
+]);
+export function artTabOf(mode: Mode): ArtTab {
+  if (isOilMode(mode)) return 'oils';
+  if (TUNNEL_TAB_MODES.has(mode)) return 'tunnels';
+  if (STAR_TAB_MODES.has(mode)) return 'stars';
+  return 'geometry';
+}
+
+/** The featured list for one tab: its presets, under the headers that still have any. */
+export function featuredFor(tab: ArtTab): FeaturedItem[] {
+  const out: FeaturedItem[] = [];
+  let header: FeaturedItem | null = null;
+  for (const item of FEATURED_PRESETS) {
+    if ('header' in item) {
+      header = item;
+      continue;
+    }
+    const p = PRESETS[item.name];
+    if (!p || artTabOf(p.mode) !== tab) continue;
+    if (header) {
+      out.push(header);
+      header = null;
+    }
+    out.push(item);
+  }
+  return out;
+}
 
 type FeaturedItem = { name: string; tag: string } | { header: string; dim?: boolean };
 
 export const FEATURED_PRESETS: FeaturedItem[] = [
   { header: 'Good Ones' },
+  // 18 Oct 2026, for the Ferrari project: "a star preset called Wind … currents of wind passing over an
+  // object from its left to its right: aerodynamics, the union of science and art. Later with a car."
+  { name: 'Wind', tag: 'WIND' },
+  { name: 'Wind Wing', tag: 'WIND' },
+  { name: 'Wind Body', tag: 'WIND' },
+  // 13 Oct 2026: "that liquid chaos from Music is amazing, use it as a star preset." First.
+  { name: 'Music Liquid Chaos', tag: 'LIQUID' },
+  // 13 Oct 2026: "a Sauron's eye … red, the tips more golden, like real fire, with the cat's eye in the centre."
+  { name: "Sauron's Eye", tag: 'FIRE' },
+  // 13 Oct 2026: "just one flame floating … red with golden tips, orange in the middle … the stars going up."
+  { name: 'One Flame', tag: 'FIRE' },
+  // 13 Oct 2026: ten sacred figures of the Indian and Tibetan gods, and five sacred dancers.
+  { name: 'Sacred Figures', tag: 'SACRED' },
+  { name: 'Sacred Dancers', tag: 'SACRED' },
+  // 13 Oct 2026: a murmuration of small birds, a school of fish, and ten masks of flowing gold.
+  { name: 'Murmuration', tag: 'FLOCK' },
+  { name: 'Fish School', tag: 'FLOCK' },
+  { name: 'Flow Masks', tag: 'MASK' },
+  { name: 'Magnetic Sand', tag: 'CURRENT' },
+  { name: 'Dot Walker', tag: 'CHAR' },
+  // 13 Oct 2026: among the best, so third and fourth in Stars.
+  { name: 'Chaos Field', tag: 'CHAOS' },
+  { name: 'Quantum Chaos', tag: 'CHAOS' },
+  { name: 'Liquid Chaos', tag: 'LIQUID' },
+  { name: 'Liquid Quantum', tag: 'LIQUID' },
   { name: 'Trip Number 1', tag: 'TRIP' },
+  { name: 'Trip Number 1 Flow', tag: 'TRIP' },
   { name: 'Trip Number 2', tag: 'DROP' },
   { name: 'Trip Number 3', tag: 'TRI' },
-  { name: 'Buddha Boy Currents', tag: 'FORM' },
-  { name: 'Scriptures', tag: 'TOP' },
-  { name: 'Vertical Scriptures', tag: 'TOP' },
-  { name: 'Eclipse', tag: 'TOP' },
-  { name: 'Yin Yang', tag: 'TOP' },
-  { name: 'Atomic Explosion', tag: 'TOP' },
+  { name: 'Flow Field', tag: 'FLOW' },
+  { name: 'Magnetic Sands 2', tag: 'FLOW' },
+  { name: 'Golden Flow', tag: 'FLOW' },
   { name: 'Gravity', tag: 'TOP' },
   { name: 'Fire', tag: 'TOP' },
   { name: 'Prism3D Core', tag: 'PRISM' },
   { name: 'Prism Bloom', tag: 'PRISM' },
+  { name: 'Prism Seed', tag: 'PRISM' },
+  { name: 'Cathedral Glass', tag: 'GLASS' },
   { name: 'Clock Orbit', tag: 'CLOCK' },
   { name: 'Ocean Drift', tag: 'CURRENT' },
   { name: 'Current 3D', tag: 'CURRENT' },
   { name: 'Current Scales', tag: 'CURRENT' },
   { name: 'Cyclone Tiles', tag: 'CURRENT' },
   { name: 'Eddy Lace', tag: 'CURRENT' },
-  { name: 'Magnetic Sand', tag: 'CURRENT' },
   { name: 'Mission Sun', tag: 'VOICE' },
   { name: 'Fire Dot Sun', tag: 'DOT' },
   { name: 'Dot Heart', tag: 'DOT' },
@@ -11705,29 +15506,19 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Touch Preset', tag: 'TOUCH' },
 
   { name: 'Outward Sun', tag: 'DOT' },
-  { name: 'Chaos Field', tag: 'CHAOS' },
-  { name: 'Quantum Chaos', tag: 'CHAOS' },
   { name: 'Chaos Triangles', tag: '3D' },
   { name: 'Chaos Tri Sphere', tag: '3D' },
-  { name: 'Mode Sun', tag: 'SELF' },
-  { name: 'Brain Topography', tag: 'SELF' },
-  { name: 'Walking Figure', tag: 'CHAR' },
-  { name: 'Dot Walker', tag: 'CHAR' },
   { name: 'Alchemical Dot Sun', tag: 'DOT' },
   { name: 'Sin Morph', tag: 'TOP' },
-  { name: 'Sacred Sin Morph', tag: 'MUSIC' },
   { name: 'Chaos Sin Morph', tag: 'MUSIC' },
   { name: 'Drift Field', tag: 'MUSIC' },
-  { name: 'Starflow Galaxy', tag: 'MUSIC' },
   { name: 'Sacred Pyramid', tag: 'MUSIC' },
   { name: 'Focus Arc', tag: 'MUSIC' },
-  { name: 'Chrysalis Rings', tag: 'MORPH' },
   { name: 'Yantra 3D', tag: 'YANTRA' },
   { name: 'Yantra Prism', tag: 'YANTRA' },
   { name: 'Yantra Colour', tag: 'YANTRA' },
   { name: 'Yantra Mono', tag: 'YANTRA' },
   { name: 'Chaos Pulse', tag: 'CHAOS' },
-  { name: 'Random Burst', tag: 'CHAOS' },
   { name: 'Chaos Tri Gold', tag: '3D' },
   { name: 'Chaos Storm 3D', tag: '3D' },
   { name: 'Drift Gold', tag: 'FLOW' },
@@ -11735,13 +15526,6 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Deep Flow 3D', tag: 'FLOW' },
   { name: 'Plasma Field', tag: 'FLOW' },
   { name: 'Solar Flare', tag: 'FLOW' },
-  { name: 'Music Entropy', tag: 'MUSIC' },
-  { name: 'Music Nebula', tag: 'MUSIC' },
-  { name: 'Groove Lattice', tag: 'MUSIC' },
-  { name: 'Nebula Veil', tag: 'NEBULA' },
-  { name: 'Nebula Bloom', tag: 'NEBULA' },
-  { name: 'Dot Galaxy', tag: 'GALAXY' },
-  { name: 'Emotion Field', tag: 'SELF' },
   { name: 'Emotion Storm', tag: 'SELF' },
   { name: 'Star Map', tag: 'SELF' },
   { name: 'Constellation Gold', tag: 'SELF' },
@@ -11755,20 +15539,57 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Rose 3D', tag: '3D' },
   { name: 'Helix 3D', tag: '3D' },
   { name: 'Orbital 3D', tag: '3D' },
-  { name: 'Golden Clock', tag: 'CLOCK' },
   { name: 'Armillary Gold', tag: 'CLOCK' },
-  { name: 'Atom Light', tag: 'ATOM' },
-  { name: 'Orbital Dance', tag: 'ORBIT' },
   { name: 'Ripple Morph', tag: 'MORPH' },
   { name: 'EMBF Live', tag: 'EMBF' },
-  { name: 'Deep Gaze', tag: 'EYE' },
-  { name: 'Cathedral Glass', tag: 'GLASS' },
-  { name: 'Prism Seed', tag: 'PRISM' },
   { name: 'Entropy 3D', tag: 'CORE' },
   { name: 'Embrace', tag: 'DOT' },
   { name: 'Dot Tunnel', tag: 'DEPTH' },
-  { name: 'Line Tunnel 3D', tag: 'DEPTH' },
+  { name: 'Random Burst', tag: 'CHAOS' },
+  { name: 'Starflow Galaxy', tag: 'MUSIC' },
+  { header: 'Tunnels' },
+  { name: 'Golden Zoom', tag: 'ZOOM' },
+  { name: 'Twisted Gate', tag: 'GATE' },
+  { name: 'Golden Seed Tunnel', tag: 'SEED' },
+  { name: 'Fourier Tube', tag: 'TUBE' },
+  { name: 'Superformula Rings', tag: 'RINGS' },
+  { name: 'Shader Tunnel', tag: 'SHADER' },
+  { name: 'Log Spiral Wormhole', tag: 'SPIRAL' },
+  { header: 'Oils' },
+  { name: 'Oil Warp', tag: 'OIL' },
+  { name: 'Ripple Fold', tag: 'OIL' },
+  { name: 'Thin Film', tag: 'OIL' },
+  { name: 'Two Oil Projector', tag: 'OIL' },
+  { name: 'Lava Lamp', tag: 'OIL' },
+  { name: 'Rorschach Oils', tag: 'MIRROR' },
+  { name: 'Mirror Oils', tag: 'MIRROR' },
+  { name: 'Thangka', tag: 'MANDALA' },
+  { name: 'Thangka Lapis', tag: 'MANDALA' },
+  { name: 'Thangka Crimson', tag: 'MANDALA' },
+  { header: 'Big Bang' },
+  { name: 'Pulse', tag: 'SAND' },
+  { name: 'Fractal Break', tag: 'FRACTAL' },
+  { name: 'Flower Symmetry', tag: 'FLOWER' },
+  { name: 'Prism Tunnel', tag: 'TUNNEL' },
+  { name: 'Ocean of Life', tag: 'LIFE' },
+  { header: 'Magnetic Sands' },
+  { name: 'Cymatic Sands 1', tag: 'CIRCLE' },
+  { name: 'Cymatic Sands 2', tag: 'SQUARE' },
+  { name: 'Cymatic Sands 3', tag: '3D' },
+  { name: 'Cymatic Sands 4', tag: 'SPHERE' },
+  { header: 'Liquid' },
+  { name: 'Liquid 1', tag: 'WEB' },
+  { name: 'Liquid 2', tag: 'ROSE' },
+  { name: 'Liquid 3', tag: 'POND' },
+  { name: 'Liquid 4', tag: 'PRISM' },
+  { header: 'Waves' },
+  { name: 'Rolling Wave', tag: 'FREE' },
+  { name: 'Fractal Wave', tag: 'HOKUSAI' },
   { header: 'In Progress / To Develop', dim: true },
+  // Moved here 13 Oct 2026: their flowers and shapes are cut on the right, not
+  // complete in their circle. Back to Good Ones once they fit.
+  { name: 'Flow Sacred', tag: 'FLOW' },
+  { name: 'Butterfly', tag: 'FLOW' },
   { name: 'Chrysalis', tag: 'MORPH' },
   { name: 'Metamorph', tag: 'MORPH' },
   { name: 'Mirror Tunnel', tag: 'DEPTH' },
@@ -11780,7 +15601,57 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Tree of Life', tag: 'TREE' },
   { name: 'Tangka Lotus', tag: 'TIB' },
   { name: 'Matrix Rain', tag: 'DOT' },
+  // Moved here from Good Ones on 3 Oct 2026: the trip is not finished yet.
+  { name: 'Star Sand Lines', tag: 'FLOW' },
 ];
+
+// Diaporama — a generated "play all" program: every featured preset in list
+// order (up to #76), each carrying its own config, looping forever. The journey
+// engine crossfades between slides so it never hard-cuts, and the builder's
+// sliders adapt to each stage's mode as it plays. Pushed onto JOURNEYS so it
+// appears in the Journeys tab like any other program.
+// Slow + calm: each slide holds ~a minute, and every preset's animation speed
+// is capped so nothing races by — it should drift, not flicker. A few presets
+// are skipped so the loop stays on the ones worth lingering on.
+const DIAPORAMA_SLIDE_SEC = 60;
+const DIAPORAMA_MAX_SPEED = 0.18;
+const DIAPORAMA_SKIP = new Set([
+  'Sacred Sin Morph',
+  'Chaos Sin Morph',
+  'Drift Field',
+  'Sacred Pyramid',
+]);
+const DIAPORAMA_STAGES: JourneyStage[] = FEATURED_PRESETS.flatMap((item) => {
+  if (!('name' in item)) return [];
+  if (DIAPORAMA_SKIP.has(item.name)) return [];
+  const p = PRESETS[item.name];
+  if (!p) return [];
+  return [
+    {
+      name: item.name,
+      preset: p.preset,
+      mode: p.mode,
+      duration: DIAPORAMA_SLIDE_SEC,
+      symmetry: p.symmetry,
+      complexity: p.complexity,
+      glow: p.glow,
+      breathSpeed: Math.min(p.breathSpeed ?? DIAPORAMA_MAX_SPEED, DIAPORAMA_MAX_SPEED),
+      intensity: p.intensity,
+      particles: p.particles,
+      luminous: p.luminous,
+      stars: p.stars,
+    },
+  ];
+}).slice(0, 76);
+
+JOURNEYS.push({
+  id: JOURNEYS.length + 1,
+  name: 'Diaporama — Play All',
+  icon: 'ALL',
+  desc: `Every preset, one after another — the whole library as a slideshow, up to #${DIAPORAMA_STAGES.length}, looping forever. Slow and calm: ~${Math.round((DIAPORAMA_STAGES.length * DIAPORAMA_SLIDE_SEC) / 60)} minutes at ${DIAPORAMA_SLIDE_SEC}s a slide; the sliders adapt to each stage as it plays.`,
+  stages: DIAPORAMA_STAGES,
+});
+
 /* ── Finger distortion (module-level, single-instance) ───────── */
 let _distortActive = false;
 let _distortWorldX = 0;
@@ -12335,17 +16206,7 @@ function buildDotWalker(cfg: Cfg, R: number): THREE.Group {
   dots.userData.tag = 'dotWalkerDots';
   group.add(dots);
 
-  for (let walker = 0; walker < 4; walker++) {
-    const trailGeo = new THREE.BufferGeometry();
-    trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(220 * 3), 3));
-    const trail = new THREE.Line(
-      trailGeo,
-      lineMat(hdrColor(pal.rgb, cfg.intensity / 10, 1.8), 0.2),
-    );
-    trail.userData.tag = 'dotWalkerTrail';
-    trail.userData.walkerIndex = walker;
-    group.add(trail);
-  }
+  // Walker trails intentionally omitted — no lines below the figures.
 
   return group;
 }
@@ -12651,6 +16512,682 @@ const DEPTH_DOT_COUNT = 2800;
 const DEPTH_LINE_RINGS = 34;
 const DEPTH_LINE_SEGMENTS = 72;
 
+/* ── Flow Field — continuous-transformation particle system ───── */
+const FLOW_FIELD_COUNT = 5200;
+
+// Target formations the flow field morphs between (0 = the dense home disk).
+function flowFormation(f: number, i: number, hx: number, hy: number, R: number): [number, number] {
+  if (f === 0) return [hx, hy];
+  const u = (i + 0.5) / FLOW_FIELD_COUNT;
+  const ga = i * 2.399963229728653;
+  if (f === 1) {
+    // Phyllotaxis sunflower
+    const r = Math.sqrt(u) * R * 0.92;
+    return [Math.cos(ga) * r, Math.sin(ga) * r];
+  }
+  if (f === 2) {
+    // Concentric rings
+    const nR = 7;
+    const ring = Math.floor(u * nR);
+    const rr = ((ring + 0.6) / nR) * R * 0.92;
+    const a = (u * nR - ring) * Math.PI * 2;
+    return [Math.cos(a) * rr, Math.sin(a) * rr];
+  }
+  if (f === 3) {
+    // Square lattice
+    const cols = Math.round(Math.sqrt(FLOW_FIELD_COUNT));
+    const gx = ((i % cols) / (cols - 1) - 0.5) * R * 1.7;
+    const gy = (Math.floor(i / cols) / (cols - 1) - 0.5) * R * 1.7;
+    return [gx, gy];
+  }
+  if (f === 4) {
+    // Spiral
+    const r = u * R * 0.92;
+    const a = ga * 0.5 + (r / R) * 7;
+    return [Math.cos(a) * r, Math.sin(a) * r];
+  }
+  if (f === 5) {
+    // Gerono lemniscate — nested figure-8 ribbons (the Magnetic-Sands double loop)
+    const ring = 0.4 + 0.6 * ((i * 0.61803398875) % 1);
+    const t = u * Math.PI * 2;
+    return [Math.cos(t) * R * 0.95 * ring, Math.sin(2 * t) * 0.5 * R * 0.95 * ring];
+  }
+  // f === 6: double spiral (two counter-rotating arms)
+  const arm = i % 2 === 0 ? 1 : -1;
+  const r6 = u * R * 0.92;
+  const a6 = arm * (ga * 0.5 + (r6 / R) * 7);
+  return [Math.cos(a6) * r6, Math.sin(a6) * r6];
+}
+
+// Movements: each owns a target formation + force mix; the field crossfades
+// between them continuously (~75s each) so it is always transforming. A long
+// 10-act cycle (~12.5 min) that now folds in two figure-8 "double loop" acts.
+const FLOW_MOVEMENTS = [
+  { form: 0, spring: 0.08, swirl: 0.3, flow: 0.5, breath: 0.2, wob: 0.1 },
+  { form: 1, spring: 0.07, swirl: 0.45, flow: 0.6, breath: 0.35, wob: 0.25 },
+  { form: 5, spring: 0.06, swirl: 0.7, flow: 0.7, breath: 0.3, wob: 0.2 }, // figure-8 double loop
+  { form: 0, spring: 0.05, swirl: 1.0, flow: 0.7, breath: 0.3, wob: 0.15 },
+  { form: 2, spring: 0.09, swirl: 0.3, flow: 0.4, breath: 0.2, wob: 0.9 },
+  { form: 6, spring: 0.07, swirl: 0.55, flow: 0.65, breath: 0.4, wob: 0.2 }, // double spiral
+  { form: 3, spring: 0.11, swirl: 0.2, flow: 0.3, breath: 0.15, wob: 0.1 },
+  { form: 5, spring: 0.06, swirl: 0.8, flow: 0.75, breath: 0.35, wob: 0.2 }, // figure-8 again, faster
+  { form: 4, spring: 0.06, swirl: 0.6, flow: 0.7, breath: 0.5, wob: 0.2 },
+  { form: 1, spring: 0.07, swirl: 0.4, flow: 0.55, breath: 0.3, wob: 0.2 },
+];
+
+// Flow Walkers — formations are walker silhouettes (designs 1–5); the field
+// morphs from one walking figure into the next through the flow.
+function flowWalkerFormation(design: number, i: number, R: number, ph: number): [number, number] {
+  // ~1 in 5 particles ring the figure with a slow 6-fold sacred halo, so the
+  // walker reads against a circle of context (like the dot-walker mode).
+  if (i % 5 === 0) {
+    const cu = (i * 0.61803398875) % 1;
+    const ca = cu * Math.PI * 2 + ph * 0.15;
+    const petal = 0.92 + 0.1 * Math.cos(ca * 6);
+    const rr = R * (1.2 + 0.25 * cu) * petal;
+    return [Math.cos(ca) * rr, Math.sin(ca) * rr];
+  }
+  const q = (i + 0.5) / FLOW_FIELD_COUNT;
+  const zone = q < 0.2 ? 0 : q < 0.44 ? 1 : q < 0.66 ? 2 : q < 0.83 ? 3 : 4;
+  const local = (q * FLOW_FIELD_COUNT * 1.61803398875) % 1;
+  const a = i * 2.399963229728653;
+  const spread = Math.sqrt(local);
+  const sx = Math.cos(a) * spread;
+  const sy = Math.sin(a) * spread;
+  const FR = R * 1.5;
+  const walkPh = ph * 22; // animate the limbs — the figure walks
+  const base = walkerLimbPoint(zone, sx, sy, walkPh, FR);
+  const p = dotWalkerDesignPoint(Math.max(1, Math.min(5, design)), zone, sx, sy, walkPh, FR, base);
+  return [p.x + sx * p.scale * 0.4, p.y + sy * p.scale * 0.4];
+}
+
+// Higher spring + lower flow/swirl so the walker silhouette holds crisp (reads
+// as a figure, closer to the classic Dot Walker) instead of being blurred away.
+const FLOW_MOVEMENTS_WALK = [
+  { form: 1, spring: 0.2, swirl: 0.1, flow: 0.18, breath: 0.12, wob: 0.06 },
+  { form: 2, spring: 0.2, swirl: 0.12, flow: 0.2, breath: 0.14, wob: 0.06 },
+  { form: 3, spring: 0.19, swirl: 0.14, flow: 0.22, breath: 0.14, wob: 0.06 },
+  { form: 4, spring: 0.2, swirl: 0.12, flow: 0.2, breath: 0.14, wob: 0.06 },
+  { form: 5, spring: 0.2, swirl: 0.1, flow: 0.18, breath: 0.12, wob: 0.06 },
+];
+
+// Flow Sacred — sacred-geometry formations (rose, star, flower-of-life,
+// lissajous) morphing through one colourful psychedelic field.
+function flowSacredFormation(
+  f: number,
+  i: number,
+  hx: number,
+  hy: number,
+  R: number,
+): [number, number] {
+  if (f === 0) return [hx, hy];
+  const u = (i + 0.5) / FLOW_FIELD_COUNT;
+  if (f === 1) {
+    // Rose curve (rhodonea)
+    const k = 5;
+    const a = u * Math.PI * 2;
+    const r = Math.cos(k * a) * R * 0.9;
+    return [Math.cos(a) * r, Math.sin(a) * r];
+  }
+  if (f === 2) {
+    // Star polygon ring
+    const points = 6;
+    const a = u * Math.PI * 2;
+    const star = 0.7 + 0.3 * Math.cos(a * points);
+    return [Math.cos(a) * R * 0.9 * star, Math.sin(a) * R * 0.9 * star];
+  }
+  if (f === 3) {
+    // Flower-of-life: seven sub-circles
+    const centers = [
+      [0, 0],
+      [1, 0],
+      [0.5, 0.866],
+      [-0.5, 0.866],
+      [-1, 0],
+      [-0.5, -0.866],
+      [0.5, -0.866],
+    ];
+    const cell = Math.floor(u * 7) % 7;
+    const ca = (u * 7 - Math.floor(u * 7)) * Math.PI * 2;
+    const c = centers[cell];
+    const sub = R * 0.3;
+    return [c[0] * sub * 1.6 + Math.cos(ca) * sub, c[1] * sub * 1.6 + Math.sin(ca) * sub];
+  }
+  if (f === 4) {
+    // Lissajous
+    const a = u * Math.PI * 2;
+    return [Math.sin(a * 3) * R * 0.85, Math.sin(a * 2) * R * 0.85];
+  }
+  if (f === 5) {
+    // Hexagram — two interlocking triangles
+    const a = u * Math.PI * 2 + (i % 2 ? Math.PI : 0);
+    const r = (0.55 + 0.45 * Math.abs(Math.cos(1.5 * a))) * R * 0.85;
+    return [Math.cos(a) * r, Math.sin(a) * r];
+  }
+  if (f === 6) {
+    // Spiral galaxy
+    const arms = 3;
+    const r = u * R * 0.92;
+    const ga = (i % arms) * ((Math.PI * 2) / arms) + (r / R) * 6;
+    return [Math.cos(ga) * r, Math.sin(ga) * r];
+  }
+  if (f === 7) {
+    // Yantra — nested up/down triangles inside a bindu
+    const tier = Math.floor(u * 4); // 0..3 concentric triangles
+    const up = tier % 2 === 0 ? 1 : -1;
+    const scale = (1 - tier * 0.22) * R * 0.92;
+    const edge = (u * 4 - tier) * 3; // 0..3 around the triangle perimeter
+    const corner = Math.floor(edge);
+    const tt = edge - corner;
+    const ang = (k: number) => (k / 3) * Math.PI * 2 + Math.PI / 2;
+    const a0 = ang(corner);
+    const a1 = ang(corner + 1);
+    const x = lerp(Math.cos(a0), Math.cos(a1), tt) * scale;
+    const y = up * lerp(Math.sin(a0), Math.sin(a1), tt) * scale;
+    return [x, y];
+  }
+  // f === 8: focus arc — a single sweeping mono arc (calm point of focus)
+  const span = Math.PI * 1.25;
+  const a8 = -span / 2 + u * span;
+  const r8 = R * (0.55 + 0.4 * (1 - Math.abs(u - 0.5) * 2));
+  return [Math.cos(a8) * r8, Math.sin(a8) * r8];
+}
+
+const FLOW_MOVEMENTS_SACRED = [
+  { form: 8, spring: 0.09, swirl: 0.2, flow: 0.4, breath: 0.3, wob: 0.15 }, // focus arc
+  { form: 1, spring: 0.08, swirl: 0.3, flow: 0.5, breath: 0.3, wob: 0.2 },
+  { form: 7, spring: 0.1, swirl: 0.25, flow: 0.4, breath: 0.2, wob: 0.2 }, // yantra
+  { form: 2, spring: 0.09, swirl: 0.3, flow: 0.5, breath: 0.25, wob: 0.3 },
+  { form: 5, spring: 0.09, swirl: 0.3, flow: 0.45, breath: 0.25, wob: 0.25 },
+  { form: 3, spring: 0.09, swirl: 0.25, flow: 0.4, breath: 0.2, wob: 0.4 },
+  { form: 6, spring: 0.08, swirl: 0.45, flow: 0.6, breath: 0.3, wob: 0.2 },
+  { form: 4, spring: 0.08, swirl: 0.4, flow: 0.6, breath: 0.3, wob: 0.2 }, // lissajous
+  { form: 0, spring: 0.07, swirl: 0.5, flow: 0.6, breath: 0.4, wob: 0.2 },
+];
+
+// Dance Walkers — two walker figures that drift together, merge, bloom, dance,
+// divide and resolve into a heart, in one continuous evolution.
+function flowDanceFormation(f: number, i: number, R: number, ph: number): [number, number] {
+  const N = FLOW_FIELD_COUNT;
+  // ~1 in 6 particles ring the pair with a slow sacred halo of context.
+  if (i % 6 === 0) {
+    const cu = (i * 0.61803398875) % 1;
+    const ca = cu * Math.PI * 2 + ph * 0.12;
+    const petal = 0.92 + 0.1 * Math.cos(ca * 6);
+    const rr = R * (1.25 + 0.22 * cu) * petal;
+    return [Math.cos(ca) * rr, Math.sin(ca) * rr];
+  }
+  if (f === 4) {
+    // Heart — particles fill a heart curve.
+    const u = (i + 0.5) / N;
+    const th = u * Math.PI * 2;
+    const hx = 16 * Math.sin(th) ** 3;
+    const hy = 13 * Math.cos(th) - 5 * Math.cos(2 * th) - 2 * Math.cos(3 * th) - Math.cos(4 * th);
+    const s = R * 0.05;
+    const fill = ((i * 0.61803398875) % 1) ** 0.5;
+    return [lerp(0, hx * s, fill), lerp(-2 * s, hy * s, fill)];
+  }
+  // Two walker silhouettes (left/right halves of the particles).
+  const half = N >> 1;
+  const isLeft = i < half;
+  const j = isLeft ? i : i - half;
+  const side = isLeft ? -1 : 1;
+  const wq = (j + 0.5) / half;
+  const zone = wq < 0.2 ? 0 : wq < 0.44 ? 1 : wq < 0.66 ? 2 : wq < 0.83 ? 3 : 4;
+  const local = (wq * half * 1.61803398875) % 1;
+  const a = j * 2.399963229728653;
+  const spread = Math.sqrt(local);
+  const sx = Math.cos(a) * spread;
+  const sy = Math.sin(a) * spread;
+  const FR = R * 0.95;
+  const design = f === 3 ? 5 : 1; // posed "dance" design vs upright
+  const walkPh = ph * 20; // animate the limbs — the figures step and sway
+  const base = walkerLimbPoint(zone, sx, sy, walkPh, FR);
+  const p = dotWalkerDesignPoint(design, zone, sx, sy, walkPh, FR, base);
+  const wx = p.x + sx * p.scale * 0.4;
+  const wy = p.y + sy * p.scale * 0.4;
+  const sep = f === 0 ? R * 0.62 : f === 1 ? R * 0.34 : f === 2 ? 0 : R * 0.42;
+  return [wx + side * sep, wy];
+}
+
+const FLOW_MOVEMENTS_DANCE = [
+  { form: 0, spring: 0.1, swirl: 0.2, flow: 0.4, breath: 0.15, wob: 0.1 }, // apart
+  { form: 1, spring: 0.1, swirl: 0.3, flow: 0.5, breath: 0.2, wob: 0.1 }, // converge
+  { form: 2, spring: 0.09, swirl: 0.5, flow: 0.5, breath: 0.3, wob: 0.1 }, // merge
+  { form: 3, spring: 0.08, swirl: 0.7, flow: 0.6, breath: 0.4, wob: 0.15 }, // dance / bloom
+  { form: 1, spring: 0.1, swirl: 0.3, flow: 0.5, breath: 0.2, wob: 0.1 }, // divide
+  { form: 0, spring: 0.1, swirl: 0.2, flow: 0.4, breath: 0.15, wob: 0.1 }, // apart
+  { form: 4, spring: 0.11, swirl: 0.2, flow: 0.3, breath: 0.2, wob: 0.1 }, // heart
+];
+
+// Magnetic Sands 2 — a long, sandy game of chaos and order: dense dots melt
+// from ripples to rose rings, a vortex and the seed of life, fold through
+// figure-8 dunes, and re-form. Every act is circular and symmetric (the old
+// horizontal sine "sand waves" act broke the circular flow, so it is gone).
+// High wob gives the grainy banding; two lemniscate acts give the double loop.
+export function flowSandsFormation(
+  f: number,
+  i: number,
+  hx: number,
+  hy: number,
+  R: number,
+): [number, number] {
+  if (f === 0) return [hx, hy];
+  const u = (i + 0.5) / FLOW_FIELD_COUNT;
+  const ga = i * 2.399963229728653;
+  // ~1 in 4 particles hold a persistent concentric-ring order, so circle
+  // patterns keep emerging inside the chaos whichever sand act is playing.
+  if (i % 4 === 0) {
+    const nR = 7;
+    const u2 = (i * 0.7548776662) % 1;
+    const ring = Math.floor(u2 * nR);
+    const rr = ((ring + 0.55) / nR) * R * 0.82;
+    const a = (u2 * nR - ring) * Math.PI * 2 + ga * 0.15;
+    return [Math.cos(a) * rr, Math.sin(a) * rr];
+  }
+  if (f === 6) {
+    // Rose rings — concentric rings, each with six soft petals
+    const nR = 8;
+    const ring = Math.floor(u * nR);
+    const a = (u * nR - ring) * Math.PI * 2;
+    const rr = ((ring + 0.55) / nR) * R * 0.88 * (1 + 0.1 * Math.cos(6 * a + ring * 0.5));
+    return [Math.cos(a) * rr, Math.sin(a) * rr];
+  }
+  if (f === 7) {
+    // Seed of life — seven full circles: one centred, six around it
+    const c = i % 7;
+    const cr = R * 0.42;
+    const ca = (c / 6) * Math.PI * 2;
+    const cx = c === 0 ? 0 : Math.cos(ca) * cr;
+    const cy = c === 0 ? 0 : Math.sin(ca) * cr;
+    const a = ((i * 0.61803398875) % 1) * Math.PI * 2;
+    return [cx + Math.cos(a) * cr, cy + Math.sin(a) * cr];
+  }
+  if (f === 2) {
+    // Ripple rings — dense concentric bands
+    const nR = 11;
+    const ring = Math.floor(u * nR);
+    const rr = ((ring + 0.5) / nR) * R * 0.95;
+    const a = (u * nR - ring) * Math.PI * 2;
+    return [Math.cos(a) * rr, Math.sin(a) * rr];
+  }
+  if (f === 3) {
+    // Vortex — tight log spiral
+    const r = Math.sqrt(u) * R * 0.95;
+    const a = ga * 0.5 + (r / R) * 10;
+    return [Math.cos(a) * r, Math.sin(a) * r];
+  }
+  if (f === 4) {
+    // Dune lemniscate — figure-8 (the double loop)
+    const ring = 0.35 + 0.65 * ((i * 0.61803398875) % 1);
+    const t = u * Math.PI * 2;
+    return [Math.cos(t) * R * 0.98 * ring, Math.sin(2 * t) * 0.55 * R * 0.98 * ring];
+  }
+  // f === 5: dust disk
+  const r = Math.sqrt(u) * R * 0.92;
+  return [Math.cos(ga) * r, Math.sin(ga) * r];
+}
+
+// 12 acts (~15 min) — long enough to keep surprising guests.
+export const FLOW_MOVEMENTS_SANDS = [
+  { form: 5, spring: 0.05, swirl: 0.4, flow: 0.6, breath: 0.3, wob: 0.5 },
+  { form: 6, spring: 0.06, swirl: 0.25, flow: 0.5, breath: 0.25, wob: 0.7 }, // rose rings
+  { form: 2, spring: 0.07, swirl: 0.3, flow: 0.45, breath: 0.2, wob: 0.9 },
+  { form: 4, spring: 0.05, swirl: 0.7, flow: 0.7, breath: 0.35, wob: 0.4 }, // double loop
+  { form: 3, spring: 0.05, swirl: 0.9, flow: 0.75, breath: 0.3, wob: 0.3 },
+  { form: 7, spring: 0.06, swirl: 0.3, flow: 0.55, breath: 0.3, wob: 0.8 }, // seed of life
+  { form: 5, spring: 0.05, swirl: 0.5, flow: 0.6, breath: 0.4, wob: 0.5 },
+  { form: 4, spring: 0.05, swirl: 0.8, flow: 0.72, breath: 0.35, wob: 0.4 }, // double loop
+  { form: 2, spring: 0.07, swirl: 0.35, flow: 0.5, breath: 0.25, wob: 0.95 },
+  { form: 3, spring: 0.05, swirl: 1.0, flow: 0.8, breath: 0.3, wob: 0.3 },
+  { form: 6, spring: 0.06, swirl: 0.28, flow: 0.5, breath: 0.25, wob: 0.7 }, // rose rings
+  { form: 5, spring: 0.05, swirl: 0.45, flow: 0.6, breath: 0.35, wob: 0.5 },
+];
+
+// Butterfly — the Brain-Loop two-figures idea grown into a butterfly: dots fill
+// Fay's butterfly curve, the wings flap (time phase), open wide, spin/dance,
+// split into two wings that orbit apart, then reunite. Continuous evolution.
+function flowButterflyFormation(f: number, i: number, R: number, ph: number): [number, number] {
+  const N = FLOW_FIELD_COUNT;
+  // ~1 in 7 particles ring the butterfly with a slow sacred halo of context.
+  if (i % 7 === 0) {
+    const cu = (i * 0.61803398875) % 1;
+    const ca = cu * Math.PI * 2 + ph * 0.12;
+    const petal = 0.92 + 0.1 * Math.cos(ca * 6);
+    const rr = R * (1.25 + 0.2 * cu) * petal;
+    return [Math.cos(ca) * rr, Math.sin(ca) * rr];
+  }
+  if (f === 0) {
+    // Rest — a soft disk
+    const r0 = Math.sqrt((i + 0.5) / N) * R * 0.6;
+    const a0 = i * 2.399963229728653;
+    return [Math.cos(a0) * r0, Math.sin(a0) * r0];
+  }
+  const u = (i + 0.5) / N;
+  const t = u * 24 * Math.PI; // sweep the whole butterfly curve
+  const r = Math.exp(Math.sin(t)) - 2 * Math.cos(4 * t) + Math.sin((2 * t - Math.PI) / 24) ** 5;
+  const s = R * 0.16;
+  let bx = Math.sin(t) * r * s;
+  let by = Math.cos(t) * r * s;
+  const flap = 0.45 + 0.55 * Math.abs(Math.cos(ph * 1.6)); // wings beat
+  if (f === 1) bx *= flap; // flapping butterfly
+  if (f === 2) {
+    bx *= 1.18; // wings wide open
+    by *= 1.06;
+  }
+  if (f === 3) {
+    const side = bx < 0 ? -1 : 1; // split the two wings apart
+    bx = bx * flap + side * R * 0.55;
+  }
+  return [bx, by];
+}
+
+const FLOW_MOVEMENTS_BUTTERFLY = [
+  { form: 0, spring: 0.09, swirl: 0.2, flow: 0.4, breath: 0.2, wob: 0.1 }, // gather
+  { form: 1, spring: 0.09, swirl: 0.25, flow: 0.45, breath: 0.3, wob: 0.12 }, // flap
+  { form: 2, spring: 0.08, swirl: 0.35, flow: 0.5, breath: 0.4, wob: 0.15 }, // open wide
+  { form: 1, spring: 0.07, swirl: 0.9, flow: 0.65, breath: 0.4, wob: 0.15 }, // spin / dance
+  { form: 3, spring: 0.08, swirl: 0.45, flow: 0.55, breath: 0.3, wob: 0.12 }, // wings divide
+  { form: 1, spring: 0.09, swirl: 0.25, flow: 0.45, breath: 0.3, wob: 0.12 }, // reunite & flap
+];
+
+// Star-Sand Lines — shifting star-sand that DRAWS the great line-works
+// (torus knot, rose, helix, orbital rings) out of dots. High spring holds the
+// curves crisp; multiple parallel strands give the lines body, like sand poured
+// along a path. Morphs continuously from one line-form to the next.
+function flowLinesFormation(f: number, i: number, R: number, ph: number): [number, number] {
+  const N = FLOW_FIELD_COUNT;
+  if (f === 0) {
+    const r0 = Math.sqrt((i + 0.5) / N) * R * 0.7;
+    const a0 = i * 2.399963229728653;
+    return [Math.cos(a0) * r0, Math.sin(a0) * r0];
+  }
+  // Each particle sits on one of several parallel strands so the "line" reads
+  // thick; the strand offset is a tiny perpendicular nudge.
+  const strands = 5;
+  const strand = i % strands;
+  const off = (strand / (strands - 1) - 0.5) * R * 0.06;
+  const u = (Math.floor(i / strands) + 0.5) / (N / strands);
+  if (f === 1) {
+    // Torus knot (p=2, q=3) — top-down projection
+    const th = u * Math.PI * 2;
+    const rr = 2 + Math.cos(3 * th);
+    const s = (R * 0.92) / 3;
+    return [Math.cos(2 * th) * rr * s + off, Math.sin(2 * th) * rr * s + off];
+  }
+  if (f === 2) {
+    // Rose / rhodonea (k=4)
+    const th = u * Math.PI * 2;
+    const rr = Math.cos(4 * th) * R * 0.92;
+    return [Math.cos(th) * rr + off, Math.sin(th) * rr + off];
+  }
+  if (f === 3) {
+    // Helix — an elliptical spiral seen at a tilt
+    const a = u * Math.PI * 2 * 5;
+    const rr = (0.2 + 0.78 * u) * R * 0.92;
+    return [Math.cos(a) * rr + off, Math.sin(a) * rr * 0.42 + (u - 0.5) * R * 0.9 + off];
+  }
+  // f === 4: orbital — nested tilted rings
+  const rings = 5;
+  const ring = Math.floor(u * rings);
+  const rr = ((ring + 1) / rings) * R * 0.9;
+  const tilt = 0.25 + ring * 0.32;
+  const a = (u * rings - ring) * Math.PI * 2 + ring * 0.7;
+  return [Math.cos(a) * rr + off, Math.sin(a) * rr * Math.cos(tilt) + off];
+}
+
+const FLOW_MOVEMENTS_LINES = [
+  { form: 1, spring: 0.14, swirl: 0.15, flow: 0.3, breath: 0.25, wob: 0.08 }, // torus knot
+  { form: 2, spring: 0.14, swirl: 0.18, flow: 0.32, breath: 0.3, wob: 0.08 }, // rose
+  { form: 4, spring: 0.13, swirl: 0.2, flow: 0.34, breath: 0.25, wob: 0.08 }, // orbital
+  { form: 3, spring: 0.13, swirl: 0.16, flow: 0.32, breath: 0.3, wob: 0.08 }, // helix
+  { form: 2, spring: 0.14, swirl: 0.4, flow: 0.45, breath: 0.35, wob: 0.1 }, // rose, swirling
+  { form: 1, spring: 0.14, swirl: 0.15, flow: 0.3, breath: 0.25, wob: 0.08 }, // knot
+];
+
+function flowFormationFor(
+  mode: Mode,
+  f: number,
+  i: number,
+  hx: number,
+  hy: number,
+  R: number,
+  ph: number,
+): [number, number] {
+  if (mode === 'flowwalkers') return flowWalkerFormation(f, i, R, ph);
+  if (mode === 'flowsacred') return flowSacredFormation(f, i, hx, hy, R);
+  if (mode === 'flowdance') return flowDanceFormation(f, i, R, ph);
+  if (mode === 'flowsands') return flowSandsFormation(f, i, hx, hy, R);
+  if (mode === 'flowbutterfly') return flowButterflyFormation(f, i, R, ph);
+  if (mode === 'flowlines') return flowLinesFormation(f, i, R, ph);
+  return flowFormation(f, i, hx, hy, R);
+}
+
+function flowMovementsFor(mode: Mode) {
+  if (mode === 'flowwalkers') return FLOW_MOVEMENTS_WALK;
+  if (mode === 'flowsacred') return FLOW_MOVEMENTS_SACRED;
+  if (mode === 'flowdance') return FLOW_MOVEMENTS_DANCE;
+  if (mode === 'flowsands') return FLOW_MOVEMENTS_SANDS;
+  if (mode === 'flowbutterfly') return FLOW_MOVEMENTS_BUTTERFLY;
+  if (mode === 'flowlines') return FLOW_MOVEMENTS_LINES;
+  return FLOW_MOVEMENTS;
+}
+
+function buildFlowField(cfg: Cfg, R: number): THREE.Group {
+  const group = new THREE.Group();
+  const pos = new Float32Array(FLOW_FIELD_COUNT * 3);
+  const vel = new Float32Array(FLOW_FIELD_COUNT * 3);
+  const seed = new Float32Array(FLOW_FIELD_COUNT * 3);
+  const col = new Float32Array(FLOW_FIELD_COUNT * 3).fill(1);
+  const home = new Float32Array(FLOW_FIELD_COUNT * 2);
+  for (let i = 0; i < FLOW_FIELD_COUNT; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.sqrt(Math.random()) * R * 0.9;
+    pos[i * 3] = Math.cos(a) * r;
+    pos[i * 3 + 1] = Math.sin(a) * r;
+    pos[i * 3 + 2] = (Math.random() - 0.5) * R * 0.12;
+    home[i * 2] = pos[i * 3];
+    home[i * 2 + 1] = pos[i * 3 + 1];
+    seed[i * 3] = Math.random();
+    seed[i * 3 + 1] = Math.random();
+    seed[i * 3 + 2] = Math.random();
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const pts = new THREE.Points(
+    geo,
+    new THREE.PointsMaterial({
+      size: 2.6 + cfg.luminous * 0.6,
+      map: getCircleTex(),
+      vertexColors: true,
+      sizeAttenuation: false,
+      transparent: true,
+      opacity: 0.85,
+      alphaTest: 0.01,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }),
+  );
+  pts.userData.tag = 'flowField';
+  pts.userData.vel = vel;
+  pts.userData.seed = seed;
+  pts.userData.home = home;
+  pts.userData.lastT = -1;
+  pts.userData.flowPh = 0;
+  pts.userData.flowMClock = 0;
+  group.add(pts);
+  return group;
+}
+
+function updateFlowField(group: THREE.Group, cfg: Cfg, t: number, R: number): void {
+  const pal = PAL[cfg.preset] ?? PAL['Cosmic Indigo'];
+  const iF = cfg.intensity / 10;
+  const speed = Math.max(0.05, cfg.breathSpeed);
+  // Movement state machine + phase clock are accumulated per-frame inside the
+  // particle group (below) so changing Flow Speed never restarts the program.
+  const MOVES = flowMovementsFor(cfg.mode);
+  const revRate =
+    cfg.mode === 'flowwalkers' ||
+    cfg.mode === 'flowdance' ||
+    cfg.mode === 'flowbutterfly' ||
+    cfg.mode === 'flowlines'
+      ? 0.06
+      : 0.4;
+  const sound = Math.min(1, _voiceEnergy * 1.4 + _musicPulse * 0.5);
+  const wells = Math.max(2, Math.min(4, Math.round(cfg.symmetry / 4) + 1));
+  const turb = 0.4 + cfg.complexity / 10;
+  const scaleBands = 4 + Math.round(cfg.complexity);
+  // "Liquid" — higher complexity keeps more momentum so particles trail and
+  // stream like liquid (reads well from ~4 up). 0.82 (crisp) → 0.93 (liquid).
+  const liquidAmt = Math.min(1, Math.max(0, (cfg.complexity - 1) / 9));
+  const liquidDamp = 0.82 + liquidAmt * 0.11;
+  // Liquid also loosens the spring so the figure lags and smears (visible even
+  // on the crisp high-spring walker modes): full spring at 1, ~35% at 10.
+  const liquidSpring = 1 - liquidAmt * 0.65;
+  const baseCol = new THREE.Color(pal.rgb[0] / 255, pal.rgb[1] / 255, pal.rgb[2] / 255);
+  const baseHsl = { h: 0, s: 0, l: 0 };
+  baseCol.getHSL(baseHsl);
+  const hueSpread = 0.04 + cfg.glow * 0.03;
+  const bright = iF * (1.5 + cfg.luminous * 0.15);
+  const tmpCol = new THREE.Color();
+
+  for (const child of group.children) {
+    if (child.userData.tag !== 'flowField') continue;
+    const pts = child as THREE.Points;
+    const posAttr = pts.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const colAttr = pts.geometry.getAttribute('color') as THREE.BufferAttribute;
+    const arr = posAttr.array as Float32Array;
+    const cArr = colAttr.array as Float32Array;
+    const vel = pts.userData.vel as Float32Array;
+    const seed = pts.userData.seed as Float32Array;
+    const home = pts.userData.home as Float32Array;
+    const drawCount = Math.round(lerp(2200, FLOW_FIELD_COUNT, cfg.particles / 10));
+
+    // Accumulate the phase + movement clock per-frame (dt × speed) so changing
+    // Flow Speed only changes the rate going forward — the continuum is kept.
+    const last = pts.userData.lastT as number;
+    const dt = last < 0 ? 16 : Math.max(0, Math.min(100, t - last));
+    pts.userData.lastT = t;
+    const ph = (pts.userData.flowPh as number) + dt * 0.00018 * speed;
+    pts.userData.flowPh = ph;
+    const mClock = (pts.userData.flowMClock as number) + ((dt / 1000) * speed) / 75;
+    pts.userData.flowMClock = mClock;
+    const mLen = MOVES.length;
+    const mi = ((Math.floor(mClock) % mLen) + mLen) % mLen;
+    const mn = (mi + 1) % mLen;
+    let mf = mClock - Math.floor(mClock);
+    mf = mf * mf * (3 - 2 * mf);
+    const MA = MOVES[mi];
+    const MB = MOVES[mn];
+    const springK = lerp(MA.spring, MB.spring, mf);
+    const swirlW = lerp(MA.swirl, MB.swirl, mf);
+    const flowW = lerp(MA.flow, MB.flow, mf);
+    const breathW = lerp(MA.breath, MB.breath, mf);
+    const wobW = lerp(MA.wob, MB.wob, mf);
+    const formA = MA.form;
+    const formB = MB.form;
+    const symmetricSands = cfg.mode === 'flowsands';
+    const hueCycle = (mClock * 0.1) % 1;
+
+    for (let i = 0; i < FLOW_FIELD_COUNT; i++) {
+      let px = arr[i * 3];
+      let py = arr[i * 3 + 1];
+      const s0 = seed[i * 3];
+      const hx = home[i * 2];
+      const hy = home[i * 2 + 1];
+
+      // Formation morph: crossfade this particle between the two movements'
+      // target formations, then revolve the whole field slowly.
+      const fa = flowFormationFor(cfg.mode, formA, i, hx, hy, R, ph);
+      const fb = flowFormationFor(cfg.mode, formB, i, hx, hy, R, ph);
+      const bx = lerp(fa[0], fb[0], mf);
+      const by = lerp(fa[1], fb[1], mf);
+      const ang = ph * revRate;
+      const ca = Math.cos(ang);
+      const sa = Math.sin(ang);
+      let tx = bx * ca - by * sa;
+      let ty = bx * sa + by * ca;
+
+      // Organic flow drift of the target, weighted by the movement. Magnetic
+      // Sands 2 drifts only in and out, so its rings stay round and whole.
+      if (symmetricSands) {
+        const dr = Math.hypot(tx, ty) + 0.0001;
+        const k = 1 + Math.sin((dr / R) * 5 - ph * 2 + s0 * 0.6) * 0.05 * turb * flowW;
+        tx *= k;
+        ty *= k;
+      } else {
+        tx += Math.sin(ty * 0.011 + ph * 2 + s0 * 6) * R * 0.07 * turb * flowW;
+        ty += Math.cos(tx * 0.011 - ph * 2 + s0 * 6) * R * 0.07 * turb * flowW;
+      }
+
+      // Gravity wells orbiting on ellipses — swirl the target locally (eddies).
+      // Magnetic Sands 2 spaces them evenly on one circle, so every eddy has a
+      // twin and no ring is dragged open into a C.
+      for (let k = 0; k < wells; k++) {
+        const kp = symmetricSands
+          ? ph * 0.6 + (k / wells) * Math.PI * 2
+          : ph * (0.6 + k * 0.27) + (k / wells) * Math.PI * 2;
+        const gx = Math.cos(kp) * R * (symmetricSands ? 0.42 : 0.34 + 0.1 * k);
+        const gy = symmetricSands
+          ? Math.sin(kp) * R * 0.42
+          : Math.sin(kp * 1.3) * R * (0.2 + 0.06 * k);
+        const dx = tx - gx;
+        const dy = ty - gy;
+        const d2 = dx * dx + dy * dy + R * R * 0.02;
+        const sw = ((R * R * 0.05) / d2) * swirlW * 0.02;
+        tx += -dy * sw;
+        ty += dx * sw;
+      }
+
+      // Magnetic-sand scale wobble on the target radius — a pattern, not a pull.
+      const trad = Math.hypot(tx, ty) + 0.0001;
+      const wob = Math.sin((trad / R) * scaleBands * Math.PI + ph * 2.5) * R * 0.03 * wobW;
+      tx += (tx / trad) * wob;
+      ty += (ty / trad) * wob;
+
+      // Gentle whole-field breathing (keeps the centre populated).
+      const breath = 1 + breathW * 0.08 * (0.5 + sound);
+      tx *= breath;
+      ty *= breath;
+
+      // Spring toward the revolving, perturbed target → preserves dense formations.
+      let vx = (vel[i * 3] + (tx - px) * springK * liquidSpring) * liquidDamp;
+      let vy = (vel[i * 3 + 1] + (ty - py) * springK * liquidSpring) * liquidDamp;
+      const vmax = R * 0.05;
+      const vmag = Math.hypot(vx, vy);
+      if (vmag > vmax) {
+        vx = (vx / vmag) * vmax;
+        vy = (vy / vmag) * vmax;
+      }
+      vel[i * 3] = vx;
+      vel[i * 3 + 1] = vy;
+      px += vx;
+      py += vy;
+
+      const rad = Math.hypot(px, py) + 0.0001;
+      const force = fingerForce(px, py, 0, R);
+      arr[i * 3] = px + force.x;
+      arr[i * 3 + 1] = py + force.y;
+      arr[i * 3 + 2] = Math.sin(rad * 0.01 + ph * 3 + s0 * 6) * R * 0.05 + force.z;
+
+      // Per-particle hue drifts outward across the radius and over the cycle.
+      let hue = (baseHsl.h + (rad / R) * hueSpread + hueCycle + s0 * 0.05) % 1;
+      if (hue < 0) hue += 1;
+      tmpCol.setHSL(hue, Math.min(1, baseHsl.s + 0.18), Math.min(0.72, baseHsl.l + 0.12));
+      cArr[i * 3] = tmpCol.r * bright;
+      cArr[i * 3 + 1] = tmpCol.g * bright;
+      cArr[i * 3 + 2] = tmpCol.b * bright;
+    }
+    posAttr.needsUpdate = true;
+    colAttr.needsUpdate = true;
+    pts.geometry.setDrawRange(0, drawCount);
+    const mat = pts.material as THREE.PointsMaterial;
+    mat.size = (2.0 + cfg.luminous * 0.7 + sound * 1.5) * (R / 260);
+    mat.opacity = Math.min(0.95, 0.55 + iF * 0.3 + sound * 0.15);
+  }
+}
+
 function buildDepthJourney(cfg: Cfg, R: number): THREE.Group {
   const group = new THREE.Group();
   const pal = PAL[cfg.preset] ?? PAL['Blue Astral'];
@@ -12745,8 +17282,27 @@ function updateDepthJourney(group: THREE.Group, cfg: Cfg, t: number, R: number):
             Math.sin(w * TAU + phase * 2) * 0.025;
           const tubeNoise = 0.84 + ringFrac * 0.18 + Math.sin(v * TAU * 5 + phase + w * 4) * 0.035;
           const radius = vanishing + R * 1.14 * near * tubeNoise;
-          x = Math.cos(a) * radius;
-          y = Math.sin(a) * radius * 0.72;
+          if (cfg.mode === 'swirldottunnel') {
+            // Magnetic-sand scale banding — a radial pattern that drifts and evolves.
+            const evo = phase * 0.5;
+            const sand =
+              1 + Math.sin(a * Math.max(3, cfg.symmetry * 0.5) + evo * 3 + travel * 6) * 0.12;
+            const r2 = radius * sand;
+            x = Math.cos(a) * r2;
+            y = Math.sin(a) * r2 * 0.72;
+            // A gravity element orbiting on an ellipse; nearby dots swirl around it.
+            const gx = Math.cos(evo) * R * 0.24;
+            const gy = Math.sin(evo * 1.3) * R * 0.14;
+            const ddx = x - gx;
+            const ddy = y - gy;
+            const gd = Math.hypot(ddx, ddy) + R * 0.05;
+            const swirlAmt = (R * R * 0.012 * near) / (gd * gd);
+            x += (-ddy / gd) * swirlAmt;
+            y += (ddx / gd) * swirlAmt;
+          } else {
+            x = Math.cos(a) * radius;
+            y = Math.sin(a) * radius * 0.72;
+          }
           z = (0.5 - travel) * R * 0.72;
         } else if (i < dotLimit && cfg.mode === 'dotroad') {
           const travel = (q + phase * 0.82) % 1;
@@ -12865,6 +17421,13 @@ function buildDotSymbolField(cfg: Cfg, R: number): THREE.Group {
   group.add(dots);
   return group;
 }
+
+// Trip Number 1 cycles ten dot shapes. The Flow variant drops the two that
+// cut the field into pieces — 6 (petals sliced into sectors) and 7 (stacked
+// ring slices) — so it only flows: eye, burst, twin swirl, spiral, sun,
+// butterfly, tunnel, heart.
+const TRIP1_SHAPES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+export const TRIP1_FLOW_SHAPES = [0, 1, 2, 3, 4, 5, 8, 9];
 
 function updateDotSymbolField(group: THREE.Group, cfg: Cfg, t: number, R: number): void {
   const pal = PAL[cfg.preset] ?? PAL['Golden Source'];
@@ -13132,9 +17695,10 @@ function updateDotSymbolField(group: THREE.Group, cfg: Cfg, t: number, R: number
           (centerY + ry * bodyBreath) * Math.cos(orbit) +
           Math.sin(a - phase) * swirl;
         z = Math.sin(phase * 1.25 + a + w * TAU) * R * (0.025 + cfg.luminous * 0.006);
-      } else if (i < dotLimit && cfg.mode === 'tripnumber1') {
+      } else if (i < dotLimit && (cfg.mode === 'tripnumber1' || cfg.mode === 'tripnumber1flow')) {
         const journey = (phase * 0.052) % 1;
-        const totalPhases = 10;
+        const shapes = cfg.mode === 'tripnumber1flow' ? TRIP1_FLOW_SHAPES : TRIP1_SHAPES;
+        const totalPhases = shapes.length;
         const raw = journey * totalPhases;
         const stage = Math.floor(raw) % totalPhases;
         const blend = smoothstep(raw - Math.floor(raw));
@@ -13249,8 +17813,8 @@ function updateDotSymbolField(group: THREE.Group, cfg: Cfg, t: number, R: number
           ];
         };
 
-        const p1 = shapePoint(stage);
-        const p2 = shapePoint((stage + 1) % totalPhases);
+        const p1 = shapePoint(shapes[stage]);
+        const p2 = shapePoint(shapes[(stage + 1) % totalPhases]);
         x = lerp(p1[0], p2[0], blend);
         y = lerp(p1[1], p2[1], blend);
         z = lerp(p1[2], p2[2], blend);
@@ -13429,9 +17993,13 @@ function updatePulse(group: THREE.Group, cfg: Cfg, t: number, R: number): void {
           Math.sin(mirrorA * 2 + t * 0.0011 + ri) * R * 0.026 * (0.35 + soundEnergy);
         const rOff = noise * chaosAmt * R * 0.22 + desertLift;
         const r2 = Math.max(0, radius + rOff);
-        arr[p * 3] = Math.cos(a) * r2;
-        arr[p * 3 + 1] = Math.sin(a) * r2 * (0.86 + beatKick * 0.06);
-        arr[p * 3 + 2] = Math.sin(a * 3 + t * 0.001 + ri) * R * 0.035 * soundEnergy;
+        const px = Math.cos(a) * r2;
+        const py = Math.sin(a) * r2 * (0.86 + beatKick * 0.06);
+        const pz = Math.sin(a * 3 + t * 0.001 + ri) * R * 0.035 * soundEnergy;
+        const f = fingerForce(px, py, pz, R);
+        arr[p * 3] = px + f.x;
+        arr[p * 3 + 1] = py + f.y;
+        arr[p * 3 + 2] = pz + f.z;
       }
     } else {
       for (let p = 0; p < halfPts; p++) {
@@ -13442,14 +18010,19 @@ function updatePulse(group: THREE.Group, cfg: Cfg, t: number, R: number): void {
           Math.sin(a * 17 + t * 0.00014 * speed) * 0.1;
         const rOff = sym ? noise * chaosAmt * R * 0.32 : noise * chaosAmt * R * 0.28 * Math.sin(a);
         const r2 = Math.max(0, radius + rOff);
+        const ry = Math.sin(a) * r2;
         // Right side
-        arr[p * 3] = Math.cos(a) * r2;
-        arr[p * 3 + 1] = Math.sin(a) * r2;
-        arr[p * 3 + 2] = 0;
+        const rx = Math.cos(a) * r2;
+        const fr = fingerForce(rx, ry, 0, R);
+        arr[p * 3] = rx + fr.x;
+        arr[p * 3 + 1] = ry + fr.y;
+        arr[p * 3 + 2] = fr.z;
         // Mirrored left side (rorschach)
-        arr[(halfPts + p) * 3] = -Math.cos(a) * r2;
-        arr[(halfPts + p) * 3 + 1] = Math.sin(a) * r2;
-        arr[(halfPts + p) * 3 + 2] = 0;
+        const lx = -Math.cos(a) * r2;
+        const fl = fingerForce(lx, ry, 0, R);
+        arr[(halfPts + p) * 3] = lx + fl.x;
+        arr[(halfPts + p) * 3 + 1] = ry + fl.y;
+        arr[(halfPts + p) * 3 + 2] = fl.z;
       }
     }
     posAttr.needsUpdate = true;
@@ -13727,6 +18300,142 @@ function updateTriangleYantraTrip(group: THREE.Group, cfg: Cfg, t: number, R: nu
 
 const BUDDHA_BOY_POINTS = 1700;
 const BUDDHA_BOY_TIDE_POINTS = 900;
+/** The colours inside an oil: palette chips, then each of the four colours on its own. */
+function OilColours({
+  colors,
+  accent,
+  accentMid,
+  dim,
+  onChange,
+}: {
+  colors: string[] | undefined;
+  accent: string;
+  accentMid: string;
+  dim: string;
+  onChange: (colors: string[] | undefined) => void;
+}) {
+  const current = colors ?? null;
+  const label: CSSProperties = {
+    fontFamily: 'var(--font-serif)',
+    fontSize: 9,
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    color: dim,
+  };
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      <span style={label}>Colours</span>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <button
+          type="button"
+          onClick={() => onChange(undefined)}
+          aria-pressed={!current}
+          style={{
+            border: `1px solid ${!current ? accent : accentMid}`,
+            borderRadius: 99,
+            background: 'transparent',
+            color: accent,
+            fontFamily: 'var(--font-serif)',
+            fontSize: 10,
+            padding: '5px 10px',
+            cursor: 'pointer',
+          }}
+        >
+          Preset
+        </button>
+        {OIL_PALETTES.map((p) => {
+          const on = current?.join() === p.colors.join();
+          return (
+            <button
+              type="button"
+              key={p.name}
+              onClick={() => onChange([...p.colors])}
+              aria-pressed={on}
+              title={p.name}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                border: `1px solid ${on ? accent : accentMid}`,
+                borderRadius: 99,
+                background: 'transparent',
+                color: accent,
+                fontFamily: 'var(--font-serif)',
+                fontSize: 10,
+                padding: '4px 9px 4px 5px',
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ display: 'inline-flex' }}>
+                {p.colors.map((c, i) => (
+                  <span
+                    key={`${p.name}-${i}`}
+                    style={{
+                      width: 11,
+                      height: 11,
+                      borderRadius: 99,
+                      background: c,
+                      marginLeft: i ? -3 : 0,
+                      boxShadow: '0 0 0 1px rgba(0,0,0,0.35)',
+                    }}
+                  />
+                ))}
+              </span>
+              {p.name}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+        {OIL_COLOUR_ROLES.map((role, i) => (
+          <label key={role} style={{ display: 'grid', gap: 3, justifyItems: 'center' }}>
+            <input
+              type="color"
+              value={current?.[i] ?? OIL_PALETTES[0].colors[i]}
+              onChange={(e) => {
+                const next = [...(current ?? OIL_PALETTES[0].colors)];
+                next[i] = e.target.value;
+                onChange(next);
+              }}
+              aria-label={`${role} colour`}
+              style={{
+                width: 36,
+                height: 28,
+                padding: 0,
+                border: `1px solid ${accentMid}`,
+                borderRadius: 8,
+                background: 'transparent',
+                cursor: 'pointer',
+                opacity: current ? 1 : 0.55,
+              }}
+            />
+            <span style={label}>{role}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function topRightButtonStyle(accent: string, border: string): CSSProperties {
+  return {
+    width: 30,
+    height: 30,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(8,6,4,0.45)',
+    border: `1px solid ${border}`,
+    borderRadius: 99,
+    color: accent,
+    fontSize: 12,
+    lineHeight: 1,
+    cursor: 'pointer',
+    backdropFilter: 'blur(6px)',
+    opacity: 0.7,
+  };
+}
+
 const DANCE_MOVES: { key: DanceMove; label: string }[] = [
   { key: 'still', label: 'Still' },
   { key: 'breath', label: 'Breath' },
@@ -16034,6 +20743,9 @@ export default function GeometryField() {
   const l3dDragRef = useRef<{ lastX: number; lastY: number } | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
   const fingerDistortRef = useRef(false);
+  // Finger touch is a click-toggle: one click latches it on (and it follows the
+  // pointer), another click turns it off — simpler than press-and-hold.
+  const fingerLatchedRef = useRef(false);
   const motionModeRef = useRef<MotionMode>('animate');
   const voiceStreamRef = useRef<MediaStream | null>(null);
   const voiceAudioContextRef = useRef<AudioContext | null>(null);
@@ -16059,7 +20771,10 @@ export default function GeometryField() {
   const [djError, setDjError] = useState('');
   const [djEnergy, setDjEnergy] = useState({ level: 0, bass: 0, highs: 0 });
   const [open, setOpen] = useState(true);
-  const [tab, setTab] = useState<'builder' | 'music' | 'journey'>('builder');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  // The four Art tabs; 'music' and 'journey' are hidden panels kept in the code.
+  const [tab, setTab] = useState<ArtTab | 'music' | 'journey'>(() => artTabOf(cfg.mode));
+  const isArtTab = tab === 'stars' || tab === 'geometry' || tab === 'tunnels' || tab === 'oils';
   const [builderView, setBuilderView] = useState<'programs' | 'sliders'>('sliders');
   const [liveMode, setLiveMode] = useState<LiveMode>('studio');
   const [liveStatus, setLiveStatus] = useState('local');
@@ -16100,15 +20815,25 @@ export default function GeometryField() {
   useLayoutEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      const mode: LiveMode =
-        params.get('projection') === '1'
-          ? 'projection'
-          : params.get('control') === '1'
-            ? 'control'
-            : 'studio';
+      // Projection mode removed — closing the controls gives a clean full-screen
+      // display instead. Only studio / control remain.
+      const mode: LiveMode = params.get('control') === '1' ? 'control' : 'studio';
       setLiveMode(mode);
-      if (mode === 'projection') setOpen(false);
       if (mode === 'control') setOpen(true);
+
+      // ?tab=stars|geometry|tunnels|oils opens that Art tab (the Big Bang page links here).
+      const urlTab = ART_TABS.find((t) => t.id === params.get('tab'));
+      if (urlTab && !params.get('preset')) {
+        const first = featuredFor(urlTab.id).find(
+          (i): i is { name: string; tag: string } => 'name' in i,
+        );
+        setTab(urlTab.id);
+        setBuilderView('programs');
+        if (first) {
+          setSelectedPresetName(first.name);
+          setCfg({ ...PRESETS[first.name] });
+        }
+      }
 
       const urlPreset = params.get('preset');
       const requestedPreset =
@@ -16120,7 +20845,7 @@ export default function GeometryField() {
           setSelectedPresetName(requestedPreset);
           setCfg({ ...presetCfg });
         }
-        setTab('builder');
+        if (presetCfg) setTab(artTabOf(presetCfg.mode));
         setBuilderView('programs');
         if (urlPreset) {
           params.delete('preset');
@@ -16400,8 +21125,11 @@ export default function GeometryField() {
       renderer.setClearColor(clearColorRef.current, 1);
 
       // Bloom from luminous slider
-      bloomPass.strength = currentCfg.luminous * 0.28;
-      bloomPass.threshold = 0.05;
+      // Full-screen shader fields would wash out under the default bloom,
+      // so they bloom only their brightest highlights.
+      const shaderField = isShaderVisualMode(currentCfg.mode);
+      bloomPass.strength = currentCfg.luminous * (shaderField ? 0.12 : 0.28);
+      bloomPass.threshold = shaderField ? 0.55 : 0.05;
       bloomPass.radius = 0.4 + currentCfg.luminous * 0.04;
 
       // Rebuild stars when count or viewport changes
@@ -16412,7 +21140,10 @@ export default function GeometryField() {
           disposeGroup(starsGroupRef.current);
         }
         starsGroupRef.current = buildStars(
-          currentCfg.stars,
+          // Every preset shows a background starfield by default — floor the
+          // count so even stars=0 presets keep a gentle field; the slider adds more.
+          // Oils are a liquid surface, not space: their stars are opt-in.
+          isOilMode(currentCfg.mode) ? currentCfg.stars : Math.max(3, currentCfg.stars),
           W,
           H,
           currentCfg.preset,
@@ -16743,7 +21474,16 @@ export default function GeometryField() {
       cfg.mode === 'infinitedive' ||
       cfg.mode === 'musicdots' ||
       cfg.mode === 'musicnebula' ||
-      cfg.mode === 'musiclattice';
+      cfg.mode === 'musiclattice' ||
+      cfg.mode === 'musicliquid' ||
+      cfg.mode === 'sauroneye' ||
+      cfg.mode === 'oneflame' ||
+      cfg.mode === 'sacredfigures' ||
+      cfg.mode === 'sacreddancers' ||
+      cfg.mode === 'murmuration' ||
+      cfg.mode === 'fishschool' ||
+      cfg.mode === 'flowmasks' ||
+      cfg.mode === 'windtunnel';
     if (!isCanvasMode) {
       canvasModeActiveRef.current = false;
       cancelAnimationFrame(canvasModeAnimRef.current);
@@ -16781,6 +21521,1066 @@ export default function GeometryField() {
       const bgB = parseInt(h.slice(4, 6), 16);
       ctx.fillStyle = `rgb(${bgR},${bgG},${bgB})`;
       ctx.fillRect(0, 0, mc.width, mc.height);
+    }
+
+    /* ── MURMURATION / FISH SCHOOL — flocks of dots in 3D ─────────────
+     *
+     * Asked for 2026-10-13: "flocks of sparrows made of dots, in 3D, making the
+     * patterns thousands of small birds make: opening, breaking, uniting. And
+     * the same as a school of fish in perpetual movement." lib/flocks.ts: each
+     * bird or fish steers after a target in a moving, changing shape, stirred
+     * by a shared current, with limited speed and turn. The birds fly as one
+     * folding sheet that breathes open and now and then breaks into three and
+     * unites; the fish mill, stream and ball, flashing silver as they turn,
+     * and scatter round a predator. The view turns slowly round them; nearer
+     * dots are larger.
+     */
+    if (cfg.mode === 'murmuration' || cfg.mode === 'fishschool') {
+      const fish = cfg.mode === 'fishschool';
+      const n = Math.round(lerp(fish ? 1200 : 1500, fish ? 6000 : 9000, (cfg.complexity - 1) / 9));
+      const pos = new Float32Array(n * 3);
+      const vel = new Float32Array(n * 3);
+      const rnd = new Float32Array(n * 3);
+      const group = new Uint8Array(n);
+      for (let i = 0; i < n; i++) {
+        // Birds: an offset in a unit ball. Fish: three numbers that place it in each way of moving.
+        if (fish) {
+          rnd[i * 3] = Math.random();
+          rnd[i * 3 + 1] = Math.random();
+          rnd[i * 3 + 2] = Math.random();
+        } else {
+          let x = 0;
+          let y = 0;
+          let z = 0;
+          do {
+            x = Math.random() * 2 - 1;
+            y = Math.random() * 2 - 1;
+            z = Math.random() * 2 - 1;
+          } while (x * x + y * y + z * z > 1);
+          rnd[i * 3] = x;
+          rnd[i * 3 + 1] = y;
+          rnd[i * 3 + 2] = z;
+        }
+        group[i] = i % 3;
+      }
+      const target = (i: number, time: number): [number, number, number] =>
+        fish
+          ? fishTarget(rnd[i * 3], rnd[i * 3 + 1], rnd[i * 3 + 2], time)
+          : birdTarget([rnd[i * 3], rnd[i * 3 + 1], rnd[i * 3 + 2]], group[i], time);
+      for (let i = 0; i < n; i++) {
+        const g = target(i, 0);
+        pos[i * 3] = g[0] + (Math.random() - 0.5) * 0.05;
+        pos[i * 3 + 1] = g[1] + (Math.random() - 0.5) * 0.05;
+        pos[i * 3 + 2] = g[2] + (Math.random() - 0.5) * 0.05;
+      }
+      const flowF = cfg.glow / 10;
+      const depthF = cfg.luminous / 10;
+      const turnF = cfg.symmetry / 10;
+      let last = performance.now();
+      let clock = 0;
+      // Birds in the palette lifted toward white; fish a cool silver over the palette.
+      const lift = (k: number): [number, number, number] => [
+        Math.round(pr + (255 - pr) * k),
+        Math.round(pg + (255 - pg) * k),
+        Math.round(pb + (255 - pb) * k),
+      ];
+
+      function drawFlock() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.04, (now - last) / 1000) * speed;
+        last = now;
+        clock += dt;
+        const W = mc!.width;
+        const H = mc!.height;
+        const scale = Math.min(W, H) * 0.52;
+        const cx = W / 2;
+        const cy = H / 2;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        if (dt > 0) {
+          const time = clock;
+          steer(pos, vel, (i) => target(i, time), time, dt, {
+            pull: fish ? 2.6 : 2.2,
+            flow: (fish ? 0.7 : 1) * (0.3 + flowF * 1.2),
+            turn: fish ? 3.2 : 2.4,
+            vmin: fish ? 0.18 : 0.22,
+            vmax: fish ? 0.95 : 0.85,
+            threat: fish ? predator(time) : null,
+          });
+        }
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = `rgba(2, 3, 6, ${fish ? 0.4 : 0.32})`;
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+        const yaw = clock * 0.06 * turnF * 2;
+        const pitch = 0.28 + 0.08 * Math.sin(clock * 0.07);
+        const base = lift(fish ? 0.45 : 0.25);
+        for (let i = 0; i < n; i++) {
+          const j = i * 3;
+          const p = view([pos[j], pos[j + 1], pos[j + 2]], yaw, pitch);
+          const near = (p[2] + 1) / 2;
+          const size = Math.max(0.8, (0.9 + depthF * 1.6 * near) * dpr);
+          let bright = (0.45 + 0.55 * near) * iF;
+          let rgb = base;
+          if (fish) {
+            // A fish flashes silver when it turns its side to the light.
+            const vx = vel[j];
+            const vz = vel[j + 2];
+            const sp = Math.hypot(vx, vel[j + 1], vz) || 1e-6;
+            const flash = Math.abs((vx * Math.cos(yaw) - vz * Math.sin(yaw)) / sp) ** 6;
+            const shimmer = (cfg.luminous / 10) * flash;
+            bright *= 0.7 + 1.1 * shimmer;
+            rgb = lift(0.45 + 0.5 * shimmer);
+          }
+          const x = cx + p[0] * scale;
+          const y = cy - p[1] * scale;
+          ctx!.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${Math.min(1, 0.7 * bright)})`;
+          if (fish) {
+            // A fish is a short stroke along its way.
+            const q = view(
+              [
+                pos[j] - vel[j] * 0.05,
+                pos[j + 1] - vel[j + 1] * 0.05,
+                pos[j + 2] - vel[j + 2] * 0.05,
+              ],
+              yaw,
+              pitch,
+            );
+            const tx = cx + q[0] * scale;
+            const ty = cy - q[1] * scale;
+            ctx!.fillRect(x - size / 2, y - size / 2, size, size);
+            ctx!.fillRect(
+              (x + tx) / 2 - size * 0.4,
+              (y + ty) / 2 - size * 0.4,
+              size * 0.8,
+              size * 0.8,
+            );
+          } else {
+            ctx!.fillRect(x - size / 2, y - size / 2, size, size);
+          }
+        }
+        canvasModeAnimRef.current = requestAnimationFrame(drawFlock);
+      }
+      drawFlock();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
+    }
+
+    /* ── FLOW MASKS — ten masks of flowing gold ───────────────────────
+     *
+     * Asked for 2026-10-13: "that liquid chaos in gold looks like an African
+     * mask: two big eyes and a mouth, horns, hair, antennae, all in flow. Make
+     * 10 such masks on a slider." lib/flow-masks.ts gives each mask's solids
+     * and holes. Dots are carried through the mask by the Liquid Chaos current;
+     * one that drifts into an eye, the mouth or out of the mask is born again
+     * inside it, so the openings stay dark in moving gold. The rims of the
+     * eyes and mouth catch the light (Rim Light), the Pulse's wave glints
+     * through, and the masks breathe: mouths open and close, horns and hair
+     * sway. The mask's name is written faintly beneath it.
+     */
+    if (cfg.mode === 'flowmasks') {
+      const TAU = Math.PI * 2;
+      const index = Math.max(0, Math.min(9, Math.round(cfg.symmetry) - 1));
+      const name = MASK_NAMES[index];
+      const n = Math.round(lerp(2500, 9000, (cfg.complexity - 1) / 9));
+      const px = new Float32Array(n);
+      const py = new Float32Array(n);
+      const rimF = cfg.glow / 10;
+      const f = cfg.luminous;
+      let last = performance.now();
+      let clock = 0;
+      let m = flowMask(index, 0);
+      const seed = (i: number) => {
+        for (let k = 0; k < 40; k++) {
+          const x = Math.random() * 2.2 - 1.1;
+          const y = Math.random() * 2.2 - 1.1;
+          if (maskInside(m, x, y).in) {
+            px[i] = x;
+            py[i] = y;
+            return;
+          }
+        }
+        px[i] = 0;
+        py[i] = -0.9;
+      };
+      for (let i = 0; i < n; i++) seed(i);
+      const [cr, cg, cb] = [
+        Math.min(255, pr * 0.5 + 150),
+        Math.min(255, pg * 0.5 + 130),
+        Math.min(255, pb * 0.5 + 90),
+      ];
+
+      function drawMask() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.05, (now - last) / 1000) * speed;
+        last = now;
+        clock += dt;
+        m = flowMask(index, clock);
+        const W = mc!.width;
+        const H = mc!.height;
+        const scale = Math.min(W, H) * 0.43;
+        const cx = W / 2;
+        const cy = H / 2;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const size = Math.max(1, 1.15 * dpr);
+        const w = TAU * 0.45 * clock;
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = 'rgba(4, 3, 2, 0.28)';
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < n; i++) {
+          // The current carries the gold through the mask.
+          const x0 = px[i];
+          const y0 = py[i];
+          const vx = Math.sin(x0 * f) * Math.cos(y0 * f + clock * 0.35);
+          const vy = -Math.cos(x0 * f) * Math.sin(y0 * f + clock * 0.35);
+          px[i] = x0 + vx * dt * 0.12;
+          py[i] = y0 + vy * dt * 0.12;
+          const at = maskInside(m, px[i], py[i]);
+          if (!at.in) {
+            seed(i);
+            continue;
+          }
+          const r = Math.hypot(px[i], py[i]);
+          const wave = Math.sin(w - 8.6 * r);
+          const crest = Math.max(0, wave) * 0.6 + at.rim * rimF;
+          const glow = (0.5 + 0.3 * Math.max(0, wave) + 1.1 * at.rim * rimF) * iF;
+          const rr = Math.round(pr + (cr - pr) * Math.min(1, crest));
+          const gg = Math.round(pg + (cg - pg) * Math.min(1, crest));
+          const bb = Math.round(pb + (cb - pb) * Math.min(1, crest));
+          const x = cx + px[i] * scale;
+          const y = cy - py[i] * scale;
+          ctx!.fillStyle = `rgba(${rr}, ${gg}, ${bb}, ${0.08 * glow})`;
+          ctx!.fillRect(x - size * 1.6, y - size * 1.6, size * 3.2, size * 3.2);
+          ctx!.fillStyle = `rgba(${rr}, ${gg}, ${bb}, ${Math.min(1, 0.6 * glow)})`;
+          ctx!.fillRect(x - size / 2, y - size / 2, size, size);
+        }
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.font = `${Math.round(11 * dpr)}px serif`;
+        ctx!.textAlign = 'center';
+        ctx!.fillStyle = `rgba(${pr}, ${pg}, ${pb}, 0.45)`;
+        ctx!.fillText(`${index + 1} · ${name}`, cx, cy + scale * 1.12);
+        canvasModeAnimRef.current = requestAnimationFrame(drawMask);
+      }
+      drawMask();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
+    }
+
+    /* ── SACRED FIGURES / SACRED DANCERS — gods and dancers of liquid light ──
+     *
+     * Asked for 2026-10-13: ten sacred figures of the Indian and Tibetan gods
+     * (the thousand-armed one meditating, Shiva Nataraja …) chosen on a slider,
+     * and five dancers "like the Dot Walker but more enriched, inspired by the
+     * quantum liquids: more dots, more substance, the liquid movement like a
+     * dance." The shapes are lib/sacred-figures.ts. Thousands of dots are
+     * scattered over a figure; each eases after its place at its own pace (the
+     * Liquid slider), so the body moves like a liquid and a dancer leaves a
+     * flowing wake; a current stirs them a little; a wave of light runs out
+     * from the heart through the figure like the Liquid Chaos crest. The
+     * figure's name is written faintly beneath it.
+     */
+    if (cfg.mode === 'sacredfigures' || cfg.mode === 'sacreddancers') {
+      const dancing = cfg.mode === 'sacreddancers';
+      const index = dancing
+        ? Math.max(0, Math.min(4, Math.round(cfg.symmetry) - 1))
+        : Math.max(0, Math.min(9, Math.round(cfg.symmetry) - 1));
+      const shapesAt = (time: number) => (dancing ? dancer(index, time) : figure(index, time));
+      const name = dancing ? DANCER_NAMES[index] : FIGURE_NAMES[index];
+      const n = Math.round(lerp(3000, dancing ? 10000 : 9000, (cfg.glow - 1) / 9));
+      const seeds = sampleDots(shapesAt(0), n, Math.random);
+      const px = new Float32Array(n);
+      const py = new Float32Array(n);
+      const liquidF = cfg.complexity / 10;
+      const glintF = cfg.luminous / 10;
+      let first = true;
+      let last = performance.now();
+      let clock = 0;
+      const [cr, cg, cb] = [
+        Math.min(255, pr * 0.55 + 150),
+        Math.min(255, pg * 0.55 + 125),
+        Math.min(255, pb * 0.5 + 80),
+      ];
+
+      function drawSacred() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.05, (now - last) / 1000) * speed;
+        last = now;
+        clock += dt;
+        const W = mc!.width;
+        const H = mc!.height;
+        const scale = Math.min(W, H) * 0.44;
+        const cx = W / 2;
+        const cy = H * 0.5;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const size = Math.max(1, 1.05 * dpr);
+        const shapes = shapesAt(clock);
+        const w = Math.PI * 2 * 0.45 * clock;
+
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = `rgba(2, 2, 4, ${dancing ? 0.2 : 0.3})`;
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+
+        for (let i = 0; i < n; i++) {
+          const d = seeds[i];
+          const [tx, ty] = dotAt(shapes[d.shape], d);
+          // The current stirs each dot a little round its place.
+          const stir = 0.012 + 0.03 * liquidF;
+          const sx = tx + Math.sin(ty * 9 + clock * 1.7 + d.drift * 6) * stir;
+          const sy = ty + Math.cos(tx * 9 - clock * 1.3 + d.drift * 5) * stir;
+          if (first) {
+            px[i] = sx;
+            py[i] = sy;
+          } else {
+            // Each dot eases after its place at its own pace: liquid.
+            const k = lerp(18, 2.2 + d.drift * 3, liquidF);
+            const f = Math.min(1, dt * k);
+            px[i] += (sx - px[i]) * f;
+            py[i] += (sy - py[i]) * f;
+          }
+          const x = px[i];
+          const y = py[i];
+          // A wave of light running out from the heart.
+          const r = Math.hypot(x, y - 0.12);
+          const wave = Math.sin(w - 7.5 * r);
+          const crest = Math.max(0, wave) * glintF;
+          const glow = (0.5 + 0.35 * Math.sin(d.drift * 40 + clock * 2) * 0.3 + 0.9 * crest) * iF;
+          const rr = Math.round(pr + (cr - pr) * crest);
+          const gg = Math.round(pg + (cg - pg) * crest);
+          const bb = Math.round(pb + (cb - pb) * crest);
+          const sxp = cx + x * scale;
+          const syp = cy - y * scale;
+          ctx!.fillStyle = `rgba(${rr}, ${gg}, ${bb}, ${0.08 * glow})`;
+          ctx!.fillRect(sxp - size * 1.6, syp - size * 1.6, size * 3.2, size * 3.2);
+          ctx!.fillStyle = `rgba(${rr}, ${gg}, ${bb}, ${Math.min(1, 0.62 * glow)})`;
+          ctx!.fillRect(sxp - size / 2, syp - size / 2, size, size);
+        }
+        first = false;
+
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.font = `${Math.round(11 * dpr)}px serif`;
+        ctx!.textAlign = 'center';
+        ctx!.fillStyle = `rgba(${pr}, ${pg}, ${pb}, 0.45)`;
+        ctx!.fillText(`${index + 1} · ${name}`, cx, cy + scale * 1.07);
+        canvasModeAnimRef.current = requestAnimationFrame(drawSacred);
+      }
+      drawSacred();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
+    }
+
+    /* ── ONE FLAME — a single flame floating, its sparks rising like stars ──
+     *
+     * Asked for 2026-10-13: "just fire, just one flame floating. Default red
+     * with golden tips, orange in the middle, but it can also go purple or other
+     * colours. Aim for the feeling of real fire, with the stars going up."
+     * The flame is thousands of short-lived embers born in a small bed at its
+     * foot. Heat lifts them, faster as they rise (buoyancy); they are drawn in
+     * toward the middle so the flame narrows to a tip, and a sway that travels
+     * up the flame makes it lick and flicker, as real flames do. Each ember
+     * changes colour as it rises and cools: the fire's base colour (red), then
+     * its middle (orange), then its tip (gold), fading out; the hot core burns
+     * brighter than the edges. Now and then a spark breaks free and climbs on
+     * up the sky, twinkling and cooling, like a star going up. The flame floats:
+     * no wick, a soft warm light round it, a slow breath in its height.
+     * Fire Colour: 0 red–orange–gold, 1 purple, 2 blue, 3 green, 4 rose,
+     * 5 white-gold, 6 turquoise.
+     */
+    /* ── WIND — air passing over an object, from its left to its right ───
+     *
+     * Asked for 2026-10-18 for the Ferrari project: aerodynamics, the wind
+     * passing over an object, science and art together; later with a car.
+     * Smoke lines, as in a wind tunnel, ride the field of lib/wind.ts: they
+     * stop on the nose, part, speed up over the shoulders and curl into the
+     * wake. Each line is coloured by its speed (slow deep blue, fast white
+     * turning gold), and a warm glow marks the stagnation point, where the
+     * pressure is highest.
+     */
+    if (cfg.mode === 'windtunnel') {
+      const shape = windShape(cfg.particles);
+      const turb = cfg.glow / 10;
+      const fade = 0.2 - 0.17 * Math.min(1, cfg.luminous / 10);
+      const lanes = Math.round(lerp(16, 64, (cfg.complexity - 1) / 9));
+      // As much smoke per area as on a full screen: a small screen (a frame in a room) would otherwise saturate to white.
+      const perLane = () =>
+        70 * Math.max(0.15, Math.min(1.4, (mc!.width * mc!.height) / (1280 * 720)));
+      type Puff = { x: number; y: number; laned: boolean };
+      let puffs: Puff[] = [];
+      let last = performance.now();
+      let clock = 0;
+      const frame = () => {
+        const W = mc!.width;
+        const H = mc!.height;
+        const scale = H / 2.2;
+        return {
+          W,
+          H,
+          scale,
+          cx: W / 2,
+          cy: H / 2,
+          xmin: -W / 2 / scale - 0.05,
+          xmax: W / 2 / scale + 0.05,
+        };
+      };
+      // Most smoke comes from a rake of evenly spaced nozzles on the left; some drifts freely between them.
+      const spawn = (x: number): Puff => {
+        const laned = Math.random() < 0.8;
+        const y = laned
+          ? -1.05 +
+            (2.1 * (Math.floor(Math.random() * lanes) + 0.5)) / lanes +
+            (Math.random() - 0.5) * 0.004
+          : (Math.random() - 0.5) * 2.3;
+        return { x, y, laned };
+      };
+      {
+        const f = frame();
+        for (let i = 0; i < lanes * perLane(); i++) {
+          const p = spawn(f.xmin + Math.random() * (f.xmax - f.xmin));
+          if (shape.sdf(p.x, p.y) > 0.01) puffs.push(p);
+        }
+      }
+      const noseOf = shape.outline.reduce((a, b) => (b[0] < a[0] ? b : a));
+
+      function drawWind() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.033, (now - last) / 1000) * speed;
+        last = now;
+        clock += dt;
+        const f = frame();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const sx = (x: number) => f.cx + x * f.scale;
+        const sy = (y: number) => f.cy - y * f.scale;
+
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = `rgba(3, 5, 10, ${fade})`;
+        ctx!.fillRect(0, 0, f.W, f.H);
+        ctx!.globalCompositeOperation = 'lighter';
+        ctx!.lineWidth = 1.1 * dpr;
+        ctx!.lineCap = 'round';
+
+        const keep: Puff[] = [];
+        for (const p of puffs) {
+          const ox = p.x;
+          const oy = p.y;
+          // Two half steps, so the lines bend smoothly round the nose.
+          let v = windVelocity(shape, p.x, p.y, clock, turb);
+          p.x += v[0] * dt * 0.5;
+          p.y += v[1] * dt * 0.5;
+          v = windVelocity(shape, p.x, p.y, clock, turb);
+          p.x += v[0] * dt * 0.5;
+          p.y += v[1] * dt * 0.5;
+          if (p.x > f.xmax || Math.abs(p.y) > 1.3 || shape.sdf(p.x, p.y) < -0.03) continue;
+          keep.push(p);
+          if (dt === 0) continue;
+          const sp = Math.hypot(v[0], v[1]);
+          const [h, sat, l] = speedColour(sp);
+          ctx!.strokeStyle = `hsla(${h}, ${sat}%, ${l}%, ${(p.laned ? 0.34 : 0.16) * (0.4 + 0.6 * iF)})`;
+          ctx!.beginPath();
+          ctx!.moveTo(sx(ox), sy(oy));
+          ctx!.lineTo(sx(p.x), sy(p.y));
+          ctx!.stroke();
+        }
+        // New smoke at the rake, as much as left the frame.
+        const want = Math.round(lanes * perLane());
+        for (let i = keep.length; i < want; i++) keep.push(spawn(f.xmin + Math.random() * 0.04));
+        puffs = keep;
+
+        // The stagnation point: a warm glow on the nose, where the air stops.
+        ctx!.globalCompositeOperation = 'lighter';
+        const gx = sx(noseOf[0]);
+        const gy = sy(noseOf[1]);
+        const gr = 0.16 * f.scale;
+        const g = ctx!.createRadialGradient(gx, gy, 0, gx, gy, gr);
+        g.addColorStop(0, `hsla(14, 95%, 58%, ${0.16 * iF})`);
+        g.addColorStop(1, 'hsla(14, 95%, 58%, 0)');
+        ctx!.fillStyle = g;
+        ctx!.fillRect(gx - gr, gy - gr, gr * 2, gr * 2);
+
+        // The object: dark, drawn like a figure in a paper, a fine light outline.
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.beginPath();
+        shape.outline.forEach(([x, y], i) =>
+          i ? ctx!.lineTo(sx(x), sy(y)) : ctx!.moveTo(sx(x), sy(y)),
+        );
+        ctx!.closePath();
+        ctx!.fillStyle = '#05070c';
+        ctx!.fill();
+        ctx!.strokeStyle = `rgba(236, 226, 206, ${0.35 + 0.35 * iF})`;
+        ctx!.lineWidth = 1.2 * dpr;
+        ctx!.stroke();
+
+        canvasModeAnimRef.current = requestAnimationFrame(drawWind);
+      }
+      drawWind();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
+    }
+
+    if (cfg.mode === 'oneflame') {
+      const TAU = Math.PI * 2;
+      // [hue, saturation, lightness] for the base, the middle and the tip of each fire.
+      const FIRES: [number, number, number][][] = [
+        [
+          [0, 100, 38],
+          [24, 100, 52],
+          [46, 100, 64],
+        ],
+        [
+          [275, 90, 38],
+          [300, 95, 55],
+          [330, 90, 74],
+        ],
+        [
+          [225, 95, 40],
+          [200, 100, 56],
+          [185, 80, 82],
+        ],
+        [
+          [140, 85, 32],
+          [105, 90, 48],
+          [70, 100, 64],
+        ],
+        [
+          [340, 90, 42],
+          [355, 95, 60],
+          [20, 100, 78],
+        ],
+        [
+          [30, 70, 50],
+          [42, 85, 70],
+          [50, 60, 90],
+        ],
+        [
+          [190, 90, 36],
+          [172, 90, 50],
+          [150, 70, 76],
+        ],
+      ];
+      const choice = FIRES[Math.max(0, Math.min(FIRES.length - 1, Math.round(cfg.particles)))];
+      const heightF = cfg.symmetry / 10;
+      const goldF = cfg.glow / 10;
+      const sparkF = cfg.luminous / 10;
+      const flick = speed;
+      type Ember = {
+        x: number;
+        y: number;
+        vx: number;
+        vy: number;
+        age: number;
+        life: number;
+        seed: number;
+        size: number;
+      };
+      type Spark = {
+        x: number;
+        y: number;
+        vx: number;
+        vy: number;
+        age: number;
+        life: number;
+        seed: number;
+      };
+      let embers: Ember[] = [];
+      let sparks: Spark[] = [];
+      let last = performance.now();
+      let clock = 0;
+      let carry = 0;
+      let sparkCarry = 0;
+      const mix = (a: number, b: number, u: number) => a + (b - a) * u;
+      // An ember's colour as it rises: base, middle, tip. Golden Tips moves the tip colour lower.
+      const colourAt = (u: number): [number, number, number] => {
+        const k = Math.min(1, u * (0.85 + goldF * 0.6));
+        const [b, m, t] = choice;
+        if (k < 0.5) {
+          const v = k / 0.5;
+          return [mix(b[0], m[0], v), mix(b[1], m[1], v), mix(b[2], m[2], v)];
+        }
+        const v = (k - 0.5) / 0.5;
+        return [mix(m[0], t[0], v), mix(m[1], t[1], v), mix(m[2], t[2], v)];
+      };
+
+      function drawFlame() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.05, (now - last) / 1000) * flick;
+        last = now;
+        clock += dt;
+        const W = mc!.width;
+        const H = mc!.height;
+        const S = Math.min(W, H);
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        // Floating: the flame drifts a little, and breathes in height.
+        const bx = W / 2 + Math.sin(clock * 0.37) * S * 0.012;
+        const by = H * 0.68 + Math.sin(clock * 0.53) * S * 0.01;
+        const tall = S * (0.28 + 0.32 * heightF) * (0.92 + 0.08 * Math.sin(clock * 1.3));
+        const bed = S * 0.08;
+
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = 'rgba(3, 2, 3, 0.3)';
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+
+        // The warm light round it.
+        const [mh, ms, ml] = choice[1];
+        const g = ctx!.createRadialGradient(
+          bx,
+          by - tall * 0.35,
+          0,
+          bx,
+          by - tall * 0.35,
+          tall * 0.9,
+        );
+        g.addColorStop(0, `hsla(${mh}, ${ms}%, ${ml}%, ${0.05 * iF})`);
+        g.addColorStop(1, 'hsla(0, 0%, 0%, 0)');
+        ctx!.fillStyle = g;
+        ctx!.fillRect(0, 0, W, H);
+
+        // New embers in the bed at the flame's foot.
+        carry += 2200 * dt;
+        while (carry >= 1) {
+          carry -= 1;
+          const a = Math.random() * TAU;
+          const r = Math.sqrt(Math.random());
+          embers.push({
+            // A round bed, so the flame's foot is a teardrop, not a flat line.
+            x: Math.cos(a) * r * bed * 0.85,
+            y: Math.abs(Math.sin(a)) * r * bed * 0.7,
+            vx: 0,
+            vy: -tall * (0.4 + Math.random() * 0.25),
+            age: 0,
+            life: 0.55 + Math.random() * 0.5,
+            seed: Math.random() * TAU,
+            size: (1.4 + Math.random() * 1.8) * dpr,
+          });
+        }
+        if (embers.length > 7000) embers = embers.slice(-7000);
+
+        const keep: Ember[] = [];
+        for (const e of embers) {
+          e.age += dt;
+          if (e.age >= e.life) continue;
+          const u = e.age / e.life;
+          const rise = -e.y / tall;
+          // Buoyancy: heat lifts it, faster as it rises.
+          e.vy -= tall * (1.5 + 0.8 * rise) * dt;
+          // Drawn to the middle, so the flame narrows to a tip...
+          e.vx -= e.x * (1.6 + 6 * rise) * dt;
+          // ...and a sway travelling up the flame makes it lick and flicker.
+          const sway =
+            Math.sin(e.y * (9 / tall) + clock * 7 + 0.6 * Math.sin(clock * 2.3)) +
+            0.5 * Math.sin(e.y * (23 / tall) - clock * 11 + e.seed);
+          e.vx += sway * S * 0.85 * (0.25 + rise) * dt;
+          e.vx *= 1 - 2.2 * dt;
+          e.vy *= 1 - 0.5 * dt;
+          e.x += e.vx * dt;
+          e.y += e.vy * dt;
+          keep.push(e);
+          // The hot core is brighter than the edges.
+          const core = Math.exp(-((e.x / (bed * (1 - 0.6 * Math.min(1, rise)))) ** 2));
+          const [h, sat, l] = colourAt(Math.min(1, 0.8 * Math.max(0, rise) + 0.3 * u));
+          const alpha = Math.sin(Math.PI * Math.min(1, u * 1.15)) ** 0.8 * (0.3 + 0.7 * iF);
+          const light = Math.min(88, l + 8 * core);
+          const size = e.size * (1 - 0.55 * u);
+          const px = bx + e.x;
+          const py = by + e.y;
+          ctx!.fillStyle = `hsla(${h}, ${sat}%, ${l}%, ${0.045 * alpha})`;
+          ctx!.fillRect(px - size * 2.4, py - size * 2.4, size * 4.8, size * 4.8);
+          ctx!.fillStyle = `hsla(${h}, ${sat}%, ${light}%, ${Math.min(1, 0.2 * alpha * (0.55 + 0.45 * core))})`;
+          ctx!.fillRect(px - size / 2, py - size / 2, size, size);
+        }
+        embers = keep;
+
+        // Sparks: now and then one breaks free and climbs up the sky, like a star going up.
+        sparkCarry += (1 + 12 * sparkF) * dt;
+        while (sparkCarry >= 1) {
+          sparkCarry -= 1;
+          sparks.push({
+            x: (Math.random() - 0.5) * bed * 0.8,
+            y: -tall * (0.4 + Math.random() * 0.5),
+            vx: (Math.random() - 0.5) * S * 0.35,
+            vy: -S * (0.12 + Math.random() * 0.22),
+            age: 0,
+            life: 2.5 + Math.random() * 3.5,
+            seed: Math.random() * TAU,
+          });
+        }
+        const keepS: Spark[] = [];
+        for (const sp of sparks) {
+          sp.age += dt;
+          if (sp.age >= sp.life) continue;
+          sp.vx += Math.sin(sp.age * 3 + sp.seed) * S * 0.05 * dt;
+          sp.vy -= S * 0.015 * dt;
+          sp.vx *= 1 - 0.6 * dt;
+          sp.x += sp.vx * dt;
+          sp.y += sp.vy * dt;
+          if (by + sp.y < -10) continue;
+          keepS.push(sp);
+          const u = sp.age / sp.life;
+          // A spark cools from the tip's colour back toward the base's as it climbs.
+          const [h, sat, l] = colourAt(1 - u * 0.7);
+          const tw = 0.6 + 0.4 * Math.sin(sp.age * 14 + sp.seed);
+          const a = (1 - u) * tw * (0.5 + 0.5 * iF);
+          const size = 2 * dpr;
+          const px = bx + sp.x;
+          const py = by + sp.y;
+          ctx!.fillStyle = `hsla(${h}, ${sat}%, ${l}%, ${0.15 * a})`;
+          ctx!.fillRect(px - size * 2, py - size * 2, size * 4, size * 4);
+          ctx!.fillStyle = `hsla(${h}, ${sat}%, ${Math.min(95, l + 20)}%, ${a})`;
+          ctx!.fillRect(px - size / 2, py - size / 2, size, size);
+        }
+        sparks = keepS.length > 600 ? keepS.slice(-600) : keepS;
+
+        canvasModeAnimRef.current = requestAnimationFrame(drawFlame);
+      }
+      drawFlame();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
+    }
+
+    /* ── SAURON'S EYE — a lidless eye wreathed in fire ──────────────
+     *
+     * Asked for 2026-10-13: "a Sauron's eye geometry, with sliders. When red the
+     * tips are more golden, like real fire, with the cat's eye in the centre."
+     * An almond of fire: flames are born on its rim and lick outward and up,
+     * longest at the two corners, swaying as they rise. Like real fire, a flame
+     * is deep red where it is born and turns orange, then gold toward its tip
+     * (Golden Tips sets how far), fading to nothing. Inside, the iris: embers
+     * drawn inward toward the centre, red at the rim and white-gold by the
+     * pupil, which is a cat's vertical slit (Pupil sets its width), black, with
+     * a thin burning edge, breathing slowly wider and narrower.
+     */
+    if (cfg.mode === 'sauroneye') {
+      const TAU = Math.PI * 2;
+      const heightF = cfg.symmetry / 10;
+      const goldF = cfg.glow / 10;
+      const pupilF = cfg.luminous;
+      const flick = speed;
+      const spawnRate = lerp(500, 2600, (cfg.complexity - 1) / 9);
+      type Flame = {
+        x: number;
+        y: number;
+        vx: number;
+        vy: number;
+        age: number;
+        life: number;
+        seed: number;
+        size: number;
+      };
+      let flames: Flame[] = [];
+      const IRIS = Math.round(lerp(700, 1800, (cfg.complexity - 1) / 9));
+      const iris = Array.from({ length: IRIS }, () => ({
+        a: Math.random() * TAU,
+        r: Math.random(),
+        sp: 0.15 + Math.random() * 0.35,
+      }));
+      let last = performance.now();
+      let clock = 0;
+      let carry = 0;
+      // Fire colour by how far along its life a flame is: deep red, orange, then gold at the tip.
+      const fire = (u: number): [number, number, number] => {
+        const tip = Math.min(1, u * (0.9 + goldF * 0.9));
+        const hue = 2 + 46 * tip ** 1.3;
+        const light = 34 + 30 * tip;
+        return [hue, 100, light];
+      };
+
+      function drawEye() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.05, (now - last) / 1000);
+        last = now;
+        clock += dt * flick;
+        const W = mc!.width;
+        const H = mc!.height;
+        const cx = W / 2;
+        const cy = H / 2;
+        const A = Math.min(W, H) * 0.34;
+        const B = A * 0.44;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = 'rgba(4, 2, 2, 0.24)';
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+
+        // The almond: a lens, pointed at the corners.
+        const rim = (t: number): [number, number, number, number] => {
+          const x = A * Math.cos(t);
+          const y = B * Math.sin(t) * (0.55 + 0.45 * Math.abs(Math.sin(t)));
+          const nx = Math.cos(t) / A;
+          const ny = Math.sin(t) / B;
+          const nl = Math.hypot(nx, ny) || 1;
+          return [x, y, nx / nl, ny / nl];
+        };
+
+        // New flames on the rim, more of them and longer at the corners.
+        carry += spawnRate * dt * flick;
+        while (carry >= 1) {
+          carry -= 1;
+          const t = Math.random() * TAU;
+          const [x, y, nx, ny] = rim(t);
+          const corner = Math.abs(Math.cos(t)) ** 3;
+          const sp = A * (0.35 + 0.55 * heightF) * (0.6 + Math.random() * 0.6) * (1 + 1.2 * corner);
+          flames.push({
+            x,
+            y,
+            vx: nx * sp,
+            vy: ny * sp * 0.75 - A * 0.25 * heightF,
+            age: 0,
+            life: (0.45 + 0.6 * heightF) * (0.6 + Math.random() * 0.7),
+            seed: Math.random() * TAU,
+            size: (1.2 + Math.random() * 1.6) * dpr,
+          });
+        }
+        if (flames.length > 9000) flames = flames.slice(-9000);
+
+        const keep: Flame[] = [];
+        for (const fl of flames) {
+          fl.age += dt * flick;
+          if (fl.age >= fl.life) continue;
+          const u = fl.age / fl.life;
+          // Rising and swaying, slowing as the flame thins out at its tip.
+          fl.vx += Math.sin(fl.age * 9 + fl.seed + clock * 2) * A * 0.9 * dt;
+          fl.vy -= A * 0.9 * heightF * dt;
+          fl.vx *= 1 - 1.6 * dt;
+          fl.vy *= 1 - 1.6 * dt;
+          fl.x += fl.vx * dt * flick;
+          fl.y += fl.vy * dt * flick;
+          keep.push(fl);
+          const [h, sat, l] = fire(u);
+          const alpha = (1 - u) ** 1.2 * (0.35 + 0.65 * iF);
+          const size = fl.size * (1 - 0.6 * u);
+          const px = cx + fl.x;
+          const py = cy + fl.y;
+          ctx!.fillStyle = `hsla(${h}, ${sat}%, ${l}%, ${0.1 * alpha})`;
+          ctx!.fillRect(px - size * 2, py - size * 2, size * 4, size * 4);
+          ctx!.fillStyle = `hsla(${h}, ${sat}%, ${Math.min(92, l + 12)}%, ${Math.min(1, 0.75 * alpha)})`;
+          ctx!.fillRect(px - size / 2, py - size / 2, size, size);
+        }
+        flames = keep;
+
+        // The iris: embers drawn in toward the pupil, red outside, white-gold within.
+        for (const e of iris) {
+          e.r -= e.sp * dt * flick * 0.5;
+          e.a += dt * flick * 0.15;
+          if (e.r < 0.08) {
+            e.r = 1;
+            e.a = Math.random() * TAU;
+          }
+          const [rx, ry] = rim(e.a);
+          const sx = cx + rx * e.r * 0.94;
+          const sy = cy + ry * e.r * 0.94;
+          const warm = 1 - e.r;
+          const h = 8 + 44 * warm;
+          const l = 38 + 40 * warm ** 1.5;
+          const a = (0.45 + 0.5 * warm) * (0.4 + 0.6 * iF);
+          const size = (1 + 1.2 * warm) * dpr;
+          ctx!.fillStyle = `hsla(${h}, 100%, ${l}%, ${0.12 * a})`;
+          ctx!.fillRect(sx - size * 2, sy - size * 2, size * 4, size * 4);
+          ctx!.fillStyle = `hsla(${h}, 100%, ${Math.min(94, l + 10)}%, ${a})`;
+          ctx!.fillRect(sx - size / 2, sy - size / 2, size, size);
+        }
+
+        // The cat's eye: a vertical slit, black, breathing, with a burning edge.
+        const pw = A * 0.07 * pupilF * (0.85 + 0.15 * Math.sin(clock * 0.9));
+        const ph = B * 1.02;
+        const slit = () => {
+          ctx!.beginPath();
+          ctx!.moveTo(cx, cy - ph);
+          ctx!.quadraticCurveTo(cx + pw * 2, cy, cx, cy + ph);
+          ctx!.quadraticCurveTo(cx - pw * 2, cy, cx, cy - ph);
+          ctx!.closePath();
+        };
+        ctx!.globalCompositeOperation = 'lighter';
+        slit();
+        ctx!.lineWidth = 6 * dpr;
+        ctx!.strokeStyle = `hsla(40, 100%, 60%, ${0.18 * iF})`;
+        ctx!.stroke();
+        ctx!.globalCompositeOperation = 'source-over';
+        slit();
+        ctx!.fillStyle = '#000';
+        ctx!.fill();
+        ctx!.lineWidth = 1.2 * dpr;
+        ctx!.strokeStyle = `hsla(46, 100%, 70%, ${0.65 * iF})`;
+        ctx!.stroke();
+        canvasModeAnimRef.current = requestAnimationFrame(drawEye);
+      }
+      drawEye();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
+    }
+
+    /* ── MUSIC LIQUID CHAOS — the Music page's magic-mode liquid, as a star ──
+     *
+     * Asked for 2026-10-13: "that liquid chaos from Music is amazing, use it as
+     * a star preset." Ported from Chill Machine's LiquidField (chaos): dots drift
+     * through a divergence-free current (the curl of sin(fx)·sin(fy + t), so they
+     * swirl and never bunch up), the Pulse's wave runs gently outward through
+     * them, and drops of colour fall into the liquid, each a ring spreading out
+     * that lifts and lights the dots it passes. On the piano every note was a
+     * drop; here they fall on their own, at a calm, uneven rhythm (Drops), and a
+     * beat from the app's music adds one. A soft trail is left on the canvas,
+     * which is what makes it read as liquid.
+     */
+    if (cfg.mode === 'musicliquid') {
+      const TAU = Math.PI * 2;
+      const n = Math.round(lerp(1400, 4600, (cfg.complexity - 1) / 9));
+      const px = new Float32Array(n);
+      const py = new Float32Array(n);
+      const seed = (i: number) => {
+        const a = Math.random() * TAU;
+        const r = Math.sqrt(Math.random()) * 0.92;
+        px[i] = Math.cos(a) * r;
+        py[i] = Math.sin(a) * r;
+      };
+      for (let i = 0; i < n; i++) seed(i);
+      const DROP_LIFE = 3.2;
+      const DROP_SPEED = 0.55;
+      const DROP_WIDTH = 0.09;
+      const dropWave = (d: number, age: number) => {
+        if (age < 0 || age > DROP_LIFE) return 0;
+        const off = d - age * DROP_SPEED;
+        const envelope = Math.exp(-(off * off) / (2 * DROP_WIDTH * DROP_WIDTH));
+        return Math.sin(off * 38) * envelope * (1 - age / DROP_LIFE) ** 1.5;
+      };
+      // The note colours of the piano: round the circle of fifths.
+      const NOTE_HUES = [0, 210, 60, 270, 120, 330, 180, 30, 240, 90, 300, 150];
+      let drops: { x: number; y: number; born: number; hue: number }[] = [];
+      let clock = 0;
+      let nextDrop = 0.6;
+      let lastPulse = 0;
+      let note = 0;
+      let last = performance.now();
+      const f = Math.max(2, cfg.symmetry);
+      const ripple = cfg.luminous;
+      const dropsPerSecond = (cfg.glow / 10) * 1.6;
+      const light = 0.4 + iF * 0.75;
+      const fade = 0.28;
+
+      function drawMusicLiquid() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.05, (now - last) / 1000) * speed;
+        last = now;
+        clock += dt;
+        const s = clock;
+        const W = mc!.width;
+        const H = mc!.height;
+
+        // Drops: on their own, unevenly, and on a beat of the app's music.
+        nextDrop -= dt;
+        const beat = _musicPulse > 0.55 && lastPulse <= 0.55;
+        lastPulse = _musicPulse;
+        if (dropsPerSecond > 0 && (nextDrop <= 0 || beat)) {
+          // A walk up and down the keys, like a hand playing: left low, right high.
+          note = (note + 1 + Math.floor(Math.random() * 5)) % 24;
+          const k = note / 23;
+          drops.push({
+            x: -0.8 + 1.6 * k,
+            y: 0.35 - 0.7 * k + (Math.random() - 0.5) * 0.25,
+            born: s,
+            hue: NOTE_HUES[note % 12],
+          });
+          if (drops.length > 24) drops.shift();
+          nextDrop = (0.35 + Math.random() * 1.3) / Math.max(0.05, dropsPerSecond);
+        }
+        drops = drops.filter((d) => s - d.born < DROP_LIFE);
+
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = `rgba(7, 6, 10, ${fade})`;
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+
+        const scale = Math.min(W, H) * 0.46;
+        const cx = W / 2;
+        const cy = H / 2;
+        const step = dt * 0.12;
+        const size = Math.max(1.2, Math.min(W, H) / 520) * 1.2;
+        const w = TAU * 0.45 * s;
+
+        for (let i = 0; i < n; i++) {
+          // The current carries the fluid.
+          const x0 = px[i];
+          const y0 = py[i];
+          const vx = Math.sin(x0 * f) * Math.cos(y0 * f + s * 0.35);
+          const vy = -Math.cos(x0 * f) * Math.sin(y0 * f + s * 0.35);
+          px[i] = x0 + vx * step;
+          py[i] = y0 + vy * step;
+          if (px[i] * px[i] + py[i] * py[i] > 0.88) seed(i);
+          const x = px[i];
+          const y = py[i];
+
+          // The liquid: the ambient Pulse wave, and every live drop.
+          const r = Math.hypot(x, y);
+          const ambient = Math.sin(w - 8.6 * r);
+          const grow = 1 + ripple * 0.06 * ambient;
+          let dx = x * grow;
+          let dy = y * grow;
+          let lift = 0;
+          let hue = -1;
+          for (const d of drops) {
+            const ex = x - d.x;
+            const ey = y - d.y;
+            const dist = Math.hypot(ex, ey) || 1e-6;
+            const wv = dropWave(dist, s - d.born);
+            if (wv === 0) continue;
+            dx += (ex / dist) * wv * 0.045 * ripple;
+            dy += (ey / dist) * wv * 0.045 * ripple;
+            if (wv > lift) {
+              lift = wv;
+              hue = d.hue;
+            }
+          }
+          const glint = 0.55 + 0.35 * Math.max(0, ambient) + 1.1 * lift;
+          const glow = Math.min(1.8, glint * light);
+          if (glow < 0.08) continue;
+          const lit = lift > 0.15 && hue >= 0;
+          const sx = cx + dx * scale;
+          const sy = cy - dy * scale;
+          if (lit) {
+            ctx!.fillStyle = `hsla(${hue}, 90%, 62%, ${0.1 * glow})`;
+            ctx!.fillRect(sx - size * 1.6, sy - size * 1.6, size * 3.2, size * 3.2);
+            ctx!.fillStyle = `hsla(${hue}, 90%, ${Math.min(90, 62 + 18 * glow)}%, ${Math.min(1, 0.55 * glow)})`;
+          } else {
+            // The current in the palette's own colour.
+            ctx!.fillStyle = `rgba(${pr}, ${pg}, ${pb}, ${0.1 * glow})`;
+            ctx!.fillRect(sx - size * 1.6, sy - size * 1.6, size * 3.2, size * 3.2);
+            const lift2 = Math.min(1, 0.3 * glow);
+            ctx!.fillStyle = `rgba(${Math.round(pr + (255 - pr) * lift2)}, ${Math.round(pg + (255 - pg) * lift2)}, ${Math.round(pb + (255 - pb) * lift2)}, ${Math.min(1, 0.55 * glow)})`;
+          }
+          ctx!.fillRect(sx - size / 2, sy - size / 2, size, size);
+        }
+        ctx!.globalCompositeOperation = 'source-over';
+        canvasModeAnimRef.current = requestAnimationFrame(drawMusicLiquid);
+      }
+      drawMusicLiquid();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
     }
 
     if (cfg.mode === 'musicdots' || cfg.mode === 'musicnebula' || cfg.mode === 'musiclattice') {
@@ -17195,6 +22995,25 @@ export default function GeometryField() {
         s: 0.75 + Math.random() * 1,
       }));
 
+      // Soft glowing dot sprite (drawn additively) so the canvas dots have the
+      // same luminous quality as the Three.js point modes (e.g. Cyclone Tiles),
+      // instead of flat 1px discs.
+      const dotSprite = document.createElement('canvas');
+      const DSR = 24;
+      dotSprite.width = DSR * 2;
+      dotSprite.height = DSR * 2;
+      const dctx = dotSprite.getContext('2d');
+      if (dctx) {
+        const g = dctx.createRadialGradient(DSR, DSR, 0, DSR, DSR, DSR);
+        g.addColorStop(0, `rgba(${pr},${pg},${pb},1)`);
+        g.addColorStop(0.35, `rgba(${pr},${pg},${pb},0.5)`);
+        g.addColorStop(1, `rgba(${pr},${pg},${pb},0)`);
+        dctx.fillStyle = g;
+        dctx.beginPath();
+        dctx.arc(DSR, DSR, DSR, 0, Math.PI * 2);
+        dctx.fill();
+      }
+
       function drawExplosion() {
         if (!canvasModeActiveRef.current) return;
         const W = mc!.width;
@@ -17209,6 +23028,7 @@ export default function GeometryField() {
         ctx!.fillStyle = 'rgba(7,2,0,0.64)';
         ctx!.fillRect(0, 0, W, H);
 
+        ctx!.globalCompositeOperation = 'lighter';
         for (const dot of dots) {
           let x = 0;
           let y = 0;
@@ -17246,11 +23066,11 @@ export default function GeometryField() {
               (ring > 0.55 ? -radius * 0.16 : 0);
             alpha = (1 - q * 0.42) * (0.42 + iF * 0.44);
           }
-          ctx!.beginPath();
-          ctx!.arc(cx + x, cy + y, dot.s, 0, Math.PI * 2);
-          ctx!.fillStyle = `rgba(${pr},${pg},${pb},${Math.max(0.12, alpha)})`;
-          ctx!.fill();
+          const sz = dot.s * (3.2 + cfg.luminous * 1.1);
+          ctx!.globalAlpha = Math.max(0.12, alpha);
+          ctx!.drawImage(dotSprite, cx + x - sz, cy + y - sz, sz * 2, sz * 2);
         }
+        ctx!.globalAlpha = 1;
 
         canvasModeAnimRef.current = requestAnimationFrame(drawExplosion);
       }
@@ -17295,6 +23115,22 @@ export default function GeometryField() {
         if (dots.length > 1600) dots.splice(0, dots.length - 1600);
       }
 
+      const touchSprite = document.createElement('canvas');
+      const TSR = 24;
+      touchSprite.width = TSR * 2;
+      touchSprite.height = TSR * 2;
+      const tctx = touchSprite.getContext('2d');
+      if (tctx) {
+        const g = tctx.createRadialGradient(TSR, TSR, 0, TSR, TSR, TSR);
+        g.addColorStop(0, `rgba(${pr},${pg},${pb},1)`);
+        g.addColorStop(0.35, `rgba(${pr},${pg},${pb},0.5)`);
+        g.addColorStop(1, `rgba(${pr},${pg},${pb},0)`);
+        tctx.fillStyle = g;
+        tctx.beginPath();
+        tctx.arc(TSR, TSR, TSR, 0, Math.PI * 2);
+        tctx.fill();
+      }
+
       function drawTouchPreset() {
         if (!canvasModeActiveRef.current) return;
         const W = mc!.width;
@@ -17307,6 +23143,7 @@ export default function GeometryField() {
 
         emitTouchDots(W, H);
 
+        ctx!.globalCompositeOperation = 'lighter';
         for (let i = dots.length - 1; i >= 0; i--) {
           const dot = dots[i];
           const cx = _distortWorldX + W / 2;
@@ -17324,10 +23161,9 @@ export default function GeometryField() {
           dot.age += 1;
           const lifeT = dot.age / dot.life;
           const alpha = Math.sin(Math.min(1, lifeT) * Math.PI) * (0.34 + iF * 0.45);
-          ctx!.beginPath();
-          ctx!.arc(dot.x, dot.y, dot.size, 0, Math.PI * 2);
-          ctx!.fillStyle = `rgba(${pr},${pg},${pb},${Math.max(0, alpha)})`;
-          ctx!.fill();
+          const sz = dot.size * (2.6 + cfg.luminous * 0.9);
+          ctx!.globalAlpha = Math.max(0, alpha);
+          ctx!.drawImage(touchSprite, dot.x - sz, dot.y - sz, sz * 2, sz * 2);
           if (
             dot.age >= dot.life ||
             dot.x < -40 ||
@@ -17339,6 +23175,8 @@ export default function GeometryField() {
           }
         }
 
+        ctx!.globalAlpha = 1;
+        ctx!.globalCompositeOperation = 'source-over';
         if (!hasTouched && dots.length === 0) {
           ctx!.fillStyle = `rgba(${pr},${pg},${pb},0.66)`;
           ctx!.font = `600 ${Math.max(14, Math.round(Math.min(W, H) * 0.036))}px serif`;
@@ -18959,6 +24797,8 @@ export default function GeometryField() {
     cfg.complexity,
     cfg.symmetry,
     cfg.glow,
+    cfg.luminous,
+    cfg.particles,
   ]);
 
   function startJourney(id: number) {
@@ -18996,6 +24836,19 @@ export default function GeometryField() {
   }
 
   function handleCanvasClick(e: React.MouseEvent<HTMLCanvasElement>) {
+    // Finger touch — click to toggle the distortion on/off at the click point.
+    if (fingerDistortRef.current) {
+      fingerLatchedRef.current = !fingerLatchedRef.current;
+      if (fingerLatchedRef.current) {
+        const r = canvasRef.current!.getBoundingClientRect();
+        const { W, H } = sizeRef.current;
+        _distortWorldX = e.clientX - r.left - W / 2;
+        _distortWorldY = -(e.clientY - r.top - H / 2);
+        _distortActive = true;
+      } else {
+        _distortActive = false;
+      }
+    }
     if (!_rippleRingsVisible || isCurrentTextureMode(cfgRef.current.mode)) return;
     const rect = canvasRef.current!.getBoundingClientRect();
     ripplesRef.current.push({
@@ -19027,7 +24880,8 @@ export default function GeometryField() {
     const { W, H } = sizeRef.current;
     _distortWorldX = e.clientX - rect.left - W / 2;
     _distortWorldY = -(e.clientY - rect.top - H / 2);
-    _distortActive = true;
+    // Touch-preset places live; finger distortion follows the click-toggle latch.
+    _distortActive = isTouchPreset ? true : fingerLatchedRef.current;
     if (
       _rippleRingsVisible &&
       _distortMode === 'ripple' &&
@@ -19043,14 +24897,18 @@ export default function GeometryField() {
   }
 
   function handleCanvasPointerLeave() {
-    if (activePointerIdRef.current === null) _distortActive = false;
+    // Keep a latched finger active even when the pointer leaves the canvas.
+    if (activePointerIdRef.current === null) _distortActive = fingerLatchedRef.current;
   }
 
   function setTouchMode(mode: FingerMode) {
     _distortMode = mode;
     fingerDistortRef.current = mode !== 'off';
     setFingerMode(mode);
-    if (mode === 'off') _distortActive = false;
+    if (mode === 'off') {
+      fingerLatchedRef.current = false;
+      _distortActive = false;
+    }
   }
 
   function stopVoiceAgitation() {
@@ -19236,6 +25094,15 @@ export default function GeometryField() {
     'Crystal Globe',
   ]);
 
+  /** Switch Art tab; if what is playing belongs to another tab, start this tab's first preset. */
+  function openArtTab(next: ArtTab) {
+    setTab(next);
+    setBuilderView('programs');
+    if (artTabOf(cfg.mode) === next) return;
+    const first = featuredFor(next).find((i): i is { name: string; tag: string } => 'name' in i);
+    if (first) applyPreset(first.name);
+  }
+
   function applyPreset(name: string) {
     const p = PRESETS[name] ?? PRESETS['Calm Field'];
     setSelectedPresetName(name);
@@ -19243,6 +25110,9 @@ export default function GeometryField() {
       ...p,
       preset: COLOUR_PRESET_NAMES.has(name) ? p.preset : (p.preset ?? prev.preset),
       luminous: Math.min(1.5, p.luminous),
+      // Chosen oil colours stay while you move from oil to oil.
+      oilColors:
+        isOilMode(p.mode) && isOilMode(prev.mode) ? (p.oilColors ?? prev.oilColors) : p.oilColors,
     }));
   }
 
@@ -19291,6 +25161,14 @@ export default function GeometryField() {
     a.href = c.toDataURL('image/png');
     a.click();
   }
+
+  // Track real fullscreen so the exit control lives top-right, clear of the
+  // "All one brain" band along the bottom.
+  useEffect(() => {
+    const sync = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, []);
 
   function handleFullscreen() {
     const el = wrapperRef.current;
@@ -19354,7 +25232,7 @@ export default function GeometryField() {
         display: 'flex',
         flexDirection: 'column',
         width: '100%',
-        height: isProjectionMode ? '100svh' : 'calc(100svh - 92px)',
+        height: isProjectionMode || isFullscreen ? '100svh' : 'calc(100svh - 92px)',
         minHeight: 0,
         position: isProjectionMode ? 'fixed' : undefined,
         inset: isProjectionMode ? 0 : undefined,
@@ -19414,7 +25292,8 @@ export default function GeometryField() {
           onPointerUp={(e) => {
             if (activePointerIdRef.current === e.pointerId) {
               activePointerIdRef.current = null;
-              _distortActive = false;
+              // Keep it on if the finger is click-latched.
+              _distortActive = fingerLatchedRef.current;
             }
             e.currentTarget.releasePointerCapture(e.pointerId);
             l3dDragRef.current = null;
@@ -19422,7 +25301,7 @@ export default function GeometryField() {
           onPointerCancel={(e) => {
             if (activePointerIdRef.current === e.pointerId) {
               activePointerIdRef.current = null;
-              _distortActive = false;
+              _distortActive = fingerLatchedRef.current;
             }
             l3dDragRef.current = null;
           }}
@@ -19433,6 +25312,9 @@ export default function GeometryField() {
             height: '100%',
             display: 'block',
             touchAction: 'none',
+            // Display mode (controls hidden): fill ~10% more of the screen.
+            transform: open ? undefined : 'scale(1.1)',
+            transformOrigin: 'center center',
             cursor:
               cfg.mode === 'celtic' ||
               cfg.mode === 'lissajous3d' ||
@@ -19486,7 +25368,16 @@ export default function GeometryField() {
           cfg.mode === 'infinitedive' ||
           cfg.mode === 'musicdots' ||
           cfg.mode === 'musicnebula' ||
-          cfg.mode === 'musiclattice') && (
+          cfg.mode === 'musiclattice' ||
+          cfg.mode === 'musicliquid' ||
+          cfg.mode === 'sauroneye' ||
+          cfg.mode === 'oneflame' ||
+          cfg.mode === 'sacredfigures' ||
+          cfg.mode === 'sacreddancers' ||
+          cfg.mode === 'murmuration' ||
+          cfg.mode === 'fishschool' ||
+          cfg.mode === 'flowmasks' ||
+          cfg.mode === 'windtunnel') && (
           <canvas
             ref={matrixCanvasRef}
             style={{
@@ -19494,6 +25385,8 @@ export default function GeometryField() {
               inset: 0,
               width: '100%',
               height: '100%',
+              transform: open ? undefined : 'scale(1.1)',
+              transformOrigin: 'center center',
               mixBlendMode: cfg.mode === 'matrix' || cfg.mode === 'matrix3d' ? 'screen' : 'normal',
               opacity: cfg.mode === 'matrix' || cfg.mode === 'matrix3d' ? 0.85 : 1,
               pointerEvents: 'none',
@@ -19501,8 +25394,8 @@ export default function GeometryField() {
           />
         )}
 
-        {/* Page title */}
-        {!isProjectionMode && (
+        {/* Page title — hidden in full-screen display (controls closed) */}
+        {!isProjectionMode && open && (
           <div
             style={{
               position: 'absolute',
@@ -19568,35 +25461,45 @@ export default function GeometryField() {
           </div>
         )}
 
-        {/* Show-controls button when panel closed */}
-        {!open && !isProjectionMode && (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
+        {/* Top-right controls — always reachable: the bottom edge belongs to
+        the "All one brain" band, which would cover anything placed there. */}
+        {!isProjectionMode && (!open || isFullscreen) && (
+          <div
             style={{
               position: 'absolute',
-              bottom: 16,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              background: 'rgba(8,6,4,0.72)',
-              border: `1px solid ${accentMid}`,
-              borderRadius: 99,
-              padding: '6px 22px',
-              color: accent,
-              fontFamily: 'var(--font-serif)',
-              fontSize: 10,
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              backdropFilter: 'blur(10px)',
-              zIndex: 20,
+              top: 10,
+              right: 10,
+              zIndex: 22,
+              display: 'flex',
+              gap: 6,
             }}
           >
-            ▲ Controls
-          </button>
+            {!open && (
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                title="Show controls"
+                aria-label="Show controls"
+                style={topRightButtonStyle(accent, accentMid)}
+              >
+                ◤
+              </button>
+            )}
+            {isFullscreen && (
+              <button
+                type="button"
+                onClick={() => document.exitFullscreen?.()}
+                title="Exit fullscreen"
+                aria-label="Exit fullscreen"
+                style={topRightButtonStyle(accent, accentMid)}
+              >
+                ✕
+              </button>
+            )}
+          </div>
         )}
 
-        {!isProjectionMode && (
+        {!isProjectionMode && open && (
           <button
             type="button"
             onClick={handleFullscreen}
@@ -19737,18 +25640,20 @@ export default function GeometryField() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {pill('Builder', tab === 'builder', () => setTab('builder'), true)}
-                {pill('Music Visuals', tab === 'music', () => setTab('music'), true)}
+                {/* Art: Stars, Geometry, Tunnels, Oils, then the Big Bang trip on its
+                    own page. Music Visuals, Journeys and Figures stay hidden, not
+                    deleted: bringing a tab back is restoring its pill line. */}
+                {ART_TABS.map(({ id, label }) => (
+                  <Fragment key={id}>
+                    {pill(label, tab === id, () => openArtTab(id), true)}
+                  </Fragment>
+                ))}
                 {pill(
-                  'Projection',
-                  isProjectionMode,
-                  () =>
-                    window.open('/geometry-field?projection=1', '_blank', 'noopener,noreferrer'),
+                  'Big Bang',
+                  false,
+                  () => window.location.assign('/geometry-field/big-bang'),
                   true,
                 )}
-                {pill('Arena', false, () => window.location.assign('/dot-walker-arena'), true)}
-                {pill('Figures', false, () => window.location.assign('/figures'), true)}
-                {pill('Figure Stars', false, () => window.location.assign('/figure-stars'), true)}
               </div>
               <button
                 type="button"
@@ -19803,7 +25708,7 @@ export default function GeometryField() {
                 </button>
               </div>
             )}
-            {tab === 'builder' && (
+            {isArtTab && (
               <div
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
               >
@@ -19857,8 +25762,8 @@ export default function GeometryField() {
               gap: 8,
             }}
           >
-            {/* ── BUILDER TAB ── */}
-            {tab === 'builder' && (
+            {/* ── ART TABS (Stars, Geometry, Tunnels, Oils) ── */}
+            {isArtTab && (
               <>
                 {/* Programs grid */}
                 {builderView === 'programs' && (
@@ -19868,7 +25773,7 @@ export default function GeometryField() {
                       {(() => {
                         let n = 0;
                         let dim = false;
-                        return FEATURED_PRESETS.map((item, i) => {
+                        return featuredFor(tab as ArtTab).map((item, i) => {
                           if ('header' in item) {
                             dim = item.dim ?? false;
                             return (
@@ -19917,10 +25822,10 @@ export default function GeometryField() {
                             >
                               <span
                                 style={{
-                                  minWidth: 13,
-                                  fontSize: 9,
+                                  minWidth: 18,
+                                  fontSize: 13,
                                   fontWeight: 700,
-                                  opacity: 0.48,
+                                  opacity: 0.72,
                                   color: accent,
                                   textAlign: 'right',
                                 }}
@@ -19970,7 +25875,7 @@ export default function GeometryField() {
                       All Programs
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                      {MODES.map(({ mode, label }, idx) => {
+                      {MODES.filter((m) => artTabOf(m.mode) === tab).map(({ mode, label }, idx) => {
                         const isActive = cfg.mode === mode;
                         return (
                           <button
@@ -19996,7 +25901,7 @@ export default function GeometryField() {
                               gap: 2,
                             }}
                           >
-                            <span style={{ fontSize: 8, opacity: 0.45, letterSpacing: '0.08em' }}>
+                            <span style={{ fontSize: 11, opacity: 0.6, letterSpacing: '0.08em' }}>
                               {String(idx + 1).padStart(2, '0')}
                             </span>
                             <span
@@ -20018,6 +25923,47 @@ export default function GeometryField() {
                 {/* Sliders + actions */}
                 {builderView === 'sliders' && (
                   <>
+                    {artTabOf(cfg.mode) === 'oils' && (
+                      <OilColours
+                        colors={cfg.oilColors}
+                        accent={accent}
+                        accentMid={accentMid}
+                        dim={`rgba(${pr},${pg},${pb},0.6)`}
+                        onChange={(oilColors) =>
+                          setCfg((prev) => ({
+                            ...prev,
+                            oilColors,
+                            // Chosen colours show as chosen: the rainbow shift steps back
+                            // (except Thin Film, whose rainbow is its iridescence).
+                            glow:
+                              oilColors && prev.mode !== 'thinfilm'
+                                ? Math.min(prev.glow, 1)
+                                : prev.glow,
+                          }))
+                        }
+                      />
+                    )}
+                    {cfg.mode === 'thangka' && (
+                      <button
+                        type="button"
+                        onClick={() => update('seed', Math.floor(Math.random() * 100000) + 1)}
+                        style={{
+                          alignSelf: 'flex-start',
+                          background: accentFaint,
+                          border: `1px solid ${accentMid}`,
+                          borderRadius: 99,
+                          padding: '7px 16px',
+                          color: accent,
+                          fontFamily: 'var(--font-serif)',
+                          fontSize: 11,
+                          letterSpacing: '0.1em',
+                          textTransform: 'uppercase',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ☸ New thangka
+                      </button>
+                    )}
                     <div
                       style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 20px' }}
                     >
@@ -20050,7 +25996,13 @@ export default function GeometryField() {
                                   color: accent,
                                 }}
                               >
-                                {step < 1 ? val.toFixed(2) : Math.round(val)}
+                                {label === 'Timer'
+                                  ? val <= TIMER_OFF
+                                    ? 'Off'
+                                    : `${Math.round(val)}s`
+                                  : step < 1
+                                    ? val.toFixed(2)
+                                    : Math.round(val)}
                               </span>
                             </div>
                             <input
@@ -21061,7 +27013,7 @@ export default function GeometryField() {
             {tab === 'journey' && (
               <>
                 {/* Journey selection */}
-                <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none' }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {JOURNEYS.map((j) =>
                     pill(`${j.icon} ${j.name}`, journeyId === j.id, () => {
                       setJourneyId(j.id);
@@ -21138,9 +27090,9 @@ export default function GeometryField() {
                         <span
                           style={{
                             fontFamily: 'var(--font-serif)',
-                            fontSize: 9,
+                            fontSize: 12,
                             color: accent,
-                            opacity: 0.5,
+                            opacity: 0.7,
                             flexShrink: 0,
                           }}
                         >

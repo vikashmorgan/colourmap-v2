@@ -55,3 +55,6 @@ next-env.d.ts
 
 # Build-time generated files
 lib/generated/
+
+.vercel
+.env*

@@ -99,8 +99,24 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </button>
           </form>
 
+          <div className="flex items-center gap-3 py-1">
+            <span className="h-px flex-1 bg-foreground/10" />
+            <span className="text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
+              or
+            </span>
+            <span className="h-px flex-1 bg-foreground/10" />
+          </div>
+
+          <a
+            href="/geometry-field"
+            className="flex w-full items-center justify-center rounded-2xl border border-foreground/20 px-4 py-3 text-sm font-medium transition-opacity hover:opacity-80"
+          >
+            Explore the visuals — no sign-in →
+          </a>
+
           <p className="text-xs leading-5 text-muted-foreground">
             Google OAuth is handled by Supabase Auth. This app only receives the resulting session.
+            Visitor mode opens the geometry visuals only; your full map needs an account.
           </p>
         </div>
       </div>

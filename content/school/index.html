@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>School · Albert School</title>
+<script>
+  // Day (beige) or night, one choice for every School page (School, Python, Git), remembered on this device. Day by default.
+  try { document.documentElement.dataset.theme = localStorage.getItem('school-theme') || 'day'; } catch (e) {}
+</script>
+<style>
+  /* Day: beige paper, as on the Git page. Night: warm dark. The button at the top switches. */
+  :root, [data-theme="day"] {
+    --paper: #f7f3ea;
+    --ink: #2b2620;
+    --soft: #6f665a;
+    --line: #e3dccd;
+    --accent: #8a5a2b;
+    --card: #fbf8f1;
+  }
+  [data-theme="night"] { --paper: #191714; --ink: #ece6da; --soft: #a49b8d; --line: #34302a; --accent: #d9a46a; --card: #201d19; }
+  .topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+  .topline .back { margin-bottom: 0; }
+  .theme { font: 600 14px system-ui, sans-serif; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; min-height: 36px; cursor: pointer; }
+  .theme:hover { border-color: var(--accent); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 Georgia, 'Times New Roman', serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 18px 80px; }
+  .back { display: inline-block; font: 600 14px system-ui, sans-serif; color: var(--accent); text-decoration: none; margin-bottom: 22px; }
+  h1 { font-size: 34px; margin: 0; font-weight: 600; letter-spacing: 0.01em; }
+  header p { color: var(--soft); margin: 4px 0 0; font-size: 15px; }
+  .classes { list-style: none; padding: 0; margin: 30px 0 0; display: grid; gap: 14px; }
+  .class { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 16px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: inherit; text-decoration: none; transition: border-color .15s ease, transform .15s ease; }
+  a.class:hover, a.class:focus-visible { border-color: var(--accent); transform: translateY(-1px); outline: none; }
+  .mark { width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--accent); color: var(--accent); display: grid; place-items: center; font: 600 15px ui-monospace, Menlo, Consolas, monospace; }
+  .class h2 { margin: 0; font-size: 20px; font-weight: 600; }
+  .class .course { margin: 2px 0 0; color: var(--soft); font: 13px/1.4 system-ui, sans-serif; letter-spacing: 0.02em; }
+  .class .what { margin: 6px 0 0; font-size: 15px; }
+  .go { font: 600 13px system-ui, sans-serif; color: var(--accent); white-space: nowrap; }
+  .class.soon { opacity: 0.6; border-style: dashed; }
+  .class.soon .mark { border-style: dashed; }
+  .class.soon .go { color: var(--soft); }
+  footer { margin-top: 40px; color: var(--soft); font-size: 13px; }
+  @media (max-width: 520px) {
+    .class { grid-template-columns: 44px 1fr; }
+    .mark { width: 44px; height: 44px; font-size: 13px; }
+    .go { grid-column: 2; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="topline">
+    <a class="back" href="/">← Brain</a>
+    <button class="theme" id="theme" type="button" aria-label="Switch between day and night">☾ Night</button>
+  </div>
+  <header>
+    <h1>School</h1>
+    <p>Albert School × Politecnico di Milano · every class in one place</p>
+  </header>
+
+  <ul class="classes">
+    <li>
+      <a class="class" href="/coding">
+        <span class="mark" aria-hidden="true">py</span>
+        <span>
+          <h2>Python</h2>
+          <p class="course">Python Fundamentals · Project 1, explorer.py</p>
+          <p class="what">The project step by step, the Python toolkit, every lesson, and review by marks.</p>
+        </span>
+        <span class="go">Open →</span>
+      </a>
+    </li>
+    <li>
+      <a class="class" href="/git">
+        <span class="mark" aria-hidden="true">git</span>
+        <span>
+          <h2>Git</h2>
+          <p class="course">MSE-DIM01-3 · Marco Molè</p>
+          <p class="what">What the project built, the oral defence, the key concepts and terms, the commands.</p>
+        </span>
+        <span class="go">Open →</span>
+      </a>
+    </li>
+    <li>
+      <a class="class" href="/sql">
+        <span class="mark" aria-hidden="true">sql</span>
+        <span>
+          <h2>SQL</h2>
+          <p class="course">SQL &amp; Business Intelligence · MSE-DIM01-4</p>
+          <p class="what">Sessions 1 to 5: SELECT, filtering and aggregation, joins and CTEs, KPIs and Tableau, window functions, with the practice answers and a cheat sheet.</p>
+        </span>
+        <span class="go">Open →</span>
+      </a>
+    </li>
+  </ul>
+
+  <footer>Each class keeps its own page; this is the way in.</footer>
+</main>
+<script>
+  const themeBtn = document.getElementById('theme');
+  const paint = () => { themeBtn.textContent = document.documentElement.dataset.theme === 'night' ? '☀ Day' : '☾ Night'; };
+  themeBtn.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'night' ? 'day' : 'night';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('school-theme', next); } catch (e) {}
+    paint();
+  });
+  paint();
+</script>
+</body>
+</html>

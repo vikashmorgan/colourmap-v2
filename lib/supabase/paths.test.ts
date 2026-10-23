@@ -15,4 +15,14 @@ describe('getSafeRedirectPath', () => {
     expect(getSafeRedirectPath('https://example.com')).toBe('/');
     expect(getSafeRedirectPath('//example.com')).toBe('/');
   });
+
+  it('rejects backslash and control-character tricks that resolve off-site', () => {
+    expect(getSafeRedirectPath('/\\example.com')).toBe('/');
+    expect(getSafeRedirectPath('/\t/example.com')).toBe('/');
+    expect(getSafeRedirectPath('/\n/example.com')).toBe('/');
+  });
+
+  it('keeps query strings on in-app paths', () => {
+    expect(getSafeRedirectPath('/chill?saved=1')).toBe('/chill?saved=1');
+  });
 });

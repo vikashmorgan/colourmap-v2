@@ -1556,7 +1556,7 @@ export default function ProportionBuddy() {
         </aside>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @media (max-width: 820px) {
           .proportion-buddy-shell {
             grid-template-columns: 1fr !important;

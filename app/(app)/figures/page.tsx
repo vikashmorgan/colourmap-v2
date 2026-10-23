@@ -71,6 +71,8 @@ export default function FiguresPage() {
   const [animFig, setAnimFig] = useState(
     ANIMATED_FIGURES.find((figure) => figure.key === requestedFigure) ?? ANIMATED_FIGURES[0],
   );
+  // Full view: hide every bit of chrome and leave just the figure on screen.
+  const [chromeOpen, setChromeOpen] = useState(true);
 
   useEffect(() => {
     const nextMode = getInitialMode(requestedMode);
@@ -100,74 +102,96 @@ export default function FiguresPage() {
         flexDirection: 'column',
       }}
     >
-      <header
-        style={{
-          padding: '14px 22px 12px',
-          borderBottom: '1px solid rgba(240,216,152,0.12)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 10,
-        }}
-      >
-        <div
+      {chromeOpen && (
+        <header
           style={{
-            fontFamily: SERIF,
-            fontSize: 11,
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
-            color: 'rgba(240,216,152,0.55)',
+            padding: '14px 22px 12px',
+            borderBottom: '1px solid rgba(240,216,152,0.12)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 10,
           }}
         >
-          3D Figures · preview
-        </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          <ModeButton active={mode === 'static'} onClick={() => setMode('static')}>
-            Static
-          </ModeButton>
-          <ModeButton active={mode === 'animated'} onClick={() => setMode('animated')}>
-            Animated
-          </ModeButton>
-          <ModeButton active={mode === 'billy'} onClick={() => setMode('billy')}>
-            Billy 3D
-          </ModeButton>
-          <Link
-            href="/figure-stars?figure=billy"
+          <div
             style={{
-              border: '1px solid rgba(240,216,152,0.25)',
-              borderRadius: 999,
-              color: 'rgba(240,216,152,0.7)',
               fontFamily: SERIF,
-              fontSize: 12,
-              letterSpacing: '0.1em',
-              padding: '6px 14px',
-              textDecoration: 'none',
+              fontSize: 11,
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase',
+              color: 'rgba(240,216,152,0.55)',
             }}
           >
-            Billy Stars
-          </Link>
-        </div>
-        {mode !== 'billy' && (
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(mode === 'static' ? STATIC_FIGURES : ANIMATED_FIGURES).map((f) => {
-              const isActive = mode === 'static' ? staticFig.key === f.key : animFig.key === f.key;
-              return (
-                <ModeButton
-                  key={f.key}
-                  active={isActive}
-                  onClick={() => {
-                    if (mode === 'static') setStaticFig(f as FigureAsset);
-                    else setAnimFig(f as (typeof ANIMATED_FIGURES)[number]);
-                  }}
-                >
-                  {f.label}
-                </ModeButton>
-              );
-            })}
+            3D Figures · preview
           </div>
-        )}
-      </header>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <ModeButton active={mode === 'static'} onClick={() => setMode('static')}>
+              Static
+            </ModeButton>
+            <ModeButton active={mode === 'animated'} onClick={() => setMode('animated')}>
+              Animated
+            </ModeButton>
+            <ModeButton active={mode === 'billy'} onClick={() => setMode('billy')}>
+              Billy 3D
+            </ModeButton>
+            <Link
+              href="/figure-stars?figure=billy"
+              style={{
+                border: '1px solid rgba(240,216,152,0.25)',
+                borderRadius: 999,
+                color: 'rgba(240,216,152,0.7)',
+                fontFamily: SERIF,
+                fontSize: 12,
+                letterSpacing: '0.1em',
+                padding: '6px 14px',
+                textDecoration: 'none',
+              }}
+            >
+              Billy Stars
+            </Link>
+            <button
+              type="button"
+              onClick={() => setChromeOpen(false)}
+              title="Full view"
+              aria-label="Full view"
+              style={{
+                border: '1px solid rgba(240,216,152,0.25)',
+                borderRadius: 999,
+                background: 'transparent',
+                color: 'rgba(240,216,152,0.7)',
+                fontFamily: SERIF,
+                fontSize: 12,
+                letterSpacing: '0.1em',
+                padding: '6px 12px',
+                cursor: 'pointer',
+              }}
+            >
+              ⤢ Full view
+            </button>
+          </div>
+          {mode !== 'billy' && (
+            <div style={{ display: 'flex', gap: 6 }}>
+              {(mode === 'static' ? STATIC_FIGURES : ANIMATED_FIGURES).map((f) => {
+                const isActive =
+                  mode === 'static' ? staticFig.key === f.key : animFig.key === f.key;
+                return (
+                  <ModeButton
+                    key={f.key}
+                    active={isActive}
+                    onClick={() => {
+                      if (mode === 'static') setStaticFig(f as FigureAsset);
+                      else setAnimFig(f as (typeof ANIMATED_FIGURES)[number]);
+                    }}
+                  >
+                    {f.label}
+                  </ModeButton>
+                );
+              })}
+            </div>
+          )}
+        </header>
+      )}
       <div style={{ flex: 1, position: 'relative' }}>
         {mode === 'static' && (
           <GoldenGod
@@ -182,6 +206,36 @@ export default function FiguresPage() {
           <AnimatedFigure key={animFig.key} assetUrl={animFig.url} color={animFig.color} />
         )}
         {mode === 'billy' && <Billy3D />}
+        {!chromeOpen && (
+          <button
+            type="button"
+            onClick={() => setChromeOpen(true)}
+            title="Show menu"
+            aria-label="Show menu"
+            style={{
+              position: 'absolute',
+              bottom: 10,
+              right: 10,
+              width: 26,
+              height: 26,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(8,6,4,0.32)',
+              border: '1px solid rgba(240,216,152,0.3)',
+              borderRadius: 999,
+              color: 'rgba(240,216,152,0.8)',
+              fontSize: 11,
+              lineHeight: 1,
+              cursor: 'pointer',
+              backdropFilter: 'blur(6px)',
+              opacity: 0.5,
+              zIndex: 20,
+            }}
+          >
+            ◤
+          </button>
+        )}
       </div>
     </div>
   );

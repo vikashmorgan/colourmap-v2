@@ -5,6 +5,21 @@
 
 Geometry Field is the immersive visual-program surface for sacred geometry, particle currents, self-map forms, and future music-reactive play. It belongs to the Creative Lab visual layer described in `three-app-architecture.md`.
 
+## Surface: Builder only (2026-10-03)
+
+The nav tab is named **Art** (it was **AI Projections** from 2026-10-03 to 2026-10-08, and **Art** before that). The panel's tabs are **Stars · Geometry · Tunnels · Oils · Big Bang** (2026-10-08):
+
+- **Stars** and **Geometry** come from the same builder; the split is how a preset is drawn: Stars are the presets drawn with dots (sands, flow fields, dot suns, trips 1–2, nebulae, the Cymatic Sands), Geometry the ones drawn mainly with lines (sacred geometry, Lissajous, knots, yantras, morphs, the Waves).
+- **Tunnels** holds every visual you fly into, old and new; **Oils** the liquid shaders with their sliders.
+- Each tab shows only its own presets and programs, under the same headers as before (a header with nothing in the tab is dropped). Opening a tab whose family is not playing starts its first preset. `?tab=stars|geometry|tunnels|oils` opens a tab directly.
+- **Big Bang** opens the Big Bang trip on its own page (`/geometry-field/big-bang`): one continuous trip of light in sixteen steps, brought over from the standalone Geometry Builder. It covers the whole screen, above the All one brain band, with the same tabs top-left to come back.
+
+Music Visuals, Journeys and the Figures link stay hidden, not removed: their code and presets are untouched, and each comes back by restoring its tab pill.
+
+**Top-right controls.** When the panel is closed, the show-controls button sits top-right; in fullscreen an exit (✕) button sits beside it. Nothing the user needs to get out sits at the bottom edge, which belongs to the **All one brain** band.
+
+**Star Sand Lines** is unfinished, so it sits at the bottom of the preset list, last under **In Progress / To Develop**, not in **Good Ones**.
+
 ## Current Flow Textures
 
 The Current family uses dot fields to reveal hidden motion patterns before and during touch. Touch should deform the particles directly; it should not add unrelated large center rings that visually compete with the field.
@@ -320,6 +335,8 @@ Rules:
 
 ## Future Direction
 
+Math tunnels (soft-edged dive-in series) and a shader-based Liquid family (oil projector, iridescence, lava, fluid) are specced in [math-tunnels-and-liquid-visuals.md](math-tunnels-and-liquid-visuals.md).
+
 Music-reactive variants should be added as explicit presets or modes, not hidden behavior inside every preset. The first shipped seed lives behind the Geometry **Music Visuals** tab, replacing the visible Journey entry for now.
 
 Accepted starter presets:
@@ -359,3 +376,61 @@ Geometry Field supports a first local DJ/projection workflow:
 This seed is intentionally local and lightweight. Later versions may replace polling with WebSocket,
 MIDI, Ableton Link, OSC, or DJ software metadata, but the crowd-facing projection must remain a clean
 fullscreen output separate from the controller.
+
+## Reflection
+
+- **2026-10-08.** The tab is called **Art** again: the visuals are art, not AI. The panel splits into Stars, Geometry, Tunnels and Oils, and the Big Bang trip becomes its fifth tab. The Big Bang journey (hidden with Journeys) keeps its original stages.
+- **2026-10-03.** Four tabs (Builder, Music Visuals, Journeys, Figures) asked a first-time viewer to choose before seeing anything. Narrowed to Builder only and renamed the tab from Art to AI Projections; the other tabs are hidden rather than deleted so they can return one at a time once each is ready. Star Sand Lines moved out of Good Ones because it is unfinished.
+
+## Liquid 1–4 (2026-10-13)
+
+A Geometry series inspired by the Big Bang **Pulse** and its liquid effect: the same travelling wave (the radius swelling with sin(ωt − k·r) running outward, depth lifting with a second wave, light glinting as the crest passes), drawn in lines on four shapes, each rippled its own way (`components/geometry-liquid.ts`):
+
+- **Liquid 1** · the Pulse's mirrored fractal web (Sierpinski edges in n mirrored sectors), breathing outward. Amber Dust.
+- **Liquid 2** · nested rose petals, stirred: the ripple swirls round the flower and twists the petals. Violet Portal.
+- **Liquid 3** · a seed-of-life lattice laid flat like a pond and seen at an angle; three wandering drops ripple it in 3D. Blue Astral.
+- **Liquid 4** · the Prism 3D look made liquid: spectral rings stacked in depth round a warm core, spectral spokes, every ring flowing and swirling and the stack undulating like a jellyfish, bright enough to bloom.
+
+Sliders: Folds, Detail, Ripple (how strongly it moves), Flow Speed, Colour Spread, Light, Stars. They sit under their own *Liquid* header in the Geometry list.
+
+Also on 2026-10-13: **Flow Sacred** and **Butterfly** moved from Good Ones to *In Progress / To Develop* in Stars, because their flowers and shapes are cut on the right instead of complete in their circle.
+
+## Liquid Chaos and Liquid Quantum (2026-10-13)
+
+Chaos Field and Quantum Chaos moved to numbers 3 and 4 in Stars (among the best), and two liquid versions follow them as 5 and 6. The dots drift through exactly the same divergence-free currents; only where they are drawn changes. **Liquid Chaos** (2D, Deep Current) runs the Pulse's wave outward through the cloud: the radius swells and sinks, a second wave swirls it, and dots glint and warm on the crest. **Liquid Quantum** (3D, Clifford Dream) rolls the wave across the sphere in wavy bands instead, because rings seen through a sphere overlap and blur; the troughs go dark so the bands read like light on liquid. Sliders: Turbulence, Ripple, Crest Warmth, Speed, Bright.
+
+## Wind (2026-10-18)
+
+For the Ferrari project: "a star preset called Wind … an object with currents of wind passing from its left to its right, to represent aerodynamics and the passage of the wind over an object. The union of science and art. Start with an object, later do it with a car. Do three presets with that idea." Three presets open Good Ones in Stars: **Wind** (a sphere), **Wind Wing** (a wing section at eight degrees) and **Wind Body** (a long, low streamlined body, the step before a car). Smoke lines, as in a wind tunnel, come from a rake of nozzles on the left and ride a field (`lib/wind.ts`) that behaves the way real air does over the object: the wind heading into it is taken away, so the air stops on the nose (a warm glow marks that stagnation point) and slides round; over the shoulders it speeds up; behind it a wake draws the smoke in and sheds vortices alternately up and down, strong behind the sphere, faint behind the wing, which pushes the air down (lift). Each line is coloured by its speed: slow air deep blue, the free stream cyan, fast air white turning gold. The object is a dark figure with a fine light outline, like a figure in a paper. The object is any closed outline (a signed distance function), so a car's side outline is one more list of points (`BODY` is the template). The smoke scales with the canvas area, so a small frame does not saturate. Sliders: Object (0 sphere, 1 wing, 2 body), Smoke Lines, Turbulence, Trails, Wind Speed, Bright. Also on the builder site (artprojection.vercel.app, `?preset=Wind&display=1`) and in the Out of the Box digital room.
+
+## Music Liquid Chaos (2026-10-13)
+
+"That liquid chaos from Music is amazing, use it as a star preset." The Music page's magic-mode Liquid chaos (Chill Machine's LiquidField) now lives in Stars as **Music Liquid Chaos**, first under Good Ones. Dots drift through the same divergence-free current, the Pulse's wave runs gently outward, and drops of colour fall into the liquid as rings that lift and light the dots they pass, leaving a soft trail. On the piano every note was a drop; here they fall on their own at a calm, uneven rhythm, walking up and down the keys in the piano's note colours, and a beat from the app's music adds one. The current takes the palette's colour (Deep Current). Sliders: Turbulence, Drops, Ripple, Density, Speed, Bright.
+
+## Sauron's Eye (2026-10-13)
+
+"A Sauron's eye geometry, with sliders. When red the tips are more golden, like real fire, with the cat's eye in the centre. In Stars." **Sauron's Eye** sits second under Good Ones. An almond of fire: flames are born on its rim and lick outward and upward, longest at the two corners, swaying as they rise. Like real fire, each flame is deep red where it is born and turns orange, then gold toward its tip, fading to nothing. Inside, the iris: embers drawn in toward the centre, red at the rim and white-gold by the pupil, a black vertical cat's slit with a thin burning edge that breathes slowly wider and narrower. Sliders: Flame Height, Golden Tips (how far the gold climbs down the flames), Pupil (slit width), Fire Density, Flicker, Bright.
+
+## One Flame (2026-10-13)
+
+"Just fire, just one flame floating. Default red with golden tips, orange in the middle, but it can also go purple or other colours. Aim for the feeling of real fire, with the stars going up." **One Flame** sits third under Good Ones, after Sauron's Eye. The flame is thousands of short-lived embers born in a small bed at its foot: heat lifts them faster as they rise, they are drawn toward the middle so the flame narrows to a tip, and a sway travelling up the flame makes it lick and flicker. Each ember changes colour as it rises and cools (base, middle, tip, fading out) and the hot core burns brighter than the edges. Now and then a spark breaks free and climbs up the sky, twinkling and cooling, like a star going up. The flame floats, with no wick, in a soft warm light, breathing slowly in height. Sliders: Fire Colour (0 red–orange–gold, 1 purple, 2 blue, 3 green, 4 rose, 5 white-gold, 6 turquoise), Flame Height, Golden Tips, Sparks, Flicker, Bright.
+
+## Sacred Figures and Sacred Dancers (2026-10-13)
+
+"A series of 10 sacred figures inspired by holy Indian and Tibetan poses of the gods, like the one with many arms meditating or Shiva Nataraja, one preset with the 10 chosen on a slider like the Dot Walker." And: "like the Dot Walker but more enriched, inspired by the quantum liquids, more dots, more substance, that liquid movement like a dance, a figure dancing. Do 5 of them." Two presets in Stars, after One Flame, drawn from `lib/sacred-figures.ts`.
+
+**Sacred Figures** (Figure 1-10): the Buddha in meditation, the thousand-armed Avalokiteshvara (a fan of arms rippling, eleven heads), Shiva Nataraja (dancing in his ring of fire, locks flying), Ganesha, Green Tara, Vishnu (discus, conch, mace), Durga (eight arms and the trident), Krishna with the flute, Lakshmi on the lotus (gold falling from her hand), Shiva in meditation (moon, third eye, the Ganga, the trident). They breathe and sway; the many arms move in slow waves.
+
+**Sacred Dancers** (Dancer 1-5): Bharatanatyam, the whirling dervish, Tandava (Shiva's cosmic dance), Cham (the Tibetan masked dance, long sleeves), Odissi (the flowing goddess).
+
+Each figure is up to ten thousand dots scattered over its body (bones, discs, rings). Every dot eases after its place at its own pace, so the body moves like a liquid and a dancer leaves a flowing wake; a current stirs the dots, and a wave of light runs out from the heart. Sliders: Figure / Dancer, Liquid, Glint, Dots, Breath / Tempo, Bright. The figure's name is written faintly beneath it.
+
+## Murmuration, Fish School and Flow Masks (2026-10-13)
+
+"Flocks of sparrows made of dots, in 3D, flying and creating the patterns thousands of small birds make: opening, breaking, uniting. And another the same, as a school of fish in perpetual movement." And: "that liquid chaos in gold looks like an African mask … make 10 such masks on a slider." Three presets in Stars, after the Sacred Dancers.
+
+**Murmuration** (`lib/flocks.ts`): up to nine thousand birds. Each steers after its place in a sheet that turns and folds through the air and breathes open and closed; now and then the flock breaks into three that wheel apart and unite again; a shared current stirs them all. The view turns slowly; nearer birds are larger. Sliders: Birds, Turbulence, Depth, Turn, Speed, Bright.
+
+**Fish School** (`lib/flocks.ts`): up to six thousand fish in perpetual motion: milling round a turning torus, streaming in a long ribbon after a leader, gathering into a ball, each flowing into the next; fish flash silver as they turn, and a predator darts through now and then, the school opening round it and closing behind. Sliders: Fish, Current, Shimmer, Turn, Speed, Bright.
+
+**Flow Masks** (`lib/flow-masks.ts`, Mask 1-10): Horned moon, Long ancestor, Skull, Antennae spirit, Sun mask, Antelope, Heart face, Striped spirit, Horned skull, Flowing-hair spirit. Dots are carried through each mask by the Liquid Chaos current and born again inside it when they drift into an eye or the mouth, so the openings stay dark in moving gold and their rims catch the light. Mouths open and close, horns and hair sway. Sliders: Mask, Density, Rim Light, Turbulence, Flow, Bright.
