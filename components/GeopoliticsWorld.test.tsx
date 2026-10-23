@@ -16,7 +16,7 @@ describe('GeopoliticsWorld', () => {
   it('opens on the world hub with both V1 categories', () => {
     render(<GeopoliticsWorld />);
 
-    expect(screen.getByRole('heading', { name: 'Geopolitics' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: /The World, walking/i })).toBeDefined();
     expect(screen.getByRole('heading', { name: 'Hormuz Crisis' })).toBeDefined();
     expect(screen.getByRole('heading', { name: 'Shipping Industry' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'World' })).toBeDefined();
@@ -31,7 +31,9 @@ describe('GeopoliticsWorld', () => {
     const reader = screen.getByTestId('page-reader');
     expect(within(reader).getByText(/21-mile pinch/i)).toBeDefined();
     expect(within(reader).getByTestId('trust-badge-trigger').textContent).toMatch(/HIGH/);
-    expect(within(reader).getByTestId('page-bluf').textContent).toMatch(/only sea passage/i);
+    expect(within(reader).getByTestId('page-bluf').textContent).toMatch(
+      /swimming pool|Persian Gulf/i,
+    );
   });
 
   it('navigates forward and backward inside a chapter', () => {

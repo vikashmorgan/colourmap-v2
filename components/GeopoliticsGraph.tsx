@@ -5,7 +5,7 @@ import { buildGraph, type Graph, type GraphEdge, type GraphNode } from '@/lib/ge
 import EducationModeSwitch from './EducationModeSwitch';
 
 const EDGE_COLOR: Record<GraphEdge['kind'], string> = {
-  dependsOn: 'rgba(36,52,82,0.55)',
+  dependsOn: 'rgba(122,84,56,0.55)',
   feedsInto: 'rgba(180,108,52,0.55)',
   related: 'rgba(36,52,82,0.2)',
 };
@@ -33,7 +33,7 @@ export default function GeopoliticsGraph({ onSwitchToSelf, onOpenPage }: Props) 
       style={{
         minHeight: 'calc(100svh - 120px)',
         background:
-          'linear-gradient(180deg, rgba(236,220,188,0.74), rgba(206,184,145,0.34)), radial-gradient(circle at 80% 8%, rgba(36,52,82,0.16), transparent 38%)',
+          'linear-gradient(180deg, rgba(236,220,188,0.74), rgba(206,184,145,0.34)), radial-gradient(circle at 80% 8%, rgba(122,84,56,0.16), transparent 38%)',
         width: 'calc(100% + 48px)',
         marginInline: '-24px',
         padding: 'clamp(10px, 2vw, 22px) clamp(12px, 4vw, 28px)',
@@ -46,7 +46,7 @@ export default function GeopoliticsGraph({ onSwitchToSelf, onOpenPage }: Props) 
         <h1
           style={{
             margin: '4px 0 4px',
-            color: '#1f2a3d',
+            color: '#2a1d0e',
             fontFamily: 'var(--font-serif)',
             fontSize: 'clamp(26px, 4.4vw, 40px)',
             letterSpacing: '0.01em',
@@ -73,7 +73,7 @@ export default function GeopoliticsGraph({ onSwitchToSelf, onOpenPage }: Props) 
 
       <div
         style={{
-          border: '1px solid rgba(36,52,82,0.22)',
+          border: '1px solid rgba(122,84,56,0.26)',
           background: 'rgba(255,248,231,0.78)',
           borderRadius: 14,
           overflowX: 'auto',
@@ -98,7 +98,7 @@ export default function GeopoliticsGraph({ onSwitchToSelf, onOpenPage }: Props) 
               markerHeight="6"
               orient="auto-start-reverse"
             >
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(36,52,82,0.7)" />
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(82,58,38,0.72)" />
             </marker>
             <marker
               id="arrow-feeds"
@@ -187,7 +187,7 @@ function GraphNodeView({
         cy={node.y}
         r={size}
         fill={highlighted ? '#1f2a3d' : 'rgba(255,248,231,0.92)'}
-        stroke={highlighted ? '#1f2a3d' : 'rgba(36,52,82,0.62)'}
+        stroke={highlighted ? '#1f2a3d' : 'rgba(122,84,56,0.62)'}
         strokeWidth={highlighted ? 2.5 : 1.2}
       />
       <text
@@ -221,7 +221,7 @@ function Legend() {
         marginTop: 8,
       }}
     >
-      <LegendDot color="rgba(36,52,82,0.55)" label="depends-on" />
+      <LegendDot color="rgba(122,84,56,0.55)" label="depends-on" />
       <LegendDot color="rgba(180,108,52,0.55)" label="feeds-into" />
       <LegendDot color="rgba(36,52,82,0.2)" label="related" />
       <span style={{ ...smallLabel, color: 'rgba(36,52,82,0.46)' }}>
@@ -278,7 +278,7 @@ function truncate(value: string, max: number) {
 
 const smallLabel = {
   margin: 0,
-  color: 'rgba(36,52,82,0.66)',
+  color: 'rgba(82,58,38,0.66)',
   fontFamily: 'var(--font-serif)',
   fontSize: 11,
   letterSpacing: '0.18em',

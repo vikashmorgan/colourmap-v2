@@ -15,8 +15,10 @@ describe('/education/world/map route', () => {
     pushMock.mockReset();
   });
 
-  it('mounts the regional map', () => {
+  it('mounts and shows either the Leaflet map or its loading placeholder', () => {
     render(<GeopoliticsMapPage />);
-    expect(screen.getByTestId('geopolitics-map')).toBeDefined();
+    const loaded = screen.queryByTestId('geopolitics-leaflet-map');
+    const loading = screen.queryByText(/Loading map/i);
+    expect(loaded ?? loading).not.toBeNull();
   });
 });

@@ -54,7 +54,7 @@ export default function GeopoliticsMap({ onSwitchToSelf, onOpenPage }: Props) {
       style={{
         minHeight: 'calc(100svh - 120px)',
         background:
-          'linear-gradient(180deg, rgba(236,220,188,0.78), rgba(206,184,145,0.34)), radial-gradient(circle at 14% 12%, rgba(36,52,82,0.16), transparent 38%)',
+          'linear-gradient(180deg, rgba(236,220,188,0.78), rgba(206,184,145,0.34)), radial-gradient(circle at 14% 12%, rgba(122,84,56,0.16), transparent 38%)',
         width: 'calc(100% + 48px)',
         marginInline: '-24px',
         padding: 'clamp(10px, 2vw, 22px) clamp(12px, 4vw, 28px)',
@@ -67,7 +67,7 @@ export default function GeopoliticsMap({ onSwitchToSelf, onOpenPage }: Props) {
         <h1
           style={{
             margin: '4px 0 4px',
-            color: '#1f2a3d',
+            color: '#2a1d0e',
             fontFamily: 'var(--font-serif)',
             fontSize: 'clamp(26px, 4.4vw, 40px)',
             letterSpacing: '0.01em',
@@ -112,7 +112,7 @@ export default function GeopoliticsMap({ onSwitchToSelf, onOpenPage }: Props) {
 
       <div
         style={{
-          border: '1px solid rgba(36,52,82,0.22)',
+          border: '1px solid rgba(122,84,56,0.26)',
           background:
             'radial-gradient(circle at 30% 30%, rgba(255,243,217,0.88), rgba(228,206,160,0.82))',
           borderRadius: 14,
@@ -228,7 +228,7 @@ export default function GeopoliticsMap({ onSwitchToSelf, onOpenPage }: Props) {
                 margin: '4px 0 2px',
                 fontFamily: 'var(--font-serif)',
                 fontSize: 14,
-                color: '#1f2a3d',
+                color: '#2a1d0e',
                 fontWeight: 700,
                 lineHeight: 1.3,
               }}
@@ -345,7 +345,7 @@ function ChokepointMarker({
           fontFamily: 'var(--font-serif)',
           fontSize: 12,
           fontWeight: 800,
-          fill: '#1a2433',
+          fill: '#1f1408',
         }}
       >
         {chokepoint.name}
@@ -376,7 +376,7 @@ function SeaLabel({ x, y, text }: { x: number; y: number; text: string }) {
       style={{
         fontFamily: 'var(--font-serif)',
         fontSize: 12,
-        fill: 'rgba(36,52,82,0.55)',
+        fill: 'rgba(122,84,56,0.55)',
         fontStyle: 'italic',
         letterSpacing: '0.16em',
       }}
@@ -399,7 +399,7 @@ function LayerToggles({
       style={{
         display: 'inline-flex',
         gap: 6,
-        border: '1px solid rgba(36,52,82,0.25)',
+        border: '1px solid rgba(122,84,56,0.28)',
         borderRadius: 999,
         background: 'rgba(255,248,231,0.78)',
         padding: 3,
@@ -461,7 +461,7 @@ function WeekSelector({
         display: 'inline-flex',
         gap: 8,
         alignItems: 'center',
-        border: '1px solid rgba(36,52,82,0.25)',
+        border: '1px solid rgba(122,84,56,0.28)',
         borderRadius: 999,
         background: 'rgba(255,248,231,0.78)',
         padding: '6px 12px',
@@ -480,7 +480,7 @@ function WeekSelector({
         style={{
           border: 0,
           background: 'transparent',
-          color: '#1f2a3d',
+          color: '#2a1d0e',
           fontFamily: 'var(--font-serif)',
           fontSize: 11,
           fontWeight: 800,
@@ -500,7 +500,7 @@ function WeekSelector({
 
 const smallLabel = {
   margin: 0,
-  color: 'rgba(36,52,82,0.66)',
+  color: 'rgba(82,58,38,0.66)',
   fontFamily: 'var(--font-serif)',
   fontSize: 11,
   letterSpacing: '0.18em',

@@ -19,6 +19,6 @@ describe('/education/world route', () => {
   it('mounts the Geopolitics World shell', () => {
     render(<GeopoliticsWorldPage />);
     expect(screen.getByTestId('geopolitics-world')).toBeDefined();
-    expect(screen.getByRole('heading', { name: 'Geopolitics' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: /The World, walking/i })).toBeDefined();
   });
 });

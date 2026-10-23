@@ -66,7 +66,7 @@ export default function TrustBadge({ confidence, lastVerified, sources, changelo
           border: `1px solid ${CONFIDENCE_COLOR[confidence]}`,
           borderRadius: 999,
           background: 'rgba(255,248,231,0.62)',
-          color: '#1f2a3d',
+          color: '#2a1d0e',
           cursor: 'pointer',
           fontFamily: 'var(--font-serif)',
           fontSize: 11,
@@ -118,7 +118,7 @@ export default function TrustBadge({ confidence, lastVerified, sources, changelo
             <p
               style={{
                 margin: 0,
-                color: '#1a2433',
+                color: '#1f1408',
                 fontSize: 13,
                 fontWeight: 800,
                 letterSpacing: '0.04em',
@@ -141,7 +141,7 @@ export default function TrustBadge({ confidence, lastVerified, sources, changelo
                     href={source.url}
                     target="_blank"
                     rel="noreferrer noopener"
-                    style={{ color: '#1f2a3d', textDecoration: 'underline' }}
+                    style={{ color: '#2a1d0e', textDecoration: 'underline' }}
                   >
                     {source.title}
                   </a>{' '}
@@ -151,12 +151,12 @@ export default function TrustBadge({ confidence, lastVerified, sources, changelo
                       style={{
                         marginLeft: 6,
                         padding: '1px 6px',
-                        border: '1px solid rgba(36,52,82,0.4)',
+                        border: '1px solid rgba(122,84,56,0.42)',
                         borderRadius: 4,
                         fontSize: 9,
                         fontWeight: 800,
                         letterSpacing: '0.1em',
-                        color: '#1f2a3d',
+                        color: '#2a1d0e',
                         background: 'rgba(255,243,217,0.5)',
                       }}
                     >
@@ -182,7 +182,7 @@ export default function TrustBadge({ confidence, lastVerified, sources, changelo
                       key={entry.at}
                       style={{ fontSize: 12, color: 'rgba(34,28,20,0.74)', lineHeight: 1.45 }}
                     >
-                      <span style={{ color: '#1f2a3d', fontWeight: 700 }}>{entry.at}</span> —{' '}
+                      <span style={{ color: '#2a1d0e', fontWeight: 700 }}>{entry.at}</span> —{' '}
                       {entry.note}
                     </li>
                   ))}
@@ -201,7 +201,7 @@ export default function TrustBadge({ confidence, lastVerified, sources, changelo
 
 const smallLabel = {
   margin: 0,
-  color: 'rgba(36,52,82,0.66)',
+  color: 'rgba(82,58,38,0.66)',
   fontFamily: 'var(--font-serif)',
   fontSize: 10,
   letterSpacing: '0.18em',

@@ -48,7 +48,7 @@ export default function ShippingIntelDashboard({
       style={{
         minHeight: 'calc(100svh - 120px)',
         background:
-          'linear-gradient(180deg, rgba(236,220,188,0.74), rgba(206,184,145,0.34)), radial-gradient(circle at 12% 8%, rgba(36,52,82,0.14), transparent 32%)',
+          'linear-gradient(180deg, rgba(236,220,188,0.74), rgba(206,184,145,0.34)), radial-gradient(circle at 12% 8%, rgba(122,84,56,0.14), transparent 32%)',
         width: 'calc(100% + 48px)',
         marginInline: '-24px',
         padding: 'clamp(10px, 2vw, 22px) clamp(12px, 4vw, 28px)',
@@ -61,7 +61,7 @@ export default function ShippingIntelDashboard({
         <h1
           style={{
             margin: '4px 0 4px',
-            color: '#1f2a3d',
+            color: '#2a1d0e',
             fontFamily: 'var(--font-serif)',
             fontSize: 'clamp(26px, 4.4vw, 40px)',
             letterSpacing: '0.01em',
@@ -149,14 +149,14 @@ export default function ShippingIntelDashboard({
               <div
                 style={{
                   fontSize: 11,
-                  color: 'rgba(36,52,82,0.66)',
+                  color: 'rgba(82,58,38,0.66)',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                 }}
               >
                 Current
               </div>
-              <div style={{ fontSize: 30, fontWeight: 900, color: '#1f2a3d', lineHeight: 1.05 }}>
+              <div style={{ fontSize: 30, fontWeight: 900, color: '#2a1d0e', lineHeight: 1.05 }}>
                 {snapshot.warRisk.vlccPremiumPercent.toFixed(2)}%
               </div>
               <div style={{ fontSize: 11, color: 'rgba(40,32,22,0.7)', marginTop: 2 }}>
@@ -192,7 +192,7 @@ export default function ShippingIntelDashboard({
                   fontFamily: 'var(--font-serif)',
                 }}
               >
-                <span style={{ fontSize: 13, color: '#1f2a3d', fontWeight: 700 }}>{r.lane}</span>
+                <span style={{ fontSize: 13, color: '#2a1d0e', fontWeight: 700 }}>{r.lane}</span>
                 <span style={{ fontSize: 13, color: 'rgba(34,28,20,0.86)' }}>
                   ${r.usd.toLocaleString()}{' '}
                   <span
@@ -222,7 +222,7 @@ export default function ShippingIntelDashboard({
                 fontFamily: 'var(--font-serif)',
                 fontSize: 30,
                 fontWeight: 900,
-                color: '#1f2a3d',
+                color: '#2a1d0e',
               }}
             >
               {snapshot.incidents.last48h}
@@ -238,7 +238,7 @@ export default function ShippingIntelDashboard({
                     lineHeight: 1.4,
                   }}
                 >
-                  <span style={{ color: 'rgba(36,52,82,0.7)', fontWeight: 700 }}>
+                  <span style={{ color: 'rgba(82,58,38,0.72)', fontWeight: 700 }}>
                     {incident.when} · {incident.where}
                   </span>{' '}
                   — {incident.what}
@@ -266,7 +266,7 @@ export default function ShippingIntelDashboard({
                   gap: 8,
                   alignItems: 'baseline',
                   fontFamily: 'var(--font-serif)',
-                  borderTop: '1px solid rgba(36,52,82,0.12)',
+                  borderTop: '1px solid rgba(122,84,56,0.12)',
                   paddingTop: 5,
                 }}
               >
@@ -283,7 +283,7 @@ export default function ShippingIntelDashboard({
                 <span
                   style={{
                     fontSize: 13,
-                    color: '#1f2a3d',
+                    color: '#2a1d0e',
                     fontWeight: 800,
                   }}
                   title={m.note}
@@ -312,7 +312,7 @@ export default function ShippingIntelDashboard({
                   color: 'rgba(34,28,20,0.86)',
                   lineHeight: 1.45,
                   paddingLeft: 12,
-                  borderLeft: '2px solid rgba(36,52,82,0.32)',
+                  borderLeft: '2px solid rgba(122,84,56,0.32)',
                 }}
               >
                 {b}
@@ -346,7 +346,7 @@ function Tile({
     <article
       data-testid={testId}
       style={{
-        border: `1px solid ${accent ? 'rgba(180,108,52,0.45)' : 'rgba(36,52,82,0.22)'}`,
+        border: `1px solid ${accent ? 'rgba(180,108,52,0.45)' : 'rgba(122,84,56,0.26)'}`,
         background: accent ? 'rgba(255,243,217,0.86)' : 'rgba(255,248,231,0.84)',
         borderRadius: 12,
         padding: '12px 14px',
@@ -365,7 +365,7 @@ function Tile({
         <h2
           style={{
             margin: 0,
-            color: '#1f2a3d',
+            color: '#2a1d0e',
             fontFamily: 'var(--font-serif)',
             fontSize: 14,
             letterSpacing: '0.06em',
@@ -380,7 +380,7 @@ function Tile({
           style={{
             border: `1px solid ${UPDATEDNESS_COLOR[updatedness]}`,
             borderRadius: 999,
-            color: '#1f2a3d',
+            color: '#2a1d0e',
             fontFamily: 'var(--font-serif)',
             fontSize: 10,
             fontWeight: 800,
@@ -415,7 +415,7 @@ function Tile({
           justifySelf: 'start',
           border: 0,
           background: 'transparent',
-          color: 'rgba(36,52,82,0.78)',
+          color: 'rgba(82,58,38,0.78)',
           cursor: 'pointer',
           fontFamily: 'var(--font-serif)',
           fontSize: 11,
@@ -442,7 +442,7 @@ function DeltaBadge({ label, bps }: { label: string; bps: number }) {
         alignItems: 'center',
         border: `1px solid ${color}`,
         borderRadius: 999,
-        color: '#1f2a3d',
+        color: '#2a1d0e',
         fontFamily: 'var(--font-serif)',
         fontSize: 11,
         fontWeight: 800,
@@ -462,7 +462,7 @@ function DeltaBadge({ label, bps }: { label: string; bps: number }) {
 
 const smallLabel = {
   margin: 0,
-  color: 'rgba(36,52,82,0.66)',
+  color: 'rgba(82,58,38,0.66)',
   fontFamily: 'var(--font-serif)',
   fontSize: 11,
   letterSpacing: '0.18em',

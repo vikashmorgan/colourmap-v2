@@ -12,7 +12,7 @@ export default function CmaCgmProposal({ onOpenIntel, onOpenWorld }: Props) {
       style={{
         minHeight: '100svh',
         background:
-          'linear-gradient(180deg, rgba(236,220,188,0.74), rgba(206,184,145,0.34)), radial-gradient(circle at 78% 14%, rgba(36,52,82,0.18), transparent 38%)',
+          'linear-gradient(180deg, rgba(236,220,188,0.74), rgba(206,184,145,0.34)), radial-gradient(circle at 78% 14%, rgba(122,84,56,0.22), transparent 38%)',
         width: 'calc(100% + 48px)',
         marginInline: '-24px',
         padding: 'clamp(18px, 4vw, 56px) clamp(14px, 6vw, 64px) 80px',
@@ -52,7 +52,7 @@ function Header() {
       <h1
         style={{
           margin: 0,
-          color: '#1a2433',
+          color: '#1f1408',
           fontFamily: 'var(--font-serif)',
           fontSize: 'clamp(32px, 6vw, 56px)',
           letterSpacing: '0.005em',
@@ -134,7 +134,7 @@ function IntelBriefMock({
       </p>
       <div
         style={{
-          border: '1px solid rgba(36,52,82,0.22)',
+          border: '1px solid rgba(122,84,56,0.26)',
           background: 'rgba(255,248,231,0.84)',
           borderRadius: 14,
           padding: '14px 18px',
@@ -143,7 +143,7 @@ function IntelBriefMock({
         }}
       >
         <div style={{ display: 'grid', gap: 4 }}>
-          <span style={chip('rgba(36,52,82,0.85)', '#ffe6aa')}>TOP MOVEMENT · today</span>
+          <span style={chip('rgba(82,58,38,0.85)', '#ffe6aa')}>TOP MOVEMENT · today</span>
           <p style={{ ...bodyStyle, margin: 0 }}>
             <strong>Hormuz VLCC war-risk eased to ~1.1% from a 2.5% March peak.</strong> 12× the
             pre-war 0.18% baseline. Translation: a $1.6 M premium per transit on an $80 M-insured
@@ -317,7 +317,7 @@ function Card({
       ? 'rgba(215,122,82,0.55)'
       : tone === 'good'
         ? 'rgba(95,178,122,0.55)'
-        : 'rgba(36,52,82,0.32)';
+        : 'rgba(122,84,56,0.32)';
   return (
     <div
       style={{
@@ -331,7 +331,7 @@ function Card({
         style={{
           fontFamily: 'var(--font-serif)',
           fontSize: 11,
-          color: 'rgba(36,52,82,0.66)',
+          color: 'rgba(82,58,38,0.66)',
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
         }}
@@ -339,7 +339,7 @@ function Card({
         {label}
       </div>
       <div
-        style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 800, color: '#1f2a3d' }}
+        style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 800, color: '#2a1d0e' }}
       >
         {value}
       </div>
@@ -351,7 +351,7 @@ function NumberCard({ big, label, note }: { big: string; label: string; note: st
   return (
     <div
       style={{
-        border: '1px solid rgba(36,52,82,0.22)',
+        border: '1px solid rgba(122,84,56,0.26)',
         background: 'rgba(255,248,231,0.84)',
         borderRadius: 14,
         padding: '14px 18px',
@@ -364,7 +364,7 @@ function NumberCard({ big, label, note }: { big: string; label: string; note: st
           fontFamily: 'var(--font-serif)',
           fontSize: 44,
           fontWeight: 900,
-          color: '#1f2a3d',
+          color: '#2a1d0e',
           lineHeight: 1,
         }}
       >
@@ -374,7 +374,7 @@ function NumberCard({ big, label, note }: { big: string; label: string; note: st
         style={{
           fontFamily: 'var(--font-serif)',
           fontSize: 12,
-          color: 'rgba(36,52,82,0.7)',
+          color: 'rgba(82,58,38,0.72)',
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
           fontWeight: 800,
@@ -411,7 +411,7 @@ function PilotPhase({
         <span
           style={{
             fontSize: 11,
-            color: 'rgba(36,52,82,0.66)',
+            color: 'rgba(82,58,38,0.66)',
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
             fontWeight: 800,
@@ -419,7 +419,7 @@ function PilotPhase({
         >
           {weeks}
         </span>
-        <h3 style={{ margin: 0, color: '#1f2a3d', fontSize: 18, lineHeight: 1.25 }}>{title}</h3>
+        <h3 style={{ margin: 0, color: '#2a1d0e', fontSize: 18, lineHeight: 1.25 }}>{title}</h3>
         <ul
           style={{
             margin: '4px 0 0',
@@ -457,7 +457,7 @@ function Quote({ attribution, lines }: { attribution: string; lines: string[] })
           key={line}
           style={{
             margin: '2px 0',
-            color: '#1a2433',
+            color: '#1f1408',
             fontSize: 15,
             lineHeight: 1.55,
             fontStyle: 'italic',
@@ -507,7 +507,7 @@ const section: React.CSSProperties = {
 
 const smallLabel: React.CSSProperties = {
   margin: 0,
-  color: 'rgba(36,52,82,0.66)',
+  color: 'rgba(82,58,38,0.66)',
   fontFamily: 'var(--font-serif)',
   fontSize: 11,
   letterSpacing: '0.18em',
@@ -516,7 +516,7 @@ const smallLabel: React.CSSProperties = {
 
 const h2Style: React.CSSProperties = {
   margin: '2px 0 4px',
-  color: '#1a2433',
+  color: '#1f1408',
   fontFamily: 'var(--font-serif)',
   fontSize: 'clamp(22px, 3.4vw, 30px)',
   lineHeight: 1.2,
@@ -531,9 +531,9 @@ const bodyStyle: React.CSSProperties = {
 };
 
 const primaryButton: React.CSSProperties = {
-  border: '1px solid rgba(36,52,82,0.4)',
+  border: '1px solid rgba(122,84,56,0.42)',
   borderRadius: 999,
-  background: 'rgba(36,52,82,0.92)',
+  background: 'rgba(82,58,38,0.92)',
   color: '#ffe6aa',
   cursor: 'pointer',
   fontFamily: 'var(--font-serif)',
@@ -547,5 +547,5 @@ const primaryButton: React.CSSProperties = {
 const secondaryButton: React.CSSProperties = {
   ...primaryButton,
   background: 'rgba(255,248,231,0.7)',
-  color: '#1f2a3d',
+  color: '#2a1d0e',
 };
