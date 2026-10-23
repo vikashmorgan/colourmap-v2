@@ -2,6 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { onChill } from '@/lib/chill/bus';
+import { ECHO_TYPES, EchoField, type EchoSettings, shouldTrigger } from '@/lib/chill/echo';
+import { EARTH_VISUAL_PALETTE } from '@/lib/chill/visuals';
+import { luminance } from '@/lib/pad-palettes';
+
 /*
  * Atom Visualizer — a family of eight soft dot visualizations
  * -----------------------------------------------------------
@@ -27,6 +32,10 @@ import { useEffect, useRef, useState } from 'react';
  * Every mode includes the same touch-push force as `atom` — drag
  * anywhere on the canvas and nearby dots are shoved outward before
  * easing back to their mode's home position.
+ *
+ * Optional `palette` recolours the dots (default: the warm Earth set) and
+ * optional `echo` subscribes to the Chill bus so sound events leave echoes
+ * (ripples, bubbles, bursts, glows, trails) — see lib/chill/echo.ts.
  */
 
 export type VisualizerMode =
@@ -65,6 +74,10 @@ interface AtomVisualizerProps {
   depth3d?: number;
   /** Which visualization mode to render */
   mode?: VisualizerMode;
+  /** Dot colours; defaults to the warm Earth palette. */
+  palette?: readonly string[];
+  /** Echo settings; when given, Chill bus events leave echoes on the canvas. */
+  echo?: EchoSettings;
 }
 
 interface Dot {
@@ -80,20 +93,16 @@ interface Dot {
   idx: number;
 }
 
-const WARM_PALETTE = [
-  '#E0908A',
-  '#E8B568',
-  '#C4A060',
-  '#B33A2B',
-  '#D4805A',
-  '#9B6BA0',
-  '#88C8E8',
-  '#7AAA58',
-];
+const WARM_PALETTE = EARTH_VISUAL_PALETTE;
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
-function buildDots(count: number, width: number, height: number, palette: string[]): Dot[] {
+function buildDots(
+  count: number,
+  width: number,
+  height: number,
+  palette: readonly string[],
+): Dot[] {
   const dots: Dot[] = [];
   const cx = width / 2;
   const cy = height / 2;
@@ -129,6 +138,8 @@ export default function AtomVisualizer({
   opacity = 1,
   depth3d = 0,
   mode = 'atom',
+  palette,
+  echo,
 }: AtomVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const dotsRef = useRef<Dot[]>([]);
@@ -146,6 +157,41 @@ export default function AtomVisualizer({
   // not like a switch flipping.
   const targetRef = useRef({ speed, density, scale, intensity, opacity, depth3d });
   const [hidden, setHidden] = useState(false);
+  const paletteRef = useRef<readonly string[]>(palette?.length ? palette : WARM_PALETTE);
+  const [echoField] = useState(() => new EchoField(echo));
+  const echoRef = useRef<EchoSettings | undefined>(echo);
+
+  // Recolour in place — positions and motion carry on untouched.
+  useEffect(() => {
+    const pal = palette?.length ? palette : WARM_PALETTE;
+    paletteRef.current = pal;
+    for (const d of dotsRef.current) d.color = pal[d.idx % pal.length];
+  }, [palette]);
+
+  useEffect(() => {
+    echoRef.current = echo;
+    if (echo) echoField.setSettings(echo);
+  }, [echo, echoField]);
+
+  // Sound events → echoes. Only listens while echo settings are given.
+  const echoOn = echo !== undefined;
+  useEffect(() => {
+    if (!echoOn) return;
+    return onChill((event) => {
+      const settings = echoRef.current;
+      if (!settings) return;
+      const pal = paletteRef.current;
+      const colored = event.color
+        ? event
+        : { ...event, color: pal[Math.floor(Math.random() * pal.length)] };
+      const now = performance.now();
+      for (const type of ECHO_TYPES) {
+        if (shouldTrigger(event, settings[type])) {
+          echoField.spawn(colored, type, width, height, now);
+        }
+      }
+    });
+  }, [echoOn, echoField, width, height]);
 
   useEffect(() => {
     modeRef.current = mode;
@@ -181,11 +227,19 @@ export default function AtomVisualizer({
     ctx.scale(dpr, dpr);
 
     const count = Math.round(80 + density * 320);
-    dotsRef.current = buildDots(count, width, height, WARM_PALETTE);
+    dotsRef.current = buildDots(count, width, height, paletteRef.current);
+    const field = echoField;
+    let frameNow = 0;
 
     const analyserData = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
 
     function applyPointerPush(d: Dot, pushRadius: number, pushStrength: number) {
+      // Every mode calls this per dot, so echo pushes ride along here.
+      if (field.size > 0) {
+        const f = field.forceAt(d.x, d.y, frameNow);
+        d.vx += f.dx;
+        d.vy += f.dy;
+      }
       const p = pointerRef.current;
       if (!p.active) return;
       const pdx = d.x - p.x;
@@ -241,7 +295,19 @@ export default function AtomVisualizer({
       }
 
       if (!ctx) return;
-      ctx.clearRect(0, 0, width, height);
+      frameNow = tMs;
+      field.step(tMs);
+      // Trail echoes erase the last frame only partly, so dots leave tails.
+      const erase = field.trailAlpha(tMs);
+      if (erase >= 1) {
+        ctx.clearRect(0, 0, width, height);
+      } else {
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.globalAlpha = erase;
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+      }
 
       const dots = dotsRef.current;
       const currentMode = modeRef.current;
@@ -720,6 +786,8 @@ export default function AtomVisualizer({
         ctx.fill();
       }
 
+      if (field.size > 0) drawEchoes(ctx, field, tMs, paletteRef.current[0]);
+
       ctx.globalAlpha = 1;
       rafRef.current = requestAnimationFrame(loop);
     }
@@ -753,7 +821,7 @@ export default function AtomVisualizer({
       canvas.removeEventListener('pointercancel', onPointerUp);
       canvas.removeEventListener('pointerleave', onPointerUp);
     };
-  }, [analyser, width, height, density, hidden]);
+  }, [analyser, width, height, density, hidden, echoField]);
 
   return (
     <div
@@ -767,8 +835,7 @@ export default function AtomVisualizer({
         ref={canvasRef}
         style={{
           borderRadius: 16,
-          background:
-            'radial-gradient(ellipse at center, rgba(255,248,220,0.25), rgba(92,48,24,0.05))',
+          background: canvasBackground(palette),
           touchAction: 'none',
           cursor: 'grab',
           display: 'block',
@@ -784,4 +851,42 @@ export default function AtomVisualizer({
       />
     </div>
   );
+}
+
+const DEFAULT_BACKGROUND =
+  'radial-gradient(ellipse at center, rgba(255,248,220,0.25), rgba(92,48,24,0.05))';
+
+/** Background tint follows the palette's darkest tone (spec: Visuals → Colour). */
+function canvasBackground(palette: readonly string[] | undefined): string {
+  if (!palette?.length) return DEFAULT_BACKGROUND;
+  const darkest = palette.reduce((a, b) => (luminance(b) < luminance(a) ? b : a));
+  return `radial-gradient(ellipse at center, rgba(255,248,220,0.25), ${darkest}14)`;
+}
+
+/** Ripple rings and glow blooms, drawn on top of the dots. */
+function drawEchoes(
+  ctx: CanvasRenderingContext2D,
+  field: EchoField,
+  now: number,
+  fallback: string,
+) {
+  for (const g of field.glows(now)) {
+    const color = g.color ?? fallback;
+    const grad = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.radius);
+    grad.addColorStop(0, color);
+    grad.addColorStop(1, `${color.slice(0, 7)}00`);
+    ctx.globalAlpha = g.alpha;
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(g.x, g.y, g.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.lineWidth = 1.5;
+  for (const r of field.rings(now)) {
+    ctx.globalAlpha = r.alpha;
+    ctx.strokeStyle = r.color ?? fallback;
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 }
