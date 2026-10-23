@@ -136,6 +136,8 @@ export const GROUPINGS: Grouping[] = [
     branch: 'art',
     label: 'Visual',
     routes: [
+      // Collections first, so they are always among the leaves the tree shows.
+      '/art/flow',
       '/geometry-field',
       '/figures',
       '/figure-stars',
@@ -160,7 +162,7 @@ export const GROUPINGS: Grouping[] = [
   /* Energy — what the machine is running on. */
   { branch: 'energy', label: 'Routines', routes: ['/programs'] },
   { branch: 'energy', label: 'Habits', routes: [] },
-  { branch: 'energy', label: 'How the body is', routes: ['/life-scan'] },
+  { branch: 'energy', label: 'How the body is', routes: ['/life-scan', '/health'] },
 ];
 
 /**

@@ -156,7 +156,6 @@ const POSITIVE_OVERLAY_PROGRAMS = new Set([
   'planetary-ecology',
   'future-transitions',
 ]);
-const JPG_PANEL_PROGRAMS = new Set(['carl-jung', 'struggle-letting-go']);
 const GENERATED_LAYERED_PANEL_COUNTS: Record<string, number> = {
   'carl-jung': 20,
   'paulo-freire': 11,
@@ -393,15 +392,15 @@ function getProgramCoverSrc(program: Program): string {
   const coverPanel = PROGRAM_COVER_PANEL[program.key] ?? 0;
   const generatedCount = GENERATED_LAYERED_PANEL_COUNTS[program.key];
   if (generatedCount) {
-    const extension = GENERATED_LAYERED_PANEL_EXTENSIONS[program.key] ?? 'png';
+    const extension = GENERATED_LAYERED_PANEL_EXTENSIONS[program.key] ?? 'jpg';
     return `/comics/${program.key}/generated/panel-${coverPanel % generatedCount}.${extension}`;
   }
   if (POSITIVE_OVERLAY_PROGRAMS.has(program.key)) {
-    const extension = POSITIVE_OVERLAY_PANEL_EXTENSIONS[program.key] ?? 'png';
+    const extension = POSITIVE_OVERLAY_PANEL_EXTENSIONS[program.key] ?? 'jpg';
     return `/comics/${program.key}/variants/positive-overlay/panel-${coverPanel}.${extension}`;
   }
   if (COMIC_PROGRAMS.has(program.key)) {
-    return `/comics/${program.key}/panel-${coverPanel}.${JPG_PANEL_PROGRAMS.has(program.key) ? 'jpg' : 'png'}`;
+    return `/comics/${program.key}/panel-${coverPanel}.jpg`;
   }
   return EDUCATION_IMAGES[0];
 }

@@ -112,3 +112,7 @@ interface AiReflectionMessage {
 - `/ai` uses theme-relative raised AI surfaces: Paper stays clear and slightly lifted, while Golden, Night, and Comic modes use the same relationship in their own color family instead of reusing paper beige.
 - Product docs identify the AI menu as the long-term AI home.
 - Future implementation has a clear path for quotas, saved reflections, and backend persistence.
+
+## Why learn the real tools (2026-10-09)
+
+The AI tab carries a card, **Why learn the real tools →**, opening `/ai/why-learn`: a set of notes in the owner's words on challenging AI rather than trusting it. AI made mediocrity cheaper and made us lazy; we need to go deeper into the problem and challenge the AI. AI works on assumptions and they add up: when a business problem appears, you find you were never clear on them and kept adding subconscious assumptions you no longer control. The art is to check and challenge the code, so we learn the real tools: coding, SQL and the rest (the page links to the Coding course). The notes live in `lib/ai/why-learn.ts`; new notes are added at the end.

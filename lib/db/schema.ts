@@ -364,6 +364,41 @@ export const recordings = pgTable('recordings', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+// ─── Chill Machine (public) ──────────────────────────────────────────────────
+// Spec: docs/specs/chill-machine-public.md. Migration: 0029_chill_machine.sql.
+
+export const chillFeedback = pgTable('chill_feedback', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id'), // null → guest
+  name: text('name'),
+  message: text('message').notNull(),
+  palette: text('palette'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const chillMixes = pgTable('chill_mixes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  title: text('title').notNull(),
+  settings: jsonb('settings').$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type ChillCue = { at: number; label: string };
+
+export const chillRecordings = pgTable('chill_recordings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  title: text('title').notNull(),
+  storagePath: text('storage_path').notNull(),
+  mimeType: text('mime_type').notNull(),
+  durationSecs: integer('duration_secs'),
+  palette: text('palette'),
+  cues: jsonb('cues').$type<ChillCue[]>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // ─── Chat ────────────────────────────────────────────────────────────────────
 
 export type ChatEntityType = 'circle' | 'spark';
@@ -480,4 +515,93 @@ export const prompts = pgTable('prompts', {
   note: text('note'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   doneAt: timestamp('done_at', { withTimezone: true }),
+});
+
+/*
+ * CODING MARKS — the study page at /coding.
+ *
+ * One row per box the user has done something with: a mark ("got" =
+ * understood, "mid" = confused, "late" = no time yet), a note (a question or a
+ * comment), or both. A row with neither is deleted rather than kept empty. `item_key` is
+ * the page's own key for a box, e.g. "s3|while", so marks survive the page
+ * being redeployed.
+ *
+ * (user_id, item_key) is unique in the migration; that is what lets a box be
+ * saved with one upsert.
+ */
+export const codingMarks = pgTable('coding_marks', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  itemKey: text('item_key').notNull(),
+  /** 'got' | 'mid' | 'late', or null when the box only has a question */
+  mark: text('mark'),
+  /** The user's own words about this box */
+  note: text('note'),
+  /** 'question' | 'comment': what kind of note it is. Null when there is no note. */
+  noteKind: text('note_kind'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/*
+ * CODING NOTES — any number of questions and comments per box of /coding.
+ * `answer` holds a reply written from the terminal; it sits beside the note
+ * and never replaces the user's own words. `read_at` is when the user marked
+ * that answer read.
+ */
+export const codingNotes = pgTable('coding_notes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  itemKey: text('item_key').notNull(),
+  /** 'question' | 'comment' */
+  kind: text('kind').notNull(),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  answer: text('answer'),
+  answeredAt: timestamp('answered_at', { withTimezone: true }),
+  readAt: timestamp('read_at', { withTimezone: true }),
+});
+
+/*
+ * HEALTH LOG — the /health page's day by day: a tick (`am|lift-sky` = '1'), a
+ * pain number (`pain|knee` = '0'..'10') or the day's note (`feel`). One value
+ * per user, day and key (unique in migration 0027).
+ */
+export const healthLog = pgTable('health_log', {
+  userId: uuid('user_id').notNull(),
+  day: date('day').notNull(),
+  itemKey: text('item_key').notNull(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/*
+ * HEALTH NOTES — questions, comments and things to research on an exercise, a
+ * section or the whole routine. Same shape as coding_notes: `answer` is written
+ * from the terminal beside the note, `read_at` is when it was read.
+ */
+export const healthNotes = pgTable('health_notes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  itemKey: text('item_key').notNull(),
+  /** 'question' | 'comment' | 'research' */
+  kind: text('kind').notNull(),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  answer: text('answer'),
+  answeredAt: timestamp('answered_at', { withTimezone: true }),
+  readAt: timestamp('read_at', { withTimezone: true }),
+});
+
+/*
+ * HEALTH PREFS — standing choices on /health that are not about a day: the
+ * order of a section's exercises (`order|knee`) and the ones set aside
+ * (`aside|step-down`). One value per user and key.
+ */
+export const healthPrefs = pgTable('health_prefs', {
+  userId: uuid('user_id').notNull(),
+  itemKey: text('item_key').notNull(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

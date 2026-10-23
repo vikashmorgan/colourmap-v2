@@ -32,6 +32,7 @@
  * honest.
  */
 
+import { COLLECTION_NAMES } from '@/lib/art/collections';
 import {
   ADMIN_HALF_LABELS,
   type AdminHalf,
@@ -104,7 +105,10 @@ export function toMandala(): BrainMandala {
       branch,
       half: group.half,
       count: group.routes.length,
-      leaves: group.routes.map((route) => ({ slug: route, label: nameOfRoute(route) })),
+      leaves: group.routes.map((route) => ({
+        slug: route,
+        label: COLLECTION_NAMES[route] ?? nameOfRoute(route),
+      })),
     })),
   }));
 

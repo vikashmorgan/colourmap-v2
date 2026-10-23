@@ -81,7 +81,7 @@ This is the same dot that opened the AI presence chat. **The dot was already mus
 
 ## Requires
 
-Migration `0023_prompts.sql`. Applied and verified: 8 columns, 4 policies, RLS on.
+Migration `0030_prompts.sql`. Applied and verified: 8 columns, 4 policies, RLS on.
 
 ---
 

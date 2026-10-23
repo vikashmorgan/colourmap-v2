@@ -58,3 +58,5 @@ lib/generated/
 
 .vercel
 .env*
+
+.tmp/

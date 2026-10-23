@@ -156,4 +156,18 @@ describe('GeometryField journeys', () => {
     expect(t3.stages.some((s) => s.mode === 'tripnumber3')).toBe(true);
     expect(t3.stages.every((s) => s.mode !== 'kaleidoscope')).toBe(true);
   });
+
+  it('Oil Projector is an oils-only, seamlessly looping journey', () => {
+    const oil = JOURNEYS.find((j) => j.name === 'Oil Projector');
+    expect(oil).toBeDefined();
+    if (!oil) return;
+    const oilModes = ['oilwarp', 'ripplefold', 'thinfilm', 'twooil', 'lavalamp', 'rorschach'];
+    for (const stage of oil.stages) {
+      expect(oilModes).toContain(stage.mode);
+      expect(PAL[stage.preset], `Oil Projector -> ${stage.name}`).toBeDefined();
+    }
+    expect(oil.stages.some((s) => s.mode === 'rorschach')).toBe(true);
+    expect(oil.stages.at(-1)?.mode).toBe(oil.stages[0].mode);
+    expect(oil.stages.at(-1)?.preset).toBe(oil.stages[0].preset);
+  });
 });

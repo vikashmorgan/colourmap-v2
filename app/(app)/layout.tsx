@@ -13,6 +13,7 @@ import { StyleProvider } from '@/components/StyleContext';
 import ThemeSwitcher from '@/components/ThemeSwitcher';
 import { ViewModeProvider } from '@/components/ViewModeContext';
 import ViewModeSwitcher from '@/components/ViewModeSwitcher';
+import { canEnterCockpit } from '@/lib/auth/cockpit-access';
 import { isVisitorPath } from '@/lib/auth/visitor';
 import { SoundSessionProvider } from '@/lib/sound-session';
 import { createClient } from '@/lib/supabase/server';
@@ -63,6 +64,12 @@ export default async function AppLayout({
   const isVisitor = !user;
   if (isVisitor && !isVisitorPath(pathname)) {
     redirect('/login');
+  }
+
+  // Owner lock: the cockpit is Martin's. Any other signed-in account (e.g. a
+  // Chill Machine email account) is sent to /chill. Visitor paths stay open.
+  if (user && !isVisitorPath(pathname) && !canEnterCockpit(user.email)) {
+    redirect('/chill');
   }
 
   return (

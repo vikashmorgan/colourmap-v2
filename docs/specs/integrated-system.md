@@ -38,6 +38,12 @@ longer a record of what the person thought.** The value of six months of notes i
 uncontaminated. One round of helpful rephrasing destroys the only thing that made them worth
 keeping.
 
+**One exception, asked for by Victor on 2026-10-05: adding, never editing.** `scripts/brain-write.ts`
+can put texts he hands over (poems, collected notes) into a notebook he names. It can only add a
+new entry for `BRAIN_USER_ID`. It cannot update or delete an entry or touch another table, and
+every entry it adds carries the tag `from-agent`. His own words are never rewritten in place, so the
+record stays his. An added entry is a copy he asked for, marked as such.
+
 ---
 
 ## Three ways to connect, and the order to do them in
