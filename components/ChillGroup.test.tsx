@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import ChillGroup, { CHILL_GROUP_LS } from './ChillGroup';
+import ChillGroup, { CHILL_GROUP_LS, ChillModule } from './ChillGroup';
 
 describe('ChillGroup', () => {
   beforeEach(() => localStorage.clear());
@@ -43,5 +43,34 @@ describe('ChillGroup', () => {
       </ChillGroup>,
     );
     expect(screen.queryByText('timeline')).toBeNull();
+  });
+});
+
+describe('ChillModule', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => cleanup());
+
+  it('starts folded with its summary and opens on click, remembering it', () => {
+    render(
+      <ChillModule id="beats" label="beats" summary="124 · Melodic">
+        <p>grid</p>
+      </ChillModule>,
+    );
+    const header = screen.getByRole('button', { name: /beats · 124 · Melodic/i });
+    expect(screen.queryByText('grid')).toBeNull();
+    fireEvent.click(header);
+    expect(screen.getByText('grid')).toBeDefined();
+    expect(header.textContent).not.toContain('124');
+    expect(localStorage.getItem(`${CHILL_GROUP_LS}module:beats`)).toBe('1');
+  });
+
+  it('restores a saved open state', () => {
+    localStorage.setItem(`${CHILL_GROUP_LS}module:look`, '1');
+    render(
+      <ChillModule id="look" label="look">
+        <p>canvas</p>
+      </ChillModule>,
+    );
+    expect(screen.getByText('canvas')).toBeDefined();
   });
 });

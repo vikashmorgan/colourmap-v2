@@ -1,13 +1,39 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import AtomVisualizer, { type VisualizerMode } from '@/components/AtomVisualizer';
-import ChillGroup from '@/components/ChillGroup';
+import ChillBeats from '@/components/ChillBeats';
+import ChillFeedbackNotepad from '@/components/ChillFeedbackNotepad';
+import ChillGroup, { ChillModule } from '@/components/ChillGroup';
+import ChillRecorder, { ChillRecordButton } from '@/components/ChillRecorder';
+import ChillSongSections, { ChillSongPosition } from '@/components/ChillSongSections';
+import ChillVisualsPanel, { echoSummary } from '@/components/ChillVisualsPanel';
 import InfoTooltip from '@/components/InfoTooltip';
 import VoiceProviderSelector from '@/components/VoiceProviderSelector';
+import {
+  beatsSummary,
+  type ChillBeatSettings,
+  loadBeats,
+  saveBeats,
+} from '@/lib/chill/beats-settings';
 import { emitChill, pitchToY } from '@/lib/chill/bus';
+import {
+  loadSections,
+  type SectionSnapshot,
+  type SongSection,
+  saveSections,
+  cueSheet as sectionCues,
+} from '@/lib/chill/sections';
+import { getTransport, onTransport } from '@/lib/chill/transport';
+import {
+  type ChillVisualSettings,
+  loadVisuals,
+  resolveVisualPalette,
+  saveVisuals,
+} from '@/lib/chill/visuals';
 import { haptic } from '@/lib/haptics';
+import { useAudioRecorder } from '@/lib/hooks/use-audio-recorder';
 import { useTTS } from '@/lib/hooks/use-tts';
 import {
   getPadPalette,
@@ -2394,7 +2420,7 @@ export default function BinauralTuner() {
   // Master bus: every Chill Machine sound runs through it so the recorder,
   // beats and echo visuals can tap one place. Analyser feeds the visuals.
   const masterRef = useRef<GainNode | null>(null);
-  const [_audioOut, setAudioOut] = useState<{
+  const [audioOut, setAudioOut] = useState<{
     ctx: AudioContext;
     master: GainNode;
     analyser: AnalyserNode;
@@ -2404,6 +2430,90 @@ export default function BinauralTuner() {
       masterRef.current && masterRef.current.context === ctx ? masterRef.current : ctx.destination,
     [],
   );
+
+  // ── Public Chill Machine modules (spec: docs/specs/chill-machine-public.md) ──
+  const moduleColors =
+    padPalette.colors.length > 0 ? padPalette.colors : Object.values(CATEGORY_COLORS);
+  const transport = useSyncExternalStore(onTransport, getTransport, getTransport);
+  const nowAudio = useCallback(() => ctxRef.current?.currentTime ?? 0, []);
+
+  const [visuals, setVisuals] = useState<ChillVisualSettings>(loadVisuals);
+  const updateVisuals = (next: ChillVisualSettings) => {
+    setVisuals(next);
+    saveVisuals(next);
+  };
+
+  const [beats, setBeats] = useState<ChillBeatSettings>(loadBeats);
+  const updateBeats = (next: ChillBeatSettings) => {
+    setBeats(next);
+    saveBeats(next);
+  };
+
+  const [sections, setSections] = useState<SongSection[]>(loadSections);
+  const updateSections = (next: SongSection[]) => {
+    setSections(next);
+    saveSections(next);
+  };
+  const [loopSectionId, setLoopSectionId] = useState<string | null>(null);
+
+  // A section snapshot holds which pads play and how the beat feels.
+  const getSnapshot = (): SectionSnapshot => ({
+    layers: { ...activeLayers },
+    beats: {
+      on: beats.on,
+      loopId: beats.loopId,
+      fill: beats.fill,
+      lowCut: beats.lowCut,
+      muteKick: beats.muteKick,
+    },
+  });
+  const applySnapshotRef = useRef<(snap: SectionSnapshot) => void>(() => {});
+  applySnapshotRef.current = (snap) => {
+    const layers = (snap.layers ?? {}) as Record<string, number>;
+    for (const l of ALL_LAYERS) {
+      const want = typeof layers[l.id] === 'number' ? layers[l.id] : 0;
+      const have = activeLayers[l.id] || 0;
+      if (want > 0 && have <= 0) {
+        toggleLayer(l.id);
+        setLayerVol(l.id, want);
+      } else if (want <= 0 && have > 0) {
+        toggleLayer(l.id);
+      } else if (want > 0 && want !== have) {
+        setLayerVol(l.id, want);
+      }
+    }
+    const b = snap.beats as Partial<ChillBeatSettings> | undefined;
+    if (b) updateBeats({ ...beats, ...b, mode: beats.mode, custom: beats.custom });
+  };
+
+  // Recorder taps the master bus; cues come from the song sections.
+  const recorder = useAudioRecorder(audioOut?.ctx ?? null, audioOut?.master ?? null);
+  const recStartRef = useRef<number | null>(null);
+  useEffect(() => {
+    recStartRef.current = recorder.state === 'recording' ? nowAudio() : null;
+  }, [recorder.state, nowAudio]);
+  const recordingCues = () => {
+    const t = getTransport();
+    const start = recStartRef.current;
+    if (!t.playing || t.startTime === null || start === null) return [];
+    const offset = t.startTime - start;
+    return sectionCues(sections, t.bpm)
+      .map((c) => ({ at: Math.max(0, c.at + offset), label: c.label }))
+      .filter((c, i, all) => i === all.length - 1 || all[i + 1].at > 0);
+  };
+
+  const [notepadOpen, setNotepadOpen] = useState(false);
+
+  // Visual canvas follows its container width.
+  const visualBoxRef = useRef<HTMLDivElement | null>(null);
+  const [visualW, setVisualW] = useState(320);
+  useEffect(() => {
+    const el = visualBoxRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([entry]) => setVisualW(Math.round(entry.contentRect.width)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
   const layerNodesRef = useRef<
     Map<string, { source: AudioBufferSourceNode | OscillatorNode; gain: GainNode }>
   >(new Map());
@@ -3255,6 +3365,43 @@ export default function BinauralTuner() {
 
   return (
     <div className="space-y-4">
+      {/* Pinned bar — record, where you are in the song, notes for Martin */}
+      <div
+        className="sticky top-0 z-20 flex items-center justify-between gap-3 px-3 py-2"
+        style={{ background: '#F2E8D0E6', backdropFilter: 'blur(6px)', borderRadius: 14 }}
+      >
+        <ChillRecordButton recorder={recorder} ready={audioOut !== null} />
+        <ChillSongPosition sections={sections} loopSectionId={loopSectionId} now={nowAudio} />
+        <button
+          type="button"
+          onClick={() => setNotepadOpen(true)}
+          className="cursor-pointer"
+          style={{
+            background: 'none',
+            border: 'none',
+            fontFamily: 'var(--font-serif)',
+            fontSize: 13,
+            color: '#7A5438',
+          }}
+        >
+          notes
+        </button>
+      </div>
+      <ChillRecorder
+        ctx={audioOut?.ctx ?? null}
+        source={audioOut?.master ?? null}
+        palette={padPalette.id}
+        cues={recordingCues}
+        recorder={recorder}
+        hideButton
+      />
+      <ChillFeedbackNotepad
+        open={notepadOpen}
+        onClose={() => setNotepadOpen(false)}
+        signedIn={false}
+        palette={padPalette.id}
+      />
+
       {/* Title */}
       <div className="text-center space-y-1.5">
         <p
@@ -4030,6 +4177,18 @@ export default function BinauralTuner() {
               )}
             </div>
 
+            {/* Beats — electronic loops under the pads */}
+            <ChillModule id="beats" label="beats" summary={beatsSummary(beats, transport.bpm)}>
+              <ChillBeats
+                ctx={audioOut?.ctx ?? null}
+                output={audioOut?.master ?? null}
+                palette={moduleColors}
+                rootFreq={baseFreq * 2}
+                value={beats}
+                onChange={updateBeats}
+              />
+            </ChillModule>
+
             {/* Controls — closable pillbox: tone, rate, reverb, wave, volume */}
             <div className="px-2">
               <button
@@ -4739,6 +4898,49 @@ export default function BinauralTuner() {
                 </div>
               )}
             </div>
+          </ChillGroup>
+
+          {/* VISUALS — what you see, and how sound marks it */}
+          <ChillGroup id="visuals" label="visuals" summary={echoSummary(visuals.echo)}>
+            <div ref={visualBoxRef} className="flex justify-center px-2">
+              <AtomVisualizer
+                width={visualW}
+                height={Math.round(Math.min(360, visualW * 0.62))}
+                intensity={0.7}
+                mode={visuals.mode}
+                speed={visuals.speed}
+                density={visuals.density}
+                scale={visuals.scale}
+                opacity={visuals.opacity}
+                depth3d={visuals.depth3d}
+                palette={resolveVisualPalette(visuals, padPalette.id)}
+                echo={visuals.echo}
+                analyser={audioOut?.analyser ?? null}
+              />
+            </div>
+            <ChillVisualsPanel
+              value={visuals}
+              onChange={updateVisuals}
+              padPalette={padPalette.id}
+            />
+          </ChillGroup>
+
+          {/* SONG — sections so you know where you are */}
+          <ChillGroup id="song" label="song" defaultOpen={false}>
+            <ChillModule id="sections" label="sections" defaultOpen>
+              <ChillSongSections
+                sections={sections}
+                onChange={updateSections}
+                palette={moduleColors}
+                loopSectionId={loopSectionId}
+                onLoopChange={setLoopSectionId}
+                getSnapshot={getSnapshot}
+                onEnterSection={(section) => {
+                  if (section.snapshot) applySnapshotRef.current(section.snapshot);
+                }}
+                now={nowAudio}
+              />
+            </ChillModule>
           </ChillGroup>
 
           {/* + more — the quieter extras */}
