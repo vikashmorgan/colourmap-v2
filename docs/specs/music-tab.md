@@ -207,3 +207,7 @@ order persisted to localStorage.
 ## Songs (2026-10-10)
 
 A third section in Music, after Music Studio and Guitar Studio: **Songs**. It shows the Chill Machine piano (its own app, `chillmachine.vercel.app`) in a frame, where loops recorded in the looper are saved as named segments and chained into songs. Here the library is kept in the user's account: the frame is opened with `?store=brain&parent=<origin>` and asks this page by postMessage to load and save it, and this page stores it in `user_prefs` under the key `chill:library` (no new table). Only messages from the piano's origin and from this frame are answered; if the library cannot be read the answer says so, so the piano never saves an empty library over the real one. On its own, the piano keeps songs in that browser instead, for testing without Supabase. `NEXT_PUBLIC_CHILL_URL` points the frame at a local piano during development.
+
+## Chill Machine tab opens the app (2026-10-24)
+
+The Sound Lab's Chill Machine tab no longer embeds the old `BinauralTuner`. It shows one link, "Open the Chill Machine ↗", to https://chillmachine.vercel.app in a new tab. See `docs/specs/chill-machine-public.md`.

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { CHILL_URL } from '@/lib/chill/url';
 import { createClient } from '@/lib/supabase/client';
 
 /*
@@ -18,7 +19,7 @@ import { createClient } from '@/lib/supabase/client';
  * and replies go to that origin only.
  */
 
-export const CHILL_URL = process.env.NEXT_PUBLIC_CHILL_URL ?? 'https://chillmachine.vercel.app';
+export { CHILL_URL };
 export const LIBRARY_KEY = 'chill:library';
 
 type Msg = { type?: unknown; id?: unknown; library?: unknown };

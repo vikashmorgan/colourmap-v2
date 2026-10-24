@@ -1,7 +1,8 @@
-import ChillPublicApp from '@/components/ChillPublicApp';
-import { getChillUser } from '@/lib/chill/current-user';
+import { redirect } from 'next/navigation';
 
-export default async function ChillPage() {
-  const user = await getChillUser();
-  return <ChillPublicApp user={user} />;
+import { CHILL_URL } from '@/lib/chill/url';
+
+/** The Chill Machine moved to its own app (2026-10-24); /chill sends people there. */
+export default function ChillPage() {
+  redirect(CHILL_URL);
 }
