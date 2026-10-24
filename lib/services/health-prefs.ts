@@ -4,7 +4,8 @@ import { deletePref, getPrefsByUser, upsertPrefs } from '@/lib/db/queries/health
  * THE HEALTH PAGE'S STANDING CHOICES (2026-10-19: "allow me to move exercise
  * boxes above another so I can reorder them, to show which are my favourites
  * and which I don't do"). `order|{section}` holds a section's exercises in
- * the chosen order; `aside|{exercise}` = '1' sets one aside. A null value
+ * the chosen order; `aside|{exercise}` = '1' sets one aside; `fav` holds the
+ * Favourites pack (2026-10-23), the chosen exercise ids in order. A null value
  * clears the key. Checked, not trusted.
  */
 

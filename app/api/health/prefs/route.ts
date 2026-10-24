@@ -4,7 +4,7 @@ import { jsonError, parseJsonBody, withAuthenticatedUser } from '@/lib/api/route
 import { HealthPrefValidationError, listPrefs, writePrefs } from '@/lib/services/health-prefs';
 
 /*
- * The /health page's standing choices (exercise order, set aside).
+ * The /health page's standing choices (exercise order, set aside, favourites).
  *
  *   GET  → { prefs: [ { key, value } ] }
  *   PUT  { prefs: [ { key, value | null } ] }  → { ok: true }
