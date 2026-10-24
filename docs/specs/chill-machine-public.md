@@ -253,3 +253,12 @@ A Chill account is a normal Supabase user. To stop such a user from reaching the
 - Video or MP4 with visuals (audio only for now. A plain coloured still frame can be added later if posting to Instagram or TikTok matters).
 - Sharing recordings by public link.
 - Replying to feedback from inside the app.
+
+## Moved to its own app (2026-10-24)
+
+Martin chose the separate Chill Machine app (`vikashmorgan/chill-machine`, https://chillmachine.vercel.app) as the one public Chill Machine. Its features (rainbow volume bar, pad palettes, notes, accounts, beats, song sections, echo and cymatics visuals) were ported there.
+
+- `/chill` and `/chill/login` redirect to the app (`CHILL_URL` in `lib/chill/url.ts`, overridable with `NEXT_PUBLIC_CHILL_URL`).
+- The Sound Lab's Chill Machine tab shows a link that opens the app in a new tab; the old `BinauralTuner` is no longer mounted.
+- `/chill/feedback` stays: Martin's list of notes, read from the same `chill_feedback` table the app writes to.
+- The owner lock still sends other signed-in accounts to `/chill`, which now lands them in the app.

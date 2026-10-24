@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import AtomVisualizer, { type VisualizerMode } from '@/components/AtomVisualizer';
-import BinauralTuner from '@/components/BinauralTuner';
 import GrooveMachine from '@/components/GrooveMachine';
 import LofiLooper from '@/components/LofiLooper';
 import MagicMaker from '@/components/MagicMaker';
+import { CHILL_URL } from '@/lib/chill/url';
 
 /* ═══════════════════════════════════════════════════════════
    Sound Lab — ambient / emotional audio tools.
@@ -156,8 +156,22 @@ export default function SoundLab() {
           render — so the audio keeps playing when the user wanders to
           Visuals or Songs. Per Martin 2026-04-25: "chill machine stays
           when we are on visuals". */}
+      {/* The Chill Machine is its own app now (2026-10-24): this tab opens it. */}
       <div style={{ display: mode === 'tuner' ? 'block' : 'none' }}>
-        <BinauralTuner />
+        <div className="mx-auto max-w-md px-4 py-10 text-center">
+          <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+            Pads, beats, song sections and visuals, in its own app.
+          </p>
+          <a
+            href={CHILL_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 inline-block rounded-full border px-5 py-2 text-base font-semibold"
+            style={{ borderColor: '#C4A060', color: 'var(--foreground)' }}
+          >
+            Open the Chill Machine ↗
+          </a>
+        </div>
       </div>
       <div style={{ display: mode === 'groove' ? 'block' : 'none' }}>
         <GrooveMachine />
