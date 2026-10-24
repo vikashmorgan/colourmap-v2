@@ -135,7 +135,8 @@ The controls under the canvas are grouped into two categories, each a small clos
 
 ### Visuals — what you see
 
-- **Mode**: today's 13 modes (atom, fibonacci, wave, galaxy…), plus more added over time.
+- **Mode**: 14 modes (atom, fibonacci, wave, galaxy… and cymatics), plus more added over time.
+- **Cymatics** (asked for 2026-10-24: "cymatics should be one of the visual modes alongside the others, so they are in the same window. And develop cymatics so there is more stars in it."). Sand on a round plate gathers on the still lines of a vibrating circular mode (J_n(αr)·cos(nθ)) and flows from figure to figure through the same eight patterns as Geometry Field's Cymatic Sands. Sound shakes the plate harder and moves the figures on faster. It sits on a night plate with a twinkling star field (140–400 stars, some four-point sparkles); settled grains glint as small stars. Grains (900–3000) and stars follow Density; colours follow the pad palette. Math: `lib/chill/cymatics-2d.ts`.
 - **Colour**: the same palettes as the pads, plus **Match pads** (the default), which follows the pad palette. The dots take their colours from the chosen palette, and the background tint follows the palette's darkest tone.
 - **Shape sliders**: today's speed, density, size, opacity and depth, unchanged.
 
