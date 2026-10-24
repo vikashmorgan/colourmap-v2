@@ -23,6 +23,7 @@ export const VISUALIZER_MODES: readonly VisualizerMode[] = [
   'galaxy',
   'orbital',
   'solar',
+  'cymatics',
 ];
 
 /** The visualizer's original warm dot colours — what Earth shows. */

@@ -5204,6 +5204,7 @@ const VALID_MODES: VisualizerMode[] = [
   'galaxy',
   'orbital',
   'solar',
+  'cymatics',
 ];
 
 function _VisualizerBox() {
@@ -5336,6 +5337,11 @@ function _VisualizerBox() {
       label: 'Solar',
       desc: 'our solar system — 8 planets on concentric orbits',
     },
+    {
+      id: 'cymatics',
+      label: 'Cymatics',
+      desc: 'sand finds the still lines of a vibrating plate, under the stars',
+    },
   ];
 
   // Stable "calm spots" on the speed axis — the user noticed certain
@@ -5463,6 +5469,15 @@ function _VisualizerBox() {
         "The Sun holds 99.86% of the solar system's mass. Jupiter holds most of the rest. Everything else, including Earth, is rounding error by mass.",
         "Orbital periods follow Kepler's third law: T² ∝ r³ (square of year length is proportional to cube of distance). Discovered by Kepler in 1609 from Tycho Brahe's observations, 80 years before Newton explained why.",
         "Voyager 1, launched 1977, crossed the heliopause (edge of the Sun's influence) in 2012 and is now in interstellar space, ~24 billion km away, still transmitting. Its Golden Record carries music and greetings for any civilization that ever finds it.",
+      ],
+    },
+    cymatics: {
+      title: 'Cymatics — sound you can see',
+      blocks: [
+        'Sprinkle sand on a plate and make it vibrate. The plate moves in a standing wave: some parts swing, some lines stay perfectly still. The sand is shaken off the moving parts and settles on the still lines, drawing the wave.',
+        'Ernst Chladni showed this in 1787 by bowing the edge of a brass plate. The figures are still called Chladni figures. Hans Jenny named the study "cymatics" in the 1960s, from the Greek kyma, wave.',
+        'On a round plate the shapes are rings and spokes: a Bessel function across the radius times a cosine around the circle. Higher notes give more rings and more spokes.',
+        'Here the plate drifts through eight figures and the sand flows from one to the next. Louder sound shakes it harder and moves it along faster.',
       ],
     },
   };

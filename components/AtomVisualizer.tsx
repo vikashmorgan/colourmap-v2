@@ -3,6 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { onChill } from '@/lib/chill/bus';
+import {
+  createSand,
+  createStars,
+  cymaticsCounts,
+  type Grain,
+  plateAt,
+  type Star,
+  stepSand,
+  twinkle,
+} from '@/lib/chill/cymatics-2d';
 import { ECHO_TYPES, EchoField, type EchoSettings, shouldTrigger } from '@/lib/chill/echo';
 import { EARTH_VISUAL_PALETTE } from '@/lib/chill/visuals';
 import { luminance } from '@/lib/pad-palettes';
@@ -51,7 +61,8 @@ export type VisualizerMode =
   | 'saturn'
   | 'galaxy'
   | 'orbital'
-  | 'solar';
+  | 'solar'
+  | 'cymatics';
 
 interface AtomVisualizerProps {
   /** Optional AnalyserNode for audio-reactive modulation */
@@ -160,6 +171,10 @@ export default function AtomVisualizer({
   const paletteRef = useRef<readonly string[]>(palette?.length ? palette : WARM_PALETTE);
   const [echoField] = useState(() => new EchoField(echo));
   const echoRef = useRef<EchoSettings | undefined>(echo);
+  // Cymatics keeps its own sand and stars (far more points than the dots).
+  const cymRef = useRef<{ grains: Grain[]; stars: Star[]; phase: number; last: number } | null>(
+    null,
+  );
 
   // Recolour in place — positions and motion carry on untouched.
   useEffect(() => {
@@ -228,6 +243,13 @@ export default function AtomVisualizer({
 
     const count = Math.round(80 + density * 320);
     dotsRef.current = buildDots(count, width, height, paletteRef.current);
+    const cymCounts = cymaticsCounts(density);
+    cymRef.current = {
+      grains: createSand(cymCounts.grains),
+      stars: createStars(cymCounts.stars),
+      phase: cymRef.current?.phase ?? 0,
+      last: 0,
+    };
     const field = echoField;
     let frameNow = 0;
 
@@ -722,6 +744,18 @@ export default function AtomVisualizer({
         ctx.beginPath();
         ctx.arc(cx, cy, 4 * sizeMul + loudness * 3, 0, Math.PI * 2);
         ctx.fill();
+      } else if (currentMode === 'cymatics') {
+        drawCymatics(ctx, cymRef.current, {
+          tMs,
+          width,
+          height,
+          speedMul,
+          sizeMul,
+          loudness,
+          palette: paletteRef.current,
+          pointer: pointerRef.current,
+          pushRadius,
+        });
       } else if (currentMode === 'solar') {
         // Solar system — sun at center, 8 planets on concentric orbits
         // at real-ish proportional radii + dots scattered along each orbit.
@@ -835,7 +869,7 @@ export default function AtomVisualizer({
         ref={canvasRef}
         style={{
           borderRadius: 16,
-          background: canvasBackground(palette),
+          background: mode === 'cymatics' ? nightBackground(palette) : canvasBackground(palette),
           touchAction: 'none',
           cursor: 'grab',
           display: 'block',
@@ -861,6 +895,117 @@ function canvasBackground(palette: readonly string[] | undefined): string {
   if (!palette?.length) return DEFAULT_BACKGROUND;
   const darkest = palette.reduce((a, b) => (luminance(b) < luminance(a) ? b : a));
   return `radial-gradient(ellipse at center, rgba(255,248,220,0.25), ${darkest}14)`;
+}
+
+/** Cymatics sits on a night plate so its stars can shine. */
+function nightBackground(palette: readonly string[] | undefined): string {
+  const darkest = palette?.length
+    ? palette.reduce((a, b) => (luminance(b) < luminance(a) ? b : a))
+    : '#3A2418';
+  return `radial-gradient(ellipse at center, ${darkest.slice(0, 7)}40, transparent 70%), #0B0806`;
+}
+
+/**
+ * Cymatics: a twinkling star field, a round plate, and sand gathering on the
+ * plate's still lines (lib/chill/cymatics-2d.ts). Sound shakes the plate and
+ * walks the figure on faster; still grains glint like stars.
+ */
+function drawCymatics(
+  ctx: CanvasRenderingContext2D,
+  state: { grains: Grain[]; stars: Star[]; phase: number; last: number } | null,
+  o: {
+    tMs: number;
+    width: number;
+    height: number;
+    speedMul: number;
+    sizeMul: number;
+    loudness: number;
+    palette: readonly string[];
+    pointer: { x: number; y: number; active: boolean };
+    pushRadius: number;
+  },
+) {
+  if (!state) return;
+  const { width, height, loudness, palette, sizeMul } = o;
+  const dt = state.last ? Math.min(0.1, (o.tMs - state.last) / 1000) : 0;
+  state.last = o.tMs;
+  state.phase += dt * o.speedMul * (0.7 + loudness * 1.6);
+  const timeS = o.tMs / 1000;
+
+  // Stars behind everything.
+  for (const star of state.stars) {
+    const b = twinkle(star, timeS, loudness);
+    const x = star.x * width;
+    const y = star.y * height;
+    const r = star.size * (0.6 + sizeMul * 0.4);
+    ctx.globalAlpha = b * 0.9;
+    ctx.fillStyle = '#FFF6E0';
+    if (star.sparkle) {
+      drawSparkle(ctx, x, y, r * 3.2 * b, r * 0.6);
+    } else {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // The plate.
+  const cx = width / 2;
+  const cy = height / 2;
+  const R = Math.min(width, height) * 0.46;
+  ctx.globalAlpha = 0.18 + loudness * 0.2;
+  ctx.strokeStyle = palette[0] ?? '#C4A060';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Sand: physics in plate units, then a pointer push.
+  const plate = plateAt(state.phase);
+  stepSand(state.grains, plate, 0.2 + loudness * 1.2);
+  const p = o.pointer;
+  const pushR = o.pushRadius / R;
+  for (const g of state.grains) {
+    if (p.active) {
+      const dx = g.x - (p.x - cx) / R;
+      const dy = g.y - (p.y - cy) / R;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < pushR && d > 0.0001) {
+        const f = (1 - d / pushR) * 0.03;
+        g.x += (dx / d) * f;
+        g.y += (dy / d) * f;
+      }
+    }
+    const x = cx + g.x * R;
+    const y = cy + g.y * R;
+    const settled = Math.max(0, 1 - g.stir * 60);
+    ctx.globalAlpha = 0.55 + settled * 0.45;
+    ctx.fillStyle = palette[Math.floor(g.seed * palette.length) % palette.length];
+    const size = (1 + g.seed * 1.1) * (0.5 + sizeMul * 0.5);
+    ctx.fillRect(x - size / 2, y - size / 2, size, size);
+    // A few settled grains glint as small stars.
+    if (g.seed > 0.965 && settled > 0.6) {
+      ctx.globalAlpha = settled * (0.5 + loudness * 0.5);
+      ctx.fillStyle = '#FFF6E0';
+      drawSparkle(ctx, x, y, size * 3.5, size * 0.45);
+    }
+  }
+}
+
+/** A four-point star: two thin crossing diamonds. */
+function drawSparkle(ctx: CanvasRenderingContext2D, x: number, y: number, len: number, w: number) {
+  ctx.beginPath();
+  ctx.moveTo(x, y - len);
+  ctx.lineTo(x + w, y);
+  ctx.lineTo(x, y + len);
+  ctx.lineTo(x - w, y);
+  ctx.closePath();
+  ctx.moveTo(x - len, y);
+  ctx.lineTo(x, y - w);
+  ctx.lineTo(x + len, y);
+  ctx.lineTo(x, y + w);
+  ctx.closePath();
+  ctx.fill();
 }
 
 /** Ripple rings and glow blooms, drawn on top of the dots. */
