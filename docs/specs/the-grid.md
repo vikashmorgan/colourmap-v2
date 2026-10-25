@@ -48,3 +48,16 @@ No counts, no scores, no ranking. Visits are kept in this browser only (`localSt
 - A Tree ◐ Grid switch, once the tree's branches have real pages.
 - Soft hover/click blips from the Chill Machine sounds, off by default.
 - Making the Grid the home page, if it earns it.
+
+## The quick menu — 2026-10-25
+
+> Martin: "i cant access the new menu cyberpunk network radial wheel. or cyberpunk matrix terminal (but without typing more like a menu)"
+
+The Grid page was only reachable from the title popup. Now every page has a **GRID** button in the header's left slot, and the **G** key (or backtick) opens the same menu, except while typing in a field. `components/GridMenu.tsx`.
+
+Two looks, switched at the top and remembered in this browser (`cb-grid-menu-mode`):
+
+- **Wheel:** the eight hubs in a ring, like a game's weapon wheel. Pick a hub and its pages take the ring; the centre goes back. With no hub picked, the centre opens the full Grid map.
+- **Terminal:** a green phosphor screen. Hubs in one column, the chosen hub's pages in the next as `[ON ]`, `[IDL]` or `[EXT]` with their line and when they were last opened. Nothing is typed. The last line opens the full map.
+
+Keys: on the wheel, arrows go round. In the terminal, up and down move, right goes into a hub and left comes back out. Enter opens; Esc goes back, then closes.

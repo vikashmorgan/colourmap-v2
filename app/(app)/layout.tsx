@@ -5,6 +5,7 @@ import ColourmapBrandButton from '@/components/ColourmapBrandButton';
 import ConditionalTopNav from '@/components/ConditionalTopNav';
 import DevBranchHud from '@/components/DevBranchHud';
 import FeedbackOverlay from '@/components/FeedbackOverlay';
+import GridMenu from '@/components/GridMenu';
 import MiniPlayer from '@/components/MiniPlayer';
 import MobileViewportBoot from '@/components/MobileViewportBoot';
 import PhoneFrame from '@/components/PhoneFrame';
@@ -89,7 +90,10 @@ export default async function AppLayout({
                   className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-2"
                   style={{ background: 'var(--header-bg, rgba(30,16,8,0.92))' }}
                 >
-                  <div />
+                  {/* The network menu: the Grid's hubs from any page (G). */}
+                  <div className="flex items-center">
+                    <GridMenu />
+                  </div>
                   {/* Brand button now also carries the user's initials —
                   tapping the title opens an About modal with the user
                   card + sign-out + vision + changelog. The right slot

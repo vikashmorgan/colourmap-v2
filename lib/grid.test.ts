@@ -7,15 +7,19 @@ import {
   HUBS,
   hubOnline,
   hubPoint,
+  isMenuKey,
   isOnline,
   lastSeen,
   nextInDirection,
   nodePoint,
   ONLINE_FOR,
+  parseMenuMode,
   parseVisits,
   SIGNALS,
   satellitePoint,
+  step,
   visitKey,
+  wheelPoint,
   withVisit,
 } from './grid';
 
@@ -139,5 +143,35 @@ describe('visits', () => {
     expect(lastSeen({ '/day': now - day }, '/day', now)).toBe('yesterday');
     expect(lastSeen({ '/day': now - 4 * day }, '/day', now)).toBe('4 days ago');
     expect(lastSeen({ '/day': now - 60 * day }, '/day', now)).toBe('a while ago');
+  });
+});
+
+describe('the quick menu', () => {
+  it('reads the saved look, defaulting to the wheel', () => {
+    expect(parseMenuMode('terminal')).toBe('terminal');
+    expect(parseMenuMode(null)).toBe('wheel');
+    expect(parseMenuMode('x')).toBe('wheel');
+  });
+
+  it('puts the first item at the top of the wheel', () => {
+    const p = wheelPoint(0, 8, 10);
+    expect(p.x).toBeCloseTo(0);
+    expect(p.y).toBeCloseTo(-10);
+    expect(wheelPoint(2, 8, 10).x).toBeCloseTo(10);
+  });
+
+  it('wraps round the ring both ways', () => {
+    expect(step(7, 8, 1)).toBe(0);
+    expect(step(0, 8, -1)).toBe(7);
+    expect(step(0, 0, 1)).toBe(0);
+  });
+
+  it('opens on G or backtick, never while typing or with a modifier', () => {
+    const k = (key: string, mod = false) => ({ key, ctrlKey: mod, metaKey: false, altKey: false });
+    expect(isMenuKey(k('g'), false)).toBe(true);
+    expect(isMenuKey(k('`'), false)).toBe(true);
+    expect(isMenuKey(k('g'), true)).toBe(false);
+    expect(isMenuKey(k('g', true), false)).toBe(false);
+    expect(isMenuKey(k('h'), false)).toBe(false);
   });
 });
