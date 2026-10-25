@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import BrainDock from '@/components/BrainDock';
 import ChillSongs from '@/components/ChillSongs';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -10,6 +10,7 @@ import GuitarStudio from '@/components/GuitarStudio';
 import NavLinks from '@/components/NavLinks';
 import SoundLab from '@/components/SoundLab';
 import { useViewMode } from '@/components/ViewModeContext';
+import { recordVisit } from '@/lib/grid';
 import { useSpellCheck } from '@/lib/hooks/use-spell-check';
 
 const SOCIAL_ROUTES = [
@@ -53,7 +54,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     pathname === '/geometry-field' ||
     pathname === '/entertainment' ||
     pathname === '/figures' ||
-    pathname === '/figure-stars';
+    pathname === '/figure-stars' ||
+    pathname === '/grid';
+  // The Grid shows what was opened this week (lib/grid.ts); it learns it here.
+  useEffect(() => {
+    if (pathname) recordVisit(pathname);
+  }, [pathname]);
   const [musicSection, setMusicSection] = useState<MusicSection>('makers');
   function showRecordingsSection(_songId?: string) {
     // Recordings hidden for now — no-op
