@@ -447,3 +447,15 @@ Martin: "improve the quality of the ferrari star visuals with the wind or curren
 - The stagnation glow on the nose is smaller and much fainter.
 
 **Work in Progress**: the dim header formerly "In Progress / To Develop" is now **Work in Progress**. Sauron's Eye, One Flame, Sacred Figures, Sacred Dancers, Murmuration, Fish School and Flow Masks moved there from Good Ones; they go back once clean. Music Liquid Chaos stays in Good Ones.
+
+## Saved looks — 2026-10-26
+
+> Martin: "add ability to save presets for the geometry sliders oil fractal. here is the first saved one" (Rorschach: Flow 0.25, Mirrors 10, Detail 8, Spread 9.5, Rainbow 1.5, Light 6, Bloom 0.3)
+
+Under the sliders, a **Saved** row (`components/SavedLooks.tsx`, `lib/geometry-saved.ts`):
+
+- **+ Save** keeps what is on screen: the mode, every slider value, and the oil colours and palette when chosen. It is named after the mode with the next free number ("Rorschach Oils 1").
+- Tap a saved look to bring it back; it switches to its mode if needed. A look saved without oil colours keeps the colours already on screen.
+- **×** deletes a look you saved.
+- **Oil Fractal 1** (the Rorschach values above) is built in. It is on every device and cannot be deleted.
+- Looks are kept in this browser (`colourmap:geometry-saved-looks`). Keeping them across devices would need a table in the database: later, and only with an OK for the migration.

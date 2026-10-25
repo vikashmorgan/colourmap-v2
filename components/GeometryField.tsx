@@ -7,6 +7,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
+import SavedLooks from '@/components/SavedLooks';
 import { birdTarget, fishTarget, predator, steer, view } from '@/lib/flocks';
 import { mask as flowMask, MASK_NAMES, inside as maskInside } from '@/lib/flow-masks';
 import {
@@ -25974,6 +25975,36 @@ export default function GeometryField() {
                         }
                       />
                     )}
+                    <SavedLooks
+                      current={{
+                        mode: cfg.mode,
+                        values: {
+                          symmetry: cfg.symmetry,
+                          complexity: cfg.complexity,
+                          glow: cfg.glow,
+                          breathSpeed: cfg.breathSpeed,
+                          intensity: cfg.intensity,
+                          particles: cfg.particles,
+                          luminous: cfg.luminous,
+                          stars: cfg.stars,
+                        },
+                        oilColors: cfg.oilColors,
+                        preset: cfg.preset,
+                      }}
+                      baseName={MODE_TO_PRESET[cfg.mode] ?? cfg.mode}
+                      onApply={(look) =>
+                        setCfg((prev) => ({
+                          ...prev,
+                          ...look.values,
+                          mode: look.mode as Mode,
+                          oilColors: look.oilColors ?? prev.oilColors,
+                          preset: look.preset ?? prev.preset,
+                        }))
+                      }
+                      accent={accent}
+                      accentMid={accentMid}
+                      dim={`rgba(${pr},${pg},${pb},0.6)`}
+                    />
                     {cfg.mode === 'thangka' && (
                       <button
                         type="button"
