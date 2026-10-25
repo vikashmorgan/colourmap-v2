@@ -61,3 +61,6 @@ Two looks, switched at the top and remembered in this browser (`cb-grid-menu-mod
 - **Terminal:** a green phosphor screen. Hubs in one column, the chosen hub's pages in the next as `[ON ]`, `[IDL]` or `[EXT]` with their line and when they were last opened. Nothing is typed. The last line opens the full map.
 
 Keys: on the wheel, arrows go round. In the terminal, up and down move, right goes into a hub and left comes back out. Enter opens; Esc goes back, then closes.
+
+
+2026-10-26. Martin: "take off the part where a circle behind it moves out. un cercle en traits tirés qui se décale derrière. crée confusion. no need." The wheel's rotating dashed ring is gone; the wheel keeps only its still outer circle and the centre disc.

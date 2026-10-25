@@ -346,14 +346,6 @@ function Wheel({
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       >
         <circle r={96} fill="none" stroke={`${accent}33`} strokeWidth={0.4} />
-        <circle
-          r={74}
-          fill="none"
-          stroke={`${accent}55`}
-          strokeWidth={0.5}
-          strokeDasharray="1 3"
-          className="grid-menu-spin"
-        />
         <circle r={30} fill="rgba(5,5,6,0.9)" stroke={`${GOLD}88`} strokeWidth={0.6} />
         {items.map((it, i) => {
           const p = wheelPoint(i, items.length, 74);
@@ -611,7 +603,6 @@ function NetIcon() {
 const MENU_CSS = `
 .grid-menu-scrim { position: absolute; inset: 0; background: transparent; border: none; cursor: default; }
 .grid-menu-in { animation: grid-menu-in 160ms ease-out; }
-.grid-menu-spin { transform-origin: center; animation: grid-menu-spin 40s linear infinite; }
 .grid-menu-centre { display: block; width: 100%; background: transparent; border: none; cursor: pointer; text-decoration: none; font-family: inherit; min-height: 44px; }
 .grid-menu-item { position: absolute; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 12px; border-radius: 999px; border: 1px solid; background: rgba(5,5,6,0.88); font-family: inherit; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; cursor: pointer; transition: box-shadow 120ms, color 120ms; }
 .grid-menu-item:focus-visible { outline: 1px solid ${GOLD}; outline-offset: 3px; }
@@ -628,9 +619,8 @@ const MENU_CSS = `
   .grid-menu-item { font-size: 10px; padding: 0 9px; letter-spacing: 0.08em; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .grid-menu-in, .grid-menu-spin, .grid-term-caret { animation: none; }
+  .grid-menu-in, .grid-term-caret { animation: none; }
 }
 @keyframes grid-menu-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
-@keyframes grid-menu-spin { to { transform: rotate(360deg); } }
 @keyframes grid-term-blink { 50% { opacity: 0; } }
 `;
