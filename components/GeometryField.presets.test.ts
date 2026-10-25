@@ -33,10 +33,10 @@ describe('GeometryField featured presets', () => {
     expect(names.indexOf('Dot Tunnel')).toBeGreaterThan(names.indexOf('Entropy 3D'));
   });
 
-  it('lists the unfinished Star Sand Lines last, under In Progress, not in Good Ones', () => {
+  it('lists the unfinished Star Sand Lines last, under Work in Progress, not in Good Ones', () => {
     const names = featuredNames();
     const inProgress = FEATURED_PRESETS.findIndex(
-      (item) => 'header' in item && item.header === 'In Progress / To Develop',
+      (item) => 'header' in item && item.header === 'Work in Progress',
     );
     const starSand = FEATURED_PRESETS.findIndex(
       (item) => 'name' in item && item.name === 'Star Sand Lines',
@@ -45,6 +45,37 @@ describe('GeometryField featured presets', () => {
     expect(names.filter((name) => name === 'Star Sand Lines')).toHaveLength(1);
     expect(names.at(-1)).toBe('Star Sand Lines');
     expect(starSand).toBeGreaterThan(inProgress);
+  });
+
+  it("puts the unclean new tests (Sauron's Eye and the 13 Oct batch) under Work in Progress, once each", () => {
+    const names = featuredNames();
+    const wip = FEATURED_PRESETS.findIndex(
+      (item) => 'header' in item && item.header === 'Work in Progress',
+    );
+    for (const n of [
+      "Sauron's Eye",
+      'One Flame',
+      'Sacred Figures',
+      'Sacred Dancers',
+      'Murmuration',
+      'Fish School',
+      'Flow Masks',
+    ]) {
+      expect(
+        names.filter((x) => x === n),
+        n,
+      ).toHaveLength(1);
+      expect(
+        FEATURED_PRESETS.findIndex((item) => 'name' in item && item.name === n),
+        n,
+      ).toBeGreaterThan(wip);
+    }
+    // The stars tab shows the header above them.
+    expect(
+      featuredFor('stars').some((item) => 'header' in item && item.header === 'Work in Progress'),
+    ).toBe(true);
+    expect(names).toContain('Music Liquid Chaos');
+    expect(names.indexOf('Music Liquid Chaos')).toBeLessThan(names.indexOf("Sauron's Eye"));
   });
 
   it('keeps Swirl Dot Tunnel bright enough for the good list', () => {

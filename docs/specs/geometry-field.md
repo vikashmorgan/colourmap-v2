@@ -18,7 +18,7 @@ Music Visuals, Journeys and the Figures link stay hidden, not removed: their cod
 
 **Top-right controls.** When the panel is closed, the show-controls button sits top-right; in fullscreen an exit (✕) button sits beside it. Nothing the user needs to get out sits at the bottom edge, which belongs to the **All one brain** band.
 
-**Star Sand Lines** is unfinished, so it sits at the bottom of the preset list, last under **In Progress / To Develop**, not in **Good Ones**.
+**Star Sand Lines** is unfinished, so it sits at the bottom of the preset list, last under **Work in Progress** (renamed from In Progress / To Develop on 2026-10-25), not in **Good Ones**.
 
 ## Current Flow Textures
 
@@ -434,3 +434,16 @@ Each figure is up to ten thousand dots scattered over its body (bones, discs, ri
 **Fish School** (`lib/flocks.ts`): up to six thousand fish in perpetual motion: milling round a turning torus, streaming in a long ribbon after a leader, gathering into a ball, each flowing into the next; fish flash silver as they turn, and a predator darts through now and then, the school opening round it and closing behind. Sliders: Fish, Current, Shimmer, Turn, Speed, Bright.
 
 **Flow Masks** (`lib/flow-masks.ts`, Mask 1-10): Horned moon, Long ancestor, Skull, Antennae spirit, Sun mask, Antelope, Heart face, Striped spirit, Horned skull, Flowing-hair spirit. Dots are carried through each mask by the Liquid Chaos current and born again inside it when they drift into an eye or the mouth, so the openings stay dark in moving gold and their rims catch the light. Mouths open and close, horns and hair sway. Sliders: Mask, Density, Rim Light, Turbulence, Flow, Bright.
+
+## Wind: the current, not the object; and Work in Progress (2026-10-25)
+
+Martin: "improve the quality of the ferrari star visuals with the wind or current effects. i dont want the object so clearly outlined in the middle. i want the current effect focus. and all the new tests that are not clean yet like saurons eyes etc... add them to a work in progress category so we know they are unfinished for the art section geom builder"
+
+**Wind** (Wind, Wind Wing, Wind Body):
+- The object is no longer drawn (no dark fill, no light outline). It is the empty space the smoke parts around, and smoke that touches it stops at its surface.
+- Each smoke segment is drawn twice: a wide faint haze under a fine line, so the current glows without a hard edge. Segments are batched by speed band (14 bands, bright and faint puffs apart), so a frame strokes a few dozen paths instead of thousands.
+- Each puff has its own brightness, so the lanes read as smoke rather than wire.
+- Trails run longer: the Trails slider now reaches a 1.2% fade per frame at 10 (was 3%), and the three presets sit at Trails 9–9.5.
+- The stagnation glow on the nose is smaller and much fainter.
+
+**Work in Progress**: the dim header formerly "In Progress / To Develop" is now **Work in Progress**. Sauron's Eye, One Flame, Sacred Figures, Sacred Dancers, Murmuration, Fish School and Flow Masks moved there from Good Ones; they go back once clean. Music Liquid Chaos stays in Good Ones.
