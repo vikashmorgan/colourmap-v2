@@ -243,6 +243,7 @@ const PRIMER_SECTIONS: { title: string; items: { term: string; def: string }[] }
 ];
 
 const MORE_SEGMENTS = [
+  { href: '/grid', label: 'The Grid' },
   { href: '/entertainment', label: 'Entertainment' },
   { href: '/music', label: 'Music' },
   { href: '/figures', label: '3D Figures' },

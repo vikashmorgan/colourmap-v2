@@ -74,6 +74,8 @@ The visual system must reinforce that split. Colourmap is not a generic dashboar
 
 Focus · AI · Notes · Education · Art · ◇ (Atlas, Roads, Music, Social, Journey, Life Scan, Research, Creator Space)
 
+The Grid (`/grid`, from the Colourmap title menu): every page as a network of hubs, a game-style central menu. See `docs/specs/the-grid.md`.
+
 Phone: Focus · AI · Notes · Education · Art · ◇
 
 ## Current Features
