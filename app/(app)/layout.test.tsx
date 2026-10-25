@@ -45,6 +45,10 @@ vi.mock('@/components/StepBack', () => ({
   default: () => <span data-testid="step-back">StepBack</span>,
 }));
 
+vi.mock('@/components/GridMenu', () => ({
+  default: () => <span data-testid="grid-menu">GridMenu</span>,
+}));
+
 vi.mock('@/components/ThemeSwitcher', () => ({
   default: () => <div data-testid="theme-switcher">ThemeSwitcher</div>,
 }));

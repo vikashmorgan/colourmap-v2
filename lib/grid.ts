@@ -328,3 +328,39 @@ export function readVisits(): Visits {
     return {};
   }
 }
+
+/* ── The quick menu: a wheel, or a terminal (components/GridMenu.tsx) ── */
+
+export type MenuMode = 'wheel' | 'terminal';
+
+export const MENU_MODE_KEY = 'cb-grid-menu-mode';
+
+export const parseMenuMode = (raw: string | null): MenuMode =>
+  raw === 'terminal' ? 'terminal' : 'wheel';
+
+/** Where item `i` of `n` sits on a wheel of radius `r` round (0, 0): the first at the top, then clockwise. */
+export function wheelPoint(i: number, n: number, r: number): Point {
+  const a = -Math.PI / 2 + (i / Math.max(n, 1)) * Math.PI * 2;
+  return { x: Math.cos(a) * r, y: Math.sin(a) * r };
+}
+
+/** The next index round a ring of `n`, either way, wrapping. */
+export const step = (i: number, n: number, by: number): number =>
+  n <= 0 ? 0 : (((i + by) % n) + n) % n;
+
+/** The key that opens the quick menu, unless the person is typing somewhere. */
+export function isMenuKey(
+  e: { key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean },
+  typing: boolean,
+): boolean {
+  if (typing || e.ctrlKey || e.metaKey || e.altKey) return false;
+  return e.key === 'g' || e.key === 'G' || e.key === '`';
+}
+
+/** Opens a page: a separate app in a new tab, a standalone page by a full load, an app screen by the router. */
+export function openNode(node: GridNode, push: (href: string) => void): void {
+  recordVisit(node.href);
+  if (node.external) window.open(node.href, '_blank', 'noopener');
+  else if (node.plain) window.location.assign(node.href);
+  else push(node.href);
+}
