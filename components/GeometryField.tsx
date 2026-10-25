@@ -2622,7 +2622,7 @@ export const PRESETS: Record<string, Cfg> = {
     breathSpeed: 0.6,
     intensity: 8,
     particles: 0,
-    luminous: 7,
+    luminous: 9,
     stars: 0,
     mode: 'windtunnel',
   },
@@ -2634,7 +2634,7 @@ export const PRESETS: Record<string, Cfg> = {
     breathSpeed: 0.7,
     intensity: 8,
     particles: 1,
-    luminous: 8,
+    luminous: 9.5,
     stars: 0,
     mode: 'windtunnel',
   },
@@ -2646,7 +2646,7 @@ export const PRESETS: Record<string, Cfg> = {
     breathSpeed: 0.65,
     intensity: 8,
     particles: 2,
-    luminous: 8,
+    luminous: 9.5,
     stars: 0,
     mode: 'windtunnel',
   },
@@ -15453,17 +15453,6 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Wind Body', tag: 'WIND' },
   // 13 Oct 2026: "that liquid chaos from Music is amazing, use it as a star preset." First.
   { name: 'Music Liquid Chaos', tag: 'LIQUID' },
-  // 13 Oct 2026: "a Sauron's eye … red, the tips more golden, like real fire, with the cat's eye in the centre."
-  { name: "Sauron's Eye", tag: 'FIRE' },
-  // 13 Oct 2026: "just one flame floating … red with golden tips, orange in the middle … the stars going up."
-  { name: 'One Flame', tag: 'FIRE' },
-  // 13 Oct 2026: ten sacred figures of the Indian and Tibetan gods, and five sacred dancers.
-  { name: 'Sacred Figures', tag: 'SACRED' },
-  { name: 'Sacred Dancers', tag: 'SACRED' },
-  // 13 Oct 2026: a murmuration of small birds, a school of fish, and ten masks of flowing gold.
-  { name: 'Murmuration', tag: 'FLOCK' },
-  { name: 'Fish School', tag: 'FLOCK' },
-  { name: 'Flow Masks', tag: 'MASK' },
   { name: 'Magnetic Sand', tag: 'CURRENT' },
   { name: 'Dot Walker', tag: 'CHAR' },
   // 13 Oct 2026: among the best, so third and fourth in Stars.
@@ -15585,7 +15574,18 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { header: 'Waves' },
   { name: 'Rolling Wave', tag: 'FREE' },
   { name: 'Fractal Wave', tag: 'HOKUSAI' },
-  { header: 'In Progress / To Develop', dim: true },
+  { header: 'Work in Progress', dim: true },
+  // Moved here 25 Oct 2026: "all the new tests that are not clean yet like saurons eyes etc...
+  // add them to a work in progress category so we know they are unfinished". The 13 Oct batch:
+  // a Sauron's eye, one floating flame, the sacred figures and dancers, a murmuration, a fish
+  // school, masks of flowing gold. Back to Good Ones once each is clean.
+  { name: "Sauron's Eye", tag: 'FIRE' },
+  { name: 'One Flame', tag: 'FIRE' },
+  { name: 'Sacred Figures', tag: 'SACRED' },
+  { name: 'Sacred Dancers', tag: 'SACRED' },
+  { name: 'Murmuration', tag: 'FLOCK' },
+  { name: 'Fish School', tag: 'FLOCK' },
+  { name: 'Flow Masks', tag: 'MASK' },
   // Moved here 13 Oct 2026: their flowers and shapes are cut on the right, not
   // complete in their circle. Back to Good Ones once they fit.
   { name: 'Flow Sacred', tag: 'FLOW' },
@@ -21907,16 +21907,24 @@ export default function GeometryField() {
      * wake. Each line is coloured by its speed (slow deep blue, fast white
      * turning gold), and a warm glow marks the stagnation point, where the
      * pressure is highest.
+     *
+     * 2026-10-25: "i dont want the object so clearly outlined in the middle. i
+     * want the current effect focus." The object is no longer drawn: it is the
+     * empty space the smoke parts around. The currents get the quality instead:
+     * each segment is drawn twice, a wide faint haze under a fine line, batched
+     * by speed so a frame strokes a few dozen paths, not thousands; each puff
+     * has its own brightness, so the lanes read as smoke, not wire; and the
+     * trails can run longer.
      */
     if (cfg.mode === 'windtunnel') {
       const shape = windShape(cfg.particles);
       const turb = cfg.glow / 10;
-      const fade = 0.2 - 0.17 * Math.min(1, cfg.luminous / 10);
+      const fade = 0.2 - 0.19 * Math.min(1, cfg.luminous / 10);
       const lanes = Math.round(lerp(16, 64, (cfg.complexity - 1) / 9));
       // As much smoke per area as on a full screen: a small screen (a frame in a room) would otherwise saturate to white.
       const perLane = () =>
         70 * Math.max(0.15, Math.min(1.4, (mc!.width * mc!.height) / (1280 * 720)));
-      type Puff = { x: number; y: number; laned: boolean };
+      type Puff = { x: number; y: number; laned: boolean; glow: number };
       let puffs: Puff[] = [];
       let last = performance.now();
       let clock = 0;
@@ -21942,8 +21950,16 @@ export default function GeometryField() {
             (2.1 * (Math.floor(Math.random() * lanes) + 0.5)) / lanes +
             (Math.random() - 0.5) * 0.004
           : (Math.random() - 0.5) * 2.3;
-        return { x, y, laned };
+        // Each puff its own brightness, so the smoke has grain.
+        return { x, y, laned, glow: 0.55 + Math.random() * 0.7 };
       };
+      // Segments of the frame, sorted into speed bands so each band is one path.
+      const BANDS = 14;
+      const BAND_MAX = 2.2;
+      const seg: number[][] = Array.from({ length: BANDS }, () => []);
+      const bandColour = Array.from({ length: BANDS }, (_, b) =>
+        speedColour(((b + 0.5) / BANDS) * BAND_MAX),
+      );
       {
         const f = frame();
         for (let i = 0; i < lanes * perLane(); i++) {
@@ -21969,9 +21985,9 @@ export default function GeometryField() {
         ctx!.fillStyle = `rgba(3, 5, 10, ${fade})`;
         ctx!.fillRect(0, 0, f.W, f.H);
         ctx!.globalCompositeOperation = 'lighter';
-        ctx!.lineWidth = 1.1 * dpr;
         ctx!.lineCap = 'round';
 
+        for (const band of seg) band.length = 0;
         const keep: Puff[] = [];
         for (const p of puffs) {
           const ox = p.x;
@@ -21983,45 +21999,60 @@ export default function GeometryField() {
           v = windVelocity(shape, p.x, p.y, clock, turb);
           p.x += v[0] * dt * 0.5;
           p.y += v[1] * dt * 0.5;
-          if (p.x > f.xmax || Math.abs(p.y) > 1.3 || shape.sdf(p.x, p.y) < -0.03) continue;
+          // With no body drawn over them, smoke that touches the object stops there, never inside it.
+          if (p.x > f.xmax || Math.abs(p.y) > 1.3 || shape.sdf(p.x, p.y) < 0) continue;
           keep.push(p);
           if (dt === 0) continue;
           const sp = Math.hypot(v[0], v[1]);
-          const [h, sat, l] = speedColour(sp);
-          ctx!.strokeStyle = `hsla(${h}, ${sat}%, ${l}%, ${(p.laned ? 0.34 : 0.16) * (0.4 + 0.6 * iF)})`;
-          ctx!.beginPath();
-          ctx!.moveTo(sx(ox), sy(oy));
-          ctx!.lineTo(sx(p.x), sy(p.y));
-          ctx!.stroke();
+          const band = Math.min(BANDS - 1, Math.floor((sp / BAND_MAX) * BANDS));
+          // Two brightness halves per band: the free drift is fainter than the laned smoke.
+          seg[band]!.push(sx(ox), sy(oy), sx(p.x), sy(p.y), p.laned ? p.glow : p.glow * 0.45);
+        }
+
+        // Haze first (wide, faint), then the fine line on top: the current glows without a hard edge.
+        const passes: [number, number][] = [
+          [3.4 * dpr, 0.07],
+          [1.0 * dpr, 0.3],
+        ];
+        for (const [width, alpha] of passes) {
+          ctx!.lineWidth = width;
+          for (let b = 0; b < BANDS; b++) {
+            const list = seg[b]!;
+            if (!list.length) continue;
+            const [h, sat, l] = bandColour[b]!;
+            // Bright and faint puffs as two paths, so grain survives the batching.
+            for (const bright of [true, false]) {
+              ctx!.beginPath();
+              let any = false;
+              for (let i = 0; i < list.length; i += 5) {
+                if (list[i + 4]! >= 0.9 !== bright) continue;
+                ctx!.moveTo(list[i]!, list[i + 1]!);
+                ctx!.lineTo(list[i + 2]!, list[i + 3]!);
+                any = true;
+              }
+              if (!any) continue;
+              const k = bright ? 1.15 : 0.6;
+              ctx!.strokeStyle = `hsla(${h}, ${sat}%, ${l}%, ${alpha * k * (0.4 + 0.6 * iF)})`;
+              ctx!.stroke();
+            }
+          }
         }
         // New smoke at the rake, as much as left the frame.
         const want = Math.round(lanes * perLane());
         for (let i = keep.length; i < want; i++) keep.push(spawn(f.xmin + Math.random() * 0.04));
         puffs = keep;
 
-        // The stagnation point: a warm glow on the nose, where the air stops.
-        ctx!.globalCompositeOperation = 'lighter';
+        // The stagnation point: a soft warm glow on the nose, where the air stops. The object
+        // itself is not drawn: it is the space the smoke parts around (2026-10-25).
         const gx = sx(noseOf[0]);
         const gy = sy(noseOf[1]);
-        const gr = 0.16 * f.scale;
+        const gr = 0.14 * f.scale;
         const g = ctx!.createRadialGradient(gx, gy, 0, gx, gy, gr);
-        g.addColorStop(0, `hsla(14, 95%, 58%, ${0.16 * iF})`);
+        g.addColorStop(0, `hsla(14, 95%, 58%, ${0.035 * iF})`);
         g.addColorStop(1, 'hsla(14, 95%, 58%, 0)');
         ctx!.fillStyle = g;
         ctx!.fillRect(gx - gr, gy - gr, gr * 2, gr * 2);
-
-        // The object: dark, drawn like a figure in a paper, a fine light outline.
         ctx!.globalCompositeOperation = 'source-over';
-        ctx!.beginPath();
-        shape.outline.forEach(([x, y], i) =>
-          i ? ctx!.lineTo(sx(x), sy(y)) : ctx!.moveTo(sx(x), sy(y)),
-        );
-        ctx!.closePath();
-        ctx!.fillStyle = '#05070c';
-        ctx!.fill();
-        ctx!.strokeStyle = `rgba(236, 226, 206, ${0.35 + 0.35 * iF})`;
-        ctx!.lineWidth = 1.2 * dpr;
-        ctx!.stroke();
 
         canvasModeAnimRef.current = requestAnimationFrame(drawWind);
       }
