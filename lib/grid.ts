@@ -164,6 +164,11 @@ export const HUBS: Hub[] = [
         line: 'The Geometry Builder: stars, wind, figures',
       },
       { href: '/art/flow', label: 'Flow', line: 'AI Sculptures, the Flow collection' },
+      {
+        href: '/art/butterflies',
+        label: 'Butterflies',
+        line: 'Liquid Butterflies: mirrored, flowing, always changing',
+      },
       { href: '/figures', label: 'Figures', line: '3D figures' },
       { href: '/figure-stars', label: 'Figure stars', line: 'Figures drawn in stars' },
       { href: '/figure-stars-trio', label: 'Trio', line: 'Three figures in stars' },

@@ -1,0 +1,291 @@
+/*
+ * LIQUID BUTTERFLIES — a generative collection for the Art section (2026-10-25).
+ *
+ * Martin pinned three images of one style (credited on Pinterest to Martin
+ * Naumann): a soft glowing form coloured like a heat map, cut into vertical
+ * strips where each strip shows the form a moment later. Then: "i want a
+ * collection of almost liquid butterfly in constant change and transformation.
+ * with symmetry. and psychedelic echo effects or slices like a constantly
+ * flowing evolving pool of colour around the butterfly theme."
+ *
+ * So each piece is a butterfly, mirrored left to right, that never holds still:
+ *
+ *   flow     the space it sits in is warped by slow noise, so it moves like liquid
+ *   flap     the wings fold toward you and open again
+ *   morph    the wings swell and change shape
+ *   slices   strips from the centre outward, each a moment later (the pins' idea)
+ *   echoes   rings of colour that keep leaving the wings
+ *   pool     the background is a flowing pool in the piece's own colours
+ *   fold     1 is the mirror only; more folds it round like a kaleidoscope
+ *   drift    the colours travel through the ramp, so nothing stays one colour
+ *   iris     soap-film colour on the wings, shifting like oil (the
+ *            iridescent-drop reference)
+ *   streaks  vertical glitch streaks through the middle, and
+ *   sparks   embers drifting off the rim (both from the eclipse reference)
+ *
+ * The technique is taken, never the pieces: our own shapes and palettes, drawn
+ * live by a shader (`components/ButterflyCanvas.tsx`).
+ *
+ * Pure: no DOM.
+ */
+
+export type Palette = {
+  id: string;
+  label: string;
+  /** Background, top and bottom. */
+  bg: [string, string];
+  /** Core → inner → rim → glow → glow → outer glow. */
+  ramp: [string, string, string, string, string, string];
+};
+
+export type ButterflySettings = {
+  /** Strips of time from the centre out; 0 for none. */
+  slices: number;
+  /** How far apart in time the strips are. */
+  delay: number;
+  /** Rings of colour leaving the wings; 0 for none. */
+  echoes: number;
+  /** How fast the colours travel. */
+  drift: number;
+  /** How liquid the space is. */
+  flow: number;
+  /** How far the wings fold. */
+  flap: number;
+  /** How much the wings change shape. */
+  morph: number;
+  /** 1: mirror only. 2 to 8: folded round like a kaleidoscope. */
+  fold: number;
+  /** Size of the butterfly. */
+  size: number;
+  /** How far the glow reaches. */
+  glow: number;
+  /** How strong the flowing pool of colour behind is. */
+  pool: number;
+  /** Overall speed. 0 is still. */
+  speed: number;
+  /** Soap-film iridescence on the wings. */
+  iris: number;
+  /** Vertical glitch streaks through the middle. */
+  streaks: number;
+  /** Embers drifting off the rim. */
+  sparks: number;
+  /** Film grain. */
+  grain: number;
+};
+
+export type Piece = {
+  slug: string;
+  title: string;
+  line: string;
+  palette: string;
+  settings: ButterflySettings;
+};
+
+export const PALETTES: Palette[] = [
+  {
+    id: 'thermal',
+    label: 'Thermal',
+    bg: ['#7cc4a4', '#7a3fd0'],
+    ramp: ['#4258cc', '#30388a', '#2a1a2e', '#d8361c', '#f08a2a', '#f7d27a'],
+  },
+  {
+    id: 'neon',
+    label: 'Neon',
+    bg: ['#1c1c0c', '#3a1a36'],
+    ramp: ['#ff8a3a', '#ff78a8', '#f070e8', '#a060ff', '#5a5aff', '#2a2a7a'],
+  },
+  {
+    id: 'acid',
+    label: 'Acid',
+    bg: ['#3a1212', '#b82428'],
+    ramp: ['#3a62d0', '#5ac8c0', '#c8f040', '#a8e030', '#e05040', '#8a1a2a'],
+  },
+  {
+    id: 'pearl',
+    label: 'Pearl',
+    bg: ['#1c1426', '#2a0f24'],
+    ramp: ['#f2f4ec', '#9ad4c0', '#3a9a86', '#f08a6a', '#d0507a', '#4a1838'],
+  },
+  {
+    id: 'gold',
+    label: 'Gold',
+    bg: ['#1a120a', '#3a2412'],
+    ramp: ['#fff2cc', '#f0d080', '#c4a060', '#a0602a', '#6a3418', '#2a160a'],
+  },
+  {
+    id: 'eclipse',
+    label: 'Eclipse',
+    bg: ['#0e1118', '#07080c'],
+    ramp: ['#020205', '#06060c', '#fff1cc', '#ffb030', '#e0401c', '#2aa8c8'],
+  },
+  {
+    id: 'opal',
+    label: 'Opal',
+    bg: ['#f0eff2', '#d9d6de'],
+    ramp: ['#efe4f6', '#c9b4f2', '#6adcc4', '#f6f4fa', '#e6e3ea', '#dcd9e0'],
+  },
+  {
+    id: 'deep',
+    label: 'Deep sea',
+    bg: ['#06121e', '#14304a'],
+    ramp: ['#e0fff8', '#60e0d0', '#1a6a8a', '#2a3a9a', '#6a3ac0', '#1a1a4a'],
+  },
+];
+
+const BASE: ButterflySettings = {
+  slices: 0,
+  delay: 0.3,
+  echoes: 0,
+  drift: 0.3,
+  flow: 0.35,
+  flap: 0.5,
+  morph: 0.4,
+  fold: 1,
+  size: 1,
+  glow: 0.07,
+  pool: 0.3,
+  speed: 0.6,
+  iris: 0,
+  streaks: 0,
+  sparks: 0,
+  grain: 0.04,
+};
+
+export const PIECES: Piece[] = [
+  {
+    slug: 'thermal-monarch',
+    title: 'Thermal Monarch',
+    line: 'Eight moments of one flight, side by side, hot at the heart',
+    palette: 'thermal',
+    settings: { ...BASE, slices: 8, delay: 0.35, pool: 0.2 },
+  },
+  {
+    slug: 'neon-psyche',
+    title: 'Neon Psyche',
+    line: 'Rings of light keep leaving the wings and never stop',
+    palette: 'neon',
+    settings: { ...BASE, echoes: 6, drift: 0.5, flow: 0.5, pool: 0.5 },
+  },
+  {
+    slug: 'acid-morpho',
+    title: 'Acid Morpho',
+    line: 'Sliced thin, fourteen beats of a wing in acid colour',
+    palette: 'acid',
+    settings: { ...BASE, slices: 14, delay: 0.18, echoes: 2, flow: 0.4 },
+  },
+  {
+    slug: 'pearl-moth',
+    title: 'Pearl Moth',
+    line: 'A pale moth melting slowly into its own echoes',
+    palette: 'pearl',
+    settings: { ...BASE, echoes: 4, drift: 0.25, flow: 0.25, flap: 0.35, pool: 0.3, speed: 0.4 },
+  },
+  {
+    slug: 'golden-swallowtail',
+    title: 'Golden Swallowtail',
+    line: 'The app gold, liquid, in six slow steps',
+    palette: 'gold',
+    settings: { ...BASE, slices: 6, delay: 0.5, echoes: 3, flow: 0.3 },
+  },
+  {
+    slug: 'deep-kaleido',
+    title: 'Deep Kaleido',
+    line: 'Six butterflies folded into one flowing flower',
+    palette: 'deep',
+    settings: { ...BASE, fold: 6, echoes: 5, flow: 0.6, pool: 0.6, size: 0.8 },
+  },
+  {
+    slug: 'eclipse',
+    title: 'Eclipse',
+    line: 'A butterfly of void inside a burning ring, glitching, shedding embers',
+    palette: 'eclipse',
+    settings: {
+      ...BASE,
+      flow: 0.15,
+      flap: 0.3,
+      morph: 0.3,
+      glow: 0.09,
+      pool: 0,
+      streaks: 0.8,
+      sparks: 0.7,
+      drift: 0.1,
+      size: 1.1,
+    },
+  },
+  {
+    slug: 'opal-drop',
+    title: 'Opal Drop',
+    line: 'Liquid glass wings on pale paper, every colour of a soap film',
+    palette: 'opal',
+    settings: {
+      ...BASE,
+      flow: 0.55,
+      morph: 0.6,
+      iris: 0.9,
+      glow: 0.05,
+      pool: 0,
+      drift: 0.2,
+      speed: 0.45,
+      grain: 0.02,
+    },
+  },
+];
+
+export const paletteById = (id: string): Palette =>
+  PALETTES.find((p) => p.id === id) ?? (PALETTES[0] as Palette);
+
+export const pieceBySlug = (slug: string): Piece | undefined => PIECES.find((p) => p.slug === slug);
+
+type Limit = { min: number; max: number; step: number; label: string };
+
+/** The bounds of every setting, for the sliders and for clamping. */
+export const LIMITS: Record<keyof ButterflySettings, Limit> = {
+  flow: { min: 0, max: 1, step: 0.05, label: 'Liquid' },
+  flap: { min: 0, max: 1, step: 0.05, label: 'Flap' },
+  morph: { min: 0, max: 1, step: 0.05, label: 'Morph' },
+  slices: { min: 0, max: 16, step: 1, label: 'Slices' },
+  delay: { min: 0.05, max: 1, step: 0.05, label: 'Slice delay' },
+  echoes: { min: 0, max: 10, step: 1, label: 'Echoes' },
+  drift: { min: 0, max: 1, step: 0.05, label: 'Colour drift' },
+  pool: { min: 0, max: 1, step: 0.05, label: 'Pool' },
+  fold: { min: 1, max: 8, step: 1, label: 'Kaleido' },
+  size: { min: 0.5, max: 1.6, step: 0.05, label: 'Size' },
+  glow: { min: 0.02, max: 0.3, step: 0.01, label: 'Glow' },
+  speed: { min: 0, max: 1.5, step: 0.05, label: 'Speed' },
+  iris: { min: 0, max: 1, step: 0.05, label: 'Iridescence' },
+  streaks: { min: 0, max: 1, step: 0.05, label: 'Glitch' },
+  sparks: { min: 0, max: 1, step: 0.05, label: 'Embers' },
+  grain: { min: 0, max: 0.15, step: 0.01, label: 'Grain' },
+};
+
+export const SLIDER_KEYS = Object.keys(LIMITS) as (keyof ButterflySettings)[];
+
+const WHOLE: (keyof ButterflySettings)[] = ['slices', 'echoes', 'fold'];
+
+/** Settings kept inside their bounds; slices, echoes and folds whole numbers. */
+export function clampSettings(s: ButterflySettings): ButterflySettings {
+  const out = { ...s };
+  for (const k of SLIDER_KEYS) {
+    const { min, max } = LIMITS[k];
+    const v = Number.isFinite(s[k]) ? s[k] : BASE[k];
+    const c = Math.min(max, Math.max(min, v));
+    out[k] = WHOLE.includes(k) ? Math.round(c) : c;
+  }
+  return out;
+}
+
+/** '#rrggbb' (or '#rgb') to 0..1 channels. */
+export function hexToRgb(hex: string): [number, number, number] {
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = h.replace(/./g, (c) => c + c);
+  const n = Number.parseInt(h, 16);
+  if (h.length !== 6 || Number.isNaN(n)) return [0, 0, 0];
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
+
+/** The six ramp colours as one flat list, for the shader's vec3 array. */
+export const rampUniform = (p: Palette): number[] => p.ramp.flatMap(hexToRgb);
+
+/** A file name for a saved frame. */
+export const frameName = (piece: Piece, paletteId: string): string =>
+  `liquid-butterfly-${piece.slug}${paletteId === piece.palette ? '' : `-${paletteId}`}.png`;
