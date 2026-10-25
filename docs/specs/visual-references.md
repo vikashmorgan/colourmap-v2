@@ -40,6 +40,14 @@ The references Martin has pinned for the generative art, with what each one teac
 - **Reach:** very close, in real time. This is the most achievable kind of "realism": one object, no scene.
 - **Used in:** the Liquid Butterflies' wing material (iridescent, liquid), and later Chill Machine pads (a drop that wobbles with each note).
 
+### 5. Digital deity: a god between imagination, digital and light
+- Pin: https://i.pinimg.com/1200x/4b/d8/cf/4bd8cf90fc3724161c773a9b663d4475.jpg
+- Martin: "a symbol of divine energy with many arms. who over time will be dancing meditating. praying and animated. with numbers and text around. like a god between imagination digital. and light." It could become **the centre of the Grid menu**, but it is developed in Art first.
+- **What it is:** a floating human figure made of fine gold filament lines, with six arms, a blinding white light at the heart and crown, a vertical beam, halo rings and sacred-geometry circles behind, and handwritten equations, diagrams and numbers orbiting around. Black background.
+- **Technique:** a 3D figure drawn as glowing wire filaments: the mesh edges plus flowing lines along the muscles, additive gold, with bloom. Extra arm pairs are duplicated from the shoulders and offset in pose. The heart and crown lights are bloom points with a lens streak. Halo rings and geometry are thin animated circles. The numbers and equations are text sprites on slow orbits that fade in and out. The poses (meditating, praying, dancing) come from rigged animations (Mixamo), blended over time.
+- **Reach:** close, in real time with three.js. The existing figure work (`/figures`, `/figure-stars`, the Golden God OBJ, the Mixamo pipeline) is the base.
+- **Used in:** a Digital Deity piece in Art. Later, the animated centre of the Grid and the quick-menu wheel. Later still, in the Chill Machine, it moves with the music.
+
 ## Where each look lives
 
 | Look | Art (first) | Music (after) |
@@ -48,3 +56,4 @@ The references Martin has pinned for the generative art, with what each one teac
 | Eclipse | Liquid Butterflies · Eclipse | Chill Machine: hits make the glitch streaks |
 | Crystal tunnel | Crystal Tunnel piece | TunnelSurfer / Chill Machine tunnel mode |
 | Iridescent liquid | Butterfly wings, a Drop piece | Chill Machine: the drop wobbles with each note |
+| Digital deity | Digital Deity piece | Centre of the Grid menu; dances to the Chill Machine |
