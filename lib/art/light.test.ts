@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   clampSettings,
+  ECLIPSE_STYLES,
   frameName,
   KIND_SLIDERS,
   LIMITS,
@@ -130,5 +131,16 @@ describe('saved tunings', () => {
 
   it('keep every setting', () => {
     expect([...SETTING_KEYS].sort()).toEqual(Object.keys(piece.settings).sort());
+  });
+});
+
+describe('the eclipse styles', () => {
+  it('has the ring, jets and rays, each in a piece, kept whole', () => {
+    expect(ECLIPSE_STYLES).toEqual(['Ring', 'Jets', 'Rays']);
+    expect(pieceBySlug('twin-jets')?.settings.style).toBe(1);
+    expect(pieceBySlug('sun-rays')?.settings.style).toBe(2);
+    const base = PIECES[0]?.settings as (typeof PIECES)[number]['settings'];
+    expect(clampSettings({ ...base, style: 1.6 }).style).toBe(2);
+    expect(clampSettings({ ...base, style: 7 }).style).toBe(2);
   });
 });

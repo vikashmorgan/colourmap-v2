@@ -37,6 +37,9 @@ describe('LightBodies', () => {
     expect(screen.getByRole('slider', { name: 'Ring' })).toBeTruthy();
     expect(screen.getByRole('slider', { name: 'Embers' })).toBeTruthy();
     expect(screen.queryByRole('slider', { name: 'Pose' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Ring' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Rays' }));
+    expect(screen.getByRole('button', { name: 'Rays' }).getAttribute('aria-pressed')).toBe('true');
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
   });

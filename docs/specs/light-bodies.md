@@ -37,3 +37,14 @@ An Art collection at `/art/light` (on the Grid under Studio → Light). It holds
 - Geometry Builder: a "Light Bodies" category in the Stars tab, as with the butterflies.
 - Chill Machine: Light visual modes. A hit makes the flares; a note turns the colours (`uShift` is already in the shaders); the bubble wobbles on each note.
 - The figure as the centre of the Grid menu.
+
+## Eclipse styles — 2026-10-26
+
+> Martin: "another mode for burning ring where the fire pulses out above and below" · "energy goes out in rayons like a pulse. different types for this eclipse preset"
+
+- The eclipse has a **Style**, chosen with buttons in the viewer (`style`, `ECLIPSE_STYLES`). The circle stays still in every style:
+  - **Ring:** as before.
+  - **Jets:** fire pulses out of the top and bottom in two flickering columns that widen as they go. Flares sets their reach.
+  - **Rays:** sharp spikes of every length, each growing out and fading on its own clock. Flares sets their reach.
+- New pieces: **Twin Jets** (Jets, fire) and **Sun Rays** (Rays, a new Navy palette after the painted eclipse reference).
+- The glitch is gone from every piece (see above).

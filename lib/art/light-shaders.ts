@@ -31,6 +31,7 @@ export const LIGHT_UNIFORMS = [
   'uCycle',
   'uNumbers',
   'uCount',
+  'uStyle',
   'uShift',
   'uBg0',
   'uBg1',
@@ -54,6 +55,7 @@ uniform float uPose;
 uniform float uCycle;
 uniform float uNumbers;
 uniform float uCount;
+uniform float uStyle;
 uniform float uShift;
 uniform vec3 uBg0;
 uniform vec3 uBg1;
@@ -166,6 +168,37 @@ void main() {
   float cold = smoothstep(0.7, 0.8, fbm(ang * 4.0 + vec2(3.0, 1.0) + t * 0.1 + r * 5.0)) * uIris;
   fire = mix(fire, ramp(5.0) * 1.2, cold * smoothstep(0.1, 0.5, u));
   col = mix(col, fire, mask);
+
+  // Jets: fire pulsing out above and below, the ring itself held still.
+  if (uStyle > 0.5 && uStyle < 1.5) {
+    float ay = abs(p.y) - R * 0.6;
+    if (ay > 0.0) {
+      float beat = 0.5 + 0.5 * sin(t * 1.6);
+      float len = R * (1.5 + 2.4 * uCorona) * (0.6 + 0.4 * beat);
+      float wob = (noise(vec2(abs(p.y) * 7.0 - t * 2.0, 1.0)) - 0.5) * 0.3 * ay;
+      float width = 0.018 + 0.14 * ay;
+      float flick = fbm(vec2(p.x * 9.0, abs(p.y) * 5.0 - t * 2.4));
+      float jet = exp(-abs(p.x + wob) / width) * smoothstep(len, 0.0, ay) * (0.45 + 0.9 * flick);
+      vec3 fire = mix(ramp(1.0), ramp(pingpong(2.0 + 2.5 * ay / len + flick + ph, 1.5, 4.2)), smoothstep(0.0, 0.5, ay / len));
+      col += fire * jet * 2.6 * step(0.0, off);
+    }
+  }
+
+  // Rays: sharp spikes of light, each growing out and fading in its own time,
+  // so the energy leaves in pulses.
+  if (uStyle > 1.5) {
+    float N = 28.0;
+    float s = a / TAU * N;
+    float cell = floor(s + 0.5);
+    float da = (s - cell) / N * TAU * r;
+    float hs = hash(vec2(cell, 3.0));
+    float wave = fract(t * 0.22 + hs);
+    float len = R * (0.2 + 1.5 * hs * hs) * (0.35 + 0.65 * sin(3.14159 * wave)) * (0.4 + uCorona);
+    float w = 0.02 * uSize * (1.0 - clamp(off / max(len, 1e-3), 0.0, 1.0));
+    float ray = smoothstep(w, w * 0.25, abs(da)) * step(0.0, off) * step(off, len);
+    col += mix(ramp(1.0), ramp(2.0), off / max(len, 1e-3)) * ray * 1.3;
+    col += ramp(1.0) * exp(-max(off, 0.0) / (R * 0.08)) * 0.35;
+  }
 
   float disc = smoothstep(0.003, -0.003, off);
   col = mix(col, ramp(0.0), disc);
