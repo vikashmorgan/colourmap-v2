@@ -50,7 +50,7 @@ describe('pieces', () => {
   });
 
   it('includes the eclipse and the iridescent drop', () => {
-    expect(pieceBySlug('eclipse')?.settings.streaks).toBeGreaterThan(0);
+    expect(pieceBySlug('eclipse')?.settings.sparks).toBeGreaterThan(0);
     expect(pieceBySlug('opal-drop')?.settings.iris).toBeGreaterThan(0);
   });
 
@@ -119,7 +119,6 @@ describe('in the Geometry Builder', () => {
       flow: 0.5,
       morph: 0.2,
       speed: 1,
-      streaks: 0.8,
     });
     expect(builderSettings('nope', builderSliders(PIECES[0] as (typeof PIECES)[number]))).toEqual(
       PIECES[0]?.settings,
@@ -139,7 +138,7 @@ describe('saved tunings', () => {
   });
 
   it('round-trips, and repairs or drops what it cannot trust', () => {
-    const a = makeSavedButterfly(eclipse(), 'gold', { ...eclipse().settings, streaks: 0.3 }, [], 1);
+    const a = makeSavedButterfly(eclipse(), 'gold', { ...eclipse().settings, sparks: 0.3 }, [], 1);
     expect(parseSavedButterflies(JSON.stringify([a]))).toEqual([a]);
     expect(parseSavedButterflies('nope')).toEqual([]);
     expect(parseSavedButterflies(JSON.stringify([{ ...a, piece: 'gone' }]))).toEqual([]);

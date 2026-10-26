@@ -30,7 +30,6 @@ uniform float uGlow;
 uniform float uPool;
 uniform float uGrain;
 uniform float uIris;
-uniform float uStreaks;
 uniform float uSparks;
 uniform vec3 uBg0;
 uniform vec3 uBg1;
@@ -160,17 +159,6 @@ void main() {
     body += uIris * edge * 0.45;
   }
   col = mix(col, body, alpha);
-
-  if (uStreaks > 0.0) {
-    // Glitch: thin columns near the centre line, each its own height and flicker.
-    float colw = 0.006;
-    float ci = floor(q.x / colw);
-    float hc = hash(vec2(ci, 3.1));
-    float reach = 0.18 + 0.5 * hash(vec2(ci, floor(uTime * 2.0 + hc * 9.0)));
-    float on = step(0.45, hc) * smoothstep(0.16, 0.0, q.x) * smoothstep(reach, reach * 0.4, abs(p.y));
-    vec3 sc = mix(ramp(5.0), ramp(3.0 + hash(vec2(ci, 7.0))), 0.5);
-    col = mix(col, sc, uStreaks * on * 0.85);
-  }
 
   if (uSparks > 0.0) {
     // Embers: one in a few grid cells near the rim, twinkling, drifting up.

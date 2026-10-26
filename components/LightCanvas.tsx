@@ -46,7 +46,6 @@ const SETTING_UNIFORMS: [keyof LightSettings, UniformName][] = [
   ['drift', 'uDrift'],
   ['iris', 'uIris'],
   ['corona', 'uCorona'],
-  ['streaks', 'uStreaks'],
   ['sparks', 'uSparks'],
   ['grain', 'uGrain'],
   ['pose', 'uPose'],

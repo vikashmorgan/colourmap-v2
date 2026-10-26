@@ -5,8 +5,8 @@
  * "not the buttefly but the eclipse and enlightement and light coour bubble stuff".
  * Three bodies of light, each its own shader (lib/art/light-shaders.ts):
  *
- *   eclipse   a black sun inside a painted ring of fire, glitch streaks through
- *             the middle and embers drifting off (reference 2)
+ *   eclipse   a black sun inside a painted ring of fire, flares reaching out and
+ *             embers drifting off (reference 2)
  *   deity     Enlightenment: a seated figure of gold filament with six arms,
  *             light at the heart and crown, a beam, halo rings and sacred
  *             geometry, numbers orbiting; over time it meditates, prays and
@@ -46,8 +46,6 @@ export type LightSettings = {
   iris: number;
   /** Eclipse: flares. Deity: halo rings and sacred geometry. */
   corona: number;
-  /** Vertical glitch streaks through the middle. */
-  streaks: number;
   /** Eclipse: embers. Deity: motes of light. Bubble: specks. */
   sparks: number;
   /** Film grain. */
@@ -132,7 +130,6 @@ export const BASE: LightSettings = {
   drift: 0.2,
   iris: 0.3,
   corona: 0.5,
-  streaks: 0,
   sparks: 0.3,
   grain: 0.03,
   pose: 0,
@@ -153,7 +150,6 @@ export const PIECES: LightPiece[] = [
       flow: 0.6,
       detail: 0.45,
       corona: 0.55,
-      streaks: 0.55,
       sparks: 0.6,
       iris: 0.25,
     },
@@ -170,7 +166,6 @@ export const PIECES: LightPiece[] = [
       flow: 0.35,
       detail: 0.3,
       corona: 0.9,
-      streaks: 0,
       sparks: 0.25,
       iris: 0.4,
     },
@@ -188,7 +183,6 @@ export const PIECES: LightPiece[] = [
       flow: 0.85,
       detail: 0.7,
       corona: 0.4,
-      streaks: 0.9,
       sparks: 0.9,
       iris: 0.15,
       grain: 0.06,
@@ -302,7 +296,6 @@ export const LIMITS: Record<keyof LightSettings, Limit> = {
   drift: { min: 0, max: 1, step: 0.05, label: 'Colour drift' },
   iris: { min: 0, max: 1, step: 0.05, label: 'Iridescence' },
   corona: { min: 0, max: 1, step: 0.05, label: 'Corona' },
-  streaks: { min: 0, max: 1, step: 0.05, label: 'Glitch' },
   sparks: { min: 0, max: 1, step: 0.05, label: 'Sparks' },
   grain: { min: 0, max: 0.15, step: 0.01, label: 'Grain' },
   pose: { min: 0, max: 2, step: 0.05, label: 'Pose' },
@@ -323,7 +316,6 @@ export const KIND_SLIDERS: Record<LightKind, { key: keyof LightSettings; label?:
     { key: 'corona', label: 'Flares' },
     { key: 'glow' },
     { key: 'iris', label: 'Cold fire' },
-    { key: 'streaks' },
     { key: 'sparks', label: 'Embers' },
     { key: 'drift' },
     { key: 'grain' },
