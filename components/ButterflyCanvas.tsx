@@ -73,6 +73,8 @@ const UNIFORMS = [
   'uGrain',
   'uIris',
   'uSparks',
+  'uForm',
+  'uPetals',
   'uBg0',
   'uBg1',
   'uRamp',
@@ -167,6 +169,8 @@ const ButterflyCanvas = forwardRef<ButterflyCanvasHandle, Props>(function Butter
       g.uniform1f(loc.uGrain, s.grain);
       g.uniform1f(loc.uIris, s.iris);
       g.uniform1f(loc.uSparks, s.sparks);
+      g.uniform1f(loc.uForm, s.form);
+      g.uniform1f(loc.uPetals, s.petals);
       g.uniform3fv(loc.uBg0, hexToRgb(p.bg[0]));
       g.uniform3fv(loc.uBg1, hexToRgb(p.bg[1]));
       g.uniform3fv(loc.uRamp, rampUniform(p));

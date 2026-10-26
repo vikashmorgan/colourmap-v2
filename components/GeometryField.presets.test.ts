@@ -37,6 +37,23 @@ describe('GeometryField featured presets', () => {
     expect(PRESETS.Eclipse?.mode).toBe('eclipse');
   });
 
+  it('has the other designs as their own category, Liquid Forms, in Stars', () => {
+    const stars = featuredFor('stars');
+    const at = stars.findIndex((item) => 'header' in item && item.header === 'Liquid Forms');
+    expect(at).toBeGreaterThan(-1);
+    const names = stars.slice(at + 1, at + 7).map((item) => ('name' in item ? item.name : ''));
+    expect(names).toEqual([
+      'Thermal Lotus',
+      'Opal Bloom',
+      'Liquid Heart',
+      'Liquid Volcano',
+      'Golden Peaks',
+      'Liquid Thangka',
+    ]);
+    for (const n of names) expect(PRESETS[n]?.mode).toBe('liquidbutterfly');
+    expect(PRESETS.Volcano?.mode).not.toBe('liquidbutterfly');
+  });
+
   it('opens Good Ones with the three Wind presets, one object each, in Stars', () => {
     const names = featuredNames();
     expect(names.slice(0, 3)).toEqual(['Wind', 'Wind Wing', 'Wind Body']);

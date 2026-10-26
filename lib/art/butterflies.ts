@@ -68,7 +68,17 @@ export type ButterflySettings = {
   sparks: number;
   /** Film grain. */
   grain: number;
+  /** The core design: 0 butterfly, 1 flower, 2 heart, 3 volcano, 4 mountains, 5 thangka (FORMS). */
+  form: number;
+  /** Petals of the flower, and of the thangka's lotus ring. */
+  petals: number;
 };
+
+/** The core designs a piece can be built on, by their number in `form`. */
+export const FORMS = ['Butterfly', 'Flower', 'Heart', 'Volcano', 'Mountains', 'Thangka'] as const;
+
+/** Whether a design uses the petals setting. */
+export const usesPetals = (form: number): boolean => form === 1 || form === 5;
 
 export type Piece = {
   slug: string;
@@ -82,7 +92,8 @@ export const PALETTES: Palette[] = [
   {
     id: 'thermal',
     label: 'Thermal',
-    bg: ['#7cc4a4', '#7a3fd0'],
+    // Warm ground (Martin, 2026-10-26: "a warm background for the first preset").
+    bg: ['#f4b26a', '#9c2f45'],
     ramp: ['#4258cc', '#30388a', '#2a1a2e', '#d8361c', '#f08a2a', '#f7d27a'],
   },
   {
@@ -116,6 +127,12 @@ export const PALETTES: Palette[] = [
     ramp: ['#020205', '#06060c', '#fff1cc', '#ffb030', '#e0401c', '#2aa8c8'],
   },
   {
+    id: 'thangka',
+    label: 'Thangka',
+    bg: ['#3a0e12', '#160a1e'],
+    ramp: ['#fff1c8', '#f2c14a', '#d8402a', '#2a6ac8', '#2a9a6a', '#1a1030'],
+  },
+  {
     id: 'opal',
     label: 'Opal',
     bg: ['#f0eff2', '#d9d6de'],
@@ -145,6 +162,8 @@ const BASE: ButterflySettings = {
   iris: 0,
   sparks: 0,
   grain: 0.04,
+  form: 0,
+  petals: 8,
 };
 
 export const PIECES: Piece[] = [
@@ -224,6 +243,82 @@ export const PIECES: Piece[] = [
       grain: 0.02,
     },
   },
+
+  /* Liquid Forms (2026-10-26): "flower. volcano. mountains. butterfly. heart as
+     different core designs", and "a tangka one … where it plays with geometry". */
+  {
+    slug: 'thermal-lotus',
+    title: 'Thermal Lotus',
+    line: 'A lotus opening and closing on a warm ground, rings leaving its petals',
+    palette: 'thermal',
+    settings: { ...BASE, form: 1, petals: 8, echoes: 4, flow: 0.4, flap: 0.5, pool: 0.25 },
+  },
+  {
+    slug: 'opal-bloom',
+    title: 'Opal Bloom',
+    line: 'Twelve petals of liquid glass, every colour of a soap film',
+    palette: 'opal',
+    settings: {
+      ...BASE,
+      form: 1,
+      petals: 12,
+      iris: 0.9,
+      glow: 0.05,
+      pool: 0,
+      flow: 0.5,
+      morph: 0.5,
+      speed: 0.45,
+      grain: 0.02,
+    },
+  },
+  {
+    slug: 'liquid-heart',
+    title: 'Liquid Heart',
+    line: 'A heart that beats slowly and sends out its echoes',
+    palette: 'neon',
+    settings: { ...BASE, form: 2, echoes: 5, drift: 0.4, flow: 0.4, flap: 0.6, pool: 0.4 },
+  },
+  {
+    slug: 'volcano',
+    title: 'Volcano',
+    line: 'Lava rising out of the crater in slow liquid blobs, embers drifting',
+    palette: 'eclipse',
+    settings: {
+      ...BASE,
+      form: 3,
+      flap: 0.8,
+      morph: 0.4,
+      sparks: 0.6,
+      glow: 0.09,
+      pool: 0.1,
+      drift: 0.15,
+      size: 1.1,
+    },
+  },
+  {
+    slug: 'golden-peaks',
+    title: 'Golden Peaks',
+    line: 'A ridge of mountains with echoes rolling off the peaks',
+    palette: 'gold',
+    settings: { ...BASE, form: 4, echoes: 4, flow: 0.25, morph: 0.6, glow: 0.05, pool: 0.35 },
+  },
+  {
+    slug: 'thangka',
+    title: 'Thangka',
+    line: 'A mandala of light: palace, gates and a turning lotus, in liquid echoes',
+    palette: 'thangka',
+    settings: {
+      ...BASE,
+      form: 5,
+      petals: 8,
+      echoes: 5,
+      flow: 0.3,
+      morph: 0.4,
+      glow: 0.06,
+      pool: 0.35,
+      drift: 0.25,
+    },
+  },
 ];
 
 export const paletteById = (id: string): Palette =>
@@ -250,16 +345,26 @@ export const LIMITS: Record<keyof ButterflySettings, Limit> = {
   iris: { min: 0, max: 1, step: 0.05, label: 'Iridescence' },
   sparks: { min: 0, max: 1, step: 0.05, label: 'Embers' },
   grain: { min: 0, max: 0.15, step: 0.01, label: 'Grain' },
+  form: { min: 0, max: FORMS.length - 1, step: 1, label: 'Design' },
+  petals: { min: 3, max: 16, step: 1, label: 'Petals' },
 };
 
-export const SLIDER_KEYS = Object.keys(LIMITS) as (keyof ButterflySettings)[];
+/** Every setting. */
+export const SETTING_KEYS = Object.keys(LIMITS) as (keyof ButterflySettings)[];
 
-const WHOLE: (keyof ButterflySettings)[] = ['slices', 'echoes', 'fold'];
+/** The settings shown as sliders; the design is chosen with buttons. */
+export const SLIDER_KEYS = SETTING_KEYS.filter((k) => k !== 'form');
 
-/** Settings kept inside their bounds; slices, echoes and folds whole numbers. */
+/** The sliders for a design: petals only where there are petals. */
+export const slidersFor = (form: number): (keyof ButterflySettings)[] =>
+  SLIDER_KEYS.filter((k) => k !== 'petals' || usesPetals(form));
+
+const WHOLE: (keyof ButterflySettings)[] = ['slices', 'echoes', 'fold', 'form', 'petals'];
+
+/** Settings kept inside their bounds; counts and the design whole numbers. */
 export function clampSettings(s: ButterflySettings): ButterflySettings {
   const out = { ...s };
-  for (const k of SLIDER_KEYS) {
+  for (const k of SETTING_KEYS) {
     const { min, max } = LIMITS[k];
     const v = Number.isFinite(s[k]) ? s[k] : BASE[k];
     const c = Math.min(max, Math.max(min, v));
@@ -290,8 +395,14 @@ export const frameName = (piece: Piece, paletteId: string): string =>
 export const BUILDER_MODE = 'liquidbutterfly';
 
 /** The piece's preset name in the builder ("Eclipse" is already taken there). */
-export const builderPresetName = (p: Piece): string =>
-  p.slug === 'eclipse' ? 'Eclipse Butterfly' : p.title;
+export const builderPresetName = (p: Piece): string => BUILDER_NAMES[p.slug] ?? p.title;
+
+/* Names already taken by other builder presets. */
+const BUILDER_NAMES: Record<string, string> = {
+  eclipse: 'Eclipse Butterfly',
+  volcano: 'Liquid Volcano',
+  thangka: 'Liquid Thangka',
+};
 
 /** The builder's shared sliders, as far as a butterfly uses them. */
 export type BuilderSliders = {
@@ -341,6 +452,8 @@ export type SavedButterfly = {
   piece: string;
   palette: string;
   settings: ButterflySettings;
+  /** A background chosen on the colour wheel, top and bottom, over the palette's own. */
+  bg?: [string, string];
 };
 
 export const SAVED_BUTTERFLIES_KEY = 'colourmap:butterfly-saved';
@@ -360,7 +473,7 @@ function parseSavedOne(raw: unknown): SavedButterfly | null {
   if (!piece || !r.settings || typeof r.settings !== 'object') return null;
   const s = r.settings as Record<string, unknown>;
   const settings = { ...piece.settings };
-  for (const k of SLIDER_KEYS) {
+  for (const k of SETTING_KEYS) {
     if (typeof s[k] === 'number')
       (settings as Record<string, number | boolean>)[k] = s[k] as number;
   }
@@ -370,8 +483,19 @@ function parseSavedOne(raw: unknown): SavedButterfly | null {
     piece: r.piece,
     palette: paletteById(r.palette).id,
     settings: clampSettings(settings),
+    ...(isBg(r.bg) ? { bg: r.bg } : {}),
   };
 }
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/** Two '#rrggbb' colours, as a custom background is kept. */
+export const isBg = (v: unknown): v is [string, string] =>
+  Array.isArray(v) && v.length === 2 && v.every((c) => typeof c === 'string' && HEX.test(c));
+
+/** The palette with a custom background laid over it, if there is one. */
+export const withBg = (p: Palette, bg?: [string, string] | null): Palette =>
+  bg ? { ...p, bg } : p;
 
 export function parseSavedButterflies(raw: string | null): SavedButterfly[] {
   if (!raw) return [];
@@ -392,6 +516,7 @@ export function makeSavedButterfly(
   settings: ButterflySettings,
   saved: SavedButterfly[],
   now: number,
+  bg?: [string, string] | null,
 ): SavedButterfly {
   const taken = new Set(saved.map((b) => b.name));
   let n = 1;
@@ -402,6 +527,7 @@ export function makeSavedButterfly(
     piece: piece.slug,
     palette,
     settings: { ...settings },
+    ...(bg ? { bg } : {}),
   };
 }
 

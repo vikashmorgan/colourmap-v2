@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import ButterflyCanvas, { type ButterflyCanvasHandle } from '@/components/ButterflyCanvas';
+import ColourWheel from '@/components/ColourWheel';
 import {
   type ButterflySettings,
   clampSettings,
+  FORMS,
   frameName,
   LIMITS,
   makeSavedButterfly,
@@ -16,7 +18,8 @@ import {
   pieceBySlug,
   readSavedButterflies,
   type SavedButterfly,
-  SLIDER_KEYS,
+  slidersFor,
+  withBg,
   writeSavedButterflies,
 } from '@/lib/art/butterflies';
 
@@ -45,6 +48,12 @@ const GRID: React.CSSProperties = {
   gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
   gap: 22,
 };
+
+/** The wall: butterflies first, then the other designs. */
+const ROWS = [
+  { title: 'Butterflies', butterflies: true },
+  { title: 'Liquid Forms', butterflies: false },
+];
 
 function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
@@ -108,7 +117,7 @@ function Card({
     >
       <ButterflyCanvas
         settings={saved?.settings ?? piece.settings}
-        palette={paletteById(saved?.palette ?? piece.palette)}
+        palette={withBg(paletteById(saved?.palette ?? piece.palette), saved?.bg)}
         animate={on && !still}
         maxDpr={0.75}
         offset={index * 3.7}
@@ -141,15 +150,25 @@ function Viewer({
   still: boolean;
   onClose: () => void;
   /** Keeps the current tuning; returns the name it was saved under. */
-  onSavePreset: (settings: ButterflySettings, palette: string) => string;
+  onSavePreset: (
+    settings: ButterflySettings,
+    palette: string,
+    bg: [string, string] | null,
+  ) => string;
 }) {
   const first = {
     settings: start?.settings ?? piece.settings,
     palette: start?.palette ?? piece.palette,
+    bg: start?.bg ?? null,
   };
   const title = start?.name ?? piece.title;
   const [settings, setSettings] = useState<ButterflySettings>(first.settings);
   const [paletteId, setPaletteId] = useState(first.palette);
+  /** A background picked on the colour wheel, over the palette's own. */
+  const [bg, setBg] = useState<[string, string] | null>(first.bg);
+  /** Which background colour the wheel is changing: top, bottom, or none. */
+  const [editing, setEditing] = useState<0 | 1 | null>(null);
+  const palette = withBg(paletteById(paletteId), bg);
   const [savedAs, setSavedAs] = useState<string | null>(null);
   const [paused, setPaused] = useState(still);
   const [panel, setPanel] = useState(true);
@@ -199,7 +218,7 @@ function Viewer({
       <ButterflyCanvas
         ref={canvas}
         settings={settings}
-        palette={paletteById(paletteId)}
+        palette={palette}
         animate={!paused}
         preserve
         label={title}
@@ -242,7 +261,7 @@ function Viewer({
         </button>
         <button
           type="button"
-          onClick={() => setSavedAs(onSavePreset(settings, paletteId))}
+          onClick={() => setSavedAs(onSavePreset(settings, paletteId, bg))}
           style={pill(Boolean(savedAs))}
         >
           {savedAs ? `Saved · ${savedAs}` : 'Save preset'}
@@ -297,7 +316,10 @@ function Viewer({
               <button
                 key={p.id}
                 type="button"
-                onClick={() => setPaletteId(p.id)}
+                onClick={() => {
+                  setPaletteId(p.id);
+                  setBg(null);
+                }}
                 aria-pressed={paletteId === p.id}
                 title={p.label}
                 aria-label={`${p.label} palette`}
@@ -312,7 +334,82 @@ function Viewer({
               />
             ))}
           </fieldset>
-          {SLIDER_KEYS.map((k) => {
+          <fieldset
+            aria-label="Design"
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 6,
+              margin: '0 0 6px',
+              padding: 0,
+              border: 'none',
+            }}
+          >
+            {FORMS.map((name, i) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => set('form', i)}
+                aria-pressed={settings.form === i}
+                style={{ ...pill(settings.form === i), minHeight: 32, padding: '0 10px' }}
+              >
+                {name}
+              </button>
+            ))}
+          </fieldset>
+          <fieldset
+            aria-label="Background"
+            style={{ display: 'grid', gap: 8, margin: '0 0 8px', padding: 0, border: 'none' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+              <span style={{ width: 86, color: '#b9ab8e' }}>Background</span>
+              {(['Top', 'Bottom'] as const).map((name, i) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => setEditing(editing === i ? null : (i as 0 | 1))}
+                  aria-pressed={editing === i}
+                  aria-label={`Background ${name.toLowerCase()} colour`}
+                  title={name}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    background: palette.bg[i],
+                    border: `2px solid ${editing === i ? GOLD : 'rgba(255,255,255,0.35)'}`,
+                  }}
+                />
+              ))}
+              {bg && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBg(null);
+                    setEditing(null);
+                  }}
+                  style={{ ...pill(), minHeight: 32, padding: '0 10px' }}
+                >
+                  Palette's own
+                </button>
+              )}
+            </div>
+            {editing !== null && (
+              <ColourWheel
+                value={palette.bg[editing]}
+                onChange={(hex) => {
+                  const next: [string, string] = [...palette.bg];
+                  next[editing] = hex;
+                  setBg(next);
+                }}
+                label={`Background ${editing === 0 ? 'top' : 'bottom'} colour`}
+                size={180}
+                still={still}
+                accent={GOLD}
+              />
+            )}
+          </fieldset>
+          {slidersFor(settings.form).map((k) => {
             const l = LIMITS[k];
             return (
               <label
@@ -344,6 +441,7 @@ function Viewer({
             onClick={() => {
               setSettings(first.settings);
               setPaletteId(first.palette);
+              setBg(first.bg);
             }}
             style={{ ...pill(), marginTop: 6, justifySelf: 'start' }}
           >
@@ -365,13 +463,15 @@ export default function LiquidButterflies() {
     setSaved(readSavedButterflies());
   }, []);
 
-  const savePreset = (piece: Piece) => (settings: ButterflySettings, palette: string) => {
-    const look = makeSavedButterfly(piece, palette, settings, saved, Date.now());
-    const next = [...saved, look];
-    setSaved(next);
-    writeSavedButterflies(next);
-    return look.name;
-  };
+  const savePreset =
+    (piece: Piece) =>
+    (settings: ButterflySettings, palette: string, bg: [string, string] | null) => {
+      const look = makeSavedButterfly(piece, palette, settings, saved, Date.now(), bg);
+      const next = [...saved, look];
+      setSaved(next);
+      writeSavedButterflies(next);
+      return look.name;
+    };
 
   const remove = (id: string) => {
     const next = saved.filter((b) => b.id !== id);
@@ -400,7 +500,9 @@ export default function LiquidButterflies() {
         </h1>
         <p style={{ margin: 0, fontSize: 16, color: MUTED, maxWidth: '62ch' }}>
           Butterflies that never hold still: mirrored, liquid, always changing shape, wrapped in
-          echoes, slices of time and a flowing pool of colour. Open one to tune it and save a frame.
+          echoes, slices of time and a flowing pool of colour. Beside them, the Liquid Forms: a
+          flower, a heart, a volcano, mountains and a thangka mandala. Open any piece to change its
+          design, pick its background on the colour wheel, tune it and save it.
         </p>
       </header>
 
@@ -447,17 +549,24 @@ export default function LiquidButterflies() {
         </section>
       )}
 
-      <div style={GRID}>
-        {PIECES.map((p, i) => (
-          <Card
-            key={p.slug}
-            piece={p}
-            index={i}
-            still={still}
-            onOpen={() => setOpen({ piece: p })}
-          />
-        ))}
-      </div>
+      {ROWS.map((row) => (
+        <section key={row.title} aria-label={row.title} style={{ marginBottom: 34 }}>
+          <h2 style={{ margin: '0 0 12px', fontFamily: 'var(--font-serif)', fontSize: 22 }}>
+            {row.title}
+          </h2>
+          <div style={GRID}>
+            {PIECES.filter((p) => row.butterflies === (p.settings.form === 0)).map((p) => (
+              <Card
+                key={p.slug}
+                piece={p}
+                index={PIECES.indexOf(p)}
+                still={still}
+                onOpen={() => setOpen({ piece: p })}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
 
       {open && (
         <Viewer

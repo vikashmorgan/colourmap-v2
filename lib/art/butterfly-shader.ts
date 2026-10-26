@@ -31,6 +31,8 @@ uniform float uPool;
 uniform float uGrain;
 uniform float uIris;
 uniform float uSparks;
+uniform float uForm;
+uniform float uPetals;
 uniform vec3 uBg0;
 uniform vec3 uBg1;
 uniform vec3 uRamp[6];
@@ -85,6 +87,111 @@ float butterfly(vec2 q, float t) {
   return smin(smin(up, lo, 0.04), body, 0.03) * max(open, 0.2);
 }
 
+float dot2(vec2 v) { return dot(v, v); }
+
+float seg(vec2 p, vec2 a, vec2 b) {
+  vec2 pa = p - a;
+  vec2 ba = b - a;
+  return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
+}
+
+// A flower seen from above: an outer ring of petals and an inner one between them.
+float flower(vec2 q, float t) {
+  float bloom = 1.0 - uFlap * 0.3 * (0.5 + 0.5 * sin(t * 1.3));
+  float a = atan(q.x, q.y);
+  float r = length(q);
+  float n = uPetals;
+  float m = 1.0 + uMorph * 0.12 * sin(t * 0.7 + a * 3.0);
+  float outer = pow(abs(cos(a * n * 0.5 + uMorph * 0.3 * sin(t * 0.4))), 0.6);
+  float inner = pow(abs(cos(a * n * 0.5 + 1.5708)), 0.6);
+  float R = 0.33 * bloom * m * (0.32 + 0.48 * outer + 0.2 * inner);
+  return min((r - R) * 0.6, r - 0.05);
+}
+
+// A heart (after Inigo Quilez's distance), beating with the flap.
+float heart(vec2 q, float t) {
+  float beat = 1.0 + uFlap * 0.08 * pow(0.5 + 0.5 * sin(t * 2.6), 4.0);
+  float k = 0.36 * beat * (1.0 + uMorph * 0.05 * sin(atan(q.y, q.x) * 5.0 + t));
+  vec2 p = q / k + vec2(0.0, 0.55);
+  float d;
+  if (p.y + p.x > 1.0) d = sqrt(dot2(p - vec2(0.25, 0.75))) - 0.35355;
+  else d = sqrt(min(dot2(p - vec2(0.0, 1.0)), dot2(p - 0.5 * max(p.x + p.y, 0.0)))) * sign(p.x - p.y);
+  return d * k;
+}
+
+float trapezoid(vec2 p, float r1, float r2, float he) {
+  vec2 k1 = vec2(r2, he);
+  vec2 k2 = vec2(r2 - r1, 2.0 * he);
+  vec2 ca = vec2(p.x - min(p.x, p.y < 0.0 ? r1 : r2), abs(p.y) - he);
+  vec2 cb = p - k1 + k2 * clamp(dot(k1 - p, k2) / dot2(k2), 0.0, 1.0);
+  float s = (cb.x < 0.0 && ca.y < 0.0) ? -1.0 : 1.0;
+  return s * sqrt(min(dot2(ca), dot2(cb)));
+}
+
+// A volcano: a cone with a crater, and blobs of lava rising out of it.
+float volcano(vec2 q, float t) {
+  vec2 c = q - vec2(0.0, -0.08);
+  c.x += uMorph * 0.015 * sin(c.y * 30.0 + t);
+  float d = trapezoid(c, 0.42, 0.08, 0.17);
+  d = max(d, -(length(c - vec2(0.0, 0.2)) - 0.065));
+  float erupt = 0.6 + 0.4 * uFlap * (0.5 + 0.5 * sin(t * 0.9));
+  d = smin(d, seg(q, vec2(0.0, 0.06), vec2(0.0, 0.16 + 0.06 * erupt)) - 0.035, 0.04);
+  for (int i = 0; i < 4; i++) {
+    float f = fract(t * 0.12 + float(i) * 0.25);
+    vec2 at = vec2(0.03 * sin(t * 0.8 + float(i) * 2.0) * f, 0.1 + f * 0.45 * erupt);
+    float r = (0.045 + 0.08 * f) * (1.0 - f * f);
+    d = smin(d, length(q - at) - r, 0.06);
+  }
+  return d;
+}
+
+// A ridge of mountains: a high peak in the middle and lower ones each side.
+float mountains(vec2 q, float t) {
+  float x = q.x;
+  float h = 0.3 - x * 1.15;
+  h = max(h, 0.17 - abs(x - 0.3) * 1.0);
+  h = max(h, 0.07 - abs(x - 0.55) * 0.9);
+  h += uMorph * 0.025 * (noise(vec2(x * 18.0, t * 0.2)) - 0.5);
+  h *= 1.0 + uFlap * 0.06 * sin(t * 0.8);
+  float d = (q.y + 0.05 - h) * 0.7;
+  d = max(d, -(q.y + 0.25));
+  return max(d, x - 0.75);
+}
+
+float box(vec2 p, vec2 b) {
+  vec2 d = abs(p) - b;
+  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+}
+
+// A thangka mandala, drawn as lines of light: rings, a square palace with four
+// gates, a turning ring of lotus petals and a seed at the heart.
+float thangka(vec2 q, float t) {
+  vec2 m = abs(q);
+  float r = length(m);
+  float w = 0.008;
+  float d = abs(r - 0.4) - w * 1.5;
+  d = min(d, abs(r - 0.36) - w * 0.7);
+  float sq = box(m, vec2(0.26));
+  float gate = min(box(m - vec2(0.0, 0.28), vec2(0.06, 0.03)), box(m - vec2(0.28, 0.0), vec2(0.03, 0.06)));
+  d = min(d, abs(min(sq, gate)) - w);
+  d = min(d, abs(r - 0.22) - w * 0.7);
+  float a = atan(q.x, q.y) + t * 0.1 * (0.3 + uMorph);
+  float petal = 0.13 + 0.06 * pow(abs(cos(a * uPetals * 0.5)), 0.7);
+  d = min(d, abs(r - petal) - w);
+  d = min(d, r - 0.05 - 0.01 * uFlap * sin(t * 1.3));
+  return d;
+}
+
+// The core design the piece is built on.
+float form(vec2 q, float t) {
+  if (uForm < 0.5) return butterfly(q, t);
+  if (uForm < 1.5) return flower(q, t);
+  if (uForm < 2.5) return heart(q, t);
+  if (uForm < 3.5) return volcano(q, t);
+  if (uForm < 4.5) return mountains(q, t);
+  return thangka(q, t);
+}
+
 vec3 ramp(float g) {
   vec3 col = uRamp[0];
   for (int i = 0; i < 5; i++) {
@@ -124,7 +231,7 @@ void main() {
   vec2 fq = q + uFlow * 0.22 * warp;
 
   float sc = uSize * grow * 0.78;
-  float d = butterfly(fq / sc, t) * sc;
+  float d = form(fq / sc, t) * sc;
   float phase = uTime * uDrift * 0.6;
 
   float inside = clamp(-d / (0.1 * uSize), 0.0, 1.0);

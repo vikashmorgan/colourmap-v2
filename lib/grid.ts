@@ -154,7 +154,8 @@ export const HUBS: Hub[] = [
   },
   {
     id: 'studio',
-    label: 'Studio',
+    // "The categories in circle G menu should be Art instead of Studio" (2026-10-26).
+    label: 'Art',
     line: 'Visual art and the tools to make it',
     accent: '#9a7ad4',
     nodes: [
@@ -167,7 +168,7 @@ export const HUBS: Hub[] = [
       {
         href: '/art/butterflies',
         label: 'Butterflies',
-        line: 'Liquid Butterflies: mirrored, flowing, always changing',
+        line: 'Liquid Butterflies and Forms: flower, heart, volcano, thangka',
       },
       {
         href: '/art/light',
@@ -177,9 +178,7 @@ export const HUBS: Hub[] = [
       { href: '/figures', label: 'Figures', line: '3D figures' },
       { href: '/figure-stars', label: 'Figure stars', line: 'Figures drawn in stars' },
       { href: '/figure-stars-trio', label: 'Trio', line: 'Three figures in stars' },
-      { href: '/dot-walker-arena', label: 'Arena', line: 'The dot walker arena' },
       { href: '/build-lab', label: 'Build lab', line: 'Creator space', prototype: true },
-      { href: '/proportion-buddy', label: 'Proportions', line: 'Proportion buddy' },
       { href: '/atlas', label: 'Atlas', line: 'The living atlas', prototype: true },
       { href: '/studios', label: 'Studios', line: 'Colour studios' },
     ],
