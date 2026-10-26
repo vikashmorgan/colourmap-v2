@@ -243,6 +243,54 @@ float digital(vec2 q, float t) {
   return min(abs(m) - 0.005, max(m, strata));
 }
 
+// A butterfly seen through a lens (Martin's screenshots, 2026-10-26): a fan
+// of long petals opening upward, a teardrop between them, two round lower
+// wings, all held inside the lens's rim.
+float lens(vec2 q, float t) {
+  float d = abs(length(q) - 0.4) - 0.018;
+  vec2 c = q - vec2(0.0, -0.02);
+  float open = 1.0 - uFlap * 0.15 * (0.5 + 0.5 * sin(t * 1.3));
+  float fan = ellipse(c, vec2(0.0, 0.17), vec2(0.028, 0.13), 0.0);
+  for (int i = 0; i < 5; i++) {
+    float fi = float(i);
+    float a = (0.2 + fi * 0.27) * open + uMorph * 0.05 * sin(t * 0.8 + fi);
+    fan = smin(fan, ellipse(c, vec2(sin(a), cos(a)) * 0.2, vec2(0.032, 0.13), -a), 0.015);
+  }
+  fan = smin(fan, ellipse(c, vec2(0.13, -0.17), vec2(0.12, 0.1) * (1.0 + uMorph * 0.06 * sin(t)), -0.3), 0.03);
+  fan = smin(fan, length(c) - 0.05, 0.03);
+  return min(d, fan);
+}
+
+// A diamond that breathes; with slices on, each strip is a moment later.
+float diamond(vec2 q, float t) {
+  float s = 1.0 + uFlap * 0.25 * sin(t * 1.1) + uMorph * 0.1 * sin(t * 0.7);
+  vec2 b = vec2(0.42, 0.3) * s;
+  vec2 p = vec2(q.x, abs(q.y)) / b;
+  return (p.x + p.y - 1.0) * min(b.x, b.y) * 0.7;
+}
+
+// A doorway: a half circle on a box.
+float arch(vec2 p, float r) {
+  return min(length(p) - r, box(p - vec2(0.0, -r * 0.6), vec2(r, r * 0.6)));
+}
+
+// A portal: arches inside arches, always drawing you further in, held in a disc.
+float portal(vec2 q, float t) {
+  float d = abs(length(q) - 0.4) - 0.03;
+  for (int i = 0; i < 7; i++) {
+    float f = fract(t * 0.06 + float(i) / 7.0);
+    float r = 0.03 + 0.34 * f * f;
+    float a = abs(arch(q - vec2(0.0, 0.03 * (1.0 - f)), r)) - (0.003 + 0.012 * f);
+    d = min(d, max(a, length(q) - 0.4));
+  }
+  return d;
+}
+
+// An orb: a thin rim of light round a sphere of drifting colour.
+float orbRim(vec2 q, float t) {
+  return abs(length(q) - 0.38 * (1.0 + uFlap * 0.03 * sin(t * 0.9))) - 0.006;
+}
+
 // The core design the piece is built on.
 float form(vec2 q, float t) {
   if (uForm < 0.5) return butterfly(q, t);
@@ -254,7 +302,11 @@ float form(vec2 q, float t) {
   if (uForm < 6.5) return circle(q, t);
   if (uForm < 7.5) return sacred(q, t);
   if (uForm < 8.5) return island(q, t);
-  return digital(q, t);
+  if (uForm < 9.5) return digital(q, t);
+  if (uForm < 10.5) return lens(q, t);
+  if (uForm < 11.5) return diamond(q, t);
+  if (uForm < 12.5) return portal(q, t);
+  return orbRim(q, t);
 }
 
 vec3 ramp(float g) {
@@ -280,7 +332,9 @@ void main() {
     a = mod(a + 0.5 * sector, sector) - 0.5 * sector;
     p = length(p) * vec2(sin(a), cos(a)) - vec2(0.0, 0.18);
   }
-  vec2 q = vec2(abs(p.x), p.y);
+  // The orb is mirrored top to bottom too: its lower half is the upper's reflection.
+  bool orb = uForm > 12.5;
+  vec2 q = vec2(abs(p.x), orb ? abs(p.y) : p.y);
 
   float k = 0.0;
   if (uSlices > 0.5) {
@@ -342,6 +396,23 @@ void main() {
     float near = exp(-max(d, 0.0) * 9.0) * step(0.0, d);
     float tw = 0.5 + 0.5 * sin(uTime * 4.0 + hs * 60.0);
     col += ramp(3.0 + hs * 2.0) * ember * near * tw * uSparks * 1.4;
+  }
+
+  if (orb) {
+    // The horizon across the sphere, and four-point stars glinting on its rim.
+    float inOrb = smoothstep(0.39 * uSize, 0.37 * uSize, length(p));
+    // Inside the sphere the clouds are stronger than outside it.
+    col = mix(col, ramp(bounce(pool * 6.0 + phase)), inOrb * 0.5);
+    col += ramp(3.0) * exp(-abs(p.y) * 900.0) * (0.35 + 0.65 * inOrb) * 0.9;
+    for (int i = 0; i < 3; i++) {
+      float fi = float(i);
+      float a = 0.6 + fi * 1.9 + uTime * 0.05;
+      vec2 at = vec2(cos(a), sin(a)) * 0.38 * uSize;
+      vec2 dp = p - at;
+      float tw = 0.6 + 0.4 * sin(uTime * 1.7 + fi * 2.3);
+      float star = exp(-abs(dp.x) * 260.0) * exp(-abs(dp.y) * 18.0) + exp(-abs(dp.y) * 260.0) * exp(-abs(dp.x) * 18.0);
+      col += mix(ramp(3.0), vec3(1.0), 0.5) * (star + 0.0004 / (dot(dp, dp) + 0.0004)) * tw * 0.8;
+    }
   }
 
   col += (hash(gl_FragCoord.xy + fract(uTime) * 61.0) - 0.5) * uGrain;
