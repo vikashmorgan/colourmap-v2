@@ -52,6 +52,7 @@ const SETTING_UNIFORMS: [keyof LightSettings, UniformName][] = [
   ['cycle', 'uCycle'],
   ['numbers', 'uNumbers'],
   ['count', 'uCount'],
+  ['style', 'uStyle'],
 ];
 
 function compile(gl: WebGLRenderingContext, type: number, src: string): WebGLShader | null {

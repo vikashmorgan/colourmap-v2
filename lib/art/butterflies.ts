@@ -68,14 +68,25 @@ export type ButterflySettings = {
   sparks: number;
   /** Film grain. */
   grain: number;
-  /** The core design: 0 butterfly, 1 flower, 2 heart, 3 volcano, 4 mountains, 5 thangka (FORMS). */
+  /** The core design, by its number in FORMS: butterfly, flower, heart, volcano, mountains, thangka, circle, sacred, island, digital. */
   form: number;
   /** Petals of the flower, and of the thangka's lotus ring. */
   petals: number;
 };
 
 /** The core designs a piece can be built on, by their number in `form`. */
-export const FORMS = ['Butterfly', 'Flower', 'Heart', 'Volcano', 'Mountains', 'Thangka'] as const;
+export const FORMS = [
+  'Butterfly',
+  'Flower',
+  'Heart',
+  'Volcano',
+  'Mountains',
+  'Thangka',
+  'Circle',
+  'Sacred',
+  'Island',
+  'Digital',
+] as const;
 
 /** Whether a design uses the petals setting. */
 export const usesPetals = (form: number): boolean => form === 1 || form === 5;
@@ -317,6 +328,74 @@ export const PIECES: Piece[] = [
       glow: 0.06,
       pool: 0.35,
       drift: 0.25,
+    },
+  },
+
+  /* 2026-10-26, later: "1 is this psychedelic circle … 2 is this sacred geometry
+     of colour … 3 is this digital mountains … flying island volcano stuff". */
+  {
+    slug: 'psychedelic-circle',
+    title: 'Psychedelic Circle',
+    line: 'A breathing circle drowning in its own rings of colour',
+    palette: 'acid',
+    settings: {
+      ...BASE,
+      form: 6,
+      echoes: 7,
+      drift: 0.6,
+      flow: 0.55,
+      morph: 0.6,
+      pool: 0.6,
+      iris: 0.25,
+    },
+  },
+  {
+    slug: 'sacred-geometry',
+    title: 'Sacred Geometry',
+    line: 'The flower of life in lines of colour, slowly turning',
+    palette: 'thangka',
+    settings: {
+      ...BASE,
+      form: 7,
+      echoes: 4,
+      drift: 0.4,
+      flow: 0.25,
+      morph: 0.4,
+      glow: 0.05,
+      pool: 0.4,
+    },
+  },
+  {
+    slug: 'floating-island',
+    title: 'Floating Island',
+    line: 'A volcano on a rock hanging in the air, lava rising, stones drifting',
+    palette: 'thermal',
+    settings: {
+      ...BASE,
+      form: 8,
+      flap: 0.7,
+      morph: 0.5,
+      sparks: 0.5,
+      glow: 0.08,
+      pool: 0.15,
+      drift: 0.15,
+      size: 1.05,
+    },
+  },
+  {
+    slug: 'digital-peaks',
+    title: 'Digital Peaks',
+    line: 'Mountains drawn in light, a scan rising through them',
+    palette: 'deep',
+    settings: {
+      ...BASE,
+      form: 9,
+      echoes: 3,
+      drift: 0.35,
+      flow: 0.2,
+      morph: 0.5,
+      glow: 0.05,
+      pool: 0.4,
     },
   },
 ];

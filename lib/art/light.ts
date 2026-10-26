@@ -58,6 +58,8 @@ export type LightSettings = {
   numbers: number;
   /** Bubble: small drops around the big one. */
   count: number;
+  /** Eclipse: 0 the ring, 1 jets above and below, 2 rays pulsing out (ECLIPSE_STYLES). */
+  style: number;
 };
 
 export type LightPiece = {
@@ -88,6 +90,12 @@ export const PALETTES: Palette[] = [
     label: 'Blood moon',
     bg: ['#100606', '#040202'],
     ramp: ['#030101', '#ffe2c8', '#ff6a3a', '#c41a2a', '#5a0a2a', '#f0d040'],
+  },
+  {
+    id: 'navy',
+    label: 'Navy',
+    bg: ['#13224a', '#081028'],
+    ramp: ['#030512', '#fffbe8', '#ffe9a8', '#f2b84a', '#b86a2a', '#6ab0e0'],
   },
   {
     id: 'gold-light',
@@ -136,6 +144,7 @@ export const BASE: LightSettings = {
   cycle: 0,
   numbers: 0,
   count: 0,
+  style: 0,
 };
 
 export const PIECES: LightPiece[] = [
@@ -173,7 +182,7 @@ export const PIECES: LightPiece[] = [
   {
     slug: 'blood-moon',
     title: 'Blood Moon',
-    line: 'Wide fire, heavy glitch, embers everywhere',
+    line: 'Wide fire and embers everywhere',
     kind: 'eclipse',
     palette: 'blood',
     settings: {
@@ -186,6 +195,34 @@ export const PIECES: LightPiece[] = [
       sparks: 0.9,
       iris: 0.15,
       grain: 0.06,
+    },
+  },
+  /* 2026-10-26: "another mode for burning ring where the fire pulses out above
+     and below", and "energy goes out in rayons like a pulse". */
+  {
+    slug: 'twin-jets',
+    title: 'Twin Jets',
+    line: 'The ring held still while its fire pulses out above and below',
+    kind: 'eclipse',
+    palette: 'fire',
+    settings: { ...BASE, style: 1, flow: 0.55, detail: 0.4, corona: 0.65, sparks: 0.5, iris: 0.2 },
+  },
+  {
+    slug: 'sun-rays',
+    title: 'Sun Rays',
+    line: 'A painted black sun, its light leaving in sharp pulsing rays',
+    kind: 'eclipse',
+    palette: 'navy',
+    settings: {
+      ...BASE,
+      style: 2,
+      speed: 0.45,
+      flow: 0.3,
+      detail: 0.25,
+      corona: 0.7,
+      sparks: 0.3,
+      iris: 0,
+      grain: 0.05,
     },
   },
   {
@@ -302,6 +339,7 @@ export const LIMITS: Record<keyof LightSettings, Limit> = {
   cycle: { min: 0, max: 1, step: 0.05, label: 'Move on' },
   numbers: { min: 0, max: 1, step: 0.05, label: 'Numbers' },
   count: { min: 0, max: 6, step: 1, label: 'Drops' },
+  style: { min: 0, max: 2, step: 1, label: 'Style' },
 };
 
 export const SETTING_KEYS = Object.keys(LIMITS) as (keyof LightSettings)[];
@@ -348,6 +386,9 @@ export const KIND_SLIDERS: Record<LightKind, { key: keyof LightSettings; label?:
   ],
 };
 
+/** The eclipse's styles, by their number in `style`; chosen with buttons. */
+export const ECLIPSE_STYLES = ['Ring', 'Jets', 'Rays'] as const;
+
 /** A pose's name, for the pose slider. */
 export function poseName(pose: number): string {
   const names = ['Meditating', 'Praying', 'Dancing'];
@@ -361,7 +402,7 @@ export function clampSettings(s: LightSettings): LightSettings {
     const { min, max } = LIMITS[k];
     const v = Number.isFinite(s[k]) ? s[k] : BASE[k];
     const c = Math.min(max, Math.max(min, v));
-    out[k] = k === 'count' ? Math.round(c) : c;
+    out[k] = k === 'count' || k === 'style' ? Math.round(c) : c;
   }
   return out;
 }

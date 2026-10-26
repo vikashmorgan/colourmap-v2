@@ -48,6 +48,37 @@ The references Martin has pinned for the generative art, with what each one teac
 - **Reach:** close, in real time with three.js. The existing figure work (`/figures`, `/figure-stars`, the Golden God OBJ, the Mixamo pipeline) is the base.
 - **Used in:** Light Bodies, as Enlightenment (Enlightenment, Night Prayer, Dance of Light): a first 2D version drawn by a shader, with poses blended from arm positions. The 3D figure on the Mixamo rig is still to come. Later, the animated centre of the Grid and the quick-menu wheel. Later still, in the Chill Machine, it moves with the music.
 
+### 6. Eclipse, evolved: jets above and below, rays like a pulse
+- Pins: https://ch.pinterest.com/pin/304274518610934855/ · https://ch.pinterest.com/pin/525091637780744504/ (a hand-painted eclipse: a black disc on navy, a white-gold rim and sharp spikes of light of every length, "Eclipse Tattoo")
+- Martin (2026-10-26): "add the burning ring to the music slider options. keeping the circle stable. but also do another mode for burning ring where the fire pulses out above and below … how the eclipse should evolve to grow with vertical and lower exit of the energy … or in this last one where energy goes out in rayons like a pulse. different types for this eclipse preset"
+- **Technique:** the ring stays a still distance band. The jets are a column of fire along the vertical axis: they widen with distance, are flickered by noise travelling outward, and their length beats. The rays are 28 angular cells, each with a thin tapering spike whose length grows and fades on its own clock, so the light leaves in pulses.
+- **Used in:** Light Bodies, as the eclipse's Style (Ring, Jets, Rays): Twin Jets and Sun Rays. Chill Machine: the Burning Ring mode.
+
+### 7. Psychedelic circle
+- Pin: https://ch.pinterest.com/pin/304274518610934924/
+- Martin: "1 is this psychedelic circle. it can be with similar tools as butterfly but another mode overall."
+- **Used in:** Liquid Butterflies, design **Circle** (a breathing disc with the butterfly's tools: echoes, slices, pool, iris): the Psychedelic Circle piece.
+
+### 8. Sacred geometry of colour
+- Pin: https://ch.pinterest.com/pin/304274518610934917/
+- Martin: "2 is this sacred geometry of colour. we will also use it for music geometry stuff. develop it as well."
+- **Used in:** Liquid Butterflies, design **Sacred** (the flower of life in lines of light, slowly turning): the Sacred Geometry piece. Later it becomes a music-geometry mode in the Chill Machine, where each note lights a circle.
+
+### 9. Digital mountains
+- Pin: https://ch.pinterest.com/pin/304274518610934875/
+- **Used in:** Liquid Butterflies, design **Digital** (the ridge drawn as an outline with strata lines rising like a scan): the Digital Peaks piece.
+
+### 10. Flying island, volcano
+- Pins: https://ch.pinterest.com/pin/304274518610934940/ · https://ch.pinterest.com/pin/304274518610934941/
+- **Used in:** Liquid Butterflies, design **Island** (a rock hanging in the air with a volcano on it, lava rising, small stones drifting): the Floating Island piece. Also the Volcano design and piece.
+
+### 11. More butterflies and their kin
+- Pins: https://ch.pinterest.com/pin/304274518609138677/ · https://ch.pinterest.com/pin/304274518610064603/
+- Martin: "extra inspiration for the butterfly and similar category alternatives."
+- **Used in:** reference for future Liquid Butterflies and Liquid Forms pieces.
+
+> **Note (2026-10-26):** pins 7–11 (the 3042745186… ones) are not public; Pinterest returns "Not found" without a sign-in, so they were built from Martin's words. Direct image links (i.pinimg.com/…) or screenshots would let the pieces match them more closely.
+
 ## Where each look lives
 
 | Look | Art (first) | Music (after) |
@@ -57,3 +88,7 @@ The references Martin has pinned for the generative art, with what each one teac
 | Crystal tunnel | Crystal Tunnel piece | TunnelSurfer / Chill Machine tunnel mode |
 | Iridescent liquid | Butterfly wings; Light Bodies · Light Bubble | Chill Machine: the drop wobbles with each note |
 | Digital deity | Light Bodies · Enlightenment | Centre of the Grid menu; dances to the Chill Machine |
+| Eclipse jets and rays | Light Bodies · Twin Jets, Sun Rays | Chill Machine · Burning Ring (Ring, Jets, Rays) |
+| Psychedelic circle | Liquid Forms · Psychedelic Circle | Chill Machine · Butterflies, design Circle |
+| Sacred geometry | Liquid Forms · Sacred Geometry | Chill Machine: music geometry (next) |
+| Digital mountains, floating island | Liquid Forms · Digital Peaks, Floating Island, Volcano | Chill Machine · Butterflies, designs |

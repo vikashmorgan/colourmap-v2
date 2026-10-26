@@ -182,6 +182,67 @@ float thangka(vec2 q, float t) {
   return d;
 }
 
+// A psychedelic circle: a disc whose rim breathes and ripples.
+float circle(vec2 q, float t) {
+  float a = atan(q.x, q.y);
+  float R = 0.3 * (1.0 + uMorph * 0.06 * sin(a * 6.0 + t) + uFlap * 0.05 * sin(t * 1.3));
+  return length(q) - R;
+}
+
+// Sacred geometry: the flower of life in lines of light, slowly turning,
+// inside its bounding circle, with a seed at the heart.
+float sacred(vec2 q, float t) {
+  float Rf = 0.1;
+  float w = 0.006;
+  float rot = t * 0.05 * (0.3 + uMorph);
+  float d = abs(length(q) - Rf) - w;
+  for (int i = 0; i < 6; i++) {
+    float a = float(i) * 1.0472 + rot;
+    d = min(d, abs(length(q - Rf * vec2(sin(a), cos(a))) - Rf) - w);
+    float b = a + 0.5236;
+    d = min(d, abs(length(q - Rf * 1.732 * vec2(sin(b), cos(b))) - Rf) - w);
+    d = min(d, abs(length(q - Rf * 2.0 * vec2(sin(a), cos(a))) - Rf) - w);
+  }
+  d = max(d, length(q) - Rf * 3.05);
+  d = min(d, abs(length(q) - Rf * 3.0) - w * 1.5);
+  d = min(d, abs(length(q) - Rf * 3.25 - 0.01 * uFlap * sin(t * 1.3)) - w);
+  return min(d, length(q) - 0.025);
+}
+
+// A floating island: a rock hanging in the air, a volcano on it, lava rising,
+// and two small stones drifting beside it.
+float island(vec2 q, float t) {
+  vec2 c = q - vec2(0.0, 0.02 * sin(t * 0.6));
+  vec2 rock = vec2(c.x + uMorph * 0.02 * (noise(vec2(c.y * 14.0, 3.0)) - 0.5), -(c.y + 0.12));
+  float d = trapezoid(rock, 0.36, 0.03, 0.16);
+  d += 0.015 * (noise(vec2(c.x * 30.0, c.y * 8.0)) - 0.5);
+  float cone = trapezoid(c - vec2(0.0, 0.1), 0.24, 0.06, 0.07);
+  cone = max(cone, -(length(c - vec2(0.0, 0.18)) - 0.045));
+  d = smin(d, cone, 0.03);
+  float erupt = 0.6 + 0.4 * uFlap * (0.5 + 0.5 * sin(t * 0.9));
+  for (int i = 0; i < 3; i++) {
+    float f = fract(t * 0.12 + float(i) * 0.33);
+    vec2 at = vec2(0.02 * sin(t + float(i) * 2.0) * f, 0.17 + f * 0.32 * erupt);
+    d = smin(d, length(c - at) - (0.035 + 0.05 * f) * (1.0 - f * f), 0.04);
+  }
+  for (int i = 0; i < 2; i++) {
+    float fi = float(i);
+    vec2 at = vec2(0.42 + fi * 0.1, -0.05 - fi * 0.14 + 0.025 * sin(t * 0.7 + fi * 2.0));
+    d = min(d, length(c - at) - (0.035 - fi * 0.012));
+  }
+  return d;
+}
+
+// Digital peaks: the mountains drawn in light, an outline and strata lines
+// rising through them like a scan.
+float digital(vec2 q, float t) {
+  float m = mountains(q, t);
+  float n = 26.0;
+  float u = fract(q.y * n - t * 0.15);
+  float strata = min(u, 1.0 - u) / n - 0.004;
+  return min(abs(m) - 0.005, max(m, strata));
+}
+
 // The core design the piece is built on.
 float form(vec2 q, float t) {
   if (uForm < 0.5) return butterfly(q, t);
@@ -189,7 +250,11 @@ float form(vec2 q, float t) {
   if (uForm < 2.5) return heart(q, t);
   if (uForm < 3.5) return volcano(q, t);
   if (uForm < 4.5) return mountains(q, t);
-  return thangka(q, t);
+  if (uForm < 5.5) return thangka(q, t);
+  if (uForm < 6.5) return circle(q, t);
+  if (uForm < 7.5) return sacred(q, t);
+  if (uForm < 8.5) return island(q, t);
+  return digital(q, t);
 }
 
 vec3 ramp(float g) {

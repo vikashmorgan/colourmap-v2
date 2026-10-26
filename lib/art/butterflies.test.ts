@@ -68,12 +68,23 @@ describe('pieces', () => {
     for (let form = 0; form < FORMS.length; form++) {
       expect(PIECES.some((p) => p.settings.form === form)).toBe(true);
     }
-    expect(FORMS).toEqual(['Butterfly', 'Flower', 'Heart', 'Volcano', 'Mountains', 'Thangka']);
+    expect(FORMS).toEqual([
+      'Butterfly',
+      'Flower',
+      'Heart',
+      'Volcano',
+      'Mountains',
+      'Thangka',
+      'Circle',
+      'Sacred',
+      'Island',
+      'Digital',
+    ]);
     expect(slidersFor(1)).toContain('petals');
     expect(slidersFor(5)).toContain('petals');
     expect(slidersFor(0)).not.toContain('petals');
-    expect(clampSettings({ ...BASE_OF(), form: 9.4, petals: 2 })).toMatchObject({
-      form: 5,
+    expect(clampSettings({ ...BASE_OF(), form: 12.4, petals: 2 })).toMatchObject({
+      form: 9,
       petals: 3,
     });
   });

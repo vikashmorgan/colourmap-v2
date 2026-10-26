@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import LightCanvas, { type LightCanvasHandle } from '@/components/LightCanvas';
 import {
   clampSettings,
+  ECLIPSE_STYLES,
   frameName,
   KIND_SLIDERS,
   LIMITS,
@@ -326,6 +327,31 @@ function Viewer({
               />
             ))}
           </fieldset>
+          {piece.kind === 'eclipse' && (
+            <fieldset
+              aria-label="Style"
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 6,
+                margin: '0 0 6px',
+                padding: 0,
+                border: 'none',
+              }}
+            >
+              {ECLIPSE_STYLES.map((name, i) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => set('style', i)}
+                  aria-pressed={settings.style === i}
+                  style={{ ...pill(settings.style === i), minHeight: 32, padding: '0 12px' }}
+                >
+                  {name}
+                </button>
+              ))}
+            </fieldset>
+          )}
           {KIND_SLIDERS[piece.kind].map(({ key: k, label }) => {
             const l = LIMITS[k];
             const name = label ?? l.label;

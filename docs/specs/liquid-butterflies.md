@@ -69,3 +69,14 @@ Thermal Monarch, Neon Psyche, Acid Morpho, Pearl Moth, Golden Swallowtail, Deep 
   - It works by drag, tap or arrow keys. It holds still with reduced motion.
   - The picked background lays over the palette. "Palette's own" or choosing a palette clears it, and Save preset keeps it (`bg` on the saved tuning).
 - **Geometry Builder:** a new **Liquid Forms** category in the Stars tab, after Liquid Butterflies. Volcano and Thangka are named **Liquid Volcano** and **Liquid Thangka** there, since those names were taken.
+
+## Circle, Sacred, Island, Digital — 2026-10-26
+
+> Martin: "1 is this psychedelic circle … 2 is this sacred geometry of colour … 3 is this digital mountains … flying island volcano stuff" (references 7–10 in `visual-references.md`)
+
+- Four more designs, ten in all:
+  - **Circle:** a breathing disc.
+  - **Sacred:** the flower of life in lines of light, turning slowly.
+  - **Island:** a floating rock with a volcano and two drifting stones.
+  - **Digital:** the mountain ridge as an outline with rising strata lines.
+- New Liquid Forms pieces: **Psychedelic Circle** (Acid), **Sacred Geometry** (Thangka), **Floating Island** (Thermal) and **Digital Peaks** (Deep sea). They show in the Liquid Forms row and the builder's Liquid Forms category.
