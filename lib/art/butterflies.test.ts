@@ -9,6 +9,7 @@ import {
   frameName,
   hexToRgb,
   isBg,
+  isFigure,
   LIMITS,
   makeSavedButterfly,
   PALETTES,
@@ -18,6 +19,7 @@ import {
   pieceBySlug,
   rampUniform,
   SLIDER_KEYS,
+  sliderLabel,
   slidersFor,
   withBg,
 } from './butterflies';
@@ -83,13 +85,21 @@ describe('pieces', () => {
       'Diamond',
       'Portal',
       'Orb',
+      'Brain',
+      'Meditate',
+      'Pray',
+      'Stand',
     ]);
     expect(slidersFor(1)).toContain('petals');
     expect(slidersFor(5)).toContain('petals');
     expect(slidersFor(0)).not.toContain('petals');
-    expect(clampSettings({ ...BASE_OF(), form: 20.4, petals: 2 })).toMatchObject({
-      form: 13,
-      petals: 3,
+    expect(slidersFor(16)).toContain('petals');
+    expect(sliderLabel('petals', 16)).toBe('Arms');
+    expect(sliderLabel('petals', 1)).toBe('Petals');
+    expect(isFigure(15) && isFigure(17) && !isFigure(14)).toBe(true);
+    expect(clampSettings({ ...BASE_OF(), form: 20.4, petals: 1 })).toMatchObject({
+      form: 17,
+      petals: 2,
     });
   });
 

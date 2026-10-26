@@ -58,7 +58,10 @@ export type LightSettings = {
   numbers: number;
   /** Bubble: small drops around the big one. */
   count: number;
-  /** Eclipse: 0 the ring, 1 jets above and below, 2 rays pulsing out (ECLIPSE_STYLES). */
+  /**
+   * Eclipse: 0 the ring, 1 jets above and below, 2 rays pulsing out, 3 a
+   * spectral halo, 4 pillars of colour up and down, 5 a vortex (ECLIPSE_STYLES).
+   */
   style: number;
 };
 
@@ -120,6 +123,24 @@ export const PALETTES: Palette[] = [
     label: 'Pearl',
     bg: ['#f3f1f5', '#d8d4de'],
     ramp: ['#ffffff', '#f0e8f8', '#c8b8f0', '#80dccc', '#f4b8d8', '#9a90b0'],
+  },
+  {
+    id: 'spectrum',
+    label: 'Spectrum',
+    bg: ['#2a1c46', '#0c0818'],
+    ramp: ['#050308', '#fff6ea', '#ff8ad0', '#ffb050', '#5ae08a', '#4aa0ff'],
+  },
+  {
+    id: 'painted',
+    label: 'Painted',
+    bg: ['#151925', '#090b11'],
+    ramp: ['#06070c', '#fff4dc', '#ffcc3a', '#f0562a', '#3ab8e0', '#e8f4ff'],
+  },
+  {
+    id: 'dusk',
+    label: 'Dusk',
+    bg: ['#3a4048', '#121418'],
+    ramp: ['#030303', '#fff2dc', '#f0d8b0', '#e88a3a', '#a8401e', '#8aa0b0'],
   },
   {
     id: 'night-drop',
@@ -223,6 +244,68 @@ export const PIECES: LightPiece[] = [
       sparks: 0.3,
       iris: 0,
       grain: 0.05,
+    },
+  },
+  /* 2026-10-26, night: "see how energy shoots up and below on the eclipse and
+     with colours as well. that but more symmetric centered" (Martin's
+     screenshots, visual-references.md #13). */
+  {
+    slug: 'colour-pillar',
+    title: 'Colour Pillar',
+    line: 'A painted ring, its energy shooting straight up and down in streaks of colour',
+    kind: 'eclipse',
+    palette: 'painted',
+    settings: { ...BASE, style: 4, flow: 0.5, detail: 0.85, corona: 0.7, sparks: 0.6, iris: 0.3 },
+  },
+  {
+    slug: 'solar-beam',
+    title: 'Solar Beam',
+    line: 'A black sun in a fiery corona, one beam of light through it',
+    kind: 'eclipse',
+    palette: 'fire',
+    settings: {
+      ...BASE,
+      style: 4,
+      flow: 0.2,
+      detail: 0.05,
+      corona: 0.55,
+      sparks: 0.2,
+      iris: 0,
+      glow: 0.7,
+    },
+  },
+  {
+    slug: 'dark-sun',
+    title: 'Dark Sun',
+    line: 'A thin white rim in a wide bloom of rainbow light',
+    kind: 'eclipse',
+    palette: 'spectrum',
+    settings: {
+      ...BASE,
+      style: 3,
+      flow: 0.4,
+      detail: 0.1,
+      corona: 0.7,
+      sparks: 0.7,
+      iris: 0,
+      glow: 0.6,
+    },
+  },
+  {
+    slug: 'vortex',
+    title: 'Vortex',
+    line: 'Light spiralling round and into the black centre',
+    kind: 'eclipse',
+    palette: 'dusk',
+    settings: {
+      ...BASE,
+      style: 5,
+      flow: 0.5,
+      detail: 0.4,
+      corona: 0.6,
+      sparks: 0.2,
+      iris: 0,
+      glow: 0.6,
     },
   },
   {
@@ -339,7 +422,7 @@ export const LIMITS: Record<keyof LightSettings, Limit> = {
   cycle: { min: 0, max: 1, step: 0.05, label: 'Move on' },
   numbers: { min: 0, max: 1, step: 0.05, label: 'Numbers' },
   count: { min: 0, max: 6, step: 1, label: 'Drops' },
-  style: { min: 0, max: 2, step: 1, label: 'Style' },
+  style: { min: 0, max: 5, step: 1, label: 'Style' },
 };
 
 export const SETTING_KEYS = Object.keys(LIMITS) as (keyof LightSettings)[];
@@ -387,7 +470,7 @@ export const KIND_SLIDERS: Record<LightKind, { key: keyof LightSettings; label?:
 };
 
 /** The eclipse's styles, by their number in `style`; chosen with buttons. */
-export const ECLIPSE_STYLES = ['Ring', 'Jets', 'Rays'] as const;
+export const ECLIPSE_STYLES = ['Ring', 'Jets', 'Rays', 'Halo', 'Pillar', 'Vortex'] as const;
 
 /** A pose's name, for the pose slider. */
 export function poseName(pose: number): string {

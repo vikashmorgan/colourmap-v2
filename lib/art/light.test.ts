@@ -139,12 +139,12 @@ describe('saved tunings', () => {
 
 describe('the eclipse styles', () => {
   it('has the ring, jets and rays, each in a piece, kept whole', () => {
-    expect(ECLIPSE_STYLES).toEqual(['Ring', 'Jets', 'Rays']);
+    expect(ECLIPSE_STYLES).toEqual(['Ring', 'Jets', 'Rays', 'Halo', 'Pillar', 'Vortex']);
     expect(pieceBySlug('twin-jets')?.settings.style).toBe(1);
     expect(pieceBySlug('sun-rays')?.settings.style).toBe(2);
     const base = PIECES[0]?.settings as (typeof PIECES)[number]['settings'];
     expect(clampSettings({ ...base, style: 1.6 }).style).toBe(2);
-    expect(clampSettings({ ...base, style: 7 }).style).toBe(2);
+    expect(clampSettings({ ...base, style: 7 }).style).toBe(5);
   });
 });
 

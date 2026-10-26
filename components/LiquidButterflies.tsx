@@ -6,6 +6,8 @@ import ButterflyCanvas, { type ButterflyCanvasHandle } from '@/components/Butter
 import ColourWheel from '@/components/ColourWheel';
 import {
   type ButterflySettings,
+  type Category,
+  categoryOf,
   clampSettings,
   FORMS,
   frameName,
@@ -18,6 +20,7 @@ import {
   pieceBySlug,
   readSavedButterflies,
   type SavedButterfly,
+  sliderLabel,
   slidersFor,
   withBg,
   writeSavedButterflies,
@@ -49,10 +52,12 @@ const GRID: React.CSSProperties = {
   gap: 22,
 };
 
-/** The wall: butterflies first, then the other designs. */
-const ROWS = [
-  { title: 'Butterflies', butterflies: true },
-  { title: 'Liquid Forms', butterflies: false },
+/** The wall, a row per category: Butterfly, Enlightenment, Mountains, then the other forms. */
+const ROWS: { title: string; category: Category }[] = [
+  { title: 'Butterflies', category: 'Butterfly' },
+  { title: 'Enlightenment', category: 'Enlightenment' },
+  { title: 'Mountains', category: 'Mountains' },
+  { title: 'Liquid Forms', category: 'Forms' },
 ];
 
 function useReducedMotion(): boolean {
@@ -410,7 +415,7 @@ function Viewer({
             )}
           </fieldset>
           {slidersFor(settings.form).map((k) => {
-            const l = LIMITS[k];
+            const l = { ...LIMITS[k], label: sliderLabel(k, settings.form) };
             return (
               <label
                 key={k}
@@ -555,7 +560,7 @@ export default function LiquidButterflies() {
             {row.title}
           </h2>
           <div style={GRID}>
-            {PIECES.filter((p) => row.butterflies === (p.settings.form === 0)).map((p) => (
+            {PIECES.filter((p) => categoryOf(p.settings.form) === row.category).map((p) => (
               <Card
                 key={p.slug}
                 piece={p}

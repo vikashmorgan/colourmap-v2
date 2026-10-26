@@ -103,3 +103,22 @@ The references Martin has pinned for the generative art, with what each one teac
 | Psychedelic circle | Liquid Forms · Psychedelic Circle | Chill Machine · Butterflies, design Circle |
 | Sacred geometry | Liquid Forms · Sacred Geometry | Chill Machine: music geometry (next) |
 | Digital mountains, floating island | Liquid Forms · Digital Peaks, Floating Island, Volcano | Chill Machine · Butterflies, designs |
+
+### 13. Eclipses with energy above and below (Martin's screenshots, 2026-10-26)
+- Files: `Desktop\ADMIN\ART\COLOURBRAIN\Eclipse\` (220523, 220621, 220711, 220725).
+- Martin: "see how energy shoots up and below on the eclipse and with colours as well. that but more symmetric centered."
+- What they are:
+  - a dark sun in a wide rainbow halo combed by fine rays (Dark Sun)
+  - a painted ring with glitchy streaks of colour shooting up and down (Colour Pillar)
+  - a fiery corona with one vertical beam (Solar Beam)
+  - a black hole in a swirling disc (Vortex)
+- **Used in:** the eclipse styles **Halo**, **Pillar** and **Vortex** (Light Bodies), with the pieces Dark Sun, Colour Pillar, Solar Beam and Vortex.
+
+### 14. Brains, enlightenment, mountains (Martin's screenshots, 2026-10-26)
+- Martin's own folders: `C:\Users\victor\Desktop\ADMIN\ART\COLOURBRAIN\` with Brain, Enlightenment, Mountains, Eclipse, Circle, Butterfly, Bubble and Big Bang. Each screenshot is copied into its folder; the originals stay in Pictures\Screenshots.
+- What they are and where they went:
+  - **Brain:** colour brain scans, seen from above → the **Brain** design (Colour Brain, Scan palette).
+  - **Enlightenment:** meditators in rainbow rings and golden light, standing figures in spheres and beams → the figure designs **Meditate**, **Pray** and **Stand**, where the Arms slider adds pairs of arms. Pieces: Meditating Light, Praying Light, Standing Light, Rainbow Body and Golden Sphere.
+  - **Mountains:** data and wireframe peaks, a glass peak mirrored on water → Data Peak and Wire Peaks (Peak and Wire palettes).
+  - **Butterfly:** rainbow wings with a cyan lace edge → Prism Wings (Prism palette).
+  - **Bubble** and **Big Bang:** kept for reference; the Light Bubble and Big Bang categories already cover them.
