@@ -127,7 +127,8 @@ const ButterflyCanvas = forwardRef<ButterflyCanvasHandle, Props>(function Butter
       return;
     }
     gl.useProgram(prog);
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     const aPos = gl.getAttribLocation(prog, 'aPos');
     gl.enableVertexAttribArray(aPos);
@@ -187,7 +188,13 @@ const ButterflyCanvas = forwardRef<ButterflyCanvasHandle, Props>(function Butter
     return () => {
       cancelAnimationFrame(raf);
       redraw.current = null;
-      g.getExtension('WEBGL_lose_context')?.loseContext();
+      // Free what this run made, but keep the context: React may mount the same
+      // canvas again (Strict Mode does in development), and a lost context
+      // would come back from getContext dead.
+      g.deleteProgram(prog);
+      g.deleteShader(vs);
+      g.deleteShader(fs);
+      g.deleteBuffer(buffer);
     };
   }, [preserve, maxDpr, offset]);
 
