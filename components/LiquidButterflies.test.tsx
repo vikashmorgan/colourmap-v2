@@ -35,7 +35,7 @@ describe('LiquidButterflies', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open Eclipse' }));
     const dialog = screen.getByRole('dialog', { name: 'Eclipse' });
     expect(dialog).toBeTruthy();
-    expect(screen.getByRole('slider', { name: 'Glitch' })).toBeTruthy();
+    expect(screen.getByRole('slider', { name: 'Embers' })).toBeTruthy();
     expect(
       screen.getByRole('button', { name: 'Eclipse palette' }).getAttribute('aria-pressed'),
     ).toBe('true');
@@ -50,14 +50,14 @@ describe('LiquidButterflies', () => {
     expect(screen.getByRole('button', { name: 'Gold palette' }).getAttribute('aria-pressed')).toBe(
       'true',
     );
-    const glitch = screen.getByRole('slider', { name: 'Glitch' }) as HTMLInputElement;
+    const glitch = screen.getByRole('slider', { name: 'Embers' }) as HTMLInputElement;
     fireEvent.change(glitch, { target: { value: '0.2' } });
     expect(glitch.value).toBe('0.2');
     fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
     expect(
       screen.getByRole('button', { name: 'Eclipse palette' }).getAttribute('aria-pressed'),
     ).toBe('true');
-    expect((screen.getByRole('slider', { name: 'Glitch' }) as HTMLInputElement).value).toBe('0.8');
+    expect((screen.getByRole('slider', { name: 'Embers' }) as HTMLInputElement).value).toBe('0.7');
   });
 
   it('hides and shows the controls', () => {
@@ -84,7 +84,7 @@ describe('saved butterflies', () => {
     expect(screen.queryByRole('region', { name: 'My butterflies' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Open Eclipse' }));
     fireEvent.click(screen.getByRole('button', { name: 'Gold palette' }));
-    fireEvent.change(screen.getByRole('slider', { name: 'Glitch' }), { target: { value: '0.3' } });
+    fireEvent.change(screen.getByRole('slider', { name: 'Embers' }), { target: { value: '0.3' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save preset' }));
     expect(screen.getByRole('button', { name: 'Saved · Eclipse 1' })).toBeTruthy();
     fireEvent.keyDown(window, { key: 'Escape' });
@@ -92,7 +92,7 @@ describe('saved butterflies', () => {
     expect(screen.getByRole('region', { name: 'My butterflies' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Open Eclipse 1' }));
     expect(screen.getByRole('dialog', { name: 'Eclipse 1' })).toBeTruthy();
-    expect((screen.getByRole('slider', { name: 'Glitch' }) as HTMLInputElement).value).toBe('0.3');
+    expect((screen.getByRole('slider', { name: 'Embers' }) as HTMLInputElement).value).toBe('0.3');
     expect(screen.getByRole('button', { name: 'Gold palette' }).getAttribute('aria-pressed')).toBe(
       'true',
     );

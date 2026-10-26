@@ -8,7 +8,7 @@ An Art collection at `/art/light` (on the Grid under Studio → Light). It holds
 
 | Kind | Pieces | What it is |
 |---|---|---|
-| Eclipse | Burning Ring, Blue Corona, Blood Moon | A black sun inside a ring of fire painted with a brush. Flares reach out, glitch streaks run through the middle, and embers drift off. |
+| Eclipse | Burning Ring, Blue Corona, Blood Moon | A black sun inside a ring of fire painted with a brush. Flares reach out and embers drift off. |
 | Enlightenment | Enlightenment, Night Prayer, Dance of Light | A seated figure of light filaments with six arms. Light at the heart and crown, a vertical beam, halo rings and a flower of life, and two orbits of numbers. It meditates, prays and dances. |
 | Light Bubble | Opal Bubble, Night Bubble | A wobbling drop of liquid light. Its skin is a soap film whose colour keeps moving, small drops orbit and melt into it, and it has sharp highlights and a bright rim. |
 
@@ -19,6 +19,8 @@ An Art collection at `/art/light` (on the Grid under Studio → Light). It holds
   - only that kind's sliders, some under its own names: Ring, Fire and Flares for the eclipse; Pose, Move on, Filaments and Halo for the figure; Wobble, Film and Drops for the bubble.
   - any of the eight palettes.
   - Pause, Reset, Save PNG and Save preset.
+- **Enlightenment stays centred and still** (Martin, 2026-10-26: "keep him centered so it stays present … without hovering left right"). Only the arms move. On narrow screens it scales down so it stays whole.
+- **No glitch** (Martin, 2026-10-26: "the glitch effect and sliders can be taken off from all the new visuals. not needed"). The vertical streaks and their slider are gone from Light Bodies and Liquid Butterflies.
 - **Pose** runs 0–2: Meditating, Praying, Dancing. The slider's label names the current pose, and positions in between blend. **Move on** carries the figure through all three poses over time; at 0 it holds the pose.
 - **Save preset** keeps the tuning (settings and palette) in this browser (`colourmap:light-saved`). Saved tunings appear in a "My light" row above the collection, named "<piece> n", and can be reopened or deleted. Reset goes back to the tuning you opened.
 - **Reduced motion:** every piece holds still.
@@ -33,5 +35,5 @@ An Art collection at `/art/light` (on the Grid under Studio → Light). It holds
 ## Next
 
 - Geometry Builder: a "Light Bodies" category in the Stars tab, as with the butterflies.
-- Chill Machine: Light visual modes. A hit makes the glitch streaks and flares; a note turns the colours (`uShift` is already in the shaders); the bubble wobbles on each note.
+- Chill Machine: Light visual modes. A hit makes the flares; a note turns the colours (`uShift` is already in the shaders); the bubble wobbles on each note.
 - The figure as the centre of the Grid menu.

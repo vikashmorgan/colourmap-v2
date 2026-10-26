@@ -20,8 +20,7 @@
  *   drift    the colours travel through the ramp, so nothing stays one colour
  *   iris     soap-film colour on the wings, shifting like oil (the
  *            iridescent-drop reference)
- *   streaks  vertical glitch streaks through the middle, and
- *   sparks   embers drifting off the rim (both from the eclipse reference)
+ *   sparks   embers drifting off the rim (from the eclipse reference)
  *
  * The technique is taken, never the pieces: our own shapes and palettes, drawn
  * live by a shader (`components/ButterflyCanvas.tsx`).
@@ -65,8 +64,6 @@ export type ButterflySettings = {
   speed: number;
   /** Soap-film iridescence on the wings. */
   iris: number;
-  /** Vertical glitch streaks through the middle. */
-  streaks: number;
   /** Embers drifting off the rim. */
   sparks: number;
   /** Film grain. */
@@ -146,7 +143,6 @@ const BASE: ButterflySettings = {
   pool: 0.3,
   speed: 0.6,
   iris: 0,
-  streaks: 0,
   sparks: 0,
   grain: 0.04,
 };
@@ -197,7 +193,7 @@ export const PIECES: Piece[] = [
   {
     slug: 'eclipse',
     title: 'Eclipse',
-    line: 'A butterfly of void inside a burning ring, glitching, shedding embers',
+    line: 'A butterfly of void inside a burning ring, shedding embers',
     palette: 'eclipse',
     settings: {
       ...BASE,
@@ -206,7 +202,6 @@ export const PIECES: Piece[] = [
       morph: 0.3,
       glow: 0.09,
       pool: 0,
-      streaks: 0.8,
       sparks: 0.7,
       drift: 0.1,
       size: 1.1,
@@ -253,7 +248,6 @@ export const LIMITS: Record<keyof ButterflySettings, Limit> = {
   glow: { min: 0.02, max: 0.3, step: 0.01, label: 'Glow' },
   speed: { min: 0, max: 1.5, step: 0.05, label: 'Speed' },
   iris: { min: 0, max: 1, step: 0.05, label: 'Iridescence' },
-  streaks: { min: 0, max: 1, step: 0.05, label: 'Glitch' },
   sparks: { min: 0, max: 1, step: 0.05, label: 'Embers' },
   grain: { min: 0, max: 0.15, step: 0.01, label: 'Grain' },
 };

@@ -575,7 +575,6 @@ function buildButterfly(): THREE.Group {
     'uPool',
     'uGrain',
     'uIris',
-    'uStreaks',
     'uSparks',
   ]) {
     uniforms[n] = { value: 0 };
@@ -626,7 +625,6 @@ function updateButterfly(group: THREE.Group, cfg: VisualCfg, t: number): void {
   u.uPool.value = s.pool;
   u.uGrain.value = s.grain;
   u.uIris.value = s.iris;
-  u.uStreaks.value = s.streaks;
   u.uSparks.value = s.sparks;
   const piece = pieceBySlug(cfg.butterfly ?? '');
   const key = piece?.palette ?? '';

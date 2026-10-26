@@ -24,7 +24,7 @@ The references Martin has pinned for the generative art, with what each one teac
 - **What it is:** a black disc inside a painted ring of fire (orange, yellow, red, a touch of cyan), vertical glitch streaks through the middle, and sparks drifting off. Flat dark background.
 - **Technique:** the ring is a distance band broken up by noise to look brush-painted. The streaks are columns of noise stretched along y, cut by a hash per column. The sparks are hashed points with twinkle.
 - **Reach:** very close, in real time.
-- **Used in:** Liquid Butterflies (an Eclipse piece); Light Bodies, as its own kind (Burning Ring, Blue Corona, Blood Moon, `docs/specs/light-bodies.md`); later a Chill Machine mode where hits make the streaks.
+- **Used in:** Liquid Butterflies (an Eclipse piece); Light Bodies, as its own kind (Burning Ring, Blue Corona, Blood Moon, `docs/specs/light-bodies.md`); later a Chill Machine mode where hits make the flares. The glitch streaks were taken out of every new visual on 2026-10-26 ("not needed").
 
 ### 3. Crystal tunnel: prismatic realism
 - Pin: https://pin.it/2bJmQxDj1 (https://ch.pinterest.com/pin/642255596905055646/), a video
@@ -53,7 +53,7 @@ The references Martin has pinned for the generative art, with what each one teac
 | Look | Art (first) | Music (after) |
 |---|---|---|
 | Time slices | Liquid Butterflies | Chill Machine: each note adds a slice |
-| Eclipse | Light Bodies · Eclipse; Liquid Butterflies · Eclipse | Chill Machine: hits make the glitch streaks |
+| Eclipse | Light Bodies · Eclipse; Liquid Butterflies · Eclipse | Chill Machine: hits make the flares |
 | Crystal tunnel | Crystal Tunnel piece | TunnelSurfer / Chill Machine tunnel mode |
 | Iridescent liquid | Butterfly wings; Light Bodies · Light Bubble | Chill Machine: the drop wobbles with each note |
 | Digital deity | Light Bodies · Enlightenment | Centre of the Grid menu; dances to the Chill Machine |

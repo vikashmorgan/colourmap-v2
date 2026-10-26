@@ -25,7 +25,6 @@ export const LIGHT_UNIFORMS = [
   'uDrift',
   'uIris',
   'uCorona',
-  'uStreaks',
   'uSparks',
   'uGrain',
   'uPose',
@@ -49,7 +48,6 @@ uniform float uDetail;
 uniform float uDrift;
 uniform float uIris;
 uniform float uCorona;
-uniform float uStreaks;
 uniform float uSparks;
 uniform float uGrain;
 uniform float uPose;
@@ -115,18 +113,6 @@ vec2 screen() { return (gl_FragCoord.xy - 0.5 * uRes) / uRes.y; }
 
 vec3 backdrop(vec2 p) { return mix(uBg0, uBg1, smoothstep(0.0, 1.0, 0.5 - p.y)); }
 
-// Glitch: thin columns near the centre line, each its own height and flicker.
-vec3 streaks(vec3 col, vec2 p, float amount, float width) {
-  if (amount <= 0.0) return col;
-  float ax = abs(p.x);
-  float ci = floor(ax / 0.006);
-  float hc = hash(vec2(ci, 3.1));
-  float reach = 0.15 + 0.45 * hash(vec2(ci, floor(uTime * 2.0 + hc * 9.0)));
-  float on = step(0.45, hc) * smoothstep(width, 0.0, ax) * smoothstep(reach, reach * 0.4, abs(p.y));
-  vec3 sc = mix(ramp(1.0), ramp(2.0 + 2.0 * hash(vec2(ci, 7.0))), 0.5);
-  return mix(col, sc, amount * on * 0.85);
-}
-
 // Points of light in a few grid cells, twinkling, drifting up; near weights where.
 vec3 sparks(vec3 col, vec2 p, float amount, float near, float tone) {
   if (amount <= 0.0) return col;
@@ -185,7 +171,6 @@ void main() {
   col = mix(col, ramp(0.0), disc);
   col += ramp(1.0) * exp(-abs(off) / (R * 0.02)) * 0.9;
 
-  col = streaks(col, p, uStreaks, R * 0.9);
   col = sparks(col, p, uSparks, exp(-abs(off) * 6.0 / uSize) * step(0.0, off), 1.5);
   gl_FragColor = vec4(grain(col), 1.0);
 }
@@ -270,26 +255,26 @@ void main() {
   vec2 p = screen();
   float t = uTime;
   float ph = t * uDrift * 0.4 + uShift;
-  float sc = 0.8 * uSize;
+  // Held still in the centre, whole on any screen: narrow ones scale it down.
+  float sc = 0.8 * uSize * min(1.0, 0.5 * uRes.x / uRes.y / 0.36);
 
   float x = mod(uPose + uCycle * t * 0.08, 3.0);
   float wM = max(0.0, 1.0 - min(abs(x), abs(x - 3.0)));
   float wP = max(0.0, 1.0 - abs(x - 1.0));
   float wD = max(0.0, 1.0 - abs(x - 2.0));
 
-  vec2 f = p / sc + vec2(0.0, 0.06 - 0.012 * sin(t * 0.8));
-  f.x += 0.025 * wD * sin(t * 1.7);
+  vec2 f = p / sc + vec2(0.0, 0.15);
   vec2 q = vec2(abs(f.x), f.y);
   float d = figure(q, t, wM, wP, wD) * sc;
 
   vec3 col = backdrop(p);
-  vec2 C = vec2(0.0, 0.16) * sc;
+  vec2 C = vec2(0.0, 0.01) * sc;
   vec2 pc = p - C;
   float rr = length(pc);
   float an = atan(pc.y, pc.x);
 
   // The beam, and the glow round the body.
-  float fade = smoothstep(0.75, 0.0, abs(p.y + 0.05));
+  float fade = smoothstep(0.75, 0.0, abs(p.y));
   col += ramp(1.5) * (exp(-abs(p.x) * 90.0) * 0.55 + exp(-abs(p.x) * 14.0) * 0.12) * fade * (0.4 + uGlow);
   col += ramp(3.0) * exp(-max(d, 0.0) * 34.0 / (0.3 + uGlow)) * 0.35;
 
@@ -346,7 +331,7 @@ void main() {
 
   // Light at the heart and the crown, each with a lens streak.
   for (int i = 0; i < 2; i++) {
-    vec2 at = (i == 0 ? vec2(0.0, 0.05) : vec2(0.0, 0.25)) * sc;
+    vec2 at = (i == 0 ? vec2(0.0, -0.04) : vec2(0.0, 0.16)) * sc;
     vec2 dp = p - at;
     float pulse = 0.85 + 0.15 * sin(t * 1.3 + float(i) * 2.0);
     float core = 0.00035 / (dot(dp, dp) + 0.00025);

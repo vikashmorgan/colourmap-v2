@@ -21,7 +21,6 @@ A butterfly drawn live by a WebGL 1 fragment shader (`components/ButterflyCanvas
 | Kaleido | 1 is the mirror only; 2 to 8 folds it round |
 | Size, Glow, Speed, Grain | As named |
 | Iridescence | Soap-film colour on the wings (the iridescent-drop reference) |
-| Glitch | Vertical streaks through the middle (the eclipse reference) |
 | Embers | Sparks drifting off the rim (the eclipse reference) |
 
 A palette is two background colours and a six-stop ramp, from the core of the shape out through its rim and glow: Thermal, Neon, Acid, Pearl, Gold, Eclipse, Opal, Deep sea.
