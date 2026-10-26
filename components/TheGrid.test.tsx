@@ -29,7 +29,7 @@ describe('TheGrid', () => {
 
   it('shows the core, the seven hubs and the two satellites', () => {
     render(<TheGrid />);
-    for (const hub of ['You', 'Sound', 'Mind', 'Learn', 'Engine room', 'Play', 'Body', 'Studio']) {
+    for (const hub of ['You', 'Sound', 'Mind', 'Learn', 'Engine room', 'Play', 'Body', 'Art']) {
       expect(screen.getByRole('button', { name: `${hub} hub` })).toBeTruthy();
     }
     expect(screen.getByRole('link', { name: 'Chill Machine (separate app)' })).toBeTruthy();
@@ -38,7 +38,7 @@ describe('TheGrid', () => {
 
   it('zooms into a hub and back out with Esc', () => {
     render(<TheGrid />);
-    fireEvent.click(screen.getByRole('button', { name: 'Studio hub' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Art hub' }));
     expect(screen.getByRole('link', { name: 'Geometry' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Mind hub' })).toBeNull();
     fireEvent.keyDown(screen.getByRole('application'), { key: 'Escape' });

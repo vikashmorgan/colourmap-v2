@@ -49,3 +49,23 @@ Thermal Monarch, Neon Psyche, Acid Morpho, Pearl Moth, Golden Swallowtail, Deep 
 - **Stars tab → Liquid Butterflies:** all eight pieces, as their own category before Work in Progress. They use mode `liquidbutterfly`, drawn in three.js by the same shader (`lib/art/butterfly-shader.ts`, used by both). The builder's sliders lay over the piece's settings: Speed, Liquid (Glow), Morph (Light), Slices (Complexity), Echoes (Particles), Kaleido (Symmetry), Bloom. Eclipse is named **Eclipse Butterfly** there, since the builder already has an Eclipse. No stars unless asked for, and the bloom is the soft one used for full-screen shaders.
 - The builder's **Saved** row works for them too, and remembers which butterfly a look belongs to.
 - **In the collection's viewer, Save preset** keeps every setting and the palette ("Eclipse 1", "Eclipse 2"…). Saved tunings show first, under **My butterflies**; tap one to open it, × to delete it. Reset in a saved tuning returns to that tuning. Kept in this browser (`colourmap:butterfly-saved`).
+
+## Liquid Forms, the colour wheel and a warm Thermal — 2026-10-26
+
+> Martin: "I want a warm background for the first preset Thermal Monarch" · "imagine flower designs. other option than the butterfly" · "a selection. flower. volcano. mountains. butterfly. heart as different core designs" · "also a tangka one … where it plays with geometry and the liquid echoes" · "work on background colours … a beautiful trippy circle of colour with a bit of an echo effect to select your colour" · "also put it as a category in the stars geometry"
+
+- **Core designs.** Every piece is built on one of six designs, set by `form` and chosen with buttons in the viewer: **Butterfly, Flower, Heart, Volcano, Mountains, Thangka**. Each is a signed distance in the same shader, so slices, echoes, flow, the pool, iridescence and embers work on all of them.
+  - Flower: an outer and an inner ring of petals that open and close.
+  - Heart: it beats.
+  - Volcano: lava rises out of the crater in slow blobs.
+  - Mountains: a ridge, with a high peak in the middle.
+  - Thangka: a mandala drawn as lines of light, with rings, a square palace with four gates, a turning lotus ring and a seed at the heart.
+  - **Petals** (3–16) is a slider for the flower and the thangka only.
+- **Liquid Forms:** six new pieces in their own row, built on the other designs: Thermal Lotus, Opal Bloom, Liquid Heart, Volcano, Golden Peaks and Thangka, plus a new Thangka palette (red, gold, blue, green on dark maroon).
+- **Thermal is warm:** its ground runs amber to wine (`#f4b26a` → `#9c2f45`) instead of mint to purple.
+- **Background on the colour wheel.** In the viewer, tap the Top or Bottom swatch to open the wheel (`components/ColourWheel.tsx`):
+  - Hue runs round the circle and saturation from the centre out; a Light slider sets brightness.
+  - Echo rings ripple slowly out through the wheel and out of the chosen colour.
+  - It works by drag, tap or arrow keys. It holds still with reduced motion.
+  - The picked background lays over the palette. "Palette's own" or choosing a palette clears it, and Save preset keeps it (`bg` on the saved tuning).
+- **Geometry Builder:** a new **Liquid Forms** category in the Stars tab, after Liquid Butterflies. Volcano and Thangka are named **Liquid Volcano** and **Liquid Thangka** there, since those names were taken.

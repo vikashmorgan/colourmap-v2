@@ -5,8 +5,10 @@ import {
   builderSettings,
   builderSliders,
   clampSettings,
+  FORMS,
   frameName,
   hexToRgb,
+  isBg,
   LIMITS,
   makeSavedButterfly,
   PALETTES,
@@ -16,9 +18,13 @@ import {
   pieceBySlug,
   rampUniform,
   SLIDER_KEYS,
+  slidersFor,
+  withBg,
 } from './butterflies';
 
 const HEX = /^#[0-9a-f]{6}$/i;
+
+const BASE_OF = () => (PIECES[0] as (typeof PIECES)[number]).settings;
 
 describe('palettes', () => {
   it('each has two background colours and a six-stop ramp, all valid', () => {
@@ -54,8 +60,27 @@ describe('pieces', () => {
     expect(pieceBySlug('opal-drop')?.settings.iris).toBeGreaterThan(0);
   });
 
-  it('has a slider for every setting', () => {
-    expect([...SLIDER_KEYS].sort()).toEqual(Object.keys(PIECES[0]?.settings ?? {}).sort());
+  it('has a slider for every setting but the design, which is chosen with buttons', () => {
+    expect([...SLIDER_KEYS, 'form'].sort()).toEqual(Object.keys(PIECES[0]?.settings ?? {}).sort());
+  });
+
+  it('builds pieces on every design, and shows petals only where there are petals', () => {
+    for (let form = 0; form < FORMS.length; form++) {
+      expect(PIECES.some((p) => p.settings.form === form)).toBe(true);
+    }
+    expect(FORMS).toEqual(['Butterfly', 'Flower', 'Heart', 'Volcano', 'Mountains', 'Thangka']);
+    expect(slidersFor(1)).toContain('petals');
+    expect(slidersFor(5)).toContain('petals');
+    expect(slidersFor(0)).not.toContain('petals');
+    expect(clampSettings({ ...BASE_OF(), form: 9.4, petals: 2 })).toMatchObject({
+      form: 5,
+      petals: 3,
+    });
+  });
+
+  it('gives Thermal Monarch a warm background', () => {
+    const [top, bottom] = paletteById('thermal').bg.map(hexToRgb);
+    for (const c of [top, bottom]) expect((c?.[0] ?? 0) > (c?.[2] ?? 1)).toBe(true);
   });
 });
 
@@ -147,5 +172,28 @@ describe('saved tunings', () => {
     )[0];
     expect(wild?.palette).toBe(PALETTES[0]?.id);
     expect(wild?.settings.slices).toBe(LIMITS.slices.max);
+  });
+});
+
+describe('a background from the colour wheel', () => {
+  it('lays over the palette and is kept with a saved tuning', () => {
+    const pal = paletteById('gold');
+    expect(withBg(pal, null)).toBe(pal);
+    expect(withBg(pal, ['#112233', '#445566']).bg).toEqual(['#112233', '#445566']);
+    expect(withBg(pal, ['#112233', '#445566']).ramp).toEqual(pal.ramp);
+    const piece = PIECES[0] as (typeof PIECES)[number];
+    const a = makeSavedButterfly(piece, 'gold', piece.settings, [], 1, ['#112233', '#445566']);
+    expect(parseSavedButterflies(JSON.stringify([a]))[0]?.bg).toEqual(['#112233', '#445566']);
+    const b = makeSavedButterfly(piece, 'gold', piece.settings, [], 1);
+    expect(b.bg).toBeUndefined();
+    expect(
+      parseSavedButterflies(JSON.stringify([{ ...a, bg: ['red', 'blue'] }]))[0]?.bg,
+    ).toBeUndefined();
+  });
+
+  it('only takes two hex colours', () => {
+    expect(isBg(['#000000', '#ffffff'])).toBe(true);
+    expect(isBg(['#000000'])).toBe(false);
+    expect(isBg('nope')).toBe(false);
   });
 });

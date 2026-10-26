@@ -68,6 +68,57 @@ describe('LiquidButterflies', () => {
   });
 });
 
+describe('designs and background', () => {
+  beforeEach(() => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it('shows the butterflies and the Liquid Forms in their own rows', () => {
+    render(<LiquidButterflies />);
+    expect(screen.getByRole('region', { name: 'Butterflies' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Liquid Forms' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open Thangka' })).toBeTruthy();
+  });
+
+  it('turns a butterfly into a flower, with petals only then', () => {
+    render(<LiquidButterflies />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open Thermal Monarch' }));
+    expect(screen.getByRole('button', { name: 'Butterfly' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(screen.queryByRole('slider', { name: 'Petals' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Flower' }));
+    expect(screen.getByRole('button', { name: 'Flower' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('slider', { name: 'Petals' })).toBeTruthy();
+  });
+
+  it('picks a background on the wheel, saves it with the preset, and goes back to the palette', () => {
+    render(<LiquidButterflies />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open Thermal Monarch' }));
+    expect(screen.queryByRole('slider', { name: 'Background top colour' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Background top colour' }));
+    const wheel = screen.getByRole('slider', { name: 'Background top colour' });
+    fireEvent.keyDown(wheel, { key: 'ArrowRight' });
+    expect(screen.getByRole('button', { name: "Palette's own" })).toBeTruthy();
+    const picked = wheel.getAttribute('aria-valuetext');
+    expect(picked).not.toBe('#f4b26a');
+    fireEvent.click(screen.getByRole('button', { name: 'Save preset' }));
+    const stored = JSON.parse(window.localStorage.getItem(SAVED_BUTTERFLIES_KEY) ?? '[]');
+    expect(stored[0].bg[0]).toBe(picked);
+    expect(stored[0].bg[1]).toBe('#9c2f45');
+    fireEvent.click(screen.getByRole('button', { name: "Palette's own" }));
+    expect(screen.queryByRole('button', { name: "Palette's own" })).toBeNull();
+  });
+});
+
 describe('saved butterflies', () => {
   beforeEach(() => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);

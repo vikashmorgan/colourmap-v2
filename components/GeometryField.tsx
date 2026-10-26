@@ -15618,7 +15618,17 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Fractal Wave', tag: 'HOKUSAI' },
   // 26 Oct 2026: the Liquid Butterflies collection, as its own category.
   { header: 'Liquid Butterflies' },
-  ...BUTTERFLY_PIECES.map((piece) => ({ name: builderPresetName(piece), tag: 'BUTTERFLY' })),
+  ...BUTTERFLY_PIECES.filter((piece) => piece.settings.form === 0).map((piece) => ({
+    name: builderPresetName(piece),
+    tag: 'BUTTERFLY',
+  })),
+  // 26 Oct 2026: the same pieces built on other designs (flower, heart, volcano,
+  // mountains, thangka): "also put it as a category in the stars geometry".
+  { header: 'Liquid Forms' },
+  ...BUTTERFLY_PIECES.filter((piece) => piece.settings.form !== 0).map((piece) => ({
+    name: builderPresetName(piece),
+    tag: 'FORM',
+  })),
   { header: 'Work in Progress', dim: true },
   // Moved here 25 Oct 2026: "all the new tests that are not clean yet like saurons eyes etc...
   // add them to a work in progress category so we know they are unfinished". The 13 Oct batch:

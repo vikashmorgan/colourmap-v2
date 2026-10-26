@@ -23,7 +23,7 @@ describe('GridMenu', () => {
     render(<GridMenu />);
     fireEvent.click(screen.getByRole('button', { name: /open the network menu/i }));
     expect(screen.getByRole('dialog', { name: 'Network menu' })).toBeTruthy();
-    for (const hub of ['You', 'Sound', 'Mind', 'Learn', 'Engine room', 'Play', 'Body', 'Studio']) {
+    for (const hub of ['You', 'Sound', 'Mind', 'Learn', 'Engine room', 'Play', 'Body', 'Art']) {
       expect(screen.getByRole('button', { name: `${hub} hub` })).toBeTruthy();
     }
     expect(screen.getByRole('link', { name: /grid/i }).getAttribute('href')).toBe('/grid');

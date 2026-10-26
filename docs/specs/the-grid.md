@@ -11,9 +11,9 @@ It is a prototype next to the top menu, not a replacement yet. It is reached fro
 ## Shape
 
 - **The core, You,** in the middle: Focus, Journey, Progress road, Profile.
-- **Seven hubs** round it, clockwise from the top: Sound, Mind, Learn, Engine room, Play, Body, Studio. Each has its own small glow colour; gold stays the main colour.
+- **Seven hubs** round it, clockwise from the top: Sound, Mind, Learn, Engine room, Play, Body, Art (called Studio until 2026-10-26: "the categories in circle G menu should be Art instead of Studio"). Each has its own small glow colour; gold stays the main colour.
 - **Satellites:** Chill Machine and TunnelSurfer are separate apps. They sit outside the ring, joined to Sound by a dashed bridge, and open in a new tab.
-- **Signals:** light pulses run along the spokes and along five links that carry something real (Body → You, Mind → Learn, Studio → Sound, Play → Studio, Mind → You).
+- **Signals:** light pulses run along the spokes and along five links that carry something real (Body → You, Mind → Learn, Art → Sound, Play → Art, Mind → You).
 
 Hubs, pages and signals live in `lib/grid.ts`. A test fails if any page in it points at a route that does not exist.
 
