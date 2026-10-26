@@ -24,7 +24,7 @@ The references Martin has pinned for the generative art, with what each one teac
 - **What it is:** a black disc inside a painted ring of fire (orange, yellow, red, a touch of cyan), vertical glitch streaks through the middle, and sparks drifting off. Flat dark background.
 - **Technique:** the ring is a distance band broken up by noise to look brush-painted. The streaks are columns of noise stretched along y, cut by a hash per column. The sparks are hashed points with twinkle.
 - **Reach:** very close, in real time.
-- **Used in:** Liquid Butterflies (an Eclipse piece), and later a Chill Machine mode where hits make the streaks.
+- **Used in:** Liquid Butterflies (an Eclipse piece); Light Bodies, as its own kind (Burning Ring, Blue Corona, Blood Moon, `docs/specs/light-bodies.md`); later a Chill Machine mode where hits make the streaks.
 
 ### 3. Crystal tunnel: prismatic realism
 - Pin: https://pin.it/2bJmQxDj1 (https://ch.pinterest.com/pin/642255596905055646/), a video
@@ -38,7 +38,7 @@ The references Martin has pinned for the generative art, with what each one teac
 - **What it is:** a single wobbling drop of liquid glass on a pale background. Its surface shifts pink, violet, green and cyan like a soap film or oil, with sharp highlights on the edge.
 - **Technique:** a raymarched blob whose surface is moved by slow noise. Colour comes from thin-film interference: the hue depends on the viewing angle and a varying film thickness. Fresnel makes the edges bright. A soft environment is reflected and refracted.
 - **Reach:** very close, in real time. This is the most achievable kind of "realism": one object, no scene.
-- **Used in:** the Liquid Butterflies' wing material (iridescent, liquid), and later Chill Machine pads (a drop that wobbles with each note).
+- **Used in:** the Liquid Butterflies' wing material (iridescent, liquid); Light Bodies, as the Light Bubble (Opal Bubble, Night Bubble); later Chill Machine pads (a drop that wobbles with each note).
 
 ### 5. Digital deity: a god between imagination, digital and light
 - Pin: https://i.pinimg.com/1200x/4b/d8/cf/4bd8cf90fc3724161c773a9b663d4475.jpg
@@ -46,14 +46,14 @@ The references Martin has pinned for the generative art, with what each one teac
 - **What it is:** a floating human figure made of fine gold filament lines, with six arms, a blinding white light at the heart and crown, a vertical beam, halo rings and sacred-geometry circles behind, and handwritten equations, diagrams and numbers orbiting around. Black background.
 - **Technique:** a 3D figure drawn as glowing wire filaments: the mesh edges plus flowing lines along the muscles, additive gold, with bloom. Extra arm pairs are duplicated from the shoulders and offset in pose. The heart and crown lights are bloom points with a lens streak. Halo rings and geometry are thin animated circles. The numbers and equations are text sprites on slow orbits that fade in and out. The poses (meditating, praying, dancing) come from rigged animations (Mixamo), blended over time.
 - **Reach:** close, in real time with three.js. The existing figure work (`/figures`, `/figure-stars`, the Golden God OBJ, the Mixamo pipeline) is the base.
-- **Used in:** a Digital Deity piece in Art. Later, the animated centre of the Grid and the quick-menu wheel. Later still, in the Chill Machine, it moves with the music.
+- **Used in:** Light Bodies, as Enlightenment (Enlightenment, Night Prayer, Dance of Light): a first 2D version drawn by a shader, with poses blended from arm positions. The 3D figure on the Mixamo rig is still to come. Later, the animated centre of the Grid and the quick-menu wheel. Later still, in the Chill Machine, it moves with the music.
 
 ## Where each look lives
 
 | Look | Art (first) | Music (after) |
 |---|---|---|
 | Time slices | Liquid Butterflies | Chill Machine: each note adds a slice |
-| Eclipse | Liquid Butterflies · Eclipse | Chill Machine: hits make the glitch streaks |
+| Eclipse | Light Bodies · Eclipse; Liquid Butterflies · Eclipse | Chill Machine: hits make the glitch streaks |
 | Crystal tunnel | Crystal Tunnel piece | TunnelSurfer / Chill Machine tunnel mode |
-| Iridescent liquid | Butterfly wings, a Drop piece | Chill Machine: the drop wobbles with each note |
-| Digital deity | Digital Deity piece | Centre of the Grid menu; dances to the Chill Machine |
+| Iridescent liquid | Butterfly wings; Light Bodies · Light Bubble | Chill Machine: the drop wobbles with each note |
+| Digital deity | Light Bodies · Enlightenment | Centre of the Grid menu; dances to the Chill Machine |

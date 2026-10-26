@@ -169,6 +169,11 @@ export const HUBS: Hub[] = [
         label: 'Butterflies',
         line: 'Liquid Butterflies: mirrored, flowing, always changing',
       },
+      {
+        href: '/art/light',
+        label: 'Light',
+        line: 'Light Bodies: eclipse, enlightenment, a drop of light',
+      },
       { href: '/figures', label: 'Figures', line: '3D figures' },
       { href: '/figure-stars', label: 'Figure stars', line: 'Figures drawn in stars' },
       { href: '/figure-stars-trio', label: 'Trio', line: 'Three figures in stars' },
