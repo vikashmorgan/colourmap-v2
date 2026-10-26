@@ -68,7 +68,7 @@ export type ButterflySettings = {
   sparks: number;
   /** Film grain. */
   grain: number;
-  /** The core design, by its number in FORMS: butterfly, flower, heart, volcano, mountains, thangka, circle, sacred, island, digital. */
+  /** The core design, by its number in FORMS: butterfly, flower, heart, volcano, mountains, thangka, circle, sacred, island, digital, lens, diamond, portal, orb. */
   form: number;
   /** Petals of the flower, and of the thangka's lotus ring. */
   petals: number;
@@ -86,6 +86,10 @@ export const FORMS = [
   'Sacred',
   'Island',
   'Digital',
+  'Lens',
+  'Diamond',
+  'Portal',
+  'Orb',
 ] as const;
 
 /** Whether a design uses the petals setting. */
@@ -142,6 +146,21 @@ export const PALETTES: Palette[] = [
     label: 'Thangka',
     bg: ['#3a0e12', '#160a1e'],
     ramp: ['#fff1c8', '#f2c14a', '#d8402a', '#2a6ac8', '#2a9a6a', '#1a1030'],
+  },
+  {
+    // After Martin's screenshots (2026-10-26): navy-black cores, red, orange and
+    // peach, a cold fringe, on a dark warm-brown ground.
+    id: 'lens',
+    label: 'Lens',
+    bg: ['#2b1d24', '#160f14'],
+    ramp: ['#0b0a12', '#1d2c80', '#d93a26', '#f28a36', '#f4c08c', '#2a1c26'],
+  },
+  {
+    // After Martin's fourth screenshot: a pastel orb, pink and lavender clouds.
+    id: 'dream',
+    label: 'Dream',
+    bg: ['#a294e0', '#c77ac4'],
+    ramp: ['#ff3d96', '#ff6ab8', '#7aa4ff', '#fbf6b0', '#9cefe6', '#a48ae6'],
   },
   {
     id: 'opal',
@@ -396,6 +415,79 @@ export const PIECES: Piece[] = [
       morph: 0.5,
       glow: 0.05,
       pool: 0.4,
+    },
+  },
+
+  /* 2026-10-26, night: three screenshots Martin took "to develop a butterfly
+     type of visual. but a different preset of it" (visual-references.md, 12). */
+  {
+    slug: 'lens-butterfly',
+    title: 'Lens Butterfly',
+    line: 'A fan of wings opening inside a lens, rainbow at every edge',
+    palette: 'lens',
+    settings: {
+      ...BASE,
+      form: 10,
+      iris: 0.2,
+      echoes: 4,
+      glow: 0.02,
+      pool: 0.05,
+      flow: 0.2,
+      flap: 0.5,
+      grain: 0.06,
+    },
+  },
+  {
+    slug: 'sliced-diamond',
+    title: 'Sliced Diamond',
+    line: 'A breathing diamond cut into five moments, side by side',
+    palette: 'lens',
+    settings: {
+      ...BASE,
+      form: 11,
+      slices: 5,
+      delay: 0.5,
+      flap: 0.8,
+      echoes: 0,
+      iris: 0.1,
+      glow: 0.06,
+      pool: 0.05,
+      flow: 0.1,
+      grain: 0.06,
+    },
+  },
+  {
+    slug: 'portal',
+    title: 'Portal',
+    line: 'Doorways inside doorways, drawing you further in',
+    palette: 'lens',
+    settings: {
+      ...BASE,
+      form: 12,
+      iris: 0.25,
+      echoes: 3,
+      glow: 0.02,
+      pool: 0.05,
+      flow: 0.15,
+      grain: 0.05,
+      speed: 0.5,
+    },
+  },
+  {
+    slug: 'dream-orb',
+    title: 'Dream Orb',
+    line: 'Pink and lavender clouds in a sphere of light, mirrored on its horizon',
+    palette: 'dream',
+    settings: {
+      ...BASE,
+      form: 13,
+      pool: 0.85,
+      iris: 0.7,
+      glow: 0.03,
+      flow: 0.6,
+      drift: 0.15,
+      speed: 0.35,
+      grain: 0.07,
     },
   },
 ];

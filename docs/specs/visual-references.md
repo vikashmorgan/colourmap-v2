@@ -77,6 +77,17 @@ The references Martin has pinned for the generative art, with what each one teac
 - Martin: "extra inspiration for the butterfly and similar category alternatives."
 - **Used in:** reference for future Liquid Butterflies and Liquid Forms pieces.
 
+### 12. Round psychedelic colour shapes (Martin's screenshots)
+- Files on Martin's machine: `C:\Users\victor\Pictures\Screenshots\Screenshot 2026-10-26 220104.png`, `220119.png`, `220133.png` and `220442.png`.
+- Martin: "just took a bunch of screenshots to develop a butterfly type of visual. but a different preset of it" · "check em. round psych colourshapes."
+- **What they are:**
+  1. A butterfly-like fan of petals, with a teardrop and two round lower wings, inside a round lens.
+  2. A diamond cut into vertical strips, each a moment later.
+  3. Nested doorways receding into a disc.
+  - These first three share a heat-map palette: navy-black cores, red, orange and peach, rainbow fringes along every edge, on a dark grainy warm-brown ground.
+  4. A pastel painted orb: pink and lavender clouds in a thin iridescent rim, a horizon line with the lower half mirrored, and four-point star glints on the rim.
+- **Used in:** Liquid Butterflies designs **Lens**, **Diamond**, **Portal** and **Orb**, with the pieces Lens Butterfly, Sliced Diamond, Portal and Dream Orb, and the new Lens and Dream palettes.
+
 > **Note (2026-10-26):** pins 7–11 (the 3042745186… ones) are not public; Pinterest returns "Not found" without a sign-in, so they were built from Martin's words. Direct image links (i.pinimg.com/…) or screenshots would let the pieces match them more closely.
 
 ## Where each look lives

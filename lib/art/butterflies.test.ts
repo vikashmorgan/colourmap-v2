@@ -79,12 +79,16 @@ describe('pieces', () => {
       'Sacred',
       'Island',
       'Digital',
+      'Lens',
+      'Diamond',
+      'Portal',
+      'Orb',
     ]);
     expect(slidersFor(1)).toContain('petals');
     expect(slidersFor(5)).toContain('petals');
     expect(slidersFor(0)).not.toContain('petals');
-    expect(clampSettings({ ...BASE_OF(), form: 12.4, petals: 2 })).toMatchObject({
-      form: 9,
+    expect(clampSettings({ ...BASE_OF(), form: 20.4, petals: 2 })).toMatchObject({
+      form: 13,
       petals: 3,
     });
   });

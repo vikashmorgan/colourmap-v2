@@ -80,3 +80,17 @@ Thermal Monarch, Neon Psyche, Acid Morpho, Pearl Moth, Golden Swallowtail, Deep 
   - **Island:** a floating rock with a volcano and two drifting stones.
   - **Digital:** the mountain ridge as an outline with rising strata lines.
 - New Liquid Forms pieces: **Psychedelic Circle** (Acid), **Sacred Geometry** (Thangka), **Floating Island** (Thermal) and **Digital Peaks** (Deep sea). They show in the Liquid Forms row and the builder's Liquid Forms category.
+
+## Lens, Diamond, Portal, Orb — 2026-10-26, night
+
+> Martin: "just took a bunch of screenshots to develop a butterfly type of visual. but a different preset of it" · "check em. round psych colourshapes." (reference 12)
+
+- Four more designs, fourteen in all:
+  - **Lens:** a fan of wing petals opening upward, a teardrop and two round lower wings, inside a lens rim.
+  - **Diamond:** a breathing rhombus; with slices, each strip is a moment later.
+  - **Portal:** doorways inside doorways, always drawing further in, held in a disc.
+  - **Orb:** a thin rim round a sphere of clouds, mirrored on a horizon line, with four-point star glints on the rim.
+- New palettes:
+  - **Lens:** navy-black cores, red, orange and peach on a dark warm-brown ground. The outer glow falls to dark, so the gaps stay dark and only the edges and echoes carry colour.
+  - **Dream:** pink and lavender pastels.
+- New pieces: **Lens Butterfly**, **Sliced Diamond**, **Portal** and **Dream Orb**. They show in the Liquid Forms row, the builder's Liquid Forms category and the Chill Machine's Butterflies.
