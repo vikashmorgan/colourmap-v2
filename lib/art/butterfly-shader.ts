@@ -291,6 +291,66 @@ float orbRim(vec2 q, float t) {
   return abs(length(q) - 0.38 * (1.0 + uFlap * 0.03 * sin(t * 0.9))) - 0.006;
 }
 
+// A brain seen from above, like a colour scan: an oval a little wider at the
+// back, split down the middle, its inside carved into folds by thin grooves
+// that slowly shift, so every fold carries its own bands of colour.
+float brain(vec2 q, float t) {
+  float br = 1.0 + uFlap * 0.025 * sin(t * 1.1);
+  float d = ellipse(q, vec2(0.0, 0.0), vec2(0.29 + 0.03 * smoothstep(0.1, -0.3, q.y), 0.38) * br, 0.0);
+  d += (noise(q * 9.0 + 3.0) - 0.5) * 0.03;
+  vec2 fp = q * 9.0 + vec2(0.0, t * 0.08 * (0.3 + uMorph));
+  float n = noise(fp) * 0.65 + noise(fp * 2.1 + 4.0) * 0.35;
+  float groove = (0.07 - abs(n - 0.5)) * 0.12;
+  d = max(d, groove);
+  return max(d, -(q.x - 0.006));
+}
+
+float limb(vec2 q, vec2 a, vec2 b, float r) { return seg(q, a, b) - r; }
+
+// A figure of light, one side of him (x >= 0): pose 0 sits meditating, hands
+// on the knees; 1 sits praying, hands together at the heart; 2 stands. The
+// Arms slider adds pairs of arms fanning up round him, as in a thangka.
+float figure(vec2 q, float t, float pose) {
+  float br = 0.006 * uFlap * sin(t * 0.9);
+  float stand = step(1.5, pose);
+  q.y -= mix(-0.02, 0.05, stand) + br;
+  float d = length(q - vec2(0.0, 0.29)) - 0.062;
+  d = smin(d, limb(q, vec2(0.0, 0.24), vec2(0.0, 0.19), 0.022), 0.02);
+  d = smin(d, seg(q, vec2(0.0, 0.17), vec2(0.0, -0.02)) - mix(0.07, 0.05, smoothstep(0.17, -0.02, q.y)), 0.03);
+  vec2 S = vec2(0.085, 0.165);
+  d = smin(d, limb(q, vec2(0.0, 0.17), S, 0.026), 0.03);
+  if (stand > 0.5) {
+    d = smin(d, limb(q, vec2(0.0, -0.03), vec2(0.05, -0.06), 0.05), 0.03);
+    d = smin(d, limb(q, vec2(0.05, -0.06), vec2(0.055, -0.43), 0.04 - 0.012 * smoothstep(-0.1, -0.43, q.y)), 0.03);
+  } else {
+    d = smin(d, limb(q, vec2(0.0, -0.04), vec2(0.07, -0.07), 0.045), 0.03);
+    d = smin(d, limb(q, vec2(0.06, -0.08), vec2(0.24, -0.16), 0.04), 0.02);
+    d = smin(d, limb(q, vec2(0.24, -0.16), vec2(-0.03, -0.17), 0.03), 0.02);
+  }
+  float pairs = clamp(floor(uPetals * 0.5), 1.0, 4.0);
+  for (int i = 0; i < 4; i++) {
+    float fi = float(i);
+    if (fi >= pairs) break;
+    vec2 E;
+    vec2 H;
+    if (i == 0) {
+      E = pose < 0.5 ? vec2(0.17, 0.02) : (pose < 1.5 ? vec2(0.14, 0.06) : vec2(0.14, 0.03));
+      H = pose < 0.5 ? vec2(0.2, -0.115) : (pose < 1.5 ? vec2(0.012, 0.13) : vec2(0.17, -0.11));
+    } else {
+      float sway = uMorph * 0.12 * sin(t * 1.2 + fi * 1.9);
+      float a1 = -0.35 + fi * 0.55 + sway;
+      float a2 = a1 + 0.75 + sway * 0.5;
+      E = S + 0.14 * vec2(cos(a1), sin(a1));
+      H = E + 0.13 * vec2(cos(a2), sin(a2));
+    }
+    float th = 0.024 - fi * 0.003;
+    d = smin(d, limb(q, S, E, th), 0.02);
+    d = smin(d, limb(q, E, H, th * 0.85), 0.015);
+    d = smin(d, length(q - H) - th * 1.25, 0.012);
+  }
+  return d;
+}
+
 // The core design the piece is built on.
 float form(vec2 q, float t) {
   if (uForm < 0.5) return butterfly(q, t);
@@ -306,7 +366,9 @@ float form(vec2 q, float t) {
   if (uForm < 10.5) return lens(q, t);
   if (uForm < 11.5) return diamond(q, t);
   if (uForm < 12.5) return portal(q, t);
-  return orbRim(q, t);
+  if (uForm < 13.5) return orbRim(q, t);
+  if (uForm < 14.5) return brain(q, t);
+  return figure(q, t, uForm - 15.0);
 }
 
 vec3 ramp(float g) {
@@ -333,7 +395,7 @@ void main() {
     p = length(p) * vec2(sin(a), cos(a)) - vec2(0.0, 0.18);
   }
   // The orb is mirrored top to bottom too: its lower half is the upper's reflection.
-  bool orb = uForm > 12.5;
+  bool orb = uForm > 12.5 && uForm < 13.5;
   vec2 q = vec2(abs(p.x), orb ? abs(p.y) : p.y);
 
   float k = 0.0;

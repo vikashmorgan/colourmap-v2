@@ -94,3 +94,29 @@ Thermal Monarch, Neon Psyche, Acid Morpho, Pearl Moth, Golden Swallowtail, Deep 
   - **Lens:** navy-black cores, red, orange and peach on a dark warm-brown ground. The outer glow falls to dark, so the gaps stay dark and only the edges and echoes carry colour.
   - **Dream:** pink and lavender pastels.
 - New pieces: **Lens Butterfly**, **Sliced Diamond**, **Portal** and **Dream Orb**. They show in the Liquid Forms row, the builder's Liquid Forms category and the Chill Machine's Butterflies.
+
+## Categories, Brain and the figures — 2026-10-26, late
+
+> Martin: "so butterfly. enlighten. eclipse and mountain are categories. and each of these then have different presets for starting stuff" · "an enlightenment figure for the butterfly type of visuals, with a man meditating. u can slide to add arms. or make him be standing up.. centered. also arms praying." · "a few brains … another starting point than butterfly" (references 13 and 14)
+
+- Four more designs, eighteen in all:
+  - **Brain:** a top-down brain, its folds carved by shifting grooves.
+  - **Meditate**, **Pray** and **Stand:** a centred figure of liquid light. Its Petals slider is called **Arms** and adds pairs of arms, up to four pairs, that fan up and sway with Morph.
+- `categoryOf(form)` sorts the designs:
+  - **Butterfly:** butterfly and lens
+  - **Enlightenment:** the figures
+  - **Mountains:** volcano, mountains, island and digital
+  - **Forms:** everything else
+- On /art/butterflies, the rows follow those categories: Butterflies, Enlightenment, Mountains, Liquid Forms.
+- In the builder's Stars tab, after Tunnels and Big Bang, the categories run in this order:
+  - **Butterfly**
+  - **Enlightenment:** the Light Bodies figures, then the liquid figures
+  - **Eclipse:** every eclipse style
+  - **Mountains**
+  - **Liquid Forms**
+- Light Bubble stays where it was.
+- New pieces:
+  - Colour Brain
+  - Meditating Light, Praying Light, Standing Light, Rainbow Body, Golden Sphere
+  - Prism Wings
+  - Data Peak, Wire Peaks

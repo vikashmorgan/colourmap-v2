@@ -63,3 +63,14 @@ An Art collection at `/art/light` (on the Grid under Studio → Light). It holds
   - Embers / Motes / Specks is sparks.
   - The first slider is the eclipse's **Style**, the figure's **Pose** or the bubble's **Drops**.
 - Soft bloom and no stars unless asked for, as with the butterflies. The builder's Saved row remembers which piece a look belongs to (`light`).
+
+## Halo, Pillar, Vortex — 2026-10-26, late
+
+> Martin: "see how energy shoots up and below on the eclipse and with colours as well. that but more symmetric centered." (visual-references.md #13)
+
+The eclipse has six styles: Ring, Jets, Rays, **Halo**, **Pillar** and **Vortex**.
+- **Pillar:** streaks of colour shoot straight up and down out of the ring, mirrored both ways so the shape stays centred, with a thin white beam through the middle. Detail sets how wide the pillar is; Flares sets how far it reaches.
+- **Halo:** a wide bloom of spectral bands, combed by fine rays.
+- **Vortex:** a disc of light that winds into the black centre.
+
+New pieces: Colour Pillar, Solar Beam, Dark Sun and Vortex, with the Spectrum, Painted and Dusk palettes.

@@ -15,11 +15,34 @@ function featuredNames() {
 }
 
 describe('GeometryField featured presets', () => {
-  it('has every Liquid Butterflies piece as its own category in Stars', () => {
+  const under = (header: string) => {
     const stars = featuredFor('stars');
-    const at = stars.findIndex((item) => 'header' in item && item.header === 'Liquid Butterflies');
+    const at = stars.findIndex((item) => 'header' in item && item.header === header);
     expect(at).toBeGreaterThan(-1);
-    const names = stars.slice(at + 1, at + 9).map((item) => ('name' in item ? item.name : ''));
+    const out: string[] = [];
+    for (const item of stars.slice(at + 1)) {
+      if ('header' in item) break;
+      out.push(item.name);
+    }
+    return out;
+  };
+
+  it('has Butterfly, Enlightenment, Eclipse and Mountains as categories in Stars, after the Big Bang', () => {
+    const headers = featuredFor('stars').flatMap((item) => ('header' in item ? [item.header] : []));
+    const at = headers.indexOf('Butterfly');
+    expect(at).toBeGreaterThan(headers.indexOf('Big Bang'));
+    expect(at).toBeGreaterThan(headers.indexOf('Tunnels'));
+    expect(headers.slice(at, at + 5)).toEqual([
+      'Butterfly',
+      'Enlightenment',
+      'Eclipse',
+      'Mountains',
+      'Liquid Forms',
+    ]);
+  });
+
+  it('has every butterfly as a preset under Butterfly', () => {
+    const names = under('Butterfly');
     expect(names).toEqual([
       'Thermal Monarch',
       'Neon Psyche',
@@ -29,6 +52,8 @@ describe('GeometryField featured presets', () => {
       'Deep Kaleido',
       'Eclipse Butterfly',
       'Opal Drop',
+      'Lens Butterfly',
+      'Prism Wings',
     ]);
     for (const n of names) {
       expect(PRESETS[n]?.mode).toBe('liquidbutterfly');
@@ -37,53 +62,59 @@ describe('GeometryField featured presets', () => {
     expect(PRESETS.Eclipse?.mode).toBe('eclipse');
   });
 
-  it('has each Light Bodies kind as its own category in Stars', () => {
-    const stars = featuredFor('stars');
-    const under = (header: string) => {
-      const at = stars.findIndex((item) => 'header' in item && item.header === header);
-      expect(at).toBeGreaterThan(-1);
-      const out: string[] = [];
-      for (const item of stars.slice(at + 1)) {
-        if ('header' in item) break;
-        out.push(item.name);
-      }
-      return out;
-    };
+  it('puts the light figures and the liquid figures together under Enlightenment', () => {
+    expect(under('Enlightenment')).toEqual([
+      'Enlightenment',
+      'Night Prayer',
+      'Dance of Light',
+      'Meditating Light',
+      'Praying Light',
+      'Standing Light',
+      'Rainbow Body',
+      'Golden Sphere',
+    ]);
+    expect(PRESETS['Night Prayer']).toMatchObject({ mode: 'lightdeity', symmetry: 1 });
+    expect(PRESETS['Praying Light']?.mode).toBe('liquidbutterfly');
+  });
+
+  it('has the eclipses, each style, under Eclipse, and the bubbles under Light Bubble', () => {
     expect(under('Eclipse')).toEqual([
       'Burning Ring',
       'Blue Corona',
       'Blood Moon',
       'Twin Jets',
       'Sun Rays',
+      'Colour Pillar',
+      'Solar Beam',
+      'Dark Sun',
+      'Vortex',
     ]);
-    expect(under('Enlightenment')).toEqual(['Enlightenment', 'Night Prayer', 'Dance of Light']);
     expect(under('Light Bubble')).toEqual(['Opal Bubble', 'Night Bubble']);
     expect(PRESETS['Sun Rays']).toMatchObject({
       mode: 'lighteclipse',
       light: 'sun-rays',
       symmetry: 2,
     });
-    expect(PRESETS['Night Prayer']).toMatchObject({ mode: 'lightdeity', symmetry: 1 });
+    expect(PRESETS['Colour Pillar']).toMatchObject({ mode: 'lighteclipse', symmetry: 4 });
     expect(PRESETS['Night Bubble']).toMatchObject({ mode: 'lightbubble', symmetry: 4 });
     for (const mode of ['lighteclipse', 'lightdeity', 'lightbubble'] as const) {
       expect(artTabOf(mode)).toBe('stars');
     }
   });
 
-  it('has the other designs as their own category, Liquid Forms, in Stars', () => {
-    const stars = featuredFor('stars');
-    const at = stars.findIndex((item) => 'header' in item && item.header === 'Liquid Forms');
-    expect(at).toBeGreaterThan(-1);
-    const names = stars.slice(at + 1, at + 7).map((item) => ('name' in item ? item.name : ''));
-    expect(names).toEqual([
-      'Thermal Lotus',
-      'Opal Bloom',
-      'Liquid Heart',
+  it('has the volcanoes and peaks under Mountains, the other designs under Liquid Forms', () => {
+    expect(under('Mountains')).toEqual([
       'Liquid Volcano',
       'Golden Peaks',
-      'Liquid Thangka',
+      'Floating Island',
+      'Digital Peaks',
+      'Data Peak',
+      'Wire Peaks',
     ]);
-    for (const n of names) expect(PRESETS[n]?.mode).toBe('liquidbutterfly');
+    const forms = under('Liquid Forms');
+    expect(forms.slice(0, 3)).toEqual(['Thermal Lotus', 'Opal Bloom', 'Liquid Heart']);
+    expect(forms).toContain('Colour Brain');
+    for (const n of forms) expect(PRESETS[n]?.mode).toBe('liquidbutterfly');
     expect(PRESETS.Volcano?.mode).not.toBe('liquidbutterfly');
   });
 

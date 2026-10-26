@@ -83,6 +83,8 @@ describe('designs and background', () => {
     render(<LiquidButterflies />);
     expect(screen.getByRole('region', { name: 'Butterflies' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Liquid Forms' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Enlightenment' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Mountains' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open Thangka' })).toBeTruthy();
   });
 

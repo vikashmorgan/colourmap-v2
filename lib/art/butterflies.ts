@@ -70,7 +70,7 @@ export type ButterflySettings = {
   grain: number;
   /** The core design, by its number in FORMS: butterfly, flower, heart, volcano, mountains, thangka, circle, sacred, island, digital, lens, diamond, portal, orb. */
   form: number;
-  /** Petals of the flower, and of the thangka's lotus ring. */
+  /** Petals of the flower, and of the thangka's lotus ring; the figures' arms. */
   petals: number;
 };
 
@@ -90,10 +90,33 @@ export const FORMS = [
   'Diamond',
   'Portal',
   'Orb',
+  'Brain',
+  'Meditate',
+  'Pray',
+  'Stand',
 ] as const;
 
 /** Whether a design uses the petals setting. */
-export const usesPetals = (form: number): boolean => form === 1 || form === 5;
+export const usesPetals = (form: number): boolean => form === 1 || form === 5 || isFigure(form);
+
+/** The enlightenment figures: meditating, praying, standing. */
+export const isFigure = (form: number): boolean => form >= 15 && form <= 17;
+
+/*
+ * 2026-10-26: "so butterfly. enlighten. eclipse and mountain are categories.
+ * and each of these then have different presets for starting stuff". The
+ * eclipse lives with the Light Bodies; the rest of the designs are the forms.
+ */
+export const CATEGORIES = ['Butterfly', 'Enlightenment', 'Mountains', 'Forms'] as const;
+export type Category = (typeof CATEGORIES)[number];
+
+/** The category a design belongs to. */
+export function categoryOf(form: number): Category {
+  if (form === 0 || form === 10) return 'Butterfly';
+  if (isFigure(form)) return 'Enlightenment';
+  if (form === 3 || form === 4 || form === 8 || form === 9) return 'Mountains';
+  return 'Forms';
+}
 
 export type Piece = {
   slug: string;
@@ -161,6 +184,41 @@ export const PALETTES: Palette[] = [
     label: 'Dream',
     bg: ['#a294e0', '#c77ac4'],
     ramp: ['#ff3d96', '#ff6ab8', '#7aa4ff', '#fbf6b0', '#9cefe6', '#a48ae6'],
+  },
+  {
+    // After Martin's brain scans (2026-10-26): pink cores, orange and yellow
+    // folds, cyan and green outlines on a dark ground.
+    id: 'scan',
+    label: 'Scan',
+    bg: ['#121530', '#05060e'],
+    ramp: ['#e8207a', '#ff8a1a', '#ffd83a', '#3ad8f0', '#58d040', '#0a0a18'],
+  },
+  {
+    // After the rainbow butterflies (2026-10-26): cyan, yellow, orange and magenta.
+    id: 'prism',
+    label: 'Prism',
+    bg: ['#06070c', '#000000'],
+    ramp: ['#f2fbff', '#40d0e0', '#f0e040', '#ff7a1a', '#e02a8a', '#1a1a50'],
+  },
+  {
+    // The meditator in rainbow rings.
+    id: 'rainbow',
+    label: 'Rainbow',
+    bg: ['#7fb8e6', '#2e6a44'],
+    ramp: ['#fff6c8', '#ffd040', '#ff7a30', '#e83a6a', '#6a5ad8', '#3ac0e0'],
+  },
+  {
+    // The data mountains: white peaks, yellow, magenta and violet foothills.
+    id: 'peak',
+    label: 'Peak',
+    bg: ['#07070d', '#000000'],
+    ramp: ['#ffffff', '#fff2a0', '#ffb030', '#d040a0', '#5a2ad0', '#0a0820'],
+  },
+  {
+    id: 'wire',
+    label: 'Wire',
+    bg: ['#0a0a0c', '#000000'],
+    ramp: ['#ffffff', '#e6e8ee', '#a8acb8', '#5a5e6a', '#2a2c34', '#0a0a0e'],
   },
   {
     id: 'opal',
@@ -490,6 +548,132 @@ export const PIECES: Piece[] = [
       grain: 0.07,
     },
   },
+  /* 2026-10-26, night: "a few brains that are good to create a preset in the
+     butterflies category, but another starting point than butterfly". */
+  {
+    slug: 'colour-brain',
+    title: 'Colour Brain',
+    line: 'A brain seen like a colour scan, its folds slowly shifting',
+    palette: 'scan',
+    settings: {
+      ...BASE,
+      form: 14,
+      glow: 0.03,
+      flow: 0.45,
+      flap: 0.4,
+      morph: 0.4,
+      drift: 0.3,
+      echoes: 2,
+      grain: 0.05,
+    },
+  },
+  /* "an enlightenment figure for the butterfly type of visuals, with a man
+     meditating. u can slide to add arms. or make him be standing up..
+     centered. also arms praying." */
+  {
+    slug: 'meditating-light',
+    title: 'Meditating Light',
+    line: 'A figure of liquid light sitting in meditation',
+    palette: 'gold',
+    settings: {
+      ...BASE,
+      form: 15,
+      petals: 2,
+      glow: 0.045,
+      echoes: 3,
+      flow: 0.25,
+      flap: 0.6,
+      morph: 0.4,
+    },
+  },
+  {
+    slug: 'praying-light',
+    title: 'Praying Light',
+    line: 'Hands together at the heart, more arms fanning up round him',
+    palette: 'thangka',
+    settings: {
+      ...BASE,
+      form: 16,
+      petals: 6,
+      glow: 0.07,
+      echoes: 3,
+      flow: 0.25,
+      flap: 0.6,
+      morph: 0.5,
+    },
+  },
+  {
+    slug: 'standing-light',
+    title: 'Standing Light',
+    line: 'A standing figure, centred, its arms opening like wings',
+    palette: 'eclipse',
+    settings: {
+      ...BASE,
+      form: 17,
+      petals: 8,
+      glow: 0.08,
+      echoes: 4,
+      flow: 0.2,
+      flap: 0.6,
+      morph: 0.6,
+    },
+  },
+  /* More starting points per category, after Martin's second batch of
+     screenshots (visual-references.md #14). */
+  {
+    slug: 'rainbow-body',
+    title: 'Rainbow Body',
+    line: 'A meditator in rings of rainbow light',
+    palette: 'rainbow',
+    settings: {
+      ...BASE,
+      form: 15,
+      petals: 2,
+      glow: 0.05,
+      echoes: 7,
+      flow: 0.2,
+      flap: 0.5,
+      morph: 0.3,
+      drift: 0.4,
+    },
+  },
+  {
+    slug: 'golden-sphere',
+    title: 'Golden Sphere',
+    line: 'A standing figure of gold in a sphere of light',
+    palette: 'gold',
+    settings: {
+      ...BASE,
+      form: 17,
+      petals: 2,
+      glow: 0.06,
+      echoes: 5,
+      flow: 0.15,
+      flap: 0.4,
+      sparks: 0.6,
+    },
+  },
+  {
+    slug: 'prism-wings',
+    title: 'Prism Wings',
+    line: 'Rainbow wings with a cyan lace edge',
+    palette: 'prism',
+    settings: { ...BASE, form: 0, glow: 0.04, echoes: 2, iris: 0.3, flow: 0.25 },
+  },
+  {
+    slug: 'data-peak',
+    title: 'Data Peak',
+    line: 'A white summit over magenta and violet foothills, like a chart of light',
+    palette: 'peak',
+    settings: { ...BASE, form: 9, glow: 0.05, echoes: 3, flow: 0.15, pool: 0.1 },
+  },
+  {
+    slug: 'wire-peaks',
+    title: 'Wire Peaks',
+    line: 'Mountains drawn in white lines, echoing out',
+    palette: 'wire',
+    settings: { ...BASE, form: 4, glow: 0.03, echoes: 6, flow: 0.1, pool: 0, iris: 0 },
+  },
 ];
 
 export const paletteById = (id: string): Palette =>
@@ -517,7 +701,7 @@ export const LIMITS: Record<keyof ButterflySettings, Limit> = {
   sparks: { min: 0, max: 1, step: 0.05, label: 'Embers' },
   grain: { min: 0, max: 0.15, step: 0.01, label: 'Grain' },
   form: { min: 0, max: FORMS.length - 1, step: 1, label: 'Design' },
-  petals: { min: 3, max: 16, step: 1, label: 'Petals' },
+  petals: { min: 2, max: 16, step: 1, label: 'Petals' },
 };
 
 /** Every setting. */
@@ -529,6 +713,10 @@ export const SLIDER_KEYS = SETTING_KEYS.filter((k) => k !== 'form');
 /** The sliders for a design: petals only where there are petals. */
 export const slidersFor = (form: number): (keyof ButterflySettings)[] =>
   SLIDER_KEYS.filter((k) => k !== 'petals' || usesPetals(form));
+
+/** A slider's name on a design: the figures' petals are their arms. */
+export const sliderLabel = (k: keyof ButterflySettings, form: number): string =>
+  k === 'petals' && isFigure(form) ? 'Arms' : LIMITS[k].label;
 
 const WHOLE: (keyof ButterflySettings)[] = ['slices', 'echoes', 'fold', 'form', 'petals'];
 

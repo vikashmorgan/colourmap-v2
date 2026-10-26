@@ -12,6 +12,7 @@ import {
   PIECES as BUTTERFLY_PIECES,
   builderPresetName,
   builderSliders,
+  categoryOf,
 } from '@/lib/art/butterflies';
 import {
   kindOfBuilderMode,
@@ -14275,7 +14276,7 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
   // Light Bodies: each kind's main settings (lib/art/light.ts lightBuilderSettings).
   lighteclipse: [
     { key: 'breathSpeed', label: 'Speed', min: 0, max: 1.5, step: 0.05 },
-    { key: 'symmetry', label: 'Style', min: 0, max: 2, step: 1 },
+    { key: 'symmetry', label: 'Style', min: 0, max: 5, step: 1 },
     { key: 'glow', label: 'Fire', min: 0, max: 10, step: 0.5 },
     { key: 'intensity', label: 'Flares', min: 0, max: 10, step: 0.5 },
     { key: 'complexity', label: 'Ring', min: 0, max: 10, step: 0.5 },
@@ -15675,6 +15676,36 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Flower Symmetry', tag: 'FLOWER' },
   { name: 'Prism Tunnel', tag: 'TUNNEL' },
   { name: 'Ocean of Life', tag: 'LIFE' },
+  // 26 Oct 2026: "so butterfly. enlighten. eclipse and mountain are
+  // categories. and each of these then have different presets", right after
+  // the tunnels and the Big Bang.
+  { header: 'Butterfly' },
+  ...BUTTERFLY_PIECES.filter((p) => categoryOf(p.settings.form) === 'Butterfly').map((p) => ({
+    name: builderPresetName(p),
+    tag: 'BUTTERFLY',
+  })),
+  { header: 'Enlightenment' },
+  ...LIGHT_PIECES.filter((p) => p.kind === 'deity').map((p) => ({ name: p.title, tag: 'LIGHT' })),
+  ...BUTTERFLY_PIECES.filter((p) => categoryOf(p.settings.form) === 'Enlightenment').map((p) => ({
+    name: builderPresetName(p),
+    tag: 'FIGURE',
+  })),
+  { header: 'Eclipse' },
+  ...LIGHT_PIECES.filter((p) => p.kind === 'eclipse').map((p) => ({
+    name: p.title,
+    tag: 'ECLIPSE',
+  })),
+  { header: 'Mountains' },
+  ...BUTTERFLY_PIECES.filter((p) => categoryOf(p.settings.form) === 'Mountains').map((p) => ({
+    name: builderPresetName(p),
+    tag: 'PEAK',
+  })),
+  // The same liquid pieces on the other designs (flower, heart, thangka, circle…).
+  { header: 'Liquid Forms' },
+  ...BUTTERFLY_PIECES.filter((p) => categoryOf(p.settings.form) === 'Forms').map((p) => ({
+    name: builderPresetName(p),
+    tag: 'FORM',
+  })),
   { header: 'Magnetic Sands' },
   { name: 'Cymatic Sands 1', tag: 'CIRCLE' },
   { name: 'Cymatic Sands 2', tag: 'SQUARE' },
@@ -15688,27 +15719,6 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { header: 'Waves' },
   { name: 'Rolling Wave', tag: 'FREE' },
   { name: 'Fractal Wave', tag: 'HOKUSAI' },
-  // 26 Oct 2026: the Liquid Butterflies collection, as its own category.
-  { header: 'Liquid Butterflies' },
-  ...BUTTERFLY_PIECES.filter((piece) => piece.settings.form === 0).map((piece) => ({
-    name: builderPresetName(piece),
-    tag: 'BUTTERFLY',
-  })),
-  // 26 Oct 2026: the same pieces built on other designs (flower, heart, volcano,
-  // mountains, thangka): "also put it as a category in the stars geometry".
-  { header: 'Liquid Forms' },
-  ...BUTTERFLY_PIECES.filter((piece) => piece.settings.form !== 0).map((piece) => ({
-    name: builderPresetName(piece),
-    tag: 'FORM',
-  })),
-  // 26 Oct 2026: the Light Bodies collection, a category per kind.
-  { header: 'Eclipse' },
-  ...LIGHT_PIECES.filter((p) => p.kind === 'eclipse').map((p) => ({
-    name: p.title,
-    tag: 'ECLIPSE',
-  })),
-  { header: 'Enlightenment' },
-  ...LIGHT_PIECES.filter((p) => p.kind === 'deity').map((p) => ({ name: p.title, tag: 'LIGHT' })),
   { header: 'Light Bubble' },
   ...LIGHT_PIECES.filter((p) => p.kind === 'bubble').map((p) => ({ name: p.title, tag: 'BUBBLE' })),
   { header: 'Work in Progress', dim: true },

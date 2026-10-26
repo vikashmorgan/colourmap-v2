@@ -186,7 +186,7 @@ void main() {
 
   // Rays: sharp spikes of light, each growing out and fading in its own time,
   // so the energy leaves in pulses.
-  if (uStyle > 1.5) {
+  if (uStyle > 1.5 && uStyle < 2.5) {
     float N = 28.0;
     float s = a / TAU * N;
     float cell = floor(s + 0.5);
@@ -198,6 +198,53 @@ void main() {
     float ray = smoothstep(w, w * 0.25, abs(da)) * step(0.0, off) * step(off, len);
     col += mix(ramp(1.0), ramp(2.0), off / max(len, 1e-3)) * ray * 1.3;
     col += ramp(1.0) * exp(-max(off, 0.0) / (R * 0.08)) * 0.35;
+  }
+
+  // Halo: a wide bloom of spectral bands round a thin bright rim, combed by
+  // fine streaks of light (the Dark Sun screenshot).
+  if (uStyle > 2.5 && uStyle < 3.5) {
+    float o = max(off, 0.0) / R;
+    float wob = (fbm(ang * 3.0 + vec2(t * 0.05, 0.0)) - 0.5) * 0.6;
+    vec3 band = ramp(pingpong(o * (3.0 + 3.0 * uFlow) - t * 0.3 + ph + wob, 1.5, 5.0));
+    float bloom = exp(-o / (0.7 + 1.6 * uGlow)) * smoothstep(0.05, 0.6, o);
+    float streak = pow(fbm(ang * 40.0 + vec2(0.0, t * 0.02)), 3.0);
+    col += band * bloom * (0.35 + 1.4 * streak) * (0.4 + 1.1 * uCorona) * step(0.0, off);
+  }
+
+  // Pillar: the energy shooting straight up and down out of the ring, in
+  // streaks of colour, mirrored left to right and top to bottom so it stays
+  // centred; a thin white beam runs through the middle.
+  if (uStyle > 3.5 && uStyle < 4.5) {
+    float ax = abs(p.x);
+    float ay = abs(p.y);
+    float colW = 0.007 * uSize;
+    float cell = floor(ax / colW);
+    float hs = hash(vec2(cell, 7.0));
+    float beat = 0.5 + 0.5 * sin(t * 1.4 + hs * 6.2831);
+    float spread = R * (0.25 + 0.6 * uDetail);
+    float within = smoothstep(spread, spread * 0.15, ax);
+    float len = R * (1.2 + 3.6 * uCorona) * (0.3 + 0.7 * hs) * (0.55 + 0.45 * beat) * within;
+    float base = sqrt(max(R * R - ax * ax, 0.0));
+    float y = ay - base;
+    float flick = noise(vec2(cell * 1.7, ay * 14.0 - t * 3.0));
+    float streak = step(0.0, y) * smoothstep(len, len * 0.25, y) * step(0.001, len);
+    vec3 c = ramp(pingpong(2.0 + hs * 3.0 + ay * 2.5 * uFlow + ph, 2.0, 5.0));
+    col += c * streak * (0.3 + 0.8 * flick) * 0.85;
+    float beam = exp(-ax / (0.002 + 0.006 * ay)) * exp(-ay / (R * (2.0 + 3.0 * uCorona)));
+    col += ramp(1.0) * beam * 1.1 * step(0.0, off);
+  }
+
+  // Vortex: a disc of light spiralling into the black centre, clouds and
+  // fine rings wound round by the turn (the black-hole screenshot).
+  if (uStyle > 4.5) {
+    float o = max(off, 0.0) / R;
+    float tw = a - 4.0 * (0.4 + uFlow) * log(1.0 + o) + t * 0.2;
+    vec2 tv = vec2(cos(tw), sin(tw));
+    float clouds = smoothstep(0.3, 0.75, fbm(tv * vec2(1.2, 3.5) + vec2(o * 2.5, t * 0.03)));
+    float rings = 0.5 + 0.5 * sin(o * 55.0 + clouds * 9.0 - t * 0.6);
+    float disk = exp(-o / (0.5 + 1.4 * uGlow)) * smoothstep(0.0, 0.06, o);
+    float g = clamp(1.2 + o * 2.4 + (clouds - 0.5) * 2.0, 1.0, 5.0);
+    col += ramp(g) * disk * (0.25 + 0.9 * clouds) * (0.75 + 0.5 * rings * (0.3 + uDetail)) * (0.6 + 0.8 * uCorona);
   }
 
   float disc = smoothstep(0.003, -0.003, off);
