@@ -34,6 +34,8 @@ export type SavedLook = {
   preset?: string;
   /** For a Liquid Butterflies look: which piece. */
   butterfly?: string;
+  /** The Light Bodies piece, for a light mode. */
+  light?: string;
   /** Built in: on every device, and cannot be deleted. */
   builtIn?: boolean;
 };
@@ -94,6 +96,7 @@ function parseLook(raw: unknown): SavedLook | null {
   }
   if (typeof r.preset === 'string') look.preset = r.preset;
   if (typeof r.butterfly === 'string') look.butterfly = r.butterfly;
+  if (typeof r.light === 'string') look.light = r.light;
   return look;
 }
 
@@ -128,6 +131,7 @@ export function makeLook(
     oilColors?: string[];
     preset?: string;
     butterfly?: string;
+    light?: string;
   },
   base: string,
   looks: SavedLook[],
@@ -142,6 +146,7 @@ export function makeLook(
   if (input.oilColors) look.oilColors = [...input.oilColors];
   if (input.preset) look.preset = input.preset;
   if (input.butterfly) look.butterfly = input.butterfly;
+  if (input.light) look.light = input.light;
   return look;
 }
 

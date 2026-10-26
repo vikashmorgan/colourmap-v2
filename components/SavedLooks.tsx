@@ -25,6 +25,7 @@ type Props = {
     oilColors?: string[];
     preset?: string;
     butterfly?: string;
+    light?: string;
   };
   /** What a new look is named after, e.g. the mode's name. */
   baseName: string;

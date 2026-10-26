@@ -13,8 +13,23 @@
 
 import * as THREE from 'three';
 
-import { BUILDER_MODE, builderSettings, paletteById, pieceBySlug } from '@/lib/art/butterflies';
+import {
+  BUILDER_MODE,
+  builderSettings,
+  type Palette,
+  paletteById,
+  pieceBySlug,
+} from '@/lib/art/butterflies';
 import { BUTTERFLY_FRAGMENT, BUTTERFLY_VERTEX } from '@/lib/art/butterfly-shader';
+import {
+  kindOfBuilderMode,
+  type LightKind,
+  type LightSettings,
+  lightBuilderSettings,
+  paletteById as lightPaletteById,
+  pieceBySlug as lightPieceBySlug,
+} from '@/lib/art/light';
+import { LIGHT_FRAGMENTS, LIGHT_UNIFORMS, LIGHT_VERTEX } from '@/lib/art/light-shaders';
 
 import {
   advancePhase,
@@ -54,6 +69,8 @@ export interface VisualCfg {
   oilColors?: readonly string[];
   /** Which Liquid Butterflies piece the butterfly mode draws (its slug). */
   butterfly?: string;
+  /** Which Light Bodies piece a light mode draws (its slug). */
+  light?: string;
 }
 
 const LINE_TUNNELS = ['drostezoom', 'twistgate', 'fouriertube', 'superrings'] as const;
@@ -66,6 +83,7 @@ export function isGeometryVisualMode(mode: string): boolean {
     (LINE_TUNNELS as readonly string[]).includes(mode) ||
     mode === 'goldenseed' ||
     mode === BUTTERFLY_MODE ||
+    kindOfBuilderMode(mode) !== undefined ||
     isShaderVisualMode(mode)
   );
 }
@@ -552,7 +570,8 @@ function linearHex(hex: string): THREE.Vector3 {
   return new THREE.Vector3(c.r, c.g, c.b);
 }
 
-function buildButterfly(): THREE.Group {
+/** A full-screen quad drawing one of the art shaders, with its float uniforms at 0. */
+function buildArtQuad(vertex: string, fragment: string, floats: readonly string[]): THREE.Group {
   const group = new THREE.Group();
   const uniforms: Record<string, THREE.IUniform> = {
     uRes: { value: new THREE.Vector2(1, 1) },
@@ -560,30 +579,10 @@ function buildButterfly(): THREE.Group {
     uBg0: { value: new THREE.Vector3() },
     uBg1: { value: new THREE.Vector3() },
   };
-  for (const n of [
-    'uTime',
-    'uSlices',
-    'uDelay',
-    'uEchoes',
-    'uDrift',
-    'uFlow',
-    'uFlap',
-    'uMorph',
-    'uFold',
-    'uSize',
-    'uGlow',
-    'uPool',
-    'uGrain',
-    'uIris',
-    'uSparks',
-    'uForm',
-    'uPetals',
-  ]) {
-    uniforms[n] = { value: 0 };
-  }
+  for (const n of floats) uniforms[n] = { value: 0 };
   const mat = new THREE.ShaderMaterial({
-    vertexShader: BUTTERFLY_VERTEX,
-    fragmentShader: BUTTERFLY_FRAGMENT,
+    vertexShader: vertex,
+    fragmentShader: fragment,
     uniforms,
     depthTest: false,
     depthWrite: false,
@@ -609,6 +608,38 @@ function buildButterfly(): THREE.Group {
   return group;
 }
 
+/** Sets an art quad's palette, only when it changes. */
+function setArtPalette(quad: THREE.Mesh, key: string, pal: Palette): void {
+  if (quad.userData.paletteKey === key) return;
+  quad.userData.paletteKey = key;
+  const u = (quad.material as THREE.ShaderMaterial).uniforms;
+  u.uBg0.value = linearHex(pal.bg[0]);
+  u.uBg1.value = linearHex(pal.bg[1]);
+  u.uRamp.value = pal.ramp.map(linearHex);
+}
+
+function buildButterfly(): THREE.Group {
+  return buildArtQuad(BUTTERFLY_VERTEX, BUTTERFLY_FRAGMENT, [
+    'uTime',
+    'uSlices',
+    'uDelay',
+    'uEchoes',
+    'uDrift',
+    'uFlow',
+    'uFlap',
+    'uMorph',
+    'uFold',
+    'uSize',
+    'uGlow',
+    'uPool',
+    'uGrain',
+    'uIris',
+    'uSparks',
+    'uForm',
+    'uPetals',
+  ]);
+}
+
 function updateButterfly(group: THREE.Group, cfg: VisualCfg, t: number): void {
   const quad = group.children[0] as THREE.Mesh;
   const u = (quad.material as THREE.ShaderMaterial).uniforms;
@@ -632,13 +663,46 @@ function updateButterfly(group: THREE.Group, cfg: VisualCfg, t: number): void {
   u.uPetals.value = s.petals;
   const piece = pieceBySlug(cfg.butterfly ?? '');
   const key = piece?.palette ?? '';
-  if (quad.userData.paletteKey !== key) {
-    quad.userData.paletteKey = key;
-    const pal = paletteById(key);
-    u.uBg0.value = linearHex(pal.bg[0]);
-    u.uBg1.value = linearHex(pal.bg[1]);
-    u.uRamp.value = pal.ramp.map(linearHex);
-  }
+  setArtPalette(quad, key, paletteById(key));
+}
+
+/* ── Light Bodies (Stars tab: Eclipse, Enlightenment, Light Bubble) ─────── */
+
+/* Each kind is its own mode, so its shader is built once (lib/art/light.ts). */
+function buildLight(kind: LightKind): THREE.Group {
+  return buildArtQuad(
+    LIGHT_VERTEX,
+    LIGHT_FRAGMENTS[kind],
+    LIGHT_UNIFORMS.filter((n) => !['uRes', 'uBg0', 'uBg1', 'uRamp'].includes(n)),
+  );
+}
+
+const LIGHT_SETTING_UNIFORMS: [keyof LightSettings, string][] = [
+  ['size', 'uSize'],
+  ['glow', 'uGlow'],
+  ['flow', 'uFlow'],
+  ['detail', 'uDetail'],
+  ['drift', 'uDrift'],
+  ['iris', 'uIris'],
+  ['corona', 'uCorona'],
+  ['sparks', 'uSparks'],
+  ['grain', 'uGrain'],
+  ['pose', 'uPose'],
+  ['cycle', 'uCycle'],
+  ['numbers', 'uNumbers'],
+  ['count', 'uCount'],
+  ['style', 'uStyle'],
+];
+
+function updateLight(group: THREE.Group, kind: LightKind, cfg: VisualCfg, t: number): void {
+  const quad = group.children[0] as THREE.Mesh;
+  const u = (quad.material as THREE.ShaderMaterial).uniforms;
+  const s = lightBuilderSettings(cfg.light, kind, cfg);
+  u.uTime.value = phaseFor(`${cfg.mode}:${cfg.light ?? ''}`, t, cfg.breathSpeed);
+  for (const [k, n] of LIGHT_SETTING_UNIFORMS) u[n].value = s[k];
+  const piece = lightPieceBySlug(cfg.light ?? '');
+  const key = piece && piece.kind === kind ? piece.palette : '';
+  setArtPalette(quad, `light:${key}`, lightPaletteById(key));
 }
 
 /* ── Entry points ───────────────────────────────────────────── */
@@ -646,6 +710,8 @@ function updateButterfly(group: THREE.Group, cfg: VisualCfg, t: number): void {
 export function buildGeometryVisual(cfg: VisualCfg, pal: PaletteSource): THREE.Group {
   if (isShaderVisualMode(cfg.mode)) return buildShaderQuad(cfg.mode, pal);
   if (cfg.mode === BUTTERFLY_MODE) return buildButterfly();
+  const kind = kindOfBuilderMode(cfg.mode);
+  if (kind) return buildLight(kind);
   if (cfg.mode === 'goldenseed') return buildGoldenSeed();
   return buildRingTunnel(cfg.mode as LineTunnel, cfg);
 }
@@ -659,6 +725,8 @@ export function updateGeometryVisual(
 ): void {
   if (isShaderVisualMode(cfg.mode)) updateShaderQuad(group, cfg, t, R);
   else if (cfg.mode === BUTTERFLY_MODE) updateButterfly(group, cfg, t);
-  else if (cfg.mode === 'goldenseed') updateGoldenSeed(group, cfg, pal, t, R);
+  else if (kindOfBuilderMode(cfg.mode)) {
+    updateLight(group, kindOfBuilderMode(cfg.mode) as LightKind, cfg, t);
+  } else if (cfg.mode === 'goldenseed') updateGoldenSeed(group, cfg, pal, t, R);
   else updateRingTunnel(group, cfg.mode as LineTunnel, cfg, pal, t, R);
 }

@@ -5,7 +5,10 @@ import {
   ECLIPSE_STYLES,
   frameName,
   KIND_SLIDERS,
+  kindOfBuilderMode,
   LIMITS,
+  lightBuilderSettings,
+  lightBuilderSliders,
   makeSavedLight,
   PALETTES,
   PIECES,
@@ -142,5 +145,41 @@ describe('the eclipse styles', () => {
     const base = PIECES[0]?.settings as (typeof PIECES)[number]['settings'];
     expect(clampSettings({ ...base, style: 1.6 }).style).toBe(2);
     expect(clampSettings({ ...base, style: 7 }).style).toBe(2);
+  });
+});
+
+describe('in the Geometry Builder', () => {
+  it('gives each kind its own mode', () => {
+    expect(kindOfBuilderMode('lighteclipse')).toBe('eclipse');
+    expect(kindOfBuilderMode('lightdeity')).toBe('deity');
+    expect(kindOfBuilderMode('lightbubble')).toBe('bubble');
+    expect(kindOfBuilderMode('liquidbutterfly')).toBeUndefined();
+  });
+
+  it('round-trips every piece through the builder sliders', () => {
+    for (const p of PIECES) {
+      expect(lightBuilderSettings(p.slug, p.kind, lightBuilderSliders(p))).toEqual(p.settings);
+    }
+  });
+
+  it('reads Symmetry as style, pose or drops', () => {
+    const rays = pieceBySlug('sun-rays');
+    const bubble = pieceBySlug('night-bubble');
+    if (!rays || !bubble) throw new Error('missing');
+    const s = { ...lightBuilderSliders(rays), symmetry: 1 };
+    expect(lightBuilderSettings('sun-rays', 'eclipse', s).style).toBe(1);
+    expect(lightBuilderSettings('night-bubble', 'bubble', { ...s, symmetry: 2 }).count).toBe(2);
+    expect(lightBuilderSettings('enlightenment', 'deity', { ...s, symmetry: 1.5 }).pose).toBe(1.5);
+  });
+
+  it('falls back to the first piece of the kind for an unknown or mismatched slug', () => {
+    const first = PIECES.find((p) => p.kind === 'bubble');
+    if (!first) throw new Error('missing');
+    expect(lightBuilderSettings('sun-rays', 'bubble', lightBuilderSliders(first))).toEqual(
+      first.settings,
+    );
+    expect(lightBuilderSettings(undefined, 'bubble', lightBuilderSliders(first))).toEqual(
+      first.settings,
+    );
   });
 });

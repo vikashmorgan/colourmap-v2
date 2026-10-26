@@ -65,6 +65,12 @@ describe('saving', () => {
     expect(makeLook({ mode: 'rorschach', values }, 'R', [], 1).oilColors).toBeUndefined();
   });
 
+  it('keeps which Light Bodies piece a light look belongs to', () => {
+    const l = makeLook({ mode: 'lighteclipse', values, light: 'sun-rays' }, 'Burning Ring', [], 1);
+    expect(l.light).toBe('sun-rays');
+    expect(parseSaved(JSON.stringify([l]))[0]?.light).toBe('sun-rays');
+  });
+
   it('deletes only the one asked', () => {
     const a = makeLook({ mode: 'x', values }, 'X', [], 1);
     const b = makeLook({ mode: 'x', values }, 'X', [a], 2);

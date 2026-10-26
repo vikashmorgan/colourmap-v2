@@ -48,3 +48,18 @@ An Art collection at `/art/light` (on the Grid under Studio → Light). It holds
   - **Rays:** sharp spikes of every length, each growing out and fading on its own clock. Flares sets their reach.
 - New pieces: **Twin Jets** (Jets, fire) and **Sun Rays** (Rays, a new Navy palette after the painted eclipse reference).
 - The glitch is gone from every piece (see above).
+
+## In the Geometry Builder — 2026-10-26
+
+> Martin: "make sure all these art categories are in the art visual part with stars etc... each by category"
+
+- The Stars tab has a category for each kind: **Eclipse** (Burning Ring, Blue Corona, Blood Moon, Twin Jets, Sun Rays), **Enlightenment** (Enlightenment, Night Prayer, Dance of Light) and **Light Bubble** (Opal Bubble, Night Bubble). They sit after Liquid Butterflies and Liquid Forms.
+- Each kind is its own mode (`lighteclipse`, `lightdeity`, `lightbubble`), drawn by the same shader as the collection, on the builder's shared art quad (`components/geometry-visuals.ts`).
+- The builder's sliders map onto the piece (`lightBuilderSettings`):
+  - Speed is Speed.
+  - Fire / Inner light / Wobble is flow.
+  - Flares / Halo / Film is corona or iris.
+  - Ring / Filaments / Bands is detail.
+  - Embers / Motes / Specks is sparks.
+  - The first slider is the eclipse's **Style**, the figure's **Pose** or the bubble's **Drops**.
+- Soft bloom and no stars unless asked for, as with the butterflies. The builder's Saved row remembers which piece a look belongs to (`light`).

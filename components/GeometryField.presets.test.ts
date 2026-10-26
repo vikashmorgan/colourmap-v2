@@ -37,6 +37,39 @@ describe('GeometryField featured presets', () => {
     expect(PRESETS.Eclipse?.mode).toBe('eclipse');
   });
 
+  it('has each Light Bodies kind as its own category in Stars', () => {
+    const stars = featuredFor('stars');
+    const under = (header: string) => {
+      const at = stars.findIndex((item) => 'header' in item && item.header === header);
+      expect(at).toBeGreaterThan(-1);
+      const out: string[] = [];
+      for (const item of stars.slice(at + 1)) {
+        if ('header' in item) break;
+        out.push(item.name);
+      }
+      return out;
+    };
+    expect(under('Eclipse')).toEqual([
+      'Burning Ring',
+      'Blue Corona',
+      'Blood Moon',
+      'Twin Jets',
+      'Sun Rays',
+    ]);
+    expect(under('Enlightenment')).toEqual(['Enlightenment', 'Night Prayer', 'Dance of Light']);
+    expect(under('Light Bubble')).toEqual(['Opal Bubble', 'Night Bubble']);
+    expect(PRESETS['Sun Rays']).toMatchObject({
+      mode: 'lighteclipse',
+      light: 'sun-rays',
+      symmetry: 2,
+    });
+    expect(PRESETS['Night Prayer']).toMatchObject({ mode: 'lightdeity', symmetry: 1 });
+    expect(PRESETS['Night Bubble']).toMatchObject({ mode: 'lightbubble', symmetry: 4 });
+    for (const mode of ['lighteclipse', 'lightdeity', 'lightbubble'] as const) {
+      expect(artTabOf(mode)).toBe('stars');
+    }
+  });
+
   it('has the other designs as their own category, Liquid Forms, in Stars', () => {
     const stars = featuredFor('stars');
     const at = stars.findIndex((item) => 'header' in item && item.header === 'Liquid Forms');
