@@ -8,6 +8,11 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 import SavedLooks from '@/components/SavedLooks';
+import {
+  PIECES as BUTTERFLY_PIECES,
+  builderPresetName,
+  builderSliders,
+} from '@/lib/art/butterflies';
 import { birdTarget, fishTarget, predator, steer, view } from '@/lib/flocks';
 import { mask as flowMask, MASK_NAMES, inside as maskInside } from '@/lib/flow-masks';
 import {
@@ -38,6 +43,7 @@ import {
 /* ── Types ─────────────────────────────────────────────────── */
 
 type Mode =
+  | 'liquidbutterfly'
   | 'sacred'
   | 'burst'
   | 'lissajous'
@@ -251,6 +257,8 @@ interface Cfg {
   seed?: number;
   /** The four colours inside an oil, chosen by the user; unset = from the palette. */
   oilColors?: string[];
+  /** Which Liquid Butterflies piece the butterfly mode draws (lib/art/butterflies.ts). */
+  butterfly?: string;
 }
 
 interface Dot {
@@ -773,7 +781,27 @@ const PAL_SORTED: [string, Pal][] = Object.entries(PAL).sort(
 
 /* ── Preset configs ─────────────────────────────────────────── */
 
+/*
+ * 26 Oct 2026: "add all these new butterflies as a new category in the stars
+ * geometry part art." Every Liquid Butterflies piece (/art/butterflies) as a
+ * Stars preset, drawn by the same shader; the sliders lay over its settings.
+ */
+const BUTTERFLY_PRESETS: Record<string, Cfg> = Object.fromEntries(
+  BUTTERFLY_PIECES.map((piece) => [
+    builderPresetName(piece),
+    {
+      preset: 'Calm Field',
+      ...builderSliders(piece),
+      luminous: 0.3,
+      stars: 0,
+      mode: 'liquidbutterfly' as Mode,
+      butterfly: piece.slug,
+    },
+  ]),
+);
+
 export const PRESETS: Record<string, Cfg> = {
+  ...BUTTERFLY_PRESETS,
   'Fire Dot Sun': {
     preset: 'Golden Source',
     symmetry: 11,
@@ -14208,6 +14236,16 @@ const CYMATIC_SLIDERS: SliderDef[] = [
 ];
 
 const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
+  // Liquid Butterflies: the collection's main settings (lib/art/butterflies.ts builderSettings).
+  liquidbutterfly: [
+    { key: 'breathSpeed', label: 'Speed', min: 0, max: 1.5, step: 0.05 },
+    { key: 'glow', label: 'Liquid', min: 0, max: 10, step: 0.5 },
+    { key: 'intensity', label: 'Morph', min: 0, max: 10, step: 0.5 },
+    { key: 'complexity', label: 'Slices', min: 0, max: 16, step: 1 },
+    { key: 'particles', label: 'Echoes', min: 0, max: 10, step: 1 },
+    { key: 'symmetry', label: 'Kaleido', min: 1, max: 8, step: 1 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
+  ],
   flowfield: [
     { key: 'symmetry', label: 'Gravity Wells', min: 4, max: 24, step: 1 },
     { key: 'complexity', label: 'Turbulence', min: 1, max: 10, step: 0.5 },
@@ -14977,6 +15015,7 @@ function slidersFor(mode: Mode): SliderDef[] {
 /* ── Mode pill definitions ──────────────────────────────────── */
 
 const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
+  liquidbutterfly: 'Thermal Monarch',
   flowfield: 'Flow Field',
   flowwalkers: 'Flow Walkers',
   flowsacred: 'Flow Sacred',
@@ -15204,6 +15243,7 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'flowdance', label: 'Dance Walkers' },
   { mode: 'flowsands', label: 'Magnetic Sands 2' },
   { mode: 'flowbutterfly', label: 'Butterfly' },
+  { mode: 'liquidbutterfly', label: 'Liquid Butterflies' },
   { mode: 'flowlines', label: 'Star Sand Lines' },
   { mode: 'eclipse', label: 'Eclipse' },
   { mode: 'yinyang', label: 'Yin Yang' },
@@ -15334,6 +15374,7 @@ const TUNNEL_TAB_MODES = new Set<Mode>([
   'logspiral',
 ]);
 const STAR_TAB_MODES = new Set<Mode>([
+  'liquidbutterfly',
   'atomicexplosion',
   'atomlight',
   'breath',
@@ -15575,6 +15616,9 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { header: 'Waves' },
   { name: 'Rolling Wave', tag: 'FREE' },
   { name: 'Fractal Wave', tag: 'HOKUSAI' },
+  // 26 Oct 2026: the Liquid Butterflies collection, as its own category.
+  { header: 'Liquid Butterflies' },
+  ...BUTTERFLY_PIECES.map((piece) => ({ name: builderPresetName(piece), tag: 'BUTTERFLY' })),
   { header: 'Work in Progress', dim: true },
   // Moved here 25 Oct 2026: "all the new tests that are not clean yet like saurons eyes etc...
   // add them to a work in progress category so we know they are unfinished". The 13 Oct batch:
@@ -21128,7 +21172,8 @@ export default function GeometryField() {
       // Bloom from luminous slider
       // Full-screen shader fields would wash out under the default bloom,
       // so they bloom only their brightest highlights.
-      const shaderField = isShaderVisualMode(currentCfg.mode);
+      const shaderField =
+        isShaderVisualMode(currentCfg.mode) || currentCfg.mode === 'liquidbutterfly';
       bloomPass.strength = currentCfg.luminous * (shaderField ? 0.12 : 0.28);
       bloomPass.threshold = shaderField ? 0.55 : 0.05;
       bloomPass.radius = 0.4 + currentCfg.luminous * 0.04;
@@ -21144,7 +21189,9 @@ export default function GeometryField() {
           // Every preset shows a background starfield by default — floor the
           // count so even stars=0 presets keep a gentle field; the slider adds more.
           // Oils are a liquid surface, not space: their stars are opt-in.
-          isOilMode(currentCfg.mode) ? currentCfg.stars : Math.max(3, currentCfg.stars),
+          isOilMode(currentCfg.mode) || currentCfg.mode === 'liquidbutterfly'
+            ? currentCfg.stars
+            : Math.max(3, currentCfg.stars),
           W,
           H,
           currentCfg.preset,
@@ -25990,6 +26037,7 @@ export default function GeometryField() {
                         },
                         oilColors: cfg.oilColors,
                         preset: cfg.preset,
+                        butterfly: cfg.butterfly,
                       }}
                       baseName={MODE_TO_PRESET[cfg.mode] ?? cfg.mode}
                       onApply={(look) =>
@@ -25999,6 +26047,7 @@ export default function GeometryField() {
                           mode: look.mode as Mode,
                           oilColors: look.oilColors ?? prev.oilColors,
                           preset: look.preset ?? prev.preset,
+                          butterfly: look.butterfly ?? prev.butterfly,
                         }))
                       }
                       accent={accent}
