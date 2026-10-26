@@ -411,6 +411,83 @@ export function clampSettings(s: LightSettings): LightSettings {
 export const frameName = (piece: LightPiece, paletteId: string): string =>
   `light-${piece.slug}${paletteId === piece.palette ? '' : `-${paletteId}`}.png`;
 
+/* ── In the Geometry Builder (Stars tab) ────────────────────────────────── */
+
+/*
+ * 2026-10-26: "make sure all these art categories are in the art visual part
+ * with stars etc... each by category". Each kind is its own builder mode (so
+ * the shader is built once per kind) and its own category in the Stars tab:
+ * Eclipse, Enlightenment, Light Bubble.
+ */
+export const LIGHT_BUILDER_MODES: Record<LightKind, string> = {
+  eclipse: 'lighteclipse',
+  deity: 'lightdeity',
+  bubble: 'lightbubble',
+};
+
+/** The kind a builder mode draws, if it is one of them. */
+export const kindOfBuilderMode = (mode: string): LightKind | undefined =>
+  (Object.keys(LIGHT_BUILDER_MODES) as LightKind[]).find((k) => LIGHT_BUILDER_MODES[k] === mode);
+
+/** The builder's shared sliders, as far as a light piece uses them. */
+export type LightBuilderSliders = {
+  symmetry: number;
+  complexity: number;
+  glow: number;
+  breathSpeed: number;
+  intensity: number;
+  particles: number;
+};
+
+/* Symmetry is the one slider each kind reads differently: the eclipse's style,
+   the figure's pose, the bubble's drops. */
+const SYMMETRY_KEY: Record<LightKind, keyof LightSettings> = {
+  eclipse: 'style',
+  deity: 'pose',
+  bubble: 'count',
+};
+
+/* Light (intensity) is the flares and halo, or the bubble's film. */
+const INTENSITY_KEY: Record<LightKind, keyof LightSettings> = {
+  eclipse: 'corona',
+  deity: 'corona',
+  bubble: 'iris',
+};
+
+/**
+ * The builder's sliders for a piece: Speed is Speed, Glow is Flow (0..10),
+ * Light is Flares, Halo or Film (0..10), Complexity is Detail (0..10),
+ * Particles is Sparks (0..10), and Symmetry is Style, Pose or Drops.
+ */
+export const lightBuilderSliders = (p: LightPiece): LightBuilderSliders => ({
+  symmetry: p.settings[SYMMETRY_KEY[p.kind]],
+  complexity: p.settings.detail * 10,
+  glow: p.settings.flow * 10,
+  intensity: p.settings[INTENSITY_KEY[p.kind]] * 10,
+  particles: p.settings.sparks * 10,
+  breathSpeed: p.settings.speed,
+});
+
+/** A piece's full settings with the builder's sliders laid over them. */
+export function lightBuilderSettings(
+  slug: string | undefined,
+  kind: LightKind,
+  s: LightBuilderSliders,
+): LightSettings {
+  const found = slug ? pieceBySlug(slug) : undefined;
+  const piece =
+    found && found.kind === kind ? found : (PIECES.find((p) => p.kind === kind) as LightPiece);
+  return clampSettings({
+    ...piece.settings,
+    [SYMMETRY_KEY[kind]]: s.symmetry,
+    [INTENSITY_KEY[kind]]: s.intensity / 10,
+    detail: s.complexity / 10,
+    flow: s.glow / 10,
+    sparks: s.particles / 10,
+    speed: s.breathSpeed,
+  });
+}
+
 /* ── Saved tunings ──────────────────────────────────────────────────────── */
 
 /** A tuning saved from the full-screen viewer: every setting and the palette. */

@@ -13,6 +13,12 @@ import {
   builderPresetName,
   builderSliders,
 } from '@/lib/art/butterflies';
+import {
+  kindOfBuilderMode,
+  LIGHT_BUILDER_MODES,
+  PIECES as LIGHT_PIECES,
+  lightBuilderSliders,
+} from '@/lib/art/light';
 import { birdTarget, fishTarget, predator, steer, view } from '@/lib/flocks';
 import { mask as flowMask, MASK_NAMES, inside as maskInside } from '@/lib/flow-masks';
 import {
@@ -44,6 +50,9 @@ import {
 
 type Mode =
   | 'liquidbutterfly'
+  | 'lighteclipse'
+  | 'lightdeity'
+  | 'lightbubble'
   | 'sacred'
   | 'burst'
   | 'lissajous'
@@ -259,6 +268,8 @@ interface Cfg {
   oilColors?: string[];
   /** Which Liquid Butterflies piece the butterfly mode draws (lib/art/butterflies.ts). */
   butterfly?: string;
+  /** Which Light Bodies piece a light mode draws (lib/art/light.ts). */
+  light?: string;
 }
 
 interface Dot {
@@ -800,8 +811,32 @@ const BUTTERFLY_PRESETS: Record<string, Cfg> = Object.fromEntries(
   ]),
 );
 
+/*
+ * 26 Oct 2026: "make sure all these art categories are in the art visual part
+ * with stars etc... each by category". Every Light Bodies piece (/art/light),
+ * one mode and one Stars category per kind: Eclipse, Enlightenment, Light Bubble.
+ */
+const LIGHT_PRESETS: Record<string, Cfg> = Object.fromEntries(
+  LIGHT_PIECES.map((piece) => [
+    piece.title,
+    {
+      preset: 'Calm Field',
+      ...lightBuilderSliders(piece),
+      luminous: 0.3,
+      stars: 0,
+      mode: LIGHT_BUILDER_MODES[piece.kind] as Mode,
+      light: piece.slug,
+    },
+  ]),
+);
+
+/** The full-screen art shaders (butterflies, light bodies): soft bloom, stars only when asked. */
+const isArtShaderMode = (mode: Mode): boolean =>
+  mode === 'liquidbutterfly' || kindOfBuilderMode(mode) !== undefined;
+
 export const PRESETS: Record<string, Cfg> = {
   ...BUTTERFLY_PRESETS,
+  ...LIGHT_PRESETS,
   'Fire Dot Sun': {
     preset: 'Golden Source',
     symmetry: 11,
@@ -14237,6 +14272,34 @@ const CYMATIC_SLIDERS: SliderDef[] = [
 
 const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
   // Liquid Butterflies: the collection's main settings (lib/art/butterflies.ts builderSettings).
+  // Light Bodies: each kind's main settings (lib/art/light.ts lightBuilderSettings).
+  lighteclipse: [
+    { key: 'breathSpeed', label: 'Speed', min: 0, max: 1.5, step: 0.05 },
+    { key: 'symmetry', label: 'Style', min: 0, max: 2, step: 1 },
+    { key: 'glow', label: 'Fire', min: 0, max: 10, step: 0.5 },
+    { key: 'intensity', label: 'Flares', min: 0, max: 10, step: 0.5 },
+    { key: 'complexity', label: 'Ring', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Embers', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
+  ],
+  lightdeity: [
+    { key: 'breathSpeed', label: 'Speed', min: 0, max: 1.5, step: 0.05 },
+    { key: 'symmetry', label: 'Pose', min: 0, max: 2, step: 0.05 },
+    { key: 'glow', label: 'Inner light', min: 0, max: 10, step: 0.5 },
+    { key: 'intensity', label: 'Halo', min: 0, max: 10, step: 0.5 },
+    { key: 'complexity', label: 'Filaments', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Motes', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
+  ],
+  lightbubble: [
+    { key: 'breathSpeed', label: 'Speed', min: 0, max: 1.5, step: 0.05 },
+    { key: 'symmetry', label: 'Drops', min: 0, max: 6, step: 1 },
+    { key: 'glow', label: 'Wobble', min: 0, max: 10, step: 0.5 },
+    { key: 'intensity', label: 'Film', min: 0, max: 10, step: 0.5 },
+    { key: 'complexity', label: 'Bands', min: 0, max: 10, step: 0.5 },
+    { key: 'particles', label: 'Specks', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
+  ],
   liquidbutterfly: [
     { key: 'breathSpeed', label: 'Speed', min: 0, max: 1.5, step: 0.05 },
     { key: 'glow', label: 'Liquid', min: 0, max: 10, step: 0.5 },
@@ -15016,6 +15079,9 @@ function slidersFor(mode: Mode): SliderDef[] {
 
 const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   liquidbutterfly: 'Thermal Monarch',
+  lighteclipse: 'Burning Ring',
+  lightdeity: 'Enlightenment',
+  lightbubble: 'Opal Bubble',
   flowfield: 'Flow Field',
   flowwalkers: 'Flow Walkers',
   flowsacred: 'Flow Sacred',
@@ -15244,6 +15310,9 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'flowsands', label: 'Magnetic Sands 2' },
   { mode: 'flowbutterfly', label: 'Butterfly' },
   { mode: 'liquidbutterfly', label: 'Liquid Butterflies' },
+  { mode: 'lighteclipse', label: 'Light Eclipse' },
+  { mode: 'lightdeity', label: 'Enlightenment' },
+  { mode: 'lightbubble', label: 'Light Bubble' },
   { mode: 'flowlines', label: 'Star Sand Lines' },
   { mode: 'eclipse', label: 'Eclipse' },
   { mode: 'yinyang', label: 'Yin Yang' },
@@ -15375,6 +15444,9 @@ const TUNNEL_TAB_MODES = new Set<Mode>([
 ]);
 const STAR_TAB_MODES = new Set<Mode>([
   'liquidbutterfly',
+  'lighteclipse',
+  'lightdeity',
+  'lightbubble',
   'atomicexplosion',
   'atomlight',
   'breath',
@@ -15629,6 +15701,16 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
     name: builderPresetName(piece),
     tag: 'FORM',
   })),
+  // 26 Oct 2026: the Light Bodies collection, a category per kind.
+  { header: 'Eclipse' },
+  ...LIGHT_PIECES.filter((p) => p.kind === 'eclipse').map((p) => ({
+    name: p.title,
+    tag: 'ECLIPSE',
+  })),
+  { header: 'Enlightenment' },
+  ...LIGHT_PIECES.filter((p) => p.kind === 'deity').map((p) => ({ name: p.title, tag: 'LIGHT' })),
+  { header: 'Light Bubble' },
+  ...LIGHT_PIECES.filter((p) => p.kind === 'bubble').map((p) => ({ name: p.title, tag: 'BUBBLE' })),
   { header: 'Work in Progress', dim: true },
   // Moved here 25 Oct 2026: "all the new tests that are not clean yet like saurons eyes etc...
   // add them to a work in progress category so we know they are unfinished". The 13 Oct batch:
@@ -21182,8 +21264,7 @@ export default function GeometryField() {
       // Bloom from luminous slider
       // Full-screen shader fields would wash out under the default bloom,
       // so they bloom only their brightest highlights.
-      const shaderField =
-        isShaderVisualMode(currentCfg.mode) || currentCfg.mode === 'liquidbutterfly';
+      const shaderField = isShaderVisualMode(currentCfg.mode) || isArtShaderMode(currentCfg.mode);
       bloomPass.strength = currentCfg.luminous * (shaderField ? 0.12 : 0.28);
       bloomPass.threshold = shaderField ? 0.55 : 0.05;
       bloomPass.radius = 0.4 + currentCfg.luminous * 0.04;
@@ -21199,7 +21280,7 @@ export default function GeometryField() {
           // Every preset shows a background starfield by default — floor the
           // count so even stars=0 presets keep a gentle field; the slider adds more.
           // Oils are a liquid surface, not space: their stars are opt-in.
-          isOilMode(currentCfg.mode) || currentCfg.mode === 'liquidbutterfly'
+          isOilMode(currentCfg.mode) || isArtShaderMode(currentCfg.mode)
             ? currentCfg.stars
             : Math.max(3, currentCfg.stars),
           W,
@@ -26048,6 +26129,7 @@ export default function GeometryField() {
                         oilColors: cfg.oilColors,
                         preset: cfg.preset,
                         butterfly: cfg.butterfly,
+                        light: cfg.light,
                       }}
                       baseName={MODE_TO_PRESET[cfg.mode] ?? cfg.mode}
                       onApply={(look) =>
@@ -26058,6 +26140,7 @@ export default function GeometryField() {
                           oilColors: look.oilColors ?? prev.oilColors,
                           preset: look.preset ?? prev.preset,
                           butterfly: look.butterfly ?? prev.butterfly,
+                          light: look.light ?? prev.light,
                         }))
                       }
                       accent={accent}
