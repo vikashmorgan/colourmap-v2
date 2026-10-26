@@ -289,3 +289,140 @@ export const rampUniform = (p: Palette): number[] => p.ramp.flatMap(hexToRgb);
 /** A file name for a saved frame. */
 export const frameName = (piece: Piece, paletteId: string): string =>
   `liquid-butterfly-${piece.slug}${paletteId === piece.palette ? '' : `-${paletteId}`}.png`;
+
+/* ── In the Geometry Builder (Stars tab, "Liquid Butterflies") ─────────── */
+
+/** The Geometry Builder mode that draws a piece. */
+export const BUILDER_MODE = 'liquidbutterfly';
+
+/** The piece's preset name in the builder ("Eclipse" is already taken there). */
+export const builderPresetName = (p: Piece): string =>
+  p.slug === 'eclipse' ? 'Eclipse Butterfly' : p.title;
+
+/** The builder's shared sliders, as far as a butterfly uses them. */
+export type BuilderSliders = {
+  symmetry: number;
+  complexity: number;
+  glow: number;
+  breathSpeed: number;
+  intensity: number;
+  particles: number;
+};
+
+/**
+ * The builder's sliders for a piece. Kaleido is Symmetry, Slices is
+ * Complexity, Echoes is Particles, Liquid is Glow and Morph is Light (both
+ * 0..10), Speed is Speed.
+ */
+export const builderSliders = (p: Piece): BuilderSliders => ({
+  symmetry: p.settings.fold,
+  complexity: p.settings.slices,
+  particles: p.settings.echoes,
+  glow: p.settings.flow * 10,
+  intensity: p.settings.morph * 10,
+  breathSpeed: p.settings.speed,
+});
+
+/** A piece's full settings with the builder's sliders laid over them. */
+export function builderSettings(slug: string | undefined, s: BuilderSliders): ButterflySettings {
+  const piece = (slug && pieceBySlug(slug)) || (PIECES[0] as Piece);
+  return clampSettings({
+    ...piece.settings,
+    fold: s.symmetry,
+    slices: s.complexity,
+    echoes: s.particles,
+    flow: s.glow / 10,
+    morph: s.intensity / 10,
+    speed: s.breathSpeed,
+  });
+}
+
+/* ── Saved tunings ("also make that u can save presets for the butterfly") ── */
+
+/** A tuning saved from the full-screen viewer: every setting and the palette. */
+export type SavedButterfly = {
+  id: string;
+  name: string;
+  /** The piece it started from. */
+  piece: string;
+  palette: string;
+  settings: ButterflySettings;
+};
+
+export const SAVED_BUTTERFLIES_KEY = 'colourmap:butterfly-saved';
+
+function parseSavedOne(raw: unknown): SavedButterfly | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  if (
+    typeof r.id !== 'string' ||
+    typeof r.name !== 'string' ||
+    typeof r.piece !== 'string' ||
+    typeof r.palette !== 'string'
+  ) {
+    return null;
+  }
+  const piece = pieceBySlug(r.piece);
+  if (!piece || !r.settings || typeof r.settings !== 'object') return null;
+  const s = r.settings as Record<string, unknown>;
+  const settings = { ...piece.settings };
+  for (const k of SLIDER_KEYS) {
+    if (typeof s[k] === 'number')
+      (settings as Record<string, number | boolean>)[k] = s[k] as number;
+  }
+  return {
+    id: r.id,
+    name: r.name.slice(0, 60),
+    piece: r.piece,
+    palette: paletteById(r.palette).id,
+    settings: clampSettings(settings),
+  };
+}
+
+export function parseSavedButterflies(raw: string | null): SavedButterfly[] {
+  if (!raw) return [];
+  try {
+    const list = JSON.parse(raw) as unknown;
+    return Array.isArray(list)
+      ? list.map(parseSavedOne).filter((b): b is SavedButterfly => b !== null)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/** A new saved tuning, named after its piece with the next free number ("Eclipse 2"). */
+export function makeSavedButterfly(
+  piece: Piece,
+  palette: string,
+  settings: ButterflySettings,
+  saved: SavedButterfly[],
+  now: number,
+): SavedButterfly {
+  const taken = new Set(saved.map((b) => b.name));
+  let n = 1;
+  while (taken.has(`${piece.title} ${n}`)) n++;
+  return {
+    id: `bfly-${now.toString(36)}`,
+    name: `${piece.title} ${n}`,
+    piece: piece.slug,
+    palette,
+    settings: { ...settings },
+  };
+}
+
+export function readSavedButterflies(): SavedButterfly[] {
+  try {
+    return parseSavedButterflies(window.localStorage.getItem(SAVED_BUTTERFLIES_KEY));
+  } catch {
+    return [];
+  }
+}
+
+export function writeSavedButterflies(saved: SavedButterfly[]): void {
+  try {
+    window.localStorage.setItem(SAVED_BUTTERFLIES_KEY, JSON.stringify(saved));
+  } catch {
+    // Storage blocked: kept for this visit only.
+  }
+}

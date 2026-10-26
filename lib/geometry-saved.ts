@@ -32,6 +32,8 @@ export type SavedLook = {
   oilColors?: string[];
   /** The colour palette's name, when it should come along. */
   preset?: string;
+  /** For a Liquid Butterflies look: which piece. */
+  butterfly?: string;
   /** Built in: on every device, and cannot be deleted. */
   builtIn?: boolean;
 };
@@ -91,6 +93,7 @@ function parseLook(raw: unknown): SavedLook | null {
     look.oilColors = r.oilColors as string[];
   }
   if (typeof r.preset === 'string') look.preset = r.preset;
+  if (typeof r.butterfly === 'string') look.butterfly = r.butterfly;
   return look;
 }
 
@@ -119,7 +122,13 @@ export function nextName(base: string, looks: SavedLook[]): string {
 
 /** A new look from the current settings. */
 export function makeLook(
-  input: { mode: string; values: LookValues; oilColors?: string[]; preset?: string },
+  input: {
+    mode: string;
+    values: LookValues;
+    oilColors?: string[];
+    preset?: string;
+    butterfly?: string;
+  },
   base: string,
   looks: SavedLook[],
   now: number,
@@ -132,6 +141,7 @@ export function makeLook(
   };
   if (input.oilColors) look.oilColors = [...input.oilColors];
   if (input.preset) look.preset = input.preset;
+  if (input.butterfly) look.butterfly = input.butterfly;
   return look;
 }
 

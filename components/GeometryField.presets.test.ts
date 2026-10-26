@@ -15,6 +15,28 @@ function featuredNames() {
 }
 
 describe('GeometryField featured presets', () => {
+  it('has every Liquid Butterflies piece as its own category in Stars', () => {
+    const stars = featuredFor('stars');
+    const at = stars.findIndex((item) => 'header' in item && item.header === 'Liquid Butterflies');
+    expect(at).toBeGreaterThan(-1);
+    const names = stars.slice(at + 1, at + 9).map((item) => ('name' in item ? item.name : ''));
+    expect(names).toEqual([
+      'Thermal Monarch',
+      'Neon Psyche',
+      'Acid Morpho',
+      'Pearl Moth',
+      'Golden Swallowtail',
+      'Deep Kaleido',
+      'Eclipse Butterfly',
+      'Opal Drop',
+    ]);
+    for (const n of names) {
+      expect(PRESETS[n]?.mode).toBe('liquidbutterfly');
+      expect(PRESETS[n]?.butterfly).toBeTruthy();
+    }
+    expect(PRESETS.Eclipse?.mode).toBe('eclipse');
+  });
+
   it('opens Good Ones with the three Wind presets, one object each, in Stars', () => {
     const names = featuredNames();
     expect(names.slice(0, 3)).toEqual(['Wind', 'Wind Wing', 'Wind Body']);

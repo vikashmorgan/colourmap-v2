@@ -13,6 +13,9 @@
 
 import * as THREE from 'three';
 
+import { BUILDER_MODE, builderSettings, paletteById, pieceBySlug } from '@/lib/art/butterflies';
+import { BUTTERFLY_FRAGMENT, BUTTERFLY_VERTEX } from '@/lib/art/butterfly-shader';
+
 import {
   advancePhase,
   flightOffset,
@@ -49,6 +52,8 @@ export interface VisualCfg {
   seed?: number;
   /** Chosen oil colours (four hex stops), overriding the palette's. */
   oilColors?: readonly string[];
+  /** Which Liquid Butterflies piece the butterfly mode draws (its slug). */
+  butterfly?: string;
 }
 
 const LINE_TUNNELS = ['drostezoom', 'twistgate', 'fouriertube', 'superrings'] as const;
@@ -60,6 +65,7 @@ export function isGeometryVisualMode(mode: string): boolean {
   return (
     (LINE_TUNNELS as readonly string[]).includes(mode) ||
     mode === 'goldenseed' ||
+    mode === BUTTERFLY_MODE ||
     isShaderVisualMode(mode)
   );
 }
@@ -531,10 +537,113 @@ function updateShaderQuad(group: THREE.Group, cfg: VisualCfg, t: number, R: numb
   }
 }
 
+/* ── Liquid Butterflies (Stars tab) ─────────────────────────── */
+
+/*
+ * The collection's shader (lib/art/butterfly-shader.ts) on a full-screen quad.
+ * It reads pixels from gl_FragCoord, so uRes is set from the drawing buffer
+ * just before each draw. Colours go in linear, like the oils, since the output
+ * pass turns the frame back into sRGB.
+ */
+export const BUTTERFLY_MODE = BUILDER_MODE;
+
+function linearHex(hex: string): THREE.Vector3 {
+  const c = new THREE.Color(hex);
+  return new THREE.Vector3(c.r, c.g, c.b);
+}
+
+function buildButterfly(): THREE.Group {
+  const group = new THREE.Group();
+  const uniforms: Record<string, THREE.IUniform> = {
+    uRes: { value: new THREE.Vector2(1, 1) },
+    uRamp: { value: Array.from({ length: 6 }, () => new THREE.Vector3()) },
+    uBg0: { value: new THREE.Vector3() },
+    uBg1: { value: new THREE.Vector3() },
+  };
+  for (const n of [
+    'uTime',
+    'uSlices',
+    'uDelay',
+    'uEchoes',
+    'uDrift',
+    'uFlow',
+    'uFlap',
+    'uMorph',
+    'uFold',
+    'uSize',
+    'uGlow',
+    'uPool',
+    'uGrain',
+    'uIris',
+    'uStreaks',
+    'uSparks',
+  ]) {
+    uniforms[n] = { value: 0 };
+  }
+  const mat = new THREE.ShaderMaterial({
+    vertexShader: BUTTERFLY_VERTEX,
+    fragmentShader: BUTTERFLY_FRAGMENT,
+    uniforms,
+    depthTest: false,
+    depthWrite: false,
+  });
+  // The vertex shader passes the quad's corners straight through, so it fills the frame whatever the camera.
+  const quad = new THREE.Mesh(new THREE.BufferGeometry(), mat);
+  quad.geometry.setAttribute('aPos', new THREE.Float32BufferAttribute([-1, -1, 3, -1, -1, 3], 2));
+  quad.geometry.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3),
+  );
+  quad.frustumCulled = false;
+  quad.renderOrder = -10;
+  quad.userData.tag = 'visualShader';
+  const size = new THREE.Vector2();
+  quad.onBeforeRender = (renderer) => {
+    renderer.getDrawingBufferSize(size);
+    const target = renderer.getRenderTarget();
+    if (target) size.set(target.width, target.height);
+    (uniforms.uRes.value as THREE.Vector2).copy(size);
+  };
+  group.add(quad);
+  return group;
+}
+
+function updateButterfly(group: THREE.Group, cfg: VisualCfg, t: number): void {
+  const quad = group.children[0] as THREE.Mesh;
+  const u = (quad.material as THREE.ShaderMaterial).uniforms;
+  const s = builderSettings(cfg.butterfly, cfg);
+  u.uTime.value = phaseFor(`${BUTTERFLY_MODE}:${cfg.butterfly ?? ''}`, t, cfg.breathSpeed);
+  u.uSlices.value = s.slices;
+  u.uDelay.value = s.delay;
+  u.uEchoes.value = s.echoes;
+  u.uDrift.value = s.drift;
+  u.uFlow.value = s.flow;
+  u.uFlap.value = s.flap;
+  u.uMorph.value = s.morph;
+  u.uFold.value = s.fold;
+  u.uSize.value = s.size;
+  u.uGlow.value = s.glow;
+  u.uPool.value = s.pool;
+  u.uGrain.value = s.grain;
+  u.uIris.value = s.iris;
+  u.uStreaks.value = s.streaks;
+  u.uSparks.value = s.sparks;
+  const piece = pieceBySlug(cfg.butterfly ?? '');
+  const key = piece?.palette ?? '';
+  if (quad.userData.paletteKey !== key) {
+    quad.userData.paletteKey = key;
+    const pal = paletteById(key);
+    u.uBg0.value = linearHex(pal.bg[0]);
+    u.uBg1.value = linearHex(pal.bg[1]);
+    u.uRamp.value = pal.ramp.map(linearHex);
+  }
+}
+
 /* ── Entry points ───────────────────────────────────────────── */
 
 export function buildGeometryVisual(cfg: VisualCfg, pal: PaletteSource): THREE.Group {
   if (isShaderVisualMode(cfg.mode)) return buildShaderQuad(cfg.mode, pal);
+  if (cfg.mode === BUTTERFLY_MODE) return buildButterfly();
   if (cfg.mode === 'goldenseed') return buildGoldenSeed();
   return buildRingTunnel(cfg.mode as LineTunnel, cfg);
 }
@@ -547,6 +656,7 @@ export function updateGeometryVisual(
   R: number,
 ): void {
   if (isShaderVisualMode(cfg.mode)) updateShaderQuad(group, cfg, t, R);
+  else if (cfg.mode === BUTTERFLY_MODE) updateButterfly(group, cfg, t);
   else if (cfg.mode === 'goldenseed') updateGoldenSeed(group, cfg, pal, t, R);
   else updateRingTunnel(group, cfg.mode as LineTunnel, cfg, pal, t, R);
 }

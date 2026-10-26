@@ -19,7 +19,13 @@ import {
  */
 
 type Props = {
-  current: { mode: string; values: LookValues; oilColors?: string[]; preset?: string };
+  current: {
+    mode: string;
+    values: LookValues;
+    oilColors?: string[];
+    preset?: string;
+    butterfly?: string;
+  };
   /** What a new look is named after, e.g. the mode's name. */
   baseName: string;
   onApply: (look: SavedLook) => void;

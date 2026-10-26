@@ -8,11 +8,16 @@ import {
   clampSettings,
   frameName,
   LIMITS,
+  makeSavedButterfly,
   PALETTES,
   PIECES,
   type Piece,
   paletteById,
+  pieceBySlug,
+  readSavedButterflies,
+  type SavedButterfly,
   SLIDER_KEYS,
+  writeSavedButterflies,
 } from '@/lib/art/butterflies';
 
 /*
@@ -21,7 +26,9 @@ import {
  * components/ButterflyCanvas.tsx.
  *
  * A wall of live pieces. Tap one to open it full screen: every setting as a
- * slider, any palette, pause, reset, and Save PNG for a frame worth keeping.
+ * slider, any palette, pause, reset, Save PNG for a frame worth keeping, and
+ * Save preset to keep the tuning itself: saved tunings sit in their own row,
+ * "My butterflies", above the collection, kept in this browser.
  * Art first: once a look holds up here it can pass to the Chill Machine
  * (docs/specs/visual-references.md).
  *
@@ -32,6 +39,12 @@ import {
 const INK = '#5C3018';
 const MUTED = '#8A6A4A';
 const GOLD = '#C4A060';
+
+const GRID: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+  gap: 22,
+};
 
 function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
@@ -62,22 +75,26 @@ function useOnScreen<T extends Element>(): [React.RefObject<T | null>, boolean] 
 
 function Card({
   piece,
+  saved,
   index,
   still,
   onOpen,
 }: {
   piece: Piece;
+  /** A saved tuning of the piece, shown instead of the piece itself. */
+  saved?: SavedButterfly;
   index: number;
   still: boolean;
   onOpen: () => void;
 }) {
   const [ref, on] = useOnScreen<HTMLButtonElement>();
+  const title = saved?.name ?? piece.title;
   return (
     <button
       ref={ref}
       type="button"
       onClick={onOpen}
-      aria-label={`Open ${piece.title}`}
+      aria-label={`Open ${title}`}
       style={{
         display: 'grid',
         gap: 8,
@@ -90,12 +107,12 @@ function Card({
       }}
     >
       <ButterflyCanvas
-        settings={piece.settings}
-        palette={paletteById(piece.palette)}
+        settings={saved?.settings ?? piece.settings}
+        palette={paletteById(saved?.palette ?? piece.palette)}
         animate={on && !still}
         maxDpr={0.75}
         offset={index * 3.7}
-        label={piece.title}
+        label={title}
         style={{
           width: '100%',
           aspectRatio: '4 / 5',
@@ -103,15 +120,37 @@ function Card({
           boxShadow: '0 10px 30px -14px rgba(40,20,8,0.5)',
         }}
       />
-      <span style={{ fontFamily: 'var(--font-serif)', fontSize: 18 }}>{piece.title}</span>
-      <span style={{ fontSize: 13, color: MUTED, lineHeight: 1.4 }}>{piece.line}</span>
+      <span style={{ fontFamily: 'var(--font-serif)', fontSize: 18 }}>{title}</span>
+      <span style={{ fontSize: 13, color: MUTED, lineHeight: 1.4 }}>
+        {saved ? `Your tuning of ${piece.title}` : piece.line}
+      </span>
     </button>
   );
 }
 
-function Viewer({ piece, still, onClose }: { piece: Piece; still: boolean; onClose: () => void }) {
-  const [settings, setSettings] = useState<ButterflySettings>(piece.settings);
-  const [paletteId, setPaletteId] = useState(piece.palette);
+function Viewer({
+  piece,
+  start,
+  still,
+  onClose,
+  onSavePreset,
+}: {
+  piece: Piece;
+  /** Open on a saved tuning rather than the piece. */
+  start?: SavedButterfly;
+  still: boolean;
+  onClose: () => void;
+  /** Keeps the current tuning; returns the name it was saved under. */
+  onSavePreset: (settings: ButterflySettings, palette: string) => string;
+}) {
+  const first = {
+    settings: start?.settings ?? piece.settings,
+    palette: start?.palette ?? piece.palette,
+  };
+  const title = start?.name ?? piece.title;
+  const [settings, setSettings] = useState<ButterflySettings>(first.settings);
+  const [paletteId, setPaletteId] = useState(first.palette);
+  const [savedAs, setSavedAs] = useState<string | null>(null);
   const [paused, setPaused] = useState(still);
   const [panel, setPanel] = useState(true);
   const canvas = useRef<ButterflyCanvasHandle | null>(null);
@@ -154,7 +193,7 @@ function Viewer({ piece, still, onClose }: { piece: Piece; still: boolean; onClo
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={piece.title}
+      aria-label={title}
       style={{ position: 'fixed', inset: 0, zIndex: 9980, background: '#000' }}
     >
       <ButterflyCanvas
@@ -163,7 +202,7 @@ function Viewer({ piece, still, onClose }: { piece: Piece; still: boolean; onClo
         palette={paletteById(paletteId)}
         animate={!paused}
         preserve
-        label={piece.title}
+        label={title}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       />
 
@@ -191,7 +230,7 @@ function Viewer({ piece, still, onClose }: { piece: Piece; still: boolean; onClo
             marginRight: 'auto',
           }}
         >
-          {piece.title}
+          {title}
         </span>
         <button
           type="button"
@@ -200,6 +239,13 @@ function Viewer({ piece, still, onClose }: { piece: Piece; still: boolean; onClo
           style={pill(paused)}
         >
           {paused ? 'Play' : 'Pause'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setSavedAs(onSavePreset(settings, paletteId))}
+          style={pill(Boolean(savedAs))}
+        >
+          {savedAs ? `Saved · ${savedAs}` : 'Save preset'}
         </button>
         <button type="button" onClick={save} style={pill()}>
           Save PNG
@@ -296,8 +342,8 @@ function Viewer({ piece, still, onClose }: { piece: Piece; still: boolean; onClo
           <button
             type="button"
             onClick={() => {
-              setSettings(piece.settings);
-              setPaletteId(piece.palette);
+              setSettings(first.settings);
+              setPaletteId(first.palette);
             }}
             style={{ ...pill(), marginTop: 6, justifySelf: 'start' }}
           >
@@ -311,8 +357,27 @@ function Viewer({ piece, still, onClose }: { piece: Piece; still: boolean; onClo
 
 export default function LiquidButterflies() {
   const still = useReducedMotion();
-  const [open, setOpen] = useState<Piece | null>(null);
+  const [open, setOpen] = useState<{ piece: Piece; start?: SavedButterfly } | null>(null);
+  const [saved, setSaved] = useState<SavedButterfly[]>([]);
   const close = useCallback(() => setOpen(null), []);
+
+  useEffect(() => {
+    setSaved(readSavedButterflies());
+  }, []);
+
+  const savePreset = (piece: Piece) => (settings: ButterflySettings, palette: string) => {
+    const look = makeSavedButterfly(piece, palette, settings, saved, Date.now());
+    const next = [...saved, look];
+    setSaved(next);
+    writeSavedButterflies(next);
+    return look.name;
+  };
+
+  const remove = (id: string) => {
+    const next = saved.filter((b) => b.id !== id);
+    setSaved(next);
+    writeSavedButterflies(next);
+  };
 
   return (
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 16px 120px', color: INK }}>
@@ -339,19 +404,71 @@ export default function LiquidButterflies() {
         </p>
       </header>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-          gap: 22,
-        }}
-      >
+      {saved.length > 0 && (
+        <section aria-label="My butterflies" style={{ marginBottom: 34 }}>
+          <h2 style={{ margin: '0 0 12px', fontFamily: 'var(--font-serif)', fontSize: 22 }}>
+            My butterflies
+          </h2>
+          <div style={GRID}>
+            {saved.map((b, i) => {
+              const piece = pieceBySlug(b.piece) as Piece;
+              return (
+                <div key={b.id} style={{ position: 'relative' }}>
+                  <Card
+                    piece={piece}
+                    saved={b}
+                    index={i + 2}
+                    still={still}
+                    onOpen={() => setOpen({ piece, start: b })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => remove(b.id)}
+                    aria-label={`Delete ${b.name}`}
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      border: '1px solid rgba(196,160,96,0.4)',
+                      background: 'rgba(10,8,6,0.6)',
+                      color: '#f2e6cc',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <div style={GRID}>
         {PIECES.map((p, i) => (
-          <Card key={p.slug} piece={p} index={i} still={still} onOpen={() => setOpen(p)} />
+          <Card
+            key={p.slug}
+            piece={p}
+            index={i}
+            still={still}
+            onOpen={() => setOpen({ piece: p })}
+          />
         ))}
       </div>
 
-      {open && <Viewer piece={open} still={still} onClose={close} />}
+      {open && (
+        <Viewer
+          key={open.start?.id ?? open.piece.slug}
+          piece={open.piece}
+          start={open.start}
+          still={still}
+          onClose={close}
+          onSavePreset={savePreset(open.piece)}
+        />
+      )}
     </main>
   );
 }

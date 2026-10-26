@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PIECES } from '@/lib/art/butterflies';
+import { PIECES, SAVED_BUTTERFLIES_KEY } from '@/lib/art/butterflies';
 
 import LiquidButterflies from './LiquidButterflies';
 
@@ -65,5 +65,41 @@ describe('LiquidButterflies', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open Neon Psyche' }));
     fireEvent.click(screen.getByRole('button', { name: 'Controls' }));
     expect(screen.queryByRole('region', { name: 'Controls' })).toBeNull();
+  });
+});
+
+describe('saved butterflies', () => {
+  beforeEach(() => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it('saves a tuning from the viewer, shows it under My butterflies, reopens it, and deletes it', () => {
+    render(<LiquidButterflies />);
+    expect(screen.queryByRole('region', { name: 'My butterflies' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Open Eclipse' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gold palette' }));
+    fireEvent.change(screen.getByRole('slider', { name: 'Glitch' }), { target: { value: '0.3' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save preset' }));
+    expect(screen.getByRole('button', { name: 'Saved · Eclipse 1' })).toBeTruthy();
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(screen.getByRole('region', { name: 'My butterflies' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Open Eclipse 1' }));
+    expect(screen.getByRole('dialog', { name: 'Eclipse 1' })).toBeTruthy();
+    expect((screen.getByRole('slider', { name: 'Glitch' }) as HTMLInputElement).value).toBe('0.3');
+    expect(screen.getByRole('button', { name: 'Gold palette' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Eclipse 1' }));
+    expect(screen.queryByRole('region', { name: 'My butterflies' })).toBeNull();
+    expect(JSON.parse(window.localStorage.getItem(SAVED_BUTTERFLIES_KEY) ?? '[]')).toEqual([]);
   });
 });

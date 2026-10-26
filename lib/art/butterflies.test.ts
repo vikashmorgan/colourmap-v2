@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  builderPresetName,
+  builderSettings,
+  builderSliders,
   clampSettings,
   frameName,
   hexToRgb,
   LIMITS,
+  makeSavedButterfly,
   PALETTES,
   PIECES,
   paletteById,
+  parseSavedButterflies,
   pieceBySlug,
   rampUniform,
   SLIDER_KEYS,
@@ -82,5 +87,66 @@ describe('helpers', () => {
     const p = pieceBySlug('eclipse') as (typeof PIECES)[number];
     expect(frameName(p, 'eclipse')).toBe('liquid-butterfly-eclipse.png');
     expect(frameName(p, 'gold')).toBe('liquid-butterfly-eclipse-gold.png');
+  });
+});
+
+describe('in the Geometry Builder', () => {
+  it('names every piece once, with Eclipse renamed', () => {
+    const names = PIECES.map(builderPresetName);
+    expect(new Set(names).size).toBe(PIECES.length);
+    expect(names).toContain('Eclipse Butterfly');
+  });
+
+  it('round-trips a piece through the builder sliders', () => {
+    for (const p of PIECES) {
+      expect(builderSettings(p.slug, builderSliders(p))).toEqual(p.settings);
+    }
+  });
+
+  it('lays the sliders over the piece and falls back to the first piece', () => {
+    const s = builderSettings('eclipse', {
+      symmetry: 4,
+      complexity: 6,
+      particles: 3,
+      glow: 5,
+      intensity: 2,
+      breathSpeed: 1,
+    });
+    expect(s).toMatchObject({
+      fold: 4,
+      slices: 6,
+      echoes: 3,
+      flow: 0.5,
+      morph: 0.2,
+      speed: 1,
+      streaks: 0.8,
+    });
+    expect(builderSettings('nope', builderSliders(PIECES[0] as (typeof PIECES)[number]))).toEqual(
+      PIECES[0]?.settings,
+    );
+  });
+});
+
+describe('saved tunings', () => {
+  const eclipse = () => pieceBySlug('eclipse') as (typeof PIECES)[number];
+
+  it('names a tuning after its piece with the next free number', () => {
+    const a = makeSavedButterfly(eclipse(), 'gold', eclipse().settings, [], 1);
+    expect(a.name).toBe('Eclipse 1');
+    expect(makeSavedButterfly(eclipse(), 'gold', eclipse().settings, [a], 2).name).toBe(
+      'Eclipse 2',
+    );
+  });
+
+  it('round-trips, and repairs or drops what it cannot trust', () => {
+    const a = makeSavedButterfly(eclipse(), 'gold', { ...eclipse().settings, streaks: 0.3 }, [], 1);
+    expect(parseSavedButterflies(JSON.stringify([a]))).toEqual([a]);
+    expect(parseSavedButterflies('nope')).toEqual([]);
+    expect(parseSavedButterflies(JSON.stringify([{ ...a, piece: 'gone' }]))).toEqual([]);
+    const wild = parseSavedButterflies(
+      JSON.stringify([{ ...a, palette: 'nope', settings: { slices: 99 } }]),
+    )[0];
+    expect(wild?.palette).toBe(PALETTES[0]?.id);
+    expect(wild?.settings.slices).toBe(LIMITS.slices.max);
   });
 });
