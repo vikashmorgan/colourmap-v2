@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-
 import { hexToHsl, hslToHex, hslToRgb, hueSatToPoint, pointToHueSat } from '@/lib/art/colour-wheel';
+import { fillStyle, sliderClass } from '@/lib/art/slider';
 
 /*
  * A circle of colour to pick from (2026-10-26): "a beautiful trippy circle of
@@ -197,7 +197,8 @@ export default function ColourWheel({
             choose(hsl.h, hsl.s, l);
           }}
           aria-label={`${label} lightness`}
-          style={{ width: '100%', accentColor: accent }}
+          className={sliderClass('magma')}
+          style={{ ...fillStyle(light, 0.03, 0.97), width: '100%' }}
         />
       </label>
     </div>

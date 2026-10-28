@@ -22,6 +22,7 @@ import {
   type SavedLight,
   writeSavedLights,
 } from '@/lib/art/light';
+import { fillStyle, sliderClass } from '@/lib/art/slider';
 
 /*
  * LIGHT BODIES — the collection's space in the Art section (2026-10-26).
@@ -377,7 +378,8 @@ function Viewer({
                   value={settings[k]}
                   onChange={(e) => set(k, Number(e.target.value))}
                   aria-label={name}
-                  style={{ width: '100%', accentColor: GOLD }}
+                  className={sliderClass('sand')}
+                  style={{ width: '100%', ...fillStyle(settings[k], l.min, l.max) }}
                 />
               </label>
             );
