@@ -20,6 +20,7 @@ import {
   PIECES as LIGHT_PIECES,
   lightBuilderSliders,
 } from '@/lib/art/light';
+import { fillStyle, sliderClass } from '@/lib/art/slider';
 import { birdTarget, fishTarget, predator, steer, view } from '@/lib/flocks';
 import { mask as flowMask, MASK_NAMES, inside as maskInside } from '@/lib/flow-masks';
 import {
@@ -26226,7 +26227,10 @@ export default function GeometryField() {
                               step={step}
                               value={val}
                               onChange={(e) => update(key as keyof Cfg, parseFloat(e.target.value))}
-                              style={{ width: '100%', accentColor: accent, cursor: 'pointer' }}
+                              className={sliderClass(
+                                cfg.mode === 'liquidbutterfly' ? 'magma' : 'sand',
+                              )}
+                              style={{ width: '100%', ...fillStyle(val, min, max) }}
                             />
                           </div>
                         );

@@ -120,3 +120,11 @@ Thermal Monarch, Neon Psyche, Acid Morpho, Pearl Moth, Golden Swallowtail, Deep 
   - Meditating Light, Praying Light, Standing Light, Rainbow Body, Golden Sphere
   - Prism Wings
   - Data Peak, Wire Peaks
+
+## Sand and magma sliders — 2026-10-28
+
+> Martin: "i want cooler sliders … inspired by the butterfly effects or the golden effects" · "golden sand sliders for the star golden visuals and magma sliders for butterfly … léger dégradé"
+
+- The sliders get two skins (`.art-slider` in `app/globals.css`, with `lib/art/slider.ts`). Each track fills to the value in a light gradient with a fine grain over it.
+  - **Sand:** pale sand to gold, with a glowing grain of gold as the thumb. Used on Light Bodies and on every builder mode except the butterflies.
+  - **Magma:** wine to red, orange and yellow, with an ember for a thumb. The slider breathes slowly; with reduced motion it holds still. Used on the Liquid Butterflies page and the builder's butterfly mode.

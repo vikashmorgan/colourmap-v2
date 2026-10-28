@@ -25,6 +25,7 @@ import {
   withBg,
   writeSavedButterflies,
 } from '@/lib/art/butterflies';
+import { fillStyle, sliderClass } from '@/lib/art/slider';
 
 /*
  * LIQUID BUTTERFLIES — the collection's space in the Art section (2026-10-25).
@@ -436,7 +437,8 @@ function Viewer({
                   value={settings[k]}
                   onChange={(e) => set(k, Number(e.target.value))}
                   aria-label={l.label}
-                  style={{ width: '100%', accentColor: GOLD }}
+                  className={sliderClass('magma')}
+                  style={{ width: '100%', ...fillStyle(settings[k], l.min, l.max) }}
                 />
               </label>
             );
