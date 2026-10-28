@@ -31,8 +31,9 @@ import {
   figure,
   sampleDots,
 } from '@/lib/sacred-figures';
+import { along, buildStarTree, routeLength, STEP } from '@/lib/star-tree';
 import { isOilMode, isShaderVisualMode } from '@/lib/visual-shaders';
-import { speedColour, windShape, windVelocity } from '@/lib/wind';
+import { windShape, windVelocity } from '@/lib/wind';
 
 import {
   buildBigBangStars,
@@ -2667,6 +2668,7 @@ export const PRESETS: Record<string, Cfg> = {
     stars: 0,
     mode: 'sauroneye',
   },
+  // 28 Oct 2026: sober, fine star sand, no coloured drops (Style 1; 0 is the old colourful one).
   'Music Liquid Chaos': {
     preset: 'Deep Current',
     symmetry: 7,
@@ -2674,8 +2676,21 @@ export const PRESETS: Record<string, Cfg> = {
     glow: 5,
     breathSpeed: 1,
     intensity: 8,
-    particles: 0,
+    particles: 1,
     luminous: 1,
+    stars: 0,
+    mode: 'musicliquid',
+  },
+  // 28 Oct 2026: the same star sand as a tree, a soft current from the roots to the branches (Style 2).
+  'Star Tree': {
+    preset: 'Golden Source',
+    symmetry: 7,
+    complexity: 8,
+    glow: 0,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 2,
+    luminous: 1.5,
     stars: 0,
     mode: 'musicliquid',
   },
@@ -14735,6 +14750,8 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
   ],
   musicliquid: [
+    // 0 the colourful liquid with drops, 1 sober star sand, 2 the Star Tree.
+    { key: 'particles', label: 'Style', min: 0, max: 2, step: 1 },
     { key: 'symmetry', label: 'Turbulence', min: 2, max: 12, step: 0.5 },
     { key: 'glow', label: 'Drops', min: 0, max: 10, step: 0.5 },
     { key: 'luminous', label: 'Ripple', min: 0, max: 3, step: 0.1 },
@@ -15569,6 +15586,8 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Wind Body', tag: 'WIND' },
   // 13 Oct 2026: "that liquid chaos from Music is amazing, use it as a star preset." First.
   { name: 'Music Liquid Chaos', tag: 'LIQUID' },
+  // 28 Oct 2026: "a tree in that style … a soft current of stars that goes from root to the branches."
+  { name: 'Star Tree', tag: 'TREE' },
   { name: 'Magnetic Sand', tag: 'CURRENT' },
   { name: 'Dot Walker', tag: 'CHAR' },
   // 13 Oct 2026: among the best, so third and fourth in Stars.
@@ -22054,27 +22073,48 @@ export default function GeometryField() {
      * passing over an object, science and art together; later with a car.
      * Smoke lines, as in a wind tunnel, ride the field of lib/wind.ts: they
      * stop on the nose, part, speed up over the shoulders and curl into the
-     * wake. Each line is coloured by its speed (slow deep blue, fast white
-     * turning gold), and a warm glow marks the stagnation point, where the
-     * pressure is highest.
+     * wake.
      *
-     * 2026-10-25: "i dont want the object so clearly outlined in the middle. i
-     * want the current effect focus." The object is no longer drawn: it is the
-     * empty space the smoke parts around. The currents get the quality instead:
-     * each segment is drawn twice, a wide faint haze under a fine line, batched
-     * by speed so a frame strokes a few dozen paths, not thousands; each puff
-     * has its own brightness, so the lanes read as smoke, not wire; and the
-     * trails can run longer.
+     * 2026-10-28, for the projection room: "make these wind effects just one
+     * colour for now, and think how to make them look better", and "they
+     * seem a bit blurry … the first one has a different shape when I open it
+     * fullscreen, which deforms the center void circle". So: one colour, warm
+     * white smoke, with speed shown as light (fast air brighter and finer,
+     * slow air dim and soft) instead of hue; the rake's lines drawn crisp,
+     * the free air as fine dust; the canvas kept at the screen's own pixels
+     * (device pixel ratio) and resized whenever its box changes, so the
+     * sphere stays round in a frame, full screen or on a projector.
      */
     if (cfg.mode === 'windtunnel') {
       const shape = windShape(cfg.particles);
       const turb = cfg.glow / 10;
-      const fade = 0.2 - 0.19 * Math.min(1, cfg.luminous / 10);
+      const SMOKE = [238, 230, 214];
+      let resized = false;
+      // At the screen's own pixels, and kept so: a stretched canvas blurs and squashes the sphere.
+      const fitCanvas = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.round((mc!.offsetWidth || 400) * dpr);
+        const h = Math.round((mc!.offsetHeight || 600) * dpr);
+        if (mc!.width !== w || mc!.height !== h) {
+          mc!.width = w;
+          mc!.height = h;
+          ctx!.fillStyle = 'rgb(3, 5, 10)';
+          ctx!.fillRect(0, 0, w, h);
+          resized = true;
+        }
+        return dpr;
+      };
+      fitCanvas();
+      const fade = 0.2 - 0.17 * Math.min(1, cfg.luminous / 10);
       const lanes = Math.round(lerp(16, 64, (cfg.complexity - 1) / 9));
       // As much smoke per area as on a full screen: a small screen (a frame in a room) would otherwise saturate to white.
-      const perLane = () =>
-        70 * Math.max(0.15, Math.min(1.4, (mc!.width * mc!.height) / (1280 * 720)));
-      type Puff = { x: number; y: number; laned: boolean; glow: number };
+      const perLane = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        return (
+          70 * Math.max(0.15, Math.min(1.4, (mc!.width * mc!.height) / (dpr * dpr * 1280 * 720)))
+        );
+      };
+      type Puff = { x: number; y: number; laned: boolean };
       let puffs: Puff[] = [];
       let last = performance.now();
       let clock = 0;
@@ -22100,16 +22140,8 @@ export default function GeometryField() {
             (2.1 * (Math.floor(Math.random() * lanes) + 0.5)) / lanes +
             (Math.random() - 0.5) * 0.004
           : (Math.random() - 0.5) * 2.3;
-        // Each puff its own brightness, so the smoke has grain.
-        return { x, y, laned, glow: 0.55 + Math.random() * 0.7 };
+        return { x, y, laned };
       };
-      // Segments of the frame, sorted into speed bands so each band is one path.
-      const BANDS = 14;
-      const BAND_MAX = 2.2;
-      const seg: number[][] = Array.from({ length: BANDS }, () => []);
-      const bandColour = Array.from({ length: BANDS }, (_, b) =>
-        speedColour(((b + 0.5) / BANDS) * BAND_MAX),
-      );
       {
         const f = frame();
         for (let i = 0; i < lanes * perLane(); i++) {
@@ -22126,8 +22158,17 @@ export default function GeometryField() {
         const dt = still ? 0 : Math.min(0.033, (now - last) / 1000) * speed;
         last = now;
         clock += dt;
+        const dpr = fitCanvas();
         const f = frame();
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        if (resized) {
+          // A bigger frame (full screen): fill it with smoke at once, not only from the rake.
+          resized = false;
+          const want = Math.round(lanes * perLane());
+          while (puffs.length < want) {
+            const p = spawn(f.xmin + Math.random() * (f.xmax - f.xmin));
+            if (shape.sdf(p.x, p.y) > 0.01) puffs.push(p);
+          }
+        }
         const sx = (x: number) => f.cx + x * f.scale;
         const sy = (y: number) => f.cy - y * f.scale;
 
@@ -22136,8 +22177,8 @@ export default function GeometryField() {
         ctx!.fillRect(0, 0, f.W, f.H);
         ctx!.globalCompositeOperation = 'lighter';
         ctx!.lineCap = 'round';
+        const [sr, sg, sb] = SMOKE;
 
-        for (const band of seg) band.length = 0;
         const keep: Puff[] = [];
         for (const p of puffs) {
           const ox = p.x;
@@ -22149,42 +22190,22 @@ export default function GeometryField() {
           v = windVelocity(shape, p.x, p.y, clock, turb);
           p.x += v[0] * dt * 0.5;
           p.y += v[1] * dt * 0.5;
-          // With no body drawn over them, smoke that touches the object stops there, never inside it.
-          if (p.x > f.xmax || Math.abs(p.y) > 1.3 || shape.sdf(p.x, p.y) < 0) continue;
+          if (p.x > f.xmax || Math.abs(p.y) > 1.3 || shape.sdf(p.x, p.y) < -0.03) continue;
           keep.push(p);
           if (dt === 0) continue;
-          const sp = Math.hypot(v[0], v[1]);
-          const band = Math.min(BANDS - 1, Math.floor((sp / BAND_MAX) * BANDS));
-          // Two brightness halves per band: the free drift is fainter than the laned smoke.
-          seg[band]!.push(sx(ox), sy(oy), sx(p.x), sy(p.y), p.laned ? p.glow : p.glow * 0.45);
-        }
-
-        // Haze first (wide, faint), then the fine line on top: the current glows without a hard edge.
-        const passes: [number, number][] = [
-          [3.4 * dpr, 0.07],
-          [1.0 * dpr, 0.3],
-        ];
-        for (const [width, alpha] of passes) {
-          ctx!.lineWidth = width;
-          for (let b = 0; b < BANDS; b++) {
-            const list = seg[b]!;
-            if (!list.length) continue;
-            const [h, sat, l] = bandColour[b]!;
-            // Bright and faint puffs as two paths, so grain survives the batching.
-            for (const bright of [true, false]) {
-              ctx!.beginPath();
-              let any = false;
-              for (let i = 0; i < list.length; i += 5) {
-                if (list[i + 4]! >= 0.9 !== bright) continue;
-                ctx!.moveTo(list[i]!, list[i + 1]!);
-                ctx!.lineTo(list[i + 2]!, list[i + 3]!);
-                any = true;
-              }
-              if (!any) continue;
-              const k = bright ? 1.15 : 0.6;
-              ctx!.strokeStyle = `hsla(${h}, ${sat}%, ${l}%, ${alpha * k * (0.4 + 0.6 * iF)})`;
-              ctx!.stroke();
-            }
+          // One colour; speed is light: slow air dim and soft, fast air bright and fine.
+          const u = Math.max(0, Math.min(1, (Math.hypot(v[0], v[1]) - 0.25) / 1.35));
+          if (p.laned) {
+            ctx!.strokeStyle = `rgba(${sr}, ${sg}, ${sb}, ${(0.14 + 0.36 * u) * (0.4 + 0.6 * iF)})`;
+            ctx!.lineWidth = (1.25 - 0.5 * u) * dpr;
+            ctx!.beginPath();
+            ctx!.moveTo(sx(ox), sy(oy));
+            ctx!.lineTo(sx(p.x), sy(p.y));
+            ctx!.stroke();
+          } else {
+            // The free air: fine dust carried along, no line.
+            ctx!.fillStyle = `rgba(${sr}, ${sg}, ${sb}, ${(0.12 + 0.2 * u) * (0.4 + 0.6 * iF)})`;
+            ctx!.fillRect(sx(p.x) - 0.6 * dpr, sy(p.y) - 0.6 * dpr, 1.2 * dpr, 1.2 * dpr);
           }
         }
         // New smoke at the rake, as much as left the frame.
@@ -22192,17 +22213,29 @@ export default function GeometryField() {
         for (let i = keep.length; i < want; i++) keep.push(spawn(f.xmin + Math.random() * 0.04));
         puffs = keep;
 
-        // The stagnation point: a soft warm glow on the nose, where the air stops. The object
-        // itself is not drawn: it is the space the smoke parts around (2026-10-25).
+        // The stagnation point: a warm glow on the nose, where the air stops.
+        ctx!.globalCompositeOperation = 'lighter';
         const gx = sx(noseOf[0]);
         const gy = sy(noseOf[1]);
-        const gr = 0.14 * f.scale;
+        const gr = 0.11 * f.scale;
         const g = ctx!.createRadialGradient(gx, gy, 0, gx, gy, gr);
-        g.addColorStop(0, `hsla(14, 95%, 58%, ${0.035 * iF})`);
-        g.addColorStop(1, 'hsla(14, 95%, 58%, 0)');
+        g.addColorStop(0, `rgba(${sr}, ${sg}, ${sb}, ${0.06 * iF})`);
+        g.addColorStop(1, `rgba(${sr}, ${sg}, ${sb}, 0)`);
         ctx!.fillStyle = g;
         ctx!.fillRect(gx - gr, gy - gr, gr * 2, gr * 2);
+
+        // The object: dark, drawn like a figure in a paper, a fine light outline.
         ctx!.globalCompositeOperation = 'source-over';
+        ctx!.beginPath();
+        shape.outline.forEach(([x, y], i) =>
+          i ? ctx!.lineTo(sx(x), sy(y)) : ctx!.moveTo(sx(x), sy(y)),
+        );
+        ctx!.closePath();
+        ctx!.fillStyle = '#05070c';
+        ctx!.fill();
+        ctx!.strokeStyle = `rgba(236, 226, 206, ${0.35 + 0.35 * iF})`;
+        ctx!.lineWidth = 1.2 * dpr;
+        ctx!.stroke();
 
         canvasModeAnimRef.current = requestAnimationFrame(drawWind);
       }
@@ -22625,6 +22658,146 @@ export default function GeometryField() {
      * beat from the app's music adds one. A soft trail is left on the canvas,
      * which is what makes it read as liquid.
      */
+    /* ── MUSIC LIQUID CHAOS, sober, and the STAR TREE ──────────────────────
+     *
+     * 2026-10-28: "music liquid chaos make it work clean in art stars, with
+     * fine clean star sand grain, and without the coloured ripples booming on
+     * it. More sober. Then we will use this as base to transform it into a
+     * tree: a tree in that style as another preset, with a soft current of
+     * stars that goes from root to the branches."
+     *
+     * Style (the Particles slider) 1: the same divergence-free current, but
+     * only fine grains of star sand, one colour, each twinkling a little; no
+     * drops, no ripples, no halos. Style 2: the Star Tree (lib/star-tree.ts):
+     * the grains ride routes from a root tip up the trunk to a branch tip,
+     * slowly, spread across each branch's width, and fade out at the tips to
+     * start again at the roots. Symmetry sets the crown (how many forks).
+     * Both are drawn at the screen's own pixels, so the grain stays fine.
+     */
+    if (cfg.mode === 'musicliquid' && Math.round(cfg.particles) >= 1) {
+      const tree = Math.round(cfg.particles) >= 2;
+      const n = Math.round(lerp(1400, 4600, (cfg.complexity - 1) / 9) * (tree ? 1.6 : 1));
+      const f = Math.max(2, cfg.symmetry);
+      const light = 0.35 + iF * 0.65;
+      // Ripple, here: how long the grains' trails last.
+      const fade = 0.1 + 0.25 * (1 - Math.min(1, cfg.luminous / 3));
+      const tint = (k: number) =>
+        [pr + (255 - pr) * k, pg + (255 - pg) * k, pb + (255 - pb) * k].map(Math.round);
+      const [gr, gg, gb] = tint(tree ? 0.35 : 0.55);
+      const fitSand = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.round((mc!.offsetWidth || 400) * dpr);
+        const h = Math.round((mc!.offsetHeight || 600) * dpr);
+        if (mc!.width !== w || mc!.height !== h) {
+          mc!.width = w;
+          mc!.height = h;
+          ctx!.fillStyle = 'rgb(5, 5, 9)';
+          ctx!.fillRect(0, 0, w, h);
+        }
+        return dpr;
+      };
+      fitSand();
+      const px = new Float32Array(n);
+      const py = new Float32Array(n);
+      const tw = new Float32Array(n);
+      // The tree: each grain's route, how far along it, its place across the branch, its pace.
+      const shapeTree = tree ? buildStarTree(Math.round(cfg.symmetry) - 1) : null;
+      const route = new Uint16Array(n);
+      const at = new Float32Array(n);
+      const across = new Float32Array(n);
+      const pace = new Float32Array(n);
+      const place = (i: number, anywhere: boolean) => {
+        tw[i] = Math.random() * Math.PI * 2;
+        if (shapeTree) {
+          route[i] = Math.floor(Math.random() * shapeTree.routes.length);
+          const r = shapeTree.routes[route[i]]!;
+          at[i] = anywhere ? Math.random() * routeLength(r) : Math.random() * 0.03;
+          // Most grains near the middle of the branch, fewer at its edges.
+          across[i] = (Math.random() + Math.random() + Math.random()) / 1.5 - 1;
+          pace[i] = 0.75 + 0.5 * Math.random();
+        } else {
+          const a = Math.random() * Math.PI * 2;
+          const rr = Math.sqrt(Math.random()) * 0.92;
+          px[i] = Math.cos(a) * rr;
+          py[i] = Math.sin(a) * rr;
+        }
+      };
+      for (let i = 0; i < n; i++) place(i, true);
+      let clock = 0;
+      let last = performance.now();
+
+      function drawStarSand() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.05, (now - last) / 1000) * speed;
+        last = now;
+        clock += dt;
+        const dpr = fitSand();
+        const W = mc!.width;
+        const H = mc!.height;
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = `rgba(5, 5, 9, ${fade})`;
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+        const scale = Math.min(W, H) * (tree ? 0.5 : 0.46);
+        const cx = W / 2;
+        const cy = H / 2;
+        const size = (tree ? 1.05 : 1.3) * dpr;
+        for (let i = 0; i < n; i++) {
+          let x: number;
+          let y: number;
+          let a = 1;
+          if (shapeTree) {
+            const r = shapeTree.routes[route[i]]!;
+            const len = routeLength(r);
+            at[i] += dt * 0.11 * pace[i];
+            if (at[i] > len + 0.12) {
+              place(i, false);
+              continue;
+            }
+            const [x0, y0, w] = along(r, at[i]);
+            const [x1, y1] = along(r, at[i] + STEP * 2);
+            const dx = x1 - x0;
+            const dy = y1 - y0;
+            const dl = Math.hypot(dx, dy) || 1;
+            // Across the branch, and a soft sway so the current breathes.
+            const off = across[i] * w + Math.sin(clock * 0.8 + tw[i]) * 0.004;
+            x = x0 - (dy / dl) * off;
+            y = y0 + (dx / dl) * off;
+            // Past the tip, the grain drifts on a little and fades, like light leaving a leaf.
+            const past = at[i] - len;
+            if (past > 0) {
+              x += (dx / dl) * past * 0.5;
+              y += (dy / dl) * past * 0.5 + past * 0.2;
+              a = 1 - past / 0.12;
+            }
+          } else {
+            const x0 = px[i];
+            const y0 = py[i];
+            const step = dt * 0.1;
+            px[i] = x0 + Math.sin(x0 * f) * Math.cos(y0 * f + clock * 0.3) * step;
+            py[i] = y0 - Math.cos(x0 * f) * Math.sin(y0 * f + clock * 0.3) * step;
+            if (px[i] * px[i] + py[i] * py[i] > 0.88) place(i, true);
+            x = px[i];
+            y = py[i];
+          }
+          const twinkle = 0.7 + 0.3 * Math.sin(clock * 1.7 + tw[i] * 3);
+          const alpha = Math.min(1, (tree ? 0.5 : 0.95) * light * twinkle * a);
+          if (alpha < 0.02) continue;
+          ctx!.fillStyle = `rgba(${gr}, ${gg}, ${gb}, ${alpha})`;
+          ctx!.fillRect(cx + x * scale - size / 2, cy - y * scale - size / 2, size, size);
+        }
+        ctx!.globalCompositeOperation = 'source-over';
+        canvasModeAnimRef.current = requestAnimationFrame(drawStarSand);
+      }
+      drawStarSand();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
+    }
+
     if (cfg.mode === 'musicliquid') {
       const TAU = Math.PI * 2;
       const n = Math.round(lerp(1400, 4600, (cfg.complexity - 1) / 9));
