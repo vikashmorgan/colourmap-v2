@@ -459,3 +459,21 @@ Under the sliders, a **Saved** row (`components/SavedLooks.tsx`, `lib/geometry-s
 - **×** deletes a look you saved.
 - **Oil Fractal 1** (the Rorschach values above) is built in. It is on every device and cannot be deleted.
 - Looks are kept in this browser (`colourmap:geometry-saved-looks`). Keeping them across devices would need a table in the database: later, and only with an OK for the migration.
+
+## Wind in one colour, sober Music Liquid Chaos, Star Tree (2026-10-28)
+
+For the Out of the Box projection room.
+
+> Martin: "make these wind effects just one colour for now … they seem a bit blurry … the first one has a different shape when I open it fullscreen" · "music liquid chaos … fine clean star sand grain, without the coloured ripples … more sober. Then … a tree in that style … a soft current of stars that goes from root to the branches."
+
+- **Wind:**
+  - The smoke is warm white. Speed shows as light and line width rather than hue.
+  - The free air is drawn as fine dust.
+  - The canvas is kept at the screen's own pixels and resized whenever its box changes. The sphere stays round in full screen, and the smoke refills at once after a resize.
+- **Music Liquid Chaos:**
+  - It has a Style slider: 0 is the old colourful liquid with drops, and 1 is sober star sand. Style 1 is now the preset: fine twinkling grains in one colour riding the same current, with no drops, ripples or halos.
+  - On Style 1, the Ripple slider sets how long the trails last.
+- **Star Tree (Style 2, a new preset after Music Liquid Chaos):**
+  - `lib/star-tree.ts` grows a seeded tree with roots, a trunk and a crown. Turbulence sets how many forks the crown has.
+  - The grains ride routes from a root tip up to a branch tip, spread across each branch's width, then fade past the tip and start again at the roots.
+- The same change is in the builder site (geometry-builder #6).
