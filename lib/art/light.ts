@@ -139,8 +139,10 @@ export const PALETTES: Palette[] = [
   {
     id: 'dusk',
     label: 'Dusk',
-    bg: ['#3a4048', '#121418'],
-    ramp: ['#030303', '#fff2dc', '#f0d8b0', '#e88a3a', '#a8401e', '#8aa0b0'],
+    // Warm all the way out (2026-10-28: "vortex dont make it green on the
+    // outside but staying in orange or pink or yellow tones warm").
+    bg: ['#3a1820', '#12080a'],
+    ramp: ['#030303', '#fff2dc', '#ffd08a', '#f08a3a', '#d8406a', '#f0a0b8'],
   },
   {
     id: 'night-drop',
