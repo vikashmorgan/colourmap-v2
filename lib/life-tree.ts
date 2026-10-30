@@ -56,11 +56,11 @@ export type View = { grow: Record<Branch, number>; shiftX: number; shiftY: numbe
 export const GROWN = 1.5;
 export const SHRUNK = 0.55;
 
-export function viewFor(lit: Branch | null): View {
+export function viewFor(lit: Branch | null, grown = GROWN): View {
   if (!lit) return { grow: { art: 1, admin: 1, energy: 1 }, shiftX: 0, shiftY: 0 };
   const a = TREE_ANGLE[lit];
   const grow = { art: SHRUNK, admin: SHRUNK, energy: SHRUNK };
-  grow[lit] = GROWN;
+  grow[lit] = grown;
   return { grow, shiftX: -Math.cos(a) * 0.3, shiftY: -Math.sin(a) * 0.3 };
 }
 
@@ -155,4 +155,20 @@ export function routeLabel(href: string): string {
   const last = href.split('/').filter(Boolean).pop() ?? href;
   const words = last.replace(/-/g, ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/*
+ * SWITCHING DESIGNS (2026-10-30): "a disintegration of the light currents and
+ * tree when you do the switch: it disintegrates and rebuilds in 2 seconds".
+ * The stars fly apart for the first second and stream back for the second;
+ * the new design's names arrive at the turn.
+ */
+export const SWITCH_SECONDS = 2;
+
+/** How far apart the stars are, 0 (a tree) to 1 (fully scattered), `t` seconds into a switch. */
+export function scatter(t: number): number {
+  if (t <= 0 || t >= SWITCH_SECONDS) return 0;
+  const half = SWITCH_SECONDS / 2;
+  const k = t < half ? t / half : (SWITCH_SECONDS - t) / half;
+  return k * k * (3 - 2 * k);
 }

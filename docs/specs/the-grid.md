@@ -88,3 +88,25 @@ the pages it connects to", and "I want the first tree to stay branchy and full".
   built yet is shown dim and does nothing.
 - **YOU** opens the pages about how you are, round the root.
 - Arrows move, Enter opens, Esc steps back out and then closes.
+
+### Design II, and the design tab — 2026-10-30
+
+Martin, asked how the G menu's organisation could be better: "do it as a
+second tree so I can combine both versions", then "with a design tab to go
+from one tree to the next, and a disintegration of the light currents and
+tree when you do the switch: it disintegrates and rebuilds in 2 seconds".
+
+- A **DESIGN I / II** tab at the top left of the tree, remembered. Switching
+  scatters the stars outward in a swirl for one second and streams them back
+  into the trees in the next; the names fade out and the new design's come in
+  at the turn.
+- **Design I** is unchanged: lib/branches.ts, areas then pages.
+- **Design II** (lib/life-tree-2.ts) places every page the Grid knows -- a test
+  fails if one is left off. Opening a tree shows it in one view: the areas
+  named along its limbs, every page hanging from the tips of its own limb, so
+  any page is two taps from G. Names are nudged apart so none overlap.
+- **Use shows (design II).** Pages opened this week glow; a tree shines up to
+  a third brighter by the share of its pages opened this week. Your last three
+  pages sit just below YOU.
+- **Type to find (design II).** Letters typed in the tree list matching pages
+  above the line; Enter opens the first, Backspace edits, Esc clears.

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const push = vi.fn();
@@ -120,5 +120,37 @@ describe('GridMenu', () => {
     fireEvent.click(screen.getByRole('button', { name: 'You' }));
     fireEvent.click(screen.getByRole('button', { name: 'Focus' }));
     expect(push).toHaveBeenCalledWith('/day');
+  });
+
+  it('switches to design II with the design tab, after the stars come apart, and remembers it', () => {
+    vi.useFakeTimers();
+    try {
+      render(<GridMenu />);
+      fireEvent.click(screen.getByRole('button', { name: /open the network menu/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Design two' }));
+      expect(window.localStorage.getItem('cb-life-tree-design')).toBe('2');
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(screen.getByRole('button', { name: 'Design two', pressed: true })).toBeTruthy();
+      // One view of a branch: every page of Art, from Visual and Music alike.
+      fireEvent.click(screen.getByRole('button', { name: 'Art' }));
+      expect(screen.getByRole('button', { name: 'Butterflies' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Chill Machine' })).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Butterflies' }));
+      expect(push).toHaveBeenCalledWith('/art/butterflies');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('finds a page by typing, in design II', () => {
+    window.localStorage.setItem('cb-life-tree-design', '2');
+    render(<GridMenu />);
+    fireEvent.click(screen.getByRole('button', { name: /open the network menu/i }));
+    for (const key of ['p', 'r', 'o'])
+      fireEvent.keyDown(document.activeElement as HTMLElement, { key });
+    fireEvent.click(screen.getByRole('button', { name: 'Programs' }));
+    expect(push).toHaveBeenCalledWith('/programs');
   });
 });
