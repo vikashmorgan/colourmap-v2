@@ -11,6 +11,8 @@ import {
   rootPoint,
   routeLabel,
   SHRUNK,
+  SWITCH_SECONDS,
+  scatter,
   shifted,
   tipLeaves,
   treeToScreen,
@@ -85,5 +87,14 @@ describe('the life tree', () => {
     // Art grows upward, so the root moves down to give it room.
     expect(shifted(f, v).cy).toBeGreaterThan(f.cy);
     expect(shifted(f, viewFor('admin')).cx).toBeLessThan(f.cx);
+  });
+
+  it('comes apart for a second and builds back in the next', () => {
+    expect(scatter(0)).toBe(0);
+    expect(scatter(SWITCH_SECONDS / 2)).toBe(1);
+    expect(scatter(0.5)).toBeGreaterThan(0);
+    expect(scatter(0.5)).toBeCloseTo(scatter(SWITCH_SECONDS - 0.5));
+    expect(scatter(SWITCH_SECONDS)).toBe(0);
+    expect(scatter(-1)).toBe(0);
   });
 });
