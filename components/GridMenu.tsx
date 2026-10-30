@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { LifeTree } from '@/components/LifeTree';
 import {
   GOLD,
   type GridNode,
@@ -13,6 +14,7 @@ import {
   isOnline,
   lastSeen,
   MENU_MODE_KEY,
+  MENU_MODES,
   type MenuMode,
   openNode,
   parseMenuMode,
@@ -30,8 +32,11 @@ import {
  * page sat behind the title popup, so this puts a way in on every page: a
  * small GRID button in the header's empty left slot, or the G key.
  *
- * Two looks for the same menu, switched at the top and remembered:
+ * Three looks for the same menu, switched at the top and remembered:
  *
+ *   TREE      (2026-10-30, the first look) the life tree: you at the root,
+ *             a pulse leaving it, Art, Admin and Energy growing out of it as
+ *             trees of stars (components/LifeTree.tsx, lib/life-tree.ts)
  *   WHEEL     the eight hubs in a ring, like a game's weapon wheel. Pick one
  *             and its pages take the ring; the centre goes back.
  *   TERMINAL  a green phosphor screen: hubs in one column, the chosen hub's
@@ -54,7 +59,7 @@ function isTyping(): boolean {
 export default function GridMenu() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<MenuMode>('wheel');
+  const [mode, setMode] = useState<MenuMode>('tree');
   const [hub, setHub] = useState<Hub | null>(null);
   const [sel, setSel] = useState(0);
   const [visits, setVisits] = useState<Visits>({});
@@ -66,7 +71,7 @@ export default function GridMenu() {
     try {
       setMode(parseMenuMode(window.localStorage.getItem(MENU_MODE_KEY)));
     } catch {
-      // Storage blocked: the wheel it is.
+      // Storage blocked: the tree it is.
     }
   }, []);
 
@@ -136,6 +141,8 @@ export default function GridMenu() {
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    // The tree moves through its own leaves (components/LifeTree.tsx).
+    if (mode === 'tree') return;
     const n = items.length;
     const ring = mode === 'wheel';
     if (e.key === 'Escape' || e.key === 'Backspace') {
@@ -226,7 +233,7 @@ export default function GridMenu() {
               zIndex: 2,
             }}
           >
-            {(['wheel', 'terminal'] as const).map((m) => (
+            {MENU_MODES.map((m) => (
               <button
                 key={m}
                 type="button"
@@ -266,7 +273,9 @@ export default function GridMenu() {
             </button>
           </div>
 
-          {mode === 'wheel' ? (
+          {mode === 'tree' ? (
+            <LifeTree go={go} close={close} />
+          ) : mode === 'wheel' ? (
             <Wheel
               hub={hub}
               items={items}

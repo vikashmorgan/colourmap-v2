@@ -64,3 +64,27 @@ Keys: on the wheel, arrows go round. In the terminal, up and down move, right go
 
 
 2026-10-26. Martin: "take off the part where a circle behind it moves out. un cercle en traits tirés qui se décale derrière. crée confusion. no need." The wheel's rotating dashed ring is gone; the wheel keeps only its still outer circle and the centre disc.
+
+## The life tree — 2026-10-30
+
+Martin: "build it on brain when I press G as organising visual language. For
+now all in one colour. With pulse from center and three trees moving from the
+center root as my life tree." Then: "each branch opens into its evolution with
+the pages it connects to", and "I want the first tree to stay branchy and full".
+
+- G now opens on a third look, **Tree** (before Wheel and Terminal). The
+  remembered look moved to a new key, so everyone lands on the tree once.
+- **The figure.** You at the root, a ring pulsing out of it every few seconds,
+  and three Star Trees (lib/star-tree.ts, without their own roots) growing out
+  of it: Art up, Admin lower right, Energy lower left -- the three branches of
+  lib/branches.ts. A current of stars runs from the root to every tip and
+  surges as each pulse leaves. Gold only.
+- **The top.** All three trees full and equal; their names beyond the crowns,
+  YOU at the root.
+- **Into a branch.** That tree evolves: it grows half as large again, the root
+  slides away to give it room, the other two shrink back but stay. Its areas
+  hang from its own branch tips, spread round the crown. An area with several
+  pages opens them the same way; one page opens directly. An area with nothing
+  built yet is shown dim and does nothing.
+- **YOU** opens the pages about how you are, round the root.
+- Arrows move, Enter opens, Esc steps back out and then closes.
