@@ -64,7 +64,7 @@ type Item = {
 
 const [GR, GG, GB] = [196, 160, 96];
 // Enough that each crown reads full and branchy at a glance (2026-10-30).
-const STARS_PER_TREE = 1500;
+const STARS_PER_TREE = 2400;
 
 const ALL_NODES: GridNode[] = HUBS.flatMap((h) => h.nodes);
 const nodeFor = (href: string): GridNode =>

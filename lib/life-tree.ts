@@ -37,7 +37,7 @@ const TREE_HEIGHT = 1.55;
 /** The empty ring the trunks start from, as a share of the smaller side: the root. */
 export const ROOT_RADIUS = 0.035;
 
-export function buildLifeTrees(depth = 7): Record<Branch, StarTree> {
+export function buildLifeTrees(depth = 8): Record<Branch, StarTree> {
   return Object.fromEntries(
     BRANCHES.map((b) => [b, buildStarTree(depth, TREE_SEED[b], false)]),
   ) as Record<Branch, StarTree>;
