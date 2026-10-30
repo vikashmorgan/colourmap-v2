@@ -110,3 +110,21 @@ tree when you do the switch: it disintegrates and rebuilds in 2 seconds".
   pages sit just below YOU.
 - **Type to find (design II).** Letters typed in the tree list matching pages
   above the line; Enter opens the first, Backspace edits, Esc clears.
+
+### The root as a ball of stars, the power quote, the star wheel — 2026-10-30
+
+- **No YOU pill and no pulse rings at the centre** ("it denatures the tree").
+  The root is a ball of star dots turning slowly, the trunks leaving from
+  inside it; tapping it (or Enter on it) still opens your own pages. The beat
+  is kept only as the current's surge.
+- **A power quote** sits under the tree on its first view: one of fifty
+  (lib/power-quotes.ts) -- Kerouac, Jack London, painters, musicians, fighters
+  -- kept to lines on the record as theirs, no lyrics. A new one each time G
+  opens, then every half minute, fading.
+- **The wheel has two designs** too, on the same DESIGN tab. **I** is the star
+  wheel (components/StarWheel.tsx, lib/star-wheel.ts): the same ball of stars
+  at the centre, a current of stars along a bowed spoke to each hub, each hub
+  a small ball of stars, the whole held by a slow ring of stars -- the context
+  circle. **II** is the wheel as it was. Moving between Tree and Wheel, the
+  new look's stars stream together, so the two read as one style changing
+  shape.
