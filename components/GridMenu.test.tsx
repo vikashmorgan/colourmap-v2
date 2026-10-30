@@ -153,4 +153,18 @@ describe('GridMenu', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Programs' }));
     expect(push).toHaveBeenCalledWith('/programs');
   });
+
+  it('keeps the wheel as it was as design II of the wheel', () => {
+    window.localStorage.setItem(MENU_MODE_KEY, 'wheel');
+    render(<GridMenu />);
+    fireEvent.click(screen.getByRole('button', { name: /open the network menu/i }));
+    expect(screen.getByRole('button', { name: 'Design one', pressed: true })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Design two' }));
+    expect(window.localStorage.getItem('cb-wheel-design')).toBe('2');
+    expect(screen.getByRole('button', { name: 'Design two', pressed: true })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /grid/i }).getAttribute('href')).toBe('/grid');
+    fireEvent.click(screen.getByRole('button', { name: 'Mind hub' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    expect(push).toHaveBeenCalledWith('/notebook');
+  });
 });

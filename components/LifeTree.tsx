@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-
+import { type Design, DesignTab, parseDesign } from '@/components/DesignTab';
+import { drawOrb, makeOrb } from '@/components/starOrb';
 import {
   BRANCH_BLURBS,
   BRANCH_LABELS,
@@ -42,6 +43,7 @@ import {
   sectors,
   spreadLabels,
 } from '@/lib/life-tree-2';
+import { nextQuote, POWER_QUOTES } from '@/lib/power-quotes';
 import { along, routeLength, STEP } from '@/lib/star-tree';
 
 /*
@@ -71,8 +73,6 @@ import { along, routeLength, STEP } from '@/lib/star-tree';
  * honestly where nothing has been built.
  */
 
-export type Design = 1 | 2;
-
 export const DESIGN_KEY = 'cb-life-tree-design';
 
 type Level =
@@ -89,6 +89,8 @@ type Item = {
   /** Opened this week (design II). */
   warm?: boolean;
   small?: boolean;
+  /** The ball of stars at the root, which is you: no pill, only the stars. */
+  orb?: boolean;
   at: [number, number];
   act?: () => void;
 };
@@ -96,6 +98,15 @@ type Item = {
 type Limb = { key: string; label: string; dim: boolean; at: [number, number] };
 
 const [GR, GG, GB] = [196, 160, 96];
+/*
+ * THE ROOT IS A BALL OF STARS (2026-10-30): "not the you button and pulse in
+ * the centre, because it denatures the tree. Can be a ball of star dots
+ * instead, so it keeps style." The trunks leave from inside it.
+ */
+const ORB_STARS = 700;
+const ORB_RADIUS = ROOT_RADIUS * 1.5;
+/** How long a power quote stays before the next fades in. */
+const QUOTE_SECONDS = 30;
 // Enough that each crown reads full and branchy at a glance (2026-10-30).
 const STARS_PER_TREE = 2400;
 
@@ -106,9 +117,11 @@ const nodeFor = (href: string): GridNode =>
 type Props = {
   go: (node: GridNode) => void;
   close: () => void;
+  /** Come in from another look: the stars stream together instead of standing ready. */
+  arrive?: boolean;
 };
 
-export function LifeTree({ go, close }: Props) {
+export function LifeTree({ go, close, arrive = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [frame, setFrame] = useState<Frame>({ cx: 0, cy: 0, min: 0 });
   const [design, setDesign] = useState<Design>(1);
@@ -119,6 +132,26 @@ export function LifeTree({ go, close }: Props) {
   const [visits, setVisits] = useState<Visits>({});
   const [now, setNow] = useState(0);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [quote, setQuote] = useState(-1);
+  const [quoteIn, setQuoteIn] = useState(false);
+
+  // A power quote under the tree: a new one each time G opens, then every half minute.
+  useEffect(() => {
+    setQuote(Math.floor(Math.random() * POWER_QUOTES.length));
+    setQuoteIn(true);
+    let swap = 0;
+    const tick = window.setInterval(() => {
+      setQuoteIn(false);
+      swap = window.setTimeout(() => {
+        setQuote((q) => nextQuote(q, Math.random()));
+        setQuoteIn(true);
+      }, 700);
+    }, QUOTE_SECONDS * 1000);
+    return () => {
+      window.clearInterval(tick);
+      window.clearTimeout(swap);
+    };
+  }, []);
 
   // The tree stood in, if any. At the top none is: all three stay full.
   const litRef = useRef<Branch | null>(null);
@@ -126,16 +159,19 @@ export function LifeTree({ go, close }: Props) {
   const warmRef = useRef<Record<Branch, number> | null>(null);
   const designRef = useRef<Design>(1);
   const switchRef = useRef(0);
+  // Read once, on arrival.
+  const arriveRef = useRef(arrive);
   const trees = useMemo(() => buildLifeTrees(), []);
 
   useEffect(() => {
     try {
-      if (window.localStorage.getItem(DESIGN_KEY) === '2') setDesign(2);
+      setDesign(parseDesign(window.localStorage.getItem(DESIGN_KEY)));
     } catch {
       // Not remembered: design I.
     }
     setVisits(readVisits());
     setNow(Date.now());
+    if (arriveRef.current) switchRef.current = performance.now() - (SWITCH_SECONDS * 1000) / 2;
     const fitFrame = () =>
       setFrame({
         cx: window.innerWidth / 2,
@@ -212,6 +248,7 @@ export function LifeTree({ go, close }: Props) {
         {
           key: 'you',
           label: 'You',
+          orb: true,
           line: 'How you are: today, the notebook, the road',
           at: [frame.cx, frame.cy] as [number, number],
           act: () => {
@@ -314,8 +351,8 @@ export function LifeTree({ go, close }: Props) {
     items.map((it) => ({
       it,
       at: it.at,
-      w: it.label.length * (it.small ? 7.5 : 9) + 30,
-      h: it.small ? 30 : 40,
+      w: it.orb ? frame.min * ORB_RADIUS * 2.4 : it.label.length * (it.small ? 7.5 : 9) + 30,
+      h: it.orb ? frame.min * ORB_RADIUS * 2.4 : it.small ? 30 : 40,
     })),
   )) {
     p.it.at = keepIn(p.at);
@@ -417,6 +454,7 @@ export function LifeTree({ go, close }: Props) {
       flyTurn[i] = (Math.random() - 0.5) * 1.6;
       flyFar[i] = 0.04 + 0.3 * Math.sqrt(Math.random());
     }
+    const orb = makeOrb(ORB_STARS);
     const glow = { art: 0.85, admin: 0.85, energy: 0.85 } as Record<Branch, number>;
     // The figure eases from where it stands to where the level wants it.
     const view: View = viewFor(null);
@@ -456,23 +494,14 @@ export function LifeTree({ go, close }: Props) {
       ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = 'lighter';
 
-      // The pulse: rings leaving the root, and the root's own breath.
+      // The heartbeat is felt, not drawn: the current surges as each beat leaves the root.
       const p = pulse(clock);
-      if (!still) {
-        ctx.strokeStyle = `rgba(${GR}, ${GG}, ${GB}, ${p.alpha * 0.5 * (1 - apart)})`;
-        ctx.lineWidth = 1.2 * dpr;
-        ctx.beginPath();
-        ctx.arc(f.cx, f.cy, p.radius * f.min, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      const breath = (0.55 + 0.45 * p.surge) * (1 - 0.6 * apart);
-      const g = ctx.createRadialGradient(f.cx, f.cy, 0, f.cx, f.cy, f.min * ROOT_RADIUS * 2.4);
-      g.addColorStop(0, `rgba(${GR}, ${GG}, ${GB}, ${0.35 * breath})`);
-      g.addColorStop(1, `rgba(${GR}, ${GG}, ${GB}, 0)`);
-      ctx.fillStyle = g;
-      ctx.fillRect(f.cx - f.min * 0.1, f.cy - f.min * 0.1, f.min * 0.2, f.min * 0.2);
-
       const size = 1.1 * dpr;
+
+      // The root: a ball of stars turning slowly, breathing with the beat, the near side brighter.
+      const orbR = f.min * ORB_RADIUS * (1 + 0.05 * p.surge) * (1 + 1.5 * apart);
+      drawOrb(ctx, orb, f.cx, f.cy, orbR, clock, size, 1 - 0.4 * apart, [GR, GG, GB]);
+
       const surge = 1 + 0.8 * p.surge;
       for (let i = 0; i < n; i++) {
         const b = BRANCHES[tree[i] as number] as Branch;
@@ -523,20 +552,6 @@ export function LifeTree({ go, close }: Props) {
     return () => cancelAnimationFrame(raf);
   }, [trees]);
 
-  const pill = (on: boolean): React.CSSProperties => ({
-    minHeight: 32,
-    minWidth: 36,
-    padding: '0 10px',
-    borderRadius: 999,
-    border: `1px solid ${on ? GOLD : '#4a4234'}`,
-    background: on ? `${GOLD}22` : 'transparent',
-    color: on ? GOLD : '#8a7d62',
-    fontFamily: 'inherit',
-    fontSize: 11,
-    letterSpacing: '0.2em',
-    cursor: 'pointer',
-  });
-
   return (
     <div
       onKeyDown={onKeyDown}
@@ -548,39 +563,7 @@ export function LifeTree({ go, close }: Props) {
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       />
 
-      {/* The design tab: from one tree to the next. */}
-      <fieldset
-        aria-label="Tree design"
-        style={{
-          position: 'absolute',
-          top: 64,
-          left: 16,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          pointerEvents: 'auto',
-          zIndex: 2,
-          margin: 0,
-          padding: 0,
-          border: 'none',
-        }}
-      >
-        <span style={{ fontSize: 10, letterSpacing: '0.22em', color: '#6d6450', marginRight: 4 }}>
-          DESIGN
-        </span>
-        {([1, 2] as const).map((d) => (
-          <button
-            key={d}
-            type="button"
-            aria-pressed={design === d}
-            aria-label={`Design ${d === 1 ? 'one' : 'two'}`}
-            onClick={() => pickDesign(d)}
-            style={pill(design === d)}
-          >
-            {d === 1 ? 'I' : 'II'}
-          </button>
-        ))}
-      </fieldset>
+      <DesignTab label="Tree design" design={design} pick={pickDesign} />
 
       <div style={{ opacity: fading ? 0 : 1, transition: `opacity ${SWITCH_SECONDS / 2}s ease` }}>
         {limbs.map((l) => (
@@ -605,6 +588,36 @@ export function LifeTree({ go, close }: Props) {
         ))}
         {items.map((it, i) => {
           const on = i === sel;
+          if (it.orb) {
+            const d = frame.min * ORB_RADIUS * 2.4;
+            return (
+              <button
+                key={it.key}
+                ref={(el) => {
+                  refs.current[i] = el;
+                }}
+                type="button"
+                onClick={it.act}
+                onMouseEnter={() => setSel(i)}
+                onFocus={() => setSel(i)}
+                aria-label={it.label}
+                style={{
+                  position: 'absolute',
+                  left: it.at[0],
+                  top: it.at[1],
+                  width: d,
+                  height: d,
+                  transform: 'translate(-50%, -50%)',
+                  borderRadius: '50%',
+                  background: 'transparent',
+                  border: `1px solid ${on ? `${GOLD}33` : 'transparent'}`,
+                  pointerEvents: 'auto',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
+              />
+            );
+          }
           return (
             <button
               key={it.key}
@@ -638,6 +651,39 @@ export function LifeTree({ go, close }: Props) {
           );
         })}
       </div>
+      {level.kind === 'trees' && !query && quote >= 0 ? (
+        <figure
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: 78,
+            width: 'min(640px, calc(100% - 32px))',
+            margin: 0,
+            transform: 'translateX(-50%)',
+            textAlign: 'center',
+            opacity: quoteIn && !fading ? 1 : 0,
+            transition: 'opacity 0.7s ease',
+          }}
+        >
+          <blockquote
+            style={{
+              margin: 0,
+              fontFamily: 'Georgia, "Times New Roman", serif',
+              fontStyle: 'italic',
+              fontSize: 15,
+              lineHeight: 1.45,
+              color: '#cbb98f',
+            }}
+          >
+            “{POWER_QUOTES[quote]?.text}”
+          </blockquote>
+          <figcaption
+            style={{ marginTop: 6, fontSize: 10, letterSpacing: '0.24em', color: '#7d7158' }}
+          >
+            {POWER_QUOTES[quote]?.who.toUpperCase()}
+          </figcaption>
+        </figure>
+      ) : null}
       <p
         aria-live="polite"
         style={{

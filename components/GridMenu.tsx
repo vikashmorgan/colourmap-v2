@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { type Design, DesignTab, parseDesign } from '@/components/DesignTab';
 import { LifeTree } from '@/components/LifeTree';
+import { StarWheel } from '@/components/StarWheel';
 import {
   GOLD,
   type GridNode,
@@ -37,7 +39,11 @@ import {
  *   TREE      (2026-10-30, the first look) the life tree: you at the root,
  *             a pulse leaving it, Art, Admin and Energy growing out of it as
  *             trees of stars (components/LifeTree.tsx, lib/life-tree.ts)
- *   WHEEL     the eight hubs in a ring, like a game's weapon wheel. Pick one
+ *   WHEEL     (design I, 2026-10-30, components/StarWheel.tsx: the same
+ *             wheel in the tree's stars -- a ball of stars at the centre,
+ *             currents along each spoke, a ring of stars round it all;
+ *             design II is the wheel as it was:)
+ *             the eight hubs in a ring, like a game's weapon wheel. Pick one
  *             and its pages take the ring; the centre goes back.
  *   TERMINAL  a green phosphor screen: hubs in one column, the chosen hub's
  *             pages in the next, with their state. Nothing is typed.
@@ -45,6 +51,8 @@ import {
  * Arrows move, Enter opens, Esc goes back and then closes. The centre of the
  * wheel and the terminal's last line open the full Grid map.
  */
+
+const WHEEL_DESIGN_KEY = 'cb-wheel-design';
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 const PHOSPHOR = '#5dff9a';
@@ -60,6 +68,10 @@ export default function GridMenu() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<MenuMode>('tree');
+  // The wheel's two designs: I the star wheel, II the wheel as it was (2026-10-30).
+  const [wheelDesign, setWheelDesign] = useState<Design>(1);
+  // Switched look since opening: the new one's stars stream in rather than stand ready.
+  const [switched, setSwitched] = useState(false);
   const [hub, setHub] = useState<Hub | null>(null);
   const [sel, setSel] = useState(0);
   const [visits, setVisits] = useState<Visits>({});
@@ -70,6 +82,7 @@ export default function GridMenu() {
   useEffect(() => {
     try {
       setMode(parseMenuMode(window.localStorage.getItem(MENU_MODE_KEY)));
+      setWheelDesign(parseDesign(window.localStorage.getItem(WHEEL_DESIGN_KEY)));
     } catch {
       // Storage blocked: the tree it is.
     }
@@ -80,6 +93,7 @@ export default function GridMenu() {
     setNow(Date.now());
     setHub(null);
     setSel(0);
+    setSwitched(false);
     setOpen(true);
   }, []);
 
@@ -109,6 +123,7 @@ export default function GridMenu() {
   }, [open, sel, hub, mode]);
 
   const pickMode = (m: MenuMode) => {
+    if (m !== mode) setSwitched(true);
     setMode(m);
     try {
       window.localStorage.setItem(MENU_MODE_KEY, m);
@@ -273,8 +288,36 @@ export default function GridMenu() {
             </button>
           </div>
 
+          {mode === 'wheel' ? (
+            <DesignTab
+              label="Wheel design"
+              design={wheelDesign}
+              pick={(d) => {
+                setWheelDesign(d);
+                setSwitched(true);
+                try {
+                  window.localStorage.setItem(WHEEL_DESIGN_KEY, String(d));
+                } catch {
+                  // Not remembered; still switched.
+                }
+              }}
+            />
+          ) : null}
+
           {mode === 'tree' ? (
-            <LifeTree go={go} close={close} />
+            <LifeTree go={go} close={close} arrive={switched} />
+          ) : mode === 'wheel' && wheelDesign === 1 ? (
+            <StarWheel
+              hub={hub}
+              items={items}
+              sel={sel}
+              setSel={setSel}
+              setRef={setRef}
+              activate={activate}
+              back={back}
+              close={close}
+              arrive={switched}
+            />
           ) : mode === 'wheel' ? (
             <Wheel
               hub={hub}
