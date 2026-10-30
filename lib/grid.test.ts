@@ -149,8 +149,9 @@ describe('visits', () => {
 describe('the quick menu', () => {
   it('reads the saved look, defaulting to the wheel', () => {
     expect(parseMenuMode('terminal')).toBe('terminal');
-    expect(parseMenuMode(null)).toBe('wheel');
-    expect(parseMenuMode('x')).toBe('wheel');
+    expect(parseMenuMode('wheel')).toBe('wheel');
+    expect(parseMenuMode(null)).toBe('tree');
+    expect(parseMenuMode('x')).toBe('tree');
   });
 
   it('puts the first item at the top of the wheel', () => {

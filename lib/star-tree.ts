@@ -28,6 +28,9 @@ export type Route = {
 
 export const STEP = 0.008;
 
+/** Where the trunk stands: its foot, in world units. */
+export const FOOT_Y = -0.62;
+
 type Seg = {
   x0: number;
   y0: number;
@@ -153,21 +156,27 @@ export type StarTree = {
   tips: [number, number][];
 };
 
-/** The tree: `depth` forks above the trunk (more is a fuller crown), roots below. */
-export function buildStarTree(depth: number, seed = 7): StarTree {
+/**
+ * The tree: `depth` forks above the trunk (more is a fuller crown), roots
+ * below. Without roots each route starts at the foot of the trunk, for trees
+ * that share one root drawn elsewhere (the life tree, lib/life-tree.ts).
+ */
+export function buildStarTree(depth: number, seed = 7, roots = true): StarTree {
   const rng = seeded(seed);
   const d = Math.max(3, Math.min(8, Math.round(depth)));
   const branches: Seg[][] = [];
   // The trunk is the first segment; the crown forks from its top.
-  grow(rng, 0, -0.62, 0, 0.42, 0.075, d, 0.48, 0.74, [], branches);
-  const roots: Seg[][] = [];
-  for (const a of [-2.25, -2.65, Math.PI, 2.65, 2.25]) {
-    grow(rng, 0, -0.62, a + (rng() - 0.5) * 0.2, 0.14, 0.05, 1, 0.35, 0.8, [], roots);
+  grow(rng, 0, FOOT_Y, 0, 0.42, 0.075, d, 0.48, 0.74, [], branches);
+  const rootSegs: Seg[][] = [];
+  if (roots) {
+    for (const a of [-2.25, -2.65, Math.PI, 2.65, 2.25]) {
+      grow(rng, 0, FOOT_Y, a + (rng() - 0.5) * 0.2, 0.14, 0.05, 1, 0.35, 0.8, [], rootSegs);
+    }
   }
   const routes: Route[] = [];
-  for (let i = 0; i < branches.length * 2; i++) {
+  for (let i = 0; i < branches.length * (roots ? 2 : 1); i++) {
     const branch = branches[i % branches.length] as Seg[];
-    const root = roots[Math.floor(rng() * roots.length)] as Seg[];
+    const root = roots ? (rootSegs[Math.floor(rng() * rootSegs.length)] as Seg[]) : [];
     routes.push(resample([...sampleChain(root, true), ...sampleChain(branch, false)]));
   }
   const tips = branches.map((b) => {

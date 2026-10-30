@@ -338,14 +338,17 @@ export function readVisits(): Visits {
   }
 }
 
-/* ── The quick menu: a wheel, or a terminal (components/GridMenu.tsx) ── */
+/* ── The quick menu: the life tree, a wheel, or a terminal (components/GridMenu.tsx) ── */
 
-export type MenuMode = 'wheel' | 'terminal';
+export type MenuMode = 'tree' | 'wheel' | 'terminal';
 
-export const MENU_MODE_KEY = 'cb-grid-menu-mode';
+export const MENU_MODES: MenuMode[] = ['tree', 'wheel', 'terminal'];
+
+/** Renamed 2026-10-30 when the tree became the first look, so G opens on it once even after a wheel was kept. */
+export const MENU_MODE_KEY = 'cb-grid-menu-look';
 
 export const parseMenuMode = (raw: string | null): MenuMode =>
-  raw === 'terminal' ? 'terminal' : 'wheel';
+  raw === 'terminal' || raw === 'wheel' ? raw : 'tree';
 
 /** Where item `i` of `n` sits on a wheel of radius `r` round (0, 0): the first at the top, then clockwise. */
 export function wheelPoint(i: number, n: number, r: number): Point {
