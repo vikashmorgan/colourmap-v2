@@ -46,6 +46,28 @@ export function buildLifeTrees(depth = 8): Record<Branch, StarTree> {
 export type Frame = { cx: number; cy: number; min: number };
 
 /*
+ * ONE GOLD, THREE TINTS (2026-10-31). At the top all three trees are the
+ * same gold. Opened, a tree leans to its own tint, so where you are reads at
+ * a glance: Art an ember, Admin parchment, Energy a green gold. Never blue.
+ */
+export const GOLD_RGB: [number, number, number] = [196, 160, 96];
+
+export const BRANCH_RGB: Record<Branch, [number, number, number]> = {
+  art: [222, 142, 92],
+  admin: [204, 188, 150],
+  energy: [176, 182, 92],
+};
+
+/** Gold leaning `t` (0..1) of the way to a branch's tint. */
+export function tint(branch: Branch, t: number): [number, number, number] {
+  const to = BRANCH_RGB[branch];
+  const k = Math.max(0, Math.min(1, t));
+  return [0, 1, 2].map((i) =>
+    Math.round((GOLD_RGB[i] as number) + ((to[i] as number) - (GOLD_RGB[i] as number)) * k),
+  ) as [number, number, number];
+}
+
+/*
  * HOW THE FIGURE STANDS. At the top all three trees are the same size and
  * full. Stood in one, that tree evolves: it grows half as large again and the
  * root slides away from it so it has the room, while the other two shrink

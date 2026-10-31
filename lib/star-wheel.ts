@@ -61,3 +61,31 @@ export const nodePoint = (f: Frame, i: number, n: number): [number, number] =>
 /** Where its name sits, just beyond its ball. */
 export const labelPoint = (f: Frame, i: number, n: number): [number, number] =>
   polar(f, spokeAngle(i, n), LABEL_RING * f.min);
+
+/*
+ * TWIGS ON THE HUBS (2026-10-31): the wheel in the opened tree's language.
+ * Each hub's ball grows one short twig per page inside it, fanned outward
+ * round its name, so the wheel says how full each hub is before it opens.
+ */
+export const TWIG_LENGTH = 0.055;
+export const TWIG_FAN = 0.7;
+
+/** The heading of twig `k` of `m` off a hub at spoke angle `angle`. */
+export const twigAngle = (angle: number, k: number, m: number): number =>
+  m <= 1 ? angle : angle + (k / (m - 1) - 0.5) * 2 * TWIG_FAN;
+
+/** A star `t` (0 at the hub's ball, 1 at the tip) along twig `k` of `m`, curling a little outward. */
+export function twigPoint(
+  f: Frame,
+  angle: number,
+  k: number,
+  m: number,
+  t: number,
+): [number, number] {
+  const [x0, y0] = polar(f, angle, NODE_RING * f.min);
+  const head = twigAngle(angle, k, m);
+  // Leaves the ball across, ends turned toward straight out: a twig, not a ray.
+  const a = head + (angle - head) * 0.35 * t;
+  const r = TWIG_LENGTH * f.min * t;
+  return [x0 + Math.cos(a) * r, y0 + Math.sin(a) * r];
+}

@@ -155,3 +155,27 @@ open bigger."
 - Opening comes apart and re-forms, a quicker version of the design switch:
   the full tree scatters, the grown one gathers. Stepping back out does the
   reverse. Both designs use it; they differ only in which areas they read.
+
+### Use on the twigs, three tints, the path line, stubs that ask, twigs on the wheel — 2026-10-31
+
+Martin, on how the G menu could be better: "ok do all that."
+
+- **Use shows on the twigs.** On an opened tree, the current along a twig
+  runs bright when its page was opened this week, as it is when opened this
+  month, and thins to a faint thread when left longer or never opened (lib/
+  branch-tree.ts twigUse). Read from the Grid's last-opened times; no counts.
+  Both designs.
+- **One gold, three tints.** At the top all three trees are gold. Opened, a
+  tree leans to its own tint -- Art an ember, Admin parchment, Energy a green
+  gold -- and leans back to gold as you step out (lib/life-tree.ts tint).
+  Never blue.
+- **The path line.** Under an opened tree, where you stand is said in full --
+  ART › VISUAL › FIGURES -- following the chosen name, so Esc always steps
+  back one name.
+- **A bare stub asks for something.** Tapping an area with nothing built
+  (Money, Papers, Habits…) says so and offers PLANT A SPARK FOR IT; a second
+  tap plants a private, no-rush spark in /sparks named for the area, and the
+  line says it is planted. Nothing is written without that second tap.
+- **Twigs on the wheel.** On the star wheel, each hub's ball grows one short
+  twig per page inside it, fanned into its name, so the wheel shows how full
+  a hub is before it opens. Inside a hub the pages have no twigs.

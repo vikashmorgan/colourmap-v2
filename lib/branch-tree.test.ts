@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { BRANCH_SHAPE, buildBranchTree, segmentsOf } from './branch-tree';
+import {
+  BRANCH_SHAPE,
+  buildBranchTree,
+  seedText,
+  segmentsOf,
+  TWIG_USE,
+  twigUse,
+} from './branch-tree';
 import { groupingsIn } from './branches';
 import { AREAS_2 } from './life-tree-2';
 import { FOOT_Y, STEP } from './star-tree';
@@ -77,5 +84,20 @@ describe('a branch grown to its pages', () => {
     );
     const tree = buildBranchTree('energy', segs);
     expect(tree.routes.length).toBe(segs.reduce((n, s) => n + Math.max(1, s.pages.length), 0));
+  });
+
+  it('shows use on the twigs: bright this week, as is this month, thin when left or never opened', () => {
+    const day = 24 * 60 * 60 * 1000;
+    const now = 100 * day;
+    expect(twigUse(now - day, now)).toBe(TWIG_USE.week);
+    expect(twigUse(now - 20 * day, now)).toBe(TWIG_USE.month);
+    expect(twigUse(now - 90 * day, now)).toBe(TWIG_USE.older);
+    expect(twigUse(undefined, now)).toBe(TWIG_USE.never);
+    expect(TWIG_USE.week).toBeGreaterThan(TWIG_USE.month);
+    expect(TWIG_USE.month).toBeGreaterThan(TWIG_USE.older);
+  });
+
+  it('words the spark planted for an empty area with its name', () => {
+    expect(seedText('Money')).toContain('Money');
   });
 });

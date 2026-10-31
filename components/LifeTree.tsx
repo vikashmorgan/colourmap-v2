@@ -3,7 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { type Design, DesignTab, parseDesign } from '@/components/DesignTab';
 import { drawOrb, makeOrb } from '@/components/starOrb';
-import { type BranchTree, buildBranchTree, type ShapedRoute, segmentsOf } from '@/lib/branch-tree';
+import {
+  type BranchTree,
+  buildBranchTree,
+  type Segment,
+  type ShapedRoute,
+  seedText,
+  segmentsOf,
+  twigUse,
+} from '@/lib/branch-tree';
 import {
   BRANCH_BLURBS,
   BRANCH_LABELS,
@@ -13,7 +21,16 @@ import {
   type Grouping,
   groupingsIn,
 } from '@/lib/branches';
-import { GOLD, type GridNode, HUBS, isOnline, readVisits, step, type Visits } from '@/lib/grid';
+import {
+  GOLD,
+  type GridNode,
+  HUBS,
+  isOnline,
+  readVisits,
+  step,
+  type Visits,
+  visitKey,
+} from '@/lib/grid';
 import {
   buildLifeTrees,
   crownPoint,
@@ -26,6 +43,7 @@ import {
   SWITCH_SECONDS,
   scatter,
   shifted,
+  tint,
   treeToScreen,
   type View,
   viewFor,
@@ -94,7 +112,17 @@ type Item = {
   focus?: [number, number | null];
 };
 
-type Limb = { key: string; label: string; dim: boolean; at: [number, number] };
+type Limb = {
+  key: string;
+  label: string;
+  dim: boolean;
+  at: [number, number];
+  /** A bare stub's name: tapping it offers to plant a spark for the area. */
+  act?: () => void;
+};
+
+/** An empty area offered a spark, and how that is going. */
+type Seed = { area: string; state: 'ask' | 'planting' | 'planted' | 'failed' };
 
 const [GR, GG, GB] = [196, 160, 96];
 /*
@@ -135,6 +163,7 @@ export function LifeTree({ go, close, arrive = false }: Props) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const [quote, setQuote] = useState(-1);
   const [quoteIn, setQuoteIn] = useState(false);
+  const [seed, setSeed] = useState<Seed | null>(null);
 
   // A power quote under the tree: a new one each time G opens, then every half minute.
   useEffect(() => {
@@ -178,6 +207,53 @@ export function LifeTree({ go, close, arrive = false }: Props) {
   );
   // The limb, and twig, the chosen name hangs from: its current runs brighter.
   const focusRef = useRef<[number, number | null] | null>(null);
+  // How strongly each route of each grown tree shows, by when its page was last opened.
+  const usesRef = useRef<Record<Design, Record<Branch, Float32Array>> | null>(null);
+  usesRef.current = useMemo(() => {
+    const areasOf: Record<Design, (b: Branch) => Segment[]> = {
+      1: (b) => segmentsOf(groupingsIn(b)),
+      2: (b) => AREAS_2[b],
+    };
+    const of = (d: Design) =>
+      Object.fromEntries(
+        BRANCHES.map((b) => {
+          const areas = areasOf[d](b);
+          return [
+            b,
+            Float32Array.from(shaped[d][b].routes, (r) => {
+              const href = r.page < 0 ? undefined : areas[r.area]?.pages[r.page];
+              return twigUse(href ? visits[visitKey(href)] : undefined, now);
+            }),
+          ];
+        }),
+      ) as Record<Branch, Float32Array>;
+    return { 1: of(1), 2: of(2) };
+  }, [shaped, visits, now]);
+
+  // A new place to stand drops any offer made on the last one.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a change of level or design is what drops it
+  useEffect(() => {
+    setSeed(null);
+  }, [level, design]);
+
+  const plant = async (area: string) => {
+    setSeed({ area, state: 'planting' });
+    try {
+      const res = await fetch('/api/sparks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: seedText(area),
+          category: 'growth',
+          timeWindow: 'no_rush',
+          isOpen: false,
+        }),
+      });
+      setSeed({ area, state: res.ok ? 'planted' : 'failed' });
+    } catch {
+      setSeed({ area, state: 'failed' });
+    }
+  };
 
   useEffect(() => {
     try {
@@ -321,6 +397,7 @@ export function LifeTree({ go, close, arrive = false }: Props) {
           label: a.label,
           dim: a.pages.length === 0,
           at: toScreen(grownTree.limbs[i]!.name),
+          act: a.pages.length ? undefined : () => setSeed({ area: a.label, state: 'ask' }),
         })),
         items: areas.flatMap((a, i) =>
           a.pages.map((href, k) => ({
@@ -350,7 +427,7 @@ export function LifeTree({ go, close, arrive = false }: Props) {
                   setSel(0);
                 }
               }
-            : undefined,
+            : () => setSeed({ area: g.label, state: 'ask' }),
         })),
         limbs: [],
       };
@@ -407,6 +484,22 @@ export function LifeTree({ go, close, arrive = false }: Props) {
   }
 
   const current = items[sel];
+  /*
+   * THE PATH LINE (2026-10-31): where you stand, said in full under the
+   * tree -- ART > VISUAL > FIGURES -- so Esc always steps back one name.
+   */
+  const trail: string[] = (() => {
+    if (query || level.kind === 'trees') return [];
+    const here = current && !current.orb ? [current.label] : [];
+    if (level.kind === 'root') return ['You', ...here];
+    const head = BRANCH_LABELS[level.branch];
+    if (level.kind === 'area') return [head, level.area.label, ...here];
+    if (design === 2 && current?.focus) {
+      const area = AREAS_2[level.branch][current.focus[0]];
+      return [head, ...(area ? [area.label] : []), ...here];
+    }
+    return [head, ...here];
+  })();
   litRef.current = level.kind === 'branch' || level.kind === 'area' ? level.branch : null;
   designRef.current = design;
   focusRef.current =
@@ -518,6 +611,9 @@ export function LifeTree({ go, close, arrive = false }: Props) {
     }
     const orb = makeOrb(ORB_STARS);
     const glow = { art: 0.85, admin: 0.85, energy: 0.85 } as Record<Branch, number>;
+    // How far each tree has leaned from gold to its own tint, and that colour.
+    const lean = { art: 0, admin: 0, energy: 0 } as Record<Branch, number>;
+    const colour = { art: '', admin: '', energy: '' } as Record<Branch, string>;
     // The figure eases from where it stands to where the level wants it.
     const view: View = viewFor(null);
     let clock = 0;
@@ -538,6 +634,7 @@ export function LifeTree({ go, close, arrive = false }: Props) {
       }
       const lit = litRef.current;
       const warmth = warmRef.current;
+      const uses = usesRef.current;
       const want = viewFor(lit);
       const ease = still ? 1 : Math.min(1, dt * 3);
       view.shiftX += (want.shiftX - view.shiftX) * ease;
@@ -548,6 +645,9 @@ export function LifeTree({ go, close, arrive = false }: Props) {
         const awake = warmth ? 0.85 + 0.3 * warmth[b] : 1;
         const bright = (lit === null ? 0.85 : lit === b ? 1.1 : 0.45) * awake;
         glow[b] += (bright - glow[b]) * ease;
+        lean[b] += ((lit === b ? 1 : 0) - lean[b]) * ease;
+        const [tr, tg, tb] = tint(b, lean[b]);
+        colour[b] = `rgba(${tr}, ${tg}, ${tb}, `;
       }
       const apart = still ? 0 : scatter((now - switchRef.current) / 1000);
       // Each tree's own coming apart, when it changes shape.
@@ -607,11 +707,16 @@ export function LifeTree({ go, close, arrive = false }: Props) {
         }
         const twinkle = 0.7 + 0.3 * Math.sin(clock * 1.7 + (tw[i] as number) * 3);
         // On a grown tree, the path to the chosen name runs bright and the rest steps back.
+        // Twigs to pages in use run bright; ones long left alone thin out.
         let lead = 1;
-        if (focus && shapeOf[b] && lit === b) {
-          const sr = r as ShapedRoute;
-          lead =
-            sr.area !== focus[0] ? 0.55 : focus[1] === null || sr.page === focus[1] ? 1.5 : 0.9;
+        const grownShape = shapeOf[b];
+        if (grownShape && lit === b) {
+          lead = uses?.[grownShape][b][route[i] as number] ?? 1;
+          if (focus) {
+            const sr = r as ShapedRoute;
+            lead *=
+              sr.area !== focus[0] ? 0.55 : focus[1] === null || sr.page === focus[1] ? 1.5 : 0.9;
+          }
         }
         const gone = Math.max(apart, own[b]);
         const alpha = Math.min(1, 0.55 * glow[b] * lead * twinkle * a * (1 - 0.2 * gone));
@@ -627,7 +732,7 @@ export function LifeTree({ go, close, arrive = false }: Props) {
           sx += ((ox * Math.cos(turn) - oy * Math.sin(turn)) / o) * far;
           sy += ((ox * Math.sin(turn) + oy * Math.cos(turn)) / o) * far;
         }
-        ctx.fillStyle = `rgba(${GR}, ${GG}, ${GB}, ${alpha})`;
+        ctx.fillStyle = `${colour[b]}${alpha})`;
         ctx.fillRect(sx - size / 2, sy - size / 2, size, size);
       }
       ctx.globalCompositeOperation = 'source-over';
@@ -651,26 +756,42 @@ export function LifeTree({ go, close, arrive = false }: Props) {
       <DesignTab label="Tree design" design={design} pick={pickDesign} />
 
       <div style={{ opacity: fading ? 0 : 1, transition: `opacity ${SWITCH_SECONDS / 2}s ease` }}>
-        {limbs.map((l) => (
-          <span
-            key={l.key}
-            aria-hidden
-            style={{
-              position: 'absolute',
-              left: l.at[0],
-              top: l.at[1],
-              transform: 'translate(-50%, -50%)',
-              fontSize: 10,
-              letterSpacing: '0.24em',
-              textTransform: 'uppercase',
-              color: l.dim ? '#5a5242' : '#a8946a',
-              textShadow: '0 0 8px #000, 0 0 3px #000',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {l.label}
-          </span>
-        ))}
+        {limbs.map((l) => {
+          const Tag = l.act ? 'button' : 'span';
+          const how = l.act
+            ? {
+                type: 'button' as const,
+                onClick: l.act,
+                'aria-label': `${l.label}, nothing built yet`,
+              }
+            : { 'aria-hidden': true };
+          return (
+            <Tag
+              key={l.key}
+              {...how}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 6,
+                fontFamily: 'inherit',
+                pointerEvents: l.act ? 'auto' : undefined,
+                cursor: l.act ? 'pointer' : undefined,
+                position: 'absolute',
+                left: l.at[0],
+                top: l.at[1],
+                transform: 'translate(-50%, -50%)',
+                fontSize: 10,
+                letterSpacing: '0.24em',
+                textTransform: 'uppercase',
+                color: l.dim ? '#5a5242' : '#a8946a',
+                textShadow: '0 0 8px #000, 0 0 3px #000',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {l.label}
+            </Tag>
+          );
+        })}
         {items.map((it, i) => {
           const on = i === sel;
           if (it.orb) {
@@ -789,7 +910,46 @@ export function LifeTree({ go, close, arrive = false }: Props) {
             {items.length ? '' : '  · nothing by that name'}
           </span>
         ) : null}
-        {current?.line ?? ''}
+        {trail.length ? (
+          <span
+            style={{ marginRight: 14, fontSize: 10, letterSpacing: '0.22em', color: '#8a7d62' }}
+          >
+            {trail.map((t) => t.toUpperCase()).join('  ›  ')}
+          </span>
+        ) : null}
+        {seed ? (
+          <>
+            {seed.state === 'planted'
+              ? `A spark for ${seed.area} is planted, in Sparks`
+              : seed.state === 'failed'
+                ? 'The spark did not plant. Try again'
+                : `${seed.area}: nothing built here yet`}
+            {seed.state === 'ask' || seed.state === 'failed' ? (
+              <button
+                type="button"
+                onClick={() => plant(seed.area)}
+                style={{
+                  marginLeft: 12,
+                  pointerEvents: 'auto',
+                  background: 'transparent',
+                  border: `1px solid ${GOLD}66`,
+                  borderRadius: 999,
+                  color: GOLD,
+                  fontFamily: 'inherit',
+                  fontSize: 10,
+                  letterSpacing: '0.18em',
+                  padding: '0 12px',
+                  minHeight: 32,
+                  cursor: 'pointer',
+                }}
+              >
+                PLANT A SPARK FOR IT
+              </button>
+            ) : null}
+          </>
+        ) : (
+          (current?.line ?? '')
+        )}
         {level.kind !== 'trees' || query ? (
           <button
             type="button"
