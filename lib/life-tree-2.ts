@@ -20,7 +20,6 @@
 
 import type { Branch } from './branches';
 import { type GridNode, HUBS, isOnline, type Visits, visitKey } from './grid';
-import { FOOT_Y, type StarTree } from './star-tree';
 
 export type Area2 = {
   label: string;
@@ -91,58 +90,6 @@ export function unplacedPages(): string[] {
   return NODES.map((n) => n.href).filter((h) => !placed.has(h));
 }
 
-/* ── Laying a branch out ─────────────────────────────────────────────── */
-
-const angleOf = (p: [number, number]) => Math.atan2(p[0], p[1] - FOOT_Y);
-const reachOf = (p: [number, number]) => Math.hypot(p[0], p[1] - FOOT_Y);
-
-export type Sector = { area: Area2; lo: number; hi: number };
-
-/**
- * The crown cut into one sector per area, side to side, each as wide as its
- * pages need (an empty area still gets a sliver, so it is seen).
- */
-export function sectors(tree: StarTree, areas: Area2[]): Sector[] {
-  const angles = tree.tips.map(angleOf);
-  const lo = Math.min(...angles);
-  const hi = Math.max(...angles);
-  const weights = areas.map((a) => Math.max(0.6, a.pages.length));
-  const total = weights.reduce((s, w) => s + w, 0);
-  let at = lo;
-  return areas.map((area, i) => {
-    const span = ((weights[i] as number) / total) * (hi - lo);
-    const s = { area, lo: at, hi: at + span };
-    at += span;
-    return s;
-  });
-}
-
-/** Where an area's name sits: on its limb, part way up the crown, in world units. */
-export function limbPoint(tree: StarTree, s: Sector): [number, number] {
-  const a = (s.lo + s.hi) / 2;
-  const r = 0.62 * Math.max(...tree.tips.map(reachOf));
-  return [Math.sin(a) * r, FOOT_Y + Math.cos(a) * r];
-}
-
-/**
- * Where each of a sector's `n` pages hangs: the furthest tip in its slice of
- * the sector, set a little beyond it; many pages alternate two distances.
- */
-export function pagePoints(tree: StarTree, s: Sector, n: number): [number, number][] {
-  return Array.from({ length: n }, (_, i) => {
-    const want = s.lo + ((i + 0.5) / n) * (s.hi - s.lo);
-    const half = (s.hi - s.lo) / n / 2;
-    const near = tree.tips.filter((p) => Math.abs(angleOf(p) - want) <= half);
-    const tip = near.length
-      ? near.reduce((b, p) => (reachOf(p) > reachOf(b) ? p : b))
-      : tree.tips.reduce((b, p) =>
-          Math.abs(angleOf(p) - want) < Math.abs(angleOf(b) - want) ? p : b,
-        );
-    const out = 1.03 + (n > 3 && i % 2 ? 0.13 : 0);
-    return [tip[0] * out, FOOT_Y + (tip[1] - FOOT_Y) * out];
-  });
-}
-
 /* ── What use shows ──────────────────────────────────────────────────── */
 
 /** How awake a branch is: 0 when nothing on it was opened this week, 1 when everything was. */
@@ -178,9 +125,6 @@ export function matchPages(query: string, limit = 5): string[] {
   );
   return [...starts, ...words].slice(0, limit);
 }
-
-/** A branch opened in design II grows less than in design I: every page has to fit round it. */
-export const GROWN_2 = 1.28;
 
 export type Placed = { at: [number, number]; w: number; h: number };
 

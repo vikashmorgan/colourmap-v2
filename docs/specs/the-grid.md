@@ -128,3 +128,30 @@ tree when you do the switch: it disintegrates and rebuilds in 2 seconds".
   circle. **II** is the wheel as it was. Moving between Tree and Wheel, the
   new look's stars stream together, so the two read as one style changing
   shape.
+
+### An opened tree grows to its own pages — 2026-10-31
+
+Martin: "want individual trees to connect to their segments in a unique, non
+generic and more precise way once you click on one of the 3 branches that
+open bigger."
+
+- At the top the three trees stay full Star Trees. **Opened, a tree is
+  regrown from its data** (lib/branch-tree.ts): the trunk forks into exactly
+  one limb per area, thicker for fuller areas and given more of the crown;
+  each limb forks into exactly one twig per page. An area with nothing built
+  is a short bare stub with its name on the end. The shape is the map: count
+  the limbs and you have counted the areas.
+- **Every name sits on its own branch.** An area's name is on its limb below
+  the twigs; a page's pill has its near edge on the tip of its own twig, and
+  the stars run from the root to exactly that point.
+- **Each tree grows in its own manner**, so the three are not one template:
+  Art flows (limbs sway in an S from one crown, twigs curl), Admin is angular
+  (a ladder of limbs up the trunk, each bent once at an elbow, long and short
+  in turn, twigs at a fixed angle), Energy rises (limbs leave low and turn
+  upward like a flame).
+- **The chosen name's path lights up.** Moving through names brightens the
+  current from the root along that limb to that twig; the rest of the tree
+  steps back. In design I, inside an area, the whole limb stays lit.
+- Opening comes apart and re-forms, a quicker version of the design switch:
+  the full tree scatters, the grown one gathers. Stepping back out does the
+  reverse. Both designs use it; they differ only in which areas they read.
