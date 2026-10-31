@@ -99,15 +99,17 @@ describe('GridMenu', () => {
     render(<GridMenu />);
     fireEvent.click(screen.getByRole('button', { name: /open the network menu/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Admin' }));
-    // An area with nothing built yet is shown, but goes nowhere.
-    const money = screen.getByRole('button', { name: 'Money' });
-    expect(money.getAttribute('aria-disabled')).toBe('true');
-    fireEvent.click(money);
+    // An area with nothing built yet is shown, goes nowhere, and offers a spark instead.
+    fireEvent.click(screen.getByRole('button', { name: 'Money' }));
     expect(push).not.toHaveBeenCalled();
+    expect(screen.getByText(/Money: nothing built here yet/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'PLANT A SPARK FOR IT' })).toBeTruthy();
     fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Escape' });
     fireEvent.click(screen.getByRole('button', { name: 'Art' }));
     fireEvent.click(screen.getByRole('button', { name: 'Music' }));
     expect(screen.getByRole('button', { name: 'Sounds' })).toBeTruthy();
+    // The path line says where you stand, down to the page chosen.
+    expect(screen.getByText(/^ART\s+›\s+MUSIC\s+›\s+/)).toBeTruthy();
     fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Escape' });
     fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Escape' });
     fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Escape' });
@@ -166,5 +168,29 @@ describe('GridMenu', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mind hub' }));
     fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
     expect(push).toHaveBeenCalledWith('/notebook');
+  });
+
+  it('plants a private spark for an empty area when asked, and says so', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      render(<GridMenu />);
+      fireEvent.click(screen.getByRole('button', { name: /open the network menu/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Admin' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Papers' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'PLANT A SPARK FOR IT' }));
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe('/api/sparks');
+      expect(JSON.parse(init.body as string)).toMatchObject({
+        isOpen: false,
+        timeWindow: 'no_rush',
+      });
+      expect(screen.getByText('A spark for Papers is planted, in Sparks')).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

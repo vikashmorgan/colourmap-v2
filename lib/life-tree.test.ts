@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { BRANCHES } from './branches';
 import {
+  BRANCH_RGB,
   buildLifeTrees,
   crownPoint,
+  GOLD_RGB,
   GROWN,
   pulse,
   REACH,
@@ -14,6 +16,7 @@ import {
   SWITCH_SECONDS,
   scatter,
   shifted,
+  tint,
   treeToScreen,
   viewFor,
 } from './life-tree';
@@ -88,5 +91,16 @@ describe('the life tree', () => {
     expect(scatter(0.5)).toBeCloseTo(scatter(SWITCH_SECONDS - 0.5));
     expect(scatter(SWITCH_SECONDS)).toBe(0);
     expect(scatter(-1)).toBe(0);
+  });
+
+  it('leans an opened tree from gold to its own tint, and never to blue', () => {
+    for (const b of BRANCHES) {
+      expect(tint(b, 0)).toEqual(GOLD_RGB);
+      expect(tint(b, 1)).toEqual(BRANCH_RGB[b]);
+      expect(tint(b, 2)).toEqual(BRANCH_RGB[b]);
+      const [r, , bl] = BRANCH_RGB[b];
+      expect(r).toBeGreaterThan(bl);
+    }
+    expect(new Set(BRANCHES.map((b) => BRANCH_RGB[b].join())).size).toBe(3);
   });
 });

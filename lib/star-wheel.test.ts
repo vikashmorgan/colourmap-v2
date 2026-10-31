@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { labelPoint, NODE_RING, nodePoint, spokeAngle, spokePoint } from './star-wheel';
+import {
+  labelPoint,
+  NODE_RING,
+  nodePoint,
+  spokeAngle,
+  spokePoint,
+  TWIG_FAN,
+  TWIG_LENGTH,
+  twigAngle,
+  twigPoint,
+} from './star-wheel';
 
 const f = { cx: 500, cy: 400, min: 800 };
 const dist = ([x, y]: [number, number]) => Math.hypot(x - f.cx, y - f.cy);
@@ -34,5 +44,22 @@ describe('the star wheel', () => {
 
   it('sets each name beyond its hub', () => {
     expect(dist(labelPoint(f, 3, 8))).toBeGreaterThan(dist(nodePoint(f, 3, 8)));
+  });
+
+  it('grows one twig per page from a hub, fanned round its spoke, out to a fixed length', () => {
+    const a = spokeAngle(1, 8);
+    const hub = nodePoint(f, 1, 8);
+    const start = twigPoint(f, a, 0, 4, 0);
+    expect(start[0]).toBeCloseTo(hub[0]);
+    expect(start[1]).toBeCloseTo(hub[1]);
+    expect(twigAngle(a, 0, 4)).toBeCloseTo(a - TWIG_FAN);
+    expect(twigAngle(a, 3, 4)).toBeCloseTo(a + TWIG_FAN);
+    expect(twigAngle(a, 0, 1)).toBe(a);
+    for (let k = 0; k < 4; k++) {
+      const tip = twigPoint(f, a, k, 4, 1);
+      expect(Math.hypot(tip[0] - hub[0], tip[1] - hub[1])).toBeCloseTo(TWIG_LENGTH * f.min);
+      // Out, away from the centre.
+      expect(dist(tip)).toBeGreaterThan(dist(hub));
+    }
   });
 });

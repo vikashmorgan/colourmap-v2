@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { drawOrb, makeOrb } from '@/components/starOrb';
 import { GOLD, type GridNode, type Hub } from '@/lib/grid';
 import { type Frame, ROOT_RADIUS, SWITCH_SECONDS, scatter } from '@/lib/life-tree';
-import { labelPoint, nodePoint, RING, spokeAngle, spokePoint } from '@/lib/star-wheel';
+import { labelPoint, nodePoint, RING, spokeAngle, spokePoint, twigPoint } from '@/lib/star-wheel';
 
 /*
  * THE STAR WHEEL — design I of the G menu's wheel (lib/star-wheel.ts): the
@@ -37,6 +37,8 @@ const STARS_PER_SPOKE = 300;
 const MAX_SPOKES = 12;
 const RING_STARS = 520;
 const ORB_RADIUS = ROOT_RADIUS * 1.5;
+// The hubs' twigs, one per page inside (lib/star-wheel.ts twigPoint).
+const TWIG_STARS = 1800;
 
 export function StarWheel({
   hub,
@@ -53,6 +55,9 @@ export function StarWheel({
   const [frame, setFrame] = useState<Frame>({ cx: 0, cy: 0, min: 0 });
   // What the drawing reads each frame, without restarting.
   const countRef = useRef(items.length);
+  // How many pages each spoke's hub holds: one twig each. Pages themselves have none.
+  const twigsRef = useRef<number[]>([]);
+  twigsRef.current = items.map((it) => ('nodes' in it ? it.nodes.length : 0));
   const selRef = useRef(sel);
   const arriveRef = useRef(arrive);
   const changedRef = useRef(0);
@@ -106,6 +111,14 @@ export function StarWheel({
       ringR[i] = 1 + (Math.random() - 0.5) * 0.03;
     }
     const glow = new Float32Array(MAX_SPOKES).fill(0.8);
+    const twigT = new Float32Array(TWIG_STARS);
+    const twigPick = new Float32Array(TWIG_STARS);
+    const twigPace = new Float32Array(TWIG_STARS);
+    for (let i = 0; i < TWIG_STARS; i++) {
+      twigT[i] = Math.random();
+      twigPick[i] = Math.random();
+      twigPace[i] = 0.6 + 0.8 * Math.random();
+    }
     const start = arriveRef.current ? performance.now() - (SWITCH_SECONDS * 1000) / 2 : 0;
     let clock = 0;
     let last = performance.now();
@@ -182,6 +195,25 @@ export function StarWheel({
         const alpha = 0.6 * (glow[k] as number) * twinkle * (1 - 0.35 * s) * (1 - 0.2 * apart);
         ctx.fillStyle = `rgba(${GR}, ${GG}, ${GB}, ${Math.min(1, alpha)})`;
         ctx.fillRect(x - size / 2, y - size / 2, size, size);
+      }
+
+      // Each hub's twigs: a current out of its ball along one twig per page inside.
+      if (grown > 0.6 && apart < 0.5) {
+        const twigs = twigsRef.current;
+        for (let i = 0; i < TWIG_STARS; i++) {
+          const k = i % MAX_SPOKES;
+          const m = k < count ? (twigs[k] ?? 0) : 0;
+          if (!m) continue;
+          twigT[i] = (twigT[i] as number) + dt * 0.35 * (twigPace[i] as number);
+          if ((twigT[i] as number) > 1) twigT[i] = 0;
+          const t = twigT[i] as number;
+          const j = Math.floor((twigPick[i] as number) * m);
+          const [x, y] = twigPoint(f, spokeAngle(k, count), j, m, t);
+          const alpha =
+            0.5 * (glow[k] as number) * (1 - t * 0.6) * (grown - 0.6) * 2.5 * (1 - 2 * apart);
+          ctx.fillStyle = `rgba(${GR}, ${GG}, ${GB}, ${Math.min(1, alpha)})`;
+          ctx.fillRect(x - size / 2, y - size / 2, size, size);
+        }
       }
 
       // Each hub, or page, a small ball of stars at the end of its spoke.

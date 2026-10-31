@@ -279,3 +279,29 @@ export function buildBranchTree(branch: Branch, areas: Segment[]): BranchTree {
 /** Segments from areas that list their pages as `routes` (lib/branches.ts). */
 export const segmentsOf = (list: { label: string; routes: string[] }[]): Segment[] =>
   list.map((g) => ({ label: g.label, pages: g.routes }));
+
+/*
+ * USE SHOWS ON THE TWIGS (2026-10-31): a twig to a page opened this week runs
+ * bright; one opened this month as it is; one not opened for longer, or
+ * never, thins to a faint thread. Read from the one fact the Grid keeps --
+ * when a page was last opened (lib/grid.ts readVisits) -- so no counts.
+ */
+const DAY = 24 * 60 * 60 * 1000;
+
+export const TWIG_USE = { week: 1.45, month: 1, older: 0.6, never: 0.45 };
+
+/** How strongly a twig shows, from when its page was last opened. */
+export function twigUse(last: number | undefined, now: number): number {
+  if (last === undefined) return TWIG_USE.never;
+  const age = now - last;
+  if (age <= 7 * DAY) return TWIG_USE.week;
+  if (age <= 30 * DAY) return TWIG_USE.month;
+  return TWIG_USE.older;
+}
+
+/*
+ * A BARE STUB ASKS FOR SOMETHING (2026-10-31). Tapping an area with nothing
+ * built offers to plant a private spark for it (/sparks), so the empty limb
+ * leads somewhere: the idea is kept where ideas are kept, until it is built.
+ */
+export const seedText = (area: string): string => `Grow ${area}: give it a place in the brain`;
