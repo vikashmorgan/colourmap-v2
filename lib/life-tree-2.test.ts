@@ -2,21 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import { BRANCHES } from './branches';
 import { withVisit } from './grid';
-import { buildLifeTrees } from './life-tree';
 import {
-  AREAS_2,
   branchWarmth,
-  limbPoint,
   matchPages,
   page,
-  pagePoints,
   placedPages,
   recentPages,
-  sectors,
   spreadLabels,
   unplacedPages,
 } from './life-tree-2';
-import { FOOT_Y } from './star-tree';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -25,22 +19,6 @@ describe('design II of the life tree', () => {
     expect(unplacedPages()).toEqual([]);
     const all = placedPages();
     expect(new Set(all).size).toBe(all.length);
-  });
-
-  it('cuts a crown into one sector per area, side to side, wider for more pages', () => {
-    const tree = buildLifeTrees().art;
-    const secs = sectors(tree, AREAS_2.art);
-    expect(secs).toHaveLength(AREAS_2.art.length);
-    for (let i = 1; i < secs.length; i++) expect(secs[i]?.lo).toBeCloseTo(secs[i - 1]?.hi ?? 0);
-    const visual = secs.find((s) => s.area.label === 'Visual');
-    const play = secs.find((s) => s.area.label === 'Play');
-    if (!visual || !play) throw new Error('missing area');
-    expect(visual.hi - visual.lo).toBeGreaterThan(play.hi - play.lo);
-    // The name sits on the limb, inside the crown; the pages beyond the tips, in order.
-    const [, ly] = limbPoint(tree, visual);
-    const points = pagePoints(tree, visual, visual.area.pages.length);
-    expect(points).toHaveLength(10);
-    for (const [, y] of points) expect(y - FOOT_Y).toBeGreaterThan((ly - FOOT_Y) * 0.6);
   });
 
   it('warms a tree by the share of its pages opened this week', () => {

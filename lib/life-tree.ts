@@ -100,39 +100,6 @@ export function crownPoint(branch: Branch, f: Frame): [number, number] {
   return [f.cx + Math.cos(a) * r, f.cy + Math.sin(a) * r];
 }
 
-/**
- * The branch tips a tree's `n` leaves hang from, in world units: spread at
- * even angles round the whole crown, side to side, each the furthest tip in
- * its direction, and set a little beyond it so the name sits on the end of
- * the branch. Many leaves alternate two distances so the names do not touch.
- */
-export function tipLeaves(tree: StarTree, n: number): [number, number][] {
-  if (n <= 0 || tree.tips.length === 0) return [];
-  const angle = (p: [number, number]) => Math.atan2(p[0], p[1] - FOOT_Y);
-  const reach = (p: [number, number]) => Math.hypot(p[0], p[1] - FOOT_Y);
-  const angles = tree.tips.map(angle);
-  const lo = Math.min(...angles);
-  const hi = Math.max(...angles);
-  return Array.from({ length: n }, (_, i) => {
-    const want = lo + ((i + 0.5) / n) * (hi - lo);
-    const width = (hi - lo) / n;
-    // The furthest tip near this direction; failing that, the nearest in angle.
-    const near = tree.tips.filter((p) => Math.abs(angle(p) - want) <= width / 2);
-    const pool = near.length ? near : tree.tips;
-    const tip = pool.reduce((best, p) =>
-      near.length
-        ? reach(p) > reach(best)
-          ? p
-          : best
-        : Math.abs(angle(p) - want) < Math.abs(angle(best) - want)
-          ? p
-          : best,
-    );
-    const out = 1.1 + (n > 5 && i % 2 ? 0.16 : 0);
-    return [tip[0] * out, FOOT_Y + (tip[1] - FOOT_Y) * out];
-  });
-}
-
 /** Where item `i` of `n` sits round the root, between the trunks, starting at the top. */
 export function rootPoint(i: number, n: number, f: Frame): [number, number] {
   const a = Math.PI / 2 + (i / Math.max(n, 1)) * Math.PI * 2;

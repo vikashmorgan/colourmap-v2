@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { type Design, DesignTab, parseDesign } from '@/components/DesignTab';
 import { drawOrb, makeOrb } from '@/components/starOrb';
+import { type BranchTree, buildBranchTree, type ShapedRoute, segmentsOf } from '@/lib/branch-tree';
 import {
   BRANCH_BLURBS,
   BRANCH_LABELS,
@@ -25,7 +26,6 @@ import {
   SWITCH_SECONDS,
   scatter,
   shifted,
-  tipLeaves,
   treeToScreen,
   type View,
   viewFor,
@@ -34,17 +34,13 @@ import {
   AREAS_2,
   branchWarmth,
   CENTRE_2,
-  GROWN_2,
-  limbPoint,
   matchPages,
   page,
-  pagePoints,
   recentPages,
-  sectors,
   spreadLabels,
 } from '@/lib/life-tree-2';
 import { nextQuote, POWER_QUOTES } from '@/lib/power-quotes';
-import { along, routeLength, STEP } from '@/lib/star-tree';
+import { along, type Route, routeLength, STEP } from '@/lib/star-tree';
 
 /*
  * THE TREE LOOK OF THE G MENU (lib/life-tree.ts): you at the centre, a pulse
@@ -59,13 +55,14 @@ import { along, routeLength, STEP } from '@/lib/star-tree';
  *
  *   trees     the three names beyond their crowns, and YOU at the root
  *   branch    that tree evolves -- grows, takes the middle, the other two
- *             shrink back -- and its areas hang from its branch tips
+ *             shrink back -- and is regrown from its areas: one limb per
+ *             area, one twig per page (lib/branch-tree.ts)
  *   area      an area with several pages: its pages hang from the tips
  *   root      the pages about how you are, round the centre
  *
  * DESIGN II reads lib/life-tree-2.ts: every page the Grid knows, placed.
- * A branch opens in one view -- its areas named on the limbs, every page
- * hanging from the tips of its own limb. Pages opened this week glow, and
+ * A branch opens in one view -- its areas named on their limbs, every page
+ * on the end of its own twig. Pages opened this week glow, and
  * the trees you use shine brighter. Your last three pages sit by YOU, and
  * typing finds any page.
  *
@@ -93,6 +90,8 @@ type Item = {
   orb?: boolean;
   at: [number, number];
   act?: () => void;
+  /** The limb, and the twig on it, this name hangs from on an opened tree. */
+  focus?: [number, number | null];
 };
 
 type Limb = { key: string; label: string; dim: boolean; at: [number, number] };
@@ -109,6 +108,8 @@ const ORB_RADIUS = ROOT_RADIUS * 1.5;
 const QUOTE_SECONDS = 30;
 // Enough that each crown reads full and branchy at a glance (2026-10-30).
 const STARS_PER_TREE = 2400;
+/** A tree changing shape as it opens comes apart and re-forms this much faster than a design switch. */
+const MORPH_PACE = 2;
 
 const ALL_NODES: GridNode[] = HUBS.flatMap((h) => h.nodes);
 const nodeFor = (href: string): GridNode =>
@@ -162,6 +163,21 @@ export function LifeTree({ go, close, arrive = false }: Props) {
   // Read once, on arrival.
   const arriveRef = useRef(arrive);
   const trees = useMemo(() => buildLifeTrees(), []);
+  // Opened, a tree is regrown from its areas: one limb each, one twig per page (lib/branch-tree.ts).
+  const shaped = useMemo(
+    (): Record<Design, Record<Branch, BranchTree>> => ({
+      1: Object.fromEntries(
+        BRANCHES.map((b) => [b, buildBranchTree(b, segmentsOf(groupingsIn(b)))]),
+      ) as Record<Branch, BranchTree>,
+      2: Object.fromEntries(BRANCHES.map((b) => [b, buildBranchTree(b, AREAS_2[b])])) as Record<
+        Branch,
+        BranchTree
+      >,
+    }),
+    [],
+  );
+  // The limb, and twig, the chosen name hangs from: its current runs brighter.
+  const focusRef = useRef<[number, number | null] | null>(null);
 
   useEffect(() => {
     try {
@@ -282,39 +298,50 @@ export function LifeTree({ go, close, arrive = false }: Props) {
     }
 
     const b = level.branch;
-    const size = design === 2 ? GROWN_2 : GROWN;
-    const grown = shifted(frame, viewFor(b, size));
-    const toScreen = (p: [number, number]) => treeToScreen(b, p[0], p[1], grown, size);
+    const grown = shifted(frame, viewFor(b));
+    const toScreen = (p: [number, number]) => treeToScreen(b, p[0], p[1], grown, GROWN);
+    // A page's name with its near edge on the tip of its twig, carried on the way the twig goes.
+    const onTip = (leaf: { end: [number, number]; on: [number, number] }, label: string) => {
+      const [ex, ey] = toScreen(leaf.end);
+      const [ox, oy] = toScreen(leaf.on);
+      const d = Math.hypot(ox - ex, oy - ey) || 1;
+      const [dx, dy] = [(ox - ex) / d, (oy - ey) / d];
+      const reach = Math.abs(dx) * ((label.length * 9 + 30) / 2) + Math.abs(dy) * 20 + 3;
+      return [ex + dx * reach, ey + dy * reach] as [number, number];
+    };
+
+    const grownTree = shaped[design][b];
 
     if (design === 2) {
-      // One view: the areas named on their limbs, every page at the tips of its own.
-      const secs = sectors(trees[b], AREAS_2[b]);
+      // One view: each area named on its own limb, each page on the end of its own twig.
+      const areas = AREAS_2[b];
       return {
-        limbs: secs.map((s) => ({
-          key: s.area.label,
-          label: s.area.label,
-          dim: s.area.pages.length === 0,
-          at: toScreen(limbPoint(trees[b], s)),
+        limbs: areas.map((a, i) => ({
+          key: a.label,
+          label: a.label,
+          dim: a.pages.length === 0,
+          at: toScreen(grownTree.limbs[i]!.name),
         })),
-        items: secs.flatMap((s) => {
-          const points = pagePoints(trees[b], s, s.area.pages.length);
-          return s.area.pages.map((href, i) =>
-            pageItem(href, toScreen(points[i] as [number, number])),
-          );
-        }),
+        items: areas.flatMap((a, i) =>
+          a.pages.map((href, k) => ({
+            ...pageItem(href, onTip(grownTree.limbs[i]!.leaves[k]!, page(href).label)),
+            focus: [i, k] as [number, number],
+          })),
+        ),
       };
     }
 
     if (level.kind === 'branch') {
       const areas = groupingsIn(b);
-      const tips = tipLeaves(trees[b], areas.length);
       return {
         items: areas.map((g, i) => ({
           key: g.label,
           label: g.label,
           line: g.routes.length ? undefined : 'Nothing built here yet',
           dim: g.routes.length === 0,
-          at: toScreen(tips[i] as [number, number]),
+          // On its own limb, below the twigs: one twig for each page inside.
+          at: toScreen(grownTree.limbs[i]!.name),
+          focus: [i, null] as [number, null],
           act: g.routes.length
             ? () => {
                 if (g.routes.length === 1) openPage(g.routes[0] as string);
@@ -330,12 +357,18 @@ export function LifeTree({ go, close, arrive = false }: Props) {
     }
 
     const { routes } = level.area;
-    const tips = tipLeaves(trees[b], routes.length);
+    const i = groupingsIn(b).indexOf(level.area);
+    const limb = grownTree.limbs[i]!;
     return {
-      items: routes.map((href, i) => pageItem(href, toScreen(tips[i] as [number, number]))),
-      limbs: [],
+      items: routes.map((href, k) => ({
+        ...pageItem(href, onTip(limb.leaves[k]!, nodeFor(href).label)),
+        focus: [i, k] as [number, number],
+      })),
+      limbs: [
+        { key: level.area.label, label: level.area.label, dim: false, at: toScreen(limb.name) },
+      ],
     };
-  }, [level, frame, go, trees, design, visits, now, query]);
+  }, [level, frame, go, shaped, design, visits, now, query]);
 
   // Every name on screen, clear of the switchers above and the line below.
   const W = frame.cx * 2;
@@ -346,21 +379,39 @@ export function LifeTree({ go, close, arrive = false }: Props) {
   ];
   for (const it of items) it.at = keepIn(it.at);
   for (const l of limbs) l.at = keepIn(l.at);
-  // No two names on top of each other; sizes roughly as the pills draw them.
-  for (const p of spreadLabels(
-    items.map((it) => ({
-      it,
+  // No two names on top of each other, pills or limb names; sizes roughly as they draw.
+  for (const p of spreadLabels<{
+    at: [number, number];
+    w: number;
+    h: number;
+    set: (at: [number, number]) => void;
+  }>([
+    ...items.map((it) => ({
       at: it.at,
       w: it.orb ? frame.min * ORB_RADIUS * 2.4 : it.label.length * (it.small ? 7.5 : 9) + 30,
       h: it.orb ? frame.min * ORB_RADIUS * 2.4 : it.small ? 30 : 40,
+      set: (at: [number, number]) => {
+        it.at = at;
+      },
     })),
-  )) {
-    p.it.at = keepIn(p.at);
+    ...limbs.map((l) => ({
+      at: l.at,
+      w: l.label.length * 9 + 10,
+      h: 16,
+      set: (at: [number, number]) => {
+        l.at = at;
+      },
+    })),
+  ])) {
+    p.set(keepIn(p.at));
   }
 
   const current = items[sel];
   litRef.current = level.kind === 'branch' || level.kind === 'area' ? level.branch : null;
   designRef.current = design;
+  focusRef.current =
+    current?.focus ??
+    (level.kind === 'area' ? [groupingsIn(level.branch).indexOf(level.area), null] : null);
   warmRef.current =
     design === 2
       ? {
@@ -437,9 +488,20 @@ export function LifeTree({ go, close, arrive = false }: Props) {
     // Where each star flies when the tree comes apart: a turn off straight out, and how far.
     const flyTurn = new Float32Array(n);
     const flyFar = new Float32Array(n);
+    /*
+     * Which shape each tree stands in: '' the full Star Tree, or the design
+     * whose grown tree it is. Changing shape comes apart and re-forms, a
+     * shorter version of the design switch, the routes swapped at the turn.
+     */
+    const shapeOf: Record<Branch, '' | Design> = { art: '', admin: '', energy: '' };
+    const morphAt: Record<Branch, number> = { art: 0, admin: 0, energy: 0 };
+    const routesOf = (b: Branch): Route[] => {
+      const d = shapeOf[b];
+      return d ? shaped[d][b].routes : trees[b].routes;
+    };
     const place = (i: number, anywhere: boolean) => {
       const b = BRANCHES[tree[i] as number] as Branch;
-      const routes = trees[b].routes;
+      const routes = routesOf(b);
       route[i] = Math.floor(Math.random() * routes.length);
       at[i] = anywhere
         ? Math.random() * routeLength(routes[route[i] as number]!)
@@ -476,7 +538,7 @@ export function LifeTree({ go, close, arrive = false }: Props) {
       }
       const lit = litRef.current;
       const warmth = warmRef.current;
-      const want = viewFor(lit, designRef.current === 2 ? GROWN_2 : GROWN);
+      const want = viewFor(lit);
       const ease = still ? 1 : Math.min(1, dt * 3);
       view.shiftX += (want.shiftX - view.shiftX) * ease;
       view.shiftY += (want.shiftY - view.shiftY) * ease;
@@ -488,6 +550,21 @@ export function LifeTree({ go, close, arrive = false }: Props) {
         glow[b] += (bright - glow[b]) * ease;
       }
       const apart = still ? 0 : scatter((now - switchRef.current) / 1000);
+      // Each tree's own coming apart, when it changes shape.
+      const own = { art: 0, admin: 0, energy: 0 } as Record<Branch, number>;
+      for (const b of BRANCHES) {
+        const want: '' | Design = lit === b ? designRef.current : '';
+        if (want !== shapeOf[b] && morphAt[b] === 0) morphAt[b] = now;
+        if (morphAt[b] === 0) continue;
+        const t = ((now - morphAt[b]) / 1000) * MORPH_PACE;
+        if (t >= SWITCH_SECONDS / 2 && want !== shapeOf[b]) {
+          shapeOf[b] = want;
+          for (let i = 0; i < n; i++) if (BRANCHES[tree[i] as number] === b) place(i, true);
+        }
+        if (still || t >= SWITCH_SECONDS) morphAt[b] = 0;
+        else own[b] = scatter(t);
+      }
+      const focus = focusRef.current;
       const f = shifted({ cx: W / 2, cy: H / 2 + 12 * dpr, min: Math.min(W, H) }, view);
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = `rgba(4, 4, 6, ${0.22 + 0.08 * apart})`;
@@ -505,7 +582,7 @@ export function LifeTree({ go, close, arrive = false }: Props) {
       const surge = 1 + 0.8 * p.surge;
       for (let i = 0; i < n; i++) {
         const b = BRANCHES[tree[i] as number] as Branch;
-        const r = trees[b].routes[route[i] as number]!;
+        const r = routesOf(b)[route[i] as number]!;
         const len = routeLength(r);
         at[i] += dt * 0.1 * (pace[i] as number) * surge;
         if ((at[i] as number) > len + 0.1) {
@@ -529,16 +606,24 @@ export function LifeTree({ go, close, arrive = false }: Props) {
           a = 1 - past / 0.1;
         }
         const twinkle = 0.7 + 0.3 * Math.sin(clock * 1.7 + (tw[i] as number) * 3);
-        const alpha = Math.min(1, 0.55 * glow[b] * twinkle * a * (1 - 0.2 * apart));
+        // On a grown tree, the path to the chosen name runs bright and the rest steps back.
+        let lead = 1;
+        if (focus && shapeOf[b] && lit === b) {
+          const sr = r as ShapedRoute;
+          lead =
+            sr.area !== focus[0] ? 0.55 : focus[1] === null || sr.page === focus[1] ? 1.5 : 0.9;
+        }
+        const gone = Math.max(apart, own[b]);
+        const alpha = Math.min(1, 0.55 * glow[b] * lead * twinkle * a * (1 - 0.2 * gone));
         if (alpha < 0.02) continue;
         let [sx, sy] = treeToScreen(b, x, y, f, view.grow[b]);
-        if (apart > 0) {
+        if (gone > 0) {
           // Coming apart: each star flies out from the root, turned a little, and swirls.
           const ox = sx - f.cx;
           const oy = sy - f.cy;
           const o = Math.hypot(ox, oy) || 1;
-          const turn = (flyTurn[i] as number) + apart * 0.9;
-          const far = (flyFar[i] as number) * apart * f.min;
+          const turn = (flyTurn[i] as number) + gone * 0.9;
+          const far = (flyFar[i] as number) * gone * f.min * (apart > 0 ? 1 : 0.5);
           sx += ((ox * Math.cos(turn) - oy * Math.sin(turn)) / o) * far;
           sy += ((ox * Math.sin(turn) + oy * Math.cos(turn)) / o) * far;
         }
@@ -550,7 +635,7 @@ export function LifeTree({ go, close, arrive = false }: Props) {
     };
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [trees]);
+  }, [trees, shaped]);
 
   return (
     <div
