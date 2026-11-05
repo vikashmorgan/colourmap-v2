@@ -279,6 +279,67 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .pmf-x span { position: absolute; top: 3px; transform: translateX(-50%); }
   .pmf-x i { position: absolute; top: 15px; transform: translateX(-50%); font-style: normal; font-size: 11px; color: var(--ink); }
 
+  /* The map: a vertical pill on the left that opens into stacks of segments. */
+  [data-seg], .card { scroll-margin-top: 46px; }
+  .where-btn { display: block; width: 100%; padding: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; color: var(--accent); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .where-btn.tinted { color: oklch(0.45 0.13 var(--h, 60)); }
+  [data-theme="night"] .where-btn.tinted { color: oklch(0.84 0.11 var(--h, 60)); }
+  .map-pill { position: fixed; z-index: 50; left: max(12px, calc(50vw - 380px - 52px)); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 7px; width: 32px; padding: 10px 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; box-shadow: 0 4px 14px rgb(0 0 0 / .10); }
+  .map-pill[hidden], .map[hidden] { display: none; }
+  .map-pill:hover { border-color: var(--accent); }
+  .map-pill b { font: 700 11px/1 ui-monospace, Consolas, monospace; }
+  .map-pill .ln { position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .map-pill .ln::before { content: ''; position: absolute; top: 4px; bottom: 4px; left: 50%; width: 2px; margin-left: -1px; background: var(--line); }
+  .map-pill i { position: relative; display: grid; place-items: center; width: 9px; height: 9px; border-radius: 50%; background: oklch(0.72 0.12 var(--h, 60)); font: 700 11px/1 ui-monospace, Consolas, monospace; font-style: normal; color: #1b2330; }
+  .map-pill i.plain { background: var(--soft); }
+  .map-pill i.here { width: 20px; height: 20px; background: oklch(0.80 0.13 var(--h, 60)); box-shadow: 0 0 0 2px oklch(0.45 0.13 var(--h, 60)); }
+  .map-pill i.plain.here { background: var(--soft); box-shadow: 0 0 0 2px var(--ink); }
+  .map { position: fixed; z-index: 60; left: 0; top: 0; bottom: 0; width: min(310px, 86vw); padding: 12px 12px 20px; overflow-y: auto; background: var(--paper); border-right: 1px solid var(--line); box-shadow: 4px 0 24px rgb(0 0 0 / .16); font: 13.5px/1.35 system-ui, sans-serif; }
+  .map button { font: inherit; color: var(--ink); cursor: pointer; }
+  .map-top { display: flex; align-items: center; justify-content: space-between; color: var(--soft); font-weight: 600; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
+  .map .map-close { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--soft); font-size: 16px; }
+  .map-now { margin: 4px 0 10px; font-weight: 600; }
+  .map-stack { margin: 0 0 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); overflow: hidden; }
+  .map-stack.in { border-color: var(--accent); }
+  .map .map-l { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 42px; padding: 7px 10px; border: 0; background: none; text-align: left; }
+  .map-l b { flex: none; }
+  .map-l span { flex: 1; color: var(--soft); }
+  .map-chev { flex: none; width: 1em; text-align: center; color: var(--soft); transition: transform .15s; }
+  [aria-expanded="true"] > .map-chev { transform: rotate(90deg); }
+  .map-segs, .map-cards { list-style: none; margin: 0; padding: 0; }
+  .map-segs { display: grid; gap: 3px; padding: 0 6px 6px; }
+  .map-s { --tint: oklch(0.80 0.11 var(--h, 60) / 0.30); border-radius: 8px; background: var(--tint); }
+  [data-theme="night"] .map-s { --tint: oklch(0.62 0.12 var(--h, 60) / 0.20); }
+  .map-s.plain { background: color-mix(in srgb, var(--soft) 12%, transparent); }
+  .map-s.here { box-shadow: inset 0 0 0 2px oklch(0.45 0.13 var(--h, 60)); }
+  [data-theme="night"] .map-s.here { box-shadow: inset 0 0 0 2px oklch(0.84 0.11 var(--h, 60)); }
+  .map-s.plain.here { box-shadow: inset 0 0 0 2px var(--soft); }
+  .map-row { display: flex; align-items: stretch; }
+  .map .map-name { flex: 1; display: flex; align-items: center; gap: 7px; min-width: 0; min-height: 38px; padding: 5px 4px 5px 8px; border: 0; background: none; text-align: left; }
+  .map-name .t { flex: 1; min-width: 0; }
+  .map-name em { display: block; font: 600 11.5px system-ui, sans-serif; color: var(--soft); }
+  .map-s.here .map-name .t { font-weight: 700; }
+  .map-n { flex: none; min-width: 1.2em; font: 700 12px ui-monospace, Consolas, monospace; text-align: center; }
+  .map .map-go { flex: none; width: 34px; border: 0; background: none; color: var(--soft); }
+  .map .map-go:hover { color: var(--ink); }
+  .map-cards { padding: 0 6px 6px; display: grid; gap: 1px; }
+  .map .map-cards button { display: flex; gap: 6px; width: 100%; padding: 4px 6px; border: 0; border-radius: 6px; background: none; font-size: 12.5px; line-height: 1.3; text-align: left; }
+  .map-cards button b { flex: none; min-width: 1.5em; font: 600 11.5px/1.45 ui-monospace, Consolas, monospace; color: var(--soft); }
+  .map .map-cards button:hover { background: color-mix(in srgb, var(--card) 60%, transparent); }
+  .map .map-cards button.on { font-weight: 700; background: var(--card); }
+  .map .map-ref { width: 100%; min-height: 42px; padding: 7px 10px; border: 1px dashed var(--line); border-radius: 12px; background: none; text-align: left; font-weight: 600; }
+  @media (min-width: 1240px) {
+    .map { left: max(10px, calc(50vw - 380px - 262px)); top: 16px; bottom: 16px; width: 244px; border: 1px solid var(--line); border-radius: 14px; box-shadow: none; }
+  }
+  @media (max-width: 900px) {
+    .map-pill { left: 0; width: 18px; padding: 8px 0 10px; gap: 6px; border-left: 0; border-radius: 0 12px 12px 0; }
+    .map-pill::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 34px; }
+    .map-pill b { font-size: 9px; letter-spacing: -.04em; }
+    .map-pill .ln { gap: 6px; }
+    .map-pill i { width: 7px; height: 7px; font-size: 10px; }
+    .map-pill i.here { width: 14px; height: 14px; }
+  }
+
   @media (max-width: 560px) {
     h1 { font-size: 26px; }
     .sessions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -306,6 +367,8 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   <p class="sync" id="sync"></p>
 </main>
 
+<button type="button" class="map-pill" id="map-pill" aria-expanded="false" aria-controls="map" aria-label="Where you are"></button>
+<nav class="map" id="map" aria-label="Where you are" hidden></nav>
 <button type="button" class="nb-dot" id="nb-dot" aria-expanded="false" aria-controls="notebook" title="Notepad"></button>
 <aside class="notebook" id="notebook" aria-label="Notepad" hidden>
   <div class="nb-top"><span class="nb-title">Notepad</span><button type="button" class="nb-close" id="nb-close" aria-label="Close the notepad">×</button></div>
@@ -932,18 +995,20 @@ function paintBars() {
 }
 // Each segment of boxes has its own colour, as on the Python page.
 const segHue = (n, gi, count) => ({ 1: 250, 2: 150, 3: 20 }[n] + (300 * gi) / Math.max(count, 1)) % 360;
+const PRACTICE_HUE = 40, RECAP_HUE = 90;
 function picOpen() { try { return localStorage.getItem('stats-pic-closed') !== '1'; } catch (e) { return true; } }
 document.addEventListener('toggle', e => { if (e.target.id === 'pic') { try { localStorage.setItem('stats-pic-closed', e.target.open ? '' : '1'); } catch (err) {} } }, true);
 function renderSession() {
-  if (current === 'ref') { document.getElementById('session').innerHTML = '<p class="where">Cheat sheet</p>' + refHtml(); applyHighlights(); return; }
+  if (current === 'ref') { document.getElementById('session').innerHTML = '<p class="where">Cheat sheet</p>' + refHtml(); applyHighlights(); mapRefresh(); return; }
   const s = SESSIONS.find(x => x.n === current);
-  document.getElementById('session').innerHTML = `<p class="where">Lecture ${s.n}</p><h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
-    + `<details class="pic" id="pic"${picOpen() ? ' open' : ''}><summary>The picture: the lecture on one page</summary><div class="pic-body">${PICTURES[s.n]()}</div></details>`
-    + s.groups.map((g, gi) => `<section class="seg" style="--h: ${segHue(s.n, gi, s.groups.length).toFixed(0)}"><h2>${esc(g.name)}</h2>${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div></section>`).join('')
-    + `<section class="seg" style="--h: 40"><h2>Practice</h2><p class="group-note">Try each one on paper first, then open the answer.</p>${practiceHtml(s)}</section>`
-    + `<h2>To remember</h2><ul class="recap" data-hl="stats|s${s.n}|recap">${s.recap.map(r => `<li>${text(r)}</li>`).join('')}</ul>`;
+  document.getElementById('session').innerHTML = `<p class="where"><button type="button" class="where-btn" id="where-btn">Lecture ${s.n}</button></p><h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
+    + `<details class="pic" id="pic" data-seg="pic"${picOpen() ? ' open' : ''}><summary>The picture: the lecture on one page</summary><div class="pic-body">${PICTURES[s.n]()}</div></details>`
+    + s.groups.map((g, gi) => `<section class="seg" data-seg="g${gi}" style="--h: ${segHue(s.n, gi, s.groups.length).toFixed(0)}"><h2>${esc(g.name)}</h2>${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div></section>`).join('')
+    + `<section class="seg" data-seg="practice" style="--h: ${PRACTICE_HUE}"><h2>Practice</h2><p class="group-note">Try each one on paper first, then open the answer.</p>${practiceHtml(s)}</section>`
+    + `<section class="seg" data-seg="recap" style="--h: ${RECAP_HUE}"><h2>To remember</h2><ul class="recap" data-hl="stats|s${s.n}|recap">${s.recap.map(r => `<li>${text(r)}</li>`).join('')}</ul></section>`;
   paintNotes();
   applyHighlights();
+  mapRefresh();
 }
 document.getElementById('sessions').addEventListener('click', e => {
   const b = e.target.closest('.sess');
@@ -1332,6 +1397,157 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'b' && e.target.matches && e.target.matches(NOTE_BOX)) { e.preventDefault(); toggleBold(e.target); }
 });
 
+/* ---------- The map: where you are ----------
+   Asked for 2026-11-05: "a system that helps me know where I am, like a dot on the left that tells me
+   this is segment 2 of Lecture 3, and I see the segments of Lecture 3, or the segments of Lecture 1 or 2",
+   then "a vertical pill that opens, a column with the stacks of the segments that can be opened and closed".
+   Closed: a pill on the left, one dot per segment in its colour, the current one larger with its number.
+   Open: one stack per lecture, each with its segments in their colours; a segment opens to its cards.
+   Moving through the page opens the segment you enter and closes the one you left. Opening anything
+   else moves nothing: only the arrow, a card, or a row with nothing to open takes you there. */
+const mapEl = document.getElementById('map');
+const mapPill = document.getElementById('map-pill');
+const MAP_WIDE = matchMedia('(min-width: 1240px)');
+const mapOpenL = new Set(), mapOpenS = new Set();
+let mapLecture = null, mapPlace = { seg: null, card: null };
+function segsOf(s) {
+  return [{ key: 'pic', name: 'The picture' },
+    ...s.groups.map((g, gi) => ({ key: `g${gi}`, name: g.name, h: segHue(s.n, gi, s.groups.length), cards: g.cards })),
+    { key: 'practice', name: 'Practice', h: PRACTICE_HUE }, { key: 'recap', name: 'To remember', h: RECAP_HUE }];
+}
+function findPlace() {
+  let seg = null, card = null;
+  const segEls = [...document.querySelectorAll('#session [data-seg]')];
+  for (const el of segEls) if (!seg || el.getBoundingClientRect().top <= 110) seg = el.dataset.seg;
+  // The last segment can be too short to reach the top: at the end of the lecture, you are in it.
+  if (segEls.length && document.getElementById('session').getBoundingClientRect().bottom <= innerHeight) seg = segEls[segEls.length - 1].dataset.seg;
+  if (seg) card = [...document.querySelectorAll(`#session [data-seg="${seg}"] .card`)].find(c => c.getBoundingClientRect().bottom > 110)?.id || null;
+  return { seg, card };
+}
+function placeText() {
+  const s = SESSIONS.find(x => x.n === current);
+  if (!s) return 'Cheat sheet';
+  const all = segsOf(s), at = all.find(x => x.key === mapPlace.seg), num = all.filter(x => x.key !== 'pic'), i = num.indexOf(at);
+  return i < 0 ? `Lecture ${current} · ${at ? at.name : ''}` : `Lecture ${current} · Segment ${i + 1} of ${num.length} · ${at.name}`;
+}
+const hueStyle = x => x.h === undefined ? '' : ` style="--h: ${x.h.toFixed(0)}"`;
+// The pinned label and the closed pill.
+function paintPlace() {
+  const s = SESSIONS.find(x => x.n === current), text = placeText();
+  mapPill.setAttribute('aria-label', `${text}. Open the map`);
+  mapPill.title = text;
+  if (!s) { mapPill.innerHTML = '<b>≡</b>'; return; }
+  const all = segsOf(s), at = all.find(x => x.key === mapPlace.seg);
+  let n = 0;
+  mapPill.innerHTML = `<b>L${s.n}</b><span class="ln">${all.map(x => {
+    if (x.key !== 'pic') n++;
+    const here = x === at;
+    return `<i class="${x.h === undefined ? 'plain' : ''}${here ? ' here' : ''}"${hueStyle(x)}>${here && x.key !== 'pic' ? n : ''}</i>`;
+  }).join('')}</span>`;
+  const where = document.getElementById('where-btn');
+  if (where) {
+    where.textContent = text;
+    where.parentElement.style.setProperty('--h', at?.h === undefined ? '' : at.h.toFixed(0));
+    where.classList.toggle('tinted', at?.h !== undefined);
+  }
+}
+function renderMap() {
+  if (mapEl.hidden) return;
+  const stack = s => {
+    const lit = s.n === current, open = mapOpenL.has(s.n);
+    let n = 0;
+    return `<div class="map-stack${lit ? ' in' : ''}"><button type="button" class="map-l" data-l="${s.n}" aria-expanded="${open}"><b>Lecture ${s.n}</b><span>${esc(s.short)}</span><span class="map-chev" style="flex:none">›</span></button>
+      ${open ? `<ol class="map-segs">${segsOf(s).map(x => {
+        if (x.key !== 'pic') n++;
+        const here = lit && mapPlace.seg === x.key, id = `${s.n}|${x.key}`, up = mapOpenS.has(id);
+        const label = `<span class="map-n">${x.key === 'pic' ? '' : n}</span><span class="t">${esc(x.name)}${here ? '<em>you are here</em>' : ''}</span>`;
+        return `<li class="map-s${x.h === undefined ? ' plain' : ''}${here ? ' here' : ''}"${hueStyle(x)}>${x.cards
+          ? `<div class="map-row"><button type="button" class="map-name" data-seg-toggle="${id}" aria-expanded="${up}">${label}<span class="map-chev">›</span></button><button type="button" class="map-go" data-s="${s.n}" data-to="${x.key}" aria-label="Go to ${esc(x.name)}" title="Go to this segment">→</button></div>
+            ${up ? `<ol class="map-cards">${x.cards.map(c => `<li><button type="button" data-s="${s.n}" data-card="c-${s.n}-${c.id}"${lit && mapPlace.card === `c-${s.n}-${c.id}` ? ' class="on"' : ''}><b>${c.num.split('.')[1]}</b>${esc(c.name)}</button></li>`).join('')}</ol>` : ''}`
+          : `<div class="map-row"><button type="button" class="map-name" data-s="${s.n}" data-to="${x.key}">${label}<span class="map-go" style="width:auto;padding-right:10px">→</span></button></div>`}</li>`;
+      }).join('')}</ol>` : ''}</div>`;
+  };
+  mapEl.innerHTML = `<div class="map-top"><span>Where you are</span><button type="button" class="map-close" aria-label="Close the map">×</button></div>
+    <p class="map-now">${esc(placeText())}</p>${SESSIONS.map(stack).join('')}<button type="button" class="map-ref" data-goref>Cheat sheet</button>`;
+}
+function mapKeepInView() {
+  const on = mapEl.querySelector('.map-cards .on') || mapEl.querySelector('.map-s.here');
+  if (!on) return;
+  const a = on.getBoundingClientRect(), b = mapEl.getBoundingClientRect();
+  if (a.top < b.top + 8) mapEl.scrollTop -= b.top + 8 - a.top;
+  else if (a.bottom > b.bottom - 8) mapEl.scrollTop += a.bottom - b.bottom + 8;
+}
+function setMap(open, remember) {
+  mapEl.hidden = !open;
+  mapPill.hidden = open;
+  mapPill.setAttribute('aria-expanded', String(open));
+  if (remember) { try { localStorage.setItem('stats-map-open', open ? '1' : ''); } catch (e) {} }
+  if (open) { renderMap(); mapKeepInView(); }
+}
+const followSeg = seg => { if (seg) mapOpenS.add(`${current}|${seg}`); };
+function mapFollow() {
+  const p = findPlace();
+  if (p.seg === mapPlace.seg && p.card === mapPlace.card) return;
+  if (p.seg !== mapPlace.seg) { mapOpenS.delete(`${current}|${mapPlace.seg}`); followSeg(p.seg); }
+  mapPlace = p;
+  paintPlace();
+  renderMap();
+  if (!mapEl.hidden) mapKeepInView();
+}
+// After every redraw of the page. A new lecture starts with only that lecture open.
+function mapRefresh() {
+  mapPlace = findPlace();
+  if (current !== mapLecture && current !== 'ref') {
+    mapLecture = current;
+    mapOpenL.clear(); mapOpenS.clear();
+    mapOpenL.add(current);
+    followSeg(mapPlace.seg);
+  }
+  paintPlace();
+  renderMap();
+}
+function mapGo(lecture, seg, cardId) {
+  if (lecture !== current) document.querySelector(`.sess[data-s="${lecture}"]`).click();
+  const el = cardId ? document.getElementById(cardId) : document.querySelector(`#session [data-seg="${seg}"]`);
+  if (!MAP_WIDE.matches) setMap(false);
+  el?.scrollIntoView({ block: 'start' });
+  mapFollow();
+}
+mapEl.addEventListener('click', e => {
+  if (e.target.closest('.map-close')) { setMap(false, MAP_WIDE.matches); return; }
+  const l = e.target.closest('[data-l]');
+  if (l) {
+    const n = Number(l.dataset.l);
+    if (!mapOpenL.delete(n)) mapOpenL.add(n);
+    renderMap();
+    return;
+  }
+  const t = e.target.closest('[data-seg-toggle]');
+  if (t) {
+    const id = t.dataset.segToggle;
+    if (!mapOpenS.delete(id)) mapOpenS.add(id);
+    renderMap();
+    return;
+  }
+  if (e.target.closest('[data-goref]')) { document.querySelector('.sess[data-s="ref"]').click(); if (!MAP_WIDE.matches) setMap(false); return; }
+  const c = e.target.closest('[data-card]');
+  if (c) { mapGo(Number(c.dataset.s), null, c.dataset.card); return; }
+  const g = e.target.closest('[data-to]');
+  if (g) mapGo(Number(g.dataset.s), g.dataset.to);
+});
+mapPill.addEventListener('click', () => setMap(true, MAP_WIDE.matches));
+document.getElementById('session').addEventListener('click', e => { if (e.target.closest('#where-btn')) setMap(true, MAP_WIDE.matches); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !mapEl.hidden) setMap(false, MAP_WIDE.matches); });
+document.addEventListener('click', e => {
+  if (mapEl.hidden || MAP_WIDE.matches) return;
+  const path = e.composedPath();
+  if (!path.includes(mapEl) && !path.includes(mapPill) && !e.target.closest?.('#where-btn')) setMap(false);
+});
+let mapTimer = 0;
+addEventListener('scroll', () => { clearTimeout(mapTimer); mapTimer = setTimeout(mapFollow, 60); }, { passive: true });
+const mapFit = () => { let open = false; try { open = localStorage.getItem('stats-map-open') === '1'; } catch (e) {} setMap(MAP_WIDE.matches && open); };
+MAP_WIDE.addEventListener('change', mapFit);
+
 /* ---------- Theme, first drawing ---------- */
 const themeBtn = document.getElementById('theme');
 const paintTheme = () => { const night = document.documentElement.dataset.theme === 'night'; themeBtn.textContent = night ? '☀ Day' : '☾ Night'; };
@@ -1344,6 +1560,7 @@ themeBtn.addEventListener('click', () => {
 paintTheme();
 renderTabs();
 renderSession();
+mapFit();
 load();
 </script>
 </body>

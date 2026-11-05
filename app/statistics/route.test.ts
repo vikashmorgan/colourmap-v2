@@ -50,6 +50,10 @@ describe('/statistics class page', () => {
     expect(html).toContain('What each piece means');
     expect(html).toContain('const segHue = ');
     expect(html).not.toContain('Explain more');
+    // The pill on the left opens to stacks of segments: which lecture and segment you are in.
+    expect(html).toContain('id="map-pill"');
+    expect(html).toContain('data-seg-toggle=');
+    expect(html).toContain(`Segment \${i + 1} of \${num.length}`);
     // Slides come from the user's private files, never from this public page.
     expect(html).toContain("const DECK_FILES = ['Stats1.pdf', 'Stats2.pdf', 'Stats3.pdf'];");
     // Nothing of the SQL course is carried over.
