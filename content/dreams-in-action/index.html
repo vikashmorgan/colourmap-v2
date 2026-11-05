@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dreams in Action</title>
+<script>
+  try { document.documentElement.dataset.theme = localStorage.getItem('school-theme') || 'day'; } catch (e) {}
+</script>
+<style>
+  :root { --paper: #f7f3ea; --card: #fbf8f1; --ink: #2b2620; --soft: #6f665a; --line: #e3dccd; --accent: #8a5a2b; --late: #a8452f; }
+  [data-theme="night"] { --paper: #191714; --card: #201d19; --ink: #ece6da; --soft: #a49b8d; --line: #34302a; --accent: #d9a46a; --late: #e08a70; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.65 Georgia, 'Times New Roman', serif; }
+  button, select, textarea, input { font-family: system-ui, sans-serif; }
+  main { max-width: 700px; margin: 0 auto; padding: 24px 18px 90px; overflow-wrap: break-word; }
+  .topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .back { font: 600 14px system-ui, sans-serif; color: var(--accent); text-decoration: none; }
+  .theme { font: 600 14px system-ui, sans-serif; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; min-height: 36px; cursor: pointer; }
+  h1 { font-size: 34px; font-weight: 600; margin: 0; line-height: 1.2; }
+  .lede { margin: 8px 0 22px; color: var(--soft); }
+  textarea, .new-name { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font-size: 16px; line-height: 1.5; }
+  textarea { resize: vertical; }
+  textarea:focus, .new-name:focus, select:focus { outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 1px; }
+  .write { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+  .write textarea { min-height: 112px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  select { min-height: 38px; max-width: 100%; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); font-size: 14px; }
+  .btn { min-height: 38px; padding: 4px 16px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--ink); font: 600 14px system-ui, sans-serif; cursor: pointer; }
+  .btn.save { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .count { margin-left: auto; font: 13px system-ui, sans-serif; color: var(--soft); }
+  .count.over { color: var(--late); font-weight: 600; }
+  .status { min-height: 1.4em; margin: 8px 2px 0; font: 14px/1.4 system-ui, sans-serif; color: var(--soft); }
+  .status.bad { color: var(--late); }
+  .blocks { display: grid; gap: 10px; margin-top: 16px; }
+  .block { --tint: oklch(0.80 0.11 var(--h) / 0.30); --title: oklch(0.45 0.13 var(--h)); border-radius: 14px; background: color-mix(in srgb, var(--tint), var(--card)); }
+  [data-theme="night"] .block { --tint: oklch(0.62 0.12 var(--h) / 0.20); --title: oklch(0.84 0.11 var(--h)); }
+  .block > summary { display: flex; align-items: baseline; gap: 10px; padding: 13px 16px; cursor: pointer; list-style: none; }
+  .block > summary::-webkit-details-marker { display: none; }
+  .block > summary::before { content: '›'; flex: none; width: .8em; font: 600 16px system-ui, sans-serif; color: var(--title); transition: transform .15s; }
+  .block[open] > summary::before { transform: rotate(90deg); }
+  .block h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.3; color: var(--title); }
+  .block-in { display: grid; gap: 10px; padding: 0 16px 14px; }
+  .prompt { margin: 0; color: var(--soft); font-size: 15.5px; }
+  .ideas { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .idea { padding: 11px 13px 8px; border-radius: 10px; background: color-mix(in srgb, var(--paper) 72%, transparent); }
+  .idea p { margin: 0; white-space: pre-wrap; }
+  .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; margin-top: 5px; font: 13px system-ui, sans-serif; color: var(--soft); }
+  .tools time { margin-right: auto; }
+  .tools button { min-height: 32px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--soft); font: inherit; cursor: pointer; }
+  .tools button:hover { color: var(--ink); background: color-mix(in srgb, var(--card) 70%, transparent); }
+  .tools button.armed { background: var(--late); color: var(--paper); }
+  .tools select { min-height: 32px; font-size: 13px; }
+  .here { justify-self: start; min-height: 34px; padding: 0 2px; border: 0; background: none; color: var(--title); font: 600 14px system-ui, sans-serif; cursor: pointer; }
+  .edit { display: grid; gap: 8px; }
+  .new-block { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .new-block input { flex: 1 1 220px; }
+  footer { margin-top: 28px; color: var(--soft); font: 14px/1.5 system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<main>
+  <div class="topline"><a class="back" href="/school">← School</a><button type="button" class="theme" id="theme"></button></div>
+  <h1>Dreams in Action</h1>
+  <p class="lede">How can we go beyond this matrix of learning, toward the future of education, and apply it through the Embassy of Dreams?</p>
+
+  <form class="write" id="write">
+    <textarea id="text" aria-label="Write an idea" placeholder="Write an idea…"></textarea>
+    <div class="row">
+      <select id="where" aria-label="Which block"></select>
+      <button type="submit" class="btn save" id="save">Save</button>
+      <span class="count" id="count" hidden></span>
+    </div>
+  </form>
+  <p class="status" id="status" role="status"></p>
+
+  <div class="blocks" id="blocks"></div>
+
+  <form class="new-block" id="new-block">
+    <input class="new-name" id="new-name" maxlength="100" aria-label="Name of a new block" placeholder="Name a new block">
+    <button type="submit" class="btn">+ Add block</button>
+  </form>
+
+  <footer>Your own words, saved to your account. Nothing here is written or changed for you.</footer>
+</main>
+<script>
+/* /dreams-in-action — asked for 2026-11-05, first under the name Criticism: "a segment in School, where I can write my ideas. We will
+   break them into blocks. The idea is to think how we can go beyond this matrix of learning, to go into the
+   future of education, and ideally apply this through the Embassy of Dreams. A reflection on logic vs intuition,
+   and how our current world, from my perspective, seems profoundly disconnected."
+   Ideas are notes in /api/coding/notes under keys dreams|<block name>; a block is known by its name. */
+const NOTES_URL = '/api/coding/notes';
+const PREFIX = 'dreams|';
+const MAX_BODY = 2000;
+const UNSORTED = 'Not sorted yet';
+const BLOCKS = [
+  { name: 'Beyond the matrix', prompt: 'How can we go beyond this way of learning stuff?' },
+  { name: 'The future of education', prompt: 'Where education goes from here.' },
+  { name: 'The Embassy of Dreams', prompt: 'How to apply this through the Embassy of Dreams.' },
+  { name: 'Logic and intuition', prompt: 'A reflection on logic versus intuition.' },
+  { name: 'A disconnected world', prompt: 'How our current world, from my perspective, seems profoundly disconnected.' },
+];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const readLocal = (k, empty) => { try { return JSON.parse(localStorage.getItem(k) || 'null') ?? empty; } catch (e) { return empty; } };
+const writeLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+const blocksEl = document.getElementById('blocks');
+const whereEl = document.getElementById('where');
+const textEl = document.getElementById('text');
+const statusEl = document.getElementById('status');
+const countEl = document.getElementById('count');
+const saveEl = document.getElementById('save');
+let ideas = [];
+let loaded = false;
+let newBlocks = readLocal('dreams-blocks', []);   // Named here, with no idea in them yet.
+const closed = new Set(readLocal('dreams-closed', []));
+let editing = null, moving = null, armed = null;
+
+const say = (msg, bad) => { statusEl.textContent = msg; statusEl.classList.toggle('bad', !!bad); };
+const blockOf = idea => idea.key.slice(PREFIX.length);
+function allBlocks() {
+  const known = BLOCKS.map(b => b.name);
+  const extra = [...newBlocks, ...ideas.map(blockOf)].filter((n, i, list) => n !== UNSORTED && !known.includes(n) && list.indexOf(n) === i);
+  const list = [...BLOCKS, ...extra.map(name => ({ name, mine: true }))];
+  return ideas.some(i => blockOf(i) === UNSORTED) ? [{ name: UNSORTED, prompt: 'Written first, to place later.' }, ...list] : list;
+}
+function paintWhere() {
+  const keep = whereEl.value;
+  const names = [UNSORTED, ...allBlocks().map(b => b.name).filter(n => n !== UNSORTED)];
+  whereEl.innerHTML = names.map(n => `<option>${esc(n)}</option>`).join('');
+  whereEl.value = names.includes(keep) ? keep : UNSORTED;
+}
+const shortDate = iso => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); };
+function ideaHtml(idea) {
+  if (editing === idea.id) {
+    return `<li class="idea"><div class="edit"><textarea rows="5" data-edit-text aria-label="Edit this idea" maxlength="${MAX_BODY}">${esc(idea.body)}</textarea><div class="row"><button type="button" class="btn save" data-act="edit-save" data-id="${esc(idea.id)}">Save</button><button type="button" class="btn" data-act="edit-cancel">Cancel</button></div></div></li>`;
+  }
+  const others = allBlocks().map(b => b.name).concat(UNSORTED).filter((n, i, l) => n !== blockOf(idea) && l.indexOf(n) === i);
+  return `<li class="idea"><p>${esc(idea.body)}</p><div class="tools"><time>${esc(shortDate(idea.createdAt))}</time>${moving === idea.id
+    ? `<select data-move-to data-id="${esc(idea.id)}" aria-label="Move to which block"><option value="">Move to…</option>${others.map(n => `<option>${esc(n)}</option>`).join('')}</select><button type="button" data-act="move-cancel">Cancel</button>`
+    : `<button type="button" data-act="edit" data-id="${esc(idea.id)}">Edit</button><button type="button" data-act="move" data-id="${esc(idea.id)}">Move</button><button type="button" data-act="delete" data-id="${esc(idea.id)}"${armed === idea.id ? ' class="armed"' : ''}>${armed === idea.id ? 'Delete for good?' : 'Delete'}</button>`}</div></li>`;
+}
+function render() {
+  paintWhere();
+  blocksEl.innerHTML = allBlocks().map((b, i) => {
+    const inside = ideas.filter(x => blockOf(x) === b.name);
+    return `<details class="block" data-block="${esc(b.name)}" style="--h: ${i % 2 ? 300 : 250}"${closed.has(b.name) ? '' : ' open'}><summary><h2>${esc(b.name)}</h2></summary>
+      <div class="block-in">${b.prompt ? `<p class="prompt">${esc(b.prompt)}</p>` : ''}${inside.length ? `<ul class="ideas">${inside.map(ideaHtml).join('')}</ul>` : ''}
+      <button type="button" class="here" data-act="write-here" data-name="${esc(b.name)}">+ Write here</button>${b.mine && !inside.length ? `<button type="button" class="here" data-act="drop-block" data-name="${esc(b.name)}">Remove this empty block</button>` : ''}</div></details>`;
+  }).join('');
+}
+function paintCount() {
+  const n = textEl.value.trim().length;
+  countEl.hidden = n < MAX_BODY - 300;
+  countEl.textContent = n > MAX_BODY ? `${n - MAX_BODY} over: split it into two ideas` : `${MAX_BODY - n} left`;
+  countEl.classList.toggle('over', n > MAX_BODY);
+  saveEl.disabled = n === 0 || n > MAX_BODY;
+}
+const fromServer = n => ({ id: n.id, key: n.itemKey, body: n.body, createdAt: n.createdAt });
+async function api(url, method, body) {
+  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error(method);
+  return res.json();
+}
+async function load() {
+  try {
+    const res = await fetch(NOTES_URL);
+    if (!res.ok) throw new Error('load');
+    ideas = (await res.json()).notes.filter(n => n.itemKey.startsWith(PREFIX)).map(fromServer).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+    loaded = true;
+    say('');
+  } catch (e) {
+    say('Your ideas could not be loaded. Reload the page before writing: what you type stays here on this device.', true);
+  }
+  render();
+  paintCount();
+}
+
+document.getElementById('write').addEventListener('submit', async e => {
+  e.preventDefault();
+  const body = textEl.value.trim();
+  if (!body || body.length > MAX_BODY) return;
+  saveEl.disabled = true;
+  try {
+    const { notes } = await api(NOTES_URL, 'POST', { notes: [{ key: PREFIX + whereEl.value, kind: 'comment', body }] });
+    ideas.push(...notes.map(fromServer));
+    textEl.value = '';
+    writeLocal('dreams-draft', '');
+    newBlocks = newBlocks.filter(n => n !== whereEl.value);
+    writeLocal('dreams-blocks', newBlocks);
+    closed.delete(whereEl.value);
+    say(`Saved in ${whereEl.value}.`);
+    render();
+  } catch (err) {
+    say('Not saved. Your words are still in the box: try again.', true);
+  }
+  paintCount();
+});
+textEl.addEventListener('input', () => { writeLocal('dreams-draft', textEl.value); paintCount(); });
+
+blocksEl.addEventListener('click', async e => {
+  const t = e.target.closest('[data-act]');
+  if (!t) return;
+  const act = t.dataset.act, id = t.dataset.id;
+  if (act !== 'delete') armed = null;
+  if (act === 'write-here') { paintWhere(); whereEl.value = t.dataset.name; document.getElementById('write').scrollIntoView({ block: 'center' }); textEl.focus({ preventScroll: true }); return; }
+  if (act === 'drop-block') { newBlocks = newBlocks.filter(n => n !== t.dataset.name); writeLocal('dreams-blocks', newBlocks); render(); return; }
+  if (act === 'edit') { editing = id; moving = null; render(); return; }
+  if (act === 'edit-cancel') { editing = null; render(); return; }
+  if (act === 'move') { moving = id; editing = null; render(); return; }
+  if (act === 'move-cancel') { moving = null; render(); return; }
+  if (act === 'edit-save') {
+    const body = t.closest('.edit').querySelector('[data-edit-text]').value.trim();
+    if (!body) { say('An idea cannot be empty. Use Delete to remove it.', true); return; }
+    try {
+      await api(`${NOTES_URL}/${encodeURIComponent(id)}`, 'PATCH', { body });
+      ideas.find(i => i.id === id).body = body;
+      editing = null;
+      say('Saved.');
+      render();
+    } catch (err) { say('Not saved. Your words are still in the box: try again.', true); }
+    return;
+  }
+  if (act === 'delete') {
+    if (armed !== id) { armed = id; render(); return; }
+    armed = null;
+    try {
+      const res = await fetch(`${NOTES_URL}/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('delete');
+      ideas = ideas.filter(i => i.id !== id);
+      say('Deleted.');
+    } catch (err) { say('Not deleted: try again.', true); }
+    render();
+  }
+});
+// A move is a new note in the other block, then the old one removed, so a failure never loses the idea.
+blocksEl.addEventListener('change', async e => {
+  const t = e.target.closest('[data-move-to]');
+  if (!t || !t.value) return;
+  const idea = ideas.find(i => i.id === t.dataset.id), to = t.value;
+  try {
+    const { notes } = await api(NOTES_URL, 'POST', { notes: [{ key: PREFIX + to, kind: 'comment', body: idea.body }] });
+    const res = await fetch(`${NOTES_URL}/${encodeURIComponent(idea.id)}`, { method: 'DELETE' });
+    ideas = ideas.filter(i => i.id !== idea.id || !res.ok);
+    ideas.push({ ...fromServer(notes[0]), createdAt: idea.createdAt });
+    ideas.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+    newBlocks = newBlocks.filter(n => n !== to);
+    writeLocal('dreams-blocks', newBlocks);
+    closed.delete(to);
+    moving = null;
+    say(res.ok ? `Moved to ${to}.` : `Copied to ${to}, but the old one could not be removed. Delete it by hand.`, !res.ok);
+  } catch (err) { say('Not moved: try again.', true); }
+  render();
+});
+blocksEl.addEventListener('toggle', e => {
+  const name = e.target.dataset?.block;
+  if (!name) return;
+  if (e.target.open) closed.delete(name); else closed.add(name);
+  writeLocal('dreams-closed', [...closed]);
+}, true);
+document.getElementById('new-block').addEventListener('submit', e => {
+  e.preventDefault();
+  const input = document.getElementById('new-name');
+  const name = input.value.trim().replace(/\s+/g, ' ');
+  if (!name) return;
+  if (!allBlocks().some(b => b.name === name) && name !== UNSORTED) { newBlocks.push(name); writeLocal('dreams-blocks', newBlocks); }
+  input.value = '';
+  render();
+  whereEl.value = name;
+  say(`Block ${name} is ready: it stays once it holds an idea.`);
+});
+
+const themeBtn = document.getElementById('theme');
+const paintTheme = () => { themeBtn.textContent = document.documentElement.dataset.theme === 'night' ? '☀ Day' : '☾ Night'; };
+themeBtn.addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'night' ? 'day' : 'night';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('school-theme', next); } catch (e) {}
+  paintTheme();
+});
+paintTheme();
+textEl.value = readLocal('dreams-draft', '');
+render();
+paintCount();
+load();
+</script>
+</body>
+</html>

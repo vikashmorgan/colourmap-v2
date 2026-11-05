@@ -25,6 +25,10 @@ A sober menu, in the style of the Git page, with one card per class:
 - Every class page leads back: Python's top-left button and Git's first link read **← School** and go to `/school`. Python's button still shows only when the page is served from Colour Brain, since the same file is also published on its own.
 - Each class keeps its own page and its own route; School only links to them.
 
+## Dreams in Action
+
+Not a class: the user's own writing, at `/dreams-in-action`, right after Statistics. See `docs/specs/dreams-in-action.md`.
+
 ## Adding a class
 
 Give it its own page and route (as `/git`), then turn its card on the School page into a link. For SQL: `content/sql/index.html`, `app/sql/route.ts`, and the SQL card's `href="/sql"`.

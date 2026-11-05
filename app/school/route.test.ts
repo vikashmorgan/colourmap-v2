@@ -42,5 +42,6 @@ describe('/school class menu', () => {
     expect(html).toContain('href="/git"');
     expect(html).toContain('<h2>SQL</h2>');
     expect(html).toContain('href="/sql"');
+    expect(html).toContain('href="/dreams-in-action"');
   });
 });
