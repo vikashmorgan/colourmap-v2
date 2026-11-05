@@ -7,6 +7,7 @@
 <script>
   // Day (beige) or night, one choice for every School page, remembered on this device. Day by default.
   try { document.documentElement.dataset.theme = localStorage.getItem('school-theme') || 'day'; } catch (e) {}
+  try { const size = Number(localStorage.getItem('stats-text-size')); if (size) document.documentElement.style.setProperty('--read', size); } catch (e) {}
 </script>
 <style>
   /* School's paper: beige by day, warm dark by night. Kept sober on purpose: one session at a time. */
@@ -27,7 +28,13 @@
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 Georgia, 'Times New Roman', serif; }
   button, select, textarea { font-family: system-ui, sans-serif; }
-  main { max-width: 760px; margin: 0 auto; padding: 24px 18px 90px; }
+  /* --read is the text size from the notepad. zoom grows the writing and the width of the boxes together. */
+  :root { --read: 1; }
+  main { zoom: var(--read); max-width: 760px; margin: 0 auto; padding: 24px 18px 90px; overflow-wrap: break-word; }
+  .cards, .card, .seg { min-width: 0; }
+  .pic-body, .pic-step { grid-template-columns: minmax(0, 1fr); }
+  .cards, .card { grid-template-columns: minmax(0, 1fr); }
+  .card table { display: block; max-width: 100%; overflow-x: auto; }
   .topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
   .back { font: 600 14px system-ui, sans-serif; color: var(--accent); text-decoration: none; }
   .theme { font: 600 14px system-ui, sans-serif; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; min-height: 36px; cursor: pointer; }
@@ -163,7 +170,13 @@
   .kw[data-kw], .kw-t { cursor: help; border-radius: 3px; }
   .kw.kw-v { color: inherit; font-weight: inherit; }
   .kw[data-kw]:hover, .kw-t:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
-  .peek { position: fixed; z-index: 58; right: 44px; top: 96px; width: min(320px, calc(100vw - 32px)); display: grid; gap: 8px; padding: 12px 14px 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--accent); box-shadow: 0 14px 36px rgb(0 0 0 / .22); font-size: 15px; }
+  .peeks { position: fixed; z-index: 58; zoom: var(--read); right: 30px; top: 86px; width: min(348px, calc((100vw - 8px) / var(--read))); max-height: calc((100vh - 96px) / var(--read)); padding: 10px 14px 18px; overflow-y: auto; display: grid; gap: 22px; align-content: start; }
+  .peek { display: grid; gap: 8px; padding: 12px 14px 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--accent); box-shadow: 0 5px 14px rgb(0 0 0 / .14); }
+  .peek .kw[data-kw], .peek .kw-t { text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+  .peek .peek-from { background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .peek-links { position: fixed; inset: 0; z-index: 59; width: 100vw; height: 100vh; pointer-events: none; overflow: visible; }
+  .peek-links path { fill: none; stroke: var(--accent); stroke-width: 2; }
+  .peek-links circle { fill: var(--accent); }
   .peek-top { display: flex; align-items: flex-start; gap: 8px; }
   .peek-term { margin: 0; font: 600 14.5px/1.45 ui-monospace, 'Cascadia Code', Consolas, monospace; flex: 1; overflow-wrap: anywhere; }
   .peek-close { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--soft); cursor: pointer; font-size: 16px; }
@@ -171,7 +184,7 @@
   .peek pre { font-size: 12.5px; padding: 6px 10px; }
   .peek .ref-go { color: var(--accent); }
   .peek-more { font: 600 12px system-ui, sans-serif; color: var(--soft); }
-  @media (max-width: 900px) { .peek { right: 16px; left: 16px; top: auto; bottom: 16px; width: auto; max-height: 55vh; overflow: auto; } }
+  @media (max-width: 900px) { .peeks { right: 2px; left: 2px; top: auto; bottom: 2px; width: auto; max-height: calc(60vh / var(--read)); } }
 .bold-btn { position: fixed; z-index: 80; width: 28px; height: 28px; padding: 0; border-radius: 7px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 700 14px Georgia, serif; cursor: pointer; opacity: .75; }
 .bold-btn:hover { opacity: 1; border-color: var(--accent); }
 textarea[aria-label="Your note"] { padding-right: 40px !important; }
@@ -226,6 +239,10 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   [data-theme="night"] .notebook { --card: color-mix(in srgb, var(--nb-bg) 85%, #fff 15%); }
   .nb-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; padding: 12px 10px 12px 16px; background: var(--nb-top); border-bottom: 1px solid var(--nb-rule); }
   .nb-title { font-size: 20px; font-weight: 600; color: var(--accent); margin-right: auto; }
+  .text-size { display: inline-flex; align-items: center; gap: 4px; margin: 0 8px 0 auto; }
+  .text-size button { min-width: 36px; height: 34px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--nb-rule); background: var(--card); color: var(--ink); font: 600 13px system-ui, sans-serif; cursor: pointer; }
+  .text-size button:disabled { opacity: .4; cursor: default; }
+  .text-size output { min-width: 3.1em; text-align: center; font: 600 12px system-ui, sans-serif; color: var(--soft); }
   .nb-close { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--nb-rule); background: var(--card); color: var(--ink); font-size: 17px; cursor: pointer; }
   .nb-write { display: grid; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--nb-rule); }
   .about { display: flex; align-items: center; gap: 8px; font: 14px system-ui, sans-serif; color: var(--soft); min-width: 0; }
@@ -294,7 +311,7 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .where-btn { display: block; width: 100%; padding: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; color: var(--accent); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .where-btn.tinted { color: oklch(0.45 0.13 var(--h, 60)); }
   [data-theme="night"] .where-btn.tinted { color: oklch(0.84 0.11 var(--h, 60)); }
-  .map-pill { position: fixed; z-index: 50; left: max(12px, calc(50vw - 380px - 52px)); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 7px; width: 32px; padding: 10px 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; box-shadow: 0 4px 14px rgb(0 0 0 / .10); }
+  .map-pill { position: fixed; z-index: 50; left: max(12px, calc(50vw - 380px * var(--read) - 52px)); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 7px; width: 32px; padding: 10px 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; box-shadow: 0 4px 14px rgb(0 0 0 / .10); }
   .map-pill[hidden], .map[hidden] { display: none; }
   .map-pill:hover { border-color: var(--accent); }
   .map-pill b { font: 700 11px/1 ui-monospace, Consolas, monospace; }
@@ -338,17 +355,13 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .map .map-cards button:hover { background: color-mix(in srgb, var(--card) 60%, transparent); }
   .map .map-cards button.on { font-weight: 700; background: var(--card); }
   .map .map-ref { width: 100%; min-height: 42px; padding: 7px 10px; border: 1px dashed var(--line); border-radius: 12px; background: none; text-align: left; font-weight: 600; }
-  @media (min-width: 1240px) {
-    .map { left: max(10px, calc(50vw - 380px - 262px)); top: 16px; bottom: 16px; width: 244px; border: 1px solid var(--line); border-radius: 14px; box-shadow: none; }
-  }
-  @media (max-width: 900px) {
-    .map-pill { left: 0; width: 18px; padding: 8px 0 10px; gap: 6px; border-left: 0; border-radius: 0 12px 12px 0; }
-    .map-pill::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 34px; }
-    .map-pill b { font-size: 9px; letter-spacing: -.04em; }
-    .map-pill .ln { gap: 6px; }
-    .map-pill i { width: 7px; height: 7px; font-size: 10px; }
-    .map-pill i.here { width: 14px; height: 14px; }
-  }
+  .map-wide .map { left: max(10px, calc(50vw - 380px * var(--read) - 262px)); top: 16px; bottom: 16px; width: 244px; border: 1px solid var(--line); border-radius: 14px; box-shadow: none; }
+  .pill-edge .map-pill { left: 0; width: 18px; padding: 8px 0 10px; gap: 6px; border-left: 0; border-radius: 0 12px 12px 0; }
+  .pill-edge .map-pill::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 34px; }
+  .pill-edge .map-pill b { font-size: 9px; letter-spacing: -.04em; }
+  .pill-edge .map-pill .ln { gap: 6px; }
+  .pill-edge .map-pill i { width: 7px; height: 7px; font-size: 10px; }
+  .pill-edge .map-pill i.here { width: 14px; height: 14px; }
 
   @media (max-width: 560px) {
     h1 { font-size: 26px; }
@@ -381,7 +394,7 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
 <nav class="map" id="map" aria-label="Where you are" hidden></nav>
 <button type="button" class="nb-dot" id="nb-dot" aria-expanded="false" aria-controls="notebook" title="Notepad"></button>
 <aside class="notebook" id="notebook" aria-label="Notepad" hidden>
-  <div class="nb-top"><span class="nb-title">Notepad</span><button type="button" class="nb-close" id="nb-close" aria-label="Close the notepad">×</button></div>
+  <div class="nb-top"><span class="nb-title">Notepad</span><span class="text-size" role="group" aria-label="Text size"><button type="button" id="size-down" aria-label="Smaller text">A−</button><output id="size-now"></output><button type="button" id="size-up" aria-label="Larger text">A+</button></span><button type="button" class="nb-close" id="nb-close" aria-label="Close the notepad">×</button></div>
   <div class="nb-write">
     <label class="about"><span>About</span><select id="nb-about" aria-label="What this note is about"></select></label>
     <div class="kinds" role="radiogroup" aria-label="Kind of note">
@@ -646,6 +659,7 @@ const SESSIONS = [
   ], recap: ['A random variable gives each outcome a number. A statement about it is an event.', 'The PMF lists P(X = x) and sums to 1.', 'Bernoulli: one trial. Binomial: successes in n trials, with four conditions to check. Poisson: counts in a window, λ on average.', 'E[X] = Σ x m_X(x), the balance point and the long-run average.', 'E[g(X)] = Σ g(x) m_X(x), and in general it is not g(E[X]).', 'Var(X) = E[X²] − (E[X])². The SD is its root.', 'E[aX + b] = aE[X] + b, and Var(aX + b) = a² Var(X): adding shifts, multiplying scales.'] },
 ];
 SESSIONS.forEach(s => { let k = 0; for (const g of s.groups) for (const c of g.cards) c.num = `${s.n}.${++k}`; });
+const readSize = () => Number(document.documentElement.style.getPropertyValue('--read')) || 1;
 const cardKey = (s, id) => `stats|s${s}|${id}`;
 
 // The picture at the top of each lecture: drawn on Nookery, the course’s made-up shop.
@@ -1157,54 +1171,100 @@ const PEEK_TERM = {
 };
 const peekKey = w => PEEK_TERM[w] || PEEK_TERM[w.replace(/ies$/, 'y').replace(/s$/, '')] || PEEK_TERM[w.replace(/s$/, '')];
 const refByTerm = term => { for (const g of REF) for (const it of g.items) if (it[0] === term) return it; return null; };
-const peek = document.createElement('aside');
-peek.className = 'peek';
-peek.hidden = true;
-peek.setAttribute('aria-label', 'Keyword');
-document.body.append(peek);
-let peekTimer = 0, peekWord = null;
+/* Asked for 2026-11-05: "when I hover over the Greek E inside an opened box that explains normal E, it opens
+   a second box, with a line connecting the two so I understand the link, placing the second box below the first".
+   A term inside a box opens the next box below it. A line runs from that term to the box it opened. */
+const peeks = document.createElement('aside');
+peeks.className = 'peeks';
+peeks.hidden = true;
+peeks.setAttribute('aria-label', 'Keyword');
+const peekLinks = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+peekLinks.setAttribute('class', 'peek-links');
+peekLinks.setAttribute('aria-hidden', 'true');
+document.body.append(peeks, peekLinks);
+let peekTimer = 0, peekCard = null;
+const peekStack = [];
+const peekId = word => LETTERS[word] ? word : peekKey(word);
+const peekHead = title => `<div class="peek-top"><p class="peek-term">${mathHtml(title)}</p><button type="button" class="peek-close" aria-label="Close">×</button></div>`;
 // A letter: what its card says it is, and its value in that card's example.
-function openLetter(word, el) {
+function letterBox(word, card) {
   const sym = word === 'nA' ? 'n_A' : word;
-  const c = el.closest('.card')?.id.match(/^c-(\d+)-(.+)$/);
+  const c = card?.id.match(/^c-(\d+)-(.+)$/);
   const r = c ? READS[`${c[1]}|${c[2]}`] : null;
   const said = r?.parts.find(([x]) => x === sym)?.[1];
   const value = r?.walk?.steps?.find(([x, v]) => x === sym && v.startsWith('= '))?.[1];
-  peekWord = el;
-  peek.innerHTML = `<div class="peek-top"><p class="peek-term">${mathHtml(sym === 'P(' ? 'P( )' : sym)}</p><button type="button" class="peek-close" aria-label="Close">×</button></div>
-    <p>${esc(said || LETTERS[word])}</p>${value ? `<p class="flow-label">In this example</p><pre>${mathHtml(`${sym} ${value}`)}</pre>` : ''}`;
-  peek.hidden = false;
+  return `${peekHead(sym === 'P(' ? 'P( )' : sym)}<p>${kwText(said || LETTERS[word])}</p>${value ? `<p class="flow-label">In this example</p><pre>${mathHtml(`${sym} ${value}`)}</pre>` : ''}`;
+}
+function termBox(word) {
+  const it = refByTerm(peekKey(word));
+  if (!it) return '';
+  const [t, d, ex, n, id] = it;
+  return `${peekHead(t)}<p>${kwText(d)}</p>${ex ? `<pre>${mathHtml(ex)}</pre>` : ''}
+    <button type="button" class="ref-go" data-go="${esc(cardKey(n, id))}">Lecture ${n} · open the card ›</button>`;
+}
+function drawPeekLinks() {
+  const area = peeks.getBoundingClientRect();
+  peekLinks.innerHTML = peekStack.slice(1).map(({ from, box }) => {
+    const a = from.getBoundingClientRect(), b = box.getBoundingClientRect();
+    // Out of the term, along the outside of the box above, into the box it opened.
+    const x1 = a.left + Math.min(a.width / 2, 10), y1 = Math.max(area.top, Math.min(a.bottom, area.bottom));
+    const side = b.left - 7, y2 = b.top + 16;
+    if (y2 > area.bottom || b.bottom < area.top) return '';
+    return `<path d="M ${x1} ${y1} V ${y1 + 3} H ${side} V ${y2} H ${b.left}"/><circle cx="${x1}" cy="${y1}" r="2.5"/><circle cx="${b.left}" cy="${y2}" r="3"/>`;
+  }).join('');
+}
+function trimPeeks(keep) {
+  while (peekStack.length > keep) {
+    const { box, from } = peekStack.pop();
+    box.remove();
+    from.classList.remove('peek-from');
+  }
+  peeks.hidden = !peekStack.length;
+  drawPeekLinks();
 }
 function openPeek(word, el) {
-  if (LETTERS[word]) { openLetter(word, el); return; }
-  const it = refByTerm(peekKey(word));
-  if (!it) return;
-  const [t, d, ex, n, id] = it;
-  peekWord = el;
-  peek.innerHTML = `<div class="peek-top"><p class="peek-term">${mathHtml(t)}</p><button type="button" class="peek-close" aria-label="Close">×</button></div>
-    <p>${esc(d)}</p>${ex ? `<pre>${mathHtml(ex)}</pre>` : ''}
-    <button type="button" class="ref-go" data-go="${esc(cardKey(n, id))}">Lecture ${n} · open the card ›</button>`;
-  peek.hidden = false;
+  const inBox = el.closest('.peek');
+  const depth = inBox ? peekStack.findIndex(b => b.box === inBox) + 1 : 0;
+  const id = peekId(word);
+  // A box does not lead back to itself, or to a box already open above it.
+  if (peekStack.slice(0, depth).some(b => b.id === id)) return;
+  const card = depth ? peekCard : el.closest('.card');
+  const html = LETTERS[word] ? letterBox(word, card) : termBox(word);
+  if (!html) return;
+  trimPeeks(depth);
+  peekCard = card;
+  const box = document.createElement('div');
+  box.className = 'peek';
+  box.innerHTML = html;
+  peeks.append(box);
+  peekStack.push({ id, from: el, box });
+  if (depth) el.classList.add('peek-from');
+  peeks.hidden = false;
+  box.scrollIntoView({ block: 'nearest' });
+  drawPeekLinks();
 }
-function closePeek() { peek.hidden = true; peekWord = null; clearTimeout(peekTimer); }
-const peekTarget = e => e.target.closest && e.target.closest('#session .kw[data-kw], #session .kw-t, #session .kw-chip');
+function closePeek() { trimPeeks(0); clearTimeout(peekTimer); }
+peeks.addEventListener('scroll', drawPeekLinks, { passive: true });
+addEventListener('resize', drawPeekLinks);
+const peekTarget = e => e.target.closest && e.target.closest('#session .kw[data-kw], #session .kw-t, #session .kw-chip, .peek .kw[data-kw], .peek .kw-t');
 document.addEventListener('mouseover', e => {
   const k = peekTarget(e);
-  if (!k || k === peekWord || k.closest('.ref-row')) return;
+  if (!k || peekStack.some(b => b.from === k) || k.closest('.ref-row')) return;
   clearTimeout(peekTimer);
   peekTimer = setTimeout(() => { if (k.matches(':hover') && getSelection().isCollapsed) openPeek(k.dataset.kw, k); }, 600);
 });
 document.addEventListener('mouseout', e => { if (peekTarget(e)) clearTimeout(peekTimer); });
 // A tap (no hover on a phone) opens it at once.
 document.addEventListener('click', e => {
-  if (e.target.closest('.peek-close')) { closePeek(); return; }
+  const shut = e.target.closest('.peek-close');
+  if (shut) { trimPeeks(peekStack.findIndex(b => b.box === shut.closest('.peek'))); return; }
   const go = e.target.closest('.peek .ref-go');
   if (go) { closePeek(); goTo(go.dataset.go); return; }
   const k = peekTarget(e);
   if (k && !k.closest('.ref-row') && getSelection().isCollapsed && !k.closest('summary')) { openPeek(k.dataset.kw, k); return; }
-  if (!peek.hidden && !e.target.closest('.peek')) closePeek();
+  if (peekStack.length && !e.composedPath().includes(peeks)) closePeek();
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !peek.hidden) closePeek(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && peekStack.length) trimPeeks(peekStack.length - 1); });
 
 /* ---------- Select a passage: highlight it, or ask about it ----------
    Asked for 2026-10-19: highlight the lessons "with the nice colour options like in
@@ -1467,7 +1527,15 @@ document.addEventListener('keydown', e => {
    else moves nothing: only the arrow, a card, or a row with nothing to open takes you there. */
 const mapEl = document.getElementById('map');
 const mapPill = document.getElementById('map-pill');
-const MAP_WIDE = matchMedia('(min-width: 1240px)');
+// Whether the page leaves room beside it: the boxes grow with the text size.
+const MAP_WIDE = { get matches() { return document.documentElement.classList.contains('map-wide'); } };
+function fitLayout() {
+  const room = innerWidth - 760 * readSize();
+  const root = document.documentElement, was = root.classList.contains('map-wide');
+  root.classList.toggle('map-wide', room >= 480);
+  root.classList.toggle('pill-edge', room <= 140);
+  return was !== root.classList.contains('map-wide');
+}
 const mapOpenL = new Set(), mapOpenS = new Set();
 let mapLecture = null, mapPlace = { seg: null, card: null };
 function segsOf(s) {
@@ -1606,7 +1674,33 @@ document.addEventListener('click', e => {
 let mapTimer = 0;
 addEventListener('scroll', () => { clearTimeout(mapTimer); mapTimer = setTimeout(mapFollow, 60); }, { passive: true });
 const mapFit = () => { let open = false; try { open = localStorage.getItem('stats-map-open') === '1'; } catch (e) {} setMap(MAP_WIDE.matches && open); };
-MAP_WIDE.addEventListener('change', mapFit);
+addEventListener('resize', () => { if (fitLayout()) mapFit(); });
+
+/* ---------- Text size ----------
+   Asked for 2026-11-05: "on the notepad, a button to define the size of the letters, so I can increase it
+   when my eyes are tired; it can also open the horizontal space of the boxes so they expand with the type". */
+const SIZES = [1, 1.1, 1.2, 1.35, 1.5];
+function paintSize() {
+  const now = readSize();
+  document.getElementById('size-now').textContent = `${Math.round(now * 100)}%`;
+  document.getElementById('size-down').disabled = now <= SIZES[0];
+  document.getElementById('size-up').disabled = now >= SIZES[SIZES.length - 1];
+}
+function setSize(step) {
+  const i = SIZES.indexOf(readSize());
+  const next = SIZES[Math.min(SIZES.length - 1, Math.max(0, (i < 0 ? 0 : i) + step))];
+  // Stay on the same card: everything above it changes height.
+  const keep = document.getElementById(findPlace().card) || document.querySelector('#session [data-seg]');
+  const top = keep?.getBoundingClientRect().top;
+  document.documentElement.style.setProperty('--read', next);
+  try { localStorage.setItem('stats-text-size', String(next)); } catch (e) {}
+  paintSize();
+  if (fitLayout()) mapFit();
+  if (keep) scrollBy(0, keep.getBoundingClientRect().top - top);
+  drawPeekLinks();
+}
+document.getElementById('size-down').addEventListener('click', () => setSize(-1));
+document.getElementById('size-up').addEventListener('click', () => setSize(1));
 
 /* ---------- Theme, first drawing ---------- */
 const themeBtn = document.getElementById('theme');
@@ -1619,6 +1713,8 @@ themeBtn.addEventListener('click', () => {
 });
 paintTheme();
 renderTabs();
+fitLayout();
+paintSize();
 renderSession();
 mapFit();
 load();
