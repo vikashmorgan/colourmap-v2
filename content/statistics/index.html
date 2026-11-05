@@ -161,6 +161,7 @@
   .kw-chip:hover { border-color: var(--accent); }
   /* Keyword peek: hover a keyword for a moment and its cheat-sheet box opens on the side. */
   .kw[data-kw], .kw-t { cursor: help; border-radius: 3px; }
+  .kw.kw-v { color: inherit; font-weight: inherit; }
   .kw[data-kw]:hover, .kw-t:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
   .peek { position: fixed; z-index: 58; right: 44px; top: 96px; width: min(320px, calc(100vw - 32px)); display: grid; gap: 8px; padding: 12px 14px 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--accent); box-shadow: 0 14px 36px rgb(0 0 0 / .22); font-size: 15px; }
   .peek-top { display: flex; align-items: flex-start; gap: 8px; }
@@ -243,6 +244,9 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .seg { --tint: oklch(0.80 0.11 var(--h, 250) / 0.30); --title: oklch(0.45 0.13 var(--h, 250)); }
   [data-theme="night"] .seg { --tint: oklch(0.62 0.12 var(--h, 250) / 0.20); --title: oklch(0.84 0.11 var(--h, 250)); }
   .seg > h2 { color: var(--title); }
+  .seg { position: relative; }
+  .seg-rail { position: absolute; left: -16px; top: 26px; bottom: 0; width: 14px; background: linear-gradient(var(--title), var(--title)) center / 2px 100% no-repeat; }
+  .seg-tab { position: sticky; top: 46px; display: block; width: 14px; padding: 7px 0; border: 0; background: var(--paper); color: var(--title); font: 600 11.5px/14px system-ui, sans-serif; letter-spacing: .02em; writing-mode: vertical-rl; white-space: nowrap; cursor: pointer; }
   .seg .card, .seg .pq { background: color-mix(in srgb, var(--tint), var(--card)); border-color: transparent; }
   .seg .card pre, .seg .pq pre, .seg .card .watch { background: color-mix(in srgb, var(--paper) 72%, transparent); }
   .seg .num, .seg .ex-num { color: var(--title); opacity: 1; font-weight: 700; }
@@ -252,6 +256,12 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
   .walk { display: grid; gap: 6px; }
   .walk .flow-label { margin: 0; }
+  .steps { margin: 0; padding: 4px 12px; border-radius: 8px; background: color-mix(in srgb, var(--paper) 72%, transparent); font: 13.5px/1.45 ui-monospace, 'Cascadia Code', Consolas, monospace; }
+  .steps > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2px 14px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .steps > div:last-child { border-bottom: 0; }
+  .steps dt, .steps dd { margin: 0; overflow-wrap: anywhere; }
+  .steps-head dt, .steps-head dd { font: 600 11.5px/1.4 system-ui, sans-serif; letter-spacing: .05em; text-transform: uppercase; color: var(--soft); }
+  .steps .result dt, .steps .result dd { color: var(--ink); font-weight: 700; }
   .reads dl { margin: 0; display: grid; }
   .reads dl > div { display: grid; grid-template-columns: minmax(0, 8.5em) minmax(0, 1fr); gap: 2px 12px; padding: 5px 0; border-bottom: 1px solid var(--line); }
   .reads dl > div:last-child { border-bottom: 0; }
@@ -604,7 +614,7 @@ const SESSIONS = [
     ] },
     { name: 'Variance', cards: [
       { id: 'spread', slide: 40, name: 'Same mean, different spread', what: 'Two warehouses can have the same average and behave very differently. Both dispatch after 2 days on average. North is reliable: almost always 1 to 3 days. South is all over the place: often 0 days, often 4.\n\nIf you promise customers 3 days, you always keep that promise with North but fail 20 % of the time with South. The average hides this. We need a second number for how spread out the values are.', more: { html: () => row(bars([[0, 0, ''], [1, 0.25, '0.25'], [2, 0.5, '0.50'], [3, 0.25, '0.25'], [4, 0, '']], { cap: 'North, SD 0.71 days', mean: 2, max: 0.5 }), bars([[0, 0.2, '0.20'], [1, 0.15, '0.15'], [2, 0.3, '0.30'], [3, 0.15, '0.15'], [4, 0.2, '0.20']], { cap: 'South, SD 1.38 days', mean: 2, max: 0.5 })) } },
-      { id: 'variance', slide: 41, name: 'Variance and standard deviation', what: 'Variance measures how far values typically fall from the average. Step by step: find how far each value is from the mean, square that distance, multiply by the value’s chance, and add.\n\nWhy square? Without it, distances below and above the mean would cancel out to zero. But squaring also changes the units, to "days squared", which means nothing to anyone. So we take the square root at the end and get the standard deviation (SD), in plain days. A bigger SD means more spread.', f: 'Var(X) = E[(X − μ)²]     μ = E[X]\nσ_X = √Var(X)', more: { say: 'North warehouse, μ = 2 days. The variance is 0.50, so the SD is 0.71 days.', html: () => tbl(['x', 'm_X(x)', 'x − μ', '(x − μ)²', '× m_X(x)'], [['1', '0.25', '−1', '1', '0.25'], ['2', '0.50', '0', '0', '0'], ['3', '0.25', '1', '1', '0.25'], ['sum', '', '', '', '*0.50']]) } },
+      { id: 'variance', slide: 41, name: 'Variance and standard deviation', what: 'Variance measures how far values typically fall from the average. Step by step: find how far each value is from the mean, which is called its deviation; square that deviation, multiply by the value’s chance, and add.\n\nWhy square? Without it, deviations below and above the mean would cancel out to zero. But squaring also changes the units, to "days squared", which means nothing to anyone. So we take the square root at the end and get the standard deviation (SD), in plain days. A bigger SD means more spread.', f: 'Var(X) = E[(X − μ)²]     μ = E[X]\nσ_X = √Var(X)', more: { say: 'North warehouse, μ = 2 days. The variance is 0.50, so the SD is 0.71 days.', html: () => tbl(['x', 'm_X(x)', 'x − μ', '(x − μ)²', '× m_X(x)'], [['1', '0.25', '−1', '1', '0.25'], ['2', '0.50', '0', '0', '0'], ['3', '0.25', '1', '1', '0.25'], ['sum', '', '', '', '*0.50']]) } },
       { id: 'shortcut', slide: 42, name: 'The variance shortcut', what: 'This is the same variance, computed a quicker way, usually easier by hand. It needs two averages: the average of the squared values, and the square of the average value. Then subtract.\n\nCareful, those two are not the same: one squares first, the other squares last. The gap between them is exactly the variance.', f: 'Var(X) = E[X²] − (E[X])²', more: { say: 'Check with North: E[X²] = 1 × 0.25 + 4 × 0.5 + 9 × 0.25 = 4.5, and 4.5 − 2² = 0.5, the same as the table.', f: 'E[X² − 2μX + μ²] = E[X²] − 2μ E[X] + μ² = E[X²] − μ²' } },
       { id: 'linear-var', slide: 43, name: 'The variance of a linear function', what: 'What happens to the spread when you change every value? Adding a fixed amount moves everything together, so the spread does not change. If delivery takes one day more than dispatch, its spread is the same.\n\nMultiplying does change it: multiply by 2, and every distance doubles. Because variance uses squares, the variance becomes 4 times bigger, while the standard deviation just doubles.', f: 'Var(aX + b) = a² Var(X)\nσ_(aX+b) = |a| σ_X', more: { say: 'Delivery takes one day more than dispatch: X + 1 has mean 3 days and the same SD, 0.71 days.' } },
       { id: 'models-moments', slide: 44, name: 'Means and variances of the models', what: 'For the three named models, nobody needs to do the long calculation, because the answers are known. Just put your numbers into this table.\n\nExample: for a Galton board, n = 20 and p = 0.5, so the mean is 20 × 0.5 = 10, and the SD is √(20 × 0.5 × 0.5) = √5 = 2.24.', more: { html: () => tbl(['Model', 'E[X]', 'Var(X)', 'SD'], [['Ber(p)', 'p', 'p(1 − p)', '√(p(1 − p))'], ['Bin(n, p)', 'np', 'np(1 − p)', '√(np(1 − p))'], ['Pois(λ)', 'λ', 'λ', '√λ']]) } },
@@ -661,58 +671,60 @@ const PICTURES = {
 /* ---------- Every formula, piece by piece ----------
  * Asked for 2026-11-05: "the elements in the equation need to be explained one by one in the
  * more explanation part". parts: each symbol and what it means. walk: the formula worked out
- * line by line on a tiny example. */
+ * on a tiny example, and "on the left I have the formulas by pieces so I connect the dots": each
+ * step is [the piece of the formula, the same piece in numbers]; a third item marks a result.
+ * "With the numbers p k n, so I can understand p = ... or n = ...": a walk opens with what each letter is. */
 const READS = {
-  '1|set': { parts: [['{ }', 'Braces: "the set of". What is inside are its elements.'], ['∈', '"Is an element of". 3 ∈ S says 3 is in S.'], ['∉', '"Is not an element of".'], ['∣', '"Such that". What follows is the property the elements share.'], ['∅', 'The empty set: nothing in it.']], walk: { intro: 'Read {x ∣ 0 ≤ x ≤ 1} aloud:', lines: '{        the set of\nx        all numbers x\n∣        such that\n0 ≤ x ≤ 1   x lies between 0 and 1\n}' } },
-  '1|universe': { parts: [['T ⊂ S', 'T is a subset of S: everything in T is also in S.'], ['Ω', 'Omega, the universal set: every object we care about.'], ['Sᶜ', 'The complement of S. The small c means "not in S".'], ['x ∈ Ω ∣ x ∉ S', 'Elements x of Ω, such that x is not in S.']], walk: { intro: 'On a die, with S = {2, 4, 6}, go through Ω and keep what is not in S:', lines: '1 not in S → keep\n2 in S     → drop\n3 not in S → keep\n4 in S     → drop\n5 not in S → keep\n6 in S     → drop\nSᶜ = {1, 3, 5}' } },
-  '1|union': { parts: [['∪', 'Union, "or". Shaped like a cup that holds everything from both.'], ['∩', 'Intersection, "and". Only what the two share.'], ['Tᶜ', 'Not in T.']], walk: { intro: 'With S = {1, 2, 3} and T = {3, 4}:', lines: 'S ∪ T  = {1, 2, 3, 4}\nS ∩ T  = {3}\nS ∩ Tᶜ = {1, 2}' } },
-  '1|disjoint': { parts: [['S ∩ T', 'What S and T have in common.'], ['= ∅', 'Is empty: they have nothing in common.'], ['partition', 'No overlaps, and nothing left out.']], walk: { intro: 'On a die:', lines: '{1, 2} and {5, 6}          disjoint, not a partition: 3 and 4 are left out\n{1, 2}, {3, 4} and {5, 6}  disjoint and they cover Ω: a partition' } },
-  '1|laws': { parts: [['S ∪ T = T ∪ S', 'The order does not matter.'], ['S ∪ (T ∪ U)', 'The grouping does not matter either.'], ['S ∩ (T ∪ U)', 'Distributive: share S across both, as in a × (b + c).'], ['(Sᶜ)ᶜ = S', '"Not not S" is S.'], ['S ∩ Sᶜ = ∅', 'Nothing is both in S and outside it.'], ['S ∪ Ω = Ω', 'Adding S to everything changes nothing.'], ['S ∩ Ω = S', 'The part of S inside everything is S.']], walk: { intro: 'Check the distributive law with S = {1, 2}, T = {2, 3} and U = {1, 4}:', lines: 'T ∪ U = {1, 2, 3, 4}       S ∩ that = {1, 2}\nS ∩ T = {2}   S ∩ U = {1}   their union = {1, 2}' } },
+  '1|set': { parts: [['{ }', 'Braces: "the set of". What is inside are its elements.'], ['∈', '"Is an element of". 3 ∈ S says 3 is in S.'], ['∉', '"Is not an element of".'], ['∣', '"Such that". What follows is the property the elements share.'], ['∅', 'The empty set: nothing in it.']], walk: { intro: 'Read {x ∣ 0 ≤ x ≤ 1} aloud:', steps: [['{', 'the set of'], ['x', 'all numbers x'], ['∣', 'such that'], ['0 ≤ x ≤ 1', 'x lies between 0 and 1'], ['}', 'end of the set']] } },
+  '1|universe': { parts: [['T ⊂ S', 'T is a subset of S: everything in T is also in S.'], ['Ω', 'Omega, the universal set: every object we care about.'], ['Sᶜ', 'The complement of S. The small c means "not in S".'], ['x ∈ Ω ∣ x ∉ S', 'Elements x of Ω, such that x is not in S.']], walk: { intro: 'On a die, with S = {2, 4, 6}, go through Ω and keep what is not in S:', steps: [['Ω', '= {1, 2, 3, 4, 5, 6}'], ['S', '= {2, 4, 6}'], ['x = 1: is x ∉ S?', 'yes → keep'], ['x = 2: is x ∉ S?', 'no → drop'], ['x = 3: is x ∉ S?', 'yes → keep'], ['x = 4: is x ∉ S?', 'no → drop'], ['x = 5: is x ∉ S?', 'yes → keep'], ['x = 6: is x ∉ S?', 'no → drop'], ['Sᶜ', '= {1, 3, 5}', 1]] } },
+  '1|union': { parts: [['∪', 'Union, "or". Shaped like a cup that holds everything from both.'], ['∩', 'Intersection, "and". Only what the two share.'], ['Tᶜ', 'Not in T.']], walk: { intro: 'With S = {1, 2, 3} and T = {3, 4}:', steps: [['S', '= {1, 2, 3}'], ['T', '= {3, 4}'], ['S ∪ T', 'in either one: {1, 2, 3, 4}'], ['S ∩ T', 'in both: {3}'], ['S ∩ Tᶜ', 'in S and not in T: {1, 2}']] } },
+  '1|disjoint': { parts: [['S ∩ T', 'What S and T have in common.'], ['= ∅', 'Is empty: they have nothing in common.'], ['partition', 'No overlaps, and nothing left out.']], walk: { intro: 'On a die:', steps: [['{1, 2} ∩ {5, 6}', '∅, so disjoint'], ['{1, 2} ∪ {5, 6}', '3 and 4 are left out, so not a partition'], ['{1, 2}, {3, 4}, {5, 6}', 'disjoint and they cover Ω: a partition', 1]] } },
+  '1|laws': { parts: [['S ∪ T = T ∪ S', 'The order does not matter.'], ['S ∪ (T ∪ U)', 'The grouping does not matter either.'], ['S ∩ (T ∪ U)', 'Distributive: share S across both, as in a × (b + c).'], ['(Sᶜ)ᶜ = S', '"Not not S" is S.'], ['S ∩ Sᶜ = ∅', 'Nothing is both in S and outside it.'], ['S ∪ Ω = Ω', 'Adding S to everything changes nothing.'], ['S ∩ Ω = S', 'The part of S inside everything is S.']], walk: { intro: 'Check the distributive law with S = {1, 2}, T = {2, 3} and U = {1, 4}:', steps: [['S', '= {1, 2}'], ['T', '= {2, 3}'], ['U', '= {1, 4}'], ['T ∪ U', '= {1, 2, 3, 4}'], ['S ∩ (T ∪ U)', '{1, 2} ∩ {1, 2, 3, 4} = {1, 2}'], ['S ∩ T', '= {2}'], ['S ∩ U', '= {1}'], ['(S ∩ T) ∪ (S ∩ U)', '{2} ∪ {1} = {1, 2}, the same', 1]] } },
   '1|demorgan': { parts: [['( )ᶜ', 'The complement of everything in the brackets.'], ['Sᶜ ∩ Tᶜ', 'Not in S and not in T.'], ['Sᶜ ∪ Tᶜ', 'Not in S or not in T.']] },
   '1|detail': { parts: [['Ω₂', 'The sample space with more detail: which orders.'], ['Ω₁', 'The one with less: how many.'], ['O, L', 'One order on time, one order late.'], ['OOL', 'First on time, second on time, third late.']] },
   '1|event': { parts: [['L', 'The event "late", a set of outcomes.'], ['ω₃, ω₄', 'Omega with a number: one single outcome. ω₃ is (late, no refund).'], ['{ω₃, ω₄}', 'The event holds both, so it occurs if either happens.']] },
-  '1|axioms': { parts: [['P(A)', 'The probability the law gives to the event A.'], ['≥ 0', 'It is never negative.'], ['⇒', '"Then". If what is on the left holds, so does what is on the right.'], ['A ∪ B', 'A or B.'], ['P(Ω) = 1', 'Something in Ω certainly happens.']], walk: { intro: 'On a fair die, with A = {1} and B = {2}, which are disjoint:', lines: 'P(A) = 1/6 ≥ 0\nP(A ∪ B) = 1/6 + 1/6 = 2/6\nP(Ω) = 6 × 1/6 = 1' } },
-  '1|complement': { parts: [['P(Aᶜ)', 'The probability that A does not happen.'], ['1', 'All of the probability, P(Ω).'], ['− P(A)', 'Take away the part where A happens.']], walk: { intro: 'P(late) = 0.14:', lines: 'P(on time) = 1 − 0.14 = 0.86' } },
-  '1|discrete': { parts: [['P(A)', 'The probability of the event A.'], ['sum', 'Add the numbers.'], ['outcomes in A', 'Only the cells that belong to A.']], walk: { intro: 'A = refunded = {ω₂, ω₄}:', lines: 'ω₂  0.06\nω₄  0.04\nP(A) = 0.06 + 0.04 = 0.10' } },
-  '1|uniform': { parts: [['number of outcomes in A', 'k: the count of cells in the event.'], ['n', 'The count of all outcomes in Ω.'], ['/', 'The share of the outcomes that are in A.']], walk: { intro: 'On a die, A = even:', lines: 'k = 3 (2, 4, 6)\nn = 6\nP(A) = 3/6 = 0.5' } },
-  '1|continuous': { parts: [['[a, b]', 'Every number from a to b, both ends included.'], ['b − a', 'The length of that interval.']], walk: { intro: 'The interval from 0.2 to 0.5:', lines: 'a = 0.2, b = 0.5\nP = 0.5 − 0.2 = 0.3' } },
-  '1|romeo': { parts: [['1', 'The area of the whole square: all of the probability.'], ['2 ×', 'There are two blank triangles.'], ['½ × (3/4)²', 'The area of one: half of base times height, both 3/4.'], ['≈', '"About equal to".'], ['|x − y| ≤ 1/4', 'Their delays differ by at most 15 minutes.']], walk: { intro: 'Step by step:', lines: '(3/4)² = 9/16\n½ × 9/16 = 9/32       one triangle\n2 × 9/32 = 9/16       both\n1 − 9/16 = 7/16       the band where they meet' } },
+  '1|axioms': { parts: [['P(A)', 'The probability the law gives to the event A.'], ['≥ 0', 'It is never negative.'], ['⇒', '"Then". If what is on the left holds, so does what is on the right.'], ['A ∪ B', 'A or B.'], ['P(Ω) = 1', 'Something in Ω certainly happens.']], walk: { intro: 'On a fair die, with A = {1} and B = {2}, which are disjoint:', steps: [['A', '= {1}'], ['B', '= {2}'], ['P(A), P(B)', '= 1/6 each'], ['P(A) ≥ 0', '1/6 ≥ 0'], ['P(A ∪ B) = P(A) + P(B)', '1/6 + 1/6 = 2/6'], ['P(Ω) = 1', '6 × 1/6 = 1']] } },
+  '1|complement': { parts: [['P(Aᶜ)', 'The probability that A does not happen.'], ['1', 'All of the probability, P(Ω).'], ['− P(A)', 'Take away the part where A happens.']], walk: { intro: 'P(late) = 0.14:', steps: [['A', '= late'], ['P(A)', 'P(late) = 0.14'], ['1 − P(A)', '= 1 − 0.14'], ['P(Aᶜ)', 'P(on time) = 0.86', 1]] } },
+  '1|discrete': { parts: [['P(A)', 'The probability of the event A.'], ['sum', 'Add the numbers.'], ['outcomes in A', 'Only the cells that belong to A.']], walk: { intro: 'A = refunded = {ω₂, ω₄}:', steps: [['A', '= refunded = {ω₂, ω₄}'], ['ω₂, in A', '= 0.06'], ['ω₄, in A', '= 0.04'], ['P(A), the sum', '0.06 + 0.04 = 0.10', 1]] } },
+  '1|uniform': { parts: [['number of outcomes in A', 'k: the count of cells in the event.'], ['n', 'The count of all outcomes in Ω.'], ['/', 'The share of the outcomes that are in A.']], walk: { intro: 'On a die, A = even:', steps: [['A', '= even = {2, 4, 6}'], ['number of outcomes in A', 'k = 3 (2, 4, 6)'], ['n', '= 6'], ['P(A) = k / n', '3/6 = 0.5', 1]] } },
+  '1|continuous': { parts: [['[a, b]', 'Every number from a to b, both ends included.'], ['b − a', 'The length of that interval.']], walk: { intro: 'The interval from 0.2 to 0.5:', steps: [['a', '= 0.2'], ['b', '= 0.5'], ['P = b − a', '0.5 − 0.2 = 0.3', 1]] } },
+  '1|romeo': { parts: [['1', 'The area of the whole square: all of the probability.'], ['2 ×', 'There are two blank triangles.'], ['½ × (3/4)²', 'The area of one: half of base times height, both 3/4.'], ['≈', '"About equal to".'], ['|x − y| ≤ 1/4', 'Their delays differ by at most 15 minutes.']], walk: { intro: 'Step by step:', steps: [['(3/4)²', '= 9/16'], ['½ × (3/4)²', '½ × 9/16 = 9/32, one triangle'], ['2 × ½ × (3/4)²', '2 × 9/32 = 9/16, both'], ['1 − 2 × ½ × (3/4)²', '1 − 9/16 = 7/16, the band where they meet', 1]] } },
   '1|prop-a': { parts: [['A ⊂ B', 'A is inside B.'], ['⇒', '"Then".'], ['P(A) ≤ P(B)', 'A is at most as likely as B.']] },
-  '1|prop-b': { parts: [['P(A ∪ B)', 'The probability of A or B.'], ['P(A) + P(B)', 'Both added: the overlap is now in twice.'], ['− P(A ∩ B)', 'Take the overlap out once.']], walk: { intro: 'Late or refunded:', lines: 'P(L) = 0.14\nP(R) = 0.10\nP(L ∩ R) = 0.04\n0.14 + 0.10 − 0.04 = 0.20' } },
-  '1|prop-c': { parts: [['≤', 'At most: the left side never exceeds the right.'], ['A₁, …, Aₙ', 'n events, numbered 1 to n.'], ['⋯', '"And so on".']], walk: { intro: 'With the same numbers:', lines: 'P(L ∪ R) = 0.20\nP(L) + P(R) = 0.24\n0.20 ≤ 0.24' } },
+  '1|prop-b': { parts: [['P(A ∪ B)', 'The probability of A or B.'], ['P(A) + P(B)', 'Both added: the overlap is now in twice.'], ['− P(A ∩ B)', 'Take the overlap out once.']], walk: { intro: 'Late or refunded:', steps: [['A', '= L, late'], ['B', '= R, refunded'], ['P(A), here P(L)', '= 0.14'], ['P(B), here P(R)', '= 0.10'], ['P(A ∩ B), here P(L ∩ R)', '= 0.04'], ['P(A) + P(B) − P(A ∩ B)', '0.14 + 0.10 − 0.04 = 0.20', 1]] } },
+  '1|prop-c': { parts: [['≤', 'At most: the left side never exceeds the right.'], ['A₁, …, Aₙ', 'n events, numbered 1 to n.'], ['⋯', '"And so on".']], walk: { intro: 'With the same numbers:', steps: [['A₁', '= L, late'], ['A₂', '= R, refunded'], ['P(A₁ ∪ A₂), here P(L ∪ R)', '= 0.20'], ['P(A₁) + P(A₂), here P(L) + P(R)', '= 0.24'], ['P(A₁ ∪ A₂) ≤ P(A₁) + P(A₂)', '0.20 ≤ 0.24', 1]] } },
   '1|prop-d': { parts: [['P(A)', 'All of A.'], ['Aᶜ ∩ B', 'The part of B outside A.'], ['Aᶜ ∩ Bᶜ ∩ C', 'The part of C outside both A and B.']] },
-  '1|frequency': { parts: [['fₙ(A)', 'The relative frequency of A in n cases.'], ['n_A', 'How many of those cases fell in A.'], ['n', 'How many cases in all.'], ['/', 'The share.']], walk: { intro: 'Last month:', lines: 'n_A = 268 late orders\nn = 2,000 orders\nf(L) = 268 / 2,000 = 0.134' } },
+  '1|frequency': { parts: [['fₙ(A)', 'The relative frequency of A in n cases.'], ['n_A', 'How many of those cases fell in A.'], ['n', 'How many cases in all.'], ['/', 'The share.']], walk: { intro: 'Last month:', steps: [['A', '= L, late'], ['n_A', '= 268 late orders'], ['n', '= 2,000 orders'], ['fₙ(A) = n_A / n', '268 / 2,000 = 0.134', 1]] } },
   '1|demere': { parts: [['P(A ∪ B)', 'A six on the first roll, or on the second.'], ['6/36 + 6/36', 'A six first, plus a six second.'], ['− 1/36', '(6, 6) was counted in both, so remove it once.']] },
 
   '2|partial': { parts: [['P(A ∣ B)', 'The probability of A, given that B happened.'], ['∣', 'The bar reads "given". What is on its right is already known.'], ['2/3', 'A is 2 of the 3 outcomes still possible.']] },
-  '2|conditional': { parts: [['P(A ∣ B)', 'How likely A is, now that we know B happened.'], ['P(A ∩ B)', 'The part where both happen: the top of the fraction.'], ['P(B)', 'All that is still possible: the bottom of the fraction.'], ['P(B) > 0', 'B must be possible, since we cannot divide by 0.']], walk: { intro: 'Late, given express, from the table of 1,000 orders:', lines: 'P(L ∩ E) = 10/1000 = 0.010\nP(E) = 200/1000 = 0.200\nP(L ∣ E) = 0.010 / 0.200 = 0.05' } },
+  '2|conditional': { parts: [['P(A ∣ B)', 'How likely A is, now that we know B happened.'], ['P(A ∩ B)', 'The part where both happen: the top of the fraction.'], ['P(B)', 'All that is still possible: the bottom of the fraction.'], ['P(B) > 0', 'B must be possible, since we cannot divide by 0.']], walk: { intro: 'Late, given express, from the table of 1,000 orders:', steps: [['A', '= L, late'], ['B', '= E, express'], ['P(A ∩ B), here P(L ∩ E)', '10/1000 = 0.010'], ['P(B), here P(E)', '200/1000 = 0.200'], ['P(A ∣ B) = P(A ∩ B) / P(B)', '0.010 / 0.200 = 0.05', 1]] } },
   '2|law-given': { parts: [['P(Lᶜ ∣ E)', 'The probability of not late, given express.'], ['1 −', 'The complement rule, now used inside "given E".'], ['0.05', 'P(L ∣ E).']] },
   '2|reverse': { parts: [['P(L ∣ S)', 'Of the standard orders, the share that are late.'], ['P(S ∣ L)', 'Of the late orders, the share that are standard.'], ['110', 'The same orders on top of both fractions.'], ['800, 120', 'Different totals underneath: standard orders, then late orders.']] },
-  '2|multiplication': { parts: [['P(A ∩ B)', 'The probability that both happen.'], ['P(B)', 'First, B happens.'], ['P(A ∣ B)', 'Then A happens, given B.']], walk: { intro: 'North and late:', lines: 'P(N) = 0.7\nP(L ∣ N) = 0.1\nP(N ∩ L) = 0.7 × 0.1 = 0.07' } },
-  '2|chain': { parts: [['A₁, A₂, A₃', 'Events in order along a path of the tree.'], ['P(A₁)', 'The first branch.'], ['P(A₂ ∣ A₁)', 'The second branch, given the first happened.'], ['P(A₃ ∣ A₁ ∩ A₂)', 'The third branch, given the first two happened.']], walk: { intro: 'Three orders, with the chance of on time 0.9 at each step whatever came before:', lines: 'P(A₁) = 0.9\nP(A₂ ∣ A₁) = 0.9\nP(A₃ ∣ A₁ ∩ A₂) = 0.9\n0.9 × 0.9 × 0.9 = 0.729' } },
-  '2|total': { parts: [['Σᵢ', 'Sigma, the Greek S for "sum". Go through each case i and add up.'], ['i', 'The number of the case: 1, 2, 3…'], ['P(Aᵢ)', 'How big case i is: its weight.'], ['P(B ∣ Aᵢ)', 'How likely B is inside case i.']], walk: { intro: 'Three carriers, i = 1, 2, 3, with B = late:', lines: 'i = 1, carrier A:  0.5 × 0.08 = 0.04\ni = 2, carrier B:  0.3 × 0.12 = 0.036\ni = 3, carrier C:  0.2 × 0.25 = 0.05\nadd:  0.04 + 0.036 + 0.05 = 0.126' } },
-  '2|bayes': { parts: [['P(A ∣ B)', 'What we want: A, given what we saw.'], ['P(A)', 'How likely A was before.'], ['P(B ∣ A)', 'How likely what we saw is if A is true.'], ['P(B)', 'How likely what we saw is overall, on any path.']], walk: { intro: 'A = South, B = late:', lines: 'P(A) = 0.3\nP(B ∣ A) = 0.2\nP(B) = 0.13\nP(A ∣ B) = 0.3 × 0.2 / 0.13 = 0.46' } },
+  '2|multiplication': { parts: [['P(A ∩ B)', 'The probability that both happen.'], ['P(B)', 'First, B happens.'], ['P(A ∣ B)', 'Then A happens, given B.']], walk: { intro: 'North and late:', steps: [['A', '= L, late'], ['B', '= N, North'], ['P(B), here P(N)', '= 0.7'], ['P(A ∣ B), here P(L ∣ N)', '= 0.1'], ['P(A ∩ B) = P(B) P(A ∣ B)', '0.7 × 0.1 = 0.07', 1]] } },
+  '2|chain': { parts: [['A₁, A₂, A₃', 'Events in order along a path of the tree.'], ['P(A₁)', 'The first branch.'], ['P(A₂ ∣ A₁)', 'The second branch, given the first happened.'], ['P(A₃ ∣ A₁ ∩ A₂)', 'The third branch, given the first two happened.']], walk: { intro: 'Three orders, with the chance of on time 0.9 at each step whatever came before:', steps: [['A₁, A₂, A₃', '= order 1, 2, 3 on time'], ['P(A₁)', '= 0.9'], ['P(A₂ ∣ A₁)', '= 0.9'], ['P(A₃ ∣ A₁ ∩ A₂)', '= 0.9'], ['P(A₁) P(A₂ ∣ A₁) P(A₃ ∣ A₁ ∩ A₂)', '0.9 × 0.9 × 0.9 = 0.729', 1]] } },
+  '2|total': { parts: [['Σᵢ', 'Sigma, the Greek S for "sum". Go through each case i and add up.'], ['i', 'The number of the case: 1, 2, 3…'], ['P(Aᵢ)', 'How big case i is: its weight.'], ['P(B ∣ Aᵢ)', 'How likely B is inside case i.']], walk: { intro: 'Three carriers, i = 1, 2, 3, with B = late:', steps: [['B', '= late'], ['A₁', '= carrier A'], ['A₂', '= carrier B'], ['A₃', '= carrier C'], ['i = 1: P(A₁) P(B ∣ A₁)', 'carrier A: 0.5 × 0.08 = 0.04'], ['i = 2: P(A₂) P(B ∣ A₂)', 'carrier B: 0.3 × 0.12 = 0.036'], ['i = 3: P(A₃) P(B ∣ A₃)', 'carrier C: 0.2 × 0.25 = 0.05'], ['P(B) = Σᵢ P(Aᵢ) P(B ∣ Aᵢ)', '0.04 + 0.036 + 0.05 = 0.126', 1]] } },
+  '2|bayes': { parts: [['P(A ∣ B)', 'What we want: A, given what we saw.'], ['P(A)', 'How likely A was before.'], ['P(B ∣ A)', 'How likely what we saw is if A is true.'], ['P(B)', 'How likely what we saw is overall, on any path.']], walk: { intro: 'A = South, B = late:', steps: [['A', '= South'], ['B', '= late'], ['P(A)', '= 0.3'], ['P(B ∣ A)', '= 0.2'], ['P(B)', '= 0.13'], ['P(A ∣ B) = P(A) P(B ∣ A) / P(B)', '0.3 × 0.2 / 0.13 = 0.46', 1]] } },
   '2|prior': { parts: [['Aᵢ', 'One possible cause, number i.'], ['P(Aᵢ)', 'The prior: before seeing anything.'], ['P(B ∣ Aᵢ)', 'The likelihood: how well this cause explains what we saw.'], ['P(B)', 'The same for every cause: it scales the answers to sum to 1.'], ['P(Aᵢ ∣ B)', 'The posterior: after seeing it.']] },
   '2|which': { parts: [['P(S ∣ L)', 'The chance it came from South, given it is late.'], ['0.06', 'South × late: 0.3 × 0.2.'], ['0.13', 'All late orders: 0.07 + 0.06.']] },
   '2|dog-answer': { parts: [['P(I ∣ D)', 'The chance of an item, given the dog sat.'], ['0.019', 'Item and dog sits: 0.02 × 0.95.'], ['0.068', 'Dog sits at all: 0.019 + 0.049.']] },
-  '2|independent': { parts: [['P(A ∣ B) = P(A)', 'Knowing B changes nothing about A.'], ['P(A ∩ B)', 'Both happen.'], ['P(A) P(B)', 'The two probabilities multiplied. Two letters side by side mean ×.']], walk: { intro: 'Check Exercise 4’s S and R:', lines: 'P(S ∩ R) = 0.10\nP(S) × P(R) = 0.4 × 0.25 = 0.10\nthe same, so independent' } },
-  '2|trials': { parts: [['p', 'The chance of success in one trial.'], ['1 − p', 'The chance of no success in one trial.'], ['n', 'How many trials.'], ['k', 'How many successes.'], ['pᵏ', 'p multiplied k times: the k successes.'], ['(1 − p)ⁿ⁻ᵏ', 'Multiplied n − k times: the rest, which failed.']], walk: { intro: 'n = 3 orders, k = 1 late, p = 0.1, the sequence OOL:', lines: 'O: 0.9\nO: 0.9\nL: 0.1\n0.9 × 0.9 × 0.1 = 0.081\nat least one late: 1 − 0.9³ = 0.271' } },
+  '2|independent': { parts: [['P(A ∣ B) = P(A)', 'Knowing B changes nothing about A.'], ['P(A ∩ B)', 'Both happen.'], ['P(A) P(B)', 'The two probabilities multiplied. Two letters side by side mean ×.']], walk: { intro: 'Check Exercise 4’s S and R:', steps: [['A', '= S'], ['B', '= R'], ['P(A)', '= 0.4'], ['P(B)', '= 0.25'], ['P(A ∩ B), here P(S ∩ R)', '= 0.10'], ['P(A) P(B), here P(S) × P(R)', '0.4 × 0.25 = 0.10'], ['P(A ∩ B) = P(A) P(B)?', 'the same, so independent', 1]] } },
+  '2|trials': { parts: [['p', 'The chance of success in one trial.'], ['1 − p', 'The chance of no success in one trial.'], ['n', 'How many trials.'], ['k', 'How many successes.'], ['pᵏ', 'p multiplied k times: the k successes.'], ['(1 − p)ⁿ⁻ᵏ', 'Multiplied n − k times: the rest, which failed.']], walk: { intro: 'n = 3 orders, k = 1 late, p = 0.1, the sequence OOL:', steps: [['n', '= 3 orders'], ['k', '= 1 late'], ['p', '= 0.1'], ['1 − p', '= 0.9'], ['1 − p, the first O', '= 0.9'], ['1 − p, the second O', '= 0.9'], ['p, the L', '= 0.1'], ['pᵏ (1 − p)ⁿ⁻ᵏ', '0.1¹ × 0.9² = 0.9 × 0.9 × 0.1 = 0.081', 1], ['at least one late: 1 − (1 − p)ⁿ', '1 − 0.9³ = 0.271', 1]] } },
   '2|demere-2': { parts: [['5/6', 'The chance of no six on one roll.'], ['(5/6)⁴', 'No six on all 4 rolls.'], ['1 −', 'So at least one six.'], ['35/36', 'The chance of no double six on one roll of two dice.']] },
   '2|cond-indep': { parts: [['∣ C', 'Everything is worked out knowing C.'], ['P(A ∩ B ∣ C)', 'Both A and B, given C.'], ['P(A ∣ C) P(B ∣ C)', 'Each one given C, multiplied.']] },
   '2|two-checks': { parts: [['D, X', 'The dog sits. The X-ray flags.'], ['0.02, 0.98', 'The chance of an item, and of none.'], ['0.9025', 'Both alert given an item: 0.95 × 0.95.'], ['0.0025', 'Both alert given no item: 0.05 × 0.05.'], ['0.068²', 'What multiplying would give if the checks were independent.']] },
 
-  '3|rv': { parts: [['X', 'The random variable.'], [':', '"Goes from… to…".'], ['Ω', 'The outcomes it starts from.'], ['→', 'Each one is sent to…'], ['ℝ', '…a real number.']], walk: { intro: 'X, the larger of two rolls:', lines: 'outcome (1, 3) → X = 3\noutcome (2, 2) → X = 2\noutcome (4, 1) → X = 4' } },
-  '3|statements': { parts: [['{X ≤ 2}', 'The event "X is at most 2".'], ['ω ∈ Ω', 'Outcomes ω taken from Ω.'], ['∣', '"Such that".'], ['X(ω) ≤ 2', 'The number X gives to that outcome is at most 2.']], walk: { intro: 'The cells where the larger roll is at most 2:', lines: '(1, 1) (1, 2) (2, 1) (2, 2)\n4 of 16 cells, so P(X ≤ 2) = 4/16' } },
-  '3|pmf': { parts: [['m', 'For mass: how much probability sits on a value.'], ['_X', 'Which variable it belongs to. This is the PMF of X.'], ['(x)', 'The value you ask about, a plain number.'], ['P(X = x)', 'The chance that X lands on that value.']], walk: { intro: 'Imagine X can be 1, 2 or 3. Then m_X is a small lookup table, and its values sum to 1:', lines: 'm_X(1) = P(X = 1) = 0.5\nm_X(2) = P(X = 2) = 0.3\nm_X(3) = P(X = 3) = 0.2\n0.5 + 0.3 + 0.2 = 1' } },
-  '3|bernoulli': { parts: [['∼', '"Follows". X has this distribution.'], ['Ber', 'Bernoulli: one trial.'], ['p', 'The chance of success, X = 1.'], ['1 − p', 'The chance of failure, X = 0.']], walk: { intro: 'With p = 0.2:', lines: 'm_X(1) = 0.2\nm_X(0) = 1 − 0.2 = 0.8' } },
-  '3|binomial': { parts: [['n', 'How many trials.'], ['p', 'The chance of success in each.'], ['k', 'The number of successes you ask about.'], ['(n choose k)', 'How many different orders those k successes can come in.'], ['pᵏ', 'The k successes.'], ['(1 − p)ⁿ⁻ᵏ', 'The n − k failures.'], ['n!', 'n factorial: n × (n − 1) × … × 1.']], walk: { intro: 'n = 3 visitors, p = 0.2, k = 1 buyer:', lines: '(3 choose 1) = 3!/(1! 2!) = 3      BNN, NBN, NNB\n0.2¹ = 0.2\n0.8² = 0.64\n3 × 0.2 × 0.64 = 0.384' } },
-  '3|poisson': { parts: [['λ', 'Lambda: the average count in the window.'], ['k', 'The count you ask about.'], ['e', 'A fixed number, about 2.718.'], ['e^(−λ)', 'The chance of zero events.'], ['λᵏ', 'λ multiplied k times.'], ['k!', 'k factorial: k × (k − 1) × … × 1, and 0! = 1.']], walk: { intro: 'λ = 4 tickets an hour:', lines: 'k = 0:  e^(−4) × 4⁰ / 0! = 0.018\nk = 1:  e^(−4) × 4¹ / 1! = 0.073\nk = 2:  e^(−4) × 4² / 2! = 0.147' } },
-  '3|expectation': { parts: [['E[X]', 'E for expectation: the average value of X. It is a Latin E, not Greek. The Greek letter is the next one.'], ['Σₓ', 'Sigma, the Greek S for "sum". It says: go through every value x that X can take, work out what follows, and add the results.'], ['x', 'One value of X, a plain number: first 1, then 2, then 3.'], ['m_X(x)', 'The probability of that value, read from the PMF. m for mass: how much weight sits on x.']], walk: { intro: 'Imagine X can be 1, 2 or 3, with m_X(1) = 0.5, m_X(2) = 0.3 and m_X(3) = 0.2. The sum means one line per value:', lines: 'x = 1:   1 × 0.5 = 0.5\nx = 2:   2 × 0.3 = 0.6\nx = 3:   3 × 0.2 = 0.6\nadd:     0.5 + 0.6 + 0.6 = 1.7\nE[X] = 1.7' } },
-  '3|rule': { parts: [['g(x)', 'A function: what you do to the value, such as squaring it.'], ['Σₓ', 'Go through every value x and add.'], ['g(x)', 'Instead of x itself, use the changed value.'], ['m_X(x)', 'The weight stays that of x.']], walk: { intro: 'The same X, with g(x) = x²:', lines: 'x = 1:   1² × 0.5 = 0.5\nx = 2:   2² × 0.3 = 1.2\nx = 3:   3² × 0.2 = 1.8\nadd:     E[X²] = 3.5\nnot the same as (E[X])² = 1.7² = 2.89' } },
-  '3|linear-mean': { parts: [['a', 'A fixed number that multiplies X.'], ['b', 'A fixed number that is added.'], ['E[X]', 'The mean of X.']], walk: { intro: 'The same X, with E[X] = 1.7, a = 2 and b = 1:', lines: 'E[2X + 1] = 2 × 1.7 + 1 = 4.4\ncheck:  3 × 0.5 + 5 × 0.3 + 7 × 0.2 = 4.4' } },
-  '3|variance': { parts: [['Var(X)', 'The variance: how spread out X is.'], ['μ', 'Mu, the Greek m: the mean, E[X].'], ['X − μ', 'How far a value falls from the mean.'], ['( )²', 'Squared, so that distances below and above do not cancel.'], ['E[ ]', 'The average of those squares, using the weights.'], ['σ_X', 'Sigma, small this time: the standard deviation.'], ['√', 'The root, back to the units of X.']], walk: { intro: 'The same X, with μ = 1.7:', lines: 'x = 1:   (1 − 1.7)² × 0.5 = 0.245\nx = 2:   (2 − 1.7)² × 0.3 = 0.027\nx = 3:   (3 − 1.7)² × 0.2 = 0.338\nadd:     Var(X) = 0.61\nσ_X = √0.61 = 0.78' } },
-  '3|shortcut': { parts: [['E[X²]', 'Square each value first, then average.'], ['(E[X])²', 'Average first, then square.'], ['−', 'The gap between the two is the variance.']], walk: { intro: 'The same X:', lines: 'E[X²] = 3.5\n(E[X])² = 1.7² = 2.89\nVar(X) = 3.5 − 2.89 = 0.61' } },
-  '3|linear-var': { parts: [['a²', 'Multiplying by a stretches distances by a, and squares by a².'], ['b', 'Not in the answer: adding moves everything and leaves the distances alone.'], ['|a|', 'The size of a, without its sign.']], walk: { intro: 'The same X, with a = 2 and b = 1:', lines: 'Var(2X + 1) = 2² × 0.61 = 2.44\nσ = 2 × 0.78 = 1.56' } },
+  '3|rv': { parts: [['X', 'The random variable.'], [':', '"Goes from… to…".'], ['Ω', 'The outcomes it starts from.'], ['→', 'Each one is sent to…'], ['ℝ', '…a real number.']], walk: { intro: 'X, the larger of two rolls:', steps: [['ω = (1, 3), then X(ω)', '= 3'], ['ω = (2, 2), then X(ω)', '= 2'], ['ω = (4, 1), then X(ω)', '= 4']] } },
+  '3|statements': { parts: [['{X ≤ 2}', 'The event "X is at most 2".'], ['ω ∈ Ω', 'Outcomes ω taken from Ω.'], ['∣', '"Such that".'], ['X(ω) ≤ 2', 'The number X gives to that outcome is at most 2.']], walk: { intro: 'The cells where the larger roll is at most 2:', steps: [['X(ω) ≤ 2', 'in these cells: (1, 1) (1, 2) (2, 1) (2, 2)'], ['cells in the event', '= 4'], ['cells in Ω', '= 16'], ['P(X ≤ 2)', '= 4/16', 1]] } },
+  '3|pmf': { parts: [['m', 'For mass: how much probability sits on a value.'], ['_X', 'Which variable it belongs to. This is the PMF of X.'], ['(x)', 'The value you ask about, a plain number.'], ['P(X = x)', 'The chance that X lands on that value.']], walk: { intro: 'Imagine X can be 1, 2 or 3. Then m_X is a small lookup table, and its values sum to 1:', steps: [['x', '= 1, then 2, then 3'], ['m_X(1) = P(X = 1)', '= 0.5'], ['m_X(2) = P(X = 2)', '= 0.3'], ['m_X(3) = P(X = 3)', '= 0.2'], ['Σₓ m_X(x)', '0.5 + 0.3 + 0.2 = 1', 1]] } },
+  '3|bernoulli': { parts: [['∼', '"Follows". X has this distribution.'], ['Ber', 'Bernoulli: one trial.'], ['p', 'The chance of success, X = 1.'], ['1 − p', 'The chance of failure, X = 0.']], walk: { intro: 'With p = 0.2:', steps: [['p', '= 0.2'], ['m_X(1) = p', '= 0.2'], ['m_X(0) = 1 − p', '1 − 0.2 = 0.8']] } },
+  '3|binomial': { parts: [['n', 'How many trials.'], ['p', 'The chance of success in each trial.'], ['k', 'The number of successes you ask about.'], ['(n choose k)', 'How many different orders those k successes can come in.'], ['pᵏ', 'The k successes.'], ['(1 − p)ⁿ⁻ᵏ', 'The n − k failures.'], ['n!', 'n factorial: n × (n − 1) × … × 1.']], walk: { intro: 'n = 3 visitors, p = 0.2, k = 1 buyer:', steps: [['n', '= 3 visitors'], ['p', '= 0.2, the chance one visitor buys'], ['k', '= 1 buyer'], ['n − k', '= 3 − 1 = 2 who do not buy'], ['1 − p', '= 1 − 0.2 = 0.8'], ['(n choose k) = n! / (k! (n − k)!)', '3! / (1! (3 − 1)!) = 6 / (1 × 2) = 3: BNN, NBN, NNB'], ['pᵏ', '0.2¹ = 0.2'], ['(1 − p)ⁿ⁻ᵏ', '(1 − 0.2)³⁻¹ = 0.8² = 0.64'], ['(n choose k) pᵏ (1 − p)ⁿ⁻ᵏ', '3 × 0.2 × 0.64 = 0.384', 1]] } },
+  '3|poisson': { parts: [['λ', 'Lambda: the average count in the window.'], ['k', 'The count you ask about.'], ['e', 'A fixed number, about 2.718.'], ['e^(−λ)', 'The chance of zero events.'], ['λᵏ', 'λ multiplied k times.'], ['k!', 'k factorial: k × (k − 1) × … × 1, and 0! = 1.']], walk: { intro: 'λ = 4 tickets an hour:', steps: [['λ', '= 4 tickets an hour'], ['k', '= 0, then 1, then 2'], ['e', '= about 2.718'], ['k = 0: e^(−λ) λᵏ / k!', 'e^(−4) × 4⁰ / 0! = 0.018'], ['k = 1: e^(−λ) λᵏ / k!', 'e^(−4) × 4¹ / 1! = 0.073'], ['k = 2: e^(−λ) λᵏ / k!', 'e^(−4) × 4² / 2! = 0.147']] } },
+  '3|expectation': { parts: [['E[X]', 'E for expectation: the average value of X. It is a Latin E, not Greek. The Greek letter is the next one.'], ['Σₓ', 'Sigma, the Greek S for "sum". It says: go through every value x that X can take, work out what follows, and add the results.'], ['x', 'One value of X, a plain number: first 1, then 2, then 3.'], ['m_X(x)', 'The probability of that value, read from the PMF. m for mass: how much weight sits on x.']], walk: { intro: 'Imagine X can be 1, 2 or 3, with m_X(1) = 0.5, m_X(2) = 0.3 and m_X(3) = 0.2. The sum means one line per value:', steps: [['x', '= 1, then 2, then 3'], ['m_X(x)', '= 0.5, then 0.3, then 0.2'], ['x = 1: x m_X(x)', '1 × 0.5 = 0.5'], ['x = 2: x m_X(x)', '2 × 0.3 = 0.6'], ['x = 3: x m_X(x)', '3 × 0.2 = 0.6'], ['E[X] = Σₓ x m_X(x)', '0.5 + 0.6 + 0.6 = 1.7', 1]] } },
+  '3|rule': { parts: [['g(x)', 'A function: what you do to the value, such as squaring it.'], ['Σₓ', 'Go through every value x and add.'], ['g(x)', 'Instead of x itself, use the changed value.'], ['m_X(x)', 'The weight stays that of x.']], walk: { intro: 'The same X, with g(x) = x²:', steps: [['x', '= 1, then 2, then 3'], ['g(x)', '= x²'], ['m_X(x)', '= 0.5, then 0.3, then 0.2'], ['x = 1: g(x) m_X(x)', '1² × 0.5 = 0.5'], ['x = 2: g(x) m_X(x)', '2² × 0.3 = 1.2'], ['x = 3: g(x) m_X(x)', '3² × 0.2 = 1.8'], ['E[g(X)] = Σₓ g(x) m_X(x)', 'E[X²] = 0.5 + 1.2 + 1.8 = 3.5', 1], ['(E[X])²', '1.7² = 2.89, not the same']] } },
+  '3|linear-mean': { parts: [['a', 'A fixed number that multiplies X.'], ['b', 'A fixed number that is added.'], ['E[X]', 'The mean of X.']], walk: { intro: 'The same X, with E[X] = 1.7, a = 2 and b = 1:', steps: [['a', '= 2'], ['b', '= 1'], ['E[X]', '= 1.7'], ['ax + b', '= 3, 5, 7 for x = 1, 2, 3'], ['E[aX + b] = a E[X] + b', '2 × 1.7 + 1 = 4.4', 1], ['check: Σₓ (ax + b) m_X(x)', '3 × 0.5 + 5 × 0.3 + 7 × 0.2 = 4.4']] } },
+  '3|variance': { parts: [['Var(X)', 'The variance: how spread out X is.'], ['μ', 'Mu, the Greek m: the mean, E[X].'], ['X − μ', 'The deviation: how far a value falls from the mean.'], ['( )²', 'Squared, so that deviations below and above do not cancel.'], ['E[ ]', 'The average of those squares, using the weights.'], ['σ_X', 'Sigma, small this time: the standard deviation.'], ['√', 'The root, back to the units of X.']], walk: { intro: 'The same X, with μ = 1.7:', steps: [['μ', '= E[X] = 1.7'], ['x', '= 1, then 2, then 3'], ['m_X(x)', '= 0.5, then 0.3, then 0.2'], ['x = 1: (x − μ)² m_X(x)', '(1 − 1.7)² × 0.5 = 0.245'], ['x = 2: (x − μ)² m_X(x)', '(2 − 1.7)² × 0.3 = 0.027'], ['x = 3: (x − μ)² m_X(x)', '(3 − 1.7)² × 0.2 = 0.338'], ['Var(X), the sum', '0.245 + 0.027 + 0.338 = 0.61', 1], ['σ_X = √Var(X)', '√0.61 = 0.78', 1]] } },
+  '3|shortcut': { parts: [['E[X²]', 'Square each value first, then average.'], ['(E[X])²', 'Average first, then square.'], ['−', 'The gap between the two is the variance.']], walk: { intro: 'The same X:', steps: [['E[X]', '= 1.7'], ['E[X²]', '= 3.5'], ['(E[X])²', '1.7² = 2.89'], ['Var(X) = E[X²] − (E[X])²', '3.5 − 2.89 = 0.61', 1]] } },
+  '3|linear-var': { parts: [['a²', 'Multiplying by a stretches distances by a, and squares by a².'], ['b', 'Not in the answer: adding moves everything and leaves the distances alone.'], ['|a|', 'The size of a, without its sign.']], walk: { intro: 'The same X, with a = 2 and b = 1:', steps: [['a', '= 2'], ['b', '= 1, which leaves no trace'], ['Var(X)', '= 0.61'], ['σ_X', '= 0.78'], ['Var(aX + b) = a² Var(X)', '2² × 0.61 = 2.44', 1], ['σ = |a| σ_X', '2 × 0.78 = 1.56', 1]] } },
 };
 
 /* ---------- Store: this browser first, then the account ---------- */
@@ -924,7 +936,8 @@ const REF = [
     ['E[X]', 'The expectation or mean: the balance point and the long-run average.', 'E[X] = Σₓ x m_X(x)', 3, 'expectation'],
     ['E[g(X)]', 'The expected value rule. In general it is not g(E[X]).', 'E[g(X)] = Σₓ g(x) m_X(x)', 3, 'rule'],
     ['E[aX + b]', 'The mean of a linear function.', 'E[aX + b] = a E[X] + b', 3, 'linear-mean'],
-    ['Var(X)', 'The variance: the average squared distance from the mean.', 'Var(X) = E[(X − μ)²] = E[X²] − μ²', 3, 'variance'],
+    ['X − μ', 'The deviation: how far a value falls from the mean.', 'x = 3, μ = 2: deviation = 3 − 2 = 1', 3, 'variance'],
+    ['Var(X)', 'The variance: the average squared deviation.', 'Var(X) = E[(X − μ)²] = E[X²] − μ²', 3, 'variance'],
     ['σ_X', 'The standard deviation, SD: the root of the variance, in the units of X.', 'σ_X = √Var(X)', 3, 'variance'],
     ['Var(aX + b)', 'Adding shifts, multiplying scales.', 'Var(aX + b) = a² Var(X)', 3, 'linear-var'],
     ['Model means and variances', 'Ready-made for the three models.', 'Ber(p):    p,   p(1 − p)\nBin(n, p): np,  np(1 − p)\nPois(λ):   λ,   λ', 3, 'models-moments'],
@@ -933,12 +946,45 @@ const REF = [
 
 /* ---------- A lecture ---------- */
 // Terms in a card's text, and symbols in a formula: hoverable, but not coloured.
-const TERMS = /\b(sample spaces?|complements?|unions?|intersections?|disjoint|partitions?|De Morgan|axioms?|events?|conditional probabilit(?:y|ies)|total probability|chain rule|multiplication rule|Bayes|priors?|likelihoods?|posteriors?|independent|independence|PMFs?|Bernoulli|binomial|Poisson|expectation|variances?|standard deviation|SD|random variables?|frequenc(?:y|ies))\b/gi;
-const SYMBOLS = /∪|∩|∣|∅|Ω|⊂|∼|ᶜ|Σ|E\[|Var\(|m_X|σ_X/g;
-function kwText(s) { return subs(esc(s).replace(TERMS, m => `<span class="kw-t" data-kw="${m.toLowerCase()}">${m}</span>`)); }
-function mathHtml(s) { return subs(esc(s).replace(SYMBOLS, m => `<span class="kw" data-kw="${m.replace('_', '')}">${m}</span>`)); }
+const TERMS = /\b(sample spaces?|complements?|unions?|intersections?|disjoint|partitions?|De Morgan|axioms?|events?|conditional probabilit(?:y|ies)|total probability|chain rule|multiplication rule|Bayes|priors?|likelihoods?|posteriors?|independent|independence|PMFs?|Bernoulli|binomial|Poisson|expectation|variances?|standard deviation|deviations?|SD|random variables?|frequenc(?:y|ies))\b/gi;
+/* Asked for 2026-11-05: "X, small x, and n, p terms like that should also reveal what they are when I
+   hover, just like Var()". What a letter means in general; the card's own READS can say more (openPeek). */
+const LETTERS = {
+  X: 'A random variable: a number decided by what happens, such as how many visitors buy.',
+  x: 'One value that X can take, a plain number. Capital X is the variable; small x is "this time, this number".',
+  n: 'A count: how many trials or cases there are in all.',
+  k: 'A count: how many successes, or outcomes, you ask about.',
+  p: 'The chance of success in one trial, a number from 0 to 1.',
+  'λ': 'Lambda: the average count in a fixed window of time or space.',
+  'μ': 'Mu, the Greek m: the mean of X, the same as E[X].',
+  'σ': 'Small sigma: the standard deviation, how far values typically fall from the mean.',
+  e: 'A fixed number, about 2.718. It appears in the Poisson formula.',
+  a: 'A fixed number that multiplies.',
+  b: 'A fixed number that is added.',
+  i: 'A counter: which case you are on, 1, then 2, then 3.',
+  g: 'A function: what you do to a value, such as squaring it.',
+  A: 'An event: a set of outcomes that can happen or not.',
+  B: 'A second event, or what was observed.',
+  S: 'A set, or an event, named S in this example.',
+  T: 'A second set, named T in this example.',
+  'ω': 'Small omega: one single outcome.',
+  nA: 'How many of the n cases fell in the event A.',
+  'P(': 'The probability of what is inside the brackets, a number from 0 to 1.',
+};
+const LETTER_FROM = { 'ᵏ': 'k', 'ⁿ': 'n', 'ₓ': 'x', 'ᵢ': 'i', 'ₙ': 'n' };
+const SYMBOLS = /∪|∩|∣|∅|Ω|⊂|∼|ᶜ|Σ|E\[|Var\(|m_X|σ_X|n_A|e\^\([^)]*\)|P\(|(?<![\p{L}\p{N}_]|carrier )(?:[XxnpkλμσbigABSTω]|a(?=[X²|,]|\s*=|\s*E\[|\s*$))(?![A-Za-z0-9_α-ω])|(?<=a)X(?![A-Za-z0-9_])|[ᵏⁿₓᵢₙ]/gu;
+// In running text only the letters that cannot be English words.
+const PROSE_LETTERS = /(?<![\p{L}\p{N}_’'-])[Xxnpkλμ](?![A-Za-z0-9_α-ω’'-])|[ᵏⁿₓᵢₙ]/gu;
+const letterSpan = (key, shown) => `<span class="kw kw-v" data-kw="${key}">${shown}</span>`;
+function kwText(s) { return subs(esc(s).replace(PROSE_LETTERS, m => letterSpan(LETTER_FROM[m] || m, m)).replace(TERMS, m => `<span class="kw-t" data-kw="${m.toLowerCase()}">${m}</span>`)); }
+function mathHtml(s) {
+  return subs(esc(s).replace(SYMBOLS, m => {
+    const key = m.startsWith('e^') ? 'e' : LETTER_FROM[m] || m.replace('_', '');
+    return LETTERS[key] ? letterSpan(key, m) : `<span class="kw" data-kw="${key}">${m}</span>`;
+  }));
+}
 function readsHtml(r) {
-  return `<div class="reads"><p class="flow-label">What each piece means</p><dl>${r.parts.map(([sym, say]) => `<div><dt>${mathHtml(sym)}</dt><dd>${kwText(say)}</dd></div>`).join('')}</dl></div>${r.walk ? `<div class="walk"><p class="flow-label">Worked out, step by step</p><p>${kwText(r.walk.intro)}</p><pre>${mathHtml(r.walk.lines)}</pre></div>` : ''}`;
+  return `<div class="reads"><p class="flow-label">What each piece means</p><dl>${r.parts.map(([sym, say]) => `<div><dt>${mathHtml(sym)}</dt><dd>${kwText(say)}</dd></div>`).join('')}</dl></div>${r.walk ? `<div class="walk"><p class="flow-label">Worked out, step by step</p><p>${kwText(r.walk.intro)}</p><dl class="steps"><div class="steps-head"><dt>The piece</dt><dd>In numbers</dd></div>${r.walk.steps.map(([piece, nums, result]) => `<div${result ? ' class="result"' : ''}><dt>${mathHtml(piece)}</dt><dd>${mathHtml(nums)}</dd></div>`).join('')}</dl></div>` : ''}`;
 }
 const PARA = String.fromCharCode(10, 10);
 const paras = t => t.split(PARA).map(p => `<p>${kwText(p)}</p>`).join('');
@@ -994,8 +1040,9 @@ function paintBars() {
   }
 }
 // Each segment of boxes has its own colour, as on the Python page.
-const segHue = (n, gi, count) => ({ 1: 250, 2: 150, 3: 20 }[n] + (300 * gi) / Math.max(count, 1)) % 360;
-const PRACTICE_HUE = 40, RECAP_HUE = 90;
+// "I love the colour of slides 1 to 10 in Lecture 1": their blue and lavender, in turn, on every lecture.
+const segHue = i => i % 2 ? 300 : 250;
+const segRail = (s, i) => `<div class="seg-rail"><button type="button" class="seg-tab" aria-label="Segment ${i + 1} of ${s.groups.length + 2}. Open the map">Segment ${i + 1}/${s.groups.length + 2}</button></div>`;
 function picOpen() { try { return localStorage.getItem('stats-pic-closed') !== '1'; } catch (e) { return true; } }
 document.addEventListener('toggle', e => { if (e.target.id === 'pic') { try { localStorage.setItem('stats-pic-closed', e.target.open ? '' : '1'); } catch (err) {} } }, true);
 function renderSession() {
@@ -1003,9 +1050,9 @@ function renderSession() {
   const s = SESSIONS.find(x => x.n === current);
   document.getElementById('session').innerHTML = `<p class="where"><button type="button" class="where-btn" id="where-btn">Lecture ${s.n}</button></p><h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
     + `<details class="pic" id="pic" data-seg="pic"${picOpen() ? ' open' : ''}><summary>The picture: the lecture on one page</summary><div class="pic-body">${PICTURES[s.n]()}</div></details>`
-    + s.groups.map((g, gi) => `<section class="seg" data-seg="g${gi}" style="--h: ${segHue(s.n, gi, s.groups.length).toFixed(0)}"><h2>${esc(g.name)}</h2>${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div></section>`).join('')
-    + `<section class="seg" data-seg="practice" style="--h: ${PRACTICE_HUE}"><h2>Practice</h2><p class="group-note">Try each one on paper first, then open the answer.</p>${practiceHtml(s)}</section>`
-    + `<section class="seg" data-seg="recap" style="--h: ${RECAP_HUE}"><h2>To remember</h2><ul class="recap" data-hl="stats|s${s.n}|recap">${s.recap.map(r => `<li>${text(r)}</li>`).join('')}</ul></section>`;
+    + s.groups.map((g, gi) => `<section class="seg" data-seg="g${gi}" style="--h: ${segHue(gi)}">${segRail(s, gi)}<h2>${esc(g.name)}</h2>${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div></section>`).join('')
+    + `<section class="seg" data-seg="practice" style="--h: ${segHue(s.groups.length)}">${segRail(s, s.groups.length)}<h2>Practice</h2><p class="group-note">Try each one on paper first, then open the answer.</p>${practiceHtml(s)}</section>`
+    + `<section class="seg" data-seg="recap" style="--h: ${segHue(s.groups.length + 1)}">${segRail(s, s.groups.length + 1)}<h2>To remember</h2><ul class="recap" data-hl="stats|s${s.n}|recap">${s.recap.map(r => `<li>${text(r)}</li>`).join('')}</ul></section>`;
   paintNotes();
   applyHighlights();
   mapRefresh();
@@ -1106,7 +1153,7 @@ const PEEK_TERM = {
   '∪': 'S ∪ T', '∩': 'S ∩ T', '∣': 'P(A ∣ B)', '∅': '∅', 'Ω': 'Ω', '⊂': 'T ⊂ S', '∼': 'X ∼', 'ᶜ': 'Sᶜ', 'Σ': 'Σₓ', 'E[': 'E[X]', 'Var(': 'Var(X)', mX: 'PMF', 'σX': 'σ_X',
   'sample space': 'Sample space', complement: 'Complement rule', union: 'S ∪ T', intersection: 'S ∩ T', disjoint: 'Disjoint', partition: 'Partition', 'de morgan': 'De Morgan', axiom: 'Axioms', event: 'Event',
   'conditional probability': 'P(A ∣ B)', 'total probability': 'Total probability', 'chain rule': 'Chain rule', 'multiplication rule': 'Multiplication rule', bayes: 'Bayes’ rule', prior: 'Prior', likelihood: 'Likelihood', posterior: 'Posterior',
-  independent: 'Independent', independence: 'Independent', pmf: 'PMF', bernoulli: 'Ber(p)', binomial: 'Bin(n, p)', poisson: 'Pois(λ)', expectation: 'E[X]', variance: 'Var(X)', 'standard deviation': 'σ_X', sd: 'σ_X', 'random variable': 'Random variable', frequency: 'Relative frequency',
+  independent: 'Independent', independence: 'Independent', pmf: 'PMF', bernoulli: 'Ber(p)', binomial: 'Bin(n, p)', poisson: 'Pois(λ)', expectation: 'E[X]', variance: 'Var(X)', deviation: 'X − μ', 'standard deviation': 'σ_X', sd: 'σ_X', 'random variable': 'Random variable', frequency: 'Relative frequency',
 };
 const peekKey = w => PEEK_TERM[w] || PEEK_TERM[w.replace(/ies$/, 'y').replace(/s$/, '')] || PEEK_TERM[w.replace(/s$/, '')];
 const refByTerm = term => { for (const g of REF) for (const it of g.items) if (it[0] === term) return it; return null; };
@@ -1116,7 +1163,20 @@ peek.hidden = true;
 peek.setAttribute('aria-label', 'Keyword');
 document.body.append(peek);
 let peekTimer = 0, peekWord = null;
+// A letter: what its card says it is, and its value in that card's example.
+function openLetter(word, el) {
+  const sym = word === 'nA' ? 'n_A' : word;
+  const c = el.closest('.card')?.id.match(/^c-(\d+)-(.+)$/);
+  const r = c ? READS[`${c[1]}|${c[2]}`] : null;
+  const said = r?.parts.find(([x]) => x === sym)?.[1];
+  const value = r?.walk?.steps?.find(([x, v]) => x === sym && v.startsWith('= '))?.[1];
+  peekWord = el;
+  peek.innerHTML = `<div class="peek-top"><p class="peek-term">${mathHtml(sym === 'P(' ? 'P( )' : sym)}</p><button type="button" class="peek-close" aria-label="Close">×</button></div>
+    <p>${esc(said || LETTERS[word])}</p>${value ? `<p class="flow-label">In this example</p><pre>${mathHtml(`${sym} ${value}`)}</pre>` : ''}`;
+  peek.hidden = false;
+}
 function openPeek(word, el) {
+  if (LETTERS[word]) { openLetter(word, el); return; }
   const it = refByTerm(peekKey(word));
   if (!it) return;
   const [t, d, ex, n, id] = it;
@@ -1412,8 +1472,8 @@ const mapOpenL = new Set(), mapOpenS = new Set();
 let mapLecture = null, mapPlace = { seg: null, card: null };
 function segsOf(s) {
   return [{ key: 'pic', name: 'The picture' },
-    ...s.groups.map((g, gi) => ({ key: `g${gi}`, name: g.name, h: segHue(s.n, gi, s.groups.length), cards: g.cards })),
-    { key: 'practice', name: 'Practice', h: PRACTICE_HUE }, { key: 'recap', name: 'To remember', h: RECAP_HUE }];
+    ...s.groups.map((g, gi) => ({ key: `g${gi}`, name: g.name, h: segHue(gi), cards: g.cards })),
+    { key: 'practice', name: 'Practice', h: segHue(s.groups.length) }, { key: 'recap', name: 'To remember', h: segHue(s.groups.length + 1) }];
 }
 function findPlace() {
   let seg = null, card = null;
@@ -1536,12 +1596,12 @@ mapEl.addEventListener('click', e => {
   if (g) mapGo(Number(g.dataset.s), g.dataset.to);
 });
 mapPill.addEventListener('click', () => setMap(true, MAP_WIDE.matches));
-document.getElementById('session').addEventListener('click', e => { if (e.target.closest('#where-btn')) setMap(true, MAP_WIDE.matches); });
+document.getElementById('session').addEventListener('click', e => { if (e.target.closest('#where-btn, .seg-tab')) setMap(true, MAP_WIDE.matches); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !mapEl.hidden) setMap(false, MAP_WIDE.matches); });
 document.addEventListener('click', e => {
   if (mapEl.hidden || MAP_WIDE.matches) return;
   const path = e.composedPath();
-  if (!path.includes(mapEl) && !path.includes(mapPill) && !e.target.closest?.('#where-btn')) setMap(false);
+  if (!path.includes(mapEl) && !path.includes(mapPill) && !e.target.closest?.('#where-btn, .seg-tab')) setMap(false);
 });
 let mapTimer = 0;
 addEventListener('scroll', () => { clearTimeout(mapTimer); mapTimer = setTimeout(mapFollow, 60); }, { passive: true });

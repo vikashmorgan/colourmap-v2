@@ -50,6 +50,14 @@ describe('/statistics class page', () => {
     expect(html).toContain('What each piece means');
     expect(html).toContain('const segHue = ');
     expect(html).not.toContain('Explain more');
+    // A worked example sets each piece of the formula beside its numbers.
+    expect(html).toContain('class="steps"');
+    expect(html).not.toContain('r.walk.lines');
+    // One pair of colours; a tab on the left of the boxes marks the segment.
+    expect(html).toContain('const segHue = i => i % 2 ? 300 : 250;');
+    expect(html).toContain('class="seg-tab"');
+    // Letters such as X, x, n and p open the same side box as a term.
+    expect(html).toContain('function openLetter(word, el)');
     // The pill on the left opens to stacks of segments: which lecture and segment you are in.
     expect(html).toContain('id="map-pill"');
     expect(html).toContain('data-seg-toggle=');
