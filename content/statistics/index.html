@@ -1,0 +1,1350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Statistics · School</title>
+<script>
+  // Day (beige) or night, one choice for every School page, remembered on this device. Day by default.
+  try { document.documentElement.dataset.theme = localStorage.getItem('school-theme') || 'day'; } catch (e) {}
+</script>
+<style>
+  /* School's paper: beige by day, warm dark by night. Kept sober on purpose: one session at a time. */
+  :root, [data-theme="day"] {
+    --paper: #f7f3ea; --card: #fbf8f1; --ink: #2b2620; --soft: #6f665a; --line: #e3dccd;
+    --accent: #8a5a2b; --code: #efe7d6;
+    --got: #2f7a4f; --mid: #b07a12; --late: #8a5a9e; --q: #985a22; --c: #357a4f;
+    --nb-bg: #efe5d2; --nb-top: #e5d6b9; --nb-rule: #d6c3a0;
+  }
+  [data-theme="night"] {
+    --paper: #191714; --card: #201d19; --ink: #ece6da; --soft: #a49b8d; --line: #34302a;
+    --accent: #d9a46a; --code: #15130f;
+    --got: #7cc49a; --mid: #e0b45a; --late: #c39be0; --q: #e0a06a; --c: #86c29f;
+    --nb-bg: #221c15; --nb-top: #2c241a; --nb-rule: #45392a;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 Georgia, 'Times New Roman', serif; }
+  button, select, textarea { font-family: system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 18px 90px; }
+  .topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .back { font: 600 14px system-ui, sans-serif; color: var(--accent); text-decoration: none; }
+  .theme { font: 600 14px system-ui, sans-serif; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; min-height: 36px; cursor: pointer; }
+  .theme:hover { border-color: var(--accent); }
+  .course { margin: 0; color: var(--soft); font: 13px/1.4 system-ui, sans-serif; letter-spacing: .02em; }
+  h1 { font-size: 32px; font-weight: 600; margin: 6px 0 0; line-height: 1.2; }
+  /* Which session you are in: top left, outside the boxes, and it stays while scrolling. */
+  .where { position: sticky; top: 0; z-index: 3; margin: 22px -18px 0;  padding: 8px 18px; background: var(--paper); font: 600 13px/21px  ui-monospace, Consolas, monospace; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+  .lede { margin: 6px 0 0; color: var(--soft); }
+
+  /* The three sessions: one shown at a time. */
+  .sessions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 22px 0 6px; }
+  .sess.ref { align-content: start; border-style: dashed; }
+  .sess.ref[aria-selected="true"] { border-style: solid; }
+  /* Cheat sheet: one line per term, found by typing. */
+  .ref-search { position: sticky; top: 37px; z-index: 2; width: 100%; margin: 18px 0 0; min-height: 42px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 15px system-ui, sans-serif; box-shadow: 0 6px 18px color-mix(in srgb, var(--paper) 80%, transparent); }
+  .ref-search:focus { outline: none; border-color: var(--accent); }
+  .ref-group h2 { margin: 28px 0 6px; }
+  .ref { margin: 0; display: grid; }
+  .ref-row { display: grid; grid-template-columns: minmax(0, 15em) minmax(0, 1fr); gap: 4px 16px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .ref-row dt { font: 600 14px/1.5 ui-monospace, 'Cascadia Code', Consolas, monospace; overflow-wrap: anywhere; }
+  .ref-row dd { margin: 0; display: grid; gap: 6px; font-size: 15px; }
+  .ref-row dd pre { font-size: 13px; padding: 6px 10px; }
+  .ref-go { justify-self: start; padding: 0; border: 0; background: none; color: var(--soft); font: 600 12px system-ui, sans-serif; cursor: pointer; min-height: 24px; }
+  .ref-go:hover { color: var(--accent); }
+  .sess { display: grid; gap: 6px; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); cursor: pointer; font: 14px/1.3 system-ui, sans-serif; }
+  .sess b { font: 600 12px ui-monospace, Consolas, monospace; color: var(--accent); }
+  .sess[aria-selected="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .bar { height: 4px; border-radius: 99px; background: var(--line); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--got); width: 0; transition: width .3s; }
+
+  h2 { font-size: 21px; font-weight: 600; margin: 34px 0 10px; }
+  .group-note { margin: -4px 0 12px; color: var(--soft); font-size: 15px; }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font: 600 13px ui-monospace, Consolas, monospace; margin: 4px 0 0; }
+  .flow span { padding: 3px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+  .flow em { color: var(--soft); font-style: normal; }
+  .flow-label { margin: 10px 0 4px; font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+
+  /* A card: name, what it does, an example, then one quiet line of controls. */
+  .cards { display: grid; gap: 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 10px; display: grid; gap: 8px; scroll-margin-top: 20px; }
+  .card[data-mark="got"] { border-color: color-mix(in srgb, var(--got) 55%, var(--line)); }
+  .card[data-mark="mid"] { border-color: color-mix(in srgb, var(--mid) 55%, var(--line)); }
+  .card[data-mark="late"] { border-color: color-mix(in srgb, var(--late) 55%, var(--line)); }
+  .card.flash { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+  /* Overall: questions and comments about the course as a whole, above the sessions. */
+  .card.overall { margin-top: 18px; border-style: dashed; padding-bottom: 12px; }
+  .card.overall h3 { font-size: 16px; }
+  .card.overall .hint { color: var(--soft); font-size: 14.5px; }
+  .card h3 { margin: 0; font-size: 17px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
+  .num { font: 12px ui-monospace, Consolas, monospace; color: var(--soft); flex: none; }
+  .card p { margin: 0; }
+  pre { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--code); font: 13.5px/1.55 ui-monospace, 'Cascadia Code', Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .kw { color: var(--accent); font-weight: 600; }
+  .cm { color: var(--soft); }
+  .watch { font-size: 15px; padding: 7px 11px; border-radius: 8px; background: color-mix(in srgb, var(--q) 9%, transparent); }
+  .watch b { font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--q); margin-right: 6px; }
+  .foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .note-btn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px; min-height: 30px; border-radius: 999px; border: 1px dashed color-mix(in srgb, var(--q) 55%, transparent); background: none; color: var(--ink); opacity: .7; font: 600 12.5px system-ui, sans-serif; cursor: pointer; }
+  .note-btn::before { content: '✎'; color: var(--q); }
+  .note-btn:hover, .note-btn[aria-pressed="true"] { opacity: 1; border-style: solid; }
+  .marks { display: flex; gap: 4px; margin-left: auto; }
+  .mark { position: relative; width: 40px; height: 40px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
+  .mark::before { content: ''; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--dot); opacity: .45; }
+  .mark:hover::before { opacity: .9; }
+  .mark[aria-pressed="true"]::before, .mark:active::before { background: var(--dot); opacity: 1; }
+  .mark::after { content: attr(data-label); position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%); white-space: nowrap; font: 600 12px system-ui, sans-serif; padding: 2px 9px; border-radius: 999px; background: var(--dot); color: var(--paper); opacity: 0; pointer-events: none; transition: opacity .15s; }
+  .mark:hover::after, .mark:focus-visible::after, .mark:focus::after { opacity: 1; }
+  /* The last dot sits at the right edge: its label opens leftwards so it is never cut off. */
+  .mark.m-late::after { left: auto; right: 0; transform: none; }
+  .m-got { --dot: var(--got); } .m-mid { --dot: var(--mid); } .m-late { --dot: var(--late); }
+
+  /* Highlights: light, see-through colours over the text, as on the Python page. */
+  mark.hl { --hl: #f2c14e; background: color-mix(in srgb, var(--hl) 38%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; cursor: pointer; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  mark.hl[data-c="green"] { --hl: #6fbf8e; }
+  mark.hl[data-c="blue"] { --hl: #7aa6e6; }
+  mark.hl[data-c="pink"] { --hl: #e48fb4; }
+  [data-theme="night"] mark.hl { background: color-mix(in srgb, var(--hl) 30%, transparent); }
+  #sel-bar { position: fixed; z-index: 75; display: flex; align-items: center; gap: 4px; padding: 5px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 8px 24px rgb(0 0 0 / .2); }
+  #sel-bar .sb-c { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--card); background: color-mix(in srgb, var(--hl) 60%, var(--card)); cursor: pointer; box-shadow: 0 0 0 1px var(--line); }
+  #sel-bar .sb-c:hover { box-shadow: 0 0 0 2px var(--hl); }
+  #sel-bar .sb-btn { min-height: 30px; padding: 3px 12px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--q) 16%, var(--card)); color: var(--ink); font: 600 13px system-ui, sans-serif; cursor: pointer; }
+  #sel-bar .sb-com { background: color-mix(in srgb, var(--c) 16%, var(--card)); }
+  #sel-bar .sb-sep { width: 1px; height: 20px; background: var(--line); margin: 0 2px; }
+  /* The picture: a small visual on a tiny made-up shop at the top of each session. */
+  .pic { margin: 18px 0 0; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+  .pic > summary { cursor: pointer; list-style: none; display: flex; align-items: center; padding: 10px 14px; font: 600 15px system-ui, sans-serif; color: var(--accent); }
+  .pic > summary::-webkit-details-marker { display: none; }
+  .pic > summary::after { content: '▸ open'; margin-left: auto; font: 600 12px system-ui, sans-serif; color: var(--soft); }
+  .pic[open] > summary::after { content: '× close'; }
+  .pic-body { padding: 0 14px 14px; display: grid; gap: 10px; }
+  .pic-lede { margin: 0; font-size: 15px; }
+  .pic-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+  .pic-next { display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; }
+  .pic-arrow { color: var(--soft); font: 600 18px system-ui, sans-serif; }
+  .pic-step { display: grid; gap: 4px; min-width: 0; max-width: 100%; align-self: flex-start; }
+  .pic-cap { font: 600 12px ui-monospace, Consolas, monospace; color: var(--accent); }
+  .pic-note { font: 13px/1.4 system-ui, sans-serif; color: var(--soft); max-width: 34ch; }
+  .pic table { font-size: 12.5px; }
+  .pic th, .pic td { padding: 3px 9px 3px 6px; }
+  .pic .key { box-shadow: inset 0 -2px 0 var(--accent); }
+  .pic .sel { background: color-mix(in srgb, var(--got) 16%, transparent); }
+  .pic .new { background: color-mix(in srgb, var(--mid) 18%, transparent); }
+  .pic tr.off td { opacity: .35; text-decoration: line-through; }
+  /* Columns a clause reads, keeps or makes; groups in colour; and the little key that names them. */
+  .pic .read, .xmore .read { border-radius: 0; background: color-mix(in srgb, var(--accent) 10%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 60%, transparent), inset -2px 0 0 color-mix(in srgb, var(--accent) 60%, transparent); }
+  .pic th.read, .xmore th.read { box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 60%, transparent), inset -2px 0 0 color-mix(in srgb, var(--accent) 60%, transparent), inset 0 2px 0 color-mix(in srgb, var(--accent) 60%, transparent); }
+  .pic tr.ga td { background: color-mix(in srgb, var(--got) 12%, transparent); }
+  .pic tr.gb td { background: color-mix(in srgb, var(--q) 12%, transparent); }
+  .pic tr.gc td { background: color-mix(in srgb, var(--late) 12%, transparent); }
+  .key-read, .key-sel, .key-new, .key-off, .key-grp { display: inline-block; margin: 0 8px 4px 0; padding: 1px 7px; border-radius: 5px; font: 600 11.5px ui-monospace, Consolas, monospace; color: var(--ink); }
+  .key-read { background: color-mix(in srgb, var(--accent) 10%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 60%, transparent), inset -2px 0 0 color-mix(in srgb, var(--accent) 60%, transparent); border-radius: 0; }
+  .key-sel { background: color-mix(in srgb, var(--got) 16%, transparent); }
+  .key-new { background: color-mix(in srgb, var(--mid) 18%, transparent); }
+  .key-off { text-decoration: line-through; opacity: .5; }
+  .key-grp { background: color-mix(in srgb, var(--q) 12%, transparent); }
+  .pic-chart { display: grid; gap: 4px; min-width: min(320px, 100%); }
+  .pic-title { margin: 0 0 4px; font: 600 14px system-ui, sans-serif; }
+  .pic-bar { display: grid; grid-template-columns: 8.5em 1fr auto; align-items: center; gap: 8px; font: 12.5px system-ui, sans-serif; }
+  .pic-bar i { display: block; height: 12px; border-radius: 3px; background: var(--accent); opacity: .75; }
+  .pic-bar b { font: 500 11.5px ui-monospace, Consolas, monospace; color: var(--soft); }
+  /* Slide link on a card, and the private-files line. */
+  .slide-link { font: 600 12.5px system-ui, sans-serif; color: var(--soft); text-decoration: none; padding: 3px 4px; }
+  .slide-link:hover { color: var(--accent); }
+  .files { margin-top: 28px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 12px; font: 14px system-ui, sans-serif; color: var(--soft); display: grid; gap: 8px; }
+  .files b { color: var(--ink); }
+  .files-up { justify-self: start; display: inline-flex; align-items: center; min-height: 34px; padding: 4px 14px; border-radius: 999px; background: var(--accent); color: var(--paper); font: 600 13px system-ui, sans-serif; cursor: pointer; }
+  .files-up input { display: none; }
+  .kw-chip { text-transform: none; letter-spacing: 0; font: 600 12px ui-monospace, Consolas, monospace; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; cursor: help; }
+  .kw-chip i { font-style: normal; color: var(--soft); margin-left: 5px; }
+  .kw-chip:hover { border-color: var(--accent); }
+  /* Keyword peek: hover a keyword for a moment and its cheat-sheet box opens on the side. */
+  .kw[data-kw], .kw-t { cursor: help; border-radius: 3px; }
+  .kw[data-kw]:hover, .kw-t:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
+  .peek { position: fixed; z-index: 58; right: 44px; top: 96px; width: min(320px, calc(100vw - 32px)); display: grid; gap: 8px; padding: 12px 14px 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--accent); box-shadow: 0 14px 36px rgb(0 0 0 / .22); font-size: 15px; }
+  .peek-top { display: flex; align-items: flex-start; gap: 8px; }
+  .peek-term { margin: 0; font: 600 14.5px/1.45 ui-monospace, 'Cascadia Code', Consolas, monospace; flex: 1; overflow-wrap: anywhere; }
+  .peek-close { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--soft); cursor: pointer; font-size: 16px; }
+  .peek p { margin: 0; }
+  .peek pre { font-size: 12.5px; padding: 6px 10px; }
+  .peek .ref-go { color: var(--accent); }
+  .peek-more { font: 600 12px system-ui, sans-serif; color: var(--soft); }
+  @media (max-width: 900px) { .peek { right: 16px; left: 16px; top: auto; bottom: 16px; width: auto; max-height: 55vh; overflow: auto; } }
+.bold-btn { position: fixed; z-index: 80; width: 28px; height: 28px; padding: 0; border-radius: 7px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 700 14px Georgia, serif; cursor: pointer; opacity: .75; }
+.bold-btn:hover { opacity: 1; border-color: var(--accent); }
+textarea[aria-label="Your note"] { padding-right: 40px !important; }
+  /* Notes: questions and comments */
+  .notes { display: grid; gap: 6px; }
+  .note { --nc: var(--q); border-radius: 8px; padding: 7px 11px; background: color-mix(in srgb, var(--nc) 9%, transparent); display: grid; gap: 3px; font-family: system-ui, sans-serif; font-size: 14.5px; }
+  .note[data-kind="comment"] { --nc: var(--c); }
+  .note-head { display: flex; align-items: center; gap: 8px; }
+  .note-kind { font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--nc); }
+  .note-kind::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--nc); margin-right: 6px; vertical-align: 1px; }
+  .note.done .note-kind::before { background: none; box-shadow: inset 0 0 0 1.5px var(--nc); }
+  .tools { margin-left: auto; display: flex; }
+  .tools button { min-width: 28px; min-height: 28px; border: 0; background: none; color: var(--soft); cursor: pointer; border-radius: 6px; font: 600 13px system-ui, sans-serif; }
+  .tools button.armed { background: var(--late); color: var(--paper); padding: 0 8px; }
+  .note-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .answer { border-left: 3px solid var(--nc); padding-left: 9px; margin-top: 2px; }
+  .read { justify-self: start; min-height: 28px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--nc); background: none; color: var(--ink); font: 600 12px system-ui, sans-serif; cursor: pointer; }
+  .editor { display: grid; gap: 7px; }
+  .editor textarea, .nb-write textarea { width: 100%; font: 15px system-ui, sans-serif; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; resize: vertical; }
+  .kinds, .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+  .kinds button, .acts button { min-height: 32px; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 600 13px system-ui, sans-serif; cursor: pointer; }
+  .kinds button[aria-checked="true"] { background: var(--q); border-color: var(--q); color: var(--paper); }
+  .kinds button[data-kind="comment"][aria-checked="true"] { background: var(--c); border-color: var(--c); }
+  .acts .save { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+  /* Practice: the question first, the answer behind a tap. */
+  .practice { display: grid; gap: 8px; }
+  .pq { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 10px 14px; }
+  .pq > summary { cursor: pointer; list-style: none; display: flex; gap: 10px; align-items: baseline; }
+  .pq > summary::-webkit-details-marker { display: none; }
+  .pq > summary::after { content: 'Answer ▸'; margin-left: auto; font: 600 12.5px system-ui, sans-serif; color: var(--accent); white-space: nowrap; }
+  .pq[open] > summary::after { content: 'Hide ▾'; }
+  .pq[open] > summary { margin-bottom: 10px; }
+  .pq .ans { display: grid; gap: 8px; }
+  .out-head { font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+  .tbl-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; font: 13px ui-monospace, Consolas, monospace; }
+  th, td { text-align: left; padding: 3px 12px 3px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--soft); font-weight: 600; }
+  .null { color: var(--soft); font-style: italic; }
+  .more-rows { font: 12.5px system-ui, sans-serif; color: var(--soft); }
+  .recap { margin: 0; padding-left: 20px; }
+  .recap li { margin: 4px 0; }
+  .sync { margin-top: 36px; color: var(--soft); font: 13px system-ui, sans-serif; }
+
+  /* The notepad on the right: the same dot and paper as Practice. */
+  .nb-dot { position: fixed; z-index: 55; right: 10px; top: 50%; width: 22px; height: 22px; padding: 0; border-radius: 50%; cursor: pointer; border: 2px solid color-mix(in srgb, var(--accent) 70%, transparent); background: var(--nb-bg); }
+  .nb-dot::after { content: ''; position: absolute; inset: -11px; }
+  .nb-dot:hover, .nb-dot[aria-expanded="true"] { border-color: var(--accent); }
+  .nb-dot.has-notes { background: var(--accent); }
+  .notebook { position: fixed; z-index: 60; right: 16px; top: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); overflow: auto; background: var(--nb-bg); border: 1px solid var(--nb-rule); border-radius: 16px; box-shadow: 0 18px 48px rgb(0 0 0 / .3); --line: var(--nb-rule); --card: color-mix(in srgb, var(--nb-bg) 70%, #fff 30%); }
+  [data-theme="night"] .notebook { --card: color-mix(in srgb, var(--nb-bg) 85%, #fff 15%); }
+  .nb-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; padding: 12px 10px 12px 16px; background: var(--nb-top); border-bottom: 1px solid var(--nb-rule); }
+  .nb-title { font-size: 20px; font-weight: 600; color: var(--accent); margin-right: auto; }
+  .nb-close { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--nb-rule); background: var(--card); color: var(--ink); font-size: 17px; cursor: pointer; }
+  .nb-write { display: grid; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--nb-rule); }
+  .about { display: flex; align-items: center; gap: 8px; font: 14px system-ui, sans-serif; color: var(--soft); min-width: 0; }
+  .about select { flex: 1; min-width: 0; width: 100%; min-height: 34px; font: 13px ui-monospace, Consolas, monospace; color: var(--ink); background: var(--card); border: 1px solid var(--nb-rule); border-radius: 8px; padding: 3px 6px; }
+  .nb-write .acts .save { background: var(--accent); border-color: var(--accent); }
+  .saved { margin: 0; min-height: 1.2em; font: 13px system-ui, sans-serif; color: var(--got); }
+  .nb-list { display: grid; gap: 10px; padding: 12px 16px 16px; }
+  .nb-group { display: grid; gap: 6px; padding: 9px 11px; border-radius: 12px; border: 1px solid var(--nb-rule); background: var(--card); }
+  .nb-group.here { border-color: var(--accent); }
+  .nb-go { text-align: left; padding: 0; border: 0; background: none; color: var(--ink); font: 600 14px system-ui, sans-serif; cursor: pointer; min-height: 28px; }
+  .nb-go .t { font: 600 11px ui-monospace, Consolas, monospace; color: var(--nb-bg); background: var(--accent); border-radius: 6px; padding: 1px 6px; margin-right: 6px; }
+  .nb-here { font: 600 12px system-ui, sans-serif; color: var(--accent); margin-left: 6px; }
+  .empty { color: var(--soft); font: 14px system-ui, sans-serif; margin: 0; }
+
+  /* Statistics: formulas, exercises and the small drawings. */
+  .seg { --tint: oklch(0.80 0.11 var(--h, 250) / 0.30); --title: oklch(0.45 0.13 var(--h, 250)); }
+  [data-theme="night"] .seg { --tint: oklch(0.62 0.12 var(--h, 250) / 0.20); --title: oklch(0.84 0.11 var(--h, 250)); }
+  .seg > h2 { color: var(--title); }
+  .seg .card, .seg .pq { background: color-mix(in srgb, var(--tint), var(--card)); border-color: transparent; }
+  .seg .card pre, .seg .pq pre, .seg .card .watch { background: color-mix(in srgb, var(--paper) 72%, transparent); }
+  .seg .num, .seg .ex-num { color: var(--title); opacity: 1; font-weight: 700; }
+  .card .sel { background: color-mix(in srgb, var(--got) 18%, transparent); }
+  .card table { font-size: 12.5px; }
+  .card th, .card td { padding: 3px 9px 3px 6px; }
+  .steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+  .walk { display: grid; gap: 6px; }
+  .walk .flow-label { margin: 0; }
+  .reads dl { margin: 0; display: grid; }
+  .reads dl > div { display: grid; grid-template-columns: minmax(0, 8.5em) minmax(0, 1fr); gap: 2px 12px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+  .reads dl > div:last-child { border-bottom: 0; }
+  .reads dt { font: 600 13.5px/1.5 ui-monospace, 'Cascadia Code', Consolas, monospace; overflow-wrap: anywhere; }
+  .reads dd { margin: 0; font-size: 15px; line-height: 1.45; }
+  .reads .flow-label { margin: 0 0 2px; }
+  sub, sup { font-size: .72em; line-height: 0; }
+  .ex { display: grid; gap: 8px; padding: 12px 0 4px; }
+  .ex h3 { margin: 0; font-size: 17px; font-weight: 600; }
+  .ex-num { font: 600 12px ui-monospace, Consolas, monospace; color: var(--accent); margin-right: 8px; }
+  .ex-setup { margin: 0; }
+  .ans p { margin: 0; }
+  .ans .sel, .ex .sel { background: color-mix(in srgb, var(--got) 16%, transparent); }
+  .venn { margin: 0; width: 170px; max-width: 100%; }
+  .venn svg, .tree { display: block; width: 100%; height: auto; }
+  figcaption { margin-top: 4px; font: 12.5px/1.35 system-ui, sans-serif; color: var(--soft); }
+  .pmf { margin: 0; width: 310px; max-width: 100%; }
+  .pmf.narrow { width: 170px; }
+  .pmf-plot { position: relative; height: 104px; margin-top: 18px; border-bottom: 1px solid var(--soft); }
+  .pmf-bar { position: absolute; bottom: 0; width: 18px; transform: translateX(-50%); border-radius: 4px 4px 0 0; background: var(--accent); }
+  .pmf-bar.thin { width: 9px; border-radius: 3px 3px 0 0; }
+  .pmf-bar.dim { opacity: .3; }
+  .pmf-bar b { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 1px; font: 500 11px ui-monospace, Consolas, monospace; color: var(--ink); white-space: nowrap; }
+  .pmf-x { position: relative; height: 32px; font: 11.5px ui-monospace, Consolas, monospace; color: var(--soft); }
+  .pmf-x span { position: absolute; top: 3px; transform: translateX(-50%); }
+  .pmf-x i { position: absolute; top: 15px; transform: translateX(-50%); font-style: normal; font-size: 11px; color: var(--ink); }
+
+  @media (max-width: 560px) {
+    h1 { font-size: 26px; }
+    .sessions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ref-row { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+</style>
+</head>
+<body>
+<main>
+  <div class="topline">
+    <a class="back" href="/school">← School</a>
+    <button class="theme" id="theme" type="button"></button>
+  </div>
+  <p class="course">Statistics &amp; Probability for Data Science · Alberto Archetti · Politecnico di Milano</p>
+  <section class="card overall" data-key="stats|notebook" aria-label="Overall questions and comments">
+    <h3>Overall questions and comments</h3>
+    <p class="hint">For anything about the course as a whole, not one card.</p>
+    <div class="notes"></div>
+    <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button></div>
+  </section>
+  <div class="sessions" role="tablist" aria-label="Lectures" id="sessions"></div>
+  <div id="session"></div>
+  <div class="files" id="files" hidden></div>
+  <p class="sync" id="sync"></p>
+</main>
+
+<button type="button" class="nb-dot" id="nb-dot" aria-expanded="false" aria-controls="notebook" title="Notepad"></button>
+<aside class="notebook" id="notebook" aria-label="Notepad" hidden>
+  <div class="nb-top"><span class="nb-title">Notepad</span><button type="button" class="nb-close" id="nb-close" aria-label="Close the notepad">×</button></div>
+  <div class="nb-write">
+    <label class="about"><span>About</span><select id="nb-about" aria-label="What this note is about"></select></label>
+    <div class="kinds" role="radiogroup" aria-label="Kind of note">
+      <button type="button" role="radio" data-kind="question" aria-checked="true">Question</button>
+      <button type="button" role="radio" data-kind="comment" aria-checked="false">Comment</button>
+    </div>
+    <textarea id="nb-text" rows="3" maxlength="2000" aria-label="Your note" placeholder="A question, or a note to yourself"></textarea>
+    <div class="acts"><button type="button" class="save" id="nb-save">Save</button></div>
+    <p class="saved" id="nb-saved" role="status"></p>
+  </div>
+  <div class="nb-list" id="nb-list"></div>
+</aside>
+
+
+<script>
+/* ---------- Small drawings: tables, Venn diagrams, trees and PMF bars ----------
+ * In the page's own colours, so they follow day and night. */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// m_X, σ_X and e^(−λ) are typed plainly in the content and shown as subscripts and powers.
+const subs = html => html.replace(/([mσnk])_(\(aX\+b\)|[A-Za-z])/g, '$1<sub>$2</sub>').replace(/e\^\(([^)]*)\)/g, 'e<sup>$1</sup>');
+const text = s => subs(esc(s));
+const row = (...items) => `<div class="pic-flow">${items.map(i => `<div class="pic-step">${i}</div>`).join('')}</div>`;
+// A cell that starts with * is shaded.
+function tbl(head, rows) {
+  const td = (v, tag) => { const on = String(v).startsWith('*'); return `<${tag}${on ? ' class="sel"' : ''}>${text(on ? String(v).slice(1) : v)}</${tag}>`; };
+  return `<div class="tbl-wrap"><table><thead><tr>${head.map(h => td(h, 'th')).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(v => td(v, 'td')).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+const ORDER = { ω1: '0.80', ω2: '0.06', ω3: '0.10', ω4: '0.04' };
+const SUBS = { ω1: 'ω₁', ω2: 'ω₂', ω3: 'ω₃', ω4: 'ω₄' };
+function orderGrid(on, cap) {
+  const c = w => `${on.includes(w) ? '*' : ''}${SUBS[w]}  ${ORDER[w]}`;
+  return `${cap ? `<span class="pic-cap">${text(cap)}</span>` : ''}${tbl(['', 'no refund', 'refund'], [['on time', c('ω1'), c('ω2')], ['late', c('ω3'), c('ω4')]])}`;
+}
+// Two circles in Ω. Regions to shade: a (A only), ab (both), b (B only), o (outside both).
+let figId = 0;
+function venn(on, { cap = '', a = 'A', b = 'B' } = {}) {
+  const id = `v${++figId}`, fill = 'fill="var(--accent)" fill-opacity=".38"';
+  const A = 'cx="82" cy="60" r="40"', B = 'cx="128" cy="60" r="40"';
+  return `<figure class="venn"><svg viewBox="0 0 210 120" role="img" aria-label="${esc(cap)}">
+    <defs><clipPath id="${id}cb"><circle ${B}/></clipPath>
+    <mask id="${id}na"><rect width="210" height="120" fill="#fff"/><circle ${A} fill="#000"/></mask>
+    <mask id="${id}nb"><rect width="210" height="120" fill="#fff"/><circle ${B} fill="#000"/></mask>
+    <mask id="${id}no"><rect width="210" height="120" fill="#fff"/><circle ${A} fill="#000"/><circle ${B} fill="#000"/></mask></defs>
+    ${on.includes('o') ? `<rect x="1" y="1" width="208" height="118" rx="6" ${fill} mask="url(#${id}no)"/>` : ''}
+    ${on.includes('a') ? `<circle ${A} ${fill} mask="url(#${id}nb)"/>` : ''}
+    ${on.includes('b') ? `<circle ${B} ${fill} mask="url(#${id}na)"/>` : ''}
+    ${on.includes('ab') ? `<circle ${A} ${fill} clip-path="url(#${id}cb)"/>` : ''}
+    <rect x="1" y="1" width="208" height="118" rx="6" fill="none" stroke="var(--soft)"/>
+    <circle ${A} fill="none" stroke="var(--ink)"/><circle ${B} fill="none" stroke="var(--ink)"/>
+    <g fill="var(--ink)" font-size="13" font-family="Georgia, serif"><text x="60" y="64">${esc(a)}</text><text x="142" y="64">${esc(b)}</text><text x="9" y="19" fill="var(--soft)">Ω</text></g>
+  </svg>${cap ? `<figcaption>${text(cap)}</figcaption>` : ''}</figure>`;
+}
+// Root, branches, leaves. A leaf with on: 1 is marked.
+function tree({ w = 460, kids }) {
+  const leaves = kids.reduce((n, k) => n + k.kids.length, 0), step = 30, h = leaves * step + 8;
+  const x1 = Math.round(w * 0.2), x2 = Math.round(w * 0.5);
+  let y = 4, out = '';
+  const labelled = (x, yy, s, on) => `<text x="${x}" y="${yy + 4}" fill="var(--ink)"${on ? ' font-weight="700"' : ''}>${esc(s)}</text>`;
+  const p = (xa, ya, xb, yb, s) => (s ? `<text x="${(xa + xb) / 2}" y="${(ya + yb) / 2 - 4}" text-anchor="middle" fill="var(--soft)" font-size="11.5">${esc(s)}</text>` : '');
+  const line = (xa, ya, xb, yb, on) => `<line x1="${xa}" y1="${ya}" x2="${xb}" y2="${yb}" stroke="${on ? 'var(--accent)' : 'var(--soft)'}" stroke-width="${on ? 2 : 1}"/>`;
+  const mids = kids.map(k => {
+    const start = y;
+    const pts = k.kids.map(l => { const yy = y + step / 2; y += step; return { l, yy }; });
+    const my = (start + y) / 2;
+    for (const { l, yy } of pts) out += line(x1 + 40, my, x2, yy, l.on) + p(x1 + 40, my, x2, yy, l.p) + labelled(x2 + 6, yy, l.label, l.on);
+    return { k, my };
+  });
+  const root = (4 + y) / 2;
+  for (const { k, my } of mids) out += line(10, root, x1, my) + p(10, root, x1, my, k.p) + labelled(x1 + 4, my, k.label);
+  return `<svg class="tree" viewBox="0 0 ${w} ${h}" style="max-width:${w}px" role="img" aria-label="Probability tree" font-family="system-ui, sans-serif" font-size="13">${out}<circle cx="10" cy="${root}" r="3.5" fill="var(--accent)"/></svg>`;
+}
+const warehouseTree = () => tree({ kids: [{ label: 'North', p: '0.7', kids: [{ label: 'N ∩ L: 0.07', p: '0.1', on: 1 }, { label: 'N ∩ Lᶜ: 0.63', p: '0.9' }] }, { label: 'South', p: '0.3', kids: [{ label: 'S ∩ L: 0.06', p: '0.2', on: 1 }, { label: 'S ∩ Lᶜ: 0.24', p: '0.8' }] }] });
+const bayesTable = (rows, sum) => tbl(['cause', 'prior', 'likelihood', 'product', 'posterior'], [...rows, ['sum', '1', '', sum, '1']]);
+const maxGrid = (hi = 3) => tbl(['1st ↓ 2nd →', '1', '2', '3', '4'], [1, 2, 3, 4].map(a => [String(a), ...[1, 2, 3, 4].map(b => `${Math.max(a, b) === hi ? '*' : ''}${Math.max(a, b)}`)]));
+// A PMF: one thin bar per value, placed on a true number line. Hover a bar for its value.
+function bars(rows, { cap = '', hi, thin, mean, max, narrow } = {}) {
+  const xs = rows.map(r => r[0]), lo = Math.min(...xs), up = Math.max(...xs), top = max || Math.max(...rows.map(r => r[1]));
+  const at = x => (up === lo ? 50 : 6 + (88 * (x - lo)) / (up - lo));
+  const every = rows.length > 14 ? 5 : rows.length > 9 ? 2 : 1;
+  const plot = rows.map(([x, v, t]) => (v ? `<span class="pmf-bar${thin ? ' thin' : ''}${hi && !hi.includes(x) ? ' dim' : ''}" style="left:${at(x)}%;height:${(100 * v) / top}%" title="${esc(`${x}: ${t}`)}">${thin ? '' : `<b>${esc(t)}</b>`}</span>` : '')).join('');
+  const labels = rows.filter(([x]) => (x - lo) % every === 0 || every === 1).map(([x]) => `<span style="left:${at(x)}%">${String(x).replace('-', '−')}</span>`).join('');
+  return `<figure class="pmf${narrow ? ' narrow' : ''}" role="img" aria-label="${esc(cap)}"><div class="pmf-plot">${plot}</div><div class="pmf-x">${labels}${mean === undefined ? '' : `<i style="left:${at(mean)}%" title="the mean">▲</i>`}</div>${cap ? `<figcaption>${text(cap)}</figcaption>` : ''}</figure>`;
+}
+const fact = n => (n < 2 ? 1 : n * fact(n - 1));
+const binom = (n, p) => Array.from({ length: n + 1 }, (_, k) => (fact(n) / (fact(k) * fact(n - k))) * p ** k * (1 - p) ** (n - k));
+const pois = (l, to) => Array.from({ length: to + 1 }, (_, k) => (Math.exp(-l) * l ** k) / fact(k));
+
+/* ---------- The course, in plain words ----------
+ * Written from the lecture decks; the slides themselves stay private.
+ * The figures were recomputed from each setup. */
+const SESSIONS = [
+  { n: 1, short: 'Sets and events', title: 'Probability starts with sets and events', lede: 'From a list of what can happen to a number for how likely it is, on the orders of one online shop.', groups: [
+    { name: 'What probability means', cards: [
+      { id: 'meaning', slide: 4, name: 'Two readings of "20 % chance"', what: 'A probability is a number between 0 and 1 that says how likely something is. 0 means it cannot happen, 1 means it certainly happens, and 0.2 is the same as 20 %.\n\nThat number can be read in two ways. As a frequency: look at many days like tomorrow, and about 1 in 5 of them has rain. As a belief: a new product launches only once, so there are no similar cases to count, and the number says how strongly we believe it will succeed.', more: { say: 'The weather forecast can be checked against many similar days, so the frequency reading feels natural. A product launch cannot be repeated, yet people still put a number on it. Both readings use the same rules, which is why the course can start from the rules.' } },
+      { id: 'nookery', slide: 6, name: 'Nookery, the course’s shop', what: 'All the examples in this course follow one made-up online shop, Nookery. It sells books, board games and home accessories.\n\nWhen someone places an order, two things are still unknown: will it arrive on time or late, and will the customer later ask for their money back (a refund)? Probability is the tool for talking about things that are still unknown.', watch: 'Three questions run through the lecture: how likely is late or refunded, can an order be both, and is last month’s 13.4 % late the probability for the next order? The answers are in cards 24, 13 and 29.' },
+    ] },
+    { name: 'Sets', cards: [
+      { id: 'set', slide: 8, name: 'A set and its elements', what: 'A set is just a group of things, like a shopping list. Each thing in the group is called an element. The faces of a die form a set with six elements: 1, 2, 3, 4, 5 and 6.\n\nA set can be finite, meaning you can finish counting it, like the faces of a die. It can also be infinite, meaning the counting never ends, like all the numbers between 0 and 1. A set with nothing in it is called the empty set.', f: 'S = {1, 2, 3, 4, 5, 6}     3 ∈ S     7 ∉ S\n{x ∣ 0 ≤ x ≤ 1}           the bar reads "such that"\n∅                         the empty set', more: { say: 'A set is written two ways: list the elements in braces, or state a property they share. The symbols ∈ and ∉ say whether one element is in or out. {0, 1, 2, …} is infinite but can be listed one by one. The numbers from 0 to 1 cannot be listed: there is one for every point of the segment.' } },
+      { id: 'universe', slide: 10, name: 'Subset, universal set, complement', what: 'Before talking about any set, decide what the whole world of the problem is. That whole world is called the universal set and is written Ω. For a die, Ω is the six faces.\n\nA subset is a smaller group taken from inside a bigger one: the even faces are a subset of all the faces. The complement of a set is everything else in the world, all that is left outside it. The complement of "even" is "odd".', f: 'T ⊂ S     every element of T is in S\nSᶜ = {x ∈ Ω ∣ x ∉ S}\nΩᶜ = ∅', more: { say: 'Take a die, so Ω = {1, 2, 3, 4, 5, 6}. If S = {2, 4, 6}, then Sᶜ = {1, 3, 5}. If T = {2, 4}, then T ⊂ S. When T ⊂ S and S ⊂ T both hold, the two sets are equal.', html: () => venn(['o'], { cap: 'Shaded: the complement of A and B together' }) } },
+      { id: 'union', slide: 11, name: 'Union is "or", intersection is "and"', what: 'These are two ways of combining two groups. The union means "or": put both groups together, so you get everything that is in the first, in the second, or in both. The intersection means "and": keep only what the two groups have in common.\n\nYou can also mix them with the complement. S ∩ Tᶜ means "in S and not in T". The drawing shows each one in colour.', f: 'S ∪ T     in S, in T, or in both\nS ∩ T     in both\nS ∩ Tᶜ    in S and not in T', watch: 'In everyday speech "or" often means one or the other. Here it always includes both.', more: { say: 'Three drawings of the same two sets. Read the shaded part aloud, using "or", "and" and "not".', html: () => row(venn(['a', 'ab', 'b'], { cap: 'S ∪ T', a: 'S', b: 'T' }), venn(['ab'], { cap: 'S ∩ T', a: 'S', b: 'T' }), venn(['a'], { cap: 'S ∩ Tᶜ', a: 'S', b: 'T' })) } },
+      { id: 'disjoint', slide: 12, name: 'Disjoint sets and partitions', what: 'Two groups are disjoint when they have nothing in common: no element is in both. "Orders from North" and "orders from South" are disjoint, because one order cannot come from both.\n\nA partition goes one step further. It is a set of disjoint groups that together cover the whole world, so every element is in exactly one group, with no overlap and nothing left out. Slicing a pizza is a partition: each bite is in exactly one slice.', f: 'disjoint     S ∩ T = ∅\npartition    disjoint, and their union is Ω', more: { say: 'Sort Nookery’s orders by warehouse: each order comes from exactly one, and none is left over. The warehouses are a partition of the orders. Partitions come back in Lecture 2, where they make the total probability theorem work.' } },
+      { id: 'laws', slide: 13, name: 'The algebra of sets', what: 'These are the rules for rearranging sets, much like the rules for rearranging sums with numbers. You rarely need to memorise them, but you should be able to read them. The list under the formula says what each line means in words.\n\nThe main idea is that you can swap the order, regroup with brackets, and share a set across a bracket, just as a × (b + c) becomes a × b + a × c.', f: 'S ∪ T = T ∪ S\nS ∪ (T ∪ U) = (S ∪ T) ∪ U\nS ∩ (T ∪ U) = (S ∩ T) ∪ (S ∩ U)\nS ∪ (T ∩ U) = (S ∪ T) ∩ (S ∪ U)\n(Sᶜ)ᶜ = S     S ∩ Sᶜ = ∅\nS ∪ Ω = Ω     S ∩ Ω = S' },
+      { id: 'demorgan', slide: 14, name: 'De Morgan’s laws', what: 'This rule tells you what happens when you say "not" in front of a whole bracket. The "not" goes onto each set inside, and "or" and "and" swap places.\n\nIn everyday words: "not (rain or snow)" means "no rain and no snow". And "not (rich and famous)" means "not rich, or not famous". You already reason this way; De Morgan just writes it down.', f: '(S ∪ T)ᶜ = Sᶜ ∩ Tᶜ\n(S ∩ T)ᶜ = Sᶜ ∪ Tᶜ', more: { say: 'Roll a die with S = even = {2, 4, 6} and T = at least 4 = {4, 5, 6}. Then S ∪ T = {2, 4, 5, 6}, and its complement is {1, 3}. The other way round: Sᶜ ∩ Tᶜ = {1, 3, 5} ∩ {1, 2, 3} = {1, 3}. The same answer.', html: () => row(venn(['o'], { cap: '(S ∪ T)ᶜ: {1, 3}', a: 'S', b: 'T' }), venn(['a', 'b', 'o'], { cap: '(S ∩ T)ᶜ: {1, 2, 3, 5}', a: 'S', b: 'T' })) } },
+    ] },
+    { name: 'Probabilistic models', cards: [
+      { id: 'model', slide: 16, name: 'A model has two ingredients', what: 'A probabilistic model is the description of something uncertain, and it has two parts. The first is the sample space Ω: the list of everything that could happen. The second is the probability law P: the rule that gives a probability to anything you might ask about.\n\nFor one order, the list is the four combinations of on time or late and refund or no refund. The law says how likely each one is. You always write the list first, and only then the numbers.', watch: 'P is given to events, sets of outcomes. It says how likely the outcomes in A are, taken together.' },
+      { id: 'sample', slide: 17, name: 'Experiment, outcome, sample space', what: 'An experiment is anything with an uncertain result: rolling a die, shipping an order. An outcome is one possible result. The sample space is the full list of outcomes.\n\nA good list passes two tests. Mutually exclusive means no two entries can happen at the same time. Collectively exhaustive means nothing is missing: whatever happens is on the list. Exactly one entry must always be true.', more: { say: 'Each failure below breaks one of the two conditions.', html: () => tbl(['Candidate Ω', 'Sample space?', 'Why'], [['{1, 2, 3, 4, 5, 6}, one die', 'yes', 'each roll matches one entry'], ['{on time, late}, one order', 'yes', 'each order is one or the other'], ['{0, 1, 2, …}, visitors today', 'yes', 'it may be infinite'], ['{1 or 3, 1 or 4, 2, 5, 6}', '*no', 'a 1 matches two entries: not exclusive'], ['{on time, 1 day late}', '*no', '3 days late matches nothing: not exhaustive']]) } },
+      { id: 'detail', slide: 19, name: 'The question sets the detail', what: 'The same situation can be listed in more or less detail, and neither is wrong. What you need depends on the question you are asking.\n\nThree orders ship, each on time (O) or late (L). If you need to know which orders were late, because you must call those customers, you need all 8 sequences. If you only need to know how many were late, the four counts 0, 1, 2 and 3 are enough. Use the detail the question needs, and no more.', f: 'Ω₂ = {OOO, OOL, OLO, LOO, OLL, LOL, LLO, LLL}     which\nΩ₁ = {0, 1, 2, 3}                                 how many', more: { say: 'The support team must call the customers, so it needs Ω₂. The warehouse manager only needs the number of late orders, so Ω₁ is enough. Ω₂ answers both questions, Ω₁ only one: OOL, OLO and LOO all land on the count 1, and Ω₁ cannot tell them apart.' } },
+      { id: 'grids', slide: 20, name: 'Grids and trees', what: 'When something happens in stages, first delivery and then refund, there are two good ways to list every outcome. A grid has one stage across the top and the other down the side, and each cell is one outcome. A tree starts at one point and splits at each stage, and each end of a branch is one outcome.\n\nThey hold the same information. Use whichever you find easier to read.', more: { say: 'Delivery, then refund: four outcomes, drawn both ways. ω₄ is (late, refund). The node "late" stands for {ω₃, ω₄}.', html: () => row(tbl(['', 'no refund', 'refund'], [['on time', 'ω₁', 'ω₂'], ['late', 'ω₃', 'ω₄']]), tree({ w: 300, kids: [{ label: 'on time', kids: [{ label: 'no refund: ω₁' }, { label: 'refund: ω₂' }] }, { label: 'late', kids: [{ label: 'no refund: ω₃' }, { label: 'refund: ω₄' }] }] })) } },
+      { id: 'event', slide: 21, name: 'An event is a set of outcomes', what: 'An event is anything you might ask the probability of, written as the group of outcomes that make it true. "Late" is an event: it is true in two of the four outcomes.\n\nAn event occurs if the actual outcome is one of those in the group. So several events can occur at once: an order that is late and refunded makes both "late" and "refunded" true.', f: 'L = late     = {ω₃, ω₄}     the bottom row\nR = refunded = {ω₂, ω₄}     the right column', watch: 'If the outcome is ω₄, both L and R occur: an order can be late and refunded at once.' },
+      { id: 'statements', slide: 22, name: 'From business words to sets', what: 'Exam and business questions come in words, and the first step is always to translate them into sets. There are only a few translations to learn: "or" becomes ∪, "and" becomes ∩, "not" becomes the small c, and "but" means "and".\n\nThe table below takes each sentence, writes it as a set, and lists which cells of the order grid it covers.', more: { say: 'The whole translation on the order grid.', html: () => tbl(['Statement', 'Event', 'Outcomes'], [['late or refunded', 'L ∪ R', 'ω₂, ω₃, ω₄'], ['late and refunded', 'L ∩ R', 'ω₄'], ['late but not refunded', 'L ∩ Rᶜ', 'ω₃'], ['neither late nor refunded', 'Lᶜ ∩ Rᶜ', 'ω₁'], ['exactly one of the two', '(L ∩ Rᶜ) ∪ (Lᶜ ∩ R)', 'ω₂, ω₃']]) } },
+    ] },
+    { name: 'Probability laws', cards: [
+      { id: 'axioms', slide: 26, name: 'The three axioms', what: 'All of probability rests on three basic rules, called axioms. An axiom is a starting rule that we accept without proof, and everything else is worked out from it.\n\nRule 1: a probability is never negative. Rule 2: if two things cannot happen together, the chance of either one is their two chances added. Rule 3: the chance that something on the list happens is 1, or 100 %.', f: '1. Nonnegativity   P(A) ≥ 0\n2. Additivity      A, B disjoint ⇒ P(A ∪ B) = P(A) + P(B)\n3. Normalization   P(Ω) = 1', more: { say: 'Additivity applied again and again covers any finite number of disjoint events. When Ω is infinite, it also covers an endless sequence of disjoint events: P(A₁ ∪ A₂ ∪ ⋯) = P(A₁) + P(A₂) + ⋯.' } },
+      { id: 'complement', slide: 27, name: 'The complement rule', what: '"Not A" is often easier to work out than A itself. Since A either happens or it does not, the two chances must add up to 1. So the chance of "not A" is 1 minus the chance of A.\n\nIf 14 % of orders are late, then 86 % are on time. You will use this trick constantly, especially for "at least one" questions.', f: 'P(Aᶜ) = 1 − P(A)', more: { say: 'By additivity P(A) + P(Aᶜ) = P(Ω), and by normalization P(Ω) = 1. Two things follow. With A = Ω, P(∅) = 0. And since P(Aᶜ) ≥ 0, P(A) ≤ 1. Example: if P(late) = 0.14, then P(on time) = 0.86.' } },
+      { id: 'discrete', slide: 30, name: 'A finite model: add up the outcomes', what: 'This is the simplest way to build a model, when you can list all the outcomes. Write the list, give each outcome a probability, and check that none is negative and that they add up to 1.\n\nThen the probability of any event is found by adding the numbers of the outcomes inside it. No further maths is needed: just add the right cells.', f: 'P(A) = sum of the probabilities of the outcomes in A', more: { say: 'Nookery’s model of one order, the numbers used for the rest of the lecture. The check: 0.80 + 0.06 + 0.10 + 0.04 = 1. Late is the bottom row: P(L) = 0.10 + 0.04 = 0.14. Refunded is the right column: P(R) = 0.06 + 0.04 = 0.10. Both is one cell: P(L ∩ R) = 0.04.', html: () => orderGrid(['ω3', 'ω4']) } },
+      { id: 'uniform', slide: 31, name: 'Equally likely outcomes', what: 'Sometimes every outcome has the same chance, as with a fair die. Then probability becomes counting. Count the outcomes you want, count all the outcomes, and divide.\n\nWith 6 equally likely faces, each has probability 1/6, and "even" holds 3 faces, so its probability is 3/6. This only works when the outcomes really are equally likely.', f: 'P(A) = (number of outcomes in A) / n', more: { say: 'Fair coin, three tosses: 8 sequences, each 1/8. "Exactly 2 heads" is {HHT, HTH, THH}, so 3/8. Fair die: P(even) = 3/6.' } },
+      { id: 'four-sided', slide: 32, name: 'Counting pairs on a grid', what: 'A 4-sided die has faces 1 to 4. Rolling it twice gives 16 possible pairs, since each of the 4 first results can go with each of the 4 second results. All 16 are equally likely, because the die is fair.\n\nSo any question about the two rolls is solved the same way: draw the 4 by 4 grid, mark the cells that fit, count them and divide by 16.', more: { say: 'At least one 4 has 7 cells, so 7/16. Equal rolls have 4 cells on the diagonal, so 4/16. First roll larger has 6 cells, so 6/16. Shaded: at least one 4.', html: () => tbl(['1st ↓ 2nd →', '1', '2', '3', '4'], [['1', '', '', '', '*•'], ['2', '', '', '', '*•'], ['3', '', '', '', '*•'], ['4', '*•', '*•', '*•', '*•']]) } },
+      { id: 'not-equal', slide: 33, name: 'Do not count unless they are equal', what: 'A common mistake: late is 2 of the 4 outcomes, so its chance must be 2/4 = 0.5. That is wrong, because the four outcomes are not equally likely. Most orders are on time with no refund. The model gives 0.14 for late.\n\nEqual chances need a real reason, like the physical symmetry of a fair die. Orders have no such symmetry, so you must add their actual probabilities.', watch: 'Count outcomes only when they are equally likely.' },
+      { id: 'continuous', slide: 34, name: 'Continuous Ω: lengths, not points', what: 'So far the outcomes could be listed. Now imagine a wheel of fortune marked from 0 to 1, where it can stop at any point at all, including 0.2371… There are endlessly many points.\n\nThen the chance of landing on one exact point is 0. Instead we ask about stretches. The chance of landing in a stretch is simply how long it is: the stretch from 0.2 to 0.5 is 0.3 long, and so has probability 0.3.', f: 'P([a, b]) = b − a     P([0.2, 0.5]) = 0.3', more: { say: 'Why a point has probability 0: if every point had some ε > 0, then more than 1/ε points would add up to more than 1, which the axioms forbid. So a point can have probability 0 and still be possible.' } },
+      { id: 'romeo', slide: 36, name: 'Romeo and Juliet: probability as area', what: 'Romeo and Juliet each arrive up to one hour late, at random, and whoever comes first waits 15 minutes. What is the chance they meet?\n\nDraw a square: Romeo’s delay along the bottom, Juliet’s up the side. Every point in the square is one possible pair of delays, and the whole square has area 1. They meet when their delays differ by at most a quarter of an hour, which is a band along the diagonal. So the probability is the area of that band.', f: 'P(meet) = 1 − 2 × ½ × (3/4)² = 1 − 9/16 = 7/16 ≈ 0.44', more: { say: 'Easier to measure where they miss. The two corners outside the band are triangles with legs of 3/4, so together they cover 9/16 of the square. What is left is the band: 7/16, a little below one half.' } },
+    ] },
+    { name: 'Properties of probability laws', cards: [
+      { id: 'prop-a', slide: 38, name: 'Property (a): larger event, larger probability', what: 'If A is inside B, then every time A happens B happens too. So B must be at least as likely as A.\n\n"Late and refunded" is inside "late", because any order that is both is certainly late. So "late and refunded" can never be more likely than "late". This is also a quick way to catch a wrong number in a report.', f: 'A ⊂ B ⇒ P(A) ≤ P(B)', more: { say: 'B is A plus the ring Aᶜ ∩ B. The two are disjoint, so P(B) = P(A) + P(Aᶜ ∩ B), and the ring adds at least 0. Example: L ∩ R ⊂ L, so "late and refunded" is never likelier than "late".' } },
+      { id: 'prop-b', slide: 39, name: 'Property (b): subtract the overlap once', what: 'This is the rule for the chance of "A or B". Adding the two chances is almost right, but the part where both happen gets counted twice: once in A and once in B. So you take it away once.\n\nIt answers the shop’s first question: how likely is an order to be late or refunded?', f: 'P(A ∪ B) = P(A) + P(B) − P(A ∩ B)', watch: 'This answers the first question: P(L ∪ R) = 0.14 + 0.10 − 0.04 = 0.20. Adding only 0.14 + 0.10 = 0.24 counts ω₄ twice.', more: { say: 'Check by adding the three shaded cells: 0.10 + 0.04 + 0.06 = 0.20. The complement rule gives the blank cell: P(neither) = 1 − 0.20 = 0.80.', html: () => orderGrid(['ω2', 'ω3', 'ω4']) } },
+      { id: 'prop-c', slide: 40, name: 'Property (c): the union bound', what: 'Since the addition rule always takes something away, or nothing, simply adding the chances can only give too much or exactly the right amount. So the sum is a ceiling: the true answer is never above it.\n\nThis is called the union bound. It is useful when you do not know the overlap but still want a safe upper limit.', f: 'P(A ∪ B) ≤ P(A) + P(B)\nP(A₁ ∪ ⋯ ∪ Aₙ) ≤ P(A₁) + ⋯ + P(Aₙ)' },
+      { id: 'prop-d', slide: 41, name: 'Property (d): split three events into pieces', what: 'This is another way to work out "A or B or C", without counting anything twice. Cut the whole thing into pieces that do not overlap: first all of A, then what B adds beyond A, then what C adds beyond both.\n\nBecause the pieces do not overlap, you can simply add their chances.', f: 'P(A ∪ B ∪ C) = P(A) + P(Aᶜ ∩ B) + P(Aᶜ ∩ Bᶜ ∩ C)' },
+      { id: 'demere', slide: 44, name: 'De Méré’s mistake', what: 'A true story from the 1600s. The gambler de Méré made two bets: at least one six in 4 rolls of a die, and at least one double six in 24 rolls of two dice. He added the chance per roll and got 2/3 both times.\n\nYet over many games he won the first bet and lost the second. His adding was wrong, because it counts twice the games with more than one six.', watch: 'Adding the chance per roll counts the overlaps twice, more so with every roll. Lecture 2 settles both bets.', more: { say: 'The smallest case: at least one six in 2 rolls. His method says 1/6 + 1/6 = 12/36. Of the 36 equal pairs, a six on the first roll is 6 pairs and a six on the second is 6 pairs, but (6, 6) is in both. Property (b) gives the truth.', f: 'P(A ∪ B) = 6/36 + 6/36 − 1/36 = 11/36 ≈ 0.306' } },
+    ] },
+    { name: 'Models and reality', flowLabel: 'The two stages', flow: ['Symmetry, past data, judgment', 'A model: Ω and P', 'Any event, by the rules'], cards: [
+      { id: 'stages', slide: 48, name: 'Built by judgment, used by logic', what: 'Using probability always has two steps. Step 1 is choosing a model: what can happen, and how likely each thing is. This takes judgment, based on symmetry or past data, and sensible people can disagree.\n\nStep 2 is calculating inside that model. This part is pure rules, with no opinion. If two correct-looking calculations disagree, the problem is usually in step 1: the model was not defined clearly.', watch: 'When two calculations seem to disagree, the model was poorly specified in the first stage.' },
+      { id: 'frequency', slide: 49, name: 'Frequencies are data, probabilities a model', what: 'A frequency is what actually happened: count how many past orders were late and divide by the total. A probability is what we expect for an order that has not shipped yet.\n\nThe first is data and changes every month. The second belongs to the model and stays until we choose to change it. They are related, but they are not the same thing.', f: 'fₙ(A) = n_A / n     268 late of 2,000: f(L) = 0.134', watch: 'So last month’s 13.4 % is data, not the probability that the next order is late.', more: { say: 'Counts are never negative, f(Ω) = 1, and disjoint counts add. So every rule of this lecture holds for frequencies too, which is why you can use them on a table of real orders.' } },
+      { id: 'settle', slide: 50, name: 'The frequency settles near the probability', what: 'With only a few orders, the frequency jumps around and can be misleading. Two simulated streams of orders, where each is late with probability 0.14, read 0.05 and 0.15 after 20 orders.\n\nAfter 5,000 orders, both are within 0.002 of 0.14. The more cases you have, the closer the frequency gets to the probability. This is why small datasets can fool you.', watch: 'Small datasets can mislead.' },
+    ] },
+  ], practice: [
+    { id: 'l1-e1', title: 'List a sample space', setup: 'Support tickets arrive by one channel: chat, email or phone. The team labels each normal or urgent. The experiment is one incoming ticket.', parts: [
+      ['Write Ω using a grid. How many outcomes?', () => `<p>3 channels × 2 labels = <b>6 outcomes</b>, one per cell.</p>` + tbl(['', 'normal', 'urgent'], [['chat', 'N', '*U, N'], ['email', 'N', '*U, N'], ['phone', '', 'U']])],
+      ['List U = "urgent" and N = "did not come by phone".', () => `<p>U is the right column: (chat, urgent), (email, urgent), (phone, urgent). N is the top two rows: (chat, normal), (chat, urgent), (email, normal), (email, urgent).</p>`],
+      ['List U ∩ N.', () => `<p>The cells in both: (chat, urgent), (email, urgent).</p>`],
+      ['List (U ∪ N)ᶜ and say it in words.', () => `<p>By De Morgan, (U ∪ N)ᶜ = Uᶜ ∩ Nᶜ = {(phone, normal)}: a normal ticket that came by phone.</p>`],
+    ] },
+    { id: 'l1-e2', title: 'A second warehouse', setup: 'A second warehouse has P(L) = 0.12, P(R) = 0.09 and P(L ∩ R) = 0.03. Compute each and name the rule.', parts: [
+      ['The order arrives on time.', () => `<pre>P(Lᶜ) = 1 − 0.12 = 0.88</pre><p>The complement rule.</p>`],
+      ['The order is late or refunded.', () => `<pre>0.12 + 0.09 − 0.03 = 0.18</pre><p>Addition rule, property (b).</p>`],
+      ['The order is neither late nor refunded.', () => `<pre>P((L ∪ R)ᶜ) = 1 − 0.18 = 0.82</pre><p>De Morgan, then the complement rule.</p>`],
+      ['The order is late but not refunded. (L is the disjoint union of L ∩ R and L ∩ Rᶜ.)', () => `<pre>P(L ∩ Rᶜ) = 0.12 − 0.03 = 0.09</pre><p>Additivity. Filling in the four regions first makes every answer a sum: 0.09, 0.03, 0.06 and 0.82.</p>`],
+      ['A report gives P(L ∩ R) = 0.10 with the same P(L) and P(R). Can that be right?', () => `<p><b>No.</b> L ∩ R ⊂ R, so by property (a) P(L ∩ R) ≤ P(R) = 0.09, which is below 0.10.</p>`],
+    ] },
+    { id: 'l1-e3', title: 'One week of orders', setup: 'Nookery records 400 orders in one week.', table: () => tbl(['', 'no refund', 'refund', 'total'], [['on time', '314', '30', '344'], ['late', '38', '18', '56'], ['total', '352', '48', '400']]), parts: [
+      ['Compute f(L), f(R) and f(L ∩ R).', () => `<pre>f(L) = 56/400 = 0.14\nf(R) = 48/400 = 0.12\nf(L ∩ R) = 18/400 = 0.045</pre>`],
+      ['Compute f(L ∪ R) twice: from the cells, and with the addition rule.', () => `<pre>cells: (38 + 18 + 30)/400 = 0.215\nrule:  0.14 + 0.12 − 0.045 = 0.215</pre>`],
+      ['The model gives P(L ∪ R) = 0.20. Does this prove the model wrong? One sentence.', () => `<p><b>No.</b> A frequency from 400 orders varies from week to week around the model’s probability, so a gap of 0.015 alone shows nothing. About half of all such weeks land at least that far from 0.20.</p>`],
+    ] },
+  ], recap: ['A model is a sample space Ω plus a probability law P. An event is a set of outcomes.', 'Three axioms: P(A) ≥ 0, P adds over disjoint events, P(Ω) = 1. Everything else follows.', 'Or is ∪, and is ∩, not is a complement. A complement swaps ∪ and ∩ (De Morgan).', 'P(Aᶜ) = 1 − P(A), and P(A ∪ B) = P(A) + P(B) − P(A ∩ B).', 'Count outcomes only when they are equally likely.', 'Frequencies are data and probabilities are a model; with many trials the first settles near the second.'] },
+
+  { n: 2, short: 'Conditioning, Bayes', title: 'Conditioning and independence', lede: 'How a probability changes when you learn something, and when it does not.', groups: [
+    { name: 'Conditional probability', cards: [
+      { id: 'dog', slide: 4, name: 'The question: a dog sits by a parcel', what: 'Detector dogs sniff parcels for prohibited food and plants. Only 2 % of parcels hold such an item. The dog sits next to 95 % of the parcels with an item, and by mistake next to 5 % of the others.\n\nThe dog has just sat next to this parcel. How likely is it that an item is inside? Most people say about 95 %. Make your own guess, above or below 50 %, and keep it in mind. Card 13 has the answer, and the surprise is the point of this lecture.' },
+      { id: 'partial', slide: 5, name: 'Partial information changes the probability', what: 'Conditional probability is about updating when you learn something. A chance is not fixed: it depends on what you already know.\n\nRoll a die. The chance of "at least 4" is 3 out of 6, or 1/2. Now someone tells you the roll is even. Only 2, 4 and 6 are still possible, and two of those three are at least 4. So the chance has become 2/3. Same die, new information, new answer.', f: 'P(A ∣ B) = 2/3     read: A given B', more: { say: 'With equally likely outcomes, conditioning is counting: outcomes in A ∩ B divided by outcomes in B.' } },
+      { id: 'conditional', slide: 6, name: 'Conditional probability', what: 'This is the general formula for the idea in the last card. P(A ∣ B) means "the chance of A, knowing that B happened".\n\nKnowing B shrinks your world: anything outside B is no longer possible, so B becomes the new whole. The question then is what share of B is also A. That share is the part where both happen, divided by all of B.', f: 'P(A ∣ B) = P(A ∩ B) / P(B),   for P(B) > 0', more: { say: 'Nookery’s last 1,000 orders. Given express, only the top row is left: 10 of its 200 orders are late. Given standard, 110 of 800. Overall, 120 of 1,000.', f: 'P(L ∣ E) = 10/200 = 0.05\nP(L ∣ S) = 110/800 = 0.1375\nP(L) = 120/1000 = 0.12', html: () => tbl(['', 'late', 'on time', 'total'], [['express', '*10', '*190', '*200'], ['standard', '110', '690', '800'], ['total', '120', '880', '1000']]) } },
+      { id: 'law-given', slide: 8, name: 'Given B, the rules still hold', what: 'Once you know B, you are simply working in a smaller world, and in that smaller world all the rules from Lecture 1 still work. The complement rule, the addition rule and the rest are the same, as long as everything is "given B".\n\nSo if 5 % of express orders are late, then 95 % of express orders are on time.', f: 'P(Lᶜ ∣ E) = 1 − 0.05 = 0.95', watch: 'Each B gives its own law. P(L ∣ E) and P(L ∣ S) belong to different laws: their sum means nothing.' },
+      { id: 'reverse', slide: 9, name: 'P(L ∣ S) is not P(S ∣ L)', what: 'This is the most important warning of the lecture. "The share of standard orders that are late" and "the share of late orders that are standard" are two different questions with two different answers.\n\nThe top of the fraction is the same 110 orders, but the bottom is different: all 800 standard orders in one case, all 120 late orders in the other. 13.75 % and 91.7 % are very far apart. Always ask: out of what?', f: 'P(L ∣ S) = 110/800 = 0.1375\nP(S ∣ L) = 110/120 = 0.917', watch: 'Mixing these two is the classic error. In the dog’s story, 95 % is P(sits ∣ item), but we want P(item ∣ sits).', more: { say: 'Given S, keep the row. Given L, keep the column.', html: () => row(tbl(['Given S', 'late', 'on time'], [['express', '', ''], ['standard', '*110', '*690']]), tbl(['Given L', 'late', 'on time'], [['express', '*10', ''], ['standard', '*110', '']])) } },
+    ] },
+    { name: 'Trees and total probability', cards: [
+      { id: 'multiplication', slide: 13, name: 'The multiplication rule', what: 'This is how to get the chance that two things both happen: the chance of the first, times the chance of the second given the first.\n\nThink of it as taking a share of a share. 70 % of orders come from North, and 10 % of those are late. So 10 % of 70 %, which is 7 % of all orders, are both from North and late.', f: 'P(A ∩ B) = P(B) P(A ∣ B)' },
+      { id: 'chain', slide: 14, name: 'The chain rule', what: 'The same idea for more than two steps. Walk along a path of a tree, multiplying at every step. Each step’s number is its chance given everything that has already happened on the path.\n\nA share of a share of a share.', f: 'P(A₁ ∩ A₂ ∩ A₃) = P(A₁) P(A₂ ∣ A₁) P(A₃ ∣ A₁ ∩ A₂)', more: { say: 'Why it holds: write each factor with the definition, and each numerator cancels the next denominator.', f: 'P(A₁) · P(A₁ ∩ A₂)/P(A₁) · P(A₁ ∩ A₂ ∩ A₃)/P(A₁ ∩ A₂) = P(A₁ ∩ A₂ ∩ A₃)' } },
+      { id: 'tree', slide: 16, name: 'A tree for two warehouses', what: 'A tree is the best tool for these problems, so learn to draw it. Start at one point. The first split is the first thing that gets decided: which warehouse. The second split is the next thing: late or not, with its chance depending on the warehouse.\n\nTo get the chance of a full path, multiply along it. All the end points together must add up to 1, which is a good check on your work.', more: { say: 'Each leaf is width times height: P(N ∩ L) = 0.7 × 0.1 = 0.07.', html: () => warehouseTree() } },
+      { id: 'total', slide: 17, name: 'Total probability', what: 'Use this when you know the answer inside each case and you want the overall answer. Split the world into cases that do not overlap (a partition), work out each case’s contribution, and add them.\n\nEach contribution is how big the case is, times how likely the event is inside it. The result is a weighted average: big cases count more. This is simply adding the matching end points of a tree.', f: 'P(B) = Σᵢ P(Aᵢ) P(B ∣ Aᵢ)', more: { say: 'What share of all orders is late? North and South form a partition. P(L) averages the two late rates, weighted by the warehouse shares, so it lies between 0.1 and 0.2, nearer 0.1 because North ships more.', f: 'P(L) = 0.7 × 0.1 + 0.3 × 0.2 = 0.13' } },
+    ] },
+    { name: 'Bayes’ rule', flowLabel: 'The table to fill in', flow: ['Prior', '× Likelihood', '= Product', 'Add: P(B)', 'Divide: Posterior'], cards: [
+      { id: 'bayes', slide: 22, name: 'Bayes’ rule', what: 'Bayes’ rule turns a question around. You usually know "how likely is this evidence if the cause is true?". You want "how likely is the cause, now that I see this evidence?". As the warning in card 5 said, these are different, and this rule converts one into the other.\n\nThe formula is short, but in practice you fill in the table shown above: one row per possible cause.', f: 'P(A ∣ B) = P(A) P(B ∣ A) / P(B)', more: { say: 'P(B) P(A ∣ B) and P(A) P(B ∣ A) are both P(A ∩ B). Dividing by P(B) > 0 gives the rule. P(B) usually comes from total probability.' } },
+      { id: 'prior', slide: 23, name: 'Prior, likelihood, posterior', what: 'Bayes’ rule comes with three names, and they are just "before", "evidence" and "after". The prior is how likely a cause is before you see anything. The likelihood is how likely the thing you saw would be, if that cause were true. The posterior is how likely the cause is after seeing it.\n\nIt is how you update your mind: what you believed, adjusted by how well each explanation fits what you just saw.', f: 'posterior = prior × likelihood / P(B)\nP(Aᵢ ∣ B) = P(Aᵢ) P(B ∣ Aᵢ) / P(B)', watch: 'The causes must form a partition. The denominator is what makes the posteriors sum to 1.' },
+      { id: 'which', slide: 24, name: 'A late order: which warehouse?', what: 'A customer complains about a late order. Which warehouse shipped it? Before the complaint, South is 30 % likely, because it ships 30 % of orders. But South is also twice as often late as North.\n\nSo the complaint moves our belief towards South, from 30 % to 46 %. Fill in the table below from left to right: prior, likelihood, multiply, add the column, divide.', f: 'P(S ∣ L) = 0.06 / 0.13 = 0.46', more: { say: 'The table has four steps: prior, likelihood, multiply and add, then divide by the sum.', html: () => bayesTable([['North', '0.7', '0.1', '0.07', '0.54'], ['South', '0.3', '0.2', '0.06', '*0.46']], '0.13') } },
+      { id: 'dog-answer', slide: 25, name: 'Back to the dog: most alerts are false', what: 'So the dog sits. Is there an item? Only 28 %, far below the 95 % most people guess. The reason is that items are rare.\n\nTrue alerts come from the tiny 2 % of parcels that hold an item. False alerts come from the huge 98 % that do not. Even at only 5 %, the false alerts outnumber the true ones. This same logic applies to medical tests and fraud detectors.', f: 'P(I ∣ D) = 0.019 / 0.068 = 0.28', watch: 'A high P(effect ∣ cause) does not mean a high P(cause ∣ effect) when the cause is rare.', more: { say: 'In counts, of 10,000 parcels: 200 hold an item and the dog sits by 190 of them. 9,800 are clean and the dog sits by 490 of them. So 190 of 680 alerts are real.', html: () => bayesTable([['item', '0.02', '0.95', '0.019', '*0.28'], ['no item', '0.98', '0.05', '0.049', '0.72']], '0.068') } },
+    ] },
+    { name: 'Independence', cards: [
+      { id: 'independent', slide: 29, name: 'Independent events', what: 'Two events are independent when knowing one tells you nothing about the other. Knowing that it rains in Tokyo does not change the chance that your parcel is late.\n\nWhen events are independent, the chance of both is simply the two chances multiplied. To test whether two events are independent, compute both sides of that equation and see if they match.', f: 'P(A ∣ B) = P(A)     or     P(A ∩ B) = P(A) P(B)', watch: 'Disjoint is not independent. Disjoint events with positive probabilities are dependent: if one happens the other cannot, so P(A ∩ B) = 0 < P(A) P(B).', more: { say: 'Late and express are not independent: P(L ∣ E) = 0.05 but P(L) = 0.12.' } },
+      { id: 'same-rolls', slide: 30, name: 'Independent on the same rolls', what: 'You cannot always tell independence by looking. Here both events depend on the first roll, yet they are independent, because the numbers fit: 1/16 = 4/16 × 4/16.\n\nRoll a 4-sided die twice. A is "the first roll is 1" and B is "the sum is 5". Knowing the first roll is 1 leaves B a chance of 1/4, the same as before. So knowing A changed nothing.', more: { say: 'The reason: given A, the sum is 5 only if the second roll is 4, so P(B ∣ A) = 1/4, the same as P(B). Independence is a fact about the numbers, and has to be checked.' } },
+      { id: 'trials', slide: 31, name: 'Independent trials', what: 'Independent trials means doing the same thing several times, with no effect from one go on the next, and with the same chance p of success each time. Success just means the thing you are counting: late orders count as successes here, even if that sounds odd.\n\nThen the chance of any exact sequence is its numbers multiplied: p for each success and 1 − p for each failure. And "at least one" is best done through its opposite, "none at all".', f: 'one sequence with k successes: pᵏ (1 − p)ⁿ⁻ᵏ\nP(at least one) = 1 − (1 − p)ⁿ', more: { say: 'Three orders, each late with probability p. OOL has probability (1 − p)² p, and so do OLO and LOO. "At least one late" is easiest through its complement: 1 minus "none late".' } },
+      { id: 'demere-2', slide: 32, name: 'De Méré settled', what: 'Now we can settle de Méré’s bets from Lecture 1. The easy way to get "at least one" is through its opposite: work out the chance of "not even one" by multiplying along the rolls, then subtract from 1.\n\nThe first bet wins 51.8 % of the time and the second 49.1 %. A small gap, but it decides who makes money over many games, just as he saw.', f: 'a six in 4 rolls:        1 − (5/6)⁴   = 0.518\na double six in 24 rolls: 1 − (35/36)²⁴ = 0.491' },
+      { id: 'fallacy', slide: 33, name: 'Independent spins have no memory', what: 'Independent means the die, wheel or coin remembers nothing. In 1913 at Monte Carlo, the roulette ball landed on black 26 times in a row. Crowds bet heavily on red, sure it was due.\n\nThey lost. A long run is rare if you look ahead at it, about 1 in 137 million here, but once 25 blacks have already happened, the next spin is the same as any other: 18 black pockets out of 37.', watch: 'Expecting red to be "due" is the gambler’s fallacy.' },
+      { id: 'cond-indep', slide: 34, name: 'Conditional independence', what: 'Two things can be linked overall, but unrelated once you know a third thing. That is conditional independence: once C is known, learning B tells you nothing more about A.\n\nEveryday example: ice cream sales and sunburns rise together, but once you know the weather, one tells you nothing more about the other. The next card shows it on real numbers.', f: 'P(A ∩ B ∣ C) = P(A ∣ C) P(B ∣ C)', watch: 'It holds for the law given C only. Given Cᶜ, or with no condition, it must be checked again.' },
+      { id: 'two-checks', slide: 35, name: 'Two checks of one parcel', what: 'A dog and an X-ray both check each parcel. If you know what is inside, their errors are unrelated, so they are independent given the content. But if you do not know what is inside, they are linked: a dog alert makes an item more likely, and so makes an X-ray flag more likely too.\n\nSo the same two events are independent in one situation and dependent in another. This is why "independent given C" has to be stated carefully.', f: 'P(D ∩ X) = 0.02 × 0.9025 + 0.98 × 0.0025 = 0.0205\nP(D) P(X) = 0.068² = 0.0046', more: { say: 'Multiply within each row, because the checks are conditionally independent there. Then combine the rows with total probability.', html: () => tbl(['', 'P(D ∣ ·)', 'P(X ∣ ·)', 'P(D ∩ X ∣ ·)'], [['given item', '0.95', '0.95', '0.9025'], ['given no item', '0.05', '0.05', '0.0025']]) } },
+    ] },
+  ], practice: [
+    { id: 'l2-e1', title: 'Read a support table', setup: '500 support tickets last month. Resolved means the first answer solved the problem. Pick one ticket uniformly at random.', table: () => tbl(['channel', 'tickets', 'resolved'], [['chat', '200', '150'], ['email', '180', '108'], ['phone', '120', '102'], ['total', '500', '360']]), parts: [
+      ['Compute P(resolved).', () => `<pre>360/500 = 0.72</pre>`],
+      ['Compute P(resolved ∣ chat), P(resolved ∣ email), P(resolved ∣ phone).', () => `<pre>chat   150/200 = 0.75\nemail  108/180 = 0.60\nphone  102/120 = 0.85</pre><p>The overall 0.72 lies between them: total probability makes it a weighted average.</p>`],
+      ['Compute P(phone ∣ resolved).', () => `<pre>102/360 = 0.283</pre>`],
+      ['Which is larger, P(resolved ∣ phone) or P(phone ∣ resolved)? Why, in one sentence?', () => `<p><b>P(resolved ∣ phone) = 0.85.</b> Phone tickets are usually resolved, but phone carries only 120 of the 500 tickets, so it accounts for a small part of the resolved ones.</p>`],
+    ] },
+    { id: 'l2-e2', title: 'Three carriers', setup: 'Carrier A takes 50 % of parcels, B 30 % and C 20 %. A parcel is late with probability 0.08 with A, 0.12 with B and 0.25 with C.', parts: [
+      ['Draw the tree and compute its six leaves.', () => tree({ w: 460, kids: [{ label: 'A', p: '0.5', kids: [{ label: 'A ∩ L: 0.04', p: '0.08', on: 1 }, { label: 'A ∩ Lᶜ: 0.46', p: '0.92' }] }, { label: 'B', p: '0.3', kids: [{ label: 'B ∩ L: 0.036', p: '0.12', on: 1 }, { label: 'B ∩ Lᶜ: 0.264', p: '0.88' }] }, { label: 'C', p: '0.2', kids: [{ label: 'C ∩ L: 0.05', p: '0.25', on: 1 }, { label: 'C ∩ Lᶜ: 0.15', p: '0.75' }] }] }) + `<p>The multiplication rule on each path. The six leaves sum to 1.</p>`],
+      ['Compute P(L).', () => `<pre>P(L) = 0.04 + 0.036 + 0.05 = 0.126</pre><p>Total probability: add the "late" leaves.</p>`],
+    ] },
+    { id: 'l2-e3', title: 'Fake reviews', setup: 'A detector flags 80 % of fake reviews and 2 % of genuine ones. For established products 1 % of reviews are fake, for new products 5 %.', parts: [
+      ['Compute P(flag) for a review of a new product.', () => `<pre>P(flag) = 0.05 × 0.8 + 0.95 × 0.02 = 0.059</pre><p>Total probability over fake and genuine.</p>`],
+      ['Compute P(fake ∣ flag) for new and for established products.', () => `<pre>new:         0.04 / 0.059 = 0.678\nestablished: P(flag) = 0.01 × 0.8 + 0.99 × 0.02 = 0.0278\n             0.008 / 0.0278 = 0.288</pre><p>The same detector, a different prior, a very different answer.</p>`],
+    ] },
+    { id: 'l2-e4', title: 'Newsletter and coupons', setup: '1,000 customers. 400 subscribe to the newsletter (S), 250 bought again within a month (R), 300 used a coupon (C). Of the subscribers, 100 bought again and 180 used a coupon. Pick one uniformly at random.', parts: [
+      ['Are S and R independent?', () => `<pre>P(S ∩ R) = 0.10     P(S) P(R) = 0.4 × 0.25 = 0.10</pre><p><b>Independent:</b> P(R ∣ S) = 100/400 = 0.25 = P(R).</p>`],
+      ['Are S and C independent?', () => `<pre>P(S ∩ C) = 0.18     P(S) P(C) = 0.4 × 0.3 = 0.12</pre><p><b>Dependent.</b></p>`],
+      ['Compute P(C ∣ S) and P(C ∣ Sᶜ).', () => `<pre>P(C ∣ S) = 180/400 = 0.45\nP(C ∣ Sᶜ) = 120/600 = 0.20</pre>`],
+      ['Are S and C disjoint?', () => `<p><b>No:</b> P(S ∩ C) = 0.18 > 0. With real data the two numbers rarely match exactly, so a small difference alone does not show dependence.</p>`],
+    ] },
+  ], recap: ['P(A ∣ B) = P(A ∩ B) / P(B): keep only the outcomes in B.', 'Multiply along a tree path; add across a partition (total probability).', 'Bayes: posterior = prior × likelihood / P(B). Fill in the table.', 'P(A ∣ B) is not P(B ∣ A). A rare cause stays fairly unlikely even after a good test.', 'Independent: P(A ∩ B) = P(A) P(B). Disjoint is not independent.', 'One sequence with k successes in n independent trials: pᵏ(1 − p)ⁿ⁻ᵏ. At least one: 1 − (1 − p)ⁿ.', 'Conditional independence holds given C only; check again without it.'] },
+
+  { n: 3, short: 'Discrete variables', title: 'Discrete random variables', lede: 'Turning outcomes into numbers, then saying what those numbers look like and how far they spread.', groups: [
+    { name: 'Random variables', cards: [
+      { id: 'galton', slide: 4, name: 'The question: where will the ball land?', what: 'A Galton board is a board of pins. Balls fall from the top and bounce left or right at each pin, ending up in one of the bins at the bottom.\n\nYou cannot predict where any one ball lands. Yet with many balls, the same shape appears every time: a pile in the middle and almost nothing at the edges. Random one at a time, predictable in bulk. Which bins fill up? Card 7 has the answer.' },
+      { id: 'rv', slide: 5, name: 'A random variable', what: 'Outcomes can be anything: pairs of rolls, words, parcels. But we want to calculate, and for that we need numbers. A random variable turns each outcome into a number. It is usually written with a capital letter, like X.\n\nDespite the name, it is really just a rule: outcome goes in, number comes out. The "random" part is only that we do not know the outcome yet. For two rolls, X could be the larger roll, or the sum, or anything you decide to measure.', f: 'X : Ω → ℝ', more: { say: 'Roll a fair 4-sided die twice. X is the larger of the two rolls, written in each cell. The sum of the rolls would be another random variable on the same Ω.', html: () => maxGrid() } },
+      { id: 'statements', slide: 6, name: 'Statements about X are events', what: 'Once you have X, you can ask questions with it. "X is at most 2" is really an event: the group of all outcomes where the number comes out as 2 or less. So everything from Lectures 1 and 2 still applies.\n\nX is called discrete when its possible values can be listed one by one, like 1, 2, 3, 4 or 0, 1, 2, … and not a smooth range.', f: '{X ≤ 2} = {ω ∈ Ω ∣ X(ω) ≤ 2}     P(X ≤ 2) = 4/16', watch: 'Upper case X is the variable, decided by the experiment. Lower case x is a fixed number: "this time x = 3".' },
+    ] },
+    { name: 'Probability mass functions', flowLabel: 'To compute a PMF, for each value x', flow: ['Collect the outcomes with X = x', 'Add their probabilities'], cards: [
+      { id: 'pmf', slide: 8, name: 'The PMF', what: 'The PMF, or probability mass function, is a list: each value X can take, with its chance next to it. It is the full description of X.\n\nThink of it as a table, or as the bar chart below. To build it: for each value, find the outcomes that give that value, and add up their chances. All the chances together add up to 1, since X must land somewhere.', f: 'm_X(x) = P(X = x)', watch: 'The book, Bertsekas and Tsitsiklis, writes p_X. The lectures write m_X, m for mass.', more: { say: 'For the larger of two rolls, count the cells of each value in the grid: 1, 3, 5 and 7 of 16.', html: () => bars([[1, 1 / 16, '1/16'], [2, 3 / 16, '3/16'], [3, 5 / 16, '5/16'], [4, 7 / 16, '7/16']], { cap: 'PMF of X, the larger roll' }) } },
+      { id: 'bernoulli', slide: 11, name: 'Bernoulli: one trial, two results', what: 'This is the simplest random variable there is: a single yes-or-no. Will the next visitor buy? We write 1 for yes and 0 for no.\n\nOnly one number is needed to describe it: p, the chance of yes. Then the chance of no is whatever remains, 1 − p. Anything with two answers fits: buy or not, late or on time, heads or tails.', f: 'X ∼ Ber(p)     m_X(1) = p     m_X(0) = 1 − p', more: { say: 'Read ∼ as "follows". Many questions have two answers: buy or not, late or on time.', html: () => bars([[0, 0.8, '0.8'], [1, 0.2, '0.2']], { cap: 'Ber(0.2): 0 no purchase, 1 purchase', narrow: 1 }) } },
+      { id: 'binomial', slide: 16, name: 'Binomial: successes in n trials', what: 'Do the yes-or-no thing n times and count the yeses. If 10 visitors come, how many buy? That count follows a binomial distribution. You need two numbers: n, how many tries, and p, the chance of yes each time.\n\nThe formula has three parts, explained below. One: how many different orders can the yeses come in? Two: the chance of all those yeses. Three: the chance of all the noes. Multiply the three together.', f: 'X ∼ Bin(n, p)     k = 0, …, n\nm_X(k) = (n choose k) pᵏ (1 − p)ⁿ⁻ᵏ\n(n choose k) = n! / (k! (n − k)!)', more: { say: 'Four visitors, each buying with probability 0.2. One buyer: BNNN, NBNN, NNBN or NNNB, 4 sequences of 0.2 × 0.8³ = 0.1024 each, so 4 × 0.1024 = 0.4096.', html: () => bars(binom(4, 0.2).map((v, k) => [k, v, v.toFixed(3)]), { cap: 'Bin(4, 0.2): number of buyers', hi: [1] }) } },
+      { id: 'galton-answer', slide: 17, name: 'The Galton board is binomial', what: 'Back to the board of pins. At each of 20 rows, a ball goes right with chance 0.5. The bin it lands in is the number of times it went right. So the bin number is a yes-or-no count over 20 tries: a binomial with n = 20 and p = 0.5.\n\nThe middle bins fill up because there are very many routes that give about 10 rights, and only one route that gives 20 rights out of 20. Bins 6 to 14 hold 96 % of the balls.', more: { html: () => bars(binom(20, 0.5).map((v, k) => [k, v, v.toFixed(3)]), { cap: 'Bin(20, 0.5): bins 6 to 14 hold 96 %', hi: [6, 7, 8, 9, 10, 11, 12, 13, 14], thin: 1, mean: 10 }) } },
+      { id: 'conditions', slide: 18, name: 'Check the four conditions', what: 'A binomial only describes the situation when all four of these conditions are true. If even one fails, you can still type the formula into a calculator, but the answer will not describe what is really happening. Go through the four, one at a time, every time you think you have a binomial.', list: ['The number of tries is fixed in advance. You know n before you start: "the next 10 visitors" is fine. This fails for "visitors until the first purchase", because nobody knows how many that will be.', 'Each try has exactly two results: yes or no. "Buys or does not buy" is fine. This fails for "buys 0, 1 or 2 items", which has three results. The fix is to count buyers instead of items.', 'The tries are independent: the result of one does not affect another. Different strangers are fine. This fails when one customer visits 5 times in a day, because someone who bought this morning is unlikely to buy again this afternoon.', 'The chance p is the same on every try. This fails when you mix groups: newsletter visitors buy more often than visitors from ads, so one single p does not describe them all.'] },
+      { id: 'poisson', slide: 19, name: 'Poisson: counts in a fixed window', what: 'The Poisson is for counting how many times something happens in a fixed stretch of time or space: tickets in an hour, calls in a minute, typos on a page. There is no fixed number of tries here: nobody knows how many customers could write.\n\nYou only need one number to describe it: the average count, written with the Greek letter λ (lambda). If the shop gets 4 tickets an hour on average, then λ = 4. The formula then gives the chance of seeing exactly k tickets in the next hour, where k can be 0, 1, 2 and so on. You do not need to do this by hand: a calculator or Excel works it out.', f: 'X ∼ Pois(λ)     k = 0, 1, 2, …\nm_X(k) = e^(−λ) λᵏ / k!\nP(X = 0) = e⁻⁴ = 0.018', more: { html: () => bars(pois(4, 12).map((v, k) => [k, v, v.toFixed(3)]), { cap: 'Pois(4): tickets in one hour', thin: 1, mean: 4 }) } },
+      { id: 'poisson-approx', slide: 20, name: 'A binomial with many rare trials', what: 'Think of 100 customers, each with a 1 % chance of writing. That is a binomial with many tries and a small chance each time, and it is painful to calculate. It turns out to be almost the same as a Poisson whose average is n × p, here 100 × 0.01 = 1.\n\nThis explains why the Poisson fits ticket counts: many people, each unlikely to write. You do not even need to know n and p separately, just the average.', watch: 'Use it when events are independent and their rate does not change. Tickets after a delivery failure break the second condition.', more: { say: 'Bin(100, 0.01) against Pois(1), where λ = np = 1.', html: () => tbl(['', 'binomial', 'Poisson'], [['P(X = 0)', '0.366', '0.368'], ['P(X = 1)', '0.370', '0.368'], ['P(X = 5)', '0.00290', '0.00307']]) } },
+      { id: 'three-models', slide: 21, name: 'Three models side by side', what: 'Three named patterns, and the skill is recognising which one fits. Is it one yes-or-no? Bernoulli. Is it counting yeses in a known number of tries? Binomial. Is it counting events in a stretch of time, with no fixed number of tries? Poisson.', more: { html: () => tbl(['Model', 'Counts', 'Values'], [['Ber(p)', 'one trial, success or not', '0, 1'], ['Bin(n, p)', 'successes in n independent trials', '0, 1, …, n'], ['Pois(λ)', 'events in a fixed window', '0, 1, 2, …']]) } },
+    ] },
+    { name: 'Expectation', cards: [
+      { id: 'expectation', slide: 29, name: 'The expectation', what: 'The expectation, or mean, is the average you would get if the situation were repeated many times. It is written E[X].\n\nTo get it, take each possible value, multiply it by its chance, and add the results. This way likely values count a lot and unlikely values count little. On the bar chart, it is the point where the chart would balance on your finger. The list below explains each symbol.', f: 'E[X] = Σₓ x m_X(x)', more: { say: 'A lamp order earns €12 if kept, −€6 if returned, −€30 if broken in transit. A single order never earns €8.10; the mean need not be a possible value.', f: 'E[X] = 12 × 0.85 − 6 × 0.10 − 30 × 0.05 = 8.1 euros', html: () => bars([[-30, 0.05, '0.05'], [-6, 0.1, '0.10'], [0, 0, ''], [12, 0.85, '0.85']], { cap: 'Margin of a lamp order, euros. ▲ the mean, €8.10', mean: 8.1 }) } },
+      { id: 'long-run', slide: 30, name: 'The long-run average', what: 'This is why the formula deserves the name "average". Over many orders, each value shows up about as often as its chance says, so the average over all orders comes close to E[X].\n\nIn a simulation, the average margin was €6.00 after 10 orders and €7.88 after 2,000, closing in on €8.10. So expectation is what a business can plan on over many orders, and not what happens on any single one.' },
+      { id: 'function', slide: 31, name: 'A function of X', what: 'Sometimes you care about something worked out from X, rather than X itself. X is the number of items in an order, but what you pay for is the number of boxes, and a box holds two items.\n\nA function is simply a rule that turns one number into another, here items into boxes. The number of boxes is itself random, so it is a new random variable, written Y = g(X).', more: { say: 'A box holds two items, so an order of x items ships in g(x) boxes. m_Y(1) = 0.4 + 0.3 = 0.7 and m_Y(2) = 0.3, so E[Y] = 1 × 0.7 + 2 × 0.3 = 1.3 boxes.', html: () => tbl(['items x', 'm_X(x)', 'boxes g(x)'], [['1', '0.4', '1'], ['2', '0.3', '1'], ['3', '0.2', '2'], ['4', '0.1', '2']]) } },
+      { id: 'rule', slide: 32, name: 'The expected value rule', what: 'To find the average of something worked out from X, there is a direct way: apply the rule to each value of X first, multiply by that value’s chance, and add.\n\nThe trap is doing it in the other order. Taking the average first and then applying the rule usually gives the wrong answer: 2 items on average does not mean 1 box on average.', f: 'E[g(X)] = Σₓ g(x) m_X(x)', watch: 'In general E[g(X)] ≠ g(E[X]). With E[X] = 2 items, g(2) = 1 box is wrong: the true mean is 1.3.', more: { html: () => tbl(['x', 'm_X(x)', 'g(x)', 'g(x) m_X(x)'], [['1', '0.4', '1', '0.4'], ['2', '0.3', '1', '0.3'], ['3', '0.2', '2', '0.4'], ['4', '0.1', '2', '0.2'], ['sum', '', '', '*1.3']]) } },
+      { id: 'linear-mean', slide: 33, name: 'The mean of a linear function', what: 'Some rules are very simple: multiply by a fixed number and add a fixed number, like a cost of €1 per order plus €2 per box. For these rules, there is a shortcut: just apply the same rule to the average.\n\nIf the average number of boxes is 1.3, the average cost is 1 + 2 × 1.3 = €3.60. This shortcut only works for this simple shape of rule.', f: 'E[aX + b] = a E[X] + b', more: { say: 'Packing costs €1 per order plus €2 per box.', f: 'E[1 + 2Y] = 1 + 2 × 1.3 = 3.6 euros' } },
+    ] },
+    { name: 'Variance', cards: [
+      { id: 'spread', slide: 40, name: 'Same mean, different spread', what: 'Two warehouses can have the same average and behave very differently. Both dispatch after 2 days on average. North is reliable: almost always 1 to 3 days. South is all over the place: often 0 days, often 4.\n\nIf you promise customers 3 days, you always keep that promise with North but fail 20 % of the time with South. The average hides this. We need a second number for how spread out the values are.', more: { html: () => row(bars([[0, 0, ''], [1, 0.25, '0.25'], [2, 0.5, '0.50'], [3, 0.25, '0.25'], [4, 0, '']], { cap: 'North, SD 0.71 days', mean: 2, max: 0.5 }), bars([[0, 0.2, '0.20'], [1, 0.15, '0.15'], [2, 0.3, '0.30'], [3, 0.15, '0.15'], [4, 0.2, '0.20']], { cap: 'South, SD 1.38 days', mean: 2, max: 0.5 })) } },
+      { id: 'variance', slide: 41, name: 'Variance and standard deviation', what: 'Variance measures how far values typically fall from the average. Step by step: find how far each value is from the mean, square that distance, multiply by the value’s chance, and add.\n\nWhy square? Without it, distances below and above the mean would cancel out to zero. But squaring also changes the units, to "days squared", which means nothing to anyone. So we take the square root at the end and get the standard deviation (SD), in plain days. A bigger SD means more spread.', f: 'Var(X) = E[(X − μ)²]     μ = E[X]\nσ_X = √Var(X)', more: { say: 'North warehouse, μ = 2 days. The variance is 0.50, so the SD is 0.71 days.', html: () => tbl(['x', 'm_X(x)', 'x − μ', '(x − μ)²', '× m_X(x)'], [['1', '0.25', '−1', '1', '0.25'], ['2', '0.50', '0', '0', '0'], ['3', '0.25', '1', '1', '0.25'], ['sum', '', '', '', '*0.50']]) } },
+      { id: 'shortcut', slide: 42, name: 'The variance shortcut', what: 'This is the same variance, computed a quicker way, usually easier by hand. It needs two averages: the average of the squared values, and the square of the average value. Then subtract.\n\nCareful, those two are not the same: one squares first, the other squares last. The gap between them is exactly the variance.', f: 'Var(X) = E[X²] − (E[X])²', more: { say: 'Check with North: E[X²] = 1 × 0.25 + 4 × 0.5 + 9 × 0.25 = 4.5, and 4.5 − 2² = 0.5, the same as the table.', f: 'E[X² − 2μX + μ²] = E[X²] − 2μ E[X] + μ² = E[X²] − μ²' } },
+      { id: 'linear-var', slide: 43, name: 'The variance of a linear function', what: 'What happens to the spread when you change every value? Adding a fixed amount moves everything together, so the spread does not change. If delivery takes one day more than dispatch, its spread is the same.\n\nMultiplying does change it: multiply by 2, and every distance doubles. Because variance uses squares, the variance becomes 4 times bigger, while the standard deviation just doubles.', f: 'Var(aX + b) = a² Var(X)\nσ_(aX+b) = |a| σ_X', more: { say: 'Delivery takes one day more than dispatch: X + 1 has mean 3 days and the same SD, 0.71 days.' } },
+      { id: 'models-moments', slide: 44, name: 'Means and variances of the models', what: 'For the three named models, nobody needs to do the long calculation, because the answers are known. Just put your numbers into this table.\n\nExample: for a Galton board, n = 20 and p = 0.5, so the mean is 20 × 0.5 = 10, and the SD is √(20 × 0.5 × 0.5) = √5 = 2.24.', more: { html: () => tbl(['Model', 'E[X]', 'Var(X)', 'SD'], [['Ber(p)', 'p', 'p(1 − p)', '√(p(1 − p))'], ['Bin(n, p)', 'np', 'np(1 − p)', '√(np(1 − p))'], ['Pois(λ)', 'λ', 'λ', '√λ']]) } },
+    ] },
+  ], practice: [
+    { id: 'l3-e1', title: 'Two parcels', setup: 'A lamp and a rug ship as two parcels. Each is late with probability 0.1, independently. X = 1 if the lamp is late, 0 if on time.', parts: [
+      ['Write the distribution of X with ∼, and compute P(X = 0).', () => `<pre>X ∼ Ber(0.1)     P(X = 0) = 1 − 0.1 = 0.9</pre>`],
+      ['Compute the probability both arrive on time.', () => `<pre>0.9 × 0.9 = 0.81</pre><p>Independent events multiply.</p>`],
+      ['Compute the probability exactly one is late.', () => `<pre>0.9 × 0.1 + 0.1 × 0.9 = 0.09 + 0.09 = 0.18</pre><p>Two disjoint cases, so they add. Check: 0.81 + 0.09 + 0.09 + 0.01 = 1.</p>`],
+    ] },
+    { id: 'l3-e2', title: 'Ten visitors', setup: 'Ten visitors open a product page. Each buys with probability 0.2, independently. X is the number of buyers.', parts: [
+      ['Name the distribution and its parameters.', () => `<pre>X ∼ Bin(10, 0.2)</pre><p>10 independent trials, two results each, the same p.</p>`],
+      ['Compute P(X = 2) and P(X = 0).', () => `<pre>P(X = 2) = 45 × 0.04 × 0.168 = 0.302\nP(X = 0) = 0.8¹⁰ = 0.107</pre>` + bars(binom(10, 0.2).slice(0, 9).map((v, k) => [k, v, v.toFixed(3)]), { cap: 'PMF of Bin(10, 0.2), up to 8', hi: [0, 2] })],
+      ['Compute P(X ≥ 1) with the complement rule.', () => `<pre>P(X ≥ 1) = 1 − P(X = 0) = 0.893</pre><p>Adding the ten values from 1 to 10 gives the same result with more work.</p>`],
+      ['One customer opens the page 10 times in a day. Is the number of purchases Bin(10, 0.2)?', () => `<p><b>No.</b> The number of trials is fixed and each has two results, but one customer’s visits are not independent: someone who bought in the morning rarely buys again that afternoon.</p>`],
+    ] },
+    { id: 'l3-e3', title: 'Protection plan', setup: 'A one-year plan for lamps costs €6. In that year a lamp needs nothing with probability 0.90, a €40 repair with probability 0.07, or a €90 replacement with probability 0.03.', parts: [
+      ['Write the PMF of Y, the profit on one plan.', () => tbl(['year', 'probability', 'cost', 'profit y'], [['no service', '0.90', '0', '6'], ['repair', '0.07', '40', '−34'], ['replacement', '0.03', '90', '−84']]) + `<p>Profit is the price minus the cost.</p>`],
+      ['Compute E[Y].', () => `<pre>6 × 0.90 − 34 × 0.07 − 84 × 0.03\n= 5.40 − 2.38 − 2.52 = 0.50 euros</pre><p>A single plan never earns €0.50. It is the balance point.</p>`],
+      ['What total profit should 1,000 plans bring?', () => `<pre>1,000 × 0.50 = 500 euros</pre>`],
+      ['Would a price of €5 be profitable on average?', () => `<pre>E[S] = 40 × 0.07 + 90 × 0.03 = 5.50\nE[Y] = 5 − 5.50 = −0.50 euros</pre><p><b>No.</b> Only a price above €5.50 is profitable on average.</p>`],
+    ] },
+    { id: 'l3-e4', title: 'Returns desk', setup: 'X is the number of parcels returned to a store in one day.', table: () => tbl(['x', 'm_X(x)'], [['0', '0.3'], ['1', '0.4'], ['2', '0.2'], ['3', '0.1']]), parts: [
+      ['Compute E[X].', () => `<pre>0 + 0.4 + 0.4 + 0.3 = 1.1 returns</pre>`],
+      ['Compute Var(X) with the shortcut, and the SD.', () => `<pre>E[X²] = 0 + 0.4 + 0.8 + 0.9 = 2.1\nVar(X) = 2.1 − 1.1² = 0.89\nσ_X = √0.89 = 0.94 returns</pre>`],
+      ['The desk costs €20 per day plus €5 per return: C = 20 + 5X. Compute E[C] and the SD of C.', () => `<pre>E[C] = 5 × 1.1 + 20 = 25.50 euros\nVar(C) = 25 × 0.89 = 22.25\nσ_C = 4.72 euros</pre>`],
+      ['Why does the fixed €20 change E[C] but not its SD?', () => `<p>It is paid every day, so it moves every possible cost by 20: the PMF shifts without changing shape. The distances from the mean stay the same. Only the €5 per return, which multiplies the deviations, changes the SD.</p>`],
+    ] },
+  ], recap: ['A random variable gives each outcome a number. A statement about it is an event.', 'The PMF lists P(X = x) and sums to 1.', 'Bernoulli: one trial. Binomial: successes in n trials, with four conditions to check. Poisson: counts in a window, λ on average.', 'E[X] = Σ x m_X(x), the balance point and the long-run average.', 'E[g(X)] = Σ g(x) m_X(x), and in general it is not g(E[X]).', 'Var(X) = E[X²] − (E[X])². The SD is its root.', 'E[aX + b] = aE[X] + b, and Var(aX + b) = a² Var(X): adding shifts, multiplying scales.'] },
+];
+SESSIONS.forEach(s => { let k = 0; for (const g of s.groups) for (const c of g.cards) c.num = `${s.n}.${++k}`; });
+const cardKey = (s, id) => `stats|s${s}|${id}`;
+
+// The picture at the top of each lecture: drawn on Nookery, the course’s made-up shop.
+const PICTURES = {
+  1: () => `<p class="pic-lede">One order has four possible <b>outcomes</b>, the cells of this grid. The <b>model</b> gives each a probability, and they sum to 1. An <b>event</b> is a set of cells; add its cells to get its probability.</p>`
+    + row(orderGrid(['ω3', 'ω4'], 'L = late: 0.14'), orderGrid(['ω2', 'ω4'], 'R = refunded: 0.10'))
+    + row(orderGrid(['ω4'], 'L ∩ R, both: 0.04'), orderGrid(['ω2', 'ω3', 'ω4'], 'L ∪ R, either: 0.20'))
+    + `<p class="pic-lede">The same operations on any two sets:</p>`
+    + row(venn(['a', 'ab', 'b'], { cap: 'A ∪ B, or' }), venn(['ab'], { cap: 'A ∩ B, and' }), venn(['a'], { cap: 'A ∩ Bᶜ, and not' })),
+  2: () => `<p class="pic-lede"><b>Forward, along the tree.</b> North ships 70 % of orders and South 30 %. Multiply along each path, then add the late leaves: P(L) = 0.07 + 0.06 = 0.13.</p>`
+    + warehouseTree()
+    + `<p class="pic-lede"><b>Backward, with Bayes.</b> A late order arrives: which warehouse? Divide each late leaf by the sum.</p>`
+    + bayesTable([['North', '0.7', '0.1', '0.07', '0.54'], ['South', '0.3', '0.2', '0.06', '*0.46']], '0.13')
+    + `<p class="pic-lede"><b>Why a rare cause stays unlikely.</b> Of 10,000 parcels, the dog sits by 680: 190 with an item and 490 without. So P(item ∣ dog sits) = 190/680 = 0.28.</p>`,
+  3: () => `<p class="pic-lede">Roll a 4-sided die twice. <b>X</b>, the larger roll, puts a number in each of the 16 cells. Count the cells of each value and you have the <b>PMF</b>. Its balance point ▲ is the <b>mean</b>, 3.125.</p>`
+    + row(maxGrid(3), bars([[1, 1 / 16, '1/16'], [2, 3 / 16, '3/16'], [3, 5 / 16, '5/16'], [4, 7 / 16, '7/16']], { cap: 'PMF of X. Shaded in the grid: X = 3, 5 of 16 cells', hi: [3], mean: 3.125 }))
+    + `<p class="pic-lede"><b>Named models</b> fit situations that recur:</p>`
+    + row(bars(binom(20, 0.5).map((v, k) => [k, v, v.toFixed(3)]), { cap: 'Bin(20, 0.5): the Galton board', thin: 1, mean: 10 }), bars(pois(4, 12).map((v, k) => [k, v, v.toFixed(3)]), { cap: 'Pois(4): tickets in one hour', thin: 1, mean: 4 }))
+    + `<p class="pic-lede"><b>Variance</b> is the spread around the mean. Same mean, different spread:</p>`
+    + row(bars([[0, 0, ''], [1, 0.25, '0.25'], [2, 0.5, '0.50'], [3, 0.25, '0.25'], [4, 0, '']], { cap: 'North: days to dispatch, SD 0.71', mean: 2, max: 0.5 }), bars([[0, 0.2, '0.20'], [1, 0.15, '0.15'], [2, 0.3, '0.30'], [3, 0.15, '0.15'], [4, 0.2, '0.20']], { cap: 'South: days to dispatch, SD 1.38', mean: 2, max: 0.5 })),
+};
+
+/* ---------- Every formula, piece by piece ----------
+ * Asked for 2026-11-05: "the elements in the equation need to be explained one by one in the
+ * more explanation part". parts: each symbol and what it means. walk: the formula worked out
+ * line by line on a tiny example. */
+const READS = {
+  '1|set': { parts: [['{ }', 'Braces: "the set of". What is inside are its elements.'], ['∈', '"Is an element of". 3 ∈ S says 3 is in S.'], ['∉', '"Is not an element of".'], ['∣', '"Such that". What follows is the property the elements share.'], ['∅', 'The empty set: nothing in it.']], walk: { intro: 'Read {x ∣ 0 ≤ x ≤ 1} aloud:', lines: '{        the set of\nx        all numbers x\n∣        such that\n0 ≤ x ≤ 1   x lies between 0 and 1\n}' } },
+  '1|universe': { parts: [['T ⊂ S', 'T is a subset of S: everything in T is also in S.'], ['Ω', 'Omega, the universal set: every object we care about.'], ['Sᶜ', 'The complement of S. The small c means "not in S".'], ['x ∈ Ω ∣ x ∉ S', 'Elements x of Ω, such that x is not in S.']], walk: { intro: 'On a die, with S = {2, 4, 6}, go through Ω and keep what is not in S:', lines: '1 not in S → keep\n2 in S     → drop\n3 not in S → keep\n4 in S     → drop\n5 not in S → keep\n6 in S     → drop\nSᶜ = {1, 3, 5}' } },
+  '1|union': { parts: [['∪', 'Union, "or". Shaped like a cup that holds everything from both.'], ['∩', 'Intersection, "and". Only what the two share.'], ['Tᶜ', 'Not in T.']], walk: { intro: 'With S = {1, 2, 3} and T = {3, 4}:', lines: 'S ∪ T  = {1, 2, 3, 4}\nS ∩ T  = {3}\nS ∩ Tᶜ = {1, 2}' } },
+  '1|disjoint': { parts: [['S ∩ T', 'What S and T have in common.'], ['= ∅', 'Is empty: they have nothing in common.'], ['partition', 'No overlaps, and nothing left out.']], walk: { intro: 'On a die:', lines: '{1, 2} and {5, 6}          disjoint, not a partition: 3 and 4 are left out\n{1, 2}, {3, 4} and {5, 6}  disjoint and they cover Ω: a partition' } },
+  '1|laws': { parts: [['S ∪ T = T ∪ S', 'The order does not matter.'], ['S ∪ (T ∪ U)', 'The grouping does not matter either.'], ['S ∩ (T ∪ U)', 'Distributive: share S across both, as in a × (b + c).'], ['(Sᶜ)ᶜ = S', '"Not not S" is S.'], ['S ∩ Sᶜ = ∅', 'Nothing is both in S and outside it.'], ['S ∪ Ω = Ω', 'Adding S to everything changes nothing.'], ['S ∩ Ω = S', 'The part of S inside everything is S.']], walk: { intro: 'Check the distributive law with S = {1, 2}, T = {2, 3} and U = {1, 4}:', lines: 'T ∪ U = {1, 2, 3, 4}       S ∩ that = {1, 2}\nS ∩ T = {2}   S ∩ U = {1}   their union = {1, 2}' } },
+  '1|demorgan': { parts: [['( )ᶜ', 'The complement of everything in the brackets.'], ['Sᶜ ∩ Tᶜ', 'Not in S and not in T.'], ['Sᶜ ∪ Tᶜ', 'Not in S or not in T.']] },
+  '1|detail': { parts: [['Ω₂', 'The sample space with more detail: which orders.'], ['Ω₁', 'The one with less: how many.'], ['O, L', 'One order on time, one order late.'], ['OOL', 'First on time, second on time, third late.']] },
+  '1|event': { parts: [['L', 'The event "late", a set of outcomes.'], ['ω₃, ω₄', 'Omega with a number: one single outcome. ω₃ is (late, no refund).'], ['{ω₃, ω₄}', 'The event holds both, so it occurs if either happens.']] },
+  '1|axioms': { parts: [['P(A)', 'The probability the law gives to the event A.'], ['≥ 0', 'It is never negative.'], ['⇒', '"Then". If what is on the left holds, so does what is on the right.'], ['A ∪ B', 'A or B.'], ['P(Ω) = 1', 'Something in Ω certainly happens.']], walk: { intro: 'On a fair die, with A = {1} and B = {2}, which are disjoint:', lines: 'P(A) = 1/6 ≥ 0\nP(A ∪ B) = 1/6 + 1/6 = 2/6\nP(Ω) = 6 × 1/6 = 1' } },
+  '1|complement': { parts: [['P(Aᶜ)', 'The probability that A does not happen.'], ['1', 'All of the probability, P(Ω).'], ['− P(A)', 'Take away the part where A happens.']], walk: { intro: 'P(late) = 0.14:', lines: 'P(on time) = 1 − 0.14 = 0.86' } },
+  '1|discrete': { parts: [['P(A)', 'The probability of the event A.'], ['sum', 'Add the numbers.'], ['outcomes in A', 'Only the cells that belong to A.']], walk: { intro: 'A = refunded = {ω₂, ω₄}:', lines: 'ω₂  0.06\nω₄  0.04\nP(A) = 0.06 + 0.04 = 0.10' } },
+  '1|uniform': { parts: [['number of outcomes in A', 'k: the count of cells in the event.'], ['n', 'The count of all outcomes in Ω.'], ['/', 'The share of the outcomes that are in A.']], walk: { intro: 'On a die, A = even:', lines: 'k = 3 (2, 4, 6)\nn = 6\nP(A) = 3/6 = 0.5' } },
+  '1|continuous': { parts: [['[a, b]', 'Every number from a to b, both ends included.'], ['b − a', 'The length of that interval.']], walk: { intro: 'The interval from 0.2 to 0.5:', lines: 'a = 0.2, b = 0.5\nP = 0.5 − 0.2 = 0.3' } },
+  '1|romeo': { parts: [['1', 'The area of the whole square: all of the probability.'], ['2 ×', 'There are two blank triangles.'], ['½ × (3/4)²', 'The area of one: half of base times height, both 3/4.'], ['≈', '"About equal to".'], ['|x − y| ≤ 1/4', 'Their delays differ by at most 15 minutes.']], walk: { intro: 'Step by step:', lines: '(3/4)² = 9/16\n½ × 9/16 = 9/32       one triangle\n2 × 9/32 = 9/16       both\n1 − 9/16 = 7/16       the band where they meet' } },
+  '1|prop-a': { parts: [['A ⊂ B', 'A is inside B.'], ['⇒', '"Then".'], ['P(A) ≤ P(B)', 'A is at most as likely as B.']] },
+  '1|prop-b': { parts: [['P(A ∪ B)', 'The probability of A or B.'], ['P(A) + P(B)', 'Both added: the overlap is now in twice.'], ['− P(A ∩ B)', 'Take the overlap out once.']], walk: { intro: 'Late or refunded:', lines: 'P(L) = 0.14\nP(R) = 0.10\nP(L ∩ R) = 0.04\n0.14 + 0.10 − 0.04 = 0.20' } },
+  '1|prop-c': { parts: [['≤', 'At most: the left side never exceeds the right.'], ['A₁, …, Aₙ', 'n events, numbered 1 to n.'], ['⋯', '"And so on".']], walk: { intro: 'With the same numbers:', lines: 'P(L ∪ R) = 0.20\nP(L) + P(R) = 0.24\n0.20 ≤ 0.24' } },
+  '1|prop-d': { parts: [['P(A)', 'All of A.'], ['Aᶜ ∩ B', 'The part of B outside A.'], ['Aᶜ ∩ Bᶜ ∩ C', 'The part of C outside both A and B.']] },
+  '1|frequency': { parts: [['fₙ(A)', 'The relative frequency of A in n cases.'], ['n_A', 'How many of those cases fell in A.'], ['n', 'How many cases in all.'], ['/', 'The share.']], walk: { intro: 'Last month:', lines: 'n_A = 268 late orders\nn = 2,000 orders\nf(L) = 268 / 2,000 = 0.134' } },
+  '1|demere': { parts: [['P(A ∪ B)', 'A six on the first roll, or on the second.'], ['6/36 + 6/36', 'A six first, plus a six second.'], ['− 1/36', '(6, 6) was counted in both, so remove it once.']] },
+
+  '2|partial': { parts: [['P(A ∣ B)', 'The probability of A, given that B happened.'], ['∣', 'The bar reads "given". What is on its right is already known.'], ['2/3', 'A is 2 of the 3 outcomes still possible.']] },
+  '2|conditional': { parts: [['P(A ∣ B)', 'How likely A is, now that we know B happened.'], ['P(A ∩ B)', 'The part where both happen: the top of the fraction.'], ['P(B)', 'All that is still possible: the bottom of the fraction.'], ['P(B) > 0', 'B must be possible, since we cannot divide by 0.']], walk: { intro: 'Late, given express, from the table of 1,000 orders:', lines: 'P(L ∩ E) = 10/1000 = 0.010\nP(E) = 200/1000 = 0.200\nP(L ∣ E) = 0.010 / 0.200 = 0.05' } },
+  '2|law-given': { parts: [['P(Lᶜ ∣ E)', 'The probability of not late, given express.'], ['1 −', 'The complement rule, now used inside "given E".'], ['0.05', 'P(L ∣ E).']] },
+  '2|reverse': { parts: [['P(L ∣ S)', 'Of the standard orders, the share that are late.'], ['P(S ∣ L)', 'Of the late orders, the share that are standard.'], ['110', 'The same orders on top of both fractions.'], ['800, 120', 'Different totals underneath: standard orders, then late orders.']] },
+  '2|multiplication': { parts: [['P(A ∩ B)', 'The probability that both happen.'], ['P(B)', 'First, B happens.'], ['P(A ∣ B)', 'Then A happens, given B.']], walk: { intro: 'North and late:', lines: 'P(N) = 0.7\nP(L ∣ N) = 0.1\nP(N ∩ L) = 0.7 × 0.1 = 0.07' } },
+  '2|chain': { parts: [['A₁, A₂, A₃', 'Events in order along a path of the tree.'], ['P(A₁)', 'The first branch.'], ['P(A₂ ∣ A₁)', 'The second branch, given the first happened.'], ['P(A₃ ∣ A₁ ∩ A₂)', 'The third branch, given the first two happened.']], walk: { intro: 'Three orders, with the chance of on time 0.9 at each step whatever came before:', lines: 'P(A₁) = 0.9\nP(A₂ ∣ A₁) = 0.9\nP(A₃ ∣ A₁ ∩ A₂) = 0.9\n0.9 × 0.9 × 0.9 = 0.729' } },
+  '2|total': { parts: [['Σᵢ', 'Sigma, the Greek S for "sum". Go through each case i and add up.'], ['i', 'The number of the case: 1, 2, 3…'], ['P(Aᵢ)', 'How big case i is: its weight.'], ['P(B ∣ Aᵢ)', 'How likely B is inside case i.']], walk: { intro: 'Three carriers, i = 1, 2, 3, with B = late:', lines: 'i = 1, carrier A:  0.5 × 0.08 = 0.04\ni = 2, carrier B:  0.3 × 0.12 = 0.036\ni = 3, carrier C:  0.2 × 0.25 = 0.05\nadd:  0.04 + 0.036 + 0.05 = 0.126' } },
+  '2|bayes': { parts: [['P(A ∣ B)', 'What we want: A, given what we saw.'], ['P(A)', 'How likely A was before.'], ['P(B ∣ A)', 'How likely what we saw is if A is true.'], ['P(B)', 'How likely what we saw is overall, on any path.']], walk: { intro: 'A = South, B = late:', lines: 'P(A) = 0.3\nP(B ∣ A) = 0.2\nP(B) = 0.13\nP(A ∣ B) = 0.3 × 0.2 / 0.13 = 0.46' } },
+  '2|prior': { parts: [['Aᵢ', 'One possible cause, number i.'], ['P(Aᵢ)', 'The prior: before seeing anything.'], ['P(B ∣ Aᵢ)', 'The likelihood: how well this cause explains what we saw.'], ['P(B)', 'The same for every cause: it scales the answers to sum to 1.'], ['P(Aᵢ ∣ B)', 'The posterior: after seeing it.']] },
+  '2|which': { parts: [['P(S ∣ L)', 'The chance it came from South, given it is late.'], ['0.06', 'South × late: 0.3 × 0.2.'], ['0.13', 'All late orders: 0.07 + 0.06.']] },
+  '2|dog-answer': { parts: [['P(I ∣ D)', 'The chance of an item, given the dog sat.'], ['0.019', 'Item and dog sits: 0.02 × 0.95.'], ['0.068', 'Dog sits at all: 0.019 + 0.049.']] },
+  '2|independent': { parts: [['P(A ∣ B) = P(A)', 'Knowing B changes nothing about A.'], ['P(A ∩ B)', 'Both happen.'], ['P(A) P(B)', 'The two probabilities multiplied. Two letters side by side mean ×.']], walk: { intro: 'Check Exercise 4’s S and R:', lines: 'P(S ∩ R) = 0.10\nP(S) × P(R) = 0.4 × 0.25 = 0.10\nthe same, so independent' } },
+  '2|trials': { parts: [['p', 'The chance of success in one trial.'], ['1 − p', 'The chance of no success in one trial.'], ['n', 'How many trials.'], ['k', 'How many successes.'], ['pᵏ', 'p multiplied k times: the k successes.'], ['(1 − p)ⁿ⁻ᵏ', 'Multiplied n − k times: the rest, which failed.']], walk: { intro: 'n = 3 orders, k = 1 late, p = 0.1, the sequence OOL:', lines: 'O: 0.9\nO: 0.9\nL: 0.1\n0.9 × 0.9 × 0.1 = 0.081\nat least one late: 1 − 0.9³ = 0.271' } },
+  '2|demere-2': { parts: [['5/6', 'The chance of no six on one roll.'], ['(5/6)⁴', 'No six on all 4 rolls.'], ['1 −', 'So at least one six.'], ['35/36', 'The chance of no double six on one roll of two dice.']] },
+  '2|cond-indep': { parts: [['∣ C', 'Everything is worked out knowing C.'], ['P(A ∩ B ∣ C)', 'Both A and B, given C.'], ['P(A ∣ C) P(B ∣ C)', 'Each one given C, multiplied.']] },
+  '2|two-checks': { parts: [['D, X', 'The dog sits. The X-ray flags.'], ['0.02, 0.98', 'The chance of an item, and of none.'], ['0.9025', 'Both alert given an item: 0.95 × 0.95.'], ['0.0025', 'Both alert given no item: 0.05 × 0.05.'], ['0.068²', 'What multiplying would give if the checks were independent.']] },
+
+  '3|rv': { parts: [['X', 'The random variable.'], [':', '"Goes from… to…".'], ['Ω', 'The outcomes it starts from.'], ['→', 'Each one is sent to…'], ['ℝ', '…a real number.']], walk: { intro: 'X, the larger of two rolls:', lines: 'outcome (1, 3) → X = 3\noutcome (2, 2) → X = 2\noutcome (4, 1) → X = 4' } },
+  '3|statements': { parts: [['{X ≤ 2}', 'The event "X is at most 2".'], ['ω ∈ Ω', 'Outcomes ω taken from Ω.'], ['∣', '"Such that".'], ['X(ω) ≤ 2', 'The number X gives to that outcome is at most 2.']], walk: { intro: 'The cells where the larger roll is at most 2:', lines: '(1, 1) (1, 2) (2, 1) (2, 2)\n4 of 16 cells, so P(X ≤ 2) = 4/16' } },
+  '3|pmf': { parts: [['m', 'For mass: how much probability sits on a value.'], ['_X', 'Which variable it belongs to. This is the PMF of X.'], ['(x)', 'The value you ask about, a plain number.'], ['P(X = x)', 'The chance that X lands on that value.']], walk: { intro: 'Imagine X can be 1, 2 or 3. Then m_X is a small lookup table, and its values sum to 1:', lines: 'm_X(1) = P(X = 1) = 0.5\nm_X(2) = P(X = 2) = 0.3\nm_X(3) = P(X = 3) = 0.2\n0.5 + 0.3 + 0.2 = 1' } },
+  '3|bernoulli': { parts: [['∼', '"Follows". X has this distribution.'], ['Ber', 'Bernoulli: one trial.'], ['p', 'The chance of success, X = 1.'], ['1 − p', 'The chance of failure, X = 0.']], walk: { intro: 'With p = 0.2:', lines: 'm_X(1) = 0.2\nm_X(0) = 1 − 0.2 = 0.8' } },
+  '3|binomial': { parts: [['n', 'How many trials.'], ['p', 'The chance of success in each.'], ['k', 'The number of successes you ask about.'], ['(n choose k)', 'How many different orders those k successes can come in.'], ['pᵏ', 'The k successes.'], ['(1 − p)ⁿ⁻ᵏ', 'The n − k failures.'], ['n!', 'n factorial: n × (n − 1) × … × 1.']], walk: { intro: 'n = 3 visitors, p = 0.2, k = 1 buyer:', lines: '(3 choose 1) = 3!/(1! 2!) = 3      BNN, NBN, NNB\n0.2¹ = 0.2\n0.8² = 0.64\n3 × 0.2 × 0.64 = 0.384' } },
+  '3|poisson': { parts: [['λ', 'Lambda: the average count in the window.'], ['k', 'The count you ask about.'], ['e', 'A fixed number, about 2.718.'], ['e^(−λ)', 'The chance of zero events.'], ['λᵏ', 'λ multiplied k times.'], ['k!', 'k factorial: k × (k − 1) × … × 1, and 0! = 1.']], walk: { intro: 'λ = 4 tickets an hour:', lines: 'k = 0:  e^(−4) × 4⁰ / 0! = 0.018\nk = 1:  e^(−4) × 4¹ / 1! = 0.073\nk = 2:  e^(−4) × 4² / 2! = 0.147' } },
+  '3|expectation': { parts: [['E[X]', 'E for expectation: the average value of X. It is a Latin E, not Greek. The Greek letter is the next one.'], ['Σₓ', 'Sigma, the Greek S for "sum". It says: go through every value x that X can take, work out what follows, and add the results.'], ['x', 'One value of X, a plain number: first 1, then 2, then 3.'], ['m_X(x)', 'The probability of that value, read from the PMF. m for mass: how much weight sits on x.']], walk: { intro: 'Imagine X can be 1, 2 or 3, with m_X(1) = 0.5, m_X(2) = 0.3 and m_X(3) = 0.2. The sum means one line per value:', lines: 'x = 1:   1 × 0.5 = 0.5\nx = 2:   2 × 0.3 = 0.6\nx = 3:   3 × 0.2 = 0.6\nadd:     0.5 + 0.6 + 0.6 = 1.7\nE[X] = 1.7' } },
+  '3|rule': { parts: [['g(x)', 'A function: what you do to the value, such as squaring it.'], ['Σₓ', 'Go through every value x and add.'], ['g(x)', 'Instead of x itself, use the changed value.'], ['m_X(x)', 'The weight stays that of x.']], walk: { intro: 'The same X, with g(x) = x²:', lines: 'x = 1:   1² × 0.5 = 0.5\nx = 2:   2² × 0.3 = 1.2\nx = 3:   3² × 0.2 = 1.8\nadd:     E[X²] = 3.5\nnot the same as (E[X])² = 1.7² = 2.89' } },
+  '3|linear-mean': { parts: [['a', 'A fixed number that multiplies X.'], ['b', 'A fixed number that is added.'], ['E[X]', 'The mean of X.']], walk: { intro: 'The same X, with E[X] = 1.7, a = 2 and b = 1:', lines: 'E[2X + 1] = 2 × 1.7 + 1 = 4.4\ncheck:  3 × 0.5 + 5 × 0.3 + 7 × 0.2 = 4.4' } },
+  '3|variance': { parts: [['Var(X)', 'The variance: how spread out X is.'], ['μ', 'Mu, the Greek m: the mean, E[X].'], ['X − μ', 'How far a value falls from the mean.'], ['( )²', 'Squared, so that distances below and above do not cancel.'], ['E[ ]', 'The average of those squares, using the weights.'], ['σ_X', 'Sigma, small this time: the standard deviation.'], ['√', 'The root, back to the units of X.']], walk: { intro: 'The same X, with μ = 1.7:', lines: 'x = 1:   (1 − 1.7)² × 0.5 = 0.245\nx = 2:   (2 − 1.7)² × 0.3 = 0.027\nx = 3:   (3 − 1.7)² × 0.2 = 0.338\nadd:     Var(X) = 0.61\nσ_X = √0.61 = 0.78' } },
+  '3|shortcut': { parts: [['E[X²]', 'Square each value first, then average.'], ['(E[X])²', 'Average first, then square.'], ['−', 'The gap between the two is the variance.']], walk: { intro: 'The same X:', lines: 'E[X²] = 3.5\n(E[X])² = 1.7² = 2.89\nVar(X) = 3.5 − 2.89 = 0.61' } },
+  '3|linear-var': { parts: [['a²', 'Multiplying by a stretches distances by a, and squares by a².'], ['b', 'Not in the answer: adding moves everything and leaves the distances alone.'], ['|a|', 'The size of a, without its sign.']], walk: { intro: 'The same X, with a = 2 and b = 1:', lines: 'Var(2X + 1) = 2² × 0.61 = 2.44\nσ = 2 × 0.78 = 1.56' } },
+};
+
+/* ---------- Store: this browser first, then the account ---------- */
+// The same marks and notes as the Python page, under keys that start with stats|.
+const ON_BRAIN = location.pathname.startsWith('/statistics');
+const MARKS_URL = '/api/coding/marks';
+const NOTES_URL = '/api/coding/notes';
+function readStore(key, empty) { try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return v ?? empty; } catch (e) { return empty; } }
+function writeStore(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {} }
+let marks = readStore('stats-marks', {});
+let notes = readStore('stats-notes', []);
+const saveLocal = () => { writeStore('stats-marks', marks); writeStore('stats-notes', notes); };
+const syncEl = document.getElementById('sync');
+const fromServer = n => ({ id: n.id, key: n.itemKey, kind: n.kind, body: n.body, answer: n.answer, readAt: n.readAt, createdAt: n.createdAt });
+const mine = k => k.startsWith('stats|');
+
+async function load() {
+  if (!ON_BRAIN) { syncEl.textContent = 'Saved in this browser.'; return; }
+  try {
+    const [mr, nr] = await Promise.all([fetch(MARKS_URL), fetch(NOTES_URL)]);
+    if (!mr.ok || !nr.ok) throw new Error('load');
+    const sm = Object.fromEntries(Object.entries((await mr.json()).marks || {}).filter(([k]) => mine(k)));
+    // Marks made here before signing in go up once; the account's own are never overwritten.
+    const up = Object.fromEntries(Object.entries(marks).filter(([k]) => !(k in sm)));
+    if (Object.keys(up).length) fetch(MARKS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ marks: up }) }).catch(() => {});
+    marks = { ...sm, ...up };
+    const server = (await nr.json()).notes.filter(n => mine(n.itemKey)).map(fromServer);
+    const local = notes.filter(n => !n.id);
+    if (local.length) {
+      const r = await fetch(NOTES_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: local.map(n => ({ key: n.key, kind: n.kind, body: n.body })) }) });
+      server.push(...(r.ok ? (await r.json()).notes.map(fromServer) : local));
+    }
+    notes = server;
+    saveLocal();
+    syncEl.textContent = 'Synced with your account: the same on your phone and computer.';
+  } catch (e) { syncEl.textContent = 'Offline: kept in this browser for now.'; }
+  renderSession(); renderNotebook(); paintBars(); showFiles(false);
+}
+function setMark(key, mark) {
+  if (marks[key] === mark) delete marks[key]; else marks[key] = mark;
+  saveLocal();
+  if (ON_BRAIN) fetch(MARKS_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, mark: marks[key] ?? null, note: null }) })
+    .catch(() => { syncEl.textContent = 'Offline: the mark is kept in this browser.'; });
+}
+
+/* ---------- Notes ---------- */
+const noteRef = n => n.id || n.localId;
+const notesOf = key => notes.filter(n => n.key === key);
+async function addNote(key, kind, body) {
+  const text = body.trim();
+  if (!text) return;
+  const n = { localId: `l${Date.now()}`, key, kind, body: text, answer: null, readAt: null, createdAt: new Date().toISOString() };
+  notes.push(n); saveLocal(); paintNotes();
+  if (!ON_BRAIN) return;
+  try {
+    const r = await fetch(NOTES_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: [{ key, kind, body: text }] }) });
+    if (!r.ok) throw new Error();
+    Object.assign(n, fromServer((await r.json()).notes[0])); delete n.localId; saveLocal();
+  } catch (e) { syncEl.textContent = 'Could not save the note to your account; it is kept in this browser.'; }
+}
+function editNote(ref, kind, body) {
+  const n = notes.find(x => noteRef(x) === ref);
+  if (!n || !body.trim()) return;
+  n.kind = kind; n.body = body.trim(); saveLocal(); paintNotes();
+  if (ON_BRAIN && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, body: n.body }) }).catch(() => {});
+}
+function deleteNote(ref) {
+  const n = notes.find(x => noteRef(x) === ref);
+  if (!n) return;
+  notes = notes.filter(x => x !== n); saveLocal(); paintNotes();
+  if (ON_BRAIN && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'DELETE' }).catch(() => {});
+}
+function markRead(ref) {
+  const n = notes.find(x => noteRef(x) === ref);
+  if (!n) return;
+  n.readAt = new Date().toISOString(); saveLocal(); paintNotes();
+  if (ON_BRAIN && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ read: true }) }).catch(() => {});
+}
+const KIND = { question: 'Question', comment: 'Comment' };
+function noteHtml(n) {
+  const done = n.kind !== 'question' || (n.answer && n.readAt);
+  return `<div class="note${done ? ' done' : ''}" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
+    <div class="note-head"><span class="note-kind">${KIND[n.kind]}</span><span class="tools"><button type="button" class="n-edit" aria-label="Edit">✎</button><button type="button" class="n-del" aria-label="Delete">×</button></span></div>
+    <div class="note-body">${boldHtml(esc(n.body))}</div>
+    ${n.answer ? `<div class="answer"><span class="note-kind">Answer</span><div class="note-body">${boldHtml(esc(n.answer))}</div>${n.readAt ? '' : '<button type="button" class="read">Got it, mark read</button>'}</div>` : ''}
+  </div>`;
+}
+function editorHtml(kind, body) {
+  return `<div class="editor" data-kind="${kind}"><div class="kinds" role="radiogroup" aria-label="Kind of note">${Object.entries(KIND).map(([k, l]) => `<button type="button" role="radio" data-kind="${k}" aria-checked="${k === kind}">${l}</button>`).join('')}</div>
+    <textarea rows="3" maxlength="2000" aria-label="Your note" placeholder="Write your question or comment">${esc(body)}</textarea>
+    <div class="acts"><button type="button" class="save">Save</button><button type="button" class="cancel">Cancel</button></div></div>`;
+}
+function paintNotes() {
+  for (const card of document.querySelectorAll('.card')) {
+    const list = notesOf(card.dataset.key);
+    card.querySelector('.notes').innerHTML = list.map(noteHtml).join('');
+    const b = card.querySelector('.note-btn');
+    b.setAttribute('aria-pressed', String(list.length > 0));
+    b.textContent = list.length ? `Question or comment · ${list.length}` : 'Question or comment';
+  }
+  renderNotebook();
+}
+// One handler for every card and the notepad's list.
+document.addEventListener('click', e => {
+  const t = e.target;
+  const k = t.closest('.editor .kinds [data-kind]');
+  if (k) { const ed = k.closest('.editor'); ed.dataset.kind = k.dataset.kind; for (const b of ed.querySelectorAll('.kinds button')) b.setAttribute('aria-checked', String(b === k)); return; }
+  const host = t.closest('.card, .nb-group');
+  if (!host) return;
+  const m = t.closest('.mark');
+  if (m) {
+    setMark(host.dataset.key, m.dataset.mark);
+    const v = marks[host.dataset.key] || '';
+    host.dataset.mark = v;
+    for (const b of host.querySelectorAll('.mark')) b.setAttribute('aria-pressed', String(b.dataset.mark === v));
+    paintBars();
+    return;
+  }
+  if (t.closest('.note-btn')) {
+    host.querySelector('.editor')?.remove();
+    host.querySelector('.notes').insertAdjacentHTML('afterend', editorHtml('question', ''));
+    host.querySelector('.editor textarea').focus();
+    return;
+  }
+  const note = t.closest('.note');
+  if (note && t.closest('.n-edit')) {
+    const n = notes.find(x => noteRef(x) === note.dataset.ref);
+    note.insertAdjacentHTML('afterend', editorHtml(n.kind, n.body));
+    note.nextElementSibling.dataset.ref = note.dataset.ref;
+    note.hidden = true;
+    note.nextElementSibling.querySelector('textarea').focus();
+    return;
+  }
+  if (note && t.closest('.n-del')) {
+    const b = t.closest('.n-del');
+    if (b.dataset.armed) { deleteNote(note.dataset.ref); return; }
+    b.dataset.armed = '1'; b.textContent = 'Delete?'; b.classList.add('armed');
+    setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = '×'; b.classList.remove('armed'); } }, 3000);
+    return;
+  }
+  if (note && t.closest('.read')) { markRead(note.dataset.ref); return; }
+  const ed = t.closest('.editor');
+  if (ed && t.closest('.save')) {
+    const body = ed.querySelector('textarea').value;
+    ed.remove();
+    if (ed.dataset.ref) editNote(ed.dataset.ref, ed.dataset.kind, body); else addNote(host.dataset.key, ed.dataset.kind, body);
+    paintNotes();
+    return;
+  }
+  if (ed && t.closest('.cancel')) { ed.remove(); paintNotes(); }
+});
+
+
+/* ---------- Cheat sheet: every rule and term from lectures 1 to 3 ---------- */
+const REF = [
+  { name: 'Sets', items: [
+    ['x ∈ S   x ∉ S', 'x is, or is not, an element of S.', '3 ∈ {1, …, 6}', 1, 'set'],
+    ['∅', 'The empty set: no elements.', '', 1, 'set'],
+    ['Ω', 'The universal set, and in a model the sample space: every possible outcome.', '', 1, 'model'],
+    ['T ⊂ S', 'Subset: every element of T is also in S.', '', 1, 'universe'],
+    ['Sᶜ', 'Complement: what is in Ω and outside S.', '{2, 4, 6}ᶜ = {1, 3, 5} on a die', 1, 'universe'],
+    ['S ∪ T', 'Union, "or": in S, in T, or in both.', '', 1, 'union'],
+    ['S ∩ T', 'Intersection, "and": in both.', '', 1, 'union'],
+    ['Disjoint', 'Sharing nothing.', 'S ∩ T = ∅', 1, 'disjoint'],
+    ['Partition', 'Disjoint sets that together cover Ω: each element in exactly one.', '', 1, 'disjoint'],
+    ['De Morgan', 'A complement swaps ∪ and ∩.', '(S ∪ T)ᶜ = Sᶜ ∩ Tᶜ\n(S ∩ T)ᶜ = Sᶜ ∪ Tᶜ', 1, 'demorgan'],
+  ] },
+  { name: 'Models and laws', items: [
+    ['Sample space', 'All possible outcomes: mutually exclusive and collectively exhaustive.', '', 1, 'sample'],
+    ['Event', 'A set of outcomes, a subset of Ω. It occurs when the outcome is in it.', 'L = {ω₃, ω₄}', 1, 'event'],
+    ['Axioms', 'The three rules behind every other rule.', 'P(A) ≥ 0\nA, B disjoint ⇒ P(A ∪ B) = P(A) + P(B)\nP(Ω) = 1', 1, 'axioms'],
+    ['Discrete law', 'On a finite Ω, add the probabilities of the outcomes in the event.', '', 1, 'discrete'],
+    ['Uniform law', 'Equally likely outcomes: the count, length or area of A over that of Ω.', 'P(A) = k / n', 1, 'uniform'],
+    ['Complement rule', 'The probability of "not A".', 'P(Aᶜ) = 1 − P(A)', 1, 'complement'],
+    ['Property (a)', 'A larger event has a larger probability.', 'A ⊂ B ⇒ P(A) ≤ P(B)', 1, 'prop-a'],
+    ['Addition rule (b)', 'Subtract the overlap once.', 'P(A ∪ B) = P(A) + P(B) − P(A ∩ B)', 1, 'prop-b'],
+    ['Union bound (c)', 'The sum is an upper limit.', 'P(A ∪ B) ≤ P(A) + P(B)', 1, 'prop-c'],
+    ['Property (d)', 'Split a union of three into disjoint pieces.', 'P(A ∪ B ∪ C) = P(A) + P(Aᶜ ∩ B) + P(Aᶜ ∩ Bᶜ ∩ C)', 1, 'prop-d'],
+    ['Relative frequency', 'The share of past cases in A. It is data, and obeys all the same rules.', 'fₙ(A) = n_A / n', 1, 'frequency'],
+  ] },
+  { name: 'Conditioning and Bayes', items: [
+    ['P(A ∣ B)', 'Conditional probability, A given B: keep only the outcomes in B.', 'P(A ∣ B) = P(A ∩ B) / P(B)', 2, 'conditional'],
+    ['Multiplication rule', 'A joint probability from a conditional one.', 'P(A ∩ B) = P(B) P(A ∣ B)', 2, 'multiplication'],
+    ['Chain rule', 'Multiply along a tree path.', 'P(A₁ ∩ A₂ ∩ A₃) = P(A₁) P(A₂ ∣ A₁) P(A₃ ∣ A₁ ∩ A₂)', 2, 'chain'],
+    ['Total probability', 'Add over a partition: a weighted average.', 'P(B) = Σᵢ P(Aᵢ) P(B ∣ Aᵢ)', 2, 'total'],
+    ['Bayes’ rule', 'Reverses a conditional probability.', 'P(A ∣ B) = P(A) P(B ∣ A) / P(B)', 2, 'bayes'],
+    ['Prior', 'How probable a cause is before seeing the effect.', 'P(Aᵢ)', 2, 'prior'],
+    ['Likelihood', 'How probable the effect is if the cause is true.', 'P(B ∣ Aᵢ)', 2, 'prior'],
+    ['Posterior', 'How probable the cause is after seeing the effect.', 'P(Aᵢ ∣ B)', 2, 'prior'],
+  ] },
+  { name: 'Independence', items: [
+    ['Independent', 'Learning one tells nothing about the other. Disjoint is not independent.', 'P(A ∩ B) = P(A) P(B)', 2, 'independent'],
+    ['Independent trials', 'n repeats, each a success with probability p.', 'one sequence: pᵏ (1 − p)ⁿ⁻ᵏ\nat least one: 1 − (1 − p)ⁿ', 2, 'trials'],
+    ['Conditional independence', 'Independent within the law given C.', 'P(A ∩ B ∣ C) = P(A ∣ C) P(B ∣ C)', 2, 'cond-indep'],
+    ['Gambler’s fallacy', 'Expecting a result to be "due" after a run. Independent trials have no memory.', '', 2, 'fallacy'],
+  ] },
+  { name: 'Random variables and PMFs', items: [
+    ['Random variable', 'A number for each outcome.', 'X : Ω → ℝ', 3, 'rv'],
+    ['PMF', 'The probability of each value. The values sum to 1.', 'm_X(x) = P(X = x)', 3, 'pmf'],
+    ['X ∼', 'Read "follows": X has this distribution.', 'X ∼ Bin(10, 0.2)', 3, 'bernoulli'],
+    ['Ber(p)', 'Bernoulli: one trial, success or not.', 'm_X(1) = p     m_X(0) = 1 − p', 3, 'bernoulli'],
+    ['Bin(n, p)', 'Binomial: successes in n independent trials with the same p.', 'm_X(k) = (n choose k) pᵏ (1 − p)ⁿ⁻ᵏ', 3, 'binomial'],
+    ['Binomial conditions', 'n fixed, two results, independent, same p.', '', 3, 'conditions'],
+    ['Pois(λ)', 'Poisson: events in a fixed window, λ on average.', 'm_X(k) = e^(−λ) λᵏ / k!', 3, 'poisson'],
+    ['Poisson approximation', 'Large n, small p: use the Poisson with λ = np.', '', 3, 'poisson-approx'],
+  ] },
+  { name: 'Expectation and variance', items: [
+    ['Σₓ', 'Sigma, the sum: go through every value x, work out what follows, add the results.', 'Σₓ x m_X(x) = 1 × 0.5 + 2 × 0.3 + 3 × 0.2', 3, 'expectation'],
+    ['E[X]', 'The expectation or mean: the balance point and the long-run average.', 'E[X] = Σₓ x m_X(x)', 3, 'expectation'],
+    ['E[g(X)]', 'The expected value rule. In general it is not g(E[X]).', 'E[g(X)] = Σₓ g(x) m_X(x)', 3, 'rule'],
+    ['E[aX + b]', 'The mean of a linear function.', 'E[aX + b] = a E[X] + b', 3, 'linear-mean'],
+    ['Var(X)', 'The variance: the average squared distance from the mean.', 'Var(X) = E[(X − μ)²] = E[X²] − μ²', 3, 'variance'],
+    ['σ_X', 'The standard deviation, SD: the root of the variance, in the units of X.', 'σ_X = √Var(X)', 3, 'variance'],
+    ['Var(aX + b)', 'Adding shifts, multiplying scales.', 'Var(aX + b) = a² Var(X)', 3, 'linear-var'],
+    ['Model means and variances', 'Ready-made for the three models.', 'Ber(p):    p,   p(1 − p)\nBin(n, p): np,  np(1 − p)\nPois(λ):   λ,   λ', 3, 'models-moments'],
+  ] },
+];
+
+/* ---------- A lecture ---------- */
+// Terms in a card's text, and symbols in a formula: hoverable, but not coloured.
+const TERMS = /\b(sample spaces?|complements?|unions?|intersections?|disjoint|partitions?|De Morgan|axioms?|events?|conditional probabilit(?:y|ies)|total probability|chain rule|multiplication rule|Bayes|priors?|likelihoods?|posteriors?|independent|independence|PMFs?|Bernoulli|binomial|Poisson|expectation|variances?|standard deviation|SD|random variables?|frequenc(?:y|ies))\b/gi;
+const SYMBOLS = /∪|∩|∣|∅|Ω|⊂|∼|ᶜ|Σ|E\[|Var\(|m_X|σ_X/g;
+function kwText(s) { return subs(esc(s).replace(TERMS, m => `<span class="kw-t" data-kw="${m.toLowerCase()}">${m}</span>`)); }
+function mathHtml(s) { return subs(esc(s).replace(SYMBOLS, m => `<span class="kw" data-kw="${m.replace('_', '')}">${m}</span>`)); }
+function readsHtml(r) {
+  return `<div class="reads"><p class="flow-label">What each piece means</p><dl>${r.parts.map(([sym, say]) => `<div><dt>${mathHtml(sym)}</dt><dd>${kwText(say)}</dd></div>`).join('')}</dl></div>${r.walk ? `<div class="walk"><p class="flow-label">Worked out, step by step</p><p>${kwText(r.walk.intro)}</p><pre>${mathHtml(r.walk.lines)}</pre></div>` : ''}`;
+}
+const PARA = String.fromCharCode(10, 10);
+const paras = t => t.split(PARA).map(p => `<p>${kwText(p)}</p>`).join('');
+function cardHtml(s, c) {
+  const key = cardKey(s.n, c.id), m = marks[key] || '';
+  const r = READS[`${s.n}|${c.id}`], x = c.more || {};
+  return `<article class="card" id="c-${s.n}-${c.id}" data-key="${esc(key)}" data-mark="${m}">
+    <h3><span class="num">${c.num.split('.')[1]}</span><span>${esc(c.name)}</span></h3>
+    ${paras(c.what)}
+    ${c.list ? `<ol class="steps">${c.list.map(i => `<li>${kwText(i)}</li>`).join('')}</ol>` : ''}
+    ${c.f ? `<pre>${mathHtml(c.f)}</pre>` : ''}
+    ${r ? readsHtml(r) : ''}
+    ${x.say ? `<p>${kwText(x.say)}</p>` : ''}${x.f ? `<pre>${mathHtml(x.f)}</pre>` : ''}${x.html ? x.html() : ''}
+    ${c.watch ? `<p class="watch"><b>Watch out</b>${kwText(c.watch)}</p>` : ''}
+    <div class="notes"></div>
+    <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>${ON_BRAIN && c.slide ? `<a class="slide-link" href="/api/coding/slides/Stats${s.n}.pdf#page=${c.slide}" target="_blank" rel="noopener">Slide ${c.slide} ›</a>` : ''}
+      <span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Confused as fuck']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span></div>
+  </article>`;
+}
+function practiceHtml(s) {
+  return s.practice.map((x, i) => `<section class="ex" aria-label="Exercise ${i + 1}"><h3><span class="ex-num">Exercise ${i + 1}</span>${esc(x.title)}</h3><p class="ex-setup" data-hl="stats|p|${x.id}">${text(x.setup)}</p>${x.table ? x.table() : ''}
+    <div class="practice">${x.parts.map(([q, a], j) => `<details class="pq" data-hl="stats|p|${x.id}-${j + 1}"><summary><span class="num">${j + 1}</span><span>${text(q)}</span></summary><div class="ans">${subs(a())}</div></details>`).join('')}</div></section>`).join('');
+}
+function refHtml() {
+  return `<h1>Cheat sheet</h1><p class="lede">Every rule and term from lectures 1 to 3, by topic. The lecture tag opens its card.</p>
+    <input type="search" class="ref-search" id="ref-q" placeholder="Find: bayes, union, variance, poisson…" aria-label="Find a rule or term" autocomplete="off">
+    <div id="ref-list">${REF.map(g => `<section class="ref-group"><h2>${esc(g.name)}</h2><dl class="ref">${g.items.map(([t, d, ex, n, id]) => `<div class="ref-row" data-hl="stats|ref|${esc(t)}" data-text="${esc(`${t} ${d} ${ex}`.toLowerCase())}">
+      <dt>${mathHtml(t)}</dt><dd><span>${esc(d)}</span>${ex ? `<pre>${mathHtml(ex)}</pre>` : ''}<button type="button" class="ref-go" data-go="${esc(cardKey(n, id))}">Lecture ${n} ›</button></dd></div>`).join('')}</dl></section>`).join('')}</div>
+    <p class="empty" id="ref-none" hidden>Nothing matches. Try a shorter word.</p>`;
+}
+function filterRef(q) {
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  for (const r of document.querySelectorAll('.ref-row')) r.hidden = !words.every(w => r.dataset.text.includes(w));
+  for (const g of document.querySelectorAll('.ref-group')) g.hidden = !g.querySelector('.ref-row:not([hidden])');
+  document.getElementById('ref-none').hidden = !!document.querySelector('.ref-row:not([hidden])');
+}
+document.getElementById('session').addEventListener('input', e => { if (e.target.id === 'ref-q') filterRef(e.target.value); });
+document.getElementById('session').addEventListener('click', e => { const go = e.target.closest('.ref-go'); if (go) goTo(go.dataset.go); });
+let current = 1;
+try { const saved = localStorage.getItem('stats-session'); current = saved === 'ref' ? saved : Number(saved) || 1; } catch (e) {}
+if (current !== 'ref' && !SESSIONS.some(s => s.n === current)) current = 1;
+function renderTabs() {
+  document.getElementById('sessions').innerHTML = SESSIONS.map(s => `<button type="button" class="sess" role="tab" data-s="${s.n}" aria-selected="${s.n === current}"><b>Lecture ${s.n}</b><span>${esc(s.short)}</span><span class="bar"><i></i></span></button>`).join('')
+    + `<button type="button" class="sess ref" role="tab" data-s="ref" aria-selected="${current === 'ref'}"><b>Cheat sheet</b><span>Every rule, findable</span></button>`;
+  paintBars();
+}
+function paintBars() {
+  for (const s of SESSIONS) {
+    const cards = s.groups.flatMap(g => g.cards);
+    const got = cards.filter(c => marks[cardKey(s.n, c.id)] === 'got').length;
+    const b = document.querySelector(`.sess[data-s="${s.n}"] .bar i`);
+    if (b) { b.style.width = `${(100 * got) / cards.length}%`; b.parentElement.title = `${got} of ${cards.length} got it`; }
+  }
+}
+// Each segment of boxes has its own colour, as on the Python page.
+const segHue = (n, gi, count) => ({ 1: 250, 2: 150, 3: 20 }[n] + (300 * gi) / Math.max(count, 1)) % 360;
+function picOpen() { try { return localStorage.getItem('stats-pic-closed') !== '1'; } catch (e) { return true; } }
+document.addEventListener('toggle', e => { if (e.target.id === 'pic') { try { localStorage.setItem('stats-pic-closed', e.target.open ? '' : '1'); } catch (err) {} } }, true);
+function renderSession() {
+  if (current === 'ref') { document.getElementById('session').innerHTML = '<p class="where">Cheat sheet</p>' + refHtml(); applyHighlights(); return; }
+  const s = SESSIONS.find(x => x.n === current);
+  document.getElementById('session').innerHTML = `<p class="where">Lecture ${s.n}</p><h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
+    + `<details class="pic" id="pic"${picOpen() ? ' open' : ''}><summary>The picture: the lecture on one page</summary><div class="pic-body">${PICTURES[s.n]()}</div></details>`
+    + s.groups.map((g, gi) => `<section class="seg" style="--h: ${segHue(s.n, gi, s.groups.length).toFixed(0)}"><h2>${esc(g.name)}</h2>${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div></section>`).join('')
+    + `<section class="seg" style="--h: 40"><h2>Practice</h2><p class="group-note">Try each one on paper first, then open the answer.</p>${practiceHtml(s)}</section>`
+    + `<h2>To remember</h2><ul class="recap" data-hl="stats|s${s.n}|recap">${s.recap.map(r => `<li>${text(r)}</li>`).join('')}</ul>`;
+  paintNotes();
+  applyHighlights();
+}
+document.getElementById('sessions').addEventListener('click', e => {
+  const b = e.target.closest('.sess');
+  if (!b) return;
+  current = b.dataset.s === 'ref' ? 'ref' : Number(b.dataset.s);
+  try { localStorage.setItem('stats-session', current); } catch (err) {}
+  for (const x of document.querySelectorAll('.sess')) x.setAttribute('aria-selected', String(x === b));
+  renderSession();
+  followSpot();
+  scrollTo({ top: 0 });
+});
+
+/* ---------- The notepad on the right ---------- */
+const notebook = document.getElementById('notebook');
+const nbDot = document.getElementById('nb-dot');
+const nbAbout = document.getElementById('nb-about');
+const nbText = document.getElementById('nb-text');
+let nbKind = 'question', nbPinned = false;
+function places() {
+  return [{ key: 'stats|notebook', tag: 'Stats', name: 'The course in general' },
+    ...SESSIONS.flatMap(s => [{ key: `stats|s${s.n}`, tag: `L${s.n}`, name: `Lecture ${s.n} in general`, s: s.n },
+      ...s.groups.flatMap(g => g.cards.map(c => ({ key: cardKey(s.n, c.id), tag: c.num, name: c.name, s: s.n, id: c.id })))])];
+}
+nbAbout.innerHTML = places().map(p => `<option value="${esc(p.key)}">${p.id ? `${p.tag} · ` : ''}${esc(p.name)}</option>`).join('');
+// Where you are: the card nearest the top of the screen, else the session.
+function currentSpot() {
+  let best = null;
+  for (const c of document.querySelectorAll('.card')) {
+    const r = c.getBoundingClientRect();
+    if (r.bottom > 80 && r.top < innerHeight * 0.6) { best = c; break; }
+  }
+  if (best) return best.dataset.key;
+  return current === 'ref' ? 'stats|notebook' : `stats|s${current}`;
+}
+function followSpot() { if (!nbPinned) nbAbout.value = currentSpot(); if (!notebook.hidden) renderNotebook(); }
+let scrollTimer = 0;
+addEventListener('scroll', () => { clearTimeout(scrollTimer); scrollTimer = setTimeout(() => { if (!notebook.hidden) followSpot(); }, 150); }, { passive: true });
+function setNotebook(open) {
+  notebook.hidden = !open;
+  nbDot.setAttribute('aria-expanded', String(open));
+  if (open) { if (!nbText.value.trim()) nbPinned = false; followSpot(); }
+}
+function renderNotebook() {
+  nbDot.classList.toggle('has-notes', notes.length > 0);
+  if (notebook.hidden) return;
+  const box = document.getElementById('nb-list');
+  if (box.querySelector('.editor')) return;
+  const here = nbAbout.value;
+  const groups = places().map(p => ({ p, list: notesOf(p.key) })).filter(g => g.list.length);
+  box.innerHTML = groups.length ? groups.map(({ p, list }) => `<div class="nb-group${p.key === here ? ' here' : ''}" data-key="${esc(p.key)}">
+      <div><button type="button" class="nb-go" data-go="${esc(p.key)}"><span class="t">${esc(p.tag)}</span>${esc(p.name)}${p.s ? ' ›' : ''}</button>${p.key === here ? '<span class="nb-here">you are here</span>' : ''}</div>
+      <div class="notes">${list.map(noteHtml).join('')}</div></div>`).join('')
+    : '<p class="empty">Nothing yet. Write above: the note is filed under the card you are reading.</p>';
+}
+function goTo(key) {
+  const p = places().find(x => x.key === key);
+  if (!p || !p.s) return;
+  if (p.s !== current) document.querySelector(`.sess[data-s="${p.s}"]`).click();
+  const el = p.id ? document.getElementById(`c-${p.s}-${p.id}`) : document.querySelector('h1');
+  if (!el) return;
+  if (innerWidth < 760) setNotebook(false);
+  el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (p.id) { el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
+}
+nbDot.addEventListener('click', () => setNotebook(notebook.hidden));
+document.getElementById('nb-close').addEventListener('click', () => setNotebook(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !notebook.hidden) setNotebook(false); });
+nbAbout.addEventListener('change', () => { nbPinned = true; renderNotebook(); });
+nbText.addEventListener('input', () => { if (nbText.value.trim()) nbPinned = true; });
+nbText.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); document.getElementById('nb-save').click(); } });
+notebook.addEventListener('click', e => {
+  const k = e.target.closest('.nb-write .kinds [data-kind]');
+  if (k) { nbKind = k.dataset.kind; for (const b of notebook.querySelectorAll('.nb-write .kinds button')) b.setAttribute('aria-checked', String(b === k)); return; }
+  if (e.target.closest('#nb-save')) {
+    if (!nbText.value.trim()) { nbText.focus(); return; }
+    const label = nbAbout.selectedOptions[0].textContent;
+    addNote(nbAbout.value, nbKind, nbText.value);
+    nbText.value = ''; nbPinned = false;
+    const s = document.getElementById('nb-saved');
+    s.textContent = `Saved to ${label}.`;
+    setTimeout(() => { if (s.textContent.startsWith('Saved')) s.textContent = ''; }, 2500);
+    followSpot();
+    return;
+  }
+  const go = e.target.closest('.nb-go');
+  if (go) goTo(go.dataset.go);
+});
+
+
+/* ---------- Term peek ----------
+   As on the SQL page: hover a term in a card's text, or a symbol in a formula, for 0.6 s, or tap
+   it on a phone. Its cheat-sheet line opens in a box at the side, with the link to its card.
+   Escape, × or a click elsewhere closes it. */
+const PEEK_TERM = {
+  '∪': 'S ∪ T', '∩': 'S ∩ T', '∣': 'P(A ∣ B)', '∅': '∅', 'Ω': 'Ω', '⊂': 'T ⊂ S', '∼': 'X ∼', 'ᶜ': 'Sᶜ', 'Σ': 'Σₓ', 'E[': 'E[X]', 'Var(': 'Var(X)', mX: 'PMF', 'σX': 'σ_X',
+  'sample space': 'Sample space', complement: 'Complement rule', union: 'S ∪ T', intersection: 'S ∩ T', disjoint: 'Disjoint', partition: 'Partition', 'de morgan': 'De Morgan', axiom: 'Axioms', event: 'Event',
+  'conditional probability': 'P(A ∣ B)', 'total probability': 'Total probability', 'chain rule': 'Chain rule', 'multiplication rule': 'Multiplication rule', bayes: 'Bayes’ rule', prior: 'Prior', likelihood: 'Likelihood', posterior: 'Posterior',
+  independent: 'Independent', independence: 'Independent', pmf: 'PMF', bernoulli: 'Ber(p)', binomial: 'Bin(n, p)', poisson: 'Pois(λ)', expectation: 'E[X]', variance: 'Var(X)', 'standard deviation': 'σ_X', sd: 'σ_X', 'random variable': 'Random variable', frequency: 'Relative frequency',
+};
+const peekKey = w => PEEK_TERM[w] || PEEK_TERM[w.replace(/ies$/, 'y').replace(/s$/, '')] || PEEK_TERM[w.replace(/s$/, '')];
+const refByTerm = term => { for (const g of REF) for (const it of g.items) if (it[0] === term) return it; return null; };
+const peek = document.createElement('aside');
+peek.className = 'peek';
+peek.hidden = true;
+peek.setAttribute('aria-label', 'Keyword');
+document.body.append(peek);
+let peekTimer = 0, peekWord = null;
+function openPeek(word, el) {
+  const it = refByTerm(peekKey(word));
+  if (!it) return;
+  const [t, d, ex, n, id] = it;
+  peekWord = el;
+  peek.innerHTML = `<div class="peek-top"><p class="peek-term">${mathHtml(t)}</p><button type="button" class="peek-close" aria-label="Close">×</button></div>
+    <p>${esc(d)}</p>${ex ? `<pre>${mathHtml(ex)}</pre>` : ''}
+    <button type="button" class="ref-go" data-go="${esc(cardKey(n, id))}">Lecture ${n} · open the card ›</button>`;
+  peek.hidden = false;
+}
+function closePeek() { peek.hidden = true; peekWord = null; clearTimeout(peekTimer); }
+const peekTarget = e => e.target.closest && e.target.closest('#session .kw[data-kw], #session .kw-t, #session .kw-chip');
+document.addEventListener('mouseover', e => {
+  const k = peekTarget(e);
+  if (!k || k === peekWord || k.closest('.ref-row')) return;
+  clearTimeout(peekTimer);
+  peekTimer = setTimeout(() => { if (k.matches(':hover') && getSelection().isCollapsed) openPeek(k.dataset.kw, k); }, 600);
+});
+document.addEventListener('mouseout', e => { if (peekTarget(e)) clearTimeout(peekTimer); });
+// A tap (no hover on a phone) opens it at once.
+document.addEventListener('click', e => {
+  if (e.target.closest('.peek-close')) { closePeek(); return; }
+  const go = e.target.closest('.peek .ref-go');
+  if (go) { closePeek(); goTo(go.dataset.go); return; }
+  const k = peekTarget(e);
+  if (k && !k.closest('.ref-row') && getSelection().isCollapsed && !k.closest('summary')) { openPeek(k.dataset.kw, k); return; }
+  if (!peek.hidden && !e.target.closest('.peek')) closePeek();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !peek.hidden) closePeek(); });
+
+/* ---------- Select a passage: highlight it, or ask about it ----------
+   Asked for 2026-10-19: highlight the lessons "with the nice colour options like in
+   the Python part". Select text on a card, a practice question, the recap or a
+   cheat-sheet line and a bar appears: four light colours, and on a card Question and
+   Comment. Highlights are kept on this device, found again by their text after every
+   redraw, and removed with a tap on them. */
+const HL_KEY = 'stats-highlights';
+let highlights = readStore(HL_KEY, []);
+const saveHighlights = () => writeStore(HL_KEY, highlights);
+const HL_HOST = '.card[data-key]:not(.overall), [data-hl]';
+const HL_SKIP = '.notes, .editor, .foot, .marks, .ref-go, .out-head, .more-rows, #sel-bar';
+const hlKeyOf = host => host.dataset.hl || host.dataset.key;
+function hlTextNodes(host) {
+  const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, {
+    acceptNode: n => (n.parentElement.closest(HL_SKIP) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+  });
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  return nodes;
+}
+function hlOffset(nodes, container, offset) {
+  let total = 0;
+  for (const n of nodes) {
+    if (n === container) return total + offset;
+    if (container.nodeType === 1 && container.contains(n)) {
+      const r = document.createRange();
+      r.setStart(container, offset);
+      if (r.comparePoint(n, 0) >= 0) return total;
+    }
+    total += n.nodeValue.length;
+  }
+  return total;
+}
+function hlWrap(host, start, end, attrs) {
+  let pos = 0;
+  for (const n of hlTextNodes(host)) {
+    const len = n.nodeValue.length, a = Math.max(start, pos), b = Math.min(end, pos + len);
+    if (a < b) {
+      let mid = n;
+      if (a > pos) mid = mid.splitText(a - pos);
+      if (b < pos + len) mid.splitText(b - a);
+      const m = document.createElement('mark');
+      m.className = 'hl';
+      for (const [k, v] of Object.entries(attrs)) m.dataset[k] = v;
+      mid.replaceWith(m);
+      m.append(mid);
+    }
+    pos += len;
+    if (pos >= end) break;
+  }
+}
+function hlApply(h) {
+  const host = [...document.querySelectorAll(HL_HOST)].find(x => hlKeyOf(x) === h.key);
+  if (!host || host.querySelector(`mark.hl[data-hid="${CSS.escape(h.id)}"]`)) return;
+  const text = hlTextNodes(host).map(n => n.nodeValue).join('');
+  let at = -1;
+  for (let i = 0; i <= h.occ; i++) { at = text.indexOf(h.text, at + 1); if (at < 0) return; }
+  hlWrap(host, at, at + h.text.length, { hid: h.id, c: h.color });
+}
+function applyHighlights() { highlights.forEach(hlApply); }
+function hlRemove(id) {
+  for (const m of document.querySelectorAll(`mark.hl[data-hid="${CSS.escape(id)}"]`)) {
+    const parent = m.parentNode;
+    m.replaceWith(...m.childNodes);
+    parent.normalize();
+  }
+  highlights = highlights.filter(h => h.id !== id);
+  saveHighlights();
+}
+const selBar = document.createElement('div');
+selBar.id = 'sel-bar';
+selBar.hidden = true;
+selBar.setAttribute('role', 'toolbar');
+selBar.setAttribute('aria-label', 'Selected passage');
+document.body.append(selBar);
+let selInfo = null;
+function selBarAt(rect) {
+  selBar.hidden = false;
+  const w = selBar.offsetWidth, h = selBar.offsetHeight;
+  selBar.style.left = `${Math.max(8, Math.min(rect.left + rect.width / 2 - w / 2, innerWidth - w - 8))}px`;
+  const top = rect.top - h - 8 >= 8 ? rect.top - h - 8 : rect.bottom + 8;
+  selBar.style.top = `${Math.max(8, Math.min(top, innerHeight - h - 8))}px`;
+}
+function hideSelBar() { selBar.hidden = true; selInfo = null; delete selBar.dataset.hid; }
+function readSelection() {
+  const sel = getSelection();
+  if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  const range = sel.getRangeAt(0);
+  const el = n => (n.nodeType === 1 ? n : n.parentElement);
+  const a = el(range.startContainer), b = el(range.endContainer);
+  if (!a || !b || a.closest('textarea, input, .editor, #sel-bar') || b.closest('textarea, input, .editor')) return null;
+  const host = a.closest(HL_HOST);
+  if (!host || host !== b.closest(HL_HOST)) return null;
+  const nodes = hlTextNodes(host);
+  const start = hlOffset(nodes, range.startContainer, range.startOffset);
+  const end = hlOffset(nodes, range.endContainer, range.endOffset);
+  const full = nodes.map(n => n.nodeValue).join('');
+  const text = full.slice(start, end);
+  if (!text.trim() || text.length > 1500) return null;
+  let occ = 0, at = full.indexOf(text);
+  while (at >= 0 && at < start) { occ++; at = full.indexOf(text, at + 1); }
+  return { host, key: hlKeyOf(host), start, end, text, occ, rect: range.getBoundingClientRect() };
+}
+const HL_COLOURS = [['yellow', '#f2c14e'], ['green', '#6fbf8e'], ['blue', '#7aa6e6'], ['pink', '#e48fb4']];
+function showSelBar() {
+  const info = readSelection();
+  if (!info) { if (!selBar.dataset.hid) hideSelBar(); return; }
+  selInfo = info;
+  delete selBar.dataset.hid;
+  const card = info.host.classList.contains('card');
+  selBar.innerHTML = HL_COLOURS.map(([c, v]) => `<button type="button" class="sb-c" data-colour="${c}" style="--hl: ${v}" title="Highlight (${c})" aria-label="Highlight in ${c}"></button>`).join('')
+    + (card ? '<span class="sb-sep"></span><button type="button" class="sb-btn sb-ask" data-kind="question">Question</button><button type="button" class="sb-btn sb-ask sb-com" data-kind="comment">Comment</button>' : '');
+  selBarAt(info.rect);
+}
+const inSelBar = e => !!(e.target.closest && e.target.closest('#sel-bar'));
+document.addEventListener('mouseup', e => { if (!inSelBar(e)) setTimeout(showSelBar, 0); });
+document.addEventListener('touchend', e => { if (!inSelBar(e)) setTimeout(showSelBar, 350); });
+document.addEventListener('keyup', e => { if (e.shiftKey) showSelBar(); });
+document.addEventListener('scroll', () => { if (!selBar.hidden) hideSelBar(); }, { passive: true, capture: true });
+selBar.addEventListener('mousedown', e => e.preventDefault());
+selBar.addEventListener('click', e => {
+  const colour = e.target.closest('.sb-c');
+  if (colour && selInfo) {
+    const h = { id: `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, key: selInfo.key, text: selInfo.text, occ: selInfo.occ, color: colour.dataset.colour };
+    highlights.push(h);
+    saveHighlights();
+    hlWrap(selInfo.host, selInfo.start, selInfo.end, { hid: h.id, c: h.color });
+    getSelection().removeAllRanges();
+    hideSelBar();
+    return;
+  }
+  const ask = e.target.closest('.sb-ask');
+  if (ask && selInfo) {
+    const { host, text } = selInfo;
+    getSelection().removeAllRanges();
+    hideSelBar();
+    host.querySelector('.editor')?.remove();
+    host.querySelector('.notes').insertAdjacentHTML('afterend', editorHtml(ask.dataset.kind, `“${text.trim()}” `));
+    const ta = host.querySelector('.editor textarea');
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+    return;
+  }
+  if (e.target.closest('.sb-remove')) { hlRemove(selBar.dataset.hid); hideSelBar(); }
+});
+// Tap a highlight to remove it.
+document.addEventListener('click', e => {
+  const m = e.target.closest && e.target.closest('mark.hl');
+  if (!m || !getSelection().isCollapsed) return;
+  e.preventDefault();
+  selBar.dataset.hid = m.dataset.hid;
+  selBar.innerHTML = '<button type="button" class="sb-btn sb-remove">Remove highlight</button>';
+  selBarAt(m.getBoundingClientRect());
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !selBar.hidden) hideSelBar(); });
+document.addEventListener('mousedown', e => { if (e.target.closest && !e.target.closest('#sel-bar, mark.hl') && selBar.dataset.hid) hideSelBar(); });
+
+/* ---------- Your slides: the lecture decks ----------
+   The decks are the teacher's material, so they stay out of this public page: each user uploads them once
+   to their private folder (the same one as the Python page's slides), and each card's "Slide n ›" opens
+   them. Any sensible name works: Stats2.pdf or lecture02_….pdf is filed as Stats2.pdf. */
+const DECK_FILES = ['Stats1.pdf', 'Stats2.pdf', 'Stats3.pdf'];
+function deckName(name) {
+  if (!/\.pdf$/i.test(name)) return null;
+  const m = name.match(/^Stats\s*([1-3])\.pdf$/i) || name.match(/(?:lecture|lesson|session)\s*_?\s*0*([1-3])(?!\d)/i);
+  return m ? `Stats${m[1]}.pdf` : null;
+}
+let filesUp = null;
+async function showFiles(force) {
+  if (!ON_BRAIN) return;
+  const box = document.getElementById('files');
+  if (filesUp === null) {
+    try { const r = await fetch('/api/coding/slides'); filesUp = r.ok ? (await r.json()).uploaded.filter(f => DECK_FILES.includes(f)) : []; } catch (e) { filesUp = []; }
+  }
+  const missing = DECK_FILES.filter(f => !filesUp.includes(f));
+  if (!missing.length && !force) { box.hidden = true; return; }
+  box.innerHTML = `<span><b>Slides:</b> ${filesUp.length} of ${DECK_FILES.length} decks uploaded${missing.length ? ` (missing: Lecture ${missing.map(f => f[5]).join(', ')})` : ''}. Pick the lecture PDFs, for example lecture01_sets_events_handout.pdf from Downloads. They stay private to you.</span>
+    <label class="files-up">Upload slides<input type="file" id="files-input" accept=".pdf,application/pdf" multiple></label>
+    <span id="files-status"></span>`;
+  box.hidden = false;
+}
+document.getElementById('files').addEventListener('change', async e => {
+  if (e.target.id !== 'files-input') return;
+  const status = document.getElementById('files-status');
+  const picked = [...e.target.files];
+  const skipped = [];
+  let done = 0;
+  for (const f of picked) {
+    const name = deckName(f.name);
+    if (!name) { skipped.push(/\.pptx?$/i.test(f.name) ? `${f.name} (a PowerPoint: pick the PDF instead)` : f.name); continue; }
+    status.textContent = `Uploading ${f.name} as ${name}…`;
+    const form = new FormData();
+    form.append('file', new File([f], name, { type: 'application/pdf' }));
+    try {
+      const r = await fetch('/api/coding/slides', { method: 'POST', body: form });
+      if (r.ok) done++; else skipped.push(`${f.name} (${(await r.json().catch(() => ({}))).error || r.status})`);
+    } catch (err) { skipped.push(`${f.name} (offline)`); }
+  }
+  filesUp = null;
+  await showFiles(true);
+  document.getElementById('files-status').textContent = `${done} uploaded.${skipped.length ? ` Not uploaded: ${skipped.join('; ')}.` : ''}`;
+});
+
+
+/* ---------- Bold in notes ----------
+   Asked for 2026-10-19: "mettre texte en gras" in questions and notepads. Notes stay plain text:
+   bold is written **like this**, shown in bold. In any note box, the B button at its top right
+   or Ctrl/Cmd+B makes the selection bold, or plain again. */
+function boldHtml(html) { return html.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, '<b>$1</b>'); }
+const NOTE_BOX = 'textarea[aria-label="Your note"]';
+function toggleBold(ta) {
+  const a = ta.selectionStart, b = ta.selectionEnd, v = ta.value;
+  ta.focus();
+  if (v.slice(a - 2, a) === '**' && v.slice(b, b + 2) === '**') {
+    ta.setSelectionRange(a - 2, b + 2);
+    if (!document.execCommand('insertText', false, v.slice(a, b))) ta.setRangeText(v.slice(a, b), a - 2, b + 2, 'end');
+    ta.setSelectionRange(a - 2, b - 2);
+  } else {
+    const inner = v.slice(a, b);
+    if (!document.execCommand('insertText', false, `**${inner}**`)) ta.setRangeText(`**${inner}**`, a, b, 'end');
+    ta.setSelectionRange(a + 2, b + 2);
+  }
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+}
+const boldBtn = document.createElement('button');
+boldBtn.type = 'button';
+boldBtn.className = 'bold-btn';
+boldBtn.textContent = 'B';
+boldBtn.title = 'Bold (Ctrl+B)';
+boldBtn.setAttribute('aria-label', 'Bold');
+boldBtn.hidden = true;
+document.body.append(boldBtn);
+let boldFor = null;
+function placeBold() {
+  if (!boldFor || !boldFor.isConnected) { boldBtn.hidden = true; return; }
+  const r = boldFor.getBoundingClientRect();
+  boldBtn.style.top = `${r.top + 5}px`;
+  boldBtn.style.left = `${r.right - 33}px`;
+  boldBtn.hidden = r.bottom < 0 || r.top > innerHeight;
+}
+document.addEventListener('focusin', e => { if (e.target.matches && e.target.matches(NOTE_BOX)) { boldFor = e.target; placeBold(); } });
+document.addEventListener('focusout', e => { if (e.target === boldFor) setTimeout(() => { if (document.activeElement !== boldFor) { boldFor = null; boldBtn.hidden = true; } }, 0); });
+addEventListener('scroll', () => { if (boldFor) placeBold(); }, { passive: true, capture: true });
+addEventListener('resize', () => { if (boldFor) placeBold(); });
+document.addEventListener('input', e => { if (e.target === boldFor) placeBold(); });
+boldBtn.addEventListener('mousedown', e => e.preventDefault());
+boldBtn.addEventListener('click', () => { if (boldFor) toggleBold(boldFor); });
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'b' && e.target.matches && e.target.matches(NOTE_BOX)) { e.preventDefault(); toggleBold(e.target); }
+});
+
+/* ---------- Theme, first drawing ---------- */
+const themeBtn = document.getElementById('theme');
+const paintTheme = () => { const night = document.documentElement.dataset.theme === 'night'; themeBtn.textContent = night ? '☀ Day' : '☾ Night'; };
+themeBtn.addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'night' ? 'day' : 'night';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('school-theme', next); } catch (e) {}
+  paintTheme();
+});
+paintTheme();
+renderTabs();
+renderSession();
+load();
+</script>
+</body>
+</html>

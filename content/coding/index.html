@@ -3961,8 +3961,8 @@ async function startSync() {
   try {
     const res = await fetch(NOTES_URL, { headers: { Accept: 'application/json' } });
     if (res.ok) {
-      // SQL's notes (keys sql|...) share this table and belong to the /sql page.
-      const serverNotes = (await res.json()).notes.map(fromServer).filter(n => !n.key.startsWith('sql|'));
+      // SQL's and Statistics' notes (keys sql|... and stats|...) share this table and belong to their own pages.
+      const serverNotes = (await res.json()).notes.map(fromServer).filter(n => !n.key.startsWith('sql|') && !n.key.startsWith('stats|'));
       const localOnly = noteList.filter(n => !n.id);
       // A note copied into the account by the database migration already has a twin there.
       const twin = n => serverNotes.some(s => s.key === n.key && s.body === n.body && s.kind === n.kind);

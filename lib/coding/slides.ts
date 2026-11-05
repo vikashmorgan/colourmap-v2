@@ -30,6 +30,10 @@ export const SLIDE_FILES = [
   'SQL4.pdf',
   'SQL5.pdf',
   'SQLBusinessCase.sql',
+  // The Statistics class (/statistics): its lecture decks.
+  'Stats1.pdf',
+  'Stats2.pdf',
+  'Stats3.pdf',
 ] as const;
 
 export type SlideFile = (typeof SLIDE_FILES)[number];
