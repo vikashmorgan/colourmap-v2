@@ -35,7 +35,9 @@ describe('/school class menu', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('private, no-store');
     expect(html).toContain('<title>School · Albert School</title>');
-    // Each class opens its own page: Python, Git and SQL.
+    // Each class opens its own page: Statistics, this trimester's, comes first.
+    expect(html.indexOf('href="/statistics"')).toBeGreaterThan(-1);
+    expect(html.indexOf('href="/statistics"')).toBeLessThan(html.indexOf('href="/coding"'));
     expect(html).toContain('href="/coding"');
     expect(html).toContain('href="/git"');
     expect(html).toContain('<h2>SQL</h2>');

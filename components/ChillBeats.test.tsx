@@ -191,7 +191,8 @@ describe('ChillBeats', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Back to loops' }));
     expect(latest.mode).toBe('simple');
-  });
+    // Many role lookups over a large grid: 3 s alone, past the default limit in a full parallel run.
+  }, 45_000);
 
   it('long-press sets an accent without toggling', () => {
     vi.useFakeTimers();

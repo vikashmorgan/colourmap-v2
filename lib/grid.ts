@@ -105,6 +105,7 @@ export const HUBS: Hub[] = [
     nodes: [
       { href: '/education', label: 'Education', line: 'Programs, and World mode for geopolitics' },
       { href: '/school', label: 'School', line: 'The way into every class', plain: true },
+      { href: '/statistics', label: 'Statistics', line: 'Learn probability', plain: true },
       { href: '/coding', label: 'Python', line: 'Learn Python, step by step', plain: true },
       { href: '/git', label: 'Git', line: 'Learn Git, step by step', plain: true },
       { href: '/sql', label: 'SQL', line: 'Learn SQL', plain: true },
