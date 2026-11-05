@@ -35,16 +35,9 @@ Colours stay sober: ochre for felt, blue for reasoned. On a phone the columns st
 
 No migration in the first version: a map is saved as notes under keys starting `dreams|map`, through `/api/coding/notes`. Each note holds at most 2,000 characters, so each bubble is its own note. If links outgrow this, propose a table then.
 
-## First map, to confirm with the user before saving
+## Personal content
 
-- **Tension:** Albert School is more of the same system; it leads to working for companies that follow the usual code; the world seems disconnected; logic and intuition are kept apart.
-- **Compass:** greater harmony (Hawkins's higher scale); mix the people, separate the time.
-- **Mission** (confirmed by the user 2026-11-05): a place where people come to imagine the future and actually build it. "About manifesting paradise on earth, creating harmony, beauty, and spaces of healing and elevation."
-- **Forms:** a nomadic Embassy of Dreams with no fixed place; a vibecoding sprint or retreat; an online community with in-person peaks; later a hostel, studios and residencies.
-- **Proof:** a 5 to 7 day retreat for 12 to 20 people, ending in a demo night; do people pay and come back?
-- **Contradicts:** criticising the usual system, and pitching a startup studio whose goal is Silicon Valley scale.
-
-The Liquid Factory details come from a pasted AI conversation and have not been checked.
+The repo is public. The bubbles of a real map are the user's own reflection, so they are saved to their account and never written in this spec or in seed files.
 
 ## Build order
 

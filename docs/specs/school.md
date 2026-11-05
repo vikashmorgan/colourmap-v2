@@ -12,7 +12,7 @@ One way into every class Victor takes at Albert School × Politecnico di Milano.
 
 A sober menu, in the style of the Git page, with one card per class:
 
-- **Statistics**: Statistics & Probability for Data Science, lectures 1 to 3. Opens `/statistics` ([spec](statistics-class.md)). First on the menu, because the other classes are from last trimester (2026-11-05).
+- **Statistics**: Statistics & Probability for Data Science, lectures 1 to 4. Opens `/statistics` ([spec](statistics-class.md)). First on the menu, because the other classes are from last trimester (2026-11-05).
 - **Python**: Python Fundamentals, Project 1 (`explorer.py`). Opens `/coding` ([spec](coding.md)).
 - **Git**: MSE-DIM01-3. Opens `/git` ([spec](git-class.md)).
 - **SQL**: `/sql`, sessions 1 to 5 (since 2026-10-19, sessions 4 and 5 added the same day; see `docs/specs/sql-class.md`).

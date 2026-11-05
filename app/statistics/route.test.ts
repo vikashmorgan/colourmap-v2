@@ -26,7 +26,7 @@ describe('/statistics class page', () => {
     expect(response.headers.get('location')).toBe('http://localhost/login?next=%2Fstatistics');
   });
 
-  it('serves the three lectures to a signed-in user, uncached', async () => {
+  it('serves the four lectures to a signed-in user, uncached', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
 
     const response = await GET(request());
@@ -66,7 +66,9 @@ describe('/statistics class page', () => {
     expect(html).toContain('data-seg-toggle=');
     expect(html).toContain(`Segment \${i + 1} of \${num.length}`);
     // Slides come from the user's private files, never from this public page.
-    expect(html).toContain("const DECK_FILES = ['Stats1.pdf', 'Stats2.pdf', 'Stats3.pdf'];");
+    expect(html).toContain(
+      "const DECK_FILES = ['Stats1.pdf', 'Stats2.pdf', 'Stats3.pdf', 'Stats4.pdf'];",
+    );
     // Nothing of the SQL course is carried over.
     expect(html).not.toContain('sql|');
     expect(html).not.toContain('Business case');
