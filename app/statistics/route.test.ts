@@ -57,7 +57,10 @@ describe('/statistics class page', () => {
     expect(html).toContain('const segHue = i => i % 2 ? 300 : 250;');
     expect(html).toContain('class="seg-tab"');
     // Letters such as X, x, n and p open the same side box as a term.
-    expect(html).toContain('function openLetter(word, el)');
+    expect(html).toContain('function letterBox(word, card)');
+    // The notepad sets the text size, and a term inside a side box opens the next box, joined by a line.
+    expect(html).toContain('id="size-up"');
+    expect(html).toContain('function drawPeekLinks()');
     // The pill on the left opens to stacks of segments: which lecture and segment you are in.
     expect(html).toContain('id="map-pill"');
     expect(html).toContain('data-seg-toggle=');
