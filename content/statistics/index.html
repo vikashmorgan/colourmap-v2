@@ -262,8 +262,11 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   [data-theme="night"] .seg { --tint: oklch(0.62 0.12 var(--h, 250) / 0.20); --title: oklch(0.84 0.11 var(--h, 250)); }
   .seg > h2 { color: var(--title); }
   .seg { position: relative; }
-  .seg-rail { position: absolute; left: -16px; top: 26px; bottom: 0; width: 14px; background: linear-gradient(var(--title), var(--title)) center / 2px 100% no-repeat; }
-  .seg-tab { position: sticky; top: 46px; display: block; width: 14px; padding: 7px 0; border: 0; background: var(--paper); color: var(--title); font: 600 11.5px/14px system-ui, sans-serif; letter-spacing: .02em; writing-mode: vertical-rl; white-space: nowrap; cursor: pointer; }
+  :root { --ochre: #b08a45; }
+  [data-theme="night"] { --ochre: #c6a05c; }
+  .seg-rail { position: absolute; left: -16px; top: 26px; bottom: 0; width: 14px; background: radial-gradient(circle, var(--ochre) 1.1px, transparent 1.5px) center top / 4px 9px repeat-y; }
+  .seg-tab:hover { color: var(--ink); }
+  .seg-tab { position: sticky; top: 46px; display: block; width: 14px; padding: 7px 0; border: 0; background: var(--paper); color: var(--ochre); font: 500 11px/14px system-ui, sans-serif; letter-spacing: .02em; writing-mode: vertical-rl; white-space: nowrap; cursor: pointer; }
   .seg .card, .seg .pq { background: color-mix(in srgb, var(--tint), var(--card)); border-color: transparent; }
   .seg .card pre, .seg .pq pre, .seg .card .watch { background: color-mix(in srgb, var(--paper) 72%, transparent); }
   .seg .num, .seg .ex-num { color: var(--title); opacity: 1; font-weight: 700; }
@@ -317,10 +320,10 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .map-pill b { font: 700 11px/1 ui-monospace, Consolas, monospace; }
   .map-pill .ln { position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px; }
   .map-pill .ln::before { content: ''; position: absolute; top: 4px; bottom: 4px; left: 50%; width: 2px; margin-left: -1px; background: var(--line); }
-  .map-pill i { position: relative; display: grid; place-items: center; width: 9px; height: 9px; border-radius: 50%; background: oklch(0.72 0.12 var(--h, 60)); font: 700 11px/1 ui-monospace, Consolas, monospace; font-style: normal; color: #1b2330; }
-  .map-pill i.plain { background: var(--soft); }
-  .map-pill i.here { width: 20px; height: 20px; background: oklch(0.80 0.13 var(--h, 60)); box-shadow: 0 0 0 2px oklch(0.45 0.13 var(--h, 60)); }
-  .map-pill i.plain.here { background: var(--soft); box-shadow: 0 0 0 2px var(--ink); }
+  .map-pill i { position: relative; display: grid; place-items: center; width: 9px; height: 9px; border-radius: 50%; background: var(--ochre); font: 700 11px/1 ui-monospace, Consolas, monospace; font-style: normal; color: var(--paper); }
+  .map-pill i.plain { background: color-mix(in srgb, var(--ochre) 50%, transparent); }
+  .map-pill i.here { width: 20px; height: 20px; background: var(--ochre); box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--ochre); }
+  .map-pill i.plain.here { background: var(--ochre); }
   .map { position: fixed; z-index: 60; left: 0; top: 0; bottom: 0; width: min(310px, 86vw); padding: 12px 12px 20px; overflow-y: auto; background: var(--paper); border-right: 1px solid var(--line); box-shadow: 4px 0 24px rgb(0 0 0 / .16); font: 13.5px/1.35 system-ui, sans-serif; }
   .map button { font: inherit; color: var(--ink); cursor: pointer; }
   .map-top { display: flex; align-items: center; justify-content: space-between; color: var(--soft); font-weight: 600; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
