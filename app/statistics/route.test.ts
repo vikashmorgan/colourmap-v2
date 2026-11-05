@@ -61,6 +61,8 @@ describe('/statistics class page', () => {
     // The notepad sets the text size, and a term inside a side box opens the next box, joined by a line.
     expect(html).toContain('id="size-up"');
     expect(html).toContain('function drawPeekLinks()');
+    // Each segment ends with the user's own boxes, each with a title.
+    expect(html).toContain('function paintBoxes()');
     // The pill on the left opens to stacks of segments: which lecture and segment you are in.
     expect(html).toContain('id="map-pill"');
     expect(html).toContain('data-seg-toggle=');

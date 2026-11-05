@@ -210,6 +210,19 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .kinds button[data-kind="comment"][aria-checked="true"] { background: var(--c); border-color: var(--c); }
   .acts .save { background: var(--ink); border-color: var(--ink); color: var(--paper); }
 
+  /* Your own boxes, at the end of a segment. */
+  .own-boxes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 12px; }
+  .own-box, .box-editor { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 12px; display: grid; gap: 8px; }
+  .seg .own-box, .seg .box-editor { background: color-mix(in srgb, var(--tint), var(--card)); border-color: transparent; }
+  .own-box h3 { margin: 0; font-size: 17px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; overflow-wrap: anywhere; }
+  .own-box .words { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .box-editor input, .box-editor textarea { width: 100%; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .box-editor input { font: 600 16px system-ui, sans-serif; }
+  .box-editor input[aria-invalid="true"] { border-color: var(--late); }
+  .box-editor textarea { font: 15px system-ui, sans-serif; resize: vertical; }
+  .box-add { justify-self: start; min-height: 30px; padding: 3px 11px; border: 1px dashed var(--line); border-radius: 999px; background: none; color: var(--soft); font: 500 13px system-ui, sans-serif; cursor: pointer; }
+  .box-add:hover { color: var(--ink); border-color: var(--soft); }
+
   /* Practice: the question first, the answer behind a tap. */
   .practice { display: grid; gap: 8px; }
   .pq { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 10px 14px; }
@@ -956,6 +969,7 @@ function editorHtml(kind, body) {
     <div class="acts"><button type="button" class="save">Save</button><button type="button" class="cancel">Cancel</button></div></div>`;
 }
 function paintNotes() {
+  paintBoxes();
   for (const card of document.querySelectorAll('.card')) {
     const list = notesOf(card.dataset.key);
     card.querySelector('.notes').innerHTML = list.map(noteHtml).join('');
@@ -965,6 +979,82 @@ function paintNotes() {
   }
   renderNotebook();
 }
+/* ---------- Your own boxes ----------
+ * Asked for 2026-11-05: "add ability to create new boxes, so I can write a new box and give it a title".
+ * A box is one note under stats|box|, so it never shows in the notepad: the first line is its title,
+ * the rest its text. A new box's unsaved words stay in this browser until it is saved or cancelled. */
+const BOX_PREFIX = 'stats|box|';
+const boxKey = (n, gi) => `${BOX_PREFIX}s${n}|g${gi}`;
+const boxParts = body => { const at = body.indexOf('\n'); return at < 0 ? [body, ''] : [body.slice(0, at), body.slice(at + 1)]; };
+const boxDrafts = () => readStore('stats-box-drafts', {});
+function setBoxDraft(key, draft) {
+  const all = boxDrafts();
+  if (draft) all[key] = draft; else delete all[key];
+  writeStore('stats-box-drafts', all);
+}
+function ownBoxHtml(n) {
+  const [title, words] = boxParts(n.body);
+  return `<article class="own-box" data-ref="${esc(noteRef(n))}"><h3><span>${esc(title)}</span><span class="tools"><button type="button" class="box-edit" aria-label="Edit">✎</button><button type="button" class="box-del" aria-label="Delete">×</button></span></h3>${words ? `<div class="words">${boldHtml(esc(words))}</div>` : ''}</article>`;
+}
+function boxEditorHtml(title, words, ref) {
+  return `<div class="box-editor"${ref ? ` data-ref="${esc(ref)}"` : ''}><input type="text" maxlength="120" aria-label="Title of the box" placeholder="Title" value="${esc(title)}">
+    <textarea rows="4" maxlength="1870" aria-label="What the box says" placeholder="Write here">${esc(words)}</textarea>
+    <div class="acts"><button type="button" class="save">Save</button><button type="button" class="cancel">Cancel</button></div></div>`;
+}
+function paintBoxes() {
+  for (const wrap of document.querySelectorAll('.own-boxes')) {
+    if (wrap.querySelector('.box-editor')) continue;
+    wrap.innerHTML = `${notesOf(wrap.dataset.boxKey).map(ownBoxHtml).join('')}<button type="button" class="box-add">+ New box</button>`;
+  }
+}
+document.addEventListener('click', async e => {
+  const t = e.target, wrap = t.closest('.own-boxes');
+  if (!wrap) return;
+  const key = wrap.dataset.boxKey, own = t.closest('.own-box'), ed = t.closest('.box-editor');
+  const openEditor = wrap.querySelector('.box-editor');
+  if (t.closest('.box-add')) {
+    if (openEditor) { openEditor.querySelector('input').focus(); return; }
+    const draft = boxDrafts()[key] || { title: '', words: '' };
+    t.closest('.box-add').insertAdjacentHTML('beforebegin', boxEditorHtml(draft.title, draft.words));
+    t.closest('.box-add').remove();
+    wrap.querySelector('.box-editor input').focus();
+    return;
+  }
+  if (own && t.closest('.box-edit')) {
+    if (openEditor) { openEditor.querySelector('input').focus(); return; }
+    const n = notes.find(x => noteRef(x) === own.dataset.ref);
+    if (!n) return;
+    own.outerHTML = boxEditorHtml(...boxParts(n.body), noteRef(n));
+    wrap.querySelector('.box-editor input').focus();
+    return;
+  }
+  if (own && t.closest('.box-del')) {
+    const b = t.closest('.box-del');
+    if (b.dataset.armed) { deleteNote(own.dataset.ref); return; }
+    b.dataset.armed = '1'; b.textContent = 'Delete?'; b.classList.add('armed');
+    setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = '×'; b.classList.remove('armed'); } }, 3000);
+    return;
+  }
+  if (ed && t.closest('.cancel')) {
+    if (!ed.dataset.ref) setBoxDraft(key, null);
+    ed.remove(); paintBoxes();
+    return;
+  }
+  if (ed && t.closest('.save')) {
+    const input = ed.querySelector('input'), title = input.value.trim(), words = ed.querySelector('textarea').value.trim();
+    if (!title) { input.setAttribute('aria-invalid', 'true'); input.placeholder = 'Give the box a title'; input.focus(); return; }
+    const body = words ? `${title}\n${words}` : title, ref = ed.dataset.ref;
+    if (!ref) setBoxDraft(key, null);
+    ed.remove();
+    if (ref) { editNote(ref, 'comment', body); return; }
+    await addNote(key, 'comment', body);
+    paintBoxes();
+  }
+});
+document.addEventListener('input', e => {
+  const ed = e.target.closest('.box-editor');
+  if (ed && !ed.dataset.ref) setBoxDraft(ed.closest('.own-boxes').dataset.boxKey, { title: ed.querySelector('input').value, words: ed.querySelector('textarea').value });
+});
 // One handler for every card and the notepad's list.
 document.addEventListener('click', e => {
   const t = e.target;
@@ -1226,7 +1316,7 @@ function renderSession() {
   const s = SESSIONS.find(x => x.n === current);
   document.getElementById('session').innerHTML = `<p class="where"><button type="button" class="where-btn" id="where-btn">Lecture ${s.n}</button></p><h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
     + `<details class="pic" id="pic" data-seg="pic"${picOpen() ? ' open' : ''}><summary>The picture: the lecture on one page</summary><div class="pic-body">${PICTURES[s.n]()}</div></details>`
-    + s.groups.map((g, gi) => `<section class="seg" data-seg="g${gi}" style="--h: ${segHue(gi)}">${segRail(s, gi)}<h2>${esc(g.name)}</h2>${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div></section>`).join('')
+    + s.groups.map((g, gi) => `<section class="seg" data-seg="g${gi}" style="--h: ${segHue(gi)}">${segRail(s, gi)}<h2>${esc(g.name)}</h2>${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div><div class="own-boxes" data-box-key="${esc(boxKey(s.n, gi))}"></div></section>`).join('')
     + `<section class="seg" data-seg="practice" style="--h: ${segHue(s.groups.length)}">${segRail(s, s.groups.length)}<h2>Practice</h2><p class="group-note">Try each one on paper first, then open the answer.</p>${practiceHtml(s)}</section>`
     + `<section class="seg" data-seg="recap" style="--h: ${segHue(s.groups.length + 1)}">${segRail(s, s.groups.length + 1)}<h2>To remember</h2><ul class="recap" data-hl="stats|s${s.n}|recap">${s.recap.map(r => `<li>${text(r)}</li>`).join('')}</ul></section>`;
   paintNotes();
@@ -1275,7 +1365,7 @@ function setNotebook(open) {
   if (open) { if (!nbText.value.trim()) nbPinned = false; followSpot(); }
 }
 function renderNotebook() {
-  nbDot.classList.toggle('has-notes', notes.length > 0);
+  nbDot.classList.toggle('has-notes', notes.some(n => !n.key.startsWith(BOX_PREFIX)));
   if (notebook.hidden) return;
   const box = document.getElementById('nb-list');
   if (box.querySelector('.editor')) return;
