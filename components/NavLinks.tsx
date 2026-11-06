@@ -61,7 +61,7 @@ export default function NavLinks() {
         ref={(el) => {
           navRef.current = el;
         }}
-        className="flex w-full items-center gap-7 justify-center scrollbar-none px-4 pb-3 pt-2"
+        className="flex w-full min-w-0 items-center gap-7 justify-[safe_center] overflow-x-auto scrollbar-none px-4 pb-3 pt-2"
         style={{ scrollbarWidth: 'none' }}
       >
         {primary.map((link) => {

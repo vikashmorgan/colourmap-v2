@@ -1,6 +1,6 @@
 # Dreams in Action
 
-A page in School for the user's own writing, at `/dreams-in-action`. Asked for 2026-11-05, first under another name: "add another segment in School, where I can write my ideas. We will break them into blocks. The idea will be to think how we can go beyond this matrix of learning stuff, in order to go into the future of education, and ideally apply this through the Embassy of Dreams. It will be a reflection on logic vs intuition, and how our current world, from my perspective, seems profoundly disconnected."
+A page in School for the user's own writing, at `/dreams-in-action`. Asked for 2026-11-05. The repo is public, so the page's text and this spec stay neutral (asked for 2026-11-06), and what the user writes stays in their account.
 
 Renamed the same day: "just call it Dreams in Action, not Criticism."
 
@@ -9,7 +9,7 @@ The words are the user's. Nothing on this page writes, rewrites or suggests idea
 ## The page
 
 - **Write box at the top.** Type an idea, choose its block and save. It starts on *Not sorted yet*, so writing comes first and placing later.
-- **Blocks.** *Beyond the matrix*, *The future of education*, *The Embassy of Dreams*, *Logic and intuition*, *A disconnected world*, each with a line from the user's request. Blue and lavender in turn, like Statistics. A block opens and closes, and that is remembered on the device (`dreams-closed`).
+- **Blocks.** *New ways of learning*, *The future of education*, *Places to build*, *Logic and intuition*, *The wider world*, each with a short neutral line. Ideas saved under a block's earlier name keep that name and still show, since a block with ideas belongs to the account. Blue and lavender in turn, like Statistics. A block opens and closes, and that is remembered on the device (`dreams-closed`).
 - **Not sorted yet** shows above the others only while it holds an idea.
 - **New blocks.** Name one under the list. It stays on this device until it holds an idea, then belongs to the account (`dreams-blocks`). An empty one can be removed.
 - **An idea** shows its text with its line breaks kept, and its date. *Edit*, *Move* to another block, and *Delete*, which asks once more first.
@@ -23,4 +23,4 @@ What is typed in the write box is kept on the device (`dreams-draft`) until it i
 
 ## Not yet
 
-Exporting the writing, and turning blocks into an essay or into the Embassy of Dreams itself. The Embassy has no page in the app yet.
+Exporting the writing, and turning blocks into an essay.

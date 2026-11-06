@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Victor's study page for *SQL & Business Intelligence* (MSE-DIM01-4, Albert School × Politecnico di Milano), sessions 1 to 5 (4 and 5 added on 2026-10-19: "add teachings of session 4 and 5 to sql"). Asked for on 2026-10-19:
+Victor's study page for *SQL & Business Intelligence* (MSE-DIM01-4, A School × Politecnico di Milano), sessions 1 to 5 (4 and 5 added on 2026-10-19: "add teachings of session 4 and 5 to sql"). Asked for on 2026-10-19:
 
 > "Can you create a page in School for all the SQL lesson sessions 1 2 3 for studying it. Minimalistic in design so not overwhelming. Also with 3 dots, comments, questions and notepad."
 

@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Victor's study companion for the Albert School × Politecnico "Python Fundamentals" course. One page that turns the course slides and his project into something he can revise from on any device, and that remembers how well he knows each part.
+Victor's study companion for the A School × Politecnico "Python Fundamentals" course. One page that turns the course slides and his project into something he can revise from on any device, and that remembers how well he knows each part.
 
 The page itself is a single self-contained HTML file, `content/coding/index.html`. The same file is also published on its own at coding-vikash.vercel.app, where it works without an account and keeps everything in the browser. Served from Colour Brain, it gains two things: marks and notes sync to the Google account, and every box links to the slide it came from.
 

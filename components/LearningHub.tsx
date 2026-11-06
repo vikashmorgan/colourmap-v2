@@ -987,17 +987,17 @@ export default function LearningHub({ onClose }: { onClose: () => void }) {
     <div
       style={{
         position: 'fixed',
-        inset: 0,
+        inset: '0 0 var(--dock-height) 0',
         zIndex: 80,
         display: 'flex',
         justifyContent: 'center',
-        background: 'rgba(4,2,0,0.6)',
+        background: hubBg,
       }}
     >
       <div
         style={{
           width: '100%',
-          maxWidth: 672,
+          maxWidth: 1320,
           background: hubBg,
           display: 'flex',
           flexDirection: 'column',
@@ -1023,6 +1023,8 @@ export default function LearningHub({ onClose }: { onClose: () => void }) {
             style={{
               width: '100%',
               height: 'auto',
+              maxHeight: 'min(38dvh, 420px)',
+              objectFit: 'cover',
               display: 'block',
             }}
           />
@@ -1242,6 +1244,7 @@ export default function LearningHub({ onClose }: { onClose: () => void }) {
 
                   {/* horizontal scroll lane */}
                   <div
+                    className="edu-lane"
                     style={{
                       display: 'flex',
                       gap: 10,
@@ -1347,6 +1350,7 @@ export default function LearningHub({ onClose }: { onClose: () => void }) {
               </div>
             </div>
             <div
+              className="edu-lane"
               style={{
                 display: 'flex',
                 gap: 10,
@@ -1390,6 +1394,7 @@ export default function LearningHub({ onClose }: { onClose: () => void }) {
               </div>
             </div>
             <div
+              className="edu-lane"
               style={{
                 display: 'flex',
                 gap: 10,

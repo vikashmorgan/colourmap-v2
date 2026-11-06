@@ -64,7 +64,7 @@
 <main>
   <div class="topline"><a class="back" href="/school">← School</a><button type="button" class="theme" id="theme"></button></div>
   <h1>Dreams in Action</h1>
-  <p class="lede">How can we go beyond this matrix of learning, toward the future of education, and apply it through the Embassy of Dreams?</p>
+  <p class="lede">My own ideas, sorted into blocks.</p>
 
   <form class="write" id="write">
     <textarea id="text" aria-label="Write an idea" placeholder="Write an idea…"></textarea>
@@ -86,21 +86,18 @@
   <footer>Your own words, saved to your account. Nothing here is written or changed for you.</footer>
 </main>
 <script>
-/* /dreams-in-action — asked for 2026-11-05, first under the name Criticism: "a segment in School, where I can write my ideas. We will
-   break them into blocks. The idea is to think how we can go beyond this matrix of learning, to go into the
-   future of education, and ideally apply this through the Embassy of Dreams. A reflection on logic vs intuition,
-   and how our current world, from my perspective, seems profoundly disconnected."
+/* /dreams-in-action — a page for the user\'s own writing, in blocks.
    Ideas are notes in /api/coding/notes under keys dreams|<block name>; a block is known by its name. */
 const NOTES_URL = '/api/coding/notes';
 const PREFIX = 'dreams|';
 const MAX_BODY = 2000;
 const UNSORTED = 'Not sorted yet';
 const BLOCKS = [
-  { name: 'Beyond the matrix', prompt: 'How can we go beyond this way of learning stuff?' },
+  { name: 'New ways of learning', prompt: 'What could learning become?' },
   { name: 'The future of education', prompt: 'Where education goes from here.' },
-  { name: 'The Embassy of Dreams', prompt: 'How to apply this through the Embassy of Dreams.' },
-  { name: 'Logic and intuition', prompt: 'A reflection on logic versus intuition.' },
-  { name: 'A disconnected world', prompt: 'How our current world, from my perspective, seems profoundly disconnected.' },
+  { name: 'Places to build', prompt: 'Where ideas could be put into practice.' },
+  { name: 'Logic and intuition', prompt: 'A reflection on logic and intuition.' },
+  { name: 'The wider world', prompt: 'How all this connects to the world around us.' },
 ];
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const readLocal = (k, empty) => { try { return JSON.parse(localStorage.getItem(k) || 'null') ?? empty; } catch (e) { return empty; } };

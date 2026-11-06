@@ -6,7 +6,7 @@
 
 ## Purpose
 
-One way into every class Victor takes at Albert School × Politecnico di Milano. Asked for 2026-10-16: "the platform for all classes. Call it School, not Coding, and you get a menu with different classes. A third class will be added for SQL."
+One way into every class Victor takes at A School × Politecnico di Milano. Asked for 2026-10-16: "the platform for all classes. Call it School, not Coding, and you get a menu with different classes. A third class will be added for SQL."
 
 ## What it holds
 

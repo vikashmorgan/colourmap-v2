@@ -785,12 +785,8 @@ function ColourmapVisionRasterPanel({
       loading={index === 0 ? 'eager' : 'lazy'}
       priority={index === 0}
       onError={() => setFailed(true)}
-      style={{
-        width: '100%',
-        height: 'auto',
-        display: 'block',
-        background: 'rgba(10,6,3,0.24)',
-      }}
+      className="edu-panel"
+      style={{ background: 'rgba(10,6,3,0.24)' }}
     />
   );
 }
@@ -831,12 +827,8 @@ function PanelImage({
         fetchPriority={index === 0 ? 'high' : 'auto'}
         decoding="async"
         onError={() => setFailed(true)}
-        style={{
-          width: '100%',
-          height: 'auto',
-          display: 'block',
-          background: 'rgba(10,6,3,0.24)',
-        }}
+        className="edu-panel"
+        style={{ background: 'rgba(10,6,3,0.24)' }}
       />
     );
   }
@@ -850,12 +842,8 @@ function PanelImage({
         fetchPriority={index === 0 ? 'high' : 'auto'}
         decoding="async"
         onError={() => setFailed(true)}
-        style={{
-          width: '100%',
-          height: 'auto',
-          display: 'block',
-          background: 'rgba(10,6,3,0.24)',
-        }}
+        className="edu-panel"
+        style={{ background: 'rgba(10,6,3,0.24)' }}
       />
     );
   }
@@ -879,12 +867,8 @@ function PanelImage({
         fetchPriority={index === 0 ? 'high' : 'auto'}
         decoding="async"
         onError={() => setFailed(true)}
-        style={{
-          width: '100%',
-          height: 'auto',
-          display: 'block',
-          background: 'rgba(10,6,3,0.24)',
-        }}
+        className="edu-panel"
+        style={{ background: 'rgba(10,6,3,0.24)' }}
       />
     );
   }
@@ -1653,15 +1637,14 @@ export default function ComicProgram({
   if (BLANK_BUBBLE_PROGRAMS.has(program.key) && !LAYERED_BUBBLE_PROGRAMS.has(program.key)) {
     return (
       <div
+        className="edu-reader"
         style={{
           position: 'fixed',
-          inset: 0,
+          inset: '0 0 var(--dock-height) 0',
           zIndex: 150,
           background: hubBg,
           display: 'flex',
           flexDirection: 'column',
-          maxWidth: 672,
-          margin: '0 auto',
         }}
       >
         <div
@@ -1875,15 +1858,14 @@ export default function ComicProgram({
     const { r: _r, g: _g, b: _b } = hex2rgb(program.color);
     return (
       <div
+        className="edu-reader"
         style={{
           position: 'fixed',
-          inset: 0,
+          inset: '0 0 var(--dock-height) 0',
           zIndex: 150,
           background: hubBg,
           display: 'flex',
           flexDirection: 'column',
-          maxWidth: 672,
-          margin: '0 auto',
           overflowY: 'auto',
         }}
       >
@@ -1927,220 +1909,232 @@ export default function ComicProgram({
           </button>
         </div>
 
-        {/* panel art preview — first scene */}
-        <button
-          type="button"
-          onClick={() => setIntro(false)}
-          aria-label={`Begin ${program.domain}`}
-          style={{
-            display: 'block',
-            width: 'auto',
-            margin: '10px 20px 0',
-            padding: 0,
-            borderRadius: 0,
-            overflow: 'visible',
-            border: `1.5px solid ${col(program.color, 0.2)}`,
-            flexShrink: 0,
-            background: 'transparent',
-            cursor: 'pointer',
-            textAlign: 'left',
-          }}
-        >
-          <PanelImage
-            programKey={program.key}
-            index={0}
-            color={program.color}
-            imageStyle={imageStyle}
-          />
-        </button>
-
-        {imageStyles.length > 1 && (
-          <div style={{ display: 'flex', gap: 8, padding: '12px 20px 0', flexShrink: 0 }}>
-            {imageStyles.map((style) => (
-              <button
-                key={style.key}
-                type="button"
-                onClick={() => {
-                  setMoreOpen(false);
-                  setImageStyle(style.key);
-                }}
-                style={{
-                  flex: 1,
-                  borderRadius: 999,
-                  border: `1px solid ${col(program.color, imageStyle === style.key ? 0.5 : 0.2)}`,
-                  background: col(program.color, imageStyle === style.key ? 0.16 : 0.05),
-                  color: cream(imageStyle === style.key ? 0.9 : 0.56),
-                  cursor: 'pointer',
-                  fontFamily: SERIF,
-                  fontSize: 11,
-                  letterSpacing: '0.08em',
-                  padding: '8px 10px',
-                }}
-              >
-                {style.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* program info */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '28px 24px 24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 20,
-          }}
-        >
-          <div>
-            <div
+        <div className="edu-split">
+          <div className="edu-split-media">
+            {/* panel art preview — first scene */}
+            <button
+              className="edu-panel-button"
+              type="button"
+              onClick={() => setIntro(false)}
+              aria-label={`Begin ${program.domain}`}
               style={{
-                fontFamily: SERIF,
-                fontSize: 11,
-                letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                color: col(program.color, 0.55),
-                marginBottom: 8,
+                display: 'block',
+                width: 'auto',
+                margin: '10px 20px 0',
+                padding: 0,
+                borderRadius: 0,
+                overflow: 'visible',
+                border: `1.5px solid ${col(program.color, 0.2)}`,
+                flexShrink: 0,
+                background: 'transparent',
+                cursor: 'pointer',
+                textAlign: 'left',
               }}
             >
-              Program
-            </div>
-            <div
-              style={{
-                fontFamily: SERIF,
-                fontSize: 28,
-                fontWeight: 700,
-                color: cream(0.92),
-                lineHeight: 1.15,
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {program.domain}
-            </div>
-          </div>
+              <PanelImage
+                programKey={program.key}
+                index={0}
+                color={program.color}
+                imageStyle={imageStyle}
+              />
+            </button>
 
-          <div style={{ display: 'flex', gap: 16 }}>
+            {imageStyles.length > 1 && (
+              <div style={{ display: 'flex', gap: 8, padding: '12px 20px 0', flexShrink: 0 }}>
+                {imageStyles.map((style) => (
+                  <button
+                    key={style.key}
+                    type="button"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      setImageStyle(style.key);
+                    }}
+                    style={{
+                      flex: 1,
+                      borderRadius: 999,
+                      border: `1px solid ${col(program.color, imageStyle === style.key ? 0.5 : 0.2)}`,
+                      background: col(program.color, imageStyle === style.key ? 0.16 : 0.05),
+                      color: cream(imageStyle === style.key ? 0.9 : 0.56),
+                      cursor: 'pointer',
+                      fontFamily: SERIF,
+                      fontSize: 11,
+                      letterSpacing: '0.08em',
+                      padding: '8px 10px',
+                    }}
+                  >
+                    {style.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="edu-split-text">
+            {/* program info */}
             <div
               style={{
-                background: col(program.color, 0.08),
-                border: `1px solid ${col(program.color, 0.15)}`,
-                borderRadius: 10,
-                padding: '10px 16px',
                 flex: 1,
-                textAlign: 'center',
+                overflowY: 'auto',
+                padding: '28px 24px 24px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 20,
               }}
             >
-              <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 700, color: cream(0.85) }}>
-                {program.segments.length}
-              </div>
-              <div
-                style={{
-                  fontFamily: SERIF,
-                  fontSize: 10,
-                  color: col(program.color, 0.5),
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  marginTop: 2,
-                }}
-              >
-                pages
-              </div>
-            </div>
-            <div
-              style={{
-                background: col(program.color, 0.08),
-                border: `1px solid ${col(program.color, 0.15)}`,
-                borderRadius: 10,
-                padding: '10px 16px',
-                flex: 1,
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 700, color: cream(0.85) }}>
-                ~{program.segments.length * 2}m
-              </div>
-              <div
-                style={{
-                  fontFamily: SERIF,
-                  fontSize: 10,
-                  color: col(program.color, 0.5),
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  marginTop: 2,
-                }}
-              >
-                to read
-              </div>
-            </div>
-          </div>
-
-          {introData && (
-            <>
-              <p
-                style={{
-                  fontFamily: SERIF,
-                  fontSize: 14,
-                  color: cream(0.7),
-                  lineHeight: 1.85,
-                  margin: 0,
-                }}
-              >
-                {introData.what}
-              </p>
-              <div style={{ borderLeft: `3px solid ${col(program.color, 0.5)}`, paddingLeft: 14 }}>
+              <div>
                 <div
                   style={{
                     fontFamily: SERIF,
-                    fontSize: 10,
-                    letterSpacing: '0.16em',
+                    fontSize: 11,
+                    letterSpacing: '0.18em',
                     textTransform: 'uppercase',
-                    color: col(program.color, 0.45),
-                    marginBottom: 5,
+                    color: col(program.color, 0.55),
+                    marginBottom: 8,
                   }}
                 >
-                  You'll walk away with
+                  Program
                 </div>
-                <p
+                <div
                   style={{
                     fontFamily: SERIF,
-                    fontSize: 13,
-                    color: cream(0.62),
-                    lineHeight: 1.8,
-                    margin: 0,
-                    fontStyle: 'italic',
+                    fontSize: 28,
+                    fontWeight: 700,
+                    color: cream(0.92),
+                    lineHeight: 1.15,
+                    letterSpacing: '-0.01em',
                   }}
                 >
-                  {introData.gain}
-                </p>
+                  {program.domain}
+                </div>
               </div>
-            </>
-          )}
-        </div>
 
-        {/* begin button */}
-        <div style={{ padding: '16px 24px 28px', flexShrink: 0 }}>
-          <button
-            type="button"
-            onClick={() => setIntro(false)}
-            style={{
-              width: '100%',
-              padding: '16px',
-              borderRadius: 14,
-              cursor: 'pointer',
-              background: col(program.color, 0.12),
-              border: `1.5px solid ${col(program.color, 0.45)}`,
-              fontFamily: SERIF,
-              fontSize: 15,
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-              color: cream(0.92),
-              boxShadow: `0 0 24px ${col(program.color, 0.12)}`,
-            }}
-          >
-            Begin →
-          </button>
+              <div style={{ display: 'flex', gap: 16 }}>
+                <div
+                  style={{
+                    background: col(program.color, 0.08),
+                    border: `1px solid ${col(program.color, 0.15)}`,
+                    borderRadius: 10,
+                    padding: '10px 16px',
+                    flex: 1,
+                    textAlign: 'center',
+                  }}
+                >
+                  <div
+                    style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 700, color: cream(0.85) }}
+                  >
+                    {program.segments.length}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: SERIF,
+                      fontSize: 10,
+                      color: col(program.color, 0.5),
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      marginTop: 2,
+                    }}
+                  >
+                    pages
+                  </div>
+                </div>
+                <div
+                  style={{
+                    background: col(program.color, 0.08),
+                    border: `1px solid ${col(program.color, 0.15)}`,
+                    borderRadius: 10,
+                    padding: '10px 16px',
+                    flex: 1,
+                    textAlign: 'center',
+                  }}
+                >
+                  <div
+                    style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 700, color: cream(0.85) }}
+                  >
+                    ~{program.segments.length * 2}m
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: SERIF,
+                      fontSize: 10,
+                      color: col(program.color, 0.5),
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      marginTop: 2,
+                    }}
+                  >
+                    to read
+                  </div>
+                </div>
+              </div>
+
+              {introData && (
+                <>
+                  <p
+                    style={{
+                      fontFamily: SERIF,
+                      fontSize: 14,
+                      color: cream(0.7),
+                      lineHeight: 1.85,
+                      margin: 0,
+                    }}
+                  >
+                    {introData.what}
+                  </p>
+                  <div
+                    style={{ borderLeft: `3px solid ${col(program.color, 0.5)}`, paddingLeft: 14 }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: SERIF,
+                        fontSize: 10,
+                        letterSpacing: '0.16em',
+                        textTransform: 'uppercase',
+                        color: col(program.color, 0.45),
+                        marginBottom: 5,
+                      }}
+                    >
+                      You'll walk away with
+                    </div>
+                    <p
+                      style={{
+                        fontFamily: SERIF,
+                        fontSize: 13,
+                        color: cream(0.62),
+                        lineHeight: 1.8,
+                        margin: 0,
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      {introData.gain}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* begin button */}
+            <div style={{ padding: '16px 24px 28px', flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={() => setIntro(false)}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  borderRadius: 14,
+                  cursor: 'pointer',
+                  background: col(program.color, 0.12),
+                  border: `1.5px solid ${col(program.color, 0.45)}`,
+                  fontFamily: SERIF,
+                  fontSize: 15,
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  color: cream(0.92),
+                  boxShadow: `0 0 24px ${col(program.color, 0.12)}`,
+                }}
+              >
+                Begin →
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -2149,15 +2143,14 @@ export default function ComicProgram({
   if (TEXT_ON_IMAGE_PROGRAMS.has(program.key)) {
     return (
       <div
+        className="edu-reader edu-reader--overlay"
         style={{
           position: 'fixed',
-          inset: 0,
+          inset: '0 0 var(--dock-height) 0',
           zIndex: 150,
           background: hubBg,
           display: 'flex',
           flexDirection: 'column',
-          maxWidth: 672,
-          margin: '0 auto',
         }}
       >
         <div
@@ -2225,147 +2218,155 @@ export default function ComicProgram({
             overflowY: 'auto',
           }}
         >
-          <button
-            type="button"
-            onClick={handleComicSurfaceClick}
-            aria-label="Comic page navigation: left previous, right next"
-            style={{
-              display: 'block',
-              width: '100%',
-              border: 0,
-              background: 'transparent',
-              cursor: 'pointer',
-              padding: 0,
-              textAlign: 'left',
-            }}
-          >
-            <PanelImage
-              programKey={program.key}
-              index={index}
-              color={program.color}
-              imageStyle={imageStyle}
-            />
-          </button>
-          <div
-            style={{
-              position: 'sticky',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              marginTop: -220,
-              padding: '96px 18px 18px',
-              background: `linear-gradient(180deg, transparent 0%, ${hubBg}ee 38%, ${hubBg} 100%)`,
-              color: cream(0.9),
-            }}
-          >
-            <div
-              style={{
-                border: `1px solid ${col(program.color, 0.26)}`,
-                background: 'rgba(10,6,3,0.68)',
-                backdropFilter: 'blur(10px)',
-                padding: 16,
-                boxShadow: `0 18px 46px ${col(program.color, 0.13)}`,
-              }}
-            >
-              <div
+          <div className="edu-split">
+            <div className="edu-split-media">
+              <button
+                className="edu-panel-button"
+                type="button"
+                onClick={handleComicSurfaceClick}
+                aria-label="Comic page navigation: left previous, right next"
                 style={{
-                  fontFamily: SERIF,
-                  fontSize: 9,
-                  letterSpacing: '0.2em',
-                  textTransform: 'uppercase',
-                  color: col(program.color, 0.66),
-                  marginBottom: 6,
+                  display: 'block',
+                  width: '100%',
+                  border: 0,
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  padding: 0,
+                  textAlign: 'left',
                 }}
               >
-                page {index + 1}
-              </div>
+                <PanelImage
+                  programKey={program.key}
+                  index={index}
+                  color={program.color}
+                  imageStyle={imageStyle}
+                />
+              </button>
+            </div>
+            <div className="edu-split-text">
               <div
+                className="edu-overlay"
                 style={{
-                  fontFamily: SERIF,
-                  fontSize: 21,
-                  fontWeight: 700,
-                  color: cream(0.94),
-                  lineHeight: 1.18,
-                  marginBottom: 10,
+                  position: 'sticky',
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  marginTop: -220,
+                  padding: '96px 18px 18px',
+                  background: `linear-gradient(180deg, transparent 0%, ${hubBg}ee 38%, ${hubBg} 100%)`,
+                  color: cream(0.9),
                 }}
               >
-                {current.title}
-              </div>
-              <div style={{ display: 'grid', gap: 10 }}>
-                {paras.slice(0, 2).map((p, i) => (
-                  <p
-                    key={i}
+                <div
+                  style={{
+                    border: `1px solid ${col(program.color, 0.26)}`,
+                    background: 'rgba(10,6,3,0.68)',
+                    backdropFilter: 'blur(10px)',
+                    padding: 16,
+                    boxShadow: `0 18px 46px ${col(program.color, 0.13)}`,
+                  }}
+                >
+                  <div
                     style={{
                       fontFamily: SERIF,
-                      fontSize: 14.5,
-                      lineHeight: 1.72,
-                      color: cream(i === 0 ? 0.78 : 0.64),
-                      margin: 0,
+                      fontSize: 9,
+                      letterSpacing: '0.2em',
+                      textTransform: 'uppercase',
+                      color: col(program.color, 0.66),
+                      marginBottom: 6,
                     }}
                   >
-                    {p}
-                  </p>
-                ))}
-              </div>
-              {index === total - 1 && <FurtherReadingBlock program={program} compact />}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  marginTop: 14,
-                  paddingTop: 12,
-                  borderTop: `1px solid ${col(program.color, 0.12)}`,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    prev();
-                  }}
-                  disabled={index === 0}
-                  style={{
-                    border: 0,
-                    background: 'transparent',
-                    color: col(program.color, index === 0 ? 0.22 : 0.58),
-                    fontFamily: SERIF,
-                    fontSize: 13,
-                    cursor: index === 0 ? 'default' : 'pointer',
-                    padding: '8px 0',
-                  }}
-                >
-                  Previous
-                </button>
-                <div style={{ display: 'flex', gap: 5 }}>
-                  {program.segments.map((_, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        width: i === index ? 18 : 5,
-                        height: 5,
-                        borderRadius: 999,
-                        background: col(program.color, i === index ? 0.8 : 0.24),
+                    page {index + 1}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: SERIF,
+                      fontSize: 21,
+                      fontWeight: 700,
+                      color: cream(0.94),
+                      lineHeight: 1.18,
+                      marginBottom: 10,
+                    }}
+                  >
+                    {current.title}
+                  </div>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {paras.slice(0, 2).map((p, i) => (
+                      <p
+                        key={i}
+                        style={{
+                          fontFamily: SERIF,
+                          fontSize: 14.5,
+                          lineHeight: 1.72,
+                          color: cream(i === 0 ? 0.78 : 0.64),
+                          margin: 0,
+                        }}
+                      >
+                        {p}
+                      </p>
+                    ))}
+                  </div>
+                  {index === total - 1 && <FurtherReadingBlock program={program} compact />}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      marginTop: 14,
+                      paddingTop: 12,
+                      borderTop: `1px solid ${col(program.color, 0.12)}`,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        prev();
                       }}
-                    />
-                  ))}
+                      disabled={index === 0}
+                      style={{
+                        border: 0,
+                        background: 'transparent',
+                        color: col(program.color, index === 0 ? 0.22 : 0.58),
+                        fontFamily: SERIF,
+                        fontSize: 13,
+                        cursor: index === 0 ? 'default' : 'pointer',
+                        padding: '8px 0',
+                      }}
+                    >
+                      Previous
+                    </button>
+                    <div style={{ display: 'flex', gap: 5 }}>
+                      {program.segments.map((_, i) => (
+                        <span
+                          key={i}
+                          style={{
+                            width: i === index ? 18 : 5,
+                            height: 5,
+                            borderRadius: 999,
+                            background: col(program.color, i === index ? 0.8 : 0.24),
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={next}
+                      style={{
+                        border: 0,
+                        background: 'transparent',
+                        color: col(program.color, 0.62),
+                        fontFamily: SERIF,
+                        fontSize: 13,
+                        cursor: 'pointer',
+                        padding: '8px 0',
+                      }}
+                    >
+                      {index === total - 1 ? 'Finish' : 'Next'}
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={next}
-                  style={{
-                    border: 0,
-                    background: 'transparent',
-                    color: col(program.color, 0.62),
-                    fontFamily: SERIF,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    padding: '8px 0',
-                  }}
-                >
-                  {index === total - 1 ? 'Finish' : 'Next'}
-                </button>
               </div>
             </div>
           </div>
@@ -2400,15 +2401,14 @@ export default function ComicProgram({
     const showGuideTitle = !isJung || guideStep !== 3;
     return (
       <div
+        className="edu-reader edu-reader--layered"
         style={{
           position: 'fixed',
-          inset: 0,
+          inset: '0 0 var(--dock-height) 0',
           zIndex: 150,
           background: hubBg,
           display: 'flex',
           flexDirection: 'column',
-          maxWidth: 672,
-          margin: '0 auto',
         }}
       >
         <div
@@ -2528,8 +2528,8 @@ export default function ComicProgram({
               display: 'block',
               position: 'relative',
               width: isLandscape
-                ? 'min(100%, 620px, calc((100dvh - 150px) * 1.78))'
-                : 'min(100%, 390px, calc((100dvh - 150px) * 0.63))',
+                ? 'min(100%, 900px, calc((100dvh - 275px) * 1.78))'
+                : 'min(100%, 560px, calc((100dvh - 275px) * 0.66))',
               maxWidth: '100%',
               margin: '0 auto',
               padding: 0,
@@ -2665,7 +2665,7 @@ export default function ComicProgram({
               style={{
                 display: 'flex',
                 gap: 7,
-                maxWidth: isLandscape ? 620 : 390,
+                maxWidth: isLandscape ? 900 : 560,
                 margin: '10px auto 0',
               }}
             >
@@ -2696,7 +2696,7 @@ export default function ComicProgram({
             </div>
           )}
           {index === total - 1 && showsGuideTextBox && (
-            <div style={{ maxWidth: isLandscape ? 620 : 390, margin: '12px auto 0' }}>
+            <div style={{ maxWidth: isLandscape ? 900 : 560, margin: '12px auto 0' }}>
               <FurtherReadingBlock program={program} compact />
             </div>
           )}
@@ -2789,15 +2789,14 @@ export default function ComicProgram({
 
   return (
     <div
+      className="edu-reader"
       style={{
         position: 'fixed',
-        inset: 0,
+        inset: '0 0 var(--dock-height) 0',
         zIndex: 150,
         background: hubBg,
         display: 'flex',
         flexDirection: 'column',
-        maxWidth: 672,
-        margin: '0 auto',
         overflowY: 'auto',
       }}
     >
@@ -2814,17 +2813,30 @@ export default function ComicProgram({
       >
         <div
           style={{
+            flex: 1,
+            minWidth: 0,
+            marginRight: 10,
             fontFamily: SERIF,
             fontSize: 11,
             color: col(program.color, 0.55),
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
           }}
         >
           {program.domain}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ fontFamily: SERIF, fontSize: 11, color: col(program.color, 0.4) }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div
+            style={{
+              fontFamily: SERIF,
+              fontSize: 11,
+              color: col(program.color, 0.4),
+              whiteSpace: 'nowrap',
+            }}
+          >
             {index + 1} / {total}
           </div>
           {textSizeControl}
@@ -2841,6 +2853,7 @@ export default function ComicProgram({
               letterSpacing: '0.1em',
               cursor: 'pointer',
               padding: '4px 12px',
+              whiteSpace: 'nowrap',
             }}
           >
             ← back
@@ -2848,132 +2861,137 @@ export default function ComicProgram({
         </div>
       </div>
 
-      {/* ── Panel art ── */}
-      <button
-        type="button"
-        onClick={handleComicSurfaceClick}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            next();
-          }
-        }}
-        aria-label={index === total - 1 ? 'Return to education' : 'Next comic page'}
-        style={{
-          flexShrink: 0,
-          margin: '16px 20px 0',
-          borderRadius: 0,
-          overflow: 'visible',
-          border: `1.5px solid ${col(program.color, 0.25)}`,
-          boxShadow: `0 0 32px ${col(program.color, 0.1)}`,
-          cursor: 'pointer',
-          display: 'block',
-          padding: 0,
-          width: 'calc(100% - 40px)',
-          background: 'transparent',
-          textAlign: 'left',
-        }}
-      >
-        <PanelImage
-          programKey={program.key}
-          index={index}
-          color={program.color}
-          imageStyle={imageStyle}
-        />
-      </button>
-
-      {imageStyles.length > 1 && (
-        <div
-          style={{
-            display: 'flex',
-            gap: 8,
-            padding: '10px 20px 0',
-            flexShrink: 0,
-          }}
-        >
-          {imageStyles.map((style) => (
-            <button
-              key={style.key}
-              type="button"
-              onClick={() => {
-                setMoreOpen(false);
-                setImageStyle(style.key);
-              }}
-              style={{
-                flex: 1,
-                minHeight: 34,
-                borderRadius: 999,
-                border: `1px solid ${col(program.color, imageStyle === style.key ? 0.5 : 0.2)}`,
-                background: col(program.color, imageStyle === style.key ? 0.16 : 0.05),
-                color: cream(imageStyle === style.key ? 0.9 : 0.56),
-                cursor: 'pointer',
-                fontFamily: SERIF,
-                fontSize: 11,
-                letterSpacing: '0.08em',
-              }}
-            >
-              {style.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* ── Caption + body ── */}
-      <div style={{ padding: '20px 20px 24px' }}>
-        {/* title caption box */}
-        <div
-          style={{
-            borderLeft: `3px solid ${col(program.color, 0.7)}`,
-            paddingLeft: 14,
-            marginBottom: 24,
-          }}
-        >
-          <div
+      <div className="edu-split">
+        <div className="edu-split-media">
+          {/* ── Panel art ── */}
+          <button
+            className="edu-panel-button"
+            type="button"
+            onClick={handleComicSurfaceClick}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                next();
+              }
+            }}
+            aria-label={index === total - 1 ? 'Return to education' : 'Next comic page'}
             style={{
-              fontFamily: SERIF,
-              fontSize: 9,
-              letterSpacing: '0.2em',
-              textTransform: 'uppercase',
-              color: col(program.color, 0.5),
-              marginBottom: 5,
+              flexShrink: 0,
+              margin: '16px 20px 0',
+              borderRadius: 0,
+              overflow: 'visible',
+              border: `1.5px solid ${col(program.color, 0.25)}`,
+              boxShadow: `0 0 32px ${col(program.color, 0.1)}`,
+              cursor: 'pointer',
+              display: 'block',
+              padding: 0,
+              width: 'calc(100% - 40px)',
+              background: 'transparent',
+              textAlign: 'left',
             }}
           >
-            page {index + 1}
-          </div>
-          <div
-            style={{
-              fontFamily: SERIF,
-              fontSize: 20,
-              fontWeight: 700,
-              color: cream(0.92),
-              lineHeight: 1.25,
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {current.title}
-          </div>
-        </div>
+            <PanelImage
+              programKey={program.key}
+              index={index}
+              color={program.color}
+              imageStyle={imageStyle}
+            />
+          </button>
 
-        {/* body paragraphs */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          {paras.map((para, i) => (
-            <p
-              key={i}
+          {imageStyles.length > 1 && (
+            <div
               style={{
-                fontFamily: SERIF,
-                fontSize: bodyFontSize,
-                color: cream(0.72),
-                lineHeight: 1.9,
-                margin: 0,
+                display: 'flex',
+                gap: 8,
+                padding: '10px 20px 0',
+                flexShrink: 0,
               }}
             >
-              {para}
-            </p>
-          ))}
+              {imageStyles.map((style) => (
+                <button
+                  key={style.key}
+                  type="button"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    setImageStyle(style.key);
+                  }}
+                  style={{
+                    flex: 1,
+                    minHeight: 34,
+                    borderRadius: 999,
+                    border: `1px solid ${col(program.color, imageStyle === style.key ? 0.5 : 0.2)}`,
+                    background: col(program.color, imageStyle === style.key ? 0.16 : 0.05),
+                    color: cream(imageStyle === style.key ? 0.9 : 0.56),
+                    cursor: 'pointer',
+                    fontFamily: SERIF,
+                    fontSize: 11,
+                    letterSpacing: '0.08em',
+                  }}
+                >
+                  {style.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        {index === total - 1 && <FurtherReadingBlock program={program} />}
+        <div className="edu-split-text">
+          {/* ── Caption + body ── */}
+          <div style={{ padding: '20px 20px 24px' }}>
+            {/* title caption box */}
+            <div
+              style={{
+                borderLeft: `3px solid ${col(program.color, 0.7)}`,
+                paddingLeft: 14,
+                marginBottom: 24,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: SERIF,
+                  fontSize: 9,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  color: col(program.color, 0.5),
+                  marginBottom: 5,
+                }}
+              >
+                page {index + 1}
+              </div>
+              <div
+                style={{
+                  fontFamily: SERIF,
+                  fontSize: 20,
+                  fontWeight: 700,
+                  color: cream(0.92),
+                  lineHeight: 1.25,
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {current.title}
+              </div>
+            </div>
+
+            {/* body paragraphs */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              {paras.map((para, i) => (
+                <p
+                  key={i}
+                  style={{
+                    fontFamily: SERIF,
+                    fontSize: bodyFontSize,
+                    color: cream(0.72),
+                    lineHeight: 1.9,
+                    margin: 0,
+                  }}
+                >
+                  {para}
+                </p>
+              ))}
+            </div>
+            {index === total - 1 && <FurtherReadingBlock program={program} />}
+          </div>
+        </div>
       </div>
-
       {/* ── Navigation ── */}
       <div
         style={{
