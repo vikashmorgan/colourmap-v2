@@ -964,3 +964,100 @@ input[type="range"].art-slider.magma {
     animation: none;
   }
 }
+
+/* Education. Asked for 2026-11-06: on a computer it fills the screen, not fragmented;
+   on a phone an image is never much bigger than the screen. Under 1024px the split
+   wrappers disappear and the page flows as one column. */
+:root {
+  --dock-height: 44px;
+}
+.edu-reader {
+  --edu-panel-max: 60dvh;
+  backdrop-filter: blur(24px);
+}
+.edu-reader--overlay {
+  --edu-panel-max: 76dvh;
+}
+.edu-panel {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: var(--edu-panel-max, none);
+  object-fit: contain;
+}
+.edu-split,
+.edu-split-media,
+.edu-split-text {
+  display: contents;
+}
+@media (min-width: 1024px) {
+  .edu-reader {
+    --edu-panel-max: calc(100dvh - var(--dock-height) - 170px);
+    overflow: hidden !important;
+  }
+  .edu-bar {
+    padding-inline: 132px !important;
+  }
+  .edu-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 48px;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    width: 100%;
+    max-width: 1400px;
+    margin-inline: auto;
+    padding: 16px 64px;
+    align-items: center;
+  }
+  .edu-split-media {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .edu-split-media > .edu-panel-button {
+    display: block !important;
+    width: auto !important;
+    max-width: 100%;
+    margin: 0 !important;
+  }
+  .edu-split-media .edu-panel {
+    width: auto;
+    max-width: 100%;
+  }
+  .edu-split-media svg {
+    max-height: var(--edu-panel-max);
+  }
+  .edu-split-text {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-self: stretch;
+    justify-content: safe center;
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+  }
+  .edu-split-text .edu-overlay {
+    position: static !important;
+    margin-top: 0 !important;
+    padding: 0 !important;
+    background: none !important;
+  }
+  .edu-split-text > div {
+    flex: 0 1 auto !important;
+  }
+  .edu-lane {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+    overflow-x: visible !important;
+  }
+  .edu-lane > * {
+    width: auto !important;
+    min-width: 0;
+  }
+}

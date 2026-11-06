@@ -37,11 +37,11 @@ describe('/dreams-in-action page', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('private, no-store');
     for (const block of [
-      'Beyond the matrix',
+      'New ways of learning',
       'The future of education',
-      'The Embassy of Dreams',
+      'Places to build',
       'Logic and intuition',
-      'A disconnected world',
+      'The wider world',
     ]) {
       expect(html).toContain(`name: '${block}'`);
     }

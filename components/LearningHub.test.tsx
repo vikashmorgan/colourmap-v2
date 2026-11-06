@@ -16,6 +16,25 @@ describe('LearningHub', () => {
     sessionStorage.clear();
   });
 
+  it('opens a program in the full-window reader, with image and words split', async () => {
+    const { container } = render(<LearningHub onClose={vi.fn()} />);
+    await screen.findByText('Until you make the unconscious conscious, it will direct your life.');
+    fireEvent.click(screen.getByRole('button', { name: 'Education' }));
+    expect(container.querySelector('.edu-lane')).not.toBeNull();
+
+    fireEvent.click(screen.getByText('Viktor Frankl & Meaning Under Pressure'));
+
+    const reader = await vi.waitFor(() => {
+      const el = container.querySelector<HTMLElement>('.edu-reader');
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    expect(reader.style.maxWidth).toBe('');
+    expect(reader.querySelector('.edu-split-media')).not.toBeNull();
+    expect(reader.querySelector('.edu-split-text')).not.toBeNull();
+    expect(reader.querySelector('img.edu-panel, svg')).not.toBeNull();
+  });
+
   it('renders education worlds and opens the comic reader with image style choices', async () => {
     localStorage.setItem('colourmap:mood-word', 'anxious');
     const onClose = vi.fn();
