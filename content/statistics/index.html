@@ -274,6 +274,11 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .seg { --tint: oklch(0.80 0.11 var(--h, 250) / 0.30); --title: oklch(0.45 0.13 var(--h, 250)); }
   [data-theme="night"] .seg { --tint: oklch(0.62 0.12 var(--h, 250) / 0.20); --title: oklch(0.84 0.11 var(--h, 250)); }
   .seg > h2 { color: var(--title); }
+  .part-no { display: block; margin-bottom: 2px; font: 600 12px system-ui, sans-serif; letter-spacing: .04em; color: var(--ochre); }
+  .part-tag { margin-left: auto; flex-shrink: 0; font: 500 11px system-ui, sans-serif; color: var(--ochre); white-space: nowrap; }
+  .ex h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+  .own-box .tools { margin-left: 0; }
+  .seg + .seg { margin-top: 36px; border-top: 1px solid color-mix(in srgb, var(--ochre) 45%, transparent); }
   .seg { position: relative; }
   :root { --ochre: #b08a45; }
   [data-theme="night"] { --ochre: #c6a05c; }
@@ -992,9 +997,9 @@ function setBoxDraft(key, draft) {
   if (draft) all[key] = draft; else delete all[key];
   writeStore('stats-box-drafts', all);
 }
-function ownBoxHtml(n) {
+function ownBoxHtml(n, part) {
   const [title, words] = boxParts(n.body);
-  return `<article class="own-box" data-ref="${esc(noteRef(n))}"><h3><span>${esc(title)}</span><span class="tools"><button type="button" class="box-edit" aria-label="Edit">✎</button><button type="button" class="box-del" aria-label="Delete">×</button></span></h3>${words ? `<div class="words">${boldHtml(esc(words))}</div>` : ''}</article>`;
+  return `<article class="own-box" data-ref="${esc(noteRef(n))}"><h3><span>${esc(title)}</span><span class="part-tag">${esc(part)}</span><span class="tools"><button type="button" class="box-edit" aria-label="Edit">✎</button><button type="button" class="box-del" aria-label="Delete">×</button></span></h3>${words ? `<div class="words">${boldHtml(esc(words))}</div>` : ''}</article>`;
 }
 function boxEditorHtml(title, words, ref) {
   return `<div class="box-editor"${ref ? ` data-ref="${esc(ref)}"` : ''}><input type="text" maxlength="120" aria-label="Title of the box" placeholder="Title" value="${esc(title)}">
@@ -1004,7 +1009,7 @@ function boxEditorHtml(title, words, ref) {
 function paintBoxes() {
   for (const wrap of document.querySelectorAll('.own-boxes')) {
     if (wrap.querySelector('.box-editor')) continue;
-    wrap.innerHTML = `${notesOf(wrap.dataset.boxKey).map(ownBoxHtml).join('')}<button type="button" class="box-add">+ New box</button>`;
+    wrap.innerHTML = `${notesOf(wrap.dataset.boxKey).map(n => ownBoxHtml(n, wrap.dataset.part)).join('')}<button type="button" class="box-add">+ New box</button>`;
   }
 }
 document.addEventListener('click', async e => {
@@ -1254,11 +1259,11 @@ function readsHtml(r) {
 }
 const PARA = String.fromCharCode(10, 10);
 const paras = t => t.split(PARA).map(p => `<p>${kwText(p)}</p>`).join('');
-function cardHtml(s, c) {
+function cardHtml(s, c, gi) {
   const key = cardKey(s.n, c.id), m = marks[key] || '';
   const r = READS[`${s.n}|${c.id}`], x = c.more || {};
   return `<article class="card" id="c-${s.n}-${c.id}" data-key="${esc(key)}" data-mark="${m}">
-    <h3><span class="num">${c.num.split('.')[1]}</span><span>${esc(c.name)}</span></h3>
+    <h3><span class="num">${c.num.split('.')[1]}</span><span>${esc(c.name)}</span>${partTag(s, gi)}</h3>
     ${paras(c.what)}
     ${c.list ? `<ol class="steps">${c.list.map(i => `<li>${kwText(i)}</li>`).join('')}</ol>` : ''}
     ${c.f ? `<pre>${mathHtml(c.f)}</pre>` : ''}
@@ -1271,7 +1276,7 @@ function cardHtml(s, c) {
   </article>`;
 }
 function practiceHtml(s) {
-  return s.practice.map((x, i) => `<section class="ex" aria-label="Exercise ${i + 1}"><h3><span class="ex-num">Exercise ${i + 1}</span>${esc(x.title)}</h3><p class="ex-setup" data-hl="stats|p|${x.id}">${text(x.setup)}</p>${x.table ? x.table() : ''}
+  return s.practice.map((x, i) => `<section class="ex" aria-label="Exercise ${i + 1}"><h3><span class="ex-num">Exercise ${i + 1}</span>${esc(x.title)}${partTag(s, s.groups.length)}</h3><p class="ex-setup" data-hl="stats|p|${x.id}">${text(x.setup)}</p>${x.table ? x.table() : ''}
     <div class="practice">${x.parts.map(([q, a], j) => `<details class="pq" data-hl="stats|p|${x.id}-${j + 1}"><summary><span class="num">${j + 1}</span><span>${text(q)}</span></summary><div class="ans">${subs(a())}</div></details>`).join('')}</div></section>`).join('');
 }
 function refHtml() {
@@ -1307,8 +1312,13 @@ function paintBars() {
 }
 // Each segment of boxes has its own colour, as on the Python page.
 // "I love the colour of slides 1 to 10 in Lecture 1": their blue and lavender, in turn, on every lecture.
-const segHue = i => i % 2 ? 300 : 250;
-const segRail = (s, i) => `<div class="seg-rail"><button type="button" class="seg-tab" aria-label="Segment ${i + 1} of ${s.groups.length + 2}. Open the map">Segment ${i + 1}/${s.groups.length + 2}</button></div>`;
+/* Asked for 2026-11-06: "boxes to be that ochre beige, the one I liked from class 3, not blue, but with something
+   to show what part they are in". One colour everywhere: hue 95, Lecture 3's second segment. The part shows in words. */
+const SEG_HUE = 95;
+const segHue = () => SEG_HUE;
+const partTag = (s, i) => `<span class="part-tag">Part ${i + 1}/${s.groups.length + 2}</span>`;
+const partHead = (s, i, name) => `<h2><span class="part-no">Part ${i + 1} of ${s.groups.length + 2}</span>${esc(name)}</h2>`;
+const segRail = (s, i) => `<div class="seg-rail"><button type="button" class="seg-tab" aria-label="Part ${i + 1} of ${s.groups.length + 2}. Open the map">Part ${i + 1}/${s.groups.length + 2}</button></div>`;
 function picOpen() { try { return localStorage.getItem('stats-pic-closed') !== '1'; } catch (e) { return true; } }
 document.addEventListener('toggle', e => { if (e.target.id === 'pic') { try { localStorage.setItem('stats-pic-closed', e.target.open ? '' : '1'); } catch (err) {} } }, true);
 function renderSession() {
@@ -1316,9 +1326,9 @@ function renderSession() {
   const s = SESSIONS.find(x => x.n === current);
   document.getElementById('session').innerHTML = `<p class="where"><button type="button" class="where-btn" id="where-btn">Lecture ${s.n}</button></p><h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
     + `<details class="pic" id="pic" data-seg="pic"${picOpen() ? ' open' : ''}><summary>The picture: the lecture on one page</summary><div class="pic-body">${PICTURES[s.n]()}</div></details>`
-    + s.groups.map((g, gi) => `<section class="seg" data-seg="g${gi}" style="--h: ${segHue(gi)}">${segRail(s, gi)}<h2>${esc(g.name)}</h2>${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c)).join('')}</div><div class="own-boxes" data-box-key="${esc(boxKey(s.n, gi))}"></div></section>`).join('')
-    + `<section class="seg" data-seg="practice" style="--h: ${segHue(s.groups.length)}">${segRail(s, s.groups.length)}<h2>Practice</h2><p class="group-note">Try each one on paper first, then open the answer.</p>${practiceHtml(s)}</section>`
-    + `<section class="seg" data-seg="recap" style="--h: ${segHue(s.groups.length + 1)}">${segRail(s, s.groups.length + 1)}<h2>To remember</h2><ul class="recap" data-hl="stats|s${s.n}|recap">${s.recap.map(r => `<li>${text(r)}</li>`).join('')}</ul></section>`;
+    + s.groups.map((g, gi) => `<section class="seg" data-seg="g${gi}" style="--h: ${segHue(gi)}">${segRail(s, gi)}${partHead(s, gi, g.name)}${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c, gi)).join('')}</div><div class="own-boxes" data-box-key="${esc(boxKey(s.n, gi))}" data-part="Part ${gi + 1}/${s.groups.length + 2}"></div></section>`).join('')
+    + `<section class="seg" data-seg="practice" style="--h: ${segHue(s.groups.length)}">${segRail(s, s.groups.length)}${partHead(s, s.groups.length, 'Practice')}<p class="group-note">Try each one on paper first, then open the answer.</p>${practiceHtml(s)}</section>`
+    + `<section class="seg" data-seg="recap" style="--h: ${segHue(s.groups.length + 1)}">${segRail(s, s.groups.length + 1)}${partHead(s, s.groups.length + 1, 'To remember')}<ul class="recap" data-hl="stats|s${s.n}|recap">${s.recap.map(r => `<li>${text(r)}</li>`).join('')}</ul></section>`;
   paintNotes();
   applyHighlights();
   mapRefresh();
@@ -1809,7 +1819,7 @@ function placeText() {
   const s = SESSIONS.find(x => x.n === current);
   if (!s) return 'Cheat sheet';
   const all = segsOf(s), at = all.find(x => x.key === mapPlace.seg), num = all.filter(x => x.key !== 'pic'), i = num.indexOf(at);
-  return i < 0 ? `Lecture ${current} · ${at ? at.name : ''}` : `Lecture ${current} · Segment ${i + 1} of ${num.length} · ${at.name}`;
+  return i < 0 ? `Lecture ${current} · ${at ? at.name : ''}` : `Lecture ${current} · Part ${i + 1} of ${num.length} · ${at.name}`;
 }
 const hueStyle = x => x.h === undefined ? '' : ` style="--h: ${x.h.toFixed(0)}"`;
 // The pinned label and the closed pill.

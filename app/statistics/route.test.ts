@@ -53,8 +53,7 @@ describe('/statistics class page', () => {
     // A worked example sets each piece of the formula beside its numbers.
     expect(html).toContain('class="steps"');
     expect(html).not.toContain('r.walk.lines');
-    // One pair of colours; a tab on the left of the boxes marks the segment.
-    expect(html).toContain('const segHue = i => i % 2 ? 300 : 250;');
+    // A tab on the left of the boxes marks the part.
     expect(html).toContain('class="seg-tab"');
     // Letters such as X, x, n and p open the same side box as a term.
     expect(html).toContain('function letterBox(word, card)');
@@ -66,7 +65,9 @@ describe('/statistics class page', () => {
     // The pill on the left opens to stacks of segments: which lecture and segment you are in.
     expect(html).toContain('id="map-pill"');
     expect(html).toContain('data-seg-toggle=');
-    expect(html).toContain(`Segment \${i + 1} of \${num.length}`);
+    expect(html).toContain(`Part \${i + 1} of \${num.length}`);
+    // One ochre colour on every box, with the part in words.
+    expect(html).toContain('const SEG_HUE = 95;');
     // Slides come from the user's private files, never from this public page.
     expect(html).toContain(
       "const DECK_FILES = ['Stats1.pdf', 'Stats2.pdf', 'Stats3.pdf', 'Stats4.pdf'];",
