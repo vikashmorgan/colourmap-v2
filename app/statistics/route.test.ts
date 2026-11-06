@@ -40,6 +40,10 @@ describe('/statistics class page', () => {
     expect(html).toContain("const MARKS_URL = '/api/coding/marks';");
     expect(html).toContain("const mine = k => k.startsWith('stats|');");
     expect(html).toContain('data-key="stats|notebook"');
+    // Reflections go to Dreams in Action, and a failed save keeps the words.
+    expect(html).toContain('id="rf-dot"');
+    expect(html).toContain("const RF_PREFIX = 'dreams|';");
+    expect(html).toContain('Not saved. Your words are still here.');
     for (const n of [1, 2, 3]) expect(html).toContain(`{ n: ${n}, short:`);
     // The cheat sheet and the highlights, as on the SQL page.
     expect(html).toContain('const REF = [');

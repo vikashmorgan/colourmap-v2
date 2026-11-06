@@ -15,6 +15,10 @@ The words are the user's. Nothing on this page writes, rewrites or suggests idea
 - **An idea** shows its text with its line breaks kept, and its date. *Edit*, *Move* to another block, and *Delete*, which asks once more first.
 - **+ Write here** on a block selects it in the write box without losing what is typed.
 
+## Written from elsewhere
+
+The *Reflections* bubble on Statistics writes here while reading ([spec](statistics-class.md)). Those notes are ordinary ideas, and can be edited, moved and deleted the same way. Their last line says where they were written.
+
 ## Saving
 
 Ideas are notes in `/api/coding/notes`, under keys `dreams|<block name>`, with no new table or migration. Python's page leaves them out of its own notes. A note holds at most 2,000 characters: the page counts down near the limit and asks to split a longer idea into two. Editing a note keeps its place; a move creates the note in the new block and then removes the old one, so a failure never loses the idea.
