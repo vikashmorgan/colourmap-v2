@@ -157,6 +157,14 @@ Small hand-drawn elements at the corners or margins — a star, a hatch, a flour
 ### Seals and stamps
 For milestones or completed states. A small round stamp in bamboo green. Used once in a great while.
 
+## Depth: a sheet on top
+
+Asked for 2026-11-06: "I like how the notepad has shadows to the back, so it feels like it is on top of the rest. That depth effect is super cool, to be thought of for the evolution of the overall app."
+
+**This is liked, and is a direction for the app's next moves.** The reference is the Statistics notepad (`.notebook` in `content/statistics/index.html`): a sheet of paper lifted over the page, with a 16px gap around it, 16px corners, a thin rule for an edge and `box-shadow: 0 18px 48px rgb(0 0 0 / .3)`. The page stays visible and alive underneath, so you know where you are.
+
+When a surface opens over another, try this before a full page change or a flat panel. Hold it to one lifted sheet at a time, since depth reads only against a calm page. Not built across the app yet: it is something to carry over page by page, starting where things already open on top.
+
 ## Motion
 
 Slow. Deliberate. A brush stroke, not a bounce.

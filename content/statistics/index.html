@@ -249,6 +249,16 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .nb-dot:hover, .nb-dot[aria-expanded="true"] { border-color: var(--accent); }
   .nb-dot.has-notes { background: var(--accent); }
   .notebook { position: fixed; z-index: 60; right: 16px; top: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); overflow: auto; background: var(--nb-bg); border: 1px solid var(--nb-rule); border-radius: 16px; box-shadow: 0 18px 48px rgb(0 0 0 / .3); --line: var(--nb-rule); --card: color-mix(in srgb, var(--nb-bg) 70%, #fff 30%); }
+  .rf-dot { position: fixed; z-index: 61; right: 10px; top: calc(50% + 36px); width: 22px; height: 22px; padding: 0; border-radius: 50%; cursor: pointer; border: 2px solid var(--ochre); background: color-mix(in srgb, var(--ochre) 35%, var(--nb-bg)); box-shadow: 0 2px 8px rgb(0 0 0 / .18); }
+  .rf-dot::after { content: ''; position: absolute; inset: -7px -11px; }
+  .rf-dot:hover, .rf-dot[aria-expanded="true"] { background: var(--ochre); }
+  .rf-dot.on-sheet { right: 5px; }
+  .rf-from { margin: 0; font: 13px system-ui, sans-serif; color: var(--soft); }
+  .rf-saved.bad { color: var(--accent); }
+  .rf-item { display: grid; gap: 3px; padding: 9px 11px; border-radius: 12px; border: 1px solid var(--nb-rule); background: var(--card); }
+  .rf-block { font: 600 12px system-ui, sans-serif; color: var(--ochre); }
+  .rf-body { margin: 0; font: 14px/1.45 system-ui, sans-serif; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .rf-all { font: 600 14px system-ui, sans-serif; color: var(--accent); }
   [data-theme="night"] .notebook { --card: color-mix(in srgb, var(--nb-bg) 85%, #fff 15%); }
   .nb-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; padding: 12px 10px 12px 16px; background: var(--nb-top); border-bottom: 1px solid var(--nb-rule); }
   .nb-title { font-size: 20px; font-weight: 600; color: var(--accent); margin-right: auto; }
@@ -428,6 +438,18 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
     <p class="saved" id="nb-saved" role="status"></p>
   </div>
   <div class="nb-list" id="nb-list"></div>
+</aside>
+<button type="button" class="rf-dot" id="rf-dot" aria-expanded="false" aria-controls="reflections" title="Reflections" aria-label="Reflections"></button>
+<aside class="notebook" id="reflections" aria-label="Reflections" hidden>
+  <div class="nb-top"><span class="nb-title">Reflections</span><button type="button" class="nb-close" id="rf-close" aria-label="Close reflections">×</button></div>
+  <div class="nb-write">
+    <label class="about"><span>Block</span><select id="rf-block" aria-label="Which block this goes in"></select></label>
+    <textarea id="rf-text" rows="5" aria-label="Your reflection" placeholder="A bigger thought, while you read"></textarea>
+    <p class="rf-from" id="rf-from"></p>
+    <div class="acts"><button type="button" class="save" id="rf-save">Save</button></div>
+    <p class="saved rf-saved" id="rf-saved" role="status"></p>
+  </div>
+  <div class="nb-list" id="rf-list"></div>
 </aside>
 
 
@@ -1344,6 +1366,85 @@ document.getElementById('sessions').addEventListener('click', e => {
   scrollTo({ top: 0 });
 });
 
+/* ---------- Reflections: a second sheet, writing into Dreams in Action ----------
+   Saved as dreams|<block> notes, so they appear there, with where you were reading as the last line. */
+const RF_PREFIX = 'dreams|';
+const RF_UNSORTED = 'Not sorted yet';
+const RF_BLOCKS = ['New ways of learning', 'The future of education', 'Places to build', 'Logic and intuition', 'The wider world'];
+const RF_MAX = 2000;
+const RF_DRAFT = 'stats-reflection-draft';
+const rfSheet = document.getElementById('reflections');
+const rfDot = document.getElementById('rf-dot');
+const rfBlock = document.getElementById('rf-block');
+const rfText = document.getElementById('rf-text');
+const rfSaved = document.getElementById('rf-saved');
+let rfNotes = [], rfSaving = false;
+function rfSource() {
+  const key = currentSpot();
+  const p = places().find(x => x.key === key);
+  if (!p) return 'Statistics';
+  if (!p.s) return 'Statistics';
+  return p.id ? `Statistics, Lecture ${p.s}: ${p.tag} ${p.name}` : `Statistics, Lecture ${p.s}`;
+}
+function rfPaint() {
+  const keep = rfBlock.value;
+  const own = [...readStore('dreams-blocks', []), ...rfNotes.map(n => n.itemKey.slice(RF_PREFIX.length))];
+  const names = [RF_UNSORTED, ...RF_BLOCKS, ...own].filter((n, i, list) => list.indexOf(n) === i);
+  rfBlock.innerHTML = names.map(n => `<option>${esc(n)}</option>`).join('');
+  rfBlock.value = names.includes(keep) ? keep : RF_UNSORTED;
+  const recent = [...rfNotes].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 5);
+  document.getElementById('rf-list').innerHTML = recent.map(n => `<div class="rf-item"><span class="rf-block">${esc(n.itemKey.slice(RF_PREFIX.length))}</span><p class="rf-body">${esc(n.body.length > 220 ? `${n.body.slice(0, 220)}…` : n.body)}</p></div>`).join('')
+    + '<a class="rf-all" href="/dreams-in-action">All reflections ›</a>';
+}
+async function rfLoad() {
+  try {
+    const r = await fetch(NOTES_URL);
+    if (!r.ok) throw new Error('load');
+    rfNotes = (await r.json()).notes.filter(n => n.itemKey.startsWith(RF_PREFIX));
+  } catch (e) { /* Writing still works; the blocks fall back to the usual ones. */ }
+  rfPaint();
+}
+const rfOnSheet = () => rfDot.classList.toggle('on-sheet', !notebook.hidden || !rfSheet.hidden);
+function setReflections(open) {
+  rfSheet.hidden = !open;
+  rfDot.setAttribute('aria-expanded', String(open));
+  rfOnSheet();
+  if (!open) return;
+  setNotebook(false);
+  document.getElementById('rf-from').textContent = `From ${rfSource()}`;
+  if (!rfText.value) rfText.value = readStore(RF_DRAFT, '');
+  rfPaint();
+  rfLoad();
+}
+async function rfSave() {
+  const text = rfText.value.trim();
+  if (!text) { rfText.focus(); return; }
+  if (rfSaving) return;
+  const source = `From ${rfSource()}`.slice(0, 160);
+  const say = (msg, bad) => { rfSaved.textContent = msg; rfSaved.classList.toggle('bad', !!bad); };
+  if (text.length + source.length + 2 > RF_MAX) { say(`Too long by ${text.length + source.length + 2 - RF_MAX} characters. Your words are still here.`, true); return; }
+  rfSaving = true;
+  const block = rfBlock.value;
+  const key = RF_PREFIX + block;
+  try {
+    const r = await fetch(NOTES_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: [{ key, kind: 'comment', body: `${text}\n\n${source}` }] }) });
+    if (!r.ok) throw new Error('save');
+    rfNotes.push(...(await r.json()).notes);
+    rfText.value = '';
+    writeStore(RF_DRAFT, '');
+    say(`Saved to ${block}.`);
+    rfPaint();
+  } catch (e) { say('Not saved. Your words are still here.', true); }
+  rfSaving = false;
+}
+rfDot.hidden = !ON_BRAIN;
+rfDot.addEventListener('click', () => setReflections(rfSheet.hidden));
+document.getElementById('rf-close').addEventListener('click', () => setReflections(false));
+document.getElementById('rf-save').addEventListener('click', rfSave);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !rfSheet.hidden) setReflections(false); });
+rfText.addEventListener('input', () => writeStore(RF_DRAFT, rfText.value));
+rfText.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); rfSave(); } });
+
 /* ---------- The notepad on the right ---------- */
 const notebook = document.getElementById('notebook');
 const nbDot = document.getElementById('nb-dot');
@@ -1368,10 +1469,12 @@ function currentSpot() {
 }
 function followSpot() { if (!nbPinned) nbAbout.value = currentSpot(); if (!notebook.hidden) renderNotebook(); }
 let scrollTimer = 0;
-addEventListener('scroll', () => { clearTimeout(scrollTimer); scrollTimer = setTimeout(() => { if (!notebook.hidden) followSpot(); }, 150); }, { passive: true });
+addEventListener('scroll', () => { clearTimeout(scrollTimer); scrollTimer = setTimeout(() => { if (!notebook.hidden) followSpot(); if (!rfSheet.hidden) document.getElementById('rf-from').textContent = `From ${rfSource()}`; }, 150); }, { passive: true });
 function setNotebook(open) {
   notebook.hidden = !open;
   nbDot.setAttribute('aria-expanded', String(open));
+  if (open) setReflections(false);
+  rfOnSheet();
   if (open) { if (!nbText.value.trim()) nbPinned = false; followSpot(); }
 }
 function renderNotebook() {
