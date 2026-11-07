@@ -8,6 +8,9 @@
   try { document.documentElement.dataset.theme = localStorage.getItem('school-theme') || 'day'; } catch (e) {}
 </script>
 <style>
+  /* Scrollbars: ochre on beige, never grey (docs/specs/visual-identity.md). */
+  html { scrollbar-width: thin; scrollbar-color: #b08a45 #efe3cc; }
+  html[data-theme="night"] { scrollbar-color: #c6a05c #3a3125; }
   :root { --paper: #f7f3ea; --card: #fbf8f1; --ink: #2b2620; --soft: #6f665a; --line: #e3dccd; --accent: #8a5a2b; --late: #a8452f; }
   [data-theme="night"] { --paper: #191714; --card: #201d19; --ink: #ece6da; --soft: #a49b8d; --line: #34302a; --accent: #d9a46a; --late: #e08a70; }
   * { box-sizing: border-box; }

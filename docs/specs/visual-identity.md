@@ -165,6 +165,12 @@ Asked for 2026-11-06: "I like how the notepad has shadows to the back, so it fee
 
 When a surface opens over another, try this before a full page change or a flat panel. Hold it to one lifted sheet at a time, since depth reads only against a calm page. Not built across the app yet: it is something to carry over page by page, starting where things already open on top.
 
+## Scrollbars
+
+Asked for 2026-11-07: "that scroller, the vertical thin bar on the left menu and in the app, should be ochre and beige, not grey; also on the right and in other places."
+
+Every scrollbar is thin, with an ochre thumb on a beige track: `#b08a45` on `#efe3cc` by day, `#c6a05c` on `#3a3125` at night. That covers the page, the left menu, the notepad and the sheets on the right, and any box that scrolls. Never the browser's default grey. In the app it is set once on `html` in `app/globals.css`, so every scrolling box inherits it. Each School page in `content/` sets it in its own styles. A strip that scrolls sideways may still hide its bar.
+
 ## Motion
 
 Slow. Deliberate. A brush stroke, not a bounce.

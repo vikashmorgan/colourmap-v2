@@ -10,6 +10,9 @@
   try { const size = Number(localStorage.getItem('stats-text-size')); if (size) document.documentElement.style.setProperty('--read', size); } catch (e) {}
 </script>
 <style>
+  /* Scrollbars: ochre on beige, never grey (docs/specs/visual-identity.md). */
+  html { scrollbar-width: thin; scrollbar-color: #b08a45 #efe3cc; }
+  html[data-theme="night"] { scrollbar-color: #c6a05c #3a3125; }
   /* School's paper: beige by day, warm dark by night. Kept sober on purpose: one session at a time. */
   :root, [data-theme="day"] {
     --paper: #f7f3ea; --card: #fbf8f1; --ink: #2b2620; --soft: #6f665a; --line: #e3dccd;
@@ -179,8 +182,11 @@
   .kw[data-kw]:hover, .kw-t:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
   .peeks { position: fixed; z-index: 58; zoom: var(--read); right: 30px; top: 86px; width: min(348px, calc((100vw - 8px) / var(--read))); max-height: calc((100vh - 96px) / var(--read)); padding: 10px 14px 18px; overflow-y: auto; display: grid; gap: 22px; align-content: start; }
   .peek { display: grid; gap: 8px; padding: 12px 14px 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--accent); box-shadow: 0 5px 14px rgb(0 0 0 / .14); }
+  /* Capital X (the variable) and small x (one value) never look alike: X upright, bold and larger; x a curved italic. */
+  .kw-v[data-kw="X"] { font-weight: 700; font-size: 1.12em; font-style: normal; }
+  .kw-v[data-kw="x"] { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 1.08em; }
   .peek .kw[data-kw], .peek .kw-t { text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent); }
-  .peek .peek-from { background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .peek .peek-from { background: color-mix(in srgb, var(--accent) 30%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 3px; }
   .peek-links { position: fixed; inset: 0; z-index: 59; width: 100vw; height: 100vh; pointer-events: none; overflow: visible; }
   .peek-links path { fill: none; stroke: var(--accent); stroke-width: 2; }
   .peek-links circle { fill: var(--accent); }
@@ -282,6 +288,16 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .nb-list { display: grid; gap: 10px; padding: 12px 16px 16px; }
   .nb-group { display: grid; gap: 6px; padding: 9px 11px; border-radius: 12px; border: 1px solid var(--nb-rule); background: var(--card); }
   .nb-group.here { border-color: var(--accent); }
+  .nb-fold { display: grid; gap: 10px; }
+  .nb-fold > summary { justify-self: start; list-style: none; padding: 5px 14px; border-radius: 999px; border: 1px solid var(--nb-rule); background: var(--card); color: var(--soft); font: 600 13px system-ui, sans-serif; cursor: pointer; }
+  .nb-fold > summary::-webkit-details-marker { display: none; }
+  .nb-fold > summary::after { content: ' ›'; }
+  .nb-fold[open] > summary::after { content: ' ‹'; }
+  .rf-new { justify-self: start; padding: 0; border: 0; background: none; color: var(--soft); font: 600 13px system-ui, sans-serif; cursor: pointer; }
+  .rf-new:hover { color: var(--accent); }
+  .rf-add { display: flex; gap: 6px; }
+  .rf-add input { flex: 1; min-width: 0; min-height: 34px; padding: 3px 8px; font: 14px system-ui, sans-serif; color: var(--ink); background: var(--card); border: 1px solid var(--nb-rule); border-radius: 8px; }
+  .rf-add button { padding: 0 12px; border-radius: 8px; border: 1px solid var(--nb-rule); background: var(--card); color: var(--ink); font: 600 13px system-ui, sans-serif; cursor: pointer; }
   .nb-go { text-align: left; padding: 0; border: 0; background: none; color: var(--ink); font: 600 14px system-ui, sans-serif; cursor: pointer; min-height: 28px; }
   .nb-go .t { font: 600 11px ui-monospace, Consolas, monospace; color: var(--nb-bg); background: var(--accent); border-radius: 6px; padding: 1px 6px; margin-right: 6px; }
   .nb-here { font: 600 12px system-ui, sans-serif; color: var(--accent); margin-left: 6px; }
@@ -452,6 +468,8 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   <div class="nb-top"><span class="nb-title">Reflections</span><button type="button" class="nb-close" id="rf-close" aria-label="Close reflections">×</button></div>
   <div class="nb-write">
     <label class="about"><span>Block</span><select id="rf-block" aria-label="Which block this goes in"></select></label>
+    <button type="button" class="rf-new" id="rf-new">+ New block</button>
+    <form class="rf-add" id="rf-add" hidden><input id="rf-name" maxlength="80" aria-label="Name of the new block" placeholder="Name of the block"><button type="submit">Add</button><button type="button" id="rf-cancel" aria-label="Cancel">×</button></form>
     <textarea id="rf-text" rows="5" aria-label="Your reflection" placeholder="A bigger thought, while you read"></textarea>
     <p class="rf-from" id="rf-from"></p>
     <div class="acts"><button type="button" class="save" id="rf-save">Save</button></div>
@@ -1351,6 +1369,30 @@ const partHead = (s, i, name) => `<h2><span class="part-no">Part ${i + 1} of ${s
 const segRail = (s, i) => `<div class="seg-rail"><button type="button" class="seg-tab" aria-label="Part ${i + 1} of ${s.groups.length + 2}. Open the map">Part ${i + 1}/${s.groups.length + 2}</button></div>`;
 function picOpen() { try { return localStorage.getItem('stats-pic-closed') !== '1'; } catch (e) { return true; } }
 document.addEventListener('toggle', e => { if (e.target.id === 'pic') { try { localStorage.setItem('stats-pic-closed', e.target.open ? '' : '1'); } catch (err) {} } }, true);
+/* Every X and x the course writes gets its own look, also where no peek is attached:
+   tables, worked rows, "aX + b". Highlights count letters, not tags, so the extra spans do not move them. */
+const BARE_XX = /(?<![\p{L}\p{N}_])[Xx](?![\p{L}\p{N}_])|(?<=(?<![\p{L}])a)X(?![\p{L}\p{N}_])/gu;
+function markXx(root) {
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement.closest('.kw-v, svg, textarea, .note, .own-boxes, button') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+  const hits = [];
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) { BARE_XX.lastIndex = 0; if (BARE_XX.test(n.data)) hits.push(n); }
+  for (const n of hits) {
+    const frag = document.createDocumentFragment();
+    let at = 0;
+    BARE_XX.lastIndex = 0; // matchAll starts where the last test left off
+    for (const m of n.data.matchAll(BARE_XX)) {
+      frag.append(n.data.slice(at, m.index));
+      const span = document.createElement('span');
+      span.className = 'kw-v';
+      span.dataset.kw = m[0];
+      span.textContent = m[0];
+      frag.append(span);
+      at = m.index + 1;
+    }
+    frag.append(n.data.slice(at));
+    n.replaceWith(frag);
+  }
+}
 function renderSession() {
   if (current === 'ref') { document.getElementById('session').innerHTML = '<p class="where">Cheat sheet</p>' + refHtml(); applyHighlights(); mapRefresh(); return; }
   const s = SESSIONS.find(x => x.n === current);
@@ -1362,6 +1404,7 @@ function renderSession() {
   paintNotes();
   applyHighlights();
   mapRefresh();
+  markXx(document.getElementById('session'));
 }
 document.getElementById('sessions').addEventListener('click', e => {
   const b = e.target.closest('.sess');
@@ -1386,7 +1429,7 @@ const rfDot = document.getElementById('rf-dot');
 const rfBlock = document.getElementById('rf-block');
 const rfText = document.getElementById('rf-text');
 const rfSaved = document.getElementById('rf-saved');
-let rfNotes = [], rfSaving = false;
+let rfNotes = [], rfSaving = false, rfUnsortedOpen = false;
 function rfSource() {
   const key = currentSpot();
   const p = places().find(x => x.key === key);
@@ -1400,8 +1443,13 @@ function rfPaint() {
   const names = [RF_UNSORTED, ...RF_BLOCKS, ...own].filter((n, i, list) => list.indexOf(n) === i);
   rfBlock.innerHTML = names.map(n => `<option>${esc(n)}</option>`).join('');
   rfBlock.value = names.includes(keep) ? keep : RF_UNSORTED;
-  const recent = [...rfNotes].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 5);
-  document.getElementById('rf-list').innerHTML = recent.map(n => `<div class="rf-item"><span class="rf-block">${esc(n.itemKey.slice(RF_PREFIX.length))}</span><p class="rf-body">${esc(n.body.length > 220 ? `${n.body.slice(0, 220)}…` : n.body)}</p></div>`).join('')
+  const newest = list => [...list].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 5);
+  const item = n => `<div class="rf-item"><span class="rf-block">${esc(n.itemKey.slice(RF_PREFIX.length))}</span><p class="rf-body">${esc(n.body.length > 220 ? `${n.body.slice(0, 220)}…` : n.body)}</p></div>`;
+  // Not sorted yet waits in a closed pill below, so it does not take the space.
+  const loose = n => n.itemKey === RF_PREFIX + RF_UNSORTED;
+  const unsorted = newest(rfNotes.filter(loose));
+  document.getElementById('rf-list').innerHTML = newest(rfNotes.filter(n => !loose(n))).map(item).join('')
+    + (unsorted.length ? `<details class="nb-fold" id="rf-unsorted"${rfUnsortedOpen ? ' open' : ''}><summary>${RF_UNSORTED}</summary>${unsorted.map(item).join('')}</details>` : '')
     + '<a class="rf-all" href="/dreams-in-action">All reflections ›</a>';
 }
 async function rfLoad() {
@@ -1446,6 +1494,23 @@ async function rfSave() {
   rfSaving = false;
 }
 rfDot.hidden = !ON_BRAIN;
+document.getElementById('rf-list').addEventListener('toggle', e => { if (e.target.id === 'rf-unsorted') rfUnsortedOpen = e.target.open; }, true);
+// A new block: named here, kept in this browser like Dreams in Action does, until an idea is saved in it.
+const rfAdd = document.getElementById('rf-add'), rfNew = document.getElementById('rf-new'), rfName = document.getElementById('rf-name');
+const rfShowAdd = open => { rfAdd.hidden = !open; rfNew.hidden = open; if (open) rfName.focus(); else rfName.value = ''; };
+rfNew.addEventListener('click', () => rfShowAdd(true));
+document.getElementById('rf-cancel').addEventListener('click', () => rfShowAdd(false));
+rfAdd.addEventListener('submit', e => {
+  e.preventDefault();
+  const name = rfName.value.replace(/\s+/g, ' ').trim();
+  if (!name || name.includes('|')) { rfName.focus(); return; }
+  const mine = readStore('dreams-blocks', []);
+  if (name !== RF_UNSORTED && !RF_BLOCKS.includes(name) && !mine.includes(name)) writeStore('dreams-blocks', [...mine, name]);
+  rfPaint();
+  rfBlock.value = name;
+  rfShowAdd(false);
+  rfText.focus();
+});
 rfDot.addEventListener('click', () => setReflections(rfSheet.hidden));
 document.getElementById('rf-close').addEventListener('click', () => setReflections(false));
 document.getElementById('rf-save').addEventListener('click', rfSave);
@@ -1458,7 +1523,7 @@ const notebook = document.getElementById('notebook');
 const nbDot = document.getElementById('nb-dot');
 const nbAbout = document.getElementById('nb-about');
 const nbText = document.getElementById('nb-text');
-let nbKind = 'question', nbPinned = false;
+let nbKind = 'question', nbPinned = false, nbEarlierOpen = false;
 function places() {
   return [{ key: 'stats|notebook', tag: 'Stats', name: 'The course in general' },
     ...SESSIONS.flatMap(s => [{ key: `stats|s${s.n}`, tag: `L${s.n}`, name: `Lecture ${s.n} in general`, s: s.n },
@@ -1491,10 +1556,16 @@ function renderNotebook() {
   const box = document.getElementById('nb-list');
   if (box.querySelector('.editor')) return;
   const here = nbAbout.value;
-  const groups = places().map(p => ({ p, list: notesOf(p.key) })).filter(g => g.list.length);
-  box.innerHTML = groups.length ? groups.map(({ p, list }) => `<div class="nb-group${p.key === here ? ' here' : ''}" data-key="${esc(p.key)}">
+  const today = new Date().toDateString();
+  const isNow = n => !n.createdAt || new Date(n.createdAt).toDateString() === today;
+  const groupsOf = keep => places().map(p => ({ p, list: notesOf(p.key).filter(keep) })).filter(g => g.list.length);
+  const paint = groups => groups.map(({ p, list }) => `<div class="nb-group${p.key === here ? ' here' : ''}" data-key="${esc(p.key)}">
       <div><button type="button" class="nb-go" data-go="${esc(p.key)}"><span class="t">${esc(p.tag)}</span>${esc(p.name)}${p.s ? ' ›' : ''}</button>${p.key === here ? '<span class="nb-here">you are here</span>' : ''}</div>
-      <div class="notes">${list.map(noteHtml).join('')}</div></div>`).join('')
+      <div class="notes">${list.map(noteHtml).join('')}</div></div>`).join('');
+  const now = groupsOf(isNow), before = groupsOf(n => !isNow(n));
+  box.innerHTML = now.length || before.length
+    ? (now.length ? paint(now) : '<p class="empty">Nothing yet today. Write above: the note is filed under the card you are reading.</p>')
+      + (before.length ? `<details class="nb-fold" id="nb-earlier"${nbEarlierOpen ? ' open' : ''}><summary>Earlier</summary>${paint(before)}</details>` : '')
     : '<p class="empty">Nothing yet. Write above: the note is filed under the card you are reading.</p>';
 }
 function goTo(key) {
@@ -1508,6 +1579,7 @@ function goTo(key) {
   if (p.id) { el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
 }
 nbDot.addEventListener('click', () => setNotebook(notebook.hidden));
+document.getElementById('nb-list').addEventListener('toggle', e => { if (e.target.id === 'nb-earlier') nbEarlierOpen = e.target.open; }, true);
 document.getElementById('nb-close').addEventListener('click', () => setNotebook(false));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !notebook.hidden) setNotebook(false); });
 nbAbout.addEventListener('change', () => { nbPinned = true; renderNotebook(); });
@@ -1578,13 +1650,14 @@ function termBox(word) {
 }
 function drawPeekLinks() {
   const area = peeks.getBoundingClientRect();
-  peekLinks.innerHTML = peekStack.slice(1).map(({ from, box }) => {
-    const a = from.getBoundingClientRect(), b = box.getBoundingClientRect();
-    // Out of the term, along the outside of the box above, into the box it opened.
-    const x1 = a.left + Math.min(a.width / 2, 10), y1 = Math.max(area.top, Math.min(a.bottom, area.bottom));
-    const side = b.left - 7, y2 = b.top + 16;
+  peekLinks.innerHTML = peekStack.slice(1).map(({ from, box }, i) => {
+    const a = from.getBoundingClientRect(), b = box.getBoundingClientRect(), up = peekStack[i].box.getBoundingClientRect();
+    // From the left edge of the box above, level with the highlighted term, down the outside, into the box it opened.
+    // The line never crosses the text: the highlight shows which term it came from.
+    const x1 = up.left, y1 = Math.max(area.top, Math.min(a.top + a.height / 2, area.bottom));
+    const side = Math.min(up.left, b.left) - 7, y2 = b.top + 16;
     if (y2 > area.bottom || b.bottom < area.top) return '';
-    return `<path d="M ${x1} ${y1} V ${y1 + 3} H ${side} V ${y2} H ${b.left}"/><circle cx="${x1}" cy="${y1}" r="2.5"/><circle cx="${b.left}" cy="${y2}" r="3"/>`;
+    return `<path d="M ${x1} ${y1} H ${side} V ${y2} H ${b.left}"/><circle cx="${x1}" cy="${y1}" r="2.5"/><circle cx="${b.left}" cy="${y2}" r="3"/>`;
   }).join('');
 }
 function trimPeeks(keep) {
