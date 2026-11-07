@@ -579,28 +579,29 @@ html {
   text-decoration-style: wavy;
 }
 
-/* Scrollbars: thin, warm brown, no white chrome */
+/* Scrollbars: thin, ochre on beige, never grey (docs/specs/visual-identity.md).
+   scrollbar-color is inherited, so this reaches every scrolling box; the webkit rules are for Safari. */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #b08a45 rgba(239, 227, 204, 0.4);
+}
 textarea::-webkit-scrollbar,
 div::-webkit-scrollbar {
-  width: 3px;
-  height: 3px;
+  width: 6px;
+  height: 6px;
 }
 textarea::-webkit-scrollbar-track,
 div::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(239, 227, 204, 0.4);
 }
 textarea::-webkit-scrollbar-thumb,
 div::-webkit-scrollbar-thumb {
-  background: rgba(196, 160, 96, 0.28);
-  border-radius: 2px;
+  background: #b08a45;
+  border-radius: 3px;
 }
 textarea::-webkit-scrollbar-thumb:hover,
 div::-webkit-scrollbar-thumb:hover {
-  background: rgba(196, 160, 96, 0.48);
-}
-textarea {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(196, 160, 96, 0.28) transparent;
+  background: #c6a05c;
 }
 
 /* GrooveMachine BPM + blend sliders — rainbow track */

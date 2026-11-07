@@ -40,6 +40,15 @@ describe('/statistics class page', () => {
     expect(html).toContain("const MARKS_URL = '/api/coding/marks';");
     expect(html).toContain("const mine = k => k.startsWith('stats|');");
     expect(html).toContain('data-key="stats|notebook"');
+    expect(html).toContain("['orange', '#f08a3c']");
+    // A line between boxes leaves from the box's left edge, not from the clicked word.
+    expect(html).toContain('const x1 = up.left,');
+    // Older notes and unsorted reflections wait in closed pills; blocks can be made in the sheet.
+    expect(html).toContain('<summary>Earlier</summary>');
+    expect(html).toContain('id="rf-new">+ New block</button>');
+    // How clear each card is: a bar on the card, a coloured number in the map.
+    expect(html).toContain('article.card[data-mark="got"]::after { background: var(--got); }');
+    expect(html).toContain('paintBars(); renderMap();');
     // Reflections go to Dreams in Action, and a failed save keeps the words.
     expect(html).toContain('id="rf-dot"');
     expect(html).toContain("const RF_PREFIX = 'dreams|';");

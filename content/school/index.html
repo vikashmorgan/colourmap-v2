@@ -9,6 +9,9 @@
   try { document.documentElement.dataset.theme = localStorage.getItem('school-theme') || 'day'; } catch (e) {}
 </script>
 <style>
+  /* Scrollbars: ochre on beige, never grey (docs/specs/visual-identity.md). */
+  html { scrollbar-width: thin; scrollbar-color: #b08a45 #efe3cc; }
+  html[data-theme="night"] { scrollbar-color: #c6a05c #3a3125; }
   /* Day: beige paper, as on the Git page. Night: warm dark. The button at the top switches. */
   :root, [data-theme="day"] {
     --paper: #f7f3ea;
