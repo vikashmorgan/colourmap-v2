@@ -46,6 +46,11 @@ describe('/statistics class page', () => {
     // Older notes and unsorted reflections wait in closed pills; blocks can be made in the sheet.
     expect(html).toContain('<summary>Earlier</summary>');
     expect(html).toContain('id="rf-new">+ New block</button>');
+    // Charts: scales on every chart, a tab with each graph and its formula, and four looks for the pill.
+    expect(html).toContain('function niceTicks(top)');
+    expect(html).toContain('data-s="charts"');
+    expect(html).toContain('const CHARTS = [');
+    expect(html).toContain("const PILL_LOOKS = ['bar', 'line', 'steps', 'gauge'];");
     // How clear each card is: a bar on the card, a coloured number in the map.
     expect(html).toContain('article.card[data-mark="got"]::after { background: var(--got); }');
     expect(html).toContain('paintBars(); renderMap();');
