@@ -1061,7 +1061,7 @@ function noteHtml(n) {
   return `<div class="note${done ? ' done' : ''}" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
     <div class="note-head"><span class="note-kind">${KIND[n.kind]}</span><span class="tools"><button type="button" class="n-edit" aria-label="Edit">✎</button><button type="button" class="n-del" aria-label="Delete">×</button></span></div>
     <div class="note-body">${boldHtml(esc(n.body))}</div>
-    ${n.answer ? `<div class="answer"><span class="note-kind">Answer</span><div class="note-body">${boldHtml(esc(n.answer))}</div>${n.readAt ? '' : '<button type="button" class="read">Got it, mark read</button>'}</div>` : ''}
+    ${n.answer ? `<div class="answer"><span class="note-kind">Answer</span><div class="note-body"${n.id ? ` data-hl="stats|ans|${esc(n.id)}"` : ''}>${boldHtml(esc(n.answer))}</div>${n.readAt ? '' : '<button type="button" class="read">Got it, mark read</button>'}</div>` : ''}
   </div>`;
 }
 function editorHtml(kind, body) {
@@ -1079,6 +1079,7 @@ function paintNotes() {
     b.textContent = list.length ? `Question or comment · ${list.length}` : 'Question or comment';
   }
   renderNotebook();
+  applyHighlights();
 }
 /* ---------- Your own boxes ----------
  * Asked for 2026-11-05: "add ability to create new boxes, so I can write a new box and give it a title".
@@ -1696,6 +1697,7 @@ function renderNotebook() {
     ? (now.length ? paint(now) : '<p class="empty">Nothing yet today. Write above: the note is filed under the card you are reading.</p>')
       + (before.length ? `<details class="nb-fold" id="nb-earlier"${nbEarlierOpen ? ' open' : ''}><summary>Earlier</summary>${paint(before)}</details>` : '')
     : '<p class="empty">Nothing yet. Write above: the note is filed under the card you are reading.</p>';
+  applyHighlights();
 }
 function goTo(key) {
   const p = places().find(x => x.key === key);
@@ -1855,8 +1857,9 @@ const HL_HOST = '.card[data-key]:not(.overall), [data-hl]';
 const HL_SKIP = '.notes, .editor, .foot, .marks, .ref-go, .out-head, .more-rows, #sel-bar';
 const hlKeyOf = host => host.dataset.hl || host.dataset.key;
 function hlTextNodes(host) {
+  // A skipped part only counts when it sits inside the host: an answer is a host of its own, inside .notes.
   const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, {
-    acceptNode: n => (n.parentElement.closest(HL_SKIP) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    acceptNode: n => { const skip = n.parentElement.closest(HL_SKIP); return skip && host.contains(skip) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; },
   });
   const nodes = [];
   while (walker.nextNode()) nodes.push(walker.currentNode);
@@ -1894,12 +1897,13 @@ function hlWrap(host, start, end, attrs) {
   }
 }
 function hlApply(h) {
-  const host = [...document.querySelectorAll(HL_HOST)].find(x => hlKeyOf(x) === h.key);
-  if (!host || host.querySelector(`mark.hl[data-hid="${CSS.escape(h.id)}"]`)) return;
-  const text = hlTextNodes(host).map(n => n.nodeValue).join('');
-  let at = -1;
-  for (let i = 0; i <= h.occ; i++) { at = text.indexOf(h.text, at + 1); if (at < 0) return; }
-  hlWrap(host, at, at + h.text.length, { hid: h.id, c: h.color });
+  for (const host of document.querySelectorAll(HL_HOST)) {
+    if (hlKeyOf(host) !== h.key || host.querySelector(`mark.hl[data-hid="${CSS.escape(h.id)}"]`)) continue;
+    const text = hlTextNodes(host).map(n => n.nodeValue).join('');
+    let at = -1;
+    for (let i = 0; i <= h.occ && (at = text.indexOf(h.text, at + 1)) >= 0; i++);
+    if (at >= 0) hlWrap(host, at, at + h.text.length, { hid: h.id, c: h.color });
+  }
 }
 function applyHighlights() { highlights.forEach(hlApply); }
 function hlRemove(id) {
@@ -1969,6 +1973,7 @@ selBar.addEventListener('click', e => {
     highlights.push(h);
     saveHighlights();
     hlWrap(selInfo.host, selInfo.start, selInfo.end, { hid: h.id, c: h.color });
+    hlApply(h); // the other copy of an answer, on its card or in the notepad
     getSelection().removeAllRanges();
     hideSelBar();
     return;

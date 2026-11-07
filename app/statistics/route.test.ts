@@ -51,6 +51,8 @@ describe('/statistics class page', () => {
     expect(html).toContain('data-s="charts"');
     expect(html).toContain('const CHARTS = [');
     expect(html).toContain("const PILL_LOOKS = ['bar', 'line', 'steps', 'gauge'];");
+    // Answers can be highlighted, kept by the note's id.
+    expect(html).toContain('data-hl="stats|ans|${esc(n.id)}"');
     // How clear each card is: a bar on the card, a coloured number in the map.
     expect(html).toContain('article.card[data-mark="got"]::after { background: var(--got); }');
     expect(html).toContain('paintBars(); renderMap();');
