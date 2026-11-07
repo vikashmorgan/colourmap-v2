@@ -53,6 +53,9 @@ describe('/statistics class page', () => {
     expect(html).toContain("const PILL_LOOKS = ['bar', 'line', 'steps', 'gauge'];");
     // Answers can be highlighted, kept by the note's id.
     expect(html).toContain('data-hl="stats|ans|${esc(n.id)}"');
+    // Focus: a third dot, where my focus and my body are, kept as stats|focus notes.
+    expect(html).toContain('id="fc-dot"');
+    expect(html).toContain("const FOCUS_KEY = 'stats|focus';");
     // How clear each card is: a bar on the card, a coloured number in the map.
     expect(html).toContain('article.card[data-mark="got"]::after { background: var(--got); }');
     expect(html).toContain('paintBars(); renderMap();');
