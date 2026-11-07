@@ -182,6 +182,7 @@
   /* Slide link on a card, and the private-files line. */
   .slide-link { font: 600 12.5px system-ui, sans-serif; color: var(--soft); text-decoration: none; padding: 3px 4px; }
   .slide-link:hover { color: var(--accent); }
+  .slide-link .of { font-weight: 400; opacity: .75; }
   .files { margin-top: 28px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 12px; font: 14px system-ui, sans-serif; color: var(--soft); display: grid; gap: 8px; }
   .files b { color: var(--ink); }
   .files-up { justify-self: start; display: inline-flex; align-items: center; min-height: 34px; padding: 4px 14px; border-radius: 999px; background: var(--accent); color: var(--paper); font: 600 13px system-ui, sans-serif; cursor: pointer; }
@@ -675,7 +676,7 @@ const pois = (l, to) => Array.from({ length: to + 1 }, (_, k) => (Math.exp(-l) *
  * Written from the lecture decks; the slides themselves stay private.
  * The figures were recomputed from each setup. */
 const SESSIONS = [
-  { n: 1, short: 'Sets and events', title: 'Probability starts with sets and events', lede: 'From a list of what can happen to a number for how likely it is, on the orders of one online shop.', groups: [
+  { n: 1, pages: 55, short: 'Sets and events', title: 'Probability starts with sets and events', lede: 'From a list of what can happen to a number for how likely it is, on the orders of one online shop.', groups: [
     { name: 'What probability means', cards: [
       { id: 'meaning', slide: 4, name: 'Two readings of "20 % chance"', what: 'A probability is a number between 0 and 1 that says how likely something is. 0 means it cannot happen, 1 means it certainly happens, and 0.2 is the same as 20 %.\n\nThat number can be read in two ways. As a frequency: look at many days like tomorrow, and about 1 in 5 of them has rain. As a belief: a new product launches only once, so there are no similar cases to count, and the number says how strongly we believe it will succeed.', more: { say: 'The weather forecast can be checked against many similar days, so the frequency reading feels natural. A product launch cannot be repeated, yet people still put a number on it. Both readings use the same rules, which is why the course can start from the rules.' } },
       { id: 'nookery', slide: 6, name: 'Nookery, the course’s shop', what: 'All the examples in this course follow one made-up online shop, Nookery. It sells books, board games and home accessories.\n\nWhen someone places an order, two things are still unknown: will it arrive on time or late, and will the customer later ask for their money back (a refund)? Probability is the tool for talking about things that are still unknown.', watch: 'Three questions run through the lecture: how likely is late or refunded, can an order be both, and is last month’s 13.4 % late the probability for the next order? The answers are in cards 24, 13 and 29.' },
@@ -739,7 +740,7 @@ const SESSIONS = [
     ] },
   ], recap: ['A model is a sample space Ω plus a probability law P. An event is a set of outcomes.', 'Three axioms: P(A) ≥ 0, P adds over disjoint events, P(Ω) = 1. Everything else follows.', 'Or is ∪, and is ∩, not is a complement. A complement swaps ∪ and ∩ (De Morgan).', 'P(Aᶜ) = 1 − P(A), and P(A ∪ B) = P(A) + P(B) − P(A ∩ B).', 'Count outcomes only when they are equally likely.', 'Frequencies are data and probabilities are a model; with many trials the first settles near the second.'] },
 
-  { n: 2, short: 'Conditioning, Bayes', title: 'Conditioning and independence', lede: 'How a probability changes when you learn something, and when it does not.', groups: [
+  { n: 2, pages: 40, short: 'Conditioning, Bayes', title: 'Conditioning and independence', lede: 'How a probability changes when you learn something, and when it does not.', groups: [
     { name: 'Conditional probability', cards: [
       { id: 'dog', slide: 4, name: 'The question: a dog sits by a parcel', what: 'Detector dogs sniff parcels for prohibited food and plants. Only 2 % of parcels hold such an item. The dog sits next to 95 % of the parcels with an item, and by mistake next to 5 % of the others.\n\nThe dog has just sat next to this parcel. How likely is it that an item is inside? Most people say about 95 %. Make your own guess, above or below 50 %, and keep it in mind. Card 13 has the answer, and the surprise is the point of this lecture.' },
       { id: 'partial', slide: 5, name: 'Partial information changes the probability', what: 'Conditional probability is about updating when you learn something. A chance is not fixed: it depends on what you already know.\n\nRoll a die. The chance of "at least 4" is 3 out of 6, or 1/2. Now someone tells you the roll is even. Only 2, 4 and 6 are still possible, and two of those three are at least 4. So the chance has become 2/3. Same die, new information, new answer.', f: 'P(A ∣ B) = 2/3     read: A given B', more: { say: 'With equally likely outcomes, conditioning is counting: outcomes in A ∩ B divided by outcomes in B.' } },
@@ -791,7 +792,7 @@ const SESSIONS = [
     ] },
   ], recap: ['P(A ∣ B) = P(A ∩ B) / P(B): keep only the outcomes in B.', 'Multiply along a tree path; add across a partition (total probability).', 'Bayes: posterior = prior × likelihood / P(B). Fill in the table.', 'P(A ∣ B) is not P(B ∣ A). A rare cause stays fairly unlikely even after a good test.', 'Independent: P(A ∩ B) = P(A) P(B). Disjoint is not independent.', 'One sequence with k successes in n independent trials: pᵏ(1 − p)ⁿ⁻ᵏ. At least one: 1 − (1 − p)ⁿ.', 'Conditional independence holds given C only; check again without it.'] },
 
-  { n: 3, short: 'Discrete variables', title: 'Discrete random variables', lede: 'Turning outcomes into numbers, then saying what those numbers look like and how far they spread.', groups: [
+  { n: 3, pages: 52, short: 'Discrete variables', title: 'Discrete random variables', lede: 'Turning outcomes into numbers, then saying what those numbers look like and how far they spread.', groups: [
     { name: 'Random variables', cards: [
       { id: 'galton', slide: 4, name: 'The question: where will the ball land?', what: 'A Galton board is a board of pins. Balls fall from the top and bounce left or right at each pin, ending up in one of the bins at the bottom.\n\nYou cannot predict where any one ball lands. Yet with many balls, the same shape appears every time: a pile in the middle and almost nothing at the edges. Random one at a time, predictable in bulk. Which bins fill up? Card 7 has the answer.' },
       { id: 'rv', slide: 5, name: 'A random variable', what: 'Outcomes can be anything: pairs of rolls, words, parcels. But we want to calculate, and for that we need numbers. A random variable turns each outcome into a number. It is usually written with a capital letter, like X.\n\nDespite the name, it is really just a rule: outcome goes in, number comes out. The "random" part is only that we do not know the outcome yet. For two rolls, X could be the larger roll, or the sum, or anything you decide to measure.', f: 'X : Ω → ℝ', more: { say: 'Roll a fair 4-sided die twice. X is the larger of the two rolls, written in each cell. The sum of the rolls would be another random variable on the same Ω.', html: () => maxGrid() } },
@@ -846,7 +847,7 @@ const SESSIONS = [
       ['Why does the fixed €20 change E[C] but not its SD?', () => `<p>It is paid every day, so it moves every possible cost by 20: the PMF shifts without changing shape. The distances from the mean stay the same. Only the €5 per return, which multiplies the deviations, changes the SD.</p>`],
     ] },
   ], recap: ['A random variable gives each outcome a number. A statement about it is an event.', 'The PMF lists P(X = x) and sums to 1.', 'Bernoulli: one trial. Binomial: successes in n trials, with four conditions to check. Poisson: counts in a window, λ on average.', 'E[X] = Σ x m_X(x), the balance point and the long-run average.', 'E[g(X)] = Σ g(x) m_X(x), and in general it is not g(E[X]).', 'Var(X) = E[X²] − (E[X])². The SD is its root.', 'E[aX + b] = aE[X] + b, and Var(aX + b) = a² Var(X): adding shifts, multiplying scales.'] },
-  { n: 4, short: 'Continuous variables', title: 'Continuous random variables and data', lede: 'Values that can be anything on a scale, where probability becomes an area. Then the bell curve, and how to summarise real data.', groups: [
+  { n: 4, pages: 51, short: 'Continuous variables', title: 'Continuous random variables and data', lede: 'Values that can be anything on a scale, where probability becomes an area. Then the bell curve, and how to summarise real data.', groups: [
     { name: 'Probability densities', cards: [
       { id: 'delivery', slide: 4, name: 'The question: how long will the parcel take?', what: 'Nookery logs how many hours each parcel takes: 60.25, 32.67, 50.51, and so on. A time can be any number on a scale, so almost no value ever repeats.\n\nThe PMF of Lecture 3 gives one probability to each value. Here that would give almost every value a probability close to 0, which tells us nothing. The useful question is about a range: how likely is a delivery between 42 and 54 hours? This whole lecture follows from asking about ranges.' },
       { id: 'bins', slide: 5, name: 'Narrower bars become a curve', what: 'Sort the parcels into bins, such as 36 to 44 hours, and draw a bar for each bin. Make each bar’s height the share of parcels in that bin, divided by the width of the bin. Then the area of the bar, width times height, is exactly that share.\n\nEvery parcel falls in one bin, so all the areas add up to 1, however wide the bins are. Now make the bins narrower and narrower. The bars settle into a smooth curve. That curve is called the density of the delivery time.', more: { html: () => row(curve(gauss(48, 6), 28, 68, { bins: 8, ticks: [36, 44, 52, 60], x: 'hours in transit', cap: 'Bins of 8 hours' }), curve(gauss(48, 6), 28, 68, { bins: 4, ticks: [36, 48, 60], x: 'hours in transit', cap: 'Bins of 4 hours' }), curve(gauss(48, 6), 28, 68, { bins: 1, ticks: [36, 48, 60], x: 'hours in transit', cap: 'Bins of 1 hour' })) } },
@@ -1393,11 +1394,12 @@ function cardHtml(s, c, gi) {
     ${paras(c.what)}
     ${c.list ? `<ol class="steps">${c.list.map(i => `<li>${kwText(i)}</li>`).join('')}</ol>` : ''}
     ${c.f ? `<pre>${mathHtml(c.f)}</pre>` : ''}
+    ${x.html ? x.html() : ''}
     ${r ? readsHtml(r) : ''}
-    ${x.say ? `<p>${kwText(x.say)}</p>` : ''}${x.f ? `<pre>${mathHtml(x.f)}</pre>` : ''}${x.html ? x.html() : ''}
+    ${x.say ? `<p>${kwText(x.say)}</p>` : ''}${x.f ? `<pre>${mathHtml(x.f)}</pre>` : ''}
     ${c.watch ? `<p class="watch"><b>Watch out</b>${kwText(c.watch)}</p>` : ''}
     <div class="notes"></div>
-    <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>${ON_BRAIN && c.slide ? `<a class="slide-link" href="/api/coding/slides/Stats${s.n}.pdf#page=${c.slide}" target="_blank" rel="noopener">Slide ${c.slide} ›</a>` : ''}
+    <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>${ON_BRAIN && c.slide ? `<a class="slide-link" href="/api/coding/slides/Stats${s.n}.pdf#page=${c.slide}" target="_blank" rel="noopener" aria-label="Slide ${c.slide} of ${s.pages}">Slide ${c.slide}<span class="of">/${s.pages}</span> ›</a>` : ''}
       <span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Confused as fuck']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span></div>
   </article>`;
 }
@@ -2038,7 +2040,7 @@ function readSelection() {
   while (at >= 0 && at < start) { occ++; at = full.indexOf(text, at + 1); }
   return { host, key: hlKeyOf(host), start, end, text, occ, rect: range.getBoundingClientRect() };
 }
-const HL_COLOURS = [['yellow', '#f2c14e'], ['green', '#6fbf8e'], ['blue', '#7aa6e6'], ['pink', '#e48fb4'], ['orange', '#f08a3c']];
+const HL_COLOURS = [['yellow', '#f2c14e'], ['green', '#6fbf8e'], ['orange', '#f08a3c'], ['pink', '#e48fb4'], ['blue', '#7aa6e6']];
 function showSelBar() {
   const info = readSelection();
   if (!info) { if (!selBar.dataset.hid) hideSelBar(); return; }
@@ -2229,7 +2231,10 @@ function placeText() {
   const s = SESSIONS.find(x => x.n === current);
   if (!s) return current === 'charts' ? 'Charts' : 'Cheat sheet';
   const all = segsOf(s), at = all.find(x => x.key === mapPlace.seg), num = all.filter(x => x.key !== 'pic'), i = num.indexOf(at);
-  return i < 0 ? `Lecture ${current} · ${at ? at.name : ''}` : `Lecture ${current} · Part ${i + 1} of ${num.length} · ${at.name}`;
+  // Where you are in the deck: the slide of the card you are reading, out of the lecture's length.
+  const card = mapPlace.card && s.groups.flatMap(g => g.cards).find(c => `c-${s.n}-${c.id}` === mapPlace.card);
+  const slide = card?.slide ? ` · Slide ${card.slide}/${s.pages}` : '';
+  return i < 0 ? `Lecture ${current} · ${at ? at.name : ''}` : `Lecture ${current} · Part ${i + 1} of ${num.length}${slide} · ${at.name}`;
 }
 const hueStyle = x => x.h === undefined ? '' : ` style="--h: ${x.h.toFixed(0)}"`;
 // The pinned label and the closed pill.

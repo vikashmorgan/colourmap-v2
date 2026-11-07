@@ -53,6 +53,14 @@ describe('/statistics class page', () => {
     expect(html).toContain("const PILL_LOOKS = ['bar', 'line', 'steps', 'gauge'];");
     // Answers can be highlighted, kept by the note's id.
     expect(html).toContain('data-hl="stats|ans|${esc(n.id)}"');
+    // A card's drawing sits under its formula, before the steps that point to it.
+    expect(html).toContain("${x.html ? x.html() : ''}\n    ${r ? readsHtml(r) : ''}");
+    expect(html).toContain(
+      "const HL_COLOURS = [['yellow', '#f2c14e'], ['green', '#6fbf8e'], ['orange', '#f08a3c'], ['pink', '#e48fb4'], ['blue', '#7aa6e6']];",
+    );
+    // Where you are in the deck: slide n of the lecture's length.
+    expect(html).toContain('{ n: 2, pages: 40, ');
+    expect(html).toContain("const slide = card?.slide ? ` · Slide ${card.slide}/${s.pages}` : '';");
     // Focus: a third dot, where my focus and my body are, kept as stats|focus notes.
     expect(html).toContain('id="fc-dot"');
     expect(html).toContain("const FOCUS_KEY = 'stats|focus';");
@@ -63,7 +71,7 @@ describe('/statistics class page', () => {
     expect(html).toContain('id="rf-dot"');
     expect(html).toContain("const RF_PREFIX = 'dreams|';");
     expect(html).toContain('Not saved. Your words are still here.');
-    for (const n of [1, 2, 3]) expect(html).toContain(`{ n: ${n}, short:`);
+    for (const n of [1, 2, 3]) expect(html).toContain(`{ n: ${n}, pages: `);
     // The cheat sheet and the highlights, as on the SQL page.
     expect(html).toContain('const REF = [');
     expect(html).toContain('data-s="ref"');
