@@ -275,6 +275,7 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .nb-dot::after { content: ''; position: absolute; inset: -11px; }
   .nb-dot:hover, .nb-dot[aria-expanded="true"] { border-color: var(--accent); }
   .nb-dot.has-notes { background: var(--accent); }
+  .nb-dot.on-sheet { right: 5px; }
   .notebook { position: fixed; z-index: 60; right: 16px; top: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); overflow: auto; background: var(--nb-bg); border: 1px solid var(--nb-rule); border-radius: 16px; box-shadow: 0 18px 48px rgb(0 0 0 / .3); --line: var(--nb-rule); --card: color-mix(in srgb, var(--nb-bg) 70%, #fff 30%); }
   .rf-dot { position: fixed; z-index: 61; right: 10px; top: calc(50% + 36px); width: 22px; height: 22px; padding: 0; border-radius: 50%; cursor: pointer; border: 2px solid var(--ochre); background: color-mix(in srgb, var(--ochre) 35%, var(--nb-bg)); box-shadow: 0 2px 8px rgb(0 0 0 / .18); }
   .rf-dot::after { content: ''; position: absolute; inset: -7px -11px; }
@@ -368,6 +369,20 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .reads .flow-label { margin: 0 0 2px; }
   sub, sup { font-size: .72em; line-height: 0; }
   .ex { display: grid; gap: 8px; padding: 12px 0 4px; }
+  .ex > .foot { margin-top: 2px; }
+  .ex-pic { display: grid; gap: 8px; }
+  .ex-pic .out-head { margin: 6px 0 0; }
+  .ex { grid-template-columns: minmax(0, 1fr); }
+  .ex-given td { white-space: normal; }
+  .ex-given td:last-child { min-width: 150px; font-family: system-ui, sans-serif; }
+  .ex-sub { margin: 4px 0 0; font: 600 13px system-ui, sans-serif; color: var(--ink); }
+  .ex-read { margin: 0; font-size: 14.5px; color: var(--soft); }
+  .laws { display: grid; gap: 10px; margin-top: 6px; padding: 10px 12px; border-radius: 10px; border-left: 3px solid var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+  .laws .out-head { margin: 0; }
+  .law { display: grid; gap: 3px; }
+  .law-name { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font: 14px system-ui, sans-serif; }
+  .law pre { margin: 0; }
+  .law-here { margin: 2px 0 0; font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
   .ex h3 { margin: 0; font-size: 17px; font-weight: 600; }
   .ex-num { font: 600 12px ui-monospace, Consolas, monospace; color: var(--accent); margin-right: 8px; }
   .ex-setup { margin: 0; }
@@ -397,7 +412,7 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .where-btn { display: block; width: 100%; padding: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; color: var(--accent); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .where-btn.tinted { color: oklch(0.45 0.13 var(--h, 60)); }
   [data-theme="night"] .where-btn.tinted { color: oklch(0.84 0.11 var(--h, 60)); }
-  .map-pill { position: fixed; z-index: 50; left: max(12px, calc(50vw - 380px * var(--read) - 52px)); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 7px; width: 32px; padding: 10px 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; box-shadow: 0 4px 14px rgb(0 0 0 / .10); }
+  .map-pill { position: fixed; z-index: 50; left: max(12px, calc(50vw - 380px * var(--read) - 110px)); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 7px; width: 32px; padding: 10px 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; box-shadow: 0 4px 14px rgb(0 0 0 / .10); }
   .map-pill[hidden], .map[hidden] { display: none; }
   .map-pill:hover { border-color: var(--accent); }
   .map-pill b { font: 700 11px/1 ui-monospace, Consolas, monospace; }
@@ -584,17 +599,18 @@ function venn(on, { cap = '', a = 'A', b = 'B' } = {}) {
 }
 // Root, branches, leaves. A leaf with on: 1 is marked.
 function tree({ w = 460, kids }) {
-  const leaves = kids.reduce((n, k) => n + k.kids.length, 0), step = 30, h = leaves * step + 8;
+  const leaves = kids.reduce((n, k) => n + k.kids.length, 0), step = 34, h = leaves * step + 8;
   const x1 = Math.round(w * 0.2), x2 = Math.round(w * 0.5);
   let y = 4, out = '';
   const labelled = (x, yy, s, on) => `<text x="${x}" y="${yy + 4}" fill="var(--ink)"${on ? ' font-weight="700"' : ''}>${esc(s)}</text>`;
-  const p = (xa, ya, xb, yb, s) => (s ? `<text x="${(xa + xb) / 2}" y="${(ya + yb) / 2 - 4}" text-anchor="middle" fill="var(--soft)" font-size="11.5">${esc(s)}</text>` : '');
+  const p = (xa, ya, xb, yb, s, t = 0.5) => (s ? `<text x="${xa + (xb - xa) * t}" y="${ya + (yb - ya) * t - 4}" text-anchor="middle" fill="var(--soft)" font-size="11.5">${esc(s)}</text>` : '');
   const line = (xa, ya, xb, yb, on) => `<line x1="${xa}" y1="${ya}" x2="${xb}" y2="${yb}" stroke="${on ? 'var(--accent)' : 'var(--soft)'}" stroke-width="${on ? 2 : 1}"/>`;
   const mids = kids.map(k => {
     const start = y;
     const pts = k.kids.map(l => { const yy = y + step / 2; y += step; return { l, yy }; });
     const my = (start + y) / 2;
-    for (const { l, yy } of pts) out += line(x1 + 40, my, x2, yy, l.on) + p(x1 + 40, my, x2, yy, l.p) + labelled(x2 + 6, yy, l.label, l.on);
+    const kx = Math.min(x2 - 40, x1 + 12 + k.label.length * 7);
+    for (const { l, yy } of pts) out += line(kx, my, x2, yy, l.on) + p(kx, my, x2, yy, l.p, 0.68) + labelled(x2 + 6, yy, l.label, l.on);
     return { k, my };
   });
   const root = (4 + y) / 2;
@@ -665,7 +681,7 @@ function boxplot({ lo, hi, q1, med, q3, wlo, whi, out = [], ticks = [], cap = ''
     <rect x="${at(q1)}" y="${top}" width="${at(q3) - at(q1)}" height="${low - top}" rx="3" fill="var(--accent)" fill-opacity=".32" stroke="var(--accent)" stroke-width="1.5"/>
     <line x1="${at(med)}" x2="${at(med)}" y1="${top}" y2="${low}" stroke="var(--ink)" stroke-width="2.5"/>
     ${out.map(x => `<circle cx="${at(x)}" cy="${mid}" r="2.5" fill="none" stroke="var(--accent)" stroke-width="1.5"/>`).join('')}
-    ${say(med, 14, 'median')}${say(q1, 62, 'Q₁')}${say(q3, 62, 'Q₃')}${say(wlo, 62, 'whisker')}${say(whi, 62, 'whisker')}${out.length ? say(out[Math.floor(out.length / 2)], 62, 'outliers') : ''}
+    ${say(med, 14, 'median')}${say(q1, 62, 'Q₁')}${say(q3, 62, 'Q₃')}<text x="${(at(wlo) - 5).toFixed(1)}" y="${mid + 4}" text-anchor="end" fill="var(--ink)" ${ink}>whisker</text><text x="${(at(whi) + 5).toFixed(1)}" y="${mid + 4}" fill="var(--ink)" ${ink}>whisker</text>${out.length ? say(out[Math.floor(out.length / 2)], 62, 'outliers') : ''}
     <line x1="0" x2="${W}" y1="72" y2="72" stroke="var(--soft)"/>${ticks.map(t => `<text x="${at(t).toFixed(1)}" y="88" text-anchor="middle" fill="var(--soft)" ${ink}>${String(t).replace('-', '−')}</text>`).join('')}</svg>${cap ? `<figcaption>${text(cap)}</figcaption>` : ''}</figure>`;
 }
 const fact = n => (n < 2 ? 1 : n * fact(n - 1));
@@ -782,7 +798,7 @@ const SESSIONS = [
     ] },
     { id: 'l2-e3', title: 'Fake reviews', setup: 'A detector flags 80 % of fake reviews and 2 % of genuine ones. For established products 1 % of reviews are fake, for new products 5 %.', parts: [
       ['Compute P(flag) for a review of a new product.', () => `<pre>P(flag) = 0.05 × 0.8 + 0.95 × 0.02 = 0.059</pre><p>Total probability over fake and genuine.</p>`],
-      ['Compute P(fake ∣ flag) for new and for established products.', () => `<pre>new:         0.04 / 0.059 = 0.678\nestablished: P(flag) = 0.01 × 0.8 + 0.99 × 0.02 = 0.0278\n             0.008 / 0.0278 = 0.288</pre><p>The same detector, a different prior, a very different answer.</p>`],
+      ['Compute P(fake ∣ flag) for new and for established products.', () => `<pre>new:         P(fake ∩ flag) = 0.05 × 0.8 = 0.04\n             P(fake ∣ flag) = 0.04 / 0.059 = 0.678\nestablished: P(flag) = 0.01 × 0.8 + 0.99 × 0.02 = 0.0278\n             0.008 / 0.0278 = 0.288</pre><p>The same detector, a different prior, a very different answer.</p>`],
     ] },
     { id: 'l2-e4', title: 'Newsletter and coupons', setup: '1,000 customers. 400 subscribe to the newsletter (S), 250 bought again within a month (R), 300 used a coupon (C). Of the subscribers, 100 bought again and 180 used a coupon. Pick one uniformly at random.', parts: [
       ['Are S and R independent?', () => `<pre>P(S ∩ R) = 0.10     P(S) P(R) = 0.4 × 0.25 = 0.10</pre><p><b>Independent:</b> P(R ∣ S) = 100/400 = 0.25 = P(R).</p>`],
@@ -1101,7 +1117,7 @@ function editorHtml(kind, body) {
 }
 function paintNotes() {
   paintBoxes();
-  for (const card of document.querySelectorAll('.card')) {
+  for (const card of document.querySelectorAll('.card, .ex[data-key]')) {
     const list = notesOf(card.dataset.key);
     card.querySelector('.notes').innerHTML = list.map(noteHtml).join('');
     const b = card.querySelector('.note-btn');
@@ -1192,7 +1208,7 @@ document.addEventListener('click', e => {
   const t = e.target;
   const k = t.closest('.editor .kinds [data-kind]');
   if (k) { const ed = k.closest('.editor'); ed.dataset.kind = k.dataset.kind; for (const b of ed.querySelectorAll('.kinds button')) b.setAttribute('aria-checked', String(b === k)); return; }
-  const host = t.closest('.card, .nb-group');
+  const host = t.closest('.card, .ex[data-key], .nb-group');
   if (!host) return;
   const m = t.closest('.mark');
   if (m) {
@@ -1403,9 +1419,182 @@ function cardHtml(s, c, gi) {
       <span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Confused as fuck']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span></div>
   </article>`;
 }
+/* ---------- The rules each practice answer uses ----------
+   Asked for 2026-11-07: "when you solve the questions, explain the laws it relates to and that we can use,
+   for example P(fake ∩ flag) = P(fake) × P(flag ∣ fake)". Per exercise, one list per part:
+   [lecture, card, name, the rule in general, the rule with this exercise's words and numbers]. */
+const PRACTICE_LAWS = {
+  'l1-e1': [
+    [[1, 'grids', 'A grid lists every outcome', 'one row per first choice, one column per second', 'Ω = 3 channels × 2 labels = 6 cells']],
+    [[1, 'event', 'An event is a set of outcomes', 'event = the outcomes where the statement is true', 'U = the urgent column\nN = the chat and email rows']],
+    [[1, 'union', 'Intersection is "and"', 'A ∩ B = the outcomes in A and in B', 'U ∩ N = urgent and not by phone = 2 cells']],
+    [[1, 'demorgan', 'De Morgan’s law', '(A ∪ B)ᶜ = Aᶜ ∩ Bᶜ', '(U ∪ N)ᶜ = Uᶜ ∩ Nᶜ = not urgent and by phone']],
+  ],
+  'l1-e2': [
+    [[1, 'complement', 'The complement rule', 'P(Aᶜ) = 1 − P(A)', 'P(on time) = P(Lᶜ) = 1 − 0.12 = 0.88']],
+    [[1, 'prop-b', 'Addition rule, property (b)', 'P(A ∪ B) = P(A) + P(B) − P(A ∩ B)', 'P(L ∪ R) = 0.12 + 0.09 − 0.03 = 0.18']],
+    [[1, 'demorgan', 'De Morgan’s law', '(A ∪ B)ᶜ = Aᶜ ∩ Bᶜ', 'neither late nor refunded = Lᶜ ∩ Rᶜ = (L ∪ R)ᶜ'],
+     [1, 'complement', 'The complement rule', 'P(Aᶜ) = 1 − P(A)', 'P((L ∪ R)ᶜ) = 1 − 0.18 = 0.82']],
+    [[1, 'axioms', 'Additivity, the second axiom', 'A, B disjoint:  P(A ∪ B) = P(A) + P(B)', 'P(L) = P(L ∩ R) + P(L ∩ Rᶜ)\n0.12 = 0.03 + P(L ∩ Rᶜ), so P(L ∩ Rᶜ) = 0.09']],
+    [[1, 'prop-a', 'Property (a): a larger event, a larger probability', 'A ⊂ B:  P(A) ≤ P(B)', 'L ∩ R ⊂ R, so P(L ∩ R) ≤ P(R) = 0.09 < 0.10']],
+  ],
+  'l1-e3': [
+    [[1, 'frequency', 'A frequency is a share of the data', 'f(A) = times A happened / number of trials', 'f(L) = 56/400 = 0.14']],
+    [[1, 'prop-b', 'Addition rule, property (b)', 'f(A ∪ B) = f(A) + f(B) − f(A ∩ B)', 'f(L ∪ R) = 0.14 + 0.12 − 0.045 = 0.215']],
+    [[1, 'settle', 'The frequency settles near the probability', 'f(A) gets close to P(A) over many trials, but one week varies', 'f = 0.215 from 400 orders, P = 0.20: a normal gap']],
+  ],
+  'l2-e1': [
+    [[1, 'uniform', 'Equally likely outcomes', 'P(A) = outcomes in A / all outcomes', 'P(resolved) = 360/500 = 0.72']],
+    [[2, 'conditional', 'Conditional probability', 'P(A ∣ B) = P(A ∩ B) / P(B)', 'P(resolved ∣ chat) = P(resolved ∩ chat) / P(chat)\n= (150/500) / (200/500) = 150/200 = 0.75'],
+     [2, 'total', 'Total probability', 'P(B) = Σᵢ P(Aᵢ) P(B ∣ Aᵢ)', 'P(resolved) = 0.40 × 0.75 + 0.36 × 0.60 + 0.24 × 0.85 = 0.72']],
+    [[2, 'conditional', 'Conditional probability', 'P(A ∣ B) = P(A ∩ B) / P(B)', 'P(phone ∣ resolved) = P(phone ∩ resolved) / P(resolved)\n= (102/500) / (360/500) = 102/360 = 0.283']],
+    [[2, 'reverse', 'P(A ∣ B) is not P(B ∣ A)', 'same top, different bottom:\nP(A ∩ B) / P(B)  and  P(A ∩ B) / P(A)', 'P(resolved ∣ phone) = 102/120 = 0.85\nP(phone ∣ resolved) = 102/360 = 0.283']],
+  ],
+  'l2-e2': [
+    [[2, 'multiplication', 'The multiplication rule', 'P(A ∩ B) = P(A) × P(B ∣ A)', 'P(carrier A ∩ late) = P(carrier A) × P(late ∣ carrier A)\n= 0.5 × 0.08 = 0.04'],
+     [2, 'tree', 'A tree: multiply along each path', 'leaf = first branch × second branch; all leaves add up to 1', '0.04 + 0.46 + 0.036 + 0.264 + 0.05 + 0.15 = 1']],
+    [[2, 'total', 'Total probability', 'P(B) = Σᵢ P(Aᵢ) P(B ∣ Aᵢ)', 'P(L) = P(A) P(L ∣ A) + P(B) P(L ∣ B) + P(C) P(L ∣ C)\n= 0.5 × 0.08 + 0.3 × 0.12 + 0.2 × 0.25 = 0.126']],
+  ],
+  'l2-e3': [
+    [[1, 'complement', 'The complement rule', 'P(Aᶜ) = 1 − P(A)', 'P(genuine) = 1 − P(fake) = 1 − 0.05 = 0.95'],
+     [2, 'total', 'Total probability', 'P(B) = Σᵢ P(Aᵢ) P(B ∣ Aᵢ)', 'P(flag) = P(fake) P(flag ∣ fake) + P(genuine) P(flag ∣ genuine)\n= 0.05 × 0.8 + 0.95 × 0.02 = 0.04 + 0.019 = 0.059']],
+    [[2, 'multiplication', 'The multiplication rule', 'P(A ∩ B) = P(A) × P(B ∣ A)', 'P(fake ∩ flag) = P(fake) × P(flag ∣ fake) = 0.05 × 0.8 = 0.04'],
+     [2, 'bayes', 'Bayes’ rule', 'P(A ∣ B) = P(A) P(B ∣ A) / P(B)', 'P(fake ∣ flag) = P(fake ∩ flag) / P(flag) = 0.04 / 0.059 = 0.678\nestablished: 0.01 × 0.8 / 0.0278 = 0.008 / 0.0278 = 0.288'],
+     [2, 'prior', 'Prior, likelihood, posterior', 'posterior = prior × likelihood / P(B)', 'new: prior 5 % → posterior 68 %\nestablished: prior 1 % → posterior 29 %']],
+  ],
+  'l2-e4': [
+    [[2, 'independent', 'Independent events', 'P(A ∩ B) = P(A) P(B),  or  P(A ∣ B) = P(A)', 'P(S ∩ R) = 100/1000 = 0.10\nP(S) P(R) = 0.4 × 0.25 = 0.10: equal, so independent']],
+    [[2, 'independent', 'Independent events', 'P(A ∩ B) = P(A) P(B)', 'P(S ∩ C) = 180/1000 = 0.18\nP(S) P(C) = 0.4 × 0.3 = 0.12: not equal, so dependent']],
+    [[2, 'conditional', 'Conditional probability', 'P(A ∣ B) = P(A ∩ B) / P(B)', 'P(C ∣ S) = 0.18 / 0.40 = 0.45\nP(C ∣ Sᶜ) = 0.12 / 0.60 = 0.20'],
+     [1, 'axioms', 'Additivity', 'A, B disjoint:  P(A ∪ B) = P(A) + P(B)', 'C ∩ Sᶜ = 300 − 180 = 120 customers\nSᶜ = 1000 − 400 = 600 customers']],
+    [[1, 'disjoint', 'Disjoint events', 'disjoint: A ∩ B = ∅, so P(A ∩ B) = 0', 'P(S ∩ C) = 0.18 > 0: not disjoint']],
+  ],
+  'l3-e1': [
+    [[3, 'bernoulli', 'Bernoulli', 'X ∼ Ber(p):  P(X = 1) = p,  P(X = 0) = 1 − p', 'X ∼ Ber(0.1),  P(X = 0) = 1 − 0.1 = 0.9']],
+    [[2, 'independent', 'Independent events multiply', 'P(A ∩ B) = P(A) P(B)', 'P(lamp on time ∩ rug on time) = 0.9 × 0.9 = 0.81']],
+    [[2, 'independent', 'Independent events multiply', 'P(A ∩ B) = P(A) P(B)', 'P(lamp late ∩ rug on time) = 0.1 × 0.9 = 0.09'],
+     [1, 'axioms', 'Additivity', 'A, B disjoint:  P(A ∪ B) = P(A) + P(B)', 'exactly one = lamp only or rug only = 0.09 + 0.09 = 0.18']],
+  ],
+  'l3-e2': [
+    [[3, 'conditions', 'The four conditions of a binomial', 'a fixed n; two results; the same p; independent trials', 'n = 10 visitors, buys or not, p = 0.2, independent: Bin(10, 0.2)']],
+    [[3, 'binomial', 'The binomial PMF', 'P(X = k) = C(n, k) pᵏ (1 − p)ⁿ⁻ᵏ', 'P(X = 2) = C(10, 2) × 0.2² × 0.8⁸ = 45 × 0.04 × 0.168 = 0.302\nP(X = 0) = C(10, 0) × 0.2⁰ × 0.8¹⁰ = 0.107']],
+    [[1, 'complement', 'The complement rule', 'P(Aᶜ) = 1 − P(A)', '"at least 1" is the opposite of "none":\nP(X ≥ 1) = 1 − P(X = 0) = 1 − 0.107 = 0.893']],
+    [[3, 'conditions', 'The four conditions of a binomial', 'a fixed n; two results; the same p; independent trials', 'one person’s 10 visits are not independent: the fourth condition fails']],
+  ],
+  'l3-e3': [
+    [[3, 'function', 'A function of X', 'Y = g(X): each outcome keeps its probability', 'profit = 6 − cost: 6 − 0 = 6,  6 − 40 = −34,  6 − 90 = −84'],
+     [3, 'pmf', 'The PMF', 'm_Y(y) = P(Y = y), and the values add up to 1', '0.90 + 0.07 + 0.03 = 1']],
+    [[3, 'expectation', 'The expectation', 'E[Y] = Σ y m_Y(y)', 'E[Y] = 6 × 0.90 + (−34) × 0.07 + (−84) × 0.03 = 0.50']],
+    [[3, 'long-run', 'The long-run average', 'over many trials, the average result is close to E[Y]', '1,000 plans × 0.50 = 500 euros']],
+    [[3, 'expectation', 'The expectation', 'E[S] = Σ s m_S(s)', 'E[cost] = 0 × 0.90 + 40 × 0.07 + 90 × 0.03 = 5.50'],
+     [3, 'linear-mean', 'The mean of a linear function', 'E[aX + b] = a E[X] + b', 'Y = 5 − S:  E[Y] = 5 − E[S] = 5 − 5.50 = −0.50']],
+  ],
+  'l3-e4': [
+    [[3, 'expectation', 'The expectation', 'E[X] = Σ x m_X(x)', 'E[X] = 0 × 0.3 + 1 × 0.4 + 2 × 0.2 + 3 × 0.1 = 1.1']],
+    [[3, 'rule', 'The expected value rule', 'E[g(X)] = Σ g(x) m_X(x)', 'E[X²] = 0² × 0.3 + 1² × 0.4 + 2² × 0.2 + 3² × 0.1 = 2.1'],
+     [3, 'shortcut', 'The variance shortcut', 'Var(X) = E[X²] − (E[X])²', 'Var(X) = 2.1 − 1.1² = 2.1 − 1.21 = 0.89'],
+     [3, 'variance', 'The standard deviation', 'σ_X = √Var(X)', 'σ_X = √0.89 = 0.94']],
+    [[3, 'linear-mean', 'The mean of a linear function', 'E[aX + b] = a E[X] + b', 'E[5X + 20] = 5 × 1.1 + 20 = 25.50'],
+     [3, 'linear-var', 'The variance of a linear function', 'Var(aX + b) = a² Var(X),  σ_(aX+b) = |a| σ_X', 'Var(C) = 5² × 0.89 = 22.25,  σ_C = 5 × 0.94 = 4.72']],
+    [[3, 'linear-var', 'The variance of a linear function', 'Var(aX + b) = a² Var(X): b is not in it', 'b = 20 shifts every cost; a = 5 stretches the distances']],
+  ],
+  'l4-e1': [
+    [[4, 'uniform', 'The uniform density', 'X ∼ Unif(a, b): height 1/(b − a), and a probability is width × height', 'P(W > 15) = (20 − 15) × 1/20 = 0.25']],
+    [[4, 'three-continuous', 'Mean and variance of a uniform', 'E[X] = (a + b)/2,  Var(X) = (b − a)²/12', 'E[W] = (0 + 20)/2 = 10,  Var(W) = 20²/12 = 33.3,  σ = √33.3 = 5.77']],
+  ],
+  'l4-e2': [
+    [[4, 'exponential', 'The exponential', 'X ∼ Exp(λ):  E[X] = 1/λ,  Var(X) = 1/λ²', '1/λ = 4, so λ = 0.25;  σ = √(1/λ²) = 1/λ = 4']],
+    [[4, 'exponential', 'The exponential tail', 'P(X > x) = 1 − F(x) = e^(−λx)', 'P(X > 6) = e^(−0.25 × 6) = e^(−1.5) = 0.223']],
+  ],
+  'l4-e3': [
+    [[4, 'standardize', 'Standardize, then read the table', 'z = (x − μ) / σ,  P(X < x) = Φ(z)', 'z = (15 − 12) / 3 = 1'],
+     [1, 'complement', 'The complement rule', 'P(Aᶜ) = 1 − P(A)', 'P(T > 15) = 1 − Φ(1) = 1 − 0.8413 = 0.159'],
+     [4, 'tables', 'The bell is symmetric', 'Φ(−z) = 1 − Φ(z)', 'P(T < 9) = Φ(−1) = 1 − 0.8413 = 0.159']],
+    [[4, 'quantile-g', 'A Gaussian quantile', 'q-quantile = μ + z σ,  where Φ(z) = q', '0.99-quantile = 12 + 2.326 × 3 = 18.98']],
+    [[4, 'tables', 'The bell is symmetric', 'Φ(−z) = 1 − Φ(z)', 'Φ(−2.326) = 1 − 0.99 = 0.01'],
+     [4, 'quantile-g', 'A Gaussian quantile', 'q-quantile = μ + z σ', '0.01-quantile: 6 = μ − 2.326 × 3, so μ = 6 + 6.98 = 12.98']],
+  ],
+  'l4-e4': [
+    [[4, 'sample', 'The sample mean', 'x̄ = Σ xᵢ / n', 'x̄ = 126 / 9 = 14'],
+     [4, 'by-hand', 'The sample variance', 's² = Σ (xᵢ − x̄)² / (n − 1),  s = √s²', 's² = 118 / 8 = 14.75,  s = 3.84']],
+    [[4, 'median', 'Median and quartiles', 'median = the middle of the sorted data\nQ₁, Q₃ = the medians of the lower and upper halves\nIQR = Q₃ − Q₁', 'median = 14,  Q₁ = 12,  Q₃ = 18,  IQR = 6']],
+    [[4, 'sample', 'The sample mean', 'x̄ = Σ xᵢ / n', 'x̄ = 222 / 10 = 22.2'],
+     [4, 'median', 'The median of an even count', 'median = the average of the two middle values', '(14 + 15) / 2 = 14.5']],
+    [[4, 'robust', 'Robust summaries', 'the median and IQR use the middle of the sorted data; the mean and SD use every value', 'one ride of 96: mean +8.2, median +0.5']],
+  ],
+};
+const cardNo = (n, id) => { const s = SESSIONS.find(x => x.n === n), i = s ? s.groups.flatMap(g => g.cards).findIndex(c => c.id === id) : -1; return i < 0 ? '' : String(i + 1); };
+function lawsHtml(s, laws) {
+  if (!laws?.length) return '';
+  return `<div class="laws"><p class="out-head">Rules used</p>${laws.map(([n, id, name, general, here]) => `<div class="law">
+    <p class="law-name"><b>${esc(name)}</b><button type="button" class="ref-go" data-go="${esc(cardKey(n, id))}">${n === s.n ? '' : `Lecture ${n} · `}card ${cardNo(n, id)} ›</button></p>
+    <pre>${subs(mathHtml(general))}</pre><p class="law-here">Here</p><pre>${subs(mathHtml(here))}</pre></div>`).join('')}</div>`;
+}
+/* ---------- Each exercise's numbers, named, and the drawing it builds ----------
+   Asked for 2026-11-07: "deconstruct it into its formulas and give names to the numbers, so I understand
+   what element it is, and build the tree; same for other exercises, show the graph or table they build". */
+const PRACTICE_PICS = {
+  'l1-e1': { given: [['Ω', '6 outcomes', 'every (channel, label) pair: one ticket'], ['U', 'a set', 'the ticket is urgent'], ['N', 'a set', 'the ticket did not come by phone']],
+    draw: () => tbl(['channel ↓  label →', 'normal', 'urgent'], [['chat', 'in N', '*in U and N'], ['email', 'in N', '*in U and N'], ['phone', 'in neither', 'in U']]),
+    read: 'One cell per outcome. U is the urgent column, N the chat and email rows. The marked cells are in both: U ∩ N.' },
+  'l1-e2': { given: [['P(L)', '0.12', 'the order is late'], ['P(R)', '0.09', 'the order is refunded'], ['P(L ∩ R)', '0.03', 'late and refunded, both']],
+    draw: () => venn(['ab'], { a: 'L', b: 'R', cap: 'L ∩ R, the overlap, is 0.03' }) + tbl(['', 'refunded R', 'not refunded Rᶜ', 'total'], [['late L', '*0.03', '0.09', '0.12'], ['on time Lᶜ', '0.06', '0.82', '0.88'], ['total', '0.09', '0.91', '1']]),
+    read: 'Fill the four regions first. Start from the overlap 0.03. Late only: 0.12 − 0.03 = 0.09. Refunded only: 0.09 − 0.03 = 0.06. Neither: 1 − (0.09 + 0.03 + 0.06) = 0.82. Every answer is then a sum of cells.' },
+  'l1-e3': { given: [['400', 'orders', 'all the orders that week'], ['56', 'orders', 'late: the "late" row total'], ['48', 'orders', 'refunded: the "refund" column total'], ['18', 'orders', 'late and refunded: the cell where both meet'], ['f(A)', 'a share', 'how often A happened: count / 400']] },
+  'l2-e1': { given: [['500', 'tickets', 'all tickets last month'], ['200, 180, 120', 'tickets', 'by chat, email, phone'], ['150, 108, 102', 'tickets', 'resolved, by chat, email, phone'], ['360', 'tickets', 'resolved in total']],
+    draw: () => tree({ w: 480, kids: [
+      { label: 'chat', p: '0.40', kids: [{ label: 'chat ∩ resolved: 0.30', p: '0.75', on: 1 }, { label: 'chat ∩ not: 0.10', p: '0.25' }] },
+      { label: 'email', p: '0.36', kids: [{ label: 'email ∩ resolved: 0.216', p: '0.60', on: 1 }, { label: 'email ∩ not: 0.144', p: '0.40' }] },
+      { label: 'phone', p: '0.24', kids: [{ label: 'phone ∩ resolved: 0.204', p: '0.85', on: 1 }, { label: 'phone ∩ not: 0.036', p: '0.15' }] }] }),
+    read: 'First branch: the channel, P(channel): chat 200/500 = 0.40, email 180/500 = 0.36, phone 120/500 = 0.24. Second branch: resolved or not, P(resolved ∣ channel). Each leaf multiplies the two. P(resolved) adds the bold leaves: 0.30 + 0.216 + 0.204 = 0.72.' },
+  'l2-e2': { given: [['P(A), P(B), P(C)', '0.5, 0.3, 0.2', 'the share of parcels each carrier takes'], ['P(L ∣ A)', '0.08', 'late, given carrier A'], ['P(L ∣ B)', '0.12', 'late, given carrier B'], ['P(L ∣ C)', '0.25', 'late, given carrier C']],
+    read: 'The tree is the answer to question 1: carrier first, then late or not, multiplying along each path.' },
+  'l2-e3': { given: [['P(flag ∣ fake)', '0.8', 'the detector catches 80 % of fake reviews'], ['P(flag ∣ genuine)', '0.02', 'it wrongly flags 2 % of genuine reviews: false alarms'], ['P(fake)', '0.05', 'new products: 5 % of reviews are fake. The prior'], ['P(fake)', '0.01', 'established products: 1 % are fake. The prior'], ['P(genuine)', '1 − P(fake)', '0.95 for new products, 0.99 for established']],
+    draw: () => `<p class="ex-sub">New products</p>` + tree({ w: 480, kids: [
+      { label: 'fake', p: '0.05', kids: [{ label: 'fake ∩ flag: 0.04', p: '0.8', on: 1 }, { label: 'fake ∩ no flag: 0.01', p: '0.2' }] },
+      { label: 'genuine', p: '0.95', kids: [{ label: 'genuine ∩ flag: 0.019', p: '0.02', on: 1 }, { label: 'genuine ∩ no flag: 0.931', p: '0.98' }] }] })
+      + bayesTable([['fake', '0.05', '0.8', '0.04', '*0.678'], ['genuine', '0.95', '0.02', '0.019', '0.322']], '0.059')
+      + `<p class="ex-sub">Established products</p>` + tree({ w: 480, kids: [
+      { label: 'fake', p: '0.01', kids: [{ label: 'fake ∩ flag: 0.008', p: '0.8', on: 1 }, { label: 'fake ∩ no flag: 0.002', p: '0.2' }] },
+      { label: 'genuine', p: '0.99', kids: [{ label: 'genuine ∩ flag: 0.0198', p: '0.02', on: 1 }, { label: 'genuine ∩ no flag: 0.9702', p: '0.98' }] }] })
+      + bayesTable([['fake', '0.01', '0.8', '0.008', '*0.288'], ['genuine', '0.99', '0.02', '0.0198', '0.712']], '0.0278'),
+    read: 'First branch: is the review fake? That is the prior. Second branch: does the detector flag it? That is the likelihood. Each leaf is prior × likelihood. The flagged leaves are bold: they add up to P(flag). Of all flagged reviews, the fake share is P(fake ∣ flag) = fake leaf / all flagged leaves.' },
+  'l2-e4': { given: [['1,000', 'customers', 'everyone'], ['400', 'customers', 'subscribe to the newsletter: S'], ['250', 'customers', 'bought again within a month: R'], ['300', 'customers', 'used a coupon: C'], ['100', 'customers', 'subscribers who bought again: S ∩ R'], ['180', 'customers', 'subscribers who used a coupon: S ∩ C']],
+    draw: () => tbl(['', 'bought again R', 'did not', 'total'], [['subscriber S', '*100', '300', '400'], ['not S', '150', '450', '600'], ['total', '250', '750', '1,000']])
+      + tbl(['', 'used coupon C', 'did not', 'total'], [['subscriber S', '*180', '220', '400'], ['not S', '120', '480', '600'], ['total', '300', '700', '1,000']]),
+    read: 'Fill each table from the totals: subtract to get the missing cells. Independent means each row has the same share: 100/400 = 150/600 = 0.25 for R, yes. For C: 180/400 = 0.45 but 120/600 = 0.20, no.' },
+  'l3-e1': { given: [['p', '0.1', 'each parcel is late with this chance'], ['1 − p', '0.9', 'each parcel is on time'], ['X', '0 or 1', '1 if the lamp is late, 0 if on time']],
+    draw: () => tree({ w: 480, kids: [
+      { label: 'lamp on time', p: '0.9', kids: [{ label: 'both on time: 0.81', p: '0.9' }, { label: 'only rug late: 0.09', p: '0.1', on: 1 }] },
+      { label: 'lamp late', p: '0.1', kids: [{ label: 'only lamp late: 0.09', p: '0.9', on: 1 }, { label: 'both late: 0.01', p: '0.1' }] }] }),
+    read: 'Independent, so the second branch is the same whatever the first did. Each leaf multiplies. "Exactly one late" is the two bold leaves: 0.09 + 0.09 = 0.18. The four leaves add up to 1.' },
+  'l3-e2': { given: [['n', '10', 'visitors: the number of trials'], ['p', '0.2', 'each visitor buys with this chance: a success'], ['1 − p', '0.8', 'a visitor does not buy'], ['X', '0 to 10', 'the number of buyers'], ['k', 'a count', 'the number of buyers you ask about'], ['C(n, k)', 'a count', 'the ways to choose which k of the n buy. C(10, 2) = 45']] },
+  'l3-e3': { given: [['6', 'euros', 'the price of one plan'], ['0.90', 'chance', 'the lamp needs nothing: cost 0'], ['0.07', 'chance', 'a repair: cost 40 euros'], ['0.03', 'chance', 'a replacement: cost 90 euros'], ['Y', 'euros', 'profit on one plan = price − cost']],
+    draw: () => tbl(['what happens', 'chance', 'cost', 'profit y = 6 − cost', 'y × chance'], [['nothing', '0.90', '0', '6', '5.40'], ['repair', '0.07', '40', '−34', '−2.38'], ['replacement', '0.03', '90', '−84', '−2.52'], ['sum', '1', '', '', '*0.50']]),
+    read: 'One row per outcome. The last column multiplies profit by chance; its sum is the expectation E[Y] = 0.50 euros.' },
+  'l3-e4': { given: [['x', '0 to 3', 'parcels returned in one day'], ['m_X(x)', 'chance', 'how likely each count is'], ['C', 'euros', 'the cost of a day: 20 fixed + 5 per return']],
+    draw: () => bars([[0, 0.3, '0.3'], [1, 0.4, '0.4'], [2, 0.2, '0.2'], [3, 0.1, '0.1']], { x: 'returns in a day', cap: 'PMF of X. The balance point, E[X], is 1.1' })
+      + tbl(['x', 'm_X(x)', 'x × m_X(x)', 'x² × m_X(x)'], [['0', '0.3', '0', '0'], ['1', '0.4', '0.4', '0.4'], ['2', '0.2', '0.4', '0.8'], ['3', '0.1', '0.3', '0.9'], ['sum', '1', '*1.1 = E[X]', '*2.1 = E[X²]']]),
+    read: 'Add a column per thing you need. The sums give E[X] = 1.1 and E[X²] = 2.1; then Var(X) = 2.1 − 1.1² = 0.89.' },
+  'l4-e1': { given: [['a', '0', 'the shortest wait, in minutes'], ['b', '20', 'the longest wait: a van leaves every 20 minutes'], ['1/(b − a)', '1/20', 'the height of the flat density'], ['W', 'minutes', 'the wait for the next van']] },
+  'l4-e2': { given: [['E[X]', '4 minutes', 'one chat every 4 minutes on average'], ['λ', '0.25', 'chats per minute: λ = 1 / mean'], ['X', 'minutes', 'the time until the next chat'], ['6', 'minutes', 'the quiet time the agent needs']] },
+  'l4-e3': { given: [['μ', '12 minutes', 'the mean packing time'], ['σ', '3 minutes', 'the standard deviation: one step of spread'], ['z', 'steps', 'how many σ a time is from μ'], ['Φ(z)', 'area', 'from the table: the share of orders below z']],
+    draw: () => curve(gauss(12, 3), 0, 24, { shade: [15, 24], label: '0.159', ticks: [3, 6, 9, 12, 15, 18, 21], x: 'minutes to pack', cap: 'N(12, 3). The shaded area is P(T > 15), one σ above the mean' }),
+    read: 'Each tick is one σ = 3 minutes. 15 is one step above 12, so z = 1. 9 is one step below, so z = −1, and the area below it mirrors the shaded one.' },
+  'l4-e4': { given: [['n', '9 rides', 'how many values'], ['xᵢ', 'minutes', 'one ride'], ['x̄', 'minutes', 'the sample mean: the sum / n'], ['s²', 'minutes²', 'the sample variance: squared distances / (n − 1)'], ['Q₁, Q₃', 'minutes', 'the medians of the lower and upper halves']],
+    draw: () => boxplot({ lo: 0, hi: 28, q1: 12, med: 14, q3: 18, wlo: 8, whi: 19, ticks: [0, 8, 12, 14, 18, 28], cap: 'The nine rides: the box holds the middle half, from 12 to 18' }),
+    read: 'The box runs from Q₁ = 12 to Q₃ = 18 with the median 14 inside. The whiskers reach the shortest and longest rides, 8 and 19.' },
+};
+function picHtml(x) {
+  const q = PRACTICE_PICS[x.id];
+  if (!q) return '';
+  return `<div class="ex-pic">${q.given ? `<p class="out-head">The numbers</p><div class="ex-given">${tbl(['', 'value', 'what it is'], q.given)}</div>` : ''}${q.draw ? `<p class="out-head">The picture</p>${q.draw()}` : ''}${q.read ? `<p class="ex-read">${text(q.read)}</p>` : ''}</div>`;
+}
 function practiceHtml(s) {
-  return s.practice.map((x, i) => `<section class="ex" aria-label="Exercise ${i + 1}"><h3><span class="ex-num">Exercise ${i + 1}</span>${esc(x.title)}${partTag(s, s.groups.length)}</h3><p class="ex-setup" data-hl="stats|p|${x.id}">${text(x.setup)}</p>${x.table ? x.table() : ''}
-    <div class="practice">${x.parts.map(([q, a], j) => `<details class="pq" data-hl="stats|p|${x.id}-${j + 1}"><summary><span class="num">${j + 1}</span><span>${text(q)}</span></summary><div class="ans">${subs(a())}</div></details>`).join('')}</div></section>`).join('');
+  return s.practice.map((x, i) => `<section class="ex" id="c-${s.n}-ex-${x.id}" data-key="${esc(cardKey(s.n, `ex-${x.id}`))}" aria-label="Exercise ${i + 1}"><h3><span class="ex-num">Exercise ${i + 1}</span>${esc(x.title)}${partTag(s, s.groups.length)}</h3><p class="ex-setup" data-hl="stats|p|${x.id}">${text(x.setup)}</p>${x.table ? x.table() : ''}${picHtml(x)}
+    <div class="practice">${x.parts.map(([q, a], j) => `<details class="pq" data-hl="stats|p|${x.id}-${j + 1}"><summary><span class="num">${j + 1}</span><span>${text(q)}</span></summary><div class="ans">${subs(a())}${lawsHtml(s, PRACTICE_LAWS[x.id]?.[j])}</div></details>`).join('')}</div>
+    <div class="notes"></div>
+    <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button></div></section>`).join('');
 }
 /* ---------- Charts: the key graph of each topic, with its formula worked out beside it ----------
    Asked for 2026-11-07: "a set of charts with scales, in each lecture, and a space with all of them,
@@ -1679,7 +1868,8 @@ function fcPaint() {
   box.innerHTML = now.map(item).join('') + (before.length ? `<details class="nb-fold" id="fc-earlier"${fcEarlierOpen ? ' open' : ''}><summary>Earlier</summary>${before.map(item).join('')}</details>` : '');
 }
 document.getElementById('fc-list').addEventListener('toggle', e => { if (e.target.id === 'fc-earlier') fcEarlierOpen = e.target.open; }, true);
-const fcOnSheet = () => fcDot.classList.toggle('on-sheet', !notebook.hidden || !rfSheet.hidden || !fcSheet.hidden);
+// All three bubbles move together, so they stay on one line.
+const fcOnSheet = () => { const on = !notebook.hidden || !rfSheet.hidden || !fcSheet.hidden; fcDot.classList.toggle('on-sheet', on); document.getElementById('nb-dot').classList.toggle('on-sheet', on); };
 function setFocus(open) {
   fcSheet.hidden = !open;
   fcDot.setAttribute('aria-expanded', String(open));
@@ -1748,13 +1938,14 @@ let nbKind = 'question', nbPinned = false, nbEarlierOpen = false;
 function places() {
   return [{ key: 'stats|notebook', tag: 'Stats', name: 'The course in general' },
     ...SESSIONS.flatMap(s => [{ key: `stats|s${s.n}`, tag: `L${s.n}`, name: `Lecture ${s.n} in general`, s: s.n },
-      ...s.groups.flatMap(g => g.cards.map(c => ({ key: cardKey(s.n, c.id), tag: c.num, name: c.name, s: s.n, id: c.id })))])];
+      ...s.groups.flatMap(g => g.cards.map(c => ({ key: cardKey(s.n, c.id), tag: c.num, name: c.name, s: s.n, id: c.id }))),
+      ...(s.practice || []).map((x, i) => ({ key: cardKey(s.n, `ex-${x.id}`), tag: `Ex ${i + 1}`, name: x.title, s: s.n, id: `ex-${x.id}` }))])];
 }
 nbAbout.innerHTML = places().map(p => `<option value="${esc(p.key)}">${p.id ? `${p.tag} · ` : ''}${esc(p.name)}</option>`).join('');
 // Where you are: the card nearest the top of the screen, else the session.
 function currentSpot() {
   let best = null;
-  for (const c of document.querySelectorAll('.card')) {
+  for (const c of document.querySelectorAll('.card, .ex[data-key]')) {
     const r = c.getBoundingClientRect();
     if (r.bottom > 80 && r.top < innerHeight * 0.6) { best = c; break; }
   }
