@@ -279,6 +279,19 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .rf-dot::after { content: ''; position: absolute; inset: -7px -11px; }
   .rf-dot:hover, .rf-dot[aria-expanded="true"] { background: var(--ochre); }
   .rf-dot.on-sheet { right: 5px; }
+  .fc-dot { position: fixed; z-index: 61; right: 10px; top: calc(50% + 72px); width: 22px; height: 22px; padding: 0; border-radius: 50%; cursor: pointer; border: 2px solid var(--c); background: color-mix(in srgb, var(--c) 30%, var(--nb-bg)); box-shadow: 0 2px 8px rgb(0 0 0 / .18); }
+  .fc-dot::after { content: ''; position: absolute; inset: -7px -11px; }
+  .fc-dot:hover, .fc-dot[aria-expanded="true"] { background: var(--c); }
+  .fc-dot.on-sheet { right: 5px; }
+  .fc-q { margin: 4px 0 0; font: 600 14px system-ui, sans-serif; color: var(--ink); }
+  .fc-scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .fc-scale button, .fc-where button { min-height: 34px; padding: 4px 6px; border-radius: 8px; border: 1px solid var(--nb-rule); background: var(--card); color: var(--ink); font: 13px system-ui, sans-serif; cursor: pointer; }
+  .fc-scale button[aria-checked="true"], .fc-where button[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: var(--nb-bg); font-weight: 600; }
+  .fc-where { display: flex; flex-wrap: wrap; gap: 4px; }
+  .fc-where button { min-height: 30px; padding: 2px 10px; border-radius: 999px; }
+  .fc-item { display: grid; gap: 2px; padding: 8px 11px; border-radius: 12px; border: 1px solid var(--nb-rule); background: var(--card); font: 13.5px/1.4 system-ui, sans-serif; }
+  .fc-item time { font: 600 12px system-ui, sans-serif; color: var(--c); }
+  .fc-item p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
   .rf-from { margin: 0; font: 13px system-ui, sans-serif; color: var(--soft); }
   .rf-saved.bad { color: var(--accent); }
   .rf-item { display: grid; gap: 3px; padding: 9px 11px; border-radius: 12px; border: 1px solid var(--nb-rule); background: var(--card); }
@@ -499,6 +512,22 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   <div class="nb-list" id="nb-list"></div>
 </aside>
 <button type="button" class="rf-dot" id="rf-dot" aria-expanded="false" aria-controls="reflections" title="Reflections" aria-label="Reflections"></button>
+<button type="button" class="fc-dot" id="fc-dot" aria-expanded="false" aria-controls="focus" title="Focus" aria-label="Focus"></button>
+<aside class="notebook" id="focus" aria-label="Focus" hidden>
+  <div class="nb-top"><span class="nb-title">Focus</span><button type="button" class="nb-close" id="fc-close" aria-label="Close focus">×</button></div>
+  <div class="nb-write">
+    <p class="fc-q" id="fc-q1">Where is my focus?</p>
+    <div class="fc-scale" role="radiogroup" aria-labelledby="fc-q1" id="fc-focus"></div>
+    <p class="fc-q" id="fc-q2">Where am I in my body?</p>
+    <div class="fc-scale" role="radiogroup" aria-labelledby="fc-q2" id="fc-body"></div>
+    <div class="fc-where" role="group" aria-label="Where I feel it" id="fc-where"></div>
+    <textarea id="fc-text" rows="2" maxlength="800" aria-label="A few words" placeholder="A few words, if you like"></textarea>
+    <p class="rf-from" id="fc-from"></p>
+    <div class="acts"><button type="button" class="save" id="fc-save">Save</button></div>
+    <p class="saved rf-saved" id="fc-saved" role="status"></p>
+  </div>
+  <div class="nb-list" id="fc-list"></div>
+</aside>
 <aside class="notebook" id="reflections" aria-label="Reflections" hidden>
   <div class="nb-top"><span class="nb-title">Reflections</span><button type="button" class="nb-close" id="rf-close" aria-label="Close reflections">×</button></div>
   <div class="nb-write">
@@ -1061,7 +1090,7 @@ function noteHtml(n) {
   return `<div class="note${done ? ' done' : ''}" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
     <div class="note-head"><span class="note-kind">${KIND[n.kind]}</span><span class="tools"><button type="button" class="n-edit" aria-label="Edit">✎</button><button type="button" class="n-del" aria-label="Delete">×</button></span></div>
     <div class="note-body">${boldHtml(esc(n.body))}</div>
-    ${n.answer ? `<div class="answer"><span class="note-kind">Answer</span><div class="note-body">${boldHtml(esc(n.answer))}</div>${n.readAt ? '' : '<button type="button" class="read">Got it, mark read</button>'}</div>` : ''}
+    ${n.answer ? `<div class="answer"><span class="note-kind">Answer</span><div class="note-body"${n.id ? ` data-hl="stats|ans|${esc(n.id)}"` : ''}>${boldHtml(esc(n.answer))}</div>${n.readAt ? '' : '<button type="button" class="read">Got it, mark read</button>'}</div>` : ''}
   </div>`;
 }
 function editorHtml(kind, body) {
@@ -1079,6 +1108,7 @@ function paintNotes() {
     b.textContent = list.length ? `Question or comment · ${list.length}` : 'Question or comment';
   }
   renderNotebook();
+  applyHighlights();
 }
 /* ---------- Your own boxes ----------
  * Asked for 2026-11-05: "add ability to create new boxes, so I can write a new box and give it a title".
@@ -1589,13 +1619,14 @@ async function rfLoad() {
   } catch (e) { /* Writing still works; the blocks fall back to the usual ones. */ }
   rfPaint();
 }
-const rfOnSheet = () => rfDot.classList.toggle('on-sheet', !notebook.hidden || !rfSheet.hidden);
+const rfOnSheet = () => rfDot.classList.toggle('on-sheet', !notebook.hidden || !rfSheet.hidden || !document.getElementById('focus').hidden);
 function setReflections(open) {
   rfSheet.hidden = !open;
   rfDot.setAttribute('aria-expanded', String(open));
   rfOnSheet();
   if (!open) return;
   setNotebook(false);
+  setFocus(false);
   document.getElementById('rf-from').textContent = `From ${rfSource()}`;
   if (!rfText.value) rfText.value = readStore(RF_DRAFT, '');
   rfPaint();
@@ -1623,6 +1654,65 @@ async function rfSave() {
   rfSaving = false;
 }
 rfDot.hidden = !ON_BRAIN;
+
+/* ---------- Focus: where my focus is and where I am in my body, while studying ----------
+   Asked for 2026-11-07. Each check is a note under stats|focus: not on any card, not a mood check-in. */
+const FOCUS_KEY = 'stats|focus';
+const FC_FOCUS = ['Scattered', 'Drifting', 'Steady', 'Deep', 'In flow'];
+const FC_BODY = ['Drained', 'Tired', 'OK', 'Good', 'Energised'];
+const FC_WHERE = ['Eyes', 'Head', 'Neck', 'Shoulders', 'Back', 'Belly', 'Legs'];
+const fcSheet = document.getElementById('focus'), fcDot = document.getElementById('fc-dot'), fcText = document.getElementById('fc-text');
+const fcPick = { focus: 0, body: 0, where: new Set() };
+let fcEarlierOpen = false;
+const fcScale = (id, words, name) => { document.getElementById(id).innerHTML = words.map((w, i) => `<button type="button" role="radio" aria-checked="false" data-${name}="${i + 1}">${w}</button>`).join(''); };
+fcScale('fc-focus', FC_FOCUS, 'focus');
+fcScale('fc-body', FC_BODY, 'body');
+document.getElementById('fc-where').innerHTML = FC_WHERE.map(w => `<button type="button" aria-pressed="false" data-where="${w}">${w}</button>`).join('');
+function fcPaint() {
+  const today = new Date().toDateString();
+  const mine = notes.filter(n => n.key === FOCUS_KEY).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  const item = n => { const d = new Date(n.createdAt); const when = d.toDateString() === today ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString([], { day: 'numeric', month: 'short' }); return `<div class="fc-item"><time>${esc(when)}</time><p>${esc(n.body)}</p></div>`; };
+  const now = mine.filter(n => new Date(n.createdAt).toDateString() === today), before = mine.filter(n => new Date(n.createdAt).toDateString() !== today).slice(0, 20);
+  const box = document.getElementById('fc-list');
+  box.innerHTML = now.map(item).join('') + (before.length ? `<details class="nb-fold" id="fc-earlier"${fcEarlierOpen ? ' open' : ''}><summary>Earlier</summary>${before.map(item).join('')}</details>` : '');
+}
+document.getElementById('fc-list').addEventListener('toggle', e => { if (e.target.id === 'fc-earlier') fcEarlierOpen = e.target.open; }, true);
+const fcOnSheet = () => fcDot.classList.toggle('on-sheet', !notebook.hidden || !rfSheet.hidden || !fcSheet.hidden);
+function setFocus(open) {
+  fcSheet.hidden = !open;
+  fcDot.setAttribute('aria-expanded', String(open));
+  if (open) { setNotebook(false); setReflections(false); document.getElementById('fc-from').textContent = `At ${rfSource()}`; fcPaint(); }
+  fcOnSheet(); rfOnSheet();
+}
+fcSheet.addEventListener('click', e => {
+  const f = e.target.closest('[data-focus]'), b = e.target.closest('[data-body]'), w = e.target.closest('[data-where]');
+  if (f || b) {
+    const name = f ? 'focus' : 'body', btn = f || b, v = Number(btn.dataset[name]);
+    fcPick[name] = fcPick[name] === v ? 0 : v;
+    for (const x of btn.parentElement.children) x.setAttribute('aria-checked', String(Number(x.dataset[name]) === fcPick[name]));
+    return;
+  }
+  if (w) { const on = !fcPick.where.has(w.dataset.where); if (on) fcPick.where.add(w.dataset.where); else fcPick.where.delete(w.dataset.where); w.setAttribute('aria-pressed', String(on)); }
+});
+document.getElementById('fc-save').addEventListener('click', async () => {
+  const say = document.getElementById('fc-saved');
+  if (!fcPick.focus && !fcPick.body && !fcText.value.trim()) { say.textContent = 'Choose where your focus or your body is first.'; return; }
+  const lines = [];
+  if (fcPick.focus) lines.push(`Focus: ${FC_FOCUS[fcPick.focus - 1]} (${fcPick.focus}/5)`);
+  if (fcPick.body) lines.push(`Body: ${FC_BODY[fcPick.body - 1]} (${fcPick.body}/5)${fcPick.where.size ? ` · ${[...fcPick.where].join(', ').toLowerCase()}` : ''}`);
+  else if (fcPick.where.size) lines.push(`Body: ${[...fcPick.where].join(', ').toLowerCase()}`);
+  if (fcText.value.trim()) lines.push(fcText.value.trim());
+  lines.push(`At ${rfSource()}`);
+  await addNote(FOCUS_KEY, 'comment', lines.join('\n'));
+  fcText.value = ''; fcPick.focus = 0; fcPick.body = 0; fcPick.where.clear();
+  for (const x of fcSheet.querySelectorAll('[aria-checked="true"], [aria-pressed="true"]')) x.setAttribute(x.hasAttribute('aria-checked') ? 'aria-checked' : 'aria-pressed', 'false');
+  say.textContent = 'Saved.';
+  setTimeout(() => { if (say.textContent === 'Saved.') say.textContent = ''; }, 2500);
+  fcPaint();
+});
+fcDot.addEventListener('click', () => setFocus(fcSheet.hidden));
+document.getElementById('fc-close').addEventListener('click', () => setFocus(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !fcSheet.hidden) setFocus(false); });
 document.getElementById('rf-list').addEventListener('toggle', e => { if (e.target.id === 'rf-unsorted') rfUnsortedOpen = e.target.open; }, true);
 // A new block: named here, kept in this browser like Dreams in Action does, until an idea is saved in it.
 const rfAdd = document.getElementById('rf-add'), rfNew = document.getElementById('rf-new'), rfName = document.getElementById('rf-name');
@@ -1675,12 +1765,12 @@ addEventListener('scroll', () => { clearTimeout(scrollTimer); scrollTimer = setT
 function setNotebook(open) {
   notebook.hidden = !open;
   nbDot.setAttribute('aria-expanded', String(open));
-  if (open) setReflections(false);
-  rfOnSheet();
+  if (open) { setReflections(false); setFocus(false); }
+  rfOnSheet(); fcOnSheet();
   if (open) { if (!nbText.value.trim()) nbPinned = false; followSpot(); }
 }
 function renderNotebook() {
-  nbDot.classList.toggle('has-notes', notes.some(n => !n.key.startsWith(BOX_PREFIX)));
+  nbDot.classList.toggle('has-notes', notes.some(n => !n.key.startsWith(BOX_PREFIX) && n.key !== 'stats|focus'));
   if (notebook.hidden) return;
   const box = document.getElementById('nb-list');
   if (box.querySelector('.editor')) return;
@@ -1696,6 +1786,7 @@ function renderNotebook() {
     ? (now.length ? paint(now) : '<p class="empty">Nothing yet today. Write above: the note is filed under the card you are reading.</p>')
       + (before.length ? `<details class="nb-fold" id="nb-earlier"${nbEarlierOpen ? ' open' : ''}><summary>Earlier</summary>${paint(before)}</details>` : '')
     : '<p class="empty">Nothing yet. Write above: the note is filed under the card you are reading.</p>';
+  applyHighlights();
 }
 function goTo(key) {
   const p = places().find(x => x.key === key);
@@ -1855,8 +1946,9 @@ const HL_HOST = '.card[data-key]:not(.overall), [data-hl]';
 const HL_SKIP = '.notes, .editor, .foot, .marks, .ref-go, .out-head, .more-rows, #sel-bar';
 const hlKeyOf = host => host.dataset.hl || host.dataset.key;
 function hlTextNodes(host) {
+  // A skipped part only counts when it sits inside the host: an answer is a host of its own, inside .notes.
   const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, {
-    acceptNode: n => (n.parentElement.closest(HL_SKIP) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    acceptNode: n => { const skip = n.parentElement.closest(HL_SKIP); return skip && host.contains(skip) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; },
   });
   const nodes = [];
   while (walker.nextNode()) nodes.push(walker.currentNode);
@@ -1894,12 +1986,13 @@ function hlWrap(host, start, end, attrs) {
   }
 }
 function hlApply(h) {
-  const host = [...document.querySelectorAll(HL_HOST)].find(x => hlKeyOf(x) === h.key);
-  if (!host || host.querySelector(`mark.hl[data-hid="${CSS.escape(h.id)}"]`)) return;
-  const text = hlTextNodes(host).map(n => n.nodeValue).join('');
-  let at = -1;
-  for (let i = 0; i <= h.occ; i++) { at = text.indexOf(h.text, at + 1); if (at < 0) return; }
-  hlWrap(host, at, at + h.text.length, { hid: h.id, c: h.color });
+  for (const host of document.querySelectorAll(HL_HOST)) {
+    if (hlKeyOf(host) !== h.key || host.querySelector(`mark.hl[data-hid="${CSS.escape(h.id)}"]`)) continue;
+    const text = hlTextNodes(host).map(n => n.nodeValue).join('');
+    let at = -1;
+    for (let i = 0; i <= h.occ && (at = text.indexOf(h.text, at + 1)) >= 0; i++);
+    if (at >= 0) hlWrap(host, at, at + h.text.length, { hid: h.id, c: h.color });
+  }
 }
 function applyHighlights() { highlights.forEach(hlApply); }
 function hlRemove(id) {
@@ -1969,6 +2062,7 @@ selBar.addEventListener('click', e => {
     highlights.push(h);
     saveHighlights();
     hlWrap(selInfo.host, selInfo.start, selInfo.end, { hid: h.id, c: h.color });
+    hlApply(h); // the other copy of an answer, on its card or in the notepad
     getSelection().removeAllRanges();
     hideSelBar();
     return;
