@@ -63,6 +63,19 @@
   .ref-row dd pre { font-size: 13px; padding: 6px 10px; }
   .ref-go { justify-self: start; padding: 0; border: 0; background: none; color: var(--soft); font: 600 12px system-ui, sans-serif; cursor: pointer; min-height: 24px; }
   .ref-go:hover { color: var(--accent); }
+  .chart-group { display: grid; gap: 14px; margin-top: 26px; }
+  .chart-group h2 { margin: 0; font-size: 19px; color: var(--ochre); }
+  .chart-row { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 22px; align-items: start; padding: 16px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+  .chart-fig { min-width: 0; }
+  .chart-fig .pic-flow { flex-direction: column; align-items: stretch; }
+  .chart-text { display: grid; gap: 8px; min-width: 0; }
+  .chart-text h3 { margin: 0; font-size: 17px; }
+  .chart-parts { display: grid; gap: 4px; margin: 0; }
+  .chart-parts > div { display: grid; grid-template-columns: minmax(64px, max-content) 1fr; gap: 10px; }
+  .chart-parts dt { font: 13px ui-monospace, Consolas, monospace; }
+  .chart-parts dd { margin: 0; }
+  .chart-read { margin: 0; color: var(--soft); }
+  @media (max-width: 760px) { .chart-row { grid-template-columns: minmax(0, 1fr); } }
   .sess { display: grid; gap: 6px; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); cursor: pointer; font: 14px/1.3 system-ui, sans-serif; }
   .sess b { font: 600 12px ui-monospace, Consolas, monospace; color: var(--accent); }
   .sess[aria-selected="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
@@ -352,12 +365,16 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .pmf { margin: 0; width: 310px; max-width: 100%; }
   .curve svg { display: block; width: 100%; height: auto; }
   .pmf.narrow { width: 170px; }
-  .pmf-plot { position: relative; height: 104px; margin-top: 18px; border-bottom: 1px solid var(--soft); }
+  .pmf-plot { position: relative; height: 104px; margin: 14px 0 0 34px; border-bottom: 1px solid var(--soft); border-left: 1px solid var(--soft); }
+  .pmf-yt { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed var(--line); }
+  .pmf-yt em { position: absolute; right: calc(100% + 5px); top: 0; transform: translateY(-50%); font: normal 11px ui-monospace, Consolas, monospace; color: var(--soft); }
+  .pmf-yname { font: 11px system-ui, sans-serif; color: var(--soft); }
+  .pmf-xname { margin: -8px 0 0 34px; text-align: center; font: 11px system-ui, sans-serif; color: var(--soft); }
   .pmf-bar { position: absolute; bottom: 0; width: 18px; transform: translateX(-50%); border-radius: 4px 4px 0 0; background: var(--accent); }
   .pmf-bar.thin { width: 9px; border-radius: 3px 3px 0 0; }
   .pmf-bar.dim { opacity: .3; }
   .pmf-bar b { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 1px; font: 500 11px ui-monospace, Consolas, monospace; color: var(--ink); white-space: nowrap; }
-  .pmf-x { position: relative; height: 32px; font: 11.5px ui-monospace, Consolas, monospace; color: var(--soft); }
+  .pmf-x { position: relative; margin-left: 34px; height: 32px; font: 11.5px ui-monospace, Consolas, monospace; color: var(--soft); }
   .pmf-x span { position: absolute; top: 3px; transform: translateX(-50%); }
   .pmf-x i { position: absolute; top: 15px; transform: translateX(-50%); font-style: normal; font-size: 11px; color: var(--ink); }
 
@@ -370,12 +387,29 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .map-pill[hidden], .map[hidden] { display: none; }
   .map-pill:hover { border-color: var(--accent); }
   .map-pill b { font: 700 11px/1 ui-monospace, Consolas, monospace; }
-  .map-pill .ln { position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px; }
-  .map-pill .ln::before { content: ''; position: absolute; top: 4px; bottom: 4px; left: 50%; width: 2px; margin-left: -1px; background: var(--line); }
-  .map-pill i { position: relative; display: grid; place-items: center; width: 9px; height: 9px; border-radius: 50%; background: var(--ochre); font: 700 11px/1 ui-monospace, Consolas, monospace; font-style: normal; color: var(--paper); }
-  .map-pill i.plain { background: color-mix(in srgb, var(--ochre) 50%, transparent); }
-  .map-pill i.here { width: 20px; height: 20px; background: var(--ochre); box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--ochre); }
-  .map-pill i.plain.here { background: var(--ochre); }
+  /* A life bar: one segment per part, filled up to the part you are reading. */
+  .map-pill .ln { display: flex; flex-direction: column; gap: 3px; }
+  .map-pill i { display: block; width: 8px; height: 18px; border-radius: 3px; background: color-mix(in srgb, var(--ochre) 22%, transparent); }
+  .map-pill i.past { background: color-mix(in srgb, var(--ochre) 70%, transparent); }
+  .map-pill i.here { background: var(--ochre); }
+  .map-pill .pn { font: 700 11px/1 ui-monospace, Consolas, monospace; color: var(--ochre); }
+  .map-pill .of { display: none; }
+  /* Four looks, changed with a double-click on the pill (stats-pill-look). Bar is the default. */
+  .map-pill[data-look="line"] .ln { gap: 0; }
+  .map-pill[data-look="line"] i { width: 3px; height: 20px; border-radius: 0; }
+  .map-pill[data-look="line"] i:first-child { border-radius: 2px 2px 0 0; }
+  .map-pill[data-look="line"] i:last-child { border-radius: 0 0 2px 2px; }
+  .map-pill[data-look="line"] i + i { box-shadow: 0 -1px 0 var(--card); }
+  .map-pill[data-look="steps"] .ln { gap: 4px; }
+  .map-pill[data-look="steps"] i { width: auto; height: auto; background: none; font: 600 11px/1.1 ui-monospace, Consolas, monospace; color: color-mix(in srgb, var(--ochre) 40%, transparent); }
+  .map-pill[data-look="steps"] i::before { content: attr(data-n); }
+  .map-pill[data-look="steps"] i.past { color: color-mix(in srgb, var(--ochre) 75%, transparent); }
+  .map-pill[data-look="steps"] i.here { color: var(--ink); font-weight: 800; }
+  .map-pill[data-look="steps"] .pn { display: none; }
+  .map-pill[data-look="gauge"] .ln { gap: 0; padding: 2px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--ochre) 45%, transparent); }
+  .map-pill[data-look="gauge"] i { width: 6px; height: 16px; border-radius: 0; background: none; }
+  .map-pill[data-look="gauge"] i.past, .map-pill[data-look="gauge"] i.here { background: var(--ochre); }
+  .map-pill[data-look="gauge"] .of { display: inline; font-weight: 500; opacity: .7; }
   .map { position: fixed; z-index: 60; left: 0; top: 0; bottom: 0; width: min(310px, 86vw); padding: 12px 12px 20px; overflow-y: auto; background: var(--paper); border-right: 1px solid var(--line); box-shadow: 4px 0 24px rgb(0 0 0 / .16); font: 13.5px/1.35 system-ui, sans-serif; }
   .map button { font: inherit; color: var(--ink); cursor: pointer; }
   .map-top { display: flex; align-items: center; justify-content: space-between; color: var(--soft); font-weight: 600; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
@@ -415,8 +449,9 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .pill-edge .map-pill { left: 0; width: 18px; padding: 8px 0 10px; gap: 6px; border-left: 0; border-radius: 0 12px 12px 0; }
   .pill-edge .map-pill::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 34px; }
   .pill-edge .map-pill b { font-size: 9px; letter-spacing: -.04em; }
-  .pill-edge .map-pill .ln { gap: 6px; }
-  .pill-edge .map-pill i { width: 7px; height: 7px; font-size: 10px; }
+  .pill-edge .map-pill .ln { gap: 2px; }
+  .pill-edge .map-pill i { width: 6px; height: 14px; }
+  .pill-edge .map-pill .pn { font-size: 9px; }
   .pill-edge .map-pill i.here { width: 14px; height: 14px; }
 
   @media (max-width: 560px) {
@@ -540,21 +575,34 @@ const warehouseTree = () => tree({ kids: [{ label: 'North', p: '0.7', kids: [{ l
 const bayesTable = (rows, sum) => tbl(['cause', 'prior', 'likelihood', 'product', 'posterior'], [...rows, ['sum', '1', '', sum, '1']]);
 const maxGrid = (hi = 3) => tbl(['1st ↓ 2nd →', '1', '2', '3', '4'], [1, 2, 3, 4].map(a => [String(a), ...[1, 2, 3, 4].map(b => `${Math.max(a, b) === hi ? '*' : ''}${Math.max(a, b)}`)]));
 // A PMF: one thin bar per value, placed on a true number line. Hover a bar for its value.
-function bars(rows, { cap = '', hi, thin, mean, max, narrow } = {}) {
+function bars(rows, { cap = '', hi, thin, mean, max, narrow, x: xName = '', y: yName = 'P(X = x)' } = {}) {
   const xs = rows.map(r => r[0]), lo = Math.min(...xs), up = Math.max(...xs), top = max || Math.max(...rows.map(r => r[1]));
   const at = x => (up === lo ? 50 : 6 + (88 * (x - lo)) / (up - lo));
   const every = rows.length > 14 ? 5 : rows.length > 9 ? 2 : 1;
   const plot = rows.map(([x, v, t]) => (v ? `<span class="pmf-bar${thin ? ' thin' : ''}${hi && !hi.includes(x) ? ' dim' : ''}" style="left:${at(x)}%;height:${(100 * v) / top}%" title="${esc(`${x}: ${t}`)}">${thin ? '' : `<b>${esc(t)}</b>`}</span>` : '')).join('');
   const labels = rows.filter(([x]) => (x - lo) % every === 0 || every === 1).map(([x]) => `<span style="left:${at(x)}%">${String(x).replace('-', '−')}</span>`).join('');
-  return `<figure class="pmf${narrow ? ' narrow' : ''}" role="img" aria-label="${esc(cap)}"><div class="pmf-plot">${plot}</div><div class="pmf-x">${labels}${mean === undefined ? '' : `<i style="left:${at(mean)}%" title="the mean">▲</i>`}</div>${cap ? `<figcaption>${text(cap)}</figcaption>` : ''}</figure>`;
+  const scale = niceTicks(top).map(t => `<span class="pmf-yt" style="bottom:${((100 * t) / top).toFixed(1)}%"><em>${tickText(t)}</em></span>`).join('');
+  return `<figure class="pmf${narrow ? ' narrow' : ''}" role="img" aria-label="${esc(cap)}"><div class="pmf-yname">${mathHtml(yName)}</div><div class="pmf-plot">${scale}${plot}</div><div class="pmf-x">${labels}${mean === undefined ? '' : `<i style="left:${at(mean)}%" title="the mean">▲</i>`}</div>${xName ? `<div class="pmf-xname">${esc(xName)}</div>` : ''}${cap ? `<figcaption>${text(cap)}</figcaption>` : ''}</figure>`;
 }
-// A density or a CDF as a line. shade: the area that is the probability. bins: bars instead of a line. guide: [x, y], read from the axes to the curve.
-function curve(fn, lo, hi, { cap = '', shade, label, ticks = [], bins, guide, top } = {}) {
-  const W = 310, H = 124, base = H - 20, at = x => 4 + ((W - 8) * (x - lo)) / (hi - lo);
+// A scale for a chart: 0 and two round steps up to the top, or 0, 0.5, 1 for a probability that reaches 1.
+function niceTicks(top) {
+  if (top >= 0.9) return [0, 0.5, 1];
+  const raw = top / 2, mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [10, 5, 2.5, 2, 1].map(m => m * mag).find(v => v <= raw * 1.03);
+  return [0, step, 2 * step];
+}
+const tickText = v => (v === 0 ? '0' : String(Number(v.toPrecision(2))));
+// A density or a CDF as a line, with its scale on the left and its unit under the bottom axis.
+// shade: the area that is the probability, darker. bins: bars instead of a line. guide: [x, y], read from the axes to the curve.
+// x: what the bottom axis measures. y: what the height is (a density, unless it is a CDF).
+function curve(fn, lo, hi, { cap = '', shade, label, ticks = [], bins, guide, top, x: xName = '', y: yName = 'density' } = {}) {
+  const W = 340, L = 50, Rt = 6, T = 18, base = 112, H = xName ? 150 : 132;
+  const at = x => L + ((W - L - Rt) * (x - lo)) / (hi - lo);
   const xs = Array.from({ length: 241 }, (_, i) => lo + ((hi - lo) * i) / 240);
-  const most = top || Math.max(...xs.map(fn)), y = v => base - ((base - 12) * v) / most;
+  const most = top || Math.max(...xs.map(fn)), y = v => base - ((base - T) * v) / most;
   const line = list => list.map(x => `${at(x).toFixed(1)},${y(fn(x)).toFixed(1)}`).join(' ');
-  let marks = '';
+  const ink = 'font-family="ui-monospace, Consolas, monospace" font-size="11"', soft = 'font-family="system-ui, sans-serif" font-size="11" fill="var(--soft)"';
+  let marks = niceTicks(Math.min(most, top && top > 1 ? 1 : most)).map(t => `<line x1="${L}" x2="${W - Rt}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="var(--line)" stroke-dasharray="${t ? '2 3' : '0'}"/><text x="${L - 5}" y="${(y(t) + 3.5).toFixed(1)}" text-anchor="end" fill="var(--soft)" ${ink}>${tickText(t)}</text>`).join('');
   if (bins) {
     for (let x = lo; x < hi - 1e-9; x += bins) {
       const h = Array.from({ length: 20 }, (_, i) => fn(x + (bins * (i + 0.5)) / 20)).reduce((a, b) => a + b, 0) / 20;
@@ -563,15 +611,15 @@ function curve(fn, lo, hi, { cap = '', shade, label, ticks = [], bins, guide, to
   } else {
     if (shade) {
       const part = Array.from({ length: 121 }, (_, i) => shade[0] + ((shade[1] - shade[0]) * i) / 120);
-      marks += `<polygon points="${at(shade[0]).toFixed(1)},${base} ${line(part)} ${at(shade[1]).toFixed(1)},${base}" fill="var(--accent)" fill-opacity=".32"/>`;
+      marks += `<polygon points="${at(shade[0]).toFixed(1)},${base} ${line(part)} ${at(shade[1]).toFixed(1)},${base}" fill="var(--accent)" fill-opacity=".55"/>`;
     }
     marks += `<polyline points="${line(xs)}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>`;
   }
-  if (guide) marks += `<polyline points="4,${y(guide[1]).toFixed(1)} ${at(guide[0]).toFixed(1)},${y(guide[1]).toFixed(1)} ${at(guide[0]).toFixed(1)},${base}" fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 3"/>`;
-  const ink = 'font-family="ui-monospace, Consolas, monospace" font-size="11"';
-  const tickMarks = ticks.map(t => { const [x, name] = Array.isArray(t) ? t : [t, t]; return `<text x="${at(x).toFixed(1)}" y="${H - 6}" text-anchor="middle" fill="var(--soft)" ${ink}>${esc(String(name))}</text>`; }).join('');
-  const area = label && shade ? `<text x="${at((shade[0] + shade[1]) / 2).toFixed(1)}" y="${base - 6}" text-anchor="middle" fill="var(--ink)" font-weight="600" ${ink}>${esc(label)}</text>` : '';
-  return `<figure class="pmf curve"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cap)}">${marks}<line x1="0" x2="${W}" y1="${base}" y2="${base}" stroke="var(--soft)"/>${area}${tickMarks}</svg>${cap ? `<figcaption>${text(cap)}</figcaption>` : ''}</figure>`;
+  if (guide) marks += `<polyline points="${L},${y(guide[1]).toFixed(1)} ${at(guide[0]).toFixed(1)},${y(guide[1]).toFixed(1)} ${at(guide[0]).toFixed(1)},${base}" fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 3"/>`;
+  const tickMarks = ticks.map(t => { const [x, name] = Array.isArray(t) ? t : [t, t]; return `<text x="${at(x).toFixed(1)}" y="${base + 15}" text-anchor="middle" fill="var(--soft)" ${ink}>${esc(String(name).replace('-', '−'))}</text>`; }).join('');
+  const area = label && shade ? `<text x="${at((shade[0] + shade[1]) / 2).toFixed(1)}" y="${base - 6}" text-anchor="middle" fill="var(--ink)" font-weight="700" ${ink}>${esc(label)}</text>` : '';
+  const names = `<text x="2" y="10" ${soft}>${esc(yName)}</text>${xName ? `<text x="${((L + W - Rt) / 2).toFixed(1)}" y="${base + 33}" text-anchor="middle" ${soft}>${esc(xName)}</text>` : ''}`;
+  return `<figure class="pmf curve"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cap)}">${marks}<line x1="${L}" x2="${L}" y1="${T - 6}" y2="${base}" stroke="var(--soft)"/><line x1="${L}" x2="${W}" y1="${base}" y2="${base}" stroke="var(--soft)"/>${area}${tickMarks}${names}</svg>${cap ? `<figcaption>${text(cap)}</figcaption>` : ''}</figure>`;
 }
 const gauss = (m, sd) => x => Math.exp(-((x - m) ** 2) / (2 * sd * sd)) / (sd * Math.sqrt(2 * Math.PI));
 const unif = (a, b) => x => (x >= a && x <= b ? 1 / (b - a) : 0);
@@ -721,24 +769,24 @@ const SESSIONS = [
       { id: 'statements', slide: 6, name: 'Statements about X are events', what: 'Once you have X, you can ask questions with it. "X is at most 2" is really an event: the group of all outcomes where the number comes out as 2 or less. So everything from Lectures 1 and 2 still applies.\n\nX is called discrete when its possible values can be listed one by one, like 1, 2, 3, 4 or 0, 1, 2, … and not a smooth range.', f: '{X ≤ 2} = {ω ∈ Ω ∣ X(ω) ≤ 2}     P(X ≤ 2) = 4/16', watch: 'Upper case X is the variable, decided by the experiment. Lower case x is a fixed number: "this time x = 3".' },
     ] },
     { name: 'Probability mass functions', flowLabel: 'To compute a PMF, for each value x', flow: ['Collect the outcomes with X = x', 'Add their probabilities'], cards: [
-      { id: 'pmf', slide: 8, name: 'The PMF', what: 'The PMF, or probability mass function, is a list: each value X can take, with its chance next to it. It is the full description of X.\n\nThink of it as a table, or as the bar chart below. To build it: for each value, find the outcomes that give that value, and add up their chances. All the chances together add up to 1, since X must land somewhere.', f: 'm_X(x) = P(X = x)', watch: 'The book, Bertsekas and Tsitsiklis, writes p_X. The lectures write m_X, m for mass.', more: { say: 'For the larger of two rolls, count the cells of each value in the grid: 1, 3, 5 and 7 of 16.', html: () => bars([[1, 1 / 16, '1/16'], [2, 3 / 16, '3/16'], [3, 5 / 16, '5/16'], [4, 7 / 16, '7/16']], { cap: 'PMF of X, the larger roll' }) } },
-      { id: 'bernoulli', slide: 11, name: 'Bernoulli: one trial, two results', what: 'This is the simplest random variable there is: a single yes-or-no. Will the next visitor buy? We write 1 for yes and 0 for no.\n\nOnly one number is needed to describe it: p, the chance of yes. Then the chance of no is whatever remains, 1 − p. Anything with two answers fits: buy or not, late or on time, heads or tails.', f: 'X ∼ Ber(p)     m_X(1) = p     m_X(0) = 1 − p', more: { say: 'Read ∼ as "follows". Many questions have two answers: buy or not, late or on time.', html: () => bars([[0, 0.8, '0.8'], [1, 0.2, '0.2']], { cap: 'Ber(0.2): 0 no purchase, 1 purchase', narrow: 1 }) } },
-      { id: 'binomial', slide: 16, name: 'Binomial: successes in n trials', what: 'Do the yes-or-no thing n times and count the yeses. If 10 visitors come, how many buy? That count follows a binomial distribution. You need two numbers: n, how many tries, and p, the chance of yes each time.\n\nThe formula has three parts, explained below. One: how many different orders can the yeses come in? Two: the chance of all those yeses. Three: the chance of all the noes. Multiply the three together.', f: 'X ∼ Bin(n, p)     k = 0, …, n\nm_X(k) = (n choose k) pᵏ (1 − p)ⁿ⁻ᵏ\n(n choose k) = n! / (k! (n − k)!)', more: { say: 'Four visitors, each buying with probability 0.2. One buyer: BNNN, NBNN, NNBN or NNNB, 4 sequences of 0.2 × 0.8³ = 0.1024 each, so 4 × 0.1024 = 0.4096.', html: () => bars(binom(4, 0.2).map((v, k) => [k, v, v.toFixed(3)]), { cap: 'Bin(4, 0.2): number of buyers', hi: [1] }) } },
-      { id: 'galton-answer', slide: 17, name: 'The Galton board is binomial', what: 'Back to the board of pins. At each of 20 rows, a ball goes right with chance 0.5. The bin it lands in is the number of times it went right. So the bin number is a yes-or-no count over 20 tries: a binomial with n = 20 and p = 0.5.\n\nThe middle bins fill up because there are very many routes that give about 10 rights, and only one route that gives 20 rights out of 20. Bins 6 to 14 hold 96 % of the balls.', more: { html: () => bars(binom(20, 0.5).map((v, k) => [k, v, v.toFixed(3)]), { cap: 'Bin(20, 0.5): bins 6 to 14 hold 96 %', hi: [6, 7, 8, 9, 10, 11, 12, 13, 14], thin: 1, mean: 10 }) } },
+      { id: 'pmf', slide: 8, name: 'The PMF', what: 'The PMF, or probability mass function, is a list: each value X can take, with its chance next to it. It is the full description of X.\n\nThink of it as a table, or as the bar chart below. To build it: for each value, find the outcomes that give that value, and add up their chances. All the chances together add up to 1, since X must land somewhere.', f: 'm_X(x) = P(X = x)', watch: 'The book, Bertsekas and Tsitsiklis, writes p_X. The lectures write m_X, m for mass.', more: { say: 'For the larger of two rolls, count the cells of each value in the grid: 1, 3, 5 and 7 of 16.', html: () => bars([[1, 1 / 16, '1/16'], [2, 3 / 16, '3/16'], [3, 5 / 16, '5/16'], [4, 7 / 16, '7/16']], { x: 'the larger of two rolls', cap: 'PMF of X, the larger roll' }) } },
+      { id: 'bernoulli', slide: 11, name: 'Bernoulli: one trial, two results', what: 'This is the simplest random variable there is: a single yes-or-no. Will the next visitor buy? We write 1 for yes and 0 for no.\n\nOnly one number is needed to describe it: p, the chance of yes. Then the chance of no is whatever remains, 1 − p. Anything with two answers fits: buy or not, late or on time, heads or tails.', f: 'X ∼ Ber(p)     m_X(1) = p     m_X(0) = 1 − p', more: { say: 'Read ∼ as "follows". Many questions have two answers: buy or not, late or on time.', html: () => bars([[0, 0.8, '0.8'], [1, 0.2, '0.2']], { x: 'purchases', cap: 'Ber(0.2): 0 no purchase, 1 purchase', narrow: 1 }) } },
+      { id: 'binomial', slide: 16, name: 'Binomial: successes in n trials', what: 'Do the yes-or-no thing n times and count the yeses. If 10 visitors come, how many buy? That count follows a binomial distribution. You need two numbers: n, how many tries, and p, the chance of yes each time.\n\nThe formula has three parts, explained below. One: how many different orders can the yeses come in? Two: the chance of all those yeses. Three: the chance of all the noes. Multiply the three together.', f: 'X ∼ Bin(n, p)     k = 0, …, n\nm_X(k) = (n choose k) pᵏ (1 − p)ⁿ⁻ᵏ\n(n choose k) = n! / (k! (n − k)!)', more: { say: 'Four visitors, each buying with probability 0.2. One buyer: BNNN, NBNN, NNBN or NNNB, 4 sequences of 0.2 × 0.8³ = 0.1024 each, so 4 × 0.1024 = 0.4096.', html: () => bars(binom(4, 0.2).map((v, k) => [k, v, v.toFixed(3)]), { x: 'buyers out of 4', cap: 'Bin(4, 0.2): number of buyers', hi: [1] }) } },
+      { id: 'galton-answer', slide: 17, name: 'The Galton board is binomial', what: 'Back to the board of pins. At each of 20 rows, a ball goes right with chance 0.5. The bin it lands in is the number of times it went right. So the bin number is a yes-or-no count over 20 tries: a binomial with n = 20 and p = 0.5.\n\nThe middle bins fill up because there are very many routes that give about 10 rights, and only one route that gives 20 rights out of 20. Bins 6 to 14 hold 96 % of the balls.', more: { html: () => bars(binom(20, 0.5).map((v, k) => [k, v, v.toFixed(3)]), { x: 'bin the ball lands in', cap: 'Bin(20, 0.5): bins 6 to 14 hold 96 %', hi: [6, 7, 8, 9, 10, 11, 12, 13, 14], thin: 1, mean: 10 }) } },
       { id: 'conditions', slide: 18, name: 'Check the four conditions', what: 'A binomial only describes the situation when all four of these conditions are true. If even one fails, you can still type the formula into a calculator, but the answer will not describe what is really happening. Go through the four, one at a time, every time you think you have a binomial.', list: ['The number of tries is fixed in advance. You know n before you start: "the next 10 visitors" is fine. This fails for "visitors until the first purchase", because nobody knows how many that will be.', 'Each try has exactly two results: yes or no. "Buys or does not buy" is fine. This fails for "buys 0, 1 or 2 items", which has three results. The fix is to count buyers instead of items.', 'The tries are independent: the result of one does not affect another. Different strangers are fine. This fails when one customer visits 5 times in a day, because someone who bought this morning is unlikely to buy again this afternoon.', 'The chance p is the same on every try. This fails when you mix groups: newsletter visitors buy more often than visitors from ads, so one single p does not describe them all.'] },
-      { id: 'poisson', slide: 19, name: 'Poisson: counts in a fixed window', what: 'The Poisson is for counting how many times something happens in a fixed stretch of time or space: tickets in an hour, calls in a minute, typos on a page. There is no fixed number of tries here: nobody knows how many customers could write.\n\nYou only need one number to describe it: the average count, written with the Greek letter λ (lambda). If the shop gets 4 tickets an hour on average, then λ = 4. The formula then gives the chance of seeing exactly k tickets in the next hour, where k can be 0, 1, 2 and so on. You do not need to do this by hand: a calculator or Excel works it out.', f: 'X ∼ Pois(λ)     k = 0, 1, 2, …\nm_X(k) = e^(−λ) λᵏ / k!\nP(X = 0) = e⁻⁴ = 0.018', more: { html: () => bars(pois(4, 12).map((v, k) => [k, v, v.toFixed(3)]), { cap: 'Pois(4): tickets in one hour', thin: 1, mean: 4 }) } },
+      { id: 'poisson', slide: 19, name: 'Poisson: counts in a fixed window', what: 'The Poisson is for counting how many times something happens in a fixed stretch of time or space: tickets in an hour, calls in a minute, typos on a page. There is no fixed number of tries here: nobody knows how many customers could write.\n\nYou only need one number to describe it: the average count, written with the Greek letter λ (lambda). If the shop gets 4 tickets an hour on average, then λ = 4. The formula then gives the chance of seeing exactly k tickets in the next hour, where k can be 0, 1, 2 and so on. You do not need to do this by hand: a calculator or Excel works it out.', f: 'X ∼ Pois(λ)     k = 0, 1, 2, …\nm_X(k) = e^(−λ) λᵏ / k!\nP(X = 0) = e⁻⁴ = 0.018', more: { html: () => bars(pois(4, 12).map((v, k) => [k, v, v.toFixed(3)]), { x: 'tickets in one hour', cap: 'Pois(4): tickets in one hour', thin: 1, mean: 4 }) } },
       { id: 'poisson-approx', slide: 20, name: 'A binomial with many rare trials', what: 'Think of 100 customers, each with a 1 % chance of writing. That is a binomial with many tries and a small chance each time, and it is painful to calculate. It turns out to be almost the same as a Poisson whose average is n × p, here 100 × 0.01 = 1.\n\nThis explains why the Poisson fits ticket counts: many people, each unlikely to write. You do not even need to know n and p separately, just the average.', watch: 'Use it when events are independent and their rate does not change. Tickets after a delivery failure break the second condition.', more: { say: 'Bin(100, 0.01) against Pois(1), where λ = np = 1.', html: () => tbl(['', 'binomial', 'Poisson'], [['P(X = 0)', '0.366', '0.368'], ['P(X = 1)', '0.370', '0.368'], ['P(X = 5)', '0.00290', '0.00307']]) } },
       { id: 'three-models', slide: 21, name: 'Three models side by side', what: 'Three named patterns, and the skill is recognising which one fits. Is it one yes-or-no? Bernoulli. Is it counting yeses in a known number of tries? Binomial. Is it counting events in a stretch of time, with no fixed number of tries? Poisson.', more: { html: () => tbl(['Model', 'Counts', 'Values'], [['Ber(p)', 'one trial, success or not', '0, 1'], ['Bin(n, p)', 'successes in n independent trials', '0, 1, …, n'], ['Pois(λ)', 'events in a fixed window', '0, 1, 2, …']]) } },
     ] },
     { name: 'Expectation', cards: [
-      { id: 'expectation', slide: 29, name: 'The expectation', what: 'The expectation, or mean, is the average you would get if the situation were repeated many times. It is written E[X].\n\nTo get it, take each possible value, multiply it by its chance, and add the results. This way likely values count a lot and unlikely values count little. On the bar chart, it is the point where the chart would balance on your finger. The list below explains each symbol.', f: 'E[X] = Σₓ x m_X(x)', more: { say: 'A lamp order earns €12 if kept, −€6 if returned, −€30 if broken in transit. A single order never earns €8.10; the mean need not be a possible value.', f: 'E[X] = 12 × 0.85 − 6 × 0.10 − 30 × 0.05 = 8.1 euros', html: () => bars([[-30, 0.05, '0.05'], [-6, 0.1, '0.10'], [0, 0, ''], [12, 0.85, '0.85']], { cap: 'Margin of a lamp order, euros. ▲ the mean, €8.10', mean: 8.1 }) } },
+      { id: 'expectation', slide: 29, name: 'The expectation', what: 'The expectation, or mean, is the average you would get if the situation were repeated many times. It is written E[X].\n\nTo get it, take each possible value, multiply it by its chance, and add the results. This way likely values count a lot and unlikely values count little. On the bar chart, it is the point where the chart would balance on your finger. The list below explains each symbol.', f: 'E[X] = Σₓ x m_X(x)', more: { say: 'A lamp order earns €12 if kept, −€6 if returned, −€30 if broken in transit. A single order never earns €8.10; the mean need not be a possible value.', f: 'E[X] = 12 × 0.85 − 6 × 0.10 − 30 × 0.05 = 8.1 euros', html: () => bars([[-30, 0.05, '0.05'], [-6, 0.1, '0.10'], [0, 0, ''], [12, 0.85, '0.85']], { x: 'margin, euros', cap: 'Margin of a lamp order, euros. ▲ the mean, €8.10', mean: 8.1 }) } },
       { id: 'long-run', slide: 30, name: 'The long-run average', what: 'This is why the formula deserves the name "average". Over many orders, each value shows up about as often as its chance says, so the average over all orders comes close to E[X].\n\nIn a simulation, the average margin was €6.00 after 10 orders and €7.88 after 2,000, closing in on €8.10. So expectation is what a business can plan on over many orders, and not what happens on any single one.' },
       { id: 'function', slide: 31, name: 'A function of X', what: 'Sometimes you care about something worked out from X, rather than X itself. X is the number of items in an order, but what you pay for is the number of boxes, and a box holds two items.\n\nA function is simply a rule that turns one number into another, here items into boxes. The number of boxes is itself random, so it is a new random variable, written Y = g(X).', more: { say: 'A box holds two items, so an order of x items ships in g(x) boxes. m_Y(1) = 0.4 + 0.3 = 0.7 and m_Y(2) = 0.3, so E[Y] = 1 × 0.7 + 2 × 0.3 = 1.3 boxes.', html: () => tbl(['items x', 'm_X(x)', 'boxes g(x)'], [['1', '0.4', '1'], ['2', '0.3', '1'], ['3', '0.2', '2'], ['4', '0.1', '2']]) } },
       { id: 'rule', slide: 32, name: 'The expected value rule', what: 'To find the average of something worked out from X, there is a direct way: apply the rule to each value of X first, multiply by that value’s chance, and add.\n\nThe trap is doing it in the other order. Taking the average first and then applying the rule usually gives the wrong answer: 2 items on average does not mean 1 box on average.', f: 'E[g(X)] = Σₓ g(x) m_X(x)', watch: 'In general E[g(X)] ≠ g(E[X]). With E[X] = 2 items, g(2) = 1 box is wrong: the true mean is 1.3.', more: { html: () => tbl(['x', 'm_X(x)', 'g(x)', 'g(x) m_X(x)'], [['1', '0.4', '1', '0.4'], ['2', '0.3', '1', '0.3'], ['3', '0.2', '2', '0.4'], ['4', '0.1', '2', '0.2'], ['sum', '', '', '*1.3']]) } },
       { id: 'linear-mean', slide: 33, name: 'The mean of a linear function', what: 'Some rules are very simple: multiply by a fixed number and add a fixed number, like a cost of €1 per order plus €2 per box. For these rules, there is a shortcut: just apply the same rule to the average.\n\nIf the average number of boxes is 1.3, the average cost is 1 + 2 × 1.3 = €3.60. This shortcut only works for this simple shape of rule.', f: 'E[aX + b] = a E[X] + b', more: { say: 'Packing costs €1 per order plus €2 per box.', f: 'E[1 + 2Y] = 1 + 2 × 1.3 = 3.6 euros' } },
     ] },
     { name: 'Variance', cards: [
-      { id: 'spread', slide: 40, name: 'Same mean, different spread', what: 'Two warehouses can have the same average and behave very differently. Both dispatch after 2 days on average. North is reliable: almost always 1 to 3 days. South is all over the place: often 0 days, often 4.\n\nIf you promise customers 3 days, you always keep that promise with North but fail 20 % of the time with South. The average hides this. We need a second number for how spread out the values are.', more: { html: () => row(bars([[0, 0, ''], [1, 0.25, '0.25'], [2, 0.5, '0.50'], [3, 0.25, '0.25'], [4, 0, '']], { cap: 'North, SD 0.71 days', mean: 2, max: 0.5 }), bars([[0, 0.2, '0.20'], [1, 0.15, '0.15'], [2, 0.3, '0.30'], [3, 0.15, '0.15'], [4, 0.2, '0.20']], { cap: 'South, SD 1.38 days', mean: 2, max: 0.5 })) } },
+      { id: 'spread', slide: 40, name: 'Same mean, different spread', what: 'Two warehouses can have the same average and behave very differently. Both dispatch after 2 days on average. North is reliable: almost always 1 to 3 days. South is all over the place: often 0 days, often 4.\n\nIf you promise customers 3 days, you always keep that promise with North but fail 20 % of the time with South. The average hides this. We need a second number for how spread out the values are.', more: { html: () => row(bars([[0, 0, ''], [1, 0.25, '0.25'], [2, 0.5, '0.50'], [3, 0.25, '0.25'], [4, 0, '']], { x: 'days to dispatch', cap: 'North, SD 0.71 days', mean: 2, max: 0.5 }), bars([[0, 0.2, '0.20'], [1, 0.15, '0.15'], [2, 0.3, '0.30'], [3, 0.15, '0.15'], [4, 0.2, '0.20']], { x: 'days to dispatch', cap: 'South, SD 1.38 days', mean: 2, max: 0.5 })) } },
       { id: 'variance', slide: 41, name: 'Variance and standard deviation', what: 'Variance measures how far values typically fall from the average. Step by step: find how far each value is from the mean, which is called its deviation; square that deviation, multiply by the value’s chance, and add.\n\nWhy square? Without it, deviations below and above the mean would cancel out to zero. But squaring also changes the units, to "days squared", which means nothing to anyone. So we take the square root at the end and get the standard deviation (SD), in plain days. A bigger SD means more spread.', f: 'Var(X) = E[(X − μ)²]     μ = E[X]\nσ_X = √Var(X)', more: { say: 'North warehouse, μ = 2 days. The variance is 0.50, so the SD is 0.71 days.', html: () => tbl(['x', 'm_X(x)', 'x − μ', '(x − μ)²', '× m_X(x)'], [['1', '0.25', '−1', '1', '0.25'], ['2', '0.50', '0', '0', '0'], ['3', '0.25', '1', '1', '0.25'], ['sum', '', '', '', '*0.50']]) } },
       { id: 'shortcut', slide: 42, name: 'The variance shortcut', what: 'This is the same variance, computed a quicker way, usually easier by hand. It needs two averages: the average of the squared values, and the square of the average value. Then subtract.\n\nCareful, those two are not the same: one squares first, the other squares last. The gap between them is exactly the variance.', f: 'Var(X) = E[X²] − (E[X])²', more: { say: 'Check with North: E[X²] = 1 × 0.25 + 4 × 0.5 + 9 × 0.25 = 4.5, and 4.5 − 2² = 0.5, the same as the table.', f: 'E[X² − 2μX + μ²] = E[X²] − 2μ E[X] + μ² = E[X²] − μ²' } },
       { id: 'linear-var', slide: 43, name: 'The variance of a linear function', what: 'What happens to the spread when you change every value? Adding a fixed amount moves everything together, so the spread does not change. If delivery takes one day more than dispatch, its spread is the same.\n\nMultiplying does change it: multiply by 2, and every distance doubles. Because variance uses squares, the variance becomes 4 times bigger, while the standard deviation just doubles.', f: 'Var(aX + b) = a² Var(X)\nσ_(aX+b) = |a| σ_X', more: { say: 'Delivery takes one day more than dispatch: X + 1 has mean 3 days and the same SD, 0.71 days.' } },
@@ -752,7 +800,7 @@ const SESSIONS = [
     ] },
     { id: 'l3-e2', title: 'Ten visitors', setup: 'Ten visitors open a product page. Each buys with probability 0.2, independently. X is the number of buyers.', parts: [
       ['Name the distribution and its parameters.', () => `<pre>X ∼ Bin(10, 0.2)</pre><p>10 independent trials, two results each, the same p.</p>`],
-      ['Compute P(X = 2) and P(X = 0).', () => `<pre>P(X = 2) = 45 × 0.04 × 0.168 = 0.302\nP(X = 0) = 0.8¹⁰ = 0.107</pre>` + bars(binom(10, 0.2).slice(0, 9).map((v, k) => [k, v, v.toFixed(3)]), { cap: 'PMF of Bin(10, 0.2), up to 8', hi: [0, 2] })],
+      ['Compute P(X = 2) and P(X = 0).', () => `<pre>P(X = 2) = 45 × 0.04 × 0.168 = 0.302\nP(X = 0) = 0.8¹⁰ = 0.107</pre>` + bars(binom(10, 0.2).slice(0, 9).map((v, k) => [k, v, v.toFixed(3)]), { x: 'buyers out of 10', cap: 'PMF of Bin(10, 0.2), up to 8', hi: [0, 2] })],
       ['Compute P(X ≥ 1) with the complement rule.', () => `<pre>P(X ≥ 1) = 1 − P(X = 0) = 0.893</pre><p>Adding the ten values from 1 to 10 gives the same result with more work.</p>`],
       ['One customer opens the page 10 times in a day. Is the number of purchases Bin(10, 0.2)?', () => `<p><b>No.</b> The number of trials is fixed and each has two results, but one customer’s visits are not independent: someone who bought in the morning rarely buys again that afternoon.</p>`],
     ] },
@@ -772,31 +820,31 @@ const SESSIONS = [
   { n: 4, short: 'Continuous variables', title: 'Continuous random variables and data', lede: 'Values that can be anything on a scale, where probability becomes an area. Then the bell curve, and how to summarise real data.', groups: [
     { name: 'Probability densities', cards: [
       { id: 'delivery', slide: 4, name: 'The question: how long will the parcel take?', what: 'Nookery logs how many hours each parcel takes: 60.25, 32.67, 50.51, and so on. A time can be any number on a scale, so almost no value ever repeats.\n\nThe PMF of Lecture 3 gives one probability to each value. Here that would give almost every value a probability close to 0, which tells us nothing. The useful question is about a range: how likely is a delivery between 42 and 54 hours? This whole lecture follows from asking about ranges.' },
-      { id: 'bins', slide: 5, name: 'Narrower bars become a curve', what: 'Sort the parcels into bins, such as 36 to 44 hours, and draw a bar for each bin. Make each bar’s height the share of parcels in that bin, divided by the width of the bin. Then the area of the bar, width times height, is exactly that share.\n\nEvery parcel falls in one bin, so all the areas add up to 1, however wide the bins are. Now make the bins narrower and narrower. The bars settle into a smooth curve. That curve is called the density of the delivery time.', more: { html: () => row(curve(gauss(48, 6), 28, 68, { bins: 8, ticks: [36, 44, 52, 60], cap: 'Bins of 8 hours' }), curve(gauss(48, 6), 28, 68, { bins: 4, ticks: [36, 48, 60], cap: 'Bins of 4 hours' }), curve(gauss(48, 6), 28, 68, { bins: 1, ticks: [36, 48, 60], cap: 'Bins of 1 hour' })) } },
-      { id: 'pdf', slide: 6, name: 'A density gives probabilities as areas', what: 'A continuous random variable has a probability density function, or PDF, written f_X. It is the curve from the card above. The curve is never below zero, and X must land somewhere, so the total area under it is 1.\n\nThe rule to remember: a probability is an area. The chance that X falls between a and b is the area under the curve between a and b. The symbol ∫ just means that area. Think of it as cutting the area into very thin strips, each one height times width, and adding them all up. It is a Σ for a curve.', f: 'Total area:   ∫ f_X(x) dx = 1\nProbability:  P(a ≤ X ≤ b) = ∫ₐᵇ f_X(x) dx', watch: 'The height f_X(x) is not a probability. Only an area is. A height can even be above 1: on a range only half a unit wide, the height of a flat density is 2.', more: { say: 'Parcels between 42 and 54 hours: the exact area is 0.683, close to the 68 % in the log.', html: () => curve(gauss(48, 6), 28, 68, { shade: [42, 54], label: '0.683', ticks: [30, 42, 54, 66], cap: 'Density of the delivery time, in hours. The shaded area is the probability.' }) } },
-      { id: 'named', slide: 7, name: 'Named densities', what: 'Just as Lecture 3 had named PMFs, some densities come up so often that they have names and a few numbers that describe them. Three questions from a parcel service show the three of them.\n\nWhen will the courier come, between 9:00 and 12:00? Uniform. How long until the next support call? Exponential. How many hours will a parcel travel? Gaussian. The next cards take them one at a time.', more: { html: () => row(curve(unif(0, 180), -30, 210, { top: 1 / 110, ticks: [[0, '9:00'], [180, '12:00']], cap: 'Uniform: flat' }), curve(expo(0.2), 0, 25, { ticks: [0, 10, 20], cap: 'Exponential: falls away' }), curve(gauss(48, 6), 28, 68, { ticks: [36, 48, 60], cap: 'Gaussian: a bell' })) } },
-      { id: 'uniform', slide: 8, name: 'Uniform: equal lengths, equal chances', what: 'The courier arrives some time between 9:00 and 12:00, and no part of that window is more likely than another. So the density is flat: the same height everywhere between a and b, and zero outside.\n\nThe total area must be 1, and a flat shape is a rectangle, so its height has to be 1 divided by its width. A probability is then just the width of your interval times that height. The wheel of fortune from Lecture 1 was the same thing, between 0 and 1.', f: 'X ∼ Unif(a, b)\nf_X(x) = 1 / (b − a)     for a ≤ x ≤ b\nE[X] = (a + b) / 2     Var(X) = (b − a)² / 12', more: { html: () => curve(unif(0, 180), -30, 210, { top: 1 / 110, shade: [60, 80], label: '0.111', ticks: [[0, '9:00'], [60, '10:00'], [120, '11:00'], [180, '12:00']], cap: 'Courier arrival. Between 10:00 and 10:20: 20/180 = 0.111' }) } },
+      { id: 'bins', slide: 5, name: 'Narrower bars become a curve', what: 'Sort the parcels into bins, such as 36 to 44 hours, and draw a bar for each bin. Make each bar’s height the share of parcels in that bin, divided by the width of the bin. Then the area of the bar, width times height, is exactly that share.\n\nEvery parcel falls in one bin, so all the areas add up to 1, however wide the bins are. Now make the bins narrower and narrower. The bars settle into a smooth curve. That curve is called the density of the delivery time.', more: { html: () => row(curve(gauss(48, 6), 28, 68, { bins: 8, ticks: [36, 44, 52, 60], x: 'hours in transit', cap: 'Bins of 8 hours' }), curve(gauss(48, 6), 28, 68, { bins: 4, ticks: [36, 48, 60], x: 'hours in transit', cap: 'Bins of 4 hours' }), curve(gauss(48, 6), 28, 68, { bins: 1, ticks: [36, 48, 60], x: 'hours in transit', cap: 'Bins of 1 hour' })) } },
+      { id: 'pdf', slide: 6, name: 'A density gives probabilities as areas', what: 'A continuous random variable has a probability density function, or PDF, written f_X. It is the curve from the card above. The curve is never below zero, and X must land somewhere, so the total area under it is 1.\n\nThe rule to remember: a probability is an area. The chance that X falls between a and b is the area under the curve between a and b. The symbol ∫ just means that area. Think of it as cutting the area into very thin strips, each one height times width, and adding them all up. It is a Σ for a curve.', f: 'Total area:   ∫ f_X(x) dx = 1\nProbability:  P(a ≤ X ≤ b) = ∫ₐᵇ f_X(x) dx', watch: 'The height f_X(x) is not a probability. Only an area is. A height can even be above 1: on a range only half a unit wide, the height of a flat density is 2.', more: { say: 'Parcels between 42 and 54 hours: the exact area is 0.683, close to the 68 % in the log.', html: () => curve(gauss(48, 6), 28, 68, { shade: [42, 54], label: '0.683', ticks: [30, 42, 54, 66], x: 'hours in transit', cap: 'Density of the delivery time, in hours. The shaded area is the probability.' }) } },
+      { id: 'named', slide: 7, name: 'Named densities', what: 'Just as Lecture 3 had named PMFs, some densities come up so often that they have names and a few numbers that describe them. Three questions from a parcel service show the three of them.\n\nWhen will the courier come, between 9:00 and 12:00? Uniform. How long until the next support call? Exponential. How many hours will a parcel travel? Gaussian. The next cards take them one at a time.', more: { html: () => row(curve(unif(0, 180), -30, 210, { top: 1 / 110, ticks: [[0, '9:00'], [180, '12:00']], x: 'arrival time', cap: 'Uniform: flat' }), curve(expo(0.2), 0, 25, { ticks: [0, 10, 20], x: 'minutes until the next call', cap: 'Exponential: falls away' }), curve(gauss(48, 6), 28, 68, { ticks: [36, 48, 60], x: 'hours in transit', cap: 'Gaussian: a bell' })) } },
+      { id: 'uniform', slide: 8, name: 'Uniform: equal lengths, equal chances', what: 'The courier arrives some time between 9:00 and 12:00, and no part of that window is more likely than another. So the density is flat: the same height everywhere between a and b, and zero outside.\n\nThe total area must be 1, and a flat shape is a rectangle, so its height has to be 1 divided by its width. A probability is then just the width of your interval times that height. The wheel of fortune from Lecture 1 was the same thing, between 0 and 1.', f: 'X ∼ Unif(a, b)\nf_X(x) = 1 / (b − a)     for a ≤ x ≤ b\nE[X] = (a + b) / 2     Var(X) = (b − a)² / 12', more: { html: () => curve(unif(0, 180), -30, 210, { top: 1 / 110, shade: [60, 80], label: '0.111', ticks: [[0, '9:00'], [60, '10:00'], [120, '11:00'], [180, '12:00']], x: 'arrival time', cap: 'Courier arrival. Between 10:00 and 10:20: 20/180 = 0.111' }) } },
       { id: 'zero', slide: 9, name: 'One exact value has probability zero', what: 'What is the chance the courier arrives at exactly 10:30:00.000, not a thousandth of a second off? A single point is a line with no width, and a shape with no width has no area. So the probability is 0, for every single value.\n\nThis has a handy result: endpoints do not matter. "Up to b" and "strictly below b" have the same probability.\n\nIt does not mean the event is impossible in real life, because recorded times are rounded. "Arrives at 10:30", to the minute, really means an interval one minute long, with probability 1/180.', f: 'P(X = x) = 0\nP(X < b) = P(X ≤ b)', watch: 'This is only for continuous variables. For a discrete X, like the number of buyers, P(X ≤ 2) and P(X < 2) are different.' },
       { id: 'integrals', slide: 10, name: 'Mean and variance: integrals replace sums', what: 'Nothing new here, only one swap. In Lecture 3 the mean was: each value, times its chance, all added up. For a continuous variable, Σ becomes ∫ and the PMF m_X becomes the density f_X. The meaning stays the same: the mean is still the balance point, and the variance is still the average squared deviation.\n\nThe rules of Lecture 3 all still hold, such as the shortcut for the variance and the rules for aX + b.', f: 'E[X] = ∫ x f_X(x) dx\nVar(X) = ∫ (x − μ)² f_X(x) dx', more: { html: () => tbl(['', 'Discrete X', 'Continuous X'], [['Total', 'Σₓ m_X(x) = 1', '∫ f_X(x) dx = 1'], ['Mean', 'Σₓ x m_X(x)', '∫ x f_X(x) dx'], ['Variance', 'Σₓ (x − μ)² m_X(x)', '∫ (x − μ)² f_X(x) dx']]) } },
-      { id: 'exponential', slide: 15, name: 'Exponential: the time until the next event', what: 'How long until the next support call? Short waits are common, and long waits get rare quickly, so the curve starts high and falls away. This is the exponential.\n\nIt needs one number, λ, the rate: how many events per minute on average. It is the same λ as in the Poisson, which counts events in a window, while the exponential measures the wait for the next one. If calls come every 5 minutes on average, then λ = 1/5 = 0.2. The mean wait is 1/λ, and you do not need an integral for the chance of a long wait, because the formula is ready-made.', f: 'X ∼ Exp(λ)\nf_X(x) = λ e^(−λx)     for x ≥ 0\nP(X > a) = e^(−λa)\nE[X] = 1/λ     Var(X) = 1/λ²', more: { html: () => curve(expo(0.2), 0, 25, { shade: [10, 25], label: '0.135', ticks: [0, 5, 10, 15, 20, 25], cap: 'Minutes until the next call, λ = 0.2. Longer than 10 minutes: 0.135' }) } },
+      { id: 'exponential', slide: 15, name: 'Exponential: the time until the next event', what: 'How long until the next support call? Short waits are common, and long waits get rare quickly, so the curve starts high and falls away. This is the exponential.\n\nIt needs one number, λ, the rate: how many events per minute on average. It is the same λ as in the Poisson, which counts events in a window, while the exponential measures the wait for the next one. If calls come every 5 minutes on average, then λ = 1/5 = 0.2. The mean wait is 1/λ, and you do not need an integral for the chance of a long wait, because the formula is ready-made.', f: 'X ∼ Exp(λ)\nf_X(x) = λ e^(−λx)     for x ≥ 0\nP(X > a) = e^(−λa)\nE[X] = 1/λ     Var(X) = 1/λ²', more: { html: () => curve(expo(0.2), 0, 25, { shade: [10, 25], label: '0.135', ticks: [0, 5, 10, 15, 20, 25], x: 'minutes until the next call', cap: 'Minutes until the next call, λ = 0.2. Longer than 10 minutes: 0.135' }) } },
     ] },
     { name: 'Cumulative distribution functions', cards: [
-      { id: 'cdf', slide: 21, name: 'The CDF adds up probability to x', what: 'PMFs are for discrete variables and densities for continuous ones. The cumulative distribution function, or CDF, works for both. It answers one question: what is the chance that X is at most x?\n\nFor a discrete variable it adds up the bars from the left, so it climbs in steps from 0 to 1. Once you have it, any range is one subtraction: everything up to b, minus everything up to a, leaves what lies between.', f: 'F_X(x) = P(X ≤ x)\nP(a < X ≤ b) = F_X(b) − F_X(a)', more: { html: () => bars(binom(10, 0.2).slice(0, 9).map((_, k) => [k, binom(10, 0.2).slice(0, k + 1).reduce((a, b) => a + b, 0), binom(10, 0.2).slice(0, k + 1).reduce((a, b) => a + b, 0).toFixed(3)]), { cap: 'CDF of Bin(10, 0.2): each bar is the chance of at most that many buyers', max: 1 }) } },
-      { id: 'cdf-cont', slide: 22, name: 'The CDF of a continuous variable', what: 'For a continuous variable the CDF has no steps. F_X(x) is the area under the density to the left of x, so it rises smoothly from 0 to 1. For the uniform courier it is a straight line, from 0 at 9:00 to 1 at 12:00. For the exponential it is one minus the chance of waiting longer.\n\nGoing back the other way, the density is the slope of the CDF: where the CDF climbs fast, the density is high. For the Gaussian there is no simple formula, which is why it gets its own table later.', f: 'F_X(x) = ∫ f_X(t) dt, the area to the left of x\nUniform:      F_X(x) = (x − a) / (b − a)\nExponential:  F_X(x) = 1 − e^(−λx)', more: { html: () => curve(x => Math.min(1, Math.max(0, x / 180)), -20, 200, { top: 1.1, guide: [162, 0.9], ticks: [[0, '9:00'], [90, '10:30'], [162, '11:42']], cap: 'CDF of the courier’s arrival. It reaches 0.9 at 11:42' }) } },
-      { id: 'lamps', slide: 24, name: 'The question: how many lamps to stock?', what: 'A Nookery store sells X ∼ Pois(6) lamps in a day, and each morning the manager decides how many to put on the shelf. Too few loses sales. Too many ties up cash.\n\nWith 8 lamps on the shelf, demand is met with probability F_X(8) = 0.847. The manager wants at least 0.95. Notice the question has flipped: the CDF takes a value and gives a probability, but here we know the probability we want and look for the value.', more: { html: () => bars(pois(6, 14).map((v, k) => [k, v, v.toFixed(3)]), { cap: 'Pois(6). In colour: the days a stock of 8 is enough', hi: [0, 1, 2, 3, 4, 5, 6, 7, 8], thin: 1 }) } },
+      { id: 'cdf', slide: 21, name: 'The CDF adds up probability to x', what: 'PMFs are for discrete variables and densities for continuous ones. The cumulative distribution function, or CDF, works for both. It answers one question: what is the chance that X is at most x?\n\nFor a discrete variable it adds up the bars from the left, so it climbs in steps from 0 to 1. Once you have it, any range is one subtraction: everything up to b, minus everything up to a, leaves what lies between.', f: 'F_X(x) = P(X ≤ x)\nP(a < X ≤ b) = F_X(b) − F_X(a)', more: { html: () => bars(binom(10, 0.2).slice(0, 9).map((_, k) => [k, binom(10, 0.2).slice(0, k + 1).reduce((a, b) => a + b, 0), binom(10, 0.2).slice(0, k + 1).reduce((a, b) => a + b, 0).toFixed(3)]), { x: 'buyers out of 10', y: 'P(X ≤ x)', cap: 'CDF of Bin(10, 0.2): each bar is the chance of at most that many buyers', max: 1 }) } },
+      { id: 'cdf-cont', slide: 22, name: 'The CDF of a continuous variable', what: 'For a continuous variable the CDF has no steps. F_X(x) is the area under the density to the left of x, so it rises smoothly from 0 to 1. For the uniform courier it is a straight line, from 0 at 9:00 to 1 at 12:00. For the exponential it is one minus the chance of waiting longer.\n\nGoing back the other way, the density is the slope of the CDF: where the CDF climbs fast, the density is high. For the Gaussian there is no simple formula, which is why it gets its own table later.', f: 'F_X(x) = ∫ f_X(t) dt, the area to the left of x\nUniform:      F_X(x) = (x − a) / (b − a)\nExponential:  F_X(x) = 1 − e^(−λx)', more: { html: () => curve(x => Math.min(1, Math.max(0, x / 180)), -20, 200, { top: 1.1, guide: [162, 0.9], ticks: [[0, '9:00'], [90, '10:30'], [162, '11:42']], x: 'arrival time', y: 'P(X ≤ x)', cap: 'CDF of the courier’s arrival. It reaches 0.9 at 11:42' }) } },
+      { id: 'lamps', slide: 24, name: 'The question: how many lamps to stock?', what: 'A Nookery store sells X ∼ Pois(6) lamps in a day, and each morning the manager decides how many to put on the shelf. Too few loses sales. Too many ties up cash.\n\nWith 8 lamps on the shelf, demand is met with probability F_X(8) = 0.847. The manager wants at least 0.95. Notice the question has flipped: the CDF takes a value and gives a probability, but here we know the probability we want and look for the value.', more: { html: () => bars(pois(6, 14).map((v, k) => [k, v, v.toFixed(3)]), { x: 'lamps sold in a day', cap: 'Pois(6). In colour: the days a stock of 8 is enough', hi: [0, 1, 2, 3, 4, 5, 6, 7, 8], thin: 1 }) } },
       { id: 'quantile', slide: 25, name: 'A quantile reads the CDF backwards', what: 'The q-quantile is the smallest value x where the CDF reaches q. To read it on a chart: start from q on the vertical axis, go right until you hit the CDF, then go down and read x.\n\nThe 0.5-quantile has its own name, the median: half the values are at or below it. It works the same for a continuous variable. The courier’s CDF reaches 0.9 at 11:42, so 11:42 is its 0.9-quantile.', f: 'q-quantile: the smallest x with F_X(x) ≥ q', more: { html: () => tbl(['Stock k', 'F_X(k)', 'Reaches 0.95?'], [['8', '0.847', 'no'], ['9', '0.916', 'no'], ['10', '*0.957', '*yes'], ['11', '0.980', 'yes']]) } },
     ] },
     { name: 'The Gaussian distribution', flowLabel: 'To get a Gaussian probability', flow: ['Subtract μ and divide by σ: that is z', 'Read Φ(z) in the table', 'For the area to the right, take 1 − Φ(z)'], cards: [
       { id: 'bell', slide: 27, name: 'Why the bell curve appears', what: 'Astronomers measuring the same star many times got slightly different numbers. In 1809 Gauss described those errors with the bell-shaped curve that now carries his name.\n\nThe same bell comes up whenever a value is the sum of many small independent effects: errors in repeated measurements, the weight of a package filled by a machine, the bin of a Galton board. Each small effect pushes a little up or down, most of them cancel, and big totals are rare. That is why the Galton board of Lecture 3 looked like a bell.' },
-      { id: 'gaussian', slide: 28, name: 'The Gaussian density', what: 'A Gaussian variable is described by two numbers: its mean μ, the centre of the bell, and its standard deviation σ, the width of the bell. A larger σ gives a lower, wider bell, since the total area must stay 1. It is also called the normal distribution, which is where the N comes from.\n\nThe formula looks frightening, and you will almost never use it by hand. Its heart is the deviation x − μ: the further x is from the middle, the smaller the curve.', f: 'X ∼ N(μ, σ)\nf_X(x) = 1 / (σ √(2π)) × e^(−(x − μ)² / (2σ²))\nE[X] = μ     Var(X) = σ²', more: { html: () => row(curve(gauss(48, 6), 20, 100, { top: 0.07, ticks: [20, 48, 100], cap: 'N(48, 6)' }), curve(gauss(56, 6), 20, 100, { top: 0.07, ticks: [20, 56, 100], cap: 'N(56, 6): the bell moves' }), curve(gauss(48, 10), 20, 100, { top: 0.07, ticks: [20, 48, 100], cap: 'N(48, 10): lower and wider' })) } },
-      { id: 'one-table', slide: 30, name: 'One table is enough', what: 'The area under a Gaussian has no simple formula, so its probabilities come from a printed table. But nobody can print one table for every μ and every σ.\n\nHere is the trick. Every Gaussian is the same bell, moved by μ and stretched by σ. So if you measure distance in standard deviations, they are all identical: the area up to 2 SDs above the mean is always 0.9772. One single table, for the Gaussian with mean 0 and SD 1, answers every question.', more: { html: () => row(curve(gauss(48, 6), 30, 66, { shade: [30, 60], label: '0.9772', ticks: [48, 60], cap: 'Parcels, N(48, 6), hours' }), curve(gauss(12, 3), 3, 21, { shade: [3, 18], label: '0.9772', ticks: [12, 18], cap: 'Packing, N(12, 3), minutes' }), curve(gauss(0, 1), -3, 3, { shade: [-3, 2], label: '0.9772', ticks: [0, 2], cap: 'Standard, N(0, 1)' })) } },
-      { id: 'standardize', slide: 31, name: 'Standardize, then read the table', what: 'To standardize a value: subtract the mean, then divide by the SD. The result, called z, says how many SDs above the mean you are. A negative z means below the mean.\n\nThe variable Z made this way is Gaussian with mean 0 and SD 1, called the standard Gaussian or standard normal. Its CDF has its own letter, Φ. The table gives Φ(z), the area to the left of z.', f: 'Z = (X − μ) / σ     is N(0, 1)\nΦ(z) = P(Z ≤ z)', more: { html: () => curve(gauss(0, 1), -3.5, 3.5, { shade: [2, 3.5], ticks: [-2, 0, 2], cap: 'A parcel slower than 60 hours is the same area as z above 2: 0.023' }) } },
+      { id: 'gaussian', slide: 28, name: 'The Gaussian density', what: 'A Gaussian variable is described by two numbers: its mean μ, the centre of the bell, and its standard deviation σ, the width of the bell. A larger σ gives a lower, wider bell, since the total area must stay 1. It is also called the normal distribution, which is where the N comes from.\n\nThe formula looks frightening, and you will almost never use it by hand. Its heart is the deviation x − μ: the further x is from the middle, the smaller the curve.', f: 'X ∼ N(μ, σ)\nf_X(x) = 1 / (σ √(2π)) × e^(−(x − μ)² / (2σ²))\nE[X] = μ     Var(X) = σ²', more: { html: () => row(curve(gauss(48, 6), 20, 100, { top: 0.07, ticks: [20, 48, 100], x: 'hours', cap: 'N(48, 6)' }), curve(gauss(56, 6), 20, 100, { top: 0.07, ticks: [20, 56, 100], x: 'hours', cap: 'N(56, 6): the bell moves' }), curve(gauss(48, 10), 20, 100, { top: 0.07, ticks: [20, 48, 100], x: 'hours', cap: 'N(48, 10): lower and wider' })) } },
+      { id: 'one-table', slide: 30, name: 'One table is enough', what: 'The area under a Gaussian has no simple formula, so its probabilities come from a printed table. But nobody can print one table for every μ and every σ.\n\nHere is the trick. Every Gaussian is the same bell, moved by μ and stretched by σ. So if you measure distance in standard deviations, they are all identical: the area up to 2 SDs above the mean is always 0.9772. One single table, for the Gaussian with mean 0 and SD 1, answers every question.', more: { html: () => row(curve(gauss(48, 6), 30, 66, { shade: [30, 60], label: '0.9772', ticks: [48, 60], x: 'hours in transit', cap: 'Parcels, N(48, 6), hours' }), curve(gauss(12, 3), 3, 21, { shade: [3, 18], label: '0.9772', ticks: [12, 18], x: 'minutes packing', cap: 'Packing, N(12, 3), minutes' }), curve(gauss(0, 1), -3, 3, { shade: [-3, 2], label: '0.9772', ticks: [0, 2], x: 'z, in SDs from the mean', cap: 'Standard, N(0, 1)' })) } },
+      { id: 'standardize', slide: 31, name: 'Standardize, then read the table', what: 'To standardize a value: subtract the mean, then divide by the SD. The result, called z, says how many SDs above the mean you are. A negative z means below the mean.\n\nThe variable Z made this way is Gaussian with mean 0 and SD 1, called the standard Gaussian or standard normal. Its CDF has its own letter, Φ. The table gives Φ(z), the area to the left of z.', f: 'Z = (X − μ) / σ     is N(0, 1)\nΦ(z) = P(Z ≤ z)', more: { html: () => curve(gauss(0, 1), -3.5, 3.5, { shade: [2, 3.5], ticks: [-2, 0, 2], x: 'z, in SDs from the mean', cap: 'A parcel slower than 60 hours is the same area as z above 2: 0.023' }) } },
       { id: 'tables', slide: 32, name: 'The two tables', what: 'There are two tables, for the two directions. The first goes from z to a probability. The second goes from a probability back to z.\n\nThe tables only list positive z, and the bell is symmetric, so for a negative z use the mirror rule below. In a spreadsheet, the formulas shown here do the same job and work for any Gaussian directly.', f: 'Φ(−z) = 1 − Φ(z)\n=NORM.S.DIST(z, TRUE)     from z to a probability\n=NORM.S.INV(q)     from a probability to z\n=NORM.DIST(x, mu, sigma, TRUE)     P(X ≤ x)\n=NORM.INV(q, mu, sigma)     the q-quantile', more: { html: () => row(tbl(['z', 'Φ(z)'], [['0', '0.5000'], ['1', '0.8413'], ['2', '0.9772'], ['2.5', '0.9938']]), tbl(['q', 'z with Φ(z) = q'], [['0.90', '1.282'], ['0.95', '1.645'], ['0.975', '1.960'], ['0.99', '2.326']])) } },
       { id: 'quantile-g', slide: 34, name: 'A Gaussian quantile is μ + zσ', what: 'To turn a probability into a value: read z from the second table, then go that many SDs from the mean. That is standardizing run backwards.\n\nThis is how a delivery promise is set. To keep its promise on 95 % of parcels, Nookery promises delivery within about 58 hours of dispatch.', f: 'the q-quantile of N(μ, σ) is μ + zσ', more: { html: () => tbl(['q', 'z', '48 + z × 6, hours'], [['0.50', '0', '48.0'], ['0.90', '1.282', '55.7'], ['0.95', '1.645', '*57.9'], ['0.99', '2.326', '62.0']]) } },
       { id: 'three-continuous', slide: 33, name: 'Three continuous models side by side', what: 'The whole first half of this lecture in one table. As in Lecture 3, the skill is recognising which one fits. Is every moment in a window equally likely? Uniform. Is it the wait for the next event? Exponential. Is it a total of many small effects, a bell around a middle? Gaussian.', more: { html: () => tbl(['Model', 'Density f_X(x)', 'CDF F_X(x)', 'E[X]', 'Var(X)'], [['Unif(a, b)', '1/(b − a)', '(x − a)/(b − a)', '(a + b)/2', '(b − a)²/12'], ['Exp(λ)', 'λ e^(−λx)', '1 − e^(−λx)', '1/λ', '1/λ²'], ['N(μ, σ)', 'the bell formula', 'Φ((x − μ)/σ)', 'μ', 'σ²']]) } },
     ] },
     { name: 'Summaries of data', cards: [
-      { id: 'model-gives', slide: 40, name: 'A model gives a mean', what: 'Everything so far started from a model, a density with its numbers, and computed from it the mean μ and the SD σ. A model describes what could happen. Its mean and SD are fixed, and in practice we usually do not know them.\n\nFor example, the time to handle a support ticket might follow a skewed density, with a long tail of slow tickets, whose mean is 10 minutes and whose SD is 7.07 minutes. The next card starts from the other side: from data.', f: 'f_X(x) = x e^(−x/θ) / θ²     with θ = 5 minutes\nμ = 10 minutes     σ_X = 7.07 minutes', more: { html: () => curve(x => (x <= 0 ? 0 : (x * Math.exp(-x / 5)) / 25), 0, 40, { ticks: [0, 10, 20, 30, 40], cap: 'A skewed density: handling time in minutes' }) } },
+      { id: 'model-gives', slide: 40, name: 'A model gives a mean', what: 'Everything so far started from a model, a density with its numbers, and computed from it the mean μ and the SD σ. A model describes what could happen. Its mean and SD are fixed, and in practice we usually do not know them.\n\nFor example, the time to handle a support ticket might follow a skewed density, with a long tail of slow tickets, whose mean is 10 minutes and whose SD is 7.07 minutes. The next card starts from the other side: from data.', f: 'f_X(x) = x e^(−x/θ) / θ²     with θ = 5 minutes\nμ = 10 minutes     σ_X = 7.07 minutes', more: { html: () => curve(x => (x <= 0 ? 0 : (x * Math.exp(-x / 5)) / 25), 0, 40, { ticks: [0, 10, 20, 30, 40], x: 'minutes handling', cap: 'A skewed density: handling time in minutes' }) } },
       { id: 'sample', slide: 41, name: 'Data give a sample mean', what: 'Data record what did happen: a table of outcomes, x₁ up to xₙ. From them we compute the sample mean, written x̄, and the sample SD, written s. These look like μ and σ, but they are different things: x̄ and s come from this one sample, and another sample of tickets would give other values.\n\nThe sample mean is just the ordinary average. The sample variance s² is nearly the average squared deviation, except that it divides by n − 1. The sample SD is its root.', f: 'x̄ = (1/n) Σᵢ xᵢ\ns² = (1/(n − 1)) Σᵢ (xᵢ − x̄)²\ns = √s²', watch: 'μ and σ belong to the model. x̄ and s belong to the data. Ten tickets from the model above gave x̄ = 9.07 and s = 5.49, not 10 and 7.07.' },
       { id: 'by-hand', slide: 42, name: 'Why divide by n − 1?', what: 'The deviations here are measured from x̄, and x̄ was computed from these same data, so it sits closer to them than the true unknown mean does. That makes the squared deviations come out a little too small. Dividing by n − 1 instead of n makes up for it. For large n the difference is small.\n\nOne check when you work by hand: the deviations from x̄ always add up to 0, as in the table.', more: { say: 'Handling times of six tickets, in minutes. The last row is the sums. So x̄ = 30/6 = 5, s² = 10/5 = 2 and s = √2 = 1.41 minutes.', html: () => tbl(['xᵢ', 'xᵢ − x̄', '(xᵢ − x̄)²'], [['4', '−1', '1'], ['6', '1', '1'], ['5', '0', '0'], ['7', '2', '4'], ['3', '−2', '4'], ['5', '0', '0'], ['*30', '*0', '*10']]) } },
       { id: 'median', slide: 46, name: 'Median and quartiles of data', what: 'Sort the values from smallest to largest. The median is the one in the middle. With an even number of values there are two in the middle, so take their average.\n\nThe quartiles cut the data into four. Q₁ is the median of the lower half and Q₃ is the median of the upper half. The distance between them is the interquartile range, the IQR: the width of the middle half of the data. With an odd number of values, the median belongs to both halves.', f: 'IQR = Q₃ − Q₁', more: { say: 'The six tickets, sorted: 3, 4, 5, 5, 6, 7. The two middle values are 5 and 5, so the median is 5. The lower half 3, 4, 5 gives Q₁ = 4, the upper half 5, 6, 7 gives Q₃ = 6, so the IQR is 6 − 4 = 2 minutes.' } },
@@ -805,12 +853,12 @@ const SESSIONS = [
     ] },
   ], practice: [
     { id: 'l4-e1', title: 'Waiting for the shuttle', setup: 'A shuttle van links two warehouses and leaves every 20 minutes. A worker arrives without knowing the timetable, so the wait W for the next van is uniform between 0 and 20 minutes.', parts: [
-      ['Write the distribution of W with ∼, and compute P(W > 15).', () => `<pre>W ∼ Unif(0, 20)     height = 1/20\nP(W > 15) = (20 − 15) × 1/20 = 0.25</pre>` + curve(unif(0, 20), -2, 22, { top: 0.075, shade: [15, 20], label: '0.25', ticks: [0, 5, 10, 15, 20], cap: 'Wait in minutes. A probability is an area.' })],
+      ['Write the distribution of W with ∼, and compute P(W > 15).', () => `<pre>W ∼ Unif(0, 20)     height = 1/20\nP(W > 15) = (20 − 15) × 1/20 = 0.25</pre>` + curve(unif(0, 20), -2, 22, { top: 0.075, shade: [15, 20], label: '0.25', ticks: [0, 5, 10, 15, 20], x: 'minutes waited', cap: 'Wait in minutes. A probability is an area.' })],
       ['Compute E[W] and the SD of W.', () => `<pre>E[W] = (0 + 20) / 2 = 10 minutes\nVar(W) = 20² / 12 = 33.3 minutes²\nσ_W = √33.3 = 5.77 minutes</pre><p>The mean of a uniform is the middle of the interval.</p>`],
     ] },
     { id: 'l4-e2', title: 'A quiet support desk', setup: 'The support log shows one chat every 4 minutes on average. The time X until the next chat is modeled as exponential, with that mean.', parts: [
       ['Write the distribution of X with ∼, and give the SD of X.', () => `<pre>E[X] = 1/λ = 4, so λ = 1/4 = 0.25 per minute\nX ∼ Exp(0.25)\nVar(X) = 1/λ², so σ_X = 1/λ = 4 minutes</pre>`],
-      ['An agent needs 6 quiet minutes to file a report. Compute the probability that no chat arrives in that time.', () => `<p>No chat in 6 minutes means the next chat comes after more than 6 minutes: the event X > 6.</p><pre>P(X > 6) = e^(−0.25 × 6) = e^(−1.5) = 0.223</pre>` + curve(expo(0.25), 0, 20, { shade: [6, 20], label: '0.223', ticks: [0, 6, 12, 18], cap: 'Minutes until the next chat' })],
+      ['An agent needs 6 quiet minutes to file a report. Compute the probability that no chat arrives in that time.', () => `<p>No chat in 6 minutes means the next chat comes after more than 6 minutes: the event X > 6.</p><pre>P(X > 6) = e^(−0.25 × 6) = e^(−1.5) = 0.223</pre>` + curve(expo(0.25), 0, 20, { shade: [6, 20], label: '0.223', ticks: [0, 6, 12, 18], x: 'minutes until the next chat', cap: 'Minutes until the next chat' })],
     ] },
     { id: 'l4-e3', title: 'Packing time', setup: 'The time T to pack one order is modeled as N(12, 3) minutes. Use the table of Φ.', parts: [
       ['Compute P(T > 15) and P(T < 9).', () => `<pre>z = (15 − 12) / 3 = 1\nP(T > 15) = 1 − Φ(1) = 1 − 0.8413 = 0.159\n\nz = (9 − 12) / 3 = −1\nP(T < 9) = Φ(−1) = 1 − Φ(1) = 0.159</pre><p>The table gives the area to the left. The area to the right is the complement, and below the mean the bell’s symmetry gives the same number.</p>`],
@@ -842,17 +890,17 @@ const PICTURES = {
     + bayesTable([['North', '0.7', '0.1', '0.07', '0.54'], ['South', '0.3', '0.2', '0.06', '*0.46']], '0.13')
     + `<p class="pic-lede"><b>Why a rare cause stays unlikely.</b> Of 10,000 parcels, the dog sits by 680: 190 with an item and 490 without. So P(item ∣ dog sits) = 190/680 = 0.28.</p>`,
   3: () => `<p class="pic-lede">Roll a 4-sided die twice. <b>X</b>, the larger roll, puts a number in each of the 16 cells. Count the cells of each value and you have the <b>PMF</b>. Its balance point ▲ is the <b>mean</b>, 3.125.</p>`
-    + row(maxGrid(3), bars([[1, 1 / 16, '1/16'], [2, 3 / 16, '3/16'], [3, 5 / 16, '5/16'], [4, 7 / 16, '7/16']], { cap: 'PMF of X. Shaded in the grid: X = 3, 5 of 16 cells', hi: [3], mean: 3.125 }))
+    + row(maxGrid(3), bars([[1, 1 / 16, '1/16'], [2, 3 / 16, '3/16'], [3, 5 / 16, '5/16'], [4, 7 / 16, '7/16']], { x: 'the larger of two rolls', cap: 'PMF of X. Shaded in the grid: X = 3, 5 of 16 cells', hi: [3], mean: 3.125 }))
     + `<p class="pic-lede"><b>Named models</b> fit situations that recur:</p>`
-    + row(bars(binom(20, 0.5).map((v, k) => [k, v, v.toFixed(3)]), { cap: 'Bin(20, 0.5): the Galton board', thin: 1, mean: 10 }), bars(pois(4, 12).map((v, k) => [k, v, v.toFixed(3)]), { cap: 'Pois(4): tickets in one hour', thin: 1, mean: 4 }))
+    + row(bars(binom(20, 0.5).map((v, k) => [k, v, v.toFixed(3)]), { x: 'bin the ball lands in', cap: 'Bin(20, 0.5): the Galton board', thin: 1, mean: 10 }), bars(pois(4, 12).map((v, k) => [k, v, v.toFixed(3)]), { x: 'tickets in one hour', cap: 'Pois(4): tickets in one hour', thin: 1, mean: 4 }))
     + `<p class="pic-lede"><b>Variance</b> is the spread around the mean. Same mean, different spread:</p>`
-    + row(bars([[0, 0, ''], [1, 0.25, '0.25'], [2, 0.5, '0.50'], [3, 0.25, '0.25'], [4, 0, '']], { cap: 'North: days to dispatch, SD 0.71', mean: 2, max: 0.5 }), bars([[0, 0.2, '0.20'], [1, 0.15, '0.15'], [2, 0.3, '0.30'], [3, 0.15, '0.15'], [4, 0.2, '0.20']], { cap: 'South: days to dispatch, SD 1.38', mean: 2, max: 0.5 })),
+    + row(bars([[0, 0, ''], [1, 0.25, '0.25'], [2, 0.5, '0.50'], [3, 0.25, '0.25'], [4, 0, '']], { x: 'days to dispatch', cap: 'North: days to dispatch, SD 0.71', mean: 2, max: 0.5 }), bars([[0, 0.2, '0.20'], [1, 0.15, '0.15'], [2, 0.3, '0.30'], [3, 0.15, '0.15'], [4, 0.2, '0.20']], { x: 'days to dispatch', cap: 'South: days to dispatch, SD 1.38', mean: 2, max: 0.5 })),
   4: () => `<p class="pic-lede">A delivery time can be any number, so we ask about ranges. The <b>density</b> is a curve, and a <b>probability is an area</b> under it. From 42 to 54 hours: 0.683.</p>`
-    + curve(gauss(48, 6), 28, 68, { shade: [42, 54], label: '0.683', ticks: [30, 42, 54, 66], cap: 'Delivery time in hours, N(48, 6)' })
+    + curve(gauss(48, 6), 28, 68, { shade: [42, 54], label: '0.683', ticks: [30, 42, 54, 66], x: 'hours in transit', cap: 'Delivery time in hours, N(48, 6)' })
     + `<p class="pic-lede"><b>Named densities</b> fit situations that recur:</p>`
-    + row(curve(unif(0, 180), -30, 210, { top: 1 / 110, ticks: [[0, '9:00'], [180, '12:00']], cap: 'Uniform: the courier’s arrival' }), curve(expo(0.2), 0, 25, { ticks: [0, 10, 20], cap: 'Exponential: until the next call' }), curve(gauss(48, 6), 28, 68, { ticks: [36, 48, 60], cap: 'Gaussian: hours in transit' }))
+    + row(curve(unif(0, 180), -30, 210, { top: 1 / 110, ticks: [[0, '9:00'], [180, '12:00']], x: 'arrival time', cap: 'Uniform: the courier’s arrival' }), curve(expo(0.2), 0, 25, { ticks: [0, 10, 20], x: 'minutes until the next call', cap: 'Exponential: until the next call' }), curve(gauss(48, 6), 28, 68, { ticks: [36, 48, 60], x: 'hours in transit', cap: 'Gaussian: hours in transit' }))
     + `<p class="pic-lede">The <b>CDF</b> adds up the area from the left. Read it forwards for a probability, and backwards for a <b>quantile</b>:</p>`
-    + curve(x => Math.min(1, Math.max(0, x / 180)), -20, 200, { top: 1.1, guide: [162, 0.9], ticks: [[0, '9:00'], [162, '11:42']], cap: 'The courier has come by 11:42 with probability 0.9' })
+    + curve(x => Math.min(1, Math.max(0, x / 180)), -20, 200, { top: 1.1, guide: [162, 0.9], ticks: [[0, '9:00'], [162, '11:42']], x: 'arrival time', y: 'P(X ≤ x)', cap: 'The courier has come by 11:42 with probability 0.9' })
     + `<p class="pic-lede"><b>Data</b> are summarised by a mean and SD, or by a median and quartiles, drawn as a <b>box plot</b>:</p>`
     + boxplot({ lo: -15, hi: 40, q1: 2.52, med: 5.25, q3: 10.08, wlo: -8.7, whi: 21.41, out: [25, 28, 31, 34, 37], ticks: [-10, 0, 10, 20, 30, 40], cap: 'Margins of 2,000 orders, in euros' }),
 };
@@ -1327,6 +1375,84 @@ function practiceHtml(s) {
   return s.practice.map((x, i) => `<section class="ex" aria-label="Exercise ${i + 1}"><h3><span class="ex-num">Exercise ${i + 1}</span>${esc(x.title)}${partTag(s, s.groups.length)}</h3><p class="ex-setup" data-hl="stats|p|${x.id}">${text(x.setup)}</p>${x.table ? x.table() : ''}
     <div class="practice">${x.parts.map(([q, a], j) => `<details class="pq" data-hl="stats|p|${x.id}-${j + 1}"><summary><span class="num">${j + 1}</span><span>${text(q)}</span></summary><div class="ans">${subs(a())}</div></details>`).join('')}</div></section>`).join('');
 }
+/* ---------- Charts: the key graph of each topic, with its formula worked out beside it ----------
+   Asked for 2026-11-07: "a set of charts with scales, in each lecture, and a space with all of them,
+   with the formulas next to them". Each entry: lecture, card, title, chart, formula, its pieces, how to read it. */
+const CHARTS = [
+  { s: 1, card: 'continuous', title: 'A probability is a length', chart: () => curve(unif(0, 1), -0.1, 1.1, { top: 1.25, shade: [0.2, 0.5], label: '0.3', ticks: [0, 0.2, 0.5, 1], x: 'where the wheel stops' }),
+    f: 'P([a, b]) = b − a\nP([0.2, 0.5]) = 0.5 − 0.2 = 0.3',
+    parts: [['[a, b]', 'A stretch of the wheel, from a to b.'], ['b − a', 'Its length. The height is 1 everywhere, so the length is also the area.']],
+    read: 'The wheel can stop anywhere from 0 to 1. The shaded stretch is 0.3 long, so its chance is 0.3.' },
+  { s: 1, card: 'prop-b', title: 'Or: add, then take the overlap away once', chart: () => venn(['a', 'ab', 'b'], { a: 'L', b: 'R' }),
+    f: 'P(L ∪ R) = P(L) + P(R) − P(L ∩ R)\n= 0.14 + 0.10 − 0.04 = 0.20',
+    parts: [['P(L)', 'Late: 0.14.'], ['P(R)', 'Refunded: 0.10.'], ['P(L ∩ R)', 'Both: 0.04. It sits in both circles, so adding counted it twice.']],
+    read: 'Each circle is an event. The shaded region is "late or refunded".' },
+  { s: 2, card: 'tree', title: 'A tree multiplies along each path', chart: () => warehouseTree(),
+    f: 'P(S ∩ L) = P(S) × P(L ∣ S)\n= 0.3 × 0.2 = 0.06',
+    parts: [['P(S)', 'First branch: the order comes from South, 0.3.'], ['P(L ∣ S)', 'Second branch: late, given South, 0.2.'], ['P(S ∩ L)', 'The leaf at the end of that path: both, 0.06.']],
+    read: 'Branches from one point add up to 1. Multiply along a path to reach its leaf. All the leaves add up to 1.' },
+  { s: 2, card: 'which', title: 'Bayes: from the late leaves back to the warehouse', chart: () => bayesTable([['North', '0.7', '0.1', '0.07', '0.54'], ['South', '0.3', '0.2', '0.06', '0.46']], '0.13'),
+    f: 'P(L) = 0.07 + 0.06 = 0.13\nP(S ∣ L) = 0.06 / 0.13 = 0.46',
+    parts: [['P(L)', 'All late orders: add the two late leaves.'], ['P(S ∣ L)', 'Of those, the share from South: its leaf divided by the total.']],
+    read: 'Read the table left to right: prior, likelihood, multiply, add the column, divide. A late order moves South from 0.30 to 0.46.' },
+  { s: 3, card: 'pmf', title: 'A PMF: one bar per value', chart: () => bars([[1, 1 / 16, '1/16'], [2, 3 / 16, '3/16'], [3, 5 / 16, '5/16'], [4, 7 / 16, '7/16']], { hi: [3], x: 'the larger of two rolls' }),
+    f: 'm_X(x) = P(X = x)\nm_X(3) = 5/16 = 0.3125',
+    parts: [['m_X(x)', 'The height of the bar at x.'], ['5/16', 'X = 3 in 5 of the 16 equally likely pairs.']],
+    read: 'Each bar is the chance of one value. All the bars add up to 1.' },
+  { s: 3, card: 'binomial', title: 'Binomial: k successes out of n', chart: () => bars(binom(4, 0.2).map((v, k) => [k, v, v.toFixed(3)]), { hi: [1], x: 'buyers out of 4' }),
+    f: 'P(X = k) = C(n, k) pᵏ (1 − p)ⁿ⁻ᵏ\nP(X = 1) = 4 × 0.2 × 0.8³ = 0.410',
+    parts: [['n', '4 visitors.'], ['p', 'Each buys with chance 0.2.'], ['k', 'We ask for exactly 1 buyer.'], ['C(n, k)', '4 ways to choose which one buys.'], ['(1 − p)ⁿ⁻ᵏ', 'The other 3 do not buy: 0.8³ = 0.512.']],
+    read: 'The coloured bar is the one worked out: 0.410.' },
+  { s: 3, card: 'poisson', title: 'Poisson: counts in a window', chart: () => bars(pois(4, 12).map((v, k) => [k, v, v.toFixed(3)]), { hi: [4], thin: 1, x: 'tickets in one hour' }),
+    f: 'P(X = k) = e^(−λ) λᵏ / k!\nP(X = 4) = e^(−4) × 4⁴ / 4! = 0.195',
+    parts: [['λ', '4 tickets per hour on average.'], ['k', 'We ask for exactly 4.'], ['k!', '4! = 24.'], ['e^(−λ)', 'e^(−4) = 0.018.']],
+    read: 'Values near λ are the most likely; far from it the bars fade.' },
+  { s: 3, card: 'expectation', title: 'The mean is the balance point', chart: () => bars([[1, 1 / 16, '1/16'], [2, 3 / 16, '3/16'], [3, 5 / 16, '5/16'], [4, 7 / 16, '7/16']], { mean: 3.125, x: 'the larger of two rolls' }),
+    f: 'E[X] = Σ x m_X(x)\n= 1×1/16 + 2×3/16 + 3×5/16 + 4×7/16\n= 50/16 = 3.125',
+    parts: [['x', 'Each value.'], ['m_X(x)', 'Its chance, the bar height.'], ['Σ', 'Add the products.']],
+    read: '▲ under the axis marks 3.125: the bars would balance on it.' },
+  { s: 3, card: 'variance', title: 'Variance: how far values land from the mean', chart: () => row(bars([[0, 0, ''], [1, 0.25, '0.25'], [2, 0.5, '0.50'], [3, 0.25, '0.25'], [4, 0, '']], { mean: 2, max: 0.5, x: 'days, North' }), bars([[0, 0.2, '0.20'], [1, 0.15, '0.15'], [2, 0.3, '0.30'], [3, 0.15, '0.15'], [4, 0.2, '0.20']], { mean: 2, max: 0.5, x: 'days, South' })),
+    f: 'Var(X) = Σ (x − μ)² m_X(x)\nNorth: 1 × 0.25 + 0 + 1 × 0.25 = 0.5, SD 0.71\nSouth: 4×0.2 + 1×0.15 + 0 + 1×0.15 + 4×0.2 = 1.9, SD 1.38',
+    parts: [['μ', 'The mean, 2 days for both.'], ['(x − μ)²', 'The squared distance of each value from it.'], ['m_X(x)', 'Its chance.']],
+    read: 'Same mean, same scale: South spreads further from 2, so its variance is larger.' },
+  { s: 4, card: 'uniform', title: 'Uniform: probability is width × height', chart: () => curve(unif(0, 180), -30, 210, { top: 1 / 110, shade: [60, 80], label: '0.111', ticks: [[0, '9:00'], [60, '10:00'], [120, '11:00'], [180, '12:00']], x: 'arrival time' }),
+    f: 'f_X(x) = 1 / (b − a) = 1/180 per minute\nP(10:00 to 10:20) = 20 × 1/180 = 0.111',
+    parts: [['b − a', 'The window: 180 minutes.'], ['1/(b − a)', 'The height, so the whole rectangle has area 1.'], ['20', 'The width of the shaded stretch, in minutes.']],
+    read: 'The scale on the left is per minute. The shaded area, width times height, is the chance.' },
+  { s: 4, card: 'exponential', title: 'Exponential: the wait for the next event', chart: () => curve(expo(0.2), 0, 25, { shade: [10, 25], label: '0.135', ticks: [0, 5, 10, 15, 20, 25], x: 'minutes until the next call' }),
+    f: 'P(T > t) = e^(−λt)\nP(T > 10) = e^(−0.2 × 10) = e^(−2) = 0.135',
+    parts: [['λ', '0.2 calls per minute, one every 5 minutes on average.'], ['t', '10 minutes.'], ['e^(−λt)', 'The area to the right of t.']],
+    read: 'The curve starts at λ = 0.2 and falls fast: long waits are rare. The shaded tail is the chance of waiting more than 10 minutes.' },
+  { s: 4, card: 'gaussian', title: 'Gaussian: most values within one σ', chart: () => curve(gauss(48, 6), 28, 68, { shade: [42, 54], label: '0.683', ticks: [30, 42, 48, 54, 66], x: 'hours in transit' }),
+    f: 'P(μ − σ ≤ X ≤ μ + σ) = 0.683\nP(42 ≤ X ≤ 54) = 0.683',
+    parts: [['μ', '48 hours, the centre.'], ['σ', '6 hours, the width.'], ['μ ± σ', '42 to 54 hours.']],
+    read: 'About two parcels in three arrive within one σ of the mean.' },
+  { s: 4, card: 'standardize', title: 'Standardize, then read Φ', chart: () => row(curve(gauss(48, 6), 30, 66, { shade: [30, 60], label: '0.9772', ticks: [36, 48, 60], x: 'hours in transit' }), curve(gauss(0, 1), -3, 3, { shade: [-3, 2], label: '0.9772', ticks: [-2, 0, 2], x: 'z, in SDs from the mean' })),
+    f: 'z = (x − μ) / σ = (60 − 48) / 6 = 2\nP(X ≤ 60) = Φ(2) = 0.9772',
+    parts: [['x − μ', '12 hours above the mean.'], ['σ', '6 hours per step.'], ['z', '2 steps above: the same place on the standard bell.'], ['Φ(z)', 'The area to the left of z, from the table.']],
+    read: 'Both shaded areas are the same, 0.9772: standardizing moves and stretches the bell without changing areas.' },
+  { s: 4, card: 'cdf', title: 'The CDF adds the bars up to x', chart: () => bars(binom(10, 0.2).slice(0, 9).map((_, k) => { const c = binom(10, 0.2).slice(0, k + 1).reduce((a, b) => a + b, 0); return [k, c, c.toFixed(3)]; }), { max: 1, hi: [2], x: 'buyers out of 10', y: 'P(X ≤ x)' }),
+    f: 'F_X(x) = P(X ≤ x)\nF_X(2) = 0.107 + 0.268 + 0.302 = 0.678',
+    parts: [['F_X(x)', 'Everything up to and including x.'], ['0.107, 0.268, 0.302', 'The PMF bars for 0, 1 and 2 buyers.']],
+    read: 'The bars only climb, from near 0 to 1. The coloured one is at most 2 buyers.' },
+  { s: 4, card: 'quantile', title: 'A quantile reads the CDF backwards', chart: () => curve(x => Math.min(1, Math.max(0, x / 180)), -20, 200, { top: 1.1, guide: [162, 0.9], ticks: [[0, '9:00'], [90, '10:30'], [162, '11:42']], x: 'arrival time', y: 'P(X ≤ x)' }),
+    f: 'F_X(x) = (minutes after 9:00) / 180\n0.9 = m / 180  →  m = 162 minutes  →  11:42',
+    parts: [['0.9', 'The probability we want, on the left scale.'], ['162', 'Where the line reaches it, in minutes after 9:00.']],
+    read: 'Start at 0.9 on the left, go right to the line, then down: 11:42.' },
+];
+function chartsHtml() {
+  return `<h1>Charts</h1><p class="lede">The key graph of each topic, lectures 1 to 4. Beside each one: its formula worked out on the example, what each piece is, and how to read the chart.</p>`
+    + SESSIONS.map(s => {
+      const list = CHARTS.filter(c => c.s === s.n);
+      if (!list.length) return '';
+      return `<section class="chart-group"><h2>Lecture ${s.n} · ${esc(s.short)}</h2>${list.map(c => `<article class="chart-row">
+        <div class="chart-fig">${c.chart()}</div>
+        <div class="chart-text"><h3>${esc(c.title)}</h3><pre>${mathHtml(c.f)}</pre>
+          <dl class="chart-parts">${c.parts.map(([sym, say]) => `<div><dt>${mathHtml(sym)}</dt><dd>${kwText(say)}</dd></div>`).join('')}</dl>
+          <p class="chart-read">${kwText(c.read)}</p>
+          <button type="button" class="ref-go" data-go="${esc(cardKey(s.n, c.card))}">Lecture ${s.n} · open the card ›</button></div></article>`).join('')}</section>`;
+    }).join('');
+}
 function refHtml() {
   return `<h1>Cheat sheet</h1><p class="lede">Every rule and term from lectures 1 to 4, by topic. The lecture tag opens its card.</p>
     <input type="search" class="ref-search" id="ref-q" placeholder="Find: bayes, union, variance, poisson…" aria-label="Find a rule or term" autocomplete="off">
@@ -1343,11 +1469,13 @@ function filterRef(q) {
 document.getElementById('session').addEventListener('input', e => { if (e.target.id === 'ref-q') filterRef(e.target.value); });
 document.getElementById('session').addEventListener('click', e => { const go = e.target.closest('.ref-go'); if (go) goTo(go.dataset.go); });
 let current = 1;
-try { const saved = localStorage.getItem('stats-session'); current = saved === 'ref' ? saved : Number(saved) || 1; } catch (e) {}
-if (current !== 'ref' && !SESSIONS.some(s => s.n === current)) current = 1;
+const isTab = v => v === 'ref' || v === 'charts';   // the two tabs that are not a lecture
+try { const saved = localStorage.getItem('stats-session'); current = isTab(saved) ? saved : Number(saved) || 1; } catch (e) {}
+if (!isTab(current) && !SESSIONS.some(s => s.n === current)) current = 1;
 function renderTabs() {
   document.getElementById('sessions').innerHTML = SESSIONS.map(s => `<button type="button" class="sess" role="tab" data-s="${s.n}" aria-selected="${s.n === current}"><b>Lecture ${s.n}</b><span>${esc(s.short)}</span><span class="bar"><i></i></span></button>`).join('')
-    + `<button type="button" class="sess ref" role="tab" data-s="ref" aria-selected="${current === 'ref'}"><b>Cheat sheet</b><span>Every rule, findable</span></button>`;
+    + `<button type="button" class="sess ref" role="tab" data-s="ref" aria-selected="${current === 'ref'}"><b>Cheat sheet</b><span>Every rule, findable</span></button>`
+    + `<button type="button" class="sess ref" role="tab" data-s="charts" aria-selected="${current === 'charts'}"><b>Charts</b><span>Every graph, with its formula</span></button>`;
   paintBars();
 }
 function paintBars() {
@@ -1394,7 +1522,8 @@ function markXx(root) {
   }
 }
 function renderSession() {
-  if (current === 'ref') { document.getElementById('session').innerHTML = '<p class="where">Cheat sheet</p>' + refHtml(); applyHighlights(); mapRefresh(); return; }
+  if (current === 'ref') { document.getElementById('session').innerHTML = '<p class="where">Cheat sheet</p>' + refHtml(); applyHighlights(); mapRefresh(); markXx(document.getElementById('session')); return; }
+  if (current === 'charts') { document.getElementById('session').innerHTML = '<p class="where">Charts</p>' + chartsHtml(); mapRefresh(); markXx(document.getElementById('session')); return; }
   const s = SESSIONS.find(x => x.n === current);
   document.getElementById('session').innerHTML = `<p class="where"><button type="button" class="where-btn" id="where-btn">Lecture ${s.n}</button></p><h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
     + `<details class="pic" id="pic" data-seg="pic"${picOpen() ? ' open' : ''}><summary>The picture: the lecture on one page</summary><div class="pic-body">${PICTURES[s.n]()}</div></details>`
@@ -1409,7 +1538,7 @@ function renderSession() {
 document.getElementById('sessions').addEventListener('click', e => {
   const b = e.target.closest('.sess');
   if (!b) return;
-  current = b.dataset.s === 'ref' ? 'ref' : Number(b.dataset.s);
+  current = isTab(b.dataset.s) ? b.dataset.s : Number(b.dataset.s);
   try { localStorage.setItem('stats-session', current); } catch (err) {}
   for (const x of document.querySelectorAll('.sess')) x.setAttribute('aria-selected', String(x === b));
   renderSession();
@@ -1538,7 +1667,7 @@ function currentSpot() {
     if (r.bottom > 80 && r.top < innerHeight * 0.6) { best = c; break; }
   }
   if (best) return best.dataset.key;
-  return current === 'ref' ? 'stats|notebook' : `stats|s${current}`;
+  return isTab(current) ? 'stats|notebook' : `stats|s${current}`;
 }
 function followSpot() { if (!nbPinned) nbAbout.value = currentSpot(); if (!notebook.hidden) renderNotebook(); }
 let scrollTimer = 0;
@@ -1974,6 +2103,9 @@ document.addEventListener('keydown', e => {
    else moves nothing: only the arrow, a card, or a row with nothing to open takes you there. */
 const mapEl = document.getElementById('map');
 const mapPill = document.getElementById('map-pill');
+const PILL_LOOKS = ['bar', 'line', 'steps', 'gauge'];
+let pillLook = 'bar';
+try { const v = localStorage.getItem('stats-pill-look'); if (PILL_LOOKS.includes(v)) pillLook = v; } catch (e) {}
 // Whether the page leaves room beside it: the boxes grow with the text size.
 const MAP_WIDE = { get matches() { return document.documentElement.classList.contains('map-wide'); } };
 function fitLayout() {
@@ -2001,7 +2133,7 @@ function findPlace() {
 }
 function placeText() {
   const s = SESSIONS.find(x => x.n === current);
-  if (!s) return 'Cheat sheet';
+  if (!s) return current === 'charts' ? 'Charts' : 'Cheat sheet';
   const all = segsOf(s), at = all.find(x => x.key === mapPlace.seg), num = all.filter(x => x.key !== 'pic'), i = num.indexOf(at);
   return i < 0 ? `Lecture ${current} · ${at ? at.name : ''}` : `Lecture ${current} · Part ${i + 1} of ${num.length} · ${at.name}`;
 }
@@ -2010,15 +2142,13 @@ const hueStyle = x => x.h === undefined ? '' : ` style="--h: ${x.h.toFixed(0)}"`
 function paintPlace() {
   const s = SESSIONS.find(x => x.n === current), text = placeText();
   mapPill.setAttribute('aria-label', `${text}. Open the map`);
-  mapPill.title = text;
+  mapPill.title = `${text}. Double-click to change its look.`;
   if (!s) { mapPill.innerHTML = '<b>≡</b>'; return; }
   const all = segsOf(s), at = all.find(x => x.key === mapPlace.seg);
-  let n = 0;
-  mapPill.innerHTML = `<b>L${s.n}</b><span class="ln">${all.map(x => {
-    if (x.key !== 'pic') n++;
-    const here = x === at;
-    return `<i class="${x.h === undefined ? 'plain' : ''}${here ? ' here' : ''}"${hueStyle(x)}>${here && x.key !== 'pic' ? n : ''}</i>`;
-  }).join('')}</span>`;
+  const i = all.indexOf(at), num = all.filter(x => x.key !== 'pic'), part = num.indexOf(at);
+  let k = 0;
+  mapPill.innerHTML = `<b>L${s.n}</b><span class="ln">${all.map((x, j) => `<i class="${j < i ? 'past' : j === i ? 'here' : ''}" data-n="${x.key === 'pic' ? '·' : ++k}"></i>`).join('')}</span>${part < 0 ? '' : `<span class="pn">${part + 1}<span class="of">/${num.length}</span></span>`}`;
+  mapPill.dataset.look = pillLook;
   const where = document.getElementById('where-btn');
   if (where) {
     where.textContent = text;
@@ -2043,7 +2173,7 @@ function renderMap() {
       }).join('')}</ol>` : ''}</div>`;
   };
   mapEl.innerHTML = `<div class="map-top"><span>Where you are</span><button type="button" class="map-close" aria-label="Close the map">×</button></div>
-    <p class="map-now">${esc(placeText())}</p>${SESSIONS.map(stack).join('')}<button type="button" class="map-ref" data-goref>Cheat sheet</button>`;
+    <p class="map-now">${esc(placeText())}</p>${SESSIONS.map(stack).join('')}<button type="button" class="map-ref" data-goref>Cheat sheet</button><button type="button" class="map-ref" data-gocharts>Charts</button>`;
 }
 function mapKeepInView() {
   const on = mapEl.querySelector('.map-cards .on') || mapEl.querySelector('.map-s.here');
@@ -2072,7 +2202,7 @@ function mapFollow() {
 // After every redraw of the page. A new lecture starts with only that lecture open.
 function mapRefresh() {
   mapPlace = findPlace();
-  if (current !== mapLecture && current !== 'ref') {
+  if (current !== mapLecture && !isTab(current)) {
     mapLecture = current;
     mapOpenL.clear(); mapOpenS.clear();
     mapOpenL.add(current);
@@ -2105,12 +2235,23 @@ mapEl.addEventListener('click', e => {
     return;
   }
   if (e.target.closest('[data-goref]')) { document.querySelector('.sess[data-s="ref"]').click(); if (!MAP_WIDE.matches) setMap(false); return; }
+  if (e.target.closest('[data-gocharts]')) { document.querySelector('.sess[data-s="charts"]').click(); if (!MAP_WIDE.matches) setMap(false); return; }
   const c = e.target.closest('[data-card]');
   if (c) { mapGo(Number(c.dataset.s), null, c.dataset.card); return; }
   const g = e.target.closest('[data-to]');
   if (g) mapGo(Number(g.dataset.s), g.dataset.to);
 });
-mapPill.addEventListener('click', () => setMap(true, MAP_WIDE.matches));
+let pillTimer = 0;
+mapPill.addEventListener('click', e => {
+  clearTimeout(pillTimer);
+  if (e.detail >= 2) {
+    pillLook = PILL_LOOKS[(PILL_LOOKS.indexOf(pillLook) + 1) % PILL_LOOKS.length];
+    try { localStorage.setItem('stats-pill-look', pillLook); } catch (err) {}
+    paintPlace();
+    return;
+  }
+  pillTimer = setTimeout(() => setMap(true, MAP_WIDE.matches), 260);
+});
 document.getElementById('session').addEventListener('click', e => { if (e.target.closest('#where-btn, .seg-tab')) setMap(true, MAP_WIDE.matches); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !mapEl.hidden) setMap(false, MAP_WIDE.matches); });
 document.addEventListener('click', e => {
