@@ -61,6 +61,11 @@ describe('/statistics class page', () => {
     // Where you are in the deck: slide n of the lecture's length.
     expect(html).toContain('{ n: 2, pages: 40, ');
     expect(html).toContain("const slide = card?.slide ? ` · Slide ${card.slide}/${s.pages}` : '';");
+    // Practice: named numbers, the drawing, the rules used, and notes on each exercise.
+    expect(html).toContain('const PRACTICE_PICS = {');
+    expect(html).toContain('const PRACTICE_LAWS = {');
+    expect(html).toContain('P(fake ∩ flag) = P(fake) × P(flag ∣ fake) = 0.05 × 0.8 = 0.04');
+    expect(html).toContain('key: cardKey(s.n, `ex-${x.id}`), tag: `Ex ${i + 1}`');
     // Focus: a third dot, where my focus and my body are, kept as stats|focus notes.
     expect(html).toContain('id="fc-dot"');
     expect(html).toContain("const FOCUS_KEY = 'stats|focus';");
