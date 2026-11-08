@@ -1,6 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import { describe, expect, it, vi } from 'vitest';
 
-import { FLOW_MOVEMENTS_SANDS, flowSandsFormation, gravityCores } from './GeometryField';
+import {
+  buildCurrentTexture,
+  FLOW_MOVEMENTS_SANDS,
+  flowSandsFormation,
+  gravityCores,
+  PRESETS,
+} from './GeometryField';
 
 const R = 300;
 
@@ -58,5 +65,21 @@ describe('Gravity', () => {
       expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeCloseTo(Math.hypot(a0.x - b0.x, a0.y - b0.y));
     }
     expect(gravityCores(10, R)[0].x).not.toBeCloseTo(a0.x);
+  });
+
+  it('draws its two balls with dots only: no rings around the cores', () => {
+    // jsdom has no 2D canvas; the soft-dot texture only needs a gradient to paint.
+    const gradient = { addColorStop: () => {} };
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      createRadialGradient: () => gradient,
+      fillRect: () => {},
+    } as unknown as CanvasRenderingContext2D);
+    const group = buildCurrentTexture(PRESETS.Gravity, R);
+    expect(group.children.length).toBeGreaterThan(0);
+    for (const child of group.children) {
+      expect(child).toBeInstanceOf(THREE.Points);
+      expect(child).not.toBeInstanceOf(THREE.Line);
+    }
+    vi.restoreAllMocks();
   });
 });

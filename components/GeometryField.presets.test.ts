@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ART_PILLS,
   ART_TABS,
   artTabOf,
   FEATURED_PRESETS,
@@ -118,14 +119,39 @@ describe('GeometryField featured presets', () => {
     expect(PRESETS.Volcano?.mode).not.toBe('liquidbutterfly');
   });
 
-  it('opens Good Ones with the three Wind presets, one object each, in Stars', () => {
-    const names = featuredNames();
+  it('opens the Experiment tab with the three Wind presets, one object each, out of Stars', () => {
+    const names = featuredFor('experiment').flatMap((i) => ('name' in i ? [i.name] : []));
     expect(names.slice(0, 3)).toEqual(['Wind', 'Wind Wing', 'Wind Body']);
     expect(['Wind', 'Wind Wing', 'Wind Body'].map((n) => PRESETS[n]?.particles)).toEqual([0, 1, 2]);
     for (const n of ['Wind', 'Wind Wing', 'Wind Body']) {
       expect(PRESETS[n]?.mode).toBe('windtunnel');
-      expect(artTabOf('windtunnel')).toBe('stars');
     }
+    expect(artTabOf('windtunnel')).toBe('experiment');
+    const stars = featuredFor('stars').flatMap((i) => ('name' in i ? [i.name] : []));
+    expect(stars).not.toContain('Wind');
+  });
+
+  it('puts the three new star trees and ADN in the Experiment tab, after Wind', () => {
+    const names = featuredFor('experiment').flatMap((i) => ('name' in i ? [i.name] : []));
+    expect(names).toEqual([
+      'Wind',
+      'Wind Wing',
+      'Wind Body',
+      'Star Willow',
+      'Sea Wind Tree',
+      'Star Banyan',
+      'ADN',
+    ]);
+    // One Star Trees mode, the Tree slider picking the shape.
+    expect(
+      ['Star Willow', 'Sea Wind Tree', 'Star Banyan'].map((n) => PRESETS[n]?.particles),
+    ).toEqual([0, 1, 2]);
+    for (const n of ['Star Willow', 'Sea Wind Tree', 'Star Banyan']) {
+      expect(PRESETS[n]?.mode).toBe('startrees');
+    }
+    expect(PRESETS.ADN?.mode).toBe('adn');
+    // The Star Tree itself stays in Stars.
+    expect(artTabOf(PRESETS['Star Tree'].mode)).toBe('stars');
   });
 
   it('keeps weaker depth presets at the bottom of the good list and removes Volcano', () => {
@@ -250,8 +276,23 @@ describe('GeometryField featured presets', () => {
     expect(PRESETS['Fractal Wave'].mode).toBe('fractalwave');
   });
 
-  it('splits the Art programs into Stars, Geometry, Tunnels and Oils', () => {
-    expect(ART_TABS.map((t) => t.label)).toEqual(['Stars', 'Geometry', 'Tunnels', 'Oils']);
+  it('splits the Art programs into Stars, Geometry, Tunnels, Oils and Experiment', () => {
+    expect(ART_TABS.map((t) => t.label)).toEqual([
+      'Stars',
+      'Geometry',
+      'Tunnels',
+      'Oils',
+      'Experiment',
+    ]);
+    // The Experiment pill comes right after Big Bang.
+    expect(ART_PILLS.map((p) => p.label)).toEqual([
+      'Stars',
+      'Geometry',
+      'Tunnels',
+      'Oils',
+      'Big Bang',
+      'Experiment',
+    ]);
     const tabOf = (name: string) => artTabOf(PRESETS[name].mode);
     expect(tabOf('Magnetic Sand')).toBe('stars');
     expect(tabOf('Trip Number 1')).toBe('stars');

@@ -31,7 +31,7 @@ export const STEP = 0.008;
 /** Where the trunk stands: its foot, in world units. */
 export const FOOT_Y = -0.62;
 
-type Seg = {
+export type Seg = {
   x0: number;
   y0: number;
   cx: number;
@@ -55,7 +55,7 @@ export function seeded(seed: number): () => number {
 }
 
 /** Grows branches from (x, y) at `angle` (radians, 0 = up), returning each tip's chain of segments from the base. */
-function grow(
+export function grow(
   rng: () => number,
   x: number,
   y: number,
@@ -107,7 +107,7 @@ function grow(
   }
 }
 
-function sampleChain(chain: Seg[], reverse: boolean): number[] {
+export function sampleChain(chain: Seg[], reverse: boolean): number[] {
   const out: number[] = [];
   const segs = reverse ? [...chain].reverse() : chain;
   for (const s of segs) {
