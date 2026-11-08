@@ -60,11 +60,25 @@ function rootsAt(rng: () => number, x: number, width: number): Seg[][] {
 
 const pick = <T>(rng: () => number, list: T[]): T => list[Math.floor(rng() * list.length)] as T;
 
+/**
+ * Without roots (the life tree, lib/life-tree.ts), every route starts at the
+ * foot, and what hangs down stops on a ground a little above it, so the
+ * strands of three trees sharing one root do not cross through it.
+ */
+export type TreeOptions = { roots?: boolean };
+
+const groundOf = (roots: boolean) => (roots ? FOOT_Y : FOOT_Y + 0.22);
+
 /** Willow: `depth` sets how many boughs (and so how full the curtain is). */
-export function buildWillow(depth: number, seed = 11): StarTree {
+export function buildWillow(
+  depth: number,
+  seed = 11,
+  { roots: withRoots = true }: TreeOptions = {},
+): StarTree {
   const rng = seeded(seed);
   const boughs = Math.max(4, Math.min(10, Math.round(depth) + 2));
-  const roots = rootsAt(rng, 0, 0.05);
+  const roots = withRoots ? rootsAt(rng, 0, 0.05) : [];
+  const ground = groundOf(withRoots);
   const topY = -0.12;
   const trunk = sample([0, FOOT_Y, 0.04, (FOOT_Y + topY) / 2, 0, topY, 0.07, 0.05]);
   const routes: Route[] = [];
@@ -89,12 +103,12 @@ export function buildWillow(depth: number, seed = 11): StarTree {
       const t = 0.35 + (0.65 * k) / (strands - 1);
       const [bx, by, bw] = at(bough, t);
       // A strand lifts a little over the bough, then hangs down.
-      const endY = Math.max(FOOT_Y - 0.1, by - (0.55 + rng() * 0.5));
+      const endY = Math.max(ground - 0.1, by - (0.55 + rng() * 0.5));
       const endX = bx + dir * (0.06 + rng() * 0.08);
       const strand: Quad = [bx, by, bx + dir * 0.1, by + 0.06, endX, endY, bw * 0.6, 0.004];
       routes.push(
         resample([
-          ...sampleChain(pick(rng, roots), true),
+          ...(withRoots ? sampleChain(pick(rng, roots), true) : []),
           ...trunk,
           ...sample(bough, 0, t),
           ...sample(strand),
@@ -131,17 +145,23 @@ export function buildWindTree(depth: number, seed = 5): StarTree {
 }
 
 /** Banyan: `depth` sets how many level limbs carry the crown and its hanging roots. */
-export function buildBanyan(depth: number, seed = 3): StarTree {
+export function buildBanyan(
+  depth: number,
+  seed = 3,
+  { roots: withRoots = true }: TreeOptions = {},
+): StarTree {
   const rng = seeded(seed);
   const limbs = Math.max(4, Math.min(9, Math.round(depth) + 1));
-  const roots = rootsAt(rng, 0, 0.06);
+  const roots = withRoots ? rootsAt(rng, 0, 0.06) : [];
+  const ground = groundOf(withRoots);
   const topY = -0.3;
   const trunk = sample([0, FOOT_Y, -0.03, (FOOT_Y + topY) / 2, 0, topY, 0.11, 0.09]);
   const pairs = Math.ceil(limbs / 2);
   const routes: Route[] = [];
   const tips: [number, number][] = [];
   const add = (raw: number[], tip: [number, number]) => {
-    routes.push(resample([...sampleChain(pick(rng, roots), true), ...trunk, ...raw]));
+    const root = withRoots ? sampleChain(pick(rng, roots), true) : [];
+    routes.push(resample([...root, ...trunk, ...raw]));
     tips.push(tip);
   };
   for (let l = 0; l < limbs; l++) {
@@ -163,7 +183,7 @@ export function buildBanyan(depth: number, seed = 3): StarTree {
     for (const t of [0.45, 0.72, 0.97]) {
       if (rng() < 0.25) continue;
       const [px, py] = at(limb, t);
-      const g = FOOT_Y - 0.02 - rng() * 0.06;
+      const g = ground - 0.02 - rng() * 0.06;
       const endX = px + (rng() - 0.5) * 0.04;
       const drop: Quad = [px, py, px + (rng() - 0.5) * 0.03, (py + g) / 2, endX, g, 0.008, 0.02];
       // Twice, so the hanging roots carry as many stars as a tuft of the crown.

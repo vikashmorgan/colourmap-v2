@@ -7,16 +7,22 @@ import { drawOrb, makeOrb } from '@/components/starOrb';
 import { GOLD, type GridNode, type Hub } from '@/lib/grid';
 import { type Frame, ROOT_RADIUS, SWITCH_SECONDS, scatter } from '@/lib/life-tree';
 import {
+  BEZEL,
   BRAIN,
   brainAngles,
+  CARDINALS,
   FORM_SECONDS,
   LABEL_RING,
   NODE_RING,
   pointAt,
   RING,
+  ROSE,
+  rosePoint,
   spokeAngle,
   spokePoint,
   stage,
+  TICKS,
+  tickLength,
   twigPoint,
   WHEEL_HIDDEN_PAGES,
 } from '@/lib/star-wheel';
@@ -29,6 +35,12 @@ import {
  * left brain's hubs on the left and the right brain's on the right
  * (2026-11-08; the ball of stars at the centre went then too). Choose a hub
  * and its pages become the spokes, round the whole ring.
+ *
+ * DESIGN III draws it as a compass rose (lib/star-wheel.ts ROSE): sixteen
+ * points of stars from the centre, each a lit half and a half in shade,
+ * north and south the needle where the brain's seam was; a bezel of ticks
+ * inside the outer ring, and N E S W on it. The spokes run straight, as
+ * bearings, and the hubs keep their places between the points.
  *
  * Same keys as the wheel it grew from (components/GridMenu.tsx): arrows go
  * round, Enter goes in or opens, Esc comes back and then closes.
@@ -47,6 +59,8 @@ type Props = {
   arrive?: boolean;
   /** Come from the tree, whose stars gathered on the ring: the wheel forms out of the ring. */
   fromRing?: boolean;
+  /** Design III: the wheel as a compass rose. */
+  compass?: boolean;
 };
 
 const [GR, GG, GB] = [196, 160, 96];
@@ -58,6 +72,9 @@ const ORB_RADIUS = ROOT_RADIUS * 1.5;
 const SEAM_STARS = 420;
 // The hubs' twigs, one per page inside (lib/star-wheel.ts twigPoint).
 const TWIG_STARS = 1800;
+// The compass rose's points, and its bezel of ticks.
+const ROSE_STARS = 2600;
+const BEZEL_STARS = 700;
 
 export function StarWheel({
   hub,
@@ -70,6 +87,7 @@ export function StarWheel({
   close,
   arrive = false,
   fromRing = false,
+  compass = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [frame, setFrame] = useState<Frame>({ cx: 0, cy: 0, min: 0 });
@@ -102,6 +120,8 @@ export function StarWheel({
   anglesRef.current = angles;
   const brainRef = useRef(brain);
   brainRef.current = brain;
+  const compassRef = useRef(compass);
+  compassRef.current = compass;
   const changedRef = useRef(0);
   countRef.current = items.length;
   selRef.current = sel;
@@ -166,7 +186,44 @@ export function StarWheel({
       seamT[i] = Math.random();
       seamX[i] = (Math.random() + Math.random() - 1) * 0.6;
     }
-    const seamGlow = { v: brainRef.current ? 1 : 0 };
+    const seamGlow = { v: brainRef.current && !compassRef.current ? 1 : 0 };
+    /*
+     * The rose's stars, shared out over its points by their size, so a big
+     * point is as full as a small one. A third keep to a point's edges,
+     * drawing its outline; the rest fill it, drifting out towards the tip.
+     */
+    const roseSize = ROSE.map((p) => p.len * p.half);
+    const roseTotal = roseSize.reduce((a, b) => a + b, 0);
+    const rosePick = new Uint8Array(ROSE_STARS);
+    const roseT = new Float32Array(ROSE_STARS);
+    const roseAcross = new Float32Array(ROSE_STARS);
+    for (let i = 0; i < ROSE_STARS; i++) {
+      let u = Math.random() * roseTotal;
+      let j = 0;
+      while (j < ROSE.length - 1 && u > (roseSize[j] as number)) {
+        u -= roseSize[j] as number;
+        j++;
+      }
+      rosePick[i] = j;
+      // Spread evenly along the point, so its narrow tip reads as clearly as its base.
+      roseT[i] = Math.random();
+      const side = Math.random() < 0.5 ? -1 : 1;
+      roseAcross[i] = Math.random() < 0.33 ? side : side * Math.random();
+    }
+    const bezelA = new Float32Array(BEZEL_STARS);
+    const bezelR = new Float32Array(BEZEL_STARS);
+    for (let i = 0; i < BEZEL_STARS; i++) {
+      if (i % 3 === 0) {
+        // On a tick: one of the 32, from the bezel inward.
+        const j = Math.floor(Math.random() * TICKS);
+        bezelA[i] = -Math.PI / 2 + (j / TICKS) * Math.PI * 2;
+        bezelR[i] = BEZEL - Math.random() * tickLength(j);
+      } else {
+        bezelA[i] = Math.random() * Math.PI * 2;
+        bezelR[i] = BEZEL * (1 + (Math.random() - 0.5) * 0.012);
+      }
+    }
+    const roseGlow = { v: compassRef.current ? 1 : 0 };
     const start =
       arriveRef.current && !formRef.current ? performance.now() - (SWITCH_SECONDS * 1000) / 2 : 0;
     let clock = 0;
@@ -222,8 +279,52 @@ export function StarWheel({
       // No ball at the centre any more: the currents leave from a small empty heart.
       const orbR = f.min * ORB_RADIUS * (1 + 1.5 * apart);
 
+      // The compass rose: its bezel, then its sixteen points, fainter inside a hub.
+      const rose = compassRef.current;
+      roseGlow.v += ((rose ? (brainRef.current ? 1 : 0.45) : 0) - roseGlow.v) * ease;
+      if (roseGlow.v > 0.02) {
+        const fade = roseGlow.v * formed * (1 - 0.6 * apart);
+        for (let i = 0; i < BEZEL_STARS; i++) {
+          const r = (bezelR[i] as number) * f.min * (1 + 0.8 * apart);
+          const a = bezelA[i] as number;
+          const alpha = 0.3 * fade * (0.6 + 0.4 * Math.sin(clock * 1.1 + i));
+          ctx.fillStyle = `rgba(${GR}, ${GG}, ${GB}, ${alpha})`;
+          ctx.fillRect(
+            f.cx + Math.cos(a) * r - size / 2,
+            f.cy + Math.sin(a) * r - size / 2,
+            size,
+            size,
+          );
+        }
+        for (let i = 0; i < ROSE_STARS; i++) {
+          // Each star drifts slowly out to the tip, then starts again from the centre.
+          roseT[i] = (roseT[i] as number) + dt * 0.03;
+          if ((roseT[i] as number) > 1) roseT[i] = 0;
+          const p = ROSE[rosePick[i] as number]!;
+          const t = roseT[i] as number;
+          const ac = roseAcross[i] as number;
+          let [x, y] = rosePoint(f, p, t, ac);
+          if (apart > 0) {
+            const ox = x - f.cx;
+            const oy = y - f.cy;
+            const o = Math.hypot(ox, oy) || 1;
+            const far = (flyFar[i % n] as number) * apart * f.min;
+            x += (ox / o) * far;
+            y += (oy / o) * far;
+          }
+          // The clockwise half of each point lit, the other in shade; the edges drawn.
+          const lit = ac > 0 ? 1 : 0.32;
+          const edge = Math.abs(ac) > 0.98 ? 1.5 : 1;
+          const alpha =
+            0.5 * fade * lit * edge * (1 - 0.3 * t) * (0.7 + 0.3 * Math.sin(clock * 1.6 + i));
+          ctx.fillStyle = `rgba(${GR}, ${GG}, ${GB}, ${Math.min(1, alpha)})`;
+          ctx.fillRect(x - size / 2, y - size / 2, size, size);
+        }
+      }
+
       // The seam: a slow fall of stars down the middle, the line between the two brains.
-      seamGlow.v += ((brainRef.current ? 1 : 0) - seamGlow.v) * ease;
+      // On the compass rose, north and south are the seam.
+      seamGlow.v += ((brainRef.current && !rose ? 1 : 0) - seamGlow.v) * ease;
       if (seamGlow.v > 0.02) {
         const half = RING * f.min * 0.96;
         for (let i = 0; i < SEAM_STARS; i++) {
@@ -254,7 +355,15 @@ export function StarWheel({
         if ((t[i] as number) > 1) t[i] = 0;
         const s = (t[i] as number) * grown;
         if (s <= 0) continue;
-        let [x, y] = spokePoint(f, angleOf(k), s, across[i] as number, orbR * 0.8);
+        // On the rose, straight bearings out from the centre.
+        let [x, y] = spokePoint(
+          f,
+          angleOf(k),
+          s,
+          (across[i] as number) * (rose ? 0.5 : 1),
+          orbR * 0.8,
+          rose ? 0 : undefined,
+        );
         if (formed < 1) {
           // Still on the ring it came from the tree on, at the spoke's own bearing.
           const ra = Math.atan2(y - f.cy, x - f.cx) + (flyTurn[i] as number) * 0.25 * (1 - formed);
@@ -275,7 +384,8 @@ export function StarWheel({
         }
         const twinkle = 0.7 + 0.3 * Math.sin(clock * 1.7 + (tw[i] as number) * 3);
         // Brightest leaving the ball, fading a touch as it reaches the hub.
-        const alpha = 0.6 * (glow[k] as number) * twinkle * (1 - 0.35 * s) * (1 - 0.2 * apart);
+        const alpha =
+          (rose ? 0.4 : 0.6) * (glow[k] as number) * twinkle * (1 - 0.35 * s) * (1 - 0.2 * apart);
         ctx.fillStyle = `rgba(${GR}, ${GG}, ${GB}, ${Math.min(1, alpha)})`;
         ctx.fillRect(x - size / 2, y - size / 2, size, size);
       }
@@ -408,6 +518,38 @@ export function StarWheel({
             </button>
           );
         })}
+
+      {/* The letters at the top only: inside a hub its pages take the whole ring, N and S too. */}
+      {frame.min > 0 && compass && brain
+        ? CARDINALS.map(({ letter, angle, share }) => {
+            const [x, y] = pointAt(frame, angle, share);
+            return (
+              <span
+                key={letter}
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  left: x,
+                  top: y,
+                  transform: 'translate(-50%, -50%)',
+                  opacity: named ? 1 : 0,
+                  transition: 'opacity 0.5s ease',
+                  // A dark disc under the letter, so the ring of stars breaks round it.
+                  background: 'rgba(4, 4, 6, 0.9)',
+                  borderRadius: '50%',
+                  width: 22,
+                  height: 22,
+                  lineHeight: '22px',
+                  textAlign: 'center',
+                  fontSize: letter === 'N' ? 13 : 11,
+                  color: letter === 'N' ? GOLD : '#8a7d62',
+                }}
+              >
+                {letter}
+              </span>
+            );
+          })
+        : null}
 
       {frame.min > 0 && brain
         ? (['left', 'right'] as const).map((side) => (

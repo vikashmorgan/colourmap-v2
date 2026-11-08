@@ -1,17 +1,24 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BEZEL,
   brainAngles,
   brainOrder,
+  CARDINALS,
   labelPoint,
   NODE_RING,
   nodePoint,
   pointAt,
+  RING,
+  ROSE,
+  rosePoint,
   SEAM_GAP,
   spokeAngle,
   spokePoint,
+  TICKS,
   TWIG_FAN,
   TWIG_LENGTH,
+  tickLength,
   twigAngle,
   twigPoint,
 } from './star-wheel';
@@ -97,5 +104,47 @@ describe('the two sides of the brain', () => {
     const [x, y] = pointAt(f, 0, 0.5);
     expect(x).toBeCloseTo(900);
     expect(y).toBeCloseTo(400);
+  });
+});
+
+describe('the compass rose', () => {
+  it('has sixteen points, north at the top and longest, with south, inside the circle', () => {
+    expect(ROSE).toHaveLength(16);
+    const north = ROSE[0]!;
+    const [nx, ny] = rosePoint(f, north, 1, 0);
+    expect(nx).toBeCloseTo(f.cx);
+    expect(ny).toBeLessThan(f.cy);
+    const south = ROSE[8]!;
+    expect(rosePoint(f, south, 1, 0)[1]).toBeGreaterThan(f.cy);
+    for (const p of ROSE) {
+      expect(p.len).toBeLessThanOrEqual(north.len);
+      expect(p.len).toBeLessThan(RING);
+    }
+    // East and west stop short of the hubs on that bearing.
+    expect(ROSE[4]!.len).toBeLessThan(NODE_RING);
+  });
+
+  it('rings the rose with a bezel of ticks inside the circle, N E S W on it, longest on the cardinals', () => {
+    expect(CARDINALS.map((c) => c.letter).join('')).toBe('NESW');
+    expect(BEZEL).toBeLessThan(RING);
+    expect(BEZEL - tickLength(0)).toBeGreaterThan(ROSE[4]!.len);
+    for (let j = 0; j < TICKS; j++) {
+      if (j % 8 === 0) expect(tickLength(j)).toBe(tickLength(0));
+      else expect(tickLength(j)).toBeLessThan(tickLength(0));
+    }
+    expect(tickLength(4)).toBeGreaterThan(tickLength(2));
+    expect(tickLength(2)).toBeGreaterThan(tickLength(1));
+  });
+
+  it('runs a straight bearing when the spoke is not bowed', () => {
+    const a = 0.7;
+    const [x, y] = spokePoint(f, a, 0.5, 0, 10, 0);
+    expect(Math.atan2(y - f.cy, x - f.cx)).toBeCloseTo(a);
+  });
+
+  it('narrows each point to nothing at its tip', () => {
+    const p = ROSE[0]!;
+    expect(rosePoint(f, p, 1, 1)).toEqual(rosePoint(f, p, 1, -1));
+    expect(dist(rosePoint(f, p, 0, 1))).toBeCloseTo(p.half * f.min);
   });
 });

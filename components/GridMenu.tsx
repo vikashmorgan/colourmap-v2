@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { type Design, DesignTab, parseDesign } from '@/components/DesignTab';
+import { type Design3, DesignTab, parseDesign3 } from '@/components/DesignTab';
 import { GridNotes, type GridPlace } from '@/components/GridNotes';
 import { LifeTree } from '@/components/LifeTree';
 import { StarWheel } from '@/components/StarWheel';
@@ -49,6 +49,10 @@ import { brainOrder, GATHER_SECONDS, WHEEL_HIDDEN, WHEEL_HIDDEN_PAGES } from '@/
  *             the left half, the right-brain ones on the right, a seam of
  *             stars between. From the tree, its stars first gather on the
  *             wheel's circle, then the wheel forms out of it.
+ *             Design III (2026-11-08) is the star wheel as a compass rose:
+ *             sixteen points of stars from the centre, north and south the
+ *             needle between the two brains, N E S W on the outer ring.
+ *             Design II, the wheel as it was:
  *             the eight hubs in a ring, like a game's weapon wheel. Pick one
  *             and its pages take the ring; the centre goes back.
  *   TERMINAL  a green phosphor screen: hubs in one column, the chosen hub's
@@ -75,7 +79,9 @@ export default function GridMenu() {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<MenuMode>('tree');
   // The wheel's two designs: I the star wheel, II the wheel as it was (2026-10-30).
-  const [wheelDesign, setWheelDesign] = useState<Design>(1);
+  const [wheelDesign, setWheelDesign] = useState<Design3>(1);
+  // Designs I and III are both the star wheel: the brain, and the brain as a compass rose.
+  const starWheel = wheelDesign !== 2;
   // Switched look since opening: the new one's stars stream in rather than stand ready.
   const [switched, setSwitched] = useState(false);
   // Tree to wheel: the tree's stars gathering on the circle, then the wheel forming from it.
@@ -96,7 +102,7 @@ export default function GridMenu() {
   useEffect(() => {
     try {
       setMode(parseMenuMode(window.localStorage.getItem(MENU_MODE_KEY)));
-      setWheelDesign(parseDesign(window.localStorage.getItem(WHEEL_DESIGN_KEY)));
+      setWheelDesign(parseDesign3(window.localStorage.getItem(WHEEL_DESIGN_KEY)));
     } catch {
       // Storage blocked: the tree it is.
     }
@@ -135,7 +141,7 @@ export default function GridMenu() {
   const top: Hub[] =
     mode !== 'wheel'
       ? HUBS
-      : wheelDesign === 1
+      : starWheel
         ? brainOrder(HUBS)
         : HUBS.filter((h) => !WHEEL_HIDDEN.has(h.id));
   const items: (Hub | GridNode)[] = hub
@@ -160,7 +166,7 @@ export default function GridMenu() {
       }
     };
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    if (mode === 'tree' && m === 'wheel' && wheelDesign === 1 && !hub && !still) {
+    if (mode === 'tree' && m === 'wheel' && starWheel && !hub && !still) {
       // The tree's stars gather on the circle first; then the wheel forms out of it.
       setGathering(true);
       remember();
@@ -339,6 +345,7 @@ export default function GridMenu() {
             <DesignTab
               label="Wheel design"
               design={wheelDesign}
+              options={[1, 2, 3]}
               pick={(d) => {
                 setWheelDesign(d);
                 setSwitched(true);
@@ -359,8 +366,10 @@ export default function GridMenu() {
               gather={gathering}
               onPlace={onTreePlace}
             />
-          ) : mode === 'wheel' && wheelDesign === 1 ? (
+          ) : mode === 'wheel' && starWheel ? (
             <StarWheel
+              key={wheelDesign}
+              compass={wheelDesign === 3}
               hub={hub}
               items={items}
               sel={sel}
