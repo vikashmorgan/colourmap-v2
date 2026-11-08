@@ -71,4 +71,14 @@ describe('the star trees', () => {
     const ys = tree.tips.map(([, y]) => y);
     expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(Math.max(...ys) - FOOT_Y);
   });
+
+  it('without roots, starts every route at the foot and hangs nothing below a raised ground', () => {
+    for (const tree of [buildWillow(8, 7, { roots: false }), buildBanyan(8, 7, { roots: false })]) {
+      for (const [[x0, y0], [, y1]] of ends(tree)) {
+        expect(x0).toBeCloseTo(0);
+        expect(y0).toBeCloseTo(FOOT_Y);
+        expect(y1).toBeGreaterThan(FOOT_Y);
+      }
+    }
+  });
 });

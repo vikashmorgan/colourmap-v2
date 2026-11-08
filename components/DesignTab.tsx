@@ -8,12 +8,30 @@ import { GOLD } from '@/lib/grid';
  */
 
 export type Design = 1 | 2;
+/** The wheel has a third (2026-11-08): the compass rose. */
+export type Design3 = 1 | 2 | 3;
 
 export const parseDesign = (raw: string | null): Design => (raw === '2' ? 2 : 1);
+export const parseDesign3 = (raw: string | null): Design3 =>
+  raw === '3' ? 3 : raw === '2' ? 2 : 1;
 
-type Props = { label: string; design: Design; pick: (d: Design) => void };
+const ROMAN = ['', 'I', 'II', 'III'];
+const WORDS = ['', 'one', 'two', 'three'];
 
-export function DesignTab({ label, design, pick }: Props) {
+type Props<D extends Design3> = {
+  label: string;
+  design: D;
+  pick: (d: D) => void;
+  /** Which designs to offer; I and II unless said. */
+  options?: readonly D[];
+};
+
+export function DesignTab<D extends Design3>({
+  label,
+  design,
+  pick,
+  options = [1, 2] as unknown as readonly D[],
+}: Props<D>) {
   return (
     <fieldset
       aria-label={label}
@@ -34,14 +52,14 @@ export function DesignTab({ label, design, pick }: Props) {
       <span style={{ fontSize: 10, letterSpacing: '0.22em', color: '#6d6450', marginRight: 4 }}>
         DESIGN
       </span>
-      {([1, 2] as const).map((d) => {
+      {options.map((d) => {
         const on = design === d;
         return (
           <button
             key={d}
             type="button"
             aria-pressed={on}
-            aria-label={`Design ${d === 1 ? 'one' : 'two'}`}
+            aria-label={`Design ${WORDS[d]}`}
             onClick={() => pick(d)}
             style={{
               minHeight: 32,
@@ -57,7 +75,7 @@ export function DesignTab({ label, design, pick }: Props) {
               cursor: 'pointer',
             }}
           >
-            {d === 1 ? 'I' : 'II'}
+            {ROMAN[d]}
           </button>
         );
       })}

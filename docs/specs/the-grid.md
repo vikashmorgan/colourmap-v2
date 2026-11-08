@@ -214,3 +214,39 @@ notes in each of these compartments, bottom right".
   that place's notes, newest first, with any answer under them. They are kept
   with the study pages' notes (/api/coding/notes, no new table), and Python's
   page leaves `grid|` notes out. A failed save says so and keeps the words.
+
+## Three designs: willow, banyan, compass rose — 2026-11-08
+
+The user, on the G menu: "make the flux in the grid's first tree more flowy,
+natural, continuous ... lightly low fps right now"; "add designs 1 2 3 which
+would be modifications on the tree and wheel. Right now design 1 and 2 are the
+same. Do 2 3 inspired by new designs on the tree"; and for the wheel, "design 3
+as a wind dial, a compass rose, north and south, with the triangles from the
+centre, inside the outer circle."
+
+- **A smoother current.** The tree's stars no longer surge in a jump on each
+  heartbeat; the current swells and eases with a smooth breath. Stars are
+  drawn in batches by tree and brightness, so the frame rate holds with 7,200
+  stars.
+- **Tree designs I, II, III each look different.** Before, I and II differed
+  only in which pages they read. Now each has its own shape, from the Star
+  Trees in Art (lib/star-trees.ts), grown without roots since the three share
+  the one root at the centre:
+  - **I** the Star Tree, as before.
+  - **II** a willow: boughs arching out, strands hanging in a curtain.
+  - **III** a banyan, low and wide, its aerial roots dropping back down
+    (grown a third larger so it reaches as far as the others).
+  Hanging strands stop on a ground above the root, so they never cross it.
+  III reads the same pages as II (use glow, recent pages, type to find).
+  Opened, every design regrows the tree from its areas, as before.
+- **Wheel design III, the compass rose.** The star wheel with the brain's
+  layout, drawn as a compass: sixteen points of stars from the centre, each
+  with a lit half and a half in shade. North and south form the needle where
+  the seam was. East and west are shorter, so Mind and Body sit just beyond
+  them; then come the four between and eight small points. A bezel of 32
+  ticks sits inside the outer ring, longest on the cardinals. N and S sit at
+  the needle's ends, inside the bezel and clear of the words below on a
+  short screen. E and W sit on the outer ring. The spokes run straight, as
+  bearings, and fainter. Inside a hub the rose dims and the letters go,
+  since the pages take the whole ring. From the tree, the stars gather onto
+  the ring as for design I.

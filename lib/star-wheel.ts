@@ -44,11 +44,12 @@ export function spokePoint(
   t: number,
   across: number,
   from: number,
+  bow = BOW,
 ): [number, number] {
   const r0 = from;
   const r1 = NODE_RING * f.min;
   const r = r0 + (r1 - r0) * t;
-  const a = angle + BOW * Math.sin(Math.PI * t);
+  const a = angle + bow * Math.sin(Math.PI * t);
   const w = f.min * (0.011 * (1 - t) + 0.0025);
   const [x, y] = polar(f, a, r);
   return [x - Math.sin(a) * across * w, y + Math.cos(a) * across * w];
@@ -157,3 +158,59 @@ export const stage = (t: number, length: number): number => {
   const k = Math.min(1, Math.max(0, t / length));
   return k * k * (3 - 2 * k);
 };
+
+/*
+ * DESIGN III, THE COMPASS ROSE (2026-11-08): "a wind dial, a compass rose,
+ * north and south, with the triangles from the centre, inside the outer
+ * circle." Sixteen points of stars out from the centre: north and south the
+ * longest -- the needle, and the seam between the two brains -- east and
+ * west shorter, so the hubs at east and west sit just beyond their tips,
+ * then the four between and the eight smallest. Each point is two halves,
+ * one lit and one in shade, as on a drawn rose.
+ */
+export type RosePoint = { angle: number; len: number; half: number };
+
+export const ROSE: RosePoint[] = Array.from({ length: 16 }, (_, j) => {
+  const angle = -Math.PI / 2 + (j * Math.PI) / 8;
+  // The needle stops short of the bezel, where N and S sit.
+  if (j % 8 === 0) return { angle, len: 0.34, half: 0.05 };
+  if (j % 8 === 4) return { angle, len: 0.25, half: 0.042 };
+  if (j % 4 === 2) return { angle, len: 0.19, half: 0.032 };
+  return { angle, len: 0.12, half: 0.02 };
+});
+
+/**
+ * A star in rose point `p`: `t` from the centre (0) to the tip (1), `across`
+ * -1..1 over the point's width, which narrows to nothing at the tip.
+ */
+export function rosePoint(f: Frame, p: RosePoint, t: number, across: number): [number, number] {
+  const along = t * p.len * f.min;
+  const w = p.half * f.min * (1 - t) * across;
+  const c = Math.cos(p.angle);
+  const s = Math.sin(p.angle);
+  return [f.cx + c * along - s * w, f.cy + s * along + c * w];
+}
+
+/** The bezel inside the outer ring: its circle, and a tick at each of the 32 points. */
+export const BEZEL = 0.395;
+
+/** Where N and S sit: inside the bezel, just past the needle's ends. */
+const CARDINAL_IN = 0.365;
+
+/**
+ * The four letters of the rose, clockwise from north, and how far out each
+ * sits: N and S inside the bezel at the needle's ends, clear of the line of
+ * words under the wheel on a short screen; E and W on the outer ring, beyond
+ * the hubs' names there.
+ */
+export const CARDINALS = [
+  { letter: 'N', angle: -Math.PI / 2, share: CARDINAL_IN },
+  { letter: 'E', angle: 0, share: RING },
+  { letter: 'S', angle: Math.PI / 2, share: CARDINAL_IN },
+  { letter: 'W', angle: Math.PI, share: RING },
+] as const;
+export const TICKS = 32;
+
+/** How long tick `j` of the bezel is, as a share of the smaller side: longest on the cardinals. */
+export const tickLength = (j: number): number =>
+  j % 8 === 0 ? 0.03 : j % 4 === 0 ? 0.02 : j % 2 === 0 ? 0.013 : 0.008;

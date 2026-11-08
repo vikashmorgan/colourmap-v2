@@ -16,7 +16,8 @@
  */
 
 import { BRANCHES, type Branch } from './branches';
-import { buildStarTree, FOOT_Y, type StarTree } from './star-tree';
+import { buildStarTree, FOOT_Y, resample, type StarTree } from './star-tree';
+import { buildBanyan, buildWillow } from './star-trees';
 
 /** Which way each tree grows, in screen radians (y down): Art up, Admin lower right, Energy lower left. */
 export const TREE_ANGLE: Record<Branch, number> = {
@@ -37,10 +38,40 @@ const TREE_HEIGHT = 1.55;
 /** The empty ring the trunks start from, as a share of the smaller side: the root. */
 export const ROOT_RADIUS = 0.035;
 
-export function buildLifeTrees(depth = 8): Record<Branch, StarTree> {
-  return Object.fromEntries(
-    BRANCHES.map((b) => [b, buildStarTree(depth, TREE_SEED[b], false)]),
-  ) as Record<Branch, StarTree>;
+/*
+ * THREE LOOKS (2026-11-08): "add designs 1 2 3 which would be modifications
+ * on the tree ... inspired by new designs on the tree". The Star Trees of Art
+ * (lib/star-trees.ts) lend two: II a willow, its strands hanging in a curtain,
+ * III a banyan, low and wide, its aerial roots dropping back down. Rootless,
+ * since the three share the one root at the centre.
+ */
+export type TreeLook = 1 | 2 | 3;
+
+/** A tree `k` times larger about its foot, its routes resampled to the same star spacing. */
+function enlarged(tree: StarTree, k: number): StarTree {
+  const at = (x: number, y: number): [number, number] => [x * k, FOOT_Y + (y - FOOT_Y) * k];
+  return {
+    routes: tree.routes.map((r) => {
+      const raw: number[] = [];
+      for (let i = 0; i < r.count; i++) {
+        const [x, y] = at(r.pts[i * 3] as number, r.pts[i * 3 + 1] as number);
+        raw.push(x, y, (r.pts[i * 3 + 2] as number) * k);
+      }
+      return resample(raw);
+    }),
+    tips: tree.tips.map(([x, y]) => at(x, y)),
+  };
+}
+
+export function buildLifeTrees(depth = 8, look: TreeLook = 1): Record<Branch, StarTree> {
+  const build = (b: Branch): StarTree =>
+    look === 2
+      ? buildWillow(depth, TREE_SEED[b], { roots: false })
+      : look === 3
+        ? // Low and wide, it is grown a third larger so its crown reaches as far as the others.
+          enlarged(buildBanyan(depth, TREE_SEED[b], { roots: false }), 1.35)
+        : buildStarTree(depth, TREE_SEED[b], false);
+  return Object.fromEntries(BRANCHES.map((b) => [b, build(b)])) as Record<Branch, StarTree>;
 }
 
 export type Frame = { cx: number; cy: number; min: number };
@@ -134,9 +165,18 @@ export function rootPoint(i: number, n: number, f: Frame): [number, number] {
  * of the smaller side) and how bright it still is. Also how much the current
  * surges as the ring leaves, 0..1.
  */
-export function pulse(t: number, period = 3.2): { radius: number; alpha: number; surge: number } {
+export function pulse(
+  t: number,
+  period = 3.2,
+): { radius: number; alpha: number; surge: number; breath: number } {
   const k = (((t % period) + period) % period) / period;
-  return { radius: ROOT_RADIUS + k * 0.5, alpha: 0.5 * (1 - k) ** 2, surge: Math.exp(-k * 6) };
+  return {
+    radius: ROOT_RADIUS + k * 0.5,
+    alpha: 0.5 * (1 - k) ** 2,
+    surge: Math.exp(-k * 6),
+    // The same beat as a smooth swell, 0 to 1 and back, with no step anywhere in it.
+    breath: 0.5 - 0.5 * Math.cos(2 * Math.PI * k),
+  };
 }
 
 /** A page's name from its address, for routes the Grid does not list. */

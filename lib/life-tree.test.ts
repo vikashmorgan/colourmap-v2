@@ -39,6 +39,23 @@ describe('the life tree', () => {
     expect(trees.art.routes[3]?.pts[30]).not.toBe(trees.admin.routes[3]?.pts[30]);
   });
 
+  it('has three looks, a different shape each, all from the shared root and within reach', () => {
+    const looks = ([1, 2, 3] as const).map((l) => buildLifeTrees(8, l));
+    expect(looks[0]?.art.routes.length).not.toBe(looks[1]?.art.routes.length);
+    expect(looks[1]?.art.routes.length).not.toBe(looks[2]?.art.routes.length);
+    for (const trees of looks) {
+      for (const b of BRANCHES) {
+        for (const r of trees[b].routes) {
+          const [x, y] = along(r, 0);
+          expect(x).toBeCloseTo(0);
+          expect(y).toBeCloseTo(FOOT_Y);
+          const [ex, ey] = along(r, routeLength(r));
+          expect(dist(treeToScreen(b, ex, ey, f))).toBeLessThan(f.min * (REACH + 0.15));
+        }
+      }
+    }
+  });
+
   it('turns Art upward and the other two downward, either side', () => {
     const trees = buildLifeTrees();
     const tip = (b: (typeof BRANCHES)[number]) => {
@@ -102,5 +119,19 @@ describe('the life tree', () => {
       expect(r).toBeGreaterThan(bl);
     }
     expect(new Set(BRANCHES.map((b) => BRANCH_RGB[b].join())).size).toBe(3);
+  });
+});
+
+describe('the breath of the current', () => {
+  it('swells and settles with the beat, never stepping from one moment to the next', () => {
+    let last = pulse(0).breath;
+    for (let t = 0.01; t < 10; t += 0.01) {
+      const b = pulse(t).breath;
+      expect(Math.abs(b - last)).toBeLessThan(0.02);
+      expect(b).toBeGreaterThanOrEqual(0);
+      expect(b).toBeLessThanOrEqual(1);
+      last = b;
+    }
+    expect(pulse(1.6).breath).toBeCloseTo(1);
   });
 });
