@@ -56,7 +56,7 @@ describe('/statistics class page', () => {
     // A card's drawing sits under its formula, before the steps that point to it.
     expect(html).toContain("${x.html ? x.html() : ''}\n    ${r ? readsHtml(r) : ''}");
     expect(html).toContain(
-      "const HL_COLOURS = [['yellow', '#f2c14e'], ['green', '#6fbf8e'], ['orange', '#f08a3c'], ['pink', '#e48fb4'], ['blue', '#7aa6e6']];",
+      "const HL_COLOURS = [['yellow', '#f2c14e'], ['lime', '#b0c06e'], ['green', '#6fbf8e'], ['orange', '#f08a3c'], ['pink', '#e48fb4'], ['blue', '#7aa6e6']];",
     );
     // Where you are in the deck: slide n of the lecture's length.
     expect(html).toContain('{ n: 2, pages: 40, ');
@@ -111,5 +111,31 @@ describe('/statistics class page', () => {
     // Nothing of the SQL course is carried over.
     expect(html).not.toContain('sql|');
     expect(html).not.toContain('Business case');
+  });
+
+  it('carries the Lecture 3 notes of 2026-11-08', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
+
+    const html = await (await GET(request())).text();
+
+    // Questions and comments fold under each box, closed unless an answer is new.
+    expect(html).toContain('function notesFold(key, list)');
+    // An edit the account refuses says so instead of vanishing on the next load.
+    expect(html).toContain('Could not save the change to your account');
+    // Yellow and green mixed sits between the two.
+    expect(html).toContain("['yellow', '#f2c14e'], ['lime', '#b0c06e'], ['green', '#6fbf8e']");
+    // The session clock: green to yellow to 45 minutes, orange to 60, red to 70.
+    expect(html).toContain(
+      "const TM_KEY = 'stats-timer', TM_IDLE = 3 * 60e3, TM_GAP = 30 * 60e3, TM_FULL = 70;",
+    );
+    // The case pad on the left, and a peek placed at the word.
+    expect(html).toContain('id="case-pad"');
+    expect(html).toContain('function caseOf(key)');
+    expect(html).toContain('function placePeeks()');
+    // New boxes: binomial or Poisson, the four properties, and Romeo and Juliet's square.
+    expect(html).toContain("id: 'bin-or-pois'");
+    expect(html).toContain("id: 'props'");
+    expect(html).toContain('function romeoSquare()');
+    expect(html).toContain('about 1 hour in 55 has no ticket at all');
   });
 });
