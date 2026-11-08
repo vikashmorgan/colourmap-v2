@@ -8,6 +8,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 import SavedLooks from '@/components/SavedLooks';
+import { helixPoint, project, rungCount, rungPoint } from '@/lib/adn';
 import {
   PIECES as BUTTERFLY_PIECES,
   builderPresetName,
@@ -32,6 +33,7 @@ import {
   sampleDots,
 } from '@/lib/sacred-figures';
 import { along, buildStarTree, routeLength, STEP } from '@/lib/star-tree';
+import { buildStarTreeShape } from '@/lib/star-trees';
 import { isOilMode, isShaderVisualMode } from '@/lib/visual-shaders';
 import { windShape, windVelocity } from '@/lib/wind';
 
@@ -226,6 +228,8 @@ type Mode =
   // Murmuration / Fish School — flocks of dots in 3D (lib/flocks.ts); Flow Masks (lib/flow-masks.ts)
   // Wind — air passing over an object, left to right: aerodynamics as art (lib/wind.ts)
   | 'windtunnel'
+  | 'startrees'
+  | 'adn'
   | 'murmuration'
   | 'fishschool'
   | 'flowmasks'
@@ -2718,6 +2722,56 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 9.5,
     stars: 0,
     mode: 'windtunnel',
+  },
+  // 8 Nov 2026, for the Experiment tab: three more trees of the Star Tree's star current
+  // (lib/star-trees.ts; Tree picks the shape) and ADN, the double helix in stars (lib/adn.ts).
+  'Star Willow': {
+    preset: 'Golden Source',
+    symmetry: 7,
+    complexity: 8,
+    glow: 0,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 0,
+    luminous: 1.5,
+    stars: 0,
+    mode: 'startrees',
+  },
+  'Sea Wind Tree': {
+    preset: 'Blue Astral',
+    symmetry: 7,
+    complexity: 8,
+    glow: 0,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 1,
+    luminous: 1.5,
+    stars: 0,
+    mode: 'startrees',
+  },
+  'Star Banyan': {
+    preset: 'Amber Dust',
+    symmetry: 7,
+    complexity: 8,
+    glow: 0,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 2,
+    luminous: 1.5,
+    stars: 0,
+    mode: 'startrees',
+  },
+  ADN: {
+    preset: 'Blue Astral',
+    symmetry: 2.5,
+    complexity: 7,
+    glow: 3,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 1,
+    luminous: 1.5,
+    stars: 0,
+    mode: 'adn',
   },
   'Liquid Quantum': {
     preset: 'Clifford Dream',
@@ -7565,6 +7619,8 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
     case 'fishschool':
     case 'flowmasks':
     case 'windtunnel':
+    case 'startrees':
+    case 'adn':
       return buildCanvasMode(cfg, R);
     case 'sinmorph3d':
       return buildSinMorph3D(cfg, R);
@@ -7867,6 +7923,8 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
     case 'fishschool':
     case 'flowmasks':
     case 'windtunnel':
+    case 'startrees':
+    case 'adn':
       updateCanvasMode(group, cfg, t, R);
       break;
     case 'sinmorph3d':
@@ -14664,6 +14722,23 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'breathSpeed', label: 'Wind Speed', min: 0.1, max: 2.0, step: 0.05 },
     { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
   ],
+  startrees: [
+    // 0 the willow, 1 the sea-wind tree, 2 the banyan.
+    { key: 'particles', label: 'Tree', min: 0, max: 2, step: 1 },
+    { key: 'symmetry', label: 'Crown', min: 4, max: 9, step: 1 },
+    { key: 'complexity', label: 'Density', min: 1, max: 10, step: 1 },
+    { key: 'luminous', label: 'Trails', min: 0, max: 3, step: 0.1 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
+  adn: [
+    { key: 'symmetry', label: 'Turns', min: 1.5, max: 5, step: 0.5 },
+    { key: 'glow', label: 'Spin', min: 0, max: 10, step: 0.5 },
+    { key: 'complexity', label: 'Density', min: 1, max: 10, step: 1 },
+    { key: 'luminous', label: 'Trails', min: 0, max: 3, step: 0.1 },
+    { key: 'breathSpeed', label: 'Speed', min: 0.1, max: 2.5, step: 0.05 },
+    { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
+  ],
   murmuration: [
     { key: 'complexity', label: 'Birds', min: 1, max: 10, step: 1 },
     { key: 'glow', label: 'Turbulence', min: 0, max: 10, step: 0.5 },
@@ -15136,6 +15211,8 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   sacredfigures: 'Sacred Figures',
   sacreddancers: 'Sacred Dancers',
   windtunnel: 'Wind',
+  startrees: 'Star Willow',
+  adn: 'ADN',
   murmuration: 'Murmuration',
   fishschool: 'Fish School',
   flowmasks: 'Flow Masks',
@@ -15318,6 +15395,8 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'sacredfigures', label: '☸ Sacred Figures' },
   { mode: 'sacreddancers', label: '☸ Sacred Dancers' },
   { mode: 'windtunnel', label: '≫ Wind' },
+  { mode: 'startrees', label: '✦ Star Trees' },
+  { mode: 'adn', label: '⌇ ADN' },
   { mode: 'murmuration', label: '⋰ Murmuration' },
   { mode: 'fishschool', label: '⋰ Fish School' },
   { mode: 'flowmasks', label: '◕ Flow Masks' },
@@ -15407,13 +15486,23 @@ const MODES: { mode: Mode; label: string }[] = [
  * same builder; the split is how a preset is drawn. Sorted 2026-10-08 by
  * reading each mode's build/draw code for points versus lines.
  */
-export type ArtTab = 'stars' | 'geometry' | 'tunnels' | 'oils';
+export type ArtTab = 'stars' | 'geometry' | 'tunnels' | 'oils' | 'experiment';
 export const ART_TABS: { id: ArtTab; label: string }[] = [
   { id: 'stars', label: 'Stars' },
   { id: 'geometry', label: 'Geometry' },
   { id: 'tunnels', label: 'Tunnels' },
   { id: 'oils', label: 'Oils' },
+  { id: 'experiment', label: 'Experiment' },
 ];
+/** The pills across the top of the panel, in order: the Art tabs, with the Big Bang page before Experiment. */
+export const ART_PILLS: ({ id: ArtTab; label: string } | { href: string; label: string })[] = [
+  ...ART_TABS.filter((t) => t.id !== 'experiment'),
+  { href: '/geometry-field/big-bang', label: 'Big Bang' },
+  ...ART_TABS.filter((t) => t.id === 'experiment'),
+];
+// 8 Nov 2026: "add all the new ones in an Experiment tab pill after Big Bang, and include Wind,
+// Wing and Body in there."
+const EXPERIMENT_TAB_MODES = new Set<Mode>(['windtunnel', 'startrees', 'adn']);
 const TUNNEL_TAB_MODES = new Set<Mode>([
   'tunnel',
   'linetunnel3d',
@@ -15452,7 +15541,6 @@ const STAR_TAB_MODES = new Set<Mode>([
   'oneflame',
   'sacredfigures',
   'sacreddancers',
-  'windtunnel',
   'murmuration',
   'fishschool',
   'flowmasks',
@@ -15519,6 +15607,7 @@ const STAR_TAB_MODES = new Set<Mode>([
 ]);
 export function artTabOf(mode: Mode): ArtTab {
   if (isOilMode(mode)) return 'oils';
+  if (EXPERIMENT_TAB_MODES.has(mode)) return 'experiment';
   if (TUNNEL_TAB_MODES.has(mode)) return 'tunnels';
   if (STAR_TAB_MODES.has(mode)) return 'stars';
   return 'geometry';
@@ -15547,12 +15636,19 @@ export function featuredFor(tab: ArtTab): FeaturedItem[] {
 type FeaturedItem = { name: string; tag: string } | { header: string; dim?: boolean };
 
 export const FEATURED_PRESETS: FeaturedItem[] = [
-  { header: 'Good Ones' },
+  // The Experiment tab: Wind, then the Star Trees and ADN (8 Nov 2026).
   // 18 Oct 2026, for the Ferrari project: "a star preset called Wind … currents of wind passing over an
   // object from its left to its right: aerodynamics, the union of science and art. Later with a car."
+  { header: 'Wind' },
   { name: 'Wind', tag: 'WIND' },
   { name: 'Wind Wing', tag: 'WIND' },
   { name: 'Wind Body', tag: 'WIND' },
+  { header: 'Life' },
+  { name: 'Star Willow', tag: 'TREE' },
+  { name: 'Sea Wind Tree', tag: 'TREE' },
+  { name: 'Star Banyan', tag: 'TREE' },
+  { name: 'ADN', tag: 'DNA' },
+  { header: 'Good Ones' },
   // 13 Oct 2026: "that liquid chaos from Music is amazing, use it as a star preset." First.
   { name: 'Music Liquid Chaos', tag: 'LIQUID' },
   // 28 Oct 2026: "a tree in that style … a soft current of stars that goes from root to the branches."
@@ -20909,7 +21005,7 @@ export default function GeometryField() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   // The four Art tabs; 'music' and 'journey' are hidden panels kept in the code.
   const [tab, setTab] = useState<ArtTab | 'music' | 'journey'>(() => artTabOf(cfg.mode));
-  const isArtTab = tab === 'stars' || tab === 'geometry' || tab === 'tunnels' || tab === 'oils';
+  const isArtTab = ART_TABS.some((t) => t.id === tab);
   const [builderView, setBuilderView] = useState<'programs' | 'sliders'>('sliders');
   const [liveMode, setLiveMode] = useState<LiveMode>('studio');
   const [liveStatus, setLiveStatus] = useState('local');
@@ -21620,7 +21716,9 @@ export default function GeometryField() {
       cfg.mode === 'murmuration' ||
       cfg.mode === 'fishschool' ||
       cfg.mode === 'flowmasks' ||
-      cfg.mode === 'windtunnel';
+      cfg.mode === 'windtunnel' ||
+      cfg.mode === 'startrees' ||
+      cfg.mode === 'adn';
     if (!isCanvasMode) {
       canvasModeActiveRef.current = false;
       cancelAnimationFrame(canvasModeAnimRef.current);
@@ -22641,9 +22739,16 @@ export default function GeometryField() {
      * slowly, spread across each branch's width, and fade out at the tips to
      * start again at the roots. Symmetry sets the crown (how many forks).
      * Both are drawn at the screen's own pixels, so the grain stays fine.
+     *
+     * 2026-11-08: the Star Trees (Experiment tab) ride the same current on
+     * three more shapes from lib/star-trees.ts: the willow, the sea-wind tree
+     * and the banyan, picked by the Tree slider.
      */
-    if (cfg.mode === 'musicliquid' && Math.round(cfg.particles) >= 1) {
-      const tree = Math.round(cfg.particles) >= 2;
+    if (
+      (cfg.mode === 'musicliquid' && Math.round(cfg.particles) >= 1) ||
+      cfg.mode === 'startrees'
+    ) {
+      const tree = cfg.mode === 'startrees' || Math.round(cfg.particles) >= 2;
       const n = Math.round(lerp(1400, 4600, (cfg.complexity - 1) / 9) * (tree ? 1.6 : 1));
       const f = Math.max(2, cfg.symmetry);
       const light = 0.35 + iF * 0.65;
@@ -22669,7 +22774,12 @@ export default function GeometryField() {
       const py = new Float32Array(n);
       const tw = new Float32Array(n);
       // The tree: each grain's route, how far along it, its place across the branch, its pace.
-      const shapeTree = tree ? buildStarTree(Math.round(cfg.symmetry) - 1) : null;
+      const crown = Math.round(cfg.symmetry) - 1;
+      const shapeTree = !tree
+        ? null
+        : cfg.mode === 'startrees'
+          ? buildStarTreeShape(cfg.particles, crown)
+          : buildStarTree(crown);
       const route = new Uint16Array(n);
       const at = new Float32Array(n);
       const across = new Float32Array(n);
@@ -22760,6 +22870,128 @@ export default function GeometryField() {
         canvasModeAnimRef.current = requestAnimationFrame(drawStarSand);
       }
       drawStarSand();
+      return () => {
+        canvasModeActiveRef.current = false;
+        cancelAnimationFrame(canvasModeAnimRef.current);
+      };
+    }
+
+    /* ── ADN — the double helix in stars ─────────────────────────────────
+     *
+     * 2026-11-08: "add another as ADN that represents DNA shapes, and dots
+     * move through them." lib/adn.ts lays out the two strands and their base
+     * pairs; here grains of star sand run up one strand and down the other,
+     * and back and forth across the rungs, while the helix turns slowly on
+     * its axis, seen a little from above. Nearer grains are larger and
+     * brighter, so the turning reads in depth. Turns sets the twists, Spin
+     * how fast it turns; only dots, no lines.
+     */
+    if (cfg.mode === 'adn') {
+      const n = Math.round(lerp(1400, 4600, (cfg.complexity - 1) / 9) * 1.2);
+      const turns = Math.max(1.5, Math.min(5, cfg.symmetry));
+      const rungs = rungCount(turns);
+      const spinRate = 0.04 + cfg.glow * 0.03;
+      const light = 0.35 + iF * 0.65;
+      const fade = 0.1 + 0.25 * (1 - Math.min(1, cfg.luminous / 3));
+      const tint = (k: number) =>
+        [pr + (255 - pr) * k, pg + (255 - pg) * k, pb + (255 - pb) * k].map(Math.round);
+      const [sr, sg, sb] = tint(0.45);
+      const [br, bg, bb] = tint(0.15);
+      const fitHelix = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.round((mc!.offsetWidth || 400) * dpr);
+        const h = Math.round((mc!.offsetHeight || 600) * dpr);
+        if (mc!.width !== w || mc!.height !== h) {
+          mc!.width = w;
+          mc!.height = h;
+          ctx!.fillStyle = 'rgb(5, 5, 9)';
+          ctx!.fillRect(0, 0, w, h);
+        }
+        return dpr;
+      };
+      fitHelix();
+      // Each grain: 0 or 1 on a strand, 2 on a rung; where along it; its pace and twinkle.
+      const kind = new Uint8Array(n);
+      const u = new Float32Array(n);
+      const rung = new Uint16Array(n);
+      const dir = new Int8Array(n);
+      const pace = new Float32Array(n);
+      const tw = new Float32Array(n);
+      const jx = new Float32Array(n);
+      const jz = new Float32Array(n);
+      const place = (i: number) => {
+        tw[i] = Math.random() * Math.PI * 2;
+        pace[i] = 0.75 + 0.5 * Math.random();
+        u[i] = Math.random();
+        // A little thickness to each strand, so it reads as a ribbon of stars.
+        jx[i] = (Math.random() - 0.5) * 0.024;
+        jz[i] = (Math.random() - 0.5) * 0.024;
+        if (Math.random() < 0.55) {
+          kind[i] = i % 2;
+        } else {
+          kind[i] = 2;
+          rung[i] = Math.floor(Math.random() * rungs);
+          dir[i] = Math.random() < 0.5 ? 1 : -1;
+        }
+      };
+      for (let i = 0; i < n; i++) place(i);
+      let clock = 0;
+      let last = performance.now();
+
+      function drawHelix() {
+        if (!canvasModeActiveRef.current) return;
+        const now = performance.now();
+        const still = motionModeRef.current === 'static';
+        const dt = still ? 0 : Math.min(0.05, (now - last) / 1000) * speed;
+        last = now;
+        clock += dt;
+        const dpr = fitHelix();
+        const W = mc!.width;
+        const H = mc!.height;
+        ctx!.globalCompositeOperation = 'source-over';
+        ctx!.fillStyle = `rgba(5, 5, 9, ${fade})`;
+        ctx!.fillRect(0, 0, W, H);
+        ctx!.globalCompositeOperation = 'lighter';
+        const scale = Math.min(W, H) * 0.5;
+        const cx = W / 2;
+        const cy = H / 2;
+        const spin = clock * spinRate;
+        for (let i = 0; i < n; i++) {
+          let p: [number, number, number];
+          if (kind[i] === 2) {
+            // Across the base pair and back, then on to another one.
+            u[i] += dt * 0.18 * pace[i] * dir[i];
+            if (u[i] > 1 || u[i] < 0) {
+              dir[i] = -dir[i];
+              u[i] = Math.max(0, Math.min(1, u[i]));
+              if (Math.random() < 0.3) rung[i] = Math.floor(Math.random() * rungs);
+            }
+            p = rungPoint(rung[i], u[i], turns, spin);
+          } else {
+            // Up strand 0, down strand 1: the two run opposite ways.
+            u[i] += dt * 0.04 * pace[i] * (kind[i] === 0 ? 1 : -1);
+            if (u[i] > 1) u[i] -= 1;
+            if (u[i] < 0) u[i] += 1;
+            p = helixPoint(u[i], kind[i] as 0 | 1, turns, spin);
+            p[0] += jx[i];
+            p[2] += jz[i];
+          }
+          const [x, y, near] = project(p, 0.14);
+          const twinkle = 0.7 + 0.3 * Math.sin(clock * 1.7 + tw[i] * 3);
+          const depth = 0.35 + 0.65 * near;
+          const alpha = Math.min(1, (kind[i] === 2 ? 0.4 : 0.6) * light * twinkle * depth);
+          if (alpha < 0.02) continue;
+          const size = (0.8 + 0.6 * near) * dpr;
+          ctx!.fillStyle =
+            kind[i] === 2
+              ? `rgba(${br}, ${bg}, ${bb}, ${alpha})`
+              : `rgba(${sr}, ${sg}, ${sb}, ${alpha})`;
+          ctx!.fillRect(cx + x * scale - size / 2, cy - y * scale - size / 2, size, size);
+        }
+        ctx!.globalCompositeOperation = 'source-over';
+        canvasModeAnimRef.current = requestAnimationFrame(drawHelix);
+      }
+      drawHelix();
       return () => {
         canvasModeActiveRef.current = false;
         cancelAnimationFrame(canvasModeAnimRef.current);
@@ -25699,7 +25931,9 @@ export default function GeometryField() {
           cfg.mode === 'murmuration' ||
           cfg.mode === 'fishschool' ||
           cfg.mode === 'flowmasks' ||
-          cfg.mode === 'windtunnel') && (
+          cfg.mode === 'windtunnel' ||
+          cfg.mode === 'startrees' ||
+          cfg.mode === 'adn') && (
           <canvas
             ref={matrixCanvasRef}
             style={{
@@ -25962,20 +26196,16 @@ export default function GeometryField() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {/* Art: Stars, Geometry, Tunnels, Oils, then the Big Bang trip on its
-                    own page. Music Visuals, Journeys and Figures stay hidden, not
-                    deleted: bringing a tab back is restoring its pill line. */}
-                {ART_TABS.map(({ id, label }) => (
-                  <Fragment key={id}>
-                    {pill(label, tab === id, () => openArtTab(id), true)}
+                {/* Art: Stars, Geometry, Tunnels, Oils, the Big Bang trip on its own
+                    page, then Experiment. Music Visuals, Journeys and Figures stay
+                    hidden, not deleted: bringing a tab back is restoring its pill line. */}
+                {ART_PILLS.map((p) => (
+                  <Fragment key={p.label}>
+                    {'href' in p
+                      ? pill(p.label, false, () => window.location.assign(p.href), true)
+                      : pill(p.label, tab === p.id, () => openArtTab(p.id), true)}
                   </Fragment>
                 ))}
-                {pill(
-                  'Big Bang',
-                  false,
-                  () => window.location.assign('/geometry-field/big-bang'),
-                  true,
-                )}
               </div>
               <button
                 type="button"

@@ -7,12 +7,13 @@ Geometry Field is the immersive visual-program surface for sacred geometry, part
 
 ## Surface: Builder only (2026-10-03)
 
-The nav tab is named **Art** (it was **AI Projections** from 2026-10-03 to 2026-10-08, and **Art** before that). The panel's tabs are **Stars · Geometry · Tunnels · Oils · Big Bang** (2026-10-08):
+The nav tab is named **Art** (it was **AI Projections** from 2026-10-03 to 2026-10-08, and **Art** before that). The panel's tabs are **Stars · Geometry · Tunnels · Oils · Big Bang** (2026-10-08), and **Experiment** after Big Bang (2026-11-08):
 
 - **Stars** and **Geometry** come from the same builder; the split is how a preset is drawn: Stars are the presets drawn with dots (sands, flow fields, dot suns, Trip 1, nebulae, the Cymatic Sands), Geometry the ones drawn mainly with lines (sacred geometry, Lissajous, knots, yantras, morphs, the Waves).
 - **Tunnels** holds every visual you fly into, old and new; **Oils** the liquid shaders with their sliders.
-- Each tab shows only its own presets and programs, under the same headers as before (a header with nothing in the tab is dropped). Opening a tab whose family is not playing starts its first preset. `?tab=stars|geometry|tunnels|oils` opens a tab directly.
+- Each tab shows only its own presets and programs, under the same headers as before (a header with nothing in the tab is dropped). Opening a tab whose family is not playing starts its first preset. `?tab=stars|geometry|tunnels|oils|experiment` opens a tab directly.
 - **Big Bang** opens the Big Bang trip on its own page (`/geometry-field/big-bang`): one continuous trip of light in sixteen steps, brought over from the standalone Geometry Builder. It covers the whole screen, above the All one brain band, with the same tabs top-left to come back.
+- **Experiment** holds the newest tries: Wind, Wind Wing and Wind Body, the three Star Trees and ADN (see *Experiment tab* below).
 
 Music Visuals, Journeys and the Figures link stay hidden, not removed: their code and presets are untouched, and each comes back by restoring its tab pill.
 
@@ -484,3 +485,21 @@ For the Out of the Box projection room.
 
 - **Trip Number 2** was removed from Stars on 2026-11-08 at the user's request: its preset, its Stars list entry and its button in All Programs are gone. The `tripnumber2` drop-pulse mode itself stays, because the Desert Pulse, Desert Temple and Long Trip journeys still play it in their stages. Trip Number 1, 1 Flow and 3–7 are unchanged.
 - **Gravity** no longer draws the two thin rings around its cores. The two balls are made only of sand dots now, with the hollow left by the dots and the stars around them.
+
+## Experiment tab: Wind, three Star Trees, ADN (2026-11-08)
+
+> Martin: "do 3 more different tree visuals in stars trees. and add another as ADN that represents DNA shapes, and dots move through them. Add all the new ones in an Experiment tab pill after Big Bang, and include Wind, Wing and Body in there."
+
+- **Experiment** is a new Art tab. Its pill comes right after Big Bang, on the panel and on the Big Bang page. Tab membership goes by mode, as for the other tabs: `windtunnel`, `startrees` and `adn`.
+- **Wind, Wind Wing and Wind Body** moved here from the top of Stars' Good Ones. They are listed under a *Wind* header, and the new presets under *Life*.
+- **Star Trees** (`lib/star-trees.ts`, mode `startrees`) use the Star Tree's current: grains ride routes from a root tip to a tip, spread across the branch's width. The Tree slider picks one of three shapes:
+  - **Star Willow**: a short trunk opens into arching boughs, and long strands hang from them like a curtain. The stars climb, then fall.
+  - **Sea Wind Tree**: the Star Tree bent by a steady wind. The trunk leans, the windward side is pressed in, and the flat crown streams out to the lee.
+  - **Star Banyan**: a wide, low, flat crown on level limbs, with aerial roots that drop straight to the ground. Some stars climb into the tufts and others run back down the hanging roots.
+  - Sliders: Tree, Crown (how many boughs, limbs or forks), Density, Trails, Speed, Bright.
+- **ADN** (`lib/adn.ts`, mode `adn`) is the double helix in stars:
+  - Two strands sit 0.8 of a half turn apart, so the wide and the narrow grooves show. Base pairs join them, ten to a turn.
+  - Stars run up one strand and down the other, since the strands are antiparallel. Others travel back and forth across the rungs.
+  - The helix turns slowly on its axis and is seen a little from above. Nearer stars are larger and brighter.
+  - Sliders: Turns, Spin, Density, Trails, Speed, Bright.
+- These presets use only dots and stars: no stroked lines, circles or filled shapes. The Star Tree itself (Music Liquid Chaos, Style 2) stays in Stars.

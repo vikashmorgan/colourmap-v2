@@ -232,7 +232,7 @@ export default function BigBang() {
     <main className="bb">
       <canvas ref={canvasRef} className="bb-canvas" />
       <div className={`bb-top${chrome ? '' : ' bb-hidden'}`}>
-        {/* The Art tabs, the same as the panel's: Stars, Geometry, Tunnels, Oils, Big Bang. */}
+        {/* The Art tabs, the same as the panel's: Stars, Geometry, Tunnels, Oils, Big Bang, Experiment. */}
         <nav className="bb-tabs" aria-label="Art">
           {[
             ['stars', 'Stars'],
@@ -247,6 +247,9 @@ export default function BigBang() {
           <span className="bb-back bb-tab-on" aria-current="page">
             Big Bang
           </span>
+          <a href="/geometry-field?tab=experiment" className="bb-back">
+            Experiment
+          </a>
         </nav>
       </div>
       <div className={`bb-step${chrome ? '' : ' bb-quiet'}`} aria-live="polite">
