@@ -13,7 +13,7 @@ describe('geometry live state', () => {
 
   it('stores a controller state for projection polling', () => {
     const saved = writeGeometryLiveState({
-      presetName: 'Trip Number 2',
+      presetName: 'Trip Number 1',
       sourceId: 'controller-1',
       cfg: {
         preset: 'Golden Source',
@@ -25,13 +25,13 @@ describe('geometry live state', () => {
         particles: 8,
         luminous: 4,
         stars: 7,
-        mode: 'tripnumber2',
+        mode: 'tripnumber1',
       },
     });
 
-    expect(saved.presetName).toBe('Trip Number 2');
+    expect(saved.presetName).toBe('Trip Number 1');
     expect(saved.sourceId).toBe('controller-1');
-    expect(saved.cfg.mode).toBe('tripnumber2');
+    expect(saved.cfg.mode).toBe('tripnumber1');
     expect(saved.updatedAt).toBeGreaterThan(0);
     expect(readGeometryLiveState()).toEqual(saved);
   });

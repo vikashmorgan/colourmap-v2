@@ -131,6 +131,8 @@ readable:
   (the default 0.05–1.5 ran far too fast).
 - **Finger distortion now affects the pulse rings** (`updatePulse`) for both
   `pulse` and `tripnumber2`.
+- *2026-11-08:* the **Trip Number 2** preset was removed from Stars at the user's
+  request. The `tripnumber2` mode stays for the journeys that use it.
 
 ### Curation + new trips (session 2)
 - **Removed from FEATURED_PRESETS:** Chrysalis Rings, and featured #57–63

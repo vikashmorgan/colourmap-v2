@@ -1131,18 +1131,6 @@ export const PRESETS: Record<string, Cfg> = {
     stars: 3,
     mode: 'tripnumber1flow',
   },
-  'Trip Number 2': {
-    preset: 'Amber Dust',
-    symmetry: 9,
-    complexity: 6.8,
-    glow: 3.2,
-    breathSpeed: 0.2,
-    intensity: 9.2,
-    particles: 9,
-    luminous: 3.6,
-    stars: 4,
-    mode: 'tripnumber2',
-  },
   'Trip Number 3': {
     preset: 'Golden Source',
     symmetry: 12,
@@ -11866,7 +11854,7 @@ function isCurrentTextureMode(mode: Mode): boolean {
   );
 }
 
-function buildCurrentTexture(cfg: Cfg, R: number): THREE.Group {
+export function buildCurrentTexture(cfg: Cfg, R: number): THREE.Group {
   const TAU = Math.PI * 2;
   const iF = cfg.intensity / 10;
   const count = Math.max(900, Math.round(lerp(1800, 4600, iF)));
@@ -11975,6 +11963,8 @@ function buildCurrentTexture(cfg: Cfg, R: number): THREE.Group {
   pts.userData.prevT = -1;
   group.add(pts);
 
+  // Gravity draws no lines: its two hollow rings went on 8 Nov 2026 ("take away the circles
+  // around the two balls … only dots and stars"), so its cores are made of sand dots alone.
   if (cfg.mode === 'eclipse') {
     const hollow = R * (0.24 + cfg.glow * 0.01);
     const outer = R * 0.92;
@@ -12010,19 +12000,6 @@ function buildCurrentTexture(cfg: Cfg, R: number): THREE.Group {
       ring.scale.set(radius, radius * 0.82, 1);
       ring.userData.tag = 'currentTextureAnchor';
       ring.userData.baseScale = [radius, radius * 0.82];
-      group.add(ring);
-    }
-  } else if (cfg.mode === 'gravity') {
-    for (const side of [1, -1]) {
-      const coreX = side * R * 0.32;
-      const coreY = -side * R * 0.06;
-      const hollow = R * (0.13 + cfg.glow * 0.008);
-      const ring = new THREE.Line(circleGeo(128), lineMat(hdrColor([rr, gg, bb], iF, 2.8), 0.5));
-      ring.position.set(coreX, coreY, 0.02);
-      ring.scale.setScalar(hollow);
-      ring.userData.tag = 'currentTextureAnchor';
-      ring.userData.baseScale = [hollow, hollow];
-      ring.userData.gravitySide = side;
       group.add(ring);
     }
   } else if (cfg.mode === 'fire') {
@@ -12450,12 +12427,6 @@ function updateCurrentTexture(group: THREE.Group, cfg: Cfg, t: number, R: number
       const [sx, sy] = child.userData.baseScale as [number, number];
       const pulse = 1 + Math.sin(t * 0.0011 * speed) * 0.025;
       child.scale.set(sx * pulse, sy * pulse, 1);
-      const side = child.userData.gravitySide as number | undefined;
-      if (side !== undefined) {
-        // The hollow rings ride on the moving cores.
-        const [core] = gravityCores(t * 0.00055 * speed, R);
-        child.position.set(core.x * side, core.y * side, 0.02);
-      }
       updateMat(child, baseRgb, iF, 2.55);
     } else if (tag === 'eclipseCorona') {
       const pts = child as THREE.Points;
@@ -15193,7 +15164,6 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
 
   tripnumber1: 'Trip Number 1',
   tripnumber1flow: 'Trip Number 1 Flow',
-  tripnumber2: 'Trip Number 2',
   tripnumber3: 'Trip Number 3',
   buddhaboycurrents: 'Buddha Boy Currents',
   touchpreset: 'Touch Preset',
@@ -15379,7 +15349,6 @@ const MODES: { mode: Mode; label: string }[] = [
 
   { mode: 'tripnumber1', label: 'Trip Number 1' },
   { mode: 'tripnumber1flow', label: 'Trip Number 1 Flow' },
-  { mode: 'tripnumber2', label: 'Trip Number 2' },
   { mode: 'tripnumber3', label: 'Trip Number 3' },
   { mode: 'buddhaboycurrents', label: 'Buddha Boy Currents' },
   { mode: 'touchpreset', label: 'Touch Preset' },
@@ -15597,7 +15566,6 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Liquid Quantum', tag: 'LIQUID' },
   { name: 'Trip Number 1', tag: 'TRIP' },
   { name: 'Trip Number 1 Flow', tag: 'TRIP' },
-  { name: 'Trip Number 2', tag: 'DROP' },
   { name: 'Trip Number 3', tag: 'TRI' },
   { name: 'Flow Field', tag: 'FLOW' },
   { name: 'Magnetic Sands 2', tag: 'FLOW' },

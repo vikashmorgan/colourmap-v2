@@ -9,7 +9,7 @@ Geometry Field is the immersive visual-program surface for sacred geometry, part
 
 The nav tab is named **Art** (it was **AI Projections** from 2026-10-03 to 2026-10-08, and **Art** before that). The panel's tabs are **Stars · Geometry · Tunnels · Oils · Big Bang** (2026-10-08):
 
-- **Stars** and **Geometry** come from the same builder; the split is how a preset is drawn: Stars are the presets drawn with dots (sands, flow fields, dot suns, trips 1–2, nebulae, the Cymatic Sands), Geometry the ones drawn mainly with lines (sacred geometry, Lissajous, knots, yantras, morphs, the Waves).
+- **Stars** and **Geometry** come from the same builder; the split is how a preset is drawn: Stars are the presets drawn with dots (sands, flow fields, dot suns, Trip 1, nebulae, the Cymatic Sands), Geometry the ones drawn mainly with lines (sacred geometry, Lissajous, knots, yantras, morphs, the Waves).
 - **Tunnels** holds every visual you fly into, old and new; **Oils** the liquid shaders with their sliders.
 - Each tab shows only its own presets and programs, under the same headers as before (a header with nothing in the tab is dropped). Opening a tab whose family is not playing starts its first preset. `?tab=stars|geometry|tunnels|oils` opens a tab directly.
 - **Big Bang** opens the Big Bang trip on its own page (`/geometry-field/big-bang`): one continuous trip of light in sixteen steps, brought over from the standalone Geometry Builder. It covers the whole screen, above the All one brain band, with the same tabs top-left to come back.
@@ -477,3 +477,10 @@ For the Out of the Box projection room.
   - `lib/star-tree.ts` grows a seeded tree with roots, a trunk and a crown. Turbulence sets how many forks the crown has.
   - The grains ride routes from a root tip up to a branch tip, spread across each branch's width, then fade past the tip and start again at the roots.
 - The same change is in the builder site (geometry-builder #6).
+
+## Trip Number 2 removed, Gravity without rings (2026-11-08)
+
+> Martin: "trip nb 2 in stars, destroy that one." · "gravity: take away the circles around the two balls, in stars. so it is only dots and stars."
+
+- **Trip Number 2** was removed from Stars on 2026-11-08 at the user's request: its preset, its Stars list entry and its button in All Programs are gone. The `tripnumber2` drop-pulse mode itself stays, because the Desert Pulse, Desert Temple and Long Trip journeys still play it in their stages. Trip Number 1, 1 Flow and 3–7 are unchanged.
+- **Gravity** no longer draws the two thin rings around its cores. The two balls are made only of sand dots now, with the hollow left by the dots and the stars around them.
