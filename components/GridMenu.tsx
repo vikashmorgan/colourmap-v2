@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { type Design, DesignTab, parseDesign } from '@/components/DesignTab';
+import { GridNotes, type GridPlace } from '@/components/GridNotes';
 import { LifeTree } from '@/components/LifeTree';
 import { StarWheel } from '@/components/StarWheel';
 import {
@@ -25,6 +26,7 @@ import {
   type Visits,
   wheelPoint,
 } from '@/lib/grid';
+import { brainOrder, GATHER_SECONDS, WHEEL_HIDDEN, WHEEL_HIDDEN_PAGES } from '@/lib/star-wheel';
 
 /*
  * THE QUICK MENU — the Grid's hubs from any page (2026-10-25).
@@ -43,6 +45,10 @@ import {
  *             wheel in the tree's stars -- a ball of stars at the centre,
  *             currents along each spoke, a ring of stars round it all;
  *             design II is the wheel as it was:)
+ *             Since 2026-11-08 design I is a brain: the left-brain hubs on
+ *             the left half, the right-brain ones on the right, a seam of
+ *             stars between. From the tree, its stars first gather on the
+ *             wheel's circle, then the wheel forms out of it.
  *             the eight hubs in a ring, like a game's weapon wheel. Pick one
  *             and its pages take the ring; the centre goes back.
  *   TERMINAL  a green phosphor screen: hubs in one column, the chosen hub's
@@ -72,6 +78,14 @@ export default function GridMenu() {
   const [wheelDesign, setWheelDesign] = useState<Design>(1);
   // Switched look since opening: the new one's stars stream in rather than stand ready.
   const [switched, setSwitched] = useState(false);
+  // Tree to wheel: the tree's stars gathering on the circle, then the wheel forming from it.
+  const [gathering, setGathering] = useState(false);
+  const [fromRing, setFromRing] = useState(false);
+  // Where the tree is, for the notes; the wheel and terminal say it from the hub.
+  const [treePlace, setTreePlace] = useState<GridPlace>({ key: 'grid|tree', label: 'Tree' });
+  const onTreePlace = useCallback((key: string, label: string) => setTreePlace({ key, label }), []);
+  const gatherTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(gatherTimer.current), []);
   const [hub, setHub] = useState<Hub | null>(null);
   const [sel, setSel] = useState(0);
   const [visits, setVisits] = useState<Visits>({});
@@ -94,6 +108,8 @@ export default function GridMenu() {
     setHub(null);
     setSel(0);
     setSwitched(false);
+    setFromRing(false);
+    setGathering(false);
     setOpen(true);
   }, []);
 
@@ -114,7 +130,19 @@ export default function GridMenu() {
     return () => window.removeEventListener('keydown', onKey);
   }, [open, show]);
 
-  const items: (Hub | GridNode)[] = hub ? hub.nodes : HUBS;
+  // The star wheel's top level goes round the brain: the right half down, the left half up.
+  // Engine room and Play stay out of both wheels for now (WHEEL_HIDDEN).
+  const top: Hub[] =
+    mode !== 'wheel'
+      ? HUBS
+      : wheelDesign === 1
+        ? brainOrder(HUBS)
+        : HUBS.filter((h) => !WHEEL_HIDDEN.has(h.id));
+  const items: (Hub | GridNode)[] = hub
+    ? mode === 'wheel'
+      ? hub.nodes.filter((n) => !WHEEL_HIDDEN_PAGES.has(n.href))
+      : hub.nodes
+    : top;
 
   // Keep focus on the selection, so Enter and screen readers follow it.
   // biome-ignore lint/correctness/useExhaustiveDependencies: hub and mode change which elements are on screen
@@ -123,13 +151,32 @@ export default function GridMenu() {
   }, [open, sel, hub, mode]);
 
   const pickMode = (m: MenuMode) => {
-    if (m !== mode) setSwitched(true);
-    setMode(m);
-    try {
-      window.localStorage.setItem(MENU_MODE_KEY, m);
-    } catch {
-      // Not remembered; still switched.
+    if (gathering) return;
+    const remember = () => {
+      try {
+        window.localStorage.setItem(MENU_MODE_KEY, m);
+      } catch {
+        // Not remembered; still switched.
+      }
+    };
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (mode === 'tree' && m === 'wheel' && wheelDesign === 1 && !hub && !still) {
+      // The tree's stars gather on the circle first; then the wheel forms out of it.
+      setGathering(true);
+      remember();
+      gatherTimer.current = window.setTimeout(() => {
+        setGathering(false);
+        setFromRing(true);
+        setSwitched(false);
+        setSel(0);
+        setMode('wheel');
+      }, GATHER_SECONDS * 1000);
+      return;
     }
+    if (m !== mode) setSwitched(true);
+    setFromRing(false);
+    setMode(m);
+    remember();
   };
 
   const enterHub = (h: Hub) => {
@@ -139,7 +186,7 @@ export default function GridMenu() {
 
   const back = () => {
     if (!hub) return close();
-    setSel(Math.max(0, HUBS.indexOf(hub)));
+    setSel(Math.max(0, top.indexOf(hub)));
     setHub(null);
   };
 
@@ -305,7 +352,13 @@ export default function GridMenu() {
           ) : null}
 
           {mode === 'tree' ? (
-            <LifeTree go={go} close={close} arrive={switched} />
+            <LifeTree
+              go={go}
+              close={close}
+              arrive={switched}
+              gather={gathering}
+              onPlace={onTreePlace}
+            />
           ) : mode === 'wheel' && wheelDesign === 1 ? (
             <StarWheel
               hub={hub}
@@ -317,6 +370,7 @@ export default function GridMenu() {
               back={back}
               close={close}
               arrive={switched}
+              fromRing={fromRing}
             />
           ) : mode === 'wheel' ? (
             <Wheel
@@ -357,6 +411,17 @@ export default function GridMenu() {
           >
             ARROWS · ENTER · ESC
           </p>
+
+          <GridNotes
+            place={
+              mode === 'tree'
+                ? treePlace
+                : {
+                    key: `grid|${mode}${hub ? `|${hub.id}` : ''}`,
+                    label: `${mode === 'wheel' ? 'Wheel' : 'Terminal'}${hub ? ` · ${hub.label}` : ''}`,
+                  }
+            }
+          />
         </div>
       )}
     </>
@@ -654,6 +719,8 @@ function NetIcon() {
 
 const MENU_CSS = `
 .grid-menu-scrim { position: absolute; inset: 0; background: transparent; border: none; cursor: default; }
+.life-tree > :not(canvas) { transition: opacity 0.4s ease !important; }
+.life-tree.gathering > :not(canvas) { opacity: 0 !important; pointer-events: none; }
 .grid-menu-in { animation: grid-menu-in 160ms ease-out; }
 .grid-menu-centre { display: block; width: 100%; background: transparent; border: none; cursor: pointer; text-decoration: none; font-family: inherit; min-height: 44px; }
 .grid-menu-item { position: absolute; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 12px; border-radius: 999px; border: 1px solid; background: rgba(5,5,6,0.88); font-family: inherit; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; cursor: pointer; transition: box-shadow 120ms, color 120ms; }

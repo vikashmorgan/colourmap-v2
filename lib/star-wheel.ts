@@ -89,3 +89,71 @@ export function twigPoint(
   const r = TWIG_LENGTH * f.min * t;
   return [x0 + Math.cos(a) * r, y0 + Math.sin(a) * r];
 }
+
+/*
+ * TWO SIDES OF THE BRAIN (2026-11-08): "make the wheel divided into two
+ * sides, with the left and right side brain." At the top level the hubs
+ * split into two halves either side of a seam of stars. Which hub goes
+ * where is the user's own call (2026-11-08): "art, body, sound left; learn,
+ * mind right". You, not placed, sits with Learn and Mind, three a side.
+ * Clockwise from the top: the right half going down, then the left half
+ * coming back up. Inside a hub, its pages take the whole ring as before.
+ */
+export type Side = 'left' | 'right';
+
+export const BRAIN: Record<string, Side> = {
+  studio: 'left',
+  body: 'left',
+  sound: 'left',
+  learn: 'right',
+  mind: 'right',
+  you: 'right',
+  engine: 'right',
+  play: 'right',
+};
+
+/** Hubs the wheel leaves out for now (2026-11-08: "engine room not needed right now in the wheel, and play is also not necessary"). They stay in the tree, the terminal and the Grid map. */
+export const WHEEL_HIDDEN = new Set(['engine', 'play']);
+
+/** Pages the wheel leaves out of a hub (2026-11-08: "circles and sparks and AI not necessary in mind"). */
+export const WHEEL_HIDDEN_PAGES = new Set(['/ai', '/sparks', '/circles']);
+
+/** The empty band either side of the seam, at the top and the bottom, in radians. */
+export const SEAM_GAP = 0.22;
+
+/** The hubs in wheel order: the right half top to bottom, then the left half bottom to top. */
+export function brainOrder<T extends { id: string }>(hubs: T[]): T[] {
+  const shown = hubs.filter((h) => !WHEEL_HIDDEN.has(h.id));
+  const right = shown.filter((h) => BRAIN[h.id] !== 'left');
+  const left = shown.filter((h) => BRAIN[h.id] === 'left').reverse();
+  return [...right, ...left];
+}
+
+/** The angle of each spoke in that order: `right` spokes down the right half, `left` up the left. */
+export function brainAngles(right: number, left: number): number[] {
+  const span = Math.PI - 2 * SEAM_GAP;
+  const top = -Math.PI / 2;
+  return [
+    ...Array.from({ length: right }, (_, j) => top + SEAM_GAP + ((j + 0.5) / right) * span),
+    ...Array.from({ length: left }, (_, j) => Math.PI / 2 + SEAM_GAP + ((j + 0.5) / left) * span),
+  ];
+}
+
+/** A point at `angle`, `share` of the smaller side out from the centre. */
+export const pointAt = (f: Frame, angle: number, share: number): [number, number] =>
+  polar(f, angle, share * f.min);
+
+/*
+ * FROM TREE TO WHEEL (2026-11-08): "when I move to wheel, the dots from the
+ * tree transform into that circle of stars and then into the wheel." The
+ * tree's stars gather onto the context circle, then the wheel forms out of
+ * that circle: its currents start on the ring and settle onto their spokes.
+ */
+export const GATHER_SECONDS = 1;
+export const FORM_SECONDS = 1.3;
+
+/** Eased progress, 0 to 1, `t` seconds into a stage of `length` seconds. */
+export const stage = (t: number, length: number): number => {
+  const k = Math.min(1, Math.max(0, t / length));
+  return k * k * (3 - 2 * k);
+};

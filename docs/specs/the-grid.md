@@ -179,3 +179,38 @@ Martin, on how the G menu could be better: "ok do all that."
 - **Twigs on the wheel.** On the star wheel, each hub's ball grows one short
   twig per page inside it, fanned into its name, so the wheel shows how full
   a hub is before it opens. Inside a hub the pages have no twigs.
+
+### No centre ball, tree to wheel through the circle, a two-sided brain, notes — 2026-11-08
+
+The user, on the G menu: "take off the bubble circle in the middle. When I
+move to wheel, the dots from the tree transform into that circle of stars and
+then into the wheel. But make the wheel divided into two sides, with the left
+and right side brain." Then: "engine room not needed right now in the wheel,
+and play is also not necessary"; "art, body, sound left; learn, mind right;
+circles and sparks and AI not necessary in mind"; and "add ability to take
+notes in each of these compartments, bottom right".
+
+- **No ball at the centre.** Neither the tree nor the star wheel draws the
+  ball of stars any more. The tree's root is still a button (You), just not
+  drawn; the trunks and spokes leave from an empty centre.
+- **Tree to wheel.** Choosing WHEEL from the tree (star wheel, design I) runs
+  in two stages: every star of the tree gathers onto the wheel's circle
+  (1 s), then the wheel forms out of that circle, its currents leaving the
+  ring and settling onto their spokes, the names fading in last (1.3 s).
+  With reduced motion the switch is immediate.
+- **A brain.** At the top, the star wheel is split by a seam of stars falling
+  down the middle. LEFT BRAIN: Art, Body, Sound. RIGHT BRAIN: Learn, Mind,
+  and You (not placed by the user; it keeps three a side). Arrows go round
+  clockwise: the right half down, then the left half up. Inside a hub its
+  pages take the whole ring, without the seam.
+- **Fewer things on the wheel, for now.** Engine room and Play are left off
+  both wheel designs, and inside Mind the wheel shows Notes only, without AI,
+  Sparks and Circles. All of them stay in the tree, the terminal and the full
+  Grid map (lib/star-wheel.ts WHEEL_HIDDEN, WHEEL_HIDDEN_PAGES).
+- **Notes, bottom right.** A NOTES pill in every look opens a small sheet for
+  reflections on how the menu should grow. Each note is filed under where you
+  are: the tree, an opened tree, one of its areas, the root, or a wheel or
+  terminal hub (keys `grid|tree|art|…`, `grid|wheel|mind`). The sheet lists
+  that place's notes, newest first, with any answer under them. They are kept
+  with the study pages' notes (/api/coding/notes, no new table), and Python's
+  page leaves `grid|` notes out. A failed save says so and keeps the words.

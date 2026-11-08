@@ -24,9 +24,15 @@ describe('GridMenu', () => {
     render(<GridMenu />);
     fireEvent.click(screen.getByRole('button', { name: /open the network menu/i }));
     expect(screen.getByRole('dialog', { name: 'Network menu' })).toBeTruthy();
-    for (const hub of ['You', 'Sound', 'Mind', 'Learn', 'Engine room', 'Play', 'Body', 'Art']) {
+    // A brain: three hubs a side. Engine room and Play stay out of the wheel for now.
+    for (const hub of ['You', 'Sound', 'Mind', 'Learn', 'Body', 'Art']) {
       expect(screen.getByRole('button', { name: `${hub} hub` })).toBeTruthy();
     }
+    for (const hub of ['Engine room', 'Play']) {
+      expect(screen.queryByRole('button', { name: `${hub} hub` })).toBeNull();
+    }
+    expect(screen.getByText('LEFT BRAIN')).toBeTruthy();
+    expect(screen.getByText('RIGHT BRAIN')).toBeTruthy();
     expect(screen.getByRole('link', { name: /grid/i }).getAttribute('href')).toBe('/grid');
   });
 
@@ -61,12 +67,21 @@ describe('GridMenu', () => {
     render(<GridMenu />);
     fireEvent.click(screen.getByRole('button', { name: /open the network menu/i }));
     const dialog = screen.getByRole('dialog');
-    fireEvent.keyDown(dialog, { key: 'ArrowRight' });
+    // Clockwise from the top: You first, down the right brain, then up the left to Sound last.
+    fireEvent.keyDown(dialog, { key: 'ArrowLeft' });
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Sound hub' }));
     fireEvent.click(document.activeElement as HTMLElement);
     expect(screen.getByRole('button', { name: 'Music' })).toBeTruthy();
     fireEvent.keyDown(dialog, { key: 'Escape' });
-    expect(screen.getByRole('button', { name: 'Sound hub' })).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Sound hub' }));
+    fireEvent.keyDown(dialog, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'You hub' }));
+    // In the wheel, Mind keeps its notes only: AI, Sparks and Circles stay in the other looks.
+    fireEvent.click(screen.getByRole('button', { name: 'Mind hub' }));
+    expect(screen.getByRole('button', { name: 'Notes' })).toBeTruthy();
+    for (const page of ['AI', 'Sparks', 'Circles'])
+      expect(screen.queryByRole('button', { name: page })).toBeNull();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
     fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
   });
