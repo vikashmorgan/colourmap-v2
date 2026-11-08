@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { type Design, DesignTab, parseDesign } from '@/components/DesignTab';
-import { drawOrb, makeOrb } from '@/components/starOrb';
 import {
   type BranchTree,
   buildBranchTree,
@@ -59,6 +58,7 @@ import {
 } from '@/lib/life-tree-2';
 import { nextQuote, POWER_QUOTES } from '@/lib/power-quotes';
 import { along, type Route, routeLength, STEP } from '@/lib/star-tree';
+import { GATHER_SECONDS, RING, stage } from '@/lib/star-wheel';
 
 /*
  * THE TREE LOOK OF THE G MENU (lib/life-tree.ts): you at the centre, a pulse
@@ -124,14 +124,13 @@ type Limb = {
 /** An empty area offered a spark, and how that is going. */
 type Seed = { area: string; state: 'ask' | 'planting' | 'planted' | 'failed' };
 
-const [GR, GG, GB] = [196, 160, 96];
 /*
- * THE ROOT IS A BALL OF STARS (2026-10-30): "not the you button and pulse in
- * the centre, because it denatures the tree. Can be a ball of star dots
- * instead, so it keeps style." The trunks leave from inside it.
+ * THE ROOT IS EMPTY (2026-11-08): "take off the bubble circle in the middle."
+ * It was a ball of stars (2026-10-30); now the trunks leave from an empty
+ * centre and only their currents say where the root is. The centre is still
+ * a button (you, how you are today), just no longer drawn.
  */
-const ORB_STARS = 700;
-const ORB_RADIUS = ROOT_RADIUS * 1.5;
+const ROOT_HIT = ROOT_RADIUS * 1.5;
 /** How long a power quote stays before the next fades in. */
 const QUOTE_SECONDS = 30;
 // Enough that each crown reads full and branchy at a glance (2026-10-30).
@@ -148,14 +147,30 @@ type Props = {
   close: () => void;
   /** Come in from another look: the stars stream together instead of standing ready. */
   arrive?: boolean;
+  /** Leaving for the wheel: every star gathers onto the wheel's circle (lib/star-wheel.ts). */
+  gather?: boolean;
+  /** Where you are, for the menu's notes: a key and a name (components/GridNotes.tsx). */
+  onPlace?: (key: string, label: string) => void;
 };
 
-export function LifeTree({ go, close, arrive = false }: Props) {
+export function LifeTree({ go, close, arrive = false, gather = false, onPlace }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [frame, setFrame] = useState<Frame>({ cx: 0, cy: 0, min: 0 });
   const [design, setDesign] = useState<Design>(1);
   const [fading, setFading] = useState(false);
   const [level, setLevel] = useState<Level>({ kind: 'trees' });
+  useEffect(() => {
+    if (!onPlace) return;
+    if (level.kind === 'trees') onPlace('grid|tree', 'Tree');
+    else if (level.kind === 'root') onPlace('grid|tree|root', 'Tree · You');
+    else if (level.kind === 'branch')
+      onPlace(`grid|tree|${level.branch}`, `Tree · ${BRANCH_LABELS[level.branch]}`);
+    else
+      onPlace(
+        `grid|tree|${level.branch}|${level.area.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+        `Tree · ${BRANCH_LABELS[level.branch]} · ${level.area.label}`,
+      );
+  }, [level, onPlace]);
   const [sel, setSel] = useState(0);
   const [query, setQuery] = useState('');
   const [visits, setVisits] = useState<Visits>({});
@@ -191,6 +206,11 @@ export function LifeTree({ go, close, arrive = false }: Props) {
   const switchRef = useRef(0);
   // Read once, on arrival.
   const arriveRef = useRef(arrive);
+  // When the stars began gathering onto the wheel's circle, or 0.
+  const gatherRef = useRef(0);
+  useEffect(() => {
+    gatherRef.current = gather ? performance.now() : 0;
+  }, [gather]);
   const trees = useMemo(() => buildLifeTrees(), []);
   // Opened, a tree is regrown from its areas: one limb each, one twig per page (lib/branch-tree.ts).
   const shaped = useMemo(
@@ -465,8 +485,8 @@ export function LifeTree({ go, close, arrive = false }: Props) {
   }>([
     ...items.map((it) => ({
       at: it.at,
-      w: it.orb ? frame.min * ORB_RADIUS * 2.4 : it.label.length * (it.small ? 7.5 : 9) + 30,
-      h: it.orb ? frame.min * ORB_RADIUS * 2.4 : it.small ? 30 : 40,
+      w: it.orb ? frame.min * ROOT_HIT * 2.4 : it.label.length * (it.small ? 7.5 : 9) + 30,
+      h: it.orb ? frame.min * ROOT_HIT * 2.4 : it.small ? 30 : 40,
       set: (at: [number, number]) => {
         it.at = at;
       },
@@ -609,7 +629,6 @@ export function LifeTree({ go, close, arrive = false }: Props) {
       flyTurn[i] = (Math.random() - 0.5) * 1.6;
       flyFar[i] = 0.04 + 0.3 * Math.sqrt(Math.random());
     }
-    const orb = makeOrb(ORB_STARS);
     const glow = { art: 0.85, admin: 0.85, energy: 0.85 } as Record<Branch, number>;
     // How far each tree has leaned from gold to its own tint, and that colour.
     const lean = { art: 0, admin: 0, energy: 0 } as Record<Branch, number>;
@@ -675,9 +694,13 @@ export function LifeTree({ go, close, arrive = false }: Props) {
       const p = pulse(clock);
       const size = 1.1 * dpr;
 
-      // The root: a ball of stars turning slowly, breathing with the beat, the near side brighter.
-      const orbR = f.min * ORB_RADIUS * (1 + 0.05 * p.surge) * (1 + 1.5 * apart);
-      drawOrb(ctx, orb, f.cx, f.cy, orbR, clock, size, 1 - 0.4 * apart, [GR, GG, GB]);
+      // Gathering for the wheel: on the wheel's own circle, round the unshifted centre.
+      const gathered = gatherRef.current
+        ? stage((now - gatherRef.current) / 1000, GATHER_SECONDS)
+        : 0;
+      const gx = W / 2;
+      const gy = H / 2 + 12 * dpr;
+      const ringR = RING * Math.min(W, H);
 
       const surge = 1 + 0.8 * p.surge;
       for (let i = 0; i < n; i++) {
@@ -732,6 +755,12 @@ export function LifeTree({ go, close, arrive = false }: Props) {
           sx += ((ox * Math.cos(turn) - oy * Math.sin(turn)) / o) * far;
           sy += ((ox * Math.sin(turn) + oy * Math.cos(turn)) / o) * far;
         }
+        if (gathered > 0) {
+          const ga = Math.atan2(sy - gy, sx - gx);
+          const gr = ringR * (1 + (across[i] as number) * 0.02);
+          sx += (gx + Math.cos(ga) * gr - sx) * gathered;
+          sy += (gy + Math.sin(ga) * gr - sy) * gathered;
+        }
         ctx.fillStyle = `${colour[b]}${alpha})`;
         ctx.fillRect(sx - size / 2, sy - size / 2, size, size);
       }
@@ -745,6 +774,8 @@ export function LifeTree({ go, close, arrive = false }: Props) {
   return (
     <div
       onKeyDown={onKeyDown}
+      // Gathering for the wheel, only the stars stay: names and words fade.
+      className={gather ? 'life-tree gathering' : 'life-tree'}
       style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}
     >
       <canvas
@@ -795,7 +826,7 @@ export function LifeTree({ go, close, arrive = false }: Props) {
         {items.map((it, i) => {
           const on = i === sel;
           if (it.orb) {
-            const d = frame.min * ORB_RADIUS * 2.4;
+            const d = frame.min * ROOT_HIT * 2.4;
             return (
               <button
                 key={it.key}
