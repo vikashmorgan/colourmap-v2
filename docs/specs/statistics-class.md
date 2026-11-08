@@ -75,3 +75,32 @@ The Python page leaves `stats|` notes out of its own lists and Review, as it doe
 
 - Lectures after the third, when they have happened.
 - The Lecture 3 assignment spreadsheet.
+
+## Notes on Lecture 3 — 2026-11-08
+
+From the questions and comments left on the page.
+
+- **Questions fold under each box.** A box's questions and comments sit in a fold, closed by default, that opens beneath it. It opens by itself when an answer is new.
+- **Editing a note.** The pen reads "✎ Edit". If the account refuses an edit, the page now says so; before, the edit looked saved and came back changed on the next load.
+- **Highlights.** Six colours: yellow, lime (yellow and green mixed, as when the two overlap), green, orange, pink, blue.
+- **Session clock.** A half circle above the right-hand dots:
+  - It goes from green to yellow up to 45 minutes, then orange, then red after 60, and it is full at 70.
+  - Time counts while the page is in front and something was touched, scrolled or typed in the last 3 minutes.
+  - A break of 30 minutes or more starts a new session.
+  - A click shows this session, today's total, earlier sessions, and *Start a new session*.
+  - It is kept on this device (`stats-timer`).
+- **The case pad.** *The case* on a box opens a pad on the left with the example the box is about:
+  - For a box, that is the last picture shown up to it in the lecture. For an exercise, it is its setup, numbers and picture.
+  - When there is room, the reading moves right so the pad sits beside it.
+  - It follows as you scroll. *From …* goes to the box it came from.
+- **Peeks at the word.** On a wide screen, a term or letter opens its box just under the word, over the text. It opens above the word when near the bottom of the screen. A phone keeps the sheet at the bottom.
+- **Hover cursor.** Hoverable math shows an ochre dot, not a question mark.
+- **Pill and map.** The pill sits as far left as the dots sit right. Its menu uses the notepad's paper.
+- **Rules as blocks.** A card's list of rules shows each rule in its own block, with its first sentence as the title (box 8, the four conditions of a binomial).
+- **Content:**
+  - The Poisson walk says what each number means: P(X = 0) = 0.018 is about 1 hour in 55 with no ticket.
+  - The peek for k says "exactly k".
+  - New box after the binomial–Poisson approximation: *Binomial or Poisson: which one, and why*.
+  - Lecture 2: the prior card says what the causes are, and why they must form a partition.
+  - Lecture 1: *The four properties together* (monotonicity, inclusion–exclusion, union bound, disjoint pieces), and property (d)'s name.
+  - Lecture 1: Romeo and Juliet's square, with the meeting band drawn.

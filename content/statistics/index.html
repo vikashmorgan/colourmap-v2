@@ -488,6 +488,69 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
     .sessions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .ref-row { grid-template-columns: minmax(0, 1fr); }
   }
+
+  /* 2026-11-08, from the notes on Lecture 3. */
+  /* A math letter or term you can hover: an ochre dot instead of the question-mark cursor. */
+  .kw[data-kw], .kw-t, .kw-chip { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='8' cy='8' r='4.5' fill='%23b08a45' stroke='%23fbf8f1' stroke-width='1.5'/%3E%3C/svg%3E") 8 8, pointer; }
+  /* Yellow and green together: the colour you get when the two overlap. */
+  mark.hl[data-c="lime"] { --hl: #b0c06e; }
+  /* A card's questions and comments sit folded under it, closed unless an answer is new. */
+  .notes:empty { display: none; }
+  .notes-fold > summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; font: 600 12.5px system-ui, sans-serif; color: var(--soft); }
+  .notes-fold > summary::-webkit-details-marker { display: none; }
+  .notes-fold > summary::before { content: '▸'; color: var(--q); transition: transform .15s; }
+  .notes-fold[open] > summary::before { transform: rotate(90deg); }
+  .notes-fold > summary:hover { color: var(--ink); }
+  .notes-fold .new { color: var(--q); }
+  .notes-in { display: grid; gap: 6px; margin-top: 4px; }
+  .tools .n-edit { padding: 0 8px; }
+  /* A list of rules in a card: one block each, its first sentence as the title. */
+  .rules { margin: 0; padding: 0; list-style: none; counter-reset: rule; display: grid; gap: 8px; }
+  .rules li { counter-increment: rule; display: grid; gap: 3px; padding: 9px 12px 10px; border-radius: 10px; background: color-mix(in srgb, var(--paper) 72%, transparent); border-left: 3px solid var(--title, var(--accent)); font-size: 15px; line-height: 1.5; }
+  .rules li b { font: 600 15px Georgia, serif; }
+  .rules li b::before { content: counter(rule) '. '; font: 700 12px ui-monospace, Consolas, monospace; color: var(--title, var(--accent)); }
+  /* The pill sits as far left as the dots sit right; its menu is the notepad's paper. */
+  .map-pill { left: 10px; }
+  .map { background: var(--nb-bg); border-right-color: var(--nb-rule); --line: var(--nb-rule); --card: color-mix(in srgb, var(--nb-bg) 70%, #fff 30%); }
+  [data-theme="night"] .map { --card: color-mix(in srgb, var(--nb-bg) 85%, #fff 15%); }
+  .map-wide .map { border-color: var(--nb-rule); box-shadow: 0 18px 48px rgb(0 0 0 / .18); }
+  /* A peek opens on the text, just under the word you hovered. */
+  .peeks.at-word { right: auto; padding: 0; overflow-y: auto; }
+  .peeks.at-word .peek { box-shadow: 0 10px 28px rgb(0 0 0 / .22); }
+  /* The case pad: the example a card is about, open on the left beside the reading. */
+  /* With room, the reading moves right so the pad sits beside it rather than over it. */
+  .case-side main { margin-left: calc(316px / var(--read)); }
+  .case-side .case-pad { left: 12px; width: 296px; }
+  .case-btn { min-height: 30px; padding: 3px 4px; border: 0; background: none; color: var(--soft); font: 600 12.5px system-ui, sans-serif; cursor: pointer; }
+  .case-btn:hover, .case-btn[aria-expanded="true"] { color: var(--accent); }
+  .case-pad { position: fixed; z-index: 61; left: 16px; top: 16px; bottom: 16px; width: min(400px, calc(100vw - 32px)); overflow: auto; display: grid; align-content: start; gap: 10px; padding: 14px 16px 18px; background: var(--nb-bg); border: 1px solid var(--nb-rule); border-radius: 16px; box-shadow: 0 18px 48px rgb(0 0 0 / .3); --line: var(--nb-rule); --card: color-mix(in srgb, var(--nb-bg) 70%, #fff 30%); font-size: 15px; }
+  [data-theme="night"] .case-pad { --card: color-mix(in srgb, var(--nb-bg) 85%, #fff 15%); }
+  .case-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .case-title { margin: 0; font: 600 19px Georgia, serif; color: var(--accent); }
+  .case-close { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--soft); font-size: 16px; cursor: pointer; }
+  .case-from { justify-self: start; padding: 0; min-height: 26px; border: 0; background: none; color: var(--soft); font: 600 12.5px system-ui, sans-serif; text-align: left; cursor: pointer; }
+  .case-from:hover { color: var(--accent); }
+  .case-body { display: grid; gap: 10px; min-width: 0; }
+  .case-body p { margin: 0; }
+  .case-body table { display: block; max-width: 100%; overflow-x: auto; font-size: 12.5px; }
+  .case-body th, .case-body td { padding: 3px 9px 3px 6px; }
+  .case-body pre { font-size: 12.5px; }
+  /* The session clock: a half circle above the dots, green to yellow up to 45 minutes, then orange, then red to 70. */
+  .timer { position: fixed; z-index: 55; right: 3px; top: calc(50% - 50px); width: 38px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; justify-items: center; color: var(--soft); }
+  .timer svg { display: block; width: 38px; height: 21px; }
+  .timer span { margin-top: -6px; font: 700 10px/1 ui-monospace, Consolas, monospace; }
+  .timer::after { content: ''; position: absolute; inset: -6px -2px; }
+  .timer-card { position: fixed; z-index: 62; right: 46px; top: calc(50% - 70px); width: min(280px, calc(100vw - 60px)); display: grid; gap: 8px; padding: 14px 16px; border-radius: 14px; background: var(--nb-bg); border: 1px solid var(--nb-rule); box-shadow: 0 14px 36px rgb(0 0 0 / .25); font: 14px/1.4 system-ui, sans-serif; color: var(--ink); }
+  .timer-card p { margin: 0; }
+  .tc-now { font: 700 26px/1.1 Georgia, serif; }
+  .tc-soft { color: var(--soft); font-size: 13px; }
+  .tc-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 13px; }
+  .tc-list li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--nb-rule); }
+  .tc-list li:last-child { border-bottom: 0; }
+  .tc-new { justify-self: start; min-height: 30px; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--nb-rule); background: none; color: var(--ink); font: 600 12.5px system-ui, sans-serif; cursor: pointer; }
+  /* Romeo and Juliet's square. */
+  .square { margin: 0; width: 230px; max-width: 100%; }
+  .square svg { display: block; width: 100%; height: auto; }
 </style>
 </style>
 </head>
@@ -512,6 +575,9 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
 
 <button type="button" class="map-pill" id="map-pill" aria-expanded="false" aria-controls="map" aria-label="Where you are"></button>
 <nav class="map" id="map" aria-label="Where you are" hidden></nav>
+<button type="button" class="timer" id="timer" aria-expanded="false" aria-controls="timer-card" aria-label="Time on this session"><svg viewBox="0 0 64 36" aria-hidden="true" id="timer-arc"></svg><span id="timer-min">0</span></button>
+<div class="timer-card" id="timer-card" hidden role="dialog" aria-label="Time worked"></div>
+<aside class="case-pad" id="case-pad" hidden aria-label="The case"><div class="case-top"><p class="case-title">The case</p><button type="button" class="case-close" aria-label="Close the case">×</button></div><button type="button" class="case-from" id="case-from"></button><div class="case-body" id="case-body"></div></aside>
 <button type="button" class="nb-dot" id="nb-dot" aria-expanded="false" aria-controls="notebook" title="Notepad"></button>
 <aside class="notebook" id="notebook" aria-label="Notepad" hidden>
   <div class="nb-top"><span class="nb-title">Notepad</span><span class="text-size" role="group" aria-label="Text size"><button type="button" id="size-down" aria-label="Smaller text">A−</button><output id="size-now"></output><button type="button" id="size-up" aria-label="Larger text">A+</button></span><button type="button" class="nb-close" id="nb-close" aria-label="Close the notepad">×</button></div>
@@ -671,6 +737,18 @@ const gauss = (m, sd) => x => Math.exp(-((x - m) ** 2) / (2 * sd * sd)) / (sd * 
 const unif = (a, b) => x => (x >= a && x <= b ? 1 / (b - a) : 0);
 const expo = l => x => (x < 0 ? 0 : l * Math.exp(-l * x));
 // A box plot lying down: the box is Q₁ to Q₃, the line inside is the median, the whiskers reach the farthest usual values.
+/* Romeo and Juliet: each delay 0 to 60 minutes, one point per pair of delays; they meet in the band |R − J| ≤ 15. */
+function romeoSquare() {
+  const X = m => 34 + m * 3, Y = m => 8 + (60 - m) * 3, pts = list => list.map(([a, b]) => `${X(a)},${Y(b)}`).join(' ');
+  const tick = m => `<text x="${X(m)}" y="${Y(0) + 14}" text-anchor="middle">${m}</text><text x="${X(0) - 5}" y="${Y(m) + 4}" text-anchor="end">${m}</text>`;
+  const miss = 'fill: color-mix(in srgb, var(--soft) 14%, transparent)';
+  return `<figure class="square"><svg viewBox="0 0 230 228" role="img" aria-label="A square of the two delays, with the band along the diagonal where they meet"><g style="font: 11px ui-monospace, Consolas, monospace; fill: var(--soft)">${[0, 15, 60].map(tick).join('')}<text x="${X(30)}" y="${Y(0) + 30}" text-anchor="middle">Romeo’s delay, minutes</text><text transform="translate(10 ${Y(30)}) rotate(-90)" text-anchor="middle">Juliet’s delay</text></g>`
+    + `<polygon points="${pts([[15, 0], [60, 0], [60, 45]])}" style="${miss}"/><polygon points="${pts([[0, 15], [0, 60], [45, 60]])}" style="${miss}"/>`
+    + `<polygon points="${pts([[0, 0], [15, 0], [60, 45], [60, 60], [45, 60], [0, 15]])}" style="fill: color-mix(in srgb, var(--accent) 34%, transparent); stroke: var(--accent); stroke-width: 1.5"/>`
+    + `<rect x="${X(0)}" y="${Y(60)}" width="180" height="180" style="fill: none; stroke: var(--soft)"/>`
+    + `<g style="font: 600 12px system-ui, sans-serif; fill: var(--ink)"><text x="${X(30)}" y="${Y(30) + 4}" text-anchor="middle">meet: 7/16</text><text x="${X(46)}" y="${Y(13)}" text-anchor="middle">miss</text><text x="${X(14)}" y="${Y(49)}" text-anchor="middle">miss</text></g></svg>`
+    + `<figcaption>Each point is one pair of delays. They meet in the band, where the delays differ by 15 minutes or less. Each corner triangle has legs of 45 minutes, 3/4 of the side.</figcaption></figure>`;
+}
 function boxplot({ lo, hi, q1, med, q3, wlo, whi, out = [], ticks = [], cap = '' }) {
   const W = 310, H = 100, at = x => 6 + ((W - 12) * (x - lo)) / (hi - lo), top = 22, low = 48, mid = 35;
   const ink = 'font-family="ui-monospace, Consolas, monospace" font-size="11"';
@@ -721,13 +799,14 @@ const SESSIONS = [
       { id: 'four-sided', slide: 32, name: 'Counting pairs on a grid', what: 'A 4-sided die has faces 1 to 4. Rolling it twice gives 16 possible pairs, since each of the 4 first results can go with each of the 4 second results. All 16 are equally likely, because the die is fair.\n\nSo any question about the two rolls is solved the same way: draw the 4 by 4 grid, mark the cells that fit, count them and divide by 16.', more: { say: 'At least one 4 has 7 cells, so 7/16. Equal rolls have 4 cells on the diagonal, so 4/16. First roll larger has 6 cells, so 6/16. Shaded: at least one 4.', html: () => tbl(['1st ↓ 2nd →', '1', '2', '3', '4'], [['1', '', '', '', '*•'], ['2', '', '', '', '*•'], ['3', '', '', '', '*•'], ['4', '*•', '*•', '*•', '*•']]) } },
       { id: 'not-equal', slide: 33, name: 'Do not count unless they are equal', what: 'A common mistake: late is 2 of the 4 outcomes, so its chance must be 2/4 = 0.5. That is wrong, because the four outcomes are not equally likely. Most orders are on time with no refund. The model gives 0.14 for late.\n\nEqual chances need a real reason, like the physical symmetry of a fair die. Orders have no such symmetry, so you must add their actual probabilities.', watch: 'Count outcomes only when they are equally likely.' },
       { id: 'continuous', slide: 34, name: 'Continuous Ω: lengths, not points', what: 'So far the outcomes could be listed. Now imagine a wheel of fortune marked from 0 to 1, where it can stop at any point at all, including 0.2371… There are endlessly many points.\n\nThen the chance of landing on one exact point is 0. Instead we ask about stretches. The chance of landing in a stretch is simply how long it is: the stretch from 0.2 to 0.5 is 0.3 long, and so has probability 0.3.', f: 'P([a, b]) = b − a     P([0.2, 0.5]) = 0.3', more: { say: 'Why a point has probability 0: if every point had some ε > 0, then more than 1/ε points would add up to more than 1, which the axioms forbid. So a point can have probability 0 and still be possible.' } },
-      { id: 'romeo', slide: 36, name: 'Romeo and Juliet: probability as area', what: 'Romeo and Juliet each arrive up to one hour late, at random, and whoever comes first waits 15 minutes. What is the chance they meet?\n\nDraw a square: Romeo’s delay along the bottom, Juliet’s up the side. Every point in the square is one possible pair of delays, and the whole square has area 1. They meet when their delays differ by at most a quarter of an hour, which is a band along the diagonal. So the probability is the area of that band.', f: 'P(meet) = 1 − 2 × ½ × (3/4)² = 1 − 9/16 = 7/16 ≈ 0.44', more: { say: 'Easier to measure where they miss. The two corners outside the band are triangles with legs of 3/4, so together they cover 9/16 of the square. What is left is the band: 7/16, a little below one half.' } },
+      { id: 'romeo', slide: 36, name: 'Romeo and Juliet: probability as area', what: 'Romeo and Juliet each arrive up to one hour late, at random, and whoever comes first waits 15 minutes. What is the chance they meet?\n\nDraw a square: Romeo’s delay along the bottom, Juliet’s up the side. Every point in the square is one possible pair of delays, and the whole square has area 1. They meet when their delays differ by at most a quarter of an hour, which is a band along the diagonal. So the probability is the area of that band.', f: 'P(meet) = 1 − 2 × ½ × (3/4)² = 1 − 9/16 = 7/16 ≈ 0.44', more: { say: 'Easier to measure where they miss. The two corners outside the band are triangles with legs of 3/4, so together they cover 9/16 of the square. What is left is the band: 7/16, a little below one half.', html: () => romeoSquare() } },
     ] },
     { name: 'Properties of probability laws', cards: [
       { id: 'prop-a', slide: 38, name: 'Property (a): larger event, larger probability', what: 'If A is inside B, then every time A happens B happens too. So B must be at least as likely as A.\n\n"Late and refunded" is inside "late", because any order that is both is certainly late. So "late and refunded" can never be more likely than "late". This is also a quick way to catch a wrong number in a report.', f: 'A ⊂ B ⇒ P(A) ≤ P(B)', more: { say: 'B is A plus the ring Aᶜ ∩ B. The two are disjoint, so P(B) = P(A) + P(Aᶜ ∩ B), and the ring adds at least 0. Example: L ∩ R ⊂ L, so "late and refunded" is never likelier than "late".' } },
       { id: 'prop-b', slide: 39, name: 'Property (b): subtract the overlap once', what: 'This is the rule for the chance of "A or B". Adding the two chances is almost right, but the part where both happen gets counted twice: once in A and once in B. So you take it away once.\n\nIt answers the shop’s first question: how likely is an order to be late or refunded?', f: 'P(A ∪ B) = P(A) + P(B) − P(A ∩ B)', watch: 'This answers the first question: P(L ∪ R) = 0.14 + 0.10 − 0.04 = 0.20. Adding only 0.14 + 0.10 = 0.24 counts ω₄ twice.', more: { say: 'Check by adding the three shaded cells: 0.10 + 0.04 + 0.06 = 0.20. The complement rule gives the blank cell: P(neither) = 1 − 0.20 = 0.80.', html: () => orderGrid(['ω2', 'ω3', 'ω4']) } },
       { id: 'prop-c', slide: 40, name: 'Property (c): the union bound', what: 'Since the addition rule always takes something away, or nothing, simply adding the chances can only give too much or exactly the right amount. So the sum is a ceiling: the true answer is never above it.\n\nThis is called the union bound. It is useful when you do not know the overlap but still want a safe upper limit.', f: 'P(A ∪ B) ≤ P(A) + P(B)\nP(A₁ ∪ ⋯ ∪ Aₙ) ≤ P(A₁) + ⋯ + P(Aₙ)' },
-      { id: 'prop-d', slide: 41, name: 'Property (d): split three events into pieces', what: 'This is another way to work out "A or B or C", without counting anything twice. Cut the whole thing into pieces that do not overlap: first all of A, then what B adds beyond A, then what C adds beyond both.\n\nBecause the pieces do not overlap, you can simply add their chances.', f: 'P(A ∪ B ∪ C) = P(A) + P(Aᶜ ∩ B) + P(Aᶜ ∩ Bᶜ ∩ C)' },
+      { id: 'prop-d', slide: 41, name: 'Property (d): disjoint pieces', what: 'This is another way to work out "A or B or C", without counting anything twice. Cut the whole thing into pieces that do not overlap: first all of A, then what B adds beyond A, then what C adds beyond both.\n\nBecause the pieces do not overlap, you can simply add their chances. The course calls it property (d). It is often called a disjoint decomposition: one union written as pieces that do not overlap.', f: 'P(A ∪ B ∪ C) = P(A) + P(Aᶜ ∩ B) + P(Aᶜ ∩ Bᶜ ∩ C)' },
+      { id: 'props', slide: 37, name: 'The four properties together', what: 'All four follow from the three axioms. Each answers one everyday question about "or" and "inside".', more: { html: () => tbl(['Property', 'Rule', 'In words'], [['(a) Monotonicity', 'A ⊂ B ⇒ P(A) ≤ P(B)', 'A smaller event is never more likely.'], ['(b) Inclusion–exclusion', 'P(A ∪ B) = P(A) + P(B) − P(A ∩ B)', 'Add both, take the overlap away once.'], ['(c) Union bound', 'P(A ∪ B) ≤ P(A) + P(B)', 'Adding gives a ceiling: never too little.'], ['(d) Disjoint pieces', 'P(A ∪ B ∪ C) = P(A) + P(Aᶜ ∩ B) + P(Aᶜ ∩ Bᶜ ∩ C)', 'Cut into pieces that do not overlap, then add.']]) } },
       { id: 'demere', slide: 44, name: 'De Méré’s mistake', what: 'A true story from the 1600s. The gambler de Méré made two bets: at least one six in 4 rolls of a die, and at least one double six in 24 rolls of two dice. He added the chance per roll and got 2/3 both times.\n\nYet over many games he won the first bet and lost the second. His adding was wrong, because it counts twice the games with more than one six.', watch: 'Adding the chance per roll counts the overlaps twice, more so with every roll. Lecture 2 settles both bets.', more: { say: 'The smallest case: at least one six in 2 rolls. His method says 1/6 + 1/6 = 12/36. Of the 36 equal pairs, a six on the first roll is 6 pairs and a six on the second is 6 pairs, but (6, 6) is in both. Property (b) gives the truth.', f: 'P(A ∪ B) = 6/36 + 6/36 − 1/36 = 11/36 ≈ 0.306' } },
     ] },
     { name: 'Models and reality', flowLabel: 'The two stages', flow: ['Symmetry, past data, judgment', 'A model: Ω and P', 'Any event, by the rules'], cards: [
@@ -772,7 +851,7 @@ const SESSIONS = [
     ] },
     { name: 'Bayes’ rule', flowLabel: 'The table to fill in', flow: ['Prior', '× Likelihood', '= Product', 'Add: P(B)', 'Divide: Posterior'], cards: [
       { id: 'bayes', slide: 22, name: 'Bayes’ rule', what: 'Bayes’ rule turns a question around. You usually know "how likely is this evidence if the cause is true?". You want "how likely is the cause, now that I see this evidence?". As the warning in card 5 said, these are different, and this rule converts one into the other.\n\nThe formula is short, but in practice you fill in the table shown above: one row per possible cause.', f: 'P(A ∣ B) = P(A) P(B ∣ A) / P(B)', more: { say: 'P(B) P(A ∣ B) and P(A) P(B ∣ A) are both P(A ∩ B). Dividing by P(B) > 0 gives the rule. P(B) usually comes from total probability.' } },
-      { id: 'prior', slide: 23, name: 'Prior, likelihood, posterior', what: 'Bayes’ rule comes with three names, and they are just "before", "evidence" and "after". The prior is how likely a cause is before you see anything. The likelihood is how likely the thing you saw would be, if that cause were true. The posterior is how likely the cause is after seeing it.\n\nIt is how you update your mind: what you believed, adjusted by how well each explanation fits what you just saw.', f: 'posterior = prior × likelihood / P(B)\nP(Aᵢ ∣ B) = P(Aᵢ) P(B ∣ Aᵢ) / P(B)', watch: 'The causes must form a partition. The denominator is what makes the posteriors sum to 1.' },
+      { id: 'prior', slide: 23, name: 'Prior, likelihood, posterior', what: 'Bayes’ rule comes with three names, and they are just "before", "evidence" and "after". The prior is how likely a cause is before you see anything. The likelihood is how likely the thing you saw would be, if that cause were true. The posterior is how likely the cause is after seeing it.\n\nIt is how you update your mind: what you believed, adjusted by how well each explanation fits what you just saw.', f: 'posterior = prior × likelihood / P(B)\nP(Aᵢ ∣ B) = P(Aᵢ) P(B ∣ Aᵢ) / P(B)', watch: 'The causes must form a partition. The causes are the possible explanations of what you saw: for a late order, "North shipped it" and "South shipped it". A partition means exactly one of them is true: they do not overlap, and none is missing. Then P(B) is the sum of prior × likelihood over every cause, and dividing by it makes the posteriors add up to 1.' },
       { id: 'which', slide: 24, name: 'A late order: which warehouse?', what: 'A customer complains about a late order. Which warehouse shipped it? Before the complaint, South is 30 % likely, because it ships 30 % of orders. But South is also twice as often late as North.\n\nSo the complaint moves our belief towards South, from 30 % to 46 %. Fill in the table below from left to right: prior, likelihood, multiply, add the column, divide.', f: 'P(S ∣ L) = 0.06 / 0.13 = 0.46', more: { say: 'The table has four steps: prior, likelihood, multiply and add, then divide by the sum.', html: () => bayesTable([['North', '0.7', '0.1', '0.07', '0.54'], ['South', '0.3', '0.2', '0.06', '*0.46']], '0.13') } },
       { id: 'dog-answer', slide: 25, name: 'Back to the dog: most alerts are false', what: 'So the dog sits. Is there an item? Only 28 %, far below the 95 % most people guess. The reason is that items are rare.\n\nTrue alerts come from the tiny 2 % of parcels that hold an item. False alerts come from the huge 98 % that do not. Even at only 5 %, the false alerts outnumber the true ones. This same logic applies to medical tests and fraud detectors.', f: 'P(I ∣ D) = 0.019 / 0.068 = 0.28', watch: 'A high P(effect ∣ cause) does not mean a high P(cause ∣ effect) when the cause is rare.', more: { say: 'In counts, of 10,000 parcels: 200 hold an item and the dog sits by 190 of them. 9,800 are clean and the dog sits by 490 of them. So 190 of 680 alerts are real.', html: () => bayesTable([['item', '0.02', '0.95', '0.019', '*0.28'], ['no item', '0.98', '0.05', '0.049', '0.72']], '0.068') } },
     ] },
@@ -822,6 +901,7 @@ const SESSIONS = [
       { id: 'conditions', slide: 18, name: 'Check the four conditions', what: 'A binomial only describes the situation when all four of these conditions are true. If even one fails, you can still type the formula into a calculator, but the answer will not describe what is really happening. Go through the four, one at a time, every time you think you have a binomial.', list: ['The number of tries is fixed in advance. You know n before you start: "the next 10 visitors" is fine. This fails for "visitors until the first purchase", because nobody knows how many that will be.', 'Each try has exactly two results: yes or no. "Buys or does not buy" is fine. This fails for "buys 0, 1 or 2 items", which has three results. The fix is to count buyers instead of items.', 'The tries are independent: the result of one does not affect another. Different strangers are fine. This fails when one customer visits 5 times in a day, because someone who bought this morning is unlikely to buy again this afternoon.', 'The chance p is the same on every try. This fails when you mix groups: newsletter visitors buy more often than visitors from ads, so one single p does not describe them all.'] },
       { id: 'poisson', slide: 19, name: 'Poisson: counts in a fixed window', what: 'The Poisson is for counting how many times something happens in a fixed stretch of time or space: tickets in an hour, calls in a minute, typos on a page. There is no fixed number of tries here: nobody knows how many customers could write.\n\nYou only need one number to describe it: the average count, written with the Greek letter λ (lambda). If the shop gets 4 tickets an hour on average, then λ = 4. The formula then gives the chance of seeing exactly k tickets in the next hour, where k can be 0, 1, 2 and so on. You do not need to do this by hand: a calculator or Excel works it out.', f: 'X ∼ Pois(λ)     k = 0, 1, 2, …\nm_X(k) = e^(−λ) λᵏ / k!\nP(X = 0) = e⁻⁴ = 0.018', more: { html: () => bars(pois(4, 12).map((v, k) => [k, v, v.toFixed(3)]), { x: 'tickets in one hour', cap: 'Pois(4): tickets in one hour', thin: 1, mean: 4 }) } },
       { id: 'poisson-approx', slide: 20, name: 'A binomial with many rare trials', what: 'Think of 100 customers, each with a 1 % chance of writing. That is a binomial with many tries and a small chance each time, and it is painful to calculate. It turns out to be almost the same as a Poisson whose average is n × p, here 100 × 0.01 = 1.\n\nThis explains why the Poisson fits ticket counts: many people, each unlikely to write. You do not even need to know n and p separately, just the average.', watch: 'Use it when events are independent and their rate does not change. Tickets after a delivery failure break the second condition.', more: { say: 'Bin(100, 0.01) against Pois(1), where λ = np = 1.', html: () => tbl(['', 'binomial', 'Poisson'], [['P(X = 0)', '0.366', '0.368'], ['P(X = 1)', '0.370', '0.368'], ['P(X = 5)', '0.00290', '0.00307']]) } },
+      { id: 'bin-or-pois', slide: 20, name: 'Binomial or Poisson: which one, and why', what: 'Ask one question first: is there a fixed number of tries? If you can say "out of these n", such as 10 visitors, 50 parcels or 4 rolls, and each one is a yes or a no with the same chance p, it is a binomial. The count can never go above n.\n\nIf you are counting how often something happens in a stretch of time or space, tickets in an hour or typos on a page, there is no list of tries: nobody knows how many people could write. You only know the average, λ. That is a Poisson, and the count has no top.\n\nWhy it matters: the binomial needs n and p, and the Poisson needs only λ. When n is large and p small, the two give almost the same numbers, as the card before shows, so the Poisson is the shortcut when n is unknown or huge.', more: { html: () => tbl(['Ask', 'Binomial', 'Poisson'], [['A fixed number of tries?', 'yes, n', 'no'], ['What you need to know', 'n and p', 'λ, the average'], ['Largest possible count', 'n', 'no limit'], ['The mean', 'np', 'λ'], ['Example', '3 of 10 visitors buy', '6 tickets in one hour']]) } },
       { id: 'three-models', slide: 21, name: 'Three models side by side', what: 'Three named patterns, and the skill is recognising which one fits. Is it one yes-or-no? Bernoulli. Is it counting yeses in a known number of tries? Binomial. Is it counting events in a stretch of time, with no fixed number of tries? Poisson.', more: { html: () => tbl(['Model', 'Counts', 'Values'], [['Ber(p)', 'one trial, success or not', '0, 1'], ['Bin(n, p)', 'successes in n independent trials', '0, 1, …, n'], ['Pois(λ)', 'events in a fixed window', '0, 1, 2, …']]) } },
     ] },
     { name: 'Expectation', cards: [
@@ -1001,7 +1081,7 @@ const READS = {
   '3|pmf': { parts: [['m', 'For mass: how much probability sits on a value.'], ['_X', 'Which variable it belongs to. This is the PMF of X.'], ['(x)', 'The value you ask about, a plain number.'], ['P(X = x)', 'The chance that X lands on that value.']], walk: { intro: 'Imagine X can be 1, 2 or 3. Then m_X is a small lookup table, and its values sum to 1:', steps: [['x', '= 1, then 2, then 3'], ['m_X(1) = P(X = 1)', '= 0.5'], ['m_X(2) = P(X = 2)', '= 0.3'], ['m_X(3) = P(X = 3)', '= 0.2'], ['Σₓ m_X(x)', '0.5 + 0.3 + 0.2 = 1', 1]] } },
   '3|bernoulli': { parts: [['∼', '"Follows". X has this distribution.'], ['Ber', 'Bernoulli: one trial.'], ['p', 'The chance of success, X = 1.'], ['1 − p', 'The chance of failure, X = 0.']], walk: { intro: 'With p = 0.2:', steps: [['p', '= 0.2'], ['m_X(1) = p', '= 0.2'], ['m_X(0) = 1 − p', '1 − 0.2 = 0.8']] } },
   '3|binomial': { parts: [['n', 'How many trials.'], ['p', 'The chance of success in each trial.'], ['k', 'The number of successes you ask about.'], ['(n choose k)', 'How many different orders those k successes can come in.'], ['pᵏ', 'The k successes.'], ['(1 − p)ⁿ⁻ᵏ', 'The n − k failures.'], ['n!', 'n factorial: n × (n − 1) × … × 1.']], walk: { intro: 'n = 3 visitors, p = 0.2, k = 1 buyer:', steps: [['n', '= 3 visitors'], ['p', '= 0.2, the chance one visitor buys'], ['k', '= 1 buyer'], ['n − k', '= 3 − 1 = 2 who do not buy'], ['1 − p', '= 1 − 0.2 = 0.8'], ['(n choose k) = n! / (k! (n − k)!)', '3! / (1! (3 − 1)!) = 6 / (1 × 2) = 3: BNN, NBN, NNB'], ['pᵏ', '0.2¹ = 0.2'], ['(1 − p)ⁿ⁻ᵏ', '(1 − 0.2)³⁻¹ = 0.8² = 0.64'], ['(n choose k) pᵏ (1 − p)ⁿ⁻ᵏ', '3 × 0.2 × 0.64 = 0.384', 1]] } },
-  '3|poisson': { parts: [['λ', 'Lambda: the average count in the window.'], ['k', 'The count you ask about.'], ['e', 'A fixed number, about 2.718.'], ['e^(−λ)', 'The chance of zero events.'], ['λᵏ', 'λ multiplied k times.'], ['k!', 'k factorial: k × (k − 1) × … × 1, and 0! = 1.']], walk: { intro: 'λ = 4 tickets an hour:', steps: [['λ', '= 4 tickets an hour'], ['k', '= 0, then 1, then 2'], ['e', '= about 2.718'], ['k = 0: e^(−λ) λᵏ / k!', 'e^(−4) × 4⁰ / 0! = 0.018'], ['k = 1: e^(−λ) λᵏ / k!', 'e^(−4) × 4¹ / 1! = 0.073'], ['k = 2: e^(−λ) λᵏ / k!', 'e^(−4) × 4² / 2! = 0.147']] } },
+  '3|poisson': { parts: [['λ', 'Lambda: the average count in the window.'], ['k', 'The count you ask about: the chance of seeing exactly k tickets in the next hour. k can be 0, 1, 2 and so on.'], ['e', 'A fixed number, about 2.718.'], ['e^(−λ)', 'The chance of zero events.'], ['λᵏ', 'λ multiplied k times.'], ['k!', 'k factorial: k × (k − 1) × … × 1, and 0! = 1.']], walk: { intro: 'λ = 4 tickets an hour. Each line is one value of the PMF, m_X(k) = P(X = k): the chance of exactly k tickets in one hour.', steps: [['λ', '= 4 tickets an hour'], ['k', '= 0, then 1, then 2'], ['e', '= about 2.718'], ['k = 0: e^(−λ) λᵏ / k!', 'e^(−4) × 4⁰ / 0! = 0.018'], ['P(X = 0) = 0.018', 'about 1 hour in 55 has no ticket at all'], ['k = 1: e^(−λ) λᵏ / k!', 'e^(−4) × 4¹ / 1! = 0.073'], ['P(X = 1) = 0.073', 'about 1 hour in 14 has exactly one ticket'], ['k = 2: e^(−λ) λᵏ / k!', 'e^(−4) × 4² / 2! = 0.147'], ['P(X = 2) = 0.147', 'about 1 hour in 7 has exactly two'], ['P(X ≤ 2)', '= 0.018 + 0.073 + 0.147 = 0.238: about 1 hour in 4 is that quiet']] } },
   '3|expectation': { parts: [['E[X]', 'E for expectation: the average value of X. It is a Latin E, not Greek. The Greek letter is the next one.'], ['Σₓ', 'Sigma, the Greek S for "sum". It says: go through every value x that X can take, work out what follows, and add the results.'], ['x', 'One value of X, a plain number: first 1, then 2, then 3.'], ['m_X(x)', 'The probability of that value, read from the PMF. m for mass: how much weight sits on x.']], walk: { intro: 'Imagine X can be 1, 2 or 3, with m_X(1) = 0.5, m_X(2) = 0.3 and m_X(3) = 0.2. The sum means one line per value:', steps: [['x', '= 1, then 2, then 3'], ['m_X(x)', '= 0.5, then 0.3, then 0.2'], ['x = 1: x m_X(x)', '1 × 0.5 = 0.5'], ['x = 2: x m_X(x)', '2 × 0.3 = 0.6'], ['x = 3: x m_X(x)', '3 × 0.2 = 0.6'], ['E[X] = Σₓ x m_X(x)', '0.5 + 0.6 + 0.6 = 1.7', 1]] } },
   '3|rule': { parts: [['g(x)', 'A function: what you do to the value, such as squaring it.'], ['Σₓ', 'Go through every value x and add.'], ['g(x)', 'Instead of x itself, use the changed value.'], ['m_X(x)', 'The weight stays that of x.']], walk: { intro: 'The same X, with g(x) = x²:', steps: [['x', '= 1, then 2, then 3'], ['g(x)', '= x²'], ['m_X(x)', '= 0.5, then 0.3, then 0.2'], ['x = 1: g(x) m_X(x)', '1² × 0.5 = 0.5'], ['x = 2: g(x) m_X(x)', '2² × 0.3 = 1.2'], ['x = 3: g(x) m_X(x)', '3² × 0.2 = 1.8'], ['E[g(X)] = Σₓ g(x) m_X(x)', 'E[X²] = 0.5 + 1.2 + 1.8 = 3.5', 1], ['(E[X])²', '1.7² = 2.89, not the same']] } },
   '3|linear-mean': { parts: [['a', 'A fixed number that multiplies X.'], ['b', 'A fixed number that is added.'], ['E[X]', 'The mean of X.']], walk: { intro: 'The same X, with E[X] = 1.7, a = 2 and b = 1:', steps: [['a', '= 2'], ['b', '= 1'], ['E[X]', '= 1.7'], ['ax + b', '= 3, 5, 7 for x = 1, 2, 3'], ['E[aX + b] = a E[X] + b', '2 × 1.7 + 1 = 4.4', 1], ['check: Σₓ (ax + b) m_X(x)', '3 × 0.5 + 5 × 0.3 + 7 × 0.2 = 4.4']] } },
@@ -1087,7 +1167,9 @@ function editNote(ref, kind, body) {
   const n = notes.find(x => noteRef(x) === ref);
   if (!n || !body.trim()) return;
   n.kind = kind; n.body = body.trim(); saveLocal(); paintNotes();
-  if (ON_BRAIN && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, body: n.body }) }).catch(() => {});
+  if (ON_BRAIN && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, body: n.body }) })
+    .then(r => { if (!r.ok) throw new Error(); syncEl.textContent = 'Note changed.'; })
+    .catch(() => { syncEl.textContent = 'Could not save the change to your account; it is kept in this browser.'; });
 }
 function deleteNote(ref) {
   const n = notes.find(x => noteRef(x) === ref);
@@ -1105,7 +1187,7 @@ const KIND = { question: 'Question', comment: 'Comment' };
 function noteHtml(n) {
   const done = n.kind !== 'question' || (n.answer && n.readAt);
   return `<div class="note${done ? ' done' : ''}" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
-    <div class="note-head"><span class="note-kind">${KIND[n.kind]}</span><span class="tools"><button type="button" class="n-edit" aria-label="Edit">✎</button><button type="button" class="n-del" aria-label="Delete">×</button></span></div>
+    <div class="note-head"><span class="note-kind">${KIND[n.kind]}</span><span class="tools"><button type="button" class="n-edit" aria-label="Edit">✎ Edit</button><button type="button" class="n-del" aria-label="Delete">×</button></span></div>
     <div class="note-body">${boldHtml(esc(n.body))}</div>
     ${n.answer ? `<div class="answer"><span class="note-kind">Answer</span><div class="note-body"${n.id ? ` data-hl="stats|ans|${esc(n.id)}"` : ''}>${boldHtml(esc(n.answer))}</div>${n.readAt ? '' : '<button type="button" class="read">Got it, mark read</button>'}</div>` : ''}
   </div>`;
@@ -1115,11 +1197,26 @@ function editorHtml(kind, body) {
     <textarea rows="3" maxlength="2000" aria-label="Your note" placeholder="Write your question or comment">${esc(body)}</textarea>
     <div class="acts"><button type="button" class="save">Save</button><button type="button" class="cancel">Cancel</button></div></div>`;
 }
+/* Asked for 2026-11-08: "all the questions should be in a closed tab by default, so it doesn't make the whole
+   lecture longer. I can just open and close them beneath each box." Open stays open while you read; a new
+   answer opens its fold. */
+const notesOpen = new Set();
+function notesFold(key, list) {
+  if (!list.length) return '';
+  const fresh = list.some(n => n.answer && !n.readAt);
+  return `<details class="notes-fold"${notesOpen.has(key) || fresh ? ' open' : ''}><summary>${list.length === 1 ? '1 question or comment' : `${list.length} questions and comments`}${fresh ? ' <span class="new">· new answer</span>' : ''}</summary><div class="notes-in">${list.map(noteHtml).join('')}</div></details>`;
+}
+document.addEventListener('toggle', e => {
+  const f = e.target;
+  if (!f.classList?.contains('notes-fold')) return;
+  const key = f.closest('[data-key]')?.dataset.key;
+  if (key) { if (f.open) notesOpen.add(key); else notesOpen.delete(key); }
+}, true);
 function paintNotes() {
   paintBoxes();
   for (const card of document.querySelectorAll('.card, .ex[data-key]')) {
     const list = notesOf(card.dataset.key);
-    card.querySelector('.notes').innerHTML = list.map(noteHtml).join('');
+    card.querySelector('.notes').innerHTML = notesFold(card.dataset.key, list);
     const b = card.querySelector('.note-btn');
     b.setAttribute('aria-pressed', String(list.length > 0));
     b.textContent = list.length ? `Question or comment · ${list.length}` : 'Question or comment';
@@ -1246,6 +1343,7 @@ document.addEventListener('click', e => {
   if (ed && t.closest('.save')) {
     const body = ed.querySelector('textarea').value;
     ed.remove();
+    notesOpen.add(host.dataset.key);
     if (ed.dataset.ref) editNote(ed.dataset.ref, ed.dataset.kind, body); else addNote(host.dataset.key, ed.dataset.kind, body);
     paintNotes();
     return;
@@ -1356,7 +1454,7 @@ const LETTERS = {
   X: 'A random variable: a number decided by what happens, such as how many visitors buy.',
   x: 'One value that X can take, a plain number. Capital X is the variable; small x is "this time, this number".',
   n: 'A count: how many trials or cases there are in all.',
-  k: 'A count: how many successes, or outcomes, you ask about.',
+  k: 'The count you ask about, as in "exactly k". In a binomial: k successes out of n tries, from 0 up to n. In a Poisson: k events in the window, 0, 1, 2 and so on, with no top.',
   p: 'The chance of success in one trial, a number from 0 to 1.',
   'λ': 'Lambda: the average count in a fixed window of time or space.',
   'μ': 'Mu, the Greek m: the mean of X, the same as E[X].',
@@ -1402,20 +1500,25 @@ function readsHtml(r) {
 }
 const PARA = String.fromCharCode(10, 10);
 const paras = t => t.split(PARA).map(p => `<p>${kwText(p)}</p>`).join('');
+// A rule in a list: its first sentence is its title, the rest says when it holds and when it fails.
+function ruleHtml(r) {
+  const at = r.search(/\.\s/);
+  return at < 0 ? `<li>${kwText(r)}</li>` : `<li><b>${kwText(r.slice(0, at + 1))}</b><span>${kwText(r.slice(at + 2))}</span></li>`;
+}
 function cardHtml(s, c, gi) {
   const key = cardKey(s.n, c.id), m = marks[key] || '';
   const r = READS[`${s.n}|${c.id}`], x = c.more || {};
   return `<article class="card" id="c-${s.n}-${c.id}" data-key="${esc(key)}" data-mark="${m}">
     <h3><span class="num">${c.num.split('.')[1]}</span><span>${esc(c.name)}</span>${partTag(s, gi)}</h3>
     ${paras(c.what)}
-    ${c.list ? `<ol class="steps">${c.list.map(i => `<li>${kwText(i)}</li>`).join('')}</ol>` : ''}
+    ${c.list ? `<ol class="rules">${c.list.map(ruleHtml).join('')}</ol>` : ''}
     ${c.f ? `<pre>${mathHtml(c.f)}</pre>` : ''}
     ${x.html ? x.html() : ''}
     ${r ? readsHtml(r) : ''}
     ${x.say ? `<p>${kwText(x.say)}</p>` : ''}${x.f ? `<pre>${mathHtml(x.f)}</pre>` : ''}
     ${c.watch ? `<p class="watch"><b>Watch out</b>${kwText(c.watch)}</p>` : ''}
     <div class="notes"></div>
-    <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>${ON_BRAIN && c.slide ? `<a class="slide-link" href="/api/coding/slides/Stats${s.n}.pdf#page=${c.slide}" target="_blank" rel="noopener" aria-label="Slide ${c.slide} of ${s.pages}">Slide ${c.slide}<span class="of">/${s.pages}</span> ›</a>` : ''}
+    <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>${caseOf(key) ? '<button type="button" class="case-btn" aria-controls="case-pad">The case</button>' : ''}${ON_BRAIN && c.slide ? `<a class="slide-link" href="/api/coding/slides/Stats${s.n}.pdf#page=${c.slide}" target="_blank" rel="noopener" aria-label="Slide ${c.slide} of ${s.pages}">Slide ${c.slide}<span class="of">/${s.pages}</span> ›</a>` : ''}
       <span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Confused as fuck']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span></div>
   </article>`;
 }
@@ -1594,7 +1697,7 @@ function practiceHtml(s) {
   return s.practice.map((x, i) => `<section class="ex" id="c-${s.n}-ex-${x.id}" data-key="${esc(cardKey(s.n, `ex-${x.id}`))}" aria-label="Exercise ${i + 1}"><h3><span class="ex-num">Exercise ${i + 1}</span>${esc(x.title)}${partTag(s, s.groups.length)}</h3><p class="ex-setup" data-hl="stats|p|${x.id}">${text(x.setup)}</p>${x.table ? x.table() : ''}${picHtml(x)}
     <div class="practice">${x.parts.map(([q, a], j) => `<details class="pq" data-hl="stats|p|${x.id}-${j + 1}"><summary><span class="num">${j + 1}</span><span>${text(q)}</span></summary><div class="ans">${subs(a())}${lawsHtml(s, PRACTICE_LAWS[x.id]?.[j])}</div></details>`).join('')}</div>
     <div class="notes"></div>
-    <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button></div></section>`).join('');
+    <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button><button type="button" class="case-btn" aria-controls="case-pad">The case</button></div></section>`).join('');
 }
 /* ---------- Charts: the key graph of each topic, with its formula worked out beside it ----------
    Asked for 2026-11-07: "a set of charts with scales, in each lecture, and a space with all of them,
@@ -2017,6 +2120,148 @@ notebook.addEventListener('click', e => {
 });
 
 
+/* ---------- The case pad ----------
+   Asked for 2026-11-08: "when you are in a box and it talks about the cells 11, 12, like box 3, I need a place
+   where I can pop open the exercise or the current case: a pad that opens on the left, so I can have it on the
+   side and understand what we are talking about, with the graph in it when there is one. For every lecture."
+   A card's case is the last picture shown up to it in the lecture: its own, or the one before it. An
+   exercise's case is the exercise: its setup, its numbers and its picture. The pad follows as you read. */
+const casePad = document.getElementById('case-pad');
+let caseShown = '';
+function caseOf(key) {
+  const m = /^stats\|s(\d+)\|(.+)$/.exec(key || '');
+  const s = m && SESSIONS.find(x => x.n === Number(m[1]));
+  if (!s) return null;
+  if (m[2].startsWith('ex-')) {
+    const i = (s.practice || []).findIndex(x => `ex-${x.id}` === m[2]);
+    if (i < 0) return null;
+    const x = s.practice[i];
+    return { id: key, from: `Exercise ${i + 1} · ${x.title}`, go: key, html: () => `<p>${text(x.setup)}</p>${x.table ? x.table() : ''}${picHtml(x)}` };
+  }
+  const cards = s.groups.flatMap(g => g.cards);
+  for (let j = cards.findIndex(c => c.id === m[2]); j >= 0; j--) {
+    const c = cards[j], x = c.more || {};
+    if (x.html) return { id: cardKey(s.n, c.id), from: `${c.num} ${c.name}`, go: cardKey(s.n, c.id), html: () => `${x.say ? `<p>${kwText(x.say)}</p>` : ''}${x.html()}${x.f ? `<pre>${mathHtml(x.f)}</pre>` : ''}` };
+  }
+  return null;
+}
+function paintCase(key) {
+  const c = caseOf(key);
+  if (!c) return false;
+  if (c.id !== caseShown) {
+    caseShown = c.id;
+    const from = document.getElementById('case-from');
+    from.textContent = `From ${c.from} ›`;
+    from.dataset.go = c.go;
+    document.getElementById('case-body').innerHTML = c.html();
+    markXx(casePad);
+  }
+  return true;
+}
+const caseSide = () => document.documentElement.classList.toggle('case-side', !casePad.hidden && innerWidth >= 316 + 760 * (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--read')) || 1) + 40);
+addEventListener('resize', caseSide);
+function setCase(open, key) {
+  if (open && !paintCase(key || currentSpot())) open = false;
+  casePad.hidden = !open;
+  caseSide();
+  for (const b of document.querySelectorAll('.case-btn')) b.setAttribute('aria-expanded', String(open));
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('.case-btn');
+  if (b) { const key = b.closest('[data-key]').dataset.key; setCase(casePad.hidden || caseOf(key)?.id !== caseShown, key); return; }
+  if (e.target.closest('.case-close')) { setCase(false); return; }
+  const from = e.target.closest('#case-from');
+  if (from) goTo(from.dataset.go);
+});
+let caseTimer = 0;
+addEventListener('scroll', () => { if (casePad.hidden) return; clearTimeout(caseTimer); caseTimer = setTimeout(() => paintCase(currentSpot()), 150); }, { passive: true });
+
+/* ---------- The session clock ----------
+   Asked for 2026-11-08: "a timer that counts how long I have worked on the session, geared to 45 minutes,
+   a half circle from green to yellow; after 45 it gets orange, after 60 red, and it goes to 70. I can click
+   on the clock and see how much time I worked. Colours like the highlighter."
+   Time counts while the page is in front and you touched, scrolled or typed in the last 3 minutes. A break of
+   30 minutes or more starts a new session. Kept on this device. */
+const TM_KEY = 'stats-timer', TM_IDLE = 3 * 60e3, TM_GAP = 30 * 60e3, TM_FULL = 70;
+const tmCard = document.getElementById('timer-card'), tmBtn = document.getElementById('timer');
+let tm = readStore(TM_KEY, { list: [] }), tmActive = Date.now(), tmTick = Date.now(), tmShown = -1;
+if (!Array.isArray(tm.list)) tm = { list: [] };
+const tmMix = (a, b, t) => `#${[1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('')}`;
+const tmColour = min => (min >= 60 ? '#d9534f' : min >= 45 ? '#f08a3c' : tmMix('#6fbf8e', '#f2c14e', Math.max(0, min) / 45));
+const tmMinutes = s => Math.floor((s?.ms || 0) / 60e3);
+const tmLecture = () => (isTab(current) ? '' : `Lecture ${current}`);
+function tmSession(now) {
+  let s = tm.list[tm.list.length - 1];
+  if (!s || now - s.last > TM_GAP) {
+    s = { start: now, last: now, ms: 0, where: tmLecture() };
+    tm.list = [...tm.list, s].slice(-40);
+  }
+  return s;
+}
+function tmArc(min) {
+  const seg = i => {
+    const a0 = Math.PI * (1 - i / TM_FULL), a1 = Math.PI * (1 - (i + 1) / TM_FULL);
+    const p = a => `${(32 + 26 * Math.cos(a)).toFixed(2)} ${(32 - 26 * Math.sin(a)).toFixed(2)}`;
+    return `<path d="M ${p(a0)} A 26 26 0 0 1 ${p(a1)}" stroke="${tmColour(i + 0.5)}" stroke-opacity="${i < min ? 1 : 0.22}"/>`;
+  };
+  return `<g fill="none" stroke-width="7">${Array.from({ length: TM_FULL }, (_, i) => seg(i)).join('')}</g>`;
+}
+function tmPaint() {
+  const s = tm.list[tm.list.length - 1], min = s && Date.now() - s.last <= TM_GAP ? tmMinutes(s) : 0;
+  if (min !== tmShown) {
+    tmShown = min;
+    document.getElementById('timer-arc').innerHTML = tmArc(min);
+    const label = document.getElementById('timer-min');
+    label.textContent = min;
+    label.style.color = min ? tmColour(min) : '';
+    tmBtn.title = `${min} minutes on this session`;
+  }
+  if (!tmCard.hidden) tmCardPaint();
+}
+const tmLength = min => (min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`);
+function tmCardPaint() {
+  const now = Date.now(), s = tm.list[tm.list.length - 1], live = s && now - s.last <= TM_GAP;
+  const today = new Date().toDateString();
+  const todayMin = tm.list.filter(x => new Date(x.start).toDateString() === today).reduce((t, x) => t + tmMinutes(x), 0);
+  const earlier = tm.list.slice(0, live ? -1 : undefined).filter(x => tmMinutes(x) > 0).slice(-6).reverse();
+  const when = x => new Date(x.start).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  tmCard.innerHTML = `<p class="tc-soft">This session</p><p class="tc-now" style="color: ${live ? tmColour(tmMinutes(s)) : 'inherit'}">${tmLength(live ? tmMinutes(s) : 0)}</p>`
+    + (live ? `<p class="tc-soft">Since ${new Date(s.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${s.where ? ` · ${esc(s.where)}` : ''}</p>` : '')
+    + `<p>Today: <b>${tmLength(todayMin)}</b></p>`
+    + (earlier.length ? `<p class="tc-soft">Earlier sessions</p><ul class="tc-list">${earlier.map(x => `<li><span>${esc(when(x))}${x.where ? ` · ${esc(x.where.replace('Lecture ', 'L'))}` : ''}</span><b>${tmLength(tmMinutes(x))}</b></li>`).join('')}</ul>` : '')
+    + `<button type="button" class="tc-new">Start a new session</button>`;
+}
+setInterval(() => {
+  const now = Date.now();
+  if (document.visibilityState === 'visible' && now - tmActive < TM_IDLE) {
+    const s = tmSession(now);
+    s.ms += Math.min(now - tmTick, 5e3);
+    s.last = now;
+    if (tmLecture()) s.where = tmLecture();
+    if (Math.floor(s.ms / 1e3) % 10 === 0) writeStore(TM_KEY, tm);
+  }
+  tmTick = now;
+  tmPaint();
+}, 1000);
+for (const ev of ['pointerdown', 'pointermove', 'keydown', 'scroll', 'wheel']) addEventListener(ev, () => { tmActive = Date.now(); }, { passive: true });
+addEventListener('pagehide', () => writeStore(TM_KEY, tm));
+tmBtn.addEventListener('click', () => {
+  const open = tmCard.hidden;
+  tmCard.hidden = !open;
+  tmBtn.setAttribute('aria-expanded', String(open));
+  if (open) tmCardPaint();
+});
+tmCard.addEventListener('click', e => {
+  if (!e.target.closest('.tc-new')) return;
+  const now = Date.now();
+  tm.list = [...tm.list, { start: now, last: now, ms: 0, where: tmLecture() }].slice(-40);
+  writeStore(TM_KEY, tm);
+  tmShown = -1;
+  tmPaint();
+});
+document.addEventListener('click', e => { if (!tmCard.hidden && !e.target.closest('#timer, #timer-card')) { tmCard.hidden = true; tmBtn.setAttribute('aria-expanded', 'false'); } });
+tmPaint();
+
 /* ---------- Term peek ----------
    As on the SQL page: hover a term in a card's text, or a symbol in a formula, for 0.6 s, or tap
    it on a phone. Its cheat-sheet line opens in a box at the side, with the link to its card.
@@ -2080,7 +2325,26 @@ function trimPeeks(keep) {
     from.classList.remove('peek-from');
   }
   peeks.hidden = !peekStack.length;
+  placePeeks();
   drawPeekLinks();
+}
+/* Asked for 2026-11-08: "bring back the boxes opening not in the empty space on the right, but close to the
+   phrase or calculation I hovered, on top of the text". The first box sits just under the word (or above it
+   near the bottom of the screen); the boxes it opens follow below it. A phone keeps the sheet at the bottom. */
+function placePeeks() {
+  const at = innerWidth > 900 && peekStack.length && peekStack[0].from.isConnected;
+  peeks.classList.toggle('at-word', !!at);
+  if (!at) { peeks.style.left = peeks.style.top = peeks.style.maxHeight = ''; return; }
+  const read = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--read')) || 1;
+  const a = peekStack[0].from.getBoundingClientRect();
+  const w = Math.min(348, (innerWidth - 8) / read) * read;
+  const left = Math.max(8, Math.min(a.left - 12, innerWidth - w - 8));
+  const below = innerHeight - a.bottom - 12, above = a.top - 12;
+  const room = below >= 260 || below >= above ? below : above;
+  const top = room === below ? a.bottom + 6 : Math.max(8, a.top - 6 - Math.min(room, peeks.scrollHeight * read));
+  peeks.style.left = `${left / read}px`;
+  peeks.style.top = `${top / read}px`;
+  peeks.style.maxHeight = `${Math.max(160, room - 6) / read}px`;
 }
 function openPeek(word, el) {
   const inBox = el.closest('.peek');
@@ -2100,13 +2364,15 @@ function openPeek(word, el) {
   peekStack.push({ id, from: el, box });
   if (depth) el.classList.add('peek-from');
   peeks.hidden = false;
+  placePeeks();
   box.scrollIntoView({ block: 'nearest' });
   drawPeekLinks();
 }
 function closePeek() { trimPeeks(0); clearTimeout(peekTimer); }
 peeks.addEventListener('scroll', drawPeekLinks, { passive: true });
-addEventListener('resize', drawPeekLinks);
-const peekTarget = e => e.target.closest && e.target.closest('#session .kw[data-kw], #session .kw-t, #session .kw-chip, .peek .kw[data-kw], .peek .kw-t');
+addEventListener('resize', () => { placePeeks(); drawPeekLinks(); });
+addEventListener('scroll', () => { if (peekStack.length) { placePeeks(); drawPeekLinks(); } }, { passive: true });
+const peekTarget = e => e.target.closest && e.target.closest('#session .kw[data-kw], #session .kw-t, #session .kw-chip, .peek .kw[data-kw], .peek .kw-t, #case-pad .kw[data-kw], #case-pad .kw-t');
 document.addEventListener('mouseover', e => {
   const k = peekTarget(e);
   if (!k || peekStack.some(b => b.from === k) || k.closest('.ref-row')) return;
@@ -2231,7 +2497,7 @@ function readSelection() {
   while (at >= 0 && at < start) { occ++; at = full.indexOf(text, at + 1); }
   return { host, key: hlKeyOf(host), start, end, text, occ, rect: range.getBoundingClientRect() };
 }
-const HL_COLOURS = [['yellow', '#f2c14e'], ['green', '#6fbf8e'], ['orange', '#f08a3c'], ['pink', '#e48fb4'], ['blue', '#7aa6e6']];
+const HL_COLOURS = [['yellow', '#f2c14e'], ['lime', '#b0c06e'], ['green', '#6fbf8e'], ['orange', '#f08a3c'], ['pink', '#e48fb4'], ['blue', '#7aa6e6']];
 function showSelBar() {
   const info = readSelection();
   if (!info) { if (!selBar.dataset.hid) hideSelBar(); return; }
