@@ -3,7 +3,8 @@
 /*
  * Vegetal, the plant world's chapter (docs/specs/art-vegetal.md): cell, roots
  * from one base, the tree flat and in 3D, fungi, a leaf, a flower on the
- * golden angle, fruit and seed. The math lives in lib/vegetal.ts; the shared
+ * golden angle, fruit and seed, then a road through an avenue and a wild
+ * forest. The math lives in lib/vegetal.ts; the shared
  * trip player draws it.
  */
 import TripPlayer, { type Trip } from '@/components/TripPlayer';

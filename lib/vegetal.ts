@@ -5,7 +5,12 @@
  * base for all the roots). vegetal cells connecting inside. a whole chapter,
  * 1 cell 2 roots 3 tree 2d 4 tree 3d … think of more ideas for 6 7 8."
  *
- * Eight pieces played as one trip, built as the Journey is (lib/journey.ts):
+ * Then two forests to fly through, to end it (2026-11-09: "a forest with a
+ * road in the middle and we fly through it as the trees grow, in 3d … do 1
+ * with symmetric trees, and one more organic where the trees are not
+ * symmetric or mirrored between left and right side of the road").
+ *
+ * Eleven pieces played as one trip, built as the Journey is (lib/journey.ts):
  * every grain of light keeps its identity, each piece is a formula from a
  * grain and the time to a place and a colour, and between pieces each grain
  * pours on at its own golden-ratio moment. The eye moves with each piece.
@@ -181,6 +186,30 @@ export const PHASES: VegetalPhase[] = [
     glow: 1,
     size: 0.85,
   },
+  {
+    id: 'avenue',
+    name: 'Avenue',
+    line: 'A road through a forest, flown a little above the ground. The trees stand in even rows, each one the mirror of the one across the road, and grow as we come.',
+    words: [
+      'Rows that repeat draw the eye to one point far ahead:',
+      'perspective is harmony you can travel through.',
+    ],
+    duration: 36,
+    glow: 1,
+    size: 0.85,
+  },
+  {
+    id: 'forest',
+    name: 'Forest',
+    line: 'The same road through a wild forest: no tree mirrors another, each grows at its own place, size and lean.',
+    words: [
+      'No two trees in a forest are alike, yet the forest is one thing:',
+      'order and freedom growing side by side.',
+    ],
+    duration: 40,
+    glow: 1,
+    size: 0.85,
+  },
 ];
 
 export const TOTAL = PHASES.reduce((s, p) => s + p.duration, 0);
@@ -212,6 +241,8 @@ export const STEP_COLOURS = [
   '#7fd14e',
   '#ffc94a',
   '#ff8a4a',
+  '#b9d98a',
+  '#7fb86a',
 ];
 
 /* ---------- 1. Cell: a block of plant cells joined inside ---------- */
@@ -971,6 +1002,156 @@ function fruitPoint(p: Particle, u: number, t: number): Vec3 {
   ];
 }
 
+/* ---------- 10–11. Avenue and Forest: flying down a road as the trees grow ---------- */
+
+/** Half the road's width; the eye flies a little above it. */
+export const ROAD_W = 3.2;
+export const EYE_H = 3;
+/** The stretch of road the trees stand along: the eye flies on, and the stretch comes round again. */
+const LOOP = 140;
+/** How far behind the eye a tree stays before it goes round to the far end. */
+const BEHIND = 14;
+const SPEED = 3.6;
+export const FOREST_SLOTS = 22;
+const isAvenue = (k: number) => PHASES[k]?.id === 'avenue';
+export const isForest = (k: number) => PHASES[k]?.id === 'avenue' || PHASES[k]?.id === 'forest';
+
+let forestKinds: Route3[][] | null = null;
+/** Four kinds of tree, grown as the 3D tree is but smaller. The avenue uses only the first. */
+export function forestTrees(): Route3[][] {
+  if (forestKinds) return forestKinds;
+  forestKinds = [11, 12, 13, 14].map((seed, i) => {
+    const out: number[][] = [];
+    grow3(seeded(seed), [0, 0, 0], [0, 1, 0], 4.2 - 0.3 * i, 0.9, 5, seed, [], out);
+    return out.map(resample3);
+  });
+  return forestKinds;
+}
+
+export type TreeSlot = {
+  x: number;
+  z0: number;
+  kind: number;
+  size: number;
+  yaw: number;
+  mirror: boolean;
+};
+/**
+ * Where tree slot j stands. In the avenue, rows at even steps, the right
+ * tree the mirror of the left. In the forest, each tree has its own place,
+ * kind, size and turn, and the two sides do not match.
+ */
+export function treeSlot(k: number, j: number): TreeSlot {
+  if (isAvenue(k)) {
+    const side = j % 2 ? 1 : -1;
+    return {
+      x: side * (ROAD_W + 3.6),
+      z0: ((j >> 1) * LOOP) / (FOREST_SLOTS / 2),
+      kind: 0,
+      size: 1,
+      yaw: 0,
+      mirror: side > 0,
+    };
+  }
+  const side = hash(j, 41) < 0.5 ? -1 : 1;
+  return {
+    x: side * (ROAD_W + 2.2 + 9 * hash(j, 42) ** 1.4),
+    z0: (j + 0.8 * (hash(j, 43) - 0.5)) * (LOOP / FOREST_SLOTS),
+    kind: Math.floor(hash(j, 44) * 4),
+    size: 0.7 + 0.55 * hash(j, 45),
+    yaw: hash(j, 46) * TAU,
+    mirror: false,
+  };
+}
+
+/** How far the eye has flown, `u` through the piece. */
+const flown = (k: number, u: number) => SPEED * u * (PHASES[k] as VegetalPhase).duration;
+/** How far ahead of the eye a thing standing at z0 along the loop is. */
+const ahead = (z0: number, s: number) => wrap(z0 - s, LOOP) - BEHIND;
+/** Trees are seedlings far ahead and grown by the time the eye reaches them. */
+const grownAt = (d: number) => 0.04 + 0.96 * smooth((LOOP - BEHIND - 14 - d) / 55);
+/** Light fades into the far dark, so the far end of the road never pops. */
+const haze = (d: number) => smooth((LOOP - BEHIND - d) / 40);
+
+type ForestRole = 'edge' | 'dash' | 'ground' | 'firefly' | 'leaf' | 'wood';
+const forestRole = (p: Particle): ForestRole =>
+  p.c < 0.07
+    ? 'edge'
+    : p.c < 0.1
+      ? 'dash'
+      : p.c < 0.19
+        ? 'ground'
+        : p.c < 0.22
+          ? 'firefly'
+          : p.c < 0.42
+            ? 'leaf'
+            : 'wood';
+
+/** Grain p in the forest: where it stands and how far ahead of the eye it is. */
+function forestAt(k: number, p: Particle, u: number, t: number): { pos: Vec3; d: number } {
+  const s = flown(k, u);
+  const side = p.d < 0.5 ? -1 : 1;
+  const on = (z0: number, x: number, y: number) => {
+    const d = ahead(z0, s);
+    return { pos: [x, y, -s - d] as Vec3, d };
+  };
+  switch (forestRole(p)) {
+    case 'edge':
+      return on(p.b * LOOP, side * ROAD_W, 0.02);
+    case 'dash': {
+      // A broken line down the middle: dashes 2.5 long, 6 apart.
+      const n = Math.floor(p.b * (LOOP / 6));
+      return on(n * 6 + 2.5 * frac(p.d * 7), 0, 0.02);
+    }
+    case 'ground': {
+      const out = ROAD_W + 0.4 + 26 * frac(p.d * 5) ** 1.6;
+      return on(p.b * LOOP, side * out, Math.sin(p.b * 400 + t * 0.3) * 0.05);
+    }
+    case 'firefly': {
+      const out = ROAD_W + 1 + 9 * frac(p.d * 3);
+      return on(
+        p.b * LOOP + Math.sin(t * 0.3 + p.i) * 0.8,
+        side * out + Math.sin(t * 0.4 + p.i * 2) * 0.6,
+        1.2 + 5 * hash(p.i, 47) + Math.sin(t * 0.5 + p.i) * 0.4,
+      );
+    }
+    default: {
+      const slot = treeSlot(k, Math.floor(p.a * FOREST_SLOTS));
+      const routes = forestTrees()[slot.kind] as Route3[];
+      const route = routes[Math.floor(hash(p.i, 48) * routes.length)] as Route3;
+      const len = length3(route);
+      const d = ahead(slot.z0, s);
+      const g = grownAt(d);
+      let local: Vec3;
+      if (forestRole(p) === 'leaf') {
+        const [x, y, z] = along3(route, len * g);
+        const sphere = fibonacciSphere(p.i % 157, 157);
+        const r = 1.1 * Math.cbrt(p.b) * smooth((g - 0.55) / 0.35);
+        local = [x + sphere[0] * r, y + sphere[1] * r * 0.8, z + sphere[2] * r];
+      } else {
+        // Sap climbing and falling, as in the 3D tree.
+        const dir = p.c < 0.71 ? 1 : -1;
+        const along = len * g * wrap(p.b + dir * t * 0.04 * (0.7 + 0.6 * p.d), 1) ** 0.45;
+        const [x, y, z, w] = along3(route, along);
+        local = add([x, y, z], fibonacciSphere(p.i % 389, 389), w * 0.5 * Math.sqrt(p.d));
+      }
+      const lx = slot.mirror ? -local[0] : local[0];
+      const c = Math.cos(slot.yaw);
+      const sn = Math.sin(slot.yaw);
+      return {
+        pos: [
+          slot.x + (lx * c - local[2] * sn) * slot.size,
+          local[1] * slot.size,
+          -s - d + (lx * sn + local[2] * c) * slot.size,
+        ],
+        d,
+      };
+    }
+  }
+}
+
+const forestPoint = (k: number, p: Particle, u: number, t: number) => forestAt(k, p, u, t).pos;
+
 /* ---------- where every grain is ---------- */
 
 /** Where particle p is in piece k's finished form, `u` through it, at chapter time t. */
@@ -992,8 +1173,10 @@ function form(k: number, p: Particle, u: number, t: number): Vec3 {
       return leafPoint(p, u, t);
     case 7:
       return flowerPoint(p, u, t);
-    default:
+    case 8:
       return fruitPoint(p, u, t);
+    default:
+      return forestPoint(k, p, u, t);
   }
 }
 
@@ -1005,10 +1188,14 @@ function form(k: number, p: Particle, u: number, t: number): Vec3 {
  * becomes a ball of light.
  */
 
-/** How far through each piece its form is whole (the fruit tells its own story, so it has none). */
+/**
+ * How far through each piece its form is whole. The fruit tells its own
+ * story and the forests are flown through, so their time always runs.
+ */
 const FORMED = [0.55, 0.45, 0.45, 0.5, 0, 0.7, 0.45, 0.4];
 const BALL_R = 20;
-const isFruit = (k: number) => k === PHASES.length - 1;
+const isFruit = (k: number) => PHASES[k]?.id === 'fruit';
+const runsOn = (k: number) => isFruit(k) || isForest(k);
 
 /** When a grain reaches its place in piece k, 0 (first) to 1 (last): the piece's growing order. */
 function order(k: number, p: Particle): number {
@@ -1039,7 +1226,7 @@ export function starBall(k: number, p: Particle, t: number): Vec3 {
 
 /** Where particle p is in piece k, `u` through it, at chapter time t. */
 export function target(k: number, p: Particle, u: number, t: number): Vec3 {
-  const f = form(k, p, isFruit(k) ? u : Math.max(u, at(FORMED, k)), t);
+  const f = form(k, p, runsOn(k) ? u : Math.max(u, at(FORMED, k)), t);
   const a = arrival(k, p, u);
   return a >= 1 ? f : lerp3(starBall(k, p, t), f, a);
 }
@@ -1184,6 +1371,9 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
         default:
           return scale([1, 0.92, 0.55], 0.8 * smooth((opening(u) - 0.6) / 0.3));
       }
+    case 9:
+    case 10:
+      return forestColour(k, p, u, t, twinkle);
     default: {
       const ripe = smooth((u - 0.08) / 0.3);
       switch (fruitRole(p)) {
@@ -1204,6 +1394,32 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
           );
       }
     }
+  }
+}
+
+const MOSS: RGB = [0.35, 0.55, 0.25];
+/** The forest's leaves: one green in the avenue, a spread of greens and a little amber in the wild forest. */
+const FOREST_LEAVES: RGB[] = [LEAF, [0.45, 0.78, 0.32], [0.82, 0.86, 0.36], [0.95, 0.66, 0.3]];
+
+function forestColour(k: number, p: Particle, u: number, t: number, twinkle: number): RGB {
+  const { d } = forestAt(k, p, u, t);
+  const h = haze(d);
+  switch (forestRole(p)) {
+    case 'edge':
+      return scale(GOLD, 0.5 * h);
+    case 'dash':
+      return scale(SUN, 0.45 * h);
+    case 'ground':
+      return scale(mix(EARTH, MOSS, frac(p.b * 31)), 0.2 * h);
+    case 'firefly':
+      return scale(SUGAR, (0.4 + 0.6 * Math.sin(t * 1.3 + p.i) ** 2) * h);
+    case 'leaf': {
+      const j = Math.floor(p.a * FOREST_SLOTS);
+      const tone = isAvenue(k) ? LEAF : (FOREST_LEAVES[Math.floor(hash(j, 49) * 4)] as RGB);
+      return scale(mix(tone, [0.85, 0.9, 0.4], p.b * 0.4), 0.75 * twinkle * h);
+    }
+    default:
+      return scale(mix(BARK, GOLD, p.d), 0.65 * twinkle * h);
   }
 }
 
@@ -1236,6 +1452,13 @@ export function eyeIn(k: number, u: number, t: number): Eye {
     case 7: {
       const tilt = smooth((u - 0.4) / 0.5);
       return { eye: lerp3([0, HEAD[1], 44], [18, 14, 36], tilt), target: HEAD };
+    }
+    case 9:
+    case 10: {
+      // Down the middle of the road, a little above it, swaying a touch more in the wild forest.
+      const s = flown(k, u);
+      const sway = Math.sin(t * 0.15) * (isAvenue(k) ? 0.25 : 0.7);
+      return { eye: [sway, EYE_H, -s], target: [sway * 0.4, EYE_H - 0.7, -s - 30] };
     }
     default: {
       const { c } = fruitOf(u, t);

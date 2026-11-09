@@ -14,11 +14,11 @@
 > whole chapter. think of more ideas for 6 7 8 and develop them."
 
 The first of the three worlds ([three-worlds.md](three-worlds.md)) to get
-its own chapter. It plays as one trip in nine numbered pieces, and the step
+its own chapter. It plays as one trip in eleven numbered pieces, and the step
 bar jumps to any of them, so each piece can also be held and shown alone
 (pause).
 
-## The nine pieces
+## The eleven pieces
 
 | # | Piece | What you see | Camera |
 |---|-------|--------------|--------|
@@ -31,8 +31,18 @@ bar jumps to any of them, so each piece can also be held and shown alone
 | 7 | Leaf | One great leaf: a midrib, veins forking to the edge, the blade between them. Light falls in and leaves as sugar, running down the veins | Above the leaf |
 | 8 | Flower | A head of florets on the golden angle (the sunflower's spirals) opens, with petals round it; pollen drifts | Face on, then tilting |
 | 9 | Fruit & seed | The flower's centre swells into a fruit, ripens from green to amber, falls, opens, and its seeds go into the ground; one sprouts, and its first cells are the cells of piece 1 | Following the fruit down |
+| 10 | Avenue | A road through a forest, flown a little above the ground. The trees stand in even rows, each the mirror of the one across the road; they are seedlings far ahead and grow as we come. Road edges and a broken centre line draw the eye to one point | Down the middle of the road |
+| 11 | Forest | The same road through a wild forest: four kinds of tree, each at its own place, distance, size and turn, and the two sides never match. Leaves in several greens and a little amber; fireflies between the trunks | Down the road, swaying a little more |
 
-The chapter loops: the sprout's cells become the block of cells.
+The two forests end the chapter (2026-11-09: "a forest with a road in the
+middle and we fly through it as the trees grow, in 3d. we are a bit above
+the ground … to get a sense of perspective and harmony but with a touch of
+something organic. do 1 with symmetric trees, and one more organic where the
+trees are not symmetric or mirrored between left and right side of the
+road"). The road never ends: trees passed behind the eye go round to the far
+end, where they start again as seedlings in the dark.
+
+The chapter loops: the forest dissolves into the block of cells.
 
 **Between pieces, a ball of stars** (2026-11-09: "I don't like that ball of
 light for transitions, it is too bright and loses the effect of many stars",
@@ -58,7 +68,7 @@ The Words key hides them, as on the Journey.
 
 ## Acceptance
 
-- `/geometry-field/vegetal` plays the nine pieces and loops; the step bar
+- `/geometry-field/vegetal` plays the eleven pieces and loops; the step bar
   jumps to any piece; Space pauses on one.
 - The pills read Stars · Geometry · Tunnels · Oils · Big Bang · Journey ·
   Vegetal · Experiment, on the Art panel and the trip pages.

@@ -8,8 +8,11 @@ import {
   camera,
   cellOf,
   colour,
+  EYE_H,
   FLORETS,
+  FOREST_SLOTS,
   floret,
+  forestTrees,
   fruitOf,
   GROUND_FRUIT,
   makeParticles,
@@ -18,6 +21,7 @@ import {
   PHASES,
   particleAt,
   phaseAt,
+  ROAD_W,
   ROOT_BASE,
   rootSystem,
   STEP_COLOURS,
@@ -25,6 +29,7 @@ import {
   TOTAL,
   target,
   tree3d,
+  treeSlot,
 } from './vegetal';
 
 const particles = makeParticles(1500);
@@ -38,7 +43,7 @@ const at = (k: number, u: number) =>
   (PHASE_START[k] as number) + u * (PHASES[k]?.duration as number);
 
 describe('the vegetal chapter', () => {
-  it('has nine numbered pieces, from a cell to fruit and seed, each with words', () => {
+  it('has eleven numbered pieces, from a cell to the forest road, each with words', () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       'cell',
       'roots',
@@ -49,6 +54,8 @@ describe('the vegetal chapter', () => {
       'leaf',
       'flower',
       'fruit',
+      'avenue',
+      'forest',
     ]);
     for (const p of PHASES) {
       expect(p.words).toHaveLength(2);
@@ -146,6 +153,44 @@ describe('the vegetal chapter', () => {
       const diff =
         ((((turn - GOLDEN_ANGLE) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
       expect(Math.abs(diff)).toBeLessThan(1e-6);
+    }
+  });
+
+  it('mirrors the avenue across the road, and lets no two sides of the forest match', () => {
+    for (let j = 0; j < FOREST_SLOTS; j += 2) {
+      const left = treeSlot(9, j);
+      const right = treeSlot(9, j + 1);
+      expect(right.x).toBeCloseTo(-left.x, 9);
+      expect(right.z0).toBe(left.z0);
+      expect(right.mirror).toBe(!left.mirror);
+    }
+    // In the forest, no tree stands opposite a twin.
+    const wild = Array.from({ length: FOREST_SLOTS }, (_, j) => treeSlot(10, j));
+    expect(new Set(wild.map((s) => Math.sign(s.x))).size).toBe(2);
+    for (const a of wild) {
+      for (const b of wild) {
+        if (a === b) continue;
+        const twin = Math.abs(a.x + b.x) < 0.5 && Math.abs(a.z0 - b.z0) < 0.5 && a.kind === b.kind;
+        expect(twin).toBe(false);
+      }
+    }
+    expect(forestTrees()).toHaveLength(4);
+  });
+
+  it('flies the eye down the road a little above it, as the trees grow toward it', () => {
+    for (const k of [9, 10]) {
+      const a = camera(at(k, 0.2));
+      const b = camera(at(k, 0.6));
+      expect(a.eye[1]).toBeCloseTo(EYE_H, 6);
+      expect(Math.abs(a.eye[0])).toBeLessThan(ROAD_W);
+      expect(b.eye[2]).toBeLessThan(a.eye[2] - 20);
+      // Trees just ahead of the eye stand taller than the seedlings far down the road.
+      const t = at(k, 0.6);
+      const trees = particles.filter((p) => p.c >= 0.42).map((p) => target(k, p, 0.6, t));
+      const eyeZ = b.eye[2];
+      const tall = (lo: number, hi: number) =>
+        Math.max(0, ...trees.filter((q) => eyeZ - q[2] > lo && eyeZ - q[2] < hi).map((q) => q[1]));
+      expect(tall(10, 40)).toBeGreaterThan(2 * tall(100, 125));
     }
   });
 
