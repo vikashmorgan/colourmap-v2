@@ -15302,15 +15302,15 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
 };
 
 const MODES: { mode: Mode; label: string }[] = [
+  // 9 Nov 2026: "pyramid, put it as the first of the visuals. I like." Heart Wave, Eye Morph, Clock,
+  // Mode Sun, Brain Topography and Walking Figure taken off the panel ("not good enough"); Mode Sun and
+  // Brain Topography still open from Build Lab.
+  { mode: 'pyramid3d', label: '△ Pyramid' },
   { mode: 'clockorbit3d', label: '⊙³ Clock Orbit' },
   { mode: 'mirrortunnel', label: '⊟ Mirror Tunnel' },
   { mode: 'infinitedive', label: '⊙ Infinite Dive' },
-  { mode: 'heartwave', label: '♡ Heart Wave' },
-  { mode: 'eyemorph', label: '◉ Eye Morph' },
   { mode: 'sinmorph3d', label: '∿³ Sin Morph' },
-  { mode: 'clock3d', label: '⊙ Clock' },
   { mode: 'atomlight', label: '⊛ Atom Light' },
-  { mode: 'pyramid3d', label: '△ Pyramid' },
   { mode: 'orbitdance', label: '◎ Orbit Dance' },
   { mode: 'ripplemorph', label: '∿ Ripple Morph' },
   { mode: 'kaleido3d', label: '⬡ Kaleido' },
@@ -15406,9 +15406,6 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'globe', label: '◎ Globe' },
   { mode: 'matrix', label: '⋮ Matrix' },
   { mode: 'matrix3d', label: '⋮³ Matrix 3D' },
-  { mode: 'archetypesun', label: 'Mode Sun' },
-  { mode: 'braintopography', label: 'Brain Topography' },
-  { mode: 'walkingfigure', label: 'Walking Figure' },
   { mode: 'dotwalker', label: 'Dot Walker' },
   { mode: 'missionsun', label: 'Mission Sun' },
   { mode: 'dotsunfire', label: 'Fire Dot Sun' },
@@ -15503,6 +15500,13 @@ export const ART_PILLS: ({ id: ArtTab; label: string } | { href: string; label: 
 // 8 Nov 2026: "add all the new ones in an Experiment tab pill after Big Bang, and include Wind,
 // Wing and Body in there."
 const EXPERIMENT_TAB_MODES = new Set<Mode>(['windtunnel', 'startrees', 'adn']);
+/** Presets kept in Experiment though their mode lives in another tab. */
+const EXPERIMENT_TAB_PRESETS = new Set<string>([
+  'Dot Brain Loop',
+  'Neuron Web 1',
+  'Neuron Web 2',
+  'Neuron Web 4',
+]);
 const TUNNEL_TAB_MODES = new Set<Mode>([
   'tunnel',
   'linetunnel3d',
@@ -15623,7 +15627,8 @@ export function featuredFor(tab: ArtTab): FeaturedItem[] {
       continue;
     }
     const p = PRESETS[item.name];
-    if (!p || artTabOf(p.mode) !== tab) continue;
+    const home = EXPERIMENT_TAB_PRESETS.has(item.name) ? 'experiment' : p && artTabOf(p.mode);
+    if (!p || home !== tab) continue;
     if (header) {
       out.push(header);
       header = null;
@@ -15682,11 +15687,7 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Fire Dot Sun', tag: 'DOT' },
   { name: 'Dot Heart', tag: 'DOT' },
   { name: 'Dot Phoenix', tag: 'DOT' },
-  { name: 'Dot Brain Loop', tag: 'DOT' },
-  { name: 'Neuron Web 1', tag: 'NEURON' },
-  { name: 'Neuron Web 2', tag: 'NEURON' },
   { name: 'Neuron Web 3', tag: 'NEURON' },
-  { name: 'Neuron Web 4', tag: 'NEURON' },
   { name: 'Neuron Web 5', tag: 'NEURON' },
   { name: 'Swirl Dot Tunnel', tag: 'DEPTH' },
   { name: 'Dot Road', tag: 'ROAD' },
@@ -15834,6 +15835,12 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Matrix Rain', tag: 'DOT' },
   // Moved here from Good Ones on 3 Oct 2026: the trip is not finished yet.
   { name: 'Star Sand Lines', tag: 'FLOW' },
+  // 9 Nov 2026: Stars 30, 31, 32 and 34 "put them in experiments at the bottom, they are low quality".
+  { header: 'Lower quality', dim: true },
+  { name: 'Dot Brain Loop', tag: 'DOT' },
+  { name: 'Neuron Web 1', tag: 'NEURON' },
+  { name: 'Neuron Web 2', tag: 'NEURON' },
+  { name: 'Neuron Web 4', tag: 'NEURON' },
 ];
 
 // Diaporama — a generated "play all" program: every featured preset in list
@@ -26454,7 +26461,12 @@ export default function GeometryField() {
                             }}
                           >
                             <span style={{ fontSize: 11, opacity: 0.6, letterSpacing: '0.08em' }}>
-                              {String(idx + 1).padStart(2, '0')}
+                              {/* Numbers run on from the featured list, so every visual in a tab has its own (9 Nov 2026). */}
+                              {String(
+                                featuredFor(tab as ArtTab).filter((f) => 'name' in f).length +
+                                  idx +
+                                  1,
+                              ).padStart(2, '0')}
                             </span>
                             <span
                               style={{

@@ -141,7 +141,15 @@ describe('GeometryField featured presets', () => {
       'Sea Wind Tree',
       'Star Banyan',
       'ADN',
+      // 9 Nov 2026: Stars 30, 31, 32 and 34 moved to the bottom of Experiment, as lower quality.
+      'Dot Brain Loop',
+      'Neuron Web 1',
+      'Neuron Web 2',
+      'Neuron Web 4',
     ]);
+    const stars = featuredFor('stars').flatMap((i) => ('name' in i ? [i.name] : []));
+    expect(stars).toContain('Neuron Web 3');
+    expect(stars).not.toContain('Neuron Web 1');
     // One Star Trees mode, the Tree slider picking the shape.
     expect(
       ['Star Willow', 'Sea Wind Tree', 'Star Banyan'].map((n) => PRESETS[n]?.particles),
@@ -172,7 +180,8 @@ describe('GeometryField featured presets', () => {
     );
 
     expect(names.filter((name) => name === 'Star Sand Lines')).toHaveLength(1);
-    expect(names.at(-1)).toBe('Star Sand Lines');
+    // Last of the Stars tab; only Experiment's lower-quality shelf comes after it.
+    expect(featuredFor('stars').at(-1)).toEqual({ name: 'Star Sand Lines', tag: 'FLOW' });
     expect(starSand).toBeGreaterThan(inProgress);
   });
 
