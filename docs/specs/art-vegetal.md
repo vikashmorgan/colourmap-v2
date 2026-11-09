@@ -1,0 +1,61 @@
+# Vegetal — the plant world's chapter
+
+**Status:** Building
+**Date:** 2026-11-09
+**Where:** `/geometry-field/vegetal`, the **Vegetal** pill after Journey ·
+`lib/vegetal.ts` · `components/Vegetal.tsx` · the shared trip player
+(`components/TripPlayer.tsx`)
+
+## Why
+
+> 2026-11-09: "develop the vegetal journeys. 3d trees. roots (but only one
+> base for all the roots). vegetal cells connecting inside. inside a whole
+> vegetal category. with 1 cell 2 roots 3 tree 2d 4 tree 3d etc… so it is a
+> whole chapter. think of more ideas for 6 7 8 and develop them."
+
+The first of the three worlds ([three-worlds.md](three-worlds.md)) to get
+its own chapter. It plays as one trip in eight numbered pieces, and the step
+bar jumps to any of them, so each piece can also be held and shown alone
+(pause).
+
+## The eight pieces
+
+| # | Piece | What you see | Camera |
+|---|-------|--------------|--------|
+| 1 | Cell | A block of boxy plant cells. Inside each, green chloroplasts stream round the wall and a nucleus glows. Bright pulses cross from cell to cell through the walls: the plant's cells are joined inside | Slowly round the block |
+| 2 | Roots | One base, and every root grows from it: down and out in all directions, forking, fine hairs at the tips. Water climbs to the base | Below, from the side |
+| 3 | Tree 2D | The Star Tree, flat, grown from its base, sap running up and down | Face on |
+| 4 | Tree 3D | A tree grown in three dimensions: each branch forks round its own axis at the golden angle, leaves at the tips, a crown you can walk round | Round the tree |
+| 5 | Fungi | Threads spread from spores through the soil and join into a net; food pulses along it; mushrooms rise above it | Low, along the net |
+| 6 | Leaf | One great leaf: a midrib, veins forking to the edge, the blade between them. Light falls in and leaves as sugar, running down the veins | Above the leaf |
+| 7 | Flower | A head of florets on the golden angle (the sunflower's spirals) opens, with petals round it; pollen drifts | Face on, then tilting |
+| 8 | Fruit & seed | The flower's centre swells into a fruit, ripens from green to amber, falls, opens, and its seeds go into the ground; one sprouts, and its first cells are the cells of piece 1 | Following the fruit down |
+
+The chapter loops: the sprout's cells become the block of cells.
+
+## Words
+
+Each piece has a short line saying what you see and two lines of
+reflection, plain and true:
+- plant cells joined through the walls (plasmodesmata)
+- root tips sensing water and gravity
+- the tree and its branching
+- most land plants living with fungi in their roots
+- leaves turning light into sugar
+- florets set at the golden angle, so the spirals come in Fibonacci numbers
+- seeds carried away by animals and wind
+
+The Words key hides them, as on the Journey.
+
+## Acceptance
+
+- `/geometry-field/vegetal` plays the eight pieces and loops; the step bar
+  jumps to any piece; Space pauses on one.
+- The pills read Stars · Geometry · Tunnels · Oils · Big Bang · Journey ·
+  Vegetal · Experiment, on the Art panel and the trip pages.
+- Every root of piece 2 starts at one base.
+- Piece 4 is three-dimensional: its tips spread round the trunk in every
+  direction, not in one plane.
+- Each piece forms by about halfway through, and every grain pours into the
+  next piece with no cut, as in the Journey.
+- No new dependencies, nothing stored beyond the Words choice.

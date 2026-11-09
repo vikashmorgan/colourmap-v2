@@ -42,13 +42,16 @@ export type Trip = {
 };
 
 /** The Art pills, the same as the panel's (components/GeometryField.tsx ART_PILLS). */
-const ART_LINKS: { href: string; label: string; page?: 'big-bang' | 'journey' }[] = [
+export type TripPage = 'big-bang' | 'journey' | 'vegetal';
+
+const ART_LINKS: { href: string; label: string; page?: TripPage }[] = [
   { href: '/geometry-field?tab=stars', label: 'Stars' },
   { href: '/geometry-field?tab=geometry', label: 'Geometry' },
   { href: '/geometry-field?tab=tunnels', label: 'Tunnels' },
   { href: '/geometry-field?tab=oils', label: 'Oils' },
   { href: '/geometry-field/big-bang', label: 'Big Bang', page: 'big-bang' },
   { href: '/geometry-field/journey', label: 'Journey', page: 'journey' },
+  { href: '/geometry-field/vegetal', label: 'Vegetal', page: 'vegetal' },
   { href: '/geometry-field?tab=experiment', label: 'Experiment' },
 ];
 
@@ -76,7 +79,7 @@ const smooth = (x: number) => {
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-export default function TripPlayer({ trip, page }: { trip: Trip; page: 'big-bang' | 'journey' }) {
+export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const timeRef = useRef(0);
   const playingRef = useRef(true);
