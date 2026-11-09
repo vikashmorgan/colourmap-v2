@@ -122,6 +122,18 @@ export const PHASES: VegetalPhase[] = [
     size: 0.85,
   },
   {
+    id: 'veins',
+    name: 'Veins',
+    line: 'One network grown from a centre, the same in every direction: a branching that turns round on itself into a circle.',
+    words: [
+      'Veins, roots, rivers and lightning branch by the same few rules.',
+      'Repeated round a centre, they make a mandala.',
+    ],
+    duration: 28,
+    glow: 1.05,
+    size: 0.8,
+  },
+  {
     id: 'fungi',
     name: 'Fungi',
     line: 'Threads spread from spores and join into one net under the soil. Food pulses along it, and mushrooms rise.',
@@ -195,6 +207,7 @@ export const STEP_COLOURS = [
   '#c48a52',
   '#d9b56a',
   '#8fc45a',
+  '#f0b44a',
   '#d9c7f0',
   '#7fd14e',
   '#ffc94a',
@@ -213,17 +226,23 @@ function cellIjk(j: number): Vec3 {
   return [j % GRID[0], Math.floor(j / GRID[0]) % GRID[1], Math.floor(j / (GRID[0] * GRID[1]))];
 }
 
+/** How far cell j sits from the middle of the block, 0..1. */
+function cellFar(j: number): number {
+  const [i, k, l] = cellIjk(j);
+  return (
+    Math.hypot(
+      (i - (GRID[0] - 1) / 2) / ((GRID[0] - 1) / 2),
+      (k - (GRID[1] - 1) / 2) / ((GRID[1] - 1) / 2),
+      (l - (GRID[2] - 1) / 2) / ((GRID[2] - 1) / 2),
+    ) / Math.sqrt(3)
+  );
+}
+
 /** Cell j's centre and half-size, `u` through the piece: the block grows out from the middle. */
 export function cellOf(j: number, u: number): { c: Vec3; h: Vec3; g: number } {
   const [i, k, l] = cellIjk(j);
   const off: Vec3 = [i - (GRID[0] - 1) / 2, k - (GRID[1] - 1) / 2, l - (GRID[2] - 1) / 2];
-  const far =
-    Math.hypot(
-      off[0] / ((GRID[0] - 1) / 2),
-      off[1] / ((GRID[1] - 1) / 2),
-      off[2] / ((GRID[2] - 1) / 2),
-    ) / Math.sqrt(3);
-  const g = smooth((u - 0.3 * far) / 0.22);
+  const g = smooth((u - 0.3 * cellFar(j)) / 0.22);
   const s = 0.47 * (0.3 + 0.7 * g);
   return {
     c: [off[0] * CELL_SIZE[0] * g, off[1] * CELL_SIZE[1] * g, off[2] * CELL_SIZE[2] * g],
@@ -549,7 +568,64 @@ function tree3Point(p: Particle, u: number, t: number): Vec3 {
   return add([x, y, z], d, w * 0.5 * Math.sqrt(p.d));
 }
 
-/* ---------- 5. Fungi: threads from spores, joined into one net ---------- */
+/* ---------- 5. Veins: the Journey's network, made round and symmetric ---------- */
+
+const VEIN_R = 24;
+/** Eight turns round the centre, each one mirrored: sixteen copies of one branching. */
+export const VEIN_FOLD = 8;
+type Mandala = { routes: Route[]; reach: number };
+let mandalaNet: Mandala | null = null;
+/** One branching grown up from the centre, and how far out it reaches. */
+export function mandala(): Mandala {
+  if (mandalaNet) return mandalaNet;
+  const rng = seeded(31);
+  const out: Seg[][] = [];
+  grow(rng, 0, 0, 0, 0.2, 0.03, 5, 0.32, 0.8, [], out);
+  const routes = out.map((c) => resample(sampleChain(c, false)));
+  let reach = 0;
+  for (const r of routes) {
+    for (let i = 0; i < r.count; i++) {
+      reach = Math.max(reach, Math.hypot(r.pts[i * 3] as number, r.pts[i * 3 + 1] as number));
+    }
+  }
+  mandalaNet = { routes, reach };
+  return mandalaNet;
+}
+
+type VeinRole = 'pulse' | 'tip' | 'ring' | 'vein';
+const veinRole = (p: Particle): VeinRole =>
+  p.c < 0.15 ? 'pulse' : p.c < 0.22 ? 'tip' : p.c < 0.3 ? 'ring' : 'vein';
+
+/** A shallow bowl facing the eye, so the round net has a little depth. */
+const bowl = (x: number, y: number): Vec3 => [x, y, 3 - 0.012 * (x * x + y * y)];
+
+/** Point (x, y) of the branching, placed in the grain's copy: one of eight turns, mirrored or not. */
+function inCopy(p: Particle, x: number, y: number, t: number): Vec3 {
+  const m = Math.floor(hash(p.i, 77) * VEIN_FOLD * 2);
+  const mx = m & 1 ? -x : x;
+  const a = ((m >> 1) / VEIN_FOLD) * TAU + t * 0.03;
+  const k = VEIN_R / mandala().reach;
+  return bowl((mx * Math.cos(a) - y * Math.sin(a)) * k, (mx * Math.sin(a) + y * Math.cos(a)) * k);
+}
+
+function veinsPoint(p: Particle, t: number): Vec3 {
+  const role = veinRole(p);
+  if (role === 'ring') {
+    const a = p.b * TAU + t * 0.03;
+    const R = VEIN_R * 1.06 + (p.d - 0.5) * 0.4;
+    return bowl(Math.cos(a) * R, Math.sin(a) * R);
+  }
+  const net = mandala();
+  const route = net.routes[Math.floor(p.a * net.routes.length)] as Route;
+  const len = routeLength(route);
+  // Food runs out from the centre to the tips, where a few grains rest and glow.
+  const s =
+    role === 'tip' ? len : role === 'pulse' ? len * wrap(p.b + t * 0.12, 1) : len * p.b ** 0.6;
+  const [x, y, w] = along(route, s);
+  return inCopy(p, x + (p.d - 0.5) * w, y, t);
+}
+
+/* ---------- 6. Fungi: threads from spores, joined into one net ---------- */
 
 const SOIL = -6;
 const FK = 40;
@@ -664,7 +740,7 @@ function fungusPoint(p: Particle, u: number, t: number): Vec3 {
   return [pos[0] + (p.d - 0.5) * w * FK, pos[1], pos[2] + (p.d - 0.5) * w * FK];
 }
 
-/* ---------- 6. Leaf: a midrib, veins forking to the edge, light in, sugar out ---------- */
+/* ---------- 7. Leaf: a midrib, veins forking to the edge, light in, sugar out ---------- */
 
 export const PETIOLE: Vec3 = [0, -24, 0];
 const BLADE_FOOT = -17;
@@ -751,7 +827,7 @@ function leafPoint(p: Particle, u: number, t: number): Vec3 {
   return lerp3(PETIOLE, pos, g);
 }
 
-/* ---------- 7. Flower: florets on the golden angle ---------- */
+/* ---------- 8. Flower: florets on the golden angle ---------- */
 
 export const HEAD: Vec3 = [0, 4, 0];
 export const FLORETS = 700;
@@ -806,7 +882,7 @@ function flowerPoint(p: Particle, u: number, t: number): Vec3 {
   }
 }
 
-/* ---------- 8. Fruit & seed: swells, ripens, falls, opens, a seed sprouts ---------- */
+/* ---------- 9. Fruit & seed: swells, ripens, falls, opens, a seed sprouts ---------- */
 
 export const GROUND_FRUIT = -16;
 export const SEEDS = 7;
@@ -816,7 +892,7 @@ const SPROUT = 3;
 /** The fruit's centre and radius, `u` through the piece: it hangs, swells, then falls. */
 export function fruitOf(u: number, t: number): { c: Vec3; r: number } {
   const swell = smooth(u / 0.28);
-  const r = 0.8 + 5.2 * swell;
+  const r = 2.5 + 3.5 * swell;
   const q = Math.min(1, Math.max(0, (u - 0.34) / 0.14));
   const y = HEAD[1] + (GROUND_FRUIT + r - HEAD[1]) * q * q;
   const sway = Math.sin(t * 0.8) * 0.4 * swell * (1 - q);
@@ -897,8 +973,8 @@ function fruitPoint(p: Particle, u: number, t: number): Vec3 {
 
 /* ---------- where every grain is ---------- */
 
-/** Where particle p is in piece k, `u` through it, at chapter time t. */
-export function target(k: number, p: Particle, u: number, t: number): Vec3 {
+/** Where particle p is in piece k's finished form, `u` through it, at chapter time t. */
+function form(k: number, p: Particle, u: number, t: number): Vec3 {
   switch (k) {
     case 0:
       return cellPoint(p, u, t);
@@ -909,14 +985,63 @@ export function target(k: number, p: Particle, u: number, t: number): Vec3 {
     case 3:
       return tree3Point(p, u, t);
     case 4:
-      return fungusPoint(p, u, t);
+      return veinsPoint(p, t);
     case 5:
-      return leafPoint(p, u, t);
+      return fungusPoint(p, u, t);
     case 6:
+      return leafPoint(p, u, t);
+    case 7:
       return flowerPoint(p, u, t);
     default:
       return fruitPoint(p, u, t);
   }
+}
+
+/*
+ * Between pieces: a ball of stars. Each form loosens into a wide, slowly
+ * turning ball of faint stars round where the next piece stands, and the
+ * stars settle into the new form in its growing order, from the base out to
+ * the tips. No piece starts from one crowded point, so the picture never
+ * becomes a ball of light.
+ */
+
+/** How far through each piece its form is whole (the fruit tells its own story, so it has none). */
+const FORMED = [0.55, 0.45, 0.45, 0.5, 0, 0.7, 0.45, 0.4];
+const BALL_R = 20;
+const isFruit = (k: number) => k === PHASES.length - 1;
+
+/** When a grain reaches its place in piece k, 0 (first) to 1 (last): the piece's growing order. */
+function order(k: number, p: Particle): number {
+  if (k === 0) return cellFar(Math.floor(p.a * CELL_COUNT));
+  if (k === 7 && flowerRole(p) === 'floret') return p.a;
+  if (isFruit(k)) return 0.5 * p.b;
+  return p.b;
+}
+
+/** How far grain p has come from the ball of stars into piece k's form, `u` through it. */
+export function arrival(k: number, p: Particle, u: number): number {
+  return smooth((u - 0.02 - 0.4 * order(k, p)) / 0.14);
+}
+
+/** The grain's place in the ball of stars round piece k. */
+export function starBall(k: number, p: Particle, t: number): Vec3 {
+  const c = eyeIn(k, 0, t).target;
+  const r = BALL_R * Math.cbrt(hash(p.i, 61));
+  const a = t * 0.05;
+  const x = p.dir[0] * r;
+  const z = p.dir[2] * r;
+  return [
+    c[0] + x * Math.cos(a) - z * Math.sin(a),
+    c[1] + p.dir[1] * r,
+    c[2] + x * Math.sin(a) + z * Math.cos(a),
+  ];
+}
+
+/** Where particle p is in piece k, `u` through it, at chapter time t. */
+export function target(k: number, p: Particle, u: number, t: number): Vec3 {
+  const f = form(k, p, isFruit(k) ? u : Math.max(u, at(FORMED, k)), t);
+  const a = arrival(k, p, u);
+  return a >= 1 ? f : lerp3(starBall(k, p, t), f, a);
 }
 
 /* ---------- colour ---------- */
@@ -948,7 +1073,18 @@ const RIPE: RGB = [1, 0.5, 0.22];
 const SEED: RGB = [0.98, 0.88, 0.66];
 const SHOOT: RGB = [0.55, 0.95, 0.4];
 
+const STAR: RGB = [0.9, 0.86, 0.74];
+
+/** The colour of particle p in piece k: a faint star until it arrives, then the form's own. */
 export function colour(k: number, p: Particle, u: number, t: number): RGB {
+  const c = formColour(k, p, u, t);
+  const a = arrival(k, p, u);
+  if (a >= 1) return c;
+  const twinkle = 0.6 + 0.4 * Math.sin(t * 2.3 + p.i * 0.91);
+  return mix(scale(STAR, 0.32 * twinkle), c, a);
+}
+
+function formColour(k: number, p: Particle, u: number, t: number): RGB {
   const twinkle = 0.7 + 0.3 * Math.sin(t * 1.7 + p.i * 0.37);
   switch (k) {
     case 0:
@@ -995,6 +1131,17 @@ export function colour(k: number, p: Particle, u: number, t: number): RGB {
           return scale(mix(BARK, GOLD, p.d), 0.7 * twinkle);
       }
     case 4:
+      switch (veinRole(p)) {
+        case 'pulse':
+          return scale(SUGAR, 1 * twinkle);
+        case 'tip':
+          return scale(SUGAR, 1.05);
+        case 'ring':
+          return scale(GOLD, 0.4 * twinkle);
+        default:
+          return scale(mix([0.78, 0.56, 0.3], SUGAR, p.b), 0.75 * twinkle);
+      }
+    case 5:
       switch (fungusRole(p)) {
         case 'pulse':
           return scale(SUGAR, 0.95 * twinkle);
@@ -1009,7 +1156,7 @@ export function colour(k: number, p: Particle, u: number, t: number): RGB {
         default:
           return p.d < 0.35 ? scale(STALK, 0.55) : scale(CAP, 0.7 * twinkle);
       }
-    case 5:
+    case 6:
       switch (leafRole(p)) {
         case 'midrib':
           return scale([0.75, 0.95, 0.45], 0.85);
@@ -1024,7 +1171,7 @@ export function colour(k: number, p: Particle, u: number, t: number): RGB {
         default:
           return scale(SUGAR, 0.9 * smooth((u - 0.35) / 0.15));
       }
-    case 6:
+    case 7:
       switch (flowerRole(p)) {
         case 'floret': {
           const n = Math.floor(p.a * FLORETS);
@@ -1081,10 +1228,12 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       return { eye: [Math.sin(a) * 58, 2, Math.cos(a) * 58], target: [0, -2, 0] };
     }
     case 4:
-      return { eye: [Math.sin(t * 0.04) * 10, 14, 44], target: [0, SOIL, 0] };
+      return { eye: [Math.sin(t * 0.04) * 6, 6, 58], target: [0, 0, 0] };
     case 5:
+      return { eye: [Math.sin(t * 0.04) * 10, 14, 44], target: [0, SOIL, 0] };
+    case 6:
       return { eye: [Math.sin(t * 0.05) * 6, 2, 52], target: [0, 0, 0] };
-    case 6: {
+    case 7: {
       const tilt = smooth((u - 0.4) / 0.5);
       return { eye: lerp3([0, HEAD[1], 44], [18, 14, 36], tilt), target: HEAD };
     }

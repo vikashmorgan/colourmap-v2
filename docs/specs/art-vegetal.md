@@ -14,11 +14,11 @@
 > whole chapter. think of more ideas for 6 7 8 and develop them."
 
 The first of the three worlds ([three-worlds.md](three-worlds.md)) to get
-its own chapter. It plays as one trip in eight numbered pieces, and the step
+its own chapter. It plays as one trip in nine numbered pieces, and the step
 bar jumps to any of them, so each piece can also be held and shown alone
 (pause).
 
-## The eight pieces
+## The nine pieces
 
 | # | Piece | What you see | Camera |
 |---|-------|--------------|--------|
@@ -26,12 +26,21 @@ bar jumps to any of them, so each piece can also be held and shown alone
 | 2 | Roots | One base, and every root grows from it: down and out in all directions, forking, fine hairs at the tips. Water climbs to the base | Below, from the side |
 | 3 | Tree 2D | The Star Tree, flat, grown from its base, sap running up and down | Face on |
 | 4 | Tree 3D | A tree grown in three dimensions: each branch forks round its own axis at the golden angle, leaves at the tips, a crown you can walk round | Round the tree |
-| 5 | Fungi | Threads spread from spores through the soil and join into a net; food pulses along it; mushrooms rise above it | Low, along the net |
-| 6 | Leaf | One great leaf: a midrib, veins forking to the edge, the blade between them. Light falls in and leaves as sugar, running down the veins | Above the leaf |
-| 7 | Flower | A head of florets on the golden angle (the sunflower's spirals) opens, with petals round it; pollen drifts | Face on, then tilting |
-| 8 | Fruit & seed | The flower's centre swells into a fruit, ripens from green to amber, falls, opens, and its seeds go into the ground; one sprouts, and its first cells are the cells of piece 1 | Following the fruit down |
+| 5 | Veins | The Journey's branching network, made round and symmetric: one branching turned eight times round a centre, each copy mirrored, in a shallow bowl inside a ring. Food runs out to the tips | Face on |
+| 6 | Fungi | Threads spread from spores through the soil and join into a net; food pulses along it; mushrooms rise above it | Low, along the net |
+| 7 | Leaf | One great leaf: a midrib, veins forking to the edge, the blade between them. Light falls in and leaves as sugar, running down the veins | Above the leaf |
+| 8 | Flower | A head of florets on the golden angle (the sunflower's spirals) opens, with petals round it; pollen drifts | Face on, then tilting |
+| 9 | Fruit & seed | The flower's centre swells into a fruit, ripens from green to amber, falls, opens, and its seeds go into the ground; one sprouts, and its first cells are the cells of piece 1 | Following the fruit down |
 
 The chapter loops: the sprout's cells become the block of cells.
+
+**Between pieces, a ball of stars** (2026-11-09: "I don't like that ball of
+light for transitions, it is too bright and loses the effect of many stars",
+then "a ball of stars better"). Each form loosens into a wide, slowly turning
+ball of faint stars round where the next piece stands, and the stars settle
+into the new form in its growing order: from the middle of the block, from
+the base of the roots and trees, from the centre of the veins. No piece
+starts from one crowded point.
 
 ## Words
 
@@ -49,7 +58,7 @@ The Words key hides them, as on the Journey.
 
 ## Acceptance
 
-- `/geometry-field/vegetal` plays the eight pieces and loops; the step bar
+- `/geometry-field/vegetal` plays the nine pieces and loops; the step bar
   jumps to any piece; Space pauses on one.
 - The pills read Stars · Geometry · Tunnels · Oils · Big Bang · Journey ·
   Vegetal · Experiment, on the Art panel and the trip pages.
@@ -58,4 +67,7 @@ The Words key hides them, as on the Journey.
   direction, not in one plane.
 - Each piece forms by about halfway through, and every grain pours into the
   next piece with no cut, as in the Journey.
+- Each piece opens as a wide ball of faint stars, never a bright point.
+- The veins are round and symmetric: eight turns, each mirrored, inside one
+  circle.
 - No new dependencies, nothing stored beyond the Words choice.

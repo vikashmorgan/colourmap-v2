@@ -7,11 +7,13 @@ import {
   CELL_COUNT,
   camera,
   cellOf,
+  colour,
   FLORETS,
   floret,
   fruitOf,
   GROUND_FRUIT,
   makeParticles,
+  mandala,
   PHASE_START,
   PHASES,
   particleAt,
@@ -19,6 +21,7 @@ import {
   ROOT_BASE,
   rootSystem,
   STEP_COLOURS,
+  starBall,
   TOTAL,
   target,
   tree3d,
@@ -35,12 +38,13 @@ const at = (k: number, u: number) =>
   (PHASE_START[k] as number) + u * (PHASES[k]?.duration as number);
 
 describe('the vegetal chapter', () => {
-  it('has eight numbered pieces, from a cell to fruit and seed, each with words', () => {
+  it('has nine numbered pieces, from a cell to fruit and seed, each with words', () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       'cell',
       'roots',
       'tree-2d',
       'tree-3d',
+      'veins',
       'fungi',
       'leaf',
       'flower',
@@ -54,6 +58,28 @@ describe('the vegetal chapter', () => {
     expect(TOTAL).toBe(PHASES.reduce((s, p) => s + p.duration, 0));
     expect(phaseAt(at(3, 0.5))).toEqual({ index: 3, u: expect.closeTo(0.5, 6) });
     expect(phaseAt(TOTAL + 1).index).toBe(0);
+  });
+
+  it('opens every piece from a wide ball of faint stars, never one crowded point', () => {
+    for (let k = 0; k < PHASES.length; k++) {
+      const t = at(k, 0);
+      const pts = particles.map((p) => target(k, p, 0, t));
+      const c = [0, 1, 2].map((i) => pts.reduce((s, q) => s + (q[i] as number), 0) / pts.length);
+      const spread = Math.sqrt(pts.reduce((s, q) => s + dist(q, c) ** 2, 0) / pts.length);
+      expect(spread).toBeGreaterThan(10);
+      for (const p of particles.slice(0, 50)) {
+        expect(target(k, p, 0, t)).toEqual(starBall(k, p, t));
+        expect(Math.max(...colour(k, p, 0, t))).toBeLessThan(0.35);
+      }
+    }
+  });
+
+  it('turns the veins round the centre: eight copies, each mirrored, inside one circle', () => {
+    expect(mandala().reach).toBeGreaterThan(0);
+    for (const p of particles) {
+      const [x, y] = target(4, p, 0.6, at(4, 0.6));
+      expect(Math.hypot(x, y)).toBeLessThan(24 * 1.1);
+    }
   });
 
   it('keeps every grain somewhere real, in every piece and between them', () => {
