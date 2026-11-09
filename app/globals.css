@@ -859,11 +859,50 @@ input[type="range"].feedback-slider::-moz-range-thumb {
   opacity: 0;
   pointer-events: none;
 }
+/* The Journey's words (docs/specs/art-journey.md): a reflection over the picture, a line at a time. */
+/* To the right of the picture, so the words never sit on what they speak about; above it on a phone. */
+.jr-words {
+  position: absolute;
+  top: 50%;
+  right: 32px;
+  transform: translateY(-60%);
+  width: min(360px, 30vw);
+  margin: 0;
+  text-align: right;
+  pointer-events: none;
+}
+@media (max-width: 760px) {
+  .jr-words {
+    top: 76px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+    transform: none;
+    text-align: center;
+  }
+}
+.jr-words p {
+  margin: 0 0 10px;
+  font-family: var(--font-serif), serif;
+  font-size: clamp(17px, 2.2vw, 23px);
+  line-height: 1.45;
+  font-style: italic;
+  color: #f4ead8;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.95);
+  transition: opacity 0.6s;
+}
+.jr-thread {
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(244, 234, 216, 0.6);
+}
 @media (prefers-reduced-motion: reduce) {
   .bb-top,
   .bb-step,
   .bb-bar,
-  .bb-line {
+  .bb-line,
+  .jr-words p {
     transition: none;
   }
 }
