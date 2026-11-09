@@ -88,6 +88,7 @@ From the questions and comments left on the page.
   - Time counts while the page is in front and something was touched, scrolled or typed in the last 3 minutes.
   - A break of 30 minutes or more starts a new session.
   - A click shows this session, today's total, earlier sessions, and *Start a new session*.
+  - The box that opens shows the half wheel again, large, with the session's time in its curve (asked for 2026-11-09: "when I click on the timer I want the half wheel to appear in the box that opens").
   - It is kept on this device (`stats-timer`).
 - **The case pad.** *The case* on a box opens a pad on the left with the example the box is about:
   - For a box, that is the last picture shown up to it in the lecture. For an exercise, it is its setup, numbers and picture.
