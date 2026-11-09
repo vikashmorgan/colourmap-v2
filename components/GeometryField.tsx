@@ -15491,10 +15491,15 @@ export const ART_TABS: { id: ArtTab; label: string }[] = [
   { id: 'oils', label: 'Oils' },
   { id: 'experiment', label: 'Experiment' },
 ];
-/** The pills across the top of the panel, in order: the Art tabs, with the Big Bang page before Experiment. */
+/**
+ * The pills across the top of the panel, in order: the Art tabs, with the Big Bang page and
+ * the Journey after it (2026-11-09, docs/specs/art-journey.md) before Experiment.
+ */
 export const ART_PILLS: ({ id: ArtTab; label: string } | { href: string; label: string })[] = [
   ...ART_TABS.filter((t) => t.id !== 'experiment'),
   { href: '/geometry-field/big-bang', label: 'Big Bang' },
+  { href: '/geometry-field/journey', label: 'Journey' },
+  { href: '/geometry-field/vegetal', label: 'Vegetal' },
   ...ART_TABS.filter((t) => t.id === 'experiment'),
 ];
 // 8 Nov 2026: "add all the new ones in an Experiment tab pill after Big Bang, and include Wind,
