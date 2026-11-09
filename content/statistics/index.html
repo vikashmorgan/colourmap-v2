@@ -268,6 +268,20 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .more-rows { font: 12.5px system-ui, sans-serif; color: var(--soft); }
   .recap { margin: 0; padding-left: 20px; }
   .recap li { margin: 4px 0; }
+  /* Summary: each lecture's essentials, one box per idea. */
+  .ess-fold { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 10px 14px; }
+  .ess-fold > summary { cursor: pointer; list-style: none; display: flex; gap: 10px; align-items: baseline; }
+  .ess-fold > summary::-webkit-details-marker { display: none; }
+  .ess-fold > summary::after { content: 'Open ▸'; margin-left: auto; font: 600 12.5px system-ui, sans-serif; color: var(--accent); white-space: nowrap; }
+  .ess-fold[open] > summary::after { content: 'Hide ▾'; }
+  .ess-fold[open] > summary { margin-bottom: 10px; }
+  .ess { display: grid; gap: 12px; margin: 4px 0 18px; }
+  .ess-item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 12px; display: grid; gap: 8px; }
+  .ess-item h3 { margin: 0; font-size: 17px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
+  .ess-is { margin: 0; font-size: 16px; }
+  .ess-ex { margin: 0; }
+  .ess-ex b { margin-right: 4px; }
+  .ess-breath { margin-top: 6px; }
   .sync { margin-top: 36px; color: var(--soft); font: 13px system-ui, sans-serif; }
 
   /* The notepad on the right: the same dot and paper as Practice. */
@@ -1629,9 +1643,11 @@ const PRACTICE_LAWS = {
 const cardNo = (n, id) => { const s = SESSIONS.find(x => x.n === n), i = s ? s.groups.flatMap(g => g.cards).findIndex(c => c.id === id) : -1; return i < 0 ? '' : String(i + 1); };
 function lawsHtml(s, laws) {
   if (!laws?.length) return '';
-  return `<div class="laws"><p class="out-head">Rules used</p>${laws.map(([n, id, name, general, here]) => `<div class="law">
+  /* 2026-11-09: "add the formulas in the exercise resolutions so I understand why the numbers were chosen":
+     the formula comes first, then the same formula with this exercise's numbers in it, then the answer. */
+  return `<div class="laws"><p class="out-head">The formula, then the numbers</p>${laws.map(([n, id, name, general, here]) => `<div class="law">
     <p class="law-name"><b>${esc(name)}</b><button type="button" class="ref-go" data-go="${esc(cardKey(n, id))}">${n === s.n ? '' : `Lecture ${n} · `}card ${cardNo(n, id)} ›</button></p>
-    <pre>${subs(mathHtml(general))}</pre><p class="law-here">Here</p><pre>${subs(mathHtml(here))}</pre></div>`).join('')}</div>`;
+    <pre>${subs(mathHtml(general))}</pre><p class="law-here">With the numbers of this exercise</p><pre>${subs(mathHtml(here))}</pre></div>`).join('')}</div>`;
 }
 /* ---------- Each exercise's numbers, named, and the drawing it builds ----------
    Asked for 2026-11-07: "deconstruct it into its formulas and give names to the numbers, so I understand
@@ -1694,8 +1710,8 @@ function picHtml(x) {
   return `<div class="ex-pic">${q.given ? `<p class="out-head">The numbers</p><div class="ex-given">${tbl(['', 'value', 'what it is'], q.given)}</div>` : ''}${q.draw ? `<p class="out-head">The picture</p>${q.draw()}` : ''}${q.read ? `<p class="ex-read">${text(q.read)}</p>` : ''}</div>`;
 }
 function practiceHtml(s) {
-  return s.practice.map((x, i) => `<section class="ex" id="c-${s.n}-ex-${x.id}" data-key="${esc(cardKey(s.n, `ex-${x.id}`))}" aria-label="Exercise ${i + 1}"><h3><span class="ex-num">Exercise ${i + 1}</span>${esc(x.title)}${partTag(s, s.groups.length)}</h3><p class="ex-setup" data-hl="stats|p|${x.id}">${text(x.setup)}</p>${x.table ? x.table() : ''}${picHtml(x)}
-    <div class="practice">${x.parts.map(([q, a], j) => `<details class="pq" data-hl="stats|p|${x.id}-${j + 1}"><summary><span class="num">${j + 1}</span><span>${text(q)}</span></summary><div class="ans">${subs(a())}${lawsHtml(s, PRACTICE_LAWS[x.id]?.[j])}</div></details>`).join('')}</div>
+  return s.practice.map((x, i) => `<section class="ex" id="c-${s.n}-ex-${x.id}" data-key="${esc(cardKey(s.n, `ex-${x.id}`))}" aria-label="Exercise ${i + 1}"><h3><span class="ex-num">Exercise ${i + 1}</span>${esc(x.title)}${partTag(s, s.groups.length)}</h3><p class="ex-setup" data-hl="stats|p|${x.id}">${kwText(x.setup)}</p>${x.table ? x.table() : ''}${picHtml(x)}
+    <div class="practice">${x.parts.map(([q, a], j) => `<details class="pq" data-hl="stats|p|${x.id}-${j + 1}"><summary><span class="num">${j + 1}</span><span>${kwText(q)}</span></summary><div class="ans">${lawsHtml(s, PRACTICE_LAWS[x.id]?.[j])}${answerHtml(a())}</div></details>`).join('')}</div>
     <div class="notes"></div>
     <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button><button type="button" class="case-btn" aria-controls="case-pad">The case</button></div></section>`).join('');
 }
@@ -1845,6 +1861,74 @@ function markXx(root) {
     n.replaceWith(frag);
   }
 }
+/* ---------- Summary: each lecture in its essentials ----------
+ * Asked for 2026-11-09: "simplify all the information in each lecture to get just the essentials
+ * with graphs, formulas, what they mean ... at the end of each lecture put a summary", and "keep
+ * the hover function". Each idea: what it is in one line, its formula, what each piece means,
+ * an example or a small graph. Words and formulas carry the same peeks as the cards. */
+const Phi = z => {
+  const t = 1 / (1 + (0.3275911 * Math.abs(z)) / Math.SQRT2);
+  const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp((-z * z) / 2);
+  return z >= 0 ? (1 + y) / 2 : (1 - y) / 2;
+};
+const pmfRows = (ps, label = v => v.toFixed(2)) => ps.map((v, k) => [k, v, label(v)]);
+const ESSENTIALS = {
+  1: [
+    { name: 'Sample space Ω', is: 'The list of everything that can happen. Each item on it is one outcome ω.', f: 'Ω = {ω₁, ω₂, ω₃, ω₄}', parts: [['Ω', 'all the outcomes together'], ['ω', 'one outcome: one way an order can turn out']], pic: () => orderGrid([], 'The four outcomes of an order, with their chances') },
+    { name: 'Event', is: 'A group of outcomes you ask about, such as "the order is late".', f: 'A ⊂ Ω', parts: [['A', 'the event: a set of outcomes'], ['⊂', '"is part of"']], pic: () => orderGrid(['ω3', 'ω4'], 'The event "late" is ω₃ and ω₄: P = 0.10 + 0.04 = 0.14') },
+    { name: 'Probability P', is: 'A number from 0 to 1 for each event. Three rules: never negative, disjoint events add up, and everything together is 1.', f: 'P(A) ≥ 0\nP(A ∪ B) = P(A) + P(B)     if A ∩ B = ∅\nP(Ω) = 1', parts: [['P(A)', 'how likely A is'], ['∅', 'nothing: A and B share no outcome']] },
+    { name: 'Or, and, not', is: 'Or is the union ∪: either one. And is the intersection ∩: both. Not is the complement ᶜ: everything else.', f: 'A ∪ B     A ∩ B     Aᶜ', pic: () => row(venn(['a', 'ab', 'b'], { cap: 'A ∪ B: A or B' }), venn(['ab'], { cap: 'A ∩ B: A and B' }), venn(['b', 'o'], { cap: 'Aᶜ: not A' })) },
+    { name: 'Complement rule', is: 'The chance that something does not happen is 1 minus the chance that it does.', f: 'P(Aᶜ) = 1 − P(A)', ex: 'Late is 0.14, so on time is 1 − 0.14 = 0.86.' },
+    { name: 'Addition rule', is: 'For "A or B": add the two chances, then take away the overlap, because it was counted twice.', f: 'P(A ∪ B) = P(A) + P(B) − P(A ∩ B)', parts: [['P(A ∩ B)', 'the overlap: both happen']], ex: 'Late or refunded: 0.14 + 0.10 − 0.04 = 0.20.' },
+    { name: 'Counting', is: 'When every outcome is equally likely, a probability is just counting.', f: 'P(A) = |A| / |Ω|', parts: [['|A|', 'how many outcomes are in A'], ['|Ω|', 'how many outcomes there are in all']], ex: 'A die shows an even number: 3/6 = 0.5.', watch: 'Only when the outcomes are equally likely.' },
+    { name: 'Frequency and probability', is: 'A frequency is what happened in the data. A probability is the model. Over many trials the frequency settles near the probability.', f: 'n_A / n  →  P(A)     as n grows', parts: [['n_A', 'how many times A happened'], ['n', 'how many trials']] },
+  ],
+  2: [
+    { name: 'Conditional probability', is: 'The chance of A once you know B happened: keep only the outcomes in B, and ask what share of them is also in A.', f: 'P(A ∣ B) = P(A ∩ B) / P(B)', parts: [['∣', '"given": B is known'], ['P(A ∩ B)', 'both happen'], ['P(B)', 'the new, smaller world']], ex: 'Late, given standard: 110/800 = 0.1375.', pic: () => venn(['ab'], { cap: 'Inside B, the share that is also in A' }) },
+    { name: 'Out of what?', is: 'P(A ∣ B) and P(B ∣ A) are two different questions, with two different answers.', f: 'P(L ∣ S) = 110/800 = 0.1375\nP(S ∣ L) = 110/120 = 0.917', watch: 'Always ask: out of what? The top is the same, the bottom is not.' },
+    { name: 'Multiply along a branch', is: 'The chance of both is the chance of the first, times the chance of the second given the first.', f: 'P(A ∩ B) = P(B) P(A ∣ B)', ex: 'North and late: 0.7 × 0.1 = 0.07.', pic: () => warehouseTree() },
+    { name: 'Total probability', is: 'To get the chance of A, add the branches that end in A: one for each case of a partition.', f: 'P(A) = Σ P(Bᵢ) P(A ∣ Bᵢ)', parts: [['Bᵢ', 'the cases: they do not overlap and together cover everything'], ['Σ', 'add over every case']], ex: 'Late: 0.7 × 0.1 + 0.3 × 0.2 = 0.13.' },
+    { name: 'Bayes’ rule', is: 'Turns the question round: from how likely the evidence is given the cause, to how likely the cause is given the evidence.', f: 'P(B ∣ A) = P(B) P(A ∣ B) / P(A)', parts: [['P(B)', 'the prior: what you believed before'], ['P(A ∣ B)', 'the likelihood: how often B gives this evidence'], ['P(A)', 'the evidence, from total probability'], ['P(B ∣ A)', 'the posterior: what you believe after']], ex: 'The dog sits: 0.02 × 0.95 / 0.068 = 0.28, not 0.95.', pic: () => bayesTable([['item', '0.02', '0.95', '0.019', '*0.28'], ['no item', '0.98', '0.05', '0.049', '0.72']], '0.068') },
+    { name: 'Independence', is: 'Knowing B tells you nothing about A: its chance stays the same.', f: 'P(A ∩ B) = P(A) P(B)\nthe same as  P(A ∣ B) = P(A)', watch: 'Disjoint is not independent. If A and B cannot happen together, knowing B tells you that A did not happen.' },
+    { name: 'Repeated trials', is: 'One sequence of n independent trials with k successes: multiply the chances. "At least one" is easiest as 1 minus "none".', f: 'one sequence:   pᵏ (1 − p)ⁿ⁻ᵏ\nat least one:   1 − (1 − p)ⁿ', parts: [['p', 'the chance of success in one trial'], ['n', 'the number of trials'], ['k', 'the number of successes']], ex: 'At least one six in 4 rolls: 1 − (5/6)⁴ = 0.518.' },
+  ],
+  3: [
+    { name: 'Random variable X', is: 'A rule that gives each outcome a number, such as the number of heads in 4 tosses.', f: 'X : Ω → numbers', parts: [['X', 'the random variable, before you look'], ['x', 'one value it can take']] },
+    { name: 'PMF m_X', is: 'The list of every value X can take, with its chance. The chances add up to 1.', f: 'm_X(x) = P(X = x)\nΣ m_X(x) = 1', pic: () => bars(pmfRows(binom(4, 0.5), v => `${Math.round(v * 16)}/16`), { cap: 'Heads in 4 tosses of a coin', x: 'heads', mean: 2 }) },
+    { name: 'Mean E[X]', is: 'The balance point of the PMF: each value times its chance, all added up. Over many repeats it is the average.', f: 'E[X] = Σ x m_X(x)', parts: [['x m_X(x)', 'a value, weighted by its chance'], ['Σ', 'add over every value']], ex: 'A die: (1 + 2 + 3 + 4 + 5 + 6) × 1/6 = 3.5.' },
+    { name: 'Variance Var(X)', is: 'How far X typically lands from its mean: the average of the squared distance from μ.', f: 'Var(X) = E[(X − μ)²] = E[X²] − (E[X])²', parts: [['μ', 'the mean, E[X]'], ['(X − μ)²', 'the squared distance from the mean'], ['E[X²]', 'the mean of the squares']], ex: 'One toss, X = 1 for heads: E[X²] = 0.5, so Var(X) = 0.5 − 0.5² = 0.25.' },
+    { name: 'Standard deviation σ_X', is: 'The spread back in the units of X: the square root of the variance.', f: 'σ_X = √Var(X)', ex: '√0.25 = 0.5.' },
+    { name: 'Shift and scale', is: 'Adding b moves the mean and leaves the spread alone. Multiplying by a scales the mean by a and the variance by a².', f: 'E[aX + b] = a E[X] + b\nVar(aX + b) = a² Var(X)' },
+    { name: 'E[g(X)]', is: 'To average a function of X, apply g to each value first, then weight by the chances.', f: 'E[g(X)] = Σ g(x) m_X(x)', watch: 'In general E[g(X)] is not g(E[X]).' },
+    { name: 'Bernoulli', is: 'One trial: success, written 1, with chance p, and failure, written 0, otherwise.', f: 'P(X = 1) = p     E[X] = p     Var(X) = p(1 − p)' },
+    { name: 'Binomial', is: 'The number of successes in n independent trials that all have the same chance p.', f: 'P(X = k) = C(n, k) pᵏ (1 − p)ⁿ⁻ᵏ\nE[X] = np     Var(X) = np(1 − p)', parts: [['C(n, k)', 'n choose k: how many orders the k successes can come in']], pic: () => bars(pmfRows(binom(10, 0.2)), { cap: 'Binomial with n = 10 and p = 0.2', x: 'successes k', mean: 2 }) },
+    { name: 'Poisson', is: 'A count of events in a window, such as calls in an hour, with λ on average.', f: 'P(X = k) = e^(−λ) λᵏ / k!\nE[X] = Var(X) = λ', pic: () => bars(pmfRows(pois(3, 10)), { cap: 'Poisson with λ = 3', x: 'count k', mean: 3 }) },
+  ],
+  4: [
+    { name: 'Density f_X', is: 'For a value on a scale, a probability is an area under the curve. The total area is 1, and the height alone is not a probability.', f: 'P(a ≤ X ≤ b) = ∫ₐᵇ f_X(x) dx\n∫ f_X(x) dx = 1', parts: [['∫ₐᵇ', 'the area from a to b'], ['f_X(x)', 'the height of the curve at x']], pic: () => curve(gauss(48, 6), 28, 68, { shade: [42, 54], label: '0.683', ticks: [30, 42, 54, 66], x: 'hours in transit', cap: 'Parcels between 42 and 54 hours: the shaded area, 0.683' }) },
+    { name: 'One exact value', is: 'A single value has no width, so no area: its probability is 0. Endpoints do not matter.', f: 'P(X = a) = 0,  so  P(X < a) = P(X ≤ a)' },
+    { name: 'Mean and variance', is: 'As in Lecture 3, with ∫ in place of Σ and f_X in place of m_X.', f: 'E[X] = ∫ x f_X(x) dx\nVar(X) = ∫ (x − μ)² f_X(x) dx' },
+    { name: 'CDF F_X', is: 'The chance that X is at most x: the area to the left of x. Any interval is the difference of two CDF values.', f: 'F_X(x) = P(X ≤ x)\nP(a < X ≤ b) = F_X(b) − F_X(a)', pic: () => curve(x => Phi((x - 48) / 6), 28, 68, { top: 1, guide: [54, Phi(1)], ticks: [30, 42, 54, 66], x: 'hours in transit', y: 'P(X ≤ x)', cap: 'The CDF climbs from 0 to 1. At 54 hours it reads 0.84.' }) },
+    { name: 'Quantile', is: 'The CDF read backwards: the value with a share q of X below it. The median is the 0.5 quantile.', f: 'the q-quantile is the x with F_X(x) = q' },
+    { name: 'Uniform', is: 'Every moment of a window is equally likely: a flat density.', f: 'X ∼ Unif(a, b)\nf_X(x) = 1/(b − a)  on the window\nE[X] = (a + b)/2     Var(X) = (b − a)²/12', pic: () => curve(unif(0, 180), -30, 210, { top: 1 / 110, shade: [60, 80], label: '0.111', ticks: [[0, '9:00'], [60, '10:00'], [120, '11:00'], [180, '12:00']], x: 'arrival time', cap: 'Courier between 10:00 and 10:20: 20/180 = 0.111' }) },
+    { name: 'Exponential', is: 'The wait until the next event, with λ events per unit of time on average. Short waits are the most likely.', f: 'X ∼ Exp(λ)\nf_X(x) = λ e^(−λx)     P(X > a) = e^(−λa)\nE[X] = 1/λ     Var(X) = 1/λ²', pic: () => curve(expo(0.2), 0, 25, { shade: [10, 25], ticks: [0, 5, 10, 15, 20], x: 'minutes until the next call', cap: 'λ = 0.2 per minute: longer than 10 minutes is e^(−2) = 0.135' }) },
+    { name: 'Gaussian N(μ, σ)', is: 'The bell: the total of many small independent effects. μ is its centre and σ its width.', f: 'X ∼ N(μ, σ)     E[X] = μ     Var(X) = σ²', pic: () => curve(gauss(48, 6), 28, 68, { ticks: [[36, 'μ − 2σ'], [42, 'μ − σ'], [48, 'μ'], [54, 'μ + σ'], [60, 'μ + 2σ']], x: 'hours in transit', cap: 'N(48, 6)' }) },
+    { name: 'Standardize: z', is: 'How many SDs a value sits from the mean. Then the table of Φ gives the area to its left.', f: 'z = (x − μ) / σ\nP(X ≤ x) = Φ(z)     Φ(−z) = 1 − Φ(z)', parts: [['z', 'the distance from the mean, counted in SDs'], ['Φ(z)', 'the area to the left of z under the standard bell']], ex: 'A parcel slower than 60 hours: z = (60 − 48)/6 = 2, so 1 − 0.977 = 0.023.' },
+    { name: 'Gaussian quantile', is: 'Standardizing run backwards: read z for the share you want, then go z SDs from the mean.', f: 'x = μ + zσ', ex: 'Met by 95 % of parcels: 48 + 1.645 × 6 = 57.9 hours.' },
+    { name: 'Data: x̄ and s', is: 'For data rather than a model. x̄ is the average of the values, and s is how far they typically sit from x̄.', f: 'x̄ = Σ xᵢ / n\ns² = Σ (xᵢ − x̄)² / (n − 1)     s = √s²', parts: [['xᵢ', 'one value of the data'], ['n − 1', 'one less than the count, because x̄ is itself fitted to the data']], watch: 'μ and σ belong to a model. x̄ and s are computed from data.' },
+    { name: 'Median and IQR', is: 'The middle value, and the width of the middle half. A few extreme values barely move them, while they move the mean and the SD a lot.', f: 'IQR = Q₃ − Q₁', parts: [['Q₁', 'a quarter of the values are below it'], ['Q₃', 'three quarters are below it']], pic: () => boxplot({ lo: 30, hi: 70, q1: 44, med: 48, q3: 52, wlo: 34, whi: 62, out: [67], ticks: [30, 40, 50, 60, 70], cap: 'The box is the middle half; one far value sits apart' }) },
+  ],
+};
+function summaryHtml(s) {
+  const list = ESSENTIALS[s.n] || [];
+  // Folded until asked for, so the lecture reads first and the summary waits at the end.
+  return `<details class="ess-fold"><summary>The lecture in its essentials: what each idea is, its formula, and what each piece means</summary>`
+    + `<p class="group-note">Hover a symbol or a term to open its line from the cheat sheet.</p>`
+    + `<div class="ess">${list.map((e, i) => `<article class="ess-item"><h3><span class="num">${i + 1}</span><span>${mathHtml(e.name)}</span></h3><p class="ess-is">${kwText(e.is)}</p>${e.f ? `<pre>${mathHtml(e.f)}</pre>` : ''}${e.parts ? readsHtml({ parts: e.parts }) : ''}${e.ex ? `<p class="ess-ex"><b>For example</b> ${kwText(e.ex)}</p>` : ''}${e.watch ? `<p class="watch"><b>Watch out</b>${kwText(e.watch)}</p>` : ''}${e.pic ? e.pic() : ''}</article>`).join('')}</div>`
+    + `<p class="flow-label ess-breath">In one breath</p><ul class="recap" data-hl="stats|s${s.n}|recap">${s.recap.map(r => `<li>${kwText(r)}</li>`).join('')}</ul></details>`;
+}
+// An answer's formula boxes get the same peeks as a card's; the words around them stay as written.
+const answerHtml = h => h.split(/(<pre>[^<]*<\/pre>)/).map(part => (part.startsWith('<pre>') ? `<pre>${mathHtml(part.slice(5, -6))}</pre>` : subs(part))).join('');
 function renderSession() {
   if (current === 'ref') { document.getElementById('session').innerHTML = '<p class="where">Cheat sheet</p>' + refHtml(); applyHighlights(); mapRefresh(); markXx(document.getElementById('session')); return; }
   if (current === 'charts') { document.getElementById('session').innerHTML = '<p class="where">Charts</p>' + chartsHtml(); mapRefresh(); markXx(document.getElementById('session')); return; }
@@ -1853,7 +1937,7 @@ function renderSession() {
     + `<details class="pic" id="pic" data-seg="pic"${picOpen() ? ' open' : ''}><summary>The picture: the lecture on one page</summary><div class="pic-body">${PICTURES[s.n]()}</div></details>`
     + s.groups.map((g, gi) => `<section class="seg" data-seg="g${gi}" style="--h: ${segHue(gi)}">${segRail(s, gi)}${partHead(s, gi, g.name)}${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c, gi)).join('')}</div><div class="own-boxes" data-box-key="${esc(boxKey(s.n, gi))}" data-part="Part ${gi + 1}/${s.groups.length + 2}"></div></section>`).join('')
     + `<section class="seg" data-seg="practice" style="--h: ${segHue(s.groups.length)}">${segRail(s, s.groups.length)}${partHead(s, s.groups.length, 'Practice')}<p class="group-note">Try each one on paper first, then open the answer.</p>${practiceHtml(s)}</section>`
-    + `<section class="seg" data-seg="recap" style="--h: ${segHue(s.groups.length + 1)}">${segRail(s, s.groups.length + 1)}${partHead(s, s.groups.length + 1, 'To remember')}<ul class="recap" data-hl="stats|s${s.n}|recap">${s.recap.map(r => `<li>${text(r)}</li>`).join('')}</ul></section>`;
+    + `<section class="seg" data-seg="recap" style="--h: ${segHue(s.groups.length + 1)}">${segRail(s, s.groups.length + 1)}${partHead(s, s.groups.length + 1, 'Summary')}${summaryHtml(s)}</section>`;
   paintNotes();
   applyHighlights();
   mapRefresh();
@@ -2673,7 +2757,7 @@ let mapLecture = null, mapPlace = { seg: null, card: null };
 function segsOf(s) {
   return [{ key: 'pic', name: 'The picture' },
     ...s.groups.map((g, gi) => ({ key: `g${gi}`, name: g.name, h: segHue(gi), cards: g.cards })),
-    { key: 'practice', name: 'Practice', h: segHue(s.groups.length) }, { key: 'recap', name: 'To remember', h: segHue(s.groups.length + 1) }];
+    { key: 'practice', name: 'Practice', h: segHue(s.groups.length) }, { key: 'recap', name: 'Summary', h: segHue(s.groups.length + 1) }];
 }
 function findPlace() {
   let seg = null, card = null;
