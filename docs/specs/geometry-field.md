@@ -503,3 +503,12 @@ For the Out of the Box projection room.
   - The helix turns slowly on its axis and is seen a little from above. Nearer stars are larger and brighter.
   - Sliders: Turns, Spin, Density, Trails, Speed, Bright.
 - These presets use only dots and stars: no stroked lines, circles or filled shapes. The Star Tree itself (Music Liquid Chaos, Style 2) stays in Stars.
+
+## Panel cleanup (2026-11-09)
+
+> "30 31 32 34 in stars, put them in experiments at the bottom, they are low quality" · "heart wave, eye morph and clock can be deleted in geometry, not good enough" · "brain topog and mode sun in geometry delete them" · "walking figure delete it in geom" · "pyramid, put it as the first of the visuals, I like" · "in geometry make them all have a unique number so the number grows instead of starting again in each category"
+
+- **Dot Brain Loop, Neuron Web 1, Neuron Web 2 and Neuron Web 4** (Stars 30, 31, 32, 34) move to the bottom of **Experiment**, under a dim *Lower quality* header. They are the only presets whose tab is set by name rather than by mode, since Neuron Web 3 and 5 stay in Stars.
+- **Heart Wave, Eye Morph, Clock, Mode Sun, Brain Topography and Walking Figure** leave the Geometry tab's All Programs. Their drawing code stays: Build Lab and the Archetype bridge still open Mode Sun and Brain Topography by name.
+- **Pyramid** is the first of All Programs.
+- **Numbers run on in each tab**: All Programs continues from the last featured number instead of starting again at 01, so every visual in a tab has its own number.
