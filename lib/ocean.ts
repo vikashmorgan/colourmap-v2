@@ -303,15 +303,15 @@ const heading = (path: (t: number) => Vec3, t: number) => {
 /** Fish j of the shoal: where it swims and which way it points. */
 export function shoalFish(j: number, u: number, t: number): { c: Vec3; f: Vec3 } {
   // Each fish follows the shoal's path a moment behind its neighbours ahead, so turns run through it.
-  const lag = hash(j, 71) * 2.2;
+  const lag = hash(j, 71) * 3;
   const centre = shoalCentre(t - lag);
   const f = heading(shoalCentre, t - lag);
   const side = norm(cross(f, [0, 1, 0]));
   const up = cross(side, f);
   // A loose lens round the path, breathing a little; tighter as the piece goes on.
-  const spread = 4.5 * (1 - 0.3 * smooth((u - 0.4) / 0.3)) * (1 + 0.12 * Math.sin(t * 0.5));
+  const spread = 9 * (1 - 0.25 * smooth((u - 0.4) / 0.3)) * (1 + 0.12 * Math.sin(t * 0.5));
   const ox = (hash(j, 72) - 0.5) * 2 * spread + Math.sin(t * 0.7 + j) * 0.3;
-  const oy = (hash(j, 73) - 0.5) * spread;
+  const oy = (hash(j, 73) - 0.5) * spread * 1.2;
   return { c: add(add(centre, side, ox), up, oy), f };
 }
 
@@ -322,7 +322,7 @@ function shoalPoint(p: Particle, u: number, t: number): Vec3 {
   if (shoalRole(p) === 'snow') return snowAt(p, t, [0, 0, 0], 70, 40);
   const j = Math.floor(p.a * SHOAL);
   const { c, f } = shoalFish(j, u, t);
-  return fishAt(c, f, 2.4 + 0.5 * hash(j, 74), p, t, j);
+  return fishAt(c, f, 3 + 0.6 * hash(j, 74), p, t, j);
 }
 
 /* ---------- 3. Small fish: a ring that gathers into a ball ---------- */
@@ -518,7 +518,7 @@ function reefAt(p: Particle, u: number, t: number): { pos: Vec3; d: number } {
       const j = Math.floor(p.a * REEF_FISH);
       const c0 = reefSchool(s, t);
       const th = hash(j, 118) * TAU + t * 0.6;
-      const r = 3 + 1.5 * hash(j, 119);
+      const r = 4.5 + 3 * hash(j, 119);
       const c: Vec3 = [
         c0[0] + Math.cos(th) * r,
         c0[1] + (hash(j, 120) - 0.5) * 2.5,
@@ -646,14 +646,14 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
       // Blue backs, silver bellies, and a few golden fish among them.
       const tone =
         hash(j, 75) < 0.12 ? GOLD_FISH : mix(BLUE_FISH, SILVER, 0.5 + 0.5 * Math.sin(p.d * TAU));
-      return scale(tone, 0.7 * twinkle);
+      return scale(tone, 0.32 * twinkle);
     }
     case 2: {
       if (p.c < 0.08) return scale(SNOW, 0.3 * twinkle);
       // A flash of silver whenever a fish's side turns toward the light.
       const { f } = smallFish(Math.floor(p.a * SMALL_FISH), u, t);
       const flash = Math.abs(f[0] * 0.6 + f[2] * 0.8) ** 6;
-      return scale(SILVER, 0.3 + 0.75 * flash);
+      return scale(SILVER, 0.16 + 0.6 * flash);
     }
     case 3: {
       if (p.c < 0.1) return scale(SNOW, 0.3 * twinkle);
@@ -671,7 +671,7 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
         case 'shaft':
           return scale(SHAFT, 0.2 * h);
         case 'fish':
-          return scale(mix(BLUE_FISH, SILVER, frac(p.a * 7)), 0.75 * twinkle * h);
+          return scale(mix(BLUE_FISH, SILVER, frac(p.a * 7)), 0.3 * twinkle * h);
         case 'jelly': {
           const j = Math.floor(p.a * REEF_JELLIES);
           return jellyColour(p, pulseOf(j, t), twinkle, h);
