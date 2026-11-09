@@ -557,6 +557,9 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .timer-card { position: fixed; z-index: 62; right: 46px; top: calc(50% - 70px); width: min(280px, calc(100vw - 60px)); display: grid; gap: 8px; padding: 14px 16px; border-radius: 14px; background: var(--nb-bg); border: 1px solid var(--nb-rule); box-shadow: 0 14px 36px rgb(0 0 0 / .25); font: 14px/1.4 system-ui, sans-serif; color: var(--ink); }
   .timer-card p { margin: 0; }
   .tc-now { font: 700 26px/1.1 Georgia, serif; }
+  .tc-wheel { display: grid; justify-items: center; }
+  .tc-wheel svg { display: block; width: 200px; height: 113px; }
+  .tc-wheel .tc-now { margin-top: -44px; }
   .tc-soft { color: var(--soft); font-size: 13px; }
   .tc-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 13px; }
   .tc-list li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--nb-rule); }
@@ -2309,7 +2312,9 @@ function tmCardPaint() {
   const todayMin = tm.list.filter(x => new Date(x.start).toDateString() === today).reduce((t, x) => t + tmMinutes(x), 0);
   const earlier = tm.list.slice(0, live ? -1 : undefined).filter(x => tmMinutes(x) > 0).slice(-6).reverse();
   const when = x => new Date(x.start).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  tmCard.innerHTML = `<p class="tc-soft">This session</p><p class="tc-now" style="color: ${live ? tmColour(tmMinutes(s)) : 'inherit'}">${tmLength(live ? tmMinutes(s) : 0)}</p>`
+  // The half wheel again, large, with the session's time sitting in its curve (asked for 2026-11-09).
+  const nowMin = live ? tmMinutes(s) : 0;
+  tmCard.innerHTML = `<p class="tc-soft">This session</p><div class="tc-wheel"><svg viewBox="0 0 64 36" aria-hidden="true">${tmArc(nowMin)}</svg><p class="tc-now" style="color: ${live ? tmColour(nowMin) : 'inherit'}">${tmLength(nowMin)}</p></div>`
     + (live ? `<p class="tc-soft">Since ${new Date(s.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${s.where ? ` · ${esc(s.where)}` : ''}</p>` : '')
     + `<p>Today: <b>${tmLength(todayMin)}</b></p>`
     + (earlier.length ? `<p class="tc-soft">Earlier sessions</p><ul class="tc-list">${earlier.map(x => `<li><span>${esc(when(x))}${x.where ? ` · ${esc(x.where.replace('Lecture ', 'L'))}` : ''}</span><b>${tmLength(tmMinutes(x))}</b></li>`).join('')}</ul>` : '')
