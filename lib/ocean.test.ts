@@ -26,6 +26,7 @@ import {
   REEF_SLOTS,
   reefFish,
   reefSlot,
+  rootCoral,
   SHOAL_KINDS,
   STEP_COLOURS,
   SWARM_NAMES,
@@ -247,10 +248,11 @@ describe('the ocean chapter', () => {
     }
   });
 
-  it('gives the small fish ten swarms and the jellyfish five kinds, each as pills', () => {
+  it('gives the small fish ten swarms and the jellyfish six kinds, each as pills', () => {
     expect(SWARM_NAMES).toHaveLength(10);
-    expect(JELLY_NAMES).toHaveLength(5);
-    const ids = ['shoal', 'sardines', 'jellyfish'];
+    expect(JELLY_NAMES).toHaveLength(6);
+    expect(JELLY_NAMES[5]).toBe('Lanterns');
+    const ids = ['shoal', 'sardines', 'jellyfish', 'fish-pulse'];
     for (let k = 0; k < PHASES.length; k++) {
       expect(hasVariants(k)).toBe(ids.includes(PHASES[k]?.id ?? ''));
     }
@@ -260,7 +262,7 @@ describe('the ocean chapter', () => {
     expect(variantLabel(jelly)).toBe('Jellyfish');
     for (const [k, n] of [
       [small, 10],
-      [jelly, 5],
+      [jelly, 6],
     ] as const) {
       for (let i = 0; i < n; i++) {
         setVariant(i, k);
@@ -325,5 +327,39 @@ describe('the ocean chapter', () => {
       f = g;
     }
     for (let i = 1; i <= 200; i++) setPointer(null, 1 / 60, 44 + i / 60);
+  });
+
+  it('lights the lanterns red and warm orange, and grows the red garden from one root on a rock', () => {
+    const jelly = PHASES.findIndex((p) => p.id === 'jellyfish');
+    setVariant(5, jelly);
+    for (const p of particles.filter((q) => q.c >= 0.1).slice(0, 400)) {
+      const [r, g, b] = pieceAt(p, jelly, 9).rgb;
+      // Warm: red the strongest, blue the weakest.
+      expect(r).toBeGreaterThanOrEqual(g);
+      expect(g).toBeGreaterThanOrEqual(b);
+    }
+    const pulse = PHASES.findIndex((p) => p.id === 'fish-pulse');
+    expect(variantNames(pulse)).toEqual(['Clownfish', 'Red garden']);
+    setVariant(1, pulse);
+    for (const s of [0, 6, 13]) {
+      for (const p of particles.slice(0, 400)) {
+        const { pos, rgb } = pieceAt(p, pulse, s);
+        for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+      }
+    }
+    // Every branch of the coral starts at the one root.
+    const root = rootCoral();
+    const starts = root.routes.map((r) => [r.pts[0], r.pts[1], r.pts[2]]);
+    for (const s of starts) expect(Math.hypot(...(s as number[]))).toBeLessThan(1e-6);
+    // The clownfish still hide as the hunter passes.
+    const start = PHASE_START[pulse] as number;
+    const near = (t: number) => {
+      const { c } = hunterAt(t);
+      return Math.hypot(c[0], c[1] + 9, c[2]);
+    };
+    const times = Array.from({ length: 200 }, (_, i) => start + (i / 200) * HUNT_LAP);
+    const closest = times.reduce((a, b) => (near(b) < near(a) ? b : a));
+    for (let j = 0; j < CLOWNS; j++) expect(clownFish(j, closest).out).toBeLessThan(0.05);
+    setVariant(0);
   });
 });
