@@ -250,3 +250,39 @@ centre, inside the outer circle."
   bearings, and fainter. Inside a hub the rose dims and the letters go,
   since the pages take the whole ring. From the tree, the stars gather onto
   the ring as for design I.
+
+## Four tree designs: a 3D tree comes in as II — 2026-11-10
+
+The user, on the G menu: "in the grid tree add a second design 2 so old 2
+become 3 and then 3 becomes 4. that is to make it a 3d tree inspired by the 3d
+tree in journey but with the three trees in one connected at the center. and
+pulsing outwards. art admin energy".
+
+- **The tree's DESIGN tab has four:** **I** the Star Tree, **II** the 3D
+  tree (new), **III** the willow (was II), **IV** the banyan (was III).
+  II, III and IV read the same pages (use glow, recent pages, type to find);
+  I reads lib/branches.ts. Opened, every design regrows the tree from its
+  areas, flat, as before, so its names sit on its twigs.
+- **A stored choice keeps its look.** The design is now remembered under a new
+  key (`cb-life-tree-design-4`). If only the old key is there, its II (the
+  willow) comes back as III and its III (the banyan) as IV; I stays I. It is a
+  new key so that a III stored after today is never moved up again.
+- **The wheel is untouched.** Its own tab, shown only on the wheel, keeps its
+  I, II, III and its own key.
+- **Design II, the 3D tree.** Art, Admin and Energy are the three limbs of one
+  tree grown in 3D from the shared root at the centre, each leaving it in its
+  usual direction (Art up, Admin lower right, Energy lower left). Each limb
+  branches the way Vegetal's 3D tree does: four limbs off its trunk, then twos
+  and threes, each fork leaning out round its own branch's axis and turning on
+  by the golden angle, so the crown fills toward you and away from you, not in
+  one plane. The centre stays empty: they share one root.
+- **Seen in depth.** The whole figure sways slowly round the upright axis
+  through the root, a little each way over forty seconds (never far enough to
+  fold Admin or Energy flat), its top leaning a touch toward you. Nearer stars
+  draw larger and brighter, farther ones smaller and dimmer. With reduced
+  motion it stands still in a three-quarter view.
+- **Pulsing outwards.** Each heartbeat a wave of light runs from the root out
+  to every tip at once, on top of the current's breath. It rises from nothing
+  at the root and fades to nothing at the tips, so no beat starts with a jump.
+- The same 7,200 stars, still drawn in batches; the turn adds nothing that is
+  made anew each frame.

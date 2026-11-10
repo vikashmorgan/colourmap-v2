@@ -24,6 +24,11 @@ export type Route = {
   pts: Float32Array;
   /** Number of points. */
   count: number;
+  /**
+   * How far each point stands out of the page, toward you, for a tree grown
+   * in 3D (the life tree's design II, lib/life-tree.ts). Absent: a flat tree.
+   */
+  z?: Float32Array;
 };
 
 export const STEP = 0.008;
