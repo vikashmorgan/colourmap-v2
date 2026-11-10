@@ -282,13 +282,14 @@ export function corals(): Colony[] {
 }
 
 /** A point of colony c's coral, grown `g`: along a branch, or on a polyp at a tip. */
-function coralLocal(c: Colony, p: Particle, g: number, t: number, polyp: boolean): Vec3 {
+function coralLocal(c: Colony, p: Particle, g: number, t: number, polyp: boolean, bloom = 0): Vec3 {
   const route = c.routes[Math.floor(hash(p.i, 63) * c.routes.length)] as Route3;
   const len = length3(route);
   let q: Vec3;
   if (polyp) {
     const [x, y, z] = along3(route, len * g);
-    const open = 0.35 + 0.25 * Math.sin(t * 1.4 + p.i * 0.1);
+    // A bloom opens the polyps wide, like flowers.
+    const open = (0.35 + 0.25 * Math.sin(t * 1.4 + p.i * 0.1)) * (1 + 1.6 * bloom);
     const d = fibonacciSphere(p.i % 61, 61);
     q = add([x, y, z], d, open * Math.cbrt(p.b) * smooth((g - 0.55) / 0.3));
   } else {
@@ -851,9 +852,13 @@ const steer = {
   w: 0,
   cursor: null as Vec3 | null,
   lead: [0, 0, 0] as Vec3,
+  /** The way the shoal is swimming: it turns toward the cursor gradually, never on the spot. */
+  dir: [1, 0, 0] as Vec3,
   f: [1, 0, 0] as Vec3,
   trail: [] as Trail[],
 };
+/** How quickly the shoal turns toward the cursor, per second: a wide, easy curve at its speed. */
+const TURN = 1.1;
 /** Where the cursor points (null when it is away) at time t, dt after the last frame. */
 export function setPointer(at: Vec3 | null, dt: number, t: number) {
   const kind = kindNow();
@@ -867,6 +872,7 @@ export function setPointer(at: Vec3 | null, dt: number, t: number) {
     // Taking over from the loop where the shoal is now.
     steer.lead = shoalCentre(t * kind.pace);
     steer.f = heading((tt) => shoalCentre(tt * kind.pace), t);
+    steer.dir = steer.f;
     steer.trail = [];
   }
   if (steer.cursor && dt > 0) {
@@ -874,18 +880,16 @@ export function setPointer(at: Vec3 | null, dt: number, t: number) {
     if (Math.hypot(...d) > 1e-3) steer.f = norm(lerp3(steer.f, norm(d), Math.min(1, dt * 8)));
   }
   steer.cursor = at;
-  // The shoal swims for the cursor at its own speed, and circles it once there, so it never stops.
-  const aim = add(at, [Math.cos(0.8 * t), 0.3 * Math.sin(0.5 * t), Math.sin(0.8 * t)], 4);
-  const to: Vec3 = [aim[0] - steer.lead[0], aim[1] - steer.lead[1], aim[2] - steer.lead[2]];
+  // The shoal swims on at its own speed, always, bending its course toward the cursor in an easy
+  // curve; near the cursor it swings round it in loops instead of stopping (2026-11-11: "when
+  // activated the fish stop moving fluidly and become very mechanic in their turns").
+  const to: Vec3 = [at[0] - steer.lead[0], at[1] - steer.lead[1], at[2] - steer.lead[2]];
   const dist = Math.hypot(...to);
-  const step = Math.min(dist, SHOAL_SPEED * kind.pace * dt);
-  if (dist > 1e-6) steer.lead = add(steer.lead, to, step / dist);
-  const last = steer.trail[steer.trail.length - 1];
-  const f =
-    last && step > 1e-4
-      ? norm([steer.lead[0] - last.c[0], steer.lead[1] - last.c[1], steer.lead[2] - last.c[2]])
-      : (last?.f ?? steer.f);
-  steer.trail.push({ t, c: steer.lead, f });
+  const round = norm(cross(steer.dir, [0, 1, 0]));
+  const want = norm(add(norm(to), round, 0.6 * smooth((7 - dist) / 5)));
+  steer.dir = norm(lerp3(steer.dir, want, 1 - Math.exp(-TURN * dt)));
+  steer.lead = add(steer.lead, steer.dir, SHOAL_SPEED * kind.pace * dt);
+  steer.trail.push({ t, c: steer.lead, f: steer.dir });
   while (steer.trail.length > 2 && (steer.trail[0] as Trail).t < t - TRAIL_SECONDS)
     steer.trail.shift();
 }
@@ -916,8 +920,9 @@ export function shoalFish(j: number, u: number, t: number): { c: Vec3; f: Vec3 }
   if (steer.w > 0) {
     // Following the cursor's fish instead, along the way the chase went.
     const chase = trailAt(t - lag);
-    centre = lerp3(centre, chase.c, steer.w);
-    f = norm(lerp3(f, chase.f, steer.w));
+    const w = smooth(steer.w);
+    centre = lerp3(centre, chase.c, w);
+    f = norm(lerp3(f, chase.f, w));
   }
   const side = norm(cross(f, [0, 1, 0]));
   const up = cross(side, f);
@@ -1520,7 +1525,13 @@ export function reefSlot(j: number): ReefSlot {
 const REEF_SECONDS = (PHASES.find((p) => p.id === 'reef') as OceanPhase).duration;
 const swum = (u: number) => SPEED * u * REEF_SECONDS;
 const ahead = (z0: number, s: number) => wrap(z0 - s, LOOP) - BEHIND;
-const grownAt = (d: number) => 0.04 + 0.96 * smooth((LOOP - BEHIND - 14 - d) / 55);
+/*
+ * 2026-11-11: "in reef I want to see the corals blooming and the fish in a
+ * shoal, not in a tornado swarm". The corals grow up in plain view as the eye
+ * comes, and burst into bloom as it passes them.
+ */
+const grownAt = (d: number) => 0.04 + 0.96 * smooth((50 - d) / 34);
+const bloomAt = (d: number) => smooth((24 - d) / 14);
 /** Light fades into the far blue, so the far end of the channel never pops. */
 const haze = (d: number) => smooth((LOOP - BEHIND - d) / 45);
 
@@ -1540,13 +1551,27 @@ const reefRole = (p: Particle): ReefRole =>
               ? 'polyp'
               : 'coral';
 
-/** The reef's fish school: wheeling a little ahead of the eye, moving on with it. */
-function reefSchool(s: number, t: number): Vec3 {
-  return [
-    7 * Math.sin(0.2 * t),
-    EYE_H + 2 + 1.5 * Math.sin(0.3 * t),
-    -s - 24 + 6 * Math.cos(0.17 * t),
-  ];
+/** Where the reef's shoal leads at time t, from a point a little ahead of the eye: weaving down the channel. */
+const reefWeave = (t: number): Vec3 => [
+  5 * Math.sin(0.22 * t),
+  2 + 1.2 * Math.sin(0.35 * t),
+  3 * Math.cos(0.2 * t),
+];
+
+/** Reef fish j: its place and heading, the shoal swimming on down the channel ahead of the eye. */
+export function reefFish(j: number, s: number, t: number): { c: Vec3; f: Vec3 } {
+  // Each fish follows the weave a moment behind the ones ahead, so turns run through the shoal.
+  const lag = 2 * hash(j, 118);
+  const w = reefWeave(t - lag);
+  const n = reefWeave(t - lag + 0.05);
+  const f = norm([(n[0] - w[0]) / 0.05, (n[1] - w[1]) / 0.05, (n[2] - w[2]) / 0.05 - SPEED]);
+  const side = norm(cross(f, [0, 1, 0]));
+  const up = cross(side, f);
+  const ox = (hash(j, 119) - 0.5) * 7 + 0.3 * Math.sin(0.7 * t + j);
+  const oy = (hash(j, 120) - 0.5) * 3;
+  const back = 6 * hash(j, 122);
+  const c = add(add(add([w[0], EYE_H + w[1], -s - 22 + w[2]], side, ox), up, oy), f, -back);
+  return { c, f };
 }
 
 function reefAt(p: Particle, u: number, t: number): { pos: Vec3; d: number } {
@@ -1571,17 +1596,9 @@ function reefAt(p: Particle, u: number, t: number): { pos: Vec3; d: number } {
       return on(k * (LOOP / 9) + q * 6, ((k % 3) - 1) * 8 + q * 4, 22 - q * 22);
     }
     case 'fish': {
-      // Small fish along a ring round the school's centre, turning as one.
+      // A shoal swimming on down the channel ahead, all one way.
       const j = Math.floor(p.a * REEF_FISH);
-      const c0 = reefSchool(s, t);
-      const th = hash(j, 118) * TAU + t * 0.6;
-      const r = 4.5 + 3 * hash(j, 119);
-      const c: Vec3 = [
-        c0[0] + Math.cos(th) * r,
-        c0[1] + (hash(j, 120) - 0.5) * 2.5,
-        c0[2] + Math.sin(th) * r,
-      ];
-      const f: Vec3 = [-Math.sin(th), 0, Math.cos(th)];
+      const { c, f } = reefFish(j, s, t);
       return { pos: fishAt(c, f, 1.1, p, t, j), d: -c[2] - s };
     }
     case 'jelly': {
@@ -1595,7 +1612,7 @@ function reefAt(p: Particle, u: number, t: number): { pos: Vec3; d: number } {
       const slot = reefSlot(Math.floor(p.a * REEF_SLOTS));
       const colony = corals()[slot.colony] as Colony;
       const d = ahead(slot.z0, s);
-      const q = coralLocal(colony, p, grownAt(d), t, reefRole(p) === 'polyp');
+      const q = coralLocal(colony, p, grownAt(d), t, reefRole(p) === 'polyp', bloomAt(d));
       return { pos: [slot.x + q[0] * slot.size, q[1] * slot.size, -s - d + q[2] * slot.size], d };
     }
   }
@@ -1769,8 +1786,9 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
         default: {
           const slot = reefSlot(Math.floor(p.a * REEF_SLOTS));
           const tone = CORAL_TONES[slot.colony] as RGB;
+          const bloom = bloomAt(d);
           return reefRole(p) === 'polyp'
-            ? scale(mix(tone, [1, 1, 0.9], 0.35), 0.85 * twinkle * h)
+            ? scale(mix(tone, [1, 1, 0.9], 0.35 - 0.15 * bloom), (0.85 + 0.5 * bloom) * twinkle * h)
             : scale(tone, 0.6 * twinkle * h);
         }
       }
@@ -1822,8 +1840,8 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       // Held still while the cursor leads, so the water stays where the hand is.
       const held: Eye = { eye: [0, 6 * view, 52 * view], target: [0, 0, 0] };
       return {
-        eye: lerp3(loop.eye, held.eye, steer.w),
-        target: lerp3(loop.target, held.target, steer.w),
+        eye: lerp3(loop.eye, held.eye, smooth(steer.w)),
+        target: lerp3(loop.target, held.target, smooth(steer.w)),
       };
     }
     case 'sardines':

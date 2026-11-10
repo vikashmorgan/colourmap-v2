@@ -24,6 +24,7 @@ import {
   pieceLength,
   pulseOf,
   REEF_SLOTS,
+  reefFish,
   reefSlot,
   SHOAL_KINDS,
   STEP_COLOURS,
@@ -300,5 +301,29 @@ describe('the ocean chapter', () => {
     const loop = shoalFish(3, 0.5, 30).c;
     setPointer(null, 1, 30);
     expect(shoalFish(3, 0.5, 30).c).toEqual(loop);
+  });
+
+  it('swims the reef fish as a shoal, all one way down the channel', () => {
+    for (const t of [3, 11, 27]) {
+      const fish = Array.from({ length: 60 }, (_, j) => reefFish(j, 50, t));
+      for (const { f } of fish) expect(f[2]).toBeLessThan(-0.5);
+      const mean = [0, 1, 2].map((i) => fish.reduce((a, x) => a + (x.f[i] as number), 0) / 60);
+      expect(Math.hypot(...mean)).toBeGreaterThan(0.9);
+    }
+  });
+
+  it('turns the cursor-led shoal in easy curves, never on the spot', () => {
+    // The cursor jumps behind the shoal: it swings round over seconds, a little each frame.
+    setPointer([0, 0, 0], 1 / 60, 40);
+    let f = shoalFish(5, 0.5, 40).f;
+    setPointer([-60, 0, 0], 1 / 60, 40 + 1 / 60);
+    for (let i = 2; i < 240; i++) {
+      setPointer(i < 120 ? [-60, 0, 0] : [60, 0, 0], 1 / 60, 40 + i / 60);
+      const g = shoalFish(5, 0.5, 40 + i / 60).f;
+      const turn = Math.acos(Math.min(1, f[0] * g[0] + f[1] * g[1] + f[2] * g[2]));
+      expect(turn).toBeLessThan(0.08);
+      f = g;
+    }
+    for (let i = 1; i <= 200; i++) setPointer(null, 1 / 60, 44 + i / 60);
   });
 });
