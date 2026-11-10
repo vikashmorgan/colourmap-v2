@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { type Design, type Design3, DesignTab, parseDesign3 } from '@/components/DesignTab';
+import { type Design, type Design4, DesignTab, parseDesign4 } from '@/components/DesignTab';
 import {
   type BranchTree,
   buildBranchTree,
@@ -33,16 +33,24 @@ import {
 import {
   buildLifeTrees,
   crownPoint,
+  depthAlong,
   type Frame,
+  figureYaw,
   GROWN,
+  makeTurn,
+  outwardWave,
+  project3,
   pulse,
   ROOT_RADIUS,
   rootPoint,
   routeLabel,
   SWITCH_SECONDS,
   scatter,
+  setTurn,
   shifted,
+  TURN_PITCH,
   tint,
+  treeScale,
   treeToScreen,
   type View,
   viewFor,
@@ -65,10 +73,12 @@ import { GATHER_SECONDS, RING, stage } from '@/lib/star-wheel';
  * leaving the root, and three trees of stars growing out of it -- Art,
  * Admin, Energy. All in gold for now.
  *
- * THREE DESIGNS, one figure, switched by the DESIGN tab at the top left and
+ * FOUR DESIGNS, one figure, switched by the DESIGN tab at the top left and
  * remembered. A switch disintegrates the stars and rebuilds them in two
  * seconds, the new design's names arriving at the turn. Each has its own
- * look (lib/life-tree.ts): I the Star Tree, II a willow, III a banyan.
+ * look (lib/life-tree.ts): I the Star Tree, II a tree grown in 3D, III a
+ * willow, IV a banyan (2026-11-10: "add a second design 2 so old 2 become 3
+ * and then 3 becomes 4").
  *
  * DESIGN I reads lib/branches.ts. Places to stand, Esc stepping back out:
  *
@@ -83,13 +93,19 @@ import { GATHER_SECONDS, RING, stage } from '@/lib/star-wheel';
  * A branch opens in one view -- its areas named on their limbs, every page
  * on the end of its own twig. Pages opened this week glow, and
  * the trees you use shine brighter. Your last three pages sit by YOU, and
- * typing finds any page. DESIGN III reads the same pages as II.
+ * typing finds any page. DESIGNS III and IV read the same pages as II.
  *
  * An area with no page yet is shown, dim, and does nothing: the tree says
  * honestly where nothing has been built.
  */
 
-export const DESIGN_KEY = 'cb-life-tree-design';
+/*
+ * Where the design is remembered. A new key since there are four
+ * (2026-11-10), so a stored III is never mistaken for the old III; the old
+ * key is still read once, its II and III moved up one (parseDesign4).
+ */
+export const DESIGN_KEY = 'cb-life-tree-design-4';
+export const OLD_DESIGN_KEY = 'cb-life-tree-design';
 
 type Level =
   | { kind: 'trees' }
@@ -159,8 +175,8 @@ type Props = {
 export function LifeTree({ go, close, arrive = false, gather = false, onPlace }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [frame, setFrame] = useState<Frame>({ cx: 0, cy: 0, min: 0 });
-  const [design, setDesign] = useState<Design3>(1);
-  // Which pages the tree reads: design I its own, II and III those of lib/life-tree-2.ts.
+  const [design, setDesign] = useState<Design4>(1);
+  // Which pages the tree reads: design I its own, II, III and IV those of lib/life-tree-2.ts.
   const content: Design = design === 1 ? 1 : 2;
   const rich = content === 2;
   const [fading, setFading] = useState(false);
@@ -209,7 +225,7 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
   // How awake each tree is (design II), and when the last switch began.
   const warmRef = useRef<Record<Branch, number> | null>(null);
   const designRef = useRef<Design>(1);
-  const lookRef = useRef<Design3>(1);
+  const lookRef = useRef<Design4>(1);
   const switchRef = useRef(0);
   // Read once, on arrival.
   const arriveRef = useRef(arrive);
@@ -219,10 +235,11 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
     gatherRef.current = gather ? performance.now() : 0;
   }, [gather]);
   const trees = useMemo(
-    (): Record<Design3, Record<Branch, StarTree>> => ({
+    (): Record<Design4, Record<Branch, StarTree>> => ({
       1: buildLifeTrees(8, 1),
       2: buildLifeTrees(8, 2),
       3: buildLifeTrees(8, 3),
+      4: buildLifeTrees(8, 4),
     }),
     [],
   );
@@ -291,7 +308,12 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
 
   useEffect(() => {
     try {
-      setDesign(parseDesign3(window.localStorage.getItem(DESIGN_KEY)));
+      setDesign(
+        parseDesign4(
+          window.localStorage.getItem(DESIGN_KEY),
+          window.localStorage.getItem(OLD_DESIGN_KEY),
+        ),
+      );
     } catch {
       // Not remembered: design I.
     }
@@ -309,7 +331,7 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
     return () => window.removeEventListener('resize', fitFrame);
   }, []);
 
-  const pickDesign = (d: Design3) => {
+  const pickDesign = (d: Design4) => {
     if (d === design || fading) return;
     switchRef.current = performance.now();
     setFading(true);
@@ -606,16 +628,18 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
     if (!cv || !ctx) return;
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const n = STARS_PER_TREE * BRANCHES.length;
-    // Where this frame's stars go, sorted by tree and brightness before drawing.
+    // Where this frame's stars go, and how large, sorted by tree and brightness before drawing.
     const bucketXY = Array.from(
       { length: BRANCHES.length * BUCKETS },
-      () => new Float32Array(n * 2),
+      () => new Float32Array(n * 3),
     );
     const bucketCount = new Int32Array(BRANCHES.length * BUCKETS);
     const tree = new Uint8Array(n);
     const route = new Uint16Array(n);
     const at = new Float32Array(n);
     const across = new Float32Array(n);
+    // On the 3D tree, how far out of the page across its branch each star rides.
+    const deep = new Float32Array(n);
     const pace = new Float32Array(n);
     const tw = new Float32Array(n);
     // Where each star flies when the tree comes apart: a turn off straight out, and how far.
@@ -642,6 +666,7 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
         ? Math.random() * routeLength(routes[route[i] as number]!)
         : Math.random() * 0.02;
       across[i] = (Math.random() + Math.random() + Math.random()) / 1.5 - 1;
+      deep[i] = (Math.random() + Math.random() + Math.random()) / 1.5 - 1;
       pace[i] = 0.75 + 0.5 * Math.random();
       tw[i] = Math.random() * Math.PI * 2;
     };
@@ -657,6 +682,9 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
     const colour = { art: '', admin: '', energy: '' } as Record<Branch, string>;
     // The figure eases from where it stands to where the level wants it.
     const view: View = viewFor(null);
+    // The 3D tree's turn this frame, and one star's place once turned: kept, not remade per star.
+    const figure = makeTurn();
+    const seen = new Float32Array(3);
     let clock = 0;
     let last = performance.now();
     let raf = 0;
@@ -731,6 +759,9 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
       // The current breathes with the beat instead of jumping on it (2026-11-08: "more flowy,
       // natural, continuous"): a smooth swell, never a step from one frame to the next.
       const surge = 1 + 0.3 * p.breath;
+      // Design II: the figure's turn, and the wave running out to the tips (lib/life-tree.ts).
+      setTurn(figure, figureYaw(clock, still), TURN_PITCH, f.min);
+      const waving = look === 2;
       bucketCount.fill(0);
       for (let i = 0; i < n; i++) {
         const b = BRANCHES[tree[i] as number] as Branch;
@@ -770,10 +801,26 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
               sr.area !== focus[0] ? 0.55 : focus[1] === null || sr.page === focus[1] ? 1.5 : 0.9;
           }
         }
-        const gone = Math.max(apart, own[b]);
-        const alpha = Math.min(1, 0.55 * glow[b] * lead * twinkle * a * (1 - 0.2 * gone));
-        if (alpha < 0.02) continue;
+        // Each beat a wave of light runs out from the root to every tip.
+        if (waving) lead *= 1 + 0.9 * outwardWave(s / (len || 1), p.phase);
         let [sx, sy] = treeToScreen(b, x, y, f, view.grow[b]);
+        let near = 1;
+        if (r.z) {
+          // Grown in 3D: out of the page by its depth there, spread across its width, then turned.
+          const dz = (depthAlong(r, s) + (deep[i] as number) * w) * treeScale(f, view.grow[b]);
+          project3(seen, sx - f.cx, sy - f.cy, dz, figure);
+          sx = f.cx + (seen[0] as number);
+          sy = f.cy + (seen[1] as number);
+          near = seen[2] as number;
+        }
+        const gone = Math.max(apart, own[b]);
+        // Nearer stars brighter, farther ones dimmer.
+        const depthLight = Math.min(1.35, Math.max(0.5, 1 + (near - 1) * 3));
+        const alpha = Math.min(
+          1,
+          0.55 * glow[b] * lead * twinkle * a * depthLight * (1 - 0.2 * gone),
+        );
+        if (alpha < 0.02) continue;
         if (gone > 0) {
           // Coming apart: each star flies out from the root, turned a little, and swirls.
           const ox = sx - f.cx;
@@ -795,8 +842,10 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
           (tree[i] as number) * BUCKETS + Math.min(BUCKETS - 1, Math.floor(alpha * BUCKETS));
         const c = bucketCount[q] as number;
         const xy = bucketXY[q] as Float32Array;
-        xy[c * 2] = sx - size / 2;
-        xy[c * 2 + 1] = sy - size / 2;
+        const sz = size * near;
+        xy[c * 3] = sx - sz / 2;
+        xy[c * 3 + 1] = sy - sz / 2;
+        xy[c * 3 + 2] = sz;
         bucketCount[q] = c + 1;
       }
       for (let q = 0; q < bucketCount.length; q++) {
@@ -804,8 +853,10 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
         if (!c) continue;
         const xy = bucketXY[q] as Float32Array;
         ctx.fillStyle = `${colour[BRANCHES[Math.floor(q / BUCKETS)] as Branch]}${((q % BUCKETS) + 0.5) / BUCKETS})`;
-        for (let k = 0; k < c; k++)
-          ctx.fillRect(xy[k * 2] as number, xy[k * 2 + 1] as number, size, size);
+        for (let k = 0; k < c; k++) {
+          const sz = xy[k * 3 + 2] as number;
+          ctx.fillRect(xy[k * 3] as number, xy[k * 3 + 1] as number, sz, sz);
+        }
       }
       ctx.globalCompositeOperation = 'source-over';
       raf = requestAnimationFrame(draw);
@@ -827,7 +878,7 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       />
 
-      <DesignTab label="Tree design" design={design} pick={pickDesign} options={[1, 2, 3]} />
+      <DesignTab label="Tree design" design={design} pick={pickDesign} options={[1, 2, 3, 4]} />
 
       <div style={{ opacity: fading ? 0 : 1, transition: `opacity ${SWITCH_SECONDS / 2}s ease` }}>
         {limbs.map((l) => {

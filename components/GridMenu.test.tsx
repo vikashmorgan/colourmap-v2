@@ -139,13 +139,13 @@ describe('GridMenu', () => {
     expect(push).toHaveBeenCalledWith('/day');
   });
 
-  it('switches to design II with the design tab, after the stars come apart, and remembers it', () => {
+  it('switches to design II, the 3D tree, after the stars come apart, and remembers it', () => {
     vi.useFakeTimers();
     try {
       render(<GridMenu />);
       fireEvent.click(screen.getByRole('button', { name: /open the network menu/i }));
       fireEvent.click(screen.getByRole('button', { name: 'Design two' }));
-      expect(window.localStorage.getItem('cb-life-tree-design')).toBe('2');
+      expect(window.localStorage.getItem('cb-life-tree-design-4')).toBe('2');
       act(() => {
         vi.advanceTimersByTime(1000);
       });
@@ -161,8 +161,18 @@ describe('GridMenu', () => {
     }
   });
 
+  it('offers four tree designs, and brings back an old willow or banyan as III or IV', () => {
+    window.localStorage.setItem('cb-life-tree-design', '3');
+    render(<GridMenu />);
+    fireEvent.click(screen.getByRole('button', { name: /open the network menu/i }));
+    for (const n of ['one', 'two', 'three', 'four'])
+      expect(screen.getByRole('button', { name: `Design ${n}` })).toBeTruthy();
+    // The old III was the banyan, which is now IV.
+    expect(screen.getByRole('button', { name: 'Design four', pressed: true })).toBeTruthy();
+  });
+
   it('finds a page by typing, in design II', () => {
-    window.localStorage.setItem('cb-life-tree-design', '2');
+    window.localStorage.setItem('cb-life-tree-design-4', '2');
     render(<GridMenu />);
     fireEvent.click(screen.getByRole('button', { name: /open the network menu/i }));
     for (const key of ['p', 'r', 'o'])
