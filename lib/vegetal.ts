@@ -210,6 +210,30 @@ export const PHASES: VegetalPhase[] = [
     glow: 1,
     size: 0.85,
   },
+  {
+    id: 'full-tree',
+    name: 'Full tree',
+    line: 'The roots below and the tree above, all in gold, meeting at the horizon. Water climbs from the root tips, through the trunk, to the crown.',
+    words: [
+      'A tree is two trees: one reaching down for water, one reaching up for light.',
+      'Neither grows without the other; the horizon is where they meet.',
+    ],
+    duration: 34,
+    glow: 1,
+    size: 0.8,
+  },
+  {
+    id: 'reflection',
+    name: 'Reflection',
+    line: 'A tree stands still at the water’s edge, and below it the same tree in the water, trembling with soft ripples.',
+    words: [
+      'Still water gives back the tree whole, branch for branch.',
+      'Above, what is; below, the same, moving.',
+    ],
+    duration: 34,
+    glow: 1,
+    size: 0.8,
+  },
 ];
 
 export const TOTAL = PHASES.reduce((s, p) => s + p.duration, 0);
@@ -243,7 +267,28 @@ export const STEP_COLOURS = [
   '#ff8a4a',
   '#b9d98a',
   '#7fb86a',
+  '#e0b452',
+  '#9cc7d9',
 ];
+
+/*
+ * Which way the sap runs in the trees (2026-11-10: "tree, you can make it
+ * with dots all moving from bottom to up or from up to bottom, with a small
+ * button on the right"). In the Journey half climb and half come down; a
+ * piece on its own sends them all one way, up or down, by its button.
+ */
+let sapWay: 0 | 1 | -1 = 0;
+/** All up (true), all down (false), or both ways as in the Journey (null). */
+export function setSap(up: boolean | null) {
+  sapWay = up === null ? 0 : up ? 1 : -1;
+}
+/** A grain's way along its branch: the one set, else up when `climbs`. */
+const sapDir = (climbs: boolean) => sapWay || (climbs ? 1 : -1);
+/** The pieces with trees whose sap the button turns. */
+export const hasSap = (k: number) =>
+  ['tree-2d', 'tree-3d', 'avenue', 'forest', 'full-tree', 'reflection'].includes(
+    PHASES[k]?.id ?? '',
+  );
 
 /* ---------- 1. Cell: a block of plant cells joined inside ---------- */
 
@@ -449,7 +494,7 @@ function flatPoint(p: Particle, u: number, t: number): Vec3 {
   const len = routeLength(route);
   const grown = 0.05 + 0.95 * smooth(u / 0.4);
   const leaf = isLeaf2(p);
-  const dir = p.c < 0.4 ? 1 : -1;
+  const dir = sapDir(p.c < 0.4);
   const s = leaf
     ? len * grown
     : len * grown * wrap(p.b + dir * t * 0.05 * (0.7 + 0.6 * p.c), 1) ** 0.6;
@@ -571,15 +616,91 @@ export function tree3d(): Route3[] {
 }
 
 type Tree3Role = 'wood' | 'leaf' | 'soil';
-const tree3Role = (p: Particle): Tree3Role => (p.c > 0.8 ? 'leaf' : p.c > 0.76 ? 'soil' : 'wood');
+const tree3Role = (p: Particle): Tree3Role => (p.c > 0.8 ? 'leaf' : p.c > 0.72 ? 'soil' : 'wood');
+
+/*
+ * The ground round the 3D tree, to try on (2026-11-10: "a bunch of pills to
+ * change the central circle ground at the base so I can experiment with
+ * different textures and materials, like tall grass, short grass, desert
+ * stones or desert sand"). Chosen by pills under a piece played on its own;
+ * the Journey keeps the earth.
+ */
+export const GROUNDS = ['Earth', 'Short grass', 'Tall grass', 'Desert sand', 'Desert stones'];
+let groundKind = 0;
+export function setGround(i: number) {
+  groundKind = i;
+}
+export const hasGround = (k: number) => PHASES[k]?.id === 'tree-3d';
+const GROUND_R = 26;
+
+/** Grain p of the ground, in the kind chosen. */
+function groundPoint(p: Particle, t: number): Vec3 {
+  const G = GROUND_3D;
+  const disc = (u: number, v: number): [number, number] => {
+    const a = v * TAU;
+    const rr = GROUND_R * Math.sqrt(u);
+    return [Math.cos(a) * rr, Math.sin(a) * rr];
+  };
+  switch (groundKind) {
+    case 1:
+    case 2: {
+      // Blades: a few grains each up a thin blade that bends in the breeze, the tall ones more.
+      const tall = groundKind === 2;
+      const blades = tall ? 150 : 260;
+      const n = Math.floor(hash(p.i, 90) * blades);
+      const [x, z] = disc(hash(n, 91), hash(n, 92));
+      const h = (tall ? 3.2 : 0.9) * (0.7 + 0.6 * hash(n, 93));
+      const q = p.b;
+      const lean = (Math.sin(t * 1.1 + x * 0.25 + z * 0.1) * (tall ? 0.6 : 0.15) + 0.2) * q * q;
+      const dir = hash(n, 94) * TAU;
+      return [x + Math.cos(dir) * lean * h, G + q * h, z + Math.sin(dir) * lean * h];
+    }
+    case 3: {
+      // Sand: ripples left by the wind, faintly drifting.
+      const [x, z] = disc(p.b, p.d);
+      return [x, G + 0.3 * Math.sin(x * 0.5 + z * 0.18 + t * 0.05) + 0.1 * Math.sin(z * 1.3), z];
+    }
+    case 4: {
+      // Stones: round backs of pebbles and rocks on a sandy floor.
+      if (p.b < 0.3) {
+        const [x, z] = disc(p.d, frac(p.b * 7));
+        return [x, G, z];
+      }
+      const n = Math.floor(hash(p.i, 95) * 46);
+      const [x, z] = disc(hash(n, 96), hash(n, 97));
+      const r = 0.5 + 1.4 * hash(n, 98) ** 2;
+      const s = fibonacciSphere(p.i % 61, 61);
+      return [x + s[0] * r, G + Math.abs(s[1]) * r * 0.6, z + s[2] * r * 0.85];
+    }
+    default: {
+      const [x, z] = disc(p.b, p.d);
+      return [x, G, z];
+    }
+  }
+}
+
+const GRASS: RGB = [0.42, 0.72, 0.28];
+const STRAW: RGB = [0.86, 0.8, 0.45];
+const SAND: RGB = [0.95, 0.8, 0.55];
+const STONE: RGB = [0.72, 0.66, 0.58];
+function groundColour(p: Particle): RGB {
+  switch (groundKind) {
+    case 1:
+      return scale(mix(GRASS, LEAF, p.b), 0.35 + 0.25 * p.b);
+    case 2:
+      return scale(mix(GRASS, STRAW, p.b ** 1.5), 0.3 + 0.3 * p.b);
+    case 3:
+      return scale(SAND, 0.22 + 0.12 * Math.sin(p.b * 40 + p.d * 9) ** 2);
+    case 4:
+      return p.b < 0.3 ? scale(SAND, 0.16) : scale(STONE, 0.3 + 0.2 * p.d);
+    default:
+      return scale(EARTH, 0.3);
+  }
+}
 
 function tree3Point(p: Particle, u: number, t: number): Vec3 {
   const role = tree3Role(p);
-  if (role === 'soil') {
-    const a = p.d * TAU;
-    const rr = 26 * Math.sqrt(p.b);
-    return [Math.cos(a) * rr, GROUND_3D, Math.sin(a) * rr];
-  }
+  if (role === 'soil') return groundPoint(p, t);
   const routes = tree3d();
   const route = routes[Math.floor(p.a * routes.length)] as Route3;
   const len = length3(route);
@@ -591,9 +712,10 @@ function tree3Point(p: Particle, u: number, t: number): Vec3 {
     const flutter = Math.sin(t * 2 + p.i) * 0.15;
     return [x + d[0] * r + flutter, y + d[1] * r * 0.8, z + d[2] * r];
   }
-  // Sap: half the grains climb, half come down; more of them out where the branches are many.
-  const dir = p.c < 0.38 ? 1 : -1;
-  const s = len * grown * wrap(p.b + dir * t * 0.04 * (0.7 + 0.6 * p.d), 1) ** 0.45;
+  // Sap: half the grains climb, half come down, at an even pace all the way, so the base is
+  // slow and calm (2026-11-10: "slower at the base for the pulse in tree 3d").
+  const dir = sapDir(p.c < 0.38);
+  const s = len * grown * wrap(p.b + dir * t * 0.04 * (0.7 + 0.6 * p.d), 1);
   const [x, y, z, w] = along3(route, s);
   const d = fibonacciSphere(p.i % 389, 389);
   return add([x, y, z], d, w * 0.5 * Math.sqrt(p.d));
@@ -623,16 +745,36 @@ export function mandala(): Mandala {
   return mandalaNet;
 }
 
+/*
+ * Exactly symmetric (2026-11-10: "veins, make it symmetric"): grains go in
+ * runs of sixteen, one per copy, and every grain of a run takes its role,
+ * branch, place and pulse from the run, so the sixteen copies are the same
+ * picture turned and mirrored, pulse for pulse.
+ */
+const VEIN_COPIES = VEIN_FOLD * 2;
+type VeinSeed = { m: number; c: number; a: number; b: number; d: number };
+function veinSeed(p: Particle): VeinSeed {
+  const run = Math.floor(p.i / VEIN_COPIES);
+  return {
+    m: p.i % VEIN_COPIES,
+    c: hash(run, 81),
+    a: hash(run, 78),
+    b: hash(run, 79),
+    d: hash(run, 80),
+  };
+}
 type VeinRole = 'pulse' | 'tip' | 'ring' | 'vein';
-const veinRole = (p: Particle): VeinRole =>
-  p.c < 0.15 ? 'pulse' : p.c < 0.22 ? 'tip' : p.c < 0.3 ? 'ring' : 'vein';
+const veinRole = (p: Particle): VeinRole => {
+  const { c } = veinSeed(p);
+  return c < 0.15 ? 'pulse' : c < 0.22 ? 'tip' : c < 0.3 ? 'ring' : 'vein';
+};
 
 /** A shallow bowl facing the eye, so the round net has a little depth. */
 const bowl = (x: number, y: number): Vec3 => [x, y, 3 - 0.012 * (x * x + y * y)];
 
 /** Point (x, y) of the branching, placed in the grain's copy: one of eight turns, mirrored or not. */
 function inCopy(p: Particle, x: number, y: number, t: number): Vec3 {
-  const m = Math.floor(hash(p.i, 77) * VEIN_FOLD * 2);
+  const { m } = veinSeed(p);
   const mx = m & 1 ? -x : x;
   const a = ((m >> 1) / VEIN_FOLD) * TAU + t * 0.03;
   const k = VEIN_R / mandala().reach;
@@ -641,19 +783,21 @@ function inCopy(p: Particle, x: number, y: number, t: number): Vec3 {
 
 function veinsPoint(p: Particle, t: number): Vec3 {
   const role = veinRole(p);
+  const { m, a: sa, b: sb, d: sd } = veinSeed(p);
   if (role === 'ring') {
-    const a = p.b * TAU + t * 0.03;
-    const R = VEIN_R * 1.06 + (p.d - 0.5) * 0.4;
+    // The ring too: one arc, repeated round in sixteen.
+    const a = ((m + sb) / VEIN_COPIES) * TAU + t * 0.03;
+    const R = VEIN_R * 1.06 + (sd - 0.5) * 0.4;
     return bowl(Math.cos(a) * R, Math.sin(a) * R);
   }
   const net = mandala();
-  const route = net.routes[Math.floor(p.a * net.routes.length)] as Route;
+  const route = net.routes[Math.floor(sa * net.routes.length)] as Route;
   const len = routeLength(route);
   // Food runs out from the centre to the tips, where a few grains rest and glow.
   const s =
-    role === 'tip' ? len : role === 'pulse' ? len * wrap(p.b + t * 0.12, 1) : len * p.b ** 0.6;
+    role === 'tip' ? len : role === 'pulse' ? len * wrap(sb + t * 0.12, 1) : len * sb ** 0.6;
   const [x, y, w] = along(route, s);
-  return inCopy(p, x + (p.d - 0.5) * w, y, t);
+  return inCopy(p, x + (sd - 0.5) * w, y, t);
 }
 
 /* ---------- 6. Fungi: threads from spores, joined into one net ---------- */
@@ -874,9 +1018,10 @@ export function floret(n: number, open: number, t: number): Vec3 {
   return [HEAD[0] + r * Math.cos(th), HEAD[1] + r * Math.sin(th), HEAD[2] + dome];
 }
 
-type FlowerRole = 'floret' | 'petal' | 'stem' | 'pollen';
+// No stem (2026-11-10: "flower without the green tige"): the head floats, its grains in the petals.
+type FlowerRole = 'floret' | 'petal' | 'pollen';
 const flowerRole = (p: Particle): FlowerRole =>
-  p.c < 0.5 ? 'floret' : p.c < 0.82 ? 'petal' : p.c < 0.93 ? 'stem' : 'pollen';
+  p.c < 0.5 ? 'floret' : p.c < 0.92 ? 'petal' : 'pollen';
 const opening = (u: number) => smooth(u / 0.4);
 
 function flowerPoint(p: Particle, u: number, t: number): Vec3 {
@@ -900,10 +1045,6 @@ function flowerPoint(p: Particle, u: number, t: number): Vec3 {
       const w = (p.d * 2 - 1) * 1.4 * Math.sin(Math.PI * q ** 0.8);
       const base = add(HEAD, er, rim);
       return add(add(add(base, axis, q * PETAL_LEN), wide, w), [0, 0, m % 2 ? -0.4 : 0]);
-    }
-    case 'stem': {
-      const y = lerp(HEAD[1] - 1, -30, p.b);
-      return [Math.sin(y * 0.05) * 1.5 + (p.d - 0.5) * 0.6, y, -2 + (frac(p.d * 7) - 0.5) * 0.6];
     }
     default: {
       const f = frac(p.b + t * 0.08);
@@ -1073,19 +1214,35 @@ const grownAt = (d: number) => 0.04 + 0.96 * smooth((LOOP - BEHIND - 14 - d) / 5
 /** Light fades into the far dark, so the far end of the road never pops. */
 const haze = (d: number) => smooth((LOOP - BEHIND - d) / 40);
 
-type ForestRole = 'edge' | 'dash' | 'ground' | 'firefly' | 'leaf' | 'wood';
-const forestRole = (p: Particle): ForestRole =>
-  p.c < 0.07
-    ? 'edge'
-    : p.c < 0.1
-      ? 'dash'
-      : p.c < 0.19
-        ? 'ground'
-        : p.c < 0.22
-          ? 'firefly'
-          : p.c < 0.42
-            ? 'leaf'
-            : 'wood';
+/*
+ * The wild forest follows a river, not a road, toward a mountain far ahead
+ * (2026-11-10: "make it a sinuous river instead of a road, and put a
+ * mountain in the distant horizon as the point it seems to be getting to").
+ * The river bends twice per turn of the loop, with a smaller ripple, so the
+ * recycled stretch still joins up; the mountain keeps its distance.
+ */
+/** How far the river has bent aside at z0 along the loop. The avenue's road runs straight. */
+export const bendAt = (k: number, z0: number) =>
+  isAvenue(k) ? 0 : 6 * Math.sin((TAU * 2 * z0) / LOOP) + 2.4 * Math.sin((TAU * 5 * z0) / LOOP + 1);
+/** How far ahead the mountain stands, always. */
+export const MOUNTAIN_D = 135;
+/** Its size: tall enough to rise well above the far trees. */
+const MOUNTAIN_K = 1.2;
+/** The mountain's ridge: one peak and two smaller shoulders. */
+export const ridge = (x: number) =>
+  34 * Math.exp(-((x / 34) ** 2)) +
+  17 * Math.exp(-(((x + 52) / 22) ** 2)) +
+  13 * Math.exp(-(((x - 56) / 20) ** 2)) +
+  1.6 * Math.sin(x * 0.35) * Math.exp(-((x / 80) ** 2));
+
+type ForestRole = 'edge' | 'dash' | 'water' | 'mountain' | 'ground' | 'firefly' | 'leaf' | 'wood';
+function forestRole(k: number, p: Particle): ForestRole {
+  // The mountain is far and wide, so it takes a good share of the grains, from the trunks.
+  if (!isAvenue(k) && p.c >= 0.92) return 'mountain';
+  if (p.c >= 0.19) return p.c < 0.22 ? 'firefly' : p.c < 0.42 ? 'leaf' : 'wood';
+  if (isAvenue(k)) return p.c < 0.07 ? 'edge' : p.c < 0.1 ? 'dash' : 'ground';
+  return p.c < 0.07 ? 'edge' : p.c < 0.13 ? 'water' : 'ground';
+}
 
 /** Grain p in the forest: where it stands and how far ahead of the eye it is. */
 function forestAt(k: number, p: Particle, u: number, t: number): { pos: Vec3; d: number } {
@@ -1093,11 +1250,31 @@ function forestAt(k: number, p: Particle, u: number, t: number): { pos: Vec3; d:
   const side = p.d < 0.5 ? -1 : 1;
   const on = (z0: number, x: number, y: number) => {
     const d = ahead(z0, s);
-    return { pos: [x, y, -s - d] as Vec3, d };
+    return { pos: [x + bendAt(k, z0), y, -s - d] as Vec3, d };
   };
-  switch (forestRole(p)) {
-    case 'edge':
-      return on(p.b * LOOP, side * ROAD_W, 0.02);
+  switch (forestRole(k, p)) {
+    case 'edge': {
+      // The road's edge, or a river bank that wavers a little.
+      const z0 = p.b * LOOP;
+      const w = isAvenue(k) ? ROAD_W : ROAD_W + 0.35 * Math.sin(z0 * 0.7 + side);
+      return on(z0, side * w, 0.02);
+    }
+    case 'water': {
+      // The river's surface, flowing past: light caught on its ripples.
+      const z0 = p.b * LOOP - t * 1.2;
+      const across = (p.d * 2 - 1) * (ROAD_W - 0.3);
+      return on(z0, across, Math.sin(z0 * 1.3 + p.d * 9 + t) * 0.05);
+    }
+    case 'mountain': {
+      // Far ahead of the eye, wherever it is: an outline, a faint face, snow on the peak.
+      const x = (p.b - 0.5) * 170;
+      const top = ridge(x);
+      const y = p.d < 0.6 ? top : top * ((p.d - 0.6) / 0.4) ** 0.7;
+      return {
+        pos: [x * MOUNTAIN_K, y * MOUNTAIN_K, -s - MOUNTAIN_D + (frac(p.d * 11) - 0.5) * 4],
+        d: 0,
+      };
+    }
     case 'dash': {
       // A broken line down the middle: dashes 2.5 long, 6 apart.
       const n = Math.floor(p.b * (LOOP / 6));
@@ -1123,14 +1300,14 @@ function forestAt(k: number, p: Particle, u: number, t: number): { pos: Vec3; d:
       const d = ahead(slot.z0, s);
       const g = grownAt(d);
       let local: Vec3;
-      if (forestRole(p) === 'leaf') {
+      if (forestRole(k, p) === 'leaf') {
         const [x, y, z] = along3(route, len * g);
         const sphere = fibonacciSphere(p.i % 157, 157);
         const r = 1.1 * Math.cbrt(p.b) * smooth((g - 0.55) / 0.35);
         local = [x + sphere[0] * r, y + sphere[1] * r * 0.8, z + sphere[2] * r];
       } else {
         // Sap climbing and falling, as in the 3D tree.
-        const dir = p.c < 0.71 ? 1 : -1;
+        const dir = sapDir(p.c < 0.71);
         const along = len * g * wrap(p.b + dir * t * 0.04 * (0.7 + 0.6 * p.d), 1) ** 0.45;
         const [x, y, z, w] = along3(route, along);
         local = add([x, y, z], fibonacciSphere(p.i % 389, 389), w * 0.5 * Math.sqrt(p.d));
@@ -1140,7 +1317,7 @@ function forestAt(k: number, p: Particle, u: number, t: number): { pos: Vec3; d:
       const sn = Math.sin(slot.yaw);
       return {
         pos: [
-          slot.x + (lx * c - local[2] * sn) * slot.size,
+          slot.x + bendAt(k, slot.z0) + (lx * c - local[2] * sn) * slot.size,
           local[1] * slot.size,
           -s - d + (lx * sn + local[2] * c) * slot.size,
         ],
@@ -1151,6 +1328,165 @@ function forestAt(k: number, p: Particle, u: number, t: number): { pos: Vec3; d:
 }
 
 const forestPoint = (k: number, p: Particle, u: number, t: number) => forestAt(k, p, u, t).pos;
+
+/* ---------- 13. Reflection: a still tree and the same tree in the water ---------- */
+
+/*
+ * 2026-11-10: "after full tree do reflection, with a tree and a reflection of
+ * it on the water with soft ripples below it. Also symmetric, but the lower
+ * part moving, without rotation of the upper tree." Grains go in pairs, one
+ * in the tree and one in the water, sharing everything but the side, so the
+ * reflection is the tree turned over; only it moves, with the ripples.
+ */
+type ReflSeed = { under: boolean; c: number; a: number; b: number; d: number; run: number };
+function reflSeed(p: Particle): ReflSeed {
+  const run = Math.floor(p.i / 2);
+  return {
+    under: p.i % 2 === 1,
+    c: hash(run, 101),
+    a: hash(run, 102),
+    b: hash(run, 103),
+    d: hash(run, 104),
+    run,
+  };
+}
+type ReflRole = 'water' | 'wood' | 'leaf';
+const reflRole = (c: number): ReflRole => (c < 0.1 ? 'water' : c < 0.78 ? 'wood' : 'leaf');
+const REFL_K = 0.75;
+
+function reflectionPoint(p: Particle, u: number, t: number): Vec3 {
+  const { under, c, a, b, d, run } = reflSeed(p);
+  const role = reflRole(c);
+  if (role === 'water') {
+    // The surface: fine lines of light along the water, drifting gently.
+    const x = (a - 0.5) * 120;
+    const z = (b - 0.5) * 50;
+    return [x + Math.sin(t * 0.3 + z) * 0.4, under ? -0.05 : 0.05, z];
+  }
+  const routes = tree3d();
+  const route = routes[Math.floor(a * routes.length)] as Route3;
+  const len = length3(route);
+  const grown = 0.05 + 0.95 * smooth(u / 0.42);
+  let q: Vec3;
+  if (role === 'leaf') {
+    const [x, y, z] = along3(route, len * grown);
+    const s = fibonacciSphere(run % 157, 157);
+    const r = 1.8 * Math.cbrt(b) * smooth((u - 0.3) / 0.2);
+    q = [x + s[0] * r, y + s[1] * r * 0.8, z + s[2] * r];
+  } else {
+    const s = len * grown * wrap(b + sapDir(c < 0.44) * t * 0.04 * (0.7 + 0.6 * d), 1);
+    const [x, y, z, w] = along3(route, s);
+    q = add([x, y, z], fibonacciSphere(run % 389, 389), w * 0.5 * Math.sqrt(d));
+  }
+  const x = q[0] * REFL_K;
+  const y = (q[1] - GROUND_3D) * REFL_K;
+  const z = q[2] * REFL_K;
+  if (!under) return [x, y, z];
+  // Turned over in the water, swaying more the deeper it goes: soft ripples.
+  const deep = smooth(y / 10);
+  return [
+    x + Math.sin(y * 0.9 - t * 1.3) * 0.7 * deep,
+    -y + Math.sin(x * 0.5 + t * 0.9) * 0.25 * deep,
+    z,
+  ];
+}
+
+function reflectionColour(p: Particle, t: number): RGB {
+  const { under, c, b, run } = reflSeed(p);
+  const tw = 0.7 + 0.3 * Math.sin(t * 1.7 + run * 0.37);
+  let rgb: RGB;
+  switch (reflRole(c)) {
+    case 'water':
+      rgb = scale(mix(WATER, SUN, 0.4), 0.16 + 0.22 * Math.sin(t * 1.2 + run) ** 2);
+      break;
+    case 'leaf':
+      rgb = scale(mix(LEAF, SUGAR, 0.35 + 0.4 * b), 0.7 * tw);
+      break;
+    default:
+      rgb = scale(mix(BARK, GOLD, b), 0.68 * tw);
+  }
+  // The reflection is fainter and a little cooler, glinting as the ripples catch the light.
+  if (!under || reflRole(c) === 'water') return rgb;
+  const glint = 0.75 + 0.25 * Math.sin(t * 2 + run * 1.3);
+  return scale(mix(rgb, WATER, 0.25), 0.5 * glint);
+}
+
+/* ---------- 12. Above and below: roots and tree, all gold, about the horizon ---------- */
+
+/*
+ * 2026-11-10: "one in vegetal with roots below and tree above, but all
+ * golden, with a horizon in the middle, no green". The roots of piece 2 hang
+ * from the horizon and the tree of piece 4 stands on it, both grown from the
+ * one point where they meet. Water climbs from the root tips to the base, and
+ * sap on up the trunk.
+ */
+const BELOW_K = 0.85;
+/*
+ * The tree holds still, and a slider turns only the horizon line, from
+ * across the picture to running toward the eye like a road (2026-11-10:
+ * "stabilise the full tree so it doesn't rotate, with a slider to rotate the
+ * road line … it gives me ideas for road perspective for later").
+ */
+let lineTurn = 0;
+/** The horizon line's turn, in degrees: 0 across the picture, 90 toward the eye. */
+export function setLineTurn(deg: number) {
+  lineTurn = deg;
+}
+export const hasLineTurn = (k: number) => PHASES[k]?.id === 'full-tree';
+type BelowRole = 'horizon' | 'water' | 'root' | 'wood' | 'leaf';
+const belowRole = (p: Particle): BelowRole =>
+  p.c < 0.07
+    ? 'horizon'
+    : p.c < 0.15
+      ? 'water'
+      : p.c < 0.45
+        ? 'root'
+        : p.c < 0.85
+          ? 'wood'
+          : 'leaf';
+
+function belowPoint(p: Particle, u: number, t: number): Vec3 {
+  const grown = 0.05 + 0.95 * smooth(u / 0.42);
+  const role = belowRole(p);
+  if (role === 'horizon') {
+    // A thin line, brightest and densest at the middle, a faint shimmer along it, turned by the
+    // Road slider from across the picture toward the eye.
+    const x = (p.b - 0.5) * 2;
+    const along = Math.sign(x) * Math.abs(x) ** 1.6 * 70;
+    const across = (p.d - 0.5) * 1.2;
+    const a = (lineTurn * Math.PI) / 180;
+    return [
+      along * Math.cos(a) - across * Math.sin(a),
+      Math.sin(p.b * 300 + t * 0.4) * 0.06,
+      along * Math.sin(a) + across * Math.cos(a),
+    ];
+  }
+  if (role === 'water' || role === 'root') {
+    const set = rootSystem();
+    const r = Math.floor(p.a * set.routes.length);
+    const len = routeLength(set.routes[r] as Route);
+    const s =
+      role === 'water' ? len * grown * wrap(p.b - t * 0.06, 1) ** 0.55 : len * grown * p.b ** 0.55;
+    const pos = onRoot(r, s, role === 'root' ? (p.d - 0.5) * 2 : 0);
+    return [pos[0] * BELOW_K, (pos[1] - ROOT_BASE[1]) * BELOW_K, pos[2] * BELOW_K];
+  }
+  const routes = tree3d();
+  const route = routes[Math.floor(p.a * routes.length)] as Route3;
+  const len = length3(route);
+  let pos: Vec3;
+  if (role === 'leaf') {
+    const [x, y, z] = along3(route, len * grown);
+    const d = fibonacciSphere(p.i % 157, 157);
+    const r = 1.6 * Math.cbrt(p.b) * smooth((u - 0.3) / 0.2);
+    pos = [x + d[0] * r, y + d[1] * r * 0.8, z + d[2] * r];
+  } else {
+    const dir = sapDir(p.c < 0.65);
+    const s = len * grown * wrap(p.b + dir * t * 0.04 * (0.7 + 0.6 * p.d), 1) ** 0.45;
+    const [x, y, z, w] = along3(route, s);
+    pos = add([x, y, z], fibonacciSphere(p.i % 389, 389), w * 0.5 * Math.sqrt(p.d));
+  }
+  return [pos[0] * BELOW_K, (pos[1] - GROUND_3D) * BELOW_K, pos[2] * BELOW_K];
+}
 
 /* ---------- where every grain is ---------- */
 
@@ -1175,6 +1511,10 @@ function form(k: number, p: Particle, u: number, t: number): Vec3 {
       return flowerPoint(p, u, t);
     case 8:
       return fruitPoint(p, u, t);
+    case 11:
+      return belowPoint(p, u, t);
+    case 12:
+      return reflectionPoint(p, u, t);
     default:
       return forestPoint(k, p, u, t);
   }
@@ -1192,7 +1532,8 @@ function form(k: number, p: Particle, u: number, t: number): Vec3 {
  * How far through each piece its form is whole. The fruit tells its own
  * story and the forests are flown through, so their time always runs.
  */
-const FORMED = [0.55, 0.45, 0.45, 0.5, 0, 0.7, 0.45, 0.4];
+// The fruit and the two roads (8–10) grow as they go and never use theirs.
+const FORMED = [0.55, 0.45, 0.45, 0.5, 0, 0.7, 0.45, 0.4, 0, 0, 0, 0.45, 0.45];
 const BALL_R = 20;
 const isFruit = (k: number) => PHASES[k]?.id === 'fruit';
 const runsOn = (k: number) => isFruit(k) || isForest(k);
@@ -1200,10 +1541,16 @@ const runsOn = (k: number) => isFruit(k) || isForest(k);
 /** When a grain reaches its place in piece k, 0 (first) to 1 (last): the piece's growing order. */
 function order(k: number, p: Particle): number {
   if (k === 0) return cellFar(Math.floor(p.a * CELL_COUNT));
+  if (k === 4) return veinSeed(p).b;
+  if (k === 12) return reflSeed(p).b;
   if (k === 7 && flowerRole(p) === 'floret') return p.a;
   if (isFruit(k)) return 0.5 * p.b;
   return p.b;
 }
+
+/** Piece k's form, held whole until FORMED unless the piece grows as it goes. */
+const whole = (k: number, p: Particle, u: number, t: number) =>
+  form(k, p, runsOn(k) ? u : Math.max(u, at(FORMED, k)), t);
 
 /** How far grain p has come from the ball of stars into piece k's form, `u` through it. */
 export function arrival(k: number, p: Particle, u: number): number {
@@ -1226,7 +1573,7 @@ export function starBall(k: number, p: Particle, t: number): Vec3 {
 
 /** Where particle p is in piece k, `u` through it, at chapter time t. */
 export function target(k: number, p: Particle, u: number, t: number): Vec3 {
-  const f = form(k, p, runsOn(k) ? u : Math.max(u, at(FORMED, k)), t);
+  const f = whole(k, p, u, t);
   const a = arrival(k, p, u);
   return a >= 1 ? f : lerp3(starBall(k, p, t), f, a);
 }
@@ -1254,7 +1601,6 @@ const SUN: RGB = [1, 0.97, 0.8];
 const DISC: RGB = [0.4, 0.25, 0.1];
 const AMBER: RGB = [1, 0.62, 0.18];
 const PETAL: RGB = [1, 0.82, 0.28];
-const STEM: RGB = [0.45, 0.75, 0.3];
 const UNRIPE: RGB = [0.45, 0.75, 0.3];
 const RIPE: RGB = [1, 0.5, 0.22];
 const SEED: RGB = [0.98, 0.88, 0.66];
@@ -1291,8 +1637,12 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
       }
     case 1:
       switch (rootRole(p)) {
-        case 'water':
-          return scale(WATER, 0.9 * twinkle);
+        case 'water': {
+          // None near the top (2026-11-10: "upper part of roots without the blue dots, but they
+          // can appear as you go in the ground and deeper"): the water shows from 4 below the base.
+          const depth = ROOT_BASE[1] - rootPoint(p, u, t)[1];
+          return scale(WATER, 0.9 * twinkle * smooth((depth - 4) / 12));
+        }
         case 'base':
           return scale(SUGAR, 0.9);
         case 'soil':
@@ -1311,23 +1661,27 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
     case 3:
       switch (tree3Role(p)) {
         case 'soil':
-          return scale(EARTH, 0.3);
+          return groundColour(p);
         case 'leaf':
           return scale(mix(LEAF, [0.85, 0.9, 0.4], p.b), 0.75 * twinkle);
         default:
           return scale(mix(BARK, GOLD, p.d), 0.7 * twinkle);
       }
-    case 4:
+    case 4: {
+      // The twinkle by run too, so every copy shines alike.
+      const { b } = veinSeed(p);
+      const tw = 0.7 + 0.3 * Math.sin(t * 1.7 + Math.floor(p.i / VEIN_COPIES) * 0.37);
       switch (veinRole(p)) {
         case 'pulse':
-          return scale(SUGAR, 1 * twinkle);
+          return scale(SUGAR, 1 * tw);
         case 'tip':
           return scale(SUGAR, 1.05);
         case 'ring':
-          return scale(GOLD, 0.4 * twinkle);
+          return scale(GOLD, 0.4 * tw);
         default:
-          return scale(mix([0.78, 0.56, 0.3], SUGAR, p.b), 0.75 * twinkle);
+          return scale(mix([0.78, 0.56, 0.3], SUGAR, b), 0.75 * tw);
       }
+    }
     case 5:
       switch (fungusRole(p)) {
         case 'pulse':
@@ -1365,15 +1719,30 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
           return scale(mix(DISC, AMBER, Math.sqrt(n / FLORETS)), 0.85 * twinkle);
         }
         case 'petal':
-          return scale(PETAL, 0.65 * (0.75 + 0.25 * p.b));
-        case 'stem':
-          return scale(STEM, 0.55);
+          // A third more grains since the stem went: each a little dimmer, the same light in all.
+          return scale(PETAL, 0.5 * (0.75 + 0.25 * p.b));
         default:
           return scale([1, 0.92, 0.55], 0.8 * smooth((opening(u) - 0.6) / 0.3));
       }
     case 9:
     case 10:
       return forestColour(k, p, u, t, twinkle);
+    case 12:
+      return reflectionColour(p, t);
+    case 11:
+      // All gold: no green anywhere.
+      switch (belowRole(p)) {
+        case 'horizon':
+          return scale(SUN, 0.55 * (1 - 0.6 * Math.abs(p.b - 0.5) * 2));
+        case 'water':
+          return scale(SUN, 0.85 * twinkle);
+        case 'root':
+          return scale(mix(GOLD, AMBER, 0.3 * p.b), 0.6 * twinkle);
+        case 'leaf':
+          return scale(mix(SUGAR, PETAL, p.b), 0.6 * twinkle);
+        default:
+          return scale(mix(GOLD, SUGAR, p.d * 0.5), 0.7 * twinkle);
+      }
     default: {
       const ripe = smooth((u - 0.08) / 0.3);
       switch (fruitRole(p)) {
@@ -1398,15 +1767,28 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
 }
 
 const MOSS: RGB = [0.35, 0.55, 0.25];
+const MIST: RGB = [0.72, 0.7, 0.88];
 /** The forest's leaves: one green in the avenue, a spread of greens and a little amber in the wild forest. */
 const FOREST_LEAVES: RGB[] = [LEAF, [0.45, 0.78, 0.32], [0.82, 0.86, 0.36], [0.95, 0.66, 0.3]];
 
 function forestColour(k: number, p: Particle, u: number, t: number, twinkle: number): RGB {
   const { d } = forestAt(k, p, u, t);
   const h = haze(d);
-  switch (forestRole(p)) {
+  switch (forestRole(k, p)) {
     case 'edge':
-      return scale(GOLD, 0.5 * h);
+      return scale(GOLD, (isAvenue(k) ? 0.5 : 0.35) * h);
+    case 'water': {
+      const glint = Math.sin(t * 1.5 + p.i * 0.7) ** 2;
+      return scale(mix(WATER, SUN, 0.45), (0.18 + 0.4 * glint) * h);
+    }
+    case 'mountain': {
+      // Brightest on its outline and snowy peak, its face faint; a far, cool tone.
+      const x = (p.b - 0.5) * 170;
+      const snow = smooth((ridge(x) - 24) / 8);
+      return p.d < 0.6
+        ? scale(mix(MIST, SUN, snow), 0.8 + 0.3 * snow)
+        : scale(MIST, 0.2 * (0.4 + 0.6 * ((p.d - 0.6) / 0.4)));
+    }
     case 'dash':
       return scale(SUN, 0.45 * h);
     case 'ground':
@@ -1456,10 +1838,22 @@ export function eyeIn(k: number, u: number, t: number): Eye {
     case 9:
     case 10: {
       // Down the middle of the road, a little above it, swaying a touch more in the wild forest.
+      // In the forest the eye follows the river's bends, looking to where it bends next.
       const s = flown(k, u);
       const sway = Math.sin(t * 0.15) * (isAvenue(k) ? 0.25 : 0.7);
-      return { eye: [sway, EYE_H, -s], target: [sway * 0.4, EYE_H - 0.7, -s - 30] };
+      const here = bendAt(k, s + BEHIND);
+      const there = bendAt(k, s + BEHIND + 30);
+      return {
+        eye: [here + sway, EYE_H, -s],
+        target: [there + sway * 0.4, EYE_H - 0.7, -s - 30],
+      };
     }
+    case 12:
+      // Still, face on and level with the water: the tree does not turn.
+      return { eye: [0, 1.5, 78], target: [0, 0, 0] };
+    case 11:
+      // Still, face on, a little above the horizon, so a line turned toward the eye reads as a road.
+      return { eye: [0, 4, 80], target: [0, 0, 0] };
     default: {
       const { c } = fruitOf(u, t);
       const ty = lerp(c[1], GROUND_FRUIT + 2, smooth((u - 0.5) / 0.2));
@@ -1497,6 +1891,70 @@ export function particleAt(p: Particle, time: number): { pos: Vec3; rgb: RGB } {
     pos: lerp3(a, target(next, p, 0, t), w),
     rgb: mix(ca, colour(next, p, 0, t), w),
   };
+}
+
+/*
+ * Each piece on its own (2026-11-10: "all those vegetal, with pill mode so u
+ * just get the visuals straight up without the circle at start … so i can
+ * click journey mode and it brings me to what it is now"). A piece starts
+ * whole, with no ball of stars, and loops: near the end each grain glides
+ * back to where the piece began. The two roads never loop back: the eye flies
+ * on, two turns of the recycled road per loop, so the wrap is seamless.
+ */
+
+/**
+ * Where piece k starts on its own: whole already. The roads grow as they go,
+ * so from 0; the fruit once it has swelled, not as a small bright dot.
+ */
+const pieceFrom = (k: number) => (isForest(k) ? 0 : isFruit(k) ? 0.2 : at(FORMED, k));
+
+/** How long piece k plays on its own before it loops, in seconds. */
+export function pieceLength(k: number): number {
+  if (isForest(k)) return (2 * LOOP) / SPEED;
+  return (1 - pieceFrom(k)) * (PHASES[k] as VegetalPhase).duration;
+}
+
+/** Piece k on its own, `s` seconds in: how far through the loop (f), the piece's own u, and its time. */
+function pieceClock(k: number, s: number): { f: number; u: number; t: number } {
+  const len = pieceLength(k);
+  const f = wrap(s, len) / len;
+  const from = pieceFrom(k);
+  const u = isForest(k) ? (f * len) / (PHASES[k] as VegetalPhase).duration : from + (1 - from) * f;
+  return { f, u, t: s };
+}
+
+/** How far through its loop piece k is, `s` seconds in, for the step bar and the words. */
+export const pieceProgress = (k: number, s: number) => pieceClock(k, s).f;
+
+/** Position and colour of particle p in piece k on its own, `s` seconds in. */
+export function pieceAt(p: Particle, k: number, s: number): { pos: Vec3; rgb: RGB } {
+  const { f, u, t } = pieceClock(k, s);
+  const pos = whole(k, p, u, t);
+  const rgb = formColour(k, p, u, t);
+  if (isForest(k)) return { pos, rgb };
+  const w = smooth((f - 0.8 + 0.12 * p.stagger) / 0.2);
+  if (w <= 0) return { pos, rgb };
+  const from = pieceFrom(k);
+  return {
+    pos: lerp3(pos, whole(k, p, from, t), w),
+    rgb: mix(rgb, formColour(k, p, from, t), w),
+  };
+}
+
+/** The camera in piece k on its own, easing back to where the piece began in the last quarter. */
+export function pieceCamera(k: number, s: number): Eye {
+  const { f, u, t } = pieceClock(k, s);
+  const a = eyeIn(k, u, t);
+  const w = isForest(k) ? 0 : smooth((f - 0.75) / 0.25);
+  if (w <= 0) return a;
+  const b = eyeIn(k, pieceFrom(k), t);
+  return { eye: lerp3(a.eye, b.eye, w), target: lerp3(a.target, b.target, w) };
+}
+
+/** Glow and size of piece k on its own. */
+export function pieceLook(k: number): { glow: number; size: number } {
+  const { glow, size } = PHASES[k] as VegetalPhase;
+  return { glow, size };
 }
 
 /** Glow and size for the whole picture, blended across piece boundaries. */

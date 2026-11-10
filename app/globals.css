@@ -754,6 +754,10 @@ input[type="range"].feedback-slider::-moz-range-thumb {
   max-width: min(560px, calc(100vw - 32px));
   transition: opacity 0.8s;
 }
+/* Above a piece's own row of pills. */
+.bb-raised .bb-step {
+  bottom: 150px;
+}
 .bb-step.bb-quiet {
   opacity: 0.55;
 }
@@ -823,6 +827,50 @@ input[type="range"].feedback-slider::-moz-range-thumb {
 }
 .bb-seg-on::before {
   background: rgba(244, 234, 216, 0.3);
+}
+/* The pieces as presets, by name (2026-11-10: "just the presets name pills like in stars, geometry"). */
+.bb-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.bb-pill {
+  min-height: 34px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 234, 216, 0.18);
+  background: rgba(20, 14, 24, 0.55);
+  color: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+/* A piece's own slider (the full tree's road line). */
+.bb-turn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+  font-size: 12.5px;
+}
+.bb-turn input {
+  width: min(240px, 50vw);
+  accent-color: #e6c27a;
+}
+.bb-turn span {
+  font:
+    12px ui-monospace,
+    monospace;
+  min-width: 3ch;
+}
+/* A piece's own looks (the 3D tree's ground): smaller, above the pieces. */
+.bb-variants .bb-pill {
+  min-height: 28px;
+  padding: 3px 11px;
+  font-size: 12.5px;
+}
+.bb-pill[aria-pressed="true"] {
+  background: rgba(244, 234, 216, 0.22);
+  border-color: rgba(244, 234, 216, 0.45);
 }
 .bb-controls {
   display: flex;
@@ -896,6 +944,18 @@ input[type="range"].feedback-slider::-moz-range-thumb {
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: rgba(244, 234, 216, 0.6);
+}
+/* Vegetal's letters all in gold (2026-11-10: "make all letters golden in all that part"). */
+.bb-vegetal,
+.bb-vegetal .bb-back,
+.bb-vegetal .bb-controls button,
+.bb-vegetal .jr-words p {
+  color: #e6c27a;
+}
+.bb-vegetal .bb-line,
+.bb-vegetal .bb-time,
+.bb-vegetal .jr-thread {
+  color: rgba(230, 194, 122, 0.85);
 }
 @media (prefers-reduced-motion: reduce) {
   .bb-top,

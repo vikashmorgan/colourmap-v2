@@ -44,7 +44,7 @@ so for the first time what grows next depends on what we put in.
 | 4 | Cells | One cell divides 2, 4, 8, 16 … into a hollow ball | Sacred | Big Bang cells, Fibonacci sphere |
 | 5 | Swarm | Every cell becomes a fish; the school turns, splits, spirals | Organisation | — |
 | 6 | Tree | The school dives and climbs back up as a tree | Nature | Star Tree (lib/star-tree.ts) |
-| 7 | Pulses | Into the trunk: water climbs, sugar falls, a heartbeat | Technology | Life tree pulse |
+| 7 | Pulses | Into the trunk: water climbs, sugar falls, a slow heartbeat every 5 seconds, each surge the same size. The crown is round all the way, as in step 6 (2026-11-10: "pulsing too fast and only half of the symmetry") | Technology | Life tree pulse |
 | 8 | Roots | Below ground, roots meet other trees' roots | Sacred | Star Tree's grow() |
 | 9 | Seed | All the light runs into one seed, and it opens again | Now | — |
 
