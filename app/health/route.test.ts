@@ -117,4 +117,35 @@ describe('/health page content', () => {
       document.querySelector('#library [data-fav="clamshell"]')?.getAttribute('aria-pressed'),
     ).toBe('false');
   });
+
+  it('opens on the Basic view: figures, a small tab per category, Full list on a key', () => {
+    const page = document.getElementById('page-exercises') as HTMLElement;
+    const tabs = () =>
+      [...document.querySelectorAll<HTMLElement>('#cat-tabs .cat-tab')].map((t) => t.dataset.cat);
+    expect(page.classList.contains('basic')).toBe(true);
+    // No favourites left, so no Favourites tab: the sections, then Good to know.
+    expect(tabs()).toEqual(['knee', 'shoulder', 'release', 'feet', 'flow', 'school', 'know']);
+    // Each exercise shows its figure in the tile, and only the chosen category is shown.
+    for (const card of document.querySelectorAll('#library .ex')) {
+      expect(card.querySelector('summary > svg.tile-fig')).not.toBeNull();
+    }
+    const shown = () =>
+      [...document.querySelectorAll<HTMLElement>('#library .sec.on')].map((s) => s.dataset.sec);
+    expect(shown()).toEqual(['knee']);
+    click('#cat-tabs [data-cat="feet"]');
+    expect(shown()).toEqual(['feet']);
+    expect((document.getElementById('sec-feet') as HTMLDetailsElement).open).toBe(true);
+    expect(localStorage.getItem('health-cat')).toBe('feet');
+
+    // A favourite brings its tab, first.
+    click('#library [data-fav="clamshell"]');
+    expect(tabs()[0]).toBe('favs');
+
+    click('#view-btn');
+    expect(page.classList.contains('basic')).toBe(false);
+    expect(shown()).toEqual([]);
+    expect(localStorage.getItem('health-ex-view')).toBe('full');
+    click('#view-btn');
+    expect(page.classList.contains('basic')).toBe(true);
+  });
 });

@@ -181,6 +181,32 @@ h2 { font-family: var(--display); font-size: 22px; margin: 28px 0 10px; }
 .know ul { margin: 0; padding-left: 18px; }
 .know li { margin: 3px 0; }
 .know .urgent { border-color: color-mix(in srgb, var(--sess-6) 50%, var(--rule)); }
+/* Basic view (2026-11-10: "the basic mode is just the icons images and then i can just click on them
+   to see more … keep a small tab for each category"). The figures in a grid, one category at a time;
+   a figure opens into its whole card across the grid. Full list shows everything as before. */
+.ex-view { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; }
+.cat-tabs { display: flex; gap: 4px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.cat-tab { flex: none; min-height: 32px; padding: 4px 12px; border: 1px solid var(--rule); border-radius: 999px; background: none; color: var(--muted); font: 600 13.5px var(--body); cursor: pointer; white-space: nowrap; }
+.cat-tab[aria-selected="true"] { color: var(--ink); border-color: color-mix(in srgb, var(--sess) 55%, var(--rule)); background: color-mix(in srgb, var(--sess) 13%, var(--panel)); }
+.view-btn { flex: none; margin-left: auto; min-height: 32px; padding: 4px 12px; border: 0; border-radius: 999px; background: none; color: var(--muted); font: 600 13px var(--body); cursor: pointer; }
+.view-btn:hover, .view-btn:focus-visible { color: var(--ink); background: var(--panel); }
+#page-exercises:not(.basic) .cat-tabs { display: none; }
+.tile-fig { display: none; }
+.basic .intro p, .basic .sec > summary, .basic .sec-sub, .basic .order-hint, .basic .favs .part-head { display: none; }
+.basic .sec, .basic .favs { display: none; border: 0; background: none; margin: 0; }
+.basic .sec.on, .basic.cat-favs .favs { display: block; }
+.basic .know-wrap { display: none; }
+.basic.cat-know .know-wrap { display: block; }
+.basic .sec-body, .basic .fav-list { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; padding: 0; }
+.basic .ex:not([open]) > summary { flex-direction: column; gap: 6px; padding: 10px 8px 12px; text-align: center; }
+.basic .ex:not([open]) .tile-fig { display: block; width: 100%; }
+.basic .ex:not([open]) :is(.ex-dose, .fav-btn, .ex-move, .aside-tag, .qs) { display: none; }
+.basic .ex:not([open]) .ex-name { font-size: 14.5px; line-height: 1.25; }
+.basic .ex[open], .basic .sec-notes { grid-column: 1 / -1; }
+.basic .fav-row { grid-template-columns: 1fr; justify-items: center; gap: 6px; padding: 10px 8px 12px; text-align: center; cursor: pointer; }
+.basic .fav-row .fig.sm { width: 100%; }
+.basic .fav-row .tname { font-weight: 600; font-size: 14.5px; line-height: 1.25; }
+.basic .fav-row :is(.tdose, .fav-acts) { display: none; }
 
 /* Notes: question, comment, research */
 .notes { display: grid; gap: 8px; border-top: 1px solid var(--rule); padding-top: 10px; }
@@ -322,6 +348,10 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
       <span class="eyebrow">The exercises</span>
       <h1>Every exercise, what it is for, how to do it.</h1>
       <p>Open a section, then an exercise. Each one takes questions, comments and things to research. The dot on the right opens the notebook, already set to the exercise you are on.</p>
+    </div>
+    <div class="ex-view">
+      <nav class="cat-tabs" id="cat-tabs" role="tablist" aria-label="Categories"></nav>
+      <button type="button" class="view-btn" id="view-btn"></button>
     </div>
     <section class="favs" id="favs" aria-labelledby="favs-title"></section>
     <div id="library"></div>
@@ -1098,7 +1128,7 @@ function renderLibrary() {
     <p class="sec-sub">${esc(s.sub)}</p>
     <div class="sec-body">
       ${orderedEx(s).map(e => `<details class="ex" id="ex-${e.id}" data-ex="${e.id}">
-        <summary draggable="true"><span class="ex-name">${esc(e.name)}</span><span class="qs" hidden></span><span class="aside-tag" hidden>set aside</span><span class="ex-dose">${esc(e.dose)}</span>${favBtn(e)}<span class="ex-move"><button type="button" data-move="up" aria-label="Move ${esc(e.name)} up" title="Move up">↑</button><button type="button" data-move="down" aria-label="Move ${esc(e.name)} down" title="Move down">↓</button></span></summary>
+        <summary draggable="true">${figSvg(e.id, 'fig tile-fig')}<span class="ex-name">${esc(e.name)}</span><span class="qs" hidden></span><span class="aside-tag" hidden>set aside</span><span class="ex-dose">${esc(e.dose)}</span>${favBtn(e)}<span class="ex-move"><button type="button" data-move="up" aria-label="Move ${esc(e.name)} up" title="Move up">↑</button><button type="button" data-move="down" aria-label="Move ${esc(e.name)} down" title="Move down">↓</button></span></summary>
         <div class="ex-body">
           ${figSvg(e.id)}
           <p><span class="lbl">How</span>${esc(e.how)}</p>
@@ -1112,13 +1142,14 @@ function renderLibrary() {
       <p class="order-hint">↑ ↓ (or drag a row) to put your favourites first. ☆ adds one to <a href="#favs">Favourites</a>, at the top. <i>Set aside</i>, inside an exercise, sends the ones you don’t do to the end.</p>
       <div class="notes sec-notes" data-key="sec|${s.id}"></div>
     </div>
-  </details>`).join('') + `<h2>Good to know</h2><div class="know">
+  </details>`).join('') + `<div class="know-wrap"><h2>Good to know</h2><div class="know">
     <div class="card"><h3>Avoid for now</h3><ul><li>Deep squats with load</li><li>Jumping</li><li>Lots of stairs, and running downhill</li><li>Kneeling</li></ul></div>
     <div class="card"><h3>Cold feet</h3><ul><li>Wool socks and warm-lined slippers; keep the ankles covered too.</li><li>Calf raises and ankle circles for 1–2 minutes boost circulation fast.</li><li>A warm foot soak, 10–15 minutes in the evening.</li><li>Ginger, warm cooked meals and warm drinks: Western advice and the Chinese-medicine “warming” approach agree.</li><li>If it persists, get checked: thyroid, iron and anaemia, and circulation are common, easy-to-test causes.</li></ul></div>
     <div class="card"><h3>Slippers for high arches</h3><ul><li>A firm heel cup: the heel does not slide side to side.</li><li>A contoured footbed with real arch support, ideally with a removable insole for your own orthotic.</li><li>A cushioned, slightly thick sole: high arches need shock absorption.</li><li>A closed back or an adjustable strap, not a floppy mule.</li><li>A warm lining (wool or felt).</li><li>Custom insoles from a podiatrist are often the real fix, and move between shoes and slippers.</li></ul></div>
     <div class="card urgent"><h3>When to see a doctor or physio</h3><ul><li><b>L3/L4:</b> numbness, tingling or weakness in the front of the thigh or knee, or the knee giving way. Any bladder or bowel change is <b>urgent</b>.</li><li>Shoulder: no progress after 6–8 weeks of consistent work, night pain, or loss of strength lifting the arm.</li><li>Knee swelling, locking, or pain that keeps climbing.</li></ul></div>
-  </div>`;
+  </div></div>`;
   for (const sec of document.querySelectorAll(".sec")) paintOrder(sec);
+  paintView();
   // Drawn again after the account loads: keep open what was open.
   if (wasOpen.sec) { const s = document.getElementById(wasOpen.sec); if (s) s.open = true; }
   if (wasOpen.ex) { const x = document.getElementById(wasOpen.ex); if (x) x.open = true; }
@@ -1205,6 +1236,7 @@ function renderFavs() {
         <span class="fav-acts"><button type="button" class="how" data-how="${id}">How ›</button>${favBtn(e)}<span class="ex-move"><button type="button" data-fmove="up" aria-label="Move ${esc(e.name)} up" title="Move up"${i === 0 ? ' disabled' : ''}>↑</button><button type="button" data-fmove="down" aria-label="Move ${esc(e.name)} down" title="Move down"${i === ids.length - 1 ? ' disabled' : ''}>↓</button></span></span>
       </li>`; }).join('')}</ol>`
       : '<p class="fav-empty">Tap ☆ on an exercise to keep the ones you actually do here, in your order.</p>');
+  paintView();   // the Favourites tab comes and goes with the pack
 }
 // The order is read back from the rows, like Your order.
 function saveFavOrder() {
@@ -1251,6 +1283,54 @@ favsEl.addEventListener('drop', e => {
   saveFavOrder();
 });
 favsEl.addEventListener('dragend', () => { if (favDragged) favDragged.classList.remove('dragging'); favDragged = null; clearFavDrop(); });
+/* ---------- Basic view ----------
+   Asked for 2026-11-10: "the basic mode is just the icons images and then i can just click on them
+   to see more. easy and faster to use. keep a small tab for each category." Basic is the default:
+   one category at a time, its exercises as figures; Full list is the page as it was. Both choices
+   are remembered on this device. */
+const viewPage = document.getElementById('page-exercises');
+const catTabs = document.getElementById('cat-tabs');
+const viewBtn = document.getElementById('view-btn');
+const CAT_NAME = { shoulder: 'Shoulder', release: 'Release', flow: 'Flow' };
+const CATS = () => [
+  ...(favIds().length ? [{ name: '★ Favourites', id: 'favs', c: null }] : []),
+  ...SECTIONS.map(s => ({ id: s.id, name: CAT_NAME[s.id] || s.title, c: s.c })),
+  { name: 'Good to know', id: 'know', c: 6 },
+];
+const readLocal = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const writeLocal = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+let basic = readLocal('health-ex-view') !== 'full';
+let cat = readLocal('health-cat');
+function paintView() {
+  const cats = CATS();
+  if (!cats.some(c => c.id === cat)) cat = cats[0].id;
+  viewPage.classList.toggle('basic', basic);
+  for (const c of ['favs', 'know']) viewPage.classList.toggle(`cat-${c}`, cat === c);
+  viewBtn.textContent = basic ? 'Full list' : 'Figures';
+  viewBtn.title = basic ? 'Every section and exercise as a list, with their notes' : 'Just the figures, one category at a time';
+  catTabs.innerHTML = cats.map(c => `<button type="button" class="cat-tab" role="tab" data-cat="${c.id}" aria-selected="${c.id === cat}" style="--sess: ${c.c ? sess(c.c) : 'var(--accent)'}">${esc(c.name)}</button>`).join('');
+  if (!basic) { for (const s of library.querySelectorAll('.sec.on')) s.classList.remove('on'); return; }
+  for (const s of library.querySelectorAll('.sec')) {
+    const on = s.dataset.sec === cat;
+    s.classList.toggle('on', on);
+    if (on) s.open = true;
+  }
+}
+function setCat(id) { cat = id; writeLocal('health-cat', id); paintView(); }
+catTabs.addEventListener('click', e => { const t = e.target.closest('[data-cat]'); if (t) setCat(t.dataset.cat); });
+viewBtn.addEventListener('click', () => {
+  basic = !basic;
+  writeLocal('health-ex-view', basic ? 'basic' : 'full');
+  if (!basic) for (const s of library.querySelectorAll('.sec')) s.open = false;
+  paintView();
+});
+// In Basic a favourite is a figure too: tap it to open its card.
+favsEl.addEventListener('click', e => {
+  if (!basic || e.target.closest('button')) return;
+  const row = e.target.closest('.fav-row');
+  if (row) goToExercise(row.dataset.id);
+});
+
 // One section open at a time, one exercise open at a time.
 document.getElementById('library').addEventListener('toggle', e => {
   const d = e.target;
@@ -1263,6 +1343,7 @@ function flash(el) { el.classList.add('flash'); setTimeout(() => el.classList.re
 function goToExercise(id) {
   const ex = document.getElementById(`ex-${id}`);
   showPage('exercises');
+  if (basic) setCat(ex.closest('.sec').dataset.sec);
   ex.closest('.sec').open = true;
   ex.open = true;
   if (innerWidth < 760) setNotebook(false);
