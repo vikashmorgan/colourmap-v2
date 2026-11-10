@@ -26,7 +26,7 @@ describe('/statistics class page', () => {
     expect(response.headers.get('location')).toBe('http://localhost/login?next=%2Fstatistics');
   });
 
-  it('serves the four lectures to a signed-in user, uncached', async () => {
+  it('serves the five lectures to a signed-in user, uncached', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
 
     const response = await GET(request());
@@ -76,7 +76,7 @@ describe('/statistics class page', () => {
     expect(html).toContain('id="rf-dot"');
     expect(html).toContain("const RF_PREFIX = 'dreams|';");
     expect(html).toContain('Not saved. Your words are still here.');
-    for (const n of [1, 2, 3]) expect(html).toContain(`{ n: ${n}, pages: `);
+    for (const n of [1, 2, 3, 4, 5]) expect(html).toContain(`{ n: ${n}, pages: `);
     // The cheat sheet and the highlights, as on the SQL page.
     expect(html).toContain('const REF = [');
     expect(html).toContain('data-s="ref"');
@@ -106,11 +106,28 @@ describe('/statistics class page', () => {
     expect(html).toContain('const SEG_HUE = 95;');
     // Slides come from the user's private files, never from this public page.
     expect(html).toContain(
-      "const DECK_FILES = ['Stats1.pdf', 'Stats2.pdf', 'Stats3.pdf', 'Stats4.pdf'];",
+      "const DECK_FILES = ['Stats1.pdf', 'Stats2.pdf', 'Stats3.pdf', 'Stats4.pdf', 'Stats5.pdf'];",
     );
     // Nothing of the SQL course is carried over.
     expect(html).not.toContain('sql|');
     expect(html).not.toContain('Business case');
+  });
+
+  it('carries Lecture 5: two variables, correlation and maximum likelihood', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
+
+    const html = await (await GET(request())).text();
+
+    expect(html).toContain("{ n: 5, pages: 34, short: 'Correlation, likelihood'");
+    // Dots for correlation, with r worked out from the dots drawn.
+    expect(html).toContain('function scatter(groups');
+    expect(html).toContain('rOf(deviations)');
+    // Every formula explained piece by piece, the cheat sheet, practice and summary.
+    expect(html).toContain("'5|likelihood': { parts:");
+    expect(html).toContain("{ name: 'Maximum likelihood', items: [");
+    expect(html).toContain("'l5-e6': [");
+    expect(html).toContain('  5: [\n');
+    expect(html).toContain("'Cov(': 'Cov(X, Y)'");
   });
 
   it('carries the Lecture 3 notes of 2026-11-08', async () => {

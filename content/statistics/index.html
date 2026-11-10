@@ -753,6 +753,56 @@ function curve(fn, lo, hi, { cap = '', shade, label, ticks = [], bins, guide, to
 const gauss = (m, sd) => x => Math.exp(-((x - m) ** 2) / (2 * sd * sd)) / (sd * Math.sqrt(2 * Math.PI));
 const unif = (a, b) => x => (x >= a && x <= b ? 1 / (b - a) : 0);
 const expo = l => x => (x < 0 ? 0 : l * Math.exp(-l * x));
+/* Pairs of values as dots, for Lecture 5. The dots are drawn from a fixed seed, so they are the same on every visit,
+   and a caption's r is worked out from the dots drawn. groups: [{ pts: [[x, y], …], hollow }].
+   means: dashed lines at the two averages. fit: the straight-line trend through all the dots, dashed; fitEach: one per group. */
+const seeded = seed => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const normals = (seed, n) => { const u = seeded(seed); return Array.from({ length: n }, () => Math.sqrt(-2 * Math.log(u() || 1e-9)) * Math.cos(2 * Math.PI * u())); };
+function pearson(pts) {
+  const n = pts.length, mx = pts.reduce((a, p) => a + p[0], 0) / n, my = pts.reduce((a, p) => a + p[1], 0) / n;
+  let sxy = 0, sxx = 0, syy = 0;
+  for (const [x, y] of pts) { sxy += (x - mx) * (y - my); sxx += (x - mx) ** 2; syy += (y - my) ** 2; }
+  return { r: sxy / Math.sqrt(sxx * syy), slope: sxy / sxx, mx, my };
+}
+const rOf = pts => pearson(pts).r.toFixed(2).replace('-', '−');
+function scatter(groups, { lo, hi, ylo, yhi, ticks = [], yticks = [], x: xName = '', y: yName = '', cap = '', means, fit, fitEach } = {}) {
+  const W = 340, L = 50, Rt = 8, T = 18, base = 120, H = xName ? 158 : 138;
+  const X = v => L + ((W - L - Rt) * (v - lo)) / (hi - lo), Y = v => base - ((base - T) * (v - ylo)) / (yhi - ylo);
+  const ink = 'font-family="ui-monospace, Consolas, monospace" font-size="11"', soft = 'font-family="system-ui, sans-serif" font-size="11" fill="var(--soft)"';
+  const all = groups.flatMap(g => g.pts), num = t => esc(String(t).replace('-', '−'));
+  const trend = (pts, dash) => {
+    const { slope, mx, my } = pearson(pts), xs = pts.map(p => p[0]), a = Math.min(...xs), b = Math.max(...xs);
+    return `<line x1="${X(a).toFixed(1)}" y1="${Y(my + slope * (a - mx)).toFixed(1)}" x2="${X(b).toFixed(1)}" y2="${Y(my + slope * (b - mx)).toFixed(1)}" stroke="var(--ink)" stroke-width="1.5"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
+  };
+  let marks = yticks.map(t => `<line x1="${L}" x2="${W - Rt}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" stroke="var(--line)" stroke-dasharray="2 3"/><text x="${L - 5}" y="${(Y(t) + 3.5).toFixed(1)}" text-anchor="end" fill="var(--soft)" ${ink}>${num(t)}</text>`).join('');
+  if (means) {
+    const { mx, my } = pearson(all);
+    marks += `<line x1="${X(mx).toFixed(1)}" x2="${X(mx).toFixed(1)}" y1="${T}" y2="${base}" stroke="var(--ink)" stroke-dasharray="3 3"/><line x1="${L}" x2="${W - Rt}" y1="${Y(my).toFixed(1)}" y2="${Y(my).toFixed(1)}" stroke="var(--ink)" stroke-dasharray="3 3"/>`;
+  }
+  marks += groups.map(g => g.pts.map(([a, b]) => `<circle cx="${X(a).toFixed(1)}" cy="${Y(b).toFixed(1)}" r="2.6" fill="${g.hollow ? 'none' : 'var(--accent)'}" fill-opacity=".7" stroke="var(--accent)" stroke-width="${g.hollow ? 1.2 : 0}"/>`).join('')).join('');
+  if (fit) marks += trend(all, 1);
+  if (fitEach) marks += groups.map(g => trend(g.pts, 0)).join('');
+  const tickMarks = ticks.map(t => `<text x="${X(t).toFixed(1)}" y="${base + 15}" text-anchor="middle" fill="var(--soft)" ${ink}>${num(t)}</text>`).join('');
+  const names = `<text x="2" y="10" ${soft}>${esc(yName)}</text>${xName ? `<text x="${((L + W - Rt) / 2).toFixed(1)}" y="${base + 33}" text-anchor="middle" ${soft}>${esc(xName)}</text>` : ''}`;
+  return `<figure class="pmf curve"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cap)}">${marks}<line x1="${L}" x2="${L}" y1="${T - 6}" y2="${base}" stroke="var(--soft)"/><line x1="${L}" x2="${W}" y1="${base}" y2="${base}" stroke="var(--soft)"/>${tickMarks}${names}</svg>${cap ? `<figcaption>${text(cap)}</figcaption>` : ''}</figure>`;
+}
+// Lecture 5's data, drawn once. Weekly ad spending (thousand euros) and orders: regular and holiday weeks.
+const adWeeks = (() => {
+  const e = normals(7, 104), reg = [], hol = [];
+  for (let i = 0; i < 104; i++) {
+    const holiday = i >= 80, x = holiday ? 18 + (i - 80) * 0.5 : 3 + (i * 13) / 80;
+    (holiday ? hol : reg).push([x, holiday ? 1750 + 12 * (x - 18) + 110 * e[i] : 800 + 11 * x + 120 * e[i]]);
+  }
+  return { reg, hol };
+})();
+// Satisfaction against the delivery deviation in hours: high near the promise, low far from it, early or late.
+const deviations = (() => { const e = normals(11, 150), u = seeded(5); return e.map(z => { const d = -5 + 15 * u(); return [d, Math.max(2, 92 - 2.6 * (d - 2.5) ** 2 + 8 * z)]; }); })();
+// Pairs with a chosen correlation ρ: y = ρx + √(1 − ρ²) × noise.
+const corrPairs = (rho, seed) => { const a = normals(seed, 120), b = normals(seed + 1, 120); return a.map((x, i) => [x, rho * x + Math.sqrt(1 - rho * rho) * b[i]]); };
+const corrPanel = (rho, seed) => { const pts = corrPairs(rho, seed); return scatter([{ pts }], { lo: -3.5, hi: 3.5, ylo: -3.5, yhi: 3.5, cap: `ρ = ${String(rho).replace('-', '−')}: these dots give r = ${rOf(pts)}` }); };
+const likeBuy = p => p ** 6 * (1 - p) ** 34;
+// Delay X in days and support contacts Y of one order, with the marginal PMFs in the margins.
+const jointDelays = () => tbl(['delay X ↓  contacts Y →', 'Y = 0', 'Y = 1', 'Y = 2', 'm_X(x)'], [['X = 0', '0.44', '0.14', '0.02', '0.60'], ['X = 1', '0.13', '0.13', '0.04', '0.30'], ['X = 2', '0.03', '0.03', '*0.04', '0.10'], ['m_Y(y)', '0.60', '0.30', '0.10', '1']]);
 // A box plot lying down: the box is Q₁ to Q₃, the line inside is the median, the whiskers reach the farthest usual values.
 /* Romeo and Juliet: each delay 0 to 60 minutes, one point per pair of delays; they meet in the band |R − J| ≤ 15. */
 function romeoSquare() {
@@ -1015,6 +1065,63 @@ const SESSIONS = [
       ['Which summaries barely move? Which ones describe a typical ride?', () => `<p>The mean rose by 8.2 and the SD by 22.34, because they use every value. The median rose by 0.5 and the IQR by 0, because they depend on the middle of the sorted data. They are <b>robust</b>.</p><p>Nine of the ten rides took at most 19 minutes, so the median, 14.5 minutes, describes a typical ride. The mean, 22.2 minutes, does not.</p>`],
     ] },
   ], recap: ['For a continuous variable, a probability is an area under the density f_X. The total area is 1, and the height is not a probability.', 'One exact value has probability 0, so endpoints do not matter.', 'Uniform: flat on a window. Exponential: the wait for the next event, P(X > a) = e^(−λa). Gaussian: a bell, for totals of many small effects.', 'Mean and variance work as in Lecture 3, with ∫ in place of Σ.', 'The CDF is F_X(x) = P(X ≤ x), and P(a < X ≤ b) = F_X(b) − F_X(a). A quantile reads it backwards.', 'Gaussian: z = (x − μ)/σ, then the table of Φ. Going back, the quantile is μ + zσ.', 'A model has μ and σ. Data have x̄ and s, with n − 1. The median and IQR are robust, and the mean and SD are not.'] },
+  { n: 5, pages: 34, short: 'Correlation, likelihood', title: 'Multiple variables and maximum likelihood', lede: 'Two numbers about the same order, and whether they move together. Then a rule for choosing the model that fits the data best.', groups: [
+    { name: 'Multiple random variables', cards: [
+      { id: 'joint', slide: 4, name: 'The question: do long delays come with more support contacts?', what: 'Pick one Nookery order at random and record two numbers about it: X, its delay in days, and Y, how many times the customer contacted support. Until now each lecture had one random variable. Here there are two, about the same order.\n\nThe joint PMF gives the probability of each pair of values, such as "delayed 1 day and 2 contacts". It is a table with one cell per pair, and since the order lands in exactly one cell, all the cells add up to 1.', f: 'm_X,Y(x, y) = P(X = x, Y = y)', more: { html: () => jointDelays() } },
+      { id: 'marginal', slide: 4, name: 'Marginal PMFs: add along a row or a column', what: 'From the joint table you can get back the PMF of X alone. "Delay 0" happens with 0, 1 or 2 contacts: three cells that cannot happen together, so their probabilities add. That is the row sum.\n\nDo this for every row and you have the PMF of X. Do it for every column and you have the PMF of Y. They are called marginal PMFs because they are written in the margins of the table.', f: 'm_X(x) = Σ over y m_X,Y(x, y)     a row sum\nm_Y(y) = Σₓ m_X,Y(x, y)     a column sum', more: { say: 'Delay 0: m_X(0) = 0.44 + 0.14 + 0.02 = 0.60. The margins of the table above hold all six sums.' } },
+      { id: 'independent-rv', slide: 5, name: 'Independent random variables', what: 'Two variables are independent when learning one tells you nothing about the other. In numbers: every cell of the joint table equals its row total times its column total. It is the rule for independent events from Lecture 2, applied to every pair of values.\n\nOne cell that breaks the rule is enough to make them dependent. Here, among orders delayed 2 days, 40 % had 2 contacts, against 10 % of all orders. So long delays do come with more contacts.', f: 'independent:  m_X,Y(x, y) = m_X(x) m_Y(y)  for every pair', watch: 'You must check every cell. A few matching cells prove nothing; one cell that differs is enough to say dependent.', more: { html: () => tbl(['cell', 'joint', 'm_X(x) m_Y(y)', 'equal?'], [['x = 2, y = 2', '0.04', '0.10 × 0.10 = 0.01', '*no']]) } },
+      { id: 'sums', slide: 6, name: 'Means add; for independent variables, variances add', what: 'An order is packed in X minutes, then waits Y minutes for the courier. The total time is X + Y. Its mean is simply the mean of X plus the mean of Y. This is always true, whether or not the two are linked.\n\nThe variance of the total is the variance of X plus the variance of Y, but only when X and Y are independent. If they were linked, for example a slow packing often followed by a long wait, the spreads would pile up and this rule would fail.\n\nThis also explains Lecture 3: a binomial count adds n independent Bernoulli variables, each with mean p and variance p(1 − p). So its mean is np and its variance np(1 − p).', f: 'E[X + Y] = E[X] + E[Y]     always\nVar(X + Y) = Var(X) + Var(Y)     if X and Y are independent', watch: 'SDs do not add. Add the variances, then take the root: √409 = 20.2 minutes, not 3 + 20 = 23.', more: { say: 'Packing X ∼ N(12, 3) and waiting Y ∼ Exp(0.05), in minutes, independently. Waiting has mean 1/0.05 = 20 and variance 1/0.05² = 400.', html: () => tbl(['', 'mean', 'variance'], [['packing X', '12', '9'], ['waiting Y', '20', '400'], ['total X + Y', '*32', '*409']]) } },
+      { id: 'iid', slide: 7, name: 'Many independent variables: probabilities multiply', what: 'With many independent variables, the chance of a whole list of values is the product of their single chances, the same rule as for independent events.\n\nWhen they are also identically distributed, meaning they all follow the same model, they are called i.i.d.: independent and identically distributed. Think of four visitors on a page, each buying with the same chance 0.2, none affecting the others. This idea is the base of everything in the last part of this lecture.', f: 'm_X₁,…,Xₙ(x₁, …, xₙ) = m_X₁(x₁) × … × m_Xₙ(xₙ)', more: { say: 'Four visitors, Xᵢ ∼ Ber(0.2) i.i.d., where 1 means the visitor buys. The sequence 1, 0, 0, 1:', html: () => tbl(['visitor', 'xᵢ', 'm(xᵢ)'], [['1', '1', '0.2'], ['2', '0', '0.8'], ['3', '0', '0.8'], ['4', '1', '0.2'], ['product', '', '*0.0256']]) } },
+    ] },
+    { name: 'Correlation', cards: [
+      { id: 'covariance', slide: 12, name: 'Covariance: do two variables move together?', what: 'Over 104 weeks, Nookery noted X, its ad spending, and Y, its orders. Draw a dashed line at each average. In the top right and the bottom left, both are above their average or both are below, so the two deviations, X − μ_X and Y − μ_Y, have the same sign and their product is positive. In the other two corners the product is negative.\n\nThe covariance is the average of that product. Positive means the two tend to move up together; negative means one goes up when the other goes down; near 0 means no straight-line link. Expanding the product gives a second, quicker formula.', f: 'Cov(X, Y) = E[(X − μ_X)(Y − μ_Y)]\n= E[XY] − μ_X μ_Y', more: { html: () => scatter([{ pts: [...adWeeks.reg, ...adWeeks.hol] }], { lo: 0, hi: 32, ylo: 600, yhi: 2000, ticks: [0, 10, 20, 30], yticks: [1000, 1500, 2000], x: 'ad spending in the week, thousand euros', y: 'orders in the week', means: 1, cap: 'A drawing shaped like the deck’s 104 weeks. Dashed: the two averages. Most weeks sit in the top right or the bottom left.' }) } },
+      { id: 'correlation', slide: 13, name: 'Correlation is a covariance without units', what: 'A covariance comes in strange units, such as "euros times orders", so its size says little. Divide it by the two SDs and the units cancel. The result is the correlation, written ρ (the Greek letter rho). It always lies between −1 and 1.\n\nClose to 1: the dots lie near a rising line. Close to −1: near a falling line. Near 0: no straight-line pattern. From data, the sample correlation r does the same with averages in place of means and n − 1, as for s in Lecture 4. For ads and orders, r = 0.92.', f: 'ρ = Cov(X, Y) / (σ_X σ_Y)     between −1 and 1\nr = s_xy / (s_x s_y)\ns_xy = (1/(n − 1)) Σᵢ (xᵢ − x̄)(yᵢ − ȳ)', more: { html: () => row(corrPanel(-0.8, 21), corrPanel(0, 31), corrPanel(0.5, 41), corrPanel(0.95, 51)) } },
+      { id: 'corr-example', slide: 14, name: 'Delays and contacts: how strong is the link?', what: 'Back to the joint table of delays and contacts. Five steps give the correlation. First the two means, then the mean of the product X × Y, cell by cell: only the cells where both are at least 1 count, because elsewhere the product is 0. Then the covariance by the quick formula, the two variances, and finally the division.\n\nThe result, 0.40, is positive and moderate: longer delays tend to come with more contacts, but far from always.', f: '1. μ_X = μ_Y = 0.30 + 2 × 0.10 = 0.50\n2. E[XY] = 1 × 0.13 + 2 × 0.04 + 2 × 0.03 + 4 × 0.04 = 0.43\n3. Cov(X, Y) = 0.43 − 0.50 × 0.50 = 0.18\n4. σ_X² = σ_Y² = 0.30 + 4 × 0.10 − 0.50² = 0.45\n5. ρ = 0.18 / √(0.45 × 0.45) = 0.40', more: { html: () => jointDelays() } },
+      { id: 'zero-corr', slide: 15, name: 'Zero correlation does not mean independence', what: 'Independent variables always have a correlation of 0. The reverse is false.\n\nCustomers dislike deliveries far from the promised time, early or late. So the satisfaction score clearly depends on the deviation: it is high near the promise and low far from it. Yet the correlation is close to 0, because the left half slopes up and the right half slopes down, and the two cancel. Correlation only measures a straight-line link. So always plot the data before trusting r.', watch: 'r = 0 means "no straight-line link", not "no link".', more: { html: () => scatter([{ pts: deviations }], { lo: -5, hi: 10, ylo: 0, yhi: 100, ticks: [-5, 0, 5, 10], yticks: [50, 100], x: 'delivery deviation, hours (negative = early)', y: 'satisfaction score', cap: `A drawing of 150 deliveries shaped like the deck’s: r = ${rOf(deviations)}, yet the score clearly depends on the deviation` }) } },
+      { id: 'causation', slide: 16, name: 'Do ads bring orders? Correlation is not causation', what: 'Across 104 weeks, r = 0.92, and 1,000 euros more in ads goes with about 45 more orders. It is tempting to conclude that ads bring orders.\n\nBut the holiday season raises both: more customers come, and Nookery spends more on ads because it expects them. Within one season, 1,000 euros more goes with only 9 to 14 more orders, and r falls to 0.33 and 0.46. Most of the link came from the season.\n\nIf X and Y are correlated, X may cause Y, Y may cause X, or a third factor may cause both.', watch: 'A correlation alone never shows which causes which, or whether either does.', more: { html: () => scatter([{ pts: adWeeks.reg }, { pts: adWeeks.hol, hollow: 1 }], { lo: 0, hi: 32, ylo: 600, yhi: 2000, ticks: [0, 10, 20, 30], yticks: [1000, 1500, 2000], x: 'ad spending in the week, thousand euros', y: 'orders in the week', fit: 1, fitEach: 1, cap: `A drawing shaped like the deck’s data. Filled: regular weeks, r = ${rOf(adWeeks.reg)}. Hollow: holiday weeks, r = ${rOf(adWeeks.hol)}. Dashed: the trend through all weeks, r = ${rOf([...adWeeks.reg, ...adWeeks.hol])}. Solid: within each season.` }) } },
+    ] },
+    { name: 'Choosing a model with maximum likelihood', flowLabel: 'Maximum likelihood in four steps', flow: ['List the candidates', 'Assume one is true', 'Compute the likelihood of the data', 'Pick the largest'], cards: [
+      { id: 'which-model', slide: 21, name: 'The question: six buyers among forty visitors', what: 'Of the first 40 visitors of a new Nookery page, 6 buy. Marketing expected a conversion rate of 0.25. An analyst proposes 0.15. Who is closer?\n\nModel the visits as i.i.d. Ber(p): each visitor buys with the same chance p, independently. Each value of p gives a different model, so choosing p means choosing a model. In general the unknown number is written θ (theta) and called a parameter, and the values in play are the candidates. The question becomes: which candidate fits the data best, and by how much?' },
+      { id: 'fisher', slide: 22, name: 'Fisher: choose what makes the data most probable', what: 'In 1912, still a student at Cambridge, Ronald Fisher proposed a rule for fitting a model to data: choose the parameter value under which the data you observed are most probable. In 1922 he named it maximum likelihood. Many statistical and machine learning models are still fitted this way today.\n\nThe rule asks each candidate one question: if this were the true model, how probable would our data be?' },
+      { id: 'likelihood', slide: 23, name: 'The likelihood of a candidate', what: 'Take the candidate p = 0.15 and pretend it is true. The visits are independent, so their probabilities multiply: p for each of the 6 buyers, and 1 − p for each of the 34 others. The result is the probability of the exact sequence of 40 visits we saw. It is called the likelihood of the candidate, written L(p).\n\nIn general, L(θ) = P(data ∣ θ). As in Lecture 2, the data are the effect and θ is the cause. To compare two candidates, divide their likelihoods: the data are 3.3 times as probable under 0.15 as under 0.25.', f: 'L(θ) = P(data ∣ θ)\nL(p) = p⁶ (1 − p)³⁴\nL(0.15) / L(0.25) = 4.54 × 10⁻⁸ / 1.38 × 10⁻⁸ = 3.3', watch: 'The likelihoods are tiny because they are the chance of one exact sequence of 40 visits. Only the ratio between candidates matters.', more: { html: () => tbl(['', 'p = 0.15', 'p = 0.25'], [['one buyer', '0.15', '0.25'], ['one non-buyer', '0.85', '0.75'], ['p⁶ (1 − p)³⁴', '*4.54 × 10⁻⁸', '1.38 × 10⁻⁸']]) } },
+      { id: 'not-prob', slide: 24, name: 'The likelihood fixes the data and varies the candidate', what: 'Draw L(p) for every candidate p from 0 to 1. The data stay fixed, 6 buyers among 40, and each point of the curve answers: how probable are these data if the rate were p? Values near 0.5 make 6 buyers among 40 very improbable, so the curve is almost 0 there.\n\nThis curve is not a density for p. Maximum likelihood treats p as a fixed unknown number, not a random one. That is why the area under the curve is not 1.', watch: 'L(p) is a probability of the data, not of p. "L(0.3) = 0.0022" does not mean "p = 0.3 has probability 0.0022".', more: { html: () => curve(p => likeBuy(p) * 1e8, 0, 0.6, { guide: [0.15, likeBuy(0.15) * 1e8], ticks: [0, 0.15, 0.25, 0.4, 0.6], x: 'candidate p', y: 'L(p) × 10⁸', cap: 'The likelihood of each candidate, for 6 buyers among 40. The peak is at 0.15' }) } },
+      { id: 'four-steps', slide: 25, name: 'Maximum likelihood in four steps', what: 'First list the candidates: a model, Ber(p), and a grid of values, p = 0.05 up to 0.30. Then, for one candidate at a time, assume it is the true model and compute how probable the data are: its likelihood. Move to the next candidate and repeat. Finally pick the candidate with the largest likelihood. It is called the maximum likelihood estimate, the MLE, written θ̂ ("theta hat").\n\nWith i.i.d. data the likelihood is always a product with one factor per observation, where f is the PMF or the density. Its logarithm turns the product into a sum, which is easier to compute.', f: 'L(θ) = f(x₁ ∣ θ) × … × f(xₙ ∣ θ)\nln L(θ) = ln f(x₁ ∣ θ) + … + ln f(xₙ ∣ θ)\nθ̂ = the candidate with the largest L(θ)' },
+      { id: 'grid', slide: 26, name: 'Search a grid for the best candidate', what: 'For the 40 visits, take six candidates, from 0.05 to 0.30 in steps of 0.05, and compute the likelihood of each. The largest is at 0.15, so the MLE is p̂ = 0.15.\n\nFor more digits, search a finer grid around it, in steps of 0.01. Here it gives 0.15 again. No special formula is needed, only a way to compute L for each candidate. Notice that 0.15 is 6/40, the share of buyers in the data.', more: { html: () => tbl(['p', 'L(p) × 10⁸'], [['0.05', '0.27'], ['0.10', '2.78'], ['0.15', '*4.54'], ['0.20', '3.25'], ['0.25', '1.38'], ['0.30', '0.39']]) } },
+      { id: 'log', slide: 27, name: 'Logarithms avoid numbers too small to store', what: 'With 40,000 visits and 6,000 buyers, L(0.15) is about 10⁻⁷³⁴³: a decimal point followed by more than 7,000 zeros. A computer rounds it to 0, and then every candidate looks the same.\n\nThe fix is to take the logarithm, written ℓ(θ) = ln L(θ). Since ln(ab) = ln a + ln b, the product becomes a sum of ordinary numbers. The logarithm only grows as its input grows, so L and ℓ peak at the same candidate: the MLE does not change.', f: 'ℓ(θ) = ln L(θ)     ln(ab) = ln a + ln b\nℓ(p) = 6 ln p + 34 ln(1 − p)', more: { html: () => tbl(['p', 'ℓ(p)'], [['0.05', '−19.72'], ['0.15', '*−16.91'], ['0.25', '−18.10'], ['0.35', '−20.95'], ['0.45', '−25.12']]) } },
+      { id: 'continuous', slide: 28, name: 'Continuous data: multiply the heights of the density', what: 'The same search works with a density. Nookery records five delivery deviations, in hours: 1.5, −0.5, 2.0, 0.5 and 1.5. Model them as i.i.d. N(μ, 1): a bell with unknown centre μ and SD 1.\n\nFor each candidate μ, read the height of the bell at each data point and multiply the five heights. The largest product is at μ = 1 hour: there the data sit near the peak of the bell.', f: 'L(μ) = f(x₁ ∣ μ) × … × f(x₅ ∣ μ)', more: { html: () => curve(gauss(1, 1), -2.5, 4.5, { ticks: [-0.5, 0.5, 1, 1.5, 2], x: 'delivery deviation, hours', cap: 'N(1, 1), the best candidate. The data sit at −0.5, 0.5, 1.5 (twice) and 2.0' }) + tbl(['μ', '0', '0.5', '1', '1.5', '2'], [['L(μ) × 10³', '0.11', '0.73', '*1.37', '0.73', '0.11']]) } },
+      { id: 'poor-model', slide: 29, name: 'The best candidate can still be a poor model', what: 'A grid over μ and σ finds the best Gaussian for 500 support handling times: N(10.3, 7.2), in minutes. But the times are skewed, like the handling-time density of Lecture 4, with a long tail of slow tickets. The bell is symmetric, so it puts probability 0.076 on negative times, which never happen.\n\nMaximum likelihood only chooses among the candidates on the list. It does not tell you that the list contains a good model. So always compare the chosen model with the data.', watch: 'The MLE is the best on the list, not necessarily good.', more: { html: () => row(curve(x => (x <= 0 ? 0 : (x * Math.exp(-x / 5.15)) / 5.15 ** 2), -15, 45, { ticks: [0, 20, 40], x: 'handling time, minutes', cap: 'The handling times: skewed, never below 0' }), curve(gauss(10.3, 7.2), -15, 45, { shade: [-15, 0], label: '0.076', ticks: [0, 20, 40], x: 'handling time, minutes', cap: 'The best Gaussian: 0.076 below 0' })) } },
+    ] },
+  ], practice: [
+    { id: 'l5-e1', title: 'Two packing desks', setup: 'Two Nookery packing desks work separately. In one hour, desk A makes X errors and desk B makes Y errors, with the joint PMF in the table.', table: () => tbl(['X ↓  Y →', 'Y = 0', 'Y = 1', 'Y = 2'], [['X = 0', '0.40', '0.24', '0.16'], ['X = 1', '0.10', '0.06', '0.04']]), parts: [
+      ['Compute the marginal PMFs of X and Y. Are X and Y independent?', () => tbl(['X ↓  Y →', 'Y = 0', 'Y = 1', 'Y = 2', 'm_X(x)'], [['X = 0', '0.40', '0.24', '0.16', '*0.80'], ['X = 1', '0.10', '0.06', '0.04', '*0.20'], ['m_Y(y)', '*0.50', '*0.30', '*0.20', '1']]) + `<pre>m_X(0) = 0.40 + 0.24 + 0.16 = 0.80\nm_X(0) m_Y(0) = 0.80 × 0.50 = 0.40 = m_X,Y(0, 0)</pre><p>The same check holds in all six cells, so X and Y are <b>independent</b>.</p>`],
+      ['Compute the mean and the variance of the total X + Y.', () => `<pre>X:  E[X] = 0.20     E[X²] = 0.20     Var(X) = 0.20 − 0.20² = 0.16\nY:  E[Y] = 0.30 + 2 × 0.20 = 0.70\n    E[Y²] = 0.30 + 4 × 0.20 = 1.10\n    Var(Y) = 1.10 − 0.70² = 0.61\n\nE[X + Y] = 0.20 + 0.70 = 0.90 errors\nVar(X + Y) = 0.16 + 0.61 = 0.77 errors²</pre><p>Means always add. The variances add because X and Y are independent.</p>`],
+    ] },
+    { id: 'l5-e2', title: 'Emails and orders', setup: 'Over five weeks, Nookery records the promotional emails sent, x in thousands, and the orders received, y in hundreds: (1, 2), (2, 4), (3, 5), (4, 4) and (5, 5).', parts: [
+      ['Compute the sample correlation r.', () => tbl(['xᵢ − x̄', 'yᵢ − ȳ', '(xᵢ − x̄)²', '(yᵢ − ȳ)²', 'product'], [['−2', '−2', '4', '4', '4'], ['−1', '0', '1', '0', '0'], ['0', '1', '0', '1', '0'], ['1', '0', '1', '0', '0'], ['2', '1', '4', '1', '2'], ['*0', '*0', '*10', '*6', '*6']]) + `<pre>x̄ = 15 / 5 = 3     ȳ = 20 / 5 = 4\ns_xy = 6 / 4 = 1.5     s_x² = 10 / 4 = 2.5     s_y² = 6 / 4 = 1.5\nr = 1.5 / √(2.5 × 1.5) = 0.77</pre>`],
+      ['The manager concludes that more emails bring more orders. Nookery sends more emails in the weeks of its sales. Does r support the conclusion?', () => `<p><b>No.</b> r = 0.77 says that weeks with more emails had more orders. It does not say why. Sales raise both the emails and the orders, so a third factor can explain the correlation. Correlation alone does not establish causation.</p>`],
+    ] },
+    { id: 'l5-e3', title: 'Returned lamps', setup: 'Of 10 Nookery lamp orders, 3 were returned. Model the returns as i.i.d. Ber(p). The supplier claims p = 0.1, and Nookery replaces the supplier if the chosen rate is 0.3 or more.', parts: [
+      ['Write L(p) and compute it for p = 0.1, 0.2, 0.3, 0.4 and 0.5. Give the MLE on this grid, and its likelihood ratio against the supplier’s claim. Should Nookery replace the supplier?', () => `<pre>L(p) = p³ (1 − p)⁷</pre>` + tbl(['p', '0.1', '0.2', '0.3', '0.4', '0.5'], [['L(p)', '0.00048', '0.00168', '*0.00222', '0.00179', '0.00098']]) + `<pre>p̂ = 0.3\nL(0.3) / L(0.1) = (0.3³ × 0.7⁷) / (0.1³ × 0.9⁷) = 4.65</pre><p>The MLE reaches 0.3, so Nookery should <b>replace the supplier</b>. The data are 4.65 times as probable under 0.3 as under the supplier’s claim.</p>`],
+      ['A colleague says: "L(0.3) = 0.0022, so p = 0.3 has probability 0.0022." Correct the sentence.', () => `<p>The likelihood is a probability of the data, given the candidate: L(0.3) = P(data ∣ p = 0.3). It is not P(p = 0.3).</p><p>The correct sentence: "If p were 0.3, the observed returns would have probability 0.0022."</p>`],
+    ] },
+    { id: 'l5-e4', title: 'Two variables and their sum', setup: 'From the exercise sheet. X and Y have the joint PMF in the table. Let S = X + Y.', table: () => tbl(['X ↓  Y →', 'Y = 0', 'Y = 1', 'Y = 2'], [['X = 1', '0.2', '0.1', '0.1'], ['X = 2', '0.1', '0.3', '0.2']]), parts: [
+      ['Compute the marginal PMFs of X and Y. Are X and Y independent?', () => `<pre>m_X(1) = 0.4     m_X(2) = 0.6\nm_Y(0) = 0.3     m_Y(1) = 0.4     m_Y(2) = 0.3\n\nm_X(1) m_Y(0) = 0.4 × 0.3 = 0.12,  but  m_X,Y(1, 0) = 0.2</pre><p>One cell differs, so X and Y are <b>dependent</b>.</p>`],
+      ['Write the PMF of S, and compute E[S] and Var(S).', () => tbl(['s', '1', '2', '3', '4'], [['m_S(s)', '0.2', '0.2', '0.4', '0.2']]) + `<pre>S = 3 comes from (1, 2) and (2, 1): 0.1 + 0.3 = 0.4\nE[S] = 0.2 + 0.4 + 1.2 + 0.8 = 2.6\nE[S²] = 0.2 + 0.8 + 3.6 + 3.2 = 7.8\nVar(S) = 7.8 − 2.6² = 1.04</pre>`],
+      ['Compare E[S] with E[X] + E[Y], and Var(S) with Var(X) + Var(Y). Explain.', () => `<pre>E[X] = 1.6     E[Y] = 1.0     E[X] + E[Y] = 2.6 = E[S]\nVar(X) = 2.8 − 1.6² = 0.24\nVar(Y) = 1.6 − 1.0² = 0.60\nVar(X) + Var(Y) = 0.84,  not 1.04</pre><p>Means always add. Variances add only for independent variables, and these are dependent: they tend to be large together, so the total spreads more.</p>`],
+      ['Compute the covariance and the correlation of X and Y.', () => `<pre>E[XY] = 1 × 0.1 + 2 × 0.1 + 2 × 0.3 + 4 × 0.2 = 1.7\nCov(X, Y) = 1.7 − 1.6 × 1.0 = 0.1\nρ = 0.1 / √(0.24 × 0.60) = 0.26</pre><p>A weak positive link. It also explains the gap above: Var(X) + Var(Y) + 2 Cov(X, Y) = 0.84 + 0.2 = 1.04.</p>`],
+    ] },
+    { id: 'l5-e5', title: 'The best Poisson model', setup: 'From the exercise sheet. Three independent windows give the counts 1, 3 and 2. Model them as i.i.d. Pois(λ), with the candidates λ = 1, 2 and 3.', parts: [
+      ['Write the likelihood L(λ) and compute it for each candidate. Which one is the MLE on this grid, and how many times as probable are the data under it as under λ = 1?', () => `<pre>L(λ) = e^(−λ) λ¹/1! × e^(−λ) λ³/3! × e^(−λ) λ²/2! = e^(−3λ) λ⁶ / 12</pre>` + tbl(['λ', '1', '2', '3'], [['L(λ)', '0.00415', '*0.01322', '0.00750']]) + `<pre>λ̂ = 2\nL(2) / L(1) = 0.01322 / 0.00415 = 3.19</pre><p>λ̂ = 2 is the average count, (1 + 3 + 2) / 3.</p>`],
+      ['Compute the log-likelihood ℓ(λ) = ln L(λ) of each candidate. Which one has the largest value?', () => tbl(['λ', '1', '2', '3'], [['ℓ(λ)', '−5.485', '*−4.326', '−4.893']]) + `<p>λ = 2 again: the logarithm only grows with L, so it peaks at the same candidate.</p>`],
+      ['A colleague proposes Bin(4, 0.5) for the same counts. Which model fits the data better, Pois(2) or Bin(4, 0.5), and by how many times?', () => `<pre>Bin(4, 0.5):  P(1) = 4/16     P(3) = 4/16     P(2) = 6/16\nL = 0.25 × 0.25 × 0.375 = 0.0234\n0.0234 / 0.01322 = 1.77</pre><p><b>Bin(4, 0.5)</b> fits better: the data are 1.77 times as probable under it.</p>`],
+    ] },
+    { id: 'l5-e6', title: 'A paid membership', setup: 'From the exercise sheet. Nookery offers a paid membership to 10 customers, and 4 join. Model the answers as i.i.d. Ber(p), with the candidates 0.2, 0.3, 0.4 and 0.5. Offering it to 1,000 customers costs 4,000 euros, and each member brings 15 euros. Nookery launches if the MLE gives a profit and the data are at least 5 times as probable under the MLE as under every candidate with a loss.', parts: [
+      ['Write L(p) and compute it for each candidate. Which is the MLE on this grid?', () => `<pre>L(p) = p⁴ (1 − p)⁶</pre>` + tbl(['p', '0.2', '0.3', '0.4', '0.5'], [['L(p) × 10⁴', '4.19', '9.53', '*11.94', '9.77']]) + `<pre>p̂ = 0.4</pre>`],
+      ['Write the profit g(p) of 1,000 offers for each candidate. Which ones give a loss?', () => `<pre>g(p) = 1,000 × p × 15 − 4,000 = 15,000p − 4,000</pre>` + tbl(['p', '0.2', '0.3', '0.4', '0.5'], [['g(p), euros', '*−1,000', '500', '2,000', '3,500']]) + `<p>Only p = 0.2 gives a loss.</p>`],
+      ['Compute the likelihood ratio of the MLE against the candidate with a loss. Launch?', () => `<pre>L(0.4) / L(0.2) = 11.94 / 4.19 = 2.85</pre><p><b>Not yet.</b> The MLE gives a profit, but 2.85 is below 5: ten answers cannot rule out a loss.</p>`],
+      ['A larger test has 16 joining among 40 customers. Repeat the MLE and the ratio. Launch?', () => `<pre>L(p) = p¹⁶ (1 − p)²⁴\np̂ = 0.4, again\nL(0.4) / L(0.2) = 65.8</pre><p><b>Launch.</b> The same share of members, 40 %, but four times as many answers: the data are now 65.8 times as probable under 0.4 as under 0.2, far above 5.</p>`],
+    ] },
+  ], recap: ['A joint PMF gives each pair of values a probability. Row and column sums give the marginal PMFs.', 'X and Y are independent if every cell equals m_X(x) m_Y(y).', 'Means always add. Variances add for independent variables.', 'i.i.d. variables: the probability of the whole list is the product.', 'Covariance and correlation measure how two variables move together on a straight line. ρ is between −1 and 1.', 'r = 0 does not mean independent, and a correlation does not show a cause.', 'The likelihood L(θ) = P(data ∣ θ). The MLE θ̂ is the candidate with the largest L. Compare two candidates by their ratio.', 'Use ℓ(θ) = ln L(θ) for many data: it peaks at the same candidate.', 'The MLE is the best on the list, not necessarily a good model.'] },
 ];
 SESSIONS.forEach(s => { let k = 0; for (const g of s.groups) for (const c of g.cards) c.num = `${s.n}.${++k}`; });
 const readSize = () => Number(document.documentElement.style.getPropertyValue('--read')) || 1;
@@ -1046,6 +1153,12 @@ const PICTURES = {
     + curve(x => Math.min(1, Math.max(0, x / 180)), -20, 200, { top: 1.1, guide: [162, 0.9], ticks: [[0, '9:00'], [162, '11:42']], x: 'arrival time', y: 'P(X ≤ x)', cap: 'The courier has come by 11:42 with probability 0.9' })
     + `<p class="pic-lede"><b>Data</b> are summarised by a mean and SD, or by a median and quartiles, drawn as a <b>box plot</b>:</p>`
     + boxplot({ lo: -15, hi: 40, q1: 2.52, med: 5.25, q3: 10.08, wlo: -8.7, whi: 21.41, out: [25, 28, 31, 34, 37], ticks: [-10, 0, 10, 20, 30, 40], cap: 'Margins of 2,000 orders, in euros' }),
+  5: () => `<p class="pic-lede">Two numbers about one order: its delay <b>X</b> and its support contacts <b>Y</b>. The <b>joint PMF</b> gives each pair a probability; the margins hold the PMF of each one alone. The marked cell shows they are <b>dependent</b>: 0.04, against 0.10 × 0.10 = 0.01.</p>`
+    + jointDelays()
+    + `<p class="pic-lede"><b>Correlation</b> measures how two variables move together on a straight line, from −1 to 1. It does not show a cause: here the holiday season raises both ads and orders.</p>`
+    + scatter([{ pts: adWeeks.reg }, { pts: adWeeks.hol, hollow: 1 }], { lo: 0, hi: 32, ylo: 600, yhi: 2000, ticks: [0, 10, 20, 30], yticks: [1000, 1500, 2000], x: 'ad spending in the week, thousand euros', y: 'orders in the week', fit: 1, fitEach: 1, cap: 'Filled: regular weeks. Hollow: holiday weeks. Dashed: all weeks. Solid: within each season.' })
+    + `<p class="pic-lede"><b>Maximum likelihood</b> asks each candidate model how probable it makes the data, and keeps the best. 6 buyers among 40 visitors: the <b>likelihood</b> peaks at p = 0.15.</p>`
+    + curve(p => likeBuy(p) * 1e8, 0, 0.6, { guide: [0.15, likeBuy(0.15) * 1e8], ticks: [0, 0.15, 0.25, 0.4, 0.6], x: 'candidate p', y: 'L(p) × 10⁸', cap: 'L(p) = p⁶ (1 − p)³⁴. The MLE is p̂ = 0.15' }),
 };
 
 /* ---------- Every formula, piece by piece ----------
@@ -1120,6 +1233,19 @@ const READS = {
   '4|model-gives': { parts: [['θ', 'Theta: one number that sets the scale of this density.'], ['μ', 'The mean of the model, here 2θ = 10.'], ['σ_X', 'The SD of the model, here √2 × θ = 7.07.']] },
   '4|sample': { parts: [['x̄', 'x-bar, the sample mean.'], ['n', 'How many values are in the data.'], ['xᵢ', 'Value number i of the data.'], ['Σᵢ', 'Go through the values, i = 1, then 2, up to n, and add.'], ['xᵢ − x̄', 'How far this value falls from the sample mean.'], ['n − 1', 'One less than the count. The card below says why.'], ['s²', 'The sample variance.'], ['s', 'The sample SD, in the units of the data.']], walk: { intro: 'Three tickets, with 1, 2 and 3 minutes:', steps: [['n', '= 3'], ['xᵢ', '= 1, then 2, then 3'], ['Σᵢ xᵢ', '1 + 2 + 3 = 6'], ['x̄ = (1/n) Σᵢ xᵢ', '6 / 3 = 2', 1], ['xᵢ − x̄', '−1, then 0, then 1'], ['(xᵢ − x̄)²', '1, then 0, then 1'], ['Σᵢ (xᵢ − x̄)²', '1 + 0 + 1 = 2'], ['s² = the sum / (n − 1)', '2 / 2 = 1', 1], ['s = √s²', '√1 = 1', 1]] } },
   '4|median': { parts: [['Q₁', 'The first quartile: a quarter of the data is at or below it.'], ['Q₃', 'The third quartile: three quarters of the data is at or below it.'], ['IQR', 'Interquartile range: the width of the middle half.']] },
+
+  '5|joint': { parts: [['m_X,Y', 'The joint PMF: one probability for each pair of values of X and Y.'], ['(x, y)', 'One pair: a value of X and a value of Y, such as delay 1 and 2 contacts.'], ['P(X = x, Y = y)', 'The chance that both happen: the comma means "and".']], walk: { intro: 'Read one cell of the table:', steps: [['x', '= 1 day of delay'], ['y', '= 2 contacts'], ['m_X,Y(1, 2) = P(X = 1, Y = 2)', '= 0.04, the cell in row X = 1, column Y = 2'], ['all nine cells together', 'add up to 1', 1]] } },
+  '5|marginal': { parts: [['m_X(x)', 'The PMF of X alone: the chance of delay x, whatever Y is.'], ['Σ over y', 'Go through every value of Y and add: across the row.'], ['Σₓ', 'Go through every value of X and add: down the column.']], walk: { intro: 'The row of delay 0, and the column of 0 contacts:', steps: [['x', '= 0'], ['m_X,Y(0, y)', '= 0.44, 0.14, 0.02 for y = 0, 1, 2'], ['m_X(0) = Σ over y m_X,Y(0, y)', '0.44 + 0.14 + 0.02 = 0.60', 1], ['m_Y(0) = Σₓ m_X,Y(x, 0)', '0.44 + 0.13 + 0.03 = 0.60', 1]] } },
+  '5|independent-rv': { parts: [['m_X,Y(x, y)', 'The joint probability, read in the table.'], ['m_X(x) m_Y(y)', 'Its row total times its column total.'], ['for every pair', 'All cells must match; one cell that differs means dependent.']], walk: { intro: 'The cell of delay 2 and 2 contacts:', steps: [['m_X,Y(2, 2)', '= 0.04'], ['m_X(2)', '= 0.10'], ['m_Y(2)', '= 0.10'], ['m_X(2) m_Y(2)', '0.10 × 0.10 = 0.01'], ['0.04 = 0.01?', 'no, so X and Y are dependent', 1]] } },
+  '5|sums': { parts: [['X + Y', 'The total: one number made by adding the two.'], ['E[X] + E[Y]', 'The mean of the total is the sum of the means, always.'], ['Var(X) + Var(Y)', 'The variance of the total, only when X and Y are independent.']], walk: { intro: 'Packing X and waiting Y, independent, in minutes:', steps: [['E[X]', '= 12'], ['E[Y] = 1/λ', '1/0.05 = 20'], ['E[X + Y] = E[X] + E[Y]', '12 + 20 = 32 minutes', 1], ['Var(X) = σ²', '3² = 9'], ['Var(Y) = 1/λ²', '1/0.05² = 400'], ['Var(X + Y) = Var(X) + Var(Y)', '9 + 400 = 409 minutes²', 1], ['SD of the total', '√409 = 20.2 minutes', 1]] } },
+  '5|iid': { parts: [['X₁, …, Xₙ', 'n variables, one per visitor: X₁ for the first, up to Xₙ for the last.'], ['x₁, …, xₙ', 'The values they took, the data.'], ['×', 'Independent, so the single chances multiply.'], ['i.i.d.', 'Independent and identically distributed: no visitor affects another, and all follow the same model.']], walk: { intro: 'Four visitors, each buying with p = 0.2, and the data 1, 0, 0, 1:', steps: [['n', '= 4'], ['m(1) = p', '= 0.2'], ['m(0) = 1 − p', '= 0.8'], ['m(x₁) × m(x₂) × m(x₃) × m(x₄)', '0.2 × 0.8 × 0.8 × 0.2 = 0.0256', 1]] } },
+  '5|covariance': { parts: [['Cov(X, Y)', 'The covariance: whether X and Y tend to be above or below their means together.'], ['X − μ_X', 'How far X is from its mean.'], ['Y − μ_Y', 'How far Y is from its mean.'], ['(X − μ_X)(Y − μ_Y)', 'Positive when both are on the same side of their means, negative otherwise.'], ['E[XY] − μ_X μ_Y', 'The quick form: the mean of the product, minus the product of the means.']], walk: { intro: 'Delays and contacts, from the joint table:', steps: [['μ_X', '= 0.50'], ['μ_Y', '= 0.50'], ['E[XY]', '= 0.43'], ['Cov(X, Y) = E[XY] − μ_X μ_Y', '0.43 − 0.50 × 0.50 = 0.18', 1]] } },
+  '5|correlation': { parts: [['ρ', 'Rho, the Greek r: the correlation of the model.'], ['σ_X σ_Y', 'The two SDs multiplied. Dividing by them cancels the units.'], ['r', 'The sample correlation, from data.'], ['s_xy', 'The sample covariance: the average product of the deviations, with n − 1.'], ['s_x, s_y', 'The sample SDs of x and of y, as in Lecture 4.'], ['ȳ', 'y-bar, the average of the y values.']], walk: { intro: 'Five weeks of emails x and orders y: (1, 2), (2, 4), (3, 5), (4, 4), (5, 5):', steps: [['n', '= 5'], ['x̄', '15 / 5 = 3'], ['ȳ', '20 / 5 = 4'], ['Σᵢ (xᵢ − x̄)(yᵢ − ȳ)', '4 + 0 + 0 + 0 + 2 = 6'], ['s_xy = the sum / (n − 1)', '6 / 4 = 1.5'], ['s_x²', '10 / 4 = 2.5'], ['s_y²', '6 / 4 = 1.5'], ['r = s_xy / (s_x s_y)', '1.5 / √(2.5 × 1.5) = 0.77', 1]] } },
+  '5|corr-example': { parts: [['μ_X', 'The mean delay, from the margin m_X.'], ['E[XY]', 'Each cell’s x × y times its probability, all added.'], ['σ_X²', 'The variance of X, by the shortcut E[X²] − μ_X².'], ['√(0.45 × 0.45)', 'σ_X σ_Y: here both variances are 0.45.']] },
+  '5|likelihood': { parts: [['L(θ)', 'The likelihood of the candidate θ.'], ['P(data ∣ θ)', 'The chance of the data we saw, if θ were the true value.'], ['p⁶', 'p multiplied 6 times: one factor per buyer.'], ['(1 − p)³⁴', '1 − p multiplied 34 times: one factor per visitor who did not buy.'], ['L(0.15) / L(0.25)', 'The likelihood ratio: how many times as probable the data are under one candidate as under the other.']], walk: { intro: '6 buyers among 40 visitors, two candidates:', steps: [['buyers', '= 6'], ['non-buyers', '40 − 6 = 34'], ['L(0.15) = 0.15⁶ × 0.85³⁴', '= 4.54 × 10⁻⁸'], ['L(0.25) = 0.25⁶ × 0.75³⁴', '= 1.38 × 10⁻⁸'], ['L(0.15) / L(0.25)', '4.54 / 1.38 = 3.3', 1]] } },
+  '5|four-steps': { parts: [['f(xᵢ ∣ θ)', 'The PMF or the density of one data point, if θ were true.'], ['×', 'i.i.d. data: one factor per observation, multiplied.'], ['ln', 'The natural logarithm. It turns the product into a sum.'], ['θ̂', 'Theta hat: the maximum likelihood estimate, the MLE.']] },
+  '5|log': { parts: [['ℓ(θ)', 'A curly l: the log-likelihood, ln L(θ).'], ['ln(ab) = ln a + ln b', 'The logarithm of a product is the sum of the logarithms.'], ['6 ln p', 'The 6 factors p become 6 times ln p.'], ['34 ln(1 − p)', 'The 34 factors 1 − p become 34 times ln(1 − p).']], walk: { intro: 'The candidate p = 0.15:', steps: [['ln 0.15', '= −1.897'], ['ln 0.85', '= −0.163'], ['6 ln p', '6 × −1.897 = −11.38'], ['34 ln(1 − p)', '34 × −0.163 = −5.53'], ['ℓ(0.15), the sum', '−11.38 − 5.53 = −16.91', 1], ['check: ln L(0.15)', 'ln(4.54 × 10⁻⁸) = −16.91', 1]] } },
+  '5|continuous': { parts: [['f(xᵢ ∣ μ)', 'The height of the bell N(μ, 1) at data point xᵢ.'], ['μ', 'The candidate: where the centre of the bell is placed.'], ['×', 'The five heights multiplied.']], walk: { intro: 'The candidate μ = 1, with the heights of N(1, 1):', steps: [['x = 1.5: height', '0.352'], ['x = −0.5: height', '0.130'], ['x = 2.0: height', '0.242'], ['x = 0.5: height', '0.352'], ['x = 1.5: height', '0.352'], ['L(1), the product', '0.352 × 0.130 × 0.242 × 0.352 × 0.352 = 1.37 × 10⁻³', 1]] } },
 };
 
 /* ---------- Store: this browser first, then the account ---------- */
@@ -1369,7 +1495,7 @@ document.addEventListener('click', e => {
 });
 
 
-/* ---------- Cheat sheet: every rule and term from lectures 1 to 4 ---------- */
+/* ---------- Cheat sheet: every rule and term from lectures 1 to 5 ---------- */
 const REF = [
   { name: 'Sets', items: [
     ['x ∈ S   x ∉ S', 'x is, or is not, an element of S.', '3 ∈ {1, …, 6}', 1, 'set'],
@@ -1460,11 +1586,32 @@ const REF = [
     ['Box plot', 'A box from Q₁ to Q₃, a line at the median, whiskers to the farthest values within 1.5 × IQR, and dots for outliers beyond.', '', 4, 'boxplot'],
     ['Robust', 'Barely moved by a few extreme values: the median and the IQR, and not the mean and the SD.', '', 4, 'robust'],
   ] },
+  { name: 'Two variables', items: [
+    ['Joint PMF', 'The probability of each pair of values. All cells sum to 1.', 'm_X,Y(x, y) = P(X = x, Y = y)', 5, 'joint'],
+    ['Marginal PMF', 'The PMF of one variable alone: a row or column sum of the joint table.', 'm_X(x) = Σ over y m_X,Y(x, y)', 5, 'marginal'],
+    ['Independent variables', 'Every cell equals its row total times its column total.', 'm_X,Y(x, y) = m_X(x) m_Y(y)', 5, 'independent-rv'],
+    ['E[X + Y]', 'Means always add.', 'E[X + Y] = E[X] + E[Y]', 5, 'sums'],
+    ['Var(X + Y)', 'Variances add when X and Y are independent.', 'Var(X + Y) = Var(X) + Var(Y)', 5, 'sums'],
+    ['i.i.d.', 'Independent and identically distributed: the probability of the whole list is the product.', '0.2 × 0.8 × 0.8 × 0.2 = 0.0256', 5, 'iid'],
+  ] },
+  { name: 'Correlation', items: [
+    ['Cov(X, Y)', 'The covariance: the average product of the two deviations. Positive when they move up together.', 'Cov(X, Y) = E[(X − μ_X)(Y − μ_Y)] = E[XY] − μ_X μ_Y', 5, 'covariance'],
+    ['ρ', 'The correlation: a covariance without units, between −1 and 1. It measures a straight-line link.', 'ρ = Cov(X, Y) / (σ_X σ_Y)', 5, 'correlation'],
+    ['r', 'The sample correlation, from n pairs of data.', 'r = s_xy / (s_x s_y)\ns_xy = (1/(n − 1)) Σᵢ (xᵢ − x̄)(yᵢ − ȳ)', 5, 'correlation'],
+    ['Zero correlation', 'Independent means ρ = 0, but ρ = 0 does not mean independent. Plot the data.', '', 5, 'zero-corr'],
+    ['Correlation and causation', 'If X and Y are correlated, X may cause Y, Y may cause X, or a third factor may cause both.', '', 5, 'causation'],
+  ] },
+  { name: 'Maximum likelihood', items: [
+    ['L(θ)', 'The likelihood of a candidate: the probability of the data if θ were true. Not the probability of θ.', 'L(θ) = P(data ∣ θ)\nL(p) = p⁶ (1 − p)³⁴', 5, 'likelihood'],
+    ['MLE', 'The maximum likelihood estimate θ̂: the candidate with the largest likelihood.', '6 buyers among 40: p̂ = 0.15', 5, 'four-steps'],
+    ['Likelihood ratio', 'How many times as probable the data are under one candidate as under another.', 'L(0.15) / L(0.25) = 3.3', 5, 'likelihood'],
+    ['ℓ(θ)', 'The log-likelihood: a sum instead of a product. It peaks at the same candidate.', 'ℓ(θ) = ln L(θ)     ln(ab) = ln a + ln b', 5, 'log'],
+  ] },
 ];
 
 /* ---------- A lecture ---------- */
 // Terms in a card's text, and symbols in a formula: hoverable, but not coloured.
-const TERMS = /\b(sample spaces?|complements?|unions?|intersections?|disjoint|partitions?|De Morgan|axioms?|events?|sample (?:mean|variance|SD)s?|densit(?:y|ies)|PDFs?|CDFs?|quantiles?|medians?|quartiles?|IQR|Gaussian|exponential|robust|standardize|standardization|conditional probabilit(?:y|ies)|total probability|chain rule|multiplication rule|Bayes|priors?|likelihoods?|posteriors?|independent|independence|PMFs?|Bernoulli|binomial|Poisson|expectation|variances?|standard deviation|deviations?|SD|random variables?|frequenc(?:y|ies))\b/gi;
+const TERMS = /\b(maximum likelihood|log-likelihood|MLE|joint PMFs?|marginal PMFs?|covariances?|correlations?|sample spaces?|complements?|unions?|intersections?|disjoint|partitions?|De Morgan|axioms?|events?|sample (?:mean|variance|SD)s?|densit(?:y|ies)|PDFs?|CDFs?|quantiles?|medians?|quartiles?|IQR|Gaussian|exponential|robust|standardize|standardization|conditional probabilit(?:y|ies)|total probability|chain rule|multiplication rule|Bayes|priors?|likelihoods?|posteriors?|independent|independence|PMFs?|Bernoulli|binomial|Poisson|expectation|variances?|standard deviation|deviations?|SD|random variables?|frequenc(?:y|ies))\b/gi;
 /* Asked for 2026-11-05: "X, small x, and n, p terms like that should also reveal what they are when I
    hover, just like Var()". What a letter means in general; the card's own READS can say more (openPeek). */
 const LETTERS = {
@@ -1493,7 +1640,9 @@ const LETTERS = {
   z: 'How many SDs a value is above the mean. Negative means below.',
   Z: 'The standardized variable: X minus its mean, divided by its SD. It is Gaussian with mean 0 and SD 1.',
   q: 'A target probability, a number from 0 to 1, as in "the q-quantile".',
-  'θ': 'Theta: a number that sets the scale of a density, in this example.',
+  'θ': 'Theta: the unknown number of a model, its parameter. In Lecture 4 it set the scale of a density; in Lecture 5 the candidates of maximum likelihood.',
+  'ρ': 'Rho, the Greek r: the correlation of X and Y, from −1 to 1.',
+  'ℓ': 'A curly l: the log-likelihood, ln L(θ).',
   'Φ': 'Phi, the Greek F: the CDF of the standard Gaussian. Φ(z) is the area to the left of z, read from a table.',
   '∫': 'An integral, a long S for "sum": it adds up very thin strips under a curve, which gives an area. It is Σ for a curve.',
   dx: 'The width of one very thin strip under the curve.',
@@ -1501,7 +1650,7 @@ const LETTERS = {
   'Q₃': 'The third quartile: the median of the upper half of the sorted data.',
 };
 const LETTER_FROM = { 'ᵏ': 'k', 'ⁿ': 'n', 'ₓ': 'x', 'ᵢ': 'i', 'ₙ': 'n', 'ₐ': 'a', 'ᵇ': 'b', 's²': 's', f_X: 'fX', F_X: 'FX' };
-const SYMBOLS = /x̄|Q₁|Q₃|∫|Φ|\bdx\b|Unif\(|Exp\(|(?<![A-Za-z])N\(|∪|∩|∣|∅|Ω|⊂|∼|ᶜ|Σ|E\[|Var\(|m_X|f_X|F_X|σ_X|n_A|e\^\((?:[^()]|\([^()]*\))*\)|P\(|(?<![\p{L}\p{N}_]|carrier )(?:[XxnpkλμσbigABSTωzZqsθ]|a(?=[X²|,]|\s*=|\s*E\[|\s*$))(?![A-Za-z0-9_α-ω])|(?<=a)X(?![A-Za-z0-9_])|[ᵏⁿₓᵢₙₐᵇ]/gu;
+const SYMBOLS = /x̄|Q₁|Q₃|∫|Φ|\bdx\b|Unif\(|Exp\(|(?<![A-Za-z])N\(|∪|∩|∣|∅|Ω|⊂|∼|ᶜ|Σ|E\[|Var\(|Cov\(|m_X|f_X|F_X|σ_X|n_A|e\^\((?:[^()]|\([^()]*\))*\)|P\(|(?<![\p{L}\p{N}_]|carrier )(?:[XxnpkλμσbigABSTωzZqsθρℓ]|a(?=[X²|,]|\s*=|\s*E\[|\s*$))(?![A-Za-z0-9_α-ω])|(?<=a)X(?![A-Za-z0-9_])|[ᵏⁿₓᵢₙₐᵇ]/gu;
 // In running text only the letters that cannot be English words.
 const PROSE_LETTERS = /x̄|Q₁|Q₃|∫|Φ|f_X|F_X|(?<![\p{L}\p{N}_’'-])s²|(?<![\p{L}\p{N}_’'-])[XxnpkλμσzZqθ](?![A-Za-z0-9_α-ω’'-])|[ᵏⁿₓᵢₙ]/gu;
 const letterSpan = (key, shown) => `<span class="kw kw-v" data-kw="${key}">${shown}</span>`;
@@ -1642,6 +1791,43 @@ const PRACTICE_LAWS = {
      [4, 'median', 'The median of an even count', 'median = the average of the two middle values', '(14 + 15) / 2 = 14.5']],
     [[4, 'robust', 'Robust summaries', 'the median and IQR use the middle of the sorted data; the mean and SD use every value', 'one ride of 96: mean +8.2, median +0.5']],
   ],
+  'l5-e1': [
+    [[5, 'marginal', 'Marginal PMFs', 'm_X(x) = Σ over y m_X,Y(x, y): a row sum', 'm_X(0) = 0.40 + 0.24 + 0.16 = 0.80'],
+     [5, 'independent-rv', 'Independent variables', 'm_X,Y(x, y) = m_X(x) m_Y(y) in every cell', 'm_X(0) m_Y(0) = 0.80 × 0.50 = 0.40 = m_X,Y(0, 0), and the same in all six cells']],
+    [[3, 'shortcut', 'The variance shortcut', 'Var(Y) = E[Y²] − (E[Y])²', 'Var(Y) = 1.10 − 0.70² = 0.61'],
+     [5, 'sums', 'Means add; for independent variables, variances add', 'E[X + Y] = E[X] + E[Y]\nVar(X + Y) = Var(X) + Var(Y)', 'E[X + Y] = 0.20 + 0.70 = 0.90\nVar(X + Y) = 0.16 + 0.61 = 0.77']],
+  ],
+  'l5-e2': [
+    [[5, 'correlation', 'The sample correlation', 'r = s_xy / (s_x s_y)', 'r = 1.5 / √(2.5 × 1.5) = 0.77']],
+    [[5, 'causation', 'Correlation is not causation', 'X may cause Y, Y may cause X, or a third factor may cause both', 'sales weeks raise both the emails and the orders']],
+  ],
+  'l5-e3': [
+    [[5, 'likelihood', 'The likelihood', 'L(p) = pᵏ (1 − p)ⁿ⁻ᵏ for k successes among n i.i.d. Ber(p) trials', 'L(0.3) = 0.3³ × 0.7⁷ = 0.00222'],
+     [5, 'four-steps', 'The MLE and the likelihood ratio', 'p̂ = the candidate with the largest L\nratio = L(θ₁) / L(θ₂)', 'p̂ = 0.3     L(0.3) / L(0.1) = 4.65']],
+    [[5, 'not-prob', 'A likelihood is a probability of the data', 'L(θ) = P(data ∣ θ), not P(θ)', 'L(0.3) = P(3 returns among 10 ∣ p = 0.3) = 0.0022']],
+  ],
+  'l5-e4': [
+    [[5, 'marginal', 'Marginal PMFs', 'row and column sums of the joint table', 'm_X(1) = 0.2 + 0.1 + 0.1 = 0.4'],
+     [5, 'independent-rv', 'Independent variables', 'm_X,Y(x, y) = m_X(x) m_Y(y) in every cell', 'm_X(1) m_Y(0) = 0.12, but m_X,Y(1, 0) = 0.2']],
+    [[3, 'expectation', 'The expectation', 'E[S] = Σ s m_S(s)', 'E[S] = 1 × 0.2 + 2 × 0.2 + 3 × 0.4 + 4 × 0.2 = 2.6'],
+     [3, 'shortcut', 'The variance shortcut', 'Var(S) = E[S²] − (E[S])²', 'Var(S) = 7.8 − 2.6² = 1.04']],
+    [[5, 'sums', 'Means add; for independent variables, variances add', 'E[X + Y] = E[X] + E[Y], always\nVar(X + Y) = Var(X) + Var(Y), only if independent', '1.6 + 1.0 = 2.6 = E[S]\n0.24 + 0.60 = 0.84, not 1.04']],
+    [[5, 'covariance', 'The covariance', 'Cov(X, Y) = E[XY] − μ_X μ_Y', 'Cov(X, Y) = 1.7 − 1.6 × 1.0 = 0.1'],
+     [5, 'correlation', 'The correlation', 'ρ = Cov(X, Y) / (σ_X σ_Y)', 'ρ = 0.1 / √(0.24 × 0.60) = 0.26']],
+  ],
+  'l5-e5': [
+    [[3, 'poisson', 'The Poisson PMF', 'm_X(k) = e^(−λ) λᵏ / k!', 'λ = 2, k = 3: e^(−2) × 2³ / 3! = 0.180'],
+     [5, 'likelihood', 'The likelihood of i.i.d. data', 'L(λ) = m(x₁) × m(x₂) × m(x₃)', 'L(2) = 0.271 × 0.180 × 0.271 = 0.01322']],
+    [[5, 'log', 'The log-likelihood', 'ℓ(λ) = ln L(λ), with the same peak', 'ℓ(2) = ln 0.01322 = −4.326']],
+    [[3, 'binomial', 'The binomial PMF', 'm_X(k) = (n choose k) pᵏ (1 − p)ⁿ⁻ᵏ', 'Bin(4, 0.5): P(2) = 6 × 0.5⁴ = 0.375'],
+     [5, 'likelihood', 'The likelihood ratio', 'L(model 1) / L(model 2)', '0.0234 / 0.01322 = 1.77']],
+  ],
+  'l5-e6': [
+    [[5, 'likelihood', 'The likelihood', 'L(p) = pᵏ (1 − p)ⁿ⁻ᵏ', 'L(0.4) = 0.4⁴ × 0.6⁶ = 0.001194']],
+    [[3, 'linear-mean', 'A linear function', 'g(p) = a p + b', 'g(p) = 15,000p − 4,000:  g(0.2) = −1,000']],
+    [[5, 'likelihood', 'The likelihood ratio', 'L(θ̂) / L(θ)', 'L(0.4) / L(0.2) = 2.85, below 5']],
+    [[5, 'likelihood', 'The likelihood ratio, with more data', 'L(p) = p¹⁶ (1 − p)²⁴', 'L(0.4) / L(0.2) = 65.8, above 5']],
+  ],
 };
 const cardNo = (n, id) => { const s = SESSIONS.find(x => x.n === n), i = s ? s.groups.flatMap(g => g.cards).findIndex(c => c.id === id) : -1; return i < 0 ? '' : String(i + 1); };
 function lawsHtml(s, laws) {
@@ -1706,6 +1892,18 @@ const PRACTICE_PICS = {
   'l4-e4': { given: [['n', '9 rides', 'how many values'], ['xᵢ', 'minutes', 'one ride'], ['x̄', 'minutes', 'the sample mean: the sum / n'], ['s²', 'minutes²', 'the sample variance: squared distances / (n − 1)'], ['Q₁, Q₃', 'minutes', 'the medians of the lower and upper halves']],
     draw: () => boxplot({ lo: 0, hi: 28, q1: 12, med: 14, q3: 18, wlo: 8, whi: 19, ticks: [0, 8, 12, 14, 18, 28], cap: 'The nine rides: the box holds the middle half, from 12 to 18' }),
     read: 'The box runs from Q₁ = 12 to Q₃ = 18 with the median 14 inside. The whiskers reach the shortest and longest rides, 8 and 19.' },
+  'l5-e1': { given: [['X', 'errors', 'desk A in one hour: 0 or 1'], ['Y', 'errors', 'desk B in one hour: 0, 1 or 2'], ['m_X,Y(x, y)', 'a table', 'the chance of each pair of error counts']] },
+  'l5-e2': { given: [['xᵢ', 'thousand emails', 'emails sent in week i'], ['yᵢ', 'hundred orders', 'orders received in week i'], ['n', '5 weeks', 'how many pairs']],
+    draw: () => scatter([{ pts: [[1, 2], [2, 4], [3, 5], [4, 4], [5, 5]] }], { lo: 0, hi: 6, ylo: 0, yhi: 6, ticks: [1, 2, 3, 4, 5], yticks: [2, 4, 6], x: 'emails, thousands', y: 'orders, hundreds', means: 1, fit: 1, cap: 'Five weeks. Dashed: x̄ = 3 and ȳ = 4, and the trend' }),
+    read: 'Most dots sit in the top right or bottom left of the dashed averages, so the products of the deviations are mostly positive: r = 0.77.' },
+  'l5-e3': { given: [['n', '10 orders', 'lamp orders'], ['k', '3 returns', 'orders returned'], ['p', 'a candidate', 'the return rate we try'], ['0.1', 'the claim', 'the supplier’s rate'], ['0.3', 'the limit', 'replace the supplier at or above it']],
+    draw: () => curve(p => p ** 3 * (1 - p) ** 7 * 1e3, 0, 1, { guide: [0.3, 0.3 ** 3 * 0.7 ** 7 * 1e3], ticks: [0, 0.1, 0.3, 0.5, 1], x: 'candidate p', y: 'L(p) × 10³', cap: 'L(p) = p³ (1 − p)⁷, highest at 0.3' }),
+    read: 'The curve peaks at 3/10 = 0.3. At the supplier’s 0.1 it is 4.65 times lower.' },
+  'l5-e4': { given: [['X', '1 or 2', 'the first variable'], ['Y', '0, 1 or 2', 'the second variable'], ['S', '1 to 4', 'their sum, X + Y']] },
+  'l5-e5': { given: [['x₁, x₂, x₃', '1, 3, 2', 'the counts in the three windows'], ['λ', '1, 2 or 3', 'the candidate average count']],
+    draw: () => bars([[1, 0.00415, '0.00415'], [2, 0.01322, '0.01322'], [3, 0.0075, '0.00750']], { x: 'candidate λ', y: 'L(λ)', cap: 'The likelihood of each candidate', hi: [2] }),
+    read: 'λ = 2 makes the counts 1, 3 and 2 most probable.' },
+  'l5-e6': { given: [['n', '10, then 40', 'customers asked'], ['k', '4, then 16', 'customers who joined'], ['g(p)', 'euros', 'profit of 1,000 offers: 15,000p − 4,000'], ['5', 'times', 'the ratio needed to launch']] },
 };
 function picHtml(x) {
   const q = PRACTICE_PICS[x.id];
@@ -1782,9 +1980,29 @@ const CHARTS = [
     f: 'F_X(x) = (minutes after 9:00) / 180\n0.9 = m / 180  →  m = 162 minutes  →  11:42',
     parts: [['0.9', 'The probability we want, on the left scale.'], ['162', 'Where the line reaches it, in minutes after 9:00.']],
     read: 'Start at 0.9 on the left, go right to the line, then down: 11:42.' },
+  { s: 5, card: 'covariance', title: 'Covariance: the corners that agree', chart: () => scatter([{ pts: [...adWeeks.reg, ...adWeeks.hol] }], { lo: 0, hi: 32, ylo: 600, yhi: 2000, ticks: [0, 10, 20, 30], yticks: [1000, 1500, 2000], x: 'ad spending, thousand euros', y: 'orders in the week', means: 1 }),
+    f: 'Cov(X, Y) = E[(X − μ_X)(Y − μ_Y)]',
+    parts: [['X − μ_X', 'Right of the vertical dashed line: positive.'], ['Y − μ_Y', 'Above the horizontal dashed line: positive.'], ['the product', 'Positive in the top right and bottom left.']],
+    read: 'Most weeks sit in the two corners where both deviations share a sign, so the covariance is positive.' },
+  { s: 5, card: 'correlation', title: 'Correlation from −1 to 1', chart: () => row(corrPanel(-0.8, 21), corrPanel(0.5, 41), corrPanel(0.95, 51)),
+    f: 'ρ = Cov(X, Y) / (σ_X σ_Y)',
+    parts: [['ρ near 1', 'Dots close to a rising line.'], ['ρ near −1', 'Dots close to a falling line.'], ['ρ near 0', 'No straight-line pattern.']],
+    read: 'The closer the dots hug a line, the closer ρ is to −1 or 1. The sign gives the direction.' },
+  { s: 5, card: 'zero-corr', title: 'r near 0, yet a clear link', chart: () => scatter([{ pts: deviations }], { lo: -5, hi: 10, ylo: 0, yhi: 100, ticks: [-5, 0, 5, 10], yticks: [50, 100], x: 'delivery deviation, hours', y: 'satisfaction' }),
+    f: `r = ${rOf(deviations)}`,
+    parts: [['left half', 'Rises: less early, more satisfied.'], ['right half', 'Falls: more late, less satisfied.']],
+    read: 'The two halves cancel, so r is near 0. Correlation only sees straight lines.' },
+  { s: 5, card: 'not-prob', title: 'The likelihood of each candidate', chart: () => curve(p => likeBuy(p) * 1e8, 0, 0.6, { guide: [0.15, likeBuy(0.15) * 1e8], ticks: [0, 0.15, 0.25, 0.4, 0.6], x: 'candidate p', y: 'L(p) × 10⁸' }),
+    f: 'L(p) = p⁶ (1 − p)³⁴\nL(0.15) = 4.54 × 10⁻⁸',
+    parts: [['p', 'The candidate conversion rate, along the bottom.'], ['L(p)', 'How probable 6 buyers among 40 are, if the rate were p.'], ['the peak', 'The MLE, p̂ = 0.15.']],
+    read: 'Read the highest point of the curve: that candidate makes the data most probable.' },
+  { s: 5, card: 'poor-model', title: 'The best Gaussian, still a poor fit', chart: () => curve(gauss(10.3, 7.2), -15, 45, { shade: [-15, 0], label: '0.076', ticks: [0, 20, 40], x: 'handling time, minutes' }),
+    f: 'N(10.3, 7.2)\nP(X < 0) = Φ(−10.3 / 7.2) = Φ(−1.43) = 0.076',
+    parts: [['N(10.3, 7.2)', 'The Gaussian with the largest likelihood.'], ['P(X < 0)', 'The probability it gives to impossible negative times.']],
+    read: 'The shaded area should be 0, since a time is never negative. The best on the list is not a good model.' },
 ];
 function chartsHtml() {
-  return `<h1>Charts</h1><p class="lede">The key graph of each topic, lectures 1 to 4. Beside each one: its formula worked out on the example, what each piece is, and how to read the chart.</p>`
+  return `<h1>Charts</h1><p class="lede">The key graph of each topic, lectures 1 to 5. Beside each one: its formula worked out on the example, what each piece is, and how to read the chart.</p>`
     + SESSIONS.map(s => {
       const list = CHARTS.filter(c => c.s === s.n);
       if (!list.length) return '';
@@ -1797,7 +2015,7 @@ function chartsHtml() {
     }).join('');
 }
 function refHtml() {
-  return `<h1>Cheat sheet</h1><p class="lede">Every rule and term from lectures 1 to 4, by topic. The lecture tag opens its card.</p>
+  return `<h1>Cheat sheet</h1><p class="lede">Every rule and term from lectures 1 to 5, by topic. The lecture tag opens its card.</p>
     <input type="search" class="ref-search" id="ref-q" placeholder="Find: bayes, union, variance, poisson…" aria-label="Find a rule or term" autocomplete="off">
     <div id="ref-list">${REF.map(g => `<section class="ref-group"><h2>${esc(g.name)}</h2><dl class="ref">${g.items.map(([t, d, ex, n, id]) => `<div class="ref-row" data-hl="stats|ref|${esc(t)}" data-text="${esc(`${t} ${d} ${ex}`.toLowerCase())}">
       <dt>${mathHtml(t)}</dt><dd><span>${esc(d)}</span>${ex ? `<pre>${mathHtml(ex)}</pre>` : ''}<button type="button" class="ref-go" data-go="${esc(cardKey(n, id))}">Lecture ${n} ›</button></dd></div>`).join('')}</dl></section>`).join('')}</div>
@@ -1920,6 +2138,17 @@ const ESSENTIALS = {
     { name: 'Gaussian quantile', is: 'Standardizing run backwards: read z for the share you want, then go z SDs from the mean.', f: 'x = μ + zσ', ex: 'Met by 95 % of parcels: 48 + 1.645 × 6 = 57.9 hours.' },
     { name: 'Data: x̄ and s', is: 'For data rather than a model. x̄ is the average of the values, and s is how far they typically sit from x̄.', f: 'x̄ = Σ xᵢ / n\ns² = Σ (xᵢ − x̄)² / (n − 1)     s = √s²', parts: [['xᵢ', 'one value of the data'], ['n − 1', 'one less than the count, because x̄ is itself fitted to the data']], watch: 'μ and σ belong to a model. x̄ and s are computed from data.' },
     { name: 'Median and IQR', is: 'The middle value, and the width of the middle half. A few extreme values barely move them, while they move the mean and the SD a lot.', f: 'IQR = Q₃ − Q₁', parts: [['Q₁', 'a quarter of the values are below it'], ['Q₃', 'three quarters are below it']], pic: () => boxplot({ lo: 30, hi: 70, q1: 44, med: 48, q3: 52, wlo: 34, whi: 62, out: [67], ticks: [30, 40, 50, 60, 70], cap: 'The box is the middle half; one far value sits apart' }) },
+  ],
+  5: [
+    { name: 'Joint PMF', is: 'The probability of each pair of values of two variables. Row and column sums give the PMF of each one alone, the marginals.', f: 'm_X,Y(x, y) = P(X = x, Y = y)\nm_X(x) = Σ over y m_X,Y(x, y)', pic: () => jointDelays() },
+    { name: 'Independent variables', is: 'Learning one tells nothing about the other: every cell equals its row total times its column total.', f: 'm_X,Y(x, y) = m_X(x) m_Y(y)  for every pair', ex: 'Delay 2 and 2 contacts: 0.04, but 0.10 × 0.10 = 0.01, so dependent.' },
+    { name: 'Sums', is: 'The mean of a total is the total of the means. The variances add too, but only for independent variables.', f: 'E[X + Y] = E[X] + E[Y]\nVar(X + Y) = Var(X) + Var(Y)  if independent', watch: 'Add variances, not SDs.' },
+    { name: 'i.i.d.', is: 'Independent and identically distributed: the chance of a whole list of values is the product of the single chances.', f: 'm(x₁) × … × m(xₙ)', ex: 'Visitors 1, 0, 0, 1 with p = 0.2: 0.2 × 0.8 × 0.8 × 0.2 = 0.0256.' },
+    { name: 'Covariance', is: 'The average product of the two deviations: positive when the variables move up together.', f: 'Cov(X, Y) = E[XY] − μ_X μ_Y', parts: [['E[XY]', 'the mean of the product, cell by cell']] },
+    { name: 'Correlation ρ and r', is: 'A covariance divided by the two SDs: no units, between −1 and 1. It measures a straight-line link only.', f: 'ρ = Cov(X, Y) / (σ_X σ_Y)\nr = s_xy / (s_x s_y)', parts: [['ρ', 'the model’s correlation'], ['r', 'the same from data, with n − 1']], watch: 'r = 0 does not mean independent, and a correlation does not show which causes which.' },
+    { name: 'Likelihood', is: 'How probable the data are if a candidate θ were the true value. A probability of the data, not of θ.', f: 'L(θ) = P(data ∣ θ)\nL(p) = pᵏ (1 − p)ⁿ⁻ᵏ  for k successes in n', pic: () => curve(p => likeBuy(p) * 1e8, 0, 0.6, { guide: [0.15, likeBuy(0.15) * 1e8], ticks: [0, 0.15, 0.6], x: 'candidate p', y: 'L(p) × 10⁸', cap: '6 buyers among 40' }) },
+    { name: 'MLE θ̂', is: 'The candidate with the largest likelihood. Compare two candidates by the ratio of their likelihoods.', f: 'θ̂ = the candidate with the largest L(θ)\nL(θ₁) / L(θ₂)', ex: '6 buyers among 40: p̂ = 0.15, and the data are 3.3 times as probable under 0.15 as under 0.25.' },
+    { name: 'Log-likelihood ℓ', is: 'The logarithm turns the product into a sum, so very small numbers stay readable. It peaks at the same candidate.', f: 'ℓ(θ) = ln L(θ)     ln(ab) = ln a + ln b' },
   ],
 };
 function summaryHtml(s) {
@@ -2356,11 +2585,12 @@ tmPaint();
    it on a phone. Its cheat-sheet line opens in a box at the side, with the link to its card.
    Escape, × or a click elsewhere closes it. */
 const PEEK_TERM = {
-  '∪': 'S ∪ T', '∩': 'S ∩ T', '∣': 'P(A ∣ B)', '∅': '∅', 'Ω': 'Ω', '⊂': 'T ⊂ S', '∼': 'X ∼', 'ᶜ': 'Sᶜ', 'Σ': 'Σₓ', 'E[': 'E[X]', 'Var(': 'Var(X)', mX: 'PMF', 'σX': 'σ_X', fX: 'PDF', FX: 'CDF', 'Unif(': 'Unif(a, b)', 'Exp(': 'Exp(λ)', 'N(': 'N(μ, σ)',
+  '∪': 'S ∪ T', '∩': 'S ∩ T', '∣': 'P(A ∣ B)', '∅': '∅', 'Ω': 'Ω', '⊂': 'T ⊂ S', '∼': 'X ∼', 'ᶜ': 'Sᶜ', 'Σ': 'Σₓ', 'E[': 'E[X]', 'Var(': 'Var(X)', mX: 'PMF', 'σX': 'σ_X', fX: 'PDF', FX: 'CDF', 'Unif(': 'Unif(a, b)', 'Exp(': 'Exp(λ)', 'N(': 'N(μ, σ)', 'Cov(': 'Cov(X, Y)',
   'sample space': 'Sample space', complement: 'Complement rule', union: 'S ∪ T', intersection: 'S ∩ T', disjoint: 'Disjoint', partition: 'Partition', 'de morgan': 'De Morgan', axiom: 'Axioms', event: 'Event',
   'conditional probability': 'P(A ∣ B)', 'total probability': 'Total probability', 'chain rule': 'Chain rule', 'multiplication rule': 'Multiplication rule', bayes: 'Bayes’ rule', prior: 'Prior', likelihood: 'Likelihood', posterior: 'Posterior',
   independent: 'Independent', independence: 'Independent', pmf: 'PMF', bernoulli: 'Ber(p)', binomial: 'Bin(n, p)', poisson: 'Pois(λ)', expectation: 'E[X]', variance: 'Var(X)', deviation: 'X − μ', 'standard deviation': 'σ_X', sd: 'σ_X', 'random variable': 'Random variable', frequency: 'Relative frequency',
   density: 'PDF', pdf: 'PDF', cdf: 'CDF', quantile: 'Quantile', median: 'Median', quartile: 'Quartiles', iqr: 'IQR', gaussian: 'N(μ, σ)', exponential: 'Exp(λ)', 'sample mean': 'x̄', 'sample variance': 's²', 'sample sd': 's²', robust: 'Robust', standardize: 'Z = (X − μ) / σ', standardization: 'Z = (X − μ) / σ',
+  'joint pmf': 'Joint PMF', 'marginal pmf': 'Marginal PMF', covariance: 'Cov(X, Y)', correlation: 'ρ', 'maximum likelihood': 'MLE', mle: 'MLE', 'log-likelihood': 'ℓ(θ)',
 };
 const peekKey = w => PEEK_TERM[w] || PEEK_TERM[w.replace(/ies$/, 'y').replace(/s$/, '')] || PEEK_TERM[w.replace(/s$/, '')];
 const refByTerm = term => { for (const g of REF) for (const it of g.items) if (it[0] === term) return it; return null; };
@@ -2645,7 +2875,7 @@ document.addEventListener('mousedown', e => { if (e.target.closest && !e.target.
    The decks are the teacher's material, so they stay out of this public page: each user uploads them once
    to their private folder (the same one as the Python page's slides), and each card's "Slide n ›" opens
    them. Any sensible name works: Stats2.pdf or lecture02_….pdf is filed as Stats2.pdf. */
-const DECK_FILES = ['Stats1.pdf', 'Stats2.pdf', 'Stats3.pdf', 'Stats4.pdf'];
+const DECK_FILES = ['Stats1.pdf', 'Stats2.pdf', 'Stats3.pdf', 'Stats4.pdf', 'Stats5.pdf'];
 function deckName(name) {
   if (!/\.pdf$/i.test(name)) return null;
   const m = name.match(/^Stats\s*([1-3])\.pdf$/i) || name.match(/(?:lecture|lesson|session)\s*_?\s*0*([1-3])(?!\d)/i);
