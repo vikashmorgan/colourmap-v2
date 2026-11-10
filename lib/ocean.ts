@@ -215,11 +215,11 @@ const CORAL_TONES: RGB[] = [
   [1, 0.5, 0.75],
   [0.6, 0.95, 0.55],
 ];
-/** Sea fans: violet, magenta, gold and deep red. */
+/** Sea fans: violet, magenta, indigo and deep red, no yellow (2026-11-10: "dont put the yellow greens in sea fans"). */
 const FAN_TONES: RGB[] = [
   [0.75, 0.45, 1],
   [1, 0.4, 0.75],
-  [1, 0.8, 0.4],
+  [0.5, 0.42, 1],
   [1, 0.38, 0.35],
 ];
 /** Table corals and brain corals: teal, ochre, pale green, salmon. */
@@ -354,10 +354,10 @@ function fanPoint(p: Particle, u: number, t: number): Vec3 {
   if (role === 'floor' || role === 'snow' || role === 'shaft') return bedPoint(role, p, t);
   const k = Math.floor(p.a * FANS);
   const c = seaFans()[k] as Colony;
-  const g = 0.04 + 0.96 * smooth((u - 0.035 * k) / 0.45);
+  const g = 0.04 + 0.96 * smooth((u - 0.02 * k) / 0.22);
   const q = coralLocal(c, p, g, t, role === 'polyp');
   // The current runs along x: every fan bends with it, more toward the top, the far ones a moment later.
-  const sway = 0.012 * q[1] * q[1] * Math.sin(0.55 * t - 0.07 * c.at[0]);
+  const sway = 0.012 * q[1] * q[1] * Math.sin(0.9 * t - 0.07 * c.at[0]);
   return [c.at[0] + q[0] + sway, c.at[1] + q[1], c.at[2] + q[2] + 0.3 * sway];
 }
 
