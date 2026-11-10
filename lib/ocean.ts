@@ -158,6 +158,18 @@ export const PHASES: OceanPhase[] = [
     glow: 1,
     size: 0.85,
   },
+  {
+    id: 'swim',
+    name: 'Swim',
+    line: 'Your turn: pick a fish or a school and swim. The cursor steers, W and S set the pace, E and Q rise and sink. Rise above the reef into open water, where schools turn round you under the stars.',
+    words: [
+      'Above the reef the water opens like a night sky,',
+      'and the schools gather round whatever swims with purpose.',
+    ],
+    duration: 40,
+    glow: 1,
+    size: 0.85,
+  },
 ];
 
 export const TOTAL = PHASES.reduce((s, p) => s + p.duration, 0);
@@ -191,6 +203,7 @@ export const STEP_COLOURS = [
   '#d8e4f0',
   '#c69cff',
   '#5fd0c0',
+  '#ffd27a',
 ];
 
 /* ---------- colours ---------- */
@@ -317,12 +330,31 @@ function bedPoint(role: 'floor' | 'snow' | 'shaft', p: Particle, t: number): Vec
   return [Math.cos(a) * r, FLOOR + Math.sin(r * 0.6 + a * 3) * 0.3, Math.sin(a) * r];
 }
 
+/*
+ * 2026-11-11: "coral garden: don't do those balls of lights at the start, just
+ * start with corals growing from nothingness, and make them grow more, slower
+ * as they get bigger". Each colony grows over most of the piece, quick at
+ * first and slowing as it gets big, and stays dark until it has begun.
+ */
+const GARDEN_SCALE = 1.3;
+/** How grown garden colony k is, u through the piece. */
+export function gardenGrowth(k: number, u: number): number {
+  const x = Math.max(0, Math.min(1, (u - 0.03 * k) / 0.75));
+  return 0.02 + 0.98 * (1 - (1 - x) ** 2.6);
+}
+/**
+ * How much of a colony shows: nothing while it is still a knot, then light growing with its size, so
+ * the grains crowded on a young coral never glare.
+ */
+const gardenSeen = (g: number) => smooth((g - 0.03) / 0.12) * Math.min(1, 1.3 * g ** 1.7);
+
 function coralPoint(p: Particle, u: number, t: number): Vec3 {
   const role = coralRole(p);
   if (role === 'floor' || role === 'snow' || role === 'shaft') return bedPoint(role, p, t);
-  const c = corals()[Math.floor(p.a * COLONIES)] as Colony;
-  const g = 0.04 + 0.96 * smooth((u - 0.04 * (p.a * COLONIES)) / 0.45);
-  return add(c.at, coralLocal(c, p, g, t, role === 'polyp'));
+  const k = Math.floor(p.a * COLONIES);
+  const c = corals()[k] as Colony;
+  const q = coralLocal(c, p, gardenGrowth(k, u), t, role === 'polyp');
+  return add(c.at, q, GARDEN_SCALE);
 }
 
 /*
@@ -936,8 +968,7 @@ export function setPointer(at: Vec3 | null, dt: number, t: number) {
     steer.trail.shift();
 }
 /** Where the chase was at time t, and which way it was going. */
-function trailAt(t: number): { c: Vec3; f: Vec3 } {
-  const tr = steer.trail;
+function trailAt(t: number, tr: Trail[] = steer.trail): { c: Vec3; f: Vec3 } {
   if (!tr.length) return { c: steer.lead, f: steer.f };
   if (t <= (tr[0] as Trail).t) return tr[0] as Trail;
   for (let i = tr.length - 1; i > 0; i--) {
@@ -1087,13 +1118,19 @@ function shoalPoint(p: Particle, u: number, t: number): Vec3 {
  * A shoal fish's colour: dark back, pale belly, the barracuda's bars. The silver fish are all
  * blue, and one alone is yellow (2026-11-10: "silver fish all in blue and only one in yellow").
  */
-function shoalColour(p: Particle, twinkle: number): RGB {
-  const kind = kindNow();
-  const j = Math.floor(p.a * kind.count);
-  if (shoalKind === 0) {
+function shoalColour(
+  p: Particle,
+  twinkle: number,
+  ki = shoalKind,
+  jj?: number,
+  lead = steer.w,
+): RGB {
+  const kind = SHOAL_KINDS[ki] as ShoalKind;
+  const j = jj ?? Math.floor(p.a * kind.count);
+  if (ki === 0) {
     const blue = mix(DEEP_BLUE, BLUE_FISH, 0.5 + 0.5 * Math.sin(p.d * TAU));
     // The one yellow fish, unless the cursor's own yellow fish is leading.
-    const yellow = j === 0 ? 1 - steer.w : 0;
+    const yellow = j === 0 ? 1 - lead : 0;
     return scale(mix(blue, YELLOW_FISH, yellow), (0.34 + 0.08 * yellow) * twinkle);
   }
   if (kind.marks) {
@@ -1689,6 +1726,272 @@ function reefAt(p: Particle, u: number, t: number): { pos: Vec3; d: number } {
   }
 }
 
+/* ---------- 9. Swim: your own fish, through the corals and up under the stars ---------- */
+/*
+ * 2026-11-11: "after reef create a game where I can choose my fish, or a school
+ * of fish, and move through the corals, or above them where it feels a bit
+ * like stars and schools of fish are around me". The world wraps round the
+ * swimmer, so the reef never ends; above it the drifting snow turns to stars.
+ */
+
+type SwimKind = { name: string; kind: number | null; count: number; len: number; cam: number };
+const SWIM_KINDS: SwimKind[] = [
+  { name: 'Clownfish', kind: null, count: 1, len: 1.4, cam: 8 },
+  { name: 'Yellow tang', kind: 1, count: 1, len: 2.2, cam: 9 },
+  { name: 'Hammerhead', kind: 3, count: 1, len: 9, cam: 20 },
+  { name: 'Swordfish', kind: 4, count: 1, len: 8, cam: 18 },
+  { name: 'Silver school', kind: 0, count: 24, len: 2.2, cam: 16 },
+  { name: 'Bannerfish school', kind: 10, count: 12, len: 2, cam: 14 },
+];
+export const SWIM_NAMES = SWIM_KINDS.map((k) => k.name);
+let swimKind = 0;
+/** Which fish you swim as: set by the pills, the clownfish in the Journey. */
+export function setSwimKind(i: number) {
+  swimKind = SWIM_KINDS[i] ? i : 0;
+}
+const swimNow = () => SWIM_KINDS[swimKind] as SwimKind;
+export const hasGame = (k: number) => PHASES[k]?.id === 'swim';
+
+/** Swimming speed in units a second, cruising; W doubles it, S slows to a drift. */
+export const SWIM_SPEED = 4.5;
+const SWIM_W = 84;
+const SKY_TOP = FLOOR + 72;
+const heading3 = (yaw: number, pitch: number): Vec3 => [
+  -Math.sin(yaw) * Math.cos(pitch),
+  Math.sin(pitch),
+  -Math.cos(yaw) * Math.cos(pitch),
+];
+const swim = {
+  on: false,
+  pos: [0, FLOOR + 6, 0] as Vec3,
+  yaw: 0,
+  pitch: 0,
+  speed: SWIM_SPEED,
+  trail: [] as Trail[],
+};
+
+/** With no one at the controls (the Journey): a slow wander over the reef and up into the stars and down again. */
+function autopilot(t: number): { c: Vec3; f: Vec3 } {
+  const at = (tt: number): Vec3 => [
+    18 * Math.sin(0.05 * tt),
+    FLOOR + 9 + 9 * (0.5 - 0.5 * Math.cos(0.06 * tt)),
+    -3.5 * tt,
+  ];
+  const c = at(t);
+  const n = at(t + 0.05);
+  return { c, f: norm([n[0] - c[0], n[1] - c[1], n[2] - c[2]]) };
+}
+
+/**
+ * The controls, each frame: whether you are swimming, where the cursor is on screen (-1 to 1 each
+ * way, null when away), the keys held, and how far the piece's time moved.
+ */
+export function setSwim(
+  active: boolean,
+  at: { x: number; y: number } | null,
+  keys: string[],
+  dt: number,
+  t: number,
+) {
+  if (!active) {
+    swim.on = false;
+    return;
+  }
+  if (!swim.on) {
+    // Taking over from the wander where it is.
+    const a = autopilot(t);
+    swim.pos = a.c;
+    swim.yaw = Math.atan2(-a.f[0], -a.f[2]);
+    swim.pitch = Math.asin(Math.max(-1, Math.min(1, a.f[1])));
+    swim.speed = SWIM_SPEED;
+    swim.trail = [];
+    swim.on = true;
+  }
+  const held = (...names: string[]) => names.some((n) => keys.includes(n));
+  // The cursor's distance from the middle turns and tilts; a small still zone in the middle.
+  const dead = (v: number) => (Math.abs(v) < 0.08 ? 0 : v - Math.sign(v) * 0.08);
+  const x = at ? dead(at.x) : 0;
+  const y = at ? dead(at.y) : 0;
+  const turn = 1.5 * x + (held('a', 'arrowleft') ? -0.9 : 0) + (held('d', 'arrowright') ? 0.9 : 0);
+  swim.yaw -= turn * dt;
+  const rise = (held('e', 'arrowup') ? 0.5 : 0) - (held('q', 'arrowdown') ? 0.5 : 0);
+  let tilt = Math.max(-0.9, Math.min(0.9, 0.9 * y + rise));
+  if (swim.pos[1] <= FLOOR + 1.6 && tilt < 0) tilt = 0;
+  if (swim.pos[1] >= SKY_TOP && tilt > 0) tilt = 0;
+  swim.pitch += (tilt - swim.pitch) * (1 - Math.exp(-2.2 * dt));
+  const pace = held('w') ? 2.1 : held('s') ? 0.35 : 1;
+  swim.speed += (SWIM_SPEED * pace - swim.speed) * (1 - Math.exp(-1.5 * dt));
+  const f = heading3(swim.yaw, swim.pitch);
+  swim.pos = add(swim.pos, f, swim.speed * dt);
+  swim.pos[1] = Math.max(FLOOR + 1.5, Math.min(SKY_TOP, swim.pos[1]));
+  swim.trail.push({ t, c: swim.pos, f });
+  while (swim.trail.length > 2 && (swim.trail[0] as Trail).t < t - 4) swim.trail.shift();
+}
+
+/** You: where you are at time t and which way you swim. */
+export function swimmer(t: number): { c: Vec3; f: Vec3 } {
+  return swim.on ? { c: swim.pos, f: heading3(swim.yaw, swim.pitch) } : autopilot(t);
+}
+
+/** A world point brought round to the copy of it nearest the swimmer, on a field `w` wide. */
+const near = (base: Vec3, c: Vec3, w: number): Vec3 => [
+  c[0] + wrap(base[0] - c[0] + w / 2, w) - w / 2,
+  base[1],
+  c[2] + wrap(base[2] - c[2] + w / 2, w) - w / 2,
+];
+/** How far up from the sand the swimmer is, 0 among the corals to 1 high in the open water. */
+const altitude = (c: Vec3) => smooth((c[1] - FLOOR - 12) / 14);
+
+export const SWIM_CORALS = 16;
+type SwimRole = 'floor' | 'sky' | 'polyp' | 'coral' | 'school' | 'you';
+const swimRole = (p: Particle): SwimRole =>
+  p.c < 0.08
+    ? 'floor'
+    : p.c < 0.2
+      ? 'sky'
+      : p.c < 0.3
+        ? 'polyp'
+        : p.c < 0.72
+          ? 'coral'
+          : p.c < 0.87
+            ? 'school'
+            : 'you';
+
+/** Coral j's place on the wrapping field, which garden colony it is, and how big. */
+function swimSlot(j: number): { at: Vec3; colony: number; size: number } {
+  const side = 4;
+  const cell = SWIM_W / side;
+  return {
+    at: [
+      ((j % side) + 0.2 + 0.6 * hash(j, 161)) * cell,
+      FLOOR,
+      (Math.floor(j / side) + 0.2 + 0.6 * hash(j, 162)) * cell,
+    ],
+    colony: Math.floor(hash(j, 163) * COLONIES),
+    size: 0.9 + 0.7 * hash(j, 164),
+  };
+}
+
+const SCHOOLS = 3;
+/** The schools round you: each one streams in a ring about you, a little above, turning its own way. */
+function schoolFish(i: number, t: number, me: Vec3): { c: Vec3; f: Vec3; s: number } {
+  const s = i % SCHOOLS;
+  const j = Math.floor(i / SCHOOLS);
+  const R = 13 + 6 * s;
+  const w = (s % 2 ? -1 : 1) * (0.22 - 0.03 * s);
+  const a = w * t + s * 2.1 - j * 0.06 * Math.sign(w);
+  const ring = (aa: number): Vec3 => [
+    me[0] + Math.cos(aa) * R,
+    me[1] + 2 + 2.5 * s + 1.5 * Math.sin(aa * 2 + s),
+    me[2] + Math.sin(aa) * R,
+  ];
+  const off: Vec3 = [
+    (hash(i, 165) - 0.5) * 2.4,
+    (hash(i, 166) - 0.5) * 1.6,
+    (hash(i, 167) - 0.5) * 2.4,
+  ];
+  const c = add(ring(a), off);
+  const n = add(ring(a + 0.01 * Math.sign(w)), off);
+  return { c, f: norm([n[0] - c[0], n[1] - c[1], n[2] - c[2]]), s };
+}
+const SCHOOL_FISH = 60;
+
+/** Fish j of your school, or you alone: following your path a moment behind, in a loose lens. */
+function youFish(j: number, t: number): { c: Vec3; f: Vec3 } {
+  const me = swimNow();
+  if (j === 0 || me.count === 1) return swimmer(t);
+  const lag = 0.25 + 1.4 * hash(j, 168);
+  const back = swim.on ? trailAt(t - lag, swim.trail) : autopilot(t - lag);
+  const side = norm(cross(back.f, [0, 1, 0]));
+  const up = cross(side, back.f);
+  const ox = (hash(j, 169) - 0.5) * 6 + 0.3 * Math.sin(0.8 * t + j);
+  const oy = (hash(j, 170) - 0.5) * 3;
+  return { c: add(add(back.c, side, ox), up, oy), f: back.f };
+}
+
+function swimPoint(p: Particle, t: number): Vec3 {
+  const me = swimmer(t).c;
+  switch (swimRole(p)) {
+    case 'floor': {
+      const base: Vec3 = [p.b * SWIM_W, FLOOR + Math.sin(p.b * 60 + p.d * 40) * 0.25, p.d * SWIM_W];
+      return near(base, me, SWIM_W);
+    }
+    case 'sky': {
+      // Snow among the corals, stars above: grains spread through the water round you.
+      const base: Vec3 = [p.b * SWIM_W, 0, hash(p.i, 171) * SWIM_W];
+      const pos = near(base, me, SWIM_W);
+      const h = 70;
+      pos[1] = me[1] + wrap(p.d * h - me[1] + h / 2 - t * 0.15, h) - h / 2;
+      if (pos[1] < FLOOR) pos[1] = FLOOR - 50;
+      return pos;
+    }
+    case 'school': {
+      const i = Math.floor(p.a * SCHOOL_FISH);
+      const { c, f, s } = schoolFish(i, t, me);
+      return fishAt(c, f, s === 2 ? 1.6 : 1.1, p, t, i);
+    }
+    case 'you': {
+      const kind = swimNow();
+      const j = Math.floor(p.a * kind.count);
+      const { c, f } = youFish(j, t);
+      const len = kind.len * (j === 0 ? 1 : 0.9 + 0.2 * hash(j, 172));
+      return kind.kind === null
+        ? fishAt(c, f, len, p, t, j)
+        : kindFishAt(SHOAL_KINDS[kind.kind] as ShoalKind, c, f, len, p, t, j);
+    }
+    default: {
+      const slot = swimSlot(Math.floor(p.a * SWIM_CORALS));
+      const colony = corals()[slot.colony] as Colony;
+      const at = near(slot.at, me, SWIM_W);
+      const q = coralLocal(colony, p, 1, t, swimRole(p) === 'polyp', 0.5);
+      return [at[0] + q[0] * slot.size, at[1] + q[1] * slot.size, at[2] + q[2] * slot.size];
+    }
+  }
+}
+
+function swimColour(p: Particle, t: number, twinkle: number): RGB {
+  const me = swimmer(t).c;
+  const up = altitude(me);
+  switch (swimRole(p)) {
+    case 'floor':
+      return scale(SAND, 0.18 * (1 - 0.5 * up));
+    case 'sky': {
+      const pos = swimPoint(p, t);
+      if (pos[1] < FLOOR) return [0, 0, 0];
+      // Up in the open water the snow becomes stars, a few brighter than the rest.
+      const star = hash(p.i, 173) ** 6;
+      return mix(scale(SNOW, 0.3 * twinkle), scale(STAR, (0.35 + 1.1 * star) * twinkle), up);
+    }
+    case 'school': {
+      const i = Math.floor(p.a * SCHOOL_FISH);
+      const s = i % SCHOOLS;
+      const tone =
+        s === 0
+          ? mix(DEEP_BLUE, BLUE_FISH, 0.5 + 0.5 * Math.sin(p.d * TAU))
+          : s === 1
+            ? ([1, 0.82, 0.12] as RGB)
+            : mix(SILVER, [0.42, 0.52, 0.6], 0.5);
+      return scale(tone, (0.3 + 0.1 * up) * twinkle);
+    }
+    case 'you': {
+      const kind = swimNow();
+      const j = Math.floor(p.a * kind.count);
+      if (kind.kind === null) return clownColour(p, twinkle);
+      return shoalColour(p, twinkle, kind.kind, j, 0);
+    }
+    default: {
+      const slot = swimSlot(Math.floor(p.a * SWIM_CORALS));
+      const at = near(slot.at, me, SWIM_W);
+      // Fading toward the edge of the field, where it wraps round.
+      const edge = smooth((SWIM_W / 2 - Math.hypot(at[0] - me[0], at[2] - me[2])) / 12);
+      const tone = CORAL_TONES[slot.colony] as RGB;
+      return swimRole(p) === 'polyp'
+        ? scale(mix(tone, [1, 1, 0.9], 0.3), 0.95 * twinkle * edge)
+        : scale(tone, 0.7 * twinkle * edge);
+    }
+  }
+}
+
 /* ---------- where every grain is ---------- */
 
 /** Where particle p is in piece k's own form, `u` through it, at chapter time t. */
@@ -1708,6 +2011,8 @@ function form(k: number, p: Particle, u: number, t: number): Vec3 {
       return smallPoint(p, u, t);
     case 'jellyfish':
       return jellyPoint(p, t);
+    case 'swim':
+      return swimPoint(p, t);
     default:
       return reefAt(p, u, t).pos;
   }
@@ -1777,6 +2082,8 @@ function jellyColour(p: Particle, pull: number, twinkle: number, k: number): RGB
 function formColour(k: number, p: Particle, u: number, t: number): RGB {
   const twinkle = 0.7 + 0.3 * Math.sin(t * 1.7 + p.i * 0.37);
   switch (PHASES[k]?.id) {
+    case 'swim':
+      return swimColour(p, t, twinkle);
     case 'coral':
       switch (coralRole(p)) {
         case 'floor':
@@ -1788,10 +2095,13 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
         case 'polyp':
           return scale(
             mix(CORAL_TONES[Math.floor(p.a * COLONIES)] as RGB, [1, 1, 0.9], 0.35),
-            0.85 * twinkle,
+            0.85 * twinkle * gardenSeen(gardenGrowth(Math.floor(p.a * COLONIES), Math.max(u, 0))),
           );
         default:
-          return scale(CORAL_TONES[Math.floor(p.a * COLONIES)] as RGB, 0.6 * twinkle);
+          return scale(
+            CORAL_TONES[Math.floor(p.a * COLONIES)] as RGB,
+            0.6 * twinkle * gardenSeen(gardenGrowth(Math.floor(p.a * COLONIES), Math.max(u, 0))),
+          );
       }
     case 'fans':
     case 'tables':
@@ -1880,9 +2190,16 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
           const slot = reefSlot(Math.floor(p.a * REEF_SLOTS));
           const tone = CORAL_TONES[slot.colony] as RGB;
           const bloom = bloomAt(d);
+          // A coral not yet grown is a tight knot of grains: kept dark until it starts to grow, so the
+          // far end of the channel has no bright dots (2026-11-11: "I don't like the dots of light in
+          // the distance for the reef, for the corals that haven't grown yet. they are too bright").
+          const seen = h * smooth((grownAt(d) - 0.08) / 0.35);
           return reefRole(p) === 'polyp'
-            ? scale(mix(tone, [1, 1, 0.9], 0.35 - 0.15 * bloom), (0.85 + 0.5 * bloom) * twinkle * h)
-            : scale(tone, 0.6 * twinkle * h);
+            ? scale(
+                mix(tone, [1, 1, 0.9], 0.35 - 0.15 * bloom),
+                (0.85 + 0.5 * bloom) * twinkle * seen,
+              )
+            : scale(tone, 0.6 * twinkle * seen);
         }
       }
     }
@@ -1941,6 +2258,14 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       return { eye: [Math.sin(t * 0.05) * 12, 8, 44], target: [0, 0, 0] };
     case 'jellyfish':
       return { eye: [Math.sin(t * 0.04) * 6, -6, 48], target: [0, 2, 0] };
+    case 'swim': {
+      // Behind you and a little above, looking past you the way you swim.
+      const { c, f } = swimmer(t);
+      const d = swimNow().cam;
+      const eye = add(add(c, f, -d), [0, 1, 0], d * 0.32);
+      eye[1] = Math.max(FLOOR + 1, eye[1]);
+      return { eye, target: add(c, f, 5) };
+    }
     default: {
       // Down the middle of the channel, a little above the sand.
       const s = swum(u);
@@ -2045,6 +2370,7 @@ const VARIANTS = new Map<string, { label: string; names: string[]; set: (i: numb
   ['sardines', { label: 'Swarm', names: SWARM_NAMES, set: setSwarm }],
   ['jellyfish', { label: 'Jellyfish', names: JELLY_NAMES, set: setJellyKind }],
   ['fish-pulse', { label: 'Garden', names: PULSE_NAMES, set: setPulseKind }],
+  ['swim', { label: 'Your fish', names: SWIM_NAMES, set: setSwimKind }],
 ]);
 const variantsOf = (k: number) => VARIANTS.get(PHASES[k]?.id ?? '');
 export const hasVariants = (k: number) => variantsOf(k) !== undefined;
