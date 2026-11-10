@@ -175,4 +175,22 @@ describe('/health page content', () => {
       'Oat milk',
     ]);
   });
+
+  it('keeps my own health notes with their date, newest first', () => {
+    const box = document.getElementById('mine-text') as HTMLTextAreaElement;
+    const form = document.getElementById('mine-add') as HTMLFormElement;
+    box.value = 'Slept well, knee calm in the morning.';
+    form.requestSubmit();
+    box.value = '   ';
+    form.requestSubmit();
+    const rows = [...document.querySelectorAll<HTMLElement>('#mine-list .food')];
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.querySelector('.mine-body')?.textContent).toBe(
+      'Slept well, knee calm in the morning.',
+    );
+    expect(rows[0]?.querySelector('time')?.getAttribute('datetime')).toMatch(/^\d{4}-/);
+    // Not mixed into the routine's notes or the food list.
+    expect(document.getElementById('review')?.textContent).not.toContain('Slept well');
+    expect(document.getElementById('food-list')?.textContent).not.toContain('Slept well');
+  });
 });
