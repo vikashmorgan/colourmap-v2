@@ -3,10 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { flow } from './bigbang';
 import {
   CHANNEL_W,
+  CLOWNS,
   camera,
+  clownFish,
   colour,
   corals,
   EYE_H,
+  FISH_BEAT,
   makeParticles,
   PHASE_START,
   PHASES,
@@ -18,7 +21,9 @@ import {
   pulseOf,
   REEF_SLOTS,
   reefSlot,
+  SHOAL_KINDS,
   STEP_COLOURS,
+  setShoalKind,
   shoalFish,
   starBall,
   TOTAL,
@@ -36,8 +41,17 @@ const at = (k: number, u: number) =>
   (PHASE_START[k] as number) + u * (PHASES[k]?.duration as number);
 
 describe('the ocean chapter', () => {
-  it('has five pieces, from a coral garden to the reef, each with words', () => {
-    expect(PHASES.map((p) => p.id)).toEqual(['coral', 'shoal', 'sardines', 'jellyfish', 'reef']);
+  it('has eight pieces, from a coral garden to the reef, each with words', () => {
+    expect(PHASES.map((p) => p.id)).toEqual([
+      'coral',
+      'fans',
+      'tables',
+      'fish-pulse',
+      'shoal',
+      'sardines',
+      'jellyfish',
+      'reef',
+    ]);
     for (const p of PHASES) {
       expect(p.words).toHaveLength(2);
       expect(p.line.length).toBeGreaterThan(20);
@@ -93,7 +107,10 @@ describe('the ocean chapter', () => {
   });
 
   it('keeps the shoal together and pointing the same way', () => {
-    const t = at(1, 0.5);
+    const t = at(
+      PHASES.findIndex((p) => p.id === 'shoal'),
+      0.5,
+    );
     const fish = Array.from({ length: 36 }, (_, j) => shoalFish(j, 0.5, t));
     const c = [0, 1, 2].map((i) => fish.reduce((s, f) => s + (f.c[i] as number), 0) / fish.length);
     for (const f of fish) expect(dist(f.c, c)).toBeLessThan(16);
@@ -110,8 +127,9 @@ describe('the ocean chapter', () => {
   });
 
   it('swims the eye down the reef channel, corals on both sides', () => {
-    const a = camera(at(4, 0.2));
-    const b = camera(at(4, 0.6));
+    const reef = PHASES.findIndex((p) => p.id === 'reef');
+    const a = camera(at(reef, 0.2));
+    const b = camera(at(reef, 0.6));
     expect(a.eye[1]).toBeCloseTo(EYE_H, 6);
     expect(b.eye[2]).toBeLessThan(a.eye[2] - 20);
     const xs = Array.from({ length: REEF_SLOTS }, (_, j) => reefSlot(j).x);
@@ -122,6 +140,59 @@ describe('the ocean chapter', () => {
       const { eye, target: aim } = camera(s);
       expect(dist(eye, aim)).toBeGreaterThan(1);
     }
+  });
+
+  it('grows the sea fans and the table corals up from the sand', () => {
+    for (const id of ['fans', 'tables']) {
+      const k = PHASES.findIndex((p) => p.id === id);
+      const grown = particles
+        .filter((p) => p.c >= 0.34)
+        .map((p) => target(k, p, 0.7, at(k, 0.7))[1]);
+      expect(Math.max(...grown)).toBeGreaterThan(-14 + 5);
+      expect(Math.min(...grown)).toBeGreaterThan(-14 - 1);
+    }
+  });
+
+  it('sends the clownfish out of their coral all together, then all back in', () => {
+    const k = PHASES.findIndex((p) => p.id === 'fish-pulse');
+    const spread = (t: number) => {
+      const out = Array.from({ length: CLOWNS }, (_, j) => clownFish(j, t).c);
+      return Math.max(...out.map((c) => Math.hypot(c[0], c[2])));
+    };
+    const start = PHASE_START[k] as number;
+    // Sheltering at the start of a beat, out in the water at its middle, home again near its end.
+    const home = spread(start + FISH_BEAT * 0.9);
+    const away = spread(start + FISH_BEAT * 0.4);
+    expect(away).toBeGreaterThan(home + 4);
+    for (let j = 0; j < CLOWNS; j++)
+      expect(clownFish(j, start + FISH_BEAT * 0.4).out).toBeGreaterThan(0.95);
+    for (let j = 0; j < CLOWNS; j++)
+      expect(clownFish(j, start + FISH_BEAT * 0.95).out).toBeLessThan(0.05);
+  });
+
+  it('swims five kinds of shoal, each of one kind of fish, the big ones fewer and wider apart', () => {
+    expect(SHOAL_KINDS.map((s) => s.name)).toEqual([
+      'Silver fish',
+      'Yellow tangs',
+      'Barracudas',
+      'Hammerheads',
+      'Swordfish',
+    ]);
+    const k = PHASES.findIndex((p) => p.id === 'shoal');
+    for (let i = 0; i < SHOAL_KINDS.length; i++) {
+      setShoalKind(i);
+      for (const p of particles.slice(0, 300)) {
+        const { pos, rgb } = particleAt(p, at(k, 0.5));
+        for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+      }
+    }
+    setShoalKind(0);
+    const shark = SHOAL_KINDS[3];
+    const tang = SHOAL_KINDS[1];
+    expect(shark?.head).toBe('hammer');
+    expect(SHOAL_KINDS[4]?.head).toBe('bill');
+    expect((shark?.count ?? 0) < (tang?.count ?? 0)).toBe(true);
+    expect((shark?.spread ?? 0) > (tang?.spread ?? 0)).toBe(true);
   });
 
   it('plays each piece on its own: no ball of stars at the start, looping with no seam', () => {

@@ -52,7 +52,13 @@ export type Trip = {
     /** Which way the moving dots run, for the steps that have them: all up or all down; null in the Journey. */
     flow?: { has: (k: number) => boolean; set: (up: boolean | null) => void };
     /** Looks to try on a step, as a row of pills (the 3D tree's ground); the first in the Journey. */
-    variants?: { has: (k: number) => boolean; names: string[]; set: (i: number) => void };
+    variants?: {
+      has: (k: number) => boolean;
+      names: string[];
+      set: (i: number) => void;
+      /** What the pills choose, for screen readers; "Ground" if not given. */
+      label?: string;
+    };
     /** A slider to play with on a step (the full tree's road line), in degrees; 0 in the Journey. */
     turn?: { has: (k: number) => boolean; label: string; max: number; set: (deg: number) => void };
   };
@@ -417,7 +423,11 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           // Steps on their own are presets, picked by name like the Art panel's, with no time bar.
           <>
             {trip.pieces?.variants?.has(hud.index) ? (
-              <div className="bb-pills bb-variants" role="toolbar" aria-label="Ground">
+              <div
+                className="bb-pills bb-variants"
+                role="toolbar"
+                aria-label={trip.pieces.variants.label ?? 'Ground'}
+              >
                 {trip.pieces.variants.names.map((name, i) => (
                   <button
                     type="button"
