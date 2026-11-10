@@ -6,7 +6,7 @@
  * swarms. and entire ecosystem in 3d as the final one with corals fishes
  * etc... that we drive through like for the tree road."
  *
- * Five pieces played as one trip, built as Vegetal is (lib/vegetal.ts):
+ * Eight pieces played as one trip, built as Vegetal is (lib/vegetal.ts):
  * every grain of light keeps its identity, each piece is a formula from a
  * grain and the time to a place and a colour, each piece opens from a wide
  * ball of faint stars, and every grain pours on into the next piece.
@@ -69,6 +69,42 @@ export const PHASES: OceanPhase[] = [
     words: [
       'A coral is a colony of tiny animals, each one building its share of stone.',
       'Together they grow forests that whole seas depend on.',
+    ],
+    duration: 32,
+    glow: 1,
+    size: 0.85,
+  },
+  {
+    id: 'fans',
+    name: 'Sea fans',
+    line: 'A forest of sea fans rises from the sand, each a single lace of branches, all bending together in the current.',
+    words: [
+      'A sea fan grows across the current, never along it,',
+      'so every polyp on its lace can catch what the water carries.',
+    ],
+    duration: 32,
+    glow: 1,
+    size: 0.85,
+  },
+  {
+    id: 'tables',
+    name: 'Table corals',
+    line: 'Table corals spread wide plates on short stalks, tier above tier, with round brain corals on the sand between them.',
+    words: [
+      'A table coral grows outward more than upward,',
+      'a roof of stone that shades the fish beneath it.',
+    ],
+    duration: 32,
+    glow: 1,
+    size: 0.85,
+  },
+  {
+    id: 'fish-pulse',
+    name: 'Fish pulse',
+    line: 'The coral stands grown and still. Small clownfish leave it all together on one beat, hang in the open water, and slip back in.',
+    words: [
+      'A clownfish rarely strays more than a few body lengths from home.',
+      'Out together, back together: the whole family breathes as one.',
     ],
     duration: 32,
     glow: 1,
@@ -146,7 +182,16 @@ export function phaseAt(time: number): { index: number; u: number } {
 }
 
 /** One colour per piece, for the step bar. */
-export const STEP_COLOURS = ['#ff7a6a', '#9fd8e8', '#d8e4f0', '#c69cff', '#5fd0c0'];
+export const STEP_COLOURS = [
+  '#ff7a6a',
+  '#c69cff',
+  '#5fd0c0',
+  '#ff9a3c',
+  '#9fd8e8',
+  '#d8e4f0',
+  '#c69cff',
+  '#5fd0c0',
+];
 
 /* ---------- colours ---------- */
 
@@ -169,6 +214,20 @@ const CORAL_TONES: RGB[] = [
   [0.35, 0.9, 0.85],
   [1, 0.5, 0.75],
   [0.6, 0.95, 0.55],
+];
+/** Sea fans: violet, magenta, gold and deep red. */
+const FAN_TONES: RGB[] = [
+  [0.75, 0.45, 1],
+  [1, 0.4, 0.75],
+  [1, 0.8, 0.4],
+  [1, 0.38, 0.35],
+];
+/** Table corals and brain corals: teal, ochre, pale green, salmon. */
+const TABLE_TONES: RGB[] = [
+  [0.35, 0.85, 0.8],
+  [0.95, 0.75, 0.4],
+  [0.7, 0.9, 0.6],
+  [0.95, 0.6, 0.45],
 ];
 
 /* ---------- shared: the sea itself ---------- */
@@ -246,23 +305,235 @@ type CoralRole = 'floor' | 'snow' | 'shaft' | 'polyp' | 'coral';
 const coralRole = (p: Particle): CoralRole =>
   p.c < 0.1 ? 'floor' : p.c < 0.16 ? 'snow' : p.c < 0.21 ? 'shaft' : p.c < 0.34 ? 'polyp' : 'coral';
 
+/** The sea bed every garden shares: sand, drifting snow and shafts of light. */
+function bedPoint(role: 'floor' | 'snow' | 'shaft', p: Particle, t: number): Vec3 {
+  if (role === 'snow') return snowAt(p, t, [0, 2, 0], 60, 36);
+  if (role === 'shaft') return shaftAt(p, t, [0, 0, 0]);
+  const a = p.d * TAU;
+  const r = 34 * Math.sqrt(p.b);
+  return [Math.cos(a) * r, FLOOR + Math.sin(r * 0.6 + a * 3) * 0.3, Math.sin(a) * r];
+}
+
 function coralPoint(p: Particle, u: number, t: number): Vec3 {
-  switch (coralRole(p)) {
-    case 'floor': {
-      const a = p.d * TAU;
-      const r = 34 * Math.sqrt(p.b);
-      return [Math.cos(a) * r, FLOOR + Math.sin(r * 0.6 + a * 3) * 0.3, Math.sin(a) * r];
-    }
-    case 'snow':
-      return snowAt(p, t, [0, 2, 0], 60, 36);
-    case 'shaft':
-      return shaftAt(p, t, [0, 0, 0]);
-    default: {
-      const c = corals()[Math.floor(p.a * COLONIES)] as Colony;
-      const g = 0.04 + 0.96 * smooth((u - 0.04 * (p.a * COLONIES)) / 0.45);
-      return add(c.at, coralLocal(c, p, g, t, coralRole(p) === 'polyp'));
-    }
+  const role = coralRole(p);
+  if (role === 'floor' || role === 'snow' || role === 'shaft') return bedPoint(role, p, t);
+  const c = corals()[Math.floor(p.a * COLONIES)] as Colony;
+  const g = 0.04 + 0.96 * smooth((u - 0.04 * (p.a * COLONIES)) / 0.45);
+  return add(c.at, coralLocal(c, p, g, t, role === 'polyp'));
+}
+
+/*
+ * More gardens (2026-11-10: "do more coral gardens"): a forest of sea fans
+ * swaying in the current, and table corals in tiers among round brain corals.
+ */
+
+/* ---------- 2. Sea fans: flat fans swaying in the current ---------- */
+
+export const FANS = 9;
+let fanSet: Colony[] | null = null;
+/** Nine sea fans, taller and finer than the garden's, each one a single plane of branches. */
+export function seaFans(): Colony[] {
+  if (fanSet) return fanSet;
+  fanSet = Array.from({ length: FANS }, (_, k) => {
+    const out: number[][] = [];
+    grow3(seeded(110 + k), [0, 0, 0], [0, 1, 0], 3 + 1.6 * hash(k, 111), 0.6, 5, k, [], out);
+    const r = 22 * Math.sqrt((k + 0.5) / FANS);
+    const a = k * GOLDEN_ANGLE + 0.7;
+    return {
+      at: [Math.cos(a) * r, FLOOR, Math.sin(a) * r * 0.7],
+      routes: out.map(resample3),
+      flat: true,
+      yaw: hash(k, 112) * Math.PI,
+    };
+  });
+  return fanSet;
+}
+
+function fanPoint(p: Particle, u: number, t: number): Vec3 {
+  const role = coralRole(p);
+  if (role === 'floor' || role === 'snow' || role === 'shaft') return bedPoint(role, p, t);
+  const k = Math.floor(p.a * FANS);
+  const c = seaFans()[k] as Colony;
+  const g = 0.04 + 0.96 * smooth((u - 0.035 * k) / 0.45);
+  const q = coralLocal(c, p, g, t, role === 'polyp');
+  // The current runs along x: every fan bends with it, more toward the top, the far ones a moment later.
+  const sway = 0.012 * q[1] * q[1] * Math.sin(0.55 * t - 0.07 * c.at[0]);
+  return [c.at[0] + q[0] + sway, c.at[1] + q[1], c.at[2] + q[2] + 0.3 * sway];
+}
+
+/* ---------- 3. Table corals: wide plates in tiers, and round brain corals ---------- */
+
+export const TABLES = 6;
+export const BRAINS = 5;
+type Plate = { at: Vec3; h: number; r: number; tilt: number };
+/** Table coral k: where it stands, how high its plate is and how wide. */
+export function tablePlate(k: number): Plate {
+  const a = k * GOLDEN_ANGLE + 0.3;
+  const d = 18 * Math.sqrt((k + 0.5) / TABLES);
+  return {
+    at: [Math.cos(a) * d, FLOOR, Math.sin(a) * d * 0.8],
+    h: 2 + 4 * hash(k, 121),
+    r: 4 + 3 * hash(k, 122),
+    tilt: (hash(k, 123) - 0.5) * 0.25,
+  };
+}
+/** Brain coral k: a low mound between the tables. */
+function brainMound(k: number): { at: Vec3; r: number } {
+  const a = k * GOLDEN_ANGLE + 2.1;
+  const d = 8 + 16 * hash(k, 124);
+  return { at: [Math.cos(a) * d, FLOOR, Math.sin(a) * d * 0.8], r: 1.8 + 1.6 * hash(k, 125) };
+}
+
+function tablePoint(p: Particle, u: number, t: number): Vec3 {
+  const role = coralRole(p);
+  if (role === 'floor' || role === 'snow' || role === 'shaft') return bedPoint(role, p, t);
+  const k = Math.floor(p.a * (TABLES + BRAINS));
+  const g = 0.04 + 0.96 * smooth((u - 0.04 * k) / 0.45);
+  if (k >= TABLES) {
+    // A dome folded into winding ridges, like a brain.
+    const m = brainMound(k - TABLES);
+    const d = fibonacciSphere(p.i % 997, 997);
+    const ridge =
+      1 + 0.07 * Math.sin(9 * Math.atan2(d[2], d[0]) + 6 * Math.sin(3 * d[1] * Math.PI));
+    const r = m.r * g * ridge;
+    return [m.at[0] + d[0] * r, m.at[1] + Math.abs(d[1]) * r * 0.75, m.at[2] + d[2] * r];
   }
+  const pl = tablePlate(k);
+  if (p.d < 0.1) {
+    // The stalk, grown first, then the plate spreads from its top.
+    const y = pl.h * Math.min(1, g * 1.6) * (p.d / 0.1);
+    const a = p.b * TAU;
+    return [pl.at[0] + Math.cos(a) * 0.45, pl.at[1] + y, pl.at[2] + Math.sin(a) * 0.45];
+  }
+  // The plate: fine branches running out from the centre, its rim curling up a little; polyps along the rim.
+  const ray = (Math.floor(hash(p.i, 126) * 56) + (hash(p.i, 127) - 0.5) * 0.3) / 56;
+  const a = ray * TAU;
+  const s = role === 'polyp' ? 0.88 + 0.12 * p.b : Math.sqrt(p.b);
+  const r = pl.r * smooth((g - 0.2) / 0.8) * s;
+  const lift = 0.06 * r * r + (hash(p.i, 128) - 0.5) * 0.25 + r * pl.tilt;
+  const breathe = role === 'polyp' ? 0.12 * Math.sin(t * 1.4 + p.i * 0.1) : 0;
+  return [pl.at[0] + Math.cos(a) * r, pl.at[1] + pl.h + lift + breathe, pl.at[2] + Math.sin(a) * r];
+}
+
+/* ---------- 4. Fish pulse: clownfish leaving their coral together, then going back in ---------- */
+/*
+ * 2026-11-10: "gardens where the coral is stable and grown and small fish
+ * pulse in and out of it, like clownfish that all come out together in the
+ * same pulse, then go back in. call it fish pulse".
+ */
+
+export const CLOWNS = 28;
+/** Seconds from one outing to the next: out together, a moment in the open water, back in, a rest. */
+export const FISH_BEAT = 8;
+let homes: Colony[] | null = null;
+/** Three corals grown close together into one thicket, the fishes' home. They do not grow: they are grown. */
+export function homeCorals(): Colony[] {
+  if (homes) return homes;
+  const at: Vec3[] = [
+    [-4, FLOOR, 0],
+    [4, FLOOR, -2],
+    [0.5, FLOOR, 4],
+  ];
+  homes = at.map((c, k) => {
+    const out: number[][] = [];
+    grow3(seeded(130 + k), [0, 0, 0], [0, 1, 0], 3.2 + 0.6 * hash(k, 131), 0.8, 5, k, [], out);
+    return { at: c, routes: out.map(resample3), flat: false, yaw: hash(k, 132) * TAU };
+  });
+  return homes;
+}
+const HOME_TONES: RGB[] = [
+  [0.75, 0.5, 1],
+  [1, 0.5, 0.75],
+  [0.35, 0.9, 0.85],
+];
+
+/** How far out the fish are at time t: 0 sheltering in the coral, 1 out in the water. One beat for all. */
+export function outOf(t: number): number {
+  const ph = frac(t / FISH_BEAT);
+  return smooth(ph / 0.22) * (1 - smooth((ph - 0.55) / 0.22));
+}
+
+/** Clownfish j: where it shelters, and where it swims to when the shoal comes out. */
+function clownPlaces(j: number): { home: Vec3; away: Vec3 } {
+  const c = homeCorals()[j % 3] as Colony;
+  const route = c.routes[Math.floor(hash(j, 141) * c.routes.length)] as Route3;
+  const [x, y, z] = along3(route, length3(route) * (0.45 + 0.4 * hash(j, 142)));
+  const cs = Math.cos(c.yaw);
+  const sn = Math.sin(c.yaw);
+  const home: Vec3 = [c.at[0] + x * cs - z * sn, c.at[1] + y, c.at[2] + x * sn + z * cs];
+  // Out and up, away from the middle of the thicket.
+  const a = Math.atan2(home[2], home[0]) + (hash(j, 143) - 0.5) * 1.2;
+  const dir = norm([Math.cos(a), 0.45 + 0.4 * hash(j, 144), Math.sin(a)]);
+  return { home, away: add(home, dir, 6 + 4 * hash(j, 145)) };
+}
+
+/** Clownfish j at time t: its place and heading. */
+export function clownFish(j: number, t: number): { c: Vec3; f: Vec3; out: number } {
+  const at = (tt: number): Vec3 => {
+    // All together, each a hair behind the next, so the shoal leaves as one but not as a machine.
+    const e = outOf(tt - 0.12 * hash(j, 146));
+    const { home, away } = clownPlaces(j);
+    const w = 0.8 * e;
+    return add(
+      lerp3(home, away, e),
+      [Math.sin(1.3 * tt + j), 0.5 * Math.sin(1.7 * tt + j), Math.cos(1.1 * tt + j)],
+      w,
+    );
+  };
+  const c = at(t);
+  const n = at(t + 0.05);
+  const v: Vec3 = [n[0] - c[0], n[1] - c[1], n[2] - c[2]];
+  const { home, away } = clownPlaces(j);
+  const outward = norm([away[0] - home[0], away[1] - home[1], away[2] - home[2]]);
+  // Facing the way it swims. Barely moving, it faces out, turns round to face home for the way back,
+  // and turns out again while it rests: a smooth turn, never a flip.
+  const ph = frac(t / FISH_BEAT);
+  const turn = Math.PI * (smooth((ph - 0.45) / 0.1) - smooth((ph - 0.8) / 0.15));
+  const cs = Math.cos(turn);
+  const sn = Math.sin(turn);
+  const rest: Vec3 = [
+    outward[0] * cs - outward[2] * sn,
+    outward[1] * cs,
+    outward[0] * sn + outward[2] * cs,
+  ];
+  const w = smooth((Math.hypot(v[0], v[1], v[2]) - 0.005) / 0.03);
+  const f = norm(add(scale(rest, 1 - w), norm(v), w));
+  return { c, f, out: outOf(t) };
+}
+
+type PulseRole = 'floor' | 'snow' | 'shaft' | 'polyp' | 'coral' | 'fish';
+const pulseRole = (p: Particle): PulseRole =>
+  p.c < 0.07
+    ? 'floor'
+    : p.c < 0.11
+      ? 'snow'
+      : p.c < 0.14
+        ? 'shaft'
+        : p.c < 0.24
+          ? 'polyp'
+          : p.c < 0.68
+            ? 'coral'
+            : 'fish';
+
+function pulsePoint(p: Particle, t: number): Vec3 {
+  const role = pulseRole(p);
+  if (role === 'floor' || role === 'snow' || role === 'shaft') return bedPoint(role, p, t);
+  if (role === 'fish') {
+    const j = Math.floor(p.a * CLOWNS);
+    const { c, f } = clownFish(j, t);
+    return fishAt(c, f, 1.3, p, t, j);
+  }
+  const c = homeCorals()[Math.floor(p.a * 3)] as Colony;
+  return add(c.at, coralLocal(c, p, 1, t, role === 'polyp'));
+}
+
+/** A clownfish's colours, head to tail: orange, with three white bands and darker fins. */
+function clownColour(p: Particle, twinkle: number): RGB {
+  const s = p.b;
+  const band = (s > 0.2 && s < 0.28) || (s > 0.47 && s < 0.55) || (s > 0.74 && s < 0.8);
+  if (band) return scale([1, 0.96, 0.9], 0.5 * twinkle);
+  if (s > 0.9) return scale([1, 0.4, 0.06], 0.22 * twinkle);
+  return scale([1, 0.45, 0.08], 0.4 * twinkle);
 }
 
 /* ---------- fish, of any size ---------- */
@@ -287,7 +558,7 @@ function fishAt(c: Vec3, f: Vec3, len: number, p: Particle, t: number, j: number
   ];
 }
 
-/* ---------- 2. Shoal: a school that turns as one ---------- */
+/* ---------- 5. Shoal: a school that turns as one ---------- */
 
 export const SHOAL = 36;
 /** Where the shoal is at time t: a slow loop through the water. */
@@ -300,19 +571,199 @@ const heading = (path: (t: number) => Vec3, t: number) => {
   return norm([b[0] - a[0], b[1] - a[1], b[2] - a[2]]);
 };
 
+/*
+ * Five kinds of shoal, picked by pills, each of one kind of fish only
+ * (2026-11-10: "5 different shoal types with each time a group of only same
+ * fish. some fish more developed like hammer sharks", "swordfish instead of
+ * dolphin"). The bigger the fish, the fewer, the slower and the wider apart.
+ */
+type ShoalKind = {
+  name: string;
+  count: number;
+  len: number;
+  /** Body depth, as a share of the length, how much taller it is, and how wide side to side (a tang is a flat disc). */
+  depth: number;
+  tall: number;
+  wide?: number;
+  /** Dorsal fin height, as a share of the length; 0 for none. Sharks and swordfish also get side fins. */
+  dorsal: number;
+  /** A fanned tail, or the high crescent of fast swimmers. */
+  tail: 'fan' | 'crescent';
+  head?: 'hammer' | 'bill';
+  spread: number;
+  /** How fast the shoal travels its loop, and how fast the tails beat. */
+  pace: number;
+  wag: number;
+  /** How far back the eye stands, for big fish. */
+  view: number;
+  back: RGB;
+  belly: RGB;
+  bars?: boolean;
+};
+export const SHOAL_KINDS: ShoalKind[] = [
+  {
+    name: 'Silver fish',
+    count: SHOAL,
+    len: 3,
+    depth: 0.2,
+    tall: 0.75,
+    dorsal: 0,
+    tail: 'fan',
+    spread: 9,
+    pace: 1,
+    wag: 1,
+    view: 1,
+    back: BLUE_FISH,
+    belly: SILVER,
+  },
+  {
+    name: 'Yellow tangs',
+    count: 44,
+    len: 2.2,
+    depth: 0.4,
+    tall: 1.3,
+    wide: 0.3,
+    dorsal: 0.08,
+    tail: 'fan',
+    spread: 7,
+    pace: 0.9,
+    wag: 1.2,
+    view: 0.85,
+    back: [1, 0.82, 0.12],
+    belly: [1, 0.93, 0.45],
+  },
+  {
+    name: 'Barracudas',
+    count: 22,
+    len: 5.5,
+    depth: 0.075,
+    tall: 0.9,
+    dorsal: 0.06,
+    tail: 'fan',
+    spread: 11,
+    pace: 0.7,
+    wag: 0.6,
+    view: 1.05,
+    back: [0.42, 0.52, 0.6],
+    belly: SILVER,
+    bars: true,
+  },
+  {
+    name: 'Hammerheads',
+    count: 8,
+    len: 11,
+    depth: 0.11,
+    tall: 0.9,
+    dorsal: 0.22,
+    tail: 'crescent',
+    head: 'hammer',
+    spread: 17,
+    pace: 0.45,
+    wag: 0.4,
+    view: 1.35,
+    back: [0.5, 0.56, 0.62],
+    belly: [0.86, 0.89, 0.92],
+  },
+  {
+    name: 'Swordfish',
+    count: 5,
+    len: 10,
+    depth: 0.12,
+    tall: 0.85,
+    dorsal: 0.2,
+    tail: 'crescent',
+    head: 'bill',
+    spread: 14,
+    pace: 0.85,
+    wag: 0.5,
+    view: 1.3,
+    back: [0.22, 0.32, 0.62],
+    belly: SILVER,
+  },
+];
+export const SHOAL_NAMES = SHOAL_KINDS.map((k) => k.name);
+let shoalKind = 0;
+/** Which shoal swims: set by the pills, the first in the Journey. */
+export function setShoalKind(i: number) {
+  shoalKind = SHOAL_KINDS[i] ? i : 0;
+}
+export const hasShoalKinds = (k: number) => PHASES[k]?.id === 'shoal';
+const kindNow = () => SHOAL_KINDS[shoalKind] as ShoalKind;
+
 /** Fish j of the shoal: where it swims and which way it points. */
 export function shoalFish(j: number, u: number, t: number): { c: Vec3; f: Vec3 } {
+  const kind = kindNow();
+  const path = (tt: number) => shoalCentre(tt * kind.pace);
   // Each fish follows the shoal's path a moment behind its neighbours ahead, so turns run through it.
-  const lag = hash(j, 71) * 3;
-  const centre = shoalCentre(t - lag);
-  const f = heading(shoalCentre, t - lag);
+  const lag = (hash(j, 71) * 3) / kind.pace;
+  const centre = path(t - lag);
+  const f = heading(path, t - lag);
   const side = norm(cross(f, [0, 1, 0]));
   const up = cross(side, f);
   // A loose lens round the path, breathing a little; tighter as the piece goes on.
-  const spread = 9 * (1 - 0.25 * smooth((u - 0.4) / 0.3)) * (1 + 0.12 * Math.sin(t * 0.5));
+  const spread =
+    kind.spread * (1 - 0.25 * smooth((u - 0.4) / 0.3)) * (1 + 0.12 * Math.sin(t * 0.5));
   const ox = (hash(j, 72) - 0.5) * 2 * spread + Math.sin(t * 0.7 + j) * 0.3;
   const oy = (hash(j, 73) - 0.5) * spread * 1.2;
   return { c: add(add(centre, side, ox), up, oy), f };
+}
+
+/** Grain p on a fish of this kind at c heading f: body, fins, and a hammer or a sword at the head. */
+function kindFishAt(
+  kind: ShoalKind,
+  c: Vec3,
+  f: Vec3,
+  len: number,
+  p: Particle,
+  t: number,
+  j: number,
+): Vec3 {
+  const side = norm(cross(f, [0, 1, 0]));
+  const up = cross(side, f);
+  const wagAt = (s: number) => 0.12 * len * Math.sin(9 * kind.wag * t + j * 1.3 - 6 * s) * s * s;
+  const put = (back: number, lat: number, ver: number): Vec3 => [
+    c[0] + f[0] * back + side[0] * lat + up[0] * ver,
+    c[1] + f[1] * back + side[1] * lat + up[1] * ver,
+    c[2] + f[2] * back + side[2] * lat + up[2] * ver,
+  ];
+  const bodyAt = (s: number) => kind.depth * len * Math.sin(Math.PI * Math.min(1, s ** 0.7 * 1.05));
+  const part = hash(p.i, 151);
+  const q = hash(p.i, 152);
+  const big = kind.dorsal >= 0.15;
+  if (kind.head === 'hammer' && part < 0.1) {
+    // The hammer: a flat blade across the head, an eye at each end.
+    return put(len * 0.47, (q - 0.5) * 0.34 * len, (p.d - 0.5) * 0.03 * len);
+  }
+  if (kind.head === 'bill' && part < 0.08) {
+    // The sword: a long flat bill, a third of the body again, ahead of the head.
+    return put(len * (0.5 + 0.38 * q), (p.d - 0.5) * 0.015 * len * (1 - q), 0);
+  }
+  if (kind.dorsal > 0 && part >= 0.1 && part < 0.18) {
+    // The dorsal fin: a triangle on the back, highest at its front edge.
+    const s = 0.28 + 0.2 * q;
+    const h = kind.dorsal * len * (1 - (s - 0.28) / 0.2) * p.d;
+    return put(len * (0.5 - s), wagAt(s), bodyAt(s) * kind.tall + h);
+  }
+  if (big && part >= 0.18 && part < 0.25) {
+    // Side fins, swept back and a little down.
+    const s = 0.3 + 0.08 * p.d;
+    const out = bodyAt(s) + 0.2 * len * q;
+    return put(len * (0.5 - s) - 0.08 * len * q, (p.b < 0.5 ? -1 : 1) * out, -0.06 * len * q);
+  }
+  if (kind.tail === 'crescent' && part >= 0.25 && part < 0.34) {
+    // A high crescent tail: two lobes swept back from the tail's root.
+    const lobe = p.b < 0.5 ? 1 : -0.8;
+    return put(-len * 0.5 - 0.1 * len * q, wagAt(1), lobe * 0.24 * len * q);
+  }
+  // The body, head at s = 0 and tail at s = 1; a fanned tail on the small fish.
+  const s = p.b;
+  const fin = kind.tail === 'fan' && s > 0.82 ? ((s - 0.82) / 0.18) * 0.22 * len : 0;
+  const a = p.d * TAU;
+  return put(
+    len * (0.5 - s),
+    Math.cos(a) * bodyAt(s) * (kind.wide ?? 1) + wagAt(s),
+    Math.sin(a) * (bodyAt(s) * kind.tall + fin),
+  );
 }
 
 type ShoalRole = 'snow' | 'fish';
@@ -320,12 +771,29 @@ const shoalRole = (p: Particle): ShoalRole => (p.c < 0.1 ? 'snow' : 'fish');
 
 function shoalPoint(p: Particle, u: number, t: number): Vec3 {
   if (shoalRole(p) === 'snow') return snowAt(p, t, [0, 0, 0], 70, 40);
-  const j = Math.floor(p.a * SHOAL);
+  const kind = kindNow();
+  const j = Math.floor(p.a * kind.count);
   const { c, f } = shoalFish(j, u, t);
-  return fishAt(c, f, 3 + 0.6 * hash(j, 74), p, t, j);
+  const len = kind.len * (1 + 0.2 * hash(j, 74));
+  return shoalKind === 0 ? fishAt(c, f, len, p, t, j) : kindFishAt(kind, c, f, len, p, t, j);
 }
 
-/* ---------- 3. Small fish: a ring that gathers into a ball ---------- */
+/** A shoal fish's colour: dark back, pale belly, the barracuda's bars, and a few golden fish among the silver. */
+function shoalColour(p: Particle, twinkle: number): RGB {
+  const kind = kindNow();
+  const j = Math.floor(p.a * kind.count);
+  if (shoalKind === 0) {
+    const tone =
+      hash(j, 75) < 0.12 ? GOLD_FISH : mix(BLUE_FISH, SILVER, 0.5 + 0.5 * Math.sin(p.d * TAU));
+    return scale(tone, 0.32 * twinkle);
+  }
+  const tone = mix(kind.belly, kind.back, 0.5 + 0.5 * Math.sin(p.d * TAU));
+  const bar =
+    kind.bars && p.b > 0.15 && p.b < 0.8 && frac(p.b * 9) < 0.35 && Math.sin(p.d * TAU) > -0.2;
+  return scale(tone, (bar ? 0.18 : 0.34) * twinkle);
+}
+
+/* ---------- 6. Small fish: a ring that gathers into a ball ---------- */
 
 export const SMALL_FISH = 900;
 /** Small fish j's place: on a wheeling ring, or, mid-piece, orbiting in a tight ball. */
@@ -366,7 +834,7 @@ function smallPoint(p: Particle, u: number, t: number): Vec3 {
   return add(c, f, (0.5 - p.b) * 0.9);
 }
 
-/* ---------- 4. Jellyfish: bells pulsing, tentacles trailing ---------- */
+/* ---------- 7. Jellyfish: bells pulsing, tentacles trailing ---------- */
 
 export const JELLIES = 13;
 const JELLY_SPAN = 46;
@@ -438,7 +906,7 @@ function jellyPoint(p: Particle, t: number): Vec3 {
   return jellyAt(c, k, pulseOf(j, t), p, t, j);
 }
 
-/* ---------- 5. Reef: a channel swum through as the corals grow ---------- */
+/* ---------- 8. Reef: a channel swum through as the corals grow ---------- */
 
 export const EYE_H = 3.5;
 export const CHANNEL_W = 4;
@@ -461,7 +929,8 @@ export function reefSlot(j: number): ReefSlot {
   };
 }
 
-const swum = (u: number) => SPEED * u * (PHASES[4] as OceanPhase).duration;
+const REEF_SECONDS = (PHASES.find((p) => p.id === 'reef') as OceanPhase).duration;
+const swum = (u: number) => SPEED * u * REEF_SECONDS;
 const ahead = (z0: number, s: number) => wrap(z0 - s, LOOP) - BEHIND;
 const grownAt = (d: number) => 0.04 + 0.96 * smooth((LOOP - BEHIND - 14 - d) / 55);
 /** Light fades into the far blue, so the far end of the channel never pops. */
@@ -548,14 +1017,20 @@ function reefAt(p: Particle, u: number, t: number): { pos: Vec3; d: number } {
 
 /** Where particle p is in piece k's own form, `u` through it, at chapter time t. */
 function form(k: number, p: Particle, u: number, t: number): Vec3 {
-  switch (k) {
-    case 0:
+  switch (PHASES[k]?.id) {
+    case 'coral':
       return coralPoint(p, Math.max(u, 0), t);
-    case 1:
+    case 'fans':
+      return fanPoint(p, Math.max(u, 0), t);
+    case 'tables':
+      return tablePoint(p, Math.max(u, 0), t);
+    case 'fish-pulse':
+      return pulsePoint(p, t);
+    case 'shoal':
       return shoalPoint(p, u, t);
-    case 2:
+    case 'sardines':
       return smallPoint(p, u, t);
-    case 3:
+    case 'jellyfish':
       return jellyPoint(p, t);
     default:
       return reefAt(p, u, t).pos;
@@ -568,10 +1043,12 @@ function form(k: number, p: Particle, u: number, t: number): Vec3 {
  * the stars settle into it one by one.
  */
 const BALL_R = 20;
+const GARDENS = new Set(['coral', 'fans', 'tables', 'fish-pulse']);
 
 /** How far grain p has come from the ball of stars into piece k's form, `u` through it. */
 export function arrival(k: number, p: Particle, u: number): number {
-  const order = k === 0 ? 0.6 * p.b : p.b;
+  // Gardens grow up from the sand, so their grains arrive sooner.
+  const order = GARDENS.has(PHASES[k]?.id ?? '') ? 0.6 * p.b : p.b;
   return smooth((u - 0.02 - 0.4 * order) / 0.14);
 }
 
@@ -623,8 +1100,8 @@ function jellyColour(p: Particle, pull: number, twinkle: number, k: number): RGB
 
 function formColour(k: number, p: Particle, u: number, t: number): RGB {
   const twinkle = 0.7 + 0.3 * Math.sin(t * 1.7 + p.i * 0.37);
-  switch (k) {
-    case 0:
+  switch (PHASES[k]?.id) {
+    case 'coral':
       switch (coralRole(p)) {
         case 'floor':
           return scale(SAND, 0.18);
@@ -640,22 +1117,35 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
         default:
           return scale(CORAL_TONES[Math.floor(p.a * COLONIES)] as RGB, 0.6 * twinkle);
       }
-    case 1: {
-      if (shoalRole(p) === 'snow') return scale(SNOW, 0.3 * twinkle);
-      const j = Math.floor(p.a * SHOAL);
-      // Blue backs, silver bellies, and a few golden fish among them.
-      const tone =
-        hash(j, 75) < 0.12 ? GOLD_FISH : mix(BLUE_FISH, SILVER, 0.5 + 0.5 * Math.sin(p.d * TAU));
-      return scale(tone, 0.32 * twinkle);
+    case 'fans':
+    case 'tables':
+    case 'fish-pulse': {
+      const role = PHASES[k]?.id === 'fish-pulse' ? pulseRole(p) : coralRole(p);
+      if (role === 'floor') return scale(SAND, 0.18);
+      if (role === 'snow') return scale(SNOW, 0.35 * twinkle);
+      if (role === 'shaft') return scale(SHAFT, 0.18 * (0.4 + 0.6 * hash(p.i, 85)));
+      if (role === 'fish') return clownColour(p, twinkle);
+      const tones =
+        PHASES[k]?.id === 'fans'
+          ? FAN_TONES
+          : PHASES[k]?.id === 'tables'
+            ? TABLE_TONES
+            : HOME_TONES;
+      const tone = tones[Math.floor(p.a * tones.length * 0.999)] as RGB;
+      return role === 'polyp'
+        ? scale(mix(tone, [1, 1, 0.9], 0.35), 0.85 * twinkle)
+        : scale(tone, 0.6 * twinkle);
     }
-    case 2: {
+    case 'shoal':
+      return shoalRole(p) === 'snow' ? scale(SNOW, 0.3 * twinkle) : shoalColour(p, twinkle);
+    case 'sardines': {
       if (p.c < 0.08) return scale(SNOW, 0.3 * twinkle);
       // A flash of silver whenever a fish's side turns toward the light.
       const { f } = smallFish(Math.floor(p.a * SMALL_FISH), u, t);
       const flash = Math.abs(f[0] * 0.6 + f[2] * 0.8) ** 6;
       return scale(SILVER, 0.16 + 0.6 * flash);
     }
-    case 3: {
+    case 'jellyfish': {
       if (p.c < 0.1) return scale(SNOW, 0.3 * twinkle);
       const j = Math.floor(p.a * JELLIES);
       return jellyColour(p, pulseOf(j, t), twinkle, jellyTop(j, t).edge);
@@ -694,24 +1184,44 @@ type Eye = { eye: Vec3; target: Vec3 };
 
 /** Where the camera stands in piece k, `u` through it. */
 export function eyeIn(k: number, u: number, t: number): Eye {
-  switch (k) {
-    case 0: {
+  switch (PHASES[k]?.id) {
+    case 'coral': {
       // Slowly round the garden, a little above the sand.
       const a = 0.4 + u * 1.2;
       return { eye: [Math.sin(a) * 44, FLOOR + 14, Math.cos(a) * 44], target: [0, FLOOR + 6, 0] };
     }
-    case 1: {
+    case 'fans': {
+      // Low among the fans, looking up their height.
+      const a = 1.2 + u * 1;
+      return { eye: [Math.sin(a) * 46, FLOOR + 10, Math.cos(a) * 46], target: [0, FLOOR + 8, 0] };
+    }
+    case 'tables': {
+      // From above, to see the plates in their tiers.
+      const a = 2 + u * 1;
+      return { eye: [Math.sin(a) * 38, FLOOR + 22, Math.cos(a) * 38], target: [0, FLOOR + 3, 0] };
+    }
+    case 'fish-pulse': {
+      // Close to the thicket, drifting round it very slowly: the coral stays still, the fish move.
+      const a = 0.5 + t * 0.025;
+      return { eye: [Math.sin(a) * 27, FLOOR + 10, Math.cos(a) * 27], target: [0, FLOOR + 7, 0] };
+    }
+    case 'shoal': {
       // Beside the shoal, keeping it in view as it loops.
-      const c = shoalCentre(t);
+      const { pace, view } = kindNow();
+      const c = shoalCentre(t * pace);
       const a = t * 0.04;
       return {
-        eye: [c[0] * 0.4 + Math.sin(a) * 40, c[1] + 4, c[2] * 0.4 + Math.cos(a) * 40],
+        eye: [
+          c[0] * 0.4 + Math.sin(a) * 40 * view,
+          c[1] + 4 * view,
+          c[2] * 0.4 + Math.cos(a) * 40 * view,
+        ],
         target: [c[0] * 0.6, c[1], c[2] * 0.6],
       };
     }
-    case 2:
+    case 'sardines':
       return { eye: [Math.sin(t * 0.05) * 12, 8, 44], target: [0, 0, 0] };
-    case 3:
+    case 'jellyfish':
       return { eye: [Math.sin(t * 0.04) * 6, -6, 48], target: [0, 2, 0] };
     default: {
       // Down the middle of the channel, a little above the sand.
