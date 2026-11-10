@@ -65,6 +65,16 @@ h2 { font-family: var(--display); font-size: 22px; margin: 28px 0 10px; }
 .pill:disabled { opacity: .35; cursor: default; }
 .pill.round { width: 38px; padding: 0; font-size: 18px; }
 
+.food-add { display: grid; gap: 8px; margin-bottom: 18px; }
+.food-add input, .food-add textarea { width: 100%; font: 15px var(--body); color: var(--ink); background: var(--ground); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; }
+.food-add textarea { resize: vertical; }
+.food-add .pill { justify-self: start; }
+.food-list { display: grid; gap: 10px; }
+.food { display: grid; grid-template-columns: 92px 1fr auto; gap: 4px 14px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--rule); }
+.food time { color: var(--muted, inherit); font-size: 13px; opacity: 0.75; }
+.food b { font-weight: 650; }
+.food p { grid-column: 2; margin: 0; white-space: pre-wrap; }
+.food button { border: 0; background: none; color: inherit; opacity: 0.55; cursor: pointer; font-size: 18px; }
 .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 14px 18px; }
 .feel { display: grid; gap: 12px; }
 .scale-row { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); align-items: center; gap: 10px; }
@@ -306,6 +316,7 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
       <button type="button" class="tab" role="tab" id="tab-plan" data-page="plan" aria-selected="false">Plan</button>
       <button type="button" class="tab" role="tab" id="tab-exercises" data-page="exercises" aria-selected="false">Exercises</button>
       <button type="button" class="tab" role="tab" id="tab-notes" data-page="notes" aria-selected="false">Notes <b id="notes-count" hidden></b></button>
+      <button type="button" class="tab" role="tab" id="tab-food" data-page="food" aria-selected="false">Food</button>
     </nav>
     <button type="button" class="theme-btn" id="theme-btn"></button>
   </div>
@@ -368,6 +379,22 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
     <div id="review"></div>
     <h2>How it felt</h2>
     <div class="timeline" id="timeline"></div>
+  </section>
+
+  <section id="page-food" role="tabpanel" aria-labelledby="tab-food" hidden>
+    <div class="intro">
+      <span class="eyebrow">Food</span>
+      <h1>Foods I didn't like.</h1>
+      <p>What you ate and what you didn't like about it. Each one is kept with its date, newest first.</p>
+    </div>
+    <form class="card food-add" id="food-add">
+      <label class="feel-label" for="food-name">The food</label>
+      <input id="food-name" maxlength="120" autocomplete="off" placeholder="Raw onion, oat milk…">
+      <label class="feel-label" for="food-why">What I didn't like</label>
+      <textarea id="food-why" rows="3" maxlength="1800" placeholder="The taste, how it sat, how I felt after…"></textarea>
+      <button type="submit" class="pill">Save</button>
+    </form>
+    <div class="food-list" id="food-list"></div>
   </section>
 
   <p class="sync" id="sync"></p>
@@ -864,6 +891,11 @@ const fromServer = n => ({ id: n.id, key: n.itemKey, kind: n.kind, body: n.body,
 /* ---------- Notes ---------- */
 const noteRef = n => n.id || n.localId;
 const notesOf = key => notes.filter(n => n.key === key);
+/* Foods I didn't like (2026-11-11: "add a place where I write foods I didn't like in health. where I
+   can write what I didn't like and it saves it with a date"): notes under the key below, the food on
+   the first line and what was not liked after it. They stay out of the routine's notes. */
+const FOOD_KEY = 'food|disliked';
+const routineNotes = () => notes.filter(n => n.key !== FOOD_KEY);
 const KIND = { question: 'Question', comment: 'Comment', research: 'Research' };
 async function addNote(key, kind, body) {
   const text = body.trim();
@@ -1372,10 +1404,11 @@ function renderReview() {
   const by = (a, b) => (order.get(a.key) ?? 1e9) - (order.get(b.key) ?? 1e9) || String(b.createdAt).localeCompare(String(a.createdAt));
   const row = n => { const p = placeOf(n.key); return `<div class="rv-row"><button type="button" class="place" data-go="${esc(n.key)}"${p.c ? ` style="--sess: ${sess(p.c)}"` : ''}><span>${esc(p.tag)}</span>${esc(p.name)} ›</button><div class="rv-note">${noteHtml(n)}</div></div>`; };
   const group = (title, list) => list.length ? `<div class="rv-group"><h3>${title} <b>${list.length}</b></h3><div class="rv-list">${list.sort(by).map(row).join('')}</div></div>` : '';
-  const qs = notes.filter(n => n.kind === 'question');
+  const all = routineNotes();
+  const qs = all.filter(n => n.kind === 'question');
   const waiting = qs.filter(n => !n.answer), answered = qs.filter(n => n.answer);
   const html = group('Questions waiting', waiting) + group('Questions answered', answered)
-    + group('To research', notes.filter(n => n.kind === 'research')) + group('Comments', notes.filter(n => n.kind === 'comment'));
+    + group('To research', all.filter(n => n.kind === 'research')) + group('Comments', all.filter(n => n.kind === 'comment'));
   document.getElementById('review').innerHTML = html ? `<h2>By exercise</h2>${html}` : '';
   const fresh = notes.filter(n => n.answer && !n.readAt).length;
   const c = document.getElementById('notes-count');
@@ -1413,11 +1446,12 @@ function setNotebook(open) {
   if (open) { if (!nbText.value.trim()) nbPinned = false; followSpot(); }
 }
 function renderNotebook() {
-  nbDot.classList.toggle('has-notes', notes.length > 0);
+  nbDot.classList.toggle('has-notes', routineNotes().length > 0);
   if (notebook.hidden) return;
   const box = document.getElementById('nb-list');
   if (box.querySelector('.n-editor')) return;
-  const q = notes.filter(n => n.kind === 'question'), r = notes.filter(n => n.kind === 'research'), c = notes.filter(n => n.kind === 'comment');
+  const all = routineNotes();
+  const q = all.filter(n => n.kind === 'question'), r = all.filter(n => n.kind === 'research'), c = all.filter(n => n.kind === 'comment');
   const waiting = q.filter(n => !n.answer).length;
   document.getElementById('nb-sum').textContent = [q.length && `${q.length} question${q.length > 1 ? 's' : ''}`, waiting && `${waiting} waiting`, r.length && `${r.length} to research`, c.length && `${c.length} comment${c.length > 1 ? 's' : ''}`].filter(Boolean).join(' · ');
   const here = currentSpot();
@@ -1527,8 +1561,34 @@ function renderNotes() {
     const n = notes.filter(x => x.key === `sec|${s.id}` || s.ex.some(e => x.key === `ex|${e.id}`)).length, q = el.querySelector('summary .sec-qs');
     q.hidden = !n; q.textContent = `✎ ${n}`;
   }
-  renderReview(); renderNotebook();
+  renderReview(); renderNotebook(); renderFood();
 }
+function renderFood() {
+  const list = notesOf(FOOD_KEY).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  document.getElementById('food-list').innerHTML = list.length ? list.map(n => {
+    const [food, ...rest] = n.body.split('\n');
+    const when = n.createdAt ? new Date(n.createdAt) : null;
+    return `<div class="food" data-ref="${esc(noteRef(n))}">
+      <time${when ? ` datetime="${esc(n.createdAt)}"` : ''}>${when ? when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</time>
+      <b>${esc(food)}</b>
+      <button type="button" class="food-del" aria-label="Delete ${esc(food)}">×</button>
+      ${rest.join('\n').trim() ? `<p>${esc(rest.join('\n').trim())}</p>` : ''}
+    </div>`;
+  }).join('') : '<p class="saved">Nothing yet.</p>';
+}
+document.getElementById('food-add').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = document.getElementById('food-name'), why = document.getElementById('food-why');
+  const food = name.value.replace(/\s+/g, ' ').trim();
+  if (!food) { name.focus(); return; }
+  addNote(FOOD_KEY, 'comment', why.value.trim() ? `${food}\n${why.value.trim()}` : food);
+  name.value = ''; why.value = '';
+  name.focus();
+});
+document.getElementById('food-list').addEventListener('click', e => {
+  const b = e.target.closest('.food-del');
+  if (b) deleteNote(b.closest('.food').dataset.ref);
+});
 function renderAll() { renderFavs(); renderLibrary(); renderDay(); renderNotes(); renderTimeline(); }
 
 paintTheme();

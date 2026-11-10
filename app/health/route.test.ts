@@ -148,4 +148,31 @@ describe('/health page content', () => {
     click('#view-btn');
     expect(page.classList.contains('basic')).toBe(true);
   });
+
+  it('keeps foods I did not like with their date, newest first, apart from the routine notes', () => {
+    const name = document.getElementById('food-name') as HTMLInputElement;
+    const why = document.getElementById('food-why') as HTMLTextAreaElement;
+    const form = document.getElementById('food-add') as HTMLFormElement;
+    name.value = '  Raw   onion ';
+    why.value = 'Too sharp, it stayed all afternoon.';
+    form.requestSubmit();
+    name.value = 'Oat milk';
+    form.requestSubmit();
+    const rows = [...document.querySelectorAll<HTMLElement>('#food-list .food')];
+    expect(rows.map((r) => r.querySelector('b')?.textContent)).toHaveLength(2);
+    expect(rows.map((r) => r.querySelector('b')?.textContent)).toContain('Raw onion');
+    const onion = rows.find((r) => r.querySelector('b')?.textContent === 'Raw onion');
+    expect(onion?.querySelector('p')?.textContent).toBe('Too sharp, it stayed all afternoon.');
+    expect(onion?.querySelector('time')?.getAttribute('datetime')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    const stored = JSON.parse(localStorage.getItem('health-notes') ?? '[]');
+    expect(stored.filter((n: { key: string }) => n.key === 'food|disliked')).toHaveLength(2);
+    expect(document.getElementById('review')?.textContent).not.toContain('onion');
+    // An empty food is not saved.
+    form.requestSubmit();
+    expect(document.querySelectorAll('#food-list .food')).toHaveLength(2);
+    (onion?.querySelector('.food-del') as HTMLElement).click();
+    expect([...document.querySelectorAll('#food-list .food b')].map((b) => b.textContent)).toEqual([
+      'Oat milk',
+    ]);
+  });
 });
