@@ -486,9 +486,12 @@ export function tree(): Route[] {
 /** A point of route `r` (of `n`) at `s`, in the journey's space, `across` -1..1 over its width. */
 function onTree(r: number, n: number, route: Route, s: number, across: number, t: number): Vec3 {
   const [x, y, w] = along(route, s);
-  const fan = (r / Math.max(1, n - 1) - 0.5) * Math.PI * 0.9 + t * 0.04;
+  // All the way round (2026-11-10: "only half of the symmetry"): turned by its distance from the
+  // trunk, each route takes its own angle of the full circle, neighbours next to each other.
+  const fan = (r / n) * TAU + t * 0.04;
   const [X, Y] = toWorld(x + (across * w) / 2, y);
-  return [X * Math.cos(fan), Y, X * Math.sin(fan)];
+  const out = Math.abs(X);
+  return [out * Math.cos(fan), Y, out * Math.sin(fan)];
 }
 function treePoint(p: Particle, u: number, t: number): Vec3 {
   const routes = tree();
@@ -506,8 +509,18 @@ function treePoint(p: Particle, u: number, t: number): Vec3 {
   const a = p.d * TAU * 3;
   return [pos[0] + Math.cos(a) * g, pos[1] + Math.sin(a) * g * 0.8, pos[2] + Math.sin(a * 1.7) * g];
 }
-/** The heartbeat in the tree: a smooth swell every 3.2 seconds (as the life tree's). */
-const breath = (t: number) => 0.5 - 0.5 * Math.cos((TAU * t) / 3.2);
+/** The heartbeat in the tree: a slow swell every 5 seconds (2026-11-10: "pulsing too fast"). */
+const BEAT = 5;
+const breath = (t: number) => 0.5 - 0.5 * Math.cos((TAU * t) / BEAT);
+/**
+ * How far a grain has gone by time t when its speed swells on each beat:
+ * the integral of 1 + ½·(½ − ½·cos ωt), so each surge is the same size
+ * however long the trip has run.
+ */
+const beatTravel = (t: number) => {
+  const w = TAU / BEAT;
+  return t + 0.5 * (t / 2 - Math.sin(w * t) / (2 * w));
+};
 function pulsePoint(p: Particle, _u: number, t: number): Vec3 {
   const routes = tree();
   const r = Math.floor(p.a * routes.length);
@@ -515,7 +528,7 @@ function pulsePoint(p: Particle, _u: number, t: number): Vec3 {
   const len = routeLength(route);
   // Half the grains climb (water), half come down (sugar); both surge on the beat.
   const up = p.c < 0.55;
-  const go = t * 0.16 * (1 + 0.5 * breath(t)) * (0.8 + 0.4 * p.d);
+  const go = 0.07 * beatTravel(t) * (0.8 + 0.4 * p.d);
   const s = wrap(p.b * len + (up ? go : -go), len);
   return onTree(r, routes.length, route, s, (p.d - 0.5) * 1.4, t);
 }

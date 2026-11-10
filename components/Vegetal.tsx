@@ -3,14 +3,18 @@
 /*
  * Vegetal, the plant world's chapter (docs/specs/art-vegetal.md): cell, roots
  * from one base, the tree flat and in 3D, fungi, a leaf, a flower on the
- * golden angle, fruit and seed, then a road through an avenue and a wild
- * forest. The math lives in lib/vegetal.ts; the shared
- * trip player draws it.
+ * golden angle, fruit and seed, a road through an avenue, a forest along a
+ * river, the full tree in gold and a tree in the water. The math lives in
+ * lib/vegetal.ts; the shared trip player draws it.
  */
 import TripPlayer, { type Trip } from '@/components/TripPlayer';
 import {
   camera,
   fade,
+  GROUNDS,
+  hasGround,
+  hasLineTurn,
+  hasSap,
   look,
   makeParticles,
   PHASE_START,
@@ -23,6 +27,9 @@ import {
   pieceLook,
   pieceProgress,
   STEP_COLOURS,
+  setGround,
+  setLineTurn,
+  setSap,
   TOTAL,
   wordsShown,
 } from '@/lib/vegetal';
@@ -46,6 +53,9 @@ const TRIP: Trip = {
     particleAt: pieceAt,
     camera: pieceCamera,
     look: pieceLook,
+    flow: { has: hasSap, set: setSap },
+    variants: { has: hasGround, names: GROUNDS, set: setGround },
+    turn: { has: hasLineTurn, label: 'Road', max: 90, set: setLineTurn },
   },
 };
 

@@ -4,6 +4,7 @@ import { flow, GOLDEN_ANGLE } from './bigbang';
 import { along, routeLength } from './star-tree';
 import {
   along3,
+  bendAt,
   CELL_COUNT,
   camera,
   cellOf,
@@ -14,7 +15,9 @@ import {
   floret,
   forestTrees,
   fruitOf,
+  GROUND_3D,
   GROUND_FRUIT,
+  GROUNDS,
   makeParticles,
   mandala,
   PHASE_START,
@@ -28,6 +31,7 @@ import {
   ROOT_BASE,
   rootSystem,
   STEP_COLOURS,
+  setGround,
   starBall,
   TOTAL,
   target,
@@ -46,7 +50,7 @@ const at = (k: number, u: number) =>
   (PHASE_START[k] as number) + u * (PHASES[k]?.duration as number);
 
 describe('the vegetal chapter', () => {
-  it('has eleven numbered pieces, from a cell to the forest road, each with words', () => {
+  it('has thirteen numbered pieces, from a cell to a tree in the water, each with words', () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       'cell',
       'roots',
@@ -59,6 +63,8 @@ describe('the vegetal chapter', () => {
       'fruit',
       'avenue',
       'forest',
+      'full-tree',
+      'reflection',
     ]);
     for (const p of PHASES) {
       expect(p.words).toHaveLength(2);
@@ -185,7 +191,12 @@ describe('the vegetal chapter', () => {
       const a = camera(at(k, 0.2));
       const b = camera(at(k, 0.6));
       expect(a.eye[1]).toBeCloseTo(EYE_H, 6);
-      expect(Math.abs(a.eye[0])).toBeLessThan(ROAD_W);
+      // Over the road, or over the river wherever it has bent (the eye stands 14 into the loop).
+      expect(Math.abs(a.eye[0] - bendAt(k, -a.eye[2] + 14))).toBeLessThan(ROAD_W);
+      if (k === 10) {
+        expect(Math.abs(bendAt(k, 30) - bendAt(k, 0))).toBeGreaterThan(2);
+        expect(bendAt(k, 30)).toBeCloseTo(bendAt(k, 30 + 140), 6);
+      }
       expect(b.eye[2]).toBeLessThan(a.eye[2] - 20);
       // Trees just ahead of the eye stand taller than the seedlings far down the road.
       const t = at(k, 0.6);
@@ -206,6 +217,84 @@ describe('the vegetal chapter', () => {
       const { eye, target: aim } = camera(s);
       expect(dist(eye, aim)).toBeGreaterThan(1);
     }
+  });
+
+  it('puts the roots below the horizon and the tree above it, all gold, no green', () => {
+    const k = PHASES.findIndex((p) => p.id === 'full-tree');
+    const t = at(k, 0.7);
+    let below = 0;
+    let above = 0;
+    for (const p of particles) {
+      const pos = target(k, p, 0.7, t);
+      const [r, g, b] = colour(k, p, 0.7, t);
+      // Gold: red at least green, green above blue.
+      expect(r).toBeGreaterThanOrEqual(g - 1e-9);
+      expect(g).toBeGreaterThanOrEqual(b - 1e-9);
+      if (pos[1] < -2) below++;
+      if (pos[1] > 2) above++;
+    }
+    expect(below).toBeGreaterThan(particles.length * 0.2);
+    expect(above).toBeGreaterThan(particles.length * 0.2);
+  });
+
+  it('makes the veins exactly symmetric: sixteen copies of one picture, turned and mirrored', () => {
+    const t = at(4, 0.6);
+    const all = makeParticles(1600);
+    // Grains 0..15 are one run, one per copy: all the same distance from the centre.
+    for (let run = 0; run < 100; run++) {
+      const r = all
+        .slice(run * 16, run * 16 + 16)
+        .map((p) => Math.hypot(...(target(4, p, 0.6, t).slice(0, 2) as [number, number])));
+      for (const v of r) expect(v).toBeCloseTo(r[0] as number, 6);
+    }
+  });
+
+  it('gives the tree in the water the shape of the tree above, turned over and rippling', () => {
+    const k = PHASES.findIndex((p) => p.id === 'reflection');
+    const all = makeParticles(2000);
+    // At a ripple-free moment for the trunk's foot, the pair meets at the water.
+    const t = at(k, 0.7);
+    let above = 0;
+    for (let i = 0; i < all.length; i += 2) {
+      const up = target(k, all[i] as (typeof all)[0], 0.7, t);
+      const down = target(k, all[i + 1] as (typeof all)[0], 0.7, t);
+      if (up[1] > 1) {
+        above++;
+        expect(down[1]).toBeLessThan(0);
+        expect(Math.abs(down[1] + up[1])).toBeLessThan(0.3);
+        expect(Math.abs(down[0] - up[0])).toBeLessThan(0.8);
+        expect(down[2]).toBeCloseTo(up[2], 6);
+      }
+    }
+    expect(above).toBeGreaterThan(500);
+    // The tree above does not turn: the eye stands still.
+    expect(camera(at(k, 0.2))).toEqual(camera(at(k, 0.6)));
+  });
+
+  it('lays each ground under the 3D tree on the floor', () => {
+    const t = at(3, 0.7);
+    const soil = particles.filter((p) => p.c > 0.72 && p.c <= 0.8);
+    GROUNDS.forEach((_, g) => {
+      setGround(g);
+      for (const p of soil) {
+        const pos = target(3, p, 0.7, t);
+        const rgb = colour(3, p, 0.7, t);
+        for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+        expect(pos[1]).toBeGreaterThan(GROUND_3D - 0.5);
+        expect(pos[1]).toBeLessThan(GROUND_3D + 5);
+      }
+    });
+    setGround(0);
+  });
+
+  it('keeps the water dark near the top of the roots and shows it deeper down', () => {
+    const t = at(1, 0.7);
+    const water = particles.filter((p) => p.c < 0.16);
+    for (const p of water) {
+      const y = target(1, p, 0.7, t)[1];
+      if (y > ROOT_BASE[1] - 3) expect(Math.max(...colour(1, p, 0.7, t))).toBeLessThan(1e-6);
+    }
+    expect(water.some((p) => Math.max(...colour(1, p, 0.7, t)) > 0.4)).toBe(true);
   });
 
   it('plays each piece on its own: whole from the start, no ball of stars, looping with no seam', () => {

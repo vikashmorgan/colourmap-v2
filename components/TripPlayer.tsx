@@ -49,6 +49,12 @@ export type Trip = {
     particleAt: (p: Particle, k: number, s: number) => { pos: Vec3; rgb: RGB };
     camera: (k: number, s: number) => { eye: Vec3; target: Vec3 };
     look: (k: number) => { glow: number; size: number };
+    /** Which way the moving dots run, for the steps that have them: all up or all down; null in the Journey. */
+    flow?: { has: (k: number) => boolean; set: (up: boolean | null) => void };
+    /** Looks to try on a step, as a row of pills (the 3D tree's ground); the first in the Journey. */
+    variants?: { has: (k: number) => boolean; names: string[]; set: (i: number) => void };
+    /** A slider to play with on a step (the full tree's road line), in degrees; 0 in the Journey. */
+    turn?: { has: (k: number) => boolean; label: string; max: number; set: (deg: number) => void };
   };
 };
 
@@ -107,6 +113,18 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   const [journey, setJourney] = useState(!trip.pieces);
   const journeyRef = useRef(!trip.pieces);
   const pieceRef = useRef(0);
+  const [flowUp, setFlowUp] = useState(true);
+  useEffect(() => {
+    tripRef.current.pieces?.flow?.set(journey ? null : flowUp);
+  }, [journey, flowUp]);
+  const [variant, setVariant] = useState(0);
+  useEffect(() => {
+    tripRef.current.pieces?.variants?.set(journey ? 0 : variant);
+  }, [journey, variant]);
+  const [turn, setTurn] = useState(0);
+  useEffect(() => {
+    tripRef.current.pieces?.turn?.set(journey ? 0 : turn);
+  }, [journey, turn]);
 
   useEffect(() => {
     try {
@@ -332,7 +350,13 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   const lines = step.words ?? [];
   const shown = trip.wordsShown?.(hud.u, lines.length) ?? lines.map(() => 1);
   return (
-    <main className="bb">
+    <main
+      className={`bb bb-${page}${
+        !journey && (trip.pieces?.variants?.has(hud.index) || trip.pieces?.turn?.has(hud.index))
+          ? ' bb-raised'
+          : ''
+      }`}
+    >
       <canvas ref={canvasRef} className="bb-canvas" />
       <div className={`bb-top${chrome ? '' : ' bb-hidden'}`}>
         <nav className="bb-tabs" aria-label="Art">
@@ -369,38 +393,90 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         <p className={`bb-line${chrome ? '' : ' bb-hidden'}`}>{step.line}</p>
       </div>
       <div className={`bb-bar${chrome ? '' : ' bb-hidden'}`}>
-        <div className="bb-segments" role="toolbar" aria-label="Steps of the trip">
-          {trip.phases.map((p, k) => {
-            const fill = k === hud.index ? hud.u : journey && k < hud.index ? 1 : 0;
-            return (
-              <button
-                type="button"
-                key={p.id}
-                className={`bb-seg${k === hud.index ? ' bb-seg-on' : ''}`}
-                style={{ flexGrow: p.duration }}
-                onClick={() => jumpTo(k)}
-                title={`${k + 1}. ${p.name}`}
-                aria-label={`Go to step ${k + 1}, ${p.name}`}
-              >
-                <span style={{ width: `${fill * 100}%`, background: trip.stepColours[k] }} />
-              </button>
-            );
-          })}
-        </div>
+        {journey ? (
+          <div className="bb-segments" role="toolbar" aria-label="Steps of the trip">
+            {trip.phases.map((p, k) => {
+              const fill = k === hud.index ? hud.u : k < hud.index ? 1 : 0;
+              return (
+                <button
+                  type="button"
+                  key={p.id}
+                  className={`bb-seg${k === hud.index ? ' bb-seg-on' : ''}`}
+                  style={{ flexGrow: p.duration }}
+                  onClick={() => jumpTo(k)}
+                  title={`${k + 1}. ${p.name}`}
+                  aria-label={`Go to step ${k + 1}, ${p.name}`}
+                >
+                  <span style={{ width: `${fill * 100}%`, background: trip.stepColours[k] }} />
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          // Steps on their own are presets, picked by name like the Art panel's, with no time bar.
+          <>
+            {trip.pieces?.variants?.has(hud.index) ? (
+              <div className="bb-pills bb-variants" role="toolbar" aria-label="Ground">
+                {trip.pieces.variants.names.map((name, i) => (
+                  <button
+                    type="button"
+                    key={name}
+                    className="bb-pill"
+                    aria-pressed={i === variant}
+                    onClick={() => setVariant(i)}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {trip.pieces?.turn?.has(hud.index) ? (
+              <label className="bb-turn">
+                {trip.pieces.turn.label}
+                <input
+                  type="range"
+                  min={0}
+                  max={trip.pieces.turn.max}
+                  value={turn}
+                  onChange={(e) => setTurn(Number(e.target.value))}
+                />
+                <span>{turn}°</span>
+              </label>
+            ) : null}
+            <div className="bb-pills" role="toolbar" aria-label="Pieces">
+              {trip.phases.map((p, k) => (
+                <button
+                  type="button"
+                  key={p.id}
+                  className="bb-pill"
+                  aria-pressed={k === hud.index}
+                  onClick={() => jumpTo(k)}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
         <div className="bb-controls">
-          <button type="button" onClick={() => jumpTo(hud.index - 1)} aria-label="Previous step">
-            ⏮
-          </button>
+          {journey ? (
+            <button type="button" onClick={() => jumpTo(hud.index - 1)} aria-label="Previous step">
+              ⏮
+            </button>
+          ) : null}
           <button type="button" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
             {playing ? '❚❚' : '▶'}
           </button>
-          <button type="button" onClick={() => jumpTo(hud.index + 1)} aria-label="Next step">
-            ⏭
-          </button>
-          <span className="bb-time">
-            {fmt(hud.time)} /{' '}
-            {fmt(journey || !trip.pieces ? trip.total : trip.pieces.length(hud.index))}
-          </span>
+          {journey ? (
+            <>
+              <button type="button" onClick={() => jumpTo(hud.index + 1)} aria-label="Next step">
+                ⏭
+              </button>
+              <span className="bb-time">
+                {fmt(hud.time)} / {fmt(trip.total)}
+              </span>
+            </>
+          ) : null}
           {trip.pieces ? (
             <button
               type="button"
@@ -428,6 +504,18 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
               </button>
             ))}
           </span>
+          {!journey && trip.pieces?.flow?.has(hud.index) ? (
+            <button
+              type="button"
+              onClick={() => setFlowUp((f) => !f)}
+              aria-label={
+                flowUp ? 'Dots moving up; send them down' : 'Dots moving down; send them up'
+              }
+              title={flowUp ? 'Moving up' : 'Moving down'}
+            >
+              {flowUp ? '↑' : '↓'}
+            </button>
+          ) : null}
         </div>
       </div>
     </main>
