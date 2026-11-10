@@ -9,7 +9,9 @@ import {
   colour,
   corals,
   EYE_H,
+  gardenGrowth,
   HUNT_LAP,
+  hasGame,
   hasPointer,
   hasVariants,
   hunterAt,
@@ -30,12 +32,16 @@ import {
   SHOAL_KINDS,
   STEP_COLOURS,
   SWARM_NAMES,
+  SWIM_NAMES,
+  SWIM_SPEED,
   setPointer,
   setShoalKind,
+  setSwim,
   setVariant,
   shoalFish,
   smallFish,
   starBall,
+  swimmer,
   TOTAL,
   target,
   variantLabel,
@@ -53,7 +59,7 @@ const at = (k: number, u: number) =>
   (PHASE_START[k] as number) + u * (PHASES[k]?.duration as number);
 
 describe('the ocean chapter', () => {
-  it('has eight pieces, from a coral garden to the reef, each with words', () => {
+  it('has nine pieces, from a coral garden to the reef and a swim of your own, each with words', () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       'coral',
       'fans',
@@ -63,6 +69,7 @@ describe('the ocean chapter', () => {
       'sardines',
       'jellyfish',
       'reef',
+      'swim',
     ]);
     for (const p of PHASES) {
       expect(p.words).toHaveLength(2);
@@ -252,7 +259,7 @@ describe('the ocean chapter', () => {
     expect(SWARM_NAMES).toHaveLength(10);
     expect(JELLY_NAMES).toHaveLength(6);
     expect(JELLY_NAMES[5]).toBe('Lanterns');
-    const ids = ['shoal', 'sardines', 'jellyfish', 'fish-pulse'];
+    const ids = ['shoal', 'sardines', 'jellyfish', 'fish-pulse', 'swim'];
     for (let k = 0; k < PHASES.length; k++) {
       expect(hasVariants(k)).toBe(ids.includes(PHASES[k]?.id ?? ''));
     }
@@ -361,5 +368,59 @@ describe('the ocean chapter', () => {
     const closest = times.reduce((a, b) => (near(b) < near(a) ? b : a));
     for (let j = 0; j < CLOWNS; j++) expect(clownFish(j, closest).out).toBeLessThan(0.05);
     setVariant(0);
+  });
+
+  it('lets you swim your own fish: cruising, steering with the cursor, faster on W, never through the sand', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    expect(hasGame(k)).toBe(true);
+    expect(hasGame(k - 1)).toBe(false);
+    expect(SWIM_NAMES).toContain('Hammerhead');
+    expect(SWIM_NAMES).toContain('Silver school');
+    // With no one at the controls it wanders on, above the sand.
+    for (let t = 0; t < 120; t += 3) expect(swimmer(t).c[1]).toBeGreaterThan(-14 + 1);
+    const frames = (n: number, at: { x: number; y: number } | null, keys: string[], t0: number) => {
+      for (let i = 1; i <= n; i++) setSwim(true, at, keys, 1 / 60, t0 + i / 60);
+      return swimmer(t0 + n / 60);
+    };
+    const a = frames(1, null, [], 0);
+    // Two seconds straight on: about the cruising speed.
+    const b = frames(120, null, [], 1 / 60);
+    const run = Math.hypot(b.c[0] - a.c[0], b.c[1] - a.c[1], b.c[2] - a.c[2]);
+    expect(run).toBeGreaterThan(SWIM_SPEED * 2 * 0.8);
+    expect(run).toBeLessThan(SWIM_SPEED * 2 * 1.2);
+    // The cursor to the right turns the fish right, gradually.
+    const right = [-b.f[2], 0, b.f[0]];
+    const c = frames(60, { x: 0.8, y: 0 }, [], 2);
+    expect(c.f[0] * (right[0] as number) + c.f[2] * (right[2] as number)).toBeGreaterThan(0.3);
+    // Down at the bottom of the screen it dives, but stops at the sand.
+    const d = frames(900, { x: 0, y: -1 }, [], 3);
+    expect(d.c[1]).toBeGreaterThanOrEqual(-14 + 1.5);
+    // W speeds up.
+    const e0 = frames(1, null, ['w'], 18);
+    const e1 = frames(180, null, ['w'], 18 + 1 / 60);
+    expect(Math.hypot(e1.c[0] - e0.c[0], e1.c[2] - e0.c[2])).toBeGreaterThan(SWIM_SPEED * 3 * 1.2);
+    // Every grain somewhere real, as each fish.
+    for (let i = 0; i < SWIM_NAMES.length; i++) {
+      setVariant(i, k);
+      for (const p of particles.slice(0, 300)) {
+        const { pos, rgb } = pieceAt(p, k, 25);
+        for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+      }
+    }
+    setSwim(false, null, [], 0, 0);
+    setVariant(0);
+  });
+
+  it('grows the garden from nothing, quick at first and slower as it gets bigger, dark until it begins', () => {
+    const k = PHASES.findIndex((p) => p.id === 'coral');
+    // Before a colony begins, its grains give no light: no balls of light at the start.
+    for (const p of particles.filter((q) => q.c >= 0.21).slice(0, 200)) {
+      expect(Math.max(...pieceAt(p, k, 0.01).rgb)).toBeLessThan(1e-3);
+    }
+    // Each step of growth takes longer than the last.
+    const steps = [0.1, 0.3, 0.5, 0.7].map((u) => gardenGrowth(2, u + 0.1) - gardenGrowth(2, u));
+    for (let i = 1; i < steps.length; i++)
+      expect(steps[i] as number).toBeLessThan(steps[i - 1] as number);
+    expect(gardenGrowth(0, 0.9)).toBeGreaterThan(0.99);
   });
 });

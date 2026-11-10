@@ -37,6 +37,11 @@ export type Trip = {
   camera?: (t: number) => { eye: Vec3; target: Vec3 };
   /** How much a grain shows by its distance from the eye; without it, the Big Bang's depth fade. */
   fade?: (pos: Vec3, eye: Vec3) => number;
+  /**
+   * Backgrounds to pick from, the first by default: one colour is flat, several run from the top
+   * of the screen to the bottom for a feeling of depth. The choice is remembered on the device.
+   */
+  backgrounds?: { name: string; stops: string[] }[];
   /** How far each line of a step's words has come in, `u` through the step. */
   wordsShown?: (u: number, lines: number) => number[];
   /**
@@ -71,6 +76,21 @@ export type Trip = {
       has: (k: number) => boolean;
       set: (at: Vec3 | null, dt: number, t: number) => void;
     };
+    /**
+     * A step you play (the Ocean's Swim): told every frame whether it is being played, where the
+     * cursor is on screen (-1 to 1 each way, null when away), the keys held (lower case), and how
+     * far the step's time moved. While it plays, the arrow keys steer instead of changing step.
+     */
+    game?: {
+      has: (k: number) => boolean;
+      set: (
+        active: boolean,
+        at: { x: number; y: number } | null,
+        keys: string[],
+        dt: number,
+        t: number,
+      ) => void;
+    };
     /** A slider to play with on a step (the full tree's road line), in degrees; 0 in the Journey. */
     turn?: { has: (k: number) => boolean; label: string; max: number; set: (deg: number) => void };
   };
@@ -92,6 +112,28 @@ const ART_LINKS: { href: string; label: string; page?: TripPage }[] = [
 ];
 
 const WORDS_KEY = 'colourmap:journey-words';
+const BG_KEY = 'colourmap:trip-bg';
+
+/** A background from top to bottom through its colours, with a soft glow of light from above. */
+function backgroundTexture(stops: string[]): THREE.Texture | THREE.Color {
+  if (stops.length < 2) return new THREE.Color(stops[0] ?? '#040207');
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  const g = ctx.createLinearGradient(0, 0, 0, 512);
+  stops.forEach((c, i) => g.addColorStop(i / (stops.length - 1), c));
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 512);
+  const glow = ctx.createRadialGradient(32, -40, 0, 32, -40, 300);
+  glow.addColorStop(0, 'rgba(120,180,255,0.14)');
+  glow.addColorStop(1, 'rgba(120,180,255,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, 64, 512);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 
 function circleTexture(): THREE.Texture {
   const sz = 64;
@@ -123,6 +165,22 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
   const [chrome, setChrome] = useState(true);
+  // Full screen with nothing but the picture: every control and word hidden until Esc
+  // (2026-11-11: "make ability to really go full screen so I can get absorbed in the visual").
+  const mainRef = useRef<HTMLElement>(null);
+  const [immersed, setImmersed] = useState(false);
+  const immerse = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+      return;
+    }
+    mainRef.current?.requestFullscreen?.().catch(() => {});
+  }, []);
+  useEffect(() => {
+    const change = () => setImmersed(document.fullscreenElement === mainRef.current);
+    document.addEventListener('fullscreenchange', change);
+    return () => document.removeEventListener('fullscreenchange', change);
+  }, []);
   const [words, setWords] = useState(true);
   const idleRef = useRef(0);
   const tripRef = useRef(trip);
@@ -144,6 +202,33 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   }, [journey, variant, hud.index]);
   // Where the cursor is on screen, -1 to 1 each way, and whether a click has it guiding.
   const cursorRef = useRef<{ x: number; y: number } | null>(null);
+  const keysRef = useRef(new Set<string>());
+  const [bg, setBg] = useState(0);
+  const bgRef = useRef<((i: number) => void) | null>(null);
+  useEffect(() => {
+    try {
+      const i = Number(window.localStorage.getItem(`${BG_KEY}:${page}`));
+      if (i > 0 && i < (tripRef.current.backgrounds?.length ?? 0)) setBg(i);
+    } catch {
+      // The first background.
+    }
+  }, [page]);
+  useEffect(() => {
+    bgRef.current?.(bg);
+  }, [bg]);
+  const nextBg = useCallback(() => {
+    const n = tripRef.current.backgrounds?.length ?? 0;
+    if (n < 2) return;
+    setBg((b) => {
+      const i = (b + 1) % n;
+      try {
+        window.localStorage.setItem(`${BG_KEY}:${page}`, String(i));
+      } catch {
+        // Not remembered; still changed.
+      }
+      return i;
+    });
+  }, [page]);
   const guideRef = useRef(true);
   const [guide, setGuide] = useState(true);
   const [turn, setTurn] = useState(0);
@@ -221,6 +306,14 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#040207');
+    let bgTex: THREE.Texture | null = null;
+    bgRef.current = (i: number) => {
+      const stops = T.backgrounds?.[i]?.stops ?? ['#040207'];
+      bgTex?.dispose();
+      const b = backgroundTexture(stops);
+      bgTex = b instanceof THREE.Texture ? b : null;
+      scene.background = b;
+    };
     const camera = new THREE.PerspectiveCamera(55, 1, 0.3, 900);
     camera.position.set(0, 0, 58);
 
@@ -288,6 +381,11 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       }
       const t = timeRef.current;
       const c = P ? P.camera(k, t) : T.camera?.(t);
+      const game = T.pieces?.game;
+      if (game) {
+        const moved = playingRef.current ? dt * speedRef.current : 0;
+        game.set(!!(P && game.has(k)), cursorRef.current, [...keysRef.current], moved, t);
+      }
       const guided = T.pieces?.pointer;
       if (guided) {
         const at = cursorRef.current;
@@ -356,8 +454,11 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     idleRef.current = performance.now();
     raf = requestAnimationFrame(frame);
 
+    bgRef.current(0);
     return () => {
       cancelAnimationFrame(raf);
+      bgRef.current = null;
+      bgTex?.dispose();
       window.removeEventListener('resize', resize);
       geometry.dispose();
       material.dispose();
@@ -373,17 +474,23 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       idleRef.current = performance.now();
       setChrome(true);
     };
+    const playing = () =>
+      !journeyRef.current && !!tripRef.current.pieces?.game?.has(pieceRef.current);
     const key = (e: KeyboardEvent) => {
       wake();
+      const typing = e.target instanceof HTMLElement && e.target.closest('input, textarea');
+      if (!typing) keysRef.current.add(e.key.toLowerCase());
+      if (playing() && e.key.startsWith('Arrow')) {
+        // While a step is played, the arrows steer.
+        e.preventDefault();
+        return;
+      }
       if (e.key === ' ') {
         e.preventDefault();
         togglePlay();
       } else if (e.key === 'ArrowRight') jumpTo(currentStep() + 1);
       else if (e.key === 'ArrowLeft') jumpTo(currentStep() - 1);
-      else if (e.key === 'f') {
-        if (document.fullscreenElement) document.exitFullscreen();
-        else document.documentElement.requestFullscreen?.();
-      }
+      else if (e.key === 'f') immerse();
     };
     const move = (e: PointerEvent) => {
       wake();
@@ -403,28 +510,35 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       guideRef.current = !guideRef.current;
       setGuide(guideRef.current);
     };
+    const keyUp = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
+    const blur = () => keysRef.current.clear();
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerdown', press);
     document.addEventListener('pointerout', away);
     window.addEventListener('keydown', key);
+    window.addEventListener('keyup', keyUp);
+    window.addEventListener('blur', blur);
     return () => {
+      window.removeEventListener('keyup', keyUp);
+      window.removeEventListener('blur', blur);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerdown', press);
       document.removeEventListener('pointerout', away);
       window.removeEventListener('keydown', key);
     };
-  }, [jumpTo, togglePlay, currentStep]);
+  }, [jumpTo, togglePlay, currentStep, immerse]);
 
   const step = trip.phases[hud.index] as TripStep;
   const lines = step.words ?? [];
   const shown = trip.wordsShown?.(hud.u, lines.length) ?? lines.map(() => 1);
   return (
     <main
+      ref={mainRef}
       className={`bb bb-${page}${
         !journey && (trip.pieces?.variants?.has(hud.index) || trip.pieces?.turn?.has(hud.index))
           ? ' bb-raised'
           : ''
-      }`}
+      }${immersed ? ' bb-immersed' : ''}`}
     >
       <canvas
         ref={canvasRef}
@@ -576,6 +690,19 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           {hasWords ? (
             <button type="button" aria-pressed={words} onClick={toggleWords}>
               Words
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={immerse}
+            aria-label="Full screen, the picture alone; Esc to come back"
+            title="Full screen (F); Esc to come back"
+          >
+            ⛶
+          </button>
+          {(trip.backgrounds?.length ?? 0) > 1 ? (
+            <button type="button" onClick={nextBg} title="Change the background">
+              {trip.backgrounds?.[bg]?.name}
             </button>
           ) : null}
           <span className="bb-speeds" role="toolbar" aria-label="Speed">

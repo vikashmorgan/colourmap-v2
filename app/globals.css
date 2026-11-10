@@ -704,6 +704,10 @@ input[type="range"].feedback-slider::-moz-range-thumb {
   overflow: hidden;
   font-family: var(--font-sans), system-ui, sans-serif;
 }
+/* Full screen with the picture alone: every control and word hidden until Esc. */
+.bb-immersed > :not(.bb-canvas) {
+  display: none !important;
+}
 .bb-canvas {
   position: absolute;
   inset: 0;
