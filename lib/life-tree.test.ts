@@ -182,8 +182,9 @@ describe('design II, the 3D tree', () => {
       expect(Math.max(...zs)).toBeGreaterThan(0.3);
       for (const r of trees[b].routes) {
         expect(r.z?.length).toBe(r.count);
-        for (const v of r.pts) expect(Number.isFinite(v)).toBe(true);
-        for (const v of r.z ?? []) expect(Number.isFinite(v)).toBe(true);
+        // One check per route, not per number: the same cover, and quick under a full run.
+        expect(Array.from(r.pts).every(Number.isFinite)).toBe(true);
+        expect(Array.from(r.z ?? []).every(Number.isFinite)).toBe(true);
       }
     }
   });
