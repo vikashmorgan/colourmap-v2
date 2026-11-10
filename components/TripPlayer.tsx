@@ -59,7 +59,7 @@ export type Trip = {
 };
 
 /** The Art pills, the same as the panel's (components/GeometryField.tsx ART_PILLS). */
-export type TripPage = 'big-bang' | 'journey' | 'vegetal';
+export type TripPage = 'big-bang' | 'journey' | 'vegetal' | 'ocean';
 
 const ART_LINKS: { href: string; label: string; page?: TripPage }[] = [
   { href: '/geometry-field?tab=stars', label: 'Stars' },
@@ -69,6 +69,7 @@ const ART_LINKS: { href: string; label: string; page?: TripPage }[] = [
   { href: '/geometry-field/big-bang', label: 'Big Bang', page: 'big-bang' },
   { href: '/geometry-field/journey', label: 'Journey', page: 'journey' },
   { href: '/geometry-field/vegetal', label: 'Vegetal', page: 'vegetal' },
+  { href: '/geometry-field/ocean', label: 'Ocean', page: 'ocean' },
   { href: '/geometry-field?tab=experiment', label: 'Experiment' },
 ];
 

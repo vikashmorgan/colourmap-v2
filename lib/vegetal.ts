@@ -514,10 +514,10 @@ function flatPoint(p: Particle, u: number, t: number): Vec3 {
 
 const STEP3 = 0.2;
 export type Route3 = { pts: Float32Array; count: number };
-const length3 = (r: Route3) => (r.count - 1) * STEP3;
+export const length3 = (r: Route3) => (r.count - 1) * STEP3;
 
 /** Resamples a polyline of x, y, z, width to points STEP3 apart. */
-function resample3(raw: number[]): Route3 {
+export function resample3(raw: number[]): Route3 {
   const pts: number[] = [at(raw, 0), at(raw, 1), at(raw, 2), at(raw, 3)];
   let carry = 0;
   for (let i = 4; i + 3 < raw.length; i += 4) {
@@ -548,7 +548,7 @@ export function along3(r: Route3, s: number): [number, number, number, number] {
 
 export const GROUND_3D = -20;
 
-function grow3(
+export function grow3(
   rng: () => number,
   o: Vec3,
   dir: Vec3,
