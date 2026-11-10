@@ -39,6 +39,17 @@ export type Trip = {
   fade?: (pos: Vec3, eye: Vec3) => number;
   /** How far each line of a step's words has come in, `u` through the step. */
   wordsShown?: (u: number, lines: number) => number[];
+  /**
+   * Each step on its own, looping, with nothing between: what the page opens
+   * on when given. The Journey button plays the whole trip instead.
+   */
+  pieces?: {
+    length: (k: number) => number;
+    progress: (k: number, s: number) => number;
+    particleAt: (p: Particle, k: number, s: number) => { pos: Vec3; rgb: RGB };
+    camera: (k: number, s: number) => { eye: Vec3; target: Vec3 };
+    look: (k: number) => { glow: number; size: number };
+  };
 };
 
 /** The Art pills, the same as the panel's (components/GeometryField.tsx ART_PILLS). */
@@ -92,6 +103,10 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   const idleRef = useRef(0);
   const tripRef = useRef(trip);
   const hasWords = trip.phases.some((p) => p.words?.length);
+  // Steps on their own (time counts up from 0 in the step) or the whole trip.
+  const [journey, setJourney] = useState(!trip.pieces);
+  const journeyRef = useRef(!trip.pieces);
+  const pieceRef = useRef(0);
 
   useEffect(() => {
     try {
@@ -115,7 +130,26 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   const jumpTo = useCallback((k: number) => {
     const { phases, start } = tripRef.current;
     const n = phases.length;
-    timeRef.current = (start[((k % n) + n) % n] as number) + 0.01;
+    const i = ((k % n) + n) % n;
+    if (journeyRef.current) timeRef.current = (start[i] as number) + 0.01;
+    else {
+      pieceRef.current = i;
+      timeRef.current = 0;
+      setHud({ index: i, u: 0, time: 0 });
+    }
+  }, []);
+  const currentStep = useCallback(
+    () => (journeyRef.current ? tripRef.current.phaseAt(timeRef.current).index : pieceRef.current),
+    [],
+  );
+  const toggleJourney = useCallback(() => {
+    const T = tripRef.current;
+    if (journeyRef.current) {
+      pieceRef.current = T.phaseAt(timeRef.current).index;
+      timeRef.current = 0;
+    } else timeRef.current = (T.start[pieceRef.current] as number) + 0.01;
+    journeyRef.current = !journeyRef.current;
+    setJourney(journeyRef.current);
   }, []);
   const togglePlay = useCallback(() => {
     playingRef.current = !playingRef.current;
@@ -194,11 +228,17 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     const frame = (now: number) => {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
-      if (playingRef.current) timeRef.current = (timeRef.current + dt * speedRef.current) % T.total;
+      const P = journeyRef.current ? undefined : T.pieces;
+      const k = pieceRef.current;
+      if (playingRef.current) {
+        const next = timeRef.current + dt * speedRef.current;
+        // A step on its own keeps counting, so whatever moves with time never jumps at its loop.
+        timeRef.current = P ? next : next % T.total;
+      }
       const t = timeRef.current;
+      const c = P ? P.camera(k, t) : T.camera?.(t);
 
-      if (T.camera) {
-        const c = T.camera(t);
+      if (c) {
         // Stepped back from what it looks at on a tall screen.
         eye[0] = c.target[0] + (c.eye[0] - c.target[0]) * back;
         eye[1] = c.target[1] + (c.eye[1] - c.target[1]) * back;
@@ -213,7 +253,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       }
 
       for (let i = 0; i < N; i++) {
-        const { pos, rgb } = T.particleAt(particles[i] as Particle, t);
+        const p = particles[i] as Particle;
+        const { pos, rgb } = P ? P.particleAt(p, k, t) : T.particleAt(p, t);
         positions[i * 3] = pos[0];
         positions[i * 3 + 1] = pos[1];
         positions[i * 3 + 2] = pos[2];
@@ -227,15 +268,20 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       geometry.attributes.position.needsUpdate = true;
       geometry.attributes.color.needsUpdate = true;
 
-      const lk = T.look(t);
+      const lk = P ? P.look(k) : T.look(t);
       bloom.strength = lk.glow * 0.78; // a quarter less glow overall: the grains read as grains
       material.size = 0.42 * lk.size;
       composer.render();
 
       if (now - lastHud > 200) {
         lastHud = now;
-        const { index, u } = T.phaseAt(t);
-        setHud({ index, u, time: t });
+        if (P) {
+          const u = P.progress(k, t);
+          setHud({ index: k, u, time: u * P.length(k) });
+        } else {
+          const { index, u } = T.phaseAt(t);
+          setHud({ index, u, time: t });
+        }
         if (playingRef.current && now - idleRef.current > 4500) setChrome(false);
       }
       raf = requestAnimationFrame(frame);
@@ -265,8 +311,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       if (e.key === ' ') {
         e.preventDefault();
         togglePlay();
-      } else if (e.key === 'ArrowRight') jumpTo(tripRef.current.phaseAt(timeRef.current).index + 1);
-      else if (e.key === 'ArrowLeft') jumpTo(tripRef.current.phaseAt(timeRef.current).index - 1);
+      } else if (e.key === 'ArrowRight') jumpTo(currentStep() + 1);
+      else if (e.key === 'ArrowLeft') jumpTo(currentStep() - 1);
       else if (e.key === 'f') {
         if (document.fullscreenElement) document.exitFullscreen();
         else document.documentElement.requestFullscreen?.();
@@ -280,7 +326,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       window.removeEventListener('pointerdown', wake);
       window.removeEventListener('keydown', key);
     };
-  }, [jumpTo, togglePlay]);
+  }, [jumpTo, togglePlay, currentStep]);
 
   const step = trip.phases[hud.index] as TripStep;
   const lines = step.words ?? [];
@@ -325,7 +371,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       <div className={`bb-bar${chrome ? '' : ' bb-hidden'}`}>
         <div className="bb-segments" role="toolbar" aria-label="Steps of the trip">
           {trip.phases.map((p, k) => {
-            const fill = k < hud.index ? 1 : k === hud.index ? hud.u : 0;
+            const fill = k === hud.index ? hud.u : journey && k < hud.index ? 1 : 0;
             return (
               <button
                 type="button"
@@ -352,8 +398,19 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
             ⏭
           </button>
           <span className="bb-time">
-            {fmt(hud.time)} / {fmt(trip.total)}
+            {fmt(hud.time)} /{' '}
+            {fmt(journey || !trip.pieces ? trip.total : trip.pieces.length(hud.index))}
           </span>
+          {trip.pieces ? (
+            <button
+              type="button"
+              aria-pressed={journey}
+              onClick={toggleJourney}
+              title="Play every piece as one trip, through a ball of stars"
+            >
+              Journey
+            </button>
+          ) : null}
           {hasWords ? (
             <button type="button" aria-pressed={words} onClick={toggleWords}>
               Words

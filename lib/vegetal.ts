@@ -1205,6 +1205,10 @@ function order(k: number, p: Particle): number {
   return p.b;
 }
 
+/** Piece k's form, held whole until FORMED unless the piece grows as it goes. */
+const whole = (k: number, p: Particle, u: number, t: number) =>
+  form(k, p, runsOn(k) ? u : Math.max(u, at(FORMED, k)), t);
+
 /** How far grain p has come from the ball of stars into piece k's form, `u` through it. */
 export function arrival(k: number, p: Particle, u: number): number {
   return smooth((u - 0.02 - 0.4 * order(k, p)) / 0.14);
@@ -1226,7 +1230,7 @@ export function starBall(k: number, p: Particle, t: number): Vec3 {
 
 /** Where particle p is in piece k, `u` through it, at chapter time t. */
 export function target(k: number, p: Particle, u: number, t: number): Vec3 {
-  const f = form(k, p, runsOn(k) ? u : Math.max(u, at(FORMED, k)), t);
+  const f = whole(k, p, u, t);
   const a = arrival(k, p, u);
   return a >= 1 ? f : lerp3(starBall(k, p, t), f, a);
 }
@@ -1497,6 +1501,70 @@ export function particleAt(p: Particle, time: number): { pos: Vec3; rgb: RGB } {
     pos: lerp3(a, target(next, p, 0, t), w),
     rgb: mix(ca, colour(next, p, 0, t), w),
   };
+}
+
+/*
+ * Each piece on its own (2026-11-10: "all those vegetal, with pill mode so u
+ * just get the visuals straight up without the circle at start … so i can
+ * click journey mode and it brings me to what it is now"). A piece starts
+ * whole, with no ball of stars, and loops: near the end each grain glides
+ * back to where the piece began. The two roads never loop back: the eye flies
+ * on, two turns of the recycled road per loop, so the wrap is seamless.
+ */
+
+/**
+ * Where piece k starts on its own: whole already. The roads grow as they go,
+ * so from 0; the fruit once it has swelled, not as a small bright dot.
+ */
+const pieceFrom = (k: number) => (isForest(k) ? 0 : isFruit(k) ? 0.2 : at(FORMED, k));
+
+/** How long piece k plays on its own before it loops, in seconds. */
+export function pieceLength(k: number): number {
+  if (isForest(k)) return (2 * LOOP) / SPEED;
+  return (1 - pieceFrom(k)) * (PHASES[k] as VegetalPhase).duration;
+}
+
+/** Piece k on its own, `s` seconds in: how far through the loop (f), the piece's own u, and its time. */
+function pieceClock(k: number, s: number): { f: number; u: number; t: number } {
+  const len = pieceLength(k);
+  const f = wrap(s, len) / len;
+  const from = pieceFrom(k);
+  const u = isForest(k) ? (f * len) / (PHASES[k] as VegetalPhase).duration : from + (1 - from) * f;
+  return { f, u, t: s };
+}
+
+/** How far through its loop piece k is, `s` seconds in, for the step bar and the words. */
+export const pieceProgress = (k: number, s: number) => pieceClock(k, s).f;
+
+/** Position and colour of particle p in piece k on its own, `s` seconds in. */
+export function pieceAt(p: Particle, k: number, s: number): { pos: Vec3; rgb: RGB } {
+  const { f, u, t } = pieceClock(k, s);
+  const pos = whole(k, p, u, t);
+  const rgb = formColour(k, p, u, t);
+  if (isForest(k)) return { pos, rgb };
+  const w = smooth((f - 0.8 + 0.12 * p.stagger) / 0.2);
+  if (w <= 0) return { pos, rgb };
+  const from = pieceFrom(k);
+  return {
+    pos: lerp3(pos, whole(k, p, from, t), w),
+    rgb: mix(rgb, formColour(k, p, from, t), w),
+  };
+}
+
+/** The camera in piece k on its own, easing back to where the piece began in the last quarter. */
+export function pieceCamera(k: number, s: number): Eye {
+  const { f, u, t } = pieceClock(k, s);
+  const a = eyeIn(k, u, t);
+  const w = isForest(k) ? 0 : smooth((f - 0.75) / 0.25);
+  if (w <= 0) return a;
+  const b = eyeIn(k, pieceFrom(k), t);
+  return { eye: lerp3(a.eye, b.eye, w), target: lerp3(a.target, b.target, w) };
+}
+
+/** Glow and size of piece k on its own. */
+export function pieceLook(k: number): { glow: number; size: number } {
+  const { glow, size } = PHASES[k] as VegetalPhase;
+  return { glow, size };
 }
 
 /** Glow and size for the whole picture, blended across piece boundaries. */

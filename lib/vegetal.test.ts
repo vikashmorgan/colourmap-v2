@@ -21,6 +21,9 @@ import {
   PHASES,
   particleAt,
   phaseAt,
+  pieceAt,
+  pieceCamera,
+  pieceLength,
   ROAD_W,
   ROOT_BASE,
   rootSystem,
@@ -202,6 +205,40 @@ describe('the vegetal chapter', () => {
     for (let s = 0; s < TOTAL; s += 3) {
       const { eye, target: aim } = camera(s);
       expect(dist(eye, aim)).toBeGreaterThan(1);
+    }
+  });
+
+  it('plays each piece on its own: whole from the start, no ball of stars, looping with no seam', () => {
+    const isRoad = (k: number) => PHASES[k]?.id === 'avenue' || PHASES[k]?.id === 'forest';
+    for (let k = 0; k < PHASES.length; k++) {
+      const len = pieceLength(k);
+      expect(len).toBeGreaterThan(8);
+      // Nothing starts in the ball of stars: every grain is in the piece's form.
+      for (const p of particles.slice(0, 100)) {
+        expect(dist(pieceAt(p, k, 0).pos, starBall(k, p, 0))).toBeGreaterThan(1e-3);
+      }
+      for (const s of [0, 0.3 * len, 0.9 * len]) {
+        for (const p of particles.slice(0, 200)) {
+          const { pos, rgb } = pieceAt(p, k, s);
+          for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+        }
+      }
+      // Seen from the eye, the end of a loop is where the next begins.
+      const before = len * 3 - 1e-4;
+      const after = len * 3 + 1e-4;
+      const e0 = pieceCamera(k, before).eye;
+      const e1 = pieceCamera(k, after).eye;
+      if (!isRoad(k)) expect(dist(e0, e1)).toBeLessThan(0.05);
+      // On the roads a grain passing behind the eye goes round to the far end at any moment, the wrap too.
+      const kept = particles.slice(0, 400).filter((p) => {
+        const a = pieceAt(p, k, before).pos;
+        const b = pieceAt(p, k, after).pos;
+        const ra = a.map((v, i) => v - (e0[i] as number));
+        const rb = b.map((v, i) => v - (e1[i] as number));
+        return dist(ra, rb) < 0.05;
+      });
+      // (In the avenue the first pair of trees stands at the very start of the loop.)
+      expect(kept.length).toBeGreaterThanOrEqual(isRoad(k) ? 360 : 400);
     }
   });
 });

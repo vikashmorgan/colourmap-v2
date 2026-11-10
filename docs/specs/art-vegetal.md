@@ -52,6 +52,16 @@ into the new form in its growing order: from the middle of the block, from
 the base of the roots and trees, from the centre of the veins. No piece
 starts from one crowded point.
 
+**Pieces on their own, Journey on a key** (2026-11-10: "make the 2 forests
+go directly into the forest mode, without the circle at the start, and all
+those vegetal with pill mode so u just get the visuals straight up … so i can
+click journey mode and it brings me to what it is now"). The page opens on
+one piece alone: it starts already whole, with no ball of stars, and loops.
+Near the end of a loop each grain glides back to where the piece began. The
+roads never loop back: the eye flies on, two turns of the recycled road per
+loop, so the wrap does not show. The fruit starts once it has swelled. The
+step bar picks the piece; **Journey** plays the whole chapter as above.
+
 ## Words
 
 Each piece has a short line saying what you see and two lines of
@@ -68,8 +78,10 @@ The Words key hides them, as on the Journey.
 
 ## Acceptance
 
-- `/geometry-field/vegetal` plays the eleven pieces and loops; the step bar
-  jumps to any piece; Space pauses on one.
+- `/geometry-field/vegetal` opens on piece 1 alone, looping; the step bar
+  picks any piece, which starts whole with no ball of stars; Space pauses.
+- **Journey** plays the eleven pieces as one trip and loops; turned off, it
+  stays on the piece it was in.
 - The pills read Stars · Geometry · Tunnels · Oils · Big Bang · Journey ·
   Vegetal · Experiment, on the Art panel and the trip pages.
 - Every root of piece 2 starts at one base.
@@ -77,7 +89,8 @@ The Words key hides them, as on the Journey.
   direction, not in one plane.
 - Each piece forms by about halfway through, and every grain pours into the
   next piece with no cut, as in the Journey.
-- Each piece opens as a wide ball of faint stars, never a bright point.
+- In the Journey each piece opens as a wide ball of faint stars, never a
+  bright point.
 - The veins are round and symmetric: eight turns, each mirrored, inside one
   circle.
 - No new dependencies, nothing stored beyond the Words choice.
