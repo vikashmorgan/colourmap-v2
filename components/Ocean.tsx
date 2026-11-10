@@ -16,6 +16,11 @@ import {
   PHASES,
   particleAt,
   phaseAt,
+  pieceAt,
+  pieceCamera,
+  pieceLength,
+  pieceLook,
+  pieceProgress,
   STEP_COLOURS,
   TOTAL,
   wordsShown,
@@ -33,6 +38,14 @@ const TRIP: Trip = {
   camera,
   fade,
   wordsShown,
+  // Opens on each piece alone, picked by name; Journey plays them as one trip.
+  pieces: {
+    length: pieceLength,
+    progress: pieceProgress,
+    particleAt: pieceAt,
+    camera: pieceCamera,
+    look: pieceLook,
+  },
 };
 
 export default function Ocean() {

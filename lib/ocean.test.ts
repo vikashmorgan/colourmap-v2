@@ -12,6 +12,9 @@ import {
   PHASES,
   particleAt,
   phaseAt,
+  pieceAt,
+  pieceCamera,
+  pieceLength,
   pulseOf,
   REEF_SLOTS,
   reefSlot,
@@ -118,6 +121,33 @@ describe('the ocean chapter', () => {
     for (let s = 0; s < TOTAL; s += 3) {
       const { eye, target: aim } = camera(s);
       expect(dist(eye, aim)).toBeGreaterThan(1);
+    }
+  });
+
+  it('plays each piece on its own: no ball of stars at the start, looping with no seam', () => {
+    for (let k = 0; k < PHASES.length; k++) {
+      const len = pieceLength(k);
+      for (const p of particles.slice(0, 100)) {
+        expect(dist(pieceAt(p, k, 0).pos, starBall(k, p, 0))).toBeGreaterThan(1e-3);
+      }
+      for (const s of [0, 0.3 * len, 0.9 * len]) {
+        for (const p of particles.slice(0, 200)) {
+          const { pos, rgb } = pieceAt(p, k, s);
+          for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+        }
+      }
+      // Seen from the eye, the end of a loop is where the next begins; in the reef a grain may
+      // be going round behind the eye at that very moment, as at any other.
+      const before = len * 3 - 1e-4;
+      const after = len * 3 + 1e-4;
+      const e0 = pieceCamera(k, before).eye;
+      const e1 = pieceCamera(k, after).eye;
+      const kept = particles.slice(0, 400).filter((p) => {
+        const ra = pieceAt(p, k, before).pos.map((v, i) => v - (e0[i] as number));
+        const rb = pieceAt(p, k, after).pos.map((v, i) => v - (e1[i] as number));
+        return dist(ra, rb) < 0.05;
+      });
+      expect(kept.length).toBeGreaterThanOrEqual(PHASES[k]?.id === 'reef' ? 370 : 400);
     }
   });
 });

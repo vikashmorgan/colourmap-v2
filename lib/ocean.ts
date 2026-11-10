@@ -750,6 +750,57 @@ export function particleAt(p: Particle, time: number): { pos: Vec3; rgb: RGB } {
   };
 }
 
+/*
+ * Each piece on its own, as Vegetal's are (2026-11-10: "then do the ocean
+ * after vegetal"): it starts at its beginning with no ball of stars, picked
+ * by name, and loops, each grain gliding back to where the piece began. The
+ * reef never loops back: the eye swims on, two turns of the channel per
+ * loop, so the wrap does not show.
+ */
+const isReef = (k: number) => PHASES[k]?.id === 'reef';
+
+/** How long piece k plays on its own before it loops, in seconds. */
+export function pieceLength(k: number): number {
+  return isReef(k) ? (2 * LOOP) / SPEED : (PHASES[k] as OceanPhase).duration;
+}
+
+/** Piece k on its own, `s` seconds in: how far through the loop (f), the piece's own u, and its time. */
+function pieceClock(k: number, s: number): { f: number; u: number; t: number } {
+  const len = pieceLength(k);
+  const f = wrap(s, len) / len;
+  return { f, u: (f * len) / (PHASES[k] as OceanPhase).duration, t: s };
+}
+
+/** How far through its loop piece k is, `s` seconds in, for the words. */
+export const pieceProgress = (k: number, s: number) => pieceClock(k, s).f;
+
+/** Position and colour of particle p in piece k on its own, `s` seconds in. */
+export function pieceAt(p: Particle, k: number, s: number): { pos: Vec3; rgb: RGB } {
+  const { f, u, t } = pieceClock(k, s);
+  const pos = form(k, p, u, t);
+  const rgb = formColour(k, p, u, t);
+  if (isReef(k)) return { pos, rgb };
+  const w = smooth((f - 0.8 + 0.12 * p.stagger) / 0.2);
+  if (w <= 0) return { pos, rgb };
+  return { pos: lerp3(pos, form(k, p, 0, t), w), rgb: mix(rgb, formColour(k, p, 0, t), w) };
+}
+
+/** The camera in piece k on its own, easing back to where the piece began in the last quarter. */
+export function pieceCamera(k: number, s: number): Eye {
+  const { f, u, t } = pieceClock(k, s);
+  const a = eyeIn(k, u, t);
+  const w = isReef(k) ? 0 : smooth((f - 0.75) / 0.25);
+  if (w <= 0) return a;
+  const b = eyeIn(k, 0, t);
+  return { eye: lerp3(a.eye, b.eye, w), target: lerp3(a.target, b.target, w) };
+}
+
+/** Glow and size of piece k on its own. */
+export function pieceLook(k: number): { glow: number; size: number } {
+  const { glow, size } = PHASES[k] as OceanPhase;
+  return { glow, size };
+}
+
 /** Glow and size for the whole picture, blended across piece boundaries. */
 export function look(time: number): { glow: number; size: number } {
   const { index, u } = phaseAt(time);
