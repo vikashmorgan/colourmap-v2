@@ -4,11 +4,14 @@ import { flow, GOLDEN_ANGLE } from './bigbang';
 import { along, routeLength } from './star-tree';
 import {
   along3,
+  BEAT,
+  beatAt,
   bendAt,
   CELL_COUNT,
   camera,
   cellOf,
   colour,
+  DRUMS,
   EYE_H,
   FLORETS,
   FOREST_SLOTS,
@@ -31,7 +34,8 @@ import {
   ROOT_BASE,
   rootSystem,
   STEP_COLOURS,
-  setGround,
+  setGold,
+  setVariant,
   starBall,
   TOTAL,
   target,
@@ -237,6 +241,19 @@ describe('the vegetal chapter', () => {
     expect(above).toBeGreaterThan(particles.length * 0.2);
   });
 
+  it("starts the full tree's roots straight down, a little below the horizon, before they spread", () => {
+    const k = PHASES.findIndex((p) => p.id === 'full-tree');
+    const t = at(k, 0.7);
+    const roots = particles
+      .filter((p) => p.c >= 0.07 && p.c < 0.45)
+      .map((p) => target(k, p, 0.7, t));
+    for (const [x, y, z] of roots) {
+      expect(y).toBeLessThan(0.1);
+      // Just under the horizon only the straight neck: no root has leaned out yet.
+      if (y > -3) expect(Math.hypot(x, z)).toBeLessThan(1.5);
+    }
+  });
+
   it('makes the veins exactly symmetric: sixteen copies of one picture, turned and mirrored', () => {
     const t = at(4, 0.6);
     const all = makeParticles(1600);
@@ -275,7 +292,7 @@ describe('the vegetal chapter', () => {
     const t = at(3, 0.7);
     const soil = particles.filter((p) => p.c > 0.72 && p.c <= 0.8);
     GROUNDS.forEach((_, g) => {
-      setGround(g);
+      setVariant(g, 3);
       for (const p of soil) {
         const pos = target(3, p, 0.7, t);
         const rgb = colour(3, p, 0.7, t);
@@ -284,7 +301,69 @@ describe('the vegetal chapter', () => {
         expect(pos[1]).toBeLessThan(GROUND_3D + 5);
       }
     });
-    setGround(0);
+    setVariant(0);
+  });
+
+  it('turns the 3D tree all gold on its switch, and back to green off it', () => {
+    const t = at(3, 0.7);
+    const leaves = particles.filter((p) => p.c > 0.8);
+    setGold(true);
+    for (const p of leaves) {
+      const [r, g, b] = colour(3, p, 0.7, t);
+      expect(r).toBeGreaterThanOrEqual(g);
+      expect(g).toBeGreaterThanOrEqual(b);
+    }
+    setGold(false);
+    expect(leaves.filter((p) => colour(3, p, 0.7, t)[1] > colour(3, p, 0.7, t)[0]).length).toBe(
+      leaves.length,
+    );
+  });
+
+  it('beats the veins: a wave leaves the centre on each beat and runs out, all brightening', () => {
+    const k = 4;
+    // A beat: half a beat in, and every beat after.
+    const beatStart = at(k, 0.5) - ((at(k, 0.5) + BEAT / 2) % BEAT) + 0.06 * BEAT;
+    const reach = (t: number) => {
+      // The pulse grains' mean distance from the centre.
+      const d = particles
+        .filter((p) => p.i % 7 === 0)
+        .map((p) => target(k, p, 0.6, t))
+        .map(([x, y]) => Math.hypot(x, y));
+      return d.reduce((a, b) => a + b, 0) / d.length;
+    };
+    expect(beatAt(beatStart)).toBeGreaterThan(0.75);
+    expect(beatAt(beatStart + BEAT * 0.9)).toBeLessThan(0.05);
+    // The whole drum is brighter just after a beat than just before the next.
+    const glow = (t: number) =>
+      particles.reduce((a, p) => a + Math.max(...colour(k, p, 0.6, t)), 0);
+    expect(glow(beatStart + 0.02)).toBeGreaterThan(glow(beatStart + BEAT * 0.95) * 1.2);
+    expect(reach(beatStart + BEAT * 0.9)).toBeGreaterThan(reach(beatStart + 0.02));
+  });
+
+  it('draws five drums, each inside its hoop, centred, and exactly symmetric', () => {
+    const t = at(4, 0.6);
+    const all = makeParticles(2400);
+    expect(DRUMS).toHaveLength(5);
+    DRUMS.forEach((d, i) => {
+      setVariant(i, 4);
+      const n = d.fold * 2;
+      let sx = 0;
+      let sy = 0;
+      for (let run = 0; run < 60; run++) {
+        const r = all.slice(run * n, run * n + n).map((p) => {
+          const [x, y] = target(4, p, 0.6, t);
+          sx += x;
+          sy += y;
+          expect(Math.hypot(x, y)).toBeLessThan(24 * 1.1);
+          return Math.hypot(x, y);
+        });
+        for (const v of r) expect(v).toBeCloseTo(r[0] as number, 6);
+      }
+      // Centred: every copy balances the others round the knot.
+      expect(Math.abs(sx / (60 * n))).toBeLessThan(1e-6);
+      expect(Math.abs(sy / (60 * n))).toBeLessThan(1e-6);
+    });
+    setVariant(0);
   });
 
   it('keeps the water dark near the top of the roots and shows it deeper down', () => {

@@ -91,8 +91,8 @@ export type Trip = {
         t: number,
       ) => void;
     };
-    /** A slider to play with on a step (the full tree's road line), in degrees; 0 in the Journey. */
-    turn?: { has: (k: number) => boolean; label: string; max: number; set: (deg: number) => void };
+    /** A switch to try on a step (the 3D tree all in gold), beside the speeds; off in the Journey. */
+    toggle?: { has: (k: number) => boolean; label: string; set: (on: boolean) => void };
   };
 };
 
@@ -231,10 +231,10 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   }, [page]);
   const guideRef = useRef(true);
   const [guide, setGuide] = useState(true);
-  const [turn, setTurn] = useState(0);
+  const [switched, setSwitched] = useState(false);
   useEffect(() => {
-    tripRef.current.pieces?.turn?.set(journey ? 0 : turn);
-  }, [journey, turn]);
+    tripRef.current.pieces?.toggle?.set(!journey && switched);
+  }, [journey, switched]);
 
   useEffect(() => {
     try {
@@ -535,9 +535,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     <main
       ref={mainRef}
       className={`bb bb-${page}${
-        !journey && (trip.pieces?.variants?.has(hud.index) || trip.pieces?.turn?.has(hud.index))
-          ? ' bb-raised'
-          : ''
+        !journey && trip.pieces?.variants?.has(hud.index) ? ' bb-raised' : ''
       }${immersed ? ' bb-immersed' : ''}`}
     >
       <canvas
@@ -630,19 +628,6 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
                 ))}
               </div>
             ) : null}
-            {trip.pieces?.turn?.has(hud.index) ? (
-              <label className="bb-turn">
-                {trip.pieces.turn.label}
-                <input
-                  type="range"
-                  min={0}
-                  max={trip.pieces.turn.max}
-                  value={turn}
-                  onChange={(e) => setTurn(Number(e.target.value))}
-                />
-                <span>{turn}°</span>
-              </label>
-            ) : null}
             <div className="bb-pills" role="toolbar" aria-label="Pieces">
               {trip.phases.map((p, k) => (
                 <button
@@ -717,6 +702,11 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
               </button>
             ))}
           </span>
+          {!journey && trip.pieces?.toggle?.has(hud.index) ? (
+            <button type="button" aria-pressed={switched} onClick={() => setSwitched((s) => !s)}>
+              {trip.pieces.toggle.label}
+            </button>
+          ) : null}
           {!journey && trip.pieces?.flow?.has(hud.index) ? (
             <button
               type="button"

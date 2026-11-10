@@ -627,10 +627,17 @@ const tree3Role = (p: Particle): Tree3Role => (p.c > 0.8 ? 'leaf' : p.c > 0.72 ?
  */
 export const GROUNDS = ['Earth', 'Short grass', 'Tall grass', 'Desert sand', 'Desert stones'];
 let groundKind = 0;
-export function setGround(i: number) {
-  groundKind = i;
-}
 export const hasGround = (k: number) => PHASES[k]?.id === 'tree-3d';
+/*
+ * The 3D tree all in gold, its green crown turned gold too (2026-11-10: "tree:
+ * put ability to make it full gold, no green leaves on top"). A switch beside
+ * the piece; the Journey keeps the green.
+ */
+let fullGold = false;
+export function setGold(on: boolean) {
+  fullGold = on;
+}
+export const hasGold = hasGround;
 const GROUND_R = 26;
 
 /** Grain p of the ground, in the kind chosen. */
@@ -726,14 +733,94 @@ function tree3Point(p: Particle, u: number, t: number): Vec3 {
 const VEIN_R = 24;
 /** Eight turns round the centre, each one mirrored: sixteen copies of one branching. */
 export const VEIN_FOLD = 8;
+
+/*
+ * Five drums (2026-11-10: "veins: make it centered and pulse more, pulse by
+ * pulse, for a rhythm of stars, and make 5 different types of that same kind
+ * of shape; looks like a buffalo drum, Lakota, seen from behind, very
+ * shamanic and earthly"). Each is a branching repeated round a centre inside a
+ * hoop, with the lacing of a hand drum's back running from the hoop to a knot
+ * in the middle. They differ in how many turns, how the branching grows, a
+ * twist, and rings. Chosen by pills; the Journey plays the first.
+ */
+type Drum = {
+  name: string;
+  fold: number;
+  seed: number;
+  depth: number;
+  spread: number;
+  shrink: number;
+  /** How far the branching turns round the centre at the hoop, in radians. */
+  twist: number;
+  /** Rings between the knot and the hoop. */
+  rings: number;
+};
+export const DRUMS: Drum[] = [
+  {
+    name: 'Drum',
+    fold: VEIN_FOLD,
+    seed: 31,
+    depth: 5,
+    spread: 0.32,
+    shrink: 0.8,
+    twist: 0,
+    rings: 0,
+  },
+  {
+    name: 'Four winds',
+    fold: 4,
+    seed: 11,
+    depth: 6,
+    spread: 0.42,
+    shrink: 0.8,
+    twist: 0,
+    rings: 1,
+  },
+  { name: 'Sun', fold: 12, seed: 47, depth: 4, spread: 0.2, shrink: 0.88, twist: 0, rings: 0 },
+  { name: 'Spiral', fold: 6, seed: 19, depth: 5, spread: 0.3, shrink: 0.82, twist: 1.3, rings: 0 },
+  { name: 'Web', fold: 10, seed: 53, depth: 4, spread: 0.36, shrink: 0.8, twist: 0, rings: 3 },
+];
+let drumKind = 0;
+const drum = () => DRUMS[drumKind] as Drum;
+export const hasDrums = (k: number) => PHASES[k]?.id === 'veins';
+
+/* The pieces' pills: the 3D tree's grounds and the veins' drums. */
+export const hasVariants = (k: number) => hasGround(k) || hasDrums(k);
+export const variantNames = (k: number) => (hasDrums(k) ? DRUMS.map((d) => d.name) : GROUNDS);
+export const variantLabel = (k: number) => (hasDrums(k) ? 'Drum' : 'Ground');
+/** Pill i on piece k; with no piece (the Journey), the first of each. */
+export function setVariant(i: number, k?: number) {
+  if (k === undefined) {
+    groundKind = 0;
+    drumKind = 0;
+  } else if (hasDrums(k)) drumKind = i;
+  else if (hasGround(k)) groundKind = i;
+}
+
+/** The time between two beats of the drum, in seconds. */
+export const BEAT = 1.5;
+/**
+ * How far through its beat the drum is at time t, 0 on the beat. The first beat falls half a beat
+ * in, so a piece's loop, a whole number of beats long, joins between two beats.
+ */
+const beatPhase = (t: number) => wrap(t / BEAT + 0.5, 1);
+const FADE = Math.exp(-4);
+/** How strongly the drum is sounding at time t: rising fast to 1 on the beat, gone by the next. */
+export const beatAt = (t: number) => {
+  const x = beatPhase(t);
+  return (smooth(x / 0.06) * (Math.exp(-4 * x) - FADE)) / (1 - FADE);
+};
+
 type Mandala = { routes: Route[]; reach: number };
-let mandalaNet: Mandala | null = null;
-/** One branching grown up from the centre, and how far out it reaches. */
-export function mandala(): Mandala {
-  if (mandalaNet) return mandalaNet;
-  const rng = seeded(31);
+const mandalaNets: (Mandala | null)[] = DRUMS.map(() => null);
+/** One branching of drum `kind` grown up from the centre, and how far out it reaches. */
+export function mandala(kind = drumKind): Mandala {
+  const cached = mandalaNets[kind];
+  if (cached) return cached;
+  const d = DRUMS[kind] as Drum;
+  const rng = seeded(d.seed);
   const out: Seg[][] = [];
-  grow(rng, 0, 0, 0, 0.2, 0.03, 5, 0.32, 0.8, [], out);
+  grow(rng, 0, 0, 0, 0.2, 0.03, d.depth, d.spread, d.shrink, [], out);
   const routes = out.map((c) => resample(sampleChain(c, false)));
   let reach = 0;
   for (const r of routes) {
@@ -741,8 +828,9 @@ export function mandala(): Mandala {
       reach = Math.max(reach, Math.hypot(r.pts[i * 3] as number, r.pts[i * 3 + 1] as number));
     }
   }
-  mandalaNet = { routes, reach };
-  return mandalaNet;
+  const net = { routes, reach };
+  mandalaNets[kind] = net;
+  return net;
 }
 
 /*
@@ -751,53 +839,85 @@ export function mandala(): Mandala {
  * branch, place and pulse from the run, so the sixteen copies are the same
  * picture turned and mirrored, pulse for pulse.
  */
-const VEIN_COPIES = VEIN_FOLD * 2;
+const veinCopies = () => drum().fold * 2;
 type VeinSeed = { m: number; c: number; a: number; b: number; d: number };
 function veinSeed(p: Particle): VeinSeed {
-  const run = Math.floor(p.i / VEIN_COPIES);
+  const n = veinCopies();
+  const run = Math.floor(p.i / n);
   return {
-    m: p.i % VEIN_COPIES,
+    m: p.i % n,
     c: hash(run, 81),
     a: hash(run, 78),
     b: hash(run, 79),
     d: hash(run, 80),
   };
 }
-type VeinRole = 'pulse' | 'tip' | 'ring' | 'vein';
+type VeinRole = 'pulse' | 'tip' | 'ring' | 'lace' | 'vein';
 const veinRole = (p: Particle): VeinRole => {
   const { c } = veinSeed(p);
-  return c < 0.15 ? 'pulse' : c < 0.22 ? 'tip' : c < 0.3 ? 'ring' : 'vein';
+  return c < 0.15 ? 'pulse' : c < 0.2 ? 'tip' : c < 0.28 ? 'ring' : c < 0.34 ? 'lace' : 'vein';
 };
 
 /** A shallow bowl facing the eye, so the round net has a little depth. */
 const bowl = (x: number, y: number): Vec3 => [x, y, 3 - 0.012 * (x * x + y * y)];
 
-/** Point (x, y) of the branching, placed in the grain's copy: one of eight turns, mirrored or not. */
+/**
+ * Point (x, y) of the branching, in drum units (the hoop at VEIN_R), placed in the grain's copy:
+ * one of the drum's turns, mirrored or not, twisted by how far out it is. On each beat the whole
+ * drum swells a touch, like a skin struck.
+ */
 function inCopy(p: Particle, x: number, y: number, t: number): Vec3 {
   const { m } = veinSeed(p);
+  const { fold, twist } = drum();
   const mx = m & 1 ? -x : x;
-  const a = ((m >> 1) / VEIN_FOLD) * TAU + t * 0.03;
-  const k = VEIN_R / mandala().reach;
+  const a = ((m >> 1) / fold) * TAU + t * 0.03 + twist * (Math.hypot(x, y) / VEIN_R) ** 1.2;
+  const k = 1 + 0.02 * beatAt(t);
   return bowl((mx * Math.cos(a) - y * Math.sin(a)) * k, (mx * Math.sin(a) + y * Math.cos(a)) * k);
 }
+
+/** Where the hoop's lacing meets in the middle. */
+const KNOT_R = 2.2;
 
 function veinsPoint(p: Particle, t: number): Vec3 {
   const role = veinRole(p);
   const { m, a: sa, b: sb, d: sd } = veinSeed(p);
+  const { fold, rings } = drum();
   if (role === 'ring') {
-    // The ring too: one arc, repeated round in sixteen.
-    const a = ((m + sb) / VEIN_COPIES) * TAU + t * 0.03;
-    const R = VEIN_R * 1.06 + (sd - 0.5) * 0.4;
-    return bowl(Math.cos(a) * R, Math.sin(a) * R);
+    // The hoop, and the drum's inner rings, each one arc repeated round in every copy.
+    const ring = rings > 0 && sd < 0.45 ? 1 + Math.floor((sd / 0.45) * rings) : 0;
+    const a = ((m + sb) / veinCopies()) * TAU + t * 0.03;
+    const R = ring
+      ? KNOT_R + ((VEIN_R - KNOT_R) * ring) / (rings + 1)
+      : VEIN_R * 1.06 + (frac(sd * 7) - 0.5) * 0.5;
+    const k = 1 + 0.02 * beatAt(t);
+    return bowl(Math.cos(a) * R * k, Math.sin(a) * R * k);
+  }
+  if (role === 'lace') {
+    // The lacing: a straight thong from the hoop to the knot, two to a copy, and the knot.
+    if (sd < 0.2) {
+      const a = sb * TAU;
+      const r = KNOT_R * Math.sqrt(sd / 0.2);
+      return inCopy(p, Math.cos(a) * r, Math.sin(a) * r, t);
+    }
+    const r = KNOT_R + (VEIN_R * 1.04 - KNOT_R) * sb;
+    const lean = Math.PI / (2 * fold);
+    return inCopy(p, Math.sin(lean) * r, Math.cos(lean) * r, t);
   }
   const net = mandala();
   const route = net.routes[Math.floor(sa * net.routes.length)] as Route;
   const len = routeLength(route);
-  // Food runs out from the centre to the tips, where a few grains rest and glow.
+  // On each beat one wave of light leaves the centre and runs out to the tips, slowing as it goes,
+  // where a few grains rest and glow.
+  const wave = beatPhase(t) + (sb - 0.5) * 0.05;
   const s =
-    role === 'tip' ? len : role === 'pulse' ? len * wrap(sb + t * 0.12, 1) : len * sb ** 0.6;
+    role === 'tip'
+      ? len
+      : role === 'pulse'
+        ? len * Math.min(1, Math.max(0, 1 - (1 - wave) ** 2))
+        : len * sb ** 0.6;
   const [x, y, w] = along(route, s);
-  return inCopy(p, x + (sd - 0.5) * w, y, t);
+  const k = VEIN_R / net.reach;
+  return inCopy(p, (x + (sd - 0.5) * w) * k, y * k, t);
 }
 
 /* ---------- 6. Fungi: threads from spores, joined into one net ---------- */
@@ -1422,17 +1542,14 @@ function reflectionColour(p: Particle, t: number): RGB {
  */
 const BELOW_K = 0.85;
 /*
- * The tree holds still, and a slider turns only the horizon line, from
- * across the picture to running toward the eye like a road (2026-11-10:
- * "stabilise the full tree so it doesn't rotate, with a slider to rotate the
- * road line … it gives me ideas for road perspective for later").
+ * The tree holds still and the horizon runs straight across; the Road slider
+ * is gone (2026-11-10: "road can be taken off in the full tree, and roots
+ * begin more straight so they all get pushed a few cm lower"). The roots drop
+ * straight down from the horizon on a short neck before they spread.
  */
-let lineTurn = 0;
-/** The horizon line's turn, in degrees: 0 across the picture, 90 toward the eye. */
-export function setLineTurn(deg: number) {
-  lineTurn = deg;
-}
-export const hasLineTurn = (k: number) => PHASES[k]?.id === 'full-tree';
+const ROOT_DROP = 4;
+/** How far below its own top a root has gone straight down before it leans out. */
+const ROOT_STRAIGHT = 7;
 type BelowRole = 'horizon' | 'water' | 'root' | 'wood' | 'leaf';
 const belowRole = (p: Particle): BelowRole =>
   p.c < 0.07
@@ -1449,17 +1566,19 @@ function belowPoint(p: Particle, u: number, t: number): Vec3 {
   const grown = 0.05 + 0.95 * smooth(u / 0.42);
   const role = belowRole(p);
   if (role === 'horizon') {
-    // A thin line, brightest and densest at the middle, a faint shimmer along it, turned by the
-    // Road slider from across the picture toward the eye.
+    // A thin line, brightest and densest at the middle, a faint shimmer along it.
     const x = (p.b - 0.5) * 2;
-    const along = Math.sign(x) * Math.abs(x) ** 1.6 * 70;
-    const across = (p.d - 0.5) * 1.2;
-    const a = (lineTurn * Math.PI) / 180;
     return [
-      along * Math.cos(a) - across * Math.sin(a),
+      Math.sign(x) * Math.abs(x) ** 1.6 * 70,
       Math.sin(p.b * 300 + t * 0.4) * 0.06,
-      along * Math.sin(a) + across * Math.cos(a),
+      (p.d - 0.5) * 1.2,
     ];
+  }
+  if (role === 'root' && hash(p.i, 83) < 0.06) {
+    // The neck: one straight stem from the horizon down to where the roots begin.
+    const w = 0.35 * Math.sqrt(p.d);
+    const a = p.d * 40;
+    return [Math.cos(a) * w, -ROOT_DROP * BELOW_K * p.b * grown, Math.sin(a) * w];
   }
   if (role === 'water' || role === 'root') {
     const set = rootSystem();
@@ -1468,7 +1587,10 @@ function belowPoint(p: Particle, u: number, t: number): Vec3 {
     const s =
       role === 'water' ? len * grown * wrap(p.b - t * 0.06, 1) ** 0.55 : len * grown * p.b ** 0.55;
     const pos = onRoot(r, s, role === 'root' ? (p.d - 0.5) * 2 : 0);
-    return [pos[0] * BELOW_K, (pos[1] - ROOT_BASE[1]) * BELOW_K, pos[2] * BELOW_K];
+    const y = pos[1] - ROOT_BASE[1];
+    // Near their top the roots are drawn in toward the middle, so they all start straight down.
+    const out = 0.15 + 0.85 * smooth(-y / ROOT_STRAIGHT);
+    return [pos[0] * out * BELOW_K, (y - ROOT_DROP) * BELOW_K, pos[2] * out * BELOW_K];
   }
   const routes = tree3d();
   const route = routes[Math.floor(p.a * routes.length)] as Route3;
@@ -1663,23 +1785,29 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
         case 'soil':
           return groundColour(p);
         case 'leaf':
-          return scale(mix(LEAF, [0.85, 0.9, 0.4], p.b), 0.75 * twinkle);
+          return fullGold
+            ? scale(mix(GOLD, SUGAR, p.b), 0.8 * twinkle)
+            : scale(mix(LEAF, [0.85, 0.9, 0.4], p.b), 0.75 * twinkle);
         default:
-          return scale(mix(BARK, GOLD, p.d), 0.7 * twinkle);
+          return scale(mix(fullGold ? GOLD : BARK, GOLD, p.d), 0.7 * twinkle);
       }
     case 4: {
       // The twinkle by run too, so every copy shines alike.
       const { b } = veinSeed(p);
-      const tw = 0.7 + 0.3 * Math.sin(t * 1.7 + Math.floor(p.i / VEIN_COPIES) * 0.37);
+      const tw = 0.7 + 0.3 * Math.sin(t * 1.7 + Math.floor(p.i / veinCopies()) * 0.37);
+      // Everything brightens on the beat and settles before the next.
+      const beat = beatAt(t);
       switch (veinRole(p)) {
         case 'pulse':
-          return scale(SUGAR, 1 * tw);
+          return scale(SUGAR, (0.75 + 0.35 * beat) * tw);
         case 'tip':
-          return scale(SUGAR, 1.05);
+          return scale(SUGAR, 0.8 + 0.35 * beat);
         case 'ring':
-          return scale(GOLD, 0.4 * tw);
+          return scale(GOLD, (0.35 + 0.25 * beat) * tw);
+        case 'lace':
+          return scale(mix(BARK, GOLD, 0.6), (0.3 + 0.3 * beat) * tw);
         default:
-          return scale(mix([0.78, 0.56, 0.3], SUGAR, b), 0.75 * tw);
+          return scale(mix([0.78, 0.56, 0.3], SUGAR, b), (0.6 + 0.25 * beat) * tw);
       }
     }
     case 5:
@@ -1826,7 +1954,8 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       return { eye: [Math.sin(a) * 58, 2, Math.cos(a) * 58], target: [0, -2, 0] };
     }
     case 4:
-      return { eye: [Math.sin(t * 0.04) * 6, 6, 58], target: [0, 0, 0] };
+      // Face on to the drum, its knot in the middle of the picture.
+      return { eye: [0, 0, 60], target: [0, 0, 0] };
     case 5:
       return { eye: [Math.sin(t * 0.04) * 10, 14, 44], target: [0, SOIL, 0] };
     case 6:

@@ -11,10 +11,9 @@ import TripPlayer, { type Trip } from '@/components/TripPlayer';
 import {
   camera,
   fade,
-  GROUNDS,
-  hasGround,
-  hasLineTurn,
+  hasGold,
   hasSap,
+  hasVariants,
   look,
   makeParticles,
   PHASE_START,
@@ -27,10 +26,12 @@ import {
   pieceLook,
   pieceProgress,
   STEP_COLOURS,
-  setGround,
-  setLineTurn,
+  setGold,
   setSap,
+  setVariant,
   TOTAL,
+  variantLabel,
+  variantNames,
   wordsShown,
 } from '@/lib/vegetal';
 
@@ -54,8 +55,8 @@ const TRIP: Trip = {
     camera: pieceCamera,
     look: pieceLook,
     flow: { has: hasSap, set: setSap },
-    variants: { has: hasGround, names: GROUNDS, set: setGround },
-    turn: { has: hasLineTurn, label: 'Road', max: 90, set: setLineTurn },
+    variants: { has: hasVariants, names: variantNames, set: setVariant, label: variantLabel },
+    toggle: { has: hasGold, label: 'Gold', set: setGold },
   },
 };
 

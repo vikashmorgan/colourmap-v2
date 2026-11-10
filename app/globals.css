@@ -848,24 +848,6 @@ input[type="range"].feedback-slider::-moz-range-thumb {
   font-size: 13.5px;
   cursor: pointer;
 }
-/* A piece's own slider (the full tree's road line). */
-.bb-turn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 28px;
-  font-size: 12.5px;
-}
-.bb-turn input {
-  width: min(240px, 50vw);
-  accent-color: #e6c27a;
-}
-.bb-turn span {
-  font:
-    12px ui-monospace,
-    monospace;
-  min-width: 3ch;
-}
 /* A piece's own looks (the 3D tree's ground): smaller, above the pieces. */
 .bb-variants .bb-pill {
   min-height: 28px;
