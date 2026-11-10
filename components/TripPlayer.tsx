@@ -51,13 +51,25 @@ export type Trip = {
     look: (k: number) => { glow: number; size: number };
     /** Which way the moving dots run, for the steps that have them: all up or all down; null in the Journey. */
     flow?: { has: (k: number) => boolean; set: (up: boolean | null) => void };
-    /** Looks to try on a step, as a row of pills (the 3D tree's ground); the first in the Journey. */
+    /**
+     * Looks to try on a step, as a row of pills (the 3D tree's ground); the first in the Journey.
+     * Names and label may differ per step; `set` is told the step, none in the Journey.
+     */
     variants?: {
       has: (k: number) => boolean;
-      names: string[];
-      set: (i: number) => void;
+      names: string[] | ((k: number) => string[]);
+      set: (i: number, k?: number) => void;
       /** What the pills choose, for screen readers; "Ground" if not given. */
-      label?: string;
+      label?: string | ((k: number) => string);
+    };
+    /**
+     * The cursor as a guide on the steps that have one: told each frame where it points on the
+     * plane through what the eye looks at, or null when it is away, switched off by a click, or in
+     * the Journey; `dt` is how far the step's time moved.
+     */
+    pointer?: {
+      has: (k: number) => boolean;
+      set: (at: Vec3 | null, dt: number, t: number) => void;
     };
     /** A slider to play with on a step (the full tree's road line), in degrees; 0 in the Journey. */
     turn?: { has: (k: number) => boolean; label: string; max: number; set: (deg: number) => void };
@@ -110,7 +122,6 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   const speedRef = useRef(1);
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
-  const [hud, setHud] = useState({ index: 0, u: 0, time: 0 });
   const [chrome, setChrome] = useState(true);
   const [words, setWords] = useState(true);
   const idleRef = useRef(0);
@@ -125,9 +136,16 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     tripRef.current.pieces?.flow?.set(journey ? null : flowUp);
   }, [journey, flowUp]);
   const [variant, setVariant] = useState(0);
+  const [hud, setHud] = useState({ index: 0, u: 0, time: 0 });
   useEffect(() => {
-    tripRef.current.pieces?.variants?.set(journey ? 0 : variant);
-  }, [journey, variant]);
+    const v = tripRef.current.pieces?.variants;
+    if (journey) v?.set(0);
+    else v?.set(variant, hud.index);
+  }, [journey, variant, hud.index]);
+  // Where the cursor is on screen, -1 to 1 each way, and whether a click has it guiding.
+  const cursorRef = useRef<{ x: number; y: number } | null>(null);
+  const guideRef = useRef(true);
+  const [guide, setGuide] = useState(true);
   const [turn, setTurn] = useState(0);
   useEffect(() => {
     tripRef.current.pieces?.turn?.set(journey ? 0 : turn);
@@ -161,6 +179,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       pieceRef.current = i;
       timeRef.current = 0;
       setHud({ index: i, u: 0, time: 0 });
+      // Each step opens on its first look.
+      setVariant(0);
     }
   }, []);
   const currentStep = useCallback(
@@ -247,6 +267,12 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     window.addEventListener('resize', resize);
 
     const eye: Vec3 = [0, 0, 58];
+    const ray = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const plane = new THREE.Plane();
+    const look = new THREE.Vector3();
+    const aimAt = new THREE.Vector3();
+    const hit = new THREE.Vector3();
     let raf = 0;
     let last = performance.now();
     let lastHud = 0;
@@ -262,6 +288,22 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       }
       const t = timeRef.current;
       const c = P ? P.camera(k, t) : T.camera?.(t);
+      const guided = T.pieces?.pointer;
+      if (guided) {
+        const at = cursorRef.current;
+        const moved = playingRef.current ? dt * speedRef.current : 0;
+        if (P && c && at && guideRef.current && guided.has(k)) {
+          ndc.set(at.x, at.y);
+          ray.setFromCamera(ndc, camera);
+          camera.getWorldDirection(look);
+          plane.setFromNormalAndCoplanarPoint(
+            look,
+            aimAt.set(c.target[0], c.target[1], c.target[2]),
+          );
+          const got = ray.ray.intersectPlane(plane, hit);
+          guided.set(got ? [got.x, got.y, got.z] : null, moved, t);
+        } else guided.set(null, moved, t);
+      }
 
       if (c) {
         // Stepped back from what it looks at on a tall screen.
@@ -343,12 +385,32 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         else document.documentElement.requestFullscreen?.();
       }
     };
-    window.addEventListener('pointermove', wake);
-    window.addEventListener('pointerdown', wake);
+    const move = (e: PointerEvent) => {
+      wake();
+      cursorRef.current = {
+        x: (e.clientX / window.innerWidth) * 2 - 1,
+        y: 1 - (e.clientY / window.innerHeight) * 2,
+      };
+    };
+    const away = (e: PointerEvent) => {
+      if (!e.relatedTarget) cursorRef.current = null;
+    };
+    // A click on the picture itself switches the cursor's guide off and on again.
+    const press = (e: PointerEvent) => {
+      wake();
+      if (e.target !== canvasRef.current || journeyRef.current) return;
+      if (!tripRef.current.pieces?.pointer?.has(pieceRef.current)) return;
+      guideRef.current = !guideRef.current;
+      setGuide(guideRef.current);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerdown', press);
+    document.addEventListener('pointerout', away);
     window.addEventListener('keydown', key);
     return () => {
-      window.removeEventListener('pointermove', wake);
-      window.removeEventListener('pointerdown', wake);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerdown', press);
+      document.removeEventListener('pointerout', away);
       window.removeEventListener('keydown', key);
     };
   }, [jumpTo, togglePlay, currentStep]);
@@ -364,7 +426,13 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           : ''
       }`}
     >
-      <canvas ref={canvasRef} className="bb-canvas" />
+      <canvas
+        ref={canvasRef}
+        className="bb-canvas"
+        style={
+          !journey && guide && trip.pieces?.pointer?.has(hud.index) ? { cursor: 'none' } : undefined
+        }
+      />
       <div className={`bb-top${chrome ? '' : ' bb-hidden'}`}>
         <nav className="bb-tabs" aria-label="Art">
           {ART_LINKS.map((l) =>
@@ -426,9 +494,16 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
               <div
                 className="bb-pills bb-variants"
                 role="toolbar"
-                aria-label={trip.pieces.variants.label ?? 'Ground'}
+                aria-label={
+                  (typeof trip.pieces.variants.label === 'function'
+                    ? trip.pieces.variants.label(hud.index)
+                    : trip.pieces.variants.label) ?? 'Ground'
+                }
               >
-                {trip.pieces.variants.names.map((name, i) => (
+                {(typeof trip.pieces.variants.names === 'function'
+                  ? trip.pieces.variants.names(hud.index)
+                  : trip.pieces.variants.names
+                ).map((name, i) => (
                   <button
                     type="button"
                     key={name}

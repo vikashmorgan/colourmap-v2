@@ -2,16 +2,17 @@
 
 /*
  * Ocean, the sea's chapter (docs/specs/art-ocean.md): coral gardens grown
- * like trees, sea fans, table corals, clownfish pulsing out of their coral,
- * five kinds of shoal, a swarm of small fish, jellyfish, and a reef channel
- * swum through. The math lives in lib/ocean.ts; the shared trip player
+ * like trees, sea fans, table corals, clownfish hiding from a hunter in their
+ * coral, six kinds of shoal led by the cursor, ten swarms of small fish, five
+ * kinds of jellyfish, and a reef channel swum through. The math lives in lib/ocean.ts; the shared trip player
  * draws it.
  */
 import TripPlayer, { type Trip } from '@/components/TripPlayer';
 import {
   camera,
   fade,
-  hasShoalKinds,
+  hasPointer,
+  hasVariants,
   look,
   makeParticles,
   PHASE_START,
@@ -23,10 +24,12 @@ import {
   pieceLength,
   pieceLook,
   pieceProgress,
-  SHOAL_NAMES,
   STEP_COLOURS,
-  setShoalKind,
+  setPointer,
+  setVariant,
   TOTAL,
+  variantLabel,
+  variantNames,
   wordsShown,
 } from '@/lib/ocean';
 
@@ -49,8 +52,10 @@ const TRIP: Trip = {
     particleAt: pieceAt,
     camera: pieceCamera,
     look: pieceLook,
-    // The shoal's five kinds of fish, one kind at a time.
-    variants: { has: hasShoalKinds, names: SHOAL_NAMES, set: setShoalKind, label: 'Shoal' },
+    // The shoal's kinds of fish, the small fish's ten swarms, the five jellyfish, one at a time.
+    variants: { has: hasVariants, names: variantNames, set: setVariant, label: variantLabel },
+    // In the shoal the cursor is a small yellow fish the others follow; a click hands back to the loop.
+    pointer: { has: hasPointer, set: setPointer },
   },
 };
 

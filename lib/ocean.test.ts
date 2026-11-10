@@ -9,7 +9,11 @@ import {
   colour,
   corals,
   EYE_H,
-  FISH_BEAT,
+  HUNT_LAP,
+  hasPointer,
+  hasVariants,
+  hunterAt,
+  JELLY_NAMES,
   makeParticles,
   PHASE_START,
   PHASES,
@@ -23,11 +27,17 @@ import {
   reefSlot,
   SHOAL_KINDS,
   STEP_COLOURS,
+  SWARM_NAMES,
+  setPointer,
   setShoalKind,
+  setVariant,
   shoalFish,
+  smallFish,
   starBall,
   TOTAL,
   target,
+  variantLabel,
+  variantNames,
 } from './ocean';
 
 const particles = makeParticles(1500);
@@ -153,31 +163,45 @@ describe('the ocean chapter', () => {
     }
   });
 
-  it('sends the clownfish out of their coral all together, then all back in', () => {
-    const k = PHASES.findIndex((p) => p.id === 'fish-pulse');
-    const spread = (t: number) => {
-      const out = Array.from({ length: CLOWNS }, (_, j) => clownFish(j, t).c);
-      return Math.max(...out.map((c) => Math.hypot(c[0], c[2])));
+  it('hides the clownfish in their coral while the blue hunter passes, and lets them out once it has gone', () => {
+    const start = PHASE_START[PHASES.findIndex((p) => p.id === 'fish-pulse')] as number;
+    const near = (t: number) => {
+      const { c } = hunterAt(t);
+      return Math.hypot(c[0], c[1] + 9, c[2]);
     };
-    const start = PHASE_START[k] as number;
-    // Sheltering at the start of a beat, out in the water at its middle, home again near its end.
-    const home = spread(start + FISH_BEAT * 0.9);
-    const away = spread(start + FISH_BEAT * 0.4);
-    expect(away).toBeGreaterThan(home + 4);
-    for (let j = 0; j < CLOWNS; j++)
-      expect(clownFish(j, start + FISH_BEAT * 0.4).out).toBeGreaterThan(0.95);
-    for (let j = 0; j < CLOWNS; j++)
-      expect(clownFish(j, start + FISH_BEAT * 0.95).out).toBeLessThan(0.05);
+    const times = Array.from({ length: 200 }, (_, i) => start + (i / 200) * HUNT_LAP);
+    const closest = times.reduce((a, b) => (near(b) < near(a) ? b : a));
+    const farthest = times.reduce((a, b) => (near(b) > near(a) ? b : a));
+    expect(near(farthest)).toBeGreaterThan(near(closest) + 20);
+    for (let j = 0; j < CLOWNS; j++) {
+      expect(clownFish(j, closest).out).toBeLessThan(0.05);
+      expect(clownFish(j, farthest).out).toBeGreaterThan(0.95);
+    }
+    // Out in the water, well away from where they hid.
+    const moved = Array.from({ length: CLOWNS }, (_, j) =>
+      dist(clownFish(j, farthest).c, clownFish(j, closest).c),
+    );
+    expect(moved.reduce((x, y) => x + y, 0) / CLOWNS).toBeGreaterThan(4);
   });
 
-  it('swims five kinds of shoal, each of one kind of fish, the big ones fewer and wider apart', () => {
+  it('swims eleven kinds of shoal, each of one kind of fish, the big ones fewer and wider apart', () => {
     expect(SHOAL_KINDS.map((s) => s.name)).toEqual([
       'Silver fish',
       'Yellow tangs',
       'Barracudas',
       'Hammerheads',
       'Swordfish',
+      'Thresher sharks',
+      'Copperbands',
+      'Threadfins',
+      'Raccoons',
+      'Longnoses',
+      'Bannerfish',
     ]);
+    // A thresher's upper tail lobe is as long as its body; a hammerhead's is the longer of its two.
+    expect(SHOAL_KINDS[5]?.lobes?.[0]).toBeGreaterThan(0.8);
+    const lobes = SHOAL_KINDS[3]?.lobes ?? [0, 0];
+    expect(lobes[0]).toBeGreaterThan(lobes[1] * 2);
     const k = PHASES.findIndex((p) => p.id === 'shoal');
     for (let i = 0; i < SHOAL_KINDS.length; i++) {
       setShoalKind(i);
@@ -220,5 +244,61 @@ describe('the ocean chapter', () => {
       });
       expect(kept.length).toBeGreaterThanOrEqual(PHASES[k]?.id === 'reef' ? 370 : 400);
     }
+  });
+
+  it('gives the small fish ten swarms and the jellyfish five kinds, each as pills', () => {
+    expect(SWARM_NAMES).toHaveLength(10);
+    expect(JELLY_NAMES).toHaveLength(5);
+    const ids = ['shoal', 'sardines', 'jellyfish'];
+    for (let k = 0; k < PHASES.length; k++) {
+      expect(hasVariants(k)).toBe(ids.includes(PHASES[k]?.id ?? ''));
+    }
+    const small = PHASES.findIndex((p) => p.id === 'sardines');
+    const jelly = PHASES.findIndex((p) => p.id === 'jellyfish');
+    expect(variantNames(small)).toEqual(SWARM_NAMES);
+    expect(variantLabel(jelly)).toBe('Jellyfish');
+    for (const [k, n] of [
+      [small, 10],
+      [jelly, 5],
+    ] as const) {
+      for (let i = 0; i < n; i++) {
+        setVariant(i, k);
+        for (const s of [0, 7.3, 19]) {
+          for (const p of particles.slice(0, 300)) {
+            const { pos, rgb } = pieceAt(p, k, s);
+            for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+          }
+        }
+      }
+    }
+    // Every swarm keeps its fish in view of the eye.
+    for (let i = 0; i < 10; i++) {
+      setVariant(i, small);
+      for (let j = 0; j < 900; j += 37) {
+        const { c } = smallFish(j, 0.5, 12);
+        expect(Math.hypot(...c)).toBeLessThan(32);
+      }
+    }
+    setVariant(0);
+  });
+
+  it('lets the cursor lead the shoal at its own speed, and hands back to the loop when it goes', () => {
+    const k = PHASES.findIndex((p) => p.id === 'shoal');
+    expect(hasPointer(k)).toBe(true);
+    expect(hasPointer(k + 1)).toBe(false);
+    const before = shoalFish(0, 0.5, 10).c;
+    const aim: [number, number, number] = [30, 0, 0];
+    // Ten seconds of frames with the cursor held to one side.
+    for (let i = 1; i <= 600; i++) setPointer(aim, 1 / 60, 10 + i / 60);
+    const fish = Array.from({ length: 36 }, (_, j) => shoalFish(j, 0.5, 20).c);
+    const mid = [0, 1, 2].map((i) => fish.reduce((s, f) => s + (f[i] as number), 0) / fish.length);
+    expect(dist(mid, aim)).toBeLessThan(dist(before, aim));
+    // No faster than the shoal swims: at most 4.4 a second from where it started.
+    expect(dist(mid, before)).toBeLessThan(4.4 * 10 + 12);
+    for (let i = 1; i <= 120; i++) setPointer(null, 1 / 60, 20 + i / 60);
+    expect(shoalFish(0, 0.5, 22).c).toEqual(shoalFish(0, 0.5, 22).c);
+    const loop = shoalFish(3, 0.5, 30).c;
+    setPointer(null, 1, 30);
+    expect(shoalFish(3, 0.5, 30).c).toEqual(loop);
   });
 });

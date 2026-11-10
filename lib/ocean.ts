@@ -101,7 +101,7 @@ export const PHASES: OceanPhase[] = [
   {
     id: 'fish-pulse',
     name: 'Fish pulse',
-    line: 'The coral stands grown and still. Small clownfish leave it all together on one beat, hang in the open water, and slip back in.',
+    line: 'The coral stands grown in a half ring. Clownfish swim out of it together, and slip back in whenever the blue hunter passes.',
     words: [
       'A clownfish rarely strays more than a few body lengths from home.',
       'Out together, back together: the whole family breathes as one.',
@@ -113,7 +113,7 @@ export const PHASES: OceanPhase[] = [
   {
     id: 'shoal',
     name: 'Shoal',
-    line: 'A shoal of fish turns as one: no leader, each fish keeping close to its neighbours.',
+    line: 'A shoal of fish turns as one, each fish keeping close to its neighbours. Your cursor is a small yellow fish they follow; a click lets them roam.',
     words: [
       'Each fish watches only the few beside it,',
       'and from that the whole shoal moves like one body.',
@@ -125,7 +125,7 @@ export const PHASES: OceanPhase[] = [
   {
     id: 'sardines',
     name: 'Small fish',
-    line: 'Thousands of small fish wheel in a ring, gather into a ball, and open into the ring again. Their sides flash silver as they turn.',
+    line: 'Thousands of small blue fish swim as one: a ring, a ball, a tornado, a river. Their sides flash pale as they turn.',
     words: [
       'Packed close, small fish are safer: a hunter cannot pick out one.',
       'The flash of a thousand turning sides is their shared defence.',
@@ -200,7 +200,9 @@ const SNOW: RGB = [0.75, 0.9, 1];
 const SHAFT: RGB = [0.6, 0.9, 1];
 const SILVER: RGB = [0.82, 0.9, 1];
 const BLUE_FISH: RGB = [0.35, 0.7, 1];
-const GOLD_FISH: RGB = [1, 0.75, 0.35];
+const DEEP_BLUE: RGB = [0.15, 0.35, 0.95];
+const YELLOW_FISH: RGB = [1, 0.88, 0.25];
+const LIGHT_BLUE: RGB = [0.6, 0.85, 1];
 const BELL: RGB = [0.72, 0.55, 1];
 const RIM: RGB = [0.75, 1, 0.95];
 const TENTACLE: RGB = [1, 0.6, 0.85];
@@ -422,62 +424,89 @@ function tablePoint(p: Particle, u: number, t: number): Vec3 {
  * same pulse, then go back in. call it fish pulse".
  */
 
-export const CLOWNS = 28;
-/** Seconds from one outing to the next: out together, a moment in the open water, back in, a rest. */
-export const FISH_BEAT = 8;
+/*
+ * 2026-11-10: "in the fish pulse do the coral more open, more busy, a bit
+ * more like a semi circle. and more small fish. when a blue silver fish comes
+ * the clowns enter. when it leaves they come out."
+ */
+
+export const CLOWNS = 48;
+export const HOMES = 6;
+/** Seconds for the blue hunter to swim once round the garden. */
+export const HUNT_LAP = 20;
+/** The way the eye looks at the thicket, round the vertical; the half ring opens toward it. */
+const PULSE_VIEW = 0.5;
+const VIEW: Vec3 = [Math.sin(PULSE_VIEW), 0, Math.cos(PULSE_VIEW)];
+const ACROSS: Vec3 = [Math.cos(PULSE_VIEW), 0, -Math.sin(PULSE_VIEW)];
+const THICKET: Vec3 = [0, FLOOR + 5, 0];
 let homes: Colony[] | null = null;
-/** Three corals grown close together into one thicket, the fishes' home. They do not grow: they are grown. */
+/** Six busy corals in a half ring, open toward the eye: the fishes' home. They do not grow: they are grown. */
 export function homeCorals(): Colony[] {
   if (homes) return homes;
-  const at: Vec3[] = [
-    [-4, FLOOR, 0],
-    [4, FLOOR, -2],
-    [0.5, FLOOR, 4],
-  ];
-  homes = at.map((c, k) => {
+  homes = Array.from({ length: HOMES }, (_, k) => {
     const out: number[][] = [];
-    grow3(seeded(130 + k), [0, 0, 0], [0, 1, 0], 3.2 + 0.6 * hash(k, 131), 0.8, 5, k, [], out);
-    return { at: c, routes: out.map(resample3), flat: false, yaw: hash(k, 132) * TAU };
+    grow3(seeded(130 + k), [0, 0, 0], [0, 1, 0], 2.6 + 0.8 * hash(k, 131), 0.7, 6, k, [], out);
+    const psi = ((k + 0.5) / HOMES - 0.5) * Math.PI;
+    const at = add(add([0, FLOOR, 0], VIEW, -9 * Math.cos(psi)), ACROSS, 10 * Math.sin(psi));
+    return { at, routes: out.map(resample3), flat: false, yaw: hash(k, 132) * TAU };
   });
   return homes;
 }
+/** A home coral's point, spread wider so its branches stand open. */
+const opened = (q: Vec3): Vec3 => [q[0] * 1.4, q[1], q[2] * 1.4];
 const HOME_TONES: RGB[] = [
   [0.75, 0.5, 1],
   [1, 0.5, 0.75],
   [0.35, 0.9, 0.85],
 ];
 
-/** How far out the fish are at time t: 0 sheltering in the coral, 1 out in the water. One beat for all. */
+/** The blue hunter at time t: a lap round the garden, passing close in front of the coral once a lap. */
+export function hunterAt(t: number): { c: Vec3; f: Vec3 } {
+  const at = (tt: number): Vec3 => {
+    const th = (tt / HUNT_LAP) * TAU;
+    return add(
+      add([0, FLOOR + 9 + 1.5 * Math.sin(th * 2), 0], ACROSS, 26 * Math.cos(th)),
+      VIEW,
+      -10 + 20 * Math.sin(th),
+    );
+  };
+  const c = at(t);
+  const n = at(t + 0.05);
+  return { c, f: norm([n[0] - c[0], n[1] - c[1], n[2] - c[2]]) };
+}
+
+/** How far out the clownfish are at time t: 0 hidden in the coral while the hunter is near, 1 out once it has gone. */
 export function outOf(t: number): number {
-  const ph = frac(t / FISH_BEAT);
-  return smooth(ph / 0.22) * (1 - smooth((ph - 0.55) / 0.22));
+  const { c } = hunterAt(t);
+  const d = Math.hypot(c[0] - THICKET[0], c[1] - THICKET[1], c[2] - THICKET[2]);
+  return smooth((d - 13) / 9);
 }
 
 /** Clownfish j: where it shelters, and where it swims to when the shoal comes out. */
 function clownPlaces(j: number): { home: Vec3; away: Vec3 } {
-  const c = homeCorals()[j % 3] as Colony;
+  const c = homeCorals()[j % HOMES] as Colony;
   const route = c.routes[Math.floor(hash(j, 141) * c.routes.length)] as Route3;
   const [x, y, z] = along3(route, length3(route) * (0.45 + 0.4 * hash(j, 142)));
   const cs = Math.cos(c.yaw);
   const sn = Math.sin(c.yaw);
-  const home: Vec3 = [c.at[0] + x * cs - z * sn, c.at[1] + y, c.at[2] + x * sn + z * cs];
-  // Out and up, away from the middle of the thicket.
-  const a = Math.atan2(home[2], home[0]) + (hash(j, 143) - 0.5) * 1.2;
+  const home = add(c.at, opened([x * cs - z * sn, y, x * sn + z * cs]));
+  // Out and up, toward the open side of the half ring.
+  const a = Math.atan2(VIEW[2], VIEW[0]) + (hash(j, 143) - 0.5) * 2.2;
   const dir = norm([Math.cos(a), 0.45 + 0.4 * hash(j, 144), Math.sin(a)]);
-  return { home, away: add(home, dir, 6 + 4 * hash(j, 145)) };
+  return { home, away: add(home, dir, 5 + 4 * hash(j, 145)) };
 }
 
 /** Clownfish j at time t: its place and heading. */
 export function clownFish(j: number, t: number): { c: Vec3; f: Vec3; out: number } {
+  const lag = 0.4 * hash(j, 146);
   const at = (tt: number): Vec3 => {
-    // All together, each a hair behind the next, so the shoal leaves as one but not as a machine.
-    const e = outOf(tt - 0.12 * hash(j, 146));
+    // All together, each a hair behind the next, so the shoal moves as one but not as a machine.
+    const e = outOf(tt - lag);
     const { home, away } = clownPlaces(j);
-    const w = 0.8 * e;
     return add(
       lerp3(home, away, e),
       [Math.sin(1.3 * tt + j), 0.5 * Math.sin(1.7 * tt + j), Math.cos(1.1 * tt + j)],
-      w,
+      0.8 * e,
     );
   };
   const c = at(t);
@@ -485,10 +514,10 @@ export function clownFish(j: number, t: number): { c: Vec3; f: Vec3; out: number
   const v: Vec3 = [n[0] - c[0], n[1] - c[1], n[2] - c[2]];
   const { home, away } = clownPlaces(j);
   const outward = norm([away[0] - home[0], away[1] - home[1], away[2] - home[2]]);
-  // Facing the way it swims. Barely moving, it faces out, turns round to face home for the way back,
-  // and turns out again while it rests: a smooth turn, never a flip.
-  const ph = frac(t / FISH_BEAT);
-  const turn = Math.PI * (smooth((ph - 0.45) / 0.1) - smooth((ph - 0.8) / 0.15));
+  // Facing the way it swims. On the way in it faces home, and once sheltered turns slowly to look
+  // out again: a smooth turn round the vertical, never a flip.
+  const going = outOf(t - lag + 0.6) - outOf(t - lag - 0.6);
+  const turn = Math.PI * smooth(-going / 0.15);
   const cs = Math.cos(turn);
   const sn = Math.sin(turn);
   const rest: Vec3 = [
@@ -498,10 +527,10 @@ export function clownFish(j: number, t: number): { c: Vec3; f: Vec3; out: number
   ];
   const w = smooth((Math.hypot(v[0], v[1], v[2]) - 0.005) / 0.03);
   const f = norm(add(scale(rest, 1 - w), norm(v), w));
-  return { c, f, out: outOf(t) };
+  return { c, f, out: outOf(t - lag) };
 }
 
-type PulseRole = 'floor' | 'snow' | 'shaft' | 'polyp' | 'coral' | 'fish';
+type PulseRole = 'floor' | 'snow' | 'shaft' | 'polyp' | 'coral' | 'hunter' | 'fish';
 const pulseRole = (p: Particle): PulseRole =>
   p.c < 0.07
     ? 'floor'
@@ -511,9 +540,11 @@ const pulseRole = (p: Particle): PulseRole =>
         ? 'shaft'
         : p.c < 0.24
           ? 'polyp'
-          : p.c < 0.68
+          : p.c < 0.62
             ? 'coral'
-            : 'fish';
+            : p.c < 0.66
+              ? 'hunter'
+              : 'fish';
 
 function pulsePoint(p: Particle, t: number): Vec3 {
   const role = pulseRole(p);
@@ -521,10 +552,14 @@ function pulsePoint(p: Particle, t: number): Vec3 {
   if (role === 'fish') {
     const j = Math.floor(p.a * CLOWNS);
     const { c, f } = clownFish(j, t);
-    return fishAt(c, f, 1.3, p, t, j);
+    return fishAt(c, f, 1.2, p, t, j);
   }
-  const c = homeCorals()[Math.floor(p.a * 3)] as Colony;
-  return add(c.at, coralLocal(c, p, 1, t, role === 'polyp'));
+  if (role === 'hunter') {
+    const { c, f } = hunterAt(t);
+    return fishAt(c, f, 4.5, p, t * 0.6, 0);
+  }
+  const c = homeCorals()[Math.floor(p.a * HOMES)] as Colony;
+  return add(c.at, opened(coralLocal(c, p, 1, t, role === 'polyp')));
 }
 
 /** A clownfish's colours, head to tail: orange, with three white bands and darker fins. */
@@ -587,8 +622,12 @@ type ShoalKind = {
   wide?: number;
   /** Dorsal fin height, as a share of the length; 0 for none. Sharks and swordfish also get side fins. */
   dorsal: number;
-  /** A fanned tail, or the high crescent of fast swimmers. */
+  /**
+   * A fanned tail, or the crescent of fast swimmers, its upper and lower lobes as shares of the
+   * length; a shark's upper lobe is the longer, a thresher's as long as its body.
+   */
   tail: 'fan' | 'crescent';
+  lobes?: [number, number];
   head?: 'hammer' | 'bill';
   spread: number;
   /** How fast the shoal travels its loop, and how fast the tails beat. */
@@ -599,7 +638,33 @@ type ShoalKind = {
   back: RGB;
   belly: RGB;
   bars?: boolean;
+  /** A butterflyfish's thin snout ahead of the head, and the long pennant streaming from its back, as shares of the length. */
+  snout?: number;
+  pennant?: number;
+  /** Its markings, head (0) to tail (1): bands across the body, some on the upper half only. */
+  marks?: { from: number; to: number; tone: RGB; top?: boolean }[];
 };
+
+const INK: RGB = [0.06, 0.06, 0.08];
+const PEARL: RGB = [0.95, 0.95, 0.9];
+const LEMON: RGB = [1, 0.85, 0.15];
+/** A butterflyfish: a tall flat disc, small fins, a quick tail; they drift in pairs and small groups. */
+const butterfly = (
+  o: Partial<ShoalKind> & Pick<ShoalKind, 'name' | 'back' | 'belly'>,
+): ShoalKind => ({
+  count: 26,
+  len: 2.1,
+  depth: 0.42,
+  tall: 1.25,
+  wide: 0.25,
+  dorsal: 0.1,
+  tail: 'fan',
+  spread: 8,
+  pace: 0.8,
+  wag: 1.3,
+  view: 0.85,
+  ...o,
+});
 export const SHOAL_KINDS: ShoalKind[] = [
   {
     name: 'Silver fish',
@@ -613,8 +678,8 @@ export const SHOAL_KINDS: ShoalKind[] = [
     pace: 1,
     wag: 1,
     view: 1,
-    back: BLUE_FISH,
-    belly: SILVER,
+    back: DEEP_BLUE,
+    belly: BLUE_FISH,
   },
   {
     name: 'Yellow tangs',
@@ -656,6 +721,7 @@ export const SHOAL_KINDS: ShoalKind[] = [
     tall: 0.9,
     dorsal: 0.22,
     tail: 'crescent',
+    lobes: [0.36, 0.16],
     head: 'hammer',
     spread: 17,
     pace: 0.45,
@@ -680,6 +746,86 @@ export const SHOAL_KINDS: ShoalKind[] = [
     back: [0.22, 0.32, 0.62],
     belly: SILVER,
   },
+  {
+    // 2026-11-10: "add the sharks with big tails that point longer, like a moon with the higher part longer".
+    name: 'Thresher sharks',
+    count: 6,
+    len: 8.5,
+    depth: 0.12,
+    tall: 0.95,
+    dorsal: 0.2,
+    tail: 'crescent',
+    lobes: [0.85, 0.13],
+    spread: 15,
+    pace: 0.5,
+    wag: 0.45,
+    view: 1.45,
+    back: [0.5, 0.44, 0.6],
+    belly: [0.88, 0.88, 0.92],
+  },
+  // Butterflyfish (2026-11-10: "add more types of beautiful unique butterfly fish").
+  butterfly({
+    // Pearl white with copper bands, a long snout, a dark eyespot near the tail.
+    name: 'Copperbands',
+    back: PEARL,
+    belly: PEARL,
+    snout: 0.2,
+    marks: [
+      { from: 0.08, to: 0.14, tone: [1, 0.5, 0.15] },
+      { from: 0.28, to: 0.37, tone: [1, 0.55, 0.15] },
+      { from: 0.5, to: 0.59, tone: [1, 0.55, 0.15] },
+      { from: 0.7, to: 0.76, tone: [1, 0.5, 0.15] },
+      { from: 0.78, to: 0.82, tone: INK, top: true },
+    ],
+  }),
+  butterfly({
+    // White chevrons at the front, lemon behind, a black band through the eye and a thread from the fin.
+    name: 'Threadfins',
+    back: LEMON,
+    belly: PEARL,
+    pennant: 0.25,
+    marks: [
+      { from: 0.1, to: 0.16, tone: INK },
+      { from: 0.55, to: 1, tone: LEMON, top: true },
+      { from: 0.85, to: 1, tone: LEMON },
+    ],
+  }),
+  butterfly({
+    // Gold, with a raccoon's black mask over the eyes and a white band behind it.
+    name: 'Raccoons',
+    back: [1, 0.72, 0.15],
+    belly: [1, 0.82, 0.3],
+    marks: [
+      { from: 0.06, to: 0.2, tone: INK, top: true },
+      { from: 0.2, to: 0.25, tone: PEARL, top: true },
+      { from: 0.84, to: 0.89, tone: INK },
+    ],
+  }),
+  butterfly({
+    // Bright yellow, a very long snout, the top of the head black above the white throat.
+    name: 'Longnoses',
+    back: [1, 0.9, 0.1],
+    belly: [1, 0.9, 0.1],
+    snout: 0.34,
+    marks: [
+      { from: 0, to: 0.22, tone: PEARL },
+      { from: 0, to: 0.22, tone: INK, top: true },
+      { from: 0.8, to: 0.84, tone: INK },
+    ],
+  }),
+  butterfly({
+    // Bannerfish: white with two broad black bands, a yellow tail, a long white banner from the back.
+    name: 'Bannerfish',
+    back: PEARL,
+    belly: PEARL,
+    pennant: 0.6,
+    dorsal: 0.14,
+    marks: [
+      { from: 0.2, to: 0.38, tone: INK },
+      { from: 0.55, to: 0.72, tone: INK },
+      { from: 0.82, to: 1, tone: LEMON },
+    ],
+  }),
 ];
 export const SHOAL_NAMES = SHOAL_KINDS.map((k) => k.name);
 let shoalKind = 0;
@@ -687,8 +833,77 @@ let shoalKind = 0;
 export function setShoalKind(i: number) {
   shoalKind = SHOAL_KINDS[i] ? i : 0;
 }
-export const hasShoalKinds = (k: number) => PHASES[k]?.id === 'shoal';
 const kindNow = () => SHOAL_KINDS[shoalKind] as ShoalKind;
+
+/*
+ * The cursor as a small yellow fish, the shoal following it at the speed it
+ * swims anyway (2026-11-10: "in shoal transform my mouse cursor into a small
+ * yellow fish. and all the shoal follows it", "at same speed as they are
+ * moving now"). The player hands over where the cursor points each frame.
+ */
+export const hasPointer = (k: number) => PHASES[k]?.id === 'shoal';
+/** Roughly how fast the shoal travels its loop, in units a second, before its kind's pace. */
+const SHOAL_SPEED = 4.4;
+/** Seconds of the chase kept, enough for the slowest shoal's last fish. */
+const TRAIL_SECONDS = 9;
+type Trail = { t: number; c: Vec3; f: Vec3 };
+const steer = {
+  w: 0,
+  cursor: null as Vec3 | null,
+  lead: [0, 0, 0] as Vec3,
+  f: [1, 0, 0] as Vec3,
+  trail: [] as Trail[],
+};
+/** Where the cursor points (null when it is away) at time t, dt after the last frame. */
+export function setPointer(at: Vec3 | null, dt: number, t: number) {
+  const kind = kindNow();
+  const was = steer.w;
+  steer.w = Math.max(0, Math.min(1, steer.w + (at ? dt : -dt) / 1.2));
+  if (!at) {
+    if (steer.w === 0) steer.trail = [];
+    return;
+  }
+  if (was === 0) {
+    // Taking over from the loop where the shoal is now.
+    steer.lead = shoalCentre(t * kind.pace);
+    steer.f = heading((tt) => shoalCentre(tt * kind.pace), t);
+    steer.trail = [];
+  }
+  if (steer.cursor && dt > 0) {
+    const d: Vec3 = [at[0] - steer.cursor[0], at[1] - steer.cursor[1], at[2] - steer.cursor[2]];
+    if (Math.hypot(...d) > 1e-3) steer.f = norm(lerp3(steer.f, norm(d), Math.min(1, dt * 8)));
+  }
+  steer.cursor = at;
+  // The shoal swims for the cursor at its own speed, and circles it once there, so it never stops.
+  const aim = add(at, [Math.cos(0.8 * t), 0.3 * Math.sin(0.5 * t), Math.sin(0.8 * t)], 4);
+  const to: Vec3 = [aim[0] - steer.lead[0], aim[1] - steer.lead[1], aim[2] - steer.lead[2]];
+  const dist = Math.hypot(...to);
+  const step = Math.min(dist, SHOAL_SPEED * kind.pace * dt);
+  if (dist > 1e-6) steer.lead = add(steer.lead, to, step / dist);
+  const last = steer.trail[steer.trail.length - 1];
+  const f =
+    last && step > 1e-4
+      ? norm([steer.lead[0] - last.c[0], steer.lead[1] - last.c[1], steer.lead[2] - last.c[2]])
+      : (last?.f ?? steer.f);
+  steer.trail.push({ t, c: steer.lead, f });
+  while (steer.trail.length > 2 && (steer.trail[0] as Trail).t < t - TRAIL_SECONDS)
+    steer.trail.shift();
+}
+/** Where the chase was at time t, and which way it was going. */
+function trailAt(t: number): { c: Vec3; f: Vec3 } {
+  const tr = steer.trail;
+  if (!tr.length) return { c: steer.lead, f: steer.f };
+  if (t <= (tr[0] as Trail).t) return tr[0] as Trail;
+  for (let i = tr.length - 1; i > 0; i--) {
+    const a = tr[i - 1] as Trail;
+    const b = tr[i] as Trail;
+    if (t >= a.t) {
+      const w = b.t > a.t ? Math.min(1, (t - a.t) / (b.t - a.t)) : 1;
+      return { c: lerp3(a.c, b.c, w), f: norm(lerp3(a.f, b.f, w)) };
+    }
+  }
+  return tr[tr.length - 1] as Trail;
+}
 
 /** Fish j of the shoal: where it swims and which way it points. */
 export function shoalFish(j: number, u: number, t: number): { c: Vec3; f: Vec3 } {
@@ -696,8 +911,14 @@ export function shoalFish(j: number, u: number, t: number): { c: Vec3; f: Vec3 }
   const path = (tt: number) => shoalCentre(tt * kind.pace);
   // Each fish follows the shoal's path a moment behind its neighbours ahead, so turns run through it.
   const lag = (hash(j, 71) * 3) / kind.pace;
-  const centre = path(t - lag);
-  const f = heading(path, t - lag);
+  let centre = path(t - lag);
+  let f = heading(path, t - lag);
+  if (steer.w > 0) {
+    // Following the cursor's fish instead, along the way the chase went.
+    const chase = trailAt(t - lag);
+    centre = lerp3(centre, chase.c, steer.w);
+    f = norm(lerp3(f, chase.f, steer.w));
+  }
   const side = norm(cross(f, [0, 1, 0]));
   const up = cross(side, f);
   // A loose lens round the path, breathing a little; tighter as the piece goes on.
@@ -730,6 +951,20 @@ function kindFishAt(
   const part = hash(p.i, 151);
   const q = hash(p.i, 152);
   const big = kind.dorsal >= 0.15;
+  if (kind.snout && part < 0.06) {
+    // A thin snout for picking food from cracks in the coral.
+    return put(len * (0.45 + kind.snout * q), (p.d - 0.5) * 0.03 * len * (1 - q), -0.03 * len);
+  }
+  if (kind.pennant && part >= 0.06 && part < 0.1) {
+    // The pennant: from the front of the fin, up and streaming back, waving as it goes.
+    const w = q;
+    const top = bodyAt(0.3) * kind.tall + kind.dorsal * len;
+    return put(
+      len * 0.2 - kind.pennant * len * w,
+      wagAt(0.3 + w * 0.5) + 0.04 * len * Math.sin(5 * t + j - 6 * w) * w,
+      top + 0.1 * len * Math.sin(w * Math.PI * 0.8),
+    );
+  }
   if (kind.head === 'hammer' && part < 0.1) {
     // The hammer: a flat blade across the head, an eye at each end.
     return put(len * 0.47, (q - 0.5) * 0.34 * len, (p.d - 0.5) * 0.03 * len);
@@ -739,10 +974,15 @@ function kindFishAt(
     return put(len * (0.5 + 0.38 * q), (p.d - 0.5) * 0.015 * len * (1 - q), 0);
   }
   if (kind.dorsal > 0 && part >= 0.1 && part < 0.18) {
-    // The dorsal fin: a triangle on the back, highest at its front edge.
-    const s = 0.28 + 0.2 * q;
-    const h = kind.dorsal * len * (1 - (s - 0.28) / 0.2) * p.d;
-    return put(len * (0.5 - s), wagAt(s), bodyAt(s) * kind.tall + h);
+    // The dorsal fin: its base on the back, narrowing as it rises, the tip swept back in a curve,
+    // as a shark's is (2026-11-10: "improve the top fin and tail of the sharks").
+    const h = p.d ** 0.8;
+    const s = 0.28 + 0.18 * q * (1 - h) + (big ? 0.14 : 0.06) * h ** 1.6;
+    return put(
+      len * (0.5 - s),
+      wagAt(s),
+      bodyAt(0.28 + 0.09 * q) * kind.tall + kind.dorsal * len * h,
+    );
   }
   if (big && part >= 0.18 && part < 0.25) {
     // Side fins, swept back and a little down.
@@ -750,10 +990,21 @@ function kindFishAt(
     const out = bodyAt(s) + 0.2 * len * q;
     return put(len * (0.5 - s) - 0.08 * len * q, (p.b < 0.5 ? -1 : 1) * out, -0.06 * len * q);
   }
-  if (kind.tail === 'crescent' && part >= 0.25 && part < 0.34) {
-    // A high crescent tail: two lobes swept back from the tail's root.
-    const lobe = p.b < 0.5 ? 1 : -0.8;
-    return put(-len * 0.5 - 0.1 * len * q, wagAt(1), lobe * 0.24 * len * q);
+  const [upperLobe, lowerLobe] = kind.lobes ?? [0.26, 0.24];
+  if (kind.tail === 'crescent' && part >= 0.25 && part < (upperLobe > 0.5 ? 0.42 : 0.34)) {
+    // A crescent tail: two lobes curving back from the tail's root, tapering to their points;
+    // the longer the upper lobe, the more of the grains it takes.
+    const upper = p.b < upperLobe / (upperLobe + lowerLobe);
+    const L = (upper ? upperLobe : lowerLobe) * len;
+    const w = q;
+    // A long lobe leaves lower and sweeps up toward its tip, like a scythe.
+    const ang = upper ? (upperLobe > 0.5 ? 0.3 + 0.35 * w : 0.75 - 0.25 * w) : -0.75 + 0.25 * w;
+    const thick = (p.d - 0.5) * 0.1 * len * (1 - w) ** 0.7;
+    return put(
+      -len * 0.48 - L * w * Math.cos(ang),
+      wagAt(1) * (1 + w),
+      L * w * Math.sin(ang) + thick,
+    );
   }
   // The body, head at s = 0 and tail at s = 1; a fanned tail on the small fish.
   const s = p.b;
@@ -769,8 +1020,15 @@ function kindFishAt(
 type ShoalRole = 'snow' | 'fish';
 const shoalRole = (p: Particle): ShoalRole => (p.c < 0.1 ? 'snow' : 'fish');
 
+/** Grains of the snow that become the cursor's yellow fish while it leads. */
+const isLeader = (p: Particle) => p.c >= 0.075 && p.c < 0.1;
+
 function shoalPoint(p: Particle, u: number, t: number): Vec3 {
-  if (shoalRole(p) === 'snow') return snowAt(p, t, [0, 0, 0], 70, 40);
+  if (shoalRole(p) === 'snow') {
+    const flake = snowAt(p, t, [0, 0, 0], 70, 40);
+    if (steer.w <= 0 || !steer.cursor || !isLeader(p)) return flake;
+    return lerp3(flake, fishAt(steer.cursor, steer.f, 1.6, p, t, 0), steer.w);
+  }
   const kind = kindNow();
   const j = Math.floor(p.a * kind.count);
   const { c, f } = shoalFish(j, u, t);
@@ -778,14 +1036,29 @@ function shoalPoint(p: Particle, u: number, t: number): Vec3 {
   return shoalKind === 0 ? fishAt(c, f, len, p, t, j) : kindFishAt(kind, c, f, len, p, t, j);
 }
 
-/** A shoal fish's colour: dark back, pale belly, the barracuda's bars, and a few golden fish among the silver. */
+/**
+ * A shoal fish's colour: dark back, pale belly, the barracuda's bars. The silver fish are all
+ * blue, and one alone is yellow (2026-11-10: "silver fish all in blue and only one in yellow").
+ */
 function shoalColour(p: Particle, twinkle: number): RGB {
   const kind = kindNow();
   const j = Math.floor(p.a * kind.count);
   if (shoalKind === 0) {
-    const tone =
-      hash(j, 75) < 0.12 ? GOLD_FISH : mix(BLUE_FISH, SILVER, 0.5 + 0.5 * Math.sin(p.d * TAU));
-    return scale(tone, 0.32 * twinkle);
+    const blue = mix(DEEP_BLUE, BLUE_FISH, 0.5 + 0.5 * Math.sin(p.d * TAU));
+    // The one yellow fish, unless the cursor's own yellow fish is leading.
+    const yellow = j === 0 ? 1 - steer.w : 0;
+    return scale(mix(blue, YELLOW_FISH, yellow), (0.34 + 0.08 * yellow) * twinkle);
+  }
+  if (kind.marks) {
+    // A butterflyfish: its snout, pennant and fins in its back colour, its body banded.
+    const part = hash(p.i, 151);
+    if ((kind.snout && part < 0.06) || (part >= 0.1 && part < 0.18))
+      return scale(kind.back, 0.34 * twinkle);
+    if (kind.pennant && part >= 0.06 && part < 0.1) return scale(PEARL, 0.4 * twinkle);
+    const top = Math.sin(p.d * TAU) > 0.1;
+    let tone = mix(kind.belly, kind.back, 0.5 + 0.5 * Math.sin(p.d * TAU));
+    for (const m of kind.marks) if (p.b >= m.from && p.b < m.to && (!m.top || top)) tone = m.tone;
+    return scale(tone, 0.36 * twinkle);
   }
   const tone = mix(kind.belly, kind.back, 0.5 + 0.5 * Math.sin(p.d * TAU));
   const bar =
@@ -793,11 +1066,11 @@ function shoalColour(p: Particle, twinkle: number): RGB {
   return scale(tone, (bar ? 0.18 : 0.34) * twinkle);
 }
 
-/* ---------- 6. Small fish: a ring that gathers into a ball ---------- */
+/* ---------- 6. Small fish: ten ways of swimming together ---------- */
 
 export const SMALL_FISH = 900;
 /** Small fish j's place: on a wheeling ring, or, mid-piece, orbiting in a tight ball. */
-function smallPath(j: number, u: number, t: number): Vec3 {
+function ringPath(j: number, u: number, t: number): Vec3 {
   const th = hash(j, 91) * TAU + t * (0.32 + 0.08 * hash(j, 92));
   const ph = hash(j, 93) * TAU + t * 0.7;
   const R = 15;
@@ -819,6 +1092,128 @@ function smallPath(j: number, u: number, t: number): Vec3 {
   ];
   return lerp3(ring, orb, ball);
 }
+
+/** A point at radius r in a random direction for fish j, turning slowly round a tilted axis. */
+function orbit(j: number, r: number, t: number, speed: number): Vec3 {
+  const tilt = hash(j, 94) * Math.PI;
+  const an = (1 + 0.4 * hash(j, 96)) * t * speed + hash(j, 97) * TAU;
+  return [Math.cos(an) * r, Math.sin(an) * r * Math.cos(tilt), Math.sin(an) * r * Math.sin(tilt)];
+}
+
+/*
+ * Ten swarms, picked by pills (2026-11-10: "small fish do 10 types of motions
+ * movements and swarms. and do them in blue"). Each is fish j's place at time t.
+ */
+const SWARMS: { name: string; at: (j: number, u: number, t: number) => Vec3 }[] = [
+  { name: 'Ring', at: ringPath },
+  {
+    // One tight ball, breathing in and out.
+    name: 'Bait ball',
+    at: (j, _u, t) =>
+      orbit(j, (6 + 4 * Math.cbrt(hash(j, 95))) * (1 + 0.15 * Math.sin(0.8 * t)), t, 1),
+  },
+  {
+    // A funnel standing up from below, wider at the top, its middle swaying.
+    name: 'Tornado',
+    at: (j, _u, t) => {
+      const y = 13 * Math.sin(hash(j, 91) * TAU + t * 0.15);
+      const r = 3 + 5 * ((y + 13) / 26) + 0.8 * hash(j, 92);
+      const a = hash(j, 93) * TAU + t * (1.2 - 0.03 * y);
+      const mx = 3 * Math.sin(0.3 * t + y * 0.12);
+      return [mx + Math.cos(a) * r, y, Math.sin(a) * r];
+    },
+  },
+  {
+    // A flat wheel, the inner fish going round faster than the outer.
+    name: 'Carousel',
+    at: (j, _u, t) => {
+      const r = 4 + 14 * Math.sqrt(hash(j, 91));
+      const a = hash(j, 92) * TAU + (t * 1.6) / (1 + r * 0.08);
+      return [
+        Math.cos(a) * r,
+        (hash(j, 93) - 0.5) * 3 + 1.5 * Math.sin(a * 2 + t * 0.5),
+        Math.sin(a) * r,
+      ];
+    },
+  },
+  {
+    // One long ribbon, each fish following the one ahead along a winding path.
+    name: 'River',
+    at: (j, _u, t) => {
+      const sg = t * 0.3 - hash(j, 91) * 3.2;
+      const path: Vec3 = [20 * Math.sin(sg), 6 * Math.sin(2 * sg + 0.5), 10 * Math.sin(1.5 * sg)];
+      return add(path, orbit(j, 2.4 * Math.sqrt(hash(j, 95)), t, 0.6));
+    },
+  },
+  {
+    // A loop round two centres, crossing in the middle.
+    name: 'Figure eight',
+    at: (j, _u, t) => {
+      const sg = hash(j, 91) * TAU + t * 0.45;
+      const path: Vec3 = [18 * Math.sin(sg), 3 * Math.sin(2 * sg + t * 0.3), 9 * Math.sin(2 * sg)];
+      return add(path, orbit(j, 3 * Math.sqrt(hash(j, 95)), t, 0.8));
+    },
+  },
+  {
+    // A hunter passes through the school; the fish part round it and close behind.
+    name: 'Fountain',
+    at: (j, _u, t) => {
+      const base: Vec3 = [
+        (hash(j, 91) - 0.5) * 30 + 2 * Math.sin(0.4 * t + j),
+        (hash(j, 92) - 0.5) * 10,
+        (hash(j, 93) - 0.5) * 14,
+      ];
+      const hunter: Vec3 = [24 * Math.sin(t * 0.35), 1.5 * Math.sin(t * 0.5), 0];
+      const d: Vec3 = [base[0] - hunter[0], base[1] - hunter[1], base[2] - hunter[2]];
+      const dl = Math.hypot(...d) || 1;
+      return add(base, d, (6 * Math.exp(-((dl / 6) ** 2))) / dl);
+    },
+  },
+  {
+    // A ball that bursts outward all at once, then slowly gathers again.
+    name: 'Flash',
+    at: (j, _u, t) => {
+      const ph = frac(t / 6);
+      const burst = smooth(ph / 0.06) * (1 - smooth((ph - 0.1) / 0.55));
+      return orbit(
+        j,
+        (5 + 3 * Math.cbrt(hash(j, 95))) * (1 + 1.8 * burst * (0.6 + 0.4 * hash(j, 98))),
+        t,
+        0.7,
+      );
+    },
+  },
+  {
+    // A wide sheet, a slow wave running through it.
+    name: 'Wave',
+    at: (j, _u, t) => {
+      const x = (hash(j, 91) - 0.5) * 44 + 1.5 * Math.sin(t * 0.6 + j);
+      const z = (hash(j, 92) - 0.5) * 24;
+      return [
+        x,
+        4 * Math.sin(0.3 * x - 1.3 * t) + 2 * Math.sin(0.3 * z + t) + (hash(j, 93) - 0.5),
+        z,
+      ];
+    },
+  },
+  {
+    // Two schools circling each other, merging into one, and parting again.
+    name: 'Two schools',
+    at: (j, _u, t) => {
+      const apart = 12 * (0.5 + 0.5 * Math.cos(0.3 * t));
+      const a = t * 0.5 + (j % 2) * Math.PI;
+      const c: Vec3 = [Math.cos(a) * apart, 0, Math.sin(a) * apart * 0.6];
+      return add(c, orbit(j, 4 + 2.5 * Math.cbrt(hash(j, 95)), t, 1.1));
+    },
+  },
+];
+export const SWARM_NAMES = SWARMS.map((w) => w.name);
+let swarm = 0;
+/** Which swarm the small fish swim: set by the pills, the ring in the Journey. */
+export function setSwarm(i: number) {
+  swarm = SWARMS[i] ? i : 0;
+}
+const smallPath = (j: number, u: number, t: number) => (SWARMS[swarm] ?? SWARMS[0])!.at(j, u, t);
 
 /** Small fish j's place and heading. */
 export function smallFish(j: number, u: number, t: number): { c: Vec3; f: Vec3 } {
@@ -899,11 +1294,204 @@ function jellyTop(j: number, t: number): { c: Vec3; k: number; edge: number } {
   };
 }
 
+/*
+ * Five kinds of jellyfish, picked by pills, one kind at a time (2026-11-10:
+ * "jelly fish do 5 kinds of jfish"). The first is the glowing one above.
+ */
+type JellyKind = {
+  name: string;
+  count: number;
+  size: number;
+  /** How fast they rise and how fast the bells beat; comb jellies do not pulse. */
+  rise: number;
+  beat: number;
+};
+export const JELLY_KINDS: JellyKind[] = [
+  { name: 'Glow jellies', count: JELLIES, size: 1, rise: 1, beat: 1 },
+  // A wide flat saucer, four pink rings in it, a fringe of short fine tentacles.
+  { name: 'Moon jellies', count: 11, size: 1, rise: 0.8, beat: 0.8 },
+  // Few and big: a red bell, a long mane of tentacles in bunches, a curtain of frilled arms.
+  { name: 'Lion’s manes', count: 4, size: 1.45, rise: 0.5, beat: 0.6 },
+  // A pale cube, four bunches of thin tentacles from its corners; quick swimmers.
+  { name: 'Box jellies', count: 9, size: 0.9, rise: 1.5, beat: 1.8 },
+  // An oval body that drifts, eight rows of combs shimmering in rainbow waves.
+  { name: 'Comb jellies', count: 14, size: 0.85, rise: 0.7, beat: 0 },
+];
+export const JELLY_NAMES = JELLY_KINDS.map((k) => k.name);
+let jellyKind = 0;
+/** Which jellyfish drift: set by the pills, the glowing ones in the Journey. */
+export function setJellyKind(i: number) {
+  jellyKind = JELLY_KINDS[i] ? i : 0;
+}
+const jellyNow = () => JELLY_KINDS[jellyKind] as JellyKind;
+const jellyPull = (j: number, t: number) => {
+  const { beat } = jellyNow();
+  return beat ? pulseOf(j, t * beat) : 0;
+};
+
+/** Jellyfish j of the kind drifting now: its top, rising, and how faint it is near the wrap. */
+function kindTop(j: number, t: number): { c: Vec3; k: number; edge: number } {
+  if (jellyKind === 0) return jellyTop(j, t);
+  const kind = jellyNow();
+  const y = wrap(
+    hash(j, 102) * JELLY_SPAN + t * kind.rise * (0.6 + 0.4 * hash(j, 103)),
+    JELLY_SPAN,
+  );
+  return {
+    c: [
+      ((j + 0.5) / kind.count - 0.5) * 46 + (hash(j, 105) - 0.5) * 6 + Math.sin(t * 0.1 + j) * 2,
+      // The big ones hang higher, so their manes stay in view.
+      y - JELLY_SPAN / 2 + (kind.size > 1.2 ? 3 : 0),
+      (hash(j, 106) - 0.5) * 22,
+    ],
+    k: kind.size * (0.8 + 0.4 * hash(j, 104)),
+    edge: smooth(y / 6) * smooth((JELLY_SPAN - y) / 6),
+  };
+}
+
+/** A bell of radius r and height h hanging below c, v from the top (0) to the rim (1); square for a box jelly. */
+function dome(c: Vec3, r: number, h: number, v: number, ang: number, square = false): Vec3 {
+  const q = Math.sin((v * Math.PI) / 2);
+  const ring = square
+    ? ((r * 0.85) / Math.max(Math.abs(Math.cos(ang)), Math.abs(Math.sin(ang)))) * (0.55 + 0.45 * q)
+    : r * q;
+  const y = square ? h * v : h * (1 - Math.cos((v * Math.PI) / 2));
+  return [c[0] + Math.cos(ang) * ring, c[1] - y, c[2] + Math.sin(ang) * ring];
+}
+
+/** Grain p on a jellyfish of kinds 1 to 4, top at c, size k, at pulse `pull`. */
+function kindJellyAt(c: Vec3, k: number, pull: number, p: Particle, t: number, j: number): Vec3 {
+  const a = p.b * TAU;
+  const v = Math.sqrt(frac(p.b * 7.3));
+  const ang = frac(p.b * 13.7) * TAU;
+  switch (jellyKind) {
+    case 1: {
+      const R = 3 * k * (1 - 0.15 * pull);
+      const H = 0.8 * k * (1 + 0.25 * pull);
+      if (p.d < 0.45) return dome(c, R, H, v, ang);
+      if (p.d < 0.53) return dome(c, R * 1.03, H, 1, a);
+      if (p.d < 0.75) {
+        const n = Math.floor(frac(p.b * 40) * 40);
+        const s = frac(p.b * 97.1);
+        const na = (n / 40) * TAU;
+        const sway = Math.sin(s * 5 - t * 1.4 + n + j) * 0.2 * s * k;
+        return [
+          c[0] + Math.cos(na) * (R + sway),
+          c[1] - H - s * 1.6 * k,
+          c[2] + Math.sin(na) * (R + sway),
+        ];
+      }
+      // Four horseshoe rings seen through the bell.
+      const n = Math.floor(frac(p.b * 4) * 4);
+      const ca = (n / 4) * TAU + Math.PI / 4;
+      const rr = 0.28 * R * (0.85 + 0.15 * frac(p.b * 31.1));
+      return [
+        c[0] + Math.cos(ca) * 0.42 * R + Math.cos(a * 11) * rr,
+        c[1] - H * 0.45,
+        c[2] + Math.sin(ca) * 0.42 * R + Math.sin(a * 11) * rr,
+      ];
+    }
+    case 2: {
+      const R = 2.6 * k * (1 - 0.18 * pull);
+      const H = 1.3 * k * (1 + 0.2 * pull);
+      if (p.d < 0.3) return dome(c, R, H, v, ang);
+      if (p.d < 0.36) return dome(c, R * 1.03, H, 1, a);
+      if (p.d < 0.85) {
+        // Eight bunches of long fine tentacles, a mane trailing far below.
+        const n = Math.floor(frac(p.b * 8) * 8);
+        const s = frac(p.b * 97.1);
+        const na = (n / 8) * TAU + (frac(p.b * 61.7) - 0.5) * 0.6;
+        const L = 11 * k * (0.6 + 0.4 * frac(p.b * 23.9)) * (1 - 0.1 * pull);
+        const sw = Math.sin(s * 4 - t * 0.9 + n + j) * 1.4 * s * k;
+        return [
+          c[0] + Math.cos(na) * R * (0.85 - 0.3 * s) + Math.cos(na + 1.6) * sw,
+          c[1] - H - s * L,
+          c[2] + Math.sin(na) * R * (0.85 - 0.3 * s) + Math.sin(na + 1.6) * sw,
+        ];
+      }
+      // A curtain of frilled arms from the middle.
+      const s = frac(p.b * 53.3);
+      const fa = frac(p.b * 4.1) * TAU + s * 1.5 + t * 0.15;
+      const rr = 0.8 * k * (1 + 0.6 * Math.sin(s * 18 + fa * 3));
+      return [c[0] + Math.cos(fa) * rr, c[1] - H * 0.6 - s * 5 * k, c[2] + Math.sin(fa) * rr];
+    }
+    case 3: {
+      const R = 1.7 * k * (1 - 0.2 * pull);
+      const H = 2.4 * k * (1 + 0.1 * pull);
+      if (p.d < 0.45) return dome(c, R, H, v, ang, true);
+      if (p.d < 0.52) return dome(c, R, H, 1, a, true);
+      // Four corners, four thin tentacles from each.
+      const n = Math.floor(frac(p.b * 16) * 16);
+      const ca = Math.PI / 4 + Math.floor(n / 4) * (Math.PI / 2) + ((n % 4) - 1.5) * 0.12;
+      const s = frac(p.b * 97.1);
+      const corner = R * 0.85 * Math.SQRT2 * (1 + 0.2 * s);
+      const sway = Math.sin(s * 5 - t * 1.4 + n + j) * 0.4 * s * k;
+      return [
+        c[0] + Math.cos(ca) * corner + Math.cos(ca + 1.6) * sway,
+        c[1] - H - s * 8 * k,
+        c[2] + Math.sin(ca) * corner + Math.sin(ca + 1.6) * sway,
+      ];
+    }
+    default: {
+      // An oval body turning slowly, eight rows of combs on it.
+      const rx = 1.3 * k;
+      const ry = 2.2 * k;
+      const spin = t * 0.3 + j;
+      const comb = p.d >= 0.6;
+      const vv = comb ? 0.1 + 0.8 * frac(p.b * 37.3) : frac(p.b * 7.3);
+      const aa = comb ? (Math.floor(frac(p.b * 8) * 8) / 8) * TAU + spin : ang + spin;
+      const out = comb ? 1.06 : 1;
+      return [
+        c[0] + Math.cos(aa) * rx * Math.sin(Math.PI * vv) * out,
+        c[1] - ry * (1 - Math.cos(Math.PI * vv)),
+        c[2] + Math.sin(aa) * rx * Math.sin(Math.PI * vv) * out,
+      ];
+    }
+  }
+}
+
+/** A rainbow hue, 0 to 1 round the wheel. */
+const rainbow = (h: number): RGB => [
+  0.5 + 0.5 * Math.cos(TAU * h),
+  0.5 + 0.5 * Math.cos(TAU * (h - 1 / 3)),
+  0.5 + 0.5 * Math.cos(TAU * (h - 2 / 3)),
+];
+
+/** A grain's colour on a jellyfish of kinds 1 to 4. */
+function kindJellyColour(p: Particle, pull: number, twinkle: number, edge: number, t: number): RGB {
+  const glow = (0.55 + 0.45 * pull) * edge;
+  switch (jellyKind) {
+    case 1:
+      if (p.d < 0.45) return scale([0.75, 0.85, 1], 0.28 * glow);
+      if (p.d < 0.53) return scale([0.85, 0.95, 1], 0.6 * glow * twinkle);
+      if (p.d < 0.75) return scale([0.8, 0.9, 1], 0.32 * twinkle * edge);
+      return scale([1, 0.55, 0.85], 0.75 * glow);
+    case 2:
+      if (p.d < 0.3) return scale([1, 0.4, 0.25], 0.42 * glow);
+      if (p.d < 0.36) return scale([1, 0.6, 0.35], 0.7 * glow * twinkle);
+      if (p.d < 0.85) return scale([1, 0.62, 0.3], 0.28 * twinkle * edge);
+      return scale([0.95, 0.35, 0.3], 0.5 * edge);
+    case 3:
+      if (p.d < 0.45) return scale([0.6, 0.9, 1], 0.24 * glow);
+      if (p.d < 0.52) return scale([0.7, 1, 1], 0.65 * glow * twinkle);
+      return scale([0.75, 0.95, 1], 0.34 * twinkle * edge);
+    default: {
+      if (p.d < 0.6) return scale([0.55, 0.75, 1], 0.18 * edge);
+      // Light running down each row of combs, broken into rainbow colours.
+      const row = Math.floor(frac(p.b * 8) * 8);
+      const vv = frac(p.b * 37.3);
+      return scale(rainbow(frac(vv * 1.5 - 0.8 * t + row * 0.08)), 0.7 * twinkle * edge);
+    }
+  }
+}
+
 function jellyPoint(p: Particle, t: number): Vec3 {
   if (p.c < 0.1) return snowAt(p, t, [0, 0, 0], 60, 44);
-  const j = Math.floor(p.a * JELLIES);
-  const { c, k } = jellyTop(j, t);
-  return jellyAt(c, k, pulseOf(j, t), p, t, j);
+  const j = Math.floor(p.a * jellyNow().count);
+  const { c, k } = kindTop(j, t);
+  return jellyKind === 0
+    ? jellyAt(c, k, pulseOf(j, t), p, t, j)
+    : kindJellyAt(c, k, jellyPull(j, t), p, t, j);
 }
 
 /* ---------- 8. Reef: a channel swum through as the corals grow ---------- */
@@ -1125,6 +1713,10 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
       if (role === 'snow') return scale(SNOW, 0.35 * twinkle);
       if (role === 'shaft') return scale(SHAFT, 0.18 * (0.4 + 0.6 * hash(p.i, 85)));
       if (role === 'fish') return clownColour(p, twinkle);
+      if (role === 'hunter') {
+        // Blue along the back, silver on the belly.
+        return scale(mix(SILVER, DEEP_BLUE, 0.5 + 0.5 * Math.sin(p.d * TAU)), 0.4 * twinkle);
+      }
       const tones =
         PHASES[k]?.id === 'fans'
           ? FAN_TONES
@@ -1137,18 +1729,26 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
         : scale(tone, 0.6 * twinkle);
     }
     case 'shoal':
-      return shoalRole(p) === 'snow' ? scale(SNOW, 0.3 * twinkle) : shoalColour(p, twinkle);
+      if (shoalRole(p) !== 'snow') return shoalColour(p, twinkle);
+      return isLeader(p) && steer.w > 0
+        ? mix(scale(SNOW, 0.3 * twinkle), scale(YELLOW_FISH, 0.5), steer.w)
+        : scale(SNOW, 0.3 * twinkle);
     case 'sardines': {
       if (p.c < 0.08) return scale(SNOW, 0.3 * twinkle);
-      // A flash of silver whenever a fish's side turns toward the light.
-      const { f } = smallFish(Math.floor(p.a * SMALL_FISH), u, t);
+      // All blue, a paler flash whenever a fish's side turns toward the light.
+      const j = Math.floor(p.a * SMALL_FISH);
+      const { f } = smallFish(j, u, t);
       const flash = Math.abs(f[0] * 0.6 + f[2] * 0.8) ** 6;
-      return scale(SILVER, 0.16 + 0.6 * flash);
+      const tone = mix(mix(DEEP_BLUE, BLUE_FISH, hash(j, 99)), LIGHT_BLUE, flash);
+      return scale(tone, 0.2 + 0.5 * flash);
     }
     case 'jellyfish': {
       if (p.c < 0.1) return scale(SNOW, 0.3 * twinkle);
-      const j = Math.floor(p.a * JELLIES);
-      return jellyColour(p, pulseOf(j, t), twinkle, jellyTop(j, t).edge);
+      const j = Math.floor(p.a * jellyNow().count);
+      const { edge } = kindTop(j, t);
+      return jellyKind === 0
+        ? jellyColour(p, pulseOf(j, t), twinkle, edge)
+        : kindJellyColour(p, jellyPull(j, t), twinkle, edge, t);
     }
     default: {
       const { d } = reefAt(p, u, t);
@@ -1201,22 +1801,29 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       return { eye: [Math.sin(a) * 38, FLOOR + 22, Math.cos(a) * 38], target: [0, FLOOR + 3, 0] };
     }
     case 'fish-pulse': {
-      // Close to the thicket, drifting round it very slowly: the coral stays still, the fish move.
-      const a = 0.5 + t * 0.025;
-      return { eye: [Math.sin(a) * 27, FLOOR + 10, Math.cos(a) * 27], target: [0, FLOOR + 7, 0] };
+      // Before the open side of the half ring and a little above it, swinging gently: the coral stays still, the fish move.
+      const a = PULSE_VIEW + 0.3 * Math.sin(t * 0.05);
+      return { eye: [Math.sin(a) * 30, FLOOR + 17, Math.cos(a) * 30], target: [0, FLOOR + 5, 0] };
     }
     case 'shoal': {
       // Beside the shoal, keeping it in view as it loops.
       const { pace, view } = kindNow();
       const c = shoalCentre(t * pace);
       const a = t * 0.04;
-      return {
+      const loop: Eye = {
         eye: [
           c[0] * 0.4 + Math.sin(a) * 40 * view,
           c[1] + 4 * view,
           c[2] * 0.4 + Math.cos(a) * 40 * view,
         ],
         target: [c[0] * 0.6, c[1], c[2] * 0.6],
+      };
+      if (steer.w <= 0) return loop;
+      // Held still while the cursor leads, so the water stays where the hand is.
+      const held: Eye = { eye: [0, 6 * view, 52 * view], target: [0, 0, 0] };
+      return {
+        eye: lerp3(loop.eye, held.eye, steer.w),
+        target: lerp3(loop.target, held.target, steer.w),
       };
     }
     case 'sardines':
@@ -1318,4 +1925,21 @@ export function look(time: number): { glow: number; size: number } {
   const next = PHASES[(index + 1) % PHASES.length] as OceanPhase;
   const w = smooth((u - 0.75) / 0.25);
   return { glow: lerp(now.glow, next.glow, w), size: lerp(now.size, next.size, w) };
+}
+
+/* ---------- pills: the shoal's kinds, the small fish's swarms, the jellyfish's kinds ---------- */
+
+const VARIANTS = new Map<string, { label: string; names: string[]; set: (i: number) => void }>([
+  ['shoal', { label: 'Shoal', names: SHOAL_NAMES, set: setShoalKind }],
+  ['sardines', { label: 'Swarm', names: SWARM_NAMES, set: setSwarm }],
+  ['jellyfish', { label: 'Jellyfish', names: JELLY_NAMES, set: setJellyKind }],
+]);
+const variantsOf = (k: number) => VARIANTS.get(PHASES[k]?.id ?? '');
+export const hasVariants = (k: number) => variantsOf(k) !== undefined;
+export const variantNames = (k: number) => variantsOf(k)?.names ?? [];
+export const variantLabel = (k: number) => variantsOf(k)?.label ?? '';
+/** Look i on piece k; with no piece, as in the Journey, every piece back to its first. */
+export function setVariant(i: number, k?: number) {
+  if (k === undefined) for (const v of VARIANTS.values()) v.set(0);
+  else variantsOf(k)?.set(i);
 }
