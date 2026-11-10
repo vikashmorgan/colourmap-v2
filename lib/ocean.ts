@@ -453,6 +453,42 @@ export function homeCorals(): Colony[] {
   });
   return homes;
 }
+/*
+ * A second garden for Fish pulse (2026-11-11: "fish pulse with only red corals and warm yellow
+ * small fish, and the blue one going around changed for a hammer shark", "and all these corals
+ * share one root, on a rock made of star points").
+ */
+export const PULSE_NAMES = ['Clownfish', 'Red garden'];
+let pulseKind = 0;
+/** Which garden Fish pulse shows: set by the pills, the clownfish in the Journey. */
+export function setPulseKind(i: number) {
+  pulseKind = PULSE_NAMES[i] ? i : 0;
+}
+const ROCK_H = 3;
+let rooted: Colony | null = null;
+/** One red coral, every branch from one root, standing on the rock. */
+export function rootCoral(): Colony {
+  if (rooted) return rooted;
+  const out: number[][] = [];
+  grow3(seeded(150), [0, 0, 0], [0, 1, 0], 2.6, 0.9, 7, 0, [], out);
+  rooted = { at: [0, FLOOR + ROCK_H - 0.4, 0], routes: out.map(resample3), flat: false, yaw: 0.3 };
+  return rooted;
+}
+/** The rock: a low lumpy boulder of star points the root grips. */
+function rockPoint(p: Particle): Vec3 {
+  const d = fibonacciSphere(p.i % 613, 613);
+  const lump = 1 + 0.18 * Math.sin(5 * d[0] + 3 * d[2]) + 0.12 * Math.sin(7 * d[1] + 2 * d[0]);
+  const r = 5.2 * lump * (0.92 + 0.08 * p.b);
+  return [d[0] * r, FLOOR + Math.max(0, d[1]) * ROCK_H * lump, d[2] * r * 0.85];
+}
+const RED_TONES: RGB[] = [
+  [1, 0.2, 0.16],
+  [0.92, 0.1, 0.18],
+  [1, 0.32, 0.22],
+];
+/** The colonies the fish live in, in the garden shown now. */
+const pulseHomes = (): Colony[] => (pulseKind === 1 ? [rootCoral()] : homeCorals());
+
 /** A home coral's point, spread wider so its branches stand open. */
 const opened = (q: Vec3): Vec3 => [q[0] * 1.4, q[1], q[2] * 1.4];
 const HOME_TONES: RGB[] = [
@@ -485,7 +521,8 @@ export function outOf(t: number): number {
 
 /** Clownfish j: where it shelters, and where it swims to when the shoal comes out. */
 function clownPlaces(j: number): { home: Vec3; away: Vec3 } {
-  const c = homeCorals()[j % HOMES] as Colony;
+  const homes = pulseHomes();
+  const c = homes[j % homes.length] as Colony;
   const route = c.routes[Math.floor(hash(j, 141) * c.routes.length)] as Route3;
   const [x, y, z] = along3(route, length3(route) * (0.45 + 0.4 * hash(j, 142)));
   const cs = Math.cos(c.yaw);
@@ -531,7 +568,7 @@ export function clownFish(j: number, t: number): { c: Vec3; f: Vec3; out: number
   return { c, f, out: outOf(t - lag) };
 }
 
-type PulseRole = 'floor' | 'snow' | 'shaft' | 'polyp' | 'coral' | 'hunter' | 'fish';
+type PulseRole = 'floor' | 'snow' | 'shaft' | 'polyp' | 'coral' | 'rock' | 'hunter' | 'fish';
 const pulseRole = (p: Particle): PulseRole =>
   p.c < 0.07
     ? 'floor'
@@ -542,7 +579,9 @@ const pulseRole = (p: Particle): PulseRole =>
         : p.c < 0.24
           ? 'polyp'
           : p.c < 0.62
-            ? 'coral'
+            ? pulseKind === 1 && p.c < 0.3
+              ? 'rock'
+              : 'coral'
             : p.c < 0.66
               ? 'hunter'
               : 'fish';
@@ -553,13 +592,16 @@ function pulsePoint(p: Particle, t: number): Vec3 {
   if (role === 'fish') {
     const j = Math.floor(p.a * CLOWNS);
     const { c, f } = clownFish(j, t);
-    return fishAt(c, f, 1.2, p, t, j);
+    return fishAt(c, f, pulseKind === 1 ? 0.85 : 1.2, p, t, j);
   }
   if (role === 'hunter') {
     const { c, f } = hunterAt(t);
+    if (pulseKind === 1) return kindFishAt(SHOAL_KINDS[3] as ShoalKind, c, f, 6, p, t, 0);
     return fishAt(c, f, 4.5, p, t * 0.6, 0);
   }
-  const c = homeCorals()[Math.floor(p.a * HOMES)] as Colony;
+  if (role === 'rock') return rockPoint(p);
+  const homes = pulseHomes();
+  const c = homes[Math.floor(p.a * homes.length)] as Colony;
   return add(c.at, opened(coralLocal(c, p, 1, t, role === 'polyp')));
 }
 
@@ -1321,7 +1363,11 @@ export const JELLY_KINDS: JellyKind[] = [
   { name: 'Box jellies', count: 9, size: 0.9, rise: 1.5, beat: 1.8 },
   // An oval body that drifts, eight rows of combs shimmering in rainbow waves.
   { name: 'Comb jellies', count: 14, size: 0.85, rise: 0.7, beat: 0 },
+  // All five mixed, glowing red and warm orange like paper lanterns (2026-11-11: "make one with all
+  // the jellyfish mixes but all red or warm orange, so it feels like lampions").
+  { name: 'Lanterns', count: 15, size: 1, rise: 0.6, beat: 0.8 },
 ];
+const LANTERNS = 5;
 export const JELLY_NAMES = JELLY_KINDS.map((k) => k.name);
 let jellyKind = 0;
 /** Which jellyfish drift: set by the pills, the glowing ones in the Journey. */
@@ -1329,9 +1375,11 @@ export function setJellyKind(i: number) {
   jellyKind = JELLY_KINDS[i] ? i : 0;
 }
 const jellyNow = () => JELLY_KINDS[jellyKind] as JellyKind;
+/** Which of the five shapes jellyfish j has: its kind's, or among the lanterns each in turn. */
+const jellyForm = (j: number) => (jellyKind === LANTERNS ? j % LANTERNS : jellyKind);
 const jellyPull = (j: number, t: number) => {
-  const { beat } = jellyNow();
-  return beat ? pulseOf(j, t * beat) : 0;
+  const { beat } = JELLY_KINDS[jellyForm(j)] as JellyKind;
+  return beat ? pulseOf(j, t * beat * (jellyKind === LANTERNS ? 0.8 : 1)) : 0;
 };
 
 /** Jellyfish j of the kind drifting now: its top, rising, and how faint it is near the wrap. */
@@ -1346,10 +1394,10 @@ function kindTop(j: number, t: number): { c: Vec3; k: number; edge: number } {
     c: [
       ((j + 0.5) / kind.count - 0.5) * 46 + (hash(j, 105) - 0.5) * 6 + Math.sin(t * 0.1 + j) * 2,
       // The big ones hang higher, so their manes stay in view.
-      y - JELLY_SPAN / 2 + (kind.size > 1.2 ? 3 : 0),
+      y - JELLY_SPAN / 2 + ((JELLY_KINDS[jellyForm(j)] as JellyKind).size > 1.2 ? 3 : 0),
       (hash(j, 106) - 0.5) * 22,
     ],
-    k: kind.size * (0.8 + 0.4 * hash(j, 104)),
+    k: (JELLY_KINDS[jellyForm(j)] as JellyKind).size * (0.8 + 0.4 * hash(j, 104)),
     edge: smooth(y / 6) * smooth((JELLY_SPAN - y) / 6),
   };
 }
@@ -1365,11 +1413,19 @@ function dome(c: Vec3, r: number, h: number, v: number, ang: number, square = fa
 }
 
 /** Grain p on a jellyfish of kinds 1 to 4, top at c, size k, at pulse `pull`. */
-function kindJellyAt(c: Vec3, k: number, pull: number, p: Particle, t: number, j: number): Vec3 {
+function kindJellyAt(
+  c: Vec3,
+  k: number,
+  pull: number,
+  p: Particle,
+  t: number,
+  j: number,
+  form = jellyKind,
+): Vec3 {
   const a = p.b * TAU;
   const v = Math.sqrt(frac(p.b * 7.3));
   const ang = frac(p.b * 13.7) * TAU;
-  switch (jellyKind) {
+  switch (form) {
     case 1: {
       const R = 3 * k * (1 - 0.15 * pull);
       const H = 0.8 * k * (1 + 0.25 * pull);
@@ -1463,9 +1519,16 @@ const rainbow = (h: number): RGB => [
 ];
 
 /** A grain's colour on a jellyfish of kinds 1 to 4. */
-function kindJellyColour(p: Particle, pull: number, twinkle: number, edge: number, t: number): RGB {
+function kindJellyColour(
+  p: Particle,
+  pull: number,
+  twinkle: number,
+  edge: number,
+  t: number,
+  form = jellyKind,
+): RGB {
   const glow = (0.55 + 0.45 * pull) * edge;
-  switch (jellyKind) {
+  switch (form) {
     case 1:
       if (p.d < 0.45) return scale([0.75, 0.85, 1], 0.28 * glow);
       if (p.d < 0.53) return scale([0.85, 0.95, 1], 0.6 * glow * twinkle);
@@ -1490,13 +1553,21 @@ function kindJellyColour(p: Particle, pull: number, twinkle: number, edge: numbe
   }
 }
 
+/** A lantern's light: the shape's own brightness, in red to warm orange, lit warmer at its rim. */
+function lanternColour(j: number, base: RGB, rim: boolean): RGB {
+  const lit = Math.max(base[0], base[1], base[2]);
+  const warm = mix([1, 0.2, 0.08], [1, 0.52, 0.12], hash(j, 107));
+  return scale(rim ? mix(warm, [1, 0.78, 0.4], 0.5) : warm, lit * 1.2);
+}
+
 function jellyPoint(p: Particle, t: number): Vec3 {
   if (p.c < 0.1) return snowAt(p, t, [0, 0, 0], 60, 44);
   const j = Math.floor(p.a * jellyNow().count);
   const { c, k } = kindTop(j, t);
-  return jellyKind === 0
+  const form = jellyForm(j);
+  return form === 0
     ? jellyAt(c, k, pulseOf(j, t), p, t, j)
-    : kindJellyAt(c, k, jellyPull(j, t), p, t, j);
+    : kindJellyAt(c, k, jellyPull(j, t), p, t, j, form);
 }
 
 /* ---------- 8. Reef: a channel swum through as the corals grow ---------- */
@@ -1729,17 +1800,34 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
       if (role === 'floor') return scale(SAND, 0.18);
       if (role === 'snow') return scale(SNOW, 0.35 * twinkle);
       if (role === 'shaft') return scale(SHAFT, 0.18 * (0.4 + 0.6 * hash(p.i, 85)));
-      if (role === 'fish') return clownColour(p, twinkle);
+      const red = PHASES[k]?.id === 'fish-pulse' && pulseKind === 1;
+      if (role === 'fish') {
+        // Small warm yellow fish in the red garden, each a touch warmer or paler.
+        if (red)
+          return scale(
+            mix([1, 0.85, 0.32], [1, 0.68, 0.2], hash(Math.floor(p.a * CLOWNS), 147)),
+            0.42 * twinkle,
+          );
+        return clownColour(p, twinkle);
+      }
       if (role === 'hunter') {
-        // Blue along the back, silver on the belly.
+        // The hammerhead grey; elsewhere blue along the back, silver on the belly.
+        if (red)
+          return scale(
+            mix([0.86, 0.89, 0.92], [0.5, 0.56, 0.62], 0.5 + 0.5 * Math.sin(p.d * TAU)),
+            0.36 * twinkle,
+          );
         return scale(mix(SILVER, DEEP_BLUE, 0.5 + 0.5 * Math.sin(p.d * TAU)), 0.4 * twinkle);
       }
+      if (role === 'rock') return scale(STAR, (0.3 + 0.25 * hash(p.i, 148) ** 3) * twinkle);
       const tones =
         PHASES[k]?.id === 'fans'
           ? FAN_TONES
           : PHASES[k]?.id === 'tables'
             ? TABLE_TONES
-            : HOME_TONES;
+            : red
+              ? RED_TONES
+              : HOME_TONES;
       const tone = tones[Math.floor(p.a * tones.length * 0.999)] as RGB;
       return role === 'polyp'
         ? scale(mix(tone, [1, 1, 0.9], 0.35), 0.85 * twinkle)
@@ -1763,9 +1851,14 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
       if (p.c < 0.1) return scale(SNOW, 0.3 * twinkle);
       const j = Math.floor(p.a * jellyNow().count);
       const { edge } = kindTop(j, t);
-      return jellyKind === 0
-        ? jellyColour(p, pulseOf(j, t), twinkle, edge)
-        : kindJellyColour(p, jellyPull(j, t), twinkle, edge, t);
+      const form = jellyForm(j);
+      const base =
+        form === 0
+          ? jellyColour(p, pulseOf(j, t), twinkle, edge)
+          : kindJellyColour(p, jellyPull(j, t), twinkle, edge, t, form);
+      if (jellyKind !== LANTERNS) return base;
+      const rim = form === 0 ? jellyPart(p) === 'rim' : form === 4 ? p.d >= 0.6 : false;
+      return lanternColour(j, base, rim);
     }
     default: {
       const { d } = reefAt(p, u, t);
@@ -1951,6 +2044,7 @@ const VARIANTS = new Map<string, { label: string; names: string[]; set: (i: numb
   ['shoal', { label: 'Shoal', names: SHOAL_NAMES, set: setShoalKind }],
   ['sardines', { label: 'Swarm', names: SWARM_NAMES, set: setSwarm }],
   ['jellyfish', { label: 'Jellyfish', names: JELLY_NAMES, set: setJellyKind }],
+  ['fish-pulse', { label: 'Garden', names: PULSE_NAMES, set: setPulseKind }],
 ]);
 const variantsOf = (k: number) => VARIANTS.get(PHASES[k]?.id ?? '');
 export const hasVariants = (k: number) => variantsOf(k) !== undefined;
