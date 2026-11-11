@@ -4,7 +4,11 @@ import { flow } from './bigbang';
 import {
   BITE,
   BITE_NAMES,
+  BOOST_PACE,
+  BOOST_PER_FISH,
+  BOOST_SECONDS,
   biteAt,
+  boostLeft,
   CHANNEL_W,
   CLOWNS,
   CORAL_MODES,
@@ -13,13 +17,17 @@ import {
   colour,
   corals,
   DEEP_FLOOR,
+  dashSpeed,
   EYE_H,
   eatNear,
   GIANT_CYCLE,
   GULP,
+  gapeAt,
   gardenGrowth,
   giantSeen,
+  HAMMER_CYCLE,
   HUNT_LAP,
+  hammersSeen,
   hasCoralModes,
   hasGame,
   hasPointer,
@@ -27,6 +35,7 @@ import {
   hasVariants,
   hunterAt,
   JELLY_NAMES,
+  lightOn,
   makeParticles,
   PHASE_START,
   PHASES,
@@ -52,6 +61,7 @@ import {
   SWIM_NAMES,
   SWIM_SPEED,
   setCoralMode,
+  setLight,
   setPointer,
   setSeaOf,
   setShoalKind,
@@ -61,10 +71,16 @@ import {
   smallFish,
   starBall,
   swimmer,
+  swimSway,
   TOTAL,
+  TUNNEL_LEN,
+  TUNNEL_R,
   target,
+  tunnelAt,
   variantLabel,
   variantNames,
+  WHALE_CYCLE,
+  whaleSeen,
 } from './ocean';
 
 const particles = makeParticles(1500);
@@ -607,5 +623,155 @@ describe('the ocean chapter', () => {
     // In the Journey, back to the coral forest: the wander keeps above the sand.
     setSeaOf(1);
     for (let t = 0; t < 120; t += 7) expect(swimmer(t).c[1]).toBeGreaterThan(-14);
+  });
+
+  it('boosts on Space while the bar lasts, and wins boost back for every fish eaten', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    setSeaOf(1, k);
+    // The clownfish, which eats nothing, so the bar only drains.
+    setVariant(2, k);
+    resetPrey();
+    expect(boostLeft()).toBe(1);
+    const frames = (n: number, keys: string[], t0: number) => {
+      for (let i = 1; i <= n; i++) setSwim(true, null, keys, 1 / 60, t0 + i / 60);
+      return swimmer(t0 + n / 60);
+    };
+    const a = frames(1, [' '], 200);
+    const b = frames(60, [' '], 200 + 1 / 60);
+    // One second of boost: well past the cruise, toward three times it.
+    const run = Math.hypot(b.c[0] - a.c[0], b.c[1] - a.c[1], b.c[2] - a.c[2]);
+    expect(run).toBeGreaterThan(SWIM_SPEED * 2);
+    expect(run).toBeLessThan(SWIM_SPEED * BOOST_PACE * 1.05);
+    expect(boostLeft()).toBeLessThan(0.75);
+    expect(boostLeft()).toBeGreaterThan(0.5);
+    // Held on, the bar runs dry and the pace falls back.
+    frames(60 * BOOST_SECONDS, [' '], 202);
+    expect(boostLeft()).toBe(0);
+    const c0 = frames(1, [' '], 210);
+    const c1 = frames(120, [' '], 210 + 1 / 60);
+    expect(Math.hypot(c1.c[0] - c0.c[0], c1.c[2] - c0.c[2])).toBeLessThan(SWIM_SPEED * 2 * 1.2);
+    // A fish eaten wins some back.
+    setVariant(0, k);
+    const before = boostLeft();
+    const t = 213;
+    const got = eatNear(preyAt(0, t).c, t);
+    expect(got).toBeGreaterThan(0);
+    expect(boostLeft()).toBeCloseTo(before + BOOST_PER_FISH * got, 5);
+    setSwim(false, null, [], 0, 0);
+    resetPrey();
+    setSeaOf(0, k);
+  });
+
+  it('sends small fish dashing away as the hammerhead closes in, every one still somewhere real', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    setSeaOf(1, k);
+    setVariant(0, k);
+    resetPrey();
+    // A long swim through the open water's shoals, rising and turning.
+    let fastest = 0;
+    for (let i = 1; i <= 1800; i++) {
+      const t = 300 + i / 60;
+      setSwim(true, { x: 0.3 * Math.sin(t * 0.2), y: 0.2 * Math.sin(t * 0.13) }, [], 1 / 60, t);
+      if (i % 30 === 0) for (let j = 0; j < PREY; j++) fastest = Math.max(fastest, dashSpeed(j));
+    }
+    expect(fastest).toBeGreaterThan(2);
+    for (let j = 0; j < PREY; j += 7) {
+      const { c, f } = preyAt(j, 330);
+      for (const v of [...c, ...f]) expect(Number.isFinite(v)).toBe(true);
+    }
+    setSwim(false, null, [], 0, 0);
+    resetPrey();
+    setSeaOf(0, k);
+  });
+
+  it('bends the body into a turn and lets it flow straight again', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    setVariant(0, k);
+    const frames = (n: number, at: { x: number; y: number } | null, t0: number) => {
+      for (let i = 1; i <= n; i++) setSwim(true, at, [], 1 / 60, t0 + i / 60);
+    };
+    frames(60, { x: 0.8, y: 0 }, 400);
+    const right = swimSway();
+    expect(right.bend).toBeGreaterThan(0.5);
+    expect(right.wave).toBeGreaterThan(1.5);
+    frames(60, { x: -0.8, y: 0 }, 401);
+    expect(swimSway().bend).toBeLessThan(-0.5);
+    frames(240, null, 402);
+    expect(Math.abs(swimSway().bend)).toBeLessThan(0.05);
+    setSwim(false, null, [], 0, 0);
+    expect(swimSway()).toEqual({ bend: 0, wave: 1 });
+  });
+
+  it('opens the jaw wide through a bite and snaps it shut', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    setVariant(0, k);
+    resetPrey();
+    const t0 = 500;
+    eatNear(preyAt(0, t0).c, t0, 100);
+    expect(gapeAt(t0 + 0.5 * BITE)).toBeGreaterThan(0.95);
+    expect(gapeAt(t0 + 0.2 * BITE)).toBeGreaterThan(0.2);
+    expect(gapeAt(t0 + 0.8 * BITE)).toBeLessThan(0.05);
+    // The clownfish has no bite.
+    setVariant(2, k);
+    expect(gapeAt(t0 + 0.5 * BITE)).toBe(0);
+    setVariant(0, k);
+    resetPrey();
+  });
+
+  it('runs a coral tunnel from one mouth to a fork and out by two mouths side by side', () => {
+    const mouth = tunnelAt(0);
+    const fork = tunnelAt(14);
+    const left = tunnelAt(14 + 21.5 - 1e-3);
+    const right = tunnelAt(TUNNEL_LEN);
+    expect(mouth.c[0]).toBeCloseTo(fork.c[0], 6);
+    expect(mouth.c[2]).toBeGreaterThan(fork.c[2]);
+    // Two exits on the same side, far enough apart that each is its own mouth.
+    expect(left.c[2]).toBeCloseTo(right.c[2], 2);
+    expect(right.c[0] - left.c[0]).toBeGreaterThan(2 * TUNNEL_R - 1);
+    // Wide enough for the hammerhead.
+    expect(TUNNEL_R).toBeGreaterThan(4);
+    for (let s = 0; s <= TUNNEL_LEN; s += 3) {
+      const { c, f } = tunnelAt(s);
+      expect(c[1]).toBe(-14);
+      expect(Math.hypot(...f)).toBeCloseTo(1, 6);
+    }
+  });
+
+  it('switches Light on the Shark Sim only, soft caustics below and waves of light above', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    setLight(true, k - 1);
+    expect(lightOn()).toBe(false);
+    setLight(true, k);
+    expect(lightOn()).toBe(true);
+    for (const sea of [0, 1, 2]) {
+      setSeaOf(sea, k);
+      for (const p of particles) {
+        const { pos, rgb } = pieceAt(p, k, 40);
+        for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+        // The caustics on the sand never glare.
+        if (p.c < 0.08) expect(Math.max(...rgb)).toBeLessThan(0.4);
+      }
+    }
+    setLight(false);
+    setSeaOf(0, k);
+  });
+
+  it('brings hammerhead schools and whales by now and then, never always there', () => {
+    const hs = Array.from({ length: HAMMER_CYCLE }, (_, t) => hammersSeen(t));
+    expect(Math.max(...hs)).toBeGreaterThan(0.9);
+    expect(Math.min(...hs)).toBe(0);
+    for (const w of [0, 1]) {
+      const ws = Array.from({ length: WHALE_CYCLE }, (_, t) => whaleSeen(w, t));
+      expect(Math.max(...ws)).toBeGreaterThan(0.9);
+      expect(Math.min(...ws)).toBe(0);
+    }
+  });
+
+  it('keeps your own fish dim, so it never reads as a white glare', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    setVariant(0, k);
+    for (const p of particles.filter((q) => q.c >= 0.87)) {
+      expect(Math.max(...pieceAt(p, k, 20).rgb)).toBeLessThan(0.35);
+    }
   });
 });

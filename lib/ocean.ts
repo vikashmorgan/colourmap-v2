@@ -690,15 +690,37 @@ function clownColour(p: Particle, twinkle: number): RGB {
 
 /* ---------- fish, of any size ---------- */
 
+/*
+ * SHARK BODY (2026-11-11): "improve shark movement animation so when i move
+ * left or right it reflects on its body in a natural liquid sinusoidal
+ * dynamic". Your own fish bends into its turns: the body curves along the arc
+ * it swims, a wave runs from head to tail that grows with how hard it turns,
+ * and the beat quickens as it goes faster.
+ */
+/** How your fish's body moves: `bend` how hard it turns (right positive), `wave` how strong its beat. */
+export type Sway = { bend: number; wave: number };
+const STILL: Sway = { bend: 0, wave: 1 };
+/** The sideways sway at s along a body `len` long (head 0, tail 1), on top of the beat `wag`. */
+const swayAt = (sway: Sway, s: number, len: number, wag: number, t: number) =>
+  sway.wave * wag + sway.bend * len * (0.28 * s * s + 0.07 * s * Math.sin(5.5 * t - 7 * s));
+
 /** Grain p on a fish at c heading f, `len` long; `j` sets its own beat. */
-function fishAt(c: Vec3, f: Vec3, len: number, p: Particle, t: number, j: number): Vec3 {
+function fishAt(
+  c: Vec3,
+  f: Vec3,
+  len: number,
+  p: Particle,
+  t: number,
+  j: number,
+  sway: Sway = STILL,
+): Vec3 {
   const side = norm(cross(f, [0, 1, 0]));
   const up = cross(side, f);
   // Head at s = 0, tail at s = 1; the last grains fan out as the tail fin.
   const s = p.b;
   const body = 0.2 * len * Math.sin(Math.PI * Math.min(1, s ** 0.7 * 1.05));
   const fin = s > 0.82 ? ((s - 0.82) / 0.18) * 0.22 * len : 0;
-  const wag = 0.12 * len * Math.sin(9 * t + j * 1.3 - 6 * s) * s * s;
+  const wag = swayAt(sway, s, len, 0.12 * len * Math.sin(9 * t + j * 1.3 - 6 * s) * s * s, t);
   const a = p.d * TAU;
   const back = len * (0.5 - s);
   const lat = Math.cos(a) * body + wag;
@@ -1049,6 +1071,16 @@ export function shoalFish(j: number, u: number, t: number): { c: Vec3; f: Vec3 }
   return { c: add(add(centre, side, ox), up, oy), f };
 }
 
+/** How far back from the head the jaw reaches, as a share of the length, and which grains are its lower half. */
+const JAW = 0.3;
+const isLowerJaw = (p: Particle) => Math.sin(p.d * TAU) < 0.15;
+/** Whether grain p lies on the body of a fish of this kind (not a fin, the tail, the hammer or a bill). */
+const onBody = (kind: ShoalKind, p: Particle) => {
+  const part = hash(p.i, 151);
+  const tailTop = kind.tail === 'crescent' ? ((kind.lobes ?? [0.26])[0] > 0.5 ? 0.42 : 0.34) : 0.25;
+  return part >= tailTop;
+};
+
 /** Grain p on a fish of this kind at c heading f: body, fins, and a hammer or a sword at the head. */
 function kindFishAt(
   kind: ShoalKind,
@@ -1059,10 +1091,12 @@ function kindFishAt(
   t: number,
   j: number,
   gape = 0,
+  sway: Sway = STILL,
 ): Vec3 {
   const side = norm(cross(f, [0, 1, 0]));
   const up = cross(side, f);
-  const wagAt = (s: number) => 0.12 * len * Math.sin(9 * kind.wag * t + j * 1.3 - 6 * s) * s * s;
+  const wagAt = (s: number) =>
+    swayAt(sway, s, len, 0.12 * len * Math.sin(9 * kind.wag * t + j * 1.3 - 6 * s) * s * s, t);
   const put = (back: number, lat: number, ver: number): Vec3 => [
     c[0] + f[0] * back + side[0] * lat + up[0] * ver,
     c[1] + f[1] * back + side[1] * lat + up[1] * ver,
@@ -1131,12 +1165,14 @@ function kindFishAt(
   const s = p.b;
   const fin = kind.tail === 'fan' && s > 0.82 ? ((s - 0.82) / 0.18) * 0.22 * len : 0;
   const a = p.d * TAU;
-  // A hunter's jaw: the underside of the head drops open as it bites.
-  const jaw = gape > 0 && s < 0.2 && Math.sin(a) < 0 ? gape * 0.12 * len * (1 - s / 0.2) : 0;
+  // A hunter's jaw (2026-11-11: "when it bites it needs to open its mouth"): the lower half of the
+  // head hinges down wide from the back of the jaw, the snout lifting a little, so the mouth gapes.
+  const hinge = gape > 0 && s < JAW ? 1 - s / JAW : 0;
+  const jaw = hinge > 0 ? (isLowerJaw(p) ? -0.26 : 0.06) * gape * len * hinge : 0;
   return put(
     len * (0.5 - s),
     Math.cos(a) * bodyAt(s) * (kind.wide ?? 1) + wagAt(s),
-    Math.sin(a) * (bodyAt(s) * kind.tall + fin) - jaw,
+    Math.sin(a) * (bodyAt(s) * kind.tall + fin) + jaw,
   );
 }
 
@@ -1826,7 +1862,11 @@ let sea = 0;
 export function setSea(i: number) {
   const next = SEA_NAMES[i] ? i : 0;
   // A new sea: you take over again from the wander, where it is in that sea.
-  if (next !== sea) swim.on = false;
+  if (next !== sea) {
+    swim.on = false;
+    dashOff.fill(0);
+    dashVel.fill(0);
+  }
   sea = next;
 }
 export const hasSeas = hasGame;
@@ -1859,7 +1899,25 @@ const swim = {
   pitch: 0,
   speed: SWIM_SPEED,
   trail: [] as Trail[],
+  /** How hard you are turning, eased, right positive: what bends the body. */
+  bend: 0,
+  /** What is left in the boost bar, 0 to 1. */
+  boost: 1,
+  /** How close the nearest small fish is to your mouth: the jaw opens a little as you close in. */
+  near: Number.POSITIVE_INFINITY,
 };
+
+/*
+ * BOOST (2026-11-11): "press space for boost. with a booster bar. when u eat
+ * fish u win boost back". Space held sends you on at three times the cruise
+ * while the bar lasts (three seconds from full); every fish eaten wins back a
+ * share of it.
+ */
+export const BOOST_PACE = 3.2;
+export const BOOST_SECONDS = 3;
+export const BOOST_PER_FISH = 0.15;
+/** The boost bar, 0 to 1, for the player to show. */
+export const boostLeft = () => swim.boost;
 
 /**
  * With no one at the controls (the Journey): over the reef and up into the stars and down again; in
@@ -1913,14 +1971,19 @@ export function setSwim(
   const y = at ? dead(at.y) : 0;
   const turn = 1.5 * x + (held('a', 'arrowleft') ? -0.9 : 0) + (held('d', 'arrowright') ? 0.9 : 0);
   swim.yaw -= turn * dt;
+  // The body follows the turn a moment late, so it flows into the bend and out of it.
+  swim.bend += (Math.max(-1.2, Math.min(1.2, turn)) - swim.bend) * (1 - Math.exp(-3.5 * dt));
   // W and S rise and sink (2026-11-11: "ws to go up and down"), as the arrows up and down do.
   const rise = (held('w', 'arrowup') ? 0.6 : 0) - (held('s', 'arrowdown') ? 0.6 : 0);
   let tilt = Math.max(-0.9, Math.min(0.9, 0.9 * y + rise));
   if (swim.pos[1] <= floorAt(swim.pos[0]) + 1.6 && tilt < 0) tilt = 0;
   if (swim.pos[1] >= SKY_TOP && tilt > 0) tilt = 0;
   swim.pitch += (tilt - swim.pitch) * (1 - Math.exp(-2.2 * dt));
-  const pace = held('e', 'shift') ? 2.1 : held('q') ? 0.35 : 1;
-  swim.speed += (SWIM_SPEED * pace - swim.speed) * (1 - Math.exp(-1.5 * dt));
+  const boosting = held(' ') && swim.boost > 0;
+  if (boosting) swim.boost = Math.max(0, swim.boost - dt / BOOST_SECONDS);
+  const pace = boosting ? BOOST_PACE : held('e', 'shift') ? 2.1 : held('q') ? 0.35 : 1;
+  // A boost kicks in quickly; otherwise the pace eases.
+  swim.speed += (SWIM_SPEED * pace - swim.speed) * (1 - Math.exp((boosting ? -5 : -1.5) * dt));
   const f = heading3(swim.yaw, swim.pitch);
   const was = swim.pos;
   swim.pos = add(swim.pos, f, swim.speed * dt);
@@ -1929,12 +1992,21 @@ export function setSwim(
   swim.pos[1] = Math.max(floorAt(swim.pos[0]) + 1.5, Math.min(SKY_TOP, swim.pos[1]));
   swim.trail.push({ t, c: swim.pos, f });
   while (swim.trail.length > 2 && (swim.trail[0] as Trail).t < t - 4) swim.trail.shift();
-  if (swimNow().eats) eatNear(mouthAt(t), t);
+  if (swimNow().eats) {
+    startle(dt, t);
+    eatNear(mouthAt(t), t);
+  }
 }
 
 /** You: where you are at time t and which way you swim. */
 export function swimmer(t: number): { c: Vec3; f: Vec3 } {
   return swim.on ? { c: swim.pos, f: heading3(swim.yaw, swim.pitch) } : autopilot(t);
+}
+/** How your own fish's body moves now: bent into the turn, its beat stronger the harder it turns and the faster it goes. */
+export function swimSway(): Sway {
+  if (!swim.on) return STILL;
+  const fast = Math.max(0, Math.min(1, swim.speed / SWIM_SPEED - 1));
+  return { bend: swim.bend, wave: 1 + 1.4 * Math.min(1, Math.abs(swim.bend)) + 0.6 * fast };
 }
 /** Where your mouth is: the front of your head. */
 const mouthAt = (t: number): Vec3 => {
@@ -2086,15 +2158,80 @@ function scatter(c: Vec3, t: number): Vec3 {
   return add(c, d, ((1 - dist / R) ** 2 * R * 0.6) / dist);
 }
 
+/*
+ * DASH (2026-11-11: "do an animation where small fish swim away faster when u
+ * get close"). Each small fish carries its own flight: as the hunter nears,
+ * it is thrown away from the nearest point of its body, harder the closer it
+ * is, turning to swim the way it flees; a spring then draws it back to its
+ * school, so it darts off and comes round again. Fleeing fish are harder to
+ * catch: the boost is how you run them down.
+ */
+const FLIGHT = 3;
+const dashOff = new Float64Array(PREY * FLIGHT);
+const dashVel = new Float64Array(PREY * FLIGHT);
+export const DASH = 28;
+/** How far from the hunter's body small fish start to flee. */
+const fearOf = (len: number) => 0.5 * len + 6;
+
+/** Where prey fish i swims at time t before it flees or parts: brought round to you, above the floor. */
+function preyBase(i: number, t: number, me: Vec3): { c: Vec3; f: Vec3 } {
+  const a = preyRaw(i, t, me);
+  const b = preyRaw(i, t + 0.05, me);
+  const c = near(a, me, SWIM_W);
+  c[1] = Math.max(floorAt(c[0]) + 1, c[1]);
+  return { c, f: norm(sub(b, a)) };
+}
+
+/** Each frame while you hunt: every small fish near you dashes away, and every one away swings home. */
+function startle(dt: number, t: number) {
+  if (dt <= 0) return;
+  const kind = swimNow();
+  const { c: s, f } = swimmer(t);
+  const mouth = add(s, f, kind.len / 2);
+  const half = kind.len / 2;
+  const R = fearOf(kind.len);
+  const keep = Math.exp(-2 * dt);
+  let nearest = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < PREY; i++) {
+    const o = i * FLIGHT;
+    if (!preyIn(i)) {
+      dashOff.fill(0, o, o + FLIGHT);
+      dashVel.fill(0, o, o + FLIGHT);
+      continue;
+    }
+    const { c } = preyBase(i, t, s);
+    const at: Vec3 = [
+      c[0] + (dashOff[o] ?? 0),
+      c[1] + (dashOff[o + 1] ?? 0),
+      c[2] + (dashOff[o + 2] ?? 0),
+    ];
+    if (preyShown(i, t) >= 1)
+      nearest = Math.min(nearest, Math.hypot(at[0] - mouth[0], at[1] - mouth[1], at[2] - mouth[2]));
+    const q = add(s, f, Math.max(-half, Math.min(half, dot(sub(at, s), f))));
+    const d = sub(at, q);
+    const dist = Math.hypot(d[0], d[1], d[2]);
+    const push = dist < R && dist > 1e-6 ? (DASH * (1 - dist / R) ** 1.5) / dist : 0;
+    for (let x = 0; x < FLIGHT; x++) {
+      const off = dashOff[o + x] ?? 0;
+      let vel = ((dashVel[o + x] ?? 0) + (push * (d[x] as number) - 2.2 * off) * dt) * keep;
+      // Never flung too far: it stays a fish of its school.
+      if (Math.abs(off + vel * dt) > 14) vel = 0;
+      dashVel[o + x] = vel;
+      dashOff[o + x] = off + vel * dt;
+    }
+  }
+  swim.near = nearest;
+}
+
 /** Prey fish i at time t: where it is, which way it swims, how long, and how much of it is there. */
 export function preyAt(i: number, t: number): { c: Vec3; f: Vec3; len: number; shown: number } {
   const me = swimmer(t).c;
-  const a = preyRaw(i, t, me);
-  const b = preyRaw(i, t + 0.05, me);
-  const f = norm(sub(b, a));
-  const base = near(a, me, SWIM_W);
-  base[1] = Math.max(floorAt(base[0]) + 1, base[1]);
-  let c = scatter(base, t);
+  const { c: base, f: way } = preyBase(i, t, me);
+  const o = i * FLIGHT;
+  const vel: Vec3 = [dashVel[o] ?? 0, dashVel[o + 1] ?? 0, dashVel[o + 2] ?? 0];
+  // Fleeing, it turns to swim the way it is thrown.
+  const f = norm(add(way, vel, 0.4));
+  let c = scatter(add(base, [dashOff[o] ?? 0, dashOff[o + 1] ?? 0, dashOff[o + 2] ?? 0]), t);
   const shown = preyShown(i, t);
   const d = t - (eatenAt[i] ?? NEVER);
   // Being eaten: drawn into the mouth as it shrinks.
@@ -2122,6 +2259,8 @@ export function eatNear(mouth: Vec3, t: number, reach = 1.2 + 0.18 * swimNow().l
   close.sort((x, y) => x.d - y.d);
   const taken = close.slice(0, most);
   for (const { i } of taken) eatenAt[i] = t;
+  // Every fish eaten wins back some boost.
+  swim.boost = Math.min(1, swim.boost + BOOST_PER_FISH * taken.length);
   bite.at = t;
   bite.style = style;
   bite.n++;
@@ -2131,22 +2270,33 @@ export function eatNear(mouth: Vec3, t: number, reach = 1.2 + 0.18 * swimNow().l
 /** Every fish back, no bite under way: for a fresh start. */
 export function resetPrey() {
   eatenAt.fill(NEVER);
+  dashOff.fill(0);
+  dashVel.fill(0);
   bite.at = NEVER;
   bite.n = 0;
+  swim.boost = 1;
 }
+
+/** How fast prey fish i is fleeing, units a second: for the tests. */
+export const dashSpeed = (i: number) =>
+  Math.hypot(dashVel[i * FLIGHT] ?? 0, dashVel[i * FLIGHT + 1] ?? 0, dashVel[i * FLIGHT + 2] ?? 0);
 
 /**
  * The hunter's body through a bite: where it is, which way it points, how wide its jaw. A lunge
  * surges forward and nods as the jaw snaps; a sweep whips the head to one side through the school
- * and back; a rise dips, then comes up from below, mouth open. The jaw opens wide and snaps shut a
- * little past halfway; the camera keeps to the steady path, so only the shark moves.
+ * and back; a rise dips, then comes up from below, mouth open. The jaw opens wide, holds a beat and
+ * snaps shut a little past halfway; the camera keeps to the steady path, so only the shark moves.
  */
 function bitePose(c: Vec3, f: Vec3, len: number, t: number): { c: Vec3; f: Vec3; gape: number } {
   const b = biteAt(t);
-  if (!b) return { c, f, gape: 0 };
+  // Closing in on a fish the jaw already parts a little, ready.
+  const ready = swim.on ? 0.3 * smooth((fearOf(len) - swim.near) / 6) : 0;
+  if (!b) return { c, f, gape: ready };
   const { style, k } = b;
   const arc = Math.sin(Math.PI * k);
-  const gape = Math.sin(Math.PI * Math.min(1, k / 0.55));
+  // Wide open through the first half, held a beat, then snapped shut.
+  const open = k < 0.45 ? smooth(k / 0.45) : k < 0.55 ? 1 : 1 - smooth((k - 0.55) / 0.1);
+  const gape = Math.max(ready * (1 - smooth(k / 0.2)), open);
   if (style === 0)
     return {
       c: add(c, f, 0.22 * len * arc),
@@ -2164,6 +2314,14 @@ function bitePose(c: Vec3, f: Vec3, len: number, t: number): { c: Vec3; f: Vec3;
     f: norm(add(f, [0, 1, 0], 0.6 * arc)),
     gape,
   };
+}
+
+/** How wide your own fish's jaw is open at time t, 0 shut to 1 wide. */
+export function gapeAt(t: number): number {
+  const kind = swimNow();
+  if (!kind.eats) return 0;
+  const { c, f } = swimmer(t);
+  return bitePose(c, f, kind.len, t).gape;
 }
 
 /* ---------- the deep: the drop-off, mantas, squid, the giant, the vents ---------- */
@@ -2390,6 +2548,221 @@ function rayAt(p: Particle, t: number, me: Vec3): { pos: Vec3; s: number } {
 /** The surface far above, a sheet of light rippling. */
 const isSurface = (p: Particle) => hash(p.i, 228) < 0.35;
 
+/* ---------- the coral tunnel, forking in a Y ---------- */
+/*
+ * TUNNEL (2026-11-11): "can u do a tunnel of corals as some place that
+ * connects from one side to another with a Y so there are two exits on one of
+ * the sides". In the coral forest an arch of coral runs along the sand: one
+ * mouth, a trunk, then it forks and comes out by two mouths side by side. Its
+ * walls are rings of coral close together with polyps tufting from them, wide
+ * enough for the hammerhead. It stands at one place on the wrapping field, so
+ * you keep coming across it.
+ */
+export const TUNNEL_R = 4.6;
+/** Where it stands on the field: the mouth at TUNNEL_Z0, the fork TRUNK on, the exits SPREAD apart. */
+const TUNNEL_X = 0;
+const TUNNEL_Z0 = 40;
+const TRUNK = 14;
+const BRANCH = 20;
+const SPREAD = 9;
+export const TUNNEL_LEN = TRUNK + 2 * 21.5;
+/** The middle of the tunnel at its floor, and which way it runs, `s` along it (0 to TUNNEL_LEN). */
+export function tunnelAt(s: number): { c: Vec3; f: Vec3 } {
+  const line = (x: number): { c: Vec3; f: Vec3 } => {
+    if (x < TRUNK) return { c: [TUNNEL_X, FLOOR, TUNNEL_Z0 - x], f: [0, 0, -1] };
+    const left = x < TRUNK + 21.5;
+    const v = Math.min(1, (x - TRUNK - (left ? 0 : 21.5)) / 21.5);
+    const side = left ? -1 : 1;
+    const at = (vv: number): Vec3 => [
+      TUNNEL_X + side * SPREAD * smooth(vv),
+      FLOOR,
+      TUNNEL_Z0 - TRUNK - BRANCH * vv,
+    ];
+    const a = at(v);
+    const b = at(Math.min(1, v + 0.01));
+    const c = at(Math.max(0, v - 0.01));
+    return { c: a, f: norm(sub(b, c)) };
+  };
+  return line(Math.max(0, Math.min(TUNNEL_LEN - 1e-6, s)));
+}
+/** Whether a place on the field lies under the tunnel's footprint, where no other coral grows. */
+const underTunnel = (x: number, z: number) =>
+  Math.abs(wrap(x - TUNNEL_X + SWIM_W / 2, SWIM_W) - SWIM_W / 2) < SPREAD + TUNNEL_R + 3 &&
+  z > TUNNEL_Z0 - TRUNK - BRANCH - TUNNEL_R - 2 &&
+  z < TUNNEL_Z0 + TUNNEL_R + 2;
+
+/** Grain p on the tunnel: on a ring of its arch, or scattered between, polyps tufting in and out. */
+function tunnelPoint(p: Particle, t: number, me: Vec3, polyp: boolean): Vec3 {
+  let s = hash(p.i, 241) * TUNNEL_LEN;
+  // Most grains gather on rings close together, so the arch reads as built of coral.
+  if (hash(p.i, 242) < 0.6) s = (Math.floor(s / 1.8) + 0.5) * 1.8;
+  const { c, f } = tunnelAt(s);
+  const side: Vec3 = [f[2], 0, -f[0]];
+  const th = p.d * Math.PI;
+  const tuft = polyp
+    ? (hash(p.i, 243) - 0.5) * 1.6 * (0.7 + 0.3 * Math.sin(t * 1.4 + p.i * 0.1))
+    : 0.9 * hash(p.i, 244) ** 3;
+  const r = TUNNEL_R + tuft;
+  const at = near(c, me, SWIM_W);
+  return [
+    at[0] + side[0] * Math.cos(th) * r,
+    at[1] + Math.sin(th) * r * 0.95,
+    at[2] + side[2] * Math.cos(th) * r,
+  ];
+}
+function tunnelColour(p: Particle, me: Vec3, polyp: boolean, twinkle: number): RGB {
+  const s = hash(p.i, 241) * TUNNEL_LEN;
+  const k = Math.floor(s / 4) % COLONIES;
+  const at = near(tunnelAt(s).c, me, SWIM_W);
+  const edge = smooth((SWIM_W / 2 - Math.hypot(at[0] - me[0], at[2] - me[2])) / 12);
+  const tone = paint(CORAL_TONES[k] as RGB, k);
+  return polyp
+    ? scale(mix(tone, polypWhite(), 0.35), 0.8 * twinkle * edge)
+    : scale(tone, 0.5 * twinkle * edge);
+}
+
+/* ---------- light: caustics on the floor, waves of light on the surface ---------- */
+/*
+ * LIGHT (2026-11-11): "can u give me lighting. like liquid reflections on the
+ * sea floor as one mode I can activate", "imagine u do a surface above. with
+ * waves of light like waves seen from below. beautiful hypnotic patterns". A
+ * switch: on the sand a net of liquid light, two families of wavering lines
+ * crossing and sliding, beads of brightness running along them; above, the
+ * surface seen from below, a wider net of light rippling the other way. Kept
+ * soft, so nothing glares.
+ */
+let light = false;
+/** The Light switch: set by the player's toggle, off in the Journey and on every other piece. */
+export function setLight(on: boolean, k?: number) {
+  light = on && (k === undefined || hasGame(k));
+}
+export const hasLight = hasGame;
+export const lightOn = () => light;
+
+/**
+ * A grain on a net of light lines over a tile `w` wide, `n` lines a family, at height y: its place,
+ * and how bright the bead it sits in is (0..1). The lines waver with periods that divide the tile,
+ * so the net wraps without a seam.
+ */
+function lightNet(p: Particle, t: number, me: Vec3, w: number, n: number, y: number, flow: number) {
+  const k1 = (TAU / w) * 3;
+  const k2 = (TAU / w) * 2;
+  const gap = w / n;
+  const line = Math.floor(hash(p.i, 272) * n);
+  const u = hash(p.i, 273) * w;
+  const across =
+    line * gap +
+    0.28 * gap * Math.sin(u * k2 + flow * t * 0.6 + line * 1.7) +
+    0.16 * gap * Math.sin(u * k1 - flow * t * 0.9 + line);
+  const pos: Vec3 = hash(p.i, 271) < 0.5 ? [u, y, across] : [across, y, u];
+  const bead = (0.5 + 0.5 * Math.sin(u * 0.9 + flow * t * 1.3 + line * 2)) ** 2;
+  return { pos: near(pos, me, w), bead };
+}
+const CAUSTIC_W = 48;
+const WAVES_W = 64;
+const causticAt = (p: Particle, t: number, me: Vec3) =>
+  lightNet(p, t, me, CAUSTIC_W, 12, FLOOR + 0.05, 1);
+const wavesAt = (p: Particle, t: number, me: Vec3) => {
+  const net = lightNet(p, t, me, WAVES_W, 16, SKY_TOP + 2, -0.7);
+  net.pos[1] += 0.6 * Math.sin(net.pos[0] * 0.2 + t * 0.7) * Math.cos(net.pos[2] * 0.17 - t * 0.5);
+  return net;
+};
+const SUNLIGHT: RGB = [0.82, 0.95, 1];
+
+/* ---------- visitors: hammerheads passing in a school, and whales ---------- */
+/*
+ * VISITORS (2026-11-11): "add bancs de requins marteaux moving in fluid ways.
+ * inside the ocean. they are not always there but sometimes appear. also add
+ * whales". Now and then a school of seven hammerheads glides by, each
+ * following the one ahead a moment later, so its turns flow through the
+ * school; and two whales cruise slowly, long flippers beating, flukes rising
+ * and falling. Each comes out of the blue and goes again.
+ */
+export const HAMMERS = 7;
+export const WHALES = 2;
+export const HAMMER_CYCLE = 70;
+export const WHALE_CYCLE = 95;
+/** How much the hammerhead school is there at time t: there a while, then gone a while. */
+export const hammersSeen = (t: number) =>
+  smooth((Math.sin((TAU * t) / HAMMER_CYCLE + 0.5) - 0.2) / 0.35);
+/** How much whale w is there at time t. */
+export const whaleSeen = (w: number, t: number) =>
+  smooth((Math.sin((TAU * t) / WHALE_CYCLE + w * 2.5) - 0.3) / 0.3);
+
+const hammerPath = (tt: number): Vec3 =>
+  sea === 2
+    ? [CANYON_MID + 10 * Math.sin(0.025 * tt), FLOOR - 9 + 4 * Math.sin(0.05 * tt), 20 - 2.6 * tt]
+    : [
+        25 * Math.sin(0.025 * tt) + 30,
+        FLOOR + (sea === 1 ? 30 : 16) + (sea === 1 ? 6 : 3) * Math.sin(0.05 * tt),
+        60 - 2.6 * tt + 12 * Math.sin(0.03 * tt),
+      ];
+/** Hammerhead j of the passing school: following the path a moment behind the one ahead. */
+function hammerOf(j: number, t: number, me: Vec3): { c: Vec3; f: Vec3 } {
+  const lag = 0.7 * j + 0.4 * hash(j, 254);
+  const a = hammerPath(t - lag);
+  const f = norm(sub(hammerPath(t - lag + 0.05), a));
+  const side = norm(cross(f, [0, 1, 0]));
+  const ox = (j % 2 ? 1 : -1) * (1.5 + 2.2 * Math.ceil(j / 2)) + 0.6 * Math.sin(0.4 * t + j);
+  const oy = (hash(j, 255) - 0.5) * 3 + 0.5 * Math.sin(0.3 * t + j * 2);
+  return { c: near(add(add(a, side, ox), [0, 1, 0], oy), me, SWIM_W), f };
+}
+
+const whalePath = (w: number, tt: number): Vec3 =>
+  sea === 2
+    ? [CANYON_MID + 8 * Math.sin(0.02 * tt + w), FLOOR - 20 - 10 * w, 40 * w - 1.8 * tt]
+    : [
+        30 + 42 * w + 8 * Math.sin(0.02 * tt + w),
+        FLOOR + (sea === 1 ? 22 + 18 * w : 40 + 6 * w) + 2 * Math.sin(0.04 * tt + w),
+        40 * w - 1.8 * tt,
+      ];
+export const WHALE_LEN = 26;
+/** A whale of our own: a long body tapering to the tail, wide flukes, long flippers; it beats up and down. */
+function whaleAt(w: number, p: Particle, t: number, me: Vec3): Vec3 {
+  const a = whalePath(w, t);
+  const put = frame(near(a, me, SWIM_W), norm(sub(whalePath(w, t + 0.05), a)));
+  const L = WHALE_LEN;
+  const flex = (s: number) => 0.05 * L * Math.sin(1.1 * t + w - 4 * s) * s * s;
+  const part = hash(p.i, 252);
+  const q = hash(p.i, 253);
+  const side = p.b < 0.5 ? -1 : 1;
+  if (part < 0.1)
+    return put(-0.47 * L - 0.06 * L * q, side * 0.15 * L * q, flex(1) + (p.d - 0.5) * 0.01 * L);
+  if (part < 0.2)
+    return put(
+      0.22 * L - 0.12 * L * q,
+      side * (0.07 * L + 0.25 * L * q),
+      -0.04 * L * q + 0.05 * L * q * Math.sin(0.7 * t + w + q),
+    );
+  const s = p.b;
+  const r = 0.085 * L * Math.sin(Math.PI * Math.min(1, s ** 0.55 * 1.02));
+  const ang = p.d * TAU;
+  return put(L * (0.5 - s), Math.cos(ang) * r, Math.sin(ang) * r * 0.9 + flex(s));
+}
+
+function visitorPoint(p: Particle, t: number, me: Vec3): Vec3 {
+  if (hash(p.i, 251) < 0.55) {
+    const j = Math.floor(p.a * HAMMERS);
+    const { c, f } = hammerOf(j, t, me);
+    return kindFishAt(SHOAL_KINDS[3] as ShoalKind, c, f, 8, p, t, j);
+  }
+  return whaleAt(Math.floor(p.a * WHALES), p, t, me);
+}
+function visitorColour(p: Particle, t: number, twinkle: number, me: Vec3): RGB {
+  const lit = 0.4 + 0.6 * daylight(me[1]);
+  if (hash(p.i, 251) < 0.55)
+    return scale(
+      mix([0.86, 0.89, 0.92], [0.5, 0.56, 0.62], 0.5 + 0.5 * Math.sin(p.d * TAU)),
+      0.3 * twinkle * hammersSeen(t) * lit,
+    );
+  const w = Math.floor(p.a * WHALES);
+  const belly = hash(p.i, 252) >= 0.2 && Math.sin(p.d * TAU) < -0.3;
+  // Throat grooves: pale lines along the belly at the front.
+  const groove = belly && p.b < 0.45 && frac(p.d * 40) < 0.3;
+  const tone: RGB = belly ? (groove ? [0.85, 0.88, 0.9] : [0.6, 0.66, 0.72]) : [0.26, 0.31, 0.4];
+  return scale(tone, 0.24 * twinkle * whaleSeen(w, t) * lit);
+}
+
 /* ---------- the Shark Sim's grains ---------- */
 
 export const SWIM_CORALS = 16;
@@ -2407,16 +2780,45 @@ const swimRole = (p: Particle): SwimRole =>
             ? 'school'
             : 'you';
 
-/** Coral j's place on the wrapping field, which garden colony it is, and how big. */
+/**
+ * What grain p draws, with the rest of the picture: the tunnel takes a share of the coral forest's
+ * corals; the visitors a share of the open water's and the deep's, and the grains a lone fish of
+ * yours leaves spare (fewer grains on you, so you never glare); with Light on, the sand turns to
+ * caustics and some snow to the waves of light above.
+ */
+type SwimPart = SwimRole | 'tunnel' | 'visitor' | 'caustic' | 'waves';
+function swimPart(p: Particle): SwimPart {
+  const role = swimRole(p);
+  switch (role) {
+    case 'you':
+      return swimNow().count === 1 && hash(p.i, 260) >= 0.4 ? 'visitor' : 'you';
+    case 'polyp':
+    case 'coral':
+      if (sea === 0) return hash(p.i, 240) < 0.45 ? 'tunnel' : role;
+      return role === 'coral' && hash(p.i, 250) < 0.22 ? 'visitor' : role;
+    case 'floor':
+      return light && sea === 0 && hash(p.i, 274) < 0.6 ? 'caustic' : role;
+    case 'sky': {
+      if (!light || sea === 2) return role;
+      const h = hash(p.i, 270);
+      return h < 0.45 ? 'waves' : sea === 0 && h < 0.65 ? 'caustic' : role;
+    }
+    default:
+      return role;
+  }
+}
+
+/** Coral j's place on the wrapping field, which garden colony it is, and how big; none under the tunnel. */
 function swimSlot(j: number): { at: Vec3; colony: number; size: number } {
   const side = 4;
   const cell = SWIM_W / side;
+  const x = ((j % side) + 0.2 + 0.6 * hash(j, 161)) * cell;
+  const z = (Math.floor(j / side) + 0.2 + 0.6 * hash(j, 162)) * cell;
+  // A coral that would stand in the tunnel's way grows just beside it instead.
+  const dx = wrap(x - TUNNEL_X + SWIM_W / 2, SWIM_W) - SWIM_W / 2;
+  const out = (dx < 0 ? -1 : 1) * (SPREAD + TUNNEL_R + 4 + 3 * hash(j, 165));
   return {
-    at: [
-      ((j % side) + 0.2 + 0.6 * hash(j, 161)) * cell,
-      FLOOR,
-      (Math.floor(j / side) + 0.2 + 0.6 * hash(j, 162)) * cell,
-    ],
+    at: [underTunnel(x, z) ? TUNNEL_X + out : x, FLOOR, z],
     colony: Math.floor(hash(j, 163) * COLONIES),
     size: 0.9 + 0.7 * hash(j, 164),
   };
@@ -2488,7 +2890,15 @@ function deepPoint(p: Particle, t: number, me: Vec3): Vec3 {
 
 function swimPoint(p: Particle, t: number): Vec3 {
   const me = swimmer(t).c;
-  switch (swimRole(p)) {
+  switch (swimPart(p)) {
+    case 'tunnel':
+      return tunnelPoint(p, t, me, swimRole(p) === 'polyp');
+    case 'visitor':
+      return visitorPoint(p, t, me);
+    case 'caustic':
+      return causticAt(p, t, me).pos;
+    case 'waves':
+      return wavesAt(p, t, me).pos;
     case 'floor': {
       if (sea === 1) return rayAt(p, t, me).pos;
       if (sea === 2) return deepRockAt(p, me);
@@ -2514,9 +2924,11 @@ function swimPoint(p: Particle, t: number): Vec3 {
       const len = kind.len * (j === 0 ? 1 : 0.9 + 0.2 * hash(j, 172));
       const { c, f, gape } =
         j === 0 && kind.eats ? bitePose(fish.c, fish.f, len, t) : { ...fish, gape: 0 };
+      // You, the one in front, bend into your turns; the fish of your school just follow.
+      const sway = j === 0 ? swimSway() : STILL;
       return kind.kind === null
-        ? fishAt(c, f, len, p, t, j)
-        : kindFishAt(SHOAL_KINDS[kind.kind] as ShoalKind, c, f, len, p, t, j, gape);
+        ? fishAt(c, f, len, p, t, j, sway)
+        : kindFishAt(SHOAL_KINDS[kind.kind] as ShoalKind, c, f, len, p, t, j, gape, sway);
     }
     default: {
       if (sea === 1) return preyPoint(SCHOOL_FISH + Math.floor(p.a * BAIT_FISH), p, t);
@@ -2609,7 +3021,20 @@ function swimColour(p: Particle, t: number, twinkle: number): RGB {
   const me = swimmer(t).c;
   const up = altitude(me);
   const dark = 1 - daylight(me[1]);
-  switch (swimRole(p)) {
+  switch (swimPart(p)) {
+    case 'tunnel':
+      return tunnelColour(p, me, swimRole(p) === 'polyp', twinkle);
+    case 'visitor':
+      return visitorColour(p, t, twinkle, me);
+    case 'caustic': {
+      // Soft lines of light on the sand, fainter the higher you swim above them.
+      const { bead } = causticAt(p, t, me);
+      return scale(mix(SUNLIGHT, [1, 0.97, 0.85], 0.5), 0.16 * (0.3 + 0.7 * bead) * (1 - 0.6 * up));
+    }
+    case 'waves': {
+      const { bead } = wavesAt(p, t, me);
+      return scale(SUNLIGHT, (0.12 + 0.1 * up) * (0.3 + 0.7 * bead) * twinkle);
+    }
     case 'floor': {
       if (sea === 1) {
         const { s } = rayAt(p, t, me);
@@ -2658,10 +3083,20 @@ function swimColour(p: Particle, t: number, twinkle: number): RGB {
       return scale(tone, (0.3 + 0.1 * up) * (1 - 0.6 * dark) * twinkle * preyShown(i, t));
     }
     case 'you': {
+      // Dimmed: you are close to the eye, and at full light you read as a white glare.
       const kind = swimNow();
       const j = Math.floor(p.a * kind.count);
-      if (kind.kind === null) return clownColour(p, twinkle);
-      return shoalColour(p, twinkle, kind.kind, j, 0);
+      const dim = kind.count === 1 ? 0.55 : 0.8;
+      if (kind.kind === null) return scale(clownColour(p, twinkle), dim);
+      const sk = SHOAL_KINDS[kind.kind] as ShoalKind;
+      const base = scale(shoalColour(p, twinkle, kind.kind, j, 0), dim);
+      // Inside the open mouth: a dark rose, so the gape reads.
+      if (j === 0 && kind.eats && p.b < JAW && isLowerJaw(p) && onBody(sk, p)) {
+        const fish = youFish(0, t);
+        const { gape } = bitePose(fish.c, fish.f, kind.len, t);
+        return mix(base, scale([0.85, 0.35, 0.38], 0.3 * twinkle), smooth(gape / 0.6));
+      }
+      return base;
     }
     default: {
       if (sea === 1) {
