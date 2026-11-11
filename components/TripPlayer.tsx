@@ -77,21 +77,15 @@ export type Trip = {
       set: (at: Vec3 | null, dt: number, t: number) => void;
     };
     /**
-     * A step you play (the Ocean's Shark Sim): told every frame whether it is being played, where the
-     * cursor is on screen (-1 to 1 each way, null when away), the keys held (lower case), and how
-     * far the step's time moved. While it plays, the arrow keys steer instead of changing step.
-     * Esc lets go of it (told it is not played, so it plays on by itself) until Steer, a click on
-     * the picture, Enter or W A S D E Q takes it back.
+     * A step you play (the Ocean's Shark Sim, the Vegetal's Bird Sim): told every frame whether it
+     * is being played, the keys held (lower case), and how far the step's time moved. Keys only,
+     * never the mouse (2026-11-11). While it plays, the arrow keys steer instead of changing step.
+     * Esc lets go of it (told it is not played, so it plays on by itself) until Steer, Enter or
+     * W A S D E Q X takes it back.
      */
     game?: {
       has: (k: number) => boolean;
-      set: (
-        active: boolean,
-        at: { x: number; y: number } | null,
-        keys: string[],
-        dt: number,
-        t: number,
-      ) => void;
+      set: (active: boolean, keys: string[], dt: number, t: number) => void;
       /** Keys the game takes for itself while played, beyond the arrows (the Shark Sim's Space, its boost). */
       claims?: string[];
       /** A small bar shown while it is played (the Shark Sim's boost), its value 0 to 1, read every frame. */
@@ -238,8 +232,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   // Where the cursor is on screen, -1 to 1 each way, and whether a click has it guiding.
   const cursorRef = useRef<{ x: number; y: number } | null>(null);
   const keysRef = useRef(new Set<string>());
-  // A step you play can be let go of (Esc) and taken back (Steer, a click on the picture, Enter or a
-  // steering key); each step opens taken.
+  // A step you play can be let go of (Esc) and taken back (Steer, Enter or a steering key); each
+  // step opens taken.
   const stoppedRef = useRef(false);
   const [stopped, setStopped] = useState(false);
   const stopGame = useCallback((stop: boolean) => {
@@ -451,7 +445,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       if (game) {
         const moved = playingRef.current ? dt * speedRef.current : 0;
         const on = !!(P && game.has(k)) && !stoppedRef.current;
-        game.set(on, cursorRef.current, [...keysRef.current], moved, t);
+        game.set(on, [...keysRef.current], moved, t);
         // The game's bar (the Shark Sim's boost), drawn straight onto the page every frame.
         const bar = meterRef.current;
         if (bar && game.meter) bar.style.width = `${Math.round(game.meter.value() * 100)}%`;
@@ -569,7 +563,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         stopGame(true);
         return;
       }
-      if (gameStep() && !playing() && /^(enter|[wasdeq])$/.test(e.key.toLowerCase())) {
+      if (gameStep() && !playing() && /^(enter|[wasdeqx])$/.test(e.key.toLowerCase())) {
         stopGame(false);
         keysRef.current.add(e.key.toLowerCase());
         return;
@@ -595,11 +589,6 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     const press = (e: PointerEvent) => {
       wake();
       if (e.target !== canvasRef.current || journeyRef.current) return;
-      // A click on the picture takes a let-go game back.
-      if (stoppedRef.current && tripRef.current.pieces?.game?.has(pieceRef.current)) {
-        stopGame(false);
-        return;
-      }
       if (!tripRef.current.pieces?.pointer?.has(pieceRef.current)) return;
       guideRef.current = !guideRef.current;
       setGuide(guideRef.current);
@@ -641,6 +630,29 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           !journey && guide && trip.pieces?.pointer?.has(hud.index) ? { cursor: 'none' } : undefined
         }
       />
+      {immersed ? (
+        <button
+          type="button"
+          className="bb-exit"
+          onClick={immerse}
+          title="Leave full screen (Esc or F)"
+        >
+          ✕ Exit full screen
+        </button>
+      ) : null}
+      {/* In full screen a game keeps its bar and count, and nothing else (2026-11-11: "add full screen mode"). */}
+      {immersed && !journey && !stopped && trip.pieces?.game?.has(hud.index) ? (
+        <div className="bb-hud">
+          {trip.pieces.game.meter ? (
+            <span className="bb-meter" role="img" aria-label={trip.pieces.game.meter.label}>
+              <span ref={meterRef} />
+            </span>
+          ) : null}
+          {trip.pieces.game.tally ? (
+            <span className="bb-tally" ref={tallyRef} aria-live="polite" />
+          ) : null}
+        </div>
+      ) : null}
       <div className={`bb-top${chrome ? '' : ' bb-hidden'}`}>
         <nav className="bb-tabs" aria-label="Art">
           {ART_LINKS.map((l) =>
@@ -798,7 +810,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
             aria-label="Full screen, the picture alone; Esc to come back"
             title="Full screen (F); Esc to come back"
           >
-            ⛶
+            {!journey && trip.pieces?.game?.has(hud.index) ? '⛶ Full screen' : '⛶'}
           </button>
           {(trip.backgrounds?.length ?? 0) > 1 ? (
             <button type="button" onClick={nextBg} title="Change the background">
@@ -827,12 +839,12 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
               >
                 Steer
               </button>
-              {trip.pieces.game.meter && !stopped ? (
+              {trip.pieces.game.meter && !stopped && !immersed ? (
                 <span className="bb-meter" role="img" aria-label={trip.pieces.game.meter.label}>
                   <span ref={meterRef} />
                 </span>
               ) : null}
-              {trip.pieces.game.tally && !stopped ? (
+              {trip.pieces.game.tally && !stopped && !immersed ? (
                 <span className="bb-tally" ref={tallyRef} aria-live="polite" />
               ) : null}
             </>

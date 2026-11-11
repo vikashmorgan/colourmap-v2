@@ -494,9 +494,9 @@ describe('the vegetal chapter', () => {
     const k = PHASES.findIndex((p) => p.id === 'bird');
     expect(PHASES[k]?.name).toBe('Bird Sim');
     const fly = (keys: string[], secs: number) => {
-      for (let i = 0; i < secs * 30; i++) setBird(true, null, keys, 1 / 30, 0);
+      for (let i = 0; i < secs * 30; i++) setBird(true, keys, 1 / 30, 0);
     };
-    setBird(true, null, [], 1 / 30, 0);
+    setBird(true, [], 1 / 30, 0);
     const y0 = flier(0).c[1];
     fly(['w'], 2);
     expect(flier(0).c[1]).toBeGreaterThan(y0 + 3);
@@ -524,7 +524,7 @@ describe('the vegetal chapter', () => {
     // The eye rides behind the bird.
     const eye = pieceCamera(k, 5);
     expect(dist(eye.eye, me)).toBeLessThan(18);
-    setBird(false, null, [], 0, 0);
+    setBird(false, [], 0, 0);
   });
 
   it('walks the Dot Walker on the forest floor: W on, S back, Space jumps, its legs striding', () => {
@@ -532,7 +532,7 @@ describe('the vegetal chapter', () => {
     expect(PLAYERS).toEqual(['Bird', 'Dot Walker']);
     setVariant(1, k);
     const step = (keys: string[], secs: number) => {
-      for (let i = 0; i < secs * 30; i++) setBird(true, null, keys, 1 / 30, 0);
+      for (let i = 0; i < secs * 30; i++) setBird(true, keys, 1 / 30, 0);
     };
     // Before any key it strolls on by itself: never standing still at the start.
     const a0 = flier(1).c;
@@ -551,7 +551,7 @@ describe('the vegetal chapter', () => {
     expect(moved).toBeGreaterThan(4);
     expect(ground()).toBeCloseTo(0, 5);
     // Space: up, and back down.
-    setBird(true, null, [' '], 1 / 30, 0);
+    setBird(true, [' '], 1 / 30, 0);
     step([], 0.2);
     expect(ground()).toBeGreaterThan(0.3);
     step([], 2);
@@ -567,7 +567,7 @@ describe('the vegetal chapter', () => {
     expect(Math.max(...ys)).toBeLessThan(4);
     // The eye stands behind, at the walker's own height.
     expect(pieceCamera(k, 5).eye[1] - me[1]).toBeLessThan(6);
-    setBird(false, null, [], 0, 0);
+    setBird(false, [], 0, 0);
     setVariant(0);
   });
 

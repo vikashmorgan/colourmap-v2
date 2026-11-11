@@ -246,7 +246,7 @@ export const PHASES: VegetalPhase[] = [
   {
     id: 'bird',
     name: 'Bird Sim',
-    line: 'Your turn: a bird, or the Dot Walker on foot, in a forest of golden trees. The cursor steers; W and S climb and dive, or walk on and back; A and D turn; Shift goes faster; Space jumps. Mushrooms glow at the feet of the trees and fireflies drift between them.',
+    line: 'Your turn: a bird, or the Dot Walker on foot, in a forest of golden trees. Keys only: A and D turn; W and S climb and dive, or walk on and back; Shift goes faster, X slower; Space jumps. Mushrooms glow at the feet of the trees and fireflies drift between them.',
     words: [
       'A forest seen from above is one living thing,',
       'every tree joined to the next below the ground.',
@@ -2391,13 +2391,7 @@ function birdPilot(t: number): { c: Vec3; f: Vec3 } {
  * The controls, each frame: whether you are flying, where the cursor is on screen (-1 to 1 each
  * way, null when away), the keys held, and how far the piece's time moved.
  */
-export function setBird(
-  active: boolean,
-  at: { x: number; y: number } | null,
-  keys: string[],
-  dt: number,
-  t: number,
-) {
+export function setBird(active: boolean, keys: string[], dt: number, t: number) {
   if (!active) {
     bird.on = false;
     bird.touched = false;
@@ -2422,10 +2416,8 @@ export function setBird(
     bird.on = true;
   }
   const held = (...names: string[]) => names.some((n) => keys.includes(n));
-  const dead = (v: number) => (Math.abs(v) < 0.08 ? 0 : v - Math.sign(v) * 0.08);
-  const x = at ? dead(at.x) : 0;
-  const y = at ? dead(at.y) : 0;
-  const turn = 1.4 * x + (held('a', 'arrowleft') ? -1 : 0) + (held('d', 'arrowright') ? 1 : 0);
+  // Keys only, never the mouse (2026-11-11: "controls should not be with mouse, only ASDWX").
+  const turn = (held('a', 'arrowleft') ? -1.4 : 0) + (held('d', 'arrowright') ? 1.4 : 0);
   bird.yaw -= turn * dt;
   if (walking()) {
     walk(held, dt);
@@ -2433,14 +2425,14 @@ export function setBird(
   }
   // Leaning into the turn, as a bird does.
   bird.bank += (-0.6 * Math.max(-1, Math.min(1, turn)) - bird.bank) * (1 - Math.exp(-3 * dt));
-  const climb = (held('w', 'arrowup') ? 0.7 : 0) - (held('s', 'arrowdown') ? 0.7 : 0);
-  let tilt = Math.max(-0.9, Math.min(0.9, 0.8 * y + climb));
+  let tilt = (held('w', 'arrowup') ? 0.8 : 0) - (held('s', 'arrowdown') ? 0.8 : 0);
   const ground = hill(bird.pos[0], bird.pos[2]);
   if (bird.pos[1] <= ground + 2 && tilt < 0) tilt = 0;
   if (bird.pos[1] >= BIRD_TOP && tilt > 0) tilt = 0;
   bird.pitch += (tilt - bird.pitch) * (1 - Math.exp(-2.5 * dt));
   const fast = held('shift');
-  bird.speed += (BIRD_SPEED * (fast ? 1.9 : 1) - bird.speed) * (1 - Math.exp(-1.5 * dt));
+  bird.speed +=
+    (BIRD_SPEED * (fast ? 1.9 : held('x') ? 0.5 : 1) - bird.speed) * (1 - Math.exp(-1.5 * dt));
   // Beating hard to climb or fly fast, gliding with wings held out on the way down.
   const want = fast ? 1 : bird.pitch > 0.1 ? 0.9 : bird.pitch < -0.15 ? 0 : 0.45;
   bird.effort += (want - bird.effort) * (1 - Math.exp(-2 * dt));
@@ -2453,7 +2445,7 @@ export function setBird(
 /** The walker on foot, each frame: walking on or back, running, jumping, its feet on the hills. */
 function walk(held: (...names: string[]) => boolean, dt: number) {
   const pace = held('w', 'arrowup') ? 1 : held('s', 'arrowdown') ? -0.6 : 0;
-  const run = held('shift') ? 2 : 1;
+  const run = held('shift') ? 2 : held('x') ? 0.5 : 1;
   bird.speed += (WALK_SPEED * run * pace - bird.speed) * (1 - Math.exp(-6 * dt));
   bird.pitch = 0;
   bird.bank = 0;

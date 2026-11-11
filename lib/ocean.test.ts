@@ -441,26 +441,26 @@ describe('the ocean chapter', () => {
     expect(SWIM_NAMES).toContain('Silver school');
     // With no one at the controls it wanders on, above the sand.
     for (let t = 0; t < 120; t += 3) expect(swimmer(t).c[1]).toBeGreaterThan(-14 + 1);
-    const frames = (n: number, at: { x: number; y: number } | null, keys: string[], t0: number) => {
-      for (let i = 1; i <= n; i++) setSwim(true, at, keys, 1 / 60, t0 + i / 60);
+    const frames = (n: number, keys: string[], t0: number) => {
+      for (let i = 1; i <= n; i++) setSwim(true, keys, 1 / 60, t0 + i / 60);
       return swimmer(t0 + n / 60);
     };
-    const a = frames(1, null, [], 0);
+    const a = frames(1, [], 0);
     // Two seconds straight on: about the cruising speed.
-    const b = frames(120, null, [], 1 / 60);
+    const b = frames(120, [], 1 / 60);
     const run = Math.hypot(b.c[0] - a.c[0], b.c[1] - a.c[1], b.c[2] - a.c[2]);
     expect(run).toBeGreaterThan(SWIM_SPEED * 2 * 0.8);
     expect(run).toBeLessThan(SWIM_SPEED * 2 * 1.2);
-    // The cursor to the right turns the fish right, gradually.
+    // D turns the fish right, gradually: keys only, no cursor.
     const right = [-b.f[2], 0, b.f[0]];
-    const c = frames(60, { x: 0.8, y: 0 }, [], 2);
+    const c = frames(60, ['d'], 2);
     expect(c.f[0] * (right[0] as number) + c.f[2] * (right[2] as number)).toBeGreaterThan(0.3);
-    // Down at the bottom of the screen it dives, but stops at the sand.
-    const d = frames(900, { x: 0, y: -1 }, [], 3);
+    // S dives, but stops at the sand.
+    const d = frames(900, ['s'], 3);
     expect(d.c[1]).toBeGreaterThanOrEqual(-14 + 1.5);
     // E speeds up.
-    const e0 = frames(1, null, ['e'], 18);
-    const e1 = frames(180, null, ['e'], 18 + 1 / 60);
+    const e0 = frames(1, ['e'], 18);
+    const e1 = frames(180, ['e'], 18 + 1 / 60);
     expect(Math.hypot(e1.c[0] - e0.c[0], e1.c[2] - e0.c[2])).toBeGreaterThan(SWIM_SPEED * 3 * 1.2);
     // Every grain somewhere real, as each fish.
     for (let i = 0; i < SWIM_NAMES.length; i++) {
@@ -470,7 +470,7 @@ describe('the ocean chapter', () => {
         for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
       }
     }
-    setSwim(false, null, [], 0, 0);
+    setSwim(false, [], 0, 0);
     setVariant(0);
   });
 
@@ -489,7 +489,7 @@ describe('the ocean chapter', () => {
 
   it('rises on W and sinks on S in the Shark Sim', () => {
     const frames = (n: number, keys: string[], t0: number) => {
-      for (let i = 1; i <= n; i++) setSwim(true, null, keys, 1 / 60, t0 + i / 60);
+      for (let i = 1; i <= n; i++) setSwim(true, keys, 1 / 60, t0 + i / 60);
       return swimmer(t0 + n / 60);
     };
     const a = frames(1, [], 0);
@@ -499,7 +499,7 @@ describe('the ocean chapter', () => {
     const down = frames(120, ['s'], 3);
     expect(down.c[1]).toBeLessThan(up.c[1] - 2);
     expect(down.f[1]).toBeLessThan(-0.2);
-    setSwim(false, null, [], 0, 0);
+    setSwim(false, [], 0, 0);
   });
 
   it('turns every coral warm (no green, no blue) or gold, on every piece with corals', () => {
@@ -630,14 +630,14 @@ describe('the ocean chapter', () => {
     setVariant(0, k);
     // In the deep, with no one at the controls, the wander goes down the canyon toward the vents.
     setSeaOf(2, k);
-    setSwim(false, null, [], 0, 0);
+    setSwim(false, [], 0, 0);
     const lows = Array.from({ length: 300 }, (_, i) => swimmer(i).c[1]);
     expect(Math.min(...lows)).toBeLessThan(DEEP_FLOOR + 10);
     expect(Math.min(...lows)).toBeGreaterThan(DEEP_FLOOR);
     // At the controls, S takes you down past the reef into the canyon.
-    for (let i = 1; i <= 900; i++) setSwim(true, null, ['s'], 1 / 60, 100 + i / 60);
+    for (let i = 1; i <= 900; i++) setSwim(true, ['s'], 1 / 60, 100 + i / 60);
     expect(swimmer(115).c[1]).toBeLessThan(-14 - 20);
-    setSwim(false, null, [], 0, 0);
+    setSwim(false, [], 0, 0);
     // The giant squid stays hidden most of the time, and shows now and then.
     const seen = Array.from({ length: GIANT_CYCLE }, (_, t) => giantSeen(t));
     expect(seen.filter((v) => v > 0.5).length).toBeLessThan(GIANT_CYCLE * 0.4);
@@ -657,7 +657,7 @@ describe('the ocean chapter', () => {
     resetPrey();
     expect(boostLeft()).toBe(1);
     const frames = (n: number, keys: string[], t0: number) => {
-      for (let i = 1; i <= n; i++) setSwim(true, null, keys, 1 / 60, t0 + i / 60);
+      for (let i = 1; i <= n; i++) setSwim(true, keys, 1 / 60, t0 + i / 60);
       return swimmer(t0 + n / 60);
     };
     const a = frames(1, [' '], 200);
@@ -681,7 +681,7 @@ describe('the ocean chapter', () => {
     const got = eatNear(preyAt(0, t).c, t);
     expect(got).toBeGreaterThan(0);
     expect(boostLeft()).toBeCloseTo(before + BOOST_PER_FISH * got, 5);
-    setSwim(false, null, [], 0, 0);
+    setSwim(false, [], 0, 0);
     resetPrey();
     setSeaOf(0, k);
   });
@@ -695,7 +695,7 @@ describe('the ocean chapter', () => {
     let fastest = 0;
     for (let i = 1; i <= 1800; i++) {
       const t = 300 + i / 60;
-      setSwim(true, { x: 0.3 * Math.sin(t * 0.2), y: 0.2 * Math.sin(t * 0.13) }, [], 1 / 60, t);
+      setSwim(true, i % 240 < 120 ? ['d', 'w'] : ['a'], 1 / 60, t);
       if (i % 30 === 0) for (let j = 0; j < PREY; j++) fastest = Math.max(fastest, dashSpeed(j));
     }
     expect(fastest).toBeGreaterThan(2);
@@ -703,7 +703,7 @@ describe('the ocean chapter', () => {
       const { c, f } = preyAt(j, 330);
       for (const v of [...c, ...f]) expect(Number.isFinite(v)).toBe(true);
     }
-    setSwim(false, null, [], 0, 0);
+    setSwim(false, [], 0, 0);
     resetPrey();
     setSeaOf(0, k);
   });
@@ -711,18 +711,18 @@ describe('the ocean chapter', () => {
   it('bends the body into a turn and lets it flow straight again', () => {
     const k = PHASES.findIndex((p) => p.id === 'swim');
     setVariant(0, k);
-    const frames = (n: number, at: { x: number; y: number } | null, t0: number) => {
-      for (let i = 1; i <= n; i++) setSwim(true, at, [], 1 / 60, t0 + i / 60);
+    const frames = (n: number, keys: string[], t0: number) => {
+      for (let i = 1; i <= n; i++) setSwim(true, keys, 1 / 60, t0 + i / 60);
     };
-    frames(60, { x: 0.8, y: 0 }, 400);
+    frames(60, ['d'], 400);
     const right = swimSway();
     expect(right.bend).toBeGreaterThan(0.5);
     expect(right.wave).toBeGreaterThan(1.5);
-    frames(60, { x: -0.8, y: 0 }, 401);
+    frames(60, ['a'], 401);
     expect(swimSway().bend).toBeLessThan(-0.5);
-    frames(240, null, 402);
+    frames(240, [], 402);
     expect(Math.abs(swimSway().bend)).toBeLessThan(0.05);
-    setSwim(false, null, [], 0, 0);
+    setSwim(false, [], 0, 0);
     expect(swimSway()).toEqual({ bend: 0, wave: 1 });
   });
 
@@ -802,7 +802,7 @@ describe('the ocean chapter', () => {
   describe('round three: a reef that answers, treasure, calm, currents, guests', () => {
     const k = PHASES.findIndex((p) => p.id === 'swim');
     const frames = (n: number, keys: string[], t0: number) => {
-      for (let i = 1; i <= n; i++) setSwim(true, null, keys, 1 / 60, t0 + i / 60);
+      for (let i = 1; i <= n; i++) setSwim(true, keys, 1 / 60, t0 + i / 60);
       return t0 + n / 60;
     };
     const yawOf = (f: number[]) => Math.atan2(-(f[0] as number), -(f[2] as number));
@@ -832,7 +832,7 @@ describe('the ocean chapter', () => {
       placeSwimmer([tb[0], tb[1] + 2, tb[2]]);
       frames(20, ['q'], t);
       expect(tubeShut(0)).toBeGreaterThan(0.8);
-      setSwim(false, null, [], 0, 0);
+      setSwim(false, [], 0, 0);
       setVariant(0, k);
     });
 
@@ -883,7 +883,7 @@ describe('the ocean chapter', () => {
         expect(r).toBeGreaterThanOrEqual(g as number);
         expect(g as number).toBeGreaterThanOrEqual(b as number);
       }
-      setSwim(false, null, [], 0, 0);
+      setSwim(false, [], 0, 0);
       resetTreasure();
       setVariant(0, k);
       setSeaOf(0, k);
@@ -901,7 +901,7 @@ describe('the ocean chapter', () => {
       t = frames(1, [' '], t);
       expect(calmNow()).toBe(0);
       expect(calmNow()).toBeLessThan(CALM_TRUST);
-      setSwim(false, null, [], 0, 0);
+      setSwim(false, [], 0, 0);
       resetPrey();
     });
 
@@ -914,7 +914,7 @@ describe('the ocean chapter', () => {
       frames(60, ['q'], 900);
       const b = swimmer(901).c;
       expect(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])).toBeGreaterThan(CURRENT_PUSH * 0.6);
-      setSwim(false, null, [], 0, 0);
+      setSwim(false, [], 0, 0);
     });
 
     it('lets you swim beside a whale, which keeps your pace, and follow a manta, which waits for you', () => {
@@ -932,7 +932,7 @@ describe('the ocean chapter', () => {
       frames(150, [], t0);
       expect(besideWhale(0)).toBeGreaterThan(0.5);
       expect(whaleRate(0)).toBeGreaterThan(1.8);
-      setSwim(false, null, [], 0, 0);
+      setSwim(false, [], 0, 0);
       // The manta: fallen far behind, it waits; close behind, it moves on.
       setSeaOf(2, k);
       const m = mantaNow();
@@ -949,7 +949,7 @@ describe('the ocean chapter', () => {
       );
       frames(90, ['q'], 1101);
       expect(mantaRate()).toBeGreaterThan(1.2);
-      setSwim(false, null, [], 0, 0);
+      setSwim(false, [], 0, 0);
       setVariant(0, k);
       setSeaOf(0, k);
     });

@@ -162,7 +162,7 @@ export const PHASES: OceanPhase[] = [
     id: 'swim',
     // Shark Sim (2026-11-11: "call it shark simulator"); the id stays 'swim'.
     name: 'Shark Sim',
-    line: 'You are the hammerhead, or any fish you pick. The cursor steers, W and S rise and sink, E and Q set the pace; swim into a school to feed. Three seas: the coral forest, open water full of shoals, and the deep.',
+    line: 'You are the hammerhead, or any fish you pick. Keys only: A and D turn, W and S rise and sink, E or Shift speeds up, Q or X slows, Space boosts; swim into a school to feed. Three seas: the coral forest, open water full of shoals, and the deep.',
     words: [
       'Above the reef the water opens like a night sky,',
       'and the schools gather round whatever swims with purpose.',
@@ -1959,16 +1959,10 @@ function autopilot(t: number): { c: Vec3; f: Vec3 } {
 }
 
 /**
- * The controls, each frame: whether you are swimming, where the cursor is on screen (-1 to 1 each
- * way, null when away), the keys held, and how far the piece's time moved.
+ * The controls, each frame: whether you are swimming, the keys held, and how far the piece's time
+ * moved. Keys only, never the mouse (2026-11-11: "controls should not be with mouse, only ASDWX").
  */
-export function setSwim(
-  active: boolean,
-  at: { x: number; y: number } | null,
-  keys: string[],
-  dt: number,
-  t: number,
-) {
+export function setSwim(active: boolean, keys: string[], dt: number, t: number) {
   if (!active) {
     swim.on = false;
     react(dt, t);
@@ -1985,23 +1979,18 @@ export function setSwim(
     swim.on = true;
   }
   const held = (...names: string[]) => names.some((n) => keys.includes(n));
-  // The cursor's distance from the middle turns and tilts; a small still zone in the middle.
-  const dead = (v: number) => (Math.abs(v) < 0.08 ? 0 : v - Math.sign(v) * 0.08);
-  const x = at ? dead(at.x) : 0;
-  const y = at ? dead(at.y) : 0;
-  const turn = 1.5 * x + (held('a', 'arrowleft') ? -0.9 : 0) + (held('d', 'arrowright') ? 0.9 : 0);
+  const turn = (held('a', 'arrowleft') ? -1.3 : 0) + (held('d', 'arrowright') ? 1.3 : 0);
   swim.yaw -= turn * dt;
   // The body follows the turn a moment late, so it flows into the bend and out of it.
   swim.bend += (Math.max(-1.2, Math.min(1.2, turn)) - swim.bend) * (1 - Math.exp(-3.5 * dt));
   // W and S rise and sink (2026-11-11: "ws to go up and down"), as the arrows up and down do.
-  const rise = (held('w', 'arrowup') ? 0.6 : 0) - (held('s', 'arrowdown') ? 0.6 : 0);
-  let tilt = Math.max(-0.9, Math.min(0.9, 0.9 * y + rise));
+  let tilt = (held('w', 'arrowup') ? 0.8 : 0) - (held('s', 'arrowdown') ? 0.8 : 0);
   if (swim.pos[1] <= floorAt(swim.pos[0]) + 1.6 && tilt < 0) tilt = 0;
   if (swim.pos[1] >= SKY_TOP && tilt > 0) tilt = 0;
   swim.pitch += (tilt - swim.pitch) * (1 - Math.exp(-2.2 * dt));
   const boosting = held(' ') && swim.boost > 0;
   if (boosting) swim.boost = Math.max(0, swim.boost - dt / BOOST_SECONDS);
-  const pace = boosting ? BOOST_PACE : held('e', 'shift') ? 2.1 : held('q') ? 0.35 : 1;
+  const pace = boosting ? BOOST_PACE : held('e', 'shift') ? 2.1 : held('q', 'x') ? 0.35 : 1;
   // A boost kicks in quickly; otherwise the pace eases.
   swim.speed += (SWIM_SPEED * pace - swim.speed) * (1 - Math.exp((boosting ? -5 : -1.5) * dt));
   const f = heading3(swim.yaw, swim.pitch);
