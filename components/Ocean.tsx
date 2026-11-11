@@ -4,15 +4,19 @@
  * Ocean, the sea's chapter (docs/specs/art-ocean.md): coral gardens grown
  * like trees, sea fans, table corals, clownfish hiding from a hunter in their
  * coral, six kinds of shoal led by the cursor, ten swarms of small fish, five
- * kinds of jellyfish, a reef channel swum through, and Swim, where you are the fish. The math lives in lib/ocean.ts; the shared trip player
- * draws it.
+ * kinds of jellyfish, a reef channel swum through, and Shark Sim, where you
+ * are the hammerhead in three seas. The math lives in lib/ocean.ts; the
+ * shared trip player draws it.
  */
 import TripPlayer, { type Trip } from '@/components/TripPlayer';
 import {
+  CORAL_MODES,
   camera,
   fade,
+  hasCoralModes,
   hasGame,
   hasPointer,
+  hasSeas,
   hasVariants,
   look,
   makeParticles,
@@ -25,8 +29,11 @@ import {
   pieceLength,
   pieceLook,
   pieceProgress,
+  SEA_NAMES,
   STEP_COLOURS,
+  setCoralMode,
   setPointer,
+  setSeaOf,
   setSwim,
   setVariant,
   TOTAL,
@@ -66,8 +73,12 @@ const TRIP: Trip = {
     variants: { has: hasVariants, names: variantNames, set: setVariant, label: variantLabel },
     // In the shoal the cursor is a small yellow fish the others follow; a click hands back to the loop.
     pointer: { has: hasPointer, set: setPointer },
-    // Swim: you steer your own fish with the cursor and the keys.
+    // Shark Sim: you steer your own fish with the cursor and the keys.
     game: { has: hasGame, set: setSwim },
+    // Shark Sim's three seas: the coral forest, open water, the deep.
+    scenes: { has: hasSeas, names: SEA_NAMES, set: setSeaOf, label: 'Sea' },
+    // Every coral natural, warm or gold, on each piece with corals.
+    cycle: { has: hasCoralModes, names: CORAL_MODES, label: 'Coral colours', set: setCoralMode },
   },
 };
 

@@ -77,7 +77,7 @@ export type Trip = {
       set: (at: Vec3 | null, dt: number, t: number) => void;
     };
     /**
-     * A step you play (the Ocean's Swim): told every frame whether it is being played, where the
+     * A step you play (the Ocean's Shark Sim): told every frame whether it is being played, where the
      * cursor is on screen (-1 to 1 each way, null when away), the keys held (lower case), and how
      * far the step's time moved. While it plays, the arrow keys steer instead of changing step.
      */
@@ -99,6 +99,26 @@ export type Trip = {
       has: (k: number) => boolean;
       label: string | ((k: number) => string);
       set: (on: boolean, k?: number) => void;
+    };
+    /**
+     * A second row of pills above the looks (the Ocean's Shark Sim's seas); the first in the Journey
+     * and on each step as it opens. `set` is told the step, none in the Journey.
+     */
+    scenes?: {
+      has: (k: number) => boolean;
+      names: string[];
+      set: (i: number, k?: number) => void;
+      label: string;
+    };
+    /**
+     * A button beside the speeds that steps through a few looks, showing the one on (the Ocean's
+     * coral colours); kept from step to step, the first in the Journey.
+     */
+    cycle?: {
+      has: (k: number) => boolean;
+      names: string[];
+      label: string;
+      set: (i: number) => void;
     };
   };
 };
@@ -246,6 +266,16 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   useEffect(() => {
     tripRef.current.pieces?.toggle?.set(!journey && switched, journey ? undefined : hud.index);
   }, [journey, switched, hud.index]);
+  const [scene, setScene] = useState(0);
+  useEffect(() => {
+    const s = tripRef.current.pieces?.scenes;
+    if (journey) s?.set(0);
+    else s?.set(scene, hud.index);
+  }, [journey, scene, hud.index]);
+  const [cycled, setCycled] = useState(0);
+  useEffect(() => {
+    tripRef.current.pieces?.cycle?.set(journey ? 0 : cycled);
+  }, [journey, cycled]);
 
   useEffect(() => {
     try {
@@ -277,6 +307,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       setHud({ index: i, u: 0, time: 0 });
       // Each step opens on its first look.
       setVariant(0);
+      setScene(0);
     }
   }, []);
   const currentStep = useCallback(
@@ -547,7 +578,9 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       ref={mainRef}
       className={`bb bb-${page}${
         !journey && trip.pieces?.variants?.has(hud.index) ? ' bb-raised' : ''
-      }${immersed ? ' bb-immersed' : ''}`}
+      }${!journey && trip.pieces?.scenes?.has(hud.index) ? ' bb-raised-2' : ''}${
+        immersed ? ' bb-immersed' : ''
+      }`}
     >
       <canvas
         ref={canvasRef}
@@ -613,6 +646,25 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         ) : (
           // Steps on their own are presets, picked by name like the Art panel's, with no time bar.
           <>
+            {trip.pieces?.scenes?.has(hud.index) ? (
+              <div
+                className="bb-pills bb-variants"
+                role="toolbar"
+                aria-label={trip.pieces.scenes.label}
+              >
+                {trip.pieces.scenes.names.map((name, i) => (
+                  <button
+                    type="button"
+                    key={name}
+                    className="bb-pill"
+                    aria-pressed={i === scene}
+                    onClick={() => setScene(i)}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             {trip.pieces?.variants?.has(hud.index) ? (
               <div
                 className="bb-pills bb-variants"
@@ -718,6 +770,15 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
               {typeof trip.pieces.toggle.label === 'string'
                 ? trip.pieces.toggle.label
                 : trip.pieces.toggle.label(hud.index)}
+            </button>
+          ) : null}
+          {!journey && trip.pieces?.cycle?.has(hud.index) ? (
+            <button
+              type="button"
+              onClick={() => setCycled((i) => (i + 1) % (trip.pieces?.cycle?.names.length || 1))}
+              title={`${trip.pieces.cycle.label}: next`}
+            >
+              {trip.pieces.cycle.names[cycled]}
             </button>
           ) : null}
           {!journey && trip.pieces?.flow?.has(hud.index) ? (

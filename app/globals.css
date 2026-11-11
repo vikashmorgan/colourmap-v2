@@ -762,6 +762,10 @@ input[type="range"].feedback-slider::-moz-range-thumb {
 .bb-raised .bb-step {
   bottom: 150px;
 }
+/* And above a second row (the Shark Sim's seas). */
+.bb-raised.bb-raised-2 .bb-step {
+  bottom: 188px;
+}
 .bb-step.bb-quiet {
   opacity: 0.55;
 }

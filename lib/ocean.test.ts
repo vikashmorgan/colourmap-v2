@@ -2,39 +2,58 @@ import { describe, expect, it } from 'vitest';
 
 import { flow } from './bigbang';
 import {
+  BITE,
+  BITE_NAMES,
+  biteAt,
   CHANNEL_W,
   CLOWNS,
+  CORAL_MODES,
   camera,
   clownFish,
   colour,
   corals,
+  DEEP_FLOOR,
   EYE_H,
+  eatNear,
+  GIANT_CYCLE,
+  GULP,
   gardenGrowth,
+  giantSeen,
   HUNT_LAP,
+  hasCoralModes,
   hasGame,
   hasPointer,
+  hasSeas,
   hasVariants,
   hunterAt,
   JELLY_NAMES,
   makeParticles,
   PHASE_START,
   PHASES,
+  PREY,
   particleAt,
   phaseAt,
   pieceAt,
   pieceCamera,
   pieceLength,
+  preyAt,
+  preyShown,
   pulseOf,
   REEF_SLOTS,
+  RESPAWN,
   reefFish,
   reefSlot,
+  resetPrey,
   rootCoral,
+  SEA_NAMES,
   SHOAL_KINDS,
   STEP_COLOURS,
   SWARM_NAMES,
   SWIM_NAMES,
   SWIM_SPEED,
+  setCoralMode,
   setPointer,
+  setSeaOf,
   setShoalKind,
   setSwim,
   setVariant,
@@ -370,11 +389,15 @@ describe('the ocean chapter', () => {
     setVariant(0);
   });
 
-  it('lets you swim your own fish: cruising, steering with the cursor, faster on W, never through the sand', () => {
+  it('lets you swim your own fish: cruising, steering with the cursor, faster on E, never through the sand', () => {
     const k = PHASES.findIndex((p) => p.id === 'swim');
     expect(hasGame(k)).toBe(true);
     expect(hasGame(k - 1)).toBe(false);
-    expect(SWIM_NAMES).toContain('Hammerhead');
+    // Shark Sim, the hammerhead first and so the one you start as; the other fish still there.
+    expect(PHASES[k]?.name).toBe('Shark Sim');
+    expect(SWIM_NAMES[0]).toBe('Hammerhead');
+    expect(variantNames(k)[0]).toBe('Hammerhead');
+    expect(SWIM_NAMES).toContain('Clownfish');
     expect(SWIM_NAMES).toContain('Silver school');
     // With no one at the controls it wanders on, above the sand.
     for (let t = 0; t < 120; t += 3) expect(swimmer(t).c[1]).toBeGreaterThan(-14 + 1);
@@ -395,9 +418,9 @@ describe('the ocean chapter', () => {
     // Down at the bottom of the screen it dives, but stops at the sand.
     const d = frames(900, { x: 0, y: -1 }, [], 3);
     expect(d.c[1]).toBeGreaterThanOrEqual(-14 + 1.5);
-    // W speeds up.
-    const e0 = frames(1, null, ['w'], 18);
-    const e1 = frames(180, null, ['w'], 18 + 1 / 60);
+    // E speeds up.
+    const e0 = frames(1, null, ['e'], 18);
+    const e1 = frames(180, null, ['e'], 18 + 1 / 60);
     expect(Math.hypot(e1.c[0] - e0.c[0], e1.c[2] - e0.c[2])).toBeGreaterThan(SWIM_SPEED * 3 * 1.2);
     // Every grain somewhere real, as each fish.
     for (let i = 0; i < SWIM_NAMES.length; i++) {
@@ -422,5 +445,167 @@ describe('the ocean chapter', () => {
     for (let i = 1; i < steps.length; i++)
       expect(steps[i] as number).toBeLessThan(steps[i - 1] as number);
     expect(gardenGrowth(0, 0.9)).toBeGreaterThan(0.99);
+  });
+
+  it('rises on W and sinks on S in the Shark Sim', () => {
+    const frames = (n: number, keys: string[], t0: number) => {
+      for (let i = 1; i <= n; i++) setSwim(true, null, keys, 1 / 60, t0 + i / 60);
+      return swimmer(t0 + n / 60);
+    };
+    const a = frames(1, [], 0);
+    const up = frames(120, ['w'], 1 / 60);
+    expect(up.c[1]).toBeGreaterThan(a.c[1] + 2);
+    expect(up.f[1]).toBeGreaterThan(0.2);
+    const down = frames(120, ['s'], 3);
+    expect(down.c[1]).toBeLessThan(up.c[1] - 2);
+    expect(down.f[1]).toBeLessThan(-0.2);
+    setSwim(false, null, [], 0, 0);
+  });
+
+  it('turns every coral warm (no green, no blue) or gold, on every piece with corals', () => {
+    expect(CORAL_MODES).toEqual(['Natural corals', 'Warm corals', 'Gold corals']);
+    const ids = ['coral', 'fans', 'tables', 'fish-pulse', 'reef', 'swim'];
+    for (let k = 0; k < PHASES.length; k++)
+      expect(hasCoralModes(k)).toBe(ids.includes(PHASES[k]?.id ?? ''));
+    // The hue of a colour in degrees, red at 0.
+    const hue = (rgb: number[]) => {
+      const [r, g, b] = rgb as [number, number, number];
+      const mx = Math.max(r, g, b);
+      const d = mx - Math.min(r, g, b);
+      if (d < 1e-9) return 0;
+      const h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      return (h * 60 + 360) % 360;
+    };
+    const coralGrains = particles.filter((p) => p.c >= 0.21);
+    const swimCorals = particles.filter((p) => p.c >= 0.2 && p.c < 0.72);
+    const check = (ok: (h: number, rgb: [number, number, number]) => boolean) => {
+      for (const id of ['coral', 'fans', 'tables', 'swim']) {
+        const k = PHASES.findIndex((p) => p.id === id);
+        for (const p of (id === 'swim' ? swimCorals : coralGrains).slice(0, 300)) {
+          const { rgb } = pieceAt(p, k, 20);
+          if (Math.max(...rgb) < 1e-3) continue;
+          expect(ok(hue(rgb), rgb as [number, number, number])).toBe(true);
+        }
+      }
+    };
+    setCoralMode(1);
+    // Warm: red the strongest, between rose and amber.
+    check((h, [r, g, b]) => r >= g && r >= b && (h <= 50 || h >= 320));
+    setCoralMode(2);
+    // Gold: red over green over blue, a golden hue.
+    check((h, [r, g, b]) => r >= g && g >= b && h >= 20 && h <= 55);
+    setCoralMode(0);
+    // Natural keeps the garden's greens and teals.
+    const k = PHASES.findIndex((p) => p.id === 'coral');
+    const greens = coralGrains
+      .slice(0, 600)
+      .map((p) => pieceAt(p, k, 20).rgb)
+      .filter(([r, g]) => g > r);
+    expect(greens.length).toBeGreaterThan(0);
+  });
+
+  it('eats small fish with three bites in turn, each fish vanishing into the mouth and coming back', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    setVariant(0, k);
+    resetPrey();
+    const t0 = 50;
+    expect(biteAt(t0)).toBeNull();
+    // A fish at the mouth is taken, and the first bite is the lunge.
+    const fish = preyAt(0, t0);
+    expect(fish.shown).toBe(1);
+    expect(eatNear(fish.c, t0)).toBe(1);
+    expect(BITE_NAMES).toEqual(['Lunge', 'Sweep', 'Rise']);
+    expect(biteAt(t0 + 0.1)?.style).toBe(0);
+    // No second bite while one is under way.
+    expect(eatNear(preyAt(1, t0 + 0.1).c, t0 + 0.1)).toBe(0);
+    // Shrinking into the mouth, then gone, then growing back, then whole.
+    const s = preyShown(0, t0 + GULP / 2);
+    expect(s).toBeGreaterThan(0);
+    expect(s).toBeLessThan(1);
+    expect(preyShown(0, t0 + GULP + 1)).toBe(0);
+    expect(preyShown(0, t0 + RESPAWN + 1)).toBeGreaterThan(0);
+    expect(preyShown(0, t0 + RESPAWN + 3)).toBe(1);
+    // The next two bites are the sweep and the rise; the sweep takes up to three.
+    const t1 = t0 + BITE + 0.1;
+    const swept = eatNear(preyAt(5, t1).c, t1, 30);
+    expect(swept).toBeGreaterThan(0);
+    expect(swept).toBeLessThanOrEqual(3);
+    expect(biteAt(t1 + 0.1)?.style).toBe(1);
+    const t2 = t1 + BITE + 0.1;
+    expect(eatNear(preyAt(10, t2).c, t2)).toBeGreaterThan(0);
+    expect(biteAt(t2 + 0.1)?.style).toBe(2);
+    // Through every bite, every grain somewhere real.
+    for (const t of [t0 + 0.2, t0 + 0.5, t1 + 0.3, t2 + 0.4, t2 + 0.7]) {
+      for (const p of particles.slice(0, 600)) {
+        const { pos, rgb } = pieceAt(p, k, t);
+        for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+      }
+    }
+    // Once every bite is long over the schools are whole again: the sea never empties.
+    for (let i = 0; i < 60; i++) expect(preyShown(i, t2 + RESPAWN + 5)).toBe(1);
+    resetPrey();
+  });
+
+  it('parts the school round the hammerhead, never letting a fish inside its body', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    resetPrey();
+    setVariant(0, k);
+    const gap = (i: number, t: number) => {
+      const me = swimmer(t).c;
+      const c = preyAt(i, t).c;
+      return Math.hypot(c[0] - me[0], c[1] - me[1], c[2] - me[2]);
+    };
+    let closest = Number.POSITIVE_INFINITY;
+    for (let t = 0; t < 60; t += 0.5)
+      for (let i = 0; i < 60; i++) closest = Math.min(closest, gap(i, t));
+    expect(closest).toBeGreaterThan(0.5);
+    // A clownfish hunts nothing; every grain still somewhere real.
+    setVariant(2, k);
+    expect(SWIM_NAMES[2]).toBe('Clownfish');
+    for (const p of particles.slice(0, 200)) {
+      for (const v of pieceAt(p, k, 12).pos) expect(Number.isFinite(v)).toBe(true);
+    }
+    setVariant(0);
+  });
+
+  it('offers three seas, each drawn in full, the deep reaching down to the vents', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    expect(SEA_NAMES).toEqual(['Coral forest', 'Open water', 'Deep ocean']);
+    expect(hasSeas(k)).toBe(true);
+    expect(hasSeas(k - 1)).toBe(false);
+    for (let sea = 0; sea < 3; sea++) {
+      setSeaOf(sea, k);
+      for (const fish of [0, 4]) {
+        setVariant(fish, k);
+        for (const s of [0, 9.5, 31]) {
+          for (const p of particles) {
+            const { pos, rgb } = pieceAt(p, k, s);
+            for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+          }
+          const { eye, target } = pieceCamera(k, s);
+          for (const v of [...eye, ...target]) expect(Number.isFinite(v)).toBe(true);
+        }
+      }
+    }
+    setVariant(0, k);
+    // In the deep, with no one at the controls, the wander goes down the canyon toward the vents.
+    setSeaOf(2, k);
+    setSwim(false, null, [], 0, 0);
+    const lows = Array.from({ length: 300 }, (_, i) => swimmer(i).c[1]);
+    expect(Math.min(...lows)).toBeLessThan(DEEP_FLOOR + 10);
+    expect(Math.min(...lows)).toBeGreaterThan(DEEP_FLOOR);
+    // At the controls, S takes you down past the reef into the canyon.
+    for (let i = 1; i <= 900; i++) setSwim(true, null, ['s'], 1 / 60, 100 + i / 60);
+    expect(swimmer(115).c[1]).toBeLessThan(-14 - 20);
+    setSwim(false, null, [], 0, 0);
+    // The giant squid stays hidden most of the time, and shows now and then.
+    const seen = Array.from({ length: GIANT_CYCLE }, (_, t) => giantSeen(t));
+    expect(seen.filter((v) => v > 0.5).length).toBeLessThan(GIANT_CYCLE * 0.4);
+    expect(Math.max(...seen)).toBeGreaterThan(0.9);
+    // The open water's shoals and the deep's lantern fish are prey too.
+    expect(PREY).toBeGreaterThan(400);
+    // In the Journey, back to the coral forest: the wander keeps above the sand.
+    setSeaOf(1);
+    for (let t = 0; t < 120; t += 7) expect(swimmer(t).c[1]).toBeGreaterThan(-14);
   });
 });
