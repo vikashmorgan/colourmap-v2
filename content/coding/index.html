@@ -3964,8 +3964,8 @@ async function startSync() {
   try {
     const res = await fetch(NOTES_URL, { headers: { Accept: 'application/json' } });
     if (res.ok) {
-      // SQL's, Statistics', Dreams in Action's and the G menu's notes (keys sql|..., stats|..., dreams|... and grid|...) share this table and belong to their own places.
-      const serverNotes = (await res.json()).notes.map(fromServer).filter(n => !n.key.startsWith('sql|') && !n.key.startsWith('stats|') && !n.key.startsWith('dreams|') && !n.key.startsWith('grid|'));
+      // SQL's, Statistics', Pandas', Dreams in Action's and the G menu's notes (keys sql|..., stats|..., pandas|..., dreams|... and grid|...) share this table and belong to their own places.
+      const serverNotes = (await res.json()).notes.map(fromServer).filter(n => !n.key.startsWith('sql|') && !n.key.startsWith('stats|') && !n.key.startsWith('pandas|') && !n.key.startsWith('dreams|') && !n.key.startsWith('grid|'));
       const localOnly = noteList.filter(n => !n.id);
       // A note copied into the account by the database migration already has a twin there.
       const twin = n => serverNotes.some(s => s.key === n.key && s.body === n.body && s.kind === n.kind);
