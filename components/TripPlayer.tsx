@@ -522,8 +522,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       wake();
       const typing = e.target instanceof HTMLElement && e.target.closest('input, textarea');
       if (!typing) keysRef.current.add(e.key.toLowerCase());
-      if (playing() && e.key.startsWith('Arrow')) {
-        // While a step is played, the arrows steer.
+      if (playing() && (e.key.startsWith('Arrow') || e.key === ' ')) {
+        // While a step is played, the arrows steer and Space is the game's (a jump), not pause.
         e.preventDefault();
         return;
       }

@@ -32,6 +32,7 @@ import {
   mandala,
   PHASE_START,
   PHASES,
+  PLAYERS,
   PULSES,
   particleAt,
   phaseAt,
@@ -524,6 +525,46 @@ describe('the vegetal chapter', () => {
     const eye = pieceCamera(k, 5);
     expect(dist(eye.eye, me)).toBeLessThan(18);
     setBird(false, null, [], 0, 0);
+  });
+
+  it('walks the Dot Walker on the forest floor: W on, S back, Space jumps, its legs striding', () => {
+    const k = PHASES.findIndex((p) => p.id === 'bird');
+    expect(PLAYERS).toEqual(['Bird', 'Dot Walker']);
+    setVariant(1, k);
+    const step = (keys: string[], secs: number) => {
+      for (let i = 0; i < secs * 30; i++) setBird(true, null, keys, 1 / 30, 0);
+    };
+    step([], 0.1);
+    const ground = () => {
+      const c = flier(0).c;
+      return c[1] - hill(c[0], c[2]);
+    };
+    expect(ground()).toBeCloseTo(0, 5);
+    const z0 = flier(0).c[2];
+    step(['w'], 2);
+    // On, the way it faces, its feet on the hills.
+    const moved = Math.hypot(flier(0).c[0], flier(0).c[2] - z0);
+    expect(moved).toBeGreaterThan(4);
+    expect(ground()).toBeCloseTo(0, 5);
+    // Space: up, and back down.
+    setBird(true, null, [' '], 1 / 30, 0);
+    step([], 0.2);
+    expect(ground()).toBeGreaterThan(0.3);
+    step([], 2);
+    expect(ground()).toBeCloseTo(0, 5);
+    // A figure about as tall as a person among the trees, every grain real, legs apart mid-stride.
+    step(['w'], 0.3);
+    const me = flier(0).c;
+    const body = particles.filter((p) => p.c >= 0.975).map((p) => pieceAt(p, k, 5));
+    for (const { pos, rgb } of body)
+      for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+    const ys = body.map(({ pos }) => pos[1] - me[1]);
+    expect(Math.max(...ys)).toBeGreaterThan(3);
+    expect(Math.max(...ys)).toBeLessThan(4);
+    // The eye stands behind, at the walker's own height.
+    expect(pieceCamera(k, 5).eye[1] - me[1]).toBeLessThan(6);
+    setBird(false, null, [], 0, 0);
+    setVariant(0);
   });
 
   it('lays each ground under the 3D tree on the floor', () => {
