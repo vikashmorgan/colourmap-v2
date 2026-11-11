@@ -29,7 +29,7 @@ trip in numbered pieces, the step bar jumping to any of them.
 | 6 | Small fish | Nine hundred small blue fish, a paler flash as their sides turn toward the light, swimming together in ten ways picked by pills: **Ring** (a wheeling ring that gathers into a ball and opens again), **Bait ball**, **Tornado** (a funnel standing up from below), **Carousel** (a flat wheel), **River** (one long winding ribbon), **Figure eight**, **Fountain** (parting round a hunter and closing behind it), **Flash** (bursting outward at once, then gathering), **Wave** (a wide sheet a wave runs through) and **Two schools** (circling each other, merging, parting). 2026-11-10: "small fish do 10 types of motions movements and swarms. and do them in blue" | Face on |
 | 7 | Jellyfish | Six looks, picked by pills ("jelly fish do 5 kinds of jfish"): **Glow jellies** (thirteen, bells pulsing with a quick pull and a slow release, ten trailing tentacles and four frilled arms, violet and cyan), **Moon jellies** (wide flat saucers, four pink rings inside, a fringe of short fine tentacles), **Lion’s manes** (four big red bells, a long mane of tentacles in bunches and a curtain of frilled arms), **Box jellies** (pale cubes, quick, four bunches of thin tentacles from the corners) and **Comb jellies** (oval, no pulse, eight rows of combs shimmering in rainbow waves), and **Lanterns**, all five mixed, glowing red and warm orange like paper lanterns, their rims lit warmer (2026-11-11: "make one with all the jellyfish mixes but all red or warm orange, so it feels like lampions") | From below, looking up a little |
 | 8 | Reef | A channel through the reef, swum a little above the sand: corals on both sides grow up in plain view as we come and burst into bloom as we pass; far ahead, corals not yet grown stay dark instead of glowing as dots (2026-11-11: "I don't like the dots of light in the distance for the reef, for the corals that haven't grown yet"), their polyps opening wide and bright; a shoal of small fish swims on ahead down the channel, all one way, weaving, each fish a moment behind the ones ahead (2026-11-11: "in reef I want to see the corals blooming and the fish in a shoal, not in a tornado swarm"); jellyfish drift above, light shafts fall in. The channel never ends: passed corals go round to the far end | Down the middle of the channel |
-| 9 | Shark Sim | A game (2026-11-11: "after reef create a game where I can choose my fish, or a school of fish, and move through the corals, or above them where it feels a bit like stars and schools of fish are around me"), renamed Shark Sim (2026-11-11: "ws to go up and down in ocean swim. call it shark simulator. even i fother fish available. make hammer head default"). Pills pick who you are, the **Hammerhead** first, so you start as it: **Hammerhead**, **Swordfish**, **Clownfish**, **Yellow tang**, **Silver school** (you are the yellow one, twenty-three blue fish following) or **Bannerfish school**. You cruise on; the cursor's distance from the middle of the screen turns and tilts you (a small still zone in the middle), **W** / **S** (or ↑ ↓) rise and sink, **E** (or Shift) speeds up and **Q** slows to a drift (the pace moved off W and S to make room), **A** / **D** (or ← →) turn; while you swim the arrows steer instead of changing piece. The floor stops you diving through it. **Eating** (2026-11-11: "add ability for shark to eat small fish with 3 animations for it o give flow and variety"): the hammerhead and the swordfish hunt. Small fish part round the hunter's body, more the closer they are, and close up again once it has passed. When a fish comes within reach of the mouth a bite begins, the three taken by turns: a **lunge** (a surge forward, the head nodding as the jaw snaps; takes one), a **sweep** (the head whips to one side through the school and back; up to three) and a **rise** (a dip, then up from below with the mouth open, the school bursting wide; two). The jaw drops open and snaps shut a little past halfway; the camera keeps to the steady path, so only the shark moves. Each fish taken shrinks into the mouth in under half a second and comes back 14 s later, growing in where its school is, so the sea never empties. The other fish hunt nothing. **Seas**, a second row of pills (2026-11-11: "create diff ocean environments. as we had said yesterday. one with swarms shoals bancs de poissons tout outour quand on monte au dessus plus haut. aim is to make it beautiful. and then deep ocean with animals from deep as said yesterday. so the coral forest is just one environment"): **Coral forest**: coral trees stand round you on a field that wraps, so the reef never ends, fading at its edge; five schools drift through it, each a swirling ball at about your height; up in the open water the drifting snow becomes stars, a few brighter, and the sand dims. **Open water**: no floor in sight, shafts of sun slanting down from a rippling surface, specks glinting brighter near it, and eight great shoals at every height, each a wheel or a tornado of small silver-blue fish turning about its own middle, breathing in and out, flashing pale as they turn to the sun; rising takes you up through them. **Deep ocean**: a canyon drops from the reef, coral on its lip, its two walls going down 96 below the sand; just below the lip four mantas (our own: a wide swept diamond, the tips rising and falling in a wave running out along each wing, two horns ahead, a whip of a tail) loop slowly; lower, in the twilight, ten squid jet mantle first, arms opening and closing, blue sparks at their tips, and groups of lantern fish with rows of blue-green lights; deeper still a giant squid, five times their size, drifts out of the dark only now and then (about a fifth of a 75 s cycle); on the floor of the abyss five hydrothermal chimneys, glowing hot at their mouths, pale mats round their feet, hot water rising and curling as it cools. Going down, daylight fades from the rock and the mantas, and the snow gives way to blue-green sparks that flash now and then. Below the reef the canyon's walls hold you: you slide along them. In the Journey, with no one at the controls, the hammerhead wanders over the coral forest, up into the stars and down again; on its own in the Deep ocean it wanders down the canyon to the vents and back | Behind you and a little above, looking past you the way you swim |
+| 9 | Shark Sim | A game (2026-11-11: "after reef create a game where I can choose my fish, or a school of fish, and move through the corals, or above them where it feels a bit like stars and schools of fish are around me"), renamed Shark Sim (2026-11-11: "ws to go up and down in ocean swim. call it shark simulator. even i fother fish available. make hammer head default"). Pills pick who you are, the **Hammerhead** first, so you start as it: **Hammerhead**, **Swordfish**, **Clownfish**, **Yellow tang**, **Silver school** (you are the yellow one, twenty-three blue fish following) or **Bannerfish school**. You cruise on; the cursor's distance from the middle of the screen turns and tilts you (a small still zone in the middle), **W** / **S** (or ↑ ↓) rise and sink, **E** (or Shift) speeds up and **Q** slows to a drift (the pace moved off W and S to make room), **A** / **D** (or ← →) turn; while you swim the arrows steer instead of changing piece. The floor stops you diving through it. **Eating** (2026-11-11: "add ability for shark to eat small fish with 3 animations for it o give flow and variety"): the hammerhead and the swordfish hunt. Small fish part round the hunter's body, more the closer they are, and close up again once it has passed. **B** bites (it was automatic until round four, below), the three taken by turns: a **lunge** (a surge forward, the head nodding as the jaw snaps; takes one), a **sweep** (the head whips to one side through the school and back; up to three) and a **rise** (a dip, then up from below with the mouth open, the school bursting wide; two). The jaw drops open and snaps shut a little past halfway; the camera keeps to the steady path, so only the shark moves. Each fish taken shrinks into the mouth in under half a second and comes back 14 s later, growing in where its school is, so the sea never empties. The other fish hunt nothing. **Seas**, a second row of pills (2026-11-11: "create diff ocean environments. as we had said yesterday. one with swarms shoals bancs de poissons tout outour quand on monte au dessus plus haut. aim is to make it beautiful. and then deep ocean with animals from deep as said yesterday. so the coral forest is just one environment"): **Coral forest**: coral trees stand round you on a field that wraps, so the reef never ends, fading at its edge; five schools drift through it, each a swirling ball at about your height; up in the open water the drifting snow becomes stars, a few brighter, and the sand dims. **Open water**: no floor in sight, shafts of sun slanting down from a rippling surface, specks glinting brighter near it, and eight great shoals at every height, each a wheel or a tornado of small silver-blue fish turning about its own middle, breathing in and out, flashing pale as they turn to the sun; rising takes you up through them. **Deep ocean**: a canyon drops from the reef, coral on its lip, its two walls going down 96 below the sand; just below the lip four mantas (our own: a wide swept diamond, the tips rising and falling in a wave running out along each wing, two horns ahead, a whip of a tail) loop slowly; lower, in the twilight, ten squid jet mantle first, arms opening and closing, blue sparks at their tips, and groups of lantern fish with rows of blue-green lights; deeper still a giant squid, five times their size, drifts out of the dark only now and then (about a fifth of a 75 s cycle); on the floor of the abyss five hydrothermal chimneys, glowing hot at their mouths, pale mats round their feet, hot water rising and curling as it cools. Going down, daylight fades from the rock and the mantas, and the snow gives way to blue-green sparks that flash now and then. Below the reef the canyon's walls hold you: you slide along them. In the Journey, with no one at the controls, the hammerhead wanders over the coral forest, up into the stars and down again; on its own in the Deep ocean it wanders down the canyon to the vents and back | Behind you and a little above, looking past you the way you swim |
 
 The page opens on one piece alone, picked by name, as Vegetal's do
 (2026-11-10: "then do the ocean after vegetal"): it starts at its beginning
@@ -76,8 +76,8 @@ Added 2026-11-11, all in the Shark Sim:
   enough for the hammerhead, runs along the sand: one mouth, a trunk 14 long, then a fork into two
   branches that come out 18 apart side by side, 20 further on. Its walls are rings of coral close
   together, polyps tufting in and out, in the coral colours picked. No other coral grows in its way.
-  It stands at one place on the wrapping field, so you keep coming across it; you can swim through
-  its walls as well as down it.
+  It stands at one place on the wrapping field, so you keep coming across it. (Round four made it a
+  great round tube you cannot leave but by a mouth; see below.)
 - **Light** ("can u give me lighting. like liquid reflections on the sea floor as one mode I can
   activate.", "imagine u do a surface above. with waves of light like waves seen from below. beautiful
   hypnotic patterns."): a **Light** switch beside the speeds. On the sand of the Coral forest, a net of
@@ -114,7 +114,7 @@ rest"):
   close; an **amphora** lying in the tunnel's fork, a faint gold glint on it; a **trail of twelve gold
   coins** spinning down the deep canyon from its lip (the trail counts once every coin is taken); a
   **glowing egg** by the first vent. Swim through a treasure to take it: it bursts outward in a soft
-  lift of its light and is gone. A small count, "Finds 2 / 6", shows beside the boost bar while you
+  lift of its light and is gone. The Treasure dial of the cockpit (round four) counts them while you
   play. Three finds bring the **Golden hammerhead** into the fish pills. Kept for the visit only.
 - **Calm**: the longer you cruise without boosting or biting, the calmer you grow (twelve seconds to
   full, twice as quick when slow, half as quick on E), with a soft warm glow on you. Past the trust
@@ -129,6 +129,69 @@ rest"):
   keep your pace, and stays out while you are with it. In the Deep the first manta loops; follow it
   from behind and it keeps about ten ahead, waiting when you fall back and moving on when you close in.
 
+## Shark Sim, round four
+
+Added 2026-11-11, all in the Shark Sim, keys only as before (A / D turn, W / S rise and sink, E or
+Shift faster, Q or X slower, Space boost, B bite, Esc lets go, Enter takes back, F full screen):
+
+- **Breach and flight** ("ability to jump above water. as u go up u can press boost, swim super fast,
+  and u fly above water, open wings and become like a flying fish shark. flying shark, and then dive
+  again with wings closed like a lil torpedo, with water bubble effects around you"): boosting up into
+  the surface fast (W held, or already climbing) you leap out at a steep angle in a splash of drops and
+  a ring on the water. In the air your side fins open into wings and you glide on a long arc, W holding
+  you up a little longer, Space keeping your speed, A and D banking; S folds the wings and you dive
+  nose first, back in with a second splash and a trail of bubbles behind you for a few seconds. The
+  surface sheet shows near the top in every sea, so you see where you will break through. The eye stays
+  level-ish behind you in the air.
+- **B to bite** ("u can also use boost to bite. but u need to press a button to eat fish, not
+  automatic"): no more eating by itself. **B** snaps the jaw, by turns the lunge, the sweep and the
+  rise, whether or not a fish is there, and takes what is within reach of the mouth. **Boost + B** is
+  one long lunge: the body surges much further, the mouth reaches nearly twice as wide, and it can take
+  three. B bites even when you are calm (the calm no longer holds a bite back), and breaks the calm.
+- **Small fish flee in beauty** ("the fish run away faster when u get close in beautiful motion"):
+  they notice you sooner (from about 8 plus your length) and flee harder; each school turns away
+  together, every fish carried by its school's own flight as well as its own; and they curve round you
+  as they go, each school its own way round, opening like a fountain and closing behind you.
+- **Fish colours** ("ability to make all fish in blue-like tones, so it becomes more aesthetically
+  unified, or all fish in reddish colours, other options"): a **Fish colours** button beside the
+  **Coral colours** one, on every piece with fish, steps through **Natural fish**, **Blue fish**,
+  **Red fish**, **Gold fish** and **Silver fish**. Each fish keeps its own light and markings; only the
+  hue moves, a little different from fish to fish so a school still shimmers. Jellyfish, whales and
+  squid keep their own colours; the Golden hammerhead stays gold.
+- **Cockpit** ("meters like in an airplane cockpit for height, speed, fish eaten, treasures
+  discovered"): four small round dials low on the right while you steer, a gold needle and the reading
+  under each: **Height** (metres above the surface, below it how deep; from the floor of the sea you
+  are in), **Speed**, **Fish** eaten and **Treasure** found out of six. In full screen they sit beside
+  the boost bar. The boost bar stays; the "Finds" count gave way to the Treasure dial. On a phone the
+  dials shrink and sit at the top right.
+- **The great tunnel** ("make tunnel really big, like a big circular tunnel, not a small half-ass
+  tunnel. a tunnel with small red fish and corals, and rays of light passing through from openings. and
+  u can't get out, u have to go through"): in the Coral forest a round tube eighteen across lies on the
+  sand, still forking in a Y: one mouth, a trunk, then two branches curving out to two mouths thirty
+  apart. Its walls are rings of coral, polyps tufting inward; thirty small red fish swim up and down it
+  in little schools, parting round you; six openings in its roof let shafts of warm sunlight fall to
+  its floor. Swim in by a mouth and its walls hold you until you leave by a mouth; from outside they
+  keep you out. Inside, the eye comes in closer behind you.
+- **Regions** ("flocks of jellyfish in some parts of the fish world, different ones. like u can get
+  lost in parts where suddenly u get the manta rays, 40 of them, and can swim with them, or suddenly a
+  swarm of jellyfish"): beyond the field that wraps round you the sea is laid out in great squares 150
+  across: in some a flight of forty mantas, in others a swarm of one kind of jellyfish (glow, moon,
+  lion's mane, box or comb), in the rest nothing. Swim far enough and you come into one: some of the
+  sea's grains pour together into mantas or jellyfish, and pour back as you leave. The mantas fly with
+  you in a loose, wide formation, each following your path a moment behind, keeping your pace; the
+  jellyfish hang in a great cloud you swim through.
+- **Calamari** ("add some calamari. when u eat one u have a superboost. but the calamari can spit ink
+  on your screen and u can't see (like in Mario Kart)"): six squid in every sea, each on its own slow
+  round, jetting away mantle first in quick pulls as you come near. Bite one and the boost bar fills
+  and a **superboost** runs for five seconds, faster than a boost, the bar not running down. Come
+  close and now and then a squid squirts its ink: a dark cloud bursts behind it, and dark sepia blots
+  cover the screen, holding a moment, then fading over a few seconds.
+- **Lines on freedom** ("give me really deep quotes about freedom as I navigate through the games, not
+  just random stuff"): with Words on, while you swim, one line at a time comes and goes every sixteen
+  seconds, its author under it: Whitman, Rousseau (in G. D. H. Cole's 1913 translation), Thoreau,
+  Charlotte Brontë, Emerson, Melville, Tagore and Douglass, twelve lines in all, public-domain writers
+  only, each under fifteen words.
+
 ## Words
 
 Each piece has a line saying what you see and two lines of reflection:
@@ -140,6 +203,8 @@ Each piece has a line saying what you see and two lines of reflection:
 - small fish safer packed close, their flash a shared defence
 - jellyfish, more than five hundred million years old, with no brain
 - a reef: under a hundredth of the sea floor, a quarter of sea life
+
+In the Shark Sim the step's own lines give way, while you swim, to the lines on freedom above.
 
 ## Acceptance
 
@@ -165,7 +230,7 @@ Each piece has a line saying what you see and two lines of reflection:
   the next piece with no cut.
 - Shark Sim opens as the hammerhead; it moves at its cruising speed, turns toward the cursor gradually, rises on W and sinks on S,
   goes faster on E, and never through the floor.
-- A hunter's bites come by turns, lunge, sweep, rise; a fish eaten shrinks into the mouth, is gone, and is whole again within 17 s.
+- A hunter's bites come by turns on B, lunge, sweep, rise; a fish eaten shrinks into the mouth, is gone, and is whole again within 17 s.
 - No small fish is ever drawn inside the hammerhead's body.
 - Shark Sim offers three seas, Coral forest, Open water and Deep ocean; in the deep you can go down the canyon toward the vents,
   and the giant squid shows less than two fifths of the time.
@@ -177,7 +242,8 @@ Each piece has a line saying what you see and two lines of reflection:
   and the pace falls back; a fish eaten wins back 15% of it. Small fish dash away from a hunter.
 - Turning bends your fish's body, and it flows straight again once you stop turning; a bite opens the
   jaw wide by its middle and has it shut by four fifths through.
-- The coral tunnel has one mouth and two exits on the same side, at least two radii apart.
+- The coral tunnel has one mouth and two exits on the same side, at least two radii apart; once in,
+  you stay within its walls until you leave by a mouth, and from outside the walls keep you out.
 - Light switches on only in the Shark Sim; the caustics never glare.
 - The hammerhead school and each whale are sometimes fully there and sometimes gone.
 - Your own fish is never brighter than 0.35 in any channel.
@@ -185,10 +251,18 @@ Each piece has a line saying what you see and two lines of reflection:
   and are all the way out within fifteen seconds; a tube worm shuts within a third of a second.
 - A clam stays shut to a cruising fish and opens to a slow one; its pearl, the amphora, the whole coin
   trail and the egg each count as a find; three finds put the Golden hammerhead in the pills, all gold.
-- Thirteen seconds of cruising make you fully calm; calm, a hunter takes nothing; a boost breaks it.
+- Thirteen seconds of cruising make you fully calm; a boost or a bite breaks it.
 - A current carries you well past your own pace.
 - Beside a whale, it keeps your pace; far behind the deep's first manta, it slows; close behind, it quickens.
 - The garden's corals give no light before they begin; each step of growth takes longer than the last.
 - **Backgrounds** (2026-11-11: "check black as one preset for background but also do some deep blue backgrounds, with feeling of depth"): a button beside the speeds cycles **Black**, **Deep blue**, **Abyss** and **Twilight**; the blues darken from the top of the screen down, with a faint glow of light from above. Remembered on the device.
 - **Full screen** (2026-11-11: "make ability to really go full screen so I can get absorbed in the visual"): ⛶ beside Play (or F) fills the screen with the picture alone, every control and word hidden; Esc comes back.
+- Boosting up through the surface leaps you out; in the air the wings spread, S folds them, and you
+  come back in with a splash and a trail of bubbles.
+- Nothing is eaten without B; Boost + B lunges further and can take three.
+- Fish colours steps through five looks on every piece with fish and leaves jellyfish, whales and squid as they are.
+- While you steer, four dials read height, speed, fish eaten and treasures found, also in full screen.
+- Some far squares of the sea hold forty mantas, others a swarm of one kind of jellyfish.
+- Biting a calamari gives a five-second superboost; a calamari's ink veils the picture and fades within five seconds.
+- The freedom lines each carry their author and stay under fifteen words.
 - No new dependencies.

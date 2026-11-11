@@ -8,6 +8,7 @@ import {
   BLOOMS,
   beatAt,
   bendAt,
+  birdKinds,
   CELL_COUNT,
   camera,
   cellOf,
@@ -15,48 +16,67 @@ import {
   DRUMS,
   EYE_H,
   FIREWORK_FLOWERS,
+  FLOCKS,
   FLORETS,
   FLOWERS,
   FOREST_SLOTS,
+  FREEDOM,
   firework,
   fireworkShown,
   flier,
+  flockCentre,
   floret,
+  forestSlot,
   forestTrees,
   fruitOf,
   GROUND_3D,
   GROUND_FRUIT,
   GROUNDS,
   hill,
+  LANDS,
   makeParticles,
   mandala,
   PHASE_START,
   PHASES,
   PLAYERS,
+  PONDS,
   PULSES,
   particleAt,
   phaseAt,
   pieceAt,
   pieceCamera,
   pieceLength,
+  pieceProgress,
   pulseKind,
+  QUOTE_EVERY,
   REFL_TREES,
   ROAD_W,
   ROOT_BASE,
   reflTreeRoutes,
+  riverHalf,
+  riverX,
   rootSystem,
   rowOpen,
+  SEA_Y,
   STEP_COLOURS,
   setBird,
   setGold,
+  setLand,
   setSwitch,
   setVariant,
+  setWaterMood,
+  spreadReach,
   starBall,
   switchLabel,
   TOTAL,
   target,
   tree3d,
   treeSlot,
+  WATER_MOODS,
+  WORLD_TREE,
+  WORLD_TREE_H,
+  wetAt,
+  worldTreeRoutes,
 } from './vegetal';
 
 const particles = makeParticles(1500);
@@ -494,9 +514,9 @@ describe('the vegetal chapter', () => {
     const k = PHASES.findIndex((p) => p.id === 'bird');
     expect(PHASES[k]?.name).toBe('Bird Sim');
     const fly = (keys: string[], secs: number) => {
-      for (let i = 0; i < secs * 30; i++) setBird(true, null, keys, 1 / 30, 0);
+      for (let i = 0; i < secs * 30; i++) setBird(true, keys, 1 / 30, 0);
     };
-    setBird(true, null, [], 1 / 30, 0);
+    setBird(true, [], 1 / 30, 0);
     const y0 = flier(0).c[1];
     fly(['w'], 2);
     expect(flier(0).c[1]).toBeGreaterThan(y0 + 3);
@@ -511,20 +531,24 @@ describe('the vegetal chapter', () => {
     fly(['s'], 20);
     const c = flier(0).c;
     expect(c[1]).toBeGreaterThan(hill(c[0], c[2]) + 1);
-    // The forest round the bird: every grain somewhere real, the trees all gold, none green.
+    // The forest round the bird: every grain somewhere real, the trees all gold, none green. All
+    // but the far world tree and the sparrows on their wider field lie on the forest's width round it.
     const me = flier(0).c;
-    let nearby = 0;
     for (const p of particles) {
       const { pos, rgb } = pieceAt(p, k, 5);
       for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
       if (p.c >= 0.3 && p.c < 0.975) expect(rgb[1]).toBeLessThanOrEqual(rgb[0] + 1e-9);
-      if (Math.hypot(pos[0] - me[0], pos[2] - me[2]) < 61) nearby++;
+      const world = p.c >= 0.29 && p.c < 0.39;
+      const flock = p.c >= 0.18 && p.c < 0.215;
+      if (!world && !flock) {
+        expect(Math.abs(pos[0] - me[0])).toBeLessThan(60 + 30);
+        expect(Math.abs(pos[2] - me[2])).toBeLessThan(60 + 30);
+      }
     }
-    expect(nearby).toBeGreaterThan(particles.length * 0.8);
     // The eye rides behind the bird.
     const eye = pieceCamera(k, 5);
     expect(dist(eye.eye, me)).toBeLessThan(18);
-    setBird(false, null, [], 0, 0);
+    setBird(false, [], 0, 0);
   });
 
   it('walks the Dot Walker on the forest floor: W on, S back, Space jumps, its legs striding', () => {
@@ -532,7 +556,7 @@ describe('the vegetal chapter', () => {
     expect(PLAYERS).toEqual(['Bird', 'Dot Walker']);
     setVariant(1, k);
     const step = (keys: string[], secs: number) => {
-      for (let i = 0; i < secs * 30; i++) setBird(true, null, keys, 1 / 30, 0);
+      for (let i = 0; i < secs * 30; i++) setBird(true, keys, 1 / 30, 0);
     };
     // Before any key it strolls on by itself: never standing still at the start.
     const a0 = flier(1).c;
@@ -551,7 +575,7 @@ describe('the vegetal chapter', () => {
     expect(moved).toBeGreaterThan(4);
     expect(ground()).toBeCloseTo(0, 5);
     // Space: up, and back down.
-    setBird(true, null, [' '], 1 / 30, 0);
+    setBird(true, [' '], 1 / 30, 0);
     step([], 0.2);
     expect(ground()).toBeGreaterThan(0.3);
     step([], 2);
@@ -567,8 +591,222 @@ describe('the vegetal chapter', () => {
     expect(Math.max(...ys)).toBeLessThan(4);
     // The eye stands behind, at the walker's own height.
     expect(pieceCamera(k, 5).eye[1] - me[1]).toBeLessThan(6);
-    setBird(false, null, [], 0, 0);
+    setBird(false, [], 0, 0);
     setVariant(0);
+  });
+
+  describe('Bird Sim world (2026-11-11)', () => {
+    const k = PHASES.findIndex((p) => p.id === 'bird');
+    const big = makeParticles(9000);
+    const steer = (keys: string[], secs: number, t0 = 0) => {
+      let t = t0;
+      for (let i = 0; i < secs * 30; i++) {
+        t += 1 / 30;
+        setBird(true, keys, 1 / 30, t);
+      }
+      return t;
+    };
+    /** Each wing's reach out from the body, and its tip's height, sideways in the flat. */
+    const wings = (t: number) => {
+      const me = flier(t);
+      const side = [-me.f[2], 0, me.f[0]];
+      const l = Math.hypot(side[0] as number, side[2] as number);
+      return [-1, 1].map((w) => {
+        let span = 0;
+        let tip = 0;
+        for (const p of big) {
+          if (p.c < 0.975 || p.a < 0.35 || (p.a < 0.675 ? -1 : 1) !== w) continue;
+          const pos = pieceAt(p, k, t).pos;
+          const d = pos.map((v, i) => v - (me.c[i] as number));
+          const across =
+            ((d[0] as number) * (side[0] as number) + (d[2] as number) * (side[2] as number)) / l;
+          if (Math.abs(across) > Math.abs(span)) {
+            span = across;
+            tip = d[1] as number;
+          }
+        }
+        return { span: Math.abs(span), tip };
+      });
+    };
+
+    it('glides through a turn on open wings: no beat, the outer wing stretched, the inner lifted', () => {
+      setVariant(0);
+      let t = steer([], 2, 5);
+      // Flying straight the wings beat: the tips rise and fall.
+      const beat: number[] = [];
+      for (let i = 0; i < 6; i++) {
+        t = steer([], 0.1, t);
+        beat.push((wings(t)[1] as { tip: number }).tip);
+      }
+      expect(Math.max(...beat) - Math.min(...beat)).toBeGreaterThan(0.8);
+      expect(Math.abs(flier(t).steer)).toBeLessThan(0.05);
+      // Held in a left turn it glides: the wings stay open and nearly still, only a slight flex.
+      t = steer(['a'], 2, t);
+      expect(flier(t).steer).toBeLessThan(-0.9);
+      const held: { span: number; tip: number }[][] = [];
+      for (let i = 0; i < 6; i++) {
+        t = steer(['a'], 0.1, t);
+        held.push(wings(t));
+      }
+      const tips = held.map((w) => (w[1] as { tip: number }).tip);
+      expect(Math.max(...tips) - Math.min(...tips)).toBeLessThan(0.5);
+      expect(Math.max(...tips) - Math.min(...tips)).toBeGreaterThan(0);
+      const [left, right] = held[0] as { span: number; tip: number }[];
+      // The outer (right) wing reaches further than the inner (left), both open wide.
+      expect((right as { span: number }).span).toBeGreaterThan(
+        (left as { span: number }).span + 0.2,
+      );
+      expect((left as { span: number }).span).toBeGreaterThan(1.8);
+      // Banked into the turn, yet the inner wing is lifted: its tip no lower than the body.
+      expect((left as { tip: number }).tip).toBeGreaterThan(0);
+      // And the other way round to the right.
+      t = steer(['d'], 3, t);
+      const [l2, r2] = wings(t);
+      expect((l2 as { span: number }).span).toBeGreaterThan((r2 as { span: number }).span + 0.2);
+      // Straight again, it eases back to beating.
+      t = steer([], 3, t);
+      expect(Math.abs(flier(t).steer)).toBeLessThan(0.05);
+      setBird(false, [], 0, 0);
+    });
+
+    it('sends flocks of sparrows across the forest, each one cloud that moves and changes shape', () => {
+      expect(FLOCKS).toBeGreaterThanOrEqual(3);
+      const sparrows = big.filter((p) => p.c >= 0.18 && p.c < 0.215);
+      expect(sparrows.length).toBeGreaterThan(200);
+      for (let f = 0; f < FLOCKS; f++) {
+        const a = flockCentre(f, 10);
+        const b = flockCentre(f, 12);
+        for (const v of [...a, ...b]) expect(Number.isFinite(v)).toBe(true);
+        // On the move, several units a second, in the air.
+        expect(Math.hypot(b[0] - a[0], b[2] - a[2])).toBeGreaterThan(8);
+        expect(a[1]).toBeGreaterThan(5);
+      }
+      // Each sparrow somewhere real, and the flock's shape is never the same twice.
+      const spread = (t: number) => {
+        const ps = sparrows.slice(0, 120).map((p) => pieceAt(p, k, t));
+        for (const { pos, rgb } of ps)
+          for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+        const ys = ps.map((r) => r.pos[1]);
+        return Math.max(...ys) - Math.min(...ys);
+      };
+      expect(Math.abs(spread(10) - spread(13))).toBeGreaterThan(0.1);
+    });
+
+    it('stands a world tree far ahead, far taller than the forest, drawn in from far so it shows', () => {
+      const routes = worldTreeRoutes();
+      let top = 0;
+      for (const r of routes)
+        for (let i = 0; i < r.count; i++) top = Math.max(top, r.pts[i * 4 + 1] as number);
+      expect(top).toBeCloseTo(WORLD_TREE_H, 0);
+      expect(WORLD_TREE_H).toBeGreaterThan(200);
+      expect(Math.hypot(WORLD_TREE[0], WORLD_TREE[2])).toBeGreaterThan(300);
+      // From the start its grains are all real and inside the far fade, and it towers: seen from
+      // the eye its top stands high above the horizon.
+      setBird(false, [], 0, 0);
+      const eye = pieceCamera(k, 1).eye;
+      const tree = big.filter((p) => p.c >= 0.29 && p.c < 0.39);
+      let steepest = 0;
+      for (const p of tree) {
+        const { pos, rgb } = pieceAt(p, k, 1);
+        for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+        expect(dist(pos, eye)).toBeLessThan(250);
+        const rise = (pos[1] - eye[1]) / Math.hypot(pos[0] - eye[0], pos[2] - eye[2]);
+        steepest = Math.max(steepest, rise);
+      }
+      expect(Math.atan(steepest)).toBeGreaterThan(0.3);
+    });
+
+    it('lays a river and two sacred ponds in the land, the trees on dry ground, the water on them', () => {
+      expect(PONDS).toHaveLength(2);
+      // The river lies in a valley, and each pond's floor under its still water.
+      for (const z of [0, 17, 40, 77, 100]) {
+        const x = riverX(z);
+        expect(wetAt(x, z)).toBe(true);
+        expect(hill(x, z)).toBeLessThan(hill(x + riverHalf(z) + 8, z));
+      }
+      for (const p of PONDS) {
+        expect(wetAt(p.c[0], p.c[1])).toBe(true);
+        expect(hill(p.c[0], p.c[1])).toBeLessThan(p.level);
+      }
+      // No tree stands in the water; the trees by the ponds stand on their banks.
+      for (let j = 0; j < 20; j++) {
+        const at = forestSlot(j).at;
+        expect(wetAt(at[0], at[2])).toBe(false);
+      }
+      // Every grain of water lies on the river or a pond.
+      setWaterMood(0);
+      const water = big.filter((p) => p.c >= 0.07 && p.c < 0.12).slice(0, 200);
+      for (const p of water) {
+        const { pos } = pieceAt(p, k, 3);
+        expect(wetAt(pos[0], pos[2])).toBe(true);
+      }
+    });
+
+    it('moves the water by its mood: calm, ripples, waves rolling, rain sparkling where it lands', () => {
+      expect(WATER_MOODS).toEqual(['Calm', 'Ripples', 'Waves', 'Rain']);
+      setLand(1, k);
+      steer([], 0.2, 2);
+      const water = big.filter((p) => p.c < 0.12);
+      const look = (m: number) => {
+        setWaterMood(m);
+        const rs = water.map((p) => pieceAt(p, k, 9));
+        for (const { pos, rgb } of rs)
+          for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+        const ys = rs.map((r) => r.pos[1]);
+        return {
+          lift: Math.max(...ys) - Math.min(...ys),
+          brightest: Math.max(...rs.map((r) => r.rgb[0])),
+        };
+      };
+      const calm = look(0);
+      const ripples = look(1);
+      const waves = look(2);
+      const rain = look(3);
+      expect(calm.lift).toBeLessThan(0.01);
+      expect(ripples.lift).toBeGreaterThan(0.05);
+      expect(waves.lift).toBeGreaterThan(ripples.lift * 3);
+      // Rain: sparkles far brighter than still water.
+      expect(rain.brightest).toBeGreaterThan(calm.brightest * 2);
+      setWaterMood(0);
+      setLand(0, k);
+      setBird(false, [], 0, 0);
+    });
+
+    it('grows a Water forest out of open water, every tree over its reflection, spreading outward', () => {
+      expect(LANDS).toEqual(['Golden forest', 'Water forest']);
+      setLand(1, k);
+      const t0 = steer([], 0.1, 20);
+      // The trees stand in the water: eight kinds, two in blossom.
+      expect(forestSlot(3).at[1]).toBe(SEA_Y);
+      expect(birdKinds()).toHaveLength(8);
+      expect(birdKinds().filter((b) => b.bloom)).toHaveLength(2);
+      // Reflections lie under the water.
+      const mirrors = big.filter((p) => p.c >= 0.9 && p.c < 0.975).slice(0, 300);
+      const under = mirrors.filter((p) => pieceAt(p, k, t0).pos[1] < SEA_Y).length;
+      expect(under).toBeGreaterThan(mirrors.length * 0.8);
+      // It spreads: further out as time goes on.
+      expect(spreadReach(t0 + 20)).toBeGreaterThan(spreadReach(t0) + 60);
+      // The Journey goes back to the Golden forest.
+      setLand(0);
+      expect(forestSlot(3).at[1]).not.toBe(SEA_Y);
+      setBird(false, [], 0, 0);
+    });
+
+    it('shows a line about freedom at a time, with its author, and turns to the next', () => {
+      expect(FREEDOM.length).toBeGreaterThanOrEqual(10);
+      for (const q of FREEDOM) {
+        expect(q.line.split(/\s+/).filter((w) => w !== '/').length).toBeLessThanOrEqual(15);
+        expect(q.by.length).toBeGreaterThan(3);
+      }
+      expect(pieceLength(k)).toBe(QUOTE_EVERY);
+      pieceProgress(k, 1);
+      expect(PHASES[k]?.words).toEqual([FREEDOM[0]?.line, `— ${FREEDOM[0]?.by}`]);
+      expect(pieceProgress(k, QUOTE_EVERY * 2.5)).toBeCloseTo(0.5, 6);
+      expect(PHASES[k]?.words[0]).toBe(FREEDOM[2]?.line);
+      // The Journey starts from the first again.
+      setVariant(0);
+      expect(PHASES[k]?.words[0]).toBe(FREEDOM[0]?.line);
+    });
   });
 
   it('lays each ground under the 3D tree on the floor', () => {

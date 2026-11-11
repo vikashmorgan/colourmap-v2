@@ -35,7 +35,74 @@ played as one trip with **Journey**.
 | 12 | Full tree | The roots of piece 2 below and the tree of piece 4 above, all in gold, no green, meeting at a horizon line across the middle. Water climbs from the root tips to the crown (2026-11-10: "roots below and tree above, but all golden, with a horizon in the middle"). It holds still, the horizon straight across. The roots drop straight down from the horizon on a short neck and only then lean out (2026-11-10: "road can be taken off in the full tree, and roots begin more straight so they all get pushed a few cm lower"); the Road slider is gone. A **No road** switch beside the speeds takes the horizon line off, its grains going onto the roots (2026-11-11: "in full tree put ability to take off the road") | Still, face on, a little above the horizon |
 | 13 | Reflection | A tree standing still at the water's edge and the same tree in the water below, branch for branch, trembling with soft ripples; only the reflection moves (2026-11-10: "a reflection of it on the water with soft ripples below it, also symmetric but lower part moving, without rotation of the upper tree"). On its own, pills pick one of five trees, each over its own water (2026-11-10: "make 5 types of tree like this one, not a weeping willow like in the grid, and for each type of reflection make the water different, one where we can see soft ripples of stars on the water, etc., to make the water more visible"): **Oak** over soft ripples of stars, rings of light passing out through a field of small stars; **Pine**, in whorls, over water still as a mirror, its reflection barely moving; **Birch**, white bark with dark marks, in the rain, rings opening and fading; **Cherry** in blossom under the moon, a glittering path on the water and petals falling onto it; **Baobab** over water breathing out mist, its reflection blurred. The water has twice the grains it had, and the eye stands a little above it so its surface shows. All in gold (2026-11-11: "keep the reflection all golden, or golden and green as second option, no silver"): every tree, blossom, moon and water turned to gold at its own brightness, pale ones to a lighter gold, never silver or blue. A **Green** switch beside the speeds gives the trees green leaves on gold. The Journey plays the oak | Still, face on, a little above the water |
 | 14 | Bloom | A flower in slow motion (2026-11-10: "add a flower bloom to the visuals so it looks like a flower growing and blooming in slow motion"): the stem rises from the ground, two leaves unfurl, the bud swells in green sepals, the sepals fold back, three rows of rose petals open from the outside in and curl at their tips, then the stamens rise and pollen drifts up. 48 seconds. Softer (2026-11-11: "it starts too bright like corals used to. focus on the flower blooming. don't make the flower too bright as well"): each part shows only as it spreads out, so the seedling and bud are faint and never a bright point, and the open flower is a touch softer. On its own, pills pick one of five flowers (2026-11-11: "make 5 diff types of flowers and add a mode where it is just lots of flowers blooming like fireworks"): **Rose** (three rows, pink), **Lotus** (two rows of broad petals in a cup, pale with pink edges, a heart like a seed head), **Lily** (six long apricot petals curling right back, long stamens), **Daisy** (many thin white petals flat round a wide gold disc), **Poppy** (four red petals in a loose cup round a dark heart); and **Fireworks**: fourteen flowers opening all round in the dark, each on its own nine-second clock, bursting open, holding, sinking a little as they fade, then blooming again elsewhere as another of the five; no stems, only blooming | Slowly round the flower, rising with it; for Fireworks, back far enough to see them all |
-| 15 | Bird Sim | Your turn (2026-11-11: "ability to navigate as a bird in a forest of golden trees, and mushrooms and stuff, like the shark sim, call it bird sim"): you are a bird, its wings beating hard to climb or fly fast and held out to glide down, leaning into its turns. The cursor steers; **W** and **S** climb and dive, **A** and **D** turn, **Shift** flies faster. The forest wraps round you so it never ends: sixteen golden trees of four kinds on low hills, sap climbing them, mushrooms in rings at their feet (amber and ember red, some glowing from within, pale spots), fireflies drifting, stars over the canopy; the far trees fade so nothing pops in. The ground stops a dive. In the Journey the bird weaves between the trees on its own. Pills choose who plays (2026-11-11: "add a way that I can walk with dot walker when walking in the forest, so not bird but dot walker, that walks on the earth"): **Bird**, or the **Dot Walker**, the golden figure of dots from the Dot Walker Arena in the round, walking on the forest floor over the hills, arms swinging against its legs, its stride and swing growing with its pace, dust kicked up at its feet. W walks on, S steps back, the cursor or A and D turn, Shift runs, Space jumps; while a step is played Space belongs to the game, not to pause. With no one at the controls it strolls between the trees. As in the Ocean's Shark Sim, **Esc** lets go (the bird weaves, the walker strolls again, and Space pauses) and **Steer**, a click on the picture, Enter or W A S D E Q takes over again | Behind the bird and a little above; behind the walker over its shoulder, at its height |
+| 15 | Bird Sim | Your turn (2026-11-11: "ability to navigate as a bird in a forest of golden trees, and mushrooms and stuff, like the shark sim, call it bird sim"): you are a bird, its wings beating hard to climb or fly fast and held out to glide down, leaning into its turns. Keys only (2026-11-11: "controls should not be with mouse, only ASDWX"): **A** and **D** turn, **W** and **S** climb and dive, **Shift** flies faster, **X** slower. In a turn it glides on open wings (2026-11-11: "as I move left/right with the bird he gets into planer (glide) and keeps his wings open. not rigid — the wings open and get impacted by left or right movement"): the beat stops, the inner wing lifts, folds a little and curls at its tip, the outer one stretches long and low, a slight flex runs along both and the tail twists into the turn; straight again, it eases back to beating. The forest wraps round you so it never ends, and the world in it is described below. In the Journey the bird weaves between the trees on its own, gliding through each bend. Pills choose who plays (2026-11-11: "add a way that I can walk with dot walker when walking in the forest, so not bird but dot walker, that walks on the earth"): **Bird**, or the **Dot Walker**, the golden figure of dots from the Dot Walker Arena in the round, walking on the forest floor over the hills (on the water in the Water forest), arms swinging against its legs, its stride and swing growing with its pace, dust kicked up at its feet. W walks on, S steps back, A and D turn, Shift runs, Space jumps; while a step is played Space belongs to the game, not to pause. With no one at the controls it strolls between the trees. As in the Ocean's Shark Sim, **Esc** lets go (the bird weaves, the walker strolls again, and Space pauses) and **Steer**, Enter or W A S D E Q takes over again | Behind the bird and a little above; behind the walker over its shoulder, at its height |
+
+## The Bird Sim's world
+
+Asked for on 2026-11-11, all on the one cloud of grains, its shares moved
+round so the grain count and the frame cost stay as they were (about 6 ms a
+frame for the whole piece, measured offline, down from about 25: everything
+a frame shares is worked out once, and each grain's place and colour in one
+pass).
+
+- **Trees, and trees in bloom** ("and more types of trees. and blooming
+  trees"): eight kinds, two golden oaks, a pine in whorls, a tall birch, a
+  broad spreading tree, a baobab, a cherry and a plum. The cherry and the
+  plum blossom, a blush on gold, opening and closing over a slow season of
+  their own, petals drifting down onto the ground or the water and resting
+  there. Closed blossoms are packed small and dim, so they never glare.
+- **Rivers and sacred ponds** ("and rivers. and sacred ponds with
+  reflections and water effects"): a river winds across each width of the
+  forest in a valley of its own, its glints flowing downstream; two wide,
+  still ponds lie in flat hollows, two trees on the banks of each, across the
+  water from each other. The tree across the pond from the eye shows in it
+  upside down, trembling as the water moves; a pond is small beside its
+  trees, so its reflections are drawn shallower than a mirror's, as on water
+  with a skin of ripples, or from where the bird flies only the trees' feet
+  would fall in it. Where the reflection does not reach, its grains glint on
+  the pond's surface. No tree or mushroom stands in the water.
+- **Sparrows** ("add flocks of sparrows flying in bird sim"): three flocks
+  of a hundred-odd small warm specks crossing the forest and the sky, each
+  one cloud that stretches and gathers, folds and turns, waves running
+  through it, as in a murmuration. Each comes round again on a field twice
+  the forest's width and fades before it does.
+- **The world tree** ("a really really big tree in the distance, like an
+  arbre monde"): 300 units tall, about ten times the forest's trees, 460 units
+  ahead at the start, its roots spread over the land, a crown like a sky of
+  gold, leaves of light drifting down. From far it is drawn in toward the eye
+  and smaller in the same proportion, so it looks exactly as far as it is and
+  still shows through the haze; nearer than 110 units it is its full size,
+  and you can fly up through its branches. The forest's trees make room
+  round its trunk. It comes round again only 1,600 units on, fading out
+  before it does.
+- **Two lands** ("ability to go to a forest that grows on water, like the
+  cherry tree but more tree types, and spreads"): a row of pills over the
+  players, **Golden forest** (the hills, the river and the ponds) or
+  **Water forest**: open water over everything, every kind of tree growing
+  straight out of it over its own whole reflection, lotuses floating where
+  the mushrooms were. The Water forest spreads: it starts as a grove round
+  where it is chosen and widens outward, six units a second, saplings rising
+  and blossoming at its edge, open water beyond, so there is always an edge
+  to fly out to. The Journey keeps the Golden forest.
+- **Water moods** ("the water can have different effects: from waves, to
+  calm ripples, to rain with lots of sparkles growing on the water"): a
+  **Water** button beside the speeds steps through **Calm** (still as a
+  mirror, a slow shimmer), **Ripples** (rings spreading slowly, out from
+  each pond's middle), **Waves** (long swells rolling through, smallest in
+  the ponds), **Rain** (lots of single sparkles flaring where drops land,
+  rings blooming and fading, the fireflies falling as rain). It moves the
+  river, the ponds, the open water and the reflections alike, and stays as
+  chosen from step to step; the Journey is calm.
+
+**Words about freedom** (2026-11-11: "give me really deep quotes about
+freedom as I navigate through the games, not just random stuff"). The Bird
+Sim's words are lines about freedom, one at a time with its author, a new one
+every twelve seconds as you fly (its bar runs once per line). Only writers long
+in the public domain, quoted word for word as first printed, translations
+only old ones: Blake, Thoreau, Epictetus (George Long), Lovelace, Rousseau
+(G. D. H. Cole), Whitman, Mill, Byron, Emerson, Tagore. Each line is fifteen
+words or fewer. The Journey shows the first, Blake's "No bird soars too
+high, if he soars with his own wings."
 
 The two forests end the chapter (2026-11-09: "a forest with a road in the
 middle and we fly through it as the trees grow, in 3d. we are a bit above
@@ -84,6 +151,7 @@ reflection, plain and true:
 - leaves turning light into sugar
 - florets set at the golden angle, so the spirals come in Fibonacci numbers
 - seeds carried away by animals and wind
+- on the Bird Sim, lines about freedom from public-domain writers (above)
 
 The Words key hides them, as on the Journey.
 

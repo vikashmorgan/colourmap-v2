@@ -15,6 +15,7 @@ import {
   hasSap,
   hasSwitch,
   hasVariants,
+  LANDS,
   look,
   makeParticles,
   PHASE_START,
@@ -28,13 +29,16 @@ import {
   pieceProgress,
   STEP_COLOURS,
   setBird,
+  setLand,
   setSap,
   setSwitch,
   setVariant,
+  setWaterMood,
   switchLabel,
   TOTAL,
   variantLabel,
   variantNames,
+  WATER_MOODS,
   wordsShown,
 } from '@/lib/vegetal';
 
@@ -60,9 +64,13 @@ const TRIP: Trip = {
     flow: { has: hasSap, set: setSap },
     variants: { has: hasVariants, names: variantNames, set: setVariant, label: variantLabel },
     toggle: { has: hasSwitch, label: switchLabel, set: setSwitch },
-    // Bird Sim: you fly your own bird with the cursor and the keys; on foot Space is the Dot Walker's
+    // Bird Sim: you fly your own bird with the keys; on foot Space is the Dot Walker's
     // jump, not pause. Esc lets go: the bird weaves, the walker strolls, until you take over again.
     game: { has: hasBird, set: setBird, claims: [' '] },
+    // Bird Sim's lands, a row over the players (2026-11-11: "a forest that grows on water"), and its
+    // water's mood on a button beside the speeds (2026-11-11: "waves, calm ripples, rain").
+    scenes: { has: hasBird, names: LANDS, set: setLand, label: 'Land' },
+    cycle: { has: hasBird, names: WATER_MOODS, label: 'Water', set: setWaterMood },
   },
 };
 
