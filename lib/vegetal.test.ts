@@ -30,9 +30,12 @@ import {
   pieceAt,
   pieceCamera,
   pieceLength,
+  REFL_TREES,
   ROAD_W,
   ROOT_BASE,
+  reflTreeRoutes,
   rootSystem,
+  rowOpen,
   STEP_COLOURS,
   setGold,
   setVariant,
@@ -54,7 +57,7 @@ const at = (k: number, u: number) =>
   (PHASE_START[k] as number) + u * (PHASES[k]?.duration as number);
 
 describe('the vegetal chapter', () => {
-  it('has thirteen numbered pieces, from a cell to a tree in the water, each with words', () => {
+  it('has fourteen numbered pieces, from a cell to a flower blooming, each with words', () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       'cell',
       'roots',
@@ -69,6 +72,7 @@ describe('the vegetal chapter', () => {
       'forest',
       'full-tree',
       'reflection',
+      'bloom',
     ]);
     for (const p of PHASES) {
       expect(p.words).toHaveLength(2);
@@ -286,6 +290,62 @@ describe('the vegetal chapter', () => {
     expect(above).toBeGreaterThan(500);
     // The tree above does not turn: the eye stands still.
     expect(camera(at(k, 0.2))).toEqual(camera(at(k, 0.6)));
+  });
+
+  it('stands five trees over five waters in the reflection, each mirrored and none a willow', () => {
+    const k = PHASES.findIndex((p) => p.id === 'reflection');
+    const t = at(k, 0.7);
+    const all = makeParticles(3000);
+    expect(REFL_TREES.map((r) => r.name)).toEqual(['Oak', 'Pine', 'Birch', 'Cherry', 'Baobab']);
+    const shapes = REFL_TREES.map((_, i) => {
+      setVariant(i, k);
+      const routes = reflTreeRoutes(i);
+      expect(routes.length).toBeGreaterThan(10);
+      let water = 0;
+      let top = 0;
+      for (const p of all) {
+        const pos = target(k, p, 0.7, t);
+        const rgb = colour(k, p, 0.7, t);
+        for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+        // Nothing hangs down from the crown: the tree stays above the water (only the trunk's
+        // foot dips in), its reflection below.
+        if (p.i % 2 === 0) expect(pos[1]).toBeGreaterThan(-2);
+        if (Math.abs(pos[1]) < 0.6 && Math.max(...rgb) > 0.1) water++;
+        top = Math.max(top, pos[1]);
+      }
+      // The water shows: a good share of the grains light its surface.
+      expect(water).toBeGreaterThan(all.length * 0.08);
+      // Every tree fits the picture.
+      expect(top).toBeLessThan(42);
+      return top;
+    });
+    // Five different trees.
+    expect(new Set(shapes.map((h) => Math.round(h))).size).toBeGreaterThanOrEqual(4);
+    setVariant(0);
+  });
+
+  it('grows the bloom slowly: the stem first, then the bud, then the petals open from the outside in', () => {
+    const k = PHASES.findIndex((p) => p.id === 'bloom');
+    const height = (u: number) =>
+      Math.max(
+        ...particles.filter((p) => p.c < 0.1).map((p) => pieceAt(p, k, u * pieceLength(k)).pos[1]),
+      );
+    expect(height(0.05)).toBeLessThan(height(0.15));
+    expect(height(0.15)).toBeLessThan(height(0.3));
+    // Closed while the bud swells, open by the end, the outer row ahead of the inner.
+    expect(rowOpen(0, 0.4)).toBe(0);
+    expect(rowOpen(0, 0.85)).toBeGreaterThan(0.9);
+    expect(rowOpen(0, 0.65)).toBeGreaterThan(rowOpen(2, 0.65));
+    const spread = (u: number) =>
+      Math.max(
+        ...particles
+          .filter((p) => p.c >= 0.24 && p.c < 0.86)
+          .map((p) => {
+            const [x, , z] = pieceAt(p, k, u * pieceLength(k)).pos;
+            return Math.hypot(x, z);
+          }),
+      );
+    expect(spread(0.78)).toBeGreaterThan(spread(0.4) * 2);
   });
 
   it('lays each ground under the 3D tree on the floor', () => {

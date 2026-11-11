@@ -234,6 +234,15 @@ export const PHASES: VegetalPhase[] = [
     glow: 1,
     size: 0.8,
   },
+  {
+    id: 'bloom',
+    name: 'Bloom',
+    line: 'A flower in slow motion: the stem rises, leaves unfurl, the bud swells and its petals open row by row.',
+    words: ['Every flower opens from the outside in,', 'slowly enough that we forget to watch it.'],
+    duration: 48,
+    glow: 1,
+    size: 0.8,
+  },
 ];
 
 export const TOTAL = PHASES.reduce((s, p) => s + p.duration, 0);
@@ -269,6 +278,7 @@ export const STEP_COLOURS = [
   '#7fb86a',
   '#e0b452',
   '#9cc7d9',
+  '#f2a0b8',
 ];
 
 /*
@@ -548,6 +558,17 @@ export function along3(r: Route3, s: number): [number, number, number, number] {
 
 export const GROUND_3D = -20;
 
+/** How a 3D tree branches: forks off the trunk, how far each leans out and up, how it shortens. */
+export type Shape3 = {
+  first: number;
+  tilt: number;
+  lean: number;
+  up: number;
+  lenK: number;
+  three: number;
+};
+const OAK_SHAPE: Shape3 = { first: 4, tilt: 0.38, lean: 0.25, up: 0.22, lenK: 0.76, three: 0.3 };
+
 export function grow3(
   rng: () => number,
   o: Vec3,
@@ -558,6 +579,7 @@ export function grow3(
   turn: number,
   chain: number[],
   out: number[][],
+  shape: Shape3 = OAK_SHAPE,
 ) {
   const e1 = norm(cross(dir, Math.abs(dir[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]));
   const e2 = cross(dir, e1);
@@ -584,23 +606,24 @@ export function grow3(
     return;
   }
   // Four main limbs off the trunk, so the crown is full all round; then twos and threes.
-  const forks = chain.length === 0 ? 4 : depth > 2 && rng() < 0.3 ? 3 : 2;
+  const forks = chain.length === 0 ? shape.first : depth > 2 && rng() < shape.three ? 3 : 2;
   for (let i = 0; i < forks; i++) {
     // Each fork leans out round the branch's own axis, turning on by the golden angle each time.
     const a = turn + (i * TAU) / forks + (rng() - 0.5) * 0.4;
-    const tilt = 0.38 + 0.25 * rng();
+    const tilt = shape.tilt + shape.lean * rng();
     const side = add(mul(e1, Math.cos(a)), e2, Math.sin(a));
-    const nd = norm(add(add(mul(dir, Math.cos(tilt)), side, Math.sin(tilt)), [0, 0.22, 0]));
+    const nd = norm(add(add(mul(dir, Math.cos(tilt)), side, Math.sin(tilt)), [0, shape.up, 0]));
     grow3(
       rng,
       end,
       nd,
-      len * (0.76 + 0.08 * (rng() - 0.5)),
+      len * (shape.lenK + 0.08 * (rng() - 0.5)),
       width * 0.7,
       depth - 1,
       a + GOLDEN_ANGLE,
       next,
       out,
+      shape,
     );
   }
 }
@@ -785,15 +808,23 @@ const drum = () => DRUMS[drumKind] as Drum;
 export const hasDrums = (k: number) => PHASES[k]?.id === 'veins';
 
 /* The pieces' pills: the 3D tree's grounds and the veins' drums. */
-export const hasVariants = (k: number) => hasGround(k) || hasDrums(k);
-export const variantNames = (k: number) => (hasDrums(k) ? DRUMS.map((d) => d.name) : GROUNDS);
-export const variantLabel = (k: number) => (hasDrums(k) ? 'Drum' : 'Ground');
+export const hasVariants = (k: number) => hasGround(k) || hasDrums(k) || hasReflTrees(k);
+export const variantNames = (k: number) =>
+  hasDrums(k)
+    ? DRUMS.map((d) => d.name)
+    : hasReflTrees(k)
+      ? REFL_TREES.map((d) => d.name)
+      : GROUNDS;
+export const variantLabel = (k: number) =>
+  hasDrums(k) ? 'Drum' : hasReflTrees(k) ? 'Tree' : 'Ground';
 /** Pill i on piece k; with no piece (the Journey), the first of each. */
 export function setVariant(i: number, k?: number) {
   if (k === undefined) {
     groundKind = 0;
     drumKind = 0;
+    reflKind = 0;
   } else if (hasDrums(k)) drumKind = i;
+  else if (hasReflTrees(k)) reflKind = i;
   else if (hasGround(k)) groundKind = i;
 }
 
@@ -1458,6 +1489,165 @@ const forestPoint = (k: number, p: Particle, u: number, t: number) => forestAt(k
  * in the tree and one in the water, sharing everything but the side, so the
  * reflection is the tree turned over; only it moves, with the ripples.
  */
+/*
+ * Five trees, each over its own water (2026-11-10: "reflection: make 5 types
+ * of tree like this one, and for each type of reflection make the water
+ * different, one where we can see soft ripples of stars on the water etc., to
+ * make the water more visible"). No weeping willow. The water has twice the
+ * grains it had, and each kind moves in its own way.
+ */
+type ReflTree = {
+  name: string;
+  /** How far down a branch from its tip the leaves reach, and how big each tuft is. */
+  leafReach: number;
+  leafR: number;
+  leaf: RGB;
+  bark: RGB;
+  /** How much the reflection sways, and how bright it is beside the tree. */
+  sway: number;
+  shown: number;
+};
+export const REFL_TREES: ReflTree[] = [
+  // The oak, the first tree, over soft ripples of stars spreading from under it.
+  {
+    name: 'Oak',
+    leafReach: 0,
+    leafR: 1.8,
+    leaf: [0.62, 0.82, 0.38],
+    bark: [0.75, 0.55, 0.32],
+    sway: 0.7,
+    shown: 0.5,
+  },
+  // A pine in whorls, dark needles along its boughs, over water still as a mirror.
+  {
+    name: 'Pine',
+    leafReach: 7,
+    leafR: 0.9,
+    leaf: [0.3, 0.62, 0.46],
+    bark: [0.62, 0.38, 0.26],
+    sway: 0.12,
+    shown: 0.72,
+  },
+  // A tall white birch, light leaves, in the rain: rings open and fade across the water.
+  {
+    name: 'Birch',
+    leafReach: 3,
+    leafR: 1.1,
+    leaf: [0.82, 0.9, 0.45],
+    bark: [0.95, 0.93, 0.88],
+    sway: 0.45,
+    shown: 0.5,
+  },
+  // A cherry in blossom under the moon: a glittering path, petals falling onto it.
+  {
+    name: 'Cherry',
+    leafReach: 2,
+    leafR: 1.7,
+    leaf: [1, 0.64, 0.78],
+    bark: [0.55, 0.34, 0.32],
+    sway: 0.35,
+    shown: 0.42,
+  },
+  // A baobab, thick trunk and a small crown, over water breathing out mist.
+  {
+    name: 'Baobab',
+    leafReach: 0.6,
+    leafR: 1.4,
+    leaf: [0.6, 0.78, 0.36],
+    bark: [0.8, 0.66, 0.58],
+    sway: 0.9,
+    shown: 0.32,
+  },
+];
+let reflKind = 0;
+const reflTree = () => REFL_TREES[reflKind] as ReflTree;
+export const hasReflTrees = (k: number) => PHASES[k]?.id === 'reflection';
+
+/** How each tree grows: forks off the trunk, how far each fork leans out, and how it shortens. */
+const TREE_SHAPES: { seed: number; len: number; width: number; depth: number; shape: Shape3 }[] = [
+  {
+    seed: 9,
+    len: 9,
+    width: 0.9,
+    depth: 7,
+    shape: { first: 3, tilt: 0.3, lean: 0.15, up: 0.3, lenK: 0.78, three: 0.2 },
+  },
+  {
+    seed: 13,
+    len: 9,
+    width: 1.4,
+    depth: 7,
+    shape: { first: 4, tilt: 0.75, lean: 0.3, up: 0.02, lenK: 0.8, three: 0.35 },
+  },
+  {
+    seed: 17,
+    len: 17,
+    width: 4.5,
+    depth: 5,
+    shape: { first: 5, tilt: 0.9, lean: 0.3, up: 0.15, lenK: 0.6, three: 0.5 },
+  },
+];
+
+/** A pine: a straight trunk and whorls of boughs that droop and turn up at the ends, shorter higher up. */
+function pineRoutes(): Route3[] {
+  const G = GROUND_3D;
+  const H = 40;
+  const trunk = (to: number) => {
+    const raw: number[] = [];
+    for (let y = 0; y <= to; y += 0.5) raw.push(0, G + y, 0, 1.3 * (1 - (0.85 * y) / H));
+    return raw;
+  };
+  const routes: Route3[] = [resample3(trunk(H))];
+  for (let k = 0; k < 12; k++) {
+    const h = 10 + k * 2.5;
+    const L = 12 * (1 - k / 12) + 1.4;
+    for (let i = 0; i < 5; i++) {
+      const a = k * GOLDEN_ANGLE + (i * TAU) / 5;
+      const raw = trunk(h);
+      for (let j = 1; j <= 10; j++) {
+        const f = j / 10;
+        raw.push(
+          Math.cos(a) * L * f,
+          G + h - 0.3 * L * f + 0.22 * L * f * f,
+          Math.sin(a) * L * f,
+          0.3 * (1 - f) + 0.05,
+        );
+      }
+      routes.push(resample3(raw));
+    }
+  }
+  return routes;
+}
+
+const reflRoutes: (Route3[] | null)[] = REFL_TREES.map(() => null);
+/** The routes of reflection tree `kind`, each from the foot of the trunk to one tip. */
+export function reflTreeRoutes(kind = reflKind): Route3[] {
+  const cached = reflRoutes[kind];
+  if (cached) return cached;
+  let routes: Route3[];
+  if (kind === 0) routes = tree3d();
+  else if (kind === 1) routes = pineRoutes();
+  else {
+    const s = TREE_SHAPES[kind - 2] as (typeof TREE_SHAPES)[0];
+    const out: number[][] = [];
+    grow3(
+      seeded(s.seed),
+      [0, GROUND_3D, 0],
+      [0, 1, 0],
+      s.len,
+      s.width,
+      s.depth,
+      0,
+      [],
+      out,
+      s.shape,
+    );
+    routes = out.map(resample3);
+  }
+  reflRoutes[kind] = routes;
+  return routes;
+}
+
 type ReflSeed = { under: boolean; c: number; a: number; b: number; d: number; run: number };
 function reflSeed(p: Particle): ReflSeed {
   const run = Math.floor(p.i / 2);
@@ -1471,28 +1661,126 @@ function reflSeed(p: Particle): ReflSeed {
   };
 }
 type ReflRole = 'water' | 'wood' | 'leaf';
-const reflRole = (c: number): ReflRole => (c < 0.1 ? 'water' : c < 0.78 ? 'wood' : 'leaf');
+const reflRole = (c: number): ReflRole => (c < 0.2 ? 'water' : c < 0.78 ? 'wood' : 'leaf');
 const REFL_K = 0.75;
+/** The moon, high over the cherry's water. */
+const MOON: Vec3 = [24, 30, -45];
+const RAIN_DROPS = 40;
+const RAIN_EVERY = 3;
+/** A falling cherry petal: how far down from the crown to the water it has come. */
+const petalFall = (run: number, t: number) => frac(t * 0.04 + hash(run, 105));
+const isPetal = (run: number, d: number) => reflKind === 3 && d < 0.12 && hash(run, 106) < 0.9;
+
+/** Grain p of the water, in the kind under the tree chosen. Each grain of a pair has its own place. */
+function waterPoint(p: Particle, t: number): Vec3 {
+  const { under, a, b, d } = reflSeed(p);
+  const ua = under ? frac(a * 7.31 + 0.13) : a;
+  const ub = under ? frac(b * 5.17 + 0.29) : b;
+  const ud = under ? frac(d * 3.73 + 0.41) : d;
+  const x = (ua - 0.5) * 130;
+  const z = (ub - 0.5) * 60 - 5;
+  switch (reflKind) {
+    case 1:
+      // Mirror still: long faint lines lying across the water, barely drifting.
+      return [wrap(x + 65 + t * 0.3, 130) - 65, 0, (Math.floor(ub * 16) / 16 - 0.5) * 60 - 5];
+    case 2: {
+      // Rain: each drop opens a ring that widens and fades; a third of the grains lie still.
+      if (ud < 0.3) return [x, 0, z];
+      const n = Math.floor(ua * RAIN_DROPS);
+      const age = t / RAIN_EVERY + hash(n, 107);
+      const drop = Math.floor(age);
+      const r = 0.3 + 5 * frac(age);
+      const th = ub * TAU;
+      return [
+        (hash(n * 131 + drop, 108) - 0.5) * 100 + Math.cos(th) * r,
+        0,
+        (hash(n * 131 + drop, 109) - 0.5) * 50 - 5 + Math.sin(th) * r * 0.9,
+      ];
+    }
+    case 3: {
+      if (ud < 0.22) {
+        // The moon above, and the same moon in the water below.
+        const th = ua * TAU;
+        const r = 3 * Math.sqrt(ub);
+        return [
+          MOON[0] + Math.cos(th) * r,
+          (under ? -1 : 1) * (MOON[1] + Math.sin(th) * r),
+          MOON[2],
+        ];
+      }
+      // The glitter path, from under the moon toward the eye, widening as it comes.
+      const f = ub;
+      return [lerp(MOON[0], 0, f) + (ua - 0.5) * (1.5 + 9 * f), 0, lerp(MOON[2], 50, f)];
+    }
+    case 4:
+      // Mist: grains hanging low over the water, drifting; the rest faint on the surface.
+      if (under) return [x, 0, z];
+      return [
+        wrap(x + 65 + t * 0.4, 130) - 65,
+        0.3 + 4 * ud * ud + Math.sin(t * 0.2 + x * 0.1) * 0.3,
+        z,
+      ];
+    default:
+      // Soft ripples of stars: a field of small stars on the water, rings of light passing out through it.
+      return [x, Math.sin(Math.hypot(x, z) * 0.7 - t * 1.1) * 0.12, z];
+  }
+}
+
+function waterColour(p: Particle, t: number): RGB {
+  const { under, a, b, d, run } = reflSeed(p);
+  const pos = waterPoint(p, t);
+  const ud = under ? frac(d * 3.73 + 0.41) : d;
+  switch (reflKind) {
+    case 1:
+      return scale(mix(WATER, SUN, 0.5), 0.2 + 0.05 * Math.sin(t * 0.5 + run));
+    case 2: {
+      if (ud < 0.3) return scale(WATER, 0.14);
+      const n = Math.floor((under ? frac(a * 7.31 + 0.13) : a) * RAIN_DROPS);
+      const age = frac(t / RAIN_EVERY + hash(n, 107));
+      return scale(mix(WATER, SUN, 0.4), 0.15 + 0.75 * (1 - age) ** 1.5);
+    }
+    case 3: {
+      if (ud < 0.22) return scale([0.98, 0.97, 0.88], under ? 0.5 : 0.85);
+      const flick = Math.max(0, Math.sin(t * 3 + run * 2.1 + b * 9)) ** 6;
+      return scale([0.95, 0.95, 0.85], 0.12 + 0.85 * flick);
+    }
+    case 4:
+      return scale([0.85, 0.9, 0.95], under ? 0.12 : 0.16 + 0.06 * Math.sin(t * 0.3 + run));
+    default: {
+      const wave = Math.max(0, Math.sin(Math.hypot(pos[0], pos[2] + 5) * 0.7 - t * 1.1)) ** 4;
+      const tw = 0.7 + 0.3 * Math.sin(t * 2.3 + run * 1.7);
+      return scale(mix(WATER, SUN, 0.55), (0.14 + 0.6 * wave) * tw);
+    }
+  }
+}
 
 function reflectionPoint(p: Particle, u: number, t: number): Vec3 {
   const { under, c, a, b, d, run } = reflSeed(p);
   const role = reflRole(c);
-  if (role === 'water') {
-    // The surface: fine lines of light along the water, drifting gently.
-    const x = (a - 0.5) * 120;
-    const z = (b - 0.5) * 50;
-    return [x + Math.sin(t * 0.3 + z) * 0.4, under ? -0.05 : 0.05, z];
-  }
-  const routes = tree3d();
+  if (role === 'water') return waterPoint(p, t);
+  const tree = reflTree();
+  const routes = reflTreeRoutes();
   const route = routes[Math.floor(a * routes.length)] as Route3;
   const len = length3(route);
   const grown = 0.05 + 0.95 * smooth(u / 0.42);
   let q: Vec3;
   if (role === 'leaf') {
-    const [x, y, z] = along3(route, len * grown);
+    const reach = tree.leafReach * hash(run, 110);
+    const [x, y, z] = along3(route, Math.max(0, len * grown - reach));
     const s = fibonacciSphere(run % 157, 157);
-    const r = 1.8 * Math.cbrt(b) * smooth((u - 0.3) / 0.2);
+    const r = tree.leafR * Math.cbrt(b) * smooth((u - 0.3) / 0.2);
     q = [x + s[0] * r, y + s[1] * r * 0.8, z + s[2] * r];
+    if (isPetal(run, d)) {
+      // A blossom petal drifting down from its place in the crown to the water, and resting there.
+      const f = petalFall(run, t);
+      const y0 = q[1];
+      const fall = Math.min(1, f * 1.25);
+      q = [
+        q[0] + Math.sin(t * 0.7 + run) * 3 * fall,
+        lerp(y0, GROUND_3D + 0.1, fall * fall),
+        q[2] + Math.cos(t * 0.5 + run) * 2 * fall,
+      ];
+    }
   } else {
     const s = len * grown * wrap(b + sapDir(c < 0.44) * t * 0.04 * (0.7 + 0.6 * d), 1);
     const [x, y, z, w] = along3(route, s);
@@ -1502,33 +1790,204 @@ function reflectionPoint(p: Particle, u: number, t: number): Vec3 {
   const y = (q[1] - GROUND_3D) * REFL_K;
   const z = q[2] * REFL_K;
   if (!under) return [x, y, z];
-  // Turned over in the water, swaying more the deeper it goes: soft ripples.
-  const deep = smooth(y / 10);
+  // Turned over in the water, swaying more the deeper it goes: ripples, as strong as the water moves.
+  const deep = smooth(y / 10) * tree.sway;
+  const mist = reflKind === 4 ? 1 : 0;
   return [
-    x + Math.sin(y * 0.9 - t * 1.3) * 0.7 * deep,
-    -y + Math.sin(x * 0.5 + t * 0.9) * 0.25 * deep,
-    z,
+    x + Math.sin(y * 0.9 - t * 1.3) * deep + mist * Math.sin(t * 0.7 + run) * 0.8,
+    -y + Math.sin(x * 0.5 + t * 0.9) * 0.35 * deep,
+    z + mist * Math.cos(t * 0.6 + run * 1.3) * 0.8,
   ];
 }
 
 function reflectionColour(p: Particle, t: number): RGB {
-  const { under, c, b, run } = reflSeed(p);
+  const { under, c, b, d, run } = reflSeed(p);
+  const role = reflRole(c);
+  if (role === 'water') return waterColour(p, t);
+  const tree = reflTree();
   const tw = 0.7 + 0.3 * Math.sin(t * 1.7 + run * 0.37);
   let rgb: RGB;
-  switch (reflRole(c)) {
-    case 'water':
-      rgb = scale(mix(WATER, SUN, 0.4), 0.16 + 0.22 * Math.sin(t * 1.2 + run) ** 2);
-      break;
-    case 'leaf':
-      rgb = scale(mix(LEAF, SUGAR, 0.35 + 0.4 * b), 0.7 * tw);
-      break;
-    default:
-      rgb = scale(mix(BARK, GOLD, b), 0.68 * tw);
+  if (role === 'leaf') {
+    rgb =
+      reflKind === 0
+        ? scale(mix(LEAF, SUGAR, 0.35 + 0.4 * b), 0.7 * tw)
+        : scale(mix(tree.leaf, [1, 0.95, 0.9], 0.3 * b), 0.7 * tw);
+    if (isPetal(run, d)) rgb = scale([1, 0.78, 0.86], 0.8);
+  } else if (reflKind === 2) {
+    // The birch's white bark, with its dark marks.
+    rgb = scale(hash(run, 111) < 0.18 ? [0.3, 0.26, 0.24] : tree.bark, 0.6 * tw);
+  } else {
+    rgb = scale(mix(tree.bark, GOLD, reflKind === 0 ? b : 0.3 * b), 0.68 * tw);
   }
   // The reflection is fainter and a little cooler, glinting as the ripples catch the light.
-  if (!under || reflRole(c) === 'water') return rgb;
+  if (!under) return rgb;
   const glint = 0.75 + 0.25 * Math.sin(t * 2 + run * 1.3);
-  return scale(mix(rgb, WATER, 0.25), 0.5 * glint);
+  return scale(mix(rgb, WATER, 0.25), tree.shown * glint);
+}
+
+/* ---------- 14. Bloom: a flower growing and opening, in slow motion ---------- */
+
+/*
+ * 2026-11-10: "add a flower bloom to the visuals so it looks like a flower
+ * growing and blooming in slow motion". A stem rises from the ground, two
+ * leaves unfurl, a bud swells in its green sepals, the sepals fold back, the
+ * petals open row by row from the outside in, and last the stamens rise and
+ * pollen drifts up.
+ */
+const BLOOM_GROUND = -16;
+const BLOOM_TOP = 6;
+type BloomRole = 'stem' | 'leaf' | 'sepal' | 'petal' | 'stamen' | 'pollen';
+const bloomRole = (p: Particle): BloomRole =>
+  p.c < 0.1
+    ? 'stem'
+    : p.c < 0.18
+      ? 'leaf'
+      : p.c < 0.24
+        ? 'sepal'
+        : p.c < 0.86
+          ? 'petal'
+          : p.c < 0.95
+            ? 'stamen'
+            : 'pollen';
+/** The stem's gentle S, at height y. */
+const stemAt = (y: number): Vec3 => [
+  0.9 * Math.sin((y - BLOOM_GROUND) * 0.12),
+  y,
+  0.5 * Math.sin((y - BLOOM_GROUND) * 0.07),
+];
+/** How high the stem has grown, u through the piece. */
+const stemTop = (u: number) => lerp(BLOOM_GROUND + 0.5, BLOOM_TOP, smooth(u / 0.32));
+/** The rows of petals, outside in: how many, how long, how wide, how far each opens and curls. */
+const PETAL_ROWS = [
+  { n: 8, len: 6.5, w: 2.6, open: 1.4, curl: 0.6 },
+  { n: 8, len: 5.5, w: 2.3, open: 1.0, curl: 0.45 },
+  { n: 5, len: 4.2, w: 1.9, open: 0.6, curl: 0.3 },
+];
+/** How open petal row `row` is, u through the piece: the outer row first. */
+export const rowOpen = (row: number, u: number) => smooth((u - 0.5 - 0.07 * row) / 0.28);
+/** How big the bud has grown. */
+const budSize = (u: number) => 0.15 + 0.85 * smooth((u - 0.18) / 0.3);
+
+/**
+ * A point on a petal-like blade from the head's centre h: `phi` round the stem, length `len`,
+ * leaning `beta` from upright and curling `curl` more toward its tip; q along it, w across.
+ */
+function blade(
+  h: Vec3,
+  phi: number,
+  r0: number,
+  len: number,
+  wide: number,
+  beta: number,
+  curl: number,
+  q: number,
+  w: number,
+): Vec3 {
+  const th = beta + (curl * q * q) / 3;
+  const across = w * wide * Math.sin(Math.PI * q ** 0.75) * 0.5;
+  const cup = w * w * wide * 0.15;
+  const radial = r0 + len * q * Math.sin(th) - cup * Math.cos(th);
+  const up = len * q * Math.cos(th) + cup * Math.sin(th);
+  return [
+    h[0] + Math.cos(phi) * radial - Math.sin(phi) * across,
+    h[1] + up,
+    h[2] + Math.sin(phi) * radial + Math.cos(phi) * across,
+  ];
+}
+
+function bloomPoint(p: Particle, u: number, t: number): Vec3 {
+  const top = stemTop(u);
+  const h = stemAt(top);
+  const size = budSize(u);
+  const breath = 1 + 0.015 * Math.sin(t * 0.3);
+  switch (bloomRole(p)) {
+    case 'stem': {
+      const d = fibonacciSphere(p.i % 97, 97);
+      return add(stemAt(lerp(BLOOM_GROUND, top, p.b)), d, 0.35 * Math.sqrt(p.d));
+    }
+    case 'leaf': {
+      // Two leaves, a third and half way up, unfurling from against the stem.
+      const k = p.a < 0.5 ? 0 : 1;
+      const y = Math.min(top, lerp(BLOOM_GROUND, BLOOM_TOP, k ? 0.52 : 0.34));
+      const open = smooth((u - 0.12 - 0.06 * k) / 0.25);
+      return blade(
+        stemAt(y),
+        0.6 + k * Math.PI,
+        0.2,
+        0.5 + 7 * open,
+        1.2 + 1.8 * open,
+        lerp(0.12, 1.05, open),
+        0.8 * open,
+        p.b,
+        p.d * 2 - 1,
+      );
+    }
+    case 'sepal': {
+      const m = Math.floor(p.a * 5);
+      const open = smooth((u - 0.45) / 0.12);
+      return blade(
+        h,
+        (m / 5) * TAU + 0.3,
+        0.5,
+        3.2 * (0.4 + 0.6 * size),
+        1.3,
+        lerp(0.15, 2, open),
+        0.3,
+        p.b,
+        p.d * 2 - 1,
+      );
+    }
+    case 'petal': {
+      const row = p.a < 0.42 ? 0 : p.a < 0.8 ? 1 : 2;
+      const R = PETAL_ROWS[row] as (typeof PETAL_ROWS)[0];
+      const m = Math.floor(hash(p.i, 112) * R.n);
+      const open = rowOpen(row, u);
+      const phi = ((m + row * 0.5) / R.n) * TAU + 0.2 * row;
+      return blade(
+        h,
+        phi,
+        0.5 + 0.5 * open,
+        R.len * size * breath,
+        R.w * (0.6 + 0.7 * open),
+        lerp(0.1, R.open, open),
+        R.curl * open,
+        p.b,
+        p.d * 2 - 1,
+      );
+    }
+    case 'stamen': {
+      // Fine threads rising from the heart once the petals are open, each with a bright tip.
+      const n = Math.floor(p.a * 16);
+      const rise = smooth((u - 0.72) / 0.14);
+      return blade(h, n * GOLDEN_ANGLE, 0.2, 0.2 + 2.6 * rise, 0.06, 0.35, 0.2, p.b, p.d * 2 - 1);
+    }
+    default: {
+      const f = frac(p.b + t * 0.05);
+      const a = p.d * TAU;
+      return add(h, [Math.sin(a) * 6 * f, 2 + 8 * f, Math.cos(a) * 6 * f]);
+    }
+  }
+}
+
+function bloomColour(p: Particle, u: number, t: number): RGB {
+  const tw = 0.85 + 0.15 * Math.sin(t * 1.3 + p.i * 0.37);
+  switch (bloomRole(p)) {
+    case 'stem':
+      return scale([0.42, 0.7, 0.36], 0.5 * tw);
+    case 'leaf':
+      return scale(mix([0.35, 0.65, 0.3], [0.62, 0.86, 0.42], p.b), 0.6 * tw);
+    case 'sepal':
+      return scale([0.42, 0.68, 0.34], 0.55 * tw);
+    case 'petal': {
+      const row = p.a < 0.42 ? 0 : p.a < 0.8 ? 1 : 2;
+      const deep = mix([0.92, 0.36, 0.55], [0.8, 0.22, 0.42], row / 2);
+      return scale(mix(deep, [1, 0.88, 0.9], p.b ** 0.7), 0.24 * tw);
+    }
+    case 'stamen':
+      return p.b > 0.88 ? scale([1, 0.8, 0.3], 0.95 * tw) : scale([1, 0.9, 0.7], 0.45);
+    default:
+      return scale([1, 0.88, 0.5], 0.8 * tw * smooth((u - 0.8) / 0.1));
+  }
 }
 
 /* ---------- 12. Above and below: roots and tree, all gold, about the horizon ---------- */
@@ -1637,6 +2096,8 @@ function form(k: number, p: Particle, u: number, t: number): Vec3 {
       return belowPoint(p, u, t);
     case 12:
       return reflectionPoint(p, u, t);
+    case 13:
+      return bloomPoint(p, u, t);
     default:
       return forestPoint(k, p, u, t);
   }
@@ -1655,7 +2116,7 @@ function form(k: number, p: Particle, u: number, t: number): Vec3 {
  * story and the forests are flown through, so their time always runs.
  */
 // The fruit and the two roads (8–10) grow as they go and never use theirs.
-const FORMED = [0.55, 0.45, 0.45, 0.5, 0, 0.7, 0.45, 0.4, 0, 0, 0, 0.45, 0.45];
+const FORMED = [0.55, 0.45, 0.45, 0.5, 0, 0.7, 0.45, 0.4, 0, 0, 0, 0.45, 0.45, 0];
 const BALL_R = 20;
 const isFruit = (k: number) => PHASES[k]?.id === 'fruit';
 const runsOn = (k: number) => isFruit(k) || isForest(k);
@@ -1857,6 +2318,8 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
       return forestColour(k, p, u, t, twinkle);
     case 12:
       return reflectionColour(p, t);
+    case 13:
+      return bloomColour(p, u, t);
     case 11:
       // All gold: no green anywhere.
       switch (belowRole(p)) {
@@ -1977,9 +2440,16 @@ export function eyeIn(k: number, u: number, t: number): Eye {
         target: [there + sway * 0.4, EYE_H - 0.7, -s - 30],
       };
     }
+    case 13: {
+      // Slowly round the flower, rising with it, and a little above once it opens.
+      const a = 0.3 + t * 0.03;
+      const ty = lerp(BLOOM_GROUND + 3, BLOOM_TOP + 1, smooth(u / 0.35));
+      const lift = 4 + 9 * smooth((u - 0.5) / 0.3);
+      return { eye: [Math.sin(a) * 32, ty + lift, Math.cos(a) * 32], target: [0, ty, 0] };
+    }
     case 12:
-      // Still, face on and level with the water: the tree does not turn.
-      return { eye: [0, 1.5, 78], target: [0, 0, 0] };
+      // Still, face on and a little above the water, so its surface shows: the tree does not turn.
+      return { eye: [0, 7, 78], target: [0, 0, 0] };
     case 11:
       // Still, face on, a little above the horizon, so a line turned toward the eye reads as a road.
       return { eye: [0, 4, 80], target: [0, 0, 0] };

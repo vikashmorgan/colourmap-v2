@@ -4,7 +4,7 @@
  * Vegetal, the plant world's chapter (docs/specs/art-vegetal.md): cell, roots
  * from one base, the tree flat and in 3D, fungi, a leaf, a flower on the
  * golden angle, fruit and seed, a road through an avenue, a forest along a
- * river, the full tree in gold and a tree in the water. The math lives in
+ * river, the full tree in gold, trees in the water and a flower blooming. The math lives in
  * lib/vegetal.ts; the shared trip player draws it.
  */
 import TripPlayer, { type Trip } from '@/components/TripPlayer';
