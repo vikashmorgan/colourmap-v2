@@ -32,7 +32,7 @@ this public repo.
 |-------|----------|---------------|-------------|
 | **Cosmos** | Stars, Big Bang, galaxies, sacred geometry | Stars, Geometry, Tunnels, Big Bang | Stars, dust clouds, comets |
 | **Ocean** | Currents, cells, swarms | Journey: sea, bacteria, veins, cells, swarm | Microbes, cells, fish schools |
-| **Vegetal** | Trees, roots, fungi, leaves, fruit | Star Tree, willow, banyan (Grid); Journey: tree, pulses, roots, seed | Roots, fungal threads, leaves, fruit, seeds |
+| **Vegetal** | Trees, roots, fungi, leaves, fruit | Star Tree (Grid); Journey: tree, pulses, roots, seed | Roots, fungal threads, leaves, fruit, seeds |
 
 Each world keeps the house look: grains of light on dark, additive glow,
 earthy and warm colours, nothing that looks like a dashboard.

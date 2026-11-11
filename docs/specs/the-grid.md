@@ -286,3 +286,20 @@ pulsing outwards. art admin energy".
   at the root and fades to nothing at the tips, so no beat starts with a jump.
 - The same 7,200 stars, still drawn in batches; the turn adds nothing that is
   made anew each frame.
+
+## One tree look: willow, banyan and 3D tree taken off — 2026-11-11
+
+The user: "yes remove from grid the two willow and the other strange tree"
+(after the Vegetal note "not saule pleureur lie in grid. taht was bad take it
+off").
+
+- **The tree's DESIGN tab is back to I and II,** and both stand in the Star
+  Tree. I reads lib/branches.ts; II reads lib/life-tree-2.ts (use glow, recent
+  pages, type to find). The willow, the banyan (its hanging roots read as a
+  second willow) and the 3D tree are gone, with the 3D tree's turn and outward
+  wave.
+- **A stored choice keeps its pages.** Under `cb-life-tree-design-4`, a stored
+  II, III or IV all read the pages of II, so they come back as II. Under the
+  old key, II and III (willow and banyan) come back as II.
+- **The wheel is untouched,** with its I, II, III.
+- The Star Willow and Star Banyan of Art's Star Trees stay where they are.

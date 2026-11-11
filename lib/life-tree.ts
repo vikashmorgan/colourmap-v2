@@ -16,16 +16,7 @@
  */
 
 import { BRANCHES, type Branch } from './branches';
-import {
-  buildStarTree,
-  FOOT_Y,
-  type Route,
-  resample,
-  STEP,
-  type StarTree,
-  seeded,
-} from './star-tree';
-import { buildBanyan, buildWillow } from './star-trees';
+import { buildStarTree, FOOT_Y, type StarTree } from './star-tree';
 
 /** Which way each tree grows, in screen radians (y down): Art up, Admin lower right, Energy lower left. */
 export const TREE_ANGLE: Record<Branch, number> = {
@@ -47,200 +38,14 @@ const TREE_HEIGHT = 1.55;
 export const ROOT_RADIUS = 0.035;
 
 /*
- * THREE LOOKS (2026-11-08): "add designs 1 2 3 which would be modifications
- * on the tree ... inspired by new designs on the tree". The Star Trees of Art
- * (lib/star-trees.ts) lend two: II a willow, its strands hanging in a curtain,
- * III a banyan, low and wide, its aerial roots dropping back down. Rootless,
- * since the three share the one root at the centre.
- *
- * FOUR LOOKS (2026-11-10): "in the grid tree add a second design 2 so old 2
- * become 3 and then 3 becomes 4. that is to make it a 3d tree inspired by the
- * 3d tree in journey but with the three trees in one connected at the center.
- * and pulsing outwards. art admin energy". So II is now a tree grown in 3D
- * (buildTree3d below), III the willow, IV the banyan.
+ * ONE LOOK (2026-11-11): "remove from grid the two willow and the other
+ * strange tree". The willow, the banyan (its dropping roots a second willow)
+ * and the 3D tree are gone; every design stands in the Star Tree.
  */
-export type TreeLook = 1 | 2 | 3 | 4;
-
-/*
- * THE 3D TREE (2026-11-10). Grown the way Vegetal's 3D tree is
- * (lib/vegetal.ts, grow3): four limbs off the trunk, then twos and threes,
- * each fork leaning out round its own branch's axis and turning on by the
- * golden angle, so the crown fills all round instead of lying in one plane.
- * Written again here, small, so the G menu does not load the Art pieces.
- *
- * In the tree's own frame: x across, y along the trunk from FOOT_Y, z out of
- * the page toward you. Each of Art, Admin and Energy is one limb of it, grown
- * from the shared root along its usual angle, so together they are one tree
- * with its root at the centre.
- */
-type V3 = [number, number, number];
-const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
-const TAU = Math.PI * 2;
-const norm3 = (v: V3): V3 => {
-  const l = Math.hypot(v[0], v[1], v[2]) || 1;
-  return [v[0] / l, v[1] / l, v[2] / l];
-};
-const cross3 = (a: V3, b: V3): V3 => [
-  a[1] * b[2] - a[2] * b[1],
-  a[2] * b[0] - a[0] * b[2],
-  a[0] * b[1] - a[1] * b[0],
-];
-const add3 = (a: V3, b: V3, k = 1): V3 => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
-
-function grow3(
-  rng: () => number,
-  o: V3,
-  dir: V3,
-  len: number,
-  width: number,
-  depth: number,
-  turn: number,
-  chain: number[],
-  out: number[][],
-) {
-  const e1 = norm3(cross3(dir, Math.abs(dir[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]));
-  const e2 = cross3(dir, e1);
-  const end = add3(o, dir, len);
-  // A slight bend, so no branch is a ruler.
-  const ba = rng() * TAU;
-  const bend = add3(
-    add3(o, dir, len * 0.5),
-    add3([e1[0] * Math.cos(ba), e1[1] * Math.cos(ba), e1[2] * Math.cos(ba)], e2, Math.sin(ba)),
-    len * 0.12,
-  );
-  const next = chain.slice();
-  for (let k = 0; k < 12; k++) {
-    const f = k / 12;
-    const g = 1 - f;
-    for (let m = 0; m < 3; m++)
-      next.push(
-        g * g * (o[m] as number) + 2 * g * f * (bend[m] as number) + f * f * (end[m] as number),
-      );
-    next.push(width + (width * 0.7 - width) * f);
-  }
-  if (depth <= 0) {
-    next.push(end[0], end[1], end[2], width * 0.7);
-    out.push(next);
-    return;
-  }
-  const forks = chain.length === 0 ? 4 : depth > 2 && rng() < 0.3 ? 3 : 2;
-  for (let i = 0; i < forks; i++) {
-    const a = turn + (i * TAU) / forks + (rng() - 0.5) * 0.4;
-    const tilt = 0.38 + 0.25 * rng();
-    const side = add3(
-      [e1[0] * Math.cos(a), e1[1] * Math.cos(a), e1[2] * Math.cos(a)],
-      e2,
-      Math.sin(a),
-    );
-    const lean = add3(
-      [dir[0] * Math.cos(tilt), dir[1] * Math.cos(tilt), dir[2] * Math.cos(tilt)],
-      side,
-      Math.sin(tilt),
-    );
-    // Leaning on along the trunk, as Vegetal's leans up toward the light.
-    const nd = norm3(add3(lean, [0, 0.22, 0]));
-    grow3(
-      rng,
-      end,
-      nd,
-      len * (0.76 + 0.08 * (rng() - 0.5)),
-      width * 0.7,
-      depth - 1,
-      a + GOLDEN_ANGLE,
-      next,
-      out,
-    );
-  }
-}
-
-/** Resamples a polyline of x, y, z, width to points STEP apart in 3D: the route's depth goes in `z`. */
-function resample3(raw: number[]): Route {
-  const pts: number[] = [raw[0] ?? 0, raw[1] ?? 0, raw[3] ?? 0];
-  const zs: number[] = [raw[2] ?? 0];
-  let carry = 0;
-  for (let i = 4; i + 3 < raw.length; i += 4) {
-    const ax = raw[i - 4] as number;
-    const ay = raw[i - 3] as number;
-    const az = raw[i - 2] as number;
-    const aw = raw[i - 1] as number;
-    const bx = raw[i] as number;
-    const by = raw[i + 1] as number;
-    const bz = raw[i + 2] as number;
-    const bw = raw[i + 3] as number;
-    const len = Math.hypot(bx - ax, by - ay, bz - az);
-    let at = STEP - carry;
-    while (at <= len) {
-      const t = at / (len || 1);
-      pts.push(ax + (bx - ax) * t, ay + (by - ay) * t, aw + (bw - aw) * t);
-      zs.push(az + (bz - az) * t);
-      at += STEP;
-    }
-    carry = len - (at - STEP);
-  }
-  return { pts: Float32Array.from(pts), count: pts.length / 3, z: Float32Array.from(zs) };
-}
-
-/** How far a 3D tree reaches from its foot, in world units: as far as the flat looks reach. */
-const REACH_3D = 1.5;
-
-/** One limb of the 3D tree, rootless, its farthest tip REACH_3D from the foot. */
-export function buildTree3d(depth = 8, seed = 7): StarTree {
-  const rng = seeded(seed);
-  const d = Math.max(3, Math.min(8, Math.round(depth)));
-  const raw: number[][] = [];
-  // Two levels fewer than the flat tree: four limbs off the trunk already make it as full.
-  grow3(rng, [0, 0, 0], [0, 1, 0], 1, 0.16, d - 2, rng() * TAU, [], raw);
-  let far = 0;
-  for (const c of raw)
-    for (let i = 0; i + 3 < c.length; i += 4)
-      far = Math.max(far, Math.hypot(c[i] as number, c[i + 1] as number, c[i + 2] as number));
-  const k = REACH_3D / (far || 1);
-  const routes = raw.map((c) => resample3(c.map((v, i) => (i % 4 === 1 ? FOOT_Y + v * k : v * k))));
-  const tips = raw.map((c) => {
-    const n = c.length;
-    return [(c[n - 4] as number) * k, FOOT_Y + (c[n - 3] as number) * k] as [number, number];
-  });
-  return { routes, tips };
-}
-
-/** How far a route stands out of the page `s` world units along it; 0 on a flat tree. */
-export function depthAlong(route: Route, s: number): number {
-  const z = route.z;
-  if (!z) return 0;
-  const f = Math.max(0, s / STEP);
-  const i = Math.min(route.count - 1, Math.floor(f));
-  const j = Math.min(route.count - 1, i + 1);
-  const t = Math.min(1, f - i);
-  return (z[i] as number) + ((z[j] as number) - (z[i] as number)) * t;
-}
-
-/** A tree `k` times larger about its foot, its routes resampled to the same star spacing. */
-function enlarged(tree: StarTree, k: number): StarTree {
-  const at = (x: number, y: number): [number, number] => [x * k, FOOT_Y + (y - FOOT_Y) * k];
-  return {
-    routes: tree.routes.map((r) => {
-      const raw: number[] = [];
-      for (let i = 0; i < r.count; i++) {
-        const [x, y] = at(r.pts[i * 3] as number, r.pts[i * 3 + 1] as number);
-        raw.push(x, y, (r.pts[i * 3 + 2] as number) * k);
-      }
-      return resample(raw);
-    }),
-    tips: tree.tips.map(([x, y]) => at(x, y)),
-  };
-}
-
-export function buildLifeTrees(depth = 8, look: TreeLook = 1): Record<Branch, StarTree> {
-  const build = (b: Branch): StarTree =>
-    look === 2
-      ? buildTree3d(depth, TREE_SEED[b])
-      : look === 3
-        ? buildWillow(depth, TREE_SEED[b], { roots: false })
-        : look === 4
-          ? // Low and wide, it is grown a third larger so its crown reaches as far as the others.
-            enlarged(buildBanyan(depth, TREE_SEED[b], { roots: false }), 1.35)
-          : buildStarTree(depth, TREE_SEED[b], false);
-  return Object.fromEntries(BRANCHES.map((b) => [b, build(b)])) as Record<Branch, StarTree>;
+export function buildLifeTrees(depth = 8): Record<Branch, StarTree> {
+  return Object.fromEntries(
+    BRANCHES.map((b) => [b, buildStarTree(depth, TREE_SEED[b], false)]),
+  ) as Record<Branch, StarTree>;
 }
 
 export type Frame = { cx: number; cy: number; min: number };
@@ -340,76 +145,15 @@ export function rootPoint(i: number, n: number, f: Frame): [number, number] {
 export function pulse(
   t: number,
   period = 3.2,
-): { radius: number; alpha: number; surge: number; breath: number; phase: number } {
+): { radius: number; alpha: number; surge: number; breath: number } {
   const k = (((t % period) + period) % period) / period;
   return {
-    // How far through the beat, 0 to 1: how far out the 3D tree's wave has gone.
-    phase: k,
     radius: ROOT_RADIUS + k * 0.5,
     alpha: 0.5 * (1 - k) ** 2,
     surge: Math.exp(-k * 6),
     // The same beat as a smooth swell, 0 to 1 and back, with no step anywhere in it.
     breath: 0.5 - 0.5 * Math.cos(2 * Math.PI * k),
   };
-}
-
-/*
- * PULSING OUTWARDS (2026-11-10). On the 3D tree each beat is a wave of light
- * running from the root out to every tip at once: brightest a share `phase`
- * of the way along each route. It rises from nothing at the root and fades to
- * nothing at the tips, so when the next beat starts there is no jump.
- */
-export function outwardWave(u: number, phase: number): number {
-  const d = (u - phase) / 0.12;
-  return Math.sin(Math.PI * Math.max(0, Math.min(1, phase))) * Math.exp(-d * d);
-}
-
-/*
- * THE TURN (2026-11-10). The 3D tree sways slowly round the upright axis
- * through the root, a little each way, never far enough to fold Admin or
- * Energy flat; and it leans its top a touch toward you, so its depth shows
- * even when still. Nearer stars draw larger and brighter, farther ones smaller
- * and dimmer. With reduced motion it stands in a fixed three-quarter view.
- */
-export const TURN_PERIOD = 40;
-const TURN_SWAY = 0.45;
-const TURN_STILL = 0.35;
-export const TURN_PITCH = 0.22;
-/** How far the eye stands from the root, as a share of the smaller side: the perspective. */
-const EYE = 2.4;
-
-export function figureYaw(t: number, still = false): number {
-  return still ? TURN_STILL : TURN_SWAY * Math.sin((TAU * t) / TURN_PERIOD);
-}
-
-/** One frame's turn, kept and refilled so drawing makes nothing new per star. */
-export type Turn = { cy: number; sy: number; cp: number; sp: number; eye: number };
-
-export const makeTurn = (): Turn => ({ cy: 1, sy: 0, cp: 1, sp: 0, eye: 1 });
-
-export function setTurn(turn: Turn, yaw: number, pitch: number, min: number): void {
-  turn.cy = Math.cos(yaw);
-  turn.sy = Math.sin(yaw);
-  turn.cp = Math.cos(pitch);
-  turn.sp = Math.sin(pitch);
-  turn.eye = min * EYE;
-}
-
-/**
- * A point (dx, dy) from the root on screen, standing dz out of it, turned and
- * seen in perspective: writes its new dx, dy, and how much nearer it came
- * (1 at the root's depth, more when nearer), into `out`.
- */
-export function project3(out: Float32Array, dx: number, dy: number, dz: number, t: Turn): void {
-  const x1 = dx * t.cy + dz * t.sy;
-  const z1 = -dx * t.sy + dz * t.cy;
-  // Seen a little from above: the top comes toward you, the near side drops.
-  const y2 = dy * t.cp + z1 * t.sp;
-  const z2 = -dy * t.sp + z1 * t.cp;
-  const k = t.eye / Math.max(t.eye * 0.2, t.eye - z2);
-  out[0] = x1 * k;
-  out[1] = y2 * k;
-  out[2] = k;
 }
 
 /** A page's name from its address, for routes the Grid does not list. */
