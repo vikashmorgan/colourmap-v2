@@ -558,7 +558,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       if (!typing) keysRef.current.add(e.key.toLowerCase());
       const claimed = tripRef.current.pieces?.game?.claims?.includes(e.key.toLowerCase());
       if (playing() && (e.key.startsWith('Arrow') || claimed)) {
-        // While a step is played, the arrows steer, and the keys it claims are its own.
+        // While a step is played, the arrows steer, and the keys it claims are its own (Space: the
+        // Shark Sim's boost, the Dot Walker's jump), not pause.
         e.preventDefault();
         return;
       }

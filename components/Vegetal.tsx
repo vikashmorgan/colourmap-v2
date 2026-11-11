@@ -60,8 +60,9 @@ const TRIP: Trip = {
     flow: { has: hasSap, set: setSap },
     variants: { has: hasVariants, names: variantNames, set: setVariant, label: variantLabel },
     toggle: { has: hasSwitch, label: switchLabel, set: setSwitch },
-    // Bird Sim: you fly your own bird with the cursor and the keys.
-    game: { has: hasBird, set: setBird },
+    // Bird Sim: you fly your own bird with the cursor and the keys; on foot Space is the Dot Walker's
+    // jump, not pause. Esc lets go: the bird weaves, the walker strolls, until you take over again.
+    game: { has: hasBird, set: setBird, claims: [' '] },
   },
 };
 
