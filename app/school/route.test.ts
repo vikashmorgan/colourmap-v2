@@ -35,7 +35,9 @@ describe('/school class menu', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('private, no-store');
     expect(html).toContain('<title>School · A School</title>');
-    // Each class opens its own page: Statistics, this trimester's, comes first.
+    // Each class opens its own page: this trimester's, Pandas then Statistics, come first.
+    expect(html.indexOf('href="/pandas"')).toBeGreaterThan(-1);
+    expect(html.indexOf('href="/pandas"')).toBeLessThan(html.indexOf('href="/statistics"'));
     expect(html.indexOf('href="/statistics"')).toBeGreaterThan(-1);
     expect(html.indexOf('href="/statistics"')).toBeLessThan(html.indexOf('href="/coding"'));
     expect(html).toContain('href="/coding"');
