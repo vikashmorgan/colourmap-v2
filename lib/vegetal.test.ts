@@ -534,7 +534,11 @@ describe('the vegetal chapter', () => {
     const step = (keys: string[], secs: number) => {
       for (let i = 0; i < secs * 30; i++) setBird(true, null, keys, 1 / 30, 0);
     };
-    step([], 0.1);
+    // Before any key it strolls on by itself: never standing still at the start.
+    const a0 = flier(1).c;
+    step([], 0.5);
+    expect(dist(flier(3).c, a0)).toBeGreaterThan(3);
+    step(['w'], 0.1);
     const ground = () => {
       const c = flier(0).c;
       return c[1] - hill(c[0], c[2]);

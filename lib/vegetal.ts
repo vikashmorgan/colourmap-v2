@@ -2354,6 +2354,8 @@ const bird = {
   stride: 0,
   jump: 0,
   vy: 0,
+  /** Whether a key has been pressed since the game began: till then the walker strolls alone. */
+  touched: false,
 };
 
 /*
@@ -2398,7 +2400,17 @@ export function setBird(
 ) {
   if (!active) {
     bird.on = false;
+    bird.touched = false;
     return;
+  }
+  // On foot it strolls by itself until a key is pressed, so it is never standing still at the start
+  // (2026-11-11: "bird sim, why is it not launching, static at start").
+  if (walking() && !bird.touched) {
+    if (!keys.length) {
+      bird.on = false;
+      return;
+    }
+    bird.touched = true;
   }
   if (!bird.on) {
     // Taking over from the weave, or the stroll, where it is.
@@ -2517,6 +2529,7 @@ export function flier(t: number): Player {
 export function setPlayer(i: number) {
   playerKind = PLAYERS[i] ? i : 0;
   bird.on = false;
+  bird.touched = false;
 }
 
 /**
