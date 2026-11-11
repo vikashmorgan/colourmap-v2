@@ -5,6 +5,7 @@ import { along, routeLength } from './star-tree';
 import {
   along3,
   BEAT,
+  BLOOMS,
   beatAt,
   bendAt,
   CELL_COUNT,
@@ -13,23 +14,31 @@ import {
   colour,
   DRUMS,
   EYE_H,
+  FIREWORK_FLOWERS,
   FLORETS,
+  FLOWERS,
   FOREST_SLOTS,
+  firework,
+  fireworkShown,
+  flier,
   floret,
   forestTrees,
   fruitOf,
   GROUND_3D,
   GROUND_FRUIT,
   GROUNDS,
+  hill,
   makeParticles,
   mandala,
   PHASE_START,
   PHASES,
+  PULSES,
   particleAt,
   phaseAt,
   pieceAt,
   pieceCamera,
   pieceLength,
+  pulseKind,
   REFL_TREES,
   ROAD_W,
   ROOT_BASE,
@@ -37,9 +46,12 @@ import {
   rootSystem,
   rowOpen,
   STEP_COLOURS,
+  setBird,
   setGold,
+  setSwitch,
   setVariant,
   starBall,
+  switchLabel,
   TOTAL,
   target,
   tree3d,
@@ -57,7 +69,7 @@ const at = (k: number, u: number) =>
   (PHASE_START[k] as number) + u * (PHASES[k]?.duration as number);
 
 describe('the vegetal chapter', () => {
-  it('has fourteen numbered pieces, from a cell to a flower blooming, each with words', () => {
+  it('has fifteen numbered pieces, from a cell to Bird Sim, each with words', () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       'cell',
       'roots',
@@ -73,6 +85,7 @@ describe('the vegetal chapter', () => {
       'full-tree',
       'reflection',
       'bloom',
+      'bird',
     ]);
     for (const p of PHASES) {
       expect(p.words).toHaveLength(2);
@@ -348,6 +361,171 @@ describe('the vegetal chapter', () => {
     expect(spread(0.78)).toBeGreaterThan(spread(0.4) * 2);
   });
 
+  it('slows the veins and turns four kinds of pulse in turn, each silent where beats meet', () => {
+    expect(BEAT).toBeGreaterThanOrEqual(2);
+    expect(PULSES).toEqual(['Wave', 'Trace', 'Heartbeat', 'Return']);
+    const start = (kind: number) => {
+      let s = BEAT / 2;
+      while (pulseKind(s + 0.01) !== kind) s += BEAT;
+      return s;
+    };
+    for (let kind = 0; kind < 4; kind++) {
+      const s = start(kind);
+      // The next beat is the next kind.
+      expect(pulseKind(s + BEAT + 0.01)).toBe((kind + 1) % 4);
+      expect(beatAt(s + 0.001)).toBeLessThan(0.1);
+      expect(beatAt(s + BEAT - 0.001)).toBeLessThan(0.1);
+    }
+    const k = 4;
+    const pulses = particles.filter((p) => p.i % 7 === 0);
+    const reach = (t: number) =>
+      pulses.map((p) => target(k, p, 0.6, t)).reduce((a, [x, y]) => a + Math.hypot(x, y), 0) /
+      pulses.length;
+    // Return: the light comes home, from the tips to the centre.
+    const back = start(3);
+    expect(reach(back + BEAT * 0.15)).toBeGreaterThan(reach(back + BEAT * 0.8));
+    // Heartbeat: two strikes in one beat.
+    const lub = start(2);
+    expect(beatAt(lub + BEAT * 0.32)).toBeGreaterThan(beatAt(lub + BEAT * 0.26));
+    // Trace: ahead of the light the veins are dark, behind it lit; by the end all lit again.
+    const tr = start(1);
+    const lit = (t: number) =>
+      particles.filter((p) => Math.max(...colour(k, p, 0.6, t)) > 0.25).length;
+    expect(lit(tr + BEAT * 0.25)).toBeLessThan(lit(tr + BEAT * 0.9) * 0.8);
+  });
+
+  it('gives each of three pieces its own switch, and the Journey none', () => {
+    const id = (x: string) => PHASES.findIndex((p) => p.id === x);
+    expect(switchLabel(id('tree-3d'))).toBe('Gold');
+    expect(switchLabel(id('full-tree'))).toBe('No road');
+    expect(switchLabel(id('reflection'))).toBe('Green');
+    expect(switchLabel(id('veins'))).toBe('');
+    // No road: the horizon line goes, its grains onto the roots.
+    const k = id('full-tree');
+    const t = at(k, 0.7);
+    const flatLine = () =>
+      particles.filter((p) => {
+        const [x, y] = target(k, p, 0.7, t);
+        return Math.abs(y) < 0.1 && Math.abs(x) > 20;
+      }).length;
+    const withRoad = flatLine();
+    setSwitch(true, k);
+    expect(withRoad).toBeGreaterThan(20);
+    expect(flatLine()).toBe(0);
+    setSwitch(false);
+    expect(flatLine()).toBe(withRoad);
+  });
+
+  it('keeps the reflection all gold, every tree and water, or gold with green leaves', () => {
+    const k = PHASES.findIndex((p) => p.id === 'reflection');
+    const t = at(k, 0.7);
+    const all = makeParticles(1200);
+    REFL_TREES.forEach((_, i) => {
+      setVariant(i, k);
+      for (const p of all) {
+        const [r, g, b] = colour(k, p, 0.7, t);
+        // Gold, never silver or blue: red at least green, green above blue.
+        expect(r).toBeGreaterThanOrEqual(g - 1e-9);
+        expect(g).toBeGreaterThan(b - 1e-9);
+        if (r > 0.05) expect(b).toBeLessThan(r * 0.95);
+      }
+    });
+    setVariant(0, k);
+    setSwitch(true, k);
+    const green = all.filter((p) => {
+      const [r, g] = colour(k, p, 0.7, t);
+      return g > r;
+    }).length;
+    expect(green).toBeGreaterThan(all.length * 0.1);
+    setSwitch(false);
+    setVariant(0);
+  });
+
+  it('opens five different flowers, each softly, never a bright point at the start', () => {
+    const k = PHASES.findIndex((p) => p.id === 'bloom');
+    expect(BLOOMS).toEqual(['Rose', 'Lotus', 'Lily', 'Daisy', 'Poppy', 'Fireworks']);
+    const L = pieceLength(k);
+    const widths = FLOWERS.map((_, i) => {
+      setVariant(i, k);
+      let w = 0;
+      for (const p of particles) {
+        const { pos, rgb } = pieceAt(p, k, 0.6 * L);
+        for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+        expect(Math.max(...rgb)).toBeLessThan(0.9);
+        if (p.c >= 0.24 && p.c < 0.86) w += Math.hypot(pos[0], pos[2]);
+      }
+      // At the very start, the bud and seedling are faint.
+      const early = particles.reduce((a, p) => a + Math.max(...pieceAt(p, k, 0.02 * L).rgb), 0);
+      const open = particles.reduce((a, p) => a + Math.max(...pieceAt(p, k, 0.6 * L).rgb), 0);
+      expect(early).toBeLessThan(open * 0.5);
+      return Math.round((w / particles.length) * 20);
+    });
+    // Five shapes: the petals' mean reach differs from one flower to the next.
+    expect(new Set(widths).size).toBe(5);
+    setVariant(0);
+  });
+
+  it('sets off fireworks of flowers: many at once, each bursting open, fading, and blooming again elsewhere', () => {
+    const k = PHASES.findIndex((p) => p.id === 'bloom');
+    setVariant(BLOOMS.indexOf('Fireworks'), k);
+    const L = pieceLength(k);
+    for (const s of [1, 7, 19]) {
+      for (const p of particles) {
+        const { pos, rgb } = pieceAt(p, k, s);
+        for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+      }
+    }
+    // Spread wide across the dark, not one flower.
+    const xs = particles.map((p) => pieceAt(p, k, 0.3 * L).pos[0]);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(25);
+    // Fading in and out, never popping.
+    expect(fireworkShown(0)).toBe(0);
+    expect(fireworkShown(1)).toBe(0);
+    expect(fireworkShown(0.5)).toBeGreaterThan(0.9);
+    // Each flower comes back somewhere new.
+    // Each flower comes back somewhere new, one bloom later.
+    expect(firework(3, 1).c).not.toEqual(firework(3, 10).c);
+    expect(FIREWORK_FLOWERS).toBeGreaterThanOrEqual(10);
+    setVariant(0);
+  });
+
+  it('flies a bird of your own through a golden forest: W climbs, S dives, A turns, never into the ground', () => {
+    const k = PHASES.findIndex((p) => p.id === 'bird');
+    expect(PHASES[k]?.name).toBe('Bird Sim');
+    const fly = (keys: string[], secs: number) => {
+      for (let i = 0; i < secs * 30; i++) setBird(true, null, keys, 1 / 30, 0);
+    };
+    setBird(true, null, [], 1 / 30, 0);
+    const y0 = flier(0).c[1];
+    fly(['w'], 2);
+    expect(flier(0).c[1]).toBeGreaterThan(y0 + 3);
+    const y1 = flier(0).c[1];
+    fly(['s'], 2);
+    expect(flier(0).c[1]).toBeLessThan(y1 - 3);
+    const f0 = flier(0).f;
+    fly(['a'], 1);
+    const f1 = flier(0).f;
+    expect(f0[0] * f1[0] + f0[2] * f1[2]).toBeLessThan(0.9);
+    // Diving for long never goes under the hills.
+    fly(['s'], 20);
+    const c = flier(0).c;
+    expect(c[1]).toBeGreaterThan(hill(c[0], c[2]) + 1);
+    // The forest round the bird: every grain somewhere real, the trees all gold, none green.
+    const me = flier(0).c;
+    let nearby = 0;
+    for (const p of particles) {
+      const { pos, rgb } = pieceAt(p, k, 5);
+      for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+      if (p.c >= 0.3 && p.c < 0.975) expect(rgb[1]).toBeLessThanOrEqual(rgb[0] + 1e-9);
+      if (Math.hypot(pos[0] - me[0], pos[2] - me[2]) < 61) nearby++;
+    }
+    expect(nearby).toBeGreaterThan(particles.length * 0.8);
+    // The eye rides behind the bird.
+    const eye = pieceCamera(k, 5);
+    expect(dist(eye.eye, me)).toBeLessThan(18);
+    setBird(false, null, [], 0, 0);
+  });
+
   it('lays each ground under the 3D tree on the floor', () => {
     const t = at(3, 0.7);
     const soil = particles.filter((p) => p.c > 0.72 && p.c <= 0.8);
@@ -382,7 +560,9 @@ describe('the vegetal chapter', () => {
   it('beats the veins: a wave leaves the centre on each beat and runs out, all brightening', () => {
     const k = 4;
     // A beat: half a beat in, and every beat after.
-    const beatStart = at(k, 0.5) - ((at(k, 0.5) + BEAT / 2) % BEAT) + 0.06 * BEAT;
+    let beatStart = at(k, 0.5) - ((at(k, 0.5) + BEAT / 2) % BEAT) + 0.06 * BEAT;
+    // A Wave beat: the other kinds are tested on their own.
+    while (pulseKind(beatStart) !== 0) beatStart += BEAT;
     const reach = (t: number) => {
       // The pulse grains' mean distance from the centre.
       const d = particles
