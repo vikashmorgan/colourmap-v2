@@ -878,6 +878,29 @@ input[type="range"].feedback-slider::-moz-range-thumb {
   font-size: 14px;
   cursor: pointer;
 }
+/* A game's bar (the Shark Sim's boost): thin, warm, quiet. */
+.bb-meter {
+  display: inline-block;
+  width: 96px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(244, 234, 216, 0.14);
+  overflow: hidden;
+}
+.bb-meter > span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: #c4a060;
+  transition: width 0.12s linear;
+}
+/* A game's count (the Shark Sim's finds): small and quiet beside its bar. */
+.bb-tally {
+  font-size: 13px;
+  color: rgba(244, 234, 216, 0.7);
+  font-variant-numeric: tabular-nums;
+}
 .bb-controls button[aria-pressed="true"] {
   background: rgba(244, 234, 216, 0.22);
 }

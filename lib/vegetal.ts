@@ -246,7 +246,7 @@ export const PHASES: VegetalPhase[] = [
   {
     id: 'bird',
     name: 'Bird Sim',
-    line: 'Your turn: you are a bird in a forest of golden trees. The cursor steers, W and S climb and dive, A and D turn, Shift flies faster. Mushrooms glow at the feet of the trees and fireflies drift between them.',
+    line: 'Your turn: a bird, or the Dot Walker on foot, in a forest of golden trees. The cursor steers; W and S climb and dive, or walk on and back; A and D turn; Shift goes faster; Space jumps. Mushrooms glow at the feet of the trees and fireflies drift between them.',
     words: [
       'A forest seen from above is one living thing,',
       'every tree joined to the next below the ground.',
@@ -843,7 +843,7 @@ export const hasDrums = (k: number) => PHASES[k]?.id === 'veins';
 
 /* The pieces' pills: the 3D tree's grounds and the veins' drums. */
 export const hasVariants = (k: number) =>
-  hasGround(k) || hasDrums(k) || hasReflTrees(k) || hasBlooms(k);
+  hasGround(k) || hasDrums(k) || hasReflTrees(k) || hasBlooms(k) || hasBird(k);
 export const variantNames = (k: number) =>
   hasDrums(k)
     ? DRUMS.map((d) => d.name)
@@ -851,9 +851,19 @@ export const variantNames = (k: number) =>
       ? REFL_TREES.map((d) => d.name)
       : hasBlooms(k)
         ? BLOOMS
-        : GROUNDS;
+        : hasBird(k)
+          ? PLAYERS
+          : GROUNDS;
 export const variantLabel = (k: number) =>
-  hasDrums(k) ? 'Drum' : hasReflTrees(k) ? 'Tree' : hasBlooms(k) ? 'Flower' : 'Ground';
+  hasDrums(k)
+    ? 'Drum'
+    : hasReflTrees(k)
+      ? 'Tree'
+      : hasBlooms(k)
+        ? 'Flower'
+        : hasBird(k)
+          ? 'Play as'
+          : 'Ground';
 /** Pill i on piece k; with no piece (the Journey), the first of each. */
 export function setVariant(i: number, k?: number) {
   if (k === undefined) {
@@ -861,8 +871,11 @@ export function setVariant(i: number, k?: number) {
     drumKind = 0;
     reflKind = 0;
     bloomKind = 0;
+    if (playerKind) setPlayer(0);
   } else if (hasDrums(k)) drumKind = i;
-  else if (hasBlooms(k)) bloomKind = i;
+  else if (hasBird(k)) {
+    if (i !== playerKind) setPlayer(i);
+  } else if (hasBlooms(k)) bloomKind = i;
   else if (hasReflTrees(k)) reflKind = i;
   else if (hasGround(k)) groundKind = i;
 }
@@ -2337,7 +2350,30 @@ const bird = {
   /** Wingbeats so far, and how hard it is beating, 0 gliding to 1. */
   flap: 0,
   effort: 0.5,
+  /** On foot: strides so far, how high off the ground in a jump, and rising speed. */
+  stride: 0,
+  jump: 0,
+  vy: 0,
+  /** Whether a key has been pressed since the game began: till then the walker strolls alone. */
+  touched: false,
 };
+
+/*
+ * THE DOT WALKER (2026-11-11: "add a way that I can walk with dot walker when
+ * walking in the forest, so not bird but dot walker, that walks on the earth,
+ * on the forest videogame"). The golden figure of dots from the Dot Walker
+ * Arena (components/DotWalkerArena.tsx), in the round: a head, a body, arms
+ * swinging against the legs as it strides, dust where its feet touch. Chosen
+ * by a pill; W and S walk on and back, Shift runs, Space jumps.
+ */
+export const PLAYERS = ['Bird', 'Dot Walker'];
+let playerKind = 0;
+const walking = () => playerKind === 1;
+/** Walking pace in units a second; Shift runs. */
+export const WALK_SPEED = 3.2;
+/** How far one stride carries the walker. */
+const WALK_STRIDE = 1.5;
+const WALK_CAM = 7;
 
 /** With no one at the controls (the Journey): a weave between the trees, rising and falling. */
 function birdPilot(t: number): { c: Vec3; f: Vec3 } {
@@ -2364,11 +2400,21 @@ export function setBird(
 ) {
   if (!active) {
     bird.on = false;
+    bird.touched = false;
     return;
   }
+  // On foot it strolls by itself until a key is pressed, so it is never standing still at the start
+  // (2026-11-11: "bird sim, why is it not launching, static at start").
+  if (walking() && !bird.touched) {
+    if (!keys.length) {
+      bird.on = false;
+      return;
+    }
+    bird.touched = true;
+  }
   if (!bird.on) {
-    // Taking over from the weave where it is.
-    const a = birdPilot(t);
+    // Taking over from the weave, or the stroll, where it is.
+    const a = walking() ? walkerPilot(t) : birdPilot(t);
     bird.pos = a.c;
     bird.yaw = Math.atan2(-a.f[0], -a.f[2]);
     bird.pitch = Math.asin(Math.max(-1, Math.min(1, a.f[1])));
@@ -2381,6 +2427,10 @@ export function setBird(
   const y = at ? dead(at.y) : 0;
   const turn = 1.4 * x + (held('a', 'arrowleft') ? -1 : 0) + (held('d', 'arrowright') ? 1 : 0);
   bird.yaw -= turn * dt;
+  if (walking()) {
+    walk(held, dt);
+    return;
+  }
   // Leaning into the turn, as a bird does.
   bird.bank += (-0.6 * Math.max(-1, Math.min(1, turn)) - bird.bank) * (1 - Math.exp(-3 * dt));
   const climb = (held('w', 'arrowup') ? 0.7 : 0) - (held('s', 'arrowdown') ? 0.7 : 0);
@@ -2400,8 +2450,48 @@ export function setBird(
   bird.pos[1] = Math.max(hill(bird.pos[0], bird.pos[2]) + 1.5, Math.min(BIRD_TOP, bird.pos[1]));
 }
 
-/** The bird: where it is at time t, which way it flies, how it leans, and its wings. */
-export function flier(t: number): { c: Vec3; f: Vec3; bank: number; flap: number; effort: number } {
+/** The walker on foot, each frame: walking on or back, running, jumping, its feet on the hills. */
+function walk(held: (...names: string[]) => boolean, dt: number) {
+  const pace = held('w', 'arrowup') ? 1 : held('s', 'arrowdown') ? -0.6 : 0;
+  const run = held('shift') ? 2 : 1;
+  bird.speed += (WALK_SPEED * run * pace - bird.speed) * (1 - Math.exp(-6 * dt));
+  bird.pitch = 0;
+  bird.bank = 0;
+  const f = bearing(bird.yaw, 0);
+  bird.pos = add(bird.pos, f, bird.speed * dt);
+  bird.stride += (bird.speed * dt) / WALK_STRIDE;
+  if (held(' ', 'space') && bird.jump <= 0) bird.vy = 6;
+  bird.vy -= 18 * dt;
+  bird.jump = Math.max(0, bird.jump + bird.vy * dt);
+  if (bird.jump <= 0) bird.vy = Math.max(0, bird.vy);
+  bird.pos[1] = hill(bird.pos[0], bird.pos[2]) + bird.jump;
+}
+
+/** With no one at the controls: the walker strolls between the trees on its own. */
+function walkerPilot(t: number): { c: Vec3; f: Vec3 } {
+  const at = (tt: number): Vec3 => {
+    const x = 16 * Math.sin(0.03 * tt);
+    const z = -WALK_SPEED * 0.9 * tt;
+    return [x, hill(x, z), z];
+  };
+  const c = at(t);
+  const n = at(t + 0.05);
+  return { c, f: norm([n[0] - c[0], 0, n[2] - c[2]]) };
+}
+
+type Player = {
+  c: Vec3;
+  f: Vec3;
+  bank: number;
+  flap: number;
+  effort: number;
+  /** On foot: strides so far, and how fast it is going, 0 standing to 1 running. */
+  stride: number;
+  pace: number;
+};
+
+/** The bird, or the walker: where it is at time t, which way it goes, how it leans, wings or legs. */
+export function flier(t: number): Player {
   if (bird.on)
     return {
       c: bird.pos,
@@ -2409,10 +2499,85 @@ export function flier(t: number): { c: Vec3; f: Vec3; bank: number; flap: number
       bank: bird.bank,
       flap: bird.flap,
       effort: bird.effort,
+      stride: bird.stride,
+      pace: Math.min(1, Math.abs(bird.speed) / (WALK_SPEED * 2)),
     };
+  if (walking()) {
+    const a = walkerPilot(t);
+    return {
+      ...a,
+      bank: 0,
+      flap: 0,
+      effort: 0,
+      stride: (WALK_SPEED * 0.9 * t) / WALK_STRIDE,
+      pace: 0.45,
+    };
+  }
   const a = birdPilot(t);
   const turn = Math.cos(0.045 * t) * 0.045 * 20 * 0.1;
-  return { ...a, bank: -0.6 * turn, flap: t * 2.4, effort: 0.5 + 0.4 * Math.cos(0.07 * t) };
+  return {
+    ...a,
+    bank: -0.6 * turn,
+    flap: t * 2.4,
+    effort: 0.5 + 0.4 * Math.cos(0.07 * t),
+    stride: 0,
+    pace: 0,
+  };
+}
+
+/** Pill i on the forest game: the bird or the walker. A new choice starts from the autopilot. */
+export function setPlayer(i: number) {
+  playerKind = PLAYERS[i] ? i : 0;
+  bird.on = false;
+  bird.touched = false;
+}
+
+/**
+ * Grain p of the Dot Walker standing at c facing f: a round head, a body, arms and legs swinging
+ * opposite as it strides, more the faster it goes, and dust kicked up where its feet land.
+ */
+function walkerBody(p: Particle, me: Player, t: number): Vec3 {
+  const side = norm(cross(me.f, [0, 1, 0]));
+  const at = (fw: number, sd: number, u: number): Vec3 =>
+    add(add(add(me.c, me.f, fw), side, sd), [0, 1, 0], u);
+  const ph = me.stride * Math.PI;
+  const swing = 0.15 + 0.55 * me.pace;
+  const bob = 0.1 * me.pace * Math.abs(Math.sin(ph)) + 0.03 * Math.sin(t * 1.6);
+  const d = fibonacciSphere(p.i % 89, 89);
+  const q = p.b;
+  if (p.a < 0.14) return at(d[2] * 0.3, d[0] * 0.3, 3.05 + bob + d[1] * 0.32);
+  if (p.a < 0.42) {
+    // The body: wide at the shoulders, narrow at the waist.
+    const h = 1.65 + 1.05 * q;
+    const w = 0.28 + 0.2 * q;
+    return at(d[2] * 0.18 + 0.05 * me.pace, d[0] * w, h + bob + d[1] * 0.05);
+  }
+  if (p.a < 0.62) {
+    // An arm from the shoulder, swinging against the leg on its side.
+    const s = p.a < 0.52 ? -1 : 1;
+    const a = -s * swing * Math.sin(ph);
+    const len = 1.15 * q;
+    return at(Math.sin(a) * len, s * (0.52 + 0.06 * q), 2.6 + bob - Math.cos(a) * len);
+  }
+  if (p.a < 0.92) {
+    // A leg: the thigh swings from the hip, the shin bends back as the foot comes through.
+    const s = p.a < 0.77 ? -1 : 1;
+    const a1 = s * swing * Math.sin(ph);
+    const a2 = a1 - 1.1 * me.pace * Math.max(0, Math.sin(ph * s + Math.PI / 2)) * 0.6;
+    const knee: Vec3 = [Math.sin(a1) * 0.82, s * 0.22, 1.65 + bob - Math.cos(a1) * 0.82];
+    const k = q < 0.5 ? q * 2 : 1;
+    if (q < 0.5) return at(knee[0] * k, knee[1], 1.65 + bob + (knee[2] - 1.65 - bob) * k);
+    const u = (q - 0.5) * 2;
+    return at(knee[0] + Math.sin(a2) * 0.82 * u, knee[1], knee[2] - Math.cos(a2) * 0.82 * u);
+  }
+  // Dust at the feet, rising and spreading from each step.
+  const f = frac(p.b + me.stride * 0.5);
+  const a = p.d * TAU;
+  return at(
+    Math.cos(a) * (0.3 + 0.8 * f) - 0.6 * f,
+    Math.sin(a) * (0.3 + 0.8 * f),
+    0.05 + 0.5 * f * me.pace,
+  );
 }
 
 /** A world point brought round to the copy of it nearest the bird, on the forest's width. */
@@ -2474,7 +2639,7 @@ function birdMushroom(m: number): {
 }
 
 /** Grain p of the bird, round its centre c flying along f: a body, two beating wings, a fanned tail. */
-function birdBody(p: Particle, me: ReturnType<typeof flier>): Vec3 {
+function birdBody(p: Particle, me: Player): Vec3 {
   const side0 = norm(cross(me.f, [0, 1, 0]));
   const up0 = cross(side0, me.f);
   // Leaning into the turn: side and up turned about the way it flies.
@@ -2555,7 +2720,7 @@ function birdPoint(p: Particle, t: number): Vec3 {
       ];
     }
     case 'bird':
-      return birdBody(p, me);
+      return walking() ? walkerBody(p, me, t) : birdBody(p, me);
     default: {
       const slot = forestSlot(Math.floor(p.a * BIRD_TREES));
       const routes = forestTrees()[slot.kind] as Route3[];
@@ -2591,6 +2756,11 @@ const birdFar = (pos: Vec3, me: Vec3) =>
 function birdColour(p: Particle, t: number, twinkle: number): RGB {
   const me = flier(t);
   const role = birdRole(p);
+  if (role === 'bird' && walking()) {
+    // The walker's gold, the head a little brighter; the dust only while walking, fading as it rises.
+    if (p.a >= 0.92) return scale(SUGAR, 0.05 * me.pace * (1 - frac(p.b + me.stride * 0.5)));
+    return scale(mix(GOLD, SUGAR, p.a < 0.14 ? 0.8 : 0.3), p.a < 0.14 ? 0.09 : 0.07);
+  }
   if (role === 'bird') {
     // Pale gold feathers, the wingtips and the tail's edge brighter; soft, since it is near.
     const tip = p.a >= 0.35 ? p.b ** 2 : p.a >= 0.25 ? p.b : 0;
@@ -3099,8 +3269,14 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       return { eye: [Math.sin(a) * 32, ty + lift, Math.cos(a) * 32], target: [0, ty, 0] };
     }
     case 14: {
-      // Behind the bird and a little above, looking past it the way it flies.
+      // Behind the bird and a little above, looking past it the way it flies; the walker from
+      // over its shoulder, at its own height.
       const { c, f } = flier(t);
+      if (walking()) {
+        const eye = add(add(c, f, -WALK_CAM), [0, 1, 0], 4);
+        eye[1] = Math.max(hill(eye[0], eye[2]) + 1.5, eye[1]);
+        return { eye, target: add(add(c, f, 6), [0, 1, 0], 2) };
+      }
       const eye = add(add(c, f, -BIRD_CAM), [0, 1, 0], BIRD_CAM * 0.3);
       eye[1] = Math.max(hill(eye[0], eye[2]) + 1, eye[1]);
       return { eye, target: add(c, f, 6) };

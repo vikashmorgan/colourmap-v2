@@ -1,25 +1,47 @@
 import { describe, expect, it } from 'vitest';
 
-import { flow } from './bigbang';
+import { flow, hash } from './bigbang';
 import {
+  anemoneAt,
+  anemoneClown,
+  anemoneHidden,
   BITE,
   BITE_NAMES,
+  BOOST_PACE,
+  BOOST_PER_FISH,
+  BOOST_SECONDS,
+  besideWhale,
   biteAt,
+  boostLeft,
+  CALM_SECONDS,
+  CALM_TRUST,
   CHANNEL_W,
   CLOWNS,
+  COINS,
   CORAL_MODES,
+  CURRENT_PUSH,
+  calmNow,
   camera,
+  clamAt,
+  clamOpen,
   clownFish,
   colour,
   corals,
+  currentStart,
   DEEP_FLOOR,
+  dashSpeed,
   EYE_H,
   eatNear,
+  FINDS,
+  finds,
   GIANT_CYCLE,
   GULP,
+  gapeAt,
   gardenGrowth,
   giantSeen,
+  HAMMER_CYCLE,
   HUNT_LAP,
+  hammersSeen,
   hasCoralModes,
   hasGame,
   hasPointer,
@@ -27,7 +49,10 @@ import {
   hasVariants,
   hunterAt,
   JELLY_NAMES,
+  lightOn,
   makeParticles,
+  mantaNow,
+  mantaRate,
   PHASE_START,
   PHASES,
   PREY,
@@ -36,6 +61,7 @@ import {
   pieceAt,
   pieceCamera,
   pieceLength,
+  placeSwimmer,
   preyAt,
   preyShown,
   pulseOf,
@@ -44,6 +70,7 @@ import {
   reefFish,
   reefSlot,
   resetPrey,
+  resetTreasure,
   rootCoral,
   SEA_NAMES,
   SHOAL_KINDS,
@@ -52,6 +79,7 @@ import {
   SWIM_NAMES,
   SWIM_SPEED,
   setCoralMode,
+  setLight,
   setPointer,
   setSeaOf,
   setShoalKind,
@@ -61,10 +89,22 @@ import {
   smallFish,
   starBall,
   swimmer,
+  swimSway,
   TOTAL,
+  TUNNEL_LEN,
+  TUNNEL_R,
+  tally,
   target,
+  treasureAt,
+  tubeAt,
+  tubeShut,
+  tunnelAt,
   variantLabel,
   variantNames,
+  WHALE_CYCLE,
+  whaleNow,
+  whaleRate,
+  whaleSeen,
 } from './ocean';
 
 const particles = makeParticles(1500);
@@ -607,5 +647,311 @@ describe('the ocean chapter', () => {
     // In the Journey, back to the coral forest: the wander keeps above the sand.
     setSeaOf(1);
     for (let t = 0; t < 120; t += 7) expect(swimmer(t).c[1]).toBeGreaterThan(-14);
+  });
+
+  it('boosts on Space while the bar lasts, and wins boost back for every fish eaten', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    setSeaOf(1, k);
+    // The clownfish, which eats nothing, so the bar only drains.
+    setVariant(2, k);
+    resetPrey();
+    expect(boostLeft()).toBe(1);
+    const frames = (n: number, keys: string[], t0: number) => {
+      for (let i = 1; i <= n; i++) setSwim(true, null, keys, 1 / 60, t0 + i / 60);
+      return swimmer(t0 + n / 60);
+    };
+    const a = frames(1, [' '], 200);
+    const b = frames(60, [' '], 200 + 1 / 60);
+    // One second of boost: well past the cruise, toward three times it.
+    const run = Math.hypot(b.c[0] - a.c[0], b.c[1] - a.c[1], b.c[2] - a.c[2]);
+    expect(run).toBeGreaterThan(SWIM_SPEED * 2);
+    expect(run).toBeLessThan(SWIM_SPEED * BOOST_PACE * 1.05);
+    expect(boostLeft()).toBeLessThan(0.75);
+    expect(boostLeft()).toBeGreaterThan(0.5);
+    // Held on, the bar runs dry and the pace falls back.
+    frames(60 * BOOST_SECONDS, [' '], 202);
+    expect(boostLeft()).toBe(0);
+    const c0 = frames(1, [' '], 210);
+    const c1 = frames(120, [' '], 210 + 1 / 60);
+    expect(Math.hypot(c1.c[0] - c0.c[0], c1.c[2] - c0.c[2])).toBeLessThan(SWIM_SPEED * 2 * 1.2);
+    // A fish eaten wins some back.
+    setVariant(0, k);
+    const before = boostLeft();
+    const t = 213;
+    const got = eatNear(preyAt(0, t).c, t);
+    expect(got).toBeGreaterThan(0);
+    expect(boostLeft()).toBeCloseTo(before + BOOST_PER_FISH * got, 5);
+    setSwim(false, null, [], 0, 0);
+    resetPrey();
+    setSeaOf(0, k);
+  });
+
+  it('sends small fish dashing away as the hammerhead closes in, every one still somewhere real', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    setSeaOf(1, k);
+    setVariant(0, k);
+    resetPrey();
+    // A long swim through the open water's shoals, rising and turning.
+    let fastest = 0;
+    for (let i = 1; i <= 1800; i++) {
+      const t = 300 + i / 60;
+      setSwim(true, { x: 0.3 * Math.sin(t * 0.2), y: 0.2 * Math.sin(t * 0.13) }, [], 1 / 60, t);
+      if (i % 30 === 0) for (let j = 0; j < PREY; j++) fastest = Math.max(fastest, dashSpeed(j));
+    }
+    expect(fastest).toBeGreaterThan(2);
+    for (let j = 0; j < PREY; j += 7) {
+      const { c, f } = preyAt(j, 330);
+      for (const v of [...c, ...f]) expect(Number.isFinite(v)).toBe(true);
+    }
+    setSwim(false, null, [], 0, 0);
+    resetPrey();
+    setSeaOf(0, k);
+  });
+
+  it('bends the body into a turn and lets it flow straight again', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    setVariant(0, k);
+    const frames = (n: number, at: { x: number; y: number } | null, t0: number) => {
+      for (let i = 1; i <= n; i++) setSwim(true, at, [], 1 / 60, t0 + i / 60);
+    };
+    frames(60, { x: 0.8, y: 0 }, 400);
+    const right = swimSway();
+    expect(right.bend).toBeGreaterThan(0.5);
+    expect(right.wave).toBeGreaterThan(1.5);
+    frames(60, { x: -0.8, y: 0 }, 401);
+    expect(swimSway().bend).toBeLessThan(-0.5);
+    frames(240, null, 402);
+    expect(Math.abs(swimSway().bend)).toBeLessThan(0.05);
+    setSwim(false, null, [], 0, 0);
+    expect(swimSway()).toEqual({ bend: 0, wave: 1 });
+  });
+
+  it('opens the jaw wide through a bite and snaps it shut', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    setVariant(0, k);
+    resetPrey();
+    const t0 = 500;
+    eatNear(preyAt(0, t0).c, t0, 100);
+    expect(gapeAt(t0 + 0.5 * BITE)).toBeGreaterThan(0.95);
+    expect(gapeAt(t0 + 0.2 * BITE)).toBeGreaterThan(0.2);
+    expect(gapeAt(t0 + 0.8 * BITE)).toBeLessThan(0.05);
+    // The clownfish has no bite.
+    setVariant(2, k);
+    expect(gapeAt(t0 + 0.5 * BITE)).toBe(0);
+    setVariant(0, k);
+    resetPrey();
+  });
+
+  it('runs a coral tunnel from one mouth to a fork and out by two mouths side by side', () => {
+    const mouth = tunnelAt(0);
+    const fork = tunnelAt(14);
+    const left = tunnelAt(14 + 21.5 - 1e-3);
+    const right = tunnelAt(TUNNEL_LEN);
+    expect(mouth.c[0]).toBeCloseTo(fork.c[0], 6);
+    expect(mouth.c[2]).toBeGreaterThan(fork.c[2]);
+    // Two exits on the same side, far enough apart that each is its own mouth.
+    expect(left.c[2]).toBeCloseTo(right.c[2], 2);
+    expect(right.c[0] - left.c[0]).toBeGreaterThan(2 * TUNNEL_R - 1);
+    // Wide enough for the hammerhead.
+    expect(TUNNEL_R).toBeGreaterThan(4);
+    for (let s = 0; s <= TUNNEL_LEN; s += 3) {
+      const { c, f } = tunnelAt(s);
+      expect(c[1]).toBe(-14);
+      expect(Math.hypot(...f)).toBeCloseTo(1, 6);
+    }
+  });
+
+  it('switches Light on the Shark Sim only, soft caustics below and waves of light above', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    setLight(true, k - 1);
+    expect(lightOn()).toBe(false);
+    setLight(true, k);
+    expect(lightOn()).toBe(true);
+    for (const sea of [0, 1, 2]) {
+      setSeaOf(sea, k);
+      for (const p of particles) {
+        const { pos, rgb } = pieceAt(p, k, 40);
+        for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+        // The caustics on the sand never glare.
+        if (p.c < 0.08) expect(Math.max(...rgb)).toBeLessThan(0.4);
+      }
+    }
+    setLight(false);
+    setSeaOf(0, k);
+  });
+
+  it('brings hammerhead schools and whales by now and then, never always there', () => {
+    const hs = Array.from({ length: HAMMER_CYCLE }, (_, t) => hammersSeen(t));
+    expect(Math.max(...hs)).toBeGreaterThan(0.9);
+    expect(Math.min(...hs)).toBe(0);
+    for (const w of [0, 1]) {
+      const ws = Array.from({ length: WHALE_CYCLE }, (_, t) => whaleSeen(w, t));
+      expect(Math.max(...ws)).toBeGreaterThan(0.9);
+      expect(Math.min(...ws)).toBe(0);
+    }
+  });
+
+  it('keeps your own fish dim, so it never reads as a white glare', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    setVariant(0, k);
+    for (const p of particles.filter((q) => q.c >= 0.87)) {
+      expect(Math.max(...pieceAt(p, k, 20).rgb)).toBeLessThan(0.35);
+    }
+  });
+
+  describe('round three: a reef that answers, treasure, calm, currents, guests', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    const frames = (n: number, keys: string[], t0: number) => {
+      for (let i = 1; i <= n; i++) setSwim(true, null, keys, 1 / 60, t0 + i / 60);
+      return t0 + n / 60;
+    };
+    const yawOf = (f: number[]) => Math.atan2(-(f[0] as number), -(f[2] as number));
+
+    it('has the anemones draw in and their clownfish dive as you come, then peek back out', () => {
+      setSeaOf(0, k);
+      setVariant(2, k);
+      resetPrey();
+      const a = anemoneAt(0, [50, -14, 30]);
+      placeSwimmer([a[0], a[1] + 3, a[2] + 2]);
+      let t = frames(40, ['q'], 600);
+      expect(anemoneHidden(0)).toBeGreaterThan(0.7);
+      const me = swimmer(t).c;
+      const fish = anemoneClown(0, t, me).c;
+      const home = anemoneAt(0, me);
+      expect(
+        Math.hypot(fish[0] - home[0], fish[1] - home[1] - 0.7, fish[2] - home[2]),
+      ).toBeLessThan(0.8);
+      // Gone past: they come out slowly, a peek first, then all the way.
+      placeSwimmer([a[0], a[1] + 3, a[2] + 42]);
+      t = frames(60, ['q'], t);
+      expect(anemoneHidden(0)).toBeGreaterThan(0.3);
+      t = frames(900, ['q'], t);
+      expect(anemoneHidden(0)).toBeLessThan(0.1);
+      // A tube worm snaps shut at once.
+      const tb = tubeAt(0, [44, -14, 40]);
+      placeSwimmer([tb[0], tb[1] + 2, tb[2]]);
+      frames(20, ['q'], t);
+      expect(tubeShut(0)).toBeGreaterThan(0.8);
+      setSwim(false, null, [], 0, 0);
+      setVariant(0, k);
+    });
+
+    it('hides treasure: a pearl for the slow, an amphora, a coin trail, an egg; three bring the Golden hammerhead', () => {
+      setSeaOf(0, k);
+      setVariant(2, k);
+      resetTreasure();
+      expect(tally()).toBe(`Finds 0 / ${FINDS}`);
+      expect(variantNames(k)).not.toContain('Golden hammerhead');
+      // At a cruise the clam stays shut; slow and close, it opens.
+      const c = clamAt(0, [42, -14, 22]);
+      placeSwimmer([c[0], c[1] + 3, c[2] + 6]);
+      let t = frames(60, [], 700);
+      expect(clamOpen(0)).toBeLessThan(0.1);
+      placeSwimmer([c[0], c[1] + 3, c[2] + 6]);
+      t = frames(300, ['q'], t);
+      expect(clamOpen(0)).toBeGreaterThan(0.7);
+      placeSwimmer(treasureAt('pearl0') as [number, number, number]);
+      t = frames(1, ['q'], t);
+      expect(finds()).toBe(1);
+      // The amphora in the tunnel's fork.
+      placeSwimmer(treasureAt('amphora') as [number, number, number]);
+      t = frames(1, [], t);
+      expect(finds()).toBe(2);
+      // The coin trail counts once every coin is taken.
+      setSeaOf(2, k);
+      for (let i = 0; i < COINS; i++) {
+        placeSwimmer(treasureAt(`coin${i}`) as [number, number, number]);
+        t = frames(1, [], t);
+        if (i < COINS - 1) expect(finds()).toBe(2);
+      }
+      expect(finds()).toBe(3);
+      expect(variantNames(k)).toContain('Golden hammerhead');
+      placeSwimmer(treasureAt('egg') as [number, number, number]);
+      t = frames(1, [], t);
+      expect(tally()).toBe(`Finds 4 / ${FINDS}`);
+      // Each bursts softly, then is gone; every grain somewhere real.
+      for (const s of [t + 0.4, t + 2]) {
+        for (const p of particles) {
+          const { pos, rgb } = pieceAt(p, k, s);
+          for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+        }
+      }
+      // The golden one swims in gold.
+      setVariant(6, k);
+      for (const p of particles.filter((q) => q.c >= 0.87 && hash(q.i, 260) < 0.4).slice(0, 200)) {
+        const [r, g, b] = pieceAt(p, k, t).rgb;
+        expect(r).toBeGreaterThanOrEqual(g as number);
+        expect(g as number).toBeGreaterThanOrEqual(b as number);
+      }
+      setSwim(false, null, [], 0, 0);
+      resetTreasure();
+      setVariant(0, k);
+      setSeaOf(0, k);
+    });
+
+    it('grows calm on a long cruise, glowing softly; a calm hunter does not bite; a boost breaks it', () => {
+      setSeaOf(0, k);
+      setVariant(2, k);
+      resetPrey();
+      placeSwimmer([40, -6, 40]);
+      let t = frames(60 * (CALM_SECONDS + 1), [], 800);
+      expect(calmNow()).toBeGreaterThan(0.95);
+      setVariant(0, k);
+      expect(eatNear(preyAt(0, t).c, t)).toBe(0);
+      t = frames(1, [' '], t);
+      expect(calmNow()).toBe(0);
+      expect(calmNow()).toBeLessThan(CALM_TRUST);
+      setSwim(false, null, [], 0, 0);
+      resetPrey();
+    });
+
+    it('carries you fast along a current once you are in it', () => {
+      setSeaOf(0, k);
+      setVariant(2, k);
+      const start = currentStart(0);
+      placeSwimmer(start);
+      const a = swimmer(0).c;
+      frames(60, ['q'], 900);
+      const b = swimmer(901).c;
+      expect(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])).toBeGreaterThan(CURRENT_PUSH * 0.6);
+      setSwim(false, null, [], 0, 0);
+    });
+
+    it('lets you swim beside a whale, which keeps your pace, and follow a manta, which waits for you', () => {
+      setSeaOf(1, k);
+      setVariant(2, k);
+      // A moment when the first whale is out.
+      let t0 = 1000;
+      while (whaleSeen(0, t0) < 0.8) t0 += 1;
+      const w = whaleNow(0);
+      const side = [-(w.f[2] as number), 0, w.f[0] as number];
+      placeSwimmer(
+        [w.c[0] + 8 * (side[0] as number), w.c[1], w.c[2] + 8 * (side[2] as number)],
+        yawOf(w.f),
+      );
+      frames(150, [], t0);
+      expect(besideWhale(0)).toBeGreaterThan(0.5);
+      expect(whaleRate(0)).toBeGreaterThan(1.8);
+      setSwim(false, null, [], 0, 0);
+      // The manta: fallen far behind, it waits; close behind, it moves on.
+      setSeaOf(2, k);
+      const m = mantaNow();
+      placeSwimmer(
+        [m.c[0] - 22 * (m.f[0] as number), m.c[1], m.c[2] - 22 * (m.f[2] as number)],
+        yawOf(m.f),
+      );
+      frames(30, ['q'], 1100);
+      expect(mantaRate()).toBeLessThan(0.8);
+      const m2 = mantaNow();
+      placeSwimmer(
+        [m2.c[0] - 5 * (m2.f[0] as number), m2.c[1], m2.c[2] - 5 * (m2.f[2] as number)],
+        yawOf(m2.f),
+      );
+      frames(90, ['q'], 1101);
+      expect(mantaRate()).toBeGreaterThan(1.2);
+      setSwim(false, null, [], 0, 0);
+      setVariant(0, k);
+      setSeaOf(0, k);
+    });
   });
 });

@@ -48,6 +48,87 @@ five kinds). The kind of shoal is the Shoal's own choice: the Journey always
 swims the silver fish, the ring of small fish and the glowing jellyfish. Each
 piece with pills opens on its first.
 
+## Shark Sim, more
+
+Added 2026-11-11, all in the Shark Sim:
+
+- **Boost** ("press space for boost. with a booster bar. when u eat fish u win boost back. and do an
+  animation where small fish swim away faster when u get close"): **Space** held sends you on at 3.2
+  times the cruise while the bar lasts, three seconds from full; each fish eaten wins back 15% of it.
+  A thin ochre bar beside **Steer** shows what is left. While you play, Space is the boost; let go
+  (below) and Space pauses again. Small fish **dash**: as a hunter comes within about 10 of them they
+  are thrown away from the nearest point of its body, harder the closer it is, turning to swim the way
+  they flee; a spring draws each back to its school, so they dart off and come round again. Fleeing
+  fish are harder to catch, and the boost is how you run them down.
+- **Esc** ("press esc for stopping the game."): Esc lets go of the controls and the fish swims on by
+  itself, as in the Journey; **Steer** (beside the speeds, pressed while you play), a click on the
+  picture, **Enter** or any of W A S D E Q takes them back. In full screen the browser takes the first
+  Esc to leave full screen; the second lets go. Each piece opens with the controls taken.
+- **Body and bite** ("improve shark movement animation so when i move left or right it reflects on its
+  body in a natural liquid sinusoidal dynamic. and when it bites it needs to open its mouth or
+  something."): your own fish bends along the arc of its turn, a moment late so it flows into the bend
+  and out again, with a wave running head to tail that grows the harder it turns; its beat strengthens
+  as it turns and as it speeds. The hunter's lower jaw hinges down wide from the back of the jaw, the
+  snout lifting a little, the inside of the mouth a dark rose; it opens through the first half of a bite,
+  holds a beat, and snaps shut. Closing in on a fish, the jaw already parts a little.
+- **Coral tunnel** ("can u do a tunnel of corals as some place that connects from one side to another
+  with a Y so there are two exits on one of the sides."): in the Coral forest an arch of coral, wide
+  enough for the hammerhead, runs along the sand: one mouth, a trunk 14 long, then a fork into two
+  branches that come out 18 apart side by side, 20 further on. Its walls are rings of coral close
+  together, polyps tufting in and out, in the coral colours picked. No other coral grows in its way.
+  It stands at one place on the wrapping field, so you keep coming across it; you can swim through
+  its walls as well as down it.
+- **Light** ("can u give me lighting. like liquid reflections on the sea floor as one mode I can
+  activate.", "imagine u do a surface above. with waves of light like waves seen from below. beautiful
+  hypnotic patterns."): a **Light** switch beside the speeds. On the sand of the Coral forest, a net of
+  liquid light: two families of wavering lines crossing and sliding, beads of brightness running along
+  them, fainter the higher you swim; above, in the Coral forest and the Open water, the surface seen
+  from below, a wider net of light rippling the other way. Kept soft so nothing glares. Off on a new
+  piece and in the Journey; not in the Deep ocean.
+- **Visitors** ("add bancs de requins marteaux moving in fluid ways. inside the ocean. they are not
+  always there but sometimes appear. also add whales."): now and then a school of seven hammerheads
+  glides by, each following the path a moment behind the one ahead so its turns flow through the
+  school, there for part of a 70 s cycle and gone the rest; two whales of our own (a long body tapering
+  to the tail, wide flukes, long flippers beating slowly, pale throat grooves) cruise by, each for part
+  of a 95 s cycle, beating gently up and down. In every sea; high above the forest, among the shoals in
+  open water, down the canyon in the deep.
+- **Your fish, dimmer** (the hammerhead close to the eye read as a white glare): a lone fish of yours
+  is drawn with fewer grains (the spare ones draw the visitors) and at a little over half the light.
+
+## Shark Sim, a living sea
+
+Added 2026-11-11, from the Shark Sim plan the user approved ("no need for day and night. but do the
+rest"):
+
+- **A reef that answers** ("some coral reefs have the clownfish hiding in when u get close. so we
+  define different corals with different reactions. anemones would be cool as well."): in the Coral
+  forest six **anemones**, soft clumps of swaying tentacles, draw them in and curl as you come within
+  about 14; three clownfish living in each dive down into the tentacles, and once you have passed
+  peek back out, slowly, then swim their rings again. Eight clusters of **tube worms** snap their
+  little spiral fans shut at once when you come within about 9 and open them again slowly. The
+  **coral trees** sway in your wake (pushed the way you swim, the sea fans most) and their polyps dim
+  as you pass, glowing back as you go. All by distance, eased.
+- **Treasure** ("searching for treasures hidden in the landscape"): six finds. A pearl in each of three
+  **giant clams** on the sand of the Coral forest: a clam opens (its upper shell lifting, the mantle's
+  lip shimmering teal to violet) only to someone slow (under about 60% of the cruise, as on Q) and
+  close; an **amphora** lying in the tunnel's fork, a faint gold glint on it; a **trail of twelve gold
+  coins** spinning down the deep canyon from its lip (the trail counts once every coin is taken); a
+  **glowing egg** by the first vent. Swim through a treasure to take it: it bursts outward in a soft
+  lift of its light and is gone. A small count, "Finds 2 / 6", shows beside the boost bar while you
+  play. Three finds bring the **Golden hammerhead** into the fish pills. Kept for the visit only.
+- **Calm**: the longer you cruise without boosting or biting, the calmer you grow (twelve seconds to
+  full, twice as quick when slow, half as quick on E), with a soft warm glow on you. Past the trust
+  mark small fish drift in to a ring just off your body instead of fleeing, and a calm hunter does not
+  bite. A boost or a bite breaks the calm.
+- **Currents**: ribbons of moving water you can see, bands of light running along them, that carry
+  you at 8 a second once you are in them (about 4 either side of their middle). In the Coral forest one
+  runs from the open reef to the tunnel's mouth and one from its right exit up into the water above;
+  in the Open water two long sweeps run among the shoals; in the Deep one runs from the reef down over
+  the canyon's lip and one from the vents back up toward it.
+- **Guests**: swim at a whale's side (within about 16 along it and 14 out) and it quickens or slows to
+  keep your pace, and stays out while you are with it. In the Deep the first manta loops; follow it
+  from behind and it keeps about ten ahead, waiting when you fall back and moving on when you close in.
+
 ## Words
 
 Each piece has a line saying what you see and two lines of reflection:
@@ -92,6 +173,21 @@ Each piece has a line saying what you see and two lines of reflection:
   a button beside the speeds, on every piece with corals, steps through **Natural corals**, **Warm corals** (reds, oranges,
   pinks and ambers, red always the strongest: no green, no blue) and **Gold corals** (golden hues only); the polyps open to a
   warmer cream with them. Kept from piece to piece; natural in the Journey.
+- In the Shark Sim, Space boosts to well past the cruise while the bar lasts; held on, the bar runs dry
+  and the pace falls back; a fish eaten wins back 15% of it. Small fish dash away from a hunter.
+- Turning bends your fish's body, and it flows straight again once you stop turning; a bite opens the
+  jaw wide by its middle and has it shut by four fifths through.
+- The coral tunnel has one mouth and two exits on the same side, at least two radii apart.
+- Light switches on only in the Shark Sim; the caustics never glare.
+- The hammerhead school and each whale are sometimes fully there and sometimes gone.
+- Your own fish is never brighter than 0.35 in any channel.
+- An anemone draws in and its clownfish go home as you come; once you have gone they peek out slowly
+  and are all the way out within fifteen seconds; a tube worm shuts within a third of a second.
+- A clam stays shut to a cruising fish and opens to a slow one; its pearl, the amphora, the whole coin
+  trail and the egg each count as a find; three finds put the Golden hammerhead in the pills, all gold.
+- Thirteen seconds of cruising make you fully calm; calm, a hunter takes nothing; a boost breaks it.
+- A current carries you well past your own pace.
+- Beside a whale, it keeps your pace; far behind the deep's first manta, it slows; close behind, it quickens.
 - The garden's corals give no light before they begin; each step of growth takes longer than the last.
 - **Backgrounds** (2026-11-11: "check black as one preset for background but also do some deep blue backgrounds, with feeling of depth"): a button beside the speeds cycles **Black**, **Deep blue**, **Abyss** and **Twilight**; the blues darken from the top of the screen down, with a faint glow of light from above. Remembered on the device.
 - **Full screen** (2026-11-11: "make ability to really go full screen so I can get absorbed in the visual"): ⛶ beside Play (or F) fills the screen with the picture alone, every control and word hidden; Esc comes back.
