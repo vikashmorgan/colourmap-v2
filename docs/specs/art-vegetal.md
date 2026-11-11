@@ -14,10 +14,10 @@
 > whole chapter. think of more ideas for 6 7 8 and develop them."
 
 The first of the three worlds ([three-worlds.md](three-worlds.md)) to get
-its own chapter: thirteen numbered pieces, each shown on its own by name, or
+its own chapter: fourteen numbered pieces, each shown on its own by name, or
 played as one trip with **Journey**.
 
-## The thirteen pieces
+## The fourteen pieces
 
 | # | Piece | What you see | Camera |
 |---|-------|--------------|--------|
@@ -33,7 +33,8 @@ played as one trip with **Journey**.
 | 10 | Avenue | A road through a forest, flown a little above the ground. The trees stand in even rows, each the mirror of the one across the road; they are seedlings far ahead and grow as we come. Road edges and a broken centre line draw the eye to one point | Down the middle of the road |
 | 11 | Forest | A wild forest along a winding river (2026-11-10: "make it a sinuous river instead of a road, and put a mountain in the distant horizon as the point it seems to be getting to"): four kinds of tree, each at its own place, distance, size and turn, growing like fireworks and settling into trees; the two sides never match. Leaves in several greens and a little amber; fireflies between the trunks; light glinting on the flowing water. Far ahead a mountain, its outline and snowy peak catching the light, always the same distance away | Along the river, following its bends |
 | 12 | Full tree | The roots of piece 2 below and the tree of piece 4 above, all in gold, no green, meeting at a horizon line across the middle. Water climbs from the root tips to the crown (2026-11-10: "roots below and tree above, but all golden, with a horizon in the middle"). It holds still, the horizon straight across. The roots drop straight down from the horizon on a short neck and only then lean out (2026-11-10: "road can be taken off in the full tree, and roots begin more straight so they all get pushed a few cm lower"); the Road slider is gone | Still, face on, a little above the horizon |
-| 13 | Reflection | A tree standing still at the water's edge and the same tree in the water below, branch for branch, trembling with soft ripples; only the reflection moves (2026-11-10: "a reflection of it on the water with soft ripples below it, also symmetric but lower part moving, without rotation of the upper tree") | Still, face on |
+| 13 | Reflection | A tree standing still at the water's edge and the same tree in the water below, branch for branch, trembling with soft ripples; only the reflection moves (2026-11-10: "a reflection of it on the water with soft ripples below it, also symmetric but lower part moving, without rotation of the upper tree"). On its own, pills pick one of five trees, each over its own water (2026-11-10: "make 5 types of tree like this one, not a weeping willow like in the grid, and for each type of reflection make the water different, one where we can see soft ripples of stars on the water, etc., to make the water more visible"): **Oak** over soft ripples of stars, rings of light passing out through a field of small stars; **Pine**, in whorls, over water still as a mirror, its reflection barely moving; **Birch**, white bark with dark marks, in the rain, rings opening and fading; **Cherry** in blossom under the moon, a glittering path on the water and petals falling onto it; **Baobab** over water breathing out mist, its reflection blurred. The water has twice the grains it had, and the eye stands a little above it so its surface shows. The Journey plays the oak | Still, face on, a little above the water |
+| 14 | Bloom | A flower in slow motion (2026-11-10: "add a flower bloom to the visuals so it looks like a flower growing and blooming in slow motion"): the stem rises from the ground, two leaves unfurl, the bud swells in green sepals, the sepals fold back, three rows of rose petals open from the outside in and curl at their tips, then the stamens rise and pollen drifts up. 48 seconds | Slowly round the flower, rising with it |
 
 The two forests end the chapter (2026-11-09: "a forest with a road in the
 middle and we fly through it as the trees grow, in 3d. we are a bit above
@@ -89,7 +90,7 @@ The Words key hides them, as on the Journey.
 
 - `/geometry-field/vegetal` opens on piece 1 alone, looping; the step bar
   picks any piece, which starts whole with no ball of stars; Space pauses.
-- **Journey** plays the thirteen pieces as one trip and loops; turned off, it
+- **Journey** plays the fourteen pieces as one trip and loops; turned off, it
   stays on the piece it was in.
 - The pills read Stars · Geometry · Tunnels · Oils · Big Bang · Journey ·
   Vegetal · Experiment, on the Art panel and the trip pages.
