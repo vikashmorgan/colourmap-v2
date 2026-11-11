@@ -11,28 +11,26 @@ export type Design = 1 | 2;
 /** The wheel has a third (2026-11-08): the compass rose. */
 export type Design3 = 1 | 2 | 3;
 
-/** The tree has a fourth (2026-11-10): the 3D tree comes in as II. */
-export type Design4 = 1 | 2 | 3 | 4;
-
 export const parseDesign = (raw: string | null): Design => (raw === '2' ? 2 : 1);
 export const parseDesign3 = (raw: string | null): Design3 =>
   raw === '3' ? 3 : raw === '2' ? 2 : 1;
 
 /**
- * The tree's design, from what is stored under its new key, or else under the
- * old one from when there were three (2026-11-10): the 3D tree came in as II,
- * so an old II (the willow) is now III and an old III (the banyan) IV. The
- * same look comes back either way.
+ * The tree's design, from what is stored under its key, or else under the old
+ * one. There were four (2026-11-10 to 11-11); III and IV, the willow and the
+ * banyan, read the pages of II, so they come back as II. Under the old key II
+ * and III were the willow and banyan.
  */
-export function parseDesign4(raw: string | null, old: string | null = null): Design4 {
-  if (raw === '1' || raw === '2' || raw === '3' || raw === '4') return Number(raw) as Design4;
-  return old === '3' ? 4 : old === '2' ? 3 : 1;
+export function parseTreeDesign(raw: string | null, old: string | null = null): Design {
+  if (raw === '1') return 1;
+  if (raw === '2' || raw === '3' || raw === '4') return 2;
+  return old === '2' || old === '3' ? 2 : 1;
 }
 
-const ROMAN = ['', 'I', 'II', 'III', 'IV'];
-const WORDS = ['', 'one', 'two', 'three', 'four'];
+const ROMAN = ['', 'I', 'II', 'III'];
+const WORDS = ['', 'one', 'two', 'three'];
 
-type Props<D extends Design4> = {
+type Props<D extends Design3> = {
   label: string;
   design: D;
   pick: (d: D) => void;
@@ -40,7 +38,7 @@ type Props<D extends Design4> = {
   options?: readonly D[];
 };
 
-export function DesignTab<D extends Design4>({
+export function DesignTab<D extends Design3>({
   label,
   design,
   pick,
