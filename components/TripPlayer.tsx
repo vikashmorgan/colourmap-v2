@@ -92,6 +92,17 @@ export type Trip = {
       meter?: { label: string; value: () => number };
       /** A short count shown beside the bar while it is played (the Shark Sim's finds), read every frame. */
       tally?: () => string;
+      /**
+       * Small round dials, like a cockpit's, shown while it is played and kept in full screen (the
+       * Shark Sim's height, speed, fish eaten, treasure): read every frame, their needles swinging
+       * from `min` (0 if not given) to `max`. The same dials every frame.
+       */
+      gauges?: () => Gauge[];
+      /**
+       * How much the screen is blotted out, 0 to 1, read every frame (the Shark Sim's squid ink):
+       * drawn as blots of ink over the picture, splashed somewhere new each time it comes.
+       */
+      veil?: () => number;
     };
     /**
      * A switch to try on a step (the 3D tree all in gold), beside the speeds; off in the Journey.
@@ -114,15 +125,33 @@ export type Trip = {
     };
     /**
      * A button beside the speeds that steps through a few looks, showing the one on (the Ocean's
-     * coral colours); kept from step to step, the first in the Journey.
+     * coral colours); kept from step to step, the first in the Journey. Several give a button each
+     * (the Ocean's coral colours and fish colours).
      */
-    cycle?: {
-      has: (k: number) => boolean;
-      names: string[];
-      label: string;
-      set: (i: number) => void;
-    };
+    cycle?: Cycle | Cycle[];
+    /**
+     * Words of a step on its own that change as it plays (the Shark Sim's lines on freedom), `s`
+     * seconds in: the lines, and how far they have come in (0..1); null for the step's own words.
+     */
+    words?: (k: number, s: number) => { lines: string[]; shown: number } | null;
   };
+};
+
+export type Cycle = {
+  has: (k: number) => boolean;
+  names: string[];
+  label: string;
+  set: (i: number) => void;
+};
+
+/** A dial of a game's cockpit. */
+export type Gauge = { label: string; value: number; min?: number; max: number; unit?: string };
+
+/** Where a dial's needle points for a value: from -135° at `min` round to 135° at `max`. */
+export const needleAngle = (g: Gauge) => {
+  const lo = g.min ?? 0;
+  const k = g.max > lo ? (g.value - lo) / (g.max - lo) : 0;
+  return -135 + 270 * Math.max(0, Math.min(1, k));
 };
 
 /** The Art pills, the same as the panel's (components/GeometryField.tsx ART_PILLS). */
@@ -285,10 +314,21 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     if (journey) s?.set(0);
     else s?.set(scene, hud.index);
   }, [journey, scene, hud.index]);
-  const [cycled, setCycled] = useState(0);
+  const cycles = ([] as Cycle[]).concat(trip.pieces?.cycle ?? []);
+  const [cycled, setCycled] = useState<number[]>([]);
   useEffect(() => {
-    tripRef.current.pieces?.cycle?.set(journey ? 0 : cycled);
+    const all = ([] as Cycle[]).concat(tripRef.current.pieces?.cycle ?? []);
+    all.forEach((c, i) => {
+      c.set(journey ? 0 : (cycled[i] ?? 0));
+    });
   }, [journey, cycled]);
+  // A game's dials and its ink, drawn straight onto the page every frame.
+  const needlesRef = useRef<(SVGGElement | null)[]>([]);
+  const readingsRef = useRef<(SVGTextElement | null)[]>([]);
+  const inkRef = useRef<HTMLDivElement>(null);
+  // Words that change as a step plays (the Shark Sim's lines on freedom).
+  const [live, setLive] = useState<{ lines: string[]; shown: number } | null>(null);
+  const liveKey = useRef('');
 
   useEffect(() => {
     try {
@@ -454,6 +494,38 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           const text = game.tally();
           if (count.textContent !== text) count.textContent = text;
         }
+        // The cockpit's dials: each needle swung to its reading, the number under it.
+        if (game.gauges && needlesRef.current.some(Boolean)) {
+          game.gauges().forEach((g, i) => {
+            const needle = needlesRef.current[i];
+            const turn = `rotate(${needleAngle(g).toFixed(1)}deg)`;
+            if (needle && needle.style.transform !== turn) needle.style.transform = turn;
+            const reading = readingsRef.current[i];
+            const text = String(Math.round(g.value));
+            if (reading && reading.textContent !== text) reading.textContent = text;
+          });
+        }
+        // Ink over the picture: splashed somewhere new each time it comes, then fading.
+        const ink = inkRef.current;
+        if (ink && game.veil) {
+          const v = on ? game.veil() : 0;
+          const was = Number(ink.dataset.v ?? 0);
+          if (v > 0 && was === 0) {
+            for (const blot of Array.from(ink.children) as HTMLElement[]) {
+              const size = 22 + Math.random() * 26;
+              blot.style.width = `${size}vmin`;
+              blot.style.height = `${size * (0.8 + Math.random() * 0.4)}vmin`;
+              blot.style.left = `${Math.random() * 90 - 10}%`;
+              blot.style.top = `${Math.random() * 80 - 5}%`;
+              blot.style.transform = `rotate(${Math.random() * 360}deg)`;
+            }
+          }
+          const shown = Math.round(v * 100) / 100;
+          if (shown !== was) {
+            ink.dataset.v = String(shown);
+            ink.style.opacity = String(shown);
+          }
+        }
       }
       const guided = T.pieces?.pointer;
       if (guided) {
@@ -509,6 +581,13 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
 
       if (now - lastHud > 200) {
         lastHud = now;
+        // Words that change as the step plays, set only when they do.
+        const w = P?.words?.(k, t) ?? null;
+        const key = w ? `${w.lines.join('|')}:${Math.round(w.shown * 10)}` : '';
+        if (key !== liveKey.current) {
+          liveKey.current = key;
+          setLive(w);
+        }
         if (P) {
           const u = P.progress(k, t);
           setHud({ index: k, u, time: u * P.length(k) });
@@ -612,8 +691,65 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   }, [jumpTo, togglePlay, currentStep, immerse, stopGame]);
 
   const step = trip.phases[hud.index] as TripStep;
-  const lines = step.words ?? [];
-  const shown = trip.wordsShown?.(hud.u, lines.length) ?? lines.map(() => 1);
+  const lines = live?.lines ?? step.words ?? [];
+  const shown = live
+    ? lines.map(() => live.shown)
+    : (trip.wordsShown?.(hud.u, lines.length) ?? lines.map(() => 1));
+  const game = trip.pieces?.game;
+  const steering = !journey && !stopped && !!game?.has(hud.index);
+  // The dials, the same set every frame: read once here for their names and ranges.
+  const dials = steering ? (game?.gauges?.() ?? []) : [];
+  const cockpit =
+    dials.length > 0 ? (
+      <div className="bb-gauges">
+        {dials.map((g, i) => (
+          <span
+            key={g.label}
+            className="bb-gauge"
+            role="img"
+            aria-label={`${g.label}${g.unit ? ` (${g.unit})` : ''}`}
+          >
+            <svg viewBox="0 0 56 56" aria-hidden="true">
+              <circle className="bb-gauge-face" cx="28" cy="28" r="26" />
+              {Array.from({ length: 9 }, (_, n) => {
+                const a = ((-135 + n * 33.75 - 90) * Math.PI) / 180;
+                return (
+                  <line
+                    key={n}
+                    className="bb-gauge-tick"
+                    x1={28 + Math.cos(a) * 21}
+                    y1={28 + Math.sin(a) * 21}
+                    x2={28 + Math.cos(a) * 24}
+                    y2={28 + Math.sin(a) * 24}
+                  />
+                );
+              })}
+              <g
+                className="bb-gauge-needle"
+                ref={(el) => {
+                  needlesRef.current[i] = el;
+                }}
+                style={{ transform: `rotate(${needleAngle(g)}deg)` }}
+              >
+                <line x1="28" y1="31" x2="28" y2="9" />
+              </g>
+              <circle className="bb-gauge-hub" cx="28" cy="28" r="2.5" />
+              <text
+                className="bb-gauge-value"
+                x="28"
+                y="45"
+                ref={(el) => {
+                  readingsRef.current[i] = el;
+                }}
+              >
+                {Math.round(g.value)}
+              </text>
+            </svg>
+            <span className="bb-gauge-label">{g.label}</span>
+          </span>
+        ))}
+      </div>
+    ) : null;
   return (
     <main
       ref={mainRef}
@@ -651,6 +787,17 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           {trip.pieces.game.tally ? (
             <span className="bb-tally" ref={tallyRef} aria-live="polite" />
           ) : null}
+          {cockpit}
+        </div>
+      ) : null}
+      {/* A cockpit of dials while you steer (2026-11-11: "meters like in an airplane cockpit"). */}
+      {!immersed && cockpit ? <div className="bb-cockpit">{cockpit}</div> : null}
+      {/* Ink over the picture, when the game asks for it (2026-11-11: "spit ink on your screen"). */}
+      {game?.veil ? (
+        <div className="bb-ink" ref={inkRef} aria-hidden="true">
+          {Array.from({ length: 7 }, (_, n) => (
+            <span key={n} />
+          ))}
         </div>
       ) : null}
       <div className={`bb-top${chrome ? '' : ' bb-hidden'}`}>
@@ -671,7 +818,11 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       {hasWords && words && lines.length > 0 ? (
         <blockquote className="jr-words" aria-live="polite">
           {lines.map((line, k) => (
-            <p key={line} style={{ opacity: shown[k] ?? 0 }}>
+            <p
+              key={line}
+              className={line.startsWith('— ') ? 'jr-by' : undefined}
+              style={{ opacity: shown[k] ?? 0 }}
+            >
               {line}
             </p>
           ))}
@@ -856,15 +1007,26 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
                 : trip.pieces.toggle.label(hud.index)}
             </button>
           ) : null}
-          {!journey && trip.pieces?.cycle?.has(hud.index) ? (
-            <button
-              type="button"
-              onClick={() => setCycled((i) => (i + 1) % (trip.pieces?.cycle?.names.length || 1))}
-              title={`${trip.pieces.cycle.label}: next`}
-            >
-              {trip.pieces.cycle.names[cycled]}
-            </button>
-          ) : null}
+          {journey
+            ? null
+            : cycles.map((c, i) =>
+                c.has(hud.index) ? (
+                  <button
+                    type="button"
+                    key={c.label}
+                    onClick={() =>
+                      setCycled((was) => {
+                        const next = [...was];
+                        next[i] = ((was[i] ?? 0) + 1) % (c.names.length || 1);
+                        return next;
+                      })
+                    }
+                    title={`${c.label}: next`}
+                  >
+                    {c.names[cycled[i] ?? 0]}
+                  </button>
+                ) : null,
+              )}
           {!journey && trip.pieces?.flow?.has(hud.index) ? (
             <button
               type="button"

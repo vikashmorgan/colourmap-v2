@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { flow, hash } from './bigbang';
 import {
+  airborne,
   anemoneAt,
   anemoneClown,
   anemoneHidden,
@@ -13,6 +14,8 @@ import {
   besideWhale,
   biteAt,
   boostLeft,
+  bubblesNow,
+  CALAMARI,
   CALM_SECONDS,
   CALM_TRUST,
   CHANNEL_W,
@@ -20,6 +23,7 @@ import {
   COINS,
   CORAL_MODES,
   CURRENT_PUSH,
+  calamariAt,
   calmNow,
   camera,
   clamAt,
@@ -31,24 +35,38 @@ import {
   DEEP_FLOOR,
   dashSpeed,
   EYE_H,
+  eatenCount,
   eatNear,
   FINDS,
+  FISH_MODES,
+  FLOCK,
+  FREEDOM,
   finds,
+  fishTint,
+  flockManta,
+  freedomAt,
   GIANT_CYCLE,
   GULP,
   gapeAt,
   gardenGrowth,
+  gauges,
   giantSeen,
   HAMMER_CYCLE,
   HUNT_LAP,
   hammersSeen,
   hasCoralModes,
+  hasFishModes,
   hasGame,
   hasPointer,
   hasSeas,
   hasVariants,
   hunterAt,
+  INK_SECONDS,
+  inkVeil,
+  inTunnel,
   JELLY_NAMES,
+  LUNGE,
+  lastSplash,
   lightOn,
   makeParticles,
   mantaNow,
@@ -65,8 +83,11 @@ import {
   preyAt,
   preyShown,
   pulseOf,
+  QUOTE_SECONDS,
+  RED_FISH,
   REEF_SLOTS,
   RESPAWN,
+  redFish,
   reefFish,
   reefSlot,
   resetPrey,
@@ -75,10 +96,12 @@ import {
   SEA_NAMES,
   SHOAL_KINDS,
   STEP_COLOURS,
+  SUPER_PACE,
   SWARM_NAMES,
   SWIM_NAMES,
   SWIM_SPEED,
   setCoralMode,
+  setFishMode,
   setLight,
   setPointer,
   setSeaOf,
@@ -88,15 +111,20 @@ import {
   shoalFish,
   smallFish,
   starBall,
+  superOn,
   swimmer,
+  swimPartOf,
   swimSway,
   TOTAL,
+  TUNNEL_BRANCH,
   TUNNEL_LEN,
   TUNNEL_R,
+  TUNNEL_TRUNK,
   tally,
   target,
   treasureAt,
   tubeAt,
+  tubeOf,
   tubeShut,
   tunnelAt,
   variantLabel,
@@ -105,6 +133,10 @@ import {
   whaleNow,
   whaleRate,
   whaleSeen,
+  wingsOpen,
+  ZONE_CELL,
+  zoneAt,
+  zoneNow,
 } from './ocean';
 
 const particles = makeParticles(1500);
@@ -517,7 +549,10 @@ describe('the ocean chapter', () => {
       return (h * 60 + 360) % 360;
     };
     const coralGrains = particles.filter((p) => p.c >= 0.21);
-    const swimCorals = particles.filter((p) => p.c >= 0.2 && p.c < 0.72);
+    // The coral grains of the Shark Sim, not the tunnel's red fish (fish follow the fish colours).
+    const swimCorals = particles.filter(
+      (p) => p.c >= 0.2 && p.c < 0.72 && swimPartOf(p, 20) !== 'redfish',
+    );
     const check = (ok: (h: number, rgb: [number, number, number]) => boolean) => {
       for (const id of ['coral', 'fans', 'tables', 'swim']) {
         const k = PHASES.findIndex((p) => p.id === id);
@@ -742,21 +777,23 @@ describe('the ocean chapter', () => {
     resetPrey();
   });
 
-  it('runs a coral tunnel from one mouth to a fork and out by two mouths side by side', () => {
+  it('runs a great round coral tunnel from one mouth to a fork and out by two mouths side by side', () => {
     const mouth = tunnelAt(0);
-    const fork = tunnelAt(14);
-    const left = tunnelAt(14 + 21.5 - 1e-3);
+    const fork = tunnelAt(TUNNEL_TRUNK);
+    const left = tunnelAt(TUNNEL_TRUNK + TUNNEL_BRANCH - 1e-3);
     const right = tunnelAt(TUNNEL_LEN);
     expect(mouth.c[0]).toBeCloseTo(fork.c[0], 6);
     expect(mouth.c[2]).toBeGreaterThan(fork.c[2]);
     // Two exits on the same side, far enough apart that each is its own mouth.
     expect(left.c[2]).toBeCloseTo(right.c[2], 2);
-    expect(right.c[0] - left.c[0]).toBeGreaterThan(2 * TUNNEL_R - 1);
-    // Wide enough for the hammerhead.
-    expect(TUNNEL_R).toBeGreaterThan(4);
+    expect(right.c[0] - left.c[0]).toBeGreaterThan(2 * TUNNEL_R + 4);
+    // Big (2026-11-11: "make tunnel really big, like a big circular tunnel"): twice the hammerhead
+    // across, a round tube resting on the sand, its middle line level.
+    expect(2 * TUNNEL_R).toBeGreaterThanOrEqual(2 * 9);
     for (let s = 0; s <= TUNNEL_LEN; s += 3) {
       const { c, f } = tunnelAt(s);
-      expect(c[1]).toBe(-14);
+      expect(c[1] - TUNNEL_R).toBeLessThan(-14);
+      expect(c[1] - TUNNEL_R).toBeGreaterThan(-14 - 2);
       expect(Math.hypot(...f)).toBeCloseTo(1, 6);
     }
   });
@@ -952,6 +989,368 @@ describe('the ocean chapter', () => {
       setSwim(false, [], 0, 0);
       setVariant(0, k);
       setSeaOf(0, k);
+    });
+  });
+
+  describe('round four: flight, the bite key, fish colours, gauges, the great tunnel, regions, calamari, freedom', () => {
+    const k = PHASES.findIndex((p) => p.id === 'swim');
+    const frames = (n: number, keys: string[], t0: number) => {
+      for (let i = 1; i <= n; i++) setSwim(true, keys, 1 / 60, t0 + i / 60);
+      return t0 + n / 60;
+    };
+    const SKY_TOP = -14 + 72;
+    const allReal = (s: number) => {
+      for (const p of particles) {
+        const { pos, rgb } = pieceAt(p, k, s);
+        for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+      }
+    };
+
+    it('leaps out on a boost, glides on spread wings, and dives back in with a splash and bubbles', () => {
+      setSeaOf(1, k);
+      setVariant(0, k);
+      resetPrey();
+      placeSwimmer([40, SKY_TOP - 1, 40], 0, 0.6);
+      // Without a boost the surface holds you.
+      let t = frames(120, ['w'], 1200);
+      expect(airborne()).toBe(false);
+      expect(swimmer(t).c[1]).toBeLessThanOrEqual(SKY_TOP + 1e-9);
+      // Boosting up into it, you leap out in a splash.
+      t = frames(40, ['w', ' '], t);
+      expect(airborne()).toBe(true);
+      const first = lastSplash();
+      expect(first).toBeGreaterThan(1200);
+      // Wings out, you glide above the water a good while.
+      t = frames(30, ['w'], t);
+      expect(wingsOpen()).toBeGreaterThan(0.8);
+      expect(swimmer(t).c[1]).toBeGreaterThan(SKY_TOP + 2);
+      // The wings spread you wide: your grains reach far out to your sides.
+      const width = (s: number) => {
+        const { c, f } = swimmer(s);
+        const side = [-(f[2] as number), 0, f[0] as number];
+        const n = Math.hypot(side[0] as number, side[2] as number) || 1;
+        let most = 0;
+        for (const p of particles.filter((q) => q.c >= 0.87 && hash(q.i, 260) < 0.4)) {
+          const { pos } = pieceAt(p, k, s);
+          most = Math.max(
+            most,
+            Math.abs(
+              ((pos[0] - c[0]) * (side[0] as number) + (pos[2] - c[2]) * (side[2] as number)) / n,
+            ),
+          );
+        }
+        return most;
+      };
+      const spread = width(t);
+      expect(spread).toBeGreaterThan(9 * 0.75);
+      t = frames(30, ['w'], t);
+      expect(airborne()).toBe(true);
+      allReal(t);
+      // S folds the wings and you dive back in, nose first, bubbles streaming behind.
+      let n = 0;
+      while (airborne() && n++ < 600) t = frames(1, ['s'], t);
+      expect(airborne()).toBe(false);
+      expect(wingsOpen()).toBeLessThan(0.3);
+      expect(lastSplash()).toBeGreaterThan(first);
+      expect(swimmer(t).f[1]).toBeLessThan(-0.3);
+      t = frames(10, [], t);
+      expect(bubblesNow()).toBeGreaterThan(0.5);
+      expect(width(t)).toBeLessThan(spread * 0.7);
+      allReal(t);
+      setSwim(false, [], 0, 0);
+      setSeaOf(0, k);
+    });
+
+    it('eats only on B, the three bites by turns; on a boost B is one long lunge', () => {
+      setSeaOf(0, k);
+      setVariant(0, k);
+      resetPrey();
+      const t0 = 1300;
+      placeSwimmer([40, -6, 40]);
+      const fish = preyAt(0, t0).c;
+      // The mouth right at a fish (you head along -z).
+      placeSwimmer([fish[0], fish[1] - 2, fish[2] + 0.65 * 9]);
+      setSwim(true, [], 1 / 60, t0);
+      expect(biteAt(t0 + 0.01)).toBeNull();
+      expect(eatenCount()).toBe(0);
+      // B: the lunge, taking the fish at the mouth.
+      setSwim(true, ['b'], 1 / 60, t0 + 1 / 60);
+      expect(biteAt(t0 + 0.1)?.style).toBe(0);
+      expect(eatenCount()).toBeGreaterThan(0);
+      // Held, it does not bite again; pressed again, the sweep, then the rise.
+      const t1 = t0 + BITE + 0.1;
+      setSwim(true, ['b'], 1 / 60, t1);
+      expect(biteAt(t1 + 0.01)).toBeNull();
+      setSwim(true, [], 1 / 60, t1 + 0.02);
+      setSwim(true, ['b'], 1 / 60, t1 + 0.04);
+      expect(biteAt(t1 + 0.1)?.style).toBe(1);
+      const t2 = t1 + BITE + 0.2;
+      setSwim(true, [], 1 / 60, t2);
+      setSwim(true, ['b'], 1 / 60, t2 + 0.02);
+      expect(biteAt(t2 + 0.1)?.style).toBe(2);
+      // With Space held: a long lunge, still going after a plain bite would have ended.
+      const t3 = t2 + BITE + 0.2;
+      setSwim(true, [' '], 1 / 60, t3);
+      setSwim(true, [' ', 'b'], 1 / 60, t3 + 0.02);
+      const long = biteAt(t3 + 0.1);
+      expect(long?.style).toBe(0);
+      expect(long?.long).toBe(true);
+      expect(LUNGE).toBeGreaterThan(BITE);
+      expect(biteAt(t3 + 0.02 + BITE + 0.1)).not.toBeNull();
+      // A clownfish has no bite.
+      setVariant(2, k);
+      const before = eatenCount();
+      frames(30, ['b'], t3 + 3);
+      expect(eatenCount()).toBe(before);
+      setSwim(false, [], 0, 0);
+      setVariant(0, k);
+      resetPrey();
+    });
+
+    it('sends a school turning away together and fast as you charge it', () => {
+      setSeaOf(0, k);
+      setVariant(0, k);
+      resetPrey();
+      const t0 = 1400;
+      placeSwimmer([40, -6, 40]);
+      const school = Array.from({ length: 12 }, (_, n) => n * 5);
+      const mid = school
+        .map((i) => preyAt(i, t0).c)
+        .reduce((a, c) => [a[0] + c[0] / 12, a[1] + c[1] / 12, a[2] + c[2] / 12], [0, 0, 0]);
+      placeSwimmer([mid[0], mid[1] - 3, mid[2] + 16]);
+      frames(45, [' '], t0);
+      const fleeing = school.filter((i) => dashSpeed(i) > 2);
+      expect(fleeing.length).toBeGreaterThanOrEqual(8);
+      expect(Math.max(...school.map(dashSpeed))).toBeGreaterThan(5);
+      setSwim(false, [], 0, 0);
+      resetPrey();
+    });
+
+    it('turns every fish blue, red, gold or silver at the press of a button, and back', () => {
+      expect(FISH_MODES).toEqual([
+        'Natural fish',
+        'Blue fish',
+        'Red fish',
+        'Gold fish',
+        'Silver fish',
+      ]);
+      const ids = ['fish-pulse', 'shoal', 'sardines', 'reef', 'swim'];
+      for (let i = 0; i < PHASES.length; i++)
+        expect(hasFishModes(i)).toBe(ids.includes(PHASES[i]?.id ?? ''));
+      // Each fish keeps its own light: only the hue changes.
+      setFishMode(1);
+      const c = fishTint([0.3, 0.2, 0.05], 3);
+      expect(Math.max(...c)).toBeCloseTo(0.3, 6);
+      expect(c[2]).toBeGreaterThan(c[0]);
+      setFishMode(0);
+      expect(fishTint([0.3, 0.2, 0.05], 3)).toEqual([0.3, 0.2, 0.05]);
+      // In the open water every shoal fish is blue, then red.
+      setSeaOf(1, k);
+      setVariant(2, k);
+      const fishGrains = particles.filter((p) => p.c >= 0.2 && p.c < 0.72).slice(0, 400);
+      const sardines = PHASES.findIndex((p) => p.id === 'sardines');
+      for (const [mode, ok] of [
+        [1, (r: number, _g: number, b: number) => b >= r],
+        [2, (r: number, g: number, b: number) => r >= g && r >= b],
+      ] as [number, (r: number, g: number, b: number) => boolean][]) {
+        setFishMode(mode);
+        for (const p of fishGrains) {
+          const [r, g, b] = pieceAt(p, k, 30).rgb as [number, number, number];
+          if (Math.max(r, g, b) < 1e-3) continue;
+          // The visitors' whales keep their own colours.
+          if (hash(p.i, 250) < 0.22 && hash(p.i, 251) >= 0.55) continue;
+          expect(ok(r, g, b)).toBe(true);
+        }
+        for (const p of particles.filter((q) => q.c >= 0.08).slice(0, 200)) {
+          const [r, g, b] = pieceAt(p, sardines, 10).rgb as [number, number, number];
+          expect(ok(r, g, b)).toBe(true);
+        }
+      }
+      setFishMode(0);
+      setVariant(0, k);
+      setSeaOf(0, k);
+    });
+
+    it('shows four cockpit gauges: height, speed, fish eaten, treasure', () => {
+      setSeaOf(0, k);
+      setVariant(0, k);
+      resetPrey();
+      resetTreasure();
+      placeSwimmer([40, -6, 40]);
+      frames(10, [], 1500);
+      const g = gauges();
+      expect(g.map((x) => x.label)).toEqual(['Height', 'Speed', 'Fish', 'Treasure']);
+      for (const x of g) {
+        expect(Number.isFinite(x.value)).toBe(true);
+        expect(x.max).toBeGreaterThan(x.min ?? 0);
+      }
+      // Under the surface the height reads below zero; the speed your cruise.
+      expect(g[0]?.value).toBeLessThan(0);
+      expect(g[1]?.value).toBe(Math.round(SWIM_SPEED));
+      expect(g[2]?.value).toBe(0);
+      expect(g[3]?.value).toBe(0);
+      setSwim(false, [], 0, 0);
+    });
+
+    it('holds you inside the great tunnel until a mouth, and keeps you out of its walls from outside', () => {
+      setSeaOf(0, k);
+      setVariant(0, k);
+      // Inside the trunk, swimming hard at the wall: held inside.
+      const mid = tunnelAt(12).c;
+      placeSwimmer([mid[0], mid[1], mid[2]], -Math.PI / 2);
+      expect(inTunnel()).toBe(true);
+      let t = 1600;
+      for (let i = 0; i < 6; i++) {
+        // Straight at the side wall, then up into the roof as well.
+        t = frames(40, i % 2 ? ['e'] : ['e', 'w'], t);
+        expect(inTunnel()).toBe(true);
+        expect(tubeOf(swimmer(t).c).d).toBeLessThan(TUNNEL_R - 2);
+      }
+      // Out through the mouth, it lets you go.
+      const near0 = tunnelAt(3).c;
+      placeSwimmer([near0[0], near0[1], near0[2]], Math.PI);
+      t = frames(180, [], t);
+      expect(inTunnel()).toBe(false);
+      expect(swimmer(t).c[2]).toBeGreaterThan(tunnelAt(0).c[2]);
+      // From outside its side, the wall keeps you out.
+      placeSwimmer([mid[0] + TUNNEL_R + 6, mid[1], mid[2]], Math.PI / 2);
+      t = frames(240, ['e'], t);
+      expect(inTunnel()).toBe(false);
+      expect(tubeOf(swimmer(t).c).d).toBeGreaterThan(TUNNEL_R + 2);
+      // In by the mouth, and out by a branch's.
+      const mouth = tunnelAt(0).c;
+      placeSwimmer([mouth[0], mouth[1], mouth[2] + 5], 0);
+      t = frames(120, [], t);
+      expect(inTunnel()).toBe(true);
+      const end = tunnelAt(TUNNEL_LEN - 3);
+      placeSwimmer(end.c, Math.atan2(-end.f[0], -end.f[2]));
+      t = frames(150, [], t);
+      expect(inTunnel()).toBe(false);
+      // The small red fish swim inside it; every grain somewhere real.
+      const me = swimmer(t).c;
+      for (let j = 0; j < RED_FISH; j++)
+        expect(tubeOf(redFish(j, t, me).c).d).toBeLessThan(TUNNEL_R + 0.5);
+      allReal(t);
+      setSwim(false, [], 0, 0);
+    });
+
+    it('finds regions as you swim: a flight of forty mantas that keeps your pace, swarms of jellyfish', () => {
+      setSeaOf(1, k);
+      setVariant(0, k);
+      // Look across the sea for one of each.
+      const find = (kind: 'manta' | 'jelly') => {
+        for (let x = -900; x < 900; x += 15)
+          for (let z = -900; z < 900; z += 15) {
+            const zone = zoneAt([x, 0, z]);
+            if (zone?.kind === kind && zone.w >= 1) return [x, z] as [number, number];
+          }
+        return null;
+      };
+      const manta = find('manta');
+      const jelly = find('jelly');
+      expect(manta).not.toBeNull();
+      expect(jelly).not.toBeNull();
+      const [mx, mz] = manta as [number, number];
+      placeSwimmer([mx, 10, mz]);
+      let t = frames(240, [], 1700);
+      expect(zoneNow(t)?.kind).toBe('manta');
+      expect(FLOCK).toBe(40);
+      const me = swimmer(t).c;
+      for (let m = 0; m < FLOCK; m++) {
+        const c = flockManta(m, t).c;
+        expect(Math.hypot(c[0] - me[0], c[2] - me[2])).toBeLessThan(45);
+      }
+      // They keep your pace: still round you after a hard swim.
+      t = frames(120, ['e'], t);
+      const me2 = swimmer(t).c;
+      const gaps = Array.from({ length: FLOCK }, (_, m) => {
+        const c = flockManta(m, t).c;
+        return Math.hypot(c[0] - me2[0], c[2] - me2[2]);
+      });
+      expect(Math.max(...gaps)).toBeLessThan(50);
+      allReal(t);
+      const [jx, jz] = jelly as [number, number];
+      placeSwimmer([jx, 20, jz]);
+      t = frames(30, ['q'], t);
+      expect(zoneNow(t)?.kind).toBe('jelly');
+      allReal(t);
+      // Out in open sea, no region.
+      expect(ZONE_CELL).toBeGreaterThan(84);
+      setSwim(false, [], 0, 0);
+      setSeaOf(0, k);
+    });
+
+    it('lets you eat a calamari for a superboost, and blinds you with ink now and then', () => {
+      setSeaOf(0, k);
+      setVariant(0, k);
+      resetPrey();
+      // Up close to each squid in turn, until one inks.
+      let t = 1800;
+      let inked = -1;
+      for (let tries = 0; tries < 40 && inked < 0; tries++) {
+        const j = tries % CALAMARI;
+        placeSwimmer([40, -6, 40]);
+        const c = calamariAt(j, t).c;
+        placeSwimmer([c[0], c[1], c[2] + 4]);
+        setSwim(true, [], 1 / 60, t);
+        if (inkVeil(t + 0.1) > 0) inked = t;
+        else t += 13;
+      }
+      expect(inked).toBeGreaterThan(0);
+      expect(inkVeil(inked + 1)).toBe(1);
+      const fading = inkVeil(inked + 3);
+      expect(fading).toBeGreaterThan(0);
+      expect(fading).toBeLessThan(1);
+      expect(inkVeil(inked + INK_SECONDS + 0.1)).toBe(0);
+      // A calamari at the mouth, bitten: the bar fills and a superboost runs.
+      resetPrey();
+      t += 50;
+      placeSwimmer([40, -6, 40]);
+      const c = calamariAt(1, t).c;
+      placeSwimmer([c[0], c[1], c[2] + 0.65 * 9]);
+      setSwim(true, ['b'], 1 / 60, t);
+      expect(superOn()).toBe(true);
+      expect(boostLeft()).toBe(1);
+      // Faster than a boost, and the bar does not run down.
+      t = frames(30, [' '], t + 1);
+      const a = swimmer(t).c;
+      t = frames(60, [' '], t);
+      const b = swimmer(t).c;
+      expect(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])).toBeGreaterThan(
+        SWIM_SPEED * BOOST_PACE * 1.1,
+      );
+      expect(boostLeft()).toBe(1);
+      expect(SUPER_PACE).toBeGreaterThan(BOOST_PACE);
+      allReal(t);
+      setSwim(false, [], 0, 0);
+      resetPrey();
+    });
+
+    it('gives deep lines about freedom while you play, each with its author, a line at a time', () => {
+      expect(FREEDOM.length).toBeGreaterThanOrEqual(10);
+      const allowed = [
+        'Walt Whitman',
+        'Jean-Jacques Rousseau',
+        'Henry David Thoreau',
+        'Charlotte Brontë',
+        'Ralph Waldo Emerson',
+        'Herman Melville',
+        'Rabindranath Tagore',
+        'Frederick Douglass',
+      ];
+      for (const q of FREEDOM) {
+        expect(q.text.split(/\s+/).length).toBeLessThanOrEqual(15);
+        expect(allowed).toContain(q.by);
+      }
+      // The Journey shows the first, with its author.
+      expect(PHASES[k]?.words).toEqual([FREEDOM[0]?.text, `— ${FREEDOM[0]?.by}`]);
+      // On its own the piece goes through them, each fading in and out.
+      const a = freedomAt(QUOTE_SECONDS * 0.5);
+      expect(a.lines[1]).toBe(`— ${FREEDOM[0]?.by}`);
+      expect(a.shown).toBe(1);
+      expect(freedomAt(QUOTE_SECONDS * 1.5).lines[0]).toBe(FREEDOM[1]?.text);
+      expect(freedomAt(QUOTE_SECONDS * 2).shown).toBe(0);
+      expect(freedomAt(QUOTE_SECONDS * FREEDOM.length + 1).lines).toEqual(freedomAt(1).lines);
     });
   });
 });
