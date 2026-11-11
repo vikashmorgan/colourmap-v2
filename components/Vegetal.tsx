@@ -4,15 +4,16 @@
  * Vegetal, the plant world's chapter (docs/specs/art-vegetal.md): cell, roots
  * from one base, the tree flat and in 3D, fungi, a leaf, a flower on the
  * golden angle, fruit and seed, a road through an avenue, a forest along a
- * river, the full tree in gold, trees in the water and a flower blooming. The math lives in
+ * river, the full tree in gold, trees in the water, a flower blooming, and Bird Sim. The math lives in
  * lib/vegetal.ts; the shared trip player draws it.
  */
 import TripPlayer, { type Trip } from '@/components/TripPlayer';
 import {
   camera,
   fade,
-  hasGold,
+  hasBird,
   hasSap,
+  hasSwitch,
   hasVariants,
   look,
   makeParticles,
@@ -26,9 +27,11 @@ import {
   pieceLook,
   pieceProgress,
   STEP_COLOURS,
-  setGold,
+  setBird,
   setSap,
+  setSwitch,
   setVariant,
+  switchLabel,
   TOTAL,
   variantLabel,
   variantNames,
@@ -56,7 +59,9 @@ const TRIP: Trip = {
     look: pieceLook,
     flow: { has: hasSap, set: setSap },
     variants: { has: hasVariants, names: variantNames, set: setVariant, label: variantLabel },
-    toggle: { has: hasGold, label: 'Gold', set: setGold },
+    toggle: { has: hasSwitch, label: switchLabel, set: setSwitch },
+    // Bird Sim: you fly your own bird with the cursor and the keys.
+    game: { has: hasBird, set: setBird },
   },
 };
 

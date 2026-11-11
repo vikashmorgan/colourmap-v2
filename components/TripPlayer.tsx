@@ -91,8 +91,15 @@ export type Trip = {
         t: number,
       ) => void;
     };
-    /** A switch to try on a step (the 3D tree all in gold), beside the speeds; off in the Journey. */
-    toggle?: { has: (k: number) => boolean; label: string; set: (on: boolean) => void };
+    /**
+     * A switch to try on a step (the 3D tree all in gold), beside the speeds; off in the Journey.
+     * Each step its own: named by step, told which step, and off again on a new step.
+     */
+    toggle?: {
+      has: (k: number) => boolean;
+      label: string | ((k: number) => string);
+      set: (on: boolean, k?: number) => void;
+    };
   };
 };
 
@@ -232,9 +239,13 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   const guideRef = useRef(true);
   const [guide, setGuide] = useState(true);
   const [switched, setSwitched] = useState(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new step is what turns it off
   useEffect(() => {
-    tripRef.current.pieces?.toggle?.set(!journey && switched);
-  }, [journey, switched]);
+    setSwitched(false);
+  }, [hud.index]);
+  useEffect(() => {
+    tripRef.current.pieces?.toggle?.set(!journey && switched, journey ? undefined : hud.index);
+  }, [journey, switched, hud.index]);
 
   useEffect(() => {
     try {
@@ -704,7 +715,9 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           </span>
           {!journey && trip.pieces?.toggle?.has(hud.index) ? (
             <button type="button" aria-pressed={switched} onClick={() => setSwitched((s) => !s)}>
-              {trip.pieces.toggle.label}
+              {typeof trip.pieces.toggle.label === 'string'
+                ? trip.pieces.toggle.label
+                : trip.pieces.toggle.label(hud.index)}
             </button>
           ) : null}
           {!journey && trip.pieces?.flow?.has(hud.index) ? (
