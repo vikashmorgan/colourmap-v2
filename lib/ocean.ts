@@ -160,8 +160,9 @@ export const PHASES: OceanPhase[] = [
   },
   {
     id: 'swim',
-    name: 'Swim',
-    line: 'Your turn: pick a fish or a school and swim. The cursor steers, W and S set the pace, E and Q rise and sink. Rise above the reef into open water, where schools turn round you under the stars.',
+    // Shark Sim (2026-11-11: "call it shark simulator"); the id stays 'swim'.
+    name: 'Shark Sim',
+    line: 'You are the hammerhead, or any fish you pick. The cursor steers, W and S rise and sink, E and Q set the pace; swim into a school to feed. Three seas: the coral forest, open water full of shoals, and the deep.',
     words: [
       'Above the reef the water opens like a night sky,',
       'and the schools gather round whatever swims with purpose.',
@@ -244,6 +245,47 @@ const TABLE_TONES: RGB[] = [
   [0.7, 0.9, 0.6],
   [0.95, 0.6, 0.45],
 ];
+
+/*
+ * CORAL COLOURS (2026-11-11): "option to make all corals warm colours no green
+ * and blue. or option to make all corals golden and warm. can be activated".
+ * A button beside the speeds steps through Natural, Warm (reds, oranges,
+ * pinks and ambers, no green, no blue) and Gold, on every piece with corals.
+ */
+export const CORAL_MODES = ['Natural corals', 'Warm corals', 'Gold corals'];
+const WARM_TONES: RGB[] = [
+  [1, 0.35, 0.3],
+  [1, 0.55, 0.22],
+  [1, 0.42, 0.62],
+  [1, 0.7, 0.28],
+  [0.95, 0.28, 0.42],
+  [1, 0.6, 0.45],
+  [0.88, 0.22, 0.2],
+];
+const GOLD_TONES: RGB[] = [
+  [1, 0.78, 0.32],
+  [1, 0.68, 0.22],
+  [0.95, 0.84, 0.5],
+  [1, 0.62, 0.2],
+  [0.92, 0.72, 0.36],
+  [1, 0.86, 0.45],
+  [0.85, 0.6, 0.25],
+];
+let coralMode = 0;
+/** Which colours the corals wear: set by the button, natural in the Journey. */
+export function setCoralMode(i: number) {
+  coralMode = CORAL_MODES[i] ? i : 0;
+}
+/** A coral's tone in the colours picked: its own, or the warm or gold one at its place `k` in its palette. */
+function paint(tone: RGB, k: number): RGB {
+  if (coralMode === 0) return tone;
+  const set = coralMode === 1 ? WARM_TONES : GOLD_TONES;
+  return set[k % set.length] as RGB;
+}
+/** The pale the polyps open to: cream, a warmer cream when the corals are warm or gold. */
+const polypWhite = (): RGB => (coralMode === 0 ? [1, 1, 0.9] : [1, 0.93, 0.78]);
+const WITH_CORALS = new Set(['coral', 'fans', 'tables', 'fish-pulse', 'reef', 'swim']);
+export const hasCoralModes = (k: number) => WITH_CORALS.has(PHASES[k]?.id ?? '');
 
 /* ---------- shared: the sea itself ---------- */
 
@@ -1016,6 +1058,7 @@ function kindFishAt(
   p: Particle,
   t: number,
   j: number,
+  gape = 0,
 ): Vec3 {
   const side = norm(cross(f, [0, 1, 0]));
   const up = cross(side, f);
@@ -1088,10 +1131,12 @@ function kindFishAt(
   const s = p.b;
   const fin = kind.tail === 'fan' && s > 0.82 ? ((s - 0.82) / 0.18) * 0.22 * len : 0;
   const a = p.d * TAU;
+  // A hunter's jaw: the underside of the head drops open as it bites.
+  const jaw = gape > 0 && s < 0.2 && Math.sin(a) < 0 ? gape * 0.12 * len * (1 - s / 0.2) : 0;
   return put(
     len * (0.5 - s),
     Math.cos(a) * bodyAt(s) * (kind.wide ?? 1) + wagAt(s),
-    Math.sin(a) * (bodyAt(s) * kind.tall + fin),
+    Math.sin(a) * (bodyAt(s) * kind.tall + fin) - jaw,
   );
 }
 
@@ -1726,41 +1771,87 @@ function reefAt(p: Particle, u: number, t: number): { pos: Vec3; d: number } {
   }
 }
 
-/* ---------- 9. Swim: your own fish, through the corals and up under the stars ---------- */
+/* ---------- 9. Shark Sim: your own fish, through three seas ---------- */
 /*
  * 2026-11-11: "after reef create a game where I can choose my fish, or a school
  * of fish, and move through the corals, or above them where it feels a bit
  * like stars and schools of fish are around me". The world wraps round the
- * swimmer, so the reef never ends; above it the drifting snow turns to stars.
+ * swimmer, so the sea never ends; above the reef the drifting snow turns to stars.
+ *
+ * SHARK SIM (2026-11-11): "ws to go up and down in ocean swim. call it shark
+ * simulator. even i fother fish available. make hammer head default". W and S
+ * rise and sink, E (or Shift) and Q set the pace; the hammerhead comes first,
+ * the other fish stay in the pills.
  */
 
-type SwimKind = { name: string; kind: number | null; count: number; len: number; cam: number };
+type SwimKind = {
+  name: string;
+  kind: number | null;
+  count: number;
+  len: number;
+  cam: number;
+  /** A hunter: it eats the small fish it reaches, and they scatter from it. */
+  eats?: boolean;
+};
 const SWIM_KINDS: SwimKind[] = [
+  { name: 'Hammerhead', kind: 3, count: 1, len: 9, cam: 20, eats: true },
+  { name: 'Swordfish', kind: 4, count: 1, len: 8, cam: 18, eats: true },
   { name: 'Clownfish', kind: null, count: 1, len: 1.4, cam: 8 },
   { name: 'Yellow tang', kind: 1, count: 1, len: 2.2, cam: 9 },
-  { name: 'Hammerhead', kind: 3, count: 1, len: 9, cam: 20 },
-  { name: 'Swordfish', kind: 4, count: 1, len: 8, cam: 18 },
   { name: 'Silver school', kind: 0, count: 24, len: 2.2, cam: 16 },
   { name: 'Bannerfish school', kind: 10, count: 12, len: 2, cam: 14 },
 ];
 export const SWIM_NAMES = SWIM_KINDS.map((k) => k.name);
 let swimKind = 0;
-/** Which fish you swim as: set by the pills, the clownfish in the Journey. */
+/** Which fish you swim as: set by the pills, the hammerhead in the Journey. */
 export function setSwimKind(i: number) {
   swimKind = SWIM_KINDS[i] ? i : 0;
 }
 const swimNow = () => SWIM_KINDS[swimKind] as SwimKind;
 export const hasGame = (k: number) => PHASES[k]?.id === 'swim';
 
-/** Swimming speed in units a second, cruising; W doubles it, S slows to a drift. */
+/*
+ * SEAS (2026-11-11): "create diff ocean environments. as we had said
+ * yesterday. one with swarms shoals bancs de poissons tout outour quand on
+ * monte au dessus plus haut. aim is to make it beautiful. and then deep ocean
+ * with animals from deep as said yesterday. so the coral forest is just one
+ * environment". Three seas, picked by a second row of pills: the coral
+ * forest; open water, lit from the surface, great shoals turning all round
+ * you at every height; and the deep, a canyon dropping from the reef past
+ * mantas, squid and lantern fish to a rare giant squid and the glowing vents.
+ */
+export const SEA_NAMES = ['Coral forest', 'Open water', 'Deep ocean'];
+let sea = 0;
+/** Which sea you swim in: set by the pills, the coral forest in the Journey. */
+export function setSea(i: number) {
+  const next = SEA_NAMES[i] ? i : 0;
+  // A new sea: you take over again from the wander, where it is in that sea.
+  if (next !== sea) swim.on = false;
+  sea = next;
+}
+export const hasSeas = hasGame;
+
+/** Swimming speed in units a second, cruising; E doubles it, Q slows to a drift. */
 export const SWIM_SPEED = 4.5;
 const SWIM_W = 84;
 const SKY_TOP = FLOOR + 72;
+/** The floor of the abyss, where the vents stand. */
+export const DEEP_FLOOR = FLOOR - 96;
+/** The deep ocean's canyon: a strip of the wrapping field, its walls dropping from the reef to the vents. */
+const CANYON: [number, number] = [21, 63];
+const inCanyon = (x: number) => {
+  const w = wrap(x, SWIM_W);
+  return w > CANYON[0] && w < CANYON[1];
+};
+/** How low you can go at x: the sand, or in the deep ocean's canyon the floor of the abyss. */
+const floorAt = (x: number) => (sea === 2 && inCanyon(x) ? DEEP_FLOOR : FLOOR);
 const heading3 = (yaw: number, pitch: number): Vec3 => [
   -Math.sin(yaw) * Math.cos(pitch),
   Math.sin(pitch),
   -Math.cos(yaw) * Math.cos(pitch),
 ];
+const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const swim = {
   on: false,
   pos: [0, FLOOR + 6, 0] as Vec3,
@@ -1770,13 +1861,21 @@ const swim = {
   trail: [] as Trail[],
 };
 
-/** With no one at the controls (the Journey): a slow wander over the reef and up into the stars and down again. */
+/**
+ * With no one at the controls (the Journey): over the reef and up into the stars and down again; in
+ * open water high among the shoals; in the deep, slowly down the canyon to the vents and back up.
+ */
 function autopilot(t: number): { c: Vec3; f: Vec3 } {
-  const at = (tt: number): Vec3 => [
-    18 * Math.sin(0.05 * tt),
-    FLOOR + 9 + 9 * (0.5 - 0.5 * Math.cos(0.06 * tt)),
-    -3.5 * tt,
-  ];
+  const at = (tt: number): Vec3 =>
+    sea === 1
+      ? [18 * Math.sin(0.05 * tt), FLOOR + 28 + 12 * Math.sin(0.04 * tt), -3.5 * tt]
+      : sea === 2
+        ? [
+            42 + 12 * Math.sin(0.05 * tt),
+            FLOOR + 6 - 98 * (0.5 - 0.5 * Math.cos(0.025 * tt)),
+            -3.5 * tt,
+          ]
+        : [18 * Math.sin(0.05 * tt), FLOOR + 9 + 9 * (0.5 - 0.5 * Math.cos(0.06 * tt)), -3.5 * tt];
   const c = at(t);
   const n = at(t + 0.05);
   return { c, f: norm([n[0] - c[0], n[1] - c[1], n[2] - c[2]]) };
@@ -1814,24 +1913,34 @@ export function setSwim(
   const y = at ? dead(at.y) : 0;
   const turn = 1.5 * x + (held('a', 'arrowleft') ? -0.9 : 0) + (held('d', 'arrowright') ? 0.9 : 0);
   swim.yaw -= turn * dt;
-  const rise = (held('e', 'arrowup') ? 0.5 : 0) - (held('q', 'arrowdown') ? 0.5 : 0);
+  // W and S rise and sink (2026-11-11: "ws to go up and down"), as the arrows up and down do.
+  const rise = (held('w', 'arrowup') ? 0.6 : 0) - (held('s', 'arrowdown') ? 0.6 : 0);
   let tilt = Math.max(-0.9, Math.min(0.9, 0.9 * y + rise));
-  if (swim.pos[1] <= FLOOR + 1.6 && tilt < 0) tilt = 0;
+  if (swim.pos[1] <= floorAt(swim.pos[0]) + 1.6 && tilt < 0) tilt = 0;
   if (swim.pos[1] >= SKY_TOP && tilt > 0) tilt = 0;
   swim.pitch += (tilt - swim.pitch) * (1 - Math.exp(-2.2 * dt));
-  const pace = held('w') ? 2.1 : held('s') ? 0.35 : 1;
+  const pace = held('e', 'shift') ? 2.1 : held('q') ? 0.35 : 1;
   swim.speed += (SWIM_SPEED * pace - swim.speed) * (1 - Math.exp(-1.5 * dt));
   const f = heading3(swim.yaw, swim.pitch);
+  const was = swim.pos;
   swim.pos = add(swim.pos, f, swim.speed * dt);
-  swim.pos[1] = Math.max(FLOOR + 1.5, Math.min(SKY_TOP, swim.pos[1]));
+  // Below the reef in the deep ocean the canyon's walls hold you: you slide along them.
+  if (sea === 2 && swim.pos[1] < FLOOR + 1.5 && !inCanyon(swim.pos[0])) swim.pos[0] = was[0];
+  swim.pos[1] = Math.max(floorAt(swim.pos[0]) + 1.5, Math.min(SKY_TOP, swim.pos[1]));
   swim.trail.push({ t, c: swim.pos, f });
   while (swim.trail.length > 2 && (swim.trail[0] as Trail).t < t - 4) swim.trail.shift();
+  if (swimNow().eats) eatNear(mouthAt(t), t);
 }
 
 /** You: where you are at time t and which way you swim. */
 export function swimmer(t: number): { c: Vec3; f: Vec3 } {
   return swim.on ? { c: swim.pos, f: heading3(swim.yaw, swim.pitch) } : autopilot(t);
 }
+/** Where your mouth is: the front of your head. */
+const mouthAt = (t: number): Vec3 => {
+  const { c, f } = swimmer(t);
+  return add(c, f, swimNow().len * 0.5);
+};
 
 /** A world point brought round to the copy of it nearest the swimmer, on a field `w` wide. */
 const near = (base: Vec3, c: Vec3, w: number): Vec3 => [
@@ -1841,6 +1950,447 @@ const near = (base: Vec3, c: Vec3, w: number): Vec3 => [
 ];
 /** How far up from the sand the swimmer is, 0 among the corals to 1 high in the open water. */
 const altitude = (c: Vec3) => smooth((c[1] - FLOOR - 12) / 14);
+/** How much sunlight reaches down to height y: all of it above the reef, none 70 below. */
+const daylight = (y: number) => smooth((y - FLOOR + 70) / 70);
+
+/* ---------- the small fish you hunt, eaten and coming back ---------- */
+/*
+ * EATING (2026-11-11): "add ability for shark to eat small fish with 3
+ * animations for it o give flow and variety". A hunter that reaches a school
+ * bites, by turns a lunge, a sweep and a rise from below; the fish it takes
+ * shrink into its mouth, the rest scatter round it and close up behind, and
+ * each one eaten comes back a while later, so the sea never empties.
+ */
+
+const SCHOOLS = 5;
+const SCHOOL_FISH = 60;
+const BAIT_BALLS = 8;
+const BAIT_FISH = 360;
+const LANTERN_GROUPS = 15;
+const LANTERN_FISH = 150;
+/** Every small fish you can eat: the schools in every sea, the open water's shoals, the deep's lantern fish. */
+export const PREY = SCHOOL_FISH + BAIT_FISH + LANTERN_FISH;
+const NEVER = -1e9;
+const eatenAt = new Float64Array(PREY).fill(NEVER);
+/** Seconds a fish takes to vanish into the mouth, and before it comes back. */
+export const GULP = 0.45;
+export const RESPAWN = 14;
+/** Whether prey fish i swims in the sea you are in. */
+const preyIn = (i: number) =>
+  i < SCHOOL_FISH ||
+  (sea === 1 ? i < SCHOOL_FISH + BAIT_FISH : sea === 2 && i >= SCHOOL_FISH + BAIT_FISH);
+
+/** How much of prey fish i is there at time t: whole, shrinking into the mouth, gone, then growing back. */
+export function preyShown(i: number, t: number): number {
+  const d = t - (eatenAt[i] ?? NEVER);
+  if (d < 0) return 1;
+  if (d < GULP) return 1 - d / GULP;
+  if (d < RESPAWN) return 0;
+  return smooth((d - RESPAWN) / 2.5);
+}
+
+/** The three bites, taken by turns, and the one under way. */
+export const BITE_NAMES = ['Lunge', 'Sweep', 'Rise'];
+export const BITE = 0.8;
+const bite = { at: NEVER, style: 0, n: 0 };
+/** The bite under way at time t, and how far through it (0..1); null between bites. */
+export function biteAt(t: number): { style: number; k: number } | null {
+  const d = t - bite.at;
+  return d >= 0 && d < BITE ? { style: bite.style, k: d / BITE } : null;
+}
+
+/** Where a school's fish is before it scatters: each school a swirling ball, drifting, at your height. */
+function schoolRaw(i: number, tt: number, me: Vec3): Vec3 {
+  const s = i % SCHOOLS;
+  const j = Math.floor(i / SCHOOLS);
+  const way = hash(s, 180) * TAU;
+  const a = (s % 2 ? -1 : 1) * 0.5 * tt + j * 0.9;
+  const r = 1.6 + 2.2 * hash(i, 165);
+  // In the deep they keep to the canyon, swimming along it.
+  const x =
+    sea === 2
+      ? CANYON[0] + 5 + 32 * hash(s, 181)
+      : hash(s, 181) * SWIM_W - Math.sin(way) * 1.4 * tt;
+  return [
+    x + Math.cos(a) * r,
+    me[1] + 2 + 2.5 * (s % 3) + 1.2 * Math.sin(0.2 * tt + s) + (hash(i, 166) - 0.5) * 2.4,
+    hash(s, 182) * SWIM_W - Math.cos(way) * 1.4 * tt + Math.sin(a) * r,
+  ];
+}
+
+/*
+ * The open water's shoals (bancs de poissons): eight great balls of small
+ * fish at every height, each turning about its own middle, a wheel or a
+ * tornado, breathing in and out as it drifts.
+ */
+function baitRaw(j: number, tt: number): Vec3 {
+  const b = j % BAIT_BALLS;
+  const n = Math.floor(j / BAIT_BALLS);
+  const R = 5 + 2.5 * hash(b, 185);
+  const spin = (b % 2 ? -1 : 1) * (0.32 + 0.12 * hash(b, 186));
+  const v = hash(j, 187) - 0.5;
+  const tornado = b % 3 === 2;
+  const r =
+    R *
+    (tornado ? 0.3 + 0.7 * (v + 0.5) : 0.55 + 0.45 * hash(j, 188)) *
+    (1 + 0.1 * Math.sin(0.4 * tt + b));
+  const a = spin * tt + n * GOLDEN_ANGLE;
+  return [
+    hash(b, 189) * SWIM_W + 4 * Math.sin(0.05 * tt + b) + Math.cos(a) * r,
+    FLOOR + 14 + 34 * hash(b, 190) + 2 * Math.sin(0.1 * tt + b) + v * R * (tornado ? 2.2 : 0.9),
+    hash(b, 191) * SWIM_W + 4 * Math.cos(0.05 * tt + b) + Math.sin(a) * r,
+  ];
+}
+
+/** The deep's lantern fish: small groups down the canyon, in the twilight below the reef. */
+function lanternRaw(j: number, tt: number): Vec3 {
+  const g = j % LANTERN_GROUPS;
+  const n = Math.floor(j / LANTERN_GROUPS);
+  return [
+    CANYON[0] + 4 + 34 * hash(g, 192) + (hash(j, 193) - 0.5) * 6 + Math.sin(0.13 * tt + n),
+    FLOOR - 12 - 43 * hash(g, 194) + (hash(j, 195) - 0.5) * 4 + 0.5 * Math.sin(0.3 * tt + j),
+    hash(g, 196) * SWIM_W - 0.8 * tt + (hash(j, 197) - 0.5) * 6 + Math.cos(0.11 * tt + n),
+  ];
+}
+
+function preyRaw(i: number, tt: number, me: Vec3): Vec3 {
+  if (i < SCHOOL_FISH) return schoolRaw(i, tt, me);
+  if (i < SCHOOL_FISH + BAIT_FISH) return baitRaw(i - SCHOOL_FISH, tt);
+  return lanternRaw(i - SCHOOL_FISH - BAIT_FISH, tt);
+}
+const preyLen = (i: number) =>
+  i < SCHOOL_FISH
+    ? (i % SCHOOLS) % 3 === 2
+      ? 1.6
+      : 1.1
+    : i < SCHOOL_FISH + BAIT_FISH
+      ? 0.85
+      : 0.7;
+
+/**
+ * Small fish part round a hunter: pushed away from the nearest point of its body, more the closer
+ * they are, and bursting wide as it rises through them. They close up again once it has passed.
+ */
+function scatter(c: Vec3, t: number): Vec3 {
+  const kind = swimNow();
+  if (!kind.eats) return c;
+  const { c: s, f } = swimmer(t);
+  const half = kind.len / 2;
+  const q = add(s, f, Math.max(-half, Math.min(half, dot(sub(c, s), f))));
+  const d = sub(c, q);
+  const dist = Math.hypot(d[0], d[1], d[2]);
+  const b = biteAt(t);
+  const burst = b && b.style === 2 ? 1 + 0.8 * Math.sin(Math.PI * b.k) : 1;
+  const R = (0.35 * kind.len + 3) * burst;
+  if (dist >= R || dist < 1e-6) return c;
+  return add(c, d, ((1 - dist / R) ** 2 * R * 0.6) / dist);
+}
+
+/** Prey fish i at time t: where it is, which way it swims, how long, and how much of it is there. */
+export function preyAt(i: number, t: number): { c: Vec3; f: Vec3; len: number; shown: number } {
+  const me = swimmer(t).c;
+  const a = preyRaw(i, t, me);
+  const b = preyRaw(i, t + 0.05, me);
+  const f = norm(sub(b, a));
+  const base = near(a, me, SWIM_W);
+  base[1] = Math.max(floorAt(base[0]) + 1, base[1]);
+  let c = scatter(base, t);
+  const shown = preyShown(i, t);
+  const d = t - (eatenAt[i] ?? NEVER);
+  // Being eaten: drawn into the mouth as it shrinks.
+  if (d >= 0 && d < GULP) c = lerp3(c, mouthAt(t), smooth(d / GULP));
+  return { c, f, len: preyLen(i), shown };
+}
+
+/**
+ * A hunter's mouth at `mouth`, time t: if no bite is under way and a small fish is within two reaches,
+ * the next of the three bites begins and takes the nearest (a lunge one, a sweep up to three, a rise
+ * two). Returns how many it took.
+ */
+export function eatNear(mouth: Vec3, t: number, reach = 1.2 + 0.18 * swimNow().len): number {
+  if (t >= bite.at && t - bite.at < BITE) return 0;
+  const style = bite.n % 3;
+  const most = style === 0 ? 1 : style === 1 ? 3 : 2;
+  const close: { i: number; d: number }[] = [];
+  for (let i = 0; i < PREY; i++) {
+    if (!preyIn(i) || preyShown(i, t) < 1) continue;
+    const { c } = preyAt(i, t);
+    const d = Math.hypot(c[0] - mouth[0], c[1] - mouth[1], c[2] - mouth[2]);
+    if (d < 2 * reach) close.push({ i, d });
+  }
+  if (!close.length) return 0;
+  close.sort((x, y) => x.d - y.d);
+  const taken = close.slice(0, most);
+  for (const { i } of taken) eatenAt[i] = t;
+  bite.at = t;
+  bite.style = style;
+  bite.n++;
+  return taken.length;
+}
+
+/** Every fish back, no bite under way: for a fresh start. */
+export function resetPrey() {
+  eatenAt.fill(NEVER);
+  bite.at = NEVER;
+  bite.n = 0;
+}
+
+/**
+ * The hunter's body through a bite: where it is, which way it points, how wide its jaw. A lunge
+ * surges forward and nods as the jaw snaps; a sweep whips the head to one side through the school
+ * and back; a rise dips, then comes up from below, mouth open. The jaw opens wide and snaps shut a
+ * little past halfway; the camera keeps to the steady path, so only the shark moves.
+ */
+function bitePose(c: Vec3, f: Vec3, len: number, t: number): { c: Vec3; f: Vec3; gape: number } {
+  const b = biteAt(t);
+  if (!b) return { c, f, gape: 0 };
+  const { style, k } = b;
+  const arc = Math.sin(Math.PI * k);
+  const gape = Math.sin(Math.PI * Math.min(1, k / 0.55));
+  if (style === 0)
+    return {
+      c: add(c, f, 0.22 * len * arc),
+      f: norm(add(f, [0, 1, 0], -0.25 * Math.sin(TAU * k))),
+      gape,
+    };
+  if (style === 1) {
+    const a = 0.7 * Math.sin(TAU * k) * (1 - 0.5 * k);
+    const cs = Math.cos(a);
+    const sn = Math.sin(a);
+    return { c, f: norm([f[0] * cs - f[2] * sn, f[1], f[0] * sn + f[2] * cs]), gape };
+  }
+  return {
+    c: add(c, [0, 1, 0], len * (0.22 * arc - 0.12 * Math.sin(TAU * k))),
+    f: norm(add(f, [0, 1, 0], 0.6 * arc)),
+    gape,
+  };
+}
+
+/* ---------- the deep: the drop-off, mantas, squid, the giant, the vents ---------- */
+
+const MANTAS = 4;
+const SQUIDS = 10;
+const RIM_CORALS = 14;
+const VENTS = 5;
+const CANYON_MID = (CANYON[0] + CANYON[1]) / 2;
+
+type DeepRole = 'rim' | 'manta' | 'squid' | 'giant' | 'vent';
+const deepRole = (p: Particle): DeepRole => {
+  const h = hash(p.i, 201);
+  return h < 0.22 ? 'rim' : h < 0.42 ? 'manta' : h < 0.6 ? 'squid' : h < 0.74 ? 'giant' : 'vent';
+};
+
+/** Coral j on the lip of the drop-off: either side of the canyon, on the reef above it. */
+function rimSlot(j: number): { at: Vec3; colony: number; size: number } {
+  const out = 1.5 + 9 * hash(j, 203);
+  return {
+    at: [
+      j % 2 ? CANYON[1] + out : CANYON[0] - out,
+      FLOOR,
+      ((j + hash(j, 204)) * SWIM_W) / RIM_CORALS,
+    ],
+    colony: Math.floor(hash(j, 205) * COLONIES),
+    size: 0.8 + 0.6 * hash(j, 206),
+  };
+}
+
+/** Grain p of a body at c heading f: `put` takes a place along it, across it and up from it. */
+const frame = (c: Vec3, f: Vec3) => {
+  const side = norm(cross(f, [0, 1, 0]));
+  const up = cross(side, f);
+  return (back: number, lat: number, ver: number): Vec3 => [
+    c[0] + f[0] * back + side[0] * lat + up[0] * ver,
+    c[1] + f[1] * back + side[1] * lat + up[1] * ver,
+    c[2] + f[2] * back + side[2] * lat + up[2] * ver,
+  ];
+};
+
+/** Manta m's path: slow loops just below the lip of the drop-off, each a little deeper than the last. */
+const mantaPath = (m: number, tt: number): Vec3 => [
+  CANYON_MID + 13 * Math.sin(0.045 * tt + m * 1.7),
+  FLOOR - 7 - 5 * m + 2 * Math.sin(0.08 * tt + m),
+  hash(m, 208) * SWIM_W - 2.2 * tt + 9 * Math.cos(0.035 * tt + m),
+];
+
+/*
+ * A manta, our own: a wide diamond of wing, its leading edge swept back, the
+ * tips rising and falling in a slow wave that runs out along each wing, two
+ * horns curling ahead of the head and a thin whip of a tail.
+ */
+function mantaAt(m: number, p: Particle, t: number, me: Vec3): Vec3 {
+  const a = mantaPath(m, t);
+  const put = frame(near(a, me, SWIM_W), norm(sub(mantaPath(m, t + 0.05), a)));
+  const L = 5.5;
+  const S = 11;
+  const part = hash(p.i, 209);
+  const q = hash(p.i, 210);
+  if (part < 0.08) return put(-L * 0.45 - 0.9 * L * q, 0.15 * q * Math.sin(3 * t + q * 6), 0);
+  if (part < 0.13) return put(L * 0.5 + 0.5 * q, (p.b < 0.5 ? -1 : 1) * (0.6 - 0.2 * q), -0.15 * q);
+  const u = p.b * 2 - 1;
+  const au = Math.abs(u);
+  const chord = L * (1 - au ** 1.4);
+  const flap = 1.9 * au ** 1.6 * Math.sin(1.4 * t + m * 1.9 - au * 1.6);
+  const thick = (hash(p.i, 211) - 0.5) * 0.35 * (1 - au);
+  return put(L * 0.5 - 0.42 * L * au - chord * p.d, (u * S) / 2, flap + thick);
+}
+
+/**
+ * A squid at c heading f, mantle first, `size` times a calamari: the mantle drawn in as it jets
+ * (pull near 1), its fins rippling at the tip, eight arms opening and closing behind, two long
+ * tentacles trailing with clubs at their ends.
+ */
+function squidAt(
+  c: Vec3,
+  f: Vec3,
+  size: number,
+  pull: number,
+  p: Particle,
+  t: number,
+  j: number,
+): Vec3 {
+  const put = frame(c, f);
+  const L = 2.4 * size;
+  const A = 1.6 * size;
+  const part = hash(p.i, 230);
+  const q = hash(p.i, 231);
+  if (part < 0.5) {
+    const r = 0.34 * size * Math.sin(Math.PI * 0.5 * Math.min(1, q * 1.6)) * (1 - 0.2 * pull);
+    const a = p.d * TAU;
+    return put(L * (0.5 - q), Math.cos(a) * r, Math.sin(a) * r);
+  }
+  if (part < 0.62)
+    return put(
+      L * (0.38 - 0.3 * q),
+      (p.b < 0.5 ? -1 : 1) * size * (0.25 + 0.45 * (1 - q) * p.d),
+      0.1 * size * Math.sin(4 * t + q * 5 + j),
+    );
+  if (part < 0.9) {
+    const arm = Math.floor(p.b * 8);
+    const ang = (arm / 8) * TAU;
+    const open = (0.15 + (0.12 + 0.25 * (1 - pull)) * q) * size;
+    return put(
+      -L * 0.5 - A * q,
+      Math.cos(ang) * open,
+      Math.sin(ang) * open + 0.08 * size * Math.sin(3 * t + q * 5 + arm),
+    );
+  }
+  const T = 3 * size;
+  const sd = p.b < 0.5 ? -1 : 1;
+  const club = q > 0.85 ? 0.08 * size * Math.sin(p.d * TAU) : 0;
+  return put(
+    -L * 0.5 - T * q,
+    sd * 0.12 * size + 0.25 * size * q * Math.sin(1.3 * t + j + q * 3) + club,
+    0.2 * size * q * Math.cos(1.1 * t + j) + club,
+  );
+}
+
+/** How the squid jet: a quick pull of the mantle, then a glide. */
+const squidPull = (j: number, t: number) => Math.max(0, Math.sin(2.2 * t + j * 1.3)) ** 2;
+/** Squid j of the group: drifting down the canyon in the twilight, each jet a surge forward. */
+function squidOf(j: number, t: number, me: Vec3): { c: Vec3; f: Vec3 } {
+  const path = (tt: number): Vec3 => [
+    CANYON_MID + 8 * Math.sin(0.03 * tt) + (hash(j, 232) - 0.5) * 10,
+    FLOOR - 30 + 4 * Math.sin(0.05 * tt) + (hash(j, 233) - 0.5) * 6,
+    hash(j, 234) * 8 + 30 - 0.9 * tt,
+  ];
+  const a = path(t);
+  const f = norm(sub(path(t + 0.05), a));
+  const surge = 0.45 * Math.sin(2.2 * t + j * 1.3 - 0.8);
+  return { c: near(add(a, f, surge), me, SWIM_W), f };
+}
+
+/** The giant squid's long cycle: hidden most of the time, it drifts out of the dark now and then. */
+export const GIANT_CYCLE = 75;
+export const giantSeen = (t: number) =>
+  smooth((Math.sin((TAU * t) / GIANT_CYCLE + 1) - 0.55) / 0.3);
+function giantOf(t: number, me: Vec3): { c: Vec3; f: Vec3 } {
+  const path = (tt: number): Vec3 => [
+    CANYON_MID + 6 * Math.sin(0.02 * tt),
+    DEEP_FLOOR + 30 + 3 * Math.sin(0.03 * tt),
+    10 - 0.6 * tt,
+  ];
+  const a = path(t);
+  return { c: near(a, me, SWIM_W), f: norm(sub(path(t + 0.05), a)) };
+}
+
+const ventBase = (v: number): Vec3 => [
+  CANYON[0] + 8 + 26 * hash(v, 212),
+  DEEP_FLOOR,
+  ((v + 0.3 * hash(v, 213)) * SWIM_W) / VENTS,
+];
+const ventH = (v: number) => 6 + 7 * hash(v, 214);
+type VentPart = 'chimney' | 'mat' | 'plume';
+const ventPart = (p: Particle): VentPart => {
+  const h = hash(p.i, 215);
+  return h < 0.4 ? 'chimney' : h < 0.5 ? 'mat' : 'plume';
+};
+const PLUME = 18;
+/** The vents on the floor of the abyss: rough chimneys, glowing mats round their feet, hot water rising. */
+function ventAt(p: Particle, t: number, me: Vec3): Vec3 {
+  const v = Math.floor(p.a * VENTS);
+  const b = near(ventBase(v), me, SWIM_W);
+  const h = ventH(v);
+  const q = hash(p.i, 216);
+  const a = p.d * TAU;
+  switch (ventPart(p)) {
+    case 'chimney': {
+      const r = (1.4 - 0.8 * q) * (0.8 + 0.4 * hash(p.i, 217));
+      return [b[0] + Math.cos(a) * r, b[1] + q * h, b[2] + Math.sin(a) * r];
+    }
+    case 'mat': {
+      const r = 1.5 + 4 * Math.sqrt(q);
+      return [b[0] + Math.cos(a) * r, b[1] + 0.1, b[2] + Math.sin(a) * r];
+    }
+    default: {
+      // Rising, widening and curling as it cools.
+      const rise = wrap(q * PLUME + t * 2.2, PLUME);
+      const w = rise / PLUME;
+      const r = 0.4 + 3.2 * w ** 0.8 * hash(p.i, 218);
+      const turn = a + t * 0.6 + rise * 0.4;
+      return [
+        b[0] + Math.cos(turn) * r + 1.5 * w * Math.sin(0.2 * t + v),
+        b[1] + h + rise,
+        b[2] + Math.sin(turn) * r,
+      ];
+    }
+  }
+}
+
+/** The deep's rock: the canyon's two walls, the reef on either side above, the floor of the abyss. */
+function deepRockAt(p: Particle, me: Vec3): Vec3 {
+  const q = hash(p.i, 219);
+  const z = hash(p.i, 220) * SWIM_W;
+  if (q < 0.55) {
+    const y = FLOOR - p.b * (FLOOR - DEEP_FLOOR);
+    const rough = 1.2 * Math.sin(y * 0.35 + z * 0.2) + (hash(p.i, 221) - 0.5);
+    return near([p.d < 0.5 ? CANYON[1] + rough : CANYON[0] - rough, y, z], me, SWIM_W);
+  }
+  if (q < 0.75) {
+    const x = CANYON[1] + p.b * (SWIM_W - (CANYON[1] - CANYON[0]));
+    return near([x, FLOOR + Math.sin(p.b * 60 + z) * 0.25, z], me, SWIM_W);
+  }
+  const x = CANYON[0] + p.b * (CANYON[1] - CANYON[0]);
+  return near([x, DEEP_FLOOR + Math.sin(x * 0.7 + z * 0.5) * 0.3, z], me, SWIM_W);
+}
+
+/* ---------- the open water: sun from the surface ---------- */
+
+const RAYS = 9;
+/** Shafts of sun slanting down from the surface, swaying; `s` how far down each grain is. */
+function rayAt(p: Particle, t: number, me: Vec3): { pos: Vec3; s: number } {
+  const k = Math.floor(hash(p.i, 222) * RAYS);
+  const s = hash(p.i, 223);
+  const base: Vec3 = [
+    hash(k, 224) * SWIM_W + Math.sin(t * 0.07 + k) * 2 + s * 14 + (hash(p.i, 227) - 0.5) * 1.6,
+    SKY_TOP + 2 - s * 60,
+    hash(k, 225) * SWIM_W + (hash(p.i, 226) - 0.5) * 1.6,
+  ];
+  return { pos: near(base, me, SWIM_W), s };
+}
+/** The surface far above, a sheet of light rippling. */
+const isSurface = (p: Particle) => hash(p.i, 228) < 0.35;
+
+/* ---------- the Shark Sim's grains ---------- */
 
 export const SWIM_CORALS = 16;
 type SwimRole = 'floor' | 'sky' | 'polyp' | 'coral' | 'school' | 'you';
@@ -1872,30 +2422,6 @@ function swimSlot(j: number): { at: Vec3; colony: number; size: number } {
   };
 }
 
-const SCHOOLS = 3;
-/** The schools round you: each one streams in a ring about you, a little above, turning its own way. */
-function schoolFish(i: number, t: number, me: Vec3): { c: Vec3; f: Vec3; s: number } {
-  const s = i % SCHOOLS;
-  const j = Math.floor(i / SCHOOLS);
-  const R = 13 + 6 * s;
-  const w = (s % 2 ? -1 : 1) * (0.22 - 0.03 * s);
-  const a = w * t + s * 2.1 - j * 0.06 * Math.sign(w);
-  const ring = (aa: number): Vec3 => [
-    me[0] + Math.cos(aa) * R,
-    me[1] + 2 + 2.5 * s + 1.5 * Math.sin(aa * 2 + s),
-    me[2] + Math.sin(aa) * R,
-  ];
-  const off: Vec3 = [
-    (hash(i, 165) - 0.5) * 2.4,
-    (hash(i, 166) - 0.5) * 1.6,
-    (hash(i, 167) - 0.5) * 2.4,
-  ];
-  const c = add(ring(a), off);
-  const n = add(ring(a + 0.01 * Math.sign(w)), off);
-  return { c, f: norm([n[0] - c[0], n[1] - c[1], n[2] - c[2]]), s };
-}
-const SCHOOL_FISH = 60;
-
 /** Fish j of your school, or you alone: following your path a moment behind, in a loose lens. */
 function youFish(j: number, t: number): { c: Vec3; f: Vec3 } {
   const me = swimNow();
@@ -1909,42 +2435,172 @@ function youFish(j: number, t: number): { c: Vec3; f: Vec3 } {
   return { c: add(add(back.c, side, ox), up, oy), f: back.f };
 }
 
+/** Prey fish i drawn by grain p: shrinking to nothing as it is eaten. */
+function preyPoint(i: number, p: Particle, t: number): Vec3 {
+  const { c, f, len, shown } = preyAt(i, t);
+  return fishAt(c, f, len * Math.max(shown, 0.02), p, t, i);
+}
+
+/** A coral of the field, or on the lip of the drop-off, grown and half in bloom. */
+function fieldCoral(
+  slot: { at: Vec3; colony: number; size: number },
+  p: Particle,
+  t: number,
+  me: Vec3,
+  polyp: boolean,
+): Vec3 {
+  const colony = corals()[slot.colony] as Colony;
+  const at = near(slot.at, me, SWIM_W);
+  const q = coralLocal(colony, p, 1, t, polyp, 0.5);
+  return [at[0] + q[0] * slot.size, at[1] + q[1] * slot.size, at[2] + q[2] * slot.size];
+}
+
+/** The snow round you: spread through the water, wrapping up and down about you. */
+function snowRound(p: Particle, t: number, me: Vec3): Vec3 {
+  const pos = near([p.b * SWIM_W, 0, hash(p.i, 171) * SWIM_W], me, SWIM_W);
+  const h = 70;
+  pos[1] = me[1] + wrap(p.d * h - me[1] + h / 2 - t * 0.15, h) - h / 2;
+  // None inside the sand or the rock: those wait, unseen, far below.
+  if (pos[1] < floorAt(pos[0]) || (sea === 2 && pos[1] < FLOOR && !inCanyon(pos[0])))
+    pos[1] = DEEP_FLOOR - 50;
+  return pos;
+}
+
+function deepPoint(p: Particle, t: number, me: Vec3): Vec3 {
+  switch (deepRole(p)) {
+    case 'rim':
+      return fieldCoral(rimSlot(Math.floor(p.a * RIM_CORALS)), p, t, me, hash(p.i, 207) < 0.25);
+    case 'manta':
+      return mantaAt(Math.floor(p.a * MANTAS), p, t, me);
+    case 'squid': {
+      const j = Math.floor(p.a * SQUIDS);
+      const { c, f } = squidOf(j, t, me);
+      return squidAt(c, f, 1, squidPull(j, t), p, t, j);
+    }
+    case 'giant': {
+      const { c, f } = giantOf(t, me);
+      return squidAt(c, f, 5, squidPull(0, t * 0.4), p, t * 0.5, 0);
+    }
+    default:
+      return ventAt(p, t, me);
+  }
+}
+
 function swimPoint(p: Particle, t: number): Vec3 {
   const me = swimmer(t).c;
   switch (swimRole(p)) {
     case 'floor': {
+      if (sea === 1) return rayAt(p, t, me).pos;
+      if (sea === 2) return deepRockAt(p, me);
       const base: Vec3 = [p.b * SWIM_W, FLOOR + Math.sin(p.b * 60 + p.d * 40) * 0.25, p.d * SWIM_W];
       return near(base, me, SWIM_W);
     }
     case 'sky': {
-      // Snow among the corals, stars above: grains spread through the water round you.
-      const base: Vec3 = [p.b * SWIM_W, 0, hash(p.i, 171) * SWIM_W];
-      const pos = near(base, me, SWIM_W);
-      const h = 70;
-      pos[1] = me[1] + wrap(p.d * h - me[1] + h / 2 - t * 0.15, h) - h / 2;
-      if (pos[1] < FLOOR) pos[1] = FLOOR - 50;
-      return pos;
+      if (sea === 1 && isSurface(p)) {
+        const pos = near([p.b * SWIM_W, 0, p.d * SWIM_W], me, SWIM_W);
+        pos[1] =
+          SKY_TOP + 2 + 0.5 * Math.sin(pos[0] * 0.3 + t * 0.8) * Math.cos(pos[2] * 0.27 - t * 0.6);
+        return pos;
+      }
+      // Snow among the corals, stars above, glints in the open water, sparks of light in the deep.
+      return snowRound(p, t, me);
     }
-    case 'school': {
-      const i = Math.floor(p.a * SCHOOL_FISH);
-      const { c, f, s } = schoolFish(i, t, me);
-      return fishAt(c, f, s === 2 ? 1.6 : 1.1, p, t, i);
-    }
+    case 'school':
+      return preyPoint(Math.floor(p.a * SCHOOL_FISH), p, t);
     case 'you': {
       const kind = swimNow();
       const j = Math.floor(p.a * kind.count);
-      const { c, f } = youFish(j, t);
+      const fish = youFish(j, t);
       const len = kind.len * (j === 0 ? 1 : 0.9 + 0.2 * hash(j, 172));
+      const { c, f, gape } =
+        j === 0 && kind.eats ? bitePose(fish.c, fish.f, len, t) : { ...fish, gape: 0 };
       return kind.kind === null
         ? fishAt(c, f, len, p, t, j)
-        : kindFishAt(SHOAL_KINDS[kind.kind] as ShoalKind, c, f, len, p, t, j);
+        : kindFishAt(SHOAL_KINDS[kind.kind] as ShoalKind, c, f, len, p, t, j, gape);
     }
     default: {
-      const slot = swimSlot(Math.floor(p.a * SWIM_CORALS));
-      const colony = corals()[slot.colony] as Colony;
-      const at = near(slot.at, me, SWIM_W);
-      const q = coralLocal(colony, p, 1, t, swimRole(p) === 'polyp', 0.5);
-      return [at[0] + q[0] * slot.size, at[1] + q[1] * slot.size, at[2] + q[2] * slot.size];
+      if (sea === 1) return preyPoint(SCHOOL_FISH + Math.floor(p.a * BAIT_FISH), p, t);
+      if (sea === 2) {
+        if (swimRole(p) === 'polyp')
+          return preyPoint(SCHOOL_FISH + BAIT_FISH + Math.floor(p.a * LANTERN_FISH), p, t);
+        return deepPoint(p, t, me);
+      }
+      return fieldCoral(swimSlot(Math.floor(p.a * SWIM_CORALS)), p, t, me, swimRole(p) === 'polyp');
+    }
+  }
+}
+
+/** A coral's colour on the field: fading toward the edge, where the field wraps round. */
+function fieldCoralColour(
+  slot: { at: Vec3; colony: number },
+  me: Vec3,
+  polyp: boolean,
+  twinkle: number,
+  light: number,
+): RGB {
+  const at = near(slot.at, me, SWIM_W);
+  const edge = smooth((SWIM_W / 2 - Math.hypot(at[0] - me[0], at[2] - me[2])) / 12) * light;
+  const tone = paint(CORAL_TONES[slot.colony] as RGB, slot.colony);
+  return polyp
+    ? scale(mix(tone, polypWhite(), 0.3), 0.95 * twinkle * edge)
+    : scale(tone, 0.7 * twinkle * edge);
+}
+
+const HOT: RGB = [1, 0.42, 0.1];
+const SMOKE: RGB = [0.42, 0.34, 0.5];
+const GLOW_CYAN: RGB = [0.35, 1, 0.9];
+const GLOW_BLUE: RGB = [0.4, 0.62, 1];
+const SQUID_RED: RGB = [1, 0.42, 0.38];
+const GIANT_RED: RGB = [0.85, 0.24, 0.2];
+
+function deepColour(p: Particle, t: number, twinkle: number, me: Vec3): RGB {
+  switch (deepRole(p)) {
+    case 'rim':
+      return fieldCoralColour(
+        rimSlot(Math.floor(p.a * RIM_CORALS)),
+        me,
+        hash(p.i, 207) < 0.25,
+        twinkle,
+        1,
+      );
+    case 'manta': {
+      // Dark backs and pale bellies, lit by what daylight reaches them, a faint pale edge to the wings.
+      const m = Math.floor(p.a * MANTAS);
+      const belly = Math.abs(p.b * 2 - 1) > 0.9 ? 1 : hash(p.i, 211);
+      const tone = mix([0.22, 0.27, 0.36], [0.85, 0.9, 0.95], belly);
+      return scale(tone, (0.12 + 0.3 * daylight(mantaPath(m, t)[1])) * twinkle);
+    }
+    case 'squid': {
+      // Reddish, the colour cells flickering, a blue spark at each arm's tip.
+      const tip = hash(p.i, 230) >= 0.62 && hash(p.i, 231) > 0.9;
+      if (tip) return scale(GLOW_BLUE, 0.7 * twinkle);
+      const flicker = 0.6 + 0.4 * Math.sin(5 * t + p.i * 0.7);
+      return scale(SQUID_RED, 0.28 * flicker * twinkle);
+    }
+    case 'giant': {
+      const seen = giantSeen(t);
+      // Its great eye, pale, on the side of the mantle near the arms.
+      const eye = hash(p.i, 230) < 0.5 && hash(p.i, 231) > 0.82 && hash(p.i, 231) < 0.9;
+      if (eye) return scale([0.9, 0.95, 1], 0.6 * seen * twinkle);
+      return scale(GIANT_RED, 0.26 * seen * twinkle);
+    }
+    default: {
+      const q = hash(p.i, 216);
+      switch (ventPart(p)) {
+        case 'chimney':
+          // Dark rock, glowing hot toward the mouth.
+          return mix(
+            scale([0.4, 0.32, 0.28], 0.1),
+            scale(HOT, 0.8 * twinkle),
+            smooth((q - 0.72) / 0.28),
+          );
+        case 'mat':
+          return scale([1, 0.92, 0.65], 0.22 * twinkle);
+        default: {
+          const w = wrap(q * PLUME + t * 2.2, PLUME) / PLUME;
+          return scale(mix(HOT, SMOKE, smooth(w / 0.5)), 0.55 * (1 - w) ** 1.5 * twinkle);
+        }
+      }
     }
   }
 }
@@ -1952,12 +2608,40 @@ function swimPoint(p: Particle, t: number): Vec3 {
 function swimColour(p: Particle, t: number, twinkle: number): RGB {
   const me = swimmer(t).c;
   const up = altitude(me);
+  const dark = 1 - daylight(me[1]);
   switch (swimRole(p)) {
-    case 'floor':
+    case 'floor': {
+      if (sea === 1) {
+        const { s } = rayAt(p, t, me);
+        const k = Math.floor(hash(p.i, 222) * RAYS);
+        return scale(
+          mix(SHAFT, [1, 0.95, 0.8], 0.3),
+          0.2 * (1 - s) ** 1.5 * (0.6 + 0.4 * Math.sin(t * 0.9 + k * 2)),
+        );
+      }
+      if (sea === 2)
+        return scale([0.55, 0.5, 0.45], 0.14 * (0.2 + 0.8 * daylight(deepRockAt(p, me)[1])));
       return scale(SAND, 0.18 * (1 - 0.5 * up));
+    }
     case 'sky': {
+      if (sea === 1 && isSurface(p)) return scale([0.75, 0.92, 1], (0.12 + 0.2 * up) * twinkle);
       const pos = swimPoint(p, t);
-      if (pos[1] < FLOOR) return [0, 0, 0];
+      if (pos[1] < DEEP_FLOOR) return [0, 0, 0];
+      if (sea === 2) {
+        // Going down, the snow gives way to sparks: a few in three glow blue-green, flashing now and then.
+        const bio = hash(p.i, 173) < 0.35;
+        const flash = Math.max(0, Math.sin(t * 0.6 + p.i * 1.7)) ** 12;
+        const tone = hash(p.i, 174) < 0.5 ? GLOW_CYAN : GLOW_BLUE;
+        const spark = bio
+          ? scale(tone, (0.12 + 0.8 * flash) * twinkle)
+          : scale(SNOW, 0.04 * twinkle);
+        return mix(scale(SNOW, 0.3 * twinkle), spark, dark);
+      }
+      if (sea === 1) {
+        // Specks catching the sun, brighter near the surface.
+        const glint = hash(p.i, 173) ** 8;
+        return scale(mix(SNOW, [1, 0.95, 0.8], glint), (0.22 + 0.9 * glint + 0.1 * up) * twinkle);
+      }
       // Up in the open water the snow becomes stars, a few brighter than the rest.
       const star = hash(p.i, 173) ** 6;
       return mix(scale(SNOW, 0.3 * twinkle), scale(STAR, (0.35 + 1.1 * star) * twinkle), up);
@@ -1966,12 +2650,12 @@ function swimColour(p: Particle, t: number, twinkle: number): RGB {
       const i = Math.floor(p.a * SCHOOL_FISH);
       const s = i % SCHOOLS;
       const tone =
-        s === 0
+        s % 3 === 0
           ? mix(DEEP_BLUE, BLUE_FISH, 0.5 + 0.5 * Math.sin(p.d * TAU))
-          : s === 1
+          : s % 3 === 1
             ? ([1, 0.82, 0.12] as RGB)
             : mix(SILVER, [0.42, 0.52, 0.6], 0.5);
-      return scale(tone, (0.3 + 0.1 * up) * twinkle);
+      return scale(tone, (0.3 + 0.1 * up) * (1 - 0.6 * dark) * twinkle * preyShown(i, t));
     }
     case 'you': {
       const kind = swimNow();
@@ -1980,14 +2664,33 @@ function swimColour(p: Particle, t: number, twinkle: number): RGB {
       return shoalColour(p, twinkle, kind.kind, j, 0);
     }
     default: {
-      const slot = swimSlot(Math.floor(p.a * SWIM_CORALS));
-      const at = near(slot.at, me, SWIM_W);
-      // Fading toward the edge of the field, where it wraps round.
-      const edge = smooth((SWIM_W / 2 - Math.hypot(at[0] - me[0], at[2] - me[2])) / 12);
-      const tone = CORAL_TONES[slot.colony] as RGB;
-      return swimRole(p) === 'polyp'
-        ? scale(mix(tone, [1, 1, 0.9], 0.3), 0.95 * twinkle * edge)
-        : scale(tone, 0.7 * twinkle * edge);
+      if (sea === 1) {
+        // Silver and blue, flashing pale whenever a fish's side turns to the sun; brighter higher up.
+        const i = SCHOOL_FISH + Math.floor(p.a * BAIT_FISH);
+        const { c, f, shown } = preyAt(i, t);
+        const flash = Math.abs(f[0] * 0.6 + f[2] * 0.8) ** 6;
+        const tone = mix(mix(DEEP_BLUE, BLUE_FISH, hash(i, 99)), LIGHT_BLUE, flash);
+        const high = smooth((c[1] - FLOOR - 10) / 50);
+        return scale(tone, (0.2 + 0.4 * flash) * (0.75 + 0.5 * high) * shown);
+      }
+      if (sea === 2) {
+        if (swimRole(p) === 'polyp') {
+          // Lantern fish: dark bodies, rows of blue-green lights along their sides.
+          const i = SCHOOL_FISH + BAIT_FISH + Math.floor(p.a * LANTERN_FISH);
+          const shown = preyShown(i, t);
+          return hash(p.i, 175) < 0.4
+            ? scale(GLOW_CYAN, 0.6 * twinkle * shown)
+            : scale([0.3, 0.42, 0.55], 0.1 * shown);
+        }
+        return deepColour(p, t, twinkle, me);
+      }
+      return fieldCoralColour(
+        swimSlot(Math.floor(p.a * SWIM_CORALS)),
+        me,
+        swimRole(p) === 'polyp',
+        twinkle,
+        1,
+      );
     }
   }
 }
@@ -2092,16 +2795,14 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
           return scale(SNOW, 0.35 * twinkle);
         case 'shaft':
           return scale(SHAFT, 0.18 * (0.4 + 0.6 * hash(p.i, 85)));
-        case 'polyp':
-          return scale(
-            mix(CORAL_TONES[Math.floor(p.a * COLONIES)] as RGB, [1, 1, 0.9], 0.35),
-            0.85 * twinkle * gardenSeen(gardenGrowth(Math.floor(p.a * COLONIES), Math.max(u, 0))),
-          );
-        default:
-          return scale(
-            CORAL_TONES[Math.floor(p.a * COLONIES)] as RGB,
-            0.6 * twinkle * gardenSeen(gardenGrowth(Math.floor(p.a * COLONIES), Math.max(u, 0))),
-          );
+        default: {
+          const c = Math.floor(p.a * COLONIES);
+          const tone = paint(CORAL_TONES[c] as RGB, c);
+          const seen = gardenSeen(gardenGrowth(c, Math.max(u, 0)));
+          return coralRole(p) === 'polyp'
+            ? scale(mix(tone, polypWhite(), 0.35), 0.85 * twinkle * seen)
+            : scale(tone, 0.6 * twinkle * seen);
+        }
       }
     case 'fans':
     case 'tables':
@@ -2138,9 +2839,10 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
             : red
               ? RED_TONES
               : HOME_TONES;
-      const tone = tones[Math.floor(p.a * tones.length * 0.999)] as RGB;
+      const ti = Math.floor(p.a * tones.length * 0.999);
+      const tone = paint(tones[ti] as RGB, ti);
       return role === 'polyp'
-        ? scale(mix(tone, [1, 1, 0.9], 0.35), 0.85 * twinkle)
+        ? scale(mix(tone, polypWhite(), 0.35), 0.85 * twinkle)
         : scale(tone, 0.6 * twinkle);
     }
     case 'shoal':
@@ -2188,7 +2890,7 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
         }
         default: {
           const slot = reefSlot(Math.floor(p.a * REEF_SLOTS));
-          const tone = CORAL_TONES[slot.colony] as RGB;
+          const tone = paint(CORAL_TONES[slot.colony] as RGB, slot.colony);
           const bloom = bloomAt(d);
           // A coral not yet grown is a tight knot of grains: kept dark until it starts to grow, so the
           // far end of the channel has no bright dots (2026-11-11: "I don't like the dots of light in
@@ -2196,7 +2898,7 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
           const seen = h * smooth((grownAt(d) - 0.08) / 0.35);
           return reefRole(p) === 'polyp'
             ? scale(
-                mix(tone, [1, 1, 0.9], 0.35 - 0.15 * bloom),
+                mix(tone, polypWhite(), 0.35 - 0.15 * bloom),
                 (0.85 + 0.5 * bloom) * twinkle * seen,
               )
             : scale(tone, 0.6 * twinkle * seen);
@@ -2263,7 +2965,7 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       const { c, f } = swimmer(t);
       const d = swimNow().cam;
       const eye = add(add(c, f, -d), [0, 1, 0], d * 0.32);
-      eye[1] = Math.max(FLOOR + 1, eye[1]);
+      eye[1] = Math.max(floorAt(c[0]) + 1, eye[1]);
       return { eye, target: add(c, f, 5) };
     }
     default: {
@@ -2380,4 +3082,8 @@ export const variantLabel = (k: number) => variantsOf(k)?.label ?? '';
 export function setVariant(i: number, k?: number) {
   if (k === undefined) for (const v of VARIANTS.values()) v.set(0);
   else variantsOf(k)?.set(i);
+}
+/** The Shark Sim's sea, the second row of pills; with no piece, as in the Journey, the coral forest. */
+export function setSeaOf(i: number, k?: number) {
+  setSea(k !== undefined && hasSeas(k) ? i : 0);
 }
