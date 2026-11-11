@@ -246,11 +246,11 @@ export const PHASES: VegetalPhase[] = [
   {
     id: 'bird',
     name: 'Bird Sim',
-    line: 'Your turn: a bird, or the Dot Walker on foot, in a forest of golden trees. Keys only: A and D turn; W and S climb and dive, or walk on and back; Shift goes faster, X slower; Space jumps. Mushrooms glow at the feet of the trees and fireflies drift between them.',
-    words: [
-      'A forest seen from above is one living thing,',
-      'every tree joined to the next below the ground.',
-    ],
+    line: 'Your turn: a bird, or the Dot Walker on foot, in a golden forest of many trees, some in blossom, with rivers, still ponds and sparrows, and a world tree far ahead. Keys only: A and D turn, the bird gliding through its turns; W and S climb and dive, or walk on and back; Shift goes faster, X slower; Space jumps.',
+    // A line about freedom and its author, a new one every QUOTE_EVERY seconds (2026-11-11).
+    get words() {
+      return freedomWords();
+    },
     duration: 60,
     glow: 1,
     size: 0.8,
@@ -871,6 +871,7 @@ export function setVariant(i: number, k?: number) {
     drumKind = 0;
     reflKind = 0;
     bloomKind = 0;
+    quoteNow = 0;
     if (playerKind) setPlayer(0);
   } else if (hasDrums(k)) drumKind = i;
   else if (hasBird(k)) {
@@ -2322,30 +2323,210 @@ function fireworkColour(p: Particle, t: number): RGB {
  * stuff. like the shark sim. call it bird sim". The forest wraps round the
  * bird, so it never ends: golden trees on low hills, mushrooms glowing in
  * rings at their feet, fireflies drifting, stars above the canopy.
+ *
+ * Then a world to fly through (2026-11-11): rivers and sacred ponds that
+ * mirror the trees, more kinds of tree and trees in blossom, flocks of
+ * sparrows, a world tree on the horizon, a forest that grows on water, moods
+ * for the water, and lines about freedom on the way.
  */
 export const hasBird = (k: number) => PHASES[k]?.id === 'bird';
 /** Cruising speed in units a second; Shift flies faster. */
 export const BIRD_SPEED = 7;
 /** The forest's width: the trees repeat this far apart round the bird. */
 const BIRD_W = 120;
-const BIRD_TREES = 16;
+/** Sixteen trees over the field, then two on the banks of each pond. */
+const FIELD_TREES = 16;
+const BIRD_TREES = 20;
 export const MUSHROOMS = 48;
 const BIRD_TOP = 60;
 const BIRD_CAM = 12;
-/** The ground's low hills, height at (x, z). */
-export const hill = (x: number, z: number) =>
-  1.4 * Math.sin(x * 0.065) + 1.1 * Math.sin(z * 0.08 + 1) + 0.6 * Math.sin((x + z) * 0.13);
 const bearing = (yaw: number, pitch: number): Vec3 => [
   -Math.sin(yaw) * Math.cos(pitch),
   Math.sin(pitch),
   -Math.cos(yaw) * Math.cos(pitch),
 ];
+/** Bumped whenever the bird or its world changes, so what is worked out once a frame is kept. */
+let birdStamp = 0;
+
+/*
+ * FREEDOM (2026-11-11: "give me really deep quotes about freedom as I
+ * navigate through the games, not just random stuff"). Lines from writers
+ * long in the public domain, word for word as first printed (old translations
+ * only), one at a time with its author, a new one every QUOTE_EVERY seconds.
+ */
+export const FREEDOM: { line: string; by: string }[] = [
+  { line: 'No bird soars too high, if he soars with his own wings.', by: 'William Blake' },
+  {
+    line: 'I wish to speak a word for Nature, for absolute freedom and wildness',
+    by: 'Henry David Thoreau',
+  },
+  { line: 'He is free who lives as he wishes to live', by: 'Epictetus, tr. George Long' },
+  { line: 'Stone walls do not a prison make, / Nor iron bars a cage', by: 'Richard Lovelace' },
+  {
+    line: 'Man is born free; and everywhere he is in chains.',
+    by: 'Jean-Jacques Rousseau, tr. G. D. H. Cole',
+  },
+  { line: 'I too am not a bit tamed, I too am untranslatable', by: 'Walt Whitman' },
+  {
+    line: 'Over himself, over his own body and mind, the individual is sovereign.',
+    by: 'John Stuart Mill',
+  },
+  {
+    line: 'Eternal Spirit of the chainless Mind! / Brightest in dungeons, Liberty!',
+    by: 'Lord Byron',
+  },
+  {
+    line: 'Nothing is at last sacred but the integrity of your own mind.',
+    by: 'Ralph Waldo Emerson',
+  },
+  {
+    line: 'I was not born to be forced. I will breathe after my own fashion.',
+    by: 'Henry David Thoreau',
+  },
+  { line: 'Where the mind is without fear and the head is held high', by: 'Rabindranath Tagore' },
+  { line: 'Afoot and light-hearted I take to the open road', by: 'Walt Whitman' },
+];
+/** How long each line about freedom stays, in seconds: the Bird Sim's loop on its own. */
+export const QUOTE_EVERY = 12;
+let quoteNow = 0;
+/** The line about freedom showing now, and its author. */
+export const freedomWords = (): string[] => {
+  const q = FREEDOM[quoteNow] ?? (FREEDOM[0] as (typeof FREEDOM)[0]);
+  return [q.line, `— ${q.by}`];
+};
+
+/*
+ * TWO LANDS (2026-11-11: "ability to go to a forest that grows on water, like
+ * the cherry tree but more tree types, and spreads"). A row of pills over the
+ * players: the Golden forest on its hills, or the Water forest, open water
+ * over everything and every kind of tree growing straight out of it over its
+ * own reflection. The Water forest spreads: it starts as a grove round where
+ * it was chosen and widens outward, saplings rising and blossoming at its
+ * edge, open water beyond, so there is always an edge to fly out to.
+ */
+export const LANDS = ['Golden forest', 'Water forest'];
+let land = 0;
+const waterWorld = () => land === 1;
+/** The open water's level in the Water forest. */
+export const SEA_Y = -0.5;
+/**
+ * The open water's grains repeat on a narrower field than the trees, so the water near the eye is
+ * dense enough to show its mood; beyond it the far fade has taken the light anyway.
+ */
+const WATER_W = 64;
+/** A water grain brought round near c: on the open water's field, or the forest's. */
+const nearWater = (base: Vec3, c: Vec3): Vec3 => nearOn(base, c, waterWorld() ? WATER_W : BIRD_W);
+/** Where and when the Water forest began spreading: set on the first frame after it is chosen. */
+let spreadFrom: { t: number; c: Vec3 } | null = null;
+/** How far out from where it began the Water forest has spread, t seconds in. */
+export const spreadReach = (t: number) =>
+  spreadFrom ? 34 + 6 * Math.max(0, t - spreadFrom.t) : Number.POSITIVE_INFINITY;
+/** Pill i over the Bird Sim: the Golden forest or the Water forest; the Journey (no piece) the first. */
+export function setLand(i: number, k?: number) {
+  const next = k !== undefined && hasBird(k) && LANDS[i] ? i : 0;
+  if (next === land) return;
+  land = next;
+  spreadFrom = null;
+  birdStamp++;
+}
+
+/*
+ * WATER MOODS (2026-11-11: "the water can have different effects: from waves,
+ * to calm ripples, to rain with lots of sparkles growing on the water etc.").
+ * A button beside the speeds steps through them, for the rivers, the ponds and
+ * the open water alike: Calm, still as a mirror; Ripples, rings spreading
+ * slowly; Waves, long swells rolling through; Rain, drops landing all over,
+ * each a sparkle that blooms into a ring and fades, the fireflies falling as
+ * rain. The reflections tremble as much as the water moves.
+ */
+export const WATER_MOODS = ['Calm', 'Ripples', 'Waves', 'Rain'];
+let waterMood = 0;
+export function setWaterMood(i: number) {
+  waterMood = WATER_MOODS[i] ? i : 0;
+}
+const RAIN_RINGS = 16;
+const RAIN_T = 2.2;
+
+/*
+ * RIVERS AND SACRED PONDS (2026-11-11: "and rivers. and sacred ponds with
+ * reflections and water effects"). A river winds across each width of the
+ * forest in a valley of its own, flowing; two still ponds lie in flat
+ * hollows, ringed with small lights, a tree on each bank, and the trees show
+ * in them upside down.
+ */
+/** The land's low hills, before the river and the ponds cut into them. */
+const rise = (x: number, z: number) =>
+  1.4 * Math.sin(x * 0.065) + 1.1 * Math.sin(z * 0.08 + 1) + 0.6 * Math.sin((x + z) * 0.13);
+/** Where the river runs across the forest at z. */
+export const riverX = (z: number) =>
+  60 + 14 * Math.sin((TAU * z) / BIRD_W) + 5 * Math.sin((2 * TAU * z) / BIRD_W + 1);
+/** Half the river's width at z. */
+export const riverHalf = (z: number) => 2.6 + 0.9 * Math.sin((3 * TAU * z) / BIRD_W);
+/** How far x is across from the middle of the nearest copy of the river at z. */
+const fromRiver = (x: number, z: number) => wrap(x - riverX(z) + BIRD_W / 2, BIRD_W) - BIRD_W / 2;
+type Pond = { c: [number, number]; r: number; level: number };
+const pond = (x: number, z: number, r: number): Pond => ({ c: [x, z], r, level: rise(x, z) - 1.2 });
+/**
+ * The two ponds in each width of the forest, each still, in a hollow of its own: wide enough that,
+ * coming to one, the trees across it show upside down in its water, as they would.
+ */
+export const PONDS: Pond[] = [pond(16, 30, 12), pond(102, 88, 9)];
+/** How far (x, z) is from the middle of the nearest copy of pond k. */
+const fromPond = (k: number, x: number, z: number) => {
+  const c = (PONDS[k] as Pond).c;
+  return Math.hypot(
+    wrap(x - c[0] + BIRD_W / 2, BIRD_W) - BIRD_W / 2,
+    wrap(z - c[1] + BIRD_W / 2, BIRD_W) - BIRD_W / 2,
+  );
+};
+/** The ground's height at (x, z): low hills, a valley along the river, a flat hollow under each pond. */
+export const hill = (x: number, z: number) => {
+  let h = rise(x, z) - 1.6 * smooth((riverHalf(z) + 5 - Math.abs(fromRiver(x, z))) / 5);
+  for (let k = 0; k < PONDS.length; k++) {
+    const p = PONDS[k] as Pond;
+    h = lerp(h, p.level - 0.6, smooth((p.r + 3 - fromPond(k, x, z)) / 3));
+  }
+  return h;
+};
+/** Whether (x, z) is under water: everywhere in the Water forest, else in the river or a pond. */
+export const wetAt = (x: number, z: number) =>
+  waterWorld() ||
+  Math.abs(fromRiver(x, z)) < riverHalf(z) ||
+  PONDS.some((p, k) => fromPond(k, x, z) < p.r);
+/** The floor at (x, z): the hills, or the open water in the Water forest. */
+const landY = (x: number, z: number) => (waterWorld() ? SEA_Y : hill(x, z));
+
+/**
+ * Water grain (u, v, w) before the mood moves it: on the open water in the Water forest; else in the
+ * river (flowing, so it drifts along with time) or in one of the ponds. `pond` says which, -1 the river.
+ */
+function waterSpot(
+  u: number,
+  v: number,
+  w: number,
+  t: number,
+): { x: number; y: number; z: number; pond: number } {
+  if (waterWorld()) return { x: v * WATER_W, y: SEA_Y, z: w * WATER_W, pond: -1 };
+  if (u < 0.55) {
+    const z = wrap(v * BIRD_W + t * 1.2, BIRD_W);
+    const x = riverX(z) + (2 * w - 1) * riverHalf(z) * 0.92;
+    return { x, y: rise(x, z) - 1.2, z, pond: -1 };
+  }
+  const k = u < 0.82 ? 0 : 1;
+  const p = PONDS[k] as Pond;
+  const a = v * TAU;
+  const r = p.r * Math.sqrt(w);
+  return { x: p.c[0] + Math.cos(a) * r, y: p.level, z: p.c[1] + Math.sin(a) * r, pond: k };
+}
+
 const bird = {
   on: false,
   pos: [0, 12, 0] as Vec3,
   yaw: 0,
   pitch: 0,
   bank: 0,
+  /** How hard it is turning, -1 left to 1 right, eased: the more, the more it glides on open wings. */
+  steer: 0,
   speed: BIRD_SPEED,
   /** Wingbeats so far, and how hard it is beating, 0 gliding to 1. */
   flap: 0,
@@ -2364,7 +2545,8 @@ const bird = {
  * on the forest videogame"). The golden figure of dots from the Dot Walker
  * Arena (components/DotWalkerArena.tsx), in the round: a head, a body, arms
  * swinging against the legs as it strides, dust where its feet touch. Chosen
- * by a pill; W and S walk on and back, Shift runs, Space jumps.
+ * by a pill; W and S walk on and back, Shift runs, Space jumps. In the Water
+ * forest it walks on the water.
  */
 export const PLAYERS = ['Bird', 'Dot Walker'];
 let playerKind = 0;
@@ -2388,10 +2570,16 @@ function birdPilot(t: number): { c: Vec3; f: Vec3 } {
 }
 
 /**
- * The controls, each frame: whether you are flying, where the cursor is on screen (-1 to 1 each
- * way, null when away), the keys held, and how far the piece's time moved.
+ * The controls, each frame: whether you are flying, the keys held, how far the piece's time moved,
+ * and the time. The Water forest starts spreading from where the bird is on the first frame in it.
  */
 export function setBird(active: boolean, keys: string[], dt: number, t: number) {
+  steerBird(active, keys, dt, t);
+  birdStamp++;
+  if (waterWorld() && !spreadFrom) spreadFrom = { t, c: [...flier(t).c] as Vec3 };
+}
+
+function steerBird(active: boolean, keys: string[], dt: number, t: number) {
   if (!active) {
     bird.on = false;
     bird.touched = false;
@@ -2423,23 +2611,26 @@ export function setBird(active: boolean, keys: string[], dt: number, t: number) 
     walk(held, dt);
     return;
   }
-  // Leaning into the turn, as a bird does.
-  bird.bank += (-0.6 * Math.max(-1, Math.min(1, turn)) - bird.bank) * (1 - Math.exp(-3 * dt));
+  // Leaning into the turn, as a bird does, and gliding through it on open wings (2026-11-11: "as I
+  // move left/right with the bird he gets into planer (glide) and keeps his wings open").
+  const steer = Math.max(-1, Math.min(1, turn / 1.4));
+  bird.steer += (steer - bird.steer) * (1 - Math.exp(-4 * dt));
+  bird.bank += (-0.6 * steer - bird.bank) * (1 - Math.exp(-3 * dt));
   let tilt = (held('w', 'arrowup') ? 0.8 : 0) - (held('s', 'arrowdown') ? 0.8 : 0);
-  const ground = hill(bird.pos[0], bird.pos[2]);
+  const ground = landY(bird.pos[0], bird.pos[2]);
   if (bird.pos[1] <= ground + 2 && tilt < 0) tilt = 0;
   if (bird.pos[1] >= BIRD_TOP && tilt > 0) tilt = 0;
   bird.pitch += (tilt - bird.pitch) * (1 - Math.exp(-2.5 * dt));
   const fast = held('shift');
   bird.speed +=
     (BIRD_SPEED * (fast ? 1.9 : held('x') ? 0.5 : 1) - bird.speed) * (1 - Math.exp(-1.5 * dt));
-  // Beating hard to climb or fly fast, gliding with wings held out on the way down.
+  // Beating hard to climb or fly fast, gliding with wings held out on the way down and in a turn.
   const want = fast ? 1 : bird.pitch > 0.1 ? 0.9 : bird.pitch < -0.15 ? 0 : 0.45;
-  bird.effort += (want - bird.effort) * (1 - Math.exp(-2 * dt));
+  bird.effort += (want * (1 - 0.85 * Math.abs(bird.steer)) - bird.effort) * (1 - Math.exp(-2 * dt));
   bird.flap += dt * (1.2 + 2.2 * bird.effort);
   const f = bearing(bird.yaw, bird.pitch);
   bird.pos = add(bird.pos, f, bird.speed * dt);
-  bird.pos[1] = Math.max(hill(bird.pos[0], bird.pos[2]) + 1.5, Math.min(BIRD_TOP, bird.pos[1]));
+  bird.pos[1] = Math.max(landY(bird.pos[0], bird.pos[2]) + 1.5, Math.min(BIRD_TOP, bird.pos[1]));
 }
 
 /** The walker on foot, each frame: walking on or back, running, jumping, its feet on the hills. */
@@ -2449,6 +2640,7 @@ function walk(held: (...names: string[]) => boolean, dt: number) {
   bird.speed += (WALK_SPEED * run * pace - bird.speed) * (1 - Math.exp(-6 * dt));
   bird.pitch = 0;
   bird.bank = 0;
+  bird.steer = 0;
   const f = bearing(bird.yaw, 0);
   bird.pos = add(bird.pos, f, bird.speed * dt);
   bird.stride += (bird.speed * dt) / WALK_STRIDE;
@@ -2456,7 +2648,7 @@ function walk(held: (...names: string[]) => boolean, dt: number) {
   bird.vy -= 18 * dt;
   bird.jump = Math.max(0, bird.jump + bird.vy * dt);
   if (bird.jump <= 0) bird.vy = Math.max(0, bird.vy);
-  bird.pos[1] = hill(bird.pos[0], bird.pos[2]) + bird.jump;
+  bird.pos[1] = landY(bird.pos[0], bird.pos[2]) + bird.jump;
 }
 
 /** With no one at the controls: the walker strolls between the trees on its own. */
@@ -2464,7 +2656,7 @@ function walkerPilot(t: number): { c: Vec3; f: Vec3 } {
   const at = (tt: number): Vec3 => {
     const x = 16 * Math.sin(0.03 * tt);
     const z = -WALK_SPEED * 0.9 * tt;
-    return [x, hill(x, z), z];
+    return [x, landY(x, z), z];
   };
   const c = at(t);
   const n = at(t + 0.05);
@@ -2475,6 +2667,8 @@ type Player = {
   c: Vec3;
   f: Vec3;
   bank: number;
+  /** How hard it turns, -1 left to 1 right: the bird glides through a turn on open wings. */
+  steer: number;
   flap: number;
   effort: number;
   /** On foot: strides so far, and how fast it is going, 0 standing to 1 running. */
@@ -2482,13 +2676,22 @@ type Player = {
   pace: number;
 };
 
+let flierMemo: { t: number; s: number; me: Player } | null = null;
 /** The bird, or the walker: where it is at time t, which way it goes, how it leans, wings or legs. */
 export function flier(t: number): Player {
+  if (flierMemo && flierMemo.t === t && flierMemo.s === birdStamp) return flierMemo.me;
+  const me = flierNow(t);
+  flierMemo = { t, s: birdStamp, me };
+  return me;
+}
+
+function flierNow(t: number): Player {
   if (bird.on)
     return {
       c: bird.pos,
       f: bearing(bird.yaw, bird.pitch),
       bank: bird.bank,
+      steer: bird.steer,
       flap: bird.flap,
       effort: bird.effort,
       stride: bird.stride,
@@ -2499,19 +2702,22 @@ export function flier(t: number): Player {
     return {
       ...a,
       bank: 0,
+      steer: 0,
       flap: 0,
       effort: 0,
       stride: (WALK_SPEED * 0.9 * t) / WALK_STRIDE,
       pace: 0.45,
     };
   }
+  // The weave bends right while its sideways drift speeds up that way: it glides through each bend.
   const a = birdPilot(t);
-  const turn = Math.cos(0.045 * t) * 0.045 * 20 * 0.1;
+  const steer = -0.9 * Math.sin(0.045 * t) ** 3;
   return {
     ...a,
-    bank: -0.6 * turn,
+    bank: -0.6 * steer,
+    steer,
     flap: t * 2.4,
-    effort: 0.5 + 0.4 * Math.cos(0.07 * t),
+    effort: (0.5 + 0.4 * Math.cos(0.07 * t)) * (1 - 0.85 * Math.abs(steer)),
     stride: 0,
     pace: 0,
   };
@@ -2522,6 +2728,7 @@ export function setPlayer(i: number) {
   playerKind = PLAYERS[i] ? i : 0;
   bird.on = false;
   bird.touched = false;
+  birdStamp++;
 }
 
 /**
@@ -2572,57 +2779,249 @@ function walkerBody(p: Particle, me: Player, t: number): Vec3 {
   );
 }
 
-/** A world point brought round to the copy of it nearest the bird, on the forest's width. */
-const nearBird = (base: Vec3, c: Vec3): Vec3 => [
-  c[0] + wrap(base[0] - c[0] + BIRD_W / 2, BIRD_W) - BIRD_W / 2,
+/** A world point brought round to the copy of it nearest c, on a field `w` wide. */
+const nearOn = (base: Vec3, c: Vec3, w: number): Vec3 => [
+  c[0] + wrap(base[0] - c[0] + w / 2, w) - w / 2,
   base[1],
-  c[2] + wrap(base[2] - c[2] + BIRD_W / 2, BIRD_W) - BIRD_W / 2,
+  c[2] + wrap(base[2] - c[2] + w / 2, w) - w / 2,
 ];
+/** A world point brought round to the copy of it nearest the bird, on the forest's width. */
+const nearBird = (base: Vec3, c: Vec3): Vec3 => nearOn(base, c, BIRD_W);
 
-type BirdRole = 'ground' | 'sky' | 'mushroom' | 'wood' | 'leaf' | 'bird';
-const birdRole = (p: Particle): BirdRole =>
-  p.c < 0.1
-    ? 'ground'
-    : p.c < 0.18
-      ? 'sky'
-      : p.c < 0.3
-        ? 'mushroom'
-        : p.c < 0.58
-          ? 'wood'
-          : p.c < 0.975
-            ? 'leaf'
-            : 'bird';
+/*
+ * THE WORLD TREE (2026-11-11: "and a really really big tree in the distance,
+ * like an arbre monde (world tree)"). One tree far taller than the forest, a
+ * long flight ahead, roots spread over the land, a crown like a sky of gold,
+ * leaves of light drifting down from it. Seen from far it is drawn closer in
+ * and smaller in the same proportion, so it looks exactly as far as it is and
+ * still shows over the haze; near, it is its full size, and you can fly up
+ * through its branches. It stands on a field so wide that it comes round
+ * again only far beyond sight, fading out before it does.
+ */
+export const WORLD_TREE: Vec3 = [10, 0, -460];
+/** How tall the world tree stands. */
+export const WORLD_TREE_H = 300;
+const WORLD_W = 1600;
+/** No nearer than this is it drawn closer: inside it, full size. */
+const WORLD_NEAR = 110;
+const WORLD_SHAPE: Shape3 = { first: 5, tilt: 0.55, lean: 0.3, up: 0.12, lenK: 0.78, three: 0.4 };
 
+/** A tree's routes stood with the foot of its trunk at the origin and scaled to `height` tall. */
+function fitRoutes(routes: Route3[], height: number): Route3[] {
+  const first = (routes[0] as Route3).pts;
+  const x0 = first[0] as number;
+  const y0 = first[1] as number;
+  const z0 = first[2] as number;
+  let top = y0 + 1e-6;
+  for (const r of routes)
+    for (let i = 0; i < r.count; i++) top = Math.max(top, r.pts[i * 4 + 1] as number);
+  const k = height / (top - y0);
+  return routes.map((r) => {
+    const pts = r.pts.slice();
+    for (let i = 0; i < r.count; i++) {
+      pts[i * 4] = ((pts[i * 4] as number) - x0) * k;
+      pts[i * 4 + 1] = ((pts[i * 4 + 1] as number) - y0) * k;
+      pts[i * 4 + 2] = ((pts[i * 4 + 2] as number) - z0) * k;
+      pts[i * 4 + 3] = (pts[i * 4 + 3] as number) * k;
+    }
+    return { pts, count: r.count };
+  });
+}
+
+let worldRoutes: Route3[] | null = null;
+/** The world tree's routes, from the foot of its trunk to every tip, WORLD_TREE_H tall. */
+export function worldTreeRoutes(): Route3[] {
+  if (worldRoutes) return worldRoutes;
+  const out: number[][] = [];
+  grow3(seeded(77), [0, 0, 0], [0, 1, 0], 4, 1.5, 6, 0, [], out, WORLD_SHAPE);
+  worldRoutes = fitRoutes(out.map(resample3), WORLD_TREE_H);
+  return worldRoutes;
+}
+
+/*
+ * MORE TREES, AND TREES IN BLOOM (2026-11-11: "and more types of trees. and
+ * blooming trees"). Eight kinds: two golden oaks, a pine in whorls, a tall
+ * birch, a broad spreading tree, a baobab, and two in blossom, a cherry and a
+ * plum, their flowers opening and closing over a slow season of their own and
+ * petals drifting down from them onto the ground or the water.
+ */
+type BirdKind = { name: string; routes: Route3[]; leafR: number; reach: number; bloom: boolean };
+const PLUM_SHAPE: Shape3 = { first: 3, tilt: 0.55, lean: 0.35, up: 0.25, lenK: 0.8, three: 0.4 };
+let birdKindList: BirdKind[] | null = null;
+/** The Bird Sim's kinds of tree, each about the forest's height. */
+export function birdKinds(): BirdKind[] {
+  if (birdKindList) return birdKindList;
+  const oaks = forestTrees();
+  const oak = oaks[0] as Route3[];
+  const h = oakHeight(oak);
+  const plum: number[][] = [];
+  grow3(seeded(29), [0, 0, 0], [0, 1, 0], 3, 0.7, 5, 0, [], plum, PLUM_SHAPE);
+  birdKindList = [
+    { name: 'Oak', routes: oak, leafR: 1.5, reach: 0, bloom: false },
+    {
+      name: 'Pine',
+      routes: fitRoutes(reflTreeRoutes(1), 1.35 * h),
+      leafR: 0.5,
+      reach: 7,
+      bloom: false,
+    },
+    {
+      name: 'Cherry',
+      routes: fitRoutes(reflTreeRoutes(3), 0.9 * h),
+      leafR: 1.3,
+      reach: 2,
+      bloom: true,
+    },
+    {
+      name: 'Birch',
+      routes: fitRoutes(reflTreeRoutes(2), 1.4 * h),
+      leafR: 0.75,
+      reach: 3,
+      bloom: false,
+    },
+    { name: 'Oak', routes: oaks[2] as Route3[], leafR: 1.5, reach: 0, bloom: false },
+    {
+      name: 'Baobab',
+      routes: fitRoutes(reflTreeRoutes(4), 0.95 * h),
+      leafR: 1.1,
+      reach: 0.6,
+      bloom: false,
+    },
+    {
+      name: 'Plum',
+      routes: fitRoutes(plum.map(resample3), 0.8 * h),
+      leafR: 1.2,
+      reach: 1.5,
+      bloom: true,
+    },
+    {
+      name: 'Spreading',
+      routes: fitRoutes(reflTreeRoutes(3), 0.85 * h),
+      leafR: 1.4,
+      reach: 0,
+      bloom: false,
+    },
+  ];
+  return birdKindList;
+}
+/** How tall a tree's routes stand above the foot of its trunk. */
+function oakHeight(routes: Route3[]): number {
+  const y0 = (routes[0] as Route3).pts[1] as number;
+  let top = y0;
+  for (const r of routes)
+    for (let i = 0; i < r.count; i++) top = Math.max(top, r.pts[i * 4 + 1] as number);
+  return top - y0;
+}
+/** How open tree j's blossom is at time t, 0 closed to 1 open: a slow season of its own. */
+const bloomOpen = (j: number, t: number) => smooth(0.6 + 0.9 * Math.sin(0.07 * t + j * 1.7));
+
+/** The share of the grains that make the world tree. */
+const WORLD_LO = 0.29;
+const WORLD_HI = 0.39;
+type BirdRole =
+  | 'ground'
+  | 'water'
+  | 'sky'
+  | 'flock'
+  | 'mushroom'
+  | 'world'
+  | 'wood'
+  | 'leaf'
+  | 'mirror'
+  | 'bird';
+/*
+ * Every grain has its part, by its place in the cloud: the shares moved round
+ * to make room for the water, the sparrows, the world tree and the
+ * reflections, the grain count the same.
+ */
+const birdRole = (p: Particle): BirdRole => {
+  const c = p.c;
+  if (c < 0.07) return waterWorld() ? 'water' : 'ground';
+  if (c < 0.12) return 'water';
+  if (c < 0.18) return 'sky';
+  if (c < 0.215) return 'flock';
+  // On the open water half the mushrooms' grains are lotuses and half more water.
+  if (c < WORLD_LO) return waterWorld() && hash(p.i, 264) < 0.5 ? 'water' : 'mushroom';
+  if (c < WORLD_HI) return 'world';
+  if (c < 0.57) return 'wood';
+  if (c < 0.9) return 'leaf';
+  if (c < 0.975) return 'mirror';
+  return 'bird';
+};
+
+type Slot = { at: Vec3; kind: number; size: number; yaw: number };
+/** The pond a tree on a bank stands by. */
+const pondOfTree = (j: number) => PONDS[Math.floor((j - FIELD_TREES) / 2)] as Pond;
+const slotCache: (Slot[] | null)[] = LANDS.map(() => null);
 /** Tree j of the forest: its foot on the wrapping field, which kind, how big, which way turned. */
-export function forestSlot(j: number): { at: Vec3; kind: number; size: number; yaw: number } {
+export function forestSlot(j: number): Slot {
+  let list = slotCache[land];
+  if (!list) {
+    list = Array.from({ length: BIRD_TREES }, (_, i) => placeTree(i));
+    slotCache[land] = list;
+  }
+  return list[wrap(j, BIRD_TREES)] as Slot;
+}
+function placeTree(j: number): Slot {
+  if (j >= FIELD_TREES) {
+    // Two on the banks of each pond, across the water from each other, so from any side one shows
+    // in it: a cherry and a birch by the first, a plum and a pine by the second.
+    const n = j - FIELD_TREES;
+    const p = pondOfTree(j);
+    const a = [0.7, 3.9, 2.2, 5.3][n] as number;
+    const x = p.c[0] + Math.cos(a) * (p.r + 1.2);
+    const z = p.c[1] + Math.sin(a) * (p.r + 1.2);
+    return { at: [x, landY(x, z), z], kind: [2, 3, 6, 1][n] as number, size: 2.1, yaw: a };
+  }
   const side = 4;
   const cell = BIRD_W / side;
-  const x = ((j % side) + 0.2 + 0.6 * hash(j, 201)) * cell;
-  const z = (Math.floor(j / side) + 0.2 + 0.6 * hash(j, 202)) * cell;
+  let x = ((j % side) + 0.2 + 0.6 * hash(j, 201)) * cell;
+  let z = (Math.floor(j / side) + 0.2 + 0.6 * hash(j, 202)) * cell;
+  // Out of the river, onto its nearer bank, and out of the ponds.
+  const dx = fromRiver(x, z);
+  const bank = riverHalf(z) + 3;
+  if (Math.abs(dx) < bank) x += (dx < 0 ? -1 : 1) * bank - dx;
+  PONDS.forEach((p, k) => {
+    const d = fromPond(k, x, z);
+    if (d < p.r + 3) {
+      const a = hash(j, 206) * TAU;
+      x = p.c[0] + Math.cos(a) * (p.r + 3);
+      z = p.c[1] + Math.sin(a) * (p.r + 3);
+    }
+  });
   return {
-    at: [x, hill(x, z), z],
-    kind: Math.floor(hash(j, 203) * 4),
+    at: [x, landY(x, z), z],
+    kind: Math.floor(hash(j, 203) * 8),
     size: 1.6 + 0.8 * hash(j, 204),
     yaw: hash(j, 205) * TAU,
   };
 }
 
-/** Mushroom m: in a ring round the foot of a tree, its height, stem and cap. */
-function birdMushroom(m: number): {
-  at: Vec3;
-  h: number;
-  stem: number;
-  cap: number;
-  glow: boolean;
-} {
+type Mushroom = { at: Vec3; h: number; stem: number; cap: number; glow: boolean };
+const mushroomCache: (Mushroom[] | null)[] = LANDS.map(() => null);
+/** Mushroom m: in a ring round the foot of a tree, out of the water, its height, stem and cap. */
+function birdMushroom(m: number): Mushroom {
+  let list = mushroomCache[land];
+  if (!list) {
+    list = Array.from({ length: MUSHROOMS }, (_, i) => placeMushroom(i));
+    mushroomCache[land] = list;
+  }
+  return list[wrap(m, MUSHROOMS)] as Mushroom;
+}
+function placeMushroom(m: number): Mushroom {
   const tree = forestSlot(m % BIRD_TREES);
-  const a = hash(m, 206) * TAU;
+  let a = hash(m, 206) * TAU;
   const d = 3 + 4 * hash(m, 207);
-  const x = tree.at[0] + Math.cos(a) * d;
-  const z = tree.at[2] + Math.sin(a) * d;
+  let x = tree.at[0] + Math.cos(a) * d;
+  let z = tree.at[2] + Math.sin(a) * d;
+  if (!waterWorld() && wetAt(x, z)) {
+    a += Math.PI;
+    x = tree.at[0] + Math.cos(a) * d;
+    z = tree.at[2] + Math.sin(a) * d;
+  }
   const size = 0.6 + 1.3 * hash(m, 208) ** 2;
   return {
-    at: [x, hill(x, z), z],
+    at: [x, landY(x, z), z],
     h: 1.2 * size,
     stem: 0.18 * size,
     cap: (0.7 + 0.3 * hash(m, 209)) * size,
@@ -2630,7 +3029,53 @@ function birdMushroom(m: number): {
   };
 }
 
-/** Grain p of the bird, round its centre c flying along f: a body, two beating wings, a fanned tail. */
+/*
+ * SPARROWS (2026-11-11: "add flocks of sparrows flying in bird sim"). Three
+ * flocks crossing the forest and the sky, each a hundred-odd small birds
+ * moving as one: the flock stretches and gathers, folds and turns, waves
+ * running through it, as starlings do in a murmuration. Each comes round
+ * again on a wide field and fades before it does.
+ */
+export const FLOCKS = 3;
+const FLOCK_W = 240;
+/** The heading of flock f. */
+const flockYaw = (f: number) => hash(f, 271) * TAU;
+/** Where the middle of flock f is at time t, before it is brought round near the bird. */
+export function flockCentre(f: number, t: number): Vec3 {
+  const a = flockYaw(f);
+  const run = (6 + 3 * hash(f, 273)) * t;
+  return [
+    hash(f, 274) * FLOCK_W - Math.sin(a) * run + 12 * Math.sin(0.23 * t + f),
+    17 + 10 * Math.sin(0.11 * t + 2 * f),
+    hash(f, 275) * FLOCK_W - Math.cos(a) * run + 12 * Math.cos(0.19 * t + 3 * f),
+  ];
+}
+
+/** Grain p of a flock: one sparrow, its place in the flock's changing shape. */
+function sparrow(p: Particle, me: Player, t: number): { pos: Vec3; k: number } {
+  const f = Math.floor(hash(p.i, 270) * FLOCKS);
+  const c = nearOn(flockCentre(f, t), me.c, FLOCK_W);
+  c[1] = Math.max(c[1], landY(c[0], c[2]) + 5);
+  const s = fibonacciSphere(p.i % 97, 97);
+  const r = Math.cbrt(hash(p.i, 272));
+  const ph = t + f * 7;
+  // A long, low cloud that breathes, with waves running through it.
+  const breathe = 0.35 * Math.sin(0.5 * ph);
+  const x0 = s[0] * r * 9 * (1 + breathe);
+  const y0 = s[1] * r * 2.6 * (1 + 0.5 * Math.sin(0.37 * ph + 1));
+  const z0 = s[2] * r * 5 * (1 - 0.6 * breathe);
+  const x = x0 + 1.8 * Math.sin(0.45 * z0 + 1.1 * ph);
+  const y = y0 + 1.5 * Math.sin(0.35 * x0 + 0.9 * ph) + 0.15 * Math.sin(t * 3 + p.i);
+  const z = z0 + 1.3 * Math.sin(0.4 * y0 + 1.3 * ph);
+  const a = flockYaw(f) + 0.5 * Math.sin(0.2 * ph);
+  const fw: Vec3 = [-Math.sin(a), 0, -Math.cos(a)];
+  const sd: Vec3 = [Math.cos(a), 0, -Math.sin(a)];
+  const pos = add(add(add(c, fw, x), sd, z), [0, 1, 0], y);
+  const away = Math.hypot(c[0] - me.c[0], c[2] - me.c[2]);
+  return { pos, k: 1 - smooth((away - 70) / 40) };
+}
+
+/** Grain p of the bird, round its centre c flying along f: a body, two wings, a fanned tail. */
 function birdBody(p: Particle, me: Player): Vec3 {
   const side0 = norm(cross(me.f, [0, 1, 0]));
   const up0 = cross(side0, me.f);
@@ -2652,92 +3097,375 @@ function birdBody(p: Particle, me: Player): Vec3 {
     return at(len, d[0] * r, d[1] * r);
   }
   if (p.a < 0.35) {
-    // The tail: a fan behind, spread a little wider as it slows.
-    const spread = (v - 0.5) * (0.5 + 0.4 * q);
-    return at(-0.7 - 0.8 * q, spread, 0.04 * Math.sin(me.flap * TAU) * q);
+    // The tail: a fan behind, spread a little wider as it slows, and twisted into a turn.
+    const spread = (v - 0.5) * (0.5 + 0.4 * q + 0.25 * Math.abs(me.steer));
+    const beat = 0.04 * Math.sin(me.flap * TAU) * (1 - Math.abs(me.steer));
+    return at(-0.7 - 0.8 * q, spread, (beat + 0.12 * me.steer * (v - 0.5)) * q);
   }
-  // A wing: out along the span, the chord narrowing to the tip, beating up and down; held out to glide.
+  // A wing: out along the span, the chord narrowing to the tip, beating up and down. In a turn the
+  // beat stops and both wings are held open to glide, not rigid: the inner wing, on the side it
+  // turns to, lifts, folds a little and curls at its tip; the outer one stretches long and low; a
+  // slight flex runs out along both (2026-11-11: "the wings open and get impacted by left or right
+  // movement").
   const wing = p.a < 0.675 ? -1 : 1;
+  const glide = Math.min(1, Math.abs(me.steer));
+  const inner = Math.max(0, wing * me.steer);
+  const outer = Math.max(0, -wing * me.steer);
   const beat = Math.sin(me.flap * TAU);
-  const lift = (0.15 + 0.75 * me.effort) * beat;
-  const span = 2.7 * q;
+  const lift = (0.15 + 0.75 * me.effort) * beat * (1 - glide);
+  const span = 2.7 * q * (1 + 0.12 * outer - 0.14 * inner);
   const chord = 0.85 * (1 - 0.65 * q);
-  const ang = lift * (0.6 + 0.4 * q);
-  const sweep = -0.35 * q * q;
+  const flex = glide * 0.07 * q * Math.sin(me.flap * 0.8 * TAU + q * 3);
+  const ang =
+    lift * (0.6 + 0.4 * q) +
+    glide * 0.08 +
+    q * (0.3 * inner - 0.18 * outer) +
+    0.45 * inner * q ** 3 +
+    flex;
+  const sweep = -0.35 * q * q - 0.3 * inner * q * q;
   return at(0.25 + sweep - v * chord, wing * span * Math.cos(ang), span * Math.sin(ang));
 }
 
-function birdPoint(p: Particle, t: number): Vec3 {
+type BirdFrame = {
+  me: Player;
+  eye: Vec3;
+  /** The foot of the world tree's nearest copy, how much it is drawn in, and how much it shows. */
+  world: Vec3;
+  worldK: number;
+  worldShown: number;
+  /** By each pond, the tree on its bank across the water from the eye. */
+  across: number[];
+};
+let frameMemo: { t: number; s: number; f: BirdFrame } | null = null;
+/** What every grain of the Bird Sim shares at time t, worked out once a frame. */
+function birdFrame(t: number): BirdFrame {
+  if (frameMemo && frameMemo.t === t && frameMemo.s === birdStamp) return frameMemo.f;
   const me = flier(t);
+  const eye = eyeIn(PHASES.length - 1, 0, t).eye;
+  const world = nearOn(WORLD_TREE, me.c, WORLD_W);
+  world[1] = landY(world[0], world[2]);
+  const away = Math.hypot(world[0] - eye[0], world[2] - eye[2]);
+  const edge = Math.max(Math.abs(world[0] - me.c[0]), Math.abs(world[2] - me.c[2]));
+  const f: BirdFrame = {
+    me,
+    eye,
+    world,
+    worldK: Math.min(1, WORLD_NEAR / Math.max(1e-3, away)),
+    worldShown: 1 - smooth((edge - 600) / 150),
+    across: PONDS.map((_, k) => {
+      const far = (j: number) => {
+        const at = nearBird(forestSlot(j).at, me.c);
+        return Math.hypot(at[0] - eye[0], at[2] - eye[2]);
+      };
+      const j = FIELD_TREES + 2 * k;
+      return far(j) > far(j + 1) ? j : j + 1;
+    }),
+  };
+  frameMemo = { t, s: birdStamp, f };
+  return f;
+}
+
+/** A grain's place, and how much of its light shows (grown, lit, near), for its colour. */
+type Grain = { pos: Vec3; k: number; lit?: boolean; petal?: boolean };
+
+/**
+ * Grain p of tree j, a leaf or a grain of sap: where it is, how grown the tree is (the Water forest's
+ * spreading edge, and room round the world tree's trunk), and whether it is a falling petal.
+ */
+function treeGrain(p: Particle, j: number, leaf: boolean, F: BirdFrame, t: number): Grain {
+  const slot = forestSlot(j);
+  const kind = birdKinds()[slot.kind] as BirdKind;
+  const route = kind.routes[Math.floor(hash(p.i, 215) * kind.routes.length)] as Route3;
+  const len = length3(route);
+  const at = nearBird(slot.at, F.me.c);
+  let g = smooth((Math.hypot(at[0] - F.world[0], at[2] - F.world[2]) - 14) / 8);
+  if (spreadFrom && waterWorld())
+    g *= smooth(
+      (spreadReach(t) - Math.hypot(at[0] - spreadFrom.c[0], at[2] - spreadFrom.c[2])) / 16,
+    );
+  let q: Vec3;
+  let petal = false;
+  if (leaf) {
+    const [x, y, z] = along3(route, Math.max(0, len - kind.reach * hash(p.i, 243)));
+    const d = fibonacciSphere(p.i % 157, 157);
+    const open = kind.bloom ? bloomOpen(j, t) * g : 1;
+    const r = kind.leafR * Math.cbrt(p.b) * (0.35 + 0.65 * open);
+    q = [x + d[0] * r + Math.sin(t * 1.5 + p.i) * 0.08, y + d[1] * r * 0.8, z + d[2] * r];
+    petal = kind.bloom && hash(p.i, 244) < 0.16;
+  } else {
+    // Sap climbing every trunk and branch.
+    const [x, y, z, w] = along3(route, len * wrap(p.b + t * 0.03 * (0.7 + 0.6 * p.d), 1));
+    q = add([x, y, z], fibonacciSphere(p.i % 389, 389), w * 0.5 * Math.sqrt(p.d));
+  }
+  const size = slot.size * (0.04 + 0.96 * g);
+  const cy = Math.cos(slot.yaw);
+  const sy = Math.sin(slot.yaw);
+  const pos: Vec3 = [
+    at[0] + (q[0] * cy - q[2] * sy) * size,
+    at[1] + q[1] * size,
+    at[2] + (q[0] * sy + q[2] * cy) * size,
+  ];
+  if (petal) {
+    // A petal drifting down from its place in the crown, and resting where it lands.
+    const fall = Math.min(1, frac(t * 0.05 + hash(p.i, 245)) * 1.25);
+    pos[0] += Math.sin(t * 0.7 + p.i) * 2.5 * fall;
+    pos[2] += Math.cos(t * 0.5 + p.i) * 2 * fall;
+    pos[1] = lerp(pos[1], landY(pos[0], pos[2]) + 0.05, fall * fall);
+  }
+  return { pos, k: g, petal };
+}
+
+/** How much the water lifts at (x, z) in the mood chosen, and how much light its crest catches. */
+function swell(x: number, z: number, pondK: number, t: number): { y: number; crest: number } {
+  switch (waterMood) {
+    case 1: {
+      // Rings spreading slowly: out from a pond's middle, or from a spring every fourteen units.
+      const r =
+        pondK >= 0
+          ? fromPond(pondK, x, z)
+          : Math.hypot(x - (Math.floor(x / 14) + 0.5) * 14, z - (Math.floor(z / 14) + 0.5) * 14);
+      const s = Math.sin(r * 1.3 - t * 2);
+      return { y: 0.06 * s, crest: Math.max(0, s) ** 4 };
+    }
+    case 2: {
+      // Long swells rolling through, smaller in the river and least in the ponds.
+      const amp = pondK >= 0 ? 0.08 : waterWorld() ? 0.45 : 0.16;
+      const s = Math.sin(0.45 * x + 0.25 * z - 1.7 * t);
+      return {
+        y: amp * (s + 0.4 * Math.sin(0.9 * z - 0.5 * x - 2.3 * t)),
+        crest: Math.max(0, s) ** 3,
+      };
+    }
+    default:
+      return { y: 0, crest: 0 };
+  }
+}
+
+/**
+ * Grain p of the water: lying still, swelling with the mood, or in the rain a drop of its own (a
+ * sparkle where it lands, flaring and gone, then landing again somewhere new) or one of a ring.
+ */
+function waterGrain(p: Particle, F: BirdFrame, t: number): Grain {
+  const rain = waterMood === 3 ? hash(p.i, 250) : 1;
+  if (rain < 0.35) {
+    // A drop lands, a sparkle, and its ring widens and fades; then it falls again somewhere new.
+    const n = Math.floor(hash(p.i, 251) * RAIN_RINGS);
+    const age = t / RAIN_T + hash(n, 252);
+    const drop = Math.floor(age);
+    const f = age - drop;
+    const m = n * 131 + drop;
+    const s = waterSpot(hash(m, 253), hash(m, 254), hash(m, 255), 0);
+    const c = nearWater([s.x, s.y, s.z], F.me.c);
+    const r = 0.1 + 2.4 * Math.sqrt(f);
+    const a = p.b * TAU;
+    return {
+      pos: [c[0] + Math.cos(a) * r, s.y + 0.03, c[2] + Math.sin(a) * r],
+      k: 0.08 + 0.45 * (1 - f) ** 2,
+    };
+  }
+  if (rain < 0.8) {
+    // Lots of single sparkles, each a drop of its own, blooming where it lands and fading fast.
+    const age = (t * 1.7) / RAIN_T + hash(p.i, 259);
+    const drop = Math.floor(age);
+    const f = age - drop;
+    const m = p.i * 7 + drop;
+    const s = waterSpot(hash(m, 253), hash(m, 254), hash(m, 255), 0);
+    const c = nearWater([s.x, s.y, s.z], F.me.c);
+    return { pos: [c[0], s.y + 0.05 + 0.3 * f, c[2]], k: 0.04 + 0.75 * (1 - f) ** 4 };
+  }
+  const s = waterSpot(p.b, p.d, hash(p.i, 256), t);
+  const pos = nearWater([s.x, s.y, s.z], F.me.c);
+  const w = swell(pos[0], pos[2], s.pond, t);
+  pos[1] += w.y;
+  const calm = 0.5 + 0.5 * Math.sin(t * 0.6 + p.i * 1.3);
+  const k =
+    waterMood === 0
+      ? 0.12 + 0.12 * calm ** 3
+      : waterMood === 3
+        ? 0.07 + 0.03 * calm
+        : 0.07 + 0.4 * w.crest;
+  return { pos, k };
+}
+
+/**
+ * The tree a grain of a reflection mirrors: any in the Water forest; else, by each pond, whichever of
+ * its two trees stands across the water from the eye, the one that shows in it.
+ */
+const mirrorTree = (p: Particle, F: BirdFrame) =>
+  waterWorld() ? Math.floor(p.a * BIRD_TREES) : (F.across[p.i % PONDS.length] as number);
+
+/**
+ * Grain p of a reflection: a grain of a tree turned over in the water under it. In the Golden forest
+ * the trees on the ponds' banks, showing only where the eye sees the pond (else a faint glint on its
+ * surface); in the Water forest every tree, in the open water. It trembles as the water moves.
+ */
+function mirrorGrain(p: Particle, F: BirdFrame, t: number): Grain {
+  const world = waterWorld();
+  const j = mirrorTree(p, F);
+  const g = treeGrain(p, j, hash(p.i, 246) < 0.62, F, t);
+  const slot = forestSlot(j);
+  const pd = pondOfTree(j);
+  const level = world ? SEA_Y : pd.level;
+  // A pond is small beside its trees: turned over at full height, only their feet would fall in it
+  // from where the bird flies, so its reflections are drawn shallower, as on water with a skin of
+  // ripples; the open water gives them back whole.
+  const m: Vec3 = [g.pos[0], level - (g.pos[1] - level) * (world ? 1 : 0.35), g.pos[2]];
+  const deep = smooth((level - m[1]) / 6);
+  const sway = [0.04, 0.25, 0.7, 0.3][waterMood] as number;
+  m[0] += Math.sin((level - m[1]) * 0.9 - t * 1.3 + p.i * 0.01) * sway * deep;
+  m[2] += Math.cos(m[0] * 0.5 + t * 0.9) * sway * 0.5 * deep;
+  if (world) return { pos: m, k: g.k, lit: true, petal: g.petal };
+  // The pond's own copy next to its tree's.
+  const at = nearBird(slot.at, F.me.c);
+  const cx = at[0] + pd.c[0] - slot.at[0];
+  const cz = at[2] + pd.c[1] - slot.at[2];
+  const e = F.eye;
+  if (e[1] > level + 0.05 && m[1] < level) {
+    // Where the eye's line to the turned-over grain crosses the water: in the pond, it shows.
+    const s = (e[1] - level) / (e[1] - m[1]);
+    const hx = e[0] + s * (m[0] - e[0]);
+    const hz = e[2] + s * (m[2] - e[2]);
+    if (Math.hypot(hx - cx, hz - cz) < pd.r * 0.95)
+      return { pos: m, k: g.k, lit: true, petal: g.petal };
+  }
+  const a = hash(p.i, 247) * TAU;
+  const r = pd.r * Math.sqrt(hash(p.i, 248));
+  return { pos: [cx + Math.cos(a) * r, level + 0.02, cz + Math.sin(a) * r], k: 1, lit: false };
+}
+
+/** Grain p of the world tree: sap in the trunk and limbs, roots over the land, the crown, falling light. */
+function worldGrain(p: Particle, F: BirdFrame, t: number): Vec3 {
+  const v = (p.c - WORLD_LO) / (WORLD_HI - WORLD_LO);
+  const routes = worldTreeRoutes();
+  // The crown gathers on a third of the tips, so each tuft is full enough to read from far off.
+  const n = Math.floor(hash(p.i, 260) * routes.length);
+  const route = routes[v < 0.4 ? n : n - (n % 3)] as Route3;
+  const len = length3(route);
+  let q: Vec3;
+  if (v < 0.3) {
+    // Sap climbing, thickest low down, so the trunk stands out as the tree's spine.
+    const s = wrap(p.b + t * 0.012 * (0.7 + 0.6 * p.d), 1) ** 1.6;
+    const [x, y, z, w] = along3(route, len * s);
+    q = add([x, y, z], fibonacciSphere(p.i % 389, 389), w * 0.5 * Math.sqrt(p.d));
+  } else if (v < 0.4) {
+    // Nine great roots running out over the land from the foot, sinking as they go.
+    const n = Math.floor(p.b * 9);
+    const a = (n / 9) * TAU + 0.3 * hash(n, 261);
+    const s = p.d;
+    const L = WORLD_TREE_H * 0.32;
+    const th = 5 * (1 - s) ** 2;
+    const d = fibonacciSphere(p.i % 61, 61);
+    q = [
+      Math.cos(a) * s * L + d[0] * th,
+      th * 0.8 - 1.5 * s + d[1] * th * 0.5,
+      Math.sin(a) * s * L + d[2] * th,
+    ];
+  } else if (v < 0.92) {
+    const [x, y, z] = along3(route, len * (1 - 0.06 * hash(p.i, 262)));
+    const d = fibonacciSphere(p.i % 157, 157);
+    const r = 0.045 * WORLD_TREE_H * Math.cbrt(p.b);
+    q = [x + d[0] * r + Math.sin(t * 0.3 + p.i) * 0.4, y + d[1] * r * 0.7, z + d[2] * r];
+  } else {
+    // Leaves of light drifting down out of the crown.
+    const [x, y, z] = along3(route, len);
+    const f = frac(t * 0.025 + hash(p.i, 263));
+    q = [x + Math.sin(t * 0.4 + p.i) * 14 * f, y * (1 - f), z + Math.cos(t * 0.3 + p.i) * 14 * f];
+  }
+  const e = F.eye;
+  const k = F.worldK;
+  return [
+    e[0] + (F.world[0] + q[0] - e[0]) * k,
+    e[1] + (F.world[1] + q[1] - e[1]) * k,
+    e[2] + (F.world[2] + q[2] - e[2]) * k,
+  ];
+}
+
+/** Where grain p of the Bird Sim is at time t, and how much of its light shows. */
+function birdGrain(p: Particle, t: number): Grain {
+  const F = birdFrame(t);
+  const me = F.me;
   switch (birdRole(p)) {
     case 'ground': {
       const pos = nearBird([p.b * BIRD_W, 0, p.d * BIRD_W], me.c);
       pos[1] = hill(pos[0], pos[2]);
-      return pos;
+      // Under the river and the ponds the bed shows only faintly.
+      return { pos, k: wetAt(pos[0], pos[2]) ? 0.3 : 1 };
     }
+    case 'water':
+      return waterGrain(p, F, t);
     case 'sky': {
       if (p.d < 0.45) {
         // Stars over the canopy.
         const pos = nearBird([p.b * BIRD_W, 0, hash(p.i, 211) * BIRD_W], me.c);
         pos[1] = 70 + 25 * hash(p.i, 212);
-        return pos;
+        return { pos, k: 1 };
+      }
+      const pos = nearBird([p.b * BIRD_W, 0, hash(p.i, 213) * BIRD_W], me.c);
+      const floor = landY(pos[0], pos[2]);
+      if (waterMood === 3) {
+        // In the rain the fireflies are raindrops, falling.
+        const f = frac(t * 0.9 + hash(p.i, 257));
+        return { pos: [pos[0], floor + 0.5 + 32 * (1 - f), pos[2]], k: 1 };
       }
       // Fireflies drifting between the trees, never far from the bird.
-      const pos = nearBird([p.b * BIRD_W, 0, hash(p.i, 213) * BIRD_W], me.c);
       const k = p.i * 0.37;
-      return [
-        pos[0] + 1.5 * Math.sin(t * 0.4 + k),
-        hill(pos[0], pos[2]) + 1 + 14 * hash(p.i, 214) + 1.2 * Math.sin(t * 0.3 + k * 2),
-        pos[2] + 1.5 * Math.cos(t * 0.35 + k),
-      ];
+      return {
+        pos: [
+          pos[0] + 1.5 * Math.sin(t * 0.4 + k),
+          floor + 1 + 14 * hash(p.i, 214) + 1.2 * Math.sin(t * 0.3 + k * 2),
+          pos[2] + 1.5 * Math.cos(t * 0.35 + k),
+        ],
+        k: 1,
+      };
     }
+    case 'flock':
+      return sparrow(p, me, t);
     case 'mushroom': {
       const m = birdMushroom(Math.floor(p.a * MUSHROOMS));
       const at = nearBird(m.at, me.c);
+      if (waterWorld()) {
+        // On the water, a lotus instead: a round leaf floating flat, a cup of petals over it.
+        if (p.b < 0.5) {
+          const a = p.d * TAU;
+          const r = m.cap * 2 * Math.sqrt(p.b / 0.5);
+          return { pos: [at[0] + Math.cos(a) * r, SEA_Y + 0.05, at[2] + Math.sin(a) * r], k: 1 };
+        }
+        const a = (Math.floor(p.d * 8) / 8) * TAU + 0.2 * hash(p.i, 258);
+        const s = (p.b - 0.5) * 2;
+        const r = m.cap * 1.4 * Math.sin(s * 1.9);
+        return {
+          pos: [at[0] + Math.cos(a) * r, SEA_Y + 0.1 + m.cap * s, at[2] + Math.sin(a) * r],
+          k: 1,
+        };
+      }
       if (p.b < 0.3) {
         // The stem, thicker at the foot.
         const y = (p.b / 0.3) * m.h;
         const a = p.d * TAU;
         const w = m.stem * (1.3 - 0.4 * (y / m.h));
-        return [at[0] + Math.cos(a) * w, at[1] + y, at[2] + Math.sin(a) * w];
+        return { pos: [at[0] + Math.cos(a) * w, at[1] + y, at[2] + Math.sin(a) * w], k: 1 };
       }
       // The cap: a dome over the stem, with a fringe of gills beneath.
       const d = fibonacciSphere(p.i % 233, 233);
       const dome = Math.abs(d[1]);
       const gill = p.b < 0.4;
-      return [
-        at[0] + d[0] * m.cap * (gill ? 0.9 : 1),
-        at[1] + m.h + (gill ? -0.05 : dome * m.cap * 0.55),
-        at[2] + d[2] * m.cap * (gill ? 0.9 : 1),
-      ];
+      return {
+        pos: [
+          at[0] + d[0] * m.cap * (gill ? 0.9 : 1),
+          at[1] + m.h + (gill ? -0.05 : dome * m.cap * 0.55),
+          at[2] + d[2] * m.cap * (gill ? 0.9 : 1),
+        ],
+        k: 1,
+      };
     }
+    case 'world':
+      return { pos: worldGrain(p, F, t), k: F.worldShown };
+    case 'mirror':
+      return mirrorGrain(p, F, t);
     case 'bird':
-      return walking() ? walkerBody(p, me, t) : birdBody(p, me);
-    default: {
-      const slot = forestSlot(Math.floor(p.a * BIRD_TREES));
-      const routes = forestTrees()[slot.kind] as Route3[];
-      const route = routes[Math.floor(hash(p.i, 215) * routes.length)] as Route3;
-      const len = length3(route);
-      let q: Vec3;
-      if (birdRole(p) === 'leaf') {
-        const [x, y, z] = along3(route, len);
-        const d = fibonacciSphere(p.i % 157, 157);
-        const r = 1.5 * Math.cbrt(p.b);
-        q = [x + d[0] * r + Math.sin(t * 1.5 + p.i) * 0.08, y + d[1] * r * 0.8, z + d[2] * r];
-      } else {
-        // Sap climbing every trunk and branch.
-        const [x, y, z, w] = along3(route, len * wrap(p.b + t * 0.03 * (0.7 + 0.6 * p.d), 1));
-        q = add([x, y, z], fibonacciSphere(p.i % 389, 389), w * 0.5 * Math.sqrt(p.d));
-      }
-      const at = nearBird(slot.at, me.c);
-      const cy = Math.cos(slot.yaw);
-      const sy = Math.sin(slot.yaw);
-      return [
-        at[0] + (q[0] * cy - q[2] * sy) * slot.size,
-        at[1] + q[1] * slot.size,
-        at[2] + (q[0] * sy + q[2] * cy) * slot.size,
-      ];
-    }
+      return { pos: walking() ? walkerBody(p, me, t) : birdBody(p, me), k: 1 };
+    default:
+      return treeGrain(p, Math.floor(p.a * BIRD_TREES), birdRole(p) === 'leaf', F, t);
   }
 }
 
@@ -2745,7 +3473,31 @@ function birdPoint(p: Particle, t: number): Vec3 {
 const birdFar = (pos: Vec3, me: Vec3) =>
   1 - smooth((Math.hypot(pos[0] - me[0], pos[2] - me[2]) - BIRD_W * 0.28) / (BIRD_W * 0.2));
 
-function birdColour(p: Particle, t: number, twinkle: number): RGB {
+/** Blossom: a blush on gold, never pink enough to leave the gold behind. */
+const BLOSSOM: RGB = [1, 0.74, 0.66];
+/** The water, all gold as on Reflection: never silver or blue. */
+const BIRD_WATER: RGB = [1, 0.86, 0.6];
+
+/** A tree's leaf or sap at its brightness, before the far fade: gold, or blossom on the trees in bloom. */
+function treeTone(
+  p: Particle,
+  j: number,
+  leaf: boolean,
+  petal: boolean,
+  t: number,
+  twinkle: number,
+): RGB {
+  if (!leaf) return scale(mix(BARK, GOLD, 0.5 + 0.5 * p.d), 0.55 * twinkle);
+  const slot = forestSlot(j);
+  if (petal) return scale(BLOSSOM, 0.4);
+  if ((birdKinds()[slot.kind] as BirdKind).bloom) {
+    const open = bloomOpen(j, t);
+    return scale(mix(mix(GOLD, BLOSSOM, open), SUN, 0.3 * p.b), (0.3 + 0.25 * open) * twinkle);
+  }
+  return scale(mix(GOLD, SUGAR, p.b), 0.55 * twinkle);
+}
+
+function birdColour(p: Particle, t: number, twinkle: number, g: Grain): RGB {
   const me = flier(t);
   const role = birdRole(p);
   if (role === 'bird' && walking()) {
@@ -2758,19 +3510,45 @@ function birdColour(p: Particle, t: number, twinkle: number): RGB {
     const tip = p.a >= 0.35 ? p.b ** 2 : p.a >= 0.25 ? p.b : 0;
     return scale(mix([0.95, 0.82, 0.55], SUN, tip), 0.05 + 0.06 * tip);
   }
-  const pos = birdPoint(p, t);
-  const far = birdFar(pos, me.c);
+  if (role === 'world') {
+    // Gold all through, softer the farther it is drawn in, so the far crown never glares.
+    const v = (p.c - WORLD_LO) / (WORLD_HI - WORLD_LO);
+    const near = 0.35 + 0.65 * g.k * Math.sqrt(birdFrame(t).worldK);
+    const tone: RGB =
+      v < 0.3
+        ? scale(mix(BARK, GOLD, 0.5 + 0.5 * p.d), 0.5)
+        : v < 0.4
+          ? scale(mix(BARK, GOLD, 0.3), 0.35)
+          : v < 0.92
+            ? scale(mix(GOLD, SUGAR, p.b), 0.42)
+            : scale(SUGAR, 0.3 + 0.5 * Math.max(0, Math.sin(t * 1.1 + p.i)) ** 4);
+    return scale(tone, near * g.k * twinkle);
+  }
+  const far = birdFar(g.pos, me.c);
   switch (role) {
     case 'ground':
-      return scale(mix(EARTH, GOLD, 0.4), 0.14 * far);
+      return scale(mix(EARTH, GOLD, 0.4), 0.14 * far * g.k);
+    case 'water':
+      return scale(BIRD_WATER, g.k * far);
     case 'sky': {
       if (p.d < 0.45) return scale(STAR, (0.2 + 0.7 * hash(p.i, 216) ** 6) * twinkle);
+      if (waterMood === 3) return scale(BIRD_WATER, 0.1 * far);
       // A firefly: a warm spark that comes and goes.
       const on = Math.max(0, Math.sin(t * 1.3 + p.i * 2.1)) ** 3;
       return scale(SUGAR, (0.15 + 0.9 * on) * far);
     }
+    case 'flock': {
+      // Small warm specks, their wings catching the light as they beat.
+      const flick = Math.sin(t * 13 + p.i * 1.7) ** 2;
+      return scale(mix(BARK, SUGAR, 0.5), (0.1 + 0.1 * flick) * g.k);
+    }
     case 'mushroom': {
       const m = birdMushroom(Math.floor(p.a * MUSHROOMS));
+      if (waterWorld()) {
+        // The lotus: a dim gold leaf, its petals blush and gold.
+        if (p.b < 0.5) return scale(GOLD, 0.05 * far);
+        return scale(mix(BLOSSOM, SUN, (p.b - 0.5) * 1.2), 0.09 * far * twinkle);
+      }
       if (p.b < 0.3) return scale(STALK, 0.35 * far);
       if (p.b < 0.4) return scale(mix(STALK, AMBER, 0.4), 0.3 * far);
       // Caps in amber and ember red, some glowing softly from within, with pale spots.
@@ -2779,10 +3557,26 @@ function birdColour(p: Particle, t: number, twinkle: number): RGB {
       const glow = m.glow ? 0.55 + 0.25 * Math.sin(t * 0.8 + p.a * 40) : 0.4;
       return scale(cap, glow * far * twinkle);
     }
-    case 'leaf':
-      return scale(mix(GOLD, SUGAR, p.b), 0.55 * twinkle * far);
-    default:
-      return scale(mix(BARK, GOLD, 0.5 + 0.5 * p.d), 0.55 * twinkle * far);
+    case 'mirror': {
+      if (!g.lit) return scale(BIRD_WATER, 0.07 * far);
+      const j = mirrorTree(p, birdFrame(t));
+      const tone = treeTone(p, j, hash(p.i, 246) < 0.62, !!g.petal, t, twinkle);
+      // Fainter than the tree, glinting as the water catches the light.
+      const glint = 0.75 + 0.25 * Math.sin(t * 2 + p.i * 1.3);
+      return scale(golden(tone), 0.45 * glint * g.k * far);
+    }
+    default: {
+      const tone = treeTone(
+        p,
+        Math.floor(p.a * BIRD_TREES),
+        role === 'leaf',
+        !!g.petal,
+        t,
+        twinkle,
+      );
+      // Saplings at the Water forest's edge come up out of the dark as they grow.
+      return scale(tone, far * (0.15 + 0.85 * g.k));
+    }
   }
 }
 
@@ -2897,7 +3691,7 @@ function form(k: number, p: Particle, u: number, t: number): Vec3 {
     case 13:
       return bloomPoint(p, u, t);
     case 14:
-      return birdPoint(p, t);
+      return birdGrain(p, t).pos;
     default:
       return forestPoint(k, p, u, t);
   }
@@ -3000,8 +3794,11 @@ export function colour(k: number, p: Particle, u: number, t: number): RGB {
   return mix(scale(STAR, 0.32 * twinkle), c, a);
 }
 
+/** Every grain's own slow twinkle. */
+const twinkleOf = (p: Particle, t: number) => 0.7 + 0.3 * Math.sin(t * 1.7 + p.i * 0.37);
+
 function formColour(k: number, p: Particle, u: number, t: number): RGB {
-  const twinkle = 0.7 + 0.3 * Math.sin(t * 1.7 + p.i * 0.37);
+  const twinkle = twinkleOf(p, t);
   switch (k) {
     case 0:
       switch (cellRole(p)) {
@@ -3127,7 +3924,7 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
     case 13:
       return bloomColour(p, u, t);
     case 14:
-      return birdColour(p, t, twinkle);
+      return birdColour(p, t, twinkle, birdGrain(p, t));
     case 11:
       // All gold: no green anywhere.
       switch (belowRole(p)) {
@@ -3266,11 +4063,11 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       const { c, f } = flier(t);
       if (walking()) {
         const eye = add(add(c, f, -WALK_CAM), [0, 1, 0], 4);
-        eye[1] = Math.max(hill(eye[0], eye[2]) + 1.5, eye[1]);
+        eye[1] = Math.max(landY(eye[0], eye[2]) + 1.5, eye[1]);
         return { eye, target: add(add(c, f, 6), [0, 1, 0], 2) };
       }
       const eye = add(add(c, f, -BIRD_CAM), [0, 1, 0], BIRD_CAM * 0.3);
-      eye[1] = Math.max(hill(eye[0], eye[2]) + 1, eye[1]);
+      eye[1] = Math.max(landY(eye[0], eye[2]) + 1, eye[1]);
       return { eye, target: add(c, f, 6) };
     }
     case 12:
@@ -3336,6 +4133,8 @@ const pieceFrom = (k: number) => (isForest(k) || hasBird(k) ? 0 : isFruit(k) ? 0
 /** How long piece k plays on its own before it loops, in seconds. */
 export function pieceLength(k: number): number {
   if (isForest(k)) return (2 * LOOP) / SPEED;
+  // The Bird Sim never loops back: its bar runs once for each line about freedom.
+  if (hasBird(k)) return QUOTE_EVERY;
   return (1 - pieceFrom(k)) * (PHASES[k] as VegetalPhase).duration;
 }
 
@@ -3348,15 +4147,27 @@ function pieceClock(k: number, s: number): { f: number; u: number; t: number } {
   return { f, u, t: s };
 }
 
-/** How far through its loop piece k is, `s` seconds in, for the step bar and the words. */
-export const pieceProgress = (k: number, s: number) => pieceClock(k, s).f;
+/**
+ * How far through its loop piece k is, `s` seconds in, for the step bar and the words. On the Bird
+ * Sim it also turns to the line about freedom of the moment, so each line comes in and goes out on
+ * its own loop.
+ */
+export function pieceProgress(k: number, s: number): number {
+  if (hasBird(k)) quoteNow = Math.floor(wrap(s / QUOTE_EVERY, FREEDOM.length));
+  return pieceClock(k, s).f;
+}
 
 /** Position and colour of particle p in piece k on its own, `s` seconds in. */
 export function pieceAt(p: Particle, k: number, s: number): { pos: Vec3; rgb: RGB } {
   const { f, u, t } = pieceClock(k, s);
+  if (hasBird(k)) {
+    // Worked out once for both its place and its colour: the Bird Sim has the most to work out.
+    const g = birdGrain(p, t);
+    return { pos: g.pos, rgb: birdColour(p, t, twinkleOf(p, t), g) };
+  }
   const pos = whole(k, p, u, t);
   const rgb = formColour(k, p, u, t);
-  if (isForest(k) || hasBird(k)) return { pos, rgb };
+  if (isForest(k)) return { pos, rgb };
   const w = smooth((f - 0.8 + 0.12 * p.stagger) / 0.2);
   if (w <= 0) return { pos, rgb };
   const from = pieceFrom(k);
