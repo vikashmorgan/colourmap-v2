@@ -96,6 +96,8 @@ export type Trip = {
       claims?: string[];
       /** A small bar shown while it is played (the Shark Sim's boost), its value 0 to 1, read every frame. */
       meter?: { label: string; value: () => number };
+      /** A short count shown beside the bar while it is played (the Shark Sim's finds), read every frame. */
+      tally?: () => string;
     };
     /**
      * A switch to try on a step (the 3D tree all in gold), beside the speeds; off in the Journey.
@@ -246,6 +248,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     keysRef.current.clear();
   }, []);
   const meterRef = useRef<HTMLSpanElement>(null);
+  const tallyRef = useRef<HTMLSpanElement>(null);
   const [bg, setBg] = useState(0);
   const bgRef = useRef<((i: number) => void) | null>(null);
   useEffect(() => {
@@ -452,6 +455,11 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         // The game's bar (the Shark Sim's boost), drawn straight onto the page every frame.
         const bar = meterRef.current;
         if (bar && game.meter) bar.style.width = `${Math.round(game.meter.value() * 100)}%`;
+        const count = tallyRef.current;
+        if (count && game.tally) {
+          const text = game.tally();
+          if (count.textContent !== text) count.textContent = text;
+        }
       }
       const guided = T.pieces?.pointer;
       if (guided) {
@@ -822,6 +830,9 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
                 <span className="bb-meter" role="img" aria-label={trip.pieces.game.meter.label}>
                   <span ref={meterRef} />
                 </span>
+              ) : null}
+              {trip.pieces.game.tally && !stopped ? (
+                <span className="bb-tally" ref={tallyRef} aria-live="polite" />
               ) : null}
             </>
           ) : null}

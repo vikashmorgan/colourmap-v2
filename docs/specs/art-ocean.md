@@ -95,6 +95,40 @@ Added 2026-11-11, all in the Shark Sim:
 - **Your fish, dimmer** (the hammerhead close to the eye read as a white glare): a lone fish of yours
   is drawn with fewer grains (the spare ones draw the visitors) and at a little over half the light.
 
+## Shark Sim, a living sea
+
+Added 2026-11-11, from the Shark Sim plan the user approved ("no need for day and night. but do the
+rest"):
+
+- **A reef that answers** ("some coral reefs have the clownfish hiding in when u get close. so we
+  define different corals with different reactions. anemones would be cool as well."): in the Coral
+  forest six **anemones**, soft clumps of swaying tentacles, draw them in and curl as you come within
+  about 14; three clownfish living in each dive down into the tentacles, and once you have passed
+  peek back out, slowly, then swim their rings again. Eight clusters of **tube worms** snap their
+  little spiral fans shut at once when you come within about 9 and open them again slowly. The
+  **coral trees** sway in your wake (pushed the way you swim, the sea fans most) and their polyps dim
+  as you pass, glowing back as you go. All by distance, eased.
+- **Treasure** ("searching for treasures hidden in the landscape"): six finds. A pearl in each of three
+  **giant clams** on the sand of the Coral forest: a clam opens (its upper shell lifting, the mantle's
+  lip shimmering teal to violet) only to someone slow (under about 60% of the cruise, as on Q) and
+  close; an **amphora** lying in the tunnel's fork, a faint gold glint on it; a **trail of twelve gold
+  coins** spinning down the deep canyon from its lip (the trail counts once every coin is taken); a
+  **glowing egg** by the first vent. Swim through a treasure to take it: it bursts outward in a soft
+  lift of its light and is gone. A small count, "Finds 2 / 6", shows beside the boost bar while you
+  play. Three finds bring the **Golden hammerhead** into the fish pills. Kept for the visit only.
+- **Calm**: the longer you cruise without boosting or biting, the calmer you grow (twelve seconds to
+  full, twice as quick when slow, half as quick on E), with a soft warm glow on you. Past the trust
+  mark small fish drift in to a ring just off your body instead of fleeing, and a calm hunter does not
+  bite. A boost or a bite breaks the calm.
+- **Currents**: ribbons of moving water you can see, bands of light running along them, that carry
+  you at 8 a second once you are in them (about 4 either side of their middle). In the Coral forest one
+  runs from the open reef to the tunnel's mouth and one from its right exit up into the water above;
+  in the Open water two long sweeps run among the shoals; in the Deep one runs from the reef down over
+  the canyon's lip and one from the vents back up toward it.
+- **Guests**: swim at a whale's side (within about 16 along it and 14 out) and it quickens or slows to
+  keep your pace, and stays out while you are with it. In the Deep the first manta loops; follow it
+  from behind and it keeps about ten ahead, waiting when you fall back and moving on when you close in.
+
 ## Words
 
 Each piece has a line saying what you see and two lines of reflection:
@@ -147,6 +181,13 @@ Each piece has a line saying what you see and two lines of reflection:
 - Light switches on only in the Shark Sim; the caustics never glare.
 - The hammerhead school and each whale are sometimes fully there and sometimes gone.
 - Your own fish is never brighter than 0.35 in any channel.
+- An anemone draws in and its clownfish go home as you come; once you have gone they peek out slowly
+  and are all the way out within fifteen seconds; a tube worm shuts within a third of a second.
+- A clam stays shut to a cruising fish and opens to a slow one; its pearl, the amphora, the whole coin
+  trail and the egg each count as a find; three finds put the Golden hammerhead in the pills, all gold.
+- Thirteen seconds of cruising make you fully calm; calm, a hunter takes nothing; a boost breaks it.
+- A current carries you well past your own pace.
+- Beside a whale, it keeps your pace; far behind the deep's first manta, it slows; close behind, it quickens.
 - The garden's corals give no light before they begin; each step of growth takes longer than the last.
 - **Backgrounds** (2026-11-11: "check black as one preset for background but also do some deep blue backgrounds, with feeling of depth"): a button beside the speeds cycles **Black**, **Deep blue**, **Abyss** and **Twilight**; the blues darken from the top of the screen down, with a faint glow of light from above. Remembered on the device.
 - **Full screen** (2026-11-11: "make ability to really go full screen so I can get absorbed in the visual"): ⛶ beside Play (or F) fills the screen with the picture alone, every control and word hidden; Esc comes back.

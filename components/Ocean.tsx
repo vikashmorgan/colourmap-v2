@@ -41,6 +41,7 @@ import {
   setSwim,
   setVariant,
   TOTAL,
+  tally,
   variantLabel,
   variantNames,
   wordsShown,
@@ -83,6 +84,8 @@ const TRIP: Trip = {
       set: setSwim,
       claims: [' '],
       meter: { label: 'Boost', value: boostLeft },
+      // The treasures found, out of six.
+      tally,
     },
     // Light: caustics on the sand and waves of light on the surface above.
     toggle: { has: hasLight, label: 'Light', set: setLight },

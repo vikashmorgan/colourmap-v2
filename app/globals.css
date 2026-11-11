@@ -895,6 +895,12 @@ input[type="range"].feedback-slider::-moz-range-thumb {
   background: #c4a060;
   transition: width 0.12s linear;
 }
+/* A game's count (the Shark Sim's finds): small and quiet beside its bar. */
+.bb-tally {
+  font-size: 13px;
+  color: rgba(244, 234, 216, 0.7);
+  font-variant-numeric: tabular-nums;
+}
 .bb-controls button[aria-pressed="true"] {
   background: rgba(244, 234, 216, 0.22);
 }

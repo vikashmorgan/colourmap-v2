@@ -1828,6 +1828,8 @@ type SwimKind = {
   cam: number;
   /** A hunter: it eats the small fish it reaches, and they scatter from it. */
   eats?: boolean;
+  /** All in gold: the fish the treasures unlock. */
+  gold?: boolean;
 };
 const SWIM_KINDS: SwimKind[] = [
   { name: 'Hammerhead', kind: 3, count: 1, len: 9, cam: 20, eats: true },
@@ -1836,12 +1838,16 @@ const SWIM_KINDS: SwimKind[] = [
   { name: 'Yellow tang', kind: 1, count: 1, len: 2.2, cam: 9 },
   { name: 'Silver school', kind: 0, count: 24, len: 2.2, cam: 16 },
   { name: 'Bannerfish school', kind: 10, count: 12, len: 2, cam: 14 },
+  // Unlocked by finding treasures; not in the pills before.
+  { name: 'Golden hammerhead', kind: 3, count: 1, len: 9, cam: 20, eats: true, gold: true },
 ];
 export const SWIM_NAMES = SWIM_KINDS.map((k) => k.name);
+/** The fish in the pills now: the golden hammerhead only once enough treasures are found. */
+export const swimNames = () => (unlocked() ? SWIM_NAMES : SWIM_NAMES.slice(0, -1));
 let swimKind = 0;
 /** Which fish you swim as: set by the pills, the hammerhead in the Journey. */
 export function setSwimKind(i: number) {
-  swimKind = SWIM_KINDS[i] ? i : 0;
+  swimKind = i < swimNames().length && SWIM_KINDS[i] ? i : 0;
 }
 const swimNow = () => SWIM_KINDS[swimKind] as SwimKind;
 export const hasGame = (k: number) => PHASES[k]?.id === 'swim';
@@ -1905,7 +1911,20 @@ const swim = {
   boost: 1,
   /** How close the nearest small fish is to your mouth: the jaw opens a little as you close in. */
   near: Number.POSITIVE_INFINITY,
+  /** How calm you are, 0 to 1: it grows while you cruise without boosting or biting. */
+  calm: 0,
 };
+
+/*
+ * CALM (2026-11-11, from the Shark Sim plan the user approved: "no need for
+ * day and night. but do the rest"): the longer you cruise without boosting or
+ * biting, the calmer you grow, twelve seconds to full, quicker when slow, and
+ * a soft warm glow grows on you. Past the trust mark small fish come close
+ * instead of fleeing, and a calm hunter does not bite; a boost breaks the calm.
+ */
+export const CALM_SECONDS = 12;
+export const CALM_TRUST = 0.6;
+export const calmNow = () => swim.calm;
 
 /*
  * BOOST (2026-11-11): "press space for boost. with a booster bar. when u eat
@@ -1952,6 +1971,7 @@ export function setSwim(
 ) {
   if (!active) {
     swim.on = false;
+    react(dt, t);
     return;
   }
   if (!swim.on) {
@@ -1987,6 +2007,12 @@ export function setSwim(
   const f = heading3(swim.yaw, swim.pitch);
   const was = swim.pos;
   swim.pos = add(swim.pos, f, swim.speed * dt);
+  // A current, once you are in it, carries you along.
+  swim.pos = add(swim.pos, currentPull(swim.pos), dt);
+  // Calm grows while you cruise, quicker when slow; a boost breaks it at once.
+  if (boosting) swim.calm = 0;
+  else
+    swim.calm = Math.min(1, swim.calm + (dt / CALM_SECONDS) * (pace < 1 ? 2 : pace > 1 ? 0.5 : 1));
   // Below the reef in the deep ocean the canyon's walls hold you: you slide along them.
   if (sea === 2 && swim.pos[1] < FLOOR + 1.5 && !inCanyon(swim.pos[0])) swim.pos[0] = was[0];
   swim.pos[1] = Math.max(floorAt(swim.pos[0]) + 1.5, Math.min(SKY_TOP, swim.pos[1]));
@@ -1996,6 +2022,8 @@ export function setSwim(
     startle(dt, t);
     eatNear(mouthAt(t), t);
   }
+  collect(t);
+  react(dt, t);
 }
 
 /** You: where you are at time t and which way you swim. */
@@ -2210,7 +2238,18 @@ function startle(dt: number, t: number) {
     const q = add(s, f, Math.max(-half, Math.min(half, dot(sub(at, s), f))));
     const d = sub(at, q);
     const dist = Math.hypot(d[0], d[1], d[2]);
-    const push = dist < R && dist > 1e-6 ? (DASH * (1 - dist / R) ** 1.5) / dist : 0;
+    // Calm, you are trusted: fish within twice the fear distance drift in to a ring just off your body.
+    const trusted = swim.calm >= CALM_TRUST;
+    const push =
+      dist < 1e-6
+        ? 0
+        : trusted
+          ? dist < 2 * R
+            ? (-3 * (dist - 0.6 * R)) / dist
+            : 0
+          : dist < R
+            ? (DASH * (1 - dist / R) ** 1.5) / dist
+            : 0;
     for (let x = 0; x < FLIGHT; x++) {
       const off = dashOff[o + x] ?? 0;
       let vel = ((dashVel[o + x] ?? 0) + (push * (d[x] as number) - 2.2 * off) * dt) * keep;
@@ -2246,6 +2285,8 @@ export function preyAt(i: number, t: number): { c: Vec3; f: Vec3; len: number; s
  */
 export function eatNear(mouth: Vec3, t: number, reach = 1.2 + 0.18 * swimNow().len): number {
   if (t >= bite.at && t - bite.at < BITE) return 0;
+  // A calm hunter does not bite.
+  if (swim.calm >= CALM_TRUST) return 0;
   const style = bite.n % 3;
   const most = style === 0 ? 1 : style === 1 ? 3 : 2;
   const close: { i: number; d: number }[] = [];
@@ -2261,6 +2302,8 @@ export function eatNear(mouth: Vec3, t: number, reach = 1.2 + 0.18 * swimNow().l
   for (const { i } of taken) eatenAt[i] = t;
   // Every fish eaten wins back some boost.
   swim.boost = Math.min(1, swim.boost + BOOST_PER_FISH * taken.length);
+  // A bite breaks the calm.
+  swim.calm = 0;
   bite.at = t;
   bite.style = style;
   bite.n++;
@@ -2275,6 +2318,7 @@ export function resetPrey() {
   bite.at = NEVER;
   bite.n = 0;
   swim.boost = 1;
+  swim.calm = 0;
 }
 
 /** How fast prey fish i is fleeing, units a second: for the tests. */
@@ -2376,8 +2420,9 @@ const mantaPath = (m: number, tt: number): Vec3 => [
  * horns curling ahead of the head and a thin whip of a tail.
  */
 function mantaAt(m: number, p: Particle, t: number, me: Vec3): Vec3 {
-  const a = mantaPath(m, t);
-  const put = frame(near(a, me, SWIM_W), norm(sub(mantaPath(m, t + 0.05), a)));
+  const tt = mantaClock(m, t);
+  const a = mantaPath(m, tt);
+  const put = frame(near(a, me, SWIM_W), norm(sub(mantaPath(m, tt + 0.05), a)));
   const L = 5.5;
   const S = 11;
   const part = hash(p.i, 209);
@@ -2719,8 +2764,9 @@ const whalePath = (w: number, tt: number): Vec3 =>
 export const WHALE_LEN = 26;
 /** A whale of our own: a long body tapering to the tail, wide flukes, long flippers; it beats up and down. */
 function whaleAt(w: number, p: Particle, t: number, me: Vec3): Vec3 {
-  const a = whalePath(w, t);
-  const put = frame(near(a, me, SWIM_W), norm(sub(whalePath(w, t + 0.05), a)));
+  const tt = whaleClock(w, t);
+  const a = whalePath(w, tt);
+  const put = frame(near(a, me, SWIM_W), norm(sub(whalePath(w, tt + 0.05), a)));
   const L = WHALE_LEN;
   const flex = (s: number) => 0.05 * L * Math.sin(1.1 * t + w - 4 * s) * s * s;
   const part = hash(p.i, 252);
@@ -2760,7 +2806,616 @@ function visitorColour(p: Particle, t: number, twinkle: number, me: Vec3): RGB {
   // Throat grooves: pale lines along the belly at the front.
   const groove = belly && p.b < 0.45 && frac(p.d * 40) < 0.3;
   const tone: RGB = belly ? (groove ? [0.85, 0.88, 0.9] : [0.6, 0.66, 0.72]) : [0.26, 0.31, 0.4];
-  return scale(tone, 0.24 * twinkle * whaleSeen(w, t) * lit);
+  return scale(tone, 0.24 * twinkle * whaleShown(w, t) * lit);
+}
+
+/* ---------- a reef that answers you: anemones, clownfish, tube worms, corals ---------- */
+/*
+ * REACTIONS (2026-11-11: "some coral reefs have the clownfish hiding in when u
+ * get close. so we define different corals with different reactions.
+ * anemones would be cool as well."). In the coral forest each kind answers
+ * you its own way, by how near you are: anemones, soft clumps of swaying
+ * tentacles, draw them in and curl; the clownfish living in them dive in and
+ * peek back out once you have passed; tube worms snap their little fans shut
+ * and open them again slowly; the coral trees sway in your wake and their
+ * polyps dim, glowing back as you go.
+ */
+export const ANEMONES = 6;
+const ANEMONE_AT: Vec3[] = [
+  [50, FLOOR, 30],
+  [20, FLOOR, 60],
+  [60, FLOOR, 74],
+  [36, FLOOR, 48],
+  [56, FLOOR, 10],
+  [30, FLOOR, 8],
+];
+const CLOWNS_EACH = 3;
+const TUBES = 8;
+const TUBE_AT: Vec3[] = [
+  [44, FLOOR, 40],
+  [26, FLOOR, 30],
+  [64, FLOOR, 40],
+  [52, FLOOR, 62],
+  [40, FLOOR, 78],
+  [22, FLOOR, 74],
+  [58, FLOOR, 20],
+  [34, FLOOR, 18],
+];
+export const CLAMS = 3;
+const CLAM_AT: Vec3[] = [
+  [42, FLOOR, 22],
+  [28, FLOOR, 66],
+  [64, FLOOR, 56],
+];
+/** How drawn in each answers you now, 0 open to 1 shut, eased: anemones, tube worms, coral trees; how open each clam is. */
+const hidden = {
+  anemone: new Float64Array(ANEMONES),
+  tube: new Float64Array(TUBES),
+  coral: new Float64Array(16),
+  clam: new Float64Array(CLAMS),
+};
+export const anemoneHidden = (a: number) => hidden.anemone[a] ?? 0;
+export const tubeShut = (k: number) => hidden.tube[k] ?? 0;
+export const clamOpen = (c: number) => hidden.clam[c] ?? 0;
+/** Where anemone a, tube cluster k or clam c is, brought round to you. */
+export const anemoneAt = (a: number, me: Vec3) => near(ANEMONE_AT[a] as Vec3, me, SWIM_W);
+export const tubeAt = (k: number, me: Vec3) => near(TUBE_AT[k] as Vec3, me, SWIM_W);
+export const clamAt = (c: number, me: Vec3) => near(CLAM_AT[c] as Vec3, me, SWIM_W);
+
+/*
+ * GUESTS (2026-11-11, the approved plan): a whale you can swim alongside
+ * quickens or slows to keep your pace while you are at its side, and stays
+ * while you do; in the deep the first manta loops, and if you follow behind
+ * it, it waits when you fall back and moves on when you close in.
+ */
+const guest = {
+  whale: [0, 0],
+  whaleRate: [1, 1],
+  beside: [0, 0],
+  manta: 0,
+  mantaRate: 1,
+};
+/** The whale's own speed along its path, units a second. */
+export const WHALE_SPEED = 1.8;
+const whaleClock = (w: number, _t: number) => guest.whale[w] ?? 0;
+const mantaClock = (m: number, t: number) => (m === 0 ? guest.manta : t);
+/** How much whale w is there: in its own time, or as long as you swim beside it. */
+const whaleShown = (w: number, t: number) => Math.max(whaleSeen(w, t), guest.beside[w] ?? 0);
+/** How fast whale w and the first manta go along their paths now, 1 their own pace: for the tests. */
+export const whaleRate = (w: number) => guest.whaleRate[w] ?? 1;
+export const mantaRate = () => guest.mantaRate;
+export const besideWhale = (w: number) => guest.beside[w] ?? 0;
+/** Where whale w and the first manta are now on the field, and which way they swim: for the tests. */
+export function whaleNow(w: number): { c: Vec3; f: Vec3 } {
+  const s = guest.whale[w] ?? 0;
+  const c = whalePath(w, s);
+  return { c, f: norm(sub(whalePath(w, s + 0.05), c)) };
+}
+export function mantaNow(): { c: Vec3; f: Vec3 } {
+  const c = mantaPath(0, guest.manta);
+  return { c, f: norm(sub(mantaPath(0, guest.manta + 0.05), c)) };
+}
+
+/** Each frame: everything that answers you eases toward how near you are. */
+function react(dt: number, t: number) {
+  if (dt <= 0) return;
+  const { c: me } = swimmer(t);
+  const ease = (v: number, to: number, up: number, down: number) =>
+    v + (to - v) * (1 - Math.exp(-(to > v ? up : down) * dt));
+  const gap = (a: Vec3, lift: number) =>
+    Math.hypot(a[0] - me[0], a[1] + lift - me[1], a[2] - me[2]);
+  for (let a = 0; a < ANEMONES; a++) {
+    const to = smooth((14 - gap(anemoneAt(a, me), 1.5)) / 6);
+    hidden.anemone[a] = ease(hidden.anemone[a] ?? 0, to, 4, 0.35);
+  }
+  for (let k = 0; k < TUBES; k++) {
+    const to = smooth((9 - gap(tubeAt(k, me), 1)) / 3);
+    hidden.tube[k] = ease(hidden.tube[k] ?? 0, to, 10, 0.4);
+  }
+  for (let j = 0; j < SWIM_CORALS; j++) {
+    const to = smooth((12 - gap(near(swimSlot(j).at, me, SWIM_W), 4)) / 8);
+    hidden.coral[j] = ease(hidden.coral[j] ?? 0, to, 3, 0.4);
+  }
+  // A clam opens only to someone slow and close.
+  const slow = swim.on && swim.speed < 0.6 * SWIM_SPEED;
+  for (let c = 0; c < CLAMS; c++) {
+    const to = slow && gap(clamAt(c, me), 0.5) < 12 ? 1 : 0;
+    hidden.clam[c] = ease(hidden.clam[c] ?? 0, to, 1.2, 0.6);
+  }
+  // The whales: at their side they match your pace.
+  for (let w = 0; w < WHALES; w++) {
+    const s = guest.whale[w] ?? 0;
+    const a = whalePath(w, s);
+    const fw = norm(sub(whalePath(w, s + 0.05), a));
+    const d = sub(me, near(a, me, SWIM_W));
+    const along = dot(d, fw);
+    const lat = Math.hypot(...sub(d, scale(fw, along) as Vec3));
+    const known = whaleSeen(w, t) > 0.3 || (guest.beside[w] ?? 0) > 0.05;
+    const beside = swim.on && known && Math.abs(along) < 16 && lat < 14;
+    const to = beside ? Math.max(0.3, Math.min(3, swim.speed / WHALE_SPEED)) : 1;
+    guest.whaleRate[w] = ease(guest.whaleRate[w] ?? 1, to, 1.5, 1.5);
+    guest.beside[w] = ease(guest.beside[w] ?? 0, beside ? 1 : 0, 1, 0.3);
+    guest.whale[w] = s + dt * (guest.whaleRate[w] ?? 1);
+  }
+  // The first manta: followed from behind, it keeps about ten ahead of you.
+  let to = 1;
+  if (sea === 2 && swim.on) {
+    const a = mantaPath(0, guest.manta);
+    const fm = norm(sub(mantaPath(0, guest.manta + 0.05), a));
+    const d = sub(me, near(a, me, SWIM_W));
+    const dist = Math.hypot(...d);
+    if (dot(d, fm) < 0 && dist < 30) to = Math.max(0.25, Math.min(1.7, 1 + (10 - dist) * 0.12));
+  }
+  guest.mantaRate = ease(guest.mantaRate, to, 1.2, 1.2);
+  guest.manta += dt * guest.mantaRate;
+}
+
+function anemonePoint(p: Particle, t: number, me: Vec3): Vec3 {
+  const a = Math.floor(p.a * ANEMONES);
+  const at = anemoneAt(a, me);
+  const hide = anemoneHidden(a);
+  // Its foot: a short soft column.
+  if (hash(p.i, 284) < 0.15) {
+    const ang = p.d * TAU;
+    const r = 0.9 * Math.sqrt(hash(p.i, 286));
+    return [at[0] + Math.cos(ang) * r, at[1] + 0.5 * p.b, at[2] + Math.sin(ang) * r];
+  }
+  // A tentacle: from the disc, up and out, swaying; drawn in, it shortens and curls inward.
+  const k = Math.floor(hash(p.i, 285) * 28);
+  const v = hash(p.i, 286);
+  const ang = k * GOLDEN_ANGLE;
+  const rr = 0.3 + 0.9 * Math.sqrt(frac(k * 0.618));
+  const L = 1.9 * (1 - 0.7 * hide);
+  const out = 0.45 * (1 - hide) * v - 0.5 * hide * v * v;
+  const sway = 0.25 * v * L * Math.sin(1.2 * t + k + a - 2 * v);
+  return [
+    at[0] + Math.cos(ang) * (rr + out * L) + sway,
+    at[1] + 0.5 + v * L * (1 - 0.25 * v),
+    at[2] + Math.sin(ang) * (rr + out * L) + 0.4 * sway,
+  ];
+}
+function anemoneColour(p: Particle, twinkle: number): RGB {
+  const a = Math.floor(p.a * ANEMONES);
+  const tone = paint([0.85, 0.5, 0.9], a);
+  if (hash(p.i, 284) < 0.15) return scale(tone, 0.18 * twinkle);
+  const tip = hash(p.i, 286) > 0.85;
+  return scale(tip ? mix(tone, polypWhite(), 0.5) : tone, (tip ? 0.5 : 0.32) * twinkle);
+}
+
+/** Clownfish j of the anemones: out round its anemone, or down in its tentacles as you pass. */
+export function anemoneClown(j: number, t: number, me: Vec3): { c: Vec3; f: Vec3 } {
+  const a = j % ANEMONES;
+  const n = Math.floor(j / ANEMONES);
+  const at = anemoneAt(a, me);
+  const way = n % 2 ? 1 : -1;
+  const ring = (tt: number): Vec3 => {
+    const ang = 0.5 * way * tt + n * 2.1;
+    const r = 1.4 + 0.5 * n;
+    return [
+      at[0] + Math.cos(ang) * r,
+      at[1] + 1.8 + 0.4 * Math.sin(tt + n),
+      at[2] + Math.sin(ang) * r,
+    ];
+  };
+  const out = ring(t);
+  const fOut = norm(sub(ring(t + 0.05), out));
+  const home: Vec3 = [
+    at[0] + Math.cos(n * 2.1) * 0.4,
+    at[1] + 0.7,
+    at[2] + Math.sin(n * 2.1) * 0.4,
+  ];
+  const h = smooth(anemoneHidden(a));
+  return { c: lerp3(out, home, h), f: norm(lerp3(fOut, [0, -1, 0], 0.8 * h)) };
+}
+
+function tubePoint(p: Particle, t: number, me: Vec3): Vec3 {
+  const k = Math.floor(p.a * TUBES);
+  const w = Math.floor(hash(p.i, 287) * 5);
+  const base = add(tubeAt(k, me), [
+    (hash(k * 5 + w, 295) - 0.5) * 1.6,
+    0,
+    (hash(k * 5 + w, 296) - 0.5) * 1.6,
+  ]);
+  const h = 0.8 + 0.6 * hash(k * 5 + w, 297);
+  const open = 1 - tubeShut(k);
+  if (hash(p.i, 288) < 0.4) {
+    const ang = p.d * TAU;
+    return [base[0] + Math.cos(ang) * 0.08, base[1] + p.b * h, base[2] + Math.sin(ang) * 0.08];
+  }
+  // The crown: a little spiral fan opening upward; shut, it is pulled down into the tube.
+  const v = hash(p.i, 289);
+  const ang = v * TAU * 2 + w + 0.3 * Math.sin(t + w);
+  const r = 0.5 * open * v;
+  return [
+    base[0] + Math.cos(ang) * r,
+    base[1] + h * (0.75 + 0.25 * open) + 0.35 * r,
+    base[2] + Math.sin(ang) * r,
+  ];
+}
+const TUBE_TONES: RGB[] = [
+  [1, 0.5, 0.3],
+  [1, 0.78, 0.3],
+  [0.95, 0.35, 0.5],
+  [0.6, 0.4, 1],
+  [1, 0.6, 0.65],
+];
+function tubeColour(p: Particle, twinkle: number): RGB {
+  if (hash(p.i, 288) < 0.4) return scale([0.6, 0.55, 0.45], 0.12);
+  const w = Math.floor(hash(p.i, 287) * 5);
+  const open = 1 - tubeShut(Math.floor(p.a * TUBES));
+  return scale(paint(TUBE_TONES[w] as RGB, w), 0.45 * twinkle * (0.25 + 0.75 * open));
+}
+
+/* ---------- treasures hidden in the landscape ---------- */
+/*
+ * TREASURE (2026-11-11: "searching for treasures hidden in the landscape").
+ * Six finds: a pearl in each of three giant clams on the sand, which open
+ * only to someone slow and close; an amphora lying in the coral tunnel's
+ * fork; a trail of twelve gold coins down the deep canyon; a glowing egg by
+ * the vents. Swim through one to take it, in a soft burst of its light. A
+ * small count shows while you play; three finds bring the Golden hammerhead
+ * into the pills. Kept for the visit only.
+ */
+export const FINDS = 6;
+export const COINS = 12;
+export const BURST = 1.2;
+const foundAt = new Map<string, number>();
+const coinAt = (i: number): Vec3 => {
+  const v = i / (COINS - 1);
+  return [
+    CANYON[0] + 5 + 18 * v,
+    FLOOR - 4 - (FLOOR - DEEP_FLOOR - 8) * v,
+    30 + 6 * Math.sin(i * 0.8),
+  ];
+};
+const amphoraAt = (): Vec3 => add(tunnelAt(TRUNK).c, [0, 0.8, 0]);
+const eggAt = (): Vec3 => add(ventBase(0), [3, 1.2, 0]);
+const pearlAt = (c: number): Vec3 => add(CLAM_AT[c] as Vec3, [0, 0.35, 0]);
+
+type Treasure = { id: string; sea: number; at: Vec3; reach: number; ready: () => boolean };
+const TREASURES: Treasure[] = [
+  ...Array.from({ length: CLAMS }, (_, c) => ({
+    id: `pearl${c}`,
+    sea: 0,
+    at: pearlAt(c),
+    reach: 2.5,
+    ready: () => clamOpen(c) > 0.7,
+  })),
+  { id: 'amphora', sea: 0, at: amphoraAt(), reach: 3, ready: () => true },
+  ...Array.from({ length: COINS }, (_, i) => ({
+    id: `coin${i}`,
+    sea: 2,
+    at: coinAt(i),
+    reach: 2.5,
+    ready: () => true,
+  })),
+  { id: 'egg', sea: 2, at: eggAt(), reach: 3, ready: () => true },
+];
+export const TREASURE_IDS = TREASURES.map((x) => x.id);
+/** Where treasure `id` lies, on the field. */
+export const treasureAt = (id: string) => TREASURES.find((x) => x.id === id)?.at;
+
+/** How many of the six finds are yours: each pearl, the amphora, the whole coin trail, the egg. */
+export function finds(): number {
+  let n = 0;
+  for (let c = 0; c < CLAMS; c++) if (foundAt.has(`pearl${c}`)) n++;
+  if (foundAt.has('amphora')) n++;
+  if (Array.from({ length: COINS }, (_, i) => foundAt.has(`coin${i}`)).every(Boolean)) n++;
+  if (foundAt.has('egg')) n++;
+  return n;
+}
+/** The count shown while you play. */
+export const tally = () => `Finds ${finds()} / ${FINDS}`;
+/** Whether the treasures have brought the Golden hammerhead. */
+export const unlocked = () => finds() >= 3;
+/** All treasures back where they were: for a fresh start. */
+export const resetTreasure = () => foundAt.clear();
+
+/** Each frame: any treasure you swim through is yours, if it is ready to be taken. */
+function collect(t: number) {
+  const { c: me, f } = swimmer(t);
+  const mouth = add(me, f, swimNow().len * 0.5);
+  for (const x of TREASURES) {
+    if (x.sea !== sea || foundAt.has(x.id) || !x.ready()) continue;
+    const at = near(x.at, me, SWIM_W);
+    const d = Math.min(
+      Math.hypot(at[0] - me[0], at[1] - me[1], at[2] - me[2]),
+      Math.hypot(at[0] - mouth[0], at[1] - mouth[1], at[2] - mouth[2]),
+    );
+    if (d < x.reach) foundAt.set(x.id, t);
+  }
+}
+
+/** How far through its burst treasure `id` is at t: 0 until found, then up to 1, when it is gone. */
+function burstOf(id: string, t: number): number {
+  const at = foundAt.get(id);
+  if (at === undefined || t < at) return 0;
+  return Math.min(1, (t - at) / BURST);
+}
+/** A treasure's grain at `local` from its middle, bursting outward and fading once found. */
+function bursting(at: Vec3, local: Vec3, k: number): Vec3 {
+  if (k <= 0) return add(at, local);
+  const l = Math.hypot(...local) || 1;
+  return add(at, local, 1 + (4 * smooth(k)) / l);
+}
+/** The light of a treasure's grain through its burst: a soft lift, then gone. */
+const burstLight = (k: number) => (k <= 0 ? 1 : k >= 1 ? 0 : (1 + 0.6 * (1 - k)) * (1 - smooth(k)));
+
+type TreasurePart = 'clam' | 'amphora' | 'coins' | 'egg';
+function treasurePoint(part: TreasurePart, p: Particle, t: number, me: Vec3): Vec3 {
+  switch (part) {
+    case 'clam': {
+      const c = Math.floor(p.a * CLAMS);
+      const at = clamAt(c, me);
+      const open = clamOpen(c);
+      if (hash(p.i, 289) < 0.12) {
+        const d = fibonacciSphere(p.i % 53, 53);
+        return bursting(
+          add(at, [0, 0.35, 0]),
+          scale(d as RGB, 0.32) as Vec3,
+          burstOf(`pearl${c}`, t),
+        );
+      }
+      // Two ridged half-shells hinged at the back; the upper one lifts as the clam opens.
+      const R = 1.7;
+      const u = p.d * 2 - 1;
+      const ridged = hash(p.i, 298) < 0.6 ? Math.round(u * 6) / 6 : u;
+      const ang = (ridged * Math.PI) / 2;
+      const v = Math.sqrt(hash(p.i, 291));
+      const dome = 0.35 * R * v * (1 - v) + 0.05;
+      const z = Math.cos(ang) * v * R - 0.5 * R;
+      const x = Math.sin(ang) * v * R;
+      if (p.b < 0.5) return [at[0] + x, at[1] + 0.3 - dome, at[2] + z];
+      const th = 0.1 + 1.0 * open;
+      const rz = z + 0.5 * R;
+      return [
+        at[0] + x,
+        at[1] + 0.3 + dome * Math.cos(th) + rz * Math.sin(th),
+        at[2] - 0.5 * R - dome * Math.sin(th) + rz * Math.cos(th),
+      ];
+    }
+    case 'amphora': {
+      // Lying on its side in the fork: a swelling body, a narrow neck, a flared mouth, two handles.
+      const at = amphoraAt();
+      const base = near(at, me, SWIM_W);
+      const s = p.b;
+      const len = 2.6;
+      const r =
+        s < 0.12
+          ? 0.12
+          : s < 0.75
+            ? 0.15 + 0.5 * Math.sin((Math.PI * (s - 0.12)) / 0.63)
+            : s > 0.95
+              ? 0.3
+              : 0.2;
+      const ang = p.d * TAU;
+      let local: Vec3 = [(s - 0.5) * len, Math.sin(ang) * r, Math.cos(ang) * r];
+      if (hash(p.i, 282) < 0.0075) {
+        // A handle: an arc from the neck to the shoulder.
+        const w = hash(p.i, 299) * Math.PI;
+        local = [
+          (0.78 - 0.12 * Math.sin(w)) * len - 0.5 * len,
+          0.2 + 0.35 * Math.sin(w),
+          p.d < 0.5 ? -0.3 : 0.3,
+        ];
+      }
+      const cs = Math.cos(0.4);
+      const sn = Math.sin(0.4);
+      return bursting(
+        base,
+        [local[0] * cs - local[2] * sn, local[1], local[0] * sn + local[2] * cs],
+        burstOf('amphora', t),
+      );
+    }
+    case 'coins': {
+      const i = Math.floor(p.a * COINS);
+      const base = near(coinAt(i), me, SWIM_W);
+      const ang = p.d * TAU;
+      const r = 0.45 * Math.sqrt(p.b);
+      const spin = t * 2 + i;
+      const lx = Math.cos(ang) * r;
+      return bursting(
+        base,
+        [lx * Math.cos(spin), Math.sin(ang) * r, lx * Math.sin(spin)],
+        burstOf(`coin${i}`, t),
+      );
+    }
+    default: {
+      const base = near(eggAt(), me, SWIM_W);
+      const d = fibonacciSphere(p.i % 97, 97);
+      const inner = hash(p.i, 300) < 0.4 ? 0.6 : 1;
+      return bursting(
+        base,
+        [d[0] * 0.7 * inner, d[1] * 1.1 * inner, d[2] * 0.7 * inner],
+        burstOf('egg', t),
+      );
+    }
+  }
+}
+function treasureColour(part: TreasurePart, p: Particle, t: number, twinkle: number): RGB {
+  switch (part) {
+    case 'clam': {
+      const c = Math.floor(p.a * CLAMS);
+      const open = clamOpen(c);
+      if (hash(p.i, 289) < 0.12)
+        return scale(
+          [1, 0.96, 0.9],
+          (0.12 + 0.3 * open) * twinkle * burstLight(burstOf(`pearl${c}`, t)),
+        );
+      // The shells pale stone; the lip of the mantle, seen as it opens, shimmering teal to violet.
+      const v = Math.sqrt(hash(p.i, 291));
+      if (v > 0.85)
+        return scale(mix([0.35, 0.75, 0.85], [0.6, 0.45, 1], p.d), (0.08 + 0.3 * open) * twinkle);
+      return scale([0.75, 0.7, 0.6], 0.15 * twinkle);
+    }
+    case 'amphora': {
+      const glint = 0.5 + 0.5 * Math.sin(2 * t);
+      const tone = mix([0.85, 0.45, 0.25], [1, 0.85, 0.45], 0.25 * glint);
+      return scale(tone, 0.28 * twinkle * burstLight(burstOf('amphora', t)));
+    }
+    case 'coins': {
+      const i = Math.floor(p.a * COINS);
+      return scale([1, 0.8, 0.35], 0.4 * twinkle * burstLight(burstOf(`coin${i}`, t)));
+    }
+    default: {
+      const k = burstLight(burstOf('egg', t));
+      if (hash(p.i, 300) < 0.4)
+        return scale([0.4, 1, 0.8], 0.35 * (0.6 + 0.4 * Math.sin(1.6 * t)) * twinkle * k);
+      return scale([0.5, 0.9, 0.8], 0.16 * twinkle * k);
+    }
+  }
+}
+
+/* ---------- currents: ribbons of moving water ---------- */
+/*
+ * CURRENTS (2026-11-11, the approved plan): a few ribbons of streaming light,
+ * moving water you can see, that carry you fast once you are in them,
+ * linking places: in the coral forest from the open reef to the tunnel's
+ * mouth, and from its right exit up into the open water; in the open water
+ * two long sweeps among the shoals; in the deep from the reef down over the
+ * canyon's lip, and from the vents back up toward it.
+ */
+const CURRENT_WAYS: Vec3[][][] = [
+  [
+    [
+      [52, -5, 80],
+      [64, -7, 66],
+      [76, -9, 54],
+      [84, -11, 47],
+    ],
+    [
+      [9, -11, 2],
+      [14, -6, -10],
+      [20, 4, -22],
+      [26, 14, -34],
+    ],
+  ],
+  [
+    [
+      [10, 6, 10],
+      [30, 12, 20],
+      [50, 10, 10],
+      [70, 4, -5],
+    ],
+    [
+      [20, 30, 60],
+      [40, 24, 40],
+      [60, 28, 25],
+      [80, 34, 20],
+    ],
+  ],
+  [
+    [
+      [70, -2, 20],
+      [66, -8, 30],
+      [60, -16, 40],
+      [52, -30, 50],
+    ],
+    [
+      [40, -104, 10],
+      [38, -80, 0],
+      [42, -50, -10],
+      [46, -20, -20],
+    ],
+  ],
+];
+export const CURRENT_PUSH = 8;
+const CURRENT_R = 4;
+const CURRENT_SAMPLES = 48;
+/** A Catmull-Rom curve through the four points of a current, as samples with their headings. */
+const currentCache = new Map<string, { at: Vec3[]; f: Vec3[]; len: number }>();
+function currentOf(s: number, i: number) {
+  const key = `${s}:${i}`;
+  const hit = currentCache.get(key);
+  if (hit) return hit;
+  const pts = (CURRENT_WAYS[s] as Vec3[][])[i] as Vec3[];
+  const P = (k: number) => pts[Math.max(0, Math.min(pts.length - 1, k))] as Vec3;
+  const at: Vec3[] = [];
+  for (let n = 0; n <= CURRENT_SAMPLES; n++) {
+    const x = (n / CURRENT_SAMPLES) * (pts.length - 1);
+    const k = Math.min(pts.length - 2, Math.floor(x));
+    const u = x - k;
+    const [p0, p1, p2, p3] = [P(k - 1), P(k), P(k + 1), P(k + 2)];
+    const c = (j: number) =>
+      0.5 *
+      (2 * (p1[j] as number) +
+        (-(p0[j] as number) + (p2[j] as number)) * u +
+        (2 * (p0[j] as number) -
+          5 * (p1[j] as number) +
+          4 * (p2[j] as number) -
+          (p3[j] as number)) *
+          u *
+          u +
+        (-(p0[j] as number) + 3 * (p1[j] as number) - 3 * (p2[j] as number) + (p3[j] as number)) *
+          u *
+          u *
+          u);
+    at.push([c(0), c(1), c(2)]);
+  }
+  const f = at.map((a, n) =>
+    norm(sub(at[Math.min(n + 1, CURRENT_SAMPLES)] as Vec3, at[Math.max(n - 1, 0)] as Vec3)),
+  );
+  let len = 0;
+  for (let n = 1; n < at.length; n++) len += Math.hypot(...sub(at[n] as Vec3, at[n - 1] as Vec3));
+  const out = { at, f, len };
+  currentCache.set(key, out);
+  return out;
+}
+const currentsHere = () => (CURRENT_WAYS[sea] as Vec3[][]).length;
+/** Where a current starts, on the field: for the tests. */
+export const currentStart = (i: number) => currentOf(sea, i).at[2] as Vec3;
+
+/** How a current pushes you at `pos`, units a second: along it, full in its middle, nothing past its edge. */
+function currentPull(pos: Vec3): Vec3 {
+  let best: Vec3 = [0, 0, 0];
+  let most = 0;
+  for (let i = 0; i < currentsHere(); i++) {
+    const { at, f } = currentOf(sea, i);
+    for (let n = 0; n < at.length; n++) {
+      const q = near(at[n] as Vec3, pos, SWIM_W);
+      const d = Math.hypot(q[0] - pos[0], q[1] - pos[1], q[2] - pos[2]);
+      const w = smooth((CURRENT_R - d) / 2);
+      if (w > most && n < at.length - 1) {
+        most = w;
+        best = scale(f[n] as RGB, CURRENT_PUSH * w) as Vec3;
+      }
+    }
+  }
+  return best;
+}
+
+/** A grain of a current: streaming along it in a loose tube; `u` how far along. */
+function currentPoint(p: Particle, t: number, me: Vec3): { pos: Vec3; u: number } {
+  const i = Math.floor(p.a * currentsHere());
+  const { at, f, len } = currentOf(sea, i);
+  const u = frac(hash(p.i, 292) + (t * CURRENT_PUSH * 0.8) / len);
+  const n = Math.min(CURRENT_SAMPLES - 1, Math.floor(u * CURRENT_SAMPLES));
+  const w = u * CURRENT_SAMPLES - n;
+  const c = lerp3(at[n] as Vec3, at[n + 1] as Vec3, w);
+  const fd = f[n] as Vec3;
+  const side = norm(cross(fd, [0, 1, 0]));
+  const up = cross(side, fd);
+  const b = hash(p.i, 294) * TAU;
+  const r = 1.2 * Math.sqrt(hash(p.i, 293));
+  return { pos: near(add(add(c, side, Math.cos(b) * r), up, Math.sin(b) * r), me, SWIM_W), u };
+}
+function currentColour(p: Particle, t: number, twinkle: number, me: Vec3): RGB {
+  const { u } = currentPoint(p, t, me);
+  // Bands of light running along it, fading in at its start and out at its end.
+  const band = (0.5 + 0.5 * Math.sin(u * 40 - t * 6 + p.a * 3)) ** 2;
+  const ends = smooth(u / 0.1) * smooth((1 - u) / 0.1);
+  const tone: RGB = sea === 2 ? [0.5, 0.8, 1] : [0.75, 0.95, 1];
+  return scale(tone, 0.13 * (0.3 + 0.7 * band) * ends * twinkle);
+}
+
+/** Put your fish at `pos`, heading `yaw`, at the controls: for the tests. */
+export function placeSwimmer(pos: Vec3, yaw = 0) {
+  swim.on = true;
+  swim.pos = pos;
+  swim.yaw = yaw;
+  swim.pitch = 0;
+  swim.speed = SWIM_SPEED;
+  swim.trail = [];
 }
 
 /* ---------- the Shark Sim's grains ---------- */
@@ -2786,19 +3441,44 @@ const swimRole = (p: Particle): SwimRole =>
  * yours leaves spare (fewer grains on you, so you never glare); with Light on, the sand turns to
  * caustics and some snow to the waves of light above.
  */
-type SwimPart = SwimRole | 'tunnel' | 'visitor' | 'caustic' | 'waves';
+type SwimPart =
+  | SwimRole
+  | 'tunnel'
+  | 'visitor'
+  | 'caustic'
+  | 'waves'
+  | 'anemone'
+  | 'clown'
+  | 'tube'
+  | 'current'
+  | TreasurePart;
 function swimPart(p: Particle): SwimPart {
   const role = swimRole(p);
   switch (role) {
     case 'you':
       return swimNow().count === 1 && hash(p.i, 260) >= 0.4 ? 'visitor' : 'you';
     case 'polyp':
-    case 'coral':
-      if (sea === 0) return hash(p.i, 240) < 0.45 ? 'tunnel' : role;
-      return role === 'coral' && hash(p.i, 250) < 0.22 ? 'visitor' : role;
+    case 'coral': {
+      if (sea === 0) {
+        // The tunnel (an amphora in its fork), then the reef's answering kinds, then the coral trees.
+        if (hash(p.i, 240) < 0.45) return hash(p.i, 282) < 0.06 ? 'amphora' : 'tunnel';
+        if (hash(p.i, 280) >= 0.35) return role;
+        const r = hash(p.i, 281);
+        return r < 0.5 ? 'anemone' : r < 0.65 ? 'clown' : r < 0.85 ? 'tube' : 'clam';
+      }
+      if (role === 'coral' && hash(p.i, 250) < 0.22) return 'visitor';
+      if (sea === 2 && role === 'coral') {
+        // Coins down the canyon from the lip's corals; the egg from the vents' grains.
+        const deep = deepRole(p);
+        if (deep === 'rim' && hash(p.i, 283) < 0.25) return 'coins';
+        if (deep === 'vent' && hash(p.i, 283) < 0.12) return 'egg';
+      }
+      return role;
+    }
     case 'floor':
       return light && sea === 0 && hash(p.i, 274) < 0.6 ? 'caustic' : role;
     case 'sky': {
+      if (hash(p.i, 290) < 0.25) return 'current';
       if (!light || sea === 2) return role;
       const h = hash(p.i, 270);
       return h < 0.45 ? 'waves' : sea === 0 && h < 0.65 ? 'caustic' : role;
@@ -2850,11 +3530,19 @@ function fieldCoral(
   t: number,
   me: Vec3,
   polyp: boolean,
+  wake = 0,
 ): Vec3 {
   const colony = corals()[slot.colony] as Colony;
   const at = near(slot.at, me, SWIM_W);
   const q = coralLocal(colony, p, 1, t, polyp, 0.5);
-  return [at[0] + q[0] * slot.size, at[1] + q[1] * slot.size, at[2] + q[2] * slot.size];
+  const pos: Vec3 = [at[0] + q[0] * slot.size, at[1] + q[1] * slot.size, at[2] + q[2] * slot.size];
+  if (wake <= 0) return pos;
+  // Swaying in your wake: pushed the way you swim, more toward the top, a sea fan the most.
+  const { f } = swimmer(t);
+  const h = q[1] * slot.size;
+  const k =
+    wake * 0.05 * h * h * (colony.flat ? 2 : 1) * (0.7 + 0.3 * Math.sin(3 * t + slot.colony));
+  return [pos[0] + f[0] * k, pos[1], pos[2] + f[2] * k];
 }
 
 /** The snow round you: spread through the water, wrapping up and down about you. */
@@ -2890,7 +3578,24 @@ function deepPoint(p: Particle, t: number, me: Vec3): Vec3 {
 
 function swimPoint(p: Particle, t: number): Vec3 {
   const me = swimmer(t).c;
-  switch (swimPart(p)) {
+  const part = swimPart(p);
+  switch (part) {
+    case 'anemone':
+      return anemonePoint(p, t, me);
+    case 'clown': {
+      const j = Math.floor(p.a * ANEMONES * CLOWNS_EACH);
+      const { c, f } = anemoneClown(j, t, me);
+      return fishAt(c, f, 0.7, p, t, j);
+    }
+    case 'tube':
+      return tubePoint(p, t, me);
+    case 'current':
+      return currentPoint(p, t, me).pos;
+    case 'clam':
+    case 'amphora':
+    case 'coins':
+    case 'egg':
+      return treasurePoint(part, p, t, me);
     case 'tunnel':
       return tunnelPoint(p, t, me, swimRole(p) === 'polyp');
     case 'visitor':
@@ -2937,7 +3642,8 @@ function swimPoint(p: Particle, t: number): Vec3 {
           return preyPoint(SCHOOL_FISH + BAIT_FISH + Math.floor(p.a * LANTERN_FISH), p, t);
         return deepPoint(p, t, me);
       }
-      return fieldCoral(swimSlot(Math.floor(p.a * SWIM_CORALS)), p, t, me, swimRole(p) === 'polyp');
+      const j = Math.floor(p.a * SWIM_CORALS);
+      return fieldCoral(swimSlot(j), p, t, me, swimRole(p) === 'polyp', hidden.coral[j] ?? 0);
     }
   }
 }
@@ -2949,13 +3655,15 @@ function fieldCoralColour(
   polyp: boolean,
   twinkle: number,
   light: number,
+  wake = 0,
 ): RGB {
   const at = near(slot.at, me, SWIM_W);
   const edge = smooth((SWIM_W / 2 - Math.hypot(at[0] - me[0], at[2] - me[2])) / 12) * light;
   const tone = paint(CORAL_TONES[slot.colony] as RGB, slot.colony);
+  // With you near, the polyps dim, and glow back as you go.
   return polyp
-    ? scale(mix(tone, polypWhite(), 0.3), 0.95 * twinkle * edge)
-    : scale(tone, 0.7 * twinkle * edge);
+    ? scale(mix(tone, polypWhite(), 0.3), 0.95 * twinkle * edge * (1 - 0.7 * wake))
+    : scale(tone, 0.7 * twinkle * edge * (1 - 0.2 * wake));
 }
 
 const HOT: RGB = [1, 0.42, 0.1];
@@ -2980,7 +3688,7 @@ function deepColour(p: Particle, t: number, twinkle: number, me: Vec3): RGB {
       const m = Math.floor(p.a * MANTAS);
       const belly = Math.abs(p.b * 2 - 1) > 0.9 ? 1 : hash(p.i, 211);
       const tone = mix([0.22, 0.27, 0.36], [0.85, 0.9, 0.95], belly);
-      return scale(tone, (0.12 + 0.3 * daylight(mantaPath(m, t)[1])) * twinkle);
+      return scale(tone, (0.12 + 0.3 * daylight(mantaPath(m, mantaClock(m, t))[1])) * twinkle);
     }
     case 'squid': {
       // Reddish, the colour cells flickering, a blue spark at each arm's tip.
@@ -3021,7 +3729,21 @@ function swimColour(p: Particle, t: number, twinkle: number): RGB {
   const me = swimmer(t).c;
   const up = altitude(me);
   const dark = 1 - daylight(me[1]);
-  switch (swimPart(p)) {
+  const part = swimPart(p);
+  switch (part) {
+    case 'anemone':
+      return anemoneColour(p, twinkle);
+    case 'clown':
+      return clownColour(p, twinkle);
+    case 'tube':
+      return tubeColour(p, twinkle);
+    case 'current':
+      return currentColour(p, t, twinkle, me);
+    case 'clam':
+    case 'amphora':
+    case 'coins':
+    case 'egg':
+      return treasureColour(part, p, t, twinkle);
     case 'tunnel':
       return tunnelColour(p, me, swimRole(p) === 'polyp', twinkle);
     case 'visitor':
@@ -3087,9 +3809,17 @@ function swimColour(p: Particle, t: number, twinkle: number): RGB {
       const kind = swimNow();
       const j = Math.floor(p.a * kind.count);
       const dim = kind.count === 1 ? 0.55 : 0.8;
-      if (kind.kind === null) return scale(clownColour(p, twinkle), dim);
+      // Calm, a soft warm glow grows on you.
+      const glow = j === 0 ? scale([1, 0.85, 0.6], 0.1 * swim.calm * twinkle) : ([0, 0, 0] as RGB);
+      if (kind.kind === null) return add(scale(clownColour(p, twinkle), dim), glow) as RGB;
       const sk = SHOAL_KINDS[kind.kind] as ShoalKind;
-      const base = scale(shoalColour(p, twinkle, kind.kind, j, 0), dim);
+      const own = kind.gold
+        ? scale(
+            mix([1, 0.72, 0.25], [1, 0.9, 0.6], 0.5 + 0.5 * Math.sin(p.d * TAU)),
+            0.32 * twinkle,
+          )
+        : shoalColour(p, twinkle, kind.kind, j, 0);
+      const base = add(scale(own, dim), glow) as RGB;
       // Inside the open mouth: a dark rose, so the gape reads.
       if (j === 0 && kind.eats && p.b < JAW && isLowerJaw(p) && onBody(sk, p)) {
         const fish = youFish(0, t);
@@ -3119,12 +3849,14 @@ function swimColour(p: Particle, t: number, twinkle: number): RGB {
         }
         return deepColour(p, t, twinkle, me);
       }
+      const j = Math.floor(p.a * SWIM_CORALS);
       return fieldCoralColour(
-        swimSlot(Math.floor(p.a * SWIM_CORALS)),
+        swimSlot(j),
         me,
         swimRole(p) === 'polyp',
         twinkle,
         1,
+        hidden.coral[j] ?? 0,
       );
     }
   }
@@ -3511,7 +4243,8 @@ const VARIANTS = new Map<string, { label: string; names: string[]; set: (i: numb
 ]);
 const variantsOf = (k: number) => VARIANTS.get(PHASES[k]?.id ?? '');
 export const hasVariants = (k: number) => variantsOf(k) !== undefined;
-export const variantNames = (k: number) => variantsOf(k)?.names ?? [];
+export const variantNames = (k: number) =>
+  PHASES[k]?.id === 'swim' ? swimNames() : (variantsOf(k)?.names ?? []);
 export const variantLabel = (k: number) => variantsOf(k)?.label ?? '';
 /** Look i on piece k; with no piece, as in the Journey, every piece back to its first. */
 export function setVariant(i: number, k?: number) {
