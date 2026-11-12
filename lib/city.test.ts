@@ -272,10 +272,29 @@ describe('the city chapter', () => {
         expect(dz).toBeGreaterThan(-140);
       }
     }
-    // Ships both ways, above and below the eye.
+    // The street's ships all fly forward, above and below the eye; the cross traffic goes
+    // left and right above it; every road keeps one colour.
     const ships = Array.from({ length: 160 }, (_, j) => canyonShip(j, 0, 5));
-    expect(ships.some((s) => s.c[1] > EYE_Y) && ships.some((s) => s.c[1] < EYE_Y)).toBe(true);
-    expect(ships.some((s) => s.dir > 0) && ships.some((s) => s.dir < 0)).toBe(true);
+    const street = ships.filter((s) => s.dir[2] !== 0);
+    const cross = ships.filter((s) => s.dir[0] !== 0);
+    expect(street.length + cross.length).toBe(160);
+    expect(street.every((s) => s.dir[2] < 0)).toBe(true);
+    expect(street.some((s) => s.c[1] > EYE_Y) && street.some((s) => s.c[1] < EYE_Y)).toBe(true);
+    expect(cross.every((s) => s.c[1] > EYE_Y + 10)).toBe(true);
+    expect(cross.some((s) => s.dir[0] > 0) && cross.some((s) => s.dir[0] < 0)).toBe(true);
+    const later = Array.from({ length: 160 }, (_, j) => canyonShip(j, 0, 9));
+    for (const [i, s] of ships.entries()) {
+      const road = (x: typeof s) => `${x.c[0].toFixed(3)}|${x.c[1]}`;
+      if (s.dir[2] !== 0) expect(road(later[i] as typeof s)).toBe(road(s));
+      expect(later[i]?.colour).toEqual(s.colour);
+    }
+    const colourOf = new Map<string, string>();
+    for (const s of street) {
+      const key = `${s.c[0]}|${s.c[1]}`;
+      const c = s.colour.join(',');
+      expect(colourOf.get(key) ?? c).toBe(c);
+      colourOf.set(key, c);
+    }
   });
 
   it('plays each piece on its own: no ball of stars at the start, looping with no seam', () => {

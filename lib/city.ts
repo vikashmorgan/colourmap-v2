@@ -228,7 +228,7 @@ export const PHASES: CityPhase[] = [
   {
     id: 'canyon',
     name: 'Canyon',
-    line: 'Flying down an endless street between the towers, ships passing above and below; the towers behind come round to the far end, so the street never ends.',
+    line: 'Flying down an endless street between the towers, ships flying forward above and below, one colour to each road, and cross streets high above; the towers behind come round to the far end, so the street never ends.',
     words: [
       'Between the walls of a city the sky becomes a road.',
       'Keep moving and the street keeps opening ahead.',
@@ -1414,26 +1414,69 @@ const ahead = (z0: number, s: number) => wrap(z0 - s, LOOP) - BEHIND;
 /** Light fades into the far violet, so the far end of the street never pops. */
 const haze = (d: number) => smooth((LOOP - BEHIND - d) / 45);
 
-/** The canyon's traffic: four lanes either side of the eye, above and below it; left comes, right goes. */
-export const CANYON_LANES = [-3.6, -1.4, 1.4, 3.6].flatMap((x) =>
-  [-9, -4, 5, 11].map((dy) => ({
+/*
+ * 2026-11-12: "the canyon make it only with lights going forward; the other
+ * direction should be for the ones above that go from left to right or right
+ * to left. each road has one colour of spaceship to keep it coherent."
+ */
+/** One colour per height of the street's traffic, low to high. */
+const LANE_COLOURS: RGB[] = [AMBER, CYAN, HEADLIGHT, VIOLET];
+/** The street's own traffic: four lanes either side of the eye, above and below it, all flying forward. */
+export const CANYON_LANES = [-3.6, -1.4, 1.4, 3.6].flatMap((x, xi) =>
+  [-9, -4, 5, 11].map((dy, level) => ({
     x,
     y: EYE_Y + dy,
-    dir: x < 0 ? 1 : -1,
-    speed: x < 0 ? 9 + 3 * hash(dy, 321) : 11 + 3 * hash(dy, 322),
+    speed: 10 + 1.5 * level + 1.5 * hash(xi * 4 + level, 321),
+    colour: LANE_COLOURS[level] as RGB,
   })),
 );
+/** Cross streets high above the canyon, each one way, left to right or right to left, in its own colour. */
+const CROSS_COLOURS: RGB[] = [MAGENTA, GOLD, LANTERN_RED, MAGENTA];
+export const CANYON_CROSSINGS = CROSS_COLOURS.map((colour, i) => ({
+  z0: (i + 0.5) * (LOOP / CROSS_COLOURS.length),
+  y: EYE_Y + (i % 2 ? 22 : 15),
+  dir: i % 2 ? 1 : -1,
+  speed: 6 + 2 * hash(i, 324),
+  colour,
+}));
+/** How far either side of the street the cross traffic shows before the towers hide it. */
+const CROSS_SPAN = 2 * (CANYON_W + 7);
+const STREET_SHIPS = 128;
 const CANYON_SHIPS = 160;
 
-/** Canyon ship j: where it is and how far ahead of the eye, flown `s` down the street at time t. */
-export function canyonShip(j: number, s: number, t: number): { c: Vec3; d: number; dir: number } {
-  const lane = CANYON_LANES[j % CANYON_LANES.length] as (typeof CANYON_LANES)[number];
-  const per = CANYON_SHIPS / CANYON_LANES.length;
-  const m = Math.floor(j / CANYON_LANES.length);
-  const z0 = ((m + 0.7 * hash(j, 323)) / per) * LOOP;
-  // In the world it moves along the street, coming (+z) or going (-z); seen from the eye it wraps.
-  const d = ahead(z0 - lane.dir * lane.speed * t, s);
-  return { c: [lane.x, lane.y, -s - d], d, dir: lane.dir };
+/**
+ * Canyon ship j: where it is, which way it heads, its road's colour and how far ahead of the eye,
+ * flown `s` down the street at time t. The first STREET_SHIPS fly the street; the rest cross above.
+ */
+export function canyonShip(
+  j: number,
+  s: number,
+  t: number,
+): { c: Vec3; d: number; dir: Vec3; colour: RGB; fade: number } {
+  if (j < STREET_SHIPS) {
+    const lane = CANYON_LANES[j % CANYON_LANES.length] as (typeof CANYON_LANES)[number];
+    const per = STREET_SHIPS / CANYON_LANES.length;
+    const m = Math.floor(j / CANYON_LANES.length);
+    const z0 = ((m + 0.7 * hash(j, 323)) / per) * LOOP;
+    // In the world it moves away down the street (-z); seen from the eye it wraps.
+    const d = ahead(z0 + lane.speed * t, s);
+    return { c: [lane.x, lane.y, -s - d], d, dir: [0, 0, -1], colour: lane.colour, fade: 1 };
+  }
+  const n = j - STREET_SHIPS;
+  const cross = CANYON_CROSSINGS[n % CANYON_CROSSINGS.length] as (typeof CANYON_CROSSINGS)[number];
+  const m = Math.floor(n / CANYON_CROSSINGS.length);
+  const per = (CANYON_SHIPS - STREET_SHIPS) / CANYON_CROSSINGS.length;
+  const x0 = ((m + 0.6 * hash(j, 325)) / per) * CROSS_SPAN;
+  const x = wrap(x0 + cross.dir * cross.speed * t, CROSS_SPAN) - CROSS_SPAN / 2;
+  const d = ahead(cross.z0, s);
+  return {
+    c: [x, cross.y, -s - d],
+    d,
+    dir: [cross.dir, 0, 0],
+    colour: cross.colour,
+    // Out of and back into the towers either side, never popping.
+    fade: smooth((CROSS_SPAN / 2 - Math.abs(x)) / 3),
+  };
 }
 
 const CANYON_ROLES = [
@@ -1463,10 +1506,10 @@ function canyonAt(p: Particle, u: number, t: number): Spot & { d: number } {
       return { pos: skyAt(p, [0, 0, -s - 60]), rgb: scale(STAR, 0.22 * twinkle), d: 60 };
     case 'ship': {
       const j = Math.floor(p.a * CANYON_SHIPS);
-      const { c, d, dir } = canyonShip(j, s, t);
+      const { c, d, dir, colour, fade } = canyonShip(j, s, t);
       return {
-        pos: dashAt(c, [0, 0, dir], p, 2.6),
-        rgb: scale(dir > 0 ? HEADLIGHT : TAILLIGHT, 0.55 * dashGlow(p) * haze(d)),
+        pos: dashAt(c, dir, p, 2.6),
+        rgb: scale(colour, 0.55 * dashGlow(p) * haze(d) * fade),
         d,
       };
     }
