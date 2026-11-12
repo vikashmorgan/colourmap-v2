@@ -6,7 +6,8 @@
 `lib/city.ts` · `lib/golden-city.ts` (the golden city: its plan from φ, the
 city rising, its heart) · `lib/golden-buildings.ts` (temples, factories,
 domes) · `lib/grain-mesh.ts` (buildings drawn as grains on lines, faces and
-dots) · `lib/city-plans.ts` (the night cities from above) ·
+dots) · `lib/city-plans.ts` (the night cities from above) · `lib/atlantis.ts` (Atlantis, the
+city under the sea) ·
 `components/City.tsx` · the shared trip player (`components/TripPlayer.tsx`)
 
 ## Why
@@ -99,7 +100,7 @@ its fair share of the fixed budget. A few slow motions live on the elements:
 steam and motes rising and fading, lights flowing along a line, a lattice
 turning and breathing, a slow orbit.
 
-## The fourteen pieces
+## The fifteen pieces
 
 | # | Piece | What you see | Camera |
 |---|-------|--------------|--------|
@@ -110,20 +111,21 @@ turning and breathing, a slow orbit.
 | 5 | Factories | Five works of the ring of making on pills (**Sawtooth**, **Foundry**, **Assembly**, **Workshops**, **Solar**, below): industrial and hopeful, with gentle signs of work, slow furnaces, a conveyor of light, soft steam | A slow orbit, a little above |
 | 6 | Domes | Golden glasshouses ("serres") on pills (**Geodesic**, **Bubbles**, **Palm house**, **Lattice**, **Garden**, below): glass a faint veil of grains, struts dense and bright, green-gold plants glowing inside | A slow orbit, a little above |
 | 7 | From above | Five night cities seen from far above, moved here from Vegetal (below): **Grid**, **Star**, **River**, **Bay**, **Canals** on pills | Drifting slowly over the city, looking a little ahead and down |
-| 8 | Towers | Twenty-five towers on a five-by-five grid of blocks, taller toward the middle, rise floor by floor from the ground, the middle first. Each is the Cell's box stacked: its four corners and a ring at every floor, the rim being built glowing warm. Windows on every face, two rows a floor, warm or cool, now and then one going out or coming on over seconds. Block outlines on the ground, stars overhead | Slowly round the city, above its roofs |
-| 9 | Sky lanes | The grown city, dimmer; ships, each a bright head and a short fading trail, stream along lanes in the streets at four heights, crossing grids, both ways in every street: white lights one way, red the other | Round the city, at the height of the lanes |
-| 10 | Neon | Each tower wears bands of neon (two to four ribbons), a tall blade sign of glowing dots on some, a spire with a slow beacon on all; coloured light pools on the street; a few ships. Every light drifts slowly round cyan, magenta, amber and violet, each tower on its own beat | Lower and closer, looking up |
-| 11 | Chinatown | A red gate (four pillars, two beams, three roofs turned up at the ends, a plaque reading 中華街, Chinatown) at the mouth of a narrow street. Tall signs hang down the street side of the towers, standing out into the street, in real Chinese and Japanese characters: ラーメン ramen, 茶 tea, 龍 dragon, 酒 wine, 夢 dream, 麺 noodles, 福 good fortune, 喫茶 café; a 夜市 night-market banner across the street and a small 喫茶 sign over a doorway. Lantern red and gold mixed with cyan and magenta. Rows of round red lanterns strung across the street, swaying a little | Walking pace through the gate and down the street |
-| 12 | Bridges and docks | Sky bridges (tubes of four edges and ribs, lights along the floor) join neighbouring towers high above the street; landing platforms stand out from the faces of the taller towers, lights chasing slowly round their rims. Ships come in on a curve, settle on a deck, rest, lift off and leave the other way | Round the city, from above the bridges |
-| 13 | Canyon | Flying down the middle of an endless street: towers either side (only the faces the street sees are drawn, so every grain shows), feet below the eye and roofs above it; traffic in lanes above and below the eye, all flying forward, one colour per height (amber, cyan, white, violet); high above, one-way cross streets carry ships left to right or right to left, each in its own colour (2026-11-12: "the canyon make it only with lights going forward … each road has one colour of spaceship to keep it coherent"); every third tower carries a tall Chinatown sign, flown past. Towers and ships that pass behind come round to the far end, so the street never ends and no grain is added | Down the middle of the street |
-| 14 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) down an endless avenue of solid, lit towers, with side streets to turn into; every eight blocks the avenue passes through a Chinatown stretch (see **Ship, round two**). **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** or Shift faster, **Q** or X slower, **Space** boosts to three times the cruise while the bar lasts; the bar fills again while you cruise. Towers' walls hold you: you slide along them. Traffic above and below you. Two dials read height and speed. With no one at the controls (the Journey, or before you steer) the ship flies down the avenue; let go with Esc and it carries on from where you were, back to the avenue | Behind the ship and a little above, looking past it |
+| 8 | Atlantis | The golden city's plan on the sea floor: glass domes of many sizes and pressure compartments with glowing portholes on its rings, joined by glass tunnels; coral gardens and kelp in its sunken canals and under some domes; a temple under a tall glass dome at its heart, its lattice sphere glowing through the water; submarines in lanes, one colour each, trailing bubbles; fish schools, jellyfish, mantas and far whales. Five views on pills (**Plan**, **Domes**, **Coral gardens**, **The heart**, **Harbour**, see **Atlantis**) | By view |
+| 9 | Towers | Twenty-five towers on a five-by-five grid of blocks, taller toward the middle, rise floor by floor from the ground, the middle first. Each is the Cell's box stacked: its four corners and a ring at every floor, the rim being built glowing warm. Windows on every face, two rows a floor, warm or cool, now and then one going out or coming on over seconds. Block outlines on the ground, stars overhead | Slowly round the city, above its roofs |
+| 10 | Sky lanes | The grown city, dimmer; ships, each a bright head and a short fading trail, stream along lanes in the streets at four heights, crossing grids, both ways in every street: white lights one way, red the other | Round the city, at the height of the lanes |
+| 11 | Neon | Each tower wears bands of neon (two to four ribbons), a tall blade sign of glowing dots on some, a spire with a slow beacon on all; coloured light pools on the street; a few ships. Every light drifts slowly round cyan, magenta, amber and violet, each tower on its own beat | Lower and closer, looking up |
+| 12 | Chinatown | A red gate (four pillars, two beams, three roofs turned up at the ends, a plaque reading 中華街, Chinatown) at the mouth of a narrow street. Tall signs hang down the street side of the towers, standing out into the street, in real Chinese and Japanese characters: ラーメン ramen, 茶 tea, 龍 dragon, 酒 wine, 夢 dream, 麺 noodles, 福 good fortune, 喫茶 café; a 夜市 night-market banner across the street and a small 喫茶 sign over a doorway. Lantern red and gold mixed with cyan and magenta. Rows of round red lanterns strung across the street, swaying a little | Walking pace through the gate and down the street |
+| 13 | Bridges and docks | Sky bridges (tubes of four edges and ribs, lights along the floor) join neighbouring towers high above the street; landing platforms stand out from the faces of the taller towers, lights chasing slowly round their rims. Ships come in on a curve, settle on a deck, rest, lift off and leave the other way | Round the city, from above the bridges |
+| 14 | Canyon | Flying down the middle of an endless street: towers either side (only the faces the street sees are drawn, so every grain shows), feet below the eye and roofs above it; traffic in lanes above and below the eye, all flying forward, one colour per height (amber, cyan, white, violet); high above, one-way cross streets carry ships left to right or right to left, each in its own colour (2026-11-12: "the canyon make it only with lights going forward … each road has one colour of spaceship to keep it coherent"); every third tower carries a tall Chinatown sign, flown past. Towers and ships that pass behind come round to the far end, so the street never ends and no grain is added | Down the middle of the street |
+| 15 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) down an endless avenue of solid, lit towers, with side streets to turn into; every eight blocks the avenue passes through a Chinatown stretch (see **Ship, round two**). **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** or Shift faster, **Q** or X slower, **Space** boosts to three times the cruise while the bar lasts; the bar fills again while you cruise. Towers' walls hold you: you slide along them. Traffic above and below you. Two dials read height and speed. With no one at the controls (the Journey, or before you steer) the ship flies down the avenue; let go with Esc and it carries on from where you were, back to the avenue | Behind the ship and a little above, looking past it |
 
 The page opens on one piece alone, picked by name, as Ocean's do: it starts
 at its beginning with no ball of stars and loops, each grain gliding back to
 where the piece began; the canyon and the ship fly on, so their loops do not show.
 The golden plan lights again ring by ring on each loop, and Rising rises again
 from its map. From above, on its own, is lit from the start and stands still,
-so it needs no glide back. **Journey** plays the fourteen as one trip: between
+so it needs no glide back. **Journey** plays the fifteen as one trip: between
 pieces a ball of faint stars; the pills fall back to the first of each.
 
 Backgrounds: **Dawn** (the default, a deep blue-violet twilight with a warm low glow near
@@ -236,6 +238,100 @@ Journey shows the first:
   along both banks and across them on bridges, a newer grid beyond, a ring
   highway, and a sparser town across the harbour.
 
+## Atlantis
+
+> 2026-11-12: "add Atlantis as a city, with marine life around it, like ocean, and spaceships are
+> submarines that leave a trail of bubbles etc... think map, different compartments etc...
+> develop. has coral gardens in some parts etc..."
+>
+> "can have hublots (portholes) for atlantis etc... atlantis also has domes, and glass tunnels
+> between them."
+
+The golden city sunk to the sea floor, after the ringed island of the old story: the plan is
+`GOLDEN` itself (read only), so the rings, their widths by φ and the twelve boulevards are the
+golden city's. Our own design throughout: no names, shapes or symbols from any film or game.
+
+**The city** (`lib/atlantis.ts`, worked out once and drawn with `lib/grain-mesh.ts`):
+
+- The land rings are the sea floor; the three canals are trenches 1.2 deep, walled on both banks
+  (a faint wall, its top edge bright), so the rings read from above. Past the ring of nature the
+  floor rises into a rocky rim, the basin's edge.
+- **The heart**: a temple under a tall glass dome (radius 3, 5.2 high): three round steps, twelve
+  columns, a ring beam, and over it an open lattice sphere (twelve meridians, parallels at 0,
+  ±1/φ² and ±1/φ, nodes of light) breathing slowly round a glowing core, still rays reaching out,
+  motes rising from the dome's crown toward the surface as a beacon.
+- **Ring of knowledge**: six small geodesic domes (radius 1.7) lit inside, slim towers with
+  portholes between them.
+- **Ring of making**: twelve pressure compartments, drums under low glass caps, ten round
+  portholes each, joined round the ring by a glass tunnel.
+- **Ring of living**: twelve great glass domes (radius 3.6) on drums ringed with portholes,
+  gardens of coral and kelp under the even ones, terraced homes with lit windows under the odd;
+  joined round the ring by a glass tunnel; beside each, two smaller domes (radius 1.1 to 1.8),
+  each joined to it by its own tunnel.
+- **Ring of nature**: reefs in five sectors, kelp meadows in the others, and three clusters of
+  three domes (large, middle, small) joined to each other and to the boulevard's end.
+- **Glass tunnels** (the boulevards): twelve from the heart's dome out across every ring, each a
+  faint skin of glass, a gold rib every 1.5, two gold rails and a lit walkway along its floor;
+  lights run along the long ones (on a short one a running light would blink, so it stays steady).
+  Where a tunnel crosses a canal, an airlock drum stands on each bank with portholes and a lamp.
+- **Portholes** ("hublots"): round gold frames with warm light glowing through from inside, each
+  breathing slowly on its own beat; on the compartments, the dome drums, the towers, the airlocks,
+  the harbour hall, the pier and the submarines' sides.
+- **The harbour**, on boulevard 0: a hall under a geodesic dome, a long pier with portholes and
+  lamps, eight berths (four a side), each a cradle and a gangway tube, and a ring gate whose lamps
+  glow one after another in a slow chase.
+- **Coral gardens**: branching corals (each branch forking in two or three, shorter, leaning
+  out), flat sea fans, anemones with glowing tips and round boulder corals, in pink, orange,
+  violet, gold, sea green and red; kelp strands with blades. They sway slowly in the current, more
+  the higher they reach (kelp most). Gardens grow in the inner and middle canals, a kelp forest in
+  the outer canal, under the six garden domes, and on the five reefs.
+
+**Submarines** (instead of ships): nine lanes, each one colour (the Canyon's rule, 2026-11-12:
+"each road has one colour"): a ring round the heart (warm white); the middle canal low (cyan) and
+high (coral), one each way; the outer canal low (lime) and high (violet), one each way; four long
+loops from the heart out over the rim along boulevards 0, 3, 6 and 9 (gold, aqua, rose, ice), out
+at one height and back at another. Each submarine is a hull, a sail, a turning propeller ring,
+warm portholes and a bow lamp, hull and lamp in its lane's colour. It keeps to its lane, clear of
+every dome and airlock and at least 1.5 above the floor. Each leaves a stream of **bubbles** from
+its stern: a bubble starts where the stern was, rises (1.1 a second, quickening) and wobbles, and
+fades in quickly and out over six seconds, so a trail of bubbles hangs behind each submarine along
+its lane. At the harbour, eight more come in through the gate on a curve, rest still at their
+berths (bubbles stop), and leave up toward the loop, fading.
+
+**Marine life** (Ocean's ideas, drawn simpler): seven fish schools (round the heart, round three
+garden domes, over two reefs, and one wide school of 30 high over the city), nine jellyfish
+rising slowly and coming round from below (faded at both ends), three mantas looping high over
+the rings, two whales far off beyond the rim.
+
+**The water**: far things dim and turn teal (the fog starts past where the eye looks; light
+carries further than stone), the teal drifting slowly toward a deeper blue over minutes; caustics
+ripple slowly over the sand, the stone and the glass; plankton drifts up; shafts of light slant
+down from the surface, which shimmers far above. Plankton, the sand of a close view and the shafts
+stand still in the water as the eye moves (fixed in place, kept in a window round the eye, faded
+where they come round). Nothing flashes: a frame apart no grain's colour moves by 0.05.
+
+**Views** (pills, label **View**; the Journey shows the Plan). The whole city is 130 across, so
+each close view keeps only the part of the city and its reefs the eye looks at and spends the
+budget there; the Plan keeps all of it.
+
+- **Plan**: the map. From nearly straight above (more than 0.95 of the way), turning slowly and
+  drawing a little nearer: the rings, the domes as circles, tunnels as spokes, gardens as colour,
+  the harbour's pier, the submarines in their coloured lanes. More grains on the buildings and
+  gardens, no shafts.
+- **Domes**: from just outside the outer canal, a little above the domes, gliding slowly round and
+  looking in across the great domes, the canal and the compartments toward the glowing heart;
+  submarines of the outer canal pass below.
+- **Coral gardens**: low over a reef of the ring of nature, looking in over the corals; more than
+  a third of the grains on the reefs, fish thick about them.
+- **The heart**: a slow orbit round the temple, a third of the grains on it; submarines circle in
+  the heart ring, a school of yellow fish above.
+- **Harbour**: a slow orbit over the pier, a quarter of the grains on the harbour and an eighth on
+  its submarines coming in, resting and leaving.
+
+Frame cost, 9,000 grains (bun, the build machine, offline, the same run): Atlantis 5.7 to 8.4 ms
+by view (Plan the most), against 3.2 to 5.6 ms for Golden plan, The heart, Domes, From above, Neon
+and Canyon. Each view's meshes are built the first time it is shown (under 70 ms).
+
 ## Chinatown
 
 > 2026-11-12: "add chinese signs on side of buildings. or japanese. like that
@@ -336,7 +432,7 @@ their summer under glass.
   starts with no ball of stars; Space pauses (in Ship, Space boosts while you steer).
 - The pills read Stars · Geometry · Tunnels · Oils · Big Bang · Journey · Vegetal · Ocean · City ·
   Experiment, on the Art panel and the trip pages.
-- **Journey** plays the fourteen pieces as one trip and loops; each piece opens as a wide ball of
+- **Journey** plays the fifteen pieces as one trip and loops; each piece opens as a wide ball of
   faint stars and every grain pours into the next piece with no cut.
 - Golden city: the land rings and the canals each grow by φ, edge to edge; twelve boulevards; the
   plan lies flat on the ground, the heart lit first and the ring of nature last, brighter toward
@@ -364,6 +460,14 @@ their summer under glass.
   soft dip now and then; red lanterns hang across the street inside its walls; a gate with 中華街
   stands at its mouth. Some signs show in the Canyon and the Ship too.
 - Ships rest on a dock's deck a while, still, between arriving and leaving.
+- Atlantis comes after From above, with five views on pills (Plan, Domes, Coral gardens, The heart,
+  Harbour); each is finite, mostly lit and the same at the same moment, seen from its own place. The
+  Plan looks from nearly straight above; the canals are sunk, the rim rises. Domes of many sizes
+  (knowledge, making, garden, homes, small domes, airlocks); coral grows inside the garden domes.
+  Every submarine stays on its lane, clear of every dome and above the floor, in its lane's colour
+  (one per lane, all different); bubbles rise as they age, leave from the stern, and are faint where
+  they come round. Harbour submarines rest still at their berth. A frame apart no colour moves by
+  0.05; in The heart, plenty of grains sit on the temple's sphere.
 - In the Canyon every tower grain stays within the stretch of street round the eye however far it
   has flown; ships pass above and below the eye, both ways.
 - Ship: it takes over from the autopilot where it is; A turns left and D right; W climbs, S dives;
