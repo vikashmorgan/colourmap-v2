@@ -31,10 +31,12 @@ import {
   pieceLength,
   pieceLook,
   pieceProgress,
+  SHIP_KEYS,
   STEP_COLOURS,
   setFly,
   setVariant,
   TOTAL,
+  tally,
   variantLabel,
   variantNames,
   wordsShown,
@@ -71,12 +73,15 @@ const TRIP: Trip = {
     // Pills under a piece: five temples, five factories, five domes, five cities from above.
     variants: { has: hasVariants, names: variantNames, set: setVariant, label: variantLabel },
     // Ship: you fly with the keys; Space boosts while the bar lasts, and it fills again as you
-    // cruise. Two dials read your height and speed.
+    // cruise (with W, on up into the stratosphere). L slows to a drift and looks down; Enter
+    // starts a race at its start. Two dials read your height and speed; the count beside the bar
+    // says the race's words, or a district's name as you come into it.
     game: {
       has: hasGame,
       set: setFly,
-      claims: [' '],
+      claims: SHIP_KEYS,
       meter: { label: 'Boost', value: boostLeft },
+      tally,
       gauges,
     },
   },

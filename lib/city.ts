@@ -33,7 +33,32 @@ import {
   smooth,
   type Vec3,
 } from './bigbang';
+import {
+  advancePulses,
+  type Block,
+  blocked,
+  blockTower,
+  cruiser,
+  DISTRICTS,
+  type DistrictId,
+  districtAt,
+  floorAt,
+  gameItems,
+  inMouth,
+  MARGIN,
+  NEAR,
+  portalJump,
+  SHIP_SLOTS,
+  shipGrain,
+  signsNear,
+  touchLanterns,
+  viewAt,
+  wallTint,
+} from './city-game';
+import { AVENUE, BLOCK_X, BLOCK_Z, type Item, TILE_J } from './city-grid';
 import { aboveAt, aboveEye, CITIES, setCityKind } from './city-plans';
+import { raceBanner, raceStep, resetRace, rival, trackItems } from './city-race';
+import { skyGrain } from './city-sky';
 import {
   buildingAt,
   buildingEye,
@@ -240,10 +265,10 @@ export const PHASES: CityPhase[] = [
   {
     id: 'ship',
     name: 'Ship',
-    line: 'Pilot a small ship down an endless avenue, through Chinatown and into the side streets, keys only: A and D turn, W and S climb and dive, E or Shift faster, Q or X slower, Space boosts while the bar lasts.',
+    line: 'Pilot a small ship through the City of Dreams: Chinatown, the Indian quarter, Istanbul, the Heights, the canals, golden gardens, temples, factories, domes, pyramids. A and D turn, W and S climb and dive, E faster, Q slower, Space boosts (with W, up into the stratosphere), L slows down to look, Enter starts a race.',
     words: [
-      'Somewhere in all that light there is a window waiting for you.',
-      'Fly gently: the city is full of other people going home.',
+      'A city you can read from above is a city you can find your way home in.',
+      'Fly gently: the city answers, a window waking for every one who passes.',
     ],
     duration: 40,
     glow: 1,
@@ -1535,23 +1560,23 @@ function canyonAt(p: Particle, u: number, t: number): Spot & { d: number } {
  */
 
 export const FLY_SPEED = 9;
-/** The highest you can climb: well over the tallest tower. */
-export const SKY = GROUND + 90;
-/** How close to a wall you can come. */
-export const MARGIN = 1.2;
+/** The highest you can climb in normal flight: over every tower. */
+export const SKY = GROUND + 150;
+/** The stratosphere: how high the super boost takes you, the whole city laid out below. */
+export const STRATOSPHERE = GROUND + 520;
+/** How fast the super boost climbs (and dives back down). */
+export const SUPER_CLIMB = 48;
+/** Slow mode: a gentle drift, the eye tilted down at the city. */
+export const SLOW_PACE = 0.22;
+export { AVENUE, BLOCK_X, BLOCK_Z, blocked, blockTower, floorAt, MARGIN };
 export const BOOST_PACE = 3;
 export const BOOST_SECONDS = 3;
 /** Seconds of cruising that fill an empty bar. */
 export const BOOST_REFILL = 10;
 
-/** A block across the avenue (x) and along it (z); a street runs on every line between blocks. */
-export const BLOCK_X = 26;
-export const BLOCK_Z = 34;
-/** Half the avenue's width, wall to wall: the street at x = 0. */
-export const AVENUE = 9;
-/** Chinatown: the first three blocks of the avenue in every eight. */
-export const CT_EVERY = 8;
-export const CT_BLOCKS = 3;
+/** Chinatown on the avenue: the first band of the plan (lib/city-game.ts), eight blocks in every 48. */
+export const CT_EVERY = TILE_J;
+export const CT_BLOCKS = 8;
 /** How far the eye sees; the far towers sink into the violet night on the way. */
 export const VIEW = 160;
 
@@ -1565,49 +1590,6 @@ export function chinatownness(z: number, ease = 0): number {
   const out = s <= len ? 0 : Math.min(s - len, CT_EVERY * BLOCK_Z - s);
   if (ease > 0) return smooth(1 - out / ease);
   return out > 0 ? 0 : 1;
-}
-
-const blockCache = new Map<number, Tower>();
-/**
- * The tower on block (I, J): its own size and place inside the block, leaving a street of at
- * least six all round; on the avenue its inner wall on the avenue's edge. Chinatown's are lower,
- * so its lanterns and signs fill the street; now and then elsewhere a low one breaks the skyline.
- */
-export function blockTower(I: number, J: number): Tower {
-  const key = I * 65536 + J;
-  const had = blockCache.get(key);
-  if (had) return had;
-  const k = 300 + wrap(I * 37 + J * 101, 9973);
-  const ave = I === 0 || I === -1;
-  const ct = ave && isChinatownRow(J);
-  let hx = 7 + 2.5 * hash(k, 421);
-  const hz = 10.5 + 3.5 * hash(k, 422);
-  let x = (I + 0.5) * BLOCK_X + (hash(k, 423) - 0.5) * Math.max(0, BLOCK_X - 2 * hx - 7);
-  if (ave) {
-    hx = Math.min(hx, 7);
-    x = (I === 0 ? 1 : -1) * (AVENUE + hx);
-  }
-  const z = (J + 0.5) * BLOCK_Z + (hash(k, 424) - 0.5) * Math.max(0, BLOCK_Z - 2 * hz - 7);
-  const low = !ave && hash(k, 426) < 0.12;
-  const h = ct
-    ? 26 + 12 * hash(k, 425)
-    : low
-      ? 9 + 6 * hash(k, 425)
-      : 24 + 44 * hash(k, 425) ** 1.3;
-  const tw: Tower = { x, z, hx, hz, h, k };
-  if (blockCache.size > 4096) blockCache.clear();
-  blockCache.set(key, tw);
-  return tw;
-}
-
-/** Whether a point is inside a tower, walls and MARGIN included: only its own block's can be near. */
-export function blocked(q: Vec3): boolean {
-  const tw = blockTower(Math.floor(q[0] / BLOCK_X), Math.floor(q[2] / BLOCK_Z));
-  return (
-    q[1] <= GROUND + tw.h + MARGIN &&
-    Math.abs(q[0] - tw.x) < tw.hx + MARGIN &&
-    Math.abs(q[2] - tw.z) < tw.hz + MARGIN
-  );
 }
 
 /* ---------- Chinatown on the avenue ---------- */
@@ -1662,7 +1644,10 @@ const bannerFor = (n: number) => {
 };
 
 /** Where the lantern strings cross the avenue in a stretch, from its start: every nine, inside the gates. */
-const LANTERN_STRINGS = Array.from({ length: 10 }, (_, r) => 8 + 9 * r);
+const LANTERN_STRINGS = Array.from(
+  { length: Math.floor((CT_BLOCKS * BLOCK_Z - 16) / 9) },
+  (_, r) => 8 + 9 * r,
+);
 const LANTERNS_ACROSS = 7;
 /** How high the strings are tied, over the ship's head as it flies under them. */
 const STRING_Y = GROUND + 18.5;
@@ -1711,9 +1696,27 @@ const fly = {
   crossed: Number.NaN,
   /** Counts every move, so a frame's plan knows the ship has moved. */
   v: 0,
+  /** The super boost: climbing on into the stratosphere (high), and how fast it climbs or falls. */
+  high: false,
+  vy: 0,
+  /** Slow mode (L): a gentle drift, the eye looking down; `look` eases it in and out. */
+  slow: false,
+  look: 0,
+  /** Keys held last frame, to catch a press (L, Enter). */
+  held: [] as string[],
+  /** The district you are in, and when you came into it, for its name on the screen. */
+  district: '' as DistrictId | '',
+  entered: Number.NEGATIVE_INFINITY,
 };
 export const hasGame = (k: number) => PHASES[k]?.id === 'ship';
 export const boostLeft = () => fly.boost;
+/** Whether slow mode is on. */
+export const slowMode = () => fly.slow;
+/**
+ * The keys the Ship takes for itself beyond the arrows, each a round button on a phone: Space
+ * boosts (with W, the super boost), L slow mode, Enter starts a race.
+ */
+export const SHIP_KEYS = [' ', 'l', 'enter'];
 
 /** The height you cruise at down the avenue, and low under the lanterns through Chinatown. */
 export const CRUISE_Y = GROUND + 21;
@@ -1745,12 +1748,19 @@ export function route(t: number): { c: Vec3; f: Vec3 } {
   return { c, f: norm([n[0] - c[0], n[1] - c[1], n[2] - c[2]]) };
 }
 
-/** Forward at the ship's pace; a wall in the way, slide along it, keeping whichever way is free. */
+/** The ceiling now: over every tower, or the stratosphere while the super boost lasts. */
+const ceiling = () => (fly.high ? STRATOSPHERE : SKY);
+
+/**
+ * Forward at the ship's pace (and up or down at the super boost's); a wall in the way, slide along
+ * it, keeping whichever way is free. The floor is the street, or a canal's bed under it.
+ */
 function move(dt: number) {
   const was = fly.pos;
   const f = headingOf(fly.yaw, fly.pitch);
   const next: Vec3 = add(was, f, fly.speed * dt);
-  next[1] = Math.max(GROUND + 2, Math.min(SKY, next[1]));
+  next[1] += fly.vy * dt;
+  next[1] = Math.max(floorAt(next[0], next[2]) + 2, Math.min(ceiling(), next[1]));
   const tries: Vec3[] = [
     next,
     [next[0], next[1], was[2]],
@@ -1817,9 +1827,23 @@ function carryOn(dt: number, t: number) {
   const wantY = onAvenue ? cruiseY(p[2], t) : CRUISE_Y;
   const wantPitch = Math.max(-0.5, Math.min(0.5, Math.atan2(wantY - p[1], 14)));
   fly.pitch += (wantPitch - fly.pitch) * (1 - Math.exp(-2.5 * dt));
+  // From high up, it comes back down at the super boost's pace, then flies as before.
+  const wantVy = p[1] > SKY - 10 ? -SUPER_CLIMB : 0;
+  fly.vy += (wantVy - fly.vy) * (1 - Math.exp(-2 * dt));
+  if (p[1] < SKY - 5) fly.high = false;
   const pace = Math.abs(miss) > 0.25 ? 0.6 : 1;
   fly.speed += (FLY_SPEED * pace - fly.speed) * (1 - Math.exp(-1.5 * dt));
   move(dt);
+}
+
+/** Starts the route afresh: no super boost, no slow mode, no race. */
+function afresh() {
+  fly.mode = 'route';
+  fly.high = false;
+  fly.vy = 0;
+  fly.slow = false;
+  fly.look = 0;
+  resetRace();
 }
 
 /**
@@ -1831,11 +1855,18 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   const jumped = Math.abs(t - fly.t - dt) > 0.5;
   fly.t = t;
   fly.v++;
-  if (jumped) fly.mode = 'route';
+  if (jumped) afresh();
+  const pressed = (k: string) => keys.includes(k) && !fly.held.includes(k);
+  const enter = pressed('enter');
+  const lookKey = pressed('l');
+  fly.held = [...keys];
+  fly.look += ((fly.slow && fly.mode === 'pilot' ? 1 : 0) - fly.look) * (1 - Math.exp(-2 * dt));
   if (!active) {
     fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
+    raceStep({ active: false, pos: fly.pos, enter: false, t });
     if (fly.mode === 'pilot') startCarryingOn();
     if (fly.mode === 'drift') carryOn(dt, t);
+    after(dt, t);
     return;
   }
   if (fly.mode === 'route') {
@@ -1848,20 +1879,65 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     fly.bank = 0;
   }
   fly.mode = 'pilot';
+  if (lookKey) fly.slow = !fly.slow;
   const held = (...names: string[]) => names.some((n) => keys.includes(n));
   const turn = (held('a', 'arrowleft') ? -1.2 : 0) + (held('d', 'arrowright') ? 1.2 : 0);
   fly.yaw = turnTo(fly.yaw - turn * dt);
   fly.bank += (-turn * 0.45 - fly.bank) * (1 - Math.exp(-4 * dt));
-  let tilt = (held('w', 'arrowup') ? 0.55 : 0) - (held('s', 'arrowdown') ? 0.55 : 0);
-  if (fly.pos[1] <= GROUND + 2.5 && tilt < 0) tilt = 0;
-  if (fly.pos[1] >= SKY && tilt > 0) tilt = 0;
+  const up = held('w', 'arrowup');
+  const down = held('s', 'arrowdown');
+  let tilt = (up ? 0.55 : 0) - (down ? 0.55 : 0);
+  if (fly.pos[1] <= floorAt(fly.pos[0], fly.pos[2]) + 2.5 && tilt < 0) tilt = 0;
+  if (fly.pos[1] >= ceiling() && tilt > 0) tilt = 0;
+  // Slow mode levels out unless you climb or dive.
   fly.pitch += (tilt - fly.pitch) * (1 - Math.exp(-2.5 * dt));
   const boosting = held(' ') && fly.boost > 0;
-  if (boosting) fly.boost = Math.max(0, fly.boost - dt / BOOST_SECONDS);
+  // High over the towers the bar does not drain: the open sky is free.
+  if (boosting && fly.pos[1] < SKY) fly.boost = Math.max(0, fly.boost - dt / BOOST_SECONDS);
   else if (!held(' ')) fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
-  const pace = boosting ? BOOST_PACE : held('e', 'shift') ? 1.8 : held('q', 'x') ? 0.4 : 1;
+  // The super boost: boost and climb together, and you go on up into the stratosphere; up there,
+  // W climbs on and S dives back down, fast; below the towers' sky you fly as before.
+  if (boosting && up) fly.high = true;
+  if (fly.high) {
+    const want = up ? SUPER_CLIMB : down ? -SUPER_CLIMB : 0;
+    fly.vy += (want - fly.vy) * (1 - Math.exp(-1.8 * dt));
+    // Once begun, the climb goes on while W is held; it ends back down under the towers' sky.
+    if (fly.pos[1] < SKY - 5 && !up) fly.high = false;
+  } else fly.vy += (0 - fly.vy) * (1 - Math.exp(-3 * dt));
+  // The race: a prompt at its start, held still for the 3, 2, 1, a bar slowing you a moment.
+  const r = raceStep({ active: true, pos: fly.pos, enter, t });
+  if (r.hold) {
+    fly.pos = [...r.hold.c];
+    fly.yaw = Math.atan2(-r.hold.f[0], -r.hold.f[2]);
+    fly.pitch = 0;
+    fly.speed = 0;
+    fly.vy = 0;
+    after(dt, t);
+    return;
+  }
+  const pace =
+    (boosting ? BOOST_PACE : held('e', 'shift') ? 1.8 : held('q', 'x') ? 0.4 : 1) *
+    (fly.slow ? SLOW_PACE : 1) *
+    r.pace;
   fly.speed += (FLY_SPEED * pace - fly.speed) * (1 - Math.exp((boosting ? -4 : -1.5) * dt));
+  const was: Vec3 = [...fly.pos];
   move(dt);
+  // A portal carries you on to another district.
+  const jump = portalJump(was, fly.pos);
+  if (jump !== 0) fly.pos = [fly.pos[0], fly.pos[1], fly.pos[2] + jump];
+  after(dt, t);
+}
+
+/** After every move: the tunnels' pulses run on, lanterns you touch light, the district's name. */
+function after(dt: number, t: number) {
+  const { c, f } = flier(t);
+  advancePulses(dt, fly.mode === 'route' ? FLY_SPEED : fly.speed, f);
+  touchLanterns(c, t);
+  const d = districtAt(c[0], c[2]);
+  if (d !== fly.district) {
+    fly.district = d;
+    fly.entered = t;
+  }
 }
 
 /** You: where you are at time t and which way you fly. */
@@ -1869,12 +1945,21 @@ export function flier(t: number): { c: Vec3; f: Vec3 } {
   return fly.mode === 'route' ? route(t) : { c: fly.pos, f: headingOf(fly.yaw, fly.pitch) };
 }
 
+/** How far up into the stratosphere you are, 0 (at the towers' sky) to 1. */
+const highness = (y: number) => smooth((y - SKY + 20) / (STRATOSPHERE - SKY));
+
 /** The cockpit's dials: your height over the street and your speed. */
 export type Gauge = { label: string; value: number; min?: number; max: number; unit?: string };
 export function gauges(): Gauge[] {
   const { c } = flier(fly.t);
   return [
-    { label: 'Height', value: Math.round(c[1] - GROUND), max: SKY - GROUND, unit: 'm' },
+    {
+      label: 'Height',
+      value: Math.round(c[1] - GROUND),
+      min: -CANAL_FLOOR,
+      max: (fly.high || c[1] > SKY ? STRATOSPHERE : SKY) - GROUND,
+      unit: 'm',
+    },
     {
       label: 'Speed',
       value: Math.round(fly.mode === 'route' ? FLY_SPEED : fly.speed),
@@ -1883,12 +1968,38 @@ export function gauges(): Gauge[] {
     },
   ];
 }
+const CANAL_FLOOR = 14;
 
-/** Behind your ship and a little above, looking past it the way you fly. */
+/**
+ * The quiet words beside the bar: the race's (a prompt, 3 2 1, gate and time, place and best),
+ * or the name of a district for a few seconds as you come into it; nothing otherwise.
+ */
+export function tally(): string {
+  const r = raceBanner(fly.t);
+  if (r) return r;
+  if (fly.district && fly.t - fly.entered < 4 && fly.entered > Number.NEGATIVE_INFINITY)
+    return DISTRICTS[fly.district].name;
+  return fly.slow ? 'Slow · looking down' : '';
+}
+
+/**
+ * Behind your ship and a little above, looking past it the way you fly. In slow mode the eye rises
+ * and tilts down at the city below; high up it stands far back and looks down on the whole plan.
+ */
 function shipEye(c: Vec3, f: Vec3): Eye {
-  const eye = add(add(c, f, -10), [0, 1, 0], 3.2);
+  const hi = highness(c[1]);
+  const lk = fly.look;
+  const fl = Math.hypot(f[0], f[2]) || 1;
+  const fh: Vec3 = [f[0] / fl, 0, f[2] / fl];
+  const back = lerp(10, 7, lk) + 150 * hi;
+  const rise = 3.2 + 7 * lk + 190 * hi;
+  const eye = add(add(c, lerp3(f, fh, Math.max(lk, hi)), -back), [0, 1, 0], rise);
   eye[1] = Math.max(GROUND + 1, eye[1]);
-  return { eye, target: add(c, f, 6) };
+  const near = add(c, f, 6);
+  const down = add(add(c, fh, 8 + 4 * lk), [0, 1, 0], -14);
+  const plan: Vec3 = [c[0] + fh[0] * 160, GROUND, c[2] + fh[2] * 160];
+  const target = lerp3(lerp3(near, down, lk), plan, hi);
+  return { eye, target };
 }
 
 /* ---------- what the eye can see: towers in the way ---------- */
@@ -1954,10 +2065,14 @@ function hidden(e: Vec3, x: number, y: number, z: number): boolean {
 
 /* ---------- the frame's plan: light sites, dealt out to the grains ---------- */
 
-/** Of every hundred grains: two stars, four for you, fourteen of traffic, the rest the pool. */
-const YOU_FROM = 2;
-const TRAFFIC_FROM = 6;
-const POOL_FROM = 20;
+/**
+ * Of every hundred grains: five for the sky (stars, constellations, satellites, stations), four
+ * for you, six for the other ships, eleven of traffic, the rest the pool.
+ */
+const YOU_FROM = 5;
+const SHIPS_FROM = 9;
+const TRAFFIC_FROM = 15;
+const POOL_FROM = 26;
 const poolRank = (i: number) => Math.floor(i / 100) * (100 - POOL_FROM) + (i % 100) - POOL_FROM;
 const poolSize = (n: number) =>
   Math.floor(n / 100) * (100 - POOL_FROM) + Math.max(0, (n % 100) - POOL_FROM);
@@ -2059,7 +2174,15 @@ const cur = {
   frame: false,
   rowZ: 0,
   gid: 0,
+  /** A district's wall colour, or none. */
+  tint: null as RGB | null,
+  /** The game's own sites (lib/city-game.ts): where each is and its colour. */
+  fn: ((_s: number, _o: number[]) => false) as Item['site'],
+  /** Whether the group is near enough to you to wake as you pass. */
+  wakes: false,
 };
+/** How far the eye sees now, as a share of VIEW: wider the higher you fly. */
+let reach = 1;
 
 /** What a group's sites are. */
 const Kind = {
@@ -2074,6 +2197,7 @@ const Kind = {
   Frame: 8,
   Lanterns: 9,
   Gate: 10,
+  Custom: 11,
 } as const;
 type Kind = (typeof Kind)[keyof typeof Kind];
 
@@ -2120,10 +2244,20 @@ function siteAt(kind: Kind, s: number): boolean {
       const row = Math.floor(s / cur.cols);
       const key = tw.k * 1009 + cur.face * 211 + col * 17 + row;
       cur.lit = windowLit(key, cur.t);
+      if (cur.lit < 0.06 && !cur.wakes) return false;
+      onFace(-1 + ((col + 0.5) * 2) / cur.cols, GROUND + ((row + 0.5) * tw.h) / cur.rows);
+      if (cur.wakes) {
+        // The city responds: dark windows near you wake as you pass.
+        const c = cur.plan.c;
+        const ex = (o[0] as number) - c[0];
+        const ey = (o[1] as number) - c[1];
+        const ez = (o[2] as number) - c[2];
+        const near = Math.sqrt(ex * ex + ey * ey + ez * ez);
+        if (near < 24) cur.lit = Math.max(cur.lit, 0.8 * smooth((24 - near) / 12));
+      }
       if (cur.lit < 0.06) return false;
       cur.warm = hash(key, 19) < (cur.ct ? 0.92 : 0.7);
       cur.red = cur.ct && hash(key, 20) < 0.18;
-      onFace(-1 + ((col + 0.5) * 2) / cur.cols, GROUND + ((row + 0.5) * tw.h) / cur.rows);
       return true;
     }
     case Kind.Fill: {
@@ -2220,6 +2354,8 @@ function siteAt(kind: Kind, s: number): boolean {
       o[2] = cz;
       return true;
     }
+    case Kind.Custom:
+      return cur.fn(s, o);
     default: {
       // The gate: the Chinatown piece's own, larger, turned to face the way you come.
       const g = gateShape(frac(0.5 + s * 0.7548776662), frac(0.5 + s * 0.569840291), s);
@@ -2239,11 +2375,15 @@ function toneAt(kind: Kind) {
   const { tw, t } = cur;
   let c: RGB;
   switch (kind) {
+    case Kind.Custom:
+      return;
     case Kind.Corner:
     case Kind.Rim:
       c = cur.ct
         ? scale(mix(VIOLET, LANTERN_RED, 0.55), 0.34)
-        : scale(mix(VIOLET, EDGE, 0.5), 0.36);
+        : cur.tint
+          ? scale(mix(VIOLET, cur.tint, 0.7), 0.38)
+          : scale(mix(VIOLET, EDGE, 0.5), 0.36);
       break;
     case Kind.Floor:
       c = cur.ct ? scale(mix(VIOLET, LANTERN_RED, 0.4), 0.14) : scale(mix(VIOLET, EDGE, 0.5), 0.15);
@@ -2260,7 +2400,9 @@ function toneAt(kind: Kind) {
       const band = cur.lit;
       c = cur.ct
         ? scale(band % 2 ? GOLD : LANTERN_RED, 0.4 * breath)
-        : scale(neonAt(tw.k + (band % 2) * 2, t), 0.4 * breath);
+        : cur.tint
+          ? scale(band % 2 ? GOLD : cur.tint, 0.4 * breath)
+          : scale(neonAt(tw.k + (band % 2) * 2, t), 0.4 * breath);
       break;
     }
     case Kind.Kerb:
@@ -2309,9 +2451,15 @@ function group(
 ) {
   const P = cur.plan;
   if (count <= 0 || P.n >= P.size) return;
-  const lim = Math.min(count, Math.ceil(weight * lambda * dens(Math.max(dNear, 10)) * count));
+  const lim = Math.min(
+    count,
+    Math.ceil(weight * lambda * dens(Math.max(dNear / reach, 10)) * count),
+  );
   if (lim <= 0) return;
   cur.gid = gid;
+  const tw0 = cur.tw;
+  cur.wakes = dNear < 26;
+  const mouthed = kind < Kind.Kerb && !!(tw0 as Block).bore;
   const stride = strideFor(count);
   const [ex, ey, ez] = P.eye;
   const [fx, fy, fz] = P.fwd;
@@ -2322,14 +2470,27 @@ function group(
     const dy = (o[1] as number) - ey;
     const dz = (o[2] as number) - ez;
     const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    if (d > VIEW || dx * fx + dy * fy + dz * fz < 0.5) continue;
-    const b = smooth((weight * lambda * dens(d) - (m + 0.5) / count) / 0.12);
+    const dd = d / reach;
+    if (dd > VIEW || dx * fx + dy * fy + dz * fz < 0.5) continue;
+    const b = smooth((weight * lambda * dens(dd) - (m + 0.5) / count) / 0.12);
     if (b <= 0) continue;
+    // No window over a tunnel's mouth.
+    if (mouthed && kind < Kind.Kerb && inMouth(tw0, o[0] as number, o[1] as number, o[2] as number))
+      continue;
     if (seen < 1 && hidden(P.eye, o[0] as number, o[1] as number, o[2] as number)) continue;
     toneAt(kind);
+    // The city responds: what is near you glows a little brighter.
+    let wake = 1;
+    if (cur.wakes) {
+      const c = P.c;
+      const wx = (o[0] as number) - c[0];
+      const wy = (o[1] as number) - c[1];
+      const wz = (o[2] as number) - c[2];
+      wake += 0.5 * smooth((20 - Math.sqrt(wx * wx + wy * wy + wz * wz)) / 14);
+    }
     // Near grains, drawn large, fade away; far light sinks into the violet night.
-    const k = b * smooth((d - 4) / 10) * smooth((VIEW - d) / 100);
-    const lean = 0.65 * (1 - smooth((VIEW - d) / 100));
+    const k = wake * b * smooth((d - 4) / 10) * smooth((VIEW - dd) / 100);
+    const lean = 0.65 * (1 - smooth((VIEW - dd) / 100));
     const lum = Math.max(o[3] as number, o[4] as number, o[5] as number) * 0.8;
     put(
       mix32(gid, s),
@@ -2415,6 +2576,8 @@ function gather(P: Plan): { d: number; run: () => void }[] {
   for (let I = I0; I <= I1; I++) {
     for (let J = J0; J <= J1; J++) {
       const tw = blockTower(I, J);
+      // Pyramids, parks, plazas and the Studio's buildings are drawn by the game (lib/city-game.ts).
+      if (tw.shape !== 'box') continue;
       const rx = tw.x - eye[0];
       const rz = tw.z - eye[2];
       const rad = Math.hypot(tw.hx, tw.hz) + 2;
@@ -2423,7 +2586,8 @@ function gather(P: Plan): { d: number; run: () => void }[] {
       // In front of the eye, within sight, and inside the view's width.
       if (depth < -rad || Math.hypot(rx, rz) - rad > VIEW || side > depth * 1.05 + rad * 1.5 + 4)
         continue;
-      const ct = (I === 0 || I === -1) && isChinatownRow(J);
+      const ct = tw.d === 'chinatown';
+      const tint = wallTint(tw);
       const id = mix32(I * 73856093, J * 19349663);
       const lo: Vec3 = [tw.x - tw.hx - 1.5, GROUND, tw.z - tw.hz - 1.5];
       const hi: Vec3 = [tw.x + tw.hx + 1.5, GROUND, tw.z + tw.hz + 1.5];
@@ -2463,7 +2627,7 @@ function gather(P: Plan): { d: number; run: () => void }[] {
             const seen = faceSeen(tw, face, eye);
             if (seen <= 0) return;
             const gid = mix32(id, face * 16);
-            Object.assign(cur, { tw, face, w, ct });
+            Object.assign(cur, { tw, face, w, ct, tint });
             cur.n = Math.ceil(tw.h / 0.4);
             group(gid + 1, 2 * cur.n, 2.4, d, seen, Kind.Corner);
             cur.n = Math.ceil((2 * w) / 0.4);
@@ -2486,6 +2650,8 @@ function gather(P: Plan): { d: number; run: () => void }[] {
     }
   }
   // Chinatown: the stretches of the avenue within sight.
+  const signs: Sign[] = [];
+  const high = eye[1] > GROUND + 90;
   const span = CT_EVERY * BLOCK_Z;
   const len = CT_BLOCKS * BLOCK_Z;
   for (let n = Math.floor((eye[2] - VIEW - len) / span); n * span <= eye[2] + VIEW; n++) {
@@ -2535,33 +2701,48 @@ function gather(P: Plan): { d: number; run: () => void }[] {
         },
       });
     }
-    const signs = [bannerFor(n)];
+    signs.push(bannerFor(n));
     for (let J = n * CT_EVERY; J < n * CT_EVERY + CT_BLOCKS; J++) signs.push(...avenueSigns(J));
-    for (const sg of signs) {
-      const { w, h } = signSize(sg);
-      const lo: Vec3 = [sg.at[0], sg.at[1] - h, sg.at[2]];
-      const hi: Vec3 = [sg.at[0] + w, sg.at[1], sg.at[2]];
-      const d = boxDistance(eye, lo, hi);
-      if (d > VIEW || (sg.at[2] - eye[2]) * hz < -12) continue;
-      items.push({
-        d,
-        run: () => {
-          const seen = pointsSeen(eye, [
-            [lo[0], lo[1], lo[2]],
-            [hi[0], hi[1], hi[2]],
-            [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2]],
-          ]);
-          if (seen <= 0) return;
-          cur.sign = sg;
-          // Read from in front; from behind, only its frame.
-          cur.front = eye[2] > sg.at[2];
-          const gid = mix32(sg.k * 131 + Math.round(sg.at[2]), Math.round(sg.at[0] * 10));
-          group(gid, signPixelCount(sg), 4, d, seen, Kind.Glyph);
-          cur.n = Math.ceil((2 * (w + h)) / (sg.px * 1.5));
-          group(gid + 1, cur.n, 3, d, seen, Kind.Frame);
-        },
-      });
-    }
+  }
+  // Chinatown's signs at every height, on all its streets.
+  if (!high) signs.push(...signsNear(eye));
+  for (const sg of signs) {
+    const { w, h } = signSize(sg);
+    const lo: Vec3 = [sg.at[0], sg.at[1] - h, sg.at[2]];
+    const hi: Vec3 = [sg.at[0] + w, sg.at[1], sg.at[2]];
+    const d = boxDistance(eye, lo, hi);
+    if (d > VIEW || (sg.at[2] - eye[2]) * hz < -12) continue;
+    items.push({
+      d,
+      run: () => {
+        const seen = pointsSeen(eye, [
+          [lo[0], lo[1], lo[2]],
+          [hi[0], hi[1], hi[2]],
+          [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2]],
+        ]);
+        if (seen <= 0) return;
+        cur.sign = sg;
+        // Read from in front; from behind, only its frame.
+        cur.front = eye[2] > sg.at[2];
+        const gid = mix32(sg.k * 131 + Math.round(sg.at[2]), Math.round(sg.at[0] * 10));
+        group(gid, signPixelCount(sg), 4, d, seen, Kind.Glyph);
+        cur.n = Math.ceil((2 * (w + h)) / (sg.px * 1.5));
+        group(gid + 1, cur.n, 3, d, seen, Kind.Frame);
+      },
+    });
+  }
+  // The game's own: districts, landmarks, lanterns, tunnels, metro, word signs, races, the plan.
+  const game: Item[] = [...gameItems(eye, fwd, cur.t), ...trackItems(eye, cur.t, NEAR)];
+  for (const g of game) {
+    items.push({
+      d: g.d,
+      run: () => {
+        // Seen at any of its probes, all of it is drawn: no check of every site.
+        if (g.probe && pointsSeen(eye, g.probe) <= 0) return;
+        cur.fn = g.site;
+        group(g.gid, g.count, g.weight, g.d, 1, Kind.Custom);
+      },
+    });
   }
   return items.sort((a, b) => a.d - b.d);
 }
@@ -2571,6 +2752,7 @@ function build(P: Plan, t: number) {
   const { c, f } = flier(t);
   const { eye, target } = shipEye(c, f);
   Object.assign(P, { t, v: fly.v, c, f, eye, fwd: norm(sub(target, eye)), n: 0, top: 0 });
+  reach = viewAt(eye[1]) / VIEW;
   cur.plan = P;
   cur.t = t;
   for (const it of gather(P)) {
@@ -2710,16 +2892,52 @@ function shipAt(p: Particle, t: number): Spot {
     return { pos: skyAt(p, [P.c[0], 0, P.c[2]]), rgb: [0, 0, 0] };
   }
   if (m >= TRAFFIC_FROM) return trafficAt(p, P, t);
+  if (m >= SHIPS_FROM) return otherShipAt(p, P, t);
   if (m >= YOU_FROM) {
     const pace = fly.mode === 'route' ? 0.6 : Math.max(0, fly.speed / FLY_SPEED - 0.4);
     const { pos, part } = craftAt(P.c, P.f, 2.4, p, pace, fly.mode === 'route' ? 0 : fly.bank);
     return { pos, rgb: craftColour(part, p, 0.42) };
   }
-  // Stars in a dome just beyond the city's reach, so nothing in it stands in front of them.
-  const twinkle = 0.75 + 0.25 * Math.sin(t * 0.9 + p.i * 0.37);
-  const d = fibonacciSphere(p.i % 997, 997);
-  const up = norm([d[0], 0.15 + 0.7 * Math.abs(d[1]), d[2]]);
-  return { pos: add(P.c, up, VIEW + 20), rgb: scale(STAR, 0.45 * twinkle) };
+  // The sky (lib/city-sky.ts), in a dome just beyond the city's reach, so nothing in it stands in
+  // front of it: stars and constellations, satellites, the stations, the spire's beacon.
+  const L = Math.floor(p.i / 100) * YOU_FROM + m;
+  const n = Math.floor(grains / 100) * YOU_FROM + Math.min(YOU_FROM, grains % 100);
+  return skyGrain(L, Math.max(n, L + 1), P.c, viewAt(P.eye[1]) + 40, highness(P.c[1]), t);
+}
+
+/**
+ * The other ships (lib/city-game.ts): six cruising the avenue, the streets and the lane over the
+ * roofs, and three more, the rivals while a race is on, a second convoy otherwise. Each ship has
+ * its share of these grains; ahead of the eye and in sight only.
+ */
+const shipSeen = { t: Number.NaN, v: -1, list: [] as boolean[] };
+function otherShipAt(p: Particle, P: Plan, t: number): Spot {
+  const per = TRAFFIC_FROM - SHIPS_FROM;
+  const L = Math.floor(p.i / 100) * per + (p.i % 100) - SHIPS_FROM;
+  const n =
+    Math.floor(grains / 100) * per + Math.max(0, Math.min(per, (grains % 100) - SHIPS_FROM));
+  const each = Math.max(1, Math.floor(n / SHIP_SLOTS));
+  const slot = Math.min(SHIP_SLOTS - 1, Math.floor(L / each));
+  const q = (L - slot * each + 0.5) / each;
+  const r = slot >= 6 ? rival(slot - 6, t) : null;
+  const ship = r ? { c: r.c, f: r.f, design: 1, k: 1 } : cruiser(slot, t, P.eye, P.c);
+  const g = shipGrain(r ? 1 : ship.design, q, p.i, ship.c, ship.f, t);
+  const rel = sub(g.pos, P.eye);
+  const d = Math.hypot(rel[0], rel[1], rel[2]);
+  let k = ship.k * smooth((d - 4) / 10) * smooth((VIEW - d) / 100);
+  if (rel[0] * P.fwd[0] + rel[1] * P.fwd[1] + rel[2] * P.fwd[2] < 0.5) k = 0;
+  if (k > 0) {
+    // Whether a ship is in sight, found once a frame per ship from its middle.
+    if (shipSeen.t !== P.t || shipSeen.v !== P.v)
+      Object.assign(shipSeen, { t: P.t, v: P.v, list: [] });
+    let seen = shipSeen.list[slot];
+    if (seen === undefined) {
+      seen = !hidden(P.eye, ship.c[0], ship.c[1], ship.c[2]);
+      shipSeen.list[slot] = seen;
+    }
+    if (!seen) k = 0;
+  }
+  return { pos: g.pos, rgb: scale(r ? mix(g.rgb, LANTERN_RED, 0.5) : g.rgb, k) };
 }
 
 /* ---------- the pieces' pills: five temples, five factories, five domes, five cities ---------- */

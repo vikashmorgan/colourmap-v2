@@ -26,6 +26,7 @@ import {
   EYE_Y,
   FLY_SPEED,
   flier,
+  floorAt,
   GATE_SIGN,
   GLYPH_PX,
   GROUND,
@@ -65,6 +66,7 @@ import {
   variantLabel,
   variantNames,
 } from './city';
+import { districtAt } from './city-game';
 import { CITIES, CITY_K, cityPlan } from './city-plans';
 import { RATIOS } from './golden-buildings';
 import {
@@ -476,7 +478,9 @@ describe('Ship', () => {
         setFly(true, keys, 1 / 60, t);
         const { c } = flier(t);
         expect(blocked(c)).toBe(false);
-        expect(c[1]).toBeGreaterThanOrEqual(GROUND + 2 - 1e-9);
+        // The floor is the street, or a canal's bed under it; no super boost here (Space and W
+        // never held together), so the ceiling is the towers' sky.
+        expect(c[1]).toBeGreaterThanOrEqual(floorAt(c[0], c[2]) + 2 - 1e-9);
         expect(c[1]).toBeLessThanOrEqual(SKY + 1e-9);
       }
     }
@@ -516,11 +520,14 @@ describe('Ship, round two: solid walls, the avenue and Chinatown', () => {
   };
 
   it('keeps walls dense near the eye and sparser far off', () => {
-    // Among the neon towers, between two Chinatowns.
-    expect(chinatownness(route(25).c[2], 40)).toBe(0);
-    fresh(25);
-    const shot = frame(25);
-    const { eye } = pieceCamera(k, 25);
+    // Among the tall towers of the Heights, away from Chinatown.
+    let s0 = 0;
+    while (districtAt(route(s0).c[0], route(s0).c[2]) !== 'heights') s0 += 0.5;
+    s0 += 8;
+    expect(chinatownness(route(s0).c[2], 40)).toBe(0);
+    fresh(s0);
+    const shot = frame(s0);
+    const { eye } = pieceCamera(k, s0);
     // Grains by the tower face they lie on: count, area and distance.
     const faces = new Map<string, { n: number; area: number; d: number }>();
     for (const { pos, rgb } of shot) {
@@ -594,7 +601,7 @@ describe('Ship, round two: solid walls, the avenue and Chinatown', () => {
   it('keeps the autopilot down the middle of the avenue, low under each Chinatown gate', () => {
     let stretches = 0;
     let was = 0;
-    for (let t = 0; t < 300; t += 0.25) {
+    for (let t = 0; t < 600; t += 0.25) {
       const { c, f } = route(t);
       expect(blocked(c)).toBe(false);
       expect(Math.abs(c[0])).toBeLessThan(AVENUE - 2);
@@ -604,9 +611,9 @@ describe('Ship, round two: solid walls, the avenue and Chinatown', () => {
       if (ct === 1 && was === 0) stretches++;
       was = ct;
     }
-    // A Chinatown stretch about every half minute, then neon towers again.
-    expect(stretches).toBeGreaterThanOrEqual(8);
-    expect(stretches).toBeLessThanOrEqual(11);
+    // Chinatown once in every turn of the plan (three minutes), then every other district.
+    expect(stretches).toBeGreaterThanOrEqual(3);
+    expect(stretches).toBeLessThanOrEqual(4);
   });
 
   it('passes through Chinatown: legible signs on its walls, red lanterns overhead', () => {

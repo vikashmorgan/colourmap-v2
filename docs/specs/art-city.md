@@ -6,7 +6,10 @@
 `lib/city.ts` · `lib/golden-city.ts` (the golden city: its plan from φ, the
 city rising, its heart) · `lib/golden-buildings.ts` (temples, factories,
 domes) · `lib/grain-mesh.ts` (buildings drawn as grains on lines, faces and
-dots) · `lib/city-plans.ts` (the night cities from above) ·
+dots) · `lib/city-plans.ts` (the night cities from above) · the Ship's
+city of dreams: `lib/city-game.ts` (districts, landmarks, signs, tunnels, ships) ·
+`lib/city-grid.ts` · `lib/city-metro.ts` · `lib/city-sky.ts` · `lib/city-race.ts` ·
+`lib/city-font.ts` ·
 `components/City.tsx` · the shared trip player (`components/TripPlayer.tsx`)
 
 ## Why
@@ -116,7 +119,7 @@ turning and breathing, a slow orbit.
 | 11 | Chinatown | A red gate (four pillars, two beams, three roofs turned up at the ends, a plaque reading 中華街, Chinatown) at the mouth of a narrow street. Tall signs hang down the street side of the towers, standing out into the street, in real Chinese and Japanese characters: ラーメン ramen, 茶 tea, 龍 dragon, 酒 wine, 夢 dream, 麺 noodles, 福 good fortune, 喫茶 café; a 夜市 night-market banner across the street and a small 喫茶 sign over a doorway. Lantern red and gold mixed with cyan and magenta. Rows of round red lanterns strung across the street, swaying a little | Walking pace through the gate and down the street |
 | 12 | Bridges and docks | Sky bridges (tubes of four edges and ribs, lights along the floor) join neighbouring towers high above the street; landing platforms stand out from the faces of the taller towers, lights chasing slowly round their rims. Ships come in on a curve, settle on a deck, rest, lift off and leave the other way | Round the city, from above the bridges |
 | 13 | Canyon | Flying down the middle of an endless street: towers either side (only the faces the street sees are drawn, so every grain shows), feet below the eye and roofs above it; traffic in four lanes above and four below, coming on the left, going on the right; every third tower carries a tall Chinatown sign, flown past. Towers and ships that pass behind come round to the far end, so the street never ends and no grain is added | Down the middle of the street |
-| 14 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) down an endless avenue of solid, lit towers, with side streets to turn into; every eight blocks the avenue passes through a Chinatown stretch (see **Ship, round two**). **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** or Shift faster, **Q** or X slower, **Space** boosts to three times the cruise while the bar lasts; the bar fills again while you cruise. Towers' walls hold you: you slide along them. Traffic above and below you. Two dials read height and speed. With no one at the controls (the Journey, or before you steer) the ship flies down the avenue; let go with Esc and it carries on from where you were, back to the avenue | Behind the ship and a little above, looking past it |
+| 14 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) down an endless avenue of solid, lit towers, with side streets to turn into; the avenue runs through the districts of the City of Dreams, Chinatown first (see **Ship, round two** and **Ship, round three**).  **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** or Shift faster, **Q** or X slower, **Space** boosts to three times the cruise while the bar lasts; the bar fills again while you cruise; **Space** with **W** climbs on into the stratosphere; **L** slows to look down; **Enter** starts a race at its start. Towers' walls hold you: you slide along them. Traffic above and below you. Two dials read height and speed. With no one at the controls (the Journey, or before you steer) the ship flies down the avenue; let go with Esc and it carries on from where you were, back to the avenue | Behind the ship and a little above, looking past it |
 
 The page opens on one piece alone, picked by name, as Ocean's do: it starts
 at its beginning with no ball of stars and loops, each grain gliding back to
@@ -310,13 +313,192 @@ and out over a short distance.
 - Frame cost, 9000 grains: Ship 5.4 ms (it was 6.5 ms before this round), against 2.5–4.2 ms for the
   other pieces (bench on the build machine, bun).
 
+## Ship, round three: the City of Dreams (game design)
+
+> 2026-11-12: "develop the video game city with elements from the studio. developing chinatown. to
+> go higher not just one street. but panneaux chinois on many levels of the city higher and lower
+> and other streets with lampions. or portals. or diwali lights. or tunnels inside buildings u can
+> navigate through. add a few other spaceships. plan the city. allow a super boost when u just go
+> up so u can go into stratosphere and see city from above. a slow mode to just look down. stars and
+> constellations. a few satellites in the sky or sky stations."
+>
+> "think videogames what makes it fun what makes the city interactive etc.... how to keep it simple
+> for memory etc.... add some golden trees in some parts. lampions chinois volants. chinatown
+> district with chinese design buildings as well. indian district quarter with indian temples.
+> etc... also a spaceship racing track in some part of the city with obstacles like diagonal bars u
+> have to navigate through. and u can start race when u go there (do u wanna start the race, and
+> have 3 2 1, and other spaceships racing with u). different racetracks to be developed for each
+> quartier. one egyptian pyramids, mosques istanbul oriental district as well."
+>
+> "love the city responds. also love idea like tunnels in tunnel racer, where u get pulses in the
+> tunnel like rings light up faster than you. also imagine a metro in the city that is on suspended
+> rail tracks that swishes through city with curves to balance square shapes and curves."
+>
+> "then the factories domes etc... must be incorporated. industrial quarter. dome organic solarpunk
+> part. etc... each organised around center landmarks. stairs temples. etc.... u can also have
+> bank. Bar. or other panneaux. Welcome to the City of Dreams panels."
+>
+> "think about ideas of pulse and rhythm in the city. not everything has to be overloaded with
+> infinite colours but pulse is an important notion. tunnels can be underground for racing."
+>
+> "also a racing track in the sky with tunnels and stuff, on a sky station flying island thing."
+
+The film is still a mood only: every building, ship and sign is our own, from a few primitives.
+
+### Principles
+
+- **The city is a compass.** A few big districts in a fixed, readable plan; each has one strong
+  colour, one silhouette and one slow motion, and a landmark on an open plaza where its streets meet.
+  The golden spire is seen from everywhere (its beacon is drawn from any distance). A district's name
+  shows quietly beside the bar for four seconds as you enter it.
+- **The city responds.** Dark windows wake as you pass and anything lit within twenty of you glows a
+  little brighter; sky lanterns you fly through turn gold and stay lit; the other ships rise and
+  move aside as you come near; a race won lights its district on the plan from above.
+- **Pulse and rhythm, not more colours.** One city clock, 66 beats a minute (`beat` in
+  `lib/city-grid.ts`: a soft swell and slow fall, never a flash). Each district beats at a simple
+  ratio of it (Chinatown 1, the Heights 2, the market 3/2, Istanbul 2/3, Indian quarter, canals and
+  domes 1/2, golden gardens 1/3, temples and Egypt 1/4): its roofs and landmark breathe on it, the
+  lantern strings swell along their length, word signs breathe, and from above slow waves of light
+  run down every street. Each district keeps to one or two hues plus white and gold.
+- **Fun loop.** Explore, find a place (a race start, a portal, a tunnel, a station), do a short
+  challenge, get a small quiet reward. No scores on the screen.
+- **Simple for memory and the frame.** Everything is data (`DISTRICTS`, `BANDS`, `LANDMARKS`,
+  `TRACKS`, `RAIL_POINTS`, `SHIP_LANES`) and a handful of reused primitives (lines, rings, domes,
+  turned surfaces, eaves); shapes are built once and cached; only what is near is detailed (the
+  same light-site pool as round two, nearer kept denser); the grain budget never changes.
+
+### The plan (`lib/city-game.ts`)
+
+A tile of 12 blocks across and 48 along (312 × 1632), repeating every way so the city never ends.
+The avenue runs down its middle; six bands of eight blocks lie along it, a district each side:
+
+| Band | Left of the avenue | Right of the avenue |
+|------|--------------------|---------------------|
+| 0 | **Chinatown**: lower towers with Chinese roofs (eaves turned up at two floors, a three-roofed pagoda on top), red and gold; tall signs at three heights on both street walls of every tower, on every street; red lanterns strung across the side streets at three heights and across the avenue high up; sky lanterns rising; landmark the **Pagoda of nine roofs** | **Chinatown** too: the **race plaza** (a ring of moon gates, a RACE sign), start of the Lantern Loop |
+| 1 | **Indian quarter**: low towers crowned by curved temple spires (shikhara: ribs and rings up the curve, a flat stone ring and finial) or four chhatris; Diwali lamps strung across the streets at three heights, twinkling slowly; landmark the **Temple of the curved spire** (a tall shikhara, four small ones, a chhatri, stepped plinth) | **Istanbul**: towers with domes and slender minarets; landmark the **Mosque of the four minarets** (square hall, great dome on its drum with sixteen ribs, four half domes, four minarets with balconies) |
+| 2 | **The Heights**: tall towers (70–128), sky bridges between them at the height both reach (upper streets between the tops), more tunnels; over the avenue a long **tube** whose rings pulse ahead of you, and two **portals** | **The Canals**: the undercity: three cross streets are canals 14 deep under the street, their walls lit with pipes and lamps, water shimmering, arches of pulsing light over them so each reads as a tunnel; you can fly down into them |
+| 3 | **Golden gardens**: golden towers, golden domes, parks of golden trees (gold-leaf crowns shimmering); landmark the **golden spire** (190 high, rings of light, an open sphere of light on top, eight golden trees round it), seen from everywhere | **Temple quarter**: the Studio's temples (lib/golden-buildings.ts, read-only) on blocks; landmark the Studio's **ziggurat**, stairs on every side, 1.7 times its Studio size |
+| 4 | **Industrial quarter**: the Studio's five factories on blocks; landmark the Studio's **foundry**, its chimneys breathing steam | **Solarpunk domes**: the Studio's glasshouses and parks of golden trees; landmark the Studio's **garden of domes** |
+| 5 | **Egyptian quarter**: pyramids on the blocks (the golden slope, courses marked, a light at every apex; they hold you like walls, on their slope), obelisks on the avenue's low towers; landmark the **great pyramid** with a lying sphinx-like figure and two obelisks (our own simple shapes) | **Neon market**: word signs in a small Latin pixel font (BANK, BAR, HOTEL, CAFE, NOODLES, CINEMA, TEA, DREAMS) |
+
+Every district's name is written over its mouth on the avenue's walls. Where the plan begins again
+a great panel over the avenue reads **WELCOME TO THE CITY OF DREAMS**. Now and then a word sign
+lights a tower elsewhere too.
+
+**Levels.** Canals under the street (floor 14 down); the street; the lanes; sky bridges; the metro
+at 35–45; the tops of the Heights; a lane of ships at 150 over every roof; the stations and the
+sky island at 300–360; the stratosphere at 520.
+
+**Tunnels.** About one tower in eight (three in ten in the Heights) has a lit tunnel through it,
+along x or z, 6.8 wide and 5.6 high: square rings of light every 1.6, warm at the mouths, no windows
+over the mouth, and no wall there: you can fly through. In every tunnel, the tube and the canals,
+**pulses** run in waves the way you fly, always faster than you (`pulseSpeed(v) = 1.7v + 8`), a
+soft swell up to each front: a tunnel rider's pull, in two hues only.
+
+**Portals.** Two ring gates over the avenue in the Heights, turning slowly in cyan and violet; fly
+through one (steering) and it carries you on, ahead the way you fly, to the mouth of another band
+(the golden gardens, the market).
+
+**The metro** (`lib/city-metro.ts`). A suspended monorail: a closed Catmull-Rom loop through twenty
+points per tile, down one side of the city and back up the other in long swinging curves, rising and
+falling gently; the rail drawn as two lit lines and sleepers, a pylon every 30 with its arm curving
+over to the rail. Three trains of four carriages hang under it, leaning into the bends, their windows
+lit; four stations on platforms beside the rail with a METRO sign. Towers under the rail stand lower,
+so it never meets one.
+
+**Other ships.** Six cruise all the time, each our own grain shape (a long hauler in a ring, a thin
+dart with twin tails, a round pod in a turning ring): a convoy of three down the avenue, one on a
+side street, one across, one in the lane over the roofs; three more (a second convoy) when no race
+takes them. Brought round near the eye as you fly, like the traffic; they rise and step aside as
+you come near.
+
+**The sky** (`lib/city-sky.ts`). Stars, and three constellations from their real stars' places
+(right ascension and declination, the public catalogue): **Orion** in the south, the **Big Dipper**
+and **Cassiopeia** to the north, all up all night (a sky at 50° north, turning a little round
+Orion's hour), each star three grains, their figures faint; three satellites slowly crossing on
+their own great circles; a turning **ring station** and a **platform** station (the sky island)
+high over the city; the golden spire's beacon. Brighter the higher you fly.
+
+### Flying it
+
+| Key (phone) | Does |
+|-------------|------|
+| A / D (stick) | turn, the ship banking |
+| W / S (stick) | climb, dive |
+| E or Shift (Faster) / Q or X (Slower) | pace |
+| Space (**Boost**) | three times the cruise while the bar lasts (the bar does not drain over the towers) |
+| Space + W | **super boost**: climbs on at 48 a second while W is held, past the towers' sky (150) up to the **stratosphere** (520); up there W climbs, S dives back down fast; under the towers' sky you fly as before |
+| L (**Look**) | **slow mode**: a gentle drift (0.22 of the pace), the eye rising and tilting down at the city below; L again to fly on |
+| Enter (**Go**) | at a race's start, starts the race |
+
+**From above.** As you climb the eye stands back and rises (up to 150 back and 190 up) and looks
+down ahead; the view opens from the street's 160 to a thousand; the city is drawn as its plan:
+every roof's outline in its district's colour, the avenue's lights white, every street a thread of
+amber with slow waves running down it, the landmarks lit, the stars brighter.
+
+### Races (`lib/city-race.ts`)
+
+Tracks are data, one per quarter: `{ district, name, full, start, gates, bars }`.
+
+| Track | District | State |
+|-------|----------|-------|
+| **Lantern Loop** | Chinatown: from the race plaza down a side street, across under the lanterns, up the avenue, back to the plaza; thirteen moon gates; five diagonal bars, two turning | **Full** |
+| **Undercity Run** | The Canals: down into one canal, along it under its pulsing arches, up and over, back along the next; eleven gates, two bars | **Full** |
+| Sky Island Loop | Round the platform station high over the Canals, through its deck, round its mast | Draft (gates only) |
+| Diwali Run, Minaret Slalom, Stair Climb, Greenhouse Glide, Pyramid Circuit | Indian quarter, Istanbul, temples, domes, Egypt | Drafts (gates only) |
+
+Fly into a full track's start (within 12) and the count beside the bar asks quietly: "Lantern Loop ·
+Start the race? Enter". Enter (or Go) starts a 3, 2, 1 (the ship held on the start, facing the
+first gate), then three rivals race you along the course (a smooth line through the gates) at their
+own paces. Pass the gates in order (the next one brighter, the passed ones dim); a gate out of order
+does not count. A bar touched slows you to a third for a second, never more. The finish shows your
+place and time and the best time, kept on the device (`localStorage`, never failing where there is
+none); a win lights the district from above. Esc, or straying 70 from the course, calls it off
+("Race off").
+
+### Acceptance (round three)
+
+- The plan is the same every time and repeats every tile; every district appears; every landmark
+  stands on its open plaza; towers stay out of the avenue, streets six or more.
+- You never fly into a tower or under the floor (the street, or a canal's bed); you can fly through
+  a tower's tunnel and down a canal.
+- Space and W together climb past the towers' sky into the stratosphere (over 400 within 16
+  seconds); the eye then stands far back and high, looking down on a lit plan; S brings you back
+  under the towers' sky. Without the super boost the ceiling is the towers' sky.
+- L toggles slow mode: under 4 a second, the eye above the ship looking down; L again, back to the
+  cruise.
+- The Ship claims Space, L and Enter (round buttons on a phone: Boost, Look, Go).
+- Pulses always run faster than the ship; the metro's rail is a smooth closed curve (no corner
+  sharper than 0.07 radians in 1.5) with every carriage hanging exactly under it; every tower it
+  passes over is lower than its carriages.
+- The race runs idle → prompt → countdown → racing → finished (or cancelled), gates in order,
+  rivals at finite places; a bar slows, never stops.
+- Every site the game adds, high or low, is at a finite place with a colour of 0 or more; the beat
+  never jumps.
+- Frame cost, 9000 grains (bun, this machine, offline): about 20–22 ms down the avenue and 22 ms in
+  the stratosphere, against 16–19 ms for round two's Ship measured the same way on the same machine
+  (round two's 5.4 ms was the build machine): about a fifth more.
+
+### Still rough, and next
+
+- The Studio's buildings, domes, minarets and spires are light: you fly through them (only towers
+  and pyramids hold you). Sky bridges and the metro are light too.
+- Sky lanterns and portals are only near the avenue; the Sky Island Loop and four other tracks are
+  drafts (gates only); the sky island itself is the platform station, still small.
+- Traffic does not yet move in platoons on the beat; the beat does not yet travel out from a heart
+  (the Nova Cores, another round).
+- Queued from the user, not in this round: rain over a river and its ripples; a business district
+  of twisting towers with docks; docking the ship and cyberpunk rooms the Dot Walker walks through,
+  with panoramas; cars on the ground; Embassies of Happiness with a Shark Simulator cabinet;
+  ultraboost ring portals high in the sky into hyperspace and other solar systems.
+
 ## Game · Studio, and the phone
 
 (2026-11-12; the shared player, [art-journey.md](art-journey.md#design-menu-game--studio-phone-controls-2026-11-12).)
 Every control sits in the **Design** menu. The Ship is the **Game** side, every other piece the
 **Studio** (found by `game.has`, so new pieces join the Studio on their own); the page reopens
 on the side last used. On a phone the Ship has a stick (turn, climb, dive) and a round
-**Boost** button (Space).
+**Boost** button (Space), with **Look** (L) and **Go** (Enter) beside it.
 
 ## Words
 
@@ -368,7 +550,8 @@ their summer under glass.
   has flown; ships pass above and below the eye, both ways.
 - Ship: it takes over from the autopilot where it is; A turns left and D right; W climbs, S dives;
   E speeds up, Q slows; Space boosts until the bar runs dry, then the pace falls back, and cruising
-  fills the bar again; it never flies into a tower, through the ground or past the sky; two dials
+  fills the bar again; it never flies into a tower, through the ground, or past the towers' sky unless super boosting (Space with W) into the
+  stratosphere; two dials
   read height and speed.
 - The same moment always gives the same picture.
 - No new dependencies.
@@ -377,12 +560,12 @@ their summer under glass.
 
 For the long-term fly-through of a future neon city:
 
-1. **Free flight in the canyon:** begun in Ship, round two (the avenue, side streets, Chinatown);
-   still to come: traffic you weave through, and near misses that ruffle the trail.
-2. **Districts:** the field of towers in kinds (Chinatown, a harbour of docks, a tall business
-   heart, a market under bridges), flown from one into the next.
-3. **Layers of the city:** a dim undercity of pipes and steam below the street, the lit middle, and
-   gardens on the roofs high above.
+1. **Free flight in the canyon:** begun in Ship, round two; still to come: traffic you weave
+   through, and near misses that ruffle the trail.
+2. **Districts:** begun in Ship, round three (eleven districts round their landmarks); still to
+   come: a harbour of docks, a business heart of twisting towers, a river under rain.
+3. **Layers of the city:** begun in round three (canals, tunnels, sky bridges, the metro, the
+   stratosphere); still to come: gardens on the roofs and rooms to dock at.
 4. **Traffic that turns:** ships changing lanes and turning at crossings, the Cell's pulses again,
    and a landing you can make on a dock.
 5. **Weather:** slow rain streaks that catch the neon, mist that softens the far towers.

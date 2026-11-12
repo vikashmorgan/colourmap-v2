@@ -164,6 +164,8 @@ describe('claimLabel', () => {
     expect(claimLabel(' ', 'Boost')).toBe('Boost');
     expect(claimLabel(' ')).toBe('Jump');
     expect(claimLabel('b')).toBe('Bite');
+    expect(claimLabel('l')).toBe('Look');
+    expect(claimLabel('enter')).toBe('Go');
     expect(claimLabel('k')).toBe('K');
   });
 });
