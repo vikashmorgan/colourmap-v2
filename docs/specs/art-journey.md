@@ -90,7 +90,7 @@ the words. The Big Bang is unchanged.
 
 **Design menu.** Every control of a trip page lives in one menu: the Art tabs, Game · Studio,
 the piece pills, a piece's own rows (variants, scenes), play and pause, Journey, Words, Full
-screen, the background, Steer, switches and cycles, the dots' ↑ / ↓ and the speeds. Shut, only
+screen, Reset view, the background, Steer, switches and cycles, the dots' ↑ / ↓ and the speeds. Shut, only
 the picture, the piece's name (`4 / 17 City`) and one small **Design** button (low on the right;
 dimmed when idle, still tappable) are on screen. While a game is played its bar and count stay
 on screen too, with its dials.
@@ -121,14 +121,34 @@ and the Big Bang have no switch.
   dives or steps back; a middle third holds nothing) in the same set of held keys the keyboard
   fills, so no game changes. A thumb on the stick or a button after Esc takes the controls back.
   The name and the Design button move to the top, the bar and count above the thumbs.
-- On any other piece a quick sideways swipe on the picture goes to the next piece (swipe left)
-  or the previous one (right); in the Studio it skips the game. A tap is a click (it turns the
-  cursor guide off and on where a piece has one). The picture takes every finger: no page
-  scroll or browser zoom over it.
+- Two small held pills above the round buttons, **Slower** (X) and **Faster** (Shift): the
+  keys all three games read for pace.
+- On any other piece a quick sideways flick on the picture (under 0.4 s) goes to the next piece
+  (flick left) or the previous one (right), the little turn of the view it made undone; in the
+  Studio it skips the game. A tap is a click (it turns the cursor guide off and on where a piece
+  has one). The picture takes every finger: no page scroll or browser zoom over it.
 - Full screen: the browser's own where it has one; where it has none (an iPhone) the controls
   hide all the same and Esc or the ✕ brings them back. Game controls stay in full screen.
-- No pinch zoom or drag orbit: the cameras are scripted and the desktop has no wheel or drag to
-  mirror.
+- Safe areas: the name, the Design button, the sheet, the stick, the buttons and the exit all
+  keep clear of the notch and the home bar (`env(safe-area-inset-*)`; the app's viewport is
+  `viewport-fit: cover`).
+- On a game, the open sheet never covers the dials: on a tablet the dials sit on the left under
+  the name and the sheet keeps to the right (at most the width less 320px); on a phone the sheet
+  rises from the bottom and stops short of the dials at the top.
+
+**Your own view** (2026-11-12, "do all that"). On top of every piece's own camera path, without
+changing a piece:
+
+- **Zoom:** pinch with two fingers, or the mouse wheel over the picture: the eye's distance from
+  what it looks at, ×0.5 to ×2.5. On a game too (the chase camera comes nearer or stands back).
+- **Orbit:** drag with one finger or the mouse: round what the eye looks at, the climb kept short
+  of straight above or below (77°). Not on a game, where the stick steers.
+- **Home:** four seconds after the last touch the view eases back to the path, slowly; **Reset
+  view** in the Design menu brings it back quickly. Each piece opens on its own path's view.
+- **A piece that flies on its own** (the Cell corridor, the Canyon; any piece whose camera's
+  target moves more than 3 in its first 6 seconds, found from the camera, never by name) gets
+  the stick on a phone: up flies 2.5 times as fast, down at 0.3, left and right drift across the
+  line of sight (up to 0.4 of the eye's distance), eased back like the rest when let go.
 
 ## Acceptance
 

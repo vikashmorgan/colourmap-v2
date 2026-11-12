@@ -30,7 +30,17 @@ vi.mock('three/examples/jsm/postprocessing/UnrealBloomPass.js', () => ({
   },
 }));
 
-import TripPlayer, { claimLabel, stickKeys, swipeStep, type Trip } from './TripPlayer';
+import TripPlayer, {
+  claimLabel,
+  clampView,
+  easeView,
+  isHome,
+  stickKeys,
+  swipeStep,
+  type Trip,
+  VIEW_HOME,
+  viewCamera,
+} from './TripPlayer';
 
 const phase = (id: string, name: string) => ({
   id,
@@ -56,11 +66,20 @@ function makeTrip(gameSet = vi.fn()): Trip {
     particleAt: at,
     phaseAt: (t) => ({ index: Math.min(2, Math.floor(t / 10)), u: (t % 10) / 10 }),
     look: () => ({ glow: 1, size: 1 }),
+    // Told the eye for every grain: where the camera stood this frame.
+    fade: (_pos, e) => {
+      seenEye = [...e];
+      return 1;
+    },
     pieces: {
       length: () => 10,
       progress: (_k, s) => (s % 10) / 10,
       particleAt: at,
-      camera: () => ({ eye: [0, 0, 10], target: [0, 0, 0] }),
+      // Neon flies on its own, as the Cell corridor does: what it looks at moves on.
+      camera: (k, s) =>
+        k === 1
+          ? { eye: [0, 0, 10 - 2 * s], target: [0, 0, -2 * s] }
+          : { eye: [0, 0, 10], target: [0, 0, 0] },
       look: () => ({ glow: 1, size: 1 }),
       variants: { has: (k) => k === 0, names: ['Grid', 'Star'], set: () => {}, label: 'City' },
       game: {
@@ -73,14 +92,21 @@ function makeTrip(gameSet = vi.fn()): Trip {
   };
 }
 
+let seenEye: number[] = [];
+
 // The frame loop, run by hand: each call to `tick` runs one frame.
 let frames: FrameRequestCallback[] = [];
-const tick = () => {
+const tick = (at = performance.now()) => {
   const run = frames;
   frames = [];
   act(() => {
-    for (const f of run) f(performance.now());
+    for (const f of run) f(at);
   });
+};
+// `n` frames a tenth of a second apart, starting `from` ms ahead of now.
+const runFrames = (n: number, from = 100) => {
+  const t0 = performance.now() + from;
+  for (let i = 0; i < n; i++) tick(t0 + i * 100);
 };
 
 const ctx2d = {
@@ -217,6 +243,100 @@ describe('TripPlayer Design menu', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(container.querySelector('main')?.className).not.toContain('bb-immersed');
+  });
+});
+
+describe('the viewer turn on the camera', () => {
+  it('keeps zoom, climb and drift inside their limits', () => {
+    const v = clampView({ zoom: 9, yaw: 7, pitch: -9, side: 3 });
+    expect(v).toEqual({ zoom: 2.5, yaw: 7, pitch: -2.7, side: 0.4 });
+    expect(clampView({ ...VIEW_HOME, zoom: 0.1 }).zoom).toBe(0.5);
+  });
+
+  it('eases home a share at a time, then lands exactly home', () => {
+    const half = easeView({ zoom: 2, yaw: 1, pitch: -1, side: 0.2 }, 0.5);
+    expect(half).toEqual({ zoom: 1.5, yaw: 0.5, pitch: -0.5, side: 0.1 });
+    let v = half;
+    for (let i = 0; i < 40; i++) v = easeView(v, 0.5);
+    expect(isHome(v)).toBe(true);
+  });
+
+  it('zooms along the line of sight and orbits round the target', () => {
+    const zoomed = viewCamera([0, 0, 10], [0, 0, 0], { ...VIEW_HOME, zoom: 2 });
+    expect(zoomed.eye[2]).toBeCloseTo(20);
+    const turned = viewCamera([0, 0, 10], [0, 0, 0], { ...VIEW_HOME, yaw: Math.PI / 2 });
+    expect(turned.eye[0]).toBeCloseTo(10);
+    expect(turned.eye[2]).toBeCloseTo(0);
+    // Never over the top: the climb stops short of straight above.
+    const high = viewCamera([0, 0, 10], [0, 0, 0], { ...VIEW_HOME, pitch: 2.7 });
+    expect(high.eye[1]).toBeLessThan(10);
+    expect(Math.hypot(...high.eye)).toBeCloseTo(10);
+    // Sideways moves eye and target together, across the line of sight.
+    const slid = viewCamera([0, 0, 10], [0, 0, 0], { ...VIEW_HOME, side: 0.2 });
+    expect(slid.target[0]).toBeCloseTo(2);
+    expect(slid.eye[0]).toBeCloseTo(2);
+  });
+});
+
+describe('TripPlayer zoom and orbit', () => {
+  it('zooms with the wheel, holds a while, then eases home on its own', () => {
+    const { container } = render(<TripPlayer trip={makeTrip()} page="city" />);
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    fireEvent.wheel(canvas, { deltaY: 1000 });
+    runFrames(3);
+    expect(seenEye[2]).toBeCloseTo(25);
+    runFrames(10, 5000);
+    expect(seenEye[2]).toBeLessThan(25);
+    expect(seenEye[2]).toBeGreaterThan(10);
+  });
+
+  it('goes back to the path quickly on Reset view', () => {
+    const { container } = render(<TripPlayer trip={makeTrip()} page="city" />);
+    fireEvent.wheel(container.querySelector('canvas') as HTMLCanvasElement, { deltaY: -1000 });
+    runFrames(1);
+    expect(seenEye[2]).toBeCloseTo(5);
+    fireEvent.click(screen.getByRole('button', { name: 'Design' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset view' }));
+    runFrames(40);
+    expect(seenEye[2]).toBeCloseTo(10);
+  });
+
+  it('orbits on a drag, but not on a game, where it only zooms', () => {
+    const { container } = render(<TripPlayer trip={makeTrip()} page="city" />);
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    fireEvent.pointerDown(canvas, { pointerId: 1, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(window, { pointerId: 1, clientX: 200, clientY: 100 });
+    fireEvent.pointerUp(window, { pointerId: 1, clientX: 200, clientY: 100 });
+    runFrames(1);
+    expect(seenEye[0]).toBeCloseTo(10 * Math.sin(-0.5));
+    expect(Math.hypot(...seenEye)).toBeCloseTo(10);
+
+    fireEvent.keyDown(window, { key: 'ArrowLeft' });
+    fireEvent.keyUp(window, { key: 'ArrowLeft' });
+    expect(screen.getByText('3 / 3')).toBeDefined();
+    fireEvent.pointerDown(canvas, { pointerId: 2, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(window, { pointerId: 2, clientX: 200, clientY: 160 });
+    fireEvent.pointerUp(window, { pointerId: 2, clientX: 200, clientY: 160 });
+    fireEvent.wheel(canvas, { deltaY: 1000 });
+    runFrames(1);
+    expect(seenEye[0]).toBeCloseTo(0);
+    expect(seenEye[2]).toBeCloseTo(25);
+  });
+
+  it('pinches to zoom with two fingers', () => {
+    const { container } = render(<TripPlayer trip={makeTrip()} page="city" />);
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    const touch = { pointerType: 'touch' };
+    fireEvent.pointerDown(canvas, { ...touch, pointerId: 1, clientX: 100, clientY: 100 });
+    fireEvent.pointerDown(canvas, { ...touch, pointerId: 2, clientX: 200, clientY: 100 });
+    // Fingers spread to twice as far apart: the eye comes in to half the distance.
+    fireEvent.pointerMove(window, { ...touch, pointerId: 2, clientX: 300, clientY: 100 });
+    runFrames(1);
+    expect(seenEye[2]).toBeCloseTo(5);
+    fireEvent.pointerUp(window, { ...touch, pointerId: 2, clientX: 300, clientY: 100 });
+    fireEvent.pointerUp(window, { ...touch, pointerId: 1, clientX: 100, clientY: 100 });
+    // A pinch is not a tap or a flick: still on the first piece.
+    expect(screen.getByText('1 / 3')).toBeDefined();
   });
 });
 
@@ -361,5 +481,54 @@ describe('TripPlayer on a phone', () => {
     tick();
     expect(gameSet.mock.calls.at(-1)?.[0]).toBe(true);
     expect(gameSet.mock.calls.at(-1)?.[1]).toEqual(['arrowup']);
+  });
+
+  it('holds Shift and X from the Faster and Slower buttons on a game', () => {
+    setTouch(true);
+    const gameSet = vi.fn();
+    render(<TripPlayer trip={makeTrip(gameSet)} page="ocean" />);
+    fireEvent.keyDown(window, { key: 'ArrowLeft' });
+    fireEvent.keyUp(window, { key: 'ArrowLeft' });
+    const faster = screen.getByRole('button', { name: 'Faster' });
+    fireEvent.pointerDown(faster, { pointerId: 1 });
+    tick();
+    expect(gameSet.mock.calls.at(-1)?.[1]).toEqual(['shift']);
+    fireEvent.pointerUp(faster, { pointerId: 1 });
+    const slower = screen.getByRole('button', { name: 'Slower' });
+    fireEvent.pointerDown(slower, { pointerId: 2 });
+    tick();
+    expect(gameSet.mock.calls.at(-1)?.[1]).toEqual(['x']);
+    fireEvent.pointerLeave(slower, { pointerId: 2 });
+    tick();
+    expect(gameSet.mock.calls.at(-1)?.[1]).toEqual([]);
+  });
+
+  it('gives the stick to a piece that flies on its own: up flies faster, sideways drifts', () => {
+    setTouch(true);
+    const { container } = render(<TripPlayer trip={makeTrip()} page="city" />);
+    expect(container.querySelector('.bb-stick')).toBeNull();
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    fireEvent.keyUp(window, { key: 'ArrowRight' });
+    expect(screen.getByText('2 / 3')).toBeDefined();
+    const stick = container.querySelector('.bb-stick') as HTMLElement;
+    expect(stick).not.toBeNull();
+    // No game buttons on a piece that is not a game.
+    expect(screen.queryByRole('button', { name: 'Boost' })).toBeNull();
+
+    // Half a second of flight on its own.
+    runFrames(5);
+    const z0 = seenEye[2] as number;
+    runFrames(5, 1000);
+    const alone = z0 - (seenEye[2] as number);
+    expect(alone).toBeCloseTo(1);
+    fireEvent.pointerDown(stick, { pointerId: 1, clientX: 0, clientY: -40 });
+    const z1 = seenEye[2] as number;
+    runFrames(5, 2000);
+    // Two and a half times the pace while the stick is up.
+    expect(z1 - (seenEye[2] as number)).toBeCloseTo(2.5);
+    fireEvent.pointerMove(stick, { pointerId: 1, clientX: 40, clientY: 0 });
+    runFrames(5, 3000);
+    expect(seenEye[0]).toBeGreaterThan(1);
+    fireEvent.pointerUp(stick, { pointerId: 1 });
   });
 });

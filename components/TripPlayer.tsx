@@ -189,12 +189,81 @@ export function claimLabel(key: string, meter?: string): string {
 }
 
 /**
- * A finger's move on the picture, from touch to lift: a quick sideways swipe goes to the next
- * piece (1, swiped left) or the previous one (-1); anything else is no swipe (0).
+ * A finger's move on the picture, from touch to lift: a quick sideways flick goes to the next
+ * piece (1, flicked left) or the previous one (-1); anything else is no swipe (0), so a slower
+ * drag is free to turn the view.
  */
 export function swipeStep(dx: number, dy: number, ms: number): -1 | 0 | 1 {
-  if (ms > 800 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return 0;
+  if (ms > 400 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return 0;
   return dx < 0 ? 1 : -1;
+}
+
+/**
+ * The viewer's own turn on a piece's camera, on top of its path (2026-11-12: pinch to zoom, drag
+ * to orbit): `zoom` scales the eye's distance from what it looks at, `yaw` and `pitch` turn the eye
+ * round it (radians), `side` slides eye and target sideways, a share of that distance.
+ */
+export type View = { zoom: number; yaw: number; pitch: number; side: number };
+export const VIEW_HOME: View = { zoom: 1, yaw: 0, pitch: 0, side: 0 };
+export const ZOOM_MIN = 0.5;
+export const ZOOM_MAX = 2.5;
+/** The highest the eye climbs above (or sinks below) what it looks at, radians. */
+const ELEVATION_MAX = 1.35;
+const SIDE_MAX = 0.4;
+
+const clampTo = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
+
+/** A view kept inside its limits. */
+export function clampView(v: View): View {
+  return {
+    zoom: clampTo(v.zoom, ZOOM_MIN, ZOOM_MAX),
+    yaw: v.yaw,
+    pitch: clampTo(v.pitch, -2 * ELEVATION_MAX, 2 * ELEVATION_MAX),
+    side: clampTo(v.side, -SIDE_MAX, SIDE_MAX),
+  };
+}
+
+/** A view eased a share `k` (0..1) of the way home, exactly home once it is close. */
+export function easeView(v: View, k: number): View {
+  const near = (x: number, home: number, eps: number) => {
+    const y = x + (home - x) * k;
+    return Math.abs(y - home) < eps ? home : y;
+  };
+  return {
+    zoom: near(v.zoom, 1, 1e-3),
+    yaw: near(v.yaw, 0, 1e-3),
+    pitch: near(v.pitch, 0, 1e-3),
+    side: near(v.side, 0, 1e-3),
+  };
+}
+
+export const isHome = (v: View) => v.zoom === 1 && v.yaw === 0 && v.pitch === 0 && v.side === 0;
+
+/**
+ * Where the eye stands and looks with the viewer's turn on top of the path's: round the target,
+ * the climb kept short of straight above or below so the picture never flips.
+ */
+export function viewCamera(eye: Vec3, target: Vec3, v: View): { eye: Vec3; target: Vec3 } {
+  const dx = eye[0] - target[0];
+  const dy = eye[1] - target[1];
+  const dz = eye[2] - target[2];
+  const r = Math.hypot(dx, dy, dz) || 1e-6;
+  const flat = Math.hypot(dx, dz);
+  const az = Math.atan2(dx, dz) + v.yaw;
+  const el = clampTo(Math.atan2(dy, flat) + v.pitch, -ELEVATION_MAX, ELEVATION_MAX);
+  const rr = r * v.zoom;
+  // Sideways: across the line of sight, level with the ground.
+  const sx = Math.cos(az) * v.side * r;
+  const sz = -Math.sin(az) * v.side * r;
+  const t: Vec3 = [target[0] + sx, target[1], target[2] + sz];
+  return {
+    eye: [
+      t[0] + rr * Math.cos(el) * Math.sin(az),
+      t[1] + rr * Math.sin(el),
+      t[2] + rr * Math.cos(el) * Math.cos(az),
+    ],
+    target: t,
+  };
 }
 
 /** The Art pills, the same as the panel's (components/GeometryField.tsx ART_PILLS). */
@@ -400,6 +469,19 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     },
     [holdStick],
   );
+  // The viewer's own turn on the camera (pinch or wheel to zoom, drag to orbit), eased home a
+  // few seconds after the last touch, or quickly on Reset view.
+  const viewRef = useRef<View>(VIEW_HOME);
+  const viewAtRef = useRef(0);
+  const returnRef = useRef(false);
+  const holdingRef = useRef(false);
+  const resetView = useCallback(() => {
+    returnRef.current = true;
+  }, []);
+  // A piece that flies on its own (the Cell corridor, the Canyon): what it looks at moves on.
+  // Found from its camera, never by name; there the stick drives instead of steering a game.
+  const fliesRef = useRef(false);
+  const [flies, setFlies] = useState(false);
   const pressKey = useCallback(
     (key: string, down: boolean) => {
       if (!down) {
@@ -455,6 +537,20 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     if (journey) s?.set(0);
     else s?.set(scene, hud.index);
   }, [journey, scene, hud.index]);
+  // Asked again when the look or the scene changes (the Cell's Corridor pill), after they are set.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new look or scene can start the flight
+  useEffect(() => {
+    const P = tripRef.current.pieces;
+    const k = hud.index;
+    let f = false;
+    if (!journey && P && !P.game?.has(k)) {
+      const a = P.camera(k, 0).target;
+      const b = P.camera(k, 6).target;
+      f = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) > 3;
+    }
+    fliesRef.current = f;
+    setFlies(f);
+  }, [journey, hud.index, variant, scene]);
   const cycles = ([] as Cycle[]).concat(trip.pieces?.cycle ?? []);
   const [cycled, setCycled] = useState<number[]>([]);
   useEffect(() => {
@@ -511,6 +607,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         }
         pieceRef.current = i;
         timeRef.current = 0;
+        // Each piece opens on its own path's view.
+        viewRef.current = VIEW_HOME;
         setHud({ index: i, u: 0, time: 0 });
         // Each step opens on its first look.
         setVariant(0);
@@ -665,8 +763,31 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       last = now;
       const P = journeyRef.current ? undefined : T.pieces;
       const k = pieceRef.current;
+      const gamePiece = !!(P && T.pieces?.game?.has(k));
+      // The stick on a piece that flies on its own: up flies faster, down slower, left and right
+      // drift across.
+      let pace = 1;
+      if (P && !gamePiece && fliesRef.current && stickHeld.current.length > 0) {
+        const held = stickHeld.current;
+        if (held.includes('arrowup')) pace = 2.5;
+        else if (held.includes('arrowdown')) pace = 0.3;
+        const drift = (held.includes('arrowright') ? 1 : 0) - (held.includes('arrowleft') ? 1 : 0);
+        if (drift !== 0) {
+          viewRef.current = clampView({
+            ...viewRef.current,
+            side: viewRef.current.side + drift * dt * 0.5,
+          });
+        }
+        viewAtRef.current = now;
+      }
+      // Home again, slowly a few seconds after the last touch, quickly on Reset view.
+      if (!isHome(viewRef.current) && !holdingRef.current) {
+        const rate = returnRef.current ? 3 : now - viewAtRef.current > 4000 ? 0.5 : 0;
+        if (rate > 0) viewRef.current = easeView(viewRef.current, 1 - Math.exp(-dt * rate));
+      }
+      if (isHome(viewRef.current)) returnRef.current = false;
       if (playingRef.current) {
-        const next = timeRef.current + dt * speedRef.current;
+        const next = timeRef.current + dt * speedRef.current * pace;
         // A step on its own keeps counting, so whatever moves with time never jumps at its loop.
         timeRef.current = P ? next : next % T.total;
       }
@@ -735,19 +856,24 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         } else guided.set(null, moved, t);
       }
 
-      if (c) {
-        // Stepped back from what it looks at on a tall screen.
-        eye[0] = c.target[0] + (c.eye[0] - c.target[0]) * back;
-        eye[1] = c.target[1] + (c.eye[1] - c.target[1]) * back;
-        eye[2] = c.target[2] + (c.eye[2] - c.target[2]) * back;
-        camera.position.set(eye[0], eye[1], eye[2]);
-        camera.lookAt(c.target[0], c.target[1], c.target[2]);
-      } else {
-        // A slow sway of the eye, so depth reads even when nothing else moves.
-        camera.position.x = Math.sin(t * 0.05) * 3;
-        camera.position.y = Math.cos(t * 0.037) * 2;
-        camera.lookAt(0, 0, 0);
-      }
+      // The path's eye: stepped back from what it looks at on a tall screen; with no camera, a
+      // slow sway round the centre, so depth reads even when nothing else moves.
+      const target: Vec3 = c ? c.target : [0, 0, 0];
+      const path: Vec3 = c
+        ? [
+            c.target[0] + (c.eye[0] - c.target[0]) * back,
+            c.target[1] + (c.eye[1] - c.target[1]) * back,
+            c.target[2] + (c.eye[2] - c.target[2]) * back,
+          ]
+        : [Math.sin(t * 0.05) * 3, Math.cos(t * 0.037) * 2, 58 * back];
+      // The viewer's turn on top; a game's chase camera only zooms (the stick steers there).
+      const vw = gamePiece ? { ...VIEW_HOME, zoom: viewRef.current.zoom } : viewRef.current;
+      const seen = isHome(vw) ? { eye: path, target } : viewCamera(path, target, vw);
+      eye[0] = seen.eye[0];
+      eye[1] = seen.eye[1];
+      eye[2] = seen.eye[2];
+      camera.position.set(eye[0], eye[1], eye[2]);
+      camera.lookAt(seen.target[0], seen.target[1], seen.target[2]);
 
       for (let i = 0; i < N; i++) {
         const p = particles[i] as Particle;
@@ -861,12 +987,61 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       else if (e.key === 'ArrowLeft') jumpTo(currentStep() - 1);
       else if (e.key === 'f') immerse();
     };
+    // Fingers and the mouse on the picture: one drags to orbit (not on a game, where the stick
+    // steers), two pinch to zoom, a tap is the click, a quick sideways flick changes piece.
+    const pts = new Map<number, { x: number; y: number }>();
+    let pinch: { d: number; zoom: number } | null = null;
+    let drag: {
+      id: number;
+      x: number;
+      y: number;
+      lx: number;
+      ly: number;
+      at: number;
+      moved: boolean;
+      touch: boolean;
+      start: View;
+    } | null = null;
+    const spread = () => {
+      const [a, b] = [...pts.values()];
+      return a && b ? Math.hypot(a.x - b.x, a.y - b.y) || 1 : 1;
+    };
+    const touched = () => {
+      viewAtRef.current = performance.now();
+      returnRef.current = false;
+    };
     const move = (e: PointerEvent) => {
       wake();
       cursorRef.current = {
         x: (e.clientX / window.innerWidth) * 2 - 1,
         y: 1 - (e.clientY / window.innerHeight) * 2,
       };
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && pts.size >= 2) {
+        touched();
+        viewRef.current = clampView({
+          ...viewRef.current,
+          zoom: (pinch.zoom * pinch.d) / spread(),
+        });
+        return;
+      }
+      if (!drag || drag.id !== e.pointerId) return;
+      const ddx = e.clientX - drag.lx;
+      const ddy = e.clientY - drag.ly;
+      drag.lx = e.clientX;
+      drag.ly = e.clientY;
+      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 8) drag.moved = true;
+      if (!drag.moved || gameStep()) return;
+      touched();
+      const v = viewRef.current;
+      viewRef.current = clampView({ ...v, yaw: v.yaw - ddx * 0.005, pitch: v.pitch + ddy * 0.005 });
+    };
+    const zoomBy = (e: WheelEvent) => {
+      e.preventDefault();
+      touched();
+      const v = viewRef.current;
+      viewRef.current = clampView({ ...v, zoom: v.zoom * Math.exp(e.deltaY * 0.0015) });
     };
     const away = (e: PointerEvent) => {
       if (!e.relatedTarget) cursorRef.current = null;
@@ -878,8 +1053,6 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       guideRef.current = !guideRef.current;
       setGuide(guideRef.current);
     };
-    // A finger on the picture: a tap is the click, a quick sideways swipe changes piece.
-    let swipe: { id: number; x: number; y: number; at: number } | null = null;
     const press = (e: PointerEvent) => {
       wake();
       const target = e.target as Node | null;
@@ -892,34 +1065,56 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         return;
       }
       if (e.target !== canvasRef.current) return;
-      if (e.pointerType === 'touch') {
-        swipe = { id: e.pointerId, x: e.clientX, y: e.clientY, at: performance.now() };
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      holdingRef.current = true;
+      touched();
+      if (pts.size === 2) {
+        // A second finger: a pinch, and no tap or flick when they lift.
+        pinch = { d: spread(), zoom: viewRef.current.zoom };
+        drag = null;
         return;
       }
-      toggleGuide();
+      drag = {
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        lx: e.clientX,
+        ly: e.clientY,
+        at: performance.now(),
+        moved: false,
+        touch: e.pointerType === 'touch',
+        start: viewRef.current,
+      };
     };
     const lift = (e: PointerEvent) => {
-      if (!swipe || swipe.id !== e.pointerId) return;
-      const dx = e.clientX - swipe.x;
-      const dy = e.clientY - swipe.y;
-      const ms = performance.now() - swipe.at;
-      swipe = null;
-      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+      if (!pts.delete(e.pointerId)) return;
+      if (pts.size < 2) pinch = null;
+      if (pts.size === 0) holdingRef.current = false;
+      touched();
+      const d = drag;
+      if (!d || d.id !== e.pointerId) return;
+      drag = null;
+      if (e.type === 'pointercancel') return;
+      if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) <= 8) {
         toggleGuide();
         return;
       }
-      // The games keep the finger for their stick; a swipe there changes nothing.
-      const s = swipeStep(dx, dy, ms);
-      // In the studio a swipe goes through its pieces only, never into the game.
+      // A quick sideways flick changes piece, its little turn of the view undone; the games keep
+      // the finger for their stick. In the studio it goes through its pieces only.
+      const s = d.touch ? swipeStep(e.clientX - d.x, e.clientY - d.y, performance.now() - d.at) : 0;
       if (s !== 0 && !gameStep()) {
+        viewRef.current = d.start;
         jumpTo(journeyRef.current ? currentStep() + s : toStudio(currentStep(), s));
       }
     };
+    const canvas = canvasRef.current;
+    canvas?.addEventListener('wheel', zoomBy, { passive: false });
     const keyUp = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
     const blur = () => keysRef.current.clear();
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerdown', press);
     window.addEventListener('pointerup', lift);
+    window.addEventListener('pointercancel', lift);
     document.addEventListener('pointerout', away);
     window.addEventListener('keydown', key);
     window.addEventListener('keyup', keyUp);
@@ -930,6 +1125,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerdown', press);
       window.removeEventListener('pointerup', lift);
+      window.removeEventListener('pointercancel', lift);
+      canvas?.removeEventListener('wheel', zoomBy);
       document.removeEventListener('pointerout', away);
       window.removeEventListener('keydown', key);
     };
@@ -996,6 +1193,25 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       </div>
     ) : null;
   const playable = !journey && !!game?.has(hud.index);
+  // A button held like a key: down while the finger is on it.
+  const holdKey = (k: string, label: string, className: string) => (
+    <button
+      type="button"
+      key={k}
+      className={className}
+      aria-label={label}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        pressKey(k, true);
+      }}
+      onPointerUp={() => pressKey(k, false)}
+      onPointerCancel={() => pressKey(k, false)}
+      onPointerLeave={() => pressKey(k, false)}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {label}
+    </button>
+  );
   const claims = game?.claims ?? [];
   // A world with a game has two sides, Game and Studio; the pills show the side you are on.
   const gamePieces = trip.phases.map((_, k) => k).filter((k) => !!game?.has(k));
@@ -1007,7 +1223,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     <main
       ref={mainRef}
       className={`bb bb-${page}${immersed ? ' bb-immersed' : ''}${
-        touch && playable ? ' bb-touch-game' : ''
+        touch && (playable || flies) ? ' bb-touch-game' : ''
       }`}
     >
       <canvas
@@ -1051,7 +1267,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       ) : null}
       {/* On a phone a game is flown with a stick under the left thumb and its own keys under the
           right, held in the same set of keys as the keyboard's (2026-11-12). */}
-      {touch && playable && game ? (
+      {touch && (playable || flies) ? (
         <div className="bb-touch">
           <div
             className="bb-stick"
@@ -1066,29 +1282,14 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
               style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }}
             />
           </div>
-          {claims.length > 0 ? (
+          {playable ? (
             <div className="bb-acts">
-              {claims.map((k) => {
-                const label = claimLabel(k, game.meter?.label);
-                return (
-                  <button
-                    type="button"
-                    key={k}
-                    className="bb-act"
-                    aria-label={label}
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      pressKey(k, true);
-                    }}
-                    onPointerUp={() => pressKey(k, false)}
-                    onPointerCancel={() => pressKey(k, false)}
-                    onPointerLeave={() => pressKey(k, false)}
-                    onContextMenu={(e) => e.preventDefault()}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
+              {claims.map((k) => holdKey(k, claimLabel(k, game?.meter?.label), 'bb-act'))}
+              {/* Faster and slower, as Shift and X: small, above the game's own buttons. */}
+              <div className="bb-paces">
+                {holdKey('x', 'Slower', 'bb-pace')}
+                {holdKey('shift', 'Faster', 'bb-pace')}
+              </div>
             </div>
           ) : null}
         </div>
@@ -1312,6 +1513,13 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
               title="Full screen (F); Esc to come back"
             >
               ⛶ Full screen
+            </button>
+            <button
+              type="button"
+              onClick={resetView}
+              title="Back to the piece's own view (pinch or wheel zooms, drag turns it)"
+            >
+              Reset view
             </button>
             {(trip.backgrounds?.length ?? 0) > 1 ? (
               <button type="button" onClick={nextBg} title="Change the background">
