@@ -21,5 +21,8 @@ describe('CityVisionPage', () => {
     expect(screen.getByRole('link', { name: 'Open the City' }).getAttribute('href')).toBe(
       '/geometry-field/city',
     );
+    expect(screen.getByRole('link', { name: '← City' }).getAttribute('href')).toBe(
+      '/geometry-field/city',
+    );
   });
 });
