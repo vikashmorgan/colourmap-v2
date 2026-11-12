@@ -185,6 +185,8 @@ export function stickKeys(dx: number, dy: number, reach = STICK_REACH): string[]
 export function claimLabel(key: string, meter?: string): string {
   if (key === ' ') return meter ?? 'Jump';
   if (key === 'b') return 'Bite';
+  if (key === 'l') return 'Look';
+  if (key === 'enter') return 'Go';
   return key.toUpperCase();
 }
 
