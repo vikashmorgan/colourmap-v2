@@ -44,6 +44,7 @@ import {
   type Vec3,
 } from './bigbang';
 import { BUILDINGS, buildingsEye } from './city-buildings';
+import { camView, cockpitEye, toggleView } from './city-cockpit';
 import { DOCK_PROMPT, type Placed as DockPlaced, dockAt } from './city-docks';
 import {
   advancePulses,
@@ -82,6 +83,7 @@ import {
   roomSeeThrough,
   roomStep,
 } from './city-rooms';
+import { currentShip, shipGrainAt, shipGrainColour } from './city-ships';
 import { skyGrain } from './city-sky';
 import {
   type Arrival,
@@ -338,7 +340,7 @@ export const PHASES: CityPhase[] = [
   {
     id: 'ship',
     name: 'Ship',
-    line: 'Pilot a small ship through the City of Dreams: Chinatown, the Indian quarter, Istanbul, the Heights, the canals, golden gardens, temples, factories, domes, pyramids. A and D turn, W and S climb and dive, E faster, Q slower, Space boosts (with W, up into the stratosphere), L slows down to look, Enter starts a race.',
+    line: 'Pilot a small ship through the City of Dreams: Chinatown, the Indian quarter, Istanbul, the Heights, the canals, golden gardens, temples, factories, domes, pyramids. A and D turn, W and S climb and dive, E faster, Q slower, Space boosts (with W, up into the stratosphere), L slows down to look, Enter starts a race, V flies from the cockpit, M opens the map.',
     words: [
       'A city you can read from above is a city you can find your way home in.',
       'Fly gently: the city answers, a window waking for every one who passes.',
@@ -1889,9 +1891,10 @@ export const boostLeft = () => fly.boost;
 export const slowMode = () => fly.slow;
 /**
  * The keys the Ship takes for itself beyond the arrows, each a round button on a phone: Space
- * boosts (with W, the super boost), L slow mode, Enter starts a race.
+ * boosts (with W, the super boost), L slow mode, Enter starts a race, V the view from the cockpit
+ * (lib/city-cockpit.ts).
  */
-export const SHIP_KEYS = [' ', 'l', 'enter'];
+export const SHIP_KEYS = [' ', 'l', 'enter', 'v'];
 
 /** The height you cruise at down the avenue, and low under the lanterns through Chinatown. */
 export const CRUISE_Y = GROUND + 21;
@@ -2007,7 +2010,8 @@ function carryOn(dt: number, t: number) {
   fly.vy += (wantVy - fly.vy) * (1 - Math.exp(-2 * dt));
   if (p[1] < SKY - 5) fly.high = false;
   const pace = Math.abs(miss) > 0.25 ? 0.6 : 1;
-  fly.speed += (FLY_SPEED * pace - fly.speed) * (1 - Math.exp(-1.5 * dt));
+  fly.speed +=
+    (FLY_SPEED * currentShip().handling.speed * pace - fly.speed) * (1 - Math.exp(-1.5 * dt));
   move(dt);
 }
 
@@ -2037,6 +2041,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   const pressed = (k: string) => keys.includes(k) && !fly.held.includes(k);
   const enter = pressed('enter');
   const lookKey = pressed('l');
+  const viewKey = pressed('v');
   fly.held = [...keys];
   fly.look += ((fly.slow && fly.mode === 'pilot' ? 1 : 0) - fly.look) * (1 - Math.exp(-2 * dt));
   // Inside a dock's room (lib/city-rooms.ts) the Dot Walker walks; Enter or Esc, back to the ship.
@@ -2072,13 +2077,18 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   }
   fly.mode = 'pilot';
   if (lookKey) fly.slow = !fly.slow;
+  // V: from behind the ship to the pilot's seat and back.
+  if (viewKey) toggleView();
+  // Each ship flies a little differently (lib/city-ships.ts): its pace, turn, boost and climb.
+  const hd = currentShip().handling;
   const held = (...names: string[]) => names.some((n) => keys.includes(n));
-  const turn = (held('a', 'arrowleft') ? -1.2 : 0) + (held('d', 'arrowright') ? 1.2 : 0);
+  const turn =
+    ((held('a', 'arrowleft') ? -1.2 : 0) + (held('d', 'arrowright') ? 1.2 : 0)) * hd.turn;
   fly.yaw = turnTo(fly.yaw - turn * dt);
   fly.bank += (-turn * 0.45 - fly.bank) * (1 - Math.exp(-4 * dt));
   const up = held('w', 'arrowup');
   const down = held('s', 'arrowdown');
-  let tilt = (up ? 0.55 : 0) - (down ? 0.55 : 0);
+  let tilt = ((up ? 0.55 : 0) - (down ? 0.55 : 0)) * Math.min(1.4, hd.climb);
   if (fly.pos[1] <= floorAt(fly.pos[0], fly.pos[2]) + 2.5 && tilt < 0) tilt = 0;
   if (fly.pos[1] >= ceiling() && tilt > 0) tilt = 0;
   // Slow mode levels out unless you climb or dive.
@@ -2118,7 +2128,8 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   const settle = fly.dock && !held('w', 's', 'e', 'shift', ' ', 'arrowup', 'arrowdown') ? 0 : 1;
   const pace =
     settle *
-    (boosting ? BOOST_PACE : held('e', 'shift') ? 1.8 : held('q', 'x') ? 0.4 : 1) *
+    hd.speed *
+    (boosting ? BOOST_PACE * hd.boost : held('e', 'shift') ? 1.8 : held('q', 'x') ? 0.4 : 1) *
     (fly.slow ? SLOW_PACE : 1) *
     r.pace;
   fly.speed += (FLY_SPEED * pace - fly.speed) * (1 - Math.exp((boosting ? -4 : -1.5) * dt));
@@ -2232,6 +2243,9 @@ export function flier(t: number): { c: Vec3; f: Vec3 } {
   return fly.mode === 'route' ? route(t) : { c: fly.pos, f: headingOf(fly.yaw, fly.pitch) };
 }
 
+/** Your ship now (the latest frame's): where it is and which way it flies, for the map. */
+export const shipNow = () => flier(fly.t);
+
 /** How far up into the stratosphere you are, 0 (at the towers' sky) to 1. */
 const highness = (y: number) => smooth((y - SKY + 20) / (STRATOSPHERE - SKY));
 
@@ -2262,10 +2276,19 @@ const clearAt = (eyeY: number) => smooth((eyeY - SKY) / (STRATOSPHERE + 190 - SK
  */
 export const highSize = (eyeY: number) => 1 + 13 * clearAt(eyeY);
 
-/** The cockpit's dials: your height over the street and your speed. */
-export type Gauge = { label: string; value: number; min?: number; max: number; unit?: string };
+export type Gauge = {
+  label: string;
+  value: number;
+  min?: number;
+  max: number;
+  unit?: string;
+  kind?: 'compass' | 'text';
+  text?: string;
+};
+/** The cockpit's instruments: height, speed, the compass and the district you are in. */
 export function gauges(): Gauge[] {
-  const { c } = flier(fly.t);
+  const { c, f } = flier(fly.t);
+  const hd = currentShip().handling;
   return [
     {
       label: 'Height',
@@ -2277,8 +2300,22 @@ export function gauges(): Gauge[] {
     {
       label: 'Speed',
       value: Math.round(fly.mode === 'route' ? FLY_SPEED : fly.speed),
-      max: FLY_SPEED * BOOST_PACE,
+      max: FLY_SPEED * BOOST_PACE * Math.max(1, hd.speed * hd.boost),
       unit: 'm/s',
+    },
+    // The compass: 0 up the avenue (-z), round to the right.
+    {
+      label: 'Heading',
+      kind: 'compass',
+      value: wrap((Math.atan2(f[0], -f[2]) * 180) / Math.PI, 360),
+      max: 360,
+    },
+    {
+      label: 'District',
+      kind: 'text',
+      text: DISTRICTS[districtAt(c[0], c[2])].name,
+      value: 0,
+      max: 1,
     },
   ];
 }
@@ -2320,6 +2357,15 @@ function shipEye(c: Vec3, f: Vec3): Eye {
   const plan: Vec3 = [c[0] + fh[0] * 160, GROUND, c[2] + fh[2] * 160];
   const target = lerp3(lerp3(near, down, lk), plan, hi);
   return { eye, target };
+}
+
+/**
+ * The Ship's camera: behind it (the chase), or from the pilot's seat when the cockpit view is on
+ * (V; lib/city-cockpit.ts), the horizon leaning with the bank.
+ */
+function shipView(c: Vec3, f: Vec3): Eye {
+  if (camView() !== 'cockpit') return shipEye(c, f);
+  return cockpitEye(c, f, currentShip().len, fly.mode === 'route' ? 0 : fly.bank, fly.look);
 }
 
 /* ---------- what the eye can see: towers in the way ---------- */
@@ -3079,7 +3125,7 @@ function gather(P: Plan): { d: number; run: () => void }[] {
 /** Make the plan for time t: where the eye is, then every site it can see, nearest first. */
 function build(P: Plan, t: number) {
   const { c, f } = flier(t);
-  const { eye, target } = roomCamera(t) ?? shipEye(c, f);
+  const { eye, target } = roomCamera(t) ?? shipView(c, f);
   seeThrough = roomSeeThrough(eye);
   Object.assign(P, { t, v: fly.v, c, f, eye, fwd: norm(sub(target, eye)), n: 0, top: 0 });
   const space = inSpace();
@@ -3263,8 +3309,16 @@ function shipAt(p: Particle, t: number): Spot {
     // a ship over the plan, not a blot of light.
     const hi = clearAt(P.eye[1]);
     const bank = fly.mode === 'route' ? 0 : fly.bank;
-    const { pos, part } = craftAt(P.c, P.f, 2.4 * (1 + 2 * hi), p, pace, bank);
-    return { pos, rgb: craftColour(part, p, 0.42 * (1 - 0.45 * hi)) };
+    // The ship you chose (lib/city-ships.ts); from its own seat you see the canopy, not the hull.
+    const ship = currentShip();
+    const len = ship.len * (1 + 2 * hi);
+    const k = camView() === 'cockpit' ? 0 : 0.42 * (1 - 0.45 * hi);
+    if (ship.id !== 'arrow') {
+      const g = shipGrainAt(ship.id, P.c, P.f, len, p, pace, bank);
+      return { pos: g.pos, rgb: shipGrainColour(ship.id, g.part, p, k) };
+    }
+    const { pos, part } = craftAt(P.c, P.f, len, p, pace, bank);
+    return { pos, rgb: craftColour(part, p, k) };
   }
   // The sky (lib/city-sky.ts), in a dome just beyond the city's reach, so nothing in it stands in
   // front of it: stars and constellations, satellites, the stations, the spire's beacon.
@@ -3453,7 +3507,7 @@ export const colour = (k: number, p: Particle, u: number, t: number) => journeyA
 
 /* ---------- the moving eye ---------- */
 
-type Eye = { eye: Vec3; target: Vec3 };
+type Eye = { eye: Vec3; target: Vec3; roll?: number };
 
 /** Where the camera stands in piece k, `u` through it. */
 export function eyeIn(k: number, u: number, t: number): Eye {
@@ -3516,7 +3570,7 @@ export function eyeIn(k: number, u: number, t: number): Eye {
     }
     default: {
       const { c, f } = flier(t);
-      return roomCamera(t) ?? shipEye(c, f);
+      return roomCamera(t) ?? shipView(c, f);
     }
   }
 }

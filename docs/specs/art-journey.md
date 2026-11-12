@@ -96,7 +96,8 @@ dimmed when idle, still tappable) are on screen. While a game is played its bar 
 on screen too, with its dials.
 
 - Opens on the button or **M**; shuts on **Esc**, the ✕, **M**, or a tap anywhere outside it
-  (that tap does nothing else). It stays open while you pick pieces.
+  (that tap does nothing else). It stays open while you pick pieces. On a game whose own panel
+  takes M (the City's map), the menu answers to **N** there instead; the button says which.
 - A wide screen: a sheet anchored above the button. A phone (≤ 640px): a sheet rising from the
   bottom, 8px from the edges, at most 64% of the height, scrolling inside. Both lifted with the
   "sheet on top" shadow (docs/specs/visual-identity.md).
@@ -157,6 +158,24 @@ colour presets or other stuff when needed for design variants.")
   the variants). The Design menu then shows a **Palette** pill (with the preset on, e.g.
   "Palette · Gold") that opens a row of the presets; only on pieces that have them. Each piece
   opens on its first preset, the Journey on the first.
+
+**Cockpit displays, game rows and a game's panel** (2026-11-12, the City's ships, cockpits and
+map, [art-city.md](art-city.md#ships-cockpits-and-the-map-2026-11-12)). Generic hooks on
+`pieces.game`, so any game can use them and the player names none:
+
+- `gauges` may carry a **compass** (`kind: 'compass'`, degrees) and a **word** (`kind: 'text'`).
+  `display()` picks how they are drawn, read every render: **dials** (the first style, and the
+  default), **lines**, **holo**, **segments**, or **none** (no instruments at all; the bar and
+  count stay). Drawn by components/Gauges.tsx and painted each frame straight onto the page (CSS
+  variables and text), never re-rendering React.
+- `options`: rows of pills on the game's side of the Design menu (the City's Ship, Displays and
+  View), each reading its choice every render.
+- `overlay()`: a layer over the picture while the game is played (a cockpit's canopy); never takes
+  a finger. A piece's camera may give `roll` to lean the picture (a cockpit's bank).
+- `sheet`: a panel over the picture (the City's map) on its key while the game is played, a button
+  in the Design menu and a small pill above the round buttons on a phone. Time stands still while
+  it is open (the last picture held); Esc, its key or its own close shut it. It closes when the
+  piece changes. A claimed **V** is named **View** on its round button.
 
 **Your own view** (2026-11-12, "do all that"). On top of every piece's own camera path, without
 changing a piece:

@@ -709,7 +709,10 @@ input[type="range"].feedback-slider::-moz-range-thumb {
   z-index: 1220;
 }
 /* Full screen with the picture alone: every control and word hidden until Esc. */
-.bb-immersed > :not(.bb-canvas):not(.bb-hud):not(.bb-exit):not(.bb-ink):not(.bb-touch) {
+.bb-immersed
+> :not(.bb-canvas):not(.bb-hud):not(.bb-exit):not(.bb-ink):not(.bb-touch):not(.bb-overlay):not(
+  .bb-sheet
+) {
   display: none !important;
 }
 .bb-canvas {
@@ -1082,6 +1085,7 @@ input[type="range"].feedback-slider::-moz-range-thumb {
 }
 .bb-gauge-needle {
   transform-origin: 28px 28px;
+  transform: rotate(calc(-135deg + 270deg * var(--k, 0)));
   transition: transform 0.15s linear;
 }
 .bb-gauge-needle line {
@@ -1539,5 +1543,335 @@ input[type="range"].art-slider.magma {
   .edu-lane > * {
     width: auto !important;
     min-width: 0;
+  }
+}
+
+/* ---------- The City's Ship: cockpit displays, the canopy and the map (2026-11-12) ---------- */
+/* A label before a game's own row of pills in the Design menu (Ship, Displays, View). */
+.bb-pills-label {
+  align-self: center;
+  margin-right: 4px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(244, 234, 216, 0.55);
+}
+/* Dials: the compass's rose turns under a fixed mark. */
+.bb-gauge-rose {
+  transform-origin: 28px 28px;
+  transform: rotate(calc(var(--h, 0deg) * -1));
+}
+.bb-gauge-rose text {
+  fill: rgba(244, 234, 216, 0.6);
+  font-size: 8px;
+  text-anchor: middle;
+}
+.bb-gauge-mark {
+  fill: #c4a060;
+}
+.bb-gauge-word {
+  align-self: end;
+  padding-bottom: 2px;
+}
+.bb-gauge-word .bb-gauge-label {
+  color: rgba(244, 234, 216, 0.8);
+  white-space: nowrap;
+}
+/* Lines: a minimal stack, a hairline bar each, numbers in tabular figures. */
+.bb-gauges-lines {
+  flex-direction: column;
+  gap: 5px;
+  min-width: 200px;
+}
+.bb-line-g {
+  display: grid;
+  grid-template-columns: 64px 1fr 72px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(244, 234, 216, 0.6);
+}
+.bb-line-bar {
+  height: 1px;
+  background: rgba(244, 234, 216, 0.18);
+  position: relative;
+}
+.bb-line-bar > span {
+  position: absolute;
+  inset: -0.5px auto -0.5px 0;
+  width: calc(var(--k, 0) * 100%);
+  background: rgba(244, 234, 216, 0.85);
+  transition: width 0.15s linear;
+}
+.bb-line-value {
+  text-align: right;
+  color: #f4ead8;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  white-space: nowrap;
+}
+.bb-line-tape {
+  position: relative;
+  height: 12px;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
+}
+.bb-line-tape::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #c4a060;
+}
+.bb-line-tape-in {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  display: flex;
+  width: 270px;
+  /* A point every 30px (90° each); the fifth, N, sits under the mark at heading 0. */
+  transform: translateX(calc(-135px - var(--hn, 0) * 120px));
+}
+.bb-line-tape-in span {
+  flex: 0 0 30px;
+  text-align: center;
+  font-size: 9px;
+  line-height: 12px;
+}
+/* Holo: open arcs of soft warm light, a faint glow; no frame. */
+.bb-holo {
+  display: grid;
+  justify-items: center;
+  filter: drop-shadow(0 0 4px rgba(255, 214, 160, 0.35));
+}
+.bb-holo svg {
+  width: 84px;
+  height: 54px;
+  display: block;
+}
+.bb-holo-track {
+  fill: none;
+  stroke: rgba(255, 226, 180, 0.16);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.bb-holo-fill {
+  fill: none;
+  stroke: rgba(255, 226, 180, 0.85);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: calc(100 - var(--k, 0) * 100);
+  transition: stroke-dashoffset 0.15s linear;
+}
+.bb-holo-needle {
+  transform-origin: 40px 46px;
+  /* North at the top of the arc, east and west halfway down, south at its ends. */
+  transform: rotate(calc(var(--hs, 0) * 90deg));
+}
+.bb-holo-needle circle {
+  fill: rgba(255, 240, 214, 0.95);
+}
+.bb-holo-value {
+  fill: rgba(255, 240, 214, 0.95);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-anchor: middle;
+}
+.bb-holo-label,
+.bb-holo-word {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 226, 180, 0.7);
+}
+.bb-holo-word {
+  align-self: center;
+  white-space: nowrap;
+}
+/* Segments: a retro amber read-out, ten cells and digits, on a dark plate. */
+.bb-gauges-segments {
+  gap: 8px;
+}
+.bb-seg7 {
+  display: grid;
+  gap: 3px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(12, 8, 6, 0.6);
+  border: 1px solid rgba(232, 166, 74, 0.25);
+  min-width: 74px;
+}
+.bb-seg7-label {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(232, 166, 74, 0.6);
+}
+.bb-seg7-value {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 16px;
+  line-height: 1;
+  color: #e8a64a;
+  text-shadow: 0 0 6px rgba(232, 166, 74, 0.45);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bb-seg7-row {
+  display: flex;
+  gap: 2px;
+}
+.bb-seg7-row i {
+  flex: 1;
+  height: 5px;
+  background: rgba(232, 166, 74, 0.12);
+}
+.bb-seg7-row i.on {
+  background: #e8a64a;
+  box-shadow: 0 0 4px rgba(232, 166, 74, 0.5);
+}
+@media (max-width: 760px) {
+  .bb-gauges-lines {
+    min-width: 170px;
+  }
+  .bb-holo svg {
+    width: 64px;
+    height: 42px;
+  }
+  .bb-seg7 {
+    min-width: 58px;
+    padding: 4px 6px;
+  }
+  .bb-seg7-value {
+    font-size: 13px;
+  }
+}
+/* A game's layer over the picture (the City's canopy): never in the way of a finger. */
+.bb-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.cd-canopy {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* A round canopy's frame runs on past its box to the screen's edges. */
+  overflow: visible;
+}
+/* A short landscape phone: the round buttons two by two, smaller, the pace pills above them,
+ * so the column never runs up the screen. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .bb-acts {
+    display: grid;
+    grid-template-columns: repeat(2, 58px);
+    gap: 10px;
+    justify-items: end;
+    bottom: calc(18px + env(safe-area-inset-bottom));
+  }
+  .bb-act {
+    width: 58px;
+    height: 58px;
+    font-size: 12px;
+  }
+  .bb-paces {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: end;
+  }
+  .bb-touch-game .bb-hud {
+    bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+  .bb-stick {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+}
+.cd-canopy-frame {
+  fill: rgba(10, 7, 14, 0.78);
+  stroke: rgba(196, 160, 96, 0.35);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.cd-canopy-glass {
+  fill: none;
+  stroke: rgba(244, 234, 216, 0.14);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.cd-canopy-dash {
+  fill: none;
+  stroke: rgba(232, 180, 110, 0.6);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 3px rgba(232, 180, 110, 0.5));
+}
+/* A game's panel over the picture (the City's map): the whole screen, time standing still. */
+.bb-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+}
+.cd-map {
+  position: absolute;
+  inset: 0;
+  color: #f4ead8;
+}
+.cd-map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+.cd-map-canvas:active {
+  cursor: grabbing;
+}
+.cd-map-bar {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top));
+  left: calc(16px + env(safe-area-inset-left));
+  right: calc(16px + env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cd-map-title {
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #e6c27a;
+}
+.cd-map-bar .bb-pills {
+  display: flex;
+  gap: 6px;
+}
+.cd-map-bar .bb-menu-close {
+  margin-left: auto;
+}
+.cd-map-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: 12px;
+  color: rgba(244, 234, 216, 0.55);
+  white-space: nowrap;
+  pointer-events: none;
+}
+@media (max-width: 640px) {
+  .cd-map-title {
+    display: none;
+  }
+  .cd-map-hint {
+    font-size: 11px;
   }
 }

@@ -12,6 +12,9 @@
  * city with the keys. The math lives in lib/city.ts, lib/golden-city.ts and
  * lib/city-plans.ts; the shared trip player draws it.
  */
+import { useEffect } from 'react';
+import CityCockpit from '@/components/CityCockpit';
+import CityDreamsMap from '@/components/CityDreamsMap';
 import TripPlayer, { type Trip } from '@/components/TripPlayer';
 import {
   boostLeft,
@@ -45,6 +48,17 @@ import {
   variantNames,
   wordsShown,
 } from '@/lib/city';
+import {
+  DISPLAY_NAMES,
+  displayIndex,
+  displayNow,
+  loadCockpit,
+  setDisplay,
+  setView,
+  VIEW_NAMES,
+  viewIndex,
+} from '@/lib/city-cockpit';
+import { loadShip, SHIP_NAMES, setShip, shipIndex } from '@/lib/city-ships';
 
 const TRIP: Trip = {
   phases: PHASES,
@@ -92,10 +106,25 @@ const TRIP: Trip = {
       meter: { label: 'Boost', value: boostLeft },
       tally,
       gauges,
+      // Four ships of our own, each with its own instruments (or any style, or none) and its
+      // canopy from the pilot's seat (V); M opens the map (2026-11-12).
+      display: displayNow,
+      options: [
+        { label: 'Ship', names: SHIP_NAMES, get: shipIndex, set: setShip },
+        { label: 'Displays', names: DISPLAY_NAMES, get: displayIndex, set: setDisplay },
+        { label: 'View', names: VIEW_NAMES, get: viewIndex, set: setView },
+      ],
+      overlay: () => <CityCockpit />,
+      sheet: { key: 'm', label: 'Map', render: (close) => <CityDreamsMap onClose={close} /> },
     },
   },
 };
 
 export default function City() {
+  // The ship, displays and view last chosen on this device.
+  useEffect(() => {
+    loadShip();
+    loadCockpit();
+  }, []);
   return <TripPlayer trip={TRIP} page="city" />;
 }

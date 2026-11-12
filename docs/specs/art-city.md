@@ -998,6 +998,106 @@ between, with portals on to the other systems and back to the City. No cities on
 - Space has no race, no other ships and no landing; the cockpit gauges still read the city's
   height out there.
 
+## Ships, cockpits and the map (2026-11-12)
+
+> "add a cool 2d city map that can turn into 3d city map that u can spin in air to see (M for map)
+> or in menu for those on the phone. can be a bit simplified so it doesn't show full city in detail
+> but captures the map etc... also do a few different spaceships with different cool spaceship
+> cockpit instruments that u see on ur screen. height speed. play with different types of
+> displays, and option to have no displays always possible, can be chosen in menu. and a pov view
+> from inside the cockpit when u drive ur spaceship."
+
+All on the Game side (the Ship), through the shared player's generic game hooks (art-journey.md,
+**Cockpit displays, game rows and a game's panel**): nothing in the player names the City.
+
+**Ships** (`lib/city-ships.ts`). Four of our own, each of grains like the first (the film is a mood
+only; no ship copied). Chosen in the Design menu's **Ship** row; remembered on the device
+(`colourmap:city-ship`, read and written in try/catch).
+
+| Ship | Shape | Handling (pace · turn · boost · climb, the Arrow = 1) | Its displays |
+|------|-------|--------------------------------------------------------|--------------|
+| **Arrow** | the first ship: a flat arrowhead, a raised spine, two engines | 1 · 1 · 1 · 1 | Dials |
+| **Manta** | a wide ray's wing bowing to its tips, a thin tail, two engines, violet glow | 0.9 · 1.3 · 0.9 · 1.2 | Lines |
+| **Ring racer** | a pointed pod inside a ring standing across its way, four struts, one engine, gold glow | 1.25 · 0.85 · 1.2 · 0.9 | Holo |
+| **Hauler** | a long box frame with ribs, a rounded cab, four engines, amber glow | 0.75 · 0.7 · 0.8 · 0.7 | Segments |
+
+Pace scales the cruise, Faster, Slower and the boost; boost scales the boost on top; turn the
+turn rate; climb the climb and dive. The autopilot's route (the Journey, before anyone steers)
+keeps its own steady pace, so it stays the same for the same moment.
+
+**Instruments** (`lib/city.ts` `gauges`): Height, Speed (its range grows with the ship's boost),
+a **Heading** compass (0 up the avenue, round to the right) and the **District** you are in.
+Four styles (components/Gauges.tsx): **Dials** (round dials, a gold needle; the compass a rose
+turning under a fixed mark), **Lines** (a minimal stack of hairline bars, the heading a sliding
+tape), **Holo** (open arcs of soft warm light, the heading a bead riding the arc) and
+**Segments** (a retro amber read-out of ten cells and digits). The **Displays** row: *Ship's own*
+(the default), any one style for every ship, or **None**, which hides every instrument (the bar
+and the race words stay). Remembered (`colourmap:city-display`).
+
+**Cockpit view.** **V** (a round **View** button on a phone; the **View** row, Chase · Cockpit,
+in the Design menu; remembered as `colourmap:city-view`) moves the eye from behind the ship to the
+pilot's seat: just behind the nose and over the spine, looking on ahead; the horizon leans with
+the bank (six tenths of it, so a turn reads without the world spinning); slow mode tips the gaze
+down at the city. Your own hull is not drawn there; instead each ship's **canopy** sits at the
+edges of the screen as a light overlay (`lib/city-cockpit.ts` `CANOPIES`, components/CityCockpit.tsx):
+the Arrow two slim struts and a straight sill, the Manta a wide low bubble, the Ring racer a round
+porthole, the Hauler a square windscreen in three panes. The canopy stays put while the world
+leans, as it would around you; the middle of the view stays clear.
+
+**The map** (`lib/city-minimap.ts`, components/CityDreamsMap.tsx). **M** on the Game side (the
+Design menu then answers to **N**; in the Studio M stays the Design menu), the **Map** button in
+the Design menu, or the small **Map** pill above the round buttons on a phone. A simplified plan of
+one tile of the city from the game's plan data: each district a patch of its colour with its name,
+one block per plot (its tower's footprint and height; pyramids as pyramids; parks and plazas flat),
+the avenue pale, the main roads (the avenue's edges, the tile's edges, the bands' edges) in gold,
+the side streets faint, every landmark named on a ringed dot, the race starts as diamonds with
+their tracks' names, the metro's loop dashed in pale rose with its four stations, the portals, the
+WELCOME panel, and your ship as a gold pointer breathing softly, the way you fly. **2D · 3D**:
+the plan tilts into extruded blocks (a little taller than life, the metro raised to its height,
+places on stems); drag spins and tips it (pans it when flat), the wheel or a pinch zooms, **Fit**
+brings the whole city back. Flat, it fits the long way up a tall screen and across a wide one.
+3D opens framed (polish, 2026-11-13: "3D map opens tiny in the middle of the screen"): tilted
+0.9, turned off the city's long axis by whichever angle (0.3 to 0.9) lets it fill the screen
+best, then zoomed and shifted until the projected box round the whole tile (its ground and tall
+towers) fills four fifths of the screen, centred; switching 2D and 3D eases between the two
+homes. **Names never pile up**: they are laid out greedily, districts first, then landmarks,
+race starts and the rest, nearer first within each; a name that would touch one already placed
+(or leave the screen) waits, and shows as you zoom in or when the pointer comes within 26 px of
+it. In 3D the far names fade (four tenths to full by depth). Time
+stands still while it is open (the player holds the last picture); **M**, **Esc** or ✕ closes it.
+The Dawn sky behind, gold lines, district hues. Canvas 2D, redrawn only when the view changes or
+about ten times a second for the pointer. New parts of the city (docks, embassies) add places by
+appending to `MAP_EXTRAS`.
+
+**Keys** (Ship, Game side): V cockpit view, M map, N Design menu; the rest as before.
+
+**Acceptance (ships, cockpits, map)**
+
+- The map's data comes from the plan and is the same every time; every district, one block per
+  plot, every landmark and race start; the metro a closed loop; flat from above, raised when tilted.
+- Four ships; the Ring racer cruises fastest and the Hauler slowest, the Manta turns furthest in a
+  second; every ship's grains finite and close round it.
+- The Displays choice is remembered; None hides every instrument; each style draws every gauge and
+  takes new readings each frame without re-rendering.
+- V moves the eye to within 1 of the ship and back to the chase; holding V does not flicker; the
+  cockpit view banks in a turn.
+- M on the game opens the map and holds time; Esc, M or its close shut it; in the Studio M is the
+  Design menu.
+- 3D opens with the tile's projected box filling 0.8 of the screen (±0.03), centred, turned off
+  its long axis, at least 0.4 of the screen both ways (1536 × 640, 390 × 844, 1024 × 768). No two
+  names shown overlap, flat or in 3D; a hidden name shows with the pointer on it.
+- The Ring racer's porthole stays round on any screen; on a short landscape phone the round
+  buttons sit two by two.
+
+**Canopy and phone** (polish, 2026-11-13). The Ring racer's canopy is `round`: fitted inside the
+screen (`xMidYMid meet`), its porthole a circle, its frame running on far past the box so the
+sides are filled, not stretched; the other canopies still stretch to the screen. On a short
+landscape phone (at most 520 high) the round buttons (Boost, Look, Go, View) sit two by two and a
+little smaller, the pace pills above them.
+
+**Still rough.** The map shows one tile (the city repeats every way) and no docks yet; on a
+touch screen a hidden name shows only by zooming (there is no hover).
+
 ## Game · Studio, and the phone
 
 (2026-11-12; the shared player, [art-journey.md](art-journey.md#design-menu-game--studio-phone-controls-2026-11-12).)
