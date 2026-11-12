@@ -40,6 +40,7 @@
   .card table { display: block; max-width: 100%; overflow-x: auto; }
   .topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
   .back { font: 600 14px system-ui, sans-serif; color: var(--accent); text-decoration: none; }
+  .city-link { margin-left: auto; }
   .theme { font: 600 14px system-ui, sans-serif; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; min-height: 36px; cursor: pointer; }
   .theme:hover { border-color: var(--accent); }
   .course { margin: 0; color: var(--soft); font: 13px/1.4 system-ui, sans-serif; letter-spacing: .02em; }
@@ -577,6 +578,7 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
 <main>
   <div class="topline">
     <a class="back" href="/school">← School</a>
+    <a class="back city-link" href="/pandas/city">City</a>
     <button class="theme" id="theme" type="button"></button>
   </div>
   <p class="course">Pandas &amp; Data Manipulation · Mattia Sabella · Politecnico di Milano</p>
@@ -2626,6 +2628,17 @@ paintSize();
 renderSession();
 mapFit();
 load();
+// Deep links, e.g. from the Pandas city (/pandas/city): #s-3 opens a lecture, #c-3-nan a card, #c-3-ex-l3-e1 an exercise.
+function followHash() {
+  let h = '';
+  try { h = decodeURIComponent(location.hash); } catch (e) { return; }
+  const m = /^#(?:s-(\d+)|c-(\d+)-(.+))$/.exec(h);
+  if (!m) return;
+  if (m[1]) { const tab = document.querySelector(`.sess[data-s="${m[1]}"]`); if (tab && Number(m[1]) !== current) tab.click(); return; }
+  goTo(cardKey(Number(m[2]), m[3]));
+}
+followHash();
+addEventListener('hashchange', followHash);
 </script>
 </body>
 </html>
