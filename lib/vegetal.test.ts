@@ -10,14 +10,11 @@ import {
   bendAt,
   birdKinds,
   CELL_COUNT,
-  CITIES,
-  CITY_K,
   CORRIDOR_CELLS,
   CORRIDOR_GAP,
   CORRIDOR_LEN,
   camera,
   cellOf,
-  cityPlan,
   colour,
   corridorAhead,
   DRUMS,
@@ -106,12 +103,11 @@ const AVENUE = piece('avenue');
 const FOREST = piece('forest');
 
 describe('the vegetal chapter', () => {
-  it('has seventeen numbered pieces, from a cell to Bird Sim, each with words', () => {
+  it('has sixteen numbered pieces, from a cell to Bird Sim, each with words', () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       'cell',
       'roots',
       'roots-tree',
-      'city',
       'tree-2d',
       'tree-3d',
       'veins',
@@ -314,92 +310,6 @@ describe('the vegetal chapter', () => {
       expect(pieceAt(p, k, 4).pos[1]).toBeGreaterThan(pieceAt(p, k, 3).pos[1]);
       // The eye walks round the tree.
       expect(dist(pieceCamera(k, 2).eye, pieceCamera(k, 12).eye)).toBeGreaterThan(5);
-    });
-  });
-
-  describe('City (2026-11-12)', () => {
-    const k = piece('city');
-    const all = makeParticles(9000);
-
-    it('comes after Roots and tree, with five cities on pills', () => {
-      expect(k).toBe(piece('roots-tree') + 1);
-      expect(PHASES[k + 1]?.id).toBe('tree-2d');
-      expect(CITIES.map((c) => c.name)).toEqual(['Grid', 'Star', 'River', 'Bay', 'Canals']);
-      expect(variantNames(k)).toEqual(['Grid', 'Star', 'River', 'Bay', 'Canals']);
-      expect(variantLabel(k)).toBe('City');
-    });
-
-    it('lays every city flat, wide, bright in the centre and sparse at the edge, dark on the water', () => {
-      const L = pieceLength(k);
-      const maps = CITIES.map((_, i) => {
-        setVariant(i, k);
-        const plan = cityPlan(i);
-        expect(plan.roads.length).toBeGreaterThan(50);
-        const [cx, cy] = plan.centre.map((v) => v * CITY_K) as [number, number];
-        let inner = 0;
-        let innerN = 0;
-        let outer = 0;
-        let outerN = 0;
-        const xs: number[] = [];
-        const cells = new Set<string>();
-        // Collected per grain and asserted once: an expect per grain made this test slow enough
-        // to time out under the full suite.
-        let finite = true;
-        let highest = 0;
-        let onWater = 0;
-        for (const p of all) {
-          const { pos, rgb } = pieceAt(p, k, 0.5 * L);
-          for (const v of [...pos, ...rgb]) finite &&= Number.isFinite(v);
-          // Seen from above: everything on the ground plane.
-          highest = Math.max(highest, Math.abs(pos[2]));
-          xs.push(pos[0]);
-          // The lights in the blocks and the bright centre never stand on the water.
-          if (p.c >= 0.74 && plan.wet(pos[0] / CITY_K, pos[1] / CITY_K)) onWater++;
-          const r = Math.hypot(pos[0] - cx, pos[1] - cy);
-          const glow = Math.max(...rgb);
-          if (r < 0.25 * CITY_K) {
-            inner += glow;
-            innerN++;
-          } else if (r > 0.7 * CITY_K && r < 1.4 * CITY_K) {
-            outer += glow;
-            outerN++;
-          }
-          cells.add(`${Math.floor(pos[0] / 3)},${Math.floor(pos[1] / 3)}`);
-        }
-        expect(finite).toBe(true);
-        expect(highest).toBeLessThan(1.5);
-        expect(onWater).toBe(0);
-        expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(CITY_K * 1.5);
-        // Denser (grains for the ground they cover) and brighter in the middle.
-        expect(innerN / 0.25 ** 2).toBeGreaterThan((3 * outerN) / (1.4 ** 2 - 0.7 ** 2));
-        expect(inner / innerN).toBeGreaterThan((outer / outerN) * 1.3);
-        return cells;
-      });
-      // Five different cities: no two light up mostly the same places.
-      for (let i = 0; i < maps.length; i++)
-        for (let j = i + 1; j < maps.length; j++) {
-          const a = maps[i] as Set<string>;
-          const b = maps[j] as Set<string>;
-          const both = [...a].filter((c) => b.has(c)).length;
-          expect(both / (a.size + b.size - both)).toBeLessThan(0.7);
-        }
-      setVariant(0);
-    });
-
-    it('moves the car lights along the fast roads, and lays the same city every time', () => {
-      setVariant(3, k);
-      const cars = all.filter((p) => p.c < 0.08).slice(0, 200);
-      const moved = cars.filter((p) => dist(pieceAt(p, k, 2).pos, pieceAt(p, k, 4).pos) > 1).length;
-      expect(moved).toBeGreaterThan(cars.length * 0.8);
-      for (const p of all.slice(0, 300)) expect(pieceAt(p, k, 5)).toEqual(pieceAt(p, k, 5));
-      // The eye drifts over the city, looking down at it.
-      const a = pieceCamera(k, 3);
-      const b = pieceCamera(k, 30);
-      expect(dist(a.eye, b.eye)).toBeGreaterThan(3);
-      expect(a.eye[2] - a.target[2]).toBeGreaterThan(40);
-      // The Journey shows the first city.
-      setVariant(0);
-      expect(variantNames(k)[0]).toBe('Grid');
     });
   });
 
