@@ -114,9 +114,10 @@ export function cockpitEye(
  * Each ship's canopy frame and dashboard edge, drawn over the picture in the cockpit view: SVG
  * path data in a 1000 × 600 box, kept to the edges so the middle stays clear. `frame` is filled
  * (the struts and the sill), `glass` a faint line along the canopy's edge, `dash` the dashboard's
- * lit edge.
+ * lit edge. A `round` canopy keeps its shape on any screen (the box fitted inside the screen, not
+ * stretched), its frame running on past the box's edges to fill the rest.
  */
-export type Canopy = { frame: string; glass: string; dash: string };
+export type Canopy = { frame: string; glass: string; dash: string; round?: boolean };
 
 export const CANOPIES: Record<ShipId, Canopy> = {
   // The Arrow: two slim struts rising to a peak above, a low straight sill.
@@ -137,9 +138,10 @@ export const CANOPIES: Record<ShipId, Canopy> = {
   },
   // The Ring racer: a round porthole, the ring's arc framing it.
   ring: {
-    frame: 'M0 0 L1000 0 L1000 600 L0 600 Z M500 40 A400 290 0 1 0 500.1 40 Z',
-    glass: 'M500 60 A380 270 0 1 1 499.9 60',
-    dash: 'M240 500 Q500 560 760 500',
+    frame: 'M-4000 -4000 H5000 V5000 H-4000 Z M500 30 A290 290 0 1 0 500.1 30 Z',
+    glass: 'M500 46 A274 274 0 1 1 499.9 46',
+    dash: 'M330 540 Q500 580 670 540',
+    round: true,
   },
   // The Hauler: a square windscreen in three panes, a heavy sill.
   hauler: {

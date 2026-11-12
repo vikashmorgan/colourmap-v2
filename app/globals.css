@@ -1762,6 +1762,35 @@ input[type="range"].art-slider.magma {
   inset: 0;
   width: 100%;
   height: 100%;
+  /* A round canopy's frame runs on past its box to the screen's edges. */
+  overflow: visible;
+}
+/* A short landscape phone: the round buttons two by two, smaller, the pace pills above them,
+ * so the column never runs up the screen. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .bb-acts {
+    display: grid;
+    grid-template-columns: repeat(2, 58px);
+    gap: 10px;
+    justify-items: end;
+    bottom: calc(18px + env(safe-area-inset-bottom));
+  }
+  .bb-act {
+    width: 58px;
+    height: 58px;
+    font-size: 12px;
+  }
+  .bb-paces {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: end;
+  }
+  .bb-touch-game .bb-hud {
+    bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+  .bb-stick {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+  }
 }
 .cd-canopy-frame {
   fill: rgba(10, 7, 14, 0.78);

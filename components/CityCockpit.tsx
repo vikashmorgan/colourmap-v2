@@ -18,7 +18,8 @@ export default function CityCockpit() {
     <svg
       className={`cd-canopy cd-canopy-${ship.id}`}
       viewBox="0 0 1000 600"
-      preserveAspectRatio="none"
+      // A round porthole stays round: fitted inside the screen, its frame filling the rest.
+      preserveAspectRatio={c.round ? 'xMidYMid meet' : 'none'}
       aria-hidden="true"
     >
       <path className="cd-canopy-frame" d={c.frame} fillRule="evenodd" />

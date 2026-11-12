@@ -242,12 +242,21 @@ export const mapHeading = (f: Vec3) => Math.atan2(f[0], -f[2]);
 
 /**
  * How the map is seen: `tilt` 0 straight down (2D) up to about 1.2 (3D, seen from the side),
- * `yaw` its turn on the table, `zoom` and the point it centres on (`cx`, `cz`, tile-local).
+ * `yaw` its turn on the table, `zoom` and the point it centres on (`cx`, `cz`, tile-local);
+ * `ox`, `oy` shift the picture on the screen (px), so a tilted city sits in the middle.
  */
-export type MapView = { tilt: number; yaw: number; zoom: number; cx: number; cz: number };
-export const TILT_3D = 0.95;
+export type MapView = {
+  tilt: number;
+  yaw: number;
+  zoom: number;
+  cx: number;
+  cz: number;
+  ox?: number;
+  oy?: number;
+};
+export const TILT_3D = 0.9;
 export const TILT_MAX = 1.25;
-export const ZOOM_RANGE: [number, number] = [0.6, 8];
+export const ZOOM_RANGE: [number, number] = [0.6, 12];
 
 /** The view that fits the whole tile on a screen w × h: the long way up a tall screen, across a wide one. */
 export function fitView(w: number, h: number, tilt = 0): MapView {
@@ -262,7 +271,65 @@ export function clampMapView(v: MapView): MapView {
     zoom: Math.max(ZOOM_RANGE[0], Math.min(ZOOM_RANGE[1], v.zoom)),
     cx: Math.max(-TILE_X / 2, Math.min(TILE_X / 2, v.cx)),
     cz: Math.max(0, Math.min(TILE_Z, v.cz)),
+    ox: v.ox ?? 0,
+    oy: v.oy ?? 0,
   };
+}
+
+/** The share of the screen the 3D city fills, the long way it can. */
+export const FIT_SHARE = 0.8;
+
+/** The screen box round the whole tile (its ground and its tall towers) seen in view v. */
+export function projectedBounds(v: MapView, w: number, h: number) {
+  let x0 = Number.POSITIVE_INFINITY;
+  let y0 = Number.POSITIVE_INFINITY;
+  let x1 = Number.NEGATIVE_INFINITY;
+  let y1 = Number.NEGATIVE_INFINITY;
+  for (const x of [-TILE_X / 2, TILE_X / 2]) {
+    for (const z of [0, TILE_Z]) {
+      for (const y of [0, 100]) {
+        const [sx, sy] = projectMap(v, w, h, x, y, z);
+        x0 = Math.min(x0, sx);
+        x1 = Math.max(x1, sx);
+        y0 = Math.min(y0, sy);
+        y1 = Math.max(y1, sy);
+      }
+    }
+  }
+  return { x0, y0, x1, y1 };
+}
+
+/** View v zoomed and shifted so the tile's projected box fills `share` of w × h, centred. */
+export function frameView(v: MapView, w: number, h: number, share = FIT_SHARE): MapView {
+  let out: MapView = { ...v, ox: 0, oy: 0 };
+  // Perspective makes the box grow a little faster than the zoom: a few rounds settle it.
+  for (let n = 0; n < 4; n++) {
+    const b = projectedBounds(out, w, h);
+    const k = Math.min((share * w) / (b.x1 - b.x0 || 1), (share * h) / (b.y1 - b.y0 || 1));
+    out = { ...out, zoom: out.zoom * k };
+  }
+  const b = projectedBounds(out, w, h);
+  return { ...out, ox: w / 2 - (b.x0 + b.x1) / 2, oy: h / 2 - (b.y0 + b.y1) / 2 };
+}
+
+/**
+ * The 3D view a screen w × h opens on: tilted at a pleasant oblique angle, the city turned a little
+ * off its long axis (whichever turn lets it fill the screen best), framed to fill FIT_SHARE of it.
+ */
+export function fitView3D(w: number, h: number, tilt = TILT_3D): MapView {
+  const base = w > h ? -Math.PI / 2 : 0;
+  let best: MapView | null = null;
+  let bestScale = 0;
+  for (let off = 0.3; off <= 0.91; off += 0.05) {
+    const v = frameView({ tilt, yaw: base + off, zoom: 1, cx: 0, cz: TILE_Z / 2 }, w, h);
+    // Compared by metres to the pixel: the zoom alone is relative to each turn's own flat fit.
+    const scale = mapScale(v, w, h);
+    if (scale > bestScale + 1e-9) {
+      bestScale = scale;
+      best = v;
+    }
+  }
+  return best as MapView;
 }
 
 /** How many pixels a metre is, the whole tile fitting w × h at zoom 1. */
@@ -301,7 +368,53 @@ export function projectMap(
   const depth = rz * st + Y * ct;
   const D = (Math.max(w, h) / k) * 1.6;
   const p = D / Math.max(D * 0.2, D - depth);
-  return [w / 2 + rx * k * p, h / 2 + sy * k * p, depth];
+  return [w / 2 + (v.ox ?? 0) + rx * k * p, h / 2 + (v.oy ?? 0) + sy * k * p, depth];
+}
+
+/* ---------- labels: none piled on another ---------- */
+
+/** A name to write on the map, and how much it matters (0 first: districts, landmarks, races, others). */
+export type MapLabel = {
+  text: string;
+  x: number;
+  y: number;
+  align: 'left' | 'center';
+  /** Its font size, px. */
+  size: number;
+  /** Its width, px (measured, or guessed from its length). */
+  w: number;
+  priority: number;
+  /** Nearer the viewer is larger (3D), for the order within a priority. */
+  depth: number;
+  alpha: number;
+  colour: string;
+  font: string;
+};
+export type LabelBox = { x0: number; y0: number; x1: number; y1: number };
+
+export const labelBox = (l: MapLabel): LabelBox => {
+  const x0 = l.align === 'left' ? l.x : l.x - l.w / 2;
+  return { x0, y0: l.y - l.size / 2 - 2, x1: x0 + l.w, y1: l.y + l.size / 2 + 2 };
+};
+export const boxesOverlap = (a: LabelBox, b: LabelBox, pad = 3) =>
+  a.x0 < b.x1 + pad && b.x0 < a.x1 + pad && a.y0 < b.y1 + pad && b.y0 < a.y1 + pad;
+
+/**
+ * Which labels to show, greedily: by priority, then nearest first; a label is kept only if it lies
+ * on the screen and touches none kept before it. The rest wait for a zoom or a hover.
+ */
+export function layoutLabels(labels: MapLabel[], w: number, h: number): MapLabel[] {
+  const order = [...labels].sort((a, b) => a.priority - b.priority || b.depth - a.depth);
+  const kept: MapLabel[] = [];
+  const boxes: LabelBox[] = [];
+  for (const l of order) {
+    const b = labelBox(l);
+    if (b.x0 < 2 || b.y0 < 2 || b.x1 > w - 2 || b.y1 > h - 2) continue;
+    if (boxes.some((o) => boxesOverlap(o, b))) continue;
+    kept.push(l);
+    boxes.push(b);
+  }
+  return kept;
 }
 
 /* ---------- drawing ---------- */
@@ -327,7 +440,8 @@ export function drawCityMap(
   ship: { x: number; y: number; z: number; heading: number } | null,
   t: number,
   labels = true,
-) {
+  hover: { x: number; y: number } | null = null,
+): MapLabel[] {
   const P = (x: number, y: number, z: number) => projectMap(v, w, h, x, y, z);
   const sky = ctx.createLinearGradient(0, 0, 0, h);
   sky.addColorStop(0, 'rgba(8,10,36,0.94)');
@@ -465,15 +579,44 @@ export function drawCityMap(
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // The districts' names, quiet, in the middle of each patch.
-  ctx.textAlign = 'center';
+  // The names, gathered here and written last, none piled on another: districts first, then
+  // landmarks, races and the rest.
+  const cands: MapLabel[] = [];
+  const measure = (text: string, font: string, size: number) => {
+    ctx.font = font;
+    const m = ctx.measureText?.(text) as TextMetrics | undefined;
+    return typeof m?.width === 'number' ? m.width : text.length * size * 0.6;
+  };
+  const say = (
+    text: string,
+    q: [number, number, number],
+    align: MapLabel['align'],
+    priority: number,
+    colour: string,
+    bold = false,
+  ) => {
+    const size = bold ? 10 : 11;
+    const font = `${bold ? '600 ' : ''}${size}px ui-sans-serif, system-ui, sans-serif`;
+    const x = align === 'left' ? q[0] + 9 : q[0];
+    cands.push({
+      text,
+      x,
+      y: q[1],
+      align,
+      size,
+      w: measure(text, font, size),
+      priority,
+      depth: q[2],
+      alpha: 1,
+      colour,
+      font,
+    });
+  };
   ctx.textBaseline = 'middle';
   if (labels) {
-    ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif';
     for (const d of data.districts) {
       const q = P((d.x0 + d.x1) / 2, 0, (d.z0 + d.z1) / 2 - BLOCK_Z * 1.5);
-      ctx.fillStyle = rgba(d.colour, 1.1, 0.75);
-      ctx.fillText(d.name.toUpperCase(), q[0], q[1]);
+      say(d.name.toUpperCase(), q, 'center', 0, rgba(d.colour, 1.1, 1), true);
     }
   }
 
@@ -523,12 +666,39 @@ export function drawCityMap(
         ctx.stroke();
     }
     if (labels && p.kind !== 'station' && p.kind !== 'portal') {
-      ctx.fillStyle = 'rgba(244,234,216,0.82)';
-      ctx.textAlign = 'left';
-      ctx.fillText(p.name, q[0] + 9, q[1]);
-      ctx.textAlign = 'center';
+      say(
+        p.name,
+        q,
+        'left',
+        p.kind === 'landmark' ? 1 : p.kind === 'race' ? 2 : 3,
+        'rgb(244,234,216)',
+      );
     }
   }
+
+  // In 3D the far names fade; a name near the pointer comes first, whatever it is.
+  if (raised && cands.length > 1) {
+    const ds = cands.map((c) => c.depth);
+    const lo = Math.min(...ds);
+    const span = Math.max(...ds) - lo || 1;
+    for (const c of cands) c.alpha = 0.4 + 0.6 * ((c.depth - lo) / span);
+  }
+  if (hover) {
+    for (const c of cands) {
+      if (Math.hypot(c.x - (c.align === 'left' ? 9 : 0) - hover.x, c.y - hover.y) < 26)
+        c.priority = -1;
+    }
+  }
+  const shown = layoutLabels(cands, w, h);
+  for (const l of shown) {
+    ctx.font = l.font;
+    ctx.textAlign = l.align;
+    ctx.globalAlpha = (l.priority === 0 ? 0.75 : 0.85) * l.alpha;
+    ctx.fillStyle = l.colour;
+    ctx.fillText(l.text, l.x, l.y);
+  }
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'center';
 
   // You: a gold pointer the way you fly, breathing softly on the city's beat.
   if (ship) {
@@ -560,4 +730,5 @@ export function drawCityMap(
     ctx.stroke();
     ctx.restore();
   }
+  return shown;
 }

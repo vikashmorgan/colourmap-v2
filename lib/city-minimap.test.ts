@@ -2,12 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { DISTRICTS, type DistrictId, LANDMARKS } from './city-game';
 import { TILE_I, TILE_J, TILE_X, TILE_Z } from './city-grid';
 import {
+  boxesOverlap,
   cityMapData,
   clampMapView,
   drawCityMap,
+  FIT_SHARE,
   fitView,
+  fitView3D,
+  labelBox,
+  layoutLabels,
   MAP_EXTRAS,
+  type MapLabel,
   mapHeading,
+  projectedBounds,
   projectMap,
   TILT_3D,
   tileLocal,
@@ -97,7 +104,7 @@ describe('the map of the City of Dreams', () => {
   it('keeps the view within its limits', () => {
     const v = clampMapView({ tilt: 3, yaw: 1, zoom: 100, cx: 1e5, cz: -1e5 });
     expect(v.tilt).toBeLessThanOrEqual(1.3);
-    expect(v.zoom).toBeLessThanOrEqual(8);
+    expect(v.zoom).toBeLessThanOrEqual(12);
     expect(v.cx).toBe(TILE_X / 2);
     expect(v.cz).toBe(0);
   });
@@ -121,5 +128,127 @@ describe('the map of the City of Dreams', () => {
     drawCityMap(ctx, cityMapData(), fitView(400, 800), 400, 800, ship, 1);
     drawCityMap(ctx, cityMapData(), { ...fitView(400, 800), tilt: TILT_3D }, 400, 800, ship, 1);
     expect(calls.filter((c) => c === 'fill').length).toBeGreaterThan(500);
+  });
+});
+
+/** A canvas that draws nothing and measures text as the map guesses it. */
+const quietCtx = () =>
+  new Proxy(
+    {},
+    {
+      get: (_t, k) => {
+        if (k === 'createLinearGradient') return () => ({ addColorStop() {} });
+        return () => undefined;
+      },
+      set: () => true,
+    },
+  ) as unknown as CanvasRenderingContext2D;
+
+const noOverlap = (shown: MapLabel[]) => {
+  for (let i = 0; i < shown.length; i++) {
+    for (let j = i + 1; j < shown.length; j++) {
+      expect(boxesOverlap(labelBox(shown[i] as MapLabel), labelBox(shown[j] as MapLabel), 0)).toBe(
+        false,
+      );
+    }
+  }
+};
+
+describe('the map, framed and labelled', () => {
+  const label = (text: string, x: number, y: number, priority: number, depth = 0): MapLabel => ({
+    text,
+    x,
+    y,
+    align: 'left',
+    size: 11,
+    w: text.length * 6.6,
+    priority,
+    depth,
+    alpha: 1,
+    colour: '#fff',
+    font: '11px sans-serif',
+  });
+
+  it('keeps the labels that matter most, never two on top of each other', () => {
+    const shown = layoutLabels(
+      [
+        label('Mosque of the four minarets', 100, 100, 1),
+        label('ISTANBUL', 110, 102, 0),
+        label('Minaret Slalom', 120, 98, 2),
+        label('Far away', 600, 300, 3),
+        label('Off the screen', 990, 300, 1),
+      ],
+      1000,
+      600,
+    );
+    expect(shown.map((l) => l.text)).toEqual(['ISTANBUL', 'Far away']);
+    noOverlap(shown);
+    // Within a priority, the nearer first.
+    const near = layoutLabels(
+      [label('Back', 100, 100, 1, -5), label('Front', 104, 101, 1, 5)],
+      800,
+      600,
+    );
+    expect(near.map((l) => l.text)).toEqual(['Front']);
+  });
+
+  for (const [w, h] of [
+    [1536, 640],
+    [390, 844],
+    [1024, 768],
+  ] as [number, number][]) {
+    it(`opens 3D framed to fill most of a ${w} × ${h} screen, centred, at an oblique angle`, () => {
+      const v = fitView3D(w, h);
+      expect(v.tilt).toBeCloseTo(TILT_3D);
+      // Turned off the city's long axis, so it is seen at a slant.
+      const off = Math.abs(Math.sin(v.yaw - (w > h ? -Math.PI / 2 : 0)));
+      expect(off).toBeGreaterThan(0.25);
+      const b = projectedBounds(v, w, h);
+      const fill = Math.max((b.x1 - b.x0) / w, (b.y1 - b.y0) / h);
+      expect(fill).toBeGreaterThan(FIT_SHARE - 0.03);
+      expect(fill).toBeLessThan(FIT_SHARE + 0.03);
+      expect(b.x0).toBeGreaterThanOrEqual(0);
+      expect(b.y0).toBeGreaterThanOrEqual(0);
+      expect(b.x1).toBeLessThanOrEqual(w);
+      expect(b.y1).toBeLessThanOrEqual(h);
+      expect((b.x0 + b.x1) / 2).toBeCloseTo(w / 2, 0);
+      expect((b.y0 + b.y1) / 2).toBeCloseTo(h / 2, 0);
+      // Not a thin strip: both ways it takes a good share of the screen (the flat plan merely
+      // tilted was about 100 px tall on a wide one).
+      expect(Math.min((b.x1 - b.x0) / w, (b.y1 - b.y0) / h)).toBeGreaterThan(0.4);
+    });
+
+    it(`shows no two labels overlapping on a ${w} × ${h} screen, flat or in 3D`, () => {
+      const data = cityMapData();
+      const flat = drawCityMap(quietCtx(), data, fitView(w, h), w, h, null, 0);
+      const deep = drawCityMap(quietCtx(), data, fitView3D(w, h), w, h, null, 0);
+      for (const shown of [flat, deep]) {
+        expect(shown.length).toBeGreaterThan(3);
+        noOverlap(shown);
+      }
+      // Districts first: on the flat plan every district's name has room.
+      expect(flat.filter((l) => l.priority === 0).length).toBeGreaterThanOrEqual(6);
+      // In 3D the far names are fainter than the near ones.
+      const alphas = deep.map((l) => l.alpha);
+      expect(Math.min(...alphas)).toBeLessThan(Math.max(...alphas));
+    });
+  }
+
+  it('shows a hidden name when the pointer comes near it', () => {
+    const data = cityMapData();
+    const w = 1536;
+    const h = 640;
+    const v = fitView3D(w, h);
+    const all = drawCityMap(quietCtx(), data, v, w, h, null, 0);
+    // Find a place whose name was hidden, and point at it.
+    const hidden = data.places.find(
+      (p) => p.kind !== 'station' && p.kind !== 'portal' && !all.some((l) => l.text === p.name),
+    );
+    expect(hidden).toBeDefined();
+    if (!hidden) return;
+    const [x, y] = projectMap(v, w, h, hidden.x, hidden.y, hidden.z);
+    const near = drawCityMap(quietCtx(), data, v, w, h, null, 0, true, { x, y });
+    expect(near.some((l) => l.text === hidden.name)).toBe(true);
+    noOverlap(near);
   });
 });

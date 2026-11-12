@@ -857,7 +857,15 @@ their tracks' names, the metro's loop dashed in pale rose with its four stations
 WELCOME panel, and your ship as a gold pointer breathing softly, the way you fly. **2D · 3D**:
 the plan tilts into extruded blocks (a little taller than life, the metro raised to its height,
 places on stems); drag spins and tips it (pans it when flat), the wheel or a pinch zooms, **Fit**
-brings the whole city back. It fits the long way up a tall screen and across a wide one. Time
+brings the whole city back. Flat, it fits the long way up a tall screen and across a wide one.
+3D opens framed (polish, 2026-11-13: "3D map opens tiny in the middle of the screen"): tilted
+0.9, turned off the city's long axis by whichever angle (0.3 to 0.9) lets it fill the screen
+best, then zoomed and shifted until the projected box round the whole tile (its ground and tall
+towers) fills four fifths of the screen, centred; switching 2D and 3D eases between the two
+homes. **Names never pile up**: they are laid out greedily, districts first, then landmarks,
+race starts and the rest, nearer first within each; a name that would touch one already placed
+(or leave the screen) waits, and shows as you zoom in or when the pointer comes within 26 px of
+it. In 3D the far names fade (four tenths to full by depth). Time
 stands still while it is open (the player holds the last picture); **M**, **Esc** or ✕ closes it.
 The Dawn sky behind, gold lines, district hues. Canvas 2D, redrawn only when the view changes or
 about ten times a second for the pointer. New parts of the city (docks, embassies) add places by
@@ -877,11 +885,20 @@ appending to `MAP_EXTRAS`.
   cockpit view banks in a turn.
 - M on the game opens the map and holds time; Esc, M or its close shut it; in the Studio M is the
   Design menu.
+- 3D opens with the tile's projected box filling 0.8 of the screen (±0.03), centred, turned off
+  its long axis, at least 0.4 of the screen both ways (1536 × 640, 390 × 844, 1024 × 768). No two
+  names shown overlap, flat or in 3D; a hidden name shows with the pointer on it.
+- The Ring racer's porthole stays round on any screen; on a short landscape phone the round
+  buttons sit two by two.
 
-**Still rough.** The canopies are drawn to fill the screen (`preserveAspectRatio: none`), so the
-Ring racer's porthole is an ellipse on a wide screen; the map shows one tile (the city repeats
-every way) and no docks yet; on a short landscape phone the column of four round buttons (Boost,
-Look, Go, View) is tall.
+**Canopy and phone** (polish, 2026-11-13). The Ring racer's canopy is `round`: fitted inside the
+screen (`xMidYMid meet`), its porthole a circle, its frame running on far past the box so the
+sides are filled, not stretched; the other canopies still stretch to the screen. On a short
+landscape phone (at most 520 high) the round buttons (Boost, Look, Go, View) sit two by two and a
+little smaller, the pace pills above them.
+
+**Still rough.** The map shows one tile (the city repeats every way) and no docks yet; on a
+touch screen a hidden name shows only by zooming (there is no hover).
 
 ## Game · Studio, and the phone
 
