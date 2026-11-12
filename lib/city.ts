@@ -8,10 +8,12 @@
  * spaceship."
  *
  * It opens on the golden city (lib/golden-city.ts: its plan from φ, the city
- * rising from it, its heart, its temples, factories and glass domes), then
- * five night cities from above (lib/city-plans.ts), then the neon city.
+ * rising from it, its heart, its Nova Cores, temples, factories and glass
+ * domes), twenty buildings from the city's quarters (lib/city-buildings.ts),
+ * five night cities from above (lib/city-plans.ts), Atlantis under the sea
+ * (lib/atlantis.ts), then the neon city, ending on the Ship.
  *
- * Fifteen pieces played as one trip, built as Ocean is (lib/ocean.ts): every
+ * Seventeen pieces played as one trip, built as Ocean is (lib/ocean.ts): every
  * grain of light keeps its identity, each piece is a formula from a grain and
  * the time to a place and a colour, each piece opens from a wide ball of
  * faint stars, and every grain pours on into the next piece. The towers are
@@ -34,6 +36,7 @@ import {
   smooth,
   type Vec3,
 } from './bigbang';
+import { BUILDINGS, buildingsEye } from './city-buildings';
 import {
   advancePulses,
   type Block,
@@ -204,6 +207,18 @@ export const PHASES: CityPhase[] = [
     size: 0.95,
   },
   {
+    id: 'buildings',
+    name: 'Buildings',
+    line: 'Twenty buildings from the quarters of the city, one to a pill: stair temples, a pagoda, domes and minarets, twisted, rounded and faceted towers, each on its plinth with walkways of light winding round it.',
+    words: [
+      'A building is a few rules, followed with care until they become a place.',
+      'The paths that wind round it are where the city is walked, not just seen.',
+    ],
+    duration: 36,
+    glow: 1,
+    size: 0.95,
+  },
+  {
     id: 'above',
     name: 'From above',
     line: 'Night cities seen from far above: streets branch like roots but in order, the centre glows, highways reach into the dark and car lights move along them. Five cities to choose from.',
@@ -329,6 +344,7 @@ export const STEP_COLOURS = [
   '#e8b450',
   '#d99a4a',
   '#cfe08a',
+  '#f0c070',
   '#f2c25a',
   '#4fd8d0',
   '#7f9cff',
@@ -3070,6 +3086,7 @@ function otherShipAt(p: Particle, P: Plan, t: number): Spot {
 let templeKind = 0;
 let factoryKind = 0;
 let domeKind = 0;
+let buildingKind = 0;
 const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number) => void }> = {
   'golden-plan': { names: PLANS, label: 'Plan', set: setPlanKind },
   nova: { names: NOVA_CORES, label: 'Nova Core', set: setNovaKind },
@@ -3078,6 +3095,7 @@ const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number
   domes: { names: DOMES.names, label: DOMES.label, set: (i) => (domeKind = i) },
   above: { names: CITIES.map((c) => c.name), label: 'City', set: setCityKind },
   atlantis: ATLANTIS_VARIANTS,
+  buildings: { names: BUILDINGS.names, label: BUILDINGS.label, set: (i) => (buildingKind = i) },
 };
 
 /*
@@ -3151,6 +3169,8 @@ export function formAt(k: number, p: Particle, u: number, t: number): Spot {
       return docksAt(p, t);
     case 'canyon':
       return canyonAt(p, u, t);
+    case 'buildings':
+      return buildingAt(BUILDINGS, buildingKind, p, t);
     default:
       return shipAt(p, t);
   }
@@ -3218,6 +3238,8 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       return buildingEye(t, FACTORIES.reach[factoryKind]);
     case 'domes':
       return buildingEye(t, DOMES.reach[domeKind]);
+    case 'buildings':
+      return buildingsEye(buildingKind, t);
     case 'above':
       return aboveEye(t);
     case 'atlantis':
