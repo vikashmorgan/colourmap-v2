@@ -1766,26 +1766,104 @@ function carSite(
 /** Districts lit by a race won: their roofs glow brighter from above. */
 export const litDistricts = new Set<DistrictId>();
 
-function planItems(eye: Vec3, R: number, k: number, t: number, out: Item[]) {
+/**
+ * What of the ground the eye sees: the box round where the corners of its view (up to a wide
+ * screen's) meet the ground, kept within Rg of the eye, and a test for a point inside the view's
+ * cone. The plan spends its grains only there, so from the stratosphere they gather where you look.
+ */
+function viewFootprint(eye: Vec3, fwd: Vec3, Rg: number) {
+  const fl = Math.hypot(fwd[0], fwd[1], fwd[2]) || 1;
+  const f: Vec3 = [fwd[0] / fl, fwd[1] / fl, fwd[2] / fl];
+  const rl = Math.hypot(f[2], f[0]) || 1;
+  const r: Vec3 = [-f[2] / rl, 0, f[0] / rl];
+  const u: Vec3 = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+  let x0 = Number.POSITIVE_INFINITY;
+  let x1 = Number.NEGATIVE_INFINITY;
+  let z0 = Number.POSITIVE_INFINITY;
+  let z1 = Number.NEGATIVE_INFINITY;
+  for (const [a, b] of [
+    [-1, -1],
+    [-1, 1],
+    [1, -1],
+    [1, 1],
+    [0, 0],
+  ] as const) {
+    const dir: Vec3 = [
+      f[0] + a * VIEW_TAN_H * r[0] + b * VIEW_TAN_V * u[0],
+      f[1] + a * VIEW_TAN_H * r[1] + b * VIEW_TAN_V * u[1],
+      f[2] + a * VIEW_TAN_H * r[2] + b * VIEW_TAN_V * u[2],
+    ];
+    const s = dir[1] < -1e-6 ? (GROUND - eye[1]) / dir[1] : Number.POSITIVE_INFINITY;
+    let gx = s * dir[0];
+    let gz = s * dir[2];
+    const g = Math.hypot(gx, gz);
+    if (!Number.isFinite(g) || g > Rg) {
+      const hl = Math.hypot(dir[0], dir[2]) || 1;
+      gx = (dir[0] / hl) * Rg;
+      gz = (dir[2] / hl) * Rg;
+    }
+    x0 = Math.min(x0, eye[0] + gx);
+    x1 = Math.max(x1, eye[0] + gx);
+    z0 = Math.min(z0, eye[2] + gz);
+    z1 = Math.max(z1, eye[2] + gz);
+  }
+  const seen = (x: number, y: number, z: number, pad: number) => {
+    const dx = x - eye[0];
+    const dy = y - eye[1];
+    const dz = z - eye[2];
+    const d = Math.hypot(dx, dy, dz) || 1;
+    return (dx * f[0] + dy * f[1] + dz * f[2]) / d > VIEW_COS - pad / d;
+  };
+  return { x0, x1, z0, z1, seen };
+}
+/** The view's half-widths as tangents (a wide screen's, 55° tall), and the cosine of its cone. */
+const VIEW_TAN_V = Math.tan((27.5 * Math.PI) / 180);
+const VIEW_TAN_H = VIEW_TAN_V * 2;
+const VIEW_COS = 1 / Math.hypot(1, VIEW_TAN_H, VIEW_TAN_V);
+
+function planItems(eye: Vec3, fwd: Vec3, R: number, k: number, t: number, out: Item[]) {
   const Rg = Math.sqrt(Math.max(0, R * R - (eye[1] - GROUND) ** 2));
-  const I0 = Math.floor((eye[0] - Rg) / BLOCK_X);
-  const I1 = Math.floor((eye[0] + Rg) / BLOCK_X);
-  const J0 = Math.floor((eye[2] - Rg) / BLOCK_Z);
-  const J1 = Math.floor((eye[2] + Rg) / BLOCK_Z);
+  const V = viewFootprint(eye, fwd, Rg);
+  // From the stratosphere the roofs' outlines and the side streets give way (they would spread
+  // the grains thin), leaving the roofs' fills, the main roads and the plazas bold.
+  const far = smooth((eye[1] - GROUND - 250) / 300);
+  const fine = 1 - 0.92 * far;
+  const I0 = Math.floor(V.x0 / BLOCK_X);
+  const I1 = Math.floor(V.x1 / BLOCK_X);
+  const J0 = Math.floor(V.z0 / BLOCK_Z);
+  const J1 = Math.floor(V.z1 / BLOCK_Z);
   for (let I = I0; I <= I1; I++) {
     for (let J = J0; J <= J1; J++) {
       const tw = blockTower(I, J);
       const y = GROUND + tw.h;
       const d = Math.hypot(tw.x - eye[0], y - eye[1], tw.z - eye[2]);
-      if (d > R) continue;
+      if (d > R || !V.seen(tw.x, y, tw.z, 30)) continue;
       const col = DISTRICTS[tw.d].colour;
-      const glow = litDistricts.has(tw.d) ? 1.6 : 1;
-      const n = Math.ceil((4 * (tw.hx + tw.hz)) / 1.6);
+      const glow = (litDistricts.has(tw.d) ? 1.6 : 1) * districtPulse(tw.d, t, (tw.k % 5) * 0.03);
+      const n = Math.ceil((4 * (tw.hx + tw.hz)) / 2.4);
+      const gid = mixId(I * 7919, J * 104729);
+      // A fill of the roof's own hue (a 2 × 2 of lights, kept before its outline), so each
+      // district reads from far above as a patch of one colour, as the Golden plan's rings do.
+      if (tw.h > 0 && tw.shape !== 'pyramid') {
+        out.push({
+          d,
+          gid: gid + 1,
+          count: 4,
+          weight: (2.2 + 2.3 * far) * k,
+          site: (s, o) => {
+            o[0] = tw.x + ((s & 1) - 0.5) * tw.hx;
+            o[1] = y;
+            o[2] = tw.z + ((s >> 1) - 0.5) * tw.hz;
+            [o[3], o[4], o[5]] = scale(col, 0.65 * glow);
+            return true;
+          },
+        });
+      }
       out.push({
         d,
-        gid: mixId(I * 7919, J * 104729),
+        gid,
         count: n,
-        weight: 1.3 * k,
+        weight: 1.1 * k * fine,
         site: (s, o) => {
           const e = ((s + 0.5) / n) * 4 * (tw.hx + tw.hz);
           const P = 2 * (tw.hx + tw.hz);
@@ -1797,52 +1875,97 @@ function planItems(eye: Vec3, R: number, k: number, t: number, out: Item[]) {
           o[0] = tw.x + x;
           o[1] = tw.shape === 'pyramid' ? GROUND + 0.1 : y;
           o[2] = tw.z + z;
-          [o[3], o[4], o[5]] = scale(col, 0.3 * glow);
+          [o[3], o[4], o[5]] = scale(col, 0.5 * glow);
           return true;
         },
       });
     }
   }
-  // Street lights: the avenue brightest, every street a thread of warm light.
+  // The landmarks' plazas: a ring of light round each in its district's hue, breathing on the
+  // district's beat, a bright heart at the middle, so every district's centre is found from above.
+  const ox = nearest(0, eye[0], TILE_X);
+  for (let nz = Math.floor((V.z0 - 30) / TILE_Z); nz * TILE_Z <= V.z1 + 30; nz++) {
+    LANDMARKS.forEach((L, li) => {
+      const cx = L.x + ox;
+      const cz = L.z + nz * TILE_Z;
+      const d = Math.hypot(cx - eye[0], GROUND - eye[1], cz - eye[2]);
+      if (d > R || !V.seen(cx, GROUND, cz, 30)) return;
+      const col = DISTRICTS[L.d].colour;
+      const glow = (litDistricts.has(L.d) ? 1.5 : 1) * districtPulse(L.d, t);
+      out.push({
+        d,
+        gid: mixId(nz * 13 + li, 515151),
+        count: PLAZA_RING + PLAZA_HEART,
+        weight: 3 * k,
+        site: (s, o) => {
+          if (s < PLAZA_RING) {
+            const a = ((s + 0.5) / PLAZA_RING) * Math.PI * 2;
+            o[0] = cx + Math.cos(a) * 24;
+            o[1] = GROUND + 0.2;
+            o[2] = cz + Math.sin(a) * 24;
+            [o[3], o[4], o[5]] = scale(col, 0.75 * glow);
+            return true;
+          }
+          const q = fibonacciSphere(s - PLAZA_RING, PLAZA_HEART);
+          o[0] = cx + q[0] * 4;
+          o[1] = GROUND + 2 + Math.abs(q[1]) * 4;
+          o[2] = cz + q[2] * 4;
+          [o[3], o[4], o[5]] = scale(mix(col, C.white, 0.35), 0.9 * glow);
+          return true;
+        },
+      });
+    });
+  }
+  // Street lights: the avenue brightest, then the main roads (the tile's edges along, the bands'
+  // edges across) as bold threads of gold, then every other street a fainter thread of amber. Few
+  // strong lines, as the Golden plan's boulevards and rings, so the plan reads from far above.
   for (let I = I0; I <= I1 + 1; I++) {
     const x = I * BLOCK_X;
     const ave = tileCol(I) === 0;
-    const n = Math.ceil((2 * Rg) / (ave ? 1.5 : 3));
+    const main = ave || tileCol(I) === -TILE_I / 2;
+    const gap = ave ? 1.2 : main ? 2 : 4;
+    const n = Math.ceil((V.z1 - V.z0) / gap);
     out.push({
       d: Math.abs(eye[1] - GROUND),
       gid: mixId(I, 424242),
       count: n,
-      weight: 1.1 * k,
+      weight: (main ? 3 : 0.5 + 0.5 * fine) * k,
       site: (s, o) => {
         o[0] = x + (ave ? (s & 1 ? 3 : -3) : 0);
         o[1] = GROUND + 0.1;
-        o[2] = eye[2] - Rg + ((s + 0.5) / n) * 2 * Rg;
+        o[2] = V.z0 + (s + 0.5) * gap;
         // A slow wave of light running down every street, on the city's beat.
-        const wave = 0.55 + 0.45 * beat(t, 1, -(o[2] as number) / 160);
-        [o[3], o[4], o[5]] = scale(ave ? C.white : C.amber, (ave ? 0.4 : 0.2) * wave);
+        const wave = 0.6 + 0.4 * beat(t, 1, -(o[2] as number) / 160);
+        const rgb = ave ? C.white : main ? C.gold : C.amber;
+        [o[3], o[4], o[5]] = scale(rgb, (ave ? 0.62 : main ? 0.5 : 0.3) * wave);
         return true;
       },
     });
   }
   for (let J = J0; J <= J1 + 1; J++) {
     const z = J * BLOCK_Z;
-    const n = Math.ceil((2 * Rg) / 3.5);
+    const main = tileRow(J) % BAND_ROWS === 0;
+    const gap = main ? 2 : 4;
+    const n = Math.ceil((V.x1 - V.x0) / gap);
     out.push({
       d: Math.abs(eye[1] - GROUND),
       gid: mixId(J, 434343),
       count: n,
-      weight: 1.1 * k,
+      weight: (main ? 3 : 0.5 + 0.5 * fine) * k,
       site: (s, o) => {
-        o[0] = eye[0] - Rg + ((s + 0.5) / n) * 2 * Rg;
+        o[0] = V.x0 + (s + 0.5) * gap;
         o[1] = GROUND + 0.1;
         o[2] = z;
-        const wave = 0.55 + 0.45 * beat(t, 1, -(o[0] as number) / 160);
-        [o[3], o[4], o[5]] = scale(C.amber, 0.16 * wave);
+        const wave = 0.6 + 0.4 * beat(t, 1, -(o[0] as number) / 160);
+        [o[3], o[4], o[5]] = scale(main ? C.gold : C.amber, (main ? 0.5 : 0.28) * wave);
         return true;
       },
     });
   }
 }
+/** Sites in a landmark plaza's ring from above, and in its bright heart. */
+const PLAZA_RING = 72;
+const PLAZA_HEART = 24;
 
 /* ---------- everything lit near the eye ---------- */
 
@@ -2056,7 +2179,7 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number): Item[] {
   }
   railItems(eye, t, Math.min(R, NEAR + 60), out);
   const k = planLook(eye[1]);
-  if (k > 0) planItems(eye, R, k, t, out);
+  if (k > 0) planItems(eye, fwd, R, k, t, out);
   return out;
 }
 

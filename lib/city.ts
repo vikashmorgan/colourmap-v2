@@ -86,7 +86,7 @@ import {
   TEMPLES,
 } from './golden-city';
 
-export { fade, wordsShown } from './journey';
+export { wordsShown } from './journey';
 export { makeParticles, type Particle };
 
 const TAU = Math.PI * 2;
@@ -2086,6 +2086,29 @@ export function flier(t: number): { c: Vec3; f: Vec3 } {
 /** How far up into the stratosphere you are, 0 (at the towers' sky) to 1. */
 const highness = (y: number) => smooth((y - SKY + 20) / (STRATOSPHERE - SKY));
 
+/**
+ * The player's fade for the city: the journey's own (light dissolving near the eye and gone by
+ * 260 from it) for every eye under the towers' sky, which is every piece but the Ship climbing.
+ * Over the towers' sky the far edge opens with the height, so from the stratosphere (the eye some
+ * 700 over the street) the whole plan below stays lit, out to the edge of the view.
+ */
+export function fade(pos: Vec3, eye: Vec3): number {
+  const d = Math.hypot(pos[0] - eye[0], pos[1] - eye[1], pos[2] - eye[2]);
+  const open = Math.max(0, eye[1] - SKY);
+  const far = 260 + 2.4 * open;
+  return smooth((d - 3) / 9) * smooth((far - d) / (140 + 0.5 * open));
+}
+
+/** How high the eye is over the towers' sky: 0 under it, 1 at its height over the stratosphere. */
+const clearAt = (eyeY: number) => smooth((eyeY - SKY) / (STRATOSPHERE + 190 - SKY));
+
+/**
+ * How large the Ship's grains are drawn: as every piece's under the towers' sky, larger as the eye
+ * climbs, so that from the stratosphere, some 800 away, the plan's grains read about the size the
+ * Golden plan's do from its own height, not as specks.
+ */
+export const highSize = (eyeY: number) => 1 + 13 * clearAt(eyeY);
+
 /** The cockpit's dials: your height over the street and your speed. */
 export type Gauge = { label: string; value: number; min?: number; max: number; unit?: string };
 export function gauges(): Gauge[] {
@@ -2321,6 +2344,8 @@ const cur = {
 };
 /** How far the eye sees now, as a share of VIEW: wider the higher you fly. */
 let reach = 1;
+/** How clear the air is: 0 under the towers' sky, 1 from some 200 over it (the far haze lifts). */
+let clear = 0;
 
 /** What a group's sites are. */
 const Kind = {
@@ -2626,9 +2651,10 @@ function group(
       const wz = (o[2] as number) - c[2];
       wake += 0.5 * smooth((20 - Math.sqrt(wx * wx + wy * wy + wz * wz)) / 14);
     }
-    // Near grains, drawn large, fade away; far light sinks into the violet night.
-    const k = wake * b * smooth((d - 4) / 10) * smooth((VIEW - dd) / 100);
-    const lean = 0.65 * (1 - smooth((VIEW - dd) / 100));
+    // Near grains, drawn large, fade away; far light sinks into the violet night. From high up
+    // the air is clear: the plan keeps its own colours out to a short fade at the view's edge.
+    const k = wake * b * smooth((d - 4) / 10) * smooth((VIEW - dd) / (100 - 70 * clear));
+    const lean = 0.65 * (1 - clear) * (1 - smooth((VIEW - dd) / 100));
     const lum = Math.max(o[3] as number, o[4] as number, o[5] as number) * 0.8;
     put(
       mix32(gid, s),
@@ -2891,6 +2917,7 @@ function build(P: Plan, t: number) {
   const { eye, target } = shipEye(c, f);
   Object.assign(P, { t, v: fly.v, c, f, eye, fwd: norm(sub(target, eye)), n: 0, top: 0 });
   reach = viewAt(eye[1]) / VIEW;
+  clear = smooth((eye[1] - SKY) / 200);
   cur.plan = P;
   cur.t = t;
   for (const it of gather(P)) {
@@ -3033,8 +3060,12 @@ function shipAt(p: Particle, t: number): Spot {
   if (m >= SHIPS_FROM) return otherShipAt(p, P, t);
   if (m >= YOU_FROM) {
     const pace = fly.mode === 'route' ? 0.6 : Math.max(0, fly.speed / FLY_SPEED - 0.4);
-    const { pos, part } = craftAt(P.c, P.f, 2.4, p, pace, fly.mode === 'route' ? 0 : fly.bank);
-    return { pos, rgb: craftColour(part, p, 0.42) };
+    // From high up, drawn with the large grains, the ship grows a little and dims, so it reads as
+    // a ship over the plan, not a blot of light.
+    const hi = clearAt(P.eye[1]);
+    const bank = fly.mode === 'route' ? 0 : fly.bank;
+    const { pos, part } = craftAt(P.c, P.f, 2.4 * (1 + 2 * hi), p, pace, bank);
+    return { pos, rgb: craftColour(part, p, 0.42 * (1 - 0.45 * hi)) };
   }
   // The sky (lib/city-sky.ts), in a dome just beyond the city's reach, so nothing in it stands in
   // front of it: stars and constellations, satellites, the stations, the spire's beacon.
@@ -3363,8 +3394,11 @@ export function pieceCamera(k: number, s: number): Eye {
 
 /** Glow and size of piece k on its own. */
 export function pieceLook(k: number): { glow: number; size: number } {
-  const { glow, size } = PHASES[k] as CityPhase;
-  return { glow, size };
+  const { id, glow, size } = PHASES[k] as CityPhase;
+  if (id !== 'ship') return { glow, size };
+  // The Ship's grains grow as its eye climbs (the latest frame's eye).
+  const P = plans.find((q) => q.t === lastBuilt);
+  return { glow, size: size * (P ? highSize(P.eye[1]) : 1) };
 }
 
 /** Glow and size for the whole picture, blended across piece boundaries. */

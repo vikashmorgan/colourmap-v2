@@ -720,6 +720,25 @@ down ahead; the view opens from the street's 160 to a thousand; the city is draw
 every roof's outline in its district's colour, the avenue's lights white, every street a thread of
 amber with slow waves running down it, the landmarks lit, the stars brighter.
 
+**Seen clearly from above** (2026-11-12: "make city more visible from above"). The plan was there
+but dark: the player's fade dissolved every grain beyond 260 from the eye (the eye in the
+stratosphere is some 700 over the street), its far plane stopped at 900, the grains were specks
+at that distance and the far haze turned them violet. Now, read as the Golden plan reads:
+
+- the City's own fade keeps the journey's for every eye under the towers' sky (every piece but
+  the Ship climbing) and opens its far edge with the height above it; the player's far plane is
+  1600;
+- the Ship's grains grow with the eye's height, up to 14 times their street size, so from 800
+  away they read about as large as the Golden plan's; your own ship grows a little and dims, so it
+  stays a ship, not a blot;
+- the haze lifts over the towers' sky: no violet lean, only a short fade at the edge of the view;
+- the plan spends its grains only where the eye looks (the view's footprint on the ground), and
+  from the stratosphere on few, bold things: each roof a fill of its district's hue (so every
+  district reads as a patch of one colour), the avenue in white, the main roads (the tile's edges
+  along, the bands' edges across) as dense threads of gold, the side streets and roof outlines
+  faint; every landmark's plaza a ring of its district's hue round a bright heart, breathing on its
+  district's beat.
+
 ### Races (`lib/city-race.ts`)
 
 Tracks are data, one per quarter: `{ district, name, full, start, gates, bars }`.
@@ -749,6 +768,11 @@ none); a win lights the district from above. Esc, or straying 70 from the course
 - Space and W together climb past the towers' sky into the stratosphere (over 400 within 16
   seconds); the eye then stands far back and high, looking down on a lit plan; S brings you back
   under the towers' sky. Without the super boost the ceiling is the towers' sky.
+- From the stratosphere the plan shows through the player's fade (nine in ten of its grains at more
+  than half their light, their mean shown brightness over 0.3, where it was 0.0002), drawn at
+  over eight times the street's grain size, with at least four districts each in its own hue; back
+  under the towers' sky the grains are the street's size again. Every other piece keeps the
+  journey's fade exactly.
 - L toggles slow mode: under 4 a second, the eye above the ship looking down; L again, back to the
   cruise.
 - The Ship claims Space, L and Enter (round buttons on a phone: Boost, Look, Go).

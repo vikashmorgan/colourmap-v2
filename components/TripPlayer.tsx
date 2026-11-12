@@ -775,7 +775,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       bgTex = b instanceof THREE.Texture ? b : null;
       scene.background = b;
     };
-    const camera = new THREE.PerspectiveCamera(55, 1, 0.3, 900);
+    // Far enough for the City's Ship in the stratosphere, its whole plan some 700 to 1300 below.
+    const camera = new THREE.PerspectiveCamera(55, 1, 0.3, 1600);
     camera.position.set(0, 0, 58);
 
     const composer = new EffectComposer(renderer);
