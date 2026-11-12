@@ -39,6 +39,7 @@ export const SLIDE_FILES = [
   // The Pandas class (/pandas): its session decks.
   'Pandas1.pdf',
   'Pandas2.pdf',
+  'Pandas3.pdf',
 ] as const;
 
 export type SlideFile = (typeof SLIDE_FILES)[number];

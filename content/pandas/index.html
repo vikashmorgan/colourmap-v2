@@ -673,6 +673,20 @@ function orders({ rows = [], cols = [], pos = false, only = false, label = '' } 
 }
 // The mask table of Lecture 2: A is total > 100, B is country == "FR".
 const maskTable = () => tbl(['', 'A: total > 100', 'B: FR', 'A & B', 'A | B', '~A'], [['o1', 'True', 'True', '*True', '*True', 'False'], ['o2', 'False', 'False', 'False', 'False', '*True'], ['o3', 'True', 'False', 'False', '*True', 'False'], ['o4', 'False', 'True', 'False', '*True', '*True'], ['o5', 'True', 'False', 'False', '*True', 'False']]);
+// The tiny table of Lecture 3, with its four problems. shade lists 'row:column' cells; add puts
+// extra columns on the right, each [heading, one value per row], a value starting with * shaded.
+// ␣ shows the hidden space in front of ES.
+const DQ = [['0', '101', 'Ana', 'FR', '34.0', '120.0', 'shipped'], ['1', '102', 'Ben', 'it', 'NaN', '80.0', 'delivered'], ['2', '103', 'NaN', 'IT', '29.0', '−50.0', 'shipped'], ['3', '104', 'Dan', 'FR', '230.0', '95.0', 'unknown'], ['4', '101', 'Ana', 'FR', '34.0', '120.0', 'shipped'], ['5', '105', 'Eva', '␣ES', '41.0', 'NaN', 'returned']];
+const DQ_COLS = ['order_id', 'customer', 'country', 'age', 'total', 'status'];
+function dq({ shade = [], add = [], label = '' } = {}) {
+  const head = ['', ...DQ_COLS, ...add.map(a => a[0])];
+  const body = DQ.map((r, i) => [r[0], ...r.slice(1).map((v, j) => (shade.includes(`${i}:${DQ_COLS[j]}`) ? `*${v}` : v)), ...add.map(a => a[1][i])]);
+  return cap(label) + tbl(head, body);
+}
+const F = 'False';
+// Lecture 3's practice table: five clients.
+const clients = (label = '') => cap(label) + tbl(['', 'id', 'city', 'age', 'plan'], [['0', '1', 'Paris', '25.0', 'basic'], ['1', '2', 'paris␣', 'NaN', 'pro'], ['2', '3', 'Lyon', '41.0', '?'], ['3', '3', 'Lyon', '41.0', '?'], ['4', '5', 'NaN', '180.0', 'pro']]);
+const report3 = () => tbl(['check', 'rows', 'pct'], [['missing value', '*3', '*50.0'], ['status unknown', '1', '16.7'], ['country not standard', '2', '33.3'], ['duplicate row', '1', '16.7'], ['age outside 0-110', '1', '16.7'], ['total below 0', '1', '16.7']]);
 const fourLoads = () => tbl(['Load', 'Shape', 'order_id', 'Outcome'], [['df1, no arguments', 'error', '—', 'UnicodeDecodeError: é is not UTF-8'], ['df2, sep="\\t"', 'error', '—', 'the same: decoding fails before the separator is used'], ['df3, + encoding="latin-1"', '(3, 6)', 'int64', 'accents right, but 00417 became 417'], ['*df4, + dtype={"order_id": str}', '*(3, 6)', '*text', '*accents right, 00417 kept']]);
 const sixCalls = () => tbl(['Call', 'The question it answers'], [['.shape', 'How many rows and columns?'], ['.dtypes', 'Which type is each column?'], ['.head(10)', 'What do real rows look like?'], ['.info()', 'Where are the NULLs? How much memory?'], ['.describe()', 'Which range do the numbers span?'], ['.value_counts()', 'Which categories exist, and how often?']]);
 
@@ -874,6 +888,129 @@ df["total"].tolist()   # [120, 0, 0, 60, 190]`)],
       ['What is the mean total of the French orders?', () => code(`df.loc[df["country"] == "FR", "total"].mean()   # 90.0`) + `<p>o1 and o4: (120 + 60) / 2 = 90. The fix to the Italian orders does not touch them.</p>`],
     ] },
   ], recap: ['df["c"] gives a Series, df[["c"]] a DataFrame.', '.loc uses labels, .iloc positions. Both read [rows, columns].', 'A slice is start:stop:step. Position slices leave out the stop; label slices include it.', 'A condition makes a mask; df[mask] keeps the True rows. Combine with ( ) and & | ~, never `and` or `or`.', 'NaN fails every comparison: use isna and notna.', 'Change data with one .loc[rows, column]. Two [ ] in a row on the left of = change nothing.'] },
+  { n: 3, pages: 42, short: 'Data quality', title: 'Data quality assessment', lede: 'Before cleaning anything, measure what is wrong: missing values, spellings, duplicates and impossible values. Every check is a True/False mask, counted, then collected in one quality report.', groups: [
+    { name: 'Assess before you clean', cards: [
+      { id: 'four', slide: 5, name: 'Four questions define data quality', what: 'Missing: is the value there? Inconsistent: is it written one way? Duplicate: is each fact recorded once? Inaccurate: is the value possible?\n\nThis session only looks and counts: no line of code changes the data. Fixing comes in the next sessions. Quality depends on the question: one table can be good enough for one analysis and useless for another.', more: { html: () => tbl(['Problem', 'Question', 'In the tiny table'], [['Missing', 'Is the value there?', 'age is NaN in row 1'], ['Inconsistent', 'Is it written one way?', '"FR", "it", "IT", " ES"'], ['Duplicate', 'Is each fact recorded once?', 'order 101 appears twice'], ['Inaccurate', 'Is the value possible?', 'age 230, total −50']]) } },
+      { id: 'toy', slide: 6, name: 'One tiny table hides all four problems', what: 'Every example uses these six orders. Each problem appears at least once, so every check has something to find.\n\nNone in a list becomes NaN, a missing value. " ES" starts with a space you cannot see on screen.', f: `df = pd.DataFrame({
+    "order_id": [101, 102, 103, 104, 101, 105],
+    "customer": ["Ana", "Ben", None, "Dan", "Ana", "Eva"],
+    "country":  ["FR", "it", "IT", "FR", "FR", " ES"],
+    "age":      [34, None, 29, 230, 34, 41],
+    "total":    [120, 80, -50, 95, 120, None],
+    "status":   ["shipped", "delivered", "shipped",
+                 "unknown", "shipped", "returned"]})`, more: { html: () => dq({ shade: ['1:age', '2:customer', '5:total', '3:status', '1:country', '5:country', '4:order_id', '4:customer', '4:country', '4:age', '4:total', '4:status', '3:age', '2:total'], label: 'Shaded: every cell with a problem. Row 4 repeats row 0.' }) } },
+      { id: 'wrong', slide: 7, name: 'Each problem quietly changes an answer', what: 'No error and no warning: pandas returns a number, and a wrong number looks as trustworthy as a right one.\n\n`count()` skips NaN. `nunique()` sees "it" and "IT" as two countries. `sum()` adds order 101 twice. `mean()` is pulled up by the impossible age 230.', f: `df["age"].count()        # 5, the table has 6 rows
+df["country"].nunique()  # 4, there are 3 countries
+df["total"].sum()        # 365.0, without the copy 245.0
+df["age"].mean()         # 73.6, without 230 it is 34.5` },
+      { id: 'pattern', slide: 8, name: 'Every check: condition, mask, count', what: 'Each check has three steps. Write a condition that is True where there is a problem. It gives a mask, one True or False per row. Then count the Trues.\n\nTrue counts as 1 and False as 0, so `mask.sum()` is how many rows have the problem and `mask.mean()` what share. A mask only reads df, it never changes it.', f: `mask = df["age"] > 110   # condition → mask
+mask.sum()               # 1 row
+mask.mean()              # 0.167: 1 of 6 rows`, more: { html: () => dq({ shade: ['3:age'], add: [['age > 110', [F, F, F, '*True', F, F]]] }) } },
+    ] },
+    { name: 'Missing values', cards: [
+      { id: 'nan', slide: 10, name: 'NaN marks an empty cell, and behaves differently', what: 'Put None in a column and pandas stores NaN, Not a Number. NaN is a float, so whole numbers become float64.\n\nPandas skip NaN without telling you: `count()` gives 2 and `mean()` divides by 2, not 3. And NaN is equal to nothing, not even NaN.', f: `s = pd.Series([10, None, 30])
+s.dtype           # float64: NaN is a float
+len(s)            # 3 rows
+s.count()         # 2 values that are there
+s.mean()          # 20.0 = (10 + 30) / 2
+np.nan == np.nan  # False`, watch: 'Never test x == np.nan: it is always False. Use isna().' },
+      { id: 'isna', slide: 12, name: 'isna(), then sum() and mean() per column', what: '`df.isna()` gives a table of the same shape: True where a cell is missing. `notna()` is its opposite; `isnull()` is an older name for isna.\n\nAdd `.sum()` and each column’s Trues are counted: how many are missing. `.mean()` gives the share, and × 100 a percentage. `df.info()` shows the same as its non-null count: with 6 rows, any column below 6 has NaN.', f: `df.isna().sum()          # missing cells per column
+df.isna().mean() * 100   # the same, in %
+pd.DataFrame({"n_missing": df.isna().sum(),
+              "pct": df.isna().mean() * 100})`, more: { html: () => cap('1 missing of 6 rows = 16.7 %') + tbl(['', 'n_missing', 'pct'], [['order_id', '0', '0.0'], ['customer', '*1', '*16.7'], ['country', '0', '0.0'], ['age', '*1', '*16.7'], ['total', '*1', '*16.7'], ['status', '0', '0.0']]) } },
+      { id: 'any-row', slide: 13, name: 'any(axis=1) finds the incomplete rows', what: 'isna() gives one True or False per cell. `.any(axis=1)` looks across each row and is True when at least one cell in it is missing: one answer per row, so a mask of incomplete rows.\n\naxis=0 goes down each column, axis=1 across each row. Here 3 rows of 6 are incomplete: half the table.', f: `m = df.isna().any(axis=1)   # one True/False per row
+m.sum()                     # 3 incomplete rows
+df[m]                       # rows 1, 2 and 5`, more: { html: () => dq({ shade: ['1:age', '2:customer', '5:total'], add: [['any', [F, '*True', '*True', F, F, '*True']]] }) } },
+      { id: 'placeholders', slide: 15, name: 'Placeholders hide missing values from isna()', what: 'A placeholder means "we do not know" but is stored as a value: "unknown", "?", "-", "n.d.", -1, 0, 999, "1900-01-01". isna() finds none of them: status has 0 NaN, yet one order is "unknown".\n\nFind them by reading `value_counts()` of text columns and the min and max of number columns. When loading, read_csv turns empty cells, N/A, NA and null into NaN; name any others with `na_values`.', f: `df["status"].isna().sum()    # 0: isna sees nothing
+df["status"].value_counts()  # ... unknown 1
+pd.read_csv(f)                         # "unknown" stays text
+pd.read_csv(f, na_values=["unknown"])  # now NaN too`, more: { html: () => row(cap('pd.read_csv(f): temp is text, 2 missing') + tbl(['', 'city', 'temp'], [['0', 'Paris', '12'], ['1', 'Rome', 'NaN'], ['2', 'Milan', '*unknown'], ['3', 'Lyon', 'NaN']]), cap('na_values=["unknown"]: float64, 3 missing') + tbl(['', 'city', 'temp'], [['0', 'Paris', '12.0'], ['1', 'Rome', 'NaN'], ['2', 'Milan', '*NaN'], ['3', 'Lyon', 'NaN']])) }, watch: 'A number column with dtype str is a clue: a placeholder is keeping it as text.' },
+    ] },
+    { name: 'Inconsistencies', cards: [
+      { id: 'spellings', slide: 18, name: 'unique, nunique and value_counts show the spellings', what: '`unique()` lists the distinct values of a column, `nunique()` counts them (NaN not counted), and `value_counts()` counts each one, most frequent first.\n\nPython compares text letter by letter, so case and spaces make new values: "it", "IT" and " ES" are three different strings, and a groupby would make 4 groups for 3 countries. Rare spellings at the bottom of value_counts are often typos.', f: `df["country"].unique()        # ['FR', 'it', 'IT', ' ES']
+df["country"].nunique()       # 4
+df["country"].value_counts()  # FR 3, it 1, IT 1, ' ES' 1`, watch: 'value_counts(dropna=False) counts NaN too.' },
+      { id: 'normalise', slide: 20, name: 'Normalise a copy to count the variants', what: 'Build a tidy version and compare. `.str` runs a text method on every value: `.str.strip()` removes spaces at both ends, `.str.upper()` puts everything in capitals.\n\nnorm is a separate Series, so df is unchanged. Where df differs from norm, the row was written another way: 2 rows.', f: `norm = df["country"].str.strip().str.upper()
+norm.nunique()                 # 3: FR, IT, ES
+(df["country"] != norm).sum()  # 2 rows written differently`, more: { html: () => tbl(['', 'country', 'norm', 'differs'], [['0', 'FR', 'FR', F], ['1', 'it', 'IT', '*True'], ['2', 'IT', 'IT', F], ['3', 'FR', 'FR', F], ['4', 'FR', 'FR', F], ['5', '␣ES', 'ES', '*True']]) }, watch: 'NaN != NaN is True: if the column has NaN, add notna() & so missing cells are not counted as spellings.' },
+      { id: 'to-numeric', slide: 21, name: 'to_numeric finds text in a number column', what: 'A column of numbers with dtype str always hides at least one value that is not a number. To find it, try to convert: `pd.to_numeric` turns text into numbers.\n\n`errors="coerce"` turns each value it cannot convert into NaN, instead of stopping with an error. Count the NaN: that is how many non-numbers were hiding.', f: `p = pd.Series(["10", "12.5", "n.d.", "8"])
+p.dtype                                  # str
+num = pd.to_numeric(p, errors="coerce")  # 10.0, 12.5, NaN, 8.0
+num.isna().sum()                         # 1: "n.d."` },
+      { id: 'agree', slide: 22, name: 'Related columns must agree', what: 'Some columns are tied by a rule: total must equal qty × price. Write the rule with != ("does not match") and the mask shows the rows that break it.\n\nRules of the same kind: a drop-off after its pick-up, an end date after its start date, total = fare + tip + tolls.', f: `o = pd.DataFrame({"qty":   [2, 1, 3, 2],
+                  "price": [5.0, 20.0, 4.0, 10.0],
+                  "total": [10.0, 20.0, 15.0, 20.0]})
+bad = o["total"] != o["qty"] * o["price"]
+bad.sum()   # 1: row 2, 3 × 4.0 = 12.0, not 15.0`, more: { html: () => tbl(['', 'qty', 'price', 'total', 'qty × price', 'mismatch'], [['0', '2', '5.0', '10.0', '10.0', F], ['1', '1', '20.0', '20.0', '20.0', F], ['2', '3', '4.0', '*15.0', '*12.0', '*True'], ['3', '2', '10.0', '20.0', '20.0', F]]) } },
+    ] },
+    { name: 'Duplicates', cards: [
+      { id: 'duplicated', slide: 25, name: 'duplicated() flags every repeat after the first', what: 'A duplicate counts one fact twice: order 101 is in the table twice, so `total.sum()` adds 120 that never existed. Duplicates come from files appended twice, forms sent twice, or a merge on the wrong key.\n\n`df.duplicated()` is True when a whole row is identical to an earlier row; the first copy stays False. `keep=False` marks every copy, to read them side by side.', f: `df.duplicated()                # True for row 4 only
+df.duplicated().sum()          # 1 extra row
+df[df.duplicated(keep=False)]  # rows 0 and 4`, more: { html: () => dq({ add: [['duplicated()', [F, F, F, F, '*True', F]], ['keep=False', ['*True', F, F, F, '*True', F]]] }) } },
+      { id: 'subset', slide: 27, name: 'subset= checks a key, not the whole row', what: 'Two rows can share an id and differ elsewhere: id 2 has two prices. They are not identical, so `duplicated()` misses them. `subset="id"` compares only that column, and `is_unique` says in one word whether a key repeats.\n\nWhich price is right is a question for the owner of the data: the check finds the conflict, it does not choose.', f: `k = pd.DataFrame({"id":    [1, 2, 2, 3],
+                  "item":  ["pen", "cup", "cup", "mug"],
+                  "price": [2.0, 5.0, 5.5, 8.0]})
+k.duplicated().sum()             # 0: no row repeats entirely
+k.duplicated(subset="id").sum()  # 1: id 2 repeats
+k["id"].is_unique                # False` },
+    ] },
+    { name: 'Accuracy', cards: [
+      { id: 'describe', slide: 30, name: 'describe() shows the impossible extremes', what: 'An accurate value is possible and plausible. The quickest look is `describe()`: read min and max first. Max age 230 is impossible; min total −50 is an order that cost less than nothing.\n\nThe mean age, 73.6, is pulled up by that one value. count is 5, not 6: describe skips NaN.', f: `df[["age", "total"]].describe()`, more: { html: () => tbl(['', 'age', 'total'], [['count', '5.0', '5.0'], ['mean', '73.6', '73.0'], ['min', '29.0', '*−50.0'], ['max', '*230.0', '120.0']]) } },
+      { id: 'between', slide: 31, name: 'between() tests a range, but NaN fails it too', what: '`between(0, 110)` is True when 0 ≤ age ≤ 110, both ends included; ~ turns it into "outside the range".\n\nThe trap: NaN is never in a range, so ~between also marks the missing age, and you count 2 wrong ages instead of 1. Test only the values that exist, with `notna() &`. Missing values are counted once, in the missing check.', f: `ok = df["age"].between(0, 110)
+(~ok).sum()                    # 2: wrong, NaN counted
+bad = df["age"].notna() & ~ok
+bad.sum()                      # 1: only age 230`, more: { html: () => dq({ shade: ['1:age', '3:age'], add: [['~ok', [F, '*True', F, '*True', F, F]], ['notna & ~ok', [F, F, F, '*True', F, F]]] }) } },
+      { id: 'isin', slide: 32, name: 'isin() tests a list of allowed values', what: '`isin(allowed)` is True when the value is in the list, and ~ marks those that are not. "unknown" is not an allowed status: 1 row fails.\n\nThe list comes from the business, not from the data: ask which statuses exist. "cancelled" is allowed even though no order has it.', f: `allowed = ["shipped", "delivered", "returned", "cancelled"]
+bad = ~df["status"].isin(allowed)
+bad.sum()               # 1
+df.loc[bad, "status"]   # row 3: 'unknown'` },
+      { id: 'iqr', slide: 33, name: 'An outlier is suspicious, not wrong', what: 'The IQR rule flags values far from the middle. q1 is the value a quarter of the way up the sorted data, q3 three quarters up. iqr = q3 − q1 is the width of the middle half.\n\nAnything more than 1.5 × iqr below q1 or above q3 is an outlier. 30 delivery days may be a typo for 3, or a real lost parcel: the check flags it, a person decides.', f: `days = pd.Series([2, 3, 3, 4, 5, 4, 30])
+q1 = days.quantile(0.25)   # 3.0
+q3 = days.quantile(0.75)   # 4.5
+iqr = q3 - q1              # 1.5
+low = q1 - 1.5 * iqr       # 0.75
+high = q3 + 1.5 * iqr      # 6.75
+days[(days < low) | (days > high)]   # 30` },
+    ] },
+    { name: 'The quality report', cards: [
+      { id: 'report', slide: 36, name: 'One mask per check, one row per mask', what: 'Give each check a name, as a mask. Then build a table with one row per check: how many rows fail it, and what share.\n\nA row can fail several checks, so the shares do not add up to 100 %. The report shows where the table is weakest: half the rows miss a value. Measure every problem before you fix any.', f: `miss  = df.isna().any(axis=1)
+unk   = df["status"] == "unknown"
+spell = df["country"] != norm
+dup   = df.duplicated()
+age   = df["age"].notna() & ~df["age"].between(0, 110)
+neg   = df["total"] < 0
+report = pd.DataFrame(
+    {"rows": [miss.sum(), unk.sum(), spell.sum(),
+              dup.sum(), age.sum(), neg.sum()]},
+    index=["missing value", "status unknown",
+           "country not standard", "duplicate row",
+           "age outside 0-110", "total below 0"])
+report["pct"] = report["rows"] / len(df) * 100`, more: { html: report3 } },
+    ] },
+  ], practice: [
+    { id: 'l3-e1', title: 'Missing, counted', setup: 'A new table of five clients: c = pd.DataFrame({"id": [1, 2, 3, 3, 5], "city": ["Paris", "paris ", "Lyon", "Lyon", None], "age": [25, None, 41, 41, 180], "plan": ["basic", "pro", "?", "?", "pro"]}). Check it without changing it.', parts: [
+      ['How many cells are missing in each column?', () => code(`c.isna().sum()   # id 0, city 1, age 1, plan 0`) + `<p>isna marks each empty cell True; sum counts the Trues of each column.</p>`],
+      ['How many rows have at least one missing cell?', () => code(`c.isna().any(axis=1).sum()   # 2: rows 1 and 4`) + `<p>any(axis=1) looks across each row: row 1 misses its age, row 4 its city.</p>`],
+      ['Is plan complete?', () => code(`c["plan"].isna().sum()      # 0
+c["plan"].value_counts()    # pro 2, ? 2, basic 1`) + `<p><b>No.</b> isna finds nothing, but "?" is a placeholder: 2 clients have no real plan.</p>`],
+    ] },
+    { id: 'l3-e2', title: 'Spellings and duplicates', setup: 'The same five clients.', parts: [
+      ['How many cities does nunique() count, and how many are there really?', () => code(`c["city"].nunique()                    # 3
+norm = c["city"].str.strip().str.title()
+norm.nunique()                         # 2: Paris, Lyon`) + `<p>"paris " has a small p and a space at the end, so it counts as a third city.</p>`],
+      ['How many rows have a city written another way?', () => code(`(c["city"] != norm).sum()                   # 2: wrong
+(c["city"].notna() & (c["city"] != norm)).sum()   # 1: row 1`) + `<p>Row 4 is NaN, and NaN != NaN is True. notna() & keeps the missing city out of the spelling check.</p>`],
+      ['How many rows are exact duplicates? Is id a unique key?', () => code(`c.duplicated().sum()   # 1: row 3 repeats row 2
+c["id"].is_unique      # False: id 3 twice`)],
+    ] },
+    { id: 'l3-e3', title: 'Ranges and the report', setup: 'The same five clients. A valid age is 0 to 120; a valid plan is basic, pro or free.', parts: [
+      ['How many ages are out of range?', () => code(`ok = c["age"].between(0, 120)
+(~ok).sum()                      # 2: wrong, NaN counted
+(c["age"].notna() & ~ok).sum()   # 1: age 180`)],
+      ['How many plans are not allowed?', () => code(`(~c["plan"].isin(["basic", "pro", "free"])).sum()   # 2`) + `<p>Both "?" fail. This is the placeholder of part 1, seen by another check.</p>`],
+      ['What share of rows are duplicates, in %?', () => code(`c.duplicated().mean() * 100   # 20.0`) + `<p>1 duplicate row of 5: 1 / 5 = 0.2, × 100 = 20 %.</p>`],
+    ] },
+  ], recap: ['Assess before you clean: today no line changes df.', 'Every check is a mask. mask.sum() counts the rows, mask.mean() gives the share.', 'Missing: isna(), and placeholders with value_counts() and min/max.', 'Spellings: nunique() and value_counts(); normalise a copy with .str.strip().str.upper() to count the variants.', 'Duplicates: duplicated() for whole rows, subset= for a key.', 'Accuracy: describe(), between() with notna() &, isin() for allowed values, the IQR rule for outliers.', 'Collect every count in one quality report; a row can fail several checks.'] },
 ];
 SESSIONS.forEach(s => { let k = 0; for (const g of s.groups) for (const c of g.cards) c.num = `${s.n}.${++k}`; });
 const readSize = () => Number(document.documentElement.style.getPropertyValue('--read')) || 1;
@@ -897,6 +1034,14 @@ const PICTURES = {
     + row(orders({ rows: ['o2', 'o3'], label: 'df.iloc[1:3] → 2 rows' }), orders({ rows: ['o2', 'o3', 'o4'], label: 'df.loc["o2":"o4"] → 3 rows' }))
     + `<p class="pic-lede"><b>Masks:</b> a condition gives True or False for each row, and df[mask] keeps the True ones. A is total > 100, B is French:</p>`
     + maskTable(),
+  3: () => `<p class="pic-lede"><b>Assess before you clean.</b> Today every check only looks and counts. Fixing is the next step.</p>`
+    + flow(['Load', 'Select', 'Assess: today', 'Clean', 'Analyse'])
+    + `<p class="pic-lede"><b>One tiny table, all four problems:</b> missing cells, spellings, a duplicate row and impossible values.</p>`
+    + dq({ shade: ['1:age', '2:customer', '5:total', '3:status', '1:country', '5:country', '4:order_id', '4:customer', '4:country', '4:age', '4:total', '4:status', '3:age', '2:total'] })
+    + `<p class="pic-lede"><b>Every check is a mask:</b> a condition gives True or False per row. .sum() counts the rows, .mean() gives the share.</p>`
+    + dq({ shade: ['3:age'], add: [['age > 110', [F, F, F, '*True', F, F]]] })
+    + `<p class="pic-lede"><b>The quality report</b> collects one count per check.</p>`
+    + report3(),
 };
 
 /* ---------- Every call, piece by piece ----------
@@ -916,6 +1061,24 @@ const READS = {
   '2|compare': { parts: [['isin([...])', 'True where the value is in the list.'], ['~', 'Not, so not in the list.'], ['between(80, 190)', 'True from 80 to 190, both ends kept.'], ['inclusive="left"', 'Keeps the start, leaves out the end.']] },
   '2|query': { parts: [['"..."', 'The whole condition, as one string.'], ["'FR'", 'Text inside the string, in the other kind of quote.'], ['@limit', 'The value of the Python variable limit.'], ['`order total`', 'Backticks around a column name with a space.']] },
   '2|chained': { parts: [['df[...]["total"] = 0', 'Two [ ] in a row on the left of =: the change goes to a temporary object.'], ['df.loc[mask, "total"] = 0', 'One step on df itself: rows by mask, the column by name.'], ['.copy()', 'A separate table, so it is clear that df is not meant to change.']] },
+  '3|toy': { parts: [['pd.DataFrame({...})', 'Builds the table from a dict: each key a column, each list its values.'], ['None', 'An empty cell. pandas stores it as NaN.'], ['" ES"', 'Text with a space in front: on screen it looks like "ES".']] },
+  '3|wrong': { parts: [['.count()', 'How many values are there, NaN left out.'], ['.nunique()', 'How many different values.'], ['.sum()', 'Adds every value, NaN left out.'], ['.mean()', 'The sum divided by the count.']] },
+  '3|pattern': { parts: [['df["age"] > 110', 'The condition, run on every row at once.'], ['mask', 'Its answers: one True or False per row.'], ['.sum()', 'Adds them, True as 1: how many rows.'], ['.mean()', 'Their average: what share of rows.']], walk: { intro: 'On the age column:', steps: [['ages', '34, NaN, 29, 230, 34, 41'], ['> 110', 'False, False, False, True, False, False'], ['mask.sum()', '0 + 0 + 0 + 1 + 0 + 0 = 1'], ['mask.mean()', '1 / 6 = 0.167', 1]] } },
+  '3|nan': { parts: [['pd.Series([...])', 'One column from a list.'], ['None', 'Stored as NaN, Not a Number.'], ['.dtype', 'The type of the column: float64, because NaN is a float.'], ['len(s)', 'Every row, NaN included.'], ['.count()', 'Only the values that are there.'], ['np.nan', 'NaN itself, from numpy.']] },
+  '3|isna': { parts: [['df.isna()', 'True where a cell is missing, for every cell.'], ['.sum()', 'Counts the Trues of each column.'], ['.mean()', 'The share of Trues in each column.'], ['* 100', 'Turns the share into a percentage.'], ['pd.DataFrame({...})', 'Puts the two Series side by side, as a small report.']], walk: { intro: 'The age column:', steps: [['isna()', 'False, True, False, False, False, False'], ['.sum()', '1 missing'], ['.mean()', '1 / 6 = 0.167'], ['* 100', '16.7 %', 1]] } },
+  '3|any-row': { parts: [['df.isna()', 'True or False for every cell.'], ['.any(axis=1)', 'Across each row: True if any cell in it is True.'], ['m.sum()', 'How many rows are incomplete.'], ['df[m]', 'Shows only those rows.']] },
+  '3|placeholders': { parts: [['.isna().sum()', 'Counts real NaN only.'], ['.value_counts()', 'Every value with how often it appears: "unknown" shows up here.'], ['pd.read_csv(f)', 'Loads the file; empty, N/A, NA and null become NaN.'], ['na_values=["unknown"]', 'Extra words to turn into NaN while loading.']] },
+  '3|spellings': { parts: [['.unique()', 'The distinct values, in order of first appearance.'], ['.nunique()', 'How many distinct values, NaN left out.'], ['.value_counts()', 'Each value and its count, most frequent first.']] },
+  '3|normalise': { parts: [['.str', 'Runs a text method on every value of the column.'], ['.strip()', 'Removes spaces at the start and the end.'], ['.upper()', 'Puts every letter in capitals.'], ['df["country"] != norm', 'True where the original differs from the tidy version.'], ['.sum()', 'How many rows differ.']] },
+  '3|to-numeric': { parts: [['pd.Series(["10", ...])', 'Numbers stored as text.'], ['pd.to_numeric(p)', 'Converts each value to a number.'], ['errors="coerce"', 'A value that is not a number becomes NaN, instead of an error.'], ['num.isna().sum()', 'Counts the values that could not be converted.']] },
+  '3|agree': { parts: [['o["qty"] * o["price"]', 'Multiplies row by row: what total should be.'], ['!=', 'Does not equal.'], ['bad', 'True in the rows that break the rule.']], walk: { intro: 'Row by row:', steps: [['row 0', '2 × 5.0 = 10.0, total 10.0: agrees'], ['row 1', '1 × 20.0 = 20.0: agrees'], ['row 2', '3 × 4.0 = 12.0, total 15.0: mismatch'], ['row 3', '2 × 10.0 = 20.0: agrees'], ['bad.sum()', '1', 1]] } },
+  '3|duplicated': { parts: [['.duplicated()', 'True when the whole row equals an earlier row.'], ['.sum()', 'How many extra copies.'], ['keep=False', 'Marks every copy, the first one too.'], ['df[...]', 'Shows the marked rows.']] },
+  '3|subset': { parts: [['subset="id"', 'Compares only the id column, not the whole row.'], ['.is_unique', 'True when no value of the column repeats.']] },
+  '3|describe': { parts: [['df[["age", "total"]]', 'Two columns, as a table.'], ['.describe()', 'count, mean, spread, min, quartiles and max of each.'], ['min, max', 'The extremes: look here first for impossible values.']] },
+  '3|between': { parts: [['.between(0, 110)', 'True when 0 ≤ age ≤ 110. NaN gives False.'], ['~ok', 'Not ok: outside the range, or NaN.'], ['.notna()', 'True where a value exists.'], ['&', 'Both at once: exists and is outside the range.']], walk: { intro: 'Ages 34, NaN, 29, 230, 34, 41:', steps: [['ok', 'True, False, True, False, True, True'], ['~ok', 'rows 1 (NaN) and 3 (230): 2'], ['notna()', 'False only for row 1'], ['notna() & ~ok', 'row 3 only: 1', 1]] } },
+  '3|isin': { parts: [['allowed', 'The list of valid values, from the business.'], ['.isin(allowed)', 'True when the value is in the list.'], ['~', 'Not: True when it is not in the list.'], ['df.loc[bad, "status"]', 'The failing rows, status column only.']] },
+  '3|iqr': { parts: [['quantile(0.25)', 'q1: a quarter of the sorted values are below it.'], ['quantile(0.75)', 'q3: three quarters are below it.'], ['iqr = q3 - q1', 'The width of the middle half of the data.'], ['1.5 * iqr', 'How far beyond q1 or q3 a value may go before it is flagged.'], ['(days < low) | (days > high)', 'Below the low fence or above the high one.']], walk: { intro: 'Sorted: 2, 3, 3, 4, 4, 5, 30, positions 0 to 6:', steps: [['q1', 'position 0.25 × 6 = 1.5: between 3 and 3 → 3.0'], ['q3', 'position 0.75 × 6 = 4.5: between 4 and 5 → 4.5'], ['iqr', '4.5 − 3.0 = 1.5'], ['low', '3.0 − 1.5 × 1.5 = 0.75'], ['high', '4.5 + 1.5 × 1.5 = 6.75'], ['outlier', '30 > 6.75', 1]] } },
+  '3|report': { parts: [['miss, unk, spell…', 'One named mask per check.'], ['.sum()', 'How many rows fail each check.'], ['pd.DataFrame({"rows": [...]}, index=[...])', 'One row per check: the counts, named by index.'], ['report["rows"] / len(df) * 100', 'Each count as a share of all rows, in %.']] },
 };
 
 /* ---------- Store: this browser first, then the account ---------- */
@@ -1165,7 +1328,7 @@ document.addEventListener('click', e => {
 });
 
 
-/* ---------- Cheat sheet: every call and term from lectures 1 and 2 ---------- */
+/* ---------- Cheat sheet: every call and term from lectures 1 to 3 ---------- */
 const REF = [
   { name: 'DataFrames', items: [
     ['DataFrame', 'A table in memory: an index, named columns, one dtype per column.', 'pd.DataFrame({"total": [129.9, 45.0]})', 1, 'dataframe'],
@@ -1218,14 +1381,26 @@ const REF = [
     ['.loc[mask, "c"] =', 'The way to change df: rows and column in one step.', 'df.loc[df["country"] == "IT", "total"] = 0', 2, 'chained'],
     ['.copy()', 'A separate table, taken on purpose.', 'fr = df[df["country"] == "FR"].copy()', 2, 'chained'],
   ] },
+  { name: 'Data quality', items: [
+    ['Quality mask', 'Each check is a condition, True where there is a problem. .sum() counts, .mean() gives the share.', 'mask = df["age"] > 110\nmask.sum()   mask.mean()', 3, 'pattern'],
+    ['any(axis=1)', 'Across each row: True if any cell is True. With isna, the incomplete rows.', 'df.isna().any(axis=1)', 3, 'any-row'],
+    ['Placeholder', 'A value that means "unknown", like "?" or 999. isna does not see it.', 'df["status"].value_counts()', 3, 'placeholders'],
+    ['na_values', 'Extra words read_csv turns into NaN.', 'pd.read_csv(f, na_values=["unknown"])', 3, 'placeholders'],
+    ['nunique', 'How many distinct values. Case and spaces make new ones.', 'df["country"].nunique()', 3, 'spellings'],
+    ['to_numeric', 'Converts text to numbers; errors="coerce" turns the rest into NaN.', 'pd.to_numeric(s, errors="coerce")', 3, 'to-numeric'],
+    ['duplicated', 'True when a row repeats an earlier one. keep=False marks every copy; subset= checks a key.', 'df.duplicated(subset="order_id")', 3, 'duplicated'],
+    ['Outlier', 'Beyond 1.5 × iqr from q1 or q3. Suspicious, not automatically wrong.', 'q1, q3 = s.quantile(0.25), s.quantile(0.75)', 3, 'iqr'],
+    ['quantile', 'The value below which a share of the data lies.', 's.quantile(0.25)', 3, 'iqr'],
+    ['Quality report', 'One row per check: how many rows fail it, and what share.', 'report["pct"] = report["rows"] / len(df) * 100', 3, 'report'],
+  ] },
 ];
 
 /* ---------- A lecture ---------- */
 // Terms in a card's text, and calls in a code box: hoverable, but not coloured.
-const TERMS = /\b(DataFrames?|Series|index|masks?|dtypes?|NaN|Copy-on-Write|chained assignment|slices?|alignment|profile)\b/g;
+const TERMS = /\b(DataFrames?|Series|index|masks?|dtypes?|NaN|Copy-on-Write|chained assignment|slices?|alignment|profile|placeholders?|outliers?)\b/g;
 // No letters to explain on this page: the code is the formula.
 const LETTERS = {};
-const CODE_TOKENS = /\.loc\b|\.iloc\b|\.str\b|\.dt\b|\bread_csv\b|\bread_excel\b|\bread_sql\b|\bjson_normalize\b|\bto_csv\b|\bisin\b|\bbetween\b|\bisna\b|\bnotna\b|\bquery\b|\bdtype=|\bsep=|\bencoding=|\bvalue_counts\b|\bdescribe\b|\binfo\b|\bnlargest\b|\.copy\(\)|\breset_index\b|\bsort_values\b|\bselect_dtypes\b/g;
+const CODE_TOKENS = /\.loc\b|\.iloc\b|\.str\b|\.dt\b|\bread_csv\b|\bread_excel\b|\bread_sql\b|\bjson_normalize\b|\bto_csv\b|\bisin\b|\bbetween\b|\bisna\b|\bnotna\b|\bquery\b|\bdtype=|\bsep=|\bencoding=|\bvalue_counts\b|\bdescribe\b|\binfo\b|\bnlargest\b|\.copy\(\)|\breset_index\b|\bsort_values\b|\bselect_dtypes\b|\bnunique\b|\bduplicated\b|\bto_numeric\b|\bquantile\b|\bna_values=/g;
 const codeKey = m => m.replace(/^\./, '').replace(/[()=]+$/, '');
 const symbolize = escaped => escaped.replace(CODE_TOKENS, m => (PEEK_TERM[codeKey(m)] ? `<span class="kw" data-kw="${codeKey(m)}">${m}</span>` : m));
 const letterSpan = (key, shown) => `<span class="kw kw-v" data-kw="${key}">${shown}</span>`;
@@ -1297,6 +1472,21 @@ const PRACTICE_LAWS = {
     [[2, 'chained', 'One .loc changes df', 'df.loc[rows, column] = value', 'df.loc[df["country"] == "IT", "total"] = 0']],
     [[2, 'loc-mask', '.loc: a mask for rows, a name for the column', 'df.loc[mask, column].mean()', 'df.loc[df["country"] == "FR", "total"].mean()']],
   ],
+  'l3-e1': [
+    [[3, 'isna', 'Missing per column', 'df.isna().sum()', 'c.isna().sum()']],
+    [[3, 'any-row', 'Incomplete rows', 'df.isna().any(axis=1).sum()', 'c.isna().any(axis=1).sum() → 2']],
+    [[3, 'placeholders', 'Placeholders hide from isna', 'df["c"].value_counts()', 'c["plan"].value_counts() → ? 2']],
+  ],
+  'l3-e2': [
+    [[3, 'spellings', 'Distinct values', 'df["c"].nunique()', 'c["city"].nunique() → 3'], [3, 'normalise', 'A tidy copy', 's.str.strip().str.title()', 'norm.nunique() → 2']],
+    [[3, 'normalise', 'Rows written another way', '(s != norm).sum()', 'c["city"].notna() & (c["city"] != norm)']],
+    [[3, 'duplicated', 'Exact duplicates', 'df.duplicated().sum()', 'c.duplicated().sum() → 1'], [3, 'subset', 'A unique key', 'df["key"].is_unique', 'c["id"].is_unique → False']],
+  ],
+  'l3-e3': [
+    [[3, 'between', 'Out of range, NaN left out', 's.notna() & ~s.between(a, b)', 'c["age"].notna() & ~c["age"].between(0, 120)']],
+    [[3, 'isin', 'Not in the allowed list', '~s.isin(allowed)', '~c["plan"].isin(["basic", "pro", "free"])']],
+    [[3, 'pattern', 'The share of True rows', 'mask.mean() * 100', 'c.duplicated().mean() * 100 → 1 / 5 × 100']],
+  ],
 };
 const cardNo = (n, id) => { const s = SESSIONS.find(x => x.n === n), i = s ? s.groups.flatMap(g => g.cards).findIndex(c => c.id === id) : -1; return i < 0 ? '' : String(i + 1); };
 function lawsHtml(s, laws) {
@@ -1317,6 +1507,9 @@ const PRACTICE_PICS = {
   'l2-e1': { draw: () => orders({ pos: true }), read: 'Each row shows its label and its position: o5 · 4 is label o5, position 4.' },
   'l2-e2': { draw: () => orders(), read: 'Read each condition row by row, then keep the rows where it is True.' },
   'l2-e3': { draw: () => orders({ rows: ['o2', 'o3'], cols: ['total'] }), read: 'The shaded cells are the totals the fix must set to 0: o2 and o3, the Italian orders.' },
+  'l3-e1': { draw: () => clients('␣ marks the space at the end of "paris ".'), read: 'Read down each column for NaN, then read plan’s values: "?" is not NaN.' },
+  'l3-e2': { draw: () => clients(), read: 'Rows 2 and 3 are the same client twice. Row 1 writes Paris another way.' },
+  'l3-e3': { draw: () => clients(), read: 'Age 180 is out of range; age NaN is missing, not wrong. "?" is not an allowed plan.' },
 };
 function picHtml(x) {
   const q = PRACTICE_PICS[x.id];
@@ -1330,7 +1523,7 @@ function practiceHtml(s) {
     <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button><button type="button" class="case-btn" aria-controls="case-pad">The case</button></div></section>`).join('');
 }
 function refHtml() {
-  return `<h1>Cheat sheet</h1><p class="lede">Every rule and term from lectures 1 and 2, by topic. The lecture tag opens its card.</p>
+  return `<h1>Cheat sheet</h1><p class="lede">Every rule and term from lectures 1 to 3, by topic. The lecture tag opens its card.</p>
     <input type="search" class="ref-search" id="ref-q" placeholder="Find: loc, mask, read_csv, query…" aria-label="Find a rule or term" autocomplete="off">
     <div id="ref-list">${REF.map(g => `<section class="ref-group"><h2>${esc(g.name)}</h2><dl class="ref">${g.items.map(([t, d, ex, n, id]) => `<div class="ref-row" data-hl="pandas|ref|${esc(t)}" data-text="${esc(`${t} ${d} ${ex}`.toLowerCase())}">
       <dt>${mathHtml(t)}</dt><dd><span>${esc(d)}</span>${ex ? `<pre>${mathHtml(ex)}</pre>` : ''}<button type="button" class="ref-go" data-go="${esc(cardKey(n, id))}">Lecture ${n} ›</button></dd></div>`).join('')}</dl></section>`).join('')}</div>
@@ -1391,6 +1584,15 @@ const ESSENTIALS = {
     { name: 'Masks', is: 'A condition gives True or False per row; df[mask] keeps the True rows.', f: 'df[(df["total"] > 100) & (df["country"] == "FR")]', parts: [['&  |  ~', 'and, or, not'], ['( )', 'around each test']], pic: maskTable },
     { name: 'Filter conditions', is: 'One tool for each kind of test.', pic: () => tbl(['Goal', 'pandas', 'SQL'], [['in a list', 'df["c"].isin(L)', 'IN'], ['in a range', 'df["c"].between(a, b)', 'BETWEEN'], ['missing', 'df["c"].isna()', 'IS NULL'], ['text contains', 'df["c"].str.contains("x", na=False)', "LIKE '%x%'"], ['date part', 'df["d"].dt.year == 2023', 'EXTRACT(YEAR …)'], ['top n', 'df.nlargest(n, "c")', 'ORDER BY … LIMIT n'], ['as a sentence', 'df.query("c > 1 and d == \'x\'")', 'the whole WHERE']]) },
     { name: 'Changing data', is: 'A selection never changes df. Change df in one step, with .loc.', f: 'df.loc[df["country"] == "IT", "total"] = 0', watch: 'Two [ ] in a row on the left of = change nothing.' },
+  ],
+  3: [
+    { name: 'Four problems', is: 'Missing, inconsistent, duplicate, inaccurate. Today we only measure them.', pic: () => tbl(['Problem', 'Find it with'], [['Missing', 'isna(), value_counts() for placeholders'], ['Inconsistent', 'nunique(), value_counts(), to_numeric'], ['Duplicate', 'duplicated(), subset='], ['Inaccurate', 'describe(), between(), isin(), quantile()']]) },
+    { name: 'The pattern', is: 'Every check is a mask: True where there is a problem.', f: 'mask = df["age"] > 110\nmask.sum()    # how many rows\nmask.mean()   # what share', parts: [['condition', 'True where the problem is'], ['.sum(), .mean()', 'count, share']] },
+    { name: 'Missing', is: 'isna() per cell; .sum() per column; .any(axis=1) per row.', f: 'df.isna().sum()\ndf.isna().any(axis=1).sum()', watch: 'Placeholders like "unknown" hide from isna: read value_counts().' },
+    { name: 'Spellings', is: 'Case and spaces make new values. Normalise a copy and compare.', f: 'norm = s.str.strip().str.upper()\n(s != norm).sum()', watch: 'NaN != NaN is True: add notna() &.' },
+    { name: 'Duplicates', is: 'Whole rows, or a key.', f: 'df.duplicated().sum()\ndf.duplicated(subset="order_id").sum()' },
+    { name: 'Accuracy', is: 'Possible and plausible values.', f: 'df["age"].notna() & ~df["age"].between(0, 110)\n~df["status"].isin(allowed)', watch: 'NaN fails between: test only the values that exist.' },
+    { name: 'The report', is: 'One row per check, with count and share.', pic: report3 },
   ],
 };
 function summaryHtml(s) {
@@ -1829,6 +2031,7 @@ const PEEK_TERM = {
   loc: '.loc', iloc: '.iloc', str: '.str', dt: '.dt', read_csv: 'read_csv', read_excel: 'read_excel', read_sql: 'read_sql', json_normalize: 'json_normalize', to_csv: 'to_csv', isin: 'isin', between: 'between', isna: 'isna', notna: 'isna', query: 'query',
   dtype: 'dtype', sep: 'sep', encoding: 'encoding', value_counts: 'value_counts', describe: 'describe', info: 'info', nlargest: 'nlargest', copy: '.copy()', reset_index: 'reset_index', sort_values: 'sort_values', select_dtypes: 'select_dtypes',
   dataframe: 'DataFrame', series: 'Series', index: 'Index', mask: 'Mask', nan: 'NaN', 'copy-on-write': 'Copy-on-Write', 'chained assignment': 'Chained assignment', slice: 'Slice', alignment: 'Alignment', profile: 'Profile',
+  nunique: 'nunique', duplicated: 'duplicated', to_numeric: 'to_numeric', quantile: 'quantile', na_values: 'na_values', placeholder: 'Placeholder', outlier: 'Outlier',
 };
 const peekKey = w => PEEK_TERM[w] || PEEK_TERM[w.replace(/ies$/, 'y').replace(/s$/, '')] || PEEK_TERM[w.replace(/s$/, '')];
 const refByTerm = term => { for (const g of REF) for (const it of g.items) if (it[0] === term) return it; return null; };
@@ -2113,13 +2316,15 @@ document.addEventListener('mousedown', e => { if (e.target.closest && !e.target.
    The decks are the teacher's material, so they stay out of this public page: each user uploads them once
    to their private folder (the same one as the Python page's slides), and each card's "Slide n ›" opens
    them. Any sensible name works: SelectingFilteringSlicing_2.pdf or Pandas2.pdf is filed as Pandas2.pdf. */
-const DECK_FILES = ['Pandas1.pdf', 'Pandas2.pdf'];
+const DECK_FILES = ['Pandas1.pdf', 'Pandas2.pdf', 'Pandas3.pdf'];
 function deckName(name) {
   if (!/\.pdf$/i.test(name)) return null;
-  // The decks' own names say what they are: (Intro)DataFrames&Loading.pdf, SelectingFilteringSlicing_2.pdf.
+  // The decks' own names say what they are: (Intro)DataFrames&Loading.pdf, SelectingFilteringSlicing_2.pdf,
+  // DataQualityAssessment_3.pdf.
   if (/dataframe/i.test(name)) return 'Pandas1.pdf';
   if (/selecting|filtering|slicing/i.test(name)) return 'Pandas2.pdf';
-  const m = name.match(/^Pandas\s*([12])\.pdf$/i) || name.match(/(?:lecture|lesson|session)\s*_?\s*0*([12])(?!\d)/i);
+  if (/quality/i.test(name)) return 'Pandas3.pdf';
+  const m = name.match(/^Pandas\s*([1-3])\.pdf$/i) || name.match(/(?:lecture|lesson|session)\s*_?\s*0*([1-3])(?!\d)/i);
   return m ? `Pandas${m[1]}.pdf` : null;
 }
 let filesUp = null;

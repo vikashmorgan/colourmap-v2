@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Victor's study page for *Pandas & Data Manipulation* (Mattia Sabella, Politecnico di Milano), sessions 1 and 2. Asked for on 2026-11-11:
+Victor's study page for *Pandas & Data Manipulation* (Mattia Sabella, Politecnico di Milano), sessions 1 to 3. Asked for on 2026-11-11:
 
 > "Add these to pandas as a new class in school, using same system as in statistics, but trying to not make it too long."
 
@@ -16,20 +16,23 @@ One self-contained file, `content/pandas/index.html`, built on the Statistics pa
 
 Shorter on purpose:
 
-- **14 cards in Session 1, 17 in Session 2**, each a short explanation, the code, and a table where it helps. The decks' many example slides are folded into one card per idea.
-- **Three exercises per session**, written on the decks' own examples (orders.tsv and the five orders o1 to o5). Every answer was rerun in pandas 3.
+- **14 cards in Session 1, 17 in Session 2, 19 in Session 3**, each a short explanation, the code, and a table where it helps. The decks' many example slides are folded into one card per idea.
+- **Three exercises per session**, written on the decks' own examples (orders.tsv, the five orders o1 to o5, and in Session 3 a table of five clients). Every answer was rerun in pandas 3.
 - **No Charts tab and no letter peeks.** The code is the formula here. In code boxes and in `code` in the text, calls such as `.loc`, `read_csv` or `isin` open their cheat-sheet line; comments are quiet. Words such as *DataFrame*, *mask* or *NaN* open theirs.
 
 The sessions:
 
 1. **DataFrames and loading data**: why prepare data, Series and DataFrames, alignment by label, the three loading traps (`sep`, `encoding`, `dtype`), Excel and JSON, the six profiling calls and the profile block, export and `read_sql`.
 2. **Selecting, filtering and slicing**: columns, `.loc` and `.iloc`, sorting and the integer-index trap, slices and their stops, boolean masks and `& | ~`, every filter condition (`isin`, `between`, `isna`, `.str`, `.dt`, `query`), Copy-on-Write and chained assignment.
+3. **Data quality assessment**: assess before you clean, the four problems (missing, inconsistent, duplicate, inaccurate), the condition → mask → count pattern, NaN, `isna` and `any(axis=1)`, placeholders and `na_values`, spellings with `nunique` and `.str.strip().str.upper()`, `to_numeric`, related columns, `duplicated` and `subset=`, `describe`, `between` with `notna() &`, `isin`, the IQR rule, and the quality report.
+
+Session 3 was added on 2026-11-12: "add this to school pandas. make sure explanations are clear concise and explain the parts of code that appear. not code without explanations kind of thing." Every card with code has *What each piece means*, naming each part of the code, and the IQR rule, the mismatch rule, `between` and the mask pattern are worked out step by step on the table's own values.
 
 The text is written from the decks in plain words. The slides are the teacher's material and this repository is public, so they are never committed.
 
 ## Your slides
 
-When a deck is missing, a dashed box at the bottom of the page offers *Upload slides*. The decks keep their own names: a PDF whose name has *DataFrames* is filed as `Pandas1.pdf`, one with *Selecting*, *Filtering* or *Slicing* as `Pandas2.pdf`, in the private `coding-slides` folder. `Pandas1.pdf`, or *session* and its number, works too. Each card's *Slide n/N ›* then opens its page.
+When a deck is missing, a dashed box at the bottom of the page offers *Upload slides*. The decks keep their own names: a PDF whose name has *DataFrames* is filed as `Pandas1.pdf`, one with *Selecting*, *Filtering* or *Slicing* as `Pandas2.pdf`, one with *Quality* as `Pandas3.pdf`, in the private `coding-slides` folder. `Pandas1.pdf`, or *session* and its number, works too. Each card's *Slide n/N ›* then opens its page.
 
 ## Storage
 

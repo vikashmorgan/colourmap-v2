@@ -12,7 +12,7 @@ One way into every class Victor takes at A School × Politecnico di Milano. Aske
 
 A sober menu, in the style of the Git page, with one card per class:
 
-- **Pandas**: Pandas & Data Manipulation, sessions 1 and 2. Opens `/pandas` ([spec](pandas-class.md)). First on the menu since 2026-11-11, above Statistics, both from this trimester.
+- **Pandas**: Pandas & Data Manipulation, sessions 1 to 3. Opens `/pandas` ([spec](pandas-class.md)). First on the menu since 2026-11-11, above Statistics, both from this trimester.
 - **Statistics**: Statistics & Probability for Data Science, lectures 1 to 5. Opens `/statistics` ([spec](statistics-class.md)). First on the menu, because the other classes are from last trimester (2026-11-05).
 - **Python**: Python Fundamentals, Project 1 (`explorer.py`). Opens `/coding` ([spec](coding.md)).
 - **Git**: MSE-DIM01-3. Opens `/git` ([spec](git-class.md)).

@@ -342,14 +342,19 @@ describe('the vegetal chapter', () => {
         let outerN = 0;
         const xs: number[] = [];
         const cells = new Set<string>();
+        // Collected per grain and asserted once: an expect per grain made this test slow enough
+        // to time out under the full suite.
+        let finite = true;
+        let highest = 0;
+        let onWater = 0;
         for (const p of all) {
           const { pos, rgb } = pieceAt(p, k, 0.5 * L);
-          for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+          for (const v of [...pos, ...rgb]) finite &&= Number.isFinite(v);
           // Seen from above: everything on the ground plane.
-          expect(Math.abs(pos[2])).toBeLessThan(1.5);
+          highest = Math.max(highest, Math.abs(pos[2]));
           xs.push(pos[0]);
           // The lights in the blocks and the bright centre never stand on the water.
-          if (p.c >= 0.74) expect(plan.wet(pos[0] / CITY_K, pos[1] / CITY_K)).toBe(false);
+          if (p.c >= 0.74 && plan.wet(pos[0] / CITY_K, pos[1] / CITY_K)) onWater++;
           const r = Math.hypot(pos[0] - cx, pos[1] - cy);
           const glow = Math.max(...rgb);
           if (r < 0.25 * CITY_K) {
@@ -361,6 +366,9 @@ describe('the vegetal chapter', () => {
           }
           cells.add(`${Math.floor(pos[0] / 3)},${Math.floor(pos[1] / 3)}`);
         }
+        expect(finite).toBe(true);
+        expect(highest).toBeLessThan(1.5);
+        expect(onWater).toBe(0);
         expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(CITY_K * 1.5);
         // Denser (grains for the ground they cover) and brighter in the middle.
         expect(innerN / 0.25 ** 2).toBeGreaterThan((3 * outerN) / (1.4 ** 2 - 0.7 ** 2));
