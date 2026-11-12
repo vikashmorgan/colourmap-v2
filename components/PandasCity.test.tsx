@@ -68,8 +68,29 @@ describe('PandasCity', () => {
     zoomIn(container);
     await waitFor(() => {
       const nan = hit(container, 'building:3:1:nan');
-      expect(nan.querySelectorAll('rect')[1].getAttribute('fill')).toBe('#F6D98E');
+      expect(nan.getAttribute('data-lit')).toBe('full');
+      // Lit: a warm glow behind it and a solid warm-white square.
+      expect(nan.querySelector('circle[fill="url(#cm-lit)"]')).toBeTruthy();
+      expect(nan.querySelectorAll('rect')[1].getAttribute('fill')).toBe('#FFC780');
     });
+  });
+
+  it('draws the City of Dreams look: dotted light, a pulse from the centre, breathing hearts', () => {
+    fetchMock.mockResolvedValue({ ok: false });
+    const { container } = render(<PandasCity lessons={lessons} />);
+    const svg = container.querySelector('svg[role="application"]') as SVGSVGElement;
+    // Lines are rows of dots: zero-length dashes with round caps.
+    expect(svg.querySelectorAll('path[stroke-dasharray^="0 "]').length).toBeGreaterThan(50);
+    // The pulse runs along the roads from the plaza, and stops for viewers who ask for less motion.
+    expect(svg.querySelectorAll('path.cm-pulse').length).toBeGreaterThan(8);
+    expect(container.querySelector('style')?.textContent).toContain('prefers-reduced-motion');
+    expect(svg.querySelectorAll('.cm-breathe').length).toBeGreaterThan(3);
+    // Each lit heart is a lattice star with a white-hot core.
+    expect(hit(container, 'heart:1').querySelector('circle[fill="url(#cm-core)"]')).toBeTruthy();
+    // The Dawn sky.
+    expect((container.firstElementChild as HTMLElement).style.background).toContain(
+      'linear-gradient',
+    );
   });
 
   it('still draws everything unlit when the marks cannot be read', async () => {
@@ -78,7 +99,8 @@ describe('PandasCity', () => {
     zoomIn(container);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     expect(container.querySelectorAll('[data-hit^="building:"]').length).toBe(50);
-    expect(container.querySelector('rect[fill="#F6D98E"]')).toBeNull();
+    expect(container.querySelector('[data-lit="full"]')).toBeNull();
+    expect(container.querySelector('[data-lit="none"]')).toBeTruthy();
   });
 
   it('at the Core depth, a tap on a city pops up its lines to remember', () => {
