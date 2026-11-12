@@ -440,8 +440,8 @@ describe('the game city: flying it', () => {
     setFly(false, [], 0, 0);
   });
 
-  it('gives L and Enter round buttons on a phone, with Space', () => {
-    expect(SHIP_KEYS).toEqual([' ', 'l', 'enter']);
+  it('gives L, Enter and V round buttons on a phone, with Space', () => {
+    expect(SHIP_KEYS).toEqual([' ', 'l', 'enter', 'v']);
   });
 });
 

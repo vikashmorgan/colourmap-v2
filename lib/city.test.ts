@@ -578,10 +578,10 @@ describe('Ship', () => {
     }
   });
 
-  it('shows height and speed on two dials, and keeps the ship behind the eye in view', () => {
+  it('shows height, speed, heading and district, and keeps the ship behind the eye in view', () => {
     fresh();
     const g = gauges();
-    expect(g.map((d) => d.label)).toEqual(['Height', 'Speed']);
+    expect(g.map((d) => d.label)).toEqual(['Height', 'Speed', 'Heading', 'District']);
     for (const d of g) expect(d.value).toBeLessThanOrEqual(d.max);
     const { eye, target: aim } = pieceCamera(k, 10);
     const { c } = flier(10);
