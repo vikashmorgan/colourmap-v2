@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { flow, GOLDEN_ANGLE } from './bigbang';
+import { flow, GOLDEN_ANGLE, type Particle } from './bigbang';
 import { along, routeLength } from './star-tree';
 import {
   along3,
@@ -10,9 +10,16 @@ import {
   bendAt,
   birdKinds,
   CELL_COUNT,
+  CITIES,
+  CITY_K,
+  CORRIDOR_CELLS,
+  CORRIDOR_GAP,
+  CORRIDOR_LEN,
   camera,
   cellOf,
+  cityPlan,
   colour,
+  corridorAhead,
   DRUMS,
   EYE_H,
   FIREWORK_FLOWERS,
@@ -72,9 +79,12 @@ import {
   target,
   tree3d,
   treeSlot,
+  variantLabel,
+  variantNames,
   WATER_MOODS,
   WORLD_TREE,
   WORLD_TREE_H,
+  waterTrip,
   wetAt,
   worldTreeRoutes,
 } from './vegetal';
@@ -88,12 +98,20 @@ const dist = (a: number[], b: number[]) =>
   );
 const at = (k: number, u: number) =>
   (PHASE_START[k] as number) + u * (PHASES[k]?.duration as number);
+const piece = (id: string) => PHASES.findIndex((p) => p.id === id);
+const ROOTS = piece('roots');
+const TREE3 = piece('tree-3d');
+const VEINS = piece('veins');
+const AVENUE = piece('avenue');
+const FOREST = piece('forest');
 
 describe('the vegetal chapter', () => {
-  it('has fifteen numbered pieces, from a cell to Bird Sim, each with words', () => {
+  it('has seventeen numbered pieces, from a cell to Bird Sim, each with words', () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       'cell',
       'roots',
+      'roots-tree',
+      'city',
       'tree-2d',
       'tree-3d',
       'veins',
@@ -135,7 +153,7 @@ describe('the vegetal chapter', () => {
   it('turns the veins round the centre: eight copies, each mirrored, inside one circle', () => {
     expect(mandala().reach).toBeGreaterThan(0);
     for (const p of particles) {
-      const [x, y] = target(4, p, 0.6, at(4, 0.6));
+      const [x, y] = target(VEINS, p, 0.6, at(VEINS, 0.6));
       expect(Math.hypot(x, y)).toBeLessThan(24 * 1.1);
     }
   });
@@ -184,8 +202,197 @@ describe('the vegetal chapter', () => {
       expect(routeLength(r)).toBeGreaterThan(0.3);
     }
     for (const p of particles) {
-      expect(target(1, p, 0.6, at(1, 0.6))[1]).toBeLessThanOrEqual(ROOT_BASE[1] + 2);
+      expect(target(ROOTS, p, 0.6, at(ROOTS, 0.6))[1]).toBeLessThanOrEqual(ROOT_BASE[1] + 2);
     }
+  });
+
+  describe('Cell corridor (2026-11-12)', () => {
+    const k = piece('cell');
+    const all = makeParticles(9000);
+
+    it('offers the block or a corridor: two walls of cells and an empty middle, the eye in it', () => {
+      expect(variantNames(k)).toEqual(['Block', 'Corridor']);
+      expect(variantLabel(k)).toBe('View');
+      setVariant(1, k);
+      for (const s of [2, 17]) {
+        let left = 0;
+        let right = 0;
+        for (const p of all) {
+          const { pos, rgb } = pieceAt(p, k, s);
+          for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+          // Nothing in the gap down the middle.
+          expect(Math.abs(pos[0])).toBeGreaterThan(CORRIDOR_GAP - 1e-6);
+          if (pos[0] < 0) left++;
+          else right++;
+        }
+        expect(left).toBeGreaterThan(all.length * 0.4);
+        expect(right).toBeGreaterThan(all.length * 0.4);
+      }
+      // The eye is in the gap, looking down it.
+      const { eye, target: aim } = pieceCamera(k, 4);
+      expect(Math.abs(eye[0])).toBeLessThan(1);
+      expect(aim[2]).toBeLessThan(eye[2] - 10);
+      setVariant(0);
+    });
+
+    it('flies on forever: the cells come toward the eye, pass behind it and come round to the far end', () => {
+      setVariant(1, k);
+      expect(CORRIDOR_CELLS).toBe(48);
+      // Every grain at every moment lies between just behind the eye and the far end: the
+      // same grains, recycled, never left behind.
+      for (const s of [0, 7, 33, 120, 1000]) {
+        for (const p of all.slice(0, 3000)) {
+          const z = pieceAt(p, k, s).pos[2];
+          expect(z).toBeLessThan(8 + 4);
+          expect(z).toBeGreaterThan(-CORRIDOR_LEN - 4);
+        }
+      }
+      // A second later nearly every grain has come closer (the rest came round to the far end).
+      const walls = all.filter((p) => p.c < 0.68).slice(0, 1000);
+      const closer = walls.filter((p) => pieceAt(p, k, 6).pos[2] > pieceAt(p, k, 5).pos[2]);
+      expect(closer.length).toBeGreaterThan(walls.length * 0.85);
+      // The first column, just ahead at the start, has gone behind and come round far ahead.
+      expect(corridorAhead(0, 0)).toBeCloseTo(0, 9);
+      expect(corridorAhead(0, 3)).toBeGreaterThan(CORRIDOR_LEN * 0.6);
+      // Coming round, the far cells fade in out of the dark.
+      const far = walls.filter((p) => pieceAt(p, k, 5).pos[2] < -CORRIDOR_LEN + 14);
+      const near = walls.filter((p) => Math.abs(pieceAt(p, k, 5).pos[2] + 15) < 6);
+      const glow = (ps: typeof walls) =>
+        ps.reduce((a, p) => a + Math.max(...pieceAt(p, k, 5).rgb), 0) / ps.length;
+      expect(glow(far)).toBeLessThan(glow(near) * 0.5);
+      setVariant(0);
+    });
+
+    it('keeps the block in the Journey', () => {
+      setVariant(1, k);
+      setVariant(0);
+      for (const p of all.slice(0, 500))
+        expect(Math.abs(target(k, p, 0.6, at(k, 0.6))[2])).toBeLessThan(20);
+    });
+  });
+
+  describe('Roots and tree (2026-11-12)', () => {
+    const k = piece('roots-tree');
+    const all = makeParticles(3000);
+
+    it('comes right after Roots: the crown above a ground line, the roots below, from one point', () => {
+      expect(k).toBe(ROOTS + 1);
+      expect(PHASES[k]?.name).toBe('Roots and tree');
+      const t = at(k, 0.7);
+      let below = 0;
+      let above = 0;
+      for (const p of all) {
+        const pos = target(k, p, 0.7, t);
+        const rgb = colour(k, p, 0.7, t);
+        for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+        // The roots (and their hairs) stay under the ground, the wood and leaves over it.
+        if (p.c >= 0.14 && p.c < 0.44) expect(pos[1]).toBeLessThan(0.5);
+        if (p.c >= 0.5) expect(pos[1]).toBeGreaterThan(-0.5);
+        if (pos[1] < -2) below++;
+        if (pos[1] > 2) above++;
+      }
+      expect(below).toBeGreaterThan(all.length * 0.25);
+      expect(above).toBeGreaterThan(all.length * 0.25);
+      // Green leaves above, earth-coloured roots below.
+      const leaves = all.filter((p) => p.c >= 0.82).map((p) => colour(k, p, 0.7, t));
+      expect(leaves.every(([r, g]) => g > r)).toBe(true);
+      const roots = all.filter((p) => p.c >= 0.14 && p.c < 0.44).map((p) => colour(k, p, 0.7, t));
+      expect(roots.every(([r, g, b]) => r >= g && g >= b)).toBe(true);
+    });
+
+    it('sends water up a root to the base and on up the trunk, so both halves live as one', () => {
+      const water = all.filter((p) => p.c < 0.1);
+      for (const s of [3, 9]) {
+        for (const p of water) {
+          const y = pieceAt(p, k, s).pos[1];
+          if (waterTrip(p, s) < 0.45) expect(y).toBeLessThan(0.3);
+          if (waterTrip(p, s) > 0.55) expect(y).toBeGreaterThan(-0.3);
+        }
+      }
+      // A grain on its way climbs: higher a moment later.
+      const p = water.find((q) => waterTrip(q, 3) > 0.1 && waterTrip(q, 3) < 0.3) as Particle;
+      expect(pieceAt(p, k, 4).pos[1]).toBeGreaterThan(pieceAt(p, k, 3).pos[1]);
+      // The eye walks round the tree.
+      expect(dist(pieceCamera(k, 2).eye, pieceCamera(k, 12).eye)).toBeGreaterThan(5);
+    });
+  });
+
+  describe('City (2026-11-12)', () => {
+    const k = piece('city');
+    const all = makeParticles(9000);
+
+    it('comes after Roots and tree, with five cities on pills', () => {
+      expect(k).toBe(piece('roots-tree') + 1);
+      expect(PHASES[k + 1]?.id).toBe('tree-2d');
+      expect(CITIES.map((c) => c.name)).toEqual(['Grid', 'Star', 'River', 'Bay', 'Canals']);
+      expect(variantNames(k)).toEqual(['Grid', 'Star', 'River', 'Bay', 'Canals']);
+      expect(variantLabel(k)).toBe('City');
+    });
+
+    it('lays every city flat, wide, bright in the centre and sparse at the edge, dark on the water', () => {
+      const L = pieceLength(k);
+      const maps = CITIES.map((_, i) => {
+        setVariant(i, k);
+        const plan = cityPlan(i);
+        expect(plan.roads.length).toBeGreaterThan(50);
+        const [cx, cy] = plan.centre.map((v) => v * CITY_K) as [number, number];
+        let inner = 0;
+        let innerN = 0;
+        let outer = 0;
+        let outerN = 0;
+        const xs: number[] = [];
+        const cells = new Set<string>();
+        for (const p of all) {
+          const { pos, rgb } = pieceAt(p, k, 0.5 * L);
+          for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+          // Seen from above: everything on the ground plane.
+          expect(Math.abs(pos[2])).toBeLessThan(1.5);
+          xs.push(pos[0]);
+          // The lights in the blocks and the bright centre never stand on the water.
+          if (p.c >= 0.74) expect(plan.wet(pos[0] / CITY_K, pos[1] / CITY_K)).toBe(false);
+          const r = Math.hypot(pos[0] - cx, pos[1] - cy);
+          const glow = Math.max(...rgb);
+          if (r < 0.25 * CITY_K) {
+            inner += glow;
+            innerN++;
+          } else if (r > 0.7 * CITY_K && r < 1.4 * CITY_K) {
+            outer += glow;
+            outerN++;
+          }
+          cells.add(`${Math.floor(pos[0] / 3)},${Math.floor(pos[1] / 3)}`);
+        }
+        expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(CITY_K * 1.5);
+        // Denser (grains for the ground they cover) and brighter in the middle.
+        expect(innerN / 0.25 ** 2).toBeGreaterThan((3 * outerN) / (1.4 ** 2 - 0.7 ** 2));
+        expect(inner / innerN).toBeGreaterThan((outer / outerN) * 1.3);
+        return cells;
+      });
+      // Five different cities: no two light up mostly the same places.
+      for (let i = 0; i < maps.length; i++)
+        for (let j = i + 1; j < maps.length; j++) {
+          const a = maps[i] as Set<string>;
+          const b = maps[j] as Set<string>;
+          const both = [...a].filter((c) => b.has(c)).length;
+          expect(both / (a.size + b.size - both)).toBeLessThan(0.7);
+        }
+      setVariant(0);
+    });
+
+    it('moves the car lights along the fast roads, and lays the same city every time', () => {
+      setVariant(3, k);
+      const cars = all.filter((p) => p.c < 0.08).slice(0, 200);
+      const moved = cars.filter((p) => dist(pieceAt(p, k, 2).pos, pieceAt(p, k, 4).pos) > 1).length;
+      expect(moved).toBeGreaterThan(cars.length * 0.8);
+      for (const p of all.slice(0, 300)) expect(pieceAt(p, k, 5)).toEqual(pieceAt(p, k, 5));
+      // The eye drifts over the city, looking down at it.
+      const a = pieceCamera(k, 3);
+      const b = pieceCamera(k, 30);
+      expect(dist(a.eye, b.eye)).toBeGreaterThan(3);
+      expect(a.eye[2] - a.target[2]).toBeGreaterThan(40);
+      // The Journey shows the first city.
+      setVariant(0);
+      expect(variantNames(k)[0]).toBe('Grid');
+    });
   });
 
   it('spreads the 3D tree round its trunk in every direction', () => {
@@ -209,14 +416,14 @@ describe('the vegetal chapter', () => {
 
   it('mirrors the avenue across the road, and lets no two sides of the forest match', () => {
     for (let j = 0; j < FOREST_SLOTS; j += 2) {
-      const left = treeSlot(9, j);
-      const right = treeSlot(9, j + 1);
+      const left = treeSlot(AVENUE, j);
+      const right = treeSlot(AVENUE, j + 1);
       expect(right.x).toBeCloseTo(-left.x, 9);
       expect(right.z0).toBe(left.z0);
       expect(right.mirror).toBe(!left.mirror);
     }
     // In the forest, no tree stands opposite a twin.
-    const wild = Array.from({ length: FOREST_SLOTS }, (_, j) => treeSlot(10, j));
+    const wild = Array.from({ length: FOREST_SLOTS }, (_, j) => treeSlot(FOREST, j));
     expect(new Set(wild.map((s) => Math.sign(s.x))).size).toBe(2);
     for (const a of wild) {
       for (const b of wild) {
@@ -229,13 +436,13 @@ describe('the vegetal chapter', () => {
   });
 
   it('flies the eye down the road a little above it, as the trees grow toward it', () => {
-    for (const k of [9, 10]) {
+    for (const k of [AVENUE, FOREST]) {
       const a = camera(at(k, 0.2));
       const b = camera(at(k, 0.6));
       expect(a.eye[1]).toBeCloseTo(EYE_H, 6);
       // Over the road, or over the river wherever it has bent (the eye stands 14 into the loop).
       expect(Math.abs(a.eye[0] - bendAt(k, -a.eye[2] + 14))).toBeLessThan(ROAD_W);
-      if (k === 10) {
+      if (k === FOREST) {
         expect(Math.abs(bendAt(k, 30) - bendAt(k, 0))).toBeGreaterThan(2);
         expect(bendAt(k, 30)).toBeCloseTo(bendAt(k, 30 + 140), 6);
       }
@@ -293,13 +500,13 @@ describe('the vegetal chapter', () => {
   });
 
   it('makes the veins exactly symmetric: sixteen copies of one picture, turned and mirrored', () => {
-    const t = at(4, 0.6);
+    const t = at(VEINS, 0.6);
     const all = makeParticles(1600);
     // Grains 0..15 are one run, one per copy: all the same distance from the centre.
     for (let run = 0; run < 100; run++) {
       const r = all
         .slice(run * 16, run * 16 + 16)
-        .map((p) => Math.hypot(...(target(4, p, 0.6, t).slice(0, 2) as [number, number])));
+        .map((p) => Math.hypot(...(target(VEINS, p, 0.6, t).slice(0, 2) as [number, number])));
       for (const v of r) expect(v).toBeCloseTo(r[0] as number, 6);
     }
   });
@@ -397,7 +604,7 @@ describe('the vegetal chapter', () => {
       expect(beatAt(s + 0.001)).toBeLessThan(0.1);
       expect(beatAt(s + BEAT - 0.001)).toBeLessThan(0.1);
     }
-    const k = 4;
+    const k = VEINS;
     const pulses = particles.filter((p) => p.i % 7 === 0);
     const reach = (t: number) =>
       pulses.map((p) => target(k, p, 0.6, t)).reduce((a, [x, y]) => a + Math.hypot(x, y), 0) /
@@ -810,13 +1017,13 @@ describe('the vegetal chapter', () => {
   });
 
   it('lays each ground under the 3D tree on the floor', () => {
-    const t = at(3, 0.7);
+    const t = at(TREE3, 0.7);
     const soil = particles.filter((p) => p.c > 0.72 && p.c <= 0.8);
     GROUNDS.forEach((_, g) => {
-      setVariant(g, 3);
+      setVariant(g, TREE3);
       for (const p of soil) {
-        const pos = target(3, p, 0.7, t);
-        const rgb = colour(3, p, 0.7, t);
+        const pos = target(TREE3, p, 0.7, t);
+        const rgb = colour(TREE3, p, 0.7, t);
         for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
         expect(pos[1]).toBeGreaterThan(GROUND_3D - 0.5);
         expect(pos[1]).toBeLessThan(GROUND_3D + 5);
@@ -826,22 +1033,22 @@ describe('the vegetal chapter', () => {
   });
 
   it('turns the 3D tree all gold on its switch, and back to green off it', () => {
-    const t = at(3, 0.7);
+    const t = at(TREE3, 0.7);
     const leaves = particles.filter((p) => p.c > 0.8);
     setGold(true);
     for (const p of leaves) {
-      const [r, g, b] = colour(3, p, 0.7, t);
+      const [r, g, b] = colour(TREE3, p, 0.7, t);
       expect(r).toBeGreaterThanOrEqual(g);
       expect(g).toBeGreaterThanOrEqual(b);
     }
     setGold(false);
-    expect(leaves.filter((p) => colour(3, p, 0.7, t)[1] > colour(3, p, 0.7, t)[0]).length).toBe(
-      leaves.length,
-    );
+    expect(
+      leaves.filter((p) => colour(TREE3, p, 0.7, t)[1] > colour(TREE3, p, 0.7, t)[0]).length,
+    ).toBe(leaves.length);
   });
 
   it('beats the veins: a wave leaves the centre on each beat and runs out, all brightening', () => {
-    const k = 4;
+    const k = VEINS;
     // A beat: half a beat in, and every beat after.
     let beatStart = at(k, 0.5) - ((at(k, 0.5) + BEAT / 2) % BEAT) + 0.06 * BEAT;
     // A Wave beat: the other kinds are tested on their own.
@@ -864,17 +1071,17 @@ describe('the vegetal chapter', () => {
   });
 
   it('draws five drums, each inside its hoop, centred, and exactly symmetric', () => {
-    const t = at(4, 0.6);
+    const t = at(VEINS, 0.6);
     const all = makeParticles(2400);
     expect(DRUMS).toHaveLength(5);
     DRUMS.forEach((d, i) => {
-      setVariant(i, 4);
+      setVariant(i, VEINS);
       const n = d.fold * 2;
       let sx = 0;
       let sy = 0;
       for (let run = 0; run < 60; run++) {
         const r = all.slice(run * n, run * n + n).map((p) => {
-          const [x, y] = target(4, p, 0.6, t);
+          const [x, y] = target(VEINS, p, 0.6, t);
           sx += x;
           sy += y;
           expect(Math.hypot(x, y)).toBeLessThan(24 * 1.1);
@@ -890,13 +1097,13 @@ describe('the vegetal chapter', () => {
   });
 
   it('keeps the water dark near the top of the roots and shows it deeper down', () => {
-    const t = at(1, 0.7);
+    const t = at(ROOTS, 0.7);
     const water = particles.filter((p) => p.c < 0.16);
     for (const p of water) {
-      const y = target(1, p, 0.7, t)[1];
-      if (y > ROOT_BASE[1] - 3) expect(Math.max(...colour(1, p, 0.7, t))).toBeLessThan(1e-6);
+      const y = target(ROOTS, p, 0.7, t)[1];
+      if (y > ROOT_BASE[1] - 3) expect(Math.max(...colour(ROOTS, p, 0.7, t))).toBeLessThan(1e-6);
     }
-    expect(water.some((p) => Math.max(...colour(1, p, 0.7, t)) > 0.4)).toBe(true);
+    expect(water.some((p) => Math.max(...colour(ROOTS, p, 0.7, t)) > 0.4)).toBe(true);
   });
 
   it('plays each piece on its own: whole from the start, no ball of stars, looping with no seam', () => {

@@ -10,7 +10,7 @@
  * with symmetric trees, and one more organic where the trees are not
  * symmetric or mirrored between left and right side of the road").
  *
- * Eleven pieces played as one trip, built as the Journey is (lib/journey.ts):
+ * The pieces are played as one trip, built as the Journey is (lib/journey.ts):
  * every grain of light keeps its identity, each piece is a formula from a
  * grain and the time to a place and a colour, and between pieces each grain
  * pours on at its own golden-ratio moment. The eye moves with each piece.
@@ -101,6 +101,30 @@ export const PHASES: VegetalPhase[] = [
     duration: 30,
     glow: 1,
     size: 0.8,
+  },
+  {
+    id: 'roots-tree',
+    name: 'Roots and tree',
+    line: 'One tree in one picture: its crown above the ground and its roots below, grown from the same point at the same pace. Water climbs from a root tip to the base, and on up the trunk to a leaf.',
+    words: [
+      'What a tree raises into the light, it mirrors in the dark below.',
+      'Roots and crown grow together; neither outgrows the other for long.',
+    ],
+    duration: 32,
+    glow: 1,
+    size: 0.82,
+  },
+  {
+    id: 'city',
+    name: 'City',
+    line: 'A city at night, seen from far above: streets branch like roots but in order, the centre glows, highways reach into the dark and car lights move along them. Five cities to choose from.',
+    words: [
+      'From high enough, a city at night looks like something that grew.',
+      'Its streets branch the way roots do: toward what it needs.',
+    ],
+    duration: 36,
+    glow: 1.05,
+    size: 0.7,
   },
   {
     id: 'tree-2d',
@@ -257,6 +281,9 @@ export const PHASES: VegetalPhase[] = [
   },
 ];
 
+/** Piece k's id: the pieces are told apart by id, so a new one can go anywhere in the list. */
+const idOf = (k: number) => PHASES[k]?.id ?? '';
+
 export const TOTAL = PHASES.reduce((s, p) => s + p.duration, 0);
 export const PHASE_START: number[] = PHASES.map((_, i) =>
   PHASES.slice(0, i).reduce((s, p) => s + p.duration, 0),
@@ -279,6 +306,8 @@ export function phaseAt(time: number): { index: number; u: number } {
 export const STEP_COLOURS = [
   '#9fd36a',
   '#c48a52',
+  '#b9a05a',
+  '#f2c25a',
   '#d9b56a',
   '#8fc45a',
   '#f0b44a',
@@ -309,7 +338,7 @@ export function setSap(up: boolean | null) {
 const sapDir = (climbs: boolean) => sapWay || (climbs ? 1 : -1);
 /** The pieces with trees whose sap the button turns. */
 export const hasSap = (k: number) =>
-  ['tree-2d', 'tree-3d', 'avenue', 'forest', 'full-tree', 'reflection'].includes(
+  ['roots-tree', 'tree-2d', 'tree-3d', 'avenue', 'forest', 'full-tree', 'reflection'].includes(
     PHASES[k]?.id ?? '',
   );
 
@@ -350,13 +379,92 @@ export function cellOf(j: number, u: number): { c: Vec3; h: Vec3; g: number } {
   };
 }
 
+/*
+ * The corridor (2026-11-12: "create ability to navigate through the two
+ * blocks of frames so u do like a space corridor in it and we can sort of fly
+ * forward through it. like an infinite set of two blocks and we in the
+ * middle", the blocks being the cells). Pills under the piece pick the view:
+ * **Block**, the block as it was, or **Corridor**: two walls of cells face
+ * each other across an open gap, three cells high and one deep, and the eye
+ * flies forward down the gap. Every cell keeps its walls, its streaming
+ * chloroplasts, its nucleus and its pulses to the next cell. The walls never
+ * end: a column of cells that passes behind the eye comes round to the far
+ * end, fading in out of the dark, so the grains are the same few always. The
+ * Journey keeps the block.
+ */
+export const CELL_VIEWS = ['Block', 'Corridor'];
+let corridor = false;
+export const hasCellViews = (k: number) => idOf(k) === 'cell';
+/** Columns of cells along each wall before they come round again, and rows up each wall. */
+export const CORRIDOR_COLS = 8;
+const CORRIDOR_ROWS = 3;
+export const CORRIDOR_CELLS = 2 * CORRIDOR_ROWS * CORRIDOR_COLS;
+/** Half the open gap down the middle, from the eye to each wall's inner face. */
+export const CORRIDOR_GAP = 5;
+/** How fast the eye flies down the corridor, in units a second. */
+export const CORRIDOR_SPEED = 3.2;
+export const CORRIDOR_LEN = CORRIDOR_COLS * CELL_SIZE[2];
+const CELL_HALF: Vec3 = mul(CELL_SIZE, 0.47);
+
+/** How far ahead of the eye column `col` stands at time t: from one cell behind it to the far end. */
+export const corridorAhead = (col: number, t: number) =>
+  wrap(col * CELL_SIZE[2] - CORRIDOR_SPEED * t + CELL_SIZE[2], CORRIDOR_LEN) - CELL_SIZE[2];
+/** Cell j of the corridor: which wall, row and column, and its centre at time t. The eye is at the origin. */
+function corridorCell(j: number, t: number): { c: Vec3; row: number; col: number } {
+  const side = j % 2 ? 1 : -1;
+  const row = Math.floor(j / 2) % CORRIDOR_ROWS;
+  const col = Math.floor(j / (2 * CORRIDOR_ROWS));
+  return {
+    c: [
+      side * (CORRIDOR_GAP + CELL_HALF[0]),
+      (row - (CORRIDOR_ROWS - 1) / 2) * CELL_SIZE[1],
+      -corridorAhead(col, t),
+    ],
+    row,
+    col,
+  };
+}
+/** How many cells piece 1 is drawn with in the view chosen. */
+const cellCount = () => (corridor ? CORRIDOR_CELLS : CELL_COUNT);
+/** How lit a corridor grain is: fading in at the far end, as its column comes round out of the dark. */
+const corridorFade = (p: Particle, t: number) => {
+  const j = Math.floor(p.a * CORRIDOR_CELLS);
+  const ahead = corridorAhead(Math.floor(j / (2 * CORRIDOR_ROWS)), t);
+  return smooth((CORRIDOR_LEN - CELL_SIZE[2] - ahead) / 20);
+};
+
 type CellRole = 'wall' | 'chloroplast' | 'nucleus' | 'pulse';
+/** In the corridor more grains go to the walls, so the frames of the nearer cells read. */
 const cellRole = (p: Particle): CellRole =>
-  p.c < 0.48 ? 'wall' : p.c < 0.8 ? 'chloroplast' : p.c < 0.9 ? 'nucleus' : 'pulse';
+  corridor
+    ? p.c < 0.68
+      ? 'wall'
+      : p.c < 0.88
+        ? 'chloroplast'
+        : p.c < 0.94
+          ? 'nucleus'
+          : 'pulse'
+    : p.c < 0.48
+      ? 'wall'
+      : p.c < 0.8
+        ? 'chloroplast'
+        : p.c < 0.9
+          ? 'nucleus'
+          : 'pulse';
 
 /** A pulse's way from its cell to the next one along an axis, and how far along it is. */
 function pulseOf(p: Particle, u: number, t: number): { from: Vec3; to: Vec3; f: number } {
-  const j = Math.floor(p.a * CELL_COUNT);
+  const j = Math.floor(p.a * cellCount());
+  if (corridor) {
+    // Along the wall to the next cell ahead, or up or down to the next row.
+    const { c, row } = corridorCell(j, t);
+    const up = Math.floor(p.d * 2) === 1;
+    const to: Vec3 = up
+      ? [c[0], c[1] + (row + 1 < CORRIDOR_ROWS ? 1 : -1) * CELL_SIZE[1], c[2]]
+      : [c[0], c[1], c[2] - CELL_SIZE[2]];
+    const f = frac(t * 0.3 + hash(j * 3 + (up ? 1 : 0), 9) + p.b * 0.08);
+    return { from: c, to, f };
+  }
   const ijk = cellIjk(j);
   const axis = Math.floor(p.d * 3);
   const step = at(ijk, axis) + 1 < at(GRID, axis) ? 1 : -1;
@@ -367,16 +475,18 @@ function pulseOf(p: Particle, u: number, t: number): { from: Vec3; to: Vec3; f: 
 }
 
 function cellPoint(p: Particle, u: number, t: number): Vec3 {
-  const j = Math.floor(p.a * CELL_COUNT);
-  const { c, h } = cellOf(j, u);
+  const j = Math.floor(p.a * cellCount());
+  const { c, h } = corridor ? { c: corridorCell(j, t).c, h: CELL_HALF } : cellOf(j, u);
   const k = h[0] / (CELL_SIZE[0] * 0.47);
   switch (cellRole(p)) {
     case 'wall': {
       // Plant cells are boxes with walls: most grains draw the box's twelve edges, so the walls
-      // read as a grid, and the rest fill its faces faintly.
+      // read as a grid, and the rest fill its faces faintly. In the corridor, where each cell has
+      // fewer grains and comes close, nearly all go to the edges, so the frames read.
       const local: Vec3 = [0, 0, 0];
-      if (p.d < 0.65) {
-        const e = Math.floor((p.d / 0.65) * 12);
+      const edges = corridor ? 0.92 : 0.65;
+      if (p.d < edges) {
+        const e = Math.floor((p.d / edges) * 12);
         const axis = e % 3;
         const corner = Math.floor(e / 3);
         local[axis] = (p.b * 2 - 1) * at(h, axis);
@@ -384,7 +494,7 @@ function cellPoint(p: Particle, u: number, t: number): Vec3 {
         local[(axis + 2) % 3] = (corner & 2 ? 1 : -1) * at(h, (axis + 2) % 3);
         return add(c, local);
       }
-      const q = (p.d - 0.65) / 0.35;
+      const q = (p.d - edges) / (1 - edges);
       const f = Math.floor(q * 6);
       const axis = f >> 1;
       local[axis] = (f & 1 ? 1 : -1) * at(h, axis);
@@ -497,7 +607,625 @@ function rootPoint(p: Particle, u: number, t: number): Vec3 {
   }
 }
 
-/* ---------- 3. Tree 2D: the Star Tree, flat ---------- */
+/* ---------- 3. Roots and tree: one tree, its crown above the ground and its roots below ---------- */
+
+/*
+ * 2026-11-12: "after roots make roots and tree. where both live in same
+ * visual." The roots of piece 2, in their earth and water colours, spread
+ * below a ground line, and the green tree of Tree 3D stands on it, both grown
+ * from the one point where they meet, at one pace. Water climbs from a root
+ * tip to the base and goes on up the trunk to a branch tip as sap, so the two
+ * halves are one living thing. The eye walks slowly round, a little above the
+ * ground.
+ */
+const RT_K = 0.7;
+type RootsTreeRole = 'water' | 'base' | 'soil' | 'root' | 'hair' | 'wood' | 'leaf';
+const rootsTreeRole = (p: Particle): RootsTreeRole =>
+  p.c < 0.1
+    ? 'water'
+    : p.c < 0.115
+      ? 'base'
+      : p.c < 0.14
+        ? 'soil'
+        : p.c < 0.44
+          ? 'root'
+          : p.c < 0.5
+            ? 'hair'
+            : p.c < 0.82
+              ? 'wood'
+              : 'leaf';
+
+/** Root r at s, moved so its base sits on the ground at the origin, at the picture's scale. */
+const rootBelow = (r: number, s: number, across: number): Vec3 => {
+  const q = onRoot(r, s, across);
+  return [q[0] * RT_K, (q[1] - ROOT_BASE[1]) * RT_K, q[2] * RT_K];
+};
+/** A point of the 3D tree, its foot moved onto the ground at the origin. */
+const treeAbove = (q: Vec3): Vec3 => [q[0] * RT_K, (q[1] - GROUND_3D) * RT_K, q[2] * RT_K];
+
+/** How far round its way a water grain is: 0 at a root tip, 0.5 at the base, 1 at a branch tip. */
+export const waterTrip = (p: Particle, t: number) => wrap(p.b + sapDir(true) * t * 0.035, 1);
+
+function rootsTreePoint(p: Particle, u: number, t: number): Vec3 {
+  const grown = 0.05 + 0.95 * smooth(u / 0.42);
+  const role = rootsTreeRole(p);
+  const roots = rootSystem();
+  const r = Math.floor(p.a * roots.routes.length);
+  const rlen = routeLength(roots.routes[r] as Route) * grown;
+  const trees = tree3d();
+  // Water picks its branch apart from its root, so one root does not always feed one branch.
+  const pick = role === 'water' ? hash(p.i, 84) : p.a;
+  const route = trees[Math.floor(pick * trees.length)] as Route3;
+  const tlen = length3(route) * grown;
+  switch (role) {
+    case 'water': {
+      const q = waterTrip(p, t);
+      if (q < 0.5) return rootBelow(r, rlen * (1 - 2 * q), 0);
+      const [x, y, z] = along3(route, tlen * (2 * q - 1));
+      return treeAbove([x, y, z]);
+    }
+    case 'base':
+      return mul(fibonacciSphere(p.i % 173, 173), 1.1 * Math.cbrt(p.b));
+    case 'soil': {
+      // The ground line: a disc seen nearly edge on, densest at the foot of the trunk.
+      const a = p.d * TAU;
+      const rr = 24 * p.b;
+      return [Math.cos(a) * rr, Math.sin(rr + t * 0.2) * 0.12, Math.sin(a) * rr];
+    }
+    case 'root':
+      return rootBelow(r, rlen * p.b ** 0.55, (p.d - 0.5) * 2);
+    case 'hair': {
+      const tip = rootBelow(r, rlen * (0.82 + 0.18 * p.b), 0);
+      const d = fibonacciSphere(p.i % 131, 131);
+      return add(tip, d, (0.2 + 0.85 * p.d) * smooth((u - 0.2) / 0.3));
+    }
+    case 'leaf': {
+      const [x, y, z] = along3(route, tlen);
+      const d = fibonacciSphere(p.i % 157, 157);
+      const rr = 1.8 * Math.cbrt(p.b) * smooth((u - 0.3) / 0.2);
+      const flutter = Math.sin(t * 2 + p.i) * 0.15;
+      return treeAbove([x + d[0] * rr + flutter, y + d[1] * rr * 0.8, z + d[2] * rr]);
+    }
+    default: {
+      const dir = sapDir(p.c < 0.66);
+      const s = tlen * wrap(p.b + dir * t * 0.04 * (0.7 + 0.6 * p.d), 1);
+      const [x, y, z, w] = along3(route, s);
+      return treeAbove(add([x, y, z], fibonacciSphere(p.i % 389, 389), w * 0.5 * Math.sqrt(p.d)));
+    }
+  }
+}
+
+/* ---------- 4. City: night cities seen from far above ---------- */
+
+/*
+ * 2026-11-12: "then do a new one called city. cityscapes seen from above in
+ * vegetal. like cities seen from space or from an airplane (must look a bit
+ * like the roots visuals but more structured). do 5 such visuals in the
+ * cities collection." A city at night lies flat across the picture, as from
+ * an airplane window: grains of light along its streets, avenues and ring
+ * roads; a dense, bright centre fading to sparse suburbs; highways reaching
+ * into the dark and forking at their ends like roots; car lights moving along
+ * the fast roads, white one way and amber the other. Water and parks stay
+ * dark. The lights come on from the centre out, and the eye drifts slowly
+ * over it. Pills pick one of five cities:
+ *   Grid    a tilted grid, a diagonal avenue across it, a river with bridges
+ *   Star    boulevards from one centre, ring roads round it, a dark park
+ *   River   an old city grown like roots from two cores, a winding river
+ *   Bay     ring roads in half circles round the head of a bay, an island
+ *   Canals  rings of canals round a harbour, a sparser town across the water
+ * The plans are laid out on a unit disc and drawn CITY_K across.
+ */
+export const CITY_K = 46;
+type Road = { route: Route; rank: number };
+type CityPlan = {
+  roads: Road[];
+  /** Running total of each road's share of the street grains, and of the fast roads' cars. */
+  cum: Float64Array;
+  fast: number[];
+  fastCum: Float64Array;
+  wet: (x: number, y: number) => boolean;
+  dens: (x: number, y: number) => number;
+  centre: [number, number];
+};
+type Keep = (x: number, y: number) => boolean;
+/** How many street grains a unit of road takes, by rank: highway, avenue, street, lane. */
+const RANK_W = [1.1, 1.5, 1, 0.45];
+
+/** Points from (x0, y0) to (x1, y1), close enough together to cut at a shore. */
+function lineRaw(x0: number, y0: number, x1: number, y1: number): number[] {
+  const n = Math.max(2, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 0.01));
+  const raw: number[] = [];
+  for (let i = 0; i <= n; i++) raw.push(lerp(x0, x1, i / n), lerp(y0, y1, i / n), 0.01);
+  return raw;
+}
+/** Points round an arc about (cx, cy). */
+function arcRaw(cx: number, cy: number, r: number, a0: number, a1: number): number[] {
+  const n = Math.max(2, Math.ceil((Math.abs(a1 - a0) * r) / 0.01));
+  const raw: number[] = [];
+  for (let i = 0; i <= n; i++) {
+    const a = lerp(a0, a1, i / n);
+    raw.push(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0.01);
+  }
+  return raw;
+}
+/** Points along a curve q -> (x, y), q from 0 to 1. */
+function curveRaw(f: (q: number) => [number, number], n: number): number[] {
+  const raw: number[] = [];
+  for (let i = 0; i <= n; i++) raw.push(...f(i / n), 0.01);
+  return raw;
+}
+/** A path cut into the stretches `keep` allows, each one a road of the given rank. */
+function roadsOf(raw: number[], rank: number, keep: Keep, out: Road[]) {
+  let run: number[] = [];
+  const flush = () => {
+    if (run.length >= 9) {
+      const route = resample(run);
+      if (route.count > 2) out.push({ route, rank });
+    }
+    run = [];
+  };
+  for (let i = 0; i + 2 < raw.length; i += 3) {
+    const x = at(raw, i);
+    const y = at(raw, i + 1);
+    if (keep(x, y)) run.push(x, y, at(raw, i + 2));
+    else flush();
+  }
+  flush();
+}
+/** Branching roads grown like roots from (x, y) toward `angle` (from +y, toward +x). */
+function rootRoads(
+  rng: () => number,
+  x: number,
+  y: number,
+  angle: number,
+  len: number,
+  depth: number,
+  spread: number,
+  shrink: number,
+  rank: number,
+  keep: Keep,
+  out: Road[],
+) {
+  const chains: Seg[][] = [];
+  grow(rng, x, y, angle, len, 0.01, depth, spread, shrink, [], chains);
+  // The chains share their first stretches; each stretch is laid once, so no road is doubled.
+  // The first stretches are the main roads, a rank up; the finer they fork, the smaller the road.
+  const laid = new Set<Seg>();
+  for (const c of chains) {
+    c.forEach((seg, i) => {
+      if (laid.has(seg)) return;
+      laid.add(seg);
+      const r = Math.min(3, Math.max(0, rank - 1 + Math.floor(i / 2)));
+      roadsOf(sampleChain([seg], false), r, keep, out);
+    });
+  }
+}
+/** Inside a ragged edge of radius R round (cx, cy), so no city is a perfect circle. */
+const within = (x: number, y: number, R: number, cx = 0, cy = 0) => {
+  const a = Math.atan2(y - cy, x - cx);
+  return (
+    Math.hypot(x - cx, y - cy) < R * (1 + 0.16 * Math.sin(3 * a + 1.3) + 0.09 * Math.sin(7 * a))
+  );
+};
+const falloff = (cx: number, cy: number, s: number) => (x: number, y: number) =>
+  Math.exp(-((x - cx) ** 2 + (y - cy) ** 2) / (s * s));
+/** Highways out from radius r0 round (cx, cy), each forking at its end like a root. */
+function highways(
+  rng: () => number,
+  n: number,
+  r0: number,
+  keep: Keep,
+  out: Road[],
+  cx = 0,
+  cy = 0,
+  turn = 0.4,
+) {
+  for (let k = 0; k < n; k++) {
+    const a = turn + (k / n) * TAU + (rng() - 0.5) * 0.4;
+    rootRoads(
+      rng,
+      cx + Math.sin(a) * r0,
+      cy + Math.cos(a) * r0,
+      a,
+      0.2,
+      3,
+      0.32,
+      0.82,
+      0,
+      keep,
+      out,
+    );
+  }
+}
+
+type CityKind = {
+  name: string;
+  seed: number;
+  build: (rng: () => number) => Omit<CityPlan, 'cum' | 'fast' | 'fastCum'>;
+};
+
+export const CITIES: CityKind[] = [
+  {
+    name: 'Grid',
+    seed: 61,
+    build: (rng) => {
+      // A grid tilted a little, close in the middle and twice as wide in the suburbs.
+      const riverY = (x: number) => -0.32 + 0.22 * x + 0.03 * Math.sin(5 * x);
+      const wet = (x: number, y: number) => Math.abs(y - riverY(x)) < 0.05;
+      const roads: Road[] = [];
+      const rot = 0.32;
+      const c = Math.cos(rot);
+      const s = Math.sin(rot);
+      const toWorld = (gx: number, gy: number): [number, number] => [
+        gx * c - gy * s,
+        gx * s + gy * c,
+      ];
+      for (let i = -22; i <= 22; i++) {
+        const v = i * 0.05;
+        const rank = i % 4 === 0 ? 1 : i % 2 === 0 ? 2 : 3;
+        const R = i % 2 === 0 ? 1 : 0.6;
+        // Avenues cross the river on bridges; streets stop at its banks.
+        const keep: Keep = (x, y) => within(x, y, R) && (rank === 1 || !wet(x, y));
+        for (const axis of [0, 1]) {
+          const raw = curveRaw((q) => {
+            const w = -1.3 + 2.6 * q;
+            return axis ? toWorld(v, w) : toWorld(w, v);
+          }, 260);
+          roadsOf(raw, rank, keep, roads);
+        }
+      }
+      // One old road cuts across the grid on a slant, and the river's two embankments.
+      const land: Keep = (x, y) => within(x, y, 1.05) && !wet(x, y);
+      roadsOf(
+        curveRaw((q) => [-1 + 2 * q, -0.75 + 1.4 * q + 0.12 * Math.sin(q * 4)], 300),
+        1,
+        (x, y) => within(x, y, 1.05),
+        roads,
+      );
+      for (const side of [-1, 1])
+        roadsOf(
+          curveRaw((q) => [-1.1 + 2.2 * q, riverY(-1.1 + 2.2 * q) + side * 0.065], 300),
+          2,
+          land,
+          roads,
+        );
+      highways(rng, 6, 0.75, (x, y) => !wet(x, y) && Math.hypot(x, y) < 1.45, roads);
+      return { roads, wet, dens: falloff(0.05, 0.08, 0.5), centre: [0.05, 0.08] };
+    },
+  },
+  {
+    name: 'Star',
+    seed: 67,
+    build: (rng) => {
+      // A dark park east of the centre: no lights in it.
+      const wet = (x: number, y: number) => Math.hypot(x - 0.3, y + 0.24) < 0.08;
+      const roads: Road[] = [];
+      const keep: Keep = (x, y) => within(x, y, 0.95) && !wet(x, y);
+      const B = 12;
+      for (let k = 0; k < B; k++) {
+        const a = (k / B) * TAU;
+        roadsOf(
+          lineRaw(Math.cos(a) * 0.03, Math.sin(a) * 0.03, Math.cos(a), Math.sin(a)),
+          1,
+          keep,
+          roads,
+        );
+        // Short streets fan out between the boulevards, more of them further out.
+        for (let m = 1; m < 6; m++) {
+          const b = a + (m / 6) * (TAU / B);
+          const r0 = m % 2 ? 0.2 : 0.1;
+          roadsOf(
+            lineRaw(Math.cos(b) * r0, Math.sin(b) * r0, Math.cos(b) * 0.9, Math.sin(b) * 0.9),
+            3,
+            keep,
+            roads,
+          );
+        }
+      }
+      roadsOf(arcRaw(0, 0, 0.03, 0, TAU), 1, () => true, roads);
+      roadsOf(arcRaw(0, 0, 0.2, 0, TAU), 1, (x, y) => !wet(x, y), roads);
+      roadsOf(arcRaw(0, 0, 0.42, 0, TAU), 1, (x, y) => !wet(x, y), roads);
+      roadsOf(arcRaw(0, 0, 0.72, 0, TAU), 0, () => true, roads);
+      for (let r = 0.08; r < 0.95; r += 0.055) roadsOf(arcRaw(0, 0, r, 0, TAU), 2, keep, roads);
+      highways(rng, 8, 0.9, (x, y) => Math.hypot(x, y) < 1.45, roads, 0, 0, 0.2);
+      return { roads, wet, dens: falloff(0, 0, 0.45), centre: [0, 0] };
+    },
+  },
+  {
+    name: 'River',
+    seed: 71,
+    build: (rng) => {
+      // An old city grown from two cores, one on each bank of a winding river.
+      const riverY = (x: number) => 0.12 * Math.sin(2.4 * x + 0.5) + 0.05 * Math.sin(5.1 * x);
+      const half = (x: number) => 0.035 + 0.012 * x;
+      const wet = (x: number, y: number) => Math.abs(y - riverY(x)) < half(x);
+      const roads: Road[] = [];
+      const keep: Keep = (x, y) => within(x, y, 1.05) && !wet(x, y);
+      for (let k = 0; k < 11; k++)
+        rootRoads(
+          rng,
+          0.05,
+          0.2,
+          (k / 11) * TAU + rng() * 0.3,
+          0.13,
+          6,
+          0.55,
+          0.86,
+          2,
+          keep,
+          roads,
+        );
+      for (let k = 0; k < 7; k++)
+        rootRoads(
+          rng,
+          -0.3,
+          -0.22,
+          (k / 7) * TAU + rng() * 0.3,
+          0.12,
+          5,
+          0.55,
+          0.86,
+          2,
+          keep,
+          roads,
+        );
+      for (const side of [-1, 1])
+        roadsOf(
+          curveRaw((q) => {
+            const x = -1.1 + 2.2 * q;
+            return [x, riverY(x) + side * (half(x) + 0.014)];
+          }, 300),
+          2,
+          (x, y) => within(x, y, 0.85),
+          roads,
+        );
+      for (const x of [-0.55, -0.2, 0.15, 0.5])
+        roadsOf(lineRaw(x, riverY(x) - 0.1, x + 0.02, riverY(x) + 0.1), 1, () => true, roads);
+      highways(rng, 5, 0.7, (x, y) => !wet(x, y) && Math.hypot(x, y) < 1.45, roads);
+      return {
+        roads,
+        wet,
+        dens: (x, y) =>
+          Math.max(falloff(0.05, 0.2, 0.34)(x, y), 0.8 * falloff(-0.3, -0.22, 0.26)(x, y)),
+        centre: [0.05, 0.2],
+      };
+    },
+  },
+  {
+    name: 'Bay',
+    seed: 73,
+    build: (rng) => {
+      // The sea to the north, pushing a bay south into the land, and an island off the coast.
+      const coastY = (x: number) =>
+        0.38 - 0.34 * Math.exp(-((x / 0.38) ** 2)) + 0.025 * Math.sin(9 * x);
+      const island = (x: number, y: number) => Math.hypot((x - 0.55) / 1.4, y - 0.66) < 0.1;
+      const wet = (x: number, y: number) => y > coastY(x) && !island(x, y);
+      const roads: Road[] = [];
+      const c: [number, number] = [0, -0.04];
+      const land: Keep = (x, y) => !wet(x, y);
+      const keep: Keep = (x, y) => within(x, y, 1.05, c[0], c[1]) && land(x, y);
+      // Ring roads in half circles round the head of the bay, boulevards fanning inland.
+      roadsOf(arcRaw(c[0], c[1], 0.25, 0, TAU), 1, land, roads);
+      roadsOf(arcRaw(c[0], c[1], 0.5, 0, TAU), 0, land, roads);
+      roadsOf(arcRaw(c[0], c[1], 0.82, 0, TAU), 0, land, roads);
+      for (let k = 0; k < 14; k++) {
+        const a = (k / 14) * TAU;
+        roadsOf(
+          lineRaw(c[0], c[1], c[0] + Math.cos(a) * 1.05, c[1] + Math.sin(a) * 1.05),
+          1,
+          keep,
+          roads,
+        );
+      }
+      for (let i = -18; i <= 18; i++) {
+        const v = i * 0.05;
+        const rank = i % 2 ? 3 : 2;
+        const R = i % 2 ? 0.5 : 0.95;
+        const k2: Keep = (x, y) => within(x, y, R, c[0], c[1]) && land(x, y);
+        roadsOf(lineRaw(-1, v, 1, v + 0.12), rank, k2, roads);
+        roadsOf(lineRaw(v, -1, v - 0.12, 1), rank, k2, roads);
+      }
+      // The shore road, the island's streets and its bridge, and piers into the bay.
+      roadsOf(
+        curveRaw((q) => [-1.1 + 2.2 * q, coastY(-1.1 + 2.2 * q) - 0.018], 400),
+        1,
+        (x, y) => land(x, y) && Math.abs(x) < 1.05,
+        roads,
+      );
+      for (let i = -3; i <= 3; i++) {
+        roadsOf(lineRaw(0.55 + i * 0.04, 0.5, 0.55 + i * 0.04, 0.8), 2, island, roads);
+        roadsOf(lineRaw(0.35, 0.66 + i * 0.03, 0.75, 0.66 + i * 0.03), 2, island, roads);
+      }
+      roadsOf(lineRaw(0.5, coastY(0.5) - 0.02, 0.52, 0.58), 1, () => true, roads);
+      for (const x of [-0.3, -0.15, 0.12, 0.28])
+        roadsOf(lineRaw(x, coastY(x) - 0.01, x, coastY(x) + 0.06), 2, () => true, roads);
+      highways(
+        rng,
+        5,
+        0.85,
+        (x, y) => land(x, y) && Math.hypot(x, y) < 1.45,
+        roads,
+        c[0],
+        c[1],
+        2.4,
+      );
+      return { roads, wet, dens: falloff(c[0], c[1], 0.45), centre: c };
+    },
+  },
+  {
+    name: 'Canals',
+    seed: 79,
+    build: (rng) => {
+      // A harbour across the city's north, and rings of canals round the old centre on its shore.
+      const c: [number, number] = [0, 0.3];
+      const harbour = (x: number, y: number) =>
+        Math.abs(y - (0.42 + 0.03 * Math.sin(6 * x))) < 0.09;
+      const CANALS = [0.13, 0.21, 0.29, 0.37, 0.45];
+      const canal = (x: number, y: number) => {
+        if (y > c[1]) return false;
+        const r = Math.hypot(x - c[0], y - c[1]);
+        return CANALS.some((R) => Math.abs(r - R) < 0.014);
+      };
+      const wet = (x: number, y: number) => harbour(x, y) || canal(x, y);
+      const roads: Road[] = [];
+      const dry: Keep = (x, y) => !wet(x, y);
+      // Both banks of every canal, and streets crossing them on bridges toward the centre.
+      for (const R of CANALS)
+        for (const side of [-1, 1])
+          roadsOf(arcRaw(c[0], c[1], R + side * 0.026, Math.PI, TAU), 2, dry, roads);
+      for (let k = 0; k <= 24; k++) {
+        const a = Math.PI + (k / 24) * Math.PI;
+        roadsOf(
+          lineRaw(
+            c[0] + Math.cos(a) * 0.05,
+            c[1] + Math.sin(a) * 0.05,
+            c[0] + Math.cos(a) * 0.95,
+            c[1] + Math.sin(a) * 0.95,
+          ),
+          k % 4 ? 3 : 1,
+          (x, y) => !harbour(x, y) && within(x, y, 0.95, c[0], c[1]),
+          roads,
+        );
+      }
+      // Beyond the canals, a newer grid; across the harbour a sparser town.
+      for (let i = -20; i <= 20; i++) {
+        const v = i * 0.06;
+        const k2: Keep = (x, y) => {
+          const r = Math.hypot(x - c[0], y - c[1]);
+          return dry(x, y) && r > 0.52 && within(x, y, y > c[1] ? 0.75 : 1.05, c[0], c[1]);
+        };
+        roadsOf(lineRaw(-1.1, v + 0.1, 1.1, v - 0.1), i % 2 ? 3 : 2, k2, roads);
+        roadsOf(lineRaw(v - 0.1, -1.1, v + 0.1, 1.1), i % 2 ? 3 : 2, k2, roads);
+      }
+      roadsOf(arcRaw(c[0], c[1], 0.72, Math.PI, TAU), 0, dry, roads);
+      roadsOf(lineRaw(-0.12, 0.3, -0.1, 0.56), 1, () => true, roads);
+      roadsOf(lineRaw(0.22, 0.3, 0.24, 0.56), 1, () => true, roads);
+      highways(
+        rng,
+        5,
+        0.75,
+        (x, y) => dry(x, y) && Math.hypot(x, y) < 1.45,
+        roads,
+        c[0],
+        c[1],
+        2.2,
+      );
+      return { roads, wet, dens: falloff(c[0], c[1] - 0.12, 0.45), centre: [c[0], c[1] - 0.12] };
+    },
+  },
+];
+let cityKind = 0;
+export const hasCities = (k: number) => idOf(k) === 'city';
+const cityPlans: (CityPlan | null)[] = CITIES.map(() => null);
+
+/** City `kind`'s plan, with each road's share of the street grains and of the cars. */
+export function cityPlan(kind = cityKind): CityPlan {
+  const cached = cityPlans[kind];
+  if (cached) return cached;
+  const base = (CITIES[kind] as CityKind).build(seeded((CITIES[kind] as CityKind).seed));
+  const cum = new Float64Array(base.roads.length);
+  const fast: number[] = [];
+  let sum = 0;
+  base.roads.forEach((r, i) => {
+    sum += routeLength(r.route) * at(RANK_W, r.rank);
+    cum[i] = sum;
+    if (r.rank <= 1) fast.push(i);
+  });
+  const fastCum = new Float64Array(fast.length);
+  let fsum = 0;
+  fast.forEach((i, j) => {
+    fsum += routeLength((base.roads[i] as Road).route);
+    fastCum[j] = fsum;
+  });
+  for (let i = 0; i < cum.length; i++) cum[i] = (cum[i] as number) / sum;
+  for (let i = 0; i < fastCum.length; i++) fastCum[i] = (fastCum[i] as number) / fsum;
+  const plan = { ...base, cum, fast, fastCum };
+  cityPlans[kind] = plan;
+  return plan;
+}
+
+/** The first index whose running total passes q. */
+function pickIn(cum: Float64Array, q: number): number {
+  let lo = 0;
+  let hi = cum.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((cum[mid] as number) < q) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+type CityRole = 'car' | 'street' | 'glow' | 'core';
+const cityRole = (p: Particle): CityRole =>
+  p.c < 0.08 ? 'car' : p.c < 0.74 ? 'street' : p.c < 0.95 ? 'glow' : 'core';
+/** A grain of the city: where it is on the plan, the rank of its road, how dense the city is there. */
+type CityGrain = { x: number; y: number; rank: number; dens: number; way: number };
+
+/*
+ * Each grain tries a few places in turn, taking the first the city's density
+ * allows, so most land in the centre and fewer out in the suburbs, while the
+ * highways keep theirs all the way out.
+ */
+export function cityGrain(p: Particle, t: number): CityGrain {
+  const plan = cityPlan();
+  const role = cityRole(p);
+  if (role === 'car') {
+    const road = plan.roads[at(plan.fast, pickIn(plan.fastCum, p.a))] as Road;
+    const len = routeLength(road.route);
+    const way = p.d < 0.5 ? 1 : -1;
+    const s = wrap(p.b * len + way * t * 0.05 * (0.8 + 0.4 * hash(p.i, 85)), len);
+    const [x, y] = along(road.route, s);
+    return { x, y, rank: road.rank, dens: plan.dens(x, y), way };
+  }
+  if (role === 'core') {
+    // The bright heart of the city, packed round its centre.
+    for (let n = 0; n < 4; n++) {
+      const a = hash(p.i, 86 + n) * TAU;
+      const r = 0.1 * Math.sqrt(-2 * Math.log(1 - 0.95 * hash(p.i, 90 + n)));
+      const x = plan.centre[0] + Math.cos(a) * r;
+      const y = plan.centre[1] + Math.sin(a) * r;
+      if (!plan.wet(x, y)) return { x, y, rank: 1, dens: plan.dens(x, y), way: 0 };
+    }
+  }
+  let g: CityGrain = { x: 0, y: 0, rank: 3, dens: 0, way: 0 };
+  for (let n = 0; n < 4; n++) {
+    const q = n === 0 ? p.a : hash(p.i, 94 + n);
+    const road = plan.roads[pickIn(plan.cum, q)] as Road;
+    const len = routeLength(road.route);
+    const s = (n === 0 ? p.b : hash(p.i, 98 + n)) * len;
+    let [x, y] = along(road.route, s);
+    if (role === 'glow') {
+      // Lights in the blocks either side of the street, the windows and yards between roads.
+      const [x2, y2] = along(road.route, Math.min(len, s + 0.01));
+      const [x1, y1] = along(road.route, Math.max(0, s - 0.01));
+      const l = Math.hypot(x2 - x1, y2 - y1) || 1;
+      const off = (hash(p.i, 102 + n) - 0.5) * 0.04;
+      x += (-(y2 - y1) / l) * off;
+      y += ((x2 - x1) / l) * off;
+      if (plan.wet(x, y)) continue;
+    }
+    const dens = plan.dens(x, y);
+    g = { x, y, rank: road.rank, dens, way: 0 };
+    const allow = road.rank === 0 && role === 'street' ? 1 : 0.08 + 0.92 * dens ** 0.8;
+    if (hash(p.i, 106 + n) < allow) break;
+  }
+  return g;
+}
+
+/** How far the lights have come on at plan point (x, y), `u` through the piece: from the centre out. */
+const cityLit = (x: number, y: number, u: number) => {
+  const c = cityPlan().centre;
+  return smooth((u * 5.5 - Math.hypot(x - c[0], y - c[1])) / 0.25);
+};
+
+const cityPos = (p: Particle, g: CityGrain): Vec3 => [
+  g.x * CITY_K,
+  g.y * CITY_K,
+  (p.d - 0.5) * 0.3 + (cityRole(p) === 'core' ? p.b * 1.2 : 0),
+];
+
+/* ---------- 5. Tree 2D: the Star Tree, flat ---------- */
 
 const GROUND_2D = -20;
 const S2 = 26;
@@ -533,7 +1261,7 @@ function flatPoint(p: Particle, u: number, t: number): Vec3 {
   return [pos[0] + Math.cos(a) * g, pos[1] + Math.sin(a) * g, pos[2]];
 }
 
-/* ---------- 4. Tree 3D: branches forking round their own axis ---------- */
+/* ---------- 6. Tree 3D: branches forking round their own axis ---------- */
 
 const STEP3 = 0.2;
 export type Route3 = { pts: Float32Array; count: number };
@@ -785,7 +1513,7 @@ function tree3Point(p: Particle, u: number, t: number): Vec3 {
   return add([x, y, z], d, w * 0.5 * Math.sqrt(p.d));
 }
 
-/* ---------- 5. Veins: the Journey's network, made round and symmetric ---------- */
+/* ---------- 7. Veins: the Journey's network, made round and symmetric ---------- */
 
 const VEIN_R = 24;
 /** Eight turns round the centre, each one mirrored: sixteen copies of one branching. */
@@ -843,27 +1571,41 @@ export const hasDrums = (k: number) => PHASES[k]?.id === 'veins';
 
 /* The pieces' pills: the 3D tree's grounds and the veins' drums. */
 export const hasVariants = (k: number) =>
-  hasGround(k) || hasDrums(k) || hasReflTrees(k) || hasBlooms(k) || hasBird(k);
+  hasGround(k) ||
+  hasDrums(k) ||
+  hasReflTrees(k) ||
+  hasBlooms(k) ||
+  hasBird(k) ||
+  hasCities(k) ||
+  hasCellViews(k);
 export const variantNames = (k: number) =>
-  hasDrums(k)
-    ? DRUMS.map((d) => d.name)
-    : hasReflTrees(k)
-      ? REFL_TREES.map((d) => d.name)
-      : hasBlooms(k)
-        ? BLOOMS
-        : hasBird(k)
-          ? PLAYERS
-          : GROUNDS;
+  hasCellViews(k)
+    ? CELL_VIEWS
+    : hasCities(k)
+      ? CITIES.map((c) => c.name)
+      : hasDrums(k)
+        ? DRUMS.map((d) => d.name)
+        : hasReflTrees(k)
+          ? REFL_TREES.map((d) => d.name)
+          : hasBlooms(k)
+            ? BLOOMS
+            : hasBird(k)
+              ? PLAYERS
+              : GROUNDS;
 export const variantLabel = (k: number) =>
-  hasDrums(k)
-    ? 'Drum'
-    : hasReflTrees(k)
-      ? 'Tree'
-      : hasBlooms(k)
-        ? 'Flower'
-        : hasBird(k)
-          ? 'Play as'
-          : 'Ground';
+  hasCellViews(k)
+    ? 'View'
+    : hasCities(k)
+      ? 'City'
+      : hasDrums(k)
+        ? 'Drum'
+        : hasReflTrees(k)
+          ? 'Tree'
+          : hasBlooms(k)
+            ? 'Flower'
+            : hasBird(k)
+              ? 'Play as'
+              : 'Ground';
 /** Pill i on piece k; with no piece (the Journey), the first of each. */
 export function setVariant(i: number, k?: number) {
   if (k === undefined) {
@@ -871,9 +1613,13 @@ export function setVariant(i: number, k?: number) {
     drumKind = 0;
     reflKind = 0;
     bloomKind = 0;
+    cityKind = 0;
+    corridor = false;
     quoteNow = 0;
     if (playerKind) setPlayer(0);
-  } else if (hasDrums(k)) drumKind = i;
+  } else if (hasCellViews(k)) corridor = i === 1;
+  else if (hasCities(k)) cityKind = CITIES[i] ? i : 0;
+  else if (hasDrums(k)) drumKind = i;
   else if (hasBird(k)) {
     if (i !== playerKind) setPlayer(i);
   } else if (hasBlooms(k)) bloomKind = i;
@@ -1044,7 +1790,7 @@ function veinsPoint(p: Particle, t: number): Vec3 {
   return inCopy(p, (x + (sd - 0.5) * w) * k, y * k, t);
 }
 
-/* ---------- 6. Fungi: threads from spores, joined into one net ---------- */
+/* ---------- 8. Fungi: threads from spores, joined into one net ---------- */
 
 const SOIL = -6;
 const FK = 40;
@@ -1159,7 +1905,7 @@ function fungusPoint(p: Particle, u: number, t: number): Vec3 {
   return [pos[0] + (p.d - 0.5) * w * FK, pos[1], pos[2] + (p.d - 0.5) * w * FK];
 }
 
-/* ---------- 7. Leaf: a midrib, veins forking to the edge, light in, sugar out ---------- */
+/* ---------- 9. Leaf: a midrib, veins forking to the edge, light in, sugar out ---------- */
 
 export const PETIOLE: Vec3 = [0, -24, 0];
 const BLADE_FOOT = -17;
@@ -1246,7 +1992,7 @@ function leafPoint(p: Particle, u: number, t: number): Vec3 {
   return lerp3(PETIOLE, pos, g);
 }
 
-/* ---------- 8. Flower: florets on the golden angle ---------- */
+/* ---------- 10. Flower: florets on the golden angle ---------- */
 
 export const HEAD: Vec3 = [0, 4, 0];
 export const FLORETS = 700;
@@ -1298,7 +2044,7 @@ function flowerPoint(p: Particle, u: number, t: number): Vec3 {
   }
 }
 
-/* ---------- 9. Fruit & seed: swells, ripens, falls, opens, a seed sprouts ---------- */
+/* ---------- 11. Fruit & seed: swells, ripens, falls, opens, a seed sprouts ---------- */
 
 export const GROUND_FRUIT = -16;
 export const SEEDS = 7;
@@ -1387,7 +2133,7 @@ function fruitPoint(p: Particle, u: number, t: number): Vec3 {
   ];
 }
 
-/* ---------- 10–11. Avenue and Forest: flying down a road as the trees grow ---------- */
+/* ---------- 12–13. Avenue and Forest: flying down a road as the trees grow ---------- */
 
 /** Half the road's width; the eye flies a little above it. */
 export const ROAD_W = 3.2;
@@ -1573,7 +2319,7 @@ function forestAt(k: number, p: Particle, u: number, t: number): { pos: Vec3; d:
 
 const forestPoint = (k: number, p: Particle, u: number, t: number) => forestAt(k, p, u, t).pos;
 
-/* ---------- 13. Reflection: a still tree and the same tree in the water ---------- */
+/* ---------- 15. Reflection: a still tree and the same tree in the water ---------- */
 
 /*
  * 2026-11-10: "after full tree do reflection, with a tree and a reflection of
@@ -1940,7 +2686,7 @@ function reflectionTint(p: Particle, t: number): RGB {
   return scale(mix(rgb, WATER, 0.25), tree.shown * glint);
 }
 
-/* ---------- 14. Bloom: a flower growing and opening, in slow motion ---------- */
+/* ---------- 16. Bloom: a flower growing and opening, in slow motion ---------- */
 
 /*
  * 2026-11-10: "add a flower bloom to the visuals so it looks like a flower
@@ -2315,7 +3061,7 @@ function fireworkColour(p: Particle, t: number): RGB {
   return p.b > 0.8 ? scale(f.tip, 0.7 * shown) : scale([1, 0.9, 0.7], 0.3 * shown);
 }
 
-/* ---------- 15. Bird Sim: your own bird, through a forest of golden trees ---------- */
+/* ---------- 17. Bird Sim: your own bird, through a forest of golden trees ---------- */
 
 /*
  * 2026-11-11: "tree 3d put ability to make the tree all golden. no green. and
@@ -3580,12 +4326,12 @@ function birdColour(p: Particle, t: number, twinkle: number, g: Grain): RGB {
   }
 }
 
-/* ---------- 12. Above and below: roots and tree, all gold, about the horizon ---------- */
+/* ---------- 14. Above and below: roots and tree, all gold, about the horizon ---------- */
 
 /*
  * 2026-11-10: "one in vegetal with roots below and tree above, but all
  * golden, with a horizon in the middle, no green". The roots of piece 2 hang
- * from the horizon and the tree of piece 4 stands on it, both grown from the
+ * from the horizon and the tree of piece 6 stands on it, both grown from the
  * one point where they meet. Water climbs from the root tips to the base, and
  * sap on up the trunk.
  */
@@ -3665,32 +4411,36 @@ function belowPoint(p: Particle, u: number, t: number): Vec3 {
 
 /** Where particle p is in piece k's finished form, `u` through it, at chapter time t. */
 function form(k: number, p: Particle, u: number, t: number): Vec3 {
-  switch (k) {
-    case 0:
+  switch (idOf(k)) {
+    case 'cell':
       return cellPoint(p, u, t);
-    case 1:
+    case 'roots':
       return rootPoint(p, u, t);
-    case 2:
+    case 'roots-tree':
+      return rootsTreePoint(p, u, t);
+    case 'city':
+      return cityPos(p, cityGrain(p, t));
+    case 'tree-2d':
       return flatPoint(p, u, t);
-    case 3:
+    case 'tree-3d':
       return tree3Point(p, u, t);
-    case 4:
+    case 'veins':
       return veinsPoint(p, t);
-    case 5:
+    case 'fungi':
       return fungusPoint(p, u, t);
-    case 6:
+    case 'leaf':
       return leafPoint(p, u, t);
-    case 7:
+    case 'flower':
       return flowerPoint(p, u, t);
-    case 8:
+    case 'fruit':
       return fruitPoint(p, u, t);
-    case 11:
+    case 'full-tree':
       return belowPoint(p, u, t);
-    case 12:
+    case 'reflection':
       return reflectionPoint(p, u, t);
-    case 13:
+    case 'bloom':
       return bloomPoint(p, u, t);
-    case 14:
+    case 'bird':
       return birdGrain(p, t).pos;
     default:
       return forestPoint(k, p, u, t);
@@ -3709,25 +4459,39 @@ function form(k: number, p: Particle, u: number, t: number): Vec3 {
  * How far through each piece its form is whole. The fruit tells its own
  * story and the forests are flown through, so their time always runs.
  */
-// The fruit and the two roads (8–10) grow as they go and never use theirs.
-const FORMED = [0.55, 0.45, 0.45, 0.5, 0, 0.7, 0.45, 0.4, 0, 0, 0, 0.45, 0.45, 0, 0];
+// The fruit, the two roads, the drums, the bloom and the Bird Sim grow as they go and never use theirs.
+const FORMED: Record<string, number> = {
+  cell: 0.55,
+  roots: 0.45,
+  'roots-tree': 0.45,
+  city: 0.3,
+  'tree-2d': 0.45,
+  'tree-3d': 0.5,
+  fungi: 0.7,
+  leaf: 0.45,
+  flower: 0.4,
+  'full-tree': 0.45,
+  reflection: 0.45,
+};
+const formed = (k: number) => FORMED[idOf(k)] ?? 0;
 const BALL_R = 20;
 const isFruit = (k: number) => PHASES[k]?.id === 'fruit';
 const runsOn = (k: number) => isFruit(k) || isForest(k) || hasBird(k);
 
 /** When a grain reaches its place in piece k, 0 (first) to 1 (last): the piece's growing order. */
 function order(k: number, p: Particle): number {
-  if (k === 0) return cellFar(Math.floor(p.a * CELL_COUNT));
-  if (k === 4) return veinSeed(p).b;
-  if (k === 12) return reflSeed(p).b;
-  if (k === 7 && flowerRole(p) === 'floret') return p.a;
+  const id = idOf(k);
+  if (id === 'cell') return cellFar(Math.floor(p.a * CELL_COUNT));
+  if (id === 'veins') return veinSeed(p).b;
+  if (id === 'reflection') return reflSeed(p).b;
+  if (id === 'flower' && flowerRole(p) === 'floret') return p.a;
   if (isFruit(k)) return 0.5 * p.b;
   return p.b;
 }
 
 /** Piece k's form, held whole until FORMED unless the piece grows as it goes. */
 const whole = (k: number, p: Particle, u: number, t: number) =>
-  form(k, p, runsOn(k) ? u : Math.max(u, at(FORMED, k)), t);
+  form(k, p, runsOn(k) ? u : Math.max(u, formed(k)), t);
 
 /** How far grain p has come from the ball of stars into piece k's form, `u` through it. */
 export function arrival(k: number, p: Particle, u: number): number {
@@ -3797,25 +4561,30 @@ export function colour(k: number, p: Particle, u: number, t: number): RGB {
 /** Every grain's own slow twinkle. */
 const twinkleOf = (p: Particle, t: number) => 0.7 + 0.3 * Math.sin(t * 1.7 + p.i * 0.37);
 
+function cellColour(p: Particle, u: number, t: number, twinkle: number): RGB {
+  switch (cellRole(p)) {
+    case 'wall':
+      return scale(CELL_WALL, corridor ? 0.5 : 0.32);
+    case 'chloroplast':
+      return scale(CHLORO, 0.7 * twinkle);
+    case 'nucleus':
+      return scale(NUCLEUS, 0.6);
+    default: {
+      // Brightest as it passes through the wall between two cells.
+      const { f } = pulseOf(p, u, t);
+      const band = Math.exp(-((f - 0.5) ** 2) / 0.01);
+      return scale(SPARK, (0.25 + 0.9 * band) * smooth((u - 0.35) / 0.15));
+    }
+  }
+}
+
 function formColour(k: number, p: Particle, u: number, t: number): RGB {
   const twinkle = twinkleOf(p, t);
-  switch (k) {
-    case 0:
-      switch (cellRole(p)) {
-        case 'wall':
-          return scale(CELL_WALL, 0.32);
-        case 'chloroplast':
-          return scale(CHLORO, 0.7 * twinkle);
-        case 'nucleus':
-          return scale(NUCLEUS, 0.6);
-        default: {
-          // Brightest as it passes through the wall between two cells.
-          const { f } = pulseOf(p, u, t);
-          const band = Math.exp(-((f - 0.5) ** 2) / 0.01);
-          return scale(SPARK, (0.25 + 0.9 * band) * smooth((u - 0.35) / 0.15));
-        }
-      }
-    case 1:
+  switch (idOf(k)) {
+    case 'cell':
+      if (corridor) return scale(cellColour(p, u, t, twinkle), corridorFade(p, t));
+      return cellColour(p, u, t, twinkle);
+    case 'roots':
       switch (rootRole(p)) {
         case 'water': {
           // None near the top (2026-11-10: "upper part of roots without the blue dots, but they
@@ -3832,13 +4601,37 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
         default:
           return scale(ROOT, 0.35);
       }
-    case 2:
+    case 'roots-tree':
+      switch (rootsTreeRole(p)) {
+        case 'water': {
+          // Water below the ground, showing only a little way down as in Roots; sap above it.
+          const q = waterTrip(p, t);
+          return q < 0.5
+            ? scale(WATER, 0.9 * twinkle * smooth((1 - 2 * q - 0.1) / 0.25))
+            : scale(mix(GOLD, WATER, 0.35), 0.8 * twinkle);
+        }
+        case 'base':
+          return scale(SUGAR, 0.9);
+        case 'soil':
+          return scale(EARTH, 0.3);
+        case 'root':
+          return scale(mix(EARTH, ROOT, p.b), 0.7 * twinkle);
+        case 'hair':
+          return scale(ROOT, 0.35);
+        case 'leaf':
+          return scale(mix(LEAF, [0.85, 0.9, 0.4], p.b), 0.75 * twinkle);
+        default:
+          return scale(mix(BARK, GOLD, p.d), 0.7 * twinkle);
+      }
+    case 'city':
+      return cityColour(p, u, t, twinkle);
+    case 'tree-2d':
       if (isSoil2(p)) return scale(EARTH, 0.35);
       if (isLeaf2(p)) return scale(LEAF, 0.9 * twinkle);
       return p.c < 0.4
         ? scale(mix(GOLD, WATER, 0.35), 0.8 * twinkle)
         : scale(mix(GOLD, SUGAR, 0.4), 0.8 * twinkle);
-    case 3:
+    case 'tree-3d':
       switch (tree3Role(p)) {
         case 'soil':
           return groundColour(p);
@@ -3849,7 +4642,7 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
         default:
           return scale(mix(fullGold ? GOLD : BARK, GOLD, p.d), 0.7 * twinkle);
       }
-    case 4: {
+    case 'veins': {
       // The twinkle by run too, so every copy shines alike.
       const { b, d } = veinSeed(p);
       const tw = 0.7 + 0.3 * Math.sin(t * 1.7 + Math.floor(p.i / veinCopies()) * 0.37);
@@ -3874,7 +4667,7 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
           );
       }
     }
-    case 5:
+    case 'fungi':
       switch (fungusRole(p)) {
         case 'pulse':
           return scale(SUGAR, 0.95 * twinkle);
@@ -3889,7 +4682,7 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
         default:
           return p.d < 0.35 ? scale(STALK, 0.55) : scale(CAP, 0.7 * twinkle);
       }
-    case 6:
+    case 'leaf':
       switch (leafRole(p)) {
         case 'midrib':
           return scale([0.75, 0.95, 0.45], 0.85);
@@ -3904,7 +4697,7 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
         default:
           return scale(SUGAR, 0.9 * smooth((u - 0.35) / 0.15));
       }
-    case 7:
+    case 'flower':
       switch (flowerRole(p)) {
         case 'floret': {
           const n = Math.floor(p.a * FLORETS);
@@ -3916,16 +4709,16 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
         default:
           return scale([1, 0.92, 0.55], 0.8 * smooth((opening(u) - 0.6) / 0.3));
       }
-    case 9:
-    case 10:
+    case 'avenue':
+    case 'forest':
       return forestColour(k, p, u, t, twinkle);
-    case 12:
+    case 'reflection':
       return reflectionColour(p, t);
-    case 13:
+    case 'bloom':
       return bloomColour(p, u, t);
-    case 14:
+    case 'bird':
       return birdColour(p, t, twinkle, birdGrain(p, t));
-    case 11:
+    case 'full-tree':
       // All gold: no green anywhere.
       switch (belowRole(p)) {
         case 'horizon':
@@ -3958,6 +4751,28 @@ function formColour(k: number, p: Particle, u: number, t: number): RGB {
             smooth(((u - 0.64) / 0.22) * 3),
           );
       }
+    }
+  }
+}
+
+const SODIUM: RGB = [1, 0.66, 0.28];
+
+/** A city's light: brighter and whiter toward the centre, amber along the highways and suburbs. */
+function cityColour(p: Particle, u: number, t: number, twinkle: number, g = cityGrain(p, t)): RGB {
+  const lit = cityLit(g.x, g.y, u);
+  const d = g.dens;
+  switch (cityRole(p)) {
+    case 'car':
+      // Headlights one way, tail lights the other.
+      return g.way > 0 ? scale(SUN, 0.85 * lit) : scale(AMBER, 0.75 * lit);
+    case 'core':
+      return scale(mix(SUGAR, SUN, 0.55), (0.6 + 0.3 * twinkle) * lit);
+    case 'glow':
+      return scale(mix(GOLD, SUGAR, d), (0.14 + 0.4 * d) * twinkle * lit);
+    default: {
+      const tone = g.rank === 0 ? SODIUM : mix(AMBER, SUN, 0.25 + 0.6 * d ** 1.5);
+      const k = at([0.7, 0.95, 0.8, 0.62], g.rank);
+      return scale(tone, (0.3 + 0.6 * d) * k * twinkle * lit);
     }
   }
 }
@@ -4007,33 +4822,50 @@ type Eye = { eye: Vec3; target: Vec3 };
 
 /** Where the camera stands in piece k, `u` through it. */
 export function eyeIn(k: number, u: number, t: number): Eye {
-  switch (k) {
-    case 0: {
+  switch (idOf(k)) {
+    case 'cell': {
+      if (corridor) {
+        // In the gap between the two walls, looking down it, swaying a touch as it flies.
+        const sway: Vec3 = [Math.sin(t * 0.31) * 0.7, Math.sin(t * 0.23) * 0.6, 0];
+        return { eye: sway, target: [sway[0] * 0.4, sway[1] * 0.4, -30] };
+      }
       // Slowly round the block of cells.
       const a = 0.5 + u * 1.3;
       return { eye: [Math.sin(a) * 46, 10, Math.cos(a) * 46], target: [0, 0, 0] };
     }
-    case 1:
+    case 'roots':
       return { eye: [Math.sin(t * 0.05) * 8, -2, 56], target: [0, 0, 0] };
-    case 2:
+    case 'roots-tree': {
+      // Slowly round the tree, a little above the ground, so the ground reads as a thin line.
+      const a = t * 0.06;
+      return { eye: [Math.sin(a) * 62, 5, Math.cos(a) * 62], target: [0, 2, 0] };
+    }
+    case 'city': {
+      // Flying over: drifting slowly across the city, looking a little ahead and down.
+      const c = cityPlan().centre;
+      const x = c[0] * CITY_K + 12 * Math.sin(t * 0.023);
+      const y = c[1] * CITY_K + 8 * Math.sin(t * 0.017 + 1);
+      return { eye: [x, y - 12, 62], target: [x, y + 2, 0] };
+    }
+    case 'tree-2d':
       return { eye: [Math.sin(t * 0.04) * 3, 0, 64], target: [0, 0, 0] };
-    case 3: {
+    case 'tree-3d': {
       const a = t * 0.07;
       return { eye: [Math.sin(a) * 58, 2, Math.cos(a) * 58], target: [0, -2, 0] };
     }
-    case 4:
+    case 'veins':
       // Face on to the drum, its knot in the middle of the picture.
       return { eye: [0, 0, 60], target: [0, 0, 0] };
-    case 5:
+    case 'fungi':
       return { eye: [Math.sin(t * 0.04) * 10, 14, 44], target: [0, SOIL, 0] };
-    case 6:
+    case 'leaf':
       return { eye: [Math.sin(t * 0.05) * 6, 2, 52], target: [0, 0, 0] };
-    case 7: {
+    case 'flower': {
       const tilt = smooth((u - 0.4) / 0.5);
       return { eye: lerp3([0, HEAD[1], 44], [18, 14, 36], tilt), target: HEAD };
     }
-    case 9:
-    case 10: {
+    case 'avenue':
+    case 'forest': {
       // Down the middle of the road, a little above it, swaying a touch more in the wild forest.
       // In the forest the eye follows the river's bends, looking to where it bends next.
       const s = flown(k, u);
@@ -4045,7 +4877,7 @@ export function eyeIn(k: number, u: number, t: number): Eye {
         target: [there + sway * 0.4, EYE_H - 0.7, -s - 30],
       };
     }
-    case 13: {
+    case 'bloom': {
       if (bloomKind === FIREWORKS) {
         // Back far enough to see them all, drifting a little from side to side.
         const a = Math.sin(t * 0.05) * 0.25;
@@ -4057,7 +4889,7 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       const lift = 4 + 9 * smooth((u - 0.5) / 0.3);
       return { eye: [Math.sin(a) * 32, ty + lift, Math.cos(a) * 32], target: [0, ty, 0] };
     }
-    case 14: {
+    case 'bird': {
       // Behind the bird and a little above, looking past it the way it flies; the walker from
       // over its shoulder, at its own height.
       const { c, f } = flier(t);
@@ -4070,10 +4902,10 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       eye[1] = Math.max(landY(eye[0], eye[2]) + 1, eye[1]);
       return { eye, target: add(c, f, 6) };
     }
-    case 12:
+    case 'reflection':
       // Still, face on and a little above the water, so its surface shows: the tree does not turn.
       return { eye: [0, 7, 78], target: [0, 0, 0] };
-    case 11:
+    case 'full-tree':
       // Still, face on, a little above the horizon, so a line turned toward the eye reads as a road.
       return { eye: [0, 4, 80], target: [0, 0, 0] };
     default: {
@@ -4128,7 +4960,7 @@ export function particleAt(p: Particle, time: number): { pos: Vec3; rgb: RGB } {
  * Where piece k starts on its own: whole already. The roads grow as they go,
  * so from 0; the fruit once it has swelled, not as a small bright dot.
  */
-const pieceFrom = (k: number) => (isForest(k) || hasBird(k) ? 0 : isFruit(k) ? 0.2 : at(FORMED, k));
+const pieceFrom = (k: number) => (isForest(k) || hasBird(k) ? 0 : isFruit(k) ? 0.2 : formed(k));
 
 /** How long piece k plays on its own before it loops, in seconds. */
 export function pieceLength(k: number): number {
@@ -4164,6 +4996,12 @@ export function pieceAt(p: Particle, k: number, s: number): { pos: Vec3; rgb: RG
     // Worked out once for both its place and its colour: the Bird Sim has the most to work out.
     const g = birdGrain(p, t);
     return { pos: g.pos, rgb: birdColour(p, t, twinkleOf(p, t), g) };
+  }
+  if (hasCities(k)) {
+    // The city's grain worked out once for its place and its colour. On its own the city is lit
+    // from the start and stands still, so its loop needs no glide back.
+    const g = cityGrain(p, t);
+    return { pos: cityPos(p, g), rgb: cityColour(p, u, t, twinkleOf(p, t), g) };
   }
   const pos = whole(k, p, u, t);
   const rgb = formColour(k, p, u, t);
