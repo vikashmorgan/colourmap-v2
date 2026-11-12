@@ -7,7 +7,11 @@
  * term aim will be to create that future neon city that we fly through on a
  * spaceship."
  *
- * Seven pieces played as one trip, built as Ocean is (lib/ocean.ts): every
+ * It opens on the golden city (lib/golden-city.ts: its plan from φ, the city
+ * rising from it, its heart, its temples, factories and glass domes), then
+ * five night cities from above (lib/city-plans.ts), then the neon city.
+ *
+ * Fourteen pieces played as one trip, built as Ocean is (lib/ocean.ts): every
  * grain of light keeps its identity, each piece is a formula from a grain and
  * the time to a place and a colour, each piece opens from a wide ball of
  * faint stars, and every grain pours on into the next piece. The towers are
@@ -29,6 +33,20 @@ import {
   smooth,
   type Vec3,
 } from './bigbang';
+import { aboveAt, aboveEye, CITIES, setCityKind } from './city-plans';
+import {
+  buildingAt,
+  buildingEye,
+  DOMES,
+  FACTORIES,
+  goldenPlanAt,
+  goldenPlanEye,
+  heartAt,
+  heartEye,
+  risingAt,
+  risingEye,
+  TEMPLES,
+} from './golden-city';
 
 export { fade, wordsShown } from './journey';
 export { makeParticles, type Particle };
@@ -69,6 +87,87 @@ export interface CityPhase extends Phase {
 }
 
 export const PHASES: CityPhase[] = [
+  {
+    id: 'golden-plan',
+    name: 'Golden plan',
+    line: 'A round city of light seen from above, lit ring by ring from its golden heart: the rings of knowledge, making, living and nature, each φ times wider than the last, canals between them, twelve boulevards running out through all of them.',
+    words: [
+      'A city can be drawn from one number, the way a sunflower is.',
+      'Every road leads to the centre, and the centre belongs to everyone.',
+    ],
+    duration: 40,
+    glow: 1.05,
+    size: 0.7,
+  },
+  {
+    id: 'rising',
+    name: 'Rising',
+    line: 'The plan rises from the map: each ring φ times higher toward the heart, the living ring in terraces, nature staying low, the canals flat and shining, as the eye tilts down from above to the side.',
+    words: [
+      'What is drawn with care can be built with care.',
+      'A city rises the way hope does: from the centre outward.',
+    ],
+    duration: 40,
+    glow: 1,
+    size: 0.75,
+  },
+  {
+    id: 'heart',
+    name: 'The heart',
+    line: 'The centre up close: an open sphere of golden light breathing slowly over a round garden where all twelve boulevards meet, low terraces stepping down to the canal, ships passing far above.',
+    words: [
+      'The heart of the city is not a palace: it is open, and it is light.',
+      'It belongs to no one, so it belongs to all.',
+    ],
+    duration: 36,
+    glow: 1.05,
+    size: 0.75,
+  },
+  {
+    id: 'temples',
+    name: 'Temples',
+    line: 'Five golden temples of the city, each built from a few shapes and one ratio: a rotunda, a ziggurat, a ring, a pyramid and a lotus.',
+    words: [
+      'The simplest rules make the calmest buildings.',
+      'A temple is a place built so that light has somewhere to rest.',
+    ],
+    duration: 36,
+    glow: 1,
+    size: 0.75,
+  },
+  {
+    id: 'factories',
+    name: 'Factories',
+    line: 'Five works in the ring of making: a sawtooth hall, a round foundry, an assembly hall under arched trusses, a tower of workshops with its crane, a solar works and its field of mirrors.',
+    words: ['Making is a kind of hope you can hold.', 'A good workshop is as bright as a temple.'],
+    duration: 36,
+    glow: 1,
+    size: 0.75,
+  },
+  {
+    id: 'domes',
+    name: 'Domes',
+    line: 'Golden glasshouses: a geodesic dome, a cluster of bubbles, a palm house, a lattice shell and a garden of domes, each full of plants growing in the light.',
+    words: [
+      'Under glass, a garden keeps its summer.',
+      'The lightest roof is the one the sun comes through.',
+    ],
+    duration: 36,
+    glow: 1,
+    size: 0.75,
+  },
+  {
+    id: 'above',
+    name: 'From above',
+    line: 'Night cities seen from far above: streets branch like roots but in order, the centre glows, highways reach into the dark and car lights move along them. Five cities to choose from.',
+    words: [
+      'From high enough, a city at night looks like something that grew.',
+      'Its streets branch the way roots do: toward what it needs.',
+    ],
+    duration: 36,
+    glow: 1.05,
+    size: 0.7,
+  },
   {
     id: 'towers',
     name: 'Towers',
@@ -175,6 +274,13 @@ export function phaseAt(time: number): { index: number; u: number } {
 
 /** One colour per piece, for the step bar. */
 export const STEP_COLOURS = [
+  '#ffd27a',
+  '#f5c060',
+  '#fff1c8',
+  '#e8b450',
+  '#d99a4a',
+  '#cfe08a',
+  '#f2c25a',
   '#7f9cff',
   '#e8f0ff',
   '#ff5fd2',
@@ -1302,7 +1408,8 @@ const CANYON_SIGNS: (Sign | null)[] = SLOTS.map((tw, j) => {
 const SIGNED = CANYON_SIGNS.flatMap((s, j) => (s ? [j] : []));
 const CANYON_SIGN_SET = signSet(SIGNED.map((j) => CANYON_SIGNS[j] as Sign));
 
-const flown = (u: number) => SPEED * u * (PHASES[5] as CityPhase).duration;
+const flown = (u: number) =>
+  SPEED * u * (PHASES.find((p) => p.id === 'canyon') as CityPhase).duration;
 const ahead = (z0: number, s: number) => wrap(z0 - s, LOOP) - BEHIND;
 /** Light fades into the far violet, so the far end of the street never pops. */
 const haze = (d: number) => smooth((LOOP - BEHIND - d) / 45);
@@ -1621,7 +1728,12 @@ const cruiseY = (z: number, t: number) =>
 const ROUTE_Z0 =
   CT_BLOCKS * BLOCK_Z +
   60 +
-  Math.round((FLY_SPEED * (PHASE_START[6] as number)) / (CT_EVERY * BLOCK_Z)) * CT_EVERY * BLOCK_Z;
+  Math.round(
+    (FLY_SPEED * (PHASE_START[PHASES.findIndex((p) => p.id === 'ship')] as number)) /
+      (CT_EVERY * BLOCK_Z),
+  ) *
+    CT_EVERY *
+    BLOCK_Z;
 function routeAt(t: number): Vec3 {
   const z = ROUTE_Z0 - FLY_SPEED * t;
   return [1.5 * Math.sin(0.21 * t), cruiseY(z, t), z];
@@ -2610,11 +2722,50 @@ function shipAt(p: Particle, t: number): Spot {
   return { pos: add(P.c, up, VIEW + 20), rgb: scale(STAR, 0.45 * twinkle) };
 }
 
+/* ---------- the pieces' pills: five temples, five factories, five domes, five cities ---------- */
+
+let templeKind = 0;
+let factoryKind = 0;
+let domeKind = 0;
+const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number) => void }> = {
+  temples: { names: TEMPLES.names, label: TEMPLES.label, set: (i) => (templeKind = i) },
+  factories: { names: FACTORIES.names, label: FACTORIES.label, set: (i) => (factoryKind = i) },
+  domes: { names: DOMES.names, label: DOMES.label, set: (i) => (domeKind = i) },
+  above: { names: CITIES.map((c) => c.name), label: 'City', set: setCityKind },
+};
+const variantsOf = (k: number) => VARIANTS[PHASES[k]?.id ?? ''];
+export const hasVariants = (k: number) => variantsOf(k) !== undefined;
+export const variantNames = (k: number) => variantsOf(k)?.names ?? [];
+export const variantLabel = (k: number) => variantsOf(k)?.label ?? '';
+/** Pill i on piece k; with no piece (the Journey), the first of each. */
+export function setVariant(i: number, k?: number) {
+  if (k === undefined) {
+    for (const v of Object.values(VARIANTS)) v.set(0);
+    return;
+  }
+  const v = variantsOf(k);
+  if (v) v.set(v.names[i] ? i : 0);
+}
+
 /* ---------- where every grain is ---------- */
 
 /** Where particle p is in piece k's own form, and its colour, `u` through it, at chapter time t. */
 export function formAt(k: number, p: Particle, u: number, t: number): Spot {
   switch (PHASES[k]?.id) {
+    case 'golden-plan':
+      return goldenPlanAt(p, Math.max(u, 0), t);
+    case 'rising':
+      return risingAt(p, Math.max(u, 0), t);
+    case 'heart':
+      return heartAt(p, t);
+    case 'temples':
+      return buildingAt(TEMPLES, templeKind, p, t);
+    case 'factories':
+      return buildingAt(FACTORIES, factoryKind, p, t);
+    case 'domes':
+      return buildingAt(DOMES, domeKind, p, t);
+    case 'above':
+      return aboveAt(p, u, t);
     case 'towers':
       return towersAt(p, Math.max(u, 0), t);
     case 'lanes':
@@ -2680,6 +2831,18 @@ type Eye = { eye: Vec3; target: Vec3 };
 /** Where the camera stands in piece k, `u` through it. */
 export function eyeIn(k: number, u: number, t: number): Eye {
   switch (PHASES[k]?.id) {
+    case 'golden-plan':
+      return goldenPlanEye(u, t);
+    case 'rising':
+      return risingEye(u, t);
+    case 'heart':
+      return heartEye(t);
+    case 'temples':
+    case 'factories':
+    case 'domes':
+      return buildingEye(t);
+    case 'above':
+      return aboveEye(t);
     case 'towers': {
       // Slowly round the city, above its roofs, looking at its heart.
       const a = 0.6 + u * 1.1;
@@ -2765,6 +2928,7 @@ export function particleAt(p: Particle, time: number): { pos: Vec3; rgb: RGB } {
  * flies on down the avenue, wherever its loop falls.
  */
 const fliesOn = (k: number) => PHASES[k]?.id === 'canyon' || PHASES[k]?.id === 'ship';
+const isAbove = (k: number) => PHASES[k]?.id === 'above';
 const isCanyon = (k: number) => PHASES[k]?.id === 'canyon';
 
 /** How long piece k plays on its own before it loops, in seconds. */
@@ -2785,6 +2949,9 @@ export const pieceProgress = (k: number, s: number) => pieceClock(k, s).f;
 /** Position and colour of particle p in piece k on its own, `s` seconds in. */
 export function pieceAt(p: Particle, k: number, s: number): { pos: Vec3; rgb: RGB } {
   const { f, u, t } = pieceClock(k, s);
+  // From above, on its own, is lit from the start (its lights came on by 0.3 through it, as in
+  // Vegetal) and stands still, so its loop needs no glide back.
+  if (isAbove(k)) return aboveAt(p, 0.3 + 0.7 * f, t);
   const a = formAt(k, p, u, t);
   if (fliesOn(k)) return a;
   const w = smooth((f - 0.8 + 0.12 * p.stagger) / 0.2);

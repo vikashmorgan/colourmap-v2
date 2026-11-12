@@ -31,6 +31,7 @@ import {
   GROUND,
   gauges,
   glyph,
+  hasVariants,
   LANES,
   LANTERNS,
   laneShip,
@@ -53,6 +54,7 @@ import {
   STEP_COLOURS,
   STREET,
   setFly,
+  setVariant,
   signFlicker,
   signPoint,
   signSize,
@@ -60,7 +62,23 @@ import {
   TOTAL,
   target,
   VIEW,
+  variantLabel,
+  variantNames,
 } from './city';
+import { CITIES, CITY_K, cityPlan } from './city-plans';
+import { RATIOS } from './golden-buildings';
+import {
+  band,
+  bandIndex,
+  GOLDEN,
+  HEART_K,
+  hopeAt,
+  revealed,
+  risen,
+  SPHERE_C,
+  SPHERE_R,
+} from './golden-city';
+import { GROUND_Y, PHI } from './grain-mesh';
 
 const particles = makeParticles(1500);
 const dist = (a: number[], b: number[]) =>
@@ -78,8 +96,15 @@ const inside = (q: number[], tw: (typeof CITY)[number]) =>
   Math.abs((q[2] as number) - tw.z) < tw.hz;
 
 describe('the city chapter', () => {
-  it('has seven pieces, from the towers to the ship, each with words', () => {
+  it('has fourteen pieces, from the golden plan to the ship, each with words', () => {
     expect(PHASES.map((p) => p.id)).toEqual([
+      'golden-plan',
+      'rising',
+      'heart',
+      'temples',
+      'factories',
+      'domes',
+      'above',
       'towers',
       'lanes',
       'neon',
@@ -89,6 +114,13 @@ describe('the city chapter', () => {
       'ship',
     ]);
     expect(PHASES.map((p) => p.name)).toEqual([
+      'Golden plan',
+      'Rising',
+      'The heart',
+      'Temples',
+      'Factories',
+      'Domes',
+      'From above',
       'Towers',
       'Sky lanes',
       'Neon',
@@ -473,8 +505,13 @@ describe('Ship, round two: solid walls, the avenue and Chinatown', () => {
   /** The route at s, a frame drawn just before it, so the plan knows how many grains are drawn. */
   const fresh = (s: number) => {
     setFly(false, [], 0, s - 5);
-    setFly(false, [], 0, s - 1 / 60);
-    frame(s - 1 / 60);
+    // A few frames first, so the plan has settled on how many grains are drawn and how densely
+    // to deal them, whatever the tests before left behind.
+    setFly(false, [], 0, s - 3 / 60);
+    for (const f of [3, 2, 1]) {
+      if (f < 3) setFly(false, [], 1 / 60, s - f / 60);
+      frame(s - f / 60);
+    }
     setFly(false, [], 1 / 60, s);
   };
 
@@ -642,5 +679,302 @@ describe('Ship, round two: solid walls, the avenue and Chinatown', () => {
     expect(Math.abs(back.c[0])).toBeLessThan(AVENUE);
     expect(back.f[2]).toBeLessThan(-0.9);
     setFly(false, [], 0, 0);
+  });
+});
+
+/* ---------- the golden city ---------- */
+
+const brightness = (rgb: number[]) => Math.max(...rgb);
+const finiteSpot = (s: { pos: number[]; rgb: number[] }) =>
+  [...s.pos, ...s.rgb].every(Number.isFinite) && Math.max(...s.rgb) <= 1 && Math.min(...s.rgb) >= 0;
+const STAR_SHARE = 0.03;
+
+describe('The golden city (2026-11-12: "build the city")', () => {
+  const all = makeParticles(9000);
+  const city = all.filter((p) => p.c >= STAR_SHARE);
+
+  it('stands on the chapter’s ground and lays its rings out by φ', () => {
+    expect(GROUND_Y).toBe(GROUND);
+    expect(GOLDEN.bands.map((b) => b.name)).toEqual([
+      'Heart',
+      'Inner canal',
+      'Ring of knowledge',
+      'Ring of making',
+      'Middle canal',
+      'Ring of living',
+      'Outer canal',
+      'Ring of nature',
+    ]);
+    const width = (b: { r0: number; r1: number }) => b.r1 - b.r0;
+    const land = GOLDEN.bands.filter((b) => b.kind === 'land');
+    const water = GOLDEN.bands.filter((b) => b.kind === 'water');
+    // Each land ring φ times wider than the one inside it, the first φ times the heart's radius;
+    // and each canal φ times wider than the canal inside it.
+    expect(width(land[0] as never) / width(band('Heart'))).toBeCloseTo(PHI, 9);
+    for (let i = 1; i < land.length; i++)
+      expect(width(land[i] as never) / width(land[i - 1] as never)).toBeCloseTo(PHI, 9);
+    for (let i = 1; i < water.length; i++)
+      expect(width(water[i] as never) / width(water[i - 1] as never)).toBeCloseTo(PHI, 9);
+    // The rings meet edge to edge, out to the city's rim.
+    for (let i = 1; i < GOLDEN.bands.length; i++)
+      expect(GOLDEN.bands[i]?.r0).toBeCloseTo(GOLDEN.bands[i - 1]?.r1 as number, 9);
+    expect(GOLDEN.outer).toBeCloseTo(GOLDEN.bands[GOLDEN.bands.length - 1]?.r1 as number, 9);
+    expect(GOLDEN.spokes).toBe(12);
+    expect(bandIndex(0)).toBe(0);
+    expect(bandIndex(GOLDEN.outer + 5)).toBe(GOLDEN.bands.length - 1);
+    // Heights φ times higher each ring toward the heart.
+    const H = GOLDEN.heights;
+    expect(H.making / H.living).toBeCloseTo(PHI, 9);
+    expect(H.knowledge / H.making).toBeCloseTo(PHI, 9);
+    expect(H.tower / H.knowledge).toBeCloseTo(PHI, 9);
+    // Brighter toward the heart.
+    expect(hopeAt(0)).toBeGreaterThan(hopeAt(20));
+    expect(hopeAt(20)).toBeGreaterThan(hopeAt(50));
+  });
+
+  it('opens the plan ring by ring from the heart, flat on the ground, brighter toward the centre', () => {
+    const k = piece('golden-plan');
+    expect(k).toBe(0);
+    const L = pieceLength(k);
+    expect(revealed(0, 0.12)).toBeGreaterThan(0.9);
+    expect(revealed(GOLDEN.bands.length - 1, 0.12)).toBe(0);
+    const ring = (pos: number[]) => bandIndex(Math.hypot(pos[0] as number, pos[2] as number));
+    const mean = (s: number, keep: (i: number) => boolean) => {
+      let sum = 0;
+      let n = 0;
+      for (const p of city) {
+        const { pos, rgb } = pieceAt(p, k, s);
+        if (!keep(ring(pos))) continue;
+        sum += brightness(rgb);
+        n++;
+      }
+      return sum / Math.max(1, n);
+    };
+    const last = GOLDEN.bands.length - 1;
+    expect(mean(0.12 * L, (i) => i === 0)).toBeGreaterThan(0.1);
+    expect(mean(0.12 * L, (i) => i === last)).toBeLessThan(0.01);
+    expect(mean(0.7 * L, (i) => i <= 2)).toBeGreaterThan(mean(0.7 * L, (i) => i === last) * 1.3);
+    let ok = true;
+    let flat = 0;
+    let far = 0;
+    for (const p of city) {
+      const s = pieceAt(p, k, 0.7 * L);
+      ok &&= finiteSpot(s);
+      flat = Math.max(flat, Math.abs(s.pos[1] - GROUND));
+      far = Math.max(far, Math.hypot(s.pos[0], s.pos[2]));
+    }
+    expect(ok).toBe(true);
+    expect(flat).toBeLessThan(3);
+    expect(far).toBeLessThan(GOLDEN.outer + 2);
+  });
+
+  it('raises the city from its map, φ times higher toward the heart, the eye tilting down to the side', () => {
+    const k = piece('rising');
+    expect(k).toBe(piece('golden-plan') + 1);
+    const L = pieceLength(k);
+    expect(risen(2, 0.02)).toBe(0);
+    let early = 0;
+    for (const p of city) early = Math.max(early, pieceAt(p, k, 0.02 * L).pos[1] - GROUND);
+    expect(early).toBeLessThan(0.5);
+    const top = [0, 0, 0, 0, 0, 0, 0, 0];
+    let ok = true;
+    for (const p of city) {
+      const s = pieceAt(p, k, 0.65 * L);
+      ok &&= finiteSpot(s);
+      const i = bandIndex(Math.hypot(s.pos[0], s.pos[2]));
+      top[i] = Math.max(top[i] as number, s.pos[1] - GROUND);
+    }
+    expect(ok).toBe(true);
+    const H = GOLDEN.heights;
+    const kn = GOLDEN.bands.findIndex((b) => b.name === 'Ring of knowledge');
+    const lv = GOLDEN.bands.findIndex((b) => b.name === 'Ring of living');
+    const nt = GOLDEN.bands.findIndex((b) => b.name === 'Ring of nature');
+    expect(top[kn]).toBeGreaterThan(H.tower * 0.9);
+    expect(top[kn]).toBeLessThan(H.tower + 1.5);
+    expect(top[lv]).toBeLessThan(H.living + 0.01);
+    expect(top[lv]).toBeGreaterThan(H.living * 0.9);
+    expect(top[nt]).toBeLessThan(3);
+    // From nearly straight above to an oblique view.
+    const tilt = (s: number) => {
+      const { eye, target } = pieceCamera(k, s);
+      return (eye[1] - target[1]) / dist(eye, target);
+    };
+    expect(tilt(0)).toBeGreaterThan(0.95);
+    expect(tilt(0.65 * L)).toBeLessThan(0.6);
+  });
+
+  it('floats an open sphere of light over the heart’s garden, breathing slowly', () => {
+    const k = piece('heart');
+    expect(HEART_K).toBeGreaterThan(1);
+    let near = 0;
+    let shell = 0;
+    let ok = true;
+    let jump = 0;
+    for (const p of city) {
+      const a = pieceAt(p, k, 11);
+      ok &&= finiteSpot(a);
+      const d = dist(a.pos, SPHERE_C);
+      if (d < SPHERE_R * 1.1) {
+        near++;
+        if (Math.abs(d - SPHERE_R) < SPHERE_R * 0.06) shell++;
+      }
+      const b = pieceAt(p, k, 11 + 1 / 60);
+      jump = Math.max(jump, dist(a.rgb, b.rgb));
+    }
+    expect(ok).toBe(true);
+    // A lattice on the sphere's shell, not a solid ball: most grains near it sit on the shell.
+    expect(near).toBeGreaterThan(300);
+    expect(shell / near).toBeGreaterThan(0.7);
+    // Mellow: a frame apart no colour jumps.
+    expect(jump).toBeLessThan(0.05);
+    // Above the garden, which is above the ground.
+    expect(SPHERE_C[1] - SPHERE_R).toBeGreaterThan(GROUND + 2.4);
+  });
+
+  for (const [id, label, names] of [
+    ['temples', 'Temple', ['Rotunda', 'Ziggurat', 'Ring', 'Pyramid', 'Lotus']],
+    ['factories', 'Factory', ['Sawtooth', 'Foundry', 'Assembly', 'Workshops', 'Solar']],
+    ['domes', 'Dome', ['Geodesic', 'Bubbles', 'Palm house', 'Lattice', 'Garden']],
+  ] as const) {
+    it(`builds five ${id}, each solid, on the ground and its own`, () => {
+      const k = piece(id);
+      expect(hasVariants(k)).toBe(true);
+      expect(variantNames(k)).toEqual(names);
+      expect(variantLabel(k)).toBe(label);
+      const maps: Set<string>[] = [];
+      for (let i = 0; i < 5; i++) {
+        setVariant(i, k);
+        let ok = true;
+        let below = 0;
+        let wide = 0;
+        let lit = 0;
+        const cells = new Set<string>();
+        for (const p of city) {
+          const s = pieceAt(p, k, 7.5);
+          ok &&= finiteSpot(s);
+          below = Math.min(below, s.pos[1] - GROUND);
+          wide = Math.max(wide, Math.hypot(s.pos[0], s.pos[2]));
+          if (brightness(s.rgb) > 0.02) lit++;
+          cells.add(s.pos.map((v) => Math.floor(v / 1.5)).join());
+        }
+        expect(ok).toBe(true);
+        expect(below).toBeGreaterThan(-0.01);
+        expect(wide).toBeLessThan(40);
+        expect(lit).toBeGreaterThan(city.length * 0.8);
+        maps.push(cells);
+      }
+      for (let i = 0; i < 5; i++)
+        for (let j = i + 1; j < 5; j++) {
+          const a = maps[i] as Set<string>;
+          const b = maps[j] as Set<string>;
+          const both = [...a].filter((c) => b.has(c)).length;
+          expect(both / (a.size + b.size - both)).toBeLessThan(0.6);
+        }
+      setVariant(0);
+    });
+  }
+
+  it('builds its temples, factories and domes from powers of φ', () => {
+    const { half, height } = RATIOS.pyramid;
+    // The Kepler triangle: height² = φ · half², so the slant is φ times the half-base.
+    expect((height / half) ** 2).toBeCloseTo(PHI, 9);
+    expect(Math.hypot(height, half) / half).toBeCloseTo(PHI, 9);
+    const ratios = (v: number[], r: number) => {
+      for (let i = 1; i < v.length; i++)
+        expect((v[i - 1] as number) / (v[i] as number)).toBeCloseTo(r, 9);
+    };
+    ratios(RATIOS.ziggurat, PHI);
+    ratios(RATIOS.bubbles, PHI);
+    ratios(RATIOS.workshops, PHI ** 0.25);
+    ratios(RATIOS.solar, 1 / Math.sqrt(PHI));
+  });
+});
+
+describe('From above (moved from Vegetal, 2026-11-12)', () => {
+  const k = piece('above');
+  const all = makeParticles(9000);
+
+  it('comes after the golden city, before the neon towers, with five cities on pills', () => {
+    expect(k).toBe(piece('domes') + 1);
+    expect(PHASES[k + 1]?.id).toBe('towers');
+    expect(CITIES.map((c) => c.name)).toEqual(['Grid', 'Star', 'River', 'Bay', 'Canals']);
+    expect(variantNames(k)).toEqual(['Grid', 'Star', 'River', 'Bay', 'Canals']);
+    expect(variantLabel(k)).toBe('City');
+  });
+
+  it('lays every city flat, wide, bright in the centre and sparse at the edge, dark on the water', () => {
+    const L = pieceLength(k);
+    const maps = CITIES.map((_, i) => {
+      setVariant(i, k);
+      const plan = cityPlan(i);
+      expect(plan.roads.length).toBeGreaterThan(50);
+      const [cx, cy] = plan.centre.map((v) => v * CITY_K) as [number, number];
+      let inner = 0;
+      let innerN = 0;
+      let outer = 0;
+      let outerN = 0;
+      let lo = Number.POSITIVE_INFINITY;
+      let hi = Number.NEGATIVE_INFINITY;
+      const cells = new Set<string>();
+      // Collected per grain and asserted once, so the test stays fast under the full suite.
+      let finite = true;
+      let highest = 0;
+      let onWater = 0;
+      for (const p of all) {
+        const { pos, rgb } = pieceAt(p, k, 0.5 * L);
+        for (const v of [...pos, ...rgb]) finite &&= Number.isFinite(v);
+        highest = Math.max(highest, Math.abs(pos[2]));
+        lo = Math.min(lo, pos[0]);
+        hi = Math.max(hi, pos[0]);
+        if (p.c >= 0.74 && plan.wet(pos[0] / CITY_K, pos[1] / CITY_K)) onWater++;
+        const r = Math.hypot(pos[0] - cx, pos[1] - cy);
+        const glow = Math.max(...rgb);
+        if (r < 0.25 * CITY_K) {
+          inner += glow;
+          innerN++;
+        } else if (r > 0.7 * CITY_K && r < 1.4 * CITY_K) {
+          outer += glow;
+          outerN++;
+        }
+        cells.add(`${Math.floor(pos[0] / 3)},${Math.floor(pos[1] / 3)}`);
+      }
+      expect(finite).toBe(true);
+      expect(highest).toBeLessThan(1.5);
+      expect(onWater).toBe(0);
+      expect(hi - lo).toBeGreaterThan(CITY_K * 1.5);
+      expect(innerN / 0.25 ** 2).toBeGreaterThan((3 * outerN) / (1.4 ** 2 - 0.7 ** 2));
+      expect(inner / innerN).toBeGreaterThan((outer / outerN) * 1.3);
+      return cells;
+    });
+    for (let i = 0; i < maps.length; i++)
+      for (let j = i + 1; j < maps.length; j++) {
+        const a = maps[i] as Set<string>;
+        const b = maps[j] as Set<string>;
+        const both = [...a].filter((c) => b.has(c)).length;
+        expect(both / (a.size + b.size - both)).toBeLessThan(0.7);
+      }
+    setVariant(0);
+  });
+
+  it('moves the car lights along the fast roads, and lays the same city every time', () => {
+    setVariant(3, k);
+    const cars = all.filter((p) => p.c < 0.08).slice(0, 200);
+    const moved = cars.filter((p) => dist(pieceAt(p, k, 2).pos, pieceAt(p, k, 4).pos) > 1).length;
+    expect(moved).toBeGreaterThan(cars.length * 0.8);
+    let same = true;
+    for (const p of all.slice(0, 300)) {
+      const a = pieceAt(p, k, 5);
+      const b = pieceAt(p, k, 5);
+      same &&= dist(a.pos, b.pos) === 0 && dist(a.rgb, b.rgb) === 0;
+    }
+    expect(same).toBe(true);
+    // The eye drifts over the city, looking down at it.
+    const a = pieceCamera(k, 3);
+    const b = pieceCamera(k, 30);
+    expect(dist(a.eye, b.eye)).toBeGreaterThan(3);
+    expect(a.eye[2] - a.target[2]).toBeGreaterThan(40);
+    // The Journey shows the first city.
+    setVariant(0);
+    expect(variantNames(k)[0]).toBe('Grid');
   });
 });

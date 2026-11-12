@@ -1,13 +1,16 @@
 'use client';
 
 /*
- * City, the third chapter after Vegetal and Ocean (docs/specs/art-city.md):
- * neon towers growing up from a grid of blocks, ships streaming in layered
- * sky lanes, bands and signs drifting slowly through their colours, a
- * Chinatown street of glowing Chinese and Japanese signs under red lanterns,
- * sky bridges and landing platforms, an endless street-canyon flown down the
- * middle, and Ship, where you pilot a small ship through the city with the
- * keys. The math lives in lib/city.ts; the shared trip player draws it.
+ * City, the third chapter after Vegetal and Ocean (docs/specs/art-city.md).
+ * It opens on the golden city: a round plan grown from φ and lit ring by ring
+ * from its heart, the city rising from that map, the open sphere of light at
+ * its heart, five temples, five factories and five golden glass domes. Then
+ * five night cities seen from above, and the neon city: towers growing up
+ * from a grid of blocks, ships in layered sky lanes, neon, a Chinatown street
+ * of glowing signs under red lanterns, sky bridges and landing platforms, an
+ * endless street-canyon, and Ship, where you pilot a small ship through the
+ * city with the keys. The math lives in lib/city.ts, lib/golden-city.ts and
+ * lib/city-plans.ts; the shared trip player draws it.
  */
 import TripPlayer, { type Trip } from '@/components/TripPlayer';
 import {
@@ -16,6 +19,7 @@ import {
   fade,
   gauges,
   hasGame,
+  hasVariants,
   look,
   makeParticles,
   PHASE_START,
@@ -29,7 +33,10 @@ import {
   pieceProgress,
   STEP_COLOURS,
   setFly,
+  setVariant,
   TOTAL,
+  variantLabel,
+  variantNames,
   wordsShown,
 } from '@/lib/city';
 
@@ -45,8 +52,10 @@ const TRIP: Trip = {
   camera,
   fade,
   wordsShown,
-  // A violet night first, darkening downward; then black, a deeper night and a dusk.
+  // A deep blue dawn first, for the golden city; then the violet night, black, a deeper night
+  // and a dusk.
   backgrounds: [
+    { name: 'Dawn', stops: ['#0a1438', '#122456', '#26305e'] },
     { name: 'Violet night', stops: ['#1c1036', '#0e0822', '#05030c'] },
     { name: 'Black', stops: ['#040207'] },
     { name: 'Deep night', stops: ['#0c0a2a', '#060418', '#020108'] },
@@ -59,6 +68,8 @@ const TRIP: Trip = {
     particleAt: pieceAt,
     camera: pieceCamera,
     look: pieceLook,
+    // Pills under a piece: five temples, five factories, five domes, five cities from above.
+    variants: { has: hasVariants, names: variantNames, set: setVariant, label: variantLabel },
     // Ship: you fly with the keys; Space boosts while the bar lasts, and it fills again as you
     // cruise. Two dials read your height and speed.
     game: {
