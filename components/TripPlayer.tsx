@@ -499,8 +499,10 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   const bgRef = useRef<((i: number) => void) | null>(null);
   useEffect(() => {
     try {
-      const i = Number(window.localStorage.getItem(`${BG_KEY}:${page}`));
-      if (i > 0 && i < (tripRef.current.backgrounds?.length ?? 0)) setBg(i);
+      // Remembered by name, so adding a background never shifts the choice.
+      const name = window.localStorage.getItem(`${BG_KEY}:${page}`);
+      const i = tripRef.current.backgrounds?.findIndex((b) => b.name === name) ?? -1;
+      if (i > 0) setBg(i);
     } catch {
       // The first background.
     }
@@ -514,7 +516,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     setBg((b) => {
       const i = (b + 1) % n;
       try {
-        window.localStorage.setItem(`${BG_KEY}:${page}`, String(i));
+        const name = tripRef.current.backgrounds?.[i]?.name;
+        if (name) window.localStorage.setItem(`${BG_KEY}:${page}`, name);
       } catch {
         // Not remembered; still changed.
       }
