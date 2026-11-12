@@ -806,6 +806,34 @@ none); a win lights the district from above. Esc, or straying 70 from the course
   the stratosphere, against 16–19 ms for round two's Ship measured the same way on the same machine
   (round two's 5.4 ms was the build machine): about a fifth more.
 
+### The river and the rain (`lib/city-rain.ts`)
+
+> 2026-11-12: "in the city make a part with rain and rain on the water below. and parts with a
+> river."
+
+- **The river** crosses the whole city along x on the street line before tile row 24, between
+  the Canals and the Heights and the golden gardens and temples beyond: 24 wide, its water 7 under
+  the street between lit embankment walls, lamps every 8 along both banks. The towers on the two
+  rows beside it are plain towers standing back from its banks (an embankment walk, the street
+  behind them still six or more wide). You can fly down onto it (the floor is 2 over its water) and
+  on along it under the bridges.
+- **Bridges**: one on every street line, a deck with railings, an arch under each edge springing
+  from the walls, lamps on six posts; the avenue's is cable-stayed, two pylons on its middle, eight
+  cables fanning from each to the deck, a cyan light climbing each pylon, slowly, on the beat.
+- **Wet reflections**: the water is a dark mirror. Every lamp shows again under its surface,
+  stretched toward it and wobbling; each arch's reflection closes it into a ring. One blue for the
+  water, light flowing slowly downstream over it, leaning violet where it rains (the neon round it).
+- **The rain** falls over the Canals and the river beside them (soft at every edge, dry
+  everywhere else): streaks of four grains slanting in a slow wind (0.32 along x for every unit
+  fallen, 24 a second), pale blue leaning to the Canals' violet, kept in a box round the eye
+  (68 across) under the towers' sky, ending where they meet the street or the water. Where they meet
+  the water, the river's or a canal's, rings spread and fade (1.7 s each), half of them on the
+  river.
+- From high up, the river's water is drawn brighter, so the plan shows a blue line across the
+  city.
+- Frame cost (9,000 grains, bun, this machine, offline, the same run): 8.1 ms at the river in the
+  rain against 7.9 ms without the river and rain at the same place; 7.7 against 6.9 in the Canals.
+
 ### Still rough, and next
 
 - The Studio's buildings, domes, minarets and spires are light: you fly through them (only towers

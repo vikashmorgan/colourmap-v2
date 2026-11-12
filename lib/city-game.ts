@@ -52,6 +52,7 @@ import {
   wrap,
 } from './city-grid';
 import { CAR_LEN, CARS, carAt, RAIL, railAt, railCeiling, STATIONS, TRAINS } from './city-metro';
+import { besideRiver, inRiver, RIVER_Y, riverClear, riverItems } from './city-rain';
 import { buildingAt, DOMES, FACTORIES, TEMPLES } from './golden-city';
 
 /* ---------- the plan: districts ---------- */
@@ -336,6 +337,12 @@ export function blockTower(I: number, J: number): Block {
   }
   if (shape !== 'studio') studio = null;
   if (shape === 'box' && !ave && hash(k, 433) < 0.04) shape = 'park';
+  // Beside the river (lib/city-rain.ts) only plain towers, standing back from its banks.
+  if (besideRiver(J) && shape !== 'box') {
+    shape = 'box';
+    studio = null;
+    if (h <= 0) h = 14 + 10 * hh;
+  }
   const plaza = plazaOf(I, J);
   if (plaza) shape = 'plaza';
   let x = cx + jx * Math.max(0, BLOCK_X - 2 * hx - 7);
@@ -343,7 +350,8 @@ export function blockTower(I: number, J: number): Block {
     hx = Math.min(hx, 7);
     x = (I === 0 ? 1 : -1) * (AVENUE + hx);
   }
-  const z = cz + jz * Math.max(0, BLOCK_Z - 2 * hz - 7);
+  let z = cz + jz * Math.max(0, BLOCK_Z - 2 * hz - 7);
+  if (besideRiver(J)) ({ z, hz } = riverClear(J, z, hz));
   if (shape === 'park' || shape === 'plaza' || shape === 'studio') {
     h = 0;
     hx = BLOCK_X / 2 - 4;
@@ -394,7 +402,10 @@ export function inCanal(x: number, z: number, room = 0): boolean {
 }
 /** The lowest the ship can go at (x, z): the street, or down in a canal. */
 export const floorAt = (x: number, z: number) =>
-  inCanal(x, z, MARGIN) ? GROUND - CANAL_DEPTH : GROUND;
+  inCanal(x, z, MARGIN) ? GROUND - CANAL_DEPTH : inRiver(x, z, MARGIN) ? RIVER_Y : GROUND;
+/** The water's surface at (x, z): the river's or a canal's; null on dry ground. */
+export const waterAt = (x: number, z: number): number | null =>
+  inRiver(x, z) ? RIVER_Y : inCanal(x, z) ? GROUND - CANAL_DEPTH + 0.6 : null;
 
 /** Whether a point is inside a building or under the floor, walls and MARGIN included. */
 export function blocked(q: Vec3): boolean {
@@ -2178,6 +2189,7 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number): Item[] {
     if (it.d < NEAR) out.push(it);
   }
   railItems(eye, t, Math.min(R, NEAR + 60), out);
+  riverItems(eye, t, R, floorAt, waterAt, out);
   const k = planLook(eye[1]);
   if (k > 0) planItems(eye, fwd, R, k, t, out);
   return out;
