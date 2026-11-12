@@ -90,11 +90,11 @@ export const GOLDEN = (() => {
     boulevard: 1.4,
     /** How high each ring rises in the city's 3D form: φ times higher each ring toward the heart. */
     heights: {
-      nature: 0.5,
-      living: PHI ** 3,
-      making: PHI ** 4,
-      knowledge: PHI ** 5,
-      tower: PHI ** 6,
+      nature: 0.8,
+      living: 1.2 * PHI ** 3,
+      making: 1.2 * PHI ** 4,
+      knowledge: 1.2 * PHI ** 5,
+      tower: 1.2 * PHI ** 6,
     },
   };
 })();
@@ -110,29 +110,36 @@ const spokeAngle = (k: number) => (k / GOLDEN.spokes) * TAU;
 
 /* ---------- the palette: gold, ivory and warm white over a deep blue dawn ---------- */
 
-const WARM_WHITE: RGB = [1, 0.95, 0.84];
-const IVORY: RGB = [0.98, 0.9, 0.74];
-const GOLD: RGB = [1, 0.76, 0.36];
-const DEEP_GOLD: RGB = [0.95, 0.62, 0.26];
-const ROSE_GOLD: RGB = [1, 0.7, 0.56];
-const WATER: RGB = [0.5, 0.66, 1];
-const PLANT: RGB = [0.74, 0.86, 0.44];
-const FIRE: RGB = [1, 0.56, 0.22];
-const STAR: RGB = [0.8, 0.82, 1];
+/*
+ * The grains add up and the player tone-maps them, so the colours here are deep and saturated
+ * (linear light) and each grain is kept faint enough that where many overlap, on a dense edge,
+ * they stay gold instead of piling up to white (2026-11-12, seen in the player: "nothing reads
+ * gold"). Only lamps and the heart's core are white-hot.
+ */
+const WARM_WHITE: RGB = [1, 0.78, 0.5];
+const IVORY_GOLD: RGB = [1, 0.56, 0.2];
+const GOLD: RGB = [1, 0.5, 0.12];
+const DEEP_GOLD: RGB = [0.95, 0.42, 0.08];
+const AMBER_GLASS: RGB = [1, 0.48, 0.14];
+const ROSE_GOLD: RGB = [1, 0.42, 0.2];
+const WATER: RGB = [0.3, 0.42, 0.9];
+const PLANT: RGB = [0.62, 0.72, 0.16];
+const FIRE: RGB = [1, 0.36, 0.06];
+const STAR: RGB = [0.8, 0.78, 1];
 
 /** Each tone's colour and strength. */
 const TONES: [RGB, number][] = [
-  [mix(GOLD, WARM_WHITE, 0.5), 0.6], // edge
-  [GOLD, 0.3], // face
-  [IVORY, 0.11], // glass
-  [WATER, 0.24], // water
-  [PLANT, 0.42], // plant
-  [FIRE, 0.7], // fire
-  [WARM_WHITE, 0.85], // light
-  [DEEP_GOLD, 0.12], // ground
-  [IVORY, 0.48], // road
-  [IVORY, 0.24], // steam
-  [GOLD, 0.26], // film
+  [GOLD, 0.34], // edge
+  [DEEP_GOLD, 0.22], // face
+  [AMBER_GLASS, 0.07], // glass
+  [WATER, 0.18], // water
+  [PLANT, 0.34], // plant
+  [FIRE, 0.6], // fire
+  [WARM_WHITE, 0.8], // light
+  [DEEP_GOLD, 0.08], // ground
+  [IVORY_GOLD, 0.42], // road
+  [IVORY_GOLD, 0.16], // steam
+  [GOLD, 0.2], // film
 ];
 
 /**
@@ -277,12 +284,12 @@ const plan = () => {
   if (!planBuilt) planBuilt = planMesh().build();
   return planBuilt;
 };
-const PLAN_SHARES: Shares = { lines: 0.58, faces: 0.68 };
+const PLAN_SHARES: Shares = { lines: 0.74, faces: 0.8 };
 
 /** How far ring i has come into the light, `u` through the plan: the heart first, then outward. */
 export const revealed = (i: number, u: number) => smooth((u - 0.05 - 0.07 * i) / 0.08);
 /** Brighter toward the heart: hope as a gradient. */
-export const hopeAt = (r: number) => 0.42 + 0.58 * Math.exp(-r / 20);
+export const hopeAt = (r: number) => 0.6 + 0.4 * Math.exp(-r / 16);
 
 export function goldenPlanEye(u: number, t: number): Eye {
   return orbit(0.5 + t * 0.01, 1.08, 100 - 8 * u, [0, G, 0]);
@@ -292,7 +299,7 @@ export function goldenPlanAt(p: Particle, u: number, t: number): { pos: Vec3; rg
   if (p.c < STARS) return starAt(p, t, [0, G, 0]);
   const h = onMesh(plan(), p, (p.c - STARS) / (1 - STARS), t, goldenPlanEye(u, t).eye, PLAN_SHARES);
   const r = Math.hypot(h.pos[0], h.pos[2]);
-  const rgb = glow(h, p, t, hopeAt(r) * revealed(bandIndex(r), u), 0.55 * Math.exp(-r / 10));
+  const rgb = glow(h, p, t, hopeAt(r) * revealed(bandIndex(r), u), 0.25 * Math.exp(-r / 6));
   return { pos: h.pos, rgb };
 }
 
@@ -329,19 +336,30 @@ function sector(m: Mesh, r0: number, r1: number, a0: number, a1: number, h: numb
     m.tri(top(A), top(lo1[i + 1] as Vec3), top(D), face);
   }
   for (const lo of [lo0, lo1]) {
-    m.poly(lo, false, edge, { w: 0.5 });
+    m.poly(lo, false, edge, { w: 0.15 });
     m.poly(
       lo.map((q) => [q[0], q[1] + h, q[2]] as Vec3),
       false,
       edge,
+      { w: 1.4 },
     );
   }
   for (const i of [0, n]) {
     const A = lo0[i] as Vec3;
     const B = lo1[i] as Vec3;
     m.quad(A, sub(B, A), up, face);
-    m.line(A, [A[0], A[1] + h, A[2]], edge);
-    m.line(B, [B[0], B[1] + h, B[2]], edge);
+    m.line(A, [A[0], A[1] + h, A[2]], edge, { w: 1.6 });
+    m.line(B, [B[0], B[1] + h, B[2]], edge, { w: 1.6 });
+  }
+}
+
+/** The stretch between two boulevards cut into n blocks, a lane 0.9 wide between each. */
+function blocks(m: Mesh, r0: number, r1: number, a0: number, a1: number, h: number, n: number) {
+  const lane = 0.9 / ((r0 + r1) / 2);
+  const w = (a1 - a0 - lane * (n - 1)) / n;
+  for (let i = 0; i < n; i++) {
+    const b0 = a0 + i * (w + lane);
+    sector(m, r0, r1, b0, b0 + w, h);
   }
 }
 
@@ -383,7 +401,7 @@ function risingMesh(): Mesh {
   for (let k = 0; k < GOLDEN.spokes; k++) {
     const a0 = spokeAngle(k);
     const a1 = spokeAngle(k + 1);
-    const inset = (r: number) => half / r;
+    const inset = (r: number) => (half + 0.6) / r;
     const kn = band('Ring of knowledge');
     const mk = band('Ring of making');
     const lv = band('Ring of living');
@@ -404,19 +422,20 @@ function risingMesh(): Mesh {
     m.dot(polar(rk, am, G + H.tower + 0.6), 0.4, light, { w: 0.6 });
     // Two halls in each sector of the ring of making.
     const rm = (mk.r0 + mk.r1) / 2;
-    sector(m, mk.r0 + 0.3, rm - 0.3, a0 + inset(rm), a1 - inset(rm), H.making);
-    sector(m, rm + 0.3, mk.r1 - 0.3, a0 + inset(rm), a1 - inset(rm), H.making / PHI);
-    // Three terraces in the ring of living, stepping down outward: φ², φ, 1.
+    blocks(m, mk.r0 + 0.3, rm - 0.3, a0 + inset(rm), a1 - inset(rm), H.making, 1);
+    blocks(m, rm + 0.3, mk.r1 - 0.3, a0 + inset(rm), a1 - inset(rm), H.making / PHI, 1);
+    // Three terraces in the ring of living, one block each, stepping down outward by φ.
     const steps = [lv.r0 + 0.3, lerp(lv.r0, lv.r1, 1 / 3), lerp(lv.r0, lv.r1, 2 / 3), lv.r1 - 0.3];
     for (let s = 0; s < 3; s++) {
       const r = (steps[s] as number) + 0.15;
-      sector(
+      blocks(
         m,
         r,
         (steps[s + 1] as number) - 0.15,
         a0 + inset(r),
         a1 - inset(r),
         H.living / PHI ** s,
+        1,
       );
     }
     // The ring of nature stays low: woods and fields.
@@ -424,8 +443,8 @@ function risingMesh(): Mesh {
       const r = lerp(nt.r0 + 1, nt.r1 - 1, hash(k * 40 + j, 411));
       const a = lerp(a0 + inset(r) * 2, a1 - inset(r) * 2, hash(k * 40 + j, 412));
       const tall = H.nature + hash(k * 40 + j, 413);
-      m.line(polar(r, a), polar(r, a, G + tall), plant, { w: 0.6 });
-      m.dot(polar(r, a, G + tall), 0.5 + 0.4 * hash(k * 40 + j, 414), plant, { w: 0.6 });
+      m.line(polar(r, a), polar(r, a, G + tall), plant, { w: 0.2 });
+      m.dot(polar(r, a, G + tall), 0.5 + 0.4 * hash(k * 40 + j, 414), plant, { w: 0.1 });
     }
     m.line(polar(GOLDEN.unit, a0), polar(GOLDEN.outer + 1, a0), road, { w: 1.4 });
   }
@@ -437,23 +456,23 @@ const rising = () => {
   if (!risingBuilt) risingBuilt = risingMesh().build();
   return risingBuilt;
 };
-const RISING_SHARES: Shares = { lines: 0.36, faces: 0.84 };
+const RISING_SHARES: Shares = { lines: 0.5, faces: 0.92 };
 
 /** How far ring i has risen, `u` through the piece: flat as a map at first, the heart rising first. */
 export const risen = (i: number, u: number) => smooth((u - 0.12 - 0.04 * i) / 0.2);
 
 export function risingEye(u: number, t: number): Eye {
   const tilt = smooth((u - 0.12) / 0.6);
-  return orbit(0.4 + t * 0.018, lerp(1.38, 0.5, tilt), lerp(112, 82, tilt), [0, G + 2, 0]);
+  return orbit(0.4 + t * 0.018, lerp(1.38, 0.38, tilt), lerp(108, 58, tilt), [0, G + 2, 0]);
 }
 
 export function risingAt(p: Particle, u: number, t: number): { pos: Vec3; rgb: RGB } {
   if (p.c < STARS) return starAt(p, t, [0, G, 0]);
   const h = onMesh(rising(), p, (p.c - STARS) / (1 - STARS), t, risingEye(u, t).eye, RISING_SHARES);
   const r = Math.hypot(h.pos[0], h.pos[2]);
-  const k = Math.max(0.02, risen(bandIndex(r), u));
+  const k = Math.max(0.01, risen(bandIndex(r), u));
   const pos: Vec3 = [h.pos[0], G + (h.pos[1] - G) * k, h.pos[2]];
-  return { pos, rgb: glow(h, p, t, hopeAt(r), 0.45 * Math.exp(-r / 10)) };
+  return { pos, rgb: glow(h, p, t, hopeAt(r), 0.2 * Math.exp(-r / 6)) };
 }
 
 /* ---------- 3. The heart: the centre up close ---------- */
@@ -617,7 +636,7 @@ export function heartAt(p: Particle, t: number): { pos: Vec3; rgb: RGB } {
     SPHERE_R * 1.2;
   return {
     pos: h.pos,
-    rgb: glow(h, p, t, hopeAt(r) * (near ? breath * 1.2 : 1), 0.4 * Math.exp(-r / 4)),
+    rgb: glow(h, p, t, hopeAt(r) * (near ? breath * 1.2 : 1), 0.15 * Math.exp(-r / 3)),
   };
 }
 

@@ -97,7 +97,7 @@ export const PHASES: CityPhase[] = [
     ],
     duration: 40,
     glow: 1.05,
-    size: 0.7,
+    size: 2,
   },
   {
     id: 'rising',
@@ -109,7 +109,7 @@ export const PHASES: CityPhase[] = [
     ],
     duration: 40,
     glow: 1,
-    size: 0.75,
+    size: 3,
   },
   {
     id: 'heart',
@@ -121,7 +121,7 @@ export const PHASES: CityPhase[] = [
     ],
     duration: 36,
     glow: 1.05,
-    size: 0.75,
+    size: 1,
   },
   {
     id: 'temples',
@@ -133,7 +133,7 @@ export const PHASES: CityPhase[] = [
     ],
     duration: 36,
     glow: 1,
-    size: 0.75,
+    size: 0.95,
   },
   {
     id: 'factories',
@@ -142,7 +142,7 @@ export const PHASES: CityPhase[] = [
     words: ['Making is a kind of hope you can hold.', 'A good workshop is as bright as a temple.'],
     duration: 36,
     glow: 1,
-    size: 0.75,
+    size: 0.95,
   },
   {
     id: 'domes',
@@ -154,7 +154,7 @@ export const PHASES: CityPhase[] = [
     ],
     duration: 36,
     glow: 1,
-    size: 0.75,
+    size: 0.95,
   },
   {
     id: 'above',

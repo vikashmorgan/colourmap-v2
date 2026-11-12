@@ -140,7 +140,7 @@ function rotunda(m: Mesh) {
     light,
     { w: 2 },
   );
-  m.dot(P(0, y0 + a * 0.55, 0), a / PHI ** 2, light, { anim: Anim.pulse, key: 0.3, w: 3 });
+  m.dot(P(0, y0 + a * 0.55, 0), a / PHI ** 4, light, { anim: Anim.pulse, key: 0.3, w: 0.6 });
   m.line(P(0, ye + a, 0), P(0, y0, 0), light, { w: 0.5, anim: Anim.flow, key: 1.2 });
 }
 
@@ -182,7 +182,7 @@ function ziggurat(m: Mesh) {
   }
   const top = s0 / PHI ** 4;
   m.box(P(0, y, 0), top, top * 1.4, top, face, edge, Math.PI / 4);
-  m.dot(P(0, y + top * 0.7, 0), top * 0.9, light, { anim: Anim.pulse, key: 1, w: 3 });
+  m.dot(P(0, y + top * 0.7, 0), top * 0.9, light, { anim: Anim.pulse, key: 1, w: 0.8 });
   m.dot(P(0, y + top * 2.2, 0), 0.5, light, { w: 1.5 });
 }
 
@@ -221,7 +221,7 @@ function ringGate(m: Mesh) {
   m.centre = P(0, cy, 0);
   torus(R, rho, false);
   torus(R / PHI, rho / PHI, true);
-  m.dot(P(0, cy, 0), R / PHI ** 3, light, { anim: Anim.pulse, key: 2, w: 3 });
+  m.dot(P(0, cy, 0), R / PHI ** 3, light, { anim: Anim.pulse, key: 2, w: 0.8 });
   for (let k = 0; k < 8; k++) {
     const t = (k / 8) * TAU;
     m.dot(P(Math.cos(t) * 9, 1.8, Math.sin(t) * 9), 0.3, light, { w: 0.4 });
@@ -253,7 +253,7 @@ function pyramid(m: Mesh) {
     const yy = y0 + h * f;
     m.poly([P(-s, yy, -s), P(s, yy, -s), P(s, yy, s), P(-s, yy, s)], true, edge, { w: 0.35 });
   }
-  m.dot(apex, 1.2, light, { anim: Anim.pulse, key: 0.5, w: 3 });
+  m.dot(apex, 1.2, light, { anim: Anim.pulse, key: 0.5, w: 0.8 });
   m.line(apex, P(0, y0 + h + 9, 0), light, { anim: Anim.flow, key: 2, w: 0.6 });
   // The doorway on the +z face, a third of the way up its slope.
   const dz = a - (a * 2.2) / h;
@@ -315,7 +315,7 @@ function lotus(m: Mesh) {
       { anim: Anim.breathe, w: 0.6 },
     );
   }
-  m.dot(m.pivot, 1.1, light, { anim: Anim.pulse, key: 3, w: 2 });
+  m.dot(m.pivot, 1.1, light, { anim: Anim.pulse, key: 3, w: 0.6 });
 }
 
 /* ---------- factories: the ring of making ---------- */
@@ -565,7 +565,7 @@ function workshops(m: Mesh) {
   m.dot(P(mx - 16, H, 0), 0.45, light, { ...o, w: 0.6 });
   m.dot(P(mx - 14, H - 9.5, 0), 0.6, light, { ...o, w: 0.6 });
   m.dot(P(mx, H + 0.5, 0), 0.4, fire, { anim: Anim.pulse, key: 1, w: 0.5 });
-  m.dot(P(0, 5 * hf + 0.5, 0), 1.2, light, { anim: Anim.pulse, key: 2, w: 1 });
+  m.dot(P(0, 5 * hf + 0.5, 0), 1.2, light, { anim: Anim.pulse, key: 2, w: 0.5 });
 }
 
 /**
@@ -579,7 +579,7 @@ function solar(m: Mesh) {
   m.cylinder(P(0, 0, 0), 0.9, G, G + H, face, edge, 4, 10);
   m.centre = P(0, H + 1.2, 0);
   m.cylinder(P(0, 0, 0), 1.6, G + H, G + H + 2.4, fire, edge, 6, 12);
-  m.dot(P(0, H + 1.2, 0), 1.8, light, { anim: Anim.pulse, key: 0.2, w: 4 });
+  m.dot(P(0, H + 1.2, 0), 1.8, light, { anim: Anim.pulse, key: 0.2, w: 1 });
   const top = P(0, H + 1.2, 0);
   for (let j = 0; j < 6; j++) {
     const r = RATIOS.solar[j] as number;

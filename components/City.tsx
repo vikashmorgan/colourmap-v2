@@ -52,10 +52,10 @@ const TRIP: Trip = {
   camera,
   fade,
   wordsShown,
-  // A deep blue dawn first, for the golden city; then the violet night, black, a deeper night
-  // and a dusk.
+  // A deep blue-violet dawn first, warm low down, so the golden city's gold stands out; then the
+  // violet night, black, a deeper night and a dusk.
   backgrounds: [
-    { name: 'Dawn', stops: ['#0a1438', '#122456', '#26305e'] },
+    { name: 'Dawn', stops: ['#080a24', '#141638', '#2a2240', '#3d2a3a'] },
     { name: 'Violet night', stops: ['#1c1036', '#0e0822', '#05030c'] },
     { name: 'Black', stops: ['#040207'] },
     { name: 'Deep night', stops: ['#0c0a2a', '#060418', '#020108'] },

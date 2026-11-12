@@ -72,11 +72,23 @@ Each land ring is φ times wider than the one inside it, and so is each canal;
 the rim is about 55 out. Twelve boulevards run from the heart out through
 every ring, crossing the canals on arched bridges.
 
-**Heights** (the city rising): φ times higher each ring toward the heart.
-Nature stays low (0.5); the ring of living steps down outward in three
-terraces, φ³, φ², φ; the ring of making stands φ⁴ (its outer halls φ³); the
-ring of knowledge φ⁵, with a tower φ⁶ high in each of its twelve sectors. The
-canals stay flat and shine.
+**Heights** (the city rising), in units of 1.2: φ times higher each ring
+toward the heart. Nature stays low (0.8); the ring of living steps down
+outward in three terraces, 1.2·φ³, 1.2·φ², 1.2·φ; the ring of making stands
+1.2·φ⁴ (its outer halls 1.2·φ³); the ring of knowledge 1.2·φ⁵, with a tower
+1.2·φ⁶ high in each of its twelve sectors. The canals stay flat and shine.
+Each sector holds one solid block per ring (wide lanes between), so the grains
+go into few, clear walls and roofs and the rising city reads as buildings,
+not a cloud.
+
+**Gold, not silver.** The player adds grains on top of each other and blooms
+them, so a bright pale gold on a dense edge sums to white. The palette is
+therefore deep and saturated (gold about [1, 0.5, 0.12], deep gold, amber
+glass, rose gold), each grain is dim on dense edges and faces so overlaps stay
+gold, and only small lamps and the heart's light are warm white. Coordinator
+finding that set this: "temples and domes render silver/white-lavender".
+Golden plan and Rising draw with bigger grains (size 2 and 3) and fewer grains
+spent on the heart, so the rings and boulevards read clearly.
 
 Buildings are drawn by `lib/grain-mesh.ts`: a building is a short list of
 lines (edges, dense and bright), triangles (faces, dimmer, lit by how squarely
@@ -114,10 +126,11 @@ from its map. From above, on its own, is lit from the start and stands still,
 so it needs no glide back. **Journey** plays the fourteen as one trip: between
 pieces a ball of faint stars; the pills fall back to the first of each.
 
-Backgrounds: **Dawn** (the default, a deep blue twilight for the golden city),
+Backgrounds: **Dawn** (the default, a deep blue-violet twilight with a warm low glow near
+the horizon, kept soft so the gold stands out),
 **Violet night** (darkening downward), **Black**, **Deep night**, **Dusk**;
-remembered on the device (by place in the list, so a background chosen before
-Dawn was added now reads one along).
+remembered on the device by name, so adding Dawn first never shifts a saved
+choice.
 
 ## Temples
 
@@ -328,7 +341,7 @@ their summer under glass.
 - Golden city: the land rings and the canals each grow by φ, edge to edge; twelve boulevards; the
   plan lies flat on the ground, the heart lit first and the ring of nature last, brighter toward
   the heart. Rising starts flat (under 0.5 above the ground) and ends with the knowledge towers about
-  φ⁶ high, the living terraces no higher than φ³ and nature under 3; the eye goes from nearly
+  1.2·φ⁶ high, the living terraces no higher than 1.2·φ³ and nature under 3; the eye goes from nearly
   straight above to an oblique view. The heart's sphere is a lattice (most grains near it lie on its
   shell) above the garden; a frame apart no colour moves by more than 0.05.
 - Temples, Factories and Domes each have five pills; every building stands on the ground (no grain
