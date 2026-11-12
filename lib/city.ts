@@ -8,10 +8,12 @@
  * spaceship."
  *
  * It opens on the golden city (lib/golden-city.ts: its plan from φ, the city
- * rising from it, its heart, its temples, factories and glass domes), then
- * five night cities from above (lib/city-plans.ts), then the neon city.
+ * rising from it, its heart, its Nova Cores, temples, factories and glass
+ * domes), twenty buildings from the city's quarters (lib/city-buildings.ts),
+ * five night cities from above (lib/city-plans.ts), Atlantis under the sea
+ * (lib/atlantis.ts), then the neon city, ending on the Ship.
  *
- * Fourteen pieces played as one trip, built as Ocean is (lib/ocean.ts): every
+ * Seventeen pieces played as one trip, built as Ocean is (lib/ocean.ts): every
  * grain of light keeps its identity, each piece is a formula from a grain and
  * the time to a place and a colour, each piece opens from a wide ball of
  * faint stars, and every grain pours on into the next piece. The towers are
@@ -22,6 +24,7 @@
  * Pure: no three.js, no DOM.
  */
 
+import { ATLANTIS_PHASE, ATLANTIS_VARIANTS, atlantisAt, atlantisEye } from './atlantis';
 import {
   fibonacciSphere,
   flow,
@@ -33,6 +36,7 @@ import {
   smooth,
   type Vec3,
 } from './bigbang';
+import { BUILDINGS, buildingsEye } from './city-buildings';
 import {
   advancePulses,
   type Block,
@@ -64,16 +68,25 @@ import {
   buildingEye,
   DOMES,
   FACTORIES,
+  FACTORY_PALETTES,
+  GOLDEN_PALETTES,
   goldenPlanAt,
   goldenPlanEye,
   heartAt,
   heartEye,
+  NOVA_CORES,
+  novaAt,
+  novaEye,
+  PLANS,
   risingAt,
   risingEye,
+  setGoldenPalette,
+  setNovaKind,
+  setPlanKind,
   TEMPLES,
 } from './golden-city';
 
-export { fade, wordsShown } from './journey';
+export { wordsShown } from './journey';
 export { makeParticles, type Particle };
 
 const TAU = Math.PI * 2;
@@ -149,9 +162,21 @@ export const PHASES: CityPhase[] = [
     size: 1,
   },
   {
+    id: 'nova',
+    name: 'Nova Cores',
+    line: 'Power sources of the city in the heart’s style: an open lattice of light floating over a round plaza, each core from its own rule, breathing slowly as its energy runs out along the conduits on the ground.',
+    words: [
+      'Every district needs a place where the light is made, and given away.',
+      'A power that breathes is a power that can be shared.',
+    ],
+    duration: 36,
+    glow: 1.05,
+    size: 1,
+  },
+  {
     id: 'temples',
     name: 'Temples',
-    line: 'Five golden temples of the city, each built from a few shapes and one ratio: a rotunda, a ziggurat, a ring, a pyramid and a lotus.',
+    line: 'Golden temples, each built from a few shapes and one ratio (a rotunda, a ziggurat, a ring, a pyramid, a lotus), then gathered into a court, a sacred complex and a whole temple quarter.',
     words: [
       'The simplest rules make the calmest buildings.',
       'A temple is a place built so that light has somewhere to rest.',
@@ -163,7 +188,7 @@ export const PHASES: CityPhase[] = [
   {
     id: 'factories',
     name: 'Factories',
-    line: 'Five works in the ring of making: a sawtooth hall, a round foundry, an assembly hall under arched trusses, a tower of workshops with its crane, a solar works and its field of mirrors.',
+    line: 'Works in the ring of making (a sawtooth hall, a foundry, an assembly hall, workshops and their crane, a solar works, old cement works, bottle kilns), then a factory group, an industrial complex and a whole industrial quarter.',
     words: ['Making is a kind of hope you can hold.', 'A good workshop is as bright as a temple.'],
     duration: 36,
     glow: 1,
@@ -172,10 +197,22 @@ export const PHASES: CityPhase[] = [
   {
     id: 'domes',
     name: 'Domes',
-    line: 'Golden glasshouses: a geodesic dome, a cluster of bubbles, a palm house, a lattice shell and a garden of domes, each full of plants growing in the light.',
+    line: 'Golden glasshouses full of plants (a geodesic dome, bubbles, a palm house, a lattice shell), then a group of domes, a dome complex joined by glass corridors and a whole solarpunk dome quarter.',
     words: [
       'Under glass, a garden keeps its summer.',
       'The lightest roof is the one the sun comes through.',
+    ],
+    duration: 36,
+    glow: 1,
+    size: 0.95,
+  },
+  {
+    id: 'buildings',
+    name: 'Buildings',
+    line: 'Twenty buildings from the quarters of the city, one to a pill: stair temples, a pagoda, domes and minarets, twisted, rounded and faceted towers, each on its plinth with walkways of light winding round it.',
+    words: [
+      'A building is a few rules, followed with care until they become a place.',
+      'The paths that wind round it are where the city is walked, not just seen.',
     ],
     duration: 36,
     glow: 1,
@@ -193,6 +230,7 @@ export const PHASES: CityPhase[] = [
     glow: 1.05,
     size: 0.7,
   },
+  ATLANTIS_PHASE,
   {
     id: 'towers',
     name: 'Towers',
@@ -203,7 +241,7 @@ export const PHASES: CityPhase[] = [
     ],
     duration: 32,
     glow: 1,
-    size: 0.8,
+    size: 0.65,
   },
   {
     id: 'lanes',
@@ -215,7 +253,7 @@ export const PHASES: CityPhase[] = [
     ],
     duration: 32,
     glow: 1,
-    size: 0.8,
+    size: 0.65,
   },
   {
     id: 'neon',
@@ -302,10 +340,13 @@ export const STEP_COLOURS = [
   '#ffd27a',
   '#f5c060',
   '#fff1c8',
+  '#ffe2a0',
   '#e8b450',
   '#d99a4a',
   '#cfe08a',
+  '#f0c070',
   '#f2c25a',
+  '#4fd8d0',
   '#7f9cff',
   '#e8f0ff',
   '#ff5fd2',
@@ -521,25 +562,73 @@ function groundAt(p: Particle): Vec3 {
 
 /* ---------- 1. Towers: the city growing up from its blocks ---------- */
 
-/** When tower j starts to rise and how far it has risen, `u` through the piece: the middle first. */
+/*
+ * When tower j starts to rise and how far it has risen, `u` through the piece: the middle first.
+ * 2026-11-12: "towers and sky lanes make them start moving faster": the middle tower rises from
+ * the first moment, quickly at first and settling (an ease-out), the rim's by a seventh of the
+ * way in, every tower up by about a third (some ten seconds).
+ */
 export function builtTop(j: number, u: number): number {
   const tw = CITY[j] as Tower;
   const mid = (BLOCKS - 1) / 2;
   const far = Math.hypot((j % BLOCKS) - mid, Math.floor(j / BLOCKS) - mid) / Math.hypot(mid, mid);
-  const start = 0.04 + 0.28 * far + 0.08 * hash(j, 207);
-  return tw.h * smooth((u - start) / 0.42);
+  const start = 0.12 * far + 0.04 * hash(j, 207) * far;
+  const x = Math.min(1, Math.max(0, (u - start) / 0.2));
+  return tw.h * (1 - (1 - x) ** 2);
 }
 
 type Spot = { pos: Vec3; rgb: RGB };
 
+/*
+ * 2026-11-12: "towers and sky lanes more defined, more dots." The grains go where the eye sees
+ * them: each tower's faces turned toward the eye, weighted by how squarely they face it (a face
+ * seen edge-on gets few, the back faces almost none), their corners, floor lines and windows.
+ * A grain near the line between two faces' shares fades, so as the eye goes round, grains that
+ * change face do it unlit, never popping.
+ */
+const FACE_FLOOR = 0.03;
+export function facingFace(tw: Tower, eye: Vec3, q: number): { face: number; fade: number } {
+  const dx = eye[0] - tw.x;
+  const dz = eye[2] - tw.z;
+  const l = Math.hypot(dx, dz) || 1;
+  const w = [
+    Math.max(0, -dz / l) + FACE_FLOOR,
+    Math.max(0, dx / l) + FACE_FLOOR,
+    Math.max(0, dz / l) + FACE_FLOOR,
+    Math.max(0, -dx / l) + FACE_FLOOR,
+  ];
+  const sum = (w[0] as number) + (w[1] as number) + (w[2] as number) + (w[3] as number);
+  let run = 0;
+  for (let f = 0; f < 4; f++) {
+    const lo = run;
+    run += (w[f] as number) / sum;
+    if (q < run || f === 3) {
+      const edge = Math.min(q - lo, run - q);
+      return { face: f, fade: smooth(edge / 0.015) };
+    }
+  }
+  return { face: 0, fade: 1 };
+}
+
 const TOWER_ROLES = [
-  ['ground', 0.08],
-  ['sky', 0.12],
-  ['edge', 0.6],
+  ['ground', 0.05],
+  ['sky', 0.08],
+  ['edge', 0.56],
   ['window', 1],
 ] as const;
 
-function towersAt(p: Particle, u: number, t: number): Spot {
+/** Where the eye goes round the towers, `u` through the piece. */
+function towersEye(u: number): { eye: Vec3; target: Vec3 } {
+  const a = 0.6 + u * 1.1;
+  return { eye: [Math.sin(a) * 66, GROUND + 34, Math.cos(a) * 66], target: [0, GROUND + 13, 0] };
+}
+/** Where the eye goes round the lanes at time t. */
+function lanesEye(t: number): { eye: Vec3; target: Vec3 } {
+  const a = 2.1 + t * 0.03;
+  return { eye: [Math.sin(a) * 52, GROUND + 26, Math.cos(a) * 52], target: [0, GROUND + 17, 0] };
+}
+
+function towersAt(p: Particle, u: number, t: number, eye: Vec3 = towersEye(u).eye): Spot {
   const twinkle = 0.7 + 0.3 * Math.sin(t * 1.3 + p.i * 0.37);
   switch (roleOf(p.c, TOWER_ROLES)) {
     case 'ground':
@@ -548,20 +637,24 @@ function towersAt(p: Particle, u: number, t: number): Spot {
       return { pos: skyAt(p, [0, 0, 0]), rgb: scale(STAR, 0.3 * twinkle) };
     case 'edge': {
       const j = pick(CITY_SET, p.a);
+      const tw = CITY[j] as Tower;
       const top = builtTop(j, u);
-      const { pos, built } = towerEdge(CITY[j] as Tower, p, top);
+      const { face, fade } = facingFace(tw, eye, hash(p.i, 15));
+      const { pos, built } = towerEdge(tw, p, top, face);
       // The rim being built glows warm; a tower not yet begun stays dark.
       return {
         pos,
-        rgb: built ? scale(EDGE, 0.28) : scale(WARM_WINDOW, 0.18 * smooth(top / 1.5)),
+        rgb: built ? scale(EDGE, 0.3 * fade) : scale(WARM_WINDOW, 0.2 * fade * smooth(top / 1.5)),
       };
     }
     default: {
       const j = pick(CITY_SET, p.a);
+      const tw = CITY[j] as Tower;
       const top = builtTop(j, u);
-      const w = towerWindow(CITY[j] as Tower, p, t, top);
+      const { face, fade } = facingFace(tw, eye, hash(p.i, 16));
+      const w = towerWindow(tw, p, t, top, face);
       const tone = w.warm ? WARM_WINDOW : COOL_WINDOW;
-      return { pos: w.pos, rgb: scale(tone, 0.02 + 0.24 * w.lit) };
+      return { pos: w.pos, rgb: scale(tone, (0.03 + 0.26 * w.lit) * fade) };
     }
   }
 }
@@ -585,7 +678,7 @@ export const LANES: Lane[] = [8, 15, 23, 32].flatMap((h, level) =>
       at: s + dir * 0.7,
       y: GROUND + h + (n % 2) * 0.8,
       dir,
-      speed: 4.5 + 2.5 * hash(level * 10 + n, 211),
+      speed: 6.5 + 3.5 * hash(level * 10 + n, 211),
     })),
   ),
 );
@@ -606,27 +699,29 @@ export function laneShip(j: number, t: number): { c: Vec3; f: Vec3; edge: number
 }
 
 const LANE_ROLES = [
-  ['ground', 0.06],
-  ['sky', 0.09],
-  ['edge', 0.33],
-  ['window', 0.55],
+  ['ground', 0.04],
+  ['sky', 0.06],
+  ['edge', 0.3],
+  ['window', 0.5],
   ['ship', 1],
 ] as const;
 
-function lanesAt(p: Particle, u: number, t: number): Spot {
+/*
+ * The traffic is streaming from the first moment (2026-11-12: "make them start moving faster"):
+ * no ship waits to come on, and the lanes run quicker than before (6.5 to 10 a second).
+ */
+function lanesAt(p: Particle, _u: number, t: number): Spot {
   const role = roleOf(p.c, LANE_ROLES);
   if (role !== 'ship') {
-    // The city stands grown and dimmer, so the traffic reads.
-    const s = towersAt(p, 1, t);
+    // The city stands grown and dimmer, so the traffic reads; only its faces toward the eye.
+    const s = towersAt(p, 1, t, lanesEye(t).eye);
     return { pos: s.pos, rgb: scale(s.rgb, role === 'window' ? 0.7 : 0.85) };
   }
   const j = Math.floor(p.a * SHIPS);
   const { c, f, edge, dir } = laneShip(j, t);
-  // The traffic comes on as the piece opens.
-  const live = smooth((u - 0.02 - 0.2 * hash(j, 213)) / 0.15);
   return {
     pos: dashAt(c, f, p, 2.4),
-    rgb: scale(dir > 0 ? HEADLIGHT : TAILLIGHT, 0.55 * dashGlow(p) * edge * live),
+    rgb: scale(dir > 0 ? HEADLIGHT : TAILLIGHT, 0.6 * dashGlow(p) * edge),
   };
 }
 
@@ -1991,6 +2086,29 @@ export function flier(t: number): { c: Vec3; f: Vec3 } {
 /** How far up into the stratosphere you are, 0 (at the towers' sky) to 1. */
 const highness = (y: number) => smooth((y - SKY + 20) / (STRATOSPHERE - SKY));
 
+/**
+ * The player's fade for the city: the journey's own (light dissolving near the eye and gone by
+ * 260 from it) for every eye under the towers' sky, which is every piece but the Ship climbing.
+ * Over the towers' sky the far edge opens with the height, so from the stratosphere (the eye some
+ * 700 over the street) the whole plan below stays lit, out to the edge of the view.
+ */
+export function fade(pos: Vec3, eye: Vec3): number {
+  const d = Math.hypot(pos[0] - eye[0], pos[1] - eye[1], pos[2] - eye[2]);
+  const open = Math.max(0, eye[1] - SKY);
+  const far = 260 + 2.4 * open;
+  return smooth((d - 3) / 9) * smooth((far - d) / (140 + 0.5 * open));
+}
+
+/** How high the eye is over the towers' sky: 0 under it, 1 at its height over the stratosphere. */
+const clearAt = (eyeY: number) => smooth((eyeY - SKY) / (STRATOSPHERE + 190 - SKY));
+
+/**
+ * How large the Ship's grains are drawn: as every piece's under the towers' sky, larger as the eye
+ * climbs, so that from the stratosphere, some 800 away, the plan's grains read about the size the
+ * Golden plan's do from its own height, not as specks.
+ */
+export const highSize = (eyeY: number) => 1 + 13 * clearAt(eyeY);
+
 /** The cockpit's dials: your height over the street and your speed. */
 export type Gauge = { label: string; value: number; min?: number; max: number; unit?: string };
 export function gauges(): Gauge[] {
@@ -2226,6 +2344,8 @@ const cur = {
 };
 /** How far the eye sees now, as a share of VIEW: wider the higher you fly. */
 let reach = 1;
+/** How clear the air is: 0 under the towers' sky, 1 from some 200 over it (the far haze lifts). */
+let clear = 0;
 
 /** What a group's sites are. */
 const Kind = {
@@ -2531,9 +2651,10 @@ function group(
       const wz = (o[2] as number) - c[2];
       wake += 0.5 * smooth((20 - Math.sqrt(wx * wx + wy * wy + wz * wz)) / 14);
     }
-    // Near grains, drawn large, fade away; far light sinks into the violet night.
-    const k = wake * b * smooth((d - 4) / 10) * smooth((VIEW - dd) / 100);
-    const lean = 0.65 * (1 - smooth((VIEW - dd) / 100));
+    // Near grains, drawn large, fade away; far light sinks into the violet night. From high up
+    // the air is clear: the plan keeps its own colours out to a short fade at the view's edge.
+    const k = wake * b * smooth((d - 4) / 10) * smooth((VIEW - dd) / (100 - 70 * clear));
+    const lean = 0.65 * (1 - clear) * (1 - smooth((VIEW - dd) / 100));
     const lum = Math.max(o[3] as number, o[4] as number, o[5] as number) * 0.8;
     put(
       mix32(gid, s),
@@ -2796,6 +2917,7 @@ function build(P: Plan, t: number) {
   const { eye, target } = shipEye(c, f);
   Object.assign(P, { t, v: fly.v, c, f, eye, fwd: norm(sub(target, eye)), n: 0, top: 0 });
   reach = viewAt(eye[1]) / VIEW;
+  clear = smooth((eye[1] - SKY) / 200);
   cur.plan = P;
   cur.t = t;
   for (const it of gather(P)) {
@@ -2938,8 +3060,12 @@ function shipAt(p: Particle, t: number): Spot {
   if (m >= SHIPS_FROM) return otherShipAt(p, P, t);
   if (m >= YOU_FROM) {
     const pace = fly.mode === 'route' ? 0.6 : Math.max(0, fly.speed / FLY_SPEED - 0.4);
-    const { pos, part } = craftAt(P.c, P.f, 2.4, p, pace, fly.mode === 'route' ? 0 : fly.bank);
-    return { pos, rgb: craftColour(part, p, 0.42) };
+    // From high up, drawn with the large grains, the ship grows a little and dims, so it reads as
+    // a ship over the plan, not a blot of light.
+    const hi = clearAt(P.eye[1]);
+    const bank = fly.mode === 'route' ? 0 : fly.bank;
+    const { pos, part } = craftAt(P.c, P.f, 2.4 * (1 + 2 * hi), p, pace, bank);
+    return { pos, rgb: craftColour(part, p, 0.42 * (1 - 0.45 * hi)) };
   }
   // The sky (lib/city-sky.ts), in a dome just beyond the city's reach, so nothing in it stands in
   // front of it: stars and constellations, satellites, the stations, the spire's beacon.
@@ -2983,17 +3109,48 @@ function otherShipAt(p: Particle, P: Plan, t: number): Spot {
   return { pos: g.pos, rgb: scale(r ? mix(g.rgb, LANTERN_RED, 0.5) : g.rgb, k) };
 }
 
-/* ---------- the pieces' pills: five temples, five factories, five domes, five cities ---------- */
+/*
+ * The pieces' pills: eleven plans, eight Nova Cores, the temples, factories and domes each from
+ * the single building up to the quarter (lib/golden-quarters.ts), five cities from above.
+ */
 
 let templeKind = 0;
 let factoryKind = 0;
 let domeKind = 0;
+let buildingKind = 0;
 const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number) => void }> = {
+  'golden-plan': { names: PLANS, label: 'Plan', set: setPlanKind },
+  nova: { names: NOVA_CORES, label: 'Nova Core', set: setNovaKind },
   temples: { names: TEMPLES.names, label: TEMPLES.label, set: (i) => (templeKind = i) },
   factories: { names: FACTORIES.names, label: FACTORIES.label, set: (i) => (factoryKind = i) },
   domes: { names: DOMES.names, label: DOMES.label, set: (i) => (domeKind = i) },
   above: { names: CITIES.map((c) => c.name), label: 'City', set: setCityKind },
+  atlantis: ATLANTIS_VARIANTS,
+  buildings: { names: BUILDINGS.names, label: BUILDINGS.label, set: (i) => (buildingKind = i) },
 };
+
+/*
+ * Colour presets per piece (the Design menu's Palette pill): the golden pieces in gold, rose
+ * gold, white marble and gold, or night neon gold; the factories in gold, rust, steel or night
+ * neon gold. Pieces with none have no Palette pill.
+ */
+const PALETTE_SETS: Record<string, string[]> = {
+  'golden-plan': GOLDEN_PALETTES,
+  rising: GOLDEN_PALETTES,
+  heart: GOLDEN_PALETTES,
+  nova: GOLDEN_PALETTES,
+  temples: GOLDEN_PALETTES,
+  factories: FACTORY_PALETTES,
+  domes: GOLDEN_PALETTES,
+};
+const palettesOf = (k: number) => PALETTE_SETS[PHASES[k]?.id ?? ''];
+export const hasPalettes = (k: number) => palettesOf(k) !== undefined;
+export const paletteNames = (k: number) => palettesOf(k) ?? [];
+/** Preset i on piece k; with no piece (the Journey) or an unknown one, gold. */
+export function setPalette(i: number, k?: number) {
+  const names = k === undefined ? undefined : palettesOf(k);
+  setGoldenPalette(names?.[i] ?? 'Gold');
+}
 const variantsOf = (k: number) => VARIANTS[PHASES[k]?.id ?? ''];
 export const hasVariants = (k: number) => variantsOf(k) !== undefined;
 export const variantNames = (k: number) => variantsOf(k)?.names ?? [];
@@ -3019,6 +3176,8 @@ export function formAt(k: number, p: Particle, u: number, t: number): Spot {
       return risingAt(p, Math.max(u, 0), t);
     case 'heart':
       return heartAt(p, t);
+    case 'nova':
+      return novaAt(p, t);
     case 'temples':
       return buildingAt(TEMPLES, templeKind, p, t);
     case 'factories':
@@ -3027,6 +3186,8 @@ export function formAt(k: number, p: Particle, u: number, t: number): Spot {
       return buildingAt(DOMES, domeKind, p, t);
     case 'above':
       return aboveAt(p, u, t);
+    case 'atlantis':
+      return atlantisAt(p, Math.max(u, 0), t);
     case 'towers':
       return towersAt(p, Math.max(u, 0), t);
     case 'lanes':
@@ -3039,6 +3200,8 @@ export function formAt(k: number, p: Particle, u: number, t: number): Spot {
       return docksAt(p, t);
     case 'canyon':
       return canyonAt(p, u, t);
+    case 'buildings':
+      return buildingAt(BUILDINGS, buildingKind, p, t);
     default:
       return shipAt(p, t);
   }
@@ -3098,27 +3261,25 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       return risingEye(u, t);
     case 'heart':
       return heartEye(t);
+    case 'nova':
+      return novaEye(t);
     case 'temples':
+      return buildingEye(t, TEMPLES.reach[templeKind]);
     case 'factories':
+      return buildingEye(t, FACTORIES.reach[factoryKind]);
     case 'domes':
-      return buildingEye(t);
+      return buildingEye(t, DOMES.reach[domeKind]);
+    case 'buildings':
+      return buildingsEye(buildingKind, t);
     case 'above':
       return aboveEye(t);
-    case 'towers': {
+    case 'atlantis':
+      return atlantisEye(u, t);
+    case 'towers':
       // Slowly round the city, above its roofs, looking at its heart.
-      const a = 0.6 + u * 1.1;
-      return {
-        eye: [Math.sin(a) * 66, GROUND + 34, Math.cos(a) * 66],
-        target: [0, GROUND + 13, 0],
-      };
-    }
-    case 'lanes': {
-      const a = 2.1 + t * 0.03;
-      return {
-        eye: [Math.sin(a) * 52, GROUND + 26, Math.cos(a) * 52],
-        target: [0, GROUND + 17, 0],
-      };
-    }
+      return towersEye(u);
+    case 'lanes':
+      return lanesEye(t);
     case 'neon': {
       // Lower and closer, among the towers, looking up a little.
       const a = 3.6 + t * 0.025;
@@ -3233,8 +3394,11 @@ export function pieceCamera(k: number, s: number): Eye {
 
 /** Glow and size of piece k on its own. */
 export function pieceLook(k: number): { glow: number; size: number } {
-  const { glow, size } = PHASES[k] as CityPhase;
-  return { glow, size };
+  const { id, glow, size } = PHASES[k] as CityPhase;
+  if (id !== 'ship') return { glow, size };
+  // The Ship's grains grow as its eye climbs (the latest frame's eye).
+  const P = plans.find((q) => q.t === lastBuilt);
+  return { glow, size: size * (P ? highSize(P.eye[1]) : 1) };
 }
 
 /** Glow and size for the whole picture, blended across piece boundaries. */

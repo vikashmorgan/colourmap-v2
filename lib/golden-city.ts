@@ -24,7 +24,8 @@ import {
   smooth,
   type Vec3,
 } from './bigbang';
-import { type BuildingSet, buildingMesh, DOMES, FACTORIES, TEMPLES } from './golden-buildings';
+import { PLAN_NAMES, PLAN_R, planVariantMesh } from './golden-plans';
+import { type BuildingSet, buildingMesh, DOMES, FACTORIES, TEMPLES } from './golden-quarters';
 import {
   Anim,
   type Built,
@@ -36,8 +37,9 @@ import {
   type Shares,
   Tone,
 } from './grain-mesh';
+import { NOVA_CENTRE, NOVA_CORES, NOVA_R, novaCore } from './nova-cores';
 
-export { DOMES, FACTORIES, PHI, TEMPLES };
+export { DOMES, FACTORIES, NOVA_CORES, PHI, PLAN_NAMES, TEMPLES };
 
 const TAU = Math.PI * 2;
 const G = GROUND_Y;
@@ -127,8 +129,9 @@ const PLANT: RGB = [0.62, 0.72, 0.16];
 const FIRE: RGB = [1, 0.36, 0.06];
 const STAR: RGB = [0.8, 0.78, 1];
 
-/** Each tone's colour and strength. */
-const TONES: [RGB, number][] = [
+/** Each tone's colour and strength, in tone order (edge, face, glass, water, plant, fire, light, ground, road, steam, film). */
+type Tones = [RGB, number][];
+const GOLD_TONES: Tones = [
   [GOLD, 0.34], // edge
   [DEEP_GOLD, 0.22], // face
   [AMBER_GLASS, 0.07], // glass
@@ -142,17 +145,125 @@ const TONES: [RGB, number][] = [
   [GOLD, 0.2], // film
 ];
 
-/**
- * The colour of a grain: its tone, drifting slowly toward rose gold and back (minutes, never a
- * flash), twinkling softly, `hope` brighter toward the heart.
+/*
+ * Colour presets (2026-11-12: "a design pill that opens colour presets or other stuff when needed
+ * for design variants"). Each keeps its grains deep and dim enough that dense edges stay their
+ * colour instead of summing to white, and each drifts slowly toward its own second colour.
  */
-function glow(h: Hit, p: Particle, t: number, hope = 1, warm = 0): RGB {
-  const [base, k] = TONES[h.tone] ?? (TONES[0] as [RGB, number]);
+export type Palette = { name: string; tones: Tones; drift: RGB };
+export const PALETTES: Palette[] = [
+  { name: 'Gold', tones: GOLD_TONES, drift: ROSE_GOLD },
+  {
+    name: 'Rose gold',
+    tones: [
+      [[1, 0.4, 0.26], 0.34],
+      [[0.9, 0.3, 0.22], 0.22],
+      [[1, 0.42, 0.3], 0.07],
+      [WATER, 0.18],
+      [PLANT, 0.3],
+      [[1, 0.3, 0.12], 0.6],
+      [[1, 0.7, 0.58], 0.8],
+      [[0.9, 0.3, 0.22], 0.08],
+      [[1, 0.55, 0.42], 0.42],
+      [[1, 0.6, 0.5], 0.16],
+      [[1, 0.4, 0.26], 0.2],
+    ],
+    drift: GOLD,
+  },
+  {
+    name: 'White marble & gold',
+    tones: [
+      [GOLD, 0.34],
+      [[0.82, 0.78, 0.7], 0.15],
+      [[0.9, 0.85, 0.75], 0.06],
+      [WATER, 0.18],
+      [PLANT, 0.3],
+      [FIRE, 0.55],
+      [WARM_WHITE, 0.8],
+      [[0.75, 0.7, 0.62], 0.07],
+      [[0.9, 0.82, 0.68], 0.36],
+      [[0.85, 0.8, 0.75], 0.14],
+      [[0.92, 0.86, 0.74], 0.16],
+    ],
+    drift: IVORY_GOLD,
+  },
+  {
+    name: 'Night neon gold',
+    tones: [
+      [GOLD, 0.36],
+      [[0.14, 0.16, 0.55], 0.2],
+      [[0.2, 0.55, 1], 0.08],
+      [[0.25, 0.35, 1], 0.2],
+      [[0.25, 1, 0.65], 0.3],
+      [[1, 0.25, 0.75], 0.55],
+      [[0.35, 0.9, 1], 0.7],
+      [[0.14, 0.12, 0.45], 0.08],
+      [[1, 0.3, 0.8], 0.36],
+      [[0.4, 0.8, 1], 0.14],
+      [[0.6, 0.4, 1], 0.2],
+    ],
+    drift: [0.75, 0.35, 1],
+  },
+  {
+    name: 'Rust',
+    tones: [
+      [[0.85, 0.34, 0.1], 0.32],
+      [[0.55, 0.22, 0.08], 0.24],
+      [[0.9, 0.5, 0.2], 0.07],
+      [[0.25, 0.35, 0.6], 0.16],
+      [[0.55, 0.6, 0.2], 0.3],
+      [[1, 0.35, 0.05], 0.6],
+      [[1, 0.74, 0.45], 0.75],
+      [[0.5, 0.28, 0.12], 0.08],
+      [[0.95, 0.6, 0.2], 0.4],
+      [[0.7, 0.6, 0.55], 0.18],
+      [[0.85, 0.45, 0.15], 0.2],
+    ],
+    drift: [0.9, 0.55, 0.15],
+  },
+  {
+    name: 'Steel blue-grey',
+    tones: [
+      [[0.55, 0.65, 0.9], 0.3],
+      [[0.3, 0.36, 0.52], 0.2],
+      [[0.5, 0.7, 1], 0.07],
+      [WATER, 0.18],
+      [PLANT, 0.3],
+      [FIRE, 0.55],
+      [[1, 0.84, 0.6], 0.75],
+      [[0.3, 0.34, 0.45], 0.08],
+      [[0.7, 0.78, 0.95], 0.36],
+      [[0.75, 0.8, 0.9], 0.16],
+      [[0.6, 0.7, 0.9], 0.2],
+    ],
+    drift: [0.45, 0.55, 0.85],
+  },
+];
+/** The presets the golden pieces offer, and the factories'. */
+export const GOLDEN_PALETTES = ['Gold', 'Rose gold', 'White marble & gold', 'Night neon gold'];
+export const FACTORY_PALETTES = ['Gold', 'Rust', 'Steel blue-grey', 'Night neon gold'];
+let palette: Palette = PALETTES[0] as Palette;
+/** Pick a preset by name (Gold when the name is unknown). */
+export function setGoldenPalette(name: string) {
+  palette = PALETTES.find((q) => q.name === name) ?? (PALETTES[0] as Palette);
+}
+export const goldenPalette = () => palette.name;
+
+/**
+ * The colour of a grain: its tone, drifting slowly toward the palette's second colour and back
+ * (minutes, never a flash), twinkling softly, `hope` brighter toward the heart; `tint` leans its
+ * lights and edges toward a colour of its own (each Nova Core's).
+ */
+function glow(h: Hit, p: Particle, t: number, hope = 1, warm = 0, tint?: RGB): RGB {
+  const tones = palette.tones;
+  const [base, k] = tones[h.tone] ?? (tones[0] as [RGB, number]);
+  const lamp = (tones[Tone.light] as [RGB, number])[0];
   let c = base;
   if (h.tone === Tone.film)
-    c = mix(GOLD, ROSE_GOLD, 0.5 + 0.5 * Math.sin(t * 0.05 + h.pos[1] * 0.4 + h.pos[0] * 0.1));
-  c = mix(c, ROSE_GOLD, 0.2 * (0.5 + 0.5 * Math.sin(t * 0.013 + p.i * 0.0007)));
-  if (warm > 0) c = mix(c, WARM_WHITE, warm);
+    c = mix(base, palette.drift, 0.5 + 0.5 * Math.sin(t * 0.05 + h.pos[1] * 0.4 + h.pos[0] * 0.1));
+  c = mix(c, palette.drift, 0.2 * (0.5 + 0.5 * Math.sin(t * 0.013 + p.i * 0.0007)));
+  if (warm > 0) c = mix(c, lamp, warm);
+  if (tint && (h.tone === Tone.light || h.tone === Tone.edge)) c = mix(c, tint, 0.3);
   const twinkle =
     h.tone === Tone.water
       ? 0.35 + 0.65 * Math.sin(t * 0.5 + p.i * 1.3) ** 2
@@ -295,11 +406,41 @@ export function goldenPlanEye(u: number, t: number): Eye {
   return orbit(0.5 + t * 0.01, 1.08, 100 - 8 * u, [0, G, 0]);
 }
 
+/*
+ * The Golden plan's pills: the golden city first, then ten more round cities from one rule each
+ * (lib/golden-plans.ts; 2026-11-12: "the golden plan design is amazing, do 10 like this that
+ * represent different cities, or the different quartiers etc...").
+ */
+export const PLANS = ['Golden', ...PLAN_NAMES];
+let planKind = 0;
+export const setPlanKind = (i: number) => {
+  planKind = PLANS[i] ? i : 0;
+};
+const planVariants: (Built | null)[] = PLAN_NAMES.map(() => null);
+/** Plan i's built mesh: 0 the golden city, 1..10 the ten plans; built once each. */
+export function planOf(i: number): Built {
+  if (i <= 0 || !PLANS[i]) return plan();
+  const got = planVariants[i - 1];
+  if (got) return got;
+  const b = planVariantMesh(i - 1).build();
+  planVariants[i - 1] = b;
+  return b;
+}
+
 export function goldenPlanAt(p: Particle, u: number, t: number): { pos: Vec3; rgb: RGB } {
   if (p.c < STARS) return starAt(p, t, [0, G, 0]);
-  const h = onMesh(plan(), p, (p.c - STARS) / (1 - STARS), t, goldenPlanEye(u, t).eye, PLAN_SHARES);
+  const h = onMesh(
+    planOf(planKind),
+    p,
+    (p.c - STARS) / (1 - STARS),
+    t,
+    goldenPlanEye(u, t).eye,
+    PLAN_SHARES,
+  );
   const r = Math.hypot(h.pos[0], h.pos[2]);
-  const rgb = glow(h, p, t, hopeAt(r) * revealed(bandIndex(r), u), 0.25 * Math.exp(-r / 6));
+  // The golden city lights ring by ring; the others in eight even rings from the heart out.
+  const ring = planKind === 0 ? bandIndex(r) : Math.min(7, Math.floor((r / PLAN_R) * 8));
+  const rgb = glow(h, p, t, hopeAt(r) * revealed(ring, u), 0.25 * Math.exp(-r / 6));
   return { pos: h.pos, rgb };
 }
 
@@ -640,7 +781,71 @@ export function heartAt(p: Particle, t: number): { pos: Vec3; rgb: RGB } {
   };
 }
 
-/* ---------- 4–6. Temples, factories, domes ---------- */
+/* ---------- 4. Nova Cores: power sources in the heart's style ---------- */
+
+/** Each core's own lean of colour on its lights and edges, kept within the warm family. */
+const NOVA_TINTS: RGB[] = [
+  [1, 0.85, 0.6],
+  [1, 0.45, 0.35],
+  [0.55, 0.8, 1],
+  [1, 0.65, 0.2],
+  [0.9, 0.75, 1],
+  [1, 0.5, 0.65],
+  [0.6, 1, 0.8],
+  [1, 0.95, 0.75],
+];
+let novaKind = 0;
+export const setNovaKind = (i: number) => {
+  novaKind = NOVA_CORES[i] ? i : 0;
+};
+const novaBuilt: (Built | null)[] = NOVA_CORES.map(() => null);
+export function novaMesh(i: number): Built {
+  const got = novaBuilt[i];
+  if (got) return got;
+  const b = novaCore(i).build();
+  novaBuilt[i] = b;
+  return b;
+}
+const NOVA_SHARES: Shares = { lines: 0.66, faces: 0.75 };
+
+export function novaEye(t: number): Eye {
+  return orbit(1.1 + t * 0.022, 0.24, 40, [0, G + 6, 0]);
+}
+
+export function novaAt(p: Particle, t: number): { pos: Vec3; rgb: RGB } {
+  if (p.c < STARS) return starAt(p, t, [0, G, 0]);
+  const h = onMesh(
+    novaMesh(novaKind),
+    p,
+    (p.c - STARS) / (1 - STARS),
+    t,
+    novaEye(t).eye,
+    NOVA_SHARES,
+  );
+  const r = Math.hypot(h.pos[0], h.pos[2]);
+  // The core breathes light, as the heart does: brighter as it swells (9 s a breath).
+  const breath = 0.85 + 0.15 * Math.sin((TAU * t) / 9);
+  // Eased off with the distance from the core, so a grain turning past its edge never jumps.
+  const d = Math.hypot(
+    h.pos[0] - NOVA_CENTRE[0],
+    h.pos[1] - NOVA_CENTRE[1],
+    h.pos[2] - NOVA_CENTRE[2],
+  );
+  const near = 1 - smooth((d - NOVA_R) / (NOVA_R * 0.6));
+  return {
+    pos: h.pos,
+    rgb: glow(
+      h,
+      p,
+      t,
+      (0.6 + 0.4 * Math.exp(-r / 14)) * (1 + (breath * 1.2 - 1) * near),
+      0.12 * Math.exp(-r / 4),
+      NOVA_TINTS[novaKind],
+    ),
+  };
+}
+
+/* ---------- 5–7. Temples, factories, domes ---------- */
 
 const builtSets = new Map<BuildingSet, (Built | null)[]>();
 export function building(set: BuildingSet, i: number): Built {
@@ -658,9 +863,12 @@ export function building(set: BuildingSet, i: number): Built {
 }
 const BUILDING_SHARES: Shares = { lines: 0.42, faces: 0.84 };
 
-/** Slowly round the building, a little above it. */
-export function buildingEye(t: number): Eye {
-  return orbit(0.8 + t * 0.035, 0.32, 46, [0, G + 6, 0]);
+/**
+ * Slowly round the building, a little above it; `reach` stands the eye further back and higher
+ * for the bigger rungs (a group, a complex, a quarter seen from above at an angle).
+ */
+export function buildingEye(t: number, reach = 1): Eye {
+  return orbit(0.8 + t * 0.035, 0.32 + 0.22 * (reach - 1), 46 * reach, [0, G + 6 / reach, 0]);
 }
 
 export function buildingAt(
@@ -675,7 +883,7 @@ export function buildingAt(
     p,
     (p.c - STARS) / (1 - STARS),
     t,
-    buildingEye(t).eye,
+    buildingEye(t, set.reach[i] ?? 1).eye,
     BUILDING_SHARES,
   );
   return { pos: h.pos, rgb: glow(h, p, t) };

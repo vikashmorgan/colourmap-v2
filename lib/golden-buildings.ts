@@ -17,7 +17,7 @@
  */
 
 import { GOLDEN_ANGLE, hash, type Vec3 } from './bigbang';
-import { Anim, GROUND_Y, Mesh, PHI, Tone } from './grain-mesh';
+import { Anim, GROUND_Y, type Mesh, PHI, Tone } from './grain-mesh';
 
 const TAU = Math.PI * 2;
 const G = GROUND_Y;
@@ -731,33 +731,246 @@ function domeGarden(m: Mesh) {
   m.ring(P(0, 0.05, 0), 13, road, { w: 0.6 });
 }
 
-/* ---------- the sets ---------- */
+/* ---------- new works: cement and kilns (2026-11-12) ---------- */
 
-type Builder = (m: Mesh) => void;
-export type BuildingSet = { names: string[]; build: Builder[]; label: string };
+/*
+ * 2026-11-12: "factories do different ones: cement factory inspired by big old rusty cement
+ * factories etc..." Our own cement works, built from the same few shapes: silos, a preheater
+ * tower of stacked cyclones, a long kiln tube, conveyor bridges. Its rust look is the Rust
+ * palette (lib/golden-city.ts), the shapes stay the same.
+ */
 
-export const TEMPLES: BuildingSet = {
-  names: ['Rotunda', 'Ziggurat', 'Ring', 'Pyramid', 'Lotus'],
-  build: [rotunda, ziggurat, ringGate, pyramid, lotus],
-  label: 'Temple',
-};
-export const FACTORIES: BuildingSet = {
-  names: ['Sawtooth', 'Foundry', 'Assembly', 'Workshops', 'Solar'],
-  build: [sawtooth, foundry, assembly, workshops, solar],
-  label: 'Factory',
-};
-export const DOMES: BuildingSet = {
-  names: ['Geodesic', 'Bubbles', 'Palm house', 'Lattice', 'Garden'],
-  build: [geodesicHouse, bubbles, palmHouse, latticeShell, domeGarden],
-  label: 'Dome',
-};
-
-/** Building i of a set, on its plaza, as a mesh: built once. */
-export function buildingMesh(set: BuildingSet, i: number): Mesh {
-  const m = new Mesh();
-  plaza(m);
-  m.centre = P(0, 5, 0);
-  const build = set.build[i] ?? (set.build[0] as Builder);
-  build(m);
-  return m;
+/** A straight tube from a to b, radius r: its skin as faces, rings every `ringEvery` along it. */
+export function tube(m: Mesh, a: Vec3, b: Vec3, r: number, ringEvery = 0, n = 12) {
+  const d: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+  const L = Math.hypot(d[0], d[1], d[2]) || 1;
+  const f: Vec3 = [d[0] / L, d[1] / L, d[2] / L];
+  // Two directions square to the tube.
+  const ref: Vec3 = Math.abs(f[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+  const u0: Vec3 = [
+    f[1] * ref[2] - f[2] * ref[1],
+    f[2] * ref[0] - f[0] * ref[2],
+    f[0] * ref[1] - f[1] * ref[0],
+  ];
+  const ul = Math.hypot(u0[0], u0[1], u0[2]);
+  const u: Vec3 = [u0[0] / ul, u0[1] / ul, u0[2] / ul];
+  const v: Vec3 = [f[1] * u[2] - f[2] * u[1], f[2] * u[0] - f[0] * u[2], f[0] * u[1] - f[1] * u[0]];
+  const at = (s: number, ang: number): Vec3 => [
+    a[0] + d[0] * s + (u[0] * Math.cos(ang) + v[0] * Math.sin(ang)) * r,
+    a[1] + d[1] * s + (u[1] * Math.cos(ang) + v[1] * Math.sin(ang)) * r,
+    a[2] + d[2] * s + (u[2] * Math.cos(ang) + v[2] * Math.sin(ang)) * r,
+  ];
+  const keep = m.centre;
+  m.centre = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
+  // The centre line moves with the faces, so each face's normal points out from the axis.
+  const segs = Math.max(2, Math.ceil(L / 1.5));
+  for (let i = 0; i < segs; i++)
+    for (let j = 0; j < n; j++) {
+      const s0 = i / segs;
+      const s1 = (i + 1) / segs;
+      const a0 = (j / n) * TAU;
+      const a1 = ((j + 1) / n) * TAU;
+      m.centre = [
+        a[0] + d[0] * (s0 + s1) * 0.5,
+        a[1] + d[1] * (s0 + s1) * 0.5,
+        a[2] + d[2] * (s0 + s1) * 0.5,
+      ];
+      m.tri(at(s0, a0), at(s1, a0), at(s1, a1), face);
+      m.tri(at(s0, a0), at(s1, a1), at(s0, a1), face);
+    }
+  if (ringEvery > 0) {
+    const k = Math.max(1, Math.round(L / ringEvery));
+    for (let i = 0; i <= k; i++)
+      m.poly(
+        Array.from({ length: n }, (_, j) => at(i / k, (j / n) * TAU)),
+        true,
+        edge,
+        { w: 1.2 },
+      );
+  }
+  for (const ang of [0, Math.PI / 2, Math.PI, 1.5 * Math.PI])
+    m.line(at(0, ang), at(1, ang), edge, { w: 0.6 });
+  m.centre = keep;
 }
+
+/** A truss bridge from a to b, `w` wide: two rails each side, posts and a zigzag between them, a belt of light inside. */
+export function truss(m: Mesh, a: Vec3, b: Vec3, w: number, h: number, belt = 1.6) {
+  const d: Vec3 = [b[0] - a[0], 0, b[2] - a[2]];
+  const L = Math.hypot(d[0], d[2]) || 1;
+  const side: Vec3 = [(-d[2] / L) * (w / 2), 0, (d[0] / L) * (w / 2)];
+  const at = (s: number, k: number, y: number): Vec3 => [
+    a[0] + (b[0] - a[0]) * s + side[0] * k,
+    a[1] + (b[1] - a[1]) * s + y,
+    a[2] + (b[2] - a[2]) * s + side[2] * k,
+  ];
+  const n = Math.max(3, Math.round(Math.hypot(L, b[1] - a[1]) / 2));
+  for (const k of [-1, 1]) {
+    m.line(at(0, k, 0), at(1, k, 0), edge, { w: 1.1 });
+    m.line(at(0, k, h), at(1, k, h), edge, { w: 1.1 });
+    m.quad(at(0, k, 0), [b[0] - a[0], b[1] - a[1], b[2] - a[2]], [0, h, 0], face, {
+      two: true,
+      w: 0.4,
+    });
+    for (let i = 0; i < n; i++) {
+      m.line(at(i / n, k, 0), at(i / n, k, h), edge, { w: 0.5 });
+      m.line(at(i / n, k, i % 2 ? 0 : h), at((i + 1) / n, k, i % 2 ? h : 0), edge, { w: 0.4 });
+    }
+  }
+  m.line(at(0, 0, 0.3), at(1, 0, 0.3), light, { anim: Anim.flow, key: belt, w: 1.2 });
+}
+
+/**
+ * Cement works. Rules: a = 2.4. Four silos in a row, radius a, a·φ³ tall, banded every a; a
+ * preheater tower a·φ⁴ tall and 2a square, carrying four cyclones down its side (each a cone
+ * a/φ wide); from its foot the kiln, a tube a/φ round and 10a long falling one in twenty-five,
+ * on three piers with a tyre at each, its far end glowing; conveyor bridges from the silo tops to
+ * the tower; a chimney a·φ⁵ tall breathing slow steam. Big, plain and heavy, as old works are.
+ */
+function cementWorks(m: Mesh) {
+  const a = 2.4;
+  const hs = a * PHI ** 3;
+  // The silos, side by side along -z.
+  for (let i = 0; i < 4; i++) {
+    const x = -9 + i * (2 * a + 0.3);
+    const z = -6;
+    m.centre = P(x, hs / 2, z);
+    m.cylinder(P(x, 0, z), a, G, G + hs, face, edge, 4, 16);
+    for (let y = a; y < hs; y += a) m.ring(P(x, y, z), a + 0.04, edge, { w: 0.6 }, 16);
+    // A cone roof and a lamp.
+    m.surface(
+      (u, v) => {
+        const t = u * TAU;
+        const r = a * (1 - v);
+        return P(x + Math.cos(t) * r, hs + v * a * 0.5, z + Math.sin(t) * r);
+      },
+      12,
+      1,
+      face,
+    );
+    m.dot(P(x, hs + a * 0.55, z), 0.3, light, { w: 0.4 });
+  }
+  // The preheater tower: a frame of floors, cyclones down its face.
+  const ht = a * PHI ** 4;
+  const tx = 8;
+  const tz = -4;
+  m.box(P(tx, 0, tz), a, ht, a, glass, edge, 0, true);
+  for (let y = a; y < ht; y += a) {
+    m.poly(
+      [P(tx - a, y, tz - a), P(tx + a, y, tz - a), P(tx + a, y, tz + a), P(tx - a, y, tz + a)],
+      true,
+      edge,
+      { w: 0.7 },
+    );
+    // Cross bracing on the front, a zigzag up the frame.
+    m.line(P(tx - a, y - a, tz + a), P(tx + a, y, tz + a), edge, { w: 0.4 });
+  }
+  for (let k = 0; k < 4; k++) {
+    const y = ht - a * 0.8 - k * a * 1.4;
+    const cx = tx + (k % 2 ? -a * 0.6 : a * 0.6);
+    const cz = tz + a + a / PHI;
+    m.centre = P(cx, y - a / 2, cz - 0.5);
+    m.cylinder(P(cx, 0, cz), a / PHI, G + y - a * 0.5, G + y, face, edge, 0, 10);
+    m.surface(
+      (u, v) => {
+        const t = u * TAU;
+        const r = (a / PHI) * (1 - 0.85 * v);
+        return P(cx + Math.cos(t) * r, y - a * 0.5 - v * a, cz + Math.sin(t) * r);
+      },
+      10,
+      2,
+      face,
+    );
+  }
+  m.dot(P(tx, ht + 0.6, tz), 0.45, light, { w: 0.5 });
+  // The kiln: a long tube falling gently from the tower's foot, on three piers, glowing at its end.
+  const k0 = P(tx - 1, a * 1.6, tz + a + 1.5);
+  const k1 = P(tx - 1 - 10 * a * 0.8, a * 1.6 - (10 * a) / 25, tz + a + 1.5 + 10 * a * 0.6);
+  tube(m, k0, k1, a / PHI, a * 1.4, 14);
+  for (let i = 1; i <= 3; i++) {
+    const s = i / 4;
+    const q: Vec3 = [
+      k0[0] + (k1[0] - k0[0]) * s,
+      k0[1] + (k1[1] - k0[1]) * s,
+      k0[2] + (k1[2] - k0[2]) * s,
+    ];
+    m.box([q[0], G, q[2]], 0.6, q[1] - G - a / PHI, 0.9, face, edge);
+    m.ring(q, a / PHI + 0.2, edge, { w: 1.5 }, 14);
+  }
+  m.dot(k1, a / PHI, fire, { anim: Anim.pulse, key: 0.4, w: 1.8 });
+  // Conveyor bridges from the silo tops to the tower.
+  truss(m, P(-9 + 3 * (2 * a + 0.3), hs, -6), P(tx - a, ht * 0.62, tz), 1.2, 1.1);
+  truss(m, P(-9, hs, -6 + a), P(-14, 0.2, 8), 1.1, 1, -1.4);
+  // The chimney and its steam.
+  const cx = 14;
+  const cz = 6;
+  m.centre = P(cx, 10, cz);
+  m.cylinder(P(cx, 0, cz), 0.9, G, G + a * PHI ** 5, face, edge, 3, 10);
+  m.ring(P(cx, a * PHI ** 5, cz), 0.9, light, { w: 1.2 }, 10);
+  m.dot(P(cx, a * PHI ** 5 + 0.4, cz), 0.8, steam, { anim: Anim.rise, key: 9, w: 3 });
+  // A low hall along the kiln, its windows lit.
+  m.box(P(-4, 0, 9), 6, a, 2.4, face, edge);
+  for (let j = 0; j < 10; j++) m.dot(P(-9.5 + j * 1.2, a * 0.55, 11.45), 0.22, light, { w: 0.3 });
+}
+
+/**
+ * Kilns. Rules: five bottle kilns round a yard by the golden angle, the first base radius 3.2 and
+ * each φ^(1/2) smaller; each kiln's wall a bottle, r(y) = R(1 − 0.6·(y/H)^0.8), H = Rφ², a neck
+ * R/φ² wide on top; a fire glowing slowly in each door; a long low workshop beside them.
+ */
+function kilns(m: Mesh) {
+  for (let i = 0; i < 5; i++) {
+    const R = 3.2 * PHI ** (-i / 2);
+    const H = R * PHI ** 2;
+    const ang = i * GOLDEN_ANGLE;
+    const d = i ? 7 + 2.2 * i : 0;
+    const x = Math.cos(ang) * d;
+    const z = Math.sin(ang) * d;
+    m.centre = P(x, H * 0.3, z);
+    const r = (y: number) => R * (1 - 0.6 * (y / H) ** 0.8);
+    m.surface(
+      (u, v) => {
+        const t = u * TAU;
+        const y = v * H;
+        return P(x + Math.cos(t) * r(y), y, z + Math.sin(t) * r(y));
+      },
+      16,
+      6,
+      face,
+      {},
+      { tone: edge, uEvery: 4, vEvery: 2 },
+    );
+    m.cylinder(P(x, 0, z), R / PHI ** 2 + 0.3, G + H, G + H + R / PHI, face, edge, 0, 10);
+    m.ring(P(x, H + R / PHI, z), R / PHI ** 2 + 0.3, light, { w: 1 }, 10);
+    m.dot(P(x, H + R / PHI + 0.4, z), 0.6, steam, { anim: Anim.rise, key: 5, w: 1.5 });
+    const door = (ang + Math.PI) % TAU;
+    m.dot(P(x + Math.cos(door) * R, 1, z + Math.sin(door) * R), 0.8, fire, {
+      anim: Anim.pulse,
+      key: i * 1.3,
+      w: 1.2,
+    });
+  }
+  m.box(P(0, 0, -15), 10, 2.6, 2.2, face, edge);
+  m.centre = P(0, 5, 0);
+  for (let j = 0; j < 14; j++) m.dot(P(-9 + j * 1.4, 1.4, -12.75), 0.24, light, { w: 0.3 });
+}
+
+/* ---------- the elements ---------- */
+
+export type Builder = (m: Mesh) => void;
+
+/** The single buildings, each one kind: the first rung of each ladder (lib/golden-quarters.ts). */
+export const TEMPLE_KINDS = {
+  names: ['Rotunda', 'Ziggurat', 'Ring', 'Pyramid', 'Lotus'],
+  build: [rotunda, ziggurat, ringGate, pyramid, lotus] as Builder[],
+};
+export const FACTORY_KINDS = {
+  names: ['Sawtooth', 'Foundry', 'Assembly', 'Workshops', 'Solar', 'Cement works', 'Kilns'],
+  build: [sawtooth, foundry, assembly, workshops, solar, cementWorks, kilns] as Builder[],
+};
+export const DOME_KINDS = {
+  names: ['Geodesic', 'Bubbles', 'Palm house', 'Lattice'],
+  build: [geodesicHouse, bubbles, palmHouse, latticeShell] as Builder[],
+};
+/** Five domes on a ring round a sixth: the domes' "group" rung. */
+export const domeGroup: Builder = domeGarden;
+export { garden, plaza, tree };

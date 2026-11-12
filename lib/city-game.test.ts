@@ -3,12 +3,14 @@ import { describe, expect, it } from 'vitest';
 import type { Vec3 } from './bigbang';
 import {
   GROUND as CITY_GROUND,
+  fade,
   flier,
   gauges,
   makeParticles,
   PHASES,
   pieceAt,
   pieceCamera,
+  pieceLook,
   SHIP_KEYS,
   SKY,
   STRATOSPHERE,
@@ -57,6 +59,7 @@ import {
   trackLength,
 } from './city-race';
 import { CONSTELLATIONS, skyGrain, starDir } from './city-sky';
+import { fade as journeyFade } from './journey';
 
 const finite = (v: number[]) => v.every(Number.isFinite);
 const ship = PHASES.findIndex((p) => p.id === 'ship');
@@ -353,6 +356,68 @@ describe('the game city: flying it', () => {
     t = run(['s'], 14, t + 3 / 60);
     expect(flier(t).c[1]).toBeLessThan(SKY);
     setFly(false, [], 0, 0);
+  });
+
+  it('shows the plan clearly from the stratosphere: lit through the player’s fade, large grains, districts in their hues', () => {
+    // 2026-11-12: "make city more visible from above".
+    setFly(false, [], 0, 50);
+    let t = run(['w', ' '], 2, 50);
+    t = run(['w'], 14, t);
+    const all = makeParticles(9000);
+    for (const f of [0, 1, 2, 3]) {
+      setFly(true, [], 1 / 60, t + f / 60);
+      for (const p of all) pieceAt(p, ship, t + f / 60);
+    }
+    t += 3 / 60;
+    const { eye } = pieceCamera(ship, t);
+    // The grains are drawn large up there, as the Golden plan's are from its height.
+    expect(pieceLook(ship).size).toBeGreaterThan(8);
+    let ground = 0;
+    let shown = 0;
+    let glow = 0;
+    const hues = new Set<string>();
+    const colours = Object.values(DISTRICTS).map((d) => {
+      const m = Math.max(...d.colour);
+      return { id: d.id, c: d.colour.map((v) => v / m) };
+    });
+    for (const p of all) {
+      const g = pieceAt(p, ship, t);
+      const l = g.rgb[0] + g.rgb[1] + g.rgb[2];
+      if (l <= 0 || g.pos[1] > GROUND + 140) continue;
+      ground++;
+      // What the player shows: through its fade, and inside its far plane (1600).
+      const d = Math.hypot(g.pos[0] - eye[0], g.pos[1] - eye[1], g.pos[2] - eye[2]);
+      const f = d < 1600 ? fade(g.pos, eye) : 0;
+      if (f > 0.5) shown++;
+      glow += l * f;
+      const m = Math.max(...g.rgb);
+      const near = colours.find((c) =>
+        c.c.every((v, i) => Math.abs(v - (g.rgb[i] as number) / m) < 0.02),
+      );
+      if (near && g.pos[1] > GROUND + 1) hues.add(near.id);
+    }
+    // Before (2026-11-12) the player's fade, gone by 260 from the eye, left it all black: the mean
+    // shown brightness of the plan's grains was 0.0002.
+    expect(ground).toBeGreaterThan(2500);
+    expect(shown / ground).toBeGreaterThan(0.9);
+    expect(glow / ground).toBeGreaterThan(0.3);
+    // Several districts, each read in its own hue.
+    expect(hues.size).toBeGreaterThanOrEqual(4);
+    t = run(['s'], 14, t);
+    for (const p of all.slice(0, 200)) pieceAt(p, ship, t);
+    expect(pieceLook(ship).size).toBe(1);
+    setFly(false, [], 0, 0);
+  });
+
+  it('keeps the journey’s fade for every eye under the towers’ sky (every piece but the Ship climbing)', () => {
+    const pos: Vec3 = [30, GROUND, -180];
+    for (let k = 0; k < PHASES.length; k++) {
+      for (const s of [0, 7, 19]) {
+        const { eye } = pieceCamera(k, s);
+        expect(eye[1]).toBeLessThan(SKY);
+        expect(fade(pos, eye)).toBe(journeyFade(pos, eye));
+      }
+    }
   });
 
   it('slows to a drift and looks down on L, and back on L again', () => {
