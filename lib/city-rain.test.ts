@@ -50,7 +50,7 @@ describe('the river (2026-11-12: "parts with a river")', () => {
     for (let I = -TILE_I; I < TILE_I; I++) {
       for (const J of [23, 24, 23 + 48, 24 - 48]) {
         const tw = blockTower(I, J);
-        expect(tw.shape).toBe('box');
+        expect(['box', 'business']).toContain(tw.shape);
         const zc = Math.round(tw.z / TILE_Z) * TILE_Z + RIVER_Z;
         const zr = tw.z < zc ? zc - RIVER_W - 2 : zc + RIVER_W + 2;
         expect(tw.z < zc ? tw.z + tw.hz : tw.z - tw.hz).toSatisfy((e: number) =>

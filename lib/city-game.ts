@@ -26,6 +26,7 @@ import {
   type Vec3,
 } from './bigbang';
 import type { Sign, Tower } from './city';
+import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
 import { textPixels } from './city-font';
 import {
   AVENUE,
@@ -117,8 +118,8 @@ export const DISTRICTS: Record<DistrictId, District> = {
     tempo: 2,
     name: 'The Heights',
     colour: C.cyan,
-    landmark: null,
-    signature: 'pulses racing down the tube, portals turning',
+    landmark: 'The Nova Core, among the business towers',
+    signature: 'pulses racing down the tube, portals turning, crowns breathing on the beat',
   },
   canals: {
     id: 'canals',
@@ -204,7 +205,7 @@ export const districtAt = (x: number, z: number) =>
 /** The landmarks, tile-local: each on the crossing at the middle of its district's side. */
 export type Landmark = {
   d: DistrictId;
-  kind: 'pagoda' | 'race' | 'shikhara' | 'mosque' | 'spire' | 'studio' | 'pyramid';
+  kind: 'pagoda' | 'race' | 'shikhara' | 'mosque' | 'spire' | 'studio' | 'pyramid' | 'nova';
   x: number;
   z: number;
   /** For a Studio building: its set and which. */
@@ -220,6 +221,7 @@ export const LANDMARKS: Landmark[] = [
   { d: 'chinatown', kind: 'race', ...LM(0, 1) },
   { d: 'indian', kind: 'shikhara', ...LM(1, -1) },
   { d: 'oriental', kind: 'mosque', ...LM(1, 1) },
+  { d: 'heights', kind: 'nova', ...LM(2, -1) },
   { d: 'golden', kind: 'spire', ...LM(3, -1) },
   { d: 'temples', kind: 'studio', set: 'temples', i: 1, ...LM(3, 1) },
   { d: 'industrial', kind: 'studio', set: 'factories', i: 1, ...LM(4, -1) },
@@ -244,7 +246,7 @@ function plazaOf(I: number, J: number): Landmark | null {
 
 /* ---------- the blocks ---------- */
 
-export type Shape = 'box' | 'pyramid' | 'park' | 'plaza' | 'studio';
+export type Shape = 'box' | 'pyramid' | 'park' | 'plaza' | 'studio' | 'business';
 /** A lit tunnel through a tower, along x (0) or z (2), at height y, half as wide and high as hw, hh. */
 export type Bore = { axis: 0 | 2; y: number; hw: number; hh: number };
 export type Block = Tower & {
@@ -296,6 +298,13 @@ export function blockTower(I: number, J: number): Block {
       break;
     case 'heights':
       h = 70 + 58 * hh ** 0.8;
+      // The business district (lib/city-business.ts): each tower its own design, taller toward
+      // the Nova Core on the plaza.
+      if (!ave) {
+        const b = businessSize(I, J, k);
+        shape = 'business';
+        [hx, hz, h, jx, jz] = [b.hx, b.hz, b.h, 0, 0];
+      }
       break;
     case 'indian':
       h = 14 + 16 * hh;
@@ -338,7 +347,7 @@ export function blockTower(I: number, J: number): Block {
   if (shape !== 'studio') studio = null;
   if (shape === 'box' && !ave && hash(k, 433) < 0.04) shape = 'park';
   // Beside the river (lib/city-rain.ts) only plain towers, standing back from its banks.
-  if (besideRiver(J) && shape !== 'box') {
+  if (besideRiver(J) && shape !== 'box' && shape !== 'business') {
     shape = 'box';
     studio = null;
     if (h <= 0) h = 14 + 10 * hh;
@@ -358,7 +367,7 @@ export function blockTower(I: number, J: number): Block {
     hz = BLOCK_Z / 2 - 4;
   }
   // Under the metro, lower, so the rail and its hanging carriages clear every roof.
-  if (shape === 'box') h = Math.max(8, Math.min(h, railCeiling(I, J)));
+  if (shape === 'box' || shape === 'business') h = Math.max(8, Math.min(h, railCeiling(I, J)));
   let bore: Bore | null = null;
   if (shape === 'box' && h >= 20 && hash(k, 440) < (d === 'heights' ? 0.3 : 0.12)) {
     const hhB = 2.8;
@@ -419,7 +428,7 @@ export function blocked(q: Vec3): boolean {
     if (dx >= ex || dz >= ez) return false;
     return q[1] < GROUND + MARGIN + tw.h * (1 - Math.max(dx / ex, dz / ez));
   }
-  if (tw.shape !== 'box') return false;
+  if (tw.shape !== 'box' && tw.shape !== 'business') return false;
   return (
     q[1] <= GROUND + tw.h + MARGIN && dx < tw.hx + MARGIN && dz < tw.hz + MARGIN && !inBore(tw, q)
   );
@@ -2053,6 +2062,18 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number): Item[] {
         });
       }
       if (tw.bore) out.push(boreItem(tw, eye));
+      if (tw.shape === 'business') {
+        const size = { ...businessSize(I, J, tw.k), hx: tw.hx, hz: tw.hz, h: tw.h };
+        out.push(towerItem(tw, size, eye, t, d));
+        for (const [B, axis] of [
+          [blockTower(I + 1, J), 0],
+          [blockTower(I, J + 1), 2],
+        ] as const) {
+          if (B.shape !== 'business') continue;
+          const it = skyBridgeItem(tw, B, axis, eye, t);
+          if (it) out.push(it);
+        }
+      }
       shopWords(tw, words);
       if (tw.d === 'heights' && tw.shape === 'box') {
         const B = blockTower(I + 1, J);
@@ -2080,6 +2101,10 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number): Item[] {
         [x, GROUND + 8, z + 20],
         [x - 20, GROUND + 8, z],
       ];
+      if (L.kind === 'nova') {
+        out.push(coreItem(x, z, eye, t, d, gid));
+        return;
+      }
       if (L.kind === 'studio' && L.set) {
         const set = L.set;
         const i = L.i ?? 0;

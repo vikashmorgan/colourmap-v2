@@ -834,6 +834,30 @@ none); a win lights the district from above. Esc, or straying 70 from the course
 - Frame cost (9,000 grains, bun, this machine, offline, the same run): 8.1 ms at the river in the
   rain against 7.9 ms without the river and rain at the same place; 7.7 against 6.9 in the Canals.
 
+### The business district (`lib/city-business.ts`)
+
+Queued from the user (2026-11-12): "a business district of twisting towers with docks". The
+Heights becomes it: every block off the avenue holds a tower of its own design (picked by the
+block's number), standing taller toward the plaza (about 60 at the district's edge to over 120
+beside the core; the metro still lowers the ones it passes over), each in a box that holds you
+and leaves streets of six or more. Drawn as grain meshes (`lib/city-mesh.ts`: a mesh built once in
+its own frame, drawn as light sites at a place and size, faces lit by how they face the eye):
+
+| Design | Rule |
+|--------|------|
+| **Twist** | Square floors 3.4 apart, turning a quarter turn from foot to roof and narrowing by a fifth; its four corners rising as helices, a rim every other floor, two windows a floor on each face; a mast and a light |
+| **Setback** | Three tiers (full width to half the height, 0.72 to 0.8, 0.46 to the roof), fins up their faces, a band of windows every floor, each setback's roof edge lit and the first one a garden |
+| **Tubes** | Four round shafts on a square, heights 1, 0.82, 0.64 and 0.9 of the tower's, a ring every 4, windows round them, a light on each |
+| **Diagrid** | A round tower netted by crossing helices (twelve round, a row every 7), its waist drawn in a little, a window in every diamond, a crown ring tilted over the roof |
+| **Blade** | A lens-shaped slab, its roof sloping up to a sharp prow, ribs up its faces, a mast and a light at the prow |
+
+Cyan and white edges over faint glass, warm and cool windows, gold roof edges; every crown light
+breathes on the Heights' beat (2). Sky bridges (glass tubes, lights running along the floor) join
+tall neighbours across the streets, along x and along z. On the plaza stands the district's
+landmark: the Studio's **Armillary** Nova Core at 1.7 times its size, breathing and turning as in
+the Studio, its conduits running out along the streets. From above, the Heights reads as before:
+every roof a patch of cyan, the core's plaza ringed.
+
 ### Still rough, and next
 
 - The Studio's buildings, domes, minarets and spires are light: you fly through them (only towers
