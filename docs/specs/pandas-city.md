@@ -16,6 +16,19 @@ Then, the same day:
 
 The look follows the circle city of *Veins* in Vegetal: roads branch like veins from a glowing centre, crossed by ring roads.
 
+## The look: the City of Dreams
+
+Asked for on 2026-11-12: "make the pandas thing as an actual city like the city video game in terms of aesthetics." The map is drawn like the City chapter's golden city from above (`lib/golden-city.ts`, `/geometry-field/city`):
+
+- The sky is the City player's **Dawn** gradient, `#080a24 → #141638 → #2a2240 → #3d2a3a`, scattered with grains of light; each lit city has its own grains, denser toward its heart.
+- Every line (roads, ring roads, octagons, blocks, fountains, the shelf) is **glowing dotted light**: a row of round dots over a soft halo, in the city's deep saturated gold (`[1, 0.5, 0.12]`, `#FF801F`) through ivory gold to warm white. Each city's accent stays in that family.
+- The plaza and each heart are a small **Nova-like lattice star** (an eight-pointed star drawn as one line, eight spokes, an inner octagon) with a white-hot core.
+- **Lit cards** are solid warm-white squares with a glow; begun cards are faintly filled; unmarked cards are dotted outlines. Lessons to come are faint dotted outlines.
+- **Slow motion**: a pulse of warm light runs out from the plaza along the region's roads, then from each heart along its avenue and lanes (7 s); the hearts, the plaza and the lit glows breathe (9 s, opacity only). Both stop when the viewer asks for reduced motion.
+- No SVG filters: the glow is a wide faint stroke under each dotted line, and radial gradients for the hearts, so it stays fast at phone width. Dot size and spacing are in screen pixels and stay the same at every zoom.
+- Labels stay crisp: SVG text with a dark rim and a soft shadow, at a constant size on screen.
+- The top-bar pills and the minimap use the game's quiet pill (dark glass, ivory hairline). The sheets stay paper for reading, framed like the game's menu: a thin dark rim and an ivory hairline around the paper, with the lifted shadow.
+
 ## The region
 
 - Eight lesson cities stand on one great ring, in course order **clockwise from the top**. The centre is a golden plaza, **DataFrame**, where all roads meet; a vein-like road runs from it to every city, and a ring road joins neighbours.
@@ -77,9 +90,10 @@ The map is a reusable, data-driven engine, with Pandas as its first source. Noth
   - `MapData = { id, title, centre: { name, blurb }, words, slots: (MapCity | null)[] }`, where `MapCity = { id, title, short, core: string[], districts: { id, name, buildings: { id, name, tag, weight, flag }[] }[], spots: { id, name }[], shelf: number }`. `words` names the kinds in the source's own language (*Lesson*, *part*, *card*, *Practice*, *Cheat sheet*, *To remember*). A `null` slot is a plot to come.
   - `layoutMap(data) → MapPlan`: every city, district, block, spot, gate and shelf placed. `SHAPES` is the shape vocabulary.
   - `cityVeins(city)`, `regionVeins(plan)`, `ringRoads(plan)`: the roads.
+  - Light: `circlePath`, `polygonPath`, `lattice(x, y, r)` (the heart's star) and `grains(seed, count, x, y, r)` (deterministic grains, denser toward the centre).
   - Panels: `Panel` (`city` 1, `district` / `spots` / `shelf` 2, `building` 3, `more` 4), `pushPanel`, `popPanel`, `panelChain`, `openPanel`, `panelTitle`, `breadcrumb`.
 - `components/city-map/CityMap.tsx`: the view. Props: `data`, `back: { href, label }`, `litOf(n, buildingId) → 'full' | 'half' | undefined`, and `renderPanel(panel, open)` for the sheets' content (the engine draws the sheet, breadcrumb, back and close).
-- `components/city-map/ui.tsx`: palette, paper sheet, glyphs, `Inline` text with `code` spans, for adapters' sheets.
+- `components/city-map/ui.tsx`: the palette (`DAWN`, the golds), the framed paper sheet, the game pill, glyphs, `Inline` text with `code` spans, for adapters' sheets.
 
 The Pandas adapter:
 

@@ -36,10 +36,13 @@ import {
   breadcrumb,
   CITY_R,
   type CityPlan,
+  circlePath,
   cityVeins,
   DISTRICT_RING,
+  grains,
   HEART_R,
   INNER_RING,
+  lattice,
   layoutMap,
   type MapData,
   openPanel,
@@ -48,32 +51,35 @@ import {
   panelDepth,
   panelTitle,
   polygon,
+  polygonPath,
   popPanel,
   RING_R,
   regionVeins,
   ringRoads,
-  star,
   type Vein,
 } from '@/lib/city-map';
 
 import {
+  DAWN,
   DIM,
   Glyph,
   type GlyphKind,
   GOLD,
   GOLD_LIT,
   GUIDE,
+  gamePill,
   INK,
   INK_SOFT,
   Inline,
   IVORY,
+  IVORY_GOLD,
   LINE,
   PAPER_2,
   paper,
   SERIF,
   SKY,
-  SKY_2,
   WARN,
+  WHITE_HOT,
 } from './ui';
 
 export type Lit = 'full' | 'half' | undefined;
@@ -91,7 +97,18 @@ type View = { x: number; y: number; k: number };
 type Popup = { n: number } | { plaza: true };
 
 const REGION_HALF = RING_R + CITY_R + 80;
-const VEIN_ALPHA = [0.55, 0.4, 0.22, 0.3];
+const VEIN_ALPHA = [0.85, 0.7, 0.45, 0.5];
+const f1 = (v: number) => v.toFixed(1);
+
+/* The slow motions: a pulse running out along the roads, and the hearts breathing (9 s, as in
+ * the City of Dreams). Opacity and dash offset only; none when the viewer asks for less motion. */
+const MOTION_CSS = `
+.cm-pulse { animation: cm-run 7s linear infinite; stroke-dashoffset: 5; opacity: 0.85; }
+@keyframes cm-run { from { stroke-dashoffset: 5; } to { stroke-dashoffset: -100; } }
+.cm-breathe { animation: cm-breathe 9s ease-in-out infinite; }
+@keyframes cm-breathe { 0%, 100% { opacity: 0.72; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .cm-pulse { display: none; } .cm-breathe { animation: none; } }
+`;
 
 /** The view that shows a square of half-size `half` around (x, y). */
 const frame = (x: number, y: number, half: number, w: number, h: number): View => ({
@@ -128,6 +145,12 @@ export default function CityMap({ data, back, litOf, renderPanel }: CityMapProps
       ring: ringRoads(plan),
       cities: plan.cities.map(cityVeins),
     }),
+    [plan],
+  );
+  // Grains of light: a sparse dust over the region, denser in each lit city toward its heart.
+  const skyGrains = useMemo(() => grains(7, 700, 0, 0, REGION_HALF * 1.15), []);
+  const cityGrains = useMemo(
+    () => plan.cities.map((c) => (c.lit ? grains(101 + c.n, 260, c.x, c.y, CITY_R + 20) : '')),
     [plan],
   );
   const words = data.words;
@@ -436,7 +459,16 @@ export default function CityMap({ data, back, litOf, renderPanel }: CityMapProps
   const px = (n: number) => n / k;
   const showParts = CITY_R * k > 90;
   const showBlocks = level !== 'core';
-  const label = (x: number, y: number, text: string, size: number, color = IVORY, weight = 400) => (
+  // Crisp text over the light: a dark rim and a soft shadow, at a constant size on screen.
+  const label = (
+    x: number,
+    y: number,
+    text: string,
+    size: number,
+    color = IVORY,
+    weight = 400,
+    rim = true,
+  ) => (
     <text
       x={x}
       y={y}
@@ -447,63 +479,120 @@ export default function CityMap({ data, back, litOf, renderPanel }: CityMapProps
       dominantBaseline="middle"
       style={{
         paintOrder: 'stroke',
-        stroke: SKY,
+        stroke: rim ? SKY : 'none',
         strokeWidth: px(3.5),
         strokeLinejoin: 'round',
         fontFamily: SERIF,
+        letterSpacing: '0.03em',
+        textShadow: rim ? '0 0 6px rgba(8, 10, 36, 0.9)' : 'none',
         pointerEvents: 'none',
       }}
     >
       {text}
     </text>
   );
-  const vein = (v: Vein, i: number, color: string) =>
+  /*
+   * Light, drawn the City of Dreams way: every line is a row of dots of light over a soft halo
+   * (no SVG filters, so it stays fast on a phone); dot size and spacing are in screen pixels.
+   */
+  const glow = (
+    key: string | number,
+    d: string,
+    color: string,
+    o: {
+      dot?: number;
+      gap?: number;
+      halo?: number;
+      alpha?: number;
+      solid?: boolean;
+      width?: number;
+    } = {},
+  ) => {
+    const dot = Math.max(px(o.dot ?? 2), o.width ?? 0);
+    const alpha = o.alpha ?? 0.9;
+    return (
+      <g key={key} pointerEvents="none">
+        <path
+          d={d}
+          fill="none"
+          stroke={color}
+          strokeOpacity={alpha * 0.16}
+          strokeWidth={dot + px(o.halo ?? 6)}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d={d}
+          fill="none"
+          stroke={color}
+          strokeOpacity={alpha}
+          strokeWidth={dot}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray={o.solid ? undefined : `0 ${f1(Math.max(px(o.gap ?? 5), dot * 1.6))}`}
+        />
+      </g>
+    );
+  };
+  /** A slow pulse of warm light running out along a road, from the centre. */
+  const pulse = (key: string | number, d: string, delay: number, width: number) => (
+    <path
+      key={key}
+      d={d}
+      pathLength={100}
+      className="cm-pulse"
+      style={{ animationDelay: `${delay}s` }}
+      fill="none"
+      stroke={WHITE_HOT}
+      strokeWidth={width}
+      strokeLinecap="round"
+      strokeDasharray="5 195"
+      pointerEvents="none"
+    />
+  );
+  const vein = (v: Vein, i: number, color: string, delay: number) =>
     v.gen === 3 && !showBlocks ? null : (
-      <path
-        key={i}
-        d={v.d}
-        fill="none"
-        stroke={color}
-        strokeOpacity={VEIN_ALPHA[v.gen]}
-        strokeWidth={Math.max(v.w, px(v.gen < 2 ? 1.5 : 0.8))}
-        strokeLinecap="round"
-        pointerEvents="none"
-      />
+      <g key={i}>
+        {glow(i, v.d, color, {
+          dot: v.gen < 2 ? 2.4 : 1.6,
+          gap: v.gen < 2 ? 5 : 6,
+          width: v.w * 0.45,
+          alpha: VEIN_ALPHA[v.gen],
+          halo: v.gen < 2 ? 8 : 4,
+        })}
+        {v.gen < 2 && pulse(`p${i}`, v.d, delay + v.gen * 1.6, Math.max(px(3), v.w * 0.6))}
+      </g>
     );
 
   const drawCity = (c: CityPlan) => {
     if (!c.city) {
       return (
         <g key={c.n} data-hit={`city:${c.n}`} style={{ cursor: 'pointer' }}>
-          <circle
-            cx={c.x}
-            cy={c.y}
-            r={CITY_R * 0.62}
-            fill="rgba(242,230,204,0.03)"
-            stroke={DIM}
-            strokeWidth={px(1)}
-            strokeDasharray={`${px(4)} ${px(6)}`}
-          />
-          <polygon
-            points={polygon(c.x, c.y, CITY_R * 0.3, 8, Math.PI / 8)}
-            fill="none"
-            stroke={DIM}
-            strokeWidth={px(1)}
-          />
-          <circle
-            cx={c.x}
-            cy={c.y}
-            r={HEART_R * 0.5}
-            fill="none"
-            stroke={DIM}
-            strokeWidth={px(1)}
-          />
+          <circle cx={c.x} cy={c.y} r={CITY_R * 0.62} fill="rgba(8,10,36,0.01)" />
+          {glow('o', circlePath(c.x, c.y, CITY_R * 0.62), IVORY, {
+            alpha: 0.28,
+            dot: 1.6,
+            gap: 7,
+            halo: 2,
+          })}
+          {glow('p', polygonPath(polygon(c.x, c.y, CITY_R * 0.3, 8, Math.PI / 8)), IVORY, {
+            alpha: 0.28,
+            dot: 1.6,
+            gap: 7,
+            halo: 2,
+          })}
+          {glow('h', lattice(c.x, c.y, HEART_R * 0.6), IVORY, {
+            alpha: 0.25,
+            solid: true,
+            dot: 0.8,
+            halo: 2,
+          })}
           {label(
             c.x,
             c.y + CITY_R * 0.62 + px(16),
             `${words.city} ${c.n} · to come`,
             13,
-            'rgba(242,230,204,0.6)',
+            'rgba(244,234,216,0.62)',
           )}
         </g>
       );
@@ -511,21 +600,29 @@ export default function CityMap({ data, back, litOf, renderPanel }: CityMapProps
     const accent = c.accent;
     return (
       <g key={c.n}>
-        {/* the ground, its construction circles and its ring roads */}
+        {/* the ground: grains of light, brighter toward the heart, and the golden construction circles */}
         <circle
           data-hit={`city:${c.n}`}
           cx={c.x}
           cy={c.y}
           r={CITY_R + 24}
-          fill="rgba(226,182,90,0.035)"
-          stroke={GUIDE}
-          strokeWidth={px(1)}
+          fill="rgba(255,128,31,0.025)"
+        />
+        <path
+          d={cityGrains[c.n - 1]}
+          fill="none"
+          stroke={accent}
+          strokeOpacity={0.5}
+          strokeWidth={px(1.6)}
+          strokeLinecap="round"
+          pointerEvents="none"
         />
         <circle
           cx={c.x}
           cy={c.y}
           r={HEART_R * PHI ** 4.5}
           fill="url(#cm-glow)"
+          className="cm-breathe"
           pointerEvents="none"
         />
         {[1, 2, 3].map((i) => (
@@ -540,178 +637,181 @@ export default function CityMap({ data, back, litOf, renderPanel }: CityMapProps
             pointerEvents="none"
           />
         ))}
-        {[DISTRICT_RING, CITY_R - 8].map((r) => (
-          <circle
-            key={r}
-            cx={c.x}
-            cy={c.y}
-            r={r}
-            fill="none"
-            stroke={accent}
-            strokeOpacity={0.16}
-            strokeWidth={Math.max(2, px(0.8))}
-            pointerEvents="none"
-          />
-        ))}
-        {/* the veins */}
-        {veins.cities[c.n - 1].map((v, i) => vein(v, i, accent))}
-        {/* districts: octagons, with their buildings */}
-        {c.districts.map((d) => (
-          <g key={d.index}>
-            <polygon
-              data-hit={`district:${c.n}:${d.index}`}
-              points={polygon(d.x, d.y, d.r, 8, Math.PI / 8)}
-              fill={SKY}
-              fillOpacity={0.55}
-              stroke={accent}
-              strokeWidth={px(1.4)}
-              style={{ cursor: 'pointer' }}
-            />
-            <polygon
-              points={polygon(d.x, d.y, d.r, 8, Math.PI / 8)}
-              fill={accent}
-              fillOpacity={0.08}
-              pointerEvents="none"
-            />
-            {showBlocks &&
-              d.blocks.map((b) => {
-                const lit = litOf?.(c.n, b.id);
-                const half = b.side / 2;
-                return (
-                  <g
-                    key={b.id}
-                    data-hit={`building:${c.n}:${d.index}:${b.id}`}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <rect
-                      x={b.x - b.cell / 2}
-                      y={b.y - b.cell / 2}
-                      width={b.cell}
-                      height={b.cell}
-                      fill="transparent"
-                    />
-                    {lit === 'full' && (
+        {/* ring roads */}
+        {[DISTRICT_RING, CITY_R - 8].map((r) =>
+          glow(`r${r}`, circlePath(c.x, c.y, r), accent, {
+            alpha: 0.45,
+            dot: 1.8,
+            gap: 6,
+            halo: 5,
+          }),
+        )}
+        {/* the veins, with the pulse running out from the heart */}
+        {veins.cities[c.n - 1].map((v, i) => vein(v, i, accent, 2.4 + c.n * 0.3))}
+        {/* districts: octagons of light, with their buildings */}
+        {c.districts.map((d) => {
+          const oct = polygon(d.x, d.y, d.r, 8, Math.PI / 8);
+          return (
+            <g key={d.index}>
+              <polygon
+                data-hit={`district:${c.n}:${d.index}`}
+                points={oct}
+                fill={SKY}
+                fillOpacity={0.62}
+                stroke="none"
+                style={{ cursor: 'pointer' }}
+              />
+              {glow('o', polygonPath(oct), accent, { dot: 2.4, gap: 5, halo: 8 })}
+              {showBlocks &&
+                d.blocks.map((b) => {
+                  const lit = litOf?.(c.n, b.id);
+                  const half = b.side / 2;
+                  const sq = `M${f1(b.x - half)} ${f1(b.y - half)}h${f1(b.side)}v${f1(b.side)}h${f1(-b.side)}Z`;
+                  return (
+                    <g
+                      key={b.id}
+                      data-hit={`building:${c.n}:${d.index}:${b.id}`}
+                      data-lit={lit ?? 'none'}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <rect
-                        x={b.x - half - 3}
-                        y={b.y - half - 3}
-                        width={b.side + 6}
-                        height={b.side + 6}
-                        fill={GOLD_LIT}
-                        opacity={0.28}
-                        rx={2}
+                        x={b.x - b.cell / 2}
+                        y={b.y - b.cell / 2}
+                        width={b.cell}
+                        height={b.cell}
+                        fill="transparent"
                       />
-                    )}
-                    <rect
-                      x={b.x - half}
-                      y={b.y - half}
-                      width={b.side}
-                      height={b.side}
-                      fill={
-                        lit === 'full'
-                          ? GOLD_LIT
-                          : lit === 'half'
-                            ? 'rgba(242,230,204,0.32)'
-                            : SKY_2
-                      }
-                      stroke={lit === 'full' ? GOLD_LIT : IVORY}
-                      strokeOpacity={lit === 'full' ? 1 : 0.75}
-                      strokeWidth={px(1.2)}
-                    />
-                    {b.flag && (
-                      <polygon
-                        points={polygon(
-                          b.x + b.cell / 2 - b.cell * 0.12,
-                          b.y - b.cell / 2 + b.cell * 0.14,
-                          b.cell * 0.11,
-                          3,
+                      {lit === 'full' && (
+                        <circle
+                          cx={b.x}
+                          cy={b.y}
+                          r={b.cell * 1.1}
+                          fill="url(#cm-lit)"
+                          className="cm-breathe"
+                        />
+                      )}
+                      <rect
+                        x={b.x - half}
+                        y={b.y - half}
+                        width={b.side}
+                        height={b.side}
+                        fill={
+                          lit === 'full'
+                            ? GOLD_LIT
+                            : lit === 'half'
+                              ? 'rgba(255,143,51,0.22)'
+                              : 'rgba(8,10,36,0.7)'
+                        }
+                        stroke="none"
+                      />
+                      {lit === 'full'
+                        ? glow('e', sq, WHITE_HOT, { solid: true, dot: 1.4, halo: 6 })
+                        : glow('e', sq, lit === 'half' ? GOLD_LIT : accent, {
+                            dot: 1.8,
+                            gap: 4,
+                            halo: 4,
+                            alpha: 0.95,
+                          })}
+                      {b.flag && (
+                        <polygon
+                          points={polygon(
+                            b.x + b.cell / 2 - b.cell * 0.12,
+                            b.y - b.cell / 2 + b.cell * 0.14,
+                            b.cell * 0.11,
+                            3,
+                          )}
+                          fill={WARN}
+                          pointerEvents="none"
+                        />
+                      )}
+                      {b.tag &&
+                        b.cell * k >= 30 &&
+                        label(
+                          b.x,
+                          b.y,
+                          b.tag,
+                          Math.min(12, b.side * k * 0.4),
+                          lit === 'full' ? '#3a1d08' : IVORY,
+                          600,
+                          lit !== 'full',
                         )}
-                        fill={WARN}
-                        pointerEvents="none"
-                      />
-                    )}
-                    {b.tag &&
-                      b.cell * k >= 30 &&
-                      label(
-                        b.x,
-                        b.y,
-                        b.tag,
-                        Math.min(12, b.side * k * 0.4),
-                        lit === 'full' ? INK : IVORY,
-                        600,
-                      )}
-                    {b.cell * k >= 110 &&
-                      label(
-                        b.x,
-                        b.y + b.cell / 2 - px(7),
-                        clip(b.name, Math.floor((b.cell * k) / 6.2)),
-                        11,
-                      )}
-                  </g>
-                );
-              })}
-            {showParts &&
-              (showBlocks
-                ? label(d.x, d.y - d.r - px(10), d.name, 12, GOLD, 600)
-                : label(d.x, d.y, d.name.split(' ').slice(0, 2).join(' '), 11, GOLD, 600))}
-          </g>
-        ))}
-        {/* the heart, with the star of the core lines */}
+                      {b.cell * k >= 110 &&
+                        label(
+                          b.x,
+                          b.y + b.cell / 2 - px(7),
+                          clip(b.name, Math.floor((b.cell * k) / 6.2)),
+                          11,
+                        )}
+                    </g>
+                  );
+                })}
+              {showParts &&
+                (showBlocks
+                  ? label(d.x, d.y - d.r - px(10), d.name, 12, GOLD_LIT, 600)
+                  : label(d.x, d.y, d.name.split(' ').slice(0, 2).join(' '), 11, GOLD_LIT, 600))}
+            </g>
+          );
+        })}
+        {/* the heart: a small Nova-like lattice star, white-hot at its core, breathing */}
         <g data-hit={`heart:${c.n}`} style={{ cursor: 'pointer' }}>
+          <circle cx={c.x} cy={c.y} r={HEART_R} fill={SKY} fillOpacity={0.7} />
+          {glow('ring', circlePath(c.x, c.y, HEART_R), accent, { dot: 2, gap: 4, halo: 6 })}
+          {glow('lat', lattice(c.x, c.y, HEART_R * 0.82), GOLD_LIT, {
+            solid: true,
+            dot: 1.1,
+            halo: 5,
+          })}
           <circle
             cx={c.x}
             cy={c.y}
-            r={HEART_R}
-            fill={SKY_2}
-            stroke={accent}
-            strokeWidth={px(1.6)}
+            r={HEART_R / PHI ** 2}
+            fill="url(#cm-core)"
+            className="cm-breathe"
           />
-          <polygon points={star(c.x, c.y, HEART_R * 0.72)} fill={accent} fillOpacity={0.9} />
         </g>
-        {/* the spots in the north */}
+        {/* the spots in the north: fountains of light */}
         {c.spots.map((s) => (
           <g key={s.id} data-hit={`spot:${c.n}:${s.id}`} style={{ cursor: 'pointer' }}>
-            <polygon
-              points={polygon(s.x, s.y, s.r, 6, 0)}
-              fill={SKY_2}
-              stroke={IVORY}
-              strokeWidth={px(1.2)}
-            />
-            <circle cx={s.x} cy={s.y} r={s.r / PHI ** 2} fill={IVORY} fillOpacity={0.75} />
+            <polygon points={polygon(s.x, s.y, s.r, 6, 0)} fill={SKY} fillOpacity={0.7} />
+            {glow('h', polygonPath(polygon(s.x, s.y, s.r, 6, 0)), IVORY, {
+              dot: 1.8,
+              gap: 4,
+              halo: 5,
+            })}
+            <circle cx={s.x} cy={s.y} r={s.r / PHI} fill="url(#cm-core)" className="cm-breathe" />
           </g>
         ))}
         {showBlocks &&
           c.spots.length > 0 &&
           label(c.x, c.spots[0].y - c.spots[0].r - px(10), words.spots, 12, IVORY, 600)}
-        {/* the shelf on the east edge */}
+        {/* the shelf on the east edge: a long frame of light, one row of dots per entry */}
         <g data-hit={`shelf:${c.n}`} style={{ cursor: 'pointer' }}>
           <rect
             x={c.shelf.x}
             y={c.shelf.y}
             width={c.shelf.w}
             height={c.shelf.h}
-            fill={SKY_2}
-            stroke={IVORY}
-            strokeWidth={px(1.2)}
+            fill={SKY}
+            fillOpacity={0.7}
           />
-          {Array.from({ length: c.shelf.entries }, (_, i) => {
-            const y = c.shelf.y + ((i + 0.5) * c.shelf.h) / c.shelf.entries;
-            return (
-              <line
-                key={i}
-                x1={c.shelf.x + 5}
-                x2={c.shelf.x + c.shelf.w - 5}
-                y1={y}
-                y2={y}
-                stroke={IVORY}
-                strokeOpacity={0.5}
-                strokeWidth={px(1)}
-              />
-            );
+          {glow('f', `M${c.shelf.x} ${c.shelf.y}h${c.shelf.w}v${c.shelf.h}h${-c.shelf.w}Z`, IVORY, {
+            dot: 1.8,
+            gap: 4,
+            halo: 5,
           })}
+          {glow(
+            'e',
+            Array.from({ length: c.shelf.entries }, (_, i) => {
+              const y = c.shelf.y + ((i + 0.5) * c.shelf.h) / c.shelf.entries;
+              return `M${f1(c.shelf.x + 6)} ${f1(y)}H${f1(c.shelf.x + c.shelf.w - 6)}`;
+            }).join(''),
+            IVORY_GOLD,
+            { dot: 1.4, gap: 4, halo: 2, alpha: 0.7 },
+          )}
         </g>
         {showBlocks &&
           label(c.shelf.x + c.shelf.w / 2, c.shelf.y - px(12), words.shelf, 12, IVORY, 600)}
-        {/* the gate in the south */}
+        {/* the gate in the south: a solid arch of light */}
         <g data-hit={`gate:${c.n}`} style={{ cursor: 'pointer' }}>
           <rect
             x={c.gate.x - c.gate.w / 2}
@@ -720,12 +820,12 @@ export default function CityMap({ data, back, litOf, renderPanel }: CityMapProps
             height={28}
             fill="transparent"
           />
-          <path
-            d={`M${c.gate.x - c.gate.w / 2} ${c.gate.y + 12} V${c.gate.y - 10} H${c.gate.x + c.gate.w / 2} V${c.gate.y + 12}`}
-            fill="none"
-            stroke={accent}
-            strokeWidth={Math.max(px(2), 4)}
-          />
+          {glow(
+            'g',
+            `M${c.gate.x - c.gate.w / 2} ${c.gate.y + 12} V${c.gate.y - 10} H${c.gate.x + c.gate.w / 2} V${c.gate.y + 12}`,
+            GOLD_LIT,
+            { solid: true, dot: 2, width: 3, halo: 8 },
+          )}
         </g>
         {label(
           c.x,
@@ -748,16 +848,7 @@ export default function CityMap({ data, back, litOf, renderPanel }: CityMapProps
   const popCity = popN ? plan.cities[popN - 1] : null;
   const popAt = popCity ? toScreen(popCity.x, popCity.y) : toScreen(0, 0);
 
-  const chip: CSSProperties = {
-    font: `600 13px ${SERIF}`,
-    color: IVORY,
-    background: 'rgba(20,27,46,0.72)',
-    border: '1px solid rgba(226,182,90,0.35)',
-    borderRadius: 999,
-    padding: '8px 12px',
-    cursor: 'pointer',
-    minHeight: 36,
-  };
+  const chip: CSSProperties = gamePill;
   const legendRows: [GlyphKind, string][] = [
     ['circle', `The plaza (${data.centre.name}) at the centre, and each city’s heart`],
     ['star', `In the heart: ${words.core.toLowerCase()}`],
@@ -777,13 +868,15 @@ export default function CityMap({ data, back, litOf, renderPanel }: CityMapProps
         position: 'fixed',
         inset: 0,
         overflow: 'hidden',
-        background: `radial-gradient(circle at 50% 45%, ${SKY_2}, ${SKY} 70%)`,
+        // The City of Dreams' Dawn: deep blue-violet above, warm low down.
+        background: `linear-gradient(180deg, ${DAWN.join(', ')})`,
         fontFamily: SERIF,
         color: IVORY,
         touchAction: 'none',
         userSelect: 'none',
       }}
     >
+      <style>{MOTION_CSS}</style>
       <svg
         ref={svgRef}
         width={w}
@@ -799,11 +892,31 @@ export default function CityMap({ data, back, litOf, renderPanel }: CityMapProps
       >
         <defs>
           <radialGradient id="cm-glow">
-            <stop offset="0" stopColor={GOLD} stopOpacity={0.32} />
+            <stop offset="0" stopColor={GOLD} stopOpacity={0.3} />
+            <stop offset="0.5" stopColor={GOLD} stopOpacity={0.08} />
+            <stop offset="1" stopColor={GOLD} stopOpacity={0} />
+          </radialGradient>
+          <radialGradient id="cm-core">
+            <stop offset="0" stopColor={WHITE_HOT} stopOpacity={1} />
+            <stop offset="0.4" stopColor={GOLD_LIT} stopOpacity={0.8} />
+            <stop offset="1" stopColor={GOLD} stopOpacity={0} />
+          </radialGradient>
+          <radialGradient id="cm-lit">
+            <stop offset="0" stopColor={GOLD_LIT} stopOpacity={0.7} />
             <stop offset="1" stopColor={GOLD} stopOpacity={0} />
           </radialGradient>
         </defs>
         <g transform={`translate(${w / 2} ${h / 2}) scale(${k}) translate(${-view.x} ${-view.y})`}>
+          {/* the sky's grains of light */}
+          <path
+            d={skyGrains}
+            fill="none"
+            stroke={IVORY}
+            strokeOpacity={0.32}
+            strokeWidth={px(1.4)}
+            strokeLinecap="round"
+            pointerEvents="none"
+          />
           {/* construction: golden guides around the great ring */}
           {[RING_R / PHI, RING_R * PHI ** 0.5].map((r) => (
             <circle
@@ -824,63 +937,48 @@ export default function CityMap({ data, back, litOf, renderPanel }: CityMapProps
             strokeWidth={px(1)}
             pointerEvents="none"
           />
-          {/* roads: the ring road and the veins from the plaza */}
-          {veins.ring.map((d) => (
-            <path
-              key={d}
-              d={d}
-              fill="none"
-              stroke={GOLD}
-              strokeOpacity={0.3}
-              strokeWidth={Math.max(px(2), 8)}
-              strokeLinecap="round"
-              pointerEvents="none"
-            />
-          ))}
-          <circle
-            cx={0}
-            cy={0}
-            r={INNER_RING}
-            fill="none"
-            stroke={GOLD}
-            strokeOpacity={0.12}
-            strokeWidth={Math.max(px(1), 3)}
-            pointerEvents="none"
-          />
-          {veins.region.map((v, i) => vein(v, i, GOLD))}
+          {/* roads: the ring road, the inner ring and the veins from the plaza, a pulse running out */}
+          {veins.ring.map((d) =>
+            glow(d, d, IVORY_GOLD, { dot: 2.6, gap: 5, width: 4, halo: 8, alpha: 0.7 }),
+          )}
+          {glow('inner', circlePath(0, 0, INNER_RING), IVORY_GOLD, {
+            dot: 1.8,
+            gap: 6,
+            halo: 4,
+            alpha: 0.4,
+          })}
+          {veins.region.map((v, i) => vein(v, i, IVORY_GOLD, 0))}
           <circle
             cx={0}
             cy={0}
             r={plan.plaza.r * PHI ** 2}
             fill="url(#cm-glow)"
+            className="cm-breathe"
             pointerEvents="none"
           />
           <g data-hit="plaza" style={{ cursor: 'pointer' }}>
+            <circle cx={0} cy={0} r={plan.plaza.r} fill={SKY} fillOpacity={0.5} />
+            {glow('o', circlePath(0, 0, plan.plaza.r), GOLD_LIT, { dot: 2.6, gap: 5, halo: 10 })}
+            {glow('i', circlePath(0, 0, plan.plaza.r / PHI), GOLD, {
+              dot: 1.8,
+              gap: 4,
+              halo: 4,
+              alpha: 0.7,
+            })}
+            {glow('l', lattice(0, 0, plan.plaza.r / PHI), GOLD_LIT, {
+              solid: true,
+              dot: 1.3,
+              halo: 6,
+            })}
             <circle
               cx={0}
               cy={0}
-              r={plan.plaza.r}
-              fill={GOLD}
-              fillOpacity={0.16}
-              stroke={GOLD}
-              strokeWidth={px(1.6)}
-            />
-            <circle
-              cx={0}
-              cy={0}
-              r={plan.plaza.r / PHI}
-              fill="none"
-              stroke={GOLD}
-              strokeOpacity={0.6}
-              strokeWidth={px(1)}
-            />
-            <polygon
-              points={polygon(0, 0, plan.plaza.r / PHI ** 2, 8, Math.PI / 8)}
-              fill={GOLD}
-              fillOpacity={0.55}
+              r={plan.plaza.r / PHI ** 2.5}
+              fill="url(#cm-core)"
+              className="cm-breathe"
             />
           </g>
-          {label(0, plan.plaza.r + px(16), data.centre.name, 14, GOLD, 600)}
+          {label(0, plan.plaza.r + px(16), data.centre.name, 14, GOLD_LIT, 600)}
           {plan.cities.map(drawCity)}
         </g>
       </svg>
@@ -932,8 +1030,9 @@ export default function CityMap({ data, back, litOf, renderPanel }: CityMapProps
               onClick={() => goLevel(lv)}
               style={{
                 ...chip,
-                background: level === lv ? GOLD : chip.background,
-                color: level === lv ? INK : IVORY,
+                background: level === lv ? 'rgba(244, 234, 216, 0.22)' : chip.background,
+                color: IVORY,
+                border: `1px solid rgba(244, 234, 216, ${level === lv ? 0.45 : 0.2})`,
               }}
             >
               {lv === 'core' ? 'Core' : lv === 'parts' ? 'Parts' : 'Detail'}
@@ -955,7 +1054,7 @@ export default function CityMap({ data, back, litOf, renderPanel }: CityMapProps
             flexBasis: '100%',
             margin: 0,
             font: `600 13px ${SERIF}`,
-            color: GOLD,
+            color: GOLD_LIT,
             letterSpacing: '.04em',
             textShadow: `0 1px 3px ${SKY}`,
           }}
@@ -1118,9 +1217,9 @@ export default function CityMap({ data, back, litOf, renderPanel }: CityMapProps
           position: 'absolute',
           left: 16,
           bottom: 16,
-          background: 'rgba(20,27,46,0.72)',
+          background: 'rgba(20, 14, 24, 0.55)',
           borderRadius: '50%',
-          border: '1px solid rgba(226,182,90,0.35)',
+          border: '1px solid rgba(244, 234, 216, 0.2)',
         }}
       >
         <circle

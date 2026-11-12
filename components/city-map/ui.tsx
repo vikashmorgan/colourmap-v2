@@ -8,33 +8,60 @@ import type { CSSProperties, ReactNode } from 'react';
 
 import { polygon, star } from '@/lib/city-map';
 
-/* golden and ivory on a deep twilight; the sheets are paper, never blue */
-export const SKY = '#141B2E';
-export const SKY_2 = '#1F2844';
-export const GOLD = '#E2B65A';
-export const GOLD_LIT = '#F6D98E';
-export const IVORY = '#F2E6CC';
-export const DIM = 'rgba(242, 230, 204, 0.28)';
-export const GUIDE = 'rgba(226, 182, 90, 0.13)';
+/*
+ * The City of Dreams' light (lib/golden-city.ts): deep saturated gold [1, 0.5, 0.12] to ivory and
+ * warm white, on its Dawn twilight. The sheets stay paper, never blue.
+ */
+export const DAWN = ['#080a24', '#141638', '#2a2240', '#3d2a3a'];
+export const SKY = '#080a24';
+export const SKY_2 = '#141638';
+export const GOLD = '#FF801F';
+export const IVORY_GOLD = '#FF8F33';
+export const GOLD_LIT = '#FFC780';
+export const WHITE_HOT = '#FFE9C7';
+export const IVORY = '#F4EAD8';
+export const DIM = 'rgba(244, 234, 216, 0.3)';
+export const GUIDE = 'rgba(255, 128, 31, 0.1)';
 export const PAPER = '#F5ECDC';
 export const PAPER_2 = '#EFE2CB';
 export const INK = '#5C3018';
 export const INK_SOFT = '#7A5A3A';
 export const LINE = '#D8C3A0';
-export const WARN = '#E59A6A';
+export const WARN = '#FF6A3D';
 export const SERIF = 'Georgia, "Times New Roman", serif';
 export const MONO = 'ui-monospace, "Cascadia Code", Consolas, monospace';
 
-/** A paper sheet; the higher the depth, the more lifted its shadow. */
+/**
+ * A paper sheet in the game's quiet frame (the City player's menu: dark glass, an ivory
+ * hairline): a thin dark rim and hairline around the paper; the higher the depth, the more lifted
+ * its shadow.
+ */
 export function paper(depth: number): CSSProperties {
   return {
     background: PAPER,
     color: INK,
     border: `1px solid ${LINE}`,
     borderRadius: 12,
-    boxShadow: `0 ${2 + depth * 4}px ${8 + depth * 10}px rgba(30, 18, 8, ${0.18 + depth * 0.05}), 0 1px 2px rgba(30, 18, 8, 0.2)`,
+    boxShadow: [
+      '0 0 0 4px rgba(20, 14, 24, 0.88)',
+      '0 0 0 5px rgba(244, 234, 216, 0.16)',
+      `0 ${6 + depth * 6}px ${16 + depth * 14}px rgba(0, 0, 0, ${0.3 + depth * 0.06})`,
+    ].join(', '),
   };
 }
+
+/** The game's quiet pill: dark glass with an ivory hairline. */
+export const gamePill: CSSProperties = {
+  font: `600 13px ${'Georgia, "Times New Roman", serif'}`,
+  color: '#F4EAD8',
+  background: 'rgba(20, 14, 24, 0.55)',
+  border: '1px solid rgba(244, 234, 216, 0.2)',
+  borderRadius: 999,
+  padding: '8px 12px',
+  letterSpacing: '0.04em',
+  cursor: 'pointer',
+  minHeight: 36,
+};
 
 /** A row in a sheet that opens something deeper. */
 export const rowButton: CSSProperties = {

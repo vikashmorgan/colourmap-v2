@@ -4,13 +4,17 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  ACCENTS,
   breadcrumb,
   CITY_R,
+  circlePath,
   cityAngle,
   cityVeins,
   DISTRICT_RING,
+  grains,
   HEART_R,
   INNER_RING,
+  lattice,
   layoutMap,
   type MapData,
   OUTER_REACH,
@@ -21,6 +25,7 @@ import {
   panelDepth,
   panelTitle,
   polygon,
+  polygonPath,
   popPanel,
   pushPanel,
   RING_R,
@@ -209,6 +214,39 @@ describe('layoutMap: the Pandas region', () => {
     expect(cityAngle(1, 8)).toBeCloseTo(-Math.PI / 2, 9);
     expect(polygon(0, 0, 10, 8).split(' ')).toHaveLength(8);
     expect(star(0, 0, 10).split(' ')).toHaveLength(10);
+  });
+});
+
+describe('light: paths, the lattice and the grains', () => {
+  it('turns circles and polygons into closed paths', () => {
+    expect(circlePath(0, 0, 10)).toBe('M-10.0 0.0a10.0 10.0 0 1 0 20.0 0a10.0 10.0 0 1 0 -20.0 0Z');
+    expect(polygonPath('0,0 1,0 1,1')).toBe('M0,0 L1,0 L1,1Z');
+  });
+
+  it('draws the heart as an eight-pointed lattice: the star line, eight spokes and an inner octagon', () => {
+    const d = lattice(0, 0, 10);
+    expect(d.match(/M/g)).toHaveLength(1 + 8 + 1);
+    expect(d.startsWith('M0.0 -10.0')).toBe(true);
+  });
+
+  it('scatters the same grains for the same seed, denser toward the centre, inside the radius', () => {
+    const d = grains(3, 400, 100, 100, 50);
+    expect(grains(3, 400, 100, 100, 50)).toBe(d);
+    expect(grains(4, 400, 100, 100, 50)).not.toBe(d);
+    const pts = [...d.matchAll(/M(-?[\d.]+) (-?[\d.]+)h0/g)].map((m) =>
+      Math.hypot(Number(m[1]) - 100, Number(m[2]) - 100),
+    );
+    expect(pts).toHaveLength(400);
+    expect(Math.max(...pts)).toBeLessThanOrEqual(50.1);
+    expect(pts.filter((r) => r < 25).length).toBeGreaterThan(pts.filter((r) => r >= 25).length);
+  });
+
+  it('keeps every city accent in the gold family', () => {
+    for (const a of ACCENTS) {
+      const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(a.slice(i, i + 2), 16));
+      expect(r).toBeGreaterThan(g);
+      expect(g).toBeGreaterThan(b);
+    }
   });
 });
 

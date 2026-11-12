@@ -95,16 +95,19 @@ export const SHAPES = {
 } as const;
 export type Kind = keyof typeof SHAPES;
 
-/** Each city's one character: its accent. The bones stay the same. */
+/**
+ * Each city's one character: its accent, all in the City of Dreams' family (deep saturated gold
+ * [1, 0.5, 0.12] through ivory gold to warm white). The bones stay the same.
+ */
 export const ACCENTS = [
-  '#E2B65A',
-  '#E59A6A',
-  '#D9A3A0',
-  '#C9B26E',
-  '#E8C987',
-  '#C8956A',
-  '#B9A46A',
-  '#E0A873',
+  '#FF8F33',
+  '#FFA05A',
+  '#FFB27A',
+  '#F5A04A',
+  '#FFC780',
+  '#F28A3C',
+  '#EBA65E',
+  '#FFA54D',
 ];
 
 export type Block = MapBuilding & {
@@ -375,6 +378,54 @@ export function star(x: number, y: number, r: number): string {
     const rr = i % 2 ? r / PHI ** 2 : r;
     return `${f1(x + rr * Math.cos(a))},${f1(y + rr * Math.sin(a))}`;
   }).join(' ');
+}
+
+/* ── light: the shapes as paths, grains and the heart's lattice ──────────── */
+
+/** A circle as a path. */
+export const circlePath = (x: number, y: number, r: number) =>
+  `M${f1(x - r)} ${f1(y)}a${f1(r)} ${f1(r)} 0 1 0 ${f1(2 * r)} 0a${f1(r)} ${f1(r)} 0 1 0 ${f1(-2 * r)} 0Z`;
+
+/** A polygon's points (from `polygon`) as a closed path. */
+export const polygonPath = (points: string) => `M${points.split(' ').join(' L')}Z`;
+
+/**
+ * The heart as a small Nova-like lattice: an eight-pointed star drawn as one line through every
+ * third point, the eight spokes, and an inner octagon.
+ */
+export function lattice(x: number, y: number, r: number): string {
+  const at = (i: number, rr: number) => {
+    const a = -Math.PI / 2 + (i * Math.PI) / 4;
+    return `${f1(x + rr * Math.cos(a))} ${f1(y + rr * Math.sin(a))}`;
+  };
+  const starLine = `M${at(0, r)}${Array.from({ length: 8 }, (_, i) => ` L${at(((i + 1) * 3) % 8, r)}`).join('')}`;
+  const spokes = Array.from({ length: 8 }, (_, i) => `M${f1(x)} ${f1(y)} L${at(i, r)}`).join(' ');
+  const inner = `M${at(0, r / PHI ** 2)}${Array.from({ length: 8 }, (_, i) => ` L${at(i + 1, r / PHI ** 2)}`).join('')}`;
+  return `${starLine} ${spokes} ${inner}`;
+}
+
+/** A small deterministic random in [0, 1). */
+function seeded(seed: number): () => number {
+  let s = Math.floor(Math.abs(seed)) % 2147483646 || 1;
+  return () => {
+    s = (s * 16807) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+/**
+ * Grains of light around (x, y): `count` points within radius r, denser toward the centre
+ * (hope as a gradient, as in the City of Dreams), drawn as one path of dots. Same seed, same grains.
+ */
+export function grains(seed: number, count: number, x: number, y: number, r: number): string {
+  const rand = seeded(seed);
+  let d = '';
+  for (let i = 0; i < count; i++) {
+    const a = rand() * Math.PI * 2;
+    const rr = r * rand() ** 1.6;
+    d += `M${f1(x + rr * Math.cos(a))} ${f1(y + rr * Math.sin(a))}h0`;
+  }
+  return d;
 }
 
 /* ── panels: sheets on top, one depth per level ───────────────────────────── */
