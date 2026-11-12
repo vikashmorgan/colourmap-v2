@@ -34,9 +34,11 @@ import TripPlayer, {
   claimLabel,
   clampView,
   easeView,
+  HINT_KEY,
   isHome,
   stickKeys,
   swipeStep,
+  swipeVariant,
   type Trip,
   VIEW_HOME,
   viewCamera,
@@ -93,6 +95,15 @@ function makeTrip(gameSet = vi.fn()): Trip {
 }
 
 let seenEye: number[] = [];
+
+// To the game from the studio: the Design menu's Game pill (the Studio's arrows never go there),
+// the menu shut again with Esc.
+const toGame = () => {
+  fireEvent.click(screen.getByRole('button', { name: 'Design' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Game' }));
+  fireEvent.keyDown(window, { key: 'Escape' });
+  fireEvent.keyUp(window, { key: 'Escape' });
+};
 
 // The frame loop, run by hand: each call to `tick` runs one frame.
 let frames: FrameRequestCallback[] = [];
@@ -177,6 +188,141 @@ describe('swipeStep', () => {
     expect(swipeStep(-30, 0, 200)).toBe(0);
     expect(swipeStep(-120, 0, 1200)).toBe(0);
     expect(swipeStep(-80, 100, 200)).toBe(0);
+  });
+});
+
+describe('swipeVariant', () => {
+  it('goes to the next variant with a quick flick up, back with one down', () => {
+    expect(swipeVariant(10, -120, 200)).toBe(1);
+    expect(swipeVariant(-10, 120, 200)).toBe(-1);
+  });
+  it('ignores short, slow or mostly sideways moves', () => {
+    expect(swipeVariant(0, -30, 200)).toBe(0);
+    expect(swipeVariant(0, -120, 1200)).toBe(0);
+    expect(swipeVariant(100, -80, 200)).toBe(0);
+  });
+});
+
+// 2026-11-12: "make it clear how can i see the variants (like click up down for variants, left
+// right for other category). make that clear, and a design pill that opens colour presets".
+describe('TripPlayer Studio navigation', () => {
+  const withVariants = (set = vi.fn()) => {
+    const trip = makeTrip();
+    if (trip.pieces?.variants) trip.pieces.variants.set = set;
+    return trip;
+  };
+
+  it('cycles the variants with ↑ ↓ and shows the variant beside the piece name', () => {
+    const set = vi.fn();
+    render(<TripPlayer trip={withVariants(set)} page="city" />);
+    expect(screen.getByText('· Grid')).toBeDefined();
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(screen.getByText('· Star')).toBeDefined();
+    expect(set).toHaveBeenLastCalledWith(1, 0);
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(screen.getByText('· Grid')).toBeDefined();
+    fireEvent.keyDown(window, { key: 'ArrowUp' });
+    expect(screen.getByText('· Star')).toBeDefined();
+    // On screen too: ˄ and ˅ by the variant's name.
+    fireEvent.click(screen.getByRole('button', { name: 'Next variant (↓)' }));
+    expect(screen.getByText('· Grid')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Previous variant (↑)' }));
+    expect(screen.getByText('· Star')).toBeDefined();
+  });
+
+  it('goes through the studio pieces with ← → and the ‹ › buttons, never into the game', () => {
+    render(<TripPlayer trip={makeTrip()} page="city" />);
+    fireEvent.keyDown(window, { key: 'ArrowLeft' });
+    expect(screen.getByText('2 / 3')).toBeDefined();
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    expect(screen.getByText('1 / 3')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Next piece (→)' }));
+    expect(screen.getByText('2 / 3')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Next piece (→)' }));
+    expect(screen.getByText('1 / 3')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Previous piece (←)' }));
+    expect(screen.getByText('2 / 3')).toBeDefined();
+    // A piece with no variants: no variant name, no ˄ ˅, and ↑ ↓ do nothing.
+    expect(screen.queryByRole('button', { name: 'Next variant (↓)' })).toBeNull();
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(screen.getByText('2 / 3')).toBeDefined();
+  });
+
+  it('leaves the arrow keys to the game while it is played, and shows no studio arrows there', () => {
+    const gameSet = vi.fn();
+    render(<TripPlayer trip={makeTrip(gameSet)} page="city" />);
+    toGame();
+    expect(screen.getByText('3 / 3')).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Next piece (→)' })).toBeNull();
+    fireEvent.keyDown(window, { key: 'ArrowUp' });
+    fireEvent.keyDown(window, { key: 'ArrowLeft' });
+    expect(screen.getByText('3 / 3')).toBeDefined();
+    runFrames(1);
+    const keys = gameSet.mock.calls.at(-1)?.[1] as string[];
+    expect(keys).toContain('arrowup');
+    expect(keys).toContain('arrowleft');
+  });
+
+  it('flicks up and down on a phone for the variants', () => {
+    setTouch(true);
+    const set = vi.fn();
+    const { container } = render(<TripPlayer trip={withVariants(set)} page="city" />);
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    fireEvent.pointerDown(canvas, {
+      pointerType: 'touch',
+      pointerId: 7,
+      clientX: 200,
+      clientY: 300,
+    });
+    fireEvent.pointerUp(canvas, { pointerType: 'touch', pointerId: 7, clientX: 205, clientY: 150 });
+    expect(screen.getByText('· Star')).toBeDefined();
+    expect(screen.getByText('1 / 3')).toBeDefined();
+  });
+
+  it('shows the hint once per world, then fades it', () => {
+    vi.useFakeTimers();
+    try {
+      const { unmount } = render(<TripPlayer trip={makeTrip()} page="city" />);
+      expect(screen.getByRole('note').textContent).toBe('↑↓ variants · ←→ pieces');
+      expect(window.localStorage.getItem(`${HINT_KEY}:city`)).toBe('1');
+      act(() => {
+        vi.advanceTimersByTime(4600);
+      });
+      expect(screen.getByRole('note').className).toContain('bb-hint-out');
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(screen.queryByRole('note')).toBeNull();
+      unmount();
+      render(<TripPlayer trip={makeTrip()} page="city" />);
+      expect(screen.queryByRole('note')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('opens colour presets from a Palette pill, only on pieces that have them', () => {
+    const trip = makeTrip();
+    const set = vi.fn();
+    if (trip.pieces)
+      trip.pieces.palettes = {
+        has: (k) => k === 0,
+        names: ['Gold', 'Rose gold', 'Rust'],
+        set,
+      };
+    render(<TripPlayer trip={trip} page="city" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Design' }));
+    const pill = screen.getByRole('button', { name: /^Palette/ });
+    expect(pill.textContent).toBe('Palette · Gold');
+    expect(screen.queryByRole('button', { name: 'Rust' })).toBeNull();
+    fireEvent.click(pill);
+    expect(pill.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Rust' }));
+    expect(set).toHaveBeenLastCalledWith(2, 0);
+    // Another piece has none: no Palette pill, and the next piece opens on the first preset.
+    fireEvent.click(screen.getByRole('button', { name: 'Neon' }));
+    expect(screen.queryByRole('button', { name: /^Palette/ })).toBeNull();
+    expect(set).toHaveBeenLastCalledWith(0, 1);
   });
 });
 
@@ -311,8 +457,7 @@ describe('TripPlayer zoom and orbit', () => {
     expect(seenEye[0]).toBeCloseTo(10 * Math.sin(-0.5));
     expect(Math.hypot(...seenEye)).toBeCloseTo(10);
 
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    fireEvent.keyUp(window, { key: 'ArrowLeft' });
+    toGame();
     expect(screen.getByText('3 / 3')).toBeDefined();
     fireEvent.pointerDown(canvas, { pointerId: 2, clientX: 100, clientY: 100 });
     fireEvent.pointerMove(window, { pointerId: 2, clientX: 200, clientY: 160 });
@@ -435,8 +580,7 @@ describe('TripPlayer on a phone', () => {
     const gameSet = vi.fn();
     const { container } = render(<TripPlayer trip={makeTrip(gameSet)} page="ocean" />);
     // Go to the game piece (the arrows change piece when no game is played).
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    fireEvent.keyUp(window, { key: 'ArrowLeft' });
+    toGame();
     expect(screen.getByText('3 / 3')).toBeDefined();
     const stick = container.querySelector('.bb-stick') as HTMLElement;
     expect(stick).not.toBeNull();
@@ -468,8 +612,7 @@ describe('TripPlayer on a phone', () => {
     setTouch(true);
     const gameSet = vi.fn();
     const { container } = render(<TripPlayer trip={makeTrip(gameSet)} page="ocean" />);
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    fireEvent.keyUp(window, { key: 'ArrowLeft' });
+    toGame();
     fireEvent.keyDown(window, { key: 'Escape' });
     tick();
     expect(gameSet.mock.calls.at(-1)?.[0]).toBe(false);
@@ -487,8 +630,7 @@ describe('TripPlayer on a phone', () => {
     setTouch(true);
     const gameSet = vi.fn();
     render(<TripPlayer trip={makeTrip(gameSet)} page="ocean" />);
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    fireEvent.keyUp(window, { key: 'ArrowLeft' });
+    toGame();
     const faster = screen.getByRole('button', { name: 'Faster' });
     fireEvent.pointerDown(faster, { pointerId: 1 });
     tick();

@@ -136,6 +136,28 @@ and the Big Bang have no switch.
   the name and the sheet keeps to the right (at most the width less 320px); on a phone the sheet
   rises from the bottom and stops short of the dials at the top.
 
+**Studio navigation** (2026-11-12: "make it clear how can i see the variants (like click up down
+for variants, left right for other category). make that clear, and a design pill that opens
+colour presets or other stuff when needed for design variants.")
+
+- In the Studio (a piece on its own that is not a game, in any world with pieces): **↑ / ↓**
+  go to the current piece's previous / next variant, round and round; **← / →** to the previous
+  / next piece, skipping the game. While a game is played the arrows stay its own; a game let go
+  of (Esc) and the Journey keep ← / → as steps.
+- On a phone: a quick upright flick on the picture (under 0.4 s, at least 60 px, mostly
+  upright) goes to the next variant (flick up) or the previous one (down), the little turn of the
+  view it made undone; a sideways flick changes piece as before.
+- On screen, by the name: small **‹ ›** either side of the piece's name (pieces) and, on a piece
+  with variants, its current variant's name after it ("Domes · Dome complex") with small **˄ ˅**
+  (variants). Quiet (low opacity) until a pointer or a finger is on them; not on a game.
+- A small hint, once per world on the device (`colourmap:trip-hint:<page>`, read and written
+  in try/catch): "↑↓ variants · ←→ pieces" (on a phone "Swipe ↕ variants · ↔ pieces") at the
+  top, fading after about five seconds.
+- **Palette.** A piece can offer colour presets (`pieces.palettes`: `has`, `names`, `set`, as
+  the variants). The Design menu then shows a **Palette** pill (with the preset on, e.g.
+  "Palette · Gold") that opens a row of the presets; only on pieces that have them. Each piece
+  opens on its first preset, the Journey on the first.
+
 **Your own view** (2026-11-12, "do all that"). On top of every piece's own camera path, without
 changing a piece:
 

@@ -470,7 +470,8 @@ export function onMesh(B: Built, p: Particle, q: number, t: number, eye: Vec3, s
     if (anim === Anim.flow) {
       const L = len3(sub(b, a)) || 1;
       s = frac(s1 + (t * key) / L);
-      lit = Math.sin(Math.PI * s) ** 0.5;
+      // Fading in and out at the ends at an even pace, so no grain ever flashes as it wraps round.
+      lit = Math.sin(Math.PI * s);
     }
     let pos = addv(a, sub(b, a), s);
     if (anim === Anim.breathe) pos = breathing(pos, B.pivot, t);

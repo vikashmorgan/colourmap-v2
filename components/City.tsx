@@ -19,11 +19,13 @@ import {
   fade,
   gauges,
   hasGame,
+  hasPalettes,
   hasVariants,
   look,
   makeParticles,
   PHASE_START,
   PHASES,
+  paletteNames,
   particleAt,
   phaseAt,
   pieceAt,
@@ -33,6 +35,7 @@ import {
   pieceProgress,
   STEP_COLOURS,
   setFly,
+  setPalette,
   setVariant,
   TOTAL,
   variantLabel,
@@ -68,8 +71,11 @@ const TRIP: Trip = {
     particleAt: pieceAt,
     camera: pieceCamera,
     look: pieceLook,
-    // Pills under a piece: five temples, five factories, five domes, five cities from above.
+    // Pills under a piece: eleven plans, eight Nova Cores, temples, factories and domes from the
+    // single building to the quarter, five cities from above.
     variants: { has: hasVariants, names: variantNames, set: setVariant, label: variantLabel },
+    // Colour presets for the golden pieces (Gold, Rose gold, …) and the factories (Rust, Steel …).
+    palettes: { has: hasPalettes, names: paletteNames, set: setPalette },
     // Ship: you fly with the keys; Space boosts while the bar lasts, and it fills again as you
     // cruise. Two dials read your height and speed.
     game: {

@@ -4,8 +4,10 @@
 **Date:** 2026-11-12
 **Where:** `/geometry-field/city`, the **City** pill after Ocean ·
 `lib/city.ts` · `lib/golden-city.ts` (the golden city: its plan from φ, the
-city rising, its heart) · `lib/golden-buildings.ts` (temples, factories,
-domes) · `lib/grain-mesh.ts` (buildings drawn as grains on lines, faces and
+city rising, its heart, the colour presets) · `lib/golden-buildings.ts` (temples, factories,
+domes) · `lib/golden-quarters.ts` (each from the element to the quarter) ·
+`lib/golden-plans.ts` (ten more plans) · `lib/nova-cores.ts` (the Nova Cores) ·
+`lib/grain-mesh.ts` (buildings drawn as grains on lines, faces and
 dots) · `lib/city-plans.ts` (the night cities from above) ·
 `components/City.tsx` · the shared trip player (`components/TripPlayer.tsx`)
 
@@ -96,34 +98,36 @@ they face the eye, so a face turned away stays faint and the building reads
 solid) and dots (lamps, plants, fire, steam). Each grain picks one by its
 golden-sequence number, lines by length, faces by area, so every part gets
 its fair share of the fixed budget. A few slow motions live on the elements:
-steam and motes rising and fading, lights flowing along a line, a lattice
+steam and motes rising and fading, lights flowing along a line (fading in and
+out at its ends at an even pace, so no grain flashes as it wraps round), a lattice
 turning and breathing, a slow orbit.
 
-## The fourteen pieces
+## The fifteen pieces
 
 | # | Piece | What you see | Camera |
 |---|-------|--------------|--------|
-| 1 | Golden plan | The plan from above, revealed ring by ring from the centre outward: the heart's florets on the golden angle (a sunflower), ring roads and streets, terraces, towers as points of light, lit blocks thicker toward the heart, woods and fields in the ring of nature, canals with their banks and shimmering water, arched bridges, twelve boulevards with travellers walking slowly in toward the heart and out | High above, a slow orbit, drawing a little nearer |
+| 1 | Golden plan | The plan from above, revealed ring by ring from the centre outward: the heart's florets on the golden angle (a sunflower), ring roads and streets, terraces, towers as points of light, lit blocks thicker toward the heart, woods and fields in the ring of nature, canals with their banks and shimmering water, arched bridges, twelve boulevards with travellers walking slowly in toward the heart and out. Pills: **Golden** and the ten plans below (**Ten golden plans**) | High above, a slow orbit, drawing a little nearer |
 | 2 | Rising | The same plan, flat as a map at first, rises in 3D ring by ring from the heart: walls, roofs and edges of every block between the boulevards, the towers, the terraces, woods staying low, canals flat; a small open sphere of light over the heart | From nearly straight above, tilting slowly down to an oblique three-quarter view as it orbits |
 | 3 | The heart | The centre up close (the plan five times larger): an open golden sphere, a lattice of light (twelve meridians over the twelve boulevards, parallels at ±1/φ² and ±1/φ, nodes of light), not a solid ball, not a palace, floating over a round garden of florets where all twelve boulevards meet, a round basin in the middle; four low terraces stepping down to the inner canal, bridges over it, the first towers of the ring of knowledge beyond. The sphere turns slowly and breathes light (9 s a breath); motes rise from the garden; ships pass slowly far above. It belongs to no one: open, light | A slow orbit, a little above the garden |
-| 4 | Temples | Five golden temples on pills (**Rotunda**, **Ziggurat**, **Ring**, **Pyramid**, **Lotus**, below) | A slow orbit, a little above |
-| 5 | Factories | Five works of the ring of making on pills (**Sawtooth**, **Foundry**, **Assembly**, **Workshops**, **Solar**, below): industrial and hopeful, with gentle signs of work, slow furnaces, a conveyor of light, soft steam | A slow orbit, a little above |
-| 6 | Domes | Golden glasshouses ("serres") on pills (**Geodesic**, **Bubbles**, **Palm house**, **Lattice**, **Garden**, below): glass a faint veil of grains, struts dense and bright, green-gold plants glowing inside | A slow orbit, a little above |
-| 7 | From above | Five night cities seen from far above, moved here from Vegetal (below): **Grid**, **Star**, **River**, **Bay**, **Canals** on pills | Drifting slowly over the city, looking a little ahead and down |
-| 8 | Towers | Twenty-five towers on a five-by-five grid of blocks, taller toward the middle, rise floor by floor from the ground, the middle first. Each is the Cell's box stacked: its four corners and a ring at every floor, the rim being built glowing warm. Windows on every face, two rows a floor, warm or cool, now and then one going out or coming on over seconds. Block outlines on the ground, stars overhead | Slowly round the city, above its roofs |
-| 9 | Sky lanes | The grown city, dimmer; ships, each a bright head and a short fading trail, stream along lanes in the streets at four heights, crossing grids, both ways in every street: white lights one way, red the other | Round the city, at the height of the lanes |
-| 10 | Neon | Each tower wears bands of neon (two to four ribbons), a tall blade sign of glowing dots on some, a spire with a slow beacon on all; coloured light pools on the street; a few ships. Every light drifts slowly round cyan, magenta, amber and violet, each tower on its own beat | Lower and closer, looking up |
-| 11 | Chinatown | A red gate (four pillars, two beams, three roofs turned up at the ends, a plaque reading 中華街, Chinatown) at the mouth of a narrow street. Tall signs hang down the street side of the towers, standing out into the street, in real Chinese and Japanese characters: ラーメン ramen, 茶 tea, 龍 dragon, 酒 wine, 夢 dream, 麺 noodles, 福 good fortune, 喫茶 café; a 夜市 night-market banner across the street and a small 喫茶 sign over a doorway. Lantern red and gold mixed with cyan and magenta. Rows of round red lanterns strung across the street, swaying a little | Walking pace through the gate and down the street |
-| 12 | Bridges and docks | Sky bridges (tubes of four edges and ribs, lights along the floor) join neighbouring towers high above the street; landing platforms stand out from the faces of the taller towers, lights chasing slowly round their rims. Ships come in on a curve, settle on a deck, rest, lift off and leave the other way | Round the city, from above the bridges |
-| 13 | Canyon | Flying down the middle of an endless street: towers either side (only the faces the street sees are drawn, so every grain shows), feet below the eye and roofs above it; traffic in lanes above and below the eye, all flying forward, one colour per height (amber, cyan, white, violet); high above, one-way cross streets carry ships left to right or right to left, each in its own colour (2026-11-12: "the canyon make it only with lights going forward … each road has one colour of spaceship to keep it coherent"); every third tower carries a tall Chinatown sign, flown past. Towers and ships that pass behind come round to the far end, so the street never ends and no grain is added | Down the middle of the street |
-| 14 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) down an endless avenue of solid, lit towers, with side streets to turn into; every eight blocks the avenue passes through a Chinatown stretch (see **Ship, round two**). **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** or Shift faster, **Q** or X slower, **Space** boosts to three times the cruise while the bar lasts; the bar fills again while you cruise. Towers' walls hold you: you slide along them. Traffic above and below you. Two dials read height and speed. With no one at the controls (the Journey, or before you steer) the ship flies down the avenue; let go with Esc and it carries on from where you were, back to the avenue | Behind the ship and a little above, looking past it |
+| 4 | Nova Cores | Eight power sources in the heart's style on pills (below): an open lattice of light floating over a round plaza of florets, each from its own rule, breathing slowly, energy running out along its conduits on the ground | A slow orbit, a little above the plaza |
+| 5 | Temples | Golden temples from the single building to the quarter on pills (**Rotunda**, **Ziggurat**, **Ring**, **Pyramid**, **Lotus**, then **Temple court**, **Sacred complex**, **Temple quarter**; see **Evolutions**) | A slow orbit, a little above; further back and higher for the bigger rungs |
+| 6 | Factories | Works of the ring of making (**Sawtooth**, **Foundry**, **Assembly**, **Workshops**, **Solar**, **Cement works**, **Kilns**, then **Factory group**, **Industrial complex**, **Industrial quarter**): industrial and hopeful, with gentle signs of work, slow furnaces, a conveyor of light, soft steam | As the temples |
+| 7 | Domes | Golden glasshouses ("serres"): **Geodesic**, **Bubbles**, **Palm house**, **Lattice**, then **Group of domes** (the former Garden), **Dome complex**, **Dome quarter**: glass a faint veil of grains, struts dense and bright, green-gold plants glowing inside | As the temples |
+| 8 | From above | Five night cities seen from far above, moved here from Vegetal (below): **Grid**, **Star**, **River**, **Bay**, **Canals** on pills | Drifting slowly over the city, looking a little ahead and down |
+| 9 | Towers | Twenty-five towers on a five-by-five grid of blocks, taller toward the middle, rise floor by floor from the ground, the middle from the first moment, all up within about ten seconds (see **Towers and sky lanes, round two**). Each is the Cell's box stacked: its corners and a line at every floor on the faces toward the eye, the rim being built glowing warm. Windows on those faces, two rows a floor, warm or cool, now and then one going out or coming on over seconds. Block outlines on the ground, stars overhead | Slowly round the city, above its roofs |
+| 10 | Sky lanes | The grown city, dimmer, its faces toward the eye; ships, each a bright head and a short fading trail, already streaming as the piece opens, along lanes in the streets at four heights, crossing grids, both ways in every street: white lights one way, red the other | Round the city, at the height of the lanes |
+| 11 | Neon | Each tower wears bands of neon (two to four ribbons), a tall blade sign of glowing dots on some, a spire with a slow beacon on all; coloured light pools on the street; a few ships. Every light drifts slowly round cyan, magenta, amber and violet, each tower on its own beat | Lower and closer, looking up |
+| 12 | Chinatown | A red gate (four pillars, two beams, three roofs turned up at the ends, a plaque reading 中華街, Chinatown) at the mouth of a narrow street. Tall signs hang down the street side of the towers, standing out into the street, in real Chinese and Japanese characters: ラーメン ramen, 茶 tea, 龍 dragon, 酒 wine, 夢 dream, 麺 noodles, 福 good fortune, 喫茶 café; a 夜市 night-market banner across the street and a small 喫茶 sign over a doorway. Lantern red and gold mixed with cyan and magenta. Rows of round red lanterns strung across the street, swaying a little | Walking pace through the gate and down the street |
+| 13 | Bridges and docks | Sky bridges (tubes of four edges and ribs, lights along the floor) join neighbouring towers high above the street; landing platforms stand out from the faces of the taller towers, lights chasing slowly round their rims. Ships come in on a curve, settle on a deck, rest, lift off and leave the other way | Round the city, from above the bridges |
+| 14 | Canyon | Flying down the middle of an endless street: towers either side (only the faces the street sees are drawn, so every grain shows), feet below the eye and roofs above it; traffic in lanes above and below the eye, all flying forward, one colour per height (amber, cyan, white, violet); high above, one-way cross streets carry ships left to right or right to left, each in its own colour (2026-11-12: "the canyon make it only with lights going forward … each road has one colour of spaceship to keep it coherent"); every third tower carries a tall Chinatown sign, flown past. Towers and ships that pass behind come round to the far end, so the street never ends and no grain is added | Down the middle of the street |
+| 15 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) down an endless avenue of solid, lit towers, with side streets to turn into; every eight blocks the avenue passes through a Chinatown stretch (see **Ship, round two**). **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** or Shift faster, **Q** or X slower, **Space** boosts to three times the cruise while the bar lasts; the bar fills again while you cruise. Towers' walls hold you: you slide along them. Traffic above and below you. Two dials read height and speed. With no one at the controls (the Journey, or before you steer) the ship flies down the avenue; let go with Esc and it carries on from where you were, back to the avenue | Behind the ship and a little above, looking past it |
 
 The page opens on one piece alone, picked by name, as Ocean's do: it starts
 at its beginning with no ball of stars and loops, each grain gliding back to
 where the piece began; the canyon and the ship fly on, so their loops do not show.
 The golden plan lights again ring by ring on each loop, and Rising rises again
 from its map. From above, on its own, is lit from the start and stands still,
-so it needs no glide back. **Journey** plays the fourteen as one trip: between
+so it needs no glide back. **Journey** plays the fifteen as one trip: between
 pieces a ball of faint stars; the pills fall back to the first of each.
 
 Backgrounds: **Dawn** (the default, a deep blue-violet twilight with a warm low glow near
@@ -200,8 +204,129 @@ golden angle, the tallest in the middle, a few lit flowers in their crowns).
   radius 6.5 and a ribbed dome on it; palms inside, the tallest under the dome.
 - **Lattice**: a grid shell of hexagons 1.3 across over a circle of radius 12,
   lifted to a shallow dome 12/φ high (height ∝ 1 − (r/12)²).
-- **Garden**: five geodesic domes on a ring of radius 13, radii 4.5·φ^(−k/2)
-  for k = 0…4, a sixth √φ larger in the middle, paths between them.
+- **Group of domes** (was **Garden**): five geodesic domes on a ring of radius 13, radii
+  4.5·φ^(−k/2) for k = 0…4, a sixth √φ larger in the middle, paths between them.
+
+## Cement works and kilns (2026-11-12)
+
+> "factories do different ones: cement factory inspired by big old rusty cement factories etc..."
+
+Our own works, drawn from the same few shapes (no real plant copied):
+
+- **Cement works**: a = 2.4. Four silos in a row, radius a, a·φ³ tall, banded every a, cone
+  roofs; a preheater tower a·φ⁴ tall and 2a square, its floors every a, four cyclones down its
+  face (each a cone a/φ wide); from its foot the kiln, a tube a/φ round and 10a long falling one
+  in twenty-five on three piers with a tyre at each, its far end glowing; conveyor bridges (truss
+  galleries with a belt of light) from the silo tops to the tower and down to a stockpile; a
+  chimney a·φ⁵ tall breathing slow steam; a low hall along the kiln. Big, plain and heavy. Its
+  rusty look is the **Rust** palette (below).
+- **Kilns**: five bottle kilns round a yard by the golden angle, the first base radius 3.2 and
+  each φ^(1/2) smaller; each wall a bottle, r(y) = R(1 − 0.6·(y/H)^0.8), H = Rφ², a neck R/φ²
+  wide; a fire glowing slowly in each door, steam from each neck; a long low workshop beside.
+
+## Evolutions: from the element to the quarter (2026-11-12)
+
+> "for the designs factories domes etc... do different versions of each or evolutions (1 dome,
+> one group of domes, one dome complex etc... so u see from the element to the whole quartier
+> factory etc..)"
+
+Temples, Factories and Domes are each **one row of pills** (flattened, so ↑ / ↓ walk it in one
+line): first the single buildings (the kinds), then three rungs of a ladder, each built from the
+rung below placed again smaller (`Placed` in `lib/golden-quarters.ts`: a mesh drawn into another
+one, moved, scaled and turned; turning and breathing parts are stilled there, steam, flow and
+pulses go on). The eye stands back 1, 1.3, 1.55 and 2.1 times as far for element, group, complex
+and quarter, and higher.
+
+| Piece | Group | Complex | Quarter |
+|-------|-------|---------|---------|
+| Temples | **Temple court**: a square court of half-width 16 walled by a colonnade (columns every 2, 16/φ³ tall); the Rotunda at φ⁻¹ in the middle, a temple at φ⁻² in each corner, a gate and a pool on each axis | **Sacred complex**: the Lotus at φ⁻¹ on a round terrace; eight temples at φ⁻³ on a circle of 24; a reflecting canal ring from 12 to 12 + 12/φ³; eight processional ways; a ring of trees | **Temple quarter**: the sacred complex at φ^−1.5 in the middle; twelve streets, ring roads at 24 and 40; in each sector a court or a temple on the ring of 32 between lit houses; gardens; a canal on the rim at 46 |
+| Factories | **Factory group**: Sawtooth, Foundry and Workshops at φ⁻¹ on a triangle of side 22 round a yard, conveyor bridges between them, a rail siding | **Industrial complex**: the Cement works at φ⁻¹ in the middle; Assembly, Kilns, Solar and Foundry at φ⁻² a quarter turn apart on a ring of 27, conveyor bridges out to each, a rail loop of 19 | **Industrial quarter**: a 5 × 5 grid of blocks 18 apart (corners left as yards), a work at φ⁻³ on each, every kind in turn, the industrial complex in the middle; a canal and quay with cranes along the south; a rail ring round it all |
+| Domes | **Group of domes** (the five on a ring round a sixth) | **Dome complex**: the Geodesic at φ^−0.5 in the middle; Palm house and Lattice at φ⁻¹ west and east, Bubbles at φ⁻¹ north, a group at φ⁻² south, each 24 out and joined by glass corridors | **Dome quarter**, a solarpunk district: the Geodesic √φ larger as its landmark; terraced gardens to 18; eight streets, ring roads at 26 and 42; eight neighbourhoods on the ring of 34, by turns a dome complex or a group of domes, houses with roof gardens between; a canal at 46; trees everywhere |
+
+## Colour presets (2026-11-12)
+
+> "a design pill that opens colour presets or other stuff when needed for design variants."
+
+A **Palette** pill in the Design menu (only on pieces that offer presets) opens a row of them;
+each piece opens on its first, the Journey always gold. Each preset is a full set of tone
+colours (edge, face, glass, water, plant, fire, light, ground, road, steam, film), kept deep and
+dim enough that dense edges stay their colour, each drifting slowly toward its own second colour:
+
+- Golden plan, Rising, The heart, Nova Cores, Temples, Domes: **Gold** (the default), **Rose
+  gold**, **White marble & gold** (ivory faces, gold edges), **Night neon gold** (gold edges,
+  deep blue faces, cyan lights, magenta roads).
+- Factories: **Gold**, **Rust** (rust-brown faces, ochre roads, red-orange edges: the old cement
+  works), **Steel blue-grey**, **Night neon gold**.
+
+## Nova Cores (2026-11-12)
+
+> "that part called the heart is absolutely premium. would love to have more novas like this
+> around the city that are like power sources, each unique, with different designs for the
+> hearts. call them the Nova Core."
+
+Each core, R = 5.5, floats over a round plaza (radius 11, florets on the golden angle, a basin
+of light, a beam rising to the core), breathes light as the heart does (9 s a breath, eased off
+with the distance from the core so nothing jumps) and sends its energy out along its conduits:
+lights flowing slowly along the ground to 46, small pylons on each. Each leans its lights a
+little toward its own colour, within the warm family. The Heart itself is unchanged.
+
+| Core | Conduits | Rule |
+|------|----------|------|
+| **Icosa** | 12 | An icosahedron blown out to the sphere, each edge cut in two (a frequency-two geodesic lattice), a small icosahedron φ² smaller turning the other way inside |
+| **Armillary** | 10 | Five rings of radius R·φ^(−k/4), each tilted k·36° and turning round the vertical, by turns one way and the other, round a still equator |
+| **Vortex** | 8 | A torus, its tube R/φ² round, wound by one line eight times round the tube for every three round the ring (a (3, 8) torus knot), a beam of light up its axis |
+| **Helix** | 6 | Two helices R/φ out, 2R tall, three turns, half a turn apart, a rung every twelfth of a turn, rings closing top and foot |
+| **Platonic nest** | 8 | A sphere (three great circles), the octahedron in it (corners on the sphere) and the cube in that (corners on the octahedron's faces, R/3 out), octahedron and cube turning opposite ways |
+| **Star tetra** | 6 | Two tetrahedra through each other on a cube's alternate corners, its long diagonal upright, turning opposite ways, a ring of light round its waist |
+| **Crystal** | 7 | Seven hexagonal crystals out from the centre on the golden-angle spiral, each φ^(1/3) shorter than the last, pointed at both ends |
+| **Satellites** | 12 | A small lattice orb R/φ across; twelve satellites on a ring of radius R tilted 1/φ² and eight on one tilted the other way, turning opposite ways, each tied to its neighbours |
+
+**For the game.** `novaCore(kind, mesh?, at?, s?)` in `lib/nova-cores.ts` builds a core (its
+plaza and conduits too) into any mesh: at the origin it breathes and turns round its own centre
+(the mesh's pivot); placed elsewhere (`at` a point on the ground, `s` its size) it is drawn
+still, since a mesh turns round one pivot only. `NOVA_CORES`, `NOVA_RULES`, `NOVA_CENTRE`,
+`NOVA_R` and `NOVA_REACH` go with it, so the city game can set cores round its districts as
+landmarks and power sources.
+
+## Ten golden plans (2026-11-12)
+
+> "the golden plan design is amazing, do 10 like this that represent different cities, or the
+> different quartiers etc..."
+
+Ten more round cities from above, each about 55 across its radius, in the Golden plan's style
+and drawn with one shared kit (`lib/golden-plans.ts`: ring roads, boulevards with travellers,
+canals with arched bridges, lit blocks thicker toward the heart, woods and fields, a sunflower
+heart). They light in eight even rings from the heart out, as the golden city does ring by ring.
+
+| Plan | Rule |
+|------|------|
+| **Sunflower** | Blocks on the golden angle, r = 52√(n/987), streets along the 21 and 34 spirals that join them, seven of the thirteen spiral arms as boulevards |
+| **Atlantis** | Equal rings of land and water out from an island (water at 6–9, 17–21, 33–38), one canal cut straight in from the sea, bridges on three axes |
+| **Twelve gates** | A round wall of radius 44 with twelve gates, a boulevard through each, ring roads at 14 and 28, woods outside |
+| **Star fort** | Walls on a sixteen-pointed star (points at 48, notches at 34) with a moat, eight streets to the points, ring roads at 10 and 22 |
+| **Lotus** | Eight outer petals from 10 to 50, eight inner ones turned half a petal from 6 to 30, a pool at the heart, an avenue down each petal |
+| **Hive** | A grid of hexagons 6.8 across clipped to a circle of 50, the middle one a garden, six avenues on the grid's axes |
+| **Mandala** | Circle, square in it, circle in that, square turned 45° in that…, each 1/√2 of the last from 50 down to 6, avenues on the axes and diagonals |
+| **Spiral** | One avenue on the golden spiral, r = 2·φ^(2θ/π) (φ wider each quarter turn), out to 52, blocks either side, woods between the turns |
+| **Harbour** | A half circle on the shore (ring roads at 12, 24, 36, 48, seven avenues fanning inland), piers, a breakwater arc at 30, an island and its lighthouse |
+| **Garden city** | Garden, halls, park, glass arcade, houses, a grand green avenue, houses, a railway ring and a green belt of farms, six boulevards out |
+
+## Towers and sky lanes, round two (2026-11-12)
+
+> "towers and sky lanes make them start moving faster." Then: "towers and sky lanes more
+> defined, more dots."
+
+- **Sooner.** The middle tower rises from the first moment, quickly at first and settling (an
+  ease-out over a fifth of the piece), the rim's by a seventh of the way in: every tower stands
+  by about a third (some ten seconds), where it took most of the piece before. The sky lanes
+  open already streaming (no ship waits to come on), and run quicker: 6.5 to 10 a second.
+- **Defined.** The tower grains go where the eye sees them: on each tower, the faces turned to
+  the eye, shared by how squarely they face it (a face seen edge-on gets few, the faces turned
+  away almost none), their corners, floor lines and windows. A grain near the line between two
+  faces' shares is dimmed, so as the eye goes round the grains that change face do it unlit,
+  never popping. Fewer grains go to stars and ground lines; grains are drawn a little smaller
+  (0.65, was 0.8). The sky lanes' city does the same from its own eye, and more of its grains go
+  to the ships.
 
 ## From above
 
@@ -318,6 +443,10 @@ Every control sits in the **Design** menu. The Ship is the **Game** side, every 
 on the side last used. On a phone the Ship has a stick (turn, climb, dive) and a round
 **Boost** button (Space).
 
+In the Studio ↑ / ↓ (or a flick up and down on a phone, or the small ˄ ˅ by the name) go
+through the current piece's variants and ← / → (a sideways flick, the small ‹ ›) through the
+pieces; the name reads e.g. "Domes · Dome complex" (art-journey.md, **Studio navigation**).
+
 ## Words
 
 Each piece has a line saying what you see and two lines of its own on cities,
@@ -336,7 +465,7 @@ their summer under glass.
   starts with no ball of stars; Space pauses (in Ship, Space boosts while you steer).
 - The pills read Stars · Geometry · Tunnels · Oils · Big Bang · Journey · Vegetal · Ocean · City ·
   Experiment, on the Art panel and the trip pages.
-- **Journey** plays the fourteen pieces as one trip and loops; each piece opens as a wide ball of
+- **Journey** plays the fifteen pieces as one trip and loops; each piece opens as a wide ball of
   faint stars and every grain pours into the next piece with no cut.
 - Golden city: the land rings and the canals each grow by φ, edge to edge; twelve boulevards; the
   plan lies flat on the ground, the heart lit first and the ring of nature last, brighter toward
@@ -344,18 +473,34 @@ their summer under glass.
   1.2·φ⁶ high, the living terraces no higher than 1.2·φ³ and nature under 3; the eye goes from nearly
   straight above to an oblique view. The heart's sphere is a lattice (most grains near it lie on its
   shell) above the garden; a frame apart no colour moves by more than 0.05.
-- Temples, Factories and Domes each have five pills; every building stands on the ground (no grain
-  below it), within 40 of the centre, most grains lit, no two alike; the stated ratios hold
-  (pyramid height² = φ · half-base², ziggurat and bubbles by φ, workshops by φ^(1/4), mirror rings
-  by √φ).
+- Temples (8 pills), Factories (10) and Domes (7) run from the single buildings to group, complex
+  and quarter; every pill stands on the ground (no grain below it), within 40 of the centre times
+  how far its eye stands back, most grains lit, no two alike; the quarter is seen from further
+  back than the complex, the complex than the building; the stated ratios hold (pyramid height² =
+  φ · half-base², ziggurat and bubbles by φ, workshops by φ^(1/4), mirror rings by √φ).
+- Golden plan: eleven pills (Golden and the ten plans), each flat (under 3.5 above the ground),
+  reaching 40 to 65 out, finite, the same every time, no two alike.
+- Nova Cores: eight pills, each its own, on the ground, many grains on the core, lit energy on the
+  conduits far out, a frame apart no colour moving more than 0.05; `novaCore` placed elsewhere is
+  still, scaled and on the ground.
+- Palettes: the golden pieces offer Gold, Rose gold, White marble & gold, Night neon gold; the
+  factories Gold, Rust, Steel blue-grey, Night neon gold; the neon pieces none; a preset changes
+  the colours (Rust less green than Gold), the Journey and unknown presets fall back to gold.
 - From above: five cities on pills, each distinct; all grains on the plane; denser and brighter in
   the centre than at the edge; no block or centre light on the water; car lights move; the same
   city every time.
 - Every piece keeps the fixed grain budget (9,000, or 5,200 on small screens). Frame cost, 9,000
   grains (bun, the build machine, offline): Golden plan 12 ms, Rising 9, The heart 8, temples,
   factories and domes 5–7, From above 8–11, against 5–9 for the neon pieces in the same run.
-- Towers rise from the ground, the middle first; no grain goes below the ground.
-- No ship in the sky lanes is ever inside a tower; lanes run both ways at four heights.
+- Towers rise from the ground, the middle first; flat at the start, above 10 by a twentieth of the
+  way in, every tower up by 0.36; no grain goes below the ground. Seen from a side, a tower's
+  faces toward the eye carry over 4 times the grains of those turned away.
+- No ship in the sky lanes is ever inside a tower; lanes run both ways at four heights, every lane
+  at least 6.5 a second, ships lit from the first moment.
+- Frame cost of the new pills (9,000 grains, bun, the build machine under load from other work, so
+  compare within the run): golden pills, the ten plans, the Nova Cores and every rung 20–29 ms,
+  against 22–25 ms for Towers, Sky lanes and The heart in the same run; Golden plan 39 ms, as
+  before the heaviest.
 - Neon colours never jump: a frame apart, a light's colour moves by under a hundredth.
 - Chinatown (2026-11-12: "add chinese signs on side of buildings. or japanese. like that cyberpunk
   asian mood. so we can create a chinatown in the city."): tall signs hang on the towers' street
