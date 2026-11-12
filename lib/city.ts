@@ -44,6 +44,7 @@ import {
   type Vec3,
 } from './bigbang';
 import { BUILDINGS, buildingsEye } from './city-buildings';
+import { DOCK_PROMPT, type Placed as DockPlaced, dockAt } from './city-docks';
 import {
   advancePulses,
   type Block,
@@ -69,6 +70,18 @@ import {
 import { AVENUE, BLOCK_X, BLOCK_Z, type Item, TILE_J } from './city-grid';
 import { aboveAt, aboveEye, CITIES, setCityKind } from './city-plans';
 import { raceBanner, raceStep, resetRace, rival, trackItems } from './city-race';
+import {
+  currentRoom,
+  enterRoom,
+  inRoom,
+  leaveRoom,
+  roomBanner,
+  roomBeyond,
+  roomCamera,
+  roomGrain,
+  roomSeeThrough,
+  roomStep,
+} from './city-rooms';
 import { skyGrain } from './city-sky';
 import {
   buildingAt,
@@ -1852,6 +1865,8 @@ const fly = {
   /** The district you are in, and when you came into it, for its name on the screen. */
   district: '' as DistrictId | '',
   entered: Number.NEGATIVE_INFINITY,
+  /** The dock whose pad you are on (lib/city-docks.ts), or null. */
+  dock: null as DockPlaced | null,
 };
 export const hasGame = (k: number) => PHASES[k]?.id === 'ship';
 export const boostLeft = () => fly.boost;
@@ -1983,6 +1998,8 @@ function carryOn(dt: number, t: number) {
 
 /** Starts the route afresh: no super boost, no slow mode, no race. */
 function afresh() {
+  leaveRoom();
+  fly.dock = null;
   fly.mode = 'route';
   fly.high = false;
   fly.vy = 0;
@@ -2006,6 +2023,12 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   const lookKey = pressed('l');
   fly.held = [...keys];
   fly.look += ((fly.slow && fly.mode === 'pilot' ? 1 : 0) - fly.look) * (1 - Math.exp(-2 * dt));
+  // Inside a dock's room (lib/city-rooms.ts) the Dot Walker walks; Enter or Esc, back to the ship.
+  if (inRoom()) {
+    if (roomStep(active, keys, dt, t) === 'stay') return;
+    backToShip();
+    if (active) return;
+  }
   if (!active) {
     fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
     raceStep({ active: false, pos: fly.pos, enter: false, t });
@@ -2060,7 +2083,17 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     after(dt, t);
     return;
   }
+  // On a dock's pad: Enter goes inside; with no key to fly on, the ship settles on the pad.
+  fly.dock = dockAt(fly.pos);
+  if (fly.dock && enter) {
+    enterRoom(fly.dock, t);
+    fly.speed = 0;
+    after(dt, t);
+    return;
+  }
+  const settle = fly.dock && !held('w', 's', 'e', 'shift', ' ', 'arrowup', 'arrowdown') ? 0 : 1;
   const pace =
+    settle *
     (boosting ? BOOST_PACE : held('e', 'shift') ? 1.8 : held('q', 'x') ? 0.4 : 1) *
     (fly.slow ? SLOW_PACE : 1) *
     r.pace;
@@ -2071,6 +2104,29 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   const jump = portalJump(was, fly.pos);
   if (jump !== 0) fly.pos = [fly.pos[0], fly.pos[1], fly.pos[2] + jump];
   after(dt, t);
+}
+
+/** Puts the ship at q heading by yaw, piloted (for the tests, and a dock to start from). */
+export function placeShip(q: Vec3, yaw = 0) {
+  fly.pos = [...q];
+  fly.yaw = yaw;
+  fly.pitch = 0;
+  fly.speed = 0;
+  fly.mode = 'pilot';
+}
+
+/** Out of a room: the ship on its dock's pad, facing away from the room, at rest. */
+function backToShip() {
+  const P = currentRoom();
+  leaveRoom();
+  if (!P) return;
+  fly.pos = [P.pad[0], P.pad[1] + 2.5, P.pad[2]];
+  fly.yaw = Math.atan2(-P.r[0], -P.r[2]);
+  fly.pitch = 0;
+  fly.speed = 0;
+  fly.vy = 0;
+  fly.mode = 'pilot';
+  fly.dock = P;
 }
 
 /** After every move: the tunnels' pulses run on, lanterns you touch light, the district's name. */
@@ -2103,7 +2159,9 @@ export function fade(pos: Vec3, eye: Vec3): number {
   const d = Math.hypot(pos[0] - eye[0], pos[1] - eye[1], pos[2] - eye[2]);
   const open = Math.max(0, eye[1] - SKY);
   const far = 260 + 2.4 * open;
-  return smooth((d - 3) / 9) * smooth((far - d) / (140 + 0.5 * open));
+  // In a room, the walker and the room stand close: only the nearest grains dissolve.
+  const near = inRoom() ? smooth((d - 0.5) / 1.2) : smooth((d - 3) / 9);
+  return near * smooth((far - d) / (140 + 0.5 * open));
 }
 
 /** How high the eye is over the towers' sky: 0 under it, 1 at its height over the stratosphere. */
@@ -2143,8 +2201,10 @@ const CANAL_FLOOR = 14;
  * or the name of a district for a few seconds as you come into it; nothing otherwise.
  */
 export function tally(): string {
+  if (inRoom()) return roomBanner(fly.t);
   const r = raceBanner(fly.t);
   if (r) return r;
+  if (fly.dock) return DOCK_PROMPT;
   if (fly.district && fly.t - fly.entered < 4 && fly.entered > Number.NEGATIVE_INFINITY)
     return DISTRICTS[fly.district].name;
   return fly.slow ? 'Slow · looking down' : '';
@@ -2648,6 +2708,7 @@ function group(
     if (mouthed && kind < Kind.Kerb && inMouth(tw0, o[0] as number, o[1] as number, o[2] as number))
       continue;
     if (seen < 1 && hidden(P.eye, o[0] as number, o[1] as number, o[2] as number)) continue;
+    if (seeThrough && !seeThrough(o[0] as number, o[1] as number, o[2] as number)) continue;
     toneAt(kind);
     // The city responds: what is near you glows a little brighter.
     let wake = 1;
@@ -2749,6 +2810,8 @@ function gather(P: Plan): { d: number; run: () => void }[] {
       const tw = blockTower(I, J);
       // Pyramids, parks, plazas and the Studio's buildings are drawn by the game (lib/city-game.ts).
       if (tw.shape !== 'box') continue;
+      // From a room, only what can lie beyond its window.
+      if (seeThrough && !roomBeyond(tw.x, tw.z, Math.hypot(tw.hx, tw.hz))) continue;
       const rx = tw.x - eye[0];
       const rz = tw.z - eye[2];
       const rad = Math.hypot(tw.hx, tw.hz) + 2;
@@ -2851,6 +2914,7 @@ function gather(P: Plan): { d: number; run: () => void }[] {
       const rz = z0 + dz;
       const d = boxDistance(eye, [-AVENUE, STRING_Y - 4, rz - 1], [AVENUE, STRING_Y, rz + 1]);
       if (d > VIEW || (rz - eye[2]) * hz < -12) continue;
+      if (seeThrough && !roomBeyond(0, rz, AVENUE)) continue;
       items.push({
         d,
         run: () => {
@@ -2883,6 +2947,7 @@ function gather(P: Plan): { d: number; run: () => void }[] {
     const hi: Vec3 = [sg.at[0] + w, sg.at[1], sg.at[2]];
     const d = boxDistance(eye, lo, hi);
     if (d > VIEW || (sg.at[2] - eye[2]) * hz < -12) continue;
+    if (seeThrough && !roomBeyond(sg.at[0], sg.at[2], w + h)) continue;
     items.push({
       d,
       run: () => {
@@ -2905,6 +2970,7 @@ function gather(P: Plan): { d: number; run: () => void }[] {
   // The game's own: districts, landmarks, lanterns, tunnels, metro, word signs, races, the plan.
   const game: Item[] = [...gameItems(eye, fwd, cur.t), ...trackItems(eye, cur.t, NEAR)];
   for (const g of game) {
+    if (seeThrough && g.probe && !g.probe.some((q) => roomBeyond(q[0], q[2], 30))) continue;
     items.push({
       d: g.d,
       run: () => {
@@ -2921,18 +2987,26 @@ function gather(P: Plan): { d: number; run: () => void }[] {
 /** Make the plan for time t: where the eye is, then every site it can see, nearest first. */
 function build(P: Plan, t: number) {
   const { c, f } = flier(t);
-  const { eye, target } = shipEye(c, f);
+  const { eye, target } = roomCamera(t) ?? shipEye(c, f);
+  seeThrough = roomSeeThrough(eye);
   Object.assign(P, { t, v: fly.v, c, f, eye, fwd: norm(sub(target, eye)), n: 0, top: 0 });
   reach = viewAt(eye[1]) / VIEW;
   clear = smooth((eye[1] - SKY) / 200);
   cur.plan = P;
   cur.t = t;
+  // From a room the pool rarely fills (the window shows a part of the city): stop at a distance.
+  const far = seeThrough ? ROOM_VIEW : Number.POSITIVE_INFINITY;
   for (const it of gather(P)) {
+    if (it.d > far) break;
     it.run();
     if (P.n >= P.size) break;
   }
 }
+/** How far the city is drawn through a room's window. */
+const ROOM_VIEW = 90;
 const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+/** In a room, what its window lets the eye see of the city (null outside a room: everything). */
+let seeThrough: ((x: number, y: number, z: number) => boolean) | null = null;
 
 /**
  * The plan for time t, made once a frame. How densely sites are kept is eased a little each frame
@@ -2960,9 +3034,11 @@ function planFor(t: number): Plan {
   const aim = 0.9 * size;
   const dt = t - lastBuilt;
   build(P, t);
+  // From a room the window shows a small part of the city: the pool need not fill.
+  const most = inRoom() ? 1.6 : 12;
   const ease = (power: number) => {
     lambda *= Math.max(0.5, Math.min(2, (aim / Math.max(1, P.n)) ** power));
-    lambda = Math.max(0.02, Math.min(12, lambda));
+    lambda = Math.max(0.02, Math.min(most, lambda));
   };
   if (dt > 0 && dt <= 0.5) ease(Math.min(1, dt * 6));
   else if (dt !== 0) {
@@ -3043,6 +3119,7 @@ function trafficAt(p: Particle, P: Plan, t: number): Spot {
   if (r[0] * P.fwd[0] + r[1] * P.fwd[1] + r[2] * P.fwd[2] < 0.5) k = 0;
   k *= smooth((d - 4) / 10) * smooth((VIEW - d) / 100);
   if (k > 0 && hidden(P.eye, pos[0], pos[1], pos[2])) k = 0;
+  if (k > 0 && seeThrough && !seeThrough(pos[0], pos[1], pos[2])) k = 0;
   const glow = b < 0.12 ? 1 : 0.55 * (1 - b) ** 2;
   return { pos, rgb: scale(sgn > 0 ? HEADLIGHT : TAILLIGHT, 0.55 * glow * k) };
 }
@@ -3064,6 +3141,14 @@ function shipAt(p: Particle, t: number): Spot {
     return { pos: skyAt(p, [P.c[0], 0, P.c[2]]), rgb: [0, 0, 0] };
   }
   if (m >= TRAFFIC_FROM) return trafficAt(p, P, t);
+  // In a room, the ships' share draws the room and the Dot Walker.
+  if (m >= YOU_FROM && inRoom()) {
+    const per = TRAFFIC_FROM - YOU_FROM;
+    const L = Math.floor(p.i / 100) * per + m - YOU_FROM;
+    const n =
+      Math.floor(grains / 100) * per + Math.max(0, Math.min(per, (grains % 100) - YOU_FROM));
+    return roomGrain(L, Math.max(n, L + 1), t);
+  }
   if (m >= SHIPS_FROM) return otherShipAt(p, P, t);
   if (m >= YOU_FROM) {
     const pace = fly.mode === 'route' ? 0.6 : Math.max(0, fly.speed / FLY_SPEED - 0.4);
@@ -3078,7 +3163,9 @@ function shipAt(p: Particle, t: number): Spot {
   // front of it: stars and constellations, satellites, the stations, the spire's beacon.
   const L = Math.floor(p.i / 100) * YOU_FROM + m;
   const n = Math.floor(grains / 100) * YOU_FROM + Math.min(YOU_FROM, grains % 100);
-  return skyGrain(L, Math.max(n, L + 1), P.c, viewAt(P.eye[1]) + 40, highness(P.c[1]), t);
+  const sky = skyGrain(L, Math.max(n, L + 1), P.c, viewAt(P.eye[1]) + 40, highness(P.c[1]), t);
+  if (seeThrough && !seeThrough(sky.pos[0], sky.pos[1], sky.pos[2])) sky.rgb = [0, 0, 0];
+  return sky;
 }
 
 /**
@@ -3320,7 +3407,7 @@ export function eyeIn(k: number, u: number, t: number): Eye {
     }
     default: {
       const { c, f } = flier(t);
-      return shipEye(c, f);
+      return roomCamera(t) ?? shipEye(c, f);
     }
   }
 }

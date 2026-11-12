@@ -27,6 +27,7 @@ import {
 } from './bigbang';
 import type { Sign, Tower } from './city';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
+import { dockItems } from './city-docks';
 import { textPixels } from './city-font';
 import {
   AVENUE,
@@ -2215,6 +2216,7 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number): Item[] {
   }
   railItems(eye, t, Math.min(R, NEAR + 60), out);
   riverItems(eye, t, R, floorAt, waterAt, out);
+  dockItems(eye, t, Math.min(R, NEAR + 40), out);
   const k = planLook(eye[1]);
   if (k > 0) planItems(eye, fwd, R, k, t, out);
   return out;

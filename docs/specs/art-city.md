@@ -858,6 +858,42 @@ landmark: the Studio's **Armillary** Nova Core at 1.7 times its size, breathing 
 the Studio, its conduits running out along the streets. From above, the Heights reads as before:
 every roof a patch of cyan, the core's plaza ringed.
 
+### Docks and rooms (`lib/city-docks.ts`, `lib/city-rooms.ts`, `lib/dot-walker.ts`)
+
+Queued from the user (2026-11-12): "docking the ship and cyberpunk rooms ... with panoramas", and
+then: "rooms are places where the dot walker can rest. improve the dot walker to walk across
+these."
+
+Four docks every tile, each a small lit room with a pad on its right and a window onto its own
+view:
+
+| Dock | Where | Pad | Window | Neon word |
+|------|-------|-----|--------|-----------|
+| **Avenue lounge** | 52 up a tower beside the avenue | a cantilever reaching out | down the avenue | AVENUE |
+| **River lounge** | on the river's south wall | a ring of light | across the water and its rain | RAIN |
+| **Street lounge** | low over the street, near the Heights | a helipad (H and edge lights) | down the street, a skylight overhead | LANES |
+| **Chinatown lounge** | 40 up, among the lanterns | a garden pad, leaves round its rim | west over the rooftops | TEA |
+
+- **Docking:** bring the ship down onto a pad (within its ring, just above it) and the bar reads
+  "Docked — Enter to go inside". On a pad the ship settles and stays put until a flying key moves
+  it on.
+- **Inside:** Enter puts you in the room as the Dot Walker (the Vegetal's golden figure of dots,
+  `lib/dot-walker.ts`), the eye over its shoulder and held inside the walls. W S walk, A D turn,
+  Shift runs, Space jumps. Walls, the sofa's back and the corner plants hold it; a step into them
+  slides along them.
+- **Resting:** standing still on the sofa for a moment, it sits down facing the window, breathing;
+  the eye moves behind its head and drifts slowly over the view. Any step stands it up.
+- **The panorama is the real city**, drawn from inside the room in true perspective, only through
+  the window (and the skylight); the room itself is drawn from the ship's own grains (edges, a
+  floor grid, the neon word, strips pulsing on the beat, mullions, sofa, plants, a lamp).
+- **Leaving:** Enter again (or Esc) puts you back in the ship on its pad, facing out.
+
+The Dot Walker's steps are smoother than the forest's: pace and turn ease in and out, it slides
+along walls rather than stopping dead, and it has a seated pose. The Vegetal uses the same body.
+
+Cost: from a room the city is drawn only out to 90 through the window (with tighter culling and a
+lower density cap), about 9 to 12 ms a frame in the bench, against 8 to 10 in flight.
+
 ### Still rough, and next
 
 - The Studio's buildings, domes, minarets and spires are light: you fly through them (only towers
@@ -866,9 +902,8 @@ every roof a patch of cyan, the core's plaza ringed.
   drafts (gates only); the sky island itself is the platform station, still small.
 - Traffic does not yet move in platoons on the beat; the beat does not yet travel out from a heart
   (the Nova Cores, another round).
-- Queued from the user, not in this round: rain over a river and its ripples; a business district
-  of twisting towers with docks; docking the ship and cyberpunk rooms the Dot Walker walks through,
-  with panoramas; cars on the ground; Embassies of Happiness with a Shark Simulator cabinet;
+- Docks are only the four lounges; the business towers do not yet have docks of their own.
+- Queued from the user, not in this round: cars on the ground; Embassies of Happiness with a Shark Simulator cabinet;
   ultraboost ring portals high in the sky into hyperspace and other solar systems.
 
 ## Game · Studio, and the phone
