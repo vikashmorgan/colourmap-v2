@@ -27,6 +27,7 @@ import {
 } from './bigbang';
 import type { Sign, Tower } from './city';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
+import { carItems } from './city-cars';
 import { dockItems } from './city-docks';
 import { embassyAt, embassyItems } from './city-embassy';
 import { textPixels } from './city-font';
@@ -2226,6 +2227,7 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number): Item[] {
   riverItems(eye, t, R, floorAt, waterAt, out);
   dockItems(eye, t, Math.min(R, NEAR + 40), out);
   embassyItems(eye, t, R, out);
+  carItems(eye, fwd, t, inCanal, out);
   const k = planLook(eye[1]);
   if (k > 0) planItems(eye, fwd, R, k, t, out);
   return out;

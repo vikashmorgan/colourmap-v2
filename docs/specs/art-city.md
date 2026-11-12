@@ -925,6 +925,26 @@ and the river:
 - **The deep link:** any world's page opens on one piece with `?piece=<step id>`
   (`pieceFromSearch` in the trip player); a link wins over the side the world was last left on.
 
+### Cars on the ground (`lib/city-cars.ts`)
+
+Queued from the user (2026-11-12): "cars on the ground": simple grain cars with head and tail
+lights, one colour per road, ready for ground racing later.
+
+- **Roads:** every street line along z carries cars both ways, keeping to the right; the avenue has
+  two lanes each way (the outer one faster); every cross street along x carries a few. Each lane
+  keeps one pace, so no car runs into the one ahead.
+- **One colour a road:** the avenue gold, the streets along z cool (cyan, violet, turquoise,
+  magenta, steel), the cross streets warm (amber, rose, saffron, leaf, ivory); neighbours differ.
+- **A car:** about sixty grains: its sill, belt line and roof in outline in its road's colour, two
+  warm headlights with a faint pool on the street ahead, two red tail lights.
+- **Where not:** never on the river (the streets cross it on their bridges), never over the
+  Canals' water, never on Chinatown's avenue (a street to walk under the lanterns); they fade out
+  round the Street lounge and its helipad.
+- **Cost:** only cars within 130 of an eye below the sky lanes (80 over the street), ahead of it,
+  are drawn; about 0.2 to 0.4 ms a frame at street level in the bench.
+- **Ready for racing:** a car's place is a pure function of its road, way, number and the time
+  (`carAt`), so a ground race can read the traffic without stepping it.
+
 ### Still rough, and next
 
 - The Studio's buildings, domes, minarets and spires are light: you fly through them (only towers
@@ -934,7 +954,8 @@ and the river:
 - Traffic does not yet move in platoons on the beat; the beat does not yet travel out from a heart
   (the Nova Cores, another round).
 - Docks are only the four lounges; the business towers do not yet have docks of their own.
-- Queued from the user, not in this round: cars on the ground;
+- Cars do not yet stop at crossings or react to the ship; no ground race yet.
+- Queued from the user, not in this round:
   ultraboost ring portals high in the sky into hyperspace and other solar systems.
 
 ## Game · Studio, and the phone
