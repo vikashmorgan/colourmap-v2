@@ -945,6 +945,46 @@ lights, one colour per road, ready for ground racing later.
 - **Ready for racing:** a car's place is a pure function of its road, way, number and the time
   (`carAt`), so a ground race can read the traffic without stepping it.
 
+### Hyperspace and three solar systems (`lib/city-space.ts`)
+
+Queued from the user (2026-11-12): "ultraboost ring portals high in the sky into hyperspace and
+other solar systems": a few portals very high over the city, runs of rings shrinking from big to
+small, seen from far; flying through every ring is the ultraboost, into a hyperspace tunnel
+(streaking star lines, rings of light pulsing past, a quiet Mach readout), then space with three
+solar systems (a star, planets with rings, moons and the glow of an atmosphere, in grains) to fly
+between, with portals on to the other systems and back to the City. No cities on the planets.
+
+- **The city's portals:** three a tile (the Avenue, Chinatown and Market Gates), each five rings
+  (radius 24 down to 8, 30 apart) at 210 to 240 over the street, above the towers' sky, so you
+  reach them with the super boost (Space and W together, then let go of W to hold the height).
+  Violet to cyan, a bright knot of light chasing round each ring, a breath on the beat. They show
+  from 300 to 400 away from the sky over the towers, and from over a thousand from the
+  stratosphere.
+- **The ultraboost:** through every ring in order, each within 6 seconds of the last ("Ultraboost ·
+  ring 3 of 5" beside the bar as you go); a ring missed, or flown through the wrong way, starts
+  the run over.
+- **The tunnel (6 seconds):** star lines streaking past round you, longer the faster, violet rings
+  rushing by on the beat; the words beside the bar read only "Hyperspace · Mach 27", the number
+  climbing quickly, gliding, easing down. You are carried; the keys wait.
+- **Space:** out in a system, facing its star, the background near black. W and S climb and dive,
+  A and D turn, Shift faster, Space boosts (its bar never drains out here); you fly five times the
+  city's pace, and nothing lets you inside a star, planet or moon. Stars all round (a band of the
+  galaxy across them), faint dust sliding past to feel the speed, each planet's orbit a faint
+  dotted ring to steer by.
+
+| System | Star | Planets |
+|--------|------|---------|
+| **Aurora** | gold | Cinder (small, red), Maren (blue, an atmosphere, a moon), Hallow (a banded giant, rings, two moons), Rime (ice, an atmosphere) |
+| **Tidewell** | blue-white | Vesper (violet, rings), Verdance (green, an atmosphere, two moons), Abyssal (a banded blue giant, an atmosphere) |
+| **Ember** | red | Forge (a lava world glowing), Saffron (a banded giant, wide rings, a moon), Hush (small, a moon) |
+
+- Planets are lit from their star (a day side and a dim night side), their far side hidden, their
+  rings hidden behind them and dimmed in their shadow; they move round their stars slowly.
+- **Gates out there:** in every system a violet-to-cyan run of rings leads on to the next system
+  (Aurora, Tidewell, Ember, Aurora again), and a gold run leads home: back through the tunnel and
+  out over the city just past the portal you left by, still held high.
+- **Cost:** out in space only the system is drawn; about 3 to 5 ms a frame in the bench.
+
 ### Still rough, and next
 
 - The Studio's buildings, domes, minarets and spires are light: you fly through them (only towers
@@ -953,10 +993,10 @@ lights, one colour per road, ready for ground racing later.
   drafts (gates only); the sky island itself is the platform station, still small.
 - Traffic does not yet move in platoons on the beat; the beat does not yet travel out from a heart
   (the Nova Cores, another round).
-- Docks are only the four lounges; the business towers do not yet have docks of their own.
+- Docks are the four lounges and the embassies' rooms; the business towers have none of their own yet.
 - Cars do not yet stop at crossings or react to the ship; no ground race yet.
-- Queued from the user, not in this round:
-  ultraboost ring portals high in the sky into hyperspace and other solar systems.
+- Space has no race, no other ships and no landing; the cockpit gauges still read the city's
+  height out there.
 
 ## Game · Studio, and the phone
 

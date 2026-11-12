@@ -57,6 +57,7 @@ import {
 } from './city-grid';
 import { CAR_LEN, CARS, carAt, RAIL, railAt, railCeiling, STATIONS, TRAINS } from './city-metro';
 import { besideRiver, inRiver, RIVER_Y, riverClear, riverItems } from './city-rain';
+import { cityPortalItems } from './city-space';
 import { buildingAt, DOMES, FACTORIES, TEMPLES } from './golden-city';
 
 /* ---------- the plan: districts ---------- */
@@ -2228,6 +2229,7 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number): Item[] {
   dockItems(eye, t, Math.min(R, NEAR + 40), out);
   embassyItems(eye, t, R, out);
   carItems(eye, fwd, t, inCanal, out);
+  cityPortalItems(eye, t, out);
   const k = planLook(eye[1]);
   if (k > 0) planItems(eye, fwd, R, k, t, out);
   return out;

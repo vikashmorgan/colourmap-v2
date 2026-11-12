@@ -84,6 +84,21 @@ import {
 } from './city-rooms';
 import { skyGrain } from './city-sky';
 import {
+  type Arrival,
+  cityRingBanner,
+  enterTunnel,
+  inSpace,
+  keepOut,
+  portalStep,
+  resetSpace,
+  spaceBanner,
+  spaceDust,
+  spaceItems,
+  spaceMode,
+  spaceSky,
+  tunnelStep,
+} from './city-space';
+import {
   buildingAt,
   buildingEye,
   DOMES,
@@ -1999,6 +2014,7 @@ function carryOn(dt: number, t: number) {
 /** Starts the route afresh: no super boost, no slow mode, no race. */
 function afresh() {
   leaveRoom();
+  resetSpace();
   fly.dock = null;
   fly.mode = 'route';
   fly.high = false;
@@ -2031,6 +2047,11 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     // Yes to Shark Simulator: off to the Ocean, the ship left on its pad.
     if (step === 'arcade') openLink(SHARK_SIM_HREF);
     if (active) return;
+  }
+  // Out through the ring portals (lib/city-space.ts): the tunnel, or a solar system.
+  if (inSpace()) {
+    spaceFly(active, keys, dt, t);
+    return;
   }
   if (!active) {
     fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
@@ -2106,7 +2127,59 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   // A portal carries you on to another district.
   const jump = portalJump(was, fly.pos);
   if (jump !== 0) fly.pos = [fly.pos[0], fly.pos[1], fly.pos[2] + jump];
+  // Through every ring of a portal high in the sky: the ultraboost, into hyperspace.
+  const gate = portalStep(was, fly.pos, t);
+  if (gate) {
+    enterTunnel(gate, t);
+    fly.high = false;
+    fly.vy = 0;
+    return;
+  }
   after(dt, t);
+}
+
+/** How much faster the ship flies out in space than over the city. */
+export const SPACE_PACE = 5;
+
+/**
+ * A frame out in space: in the tunnel you are carried; in a system you fly freely (W and S climb
+ * and dive, A and D turn, Shift faster, Space boosts, the bar never draining out here), kept out of
+ * the star, the planets and the moons; through a portal's rings, on into the tunnel again.
+ */
+function spaceFly(active: boolean, keys: string[], dt: number, t: number) {
+  fly.mode = 'pilot';
+  fly.dock = null;
+  if (spaceMode() === 'tunnel') {
+    fly.bank *= Math.exp(-3 * dt);
+    const a = tunnelStep(dt, t);
+    if (a) arrive(a);
+    return;
+  }
+  const held = (...names: string[]) => active && names.some((n) => keys.includes(n));
+  const turn = (held('a', 'arrowleft') ? -1.2 : 0) + (held('d', 'arrowright') ? 1.2 : 0);
+  fly.yaw = turnTo(fly.yaw - turn * dt);
+  fly.bank += (-turn * 0.45 - fly.bank) * (1 - Math.exp(-4 * dt));
+  const tilt = (held('w', 'arrowup') ? 0.7 : 0) - (held('s', 'arrowdown') ? 0.7 : 0);
+  fly.pitch += (tilt - fly.pitch) * (1 - Math.exp(-2.5 * dt));
+  const boosting = held(' ');
+  if (!boosting) fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
+  const pace = boosting ? BOOST_PACE : held('e', 'shift') ? 1.8 : held('q', 'x') ? 0.4 : 1;
+  fly.speed +=
+    (FLY_SPEED * SPACE_PACE * pace - fly.speed) * (1 - Math.exp((boosting ? -4 : -1.5) * dt));
+  const was: Vec3 = [...fly.pos];
+  fly.pos = keepOut(add(was, headingOf(fly.yaw, fly.pitch), fly.speed * dt), t);
+  const gate = portalStep(was, fly.pos, t);
+  if (gate) enterTunnel(gate, t);
+}
+
+/** Out of the tunnel: into a system facing its star, or home over the city, on along the portal. */
+function arrive(a: Arrival) {
+  fly.pos = [...a.pos];
+  fly.yaw = a.yaw;
+  fly.pitch = 0;
+  fly.vy = 0;
+  fly.high = a.city;
+  fly.speed = FLY_SPEED * (a.city ? BOOST_PACE : SPACE_PACE);
 }
 
 /** Puts the ship at q heading by yaw, piloted (for the tests, and a dock to start from). */
@@ -2170,6 +2243,8 @@ const highness = (y: number) => smooth((y - SKY + 20) / (STRATOSPHERE - SKY));
  */
 export function fade(pos: Vec3, eye: Vec3): number {
   const d = Math.hypot(pos[0] - eye[0], pos[1] - eye[1], pos[2] - eye[2]);
+  // Out in space nothing dims with distance: only the nearest grains dissolve.
+  if (inSpace()) return smooth((d - 3) / 9);
   const open = Math.max(0, eye[1] - SKY);
   const far = 260 + 2.4 * open;
   // In a room, the walker and the room stand close: only the nearest grains dissolve.
@@ -2215,6 +2290,9 @@ const CANAL_FLOOR = 14;
  */
 export function tally(): string {
   if (inRoom()) return roomBanner(fly.t);
+  if (inSpace()) return spaceBanner(fly.t);
+  const rings = cityRingBanner(fly.t);
+  if (rings) return rings;
   const r = raceBanner(fly.t);
   if (r) return r;
   if (fly.dock) return DOCK_PROMPT;
@@ -2228,6 +2306,7 @@ export function tally(): string {
  * and tilts down at the city below; high up it stands far back and looks down on the whole plan.
  */
 function shipEye(c: Vec3, f: Vec3): Eye {
+  if (inSpace()) return { eye: add(add(c, f, -10), [0, 1, 0], 3.2), target: add(c, f, 8) };
   const hi = highness(c[1]);
   const lk = fly.look;
   const fl = Math.hypot(f[0], f[2]) || 1;
@@ -3003,13 +3082,14 @@ function build(P: Plan, t: number) {
   const { eye, target } = roomCamera(t) ?? shipEye(c, f);
   seeThrough = roomSeeThrough(eye);
   Object.assign(P, { t, v: fly.v, c, f, eye, fwd: norm(sub(target, eye)), n: 0, top: 0 });
-  reach = viewAt(eye[1]) / VIEW;
-  clear = smooth((eye[1] - SKY) / 200);
+  const space = inSpace();
+  reach = space ? SPACE_REACH : viewAt(eye[1]) / VIEW;
+  clear = space ? 1 : smooth((eye[1] - SKY) / 200);
   cur.plan = P;
   cur.t = t;
   // From a room the pool rarely fills (the window shows a part of the city): stop at a distance.
   const far = seeThrough ? ROOM_VIEW : Number.POSITIVE_INFINITY;
-  for (const it of gather(P)) {
+  for (const it of space ? spaceRuns(P) : gather(P)) {
     if (it.d > far) break;
     it.run();
     if (P.n >= P.size) break;
@@ -3017,6 +3097,18 @@ function build(P: Plan, t: number) {
 }
 /** How far the city is drawn through a room's window. */
 const ROOM_VIEW = 90;
+/** Out in space the view reaches across a whole system. */
+const SPACE_REACH = 2600 / VIEW;
+/** What space puts before the eye (lib/city-space.ts), as the plan's sites. */
+function spaceRuns(P: Plan): { d: number; run: () => void }[] {
+  return spaceItems(P.eye, P.f, cur.t).map((g) => ({
+    d: g.d,
+    run: () => {
+      cur.fn = g.site;
+      group(g.gid, g.count, g.weight, g.d, 1, Kind.Custom);
+    },
+  }));
+}
 const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 /** In a room, what its window lets the eye see of the city (null outside a room: everything). */
 let seeThrough: ((x: number, y: number, z: number) => boolean) | null = null;
@@ -3089,6 +3181,8 @@ const near = (a: number, c: number, period: number) =>
  */
 function trafficAt(p: Particle, P: Plan, t: number): Spot {
   const L = Math.floor(p.i / 100) * (POOL_FROM - TRAFFIC_FROM) + (p.i % 100) - TRAFFIC_FROM;
+  // Out in space, dust drifting past instead.
+  if (inSpace()) return spaceDust(L, P.eye);
   const j = Math.floor(L / DASH);
   const b = (L % DASH) / (DASH - 1);
   const lane = j % LANE_COUNT;
@@ -3176,6 +3270,7 @@ function shipAt(p: Particle, t: number): Spot {
   // front of it: stars and constellations, satellites, the stations, the spire's beacon.
   const L = Math.floor(p.i / 100) * YOU_FROM + m;
   const n = Math.floor(grains / 100) * YOU_FROM + Math.min(YOU_FROM, grains % 100);
+  if (inSpace()) return spaceSky(L, Math.max(n, L + 1), P.eye, t);
   const sky = skyGrain(L, Math.max(n, L + 1), P.c, viewAt(P.eye[1]) + 40, highness(P.c[1]), t);
   if (seeThrough && !seeThrough(sky.pos[0], sky.pos[1], sky.pos[2])) sky.rgb = [0, 0, 0];
   return sky;
@@ -3188,6 +3283,7 @@ function shipAt(p: Particle, t: number): Spot {
  */
 const shipSeen = { t: Number.NaN, v: -1, list: [] as boolean[] };
 function otherShipAt(p: Particle, P: Plan, t: number): Spot {
+  if (inSpace()) return { pos: P.eye, rgb: [0, 0, 0] };
   const per = TRAFFIC_FROM - SHIPS_FROM;
   const L = Math.floor(p.i / 100) * per + (p.i % 100) - SHIPS_FROM;
   const n =
@@ -3504,8 +3600,12 @@ export function pieceCamera(k: number, s: number): Eye {
  * water, teal near the surface deepening to blue-black; null for the chosen one.
  */
 export function pieceBackground(k: number): string[] | null {
-  return PHASES[k]?.id === 'atlantis' ? ATLANTIS_WATER : null;
+  const id = PHASES[k]?.id;
+  if (id === 'ship' && inSpace()) return SPACE_BACKGROUND;
+  return id === 'atlantis' ? ATLANTIS_WATER : null;
 }
+/** Out in space: near black, a breath of deep blue low down. */
+const SPACE_BACKGROUND = ['#010108', '#000003', '#020414'];
 
 /** Glow and size of piece k on its own. */
 export function pieceLook(k: number): { glow: number; size: number } {
