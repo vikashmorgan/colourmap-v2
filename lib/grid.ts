@@ -172,6 +172,11 @@ export const HUBS: Hub[] = [
         label: 'Geometry',
         line: 'The Geometry Builder: stars, wind, figures',
       },
+      {
+        href: '/geometry-field/city/vision',
+        label: 'City vision',
+        line: 'How far the City of Dreams can go in a year',
+      },
       { href: '/art/flow', label: 'Flow', line: 'AI Sculptures, the Flow collection' },
       {
         href: '/art/butterflies',
