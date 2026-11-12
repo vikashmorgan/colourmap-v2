@@ -379,13 +379,92 @@ export function cellOf(j: number, u: number): { c: Vec3; h: Vec3; g: number } {
   };
 }
 
+/*
+ * The corridor (2026-11-12: "create ability to navigate through the two
+ * blocks of frames so u do like a space corridor in it and we can sort of fly
+ * forward through it. like an infinite set of two blocks and we in the
+ * middle", the blocks being the cells). Pills under the piece pick the view:
+ * **Block**, the block as it was, or **Corridor**: two walls of cells face
+ * each other across an open gap, three cells high and one deep, and the eye
+ * flies forward down the gap. Every cell keeps its walls, its streaming
+ * chloroplasts, its nucleus and its pulses to the next cell. The walls never
+ * end: a column of cells that passes behind the eye comes round to the far
+ * end, fading in out of the dark, so the grains are the same few always. The
+ * Journey keeps the block.
+ */
+export const CELL_VIEWS = ['Block', 'Corridor'];
+let corridor = false;
+export const hasCellViews = (k: number) => idOf(k) === 'cell';
+/** Columns of cells along each wall before they come round again, and rows up each wall. */
+export const CORRIDOR_COLS = 8;
+const CORRIDOR_ROWS = 3;
+export const CORRIDOR_CELLS = 2 * CORRIDOR_ROWS * CORRIDOR_COLS;
+/** Half the open gap down the middle, from the eye to each wall's inner face. */
+export const CORRIDOR_GAP = 5;
+/** How fast the eye flies down the corridor, in units a second. */
+export const CORRIDOR_SPEED = 3.2;
+export const CORRIDOR_LEN = CORRIDOR_COLS * CELL_SIZE[2];
+const CELL_HALF: Vec3 = mul(CELL_SIZE, 0.47);
+
+/** How far ahead of the eye column `col` stands at time t: from one cell behind it to the far end. */
+export const corridorAhead = (col: number, t: number) =>
+  wrap(col * CELL_SIZE[2] - CORRIDOR_SPEED * t + CELL_SIZE[2], CORRIDOR_LEN) - CELL_SIZE[2];
+/** Cell j of the corridor: which wall, row and column, and its centre at time t. The eye is at the origin. */
+function corridorCell(j: number, t: number): { c: Vec3; row: number; col: number } {
+  const side = j % 2 ? 1 : -1;
+  const row = Math.floor(j / 2) % CORRIDOR_ROWS;
+  const col = Math.floor(j / (2 * CORRIDOR_ROWS));
+  return {
+    c: [
+      side * (CORRIDOR_GAP + CELL_HALF[0]),
+      (row - (CORRIDOR_ROWS - 1) / 2) * CELL_SIZE[1],
+      -corridorAhead(col, t),
+    ],
+    row,
+    col,
+  };
+}
+/** How many cells piece 1 is drawn with in the view chosen. */
+const cellCount = () => (corridor ? CORRIDOR_CELLS : CELL_COUNT);
+/** How lit a corridor grain is: fading in at the far end, as its column comes round out of the dark. */
+const corridorFade = (p: Particle, t: number) => {
+  const j = Math.floor(p.a * CORRIDOR_CELLS);
+  const ahead = corridorAhead(Math.floor(j / (2 * CORRIDOR_ROWS)), t);
+  return smooth((CORRIDOR_LEN - CELL_SIZE[2] - ahead) / 20);
+};
+
 type CellRole = 'wall' | 'chloroplast' | 'nucleus' | 'pulse';
+/** In the corridor more grains go to the walls, so the frames of the nearer cells read. */
 const cellRole = (p: Particle): CellRole =>
-  p.c < 0.48 ? 'wall' : p.c < 0.8 ? 'chloroplast' : p.c < 0.9 ? 'nucleus' : 'pulse';
+  corridor
+    ? p.c < 0.68
+      ? 'wall'
+      : p.c < 0.88
+        ? 'chloroplast'
+        : p.c < 0.94
+          ? 'nucleus'
+          : 'pulse'
+    : p.c < 0.48
+      ? 'wall'
+      : p.c < 0.8
+        ? 'chloroplast'
+        : p.c < 0.9
+          ? 'nucleus'
+          : 'pulse';
 
 /** A pulse's way from its cell to the next one along an axis, and how far along it is. */
 function pulseOf(p: Particle, u: number, t: number): { from: Vec3; to: Vec3; f: number } {
-  const j = Math.floor(p.a * CELL_COUNT);
+  const j = Math.floor(p.a * cellCount());
+  if (corridor) {
+    // Along the wall to the next cell ahead, or up or down to the next row.
+    const { c, row } = corridorCell(j, t);
+    const up = Math.floor(p.d * 2) === 1;
+    const to: Vec3 = up
+      ? [c[0], c[1] + (row + 1 < CORRIDOR_ROWS ? 1 : -1) * CELL_SIZE[1], c[2]]
+      : [c[0], c[1], c[2] - CELL_SIZE[2]];
+    const f = frac(t * 0.3 + hash(j * 3 + (up ? 1 : 0), 9) + p.b * 0.08);
+    return { from: c, to, f };
+  }
   const ijk = cellIjk(j);
   const axis = Math.floor(p.d * 3);
   const step = at(ijk, axis) + 1 < at(GRID, axis) ? 1 : -1;
@@ -396,16 +475,18 @@ function pulseOf(p: Particle, u: number, t: number): { from: Vec3; to: Vec3; f: 
 }
 
 function cellPoint(p: Particle, u: number, t: number): Vec3 {
-  const j = Math.floor(p.a * CELL_COUNT);
-  const { c, h } = cellOf(j, u);
+  const j = Math.floor(p.a * cellCount());
+  const { c, h } = corridor ? { c: corridorCell(j, t).c, h: CELL_HALF } : cellOf(j, u);
   const k = h[0] / (CELL_SIZE[0] * 0.47);
   switch (cellRole(p)) {
     case 'wall': {
       // Plant cells are boxes with walls: most grains draw the box's twelve edges, so the walls
-      // read as a grid, and the rest fill its faces faintly.
+      // read as a grid, and the rest fill its faces faintly. In the corridor, where each cell has
+      // fewer grains and comes close, nearly all go to the edges, so the frames read.
       const local: Vec3 = [0, 0, 0];
-      if (p.d < 0.65) {
-        const e = Math.floor((p.d / 0.65) * 12);
+      const edges = corridor ? 0.92 : 0.65;
+      if (p.d < edges) {
+        const e = Math.floor((p.d / edges) * 12);
         const axis = e % 3;
         const corner = Math.floor(e / 3);
         local[axis] = (p.b * 2 - 1) * at(h, axis);
@@ -413,7 +494,7 @@ function cellPoint(p: Particle, u: number, t: number): Vec3 {
         local[(axis + 2) % 3] = (corner & 2 ? 1 : -1) * at(h, (axis + 2) % 3);
         return add(c, local);
       }
-      const q = (p.d - 0.65) / 0.35;
+      const q = (p.d - edges) / (1 - edges);
       const f = Math.floor(q * 6);
       const axis = f >> 1;
       local[axis] = (f & 1 ? 1 : -1) * at(h, axis);
@@ -1490,31 +1571,41 @@ export const hasDrums = (k: number) => PHASES[k]?.id === 'veins';
 
 /* The pieces' pills: the 3D tree's grounds and the veins' drums. */
 export const hasVariants = (k: number) =>
-  hasGround(k) || hasDrums(k) || hasReflTrees(k) || hasBlooms(k) || hasBird(k) || hasCities(k);
+  hasGround(k) ||
+  hasDrums(k) ||
+  hasReflTrees(k) ||
+  hasBlooms(k) ||
+  hasBird(k) ||
+  hasCities(k) ||
+  hasCellViews(k);
 export const variantNames = (k: number) =>
-  hasCities(k)
-    ? CITIES.map((c) => c.name)
-    : hasDrums(k)
-      ? DRUMS.map((d) => d.name)
-      : hasReflTrees(k)
-        ? REFL_TREES.map((d) => d.name)
-        : hasBlooms(k)
-          ? BLOOMS
-          : hasBird(k)
-            ? PLAYERS
-            : GROUNDS;
+  hasCellViews(k)
+    ? CELL_VIEWS
+    : hasCities(k)
+      ? CITIES.map((c) => c.name)
+      : hasDrums(k)
+        ? DRUMS.map((d) => d.name)
+        : hasReflTrees(k)
+          ? REFL_TREES.map((d) => d.name)
+          : hasBlooms(k)
+            ? BLOOMS
+            : hasBird(k)
+              ? PLAYERS
+              : GROUNDS;
 export const variantLabel = (k: number) =>
-  hasCities(k)
-    ? 'City'
-    : hasDrums(k)
-      ? 'Drum'
-      : hasReflTrees(k)
-        ? 'Tree'
-        : hasBlooms(k)
-          ? 'Flower'
-          : hasBird(k)
-            ? 'Play as'
-            : 'Ground';
+  hasCellViews(k)
+    ? 'View'
+    : hasCities(k)
+      ? 'City'
+      : hasDrums(k)
+        ? 'Drum'
+        : hasReflTrees(k)
+          ? 'Tree'
+          : hasBlooms(k)
+            ? 'Flower'
+            : hasBird(k)
+              ? 'Play as'
+              : 'Ground';
 /** Pill i on piece k; with no piece (the Journey), the first of each. */
 export function setVariant(i: number, k?: number) {
   if (k === undefined) {
@@ -1523,9 +1614,11 @@ export function setVariant(i: number, k?: number) {
     reflKind = 0;
     bloomKind = 0;
     cityKind = 0;
+    corridor = false;
     quoteNow = 0;
     if (playerKind) setPlayer(0);
-  } else if (hasCities(k)) cityKind = CITIES[i] ? i : 0;
+  } else if (hasCellViews(k)) corridor = i === 1;
+  else if (hasCities(k)) cityKind = CITIES[i] ? i : 0;
   else if (hasDrums(k)) drumKind = i;
   else if (hasBird(k)) {
     if (i !== playerKind) setPlayer(i);
@@ -4468,24 +4561,29 @@ export function colour(k: number, p: Particle, u: number, t: number): RGB {
 /** Every grain's own slow twinkle. */
 const twinkleOf = (p: Particle, t: number) => 0.7 + 0.3 * Math.sin(t * 1.7 + p.i * 0.37);
 
+function cellColour(p: Particle, u: number, t: number, twinkle: number): RGB {
+  switch (cellRole(p)) {
+    case 'wall':
+      return scale(CELL_WALL, corridor ? 0.5 : 0.32);
+    case 'chloroplast':
+      return scale(CHLORO, 0.7 * twinkle);
+    case 'nucleus':
+      return scale(NUCLEUS, 0.6);
+    default: {
+      // Brightest as it passes through the wall between two cells.
+      const { f } = pulseOf(p, u, t);
+      const band = Math.exp(-((f - 0.5) ** 2) / 0.01);
+      return scale(SPARK, (0.25 + 0.9 * band) * smooth((u - 0.35) / 0.15));
+    }
+  }
+}
+
 function formColour(k: number, p: Particle, u: number, t: number): RGB {
   const twinkle = twinkleOf(p, t);
   switch (idOf(k)) {
     case 'cell':
-      switch (cellRole(p)) {
-        case 'wall':
-          return scale(CELL_WALL, 0.32);
-        case 'chloroplast':
-          return scale(CHLORO, 0.7 * twinkle);
-        case 'nucleus':
-          return scale(NUCLEUS, 0.6);
-        default: {
-          // Brightest as it passes through the wall between two cells.
-          const { f } = pulseOf(p, u, t);
-          const band = Math.exp(-((f - 0.5) ** 2) / 0.01);
-          return scale(SPARK, (0.25 + 0.9 * band) * smooth((u - 0.35) / 0.15));
-        }
-      }
+      if (corridor) return scale(cellColour(p, u, t, twinkle), corridorFade(p, t));
+      return cellColour(p, u, t, twinkle);
     case 'roots':
       switch (rootRole(p)) {
         case 'water': {
@@ -4726,6 +4824,11 @@ type Eye = { eye: Vec3; target: Vec3 };
 export function eyeIn(k: number, u: number, t: number): Eye {
   switch (idOf(k)) {
     case 'cell': {
+      if (corridor) {
+        // In the gap between the two walls, looking down it, swaying a touch as it flies.
+        const sway: Vec3 = [Math.sin(t * 0.31) * 0.7, Math.sin(t * 0.23) * 0.6, 0];
+        return { eye: sway, target: [sway[0] * 0.4, sway[1] * 0.4, -30] };
+      }
       // Slowly round the block of cells.
       const a = 0.5 + u * 1.3;
       return { eye: [Math.sin(a) * 46, 10, Math.cos(a) * 46], target: [0, 0, 0] };

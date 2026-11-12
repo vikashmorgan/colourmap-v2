@@ -21,7 +21,7 @@ played as one trip with **Journey**.
 
 | # | Piece | What you see | Camera |
 |---|-------|--------------|--------|
-| 1 | Cell | A block of boxy plant cells. Inside each, green chloroplasts stream round the wall and a nucleus glows. Bright pulses cross from cell to cell through the walls: the plant's cells are joined inside | Slowly round the block |
+| 1 | Cell | A block of boxy plant cells. Inside each, green chloroplasts stream round the wall and a nucleus glows. Bright pulses cross from cell to cell through the walls: the plant's cells are joined inside. On its own, pills pick the view: **Block**, or **Corridor**, two endless walls of cells to fly down (below); the Journey keeps the block | Slowly round the block; in the corridor, down the gap between the walls |
 | 2 | Roots | One base, and every root grows from it: down and out in all directions, forking, fine hairs at the tips. Water climbs to the base; it shows only from a little below the base, deeper down (2026-11-10: "upper part of roots without the blue dots") | Below, from the side |
 | 3 | Roots and tree | One tree in one picture (2026-11-12: "after roots make roots and tree. where both live in same visual"): the roots of piece 2, in their earth colours with fine hairs at the tips, spread below a ground line, and the green tree of piece 6 stands on it, both grown from the one point where they meet, at one pace. Water climbs from a root tip to the base, blue below the ground, and goes on up the trunk to a branch tip as pale sap, so the two halves live as one. The ↑ / ↓ button turns the water and sap | Slowly round the tree, a little above the ground |
 | 4 | City | Night cities seen from far above, as from space or an airplane window (2026-11-12, below): five on pills, **Grid**, **Star**, **River**, **Bay**, **Canals** | Drifting slowly over the city, looking a little ahead and down |
@@ -38,6 +38,32 @@ played as one trip with **Journey**.
 | 15 | Reflection | A tree standing still at the water's edge and the same tree in the water below, branch for branch, trembling with soft ripples; only the reflection moves (2026-11-10: "a reflection of it on the water with soft ripples below it, also symmetric but lower part moving, without rotation of the upper tree"). On its own, pills pick one of five trees, each over its own water (2026-11-10: "make 5 types of tree like this one, not a weeping willow like in the grid, and for each type of reflection make the water different, one where we can see soft ripples of stars on the water, etc., to make the water more visible"): **Oak** over soft ripples of stars, rings of light passing out through a field of small stars; **Pine**, in whorls, over water still as a mirror, its reflection barely moving; **Birch**, white bark with dark marks, in the rain, rings opening and fading; **Cherry** in blossom under the moon, a glittering path on the water and petals falling onto it; **Baobab** over water breathing out mist, its reflection blurred. The water has twice the grains it had, and the eye stands a little above it so its surface shows. All in gold (2026-11-11: "keep the reflection all golden, or golden and green as second option, no silver"): every tree, blossom, moon and water turned to gold at its own brightness, pale ones to a lighter gold, never silver or blue. A **Green** switch beside the speeds gives the trees green leaves on gold. The Journey plays the oak | Still, face on, a little above the water |
 | 16 | Bloom | A flower in slow motion (2026-11-10: "add a flower bloom to the visuals so it looks like a flower growing and blooming in slow motion"): the stem rises from the ground, two leaves unfurl, the bud swells in green sepals, the sepals fold back, three rows of rose petals open from the outside in and curl at their tips, then the stamens rise and pollen drifts up. 48 seconds. Softer (2026-11-11: "it starts too bright like corals used to. focus on the flower blooming. don't make the flower too bright as well"): each part shows only as it spreads out, so the seedling and bud are faint and never a bright point, and the open flower is a touch softer. On its own, pills pick one of five flowers (2026-11-11: "make 5 diff types of flowers and add a mode where it is just lots of flowers blooming like fireworks"): **Rose** (three rows, pink), **Lotus** (two rows of broad petals in a cup, pale with pink edges, a heart like a seed head), **Lily** (six long apricot petals curling right back, long stamens), **Daisy** (many thin white petals flat round a wide gold disc), **Poppy** (four red petals in a loose cup round a dark heart); and **Fireworks**: fourteen flowers opening all round in the dark, each on its own nine-second clock, bursting open, holding, sinking a little as they fade, then blooming again elsewhere as another of the five; no stems, only blooming | Slowly round the flower, rising with it; for Fireworks, back far enough to see them all |
 | 17 | Bird Sim | Your turn (2026-11-11: "ability to navigate as a bird in a forest of golden trees, and mushrooms and stuff, like the shark sim, call it bird sim"): you are a bird, its wings beating hard to climb or fly fast and held out to glide down, leaning into its turns. Keys only (2026-11-11: "controls should not be with mouse, only ASDWX"): **A** and **D** turn, **W** and **S** climb and dive, **Shift** flies faster, **X** slower. In a turn it glides on open wings (2026-11-11: "as I move left/right with the bird he gets into planer (glide) and keeps his wings open. not rigid — the wings open and get impacted by left or right movement"): the beat stops, the inner wing lifts, folds a little and curls at its tip, the outer one stretches long and low, a slight flex runs along both and the tail twists into the turn; straight again, it eases back to beating. The forest wraps round you so it never ends, and the world in it is described below. In the Journey the bird weaves between the trees on its own, gliding through each bend. Pills choose who plays (2026-11-11: "add a way that I can walk with dot walker when walking in the forest, so not bird but dot walker, that walks on the earth"): **Bird**, or the **Dot Walker**, the golden figure of dots from the Dot Walker Arena in the round, walking on the forest floor over the hills (on the water in the Water forest), arms swinging against its legs, its stride and swing growing with its pace, dust kicked up at its feet. W walks on, S steps back, A and D turn, Shift runs, Space jumps; while a step is played Space belongs to the game, not to pause. With no one at the controls it strolls between the trees. As in the Ocean's Shark Sim, **Esc** lets go (the bird weaves, the walker strolls again, and Space pauses) and **Steer**, Enter or W A S D E Q takes over again | Behind the bird and a little above; behind the walker over its shoulder, at its height |
+
+## The cell corridor
+
+> 2026-11-12: "create ability to navigate through the two blocks of frames so
+> u do like a space corridor in it and we can sort of fly forward through it.
+> like an infinite set of two blocks and we in the middle." (The blocks: the
+> cells.)
+
+On the Cell piece the **Corridor** pill turns the block into two walls of
+cells facing each other across an open gap, three cells high and one deep,
+and the eye flies forward down the middle of the gap at a steady pace,
+swaying a touch. Every cell keeps its box edges (most of its wall grains go
+to the edges here, so the frames read), its streaming chloroplasts, its
+nucleus and its pulses to the next cell along the wall or up and down it.
+The walls never end: a column of cells that passes behind the eye comes round
+to the far end, fading in out of the dark, so the grain count stays fixed.
+Automatic flight only; no keys (the game keys would take Space from pause on
+this piece).
+
+Acceptance:
+- Cell has **Block** · **Corridor** pills; the Journey keeps the block.
+- In the corridor no grain is in the gap down the middle; the grains split
+  about evenly between the two walls; the eye sits in the gap looking down it.
+- Every grain at every moment lies between just behind the eye and the far
+  end: cells that pass behind come round ahead, the same grains recycled.
+- The far end fades in rather than popping.
 
 ## The cities
 

@@ -12,10 +12,14 @@ import {
   CELL_COUNT,
   CITIES,
   CITY_K,
+  CORRIDOR_CELLS,
+  CORRIDOR_GAP,
+  CORRIDOR_LEN,
   camera,
   cellOf,
   cityPlan,
   colour,
+  corridorAhead,
   DRUMS,
   EYE_H,
   FIREWORK_FLOWERS,
@@ -200,6 +204,71 @@ describe('the vegetal chapter', () => {
     for (const p of particles) {
       expect(target(ROOTS, p, 0.6, at(ROOTS, 0.6))[1]).toBeLessThanOrEqual(ROOT_BASE[1] + 2);
     }
+  });
+
+  describe('Cell corridor (2026-11-12)', () => {
+    const k = piece('cell');
+    const all = makeParticles(9000);
+
+    it('offers the block or a corridor: two walls of cells and an empty middle, the eye in it', () => {
+      expect(variantNames(k)).toEqual(['Block', 'Corridor']);
+      expect(variantLabel(k)).toBe('View');
+      setVariant(1, k);
+      for (const s of [2, 17]) {
+        let left = 0;
+        let right = 0;
+        for (const p of all) {
+          const { pos, rgb } = pieceAt(p, k, s);
+          for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
+          // Nothing in the gap down the middle.
+          expect(Math.abs(pos[0])).toBeGreaterThan(CORRIDOR_GAP - 1e-6);
+          if (pos[0] < 0) left++;
+          else right++;
+        }
+        expect(left).toBeGreaterThan(all.length * 0.4);
+        expect(right).toBeGreaterThan(all.length * 0.4);
+      }
+      // The eye is in the gap, looking down it.
+      const { eye, target: aim } = pieceCamera(k, 4);
+      expect(Math.abs(eye[0])).toBeLessThan(1);
+      expect(aim[2]).toBeLessThan(eye[2] - 10);
+      setVariant(0);
+    });
+
+    it('flies on forever: the cells come toward the eye, pass behind it and come round to the far end', () => {
+      setVariant(1, k);
+      expect(CORRIDOR_CELLS).toBe(48);
+      // Every grain at every moment lies between just behind the eye and the far end: the
+      // same grains, recycled, never left behind.
+      for (const s of [0, 7, 33, 120, 1000]) {
+        for (const p of all.slice(0, 3000)) {
+          const z = pieceAt(p, k, s).pos[2];
+          expect(z).toBeLessThan(8 + 4);
+          expect(z).toBeGreaterThan(-CORRIDOR_LEN - 4);
+        }
+      }
+      // A second later nearly every grain has come closer (the rest came round to the far end).
+      const walls = all.filter((p) => p.c < 0.68).slice(0, 1000);
+      const closer = walls.filter((p) => pieceAt(p, k, 6).pos[2] > pieceAt(p, k, 5).pos[2]);
+      expect(closer.length).toBeGreaterThan(walls.length * 0.85);
+      // The first column, just ahead at the start, has gone behind and come round far ahead.
+      expect(corridorAhead(0, 0)).toBeCloseTo(0, 9);
+      expect(corridorAhead(0, 3)).toBeGreaterThan(CORRIDOR_LEN * 0.6);
+      // Coming round, the far cells fade in out of the dark.
+      const far = walls.filter((p) => pieceAt(p, k, 5).pos[2] < -CORRIDOR_LEN + 14);
+      const near = walls.filter((p) => Math.abs(pieceAt(p, k, 5).pos[2] + 15) < 6);
+      const glow = (ps: typeof walls) =>
+        ps.reduce((a, p) => a + Math.max(...pieceAt(p, k, 5).rgb), 0) / ps.length;
+      expect(glow(far)).toBeLessThan(glow(near) * 0.5);
+      setVariant(0);
+    });
+
+    it('keeps the block in the Journey', () => {
+      setVariant(1, k);
+      setVariant(0);
+      for (const p of all.slice(0, 500))
+        expect(Math.abs(target(k, p, 0.6, at(k, 0.6))[2])).toBeLessThan(20);
+    });
   });
 
   describe('Roots and tree (2026-11-12)', () => {
