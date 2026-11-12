@@ -704,6 +704,10 @@ input[type="range"].feedback-slider::-moz-range-thumb {
   overflow: hidden;
   font-family: var(--font-sans), system-ui, sans-serif;
 }
+/* While the Design menu is open it sits above the app's + dot (z 1210), which would cover its last row. */
+.bb:has(.bb-design[aria-expanded="true"]) {
+  z-index: 1220;
+}
 /* Full screen with the picture alone: every control and word hidden until Esc. */
 .bb-immersed > :not(.bb-canvas):not(.bb-hud):not(.bb-exit):not(.bb-ink):not(.bb-touch) {
   display: none !important;
