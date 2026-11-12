@@ -26,7 +26,7 @@ describe('/pandas class page', () => {
     expect(response.headers.get('location')).toBe('http://localhost/login?next=%2Fpandas');
   });
 
-  it('serves the two sessions to a signed-in user, uncached', async () => {
+  it('serves the three sessions to a signed-in user, uncached', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
 
     const response = await GET(request());
@@ -38,6 +38,7 @@ describe('/pandas class page', () => {
     expect(html).toContain('<title>Pandas · School</title>');
     expect(html).toContain("{ n: 1, pages: 37, short: 'DataFrames & loading'");
     expect(html).toContain("{ n: 2, pages: 51, short: 'Selecting, filtering & slicing'");
+    expect(html).toContain("{ n: 3, pages: 42, short: 'Data quality'");
     // Marks and notes share the coding API, kept apart by their pandas| keys.
     expect(html).toContain("const MARKS_URL = '/api/coding/marks';");
     expect(html).toContain("const mine = k => k.startsWith('pandas|');");
@@ -55,6 +56,8 @@ describe('/pandas class page', () => {
 
     expect(html).toContain('const PICTURES = {');
     expect(html).toContain("'2|mask': { parts:");
+    // Session 3: every piece of code explained, the IQR rule worked out step by step.
+    expect(html).toContain("'3|iqr': { parts:");
     expect(html).toContain('const PRACTICE_LAWS = {');
     expect(html).toContain('const PRACTICE_PICS = {');
     expect(html).toContain('const ESSENTIALS = {');
@@ -74,9 +77,10 @@ describe('/pandas class page', () => {
 
     const html = await (await GET(request())).text();
 
-    expect(html).toContain("const DECK_FILES = ['Pandas1.pdf', 'Pandas2.pdf'];");
+    expect(html).toContain("const DECK_FILES = ['Pandas1.pdf', 'Pandas2.pdf', 'Pandas3.pdf'];");
     expect(html).toContain("if (/dataframe/i.test(name)) return 'Pandas1.pdf';");
     expect(html).toContain("if (/selecting|filtering|slicing/i.test(name)) return 'Pandas2.pdf';");
+    expect(html).toContain("if (/quality/i.test(name)) return 'Pandas3.pdf';");
     expect(html).toContain(`/api/coding/slides/Pandas\${s.n}.pdf#page=\${c.slide}`);
   });
 });
