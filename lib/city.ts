@@ -33,6 +33,7 @@ import {
   smooth,
   type Vec3,
 } from './bigbang';
+import { BUILDINGS, buildingsEye } from './city-buildings';
 import { aboveAt, aboveEye, CITIES, setCityKind } from './city-plans';
 import {
   buildingAt,
@@ -249,6 +250,18 @@ export const PHASES: CityPhase[] = [
     glow: 1,
     size: 1,
   },
+  {
+    id: 'buildings',
+    name: 'Buildings',
+    line: 'Twenty buildings from the quarters of the city, one to a pill: stair temples, a pagoda, domes and minarets, twisted, rounded and faceted towers, each on its plinth with walkways of light winding round it.',
+    words: [
+      'A building is a few rules, followed with care until they become a place.',
+      'The paths that wind round it are where the city is walked, not just seen.',
+    ],
+    duration: 36,
+    glow: 1,
+    size: 0.95,
+  },
 ];
 
 export const TOTAL = PHASES.reduce((s, p) => s + p.duration, 0);
@@ -288,6 +301,7 @@ export const STEP_COLOURS = [
   '#ffb24a',
   '#4ef0ff',
   '#b48cff',
+  '#f0c070',
 ];
 
 /* ---------- colours ---------- */
@@ -2770,11 +2784,13 @@ function shipAt(p: Particle, t: number): Spot {
 let templeKind = 0;
 let factoryKind = 0;
 let domeKind = 0;
+let buildingKind = 0;
 const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number) => void }> = {
   temples: { names: TEMPLES.names, label: TEMPLES.label, set: (i) => (templeKind = i) },
   factories: { names: FACTORIES.names, label: FACTORIES.label, set: (i) => (factoryKind = i) },
   domes: { names: DOMES.names, label: DOMES.label, set: (i) => (domeKind = i) },
   above: { names: CITIES.map((c) => c.name), label: 'City', set: setCityKind },
+  buildings: { names: BUILDINGS.names, label: BUILDINGS.label, set: (i) => (buildingKind = i) },
 };
 const variantsOf = (k: number) => VARIANTS[PHASES[k]?.id ?? ''];
 export const hasVariants = (k: number) => variantsOf(k) !== undefined;
@@ -2821,6 +2837,8 @@ export function formAt(k: number, p: Particle, u: number, t: number): Spot {
       return docksAt(p, t);
     case 'canyon':
       return canyonAt(p, u, t);
+    case 'buildings':
+      return buildingAt(BUILDINGS, buildingKind, p, t);
     default:
       return shipAt(p, t);
   }
@@ -2884,6 +2902,8 @@ export function eyeIn(k: number, u: number, t: number): Eye {
     case 'factories':
     case 'domes':
       return buildingEye(t);
+    case 'buildings':
+      return buildingsEye(buildingKind, t);
     case 'above':
       return aboveEye(t);
     case 'towers': {
