@@ -2,9 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { flow } from './bigbang';
 import {
+  AVENUE,
+  avenueSigns,
+  BLOCK_X,
+  BLOCK_Z,
   BOOST_PACE,
   BRIDGES,
   blocked,
+  blockTower,
   boostLeft,
   builtTop,
   CANYON_SLOTS,
@@ -15,6 +20,7 @@ import {
   camera,
   canyonShip,
   canyonSlot,
+  chinatownness,
   colour,
   dockShip,
   EYE_Y,
@@ -39,6 +45,7 @@ import {
   pieceAt,
   pieceCamera,
   pieceLength,
+  route,
   SHIPS,
   SIGN_TEXTS,
   type Sign,
@@ -52,6 +59,7 @@ import {
   starBall,
   TOTAL,
   target,
+  VIEW,
 } from './city';
 
 const particles = makeParticles(1500);
@@ -452,6 +460,187 @@ describe('Ship', () => {
     expect(dist(eye, c)).toBeGreaterThan(8);
     expect(dist(eye, c)).toBeLessThan(14);
     expect(dist(aim, c)).toBeLessThan(8);
+    setFly(false, [], 0, 0);
+  });
+});
+
+describe('Ship, round two: solid walls, the avenue and Chinatown', () => {
+  const k = PHASES.findIndex((p) => p.id === 'ship');
+  const all = makeParticles(9000);
+  const lit = (rgb: number[]) => (rgb[0] as number) + (rgb[1] as number) + (rgb[2] as number) > 0;
+  /** The picture at s, as the player draws it (every grain, in order). */
+  const frame = (s: number) => all.map((p) => pieceAt(p, k, s));
+  /** The route at s, a frame drawn just before it, so the plan knows how many grains are drawn. */
+  const fresh = (s: number) => {
+    setFly(false, [], 0, s - 5);
+    setFly(false, [], 0, s - 1 / 60);
+    frame(s - 1 / 60);
+    setFly(false, [], 1 / 60, s);
+  };
+
+  it('keeps walls dense near the eye and sparser far off', () => {
+    // Among the neon towers, between two Chinatowns.
+    expect(chinatownness(route(25).c[2], 40)).toBe(0);
+    fresh(25);
+    const shot = frame(25);
+    const { eye } = pieceCamera(k, 25);
+    // Grains by the tower face they lie on: count, area and distance.
+    const faces = new Map<string, { n: number; area: number; d: number }>();
+    for (const { pos, rgb } of shot) {
+      if (!lit(rgb)) continue;
+      const I = Math.floor(pos[0] / BLOCK_X);
+      const J = Math.floor(pos[2] / BLOCK_Z);
+      const tw = blockTower(I, J);
+      if (pos[1] < GROUND + 0.1 || pos[1] > GROUND + tw.h + 0.01) continue;
+      const onX =
+        Math.abs(Math.abs(pos[0] - tw.x) - tw.hx) < 0.1 && Math.abs(pos[2] - tw.z) <= tw.hz;
+      const onZ =
+        Math.abs(Math.abs(pos[2] - tw.z) - tw.hz) < 0.1 && Math.abs(pos[0] - tw.x) <= tw.hx;
+      if (!onX && !onZ) continue;
+      const key = `${I},${J},${onX ? Math.sign(pos[0] - tw.x) : 2 * Math.sign(pos[2] - tw.z)}`;
+      // The nearest the face comes to the eye.
+      const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+      const y = clamp(eye[1], GROUND, GROUND + tw.h);
+      const nearest = onX
+        ? [tw.x + Math.sign(pos[0] - tw.x) * tw.hx, y, clamp(eye[2], tw.z - tw.hz, tw.z + tw.hz)]
+        : [clamp(eye[0], tw.x - tw.hx, tw.x + tw.hx), y, tw.z + Math.sign(pos[2] - tw.z) * tw.hz];
+      const f = faces.get(key) ?? {
+        n: 0,
+        area: 2 * (onX ? tw.hz : tw.hx) * tw.h,
+        d: dist(nearest, eye),
+      };
+      f.n++;
+      faces.set(key, f);
+    }
+    const density = (lo: number, hi: number) => {
+      const fs = [...faces.values()].filter((f) => f.d >= lo && f.d < hi && f.n > 5);
+      expect(fs.length).toBeGreaterThan(1);
+      return fs.reduce((s, f) => s + f.n / f.area, 0) / fs.length;
+    };
+    expect(density(0, 40)).toBeGreaterThan(3 * density(80, VIEW));
+  });
+
+  it('deals one fixed pool of grains to what the eye sees: in front, in reach, the rest unlit', () => {
+    fresh(30);
+    const counts: number[] = [];
+    for (let s = 30; s < 36; s += 0.5) {
+      setFly(false, [], 0.5, s);
+      const shot = frame(s);
+      expect(shot).toHaveLength(all.length);
+      const { eye, target: aim } = pieceCamera(k, s);
+      const fwd = aim.map((v, i) => v - (eye[i] as number));
+      const { c } = flier(s);
+      let n = 0;
+      let finite = true;
+      let behind = 0;
+      let beyond = 0;
+      for (const { pos, rgb } of shot) {
+        finite &&= [...pos, ...rgb].every(Number.isFinite);
+        // The stars apart, in a dome beyond everything else.
+        if (!lit(rgb) || dist(pos, c) > VIEW + 10) continue;
+        n++;
+        const rel = pos.map((v, i) => v - (eye[i] as number));
+        if (rel[0] * fwd[0] + rel[1] * fwd[1] + rel[2] * fwd[2] <= 0) behind++;
+        if (dist(pos, eye) > VIEW) beyond++;
+      }
+      expect(finite).toBe(true);
+      expect(behind).toBe(0);
+      expect(beyond).toBe(0);
+      counts.push(n);
+    }
+    // The towers passed come round ahead: the pool stays well used however far the ship has gone,
+    // and never asks for a grain more than there are.
+    expect(Math.min(...counts)).toBeGreaterThan(0.6 * all.length);
+    expect(Math.max(...counts)).toBeLessThanOrEqual(all.length);
+  });
+
+  it('keeps the autopilot down the middle of the avenue, low under each Chinatown gate', () => {
+    let stretches = 0;
+    let was = 0;
+    for (let t = 0; t < 300; t += 0.25) {
+      const { c, f } = route(t);
+      expect(blocked(c)).toBe(false);
+      expect(Math.abs(c[0])).toBeLessThan(AVENUE - 2);
+      expect(f[2] / Math.hypot(f[0], f[2])).toBeLessThan(-0.95);
+      const ct = chinatownness(c[2]);
+      if (ct === 1) expect(c[1]).toBeLessThan(GROUND + 12);
+      if (ct === 1 && was === 0) stretches++;
+      was = ct;
+    }
+    // A Chinatown stretch about every half minute, then neon towers again.
+    expect(stretches).toBeGreaterThanOrEqual(8);
+    expect(stretches).toBeLessThanOrEqual(11);
+  });
+
+  it('passes through Chinatown: legible signs on its walls, red lanterns overhead', () => {
+    // The first stretch on the route, and the sign nearest its gate.
+    let t = 0;
+    while (chinatownness(route(t).c[2]) < 1) t += 0.05;
+    const J = Math.floor((route(t).c[2] - 4) / BLOCK_Z);
+    const signs = avenueSigns(J);
+    expect(signs.length).toBe(4);
+    const sign = signs.reduce((a, b) => (b.at[2] > a.at[2] ? b : a)) as Sign;
+    // Twenty-five short of it.
+    while (route(t).c[2] > sign.at[2] + 18) t += 0.02;
+    fresh(t);
+    const { eye } = pieceCamera(k, t);
+    expect(eye[2]).toBeGreaterThan(sign.at[2]);
+    const shot = frame(t);
+    const lit_ = new Set<string>();
+    [...sign.text].forEach((ch, n) => {
+      for (const [col, r] of glyph(ch, true)) lit_.add(`${col},${r + n * (GLYPH_PX + 3)}`);
+    });
+    const hit = new Set<string>();
+    let lanterns = 0;
+    for (const { pos, rgb } of shot) {
+      if (!lit(rgb)) continue;
+      if (Math.abs(pos[2] - sign.at[2]) < 1e-3) {
+        const key = `${Math.floor((pos[0] - sign.at[0]) / sign.px)},${Math.floor((sign.at[1] - pos[1]) / sign.px)}`;
+        if (lit_.has(key)) hit.add(key);
+      }
+      if (
+        pos[1] > eye[1] &&
+        Math.abs(pos[0]) < AVENUE &&
+        rgb[0] > 2 * rgb[2] &&
+        rgb[0] > 1.5 * rgb[1]
+      )
+        lanterns++;
+    }
+    // Most of its characters' pixels alight, so it reads as you pass.
+    expect(hit.size).toBeGreaterThan(0.6 * lit_.size);
+    expect(lanterns).toBeGreaterThan(200);
+  });
+
+  it('steers into a side street with D, and carries on from where you let go, back down the avenue', () => {
+    // Just short of a crossing, outside Chinatown.
+    let t = 10;
+    for (;;) {
+      const z = route(t).c[2];
+      const into = z - Math.floor(z / BLOCK_Z) * BLOCK_Z;
+      if (into > 6.5 && into < 7.5 && chinatownness(z, 30) === 0) break;
+      t += 0.01;
+    }
+    setFly(false, [], 0, t);
+    setFly(true, [], 1 / 60, t);
+    const step = (active: boolean, keys: string[], seconds: number) => {
+      for (let i = 0; i < seconds * 60; i++) {
+        t += 1 / 60;
+        setFly(active, keys, 1 / 60, t);
+        expect(blocked(flier(t).c)).toBe(false);
+      }
+    };
+    step(true, ['d'], 1.4);
+    step(true, [], 2.5);
+    const side = flier(t);
+    expect(side.f[0]).toBeGreaterThan(0.9);
+    expect(side.c[0]).toBeGreaterThan(AVENUE + 5);
+    // Let go: no jump, the autopilot carries on from there.
+    step(false, [], 1 / 60);
+    expect(dist(flier(t).c, side.c)).toBeLessThan(FLY_SPEED / 30);
+    step(false, [], 40);
+    const back = flier(t);
+    expect(Math.abs(back.c[0])).toBeLessThan(AVENUE);
+    expect(back.f[2]).toBeLessThan(-0.9);
     setFly(false, [], 0, 0);
   });
 });

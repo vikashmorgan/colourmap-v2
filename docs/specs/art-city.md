@@ -39,11 +39,11 @@ minute each), never flash, as the user prefers.
 | 4 | Chinatown | A red gate (four pillars, two beams, three roofs turned up at the ends, a plaque reading 中華街, Chinatown) at the mouth of a narrow street. Tall signs hang down the street side of the towers, standing out into the street, in real Chinese and Japanese characters: ラーメン ramen, 茶 tea, 龍 dragon, 酒 wine, 夢 dream, 麺 noodles, 福 good fortune, 喫茶 café; a 夜市 night-market banner across the street and a small 喫茶 sign over a doorway. Lantern red and gold mixed with cyan and magenta. Rows of round red lanterns strung across the street, swaying a little | Walking pace through the gate and down the street |
 | 5 | Bridges and docks | Sky bridges (tubes of four edges and ribs, lights along the floor) join neighbouring towers high above the street; landing platforms stand out from the faces of the taller towers, lights chasing slowly round their rims. Ships come in on a curve, settle on a deck, rest, lift off and leave the other way | Round the city, from above the bridges |
 | 6 | Canyon | Flying down the middle of an endless street: towers either side (only the faces the street sees are drawn, so every grain shows), feet below the eye and roofs above it; traffic in four lanes above and four below, coming on the left, going on the right; every third tower carries a tall Chinatown sign, flown past. Towers and ships that pass behind come round to the far end, so the street never ends and no grain is added | Down the middle of the street |
-| 7 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) through a field of towers that wraps round you, its far edge fading. **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** or Shift faster, **Q** or X slower, **Space** boosts to three times the cruise while the bar lasts; the bar fills again while you cruise. Towers' walls hold you: you slide along them. Traffic in the streets at four heights; signs on every third tower. Two dials read height and speed. With no one at the controls (the Journey, or let go with Esc), the ship flies a round of the streets about two blocks, rising and sinking | Behind the ship and a little above, looking past it |
+| 7 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) down an endless avenue of solid, lit towers, with side streets to turn into; every eight blocks the avenue passes through a Chinatown stretch (see **Ship, round two**). **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** or Shift faster, **Q** or X slower, **Space** boosts to three times the cruise while the bar lasts; the bar fills again while you cruise. Towers' walls hold you: you slide along them. Traffic above and below you. Two dials read height and speed. With no one at the controls (the Journey, or before you steer) the ship flies down the avenue; let go with Esc and it carries on from where you were, back to the avenue | Behind the ship and a little above, looking past it |
 
 The page opens on one piece alone, picked by name, as Ocean's do: it starts
 at its beginning with no ball of stars and loops, each grain gliding back to
-where the piece began; the canyon flies on, so its loop does not show.
+where the piece began; the canyon and the ship fly on, so their loops do not show.
 **Journey** plays the seven as one trip: between pieces a ball of faint
 stars.
 
@@ -61,6 +61,68 @@ server and in the browser, with no canvas. Every grain of a sign falls on a
 lit pixel of its characters (or on its thin frame). In a vertical sign the
 long vowel mark ー stands upright, as it is written down a page. Only common,
 kind shop and street words, each meaning listed beside the table in the code.
+
+## Ship, round two
+
+> 2026-11-12: "solid tower walls while you fly the ship, since they still look like sparse lines of
+> light. After that would come the ship flying down the canyon past Chinatown, which is the start
+> of the full fly-through." ("work on it.")
+
+**The city.** An endless grid of blocks with a tower on each. A wide avenue (18 across) runs on
+forward down the middle, with narrower streets beside it and side streets across, at least six
+wide, so you can turn into any of them. Three blocks in every eight, the avenue is **Chinatown**:
+
+- a red gate at each end (the Chinatown piece's gate made larger, with 中華街 on its plaque, tall
+  enough to fly under its beams);
+- tall signs hanging down the walls in real characters (from the same glyph bitmaps), standing
+  out over the avenue and facing down it so you read them as you come;
+- ten strings of red lanterns across the avenue, over the ship's head;
+- a 夜市 banner across the middle.
+
+Chinatown's towers are lower and lit warm, with red and gold bands. After it come neon towers
+again.
+
+**Solid walls.** The grain budget stays fixed, but it now goes only where the eye can see. Every
+frame the city becomes a list of light sites, taken only from:
+
+- towers in front of the eye and within sight (160);
+- the faces turned toward the eye;
+- faces that other towers don't hide (each site is checked when a face is partly hidden).
+
+Each face has a dense grid of windows (lit warm or cool, now and then one going out or coming on
+over seconds), clearly drawn corners and roof edge, floor lines, neon bands and a faint fill.
+Nearer sites are kept more densely than far ones. Far light dims and leans violet, gone by 160.
+Grains closer than about ten to the eye fade out, so they never show as big soft dots. The
+player draws every grain the same size (one size for the whole cloud) and lets a piece set only
+its colour, so fading is the only way to tame them. The pool of grains is dealt out to the
+sites, and the rest wait unlit. This is the Canyon's recycling made general: towers that fall
+behind give their grains to the ones ahead. A site keeps its grain from frame to frame, and sites
+come and go by fading, never popping.
+
+**Flight.** With no one steering, the autopilot flies down the middle of the avenue, weaving a
+little. It dips low (8 over the street) through each Chinatown, under the gate's beam and the
+lanterns, and rises again among the neon towers. If you let go, it carries on from where you
+were: it follows the street you're in, turns back toward the avenue at the next crossing, then
+heads on down it. Traffic streams above and below you along the avenue and the nearby streets,
+both ways. The avenue's low lanes go quiet through Chinatown. Like the canyon, the ship flies on
+with no loop. In the Journey its route passes near the middle of the city, so the grains pour in
+and out over a short distance.
+
+**Acceptance (round two)**
+
+- Walls: faces within 40 of the eye carry at least three times the grains per area of faces 80 or
+  more away. No lit grain is behind the eye or beyond 160 (apart from the star dome), and the
+  pool never asks for more grains than the player draws.
+- The autopilot's route never enters a tower, stays at least two inside the avenue's walls and
+  heads down it. It passes a Chinatown stretch about every half minute, and through each one it
+  flies under 12 (below the gate's beam).
+- Passing a Chinatown sign, most of its characters' pixels are alight, so it reads. Red lanterns
+  hang over the avenue above the eye.
+- D at a crossing turns you into the side street. Letting go never jumps the ship, and within 40
+  seconds the autopilot is back on the avenue heading down it, never inside a tower on the way.
+- Colours drift and flicker as elsewhere (signs never more than 0.02 a frame); nothing flashes.
+- Frame cost, 9000 grains: Ship 5.4 ms (it was 6.5 ms before this round), against 2.5–4.2 ms for the
+  other pieces (bench on the build machine, bun).
 
 ## Words
 
@@ -101,8 +163,8 @@ between walls becoming a road; a window waiting for you somewhere.
 
 For the long-term fly-through of a future neon city:
 
-1. **Free flight in the canyon:** the Ship piece's controls on the Canyon's street, with traffic you
-   weave through and near misses that ruffle the trail.
+1. **Free flight in the canyon:** begun in Ship, round two (the avenue, side streets, Chinatown);
+   still to come: traffic you weave through, and near misses that ruffle the trail.
 2. **Districts:** the field of towers in kinds (Chinatown, a harbour of docks, a tall business
    heart, a market under bridges), flown from one into the next.
 3. **Layers of the city:** a dim undercity of pipes and steam below the street, the lit middle, and
