@@ -9,7 +9,13 @@
  * colour, at any moment. A trip may also move the camera, fade grains by their
  * distance from it, and carry words for each step.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type PointerEvent as ReactPointerEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
@@ -154,6 +160,112 @@ export const needleAngle = (g: Gauge) => {
   return -135 + 270 * Math.max(0, Math.min(1, k));
 };
 
+/** How far the on-screen stick's knob travels from its middle, in px. */
+const STICK_REACH = 44;
+/** The middle of the stick that steers nothing, as a share of its reach. */
+const STICK_DEAD = 0.35;
+
+/**
+ * The arrow keys the on-screen stick holds for a thumb `dx`, `dy` px from its middle (down is
+ * positive): the keys the games already read from a keyboard, so a phone needs no game changes
+ * (2026-11-12: "find a way to move and navigate when on phone").
+ */
+export function stickKeys(dx: number, dy: number, reach = STICK_REACH): string[] {
+  const x = dx / reach;
+  const y = dy / reach;
+  const keys: string[] = [];
+  if (x < -STICK_DEAD) keys.push('arrowleft');
+  else if (x > STICK_DEAD) keys.push('arrowright');
+  if (y < -STICK_DEAD) keys.push('arrowup');
+  else if (y > STICK_DEAD) keys.push('arrowdown');
+  return keys;
+}
+
+/** What a key a game claims is called on its round button: Space by the game's bar, B the bite. */
+export function claimLabel(key: string, meter?: string): string {
+  if (key === ' ') return meter ?? 'Jump';
+  if (key === 'b') return 'Bite';
+  return key.toUpperCase();
+}
+
+/**
+ * A finger's move on the picture, from touch to lift: a quick sideways flick goes to the next
+ * piece (1, flicked left) or the previous one (-1); anything else is no swipe (0), so a slower
+ * drag is free to turn the view.
+ */
+export function swipeStep(dx: number, dy: number, ms: number): -1 | 0 | 1 {
+  if (ms > 400 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return 0;
+  return dx < 0 ? 1 : -1;
+}
+
+/**
+ * The viewer's own turn on a piece's camera, on top of its path (2026-11-12: pinch to zoom, drag
+ * to orbit): `zoom` scales the eye's distance from what it looks at, `yaw` and `pitch` turn the eye
+ * round it (radians), `side` slides eye and target sideways, a share of that distance.
+ */
+export type View = { zoom: number; yaw: number; pitch: number; side: number };
+export const VIEW_HOME: View = { zoom: 1, yaw: 0, pitch: 0, side: 0 };
+export const ZOOM_MIN = 0.5;
+export const ZOOM_MAX = 2.5;
+/** The highest the eye climbs above (or sinks below) what it looks at, radians. */
+const ELEVATION_MAX = 1.35;
+const SIDE_MAX = 0.4;
+
+const clampTo = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
+
+/** A view kept inside its limits. */
+export function clampView(v: View): View {
+  return {
+    zoom: clampTo(v.zoom, ZOOM_MIN, ZOOM_MAX),
+    yaw: v.yaw,
+    pitch: clampTo(v.pitch, -2 * ELEVATION_MAX, 2 * ELEVATION_MAX),
+    side: clampTo(v.side, -SIDE_MAX, SIDE_MAX),
+  };
+}
+
+/** A view eased a share `k` (0..1) of the way home, exactly home once it is close. */
+export function easeView(v: View, k: number): View {
+  const near = (x: number, home: number, eps: number) => {
+    const y = x + (home - x) * k;
+    return Math.abs(y - home) < eps ? home : y;
+  };
+  return {
+    zoom: near(v.zoom, 1, 1e-3),
+    yaw: near(v.yaw, 0, 1e-3),
+    pitch: near(v.pitch, 0, 1e-3),
+    side: near(v.side, 0, 1e-3),
+  };
+}
+
+export const isHome = (v: View) => v.zoom === 1 && v.yaw === 0 && v.pitch === 0 && v.side === 0;
+
+/**
+ * Where the eye stands and looks with the viewer's turn on top of the path's: round the target,
+ * the climb kept short of straight above or below so the picture never flips.
+ */
+export function viewCamera(eye: Vec3, target: Vec3, v: View): { eye: Vec3; target: Vec3 } {
+  const dx = eye[0] - target[0];
+  const dy = eye[1] - target[1];
+  const dz = eye[2] - target[2];
+  const r = Math.hypot(dx, dy, dz) || 1e-6;
+  const flat = Math.hypot(dx, dz);
+  const az = Math.atan2(dx, dz) + v.yaw;
+  const el = clampTo(Math.atan2(dy, flat) + v.pitch, -ELEVATION_MAX, ELEVATION_MAX);
+  const rr = r * v.zoom;
+  // Sideways: across the line of sight, level with the ground.
+  const sx = Math.cos(az) * v.side * r;
+  const sz = -Math.sin(az) * v.side * r;
+  const t: Vec3 = [target[0] + sx, target[1], target[2] + sz];
+  return {
+    eye: [
+      t[0] + rr * Math.cos(el) * Math.sin(az),
+      t[1] + rr * Math.sin(el),
+      t[2] + rr * Math.cos(el) * Math.cos(az),
+    ],
+    target: t,
+  };
+}
+
 /** The Art pills, the same as the panel's (components/GeometryField.tsx ART_PILLS). */
 export type TripPage = 'big-bang' | 'journey' | 'vegetal' | 'ocean' | 'city';
 
@@ -172,6 +284,7 @@ const ART_LINKS: { href: string; label: string; page?: TripPage }[] = [
 
 const WORDS_KEY = 'colourmap:journey-words';
 const BG_KEY = 'colourmap:trip-bg';
+const MODE_KEY = 'colourmap:trip-mode';
 
 /** A background from top to bottom through its colours, with a soft glow of light from above. */
 function backgroundTexture(stops: string[]): THREE.Texture | THREE.Color {
@@ -228,17 +341,56 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   // (2026-11-11: "make ability to really go full screen so I can get absorbed in the visual").
   const mainRef = useRef<HTMLElement>(null);
   const [immersed, setImmersed] = useState(false);
+  // Where the browser has no full screen for a page (an iPhone), the picture alone all the same:
+  // the player already covers the window, so hiding the controls is the whole of it.
+  const fauxRef = useRef(false);
+  // Every control in one Design menu, shut by default, so the picture has the screen
+  // (2026-11-12: "all buttons can be in a design menu tab so on phone they dont take all the
+  // screen space").
+  const [menu, setMenu] = useState(false);
+  const menuRef = useRef(false);
+  const designRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const openMenu = useCallback((open: boolean, focusBack = false) => {
+    menuRef.current = open;
+    setMenu(open);
+    if (!open && focusBack) designRef.current?.focus();
+  }, []);
+  useEffect(() => {
+    if (menu) panelRef.current?.focus();
+  }, [menu]);
   const immerse = useCallback(() => {
+    openMenu(false);
     if (document.fullscreenElement) {
       document.exitFullscreen();
       return;
     }
-    mainRef.current?.requestFullscreen?.().catch(() => {});
-  }, []);
+    if (fauxRef.current) {
+      fauxRef.current = false;
+      setImmersed(false);
+      return;
+    }
+    const faux = () => {
+      fauxRef.current = true;
+      setImmersed(true);
+    };
+    const el = mainRef.current;
+    if (!el?.requestFullscreen) faux();
+    else el.requestFullscreen().catch(faux);
+  }, [openMenu]);
   useEffect(() => {
-    const change = () => setImmersed(document.fullscreenElement === mainRef.current);
+    const change = () => {
+      fauxRef.current = false;
+      setImmersed(document.fullscreenElement === mainRef.current);
+    };
     document.addEventListener('fullscreenchange', change);
     return () => document.removeEventListener('fullscreenchange', change);
+  }, []);
+  // A phone or tablet: the games get a stick and buttons, and a swipe changes piece.
+  const [touch, setTouch] = useState(false);
+  useEffect(() => {
+    // Not 'ontouchstart': a laptop with a touch screen keeps its keyboard look until it is touched.
+    if (window.matchMedia?.('(pointer: coarse)').matches) setTouch(true);
   }, []);
   const [words, setWords] = useState(true);
   const idleRef = useRef(0);
@@ -271,14 +423,86 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     setStopped(stop);
     keysRef.current.clear();
   }, []);
+  // The on-screen stick and buttons hold keys in the same set the keyboard fills.
+  const stickRef = useRef<{ id: number; cx: number; cy: number } | null>(null);
+  const stickHeld = useRef<string[]>([]);
+  const [knob, setKnob] = useState({ x: 0, y: 0 });
+  const holdStick = useCallback((keys: string[]) => {
+    for (const k of stickHeld.current) if (!keys.includes(k)) keysRef.current.delete(k);
+    for (const k of keys) keysRef.current.add(k);
+    stickHeld.current = keys;
+  }, []);
+  const stickMove = useCallback(
+    (e: ReactPointerEvent<HTMLElement>) => {
+      const s = stickRef.current;
+      if (!s || s.id !== e.pointerId) return;
+      let dx = e.clientX - s.cx;
+      let dy = e.clientY - s.cy;
+      const d = Math.hypot(dx, dy);
+      if (d > STICK_REACH) {
+        dx *= STICK_REACH / d;
+        dy *= STICK_REACH / d;
+      }
+      setKnob({ x: dx, y: dy });
+      holdStick(stickKeys(dx, dy));
+    },
+    [holdStick],
+  );
+  const stickDown = useCallback(
+    (e: ReactPointerEvent<HTMLElement>) => {
+      e.preventDefault();
+      // A thumb on the stick takes the controls back, as W A S D do.
+      if (stoppedRef.current) stopGame(false);
+      const r = e.currentTarget.getBoundingClientRect();
+      stickRef.current = { id: e.pointerId, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      stickMove(e);
+    },
+    [stickMove, stopGame],
+  );
+  const stickUp = useCallback(
+    (e: ReactPointerEvent<HTMLElement>) => {
+      if (stickRef.current?.id !== e.pointerId) return;
+      stickRef.current = null;
+      setKnob({ x: 0, y: 0 });
+      holdStick([]);
+    },
+    [holdStick],
+  );
+  // The viewer's own turn on the camera (pinch or wheel to zoom, drag to orbit), eased home a
+  // few seconds after the last touch, or quickly on Reset view.
+  const viewRef = useRef<View>(VIEW_HOME);
+  const viewAtRef = useRef(0);
+  const returnRef = useRef(false);
+  const holdingRef = useRef(false);
+  const resetView = useCallback(() => {
+    returnRef.current = true;
+  }, []);
+  // A piece that flies on its own (the Cell corridor, the Canyon): what it looks at moves on.
+  // Found from its camera, never by name; there the stick drives instead of steering a game.
+  const fliesRef = useRef(false);
+  const [flies, setFlies] = useState(false);
+  const pressKey = useCallback(
+    (key: string, down: boolean) => {
+      if (!down) {
+        keysRef.current.delete(key);
+        return;
+      }
+      if (stoppedRef.current) stopGame(false);
+      keysRef.current.add(key);
+    },
+    [stopGame],
+  );
   const meterRef = useRef<HTMLSpanElement>(null);
   const tallyRef = useRef<HTMLSpanElement>(null);
   const [bg, setBg] = useState(0);
   const bgRef = useRef<((i: number) => void) | null>(null);
   useEffect(() => {
     try {
-      const i = Number(window.localStorage.getItem(`${BG_KEY}:${page}`));
-      if (i > 0 && i < (tripRef.current.backgrounds?.length ?? 0)) setBg(i);
+      // Remembered by name, so adding a background never shifts the choice.
+      const name = window.localStorage.getItem(`${BG_KEY}:${page}`);
+      const i = tripRef.current.backgrounds?.findIndex((b) => b.name === name) ?? -1;
+      if (i > 0) setBg(i);
     } catch {
       // The first background.
     }
@@ -292,7 +516,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     setBg((b) => {
       const i = (b + 1) % n;
       try {
-        window.localStorage.setItem(`${BG_KEY}:${page}`, String(i));
+        const name = tripRef.current.backgrounds?.[i]?.name;
+        if (name) window.localStorage.setItem(`${BG_KEY}:${page}`, name);
       } catch {
         // Not remembered; still changed.
       }
@@ -315,6 +540,20 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     if (journey) s?.set(0);
     else s?.set(scene, hud.index);
   }, [journey, scene, hud.index]);
+  // Asked again when the look or the scene changes (the Cell's Corridor pill), after they are set.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new look or scene can start the flight
+  useEffect(() => {
+    const P = tripRef.current.pieces;
+    const k = hud.index;
+    let f = false;
+    if (!journey && P && !P.game?.has(k)) {
+      const a = P.camera(k, 0).target;
+      const b = P.camera(k, 6).target;
+      f = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) > 3;
+    }
+    fliesRef.current = f;
+    setFlies(f);
+  }, [journey, hud.index, variant, scene]);
   const cycles = ([] as Cycle[]).concat(trip.pieces?.cycle ?? []);
   const [cycled, setCycled] = useState<number[]>([]);
   useEffect(() => {
@@ -350,6 +589,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     });
   }, []);
 
+  // The last studio piece, to come back to from the game.
+  const studioRef = useRef(-1);
   const jumpTo = useCallback(
     (k: number) => {
       const { phases, start } = tripRef.current;
@@ -357,8 +598,20 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       const i = ((k % n) + n) % n;
       if (journeyRef.current) timeRef.current = (start[i] as number) + 0.01;
       else {
+        // Which side of the world this is (the game or the studio), remembered on the device.
+        const game = tripRef.current.pieces?.game;
+        if (game && phases.some((_, k) => game.has(k))) {
+          if (!game.has(i)) studioRef.current = i;
+          try {
+            window.localStorage.setItem(`${MODE_KEY}:${page}`, game.has(i) ? 'game' : 'studio');
+          } catch {
+            // Not remembered; still switched.
+          }
+        }
         pieceRef.current = i;
         timeRef.current = 0;
+        // Each piece opens on its own path's view.
+        viewRef.current = VIEW_HOME;
         setHud({ index: i, u: 0, time: 0 });
         // Each step opens on its first look.
         setVariant(0);
@@ -366,8 +619,46 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         stopGame(false);
       }
     },
-    [stopGame],
+    [stopGame, page],
   );
+  // Two sides to a world with a game (2026-11-12: "u have all the test elements and the 3d
+  // videogame as two components"): the Game (the pieces `game.has`), and the Studio, every other
+  // piece, to play with designs. Never by name or number, so new pieces fall in on their own.
+  const isGame = useCallback((k: number) => !!tripRef.current.pieces?.game?.has(k), []);
+  const toStudio = useCallback(
+    (from: number, dir: 1 | -1) => {
+      const n = tripRef.current.phases.length;
+      for (let s = 1; s <= n; s++) {
+        const k = (((from + dir * s) % n) + n) % n;
+        if (!isGame(k)) return k;
+      }
+      return from;
+    },
+    [isGame],
+  );
+  const switchMode = useCallback(
+    (game: boolean) => {
+      const n = tripRef.current.phases.length;
+      if (game) {
+        const k = Array.from({ length: n }, (_, i) => i).find(isGame);
+        if (k !== undefined) jumpTo(k);
+        return;
+      }
+      const back = studioRef.current;
+      jumpTo(back >= 0 && !isGame(back) ? back : toStudio(-1, 1));
+    },
+    [isGame, jumpTo, toStudio],
+  );
+  // A world opens on the side it was left on.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once, as the page opens
+  useEffect(() => {
+    if (journeyRef.current) return;
+    try {
+      if (window.localStorage.getItem(`${MODE_KEY}:${page}`) === 'game') switchMode(true);
+    } catch {
+      // The first piece.
+    }
+  }, []);
   const currentStep = useCallback(
     () => (journeyRef.current ? tripRef.current.phaseAt(timeRef.current).index : pieceRef.current),
     [],
@@ -475,8 +766,31 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       last = now;
       const P = journeyRef.current ? undefined : T.pieces;
       const k = pieceRef.current;
+      const gamePiece = !!(P && T.pieces?.game?.has(k));
+      // The stick on a piece that flies on its own: up flies faster, down slower, left and right
+      // drift across.
+      let pace = 1;
+      if (P && !gamePiece && fliesRef.current && stickHeld.current.length > 0) {
+        const held = stickHeld.current;
+        if (held.includes('arrowup')) pace = 2.5;
+        else if (held.includes('arrowdown')) pace = 0.3;
+        const drift = (held.includes('arrowright') ? 1 : 0) - (held.includes('arrowleft') ? 1 : 0);
+        if (drift !== 0) {
+          viewRef.current = clampView({
+            ...viewRef.current,
+            side: viewRef.current.side + drift * dt * 0.5,
+          });
+        }
+        viewAtRef.current = now;
+      }
+      // Home again, slowly a few seconds after the last touch, quickly on Reset view.
+      if (!isHome(viewRef.current) && !holdingRef.current) {
+        const rate = returnRef.current ? 3 : now - viewAtRef.current > 4000 ? 0.5 : 0;
+        if (rate > 0) viewRef.current = easeView(viewRef.current, 1 - Math.exp(-dt * rate));
+      }
+      if (isHome(viewRef.current)) returnRef.current = false;
       if (playingRef.current) {
-        const next = timeRef.current + dt * speedRef.current;
+        const next = timeRef.current + dt * speedRef.current * pace;
         // A step on its own keeps counting, so whatever moves with time never jumps at its loop.
         timeRef.current = P ? next : next % T.total;
       }
@@ -545,19 +859,24 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         } else guided.set(null, moved, t);
       }
 
-      if (c) {
-        // Stepped back from what it looks at on a tall screen.
-        eye[0] = c.target[0] + (c.eye[0] - c.target[0]) * back;
-        eye[1] = c.target[1] + (c.eye[1] - c.target[1]) * back;
-        eye[2] = c.target[2] + (c.eye[2] - c.target[2]) * back;
-        camera.position.set(eye[0], eye[1], eye[2]);
-        camera.lookAt(c.target[0], c.target[1], c.target[2]);
-      } else {
-        // A slow sway of the eye, so depth reads even when nothing else moves.
-        camera.position.x = Math.sin(t * 0.05) * 3;
-        camera.position.y = Math.cos(t * 0.037) * 2;
-        camera.lookAt(0, 0, 0);
-      }
+      // The path's eye: stepped back from what it looks at on a tall screen; with no camera, a
+      // slow sway round the centre, so depth reads even when nothing else moves.
+      const target: Vec3 = c ? c.target : [0, 0, 0];
+      const path: Vec3 = c
+        ? [
+            c.target[0] + (c.eye[0] - c.target[0]) * back,
+            c.target[1] + (c.eye[1] - c.target[1]) * back,
+            c.target[2] + (c.eye[2] - c.target[2]) * back,
+          ]
+        : [Math.sin(t * 0.05) * 3, Math.cos(t * 0.037) * 2, 58 * back];
+      // The viewer's turn on top; a game's chase camera only zooms (the stick steers there).
+      const vw = gamePiece ? { ...VIEW_HOME, zoom: viewRef.current.zoom } : viewRef.current;
+      const seen = isHome(vw) ? { eye: path, target } : viewCamera(path, target, vw);
+      eye[0] = seen.eye[0];
+      eye[1] = seen.eye[1];
+      eye[2] = seen.eye[2];
+      camera.position.set(eye[0], eye[1], eye[2]);
+      camera.lookAt(seen.target[0], seen.target[1], seen.target[2]);
 
       for (let i = 0; i < N; i++) {
         const p = particles[i] as Particle;
@@ -596,7 +915,9 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           const { index, u } = T.phaseAt(t);
           setHud({ index, u, time: t });
         }
-        if (playingRef.current && now - idleRef.current > 4500) setChrome(false);
+        if (playingRef.current && !menuRef.current && now - idleRef.current > 4500) {
+          setChrome(false);
+        }
       }
       raf = requestAnimationFrame(frame);
     };
@@ -629,7 +950,21 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     const key = (e: KeyboardEvent) => {
       wake();
       const typing = e.target instanceof HTMLElement && e.target.closest('input, textarea');
+      if (e.key === 'Escape' && menuRef.current) {
+        // Esc shuts the Design menu first, the focus back on its button.
+        openMenu(false, true);
+        return;
+      }
+      if (e.key === 'Escape' && fauxRef.current) {
+        // Out of the stand-in full screen, as the browser's own takes the first Esc.
+        immerse();
+        return;
+      }
       if (!typing) keysRef.current.add(e.key.toLowerCase());
+      if (!typing && e.key.toLowerCase() === 'm' && !e.metaKey && !e.ctrlKey) {
+        openMenu(!menuRef.current, menuRef.current);
+        return;
+      }
       const claimed = tripRef.current.pieces?.game?.claims?.includes(e.key.toLowerCase());
       if (playing() && (e.key.startsWith('Arrow') || claimed)) {
         // While a step is played, the arrows steer, and the keys it claims are its own (Space: the
@@ -655,28 +990,134 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       else if (e.key === 'ArrowLeft') jumpTo(currentStep() - 1);
       else if (e.key === 'f') immerse();
     };
+    // Fingers and the mouse on the picture: one drags to orbit (not on a game, where the stick
+    // steers), two pinch to zoom, a tap is the click, a quick sideways flick changes piece.
+    const pts = new Map<number, { x: number; y: number }>();
+    let pinch: { d: number; zoom: number } | null = null;
+    let drag: {
+      id: number;
+      x: number;
+      y: number;
+      lx: number;
+      ly: number;
+      at: number;
+      moved: boolean;
+      touch: boolean;
+      start: View;
+    } | null = null;
+    const spread = () => {
+      const [a, b] = [...pts.values()];
+      return a && b ? Math.hypot(a.x - b.x, a.y - b.y) || 1 : 1;
+    };
+    const touched = () => {
+      viewAtRef.current = performance.now();
+      returnRef.current = false;
+    };
     const move = (e: PointerEvent) => {
       wake();
       cursorRef.current = {
         x: (e.clientX / window.innerWidth) * 2 - 1,
         y: 1 - (e.clientY / window.innerHeight) * 2,
       };
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && pts.size >= 2) {
+        touched();
+        viewRef.current = clampView({
+          ...viewRef.current,
+          zoom: (pinch.zoom * pinch.d) / spread(),
+        });
+        return;
+      }
+      if (!drag || drag.id !== e.pointerId) return;
+      const ddx = e.clientX - drag.lx;
+      const ddy = e.clientY - drag.ly;
+      drag.lx = e.clientX;
+      drag.ly = e.clientY;
+      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 8) drag.moved = true;
+      if (!drag.moved || gameStep()) return;
+      touched();
+      const v = viewRef.current;
+      viewRef.current = clampView({ ...v, yaw: v.yaw - ddx * 0.005, pitch: v.pitch + ddy * 0.005 });
+    };
+    const zoomBy = (e: WheelEvent) => {
+      e.preventDefault();
+      touched();
+      const v = viewRef.current;
+      viewRef.current = clampView({ ...v, zoom: v.zoom * Math.exp(e.deltaY * 0.0015) });
     };
     const away = (e: PointerEvent) => {
       if (!e.relatedTarget) cursorRef.current = null;
     };
     // A click on the picture itself switches the cursor's guide off and on again.
-    const press = (e: PointerEvent) => {
-      wake();
-      if (e.target !== canvasRef.current || journeyRef.current) return;
+    const toggleGuide = () => {
+      if (journeyRef.current) return;
       if (!tripRef.current.pieces?.pointer?.has(pieceRef.current)) return;
       guideRef.current = !guideRef.current;
       setGuide(guideRef.current);
     };
+    const press = (e: PointerEvent) => {
+      wake();
+      const target = e.target as Node | null;
+      if (e.pointerType === 'touch') setTouch(true);
+      if (menuRef.current) {
+        // A tap anywhere outside the Design menu shuts it, and does nothing else.
+        const inside =
+          !!target && (panelRef.current?.contains(target) || designRef.current?.contains(target));
+        if (!inside) openMenu(false);
+        return;
+      }
+      if (e.target !== canvasRef.current) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      holdingRef.current = true;
+      touched();
+      if (pts.size === 2) {
+        // A second finger: a pinch, and no tap or flick when they lift.
+        pinch = { d: spread(), zoom: viewRef.current.zoom };
+        drag = null;
+        return;
+      }
+      drag = {
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        lx: e.clientX,
+        ly: e.clientY,
+        at: performance.now(),
+        moved: false,
+        touch: e.pointerType === 'touch',
+        start: viewRef.current,
+      };
+    };
+    const lift = (e: PointerEvent) => {
+      if (!pts.delete(e.pointerId)) return;
+      if (pts.size < 2) pinch = null;
+      if (pts.size === 0) holdingRef.current = false;
+      touched();
+      const d = drag;
+      if (!d || d.id !== e.pointerId) return;
+      drag = null;
+      if (e.type === 'pointercancel') return;
+      if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) <= 8) {
+        toggleGuide();
+        return;
+      }
+      // A quick sideways flick changes piece, its little turn of the view undone; the games keep
+      // the finger for their stick. In the studio it goes through its pieces only.
+      const s = d.touch ? swipeStep(e.clientX - d.x, e.clientY - d.y, performance.now() - d.at) : 0;
+      if (s !== 0 && !gameStep()) {
+        viewRef.current = d.start;
+        jumpTo(journeyRef.current ? currentStep() + s : toStudio(currentStep(), s));
+      }
+    };
+    const canvas = canvasRef.current;
+    canvas?.addEventListener('wheel', zoomBy, { passive: false });
     const keyUp = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
     const blur = () => keysRef.current.clear();
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerdown', press);
+    window.addEventListener('pointerup', lift);
+    window.addEventListener('pointercancel', lift);
     document.addEventListener('pointerout', away);
     window.addEventListener('keydown', key);
     window.addEventListener('keyup', keyUp);
@@ -686,10 +1127,13 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       window.removeEventListener('blur', blur);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerdown', press);
+      window.removeEventListener('pointerup', lift);
+      window.removeEventListener('pointercancel', lift);
+      canvas?.removeEventListener('wheel', zoomBy);
       document.removeEventListener('pointerout', away);
       window.removeEventListener('keydown', key);
     };
-  }, [jumpTo, togglePlay, currentStep, immerse, stopGame]);
+  }, [jumpTo, togglePlay, currentStep, immerse, stopGame, openMenu, toStudio]);
 
   const step = trip.phases[hud.index] as TripStep;
   const lines = live?.lines ?? step.words ?? [];
@@ -751,13 +1195,38 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         ))}
       </div>
     ) : null;
+  const playable = !journey && !!game?.has(hud.index);
+  // A button held like a key: down while the finger is on it.
+  const holdKey = (k: string, label: string, className: string) => (
+    <button
+      type="button"
+      key={k}
+      className={className}
+      aria-label={label}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        pressKey(k, true);
+      }}
+      onPointerUp={() => pressKey(k, false)}
+      onPointerCancel={() => pressKey(k, false)}
+      onPointerLeave={() => pressKey(k, false)}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {label}
+    </button>
+  );
+  const claims = game?.claims ?? [];
+  // A world with a game has two sides, Game and Studio; the pills show the side you are on.
+  const gamePieces = trip.phases.map((_, k) => k).filter((k) => !!game?.has(k));
+  const twoSides = !!trip.pieces && gamePieces.length > 0 && gamePieces.length < trip.phases.length;
+  const pillPieces = trip.phases
+    .map((p, k) => ({ p, k }))
+    .filter(({ k }) => !twoSides || !!game?.has(k) === playable);
   return (
     <main
       ref={mainRef}
-      className={`bb bb-${page}${
-        !journey && trip.pieces?.variants?.has(hud.index) ? ' bb-raised' : ''
-      }${!journey && trip.pieces?.scenes?.has(hud.index) ? ' bb-raised-2' : ''}${
-        immersed ? ' bb-immersed' : ''
+      className={`bb bb-${page}${immersed ? ' bb-immersed' : ''}${
+        touch && (playable || flies) ? ' bb-touch-game' : ''
       }`}
     >
       <canvas
@@ -777,18 +1246,16 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           ✕ Exit full screen
         </button>
       ) : null}
-      {/* In full screen a game keeps its bar and count, and nothing else (2026-11-11: "add full screen mode"). */}
-      {immersed && !journey && !stopped && trip.pieces?.game?.has(hud.index) ? (
+      {/* While a game is played its bar and count stay on screen, full screen or not. */}
+      {steering && (game?.meter || game?.tally || (immersed && cockpit)) ? (
         <div className="bb-hud">
-          {trip.pieces.game.meter ? (
-            <span className="bb-meter" role="img" aria-label={trip.pieces.game.meter.label}>
+          {game?.meter ? (
+            <span className="bb-meter" role="img" aria-label={game.meter.label}>
               <span ref={meterRef} />
             </span>
           ) : null}
-          {trip.pieces.game.tally ? (
-            <span className="bb-tally" ref={tallyRef} aria-live="polite" />
-          ) : null}
-          {cockpit}
+          {game?.tally ? <span className="bb-tally" ref={tallyRef} aria-live="polite" /> : null}
+          {immersed ? cockpit : null}
         </div>
       ) : null}
       {/* A cockpit of dials while you steer (2026-11-11: "meters like in an airplane cockpit"). */}
@@ -801,21 +1268,35 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           ))}
         </div>
       ) : null}
-      <div className={`bb-top${chrome ? '' : ' bb-hidden'}`}>
-        <nav className="bb-tabs" aria-label="Art">
-          {ART_LINKS.map((l) =>
-            l.page === page ? (
-              <span key={l.href} className="bb-back bb-tab-on" aria-current="page">
-                {l.label}
-              </span>
-            ) : (
-              <a key={l.href} href={l.href} className="bb-back">
-                {l.label}
-              </a>
-            ),
-          )}
-        </nav>
-      </div>
+      {/* On a phone a game is flown with a stick under the left thumb and its own keys under the
+          right, held in the same set of keys as the keyboard's (2026-11-12). */}
+      {touch && (playable || flies) ? (
+        <div className="bb-touch">
+          <div
+            className="bb-stick"
+            aria-hidden="true"
+            onPointerDown={stickDown}
+            onPointerMove={stickMove}
+            onPointerUp={stickUp}
+            onPointerCancel={stickUp}
+          >
+            <span
+              className="bb-stick-knob"
+              style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }}
+            />
+          </div>
+          {playable ? (
+            <div className="bb-acts">
+              {claims.map((k) => holdKey(k, claimLabel(k, game?.meter?.label), 'bb-act'))}
+              {/* Faster and slower, as Shift and X: small, above the game's own buttons. */}
+              <div className="bb-paces">
+                {holdKey('x', 'Slower', 'bb-pace')}
+                {holdKey('shift', 'Faster', 'bb-pace')}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {hasWords && words && lines.length > 0 ? (
         <blockquote className="jr-words" aria-live="polite">
           {lines.map((line, k) => (
@@ -839,150 +1320,216 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         </div>
         <p className={`bb-line${chrome ? '' : ' bb-hidden'}`}>{step.line}</p>
       </div>
-      <div className={`bb-bar${chrome ? '' : ' bb-hidden'}`}>
-        {journey ? (
-          <div className="bb-segments" role="toolbar" aria-label="Steps of the trip">
-            {trip.phases.map((p, k) => {
-              const fill = k === hud.index ? hud.u : k < hud.index ? 1 : 0;
-              return (
-                <button
-                  type="button"
-                  key={p.id}
-                  className={`bb-seg${k === hud.index ? ' bb-seg-on' : ''}`}
-                  style={{ flexGrow: p.duration }}
-                  onClick={() => jumpTo(k)}
-                  title={`${k + 1}. ${p.name}`}
-                  aria-label={`Go to step ${k + 1}, ${p.name}`}
-                >
-                  <span style={{ width: `${fill * 100}%`, background: trip.stepColours[k] }} />
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          // Steps on their own are presets, picked by name like the Art panel's, with no time bar.
-          <>
-            {trip.pieces?.scenes?.has(hud.index) ? (
-              <div
-                className="bb-pills bb-variants"
-                role="toolbar"
-                aria-label={trip.pieces.scenes.label}
-              >
-                {trip.pieces.scenes.names.map((name, i) => (
-                  <button
-                    type="button"
-                    key={name}
-                    className="bb-pill"
-                    aria-pressed={i === scene}
-                    onClick={() => setScene(i)}
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            {trip.pieces?.variants?.has(hud.index) ? (
-              <div
-                className="bb-pills bb-variants"
-                role="toolbar"
-                aria-label={
-                  (typeof trip.pieces.variants.label === 'function'
-                    ? trip.pieces.variants.label(hud.index)
-                    : trip.pieces.variants.label) ?? 'Ground'
-                }
-              >
-                {(typeof trip.pieces.variants.names === 'function'
-                  ? trip.pieces.variants.names(hud.index)
-                  : trip.pieces.variants.names
-                ).map((name, i) => (
-                  <button
-                    type="button"
-                    key={name}
-                    className="bb-pill"
-                    aria-pressed={i === variant}
-                    onClick={() => setVariant(i)}
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            <div className="bb-pills" role="toolbar" aria-label="Pieces">
-              {trip.phases.map((p, k) => (
-                <button
-                  type="button"
-                  key={p.id}
-                  className="bb-pill"
-                  aria-pressed={k === hud.index}
-                  onClick={() => jumpTo(k)}
-                >
-                  {p.name}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-        <div className="bb-controls">
-          {journey ? (
-            <button type="button" onClick={() => jumpTo(hud.index - 1)} aria-label="Previous step">
-              ⏮
-            </button>
-          ) : null}
-          <button type="button" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
-            {playing ? '❚❚' : '▶'}
-          </button>
-          {journey ? (
-            <>
-              <button type="button" onClick={() => jumpTo(hud.index + 1)} aria-label="Next step">
-                ⏭
-              </button>
-              <span className="bb-time">
-                {fmt(hud.time)} / {fmt(trip.total)}
-              </span>
-            </>
-          ) : null}
-          {trip.pieces ? (
+      <button
+        type="button"
+        ref={designRef}
+        className={`bb-design${chrome || menu ? '' : ' bb-quiet'}`}
+        aria-haspopup="dialog"
+        aria-expanded={menu}
+        aria-controls="bb-menu"
+        onClick={() => openMenu(!menu, menu)}
+        title="Design: the art, its pieces and looks (M)"
+      >
+        Design
+      </button>
+      {menu ? (
+        <div
+          id="bb-menu"
+          ref={panelRef}
+          className="bb-menu"
+          role="dialog"
+          aria-label="Design"
+          tabIndex={-1}
+        >
+          <div className="bb-menu-head">
+            <span className="bb-menu-title">Design</span>
             <button
               type="button"
-              aria-pressed={journey}
-              onClick={toggleJourney}
-              title="Play every piece as one trip, through a ball of stars"
+              className="bb-menu-close"
+              onClick={() => openMenu(false, true)}
+              aria-label="Close the design menu"
             >
-              Journey
+              ✕
             </button>
-          ) : null}
-          {hasWords ? (
-            <button type="button" aria-pressed={words} onClick={toggleWords}>
-              Words
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={immerse}
-            aria-label="Full screen, the picture alone; Esc to come back"
-            title="Full screen (F); Esc to come back"
-          >
-            {!journey && trip.pieces?.game?.has(hud.index) ? '⛶ Full screen' : '⛶'}
-          </button>
-          {(trip.backgrounds?.length ?? 0) > 1 ? (
-            <button type="button" onClick={nextBg} title="Change the background">
-              {trip.backgrounds?.[bg]?.name}
-            </button>
-          ) : null}
-          <span className="bb-speeds" role="toolbar" aria-label="Speed">
-            {[0.5, 1, 2].map((s) => (
+          </div>
+          <nav className="bb-tabs" aria-label="Art">
+            {ART_LINKS.map((l) =>
+              l.page === page ? (
+                <span key={l.href} className="bb-back bb-tab-on" aria-current="page">
+                  {l.label}
+                </span>
+              ) : (
+                <a key={l.href} href={l.href} className="bb-back">
+                  {l.label}
+                </a>
+              ),
+            )}
+          </nav>
+          {journey ? (
+            <div className="bb-segments" role="toolbar" aria-label="Steps of the trip">
+              {trip.phases.map((p, k) => {
+                const fill = k === hud.index ? hud.u : k < hud.index ? 1 : 0;
+                return (
+                  <button
+                    type="button"
+                    key={p.id}
+                    className={`bb-seg${k === hud.index ? ' bb-seg-on' : ''}`}
+                    style={{ flexGrow: p.duration }}
+                    onClick={() => jumpTo(k)}
+                    title={`${k + 1}. ${p.name}`}
+                    aria-label={`Go to step ${k + 1}, ${p.name}`}
+                  >
+                    <span style={{ width: `${fill * 100}%`, background: trip.stepColours[k] }} />
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            // Steps on their own are presets, picked by name like the Art panel's, with no time bar.
+            <>
+              {twoSides ? (
+                <div className="bb-pills bb-modes" role="toolbar" aria-label="Mode">
+                  <button
+                    type="button"
+                    className="bb-pill"
+                    aria-pressed={playable}
+                    onClick={() => switchMode(true)}
+                    title="The game: fly it yourself"
+                  >
+                    Game
+                  </button>
+                  <button
+                    type="button"
+                    className="bb-pill"
+                    aria-pressed={!playable}
+                    onClick={() => switchMode(false)}
+                    title="The studio: every other piece, to play with designs"
+                  >
+                    Studio
+                  </button>
+                </div>
+              ) : null}
+              {pillPieces.length > 1 || !twoSides ? (
+                <div className="bb-pills" role="toolbar" aria-label="Pieces">
+                  {pillPieces.map(({ p, k }) => (
+                    <button
+                      type="button"
+                      key={p.id}
+                      className="bb-pill"
+                      aria-pressed={k === hud.index}
+                      onClick={() => jumpTo(k)}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {trip.pieces?.scenes?.has(hud.index) ? (
+                <div
+                  className="bb-pills bb-variants"
+                  role="toolbar"
+                  aria-label={trip.pieces.scenes.label}
+                >
+                  {trip.pieces.scenes.names.map((name, i) => (
+                    <button
+                      type="button"
+                      key={name}
+                      className="bb-pill"
+                      aria-pressed={i === scene}
+                      onClick={() => setScene(i)}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {trip.pieces?.variants?.has(hud.index) ? (
+                <div
+                  className="bb-pills bb-variants"
+                  role="toolbar"
+                  aria-label={
+                    (typeof trip.pieces.variants.label === 'function'
+                      ? trip.pieces.variants.label(hud.index)
+                      : trip.pieces.variants.label) ?? 'Ground'
+                  }
+                >
+                  {(typeof trip.pieces.variants.names === 'function'
+                    ? trip.pieces.variants.names(hud.index)
+                    : trip.pieces.variants.names
+                  ).map((name, i) => (
+                    <button
+                      type="button"
+                      key={name}
+                      className="bb-pill"
+                      aria-pressed={i === variant}
+                      onClick={() => setVariant(i)}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          )}
+          <div className="bb-controls">
+            {journey ? (
               <button
                 type="button"
-                key={s}
-                aria-pressed={speed === s}
-                onClick={() => changeSpeed(s)}
+                onClick={() => jumpTo(hud.index - 1)}
+                aria-label="Previous step"
               >
-                {s}×
+                ⏮
               </button>
-            ))}
-          </span>
-          {!journey && trip.pieces?.game?.has(hud.index) ? (
-            <>
+            ) : null}
+            <button type="button" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
+              {playing ? '❚❚' : '▶'}
+            </button>
+            {journey ? (
+              <>
+                <button type="button" onClick={() => jumpTo(hud.index + 1)} aria-label="Next step">
+                  ⏭
+                </button>
+                <span className="bb-time">
+                  {fmt(hud.time)} / {fmt(trip.total)}
+                </span>
+              </>
+            ) : null}
+            {trip.pieces ? (
+              <button
+                type="button"
+                aria-pressed={journey}
+                onClick={toggleJourney}
+                title="Play every piece as one trip, through a ball of stars"
+              >
+                Journey
+              </button>
+            ) : null}
+            {hasWords ? (
+              <button type="button" aria-pressed={words} onClick={toggleWords}>
+                Words
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={immerse}
+              aria-label="Full screen, the picture alone; Esc to come back"
+              title="Full screen (F); Esc to come back"
+            >
+              ⛶ Full screen
+            </button>
+            <button
+              type="button"
+              onClick={resetView}
+              title="Back to the piece's own view (pinch or wheel zooms, drag turns it)"
+            >
+              Reset view
+            </button>
+            {(trip.backgrounds?.length ?? 0) > 1 ? (
+              <button type="button" onClick={nextBg} title="Change the background">
+                {trip.backgrounds?.[bg]?.name}
+              </button>
+            ) : null}
+            {playable ? (
               <button
                 type="button"
                 aria-pressed={!stopped}
@@ -991,57 +1538,61 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
               >
                 Steer
               </button>
-              {trip.pieces.game.meter && !stopped && !immersed ? (
-                <span className="bb-meter" role="img" aria-label={trip.pieces.game.meter.label}>
-                  <span ref={meterRef} />
-                </span>
-              ) : null}
-              {trip.pieces.game.tally && !stopped && !immersed ? (
-                <span className="bb-tally" ref={tallyRef} aria-live="polite" />
-              ) : null}
-            </>
-          ) : null}
-          {!journey && trip.pieces?.toggle?.has(hud.index) ? (
-            <button type="button" aria-pressed={switched} onClick={() => setSwitched((s) => !s)}>
-              {typeof trip.pieces.toggle.label === 'string'
-                ? trip.pieces.toggle.label
-                : trip.pieces.toggle.label(hud.index)}
-            </button>
-          ) : null}
-          {journey
-            ? null
-            : cycles.map((c, i) =>
-                c.has(hud.index) ? (
-                  <button
-                    type="button"
-                    key={c.label}
-                    onClick={() =>
-                      setCycled((was) => {
-                        const next = [...was];
-                        next[i] = ((was[i] ?? 0) + 1) % (c.names.length || 1);
-                        return next;
-                      })
-                    }
-                    title={`${c.label}: next`}
-                  >
-                    {c.names[cycled[i] ?? 0]}
-                  </button>
-                ) : null,
-              )}
-          {!journey && trip.pieces?.flow?.has(hud.index) ? (
-            <button
-              type="button"
-              onClick={() => setFlowUp((f) => !f)}
-              aria-label={
-                flowUp ? 'Dots moving up; send them down' : 'Dots moving down; send them up'
-              }
-              title={flowUp ? 'Moving up' : 'Moving down'}
-            >
-              {flowUp ? '↑' : '↓'}
-            </button>
-          ) : null}
+            ) : null}
+            {!journey && trip.pieces?.toggle?.has(hud.index) ? (
+              <button type="button" aria-pressed={switched} onClick={() => setSwitched((s) => !s)}>
+                {typeof trip.pieces.toggle.label === 'string'
+                  ? trip.pieces.toggle.label
+                  : trip.pieces.toggle.label(hud.index)}
+              </button>
+            ) : null}
+            {journey
+              ? null
+              : cycles.map((c, i) =>
+                  c.has(hud.index) ? (
+                    <button
+                      type="button"
+                      key={c.label}
+                      onClick={() =>
+                        setCycled((was) => {
+                          const next = [...was];
+                          next[i] = ((was[i] ?? 0) + 1) % (c.names.length || 1);
+                          return next;
+                        })
+                      }
+                      title={`${c.label}: next`}
+                    >
+                      {c.names[cycled[i] ?? 0]}
+                    </button>
+                  ) : null,
+                )}
+            {!journey && trip.pieces?.flow?.has(hud.index) ? (
+              <button
+                type="button"
+                onClick={() => setFlowUp((f) => !f)}
+                aria-label={
+                  flowUp ? 'Dots moving up; send them down' : 'Dots moving down; send them up'
+                }
+                title={flowUp ? 'Moving up' : 'Moving down'}
+              >
+                {flowUp ? '↑' : '↓'}
+              </button>
+            ) : null}
+            <span className="bb-speeds" role="toolbar" aria-label="Speed">
+              {[0.5, 1, 2].map((s) => (
+                <button
+                  type="button"
+                  key={s}
+                  aria-pressed={speed === s}
+                  onClick={() => changeSpeed(s)}
+                >
+                  {s}×
+                </button>
+              ))}
+            </span>
+          </div>
         </div>
-      </div>
+      ) : null}
     </main>
   );
 }
