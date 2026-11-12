@@ -28,6 +28,7 @@ import {
 import type { Sign, Tower } from './city';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
 import { dockItems } from './city-docks';
+import { embassyAt, embassyItems } from './city-embassy';
 import { textPixels } from './city-font';
 import {
   AVENUE,
@@ -247,7 +248,7 @@ function plazaOf(I: number, J: number): Landmark | null {
 
 /* ---------- the blocks ---------- */
 
-export type Shape = 'box' | 'pyramid' | 'park' | 'plaza' | 'studio' | 'business';
+export type Shape = 'box' | 'pyramid' | 'park' | 'plaza' | 'studio' | 'business' | 'embassy';
 /** A lit tunnel through a tower, along x (0) or z (2), at height y, half as wide and high as hw, hh. */
 export type Bore = { axis: 0 | 2; y: number; hw: number; hh: number };
 export type Block = Tower & {
@@ -355,6 +356,13 @@ export function blockTower(I: number, J: number): Block {
   }
   const plaza = plazaOf(I, J);
   if (plaza) shape = 'plaza';
+  // An Embassy of Happiness (lib/city-embassy.ts): its own building, in the middle of its block.
+  const emb = embassyAt(I, J);
+  if (emb) {
+    shape = 'embassy';
+    studio = null;
+    [hx, hz, h, jx, jz] = [emb.hx, emb.hz, emb.h, 0, 0];
+  }
   let x = cx + jx * Math.max(0, BLOCK_X - 2 * hx - 7);
   if (ave && shape === 'box') {
     hx = Math.min(hx, 7);
@@ -429,7 +437,7 @@ export function blocked(q: Vec3): boolean {
     if (dx >= ex || dz >= ez) return false;
     return q[1] < GROUND + MARGIN + tw.h * (1 - Math.max(dx / ex, dz / ez));
   }
-  if (tw.shape !== 'box' && tw.shape !== 'business') return false;
+  if (tw.shape !== 'box' && tw.shape !== 'business' && tw.shape !== 'embassy') return false;
   return (
     q[1] <= GROUND + tw.h + MARGIN && dx < tw.hx + MARGIN && dz < tw.hz + MARGIN && !inBore(tw, q)
   );
@@ -2217,6 +2225,7 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number): Item[] {
   railItems(eye, t, Math.min(R, NEAR + 60), out);
   riverItems(eye, t, R, floorAt, waterAt, out);
   dockItems(eye, t, Math.min(R, NEAR + 40), out);
+  embassyItems(eye, t, R, out);
   const k = planLook(eye[1]);
   if (k > 0) planItems(eye, fwd, R, k, t, out);
   return out;

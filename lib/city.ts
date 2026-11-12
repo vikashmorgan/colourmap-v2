@@ -2025,8 +2025,11 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   fly.look += ((fly.slow && fly.mode === 'pilot' ? 1 : 0) - fly.look) * (1 - Math.exp(-2 * dt));
   // Inside a dock's room (lib/city-rooms.ts) the Dot Walker walks; Enter or Esc, back to the ship.
   if (inRoom()) {
-    if (roomStep(active, keys, dt, t) === 'stay') return;
+    const step = roomStep(active, keys, dt, t);
+    if (step === 'stay') return;
     backToShip();
+    // Yes to Shark Simulator: off to the Ocean, the ship left on its pad.
+    if (step === 'arcade') openLink(SHARK_SIM_HREF);
     if (active) return;
   }
   if (!active) {
@@ -2113,6 +2116,16 @@ export function placeShip(q: Vec3, yaw = 0) {
   fly.pitch = 0;
   fly.speed = 0;
   fly.mode = 'pilot';
+}
+
+/** Where the embassies' arcade cabinets lead: the Ocean, opened on its Shark Sim. */
+export const SHARK_SIM_HREF = '/geometry-field/ocean?piece=swim';
+let openLink = (href: string) => {
+  if (typeof window !== 'undefined') window.location.assign(href);
+};
+/** How the city opens a link (the page by default; a test listens instead). */
+export function setOpenLink(fn: (href: string) => void) {
+  openLink = fn;
 }
 
 /** Out of a room: the ship on its dock's pad, facing away from the room, at rest. */

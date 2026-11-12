@@ -174,6 +174,18 @@ export function backgroundStops(trip: Trip, chosen: number, k: number | null): s
   return own ?? trip.backgrounds?.[chosen]?.stops ?? ['#040207'];
 }
 
+/**
+ * The piece a link asks for (`?piece=<step id>`, as the City's arcade cabinet opens the Ocean on
+ * Shark Sim): its number, or null with no such piece or no pieces to pick from.
+ */
+export function pieceFromSearch(trip: Trip, search: string): number | null {
+  if (!trip.pieces) return null;
+  const id = new URLSearchParams(search).get('piece');
+  if (!id) return null;
+  const k = trip.phases.findIndex((p) => p.id === id);
+  return k < 0 ? null : k;
+}
+
 /** A dial of a game's cockpit. */
 export type Gauge = { label: string; value: number; min?: number; max: number; unit?: string };
 
@@ -716,6 +728,12 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, as the page opens
   useEffect(() => {
     if (journeyRef.current) return;
+    // A link to one piece opens on it.
+    const asked = pieceFromSearch(tripRef.current, window.location.search);
+    if (asked !== null) {
+      jumpTo(asked);
+      return;
+    }
     try {
       if (window.localStorage.getItem(`${MODE_KEY}:${page}`) === 'game') switchMode(true);
     } catch {

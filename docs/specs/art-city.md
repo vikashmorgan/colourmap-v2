@@ -894,6 +894,37 @@ along walls rather than stopping dead, and it has a seated pose. The Vegetal use
 Cost: from a room the city is drawn only out to 90 through the window (with tighter culling and a
 lower density cap), about 9 to 12 ms a frame in the bench, against 8 to 10 in flight.
 
+### Embassies of Happiness (`lib/city-embassy.ts`)
+
+Queued from the user (2026-11-12): "Embassies of Happiness with a Shark Simulator cabinet":
+several unique buildings with a big glowing "EMBASSY OF HAPPINESS" sign, each with a dock to a big
+room holding an arcade cabinet, SHARK SIMULATOR; walking up to it asks "Do you want to take a rest
+from the city and play Shark Simulator?", and yes opens the Ocean on its Shark Sim.
+
+Three embassies a tile, each its own design and two hues, on a block of its own away from the metro
+and the river:
+
+| Embassy | Where | Design | Hues |
+|---------|-------|--------|------|
+| **Lotus** | the Golden district, among its parks | a round glass tower in three rings of ten petals opening outward up it, each ring turned half a petal, their light drifting slowly up between the hues | rose, gold |
+| **Hanging Gardens** | the Oriental quarter, near the mosque | five terraces widening as they rise, plants along every rim, water falling from tier to tier | turquoise, leaf |
+| **Prism** | the Market | a triangular glass prism turning a sixth as it rises round a heart of light breathing on the beat, a round deck and a mast on its roof | violet, white |
+
+- **The sign:** EMBASSY OF / HAPPINESS in light standing on the roof's edge toward the avenue and
+  readable from it, in a white frame, a slow wave running along the letters between the two hues.
+  The sign shows from as far as the city is drawn; the building itself from 220.
+- **The room:** each roof holds a big room (12 by 10, 5 high), a dock like the lounges (its pad
+  over the street, "Docked — Enter to go inside"), HAPPINESS in neon on its back wall.
+- **The cabinet:** against the room's left wall, SHARK SIMULATOR on its marquee, a blue screen with
+  a little shark chasing a gold fish across and back, a red stick and two buttons breathing on the
+  beat, a pool of its light on the floor. It stands in the walker's way like the sofa.
+- **The question:** walk up to the cabinet and face it, and the words beside the bar ask "Do you
+  want to take a rest from the city and play Shark Simulator? Enter: yes". Enter opens
+  `/geometry-field/ocean?piece=swim`, the ship left on its pad; walk away and the question goes.
+  Enter anywhere else in the room still goes back to the ship.
+- **The deep link:** any world's page opens on one piece with `?piece=<step id>`
+  (`pieceFromSearch` in the trip player); a link wins over the side the world was last left on.
+
 ### Still rough, and next
 
 - The Studio's buildings, domes, minarets and spires are light: you fly through them (only towers
@@ -903,7 +934,7 @@ lower density cap), about 9 to 12 ms a frame in the bench, against 8 to 10 in fl
 - Traffic does not yet move in platoons on the beat; the beat does not yet travel out from a heart
   (the Nova Cores, another round).
 - Docks are only the four lounges; the business towers do not yet have docks of their own.
-- Queued from the user, not in this round: cars on the ground; Embassies of Happiness with a Shark Simulator cabinet;
+- Queued from the user, not in this round: cars on the ground;
   ultraboost ring portals high in the sky into hyperspace and other solar systems.
 
 ## Game · Studio, and the phone

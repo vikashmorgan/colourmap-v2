@@ -15,6 +15,7 @@
  */
 
 import { hash, type RGB, type Vec3 } from './bigbang';
+import { EMBASSY_DOCKS } from './city-embassy';
 import {
   BLOCK_Z,
   beat,
@@ -57,7 +58,8 @@ export type Dock = {
 };
 
 const G = GROUND;
-export const DOCKS: Dock[] = [
+/** The four sky lounges. */
+export const LOUNGES: Dock[] = [
   {
     // High over the Heights' avenue, hung on an avenue tower, looking down the avenue.
     name: 'Avenue lounge',
@@ -111,6 +113,8 @@ export const DOCKS: Dock[] = [
     tilt: -0.1,
   },
 ];
+/** Every dock: the lounges, then the Embassies of Happiness' big rooms (lib/city-embassy.ts). */
+export const DOCKS: Dock[] = [...LOUNGES, ...EMBASSY_DOCKS];
 
 /* ---------- a dock's frame ---------- */
 

@@ -15,6 +15,12 @@
  * A and D turn, Shift runs, Space jumps; the walls hold the walker and it slides along them. Stand
  * still on the sofa a moment and it sits: the eye settles behind its shoulder and drifts slowly
  * over the view. Enter (or Esc) goes back to the ship on its pad.
+ *
+ * The Embassies of Happiness' big rooms (`arcade` docks, lib/city-embassy.ts) hold an arcade
+ * cabinet against the left wall, SHARK SIMULATOR on its marquee and a little shark swimming on its
+ * screen. Walk up to it and the words ask "Do you want to take a rest from the city and play Shark
+ * Simulator?"; Enter says yes (`roomStep` answers 'arcade', and the city opens the Ocean's Shark
+ * Sim).
  */
 
 import { hash, type RGB, type Vec3 } from './bigbang';
@@ -56,11 +62,43 @@ const sofaBack = (d: number) => d / 2 - 3.3;
 const seatOut = (d: number) => d / 2 - 2.1;
 const WALL_ROOM = 0.55;
 
-/** Where the walker may stand: inside the walls, off the sofa's back and the plants. */
+/**
+ * The arcade cabinet in an embassy's room: its middle against the left wall (across, along the
+ * view), facing into the room (+side); half as deep and wide as these, this tall to its marquee.
+ */
+const CAB_DEPTH = 0.45;
+const CAB_HALF = 0.9;
+const CAB_H = 2.25;
+const cabinetAt = (P: Placed): [number, number] => [
+  -P.dock.w + CAB_DEPTH + 0.1,
+  -P.dock.d / 2 + 2.4,
+];
+
+/** Whether the walker stands at the cabinet, in front of it and turned toward it. */
+export function atCabinet(P: Placed, x: number, z: number, yaw: number): boolean {
+  if (!P.dock.arcade) return false;
+  const [cs, co] = cabinetAt(P);
+  const [s, o] = local(P, x, z);
+  const front = s - (cs + CAB_DEPTH);
+  if (front < 0.3 || front > 2.4 || Math.abs(o - co) > CAB_HALF + 0.5) return false;
+  // Facing the cabinet (toward -side) at least a little.
+  const [hx, hz] = heading(yaw);
+  return -(hx * P.r[0] + hz * P.r[2]) > 0.2;
+}
+
+/** The words at the cabinet. */
+export const ARCADE_PROMPT =
+  'Do you want to take a rest from the city and play Shark Simulator? Enter: yes';
+
+/** Where the walker may stand: inside the walls, off the sofa's back, the plants and the cabinet. */
 export function roomFree(P: Placed, x: number, z: number): boolean {
   const { w, d } = P.dock;
   const [s, o] = local(P, x, z);
   if (Math.abs(s) > w - WALL_ROOM || Math.abs(o) > d / 2 - WALL_ROOM) return false;
+  if (P.dock.arcade) {
+    const [cs, co] = cabinetAt(P);
+    if (s < cs + CAB_DEPTH + 0.35 && Math.abs(o - co) < CAB_HALF + 0.3) return false;
+  }
   if (Math.abs(s) < SOFA_HALF + 0.3 && o > sofaBack(d) - 0.35 && o < sofaBack(d) + 0.55)
     return false;
   // Plants in the two corners by the window.
@@ -94,15 +132,22 @@ export function leaveRoom() {
 
 /**
  * The room each frame: whether it is played, the keys, the time step and the time. Returns
- * 'leave' when Enter is pressed or the game is let go (Esc), else 'stay'.
+ * 'arcade' when Enter is pressed at the cabinet (yes, Shark Simulator), 'leave' when it is pressed
+ * anywhere else or the game is let go (Esc), else 'stay'.
  */
-export function roomStep(active: boolean, keys: string[], dt: number, t: number): 'stay' | 'leave' {
+export function roomStep(
+  active: boolean,
+  keys: string[],
+  dt: number,
+  t: number,
+): 'stay' | 'leave' | 'arcade' {
   const P = room.P;
   if (!P) return 'leave';
   room.t = t;
   const enter = keys.includes('enter') && !room.held.includes('enter');
   room.held = [...keys];
-  if (!active || enter) return 'leave';
+  if (!active) return 'leave';
+  if (enter) return atCabinet(P, room.w.x, room.w.z, room.w.yaw) ? 'arcade' : 'leave';
   const w = room.w;
   stepWalker(
     w,
@@ -229,6 +274,8 @@ export function roomBeyond(x: number, z: number, r: number): boolean {
 /* ---------- the room's own grains ---------- */
 
 const WALKER_SHARE = 0.22;
+/** In an embassy's room, the cabinet's share of the grains after the walker's. */
+const CABINET_SHARE = 0.2;
 
 /**
  * Grain L of the n the room draws with (the ship's and the other ships' share of the frame): the
@@ -251,8 +298,113 @@ export function roomGrain(L: number, n: number, t: number): Spot {
     const dust = isDust(p) ? me.pace * 0.5 * (1 - me.sit) : 1;
     return { pos, rgb: scale(C.gold, 0.5 * head * dust) };
   }
-  return roomSite(P, (u - WALKER_SHARE) / (1 - WALKER_SHARE), L, t);
+  if (P.dock.arcade && u < WALKER_SHARE + CABINET_SHARE)
+    return cabinetSite(P, (u - WALKER_SHARE) / CABINET_SHARE, L, t);
+  const k = P.dock.arcade ? WALKER_SHARE + CABINET_SHARE : WALKER_SHARE;
+  return roomSite(P, (u - k) / (1 - k), L, t);
 }
+
+/**
+ * A point of the arcade cabinet, q (0..1) through it: its outline in neon, SHARK SIMULATOR on its
+ * marquee, a blue screen with a little shark swimming across it after a fish, its stick and
+ * buttons, and a pool of its light on the floor.
+ */
+function cabinetSite(P: Placed, q: number, L: number, t: number): Spot {
+  const [h1, h2] = P.dock.hues;
+  const [cs, co] = cabinetAt(P);
+  const r = (salt: number) => hash(L, salt);
+  // f: out from the wall (into the room), a: across (along the view), y: up.
+  const at = (f: number, a: number, y: number, c: RGB, k: number): Spot => ({
+    pos: roomPoint(P, cs + f, co + a, y),
+    rgb: scale(c, k),
+  });
+  const D = CAB_DEPTH;
+  const A = CAB_HALF;
+  if (q < 0.26) {
+    // The body's outline: its two sides' profiles (deep at the foot, a slanted screen, the marquee
+    // jutting over it) and the lines across between them.
+    const side = r(1) < 0.5 ? -1 : 1;
+    const e = r(2) * (PROFILE.length - 1);
+    const i = Math.floor(e);
+    const fr = e - i;
+    const p0 = PROFILE[i] as [number, number];
+    const p1 = PROFILE[i + 1] as [number, number];
+    if (r(3) < 0.75)
+      return at(p0[0] + (p1[0] - p0[0]) * fr, side * A, p0[1] + (p1[1] - p0[1]) * fr, h1, 0.4);
+    return at(p0[0], (r(4) - 0.5) * 2 * A, p0[1], mix(h1, C.white, 0.3), 0.3);
+  }
+  if (q < 0.5) {
+    // The marquee: SHARK SIMULATOR in light, glowing on a slow breath.
+    const T = textPixels(MARQUEE);
+    const npx = T.px.length / 2;
+    const i = Math.floor(r(5) * npx);
+    const px = (2 * A * 0.86) / T.w;
+    const cx = ((T.px[i * 2] as number) + 0.5 - T.w / 2) * px;
+    const cy = ((T.px[i * 2 + 1] as number) + 0.5) * px;
+    const glow = 0.85 + 0.15 * Math.sin(t * 0.6);
+    // Read from the room, facing the cabinet: the words run along the view (the reader's right).
+    return at(D + 0.12, cx, CAB_H + 0.42 - cy, mix(h2, C.cyan, 0.5), 0.55 * glow);
+  }
+  if (q < 0.82) {
+    // The screen, slanting back: deep blue water, a shark chasing a fish across and back.
+    const e = (q - 0.5) / 0.32;
+    const sy = (v: number) => 1.3 + v * 0.65;
+    const sf = (v: number) => D - 0.03 - v * 0.15;
+    const sw = A * 0.8;
+    const sx = Math.sin(t * 0.45) * sw * 0.6;
+    const dir = Math.cos(t * 0.45) >= 0 ? -1 : 1;
+    if (e < 0.45) {
+      // The water: faint blue, lighter toward the top, light rippling through it.
+      const a = (r(6) - 0.5) * 2 * sw;
+      const v = r(7);
+      const ripple = 0.5 + 0.5 * Math.sin(a * 6 + v * 4 + t * 1.3);
+      return at(sf(v), a, sy(v), mix(DEEP, C.cyan, 0.3 * v), 0.1 + 0.06 * ripple);
+    }
+    if (e < 0.85) {
+      // The shark: a body tapering to its tail, a fin on top, its tail sweeping.
+      const k = r(8);
+      const along = (k - 0.5) * 0.6;
+      const thick = Math.max(0, 0.07 * (1 - Math.abs(k - 0.35) * 1.6));
+      const tail = k < 0.15 ? Math.sin(t * 4) * 0.05 : 0;
+      const fin = r(9) < 0.15 ? Math.max(0, 0.08 * (1 - Math.abs(k - 0.5) * 4)) : 0;
+      const v = 0.45 + 0.08 * Math.sin(t * 0.7) + (r(10) - 0.5) * 2 * thick + tail + fin;
+      return at(sf(v) + 0.01, sx - dir * along, sy(v), SHARK, 0.45);
+    }
+    // The fish it chases, gold, just ahead of it.
+    const v = 0.5 + 0.1 * Math.sin(t * 1.1);
+    const a = Math.max(-sw, Math.min(sw, sx - dir * 0.45 + (r(11) - 0.5) * 0.06));
+    return at(sf(v) + 0.01, a, sy(v) + (r(12) - 0.5) * 0.05, C.gold, 0.5);
+  }
+  if (q < 0.9) {
+    // The control panel: a red stick and two buttons breathing on the beat.
+    const b = beat(t, 1);
+    const k = r(13);
+    if (k < 0.45) return at(D + 0.15, -0.3, 1.12 + 0.2 * r(14), C.red, 0.45);
+    const btn = k < 0.72 ? 0.15 : 0.4;
+    const a = r(15) * TAU;
+    return at(D + 0.15 + Math.cos(a) * 0.05, btn + Math.sin(a) * 0.05, 1.12, h2, 0.3 + 0.25 * b);
+  }
+  // A pool of its light on the floor in front.
+  const a = r(16) * TAU;
+  const rr = 1.2 * Math.sqrt(r(17));
+  return at(D + 0.9 + Math.cos(a) * rr * 0.7, Math.sin(a) * rr, 0.02, h1, 0.12 * (1 - rr / 1.2));
+}
+const MARQUEE = 'SHARK\nSIMULATOR';
+const DEEP: RGB = [0.1, 0.35, 0.8];
+const SHARK: RGB = [0.75, 0.83, 0.95];
+/** The cabinet's side, out from the wall and up: its foot, the panel, the slanted screen, the marquee. */
+const PROFILE: [number, number][] = [
+  [-CAB_DEPTH, 0],
+  [CAB_DEPTH, 0],
+  [CAB_DEPTH, 1.0],
+  [CAB_DEPTH + 0.3, 1.1],
+  [CAB_DEPTH, 1.25],
+  [CAB_DEPTH - 0.15, 2.0],
+  [CAB_DEPTH + 0.1, 2.05],
+  [CAB_DEPTH + 0.1, CAB_H + 0.5],
+  [-CAB_DEPTH, CAB_H + 0.5],
+  [-CAB_DEPTH, 0],
+];
 
 /** A point of the room's own, q (0..1) through it. */
 function roomSite(P: Placed, q: number, L: number, t: number): Spot {
@@ -368,6 +520,7 @@ function roomSite(P: Placed, q: number, L: number, t: number): Spot {
 export function roomBanner(t: number): string {
   const P = room.P;
   if (!P) return '';
+  if (atCabinet(P, room.w.x, room.w.z, room.w.yaw)) return ARCADE_PROMPT;
   if (t - room.since < 6)
     return `${P.dock.name} · W S walk, A D turn, Shift run, Space jump · Enter: back to the ship`;
   if (room.w.sit > 0.5) return `${P.dock.name} · resting`;

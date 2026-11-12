@@ -37,6 +37,7 @@ import TripPlayer, {
   easeView,
   HINT_KEY,
   isHome,
+  pieceFromSearch,
   stickKeys,
   swipeStep,
   swipeVariant,
@@ -168,6 +169,19 @@ describe('stickKeys', () => {
     expect(stickKeys(0, -44)).toEqual(['arrowup']);
     expect(stickKeys(0, 44)).toEqual(['arrowdown']);
     expect(stickKeys(40, -40)).toEqual(['arrowright', 'arrowup']);
+  });
+});
+
+describe('pieceFromSearch', () => {
+  it('opens on the piece a link names by its id, and on nothing else', () => {
+    const trip = makeTrip();
+    const id = trip.phases[2].id;
+    expect(pieceFromSearch(trip, `?piece=${id}`)).toBe(2);
+    expect(pieceFromSearch(trip, `?x=1&piece=${trip.phases[1].id}`)).toBe(1);
+    expect(pieceFromSearch(trip, '?piece=nowhere')).toBeNull();
+    expect(pieceFromSearch(trip, '')).toBeNull();
+    // The Journey alone (no pieces) has nothing to pick.
+    expect(pieceFromSearch({ ...trip, pieces: undefined }, `?piece=${id}`)).toBeNull();
   });
 });
 
