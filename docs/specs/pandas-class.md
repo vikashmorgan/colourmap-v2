@@ -30,6 +30,10 @@ Session 3 was added on 2026-11-12: "add this to school pandas. make sure explana
 
 The text is written from the decks in plain words. The slides are the teacher's material and this repository is public, so they are never committed.
 
+## The city
+
+*City* in the header opens `/pandas/city` ([spec](pandas-city.md)): the lessons as cities seen from above, every part in its own place and shape, read from this page itself. The page follows `#s-3` (a lecture) and `#c-3-nan` (a card or exercise) so the city can link straight in.
+
 ## Your slides
 
 When a deck is missing, a dashed box at the bottom of the page offers *Upload slides*. The decks keep their own names: a PDF whose name has *DataFrames* is filed as `Pandas1.pdf`, one with *Selecting*, *Filtering* or *Slicing* as `Pandas2.pdf`, one with *Quality* as `Pandas3.pdf`, in the private `coding-slides` folder. `Pandas1.pdf`, or *session* and its number, works too. Each card's *Slide n/N ›* then opens its page.
