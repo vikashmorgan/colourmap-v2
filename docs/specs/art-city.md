@@ -124,6 +124,14 @@ and out over a short distance.
 - Frame cost, 9000 grains: Ship 5.4 ms (it was 6.5 ms before this round), against 2.5–4.2 ms for the
   other pieces (bench on the build machine, bun).
 
+## Game · Studio, and the phone
+
+(2026-11-12; the shared player, [art-journey.md](art-journey.md#design-menu-game--studio-phone-controls-2026-11-12).)
+Every control sits in the **Design** menu. The Ship is the **Game** side, every other piece the
+**Studio** (found by `game.has`, so new pieces join the Studio on their own); the page reopens
+on the side last used. On a phone the Ship has a stick (turn, climb, dive) and a round
+**Boost** button (Space).
+
 ## Words
 
 Each piece has a line saying what you see and two lines of its own on cities,

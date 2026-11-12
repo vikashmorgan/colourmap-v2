@@ -9,7 +9,13 @@
  * colour, at any moment. A trip may also move the camera, fade grains by their
  * distance from it, and carry words for each step.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type PointerEvent as ReactPointerEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
@@ -154,6 +160,43 @@ export const needleAngle = (g: Gauge) => {
   return -135 + 270 * Math.max(0, Math.min(1, k));
 };
 
+/** How far the on-screen stick's knob travels from its middle, in px. */
+const STICK_REACH = 44;
+/** The middle of the stick that steers nothing, as a share of its reach. */
+const STICK_DEAD = 0.35;
+
+/**
+ * The arrow keys the on-screen stick holds for a thumb `dx`, `dy` px from its middle (down is
+ * positive): the keys the games already read from a keyboard, so a phone needs no game changes
+ * (2026-11-12: "find a way to move and navigate when on phone").
+ */
+export function stickKeys(dx: number, dy: number, reach = STICK_REACH): string[] {
+  const x = dx / reach;
+  const y = dy / reach;
+  const keys: string[] = [];
+  if (x < -STICK_DEAD) keys.push('arrowleft');
+  else if (x > STICK_DEAD) keys.push('arrowright');
+  if (y < -STICK_DEAD) keys.push('arrowup');
+  else if (y > STICK_DEAD) keys.push('arrowdown');
+  return keys;
+}
+
+/** What a key a game claims is called on its round button: Space by the game's bar, B the bite. */
+export function claimLabel(key: string, meter?: string): string {
+  if (key === ' ') return meter ?? 'Jump';
+  if (key === 'b') return 'Bite';
+  return key.toUpperCase();
+}
+
+/**
+ * A finger's move on the picture, from touch to lift: a quick sideways swipe goes to the next
+ * piece (1, swiped left) or the previous one (-1); anything else is no swipe (0).
+ */
+export function swipeStep(dx: number, dy: number, ms: number): -1 | 0 | 1 {
+  if (ms > 800 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return 0;
+  return dx < 0 ? 1 : -1;
+}
+
 /** The Art pills, the same as the panel's (components/GeometryField.tsx ART_PILLS). */
 export type TripPage = 'big-bang' | 'journey' | 'vegetal' | 'ocean' | 'city';
 
@@ -172,6 +215,7 @@ const ART_LINKS: { href: string; label: string; page?: TripPage }[] = [
 
 const WORDS_KEY = 'colourmap:journey-words';
 const BG_KEY = 'colourmap:trip-bg';
+const MODE_KEY = 'colourmap:trip-mode';
 
 /** A background from top to bottom through its colours, with a soft glow of light from above. */
 function backgroundTexture(stops: string[]): THREE.Texture | THREE.Color {
@@ -228,17 +272,56 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   // (2026-11-11: "make ability to really go full screen so I can get absorbed in the visual").
   const mainRef = useRef<HTMLElement>(null);
   const [immersed, setImmersed] = useState(false);
+  // Where the browser has no full screen for a page (an iPhone), the picture alone all the same:
+  // the player already covers the window, so hiding the controls is the whole of it.
+  const fauxRef = useRef(false);
+  // Every control in one Design menu, shut by default, so the picture has the screen
+  // (2026-11-12: "all buttons can be in a design menu tab so on phone they dont take all the
+  // screen space").
+  const [menu, setMenu] = useState(false);
+  const menuRef = useRef(false);
+  const designRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const openMenu = useCallback((open: boolean, focusBack = false) => {
+    menuRef.current = open;
+    setMenu(open);
+    if (!open && focusBack) designRef.current?.focus();
+  }, []);
+  useEffect(() => {
+    if (menu) panelRef.current?.focus();
+  }, [menu]);
   const immerse = useCallback(() => {
+    openMenu(false);
     if (document.fullscreenElement) {
       document.exitFullscreen();
       return;
     }
-    mainRef.current?.requestFullscreen?.().catch(() => {});
-  }, []);
+    if (fauxRef.current) {
+      fauxRef.current = false;
+      setImmersed(false);
+      return;
+    }
+    const faux = () => {
+      fauxRef.current = true;
+      setImmersed(true);
+    };
+    const el = mainRef.current;
+    if (!el?.requestFullscreen) faux();
+    else el.requestFullscreen().catch(faux);
+  }, [openMenu]);
   useEffect(() => {
-    const change = () => setImmersed(document.fullscreenElement === mainRef.current);
+    const change = () => {
+      fauxRef.current = false;
+      setImmersed(document.fullscreenElement === mainRef.current);
+    };
     document.addEventListener('fullscreenchange', change);
     return () => document.removeEventListener('fullscreenchange', change);
+  }, []);
+  // A phone or tablet: the games get a stick and buttons, and a swipe changes piece.
+  const [touch, setTouch] = useState(false);
+  useEffect(() => {
+    // Not 'ontouchstart': a laptop with a touch screen keeps its keyboard look until it is touched.
+    if (window.matchMedia?.('(pointer: coarse)').matches) setTouch(true);
   }, []);
   const [words, setWords] = useState(true);
   const idleRef = useRef(0);
@@ -271,6 +354,63 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     setStopped(stop);
     keysRef.current.clear();
   }, []);
+  // The on-screen stick and buttons hold keys in the same set the keyboard fills.
+  const stickRef = useRef<{ id: number; cx: number; cy: number } | null>(null);
+  const stickHeld = useRef<string[]>([]);
+  const [knob, setKnob] = useState({ x: 0, y: 0 });
+  const holdStick = useCallback((keys: string[]) => {
+    for (const k of stickHeld.current) if (!keys.includes(k)) keysRef.current.delete(k);
+    for (const k of keys) keysRef.current.add(k);
+    stickHeld.current = keys;
+  }, []);
+  const stickMove = useCallback(
+    (e: ReactPointerEvent<HTMLElement>) => {
+      const s = stickRef.current;
+      if (!s || s.id !== e.pointerId) return;
+      let dx = e.clientX - s.cx;
+      let dy = e.clientY - s.cy;
+      const d = Math.hypot(dx, dy);
+      if (d > STICK_REACH) {
+        dx *= STICK_REACH / d;
+        dy *= STICK_REACH / d;
+      }
+      setKnob({ x: dx, y: dy });
+      holdStick(stickKeys(dx, dy));
+    },
+    [holdStick],
+  );
+  const stickDown = useCallback(
+    (e: ReactPointerEvent<HTMLElement>) => {
+      e.preventDefault();
+      // A thumb on the stick takes the controls back, as W A S D do.
+      if (stoppedRef.current) stopGame(false);
+      const r = e.currentTarget.getBoundingClientRect();
+      stickRef.current = { id: e.pointerId, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      stickMove(e);
+    },
+    [stickMove, stopGame],
+  );
+  const stickUp = useCallback(
+    (e: ReactPointerEvent<HTMLElement>) => {
+      if (stickRef.current?.id !== e.pointerId) return;
+      stickRef.current = null;
+      setKnob({ x: 0, y: 0 });
+      holdStick([]);
+    },
+    [holdStick],
+  );
+  const pressKey = useCallback(
+    (key: string, down: boolean) => {
+      if (!down) {
+        keysRef.current.delete(key);
+        return;
+      }
+      if (stoppedRef.current) stopGame(false);
+      keysRef.current.add(key);
+    },
+    [stopGame],
+  );
   const meterRef = useRef<HTMLSpanElement>(null);
   const tallyRef = useRef<HTMLSpanElement>(null);
   const [bg, setBg] = useState(0);
@@ -350,6 +490,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     });
   }, []);
 
+  // The last studio piece, to come back to from the game.
+  const studioRef = useRef(-1);
   const jumpTo = useCallback(
     (k: number) => {
       const { phases, start } = tripRef.current;
@@ -357,6 +499,16 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       const i = ((k % n) + n) % n;
       if (journeyRef.current) timeRef.current = (start[i] as number) + 0.01;
       else {
+        // Which side of the world this is (the game or the studio), remembered on the device.
+        const game = tripRef.current.pieces?.game;
+        if (game && phases.some((_, k) => game.has(k))) {
+          if (!game.has(i)) studioRef.current = i;
+          try {
+            window.localStorage.setItem(`${MODE_KEY}:${page}`, game.has(i) ? 'game' : 'studio');
+          } catch {
+            // Not remembered; still switched.
+          }
+        }
         pieceRef.current = i;
         timeRef.current = 0;
         setHud({ index: i, u: 0, time: 0 });
@@ -366,8 +518,46 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         stopGame(false);
       }
     },
-    [stopGame],
+    [stopGame, page],
   );
+  // Two sides to a world with a game (2026-11-12: "u have all the test elements and the 3d
+  // videogame as two components"): the Game (the pieces `game.has`), and the Studio, every other
+  // piece, to play with designs. Never by name or number, so new pieces fall in on their own.
+  const isGame = useCallback((k: number) => !!tripRef.current.pieces?.game?.has(k), []);
+  const toStudio = useCallback(
+    (from: number, dir: 1 | -1) => {
+      const n = tripRef.current.phases.length;
+      for (let s = 1; s <= n; s++) {
+        const k = (((from + dir * s) % n) + n) % n;
+        if (!isGame(k)) return k;
+      }
+      return from;
+    },
+    [isGame],
+  );
+  const switchMode = useCallback(
+    (game: boolean) => {
+      const n = tripRef.current.phases.length;
+      if (game) {
+        const k = Array.from({ length: n }, (_, i) => i).find(isGame);
+        if (k !== undefined) jumpTo(k);
+        return;
+      }
+      const back = studioRef.current;
+      jumpTo(back >= 0 && !isGame(back) ? back : toStudio(-1, 1));
+    },
+    [isGame, jumpTo, toStudio],
+  );
+  // A world opens on the side it was left on.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once, as the page opens
+  useEffect(() => {
+    if (journeyRef.current) return;
+    try {
+      if (window.localStorage.getItem(`${MODE_KEY}:${page}`) === 'game') switchMode(true);
+    } catch {
+      // The first piece.
+    }
+  }, []);
   const currentStep = useCallback(
     () => (journeyRef.current ? tripRef.current.phaseAt(timeRef.current).index : pieceRef.current),
     [],
@@ -596,7 +786,9 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           const { index, u } = T.phaseAt(t);
           setHud({ index, u, time: t });
         }
-        if (playingRef.current && now - idleRef.current > 4500) setChrome(false);
+        if (playingRef.current && !menuRef.current && now - idleRef.current > 4500) {
+          setChrome(false);
+        }
       }
       raf = requestAnimationFrame(frame);
     };
@@ -629,7 +821,21 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     const key = (e: KeyboardEvent) => {
       wake();
       const typing = e.target instanceof HTMLElement && e.target.closest('input, textarea');
+      if (e.key === 'Escape' && menuRef.current) {
+        // Esc shuts the Design menu first, the focus back on its button.
+        openMenu(false, true);
+        return;
+      }
+      if (e.key === 'Escape' && fauxRef.current) {
+        // Out of the stand-in full screen, as the browser's own takes the first Esc.
+        immerse();
+        return;
+      }
       if (!typing) keysRef.current.add(e.key.toLowerCase());
+      if (!typing && e.key.toLowerCase() === 'm' && !e.metaKey && !e.ctrlKey) {
+        openMenu(!menuRef.current, menuRef.current);
+        return;
+      }
       const claimed = tripRef.current.pieces?.game?.claims?.includes(e.key.toLowerCase());
       if (playing() && (e.key.startsWith('Arrow') || claimed)) {
         // While a step is played, the arrows steer, and the keys it claims are its own (Space: the
@@ -666,17 +872,54 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       if (!e.relatedTarget) cursorRef.current = null;
     };
     // A click on the picture itself switches the cursor's guide off and on again.
-    const press = (e: PointerEvent) => {
-      wake();
-      if (e.target !== canvasRef.current || journeyRef.current) return;
+    const toggleGuide = () => {
+      if (journeyRef.current) return;
       if (!tripRef.current.pieces?.pointer?.has(pieceRef.current)) return;
       guideRef.current = !guideRef.current;
       setGuide(guideRef.current);
+    };
+    // A finger on the picture: a tap is the click, a quick sideways swipe changes piece.
+    let swipe: { id: number; x: number; y: number; at: number } | null = null;
+    const press = (e: PointerEvent) => {
+      wake();
+      const target = e.target as Node | null;
+      if (e.pointerType === 'touch') setTouch(true);
+      if (menuRef.current) {
+        // A tap anywhere outside the Design menu shuts it, and does nothing else.
+        const inside =
+          !!target && (panelRef.current?.contains(target) || designRef.current?.contains(target));
+        if (!inside) openMenu(false);
+        return;
+      }
+      if (e.target !== canvasRef.current) return;
+      if (e.pointerType === 'touch') {
+        swipe = { id: e.pointerId, x: e.clientX, y: e.clientY, at: performance.now() };
+        return;
+      }
+      toggleGuide();
+    };
+    const lift = (e: PointerEvent) => {
+      if (!swipe || swipe.id !== e.pointerId) return;
+      const dx = e.clientX - swipe.x;
+      const dy = e.clientY - swipe.y;
+      const ms = performance.now() - swipe.at;
+      swipe = null;
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+        toggleGuide();
+        return;
+      }
+      // The games keep the finger for their stick; a swipe there changes nothing.
+      const s = swipeStep(dx, dy, ms);
+      // In the studio a swipe goes through its pieces only, never into the game.
+      if (s !== 0 && !gameStep()) {
+        jumpTo(journeyRef.current ? currentStep() + s : toStudio(currentStep(), s));
+      }
     };
     const keyUp = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
     const blur = () => keysRef.current.clear();
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerdown', press);
+    window.addEventListener('pointerup', lift);
     document.addEventListener('pointerout', away);
     window.addEventListener('keydown', key);
     window.addEventListener('keyup', keyUp);
@@ -686,10 +929,11 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       window.removeEventListener('blur', blur);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerdown', press);
+      window.removeEventListener('pointerup', lift);
       document.removeEventListener('pointerout', away);
       window.removeEventListener('keydown', key);
     };
-  }, [jumpTo, togglePlay, currentStep, immerse, stopGame]);
+  }, [jumpTo, togglePlay, currentStep, immerse, stopGame, openMenu, toStudio]);
 
   const step = trip.phases[hud.index] as TripStep;
   const lines = live?.lines ?? step.words ?? [];
@@ -751,13 +995,19 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         ))}
       </div>
     ) : null;
+  const playable = !journey && !!game?.has(hud.index);
+  const claims = game?.claims ?? [];
+  // A world with a game has two sides, Game and Studio; the pills show the side you are on.
+  const gamePieces = trip.phases.map((_, k) => k).filter((k) => !!game?.has(k));
+  const twoSides = !!trip.pieces && gamePieces.length > 0 && gamePieces.length < trip.phases.length;
+  const pillPieces = trip.phases
+    .map((p, k) => ({ p, k }))
+    .filter(({ k }) => !twoSides || !!game?.has(k) === playable);
   return (
     <main
       ref={mainRef}
-      className={`bb bb-${page}${
-        !journey && trip.pieces?.variants?.has(hud.index) ? ' bb-raised' : ''
-      }${!journey && trip.pieces?.scenes?.has(hud.index) ? ' bb-raised-2' : ''}${
-        immersed ? ' bb-immersed' : ''
+      className={`bb bb-${page}${immersed ? ' bb-immersed' : ''}${
+        touch && playable ? ' bb-touch-game' : ''
       }`}
     >
       <canvas
@@ -777,18 +1027,16 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           ✕ Exit full screen
         </button>
       ) : null}
-      {/* In full screen a game keeps its bar and count, and nothing else (2026-11-11: "add full screen mode"). */}
-      {immersed && !journey && !stopped && trip.pieces?.game?.has(hud.index) ? (
+      {/* While a game is played its bar and count stay on screen, full screen or not. */}
+      {steering && (game?.meter || game?.tally || (immersed && cockpit)) ? (
         <div className="bb-hud">
-          {trip.pieces.game.meter ? (
-            <span className="bb-meter" role="img" aria-label={trip.pieces.game.meter.label}>
+          {game?.meter ? (
+            <span className="bb-meter" role="img" aria-label={game.meter.label}>
               <span ref={meterRef} />
             </span>
           ) : null}
-          {trip.pieces.game.tally ? (
-            <span className="bb-tally" ref={tallyRef} aria-live="polite" />
-          ) : null}
-          {cockpit}
+          {game?.tally ? <span className="bb-tally" ref={tallyRef} aria-live="polite" /> : null}
+          {immersed ? cockpit : null}
         </div>
       ) : null}
       {/* A cockpit of dials while you steer (2026-11-11: "meters like in an airplane cockpit"). */}
@@ -801,21 +1049,50 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           ))}
         </div>
       ) : null}
-      <div className={`bb-top${chrome ? '' : ' bb-hidden'}`}>
-        <nav className="bb-tabs" aria-label="Art">
-          {ART_LINKS.map((l) =>
-            l.page === page ? (
-              <span key={l.href} className="bb-back bb-tab-on" aria-current="page">
-                {l.label}
-              </span>
-            ) : (
-              <a key={l.href} href={l.href} className="bb-back">
-                {l.label}
-              </a>
-            ),
-          )}
-        </nav>
-      </div>
+      {/* On a phone a game is flown with a stick under the left thumb and its own keys under the
+          right, held in the same set of keys as the keyboard's (2026-11-12). */}
+      {touch && playable && game ? (
+        <div className="bb-touch">
+          <div
+            className="bb-stick"
+            aria-hidden="true"
+            onPointerDown={stickDown}
+            onPointerMove={stickMove}
+            onPointerUp={stickUp}
+            onPointerCancel={stickUp}
+          >
+            <span
+              className="bb-stick-knob"
+              style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }}
+            />
+          </div>
+          {claims.length > 0 ? (
+            <div className="bb-acts">
+              {claims.map((k) => {
+                const label = claimLabel(k, game.meter?.label);
+                return (
+                  <button
+                    type="button"
+                    key={k}
+                    className="bb-act"
+                    aria-label={label}
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      pressKey(k, true);
+                    }}
+                    onPointerUp={() => pressKey(k, false)}
+                    onPointerCancel={() => pressKey(k, false)}
+                    onPointerLeave={() => pressKey(k, false)}
+                    onContextMenu={(e) => e.preventDefault()}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {hasWords && words && lines.length > 0 ? (
         <blockquote className="jr-words" aria-live="polite">
           {lines.map((line, k) => (
@@ -839,150 +1116,209 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         </div>
         <p className={`bb-line${chrome ? '' : ' bb-hidden'}`}>{step.line}</p>
       </div>
-      <div className={`bb-bar${chrome ? '' : ' bb-hidden'}`}>
-        {journey ? (
-          <div className="bb-segments" role="toolbar" aria-label="Steps of the trip">
-            {trip.phases.map((p, k) => {
-              const fill = k === hud.index ? hud.u : k < hud.index ? 1 : 0;
-              return (
-                <button
-                  type="button"
-                  key={p.id}
-                  className={`bb-seg${k === hud.index ? ' bb-seg-on' : ''}`}
-                  style={{ flexGrow: p.duration }}
-                  onClick={() => jumpTo(k)}
-                  title={`${k + 1}. ${p.name}`}
-                  aria-label={`Go to step ${k + 1}, ${p.name}`}
-                >
-                  <span style={{ width: `${fill * 100}%`, background: trip.stepColours[k] }} />
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          // Steps on their own are presets, picked by name like the Art panel's, with no time bar.
-          <>
-            {trip.pieces?.scenes?.has(hud.index) ? (
-              <div
-                className="bb-pills bb-variants"
-                role="toolbar"
-                aria-label={trip.pieces.scenes.label}
-              >
-                {trip.pieces.scenes.names.map((name, i) => (
-                  <button
-                    type="button"
-                    key={name}
-                    className="bb-pill"
-                    aria-pressed={i === scene}
-                    onClick={() => setScene(i)}
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            {trip.pieces?.variants?.has(hud.index) ? (
-              <div
-                className="bb-pills bb-variants"
-                role="toolbar"
-                aria-label={
-                  (typeof trip.pieces.variants.label === 'function'
-                    ? trip.pieces.variants.label(hud.index)
-                    : trip.pieces.variants.label) ?? 'Ground'
-                }
-              >
-                {(typeof trip.pieces.variants.names === 'function'
-                  ? trip.pieces.variants.names(hud.index)
-                  : trip.pieces.variants.names
-                ).map((name, i) => (
-                  <button
-                    type="button"
-                    key={name}
-                    className="bb-pill"
-                    aria-pressed={i === variant}
-                    onClick={() => setVariant(i)}
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            <div className="bb-pills" role="toolbar" aria-label="Pieces">
-              {trip.phases.map((p, k) => (
-                <button
-                  type="button"
-                  key={p.id}
-                  className="bb-pill"
-                  aria-pressed={k === hud.index}
-                  onClick={() => jumpTo(k)}
-                >
-                  {p.name}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-        <div className="bb-controls">
-          {journey ? (
-            <button type="button" onClick={() => jumpTo(hud.index - 1)} aria-label="Previous step">
-              ⏮
-            </button>
-          ) : null}
-          <button type="button" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
-            {playing ? '❚❚' : '▶'}
-          </button>
-          {journey ? (
-            <>
-              <button type="button" onClick={() => jumpTo(hud.index + 1)} aria-label="Next step">
-                ⏭
-              </button>
-              <span className="bb-time">
-                {fmt(hud.time)} / {fmt(trip.total)}
-              </span>
-            </>
-          ) : null}
-          {trip.pieces ? (
+      <button
+        type="button"
+        ref={designRef}
+        className={`bb-design${chrome || menu ? '' : ' bb-quiet'}`}
+        aria-haspopup="dialog"
+        aria-expanded={menu}
+        aria-controls="bb-menu"
+        onClick={() => openMenu(!menu, menu)}
+        title="Design: the art, its pieces and looks (M)"
+      >
+        Design
+      </button>
+      {menu ? (
+        <div
+          id="bb-menu"
+          ref={panelRef}
+          className="bb-menu"
+          role="dialog"
+          aria-label="Design"
+          tabIndex={-1}
+        >
+          <div className="bb-menu-head">
+            <span className="bb-menu-title">Design</span>
             <button
               type="button"
-              aria-pressed={journey}
-              onClick={toggleJourney}
-              title="Play every piece as one trip, through a ball of stars"
+              className="bb-menu-close"
+              onClick={() => openMenu(false, true)}
+              aria-label="Close the design menu"
             >
-              Journey
+              ✕
             </button>
-          ) : null}
-          {hasWords ? (
-            <button type="button" aria-pressed={words} onClick={toggleWords}>
-              Words
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={immerse}
-            aria-label="Full screen, the picture alone; Esc to come back"
-            title="Full screen (F); Esc to come back"
-          >
-            {!journey && trip.pieces?.game?.has(hud.index) ? '⛶ Full screen' : '⛶'}
-          </button>
-          {(trip.backgrounds?.length ?? 0) > 1 ? (
-            <button type="button" onClick={nextBg} title="Change the background">
-              {trip.backgrounds?.[bg]?.name}
-            </button>
-          ) : null}
-          <span className="bb-speeds" role="toolbar" aria-label="Speed">
-            {[0.5, 1, 2].map((s) => (
+          </div>
+          <nav className="bb-tabs" aria-label="Art">
+            {ART_LINKS.map((l) =>
+              l.page === page ? (
+                <span key={l.href} className="bb-back bb-tab-on" aria-current="page">
+                  {l.label}
+                </span>
+              ) : (
+                <a key={l.href} href={l.href} className="bb-back">
+                  {l.label}
+                </a>
+              ),
+            )}
+          </nav>
+          {journey ? (
+            <div className="bb-segments" role="toolbar" aria-label="Steps of the trip">
+              {trip.phases.map((p, k) => {
+                const fill = k === hud.index ? hud.u : k < hud.index ? 1 : 0;
+                return (
+                  <button
+                    type="button"
+                    key={p.id}
+                    className={`bb-seg${k === hud.index ? ' bb-seg-on' : ''}`}
+                    style={{ flexGrow: p.duration }}
+                    onClick={() => jumpTo(k)}
+                    title={`${k + 1}. ${p.name}`}
+                    aria-label={`Go to step ${k + 1}, ${p.name}`}
+                  >
+                    <span style={{ width: `${fill * 100}%`, background: trip.stepColours[k] }} />
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            // Steps on their own are presets, picked by name like the Art panel's, with no time bar.
+            <>
+              {twoSides ? (
+                <div className="bb-pills bb-modes" role="toolbar" aria-label="Mode">
+                  <button
+                    type="button"
+                    className="bb-pill"
+                    aria-pressed={playable}
+                    onClick={() => switchMode(true)}
+                    title="The game: fly it yourself"
+                  >
+                    Game
+                  </button>
+                  <button
+                    type="button"
+                    className="bb-pill"
+                    aria-pressed={!playable}
+                    onClick={() => switchMode(false)}
+                    title="The studio: every other piece, to play with designs"
+                  >
+                    Studio
+                  </button>
+                </div>
+              ) : null}
+              {pillPieces.length > 1 || !twoSides ? (
+                <div className="bb-pills" role="toolbar" aria-label="Pieces">
+                  {pillPieces.map(({ p, k }) => (
+                    <button
+                      type="button"
+                      key={p.id}
+                      className="bb-pill"
+                      aria-pressed={k === hud.index}
+                      onClick={() => jumpTo(k)}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {trip.pieces?.scenes?.has(hud.index) ? (
+                <div
+                  className="bb-pills bb-variants"
+                  role="toolbar"
+                  aria-label={trip.pieces.scenes.label}
+                >
+                  {trip.pieces.scenes.names.map((name, i) => (
+                    <button
+                      type="button"
+                      key={name}
+                      className="bb-pill"
+                      aria-pressed={i === scene}
+                      onClick={() => setScene(i)}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {trip.pieces?.variants?.has(hud.index) ? (
+                <div
+                  className="bb-pills bb-variants"
+                  role="toolbar"
+                  aria-label={
+                    (typeof trip.pieces.variants.label === 'function'
+                      ? trip.pieces.variants.label(hud.index)
+                      : trip.pieces.variants.label) ?? 'Ground'
+                  }
+                >
+                  {(typeof trip.pieces.variants.names === 'function'
+                    ? trip.pieces.variants.names(hud.index)
+                    : trip.pieces.variants.names
+                  ).map((name, i) => (
+                    <button
+                      type="button"
+                      key={name}
+                      className="bb-pill"
+                      aria-pressed={i === variant}
+                      onClick={() => setVariant(i)}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          )}
+          <div className="bb-controls">
+            {journey ? (
               <button
                 type="button"
-                key={s}
-                aria-pressed={speed === s}
-                onClick={() => changeSpeed(s)}
+                onClick={() => jumpTo(hud.index - 1)}
+                aria-label="Previous step"
               >
-                {s}×
+                ⏮
               </button>
-            ))}
-          </span>
-          {!journey && trip.pieces?.game?.has(hud.index) ? (
-            <>
+            ) : null}
+            <button type="button" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
+              {playing ? '❚❚' : '▶'}
+            </button>
+            {journey ? (
+              <>
+                <button type="button" onClick={() => jumpTo(hud.index + 1)} aria-label="Next step">
+                  ⏭
+                </button>
+                <span className="bb-time">
+                  {fmt(hud.time)} / {fmt(trip.total)}
+                </span>
+              </>
+            ) : null}
+            {trip.pieces ? (
+              <button
+                type="button"
+                aria-pressed={journey}
+                onClick={toggleJourney}
+                title="Play every piece as one trip, through a ball of stars"
+              >
+                Journey
+              </button>
+            ) : null}
+            {hasWords ? (
+              <button type="button" aria-pressed={words} onClick={toggleWords}>
+                Words
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={immerse}
+              aria-label="Full screen, the picture alone; Esc to come back"
+              title="Full screen (F); Esc to come back"
+            >
+              ⛶ Full screen
+            </button>
+            {(trip.backgrounds?.length ?? 0) > 1 ? (
+              <button type="button" onClick={nextBg} title="Change the background">
+                {trip.backgrounds?.[bg]?.name}
+              </button>
+            ) : null}
+            {playable ? (
               <button
                 type="button"
                 aria-pressed={!stopped}
@@ -991,57 +1327,61 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
               >
                 Steer
               </button>
-              {trip.pieces.game.meter && !stopped && !immersed ? (
-                <span className="bb-meter" role="img" aria-label={trip.pieces.game.meter.label}>
-                  <span ref={meterRef} />
-                </span>
-              ) : null}
-              {trip.pieces.game.tally && !stopped && !immersed ? (
-                <span className="bb-tally" ref={tallyRef} aria-live="polite" />
-              ) : null}
-            </>
-          ) : null}
-          {!journey && trip.pieces?.toggle?.has(hud.index) ? (
-            <button type="button" aria-pressed={switched} onClick={() => setSwitched((s) => !s)}>
-              {typeof trip.pieces.toggle.label === 'string'
-                ? trip.pieces.toggle.label
-                : trip.pieces.toggle.label(hud.index)}
-            </button>
-          ) : null}
-          {journey
-            ? null
-            : cycles.map((c, i) =>
-                c.has(hud.index) ? (
-                  <button
-                    type="button"
-                    key={c.label}
-                    onClick={() =>
-                      setCycled((was) => {
-                        const next = [...was];
-                        next[i] = ((was[i] ?? 0) + 1) % (c.names.length || 1);
-                        return next;
-                      })
-                    }
-                    title={`${c.label}: next`}
-                  >
-                    {c.names[cycled[i] ?? 0]}
-                  </button>
-                ) : null,
-              )}
-          {!journey && trip.pieces?.flow?.has(hud.index) ? (
-            <button
-              type="button"
-              onClick={() => setFlowUp((f) => !f)}
-              aria-label={
-                flowUp ? 'Dots moving up; send them down' : 'Dots moving down; send them up'
-              }
-              title={flowUp ? 'Moving up' : 'Moving down'}
-            >
-              {flowUp ? '↑' : '↓'}
-            </button>
-          ) : null}
+            ) : null}
+            {!journey && trip.pieces?.toggle?.has(hud.index) ? (
+              <button type="button" aria-pressed={switched} onClick={() => setSwitched((s) => !s)}>
+                {typeof trip.pieces.toggle.label === 'string'
+                  ? trip.pieces.toggle.label
+                  : trip.pieces.toggle.label(hud.index)}
+              </button>
+            ) : null}
+            {journey
+              ? null
+              : cycles.map((c, i) =>
+                  c.has(hud.index) ? (
+                    <button
+                      type="button"
+                      key={c.label}
+                      onClick={() =>
+                        setCycled((was) => {
+                          const next = [...was];
+                          next[i] = ((was[i] ?? 0) + 1) % (c.names.length || 1);
+                          return next;
+                        })
+                      }
+                      title={`${c.label}: next`}
+                    >
+                      {c.names[cycled[i] ?? 0]}
+                    </button>
+                  ) : null,
+                )}
+            {!journey && trip.pieces?.flow?.has(hud.index) ? (
+              <button
+                type="button"
+                onClick={() => setFlowUp((f) => !f)}
+                aria-label={
+                  flowUp ? 'Dots moving up; send them down' : 'Dots moving down; send them up'
+                }
+                title={flowUp ? 'Moving up' : 'Moving down'}
+              >
+                {flowUp ? '↑' : '↓'}
+              </button>
+            ) : null}
+            <span className="bb-speeds" role="toolbar" aria-label="Speed">
+              {[0.5, 1, 2].map((s) => (
+                <button
+                  type="button"
+                  key={s}
+                  aria-pressed={speed === s}
+                  onClick={() => changeSpeed(s)}
+                >
+                  {s}×
+                </button>
+              ))}
+            </span>
+          </div>
         </div>
-      </div>
+      ) : null}
     </main>
   );
 }

@@ -210,6 +210,13 @@ geometry, except when in journey mode"). The pieces with trees have a small
 small button on the right"); in the Journey half do each. All the page's
 letters are gold (2026-11-10: "make all letters golden in all that part").
 
+**Game · Studio, and the phone** (2026-11-12; the shared player,
+[art-journey.md](art-journey.md#design-menu-game--studio-phone-controls-2026-11-12)). The pills
+and every other control now sit in the **Design** menu, shut by default. The Bird Sim is the
+**Game** side, the other sixteen pieces the **Studio**; the page reopens on the side last used.
+On a phone the Bird Sim has a stick (turn, climb, dive; the walker walks on and steps back) and
+a round **Jump** button (Space); a sideways swipe changes studio piece.
+
 ## Words
 
 Each piece has a short line saying what you see and two lines of

@@ -192,6 +192,13 @@ Shift faster, Q or X slower, Space boost, B bite, Esc lets go, Enter takes back,
   Charlotte Brontë, Emerson, Melville, Tagore and Douglass, twelve lines in all, public-domain writers
   only, each under fifteen words.
 
+## Game · Studio, and the phone
+
+(2026-11-12; the shared player, [art-journey.md](art-journey.md#design-menu-game--studio-phone-controls-2026-11-12).)
+Every control sits in the **Design** menu. The Shark Sim is the **Game** side, the other pieces
+the **Studio**; the page reopens on the side last used. On a phone the Shark Sim has a stick
+(turn, rise, sink) and two round buttons, **Boost** (Space) and **Bite** (B).
+
 ## Words
 
 Each piece has a line saying what you see and two lines of reflection:
