@@ -141,7 +141,7 @@ export const PHASES: CityPhase[] = [
   {
     id: 'ship',
     name: 'Ship',
-    line: 'Pilot a small ship through the city, keys only: A and D turn, W and S climb and dive, E or Shift faster, Q or X slower, Space boosts while the bar lasts.',
+    line: 'Pilot a small ship down an endless avenue, through Chinatown and into the side streets, keys only: A and D turn, W and S climb and dive, E or Shift faster, Q or X slower, Space boosts while the bar lasts.',
     words: [
       'Somewhere in all that light there is a window waiting for you.',
       'Fly gently: the city is full of other people going home.',
@@ -683,10 +683,14 @@ export function signSize(s: Sign): { w: number; h: number } {
   const one = GLYPH_PX * s.px;
   return s.vertical ? { w: one, h: one + (n - 1) * cell } : { w: one + (n - 1) * cell, h: one };
 }
-const signCache = new Map<Sign, Float32Array>();
-/** Every lit pixel of a sign's characters, as x and y down from its top left, in pixels. */
+const signCache = new Map<string, Float32Array>();
+/**
+ * Every lit pixel of a sign's characters, as x and y down from its top left, in pixels: the same
+ * for every sign of the same words, so kept by its words.
+ */
 function signPixels(s: Sign): Float32Array {
-  const had = signCache.get(s);
+  const key = `${s.text}${s.vertical ? '|' : '-'}`;
+  const had = signCache.get(key);
   if (had) return had;
   const out: number[] = [];
   [...s.text].forEach((ch, n) => {
@@ -696,13 +700,17 @@ function signPixels(s: Sign): Float32Array {
     }
   });
   const arr = new Float32Array(out);
-  signCache.set(s, arr);
+  signCache.set(key, arr);
   return arr;
 }
 export const signPixelCount = (s: Sign) => signPixels(s).length / 2;
 
 /** Grain p on a sign: most on a lit pixel of its characters, the rest on a thin frame round them. */
-export function signPoint(s: Sign, p: Particle, salt = 51): { pos: Vec3; frame: boolean } {
+export function signPoint(
+  s: Sign,
+  p: Pick<Particle, 'i'>,
+  salt = 51,
+): { pos: Vec3; frame: boolean } {
   const { w, h } = signSize(s);
   const m = 2.2 * s.px;
   if (hash(p.i, salt) < 0.14) {
@@ -843,9 +851,14 @@ export const GATE_SIGN: Sign = {
   k: 32,
 };
 
+type GatePart = 'pillar' | 'beam' | 'roof' | 'plaque';
 /** A grain of the gate: four red pillars, two beams, curved roofs turning up at their ends. */
-function gateAt(p: Particle): { pos: Vec3; part: 'pillar' | 'beam' | 'roof' | 'plaque' } {
-  const q = p.d;
+function gateAt(p: Particle): { pos: Vec3; part: GatePart } {
+  return gateShape(p.d, p.b, p.i);
+}
+/** The gate's shape: `q` (0..1) picks the part, `b` (0..1) the place along it, `i` the rest. */
+function gateShape(q: number, b: number, i: number): { pos: Vec3; part: GatePart } {
+  const p = { i, b };
   const z = GATE_Z;
   if (q < 0.3) {
     // Pillars: the two middle ones the taller, each four corner lines.
@@ -1386,21 +1399,35 @@ function canyonAt(p: Particle, u: number, t: number): Spot & { d: number } {
   }
 }
 
-/* ---------- 7. Ship: your own ship, through an endless city ---------- */
+/* ---------- 7. Ship: your own ship, down the avenue and through Chinatown ---------- */
 /*
  * 2026-11-12: "long term aim will be to create that future neon city that we
- * fly through on a spaceship." A first flight: the city is a field of towers
- * that wraps round you, so it never ends, its far edge fading; traffic runs
- * in the streets at four heights. Keys only, as the Shark Sim: A and D turn,
- * W and S climb and dive, E or Shift faster, Q or X slower, Space boosts
- * while the bar lasts and the bar fills again as you cruise. The towers'
- * walls hold you: you slide along them.
+ * fly through on a spaceship." Keys only, as the Shark Sim: A and D turn, W
+ * and S climb and dive, E or Shift faster, Q or X slower, Space boosts while
+ * the bar lasts and the bar fills again as you cruise. The towers' walls hold
+ * you: you slide along them.
+ *
+ * Round two, the same day: "solid tower walls while you fly the ship, since
+ * they still look like sparse lines of light. After that would come the ship
+ * flying down the canyon past Chinatown, which is the start of the full
+ * fly-through." The city is an endless grid of blocks, a tower to each: a
+ * wide avenue runs on forward (-z) down the middle, narrower streets beside
+ * it and side streets across, to turn into. Three blocks in every eight the
+ * avenue is Chinatown: a red gate at either end, tall signs down the walls,
+ * lanterns strung across overhead and a 夜市 banner; then neon towers again.
+ *
+ * The grains: the Canyon brings its towers round to the far end and draws only
+ * the faces the street sees. Here that is taken all the way. Every frame the
+ * city is a list of light sites (on each face: windows, its edges, neon bands
+ * and a faint fill; signs, lanterns, gates; the kerbs) on just the towers in
+ * front of the eye and within VIEW, on just the faces turned toward it, nearer
+ * sites kept more densely than far ones. The pool of grains is dealt out to
+ * them and whatever is left waits unlit. The picture is the set of sites, so
+ * a grain moving from one site to another never shows; a site comes and goes
+ * by fading, never popping.
  */
 
 export const FLY_SPEED = 9;
-export const FIELD = 96;
-const FIELD_BLOCKS = 4;
-const FIELD_PITCH = FIELD / FIELD_BLOCKS;
 /** The highest you can climb: well over the tallest tower. */
 export const SKY = GROUND + 90;
 /** How close to a wall you can come. */
@@ -1410,58 +1437,160 @@ export const BOOST_SECONDS = 3;
 /** Seconds of cruising that fill an empty bar. */
 export const BOOST_REFILL = 10;
 
-export const FIELD_TOWERS: Tower[] = Array.from({ length: FIELD_BLOCKS * FIELD_BLOCKS }, (_, j) => {
-  const i = j % FIELD_BLOCKS;
-  const l = Math.floor(j / FIELD_BLOCKS);
-  return {
-    x: i * FIELD_PITCH - FIELD / 2 + FIELD_PITCH / 2 + (hash(j, 401) - 0.5) * 2.4,
-    z: l * FIELD_PITCH - FIELD / 2 + FIELD_PITCH / 2 + (hash(j, 402) - 0.5) * 2.4,
-    hx: 3.5 + 3 * hash(j, 403),
-    hz: 3.5 + 3 * hash(j, 404),
-    h: 16 + 36 * hash(j, 405) ** 1.2,
-    k: j + 120,
-  };
-});
-const FIELD_SET = towerSet(FIELD_TOWERS);
-/** The streets of the field: between every two rows of blocks. */
-const FIELD_STREETS = Array.from({ length: FIELD_BLOCKS }, (_, i) => i * FIELD_PITCH - FIELD / 2);
-const FIELD_LANES = [10, 20, 32, 46].flatMap((h, level) =>
-  FIELD_STREETS.flatMap((at, n) =>
-    ([1, -1] as const).map((dir) => ({
-      axis: level % 2 ? 2 : 0,
-      at: at + dir * 0.9,
-      y: GROUND + h,
-      dir,
-      speed: 7 + 4 * hash(level * 10 + n, 411),
-    })),
-  ),
-);
-const FIELD_SHIPS = 200;
-/** A sign on every third tower of the field. */
-const FIELD_SIGNS: Sign[] = FIELD_TOWERS.flatMap((tw, j) => {
-  if (j % 3 !== 1) return [];
-  const s: Sign = {
-    text: SIGN_TEXTS[j % SIGN_TEXTS.length] as string,
-    at: [0, 0, 0],
-    vertical: true,
-    px: 0.22,
-    tone: SIGN_TONES[j % SIGN_TONES.length] as Sign['tone'],
-    k: j + 90,
-  };
-  const { h } = signSize(s);
-  return [{ ...s, at: [tw.x + tw.hx + 0.3, GROUND + 12 + h, tw.z + tw.hz * 0.5] as Vec3 }];
-});
-const FIELD_SIGN_SET = signSet(FIELD_SIGNS);
-const FIELD_SIGN_TOWER = FIELD_TOWERS.flatMap((_, j) => (j % 3 === 1 ? [j] : []));
+/** A block across the avenue (x) and along it (z); a street runs on every line between blocks. */
+export const BLOCK_X = 26;
+export const BLOCK_Z = 34;
+/** Half the avenue's width, wall to wall: the street at x = 0. */
+export const AVENUE = 9;
+/** Chinatown: the first three blocks of the avenue in every eight. */
+export const CT_EVERY = 8;
+export const CT_BLOCKS = 3;
+/** How far the eye sees; the far towers sink into the violet night on the way. */
+export const VIEW = 160;
+
+/** Whether row J of the avenue's blocks is Chinatown. */
+export const isChinatownRow = (J: number) => wrap(J, CT_EVERY) < CT_BLOCKS;
+
+/** How far into Chinatown a point of the avenue at z is: 1 inside a stretch, easing to 0 over `ease` outside it. */
+export function chinatownness(z: number, ease = 0): number {
+  const s = wrap(z, CT_EVERY * BLOCK_Z);
+  const len = CT_BLOCKS * BLOCK_Z;
+  const out = s <= len ? 0 : Math.min(s - len, CT_EVERY * BLOCK_Z - s);
+  if (ease > 0) return smooth(1 - out / ease);
+  return out > 0 ? 0 : 1;
+}
+
+const blockCache = new Map<number, Tower>();
+/**
+ * The tower on block (I, J): its own size and place inside the block, leaving a street of at
+ * least six all round; on the avenue its inner wall on the avenue's edge. Chinatown's are lower,
+ * so its lanterns and signs fill the street; now and then elsewhere a low one breaks the skyline.
+ */
+export function blockTower(I: number, J: number): Tower {
+  const key = I * 65536 + J;
+  const had = blockCache.get(key);
+  if (had) return had;
+  const k = 300 + wrap(I * 37 + J * 101, 9973);
+  const ave = I === 0 || I === -1;
+  const ct = ave && isChinatownRow(J);
+  let hx = 7 + 2.5 * hash(k, 421);
+  const hz = 10.5 + 3.5 * hash(k, 422);
+  let x = (I + 0.5) * BLOCK_X + (hash(k, 423) - 0.5) * Math.max(0, BLOCK_X - 2 * hx - 7);
+  if (ave) {
+    hx = Math.min(hx, 7);
+    x = (I === 0 ? 1 : -1) * (AVENUE + hx);
+  }
+  const z = (J + 0.5) * BLOCK_Z + (hash(k, 424) - 0.5) * Math.max(0, BLOCK_Z - 2 * hz - 7);
+  const low = !ave && hash(k, 426) < 0.12;
+  const h = ct
+    ? 26 + 12 * hash(k, 425)
+    : low
+      ? 9 + 6 * hash(k, 425)
+      : 24 + 44 * hash(k, 425) ** 1.3;
+  const tw: Tower = { x, z, hx, hz, h, k };
+  if (blockCache.size > 4096) blockCache.clear();
+  blockCache.set(key, tw);
+  return tw;
+}
+
+/** Whether a point is inside a tower, walls and MARGIN included: only its own block's can be near. */
+export function blocked(q: Vec3): boolean {
+  const tw = blockTower(Math.floor(q[0] / BLOCK_X), Math.floor(q[2] / BLOCK_Z));
+  return (
+    q[1] <= GROUND + tw.h + MARGIN &&
+    Math.abs(q[0] - tw.x) < tw.hx + MARGIN &&
+    Math.abs(q[2] - tw.z) < tw.hz + MARGIN
+  );
+}
+
+/* ---------- Chinatown on the avenue ---------- */
+
+const signRows = new Map<number, Sign[]>();
+/**
+ * The tall signs of Chinatown's row J: two down the avenue side of each tower, standing out over
+ * the avenue and facing down it (+z), so you read them as you come.
+ */
+export function avenueSigns(J: number): Sign[] {
+  if (!isChinatownRow(J)) return [];
+  const had = signRows.get(J);
+  if (had) return had;
+  const out: Sign[] = [];
+  for (const side of [-1, 1]) {
+    const tw = blockTower(side < 0 ? -1 : 0, J);
+    for (const n of [0, 1]) {
+      const j = J * 4 + (side < 0 ? 0 : 2) + n;
+      const s0: Sign = {
+        text: SIGN_TEXTS[wrap(j * 3 + 1, SIGN_TEXTS.length)] as string,
+        at: [0, 0, 0],
+        vertical: true,
+        px: 0.25,
+        tone: SIGN_TONES[wrap(j, SIGN_TONES.length)] as Sign['tone'],
+        k: 200 + wrap(j, 97),
+      };
+      const { w, h } = signSize(s0);
+      const x0 = side < 0 ? -AVENUE + 0.3 : AVENUE - 0.3 - w;
+      const top = Math.min(GROUND + tw.h - 1, GROUND + 4 + h + 7 * hash(j, 431));
+      out.push({ ...s0, at: [x0, top, tw.z + tw.hz * (n ? -0.45 : 0.6)] });
+    }
+  }
+  if (signRows.size > 256) signRows.clear();
+  signRows.set(J, out);
+  return out;
+}
+
+/** The night-market banner across the middle of stretch n, between two strings of lanterns. */
+function bannerOf(n: number): Sign {
+  const s: Sign = { text: '夜市', at: [0, 0, 0], vertical: false, px: 0.3, tone: 'gold', k: 230 };
+  const { w } = signSize(s);
+  return { ...s, at: [-w / 2, GROUND + 23.5, n * CT_EVERY * BLOCK_Z + 48.5], k: 230 + wrap(n, 7) };
+}
+const banners = new Map<number, Sign>();
+const bannerFor = (n: number) => {
+  const had = banners.get(n);
+  if (had) return had;
+  if (banners.size > 64) banners.clear();
+  const s = bannerOf(n);
+  banners.set(n, s);
+  return s;
+};
+
+/** Where the lantern strings cross the avenue in a stretch, from its start: every nine, inside the gates. */
+const LANTERN_STRINGS = Array.from({ length: 10 }, (_, r) => 8 + 9 * r);
+const LANTERNS_ACROSS = 7;
+/** How high the strings are tied, over the ship's head as it flies under them. */
+const STRING_Y = GROUND + 18.5;
+const LANTERN_SITES = 66;
+const STRING_SITES = 40;
+/** The gate on the avenue, the Chinatown piece's own made larger, tall enough to fly under its beams. */
+const GATE_WIDE = 1.65;
+const GATE_TALL = 2;
+const GATE_SITES = 1500;
+
+/* ---------- the flight ---------- */
 
 const headingOf = (yaw: number, pitch: number): Vec3 => [
   -Math.sin(yaw) * Math.cos(pitch),
   Math.sin(pitch),
   -Math.cos(yaw) * Math.cos(pitch),
 ];
+/** The ways along the grid, as the autopilot keeps them: -z, +x, +z, -x. */
+const WAYS: [number, number][] = [
+  [0, -1],
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+];
+const turnTo = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+
+/**
+ * Who flies: `route` the autopilot down the avenue (the Journey, or before anyone steers), the
+ * same for the same moment; `pilot` you; `drift` the autopilot again once you let go, carrying on
+ * from where you were along the streets, back to the avenue and down it.
+ */
+type Pilot = 'route' | 'pilot' | 'drift';
 const fly = {
-  on: false,
-  pos: [0, GROUND + 24, 0] as Vec3,
+  mode: 'route' as Pilot,
+  pos: [0, GROUND + 21, 0] as Vec3,
   yaw: 0,
   pitch: 0,
   speed: FLY_SPEED,
@@ -1469,85 +1598,147 @@ const fly = {
   /** How far the ship leans into its turn, eased. */
   bank: 0,
   t: 0,
+  /** Carrying on: the way it keeps (WAYS), the street's line, the last crossing it chose at. */
+  way: 0,
+  line: 0,
+  crossed: Number.NaN,
+  /** Counts every move, so a frame's plan knows the ship has moved. */
+  v: 0,
 };
 export const hasGame = (k: number) => PHASES[k]?.id === 'ship';
 export const boostLeft = () => fly.boost;
 
+/** The height you cruise at down the avenue, and low under the lanterns through Chinatown. */
+export const CRUISE_Y = GROUND + 21;
+export const CHINATOWN_Y = GROUND + 8.5;
+const cruiseY = (z: number, t: number) =>
+  lerp(CRUISE_Y + 3 * Math.sin(0.09 * t), CHINATOWN_Y, chinatownness(z, 45));
 /**
- * The autopilot's round: the streets round two blocks by two, its corners rounded, `d` along it
- * (x and z). Staying near the middle of the field, the Journey never carries the eye far off.
+ * The route: on its own the piece starts sixty short of a Chinatown gate; in the Journey, which
+ * reaches the ship's piece some minutes in, it passes near the middle of the city, so the grains
+ * pour in from the canyon and on into the towers without crossing half the city.
  */
-const LAP_H = FIELD_PITCH;
-const LAP_R = 3;
-const LAP_SIDE = 2 * LAP_H - 2 * LAP_R + (Math.PI * LAP_R) / 2;
-function lap(d: number): [number, number] {
-  const w = wrap(d, 4 * LAP_SIDE);
-  const side = Math.floor(w / LAP_SIDE);
-  const s = w - side * LAP_SIDE;
-  const straight = 2 * LAP_H - 2 * LAP_R;
-  let x: number;
-  let z: number;
-  if (s < straight) [x, z] = [-LAP_H, LAP_H - LAP_R - s];
-  else {
-    const a = Math.PI + (s - straight) / LAP_R;
-    [x, z] = [-LAP_H + LAP_R + LAP_R * Math.cos(a), -LAP_H + LAP_R + LAP_R * Math.sin(a)];
-  }
-  // Each side the first turned a quarter round: (x, z) to (-z, x).
-  for (let i = 0; i < side; i++) [x, z] = [-z, x];
-  return [x, z];
+const ROUTE_Z0 =
+  CT_BLOCKS * BLOCK_Z +
+  60 +
+  Math.round((FLY_SPEED * (PHASE_START[6] as number)) / (CT_EVERY * BLOCK_Z)) * CT_EVERY * BLOCK_Z;
+function routeAt(t: number): Vec3 {
+  const z = ROUTE_Z0 - FLY_SPEED * t;
+  return [1.5 * Math.sin(0.21 * t), cruiseY(z, t), z];
 }
-
-/** With no one at the controls (the Journey, or let go): round the streets, rising and sinking among the towers. */
-function autopilot(t: number): { c: Vec3; f: Vec3 } {
-  const at = (tt: number): Vec3 => {
-    const [x, z] = lap(FLY_SPEED * tt);
-    return [x, GROUND + 26 + 10 * Math.sin(0.07 * tt), z];
-  };
-  const c = at(t);
-  const n = at(t + 0.05);
+/** With no one at the controls: down the avenue, weaving a little, dipping through each Chinatown. */
+export function route(t: number): { c: Vec3; f: Vec3 } {
+  const c = routeAt(t);
+  const n = routeAt(t + 0.05);
   return { c, f: norm([n[0] - c[0], n[1] - c[1], n[2] - c[2]]) };
 }
 
-/** A coordinate of the field brought round to the copy of it nearest `c`. */
-const nearest = (x: number, c: number) => c + wrap(x - c + FIELD / 2, FIELD) - FIELD / 2;
+/** Forward at the ship's pace; a wall in the way, slide along it, keeping whichever way is free. */
+function move(dt: number) {
+  const was = fly.pos;
+  const f = headingOf(fly.yaw, fly.pitch);
+  const next: Vec3 = add(was, f, fly.speed * dt);
+  next[1] = Math.max(GROUND + 2, Math.min(SKY, next[1]));
+  const tries: Vec3[] = [
+    next,
+    [next[0], next[1], was[2]],
+    [was[0], next[1], next[2]],
+    [was[0], next[1], was[2]],
+    // On a roof: on along it at the same height.
+    [next[0], was[1], next[2]],
+    [next[0], was[1], was[2]],
+    [was[0], was[1], next[2]],
+  ];
+  fly.pos = tries.find((q) => !blocked(q)) ?? was;
+}
 
-/** Whether a point is inside a tower of the field, walls and MARGIN included. */
-export function blocked(q: Vec3): boolean {
-  for (const tw of FIELD_TOWERS) {
-    if (q[1] > GROUND + tw.h + MARGIN) continue;
-    if (
-      Math.abs(q[0] - nearest(tw.x, q[0])) < tw.hx + MARGIN &&
-      Math.abs(q[2] - nearest(tw.z, q[2])) < tw.hz + MARGIN
-    )
-      return true;
+/** At a crossing, which way the autopilot goes: back toward the avenue, then on down it. */
+function nextWay(way: number, line: number, at: number): number {
+  if (way === 0 || way === 2) {
+    if (Math.abs(line) < 1) return way === 0 ? 0 : 1;
+    return line > 0 ? 3 : 1;
   }
-  return false;
+  if (Math.abs(at) < 1) return 0;
+  // Going away from the avenue: turn down the next street, and back toward it at the crossing after.
+  return at > 0 === (way === 1) ? 0 : way;
+}
+
+/** Letting go: the autopilot takes the way along the grid nearest your heading, on the nearest street. */
+function startCarryingOn() {
+  fly.mode = 'drift';
+  fly.way = wrap(Math.round(-fly.yaw / (Math.PI / 2)), 4);
+  const alongZ = fly.way % 2 === 0;
+  fly.line = alongZ
+    ? Math.round(fly.pos[0] / BLOCK_X) * BLOCK_X
+    : Math.round(fly.pos[2] / BLOCK_Z) * BLOCK_Z;
+  fly.crossed = Number.NaN;
+}
+
+/** The autopilot carrying on: down the middle of its street, choosing at each crossing, easing round. */
+function carryOn(dt: number, t: number) {
+  const p = fly.pos;
+  let [dx, dz] = WAYS[fly.way] as [number, number];
+  let alongZ = dx === 0;
+  const pitchOf = alongZ ? BLOCK_Z : BLOCK_X;
+  const coord = alongZ ? p[2] : p[0];
+  const sgn = alongZ ? dz : dx;
+  const next = (sgn > 0 ? Math.ceil(coord / pitchOf) : Math.floor(coord / pitchOf)) * pitchOf;
+  const mark = next + (alongZ ? 0 : 1e7);
+  if (Math.abs(next - coord) < 8 && mark !== fly.crossed) {
+    fly.crossed = mark;
+    const way = nextWay(fly.way, fly.line, next);
+    if (way !== fly.way) {
+      fly.way = way;
+      fly.line = next;
+      [dx, dz] = WAYS[way] as [number, number];
+      alongZ = dx === 0;
+    }
+  }
+  // Aim ten ahead along the street, pulled toward its middle.
+  const off = alongZ ? fly.line - p[0] : fly.line - p[2];
+  const aim: [number, number] = alongZ ? [off, dz * 10] : [dx * 10, off];
+  const miss = turnTo(Math.atan2(-aim[0], -aim[1]) - fly.yaw);
+  const rate = Math.max(-1.1, Math.min(1.1, miss * 2.5));
+  fly.yaw = turnTo(fly.yaw + rate * dt);
+  fly.bank += (rate * 0.45 - fly.bank) * (1 - Math.exp(-4 * dt));
+  const onAvenue = alongZ && Math.abs(fly.line) < 1;
+  const wantY = onAvenue ? cruiseY(p[2], t) : CRUISE_Y;
+  const wantPitch = Math.max(-0.5, Math.min(0.5, Math.atan2(wantY - p[1], 14)));
+  fly.pitch += (wantPitch - fly.pitch) * (1 - Math.exp(-2.5 * dt));
+  const pace = Math.abs(miss) > 0.25 ? 0.6 : 1;
+  fly.speed += (FLY_SPEED * pace - fly.speed) * (1 - Math.exp(-1.5 * dt));
+  move(dt);
 }
 
 /**
  * The controls, each frame: whether you are flying, the keys held, and how far the piece's time
- * moved. Keys only, never the mouse, as in the Shark Sim.
+ * moved. Keys only, never the mouse, as in the Shark Sim. A jump in time (a piece picked again,
+ * the Journey) starts the route afresh.
  */
 export function setFly(active: boolean, keys: string[], dt: number, t: number) {
+  const jumped = Math.abs(t - fly.t - dt) > 0.5;
   fly.t = t;
+  fly.v++;
+  if (jumped) fly.mode = 'route';
   if (!active) {
-    fly.on = false;
     fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
+    if (fly.mode === 'pilot') startCarryingOn();
+    if (fly.mode === 'drift') carryOn(dt, t);
     return;
   }
-  if (!fly.on) {
+  if (fly.mode === 'route') {
     // Taking over from the autopilot where it is.
-    const a = autopilot(t);
+    const a = route(t);
     fly.pos = a.c;
     fly.yaw = Math.atan2(-a.f[0], -a.f[2]);
     fly.pitch = Math.asin(Math.max(-1, Math.min(1, a.f[1])));
     fly.speed = FLY_SPEED;
     fly.bank = 0;
-    fly.on = true;
   }
+  fly.mode = 'pilot';
   const held = (...names: string[]) => names.some((n) => keys.includes(n));
   const turn = (held('a', 'arrowleft') ? -1.2 : 0) + (held('d', 'arrowright') ? 1.2 : 0);
-  fly.yaw -= turn * dt;
+  fly.yaw = turnTo(fly.yaw - turn * dt);
   fly.bank += (-turn * 0.45 - fly.bank) * (1 - Math.exp(-4 * dt));
   let tilt = (held('w', 'arrowup') ? 0.55 : 0) - (held('s', 'arrowdown') ? 0.55 : 0);
   if (fly.pos[1] <= GROUND + 2.5 && tilt < 0) tilt = 0;
@@ -1558,23 +1749,12 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   else if (!held(' ')) fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
   const pace = boosting ? BOOST_PACE : held('e', 'shift') ? 1.8 : held('q', 'x') ? 0.4 : 1;
   fly.speed += (FLY_SPEED * pace - fly.speed) * (1 - Math.exp((boosting ? -4 : -1.5) * dt));
-  const was = fly.pos;
-  const f = headingOf(fly.yaw, fly.pitch);
-  const next: Vec3 = add(was, f, fly.speed * dt);
-  next[1] = Math.max(GROUND + 2, Math.min(SKY, next[1]));
-  // A wall in the way: slide along it, keeping whichever way is free.
-  const tries: Vec3[] = [
-    next,
-    [next[0], next[1], was[2]],
-    [was[0], next[1], next[2]],
-    [was[0], next[1], was[2]],
-  ];
-  fly.pos = tries.find((q) => !blocked(q)) ?? was;
+  move(dt);
 }
 
 /** You: where you are at time t and which way you fly. */
 export function flier(t: number): { c: Vec3; f: Vec3 } {
-  return fly.on ? { c: fly.pos, f: headingOf(fly.yaw, fly.pitch) } : autopilot(t);
+  return fly.mode === 'route' ? route(t) : { c: fly.pos, f: headingOf(fly.yaw, fly.pitch) };
 }
 
 /** The cockpit's dials: your height over the street and your speed. */
@@ -1585,93 +1765,849 @@ export function gauges(): Gauge[] {
     { label: 'Height', value: Math.round(c[1] - GROUND), max: SKY - GROUND, unit: 'm' },
     {
       label: 'Speed',
-      value: Math.round(fly.on ? fly.speed : FLY_SPEED),
+      value: Math.round(fly.mode === 'route' ? FLY_SPEED : fly.speed),
       max: FLY_SPEED * BOOST_PACE,
       unit: 'm/s',
     },
   ];
 }
 
-const SHIP_ROLES = [
-  ['ground', 0.05],
-  ['sky', 0.07],
-  ['edge', 0.46],
-  ['window', 0.64],
-  ['band', 0.7],
-  ['sign', 0.8],
-  ['traffic', 0.96],
-  ['you', 1],
-] as const;
+/** Behind your ship and a little above, looking past it the way you fly. */
+function shipEye(c: Vec3, f: Vec3): Eye {
+  const eye = add(add(c, f, -10), [0, 1, 0], 3.2);
+  eye[1] = Math.max(GROUND + 1, eye[1]);
+  return { eye, target: add(c, f, 6) };
+}
 
-/** How much shows at a horizontal distance from you: all near, nothing at the field's wrapping edge. */
-const fieldEdge = (q: Vec3, c: Vec3) =>
-  smooth((FIELD / 2 - 4 - Math.hypot(q[0] - c[0], q[2] - c[2])) / 16);
+/* ---------- what the eye can see: towers in the way ---------- */
 
-function shipAt(p: Particle, t: number): Spot {
-  const { c, f } = flier(t);
-  const role = roleOf(p.c, SHIP_ROLES);
-  const twinkle = 0.75 + 0.25 * Math.sin(t * 0.9 + p.i * 0.37);
-  const placed = (tw: Tower): Tower => ({ ...tw, x: nearest(tw.x, c[0]), z: nearest(tw.z, c[2]) });
-  switch (role) {
-    case 'ground': {
-      // The block outlines round you, brought round as you fly.
-      const j = Math.floor(p.a * FIELD_TOWERS.length);
-      const tw = placed(FIELD_TOWERS[j] as Tower);
-      const block: Tower = { ...tw, hx: FIELD_PITCH / 2 - 3, hz: FIELD_PITCH / 2 - 3 };
-      const pos = ringAt(block, p.b, GROUND);
-      return { pos, rgb: scale(GROUND_LINE, 0.16 * fieldEdge(pos, c)) };
+/** Whether the line from the eye to a point runs through tower tw (one the eye is inside never hides). */
+function crosses(tw: Tower, e: Vec3, dx: number, dy: number, dz: number): boolean {
+  const s = 0.06;
+  const x0 = tw.x - tw.hx + s;
+  const x1 = tw.x + tw.hx - s;
+  const z0 = tw.z - tw.hz + s;
+  const z1 = tw.z + tw.hz - s;
+  const y1 = GROUND + tw.h - s;
+  if (e[0] > x0 && e[0] < x1 && e[2] > z0 && e[2] < z1 && e[1] < y1) return false;
+  let lo = 0;
+  let hi = 1;
+  const slab = (o: number, d: number, a: number, b: number) => {
+    if (Math.abs(d) < 1e-9) {
+      if (o <= a || o >= b) hi = -1;
+      return;
     }
-    case 'sky':
-      return { pos: skyAt(p, [c[0], 0, c[2]]), rgb: scale(STAR, 0.25 * twinkle) };
-    case 'you': {
-      const pace = fly.on ? Math.max(0, fly.speed / FLY_SPEED - 0.4) : 0.6;
-      const { pos, part } = craftAt(c, f, 2.4, p, pace, fly.on ? fly.bank : 0);
-      return { pos, rgb: craftColour(part, p, 0.42) };
-    }
-    case 'traffic': {
-      const j = Math.floor(p.a * FIELD_SHIPS);
-      const lane = FIELD_LANES[j % FIELD_LANES.length] as (typeof FIELD_LANES)[number];
-      const per = FIELD_SHIPS / FIELD_LANES.length;
-      const m = Math.floor(j / FIELD_LANES.length);
-      const along = (m + 0.7 * hash(j, 412)) * (FIELD / per) + lane.dir * lane.speed * t;
-      const q: Vec3 =
-        lane.axis === 0
-          ? [nearest(along, c[0]), lane.y, nearest(lane.at, c[2])]
-          : [nearest(lane.at, c[0]), lane.y + 0.5, nearest(along, c[2])];
-      const dir: Vec3 = lane.axis === 0 ? [lane.dir, 0, 0] : [0, 0, lane.dir];
-      return {
-        pos: dashAt(q, dir, p, 2.8),
-        rgb: scale(lane.dir > 0 ? HEADLIGHT : TAILLIGHT, 0.55 * dashGlow(p) * fieldEdge(q, c)),
-      };
-    }
-    case 'sign': {
-      const n = pickSign(FIELD_SIGN_SET, p.a);
-      const sign = FIELD_SIGNS[n] as Sign;
-      const tw = FIELD_TOWERS[FIELD_SIGN_TOWER[n] as number] as Tower;
-      const { pos, frame } = signPoint(sign, p);
-      const q: Vec3 = [
-        pos[0] - tw.x + nearest(tw.x, c[0]),
-        pos[1],
-        pos[2] - tw.z + nearest(tw.z, c[2]),
-      ];
-      return { pos: q, rgb: scale(signColour(sign, frame, t), fieldEdge(q, c)) };
-    }
-    default: {
-      const j = pick(FIELD_SET, p.a);
-      const tw = placed(FIELD_TOWERS[j] as Tower);
-      if (role === 'edge') {
-        const { pos } = towerEdge(tw, p, tw.h, -1, 9);
-        return { pos, rgb: scale(mix(VIOLET, EDGE, 0.5), 0.32 * fieldEdge(pos, c)) };
-      }
-      if (role === 'window') {
-        const w = towerWindow(tw, p, t);
-        const tone = w.warm ? WARM_WINDOW : COOL_WINDOW;
-        return { pos: w.pos, rgb: scale(tone, (0.02 + 0.3 * w.lit) * fieldEdge(w.pos, c)) };
-      }
-      const { pos, band } = towerBand(tw, p);
-      return { pos, rgb: scale(neonAt(j + (band % 2) * 2, t), 0.38 * fieldEdge(pos, c)) };
+    let u = (a - o) / d;
+    let w = (b - o) / d;
+    if (u > w) [u, w] = [w, u];
+    lo = Math.max(lo, u);
+    hi = Math.min(hi, w);
+  };
+  slab(e[0], dx, x0, x1);
+  if (lo >= hi) return false;
+  slab(e[2], dz, z0, z1);
+  if (lo >= hi) return false;
+  slab(e[1], dy, GROUND - 1, y1);
+  return lo < hi;
+}
+
+/** Whether a tower stands between the eye and a point: the blocks walked through along the line, one by one. */
+function hidden(e: Vec3, x: number, y: number, z: number): boolean {
+  const dx = x - e[0];
+  const dy = y - e[1];
+  const dz = z - e[2];
+  let I = Math.floor(e[0] / BLOCK_X);
+  let J = Math.floor(e[2] / BLOCK_Z);
+  const si = dx > 0 ? 1 : -1;
+  const sj = dz > 0 ? 1 : -1;
+  const ax = Math.abs(dx);
+  const az = Math.abs(dz);
+  const stepX = ax > 1e-9 ? BLOCK_X / ax : Number.POSITIVE_INFINITY;
+  const stepZ = az > 1e-9 ? BLOCK_Z / az : Number.POSITIVE_INFINITY;
+  let nx = ax > 1e-9 ? (si > 0 ? (I + 1) * BLOCK_X - e[0] : e[0] - I * BLOCK_X) / ax : stepX;
+  let nz = az > 1e-9 ? (sj > 0 ? (J + 1) * BLOCK_Z - e[2] : e[2] - J * BLOCK_Z) / az : stepZ;
+  for (let n = 0; n < 40; n++) {
+    if (crosses(blockTower(I, J), e, dx, dy, dz)) return true;
+    if (nx > 1 && nz > 1) return false;
+    if (nx < nz) {
+      nx += stepX;
+      I += si;
+    } else {
+      nz += stepZ;
+      J += sj;
     }
   }
+  return false;
+}
+
+/* ---------- the frame's plan: light sites, dealt out to the grains ---------- */
+
+/** Of every hundred grains: two stars, four for you, fourteen of traffic, the rest the pool. */
+const YOU_FROM = 2;
+const TRAFFIC_FROM = 6;
+const POOL_FROM = 20;
+const poolRank = (i: number) => Math.floor(i / 100) * (100 - POOL_FROM) + (i % 100) - POOL_FROM;
+const poolSize = (n: number) =>
+  Math.floor(n / 100) * (100 - POOL_FROM) + Math.max(0, (n % 100) - POOL_FROM);
+
+type Plan = {
+  t: number;
+  v: number;
+  c: Vec3;
+  f: Vec3;
+  eye: Vec3;
+  fwd: Vec3;
+  /** How many sites, and each one's place and colour. */
+  n: number;
+  pos: Float32Array;
+  rgb: Float32Array;
+  /** Each site's own number, and the pool grain it went to. */
+  ids: Uint32Array;
+  home: Int32Array;
+  /** Pool grain r shows site slot[r], or waits unlit (-1). */
+  slot: Int32Array;
+  size: number;
+  /** How many grains asked of this plan, so the next knows how many the player draws. */
+  top: number;
+};
+const newPlan = (): Plan => ({
+  t: Number.NaN,
+  v: -1,
+  c: [0, 0, 0],
+  f: [0, 0, -1],
+  eye: [0, 0, 0],
+  fwd: [0, 0, -1],
+  n: 0,
+  pos: new Float32Array(0),
+  rgb: new Float32Array(0),
+  ids: new Uint32Array(0),
+  home: new Int32Array(0),
+  slot: new Int32Array(0),
+  size: 0,
+  top: 0,
+});
+/** Two plans kept, so asking about two moments in turn never makes either again. */
+const plans: [Plan, Plan] = [newPlan(), newPlan()];
+let grains = 9000;
+/** How densely sites are kept: raised and lowered gently, frame to frame, to fill the pool. */
+let lambda = 1;
+let lastBuilt = Number.NaN;
+
+/** A 32-bit mix of two numbers, for dealing sites to grains. */
+function mix32(a: number, b: number): number {
+  let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x632be5ab, 0xc2b2ae35);
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x7feb352d);
+  h ^= h >>> 15;
+  return h >>> 0;
+}
+const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+const strides = new Map<number, number>();
+/** A step through n sites that visits each once, the first few already spread over them all. */
+function strideFor(n: number): number {
+  const had = strides.get(n);
+  if (had) return had;
+  let s = Math.max(1, Math.round(n * 0.618034));
+  while (gcd(s, n) !== 1) s++;
+  strides.set(n, s);
+  return s;
+}
+/**
+ * How densely sites are kept at a distance: all near, fewer further off, and few right by the eye,
+ * where they would be drawn large and are faded anyway.
+ */
+const dens = (d: number) => {
+  const r = Math.min(1, 22 / d);
+  return r * Math.sqrt(r) * smooth((d - 3) / 7);
+};
+
+/* The site being placed and its colour, and what it belongs to. */
+const o = [0, 0, 0, 0, 0, 0];
+const cur = {
+  plan: plans[0],
+  t: 0,
+  tw: CITY[0] as Tower,
+  face: 0,
+  w: 0,
+  ct: false,
+  cols: 0,
+  rows: 0,
+  per: 0,
+  n: 0,
+  nr: 0,
+  bands: 0,
+  lit: 0,
+  warm: true,
+  red: false,
+  sign: GATE_SIGN,
+  gateZ: 0,
+  flip: 1,
+  front: true,
+  part: 'pillar' as GatePart,
+  frame: false,
+  rowZ: 0,
+  gid: 0,
+};
+
+/** What a group's sites are. */
+const Kind = {
+  Corner: 0,
+  Rim: 1,
+  Floor: 2,
+  Window: 3,
+  Fill: 4,
+  Band: 5,
+  Kerb: 6,
+  Glyph: 7,
+  Frame: 8,
+  Lanterns: 9,
+  Gate: 10,
+} as const;
+type Kind = (typeof Kind)[keyof typeof Kind];
+
+/** A point on the current face, `a` (-1..1) across it, at height y, `out` beyond the wall. */
+function onFace(a: number, y: number, out = 0.04) {
+  const { tw } = cur;
+  o[1] = y;
+  switch (cur.face) {
+    case 0:
+      o[0] = tw.x + a * tw.hx;
+      o[2] = tw.z - tw.hz - out;
+      return;
+    case 1:
+      o[0] = tw.x + tw.hx + out;
+      o[2] = tw.z + a * tw.hz;
+      return;
+    case 2:
+      o[0] = tw.x - a * tw.hx;
+      o[2] = tw.z + tw.hz + out;
+      return;
+    default:
+      o[0] = tw.x - tw.hx - out;
+      o[2] = tw.z - a * tw.hz;
+  }
+}
+
+/** Site s of the current group's kind: its place into o; false when there is nothing there (a dark window). */
+function siteAt(kind: Kind, s: number): boolean {
+  const { tw } = cur;
+  switch (kind) {
+    case Kind.Corner:
+      onFace(s % 2 ? 1 : -1, GROUND + ((Math.floor(s / 2) + 0.5) * tw.h) / cur.n, 0);
+      return true;
+    case Kind.Rim:
+      onFace(-1 + ((s + 0.5) * 2) / cur.n, GROUND + tw.h, 0);
+      return true;
+    case Kind.Floor: {
+      const fl = Math.floor(s / cur.per);
+      onFace(-1 + (((s % cur.per) + 0.5) * 2) / cur.per, GROUND + ((fl + 1) * tw.h) / (cur.n + 1));
+      return true;
+    }
+    case Kind.Window: {
+      const col = s % cur.cols;
+      const row = Math.floor(s / cur.cols);
+      const key = tw.k * 1009 + cur.face * 211 + col * 17 + row;
+      cur.lit = windowLit(key, cur.t);
+      if (cur.lit < 0.06) return false;
+      cur.warm = hash(key, 19) < (cur.ct ? 0.92 : 0.7);
+      cur.red = cur.ct && hash(key, 20) < 0.18;
+      onFace(-1 + ((col + 0.5) * 2) / cur.cols, GROUND + ((row + 0.5) * tw.h) / cur.rows);
+      return true;
+    }
+    case Kind.Fill: {
+      const m = mix32(cur.gid, s);
+      const jx = ((m & 1023) / 1024 - 0.5) * 0.8;
+      const jy = (((m >>> 10) & 1023) / 1024 - 0.5) * 0.8;
+      const col = s % cur.n;
+      const row = Math.floor(s / cur.n);
+      onFace(
+        -1 + ((col + 0.5 + jx) * 2) / cur.n,
+        GROUND + ((row + 0.5 + jy) * tw.h) / cur.nr,
+        0.02,
+      );
+      return true;
+    }
+    case Kind.Band: {
+      const line = Math.floor(s / cur.per);
+      const band = line >> 1;
+      cur.lit = band;
+      const y = GROUND + tw.h * (0.35 + (0.6 * (band + 0.5)) / cur.bands) + (line & 1) * 0.28;
+      onFace(-1 + (((s % cur.per) + 0.5) * 2) / cur.per, y, 0.08);
+      return true;
+    }
+    case Kind.Kerb: {
+      const pave: Tower = { ...tw, hx: tw.hx + 1.5, hz: tw.hz + 1.5 };
+      const q = ringAt(pave, (s + 0.5) / cur.n, GROUND + 0.02);
+      [o[0], o[1], o[2]] = q;
+      return true;
+    }
+    case Kind.Glyph: {
+      if (!cur.front) return false;
+      const sg = cur.sign;
+      const px = signPixels(sg);
+      o[0] = sg.at[0] + ((px[s * 2] as number) + 0.5) * sg.px;
+      o[1] = sg.at[1] - ((px[s * 2 + 1] as number) + 0.5) * sg.px;
+      o[2] = sg.at[2];
+      return true;
+    }
+    case Kind.Frame: {
+      const sg = cur.sign;
+      const { w, h } = signSize(sg);
+      const m = 2.2 * sg.px;
+      const W = w + 2 * m;
+      const H = h + 2 * m;
+      const e = ((s + 0.5) / cur.n) * 2 * (W + H);
+      let x: number;
+      let y: number;
+      if (e < W) [x, y] = [e, 0];
+      else if (e < W + H) [x, y] = [W, e - W];
+      else if (e < 2 * W + H) [x, y] = [2 * W + H - e, H];
+      else [x, y] = [0, 2 * (W + H) - e];
+      o[0] = sg.at[0] - m + x;
+      o[1] = sg.at[1] + m - y;
+      o[2] = sg.at[2];
+      return true;
+    }
+    case Kind.Lanterns: {
+      const across = LANTERNS_ACROSS * LANTERN_SITES;
+      if (s >= across) {
+        // The string: tied to the walls, sagging to the middle.
+        const x = -AVENUE + ((s - across + 0.5) * 2 * AVENUE) / STRING_SITES;
+        cur.part = 'beam';
+        o[0] = x;
+        o[1] = STRING_Y - 1.2 * (1 - (x / AVENUE) ** 2);
+        o[2] = cur.rowZ;
+        return true;
+      }
+      const j = Math.floor(s / LANTERN_SITES);
+      const q = s % LANTERN_SITES;
+      const key = Math.round(cur.rowZ) * 7 + j;
+      const x = -AVENUE + ((j + 0.5) * 2 * AVENUE) / LANTERNS_ACROSS;
+      const cy =
+        STRING_Y - 1.2 * (1 - (x / AVENUE) ** 2) - 1.1 + 0.05 * Math.sin(cur.t * 0.7 + key);
+      const cz = cur.rowZ + 0.15 * Math.sin(cur.t * 0.6 + key * 1.3);
+      cur.lit = key;
+      if (q < 54) {
+        const d = fibonacciSphere(q, 54);
+        cur.part = 'pillar';
+        o[0] = x + d[0] * 0.8;
+        o[1] = cy + d[1] * 0.95;
+        o[2] = cz + d[2] * 0.8;
+        return true;
+      }
+      cur.part = 'roof';
+      if (q < 62) {
+        const a = ((q - 54) / 8) * TAU;
+        o[0] = x + Math.cos(a) * 0.36;
+        o[1] = cy + 0.98;
+        o[2] = cz + Math.sin(a) * 0.36;
+        return true;
+      }
+      o[0] = x;
+      o[1] = cy - 1 - (q - 62) * 0.18;
+      o[2] = cz;
+      return true;
+    }
+    default: {
+      // The gate: the Chinatown piece's own, larger, turned to face the way you come.
+      const g = gateShape(frac(0.5 + s * 0.7548776662), frac(0.5 + s * 0.569840291), s);
+      if (g.part === 'plaque' && !cur.front) return false;
+      cur.part = g.part;
+      cur.frame = g.part === 'plaque' && signPoint(GATE_SIGN, { i: s }, 67).frame;
+      o[0] = g.pos[0] * GATE_WIDE * cur.flip;
+      o[1] = GROUND + (g.pos[1] - GROUND) * GATE_TALL;
+      o[2] = cur.gateZ + (g.pos[2] - GATE_Z) * GATE_WIDE * cur.flip;
+      return true;
+    }
+  }
+}
+
+/** The colour of the site just placed, into o[3..5]. */
+function toneAt(kind: Kind) {
+  const { tw, t } = cur;
+  let c: RGB;
+  switch (kind) {
+    case Kind.Corner:
+    case Kind.Rim:
+      c = cur.ct
+        ? scale(mix(VIOLET, LANTERN_RED, 0.55), 0.34)
+        : scale(mix(VIOLET, EDGE, 0.5), 0.36);
+      break;
+    case Kind.Floor:
+      c = cur.ct ? scale(mix(VIOLET, LANTERN_RED, 0.4), 0.14) : scale(mix(VIOLET, EDGE, 0.5), 0.15);
+      break;
+    case Kind.Window:
+      c = scale(cur.red ? LANTERN_RED : cur.warm ? WARM_WINDOW : COOL_WINDOW, 0.04 + 0.3 * cur.lit);
+      break;
+    case Kind.Fill:
+      c = scale(mix(VIOLET, EDGE, 0.35), 0.1);
+      break;
+    case Kind.Band: {
+      // A tower's bands in its own colour, every other one two steps on; Chinatown's red and gold.
+      const breath = 0.8 + 0.2 * Math.sin(t * 0.35 + tw.k * 1.7);
+      const band = cur.lit;
+      c = cur.ct
+        ? scale(band % 2 ? GOLD : LANTERN_RED, 0.4 * breath)
+        : scale(neonAt(tw.k + (band % 2) * 2, t), 0.4 * breath);
+      break;
+    }
+    case Kind.Kerb:
+      c = scale(GROUND_LINE, 0.2);
+      break;
+    case Kind.Glyph:
+      c = signColour(cur.sign, false, t);
+      break;
+    case Kind.Frame:
+      c = signColour(cur.sign, true, t);
+      break;
+    case Kind.Lanterns: {
+      const glow = 0.85 + 0.15 * Math.sin(t * 0.5 + cur.lit * 0.9);
+      c =
+        cur.part === 'pillar'
+          ? scale(mix(LANTERN_RED, AMBER, 0.15), 0.42 * glow)
+          : cur.part === 'roof'
+            ? scale(GOLD, 0.45)
+            : scale(GOLD, 0.12);
+      break;
+    }
+    default:
+      c =
+        cur.part === 'plaque'
+          ? signColour(GATE_SIGN, cur.frame, t)
+          : cur.part === 'roof'
+            ? scale(GOLD, 0.4)
+            : scale(LANTERN_RED, cur.part === 'pillar' ? 0.34 : 0.42);
+  }
+  [o[3], o[4], o[5]] = c;
+}
+
+/**
+ * One group of sites, `count` of them, kept `weight` times as densely as windows: the m-th in a
+ * fixed, well-spread order shows while m / count is under how densely sites are kept where it
+ * is, fading in over the last stretch, so sites come and go softly as you near and leave. A group
+ * partly hidden (`seen` under 1) has each site checked against the towers in the way.
+ */
+function group(
+  gid: number,
+  count: number,
+  weight: number,
+  dNear: number,
+  seen: number,
+  kind: Kind,
+) {
+  const P = cur.plan;
+  if (count <= 0 || P.n >= P.size) return;
+  const lim = Math.min(count, Math.ceil(weight * lambda * dens(Math.max(dNear, 10)) * count));
+  if (lim <= 0) return;
+  cur.gid = gid;
+  const stride = strideFor(count);
+  const [ex, ey, ez] = P.eye;
+  const [fx, fy, fz] = P.fwd;
+  for (let m = 0; m < lim; m++) {
+    const s = (m * stride) % count;
+    if (!siteAt(kind, s)) continue;
+    const dx = (o[0] as number) - ex;
+    const dy = (o[1] as number) - ey;
+    const dz = (o[2] as number) - ez;
+    const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (d > VIEW || dx * fx + dy * fy + dz * fz < 0.5) continue;
+    const b = smooth((weight * lambda * dens(d) - (m + 0.5) / count) / 0.12);
+    if (b <= 0) continue;
+    if (seen < 1 && hidden(P.eye, o[0] as number, o[1] as number, o[2] as number)) continue;
+    toneAt(kind);
+    // Near grains, drawn large, fade away; far light sinks into the violet night.
+    const k = b * smooth((d - 4) / 10) * smooth((VIEW - d) / 100);
+    const lean = 0.65 * (1 - smooth((VIEW - d) / 100));
+    const lum = Math.max(o[3] as number, o[4] as number, o[5] as number) * 0.8;
+    put(
+      mix32(gid, s),
+      lerp(o[3] as number, VIOLET[0] * lum, lean) * k,
+      lerp(o[4] as number, VIOLET[1] * lum, lean) * k,
+      lerp(o[5] as number, VIOLET[2] * lum, lean) * k,
+    );
+    if (P.n >= P.size) return;
+  }
+}
+
+/** A site into the plan: its place (in o), its colour and its own number. */
+function put(id: number, r: number, g: number, b: number) {
+  const P = cur.plan;
+  const n = P.n;
+  P.ids[n] = id;
+  P.pos[n * 3] = o[0] as number;
+  P.pos[n * 3 + 1] = o[1] as number;
+  P.pos[n * 3 + 2] = o[2] as number;
+  P.rgb[n * 3] = r;
+  P.rgb[n * 3 + 1] = g;
+  P.rgb[n * 3 + 2] = b;
+  P.n++;
+}
+
+/**
+ * Deal the sites to the pool's grains: a site seen last frame keeps the grain it had, so grains
+ * stay put as the picture moves (and pour smoothly into the next piece); a new one takes a free
+ * grain at or after its own number.
+ */
+function deal(P: Plan, prev: Plan) {
+  P.slot.fill(-1);
+  const had = new Map<number, number>();
+  for (let s = 0; s < prev.n; s++) had.set(prev.ids[s] as number, prev.home[s] as number);
+  for (let s = 0; s < P.n; s++) {
+    const h = had.get(P.ids[s] as number);
+    if (h !== undefined && h < P.size && P.slot[h] === -1) {
+      P.slot[h] = s;
+      P.home[s] = h;
+    } else P.home[s] = -1;
+  }
+  for (let s = 0; s < P.n; s++) {
+    if (P.home[s] !== -1) continue;
+    let j = (P.ids[s] as number) % P.size;
+    while (P.slot[j] !== -1) j = j + 1 === P.size ? 0 : j + 1;
+    P.slot[j] = s;
+    P.home[s] = j;
+  }
+}
+
+/** How much of a face the eye sees, 0..1, from a few points on it. */
+function faceSeen(tw: Tower, face: number, eye: Vec3): number {
+  let seen = 0;
+  for (const a of [-0.8, 0, 0.8]) {
+    for (const y of [0.08, 0.4, 0.7, 0.97]) {
+      const q = facePoint(tw, face, a, GROUND + y * tw.h, 0.05);
+      if (!hidden(eye, q[0], q[1], q[2])) seen++;
+    }
+  }
+  return seen / 12;
+}
+/** How much of something the eye sees, 0..1, from a few of its points. */
+function pointsSeen(eye: Vec3, pts: Vec3[]): number {
+  return pts.filter((q) => !hidden(eye, q[0], q[1], q[2])).length / pts.length;
+}
+/** The nearest a box comes to a point. */
+function boxDistance(e: Vec3, lo: Vec3, hi: Vec3): number {
+  const c = (i: number) => Math.max(lo[i] as number, Math.min(hi[i] as number, e[i] as number));
+  return Math.hypot(c(0) - e[0], c(1) - e[1], c(2) - e[2]);
+}
+
+/** Everything to draw this frame, nearest first: towers' faces and kerbs, and Chinatown. */
+function gather(P: Plan): { d: number; run: () => void }[] {
+  const items: { d: number; run: () => void }[] = [];
+  const { eye, fwd } = P;
+  const fl = Math.hypot(fwd[0], fwd[2]) || 1;
+  const hx = fwd[0] / fl;
+  const hz = fwd[2] / fl;
+  const I0 = Math.floor((eye[0] - VIEW) / BLOCK_X);
+  const I1 = Math.floor((eye[0] + VIEW) / BLOCK_X);
+  const J0 = Math.floor((eye[2] - VIEW) / BLOCK_Z);
+  const J1 = Math.floor((eye[2] + VIEW) / BLOCK_Z);
+  for (let I = I0; I <= I1; I++) {
+    for (let J = J0; J <= J1; J++) {
+      const tw = blockTower(I, J);
+      const rx = tw.x - eye[0];
+      const rz = tw.z - eye[2];
+      const rad = Math.hypot(tw.hx, tw.hz) + 2;
+      const depth = rx * hx + rz * hz;
+      const side = Math.abs(rx * hz - rz * hx);
+      // In front of the eye, within sight, and inside the view's width.
+      if (depth < -rad || Math.hypot(rx, rz) - rad > VIEW || side > depth * 1.05 + rad * 1.5 + 4)
+        continue;
+      const ct = (I === 0 || I === -1) && isChinatownRow(J);
+      const id = mix32(I * 73856093, J * 19349663);
+      const lo: Vec3 = [tw.x - tw.hx - 1.5, GROUND, tw.z - tw.hz - 1.5];
+      const hi: Vec3 = [tw.x + tw.hx + 1.5, GROUND, tw.z + tw.hz + 1.5];
+      const dk = boxDistance(eye, lo, hi);
+      items.push({
+        d: dk,
+        run: () => {
+          cur.tw = tw;
+          cur.n = Math.ceil((4 * (tw.hx + tw.hz + 3)) / 0.6);
+          group(mix32(id, 99), cur.n, 1.4, dk, 0.5, Kind.Kerb);
+        },
+      });
+      for (let face = 0; face < 4; face++) {
+        const n: Vec3 = (
+          [
+            [0, 0, -1],
+            [1, 0, 0],
+            [0, 0, 1],
+            [-1, 0, 0],
+          ] as Vec3[]
+        )[face] as Vec3;
+        const fc = facePoint(tw, face, 0, eye[1]);
+        // Only the faces turned toward the eye.
+        if ((eye[0] - fc[0]) * n[0] + (eye[2] - fc[2]) * n[2] <= 0.05) continue;
+        const w = face % 2 ? tw.hz : tw.hx;
+        const a0 = facePoint(tw, face, -1, GROUND);
+        const a1 = facePoint(tw, face, 1, GROUND + tw.h);
+        const d = boxDistance(
+          eye,
+          [Math.min(a0[0], a1[0]), GROUND, Math.min(a0[2], a1[2])],
+          [Math.max(a0[0], a1[0]), GROUND + tw.h, Math.max(a0[2], a1[2])],
+        );
+        if (d > VIEW) continue;
+        items.push({
+          d,
+          run: () => {
+            const seen = faceSeen(tw, face, eye);
+            if (seen <= 0) return;
+            const gid = mix32(id, face * 16);
+            Object.assign(cur, { tw, face, w, ct });
+            cur.n = Math.ceil(tw.h / 0.4);
+            group(gid + 1, 2 * cur.n, 2.4, d, seen, Kind.Corner);
+            cur.n = Math.ceil((2 * w) / 0.4);
+            group(gid + 2, cur.n, 2.4, d, seen, Kind.Rim);
+            cur.bands = 2 + Math.floor(hash(tw.k, 31) * 3);
+            cur.per = Math.ceil((2 * w) / 0.45);
+            group(gid + 3, cur.bands * 2 * cur.per, 1.6, d, seen, Kind.Band);
+            cur.cols = Math.max(2, Math.floor((2 * w) / 1.1));
+            cur.rows = Math.max(2, Math.floor(tw.h / 1.6));
+            group(gid + 4, cur.cols * cur.rows, 1.6, d, seen, Kind.Window);
+            cur.n = Math.max(0, Math.round(tw.h / FLOOR_H) - 1);
+            cur.per = Math.ceil((2 * w) / 0.5);
+            group(gid + 5, cur.n * cur.per, 0.5, d, seen, Kind.Floor);
+            cur.n = Math.ceil((2 * w) / 1.6);
+            cur.nr = Math.ceil(tw.h / 1.6);
+            group(gid + 6, cur.n * cur.nr, 0.6, d, seen, Kind.Fill);
+          },
+        });
+      }
+    }
+  }
+  // Chinatown: the stretches of the avenue within sight.
+  const span = CT_EVERY * BLOCK_Z;
+  const len = CT_BLOCKS * BLOCK_Z;
+  for (let n = Math.floor((eye[2] - VIEW - len) / span); n * span <= eye[2] + VIEW; n++) {
+    const z0 = n * span;
+    for (const [gz, flip] of [
+      [z0 + len - 2, 1],
+      [z0 + 2, -1],
+    ] as const) {
+      const d = boxDistance(eye, [-9, GROUND, gz - 1.2], [9, GROUND + 21, gz + 1.2]);
+      if (d > VIEW || (gz - eye[2]) * hz + -eye[0] * hx < -12) continue;
+      items.push({
+        d,
+        run: () => {
+          const seen = pointsSeen(eye, [
+            [-8, GROUND + 4, gz],
+            [8, GROUND + 4, gz],
+            [0, GROUND + 19, gz],
+          ]);
+          if (seen <= 0) return;
+          Object.assign(cur, { gateZ: gz, flip, front: (eye[2] - gz) * flip > 0 });
+          group(mix32(n, 501 + flip), GATE_SITES, 2.5, d, seen, Kind.Gate);
+        },
+      });
+    }
+    for (const dz of LANTERN_STRINGS) {
+      const rz = z0 + dz;
+      const d = boxDistance(eye, [-AVENUE, STRING_Y - 4, rz - 1], [AVENUE, STRING_Y, rz + 1]);
+      if (d > VIEW || (rz - eye[2]) * hz < -12) continue;
+      items.push({
+        d,
+        run: () => {
+          const seen = pointsSeen(eye, [
+            [-6, STRING_Y - 2, rz],
+            [0, STRING_Y - 2, rz],
+            [6, STRING_Y - 2, rz],
+          ]);
+          if (seen <= 0) return;
+          cur.rowZ = rz;
+          group(
+            mix32(n, 600 + dz),
+            LANTERNS_ACROSS * LANTERN_SITES + STRING_SITES,
+            1.8,
+            d,
+            seen,
+            Kind.Lanterns,
+          );
+        },
+      });
+    }
+    const signs = [bannerFor(n)];
+    for (let J = n * CT_EVERY; J < n * CT_EVERY + CT_BLOCKS; J++) signs.push(...avenueSigns(J));
+    for (const sg of signs) {
+      const { w, h } = signSize(sg);
+      const lo: Vec3 = [sg.at[0], sg.at[1] - h, sg.at[2]];
+      const hi: Vec3 = [sg.at[0] + w, sg.at[1], sg.at[2]];
+      const d = boxDistance(eye, lo, hi);
+      if (d > VIEW || (sg.at[2] - eye[2]) * hz < -12) continue;
+      items.push({
+        d,
+        run: () => {
+          const seen = pointsSeen(eye, [
+            [lo[0], lo[1], lo[2]],
+            [hi[0], hi[1], hi[2]],
+            [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2]],
+          ]);
+          if (seen <= 0) return;
+          cur.sign = sg;
+          // Read from in front; from behind, only its frame.
+          cur.front = eye[2] > sg.at[2];
+          const gid = mix32(sg.k * 131 + Math.round(sg.at[2]), Math.round(sg.at[0] * 10));
+          group(gid, signPixelCount(sg), 4, d, seen, Kind.Glyph);
+          cur.n = Math.ceil((2 * (w + h)) / (sg.px * 1.5));
+          group(gid + 1, cur.n, 3, d, seen, Kind.Frame);
+        },
+      });
+    }
+  }
+  return items.sort((a, b) => a.d - b.d);
+}
+
+/** Make the plan for time t: where the eye is, then every site it can see, nearest first. */
+function build(P: Plan, t: number) {
+  const { c, f } = flier(t);
+  const { eye, target } = shipEye(c, f);
+  Object.assign(P, { t, v: fly.v, c, f, eye, fwd: norm(sub(target, eye)), n: 0, top: 0 });
+  cur.plan = P;
+  cur.t = t;
+  for (const it of gather(P)) {
+    it.run();
+    if (P.n >= P.size) break;
+  }
+}
+const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+
+/**
+ * The plan for time t, made once a frame. How densely sites are kept is eased a little each frame
+ * toward filling nine tenths of the pool; after a jump in time it is found again at once.
+ */
+function planFor(t: number): Plan {
+  const hit = plans.find((P) => P.t === t && P.v === fly.v);
+  if (hit) return hit;
+  const [a, b] = plans;
+  const prev = a.t === lastBuilt ? a : b;
+  const P = prev === a ? b : a;
+  // Learnt from the last plan, once it has been asked for a hundred grains or more.
+  if (prev.top >= 100) grains = prev.top;
+  const size = poolSize(grains);
+  if (P.size !== size) {
+    Object.assign(P, {
+      size,
+      pos: new Float32Array(size * 3),
+      rgb: new Float32Array(size * 3),
+      ids: new Uint32Array(size),
+      home: new Int32Array(size),
+      slot: new Int32Array(size),
+    });
+  }
+  const aim = 0.9 * size;
+  const dt = t - lastBuilt;
+  build(P, t);
+  const ease = (power: number) => {
+    lambda *= Math.max(0.5, Math.min(2, (aim / Math.max(1, P.n)) ** power));
+    lambda = Math.max(0.02, Math.min(12, lambda));
+  };
+  if (dt > 0 && dt <= 0.5) ease(Math.min(1, dt * 6));
+  else if (dt !== 0) {
+    for (let n = 0; n < 4; n++) {
+      ease(0.85);
+      build(P, t);
+    }
+  }
+  deal(P, prev);
+  lastBuilt = t;
+  return P;
+}
+
+/* ---------- the traffic: streams in the streets round you ---------- */
+
+const NS_HEIGHTS = [5, 11, 28, 35];
+const EW_HEIGHTS = [16, 40];
+const NS_STREETS = 5;
+const EW_STREETS = 6;
+/** The avenue's own lanes, two a side at each height, always there; then the streets round you. */
+const AVE_LANES = NS_HEIGHTS.length * 4;
+const NS_LANES = AVE_LANES + NS_STREETS * NS_HEIGHTS.length * 2;
+const LANE_COUNT = NS_LANES + EW_STREETS * EW_HEIGHTS.length * 2;
+const RUN = 200;
+const DASH = 9;
+/** The whole number ≡ slot (mod n) nearest x: a street slot brought round to the one nearest the eye. */
+const nearestOf = (slot: number, n: number, x: number) => slot + n * Math.round((x - slot) / n);
+const near = (a: number, c: number, period: number) =>
+  c + wrap(a - c + period / 2, period) - period / 2;
+
+/**
+ * A grain of the traffic: ships stream along the streets at four heights (two across), coming on
+ * the left and going on the right; the streets round you, brought round as you fly, fading where
+ * they come round. None low on the avenue through Chinatown, under its lanterns.
+ */
+function trafficAt(p: Particle, P: Plan, t: number): Spot {
+  const L = Math.floor(p.i / 100) * (POOL_FROM - TRAFFIC_FROM) + (p.i % 100) - TRAFFIC_FROM;
+  const j = Math.floor(L / DASH);
+  const b = (L % DASH) / (DASH - 1);
+  const lane = j % LANE_COUNT;
+  const cx = P.eye[0] + P.fwd[0] * 60;
+  const cz = P.eye[2] + P.fwd[2] * 60;
+  const speed = 7 + 4 * hash(lane, 451);
+  const s0 = hash(j, 452) * RUN;
+  let head: Vec3;
+  let dir: Vec3;
+  let k: number;
+  let sgn: number;
+  if (lane < NS_LANES) {
+    const ave = lane < AVE_LANES;
+    const n = ave ? lane : lane - AVE_LANES;
+    sgn = ave ? (n & 1 ? 1 : -1) : n >= (NS_LANES - AVE_LANES) / 2 ? 1 : -1;
+    const level = (ave ? n >> 1 : Math.floor(n / NS_STREETS)) % NS_HEIGHTS.length;
+    const I = ave ? 0 : nearestOf(n % NS_STREETS, NS_STREETS, cx / BLOCK_X);
+    const y = (NS_HEIGHTS[level] as number) + (ave && n >= 8 ? 1.2 : 0);
+    const z = near(s0 + sgn * speed * t, cz, RUN);
+    const off = I === 0 ? (ave && n >= 8 ? 6.3 : 3.4) : 2.2;
+    head = [I * BLOCK_X - sgn * off, GROUND + y + (I & 1) * 0.6, z];
+    dir = [0, 0, sgn];
+    k = smooth((RUN / 2 - Math.abs(z - cz)) / 20);
+    k *= smooth(((NS_STREETS / 2) * BLOCK_X - Math.abs(I * BLOCK_X - cx)) / 15);
+    if (I === 0 && y < 16) k *= 1 - chinatownness(z, 12);
+  } else {
+    const e = lane - NS_LANES;
+    sgn = e >= EW_STREETS * EW_HEIGHTS.length ? 1 : -1;
+    const level = Math.floor(e / EW_STREETS) % EW_HEIGHTS.length;
+    const J = nearestOf(e % EW_STREETS, EW_STREETS, cz / BLOCK_Z);
+    const x = near(s0 + sgn * speed * t, cx, RUN);
+    head = [x, GROUND + (EW_HEIGHTS[level] as number), J * BLOCK_Z + sgn * 2.2];
+    dir = [sgn, 0, 0];
+    k = smooth((RUN / 2 - Math.abs(x - cx)) / 20);
+    k *= smooth(((EW_STREETS / 2) * BLOCK_Z - Math.abs(J * BLOCK_Z - cz)) / 15);
+  }
+  const pos = add(head, dir, -(b ** 1.6) * 2.8);
+  const r = sub(pos, P.eye);
+  const d = Math.hypot(r[0], r[1], r[2]);
+  // Only ahead of the eye and within sight.
+  if (r[0] * P.fwd[0] + r[1] * P.fwd[1] + r[2] * P.fwd[2] < 0.5) k = 0;
+  k *= smooth((d - 4) / 10) * smooth((VIEW - d) / 100);
+  if (k > 0 && hidden(P.eye, pos[0], pos[1], pos[2])) k = 0;
+  const glow = b < 0.12 ? 1 : 0.55 * (1 - b) ** 2;
+  return { pos, rgb: scale(sgn > 0 ? HEADLIGHT : TAILLIGHT, 0.55 * glow * k) };
+}
+
+function shipAt(p: Particle, t: number): Spot {
+  const P = planFor(t);
+  if (p.i + 1 > P.top) P.top = p.i + 1;
+  const m = p.i % 100;
+  if (m >= POOL_FROM) {
+    const r = poolRank(p.i);
+    const s = r < P.size ? (P.slot[r] as number) : -1;
+    if (s >= 0) {
+      return {
+        pos: [P.pos[s * 3] as number, P.pos[s * 3 + 1] as number, P.pos[s * 3 + 2] as number],
+        rgb: [P.rgb[s * 3] as number, P.rgb[s * 3 + 1] as number, P.rgb[s * 3 + 2] as number],
+      };
+    }
+    // Waiting, unlit, for a site to show.
+    return { pos: skyAt(p, [P.c[0], 0, P.c[2]]), rgb: [0, 0, 0] };
+  }
+  if (m >= TRAFFIC_FROM) return trafficAt(p, P, t);
+  if (m >= YOU_FROM) {
+    const pace = fly.mode === 'route' ? 0.6 : Math.max(0, fly.speed / FLY_SPEED - 0.4);
+    const { pos, part } = craftAt(P.c, P.f, 2.4, p, pace, fly.mode === 'route' ? 0 : fly.bank);
+    return { pos, rgb: craftColour(part, p, 0.42) };
+  }
+  // Stars in a dome just beyond the city's reach, so nothing in it stands in front of them.
+  const twinkle = 0.75 + 0.25 * Math.sin(t * 0.9 + p.i * 0.37);
+  const d = fibonacciSphere(p.i % 997, 997);
+  const up = norm([d[0], 0.15 + 0.7 * Math.abs(d[1]), d[2]]);
+  return { pos: add(P.c, up, VIEW + 20), rgb: scale(STAR, 0.45 * twinkle) };
 }
 
 /* ---------- where every grain is ---------- */
@@ -1791,11 +2727,8 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       };
     }
     default: {
-      // Behind your ship and a little above, looking past it the way you fly.
       const { c, f } = flier(t);
-      const eye = add(add(c, f, -10), [0, 1, 0], 3.2);
-      eye[1] = Math.max(GROUND + 1, eye[1]);
-      return { eye, target: add(c, f, 6) };
+      return shipEye(c, f);
     }
   }
 }
@@ -1828,8 +2761,10 @@ export function particleAt(p: Particle, time: number): { pos: Vec3; rgb: RGB } {
  * Each piece on its own, as Ocean's are: it starts at its beginning with no
  * ball of stars, picked by name, and loops, each grain gliding back to where
  * the piece began. The canyon never loops back: the eye flies on, two turns
- * of the street per loop, so the wrap does not show.
+ * of the street per loop, so the wrap does not show. Nor does the ship: it
+ * flies on down the avenue, wherever its loop falls.
  */
+const fliesOn = (k: number) => PHASES[k]?.id === 'canyon' || PHASES[k]?.id === 'ship';
 const isCanyon = (k: number) => PHASES[k]?.id === 'canyon';
 
 /** How long piece k plays on its own before it loops, in seconds. */
@@ -1851,7 +2786,7 @@ export const pieceProgress = (k: number, s: number) => pieceClock(k, s).f;
 export function pieceAt(p: Particle, k: number, s: number): { pos: Vec3; rgb: RGB } {
   const { f, u, t } = pieceClock(k, s);
   const a = formAt(k, p, u, t);
-  if (isCanyon(k)) return a;
+  if (fliesOn(k)) return a;
   const w = smooth((f - 0.8 + 0.12 * p.stagger) / 0.2);
   if (w <= 0) return a;
   const b = formAt(k, p, 0, t);
@@ -1862,7 +2797,7 @@ export function pieceAt(p: Particle, k: number, s: number): { pos: Vec3; rgb: RG
 export function pieceCamera(k: number, s: number): Eye {
   const { f, u, t } = pieceClock(k, s);
   const a = eyeIn(k, u, t);
-  const w = isCanyon(k) ? 0 : smooth((f - 0.75) / 0.25);
+  const w = fliesOn(k) ? 0 : smooth((f - 0.75) / 0.25);
   if (w <= 0) return a;
   const b = eyeIn(k, 0, t);
   return { eye: lerp3(a.eye, b.eye, w), target: lerp3(a.target, b.target, w) };
