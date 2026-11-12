@@ -22,6 +22,7 @@
  * Pure: no three.js, no DOM.
  */
 
+import { ATLANTIS_PHASE, ATLANTIS_VARIANTS, atlantisAt, atlantisEye } from './atlantis';
 import {
   fibonacciSphere,
   flow,
@@ -214,6 +215,7 @@ export const PHASES: CityPhase[] = [
     glow: 1.05,
     size: 0.7,
   },
+  ATLANTIS_PHASE,
   {
     id: 'towers',
     name: 'Towers',
@@ -328,6 +330,7 @@ export const STEP_COLOURS = [
   '#d99a4a',
   '#cfe08a',
   '#f2c25a',
+  '#4fd8d0',
   '#7f9cff',
   '#e8f0ff',
   '#ff5fd2',
@@ -3074,6 +3077,7 @@ const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number
   factories: { names: FACTORIES.names, label: FACTORIES.label, set: (i) => (factoryKind = i) },
   domes: { names: DOMES.names, label: DOMES.label, set: (i) => (domeKind = i) },
   above: { names: CITIES.map((c) => c.name), label: 'City', set: setCityKind },
+  atlantis: ATLANTIS_VARIANTS,
 };
 
 /*
@@ -3133,6 +3137,8 @@ export function formAt(k: number, p: Particle, u: number, t: number): Spot {
       return buildingAt(DOMES, domeKind, p, t);
     case 'above':
       return aboveAt(p, u, t);
+    case 'atlantis':
+      return atlantisAt(p, Math.max(u, 0), t);
     case 'towers':
       return towersAt(p, Math.max(u, 0), t);
     case 'lanes':
@@ -3214,6 +3220,8 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       return buildingEye(t, DOMES.reach[domeKind]);
     case 'above':
       return aboveEye(t);
+    case 'atlantis':
+      return atlantisEye(u, t);
     case 'towers':
       // Slowly round the city, above its roofs, looking at its heart.
       return towersEye(u);

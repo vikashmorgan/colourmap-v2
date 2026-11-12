@@ -115,6 +115,7 @@ describe('the city chapter', () => {
       'factories',
       'domes',
       'above',
+      'atlantis',
       'towers',
       'lanes',
       'neon',
@@ -132,6 +133,7 @@ describe('the city chapter', () => {
       'Factories',
       'Domes',
       'From above',
+      'Atlantis',
       'Towers',
       'Sky lanes',
       'Neon',
@@ -1209,7 +1211,8 @@ describe('From above (moved from Vegetal, 2026-11-12)', () => {
 
   it('comes after the golden city, before the neon towers, with five cities on pills', () => {
     expect(k).toBe(piece('domes') + 1);
-    expect(PHASES[k + 1]?.id).toBe('towers');
+    expect(PHASES[k + 1]?.id).toBe('atlantis');
+    expect(PHASES[k + 2]?.id).toBe('towers');
     expect(CITIES.map((c) => c.name)).toEqual(['Grid', 'Star', 'River', 'Bay', 'Canals']);
     expect(variantNames(k)).toEqual(['Grid', 'Star', 'River', 'Bay', 'Canals']);
     expect(variantLabel(k)).toBe('City');
