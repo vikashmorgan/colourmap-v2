@@ -523,6 +523,25 @@ Frame cost, 9,000 grains (bun, the build machine, offline, the same run): Atlant
 by view (Plan the most), against 3.2 to 5.6 ms for Golden plan, The heart, Domes, From above, Neon
 and Canyon. Each view's meshes are built the first time it is shown (under 70 ms).
 
+**Tuning (2026-11-12).** The user, in the real player: the Plan was too dark and murky, the
+Domes and Coral gardens sparse up close. Now:
+
+- **The Plan reads as a map.** Every building grain is lifted 2.2 times and leaned halfway toward
+  its ring's hue (`ringHue`: the heart warm white, knowledge cyan, making amber, living coral
+  rose, nature sea green, the canals water blue); the reefs and the sand are lifted too. A sixth of
+  the grains is the map itself (`mapSite`): a bright line on every bank and the rim, a slow wave
+  running outward; the twelve tunnels with soft pulses running in toward the heart; every dome and
+  compartment a lit disc in its kind's colour (gardens green, homes warm, knowledge cyan, making
+  amber), its rim brighter; the heart a sunflower of light on the golden angle, breathing on its
+  9 s breath. Less goes to plankton, fish and whales. The Plan's grains are drawn larger (1.9,
+  against 1.4 for Domes and Coral gardens and 1.2 for the heart and the harbour).
+- **Fuller up close.** Domes gives nearly half its grains to the city (was a third), Coral gardens
+  nearly half to the reefs, and each reef sector has a carpet of forty small colonies between the
+  big ones.
+- **Its own water.** The player takes a per-piece background (`pieces.background`, a step's own
+  stops over the chosen one, the Journey keeping the chosen one): Atlantis shows a teal-blue
+  water, teal near the surface deepening to blue-black.
+
 ## Chinatown
 
 > 2026-11-12: "add chinese signs on side of buildings. or japanese. like that

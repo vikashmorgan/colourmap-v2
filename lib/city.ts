@@ -24,7 +24,14 @@
  * Pure: no three.js, no DOM.
  */
 
-import { ATLANTIS_PHASE, ATLANTIS_VARIANTS, atlantisAt, atlantisEye } from './atlantis';
+import {
+  ATLANTIS_PHASE,
+  ATLANTIS_VARIANTS,
+  ATLANTIS_WATER,
+  atlantisAt,
+  atlantisEye,
+  atlantisSize,
+} from './atlantis';
 import {
   fibonacciSphere,
   flow,
@@ -3392,9 +3399,19 @@ export function pieceCamera(k: number, s: number): Eye {
   return { eye: lerp3(a.eye, b.eye, w), target: lerp3(a.target, b.target, w) };
 }
 
+/**
+ * A piece's own background, over the one chosen (the player's per-piece background): Atlantis's
+ * water, teal near the surface deepening to blue-black; null for the chosen one.
+ */
+export function pieceBackground(k: number): string[] | null {
+  return PHASES[k]?.id === 'atlantis' ? ATLANTIS_WATER : null;
+}
+
 /** Glow and size of piece k on its own. */
 export function pieceLook(k: number): { glow: number; size: number } {
   const { id, glow, size } = PHASES[k] as CityPhase;
+  // Atlantis: bold grains on its map, a little fuller up close.
+  if (id === 'atlantis') return { glow, size: atlantisSize() };
   if (id !== 'ship') return { glow, size };
   // The Ship's grains grow as its eye climbs (the latest frame's eye).
   const P = plans.find((q) => q.t === lastBuilt);

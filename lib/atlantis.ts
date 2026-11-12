@@ -691,6 +691,12 @@ function reefMesh(): Mesh {
       const a = a0 + (hash(k * 50 + i, 45) - 0.5) * 0.42;
       colony(polar(r, a, G), 2.2 + 1.8 * hash(i, 46), i % 5 === 4 ? 3 : i % 4);
     }
+    // A carpet of small colonies between the big ones, so the reef reads thick up close.
+    for (let i = 0; i < 40; i++) {
+      const r = lerp(NATURE.r0 + 1.5, RIM - 2, hash(k * 70 + i, 50));
+      const a = a0 + (hash(k * 70 + i, 51) - 0.5) * 0.46;
+      colony(polar(r, a, G), 0.9 + 0.7 * hash(i, 52), (i % 3) + 1);
+    }
   }
   // The other nature sectors: kelp meadows.
   for (let k = 0; k < SECTORS; k++) {
@@ -1287,57 +1293,60 @@ type Role =
   | 'fish'
   | 'jelly'
   | 'manta'
-  | 'whale';
+  | 'whale'
+  | 'map';
 
 /** How each view shares out the grains (each row sums to 1). */
 const SHARES: [Role, number][][] = [
-  // Plan: the map; more on the buildings and the gardens, no shafts.
+  // Plan: the map; more on the buildings and the gardens, no shafts; a share drawn as the map
+  // itself (2026-11-12, the user: the Plan "too dark/murky"): bright banks, tunnels, domes, heart.
   [
-    ['plankton', 0.03],
-    ['floor', 0.1],
-    ['city', 0.36],
+    ['plankton', 0.015],
+    ['floor', 0.06],
+    ['city', 0.34],
     ['temple', 0.05],
     ['harbour', 0.04],
-    ['reef', 0.16],
-    ['sub', 0.08],
-    ['bubble', 0.06],
+    ['reef', 0.15],
+    ['sub', 0.07],
+    ['bubble', 0.04],
     ['dock', 0.02],
-    ['fish', 0.05],
+    ['fish', 0.03],
+    ['jelly', 0.01],
+    ['manta', 0.01],
+    ['whale', 0.005],
+    ['map', 0.16],
+  ],
+  // Domes: flying between the compartments; most grains on the domes, little on the open water.
+  [
+    ['plankton', 0.02],
+    ['shaft', 0.03],
+    ['floor', 0.06],
+    ['city', 0.47],
+    ['temple', 0.04],
+    ['harbour', 0.02],
+    ['reef', 0.12],
+    ['sub', 0.07],
+    ['bubble', 0.05],
+    ['dock', 0.01],
+    ['fish', 0.06],
     ['jelly', 0.02],
     ['manta', 0.02],
     ['whale', 0.01],
   ],
-  // Domes: flying between the compartments.
-  [
-    ['plankton', 0.05],
-    ['shaft', 0.04],
-    ['floor', 0.08],
-    ['city', 0.36],
-    ['temple', 0.04],
-    ['harbour', 0.02],
-    ['reef', 0.12],
-    ['sub', 0.08],
-    ['bubble', 0.06],
-    ['dock', 0.01],
-    ['fish', 0.07],
-    ['jelly', 0.03],
-    ['manta', 0.02],
-    ['whale', 0.02],
-  ],
   // Coral gardens: the reefs carry most of the grains, fish thick about them.
   [
-    ['plankton', 0.05],
-    ['shaft', 0.04],
-    ['floor', 0.07],
-    ['city', 0.16],
+    ['plankton', 0.02],
+    ['shaft', 0.03],
+    ['floor', 0.05],
+    ['city', 0.13],
     ['temple', 0.02],
     ['harbour', 0.01],
-    ['reef', 0.36],
-    ['sub', 0.05],
-    ['bubble', 0.04],
+    ['reef', 0.48],
+    ['sub', 0.04],
+    ['bubble', 0.03],
     ['fish', 0.12],
     ['jelly', 0.03],
-    ['manta', 0.03],
+    ['manta', 0.02],
     ['whale', 0.02],
   ],
   // The heart: a third of the grains on the temple.
@@ -1453,6 +1462,123 @@ const near = (x: number, c: number, R: number) => c + wrap(x - c + R, 2 * R) - R
 const edgeFade = (dx: number, dz: number, R: number) =>
   smooth((R - Math.abs(dx)) / 5) * smooth((R - Math.abs(dz)) / 5);
 
+/* ---------- the Plan, read as a map ---------- */
+
+/*
+ * 2026-11-12, the user on the Plan in the real player: too dark and murky. From above the city now
+ * reads as a map: each ring in its own hue (knowledge cyan, making amber, living coral rose,
+ * nature sea green, the heart warm white), everything lifted brighter, and a share of the grains
+ * drawn as the map itself: bright banks, the twelve tunnels with slow pulses running in to the
+ * heart, every dome a lit disc, the heart a sunflower of light breathing on its 9 s breath.
+ */
+const PLAN_LIFT = 2.2;
+const WATER_HUE: RGB = [0.3, 0.85, 1];
+/** Each ring's hue on the map, by distance from the heart. */
+export function ringHue(r: number): RGB {
+  if (r < HEART.r1) return [1, 0.84, 0.55];
+  if (r < INNER.r1) return WATER_HUE;
+  if (r < KNOW.r1) return [0.42, 0.92, 1];
+  if (r < MAKE.r1) return [1, 0.62, 0.2];
+  if (r < MIDDLE.r1) return WATER_HUE;
+  if (r < LIVE.r1) return [1, 0.48, 0.52];
+  if (r < OUTER.r1) return WATER_HUE;
+  return [0.42, 1, 0.6];
+}
+/** A grain of the Plan, lifted brighter and (for the buildings) leaned toward its ring's hue. */
+function planLift(rgb: RGB, pos: Vec3, hued: boolean): RGB {
+  let c = rgb;
+  if (hued) {
+    const hue = ringHue(Math.hypot(pos[0], pos[2]));
+    const lum = Math.max(rgb[0], rgb[1], rgb[2]);
+    c = mix(rgb, scale(hue, lum), 0.5);
+  }
+  return [
+    Math.min(1, c[0] * PLAN_LIFT),
+    Math.min(1, c[1] * PLAN_LIFT),
+    Math.min(1, c[2] * PLAN_LIFT),
+  ];
+}
+const MAP_RGB: number[] = [0, 0, 0];
+const MAP_KIND: Record<string, RGB> = {
+  garden: [0.45, 1, 0.5],
+  homes: [1, 0.66, 0.38],
+  knowledge: [0.42, 0.92, 1],
+  making: [1, 0.62, 0.2],
+  dome: [0.4, 0.95, 0.9],
+  tower: [1, 0.8, 0.45],
+  airlock: [1, 0.8, 0.45],
+};
+/** The heart's 9 s breath, 0..1, eased: never a flash. */
+const breath = (t: number) => 0.5 - 0.5 * Math.cos((t / 9) * TAU);
+
+/**
+ * A grain of the map share (the Plan only): its place, and its colour into `out`. A third on the
+ * banks of every ring, a quarter on the twelve tunnels, a quarter on the domes, the rest the heart.
+ */
+export function mapSite(p: Particle, q: number, t: number, out: number[]): Vec3 {
+  const a = p.d * TAU;
+  let pos: Vec3;
+  let c: RGB;
+  let k: number;
+  if (q < 0.34) {
+    // The banks: a circle at every band's inner edge, and the rim; a slow wave running outward.
+    const rings = GOLDEN.bands.slice(1);
+    const n = Math.min(rings.length, Math.floor((q / 0.34) * (rings.length + 1)));
+    const b = rings[n];
+    const r = b ? b.r0 : RIM;
+    const water = b?.kind === 'water';
+    pos = polar(r, a, (water ? G + WALL_TOP : G) + 0.05);
+    c = ringHue(r + (water ? -0.5 : 0.5));
+    k = 0.42 * (0.75 + 0.25 * Math.sin(t * 0.5 - r * 0.12));
+  } else if (q < 0.6) {
+    // The tunnels: twelve spokes, pulses running in toward the heart, slow and soft.
+    const s = (q - 0.34) / 0.26;
+    const spoke = Math.floor(s * SECTORS);
+    const along = hash(p.i, 211);
+    const r1 = spoke === 0 ? HARBOUR.x1 : OUTER.r1 + 0.4;
+    const r = lerp(HEART.r1, r1, along);
+    pos = polar(r, spokeAngle(spoke), TUBE_Y + 0.4);
+    const x = frac(r / 9 + t * 0.1);
+    const pulse = Math.exp(-((x - 0.5) ** 2) / 0.012);
+    c = mix([1, 0.62, 0.22], [1, 0.9, 0.7], pulse);
+    k = 0.3 + 0.4 * pulse;
+  } else if (q < 0.86) {
+    // The domes: every compartment a disc, its rim brighter, breathing on its own beat.
+    const list = COMPARTMENTS.length
+      ? COMPARTMENTS
+      : [{ c: [0, G, 0] as Vec3, r: 1, kind: 'dome' }];
+    const j = Math.floor(((q - 0.6) / 0.26) * list.length) % list.length;
+    const C0 = list[j] as Compartment;
+    const rim = hash(p.i, 212) < 0.55;
+    const rr = C0.r * (rim ? 1 : Math.sqrt(hash(p.i, 213)) * 0.92);
+    pos = [C0.c[0] + Math.cos(a) * rr, G + 0.1, C0.c[2] + Math.sin(a) * rr];
+    c = MAP_KIND[C0.kind] ?? (MAP_KIND.dome as RGB);
+    k = (rim ? 0.4 : 0.16) * (0.8 + 0.2 * Math.sin(t * 0.6 + j * 1.7));
+  } else {
+    // The heart: a sunflower of light on the golden angle, brightest in the middle, breathing.
+    const n = Math.floor(((q - 0.86) / 0.14) * 377);
+    const r = HEART.r1 * 0.95 * Math.sqrt((n + 0.5) / 377);
+    const ga = n * 2.399963 + t * 0.02;
+    pos = polar(r, ga, G + 0.15);
+    c = mix([1, 0.92, 0.75], [1, 0.62, 0.2], r / HEART.r1);
+    k = (0.35 + 0.35 * (1 - r / HEART.r1)) * (0.8 + 0.2 * breath(t));
+  }
+  out[0] = Math.min(1, c[0] * k);
+  out[1] = Math.min(1, c[1] * k);
+  out[2] = Math.min(1, c[2] * k);
+  return pos;
+}
+
+/** How large the grains are drawn in each view: bold on the map, a little fuller up close. */
+const VIEW_SIZE = [1.9, 1.4, 1.4, 1.2, 1.2];
+export const atlantisSize = (v = view) => VIEW_SIZE[v] ?? 1.2;
+
+/**
+ * The water's own background for the piece (the player's per-piece background): teal near the
+ * surface, deepening to blue-black below.
+ */
+export const ATLANTIS_WATER = ['#0b3f52', '#072c40', '#041a2e', '#020a16'];
+
 /** Grain p in Atlantis, `u` through the piece, at time t, in the view on the pills (or v). */
 export function atlantisAt(p: Particle, u: number, t: number, v = view): Spot {
   const M = meshes(v);
@@ -1533,7 +1659,12 @@ export function atlantisAt(p: Particle, u: number, t: number, v = view): Spot {
       const pos: Vec3 = [x, floorAt(x, z) + 0.04 * Math.sin(x * 1.3 + z * 0.7), z];
       const wet = pos[1] < G - 0.5;
       const base = wet ? TRENCH_SAND : r > RIM ? mix(SAND, [0.4, 0.42, 0.5], 0.6) : SAND;
-      const k = (wet ? 0.12 : 0.1) * fade * caustic(x, z, t) * (0.7 + 0.3 * hash(p.i, 94));
+      const k =
+        (wet ? 0.12 : 0.1) *
+        (v === 0 ? 1.7 : 1) *
+        fade *
+        caustic(x, z, t) *
+        (0.7 + 0.3 * hash(p.i, 94));
       return { pos, rgb: underwater(scale(base, k), pos, E) };
     }
     case 'city':
@@ -1544,13 +1675,19 @@ export function atlantisAt(p: Particle, u: number, t: number, v = view): Spot {
       const h = onMesh(B, p, q, t, E.eye, sh);
       // The heart's gold glows warmer toward its core.
       const warm = role === 'temple' ? 0.35 * Math.exp(-dist(h.pos, TEMPLE_SPHERE.c) / 1.5) : 0;
-      const rgb = mix(meshColour(h, p, t, false), scale(WARM_WHITE, 0.6 * h.lit), warm);
+      let rgb = mix(meshColour(h, p, t, false), scale(WARM_WHITE, 0.6 * h.lit), warm);
+      if (v === 0) rgb = planLift(rgb, h.pos, true);
       return { pos: h.pos, rgb: underwater(rgb, h.pos, E, h.tone === Tone.light) };
     }
     case 'reef': {
       const h = onMesh(M.reef, p, q, t, E.eye, REEF_SHARES);
       const pos = swayed(h.pos, h.key === KELP, t);
-      return { pos, rgb: underwater(meshColour(h, p, t, true), pos, E) };
+      const rgb = meshColour(h, p, t, true);
+      return { pos, rgb: underwater(v === 0 ? planLift(rgb, pos, false) : rgb, pos, E) };
+    }
+    case 'map': {
+      const pos = mapSite(p, q, t, MAP_RGB);
+      return { pos, rgb: underwater([MAP_RGB[0], MAP_RGB[1], MAP_RGB[2]] as RGB, pos, E, true) };
     }
     case 'sub': {
       const g = Math.floor(q * SUB_COUNT);

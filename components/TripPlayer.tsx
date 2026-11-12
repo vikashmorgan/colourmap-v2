@@ -60,6 +60,11 @@ export type Trip = {
     particleAt: (p: Particle, k: number, s: number) => { pos: Vec3; rgb: RGB };
     camera: (k: number, s: number) => { eye: Vec3; target: Vec3 };
     look: (k: number) => { glow: number; size: number };
+    /**
+     * A step's own background, top to bottom, over the chosen one (Atlantis's water); null keeps
+     * the chosen one. Read every frame, so it must be cheap and return the same array each time.
+     */
+    background?: (k: number) => string[] | null;
     /** Which way the moving dots run, for the steps that have them: all up or all down; null in the Journey. */
     flow?: { has: (k: number) => boolean; set: (up: boolean | null) => void };
     /**
@@ -159,6 +164,15 @@ export type Cycle = {
   label: string;
   set: (i: number) => void;
 };
+
+/**
+ * The background stops to show: a step's own (on a step alone, if it has one), else the chosen
+ * background, else black.
+ */
+export function backgroundStops(trip: Trip, chosen: number, k: number | null): string[] {
+  const own = k === null ? null : (trip.pieces?.background?.(k) ?? null);
+  return own ?? trip.backgrounds?.[chosen]?.stops ?? ['#040207'];
+}
 
 /** A dial of a game's cockpit. */
 export type Gauge = { label: string; value: number; min?: number; max: number; unit?: string };
@@ -768,12 +782,21 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#040207');
     let bgTex: THREE.Texture | null = null;
-    bgRef.current = (i: number) => {
-      const stops = T.backgrounds?.[i]?.stops ?? ['#040207'];
+    // The chosen background, and the stops shown now (a step's own may stand over it).
+    let chosenBg = 0;
+    let shownBg = '';
+    const showBg = (stops: string[]) => {
+      const key = stops.join();
+      if (key === shownBg) return;
+      shownBg = key;
       bgTex?.dispose();
       const b = backgroundTexture(stops);
       bgTex = b instanceof THREE.Texture ? b : null;
       scene.background = b;
+    };
+    bgRef.current = (i: number) => {
+      chosenBg = i;
+      showBg(backgroundStops(T, i, journeyRef.current ? null : pieceRef.current));
     };
     // Far enough for the City's Ship in the stratosphere, its whole plan some 700 to 1300 below.
     const camera = new THREE.PerspectiveCamera(55, 1, 0.3, 1600);
@@ -865,6 +888,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         timeRef.current = P ? next : next % T.total;
       }
       const t = timeRef.current;
+      if (T.pieces?.background) showBg(backgroundStops(T, chosenBg, P ? k : null));
       const c = P ? P.camera(k, t) : T.camera?.(t);
       const game = T.pieces?.game;
       if (game) {

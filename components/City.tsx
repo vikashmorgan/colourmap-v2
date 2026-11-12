@@ -29,6 +29,7 @@ import {
   particleAt,
   phaseAt,
   pieceAt,
+  pieceBackground,
   pieceCamera,
   pieceLength,
   pieceLook,
@@ -73,6 +74,8 @@ const TRIP: Trip = {
     particleAt: pieceAt,
     camera: pieceCamera,
     look: pieceLook,
+    // Atlantis's own water behind it.
+    background: pieceBackground,
     // Pills under a piece: eleven plans, eight Nova Cores, temples, factories and domes from the
     // single building to the quarter, five cities from above.
     variants: { has: hasVariants, names: variantNames, set: setVariant, label: variantLabel },
