@@ -25,6 +25,7 @@ import {
   dockShip,
   EYE_Y,
   FLY_SPEED,
+  facingFace,
   flier,
   floorAt,
   GATE_SIGN,
@@ -32,6 +33,7 @@ import {
   GROUND,
   gauges,
   glyph,
+  hasPalettes,
   hasVariants,
   LANES,
   LANTERNS,
@@ -42,6 +44,7 @@ import {
   PADS,
   PHASE_START,
   PHASES,
+  paletteNames,
   particleAt,
   phaseAt,
   pieceAt,
@@ -55,6 +58,7 @@ import {
   STEP_COLOURS,
   STREET,
   setFly,
+  setPalette,
   setVariant,
   signFlicker,
   signPoint,
@@ -80,7 +84,10 @@ import {
   SPHERE_C,
   SPHERE_R,
 } from './golden-city';
+import { PLAN_NAMES, PLAN_RULES } from './golden-plans';
+import { DOMES, FACTORIES, TEMPLES } from './golden-quarters';
 import { GROUND_Y, PHI } from './grain-mesh';
+import { NOVA_CENTRE, NOVA_CORES, NOVA_R, NOVA_RULES, novaCore } from './nova-cores';
 
 const particles = makeParticles(1500);
 const dist = (a: number[], b: number[]) =>
@@ -98,11 +105,12 @@ const inside = (q: number[], tw: (typeof CITY)[number]) =>
   Math.abs((q[2] as number) - tw.z) < tw.hz;
 
 describe('the city chapter', () => {
-  it('has fourteen pieces, from the golden plan to the ship, each with words', () => {
+  it('has fifteen pieces, from the golden plan to the ship, each with words', () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       'golden-plan',
       'rising',
       'heart',
+      'nova',
       'temples',
       'factories',
       'domes',
@@ -119,6 +127,7 @@ describe('the city chapter', () => {
       'Golden plan',
       'Rising',
       'The heart',
+      'Nova Cores',
       'Temples',
       'Factories',
       'Domes',
@@ -151,20 +160,29 @@ describe('the city chapter', () => {
   });
 
   it('keeps every grain somewhere real and in view, in every piece and between them', () => {
+    // Collected per grain and asserted once, so the test stays fast under the full suite.
+    let finite = true;
+    let far = 0;
+    let hi = 0;
+    let lo = 1;
     for (let k = 0; k < PHASES.length; k++) {
       for (const u of [0, 0.3, 0.6, 0.85, 0.99]) {
         const t = at(k, u);
         const { eye } = camera(t);
         for (const p of particles.slice(0, 300)) {
           const { pos, rgb } = particleAt(p, t);
-          for (const v of [...pos, ...rgb]) expect(Number.isFinite(v)).toBe(true);
-          // Within the trip player's far plane, and never brighter than a grain should be.
-          expect(dist(pos, eye)).toBeLessThan(900);
-          expect(Math.max(...rgb)).toBeLessThanOrEqual(1);
-          expect(Math.min(...rgb)).toBeGreaterThanOrEqual(0);
+          for (const v of [...pos, ...rgb]) finite &&= Number.isFinite(v);
+          far = Math.max(far, dist(pos, eye));
+          hi = Math.max(hi, ...rgb);
+          lo = Math.min(lo, ...rgb);
         }
       }
     }
+    expect(finite).toBe(true);
+    // Within the trip player's far plane, and never brighter than a grain should be.
+    expect(far).toBeLessThan(900);
+    expect(hi).toBeLessThanOrEqual(1);
+    expect(lo).toBeGreaterThanOrEqual(0);
   });
 
   it('pours each grain into the next piece with no cut', () => {
@@ -204,16 +222,67 @@ describe('the city chapter', () => {
         GROUND - 1e-6,
       );
     }
-    // Taller by the middle of the piece than at its start (the sky's stars apart).
+    // Flat at the very start, rising from the first moments (2026-11-12: "make them start moving
+    // faster"), all up by about a third of the way in (the sky's stars apart).
     const roofs = (u: number) =>
       Math.max(
         ...particles
           .filter((p) => p.c >= 0.12)
           .map((p) => pieceAt(p, k, u * (PHASES[k]?.duration as number)).pos[1]),
       );
-    expect(roofs(0.02)).toBeLessThan(GROUND + 1);
+    expect(roofs(0)).toBeLessThan(GROUND + 1);
+    expect(roofs(0.05)).toBeGreaterThan(GROUND + 10);
+    for (let j = 0; j < CITY.length; j++)
+      expect(builtTop(j, 0.36)).toBeCloseTo(CITY[j]?.h as number, 6);
     expect(roofs(0.7)).toBeGreaterThan(GROUND + 30);
     expect(height(0.7)).toBeGreaterThan(roofs(0.7));
+  });
+
+  it('spends the tower grains on the faces toward the eye, fading those that change face', () => {
+    // 2026-11-12: "towers and sky lanes more defined, more dots."
+    const tw = CITY[12] as (typeof CITY)[number];
+    const eye: [number, number, number] = [tw.x + 50, GROUND + 30, tw.z + 10];
+    const count = [0, 0, 0, 0];
+    let faded = 0;
+    for (let i = 0; i < 4000; i++) {
+      const { face, fade } = facingFace(tw, eye, (i + 0.5) / 4000);
+      count[face] = (count[face] as number) + 1;
+      if (fade < 1) faded++;
+    }
+    // +x faces the eye squarely, +z a little; -x and -z, turned away, almost nothing.
+    expect(count[1]).toBeGreaterThan(2500);
+    expect(count[2]).toBeGreaterThan(count[0] as number);
+    expect((count[0] as number) + (count[3] as number)).toBeLessThan(400);
+    expect(faded / 4000).toBeLessThan(0.15);
+    // Each tower is drawn by more grains on the faces seen than on those turned away.
+    const k = piece('towers');
+    const { eye: e } = pieceCamera(k, 0.6 * (PHASES[k]?.duration as number));
+    let near = 0;
+    let far = 0;
+    for (const p of makeParticles(9000)) {
+      if (p.c < 0.08) continue;
+      const s = pieceAt(p, k, 0.6 * (PHASES[k]?.duration as number));
+      if (Math.max(...s.rgb) < 0.01) continue;
+      for (const t of CITY) {
+        if (
+          !inside([s.pos[0], s.pos[1] - 0.05, s.pos[2]], { ...t, hx: t.hx + 0.1, hz: t.hz + 0.1 })
+        )
+          continue;
+        const toEye = (e[0] - t.x) * (s.pos[0] - t.x) + (e[2] - t.z) * (s.pos[2] - t.z);
+        if (toEye > 0) near++;
+        else far++;
+        break;
+      }
+    }
+    expect(near).toBeGreaterThan(far * 4);
+  });
+
+  it('has the sky lanes streaming from the first moment', () => {
+    const k = piece('lanes');
+    const ships = makeParticles(9000).filter((p) => p.c >= 0.5);
+    const lit = ships.filter((p) => Math.max(...pieceAt(p, k, 0.2).rgb) > 0.02).length;
+    expect(lit / ships.length).toBeGreaterThan(0.2);
+    expect(Math.min(...LANES.map((l) => l.speed))).toBeGreaterThanOrEqual(6.5);
   });
 
   it('sends ships along the lanes between the towers, both ways, at four heights', () => {
@@ -857,18 +926,66 @@ describe('The golden city (2026-11-12: "build the city")', () => {
     expect(SPHERE_C[1] - SPHERE_R).toBeGreaterThan(GROUND + 2.4);
   });
 
-  for (const [id, label, names] of [
-    ['temples', 'Temple', ['Rotunda', 'Ziggurat', 'Ring', 'Pyramid', 'Lotus']],
-    ['factories', 'Factory', ['Sawtooth', 'Foundry', 'Assembly', 'Workshops', 'Solar']],
-    ['domes', 'Dome', ['Geodesic', 'Bubbles', 'Palm house', 'Lattice', 'Garden']],
+  // 2026-11-12: "do different versions of each or evolutions (1 dome, one group of domes, one dome
+  // complex etc... so u see from the element to the whole quartier factory etc..)".
+  for (const [id, label, set, names] of [
+    [
+      'temples',
+      'Temple',
+      TEMPLES,
+      [
+        'Rotunda',
+        'Ziggurat',
+        'Ring',
+        'Pyramid',
+        'Lotus',
+        'Temple court',
+        'Sacred complex',
+        'Temple quarter',
+      ],
+    ],
+    [
+      'factories',
+      'Factory',
+      FACTORIES,
+      [
+        'Sawtooth',
+        'Foundry',
+        'Assembly',
+        'Workshops',
+        'Solar',
+        'Cement works',
+        'Kilns',
+        'Factory group',
+        'Industrial complex',
+        'Industrial quarter',
+      ],
+    ],
+    [
+      'domes',
+      'Dome',
+      DOMES,
+      [
+        'Geodesic',
+        'Bubbles',
+        'Palm house',
+        'Lattice',
+        'Group of domes',
+        'Dome complex',
+        'Dome quarter',
+      ],
+    ],
   ] as const) {
-    it(`builds five ${id}, each solid, on the ground and its own`, () => {
+    it(`builds the ${id} from the single building to the quarter, each solid, on the ground and its own`, () => {
       const k = piece(id);
       expect(hasVariants(k)).toBe(true);
       expect(variantNames(k)).toEqual(names);
       expect(variantLabel(k)).toBe(label);
+      // The ladder's last three rungs: group, complex, quarter, each seen from further back.
+      expect(set.rung.slice(-3)).toEqual([1, 2, 3]);
       const maps: Set<string>[] = [];
-      for (let i = 0; i < 5; i++) {
+      const reach: number[] = [];
+      for (let i = 0; i < names.length; i++) {
         setVariant(i, k);
         let ok = true;
         let below = 0;
@@ -885,20 +1002,190 @@ describe('The golden city (2026-11-12: "build the city")', () => {
         }
         expect(ok).toBe(true);
         expect(below).toBeGreaterThan(-0.01);
-        expect(wide).toBeLessThan(40);
+        // A building within 40 of its centre; the bigger rungs within as much again as the eye stands back.
+        expect(wide).toBeLessThan(40 * (set.reach[i] as number));
         expect(lit).toBeGreaterThan(city.length * 0.8);
         maps.push(cells);
+        const { eye, target } = pieceCamera(k, 7.5);
+        reach.push(dist(eye, target));
       }
-      for (let i = 0; i < 5; i++)
-        for (let j = i + 1; j < 5; j++) {
+      for (let i = 0; i < names.length; i++)
+        for (let j = i + 1; j < names.length; j++) {
           const a = maps[i] as Set<string>;
           const b = maps[j] as Set<string>;
           const both = [...a].filter((c) => b.has(c)).length;
           expect(both / (a.size + b.size - both)).toBeLessThan(0.6);
         }
+      // The quarter is seen from further back than the complex, and that than the single building.
+      const n = names.length;
+      expect(reach[n - 1]).toBeGreaterThan(reach[n - 2] as number);
+      expect(reach[n - 2]).toBeGreaterThan(reach[0] as number);
       setVariant(0);
     });
   }
+
+  it('offers colour presets on the golden pieces and the factories, and applies them', () => {
+    expect(paletteNames(piece('temples'))).toEqual([
+      'Gold',
+      'Rose gold',
+      'White marble & gold',
+      'Night neon gold',
+    ]);
+    expect(paletteNames(piece('factories'))).toEqual([
+      'Gold',
+      'Rust',
+      'Steel blue-grey',
+      'Night neon gold',
+    ]);
+    expect(hasPalettes(piece('heart'))).toBe(true);
+    expect(hasPalettes(piece('towers'))).toBe(false);
+    expect(paletteNames(piece('towers'))).toEqual([]);
+    const k = piece('factories');
+    setVariant(5, k);
+    const sample = city.slice(0, 400);
+    const look = () => sample.map((p) => pieceAt(p, k, 7.5).rgb);
+    setPalette(0, k);
+    const gold = look();
+    setPalette(1, k);
+    const rust = look();
+    let changed = 0;
+    let ok = true;
+    for (let i = 0; i < sample.length; i++) {
+      if (dist(gold[i] as number[], rust[i] as number[]) > 0.01) changed++;
+      ok &&= finiteSpot({ pos: [0, 0, 0], rgb: rust[i] as number[] });
+    }
+    expect(ok).toBe(true);
+    expect(changed).toBeGreaterThan(sample.length * 0.5);
+    // Rust leans red: less green than gold over the same grains.
+    const green = (c: number[][]) =>
+      c.reduce((s, x) => s + (x[1] as number) / ((x[0] as number) + 1e-6), 0);
+    expect(green(rust)).toBeLessThan(green(gold));
+    // The Journey (no piece) and an unknown preset fall back to gold.
+    setPalette(9, k);
+    expect(look()).toEqual(gold);
+    setPalette(1, k);
+    setPalette(0);
+    expect(look()).toEqual(gold);
+    setVariant(0);
+  });
+
+  it('lays out eleven plans from above, each its own, flat, finite and the same every time', () => {
+    // 2026-11-12: "the golden plan design is amazing, do 10 like this".
+    const k = piece('golden-plan');
+    expect(variantNames(k)).toEqual(['Golden', ...PLAN_NAMES]);
+    expect(PLAN_NAMES).toHaveLength(10);
+    expect(PLAN_RULES).toHaveLength(10);
+    const L = pieceLength(k);
+    const maps: Set<string>[] = [];
+    for (let i = 0; i < 11; i++) {
+      setVariant(i, k);
+      let ok = true;
+      let flat = 0;
+      let far = 0;
+      let same = true;
+      const cells = new Set<string>();
+      for (const p of city) {
+        const s = pieceAt(p, k, 0.7 * L);
+        ok &&= finiteSpot(s);
+        flat = Math.max(flat, Math.abs(s.pos[1] - GROUND));
+        far = Math.max(far, Math.hypot(s.pos[0], s.pos[2]));
+        cells.add(`${Math.floor(s.pos[0] / 2)},${Math.floor(s.pos[2] / 2)}`);
+      }
+      for (const p of city.slice(0, 200))
+        same &&= dist(pieceAt(p, k, 9).pos, pieceAt(p, k, 9).pos) === 0;
+      expect(ok).toBe(true);
+      expect(same).toBe(true);
+      expect(flat).toBeLessThan(3.5);
+      expect(far).toBeLessThan(65);
+      expect(far).toBeGreaterThan(40);
+      maps.push(cells);
+    }
+    for (let i = 0; i < maps.length; i++)
+      for (let j = i + 1; j < maps.length; j++) {
+        const a = maps[i] as Set<string>;
+        const b = maps[j] as Set<string>;
+        const both = [...a].filter((c) => b.has(c)).length;
+        expect(both / (a.size + b.size - both)).toBeLessThan(0.7);
+      }
+    setVariant(0);
+  });
+
+  it('lights eight Nova Cores over their plazas, each its own, breathing, its energy running out', () => {
+    // 2026-11-12: "would love to have more novas like this around the city ... call them the Nova Core."
+    const k = piece('nova');
+    expect(k).toBe(piece('heart') + 1);
+    expect(variantNames(k)).toEqual(NOVA_CORES);
+    expect(NOVA_CORES).toHaveLength(8);
+    expect(NOVA_RULES).toHaveLength(8);
+    const maps: Set<string>[] = [];
+    for (let i = 0; i < 8; i++) {
+      setVariant(i, k);
+      let ok = true;
+      let near = 0;
+      let below = 0;
+      let jump = 0;
+      let out = 0;
+      const cells = new Set<string>();
+      for (const p of city) {
+        const a = pieceAt(p, k, 11);
+        ok &&= finiteSpot(a);
+        below = Math.min(below, a.pos[1] - GROUND);
+        if (dist(a.pos, NOVA_CENTRE) < NOVA_R * 1.4) {
+          near++;
+          cells.add(a.pos.map((v) => Math.floor(v / 0.8)).join());
+        }
+        // Energy out along the conduits: lit grains on the ground far from the core.
+        if (
+          Math.hypot(a.pos[0], a.pos[2]) > 15 &&
+          a.pos[1] - GROUND < 0.3 &&
+          brightness(a.rgb) > 0.05
+        )
+          out++;
+        jump = Math.max(jump, dist(a.rgb, pieceAt(p, k, 11 + 1 / 60).rgb));
+      }
+      expect(ok).toBe(true);
+      expect(below).toBeGreaterThan(-0.01);
+      expect(near).toBeGreaterThan(city.length * 0.15);
+      expect(out).toBeGreaterThan(100);
+      expect(jump).toBeLessThan(0.05);
+      maps.push(cells);
+      // The same picture for the same moment.
+      for (const p of city.slice(0, 100)) expect(pieceAt(p, k, 4)).toEqual(pieceAt(p, k, 4));
+    }
+    for (let i = 0; i < 8; i++)
+      for (let j = i + 1; j < 8; j++) {
+        const a = maps[i] as Set<string>;
+        const b = maps[j] as Set<string>;
+        const both = [...a].filter((c) => b.has(c)).length;
+        expect(both / (a.size + b.size - both)).toBeLessThan(0.6);
+      }
+    setVariant(0);
+  });
+
+  it('builds a Nova Core anywhere for the game, still and scaled', () => {
+    const home = novaCore(3).build();
+    expect(home.pivot).toEqual(NOVA_CENTRE);
+    const placed = novaCore(3, undefined, [100, GROUND, -40], 0.5).build();
+    expect(placed.lines.length).toBe(home.lines.length);
+    let ok = true;
+    let lo = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < placed.lines.length; i += 3) {
+      const x = placed.lines[i] as number;
+      const y = placed.lines[i + 1] as number;
+      const z = placed.lines[i + 2] as number;
+      ok &&= Number.isFinite(x + y + z) && Math.hypot(x - 100, z + 40) <= 46 * 0.5 + 0.01;
+      lo = Math.min(lo, y);
+    }
+    expect(ok).toBe(true);
+    expect(lo).toBeGreaterThanOrEqual(GROUND - 1e-6);
+    // Placed elsewhere nothing turns (a mesh turns round one pivot only).
+    for (let i = 1; i < placed.lineMeta.length; i += 4) {
+      expect(placed.lineMeta[i]).not.toBe(3);
+      expect(placed.lineMeta[i]).not.toBe(5);
+    }
+    // Any kind number lands on one of the eight.
+    expect(novaCore(11).build().lines.length).toBe(novaCore(3).build().lines.length);
+  });
 
   it('builds its temples, factories and domes from powers of φ', () => {
     const { half, height } = RATIOS.pyramid;

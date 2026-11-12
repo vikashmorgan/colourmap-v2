@@ -74,6 +74,16 @@ export type Trip = {
       label?: string | ((k: number) => string);
     };
     /**
+     * Colour presets for a step (the golden city's Gold, Rose gold, …), opened from a Palette pill
+     * in the Design menu; the pill shows only on the steps that have them. The first in the
+     * Journey and on each step as it opens; `set` is told the step, none in the Journey.
+     */
+    palettes?: {
+      has: (k: number) => boolean;
+      names: string[] | ((k: number) => string[]);
+      set: (i: number, k?: number) => void;
+    };
+    /**
      * The cursor as a guide on the steps that have one: told each frame where it points on the
      * plane through what the eye looks at, or null when it is away, switched off by a click, or in
      * the Journey; `dt` is how far the step's time moved.
@@ -199,6 +209,25 @@ export function swipeStep(dx: number, dy: number, ms: number): -1 | 0 | 1 {
   if (ms > 400 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return 0;
   return dx < 0 ? 1 : -1;
 }
+
+/**
+ * The same for an upright flick, in the Studio: up goes to the piece's next variant (1), down to
+ * the one before (-1), as ↓ and ↑ do (2026-11-12: "click up down for variants, left right for
+ * other category").
+ */
+export function swipeVariant(dx: number, dy: number, ms: number): -1 | 0 | 1 {
+  if (ms > 400 || Math.abs(dy) < 60 || Math.abs(dy) < Math.abs(dx) * 1.5) return 0;
+  return dy < 0 ? 1 : -1;
+}
+
+/** The names of a step's variants, or none. */
+export function variantsAt(v: NonNullable<Trip['pieces']>['variants'], k: number): string[] {
+  if (!v?.has(k)) return [];
+  return typeof v.names === 'function' ? v.names(k) : v.names;
+}
+
+/** The key that remembers a world's navigation hint was shown. */
+export const HINT_KEY = 'colourmap:trip-hint';
 
 /**
  * The viewer's own turn on a piece's camera, on top of its path (2026-11-12: pinch to zoom, drag
@@ -413,6 +442,23 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     if (journey) v?.set(0);
     else v?.set(variant, hud.index);
   }, [journey, variant, hud.index]);
+  /** The current piece's next (1) or previous (-1) variant, round and round; none in the Journey. */
+  const stepVariant = useCallback((d: 1 | -1) => {
+    if (journeyRef.current) return;
+    const n = variantsAt(tripRef.current.pieces?.variants, pieceRef.current).length;
+    if (n < 2) return;
+    setVariant((v) => (((v + d) % n) + n) % n);
+  }, []);
+  // Colour presets: a Palette pill opens them; each piece opens on its first.
+  const [palette, setPalette] = useState(0);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useEffect(() => {
+    const c = tripRef.current.pieces?.palettes;
+    if (journey) c?.set(0);
+    else c?.set(palette, hud.index);
+  }, [journey, palette, hud.index]);
+  // The navigation hint, once per world on the device, fading after a few seconds.
+  const [hint, setHint] = useState<'on' | 'out' | null>(null);
   // Where the cursor is on screen, -1 to 1 each way, and whether a click has it guiding.
   const cursorRef = useRef<{ x: number; y: number } | null>(null);
   const keysRef = useRef(new Set<string>());
@@ -618,6 +664,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         // Each step opens on its first look.
         setVariant(0);
         setScene(0);
+        setPalette(0);
         stopGame(false);
       }
     },
@@ -661,6 +708,26 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       // The first piece.
     }
   }, []);
+  // The hint, once per world: "↑↓ variants · ←→ pieces", gone after a few seconds.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once, as the page opens
+  useEffect(() => {
+    if (journeyRef.current) return;
+    try {
+      if (window.localStorage.getItem(`${HINT_KEY}:${page}`)) return;
+      window.localStorage.setItem(`${HINT_KEY}:${page}`, '1');
+    } catch {
+      // Shown, though not remembered.
+    }
+    setHint('on');
+  }, []);
+  useEffect(() => {
+    if (!hint) return;
+    const next = window.setTimeout(
+      () => setHint(hint === 'on' ? 'out' : null),
+      hint === 'on' ? 4500 : 1800,
+    );
+    return () => window.clearTimeout(next);
+  }, [hint]);
   const currentStep = useCallback(
     () => (journeyRef.current ? tripRef.current.phaseAt(timeRef.current).index : pieceRef.current),
     [],
@@ -985,12 +1052,19 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         keysRef.current.add(e.key.toLowerCase());
         return;
       }
+      // In the Studio (a piece on its own that is no game): ↑ / ↓ the piece's variants, ← / → the
+      // pieces, never into the game. A game let go of and the Journey keep ← / → as steps.
+      const studio = !journeyRef.current && !gameStep();
       if (e.key === ' ') {
         e.preventDefault();
         togglePlay();
-      } else if (e.key === 'ArrowRight') jumpTo(currentStep() + 1);
-      else if (e.key === 'ArrowLeft') jumpTo(currentStep() - 1);
-      else if (e.key === 'f') immerse();
+      } else if (studio && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault();
+        stepVariant(e.key === 'ArrowDown' ? 1 : -1);
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        const d = e.key === 'ArrowRight' ? 1 : -1;
+        jumpTo(studio ? toStudio(currentStep(), d) : currentStep() + d);
+      } else if (e.key === 'f') immerse();
     };
     // Fingers and the mouse on the picture: one drags to orbit (not on a game, where the stick
     // steers), two pinch to zoom, a tap is the click, a quick sideways flick changes piece.
@@ -1106,10 +1180,18 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       }
       // A quick sideways flick changes piece, its little turn of the view undone; the games keep
       // the finger for their stick. In the studio it goes through its pieces only.
-      const s = d.touch ? swipeStep(e.clientX - d.x, e.clientY - d.y, performance.now() - d.at) : 0;
+      const ms = performance.now() - d.at;
+      const s = d.touch ? swipeStep(e.clientX - d.x, e.clientY - d.y, ms) : 0;
       if (s !== 0 && !gameStep()) {
         viewRef.current = d.start;
         jumpTo(journeyRef.current ? currentStep() + s : toStudio(currentStep(), s));
+        return;
+      }
+      // An upright flick in the Studio: the piece's next or previous variant.
+      const v = d.touch ? swipeVariant(e.clientX - d.x, e.clientY - d.y, ms) : 0;
+      if (v !== 0 && !gameStep() && !journeyRef.current) {
+        viewRef.current = d.start;
+        stepVariant(v);
       }
     };
     const canvas = canvasRef.current;
@@ -1135,7 +1217,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       document.removeEventListener('pointerout', away);
       window.removeEventListener('keydown', key);
     };
-  }, [jumpTo, togglePlay, currentStep, immerse, stopGame, openMenu, toStudio]);
+  }, [jumpTo, togglePlay, currentStep, immerse, stopGame, openMenu, toStudio, stepVariant]);
 
   const step = trip.phases[hud.index] as TripStep;
   const lines = live?.lines ?? step.words ?? [];
@@ -1224,6 +1306,17 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   const pillPieces = trip.phases
     .map((p, k) => ({ p, k }))
     .filter(({ k }) => !twoSides || !!game?.has(k) === playable);
+  // The Studio's on-screen arrows and the current variant's name beside the piece's.
+  const studioNav = !!trip.pieces && !journey && !playable;
+  const variantList = variantsAt(trip.pieces?.variants, hud.index);
+  const variantNow = variantList[variant] ?? '';
+  const palettes = trip.pieces?.palettes;
+  const paletteList =
+    !journey && palettes?.has(hud.index)
+      ? typeof palettes.names === 'function'
+        ? palettes.names(hud.index)
+        : palettes.names
+      : [];
   return (
     <main
       ref={mainRef}
@@ -1312,12 +1405,66 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           ))}
         </blockquote>
       ) : null}
+      {hint && studioNav ? (
+        <div className={`bb-hint${hint === 'out' ? ' bb-hint-out' : ''}`} role="note">
+          {touch ? 'Swipe ↕ variants · ↔ pieces' : '↑↓ variants · ←→ pieces'}
+        </div>
+      ) : null}
       <div className={`bb-step${chrome ? '' : ' bb-quiet'}`} aria-live="polite">
         <div className="bb-step-head">
           <span className="bb-num" style={{ background: trip.stepColours[hud.index] }}>
             {hud.index + 1} / {trip.phases.length}
           </span>
+          {studioNav ? (
+            <button
+              type="button"
+              className="bb-nav"
+              onClick={() => jumpTo(toStudio(hud.index, -1))}
+              aria-label="Previous piece (←)"
+              title="Previous piece (←)"
+            >
+              ‹
+            </button>
+          ) : null}
           <span className="bb-name">{step.name}</span>
+          {studioNav ? (
+            <button
+              type="button"
+              className="bb-nav"
+              onClick={() => jumpTo(toStudio(hud.index, 1))}
+              aria-label="Next piece (→)"
+              title="Next piece (→)"
+            >
+              ›
+            </button>
+          ) : null}
+          {studioNav && variantNow ? (
+            <>
+              <span className="bb-variant-name">· {variantNow}</span>
+              {variantList.length > 1 ? (
+                <span className="bb-navs">
+                  <button
+                    type="button"
+                    className="bb-nav"
+                    onClick={() => stepVariant(-1)}
+                    aria-label="Previous variant (↑)"
+                    title="Previous variant (↑)"
+                  >
+                    ˄
+                  </button>
+                  <button
+                    type="button"
+                    className="bb-nav"
+                    onClick={() => stepVariant(1)}
+                    aria-label="Next variant (↓)"
+                    title="Next variant (↓)"
+                  >
+                    ˅
+                  </button>
+                </span>
+              ) : null}
+            </>
+          ) : null}
           {step.thread ? <span className="jr-thread">{step.thread}</span> : null}
         </div>
         <p className={`bb-line${chrome ? '' : ' bb-hidden'}`}>{step.line}</p>
@@ -1469,6 +1616,32 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
                       {name}
                     </button>
                   ))}
+                </div>
+              ) : null}
+              {paletteList.length > 0 ? (
+                <div className="bb-pills bb-variants" role="toolbar" aria-label="Palette">
+                  <button
+                    type="button"
+                    className="bb-pill"
+                    aria-expanded={paletteOpen}
+                    onClick={() => setPaletteOpen((o) => !o)}
+                    title="Colour presets for this piece"
+                  >
+                    Palette{paletteOpen ? '' : ` · ${paletteList[palette] ?? paletteList[0]}`}
+                  </button>
+                  {paletteOpen
+                    ? paletteList.map((name, i) => (
+                        <button
+                          type="button"
+                          key={name}
+                          className="bb-pill"
+                          aria-pressed={i === palette}
+                          onClick={() => setPalette(i)}
+                        >
+                          {name}
+                        </button>
+                      ))
+                    : null}
                 </div>
               ) : null}
             </>
