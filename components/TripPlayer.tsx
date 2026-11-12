@@ -10,6 +10,7 @@
  * distance from it, and carry words for each step.
  */
 import {
+  type ReactNode,
   type PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
@@ -21,7 +22,10 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { type Gauge, GaugeCluster, type GaugeStyle, paintGauges } from '@/components/Gauges';
 import type { Particle, Phase, RGB, Vec3 } from '@/lib/bigbang';
+
+export { type Gauge, type GaugeStyle, needleAngle } from '@/components/Gauges';
 
 export type TripStep = Phase & {
   /** What the step's words are about (the Journey's threads). */
@@ -58,7 +62,8 @@ export type Trip = {
     length: (k: number) => number;
     progress: (k: number, s: number) => number;
     particleAt: (p: Particle, k: number, s: number) => { pos: Vec3; rgb: RGB };
-    camera: (k: number, s: number) => { eye: Vec3; target: Vec3 };
+    /** Where the eye stands and looks; `roll` leans the picture (radians, a cockpit's bank). */
+    camera: (k: number, s: number) => { eye: Vec3; target: Vec3; roll?: number };
     look: (k: number) => { glow: number; size: number };
     /** Which way the moving dots run, for the steps that have them: all up or all down; null in the Journey. */
     flow?: { has: (k: number) => boolean; set: (up: boolean | null) => void };
@@ -119,6 +124,24 @@ export type Trip = {
        * drawn as blots of ink over the picture, splashed somewhere new each time it comes.
        */
       veil?: () => number;
+      /**
+       * How the gauges are drawn, read every render (the City's ships each have their own
+       * instruments): dials, lines, holo or segments; 'none' hides them. Dials if not given.
+       */
+      display?: () => GaugeStyle | 'none';
+      /**
+       * Rows of pills the game adds to the Design menu on its side (the City's Ship, Displays and
+       * View): each reads its choice every render and is told the one picked.
+       */
+      options?: GameOption[];
+      /** Drawn over the picture while the game is played, read every render (a cockpit's canopy). */
+      overlay?: () => ReactNode;
+      /**
+       * A panel the game opens over the picture (the City's map): on its key while played, a
+       * button in the Design menu and on a phone. Time stands still while it is open; Esc, its
+       * key or `close` shuts it. Where its key is M, the Design menu answers to N instead.
+       */
+      sheet?: { key: string; label: string; render: (close: () => void) => ReactNode };
     };
     /**
      * A switch to try on a step (the 3D tree all in gold), beside the speeds; off in the Journey.
@@ -160,15 +183,16 @@ export type Cycle = {
   set: (i: number) => void;
 };
 
-/** A dial of a game's cockpit. */
-export type Gauge = { label: string; value: number; min?: number; max: number; unit?: string };
-
-/** Where a dial's needle points for a value: from -135° at `min` round to 135° at `max`. */
-export const needleAngle = (g: Gauge) => {
-  const lo = g.min ?? 0;
-  const k = g.max > lo ? (g.value - lo) / (g.max - lo) : 0;
-  return -135 + 270 * Math.max(0, Math.min(1, k));
+/** A row of pills a game adds to the Design menu: its names, the one on now, and picking one. */
+export type GameOption = {
+  label: string;
+  names: string[];
+  get: () => number;
+  set: (i: number) => void;
 };
+
+/** The key that opens the Design menu: M, or N where the game's own panel takes M. */
+export const menuKey = (sheetKey?: string) => (sheetKey === 'm' ? 'n' : 'm');
 
 /** How far the on-screen stick's knob travels from its middle, in px. */
 const STICK_REACH = 44;
@@ -197,6 +221,7 @@ export function claimLabel(key: string, meter?: string): string {
   if (key === 'b') return 'Bite';
   if (key === 'l') return 'Look';
   if (key === 'enter') return 'Go';
+  if (key === 'v') return 'View';
   return key.toUpperCase();
 }
 
@@ -390,6 +415,20 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   useEffect(() => {
     if (menu) panelRef.current?.focus();
   }, [menu]);
+  // A game's own panel over the picture (the City's map); time stands still while it is open.
+  const [sheet, setSheet] = useState(false);
+  const sheetRef = useRef(false);
+  const openSheet = useCallback(
+    (open: boolean) => {
+      sheetRef.current = open;
+      setSheet(open);
+      keysRef.current.clear();
+      if (open) openMenu(false);
+    },
+    [openMenu],
+  );
+  // A game's option rows re-read their choice when one is picked.
+  const [, setPicked] = useState(0);
   const immerse = useCallback(() => {
     openMenu(false);
     if (document.fullscreenElement) {
@@ -610,9 +649,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       c.set(journey ? 0 : (cycled[i] ?? 0));
     });
   }, [journey, cycled]);
-  // A game's dials and its ink, drawn straight onto the page every frame.
-  const needlesRef = useRef<(SVGGElement | null)[]>([]);
-  const readingsRef = useRef<(SVGTextElement | null)[]>([]);
+  // A game's instruments and its ink, drawn straight onto the page every frame.
+  const cockpitRef = useRef<HTMLDivElement>(null);
   const inkRef = useRef<HTMLDivElement>(null);
   // Words that change as a step plays (the Shark Sim's lines on freedom).
   const [live, setLive] = useState<{ lines: string[]; shown: number } | null>(null);
@@ -658,6 +696,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         }
         pieceRef.current = i;
         timeRef.current = 0;
+        sheetRef.current = false;
+        setSheet(false);
         // Each piece opens on its own path's view.
         viewRef.current = VIEW_HOME;
         setHud({ index: i, u: 0, time: 0 });
@@ -834,6 +874,11 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     const frame = (now: number) => {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
+      // A game's panel is open (the City's map): time stands still, the last picture held.
+      if (sheetRef.current) {
+        raf = requestAnimationFrame(frame);
+        return;
+      }
       const P = journeyRef.current ? undefined : T.pieces;
       const k = pieceRef.current;
       const gamePiece = !!(P && T.pieces?.game?.has(k));
@@ -879,17 +924,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           const text = game.tally();
           if (count.textContent !== text) count.textContent = text;
         }
-        // The cockpit's dials: each needle swung to its reading, the number under it.
-        if (game.gauges && needlesRef.current.some(Boolean)) {
-          game.gauges().forEach((g, i) => {
-            const needle = needlesRef.current[i];
-            const turn = `rotate(${needleAngle(g).toFixed(1)}deg)`;
-            if (needle && needle.style.transform !== turn) needle.style.transform = turn;
-            const reading = readingsRef.current[i];
-            const text = String(Math.round(g.value));
-            if (reading && reading.textContent !== text) reading.textContent = text;
-          });
-        }
+        // The cockpit's instruments, in whichever style: each reading painted straight on.
+        if (game.gauges && cockpitRef.current) paintGauges(cockpitRef.current, game.gauges());
         // Ink over the picture: splashed somewhere new each time it comes, then fading.
         const ink = inkRef.current;
         if (ink && game.veil) {
@@ -947,6 +983,9 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       eye[2] = seen.eye[2];
       camera.position.set(eye[0], eye[1], eye[2]);
       camera.lookAt(seen.target[0], seen.target[1], seen.target[2]);
+      // A cockpit's bank leans the picture.
+      const roll = (c as { roll?: number } | undefined)?.roll ?? 0;
+      if (roll) camera.rotateZ(roll);
 
       for (let i = 0; i < N; i++) {
         const p = particles[i] as Particle;
@@ -1025,13 +1064,27 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         openMenu(false, true);
         return;
       }
+      if (e.key === 'Escape' && sheetRef.current) {
+        // Esc shuts a game's panel (the City's map) first.
+        openSheet(false);
+        return;
+      }
       if (e.key === 'Escape' && fauxRef.current) {
         // Out of the stand-in full screen, as the browser's own takes the first Esc.
         immerse();
         return;
       }
+      // A game's panel opens and shuts on its own key (the City's map on M), on the game's side.
+      const sheetKey = gameStep() ? tripRef.current.pieces?.game?.sheet?.key : undefined;
+      const plain = !typing && !e.metaKey && !e.ctrlKey && !e.altKey;
+      if (plain && sheetKey && e.key.toLowerCase() === sheetKey) {
+        openSheet(!sheetRef.current);
+        return;
+      }
+      // While it is open, nothing else: time stands still.
+      if (sheetRef.current) return;
       if (!typing) keysRef.current.add(e.key.toLowerCase());
-      if (!typing && e.key.toLowerCase() === 'm' && !e.metaKey && !e.ctrlKey) {
+      if (plain && e.key.toLowerCase() === menuKey(sheetKey)) {
         openMenu(!menuRef.current, menuRef.current);
         return;
       }
@@ -1218,7 +1271,17 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       document.removeEventListener('pointerout', away);
       window.removeEventListener('keydown', key);
     };
-  }, [jumpTo, togglePlay, currentStep, immerse, stopGame, openMenu, toStudio, stepVariant]);
+  }, [
+    jumpTo,
+    togglePlay,
+    currentStep,
+    immerse,
+    stopGame,
+    openMenu,
+    openSheet,
+    toStudio,
+    stepVariant,
+  ]);
 
   const step = trip.phases[hud.index] as TripStep;
   const lines = live?.lines ?? step.words ?? [];
@@ -1227,58 +1290,13 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     : (trip.wordsShown?.(hud.u, lines.length) ?? lines.map(() => 1));
   const game = trip.pieces?.game;
   const steering = !journey && !stopped && !!game?.has(hud.index);
-  // The dials, the same set every frame: read once here for their names and ranges.
-  const dials = steering ? (game?.gauges?.() ?? []) : [];
+  // The instruments, the same set every frame: read once here for their names and ranges, drawn
+  // in the game's style (none hides them all).
+  const display = steering ? (game?.display?.() ?? 'dials') : 'none';
+  const dials = display !== 'none' ? (game?.gauges?.() ?? []) : [];
   const cockpit =
-    dials.length > 0 ? (
-      <div className="bb-gauges">
-        {dials.map((g, i) => (
-          <span
-            key={g.label}
-            className="bb-gauge"
-            role="img"
-            aria-label={`${g.label}${g.unit ? ` (${g.unit})` : ''}`}
-          >
-            <svg viewBox="0 0 56 56" aria-hidden="true">
-              <circle className="bb-gauge-face" cx="28" cy="28" r="26" />
-              {Array.from({ length: 9 }, (_, n) => {
-                const a = ((-135 + n * 33.75 - 90) * Math.PI) / 180;
-                return (
-                  <line
-                    key={n}
-                    className="bb-gauge-tick"
-                    x1={28 + Math.cos(a) * 21}
-                    y1={28 + Math.sin(a) * 21}
-                    x2={28 + Math.cos(a) * 24}
-                    y2={28 + Math.sin(a) * 24}
-                  />
-                );
-              })}
-              <g
-                className="bb-gauge-needle"
-                ref={(el) => {
-                  needlesRef.current[i] = el;
-                }}
-                style={{ transform: `rotate(${needleAngle(g)}deg)` }}
-              >
-                <line x1="28" y1="31" x2="28" y2="9" />
-              </g>
-              <circle className="bb-gauge-hub" cx="28" cy="28" r="2.5" />
-              <text
-                className="bb-gauge-value"
-                x="28"
-                y="45"
-                ref={(el) => {
-                  readingsRef.current[i] = el;
-                }}
-              >
-                {Math.round(g.value)}
-              </text>
-            </svg>
-            <span className="bb-gauge-label">{g.label}</span>
-          </span>
-        ))}
-      </div>
+    display !== 'none' && dials.length > 0 ? (
+      <GaugeCluster gauges={dials} style={display} rootRef={cockpitRef} />
     ) : null;
   const playable = !journey && !!game?.has(hud.index);
   // A button held like a key: down while the finger is on it.
@@ -1301,6 +1319,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     </button>
   );
   const claims = game?.claims ?? [];
+  const gameSheet = playable ? game?.sheet : undefined;
+  const designKey = menuKey(gameSheet?.key).toUpperCase();
   // A world with a game has two sides, Game and Studio; the pills show the side you are on.
   const gamePieces = trip.phases.map((_, k) => k).filter((k) => !!game?.has(k));
   const twoSides = !!trip.pieces && gamePieces.length > 0 && gamePieces.length < trip.phases.length;
@@ -1332,6 +1352,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           !journey && guide && trip.pieces?.pointer?.has(hud.index) ? { cursor: 'none' } : undefined
         }
       />
+      {/* A game's own layer over the picture while it is played (a cockpit's canopy). */}
+      {steering && game?.overlay ? <div className="bb-overlay">{game.overlay()}</div> : null}
       {immersed ? (
         <button
           type="button"
@@ -1355,7 +1377,15 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         </div>
       ) : null}
       {/* A cockpit of dials while you steer (2026-11-11: "meters like in an airplane cockpit"). */}
-      {!immersed && cockpit ? <div className="bb-cockpit">{cockpit}</div> : null}
+      {!immersed && cockpit ? (
+        <div className={`bb-cockpit bb-cockpit-${display}`}>{cockpit}</div>
+      ) : null}
+      {/* A game's panel over the picture (the City's map), time standing still under it. */}
+      {sheet && gameSheet ? (
+        <div className="bb-sheet" role="dialog" aria-label={gameSheet.label}>
+          {gameSheet.render(() => openSheet(false))}
+        </div>
+      ) : null}
       {/* Ink over the picture, when the game asks for it (2026-11-11: "spit ink on your screen"). */}
       {game?.veil ? (
         <div className="bb-ink" ref={inkRef} aria-hidden="true">
@@ -1388,6 +1418,11 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
               <div className="bb-paces">
                 {holdKey('x', 'Slower', 'bb-pace')}
                 {holdKey('shift', 'Faster', 'bb-pace')}
+                {gameSheet ? (
+                  <button type="button" className="bb-pace" onClick={() => openSheet(true)}>
+                    {gameSheet.label}
+                  </button>
+                ) : null}
               </div>
             </div>
           ) : null}
@@ -1478,7 +1513,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         aria-expanded={menu}
         aria-controls="bb-menu"
         onClick={() => openMenu(!menu, menu)}
-        title="Design: the art, its pieces and looks (M)"
+        title={`Design: the art, its pieces and looks (${designKey})`}
       >
         Design
       </button>
@@ -1645,6 +1680,33 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
                     : null}
                 </div>
               ) : null}
+              {/* The game's own rows on its side (the City's Ship, Displays and View). */}
+              {playable
+                ? game?.options?.map((o) => (
+                    <div
+                      key={o.label}
+                      className="bb-pills bb-variants"
+                      role="toolbar"
+                      aria-label={o.label}
+                    >
+                      <span className="bb-pills-label">{o.label}</span>
+                      {o.names.map((name, i) => (
+                        <button
+                          type="button"
+                          key={name}
+                          className="bb-pill"
+                          aria-pressed={i === o.get()}
+                          onClick={() => {
+                            o.set(i);
+                            setPicked((n) => n + 1);
+                          }}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  ))
+                : null}
             </>
           )}
           <div className="bb-controls">
@@ -1703,6 +1765,15 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
             {(trip.backgrounds?.length ?? 0) > 1 ? (
               <button type="button" onClick={nextBg} title="Change the background">
                 {trip.backgrounds?.[bg]?.name}
+              </button>
+            ) : null}
+            {gameSheet ? (
+              <button
+                type="button"
+                onClick={() => openSheet(true)}
+                title={`${gameSheet.label} (${gameSheet.key.toUpperCase()})`}
+              >
+                {gameSheet.label}
               </button>
             ) : null}
             {playable ? (
