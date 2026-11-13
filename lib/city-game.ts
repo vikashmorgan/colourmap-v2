@@ -19,11 +19,13 @@
 import { fibonacciSphere, hash, type RGB, smooth, type Vec3 } from './bigbang';
 import type { Sign, Tower } from './city';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
+import { canyonHeight, canyonItems, canyonWallAt } from './city-canyon';
 import { carItems } from './city-cars';
 import { CODE_GREEN, CODE_TEMPO, codeSize, codeTowerItem, dataSpireItem } from './city-code';
 import { type Design, designFor, designHolds, designItem, studioItem } from './city-designs';
 import { dockItems } from './city-docks';
 import { embassyAt, embassyItems } from './city-embassy';
+import { factoryAt, factoryContextItem } from './city-factories';
 import { textPixels } from './city-font';
 import {
   AVENUE,
@@ -374,9 +376,8 @@ export function blockTower(I: number, J: number): Block {
       studio = { set: 'temples', i: Math.floor(hash(k, 431) * 5) };
       break;
     case 'industrial':
+      // Its foundry is the landmark; its other works stand singly (lib/city-factories.ts).
       h = 14 + 20 * hh;
-      if (!ave && pick < 0.45) shape = 'studio';
-      studio = { set: 'factories', i: Math.floor(hash(k, 431) * 5) };
       break;
     case 'domes':
       h = 12 + 16 * hh;
@@ -403,6 +404,13 @@ export function blockTower(I: number, J: number): Block {
     }
     default:
       if (!ave && hash(k, 426) < 0.12) h = 9 + 6 * hh;
+  }
+  // The Studio's factories, one to a block where they make sense, never two side by side
+  // (2026-11-13: "think how factories can be better integrated not all together").
+  const works = ave ? null : factoryAt(I, J);
+  if (works) {
+    shape = 'studio';
+    studio = { set: 'factories', i: works.i };
   }
   if (shape !== 'studio') studio = null;
   if (shape === 'box' && !ave && hash(k, 433) < 0.04) shape = 'park';
@@ -454,6 +462,22 @@ export function blockTower(I: number, J: number): Block {
   }
   let z = cz + jz * Math.max(0, BLOCK_Z - 2 * hz - 7);
   if (besideRiver(J)) ({ z, hz } = riverClear(J, z, hz));
+  // A wall of the Neon Canyon (lib/city-canyon.ts): pushed up to the canyon's street, very tall
+  // (2026-11-13: "add a neon part to the city and a canyon in there").
+  const wallAt = canyonWallAt(I, J);
+  const wall = wallAt && shape !== 'plaza' && shape !== 'embassy' && !thru ? wallAt : null;
+  if (wall) {
+    const ox = (I - tileCol(I)) * BLOCK_X;
+    const oz = (J - tileRow(J)) * BLOCK_Z;
+    shape = 'box';
+    studio = null;
+    design = null;
+    hx = (wall.x1 - wall.x0) / 2;
+    hz = (wall.z1 - wall.z0) / 2;
+    x = ox + (wall.x0 + wall.x1) / 2;
+    z = oz + (wall.z0 + wall.z1) / 2;
+    h = canyonHeight(k);
+  }
   if (shape === 'park' || shape === 'plaza' || shape === 'studio') {
     h = 0;
     hx = BLOCK_X / 2 - 4;
@@ -465,7 +489,7 @@ export function blockTower(I: number, J: number): Block {
   let bore: Bore | null = null;
   if (thru) bore = { axis: 2, y: THROUGH.y, hw: THROUGH.hw, hh: THROUGH.hh, through: true };
   // More tunnels through towers than there were (2026-11-13: "more tunnels inside buildings").
-  else if (shape === 'box' && h >= 20 && hash(k, 440) < (d === 'heights' ? 0.4 : 0.2)) {
+  else if (shape === 'box' && !wall && h >= 20 && hash(k, 440) < (d === 'heights' ? 0.4 : 0.2)) {
     const hhB = 2.8;
     bore = {
       axis: hash(k, 441) < 0.5 ? 0 : 2,
@@ -476,7 +500,9 @@ export function blockTower(I: number, J: number): Block {
   }
   const style = FACADES[d];
   const facade: Facade | null =
-    style && shape === 'box' && !thru && h >= 14 && hash(k, 480) < FACADE_SHARE ? style : null;
+    style && shape === 'box' && !thru && !wall && h >= 14 && hash(k, 480) < FACADE_SHARE
+      ? style
+      : null;
   const tw: Block = { x, z, hx, hz, h, k, I, J, d, shape, bore, studio, design, facade };
   if (blockCache.size > 20000) blockCache.clear();
   blockCache.set(key, tw);
@@ -1675,7 +1701,8 @@ function shopWords(tw: Block, out: WordSign[]) {
     frame: 'line',
   });
   // A few hanging boards on the market's side streets, at one or two heights: not every tower.
-  if (tw.d === 'market' && hash(tw.k, 483) < 0.5 && tw.I !== 0)
+  // (The Neon Canyon's walls carry their own, at more heights: lib/city-canyon.ts.)
+  if (tw.d === 'market' && hash(tw.k, 483) < 0.5 && tw.I !== 0 && !canyonWallAt(tw.I, tw.J))
     out.push(
       ...boardsOn(
         tw,
@@ -2222,7 +2249,26 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
       if (tw.shape === 'studio' && tw.studio) {
         // The Studio's temples, factories and domes, lit from your eye in their quarter's colours.
         const st = tw.studio;
-        out.push(studioItem(st.set, st.i, { x: tw.x, z: tw.z, key: tw.k }, 0.72, 2000, eye, t));
+        const works = factoryAt(I, J);
+        out.push(
+          studioItem(
+            st.set,
+            st.i,
+            { x: tw.x, z: tw.z, key: tw.k },
+            0.72,
+            2000,
+            eye,
+            t,
+            works?.tint,
+          ),
+        );
+        // A factory standing on its own: its yard, chimney and conveyor to its neighbour.
+        if (works) {
+          const { axis, dir } = works.conveyor;
+          const B = axis === 0 ? blockTower(I + dir, J) : blockTower(I, J + dir);
+          const solid = B.shape === 'box' || B.shape === 'business' || B.shape === 'code';
+          out.push(factoryContextItem(works, tw, solid ? B : null, eye, t));
+        }
       }
       if (tw.shape === 'design' && tw.design)
         out.push(designItem(tw.design, tw, DISTRICTS[tw.d].colour, eye, t));
@@ -2389,6 +2435,8 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
   }
   // Rope lights across the streets (lib/city-ropes.ts), Diwali lanes in the Indian quarter.
   ropeItems(eye, t, NEAR, blockTower, ahead, out);
+  // The Neon Canyon through the market (lib/city-canyon.ts): its walls' neon, cables, boards.
+  canyonItems(eye, t, NEAR, blockTower, ahead, out);
   // The Deep Line under the city (lib/city-under.ts), and its name over the avenue ramp's mouth.
   underItems(eye, t, NEAR, pulseAt, ahead, out);
   for (const m of DEEP_MOUTHS) {
