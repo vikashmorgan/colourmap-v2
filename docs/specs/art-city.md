@@ -758,6 +758,28 @@ at that distance and the far haze turned them violet. Now, read as the Golden pl
   faint; every landmark's plaza a ring of its district's hue round a bright heart, breathing on its
   district's beat.
 
+**Flight feel (2026-11-13)** ("specially playability navigation effects. for making city fun to
+fly through. smooth turn effects when u turn a lot, effects behind ship for the boost. boost not
+too fast in the city but faster when above."). Every change eases; nothing flashes.
+
+- **Turns** ease in and glide out: the turn rate eases toward the keys (1 − e^(−6 dt)), so letting
+  go carries the turn on a moment; a turn held long banks deeper (a quarter radian more by 1.5 s).
+  Each ship's turn still scales the rate.
+- **The chase camera** follows the heading a beat late (1 − e^(−5 dt)), so a turn swings the view
+  round the ship, and rolls slightly with the bank (0.22 of it); level on the autopilot's route,
+  looking down and from high up.
+- **The boost by height**: twice the cruise in the streets, three times at the roofs (the towers'
+  sky), four and a half in the stratosphere, blending smoothly. Out in space it stays three times
+  space's pace; the Speed dial's range holds the fastest you can go, so the needle never runs past it.
+- **The plume**: boosting raises a glow (an afterglow fading over a few seconds after): the trail
+  grows up to 1.6 ship lengths longer with a gentle ripple growing from the engines, brighter and
+  fuller, the engines brighter, a few more grains given to it; the chase eye stands back a little
+  (up to 2.2).
+- **A soft wall bump**: sliding along a wall bleeds a little speed and leans the ship away from it,
+  easing back after; never on the autopilot.
+- **Through a portal** the glow flares and the camera comes along at once, so the jump never snaps
+  the view.
+
 ### Races (`lib/city-race.ts`)
 
 Tracks are data, one per quarter: `{ district, name, full, start, gates, bars }`.
