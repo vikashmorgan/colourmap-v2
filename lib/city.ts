@@ -128,17 +128,21 @@ import {
   GOLDEN_PALETTES,
   goldenPlanAt,
   goldenPlanEye,
+  HEART_KINDS,
   heartAt,
   heartEye,
   NOVA_CORES,
   novaAt,
   novaEye,
   PLANS,
+  RISING_ORDERS,
   risingAt,
   risingEye,
   setGoldenPalette,
+  setHeartKind,
   setNovaKind,
   setPlanKind,
+  setRisingKind,
   TEMPLES,
 } from './golden-city';
 
@@ -3632,6 +3636,8 @@ let buildingKind = 0;
 let atlantisKind = 0;
 const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number) => void }> = {
   'golden-plan': { names: PLANS, label: 'Plan', set: setPlanKind },
+  rising: { names: RISING_ORDERS, label: 'Rise', set: setRisingKind },
+  heart: { names: HEART_KINDS, label: 'Heart', set: setHeartKind },
   nova: { names: NOVA_CORES, label: 'Nova Core', set: setNovaKind },
   temples: { names: TEMPLES.names, label: TEMPLES.label, set: (i) => (templeKind = i) },
   factories: { names: FACTORIES.names, label: FACTORIES.label, set: (i) => (factoryKind = i) },

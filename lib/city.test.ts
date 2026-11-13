@@ -82,9 +82,12 @@ import {
   bandIndex,
   GOLDEN,
   HEART_K,
+  HEART_KINDS,
   hopeAt,
+  RISING_ORDERS,
   revealed,
   risen,
+  risenBy,
   SPHERE_C,
   SPHERE_R,
 } from './golden-city';
@@ -936,6 +939,56 @@ describe('The golden city (2026-11-12: "build the city")', () => {
     };
     expect(tilt(0)).toBeGreaterThan(0.95);
     expect(tilt(0.65 * L)).toBeLessThan(0.6);
+  });
+
+  it('rises within a second, all up by about a third, in five orders on ↑↓', () => {
+    // 2026-11-13: "make the rising start rising faster ... do different ones of these".
+    const k = piece('rising');
+    expect(variantNames(k)).toEqual(RISING_ORDERS);
+    const rings = GOLDEN.bands.length;
+    for (let kind = 0; kind < RISING_ORDERS.length; kind++) {
+      for (let i = 0; i < rings; i++)
+        for (let s = 0; s < GOLDEN.spokes; s++) {
+          expect(risenBy(kind, i, s, 0)).toBeCloseTo(0, 9);
+          expect(risenBy(kind, i, s, 0.45)).toBeCloseTo(1, 6);
+          // A ripple may overshoot a little, never a jump.
+          expect(risenBy(kind, i, s, 0.2)).toBeLessThan(1.1);
+        }
+      // Something is already moving two seconds in.
+      let moving = 0;
+      for (let i = 0; i < rings; i++)
+        for (let s = 0; s < GOLDEN.spokes; s++)
+          moving = Math.max(moving, risenBy(kind, i, s, 0.05));
+      expect(moving).toBeGreaterThan(0);
+    }
+    // Outside in: the edge before the heart.
+    expect(risenBy(1, rings - 1, 0, 0.08)).toBeGreaterThan(risenBy(1, 0, 0, 0.08));
+    let ok = true;
+    for (let v = 0; v < RISING_ORDERS.length; v++) {
+      setVariant(v, k);
+      for (const p of city) ok &&= finiteSpot(pieceAt(p, k, 0.3 * pieceLength(k)));
+    }
+    setVariant(0, k);
+    expect(ok).toBe(true);
+  });
+
+  it('offers five hearts on ↑↓, each floating round the sphere’s centre', () => {
+    // 2026-11-13: "do different options for the heart".
+    const k = piece('heart');
+    expect(variantNames(k)).toEqual(HEART_KINDS);
+    for (let v = 0; v < HEART_KINDS.length; v++) {
+      setVariant(v, k);
+      let near = 0;
+      let ok = true;
+      for (const p of city) {
+        const s = pieceAt(p, k, 11);
+        ok &&= finiteSpot(s);
+        if (dist(s.pos, SPHERE_C) < SPHERE_R * 1.3) near++;
+      }
+      expect(ok).toBe(true);
+      expect(near).toBeGreaterThan(city.length * 0.04);
+    }
+    setVariant(0, k);
   });
 
   it('floats an open sphere of light over the heart’s garden, breathing slowly', () => {

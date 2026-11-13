@@ -80,7 +80,7 @@ export const ATLANTIS_PHASE: Phase & { words: string[] } = {
     'Every bubble rising is someone travelling home.',
   ],
   duration: 40,
-  glow: 1,
+  glow: 0.6,
   size: 1.2,
 };
 
@@ -318,10 +318,7 @@ function cityMesh(): Mesh {
       m.dot([at[0], G + 0.6, at[2]], 0.9, Tone.light, { anim: Anim.pulse, key: k, w: 0.5 });
       note({ c: at, r: KNOW_R, kind: 'knowledge' });
     } else {
-      m.cylinder(at, 0.6, G, G + 2.8, Tone.face, Tone.edge, 4, 10);
-      for (const y of [0.8, 1.6, 2.4]) portholes(m, at, 0.6, G + y, 4, 0.12, k + y);
-      m.dot([at[0], G + 2.95, at[2]], 0.18, Tone.light, { anim: Anim.pulse, key: k * 1.7, w: 0.2 });
-      note({ c: [at[0], G + 1.4, at[2]], r: 1.5, kind: 'tower' });
+      spire(m, at, 0.7, 7.4, k * 1.7);
     }
   }
   // Ring of making: twelve pressure compartments, drums under low glass caps, portholes round them.
@@ -341,6 +338,7 @@ function cityMesh(): Mesh {
     glassDome(m, [at[0], G + 0.7, at[2]], LIVE_R);
     note({ c: at, r: LIVE_R, kind: isGardenDome(k) ? 'garden' : 'homes' });
     if (isGardenDome(k)) continue;
+    spire(m, at, 0.55, 7.8, k * 2.3, G + 0.7 + LIVE_R);
     [2.8, 2.0, 1.2].forEach((r, i) => {
       const y = G + 0.4 + 0.6 * i;
       m.ring([at[0], y, at[2]], r, Tone.edge, { w: 0.7 }, 20);
@@ -410,8 +408,33 @@ function cityMesh(): Mesh {
     domeWithTunnel(m, hub, 2.8, polar(OUTER.r1 + 0.4, spokeAngle(k), TUBE_Y), 0, k);
     domeWithTunnel(m, polar(46.5, a + 0.09, G), 1.8, hub, 2.8, k + 0.5);
     domeWithTunnel(m, polar(44.5, a - 0.13, G), 1.1, hub, 2.8, k + 0.7);
+    spire(m, polar(42.6, a - 0.12, G), 0.6, 7.6, k * 0.9);
   }
   return m;
+}
+
+/*
+ * A spire (2026-11-13: "bring more verticality to atlantis"): three drums, each 1/φ narrower than
+ * the one below, rings of portholes up them, a lamp at each step and a mast with a slow light on
+ * top. From y0 (the ground, or a dome's crown it rises out of) to G + h, kept under the high
+ * submarine loops. Its bounding spheres are stacked up it, so submarines keep clear.
+ */
+function spire(m: Mesh, at: Vec3, r: number, h: number, key: number, y0 = G) {
+  const top = G + h;
+  const mast = top - 1.2;
+  const steps = [y0, lerp(y0, mast, 0.5), lerp(y0, mast, 0.8), mast];
+  for (let i = 0; i < 3; i++) {
+    const rr = r / PHI ** (i * 0.5);
+    const a = steps[i] as number;
+    const b = steps[i + 1] as number;
+    m.cylinder(at, rr, a, b, Tone.face, Tone.edge, 3, 10);
+    for (let y = a + 0.55; y < b - 0.2; y += 0.9) portholes(m, at, rr, y, 4, 0.1, key + y);
+    m.ring([at[0], b, at[2]], rr * 1.25, Tone.edge, { w: 0.4 }, 12);
+  }
+  m.line([at[0], mast, at[2]], [at[0], top, at[2]], Tone.edge, { w: 0.25 });
+  m.dot([at[0], top, at[2]], 0.15, Tone.light, { anim: Anim.pulse, key, w: 0.2 });
+  for (let y = y0 + r; y < top; y += 2 * r)
+    note({ c: [at[0], y, at[2]], r: r * 1.3, kind: 'tower' });
 }
 
 /** A glass dome of radius r at `at`, a drum of portholes under it, a glass tunnel to `to`. */
@@ -1570,7 +1593,7 @@ export function mapSite(p: Particle, q: number, t: number, out: number[]): Vec3 
 }
 
 /** How large the grains are drawn in each view: bold on the map, a little fuller up close. */
-const VIEW_SIZE = [1.9, 1.4, 1.4, 1.2, 1.2];
+const VIEW_SIZE = [1.7, 1.1, 1.15, 1.0, 1.0];
 export const atlantisSize = (v = view) => VIEW_SIZE[v] ?? 1.2;
 
 /**
@@ -1674,9 +1697,10 @@ export function atlantisAt(p: Particle, u: number, t: number, v = view): Spot {
       const sh = role === 'city' ? CITY_SHARES : role === 'temple' ? TEMPLE_SHARES : HARBOUR_SHARES;
       const h = onMesh(B, p, q, t, E.eye, sh);
       // The heart's gold glows warmer toward its core.
-      const warm = role === 'temple' ? 0.35 * Math.exp(-dist(h.pos, TEMPLE_SPHERE.c) / 1.5) : 0;
+      const warm = role === 'temple' ? 0.2 * Math.exp(-dist(h.pos, TEMPLE_SPHERE.c) / 1.5) : 0;
       let rgb = mix(meshColour(h, p, t, false), scale(WARM_WHITE, 0.6 * h.lit), warm);
-      if (v === 0) rgb = planLift(rgb, h.pos, true);
+      // 2026-11-13: "it seems to shine too much still": up close the buildings are lit, not glowing.
+      rgb = v === 0 ? planLift(rgb, h.pos, true) : scale(rgb, 0.78);
       return { pos: h.pos, rgb: underwater(rgb, h.pos, E, h.tone === Tone.light) };
     }
     case 'reef': {
