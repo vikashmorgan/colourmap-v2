@@ -1153,6 +1153,34 @@ stays lit. **WELCOME TO THE CITY OF DREAMS** in `deco`, gold drifting to warm wh
 over the cross street just ahead of the start; boards in red, gold and saffron hang over the avenue
 from its walls; its roofs carry posters far more often. Then Chinatown's own gate and lanterns.
 
+### Chinatown higher, and the city's names (2026-11-13)
+
+> "make chinatown higher with many levels. i like how it is becoming devlopped. also u can put
+> more banners liek city of dreams. city of hope etc...all around the city."
+
+- **Chinatown, many levels** (`lib/city-game.ts`): its towers now stand 30–58 (the avenue's 30–52;
+  22–38 before), about one in six off the avenue a **tall tiered tower** of 74–104; all still
+  under the metro and under the Chinatown lounge's pad. Storey on storey, one every 6.5 or so,
+  each with its own eave flaring past the walls, corners swept up, every other one further out
+  over a red fascia; every other storey a balcony rail along both street walls and a lantern
+  under each eave corner; a crown of three roofs on top (five and a ringed spire on the tall
+  towers). **Covered walkways** cross the side streets between towers at 20, 32, 44, 57 and 70
+  (about half the heights both walls reach; never over the avenue; light, as the sky bridges).
+  The tall signs climb with them (five levels on towers over 46), the lantern strings too (side
+  streets to 38 and 50, the avenue to 46). Collision is the towers' boxes at their new heights;
+  the avenue, its gates and the opening road stay open.
+- **The city's names** (`CITY_NAMES`, `nameBanner` in `lib/city-signs.ts`; `cityBanners` in
+  `lib/city-game.ts`): CITY OF DREAMS, HOPE, LIGHT, PEACE, LOVE, JOY and FRIENDS, about twenty a
+  tile, framed like the welcome, each in its district's colour drifting slowly to a second hue:
+  over the avenue at the mouths of the Heights (LIGHT), the Golden gardens (PEACE) and the
+  Studio's band (FRIENDS), and high over it in the middle of the Heights (DREAMS) and the Studio's
+  band (JOY), all above the lanes you cruise in; over the roofs at the tile's two edges (FRIENDS
+  by Chinatown, HOPE, LOVE, DREAMS, JOY, LIGHT in the Green Code quarter); on a roof near the
+  avenue in seven quiet districts; and high on the street face of every tall tiered tower in
+  Chinatown, in `brush`. Faces `deco`, `tall`, `sign` and `brush`. Each over a cross street, on a
+  roof or on a face, so none cuts a wall. The Neon market's side and the opening road keep their
+  own signs.
+
 ### The Green Code quarter (`lib/city-code.ts`)
 
 > 2026-11-13: "do a matrix quarter in green".
