@@ -38,15 +38,20 @@ describe('Buildings (2026-11-12: "do 20 cool buildings, each unique")', () => {
       // Kept small enough that a grain's pick stays cheap.
       expect(b.lines.length / 6 + b.tris.length / 9 + b.dots.length / 4).toBeLessThan(20000);
       const reach = siteReach((BUILDING_KINDS[i] as BuildingKind).site) + 6;
+      // One pass for the lowest point and the furthest reach: an expect per vertex is slow.
+      let low = Number.POSITIVE_INFINITY;
+      let far = 0;
       for (const arr of [b.lines, b.tris]) {
         for (let j = 0; j < arr.length; j += 3) {
-          expect(arr[j + 1] as number).toBeGreaterThan(GROUND_Y - 0.01);
-          expect(Math.hypot(arr[j] as number, arr[j + 2] as number)).toBeLessThan(reach);
+          low = Math.min(low, arr[j + 1] as number);
+          far = Math.max(far, Math.hypot(arr[j] as number, arr[j + 2] as number));
         }
       }
+      expect(low).toBeGreaterThan(GROUND_Y - 0.01);
+      expect(far).toBeLessThan(reach);
       const again = building(i).build();
-      expect(Array.from(again.lines)).toEqual(Array.from(b.lines));
-      expect(Array.from(again.dots)).toEqual(Array.from(b.dots));
+      expect(again.lines.every((v, j) => v === b.lines[j])).toBe(true);
+      expect(again.dots.every((v, j) => v === b.dots[j])).toBe(true);
     }
   });
 
