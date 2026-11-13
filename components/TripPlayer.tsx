@@ -281,6 +281,28 @@ export function variantsAt(v: NonNullable<Trip['pieces']>['variants'], k: number
 export const HINT_KEY = 'colourmap:trip-hint';
 
 /**
+ * The Game side's hint, once per world too (2026-11-13): how to fly, the boost, the game's panel
+ * and letting go; on a phone, the stick and the buttons. Only what the game has is named.
+ */
+export function gameHintText(
+  touch: boolean,
+  game: Pick<NonNullable<NonNullable<Trip['pieces']>['game']>, 'claims' | 'meter' | 'sheet'>,
+): string {
+  const space = game.claims?.includes(' ');
+  const boost = game.meter?.label ?? 'Jump';
+  const sheet = game.sheet;
+  const parts = touch
+    ? ['Stick to fly', space ? boost : '', sheet ? `${sheet.label} above the buttons` : '']
+    : [
+        'W A S D fly',
+        space ? `Space ${boost.toLowerCase()}` : '',
+        sheet ? `${sheet.key.toUpperCase()} ${sheet.label.toLowerCase()}` : '',
+        'Esc lets go',
+      ];
+  return parts.filter(Boolean).join(' · ');
+}
+
+/**
  * The viewer's own turn on a piece's camera, on top of its path (2026-11-12: pinch to zoom, drag
  * to orbit): `zoom` scales the eye's distance from what it looks at, `yaw` and `pitch` turn the eye
  * round it (radians), `side` slides eye and target sideways, a share of that distance.
@@ -524,6 +546,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   }, [journey, palette, hud.index]);
   // The navigation hint, once per world on the device, fading after a few seconds.
   const [hint, setHint] = useState<'on' | 'out' | null>(null);
+  // The Game side's own hint, once per world, the first time it is played.
+  const [gameHint, setGameHint] = useState<'on' | 'out' | null>(null);
   // Where the cursor is on screen, -1 to 1 each way, and whether a click has it guiding.
   const cursorRef = useRef<{ x: number; y: number } | null>(null);
   const keysRef = useRef(new Set<string>());
@@ -800,6 +824,26 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     );
     return () => window.clearTimeout(next);
   }, [hint]);
+  const onGame = !journey && !!trip.pieces?.game?.has(hud.index);
+  useEffect(() => {
+    if (!onGame) return;
+    const key = `${HINT_KEY}:${page}:game`;
+    try {
+      if (window.localStorage.getItem(key)) return;
+      window.localStorage.setItem(key, '1');
+    } catch {
+      // Shown, though not remembered.
+    }
+    setGameHint('on');
+  }, [onGame, page]);
+  useEffect(() => {
+    if (!gameHint) return;
+    const next = window.setTimeout(
+      () => setGameHint(gameHint === 'on' ? 'out' : null),
+      gameHint === 'on' ? 4500 : 1800,
+    );
+    return () => window.clearTimeout(next);
+  }, [gameHint]);
   const currentStep = useCallback(
     () => (journeyRef.current ? tripRef.current.phaseAt(timeRef.current).index : pieceRef.current),
     [],
@@ -1486,6 +1530,11 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       {hint && studioNav ? (
         <div className={`bb-hint${hint === 'out' ? ' bb-hint-out' : ''}`} role="note">
           {touch ? 'Swipe ↕ variants · ↔ pieces' : '↑↓ variants · ←→ pieces'}
+        </div>
+      ) : null}
+      {gameHint && playable && game ? (
+        <div className={`bb-hint${gameHint === 'out' ? ' bb-hint-out' : ''}`} role="note">
+          {gameHintText(touch, game)}
         </div>
       ) : null}
       <div className={`bb-step${chrome ? '' : ' bb-quiet'}`} aria-live="polite">

@@ -1328,13 +1328,29 @@ input[type="range"].feedback-slider::-moz-range-thumb {
   left: calc(16px + env(safe-area-inset-left));
   right: auto;
 }
-/* On a phone the sheet rises from the bottom, below the dials at the top. */
+/* The Game side's hint, under the step and the Design pill at the top. */
+.bb-touch-game .bb-hint {
+  top: calc(108px + env(safe-area-inset-top));
+}
+/* On a phone the sheet rises from the bottom, below the dials at the top; the bar and its words
+ * move up under the step, clear of the thumbs, the words cut short rather than wrapped. */
 @media (max-width: 640px) {
   .bb-touch-game .bb-menu {
     top: auto;
     bottom: calc(8px + env(safe-area-inset-bottom));
     width: auto;
     max-height: calc(100dvh - 160px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+  .bb-touch-game .bb-hud {
+    top: calc(56px + env(safe-area-inset-top));
+    bottom: auto;
+  }
+  .bb-touch-game .bb-tally {
+    max-width: 70vw;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 .bb-vegetal .bb-line,

@@ -45,7 +45,13 @@ import {
 } from './bigbang';
 import { BUILDINGS, buildingsEye } from './city-buildings';
 import { camView, cockpitEye, toggleView } from './city-cockpit';
-import { DOCK_PROMPT, type Placed as DockPlaced, dockAt } from './city-docks';
+import {
+  approachPrompt,
+  DOCK_PROMPT,
+  type Placed as DockPlaced,
+  dockAt,
+  dockNear,
+} from './city-docks';
 import {
   advancePulses,
   type Block,
@@ -1966,6 +1972,7 @@ function nextWay(way: number, line: number, at: number): number {
 /** Letting go: the autopilot takes the way along the grid nearest your heading, on the nearest street. */
 function startCarryingOn() {
   fly.mode = 'drift';
+  letGoAt = fly.t;
   fly.way = wrap(Math.round(-fly.yaw / (Math.PI / 2)), 4);
   const alongZ = fly.way % 2 === 0;
   fly.line = alongZ
@@ -2321,6 +2328,9 @@ export function gauges(): Gauge[] {
 }
 const CANAL_FLOOR = 14;
 
+/** When you last let go and the autopilot carried on. */
+let letGoAt = Number.NEGATIVE_INFINITY;
+
 /**
  * The quiet words beside the bar: the race's (a prompt, 3 2 1, gate and time, place and best),
  * or the name of a district for a few seconds as you come into it; nothing otherwise.
@@ -2332,7 +2342,11 @@ export function tally(): string {
   if (rings) return rings;
   const r = raceBanner(fly.t);
   if (r) return r;
+  // 2026-11-13: once you let go (Esc), "Autopilot" for a moment; near a pad, its name.
+  if (fly.mode === 'drift' && fly.t - letGoAt >= 0 && fly.t - letGoAt < 3) return 'Autopilot';
   if (fly.dock) return DOCK_PROMPT;
+  const near = fly.mode === 'pilot' ? dockNear(fly.pos) : null;
+  if (near) return approachPrompt(near.P);
   if (fly.district && fly.t - fly.entered < 4 && fly.entered > Number.NEGATIVE_INFINITY)
     return DISTRICTS[fly.district].name;
   return fly.slow ? 'Slow · looking down' : '';
@@ -3106,7 +3120,7 @@ function gather(P: Plan): { d: number; run: () => void }[] {
     });
   }
   // The game's own: districts, landmarks, lanterns, tunnels, metro, word signs, races, the plan.
-  const game: Item[] = [...gameItems(eye, fwd, cur.t), ...trackItems(eye, cur.t, NEAR)];
+  const game: Item[] = [...gameItems(eye, fwd, cur.t, P.c), ...trackItems(eye, cur.t, NEAR)];
   for (const g of game) {
     if (seeThrough && g.probe && !g.probe.some((q) => roomBeyond(q[0], q[2], 30))) continue;
     items.push({

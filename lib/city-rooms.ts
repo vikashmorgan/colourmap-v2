@@ -41,6 +41,8 @@ const room = {
   w: newWalker(),
   since: 0,
   t: 0,
+  /** The first room on this device: the banner spells out the controls. */
+  first: true,
   /** Keys held last frame, to catch a press of Enter. */
   held: [] as string[],
 };
@@ -116,6 +118,22 @@ export function onSeat(P: Placed, x: number, z: number): boolean {
 /** The yaw that looks down a level direction (yaw 0 looks down -z). */
 const yawOf = (v: Vec3) => Math.atan2(-v[0], -v[2]);
 
+/** The key that remembers a room's controls were spelled out on this device. */
+export const ROOM_HINT_KEY = 'colourmap:city-room-hint';
+
+/** Whether this is the first room on the device (remembered from now on, where storage allows). */
+function firstRoom(): boolean {
+  try {
+    const store = globalThis.localStorage;
+    if (!store) return true;
+    if (store.getItem(ROOM_HINT_KEY)) return false;
+    store.setItem(ROOM_HINT_KEY, '1');
+  } catch {
+    // Spelled out, though not remembered.
+  }
+  return true;
+}
+
 /** Into the room of dock P: the walker by the door on the pad's side, facing the view. */
 export function enterRoom(P: Placed, t: number) {
   const door = roomPoint(P, P.dock.w - 1.3, 0, 0);
@@ -124,6 +142,7 @@ export function enterRoom(P: Placed, t: number) {
   room.since = t;
   room.t = t;
   room.held = ['enter'];
+  room.first = firstRoom();
 }
 /** Out of the room. */
 export function leaveRoom() {
@@ -516,13 +535,17 @@ function roomSite(P: Placed, q: number, L: number, t: number): Spot {
   };
 }
 
-/** The words beside the bar in a room. */
+/**
+ * The words beside the bar in a room: the controls spelled out for 6 s in the first room on the
+ * device, after that only the room's name for 3 s (2026-11-13).
+ */
 export function roomBanner(t: number): string {
   const P = room.P;
   if (!P) return '';
   if (atCabinet(P, room.w.x, room.w.z, room.w.yaw)) return ARCADE_PROMPT;
-  if (t - room.since < 6)
+  if (room.first && t - room.since < 6)
     return `${P.dock.name} · W S walk, A D turn, Shift run, Space jump · Enter: back to the ship`;
+  if (!room.first && t - room.since < 3) return P.dock.name;
   if (room.w.sit > 0.5) return `${P.dock.name} · resting`;
   return '';
 }

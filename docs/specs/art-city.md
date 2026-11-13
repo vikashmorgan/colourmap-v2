@@ -1066,8 +1066,8 @@ race starts and the rest, nearer first within each; a name that would touch one 
 it. In 3D the far names fade (four tenths to full by depth). Time
 stands still while it is open (the player holds the last picture); **M**, **Esc** or ✕ closes it.
 The Dawn sky behind, gold lines, district hues. Canvas 2D, redrawn only when the view changes or
-about ten times a second for the pointer. New parts of the city (docks, embassies) add places by
-appending to `MAP_EXTRAS`.
+about ten times a second for the pointer. New parts of the city add places by appending to
+`MAP_EXTRAS` (the docks and embassies are there now).
 
 **Keys** (Ship, Game side): V cockpit view, M map, N Design menu; the rest as before.
 
@@ -1095,8 +1095,19 @@ sides are filled, not stretched; the other canopies still stretch to the screen.
 landscape phone (at most 520 high) the round buttons (Boost, Look, Go, View) sit two by two and a
 little smaller, the pace pills above them.
 
-**Still rough.** The map shows one tile (the city repeats every way) and no docks yet; on a
-touch screen a hidden name shows only by zooming (there is no hover).
+**Map and game polish** (2026-11-13). The map shows every dock's pad (an H in a ring) and every
+Embassy of Happiness (a small triangle), named after the race starts. On a touch screen a tap
+shows the name under the finger for 3 s (the footer says "tap a place for its name"). A quiet
+"You · 52 m" (your height) sits beside your pointer where no name is in the way. A district
+whose race you won is drawn brighter, edged in gold. The Game side has its own hint, once per
+world: "W A S D fly · Space boost · M map · Esc lets go" (on a phone "Stick to fly · Boost · Map
+above the buttons"). Letting go says "Autopilot" for 3 s. Coming in to a pad (within 30, no more
+than 12 over or under) its rim lights brighten and the words say "<lounge> · land on the pad".
+A room's controls are spelled out in the first room on the device; after that only its name, for
+3 s. Cars dip their lights as the ship passes low over them (dark within 5, full again by 10).
+On a phone the bar and its words sit up under the step, the words cut short instead of wrapping.
+
+**Still rough.** The map shows one tile (the city repeats every way).
 
 ## Game · Studio, and the phone
 

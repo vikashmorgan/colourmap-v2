@@ -14,6 +14,8 @@
  */
 
 import type { RGB, Vec3 } from './bigbang';
+import { DOCKS, LOUNGES, placeDock } from './city-docks';
+import { EMBASSIES, embassyCentre } from './city-embassy';
 import {
   BAND_ROWS,
   BANDS,
@@ -61,7 +63,7 @@ export type MapBlock = {
 };
 export type MapRoad = { x0: number; z0: number; x1: number; z1: number; main: boolean };
 export type MapPlace = {
-  kind: 'landmark' | 'race' | 'station' | 'portal' | 'welcome';
+  kind: 'landmark' | 'race' | 'station' | 'portal' | 'welcome' | 'dock' | 'embassy';
   name: string;
   x: number;
   z: number;
@@ -101,6 +103,32 @@ export const landmarkName = (l: Landmark) =>
  * shows as a named dot. Kept here so a new part only appends, never edits the map.
  */
 export const MAP_EXTRAS: MapPlace[] = [];
+
+/**
+ * The docks' pads (lib/city-docks.ts) and the Embassies of Happiness (lib/city-embassy.ts) as
+ * places: an H in a ring for a pad, a small triangle for an embassy (2026-11-13).
+ */
+export function dockAndEmbassyPlaces(): MapPlace[] {
+  const out: MapPlace[] = [];
+  DOCKS.forEach((d, i) => {
+    const pad = placeDock(i, d.at).pad;
+    const [x, z] = tileLocal(pad[0], pad[2]);
+    const e = EMBASSIES[i - LOUNGES.length];
+    out.push({
+      kind: 'dock',
+      name: e ? `${e.design} pad` : d.name,
+      x,
+      z,
+      y: d.at[1] - GROUND,
+      colour: d.hues[0],
+    });
+  });
+  for (const e of EMBASSIES) {
+    const [x, z] = embassyCentre(e);
+    out.push({ kind: 'embassy', name: `${e.design} embassy`, x, z, y: e.h, colour: e.hues[0] });
+  }
+  return out;
+}
 
 let cached: MapData | null = null;
 /** How many places the plan itself gives, before MAP_EXTRAS. */
@@ -235,6 +263,8 @@ export const tileLocal = (x: number, z: number): [number, number] => [
   wrap(x + TILE_X / 2, TILE_X) - TILE_X / 2,
   wrap(z, TILE_Z),
 ];
+// Filled once tileLocal is defined: the docks and embassies join the plan's places.
+MAP_EXTRAS.push(...dockAndEmbassyPlaces());
 
 /** Your ship's heading on the map, radians: 0 up the avenue (-z), round to the right. */
 export const mapHeading = (f: Vec3) => Math.atan2(f[0], -f[2]);
@@ -418,11 +448,57 @@ export function layoutLabels(labels: MapLabel[], w: number, h: number): MapLabel
   return kept;
 }
 
+/**
+ * A tap on a touch screen: a finger lifted within 8 px of where it came down (a mouse points
+ * instead). Its lift shows the name under it, as a pointer coming near does (2026-11-13).
+ */
+export const isTap = (
+  down: { x: number; y: number },
+  up: { x: number; y: number },
+  pointerType: string,
+) => pointerType !== 'mouse' && Math.hypot(up.x - down.x, up.y - down.y) < 8;
+
+/**
+ * The quiet caption beside your pointer, "You · 52 m" (its height over the street), at screen
+ * point q, or null where it would touch a name shown or leave the screen (2026-11-13).
+ */
+export function shipCaption(
+  q: [number, number],
+  height: number,
+  shown: MapLabel[],
+  w: number,
+  h: number,
+  measure: (text: string, font: string, size: number) => number = (t, _f, size) =>
+    t.length * size * 0.6,
+): MapLabel | null {
+  const text = `You · ${Math.max(0, Math.round(height))} m`;
+  const size = 10;
+  const font = `${size}px ui-sans-serif, system-ui, sans-serif`;
+  const label: MapLabel = {
+    text,
+    x: q[0] + 16,
+    y: q[1],
+    align: 'left',
+    size,
+    w: measure(text, font, size),
+    priority: 4,
+    depth: 0,
+    alpha: 0.6,
+    colour: 'rgb(255,226,166)',
+    font,
+  };
+  const b = labelBox(label);
+  if (b.x0 < 2 || b.y0 < 2 || b.x1 > w - 2 || b.y1 > h - 2) return null;
+  if (shown.some((l) => boxesOverlap(labelBox(l), b))) return null;
+  return label;
+}
+
 /* ---------- drawing ---------- */
 
 const rgba = (c: RGB, k: number, a: number) =>
   `rgba(${Math.round(Math.min(1, c[0] * k) * 255)},${Math.round(Math.min(1, c[1] * k) * 255)},${Math.round(Math.min(1, c[2] * k) * 255)},${a})`;
 const GOLD: RGB = [1, 0.78, 0.45];
+const NONE_LIT: ReadonlySet<DistrictId> = new Set();
 
 type Face = { depth: number; pts: [number, number][]; fill: string; line?: string };
 
@@ -430,7 +506,8 @@ type Face = { depth: number; pts: [number, number][]; fill: string; line?: strin
  * Draws the map on a 2D canvas of w × h css pixels: the Dawn sky behind, the districts, the roads,
  * the blocks (flat or as prisms when tilted), the metro, the places and your ship (tile-local
  * `ship`, heading `heading`), the beat `t` breathing the pointer. `labels` names the districts and
- * places.
+ * places; `hover` brings the names near it first; the districts in `lit` (their race won) are
+ * brighter, edged in gold.
  */
 export function drawCityMap(
   ctx: CanvasRenderingContext2D,
@@ -442,6 +519,7 @@ export function drawCityMap(
   t: number,
   labels = true,
   hover: { x: number; y: number } | null = null,
+  lit: ReadonlySet<DistrictId> = NONE_LIT,
 ): MapLabel[] {
   const P = (x: number, y: number, z: number) => projectMap(v, w, h, x, y, z);
   const sky = ctx.createLinearGradient(0, 0, 0, h);
@@ -470,8 +548,13 @@ export function drawCityMap(
       (q) => [q[0], q[1]] as [number, number],
     );
 
-  // The ground: each district a patch of its colour.
-  for (const d of data.districts) poly(flat(d.x0, d.z0, d.x1, d.z1), rgba(d.colour, 0.32, 0.22));
+  // The ground: each district a patch of its colour; a district whose race was won brighter,
+  // edged in gold (2026-11-13).
+  for (const d of data.districts) {
+    const pts = flat(d.x0, d.z0, d.x1, d.z1);
+    if (lit.has(d.id)) poly(pts, rgba(d.colour, 0.6, 0.36), rgba(GOLD, 1, 0.9), 1);
+    else poly(pts, rgba(d.colour, 0.32, 0.22));
+  }
   // The avenue, a pale band.
   poly(flat(-AVENUE, 0, AVENUE, data.length), 'rgba(244,234,216,0.07)');
 
@@ -621,7 +704,8 @@ export function drawCityMap(
     }
   }
 
-  // The places: landmarks a ringed dot, races a diamond, stations a small square, portals a ring.
+  // The places: landmarks a ringed dot, races a diamond, stations a small square, portals a ring,
+  // docks an H in a ring, embassies a small triangle.
   ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
   for (const p of data.places) {
     const base = P(p.x, 0, p.z);
@@ -657,6 +741,24 @@ export function drawCityMap(
         break;
       case 'welcome':
         ctx.rect(q[0] - 7, q[1] - 1.5, 14, 3);
+        ctx.fill();
+        break;
+      case 'dock':
+        ctx.arc(q[0], q[1], 4.5, 0, Math.PI * 2);
+        ctx.moveTo(q[0] - 2, q[1] - 2.2);
+        ctx.lineTo(q[0] - 2, q[1] + 2.2);
+        ctx.moveTo(q[0] + 2, q[1] - 2.2);
+        ctx.lineTo(q[0] + 2, q[1] + 2.2);
+        ctx.moveTo(q[0] - 2, q[1]);
+        ctx.lineTo(q[0] + 2, q[1]);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        break;
+      case 'embassy':
+        ctx.moveTo(q[0], q[1] - 4.5);
+        ctx.lineTo(q[0] + 4, q[1] + 3);
+        ctx.lineTo(q[0] - 4, q[1] + 3);
+        ctx.closePath();
         ctx.fill();
         break;
       default:
@@ -730,6 +832,17 @@ export function drawCityMap(
     ctx.lineWidth = 1;
     ctx.stroke();
     ctx.restore();
+    // "You · 52 m" beside it, quietly, where no name shown is in the way.
+    const cap = labels ? shipCaption([q[0], q[1]], ship.y, shown, w, h, measure) : null;
+    if (cap) {
+      ctx.font = cap.font;
+      ctx.textAlign = 'left';
+      ctx.globalAlpha = cap.alpha;
+      ctx.fillStyle = cap.colour;
+      ctx.fillText(cap.text, cap.x, cap.y);
+      ctx.globalAlpha = 1;
+      ctx.textAlign = 'center';
+    }
   }
   return shown;
 }
