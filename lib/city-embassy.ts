@@ -285,22 +285,33 @@ const SHARES = { lines: 0.55, faces: 0.8 };
 
 /* ---------- the sign ---------- */
 
-const SIGN_PX = 0.36;
+const SIGN_PX = 0.34;
 const SIGN_SITES = 1500;
 
 /**
  * Site s of embassy e's sign (centred at x, z): the words in light standing on the roof's edge
- * toward the avenue, clear of the room, readable from the avenue; a frame round them; each letter's light breathing
- * slowly from the first hue toward the second and back, a wave running along the words.
+ * toward the avenue, clear of the room; a frame round them; each letter's light breathing slowly
+ * from the first hue toward the second and back, a wave running along the words. It reads from
+ * both sides (2026-11-13: it read only from the avenue's side, mirrored from behind): seen from
+ * behind, the words run the other way.
  */
-function signSite(e: Embassy, x: number, z: number, s: number, t: number, o: number[]): boolean {
-  const T = textPixels(EMBASSY_SIGN);
+function signSite(
+  e: Embassy,
+  x: number,
+  z: number,
+  s: number,
+  t: number,
+  o: number[],
+  eye?: Vec3,
+): boolean {
+  const T = textPixels(EMBASSY_SIGN, { face: 'deco', fill: true });
   const npx = T.px.length / 2;
   // Toward the avenue (x = 0 in the tile): the edge on that side; read from there, the words run
-  // along -z on the left of the avenue, along +z on its right.
+  // along -z on the left of the avenue, along +z on its right; from behind, the other way.
   const side = e.li < 0 ? 1 : -1;
   const fx = x + side * (e.hx + 0.6);
-  const run = e.li < 0 ? -1 : 1;
+  const behind = eye !== undefined && (eye[0] - fx) * side < 0;
+  const run = (e.li < 0 ? -1 : 1) * (behind ? -1 : 1);
   const top = G + e.h + 1.2 + T.h * SIGN_PX;
   const [h1, h2] = e.hues;
   const u = (s + 0.5) / SIGN_SITES;
@@ -387,7 +398,7 @@ export function embassyItems(eye: Vec3, t: number, R: number, out: Item[]) {
         [fx + side, top + 3.5, z + 6],
         [fx + side, top + 3.5, z - 6],
       ],
-      site: (s, o) => signSite(e, x, z, s, t, o),
+      site: (s, o) => signSite(e, x, z, s, t, o, eye),
     });
   });
 }

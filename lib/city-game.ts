@@ -20,6 +20,7 @@ import { fibonacciSphere, hash, type RGB, smooth, type Vec3 } from './bigbang';
 import type { Sign, Tower } from './city';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
 import { carItems } from './city-cars';
+import { CODE_GREEN, CODE_TEMPO, codeSize, codeTowerItem, dataSpireItem } from './city-code';
 import { type Design, designFor, designHolds, designItem, studioItem } from './city-designs';
 import { dockItems } from './city-docks';
 import { embassyAt, embassyItems } from './city-embassy';
@@ -52,6 +53,20 @@ import { CAR_LEN, CARS, carAt, RAIL, railAt, railCeiling, STATIONS, TRAINS } fro
 import { besideRiver, inRiver, RIVER_Y, riverClear, riverItems } from './city-rain';
 import { FACADE_SHARE, FACADES, type Facade, facadeItem, roofItem } from './city-roofs';
 import { ropeItems } from './city-ropes';
+import {
+  avenueWall,
+  boardsOn,
+  OPENING,
+  openingRow,
+  posterBoardItem,
+  posterOn,
+  posterSigns,
+  TORII_Z,
+  toriiItem,
+  type WordSign,
+  welcomeSign,
+  wordItem,
+} from './city-signs';
 import { cityPortalItems } from './city-space';
 import { DEEP_MOUTHS, THROUGH, underAt, underBlocked, underItems, underOpen } from './city-under';
 
@@ -68,7 +83,8 @@ export type DistrictId =
   | 'industrial'
   | 'domes'
   | 'egypt'
-  | 'market';
+  | 'market'
+  | 'code';
 
 export type District = {
   id: DistrictId;
@@ -176,6 +192,15 @@ export const DISTRICTS: Record<DistrictId, District> = {
     landmark: null,
     signature: 'word signs: bank, bar, hotel, café',
   },
+  // 2026-11-13: "do a matrix quarter in green". A mood only: our own glyphs, our own spire.
+  code: {
+    id: 'code',
+    tempo: CODE_TEMPO,
+    name: 'Green Code quarter',
+    colour: CODE_GREEN,
+    landmark: 'The data spire, code falling down its faces',
+    signature: 'columns of green glyphs falling slowly down dark towers',
+  },
 };
 
 /** The six bands along the avenue, eight blocks each: the district left of it, and right. */
@@ -186,6 +211,8 @@ export const BANDS: [DistrictId, DistrictId][] = [
   ['golden', 'temples'],
   ['industrial', 'domes'],
   ['egypt', 'market'],
+  // Beyond the market, where the plan begins again: the Green Code quarter, both sides.
+  ['code', 'code'],
 ];
 export const BAND_ROWS = 8;
 
@@ -204,7 +231,16 @@ export const districtAt = (x: number, z: number) =>
 /** The landmarks, tile-local: each on the crossing at the middle of its district's side. */
 export type Landmark = {
   d: DistrictId;
-  kind: 'pagoda' | 'race' | 'shikhara' | 'mosque' | 'spire' | 'studio' | 'pyramid' | 'nova';
+  kind:
+    | 'pagoda'
+    | 'race'
+    | 'shikhara'
+    | 'mosque'
+    | 'spire'
+    | 'studio'
+    | 'pyramid'
+    | 'nova'
+    | 'dataspire';
   x: number;
   z: number;
   /** For a Studio building: its set and which. */
@@ -226,6 +262,7 @@ export const LANDMARKS: Landmark[] = [
   { d: 'industrial', kind: 'studio', set: 'factories', i: 1, ...LM(4, -1) },
   { d: 'domes', kind: 'studio', set: 'domes', i: 4, ...LM(4, 1) },
   { d: 'egypt', kind: 'pyramid', ...LM(5, -1) },
+  { d: 'code', kind: 'dataspire', ...LM(6, -1) },
 ];
 /** The golden spire: the one landmark seen from everywhere. */
 export const SPIRE = LANDMARKS.find((l) => l.kind === 'spire') as Landmark;
@@ -253,7 +290,8 @@ export type Shape =
   | 'studio'
   | 'business'
   | 'embassy'
-  | 'design';
+  | 'design'
+  | 'code';
 /**
  * A lit tunnel through a tower, along x (0) or z (2), at height y, half as wide and high as hw, hh.
  * `through`: part of the one tunnel bored through a whole row of towers (lib/city-under.ts THROUGH).
@@ -355,6 +393,14 @@ export function blockTower(I: number, J: number): Block {
         h = hx * Math.sqrt((1 + Math.sqrt(5)) / 2);
       }
       break;
+    case 'code': {
+      // The Green Code quarter (lib/city-code.ts): slim dark towers, code falling down their faces.
+      shape = 'code';
+      const c = codeSize(k, ave);
+      [hx, hz, h] = [c.hx, c.hz, c.h];
+      jx *= 0.5;
+      break;
+    }
     default:
       if (!ave && hash(k, 426) < 0.12) h = 9 + 6 * hh;
   }
@@ -402,7 +448,7 @@ export function blockTower(I: number, J: number): Block {
     h = Math.max(h, THROUGH.y + THROUGH.hh + 8 - GROUND + 10 * hh);
   }
   let x = cx + jx * Math.max(0, BLOCK_X - 2 * hx - 7);
-  if (ave && shape === 'box') {
+  if (ave && (shape === 'box' || shape === 'code')) {
     hx = Math.min(hx, 7);
     x = (I === 0 ? 1 : -1) * (AVENUE + hx);
   }
@@ -414,7 +460,8 @@ export function blockTower(I: number, J: number): Block {
     hz = BLOCK_Z / 2 - 4;
   }
   // Under the metro, lower, so the rail and its hanging carriages clear every roof.
-  if (shape === 'box' || shape === 'business') h = Math.max(8, Math.min(h, railCeiling(I, J)));
+  if (shape === 'box' || shape === 'business' || shape === 'code')
+    h = Math.max(8, Math.min(h, railCeiling(I, J)));
   let bore: Bore | null = null;
   if (thru) bore = { axis: 2, y: THROUGH.y, hw: THROUGH.hw, hh: THROUGH.hh, through: true };
   // More tunnels through towers than there were (2026-11-13: "more tunnels inside buildings").
@@ -488,7 +535,13 @@ export function blocked(q: Vec3): boolean {
     if (dx >= ex || dz >= ez) return false;
     return q[1] < GROUND + MARGIN + tw.h * (1 - Math.max(dx / ex, dz / ez));
   }
-  if (tw.shape !== 'box' && tw.shape !== 'business' && tw.shape !== 'embassy') return false;
+  if (
+    tw.shape !== 'box' &&
+    tw.shape !== 'business' &&
+    tw.shape !== 'embassy' &&
+    tw.shape !== 'code'
+  )
+    return false;
   return (
     q[1] <= GROUND + tw.h + MARGIN && dx < tw.hx + MARGIN && dz < tw.hz + MARGIN && !inBore(tw, q)
   );
@@ -1540,108 +1593,138 @@ function bridgeItem(A: Block, B: Block, eye: Vec3): Item | null {
   };
 }
 
-/* ---------- word signs: the Latin pixel font ---------- */
+/* ---------- word signs: the city's pixel faces (lib/city-font.ts, lib/city-signs.ts) ---------- */
 
-export type WordSign = { text: string; at: Vec3; px: number; rgb: RGB; key: number };
-function wordItem(w: WordSign, eye: Vec3, t: number): Item | null {
-  // Read from in front (+z) only.
-  if (eye[2] < w.at[2]) return null;
-  const T = textPixels(w.text);
-  const W = T.w * w.px;
-  const H = T.h * w.px;
-  const frame = Math.ceil((2 * (W + H)) / (w.px * 1.4));
-  const n = T.px.length / 2;
-  return {
-    d: boxDist(eye, [w.at[0], w.at[1] - H, w.at[2]], [w.at[0] + W, w.at[1], w.at[2]]),
-    gid: mixId(w.key, Math.round(w.at[2])),
-    count: n + frame,
-    weight: 3.5,
-    probe: [
-      [w.at[0], w.at[1], w.at[2]],
-      [w.at[0] + W, w.at[1] - H, w.at[2]],
-      [w.at[0] + W / 2, w.at[1] - H / 2, w.at[2]],
-    ],
-    site: (s, o) => {
-      // Breathing in time with the city's clock.
-      const f = 0.85 + 0.15 * beat(t, 1 / 2, w.key * 0.1);
-      if (s < n) {
-        o[0] = w.at[0] + ((T.px[s * 2] as number) + 0.5) * w.px;
-        o[1] = w.at[1] - ((T.px[s * 2 + 1] as number) + 0.5) * w.px;
-        o[2] = w.at[2];
-        [o[3], o[4], o[5]] = scale(w.rgb, 0.6 * f);
-        return true;
-      }
-      const m = 2 * w.px;
-      const e = ((s - n + 0.5) / frame) * 2 * (W + H + 4 * m);
-      const WW = W + 2 * m;
-      const HH = H + 2 * m;
-      let x: number;
-      let y: number;
-      if (e < WW) [x, y] = [e, 0];
-      else if (e < WW + HH) [x, y] = [WW, e - WW];
-      else if (e < 2 * WW + HH) [x, y] = [2 * WW + HH - e, HH];
-      else [x, y] = [0, Math.max(0, 2 * (WW + HH) - e)];
-      o[0] = w.at[0] - m + x;
-      o[1] = w.at[1] + m - y;
-      o[2] = w.at[2];
-      [o[3], o[4], o[5]] = scale(w.rgb, 0.22 * f);
-      return true;
-    },
-  };
-}
+export type { WordSign };
+
 const MARKET_WORDS = ['BANK', 'BAR', 'HOTEL', 'CAFE', 'NOODLES', 'CINEMA', 'TEA', 'DREAMS'];
 const NEON_TONES: RGB[] = [C.magenta, C.cyan];
-/** The word signs near the eye: district names at their mouths, the market's shop words, the welcome. */
+/** The Green Code quarter's welcome, at both its mouths. */
+export const CODE_WELCOME = 'WELCOME TO THE\nGREEN CODE QUARTER';
+/** The words the plan itself writes on its signs (with the districts' names), for the tests. */
+export const SIGN_STRINGS = [CODE_WELCOME, ...MARKET_WORDS, 'METRO', 'RACE'];
+/**
+ * The word signs near the eye: district names at their mouths, the Green Code quarter's welcome
+ * at both of its; the city's welcome is the opening road's (`openingItems`).
+ */
 function wordsNear(eye: Vec3, R: number, out: WordSign[]) {
   const n0 = Math.floor((eye[2] - R) / TILE_Z);
   const n1 = Math.floor((eye[2] + R) / TILE_Z);
   const xc = nearest(0, eye[0], TILE_X);
+  const code = BANDS.findIndex((b) => b[0] === 'code');
+  const T = textPixels(CODE_WELCOME, { face: 'deco' });
+  const px = 0.34;
   for (let n = n0; n <= n1; n++) {
     const z0 = n * TILE_Z;
-    // Welcome, over the avenue where the city begins again.
-    out.push({
-      text: 'WELCOME TO THE\nCITY OF DREAMS',
-      at: [xc - 22, GROUND + 52, z0 + TILE_Z - 14],
-      px: 0.5,
-      rgb: C.gold,
-      key: 9001 + n,
-    });
+    // The Green Code quarter's welcome, over the avenue at both its mouths, in green.
+    for (const [z, k] of [
+      [z0 + code * BAND_ROWS * BLOCK_Z, 0],
+      [z0 + TILE_Z, 1],
+    ] as const)
+      out.push({
+        text: CODE_WELCOME,
+        at: [xc - (T.w * px) / 2, GROUND + 30 + T.h * px, z],
+        px,
+        rgb: CODE_GREEN,
+        rgb2: mix(CODE_GREEN, C.white, 0.5),
+        key: 9101 + n * 2 + k,
+        face: 'deco',
+        frame: 'box',
+      });
     BANDS.forEach((band, b) => {
-      // Each district's name over its mouth, on the avenue's walls.
+      // Each district's name over its mouth, on the avenue's walls, in the bold face.
       const J = n * TILE_J + b * BAND_ROWS + BAND_ROWS - 1;
       band.forEach((id, side) => {
         const tw = blockTower(side ? 0 : -1, J);
         const name = DISTRICTS[id].name.toUpperCase();
-        const T = textPixels(name);
-        const px = 0.24;
-        const x = side ? xc + AVENUE + 1 : xc - AVENUE - 1 - T.w * px;
+        const T2 = textPixels(name, { face: 'deco' });
+        const px2 = 0.22;
+        const x = side ? xc + AVENUE + 1 : xc - AVENUE - 1 - T2.w * px2;
         out.push({
           text: name,
           at: [x, GROUND + Math.min(tw.h - 2, 14), tw.z + tw.hz + 0.4],
-          px,
+          px: px2,
           rgb: DISTRICTS[id].colour,
           key: b * 2 + side,
+          face: 'deco',
+          frame: 'line',
         });
       });
     });
   }
 }
-/** The market's shop words, and METRO and RACE: on tower faces that look down the streets (+z). */
+/**
+ * The market's shop words in the tall neon face (now and then elsewhere too), on tower faces that
+ * look down the streets (+z); and the market's hanging boards.
+ */
 function shopWords(tw: Block, out: WordSign[]) {
   if (tw.shape !== 'box') return;
   const h = hash(tw.k, 480);
   if (tw.d !== 'market' && h > 0.06) return;
   const word = MARKET_WORDS[Math.floor(hash(tw.k, 481) * MARKET_WORDS.length)] as string;
-  const T = textPixels(word);
-  const px = Math.min(0.45, (tw.hx * 1.6) / T.w);
-  const y = GROUND + Math.min(tw.h - 2, 8 + (tw.h - 12) * hash(tw.k, 482));
+  const T = textPixels(word, { face: 'tall' });
+  const px = Math.min(0.42, (tw.hx * 1.6) / T.w);
+  const y = GROUND + Math.min(tw.h - 2, 8 + T.h * px + (tw.h - 14) * hash(tw.k, 482));
   out.push({
     text: word,
     at: [tw.x - (T.w * px) / 2, y, tw.z + tw.hz + 0.3],
     px,
     rgb: NEON_TONES[tw.k % NEON_TONES.length] as RGB,
     key: tw.k,
+    face: 'tall',
+    frame: 'line',
   });
+  // A few hanging boards on the market's side streets, at one or two heights: not every tower.
+  if (tw.d === 'market' && hash(tw.k, 483) < 0.5 && tw.I !== 0)
+    out.push(
+      ...boardsOn(
+        tw,
+        [hash(tw.k, 484) < 0.5 ? -1 : 1],
+        tw.h > 34 ? [0.3, 0.75] : [0.5],
+        NEON_TONES,
+      ),
+    );
+}
+
+/** A tower's poster on its roof, in its district's hue, where it carries one. */
+function posterItems(tw: Block, eye: Vec3, t: number, out: Item[]) {
+  if (tw.shape !== 'box' || tw.d === 'chinatown') return;
+  const often = openingRow(tileRow(tw.J)) && (tw.I === 0 || tw.I === -1);
+  const p = posterOn(tw, often ? C.saffron : DISTRICTS[tw.d].colour, often);
+  if (!p) return;
+  out.push(posterBoardItem(p, eye, t));
+  for (const w of posterSigns(p)) out.push(wordItem(w, eye, t));
+}
+
+/**
+ * The road you start on (2026-11-13: "a cool entry for the game. a first road that is awesome
+ * (like the chinatown one)"): down the avenue from where the Ship starts to Chinatown's gate, a
+ * row of temple gates glowing as you pass through them, the welcome hung over it, boards on its
+ * walls at many heights (the posters on its roofs come with the towers').
+ */
+function openingItems(eye: Vec3, t: number, out: Item[]) {
+  const xc = nearest(0, eye[0], TILE_X);
+  if (Math.abs(eye[0] - xc) > NEAR) return;
+  const mid = (OPENING.start + OPENING.end) / 2;
+  const n = Math.round((eye[2] - mid) / TILE_Z);
+  const oz = n * TILE_Z;
+  if (Math.abs(oz + mid - eye[2]) > NEAR + 120) return;
+  TORII_Z.forEach((z, i) => {
+    const it = toriiItem(oz + z, xc, eye, t, n * 31 + i);
+    if (it.d < NEAR) out.push(it);
+  });
+  const w = wordItem(welcomeSign(xc, oz + OPENING.welcome, 9001 + n), eye, t);
+  if (w.d < NEAR + 40) out.push(w);
+  for (let lj = 8; lj < 14; lj++) {
+    for (const I of [-1, 0] as const) {
+      const tw = blockTower(I, n * TILE_J + lj);
+      if (tw.shape !== 'box' || Math.abs(tw.z - eye[2]) > NEAR) continue;
+      const side: -1 | 1 = I < 0 ? -1 : 1;
+      const levels = tw.h > 26 ? [0.25, 0.55, 0.85] : [0.3, 0.75];
+      for (const b of boardsOn(tw, [side], levels, [C.red, C.gold, C.saffron], avenueWall(xc)))
+        out.push(wordItem(b, eye, t));
+    }
+  }
 }
 
 /* ---------- Chinatown's signs at every height ---------- */
@@ -1807,7 +1890,7 @@ function railItems(eye: Vec3, t: number, R: number, out: Item[]) {
         eye,
         t,
       );
-      if (wi) out.push(wi);
+      out.push(wi);
     });
   }
 }
@@ -2032,7 +2115,14 @@ function planItems(eye: Vec3, fwd: Vec3, R: number, k: number, t: number, out: I
         o[2] = V.z0 + (s + 0.5) * gap;
         // A slow wave of light running down every street, on the city's beat.
         const wave = 0.6 + 0.4 * beat(t, 1, -(o[2] as number) / 160);
-        const rgb = ave ? C.white : main ? C.gold : C.amber;
+        // The Green Code quarter's streets are lit green.
+        const rgb = inCode(x, o[2] as number)
+          ? CODE_GREEN
+          : ave
+            ? C.white
+            : main
+              ? C.gold
+              : C.amber;
         [o[3], o[4], o[5]] = scale(rgb, (ave ? 0.62 : main ? 0.5 : 0.3) * wave);
         return true;
       },
@@ -2053,12 +2143,17 @@ function planItems(eye: Vec3, fwd: Vec3, R: number, k: number, t: number, out: I
         o[1] = GROUND + 0.1;
         o[2] = z;
         const wave = 0.6 + 0.4 * beat(t, 1, -(o[0] as number) / 160);
-        [o[3], o[4], o[5]] = scale(main ? C.gold : C.amber, (main ? 0.5 : 0.28) * wave);
+        const rgb = inCode(o[0] as number, z) ? CODE_GREEN : main ? C.gold : C.amber;
+        [o[3], o[4], o[5]] = scale(rgb, (main ? 0.5 : 0.28) * wave);
         return true;
       },
     });
   }
 }
+/** Whether a point is in the Green Code quarter (its streets lit green). */
+const inCode = (x: number, z: number) => districtAt(x + 0.01, z) === 'code';
+/** Cars in the Green Code quarter take its green, their lights too. */
+const codeCars = (x: number, z: number): RGB | null => (inCode(x, z) ? CODE_GREEN : null);
 /** Sites in a landmark plaza's ring from above, and in its bright heart. */
 const PLAZA_RING = 72;
 const PLAZA_HEART = 24;
@@ -2156,6 +2251,8 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
         }
       }
       shopWords(tw, words);
+      posterItems(tw, eye, t, out);
+      if (tw.shape === 'code') out.push(codeTowerItem(tw, eye, t, d));
       if (tw.d === 'heights' && tw.shape === 'box') {
         const B = blockTower(I + 1, J);
         if (B.shape === 'box' && B.d === 'heights') {
@@ -2184,6 +2281,10 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
       ];
       if (L.kind === 'nova') {
         out.push(coreItem(x, z, eye, t, d, gid));
+        return;
+      }
+      if (L.kind === 'dataspire') {
+        out.push(dataSpireItem(x, z, eye, t, d, gid));
         return;
       }
       if (L.kind === 'studio' && L.set) {
@@ -2216,7 +2317,7 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
           eye,
           t,
         );
-        if (wi) out.push(wi);
+        out.push(wi);
       }
     });
     // The Heights' tube and portals, over the avenue.
@@ -2276,8 +2377,9 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
   wordsNear(eye, NEAR, words);
   for (const w of words) {
     const it = wordItem(w, eye, t);
-    if (it && it.d < NEAR) out.push(it);
+    if (it.d < NEAR) out.push(it);
   }
+  openingItems(eye, t, out);
   const strands: Strand[] = [];
   strandsNear(eye, NEAR, strands);
   for (const st of strands) {
@@ -2304,7 +2406,7 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
   riverItems(eye, t, R, floorAt, waterAt, out);
   dockItems(eye, t, Math.min(R, NEAR + 40), out, ship);
   embassyItems(eye, t, R, out);
-  carItems(eye, fwd, t, (x, z) => inCanal(x, z) || underOpen(x, z), out, ship);
+  carItems(eye, fwd, t, (x, z) => inCanal(x, z) || underOpen(x, z), out, ship, codeCars);
   cityPortalItems(eye, t, out);
   const k = planLook(eye[1]);
   if (k > 0) planItems(eye, fwd, R, k, t, out);

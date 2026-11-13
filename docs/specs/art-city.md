@@ -702,8 +702,9 @@ The film is still a mood only: every building, ship and sign is our own, from a 
 
 ### The plan (`lib/city-game.ts`)
 
-A tile of 12 blocks across and 48 along (312 × 1632), repeating every way so the city never ends.
-The avenue runs down its middle; six bands of eight blocks lie along it, a district each side:
+A tile of 12 blocks across and 56 along (312 × 1904; 48 and 1632 before the Green Code quarter),
+repeating every way so the city never ends. The avenue runs down its middle; seven bands of eight
+blocks lie along it, a district each side:
 
 | Band | Left of the avenue | Right of the avenue |
 |------|--------------------|---------------------|
@@ -713,10 +714,11 @@ The avenue runs down its middle; six bands of eight blocks lie along it, a distr
 | 3 | **Golden gardens**: golden towers, golden domes, parks of golden trees (gold-leaf crowns shimmering); landmark the **golden spire** (190 high, rings of light, an open sphere of light on top, eight golden trees round it), seen from everywhere | **Temple quarter**: the Studio's temples (lib/golden-buildings.ts, read-only) on blocks; landmark the Studio's **ziggurat**, stairs on every side, 1.7 times its Studio size |
 | 4 | **Industrial quarter**: the Studio's five factories on blocks; landmark the Studio's **foundry**, its chimneys breathing steam | **Solarpunk domes**: the Studio's glasshouses and parks of golden trees; landmark the Studio's **garden of domes** |
 | 5 | **Egyptian quarter**: pyramids on the blocks (the golden slope, courses marked, a light at every apex; they hold you like walls, on their slope), obelisks on the avenue's low towers; landmark the **great pyramid** with a lying sphinx-like figure and two obelisks (our own simple shapes) | **Neon market**: word signs in a small Latin pixel font (BANK, BAR, HOTEL, CAFE, NOODLES, CINEMA, TEA, DREAMS) |
+| 6 | **Green Code quarter** (both sides, below): dark towers with code falling down their faces; landmark the **data spire** | **Green Code quarter** too |
 
-Every district's name is written over its mouth on the avenue's walls. Where the plan begins again
-a great panel over the avenue reads **WELCOME TO THE CITY OF DREAMS**. Now and then a word sign
-lights a tower elsewhere too.
+Every district's name is written over its mouth on the avenue's walls. The great panel
+**WELCOME TO THE CITY OF DREAMS** hangs over the opening road, where the Ship starts (below). Now
+and then a word sign lights a tower elsewhere too.
 
 **Levels.** Canals under the street (floor 14 down); the street; the lanes; sky bridges; the metro
 at 35–45; the tops of the Heights; a lane of ships at 150 over every roof; the stations and the
@@ -1093,11 +1095,80 @@ buildings".
   the rest; the frame's grains are the same pool, so the cost is in building the items (the same
   few milliseconds as before in the bench).
 
+### Signs, posters and gates (`lib/city-font.ts`, `lib/city-signs.ts`)
+
+> 2026-11-13: "check how banner typos can be better." / "work on different typos. pancartes like
+> chinatown ones. affiches publicitaires. cool pancartes. japanese doors like those temple doors
+> that u must fly through. also think of a cool entry for the game. a first road that is awesome
+> (like the chinatown one)."
+
+- **Four faces**, written as bits: `sign` (5 × 7, the plain one), `tall` (4 × 9, M W T V X Y five
+  wide: neon and narrow boards), `deco` (the plain one bold, every stroke two wide: the big
+  banners and the districts' names), `brush` (the plain one drawn with a 45° nib: hanging
+  boards). Letters set by what they hold (I narrower than M), a pair leaving room on every row a
+  pixel closer (L T, A T), words five pixels apart. Every letter of a face is distinct (O and 0 by
+  the slash, I and 1 by the flag). Punctuation: `. , ' ! ? & : / + · -`.
+- **Filled strokes**: a light halfway between every two neighbouring lit pixels (diagonals too),
+  so words read as lines from far off.
+- **Both sides**: every word sign, the posters and the embassies' sign read from behind too, the
+  letters laid the other way so they never read mirrored (the embassy sign read only from the
+  avenue's side before).
+- **Frames**: big banners (a pixel of 0.4 or more) a quiet frame with three brighter lights at each
+  corner; smaller words an underline; hanging boards a frame and a faint backing.
+- **Posters** on about one roof in twelve (not Chinatown, not the Green Code quarter): a board on
+  the roof's street edge on two legs, an invented brand in `deco` in its district's hue over its
+  line in `tall` in white, a gold frame with a soft light going round it once in about seven
+  seconds. Brands are our own (GLOWBERRY SODA, ORBIT NOODLES, DRIFT TEA HOUSE, VELVET HOURS, ...).
+- **Hanging boards**: a word stacked top to bottom in `brush` on a framed board standing out from
+  a wall over the street, facing down it: on about half the market's towers (one side, one or two
+  heights) and on the opening road's walls at two or three heights.
+- **The SHARK SIMULATOR marquee**: in `tall`, its strokes filled, on a topper as wide as the
+  cabinet rising to 3.2 (it was 0.5 high before).
+
+**The opening road.** The Ship now starts 190 short of Chinatown's gate (60 before), at the head of
+the avenue's stretch through the Indian band's first six rows: ten temple gates (our own, from the
+torii: two round posts leaning in, a lintel swept up at its ends over a lower beam, a strut and
+plaque between, two paper lanterns hanging from the beam), one every 18, the route flying under
+every lintel; each swells to a warm glow over a second and a half as you pass through it and
+stays lit. **WELCOME TO THE CITY OF DREAMS** in `deco`, gold drifting to warm white, framed, hangs
+over the cross street just ahead of the start; boards in red, gold and saffron hang over the avenue
+from its walls; its roofs carry posters far more often. Then Chinatown's own gate and lanterns.
+
+### The Green Code quarter (`lib/city-code.ts`)
+
+> 2026-11-13: "do a matrix quarter in green".
+
+A mood only: no film names, logos or characters. The seventh band (rows 48–55 of the tile,
+z 1632–1904, both sides of the avenue), added at the far end of the plan so every other place keeps
+its tile-local spot: you reach it flying on from the market, or back out of Chinatown across the
+tile's edge.
+
+- **Towers**: slim and dark (half-widths 6.4–8 by 9–12, 34 to 82 high), holding you like walls.
+  Deep green edges, a green rim on the roof, and on the faces turned toward the eye the code:
+  columns every 1.25, cells every 1.15, each cell a glyph of two dots (fixed per cell); two streams
+  fall down each column at 2 to 3.5 cells a second, a mint head and a twelve-cell trail fading
+  smoothly behind it (no cell's light ever changes by more than 0.07 a frame). Budget as the
+  business towers': at most 4200 sites a tower, weight 1.25.
+- **Streets lit green**: a kerb of green round every tower with a mint lamp every few steps; cars
+  there take the green, their lights too; from above its streets are green threads.
+- **The data spire** on its plaza (x −78, z 1768 in the tile): a monolith 16 across tapering to 9 at
+  150, a point to 162, its edges bright, the code falling down its faces, three square halos sinking
+  slowly down it (about seventy seconds each, fading in and out), a beacon breathing on the
+  quarter's beat (1/3), a ring and eight lines of light on the plaza. On the map as **Data spire**.
+- **WELCOME TO THE GREEN CODE QUARTER** in `deco`, green drifting to mint white, framed, over the
+  avenue at both its mouths.
+- Green only: everything the game adds there (towers, spire, kerbs, cars, signs) has green its
+  strongest channel.
+
 ### Still rough, and next
 
 - The Studio's domes, minarets and spires on the box towers are light: you fly through them (the
-  towers, pyramids and the twenty hold you). Sky bridges and the metro are light too.
+  towers, pyramids, the twenty and the code towers hold you). Sky bridges and the metro are light
+  too.
 - The Deep Line has no race of its own yet (the tracks are one a quarter), and no side branches.
+- The Green Code quarter's towers have no tunnels, docks or race; the code's glyphs do not change.
+- The opening road's boards and gates are only on the Ship's first stretch; Chinatown's avenue
+  keeps its own signs.
 - Sky lanterns and portals are only near the avenue; the Sky Island Loop and four other tracks are
   drafts (gates only); the sky island itself is the platform station, still small.
 - Traffic does not yet move in platoons on the beat; the beat does not yet travel out from a heart
