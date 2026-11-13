@@ -57,7 +57,14 @@ export function roadColour(r: Road): RGB {
 const laneOff = (r: Road, lane: number) =>
   r.axis === 2 && r.line === 0 ? (lane === 0 ? AVENUE * 0.3 : AVENUE * 0.68) : 1.7;
 
-export type Car = { pos: Vec3; dir: Vec3; road: Road; colour: RGB };
+export type Car = {
+  pos: Vec3;
+  dir: Vec3;
+  road: Road;
+  colour: RGB;
+  /** Its head and tail lights, where a district has its own (the Green Code quarter's greens). */
+  lights?: [RGB, RGB];
+};
 
 /**
  * Car k of road r going way `sgn` (+1 or -1 along its axis), the copy of it nearest `near`, at time
@@ -172,17 +179,17 @@ export function carSite(c: Car, s: number, o: number[], fade = 1): boolean {
     // Headlights, warm white, either side of its nose.
     const side = s & 1 ? 1 : -1;
     const j = hash(s, 7) * 0.12;
-    return put(L + 0.02, side * (W - 0.25) + j, 0.72, C.warm, 0.75);
+    return put(L + 0.02, side * (W - 0.25) + j, 0.72, c.lights?.[0] ?? C.warm, 0.75);
   }
   if (s < 58) {
     // Tail lights, red.
     const side = s & 1 ? 1 : -1;
-    return put(-L - 0.02, side * (W - 0.2) + hash(s, 8) * 0.12, 0.75, C.red, 0.6);
+    return put(-L - 0.02, side * (W - 0.2) + hash(s, 8) * 0.12, 0.75, c.lights?.[1] ?? C.red, 0.6);
   }
   // A faint pool of its headlights on the street ahead.
   const a = L + 1.2 + 3.5 * hash(s, 9);
   const b = (hash(s, 10) - 0.5) * 1.4 * (1 + (a - L) * 0.25);
-  return put(a, b, 0.03, C.warm, 0.1);
+  return put(a, b, 0.03, c.lights?.[0] ?? C.warm, 0.1);
 }
 
 /** How near a car is drawn, and how high the eye may be for cars to be drawn at all. */
@@ -191,7 +198,8 @@ export const CAR_EYE_MAX = GROUND + 80;
 
 /**
  * The cars near a low eye, ahead of it (`fwd`), for the Ship's renderer; `onCanal` keeps them off
- * the Canals' water.
+ * the Canals' water; `tint`, where it gives a hue, paints a car and its lights in it (2026-11-13:
+ * the Green Code quarter is green only).
  */
 export function carItems(
   eye: Vec3,
@@ -199,12 +207,15 @@ export function carItems(
   t: number,
   onCanal: (x: number, z: number) => boolean,
   out: Item[],
+  tint?: (x: number, z: number) => RGB | null,
 ) {
   if (eye[1] > CAR_EYE_MAX) return;
   const fl = Math.hypot(fwd[0], fwd[2]) || 1;
   const hx = fwd[0] / fl;
   const hz = fwd[2] / fl;
-  const push = (c: Car, gid: number) => {
+  const push = (car: Car, gid: number) => {
+    const g = tint?.(car.pos[0], car.pos[2]);
+    const c: Car = g ? { ...car, colour: g, lights: [mix(g, C.white, 0.5), scale(g, 0.6)] } : car;
     const dx = c.pos[0] - eye[0];
     const dz = c.pos[2] - eye[2];
     const d = Math.hypot(dx, c.pos[1] + 0.8 - eye[1], dz);

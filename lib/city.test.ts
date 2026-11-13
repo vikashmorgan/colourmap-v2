@@ -612,10 +612,12 @@ describe('Ship, round two: solid walls, the avenue and Chinatown', () => {
   };
 
   it('keeps walls dense near the eye and sparser far off', () => {
-    // Among the tall towers of the Heights, away from Chinatown.
+    // Among the tall towers of the Heights, away from Chinatown, short of the tube over the
+    // avenue (2026-11-13: once the plan grew a seventh band, eight seconds in put the eye at the
+    // tube's mouth, its rings filling the near view and starving every far wall).
     let s0 = 0;
     while (districtAt(route(s0).c[0], route(s0).c[2]) !== 'heights') s0 += 0.5;
-    s0 += 8;
+    s0 += 4;
     expect(chinatownness(route(s0).c[2], 40)).toBe(0);
     fresh(s0);
     const shot = frame(s0);

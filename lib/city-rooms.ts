@@ -320,7 +320,7 @@ function cabinetSite(P: Placed, q: number, L: number, t: number): Spot {
   });
   const D = CAB_DEPTH;
   const A = CAB_HALF;
-  if (q < 0.26) {
+  if (q < 0.22) {
     // The body's outline: its two sides' profiles (deep at the foot, a slanted screen, the marquee
     // jutting over it) and the lines across between them.
     const side = r(1) < 0.5 ? -1 : 1;
@@ -334,16 +334,17 @@ function cabinetSite(P: Placed, q: number, L: number, t: number): Spot {
     return at(p0[0], (r(4) - 0.5) * 2 * A, p0[1], mix(h1, C.white, 0.3), 0.3);
   }
   if (q < 0.5) {
-    // The marquee: SHARK SIMULATOR in light, glowing on a slow breath.
-    const T = textPixels(MARQUEE);
+    // The marquee: SHARK SIMULATOR in light, glowing on a slow breath; in the tall face, its
+    // strokes filled, on a topper as wide as the cabinet (2026-11-13: it was too small to read).
+    const T = textPixels(MARQUEE, { face: 'tall', fill: true });
     const npx = T.px.length / 2;
     const i = Math.floor(r(5) * npx);
-    const px = (2 * A * 0.86) / T.w;
+    const px = Math.min((2 * A * 0.96) / T.w, (MARQUEE_TOP - 2.15) / T.h);
     const cx = ((T.px[i * 2] as number) + 0.5 - T.w / 2) * px;
     const cy = ((T.px[i * 2 + 1] as number) + 0.5) * px;
     const glow = 0.85 + 0.15 * Math.sin(t * 0.6);
     // Read from the room, facing the cabinet: the words run along the view (the reader's right).
-    return at(D + 0.12, cx, CAB_H + 0.42 - cy, mix(h2, C.cyan, 0.5), 0.55 * glow);
+    return at(D + 0.12, cx, MARQUEE_TOP - 0.06 - cy, mix(h2, C.cyan, 0.5), 0.6 * glow);
   }
   if (q < 0.82) {
     // The screen, slanting back: deep blue water, a shark chasing a fish across and back.
@@ -390,6 +391,8 @@ function cabinetSite(P: Placed, q: number, L: number, t: number): Spot {
   return at(D + 0.9 + Math.cos(a) * rr * 0.7, Math.sin(a) * rr, 0.02, h1, 0.12 * (1 - rr / 1.2));
 }
 const MARQUEE = 'SHARK\nSIMULATOR';
+/** The top of the cabinet's marquee: a topper standing over the screen. */
+const MARQUEE_TOP = CAB_H + 0.95;
 const DEEP: RGB = [0.1, 0.35, 0.8];
 const SHARK: RGB = [0.75, 0.83, 0.95];
 /** The cabinet's side, out from the wall and up: its foot, the panel, the slanted screen, the marquee. */
@@ -401,8 +404,8 @@ const PROFILE: [number, number][] = [
   [CAB_DEPTH, 1.25],
   [CAB_DEPTH - 0.15, 2.0],
   [CAB_DEPTH + 0.1, 2.05],
-  [CAB_DEPTH + 0.1, CAB_H + 0.5],
-  [-CAB_DEPTH, CAB_H + 0.5],
+  [CAB_DEPTH + 0.1, CAB_H + 0.95],
+  [-CAB_DEPTH, CAB_H + 0.95],
   [-CAB_DEPTH, 0],
 ];
 

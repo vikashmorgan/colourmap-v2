@@ -37,6 +37,7 @@ import {
 } from './city-grid';
 import { RAIL, STATIONS } from './city-metro';
 import { TRACKS } from './city-race';
+import { OPENING } from './city-signs';
 
 /* ---------- the data ---------- */
 
@@ -89,9 +90,14 @@ const LANDMARK_NAMES: Record<Landmark['kind'], string> = {
   studio: 'Studio',
   pyramid: 'Great pyramid',
   nova: 'Nova Core of the Heights',
+  dataspire: 'Data spire',
 };
 const STUDIO_NAMES = { temples: 'Ziggurat', factories: 'Foundry', domes: 'Garden of domes' };
-const LANDMARK_Y: Partial<Record<Landmark['kind'], number>> = { spire: 190, pyramid: 40 };
+const LANDMARK_Y: Partial<Record<Landmark['kind'], number>> = {
+  spire: 190,
+  pyramid: 40,
+  dataspire: 162,
+};
 
 export const landmarkName = (l: Landmark) =>
   l.kind === 'studio' && l.set ? STUDIO_NAMES[l.set] : LANDMARK_NAMES[l.kind];
@@ -144,9 +150,14 @@ export function cityMapData(): MapData {
         z: tw.z,
         hx: tw.hx,
         hz: tw.hz,
-        h: tw.shape === 'box' || tw.shape === 'pyramid' ? tw.h : 0,
+        h: tw.shape === 'box' || tw.shape === 'code' || tw.shape === 'pyramid' ? tw.h : 0,
         d: tw.d,
-        shape: tw.shape === 'box' ? 'box' : tw.shape === 'pyramid' ? 'pyramid' : 'flat',
+        shape:
+          tw.shape === 'box' || tw.shape === 'code'
+            ? 'box'
+            : tw.shape === 'pyramid'
+              ? 'pyramid'
+              : 'flat',
       });
     }
   }
@@ -215,7 +226,7 @@ export function cityMapData(): MapData {
     kind: 'welcome',
     name: 'Welcome to the City of Dreams',
     x: 0,
-    z: 0,
+    z: OPENING.welcome,
     y: 30,
     colour: [1, 0.74, 0.3],
   });

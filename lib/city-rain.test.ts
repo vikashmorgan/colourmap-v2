@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Vec3 } from './bigbang';
 import { blocked, blockTower, floorAt, gameItems, waterAt } from './city-game';
-import { BLOCK_X, BLOCK_Z, GROUND, type Item, TILE_I, TILE_X, TILE_Z } from './city-grid';
+import { BLOCK_X, BLOCK_Z, GROUND, type Item, TILE_I, TILE_J, TILE_X, TILE_Z } from './city-grid';
 import {
   BRIDGES_X,
   FALL,
@@ -48,7 +48,7 @@ describe('the river (2026-11-12: "parts with a river")', () => {
 
   it('keeps every tower back from its banks, and you can fly low over it, under the bridges', () => {
     for (let I = -TILE_I; I < TILE_I; I++) {
-      for (const J of [23, 24, 23 + 48, 24 - 48]) {
+      for (const J of [23, 24, 23 + TILE_J, 24 - TILE_J]) {
         const tw = blockTower(I, J);
         expect(['box', 'business']).toContain(tw.shape);
         const zc = Math.round(tw.z / TILE_Z) * TILE_Z + RIVER_Z;
