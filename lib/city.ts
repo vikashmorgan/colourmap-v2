@@ -32,6 +32,7 @@ import {
   atlantisEye,
   atlantisSize,
 } from './atlantis';
+import { ATLANTIS_BUILDINGS } from './atlantis-buildings';
 import {
   fibonacciSphere,
   flow,
@@ -101,6 +102,7 @@ import {
   tunnelStep,
 } from './city-space';
 import {
+  ATLANTIS_PALETTES,
   buildingAt,
   buildingEye,
   DOMES,
@@ -269,6 +271,18 @@ export const PHASES: CityPhase[] = [
   },
   ATLANTIS_PHASE,
   {
+    id: 'atlantis-buildings',
+    name: 'Atlantis buildings',
+    line: 'The sunken city built one piece at a time (a porthole tower, a pearl dome, a coral temple, a kelp spire, a submarine pen, a jelly lighthouse), then a cluster of domes joined by glass tunnels, a walled compartment and a whole Atlantis quarter, bubbles rising from every crown.',
+    words: [
+      'Under the sea a building has to hold its own air, and its own light.',
+      'A glass tunnel is a street that the fish can watch.',
+    ],
+    duration: 36,
+    glow: 1,
+    size: 0.95,
+  },
+  {
     id: 'towers',
     name: 'Towers',
     line: 'A city grows up out of a grid of blocks: tall towers rise floor by floor, box on box, their windows lighting as they climb.',
@@ -384,6 +398,7 @@ export const STEP_COLOURS = [
   '#f0c070',
   '#f2c25a',
   '#4fd8d0',
+  '#5ec8e8',
   '#7f9cff',
   '#e8f0ff',
   '#ff5fd2',
@@ -3375,6 +3390,7 @@ let templeKind = 0;
 let factoryKind = 0;
 let domeKind = 0;
 let buildingKind = 0;
+let atlantisKind = 0;
 const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number) => void }> = {
   'golden-plan': { names: PLANS, label: 'Plan', set: setPlanKind },
   nova: { names: NOVA_CORES, label: 'Nova Core', set: setNovaKind },
@@ -3383,6 +3399,11 @@ const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number
   domes: { names: DOMES.names, label: DOMES.label, set: (i) => (domeKind = i) },
   above: { names: CITIES.map((c) => c.name), label: 'City', set: setCityKind },
   atlantis: ATLANTIS_VARIANTS,
+  'atlantis-buildings': {
+    names: ATLANTIS_BUILDINGS.names,
+    label: ATLANTIS_BUILDINGS.label,
+    set: (i) => (atlantisKind = i),
+  },
   buildings: { names: BUILDINGS.names, label: BUILDINGS.label, set: (i) => (buildingKind = i) },
 };
 
@@ -3399,6 +3420,7 @@ const PALETTE_SETS: Record<string, string[]> = {
   temples: GOLDEN_PALETTES,
   factories: FACTORY_PALETTES,
   domes: GOLDEN_PALETTES,
+  'atlantis-buildings': ATLANTIS_PALETTES,
 };
 const palettesOf = (k: number) => PALETTE_SETS[PHASES[k]?.id ?? ''];
 export const hasPalettes = (k: number) => palettesOf(k) !== undefined;
@@ -3445,6 +3467,8 @@ export function formAt(k: number, p: Particle, u: number, t: number): Spot {
       return aboveAt(p, u, t);
     case 'atlantis':
       return atlantisAt(p, Math.max(u, 0), t);
+    case 'atlantis-buildings':
+      return buildingAt(ATLANTIS_BUILDINGS, atlantisKind, p, t);
     case 'towers':
       return towersAt(p, Math.max(u, 0), t);
     case 'lanes':
@@ -3532,6 +3556,8 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       return aboveEye(t);
     case 'atlantis':
       return atlantisEye(u, t);
+    case 'atlantis-buildings':
+      return buildingEye(t, ATLANTIS_BUILDINGS.reach[atlantisKind]);
     case 'towers':
       // Slowly round the city, above its roofs, looking at its heart.
       return towersEye(u);
@@ -3656,7 +3682,7 @@ export function pieceCamera(k: number, s: number): Eye {
 export function pieceBackground(k: number): string[] | null {
   const id = PHASES[k]?.id;
   if (id === 'ship' && inSpace()) return SPACE_BACKGROUND;
-  return id === 'atlantis' ? ATLANTIS_WATER : null;
+  return id === 'atlantis' || id === 'atlantis-buildings' ? ATLANTIS_WATER : null;
 }
 /** Out in space: near black, a breath of deep blue low down. */
 const SPACE_BACKGROUND = ['#010108', '#000003', '#020414'];

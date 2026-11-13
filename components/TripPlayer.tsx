@@ -1373,6 +1373,9 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
   const studioNav = !!trip.pieces && !journey && !playable;
   const variantList = variantsAt(trip.pieces?.variants, hud.index);
   const variantNow = variantList[variant] ?? '';
+  const variantKind = trip.pieces?.variants?.label;
+  const variantWord =
+    (typeof variantKind === 'function' ? variantKind(hud.index) : variantKind) || 'Variant';
   const palettes = trip.pieces?.palettes;
   const paletteList =
     !journey && palettes?.has(hud.index)
@@ -1545,6 +1548,12 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
           ) : null}
           {step.thread ? <span className="jr-thread">{step.thread}</span> : null}
         </div>
+        {/* Where you are in the row: "Factory 3 of 10". */}
+        {studioNav && variantList.length > 1 ? (
+          <span className="bb-variant-count">
+            {variantWord} {variant + 1} of {variantList.length}
+          </span>
+        ) : null}
         <p className={`bb-line${chrome ? '' : ' bb-hidden'}`}>{step.line}</p>
       </div>
       <button

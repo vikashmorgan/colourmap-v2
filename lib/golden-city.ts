@@ -238,10 +238,66 @@ export const PALETTES: Palette[] = [
     ],
     drift: [0.45, 0.55, 0.85],
   },
+  /*
+   * Atlantis's (2026-11-13): the sea's teal and aqua with pearl lights; pearl and coral; the
+   * deep's own bioluminescence, cyan and violet. Kept dim like the others, drifting slowly.
+   */
+  {
+    name: 'Deep sea',
+    tones: [
+      [[0.25, 0.8, 0.85], 0.32],
+      [[0.08, 0.32, 0.45], 0.22],
+      [[0.3, 0.75, 0.9], 0.08],
+      [[0.15, 0.4, 0.8], 0.2],
+      [[0.3, 0.8, 0.45], 0.32],
+      [[1, 0.45, 0.4], 0.5],
+      [[0.85, 0.95, 1], 0.75],
+      [[0.12, 0.28, 0.32], 0.09],
+      [[0.4, 0.85, 0.9], 0.36],
+      [[0.7, 0.9, 1], 0.2],
+      [[0.45, 0.85, 0.95], 0.22],
+    ],
+    drift: [0.3, 0.55, 0.95],
+  },
+  {
+    name: 'Pearl & coral',
+    tones: [
+      [[0.92, 0.88, 0.85], 0.28],
+      [[0.55, 0.5, 0.55], 0.17],
+      [[0.85, 0.82, 0.9], 0.07],
+      [[0.25, 0.5, 0.75], 0.18],
+      [[1, 0.5, 0.45], 0.32],
+      [[1, 0.42, 0.35], 0.55],
+      [[1, 0.92, 0.85], 0.75],
+      [[0.45, 0.4, 0.4], 0.08],
+      [[1, 0.75, 0.68], 0.34],
+      [[0.9, 0.9, 0.95], 0.18],
+      [[0.95, 0.8, 0.9], 0.22],
+    ],
+    drift: [1, 0.6, 0.55],
+  },
+  {
+    name: 'Bioluminescent',
+    tones: [
+      [[0.2, 0.95, 0.9], 0.34],
+      [[0.08, 0.12, 0.4], 0.2],
+      [[0.3, 0.6, 1], 0.08],
+      [[0.2, 0.3, 0.9], 0.2],
+      [[0.25, 1, 0.6], 0.32],
+      [[0.85, 0.3, 1], 0.55],
+      [[0.5, 1, 0.95], 0.75],
+      [[0.08, 0.1, 0.3], 0.08],
+      [[0.6, 0.4, 1], 0.36],
+      [[0.5, 0.9, 1], 0.18],
+      [[0.7, 0.45, 1], 0.22],
+    ],
+    drift: [0.65, 0.35, 1],
+  },
 ];
-/** The presets the golden pieces offer, and the factories'. */
+/** The presets the golden pieces offer, the factories' and Atlantis's buildings'. */
 export const GOLDEN_PALETTES = ['Gold', 'Rose gold', 'White marble & gold', 'Night neon gold'];
 export const FACTORY_PALETTES = ['Gold', 'Rust', 'Steel blue-grey', 'Night neon gold'];
+export const ATLANTIS_PALETTES = ['Deep sea', 'Pearl & coral', 'Bioluminescent', 'Gold'];
 let palette: Palette = PALETTES[0] as Palette;
 /** Pick a preset by name (Gold when the name is unknown). */
 export function setGoldenPalette(name: string) {

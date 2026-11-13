@@ -105,7 +105,7 @@ const inside = (q: number[], tw: (typeof CITY)[number]) =>
   Math.abs((q[2] as number) - tw.z) < tw.hz;
 
 describe('the city chapter', () => {
-  it('has seventeen pieces, from the golden plan to the ship, each with words', () => {
+  it('has eighteen pieces, from the golden plan to the ship, each with words', () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       'golden-plan',
       'rising',
@@ -117,6 +117,7 @@ describe('the city chapter', () => {
       'buildings',
       'above',
       'atlantis',
+      'atlantis-buildings',
       'towers',
       'lanes',
       'neon',
@@ -136,6 +137,7 @@ describe('the city chapter', () => {
       'Buildings',
       'From above',
       'Atlantis',
+      'Atlantis buildings',
       'Towers',
       'Sky lanes',
       'Neon',
@@ -1215,7 +1217,8 @@ describe('From above (moved from Vegetal, 2026-11-12)', () => {
     expect(PHASES[k - 1]?.id).toBe('buildings');
     expect(piece('buildings')).toBe(piece('domes') + 1);
     expect(PHASES[k + 1]?.id).toBe('atlantis');
-    expect(PHASES[k + 2]?.id).toBe('towers');
+    expect(PHASES[k + 2]?.id).toBe('atlantis-buildings');
+    expect(PHASES[k + 3]?.id).toBe('towers');
     expect(CITIES.map((c) => c.name)).toEqual(['Grid', 'Star', 'River', 'Bay', 'Canals']);
     expect(variantNames(k)).toEqual(['Grid', 'Star', 'River', 'Bay', 'Canals']);
     expect(variantLabel(k)).toBe('City');

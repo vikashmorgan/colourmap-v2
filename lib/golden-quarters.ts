@@ -78,7 +78,7 @@ export class Placed extends Mesh {
 }
 
 /** Build `b` into m at (x, z), s times the size, turned rot. */
-function place(m: Mesh, b: Builder, x: number, z: number, s: number, rot = 0) {
+export function place(m: Mesh, b: Builder, x: number, z: number, s: number, rot = 0) {
   const sub = new Placed(m, P(x, 0, z), s, rot);
   sub.centre = P(0, 5, 0);
   b(sub);
@@ -369,7 +369,7 @@ const D = DOME_KINDS.build as [Builder, Builder, Builder, Builder];
 const [geodesic, bubbles, palmHouse, lattice] = D;
 
 /** A glass corridor on the ground from a to b: a low barrel of ribs. */
-function corridor(m: Mesh, a: Vec3, b: Vec3, r = 1.4) {
+export function corridor(m: Mesh, a: Vec3, b: Vec3, r = 1.4) {
   const dx = b[0] - a[0];
   const dz = b[2] - a[2];
   const L = Math.hypot(dx, dz) || 1;
@@ -494,10 +494,12 @@ export type BuildingSet = {
   reach: number[];
   /** Where each pill sits on the ladder: 0 the element, 1 group, 2 complex, 3 quarter. */
   rung: number[];
+  /** What it stands on, `r` wide: a plaza unless given (Atlantis stands on the seabed). */
+  floor?: (m: Mesh, r: number) => void;
 };
 
 const REACH = [1, 1.3, 1.55, 2.1];
-function ladder(
+export function ladder(
   label: string,
   kinds: { names: string[]; build: Builder[] },
   rungs: [string, Builder][],
@@ -534,7 +536,7 @@ export const DOMES = ladder('Dome', DOME_KINDS, [
 export function buildingMesh(set: BuildingSet, i: number): Mesh {
   const k = set.build[i] ? i : 0;
   const m = new Mesh();
-  plaza(m, 18 * (set.reach[k] ?? 1) * (set.rung[k] === 3 ? 1.25 : 1));
+  (set.floor ?? plaza)(m, 18 * (set.reach[k] ?? 1) * (set.rung[k] === 3 ? 1.25 : 1));
   m.centre = P(0, 5, 0);
   (set.build[k] as Builder)(m);
   return m;

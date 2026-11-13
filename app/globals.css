@@ -764,8 +764,9 @@ input[type="range"].feedback-slider::-moz-range-thumb {
 }
 .bb-step-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 4px 12px;
 }
 .bb-num {
   color: #120b06;
@@ -775,18 +776,32 @@ input[type="range"].feedback-slider::-moz-range-thumb {
   padding: 3px 10px;
   border-radius: 999px;
 }
+/* Names wrap as a whole, never inside: a long variant drops to its own line. */
 .bb-name {
   font-family: var(--font-serif), serif;
   font-size: clamp(22px, 3.6vw, 34px);
+  white-space: nowrap;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.8);
 }
 /* The Studio's arrows by the name (2026-11-12: "make it clear how can i see the variants"): quiet
  * until a pointer or a finger is on them; ‹ › the pieces, ˄ ˅ the current piece's variants. */
 .bb-variant-name {
   font-family: var(--font-serif), serif;
+  white-space: nowrap;
   font-size: clamp(16px, 2.4vw, 22px);
   color: rgba(244, 234, 216, 0.82);
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.8);
+}
+/* Where you are in the piece's row (2026-11-13: "factory one of five or something so it is
+ * clear"): small caps under the name, quiet. */
+.bb-variant-count {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(244, 234, 216, 0.6);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8);
 }
 .bb-nav {
   pointer-events: auto;
