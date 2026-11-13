@@ -1989,7 +1989,9 @@ export function depthOfField(): { at: number; blur: number } | null {
   const cockpit = camView() === 'cockpit';
   const at = cockpit ? 45 : Math.hypot(P.c[0] - P.eye[0], P.c[1] - P.eye[1], P.c[2] - P.eye[2]);
   const boost = fly.mode === 'route' ? 0 : 0.7 * fly.glow + 0.8 * fly.hyper;
-  return { at, blur: (0.45 + boost) * (1 - hi) * (cockpit ? 0.6 : 1) };
+  // 2026-11-13: "check depth of field for the city": the far city softens from cruise on, not
+  // only under the boost, so the depth reads at every speed.
+  return { at, blur: (0.6 + boost) * (1 - hi) * (cockpit ? 0.6 : 1) };
 }
 /** Where the ship has flown lately, for its boost trail (lib/city-trail.ts). */
 const trail = makeTrail();
