@@ -100,6 +100,7 @@ import {
   spaceSky,
   tunnelStep,
 } from './city-space';
+import { underEyeY, underSeeThrough } from './city-under';
 import {
   buildingAt,
   buildingEye,
@@ -2351,7 +2352,8 @@ function shipEye(c: Vec3, f: Vec3): Eye {
   const back = lerp(10, 7, lk) + 150 * hi;
   const rise = 3.2 + 7 * lk + 190 * hi;
   const eye = add(add(c, lerp3(f, fh, Math.max(lk, hi)), -back), [0, 1, 0], rise);
-  eye[1] = Math.max(GROUND + 1, eye[1]);
+  // Down in the Deep Line (lib/city-under.ts) the camera stays inside it; else over the street.
+  eye[1] = underEyeY(c, eye[1]) ?? Math.max(GROUND + 1, eye[1]);
   const near = add(c, f, 6);
   const down = add(add(c, fh, 8 + 4 * lk), [0, 1, 0], -14);
   const plan: Vec3 = [c[0] + fh[0] * 160, GROUND, c[2] + fh[2] * 160];
@@ -3009,7 +3011,9 @@ function gather(P: Plan): { d: number; run: () => void }[] {
             group(gid + 3, cur.bands * 2 * cur.per, 1.6, d, seen, Kind.Band);
             cur.cols = Math.max(2, Math.floor((2 * w) / 1.1));
             cur.rows = Math.max(2, Math.floor(tw.h / 1.6));
-            group(gid + 4, cur.cols * cur.rows, 1.6, d, seen, Kind.Window);
+            // A tower wearing its own windows (lib/city-roofs.ts) keeps them, not this grid.
+            if (!(tw as Block).facade)
+              group(gid + 4, cur.cols * cur.rows, 1.6, d, seen, Kind.Window);
             cur.n = Math.max(0, Math.round(tw.h / FLOOR_H) - 1);
             cur.per = Math.ceil((2 * w) / 0.5);
             group(gid + 5, cur.n * cur.per, 0.5, d, seen, Kind.Floor);
@@ -3126,7 +3130,7 @@ function gather(P: Plan): { d: number; run: () => void }[] {
 function build(P: Plan, t: number) {
   const { c, f } = flier(t);
   const { eye, target } = roomCamera(t) ?? shipView(c, f);
-  seeThrough = roomSeeThrough(eye);
+  seeThrough = roomSeeThrough(eye) ?? underSeeThrough(eye);
   Object.assign(P, { t, v: fly.v, c, f, eye, fwd: norm(sub(target, eye)), n: 0, top: 0 });
   const space = inSpace();
   reach = space ? SPACE_REACH : viewAt(eye[1]) / VIEW;

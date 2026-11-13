@@ -16,18 +16,11 @@
  * lanterns you fly through stay lit, ships move aside.
  */
 
-import {
-  fibonacciSphere,
-  hash,
-  makeParticles,
-  type Particle,
-  type RGB,
-  smooth,
-  type Vec3,
-} from './bigbang';
+import { fibonacciSphere, hash, type RGB, smooth, type Vec3 } from './bigbang';
 import type { Sign, Tower } from './city';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
 import { carItems } from './city-cars';
+import { type Design, designFor, designHolds, designItem, studioItem } from './city-designs';
 import { dockItems } from './city-docks';
 import { embassyAt, embassyItems } from './city-embassy';
 import { textPixels } from './city-font';
@@ -57,8 +50,10 @@ import {
 } from './city-grid';
 import { CAR_LEN, CARS, carAt, RAIL, railAt, railCeiling, STATIONS, TRAINS } from './city-metro';
 import { besideRiver, inRiver, RIVER_Y, riverClear, riverItems } from './city-rain';
+import { FACADE_SHARE, FACADES, type Facade, facadeItem, roofItem } from './city-roofs';
+import { ropeItems } from './city-ropes';
 import { cityPortalItems } from './city-space';
-import { buildingAt, DOMES, FACTORIES, TEMPLES } from './golden-city';
+import { DEEP_MOUTHS, THROUGH, underAt, underBlocked, underItems, underOpen } from './city-under';
 
 /* ---------- the plan: districts ---------- */
 
@@ -250,9 +245,20 @@ function plazaOf(I: number, J: number): Landmark | null {
 
 /* ---------- the blocks ---------- */
 
-export type Shape = 'box' | 'pyramid' | 'park' | 'plaza' | 'studio' | 'business' | 'embassy';
-/** A lit tunnel through a tower, along x (0) or z (2), at height y, half as wide and high as hw, hh. */
-export type Bore = { axis: 0 | 2; y: number; hw: number; hh: number };
+export type Shape =
+  | 'box'
+  | 'pyramid'
+  | 'park'
+  | 'plaza'
+  | 'studio'
+  | 'business'
+  | 'embassy'
+  | 'design';
+/**
+ * A lit tunnel through a tower, along x (0) or z (2), at height y, half as wide and high as hw, hh.
+ * `through`: part of the one tunnel bored through a whole row of towers (lib/city-under.ts THROUGH).
+ */
+export type Bore = { axis: 0 | 2; y: number; hw: number; hh: number; through?: boolean };
 export type Block = Tower & {
   I: number;
   J: number;
@@ -261,6 +267,10 @@ export type Block = Tower & {
   bore: Bore | null;
   /** On a block that holds one of the Studio's buildings: which, and how large. */
   studio: { set: 'temples' | 'factories' | 'domes'; i: number } | null;
+  /** On a block that holds one of the Studio's twenty buildings (lib/city-designs.ts): which, how large. */
+  design: Design | null;
+  /** A plain building that wears readable windows (lib/city-roofs.ts): their style. */
+  facade: Facade | null;
 };
 
 const blockCache = new Map<number, Block>();
@@ -350,10 +360,18 @@ export function blockTower(I: number, J: number): Block {
   }
   if (shape !== 'studio') studio = null;
   if (shape === 'box' && !ave && hash(k, 433) < 0.04) shape = 'park';
+  // One of the Studio's twenty buildings (lib/city-designs.ts), in the quarter it belongs to
+  // (2026-11-13: "use the 20 buildings in the main city, in the quarters they belong to").
+  let design: Design | null = null;
+  if (!ave && (shape === 'box' || shape === 'business' || shape === 'pyramid')) {
+    design = designFor(d, k, railCeiling(I, J));
+    if (design) shape = 'design';
+  }
   // Beside the river (lib/city-rain.ts) only plain towers, standing back from its banks.
   if (besideRiver(J) && shape !== 'box' && shape !== 'business') {
     shape = 'box';
     studio = null;
+    design = null;
     if (h <= 0) h = 14 + 10 * hh;
   }
   const plaza = plazaOf(I, J);
@@ -364,6 +382,24 @@ export function blockTower(I: number, J: number): Block {
     shape = 'embassy';
     studio = null;
     [hx, hz, h, jx, jz] = [emb.hx, emb.hz, emb.h, 0, 0];
+  }
+  if (shape !== 'design') design = null;
+  if (design) [hx, hz, h, jx, jz] = [design.r, design.r, design.h, 0, 0];
+  // The row of towers the through tunnel bores (2026-11-13: "a tunnel that bores a hole straight
+  // through several buildings in a row"): plain, on its line, tall enough to hold it.
+  const thru =
+    !ave &&
+    tileCol(I) === Math.floor(THROUGH.x / BLOCK_X) &&
+    tileRow(J) >= THROUGH.J0 &&
+    tileRow(J) <= THROUGH.J1 &&
+    shape !== 'plaza' &&
+    shape !== 'embassy';
+  if (thru) {
+    shape = 'box';
+    studio = null;
+    jx = 0;
+    hx = Math.max(hx, 7.5);
+    h = Math.max(h, THROUGH.y + THROUGH.hh + 8 - GROUND + 10 * hh);
   }
   let x = cx + jx * Math.max(0, BLOCK_X - 2 * hx - 7);
   if (ave && shape === 'box') {
@@ -380,7 +416,9 @@ export function blockTower(I: number, J: number): Block {
   // Under the metro, lower, so the rail and its hanging carriages clear every roof.
   if (shape === 'box' || shape === 'business') h = Math.max(8, Math.min(h, railCeiling(I, J)));
   let bore: Bore | null = null;
-  if (shape === 'box' && h >= 20 && hash(k, 440) < (d === 'heights' ? 0.3 : 0.12)) {
+  if (thru) bore = { axis: 2, y: THROUGH.y, hw: THROUGH.hw, hh: THROUGH.hh, through: true };
+  // More tunnels through towers than there were (2026-11-13: "more tunnels inside buildings").
+  else if (shape === 'box' && h >= 20 && hash(k, 440) < (d === 'heights' ? 0.4 : 0.2)) {
     const hhB = 2.8;
     bore = {
       axis: hash(k, 441) < 0.5 ? 0 : 2,
@@ -389,7 +427,10 @@ export function blockTower(I: number, J: number): Block {
       hh: hhB,
     };
   }
-  const tw: Block = { x, z, hx, hz, h, k, I, J, d, shape, bore, studio };
+  const style = FACADES[d];
+  const facade: Facade | null =
+    style && shape === 'box' && !thru && h >= 14 && hash(k, 480) < FACADE_SHARE ? style : null;
+  const tw: Block = { x, z, hx, hz, h, k, I, J, d, shape, bore, studio, design, facade };
   if (blockCache.size > 20000) blockCache.clear();
   blockCache.set(key, tw);
   return tw;
@@ -422,17 +463,25 @@ export function inCanal(x: number, z: number, room = 0): boolean {
 }
 /** The lowest the ship can go at (x, z): the street, or down in a canal. */
 export const floorAt = (x: number, z: number) =>
-  inCanal(x, z, MARGIN) ? GROUND - CANAL_DEPTH : inRiver(x, z, MARGIN) ? RIVER_Y : GROUND;
+  inCanal(x, z, MARGIN)
+    ? GROUND - CANAL_DEPTH
+    : (underAt(x, z, MARGIN)?.floor ?? (inRiver(x, z, MARGIN) ? RIVER_Y : GROUND));
 /** The water's surface at (x, z): the river's or a canal's; null on dry ground. */
 export const waterAt = (x: number, z: number): number | null =>
   inRiver(x, z) ? RIVER_Y : inCanal(x, z) ? GROUND - CANAL_DEPTH + 0.6 : null;
 
 /** Whether a point is inside a building or under the floor, walls and MARGIN included. */
 export function blocked(q: Vec3): boolean {
+  // The Deep Line (lib/city-under.ts): its rock, or free inside it under the street.
+  if (!inCanal(q[0], q[2])) {
+    const u = underBlocked(q, MARGIN);
+    if (u !== null) return u;
+  }
   if (q[1] < floorAt(q[0], q[2]) + 2 - 1e-6) return true;
   const tw = blockTower(Math.floor(q[0] / BLOCK_X), Math.floor(q[2] / BLOCK_Z));
   const dx = Math.abs(q[0] - tw.x);
   const dz = Math.abs(q[2] - tw.z);
+  if (tw.shape === 'design' && tw.design) return designHolds(tw.design, tw.x, tw.z, q, MARGIN);
   if (tw.shape === 'pyramid') {
     const ex = tw.hx + MARGIN;
     const ez = tw.hz + MARGIN;
@@ -1017,32 +1066,6 @@ function modelSite(
   return true;
 }
 
-/* ---------- the Studio's buildings, in the city ---------- */
-
-/** Grains to sample the Studio's buildings with: their own golden-sequence numbers. */
-const STUDIO_GRAINS: Particle[] = makeParticles(1800);
-const SETS = { temples: TEMPLES, factories: FACTORIES, domes: DOMES };
-/** Site s of a Studio building (read-only use of lib/golden-city.ts), scaled by sc, at (x, z). */
-function studioSite(
-  set: 'temples' | 'factories' | 'domes',
-  i: number,
-  s: number,
-  t: number,
-  x: number,
-  z: number,
-  sc: number,
-  o: number[],
-) {
-  const p = STUDIO_GRAINS[s] as Particle;
-  if (p.c < 0.05) return false;
-  const g = buildingAt(SETS[set], i, p, t);
-  o[0] = x + g.pos[0] * sc;
-  o[1] = GROUND + (g.pos[1] - GROUND) * sc;
-  o[2] = z + g.pos[2] * sc;
-  [o[3], o[4], o[5]] = [g.rgb[0] * 0.85, g.rgb[1] * 0.85, g.rgb[2] * 0.85];
-  return true;
-}
-
 /* ---------- lanterns, Diwali lamps, sky lanterns ---------- */
 
 type Strand = { a: Vec3; b: Vec3; kind: 'red' | 'diwali'; key: number };
@@ -1302,6 +1325,47 @@ function boreItem(tw: Block, eye: Vec3): Item {
       [o[3], o[4], o[5]] = mouth
         ? scale(C.warm, 0.5)
         : scale(mix(C.amber, C.cyan, p), 0.1 + 0.42 * p);
+      return true;
+    },
+  };
+}
+
+/**
+ * A stretch of the through tunnel (lib/city-under.ts THROUGH): rings of light down the whole
+ * block, through the tower and on over the street to the next, so the row reads as one tunnel;
+ * warm frames at its two ends, the pulses running on ahead of you.
+ */
+function throughItem(tw: Block, eye: Vec3): Item {
+  const b = tw.bore as Bore;
+  const z0 = tw.J * BLOCK_Z;
+  const len = BLOCK_Z;
+  const rings = Math.floor(len / 1.6);
+  const per = 28;
+  const first = tileRow(tw.J) === THROUGH.J0;
+  const last = tileRow(tw.J) === THROUGH.J1;
+  return {
+    d: boxDist(eye, [tw.x - b.hw, b.y - b.hh, z0], [tw.x + b.hw, b.y + b.hh, z0 + len]),
+    gid: mixId(tw.k, 992),
+    count: rings * per,
+    weight: 2.2,
+    probe: [
+      [tw.x, b.y, z0],
+      [tw.x, b.y, z0 + len / 2],
+      [tw.x, b.y, z0 + len],
+    ],
+    site: (s, o) => {
+      const k = Math.floor(s / per);
+      const e = ((s % per) + 0.5) / per;
+      const z = z0 + (k + 0.5) * (len / rings);
+      const [lat, dy] = aroundRect(e * 4 * (b.hw + b.hh), b.hw, b.hh);
+      o[0] = tw.x + lat;
+      o[1] = b.y + dy;
+      o[2] = z;
+      const mouth = (first && k === 0) || (last && k === rings - 1);
+      const p = pulseAt(z, 2);
+      [o[3], o[4], o[5]] = mouth
+        ? scale(C.warm, 0.55)
+        : scale(mix(C.magenta, C.cyan, p), 0.1 + 0.45 * p);
       return true;
     },
   };
@@ -1873,19 +1937,20 @@ function planItems(eye: Vec3, fwd: Vec3, R: number, k: number, t: number, out: I
       const glow = (litDistricts.has(tw.d) ? 1.6 : 1) * districtPulse(tw.d, t, (tw.k % 5) * 0.03);
       const n = Math.ceil((4 * (tw.hx + tw.hz)) / 2.4);
       const gid = mixId(I * 7919, J * 104729);
-      // A fill of the roof's own hue (a 2 × 2 of lights, kept before its outline), so each
-      // district reads from far above as a patch of one colour, as the Golden plan's rings do.
+      // A fill of the roof's own hue (a 3 × 3 of lights, kept before its outline), so each
+      // district reads from far above as a patch of one colour, as the Golden plan's rings do,
+      // the roofs shining up at you (2026-11-13: "not just black roofs").
       if (tw.h > 0 && tw.shape !== 'pyramid') {
         out.push({
           d,
           gid: gid + 1,
-          count: 4,
+          count: 9,
           weight: (2.2 + 2.3 * far) * k,
           site: (s, o) => {
-            o[0] = tw.x + ((s & 1) - 0.5) * tw.hx;
+            o[0] = tw.x + ((s % 3) - 1) * 0.62 * tw.hx;
             o[1] = y;
-            o[2] = tw.z + ((s >> 1) - 0.5) * tw.hz;
-            [o[3], o[4], o[5]] = scale(col, 0.65 * glow);
+            o[2] = tw.z + (Math.floor(s / 3) - 1) * 0.62 * tw.hz;
+            [o[3], o[4], o[5]] = scale(s === 4 ? mix(col, C.warm, 0.5) : col, 0.72 * glow);
             return true;
           },
         });
@@ -2059,20 +2124,24 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number): Item[] {
         });
       }
       if (tw.shape === 'studio' && tw.studio) {
+        // The Studio's temples, factories and domes, lit from your eye in their quarter's colours.
         const st = tw.studio;
-        out.push({
-          d,
-          gid: mixId(tw.k, 4321),
-          count: 700,
-          weight: 1.2,
-          probe: [
-            [tw.x, GROUND + 6, tw.z],
-            [tw.x, GROUND + 2, tw.z + tw.hz],
-          ],
-          site: (s, o) => studioSite(st.set, st.i, s, t, tw.x, tw.z, 0.78, o),
-        });
+        out.push(studioItem(st.set, st.i, { x: tw.x, z: tw.z, key: tw.k }, 0.72, 2000, eye, t));
       }
-      if (tw.bore) out.push(boreItem(tw, eye));
+      if (tw.shape === 'design' && tw.design)
+        out.push(designItem(tw.design, tw, DISTRICTS[tw.d].colour, eye, t));
+      if (tw.bore?.through) out.push(throughItem(tw, eye));
+      else if (tw.bore) out.push(boreItem(tw, eye));
+      if (tw.shape === 'box') {
+        // Roofs that glow from above, and readable windows on some (lib/city-roofs.ts).
+        const roof = roofItem(tw, DISTRICTS[tw.d].colour, eye, t);
+        if (roof) out.push(roof);
+        if (tw.facade && d < 120)
+          for (let face = 0; face < 4; face++) {
+            const it = facadeItem(tw, face, tw.facade, DISTRICTS[tw.d].colour, eye, t);
+            if (it) out.push(it);
+          }
+      }
       if (tw.shape === 'business') {
         const size = { ...businessSize(I, J, tw.k), hx: tw.hx, hz: tw.hz, h: tw.h };
         out.push(towerItem(tw, size, eye, t, d));
@@ -2117,16 +2186,7 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number): Item[] {
         return;
       }
       if (L.kind === 'studio' && L.set) {
-        const set = L.set;
-        const i = L.i ?? 0;
-        out.push({
-          d,
-          gid,
-          count: 1800,
-          weight: 1.4,
-          probe,
-          site: (s, o) => studioSite(set, i, s, t, x, z, 1.7, o),
-        });
+        out.push({ ...studioItem(L.set, L.i ?? 0, { x, z, key: gid }, 1.5, 4000, eye, t), d });
         return;
       }
       const M =
@@ -2224,11 +2284,26 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number): Item[] {
     const it = strandItem(st, eye, t);
     if (it.d < NEAR) out.push(it);
   }
+  // Rope lights across the streets (lib/city-ropes.ts), Diwali lanes in the Indian quarter.
+  ropeItems(eye, t, NEAR, blockTower, ahead, out);
+  // The Deep Line under the city (lib/city-under.ts), and its name over the avenue ramp's mouth.
+  underItems(eye, t, NEAR, pulseAt, ahead, out);
+  for (const m of DEEP_MOUTHS) {
+    if (m.down !== -1) continue;
+    const at: Vec3 = [
+      nearest(m.x, eye[0], TILE_X) - 9.5,
+      GROUND + 15.5,
+      nearest(m.z, eye[2], TILE_Z) + 0.5,
+    ];
+    if (Math.hypot(at[0] - eye[0], at[2] - eye[2]) > NEAR) continue;
+    const wi = wordItem({ text: 'DEEP LINE', at, px: 0.42, rgb: C.cyan, key: 4400 }, eye, t);
+    if (wi) out.push(wi);
+  }
   railItems(eye, t, Math.min(R, NEAR + 60), out);
   riverItems(eye, t, R, floorAt, waterAt, out);
   dockItems(eye, t, Math.min(R, NEAR + 40), out);
   embassyItems(eye, t, R, out);
-  carItems(eye, fwd, t, inCanal, out);
+  carItems(eye, fwd, t, (x, z) => inCanal(x, z) || underOpen(x, z), out);
   cityPortalItems(eye, t, out);
   const k = planLook(eye[1]);
   if (k > 0) planItems(eye, fwd, R, k, t, out);
