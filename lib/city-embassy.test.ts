@@ -5,7 +5,7 @@ import { PHASES, placeShip, SHARK_SIM_HREF, setFly, setOpenLink, tally } from '.
 import { DOCK_PROMPT, DOCKS, dockAt, placeDock, roomPoint } from './city-docks';
 import { EMBASSIES, EMBASSY_DOCKS, embassyAt, embassyCentre, embassyItems } from './city-embassy';
 import { blocked, blockTower } from './city-game';
-import { GROUND, type Item, mixId, TILE_X, TILE_Z } from './city-grid';
+import { GROUND, type Item, mixId, TILE_J, TILE_X, TILE_Z } from './city-grid';
 import { railCeiling } from './city-metro';
 import { besideRiver } from './city-rain';
 import {
@@ -43,7 +43,7 @@ describe('Embassies of Happiness (queued: "Embassies of Happiness with a Shark S
         [1, -2],
       ]) {
         const I = e.li + ti * 12;
-        const J = e.lj + tj * 48;
+        const J = e.lj + tj * TILE_J;
         expect(embassyAt(I, J)).toBe(e);
         const tw = blockTower(I, J);
         expect(tw.shape).toBe('embassy');

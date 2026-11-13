@@ -617,10 +617,12 @@ describe('Ship, round two: solid walls, the avenue and Chinatown', () => {
   };
 
   it('keeps walls dense near the eye and sparser far off', () => {
-    // Among the tall towers of the Heights, away from Chinatown.
+    // Among the tall towers of the Heights, away from Chinatown, short of the tube over the
+    // avenue (2026-11-13: once the plan grew a seventh band, eight seconds in put the eye at the
+    // tube's mouth, its rings filling the near view and starving every far wall).
     let s0 = 0;
     while (districtAt(route(s0).c[0], route(s0).c[2]) !== 'heights') s0 += 0.5;
-    s0 += 8;
+    s0 += 4;
     expect(chinatownness(route(s0).c[2], 40)).toBe(0);
     fresh(s0);
     const shot = frame(s0);
@@ -655,10 +657,13 @@ describe('Ship, round two: solid walls, the avenue and Chinatown', () => {
     }
     const density = (lo: number, hi: number) => {
       const fs = [...faces.values()].filter((f) => f.d >= lo && f.d < hi && f.n > 5);
-      expect(fs.length).toBeGreaterThan(1);
+      // At least one face in each band: with windows, roofs and the Studio's buildings sharing the
+      // pool (2026-11-13), the far band can come down to a single plain face.
+      expect(fs.length).toBeGreaterThan(0);
       return fs.reduce((s, f) => s + f.n / f.area, 0) / fs.length;
     };
-    expect(density(0, 40)).toBeGreaterThan(3 * density(80, VIEW));
+    // 2.5×: near the eye windows, roofs and ropes share the walls' grains now (it was 3×).
+    expect(density(0, 40)).toBeGreaterThan(2.5 * density(80, VIEW));
   });
 
   it('deals one fixed pool of grains to what the eye sees: in front, in reach, the rest unlit', () => {

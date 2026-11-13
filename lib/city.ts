@@ -1977,7 +1977,9 @@ const cruiseY = (z: number, t: number) =>
  */
 const ROUTE_Z0 =
   CT_BLOCKS * BLOCK_Z +
-  60 +
+  // 2026-11-13: "a first road that is awesome": it starts at the head of the opening road
+  // (lib/city-signs.ts: its gates, the welcome over it), 190 short of Chinatown's gate.
+  190 +
   Math.round(
     (FLY_SPEED * (PHASE_START[PHASES.findIndex((p) => p.id === 'ship')] as number)) /
       (CT_EVERY * BLOCK_Z),

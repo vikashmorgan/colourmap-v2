@@ -13,9 +13,13 @@ export const BLOCK_X = 26;
 export const BLOCK_Z = 34;
 /** Half the avenue's width, wall to wall: the street at x = 0. */
 export const AVENUE = 9;
-/** The plan repeats every TILE_I blocks across and TILE_J along, so the city never ends. */
+/**
+ * The plan repeats every TILE_I blocks across and TILE_J along, so the city never ends: seven
+ * bands of eight along (2026-11-13: the seventh, the Green Code quarter, added at the far end so
+ * every other place keeps its tile-local spot).
+ */
 export const TILE_I = 12;
-export const TILE_J = 48;
+export const TILE_J = 56;
 export const TILE_X = TILE_I * BLOCK_X;
 export const TILE_Z = TILE_J * BLOCK_Z;
 
