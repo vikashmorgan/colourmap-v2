@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { DOCKS } from './city-docks';
+import { EMBASSIES } from './city-embassy';
 import { DISTRICTS, type DistrictId, LANDMARKS } from './city-game';
 import { TILE_I, TILE_J, TILE_X, TILE_Z } from './city-grid';
 import {
@@ -9,6 +11,7 @@ import {
   FIT_SHARE,
   fitView,
   fitView3D,
+  isTap,
   labelBox,
   layoutLabels,
   MAP_EXTRAS,
@@ -16,6 +19,7 @@ import {
   mapHeading,
   projectedBounds,
   projectMap,
+  shipCaption,
   TILT_3D,
   tileLocal,
 } from './city-minimap';
@@ -250,5 +254,149 @@ describe('the map, framed and labelled', () => {
     const near = drawCityMap(quietCtx(), data, v, w, h, null, 0, true, { x, y });
     expect(near.some((l) => l.text === hidden.name)).toBe(true);
     noOverlap(near);
+  });
+});
+
+/** A canvas that records every stroke and every word written, with the style it had. */
+const recordingCtx = () => {
+  const state: Record<string, unknown> = {};
+  const strokes: { style: unknown; width: unknown }[] = [];
+  const texts: string[] = [];
+  const ctx = new Proxy(state, {
+    get: (t, k) => {
+      if (k === 'createLinearGradient') return () => ({ addColorStop() {} });
+      if (k === 'stroke') return () => strokes.push({ style: t.strokeStyle, width: t.lineWidth });
+      if (k === 'fillText') return (text: string) => texts.push(text);
+      if (typeof k === 'string' && k in t) return t[k];
+      return () => undefined;
+    },
+    set: (t, k, v) => {
+      t[k as string] = v;
+      return true;
+    },
+  }) as unknown as CanvasRenderingContext2D;
+  return { ctx, strokes, texts };
+};
+
+describe('the map, 2026-11-13: docks, embassies, taps, you and the races won', () => {
+  it('shows every dock and every embassy, inside the tile, the plan cached as before', () => {
+    const m = cityMapData();
+    const docks = m.places.filter((p) => p.kind === 'dock');
+    const embassies = m.places.filter((p) => p.kind === 'embassy');
+    expect(docks).toHaveLength(DOCKS.length);
+    expect(embassies).toHaveLength(EMBASSIES.length);
+    for (const p of [...docks, ...embassies]) {
+      expect(Math.abs(p.x)).toBeLessThanOrEqual(TILE_X / 2);
+      expect(p.z).toBeGreaterThanOrEqual(0);
+      expect(p.z).toBeLessThanOrEqual(TILE_Z);
+      expect(p.y).toBeGreaterThan(0);
+    }
+    expect(embassies.map((p) => p.name)).toContain('Lotus embassy');
+    expect(docks.map((p) => p.name)).toContain('Avenue lounge');
+    expect(cityMapData()).toBe(m);
+  });
+
+  it('draws an H in a ring for a dock and a triangle for an embassy, their names after the races', () => {
+    const w = 1536;
+    const h = 640;
+    const data = cityMapData();
+    const v = fitView3D(w, h);
+    // Pointed at, a dock's or an embassy's name shows like any other.
+    for (const kind of ['dock', 'embassy'] as const) {
+      const p = data.places.find((q) => q.kind === kind);
+      expect(p).toBeDefined();
+      if (!p) continue;
+      const [x, y] = projectMap(v, w, h, p.x, p.y, p.z);
+      const shown = drawCityMap(quietCtx(), data, v, w, h, null, 0, true, { x, y });
+      expect(shown.some((l) => l.text === p.name)).toBe(true);
+      noOverlap(shown);
+    }
+    const all = drawCityMap(quietCtx(), data, fitView(w, h), w, h, null, 0);
+    const names = new Set(
+      data.places.filter((p) => p.kind === 'dock' || p.kind === 'embassy').map((p) => p.name),
+    );
+    for (const l of all) if (names.has(l.text)) expect(l.priority).toBe(3);
+  });
+
+  it('tells a tap from a drag, and a tap shows the hidden name under it', () => {
+    expect(isTap({ x: 10, y: 10 }, { x: 14, y: 15 }, 'touch')).toBe(true);
+    expect(isTap({ x: 10, y: 10 }, { x: 20, y: 10 }, 'touch')).toBe(false);
+    expect(isTap({ x: 10, y: 10 }, { x: 10, y: 10 }, 'mouse')).toBe(false);
+    expect(isTap({ x: 10, y: 10 }, { x: 12, y: 10 }, 'pen')).toBe(true);
+    const data = cityMapData();
+    const w = 390;
+    const h = 844;
+    const v = fitView3D(w, h);
+    const all = drawCityMap(quietCtx(), data, v, w, h, null, 0);
+    const hidden = data.places.filter(
+      (p) => p.kind !== 'station' && p.kind !== 'portal' && !all.some((l) => l.text === p.name),
+    );
+    expect(hidden.length).toBeGreaterThan(0);
+    // A finger lands a few px off; the name under it shows (where the screen has room for it).
+    let found = 0;
+    for (const p of hidden) {
+      const [x, y] = projectMap(v, w, h, p.x, p.y, p.z);
+      const tapped = drawCityMap(quietCtx(), data, v, w, h, null, 0, true, { x: x + 3, y: y - 2 });
+      if (tapped.some((l) => l.text === p.name)) found++;
+      noOverlap(tapped);
+    }
+    expect(found).toBeGreaterThan(0);
+  });
+
+  it('captions your pointer "You · 52 m", only where no name shown is in the way', () => {
+    const cap = shipCaption([200, 300], 52.4, [], 800, 600);
+    expect(cap?.text).toBe('You · 52 m');
+    expect(cap?.x).toBeGreaterThan(200);
+    const name: MapLabel = {
+      text: 'Golden spire',
+      x: (cap?.x ?? 0) + 4,
+      y: 300,
+      align: 'left',
+      size: 11,
+      w: 70,
+      priority: 1,
+      depth: 0,
+      alpha: 1,
+      colour: '#fff',
+      font: '11px sans-serif',
+    };
+    expect(shipCaption([200, 300], 52, [name], 800, 600)).toBeNull();
+    expect(shipCaption([200, 300], 52, [{ ...name, y: 400 }], 800, 600)).not.toBeNull();
+    // Off the screen's edge: none.
+    expect(shipCaption([790, 300], 52, [], 800, 600)).toBeNull();
+    // Drawn on the map beside the pointer, or not at all where a name is in the way.
+    const data = cityMapData();
+    const v = fitView(400, 800);
+    const shown = drawCityMap(quietCtx(), data, v, 400, 800, null, 0);
+    let drawn = 0;
+    for (const [x, z] of [
+      [-60, 200],
+      [40, 600],
+      [-20, 1200],
+      [60, 1700],
+    ]) {
+      const { ctx, texts } = recordingCtx();
+      drawCityMap(ctx, data, v, 400, 800, { x, y: 52, z, heading: 0 }, 0);
+      const [sx, sy] = projectMap(v, 400, 800, x, 0, z);
+      const free = shipCaption([sx, sy], 52, shown, 400, 800);
+      expect(texts.includes('You · 52 m')).toBe(free !== null);
+      if (free) drawn++;
+    }
+    expect(drawn).toBeGreaterThan(0);
+  });
+
+  it('draws the districts whose race was won brighter, edged in gold', () => {
+    const data = cityMapData();
+    const v = fitView(400, 800);
+    const gold = 'rgba(255,199,115,0.9)';
+    const plain = recordingCtx();
+    drawCityMap(plain.ctx, data, v, 400, 800, null, 0);
+    expect(plain.strokes.filter((s) => s.style === gold)).toHaveLength(0);
+    const id = data.districts[0]?.id as DistrictId;
+    const lit = recordingCtx();
+    drawCityMap(lit.ctx, data, v, 400, 800, null, 0, true, null, new Set([id]));
+    const edged = lit.strokes.filter((s) => s.style === gold);
+    expect(edged).toHaveLength(data.districts.filter((d) => d.id === id).length);
+    for (const e of edged) expect(e.width).toBe(1);
   });
 });

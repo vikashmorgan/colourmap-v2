@@ -166,13 +166,39 @@ export function dockAt(q: Vec3): Placed | null {
 /** The words beside the bar on a pad. */
 export const DOCK_PROMPT = 'Docked — Enter to go inside';
 
+/** How near a pad the approach begins: its rim lights brighten, the words name it. */
+export const APPROACH = 30;
+
+/**
+ * The dock whose pad the ship is coming in to (2026-11-13): the nearest within APPROACH across,
+ * no more than 12 over or under it, and how far it is (`d`), or null.
+ */
+export function dockNear(q: Vec3): { P: Placed; d: number } | null {
+  let best: { P: Placed; d: number } | null = null;
+  for (let i = 0; i < DOCKS.length; i++) {
+    const P = placeDock(i, q);
+    const d = Math.hypot(q[0] - P.pad[0], q[2] - P.pad[2]);
+    if (d < APPROACH && Math.abs(q[1] - P.pad[1]) < 12 && (!best || d < best.d)) best = { P, d };
+  }
+  return best;
+}
+/** The words on the way in to a pad. */
+export const approachPrompt = (P: Placed) => `${P.dock.name} · land on the pad`;
+
+const smooth = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+/** How much brighter a pad's rim lights are with the ship `d` from it: up to +0.5 over the last 20. */
+export const approachGlow = (d: number) => 0.5 * smooth((APPROACH - d) / 20);
+
 /* ---------- drawing: the pad and the room's shell seen from outside ---------- */
 
 const PAD_SITES = 520;
 const SHELL_SITES = 520;
 
-/** Site s of a pad of design D round centre p (its floor level), its colour into o[3..5]. */
-function padSite(P: Placed, s: number, t: number, o: number[]) {
+/**
+ * Site s of a pad of design D round centre p (its floor level), its colour into o[3..5]; `near`
+ * brightens its rim as the ship comes in (approachGlow).
+ */
+function padSite(P: Placed, s: number, t: number, o: number[], near = 0) {
   const { pad, dock, r, v } = P;
   const [h1, h2] = dock.hues;
   const u = (s + 0.5) / PAD_SITES;
@@ -205,7 +231,7 @@ function padSite(P: Placed, s: number, t: number, o: number[]) {
         pad[1] + 0.05,
         pad[2] + r[2] * x + v[2] * z,
         h1,
-        0.22 + 0.3 * chase,
+        (0.22 + 0.3 * chase) * (1 + near),
       );
     }
     return set(
@@ -213,7 +239,7 @@ function padSite(P: Placed, s: number, t: number, o: number[]) {
       pad[1] + 0.05,
       pad[2] + Math.sin(a) * rr,
       h1,
-      0.22 + 0.3 * chase,
+      (0.22 + 0.3 * chase) * (1 + near),
     );
   }
   const q = (u - 0.3) / 0.7;
@@ -351,10 +377,20 @@ function shellSite(P: Placed, s: number, t: number, o: number[]) {
 }
 const frac = (x: number) => x - Math.floor(x);
 
-/** Every dock near the eye, its pad and its room's shell, for the Ship's renderer. */
-export function dockItems(eye: Vec3, t: number, R: number, out: Item[]) {
+/**
+ * Every dock near the eye, its pad and its room's shell, for the Ship's renderer; the pad the
+ * `ship` is coming in to has its rim lit brighter.
+ */
+export function dockItems(eye: Vec3, t: number, R: number, out: Item[], ship?: Vec3) {
+  const coming = ship ? dockNear(ship) : null;
   for (let i = 0; i < DOCKS.length; i++) {
     const P = placeDock(i, eye);
+    const near =
+      coming &&
+      coming.P.i === i &&
+      Math.hypot(coming.P.pad[0] - P.pad[0], coming.P.pad[2] - P.pad[2]) < 1
+        ? approachGlow(coming.d)
+        : 0;
     const { w, d, h } = P.dock;
     const lo: Vec3 = [
       Math.min(P.c[0] - w - d, P.pad[0] - PAD_R),
@@ -374,7 +410,7 @@ export function dockItems(eye: Vec3, t: number, R: number, out: Item[]) {
       count: PAD_SITES,
       weight: 2.2,
       probe: [P.pad, [P.pad[0], P.pad[1] + 3, P.pad[2]]],
-      site: (s, o) => padSite(P, s, t, o),
+      site: (s, o) => padSite(P, s, t, o, near),
     });
     out.push({
       d: dist,

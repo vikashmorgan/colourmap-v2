@@ -2076,9 +2076,10 @@ export const planLook = (y: number) => smooth((y - GROUND - 70) / 90);
 /**
  * Everything the game adds to the Ship's picture near the eye: the districts' roofs, landmarks
  * and Studio buildings, lanterns and lamps, tunnels and their pulses, portals, canals, bridges,
- * the metro, word signs and, from high up, the plan.
+ * the metro, word signs and, from high up, the plan. With the `ship`, the pad it comes in to
+ * brightens and the cars' lights dip as it passes low.
  */
-export function gameItems(eye: Vec3, fwd: Vec3, t: number): Item[] {
+export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] {
   const out: Item[] = [];
   const R = viewAt(eye[1]);
   const fl = Math.hypot(fwd[0], fwd[2]) || 1;
@@ -2301,9 +2302,9 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number): Item[] {
   }
   railItems(eye, t, Math.min(R, NEAR + 60), out);
   riverItems(eye, t, R, floorAt, waterAt, out);
-  dockItems(eye, t, Math.min(R, NEAR + 40), out);
+  dockItems(eye, t, Math.min(R, NEAR + 40), out, ship);
   embassyItems(eye, t, R, out);
-  carItems(eye, fwd, t, (x, z) => inCanal(x, z) || underOpen(x, z), out);
+  carItems(eye, fwd, t, (x, z) => inCanal(x, z) || underOpen(x, z), out, ship);
   cityPortalItems(eye, t, out);
   const k = planLook(eye[1]);
   if (k > 0) planItems(eye, fwd, R, k, t, out);

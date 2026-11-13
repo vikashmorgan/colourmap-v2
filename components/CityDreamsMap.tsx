@@ -5,13 +5,15 @@
  * docs/specs/art-city.md, "Ships, cockpits and the map"). A flat 2D plan that tilts into 3D
  * blocks, framed to fill most of the screen at an oblique angle; drag turns it (pans it when
  * flat), the wheel or a pinch zooms, a name hidden to keep the others readable shows when the
- * pointer comes near. Time stands still under it (the trip player holds the frame); M, Esc or ✕
+ * pointer comes near (on a phone, when tapped). The districts whose race you won glow, edged in
+ * gold. Time stands still under it (the trip player holds the frame); M, Esc or ✕
  * closes it. Drawn on a Canvas 2D from lib/city-minimap.ts, only when something changed or the
  * pointer's beat moves on.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { shipNow } from '@/lib/city';
+import { litDistricts } from '@/lib/city-game';
 import { GROUND } from '@/lib/city-grid';
 import {
   cityMapData,
@@ -19,6 +21,7 @@ import {
   drawCityMap,
   fitView,
   fitView3D,
+  isTap,
   type MapView,
   mapHeading,
   mapScale,
@@ -63,9 +66,12 @@ export default function CityDreamsMap({ onClose }: { onClose: () => void }) {
   const targetRef = useRef<MapView | null>(null);
   const sizeRef = useRef({ w: 1, h: 1 });
   const dirty = useRef(true);
+  // A phone or tablet: names show on a tap, not a hover.
+  const [coarse, setCoarse] = useState(false);
 
   useEffect(() => {
     closeRef.current?.focus();
+    setCoarse(!!window.matchMedia?.('(pointer: coarse)').matches);
   }, []);
 
   useEffect(() => {
@@ -120,7 +126,18 @@ export default function CityDreamsMap({ onClose }: { onClose: () => void }) {
       }
       // The pointer breathes: a redraw some ten times a second is enough.
       if (dirty.current || now - drawn > 100) {
-        drawCityMap(ctx, data, viewRef.current as MapView, w, h, ship, now / 1000, true, hover);
+        drawCityMap(
+          ctx,
+          data,
+          viewRef.current as MapView,
+          w,
+          h,
+          ship,
+          now / 1000,
+          true,
+          hover,
+          litDistricts,
+        );
         drawn = now;
         dirty.current = false;
       }
@@ -130,6 +147,13 @@ export default function CityDreamsMap({ onClose }: { onClose: () => void }) {
 
     // Drag turns the map (pans it when flat); two fingers pinch; the wheel zooms.
     const pts = new Map<number, { x: number; y: number }>();
+    // Where each finger came down, to tell a tap from a drag; a tapped name goes after 3 s.
+    const downs = new Map<number, { x: number; y: number }>();
+    let tapTimer = 0;
+    const clearTap = () => {
+      window.clearTimeout(tapTimer);
+      tapTimer = 0;
+    };
     let pinch: { d: number; zoom: number } | null = null;
     const spread = () => {
       const [a, b] = [...pts.values()];
@@ -138,13 +162,20 @@ export default function CityDreamsMap({ onClose }: { onClose: () => void }) {
     const down = (e: PointerEvent) => {
       canvas.setPointerCapture?.(e.pointerId);
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      downs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (tapTimer) {
+        clearTap();
+        hover = null;
+        dirty.current = true;
+      }
       targetRef.current = null;
       if (pts.size === 2) pinch = { d: spread(), zoom: (viewRef.current as MapView).zoom };
     };
     const move = (e: PointerEvent) => {
       // A name near the pointer shows, even one hidden to keep the others readable.
       const r = canvas.getBoundingClientRect();
-      hover = e.pointerType === 'mouse' ? { x: e.clientX - r.left, y: e.clientY - r.top } : null;
+      if (e.pointerType === 'mouse') hover = { x: e.clientX - r.left, y: e.clientY - r.top };
+      else if (!tapTimer) hover = null;
       dirty.current = true;
       const was = pts.get(e.pointerId);
       if (!was) return;
@@ -180,8 +211,28 @@ export default function CityDreamsMap({ onClose }: { onClose: () => void }) {
     const up = (e: PointerEvent) => {
       pts.delete(e.pointerId);
       if (pts.size < 2) pinch = null;
+      const from = downs.get(e.pointerId);
+      downs.delete(e.pointerId);
+      // A tap shows the name under the finger, for 3 s or until the next touch.
+      if (
+        e.type === 'pointerup' &&
+        from &&
+        isTap(from, { x: e.clientX, y: e.clientY }, e.pointerType)
+      ) {
+        const r = canvas.getBoundingClientRect();
+        hover = { x: e.clientX - r.left, y: e.clientY - r.top };
+        dirty.current = true;
+        clearTap();
+        tapTimer = window.setTimeout(() => {
+          tapTimer = 0;
+          hover = null;
+          dirty.current = true;
+        }, 3000);
+      }
     };
-    const leave = () => {
+    const leave = (e: PointerEvent) => {
+      // A finger leaves as it lifts: a tapped name stays.
+      if (e.pointerType !== 'mouse' && tapTimer) return;
       hover = null;
       dirty.current = true;
     };
@@ -200,6 +251,7 @@ export default function CityDreamsMap({ onClose }: { onClose: () => void }) {
     canvas.addEventListener('wheel', wheel, { passive: false });
     return () => {
       cancelAnimationFrame(raf);
+      clearTap();
       window.removeEventListener('resize', size);
       canvas.removeEventListener('pointerdown', down);
       canvas.removeEventListener('pointermove', move);
@@ -252,8 +304,8 @@ export default function CityDreamsMap({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       <p className="cd-map-hint">
-        {mode === '3d' ? 'Drag to spin and tilt' : 'Drag to move'} · wheel or pinch to zoom · point
-        at a place for its name · M or Esc to close
+        {mode === '3d' ? 'Drag to spin and tilt' : 'Drag to move'} · wheel or pinch to zoom ·{' '}
+        {coarse ? 'tap a place for its name' : 'point at a place for its name'} · M or Esc to close
       </p>
     </div>
   );

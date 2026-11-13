@@ -127,12 +127,26 @@ export function carFade(c: Car): number {
   return k;
 }
 
+const smooth = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+/**
+ * How bright a car's lights are with the ship `ship` near (2026-11-13): they dip as it passes low,
+ * gone within 5, full again by 10. The car itself stays where it is.
+ */
+export function carLights(c: Car, ship?: Vec3): number {
+  if (!ship) return 1;
+  const d = Math.hypot(c.pos[0] - ship[0], c.pos[1] + 0.8 - ship[1], c.pos[2] - ship[2]);
+  return 1 - smooth((10 - d) / 5);
+}
+
 /* ---------- drawing ---------- */
 
 const CAR_SITES = 64;
 
-/** Site s of a car: its outline in its road's colour, its lights, the pool of its headlights. */
-export function carSite(c: Car, s: number, o: number[], fade = 1): boolean {
+/**
+ * Site s of a car: its outline in its road's colour, its lights, the pool of its headlights;
+ * `lights` dims the lights alone (carLights).
+ */
+export function carSite(c: Car, s: number, o: number[], fade = 1, lights = 1): boolean {
   const f = c.dir;
   // Its right: heading -z it is +x.
   const r: Vec3 = [-f[2], 0, f[0]];
@@ -172,17 +186,17 @@ export function carSite(c: Car, s: number, o: number[], fade = 1): boolean {
     // Headlights, warm white, either side of its nose.
     const side = s & 1 ? 1 : -1;
     const j = hash(s, 7) * 0.12;
-    return put(L + 0.02, side * (W - 0.25) + j, 0.72, C.warm, 0.75);
+    return put(L + 0.02, side * (W - 0.25) + j, 0.72, C.warm, 0.75 * lights);
   }
   if (s < 58) {
     // Tail lights, red.
     const side = s & 1 ? 1 : -1;
-    return put(-L - 0.02, side * (W - 0.2) + hash(s, 8) * 0.12, 0.75, C.red, 0.6);
+    return put(-L - 0.02, side * (W - 0.2) + hash(s, 8) * 0.12, 0.75, C.red, 0.6 * lights);
   }
   // A faint pool of its headlights on the street ahead.
   const a = L + 1.2 + 3.5 * hash(s, 9);
   const b = (hash(s, 10) - 0.5) * 1.4 * (1 + (a - L) * 0.25);
-  return put(a, b, 0.03, C.warm, 0.1);
+  return put(a, b, 0.03, C.warm, 0.1 * lights);
 }
 
 /** How near a car is drawn, and how high the eye may be for cars to be drawn at all. */
@@ -191,7 +205,7 @@ export const CAR_EYE_MAX = GROUND + 80;
 
 /**
  * The cars near a low eye, ahead of it (`fwd`), for the Ship's renderer; `onCanal` keeps them off
- * the Canals' water.
+ * the Canals' water; near the `ship` their lights dip.
  */
 export function carItems(
   eye: Vec3,
@@ -199,6 +213,7 @@ export function carItems(
   t: number,
   onCanal: (x: number, z: number) => boolean,
   out: Item[],
+  ship?: Vec3,
 ) {
   if (eye[1] > CAR_EYE_MAX) return;
   const fl = Math.hypot(fwd[0], fwd[2]) || 1;
@@ -213,13 +228,14 @@ export function carItems(
     if (!carRoadOpen(c, onCanal)) return;
     const fade = carFade(c);
     if (fade <= 0) return;
+    const lights = carLights(c, ship);
     out.push({
       d: Math.max(0, d - CAR_LEN),
       gid,
       count: CAR_SITES,
       weight: 1.6,
       probe: [[c.pos[0], c.pos[1] + 0.9, c.pos[2]]],
-      site: (s, o) => carSite(c, s, o, fade),
+      site: (s, o) => carSite(c, s, o, fade, lights),
     });
   };
   // Streets along z: the lines within reach across x.

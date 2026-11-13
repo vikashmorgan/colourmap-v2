@@ -35,6 +35,7 @@ import TripPlayer, {
   claimLabel,
   clampView,
   easeView,
+  gameHintText,
   HINT_KEY,
   isHome,
   pieceFromSearch,
@@ -335,6 +336,45 @@ describe('TripPlayer Studio navigation', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('shows the Game side its own hint once per world, then fades it (2026-11-13)', () => {
+    vi.useFakeTimers();
+    try {
+      const { unmount } = render(<TripPlayer trip={makeTrip()} page="city" />);
+      toGame();
+      const notes = () => screen.getAllByRole('note').map((n) => n.textContent);
+      expect(notes()).toContain('W A S D fly · Space boost · Esc lets go');
+      expect(window.localStorage.getItem(`${HINT_KEY}:city:game`)).toBe('1');
+      act(() => {
+        vi.advanceTimersByTime(4600);
+      });
+      expect(screen.getByRole('note').className).toContain('bb-hint-out');
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(screen.queryAllByRole('note')).toHaveLength(0);
+      unmount();
+      render(<TripPlayer trip={makeTrip()} page="city" />);
+      toGame();
+      expect(screen.queryAllByRole('note').map((n) => n.textContent)).not.toContain(
+        'W A S D fly · Space boost · Esc lets go',
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('names only what the game has in its hint, keys or touch', () => {
+    const city = {
+      claims: [' ', 'l', 'enter', 'v'],
+      meter: { label: 'Boost', value: () => 1 },
+      sheet: { key: 'm', label: 'Map', render: () => null },
+    };
+    expect(gameHintText(false, city)).toBe('W A S D fly · Space boost · M map · Esc lets go');
+    expect(gameHintText(true, city)).toBe('Stick to fly · Boost · Map above the buttons');
+    expect(gameHintText(false, {})).toBe('W A S D fly · Esc lets go');
+    expect(gameHintText(true, {})).toBe('Stick to fly');
   });
 
   it('opens colour presets from a Palette pill, only on pieces that have them', () => {

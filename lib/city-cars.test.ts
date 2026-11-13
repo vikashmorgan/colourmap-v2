@@ -8,6 +8,7 @@ import {
   carAt,
   carFade,
   carItems,
+  carLights,
   carRoadOpen,
   carSite,
   type Road,
@@ -143,5 +144,61 @@ describe('cars on the ground (queued: "cars on the ground")', () => {
     const high: Item[] = [];
     carItems([eye[0], CAR_EYE_MAX + 1, eye[2]], fwd, 12, inCanal, high);
     expect(high.length).toBe(0);
+  });
+});
+
+// 2026-11-13: the cars dip their lights as the ship passes low over them.
+describe('cars dipping their lights', () => {
+  it('dims the lights alone within 10 of the ship, dark within 5, the car where it was', () => {
+    const c = carAt(street, 1, 2, 5, [3 * BLOCK_X, 0, 300]);
+    const over = (d: number): Vec3 => [c.pos[0], c.pos[1] + 0.8 + d, c.pos[2]];
+    expect(carLights(c)).toBe(1);
+    expect(carLights(c, over(12))).toBe(1);
+    expect(carLights(c, over(7.5))).toBeCloseTo(0.5);
+    expect(carLights(c, over(4))).toBe(0);
+    const sites = (lights: number) => {
+      const out: number[][] = [];
+      for (let s = 0; s < 64; s++) {
+        const o = [0, 0, 0, 0, 0, 0];
+        carSite(c, s, o, 1, lights);
+        out.push(o);
+      }
+      return out;
+    };
+    const lit = sites(1);
+    const dipped = sites(0.5);
+    for (let s = 0; s < 64; s++) {
+      const a = lit[s] as number[];
+      const b = dipped[s] as number[];
+      expect(b.slice(0, 3)).toEqual(a.slice(0, 3));
+      // The outline as bright; the head and tail lights and their pool half as bright.
+      if (s < 40) expect(b[3]).toBe(a[3]);
+      else expect(b[3]).toBeCloseTo((a[3] as number) * 0.5);
+    }
+  });
+
+  it('passes the ship to the cars near a low eye', () => {
+    const eye: Vec3 = [2 * BLOCK_X, GROUND + 6, 30 * BLOCK_Z];
+    const fwd: Vec3 = [0, 0, -1];
+    const plain: Item[] = [];
+    carItems(eye, fwd, 12, inCanal, plain);
+    // Low over the first car.
+    const at = plain[0]?.probe?.[0] as Vec3;
+    const near: Item[] = [];
+    const ship: Vec3 = [at[0], GROUND + 3, at[2]];
+    carItems(eye, fwd, 12, inCanal, near, ship);
+    expect(near.length).toBe(plain.length);
+    const glow = (items: Item[]) => {
+      let sum = 0;
+      const o = [0, 0, 0, 0, 0, 0];
+      for (const it of items) {
+        for (let s = 40; s < 64; s++) {
+          it.site(s, o);
+          sum += o[3] as number;
+        }
+      }
+      return sum;
+    };
+    expect(glow(near)).toBeLessThan(glow(plain));
   });
 });
