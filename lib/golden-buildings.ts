@@ -66,7 +66,7 @@ function garden(m: Mesh, cx: number, cz: number, r: number, top: number, n = 7) 
 }
 
 /** A hemisphere of radius r round c, from its foot up to `top` (0..1 of the way to its crown). */
-function dome(
+export function dome(
   m: Mesh,
   c: Vec3,
   r: number,
@@ -740,8 +740,16 @@ function domeGarden(m: Mesh) {
  * palette (lib/golden-city.ts), the shapes stay the same.
  */
 
-/** A straight tube from a to b, radius r: its skin as faces, rings every `ringEvery` along it. */
-export function tube(m: Mesh, a: Vec3, b: Vec3, r: number, ringEvery = 0, n = 12) {
+/** A straight tube from a to b, radius r: its skin as faces (`skin`: glass for a glass tunnel), rings every `ringEvery` along it. */
+export function tube(
+  m: Mesh,
+  a: Vec3,
+  b: Vec3,
+  r: number,
+  ringEvery = 0,
+  n = 12,
+  skin: number = face,
+) {
   const d: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
   const L = Math.hypot(d[0], d[1], d[2]) || 1;
   const f: Vec3 = [d[0] / L, d[1] / L, d[2] / L];
@@ -775,8 +783,8 @@ export function tube(m: Mesh, a: Vec3, b: Vec3, r: number, ringEvery = 0, n = 12
         a[1] + d[1] * (s0 + s1) * 0.5,
         a[2] + d[2] * (s0 + s1) * 0.5,
       ];
-      m.tri(at(s0, a0), at(s1, a0), at(s1, a1), face);
-      m.tri(at(s0, a0), at(s1, a1), at(s0, a1), face);
+      m.tri(at(s0, a0), at(s1, a0), at(s1, a1), skin);
+      m.tri(at(s0, a0), at(s1, a1), at(s0, a1), skin);
     }
   if (ringEvery > 0) {
     const k = Math.max(1, Math.round(L / ringEvery));

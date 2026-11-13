@@ -32,6 +32,7 @@ import {
   atlantisEye,
   atlantisSize,
 } from './atlantis';
+import { ATLANTIS_BUILDINGS } from './atlantis-buildings';
 import {
   fibonacciSphere,
   flow,
@@ -45,7 +46,13 @@ import {
 } from './bigbang';
 import { BUILDINGS, buildingsEye } from './city-buildings';
 import { camView, cockpitEye, toggleView } from './city-cockpit';
-import { DOCK_PROMPT, type Placed as DockPlaced, dockAt } from './city-docks';
+import {
+  approachPrompt,
+  DOCK_PROMPT,
+  type Placed as DockPlaced,
+  dockAt,
+  dockNear,
+} from './city-docks';
 import {
   advancePulses,
   type Block,
@@ -83,7 +90,15 @@ import {
   roomSeeThrough,
   roomStep,
 } from './city-rooms';
-import { currentShip, shipGrainAt, shipGrainColour } from './city-ships';
+import {
+  currentShip,
+  engineCut,
+  engineLight,
+  plumeAt,
+  shipGrainAt,
+  shipGrainColour,
+  trailLight,
+} from './city-ships';
 import { skyGrain } from './city-sky';
 import {
   type Arrival,
@@ -100,7 +115,9 @@ import {
   spaceSky,
   tunnelStep,
 } from './city-space';
+import { underEyeY, underSeeThrough } from './city-under';
 import {
+  ATLANTIS_PALETTES,
   buildingAt,
   buildingEye,
   DOMES,
@@ -269,6 +286,18 @@ export const PHASES: CityPhase[] = [
   },
   ATLANTIS_PHASE,
   {
+    id: 'atlantis-buildings',
+    name: 'Atlantis buildings',
+    line: 'The sunken city built one piece at a time (a porthole tower, a pearl dome, a coral temple, a kelp spire, a submarine pen, a jelly lighthouse), then a cluster of domes joined by glass tunnels, a walled compartment and a whole Atlantis quarter, bubbles rising from every crown.',
+    words: [
+      'Under the sea a building has to hold its own air, and its own light.',
+      'A glass tunnel is a street that the fish can watch.',
+    ],
+    duration: 36,
+    glow: 1,
+    size: 0.95,
+  },
+  {
     id: 'towers',
     name: 'Towers',
     line: 'A city grows up out of a grid of blocks: tall towers rise floor by floor, box on box, their windows lighting as they climb.',
@@ -384,6 +413,7 @@ export const STEP_COLOURS = [
   '#f0c070',
   '#f2c25a',
   '#4fd8d0',
+  '#5ec8e8',
   '#7f9cff',
   '#e8f0ff',
   '#ff5fd2',
@@ -1274,7 +1304,8 @@ function chinatownAt(p: Particle, t: number): Spot {
 /**
  * Grain p on a small ship at c heading f, `len` long, banked `roll`: a flat arrowhead with a
  * raised spine, two engines at the back and their glow streaming behind, longer the faster it
- * goes (`pace` 0 at rest). Our own shape: an arrowhead, nothing borrowed.
+ * goes (`pace` 0 at rest) and with the boost's `glow` (lib/city-ships.ts plumeAt, `t` for its
+ * ripple). Our own shape: an arrowhead, nothing borrowed.
  */
 function craftAt(
   c: Vec3,
@@ -1283,6 +1314,8 @@ function craftAt(
   p: Particle,
   pace: number,
   roll = 0,
+  glow = 0,
+  t = 0,
 ): { pos: Vec3; part: 'hull' | 'spine' | 'engine' | 'trail' } {
   const side0 = norm(cross(f, [0, 1, 0]));
   const up0 = cross(side0, f);
@@ -1310,26 +1343,32 @@ function craftAt(
     return { pos: at(0.45 - s * 0.75, 0, 0.07 * Math.sin(Math.PI * s)), part: 'spine' };
   }
   const e = hash(p.i, 94) < 0.5 ? 1 : -1;
-  if (q < 0.76) {
+  if (q < engineCut(0.58, 0.76, glow)) {
     const a = hash(p.i, 95) * TAU;
     return {
       pos: at(-0.3, e * 0.17 + Math.cos(a) * 0.05, Math.sin(a) * 0.05),
       part: 'engine',
     };
   }
-  const s = hash(p.i, 96);
-  return { pos: at(-0.32 - s * (0.25 + 0.55 * pace), e * 0.17, 0), part: 'trail' };
+  const w = plumeAt(hash(p.i, 96), pace, glow, t);
+  return { pos: at(-0.32 - w.back, e * 0.17 + w.side, w.up), part: 'trail' };
 }
-function craftColour(part: 'hull' | 'spine' | 'engine' | 'trail', p: Particle, k: number): RGB {
+function craftColour(
+  part: 'hull' | 'spine' | 'engine' | 'trail',
+  p: Particle,
+  k: number,
+  glow = 0,
+): RGB {
+  const lit = (m: number): RGB => scale(CYAN, m).map((v) => Math.min(1, v)) as RGB;
   switch (part) {
     case 'hull':
       return scale(HULL, 0.28 * k);
     case 'spine':
       return scale(HULL, 0.34 * k);
     case 'engine':
-      return scale(CYAN, 0.55 * k);
+      return lit(engineLight(glow) * k);
     default:
-      return scale(CYAN, 0.35 * (1 - hash(p.i, 96)) * k);
+      return lit(trailLight(hash(p.i, 96), glow) * k);
   }
 }
 
@@ -1744,7 +1783,21 @@ export const SUPER_CLIMB = 48;
 /** Slow mode: a gentle drift, the eye tilted down at the city. */
 export const SLOW_PACE = 0.22;
 export { AVENUE, BLOCK_X, BLOCK_Z, blocked, blockTower, floorAt, MARGIN };
+/** The boost at roof height (boostPaceAt): three times the cruise. */
 export const BOOST_PACE = 3;
+/** The boost in the streets, and in the stratosphere. */
+export const STREET_BOOST = 2;
+export const HIGH_BOOST = 4.5;
+/**
+ * The boost by height (2026-11-13: "boost not too fast in the city but faster when above"): twice
+ * the cruise in the streets, three times at roof height, four and a half in the stratosphere, each
+ * blending smoothly into the next.
+ */
+export function boostPaceAt(y: number): number {
+  const roofs = smooth((y - GROUND - 30) / 100);
+  const above = smooth((y - SKY + 20) / (STRATOSPHERE - SKY));
+  return lerp(STREET_BOOST, BOOST_PACE, roofs) + (HIGH_BOOST - BOOST_PACE) * above;
+}
 export const BOOST_SECONDS = 3;
 /** Seconds of cruising that fill an empty bar. */
 export const BOOST_REFILL = 10;
@@ -1864,6 +1917,20 @@ const fly = {
   boost: 1,
   /** How far the ship leans into its turn, eased. */
   bank: 0,
+  /**
+   * Flight feel (2026-11-13: "smooth turn effects when u turn a lot"): the turn rate eased toward
+   * the keys (a release glides out), and how many seconds a turn has been held (a long one banks
+   * deeper).
+   */
+  turnRate: 0,
+  turning: 0,
+  /** The chase camera's own heading, easing after the ship's, so a turn swings the view round. */
+  camYaw: 0,
+  camPitch: 0,
+  /** The boost's glow, 0..1: rises while you boost, an afterglow fading slowly after. */
+  glow: 0,
+  /** A small lean away from a wall you slide along, eased back. */
+  nudge: 0,
   t: 0,
   /** Carrying on: the way it keeps (WAYS), the street's line, the last crossing it chose at. */
   way: 0,
@@ -1887,6 +1954,8 @@ const fly = {
 };
 export const hasGame = (k: number) => PHASES[k]?.id === 'ship';
 export const boostLeft = () => fly.boost;
+/** The boost's glow now, 0..1 (its plume and afterglow). */
+export const boostGlow = () => fly.glow;
 /** Whether slow mode is on. */
 export const slowMode = () => fly.slow;
 /**
@@ -1931,9 +2000,10 @@ const ceiling = () => (fly.high ? STRATOSPHERE : SKY);
 
 /**
  * Forward at the ship's pace (and up or down at the super boost's); a wall in the way, slide along
- * it, keeping whichever way is free. The floor is the street, or a canal's bed under it.
+ * it, keeping whichever way is free. The floor is the street, or a canal's bed under it. Returns
+ * how the wall stood: 0 none in the way, or the side it is on (+1 the ship's right, -1 its left).
  */
-function move(dt: number) {
+function move(dt: number): number {
   const was = fly.pos;
   const f = headingOf(fly.yaw, fly.pitch);
   const next: Vec3 = add(was, f, fly.speed * dt);
@@ -1950,6 +2020,11 @@ function move(dt: number) {
     [was[0], was[1], next[2]],
   ];
   fly.pos = tries.find((q) => !blocked(q)) ?? was;
+  // What the wall took from the move along the ground, and which side of the ship it stands.
+  const lx = next[0] - fly.pos[0];
+  const lz = next[2] - fly.pos[2];
+  if (Math.hypot(lx, lz) < 1e-9) return 0;
+  return lx * -f[2] + lz * f[0] >= 0 ? 1 : -1;
 }
 
 /** At a crossing, which way the autopilot goes: back toward the avenue, then on down it. */
@@ -1966,6 +2041,7 @@ function nextWay(way: number, line: number, at: number): number {
 /** Letting go: the autopilot takes the way along the grid nearest your heading, on the nearest street. */
 function startCarryingOn() {
   fly.mode = 'drift';
+  letGoAt = fly.t;
   fly.way = wrap(Math.round(-fly.yaw / (Math.PI / 2)), 4);
   const alongZ = fly.way % 2 === 0;
   fly.line = alongZ
@@ -2000,6 +2076,10 @@ function carryOn(dt: number, t: number) {
   const miss = turnTo(Math.atan2(-aim[0], -aim[1]) - fly.yaw);
   const rate = Math.max(-1.1, Math.min(1.1, miss * 2.5));
   fly.yaw = turnTo(fly.yaw + rate * dt);
+  // Kept as the turn rate, so taking the controls back goes on from this turn, no jolt.
+  fly.turnRate = -rate;
+  fly.turning = 0;
+  fly.nudge = 0;
   fly.bank += (rate * 0.45 - fly.bank) * (1 - Math.exp(-4 * dt));
   const onAvenue = alongZ && Math.abs(fly.line) < 1;
   const wantY = onAvenue ? cruiseY(p[2], t) : CRUISE_Y;
@@ -2025,7 +2105,36 @@ function afresh() {
   fly.vy = 0;
   fly.slow = false;
   fly.look = 0;
+  fly.turnRate = 0;
+  fly.turning = 0;
+  fly.nudge = 0;
+  fly.glow = 0;
   resetRace();
+}
+
+/** The chase camera on the ship's heading at once (a fresh start, a placing, a jump). */
+function camOnShip() {
+  fly.camYaw = fly.yaw;
+  fly.camPitch = fly.pitch;
+}
+
+/**
+ * The turn, eased (2026-11-13: "smooth turn effects when u turn a lot"): the rate eases toward the
+ * keys' (`want`, radians a second, right +) so a release glides out; held long, the ship banks
+ * deeper into it. `nudge` adds a lean (away from a wall).
+ */
+function steer(want: number, dt: number) {
+  fly.turnRate += (want - fly.turnRate) * (1 - Math.exp(-6 * dt));
+  fly.turning = want !== 0 ? fly.turning + dt : 0;
+  fly.yaw = turnTo(fly.yaw - fly.turnRate * dt);
+  const lean =
+    -fly.turnRate * 0.45 - 0.25 * Math.sign(fly.turnRate) * smooth(fly.turning / 1.5) + fly.nudge;
+  fly.bank += (lean - fly.bank) * (1 - Math.exp(-4 * dt));
+}
+
+/** The boost's glow: up while boosting, a slow afterglow after (mellow: it eases, never flashes). */
+function glowStep(boosting: boolean, dt: number) {
+  fly.glow += ((boosting ? 1 : 0) - fly.glow) * (1 - Math.exp((boosting ? -5 : -1.2) * dt));
 }
 
 /**
@@ -2060,6 +2169,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   }
   if (!active) {
     fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
+    glowStep(false, dt);
     raceStep({ active: false, pos: fly.pos, enter: false, t });
     if (fly.mode === 'pilot') startCarryingOn();
     if (fly.mode === 'drift') carryOn(dt, t);
@@ -2074,6 +2184,9 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     fly.pitch = Math.asin(Math.max(-1, Math.min(1, a.f[1])));
     fly.speed = FLY_SPEED;
     fly.bank = 0;
+    fly.turnRate = 0;
+    fly.turning = 0;
+    camOnShip();
   }
   fly.mode = 'pilot';
   if (lookKey) fly.slow = !fly.slow;
@@ -2084,8 +2197,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   const held = (...names: string[]) => names.some((n) => keys.includes(n));
   const turn =
     ((held('a', 'arrowleft') ? -1.2 : 0) + (held('d', 'arrowright') ? 1.2 : 0)) * hd.turn;
-  fly.yaw = turnTo(fly.yaw - turn * dt);
-  fly.bank += (-turn * 0.45 - fly.bank) * (1 - Math.exp(-4 * dt));
+  steer(turn, dt);
   const up = held('w', 'arrowup');
   const down = held('s', 'arrowdown');
   let tilt = ((up ? 0.55 : 0) - (down ? 0.55 : 0)) * Math.min(1.4, hd.climb);
@@ -2097,6 +2209,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   // High over the towers the bar does not drain: the open sky is free.
   if (boosting && fly.pos[1] < SKY) fly.boost = Math.max(0, fly.boost - dt / BOOST_SECONDS);
   else if (!held(' ')) fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
+  glowStep(boosting, dt);
   // The super boost: boost and climb together, and you go on up into the stratosphere; up there,
   // W climbs on and S dives back down, fast; below the towers' sky you fly as before.
   if (boosting && up) fly.high = true;
@@ -2129,15 +2242,28 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   const pace =
     settle *
     hd.speed *
-    (boosting ? BOOST_PACE * hd.boost : held('e', 'shift') ? 1.8 : held('q', 'x') ? 0.4 : 1) *
+    (boosting
+      ? boostPaceAt(fly.pos[1]) * hd.boost
+      : held('e', 'shift')
+        ? 1.8
+        : held('q', 'x')
+          ? 0.4
+          : 1) *
     (fly.slow ? SLOW_PACE : 1) *
     r.pace;
   fly.speed += (FLY_SPEED * pace - fly.speed) * (1 - Math.exp((boosting ? -4 : -1.5) * dt));
   const was: Vec3 = [...fly.pos];
-  move(dt);
-  // A portal carries you on to another district.
+  const wall = move(dt);
+  // A soft bump: sliding along a wall bleeds a little speed and leans the ship away from it.
+  if (wall !== 0) fly.speed *= 0.985 ** (dt * 60);
+  fly.nudge += (0.15 * wall - fly.nudge) * (1 - Math.exp((wall !== 0 ? -6 : -3) * dt));
+  // A portal carries you on to another district: the glow flares softly, the camera comes along.
   const jump = portalJump(was, fly.pos);
-  if (jump !== 0) fly.pos = [fly.pos[0], fly.pos[1], fly.pos[2] + jump];
+  if (jump !== 0) {
+    fly.pos = [fly.pos[0], fly.pos[1], fly.pos[2] + jump];
+    fly.glow = 1;
+    camOnShip();
+  }
   // Through every ring of a portal high in the sky: the ultraboost, into hyperspace.
   const gate = portalStep(was, fly.pos, t);
   if (gate) {
@@ -2168,11 +2294,12 @@ function spaceFly(active: boolean, keys: string[], dt: number, t: number) {
   }
   const held = (...names: string[]) => active && names.some((n) => keys.includes(n));
   const turn = (held('a', 'arrowleft') ? -1.2 : 0) + (held('d', 'arrowright') ? 1.2 : 0);
-  fly.yaw = turnTo(fly.yaw - turn * dt);
-  fly.bank += (-turn * 0.45 - fly.bank) * (1 - Math.exp(-4 * dt));
+  fly.nudge = 0;
+  steer(turn, dt);
   const tilt = (held('w', 'arrowup') ? 0.7 : 0) - (held('s', 'arrowdown') ? 0.7 : 0);
   fly.pitch += (tilt - fly.pitch) * (1 - Math.exp(-2.5 * dt));
   const boosting = held(' ');
+  glowStep(boosting, dt);
   if (!boosting) fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
   const pace = boosting ? BOOST_PACE : held('e', 'shift') ? 1.8 : held('q', 'x') ? 0.4 : 1;
   fly.speed +=
@@ -2190,7 +2317,10 @@ function arrive(a: Arrival) {
   fly.pitch = 0;
   fly.vy = 0;
   fly.high = a.city;
-  fly.speed = FLY_SPEED * (a.city ? BOOST_PACE : SPACE_PACE);
+  fly.speed = FLY_SPEED * (a.city ? boostPaceAt(a.pos[1]) : SPACE_PACE);
+  fly.turnRate = 0;
+  fly.turning = 0;
+  camOnShip();
 }
 
 /** Puts the ship at q heading by yaw, piloted (for the tests, and a dock to start from). */
@@ -2200,6 +2330,10 @@ export function placeShip(q: Vec3, yaw = 0) {
   fly.pitch = 0;
   fly.speed = 0;
   fly.mode = 'pilot';
+  fly.turnRate = 0;
+  fly.turning = 0;
+  fly.nudge = 0;
+  camOnShip();
 }
 
 /** Where the embassies' arcade cabinets lead: the Ocean, opened on its Shark Sim. */
@@ -2224,11 +2358,23 @@ function backToShip() {
   fly.vy = 0;
   fly.mode = 'pilot';
   fly.dock = P;
+  fly.turnRate = 0;
+  fly.turning = 0;
+  camOnShip();
 }
 
 /** After every move: the tunnels' pulses run on, lanterns you touch light, the district's name. */
 function after(dt: number, t: number) {
   const { c, f } = flier(t);
+  // The chase camera follows the heading a beat late, so a turn swings the view round.
+  if (fly.mode === 'route') {
+    fly.camYaw = Math.atan2(-f[0], -f[2]);
+    fly.camPitch = Math.asin(Math.max(-1, Math.min(1, f[1])));
+  } else {
+    const k = 1 - Math.exp(-5 * dt);
+    fly.camYaw = turnTo(fly.camYaw + turnTo(fly.yaw - fly.camYaw) * k);
+    fly.camPitch += (fly.pitch - fly.camPitch) * k;
+  }
   advancePulses(dt, fly.mode === 'route' ? FLY_SPEED : fly.speed, f);
   touchLanterns(c, t);
   const d = districtAt(c[0], c[2]);
@@ -2289,6 +2435,10 @@ export type Gauge = {
 export function gauges(): Gauge[] {
   const { c, f } = flier(fly.t);
   const hd = currentShip().handling;
+  // The needle's range holds the fastest you can go here: the stratosphere's boost, or space's.
+  const speedMax = inSpace()
+    ? FLY_SPEED * SPACE_PACE * BOOST_PACE
+    : FLY_SPEED * HIGH_BOOST * Math.max(1, hd.speed * hd.boost);
   return [
     {
       label: 'Height',
@@ -2299,8 +2449,8 @@ export function gauges(): Gauge[] {
     },
     {
       label: 'Speed',
-      value: Math.round(fly.mode === 'route' ? FLY_SPEED : fly.speed),
-      max: FLY_SPEED * BOOST_PACE * Math.max(1, hd.speed * hd.boost),
+      value: Math.min(speedMax, Math.round(fly.mode === 'route' ? FLY_SPEED : fly.speed)),
+      max: speedMax,
       unit: 'm/s',
     },
     // The compass: 0 up the avenue (-z), round to the right.
@@ -2321,6 +2471,9 @@ export function gauges(): Gauge[] {
 }
 const CANAL_FLOOR = 14;
 
+/** When you last let go and the autopilot carried on. */
+let letGoAt = Number.NEGATIVE_INFINITY;
+
 /**
  * The quiet words beside the bar: the race's (a prompt, 3 2 1, gate and time, place and best),
  * or the name of a district for a few seconds as you come into it; nothing otherwise.
@@ -2332,7 +2485,11 @@ export function tally(): string {
   if (rings) return rings;
   const r = raceBanner(fly.t);
   if (r) return r;
+  // 2026-11-13: once you let go (Esc), "Autopilot" for a moment; near a pad, its name.
+  if (fly.mode === 'drift' && fly.t - letGoAt >= 0 && fly.t - letGoAt < 3) return 'Autopilot';
   if (fly.dock) return DOCK_PROMPT;
+  const near = fly.mode === 'pilot' ? dockNear(fly.pos) : null;
+  if (near) return approachPrompt(near.P);
   if (fly.district && fly.t - fly.entered < 4 && fly.entered > Number.NEGATIVE_INFINITY)
     return DISTRICTS[fly.district].name;
   return fly.slow ? 'Slow · looking down' : '';
@@ -2346,17 +2503,27 @@ function shipEye(c: Vec3, f: Vec3): Eye {
   if (inSpace()) return { eye: add(add(c, f, -10), [0, 1, 0], 3.2), target: add(c, f, 8) };
   const hi = highness(c[1]);
   const lk = fly.look;
-  const fl = Math.hypot(f[0], f[2]) || 1;
-  const fh: Vec3 = [f[0] / fl, 0, f[2] / fl];
-  const back = lerp(10, 7, lk) + 150 * hi;
+  const flat = (v: Vec3): Vec3 => {
+    const l = Math.hypot(v[0], v[2]) || 1;
+    return [v[0] / l, 0, v[2] / l];
+  };
+  const fh = flat(f);
+  // Flight feel (2026-11-13): the eye stands on the camera's own, lagging heading (a turn swings
+  // the view round) while it looks along the ship's; the boost's glow pulls it back a little.
+  const route = fly.mode === 'route';
+  const fc = route ? f : headingOf(fly.camYaw, fly.camPitch);
+  const back = lerp(10, 7, lk) + 150 * hi + (route ? 0 : 2.2 * fly.glow);
   const rise = 3.2 + 7 * lk + 190 * hi;
-  const eye = add(add(c, lerp3(f, fh, Math.max(lk, hi)), -back), [0, 1, 0], rise);
-  eye[1] = Math.max(GROUND + 1, eye[1]);
+  const eye = add(add(c, lerp3(fc, flat(fc), Math.max(lk, hi)), -back), [0, 1, 0], rise);
+  // Down in the Deep Line (lib/city-under.ts) the camera stays inside it; else over the street.
+  eye[1] = underEyeY(c, eye[1]) ?? Math.max(GROUND + 1, eye[1]);
   const near = add(c, f, 6);
   const down = add(add(c, fh, 8 + 4 * lk), [0, 1, 0], -14);
   const plan: Vec3 = [c[0] + fh[0] * 160, GROUND, c[2] + fh[2] * 160];
   const target = lerp3(lerp3(near, down, lk), plan, hi);
-  return { eye, target };
+  // A slight roll with the bank, none on the autopilot's route, looking down or from high up.
+  const roll = route ? 0 : fly.bank * 0.22 * (1 - hi) * (1 - lk);
+  return { eye, target, roll };
 }
 
 /**
@@ -3009,7 +3176,9 @@ function gather(P: Plan): { d: number; run: () => void }[] {
             group(gid + 3, cur.bands * 2 * cur.per, 1.6, d, seen, Kind.Band);
             cur.cols = Math.max(2, Math.floor((2 * w) / 1.1));
             cur.rows = Math.max(2, Math.floor(tw.h / 1.6));
-            group(gid + 4, cur.cols * cur.rows, 1.6, d, seen, Kind.Window);
+            // A tower wearing its own windows (lib/city-roofs.ts) keeps them, not this grid.
+            if (!(tw as Block).facade)
+              group(gid + 4, cur.cols * cur.rows, 1.6, d, seen, Kind.Window);
             cur.n = Math.max(0, Math.round(tw.h / FLOOR_H) - 1);
             cur.per = Math.ceil((2 * w) / 0.5);
             group(gid + 5, cur.n * cur.per, 0.5, d, seen, Kind.Floor);
@@ -3106,7 +3275,7 @@ function gather(P: Plan): { d: number; run: () => void }[] {
     });
   }
   // The game's own: districts, landmarks, lanterns, tunnels, metro, word signs, races, the plan.
-  const game: Item[] = [...gameItems(eye, fwd, cur.t), ...trackItems(eye, cur.t, NEAR)];
+  const game: Item[] = [...gameItems(eye, fwd, cur.t, P.c), ...trackItems(eye, cur.t, NEAR)];
   for (const g of game) {
     if (seeThrough && g.probe && !g.probe.some((q) => roomBeyond(q[0], q[2], 30))) continue;
     items.push({
@@ -3126,7 +3295,7 @@ function gather(P: Plan): { d: number; run: () => void }[] {
 function build(P: Plan, t: number) {
   const { c, f } = flier(t);
   const { eye, target } = roomCamera(t) ?? shipView(c, f);
-  seeThrough = roomSeeThrough(eye);
+  seeThrough = roomSeeThrough(eye) ?? underSeeThrough(eye);
   Object.assign(P, { t, v: fly.v, c, f, eye, fwd: norm(sub(target, eye)), n: 0, top: 0 });
   const space = inSpace();
   reach = space ? SPACE_REACH : viewAt(eye[1]) / VIEW;
@@ -3313,12 +3482,14 @@ function shipAt(p: Particle, t: number): Spot {
     const ship = currentShip();
     const len = ship.len * (1 + 2 * hi);
     const k = camView() === 'cockpit' ? 0 : 0.42 * (1 - 0.45 * hi);
+    // The boost's plume and its afterglow (2026-11-13: "effects behind ship for the boost").
+    const glow = fly.mode === 'route' ? 0 : fly.glow;
     if (ship.id !== 'arrow') {
-      const g = shipGrainAt(ship.id, P.c, P.f, len, p, pace, bank);
-      return { pos: g.pos, rgb: shipGrainColour(ship.id, g.part, p, k) };
+      const g = shipGrainAt(ship.id, P.c, P.f, len, p, pace, bank, glow, t);
+      return { pos: g.pos, rgb: shipGrainColour(ship.id, g.part, p, k, glow) };
     }
-    const { pos, part } = craftAt(P.c, P.f, len, p, pace, bank);
-    return { pos, rgb: craftColour(part, p, k) };
+    const { pos, part } = craftAt(P.c, P.f, len, p, pace, bank, glow, t);
+    return { pos, rgb: craftColour(part, p, k, glow) };
   }
   // The sky (lib/city-sky.ts), in a dome just beyond the city's reach, so nothing in it stands in
   // front of it: stars and constellations, satellites, the stations, the spire's beacon.
@@ -3375,6 +3546,7 @@ let templeKind = 0;
 let factoryKind = 0;
 let domeKind = 0;
 let buildingKind = 0;
+let atlantisKind = 0;
 const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number) => void }> = {
   'golden-plan': { names: PLANS, label: 'Plan', set: setPlanKind },
   nova: { names: NOVA_CORES, label: 'Nova Core', set: setNovaKind },
@@ -3383,6 +3555,11 @@ const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number
   domes: { names: DOMES.names, label: DOMES.label, set: (i) => (domeKind = i) },
   above: { names: CITIES.map((c) => c.name), label: 'City', set: setCityKind },
   atlantis: ATLANTIS_VARIANTS,
+  'atlantis-buildings': {
+    names: ATLANTIS_BUILDINGS.names,
+    label: ATLANTIS_BUILDINGS.label,
+    set: (i) => (atlantisKind = i),
+  },
   buildings: { names: BUILDINGS.names, label: BUILDINGS.label, set: (i) => (buildingKind = i) },
 };
 
@@ -3399,6 +3576,7 @@ const PALETTE_SETS: Record<string, string[]> = {
   temples: GOLDEN_PALETTES,
   factories: FACTORY_PALETTES,
   domes: GOLDEN_PALETTES,
+  'atlantis-buildings': ATLANTIS_PALETTES,
 };
 const palettesOf = (k: number) => PALETTE_SETS[PHASES[k]?.id ?? ''];
 export const hasPalettes = (k: number) => palettesOf(k) !== undefined;
@@ -3445,6 +3623,8 @@ export function formAt(k: number, p: Particle, u: number, t: number): Spot {
       return aboveAt(p, u, t);
     case 'atlantis':
       return atlantisAt(p, Math.max(u, 0), t);
+    case 'atlantis-buildings':
+      return buildingAt(ATLANTIS_BUILDINGS, atlantisKind, p, t);
     case 'towers':
       return towersAt(p, Math.max(u, 0), t);
     case 'lanes':
@@ -3532,6 +3712,8 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       return aboveEye(t);
     case 'atlantis':
       return atlantisEye(u, t);
+    case 'atlantis-buildings':
+      return buildingEye(t, ATLANTIS_BUILDINGS.reach[atlantisKind]);
     case 'towers':
       // Slowly round the city, above its roofs, looking at its heart.
       return towersEye(u);
@@ -3583,7 +3765,8 @@ export function camera(time: number): Eye {
   const w = smooth((u - 0.75) / 0.25);
   if (w <= 0) return a;
   const b = eyeIn((index + 1) % PHASES.length, 0, t);
-  return { eye: lerp3(a.eye, b.eye, w), target: lerp3(a.target, b.target, w) };
+  const roll = lerp(a.roll ?? 0, b.roll ?? 0, w);
+  return { eye: lerp3(a.eye, b.eye, w), target: lerp3(a.target, b.target, w), roll };
 }
 
 /* ---------- the flow between pieces ---------- */
@@ -3646,7 +3829,8 @@ export function pieceCamera(k: number, s: number): Eye {
   const w = fliesOn(k) ? 0 : smooth((f - 0.75) / 0.25);
   if (w <= 0) return a;
   const b = eyeIn(k, 0, t);
-  return { eye: lerp3(a.eye, b.eye, w), target: lerp3(a.target, b.target, w) };
+  const roll = lerp(a.roll ?? 0, b.roll ?? 0, w);
+  return { eye: lerp3(a.eye, b.eye, w), target: lerp3(a.target, b.target, w), roll };
 }
 
 /**
@@ -3656,7 +3840,7 @@ export function pieceCamera(k: number, s: number): Eye {
 export function pieceBackground(k: number): string[] | null {
   const id = PHASES[k]?.id;
   if (id === 'ship' && inSpace()) return SPACE_BACKGROUND;
-  return id === 'atlantis' ? ATLANTIS_WATER : null;
+  return id === 'atlantis' || id === 'atlantis-buildings' ? ATLANTIS_WATER : null;
 }
 /** Out in space: near black, a breath of deep blue low down. */
 const SPACE_BACKGROUND = ['#010108', '#000003', '#020414'];

@@ -121,13 +121,14 @@ turning and breathing, a slow orbit.
 | 8 | Buildings | Twenty buildings from the quarters of the city on pills (**Buildings**, below): stair temples, a pagoda, a domed hall with minarets, twisted, rounded and faceted towers, each on its plinth with curvy walkways of dotted light winding round it | A slow orbit, a little above, drawn back to see each one whole |
 | 9 | From above | Five night cities seen from far above, moved here from Vegetal (below): **Grid**, **Star**, **River**, **Bay**, **Canals** on pills | Drifting slowly over the city, looking a little ahead and down |
 | 10 | Atlantis | The golden city's plan on the sea floor: glass domes of many sizes and pressure compartments with glowing portholes on its rings, joined by glass tunnels; coral gardens and kelp in its sunken canals and under some domes; a temple under a tall glass dome at its heart, its lattice sphere glowing through the water; submarines in lanes, one colour each, trailing bubbles; fish schools, jellyfish, mantas and far whales. Five views on pills (**Plan**, **Domes**, **Coral gardens**, **The heart**, **Harbour**, see **Atlantis**) | By view |
-| 11 | Towers | Twenty-five towers on a five-by-five grid of blocks, taller toward the middle, rise floor by floor from the ground, the middle from the first moment, all up within about ten seconds (see **Towers and sky lanes, round two**). Each is the Cell's box stacked: its corners and a line at every floor on the faces toward the eye, the rim being built glowing warm. Windows on those faces, two rows a floor, warm or cool, now and then one going out or coming on over seconds. Block outlines on the ground, stars overhead | Slowly round the city, above its roofs |
-| 12 | Sky lanes | The grown city, dimmer, its faces toward the eye; ships, each a bright head and a short fading trail, already streaming as the piece opens, along lanes in the streets at four heights, crossing grids, both ways in every street: white lights one way, red the other | Round the city, at the height of the lanes |
-| 13 | Neon | Each tower wears bands of neon (two to four ribbons), a tall blade sign of glowing dots on some, a spire with a slow beacon on all; coloured light pools on the street; a few ships. Every light drifts slowly round cyan, magenta, amber and violet, each tower on its own beat | Lower and closer, looking up |
-| 14 | Chinatown | A red gate (four pillars, two beams, three roofs turned up at the ends, a plaque reading 中華街, Chinatown) at the mouth of a narrow street. Tall signs hang down the street side of the towers, standing out into the street, in real Chinese and Japanese characters: ラーメン ramen, 茶 tea, 龍 dragon, 酒 wine, 夢 dream, 麺 noodles, 福 good fortune, 喫茶 café; a 夜市 night-market banner across the street and a small 喫茶 sign over a doorway. Lantern red and gold mixed with cyan and magenta. Rows of round red lanterns strung across the street, swaying a little | Walking pace through the gate and down the street |
-| 15 | Bridges and docks | Sky bridges (tubes of four edges and ribs, lights along the floor) join neighbouring towers high above the street; landing platforms stand out from the faces of the taller towers, lights chasing slowly round their rims. Ships come in on a curve, settle on a deck, rest, lift off and leave the other way | Round the city, from above the bridges |
-| 16 | Canyon | Flying down the middle of an endless street: towers either side (only the faces the street sees are drawn, so every grain shows), feet below the eye and roofs above it; traffic in lanes above and below the eye, all flying forward, one colour per height (amber, cyan, white, violet); high above, one-way cross streets carry ships left to right or right to left, each in its own colour (2026-11-12: "the canyon make it only with lights going forward … each road has one colour of spaceship to keep it coherent"); every third tower carries a tall Chinatown sign, flown past. Towers and ships that pass behind come round to the far end, so the street never ends and no grain is added | Down the middle of the street |
-| 17 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) down an endless avenue of solid, lit towers, with side streets to turn into; the avenue runs through the districts of the City of Dreams, Chinatown first (see **Ship, round two** and **Ship, round three**). **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** or Shift faster, **Q** or X slower, **Space** boosts to three times the cruise while the bar lasts; the bar fills again while you cruise; **Space** with **W** climbs on into the stratosphere; **L** slows to look down; **Enter** starts a race at its start. Towers' walls hold you: you slide along them. Traffic above and below you. Two dials read height and speed. With no one at the controls (the Journey, or before you steer) the ship flies down the avenue; let go with Esc and it carries on from where you were, back to the avenue | Behind the ship and a little above, looking past it |
+| 11 | Atlantis buildings | The sunken city's architecture from the single building to the quarter on pills (**Porthole tower**, **Pearl dome**, **Coral temple**, **Kelp spire**, **Submarine pen**, **Jelly lighthouse**, then **Dome cluster**, **Compartment**, **Atlantis quarter**; see **Atlantis buildings**), on the seabed in Atlantis's water, bubbles rising from every crown | As the temples |
+| 12 | Towers | Twenty-five towers on a five-by-five grid of blocks, taller toward the middle, rise floor by floor from the ground, the middle from the first moment, all up within about ten seconds (see **Towers and sky lanes, round two**). Each is the Cell's box stacked: its corners and a line at every floor on the faces toward the eye, the rim being built glowing warm. Windows on those faces, two rows a floor, warm or cool, now and then one going out or coming on over seconds. Block outlines on the ground, stars overhead | Slowly round the city, above its roofs |
+| 13 | Sky lanes | The grown city, dimmer, its faces toward the eye; ships, each a bright head and a short fading trail, already streaming as the piece opens, along lanes in the streets at four heights, crossing grids, both ways in every street: white lights one way, red the other | Round the city, at the height of the lanes |
+| 14 | Neon | Each tower wears bands of neon (two to four ribbons), a tall blade sign of glowing dots on some, a spire with a slow beacon on all; coloured light pools on the street; a few ships. Every light drifts slowly round cyan, magenta, amber and violet, each tower on its own beat | Lower and closer, looking up |
+| 15 | Chinatown | A red gate (four pillars, two beams, three roofs turned up at the ends, a plaque reading 中華街, Chinatown) at the mouth of a narrow street. Tall signs hang down the street side of the towers, standing out into the street, in real Chinese and Japanese characters: ラーメン ramen, 茶 tea, 龍 dragon, 酒 wine, 夢 dream, 麺 noodles, 福 good fortune, 喫茶 café; a 夜市 night-market banner across the street and a small 喫茶 sign over a doorway. Lantern red and gold mixed with cyan and magenta. Rows of round red lanterns strung across the street, swaying a little | Walking pace through the gate and down the street |
+| 16 | Bridges and docks | Sky bridges (tubes of four edges and ribs, lights along the floor) join neighbouring towers high above the street; landing platforms stand out from the faces of the taller towers, lights chasing slowly round their rims. Ships come in on a curve, settle on a deck, rest, lift off and leave the other way | Round the city, from above the bridges |
+| 17 | Canyon | Flying down the middle of an endless street: towers either side (only the faces the street sees are drawn, so every grain shows), feet below the eye and roofs above it; traffic in lanes above and below the eye, all flying forward, one colour per height (amber, cyan, white, violet); high above, one-way cross streets carry ships left to right or right to left, each in its own colour (2026-11-12: "the canyon make it only with lights going forward … each road has one colour of spaceship to keep it coherent"); every third tower carries a tall Chinatown sign, flown past. Towers and ships that pass behind come round to the far end, so the street never ends and no grain is added | Down the middle of the street |
+| 18 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) down an endless avenue of solid, lit towers, with side streets to turn into; the avenue runs through the districts of the City of Dreams, Chinatown first (see **Ship, round two** and **Ship, round three**). **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** or Shift faster, **Q** or X slower, **Space** boosts to three times the cruise while the bar lasts; the bar fills again while you cruise; **Space** with **W** climbs on into the stratosphere; **L** slows to look down; **Enter** starts a race at its start. Towers' walls hold you: you slide along them. Traffic above and below you. Two dials read height and speed. With no one at the controls (the Journey, or before you steer) the ship flies down the avenue; let go with Esc and it carries on from where you were, back to the avenue | Behind the ship and a little above, looking past it |
 
 The page opens on one piece alone, picked by name, as Ocean's do: it starts
 at its beginning with no ball of stars and loops, each grain gliding back to
@@ -249,6 +250,35 @@ and quarter, and higher.
 | Temples | **Temple court**: a square court of half-width 16 walled by a colonnade (columns every 2, 16/φ³ tall); the Rotunda at φ⁻¹ in the middle, a temple at φ⁻² in each corner, a gate and a pool on each axis | **Sacred complex**: the Lotus at φ⁻¹ on a round terrace; eight temples at φ⁻³ on a circle of 24; a reflecting canal ring from 12 to 12 + 12/φ³; eight processional ways; a ring of trees | **Temple quarter**: the sacred complex at φ^−1.5 in the middle; twelve streets, ring roads at 24 and 40; in each sector a court or a temple on the ring of 32 between lit houses; gardens; a canal on the rim at 46 |
 | Factories | **Factory group**: Sawtooth, Foundry and Workshops at φ⁻¹ on a triangle of side 22 round a yard, conveyor bridges between them, a rail siding | **Industrial complex**: the Cement works at φ⁻¹ in the middle; Assembly, Kilns, Solar and Foundry at φ⁻² a quarter turn apart on a ring of 27, conveyor bridges out to each, a rail loop of 19 | **Industrial quarter**: a 5 × 5 grid of blocks 18 apart (corners left as yards), a work at φ⁻³ on each, every kind in turn, the industrial complex in the middle; a canal and quay with cranes along the south; a rail ring round it all |
 | Domes | **Group of domes** (the five on a ring round a sixth) | **Dome complex**: the Geodesic at φ^−0.5 in the middle; Palm house and Lattice at φ⁻¹ west and east, Bubbles at φ⁻¹ north, a group at φ⁻² south, each 24 out and joined by glass corridors | **Dome quarter**, a solarpunk district: the Geodesic √φ larger as its landmark; terraced gardens to 18; eight streets, ring roads at 26 and 42; eight neighbourhoods on the ring of 34, by turns a dome complex or a group of domes, houses with roof gardens between; a canal at 46; trees everywhere |
+
+## Atlantis buildings (2026-11-13)
+
+> "ok work on atlantis design components and add them, make sure all design components for
+> categories can be navigated by going up and something tells us. factory one of five or
+> something so it is clear"
+
+A piece after Atlantis (`lib/atlantis-buildings.ts`), one row of pills like Temples, Factories
+and Domes, standing on a seabed (a sandy disc, its rim, slow rings of light) instead of a plaza:
+
+| Pill | Rules |
+|------|-------|
+| Porthole tower | Three drums, radii 5, 5/√φ, 5/φ, each 5φ high, two rings of portholes on each (12, 10, 8 round); a glass cap with a pearl of light under it |
+| Pearl dome | A geodesic glass dome of radius 11 on a drum 11/φ³ high ringed with sixteen portholes; a coral garden inside round a pearl of radius 11/φ⁴ on a plinth |
+| Coral temple | Three round terraces, radii 12, 12/φ, 12/φ², each 12/φ³ high, corals on each; a scalloped shell roof, a half dome of thirteen ribs, open to the front; a stair up the front |
+| Kelp spire | Four ribs in a helix a turn and a half, radius 4 at the foot to 4/φ⁴ at the top, 4φ⁴ high, glass between, lit floors every φ³; kelp swaying round its foot |
+| Submarine pen | A basin 24 by 12 under three glass barrel vaults; a submarine resting in the middle bay, its hull an ellipsoid with a conning tower and lit portholes; lit quays |
+| Jelly lighthouse | A stem 5φ² high; a bell of radius 6 flattened to 1/φ, scalloped in eight, breathing; twelve tentacles of light trailing down, light running along them |
+| Dome cluster | The Pearl dome at φ⁻¹; Porthole tower, Coral temple, Kelp spire and Jelly lighthouse at φ⁻² a quarter turn apart on a circle of 22; a glass tunnel out to each; a reef |
+| Compartment | A sea wall of radius 30, 30/φ⁴ high, ringed with portholes, a shallow glass dome over it 30/φ² high; the dome cluster inside, a submarine pen by the east gate; reefs round the rim |
+| Atlantis quarter | A Kelp spire as the landmark among coral gardens; six neighbourhoods on the ring of 34, by turns a compartment and a dome cluster, joined by a ring of glass tunnels and six more to the middle; submarine lanes of light at 45 and 47.5; reefs |
+
+Bubbles rise from every crown (dots climbing, swaying and fading). Palettes: **Deep sea** (the
+default: teal and aqua, pearl lights), **Pearl & coral**, **Bioluminescent** (cyan and violet),
+**Gold**. The water behind is Atlantis's own.
+
+**Where you are in a row.** Under the piece's name in the Studio, small caps say which pill of
+how many is showing, in the row's own word: "Factory 3 of 10", "Plan 2 of 11", "Atlantis 1 of
+9". It shows on every piece with more than one pill, with the ˄ ˅ arrows beside the name.
 
 ## Colour presets (2026-11-12)
 
@@ -758,6 +788,28 @@ at that distance and the far haze turned them violet. Now, read as the Golden pl
   faint; every landmark's plaza a ring of its district's hue round a bright heart, breathing on its
   district's beat.
 
+**Flight feel (2026-11-13)** ("specially playability navigation effects. for making city fun to
+fly through. smooth turn effects when u turn a lot, effects behind ship for the boost. boost not
+too fast in the city but faster when above."). Every change eases; nothing flashes.
+
+- **Turns** ease in and glide out: the turn rate eases toward the keys (1 − e^(−6 dt)), so letting
+  go carries the turn on a moment; a turn held long banks deeper (a quarter radian more by 1.5 s).
+  Each ship's turn still scales the rate.
+- **The chase camera** follows the heading a beat late (1 − e^(−5 dt)), so a turn swings the view
+  round the ship, and rolls slightly with the bank (0.22 of it); level on the autopilot's route,
+  looking down and from high up.
+- **The boost by height**: twice the cruise in the streets, three times at the roofs (the towers'
+  sky), four and a half in the stratosphere, blending smoothly. Out in space it stays three times
+  space's pace; the Speed dial's range holds the fastest you can go, so the needle never runs past it.
+- **The plume**: boosting raises a glow (an afterglow fading over a few seconds after): the trail
+  grows up to 1.6 ship lengths longer with a gentle ripple growing from the engines, brighter and
+  fuller, the engines brighter, a few more grains given to it; the chase eye stands back a little
+  (up to 2.2).
+- **A soft wall bump**: sliding along a wall bleeds a little speed and leans the ship away from it,
+  easing back after; never on the autopilot.
+- **Through a portal** the glow flares and the camera comes along at once, so the jump never snaps
+  the view.
+
 ### Races (`lib/city-race.ts`)
 
 Tracks are data, one per quarter: `{ district, name, full, start, gates, bars }`.
@@ -985,10 +1037,67 @@ between, with portals on to the other systems and back to the City. No cities on
   out over the city just past the portal you left by, still held high.
 - **Cost:** out in space only the system is drawn; about 3 to 5 ms a frame in the bench.
 
+### Richer streets, round four (2026-11-13)
+
+From the user (2026-11-13): "the core buildings of the game city are boring: improve them", "more
+tunnels inside buildings, and one that bores through several buildings in a row", "diwali corridor
+rope lights", "tunnels below the city you can enter", "stars above the city, the city shining from
+above, not black roofs", "make sure the factories etc. are in the city", "windows for some of the
+buildings".
+
+- **The twenty in the city (`lib/city-designs.ts`):** the Buildings piece's twenty
+  (`lib/city-buildings.ts`, without their walkways) stand on a share of the blocks of the quarter
+  they belong to: the Pagoda in Chinatown, the Shikhara and Hanging Gardens in the Indian quarter,
+  the Domed Hall and Spiral Library in Istanbul, the Twist, Sky Bridge, Crystal and Sail among the
+  Heights' towers, the Twist, Crystal, Cantilever, Sail, Trio and Sky Bridge in the market, the
+  Porthole Hall, Ring Stack, Pebbles and Sail on the Canals, the Tree Tower, Great Arch, Spiral
+  Library and Hanging Gardens in the gardens, the Sun Stair, Amphitheatre and Great Arch among the
+  temples, the Trio, Ring Stack and Cantilever among the factories, the Step Mastaba among the
+  pyramids. Each is scaled to fill its block (its plinth within 10.5 of the middle, up to 1.9× the
+  Studio's size) and kept under the metro, drawn as a grain mesh in its quarter's colours, lit from
+  your eye. They hold you: a box for the towers, a tapering mass for the stair temples, pagoda and
+  spire.
+- **The Studio's temples, factories and domes** now go through the same meshes (lit from your eye,
+  their quarter's colours, 2000 grains a block, 4000 on the landmark plazas), where before they were
+  drawn from the Studio's turning eye and read faint.
+- **More tunnels through towers:** one tower in five (two in five in the Heights). **The through
+  tunnel:** the neon market's column x = 65, blocks 43 to 47 (z 1462 to 1632): five towers on one
+  line, each bored at 14 over the street, rings of light running on over the streets between, so
+  it reads, and flies, as one tunnel.
+- **Rope lights (`lib/city-ropes.ts`):** corridors of ropes from wall to wall across the streets,
+  one every 4.2 down the street, each sagging in a catenary a fifth of its span deep, a tiny light
+  every half metre: marigold and warm in the Indian quarter (most streets), red and gold in
+  Chinatown, turquoise in Istanbul, magenta in the market, warm white now and then elsewhere. A
+  slow wave runs along them and down the corridor; never a flash.
+- **The Deep Line (`lib/city-under.ts`):** a tunnel 13 wide and 11 tall, 18 under the street. In
+  by the ramp in the avenue at z 520 (Indian quarter, under a lit portal and DEEP LINE), down to
+  z 460, along under the avenue to z 340, west to x −130, south under Chinatown's west side to
+  z 136, east under the avenue to x 130 (a second ramp rises from that crossing to Chinatown's
+  avenue at z 76), then north under Istanbul, rising gently, out through the south wall of the
+  Canals' first canal (z 612). Rings of light every 3 with the tunnels' pulses, lamps down the
+  floor, chevrons down the ramps. The street over it is solid; deep inside, the city overhead is
+  out of sight and the camera stays in the tunnel. The map draws it (and the through tunnel)
+  dashed in cyan, its two mouths named.
+- **Roofs from above (`lib/city-roofs.ts`):** looking down on a plain building, its roof's edge is
+  lit all round in its quarter's colour, nine lamps on it, a slow red light on the tall ones, and a
+  haze of soft light rising off it; from the plan's height each roof is a 3 × 3 of its colour.
+- **Stars:** four in ten of the sky's grains are plain stars now (they were sixty in all), a few
+  bright, most faint, each its own slow twinkle.
+- **Windows:** a share of the plain buildings (not Chinatown's) wear their quarter's windows in
+  place of the city's grid: arched in the Indian, temple and Egyptian quarters, round in Istanbul
+  and the domes, a grid of panes in the gardens, canals and factories, ribbon bands in the Heights
+  and the market. About six in ten are lit; one in six switches on or off every two to five
+  minutes, easing over six seconds.
+- **Cost:** everything new is an item for the Ship's renderer, near the eye only (within 160, the
+  windows within 120, the tunnel from the street only near its ramps), thinned with distance like
+  the rest; the frame's grains are the same pool, so the cost is in building the items (the same
+  few milliseconds as before in the bench).
+
 ### Still rough, and next
 
-- The Studio's buildings, domes, minarets and spires are light: you fly through them (only towers
-  and pyramids hold you). Sky bridges and the metro are light too.
+- The Studio's domes, minarets and spires on the box towers are light: you fly through them (the
+  towers, pyramids and the twenty hold you). Sky bridges and the metro are light too.
+- The Deep Line has no race of its own yet (the tracks are one a quarter), and no side branches.
 - Sky lanterns and portals are only near the avenue; the Sky Island Loop and four other tracks are
   drafts (gates only); the sky island itself is the platform station, still small.
 - Traffic does not yet move in platoons on the beat; the beat does not yet travel out from a heart
@@ -1066,8 +1175,8 @@ race starts and the rest, nearer first within each; a name that would touch one 
 it. In 3D the far names fade (four tenths to full by depth). Time
 stands still while it is open (the player holds the last picture); **M**, **Esc** or ✕ closes it.
 The Dawn sky behind, gold lines, district hues. Canvas 2D, redrawn only when the view changes or
-about ten times a second for the pointer. New parts of the city (docks, embassies) add places by
-appending to `MAP_EXTRAS`.
+about ten times a second for the pointer. New parts of the city add places by appending to
+`MAP_EXTRAS` (the docks and embassies are there now).
 
 **Keys** (Ship, Game side): V cockpit view, M map, N Design menu; the rest as before.
 
@@ -1095,8 +1204,19 @@ sides are filled, not stretched; the other canopies still stretch to the screen.
 landscape phone (at most 520 high) the round buttons (Boost, Look, Go, View) sit two by two and a
 little smaller, the pace pills above them.
 
-**Still rough.** The map shows one tile (the city repeats every way) and no docks yet; on a
-touch screen a hidden name shows only by zooming (there is no hover).
+**Map and game polish** (2026-11-13). The map shows every dock's pad (an H in a ring) and every
+Embassy of Happiness (a small triangle), named after the race starts. On a touch screen a tap
+shows the name under the finger for 3 s (the footer says "tap a place for its name"). A quiet
+"You · 52 m" (your height) sits beside your pointer where no name is in the way. A district
+whose race you won is drawn brighter, edged in gold. The Game side has its own hint, once per
+world: "W A S D fly · Space boost · M map · Esc lets go" (on a phone "Stick to fly · Boost · Map
+above the buttons"). Letting go says "Autopilot" for 3 s. Coming in to a pad (within 30, no more
+than 12 over or under) its rim lights brighten and the words say "<lounge> · land on the pad".
+A room's controls are spelled out in the first room on the device; after that only its name, for
+3 s. Cars dip their lights as the ship passes low over them (dark within 5, full again by 10).
+On a phone the bar and its words sit up under the step, the words cut short instead of wrapping.
+
+**Still rough.** The map shows one tile (the city repeats every way).
 
 ## Game · Studio, and the phone
 

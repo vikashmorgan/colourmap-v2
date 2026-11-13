@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { makeParticles, type Vec3 } from './bigbang';
 import { PHASES, pieceAt, placeShip, setFly, tally } from './city';
@@ -10,6 +10,8 @@ import {
   inRoom,
   leaveRoom,
   onSeat,
+  ROOM_HINT_KEY,
+  roomBanner,
   roomCamera,
   roomFree,
   roomGrain,
@@ -215,5 +217,44 @@ describe('docks and rooms (queued: "docking the ship and cyberpunk rooms ... wit
     tick([], false);
     expect(inRoom()).toBe(false);
     setFly(false, [], 0, 0);
+  });
+});
+
+// 2026-11-13: the controls spelled out in the first room on the device; after that, the name alone.
+describe('the room banner, shorter after the first visit', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    leaveRoom();
+  });
+  const P = placeDock(0, [0, 0, 0]);
+
+  it('spells out the controls the first time, then only the name for 3 s', () => {
+    const kept = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => kept.get(k) ?? null,
+      setItem: (k: string, v: string) => kept.set(k, v),
+    });
+    enterRoom(P, 100);
+    expect(roomBanner(101)).toContain('W S walk');
+    expect(roomBanner(105)).toContain('W S walk');
+    expect(roomBanner(107)).toBe('');
+    expect(kept.get(ROOM_HINT_KEY)).toBe('1');
+    enterRoom(P, 200);
+    expect(roomBanner(201)).toBe(P.dock.name);
+    expect(roomBanner(203.5)).toBe('');
+  });
+
+  it('works with no storage, or storage that throws: the controls every time', () => {
+    vi.stubGlobal('localStorage', undefined);
+    enterRoom(P, 10);
+    expect(roomBanner(11)).toContain('W S walk');
+    vi.stubGlobal('localStorage', {
+      getItem: () => {
+        throw new Error('blocked');
+      },
+      setItem: () => {},
+    });
+    enterRoom(P, 20);
+    expect(roomBanner(21)).toContain('W S walk');
   });
 });
