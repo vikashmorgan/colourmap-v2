@@ -19,6 +19,7 @@ import TripPlayer, { type Trip } from '@/components/TripPlayer';
 import {
   boostLeft,
   camera,
+  depthOfField,
   fade,
   gauges,
   hasGame,
@@ -106,6 +107,8 @@ const TRIP: Trip = {
       meter: { label: 'Boost', value: boostLeft },
       tally,
       gauges,
+      // The ship in focus, the far city softening, more under the boost (2026-11-13).
+      focus: depthOfField,
       // Four ships of our own, each with its own instruments (or any style, or none) and its
       // canopy from the pilot's seat (V); M opens the map (2026-11-12).
       display: displayNow,

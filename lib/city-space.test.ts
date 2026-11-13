@@ -31,6 +31,7 @@ import {
   resetSpace,
   ringCrossed,
   ringOf,
+  ringPull,
   SYSTEMS,
   spaceItems,
   spaceMode,
@@ -99,23 +100,45 @@ describe('hyperspace (queued: "ultraboost ring portals high in the sky into hype
     ).toBe(-1);
     // The wrong way through does not count.
     expect(ringCrossed(P, after, before)).toBe(-1);
-    // Missing the third ring: no ultraboost.
-    expect(flyThrough(P, 10, 2)).toBe(-1);
+    // Missing one ring is forgiven (2026-11-13: "boost rings don't work"); missing the last is not.
+    expect(flyThrough(P, 10, 2)).toBeGreaterThan(0);
+    resetSpace();
+    expect(flyThrough(P, 10, RING_RADII.length - 1)).toBe(-1);
     resetSpace();
     expect(flyThrough(P, 30)).toBeGreaterThan(0);
     // Too slow between two rings: the run starts over.
     resetSpace();
-    const a = ringOf(P, 0).c;
-    const b = ringOf(P, 1).c;
-    const step = (q: Vec3, t: number) =>
-      portalStep(
-        [q[0] - P.axis[0], q[1], q[2] - P.axis[2]],
-        [q[0] + P.axis[0], q[1], q[2] + P.axis[2]],
+    const step = (q: Vec3, t: number, back = false) => {
+      const s = back ? -1 : 1;
+      return portalStep(
+        [q[0] - s * P.axis[0], q[1], q[2] - s * P.axis[2]],
+        [q[0] + s * P.axis[0], q[1], q[2] + s * P.axis[2]],
         t,
       );
-    expect(step(a, 100)).toBeNull();
-    expect(step(b, 100 + RING_WINDOW + 1)).toBeNull();
-    for (let i = 2; i < RING_RADII.length; i++) expect(step(ringOf(P, i).c, 108 + i)).toBeNull();
+    };
+    expect(step(ringOf(P, 0).c, 100)).toBeNull();
+    expect(step(ringOf(P, 1).c, 101)).toBeNull();
+    expect(step(ringOf(P, 2).c, 101 + RING_WINDOW + 1)).toBeNull();
+    for (let i = 3; i < RING_RADII.length; i++) expect(step(ringOf(P, i).c, 108 + i)).toBeNull();
+    // Flown the other way, small ring first, it opens too.
+    resetSpace();
+    let opened = null;
+    for (let i = RING_RADII.length - 1; i >= 0; i--)
+      opened = step(ringOf(P, i).c, 200 + (RING_RADII.length - i), true) ?? opened;
+    expect(opened).not.toBeNull();
+  });
+
+  it('pulls the ship gently toward the next ring ahead, and not from far off or side on', () => {
+    const P = cityPortal(0, [0, 0, 0]);
+    const c0 = ringOf(P, 0).c;
+    const from: Vec3 = [c0[0] + 15, c0[1] - 10, c0[2] - P.axis[2] * 60];
+    expect(ringPull(from, P.axis)).toEqual(c0);
+    // From the far side, flying back, the nearest ring ahead is the small one.
+    const c4 = ringOf(P, RING_RADII.length - 1).c;
+    const back: Vec3 = [c4[0], c4[1], c4[2] + P.axis[2] * 40];
+    expect(ringPull(back, [-P.axis[0], -P.axis[1], -P.axis[2]])).toEqual(c4);
+    expect(ringPull([c0[0], c0[1], c0[2] - P.axis[2] * 300], P.axis)).toBeNull();
+    expect(ringPull(from, [1, 0, 0])).toBeNull();
   });
 
   it('the tunnel: Mach climbing and easing, streaks round the eye, then a system facing its star', () => {

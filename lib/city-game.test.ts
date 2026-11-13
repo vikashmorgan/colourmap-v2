@@ -441,7 +441,7 @@ describe('the game city: flying it', () => {
   });
 
   it('gives L, Enter and V round buttons on a phone, with Space', () => {
-    expect(SHIP_KEYS).toEqual([' ', 'l', 'enter', 'v']);
+    expect(SHIP_KEYS).toEqual([' ', 'tab', 'l', 'enter', 'v']);
   });
 });
 

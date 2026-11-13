@@ -310,21 +310,37 @@ export function resetSpace() {
   state.home = null;
 }
 
+/** The portals you can fly through now: the system's out in space, else the city's nearest q. */
+const portalsNear = (q: Vec3) =>
+  state.mode === 'space' ? currentSystem().portals : CITY_PORTALS.map((_, i) => cityPortal(i, q));
+
+/**
+ * Which ring of P the step from a to b went through, either way (2026-11-13: "boost rings don't
+ * work for going to space"): its place in the run as you fly it (the big ring first the right
+ * way, the small one first the other way), and which way; null if none.
+ */
+export function ringPassed(P: Portal, a: Vec3, b: Vec3): { order: number; back: boolean } | null {
+  const i = ringCrossed(P, a, b);
+  if (i >= 0) return { order: i, back: false };
+  const j = ringCrossed(P, b, a);
+  return j >= 0 ? { order: RING_RADII.length - 1 - j, back: true } : null;
+}
+
 /**
  * The rings you fly through, each step from a to b (the city's portals in the city, the system's
- * out in space): through all of a portal's rings in order, each within RING_WINDOW of the last, it
- * opens; returns that portal, else null.
+ * out in space): through a portal's rings in order, either way, each within RING_WINDOW of the
+ * last, a ring missed here and there forgiven, it opens at the last; returns that portal, else null.
  */
 export function portalStep(a: Vec3, b: Vec3, t: number): Portal | null {
-  const list =
-    state.mode === 'space' ? currentSystem().portals : CITY_PORTALS.map((_, i) => cityPortal(i, b));
-  for (const P of list) {
-    const i = ringCrossed(P, a, b);
-    if (i < 0) continue;
-    const key = `${state.mode}:${P.name}:${Math.round(P.at[0])}:${Math.round(P.at[2])}`;
+  for (const P of portalsNear(b)) {
+    const hit = ringPassed(P, a, b);
+    if (!hit) continue;
+    const i = hit.order;
+    const key = `${state.mode}:${P.name}:${Math.round(P.at[0])}:${Math.round(P.at[2])}:${hit.back}`;
     const run = state.runs.get(key);
     const n = run && t - run.t < RING_WINDOW ? run.n : 0;
-    const next = i === n ? n + 1 : i === 0 ? 1 : 0;
+    // The next ring, or the one after it (one missed), carries the run on; else it starts again.
+    const next = i === n || (i === n + 1 && (n > 0 || i === 1)) ? i + 1 : i === 0 ? 1 : 0;
     state.runs.set(key, { n: next, t });
     if (next === RING_RADII.length) {
       state.runs.delete(key);
@@ -333,6 +349,34 @@ export function portalStep(a: Vec3, b: Vec3, t: number): Portal | null {
   }
   return null;
 }
+/**
+ * A gentle pull toward the next ring ahead (2026-11-13): the middle of the nearest ring of a portal
+ * you are flying at (heading within about 45° of its way, either way), up to 110 ahead and within
+ * twice its radius to the side; null if none. The ship eases toward it, so a run of rings can be
+ * flown without threading each one by hand.
+ */
+export function ringPull(q: Vec3, f: Vec3): Vec3 | null {
+  if (state.mode === 'tunnel') return null;
+  let best: Vec3 | null = null;
+  let bestAhead = Number.POSITIVE_INFINITY;
+  for (const P of portalsNear(q)) {
+    const along = dot(f, P.axis);
+    if (Math.abs(along) < 0.7) continue;
+    const s = Math.sign(along);
+    for (let i = 0; i < RING_RADII.length; i++) {
+      const { c, r } = ringOf(P, i);
+      const d = sub(c, q);
+      const ahead = dot(d, P.axis) * s;
+      if (ahead <= 0.5 || ahead > 110) continue;
+      const side = len(add(d, P.axis, -dot(d, P.axis)));
+      if (side > r * 2 || ahead >= bestAhead) continue;
+      best = c;
+      bestAhead = ahead;
+    }
+  }
+  return best;
+}
+
 /** How many rings of the run you are on (for the words beside the bar), 0 if none. */
 export function ringsDone(t: number): number {
   let best = 0;

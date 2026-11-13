@@ -7,6 +7,8 @@ import {
   BLOCK_X,
   BLOCK_Z,
   BOOST_PACE,
+  BOOST_REFILL,
+  BOOST_SECONDS,
   BRIDGES,
   blocked,
   blockTower,
@@ -36,6 +38,7 @@ import {
   glyph,
   hasPalettes,
   hasVariants,
+  hyperGlow,
   LANES,
   LANTERNS,
   laneShip,
@@ -556,13 +559,36 @@ describe('Ship', () => {
     const tb = run([' '], 1);
     expect(speed()).toBeGreaterThan(FLY_SPEED * (boostPaceAt(flier(tb).c[1]) - 0.3));
     expect(boostPaceAt(SKY)).toBeCloseTo(BOOST_PACE, 1);
-    expect(boostLeft()).toBeLessThan(0.75);
+    expect(boostLeft()).toBeCloseTo(1 - 1 / BOOST_SECONDS, 1);
     // Held on, the bar runs dry and the pace falls back; cruising fills it again.
     run([' '], 6);
     expect(boostLeft()).toBe(0);
     expect(speed()).toBeLessThan(FLY_SPEED * 1.3);
     run([], 4);
     expect(boostLeft()).toBeGreaterThan(0.3);
+  });
+
+  it('hyperboosts on Tab with Space: faster again, draining the bar faster (2026-11-13)', () => {
+    const speed = () => gauges().find((g) => g.label === 'Speed')?.value as number;
+    // A full bar for each (the tests before leave it low): cruising fills it.
+    fresh();
+    run([], BOOST_REFILL + 1);
+    fresh();
+    run([' '], 1.2);
+    const boosted = speed();
+    const left = boostLeft();
+    fresh();
+    run([], BOOST_REFILL + 1);
+    fresh();
+    run([' ', 'tab'], 1.2);
+    expect(speed()).toBeGreaterThan(boosted * 1.4);
+    expect(boostLeft()).toBeLessThan(left);
+    expect(hyperGlow()).toBeGreaterThan(0.5);
+    // Tab alone does nothing; the glow fades after.
+    fresh();
+    run(['tab'], 1);
+    expect(hyperGlow()).toBe(0);
+    for (const g of gauges()) if (g.kind === undefined) expect(g.value).toBeLessThanOrEqual(g.max);
   });
 
   it('never flies into a tower, through the ground or past the sky', () => {
