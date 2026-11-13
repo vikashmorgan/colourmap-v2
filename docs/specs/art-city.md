@@ -1179,6 +1179,15 @@ tile's edge.
 - Green only: everything the game adds there (towers, spire, kerbs, cars, signs) has green its
   strongest channel.
 
+### Rising, hearts, Atlantis and depth (2026-11-13)
+
+"make the rising start rising faster. and do different ones of these", "do different options for the heart", "bring more verticality to atlantis. and it seems to shine too much still or too much glow", "check depth of field for the city".
+
+- **Rising** starts within a second and is all up by a third of the piece. ↑↓ picks how it rises: Heart first, Outside in, Spiral (sector after sector), Ripple (each ring settles with a small overshoot, never a jump) or Bloom (each block on its own beat).
+- **The heart** has five on ↑↓, over the same garden, canal and bridges: Open sphere, Golden torus, Lantern (twelve ribs turning a quarter as they rise), Lotus (two tiers of petals, a seed head of florets) and Armillary (three tilted rings turning slowly).
+- **Atlantis** gains spires of three drums, each narrower, with porthole rings, a lamp at each step and a slow light on a mast: in the ring of knowledge, rising out of the homes' domes, and beside the nature clusters. They stay below the high submarine loops, and their bounding spheres keep submarines clear. Less bloom (glow 0.6), smaller grains in the close views, buildings lit rather than glowing up close, a softer heart.
+- **Depth of field** in the game softens the far city from cruise on, not only under the boost: it starts at 1.35 times the focus distance and ramps over 110.
+
 ### Still rough, and next
 
 - The Studio's domes, minarets and spires on the box towers are light: you fly through them (the
