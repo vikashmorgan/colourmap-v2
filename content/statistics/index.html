@@ -52,6 +52,14 @@
   .sessions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 22px 0 6px; }
   .sess.ref { align-content: start; border-style: dashed; }
   .sess.ref[aria-selected="true"] { border-style: solid; }
+  /* The Summary tab: warm brown, first in the row, so it is found at a glance. */
+  .sess.sum { --brown: #8a5a3b; align-content: start; border-color: color-mix(in srgb, var(--brown) 55%, var(--line)); background: color-mix(in srgb, var(--brown) 14%, var(--card)); }
+  .sess.sum b { color: var(--brown); }
+  .sess.sum[aria-selected="true"] { border-color: var(--brown); box-shadow: inset 0 0 0 1px var(--brown); }
+  [data-theme="night"] .sess.sum { --brown: #d4a27c; }
+  .sum-l { margin-top: 30px; }
+  .sum-l h2 { margin: 0 0 10px; color: #8a5a3b; display: flex; gap: 10px; align-items: baseline; }
+  [data-theme="night"] .sum-l h2 { color: #d4a27c; }
   /* Cheat sheet: one line per term, found by typing. */
   .ref-search { position: sticky; top: 37px; z-index: 2; width: 100%; margin: 18px 0 0; min-height: 42px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 15px system-ui, sans-serif; box-shadow: 0 6px 18px color-mix(in srgb, var(--paper) 80%, transparent); }
   .ref-search:focus { outline: none; border-color: var(--accent); }
@@ -276,7 +284,17 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .ess-fold[open] > summary::after { content: 'Hide ▾'; }
   .ess-fold[open] > summary { margin-bottom: 10px; }
   .ess { display: grid; gap: 12px; margin: 4px 0 18px; }
-  .ess-item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 12px; display: grid; gap: 8px; }
+  .ess-item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 26px 10px 16px; display: grid; gap: 8px; position: relative; scroll-margin-top: 20px; }
+  /* The same three dots as a card, and the same bar down the right edge. */
+  .ess-item::after { content: ''; position: absolute; right: 8px; top: 12px; bottom: 12px; width: 5px; border-radius: 3px; background: color-mix(in srgb, var(--line) 70%, transparent); transition: background .3s; }
+  .ess-item[data-mark="got"] { border-color: color-mix(in srgb, var(--got) 55%, var(--line)); }
+  .ess-item[data-mark="mid"] { border-color: color-mix(in srgb, var(--mid) 55%, var(--line)); }
+  .ess-item[data-mark="late"] { border-color: color-mix(in srgb, var(--late) 55%, var(--line)); }
+  .ess-item[data-mark="got"]::after { background: var(--got); }
+  .ess-item[data-mark="mid"]::after { background: var(--mid); }
+  .ess-item[data-mark="late"]::after { background: var(--late); }
+  .ess-item.flash { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+  .ess-item p { margin: 0; }
   .ess-item h3 { margin: 0; font-size: 17px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
   .ess-is { margin: 0; font-size: 16px; }
   .ess-ex { margin: 0; }
@@ -1357,7 +1375,7 @@ document.addEventListener('toggle', e => {
 }, true);
 function paintNotes() {
   paintBoxes();
-  for (const card of document.querySelectorAll('.card, .ex[data-key]')) {
+  for (const card of document.querySelectorAll('.card, .ex[data-key], .ess-item')) {
     const list = notesOf(card.dataset.key);
     card.querySelector('.notes').innerHTML = notesFold(card.dataset.key, list);
     const b = card.querySelector('.note-btn');
@@ -1448,14 +1466,18 @@ document.addEventListener('click', e => {
   const t = e.target;
   const k = t.closest('.editor .kinds [data-kind]');
   if (k) { const ed = k.closest('.editor'); ed.dataset.kind = k.dataset.kind; for (const b of ed.querySelectorAll('.kinds button')) b.setAttribute('aria-checked', String(b === k)); return; }
-  const host = t.closest('.card, .ex[data-key], .nb-group');
+  const host = t.closest('.card, .ex[data-key], .ess-item, .nb-group');
   if (!host) return;
   const m = t.closest('.mark');
   if (m) {
     setMark(host.dataset.key, m.dataset.mark);
     const v = marks[host.dataset.key] || '';
-    host.dataset.mark = v;
-    for (const b of host.querySelectorAll('.mark')) b.setAttribute('aria-pressed', String(b.dataset.mark === v));
+    // A summary idea can be on the page twice (the Summary tab and a lecture's end): both follow.
+    for (const h of document.querySelectorAll(`[data-key="${CSS.escape(host.dataset.key)}"]`)) {
+      if (!h.querySelector('.marks')) continue;
+      h.dataset.mark = v;
+      for (const b of h.querySelectorAll('.mark')) b.setAttribute('aria-pressed', String(b.dataset.mark === v));
+    }
     paintBars(); renderMap();
     return;
   }
@@ -1685,9 +1707,11 @@ function cardHtml(s, c, gi) {
     ${c.watch ? `<p class="watch"><b>Watch out</b>${kwText(c.watch)}</p>` : ''}
     <div class="notes"></div>
     <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>${caseOf(key) ? '<button type="button" class="case-btn" aria-controls="case-pad">The case</button>' : ''}${ON_BRAIN && c.slide ? `<a class="slide-link" href="/api/coding/slides/Stats${s.n}.pdf#page=${c.slide}" target="_blank" rel="noopener" aria-label="Slide ${c.slide} of ${s.pages}">Slide ${c.slide}<span class="of">/${s.pages}</span> ›</a>` : ''}
-      <span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Confused as fuck']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span></div>
+      ${marksHtml(m)}</div>
   </article>`;
 }
+// The three dots: how well you know a card or a summary idea.
+const marksHtml = m => `<span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Confused as fuck']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span>`;
 /* ---------- The rules each practice answer uses ----------
    Asked for 2026-11-07: "when you solve the questions, explain the laws it relates to and that we can use,
    for example P(fake ∩ flag) = P(fake) × P(flag ∣ fake)". Per exercise, one list per part:
@@ -2030,11 +2054,12 @@ function filterRef(q) {
 document.getElementById('session').addEventListener('input', e => { if (e.target.id === 'ref-q') filterRef(e.target.value); });
 document.getElementById('session').addEventListener('click', e => { const go = e.target.closest('.ref-go'); if (go) goTo(go.dataset.go); });
 let current = 1;
-const isTab = v => v === 'ref' || v === 'charts';   // the two tabs that are not a lecture
+const isTab = v => v === 'sum' || v === 'ref' || v === 'charts';   // the three tabs that are not a lecture
 try { const saved = localStorage.getItem('stats-session'); current = isTab(saved) ? saved : Number(saved) || 1; } catch (e) {}
 if (!isTab(current) && !SESSIONS.some(s => s.n === current)) current = 1;
 function renderTabs() {
-  document.getElementById('sessions').innerHTML = SESSIONS.map(s => `<button type="button" class="sess" role="tab" data-s="${s.n}" aria-selected="${s.n === current}"><b>Lecture ${s.n}</b><span>${esc(s.short)}</span><span class="bar"><i></i></span></button>`).join('')
+  document.getElementById('sessions').innerHTML = `<button type="button" class="sess sum" role="tab" data-s="sum" aria-selected="${current === 'sum'}"><b>Summary</b><span>Every lecture, start to finish</span></button>`
+    + SESSIONS.map(s => `<button type="button" class="sess" role="tab" data-s="${s.n}" aria-selected="${s.n === current}"><b>Lecture ${s.n}</b><span>${esc(s.short)}</span><span class="bar"><i></i></span></button>`).join('')
     + `<button type="button" class="sess ref" role="tab" data-s="ref" aria-selected="${current === 'ref'}"><b>Cheat sheet</b><span>Every rule, findable</span></button>`
     + `<button type="button" class="sess ref" role="tab" data-s="charts" aria-selected="${current === 'charts'}"><b>Charts</b><span>Every graph, with its formula</span></button>`;
   paintBars();
@@ -2151,19 +2176,34 @@ const ESSENTIALS = {
     { name: 'Log-likelihood ℓ', is: 'The logarithm turns the product into a sum, so very small numbers stay readable. It peaks at the same candidate.', f: 'ℓ(θ) = ln L(θ)     ln(ab) = ln a + ln b' },
   ],
 };
+/* Asked for 2026-11-13: "add three dots in school to see what u can understand clear confused for the summary
+ * part, also put the summary tab at the start so i can access it from start to finish (notes and questions
+ * are the same in summary up and bottom)". Each idea has a card's three dots and its Question or comment,
+ * keyed by its name, so the Summary tab and the lecture's end show the same marks and notes. */
+const essId = e => `sum-${e.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+// `own` is the lecture's end: it carries the id that the notepad's links jump to.
+function essItemHtml(s, e, i, own) {
+  const key = cardKey(s.n, essId(e)), m = marks[key] || '';
+  return `<article class="ess-item"${own ? ` id="c-${s.n}-${essId(e)}"` : ''} data-key="${esc(key)}" data-mark="${m}"><h3><span class="num">${i + 1}</span><span>${mathHtml(e.name)}</span></h3><p class="ess-is">${kwText(e.is)}</p>${e.f ? `<pre>${mathHtml(e.f)}</pre>` : ''}${e.parts ? readsHtml({ parts: e.parts }) : ''}${e.ex ? `<p class="ess-ex"><b>For example</b> ${kwText(e.ex)}</p>` : ''}${e.watch ? `<p class="watch"><b>Watch out</b>${kwText(e.watch)}</p>` : ''}${e.pic ? e.pic() : ''}`
+    + `<div class="notes"></div><div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>${marksHtml(m)}</div></article>`;
+}
+const essListHtml = (s, own) => `<div class="ess">${(ESSENTIALS[s.n] || []).map((e, i) => essItemHtml(s, e, i, own)).join('')}</div>`;
 function summaryHtml(s) {
-  const list = ESSENTIALS[s.n] || [];
   // Folded until asked for, so the lecture reads first and the summary waits at the end.
   return `<details class="ess-fold"><summary>The lecture in its essentials: what each idea is, its formula, and what each piece means</summary>`
     + `<p class="group-note">Hover a symbol or a term to open its line from the cheat sheet.</p>`
-    + `<div class="ess">${list.map((e, i) => `<article class="ess-item"><h3><span class="num">${i + 1}</span><span>${mathHtml(e.name)}</span></h3><p class="ess-is">${kwText(e.is)}</p>${e.f ? `<pre>${mathHtml(e.f)}</pre>` : ''}${e.parts ? readsHtml({ parts: e.parts }) : ''}${e.ex ? `<p class="ess-ex"><b>For example</b> ${kwText(e.ex)}</p>` : ''}${e.watch ? `<p class="watch"><b>Watch out</b>${kwText(e.watch)}</p>` : ''}${e.pic ? e.pic() : ''}</article>`).join('')}</div>`
+    + essListHtml(s, true)
     + `<p class="flow-label ess-breath">In one breath</p><ul class="recap" data-hl="stats|s${s.n}|recap">${s.recap.map(r => `<li>${kwText(r)}</li>`).join('')}</ul></details>`;
 }
+// The Summary tab: every lecture's essentials, from the first to the last, open.
+const allSummariesHtml = () => '<p class="where">Summary</p><h1>Every lecture in its essentials</h1><p class="lede">What each idea is, its formula, and what each piece means. The dots and the questions are the same as at the end of each lecture.</p>'
+  + SESSIONS.map(s => `<section class="sum-l"><h2><span class="num">Lecture ${s.n}</span>${esc(s.title)}</h2>${essListHtml(s, false)}</section>`).join('');
 // An answer's formula boxes get the same peeks as a card's; the words around them stay as written.
 const answerHtml = h => h.split(/(<pre>[^<]*<\/pre>)/).map(part => (part.startsWith('<pre>') ? `<pre>${mathHtml(part.slice(5, -6))}</pre>` : subs(part))).join('');
 function renderSession() {
   if (current === 'ref') { document.getElementById('session').innerHTML = '<p class="where">Cheat sheet</p>' + refHtml(); applyHighlights(); mapRefresh(); markXx(document.getElementById('session')); return; }
   if (current === 'charts') { document.getElementById('session').innerHTML = '<p class="where">Charts</p>' + chartsHtml(); mapRefresh(); markXx(document.getElementById('session')); return; }
+  if (current === 'sum') { document.getElementById('session').innerHTML = allSummariesHtml(); paintNotes(); mapRefresh(); markXx(document.getElementById('session')); return; }
   const s = SESSIONS.find(x => x.n === current);
   document.getElementById('session').innerHTML = `<p class="where"><button type="button" class="where-btn" id="where-btn">Lecture ${s.n}</button></p><h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
     + `<details class="pic" id="pic" data-seg="pic"${picOpen() ? ' open' : ''}><summary>The picture: the lecture on one page</summary><div class="pic-body">${PICTURES[s.n]()}</div></details>`
@@ -2358,13 +2398,14 @@ function places() {
   return [{ key: 'stats|notebook', tag: 'Stats', name: 'The course in general' },
     ...SESSIONS.flatMap(s => [{ key: `stats|s${s.n}`, tag: `L${s.n}`, name: `Lecture ${s.n} in general`, s: s.n },
       ...s.groups.flatMap(g => g.cards.map(c => ({ key: cardKey(s.n, c.id), tag: c.num, name: c.name, s: s.n, id: c.id }))),
-      ...(s.practice || []).map((x, i) => ({ key: cardKey(s.n, `ex-${x.id}`), tag: `Ex ${i + 1}`, name: x.title, s: s.n, id: `ex-${x.id}` }))])];
+      ...(s.practice || []).map((x, i) => ({ key: cardKey(s.n, `ex-${x.id}`), tag: `Ex ${i + 1}`, name: x.title, s: s.n, id: `ex-${x.id}` })),
+      ...(ESSENTIALS[s.n] || []).map((e, i) => ({ key: cardKey(s.n, essId(e)), tag: `Sum ${i + 1}`, name: e.name, s: s.n, id: essId(e) }))])];
 }
 nbAbout.innerHTML = places().map(p => `<option value="${esc(p.key)}">${p.id ? `${p.tag} · ` : ''}${esc(p.name)}</option>`).join('');
 // Where you are: the card nearest the top of the screen, else the session.
 function currentSpot() {
   let best = null;
-  for (const c of document.querySelectorAll('.card, .ex[data-key]')) {
+  for (const c of document.querySelectorAll('.card, .ex[data-key], .ess-item')) {
     const r = c.getBoundingClientRect();
     if (r.bottom > 80 && r.top < innerHeight * 0.6) { best = c; break; }
   }
@@ -2406,6 +2447,9 @@ function goTo(key) {
   if (p.s !== current) document.querySelector(`.sess[data-s="${p.s}"]`).click();
   const el = p.id ? document.getElementById(`c-${p.s}-${p.id}`) : document.querySelector('h1');
   if (!el) return;
+  // A summary idea at a lecture's end waits in a closed fold: open it first.
+  const fold = el.closest('details');
+  if (fold) fold.open = true;
   if (innerWidth < 760) setNotebook(false);
   el.scrollIntoView({ block: 'start', behavior: 'smooth' });
   if (p.id) { el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
@@ -3005,7 +3049,7 @@ function findPlace() {
 }
 function placeText() {
   const s = SESSIONS.find(x => x.n === current);
-  if (!s) return current === 'charts' ? 'Charts' : 'Cheat sheet';
+  if (!s) return { charts: 'Charts', sum: 'Summary' }[current] || 'Cheat sheet';
   const all = segsOf(s), at = all.find(x => x.key === mapPlace.seg), num = all.filter(x => x.key !== 'pic'), i = num.indexOf(at);
   // Where you are in the deck: the slide of the card you are reading, out of the lecture's length.
   const card = mapPlace.card && s.groups.flatMap(g => g.cards).find(c => `c-${s.n}-${c.id}` === mapPlace.card);
