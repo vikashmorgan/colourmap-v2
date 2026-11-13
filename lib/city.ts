@@ -108,6 +108,7 @@ import {
   keepOut,
   portalStep,
   resetSpace,
+  ringPull,
   spaceBanner,
   spaceDust,
   spaceItems,
@@ -115,6 +116,7 @@ import {
   spaceSky,
   tunnelStep,
 } from './city-space';
+import { clearTrail, makeTrail, pushTrail, trailGrain } from './city-trail';
 import { underEyeY, underSeeThrough } from './city-under';
 import {
   ATLANTIS_PALETTES,
@@ -1783,14 +1785,21 @@ export const SUPER_CLIMB = 48;
 /** Slow mode: a gentle drift, the eye tilted down at the city. */
 export const SLOW_PACE = 0.22;
 export { AVENUE, BLOCK_X, BLOCK_Z, blocked, blockTower, floorAt, MARGIN };
-/** The boost at roof height (boostPaceAt): three times the cruise. */
-export const BOOST_PACE = 3;
+/** The boost at roof height (boostPaceAt). 2026-11-13, later: "add more boost". */
+export const BOOST_PACE = 3.6;
 /** The boost in the streets, and in the stratosphere. */
-export const STREET_BOOST = 2;
-export const HIGH_BOOST = 4.5;
+export const STREET_BOOST = 2.5;
+export const HIGH_BOOST = 5.5;
 /**
- * The boost by height (2026-11-13: "boost not too fast in the city but faster when above"): twice
- * the cruise in the streets, three times at roof height, four and a half in the stratosphere, each
+ * The hyperboost (Tab with Space; 2026-11-13: "a second faster boost, with tab"): this many times
+ * the boost again, draining the bar faster, from a bar a little full.
+ */
+export const HYPER_PACE = 1.8;
+export const HYPER_DRAIN = 2.2;
+export const HYPER_FROM = 0.15;
+/**
+ * The boost by height (2026-11-13: "boost not too fast in the city but faster when above"): two and
+ * a half times the cruise in the streets, 3.6 at roof height, 5.5 in the stratosphere, each
  * blending smoothly into the next.
  */
 export function boostPaceAt(y: number): number {
@@ -1798,9 +1807,9 @@ export function boostPaceAt(y: number): number {
   const above = smooth((y - SKY + 20) / (STRATOSPHERE - SKY));
   return lerp(STREET_BOOST, BOOST_PACE, roofs) + (HIGH_BOOST - BOOST_PACE) * above;
 }
-export const BOOST_SECONDS = 3;
+export const BOOST_SECONDS = 4.5;
 /** Seconds of cruising that fill an empty bar. */
-export const BOOST_REFILL = 10;
+export const BOOST_REFILL = 8;
 
 /** Chinatown on the avenue: the first band of the plan (lib/city-game.ts), eight blocks in every 48. */
 export const CT_EVERY = TILE_J;
@@ -1929,6 +1938,10 @@ const fly = {
   camPitch: 0,
   /** The boost's glow, 0..1: rises while you boost, an afterglow fading slowly after. */
   glow: 0,
+  /** The hyperboost's, the same way: 0..1. */
+  hyper: 0,
+  /** Whether the hyperboost is on (held Tab with Space, begun from a bar a little full). */
+  hyperOn: false,
   /** A small lean away from a wall you slide along, eased back. */
   nudge: 0,
   t: 0,
@@ -1956,6 +1969,26 @@ export const hasGame = (k: number) => PHASES[k]?.id === 'ship';
 export const boostLeft = () => fly.boost;
 /** The boost's glow now, 0..1 (its plume and afterglow). */
 export const boostGlow = () => fly.glow;
+/** The hyperboost's glow now, 0..1. */
+export const hyperGlow = () => fly.hyper;
+/**
+ * Depth of field for the Ship (2026-11-13: "more depth of field"): the ship in focus, the city
+ * far behind it softening, more under the boost and the hyperboost; none from high up (the plan
+ * must stay sharp), in space or from the cockpit, where the focus is far ahead.
+ */
+export function depthOfField(): { at: number; blur: number } | null {
+  if (inSpace()) return null;
+  const P = plans.find((q) => q.t === lastBuilt);
+  if (!P) return null;
+  const hi = highness(P.c[1]);
+  if (hi > 0.95) return null;
+  const cockpit = camView() === 'cockpit';
+  const at = cockpit ? 45 : Math.hypot(P.c[0] - P.eye[0], P.c[1] - P.eye[1], P.c[2] - P.eye[2]);
+  const boost = fly.mode === 'route' ? 0 : 0.7 * fly.glow + 0.8 * fly.hyper;
+  return { at, blur: (0.45 + boost) * (1 - hi) * (cockpit ? 0.6 : 1) };
+}
+/** Where the ship has flown lately, for its boost trail (lib/city-trail.ts). */
+const trail = makeTrail();
 /** Whether slow mode is on. */
 export const slowMode = () => fly.slow;
 /**
@@ -1963,7 +1996,7 @@ export const slowMode = () => fly.slow;
  * boosts (with W, the super boost), L slow mode, Enter starts a race, V the view from the cockpit
  * (lib/city-cockpit.ts).
  */
-export const SHIP_KEYS = [' ', 'l', 'enter', 'v'];
+export const SHIP_KEYS = [' ', 'tab', 'l', 'enter', 'v'];
 
 /** The height you cruise at down the avenue, and low under the lanterns through Chinatown. */
 export const CRUISE_Y = GROUND + 21;
@@ -2111,6 +2144,9 @@ function afresh() {
   fly.turning = 0;
   fly.nudge = 0;
   fly.glow = 0;
+  fly.hyper = 0;
+  fly.hyperOn = false;
+  clearTrail(trail);
   resetRace();
 }
 
@@ -2134,9 +2170,33 @@ function steer(want: number, dt: number) {
   fly.bank += (lean - fly.bank) * (1 - Math.exp(-4 * dt));
 }
 
+/**
+ * Flying at a portal's rings, the ship eases sideways toward the next ring's middle (2026-11-13:
+ * "boost rings don't work for going to space"), so a run can be flown without threading each ring.
+ */
+function pullToRing(dt: number) {
+  const f = headingOf(fly.yaw, fly.pitch);
+  const c = ringPull(fly.pos, f);
+  if (!c) return;
+  const d = sub(c, fly.pos);
+  const off = add(d, f, -(d[0] * f[0] + d[1] * f[1] + d[2] * f[2]));
+  fly.pos = add(fly.pos, off, 1 - Math.exp(-2.4 * dt));
+}
+
 /** The boost's glow: up while boosting, a slow afterglow after (mellow: it eases, never flashes). */
-function glowStep(boosting: boolean, dt: number) {
+function glowStep(boosting: boolean, dt: number, hyper = false) {
   fly.glow += ((boosting ? 1 : 0) - fly.glow) * (1 - Math.exp((boosting ? -5 : -1.2) * dt));
+  fly.hyper += ((hyper ? 1 : 0) - fly.hyper) * (1 - Math.exp((hyper ? -3 : -1) * dt));
+}
+
+/**
+ * The hyperboost (Tab with Space): begun only from a bar a little full, it lasts while both are
+ * held and the bar has some left.
+ */
+function hyperStep(boosting: boolean, tab: boolean): boolean {
+  if (!boosting || !tab) fly.hyperOn = false;
+  else if (!fly.hyperOn && fly.boost > HYPER_FROM) fly.hyperOn = true;
+  return fly.hyperOn;
 }
 
 /**
@@ -2208,10 +2268,12 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   // Slow mode levels out unless you climb or dive.
   fly.pitch += (tilt - fly.pitch) * (1 - Math.exp(-2.5 * dt));
   const boosting = held(' ') && fly.boost > 0;
+  const hyper = hyperStep(boosting, held('tab'));
   // High over the towers the bar does not drain: the open sky is free.
-  if (boosting && fly.pos[1] < SKY) fly.boost = Math.max(0, fly.boost - dt / BOOST_SECONDS);
+  if (boosting && fly.pos[1] < SKY)
+    fly.boost = Math.max(0, fly.boost - (dt / BOOST_SECONDS) * (hyper ? HYPER_DRAIN : 1));
   else if (!held(' ')) fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
-  glowStep(boosting, dt);
+  glowStep(boosting, dt, hyper);
   // The super boost: boost and climb together, and you go on up into the stratosphere; up there,
   // W climbs on and S dives back down, fast; below the towers' sky you fly as before.
   if (boosting && up) fly.high = true;
@@ -2245,7 +2307,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     settle *
     hd.speed *
     (boosting
-      ? boostPaceAt(fly.pos[1]) * hd.boost
+      ? boostPaceAt(fly.pos[1]) * hd.boost * (hyper ? HYPER_PACE : 1)
       : held('e', 'shift')
         ? 1.8
         : held('q', 'x')
@@ -2253,7 +2315,8 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
           : 1) *
     (fly.slow ? SLOW_PACE : 1) *
     r.pace;
-  fly.speed += (FLY_SPEED * pace - fly.speed) * (1 - Math.exp((boosting ? -4 : -1.5) * dt));
+  fly.speed +=
+    (FLY_SPEED * pace - fly.speed) * (1 - Math.exp((hyper ? -2.5 : boosting ? -4 : -1.5) * dt));
   const was: Vec3 = [...fly.pos];
   const wall = move(dt);
   // A soft bump: sliding along a wall bleeds a little speed and leans the ship away from it.
@@ -2266,6 +2329,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     fly.glow = 1;
     camOnShip();
   }
+  pullToRing(dt);
   // Through every ring of a portal high in the sky: the ultraboost, into hyperspace.
   const gate = portalStep(was, fly.pos, t);
   if (gate) {
@@ -2301,13 +2365,17 @@ function spaceFly(active: boolean, keys: string[], dt: number, t: number) {
   const tilt = (held('w', 'arrowup') ? 0.7 : 0) - (held('s', 'arrowdown') ? 0.7 : 0);
   fly.pitch += (tilt - fly.pitch) * (1 - Math.exp(-2.5 * dt));
   const boosting = held(' ');
-  glowStep(boosting, dt);
+  const hyper = hyperStep(boosting, held('tab'));
+  glowStep(boosting, dt, hyper);
   if (!boosting) fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
-  const pace = boosting ? BOOST_PACE : held('e', 'shift') ? 1.8 : held('q', 'x') ? 0.4 : 1;
+  const pace =
+    (boosting ? BOOST_PACE : held('e', 'shift') ? 1.8 : held('q', 'x') ? 0.4 : 1) *
+    (hyper ? HYPER_PACE : 1);
   fly.speed +=
     (FLY_SPEED * SPACE_PACE * pace - fly.speed) * (1 - Math.exp((boosting ? -4 : -1.5) * dt));
   const was: Vec3 = [...fly.pos];
   fly.pos = keepOut(add(was, headingOf(fly.yaw, fly.pitch), fly.speed * dt), t);
+  pullToRing(dt);
   const gate = portalStep(was, fly.pos, t);
   if (gate) enterTunnel(gate, t);
 }
@@ -2378,6 +2446,9 @@ function after(dt: number, t: number) {
     fly.camPitch += (fly.pitch - fly.camPitch) * k;
   }
   advancePulses(dt, fly.mode === 'route' ? FLY_SPEED : fly.speed, f);
+  // The path behind the ship, for its boost trail; the ship's right is level.
+  const fl = Math.hypot(f[0], f[2]) || 1;
+  pushTrail(trail, c, [-f[2] / fl, 0, f[0] / fl], t);
   touchLanterns(c, t);
   const d = districtAt(c[0], c[2]);
   if (d !== fly.district) {
@@ -2439,8 +2510,8 @@ export function gauges(): Gauge[] {
   const hd = currentShip().handling;
   // The needle's range holds the fastest you can go here: the stratosphere's boost, or space's.
   const speedMax = inSpace()
-    ? FLY_SPEED * SPACE_PACE * BOOST_PACE
-    : FLY_SPEED * HIGH_BOOST * Math.max(1, hd.speed * hd.boost);
+    ? FLY_SPEED * SPACE_PACE * BOOST_PACE * HYPER_PACE
+    : FLY_SPEED * HIGH_BOOST * HYPER_PACE * Math.max(1, hd.speed * hd.boost);
   return [
     {
       label: 'Height',
@@ -2514,7 +2585,7 @@ function shipEye(c: Vec3, f: Vec3): Eye {
   // the view round) while it looks along the ship's; the boost's glow pulls it back a little.
   const route = fly.mode === 'route';
   const fc = route ? f : headingOf(fly.camYaw, fly.camPitch);
-  const back = lerp(10, 7, lk) + 150 * hi + (route ? 0 : 2.2 * fly.glow);
+  const back = lerp(10, 7, lk) + 150 * hi + (route ? 0 : 2.2 * fly.glow + 2.8 * fly.hyper);
   const rise = 3.2 + 7 * lk + 190 * hi;
   const eye = add(add(c, lerp3(fc, flat(fc), Math.max(lk, hi)), -back), [0, 1, 0], rise);
   // Down in the Deep Line (lib/city-under.ts) the camera stays inside it; else over the street.
@@ -3486,6 +3557,16 @@ function shipAt(p: Particle, t: number): Spot {
     const k = camView() === 'cockpit' ? 0 : 0.42 * (1 - 0.45 * hi);
     // The boost's plume and its afterglow (2026-11-13: "effects behind ship for the boost").
     const glow = fly.mode === 'route' ? 0 : fly.glow;
+    // A share of your grains, growing with the glow, lies in the trail along the path you flew.
+    const hyper = fly.mode === 'route' ? 0 : fly.hyper;
+    const share = camView() === 'cockpit' ? 0 : 0.55 * glow + 0.2 * hyper;
+    if (share > 0.01) {
+      const q = hash(p.i, 941);
+      if (q < share) {
+        const g = trailGrain(trail, p.i, q / share, len, glow, hyper, t);
+        if (g) return g;
+      }
+    }
     if (ship.id !== 'arrow') {
       const g = shipGrainAt(ship.id, P.c, P.f, len, p, pace, bank, glow, t);
       return { pos: g.pos, rgb: shipGrainColour(ship.id, g.part, p, k, glow) };

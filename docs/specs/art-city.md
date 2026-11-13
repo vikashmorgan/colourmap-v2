@@ -800,8 +800,9 @@ too fast in the city but faster when above."). Every change eases; nothing flash
 - **The chase camera** follows the heading a beat late (1 − e^(−5 dt)), so a turn swings the view
   round the ship, and rolls slightly with the bank (0.22 of it); level on the autopilot's route,
   looking down and from high up.
-- **The boost by height**: twice the cruise in the streets, three times at the roofs (the towers'
-  sky), four and a half in the stratosphere, blending smoothly. Out in space it stays three times
+- **The boost by height**: 2.5 times the cruise in the streets, 3.6 at the roofs (the towers'
+  sky), 5.5 in the stratosphere, blending smoothly (2026-11-13, later: "add more boost"; it was
+  2, 3 and 4.5); the bar lasts 4.5 s (was 3) and fills in 8 (was 10). Out in space it stays three times
   space's pace; the Speed dial's range holds the fastest you can go, so the needle never runs past it.
 - **The plume**: boosting raises a glow (an afterglow fading over a few seconds after): the trail
   grows up to 1.6 ship lengths longer with a gentle ripple growing from the engines, brighter and
@@ -809,6 +810,24 @@ too fast in the city but faster when above."). Every change eases; nothing flash
   (up to 2.2).
 - **A soft wall bump**: sliding along a wall bleeds a little speed and leans the ship away from it,
   easing back after; never on the autopilot.
+- **The hyperboost** (2026-11-13: "a second faster boost, with tab"): **Tab** with Space, begun
+  from a bar at least 0.15 full, flies 1.8 times the boost and drains the bar 2.2 times as fast; its
+  own glow rises and fades more slowly, the eye stands back further (up to 2.8 more). On a phone, a
+  **Hyper** button.
+- **The trail along the path** (`lib/city-trail.ts`; "a better boost trail"): the last 1.6 s of
+  where the ship actually flew are kept, and a share of its grains (up to 55% of them at full boost,
+  more under the hyper) lie along that path, so the trail curves with every turn: two streams from
+  the engines drawing together then spreading like a contrail, sparks drifting off and falling,
+  cyan cooling to violet with age, a hot white-pink core under the hyper. Not drawn from the cockpit.
+- **Depth of field** ("more depth of field"): the player's grains go larger and dimmer by the same
+  measure the further they are behind the distance in focus (the ship, or 45 ahead from the
+  cockpit) and when very near the eye, so they soften without adding light; the softening grows
+  under the boost and the hyper, and fades out climbing to the plan (none in space).
+- **Ring portals, forgiving** ("boost rings don't work for going to space"): a run counts flown
+  either way (big ring first, or small first), a ring missed here and there is forgiven (the last
+  must be flown), and flying at a portal within about 45° of its way, the ship eases sideways
+  toward the next ring's middle (up to 110 ahead, within twice its radius), so a run can be flown
+  without threading each ring by hand.
 - **Through a portal** the glow flares and the camera comes along at once, so the jump never snaps
   the view.
 

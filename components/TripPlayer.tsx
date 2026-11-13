@@ -125,6 +125,12 @@ export type Trip = {
        */
       gauges?: () => Gauge[];
       /**
+       * Depth of field while it is played, read every frame (the City's Ship, 2026-11-13: "more
+       * depth of field"): the distance in focus and how strongly grains away from it soften (0
+       * none); null for none.
+       */
+      focus?: () => { at: number; blur: number } | null;
+      /**
        * How much the screen is blotted out, 0 to 1, read every frame (the Shark Sim's squid ink):
        * drawn as blots of ink over the picture, splashed somewhere new each time it comes.
        */
@@ -248,6 +254,7 @@ export function claimLabel(key: string, meter?: string): string {
   if (key === 'l') return 'Look';
   if (key === 'enter') return 'Go';
   if (key === 'v') return 'View';
+  if (key === 'tab') return 'Hyper';
   return key.toUpperCase();
 }
 
@@ -927,6 +934,43 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
+    // Depth of field (a game's focus): grains far behind, or very near, the distance in focus are
+    // drawn larger and dimmer by the same measure, so they soften without adding light.
+    const dof = { value: new THREE.Vector2(0, 0) };
+    material.onBeforeCompile = (sh) => {
+      sh.uniforms.uDof = dof;
+      sh.vertexShader = sh.vertexShader
+        .replace(
+          '#include <common>',
+          `#include <common>
+uniform vec2 uDof;
+varying float vDof;`,
+        )
+        .replace(
+          '#include <fog_vertex>',
+          `#include <fog_vertex>
+          vDof = 1.0;
+          if (uDof.y > 0.0) {
+            float dz = -mvPosition.z;
+            float far = clamp((dz - uDof.x * 1.6) / 180.0, 0.0, 1.0) * 2.2;
+            float near = clamp((uDof.x * 0.55 - dz) / (uDof.x * 0.55), 0.0, 1.0) * 1.2;
+            float coc = uDof.y * max(far, near);
+            gl_PointSize *= 1.0 + coc;
+            vDof = pow(1.0 + coc, -1.4);
+          }`,
+        );
+      sh.fragmentShader = sh.fragmentShader
+        .replace(
+          '#include <common>',
+          `#include <common>
+varying float vDof;`,
+        )
+        .replace(
+          '#include <color_fragment>',
+          `#include <color_fragment>
+diffuseColor.rgb *= vDof;`,
+        );
+    };
     const points = new THREE.Points(geometry, material);
     points.frustumCulled = false;
     scene.add(points);
@@ -1002,9 +1046,11 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
         const moved = playingRef.current ? dt * speedRef.current : 0;
         const on = !!(P && game.has(k)) && !stoppedRef.current;
         game.set(on, [...keysRef.current], moved, t);
+        const fc = P && game.has(k) ? (game.focus?.() ?? null) : null;
+        dof.value.set(fc?.at ?? 0, fc?.blur ?? 0);
         // The game's bar (the Shark Sim's boost), drawn straight onto the page every frame.
         const bar = meterRef.current;
-        if (bar && game.meter) bar.style.width = `${Math.round(game.meter.value() * 100)}%`;
+        if (bar && game.meter) bar.style.width = `$Math.round(game.meter.value() * 100)%`;
         const count = tallyRef.current;
         if (count && game.tally) {
           const text = game.tally();
