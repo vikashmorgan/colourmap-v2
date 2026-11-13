@@ -160,6 +160,36 @@ export function shipAxes(f: Vec3, roll: number): { side: Vec3; up: Vec3 } {
   return { side, up: cross(side, f) };
 }
 
+/*
+ * The boost's plume (2026-11-13: "effects behind ship for the boost"). `glow` (0..1) rises while
+ * you boost and fades slowly after: the trail grows longer (up to 1.6 ship lengths more), a gentle
+ * ripple running down it, growing from nothing at the engines; brighter and fuller (fading less
+ * along its length), the engines brighter, and a few of the engines' grains given to the trail.
+ */
+
+/** Where trail grain `u` (0 at the engine, 1 at the tail) sits, behind the engine in ship lengths. */
+export function plumeAt(
+  u: number,
+  pace: number,
+  glow = 0,
+  t = 0,
+): { back: number; side: number; up: number } {
+  const wave = TAU * 1.5 * u - 6 * t;
+  return {
+    back: u * (0.25 + 0.55 * pace + 1.6 * glow),
+    side: 0.05 * glow * u * Math.sin(wave),
+    up: 0.03 * glow * u * Math.cos(wave),
+  };
+}
+
+/** Where the engines' grains end and the trail's begin (engines from lo), more trail at full glow. */
+export const engineCut = (lo: number, hi: number, glow = 0) => lo + (hi - lo) * (1 - 0.35 * glow);
+
+/** How bright the engines are, and trail grain u, as a share of the glow colour (never over 1). */
+export const engineLight = (glow = 0) => 0.55 * (1 + 0.5 * glow);
+export const trailLight = (u: number, glow = 0) =>
+  0.35 * (1 - u * (1 - 0.4 * glow)) * (1 + 0.5 * glow);
+
 /** A point on the outline through `pts` (closed), `s` (0..1) round it. */
 function outline(pts: [number, number][], e: number, s: number): [number, number] {
   const A = pts[e % pts.length] as [number, number];
@@ -169,9 +199,9 @@ function outline(pts: [number, number][], e: number, s: number): [number, number
 
 /**
  * Grain p on ship `id` at c heading f, `len` long, banked `roll`, its trail longer the faster it
- * goes (`pace` 0 at rest). In the ship's own units: a along it (nose +), s to its side, h up.
- * The Arrow is drawn by lib/city.ts (its first shape); this is every other one, and the Arrow too
- * for a caller without it.
+ * goes (`pace` 0 at rest) and with the boost's `glow` (plumeAt, `t` the time for its ripple). In
+ * the ship's own units: a along it (nose +), s to its side, h up. The Arrow is drawn by
+ * lib/city.ts (its first shape); this is every other one, and the Arrow too for a caller without it.
  */
 export function shipGrainAt(
   id: ShipId,
@@ -181,6 +211,8 @@ export function shipGrainAt(
   p: Particle,
   pace: number,
   roll = 0,
+  glow = 0,
+  t = 0,
 ): { pos: Vec3; part: ShipPart } {
   const { side, up } = shipAxes(f, roll);
   const at = (a: number, s: number, h: number): Vec3 =>
@@ -188,10 +220,10 @@ export function shipGrainAt(
   const q = p.b;
   const u = hash(p.i, 92);
   const pick = (n: number) => Math.floor(hash(p.i, 91) * n);
-  const trail = (a0: number, s0: number, h0 = 0) => ({
-    pos: at(a0 - u * (0.25 + 0.55 * pace), s0, h0),
-    part: 'trail' as const,
-  });
+  const trail = (a0: number, s0: number, h0 = 0) => {
+    const w = plumeAt(u, pace, glow, t);
+    return { pos: at(a0 - w.back, s0 + w.side, h0 + w.up), part: 'trail' as const };
+  };
   switch (id) {
     case 'manta': {
       // A ray's wing: the nose, the leading edges curving out to the tips, the trailing edge in.
@@ -219,7 +251,7 @@ export function shipGrainAt(
         return { pos: at(-0.36 - u * 0.5, 0, 0.02), part: 'spine' };
       }
       const e = hash(p.i, 94) < 0.5 ? 1 : -1;
-      if (q < 0.8) {
+      if (q < engineCut(0.62, 0.8, glow)) {
         const a = hash(p.i, 95) * TAU;
         return {
           pos: at(-0.26, e * 0.14 + Math.cos(a) * 0.04, Math.sin(a) * 0.04),
@@ -248,7 +280,7 @@ export function shipGrainAt(
         const r = lerp(0.12, 0.4, u);
         return { pos: at(-0.04, Math.cos(a) * r, Math.sin(a) * r), part: 'spine' };
       }
-      if (q < 0.88) {
+      if (q < engineCut(0.8, 0.88, glow)) {
         const a = hash(p.i, 95) * TAU;
         return { pos: at(-0.32, Math.cos(a) * 0.06, Math.sin(a) * 0.06), part: 'engine' };
       }
@@ -298,7 +330,7 @@ export function shipGrainAt(
       const k = pick(4);
       const ex = k & 1 ? 0.11 : -0.11;
       const ey = k & 2 ? 0.06 : -0.06;
-      if (q < 0.84) {
+      if (q < engineCut(0.7, 0.84, glow)) {
         const a = hash(p.i, 95) * TAU;
         return { pos: at(-0.47, ex + Math.cos(a) * 0.04, ey + Math.sin(a) * 0.04), part: 'engine' };
       }
@@ -319,7 +351,7 @@ export function shipGrainAt(
       if (q < 0.58)
         return { pos: at(0.45 - u * 0.75, 0, 0.07 * Math.sin(Math.PI * u)), part: 'spine' };
       const e = hash(p.i, 94) < 0.5 ? 1 : -1;
-      if (q < 0.76) {
+      if (q < engineCut(0.58, 0.76, glow)) {
         const a = hash(p.i, 95) * TAU;
         return { pos: at(-0.3, e * 0.17 + Math.cos(a) * 0.05, Math.sin(a) * 0.05), part: 'engine' };
       }
@@ -328,18 +360,25 @@ export function shipGrainAt(
   }
 }
 
-/** A grain's colour on ship `id`: the hull's quiet light, the engines and trail in its glow. */
-export function shipGrainColour(id: ShipId, part: ShipPart, p: Particle, k: number): RGB {
+/**
+ * A grain's colour on ship `id`: the hull's quiet light, the engines and trail in its glow,
+ * brighter and fuller with the boost's `glow` (no channel over 1).
+ */
+export function shipGrainColour(id: ShipId, part: ShipPart, p: Particle, k: number, glow = 0): RGB {
   const s = shipById(id);
-  const sc = (c: RGB, m: number): RGB => [c[0] * m, c[1] * m, c[2] * m];
+  const sc = (c: RGB, m: number): RGB => [
+    Math.min(1, c[0] * m),
+    Math.min(1, c[1] * m),
+    Math.min(1, c[2] * m),
+  ];
   switch (part) {
     case 'hull':
       return sc(s.hull, 0.28 * k);
     case 'spine':
       return sc(s.hull, 0.34 * k);
     case 'engine':
-      return sc(s.glow, 0.55 * k);
+      return sc(s.glow, engineLight(glow) * k);
     default:
-      return sc(s.glow, 0.35 * (1 - hash(p.i, 92)) * k);
+      return sc(s.glow, trailLight(hash(p.i, 92), glow) * k);
   }
 }

@@ -11,6 +11,7 @@ import {
   blocked,
   blockTower,
   boostLeft,
+  boostPaceAt,
   builtTop,
   CANYON_SLOTS,
   CANYON_W,
@@ -551,8 +552,10 @@ describe('Ship', () => {
     run(['q'], 3);
     expect(speed()).toBeLessThan(FLY_SPEED * 0.6);
     fresh();
-    run([' '], 1);
-    expect(speed()).toBeGreaterThan(FLY_SPEED * (BOOST_PACE - 0.3));
+    // The boost by height (2026-11-13): twice the cruise in the streets, three times at the roofs.
+    const tb = run([' '], 1);
+    expect(speed()).toBeGreaterThan(FLY_SPEED * (boostPaceAt(flier(tb).c[1]) - 0.3));
+    expect(boostPaceAt(SKY)).toBeCloseTo(BOOST_PACE, 1);
     expect(boostLeft()).toBeLessThan(0.75);
     // Held on, the bar runs dry and the pace falls back; cruising fills it again.
     run([' '], 6);
