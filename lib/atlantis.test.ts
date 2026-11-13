@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ATLANTIS_VIEWS,
   atlantisAt,
+  atlantisSize,
   BERTHS,
   BUBBLE_LIFE,
   bubble,
@@ -10,7 +11,9 @@ import {
   dockedSub,
   floorAt,
   isGardenDome,
+  mapSite,
   prepareAtlantis,
+  ringHue,
   roleShare,
   SUB_COUNT,
   SUB_LANES,
@@ -20,7 +23,15 @@ import {
   viewEye,
 } from './atlantis';
 import { makeParticles } from './bigbang';
-import { hasVariants, PHASES, pieceAt, setVariant, variantLabel, variantNames } from './city';
+import {
+  hasVariants,
+  PHASES,
+  pieceAt,
+  pieceBackground,
+  setVariant,
+  variantLabel,
+  variantNames,
+} from './city';
 import { GOLDEN } from './golden-city';
 import { GROUND_Y } from './grain-mesh';
 
@@ -49,7 +60,7 @@ describe('Atlantis (2026-11-12: "add Atlantis as a city, with marine life around
     for (let v = 0; v < ATLANTIS_VIEWS.length; v++) {
       // Each view shares out the whole budget.
       const roles = ['plankton', 'shaft', 'floor', 'city', 'temple', 'harbour', 'reef', 'sub'];
-      const more = ['bubble', 'dock', 'fish', 'jelly', 'manta', 'whale'];
+      const more = ['bubble', 'dock', 'fish', 'jelly', 'manta', 'whale', 'map'];
       const sum = [...roles, ...more].reduce((s, r) => s + roleShare(v, r), 0);
       expect(sum).toBeCloseTo(1, 9);
     }
@@ -224,5 +235,44 @@ describe('Atlantis (2026-11-12: "add Atlantis as a city, with marine life around
       if (dist(pieceAt(p, k, 9).pos, TEMPLE_SPHERE.c) < TEMPLE_SPHERE.r * 1.3) near++;
     expect(near).toBeGreaterThan(300);
     setVariant(0);
+  });
+
+  it('reads as a clear map from above (2026-11-12: the Plan was "too dark/murky")', () => {
+    // Bright: the Plan's lit grains shine well over the close views' and the map share is bold.
+    const meanLit = (v: number) => {
+      let sum = 0;
+      let n = 0;
+      for (const p of some) {
+        const s = atlantisAt(p, 0.3, 12, v);
+        const m = Math.max(...s.rgb);
+        if (m > 0.01) {
+          sum += m;
+          n++;
+        }
+      }
+      return sum / Math.max(1, n);
+    };
+    expect(meanLit(0)).toBeGreaterThan(0.18);
+    expect(meanLit(0)).toBeGreaterThan(meanLit(1) * 1.3);
+    // The rings each in their own hue, the canals water-blue.
+    const hues = [5, 12, 18, 30, 45].map((r) => ringHue(r).join());
+    expect(new Set(hues).size).toBe(5);
+    // The map share: on the floor plan, lit, on the rings, the tunnels, the domes and the heart.
+    const out = [0, 0, 0];
+    let lit = 0;
+    let n = 0;
+    for (let i = 0; i < 400; i++) {
+      const p = all[i] as (typeof all)[number];
+      const pos = mapSite(p, i / 400, 10, out);
+      expect(pos.every(Number.isFinite)).toBe(true);
+      expect(Math.hypot(pos[0], pos[2])).toBeLessThan(GOLDEN.outer + 10);
+      if (Math.max(...out) > 0.1) lit++;
+      n++;
+    }
+    expect(lit).toBeGreaterThan(n * 0.8);
+    // The Plan draws bolder grains than the close views; the piece has its own water behind it.
+    expect(atlantisSize(0)).toBeGreaterThan(atlantisSize(3));
+    expect(pieceBackground(k)?.length).toBeGreaterThan(1);
+    expect(pieceBackground(0)).toBeNull();
   });
 });

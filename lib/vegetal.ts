@@ -30,6 +30,7 @@ import {
   smooth,
   type Vec3,
 } from './bigbang';
+import { walkerBody as dotWalkerBody } from './dot-walker';
 import {
   along,
   buildStarTree,
@@ -2927,47 +2928,8 @@ export function setPlayer(i: number) {
  * opposite as it strides, more the faster it goes, and dust kicked up where its feet land.
  */
 function walkerBody(p: Particle, me: Player, t: number): Vec3 {
-  const side = norm(cross(me.f, [0, 1, 0]));
-  const at = (fw: number, sd: number, u: number): Vec3 =>
-    add(add(add(me.c, me.f, fw), side, sd), [0, 1, 0], u);
-  const ph = me.stride * Math.PI;
-  const swing = 0.15 + 0.55 * me.pace;
-  const bob = 0.1 * me.pace * Math.abs(Math.sin(ph)) + 0.03 * Math.sin(t * 1.6);
-  const d = fibonacciSphere(p.i % 89, 89);
-  const q = p.b;
-  if (p.a < 0.14) return at(d[2] * 0.3, d[0] * 0.3, 3.05 + bob + d[1] * 0.32);
-  if (p.a < 0.42) {
-    // The body: wide at the shoulders, narrow at the waist.
-    const h = 1.65 + 1.05 * q;
-    const w = 0.28 + 0.2 * q;
-    return at(d[2] * 0.18 + 0.05 * me.pace, d[0] * w, h + bob + d[1] * 0.05);
-  }
-  if (p.a < 0.62) {
-    // An arm from the shoulder, swinging against the leg on its side.
-    const s = p.a < 0.52 ? -1 : 1;
-    const a = -s * swing * Math.sin(ph);
-    const len = 1.15 * q;
-    return at(Math.sin(a) * len, s * (0.52 + 0.06 * q), 2.6 + bob - Math.cos(a) * len);
-  }
-  if (p.a < 0.92) {
-    // A leg: the thigh swings from the hip, the shin bends back as the foot comes through.
-    const s = p.a < 0.77 ? -1 : 1;
-    const a1 = s * swing * Math.sin(ph);
-    const a2 = a1 - 1.1 * me.pace * Math.max(0, Math.sin(ph * s + Math.PI / 2)) * 0.6;
-    const knee: Vec3 = [Math.sin(a1) * 0.82, s * 0.22, 1.65 + bob - Math.cos(a1) * 0.82];
-    const k = q < 0.5 ? q * 2 : 1;
-    if (q < 0.5) return at(knee[0] * k, knee[1], 1.65 + bob + (knee[2] - 1.65 - bob) * k);
-    const u = (q - 0.5) * 2;
-    return at(knee[0] + Math.sin(a2) * 0.82 * u, knee[1], knee[2] - Math.cos(a2) * 0.82 * u);
-  }
-  // Dust at the feet, rising and spreading from each step.
-  const f = frac(p.b + me.stride * 0.5);
-  const a = p.d * TAU;
-  return at(
-    Math.cos(a) * (0.3 + 0.8 * f) - 0.6 * f,
-    Math.sin(a) * (0.3 + 0.8 * f),
-    0.05 + 0.5 * f * me.pace,
-  );
+  // Shared with the City's rooms (lib/dot-walker.ts), where it can also sit down to rest.
+  return dotWalkerBody(p, me, t);
 }
 
 /** A world point brought round to the copy of it nearest c, on a field `w` wide. */

@@ -523,6 +523,25 @@ Frame cost, 9,000 grains (bun, the build machine, offline, the same run): Atlant
 by view (Plan the most), against 3.2 to 5.6 ms for Golden plan, The heart, Domes, From above, Neon
 and Canyon. Each view's meshes are built the first time it is shown (under 70 ms).
 
+**Tuning (2026-11-12).** The user, in the real player: the Plan was too dark and murky, the
+Domes and Coral gardens sparse up close. Now:
+
+- **The Plan reads as a map.** Every building grain is lifted 2.2 times and leaned halfway toward
+  its ring's hue (`ringHue`: the heart warm white, knowledge cyan, making amber, living coral
+  rose, nature sea green, the canals water blue); the reefs and the sand are lifted too. A sixth of
+  the grains is the map itself (`mapSite`): a bright line on every bank and the rim, a slow wave
+  running outward; the twelve tunnels with soft pulses running in toward the heart; every dome and
+  compartment a lit disc in its kind's colour (gardens green, homes warm, knowledge cyan, making
+  amber), its rim brighter; the heart a sunflower of light on the golden angle, breathing on its
+  9 s breath. Less goes to plankton, fish and whales. The Plan's grains are drawn larger (1.9,
+  against 1.4 for Domes and Coral gardens and 1.2 for the heart and the harbour).
+- **Fuller up close.** Domes gives nearly half its grains to the city (was a third), Coral gardens
+  nearly half to the reefs, and each reef sector has a carpet of forty small colonies between the
+  big ones.
+- **Its own water.** The player takes a per-piece background (`pieces.background`, a step's own
+  stops over the chosen one, the Journey keeping the chosen one): Atlantis shows a teal-blue
+  water, teal near the surface deepening to blue-black.
+
 ## Chinatown
 
 > 2026-11-12: "add chinese signs on side of buildings. or japanese. like that
@@ -787,6 +806,185 @@ none); a win lights the district from above. Esc, or straying 70 from the course
   the stratosphere, against 16–19 ms for round two's Ship measured the same way on the same machine
   (round two's 5.4 ms was the build machine): about a fifth more.
 
+### The river and the rain (`lib/city-rain.ts`)
+
+> 2026-11-12: "in the city make a part with rain and rain on the water below. and parts with a
+> river."
+
+- **The river** crosses the whole city along x on the street line before tile row 24, between
+  the Canals and the Heights and the golden gardens and temples beyond: 24 wide, its water 7 under
+  the street between lit embankment walls, lamps every 8 along both banks. The towers on the two
+  rows beside it are plain towers standing back from its banks (an embankment walk, the street
+  behind them still six or more wide). You can fly down onto it (the floor is 2 over its water) and
+  on along it under the bridges.
+- **Bridges**: one on every street line, a deck with railings, an arch under each edge springing
+  from the walls, lamps on six posts; the avenue's is cable-stayed, two pylons on its middle, eight
+  cables fanning from each to the deck, a cyan light climbing each pylon, slowly, on the beat.
+- **Wet reflections**: the water is a dark mirror. Every lamp shows again under its surface,
+  stretched toward it and wobbling; each arch's reflection closes it into a ring. One blue for the
+  water, light flowing slowly downstream over it, leaning violet where it rains (the neon round it).
+- **The rain** falls over the Canals and the river beside them (soft at every edge, dry
+  everywhere else): streaks of four grains slanting in a slow wind (0.32 along x for every unit
+  fallen, 24 a second), pale blue leaning to the Canals' violet, kept in a box round the eye
+  (68 across) under the towers' sky, ending where they meet the street or the water. Where they meet
+  the water, the river's or a canal's, rings spread and fade (1.7 s each), half of them on the
+  river.
+- From high up, the river's water is drawn brighter, so the plan shows a blue line across the
+  city.
+- Frame cost (9,000 grains, bun, this machine, offline, the same run): 8.1 ms at the river in the
+  rain against 7.9 ms without the river and rain at the same place; 7.7 against 6.9 in the Canals.
+
+### The business district (`lib/city-business.ts`)
+
+Queued from the user (2026-11-12): "a business district of twisting towers with docks". The
+Heights becomes it: every block off the avenue holds a tower of its own design (picked by the
+block's number), standing taller toward the plaza (about 60 at the district's edge to over 120
+beside the core; the metro still lowers the ones it passes over), each in a box that holds you
+and leaves streets of six or more. Drawn as grain meshes (`lib/city-mesh.ts`: a mesh built once in
+its own frame, drawn as light sites at a place and size, faces lit by how they face the eye):
+
+| Design | Rule |
+|--------|------|
+| **Twist** | Square floors 3.4 apart, turning a quarter turn from foot to roof and narrowing by a fifth; its four corners rising as helices, a rim every other floor, two windows a floor on each face; a mast and a light |
+| **Setback** | Three tiers (full width to half the height, 0.72 to 0.8, 0.46 to the roof), fins up their faces, a band of windows every floor, each setback's roof edge lit and the first one a garden |
+| **Tubes** | Four round shafts on a square, heights 1, 0.82, 0.64 and 0.9 of the tower's, a ring every 4, windows round them, a light on each |
+| **Diagrid** | A round tower netted by crossing helices (twelve round, a row every 7), its waist drawn in a little, a window in every diamond, a crown ring tilted over the roof |
+| **Blade** | A lens-shaped slab, its roof sloping up to a sharp prow, ribs up its faces, a mast and a light at the prow |
+
+Cyan and white edges over faint glass, warm and cool windows, gold roof edges; every crown light
+breathes on the Heights' beat (2). Sky bridges (glass tubes, lights running along the floor) join
+tall neighbours across the streets, along x and along z. On the plaza stands the district's
+landmark: the Studio's **Armillary** Nova Core at 1.7 times its size, breathing and turning as in
+the Studio, its conduits running out along the streets. From above, the Heights reads as before:
+every roof a patch of cyan, the core's plaza ringed.
+
+### Docks and rooms (`lib/city-docks.ts`, `lib/city-rooms.ts`, `lib/dot-walker.ts`)
+
+Queued from the user (2026-11-12): "docking the ship and cyberpunk rooms ... with panoramas", and
+then: "rooms are places where the dot walker can rest. improve the dot walker to walk across
+these."
+
+Four docks every tile, each a small lit room with a pad on its right and a window onto its own
+view:
+
+| Dock | Where | Pad | Window | Neon word |
+|------|-------|-----|--------|-----------|
+| **Avenue lounge** | 52 up a tower beside the avenue | a cantilever reaching out | down the avenue | AVENUE |
+| **River lounge** | on the river's south wall | a ring of light | across the water and its rain | RAIN |
+| **Street lounge** | low over the street, near the Heights | a helipad (H and edge lights) | down the street, a skylight overhead | LANES |
+| **Chinatown lounge** | 40 up, among the lanterns | a garden pad, leaves round its rim | west over the rooftops | TEA |
+
+- **Docking:** bring the ship down onto a pad (within its ring, just above it) and the bar reads
+  "Docked — Enter to go inside". On a pad the ship settles and stays put until a flying key moves
+  it on.
+- **Inside:** Enter puts you in the room as the Dot Walker (the Vegetal's golden figure of dots,
+  `lib/dot-walker.ts`), the eye over its shoulder and held inside the walls. W S walk, A D turn,
+  Shift runs, Space jumps. Walls, the sofa's back and the corner plants hold it; a step into them
+  slides along them.
+- **Resting:** standing still on the sofa for a moment, it sits down facing the window, breathing;
+  the eye moves behind its head and drifts slowly over the view. Any step stands it up.
+- **The panorama is the real city**, drawn from inside the room in true perspective, only through
+  the window (and the skylight); the room itself is drawn from the ship's own grains (edges, a
+  floor grid, the neon word, strips pulsing on the beat, mullions, sofa, plants, a lamp).
+- **Leaving:** Enter again (or Esc) puts you back in the ship on its pad, facing out.
+
+The Dot Walker's steps are smoother than the forest's: pace and turn ease in and out, it slides
+along walls rather than stopping dead, and it has a seated pose. The Vegetal uses the same body.
+
+Cost: from a room the city is drawn only out to 90 through the window (with tighter culling and a
+lower density cap), about 9 to 12 ms a frame in the bench, against 8 to 10 in flight.
+
+### Embassies of Happiness (`lib/city-embassy.ts`)
+
+Queued from the user (2026-11-12): "Embassies of Happiness with a Shark Simulator cabinet":
+several unique buildings with a big glowing "EMBASSY OF HAPPINESS" sign, each with a dock to a big
+room holding an arcade cabinet, SHARK SIMULATOR; walking up to it asks "Do you want to take a rest
+from the city and play Shark Simulator?", and yes opens the Ocean on its Shark Sim.
+
+Three embassies a tile, each its own design and two hues, on a block of its own away from the metro
+and the river:
+
+| Embassy | Where | Design | Hues |
+|---------|-------|--------|------|
+| **Lotus** | the Golden district, among its parks | a round glass tower in three rings of ten petals opening outward up it, each ring turned half a petal, their light drifting slowly up between the hues | rose, gold |
+| **Hanging Gardens** | the Oriental quarter, near the mosque | five terraces widening as they rise, plants along every rim, water falling from tier to tier | turquoise, leaf |
+| **Prism** | the Market | a triangular glass prism turning a sixth as it rises round a heart of light breathing on the beat, a round deck and a mast on its roof | violet, white |
+
+- **The sign:** EMBASSY OF / HAPPINESS in light standing on the roof's edge toward the avenue and
+  readable from it, in a white frame, a slow wave running along the letters between the two hues.
+  The sign shows from as far as the city is drawn; the building itself from 220.
+- **The room:** each roof holds a big room (12 by 10, 5 high), a dock like the lounges (its pad
+  over the street, "Docked — Enter to go inside"), HAPPINESS in neon on its back wall.
+- **The cabinet:** against the room's left wall, SHARK SIMULATOR on its marquee, a blue screen with
+  a little shark chasing a gold fish across and back, a red stick and two buttons breathing on the
+  beat, a pool of its light on the floor. It stands in the walker's way like the sofa.
+- **The question:** walk up to the cabinet and face it, and the words beside the bar ask "Do you
+  want to take a rest from the city and play Shark Simulator? Enter: yes". Enter opens
+  `/geometry-field/ocean?piece=swim`, the ship left on its pad; walk away and the question goes.
+  Enter anywhere else in the room still goes back to the ship.
+- **The deep link:** any world's page opens on one piece with `?piece=<step id>`
+  (`pieceFromSearch` in the trip player); a link wins over the side the world was last left on.
+
+### Cars on the ground (`lib/city-cars.ts`)
+
+Queued from the user (2026-11-12): "cars on the ground": simple grain cars with head and tail
+lights, one colour per road, ready for ground racing later.
+
+- **Roads:** every street line along z carries cars both ways, keeping to the right; the avenue has
+  two lanes each way (the outer one faster); every cross street along x carries a few. Each lane
+  keeps one pace, so no car runs into the one ahead.
+- **One colour a road:** the avenue gold, the streets along z cool (cyan, violet, turquoise,
+  magenta, steel), the cross streets warm (amber, rose, saffron, leaf, ivory); neighbours differ.
+- **A car:** about sixty grains: its sill, belt line and roof in outline in its road's colour, two
+  warm headlights with a faint pool on the street ahead, two red tail lights.
+- **Where not:** never on the river (the streets cross it on their bridges), never over the
+  Canals' water, never on Chinatown's avenue (a street to walk under the lanterns); they fade out
+  round the Street lounge and its helipad.
+- **Cost:** only cars within 130 of an eye below the sky lanes (80 over the street), ahead of it,
+  are drawn; about 0.2 to 0.4 ms a frame at street level in the bench.
+- **Ready for racing:** a car's place is a pure function of its road, way, number and the time
+  (`carAt`), so a ground race can read the traffic without stepping it.
+
+### Hyperspace and three solar systems (`lib/city-space.ts`)
+
+Queued from the user (2026-11-12): "ultraboost ring portals high in the sky into hyperspace and
+other solar systems": a few portals very high over the city, runs of rings shrinking from big to
+small, seen from far; flying through every ring is the ultraboost, into a hyperspace tunnel
+(streaking star lines, rings of light pulsing past, a quiet Mach readout), then space with three
+solar systems (a star, planets with rings, moons and the glow of an atmosphere, in grains) to fly
+between, with portals on to the other systems and back to the City. No cities on the planets.
+
+- **The city's portals:** three a tile (the Avenue, Chinatown and Market Gates), each five rings
+  (radius 24 down to 8, 30 apart) at 210 to 240 over the street, above the towers' sky, so you
+  reach them with the super boost (Space and W together, then let go of W to hold the height).
+  Violet to cyan, a bright knot of light chasing round each ring, a breath on the beat. They show
+  from 300 to 400 away from the sky over the towers, and from over a thousand from the
+  stratosphere.
+- **The ultraboost:** through every ring in order, each within 6 seconds of the last ("Ultraboost ·
+  ring 3 of 5" beside the bar as you go); a ring missed, or flown through the wrong way, starts
+  the run over.
+- **The tunnel (6 seconds):** star lines streaking past round you, longer the faster, violet rings
+  rushing by on the beat; the words beside the bar read only "Hyperspace · Mach 27", the number
+  climbing quickly, gliding, easing down. You are carried; the keys wait.
+- **Space:** out in a system, facing its star, the background near black. W and S climb and dive,
+  A and D turn, Shift faster, Space boosts (its bar never drains out here); you fly five times the
+  city's pace, and nothing lets you inside a star, planet or moon. Stars all round (a band of the
+  galaxy across them), faint dust sliding past to feel the speed, each planet's orbit a faint
+  dotted ring to steer by.
+
+| System | Star | Planets |
+|--------|------|---------|
+| **Aurora** | gold | Cinder (small, red), Maren (blue, an atmosphere, a moon), Hallow (a banded giant, rings, two moons), Rime (ice, an atmosphere) |
+| **Tidewell** | blue-white | Vesper (violet, rings), Verdance (green, an atmosphere, two moons), Abyssal (a banded blue giant, an atmosphere) |
+| **Ember** | red | Forge (a lava world glowing), Saffron (a banded giant, wide rings, a moon), Hush (small, a moon) |
+
+- Planets are lit from their star (a day side and a dim night side), their far side hidden, their
+  rings hidden behind them and dimmed in their shadow; they move round their stars slowly.
+- **Gates out there:** in every system a violet-to-cyan run of rings leads on to the next system
+  (Aurora, Tidewell, Ember, Aurora again), and a gold run leads home: back through the tunnel and
+  out over the city just past the portal you left by, still held high.
+- **Cost:** out in space only the system is drawn; about 3 to 5 ms a frame in the bench.
+
 ### Still rough, and next
 
 - The Studio's buildings, domes, minarets and spires are light: you fly through them (only towers
@@ -795,10 +993,10 @@ none); a win lights the district from above. Esc, or straying 70 from the course
   drafts (gates only); the sky island itself is the platform station, still small.
 - Traffic does not yet move in platoons on the beat; the beat does not yet travel out from a heart
   (the Nova Cores, another round).
-- Queued from the user, not in this round: rain over a river and its ripples; a business district
-  of twisting towers with docks; docking the ship and cyberpunk rooms the Dot Walker walks through,
-  with panoramas; cars on the ground; Embassies of Happiness with a Shark Simulator cabinet;
-  ultraboost ring portals high in the sky into hyperspace and other solar systems.
+- Docks are the four lounges and the embassies' rooms; the business towers have none of their own yet.
+- Cars do not yet stop at crossings or react to the ship; no ground race yet.
+- Space has no race, no other ships and no landing; the cockpit gauges still read the city's
+  height out there.
 
 ## Ships, cockpits and the map (2026-11-12)
 

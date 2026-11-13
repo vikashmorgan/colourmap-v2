@@ -31,11 +31,13 @@ vi.mock('three/examples/jsm/postprocessing/UnrealBloomPass.js', () => ({
 }));
 
 import TripPlayer, {
+  backgroundStops,
   claimLabel,
   clampView,
   easeView,
   HINT_KEY,
   isHome,
+  pieceFromSearch,
   stickKeys,
   swipeStep,
   swipeVariant,
@@ -167,6 +169,38 @@ describe('stickKeys', () => {
     expect(stickKeys(0, -44)).toEqual(['arrowup']);
     expect(stickKeys(0, 44)).toEqual(['arrowdown']);
     expect(stickKeys(40, -40)).toEqual(['arrowright', 'arrowup']);
+  });
+});
+
+describe('pieceFromSearch', () => {
+  it('opens on the piece a link names by its id, and on nothing else', () => {
+    const trip = makeTrip();
+    const id = trip.phases[2].id;
+    expect(pieceFromSearch(trip, `?piece=${id}`)).toBe(2);
+    expect(pieceFromSearch(trip, `?x=1&piece=${trip.phases[1].id}`)).toBe(1);
+    expect(pieceFromSearch(trip, '?piece=nowhere')).toBeNull();
+    expect(pieceFromSearch(trip, '')).toBeNull();
+    // The Journey alone (no pieces) has nothing to pick.
+    expect(pieceFromSearch({ ...trip, pieces: undefined }, `?piece=${id}`)).toBeNull();
+  });
+});
+
+describe('backgroundStops', () => {
+  it("shows a step's own background on that step alone, else the chosen one", () => {
+    const water = ['#0b3f52', '#020a16'];
+    const trip = makeTrip();
+    trip.backgrounds = [
+      { name: 'A', stops: ['#111111'] },
+      { name: 'B', stops: ['#222222', '#333333'] },
+    ];
+    expect(backgroundStops(trip, 1, 0)).toEqual(['#222222', '#333333']);
+    trip.pieces = { ...(trip.pieces as NonNullable<Trip['pieces']>) };
+    trip.pieces.background = (k) => (k === 2 ? water : null);
+    expect(backgroundStops(trip, 1, 2)).toBe(water);
+    expect(backgroundStops(trip, 0, 1)).toEqual(['#111111']);
+    // The Journey (no step alone) keeps the chosen one; with none chosen, black.
+    expect(backgroundStops(trip, 1, null)).toEqual(['#222222', '#333333']);
+    expect(backgroundStops({ ...trip, backgrounds: undefined }, 0, 1)).toEqual(['#040207']);
   });
 });
 

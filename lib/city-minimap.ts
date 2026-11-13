@@ -88,6 +88,7 @@ const LANDMARK_NAMES: Record<Landmark['kind'], string> = {
   spire: 'Golden spire',
   studio: 'Studio',
   pyramid: 'Great pyramid',
+  nova: 'Nova Core of the Heights',
 };
 const STUDIO_NAMES = { temples: 'Ziggurat', factories: 'Foundry', domes: 'Garden of domes' };
 const LANDMARK_Y: Partial<Record<Landmark['kind'], number>> = { spire: 190, pyramid: 40 };
