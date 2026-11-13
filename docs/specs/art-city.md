@@ -1015,10 +1015,67 @@ between, with portals on to the other systems and back to the City. No cities on
   out over the city just past the portal you left by, still held high.
 - **Cost:** out in space only the system is drawn; about 3 to 5 ms a frame in the bench.
 
+### Richer streets, round four (2026-11-13)
+
+From the user (2026-11-13): "the core buildings of the game city are boring: improve them", "more
+tunnels inside buildings, and one that bores through several buildings in a row", "diwali corridor
+rope lights", "tunnels below the city you can enter", "stars above the city, the city shining from
+above, not black roofs", "make sure the factories etc. are in the city", "windows for some of the
+buildings".
+
+- **The twenty in the city (`lib/city-designs.ts`):** the Buildings piece's twenty
+  (`lib/city-buildings.ts`, without their walkways) stand on a share of the blocks of the quarter
+  they belong to: the Pagoda in Chinatown, the Shikhara and Hanging Gardens in the Indian quarter,
+  the Domed Hall and Spiral Library in Istanbul, the Twist, Sky Bridge, Crystal and Sail among the
+  Heights' towers, the Twist, Crystal, Cantilever, Sail, Trio and Sky Bridge in the market, the
+  Porthole Hall, Ring Stack, Pebbles and Sail on the Canals, the Tree Tower, Great Arch, Spiral
+  Library and Hanging Gardens in the gardens, the Sun Stair, Amphitheatre and Great Arch among the
+  temples, the Trio, Ring Stack and Cantilever among the factories, the Step Mastaba among the
+  pyramids. Each is scaled to fill its block (its plinth within 10.5 of the middle, up to 1.9× the
+  Studio's size) and kept under the metro, drawn as a grain mesh in its quarter's colours, lit from
+  your eye. They hold you: a box for the towers, a tapering mass for the stair temples, pagoda and
+  spire.
+- **The Studio's temples, factories and domes** now go through the same meshes (lit from your eye,
+  their quarter's colours, 2000 grains a block, 4000 on the landmark plazas), where before they were
+  drawn from the Studio's turning eye and read faint.
+- **More tunnels through towers:** one tower in five (two in five in the Heights). **The through
+  tunnel:** the neon market's column x = 65, blocks 43 to 47 (z 1462 to 1632): five towers on one
+  line, each bored at 14 over the street, rings of light running on over the streets between, so
+  it reads, and flies, as one tunnel.
+- **Rope lights (`lib/city-ropes.ts`):** corridors of ropes from wall to wall across the streets,
+  one every 4.2 down the street, each sagging in a catenary a fifth of its span deep, a tiny light
+  every half metre: marigold and warm in the Indian quarter (most streets), red and gold in
+  Chinatown, turquoise in Istanbul, magenta in the market, warm white now and then elsewhere. A
+  slow wave runs along them and down the corridor; never a flash.
+- **The Deep Line (`lib/city-under.ts`):** a tunnel 13 wide and 11 tall, 18 under the street. In
+  by the ramp in the avenue at z 520 (Indian quarter, under a lit portal and DEEP LINE), down to
+  z 460, along under the avenue to z 340, west to x −130, south under Chinatown's west side to
+  z 136, east under the avenue to x 130 (a second ramp rises from that crossing to Chinatown's
+  avenue at z 76), then north under Istanbul, rising gently, out through the south wall of the
+  Canals' first canal (z 612). Rings of light every 3 with the tunnels' pulses, lamps down the
+  floor, chevrons down the ramps. The street over it is solid; deep inside, the city overhead is
+  out of sight and the camera stays in the tunnel. The map draws it (and the through tunnel)
+  dashed in cyan, its two mouths named.
+- **Roofs from above (`lib/city-roofs.ts`):** looking down on a plain building, its roof's edge is
+  lit all round in its quarter's colour, nine lamps on it, a slow red light on the tall ones, and a
+  haze of soft light rising off it; from the plan's height each roof is a 3 × 3 of its colour.
+- **Stars:** four in ten of the sky's grains are plain stars now (they were sixty in all), a few
+  bright, most faint, each its own slow twinkle.
+- **Windows:** a share of the plain buildings (not Chinatown's) wear their quarter's windows in
+  place of the city's grid: arched in the Indian, temple and Egyptian quarters, round in Istanbul
+  and the domes, a grid of panes in the gardens, canals and factories, ribbon bands in the Heights
+  and the market. About six in ten are lit; one in six switches on or off every two to five
+  minutes, easing over six seconds.
+- **Cost:** everything new is an item for the Ship's renderer, near the eye only (within 160, the
+  windows within 120, the tunnel from the street only near its ramps), thinned with distance like
+  the rest; the frame's grains are the same pool, so the cost is in building the items (the same
+  few milliseconds as before in the bench).
+
 ### Still rough, and next
 
-- The Studio's buildings, domes, minarets and spires are light: you fly through them (only towers
-  and pyramids hold you). Sky bridges and the metro are light too.
+- The Studio's domes, minarets and spires on the box towers are light: you fly through them (the
+  towers, pyramids and the twenty hold you). Sky bridges and the metro are light too.
+- The Deep Line has no race of its own yet (the tracks are one a quarter), and no side branches.
 - Sky lanterns and portals are only near the avenue; the Sky Island Loop and four other tracks are
   drafts (gates only); the sky island itself is the platform station, still small.
 - Traffic does not yet move in platoons on the beat; the beat does not yet travel out from a heart

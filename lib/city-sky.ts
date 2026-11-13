@@ -119,13 +119,22 @@ export function skyGrain(L: number, n: number, c: Vec3, R: number, high: number,
     pos: [c[0] + d[0] * R, c[1] + d[1] * R, c[2] + d[2] * R],
     rgb: d[1] > 0.02 || high > 0.3 ? scale(rgb, k * bright) : [0, 0, 0],
   });
-  const plain = Math.min(60, Math.floor(n * 0.2));
+  // The plain stars: four in ten of the sky's grains (they were sixty in all, too few to read as
+  // a starry sky; 2026-11-13: "make sure there are stars above the city"). Most faint, a few
+  // bright, a slow twinkle each, spread evenly over the dome, thicker toward the zenith.
+  const plain = Math.floor(n * 0.42);
   if (L < plain) {
-    const d = fibonacciSphere(L * 7 + 3, plain * 7);
-    const up: Vec3 = [d[0], Math.abs(d[1]) * 0.9 + 0.08, d[2]];
+    const d = fibonacciSphere(L, plain);
+    const up: Vec3 = [d[0], Math.abs(d[1]) * 0.92 + 0.06, d[2]];
     const l = Math.hypot(up[0], up[1], up[2]);
-    const tw = 0.75 + 0.25 * Math.sin(t * 0.9 + L * 0.37);
-    return dome([up[0] / l, up[1] / l, up[2] / l], 0.3 * tw, mix(C.white, C.violet, hash(L, 1)));
+    const tw = 0.75 + 0.25 * Math.sin(t * (0.4 + 0.6 * hash(L, 2)) + L * 0.37);
+    const mag = hash(L, 3);
+    const k = mag > 0.93 ? 0.62 : mag > 0.7 ? 0.42 : 0.28;
+    return dome(
+      [up[0] / l, up[1] / l, up[2] / l],
+      k * tw,
+      mix(C.white, C.violet, hash(L, 1) * 0.6),
+    );
   }
   let m = L - plain;
   // The constellations: each star three grains, brighter for brighter stars; their figures faint.

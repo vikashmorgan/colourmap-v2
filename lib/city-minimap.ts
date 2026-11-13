@@ -37,6 +37,7 @@ import {
 } from './city-grid';
 import { RAIL, STATIONS } from './city-metro';
 import { TRACKS } from './city-race';
+import { DEEP_MOUTHS, tunnelLines } from './city-under';
 
 /* ---------- the data ---------- */
 
@@ -78,6 +79,8 @@ export type MapData = {
   places: MapPlace[];
   /** The metro's loop, tile-local (x, z), every few metres. */
   metro: [number, number][];
+  /** The tunnels (the Deep Line under the street, the one through a row of towers), as lines. */
+  tunnels?: [number, number][][];
 };
 
 const LANDMARK_NAMES: Record<Landmark['kind'], string> = {
@@ -144,9 +147,14 @@ export function cityMapData(): MapData {
         z: tw.z,
         hx: tw.hx,
         hz: tw.hz,
-        h: tw.shape === 'box' || tw.shape === 'pyramid' ? tw.h : 0,
+        h: tw.shape === 'box' || tw.shape === 'pyramid' || tw.shape === 'design' ? tw.h : 0,
         d: tw.d,
-        shape: tw.shape === 'box' ? 'box' : tw.shape === 'pyramid' ? 'pyramid' : 'flat',
+        shape:
+          tw.shape === 'box' || tw.shape === 'design'
+            ? 'box'
+            : tw.shape === 'pyramid'
+              ? 'pyramid'
+              : 'flat',
       });
     }
   }
@@ -211,6 +219,8 @@ export function cityMapData(): MapData {
       colour: [0.6, 0.4, 1],
     });
   }
+  for (const m of DEEP_MOUTHS)
+    places.push({ kind: 'portal', name: m.name, x: m.x, z: m.z, y: 0, colour: [0.22, 0.92, 1] });
   places.push({
     kind: 'welcome',
     name: 'Welcome to the City of Dreams',
@@ -226,7 +236,16 @@ export function cityMapData(): MapData {
   for (let s = 0; s < RAIL.n; s += 12)
     metro.push([RAIL.pos[s * 3] as number, RAIL.pos[s * 3 + 2] as number]);
 
-  cached = { width: TILE_X, length: TILE_Z, districts, blocks, roads, places, metro };
+  cached = {
+    width: TILE_X,
+    length: TILE_Z,
+    districts,
+    blocks,
+    roads,
+    places,
+    metro,
+    tunnels: tunnelLines(),
+  };
   return cached;
 }
 
@@ -578,6 +597,21 @@ export function drawCityMap(
   ctx.strokeStyle = 'rgba(255,190,170,0.55)';
   ctx.lineWidth = 1.2;
   ctx.stroke();
+  // The tunnels, dashed in cyan: the Deep Line at the street (it lies under it), the through
+  // tunnel at its height in the towers.
+  ctx.setLineDash([3, 3]);
+  ctx.strokeStyle = 'rgba(56,235,255,0.7)';
+  ctx.lineWidth = 1.6;
+  (data.tunnels ?? []).forEach((line, i, all) => {
+    const y = raised && i === all.length - 1 ? 14 : 0;
+    ctx.beginPath();
+    line.forEach(([x, z], j) => {
+      const q = P(x, y, z);
+      if (j) ctx.lineTo(q[0], q[1]);
+      else ctx.moveTo(q[0], q[1]);
+    });
+    ctx.stroke();
+  });
   ctx.setLineDash([]);
 
   // The names, gathered here and written last, none piled on another: districts first, then
