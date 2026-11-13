@@ -9,6 +9,7 @@ import {
   rainLight,
   TRAIL,
 } from './city-code';
+import { factoryAt } from './city-factories';
 import {
   BAND_ROWS,
   BANDS,
@@ -63,6 +64,12 @@ describe('the Green Code quarter (2026-11-13: "do a matrix quarter in green")', 
       for (let I = -TILE_I / 2; I < TILE_I / 2; I++) {
         const tw = blockTower(I, J);
         if (tw.shape === 'plaza') continue;
+        // 2026-11-13: "think how factories can be better integrated not all together": one
+        // block is the quarter's data foundry (lib/city-factories.ts), drawn in green.
+        if (tw.shape === 'studio') {
+          expect(factoryAt(I, J)?.role).toBe('data foundry');
+          continue;
+        }
         expect(tw.shape).toBe('code');
         towers++;
         expect(Math.abs(tw.x) - tw.hx).toBeGreaterThanOrEqual(9 - 1e-9);
