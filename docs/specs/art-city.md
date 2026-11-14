@@ -712,7 +712,7 @@ blocks lie along it, a district each side:
 | 1 | **Indian quarter**: low towers crowned by curved temple spires (shikhara: ribs and rings up the curve, a flat stone ring and finial) or four chhatris; Diwali lamps strung across the streets at three heights, twinkling slowly; landmark the **Temple of the curved spire** (a tall shikhara, four small ones, a chhatri, stepped plinth) | **Istanbul**: towers with domes and slender minarets; landmark the **Mosque of the four minarets** (square hall, great dome on its drum with sixteen ribs, four half domes, four minarets with balconies) |
 | 2 | **The Heights**: tall towers (70–128), sky bridges between them at the height both reach (upper streets between the tops), more tunnels; over the avenue a long **tube** whose rings pulse ahead of you, and two **portals** | **The Canals**: the undercity: three cross streets are canals 14 deep under the street, their walls lit with pipes and lamps, water shimmering, arches of pulsing light over them so each reads as a tunnel; you can fly down into them |
 | 3 | **Golden gardens**: golden towers, golden domes, parks of golden trees (gold-leaf crowns shimmering); landmark the **golden spire** (190 high, rings of light, an open sphere of light on top, eight golden trees round it), seen from everywhere | **Temple quarter**: the Studio's temples (lib/golden-buildings.ts, read-only) on blocks; landmark the Studio's **ziggurat**, stairs on every side, 1.7 times its Studio size |
-| 4 | **Industrial quarter**: the Studio's five factories on blocks; landmark the Studio's **foundry**, its chimneys breathing steam | **Solarpunk domes**: the Studio's glasshouses and parks of golden trees; landmark the Studio's **garden of domes** |
+| 4 | **Industrial quarter**: two of the Studio's works on blocks (the rest stand singly through the city, below); landmark the Studio's **foundry**, its chimneys breathing steam | **Solarpunk domes**: the Studio's glasshouses and parks of golden trees; landmark the Studio's **garden of domes** |
 | 5 | **Egyptian quarter**: pyramids on the blocks (the golden slope, courses marked, a light at every apex; they hold you like walls, on their slope), obelisks on the avenue's low towers; landmark the **great pyramid** with a lying sphinx-like figure and two obelisks (our own simple shapes) | **Neon market**: word signs in a small Latin pixel font (BANK, BAR, HOTEL, CAFE, NOODLES, CINEMA, TEA, DREAMS) |
 | 6 | **Green Code quarter** (both sides, below): dark towers with code falling down their faces; landmark the **data spire** | **Green Code quarter** too |
 
@@ -1163,6 +1163,34 @@ stays lit. **WELCOME TO THE CITY OF DREAMS** in `deco`, gold drifting to warm wh
 over the cross street just ahead of the start; boards in red, gold and saffron hang over the avenue
 from its walls; its roofs carry posters far more often. Then Chinatown's own gate and lanterns.
 
+### Chinatown higher, and the city's names (2026-11-13)
+
+> "make chinatown higher with many levels. i like how it is becoming devlopped. also u can put
+> more banners liek city of dreams. city of hope etc...all around the city."
+
+- **Chinatown, many levels** (`lib/city-game.ts`): its towers now stand 30–58 (the avenue's 30–52;
+  22–38 before), about one in six off the avenue a **tall tiered tower** of 74–104; all still
+  under the metro and under the Chinatown lounge's pad. Storey on storey, one every 6.5 or so,
+  each with its own eave flaring past the walls, corners swept up, every other one further out
+  over a red fascia; every other storey a balcony rail along both street walls and a lantern
+  under each eave corner; a crown of three roofs on top (five and a ringed spire on the tall
+  towers). **Covered walkways** cross the side streets between towers at 20, 32, 44, 57 and 70
+  (about half the heights both walls reach; never over the avenue; light, as the sky bridges).
+  The tall signs climb with them (five levels on towers over 46), the lantern strings too (side
+  streets to 38 and 50, the avenue to 46). Collision is the towers' boxes at their new heights;
+  the avenue, its gates and the opening road stay open.
+- **The city's names** (`CITY_NAMES`, `nameBanner` in `lib/city-signs.ts`; `cityBanners` in
+  `lib/city-game.ts`): CITY OF DREAMS, HOPE, LIGHT, PEACE, LOVE, JOY and FRIENDS, about twenty a
+  tile, framed like the welcome, each in its district's colour drifting slowly to a second hue:
+  over the avenue at the mouths of the Heights (LIGHT), the Golden gardens (PEACE) and the
+  Studio's band (FRIENDS), and high over it in the middle of the Heights (DREAMS) and the Studio's
+  band (JOY), all above the lanes you cruise in; over the roofs at the tile's two edges (FRIENDS
+  by Chinatown, HOPE, LOVE, DREAMS, JOY, LIGHT in the Green Code quarter); on a roof near the
+  avenue in seven quiet districts; and high on the street face of every tall tiered tower in
+  Chinatown, in `brush`. Faces `deco`, `tall`, `sign` and `brush`. Each over a cross street, on a
+  roof or on a face, so none cuts a wall. The Neon market's side and the opening road keep their
+  own signs.
+
 ### The Green Code quarter (`lib/city-code.ts`)
 
 > 2026-11-13: "do a matrix quarter in green".
@@ -1188,6 +1216,28 @@ tile's edge.
   avenue at both its mouths.
 - Green only: everything the game adds there (towers, spire, kerbs, cars, signs) has green its
   strongest channel.
+
+### The Neon Canyon, and factories through the city (`lib/city-canyon.ts`, `lib/city-factories.ts`)
+
+> 2026-11-13: "add a neon part to the city and a canyon in there. if not done allready. think how
+> factories can be better integrated not all together."
+
+- **The Neon Canyon**: a street 12 across and 298 long through the Neon market: down x = 52 from
+  the domes' edge (z 1360), a bend west along z = 1428, then down x = 26 to the Green Code
+  quarter's edge (z 1632). Its walls are the plan's own towers pushed up to the street, 104 to 140
+  high (lower only in its last two rows, where the metro crosses over it), so they hold you like
+  every tower. The city's neon part: bands of neon every six up the faces it sees, a strip up each
+  edge, the light lying on its street in soft streaks, boards hanging over it at five heights,
+  glowing cables strung across it every 8.5 at up to eight heights, and NEON CANYON over both
+  mouths. Every hue drifts slowly round cyan, magenta, amber and violet (a turn in about a minute
+  and a half); nothing flashes. Lit only near the eye and ahead of it, each face at most 3600
+  sites. On the map as a magenta line, named **Neon Canyon**.
+- **Factories through the city**: the Industrial quarter keeps its landmark foundry and two works;
+  the others stand singly, never two on neighbouring blocks: cement works on the Canals' quay,
+  an assembly hall at the city's edge by the Heights, solar works at the desert's edge among the
+  pyramids, kilns beside the domes (their glassworks), and the Green Code quarter's **data
+  foundry**, drawn in its green only. Each has a lit yard, a chimney breathing slow steam with a
+  slow red lamp, and a conveyor of light gliding to its neighbour's wall (`FACTORY_SITES`).
 
 ### Rising, hearts, Atlantis and depth (2026-11-13)
 
