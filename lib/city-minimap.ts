@@ -16,6 +16,7 @@
 import type { RGB, Vec3 } from './bigbang';
 import { ANNEX_X, annexContours, annexPlaces, type MapContour, MOUNTAIN_ROWS } from './city-annex';
 import { CANYON_PATH } from './city-canyon';
+import { CORRIDOR_HALF, CORRIDOR_LINES, CORRIDOR_X, corridorRoads } from './city-corridors';
 import { DOCKS, LOUNGES, placeDock } from './city-docks';
 import { EMBASSIES, embassyCentre } from './city-embassy';
 import {
@@ -249,9 +250,12 @@ export function cityMapData(): MapData {
     const z = b * BAND_ROWS * BLOCK_Z;
     roads.push({ x0: -STRIP_X / 2, z0: z, x1: STRIP_X / 2, z1: z, main: true });
   }
+  // The racing corridors (lib/city-corridors.ts, 2026-11-14): main roads like the avenue, their two
+  // walls the whole tile long, three blocks either side of it.
+  for (const r of corridorRoads()) roads.push({ ...r, main: true });
   // The side streets, faint: every block's edge along and across.
   for (let I = -STRIP_I / 2 + 1; I < STRIP_I / 2; I++) {
-    if (I === 0) continue;
+    if (I === 0 || (CORRIDOR_LINES as readonly number[]).includes(I)) continue;
     roads.push({ x0: I * BLOCK_X, z0: 0, x1: I * BLOCK_X, z1: TILE_Z, main: false });
   }
   for (let J = 1; J < TILE_J; J++) {
@@ -721,6 +725,9 @@ export function drawCityMap(
   }
   // The avenue, a pale band.
   poly(flat(-AVENUE, 0, AVENUE, data.length), 'rgba(244,234,216,0.07)');
+  // And the racing corridors, pale bands too.
+  for (const c of CORRIDOR_X)
+    poly(flat(c - CORRIDOR_HALF, 0, c + CORRIDOR_HALF, data.length), 'rgba(244,234,216,0.05)');
   // The annex's topography (2026-11-14): the peaks' contour lines and the hills' terraces, each
   // at its height when tilted, so the mountains rise in rings on the 3D map.
   for (const c of data.contours ?? []) {
