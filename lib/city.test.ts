@@ -23,6 +23,7 @@ import {
   canyonSlot,
   chinatownness,
   colour,
+  DOUBLE_BOOST,
   dockShip,
   EYE_Y,
   FLY_SPEED,
@@ -545,6 +546,18 @@ describe('Ship', () => {
     fresh();
     t = run(['s'], 2);
     expect(flier(t).c[1]).toBeLessThan(y0 - 3);
+  });
+
+  it('boosts twice as fast on Shift as on Space (2026-11-14)', () => {
+    const speed = () => gauges().find((g) => g.label === 'Speed')?.value as number;
+    fresh();
+    run([' '], 1);
+    const single = speed();
+    fresh();
+    const td = run(['shift'], 1);
+    expect(speed()).toBeGreaterThan(single * 1.6);
+    expect(speed()).toBeGreaterThan(FLY_SPEED * (boostPaceAt(flier(td).c[1]) * DOUBLE_BOOST - 0.6));
+    expect(DOUBLE_BOOST).toBe(2);
   });
 
   it('goes faster on E, slower on Q, and boosts on Space as long as it is held', () => {

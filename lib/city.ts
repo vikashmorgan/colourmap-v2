@@ -1824,8 +1824,8 @@ function canyonAt(p: Particle, u: number, t: number): Spot & { d: number } {
 /*
  * 2026-11-12: "long term aim will be to create that future neon city that we
  * fly through on a spaceship." Keys only, as the Shark Sim: A and D turn, W
- * and S climb and dive, E or Shift faster, Q or X slower, Space boosts, as
- * long as you like (2026-11-14). The towers' walls hold
+ * and S climb and dive, E faster, Q or X slower, Space boosts, as
+ * long as you like (2026-11-14), and Shift boosts twice as fast (DOUBLE_BOOST). The towers' walls hold
  * you: you slide along them.
  *
  * Round two, the same day: "solid tower walls while you fly the ship, since
@@ -1858,6 +1858,10 @@ export const SUPER_CLIMB = 48;
 /** Slow mode: a gentle drift, the eye tilted down at the city. */
 export const SLOW_PACE = 0.22;
 export { AVENUE, BLOCK_X, BLOCK_Z, blocked, blockTower, floorAt, MARGIN };
+
+/** Shift's double boost: twice the boost's pace, wherever the boost goes (2026-11-14). */
+export const DOUBLE_BOOST = 2;
+
 /**
  * The boost at roof height (boostPaceAt). 2026-11-13, later: "add more boost"; 2026-11-14: "more
  * boost on all ships so boost is not limited, and abundant": faster again, and the bar never drains.
@@ -2401,7 +2405,10 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   if (fly.pos[1] >= ceiling() && tilt > 0) tilt = 0;
   // Slow mode levels out unless you climb or dive.
   fly.pitch += (tilt - fly.pitch) * (1 - Math.exp(-2.5 * dt));
-  const boosting = held(' ');
+  // Shift is the double boost (2026-11-14: "when I press [Shift] ... it makes a double boost that
+  // goes twice faster than boost"); Space the plain one.
+  const double = held('shift');
+  const boosting = double || held(' ');
   const hyper = hyperStep(boosting, held('tab'));
   glowStep(boosting, dt, hyper);
   // The super boost: boost and climb together, and you go on up into the stratosphere; up there,
@@ -2453,8 +2460,8 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     settle *
     hd.speed *
     (boosting
-      ? boostPaceAt(fly.pos[1]) * hd.boost * (hyper ? HYPER_PACE : 1)
-      : held('e', 'shift')
+      ? boostPaceAt(fly.pos[1]) * hd.boost * (hyper ? HYPER_PACE : 1) * (double ? DOUBLE_BOOST : 1)
+      : held('e')
         ? 1.8
         : held('q', 'x')
           ? 0.4
@@ -2549,7 +2556,7 @@ export const SPACE_PACE = 5;
 
 /**
  * A frame out in space: in the tunnel you are carried; in a system you fly freely (W and S climb
- * and dive, A and D turn, Shift faster, Space boosts, the bar never draining out here), kept out of
+ * and dive, A and D turn, E faster, Space boosts, Shift boosts twice as fast, the bar never draining out here), kept out of
  * the star, the planets and the moons; through a portal's rings, on into the tunnel again.
  */
 function spaceFly(active: boolean, keys: string[], dt: number, t: number) {
@@ -2567,12 +2574,18 @@ function spaceFly(active: boolean, keys: string[], dt: number, t: number) {
   steer(turn, dt);
   const tilt = (held('w', 'arrowup') ? 0.7 : 0) - (held('s', 'arrowdown') ? 0.7 : 0);
   fly.pitch += (tilt - fly.pitch) * (1 - Math.exp(-2.5 * dt));
-  const boosting = held(' ');
+  const double = held('shift');
+  const boosting = double || held(' ');
   const hyper = hyperStep(boosting, held('tab'));
   glowStep(boosting, dt, hyper);
   const pace =
-    (boosting ? BOOST_PACE : held('e', 'shift') ? 1.8 : held('q', 'x') ? 0.4 : 1) *
-    (hyper ? HYPER_PACE : 1);
+    (boosting
+      ? BOOST_PACE * (double ? DOUBLE_BOOST : 1)
+      : held('e')
+        ? 1.8
+        : held('q', 'x')
+          ? 0.4
+          : 1) * (hyper ? HYPER_PACE : 1);
   fly.speed +=
     (FLY_SPEED * SPACE_PACE * pace - fly.speed) * (1 - Math.exp((boosting ? -4 : -1.5) * dt));
   const was: Vec3 = [...fly.pos];

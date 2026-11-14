@@ -45,6 +45,7 @@ import {
   STRIP_X,
   TAU,
   TILE_I,
+  TILE_J,
   TILE_X,
   wrap,
 } from './city-grid';
@@ -635,6 +636,8 @@ export type MarketStream = {
   sgn: 1 | -1;
   speed: number;
   gap: number;
+  /** A highway of its own colour (the low-roof highways' quarter tones); unset, its level's. */
+  tone?: RGB;
 };
 
 const MZ0 = 40 * BLOCK_Z;
@@ -679,6 +682,82 @@ export function marketShip(S: MarketStream, i: number, t: number): { s: number; 
 /** A highway's point at `s` along it, tile-local. */
 export const marketPoint = (S: MarketStream, s: number): Vec3 =>
   S.axis === 2 ? [S.c, GROUND + S.y, s] : [s, GROUND + S.y, S.c];
+
+/* ---------- highways over the low roofs ---------- */
+
+/*
+ * 2026-11-14 (docs/specs/art-city.md, "Alive quarters"): "highways of traffic on the higher layers
+ * of the city, flying above the lower buildings, to add life up there." Where a run of blocks stands
+ * low (the Temples' quarter, the Oriental quarter, Egypt's pyramids), two highways fly along it,
+ * each three lanes abreast, one way, the next the other way, just over the roofs: every height clear
+ * of the street channels' (lib/city-flow.ts), the express lanes', the big ships' lines (96, 126,
+ * 142), the high currents' loops (142 and up) and the stations (210 and up). Drawn as the market's
+ * highways are (lib/city-market.ts highwayItem), in their quarter's colour.
+ */
+
+/** How far apart a low-roof highway's three lanes fly, side by side. */
+export const SKY_LANE_GAP = 3;
+const skyHighway = (
+  c: number,
+  row0: number,
+  row1: number,
+  y: number,
+  sgn: 1 | -1,
+  speed: number,
+  tone: RGB,
+  gap = 18,
+): MarketStream[] =>
+  [-1, 0, 1].map((l) => ({
+    level: 'high' as MarketLevel,
+    axis: 2 as const,
+    c: c + l * SKY_LANE_GAP,
+    s0: row0 * BLOCK_Z + 6,
+    s1: row1 * BLOCK_Z - 6,
+    y,
+    sgn,
+    speed,
+    gap,
+    tone,
+  }));
+
+/** The low-roof highways, tile-local: down the middle of a column of blocks, over its roofs. */
+export const SKY_STREAMS: MarketStream[] = [
+  // Egypt's pyramids (rows 40 to 47, west): low, either side of the pyramid's plaza, clear of
+  // the Sunboat Mast.
+  ...skyHighway(-1.5 * BLOCK_X, 40, 48, 40, 1, 16, [0.95, 0.75, 0.45]),
+  ...skyHighway(-4.5 * BLOCK_X, 40, 48, 46, -1, 16, [1, 0.64, 0.22]),
+  // The Temples' quarter (rows 24 to 31, east): just over its temples (up to 79) and towers.
+  // (The Oriental quarter, which had one, now stands tall: lib/city-alive.ts RISE.)
+  ...skyHighway(1.5 * BLOCK_X, 24, 32, 86, -1, 18, [1, 0.93, 0.8]),
+  ...skyHighway(5.5 * BLOCK_X, 24, 32, 86, 1, 18, [1, 0.74, 0.3]),
+];
+
+/*
+ * Higher streams (2026-11-14: "some ship streams fly higher too, well above the towers but below
+ * the stations"): threaded at 186, over the high currents' loops (142 to 182) and under the
+ * stations (their lowest at 190 and up) and the ring sets (192 and up), the length of the tile.
+ */
+export const HIGH_STREAM_Y = 186;
+export const HIGH_STREAMS: MarketStream[] = [
+  ...skyHighway(-2.5 * BLOCK_X, 0, TILE_J, HIGH_STREAM_Y, -1, 24, [0.6, 0.75, 1], 40).slice(1, 2),
+  ...skyHighway(3.5 * BLOCK_X, 0, TILE_J, HIGH_STREAM_Y, 1, 24, [0.75, 0.6, 1], 40).slice(1, 2),
+];
+
+/** The lowest low-roof highway over tile-local (x, z), `pad` round its lanes; null where none flies. */
+export function skyStreamOver(x: number, z: number, pad = 0): number | null {
+  let y: number | null = null;
+  for (const S of SKY_STREAMS)
+    if (Math.abs(x - S.c) <= pad + 1 && z >= S.s0 - pad && z <= S.s1 + pad)
+      y = y === null ? S.y : Math.min(y, S.y);
+  return y;
+}
+
+/** A highway's colour now: its own tone leaning slowly toward white, or its level's (the market's). */
+export function streamColour(S: MarketStream, t: number): RGB {
+  if (!S.tone) return marketColour(S.level, t);
+  const lean = 0.5 + 0.5 * Math.sin(0.05 * t + S.c * 0.01);
+  return mix(S.tone, [0.9, 0.95, 1], 0.15 + 0.2 * lean);
+}
 
 /** A highway's colour: warm rose low, magenta in the middle, cyan high, each leaning slowly. */
 export function marketColour(level: MarketLevel, t: number): RGB {

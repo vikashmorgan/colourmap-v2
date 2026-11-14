@@ -15,8 +15,18 @@ const GRAINS: Particle[] = makeParticles(MESH_GRAINS);
 /** A mesh's colours: each tone (and key) to a colour, already at its strength. */
 export type Palette = (h: Hit, t: number) => RGB;
 
-/** A mesh placed in the city: its foot at `at` (the mesh's ground at GROUND), scaled by `sc`. */
-export type Placed = { B: Built; at: Vec3; sc: number; shares: Shares; palette: Palette };
+/**
+ * A mesh placed in the city: its foot at `at` (the mesh's ground at GROUND), scaled by `sc`, and
+ * stretched `sy` times further upward (unset: 1; lib/city-alive.ts canalDesign).
+ */
+export type Placed = {
+  B: Built;
+  at: Vec3;
+  sc: number;
+  shares: Shares;
+  palette: Palette;
+  sy?: number;
+};
 
 /**
  * Site s of a placed mesh (s under MESH_GRAINS), seen from `eye`: its place into o[0..2] and its
@@ -25,14 +35,15 @@ export type Placed = { B: Built; at: Vec3; sc: number; shares: Shares; palette: 
 export function meshSite(P: Placed, s: number, t: number, eye: Vec3, k: number, o: number[]) {
   const p = GRAINS[s % MESH_GRAINS] as Particle;
   const { at, sc } = P;
+  const sv = sc * (P.sy ?? 1);
   const local: Vec3 = [
     (eye[0] - at[0]) / sc,
-    GROUND + (eye[1] - at[1]) / sc,
+    GROUND + (eye[1] - at[1]) / sv,
     (eye[2] - at[2]) / sc,
   ];
   const h = onMesh(P.B, p, p.c, t, local, P.shares);
   o[0] = at[0] + h.pos[0] * sc;
-  o[1] = at[1] + (h.pos[1] - GROUND) * sc;
+  o[1] = at[1] + (h.pos[1] - GROUND) * sv;
   o[2] = at[2] + h.pos[2] * sc;
   const c = P.palette(h, t);
   const m = k * h.lit;

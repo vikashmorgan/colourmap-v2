@@ -46,8 +46,18 @@ const TAPERED = new Set([0, 1, 2, 3, 17]);
 /** The footprint a design may fill: a circle this wide round the block's middle. */
 export const DESIGN_FIT = 10.5;
 
-/** Design `kind` on a block: its scale, the box that stands for it (for the map, the eye), its height. */
-export type Design = { kind: number; sc: number; r: number; h: number; tapered: boolean };
+/**
+ * Design `kind` on a block: its scale, the box that stands for it (for the map, the eye), its height;
+ * `sy`: stretched that many times further upward (the Canals' own, lib/city-alive.ts canalDesign).
+ */
+export type Design = {
+  kind: number;
+  sc: number;
+  r: number;
+  h: number;
+  tapered: boolean;
+  sy?: number;
+};
 
 /**
  * Whether block-number k in quarter d holds one of the twenty, and which, fitted to the block and
@@ -170,6 +180,7 @@ export function designItem(
     B: designMesh(g.kind),
     at: [at.x, GROUND, at.z],
     sc: g.sc,
+    sy: g.sy,
     shares: SHARES,
     palette: quarterPalette(colour),
   };

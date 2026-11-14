@@ -128,7 +128,7 @@ turning and breathing, a slow orbit.
 | 15 | Chinatown | A red gate (four pillars, two beams, three roofs turned up at the ends, a plaque reading 中華街, Chinatown) at the mouth of a narrow street. Tall signs hang down the street side of the towers, standing out into the street, in real Chinese and Japanese characters: ラーメン ramen, 茶 tea, 龍 dragon, 酒 wine, 夢 dream, 麺 noodles, 福 good fortune, 喫茶 café; a 夜市 night-market banner across the street and a small 喫茶 sign over a doorway. Lantern red and gold mixed with cyan and magenta. Rows of round red lanterns strung across the street, swaying a little | Walking pace through the gate and down the street |
 | 16 | Bridges and docks | Sky bridges (tubes of four edges and ribs, lights along the floor) join neighbouring towers high above the street; landing platforms stand out from the faces of the taller towers, lights chasing slowly round their rims. Ships come in on a curve, settle on a deck, rest, lift off and leave the other way | Round the city, from above the bridges |
 | 17 | Canyon | Flying down the middle of an endless street: towers either side (only the faces the street sees are drawn, so every grain shows), feet below the eye and roofs above it; traffic in lanes above and below the eye, all flying forward, one colour per height (amber, cyan, white, violet); high above, one-way cross streets carry ships left to right or right to left, each in its own colour (2026-11-12: "the canyon make it only with lights going forward … each road has one colour of spaceship to keep it coherent"); every third tower carries a tall Chinatown sign, flown past. Towers and ships that pass behind come round to the far end, so the street never ends and no grain is added | Down the middle of the street |
-| 18 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) down an endless avenue of solid, lit towers, with side streets to turn into; the avenue runs through the districts of the City of Dreams, Chinatown first (see **Ship, round two** and **Ship, round three**). **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** or Shift faster, **Q** or X slower, **Space** boosts to three times the cruise or more, for as long as it is held; **Space** with **W** climbs on into the stratosphere; **L** slows to look down; **Enter** starts a race at its start. Towers' walls hold you: you slide along them. Traffic above and below you. Two dials read height and speed. With no one at the controls (the Journey, or before you steer) the ship flies down the avenue; let go with Esc and it carries on from where you were, back to the avenue | Behind the ship and a little above, looking past it |
+| 18 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) down an endless avenue of solid, lit towers, with side streets to turn into; the avenue runs through the districts of the City of Dreams, Chinatown first (see **Ship, round two** and **Ship, round three**). **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** faster, **Q** or X slower, **Space** boosts to three times the cruise or more, for as long as it is held, and **Shift** is the double boost, twice the Space boost's pace (2026-11-14); **Space** with **W** climbs on into the stratosphere; **L** slows to look down; **Enter** starts a race at its start. Towers' walls hold you: you slide along them. Traffic above and below you. Two dials read height and speed. With no one at the controls (the Journey, or before you steer) the ship flies down the avenue; let go with Esc and it carries on from where you were, back to the avenue | Behind the ship and a little above, looking past it |
 
 The page opens on one piece alone, picked by name, as Ocean's do: it starts
 at its beginning with no ball of stars and loops, each grain gliding back to
@@ -1123,7 +1123,7 @@ between, with portals on to the other systems and back to the City. No cities on
   rushing by on the beat; the words beside the bar read only "Hyperspace · Mach 27", the number
   climbing quickly, gliding, easing down. You are carried; the keys wait.
 - **Space:** out in a system, facing its star, the background near black. W and S climb and dive,
-  A and D turn, Shift faster, Space boosts (its bar never drains out here); you fly five times the
+  A and D turn, E faster, Space boosts and Shift boosts twice as fast (its bar never drains out here); you fly five times the
   city's pace, and nothing lets you inside a star, planet or moon. Stars all round (a band of the
   galaxy across them), faint dust sliding past to feel the speed, each planet's orbit a faint
   dotted ring to steer by.
@@ -2050,6 +2050,89 @@ under both roofs, clear of the highways, over open air; few flashing signs, cris
 to three quarters of the time, at most two flashes a period; six streams at three heights 25
 and more apart, in the market and in open air, crossings at different levels, every ship one
 way at its stream's speed, evenly spaced.
+
+### Alive quarters (2026-11-14)
+
+The user's asks: ordinary towers much taller and joined at height; roads, ramps and bridges round
+the temples and unique buildings, composed as one design; a big gate in each quarter; banners
+across the streets you fly under; more bridges in the tall streets, which must still breathe;
+signs turned every way; hanging lights in every quarter; bridges over the canals with arched
+undersides; the Canals' unique buildings as big as the Heights'; a much taller Indian quarter with a
+few super-tall spires; and highways of ships just over the low roofs. Code: `lib/city-alive.ts`
+(and its shared ground `lib/city-alive-base.ts`), `lib/city-gates.ts`, `lib/city-banners.ts`,
+`lib/city-plazas.ts`, `lib/city-canal-bridges.ts`, `lib/city-strokes.ts` (structures drawn as
+strokes of light, built once), with small hooks in `lib/city-game.ts` (the towers' heights, the
+spires' open blocks, the Canals' designs, one call in the items) and `lib/city-currents.ts`
+(SKY_STREAMS). Light only, mellow: a slow drift, nothing flashes; nothing new blocks the Ship.
+
+- **Taller towers:** the plain and business towers off the avenue rise per quarter (RISE: the
+  Indian quarter 36 to 72, the Heights 92 to 124, the Canals 38 to 84, Golden, Industrial, Domes
+  and the market up to 90 to 104, about a fifth taller still), never lower than they were. They
+  stay under ALIVE_CAP (128: the high currents dip to 142), ten under a big ship's line over their
+  column (the liner over column -5, the barge over column 4), under the metro and the sky lounges.
+  The first column beside the avenue keeps its height: the quarters step up away from the avenue.
+- **Sky bridges and walkways:** between neighbouring towers of the same quarter, across both kinds
+  of street, at up to three of SKY_LEVELS (38 to 102) under both roofs: glass tubes, trusses and
+  slender arched walkways, lamps along their decks.
+- **Hanging lights:** strings across the side streets of every quarter but Chinatown and the
+  Indian quarter, at 24, 34 or 46, lamps on drops in the quarter's shape (globes, bells, cages,
+  stars, paper drops), a slow swell along them.
+- **Gates:** eleven, one in each quarter but Chinatown, across the wide street two lines off the
+  avenue in the quarter's second row, each its own style (Mughal arch, horseshoe arch, glass
+  portal, Venetian bell towers, half sun, gopuram, steel gantry, onion domes, pylons, neon frames,
+  wireframe), its posts at the walls, every beam 20 or more over the street, the quarter's name on
+  its lintel.
+- **Banners across the streets:** wall to wall on two cables, across the side streets (facing
+  along them) and the cross streets (turned a quarter), feet at 38 to 80 so you fly under or over.
+- **Signs turned every way:** blade signs standing out of the walls into the cross streets (read
+  flying along them), corner signs at forty-five degrees over the crossings, signs on posts over
+  the roofs at their own angles (top 104 at most, never into a highway).
+- **Plazas:** round every landmark (but the race plaza) and big square: a ring road with its dashed
+  line, a pool with rings spreading from it and paving rays, a ring walkway at 22, two ramps
+  curving up to it through opposite quarters, four bridges in to a halo round the building.
+- **Canal bridges:** fifteen over the three canals at the middles of blocks: tall single arches,
+  low three-arch stone bridges, slender footbridges whose deck is a curve, the Gallery Bridge (a
+  wide arch with an arcade on top) and arched sky bridges from tower to tower at 44, 62 or 84.
+  Every arch's underside curves up to its crown, over ten above the water; nothing under it;
+  every street-level top under 11 (the cross street's lowest lane is 15).
+- **Canals' unique buildings:** the Studio's designs in the Canals stretch upward to 92 to 124
+  (their footprint kept), under the metro and any big ship's line.
+- **Indian spires:** the Saffron Shikhara, the Garden of Lamps and the Marigold Dome (Studio
+  buildings stretched to 112 to 126) on blocks of their own kept open, out from under the metro,
+  spread over the quarter, ten under any big ship, under the rings and far under the stations.
+- **Highways over the low roofs:** four, three lanes abreast, one way each, the market's look in
+  their quarter's tone: two over Egypt's pyramids (40, 46), two over the Temples' quarter (86, over
+  its temples up to 79); each over every roof under it by six or more in every copy of the tile
+  (a raised tower stays HIGHWAY_CLEAR under one), clear of the street lanes, the big ships, the
+  high currents and the stations.
+- **Higher streams:** two, one way each, the length of the tile at 186: over the high currents'
+  loops (182 at most), under the stations (their lowest over 190) and the ring sets.
+- **Orbits round the monuments** (`lib/city-orbits.ts`): round every landmark but the race plaza,
+  every big square, the fifteen new buildings, the Indian spires and the Turquoise Crown, a ring of
+  ships at a constant radius seven outside its reach, one way, at the lowest height over every roof
+  under it by eight that is clear of the street lanes, the big ships' lines and the ring sets (104
+  at most, under the express lanes, the flocks and the high currents); about half get a second ring
+  higher flying the other way, about a third fly the first as a two-turn spiral, up or down, fading
+  at its ends. Found per tile copy, since the towers round a monument differ from copy to copy.
+- **The Oriental quarter, Istanbul-like** (`lib/city-istanbul.ts`): its towers rise to 40 to 84
+  (some to 106), each plain one crowned with a drum and dome of our own, now and then a smaller dome
+  stacked over it, and two or four slender needles with balcony rings and pointed caps, turquoise
+  and gold. The Turquoise Crown, the centrepiece, on its own open block at the quarter's entrance
+  (block 3, row 8): an octagonal shaft in five tiers with balcony rings, a drum and a great dome at
+  132 to 150, a gold finial to 176, four needles beside it; taller than every tower in the quarter
+  and than the Crescent Needle (162), under the stations and the ring sets. Like the fifteen new
+  buildings it stands in the high currents' band (142 to 182): light, the ships fly through it.
+- **Lanes:** whatever crosses a street keeps LANE_CLEAR (4) from every street channel's height (5,
+  11, 15, 30, the express 112 and 120), and in the market from its highways'.
+- **Acceptance:** `lib/city-alive.test.ts`, `lib/city-gates.test.ts`, `lib/city-orbits.test.ts` and
+  `lib/city-istanbul.test.ts`: towers raised and capped, orbits at a constant radius, one way, over
+  the roofs and clear of the walls, the higher streams threaded, the Oriental quarter raised and the
+  Turquoise Crown its tallest,
+  the Canals' uniques at the Heights' scale, the spires and their clearances, sky bridges, hanging
+  lights in the new quarters, the highways over the roofs and one way, gates per quarter with room
+  to fly through, banners in both orientations with room to fly under, signs in several
+  orientations, canal arches concave with room under, plazas inside their blocks, no grains in the
+  lanes, a modest budget, and nothing jumping between frames.
 
 ### Mountain and Favela quarters (2026-11-14)
 
