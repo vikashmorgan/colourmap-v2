@@ -1689,6 +1689,12 @@ four minutes over every firework place within 5 of a station or a parcours ring.
 
 ### The far city (2026-11-14)
 
+> **Taken off the City, 2026-11-14 (later).** The user: "the horizon drawing is awesome but it feels
+> like a totally different game and makes it all confusing. take it off but add it to the designs".
+> The City's trip no longer passes `farLayer` (components/City.tsx; components/City.test.tsx checks
+> it). `lib/city-far.ts` and `lib/far-layer.ts` stay, ready to become an Art design: a psychedelic,
+> futuristic neon horizon, for a later game of mega speed over quickly generated cities.
+
 The user asked "what stops u from increasing field depth of vision 5 times on computer?" The
 answer: the grains are worked out in JavaScript every frame (about a millisecond a thousand), so a
 longer live view costs frame time. The way round it is a far layer built once and drawn by the GPU.
