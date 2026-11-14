@@ -18,6 +18,7 @@
 
 import { fibonacciSphere, hash, type RGB, smooth, type Vec3 } from './bigbang';
 import type { Sign, Tower } from './city';
+import { avenueHeight, avenueItems } from './city-avenue';
 import { bigItems, openBlock, studioBlockItems } from './city-big';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
 import { canyonHeight, canyonItems, canyonWallAt } from './city-canyon';
@@ -431,6 +432,10 @@ export function blockTower(I: number, J: number): Block {
     default:
       if (!ave && hash(k, 426) < 0.12) h = 9 + 6 * hh;
   }
+  // The Grand Avenue (lib/city-avenue.ts; 2026-11-14: "make sure these main streets are high with
+  // many vertical levels"): the avenue's own towers stand taller in every quarter, so its galleries
+  // and bridges climb well above the road.
+  if (ave) h = avenueHeight(d, hh, h);
   // The Studio's factories, one to a block where they make sense, never two side by side
   // (2026-11-13: "think how factories can be better integrated not all together").
   const works = ave ? null : factoryAt(I, J);
@@ -2863,6 +2868,9 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
   ropeItems(eye, t, NEAR, blockTower, ahead, out);
   // The Neon Canyon through the market (lib/city-canyon.ts): its walls' neon, cables, boards.
   canyonItems(eye, t, NEAR, blockTower, ahead, out);
+  // The Grand Avenue (lib/city-avenue.ts): its bridges, galleries, roofs, the features over it and
+  // the gateways at every band's edge, on many levels above the road.
+  avenueItems(eye, t, NEAR, blockTower, ahead, out);
   // The Deep Line under the city (lib/city-under.ts), and its name over the avenue ramp's mouth.
   underItems(eye, t, NEAR, pulseAt, ahead, out);
   for (const m of DEEP_MOUTHS) {
