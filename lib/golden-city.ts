@@ -655,11 +655,52 @@ const rising = () => {
 };
 const RISING_SHARES: Shares = { lines: 0.5, faces: 0.92 };
 
-/** How far ring i has risen, `u` through the piece: flat as a map at first, the heart rising first. */
-export const risen = (i: number, u: number) => smooth((u - 0.12 - 0.04 * i) / 0.2);
+/*
+ * How far ring i has risen, `u` through the piece: flat as a map for a moment, the heart rising first.
+ * 2026-11-13: "make the rising start rising faster": it starts within a second, not five, and the
+ * whole city is up by a third of the piece instead of two thirds.
+ */
+export const risen = (i: number, u: number) => smooth((u - 0.02 - 0.025 * i) / 0.12);
+
+/*
+ * The ways the city can rise, the Studio's ↑↓ on this piece (2026-11-13: "do different ones of
+ * these"). Each takes the ring i and the sector s (0..spokes − 1) a grain is in.
+ */
+export const RISING_ORDERS = ['Heart first', 'Outside in', 'Spiral', 'Ripple', 'Bloom'];
+let risingKind = 0;
+export const setRisingKind = (i: number) => {
+  risingKind = RISING_ORDERS[i] ? i : 0;
+};
+const RINGS = GOLDEN.bands.length;
+// Overshoots a little and settles, like water finding its level: never a jump.
+const settle = (x: number) => {
+  const c = Math.min(1, Math.max(0, x)) - 1;
+  return 1 + 2.2 * c ** 3 + 1.2 * c ** 2;
+};
+export function risenBy(kind: number, i: number, s: number, u: number): number {
+  switch (kind) {
+    case 1:
+      return risen(RINGS - 1 - i, u);
+    case 2:
+      // Round the city, sector after sector, the inner rings a step ahead.
+      return smooth((u - 0.02 - 0.02 * s - 0.008 * i) / 0.1);
+    case 3:
+      return settle((u - 0.02 - 0.03 * i) / 0.13);
+    case 4:
+      // Each block on its own beat, like flowers opening.
+      return smooth((u - 0.02 - 0.26 * hash(i * 31 + s, 471)) / 0.08);
+    default:
+      return risen(i, u);
+  }
+}
+const sectorOf = (x: number, z: number) => {
+  const a = Math.atan2(z, x) - spokeAngle(0);
+  const turn = (((a / (Math.PI * 2)) % 1) + 1) % 1;
+  return Math.floor(turn * GOLDEN.spokes) % GOLDEN.spokes;
+};
 
 export function risingEye(u: number, t: number): Eye {
-  const tilt = smooth((u - 0.12) / 0.6);
+  const tilt = smooth((u - 0.04) / 0.45);
   return orbit(0.4 + t * 0.018, lerp(1.38, 0.38, tilt), lerp(108, 58, tilt), [0, G + 2, 0]);
 }
 
@@ -667,7 +708,7 @@ export function risingAt(p: Particle, u: number, t: number): { pos: Vec3; rgb: R
   if (p.c < STARS) return starAt(p, t, [0, G, 0]);
   const h = onMesh(rising(), p, (p.c - STARS) / (1 - STARS), t, risingEye(u, t).eye, RISING_SHARES);
   const r = Math.hypot(h.pos[0], h.pos[2]);
-  const k = Math.max(0.01, risen(bandIndex(r), u));
+  const k = Math.max(0.01, risenBy(risingKind, bandIndex(r), sectorOf(h.pos[0], h.pos[2]), u));
   const pos: Vec3 = [h.pos[0], G + (h.pos[1] - G) * k, h.pos[2]];
   return { pos, rgb: glow(h, p, t, hopeAt(r), 0.2 * Math.exp(-r / 6)) };
 }
@@ -687,7 +728,186 @@ const PLAZA_Y = 2.4;
 export const SPHERE_R = 5.5;
 export const SPHERE_C: Vec3 = [0, G + PLAZA_Y + 4 + SPHERE_R, 0];
 
-function heartMesh(): Mesh {
+/*
+ * The hearts, the Studio's ↑↓ on this piece (2026-11-13: "do different options for the heart").
+ * Each is drawn round SPHERE_C within about SPHERE_R, in edges and lights, breathing slowly.
+ */
+const BREATHE = { anim: Anim.breathe };
+/** A circle of n points round c, in the plane of the unit vectors u and v. */
+const ringAround = (c: Vec3, r: number, u: Vec3, v: Vec3, n = 48): Vec3[] =>
+  Array.from({ length: n }, (_, j) => {
+    const a = (j / n) * TAU;
+    return [
+      c[0] + r * (Math.cos(a) * u[0] + Math.sin(a) * v[0]),
+      c[1] + r * (Math.cos(a) * u[1] + Math.sin(a) * v[1]),
+      c[2] + r * (Math.cos(a) * u[2] + Math.sin(a) * v[2]),
+    ];
+  });
+
+/** The open sphere: twelve meridians over the boulevards, parallels at ±1/φ², ±1/φ, nodes of light. */
+function openSphere(m: Mesh) {
+  const S = SPHERE_R;
+  const C = SPHERE_C;
+  const at = (a: number, lat: number): Vec3 => [
+    C[0] + Math.cos(a) * Math.cos(lat) * S,
+    C[1] + Math.sin(lat) * S,
+    C[2] + Math.sin(a) * Math.cos(lat) * S,
+  ];
+  const lats = [0, 1 / PHI ** 2, -1 / PHI ** 2, 1 / PHI, -1 / PHI].map((s) => Math.asin(s));
+  for (let k = 0; k < 12; k++) {
+    const a = spokeAngle(k);
+    m.poly(
+      Array.from({ length: 25 }, (_, j) => at(a, -Math.PI / 2 + (j / 24) * Math.PI)),
+      false,
+      Tone.edge,
+      { ...BREATHE, w: 1.2 },
+    );
+    for (const lat of lats) m.dot(at(a, lat), 0.18, Tone.light, { ...BREATHE, w: 0.5 });
+  }
+  for (const lat of lats)
+    m.poly(
+      Mesh.circle([C[0], C[1] + Math.sin(lat) * S, C[2]], Math.cos(lat) * S, 48),
+      true,
+      Tone.edge,
+      {
+        ...BREATHE,
+        w: 1.1,
+      },
+    );
+}
+
+/** A ring of light lying level, its tube drawn as small circles all round, nodes where the boulevards point. */
+function goldenTorus(m: Mesh) {
+  const C = SPHERE_C;
+  const R = SPHERE_R * 1.05;
+  const r = R / PHI ** 2;
+  const up: Vec3 = [0, 1, 0];
+  for (let k = 0; k < 36; k++) {
+    const a = (k / 36) * TAU;
+    const out: Vec3 = [Math.cos(a), 0, Math.sin(a)];
+    const c: Vec3 = [C[0] + out[0] * R, C[1], C[2] + out[2] * R];
+    m.poly(ringAround(c, r, out, up, 20), true, Tone.edge, { ...BREATHE, w: k % 3 ? 0.7 : 1.2 });
+    if (k % 3 === 0)
+      m.dot([c[0] + out[0] * r, c[1], c[2] + out[2] * r], 0.2, Tone.light, { ...BREATHE, w: 0.5 });
+  }
+  for (const y of [-r, 0, r])
+    m.poly(Mesh.circle([C[0], C[1] + y, C[2]], R + (y ? 0 : r), 72), true, Tone.edge, {
+      ...BREATHE,
+      w: 1,
+    });
+  m.poly(Mesh.circle([C[0], C[1], C[2]], R - r, 60), true, Tone.light, { ...BREATHE, w: 0.8 });
+}
+
+/** A lantern of twelve ribs, each turning a quarter round as it rises, like a vase spun on a wheel. */
+function lanternOfLight(m: Mesh) {
+  const C = SPHERE_C;
+  const S = SPHERE_R;
+  for (const dir of [1, -1])
+    for (let k = 0; k < 12; k++) {
+      const a0 = spokeAngle(k);
+      const rib = Array.from({ length: 33 }, (_, j) => {
+        const f = j / 32;
+        const r = 0.6 + S * 0.85 * Math.sin(Math.PI * (0.12 + 0.8 * f));
+        const a = a0 + dir * f * (Math.PI / 2);
+        return [C[0] + Math.cos(a) * r, C[1] - S + 2 * S * f, C[2] + Math.sin(a) * r] as Vec3;
+      });
+      m.poly(rib, false, dir > 0 ? Tone.edge : Tone.light, { ...BREATHE, w: dir > 0 ? 1.1 : 0.6 });
+    }
+  for (const f of [0, 1 / PHI ** 2, 1 - 1 / PHI, 1 / PHI, 1]) {
+    const r = 0.6 + S * 0.85 * Math.sin(Math.PI * (0.12 + 0.8 * f));
+    m.poly(Mesh.circle([C[0], C[1] - S + 2 * S * f, C[2]], r, 48), true, Tone.edge, {
+      ...BREATHE,
+      w: 0.9,
+    });
+  }
+}
+
+/** A lotus of light floating open: two tiers of petals, twelve and twelve between, a seed head of florets. */
+function lotus(m: Mesh) {
+  const C = SPHERE_C;
+  const S = SPHERE_R;
+  const base: Vec3 = [C[0], C[1] - S * 0.7, C[2]];
+  const petal = (a: number, len: number, lean: number, wide: number, tone: number) => {
+    const out: Vec3 = [Math.cos(a), 0, Math.sin(a)];
+    const side: Vec3 = [-Math.sin(a), 0, Math.cos(a)];
+    // The petal's spine leans out from straight up by `lean`; its edge swells and closes to a tip.
+    const spine: Vec3 = [out[0] * Math.sin(lean), Math.cos(lean), out[2] * Math.sin(lean)];
+    const edgeAt = (f: number, s: number): Vec3 => {
+      const w = wide * Math.sin(Math.PI * f) ** 0.8 * s;
+      const cup = 0.25 * len * Math.sin(Math.PI * f) * Math.abs(s);
+      return [
+        base[0] + spine[0] * len * f + side[0] * w - out[0] * cup * 0.3,
+        base[1] + spine[1] * len * f + cup * 0.2,
+        base[2] + spine[2] * len * f + side[2] * w - out[2] * cup * 0.3,
+      ];
+    };
+    const pts = [
+      ...Array.from({ length: 13 }, (_, j) => edgeAt(j / 12, 1)),
+      ...Array.from({ length: 12 }, (_, j) => edgeAt(1 - (j + 1) / 12, -1)),
+    ];
+    m.poly(pts, false, tone, { ...BREATHE, w: 1 });
+    m.line(base, edgeAt(0.85, 0), Tone.light, { ...BREATHE, w: 0.3 });
+  };
+  for (let k = 0; k < 12; k++) {
+    const a = spokeAngle(k);
+    petal(a, S * 1.75, 1.15, S * 0.42, Tone.edge);
+    petal(a + Math.PI / 12, S * 1.4, 0.6, S * 0.34, Tone.light);
+  }
+  for (let n = 0; n < 89; n++) {
+    const r = S * 0.32 * Math.sqrt((n + 0.5) / 89);
+    const a = n * GOLDEN_ANGLE;
+    m.dot(
+      [base[0] + Math.cos(a) * r, base[1] + S * 0.25, base[2] + Math.sin(a) * r],
+      0.1,
+      Tone.light,
+      {
+        ...BREATHE,
+        w: 0.15,
+      },
+    );
+  }
+  m.poly(ringAround(base, S * 0.35, [1, 0, 0], [0, 0, 1]), true, Tone.edge, { w: 0.6 });
+}
+
+/** An armillary: three great rings tilted a third of a turn apart, turning slowly round the light. */
+function armillary(m: Mesh) {
+  const C = SPHERE_C;
+  const S = SPHERE_R;
+  const spin = { anim: Anim.orbit, key: 0.05 };
+  for (let k = 0; k < 3; k++) {
+    const a = (k / 3) * Math.PI;
+    const tilt = Math.PI / 2 - Math.atan(1 / PHI);
+    const u: Vec3 = [Math.cos(a), 0, Math.sin(a)];
+    const v: Vec3 = [-Math.sin(a) * Math.cos(tilt), Math.sin(tilt), Math.cos(a) * Math.cos(tilt)];
+    for (const [rr, tone, w] of [
+      [S, Tone.edge, 1.3],
+      [S * 0.94, Tone.light, 0.5],
+    ] as const)
+      m.poly(ringAround(C, rr, u, v, 72), true, tone, { ...spin, w });
+    for (let j = 0; j < 12; j++) {
+      const p = ringAround(C, S, u, v, 12)[j] as Vec3;
+      m.dot(p, 0.16, Tone.light, { ...spin, w: 0.3 });
+    }
+  }
+  // The level ring it all turns in, standing still.
+  m.poly(Mesh.circle([C[0], C[1], C[2]], S * 1.12, 72), true, Tone.edge, { ...BREATHE, w: 1.1 });
+  m.poly(Mesh.circle([C[0], C[1] - S * 1.05, C[2]], S * 0.3, 32), true, Tone.edge, { w: 0.6 });
+}
+
+export const HEART_KINDS = ['Open sphere', 'Golden torus', 'Lantern', 'Lotus', 'Armillary'];
+const HEART_CORES: ((m: Mesh) => void)[] = [
+  openSphere,
+  goldenTorus,
+  lanternOfLight,
+  lotus,
+  armillary,
+];
+let heartKind = 0;
+export const setHeartKind = (i: number) => {
+  heartKind = HEART_KINDS[i] ? i : 0;
+};
+
+function heartMesh(kind: number): Mesh {
   const m = new Mesh();
   const { road, edge, light, water, plant, face, ground } = Tone;
   const R = GOLDEN.unit * HEART_K;
@@ -743,45 +963,10 @@ function heartMesh(): Mesh {
     const r = band('Ring of knowledge').r0 * HEART_K + 4.5;
     m.box(polar(r, a), 1.6, 6 + 4 * hash(j, 421), 1.6, face, edge, -a);
   }
-  // The open sphere: twelve meridians over the boulevards, parallels at ±1/φ², ±1/φ, nodes of light.
+  // What floats over the garden: the open sphere, or one of the other hearts.
   m.pivot = SPHERE_C;
-  const o = { anim: Anim.breathe };
-  const S = SPHERE_R;
-  const C = SPHERE_C;
-  const lats = [0, 1 / PHI ** 2, -1 / PHI ** 2, 1 / PHI, -1 / PHI].map((s) => Math.asin(s));
-  for (let k = 0; k < 12; k++) {
-    const a = spokeAngle(k);
-    m.poly(
-      Array.from({ length: 25 }, (_, j) => {
-        const lat = -Math.PI / 2 + (j / 24) * Math.PI;
-        return [
-          C[0] + Math.cos(a) * Math.cos(lat) * S,
-          C[1] + Math.sin(lat) * S,
-          C[2] + Math.sin(a) * Math.cos(lat) * S,
-        ] as Vec3;
-      }),
-      false,
-      edge,
-      { ...o, w: 1.2 },
-    );
-    for (const lat of lats)
-      m.dot(
-        [
-          C[0] + Math.cos(a) * Math.cos(lat) * S,
-          C[1] + Math.sin(lat) * S,
-          C[2] + Math.sin(a) * Math.cos(lat) * S,
-        ],
-        0.18,
-        light,
-        { ...o, w: 0.5 },
-      );
-  }
-  for (const lat of lats)
-    m.poly(Mesh.circle([C[0], C[1] + Math.sin(lat) * S, C[2]], Math.cos(lat) * S, 48), true, edge, {
-      ...o,
-      w: 1.1,
-    });
-  m.dot(C, 1.2, light, { anim: Anim.pulse, key: 0, w: 1.5 });
+  (HEART_CORES[kind] ?? openSphere)(m);
+  m.dot(SPHERE_C, 1.2, light, { anim: Anim.pulse, key: 0, w: 1.5 });
   // Motes of light rising slowly from the garden toward the sphere.
   for (let j = 0; j < 30; j++)
     m.dot(
@@ -811,10 +996,10 @@ function heartMesh(): Mesh {
   return m;
 }
 
-let heartBuilt: Built | null = null;
+const heartBuilt: (Built | undefined)[] = [];
 const heart = () => {
-  if (!heartBuilt) heartBuilt = heartMesh().build();
-  return heartBuilt;
+  heartBuilt[heartKind] ??= heartMesh(heartKind).build();
+  return heartBuilt[heartKind] as Built;
 };
 const HEART_SHARES: Shares = { lines: 0.48, faces: 0.8 };
 

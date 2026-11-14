@@ -957,7 +957,7 @@ varying float vDof;`,
           vDof = 1.0;
           if (uDof.y > 0.0) {
             float dz = -mvPosition.z;
-            float far = clamp((dz - uDof.x * 1.6) / 180.0, 0.0, 1.0) * 2.2;
+            float far = clamp((dz - uDof.x * 1.35) / 110.0, 0.0, 1.0) * 2.6;
             float near = clamp((uDof.x * 0.55 - dz) / (uDof.x * 0.55), 0.0, 1.0) * 1.2;
             float coc = uDof.y * max(far, near);
             gl_PointSize *= 1.0 + coc;
