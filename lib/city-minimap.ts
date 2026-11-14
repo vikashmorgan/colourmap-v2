@@ -490,38 +490,35 @@ export const isTap = (
 ) => pointerType !== 'mouse' && Math.hypot(up.x - down.x, up.y - down.y) < 8;
 
 /**
- * The quiet caption beside your pointer, "You · 52 m" (its height over the street), at screen
- * point q, or null where it would touch a name shown or leave the screen (2026-11-13).
+ * Your caption, "You · 52 m", always shown (2026-11-14): right of the pointer, or left of it near
+ * the right edge, kept on screen; the names it touches give way to it.
  */
-export function shipCaption(
+export function youCaption(
   q: [number, number],
   height: number,
-  shown: MapLabel[],
   w: number,
   h: number,
   measure: (text: string, font: string, size: number) => number = (t, _f, size) =>
     t.length * size * 0.6,
-): MapLabel | null {
+): MapLabel {
   const text = `You · ${Math.max(0, Math.round(height))} m`;
-  const size = 10;
-  const font = `${size}px ui-sans-serif, system-ui, sans-serif`;
-  const label: MapLabel = {
+  const size = 12;
+  const font = `600 ${size}px ui-sans-serif, system-ui, sans-serif`;
+  const tw = measure(text, font, size);
+  const left = q[0] + 24 + tw > w - 4;
+  return {
     text,
-    x: q[0] + 16,
-    y: q[1],
+    x: left ? q[0] - 24 - tw : q[0] + 24,
+    y: Math.max(size + 2, Math.min(h - 4, q[1])),
     align: 'left',
     size,
-    w: measure(text, font, size),
-    priority: 4,
+    w: tw,
+    priority: 5,
     depth: 0,
-    alpha: 0.6,
+    alpha: 0.95,
     colour: 'rgb(255,226,166)',
     font,
   };
-  const b = labelBox(label);
-  if (b.x0 < 2 || b.y0 < 2 || b.x1 > w - 2 || b.y1 > h - 2) return null;
-  if (shown.some((l) => boxesOverlap(labelBox(l), b))) return null;
-  return label;
 }
 
 /* ---------- drawing ---------- */
@@ -838,7 +835,12 @@ export function drawCityMap(
         c.priority = -1;
     }
   }
-  const shown = layoutLabels(cands, w, h);
+  let shown = layoutLabels(cands, w, h);
+  // Where you are, on screen, and your caption: it always shows, the names it would touch give way
+  // (2026-11-14: "make it clear on the map where I am").
+  const q = ship ? P(ship.x, raised ? Math.max(0, ship.y) : 0, ship.z) : null;
+  const cap = ship && q && labels ? youCaption([q[0], q[1]], ship.y, w, h, measure) : null;
+  if (cap) shown = shown.filter((l) => !boxesOverlap(labelBox(l), labelBox(cap)));
   for (const l of shown) {
     ctx.font = l.font;
     ctx.textAlign = l.align;
@@ -849,23 +851,40 @@ export function drawCityMap(
   ctx.globalAlpha = 1;
   ctx.textAlign = 'center';
 
-  // You: a gold pointer the way you fly, breathing softly on the city's beat.
-  if (ship) {
-    const q = P(ship.x, raised ? Math.max(0, ship.y) : 0, ship.z);
+  // You: a gold pointer the way you fly, two rings spreading slowly from it and faint lines across
+  // the map through it, so the eye finds it at once. Mellow: the rings ease out, nothing flashes.
+  if (ship && q) {
     const ahead = P(
       ship.x + Math.sin(ship.heading) * 10,
       raised ? Math.max(0, ship.y) : 0,
       ship.z - Math.cos(ship.heading) * 10,
     );
     const a = Math.atan2(ahead[1] - q[1], ahead[0] - q[0]);
-    const glow = 0.55 + 0.25 * Math.sin(t * 2.2);
+    const k = Math.max(0.7, Math.min(1.3, Math.min(w, h) / 480));
+    ctx.strokeStyle = 'rgba(255,214,150,0.16)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(q[0], q[1], 13, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,214,150,${(0.16 * glow).toFixed(3)})`;
+    ctx.moveTo(0, q[1]);
+    ctx.lineTo(w, q[1]);
+    ctx.moveTo(q[0], 0);
+    ctx.lineTo(q[0], h);
+    ctx.stroke();
+    for (const off of [0, 0.5]) {
+      const u = (t / 3.2 + off) % 1;
+      ctx.beginPath();
+      ctx.arc(q[0], q[1], (14 + 34 * u) * k, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255,214,150,${(0.5 * (1 - u) * (1 - u)).toFixed(3)})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(q[0], q[1], 15 * k, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,214,150,0.22)';
     ctx.fill();
     ctx.save();
     ctx.translate(q[0], q[1]);
     ctx.rotate(a);
+    ctx.scale(1.5 * k, 1.5 * k);
     ctx.beginPath();
     ctx.moveTo(10, 0);
     ctx.lineTo(-6, 6);
@@ -874,15 +893,13 @@ export function drawCityMap(
     ctx.closePath();
     ctx.fillStyle = '#ffe2a6';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(40,24,10,0.6)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(40,24,10,0.85)';
+    ctx.lineWidth = 1.2;
     ctx.stroke();
     ctx.restore();
-    // "You · 52 m" beside it, quietly, where no name shown is in the way.
-    const cap = labels ? shipCaption([q[0], q[1]], ship.y, shown, w, h, measure) : null;
     if (cap) {
       ctx.font = cap.font;
-      ctx.textAlign = 'left';
+      ctx.textAlign = cap.align;
       ctx.globalAlpha = cap.alpha;
       ctx.fillStyle = cap.colour;
       ctx.fillText(cap.text, cap.x, cap.y);
