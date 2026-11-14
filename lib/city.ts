@@ -47,6 +47,24 @@ import {
 import { BUILDINGS, buildingsEye } from './city-buildings';
 import { camView, cockpitEye, toggleView } from './city-cockpit';
 import {
+  FLOCK,
+  flockTheta,
+  type HighCurrent,
+  highColour,
+  highCurrentsNear,
+  highShip,
+  isQuarterShip,
+  laneColour,
+  laneLight,
+  loopAt,
+  OUTLIERS,
+  type Outlier,
+  outlierAt,
+  outlierGrain,
+  quarterEdge,
+  streamShip,
+} from './city-currents';
+import {
   approachPrompt,
   DOCK_PROMPT,
   type Placed as DockPlaced,
@@ -54,7 +72,6 @@ import {
   dockNear,
 } from './city-docks';
 import { fireworkItems } from './city-fireworks';
-import { flowLane, LANE_COUNT } from './city-flow';
 import {
   advancePulses,
   type Block,
@@ -83,6 +100,14 @@ import {
 import { AVENUE, BLOCK_X, BLOCK_Z, type Item, TILE_J } from './city-grid';
 import { lifeItems } from './city-life';
 import { aboveAt, aboveEye, CITIES, setCityKind } from './city-plans';
+import {
+  DRONES,
+  droneAt,
+  type Home,
+  homesNear,
+  quarterShipGrain,
+  swarmSeen,
+} from './city-quarter-ships';
 import { raceBanner, raceStep, resetRace, rival, trackItems } from './city-race';
 import { aboveCityItems, resetRings, ringBanner, ringStep } from './city-rings';
 import { codeHeight, riseClock, setRiseClock } from './city-rise';
@@ -3610,62 +3635,287 @@ function planFor(t: number): Plan {
   return P;
 }
 
-/* ---------- the traffic: streams in the streets round you ---------- */
+/* ---------- the traffic: currents in the streets round you, and over the roofs ---------- */
 
-const RUN = 200;
 const DASH = 9;
-const near = (a: number, c: number, period: number) =>
-  c + wrap(a - c + period / 2, period) - period / 2;
+
+/*
+ * Of the traffic's eleven grains a hundred (2026-11-14: "make more channels where ships navigate
+ * together in one direction to avoid overload. so u follow linear currents of ships"): two for the
+ * high currents over the roofs, one for the big ships, one for the quarters' drones, one for the
+ * lane lights, six for the ships in the street channels (the last six, the ones the stars borrow
+ * when you look up, lib/city-stars.ts). Each kind a formula of the time, as before.
+ */
+const HIGH_FROM = TRAFFIC_FROM;
+const BIG_FROM = HIGH_FROM + 2;
+const DRONE_FROM = BIG_FROM + 1;
+const LANE_FROM = DRONE_FROM + 1;
+const STREAM_FROM = LANE_FROM + 1;
+
+/** Grain i's place among a share of `w` grains a hundred from `from`, and how many the share has. */
+function shareOf(i: number, from: number, w: number): { L: number; n: number } {
+  const L = Math.floor(i / 100) * w + (i % 100) - from;
+  const n = Math.floor(grains / 100) * w + Math.max(0, Math.min(w, (grains % 100) - from));
+  return { L, n: Math.max(n, L + 1) };
+}
+
+const DARK: RGB = [0, 0, 0];
+
+/** How much a point shows from the eye: ahead of it, from 4 away, fading out by R. */
+function sightOf(pos: Vec3, P: Plan, R: number): number {
+  const r = sub(pos, P.eye);
+  if (r[0] * P.fwd[0] + r[1] * P.fwd[1] + r[2] * P.fwd[2] < 0.5) return 0;
+  const d = Math.hypot(r[0], r[1], r[2]);
+  return smooth((d - 4) / 10) * smooth((R - d) / 100);
+}
+
+/** A ship near yours moves up and aside, as the other ships do: never inside yours. */
+function yieldFrom(c: Vec3, you: Vec3): Vec3 {
+  const d = Math.hypot(c[0] - you[0], c[1] - you[1], c[2] - you[2]);
+  const y = smooth((12 - d) / 8);
+  if (y <= 0) return c;
+  const dx = c[0] - you[0];
+  const dz = c[2] - you[2];
+  const l = Math.hypot(dx, dz) || 1;
+  return [c[0] + (dx / l) * 2.5 * y, c[1] + 4 * y, c[2] + (dz / l) * 2.5 * y];
+}
+
+/** Found once a frame: the high currents and the quarters' hearts nearest, and which ships are in sight. */
+const currentFrame = {
+  t: Number.NaN,
+  v: -1,
+  highs: [] as HighCurrent[],
+  homes: [] as Home[],
+  bigs: [] as { o: number; s: ReturnType<typeof outlierAt>; d: number }[],
+  seen: new Map<number, boolean>(),
+  streams: new Map<
+    number,
+    { S: ReturnType<typeof streamShip>; head: Vec3; d: DistrictId | null; k0: number }
+  >(),
+};
+function frameOf(P: Plan) {
+  const F = currentFrame;
+  if (F.t !== P.t || F.v !== P.v) {
+    F.t = P.t;
+    F.v = P.v;
+    F.highs = highCurrentsNear(P.eye, 2);
+    F.homes = homesNear(P.eye, 2);
+    F.bigs = OUTLIERS.map((_, o) => {
+      const s = outlierAt(o, P.eye, P.t);
+      return { o, s, d: Math.hypot(s.c[0] - P.eye[0], s.c[1] - P.eye[1], s.c[2] - P.eye[2]) };
+    }).sort((a, b) => a.d - b.d);
+    F.seen.clear();
+    F.streams.clear();
+  }
+  return F;
+}
+function seenOnce(P: Plan, key: number, c: Vec3): boolean {
+  const F = frameOf(P);
+  let s = F.seen.get(key);
+  if (s === undefined) {
+    s = !hidden(P.eye, c[0], c[1], c[2]);
+    F.seen.set(key, s);
+  }
+  return s;
+}
 
 /**
- * A grain of the traffic: ships stream along the streets in a designed flow (lib/city-flow.ts,
- * 2026-11-14: "i like feeling of being in a flow"): the avenue one way at each level, every street
- * one way, each crossing street the other way and higher, express lanes over the roofs; the streets
- * round you, brought round as you fly, fading where they come round. None low on the avenue through
- * Chinatown, under its lanterns.
+ * A grain of the traffic (lib/city-currents.ts, lib/city-quarter-ships.ts; 2026-11-14: "i like
+ * feeling of being in a flow"): the street channels on the flow's rules, each a river of ships at
+ * one speed and one spacing, lane lights swelling along them; the high currents sweeping over the
+ * roofs; the big ships; each quarter's own ships among its streets' and its drones round its heart.
  */
 function trafficAt(p: Particle, P: Plan, t: number): Spot {
-  const L = Math.floor(p.i / 100) * (POOL_FROM - TRAFFIC_FROM) + (p.i % 100) - TRAFFIC_FROM;
   // Out in space, dust drifting past instead.
-  if (inSpace()) return spaceDust(L, P.eye);
-  const j = Math.floor(L / DASH);
-  const b = (L % DASH) / (DASH - 1);
-  const lane = j % LANE_COUNT;
-  const cx = P.eye[0] + P.fwd[0] * 60;
-  const cz = P.eye[2] + P.fwd[2] * 60;
-  const s0 = hash(j, 452) * RUN;
-  const F = flowLane(lane, cx, cz, BLOCK_X, BLOCK_Z);
-  const sgn = F.sgn;
-  let head: Vec3;
-  let dir: Vec3;
-  let k: number;
-  if (F.axis === 2) {
-    const z = near(s0 + sgn * F.speed * t, cz, RUN);
-    head = [F.line * BLOCK_X + F.off, GROUND + F.y, z];
-    dir = [0, 0, sgn];
-    k = smooth((RUN / 2 - Math.abs(z - cz)) / 20);
-    if (!(F.avenue && F.streets === 1))
-      k *= smooth(((F.streets / 2) * BLOCK_X - Math.abs(F.line * BLOCK_X - cx)) / 15);
-    if (F.line === 0 && F.y < 16) k *= 1 - chinatownness(z, 12);
-  } else {
-    const x = near(s0 + sgn * F.speed * t, cx, RUN);
-    head = [x, GROUND + F.y, F.line * BLOCK_Z + F.off];
-    dir = [sgn, 0, 0];
-    k = smooth((RUN / 2 - Math.abs(x - cx)) / 20);
-    k *= smooth(((F.streets / 2) * BLOCK_Z - Math.abs(F.line * BLOCK_Z - cz)) / 15);
+  if (inSpace()) {
+    const L = Math.floor(p.i / 100) * (POOL_FROM - TRAFFIC_FROM) + (p.i % 100) - TRAFFIC_FROM;
+    return spaceDust(L, P.eye);
   }
-  const pos = add(head, dir, -(b ** 1.6) * 2.8);
-  const r = sub(pos, P.eye);
-  const d = Math.hypot(r[0], r[1], r[2]);
-  // Only ahead of the eye and within sight.
-  if (r[0] * P.fwd[0] + r[1] * P.fwd[1] + r[2] * P.fwd[2] < 0.5) k = 0;
-  k *= smooth((d - 4) / 10) * smooth((VIEW - d) / 100);
-  if (k > 0 && hidden(P.eye, pos[0], pos[1], pos[2])) k = 0;
+  const m = p.i % 100;
+  if (m >= STREAM_FROM) return streamGrain(p, P, t);
+  if (m >= LANE_FROM) return laneGrain(p, P, t);
+  if (m >= DRONE_FROM) return droneGrain(p, P, t);
+  if (m >= BIG_FROM) return bigShipGrain(p, P, t);
+  return highGrain(p, P, t);
+}
+
+/** The ships' channels are found round a point 60 ahead of the eye. */
+const channelCentre = (P: Plan): [number, number] => [
+  P.eye[0] + P.fwd[0] * 60,
+  P.eye[2] + P.fwd[2] * 60,
+];
+
+/** None low on the avenue through Chinatown, under its lanterns. */
+const underLanterns = (F: { kind: string; y: number }, z: number) =>
+  F.kind === 'avenue' && F.y < 16 ? 1 - chinatownness(z, 12) : 1;
+
+/** Ship j of the street channels this frame, found once for all its grains. */
+function streamOf(P: Plan, j: number, ships: number, t: number) {
+  const F = frameOf(P);
+  let e = F.streams.get(j);
+  if (!e) {
+    const [cx, cz] = channelCentre(P);
+    const S = streamShip(j, ships, cx, cz, t);
+    const head = yieldFrom(S.head, P.c);
+    let k0 = S.k * underLanterns(S.F, head[2]);
+    let d: DistrictId | null = null;
+    if (isQuarterShip(S)) {
+      d = districtAt(head[0], head[2]);
+      k0 *= smooth((quarterEdge(S.F, head) - 4) / 10);
+    }
+    e = { S, head, d, k0 };
+    F.streams.set(j, e);
+  }
+  return e;
+}
+
+function streamGrain(p: Particle, P: Plan, t: number): Spot {
+  const { L, n } = shareOf(p.i, STREAM_FROM, POOL_FROM - STREAM_FROM);
+  const j = Math.floor(L / DASH);
+  const g = L % DASH;
+  const ships = Math.floor(n / DASH);
+  if (j >= ships) return { pos: P.eye, rgb: DARK };
+  const { S, head, d, k0 } = streamOf(P, j, ships, t);
+  let k = k0;
+  if (d) {
+    // One of the quarter's own (2026-11-14: "also make some unique ships or drones for each
+    // quarter"), only in its own streets: fading out at its quarter's edge, the next one's in.
+    const s = quarterShipGrain(
+      d,
+      (g + 0.5) / DASH,
+      hash(j * DASH + g, 617),
+      head,
+      S.dir,
+      1.7,
+      t,
+      TAU * hash(j, 618),
+      1,
+    );
+    k *= sightOf(s.pos, P, VIEW);
+    if (k > 0 && !seenOnce(P, 10000 + j, head)) k = 0;
+    if (k > 0 && seeThrough && !seeThrough(s.pos[0], s.pos[1], s.pos[2])) k = 0;
+    return { pos: s.pos, rgb: scale(s.rgb, k) };
+  }
+  // A streak of light: a bright nose and a tail a little longer the faster its channel flows.
+  const b = g / (DASH - 1);
+  const pos = add(head, S.dir, -(b ** 1.6) * (2.2 + 0.08 * S.F.speed));
+  k *= sightOf(pos, P, VIEW);
+  // Whether the ship is in sight, found once a frame from its nose.
+  if (k > 0 && !seenOnce(P, 10000 + j, head)) k = 0;
   if (k > 0 && seeThrough && !seeThrough(pos[0], pos[1], pos[2])) k = 0;
   const glow = b < 0.12 ? 1 : 0.55 * (1 - b) ** 2;
   // Ships coming toward the eye show their white headlights, ships going away their red tails.
-  const coming = dir[0] * P.fwd[0] + dir[2] * P.fwd[2] < 0;
+  const coming = S.dir[0] * P.fwd[0] + S.dir[2] * P.fwd[2] < 0;
   return { pos, rgb: scale(coming ? HEADLIGHT : TAILLIGHT, 0.55 * glow * k) };
+}
+
+function laneGrain(p: Particle, P: Plan, t: number): Spot {
+  const { L, n } = shareOf(p.i, LANE_FROM, 1);
+  const [cx, cz] = channelCentre(P);
+  const l = laneLight(L, n, cx, cz, t);
+  let k = l.k * underLanterns(l.F, l.pos[2]) * sightOf(l.pos, P, VIEW);
+  if (k > 0 && hidden(P.eye, l.pos[0], l.pos[1], l.pos[2])) k = 0;
+  if (k > 0 && seeThrough && !seeThrough(l.pos[0], l.pos[1], l.pos[2])) k = 0;
+  return { pos: l.pos, rgb: scale(laneColour(l.F, t), 0.1 * l.light * k) };
+}
+
+/** How far the high currents, the big ships and the drones are seen: further than the streets. */
+const farSight = (P: Plan) => Math.max(VIEW, viewAt(P.eye[1])) + 60;
+
+function highGrain(p: Particle, P: Plan, t: number): Spot {
+  const { L, n } = shareOf(p.i, HIGH_FROM, 2);
+  const F = frameOf(P);
+  const per = Math.max(1, Math.floor(n / 2));
+  const ci = Math.min(1, Math.floor(L / per));
+  const H = F.highs[ci];
+  if (!H) return { pos: P.eye, rgb: DARK };
+  const local = L - ci * per;
+  const flock = Math.min(FLOCK, Math.floor((per * 0.75) / DASH));
+  const colour = highColour(H, t);
+  const R = farSight(P);
+  if (local < flock * DASH) {
+    // A ship of the flock: a bright nose, two wingtips banked into the turn, a fading tail.
+    const i = Math.floor(local / DASH);
+    const g = local % DASH;
+    const s = highShip(H, i, t);
+    const c = yieldFrom(s.c, P.c);
+    const cb = Math.cos(s.bank);
+    const sb = Math.sin(s.bank);
+    let pos: Vec3;
+    let light: number;
+    if (g < 2) {
+      pos = add(c, s.f, g === 0 ? 0.9 : 0.3);
+      light = 0.55;
+    } else if (g < 4) {
+      const e = g === 2 ? 1 : -1;
+      pos = add(add(c, s.f, -0.4), [s.side[0] * cb, sb, s.side[2] * cb], 1.1 * e);
+      light = 0.42;
+    } else {
+      const u = (g - 4) / 4;
+      pos = add(c, s.f, -(0.6 + 2.4 * u));
+      light = 0.32 * (1 - u) ** 2;
+    }
+    let k = sightOf(pos, P, R);
+    if (k > 0 && !seenOnce(P, 1000 + ci * 100 + i, c)) k = 0;
+    if (k > 0 && seeThrough && !seeThrough(pos[0], pos[1], pos[2])) k = 0;
+    return { pos, rgb: scale(colour, light * k) };
+  }
+  // The faint path of light ahead of the flock, where it will turn: a bridge of light over the avenue.
+  const dots = Math.max(1, per - flock * DASH);
+  const d = local - flock * DASH;
+  const u = (d + 0.5) / dots;
+  const th = flockTheta(H, t) + H.sgn * (0.03 + 0.9 * u);
+  const pos = loopAt(H, th).p;
+  pos[1] -= 0.8;
+  let k = sightOf(pos, P, R) * (1 - u);
+  // In sight or not, found once a frame for every six dots along the path.
+  if (k > 0 && !seenOnce(P, 5000 + ci * 1000 + Math.floor(d / 6), pos)) k = 0;
+  if (k > 0 && seeThrough && !seeThrough(pos[0], pos[1], pos[2])) k = 0;
+  return { pos, rgb: scale(colour, 0.09 * k) };
+}
+
+function bigShipGrain(p: Particle, P: Plan, t: number): Spot {
+  const { L, n } = shareOf(p.i, BIG_FROM, 1);
+  // The two big ships nearest share these grains, the nearer the larger share.
+  const all = frameOf(P).bigs;
+  const cut = Math.floor(n * 0.6);
+  const first = L < cut;
+  const e = all[first ? 0 : 1] as (typeof all)[number];
+  const q = first ? (L + 0.5) / cut : (L - cut + 0.5) / Math.max(1, n - cut);
+  const O = OUTLIERS[e.o] as Outlier;
+  const g = outlierGrain(O.kind, q, hash(L, 667), t);
+  const f = e.s.f;
+  const side: Vec3 = [-f[2], 0, f[0]];
+  const pos: Vec3 = [
+    e.s.c[0] + f[0] * g.a + side[0] * g.b,
+    e.s.c[1] + g.h,
+    e.s.c[2] + f[2] * g.a + side[2] * g.b,
+  ];
+  let k = e.s.k * sightOf(pos, P, farSight(P));
+  if (k > 0 && !seenOnce(P, 2000 + e.o, e.s.c)) k = 0;
+  if (k > 0 && seeThrough && !seeThrough(pos[0], pos[1], pos[2])) k = 0;
+  return { pos, rgb: scale(g.rgb, g.light * k) };
+}
+
+function droneGrain(p: Particle, P: Plan, t: number): Spot {
+  const { L, n } = shareOf(p.i, DRONE_FROM, 1);
+  const F = frameOf(P);
+  const per = Math.max(1, Math.floor(n / 2));
+  const hi = Math.min(1, Math.floor(L / per));
+  const home = F.homes[hi];
+  if (!home) return { pos: P.eye, rgb: DARK };
+  const local = L - hi * per;
+  const each = Math.max(1, Math.floor(per / DRONES));
+  const i = Math.floor(local / each);
+  if (i >= DRONES) return { pos: P.eye, rgb: DARK };
+  const dr = droneAt(home, i, t);
+  const c = yieldFrom(dr.c, P.c);
+  const q = ((local % each) + 0.5) / each;
+  const s = quarterShipGrain(home.d, q, hash(L, 627), c, dr.f, 2.2, t, dr.phase, 1);
+  let k = swarmSeen(home, P.eye) * sightOf(s.pos, P, farSight(P));
+  if (k > 0 && !seenOnce(P, 3000 + hi * 10 + i, c)) k = 0;
+  if (k > 0 && seeThrough && !seeThrough(s.pos[0], s.pos[1], s.pos[2])) k = 0;
+  return { pos: s.pos, rgb: scale(s.rgb, k) };
 }
 
 function shipAt(p: Particle, t: number): Spot {

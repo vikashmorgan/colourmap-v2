@@ -4,7 +4,7 @@ import type { Vec3 } from './bigbang';
 import { placeShip, route, SKY, setFly, tally } from './city';
 import { FLOCK_Y } from './city-flocks';
 import { blocked } from './city-game';
-import { TILE_X, TILE_Z } from './city-grid';
+import { GROUND, TILE_X, TILE_Z } from './city-grid';
 import { TRACKS } from './city-race';
 import {
   aboveCityItems,
@@ -83,15 +83,17 @@ describe('Rings of light: concentric rings as decoration (2026-11-14)', () => {
     }
   });
 
-  it('turns them slowly and keeps them over the flocks or under them, never among them', () => {
+  it('turns them slowly and keeps them clear of the flocks, the high currents and the big ships', () => {
     const a = [0, 0, 0, 0, 0, 0];
     const b = [0, 0, 0, 0, 0, 0];
     for (const set of ringSets()) {
       const top = Math.abs(set.n[1]) > 0.9 ? 1.5 : Math.max(...set.radii);
       const lo = set.c[1] - top;
       const hi = set.c[1] + top;
-      // The flocks wander 140 over the street, their shapes some 20 up and down.
+      // The flocks wander 140 over the street, their shapes some 20 up and down; the high
+      // currents of ships 142 to 182, the big ships 96 to 142: none of it among them.
       expect(lo > FLOCK_Y + 26 || hi < FLOCK_Y - 26, set.kind).toBe(true);
+      expect(lo > GROUND + 192 || hi < GROUND + 80, set.kind).toBe(true);
       const c0 = setCentre(set, 30);
       const c1 = setCentre(set, 30 + 1 / 60);
       for (let s = 0; s < setCount(set); s += 11) {
@@ -331,6 +333,10 @@ describe('Rings of light: the parcours high over the city (2026-11-14)', () => {
       const sky = TRACKS.find((k) => k.name === 'Sky Island Loop');
       for (const q of sky?.gates ?? []) expect(apart(g.c, q)).toBeGreaterThan(g.r + 15);
     }
+    // The decorative sets apart from the parcours' rings.
+    for (const set of ringSets())
+      for (const g of G)
+        expect(apart(set.c, g.c) - Math.max(...set.radii) - g.r, set.kind).toBeGreaterThan(8);
     // Every ring and set far over the autopilot's route, the quarter starts and the low races.
     const all: [Vec3, number][] = [
       ...G.map((g): [Vec3, number] => [g.c, g.r]),

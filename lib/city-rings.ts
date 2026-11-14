@@ -90,19 +90,22 @@ const vertical = (yaw: number, tilt = 0): Vec3 =>
   norm([Math.sin(yaw) * Math.cos(tilt), Math.sin(tilt), Math.cos(yaw) * Math.cos(tilt)]);
 const UP: Vec3 = [0, 1, 0];
 
+/** How high the rings standing over buildings float: over the high currents (142 to 182). */
+const OVER_Y = 226;
+
 let sets: RingSet[] | null = null;
 /**
  * Every set of concentric rings, tile-local: halos over six landmarks' crowns, halos round six of
  * the fifteen buildings, rings standing over four more, rings under six flying stations, and six
- * free in the air. All over the flocks (some 120 to 165 over the street) or under them, never in
- * among them.
+ * free in the air. All of them under 80 over the street or over 195, so never among the flocks
+ * (some 120 to 165), the high currents of ships (142 to 182) or the big ships (96 to 142).
  */
 export function ringSets(): RingSet[] {
   if (sets) return sets;
   const out: RingSet[] = [];
   const add = (s: Omit<RingSet, 'key'>) => out.push({ ...s, key: mixId(out.length, 6161) });
-  // Halos floating over six landmarks' crowns, thirty over their tops (over the flocks), under
-  // where their fireworks burst (sixty and more over the tops).
+  // Halos floating over six landmarks' crowns, thirty over their tops and at least 200 over the
+  // street (over the flocks and the high currents), under where their fireworks burst.
   const crowned: [string, string | undefined][] = [
     ['pagoda', undefined],
     ['shikhara', undefined],
@@ -118,14 +121,14 @@ export function ringSets(): RingSet[] {
     const top = key ? landmarkHeight(key) : 60;
     add({
       kind: 'crown',
-      c: [L.x, GROUND + top + 30, L.z],
+      c: [L.x, GROUND + Math.max(top + 30, 200), L.z],
       n: UP,
       radii: [18, 26, 34],
       spin: 0.08,
       under: -1,
     });
   }
-  // Halos round six of the fifteen buildings, a little over halfway up (under the flocks).
+  // Halos round six of the fifteen buildings, under halfway up (under the big ships and flocks).
   const halo = [
     'Lantern Spindle',
     'Helix Exchange',
@@ -142,7 +145,7 @@ export function ringSets(): RingSet[] {
     if (halo.includes(b.name))
       add({
         kind: 'halo',
-        c: [x, GROUND + Math.min(100, 0.58 * top), z],
+        c: [x, GROUND + Math.min(70, 0.45 * top), z],
         n: UP,
         radii: [18, 24, 30],
         spin: 0.1,
@@ -151,7 +154,7 @@ export function ringSets(): RingSet[] {
     if (over.includes(b.name))
       add({
         kind: 'over',
-        c: [x, GROUND + top + 56, z],
+        c: [x, GROUND + OVER_Y, z],
         n: [0, 0, 1],
         radii: [16, 22, 28],
         spin: 0.09,
@@ -183,12 +186,12 @@ export function ringSets(): RingSet[] {
   }
   // Free in the air, standing at a slant, over the flocks and under the parcours.
   const free: [number, number, number, number, number[]][] = [
-    [-35, 420, 205, 0.3, [20, 28, 36]],
-    [45, 960, 205, -0.5, [18, 28]],
-    [-40, 1040, 205, 1.1, [20, 28, 36]],
-    [40, 1380, 205, 0.2, [18, 24, 30, 36]],
-    [-30, 1600, 205, -0.8, [22, 32]],
-    [35, 1830, 205, 0.6, [18, 27, 36]],
+    [-35, 420, 232, 0.3, [18, 24, 30]],
+    [45, 960, 232, -0.5, [18, 28]],
+    [-40, 1040, 232, 1.1, [20, 25, 30]],
+    [40, 1380, 232, 0.2, [16, 21, 26, 30]],
+    [-30, 1600, 232, -0.8, [20, 30]],
+    [35, 1830, 224, 0.6, [18, 24, 30]],
   ];
   for (const [x, z, h, yaw, radii] of free)
     add({
@@ -553,7 +556,7 @@ export function parcoursItems(eye: Vec3, fwd: Vec3, t: number, R: number, out: I
 /**
  * At most this many of each are drawn, the nearest: the stations, the decorative sets and the
  * parcours' rings. With the renderer's thinning, that holds them to a modest share of the pool
- * (some 31,000 sites in all at the very most, far fewer drawn), so the city under them keeps its grains.
+ * (some 30,000 sites in all at the very most, far fewer drawn), so the city under them keeps its grains.
  */
 export const MOST_STATIONS = 6;
 export const MOST_SETS = 10;

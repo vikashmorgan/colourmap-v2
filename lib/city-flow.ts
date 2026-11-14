@@ -23,6 +23,14 @@
  */
 
 import { hash } from './bigbang';
+import { wideLine } from './city-grid';
+
+/**
+ * How far off its line a lane runs on a side street: further out on the wide ones (2026-11-14:
+ * "make a lot of the thin streets larger"), so the two streams use the boulevard's width.
+ */
+export const LANE_OFF = 1.8;
+export const WIDE_LANE_OFF = 3;
 
 /** The avenue's heights: the first two with you (down the avenue), the last two toward you. */
 export const AVE_HEIGHTS = [5, 11, 28, 35];
@@ -101,7 +109,7 @@ export function flowLane(lane: number, cx: number, cz: number, BX: number, BZ: n
       line: I,
       y: (Z_HEIGHTS[level] as number) + (I & 1) * 0.6,
       sgn: zStreetWay(I),
-      off: side * (I === 0 ? 3.4 : 1.8),
+      off: side * (I === 0 ? 3.4 : wideLine(2, I) ? WIDE_LANE_OFF : LANE_OFF),
       speed,
       streets: Z_STREETS,
       avenue: I === 0,
@@ -118,7 +126,7 @@ export function flowLane(lane: number, cx: number, cz: number, BX: number, BZ: n
       line: J,
       y: X_HEIGHTS[level] as number,
       sgn: xStreetWay(J),
-      off: side * 1.8,
+      off: side * (wideLine(0, J) ? WIDE_LANE_OFF : LANE_OFF),
       speed,
       streets: X_STREETS,
       avenue: false,

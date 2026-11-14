@@ -1583,17 +1583,20 @@ their reach and 20 more across), the space portals, the Sky Island Loop and one 
 radius 16 to 40, every ring dashed (twelve dashes, a warm lamp at every third), turning slowly, each
 the other way to the next, breathing gently, in the quarter's colour:
 
-- **crowns**: halos 30 over six landmarks' crowns (pagoda, temple mountain, stair tower, twisting
-  tower, floating obelisk, data spire), under where their fireworks burst;
+- **crowns**: halos 30 over six landmarks' crowns and at least 200 over the street (pagoda, temple
+  mountain, stair tower, twisting tower, floating obelisk, data spire), under where their
+  fireworks burst;
 - **halos** round six of the fifteen buildings (Lantern Spindle, Helix Exchange, Sunleaf Column,
-  Sunboat Mast, Neon Prism, Cascade Monolith), some 90 up, under the flocks;
-- **over** four more (Hourglass Tower, Ivory Echo, Cog Tower, Seed Pod), standing 56 over their
-  tops, facing down the city, so you fly through them along it;
+  Sunboat Mast, Neon Prism, Cascade Monolith), 56 to 70 up, under the big ships;
+- **over** four more (Hourglass Tower, Ivory Echo, Cog Tower, Seed Pod), standing 226 over the
+  street, some 70 over their tops, facing down the city, so you fly through them along it;
 - **under** six stations (Lantern Harbour, Turquoise Wheel, Violet Disc City, Sky Ziggurat, Neon
   Carousel, Twin Ring Habitat), hanging 16 under them and bobbing with them;
-- **free** in the air: six sets standing at a slant, 205 over the street.
+- **free** in the air: six sets standing at a slant, 224 to 232 over the street.
 
-All of them over the flocks (some 120 to 165) or under them, never among them.
+All of them under 80 over the street or over 195, so never among the flocks (some 120 to 165),
+the high currents of ships (142 to 182) or the big ships (96 to 142), and apart from the
+parcours.
 
 **The parcours**: a chain of 45 big rings (radius 20) along one smooth curve down the whole tile,
 weaving across the avenue (x −75 to 75) and rising and falling from 275 to 365 over the street.
@@ -1615,8 +1618,8 @@ stations, the rings' radius and 15 from the parcours).
 
 **Budget**: items in the pool like everything else, dealt nearest first and thinned with the
 distance by the renderer. At most the nearest 6 stations (1,160 to 2,406 sites each, weight 1.8),
-10 decorative sets (about 520 to 1,230 sites each, weight 1.6) and 16 parcours rings (280 sites each,
-weight 2.2) are drawn: some 31,000 sites in all at the very most, far fewer shown. From over the stations (the
+10 decorative sets (about 530 to 1,060 sites each, weight 1.6) and 16 parcours rings (280 sites each,
+weight 2.2) are drawn: some 30,000 sites in all at the very most, far fewer shown. From over the stations (the
 stratosphere, looking down on the plan) they weigh a quarter, so the plan keeps its grains (the
 plan's own test unchanged). Costs measured with a throwaway bench (deleted): 0.6 to 0.9 µs a site,
 as the landmarks' crowns are on the same machine.
@@ -1627,15 +1630,153 @@ in its own quarter and its colours (mean colour within 0.97 of the quarter's); t
 deterministically, no grain moving more than 0.4 a frame unless dark, no brightness step over 0.03;
 clear of the fireworks, portals, Sky Island Loop, one another, the route, starts and races; drawn
 from the street and from far off. Sets concentric (every light its ring's radius from the one
-middle, in one plane), radius 16 and more, turning slowly, clear of the flocks, the under-sets
+middle, in one plane), radius 16 and more, turning slowly, clear of the flocks, the high currents
+and the big ships, apart from the parcours, the under-sets
 bobbing with their stations. The parcours: radius 16 to 25, heights 270 to 370, a steady gap, under
 25° from ring to ring, banked both ways; a pass within 0.8 of the radius counts either way, 1.5
 does not; the tally counts the rings flown in a row and lapses; flown through the whole chain no
 portal opens; the ring warms with no step over 0.06 a frame; the Ship's own flight through a ring
 shows "Rings 1"; only the nearest are drawn, a modest share, thinner from the stratosphere.
 
+### Ship currents and quarter ships (2026-11-14)
+
+> "make more channels where ships navigate together in one direction to avoid overload. so u
+> follow linear currents of ships. some of these currents can be above and turn together or be
+> more curvy currents. but mainly one street one direction of ship and a few outliers with the
+> unique big ships. also make some unique ships or drones for each quarter."
+>
+> "a few unique ships become part of the quarter. this doesn't mean only those. feeling of current
+> is to have a cool feeling that you are going in a direction, it feels satisfying."
+>
+> Earlier: "i like feeling of being in a flow."
+
+`lib/city-currents.ts` and `lib/city-quarter-ships.ts`, drawn by the traffic's grains in
+`lib/city.ts` (`trafficAt`). The traffic becomes rivers you can slot into and follow: steady
+streams, aligned, at one speed, smooth curves over the roofs. Every place is a formula of the time;
+colours lean slowly, nothing flashes. Our own designs only.
+
+**Street channels** (on the flow's rules, `lib/city-flow.ts`): the avenue one way at each level,
+two files a level either side of its middle (±4.8, the middle left clear), the two low levels with
+you, the two high toward you; one file down the middle of each street, one way, the next street the
+other way (5 or 11 over the street, alternating); the cross streets higher (15 or 30), alternating
+the same way, so the crossings pass over; express lanes over the roofs (112 and 120). Twenty
+channels round the eye, each brought round two or four streets at a time so it never changes its
+way. In a channel every ship flies at the channel's one speed (7.5–10 in the streets, 9–11 on the
+avenue, 15–18 express), single file, one spacing apart (the stretch of 180 shared evenly), so a
+channel reads as a river; the avenue's files are fuller (half again as many ships), the express
+thinner. A ship's streak is a little longer the faster its channel flows. **Lane lights** mark
+each channel: faint dots fixed over the street, a slow swell of light (some eight seconds a
+wave) running along them the way the channel flows — warm on the avenue, pale blue in the streets,
+violet over the roofs. None at the cruise height (21), none low on the avenue through Chinatown.
+
+**High currents** over the roofs: one long loop a cell (a tile wide, twelve blocks deep), centred on
+the avenue so it crosses it twice and links the quarters either side, 150–174 over the street
+(above every tower), rising and falling a little; its path a sum of a few sines, so smooth
+everywhere. A flock of twelve ships flies each, two abreast nine apart, all turning together and
+banking into the turns (the bank from the loop's curvature, never over 0.7), a bright nose, two
+wingtips and a fading tail each; a faint path of light ahead of the flock shows where it will turn
+(a bridge of light where it crosses the avenue). Pale gold leaning slowly to a soft cyan. The two
+loops nearest are drawn, seen further than the street traffic.
+
+**Outliers**, three big ships of our own, each alone in a stretch of 700–900, slow (2.2–3.6 a
+second), high over the blocks at its own height, never down the avenue low: the **cargo liner**
+(34 long, a spindle hull, a warm row of windows, its bridge toward the bow, three soft engines;
+126, along z over the blocks left of the avenue, with you), the **lantern barge** (22, a flat
+deck, twenty lanterns swaying under its edges, an arched canopy; 96, right of the avenue, toward
+you) and the **long ferry** (40, two decks of windows in soft bands, a slim mast with a soft
+beacon; 142, crossing over the avenue). The two nearest share their grains.
+
+**Quarter ships**: each quarter has its own design in its colours (body in the quarter's colour
+leaning slowly to its accent, a soft light): lantern skiffs (Chinatown), lotus gliders (the
+Indian quarter), crescent wings (Istanbul), glass needles (the Heights), gondola drones (the
+Canals), gilded seed pods (the golden gardens), prayer-flag drones (the temples), cargo haulers
+(the industrial quarter), bubble pods (the domes), sun-sail boats (Egypt), neon kites (the
+market) and glyph drones (the Green Code). About three in ten of the ships in the street channels
+are their quarter's own, flying among the general ones in the same file at the same speed; at a
+quarter's edge one fades out and the next quarter's fades in, so each flies only its own streets.
+And small **swarms of drones**, six each, drift slowly round each quarter's heart (its landmark's
+crossing, or the middle of its side of the avenue), 40–54 out, 48–74 high, hovering a little; the
+two hearts nearest are drawn.
+
+**Out of your way.** A ship near yours moves up and aside (as the other ships do), so none is ever
+inside yours; the avenue's middle stays clear; all of it is light (nothing in `blocked`), so
+nothing traps you.
+
+**Grain shares.** The traffic keeps its eleven grains a hundred, reshared: two for the high
+currents, one for the big ships, one for the drones, one for the lane lights, six for the street
+channels' ships (the last six, the ones the stars borrow when you look up). Whether a ship is in
+sight is found once a frame from its middle, and each street ship once a frame for all its grains.
+Timed over 120 frames at 15,000 grains on the avenue (golden gardens, industrial, Egypt), the
+traffic's grains alone: 5.1–5.4 ms before, 3.8–4.1 ms after.
+
+**Acceptance** (`lib/city-currents.test.ts`, `lib/city-quarter-ships.test.ts`): every channel one
+way on the flow's rules, keeping its way as it comes round, none at the cruise height, the avenue's
+files clear of its middle; single file, one spacing, one heading, moving at the channel's speed;
+lane lights fixed, swelling slowly; high currents over every tower, spanning the avenue, no heading
+or bank step over 0.03 a frame, side-by-side ships heading and banking together; big ships slow,
+long, rare, high and off the avenue; every district its own design, each a different shape,
+every colour in its quarter's family and leaning slowly; quarter ships a share (15–45%) of the
+street ships, every district's seen in its streets; drones drifting slowly round every heart;
+no lit traffic grain inside your ship; all deterministic.
+
+### Wider streets (2026-11-14)
+
+> "make a lot of the thin streets larger."
+>
+> "avoid streets being too narrow where panels almost touch themselves. great when tall streets
+> with lots of pancartes but needs to breathe. u can expand map if necessary, widen it etc..."
+>
+> Earlier: "side streets that work well".
+
+The grid stays as it was (26 × 34 blocks, the tile 12 × 56): changing it would move every
+landmark, square, start, race and the canyon, and the streets could be won inside the blocks.
+`lib/city-grid.ts` (`wideLine`, `WIDE_FACTOR`) chooses the streets; `lib/city-game.ts`
+`blockTower` stands the towers back from them, and everything that reads the towers follows:
+collision, walls, roofs, façades, signs and boards, Chinatown's walkways and lantern strings, the
+sky bridges, the factories' conveyors, the minimap.
+
+- **Boulevards and lanes.** Every other side street is a boulevard: along z the even lines (the
+  streets that flow +z) but the avenue's, across x the odd lines (so the band edges keep theirs).
+  The towers either side stand back 1.75 times as far from a boulevard's middle as they stood, the
+  far face staying put, so wide and narrower streets alternate both ways. Over a tile, where both
+  towers stand back: along z 9.2 → 16.3 in the Canals, 9.8 → 17.1 Indian, 8.8 → 15.5 temples,
+  9.2 → 17.0 Heights, 11.4 → 20.0 Green Code (about 9 → 16 on average); across x 12.5 → 19.7 in the
+  Heights, 10.3 → 15.6 Indian, 9.8 → 14.7 industrial, 13.6 → 21.6 Green Code. A business tower
+  keeps its design's proportions and shrinks to its new box; a tower is never thinner than 7.2;
+  a tunnel through a slimmed tower runs along it when it no longer fits across.
+- **Every side street breathes.** No side street narrower than nine (it was six at the
+  narrowest): each tower stands at least 4.5 from a side street's middle, and beside the towers
+  that keep their places (the avenue's, the canyon's walls, the through tunnel's row, now seven
+  either side of its tunnel) the other side makes the street up to nine alone. The Neon Canyon's
+  first wall stands three further back from the street behind it.
+- **Chinatown** keeps its own lanes, out of the rhythm, but its side streets are fourteen wide
+  (they were ten, twelve behind the avenue's walls): towers six across at most, its first towers
+  off the avenue five and a step out. Its tall signs stand out nearly four from both walls, so six
+  of open air are left between them; its covered walkways are fourteen long.
+- **Staggered signs.** Chinatown's tall signs and the hanging boards (the market, the canyon, the
+  opening road) are staggered by wall: a level's sign on a +x wall hangs where the wall across has
+  none, so no two face each other across a street. Boards (under two out) leave five and more
+  between the walls of any side street, eight across the canyon.
+- **Traffic.** On a boulevard the two streams of ships run 3 off its line (1.8 elsewhere) and the
+  ground cars 2.6 (1.7).
+- **Kept as they were** (tested): the avenue and its towers, galleries and bridges; the canyon,
+  twelve across; the big squares, the fifteen buildings' and the Studio's blocks, the plazas and
+  embassies; the autopilot's route, the race courses and the quarter starts.
+
+**Acceptance** (`lib/city-streets.test.ts`): every boulevard stretch between two towers that
+stand back at least 1.6 times as wide as it was (1.75 on average); the avenue's towers unchanged;
+every side street nine or more but where two kept towers meet, Chinatown's fourteen; collision
+at the drawn walls of the boulevards and their middles clear; walkways and sky bridges meeting
+both walls; facing signs and boards never closer than four, a way of six (Chinatown) or five
+between; the canyon's boards apart; the traffic further out on the boulevards.
+
 ### Still rough, and next
 
+- The wider streets (2026-11-14) leave two kinds of narrow gap as they were: the short cross
+  streets between the avenue's own towers (6.6 to 9, the avenue kept as designed) and the slits
+  between the Neon Canyon's wall blocks (6, no boards in them). The round, open and one-off
+  buildings (the twenty, pyramids, embassies) keep their places, so a boulevard beside one is
+  only widened from the other side.
 - Atlantis's tunnels are drawn thin in grains, so from the Plan they read as faint lines; up close
   the helices read as dotted spirals. Nobody walks them yet. The Atlantis buildings piece does not
   have the towers, factories or complexes yet.
@@ -1656,6 +1797,9 @@ shows "Rings 1"; only the nearest are drawn, a modest share, thinner from the st
   keeps its own signs.
 - Sky lanterns and portals are only near the avenue; the Sky Island Loop and four other tracks are
   drafts (gates only); the sky island itself is the platform station, still small.
+- The quarter ships in the street channels are nine grains each (a street ship's share), so they
+  read as small clusters in their quarter's colours; the drones show the designs best. The high
+  currents and big ships are not on the minimap, and you cannot dock with a big ship yet.
 - Traffic does not yet move in platoons on the beat; the beat does not yet travel out from a heart
   (the Nova Cores, another round).
 - Docks are the four lounges and the embassies' rooms; the business towers have none of their own yet.
