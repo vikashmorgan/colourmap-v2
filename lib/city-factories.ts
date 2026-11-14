@@ -118,7 +118,7 @@ export const FACTORY_SITES: FactorySite[] = [
     hue: C.leaf,
     conveyor: { axis: 0, dir: -1 },
   },
-  // The Green Code quarter's data foundry, drawn in the quarter's green.
+  // The Matrix quarter's data foundry, drawn in the quarter's green.
   {
     li: 3,
     lj: 52,

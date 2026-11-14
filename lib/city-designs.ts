@@ -142,7 +142,7 @@ export function quarterPalette(colour: RGB): Palette {
   palettes.set(key, p);
   return p;
 }
-/** A palette in one hue only: the quarter's own, each tone's brightness kept (the Green Code's rule). */
+/** A palette in one hue only: the quarter's own, each tone's brightness kept (the Matrix quarter's rule). */
 const monos = new Map<string, Palette>();
 export function monoPalette(colour: RGB): Palette {
   const key = colour.join(',');

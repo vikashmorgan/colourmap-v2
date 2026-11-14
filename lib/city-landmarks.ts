@@ -437,7 +437,7 @@ function floatingObelisk(): Model {
   return model(parts, Y1 + 8, 10);
 }
 
-/* ---------- the Green Code quarter: a cascade of data pillars round the spire ---------- */
+/* ---------- the Matrix quarter: a cascade of data pillars round the spire ---------- */
 
 function dataCascade(): Model {
   const parts: Part[] = [];

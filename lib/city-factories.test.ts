@@ -36,7 +36,7 @@ describe('factories through the city (2026-11-13: "think how factories can be be
     expect(factories().filter((b) => b.d === 'industrial')).toHaveLength(2);
   });
 
-  it('stands the others singly where they make sense: canals, the Heights’ edge, the desert, the domes, the Green Code', () => {
+  it('stands the others singly where they make sense: canals, the Heights’ edge, the desert, the domes, the Matrix quarter', () => {
     const all = factories();
     expect(all).toHaveLength(FACTORY_SITES.length);
     const where = new Set(all.map((b) => b.d));
@@ -92,7 +92,7 @@ describe('factories through the city (2026-11-13: "think how factories can be be
     expect(items.some((it) => it.gid === mixId(tw.k, 6611))).toBe(true);
   });
 
-  it('draws the data foundry in the Green Code quarter’s green only', () => {
+  it('draws the data foundry in the Matrix quarter’s green only', () => {
     const site = FACTORY_SITES.find((s) => s.role === 'data foundry');
     expect(site?.tint).toBeDefined();
     const tw = blockTower(site?.li as number, site?.lj as number);
