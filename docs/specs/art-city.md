@@ -825,6 +825,9 @@ too fast in the city but faster when above."). Every change eases; nothing flash
   measure the further they are behind the distance in focus (the ship, or 45 ahead from the
   cockpit) and when very near the eye, so they soften without adding light; the softening grows
   under the boost and the hyper, and fades out climbing to the plan (none in space).
+- **No sentences while you fly** (2026-11-14: "no sentences and quotes while we fly in the city,
+  it just takes space"): while the Ship is played, its quotes and its line under the name are
+  hidden (the game's `wordless`); the Journey and the Studio pieces keep theirs.
 - **Seeing far, more grains** (2026-11-14: "improve density for the City videogame and visibility
   so buildings can be seen in the distance"). The view reaches 340 in the street (was 160),
   opening as you climb to 1,300 (was 1,000), and tower walls are gathered out to 420 (were only
@@ -1366,7 +1369,7 @@ little smaller, the pace pills above them.
 **Map and game polish** (2026-11-13). The map shows every dock's pad (an H in a ring) and every
 Embassy of Happiness (a small triangle), named after the race starts. On a touch screen a tap
 shows the name under the finger for 3 s (the footer says "tap a place for its name"). A quiet
-"You · 52 m" (your height) sits beside your pointer where no name is in the way. A district
+"You · 52 m" (your height) always sits beside your pointer, and names in its way give way to it. Where you are reads at once (2026-11-14: "make it clear on the map where I am"): a larger pointer, two gold rings spreading slowly from it, and faint gold lines across the map through it. A district
 whose race you won is drawn brighter, edged in gold. The Game side has its own hint, once per
 world: "W A S D fly · Space boost · M map · Esc lets go" (on a phone "Stick to fly · Boost · Map
 above the buttons"). Letting go says "Autopilot" for 3 s. Coming in to a pad (within 30, no more

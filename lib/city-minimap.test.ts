@@ -19,9 +19,9 @@ import {
   mapHeading,
   projectedBounds,
   projectMap,
-  shipCaption,
   TILT_3D,
   tileLocal,
+  youCaption,
 } from './city-minimap';
 import { TRACKS } from './city-race';
 
@@ -343,32 +343,16 @@ describe('the map, 2026-11-13: docks, embassies, taps, you and the races won', (
     expect(found).toBeGreaterThan(0);
   });
 
-  it('captions your pointer "You · 52 m", only where no name shown is in the way', () => {
-    const cap = shipCaption([200, 300], 52.4, [], 800, 600);
-    expect(cap?.text).toBe('You · 52 m');
-    expect(cap?.x).toBeGreaterThan(200);
-    const name: MapLabel = {
-      text: 'Golden spire',
-      x: (cap?.x ?? 0) + 4,
-      y: 300,
-      align: 'left',
-      size: 11,
-      w: 70,
-      priority: 1,
-      depth: 0,
-      alpha: 1,
-      colour: '#fff',
-      font: '11px sans-serif',
-    };
-    expect(shipCaption([200, 300], 52, [name], 800, 600)).toBeNull();
-    expect(shipCaption([200, 300], 52, [{ ...name, y: 400 }], 800, 600)).not.toBeNull();
-    // Off the screen's edge: none.
-    expect(shipCaption([790, 300], 52, [], 800, 600)).toBeNull();
-    // Drawn on the map beside the pointer, or not at all where a name is in the way.
+  it('always captions your pointer "You · 52 m", the names it touches giving way (2026-11-14)', () => {
+    const cap = youCaption([200, 300], 52.4, 800, 600);
+    expect(cap.text).toBe('You · 52 m');
+    expect(cap.x).toBeGreaterThan(200);
+    // Near the right edge it sits left of the pointer, on screen.
+    const edge = youCaption([790, 300], 52, 800, 600);
+    expect(edge.x + edge.w).toBeLessThan(790);
+    // Drawn wherever you are, and no name shown touches it.
     const data = cityMapData();
     const v = fitView(400, 800);
-    const shown = drawCityMap(quietCtx(), data, v, 400, 800, null, 0);
-    let drawn = 0;
     for (const [x, z] of [
       [-60, 200],
       [40, 600],
@@ -376,13 +360,12 @@ describe('the map, 2026-11-13: docks, embassies, taps, you and the races won', (
       [60, 1700],
     ]) {
       const { ctx, texts } = recordingCtx();
-      drawCityMap(ctx, data, v, 400, 800, { x, y: 52, z, heading: 0 }, 0);
+      const shown = drawCityMap(ctx, data, v, 400, 800, { x, y: 52, z, heading: 0 }, 0);
+      expect(texts.includes('You · 52 m')).toBe(true);
       const [sx, sy] = projectMap(v, 400, 800, x, 0, z);
-      const free = shipCaption([sx, sy], 52, shown, 400, 800);
-      expect(texts.includes('You · 52 m')).toBe(free !== null);
-      if (free) drawn++;
+      const box = labelBox(youCaption([sx, sy], 52, 400, 800));
+      for (const l of shown) expect(boxesOverlap(labelBox(l), box)).toBe(false);
     }
-    expect(drawn).toBeGreaterThan(0);
   });
 
   it('draws the districts whose race was won brighter, edged in gold', () => {
