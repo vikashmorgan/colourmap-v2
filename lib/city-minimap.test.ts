@@ -11,12 +11,14 @@ import {
   FIT_SHARE,
   fitView,
   fitView3D,
+  isClick,
   isTap,
   labelBox,
   layoutLabels,
   MAP_EXTRAS,
   type MapLabel,
   mapHeading,
+  mapPick,
   projectedBounds,
   projectMap,
   shipCaption,
@@ -398,5 +400,55 @@ describe('the map, 2026-11-13: docks, embassies, taps, you and the races won', (
     const edged = lit.strokes.filter((s) => s.style === gold);
     expect(edged).toHaveLength(data.districts.filter((d) => d.id === id).length);
     for (const e of edged) expect(e.width).toBe(1);
+  });
+});
+
+describe('fast travel from the map (2026-11-14: "from map i can click to the diff spots and fast travel")', () => {
+  it('tells a click or a tap from a drag, any pointer', () => {
+    expect(isClick({ x: 10, y: 10 }, { x: 14, y: 15 })).toBe(true);
+    expect(isClick({ x: 10, y: 10 }, { x: 30, y: 10 })).toBe(false);
+  });
+
+  for (const [w, h] of [
+    [1536, 640],
+    [390, 844],
+  ] as const) {
+    it(`travels to the quarter or place whose name is tapped, on a ${w} × ${h} screen`, () => {
+      const data = cityMapData();
+      for (const v of [fitView(w, h), fitView3D(w, h)]) {
+        const shown = drawCityMap(quietCtx(), data, v, w, h, null, 0);
+        let quarters = 0;
+        for (const l of shown) {
+          const x = l.align === 'left' ? l.x + l.w / 2 : l.x;
+          const go = mapPick(shown, data, v, w, h, { x, y: l.y }, false);
+          expect(go, l.text).toEqual(l.go);
+          if (go && 'd' in go) {
+            quarters++;
+            expect(DISTRICTS[go.d].name.toUpperCase()).toBe(l.text);
+          } else if (go) expect(go.name).toBe(l.text);
+        }
+        expect(quarters).toBeGreaterThanOrEqual(6);
+      }
+    });
+  }
+
+  it('travels to the quarter under a click on its ground (a mouse), never from a finger off a name', () => {
+    const w = 1536;
+    const h = 640;
+    const data = cityMapData();
+    const v = fitView(w, h);
+    const shown = drawCityMap(quietCtx(), data, v, w, h, null, 0);
+    for (const d of data.districts) {
+      // A point inside its patch, off its name.
+      const [x, y] = projectMap(v, w, h, (d.x0 + d.x1) / 2 + 20, 0, (d.z0 + d.z1) / 2 + 40);
+      const go = mapPick(shown, data, v, w, h, { x, y });
+      if (go && 'd' in go) expect(go.d).toBe(d.id);
+    }
+    // Off the city altogether: nothing.
+    expect(mapPick(shown, data, v, w, h, { x: 2, y: 2 })).toBeNull();
+    // A finger on bare ground shows names instead (as before), no trip.
+    const [x, y] = projectMap(v, w, h, 100, 0, 1000);
+    const touch = mapPick(shown, data, v, w, h, { x, y }, false);
+    if (touch) expect(shown.some((l) => l.go === touch)).toBe(true);
   });
 });

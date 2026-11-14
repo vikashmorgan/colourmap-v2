@@ -155,9 +155,15 @@ export type Trip = {
       /**
        * A panel the game opens over the picture (the City's map): on its key while played, a
        * button in the Design menu and on a phone. Time stands still while it is open; Esc, its
-       * key or `close` shuts it. Where its key is M, the Design menu answers to N instead.
+       * key or `close` shuts it. Where its key is M, the Design menu answers to N instead. `fly`
+       * shuts it and takes the controls back, so a trip begun from it (the City's fast travel,
+       * 2026-11-14) flies on, piloted.
        */
-      sheet?: { key: string; label: string; render: (close: () => void) => ReactNode };
+      sheet?: {
+        key: string;
+        label: string;
+        render: (close: () => void, fly: () => void) => ReactNode;
+      };
     };
     /**
      * A switch to try on a step (the 3D tree all in gold), beside the speeds; off in the Journey.
@@ -1523,7 +1529,13 @@ diffuseColor.rgb *= vDof;`,
       {/* A game's panel over the picture (the City's map), time standing still under it. */}
       {sheet && gameSheet ? (
         <div className="bb-sheet" role="dialog" aria-label={gameSheet.label}>
-          {gameSheet.render(() => openSheet(false))}
+          {gameSheet.render(
+            () => openSheet(false),
+            () => {
+              openSheet(false);
+              stopGame(false);
+            },
+          )}
         </div>
       ) : null}
       {/* Ink over the picture, when the game asks for it (2026-11-11: "spit ink on your screen"). */}

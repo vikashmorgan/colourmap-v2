@@ -59,6 +59,7 @@ import {
   VIEW_NAMES,
   viewIndex,
 } from '@/lib/city-cockpit';
+import { setCityQuality } from '@/lib/city-game';
 import { loadShip, SHIP_NAMES, setShip, shipIndex } from '@/lib/city-ships';
 
 const TRIP: Trip = {
@@ -67,8 +68,9 @@ const TRIP: Trip = {
   total: TOTAL,
   stepColours: STEP_COLOURS,
   makeParticles,
-  // More grains than the other worlds: the towers and the far districts fill in (2026-11-14).
-  grains: { small: 6500, large: 13000 },
+  // More grains than the other worlds: the towers and the far districts fill in (2026-11-14); on a
+  // computer more again, for the longer view (2026-11-14: "make much more visibility for computer").
+  grains: { small: 6500, large: 15000 },
   particleAt,
   phaseAt,
   look,
@@ -112,7 +114,8 @@ const TRIP: Trip = {
       // The ship in focus, the far city softening, more under the boost (2026-11-13).
       focus: depthOfField,
       // Four ships of our own, each with its own instruments (or any style, or none) and its
-      // canopy from the pilot's seat (V); M opens the map (2026-11-12).
+      // canopy from the pilot's seat (V); M opens the map (2026-11-12), and a tap on a quarter in
+      // it flies there (2026-11-14), as [ and ] hop to the quarter before or after.
       display: displayNow,
       options: [
         { label: 'Ship', names: SHIP_NAMES, get: shipIndex, set: setShip },
@@ -120,7 +123,11 @@ const TRIP: Trip = {
         { label: 'View', names: VIEW_NAMES, get: viewIndex, set: setView },
       ],
       overlay: () => <CityCockpit />,
-      sheet: { key: 'm', label: 'Map', render: (close) => <CityDreamsMap onClose={close} /> },
+      sheet: {
+        key: 'm',
+        label: 'Map',
+        render: (close, fly) => <CityDreamsMap onClose={close} onFly={fly} />,
+      },
     },
   },
 };
@@ -130,6 +137,8 @@ export default function City() {
   useEffect(() => {
     loadShip();
     loadCockpit();
+    // A computer sees further than a phone, by the trip player's own rule for its grains.
+    setCityQuality(window.innerWidth < 700 ? 'small' : 'large');
   }, []);
   return <TripPlayer trip={TRIP} page="city" />;
 }

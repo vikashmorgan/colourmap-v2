@@ -466,7 +466,14 @@ export type MapLabel = {
   alpha: number;
   colour: string;
   font: string;
+  /** Where a tap on it travels (a quarter, or a place); none for your own caption. */
+  go?: MapGo;
 };
+/**
+ * Where a tap on the map travels (2026-11-14: "from map i can click to the diff spots and fast
+ * travel"): a quarter's start, or a named place (tile-local, `y` over the street).
+ */
+export type MapGo = { d: DistrictId } | { x: number; z: number; y: number; name: string };
 export type LabelBox = { x0: number; y0: number; x1: number; y1: number };
 
 export const labelBox = (l: MapLabel): LabelBox => {
@@ -503,6 +510,56 @@ export const isTap = (
   up: { x: number; y: number },
   pointerType: string,
 ) => pointerType !== 'mouse' && Math.hypot(up.x - down.x, up.y - down.y) < 8;
+/** A click or a tap, any pointer: lifted within 8 px of where it came down (a drag pans instead). */
+export const isClick = (down: { x: number; y: number }, up: { x: number; y: number }) =>
+  Math.hypot(up.x - down.x, up.y - down.y) < 8;
+
+/** Whether screen point q lies inside the polygon pts (any convex or plain quad on the screen). */
+function inside(pts: [number, number][], q: { x: number; y: number }): boolean {
+  let hit = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i] as [number, number];
+    const [xj, yj] = pts[j] as [number, number];
+    if (yi > q.y !== yj > q.y && q.x < ((xj - xi) * (q.y - yi)) / (yj - yi) + xi) hit = !hit;
+  }
+  return hit;
+}
+
+/**
+ * What a tap at screen point q travels to (2026-11-14: "from map i can click to the diff spots and
+ * fast travel"): a name shown under it (with its mark, left of a place's name), else, when `area`
+ * (a mouse, which shows names by pointing), the quarter whose ground lies under it; null for none.
+ */
+export function mapPick(
+  shown: MapLabel[],
+  data: MapData,
+  v: MapView,
+  w: number,
+  h: number,
+  q: { x: number; y: number },
+  area = true,
+): MapGo | null {
+  for (const l of shown) {
+    if (!l.go) continue;
+    const b = labelBox(l);
+    const x0 = l.align === 'left' ? b.x0 - 16 : b.x0 - 4;
+    if (q.x >= x0 && q.x <= b.x1 + 4 && q.y >= b.y0 - 3 && q.y <= b.y1 + 3) return l.go;
+  }
+  if (!area) return null;
+  for (const d of data.districts) {
+    const pts = [
+      [d.x0, d.z0],
+      [d.x1, d.z0],
+      [d.x1, d.z1],
+      [d.x0, d.z1],
+    ].map(([x, z]) => projectMap(v, w, h, x as number, 0, z as number).slice(0, 2)) as [
+      number,
+      number,
+    ][];
+    if (inside(pts, q)) return { d: d.id };
+  }
+  return null;
+}
 
 /**
  * The quiet caption beside your pointer, "You · 52 m" (its height over the street), at screen
@@ -756,6 +813,7 @@ export function drawCityMap(
     priority: number,
     colour: string,
     bold = false,
+    go?: MapGo,
   ) => {
     const size = bold ? 10 : 11;
     const font = `${bold ? '600 ' : ''}${size}px ui-sans-serif, system-ui, sans-serif`;
@@ -772,13 +830,14 @@ export function drawCityMap(
       alpha: 1,
       colour,
       font,
+      go,
     });
   };
   ctx.textBaseline = 'middle';
   if (labels) {
     for (const d of data.districts) {
       const q = P((d.x0 + d.x1) / 2, 0, (d.z0 + d.z1) / 2 - BLOCK_Z * 1.5);
-      say(d.name.toUpperCase(), q, 'center', 0, rgba(d.colour, 1.1, 1), true);
+      say(d.name.toUpperCase(), q, 'center', 0, rgba(d.colour, 1.1, 1), true, { d: d.id });
     }
   }
 
@@ -858,6 +917,8 @@ export function drawCityMap(
         'left',
         p.kind === 'landmark' || p.kind === 'canyon' ? 1 : p.kind === 'race' ? 2 : 3,
         'rgb(244,234,216)',
+        false,
+        { x: p.x, z: p.z, y: p.y, name: p.name },
       );
     }
   }

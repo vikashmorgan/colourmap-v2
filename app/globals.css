@@ -1898,6 +1898,11 @@ input[type="range"].art-slider.magma {
   white-space: nowrap;
   pointer-events: none;
 }
+/* The fast-travel hint, one quiet line over the other (2026-11-14). */
+.cd-map-hint.cd-map-go {
+  bottom: calc(34px + env(safe-area-inset-bottom));
+  color: rgba(255, 226, 166, 0.6);
+}
 @media (max-width: 640px) {
   .cd-map-title {
     display: none;

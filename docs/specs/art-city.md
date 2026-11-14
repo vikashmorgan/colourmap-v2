@@ -765,6 +765,7 @@ high over the city; the golden spire's beacon. Brighter the higher you fly.
 | Space + W | **super boost**: climbs on at 48 a second while W is held, past the towers' sky (150) up to the **stratosphere** (520); up there W climbs, S dives back down fast; under the towers' sky you fly as before |
 | L (**Look**) | **slow mode**: a gentle drift (0.22 of the pace), the eye rising and tilting down at the city below; L again to fly on |
 | Enter (**Go**) | at a race's start, starts the race |
+| [ / ] | **hop** to the quarter before or after, at its start (below; no phone button: a phone taps the map) |
 
 **From above.** As you climb the eye stands back and rises (up to 150 back and 190 up) and looks
 down ahead; the view opens from the street's 160 to a thousand; the city is drawn as its plan:
@@ -833,6 +834,22 @@ too fast in the city but faster when above."). Every change eases; nothing flash
   reaches 460 (was 260, which the other pieces keep). The City draws 13,000 grains on a computer
   and 6,500 on a phone (the other worlds 9,000 and 5,200): each thousand costs about 0.6 ms of a
   frame's 16.7, the wider view about 3%.
+- **Further on a computer** (2026-11-14: "make much more visibility for computer"). The City
+  knows whether it runs on a computer or a phone by the trip player's own rule for its grains (a
+  screen under 700 wide is a phone): components/City.tsx calls `setCityQuality('large' | 'small')`
+  (lib/city-game.ts), a phone until told (so the tests see the phone's). A phone keeps every number
+  above. A computer sees **520** in the street (`STREET_VIEW_LARGE`, opening as you climb to the same
+  1,300), gathers tower walls out to **640** (`TOWER_SIGHT_LARGE`, lib/city.ts), and the flown
+  Ship's fade reaches **680** (`SHIP_FAR_LARGE`); it draws **15,000** grains (was 13,000). Near
+  detail is as fine as before: grains are still dealt densely only out to the old reach (`dreach`,
+  160 in the street), the far towers sparsely. Faces beyond what a phone sees in the street (340)
+  are checked for being hidden at four points instead of twelve (each look along the streets out
+  there is long, and the face gets few grains), so the longer view itself costs next to nothing.
+  Measured (a throwaway bench: `setFly` + `pieceCamera` + `pieceAt` over every grain, 120 frames,
+  four runs, this machine): on the avenue in the Heights 13.0 ms a frame for today's 13,000 with the
+  phone's view, **15.3 ms** for 15,000 with the computer's, 16.1 ms for 16,000; at roof height in
+  the golden gardens (a quarter's start, more city in sight) 16.5, 20.0 and 21.0. 16,000 went past
+  the ~15 ms line on the avenue, so 15,000 it is.
 - **Ring portals, forgiving** ("boost rings don't work for going to space"): a run counts flown
   either way (big ring first, or small first), a ring missed here and there is forgiven (the last
   must be flown), and flying at a portal within about 45° of its way, the ship eases sideways
@@ -840,6 +857,58 @@ too fast in the city but faster when above."). Every change eases; nothing flash
   without threading each ring by hand.
 - **Through a portal** the glow flares and the camera comes along at once, so the jump never snaps
   the view.
+
+### Quarter starts and fast travel (`lib/city-travel.ts`, 2026-11-14)
+
+> "ability to go to main street or main starting point of each quarter. so there is a special road
+> on each quarter that has a great view etc..." and "from map i can click to the diff spots and
+> fast travel."
+
+**A start in every quarter** (`QUARTER_STARTS`, in the plan's order down the avenue). Each stands
+over a street at about roof height (**GROUND + 50**, raised further only if a wall were there, by
+the collision's own `blocked`), facing down its road toward the quarter's view:
+
+- a quarter with a landmark (Chinatown's pagoda, the Indian temple, Istanbul's mosque, the Nova Core
+  of the Heights, the golden spire, the ziggurat, the foundry, the garden of domes, the great
+  pyramid, the data spire): on the street through the landmark's plaza, six short of the band's far
+  edge, the landmark straight ahead some 130 away, the quarter's towers walling the road;
+- **the Canals**: over the middle canal, in from the tile's edge, looking along it to the avenue;
+- **the Neon market**: inside the Neon Canyon near the foot of its long run, looking up between
+  its walls to the bend.
+
+Every start is in its own quarter, clear of every wall (and so in every copy of the tile), and the
+road ahead of it is open at its height. Positions are tile-local; a trip goes to the copy nearest
+the ship.
+
+**Fast travel from the map.** In the map (M), a tap or click on a quarter's name, or a place's
+(a landmark, a race start, a pad, an embassy, the Neon Canyon, the WELCOME panel), flies there: a
+quarter's name to its start; a landmark or the Neon Canyon to the start that looks at it; any other
+place to a clear point some 60 back from it along a street, a little over its height, facing it.
+With a mouse, a click anywhere on a quarter's ground goes to its start too; on a touch screen a
+tap on bare ground still shows the names near it (as before), and a tap on a name flies. A drag
+still pans or spins; only a lift within 8 px of where it came down counts. The sheet closes, the
+controls come back (piloted, even if you had let go), and the ship is carried there in **0.6 to 1
+s** (longer the further), its heading easing round, over a gentle arc above the roofs on a long
+trip (up to 80, a little of the plan glimpsed on the way), the plume glowing; no flash, no cut.
+Leaving a room, space or a race first. One quiet line in the map says so: "Tap a quarter to fly
+there".
+
+**Hops while flying.** **[** and **]** fly to the start of the quarter before or after the one you
+are in, round the plan's order (the Green Code's next is Chinatown), the same short trip. Neither
+key was taken; they get no phone button (a phone taps the map).
+
+**Acceptance (quarter starts and fast travel)**
+
+- Twelve starts, one per quarter, each inside its quarter, over GROUND + 30, not blocked here or
+  in a far copy, facing its view (a landmark, the avenue, the canyon's bend) more than 100 away,
+  the road there open at its height.
+- After a trip the ship is within 3 of the start's nearest copy, clear, piloted, facing its way,
+  in at most a second; no frame moves it more than 60.
+- [ and ] hop to the next and the previous quarter.
+- On the map a tap on any shown name travels to that name's quarter or place; a mouse click on a
+  quarter's ground travels to it; a finger on bare ground does not.
+- A phone keeps 340, 420, 460 and 6,500 grains; a computer sees 520, gathers to 640, fades at 680
+  and draws 15,000.
 
 ### Races (`lib/city-race.ts`)
 
@@ -1337,7 +1406,9 @@ The Dawn sky behind, gold lines, district hues. Canvas 2D, redrawn only when the
 about ten times a second for the pointer. New parts of the city add places by appending to
 `MAP_EXTRAS` (the docks and embassies are there now).
 
-**Keys** (Ship, Game side): V cockpit view, M map, N Design menu; the rest as before.
+**Keys** (Ship, Game side): V cockpit view, M map, N Design menu, [ and ] hop between the
+quarters' starts (2026-11-14); the rest as before. A tap on a name in the map flies there
+("Quarter starts and fast travel").
 
 **Acceptance (ships, cockpits, map)**
 
