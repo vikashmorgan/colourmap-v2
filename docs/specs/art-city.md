@@ -1638,6 +1638,55 @@ does not; the tally counts the rings flown in a row and lapses; flown through th
 portal opens; the ring warms with no step over 0.06 a frame; the Ship's own flight through a ring
 shows "Rings 1"; only the nearest are drawn, a modest share, thinner from the stratosphere.
 
+**Finished: the map, fast travel, the best run, docking** (2026-11-14, "finish the sky stations").
+`lib/city-skyport.ts`, with small hooks in `lib/city.ts` (`setFly` docks and holds, `travelTo` lands
+high, `tally` names the station, a fresh start undocks), `lib/city-minimap.ts`, `lib/city-travel.ts`
+(`spotFor` only), `lib/city-rings.ts` and `lib/city-stations.ts`.
+
+- **On the map**: every station a small level disc (a thin ellipse round a dot) in its quarter's
+  colour, the parcours a faint dotted gold line down the tile and its start a small open ring. In
+  3D they stand at 0.45 of their height (a layer over the towers, kept in the frame), their stems
+  fainter than the other places'. Their names come last (after the docks and embassies), so they
+  never push another aside; a pointer near one brings it first, as for any place.
+- **Fast travel**: a tap on a station's name or mark (its name shown or not, within 9 px) flies
+  there: level with its middle, out past its reach on its +z side by 30, facing it. **Ring
+  parcours** flies to its start: on the curve a little past the first ring (0.6 of the way to the
+  second), facing the first ring's middle some 25 ahead, so flying straight on goes through it and
+  on down the chain. A trip landing over the towers' sky keeps the super boost's height, so the
+  ship holds its height there instead of sinking.
+- **The best run**: the most rings in a row shows beside a shorter run, quietly: "Rings 7 · best
+  12" (only "Rings 12" while the run is the best). Kept on the device as the races' best times are
+  (`colourmap:city-rings:best`, in try/catch; where there is no storage it lives the visit only);
+  a fresh start forgets the run, never the best.
+- **Docking**: flown slower than 6.5 (under the cruise: Q, or slow mode) into a station's middle
+  (within 16 of it), the ship docks: it eases in to at most 8 from the middle and holds there gently,
+  bobbing with the station, while the station's lamps warm (toward the warm shade, a little
+  brighter) over two seconds; "Docked · Lantern Harbour" shows beside the bar. Any steering,
+  climbing, Faster or boost undocks at once (the keys fly on as usual, from rest), and so do letting
+  go, a trip or a fresh start; the lamps cool over four seconds. A station just left docks again
+  only once the ship has been 24 from its middle, so it can never catch the ship.
+- **Polish**: fireworks no longer bloom into a station or a parcours ring (a burst whose sparks,
+  falling as they fade, would reach a station's reach or a ring's stays unlit; before, a burst
+  could reach up to 16 into Violet Disc City and Biosphere Cluster and 28 into the parcours'
+  fourth ring). A station's lamp is never brighter than 0.74 (the lift from over the plan and a
+  dock's warmth together would reach 0.85). Checked and already clear: the high currents (under
+  182), every block tower (under 137) and every Matrix (code) tower (under 115) stay under every
+  station (over 210); the landmarks' tall crowns stand off them across (their fireworks' places,
+  each station's reach and 20 more); the decorative sets stay off every station but the one each
+  hangs under.
+
+Acceptance (`lib/city-skyport.test.ts`, `lib/city-minimap.test.ts`, `lib/city-travel.test.ts`,
+`lib/city-rings.test.ts`, `lib/city-stations.test.ts`): fifteen station marks and the parcours start
+on the map, inside the tile, one disc each and the dotted line drawn, names after every other
+place's and none overlapping; a tap on a mark with no names shown leads to it; each station's spot
+clear, out of every station's reach, outside its docking zone and facing it; the parcours start
+facing the first ring, 15 to 40 from it, flown straight through it; the Ship flown to a station,
+to the parcours (shows "Rings 1"), landing within 3 and holding its height; the best run up with a
+run, beside a shorter one, kept through a fresh start and on the device; docking only slow, unsteered
+and in the middle, held bobbing with the station, undocked by any steering, never docking again
+until the ship has left; warming and cooling with no step over 0.03 a frame; no burst alive in
+four minutes over every firework place within 5 of a station or a parcours ring.
+
 ### The far city (2026-11-14)
 
 The user asked "what stops u from increasing field depth of vision 5 times on computer?" The
@@ -1913,8 +1962,10 @@ way at its stream's speed, evenly spaced.
 - The Grand Avenue's bridges, galleries, roofs and gateways are light: nothing to land on, no
   race through its gateways yet; its designs repeat in every turn of the plan (the towers differ).
   The side streets have not had their own round yet.
-- The flying stations are light (no landing, no docks, no rooms) and the map does not show them or
-  the parcours yet; the parcours keeps no best time or record of its own beyond the run in a row.
+- The flying stations are light: you dock in their middles (no pads, no rooms inside, nothing
+  to walk), and every tile copy of a station warms while you are docked at one. The parcours'
+  best is a run in a row, not a time; there is no lap or timed run of it yet. On a phone two sky
+  marks can sit close enough that a tap between them picks either.
 - The Canals and the Neon market still have no landmark of their own; the big squares are only in
   the landmarks' columns; the Studio's meshes are stretched upward rather than redrawn tall.
 - The Deep Line has no race of its own yet (the tracks are one a quarter), and no side branches.

@@ -133,6 +133,7 @@ import {
   trailLight,
 } from './city-ships';
 import { skyGrain } from './city-sky';
+import { resetSkyDock, skyDockBanner, skyDockStep, undockSky } from './city-skyport';
 import {
   type Arrival,
   cityRingBanner,
@@ -2184,6 +2185,22 @@ function carryOn(dt: number, t: number) {
   move(dt);
 }
 
+/** The keys that undock the ship from a flying station: any steering, climbing, faster or boost. */
+const SKY_UNDOCK_KEYS = [
+  'a',
+  'd',
+  'w',
+  's',
+  'arrowleft',
+  'arrowright',
+  'arrowup',
+  'arrowdown',
+  'e',
+  'shift',
+  ' ',
+  'tab',
+];
+
 /** Starts the route afresh: no super boost, no slow mode, no race. */
 function afresh() {
   fly.travel = null;
@@ -2204,6 +2221,7 @@ function afresh() {
   clearTrail(trail);
   resetRace();
   resetRings();
+  resetSkyDock();
 }
 
 /** The chase camera on the ship's heading at once (a fresh start, a placing, a jump). */
@@ -2299,6 +2317,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   if (fly.mode !== 'route') fly.pos = liftOver(fly.pos);
   if (!active) {
     glowStep(false, dt);
+    undockSky(t);
     raceStep({ active: false, pos: fly.pos, enter: false, t });
     if (fly.mode === 'pilot') startCarryingOn();
     if (fly.mode === 'drift') carryOn(dt, t);
@@ -2362,6 +2381,22 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   if (fly.dock && enter) {
     enterRoom(fly.dock, t);
     fly.speed = 0;
+    after(dt, t);
+    return;
+  }
+  // Slow into a flying station's middle, the ship docks (lib/city-skyport.ts, 2026-11-14): it
+  // settles and holds gently there, bobbing with it; any steering or boost undocks at once.
+  const skyHold = skyDockStep(fly.pos, fly.speed, held(...SKY_UNDOCK_KEYS), t);
+  if (skyHold) {
+    const k = 1 - Math.exp(-2 * dt);
+    fly.pos = [
+      fly.pos[0] + (skyHold[0] - fly.pos[0]) * k,
+      fly.pos[1] + (skyHold[1] - fly.pos[1]) * k,
+      fly.pos[2] + (skyHold[2] - fly.pos[2]) * k,
+    ];
+    fly.speed *= Math.exp(-3 * dt);
+    fly.vy = 0;
+    fly.high = fly.pos[1] > SKY - 5;
     after(dt, t);
     return;
   }
@@ -2494,6 +2529,7 @@ export function travelTo(spot: TravelSpot) {
   if (inRoom()) leaveRoom();
   if (inSpace()) resetSpace();
   resetRace();
+  undockSky(fly.t);
   const { c, f } = flier(fly.t);
   const to = nearestCopy(spot.pos, c);
   const d = Math.hypot(to[0] - c[0], to[2] - c[2]);
@@ -2509,7 +2545,8 @@ export function travelTo(spot: TravelSpot) {
   };
   fly.mode = 'pilot';
   fly.dock = null;
-  fly.high = false;
+  // Landing over the towers' sky (a flying station, the parcours), the ship holds its height there.
+  fly.high = to[1] > SKY - 5;
   fly.vy = 0;
   fly.slow = false;
   fly.pitch = 0;
@@ -2703,6 +2740,9 @@ export function tally(): string {
   // The parcours' count of rings in a row (2026-11-14), while it lasts.
   const parcours = ringBanner(fly.t);
   if (parcours) return parcours;
+  // Docked at a flying station (2026-11-14): its name.
+  const docked = skyDockBanner();
+  if (docked) return docked;
   // 2026-11-13: once you let go (Esc), "Autopilot" for a moment; near a pad, its name.
   if (fly.mode === 'drift' && fly.t - letGoAt >= 0 && fly.t - letGoAt < 3) return 'Autopilot';
   if (fly.dock) return DOCK_PROMPT;

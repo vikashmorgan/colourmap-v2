@@ -8,6 +8,7 @@ import { GROUND, type Item, TILE_X, TILE_Z } from './city-grid';
 import { TRACKS } from './city-race';
 import { CITY_PORTALS, RING_RADII, ringOf } from './city-space';
 import {
+  STATION_GLOW_MAX,
   STATION_HIGH,
   STATION_LOW,
   STATIONS,
@@ -108,6 +109,20 @@ describe('Flying stations over the City of Dreams (2026-11-14)', () => {
           // Mellow: never brighter than a lit window's glow.
           expect(lumA).toBeLessThan(0.8);
         }
+      }
+    }
+  });
+
+  it('stays mellow lit up from the stratosphere and warmed by a docked ship: never a glare', () => {
+    const o = [0, 0, 0, 0, 0, 0];
+    for (const s of STATIONS) {
+      const c = stationCentre(s, 5);
+      // The most the drawing lifts them (from over the plan) and the warmest a dock makes them.
+      for (let i = 0; i < stationCount(s); i += 5) {
+        stationSite(s, i, 5, c, 1.15 * 1.6, o, 1);
+        expect(Math.max(o[3] as number, o[4] as number, o[5] as number), s.name).toBeLessThan(
+          STATION_GLOW_MAX + 1e-9,
+        );
       }
     }
   });

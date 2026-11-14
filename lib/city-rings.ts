@@ -429,11 +429,53 @@ const state = {
   last: Number.NEGATIVE_INFINITY,
 };
 
-/** Forgets every ring flown and the count (a fresh start, a jump in time). */
+/** Forgets every ring flown and the count (a fresh start, a jump in time); the best stays. */
 export function resetRings() {
   state.passed.clear();
   state.streak = 0;
   state.last = Number.NEGATIVE_INFINITY;
+}
+
+/**
+ * The best run (most rings in a row), kept on the device as the races' best times are
+ * (lib/city-race.ts), read once; where there is no storage it lives this visit only.
+ */
+export const RING_BEST_KEY = 'colourmap:city-rings:best';
+let best = -1;
+/** The best run of rings in a row so far (0 before any). */
+export function ringBest(): number {
+  if (best < 0) {
+    best = 0;
+    try {
+      const n = Number(globalThis.localStorage?.getItem(RING_BEST_KEY));
+      if (Number.isInteger(n) && n > 0) best = n;
+    } catch {
+      /* no storage: the best lives this visit only */
+    }
+  }
+  return best;
+}
+function noteBest(n: number) {
+  if (n <= ringBest()) return;
+  best = n;
+  try {
+    globalThis.localStorage?.setItem(RING_BEST_KEY, String(n));
+  } catch {
+    /* no storage: the best lives this visit only */
+  }
+}
+/**
+ * Forgets the best, here and on the device (a test's fresh start); with `device` false, only here,
+ * so it is read from the device again (as on a new visit).
+ */
+export function resetRingBest(device = true) {
+  best = device ? 0 : -1;
+  if (!device) return;
+  try {
+    globalThis.localStorage?.removeItem(RING_BEST_KEY);
+  } catch {
+    /* no storage: nothing kept */
+  }
 }
 
 /**
@@ -453,6 +495,7 @@ export function ringStep(a: Vec3, b: Vec3, t: number): number {
     state.passed.set(key, t);
     state.streak = t - state.last < STREAK_WINDOW ? state.streak + 1 : 1;
     state.last = t;
+    noteBest(state.streak);
     hits++;
   }
   if (state.passed.size > 256)
@@ -460,11 +503,14 @@ export function ringStep(a: Vec3, b: Vec3, t: number): number {
   return hits;
 }
 
-/** The count of rings in a row, while it lasts, for the quiet words beside the bar; '' otherwise. */
+/**
+ * The count of rings in a row, while it lasts, for the quiet words beside the bar, and the best
+ * run after it when this one is short of it ("Rings 7 · best 12"); '' otherwise.
+ */
 export function ringBanner(t: number): string {
-  return state.streak > 0 && t - state.last >= 0 && t - state.last < STREAK_WINDOW
-    ? `Rings ${state.streak}`
-    : '';
+  if (!(state.streak > 0 && t - state.last >= 0 && t - state.last < STREAK_WINDOW)) return '';
+  const b = ringBest();
+  return b > state.streak ? `Rings ${state.streak} · best ${b}` : `Rings ${state.streak}`;
 }
 
 /**
