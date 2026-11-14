@@ -2100,13 +2100,34 @@ spires' open blocks, the Canals' designs, one call in the items) and `lib/city-c
 - **Indian spires:** the Saffron Shikhara, the Garden of Lamps and the Marigold Dome (Studio
   buildings stretched to 112 to 126) on blocks of their own kept open, out from under the metro,
   spread over the quarter, ten under any big ship, under the rings and far under the stations.
-- **Highways over the low roofs:** five, three lanes abreast, one way each, the market's look in
-  their quarter's tone: two over Egypt's pyramids (40, 46), two over the Temples' quarter (86 over
-  its temples, 72), one over the Oriental quarter (42); each over every roof under it by six or
-  more, clear of the street lanes, the big ships, the high currents and the stations.
+- **Highways over the low roofs:** four, three lanes abreast, one way each, the market's look in
+  their quarter's tone: two over Egypt's pyramids (40, 46), two over the Temples' quarter (86, over
+  its temples up to 79); each over every roof under it by six or more in every copy of the tile
+  (a raised tower stays HIGHWAY_CLEAR under one), clear of the street lanes, the big ships, the
+  high currents and the stations.
+- **Higher streams:** two, one way each, the length of the tile at 186: over the high currents'
+  loops (182 at most), under the stations (their lowest over 190) and the ring sets.
+- **Orbits round the monuments** (`lib/city-orbits.ts`): round every landmark but the race plaza,
+  every big square, the fifteen new buildings, the Indian spires and the Turquoise Crown, a ring of
+  ships at a constant radius seven outside its reach, one way, at the lowest height over every roof
+  under it by eight that is clear of the street lanes, the big ships' lines and the ring sets (104
+  at most, under the express lanes, the flocks and the high currents); about half get a second ring
+  higher flying the other way, about a third fly the first as a two-turn spiral, up or down, fading
+  at its ends. Found per tile copy, since the towers round a monument differ from copy to copy.
+- **The Oriental quarter, Istanbul-like** (`lib/city-istanbul.ts`): its towers rise to 40 to 84
+  (some to 106), each plain one crowned with a drum and dome of our own, now and then a smaller dome
+  stacked over it, and two or four slender needles with balcony rings and pointed caps, turquoise
+  and gold. The Turquoise Crown, the centrepiece, on its own open block at the quarter's entrance
+  (block 3, row 8): an octagonal shaft in five tiers with balcony rings, a drum and a great dome at
+  132 to 150, a gold finial to 176, four needles beside it; taller than every tower in the quarter
+  and than the Crescent Needle (162), under the stations and the ring sets. Like the fifteen new
+  buildings it stands in the high currents' band (142 to 182): light, the ships fly through it.
 - **Lanes:** whatever crosses a street keeps LANE_CLEAR (4) from every street channel's height (5,
   11, 15, 30, the express 112 and 120), and in the market from its highways'.
-- **Acceptance:** `lib/city-alive.test.ts` and `lib/city-gates.test.ts`: towers raised and capped,
+- **Acceptance:** `lib/city-alive.test.ts`, `lib/city-gates.test.ts`, `lib/city-orbits.test.ts` and
+  `lib/city-istanbul.test.ts`: towers raised and capped, orbits at a constant radius, one way, over
+  the roofs and clear of the walls, the higher streams threaded, the Oriental quarter raised and the
+  Turquoise Crown its tallest,
   the Canals' uniques at the Heights' scale, the spires and their clearances, sky bridges, hanging
   lights in the new quarters, the highways over the roofs and one way, gates per quarter with room
   to fly through, banners in both orientations with room to fly under, signs in several

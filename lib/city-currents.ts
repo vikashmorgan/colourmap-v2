@@ -43,6 +43,7 @@ import {
   nearest,
   TAU,
   TILE_I,
+  TILE_J,
   TILE_X,
   wrap,
 } from './city-grid';
@@ -697,6 +698,7 @@ const skyHighway = (
   sgn: 1 | -1,
   speed: number,
   tone: RGB,
+  gap = 18,
 ): MarketStream[] =>
   [-1, 0, 1].map((l) => ({
     level: 'high' as MarketLevel,
@@ -707,7 +709,7 @@ const skyHighway = (
     y,
     sgn,
     speed,
-    gap: 18,
+    gap,
     tone,
   }));
 
@@ -718,10 +720,20 @@ export const SKY_STREAMS: MarketStream[] = [
   ...skyHighway(-1.5 * BLOCK_X, 40, 48, 40, 1, 16, [0.95, 0.75, 0.45]),
   ...skyHighway(-4.5 * BLOCK_X, 40, 48, 46, -1, 16, [1, 0.64, 0.22]),
   // The Temples' quarter (rows 24 to 31, east): just over its temples (up to 79) and towers.
+  // (The Oriental quarter, which had one, now stands tall: lib/city-alive.ts RISE.)
   ...skyHighway(1.5 * BLOCK_X, 24, 32, 86, -1, 18, [1, 0.93, 0.8]),
-  ...skyHighway(5.5 * BLOCK_X, 24, 32, 72, 1, 18, [1, 0.74, 0.3]),
-  // The Oriental quarter (rows 8 to 15, east), over its low roofs.
-  ...skyHighway(5.5 * BLOCK_X, 8, 16, 42, -1, 17, [0.25, 0.85, 0.8]),
+  ...skyHighway(5.5 * BLOCK_X, 24, 32, 86, 1, 18, [1, 0.74, 0.3]),
+];
+
+/*
+ * Higher streams (2026-11-14: "some ship streams fly higher too, well above the towers but below
+ * the stations"): threaded at 186, over the high currents' loops (142 to 182) and under the
+ * stations (their lowest at 190 and up) and the ring sets (192 and up), the length of the tile.
+ */
+export const HIGH_STREAM_Y = 186;
+export const HIGH_STREAMS: MarketStream[] = [
+  ...skyHighway(-2.5 * BLOCK_X, 0, TILE_J, HIGH_STREAM_Y, -1, 24, [0.6, 0.75, 1], 40).slice(1, 2),
+  ...skyHighway(3.5 * BLOCK_X, 0, TILE_J, HIGH_STREAM_Y, 1, 24, [0.75, 0.6, 1], 40).slice(1, 2),
 ];
 
 /** The lowest low-roof highway over tile-local (x, z), `pad` round its lanes; null where none flies. */

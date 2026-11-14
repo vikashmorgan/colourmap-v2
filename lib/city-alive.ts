@@ -33,7 +33,13 @@ import { bannerItems } from './city-banners';
 import { stretchSite } from './city-big';
 import { BUILDING_KINDS } from './city-buildings';
 import { canalBridgeItems } from './city-canal-bridges';
-import { type MarketStream, OUTLIERS, SKY_STREAMS } from './city-currents';
+import {
+  HIGH_STREAMS,
+  type MarketStream,
+  OUTLIERS,
+  SKY_STREAMS,
+  skyStreamOver,
+} from './city-currents';
 import { type Design, designMesh, quarterPalette } from './city-designs';
 import { gateItems } from './city-gates';
 import {
@@ -51,7 +57,9 @@ import {
   TILE_Z,
   wrap,
 } from './city-grid';
+import { istanbulItems } from './city-istanbul';
 import { highwayItem } from './city-market';
+import { type Monument, orbitItems } from './city-orbits';
 import { type PlazaSpot, plazaItems } from './city-plazas';
 import { type StrokeSet, Strokes, strokeItem } from './city-strokes';
 
@@ -86,7 +94,7 @@ export function columnCap(I: number): number {
  */
 export const RISE: Record<string, { lo: number; hi: number; sky: number; skyHi: number }> = {
   indian: { lo: 36, hi: 72, sky: 0.12, skyHi: 96 },
-  oriental: { lo: 24, hi: 52, sky: 0.1, skyHi: 74 },
+  oriental: { lo: 40, hi: 84, sky: 0.22, skyHi: 106 },
   heights: { lo: 92, hi: 124, sky: 0.2, skyHi: 128 },
   canals: { lo: 38, hi: 84, sky: 0.2, skyHi: 112 },
   golden: { lo: 42, hi: 92, sky: 0.18, skyHi: 118 },
@@ -96,8 +104,22 @@ export const RISE: Record<string, { lo: number; hi: number; sky: number; skyHi: 
   market: { lo: 44, hi: 104, sky: 0.2, skyHi: 122 },
 };
 
-/** Tower k of quarter d in column I, h tall as planned: how tall it stands now (never lower). */
-export function aliveHeight(d: string, k: number, h: number, I: number): number {
+/** How far under a low-roof highway (lib/city-currents.ts SKY_STREAMS) a raised roof stays. */
+export const HIGHWAY_CLEAR = 8;
+
+/**
+ * Tower k of quarter d in column I, h tall as planned: how tall it stands now (never lower). At
+ * (x, z), `half` its widest half: never up into a low-roof highway over it.
+ */
+export function aliveHeight(
+  d: string,
+  k: number,
+  h: number,
+  I: number,
+  x = Number.NaN,
+  z = Number.NaN,
+  half = 0,
+): number {
   const R = RISE[d];
   if (!R) return h;
   let want = R.lo + (R.hi - R.lo) * hash(k, 901) ** 1.2;
@@ -105,6 +127,10 @@ export function aliveHeight(d: string, k: number, h: number, I: number): number 
   // The first column beside the avenue's own towers keeps its height: the quarters step up away
   // from the avenue, whose walls and galleries keep their own levels (lib/city-avenue.ts).
   if (!risesAt(I)) return h;
+  if (Number.isFinite(x)) {
+    const hw = skyStreamOver(x - nearest(0, x, TILE_X), wrap(z, TILE_Z), half + 2);
+    if (hw !== null) want = Math.min(want, hw - HIGHWAY_CLEAR);
+  }
   return Math.max(h, Math.min(want, columnCap(I)));
 }
 /** Whether a column's towers rise: all but the avenue's and the first beside it. */
@@ -452,7 +478,7 @@ export function hangSet(H: Hang): StrokeSet {
 /** The highways over the low roofs within sight (lib/city-currents.ts SKY_STREAMS). */
 function skyHighwayItems(eye: Vec3, t: number, R: number, ahead: Ahead, out: Item[]) {
   const ox0 = nearest(0, eye[0], TILE_X);
-  SKY_STREAMS.forEach((S: MarketStream, i) => {
+  [...SKY_STREAMS, ...HIGH_STREAMS].forEach((S: MarketStream, i) => {
     const mid = (S.s0 + S.s1) / 2;
     const half = (S.s1 - S.s0) / 2;
     for (const ox of [ox0 - TILE_X, ox0, ox0 + TILE_X]) {
@@ -484,6 +510,7 @@ export function aliveItems(
   ahead: Ahead,
   out: Item[],
   plazas: PlazaSpot[] = [],
+  monuments: Monument[] = [],
 ) {
   spireItems(eye, t, far, ahead, out);
   skyHighwayItems(eye, t, Math.min(far, near + 120), ahead, out);
@@ -527,4 +554,6 @@ export function aliveItems(
   bannerItems(eye, t, near, towerAt, ahead, out);
   plazaItems(eye, t, Math.min(far, near + 140), plazas, ahead, out);
   canalBridgeItems(eye, t, near, towerAt, ahead, out);
+  orbitItems(eye, t, Math.min(far, near + 160), monuments, towerAt, ahead, out);
+  istanbulItems(eye, t, near, far, towerAt, ahead, out);
 }
