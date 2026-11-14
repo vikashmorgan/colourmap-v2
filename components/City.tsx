@@ -108,6 +108,8 @@ const TRIP: Trip = {
       has: hasGame,
       set: setFly,
       claims: SHIP_KEYS,
+      // No quotes or sentences while you fly: they only take space (2026-11-14).
+      wordless: true,
       meter: { label: 'Boost', value: boostLeft },
       tally,
       gauges,

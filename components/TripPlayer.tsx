@@ -119,6 +119,11 @@ export type Trip = {
       set: (active: boolean, keys: string[], dt: number, t: number) => void;
       /** Keys the game takes for itself while played, beyond the arrows (the Shark Sim's Space, its boost). */
       claims?: string[];
+      /**
+       * No sentences while it is played (the City's Ship, 2026-11-14: "no sentences and quotes while
+       * we fly in the city, it just takes space"): the step's words and its line are hidden.
+       */
+      wordless?: boolean;
       /** A small bar shown while it is played (the Shark Sim's boost), its value 0 to 1, read every frame. */
       meter?: { label: string; value: () => number };
       /** A short count shown beside the bar while it is played (the Shark Sim's finds), read every frame. */
@@ -1433,6 +1438,7 @@ diffuseColor.rgb *= vDof;`,
     : (trip.wordsShown?.(hud.u, lines.length) ?? lines.map(() => 1));
   const game = trip.pieces?.game;
   const steering = !journey && !stopped && !!game?.has(hud.index);
+  const quiet = steering && !!game?.wordless;
   // The instruments, the same set every frame: read once here for their names and ranges, drawn
   // in the game's style (none hides them all).
   const display = steering ? (game?.display?.() ?? 'dials') : 'none';
@@ -1580,7 +1586,7 @@ diffuseColor.rgb *= vDof;`,
           ) : null}
         </div>
       ) : null}
-      {hasWords && words && lines.length > 0 ? (
+      {hasWords && words && !quiet && lines.length > 0 ? (
         <blockquote className="jr-words" aria-live="polite">
           {lines.map((line, k) => (
             <p
@@ -1666,7 +1672,7 @@ diffuseColor.rgb *= vDof;`,
             {variantWord} {variant + 1} of {variantList.length}
           </span>
         ) : null}
-        <p className={`bb-line${chrome ? '' : ' bb-hidden'}`}>{step.line}</p>
+        <p className={`bb-line${chrome && !quiet ? '' : ' bb-hidden'}`}>{step.line}</p>
       </div>
       <button
         type="button"
