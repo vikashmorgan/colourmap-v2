@@ -42,7 +42,7 @@ function greenSites(items: Item[]) {
   return n;
 }
 
-describe('the Green Code quarter (2026-11-13: "do a matrix quarter in green")', () => {
+describe('the Matrix quarter (2026-11-13: "do a matrix quarter in green")', () => {
   it('takes a band of its own at the far end of the plan, both sides, overlapping no other quarter', () => {
     expect(BANDS).toHaveLength(TILE_J / BAND_ROWS);
     expect(BANDS[BANDS.length - 1]).toEqual(['code', 'code']);
@@ -54,7 +54,7 @@ describe('the Green Code quarter (2026-11-13: "do a matrix quarter in green")', 
         expect(districtOf(I, J) === 'code').toBe(inBand);
       }
     }
-    expect(DISTRICTS.code.name).toBe('Green Code quarter');
+    expect(DISTRICTS.code.name).toBe('Matrix quarter');
     expect(DISTRICTS.code.colour).toEqual(CODE_GREEN);
   });
 
@@ -77,7 +77,8 @@ describe('the Green Code quarter (2026-11-13: "do a matrix quarter in green")', 
         expect((I + 1) * BLOCK_X - tw.x - tw.hx).toBeGreaterThanOrEqual(3 - 1e-9);
         expect(tw.z - tw.hz - J * BLOCK_Z).toBeGreaterThanOrEqual(3 - 1e-9);
         expect((J + 1) * BLOCK_Z - tw.z - tw.hz).toBeGreaterThanOrEqual(3 - 1e-9);
-        expect(blocked([tw.x, GROUND + tw.h / 2, tw.z])).toBe(true);
+        // Under its roof even at the bottom of its rise (lib/city-rise.ts RISE_MAX_DROP).
+        expect(blocked([tw.x, GROUND + tw.h * 0.4, tw.z])).toBe(true);
         expect(blocked([tw.x, GROUND + tw.h + 3, tw.z])).toBe(false);
       }
     }

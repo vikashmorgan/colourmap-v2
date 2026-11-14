@@ -26,6 +26,7 @@ import {
   youCaption,
 } from './city-minimap';
 import { TRACKS } from './city-race';
+import { STATIONS } from './city-stations';
 
 describe('the map of the City of Dreams', () => {
   it('comes from the plan, the same every time', () => {
@@ -433,5 +434,68 @@ describe('fast travel from the map (2026-11-14: "from map i can click to the dif
     const [x, y] = projectMap(v, w, h, 100, 0, 1000);
     const touch = mapPick(shown, data, v, w, h, { x, y }, false);
     if (touch) expect(shown.some((l) => l.go === touch)).toBe(true);
+  });
+});
+
+describe('the flying stations and the parcours on the map (2026-11-14: "finish the sky stations")', () => {
+  it('marks every flying station and the parcours start, and draws the parcours line', () => {
+    const data = cityMapData();
+    const sky = data.places.filter((p) => p.kind === 'sky');
+    expect(sky.map((p) => p.name)).toEqual(STATIONS.map((s) => s.name));
+    expect(data.places.filter((p) => p.kind === 'parcours')).toHaveLength(1);
+    expect(data.parcours?.length).toBeGreaterThan(60);
+    // Quiet: one small disc each, the line dotted faint, no name pushing another aside.
+    const calls: string[] = [];
+    const dashes: unknown[] = [];
+    const ctx = new Proxy(
+      {},
+      {
+        get: (_t, k) => {
+          if (k === 'createLinearGradient') return () => ({ addColorStop() {} });
+          return (...args: unknown[]) => {
+            calls.push(String(k));
+            if (k === 'setLineDash') dashes.push(args[0]);
+          };
+        },
+        set: () => true,
+      },
+    ) as unknown as CanvasRenderingContext2D;
+    for (const v of [fitView(1536, 640), fitView3D(1536, 640)]) {
+      calls.length = 0;
+      const shown = drawCityMap(ctx, data, v, 1536, 640, null, 0);
+      expect(calls.filter((c) => c === 'ellipse')).toHaveLength(STATIONS.length);
+      noOverlap(shown);
+      // Their names come after every other place's.
+      for (const l of shown)
+        if (sky.some((p) => p.name === l.text) || l.text === 'Ring parcours')
+          expect(l.priority).toBe(4);
+    }
+    expect(dashes).toContainEqual([1, 5]);
+  });
+
+  it('flies to a station or the parcours start at a tap on its mark, its name shown or not', () => {
+    const data = cityMapData();
+    for (const [w, h] of [
+      [1536, 640],
+      [390, 844],
+    ] as const) {
+      for (const v of [fitView(w, h), fitView3D(w, h)]) {
+        // No names at all: the marks alone lead there.
+        const raised = v.tilt > 0.02;
+        for (const p of data.places) {
+          if (p.kind !== 'sky' && p.kind !== 'parcours') continue;
+          const [x, y] = projectMap(v, w, h, p.x, raised ? p.y : 0, p.z);
+          if (x < 0 || y < 0 || x > w || y > h) continue;
+          const go = mapPick([], data, v, w, h, { x: x + 2, y: y - 2 }, false);
+          // Two marks may sit close on a phone: the tap leads to a sky mark either way.
+          expect(go && 'sky' in go, p.name).toBe(true);
+        }
+      }
+    }
+    const v = fitView(1536, 640);
+    STATIONS.forEach((s, i) => {
+      const [x, y] = projectMap(v, 1536, 640, s.x, 0, s.z);
+      expect(mapPick([], data, v, 1536, 640, { x, y }, false)).toEqual({ sky: i, name: s.name });
+    });
   });
 });

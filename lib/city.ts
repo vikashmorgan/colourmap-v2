@@ -117,6 +117,7 @@ import {
   swarmSeen,
 } from './city-quarter-ships';
 import { race, raceBanner, raceStep, resetRace, rival, trackItems } from './city-race';
+import { aboveCityItems, resetRings, ringBanner, ringStep } from './city-rings';
 import { codeHeight, riseClock, setRiseClock } from './city-rise';
 import {
   currentRoom,
@@ -148,6 +149,7 @@ import {
   trailLight,
 } from './city-ships';
 import { skyGrain } from './city-sky';
+import { resetSkyDock, skyDockBanner, skyDockStep, undockSky } from './city-skyport';
 import {
   type Arrival,
   cityRingBanner,
@@ -2141,7 +2143,7 @@ function move(dt: number): number {
 }
 
 /**
- * Out of a Green Code tower that has grown into the ship's space (lib/city-rise.ts): up onto its
+ * Out of a Matrix tower that has grown into the ship's space (lib/city-rise.ts): up onto its
  * roof, MARGIN over it. The roof rises slowly and smoothly, so the ship rides up with it.
  */
 function liftOver(q: Vec3): Vec3 {
@@ -2221,6 +2223,22 @@ function carryOn(dt: number, t: number) {
   move(dt);
 }
 
+/** The keys that undock the ship from a flying station: any steering, climbing, faster or boost. */
+const SKY_UNDOCK_KEYS = [
+  'a',
+  'd',
+  'w',
+  's',
+  'arrowleft',
+  'arrowright',
+  'arrowup',
+  'arrowdown',
+  'e',
+  'shift',
+  ' ',
+  'tab',
+];
+
 /** Starts the route afresh: no super boost, no slow mode, no race. */
 function afresh() {
   fly.travel = null;
@@ -2242,6 +2260,8 @@ function afresh() {
   fly.hyperOn = false;
   clearTrail(trail);
   resetRace();
+  resetRings();
+  resetSkyDock();
 }
 
 /** The chase camera on the ship's heading at once (a fresh start, a placing, a jump). */
@@ -2337,10 +2357,11 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   }
   // On Atlantis's ground (lib/city-speedway.ts): its own walls, no races, docks or portals.
   const realm = inAtlantis();
-  // A Green Code tower rising under the ship lifts it with its roof, never through it (2026-11-14).
+  // A Matrix tower rising under the ship lifts it with its roof, never through it (2026-11-14).
   if (fly.mode !== 'route' && !realm) fly.pos = liftOver(fly.pos);
   if (!active) {
     glowStep(false, dt);
+    undockSky(t);
     if (!realm) raceStep({ active: false, pos: fly.pos, enter: false, t });
     if (fly.mode === 'pilot') startCarryingOn();
     if (fly.mode === 'drift') {
@@ -2411,6 +2432,22 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     after(dt, t);
     return;
   }
+  // Slow into a flying station's middle, the ship docks (lib/city-skyport.ts, 2026-11-14): it
+  // settles and holds gently there, bobbing with it; any steering or boost undocks at once.
+  const skyHold = realm ? null : skyDockStep(fly.pos, fly.speed, held(...SKY_UNDOCK_KEYS), t);
+  if (skyHold) {
+    const k = 1 - Math.exp(-2 * dt);
+    fly.pos = [
+      fly.pos[0] + (skyHold[0] - fly.pos[0]) * k,
+      fly.pos[1] + (skyHold[1] - fly.pos[1]) * k,
+      fly.pos[2] + (skyHold[2] - fly.pos[2]) * k,
+    ];
+    fly.speed *= Math.exp(-3 * dt);
+    fly.vy = 0;
+    fly.high = fly.pos[1] > SKY - 5;
+    after(dt, t);
+    return;
+  }
   const settle = fly.dock && !held('w', 's', 'e', 'shift', ' ', 'arrowup', 'arrowdown') ? 0 : 1;
   const pace =
     settle *
@@ -2467,6 +2504,9 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     fly.vy = 0;
     return;
   }
+  // Through the rings of the parcours high over the city (lib/city-rings.ts; 2026-11-14: "a kind of
+  // tunnel parcours higher up"): each warms and counts, and never opens hyperspace.
+  ringStep(was, fly.pos, t);
   after(dt, t);
 }
 
@@ -2593,6 +2633,7 @@ export function travelTo(spot: TravelSpot) {
   if (inRoom()) leaveRoom();
   if (inSpace()) resetSpace();
   resetRace();
+  undockSky(fly.t);
   const { c: at, f } = flier(fly.t);
   // From Atlantis's ground, the trip starts from the gate you came in by, in the city.
   const c = inAtlantis() ? toWorld(at) : at;
@@ -2616,7 +2657,8 @@ export function travelTo(spot: TravelSpot) {
   };
   fly.mode = 'pilot';
   fly.dock = null;
-  fly.high = false;
+  // Landing over the towers' sky (a flying station, the parcours), the ship holds its height there.
+  fly.high = to[1] > SKY - 5;
   fly.vy = 0;
   fly.slow = false;
   fly.pitch = 0;
@@ -2841,6 +2883,12 @@ export function tally(): string {
   if (rings) return rings;
   const r = raceBanner(fly.t);
   if (r) return r;
+  // The parcours' count of rings in a row (2026-11-14), while it lasts.
+  const parcours = ringBanner(fly.t);
+  if (parcours) return parcours;
+  // Docked at a flying station (2026-11-14): its name.
+  const docked = skyDockBanner();
+  if (docked) return docked;
   // 2026-11-13: once you let go (Esc), "Autopilot" for a moment; near a pad, its name.
   if (fly.mode === 'drift' && fly.t - letGoAt >= 0 && fly.t - letGoAt < 3) return 'Autopilot';
   if (fly.dock) return DOCK_PROMPT;
@@ -2900,7 +2948,7 @@ function crosses(tw: Tower, e: Vec3, dx: number, dy: number, dz: number): boolea
   const x1 = tw.x + tw.hx - s;
   const z0 = tw.z - tw.hz + s;
   const z1 = tw.z + tw.hz - s;
-  // A Green Code tower hides only as high as it stands now (lib/city-rise.ts).
+  // A Matrix tower hides only as high as it stands now (lib/city-rise.ts).
   const h = (tw as Block).shape === 'code' ? codeHeight(tw.h, tw.k, riseClock()) : tw.h;
   const y1 = GROUND + h - s;
   if (e[0] > x0 && e[0] < x1 && e[2] > z0 && e[2] < z1 && e[1] < y1) return false;
@@ -3670,6 +3718,10 @@ function gather(P: Plan): { d: number; run: () => void }[] {
     ...trackItems(eye, cur.t, NEAR),
     ...lifeItems(eye, cur.t, P.c, P.f),
     ...fireworkItems(eye, cur.t, viewAt(eye[1])),
+    // The flying stations, the rings of light and the parcours over the towers' sky
+    // (lib/city-stations.ts, lib/city-rings.ts; 2026-11-14: "add 15 cool flying stations ... so
+    // when u fly above there is cool stuff", "and big circles of lights concentric in many parts").
+    ...aboveCityItems(eye, fwd, cur.t, viewAt(eye[1])),
   ];
   // The speedway's mouth over the avenue at the plan's north end (lib/city-speedway.ts).
   mouthItems(eye, fwd, cur.t, game);

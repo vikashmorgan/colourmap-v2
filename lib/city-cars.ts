@@ -72,7 +72,7 @@ export type Car = {
   dir: Vec3;
   road: Road;
   colour: RGB;
-  /** Its head and tail lights, where a district has its own (the Green Code quarter's greens). */
+  /** Its head and tail lights, where a district has its own (the Matrix quarter's greens). */
   lights?: [RGB, RGB];
 };
 
@@ -229,7 +229,7 @@ export const CAR_EYE_MAX = GROUND + 80;
 /**
  * The cars near a low eye, ahead of it (`fwd`), for the Ship's renderer; `onCanal` keeps them off
  * the Canals' water; near the `ship` their lights dip; `tint`, where it gives a hue, paints a car
- * and its lights in it (2026-11-13: the Green Code quarter is green only).
+ * and its lights in it (2026-11-13: the Matrix quarter is green only).
  */
 export function carItems(
   eye: Vec3,

@@ -703,7 +703,7 @@ The film is still a mood only: every building, ship and sign is our own, from a 
 
 ### The plan (`lib/city-game.ts`)
 
-A tile of 12 blocks across and 56 along (312 × 1904; 48 and 1632 before the Green Code quarter),
+A tile of 12 blocks across and 56 along (312 × 1904; 48 and 1632 before the Matrix quarter),
 repeating every way so the city never ends. The avenue runs down its middle; seven bands of eight
 blocks lie along it, a district each side:
 
@@ -715,7 +715,7 @@ blocks lie along it, a district each side:
 | 3 | **Golden gardens**: golden towers, golden domes, parks of golden trees (gold-leaf crowns shimmering); landmark the **golden spire** (190 high, rings of light, an open sphere of light on top, eight golden trees round it), seen from everywhere | **Temple quarter**: the Studio's temples (lib/golden-buildings.ts, read-only) on blocks; landmark the Studio's **ziggurat**, stairs on every side, 1.7 times its Studio size |
 | 4 | **Industrial quarter**: two of the Studio's works on blocks (the rest stand singly through the city, below); landmark the Studio's **foundry**, its chimneys breathing steam | **Solarpunk domes**: the Studio's glasshouses and parks of golden trees; landmark the Studio's **garden of domes** |
 | 5 | **Egyptian quarter**: pyramids on the blocks (the golden slope, courses marked, a light at every apex; they hold you like walls, on their slope), obelisks on the avenue's low towers; landmark the **great pyramid** with a lying sphinx-like figure and two obelisks (our own simple shapes) | **Neon market**: word signs in a small Latin pixel font (BANK, BAR, HOTEL, CAFE, NOODLES, CINEMA, TEA, DREAMS) |
-| 6 | **Green Code quarter** (both sides, below): dark towers with code falling down their faces; landmark the **data spire** | **Green Code quarter** too |
+| 6 | **Matrix quarter** (both sides, below): dark towers with code falling down their faces; landmark the **data spire** | **Matrix quarter** too |
 
 Every district's name is written over its mouth on the avenue's walls. The great panel
 **WELCOME TO THE CITY OF DREAMS** hangs over the opening road, where the Ship starts (below). Now
@@ -898,7 +898,7 @@ Leaving a room, space or a race first. One quiet line in the map says so: "Tap a
 there".
 
 **Hops while flying.** **[** and **]** fly to the start of the quarter before or after the one you
-are in, round the plan's order (the Green Code's next is Chinatown), the same short trip. Neither
+are in, round the plan's order (the Matrix quarter's next is Chinatown), the same short trip. Neither
 key was taken; they get no phone button (a phone taps the map).
 
 **Acceptance (quarter starts and fast travel)**
@@ -1217,7 +1217,7 @@ buildings".
   avenue's side before).
 - **Frames**: big banners (a pixel of 0.4 or more) a quiet frame with three brighter lights at each
   corner; smaller words an underline; hanging boards a frame and a faint backing.
-- **Posters** on about one roof in twelve (not Chinatown, not the Green Code quarter): a board on
+- **Posters** on about one roof in twelve (not Chinatown, not the Matrix quarter): a board on
   the roof's street edge on two legs, an invented brand in `deco` in its district's hue over its
   line in `tall` in white, a gold frame with a soft light going round it once in about seven
   seconds. Brands are our own (GLOWBERRY SODA, ORBIT NOODLES, DRIFT TEA HOUSE, VELVET HOURS, ...).
@@ -1258,13 +1258,13 @@ from its walls; its roofs carry posters far more often. Then Chinatown's own gat
   over the avenue at the mouths of the Heights (LIGHT), the Golden gardens (PEACE) and the
   Studio's band (FRIENDS), and high over it in the middle of the Heights (DREAMS) and the Studio's
   band (JOY), all above the lanes you cruise in; over the roofs at the tile's two edges (FRIENDS
-  by Chinatown, HOPE, LOVE, DREAMS, JOY, LIGHT in the Green Code quarter); on a roof near the
+  by Chinatown, HOPE, LOVE, DREAMS, JOY, LIGHT in the Matrix quarter); on a roof near the
   avenue in seven quiet districts; and high on the street face of every tall tiered tower in
   Chinatown, in `brush`. Faces `deco`, `tall`, `sign` and `brush`. Each over a cross street, on a
   roof or on a face, so none cuts a wall. The Neon market's side and the opening road keep their
   own signs.
 
-### The Green Code quarter (`lib/city-code.ts`)
+### The Matrix quarter (`lib/city-code.ts`)
 
 > 2026-11-13: "do a matrix quarter in green".
 
@@ -1285,7 +1285,7 @@ tile's edge.
   150, a point to 162, its edges bright, the code falling down its faces, three square halos sinking
   slowly down it (about seventy seconds each, fading in and out), a beacon breathing on the
   quarter's beat (1/3), a ring and eight lines of light on the plaza. On the map as **Data spire**.
-- **WELCOME TO THE GREEN CODE QUARTER** in `deco`, green drifting to mint white, framed, over the
+- **WELCOME TO THE MATRIX QUARTER** in `deco`, green drifting to mint white, framed, over the
   avenue at both its mouths.
 - Green only: everything the game adds there (towers, spire, kerbs, cars, signs) has green its
   strongest channel.
@@ -1296,7 +1296,7 @@ tile's edge.
 > factories can be better integrated not all together."
 
 - **The Neon Canyon**: a street 12 across and 298 long through the Neon market: down x = 52 from
-  the domes' edge (z 1360), a bend west along z = 1428, then down x = 26 to the Green Code
+  the domes' edge (z 1360), a bend west along z = 1428, then down x = 26 to the Matrix quarter
   quarter's edge (z 1632). Its walls are the plan's own towers pushed up to the street, 104 to 140
   high (lower only in its last two rows, where the metro crosses over it), so they hold you like
   every tower. The city's neon part: bands of neon every six up the faces it sees, a strip up each
@@ -1308,7 +1308,7 @@ tile's edge.
 - **Factories through the city**: the Industrial quarter keeps its landmark foundry and two works;
   the others stand singly, never two on neighbouring blocks: cement works on the Canals' quay,
   an assembly hall at the city's edge by the Heights, solar works at the desert's edge among the
-  pyramids, kilns beside the domes (their glassworks), and the Green Code quarter's **data
+  pyramids, kilns beside the domes (their glassworks), and the Matrix quarter's **data
   foundry**, drawn in its green only. Each has a lit yard, a chimney breathing slow steam with a
   slow red lamp, and a conveyor of light gliding to its neighbour's wall (`FACTORY_SITES`).
 
@@ -1341,7 +1341,7 @@ All of it mellow, as ever: colours lean slowly, nothing flashes or jumps, and ev
 
 - **Flying lanterns over Chinatown** (`lib/city-lanterns.ts`): 64 paper lanterns over each Chinatown stretch, red to amber paper a little wider at the top, a warm flame low inside, a gold rim at the open foot. Each rises slowly (a third to two thirds of a unit a second) from eight over the highest roof round it (seventy over the street at least, over the grand pagoda), swaying as it goes, fading in as it starts and out ninety higher, then comes round: always some at every height. 22 sites each.
 - **Jellyfish of light** among and over them: 10 a stretch, a translucent bell of six rings with a brighter rim, eight trailing tendrils and four frilled arms, the bell pulsing slowly and softly (five to eight seconds), drifting a little; each leans round rose, amber and soft violet, about a minute from one to the next. They float high enough that their tendrils clear the roofs. 120 sites each.
-- **The Green Code towers rise and sink** (`lib/city-rise.ts`): a little under half of the quarter's towers sink slowly from their full height by a fifth to nearly half of it and grow back, each on its own cosine cycle of eight to twenty seconds and its own phase. Never above the height they were built to (so under the metro and every ceiling). Their walls follow the drawn height (`blocked` reads the city's clock, set by the Ship each frame and each picture), the towers hide only as high as they stand, and a roof rising under the ship lifts it with it, so the ship is never inside a tower. The autopilot's avenue is untouched.
+- **The Matrix towers rise and sink** (`lib/city-rise.ts`): a little under half of the quarter's towers sink slowly from their full height by a fifth to nearly half of it and grow back, each on its own cosine cycle of eight to twenty seconds and its own phase. Never above the height they were built to (so under the metro and every ceiling). Their walls follow the drawn height (`blocked` reads the city's clock, set by the Ship each frame and each picture), the towers hide only as high as they stand, and a roof rising under the ship lifts it with it, so the ship is never inside a tower. The autopilot's avenue is untouched.
 - **The traffic's flow** (`lib/city-flow.ts`): the avenue streams one way at each level, the two low levels (5, 11) down the avenue with you, the two high (28, 35) toward you. Every street along z is one way, all of it, alternating street by street (low, 5 and 11); every cross street along x is one way, alternating the same way (one street only to the right, the next only to the left), and higher (15 and 30), so the crossing streams pass over the streets they cross. Express lanes over the roofs (112 along z, 120 along x), each against the street under it and faster. A lane is brought round to the streets ahead two or four at a time, so it never changes its way. Ships coming toward the eye show white headlights, ships going away red tails. None at the cruise height (21) and none low on the avenue through Chinatown, as before.
 - **Murmurations** (`lib/city-flocks.ts`): a flock in most cells of a 360 × 480 grid over the whole city, wandering slowly round its cell some 140 over the street (over the roofs, under the stratosphere), 520 small dark-gold and silver birds each. A flock holds a shape, then eases into the next every sixteen seconds: a twisting ribbon, a ring, a spiral, a wave rolling through a sheet, a sheet folding like a book; it turns slowly, each bird wandering a little, a slow shimmer running across it. As the ship nears, the birds part from the line it flies along in a soft wave, opening some 13 round it, earlier ahead of it than behind, closing again once it is past; a bird is only ever pushed further out than it was, so none crosses another, and from 70 away none moves at all. The nearest five flocks are drawn.
 - **Stars when you look up** (`lib/city-stars.ts`, `lib/city-sky.ts`): the sky keeps its five grains a hundred, and as the eye looks up (the camera's forward over the horizon) it borrows up to six more a hundred from the traffic's eleven, one after another, each easing across from a ship to a star; looking ahead, the city keeps them all. The borrowed grains are a faint Milky Way arching over the city (half of them) and more scattered stars, most faint, a few bright. All stars twinkle slowly and gently (never under 0.82 of their light), are brighter looking up, and are no longer dimmed by the player's fade at the dome's distance.
@@ -1379,7 +1379,7 @@ beat; from high up it is lit up to the plan's strength.
 | Industrial quarter | The Studio's foundry | 31 | **196** | a **twisting tower** turning a quarter round as it rises from the foundry's roof, furnace light at its foot, slow rings of steam rising off its top |
 | Solarpunk domes | The Studio's garden of domes | 9 | **142** | a **stack of five glass domes** on a stalk, plants glowing under each |
 | Egyptian quarter | The great pyramid | 36 | **178** | a **floating obelisk** over the apex, a thread of light up to it, three rings drifting slowly round it |
-| Green Code quarter | The data spire | 165 | 165 | gains a **cascade of twelve data pillars** spiralling up round it (30 to 140), light falling down their faces |
+| Matrix quarter | The data spire | 165 | 165 | gains a **cascade of twelve data pillars** spiralling up round it (30 to 140), light falling down their faces |
 
 **Big squares** (`lib/city-big.ts`). Ten open squares, each the four blocks round a crossing in
 the landmarks' columns (x ±78), halfway between two landmarks, hold one of the Studio's temples
@@ -1424,7 +1424,7 @@ block of its own kept open for it (off the avenue, out from under the metro, no 
 | Seed Pod | Solarpunk domes (1, 37) | 145 | four tall lattice pods up a stalk, a glowing seed in each |
 | Sunboat Mast | Egyptian quarter (−6, 44) | 161 | a tapering mast carrying a crescent boat and a sun |
 | Neon Prism | Neon market (4, 45) | 158 | a triangular tower twisting a third round as it rises |
-| Cascade Monolith | Green Code quarter (5, 53) | 150 | six slabs stacked and set back, light falling down them |
+| Cascade Monolith | Matrix quarter (5, 53) | 150 | six slabs stacked and set back, light falling down them |
 
 Each is 900 to 2,200 sites (weight 1.5), drawn out to the whole view, seen over the towers by
 probes high on it.
@@ -1474,7 +1474,7 @@ slowly between the band's two quarters' colours, lamps twinkle softly, nothing f
 **High walls.** The avenue's own towers stand taller in every quarter (`avenueHeight`): Chinatown
 36–62, the Indian quarter 64–104, Istanbul 60–100, the Canals 58–94, the golden gardens 70–110,
 the temples 64–100, the industrial quarter 66–102, the domes 60–96, Egypt 52–82, the market
-72–116, the Green Code 66–116 (the Heights were tall already). The metro, the Neon Canyon and the
+72–116, the Matrix quarter 66–116 (the Heights were tall already). The metro, the Neon Canyon and the
 Chinatown lounge still set the height where they cross. So the avenue is a deep street all the way,
 its good things climbing from 20 to past 100 over the road.
 
@@ -1495,7 +1495,7 @@ its good things climbing from 20 to past 100 over the road.
 | Golden gardens · temples | colonnade bridges, gardens trailing under them (30, 46, 62, 80) | golden colonnades, hanging gardens below each (24, 44, 64, 84) | ivory colonnades, the same | roof gardens; stepped crowns with a lit apex | a trellis of hanging vines (rows 4–5, up to 104) |
 | Industrial · domes | truss gantries with a lamp at every node, and pipe bridges (28, 42, 56, 72) | catwalks with rails, braces and slow amber lamps (24, 40, 56, 72) | dome balconies of glass, green light inside (22, 38, 54, 70) | landing pads; glass domes over gardens | a long glass tube down the right side with plants in it (rows 1–6, 76) and a travelling crane rolling slowly on rails (rows 3–4, up to 98) |
 | Egypt · Neon market | floating obelisk bridges (on nothing, gold bands, a lit tip), and neon bridges with a board hung under each (28, 42, 56, 72) | stepped terraces, each further out, lamps and small obelisk lamps (18, 30, 42, 54, 66) | neon decks every twelve (20 to 92) | stepped crowns; rooftop sign frames | sun-disc gates to fly through, rays and wings, at rows 1, 3, 5, 7 (54); a neon grid (rows 4–6, up to 104) |
-| Green Code | code bridges, glyph lights streaming along them (30, 46, 62, 80) | glyph ledges, a stream falling along (24, 44, 64, 84, 104) | the same | landing pads | a cascade of glyph columns hanging from a lattice, light falling down each (rows 3–5, up to 112) |
+| Matrix | code bridges, glyph lights streaming along them (30, 46, 62, 80) | glyph ledges, a stream falling along (24, 44, 64, 84, 104) | the same | landing pads | a cascade of glyph columns hanging from a lattice, light falling down each (rows 3–5, up to 112) |
 
 Over the Heights' tube and its two lounges (rows 17–21) nothing of the avenue's stands under 64.
 
@@ -1505,12 +1505,12 @@ two pylons on the cross street's corners (x ±10.8) rising 112, rings and lamp b
 lintels across the avenue (34, 64, 94), a double arch crowning it (to 128), its light drifting
 between the two bands' hues; the name of the band you fly into going down the avenue (−z) on its
 near face (at 88), the other band's under it (at 60), in the deco face. The join where the plan
-turns (z = 0, the Green Code into Chinatown) and Chinatown's other edge (into the opening road)
+turns (z = 0, the Matrix quarter into Chinatown) and Chinatown's other edge (into the opening road)
 carry a flared red-and-gold roof over the crown and two great lanterns under the top lintel; the
-gateways at the Green Code's two edges have glyphs falling down their pylons; the others a ring in
+gateways at the Matrix quarter's two edges have glyphs falling down their pylons; the others a ring in
 the crown. Each band's first and last rows lean 30% toward the neighbouring band's hues, so one
 quarter blends into the next. Gateway words: CHINATOWN, LAMPS & DOMES, THE HEIGHTS, GOLDEN
-GARDENS, FORGE & GLASS, SUN & NEON, GREEN CODE.
+GARDENS, FORGE & GLASS, SUN & NEON, MATRIX.
 
 **Budget.** Near-eye items like Chinatown's: each block's bridges one item, each tower's galleries
 and roof one item each, each feature and gateway one; drawn within 160 ahead (the gateways 270),
@@ -1526,8 +1526,166 @@ cost: the frame's grains are a fixed pool; this machine's timings drift threefol
 every band, wall to wall, in the block; sites on six or more ten-high levels over 20 in every
 band; the avenue's middle clear at every height to 120 and the autopilot's route clear; the
 quarter starts and race gates clear; colours drift slowly (no step over 0.03 a frame); a gateway at
-every band's edge, the join's naming CHINATOWN and GREEN CODE, crowned over 112, its lintels lit,
+every band's edge, the join's naming CHINATOWN and MATRIX, crowned over 112, its lintels lit,
 flown through at every height, on every turn of the plan; each band blending into the next.
+
+### Flying stations and rings of light (2026-11-14)
+
+> "add 15 cool flying stations. can be futuristic. circular. etc... like mini cities or buildings
+> or temples or novas above the sky. these will add an element above the city so when u fly above
+> there is cool stuff. ... and big circles of lights concentric in many parts, they look good as
+> decorative element u can fly through. can be part of architecture on top or on side of a tall
+> building or below a flying station. or just in the air creating a kind of tunnel parcours higher
+> up as you fly above the city and try to align flying into them and turning carving to keep on
+> going through that tunnel. but make circles big so not too precise and tiny."
+
+`lib/city-stations.ts` and `lib/city-rings.ts`, hooked into `lib/city.ts` (`gather` draws them,
+`setFly` counts the parcours, `tally` shows the count, a fresh start forgets it). Our own designs
+only, grains from the shared primitives (`lib/city-shapes.ts`) and a few of their own. Mellow: every
+colour drifts slowly toward a warmer shade and back, a few lamps twinkle softly, nothing flashes;
+every motion is a formula of the time (nothing kept frame to frame), so the same moment always
+shows the same picture and nothing jumps.
+
+**Fifteen flying stations**, one to every quarter and two over Chinatown, the Heights and the
+Matrix quarter, floating over the towers' sky (their middles 240 to 420 over the street, all of each
+between 210 and 450): reached with the super boost, under the stratosphere's top, so the super
+boost still opens the whole plan over them. They stand at the tile's sides (x ±115, ±140, left
+quarters left, right quarters right), so the parcours weaves down the middle between them. Each
+turns slowly round the vertical (0.02 to 0.05 radians a second, some each way) and bobs 2 to 3.5
+up and down over 17 to 25 seconds; some have parts of their own turning (orbits, gimbals, discs,
+habitat rings, shuttles) or light flowing (waterfalls, falling light, fading at both ends).
+
+| Station | Quarter | Middle (over the street) | Design | Sites |
+|---------|---------|------|--------|-------|
+| Lantern Harbour | Chinatown | 240 | a gold ring deck, eight great lanterns hung under it round one greater lantern | 1,836 |
+| Orbital Monastery | Chinatown | 360 | a ring walkway with eight small shrines on it, a bell under an arch in its middle | 1,950 |
+| Lotus Rock | Indian quarter | 300 | a temple on a floating rock, terraces round its curved spire, six waterfalls of light | 1,930 |
+| Turquoise Wheel | Istanbul | 420 | a torus on six spokes round a hub, a crescent over its axle | 1,476 |
+| Nova Stack | The Heights | 340 | three Nova Cores stacked on a spine, each wrapped in two turning orbits | 1,616 |
+| Docking Spire | The Heights | 280 | a needle with three docking rings and their pads, shuttles circling it | 1,801 |
+| Violet Disc City | The Canals | 250 | a mini city of tiny towers on a floating disc round a twisting tower | 1,960 |
+| Garden Island | Golden gardens | 260 | an island of gold trees round a great tree, roots trailing under its rock | 1,936 |
+| Sky Ziggurat | Temple quarter | 380 | two stepped ziggurats base to base, a halo round them, a pillar of light under | 1,160 |
+| Gyroscope Foundry | Industrial quarter | 400 | three nested rings turning on their own axes round a furnace core | 1,590 |
+| Biosphere Cluster | Solarpunk domes | 270 | three glass spheres joined by tubes, plants glowing inside | 1,378 |
+| Hanging Pyramid | Egyptian quarter | 340 | a pyramid hanging point down, a sun ring with rays over it | 1,182 |
+| Neon Carousel | Neon market | 300 | four discs on a mast, each turning the other way, boards hung round them | 2,406 |
+| Data Lattice | Matrix | 320 | a lattice cube standing on its corner, a core inside, light falling through it | 1,328 |
+| Twin Ring Habitat | Matrix | 420 | two habitat rings turning opposite ways round a hub, panels over them | 1,844 |
+
+Each wears its quarter's colour, a lighter shade (toward warm, never white), a deeper one and a
+golden one. **Fly-through**: all light, as the Studio's other additions are; no collision, so the
+ship can never be caught on one. They float over every tower (no probes; the street sees them
+looking up) and stand clear of the landmarks and big squares where the fireworks burst (at least
+their reach and 20 more across), the space portals, the Sky Island Loop and one another.
+
+**Concentric rings** (`ringSets`): 28 sets of two to four rings round one middle in one plane,
+radius 16 to 40, every ring dashed (twelve dashes, a warm lamp at every third), turning slowly, each
+the other way to the next, breathing gently, in the quarter's colour:
+
+- **crowns**: halos 30 over six landmarks' crowns and at least 200 over the street (pagoda, temple
+  mountain, stair tower, twisting tower, floating obelisk, data spire), under where their
+  fireworks burst;
+- **halos** round six of the fifteen buildings (Lantern Spindle, Helix Exchange, Sunleaf Column,
+  Sunboat Mast, Neon Prism, Cascade Monolith), 56 to 70 up, under the big ships;
+- **over** four more (Hourglass Tower, Ivory Echo, Cog Tower, Seed Pod), standing 226 over the
+  street, some 70 over their tops, facing down the city, so you fly through them along it;
+- **under** six stations (Lantern Harbour, Turquoise Wheel, Violet Disc City, Sky Ziggurat, Neon
+  Carousel, Twin Ring Habitat), hanging 16 under them and bobbing with them;
+- **free** in the air: six sets standing at a slant, 224 to 232 over the street.
+
+All of them under 80 over the street or over 195, so never among the flocks (some 120 to 165),
+the high currents of ships (142 to 182) or the big ships (96 to 142), and apart from the
+parcours.
+
+**The parcours**: a chain of 45 big rings (radius 20) along one smooth curve down the whole tile,
+weaving across the avenue (x −75 to 75) and rising and falling from 275 to 365 over the street.
+The curve repeats with the plan, so the chain never ends: flown down the city it comes round to its
+start. Rings stand about 46 apart along it, never turning more than 16° from one to the next; each
+leans into the turn (up to 0.46 radians) and has a brighter keel at its foot, so the banking reads.
+Through a ring (its plane crossed within 1.1 of its radius from its middle, either way: big and
+forgiving, never precise) it warms toward gold over half a second and cools over six, a soft halo
+ripples out from it and fades over 1.4 seconds, and **"Rings N"** shows in the quiet words beside
+the bar (after the race's, before a district's name): the rings flown in a row, the count starting
+again after ten seconds without one. The same ring twice within a second and a half counts once.
+These rings are not the space portals: they never open hyperspace, and they stand well clear of
+them (at least the two radii and 20 more), of the stations and the Sky Island Loop. The super
+boost takes you up to them; once up, the ship holds its height while you carve.
+
+**Kept clear**: everything here is 40 and more from the autopilot's route, 20 and more from every
+quarter start, 15 and more from every race gate (the Sky Island Loop's gates 25 and more from the
+stations, the rings' radius and 15 from the parcours).
+
+**Budget**: items in the pool like everything else, dealt nearest first and thinned with the
+distance by the renderer. At most the nearest 6 stations (1,160 to 2,406 sites each, weight 1.8),
+10 decorative sets (about 530 to 1,060 sites each, weight 1.6) and 16 parcours rings (280 sites each,
+weight 2.2) are drawn: some 30,000 sites in all at the very most, far fewer shown. From over the stations (the
+stratosphere, looking down on the plan) they weigh a quarter, so the plan keeps its grains (the
+plan's own test unchanged). Costs measured with a throwaway bench (deleted): 0.6 to 0.9 µs a site,
+as the landmarks' crowns are on the same machine.
+
+**Acceptance** (`lib/city-stations.test.ts`, `lib/city-rings.test.ts`): fifteen stations, each its
+own design and shape; heights in range, over the towers' sky and under the stratosphere's top; each
+in its own quarter and its colours (mean colour within 0.97 of the quarter's); turning and bobbing
+deterministically, no grain moving more than 0.4 a frame unless dark, no brightness step over 0.03;
+clear of the fireworks, portals, Sky Island Loop, one another, the route, starts and races; drawn
+from the street and from far off. Sets concentric (every light its ring's radius from the one
+middle, in one plane), radius 16 and more, turning slowly, clear of the flocks, the high currents
+and the big ships, apart from the parcours, the under-sets
+bobbing with their stations. The parcours: radius 16 to 25, heights 270 to 370, a steady gap, under
+25° from ring to ring, banked both ways; a pass within 0.8 of the radius counts either way, 1.5
+does not; the tally counts the rings flown in a row and lapses; flown through the whole chain no
+portal opens; the ring warms with no step over 0.06 a frame; the Ship's own flight through a ring
+shows "Rings 1"; only the nearest are drawn, a modest share, thinner from the stratosphere.
+
+**Finished: the map, fast travel, the best run, docking** (2026-11-14, "finish the sky stations").
+`lib/city-skyport.ts`, with small hooks in `lib/city.ts` (`setFly` docks and holds, `travelTo` lands
+high, `tally` names the station, a fresh start undocks), `lib/city-minimap.ts`, `lib/city-travel.ts`
+(`spotFor` only), `lib/city-rings.ts` and `lib/city-stations.ts`.
+
+- **On the map**: every station a small level disc (a thin ellipse round a dot) in its quarter's
+  colour, the parcours a faint dotted gold line down the tile and its start a small open ring. In
+  3D they stand at 0.45 of their height (a layer over the towers, kept in the frame), their stems
+  fainter than the other places'. Their names come last (after the docks and embassies), so they
+  never push another aside; a pointer near one brings it first, as for any place.
+- **Fast travel**: a tap on a station's name or mark (its name shown or not, within 9 px) flies
+  there: level with its middle, out past its reach on its +z side by 30, facing it. **Ring
+  parcours** flies to its start: on the curve a little past the first ring (0.6 of the way to the
+  second), facing the first ring's middle some 25 ahead, so flying straight on goes through it and
+  on down the chain. A trip landing over the towers' sky keeps the super boost's height, so the
+  ship holds its height there instead of sinking.
+- **The best run**: the most rings in a row shows beside a shorter run, quietly: "Rings 7 · best
+  12" (only "Rings 12" while the run is the best). Kept on the device as the races' best times are
+  (`colourmap:city-rings:best`, in try/catch; where there is no storage it lives the visit only);
+  a fresh start forgets the run, never the best.
+- **Docking**: flown slower than 6.5 (under the cruise: Q, or slow mode) into a station's middle
+  (within 16 of it), the ship docks: it eases in to at most 8 from the middle and holds there gently,
+  bobbing with the station, while the station's lamps warm (toward the warm shade, a little
+  brighter) over two seconds; "Docked · Lantern Harbour" shows beside the bar. Any steering,
+  climbing, Faster or boost undocks at once (the keys fly on as usual, from rest), and so do letting
+  go, a trip or a fresh start; the lamps cool over four seconds. A station just left docks again
+  only once the ship has been 24 from its middle, so it can never catch the ship.
+- **Polish**: fireworks no longer bloom into a station or a parcours ring (a burst whose sparks,
+  falling as they fade, would reach a station's reach or a ring's stays unlit; before, a burst
+  could reach up to 16 into Violet Disc City and Biosphere Cluster and 28 into the parcours'
+  fourth ring). A station's lamp is never brighter than 0.74 (the lift from over the plan and a
+  dock's warmth together would reach 0.85). Checked and already clear: the high currents (under
+  182), every block tower (under 137) and every Matrix (code) tower (under 115) stay under every
+  station (over 210); the landmarks' tall crowns stand off them across (their fireworks' places,
+  each station's reach and 20 more); the decorative sets stay off every station but the one each
+  hangs under.
+
+Acceptance (`lib/city-skyport.test.ts`, `lib/city-minimap.test.ts`, `lib/city-travel.test.ts`,
+`lib/city-rings.test.ts`, `lib/city-stations.test.ts`): fifteen station marks and the parcours start
+on the map, inside the tile, one disc each and the dotted line drawn, names after every other
+place's and none overlapping; a tap on a mark with no names shown leads to it; each station's spot
+clear, out of every station's reach, outside its docking zone and facing it; the parcours start
+facing the first ring, 15 to 40 from it, flown straight through it; the Ship flown to a station,
+to the parcours (shows "Rings 1"), landing within 3 and holding its height; the best run up with a
+run, beside a shorter one, kept through a fresh start and on the device; docking only slow, unsteered
+and in the middle, held bobbing with the station, undocked by any steering, never docking again
+until the ship has left; warming and cooling with no step over 0.03 a frame; no burst alive in
+four minutes over every firework place within 5 of a station or a parcours ring.
 
 ### The far city (2026-11-14)
 
@@ -1628,7 +1786,7 @@ leaning slowly to its accent, a soft light): lantern skiffs (Chinatown), lotus g
 Indian quarter), crescent wings (Istanbul), glass needles (the Heights), gondola drones (the
 Canals), gilded seed pods (the golden gardens), prayer-flag drones (the temples), cargo haulers
 (the industrial quarter), bubble pods (the domes), sun-sail boats (Egypt), neon kites (the
-market) and glyph drones (the Green Code). About three in ten of the ships in the street channels
+market) and glyph drones (the Matrix quarter). About three in ten of the ships in the street channels
 are their quarter's own, flying among the general ones in the same file at the same speed; at a
 quarter's edge one fades out and the next quarter's fades in, so each flies only its own streets.
 And small **swarms of drones**, six each, drift slowly round each quarter's heart (its landmark's
@@ -1677,8 +1835,8 @@ sky bridges, the factories' conveyors, the minimap.
   The towers either side stand back 1.75 times as far from a boulevard's middle as they stood, the
   far face staying put, so wide and narrower streets alternate both ways. Over a tile, where both
   towers stand back: along z 9.2 → 16.3 in the Canals, 9.8 → 17.1 Indian, 8.8 → 15.5 temples,
-  9.2 → 17.0 Heights, 11.4 → 20.0 Green Code (about 9 → 16 on average); across x 12.5 → 19.7 in the
-  Heights, 10.3 → 15.6 Indian, 9.8 → 14.7 industrial, 13.6 → 21.6 Green Code. A business tower
+  9.2 → 17.0 Heights, 11.4 → 20.0 Matrix (about 9 → 16 on average); across x 12.5 → 19.7 in the
+  Heights, 10.3 → 15.6 Indian, 9.8 → 14.7 industrial, 13.6 → 21.6 Matrix. A business tower
   keeps its design's proportions and shrinks to its new box; a tower is never thinner than 7.2;
   a tunnel through a slimmed tower runs along it when it no longer fits across.
 - **Every side street breathes.** No side street narrower than nine (it was six at the
@@ -1816,7 +1974,87 @@ closer off the tile's middle column (an older quirk of `blockTower`), so the mou
 fit every copy. The sharks are light and may pass through the lane's walls if you hug one. Nothing
 lands in Atlantis yet, and its tubes, like PR #465's tunnels, are for show (nobody walks them).
 
+### Matrix quarter and Neon Market (2026-11-14)
+
+> Two quarters to come alive. The Matrix quarter (the Green Code, renamed): always green,
+> buildings rising and sinking, some towers blinking, running lights giving a feeling of speed;
+> the first buildings at its edge round tubes you can spin around, deeper in more rigid and
+> square; playful and interactive. The Neon Market: a few more bridges across its streets at
+> various heights, a few flashing lights and signs, and ship currents as flying highways at
+> different heights.
+
+**The name.** Everything a player reads says Matrix: the district's name (Matrix quarter, on
+the minimap and in fast travel), WELCOME TO THE MATRIX QUARTER over the avenue at both its
+mouths, MATRIX on the gateways and the district sign. The internal id stays `code`, and so do
+`lib/city-code.ts` and its exports. Only the mood is borrowed: our own glyphs, shapes and spire.
+
+**The Matrix quarter** (`lib/city-matrix.ts`, `lib/city-rise.ts`; drawn from `lib/city-game.ts`):
+
+- **Forms by depth.** A tower's form follows its row's distance from the quarter's nearer entry
+  edge (the market's side and the next tile's Chinatown side): the entrance rows are **round
+  tubes**, the next rows **octagons**, the four rows in the middle **square blocks**. Round and
+  octagonal towers are as deep as they are wide (their narrower side), so there is room to fly
+  round them and come back, and their walls are their own outline: a circle, an octagon, so the
+  ship can pass close by where a box's corner would have been. A tube wears twelve ribs and a
+  ring every seven up; an octagon its eight corners and a band every nine. The avenue's own towers
+  stay square (its bridges and galleries hang on them).
+- **Rising and sinking, more.** Seven towers in ten move now (it was a little under half), by
+  three tenths to over half their height, on cycles of nine to eighteen seconds; no roof ever
+  moves faster than 10 a second, so a tall tower's swing is held to what stays smooth. Never above
+  the height they were built to; walls, hiding and the lift onto a rising roof as before.
+- **Blinking.** About three towers in ten blink: a soft, doubly eased swell down to under a fifth
+  of their light and back, on a 1.25 to 2 second rhythm, each tower on its own phase. Never dark,
+  never more than a soft step a frame, so never a strobe. The kerb lamps do not blink.
+- **Running lights.** On every tower, streaks of green race one way only: up the ribs or corners
+  (and the middle of a square's faces), down them, or round the tower at three heights, one way
+  round. Bright mint heads, tails fading behind, at 26 to 48 a second: falling code and pulses
+  running up the edges, a feeling of speed.
+- **Play.** As the ship comes within 30 of a tower's wall (and not high over its roof), its
+  streaks brighten and stretch, so towers light up as you slalom past. Read from the ship's place
+  alone each frame: no state, nothing kept.
+- **Green only**: every light is a mix of the quarter's three greens.
+
+**The Neon Market** (`lib/city-market.ts`, highways in `lib/city-currents.ts`):
+
+- **Bridges.** About one pair of neighbouring market towers in two (plain towers, off the avenue,
+  never the canyon's walls) is joined across the street between them, both ways across, hung at
+  about 0.28, 0.52 or 0.78 of the lower roof and always 6 clear of the highways' heights: two
+  rails each side, deck lamps, and a neon strip under it drifting slowly round the canyon's hues.
+  Light, like every sky bridge: you fly through them.
+- **Flashing signs.** The one exception to the city's mellow light, asked for by name. About one
+  market tower in eight carries a framed word of our own (OPEN, LIVE, NOW, NIGHT, NEON, JOY) high on
+  its -z wall (the shop words have +z), in magenta, cyan, amber or rose. Each flashes crisply on
+  and off (edges of 35 ms) on a 1.1 to 1.7 second period: on for a little over half, or a quick
+  double flash. Off, it keeps a faint tube (6%). Never the whole quarter, never a strobe.
+- **Flying highways.** Six one-way streams of ships through the market, at three heights clearly
+  apart, each between two of the canyon's cable heights and clear of the street channels (5 to 35)
+  and the express lanes (112, 120): **low at 20** down the Neon Canyon's long run toward the
+  Matrix quarter and back up the street at x 104; **mid at 57** across the market along two cross
+  streets, opposite ways; **high at 94** down x 78 and back up x 130. Streams that cross run at
+  different levels. In each, every ship flies the stream's one speed (13 to 22) at one spacing,
+  fading in at its start and out at its end; low ships warm rose, mid magenta, high cyan, each a
+  bright nose, wingtips, a fin and a tail; a faint line of lane lights under them carries a slow
+  swell the way the stream flows, so you can see a stream from afar and slot in behind it.
+
+**Cost.** Everything is near-eye items (within 160, ahead of the eye) computed from the time; no
+per-frame state, no allocation per grain. A Matrix tower adds 64 to 128 streak sites to its
+item; a highway 15 to 20 ships of nine grains and 65 to 90 lane lights; a bridge six lines.
+
+**Acceptance** (`lib/city-matrix.test.ts`, `lib/city-market.test.ts`): no player-facing "Green
+Code" left; round towers on the entrance rows, octagons next, square deeper in, round and
+octagonal as deep as wide; collision at the circle (a box's corner free); outlines closed,
+normals out; most towers rising, by a lot, smoothly; a share blinking, staggered, between 1.25 and
+2 seconds, never dark, never more than 0.1 a frame; every tower's streaks one way, fast, brighter
+with the ship close; every form green only; bridges both ways, at heights 15 and more apart,
+under both roofs, clear of the highways, over open air; few flashing signs, crisp, lit a quarter
+to three quarters of the time, at most two flashes a period; six streams at three heights 25
+and more apart, in the market and in open air, crossings at different levels, every ship one
+way at its stream's speed, evenly spaced.
+
 ### Still rough, and next
+
+- The Matrix quarter's running lights brighten as the ship comes close but do not speed up (the
+  speed is fixed per tower, so a head never jumps). The market's bridges are light, not solid.
 
 - The wider streets (2026-11-14) leave two kinds of narrow gap as they were: the short cross
   streets between the avenue's own towers (6.6 to 9, the avenue kept as designed) and the slits
@@ -1833,10 +2071,14 @@ lands in Atlantis yet, and its tubes, like PR #465's tunnels, are for show (nobo
 - The Grand Avenue's bridges, galleries, roofs and gateways are light: nothing to land on, no
   race through its gateways yet; its designs repeat in every turn of the plan (the towers differ).
   The side streets have not had their own round yet.
+- The flying stations are light: you dock in their middles (no pads, no rooms inside, nothing
+  to walk), and every tile copy of a station warms while you are docked at one. The parcours'
+  best is a run in a row, not a time; there is no lap or timed run of it yet. On a phone two sky
+  marks can sit close enough that a tap between them picks either.
 - The Canals and the Neon market still have no landmark of their own; the big squares are only in
   the landmarks' columns; the Studio's meshes are stretched upward rather than redrawn tall.
 - The Deep Line has no race of its own yet (the tracks are one a quarter), and no side branches.
-- The Green Code quarter's towers have no tunnels, docks or race; the code's glyphs do not change.
+- The Matrix quarter's towers have no tunnels, docks or race; the code's glyphs do not change.
 - The opening road's boards and gates are only on the Ship's first stretch; Chinatown's avenue
   keeps its own signs.
 - Sky lanterns and portals are only near the avenue; the Sky Island Loop and four other tracks are

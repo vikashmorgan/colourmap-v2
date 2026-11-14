@@ -29,6 +29,7 @@ import {
 } from './city-game';
 import { BLOCK_X, BLOCK_Z, GROUND, TILE_X, TILE_Z } from './city-grid';
 import type { MapGo } from './city-minimap';
+import { skySpot } from './city-skyport';
 import { ATLANTIS_NAME, MOUTH, SPEEDWAY_NAME } from './city-speedway';
 
 /**
@@ -63,7 +64,7 @@ function startAt(d: DistrictId, x: number, z: number, view: [number, number]): Q
   };
 }
 
-/** The band a district's land lies in (the first, for Chinatown and the Green Code, both sides). */
+/** The band a district's land lies in (the first, for Chinatown and the Matrix quarter, both sides). */
 const bandOf = (d: DistrictId) => BANDS.findIndex((b) => b[0] === d || b[1] === d);
 
 /**
@@ -84,7 +85,7 @@ function canalsStart(): QuarterStart {
 }
 
 /**
- * The Neon market: in the Neon Canyon, near the foot of its long run (the Green Code's edge),
+ * The Neon market: in the Neon Canyon, near the foot of its long run (the Matrix quarter's edge),
  * looking up between its walls to the bend.
  */
 function marketStart(): QuarterStart {
@@ -96,7 +97,7 @@ function marketStart(): QuarterStart {
 /**
  * Every quarter's start, in the plan's order down the avenue: Chinatown, the Indian quarter,
  * Istanbul, the Heights, the Canals, the golden gardens, the temples, the industrial quarter, the
- * domes, Egypt, the Neon market and the Green Code.
+ * domes, Egypt, the Neon market and the Matrix quarter.
  */
 export const QUARTER_STARTS: QuarterStart[] = BANDS.flatMap(([l, r]) => (l === r ? [l] : [l, r]))
   .filter((d, i, all) => all.indexOf(d) === i)
@@ -158,9 +159,13 @@ export const ATLANTIS_SPOT: TravelSpot = {
   realm: 'atlantis',
 };
 
-/** Where a tap on the map leads: a quarter's start, the speedway, Atlantis, or a place's spot. */
+/**
+ * Where a tap on the map leads: a quarter's start, a flying station or the ring parcours' start
+ * (lib/city-skyport.ts), the speedway, Atlantis, or a place's spot.
+ */
 export const spotFor = (go: MapGo): TravelSpot => {
   if ('d' in go) return quarterStart(go.d);
+  if ('sky' in go) return skySpot(go.sky);
   if (go.name === SPEEDWAY_NAME) return SPEEDWAY_SPOT;
   if (go.name === ATLANTIS_NAME) return ATLANTIS_SPOT;
   return placeSpot(go.x, go.z, go.y);

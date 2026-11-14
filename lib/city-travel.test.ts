@@ -11,12 +11,15 @@ import { inCanyon } from './city-canyon';
 import { blocked, DISTRICTS, type DistrictId, districtAt, LANDMARKS } from './city-game';
 import { GROUND, TILE_X, TILE_Z } from './city-grid';
 import { cityMapData } from './city-minimap';
+import { skySpot } from './city-skyport';
+import { STATIONS } from './city-stations';
 import {
   hopFrom,
   nearestCopy,
   placeSpot,
   QUARTER_STARTS,
   quarterStart,
+  spotFor,
   yawToward,
 } from './city-travel';
 
@@ -156,6 +159,33 @@ describe('fast travel', () => {
     // The tile's half length in about a second: a few tens a frame at the fastest, no snap.
     expect(most).toBeLessThan(60);
     expect(most).toBeGreaterThan(0);
+  });
+
+  it('flies to a flying station or the ring parcours from the map, and holds its height up there', () => {
+    t += dt;
+    setFly(true, [], dt, t);
+    for (const go of [
+      { sky: 0, name: STATIONS[0]?.name ?? '' },
+      { sky: 9, name: STATIONS[9]?.name ?? '' },
+      { sky: 'parcours' as const, name: 'Ring parcours' },
+    ]) {
+      const spot = spotFor(go);
+      expect(spot).toEqual(skySpot(go.sky));
+      const from = shipNow().c;
+      travelTo(spot);
+      run([], 1.1);
+      expect(travelling()).toBe(false);
+      const at = nearestCopy(spot.pos, from);
+      expect(
+        Math.hypot(...([0, 1, 2] as const).map((k) => shipNow().c[k] - at[k])),
+        go.name,
+      ).toBeLessThan(3);
+      // Over the towers' sky, flying on level: it neither sinks nor climbs away.
+      run([], 1);
+      expect(Math.abs(shipNow().c[1] - at[1]), go.name).toBeLessThan(2);
+      expect(shipNow().c[1]).toBeGreaterThan(GROUND + 200);
+    }
+    setFly(false, [], 0, 0);
   });
 
   it('hops with [ and ] while flying', () => {

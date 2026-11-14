@@ -41,6 +41,7 @@ import {
 import { RAIL, STATIONS } from './city-metro';
 import { TRACKS } from './city-race';
 import { OPENING } from './city-signs';
+import { parcoursLine, skyPlaces } from './city-skyport';
 import { SPEEDWAY_PLACES } from './city-speedway';
 import { DEEP_MOUTHS, tunnelLines } from './city-under';
 
@@ -67,13 +68,25 @@ export type MapBlock = {
 };
 export type MapRoad = { x0: number; z0: number; x1: number; z1: number; main: boolean };
 export type MapPlace = {
-  kind: 'landmark' | 'race' | 'station' | 'portal' | 'welcome' | 'dock' | 'embassy' | 'canyon';
+  kind:
+    | 'landmark'
+    | 'race'
+    | 'station'
+    | 'portal'
+    | 'welcome'
+    | 'dock'
+    | 'embassy'
+    | 'canyon'
+    | 'sky'
+    | 'parcours';
   name: string;
   x: number;
   z: number;
   /** Its height over the street, where it stands in the 3D map. */
   y: number;
   colour: RGB;
+  /** Where a tap on it travels, when not to a spot near (x, z) (a flying station, the parcours). */
+  go?: MapGo;
 };
 export type MapData = {
   width: number;
@@ -88,6 +101,8 @@ export type MapData = {
   tunnels?: [number, number][][];
   /** The Neon Canyon's middle line (lib/city-canyon.ts), tile-local. */
   canyon?: [number, number][];
+  /** The ring parcours' curve (lib/city-rings.ts): x, z and its height in the 3D map. */
+  parcours?: [number, number, number][];
 };
 
 const LANDMARK_NAMES: Record<Landmark['kind'], string> = {
@@ -284,6 +299,8 @@ export function cityMapData(): MapData {
     y: 30,
     colour: [1, 0.74, 0.3],
   });
+  // The fifteen flying stations and the parcours' start (lib/city-skyport.ts, 2026-11-14).
+  places.push(...skyPlaces());
   basePlaces = places.length;
   places.push(...MAP_EXTRAS);
 
@@ -301,6 +318,7 @@ export function cityMapData(): MapData {
     metro,
     tunnels: tunnelLines(),
     canyon: CANYON_PATH.map(([x, z]) => [x, z]),
+    parcours: parcoursLine(),
   };
   return cached;
 }
@@ -476,7 +494,10 @@ export type MapLabel = {
  * Where a tap on the map travels (2026-11-14: "from map i can click to the diff spots and fast
  * travel"): a quarter's start, or a named place (tile-local, `y` over the street).
  */
-export type MapGo = { d: DistrictId } | { x: number; z: number; y: number; name: string };
+export type MapGo =
+  | { d: DistrictId }
+  | { x: number; z: number; y: number; name: string }
+  | { sky: number | 'parcours'; name: string };
 export type LabelBox = { x0: number; y0: number; x1: number; y1: number };
 
 export const labelBox = (l: MapLabel): LabelBox => {
@@ -528,6 +549,9 @@ function inside(pts: [number, number][], q: { x: number; y: number }): boolean {
   return hit;
 }
 
+/** How near a sky mark a tap must land to travel there, px. */
+export const MARK_PICK = 9;
+
 /**
  * What a tap at screen point q travels to (2026-11-14: "from map i can click to the diff spots and
  * fast travel"): a name shown under it (with its mark, left of a place's name), else, when `area`
@@ -547,6 +571,13 @@ export function mapPick(
     const b = labelBox(l);
     const x0 = l.align === 'left' ? b.x0 - 16 : b.x0 - 4;
     if (q.x >= x0 && q.x <= b.x1 + 4 && q.y >= b.y0 - 3 && q.y <= b.y1 + 3) return l.go;
+  }
+  // A flying station's or the parcours' mark, its name shown or not (2026-11-14).
+  const raised = v.tilt > 0.02;
+  for (const p of data.places) {
+    if (!p.go) continue;
+    const [sx, sy] = projectMap(v, w, h, p.x, raised ? p.y : 0, p.z);
+    if (Math.hypot(sx - q.x, sy - q.y) <= MARK_PICK) return p.go;
   }
   if (!area) return null;
   for (const d of data.districts) {
@@ -797,6 +828,21 @@ export function drawCityMap(
       ctx.stroke();
     }
   }
+  // The ring parcours high over the city: a faint dotted gold line (quiet: it never outshines the
+  // roads), at its height in 3D (2026-11-14).
+  if (data.parcours) {
+    ctx.beginPath();
+    data.parcours.forEach(([x, z, y], j) => {
+      const q = P(x, raised ? y : 0, z);
+      if (j) ctx.lineTo(q[0], q[1]);
+      else ctx.moveTo(q[0], q[1]);
+    });
+    ctx.setLineDash([1, 5]);
+    ctx.strokeStyle = rgba(GOLD, 1, 0.38);
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 
   // The names, gathered here and written last, none piled on another: districts first, then
   // landmarks, races and the rest.
@@ -842,16 +888,19 @@ export function drawCityMap(
   }
 
   // The places: landmarks a ringed dot, races a diamond, stations a small square, portals a ring,
-  // docks an H in a ring, embassies a small triangle.
+  // docks an H in a ring, embassies a small triangle, flying stations a small level disc and the
+  // parcours' start a small open ring.
   ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
   for (const p of data.places) {
+    const sky = p.kind === 'sky' || p.kind === 'parcours';
     const base = P(p.x, 0, p.z);
     const q = raised ? P(p.x, p.y, p.z) : base;
     if (raised && p.y > 0) {
       ctx.beginPath();
       ctx.moveTo(base[0], base[1]);
       ctx.lineTo(q[0], q[1]);
-      ctx.strokeStyle = rgba(p.colour, 1, 0.35);
+      // The sky's stems fainter: they float, nothing holds them up.
+      ctx.strokeStyle = rgba(p.colour, 1, sky ? 0.12 : 0.35);
       ctx.lineWidth = 1;
       ctx.stroke();
     }
@@ -903,6 +952,23 @@ export function drawCityMap(
         ctx.closePath();
         ctx.fill();
         break;
+      case 'sky':
+        // A flying station: a small level disc (a flat ring) round a dot, quiet.
+        ctx.ellipse(q[0], q[1], 5, 2, 0, 0, Math.PI * 2);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = rgba(p.colour, 1.1, 0.7);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(q[0], q[1], 1.4, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case 'parcours':
+        // The parcours' start: a small open ring, as its rings are.
+        ctx.arc(q[0], q[1], 3.5, 0, Math.PI * 2);
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = rgba(p.colour, 1, 0.8);
+        ctx.stroke();
+        break;
       default:
         ctx.arc(q[0], q[1], 3, 0, Math.PI * 2);
         ctx.fill();
@@ -915,10 +981,10 @@ export function drawCityMap(
         p.name,
         q,
         'left',
-        p.kind === 'landmark' || p.kind === 'canyon' ? 1 : p.kind === 'race' ? 2 : 3,
+        p.kind === 'landmark' || p.kind === 'canyon' ? 1 : p.kind === 'race' ? 2 : sky ? 4 : 3,
         'rgb(244,234,216)',
         false,
-        { x: p.x, z: p.z, y: p.y, name: p.name },
+        p.go ?? { x: p.x, z: p.z, y: p.y, name: p.name },
       );
     }
   }
