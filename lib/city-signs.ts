@@ -361,9 +361,12 @@ export function boardsOn(
       const top = G + Math.min(tw.h - 1, Math.max(h + 2.5, tw.h * lv + h / 2));
       if (top - h < G + 2) return;
       const x0 = wallX ? wallX(side, w) : side > 0 ? tw.x + tw.hx + 0.6 : tw.x - tw.hx - 0.6 - w;
+      // Staggered (2026-11-14: "great when tall streets with lots of pancartes but needs to
+      // breathe"): a level's board on a +x wall hangs where the -x wall across has none.
+      const back = (m + (side > 0 ? 1 : 0)) % 2;
       out.push({
         text,
-        at: [x0, top, tw.z + tw.hz * (m % 2 ? -0.35 : 0.5)],
+        at: [x0, top, tw.z + tw.hz * (back ? -0.35 : 0.5)],
         px,
         rgb: tones[Math.floor(hash(j, 494) * tones.length)] as RGB,
         frameRgb: C.white,

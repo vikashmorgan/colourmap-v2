@@ -88,8 +88,9 @@ const X52 = 2 * BLOCK_X;
 const X26 = BLOCK_X;
 const ZB = 42 * BLOCK_Z;
 export const CANYON_WALLS: CanyonWall[] = [
-  // The first run, down x = 52.
-  { li: 1, lj: 40, x0: X26 + 3, x1: X52 - W, z0: row(40)[0], z1: row(40)[1], faces: [[1, 0]] },
+  // The first run, down x = 52. Its first wall stands six back from the street behind it, by the
+  // avenue's wall (2026-11-14: "avoid streets being too narrow"), so that street is nine wide.
+  { li: 1, lj: 40, x0: X26 + 6, x1: X52 - W, z0: row(40)[0], z1: row(40)[1], faces: [[1, 0]] },
   {
     li: 2,
     lj: 40,
