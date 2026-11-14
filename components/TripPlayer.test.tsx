@@ -601,6 +601,48 @@ describe('TripPlayer Game and Studio', () => {
     expect(shown(false)).toEqual({ words: true, line: true });
   });
 
+  it('builds the far layer once, on a computer, only once a game step is on (2026-11-14)', () => {
+    const layer = (shown = 1) => ({
+      build: vi.fn(() => ({
+        positions: new Float32Array([0, 0, 600, 10, 5, 900]),
+        colours: new Float32Array([0.3, 0.1, 0.1, 0.1, 0.3, 0.1]),
+        tile: [100, 1000] as [number, number],
+        cuts: [0, 1],
+        spans: [
+          [0, 700],
+          [700, 1000],
+        ] as [number, number][],
+      })),
+      near: () => 520,
+      far: () => 2600,
+      shown: vi.fn(() => shown),
+    });
+    // A computer: built on the game step, not before, and once only.
+    const far = layer();
+    render(<TripPlayer trip={{ ...makeTrip(), farLayer: far }} page="city" />);
+    runFrames(3);
+    expect(far.build).not.toHaveBeenCalled();
+    toGame();
+    runFrames(3);
+    expect(far.build).toHaveBeenCalledTimes(1);
+    cleanup();
+    // Hidden (a room, space, a phone's quality): never built.
+    const hidden = layer(0);
+    render(<TripPlayer trip={{ ...makeTrip(), farLayer: hidden }} page="city" />);
+    toGame();
+    runFrames(3);
+    expect(hidden.build).not.toHaveBeenCalled();
+    cleanup();
+    // A phone: not even asked.
+    vi.stubGlobal('innerWidth', 500);
+    const phone = layer();
+    render(<TripPlayer trip={{ ...makeTrip(), farLayer: phone }} page="city" />);
+    toGame();
+    runFrames(3);
+    expect(phone.shown).not.toHaveBeenCalled();
+    expect(phone.build).not.toHaveBeenCalled();
+  });
+
   it('opens a world on the side it was left on', () => {
     const { unmount } = render(<TripPlayer trip={makeTrip()} page="ocean" />);
     fireEvent.click(screen.getByRole('button', { name: 'Design' }));
