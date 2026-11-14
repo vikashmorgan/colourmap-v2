@@ -214,6 +214,7 @@ import {
   setRisingKind,
   TEMPLES,
 } from './golden-city';
+import { SKYSCRAPERS, skyscraperEye } from './skyscrapers';
 
 export { wordsShown } from './journey';
 export { makeParticles, type Particle };
@@ -342,6 +343,18 @@ export const PHASES: CityPhase[] = [
     words: [
       'A building is a few rules, followed with care until they become a place.',
       'The paths that wind round it are where the city is walked, not just seen.',
+    ],
+    duration: 36,
+    glow: 1,
+    size: 0.95,
+  },
+  {
+    id: 'skyscrapers',
+    name: 'Skyscrapers',
+    line: 'Eleven tall towers of the City of Dreams, one to a pill: a helix twist, a crowned needle, offset boxes, a tower opened through at its sky gardens, twin legs under a crown, a lattice spire, an orbit tower, a stepped temple tower, a prism blade, a lotus crown and an arch gate.',
+    words: [
+      'A tower is a street turned upright, toward the light.',
+      'From far off it is a line; up close, a thousand lit rooms.',
     ],
     duration: 36,
     glow: 1,
@@ -487,6 +500,7 @@ export const STEP_COLOURS = [
   '#cfe08a',
   '#f0c070',
   '#f2c25a',
+  '#f6dca0',
   '#4fd8d0',
   '#5ec8e8',
   '#7f9cff',
@@ -4295,6 +4309,7 @@ let templeKind = 0;
 let factoryKind = 0;
 let domeKind = 0;
 let buildingKind = 0;
+let skyscraperKind = 0;
 let atlantisKind = 0;
 const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number) => void }> = {
   'golden-plan': { names: PLANS, label: 'Plan', set: setPlanKind },
@@ -4312,6 +4327,11 @@ const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number
     set: (i) => (atlantisKind = i),
   },
   buildings: { names: BUILDINGS.names, label: BUILDINGS.label, set: (i) => (buildingKind = i) },
+  skyscrapers: {
+    names: SKYSCRAPERS.names,
+    label: SKYSCRAPERS.label,
+    set: (i) => (skyscraperKind = i),
+  },
 };
 
 /*
@@ -4327,6 +4347,7 @@ const PALETTE_SETS: Record<string, string[]> = {
   temples: GOLDEN_PALETTES,
   factories: FACTORY_PALETTES,
   domes: GOLDEN_PALETTES,
+  skyscrapers: GOLDEN_PALETTES,
   'atlantis-buildings': ATLANTIS_PALETTES,
 };
 const palettesOf = (k: number) => PALETTE_SETS[PHASES[k]?.id ?? ''];
@@ -4390,6 +4411,8 @@ export function formAt(k: number, p: Particle, u: number, t: number): Spot {
       return canyonAt(p, u, t);
     case 'buildings':
       return buildingAt(BUILDINGS, buildingKind, p, t);
+    case 'skyscrapers':
+      return buildingAt(SKYSCRAPERS, skyscraperKind, p, t);
     default:
       return shipAt(p, t);
   }
@@ -4459,6 +4482,8 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       return buildingEye(t, DOMES.reach[domeKind]);
     case 'buildings':
       return buildingsEye(buildingKind, t);
+    case 'skyscrapers':
+      return skyscraperEye(t);
     case 'above':
       return aboveEye(t);
     case 'atlantis':

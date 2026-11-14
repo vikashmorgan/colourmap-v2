@@ -2140,6 +2140,68 @@ spires' open blocks, the Canals' designs, one call in the items) and `lib/city-c
   orientations, canal arches concave with room under, plazas inside their blocks, no grains in the
   lanes, a modest budget, and nothing jumping between frames.
 
+### Temple skyscrapers and the Skyscraper series (2026-11-14)
+
+> "Temple quarter should have a bunch of awesome unique skyscrapers as well, with a big long
+> bridge between them, so they are not right next to each other. This creates cool spaces to fly
+> around. Add a skyscraper series to the designs." And: "Perspective is everything and the whole
+> point of this city. Perspective is power, and makes it beautiful."
+
+Code: `lib/skyscrapers.ts` (the series), `lib/city-skyscrapers-plan.ts` (where the towers stand,
+how the high currents climb over them), `lib/city-skyscrapers.ts` (drawing, bridges, walls), with
+small hooks in `lib/city-game.ts` (open blocks, walls, one call in the items),
+`lib/city-currents.ts` (loopAt) and `lib/city.ts` (the Studio piece).
+
+- **The Skyscraper series:** a Studio piece after Buildings, eleven pills (label "Skyscraper"):
+  Helix Twist (36 square floors turning a quarter and a half turn, tapering), Crowned Needle (an
+  eight-sided needle with a crown of eight tines), Offset Stack (five boxes set off one another,
+  garden rails on the terraces), Garden Void (opened right through at its sky gardens, only its
+  corner columns standing, trees and lamps between), Twin Crown (two legs with a slot between,
+  joined high by a glass crown), Lattice Spire (a diagrid of light round a glass core), Orbit Tower
+  (a domed round core, three tilted rings turning very slowly), Stepped Temple Tower (a temple's
+  terraces, a ribbed shaft, a stepped crown, a gold finial), Prism Blade (three-sided, turning, its
+  roof cut on a slant), Lotus Crown (a slim shaft opening into eight glass petals) and Arch Gate (a
+  tower on a great arch you fly under). Our own designs. Each is a builder of any height and
+  footprint, standing inside its square at every height (its reach), cut by voids where asked
+  (nothing drawn there); the golden palettes as the other Studio pieces.
+- **Five towers in the Temples quarter,** each on a block of its own in columns 4 and 5, rows 26
+  to 31, staggered like a chessboard so no two stand on neighbouring blocks (a diagonal block apart
+  at the nearest, nine or more of open air between their walls), 150 to 170 high (every tower in
+  the quarter is under 110; the tallest three over Ivory Echo's 157): the Garden of Bells (Garden
+  Void, x 143, row 26), the Gate of the Barge (Arch Gate, x 117, row 27), the Helix of Dawn (Helix
+  Twist on a gate, x 143, row 28), the Twin Lanterns (Twin Crown, x 117, row 29) and the Stair of
+  Light (Stepped Temple Tower on a gate, x 143, row 31). **Perspective:** two files, x 117 and x 143,
+  that line up as you fly down the quarter, two rows of gates receding: the lantern barge (x 117,
+  96) sails through the file on x 117, the Temples' eastern highway (86) through the file on x 143.
+  The blocks beside them in columns 4 and 5 are open, but for the Studio's temples, which stand low
+  and well back. A design that cannot carry a slot stands on a gate: two legs either side of the
+  slot and a lintel, the design on top.
+- **Clearances:** kept off the racing corridors (x 66 to 90) and the slimmed columns beside them (2
+  and 3; nothing opened there, so every corridor obstacle keeps a tower beside it), off the avenue
+  and its own columns (0 and 1), off the river's row and its neighbours (23 to 25, so the river
+  gap's walls stay put); every footprint inside its block (4.5 or more from each street's middle);
+  clear of the landmark's plaza and orbit, Ivory Echo's orbit and the Domes' big square; under the
+  higher streams (186) and the stations.
+- **Five long bridges,** every tower joined, spans of 40 to 80, no piers, none over a corridor's
+  column: a lattice truss and a bowstring arch down the file on x 143, an arch under its deck down
+  the file on x 117 (each framing the view across the quarter as you fly under it), a straight deck
+  crossing between the files and threading the gap between two towers, and a second truss; decks at
+  128 to 140, every part between 124 (over the express lanes) and 145 (under ordinary flight's
+  ceiling, 150): you fly under, over and between.
+- **The high currents climb over them:** over the towers' area (and twelve round it) every loop
+  flies at 177 or more (the tallest plus seven), easing back to its own height over 110 round it, a
+  soft maximum so the flocks climb without a jolt, still under the higher streams.
+- **Walls:** each tower's square at each height and each bridge's deck hold the Ship off
+  (`blocked`); its voids are open, so you fly through the gates and under the arch.
+- **Light and budget:** 3,600 sites a tower, the bridges as strokes of light built once; ivory
+  leaning slowly to gold, lamps breathing; nothing flashes.
+- **Acceptance:** `lib/skyscrapers.test.ts` and `lib/city-skyscrapers.test.ts`: the series
+  registered with eight or more designs, each inside its footprint and out of its voids; the towers
+  apart, in files, the tallest in the quarter; the corridors, their columns, the avenue and the
+  river's rows clear; bridges joining
+  pairs with room under and over; the currents lifted and smooth, the highway, the barge, the high
+  streams and the orbits clear; walls that stop the Ship; the grain budget; slow light.
+
 ### Mountain and Favela quarters (2026-11-14)
 
 > "add the mountain and favela above, so the city becomes more square. doesn't have to be a

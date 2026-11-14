@@ -106,6 +106,7 @@ import {
   welcomeSign,
   wordItem,
 } from './city-signs';
+import { skyscraperBlock, skyscraperHolds, skyscraperItems } from './city-skyscrapers';
 import { cityPortalItems } from './city-space';
 import { DEEP_MOUTHS, THROUGH, underAt, underBlocked, underItems, underOpen } from './city-under';
 
@@ -591,7 +592,17 @@ function buildBlock(I: number, J: number, wide: boolean): Block {
   // The big squares and the new buildings' blocks are kept open too (lib/city-big.ts), and the
   // Indian quarter's super-tall spires' (lib/city-alive.ts) and the Turquoise Crown's
   // (lib/city-istanbul.ts).
-  if (plaza || openBlock(I, J) || (wide && (spireAt(I, J) || crownBlock(I, J)))) shape = 'plaza';
+  // The Temple skyscrapers' blocks, and round them every block but the Studio's temples (those
+  // stand low and well back from the towers), kept open (lib/city-skyscrapers.ts).
+  const sky = wide && d === 'temples' ? skyscraperBlock(I, J) : null;
+  if (
+    plaza ||
+    openBlock(I, J) ||
+    (wide && (spireAt(I, J) || crownBlock(I, J))) ||
+    sky === 'tower' ||
+    (sky === 'beside' && shape !== 'studio' && !besideRiver(J))
+  )
+    shape = 'plaza';
   // An Embassy of Happiness (lib/city-embassy.ts): its own building, in the middle of its block.
   const emb = embassyAt(I, J);
   if (emb) {
@@ -829,6 +840,8 @@ export function blocked(q: Vec3): boolean {
   if (q[1] < floorAt(q[0], q[2]) + 2 - 1e-6) return true;
   // The annex (lib/city-annex.ts): its peaks, temples, pylons, hills and houses, a height field.
   if (inAnnex(q[0])) return annexBlocked(q, MARGIN);
+  // The Temple skyscrapers and their bridges (lib/city-skyscrapers.ts): real walls.
+  if (skyscraperHolds(q, MARGIN)) return true;
   const tw = blockTower(Math.floor(q[0] / BLOCK_X), Math.floor(q[2] / BLOCK_Z));
   const dx = Math.abs(q[0] - tw.x);
   const dz = Math.abs(q[2] - tw.z);
@@ -3233,6 +3246,8 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
   // The alive quarters (lib/city-alive.ts): sky bridges, hanging lights, gates, banners and turned
   // signs, the plazas' rings and ramps, the canal bridges, the Indian spires, the low-roof highways.
   aliveItems(eye, t, NEAR, R, blockTower, ahead, out, alivePlazas(), aliveMonuments());
+  // The Temple skyscrapers and their long bridges (lib/city-skyscrapers.ts).
+  skyscraperItems(eye, t, R, NEAR, ahead, out, lift);
   // The Deep Line under the city (lib/city-under.ts), and its name over the avenue ramp's mouth.
   underItems(eye, t, NEAR, pulseAt, ahead, out);
   for (const m of DEEP_MOUTHS) {

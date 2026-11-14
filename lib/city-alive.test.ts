@@ -36,6 +36,7 @@ import { blocked, blockTower, blockTowerAsWas } from './city-game';
 import { BLOCK_X, BLOCK_Z, GROUND, type Item, TAU, TILE_I, wrap } from './city-grid';
 import { railCeiling } from './city-metro';
 import { ringSets } from './city-rings';
+import { TEMPLE_TOWERS } from './city-skyscrapers-plan';
 import { STATION_LOW } from './city-stations';
 import { strokePoint } from './city-strokes';
 
@@ -310,9 +311,13 @@ describe('alive quarters: highways over the low roofs', () => {
       let top = 0;
       for (let z = S.s0; z <= S.s1; z += 2)
         for (const dx of [-4, 0, 4]) top = Math.max(top, roof(S.c + dx, z));
-      // Over every roof by six, and no higher than forty over the highest.
+      // Over every roof by six, and no higher than forty over the highest (or threading the gates
+      // of the Temple skyscrapers, lib/city-skyscrapers.ts, whose blocks round them are open).
       expect(S.y).toBeGreaterThan(top + 6);
-      expect(S.y).toBeLessThan(top + 40);
+      const gates = TEMPLE_TOWERS.some(
+        (T) => Math.abs(T.x - S.c) < T.r && T.voids.some((v) => v.y0 < S.y && v.y1 > S.y),
+      );
+      if (!gates) expect(S.y).toBeLessThan(top + 40);
       // Each ship moves on the highway's way.
       const a = marketShip(S, 2, 10);
       const b = marketShip(S, 2, 10.1);
