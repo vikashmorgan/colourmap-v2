@@ -825,6 +825,9 @@ too fast in the city but faster when above."). Every change eases; nothing flash
   measure the further they are behind the distance in focus (the ship, or 45 ahead from the
   cockpit) and when very near the eye, so they soften without adding light; the softening grows
   under the boost and the hyper, and fades out climbing to the plan (none in space).
+- **No sentences while you fly** (2026-11-14: "no sentences and quotes while we fly in the city,
+  it just takes space"): while the Ship is played, its quotes and its line under the name are
+  hidden (the game's `wordless`); the Journey and the Studio pieces keep theirs.
 - **Seeing far, more grains** (2026-11-14: "improve density for the City videogame and visibility
   so buildings can be seen in the distance"). The view reaches 340 in the street (was 160),
   opening as you climb to 1,300 (was 1,000), and tower walls are gathered out to 420 (were only
