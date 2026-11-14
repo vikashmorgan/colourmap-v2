@@ -1198,11 +1198,94 @@ tile's edge.
 - **Atlantis** gains spires of three drums, each narrower, with porthole rings, a lamp at each step and a slow light on a mast: in the ring of knowledge, rising out of the homes' domes, and beside the nature clusters. They stay below the high submarine loops, and their bounding spheres keep submarines clear. Less bloom (glow 0.6), smaller grains in the close views, buildings lit rather than glowing up close, a softer heart.
 - **Depth of field** in the game softens the far city from cruise on, not only under the boost: it starts at 1.35 times the focus distance and ramps over 110.
 
+### Taller landmarks and fireworks (2026-11-14)
+
+> "a lot of landmark buildings are not tall enough. they need to be much bigger like the arch or
+> other innovative buildings."
+>
+> "also add fireworks in some places above the city they pop at random. in the colours of the
+> quarter."
+>
+> "BIG TEMPLES. BIG DOMES. AND NOVA CORES IN THE CITY."
+>
+> "ALL THE COOL BUILDINGS SERIES MUST BE MUCH BIGGER. MAKE 15 MORE OF THEM AND ADD THEM TO THE CITY."
+
+Our own designs only: no real named building, no other game's look. Everything is grains from a
+few primitives (`lib/city-shapes.ts`: lines, rings, spheres, turned surfaces, twisting boxes).
+
+**The landmarks' crowns** (`lib/city-landmarks.ts`). Each landmark keeps its old self as the foot
+and gains a tall crown in its quarter's colour, dense enough to read from 300 and more away (1,000
+to 3,600 sites, weight 1.6, seen over the towers by probes high on it), breathing on its quarter's
+beat; from high up it is lit up to the plan's strength.
+
+| Quarter | Landmark | Was | Now | The crown |
+|---------|----------|-----|-----|-----------|
+| Chinatown | Pagoda of nine roofs | 64 | **190** | the **lantern tower**: six great lanterns stacked on a gold mast over the nine roofs, each smaller, a warm heart breathing in each |
+| Chinatown | Race plaza | 10 | **140** | two great **moon arches** along the plaza's diagonals, crossing at 128 over the crossing, lanterns hung under them, a gold moon where they meet; the race starts under them |
+| Indian quarter | Temple of the curved spire | 55 | **138** | a **temple mountain**: four terraces, four great corner spires to 88, an upper spire over the old one |
+| Istanbul | Mosque of the four minarets | 51 | **142** | four **great minarets** at the plaza's corners (three balconies, turquoise caps), a stack of three domes on the great dome, and a great **floating ring** at 88–120 turning very slowly, its middle open to fly through |
+| The Heights | Nova Core | 24 | **287** | the **sail tower**: two curved blades twisting up from round the Core to a needle, violet rings between them |
+| Golden gardens | Golden spire | 199 | 199 | unchanged: it was already the tallest |
+| Temple quarter | The Studio's ziggurat | 20 | **161** | a **stair tower**: ten receding terraces on the ziggurat, a stair up every side, a light climbing them (a minute from foot to top) |
+| Industrial quarter | The Studio's foundry | 31 | **196** | a **twisting tower** turning a quarter round as it rises from the foundry's roof, furnace light at its foot, slow rings of steam rising off its top |
+| Solarpunk domes | The Studio's garden of domes | 9 | **142** | a **stack of five glass domes** on a stalk, plants glowing under each |
+| Egyptian quarter | The great pyramid | 36 | **178** | a **floating obelisk** over the apex, a thread of light up to it, three rings drifting slowly round it |
+| Green Code quarter | The data spire | 165 | 165 | gains a **cascade of twelve data pillars** spiralling up round it (30 to 140), light falling down their faces |
+
+**Big squares** (`lib/city-big.ts`). Ten open squares, each the four blocks round a crossing in
+the landmarks' columns (x ±78), halfway between two landmarks, hold one of the Studio's temples
+or domes or a Nova Core, stretched to five to seven times its height and half as wide again (the
+Core 0.6 as wide), in its quarter's palette: big temples (Rotunda 98, Ring 97, Lotus 83), big domes
+(Geodesic 76, Palm house 92, Bubbles 55) and four Nova Cores (86). No two of a kind are
+neighbours, along a column or across the avenue (the landmarks counted). They stand clear of the
+metro's rail (the Code quarter's two on row 50, past its loop), the through tunnel, the embassies
+and every race course (no gate within 36).
+
+| Row (z) | Left of the avenue | Right of the avenue |
+|---------|--------------------|---------------------|
+| 8 (272) | Nova Core, saffron | big temple (Ring), turquoise |
+| 16 (544) | big dome (Geodesic), cyan | Nova Core, violet |
+| 32 (1088) | big temple (Rotunda), steel | Nova Core, leaf |
+| 40 (1360) | big dome (Palm house), sand | big temple (Lotus), magenta |
+| 50 (1700) | Nova Core, green | big dome (Bubbles), green |
+
+**The Studio's buildings on the blocks**, the "cool buildings series" (temples, factories, domes):
+much bigger, stretched to 0.8 across and 3.6 up (they stood at 0.72), so 27 to 79 high over
+quarters whose towers stand 12 to 34; drawn out to the whole view (to 420), not only near (from
+high up the plan stands for them).
+
+**Flying through.** All of it is light, as the Studio's other additions are: the plazas and big
+squares are open ground (no tower, nothing holds the Ship), so you fly through every crown, under
+the moon arches and through the floating ring. Nothing reaches the avenue (every crown and square
+stands 30 and more off it), so the autopilot's route and the race courses are untouched (tested).
+
+**Fireworks** (`lib/city-fireworks.ts`). Over every landmark and big square, the three canals and
+either side of the river (26 places a tile; the Ship's game has no canyon, so the river stands in
+for it), each place has its own slot every 9 to 15 seconds, and about half the slots fire, so from
+anywhere a burst goes up every few seconds within sight. Random but only from the time and the
+place's number: the same moment always shows the same bursts.
+
+- A shell (six faint warm grains) rises 1.6 s from 100 over the street, slowing, to its height: never
+  under 200 over the street, at least 60 over the tallest thing at its place, never over 390
+  (the stratosphere is at 520).
+- It blooms into a **sphere** (sparks evenly round) or a **peony** (unevenly, fuller) of 140
+  sparks, each with a fainter grain behind it as its trail, 18 to 30 across; the sparks fly out,
+  slowing, and fall gently (2.6 s² a unit), fading over 2.2 to 3 s.
+- In its quarter's colours: the quarter's colour, a lighter shade (toward warm white, never
+  white) and a deeper one.
+- **Mellow**: it blooms in over 0.4 s (no step of more than 0.08 a frame), fades to dark by its
+  end; each spark is a grain no brighter than a lit window (0.5), so nothing lights the screen.
+- Budget: at most the 8 nearest bursts within sight are drawn, 286 sites each (weight 1.6, as
+  the lanterns), in the same grain pool as everything else; from the cockpit they show too.
+
 ### Still rough, and next
 
 - The Studio's domes, minarets and spires on the box towers are light: you fly through them (the
   towers, pyramids, the twenty and the code towers hold you). Sky bridges and the metro are light
-  too.
+  too. So are the landmarks' tall crowns, the big squares and the Studio's buildings on the
+  blocks (2026-11-14).
+- The Canals and the Neon market still have no landmark of their own; the big squares are only in
+  the landmarks' columns; the Studio's meshes are stretched upward rather than redrawn tall.
 - The Deep Line has no race of its own yet (the tracks are one a quarter), and no side branches.
 - The Green Code quarter's towers have no tunnels, docks or race; the code's glyphs do not change.
 - The opening road's boards and gates are only on the Ship's first stretch; Chinatown's avenue

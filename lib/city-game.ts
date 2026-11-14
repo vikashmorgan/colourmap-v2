@@ -18,6 +18,7 @@
 
 import { fibonacciSphere, hash, type RGB, smooth, type Vec3 } from './bigbang';
 import type { Sign, Tower } from './city';
+import { bigItems, openBlock, studioBlockItems } from './city-big';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
 import { carItems } from './city-cars';
 import { CODE_GREEN, CODE_TEMPO, codeSize, codeTowerItem, dataSpireItem } from './city-code';
@@ -49,6 +50,7 @@ import {
   TILE_Z,
   wrap,
 } from './city-grid';
+import { crownItem, crownKey } from './city-landmarks';
 import { CAR_LEN, CARS, carAt, RAIL, railAt, railCeiling, STATIONS, TRAINS } from './city-metro';
 import { besideRiver, inRiver, RIVER_Y, riverClear, riverItems } from './city-rain';
 import { FACADE_SHARE, FACADES, type Facade, facadeItem, roofItem } from './city-roofs';
@@ -421,7 +423,8 @@ export function blockTower(I: number, J: number): Block {
     if (h <= 0) h = 14 + 10 * hh;
   }
   const plaza = plazaOf(I, J);
-  if (plaza) shape = 'plaza';
+  // The big squares and the new buildings' blocks are kept open too (lib/city-big.ts).
+  if (plaza || openBlock(I, J)) shape = 'plaza';
   // An Embassy of Happiness (lib/city-embassy.ts): its own building, in the middle of its block.
   const emb = embassyAt(I, J);
   if (emb) {
@@ -2225,11 +2228,6 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
           site: (s, o) => modelSite(M, s, t, tw.x, GROUND, tw.z, 1, pulse, o),
         });
       }
-      if (tw.shape === 'studio' && tw.studio) {
-        // The Studio's temples, factories and domes, lit from your eye in their quarter's colours.
-        const st = tw.studio;
-        out.push(studioItem(st.set, st.i, { x: tw.x, z: tw.z, key: tw.k }, 0.72, 2000, eye, t));
-      }
       if (tw.shape === 'design' && tw.design)
         out.push(designItem(tw.design, tw, DISTRICTS[tw.d].colour, eye, t));
       if (tw.bore?.through) out.push(throughItem(tw, eye));
@@ -2268,7 +2266,9 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
       }
     }
   }
-  // Landmarks within sight (from high up, from far off).
+  // Landmarks within sight (from high up, from far off). From high up the tall crowns and the big
+  // squares are lit up to the plan's strength, so they read on it.
+  const lift = 1 + 1.6 * planLook(eye[1]);
   const ox = nearest(0, eye[0], TILE_X);
   const n0 = Math.floor((eye[2] - R) / TILE_Z);
   const n1 = Math.floor((eye[2] + R) / TILE_Z);
@@ -2285,6 +2285,9 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
         [x, GROUND + 8, z + 20],
         [x - 20, GROUND + 8, z],
       ];
+      // Each landmark's tall crown (lib/city-landmarks.ts; 2026-11-14: "they need to be much bigger").
+      const ck = crownKey(L.kind, L.set);
+      if (ck) out.push(crownItem(ck, x, z, eye, t, gid, districtPulse(L.d, t) * lift));
       if (L.kind === 'nova') {
         out.push(coreItem(x, z, eye, t, d, gid));
         return;
@@ -2380,6 +2383,12 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
       }
     }
   }
+  // The Studio's temples, factories and domes on the blocks, much bigger, out to the view, and the
+  // big squares' temples, domes and Nova Cores (lib/city-big.ts; 2026-11-14: "BIG TEMPLES. BIG
+  // DOMES. AND NOVA CORES IN THE CITY.").
+  const colourAt = (x: number, z: number) => DISTRICTS[districtAt(x, z)].colour;
+  if (planLook(eye[1]) < 0.5) studioBlockItems(eye, t, R, blockTower, ahead, colourAt, out);
+  bigItems(eye, t, R, ahead, colourAt, out, lift);
   wordsNear(eye, NEAR, words);
   for (const w of words) {
     const it = wordItem(w, eye, t);
