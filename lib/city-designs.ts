@@ -142,6 +142,20 @@ export function quarterPalette(colour: RGB): Palette {
   palettes.set(key, p);
   return p;
 }
+/** A palette in one hue only: the quarter's own, each tone's brightness kept (the Green Code's rule). */
+const monos = new Map<string, Palette>();
+export function monoPalette(colour: RGB): Palette {
+  const key = colour.join(',');
+  const had = monos.get(key);
+  if (had) return had;
+  const base = quarterPalette(colour);
+  const p: Palette = (h: Hit, t: number) => {
+    const c = base(h, t);
+    return scale(colour, (c[0] + c[1] + c[2]) / 3);
+  };
+  monos.set(key, p);
+  return p;
+}
 const SHARES = { lines: 0.55, faces: 0.76 };
 
 /** A design on its block, for the Ship's renderer. */
@@ -187,7 +201,8 @@ const SET_COLOURS: Record<StudioSet, RGB> = {
 
 /**
  * One of the Studio's temples, factories or domes (lib/golden-city.ts, read only) on a block or a
- * plaza, scaled by sc, lit from your own eye in its quarter's colours.
+ * plaza, scaled by sc, lit from your own eye in its quarter's colours (or in `colour` alone: the
+ * data foundry's green).
  */
 export function studioItem(
   set: StudioSet,
@@ -197,6 +212,7 @@ export function studioItem(
   count: number,
   eye: Vec3,
   t: number,
+  colour?: RGB,
 ): Item {
   const B = studioBuilding(SETS[set], i);
   const P: Placed = {
@@ -204,7 +220,7 @@ export function studioItem(
     at: [at.x, GROUND, at.z],
     sc,
     shares: { lines: 0.5, faces: 0.74 },
-    palette: quarterPalette(SET_COLOURS[set]),
+    palette: colour ? monoPalette(colour) : quarterPalette(SET_COLOURS[set]),
   };
   const r = 14 * sc;
   const h = 18 * sc;

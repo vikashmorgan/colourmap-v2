@@ -14,6 +14,7 @@
  */
 
 import type { RGB, Vec3 } from './bigbang';
+import { CANYON_PATH } from './city-canyon';
 import { DOCKS, LOUNGES, placeDock } from './city-docks';
 import { EMBASSIES, embassyCentre } from './city-embassy';
 import {
@@ -65,7 +66,7 @@ export type MapBlock = {
 };
 export type MapRoad = { x0: number; z0: number; x1: number; z1: number; main: boolean };
 export type MapPlace = {
-  kind: 'landmark' | 'race' | 'station' | 'portal' | 'welcome' | 'dock' | 'embassy';
+  kind: 'landmark' | 'race' | 'station' | 'portal' | 'welcome' | 'dock' | 'embassy' | 'canyon';
   name: string;
   x: number;
   z: number;
@@ -84,6 +85,8 @@ export type MapData = {
   metro: [number, number][];
   /** The tunnels (the Deep Line under the street, the one through a row of towers), as lines. */
   tunnels?: [number, number][][];
+  /** The Neon Canyon's middle line (lib/city-canyon.ts), tile-local. */
+  canyon?: [number, number][];
 };
 
 const LANDMARK_NAMES: Record<Landmark['kind'], string> = {
@@ -261,6 +264,17 @@ export function cityMapData(): MapData {
   }
   for (const m of DEEP_MOUTHS)
     places.push({ kind: 'portal', name: m.name, x: m.x, z: m.z, y: 0, colour: [0.22, 0.92, 1] });
+  // The Neon Canyon, named at the middle of its long run.
+  const [cx0, cz0] = CANYON_PATH[2] as [number, number];
+  const [, cz1] = CANYON_PATH[3] as [number, number];
+  places.push({
+    kind: 'canyon',
+    name: 'Neon Canyon',
+    x: cx0,
+    z: (cz0 + cz1) / 2,
+    y: 0,
+    colour: [1, 0.28, 0.78],
+  });
   places.push({
     kind: 'welcome',
     name: 'Welcome to the City of Dreams',
@@ -285,6 +299,7 @@ export function cityMapData(): MapData {
     places,
     metro,
     tunnels: tunnelLines(),
+    canyon: CANYON_PATH.map(([x, z]) => [x, z]),
   };
   return cached;
 }
@@ -705,6 +720,23 @@ export function drawCityMap(
     ctx.stroke();
   });
   ctx.setLineDash([]);
+  // The Neon Canyon: a broad soft magenta line down its street, a fine bright one in it.
+  if (data.canyon) {
+    for (const [width, style] of [
+      [5, 'rgba(255,72,200,0.28)'],
+      [1.6, 'rgba(255,140,225,0.9)'],
+    ] as const) {
+      ctx.beginPath();
+      data.canyon.forEach(([x, z], j) => {
+        const q = P(x, 0, z);
+        if (j) ctx.lineTo(q[0], q[1]);
+        else ctx.moveTo(q[0], q[1]);
+      });
+      ctx.strokeStyle = style;
+      ctx.lineWidth = width;
+      ctx.stroke();
+    }
+  }
 
   // The names, gathered here and written last, none piled on another: districts first, then
   // landmarks, races and the rest.
@@ -786,6 +818,11 @@ export function drawCityMap(
         ctx.rect(q[0] - 7, q[1] - 1.5, 14, 3);
         ctx.fill();
         break;
+      case 'canyon':
+        // Its line says where it is; a small mark for its name.
+        ctx.arc(q[0], q[1], 2, 0, Math.PI * 2);
+        ctx.fill();
+        break;
       case 'dock':
         ctx.arc(q[0], q[1], 4.5, 0, Math.PI * 2);
         ctx.moveTo(q[0] - 2, q[1] - 2.2);
@@ -816,7 +853,7 @@ export function drawCityMap(
         p.name,
         q,
         'left',
-        p.kind === 'landmark' ? 1 : p.kind === 'race' ? 2 : 3,
+        p.kind === 'landmark' || p.kind === 'canyon' ? 1 : p.kind === 'race' ? 2 : 3,
         'rgb(244,234,216)',
       );
     }
