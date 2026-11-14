@@ -262,7 +262,7 @@ export function quarterGrain(
       return { a: 0.1, b: 0, h: 0, part: 2 };
     }
     default: {
-      // The Green Code's glyph drone: a square frame upright, a glyph of our own in it.
+      // The Matrix's glyph drone: a square frame upright, a glyph of our own in it.
       if (q < 0.45) {
         const u = (q / 0.45) * 4;
         const k = Math.floor(u);

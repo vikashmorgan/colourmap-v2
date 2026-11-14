@@ -2105,7 +2105,7 @@ function move(dt: number): number {
 }
 
 /**
- * Out of a Green Code tower that has grown into the ship's space (lib/city-rise.ts): up onto its
+ * Out of a Matrix tower that has grown into the ship's space (lib/city-rise.ts): up onto its
  * roof, MARGIN over it. The roof rises slowly and smoothly, so the ship rides up with it.
  */
 function liftOver(q: Vec3): Vec3 {
@@ -2313,7 +2313,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     spaceFly(active, keys, dt, t);
     return;
   }
-  // A Green Code tower rising under the ship lifts it with its roof, never through it (2026-11-14).
+  // A Matrix tower rising under the ship lifts it with its roof, never through it (2026-11-14).
   if (fly.mode !== 'route') fly.pos = liftOver(fly.pos);
   if (!active) {
     glowStep(false, dt);
@@ -2802,7 +2802,7 @@ function crosses(tw: Tower, e: Vec3, dx: number, dy: number, dz: number): boolea
   const x1 = tw.x + tw.hx - s;
   const z0 = tw.z - tw.hz + s;
   const z1 = tw.z + tw.hz - s;
-  // A Green Code tower hides only as high as it stands now (lib/city-rise.ts).
+  // A Matrix tower hides only as high as it stands now (lib/city-rise.ts).
   const h = (tw as Block).shape === 'code' ? codeHeight(tw.h, tw.k, riseClock()) : tw.h;
   const y1 = GROUND + h - s;
   if (e[0] > x0 && e[0] < x1 && e[2] > z0 && e[2] < z1 && e[1] < y1) return false;

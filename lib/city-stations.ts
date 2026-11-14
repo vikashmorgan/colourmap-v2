@@ -75,7 +75,7 @@ export const STATION_LOW = 200;
 export const STATION_HIGH = 480;
 
 /**
- * The fifteen, tile-local: one to every quarter, two over Chinatown, the Heights and the Green Code.
+ * The fifteen, tile-local: one to every quarter, two over Chinatown, the Heights and the Matrix quarter.
  * Each stands well off the landmarks and big squares (where the fireworks burst), off the space
  * portals and the Sky Island Loop, and off the ring parcours (lib/city-rings.ts); tested.
  */

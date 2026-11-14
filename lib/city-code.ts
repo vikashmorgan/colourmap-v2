@@ -1,5 +1,5 @@
 /*
- * The Green Code quarter of the City of Dreams (docs/specs/art-city.md, "The Green Code quarter"):
+ * The Matrix quarter of the City of Dreams (docs/specs/art-city.md, "The Matrix quarter"):
  * dark towers whose faces carry slowly falling columns of green glyph-dots, green-lit streets, and
  * on its plaza a monolithic data spire. Pure: no three.js, no DOM.
  *
@@ -240,7 +240,7 @@ const BEACON = 36;
 const PLAZA = 200;
 
 /**
- * The Green Code quarter's landmark on its plaza: a monolith tapering from 16 across to 9, 150
+ * The Matrix quarter's landmark on its plaza: a monolith tapering from 16 across to 9, 150
  * high, a point on top; its four edges bright, the falling code down the faces turned toward the
  * eye, three square halos sinking slowly down it and fading in and out, a beacon breathing at its
  * point, and on the plaza a ring and lines of light running out to the streets.

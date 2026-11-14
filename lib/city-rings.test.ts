@@ -330,6 +330,8 @@ describe('Rings of light: the parcours high over the city (2026-11-14)', () => {
     }
     expect(tally()).toBe('Rings 1');
     expect(inSpace()).toBe(false);
+    // Land the Ship again, so later suites start from the ground.
+    setFly(false, [], 0, 0);
     resetRings();
     // Leaked fly state breaks the tests after: back on the route.
     setFly(false, [], 0, 0);

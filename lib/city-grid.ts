@@ -15,7 +15,7 @@ export const BLOCK_Z = 34;
 export const AVENUE = 9;
 /**
  * The plan repeats every TILE_I blocks across and TILE_J along, so the city never ends: seven
- * bands of eight along (2026-11-13: the seventh, the Green Code quarter, added at the far end so
+ * bands of eight along (2026-11-13: the seventh, the Matrix quarter, added at the far end so
  * every other place keeps its tile-local spot).
  */
 export const TILE_I = 12;
