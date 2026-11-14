@@ -1529,6 +1529,52 @@ quarter starts and race gates clear; colours drift slowly (no step over 0.03 a f
 every band's edge, the join's naming CHINATOWN and GREEN CODE, crowned over 112, its lintels lit,
 flown through at every height, on every turn of the plan; each band blending into the next.
 
+### The far city (2026-11-14)
+
+The user asked "what stops u from increasing field depth of vision 5 times on computer?" The
+answer: the grains are worked out in JavaScript every frame (about a millisecond a thousand), so a
+longer live view costs frame time. The way round it is a far layer built once and drawn by the GPU.
+Then: "lets try it. try a light version that doesn't take u too much energy but still looks nice."
+
+- **Computer only.** It shows when the City's quality is `'large'` (components/City.tsx,
+  `setCityQuality`) and the trip player is not on a phone (under 700 wide). Phones and the other
+  worlds are unchanged. It shows only on a game step (the Ship), never in the Journey.
+- **One tile, built once** (`lib/city-far.ts` `farCity`, made the first time it shows): every
+  block's tower gives its roof corners and the middles of the roof's sides, 3 to 16 points down each
+  edge (dimming toward the street) and, on towers over 40 (over 80), two (three) rows of warmer
+  window points; pyramids give their apex and their edges; the Studio's buildings on open blocks,
+  the ten landmarks (all but the race plaza) and the ten big squares get a silhouette of about 60
+  points (a column to the tip and eight narrowing rings); parks and plazas a glow or two on the
+  ground. All in the districts' colours, dimmed as a night city far away, a little difference from
+  light to light, fixed. **27,895 points**, positions and colours as Float32Arrays: **669,480
+  bytes** (about 650 KB), built in about 50 ms. The tile is cut into seven strips along z, one to
+  each band of districts, so each can be left out on its own when out of sight.
+- **Drawn round the eye** (`lib/far-layer.ts`, generic; the drawing in components/TripPlayer.tsx
+  `farLayerOf`): the tile is 312 across and 1,904 along, so the copies of its strips that come within
+  reach (about 280 in the street) are each a `THREE.Points` sharing its strip's geometry and one
+  `ShaderMaterial`, placed again only once the eye has moved 12 (about 40 µs of JavaScript each
+  time); three.js leaves out the ones out of sight. Copies wholly inside the live view are skipped.
+- **Reach and fade** (`farFade`, the shader the same): nothing inside 0.8 of the live view
+  (`viewAt`, 520 in the street on a computer), coming in smoothly to its edge, so there is no seam
+  with the live grains; dimming slowly to under half with distance, a bluish haze mixing in, and
+  gone by **2,600** (`FAR_REACH`, five times 520) from 0.7 of it. The camera's far plane opens to
+  2,700 while it shows (1,600 otherwise). Points are about a grain and a half wide where the live
+  view ends, one pixel far off, additive like the grains. Still colours: no drift, no flicker.
+- **Where it hides** (`farShown`): in a room, in space, on a phone. Climbing, it keeps half of
+  itself once the plan from above has taken over (the plan's own far edge, `viewAt`, is then far
+  out, and the layer starts beyond it, so the two do not double up), and fades away by the
+  stratosphere. It stays in the cockpit view.
+- **Cost.** The live grains' per-frame JavaScript is unchanged (the same 15,000, the same work);
+  the far layer adds a few uniforms a frame and a placing every 12 moved. On the GPU it is about a
+  million points in reach, a quarter to a third of them in sight: small next to the bloom passes.
+  Not measured in a browser yet.
+- **Acceptance** (`lib/city-far.test.ts`, components/TripPlayer.test.tsx): built once (the same
+  object on a second call); 20,000 to 40,000 points, under 1 MB; every point inside one tile and
+  each strip inside its span; colours in the districts' families and dim; the fade nothing inside
+  the near view, rising after, dimming with distance, nothing beyond the far edge; the copies cover
+  the reach and skip what is wholly inside the near view; off for `'small'`; the player builds it
+  only on a game step, once, and never on a phone.
+
 ### Ship currents and quarter ships (2026-11-14)
 
 > "make more channels where ships navigate together in one direction to avoid overload. so u

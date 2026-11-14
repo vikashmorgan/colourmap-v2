@@ -24,6 +24,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { type Gauge, GaugeCluster, type GaugeStyle, paintGauges } from '@/components/Gauges';
 import type { Particle, Phase, RGB, Vec3 } from '@/lib/bigbang';
+import { type FarCopy, type FarLayer, tileCopies } from '@/lib/far-layer';
 
 export { type Gauge, type GaugeStyle, needleAngle } from '@/components/Gauges';
 
@@ -52,6 +53,13 @@ export type Trip = {
   camera?: (t: number) => { eye: Vec3; target: Vec3 };
   /** How much a grain shows by its distance from the eye; without it, the Big Bang's depth fade. */
   fade?: (pos: Vec3, eye: Vec3) => number;
+  /**
+   * A far layer (the City's far city, 2026-11-14: "what stops u from increasing field depth of
+   * vision 5 times on computer?"): one tile of a repeating world built once as a still cloud and
+   * drawn by the GPU in copies round the eye, beyond the live grains' view. Only on a computer
+   * and only while a game step is on; no JavaScript a frame but a few uniforms (lib/far-layer.ts).
+   */
+  farLayer?: FarLayer;
   /**
    * Backgrounds to pick from, the first by default: one colour is flat, several run from the top
    * of the screen to the bottom for a feeling of depth. The choice is remembered on the device.
@@ -447,6 +455,143 @@ function circleTexture(): THREE.Texture {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, sz, sz);
   return new THREE.CanvasTexture(canvas);
+}
+
+/** The camera's far plane without a far layer: enough for the City's Ship in the stratosphere. */
+const CAMERA_FAR = 1600;
+
+/**
+ * The far layer's drawing (lib/far-layer.ts; the City's far city, 2026-11-14: "try a light
+ * version that doesn't take u too much energy but still looks nice"): the cloud built the first
+ * time it shows, one geometry to each strip of its tile, and a pool of THREE.Points sharing them,
+ * placed at the tile copies round the eye (placed again only once the eye has moved a little).
+ * The shader fades each point as `farFade` does, a bluish haze far off, the colours still.
+ * `update` returns the camera's far plane it needs.
+ */
+function farLayerOf(layer: FarLayer | undefined) {
+  if (!layer) return null;
+  const group = new THREE.Group();
+  group.visible = false;
+  const uniforms = {
+    uEye: { value: new THREE.Vector3() },
+    uNear: { value: 0 },
+    uFar: { value: 1 },
+    uShown: { value: 0 },
+    uScale: { value: 500 },
+    // A point's size, in the world: about a grain and a half on screen where the live view ends.
+    uSize: { value: 0.8 },
+  };
+  const material = new THREE.ShaderMaterial({
+    uniforms,
+    vertexShader: `
+attribute vec3 tint;
+uniform vec3 uEye;
+uniform float uNear;
+uniform float uFar;
+uniform float uShown;
+uniform float uScale;
+uniform float uSize;
+varying vec3 vCol;
+void main() {
+  vec4 world = modelMatrix * vec4(position, 1.0);
+  float d = distance(world.xyz, uEye);
+  float k = clamp((d - uNear) / max(1.0, uFar - uNear), 0.0, 1.0);
+  float f = smoothstep(uNear * 0.8, uNear, d) * (1.0 - smoothstep(uFar * 0.7, uFar, d))
+    * (1.0 - 0.55 * k) * uShown;
+  vec3 haze = vec3(0.32, 0.42, 0.75) * dot(tint, vec3(0.3333));
+  vCol = mix(tint, haze, 0.55 * k) * f;
+  vec4 mv = viewMatrix * world;
+  gl_Position = projectionMatrix * mv;
+  gl_PointSize = f > 0.0 ? clamp(uSize * uScale / max(1.0, -mv.z), 1.0, 3.0) : 0.0;
+}`,
+    fragmentShader: `
+varying vec3 vCol;
+void main() {
+  float a = 1.0 - smoothstep(0.15, 0.5, length(gl_PointCoord - 0.5));
+  if (a <= 0.0) discard;
+  gl_FragColor = vec4(vCol * a, 1.0);
+}`,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  let strips: THREE.BufferGeometry[] = [];
+  let cloud: ReturnType<FarLayer['build']> | null = null;
+  const pool: THREE.Points[] = [];
+  const copies: FarCopy[] = [];
+  const placed = { x: Number.NaN, z: Number.NaN, near: 0, far: 0 };
+  return {
+    group,
+    resize(drawingHeight: number) {
+      uniforms.uScale.value = drawingHeight / 2 / Math.tan((55 / 2) * (Math.PI / 180));
+    },
+    update(on: boolean, eye: Vec3): number {
+      const shown = on ? layer.shown(eye) : 0;
+      group.visible = shown > 0;
+      if (!group.visible) return CAMERA_FAR;
+      if (!cloud) {
+        cloud = layer.build();
+        const { positions, colours, cuts } = cloud;
+        const n = positions.length / 3;
+        strips = cuts.map((a, s) => {
+          const b = cuts[s + 1] ?? n;
+          const g = new THREE.BufferGeometry();
+          g.setAttribute(
+            'position',
+            new THREE.BufferAttribute(positions.subarray(a * 3, b * 3), 3),
+          );
+          g.setAttribute('tint', new THREE.BufferAttribute(colours.subarray(a * 3, b * 3), 3));
+          // Tall enough for the spire: each strip left out whole when it is out of sight.
+          g.computeBoundingSphere();
+          return g;
+        });
+      }
+      const near = layer.near(eye);
+      const far = layer.far(eye);
+      uniforms.uEye.value.set(eye[0], eye[1], eye[2]);
+      uniforms.uNear.value = near;
+      uniforms.uFar.value = far;
+      uniforms.uShown.value = shown;
+      // Placed again only once the eye has moved 12 or the view has opened or closed by as much.
+      const moved =
+        Math.hypot(eye[0] - placed.x, eye[2] - placed.z) > 12 ||
+        Math.abs(near - placed.near) > 12 ||
+        Math.abs(far - placed.far) > 12;
+      if (moved || Number.isNaN(placed.x)) {
+        Object.assign(placed, { x: eye[0], z: eye[2], near, far });
+        // With 24 to spare each way, so the copies still cover until the next placing.
+        const n = tileCopies(
+          eye,
+          Math.max(0, near - 24),
+          far + 24,
+          cloud.tile,
+          cloud.spans,
+          copies,
+        );
+        for (let i = 0; i < Math.max(n, pool.length); i++) {
+          let p = pool[i];
+          if (i >= n) {
+            if (p) p.visible = false;
+            continue;
+          }
+          const c = copies[i] as FarCopy;
+          if (!p) {
+            p = new THREE.Points(strips[c.chunk], material);
+            pool.push(p);
+            group.add(p);
+          }
+          p.geometry = strips[c.chunk] as THREE.BufferGeometry;
+          p.position.set(c.ox, 0, c.oz);
+          p.visible = true;
+        }
+      }
+      return Math.max(CAMERA_FAR, far + 100);
+    },
+    dispose() {
+      for (const g of strips) g.dispose();
+      material.dispose();
+    },
+  };
 }
 
 const smooth = (x: number) => {
@@ -902,7 +1047,8 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       antialias: true,
       powerPreference: 'high-performance',
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const dpr = Math.min(window.devicePixelRatio, 2);
+    renderer.setPixelRatio(dpr);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#040207');
@@ -924,7 +1070,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
       showBg(backgroundStops(T, i, journeyRef.current ? null : pieceRef.current));
     };
     // Far enough for the City's Ship in the stratosphere, its whole plan some 700 to 1300 below.
-    const camera = new THREE.PerspectiveCamera(55, 1, 0.3, 1600);
+    const camera = new THREE.PerspectiveCamera(55, 1, 0.3, CAMERA_FAR);
     camera.position.set(0, 0, 58);
 
     const composer = new EffectComposer(renderer);
@@ -990,6 +1136,8 @@ diffuseColor.rgb *= vDof;`,
     const points = new THREE.Points(geometry, material);
     points.frustumCulled = false;
     scene.add(points);
+    const far = small ? null : farLayerOf(T.farLayer);
+    if (far) scene.add(far.group);
 
     // On a tall phone screen the eye steps back, so the whole picture stays in view.
     let back = 1;
@@ -998,6 +1146,7 @@ diffuseColor.rgb *= vDof;`,
       const h = window.innerHeight;
       renderer.setSize(w, h, false);
       composer.setSize(w, h);
+      far?.resize(h * dpr);
       camera.aspect = w / h;
       back = w / h < 0.8 ? 1 / Math.max(0.55, w / h / 0.8) : 1;
       if (!T.camera) camera.position.z = 58 * back;
@@ -1150,6 +1299,12 @@ diffuseColor.rgb *= vDof;`,
       }
       geometry.attributes.position.needsUpdate = true;
       geometry.attributes.color.needsUpdate = true;
+      // The far layer, on a game step only: its copies placed round the eye, its fade told where.
+      const reach = far ? far.update(gamePiece, eye) : CAMERA_FAR;
+      if (camera.far !== reach) {
+        camera.far = reach;
+        camera.updateProjectionMatrix();
+      }
 
       const lk = P ? P.look(k) : T.look(t);
       bloom.strength = lk.glow * 0.78; // a quarter less glow overall: the grains read as grains
@@ -1190,6 +1345,7 @@ diffuseColor.rgb *= vDof;`,
       geometry.dispose();
       material.dispose();
       texture.dispose();
+      far?.dispose();
       composer.dispose();
       renderer.dispose();
     };
