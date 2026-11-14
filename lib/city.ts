@@ -69,6 +69,7 @@ import {
   NEAR,
   portalJump,
   SHIP_SLOTS,
+  STREET_VIEW,
   shipGrain,
   signsNear,
   touchLanterns,
@@ -1751,8 +1752,8 @@ function canyonAt(p: Particle, u: number, t: number): Spot & { d: number } {
 /*
  * 2026-11-12: "long term aim will be to create that future neon city that we
  * fly through on a spaceship." Keys only, as the Shark Sim: A and D turn, W
- * and S climb and dive, E or Shift faster, Q or X slower, Space boosts while
- * the bar lasts and the bar fills again as you cruise. The towers' walls hold
+ * and S climb and dive, E or Shift faster, Q or X slower, Space boosts, as
+ * long as you like (2026-11-14). The towers' walls hold
  * you: you slide along them.
  *
  * Round two, the same day: "solid tower walls while you fly the ship, since
@@ -1785,21 +1786,22 @@ export const SUPER_CLIMB = 48;
 /** Slow mode: a gentle drift, the eye tilted down at the city. */
 export const SLOW_PACE = 0.22;
 export { AVENUE, BLOCK_X, BLOCK_Z, blocked, blockTower, floorAt, MARGIN };
-/** The boost at roof height (boostPaceAt). 2026-11-13, later: "add more boost". */
-export const BOOST_PACE = 3.6;
+/**
+ * The boost at roof height (boostPaceAt). 2026-11-13, later: "add more boost"; 2026-11-14: "more
+ * boost on all ships so boost is not limited, and abundant": faster again, and the bar never drains.
+ */
+export const BOOST_PACE = 4.6;
 /** The boost in the streets, and in the stratosphere. */
-export const STREET_BOOST = 2.5;
-export const HIGH_BOOST = 5.5;
+export const STREET_BOOST = 3.2;
+export const HIGH_BOOST = 7.5;
 /**
  * The hyperboost (Tab with Space; 2026-11-13: "a second faster boost, with tab"): this many times
- * the boost again, draining the bar faster, from a bar a little full.
+ * the boost again.
  */
 export const HYPER_PACE = 1.8;
-export const HYPER_DRAIN = 2.2;
-export const HYPER_FROM = 0.15;
 /**
  * The boost by height (2026-11-13: "boost not too fast in the city but faster when above"): two and
- * a half times the cruise in the streets, 3.6 at roof height, 5.5 in the stratosphere, each
+ * about three times the cruise in the streets, 4.6 at roof height, 7.5 in the stratosphere, each
  * blending smoothly into the next.
  */
 export function boostPaceAt(y: number): number {
@@ -1807,9 +1809,6 @@ export function boostPaceAt(y: number): number {
   const above = smooth((y - SKY + 20) / (STRATOSPHERE - SKY));
   return lerp(STREET_BOOST, BOOST_PACE, roofs) + (HIGH_BOOST - BOOST_PACE) * above;
 }
-export const BOOST_SECONDS = 4.5;
-/** Seconds of cruising that fill an empty bar. */
-export const BOOST_REFILL = 8;
 
 /** Chinatown on the avenue: the first band of the plan (lib/city-game.ts), eight blocks in every 48. */
 export const CT_EVERY = TILE_J;
@@ -2189,13 +2188,9 @@ function glowStep(boosting: boolean, dt: number, hyper = false) {
   fly.hyper += ((hyper ? 1 : 0) - fly.hyper) * (1 - Math.exp((hyper ? -3 : -1) * dt));
 }
 
-/**
- * The hyperboost (Tab with Space): begun only from a bar a little full, it lasts while both are
- * held and the bar has some left.
- */
+/** The hyperboost (Tab with Space): it lasts while both are held. */
 function hyperStep(boosting: boolean, tab: boolean): boolean {
-  if (!boosting || !tab) fly.hyperOn = false;
-  else if (!fly.hyperOn && fly.boost > HYPER_FROM) fly.hyperOn = true;
+  fly.hyperOn = boosting && tab;
   return fly.hyperOn;
 }
 
@@ -2230,7 +2225,6 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     return;
   }
   if (!active) {
-    fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
     glowStep(false, dt);
     raceStep({ active: false, pos: fly.pos, enter: false, t });
     if (fly.mode === 'pilot') startCarryingOn();
@@ -2267,12 +2261,8 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   if (fly.pos[1] >= ceiling() && tilt > 0) tilt = 0;
   // Slow mode levels out unless you climb or dive.
   fly.pitch += (tilt - fly.pitch) * (1 - Math.exp(-2.5 * dt));
-  const boosting = held(' ') && fly.boost > 0;
+  const boosting = held(' ');
   const hyper = hyperStep(boosting, held('tab'));
-  // High over the towers the bar does not drain: the open sky is free.
-  if (boosting && fly.pos[1] < SKY)
-    fly.boost = Math.max(0, fly.boost - (dt / BOOST_SECONDS) * (hyper ? HYPER_DRAIN : 1));
-  else if (!held(' ')) fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
   glowStep(boosting, dt, hyper);
   // The super boost: boost and climb together, and you go on up into the stratosphere; up there,
   // W climbs on and S dives back down, fast; below the towers' sky you fly as before.
@@ -2367,7 +2357,6 @@ function spaceFly(active: boolean, keys: string[], dt: number, t: number) {
   const boosting = held(' ');
   const hyper = hyperStep(boosting, held('tab'));
   glowStep(boosting, dt, hyper);
-  if (!boosting) fly.boost = Math.min(1, fly.boost + dt / BOOST_REFILL);
   const pace =
     (boosting ? BOOST_PACE : held('e', 'shift') ? 1.8 : held('q', 'x') ? 0.4 : 1) *
     (hyper ? HYPER_PACE : 1);
@@ -2468,9 +2457,12 @@ export const shipNow = () => flier(fly.t);
 /** How far up into the stratosphere you are, 0 (at the towers' sky) to 1. */
 const highness = (y: number) => smooth((y - SKY + 20) / (STRATOSPHERE - SKY));
 
+/** Whether the eye asked for is the Ship's, flown (set by pieceCamera): it then sees further. */
+let shipFlown = false;
 /**
  * The player's fade for the city: the journey's own (light dissolving near the eye and gone by
- * 260 from it) for every eye under the towers' sky, which is every piece but the Ship climbing.
+ * 260 from it) for every eye under the towers' sky, which is every piece but the Ship climbing,
+ * and the Ship once flown, which sees to 460.
  * Over the towers' sky the far edge opens with the height, so from the stratosphere (the eye some
  * 700 over the street) the whole plan below stays lit, out to the edge of the view.
  */
@@ -2479,10 +2471,11 @@ export function fade(pos: Vec3, eye: Vec3): number {
   // Out in space nothing dims with distance: only the nearest grains dissolve.
   if (inSpace()) return smooth((d - 3) / 9);
   const open = Math.max(0, eye[1] - SKY);
-  const far = 260 + 2.4 * open;
+  // Flown, the far edge sits further out, past the view (viewAt), so far towers read (2026-11-14).
+  const far = (shipFlown ? 460 : 260) + 2.4 * open;
   // In a room, the walker and the room stand close: only the nearest grains dissolve.
   const near = inRoom() ? smooth((d - 0.5) / 1.2) : smooth((d - 3) / 9);
-  return near * smooth((far - d) / (140 + 0.5 * open));
+  return near * smooth((far - d) / ((shipFlown ? 180 : 140) + 0.5 * open));
 }
 
 /** How high the eye is over the towers' sky: 0 under it, 1 at its height over the stratosphere. */
@@ -2789,6 +2782,11 @@ const cur = {
 };
 /** How far the eye sees now, as a share of VIEW: wider the higher you fly. */
 let reach = 1;
+/**
+ * How far sites are kept densely, as a share of VIEW: the view's old reach, 160 in the street, so
+ * what is near stays as fine while the towers far off are drawn more sparsely, out to `reach`.
+ */
+let dreach = 1;
 /** How clear the air is: 0 under the towers' sky, 1 from some 200 over it (the far haze lifts). */
 let clear = 0;
 
@@ -3061,7 +3059,7 @@ function group(
   if (count <= 0 || P.n >= P.size) return;
   const lim = Math.min(
     count,
-    Math.ceil(weight * lambda * dens(Math.max(dNear / reach, 10)) * count),
+    Math.ceil(weight * lambda * dens(Math.max(dNear / dreach, 10)) * count),
   );
   if (lim <= 0) return;
   cur.gid = gid;
@@ -3080,7 +3078,7 @@ function group(
     const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
     const dd = d / reach;
     if (dd > VIEW || dx * fx + dy * fy + dz * fz < 0.5) continue;
-    const b = smooth((weight * lambda * dens(dd) - (m + 0.5) / count) / 0.12);
+    const b = smooth((weight * lambda * dens(d / dreach) - (m + 0.5) / count) / 0.12);
     if (b <= 0) continue;
     // No window over a tunnel's mouth.
     if (mouthed && kind < Kind.Kerb && inMouth(tw0, o[0] as number, o[1] as number, o[2] as number))
@@ -3172,6 +3170,8 @@ function boxDistance(e: Vec3, lo: Vec3, hi: Vec3): number {
   return Math.hypot(c(0) - e[0], c(1) - e[1], c(2) - e[2]);
 }
 
+/** How far tower walls are gathered at most. */
+const TOWER_SIGHT = 420;
 /** Everything to draw this frame, nearest first: towers' faces and kerbs, and Chinatown. */
 function gather(P: Plan): { d: number; run: () => void }[] {
   const items: { d: number; run: () => void }[] = [];
@@ -3179,10 +3179,13 @@ function gather(P: Plan): { d: number; run: () => void }[] {
   const fl = Math.hypot(fwd[0], fwd[2]) || 1;
   const hx = fwd[0] / fl;
   const hz = fwd[2] / fl;
-  const I0 = Math.floor((eye[0] - VIEW) / BLOCK_X);
-  const I1 = Math.floor((eye[0] + VIEW) / BLOCK_X);
-  const J0 = Math.floor((eye[2] - VIEW) / BLOCK_Z);
-  const J1 = Math.floor((eye[2] + VIEW) / BLOCK_Z);
+  // The towers stand out to the whole view (2026-11-14: "buildings can be seen in the distance"),
+  // up to TOWER_SIGHT: higher up, the plan (lib/city-game.ts) draws the city beyond.
+  const sight = Math.min(reach * VIEW, TOWER_SIGHT);
+  const I0 = Math.floor((eye[0] - sight) / BLOCK_X);
+  const I1 = Math.floor((eye[0] + sight) / BLOCK_X);
+  const J0 = Math.floor((eye[2] - sight) / BLOCK_Z);
+  const J1 = Math.floor((eye[2] + sight) / BLOCK_Z);
   for (let I = I0; I <= I1; I++) {
     for (let J = J0; J <= J1; J++) {
       const tw = blockTower(I, J);
@@ -3196,7 +3199,7 @@ function gather(P: Plan): { d: number; run: () => void }[] {
       const depth = rx * hx + rz * hz;
       const side = Math.abs(rx * hz - rz * hx);
       // In front of the eye, within sight, and inside the view's width.
-      if (depth < -rad || Math.hypot(rx, rz) - rad > VIEW || side > depth * 1.05 + rad * 1.5 + 4)
+      if (depth < -rad || Math.hypot(rx, rz) - rad > sight || side > depth * 1.05 + rad * 1.5 + 4)
         continue;
       const ct = tw.d === 'chinatown';
       const tint = wallTint(tw);
@@ -3232,7 +3235,7 @@ function gather(P: Plan): { d: number; run: () => void }[] {
           [Math.min(a0[0], a1[0]), GROUND, Math.min(a0[2], a1[2])],
           [Math.max(a0[0], a1[0]), GROUND + tw.h, Math.max(a0[2], a1[2])],
         );
-        if (d > VIEW) continue;
+        if (d > sight) continue;
         items.push({
           d,
           run: () => {
@@ -3372,6 +3375,7 @@ function build(P: Plan, t: number) {
   Object.assign(P, { t, v: fly.v, c, f, eye, fwd: norm(sub(target, eye)), n: 0, top: 0 });
   const space = inSpace();
   reach = space ? SPACE_REACH : viewAt(eye[1]) / VIEW;
+  dreach = space ? SPACE_REACH : Math.max(NEAR, viewAt(eye[1]) - (STREET_VIEW - NEAR)) / VIEW;
   clear = space ? 1 : smooth((eye[1] - SKY) / 200);
   cur.plan = P;
   cur.t = t;
@@ -3907,6 +3911,8 @@ export function pieceAt(p: Particle, k: number, s: number): { pos: Vec3; rgb: RG
 
 /** The camera in piece k on its own, easing back to where the piece began in the last quarter. */
 export function pieceCamera(k: number, s: number): Eye {
+  // The Ship, once flown, sees further (fade); every other piece keeps the journey's fade.
+  shipFlown = PHASES[k]?.id === 'ship' && fly.mode !== 'route';
   const { f, u, t } = pieceClock(k, s);
   const a = eyeIn(k, u, t);
   const w = fliesOn(k) ? 0 : smooth((f - 0.75) / 0.25);

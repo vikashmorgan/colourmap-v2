@@ -2568,10 +2568,16 @@ const PLAZA_HEART = 24;
 
 /* ---------- everything lit near the eye ---------- */
 
-/** How far the eye can see at a height: the street's 160, opening wide as you climb, to a thousand. */
+/** How far the details are drawn: ornaments, signs, lanterns, tunnels. */
 export const NEAR = 160;
+/**
+ * How far the eye can see at a height: 340 in the street, opening wide as you climb, to 1,300.
+ * Was 160 (2026-11-14: "improve density and visibility so buildings can be seen in the distance"):
+ * the towers now stand out to twice as far, their details still kept to NEAR.
+ */
+export const STREET_VIEW = 340;
 export function viewAt(y: number): number {
-  return clamp(NEAR + (y - GROUND - 60) * 1.6, NEAR, 1000);
+  return clamp(STREET_VIEW + (y - GROUND - 60) * 1.6, STREET_VIEW, 1300);
 }
 /** How much the city is drawn as its plan, from above: none low down, all of it high. */
 export const planLook = (y: number) => smooth((y - GROUND - 70) / 90);
