@@ -1547,7 +1547,7 @@ every motion is a formula of the time (nothing kept frame to frame), so the same
 shows the same picture and nothing jumps.
 
 **Fifteen flying stations**, one to every quarter and two over Chinatown, the Heights and the
-Green Code, floating over the towers' sky (their middles 240 to 420 over the street, all of each
+Matrix quarter, floating over the towers' sky (their middles 240 to 420 over the street, all of each
 between 210 and 450): reached with the super boost, under the stratosphere's top, so the super
 boost still opens the whole plan over them. They stand at the tile's sides (x ±115, ±140, left
 quarters left, right quarters right), so the parcours weaves down the middle between them. Each
@@ -1570,8 +1570,8 @@ habitat rings, shuttles) or light flowing (waterfalls, falling light, fading at 
 | Biosphere Cluster | Solarpunk domes | 270 | three glass spheres joined by tubes, plants glowing inside | 1,378 |
 | Hanging Pyramid | Egyptian quarter | 340 | a pyramid hanging point down, a sun ring with rays over it | 1,182 |
 | Neon Carousel | Neon market | 300 | four discs on a mast, each turning the other way, boards hung round them | 2,406 |
-| Data Lattice | Green Code | 320 | a lattice cube standing on its corner, a core inside, light falling through it | 1,328 |
-| Twin Ring Habitat | Green Code | 420 | two habitat rings turning opposite ways round a hub, panels over them | 1,844 |
+| Data Lattice | Matrix | 320 | a lattice cube standing on its corner, a core inside, light falling through it | 1,328 |
+| Twin Ring Habitat | Matrix | 420 | two habitat rings turning opposite ways round a hub, panels over them | 1,844 |
 
 Each wears its quarter's colour, a lighter shade (toward warm, never white), a deeper one and a
 golden one. **Fly-through**: all light, as the Studio's other additions are; no collision, so the
@@ -1864,6 +1864,115 @@ every side street nine or more but where two kept towers meet, Chinatown's fourt
 at the drawn walls of the boulevards and their middles clear; walkways and sky bridges meeting
 both walls; facing signs and boards never closer than four, a way of six (Chinatown) or five
 between; the canyon's boards apart; the traffic further out on the boulevards.
+
+### Atlantis rising and the speed tunnel (2026-11-14)
+
+> "Plant Atlantis circle by circle, adding height and circles as you go." "More spaced out than
+> the first city", "high and tall": towers, spirals, tubes connecting bubble domes that float in
+> the air. A speed tunnel from the middle north of the city: "one deep lane between two tall
+> walls, with space to fly", tunnels along it, "lights that flash and stream in the ship's
+> direction, faster than the ship, so it feels like full speed". "Welcome to Atlantis" on
+> entering, and a school of sharks that follows at your speed for about 20 seconds, peels away,
+> and sometimes comes back.
+
+The City's own Atlantis, flown in the game (the Atlantis pieces of the Studio, `lib/atlantis.ts`,
+are unchanged). The city repeats every tile, so a city this big cannot stand in it: Atlantis has
+its own ground, reached only by the speedway, as space is reached only by the ring portals. Our
+own designs only. `lib/city-speedway.ts`, `lib/city-atlantis-rings.ts`, `lib/city-sharks.ts`, with
+small hooks in `lib/city.ts` (flight, camera, grains), `lib/city-avenue.ts` (its bridges give way
+to the mouth), `lib/city-far.ts` (the far city hides), `lib/city-travel.ts` and
+`lib/city-minimap.ts` (two map places).
+
+**The mouth** (in the city, every copy of the tile). At the plan's north end, the top middle of the
+map: over the avenue in Chinatown's first rows, from z = 76 north to the **gate** at z = 8. Two tall
+walls of light 12 apart, from a glowing deck at 26 to 140, streaks running north along them and
+the deck, the gate and the opening each a frame of light with a quick chase round it. All light:
+under the deck (the cruise at 21, the autopilot's route, Chinatown's lanterns and banner) the
+avenue runs on as before; the Grand Avenue's bridges in rows 0–2 give way above 22. Fly north
+through the gate, piloted, between the deck and the top (not in a race) and you are on Atlantis's
+ground, the lane going straight on from where you were. In the mouth the pace already rises (up to
+1.75 times by the gate).
+
+**The lane** (Atlantis's ground; the gate at z = 0, north is −z). **640** long. It opens from the
+mouth's 12 to **44** across in the first hundred and flares to about 124 at its end. Its walls
+stand 176 high and are solid; you fly up to 150 (so you stay in it), and both ends are open, so
+it never traps you. Its light is the one exception to the City's mellow rule, as asked: sixteen
+rows of streaks up each wall and five along the floor run north with the ship's way, each a
+bright flickering head and a fading tail, riding a phase that advances at `lightSpeed(v) =
+2.2v + 12` (always well past the ship; eased from its speed, so a change of pace never makes
+them jump); dim rails between. **Three tunnels** of arches (posts up the walls to 44, a half
+circle over; one every 4 for 72; at 120, 290 and 460 along) light in waves running north faster
+than you. **The push**: in the lane your pace is multiplied by up to 2.25 (`PUSH` 1.25), easing off
+over the last stretch; keys still speed you up, slow you, steer and climb. Fly back south out of
+the lane's start and you are home, in the mouth you left by; the map and [ ] also bring you home
+from anywhere in Atlantis.
+
+**Atlantis** (`ATL_CENTRE`, 1,160 north of the gate). Six rings of towers round the heart, planted
+from the rim in, **each ring taller than the one outside it**: radius 460, 384, 308, 232, 156, 84;
+height 44, 72, 100, 128, 156, 186 (each tower within 8% of its ring's, so the rings never overlap);
+the **heart** a tiered spire of 250 with a pearl floating over its tip. Seen from the lane the city
+rises like a crown. Towers about 62 apart along a ring, rings 76 apart: **at least 26 clear between
+any two towers** (a whole block of the first city, whose streets are 6 to 11). A straight avenue
+from the lane to the heart is kept clear (72 across). Three kinds of tower in turn: **drums** of
+three tiers, **spiral towers** (a square twisting three quarters of a turn as it rises), **needles**;
+each a ring's hue, teal at the rim warming to gold at the heart, drifting slowly; edges, bands,
+portholes breathing, a crown of lamps. **Spiral tubes** wind up every third tower (2 to 5 turns)
+and a great one round the heart (5 turns). **Bubble domes float** over the gaps between the rings
+(at about half the rings' height), glass with gold bands and equator and a pearl light inside,
+chained round each gap by glowing tubes and each tied by a tube to the nearest tower of the ring
+inside. **The four dome complexes** (PR #465's, folded in): at north, east, south and west on the
+circle of 270, a great dome of 20 and four smaller floating at 118, over a **circle plaza** on the
+ground, joined to one another by a great ring of tube; the rings either side leave their plazas
+open. **Ring roads** of light on the ground mark every circle, a slow swell running round them.
+Tubes carry soft warm pulses at 3 a second; nothing in Atlantis flashes. Towers and domes are
+solid; tubes and roads are light. Past 560 from the heart a gentle turn brings you back, and 640
+is the edge. Over Atlantis: a deep sea at night (its own background), only the plain stars.
+
+**The welcome.** Past the arrival line (150 short of the lane's end) the first time in a session,
+**WELCOME TO ATLANTIS** lights in big deco letters of grains hung across the lane near its end, read
+as you come: glowing in over 0.8 s, held 7 s, gone by 9.5 s, never again until the page is opened
+afresh. The game stays wordless otherwise: beside the bar Atlantis shows nothing (the gauges'
+district reads "Atlantis").
+
+**The sharks.** On every arrival a school of seven (our own: a spindle body paler underneath, a
+swept dorsal fin, two pectorals, a crescent tail, a teal lateral line, small eyes; each body
+swishing, more toward the tail) comes up from behind and swims **beside you at your speed** (14 to
+one side, a little below), each at its slot, wandering on slow sines. After **20 s** it peels away:
+slowing, turning off to its side and down, each shark fading in turn, gone within 6 s. While you
+stay it **comes back** between **60 and 120 s** later (each time on the other side), and again. It
+uses the traffic's grains (eleven in a hundred, about 100 a shark on a phone); when the sharks are
+away those grains are faint motes in the water.
+
+**Fast travel.** Two new places on the map at its top middle: **Speedway to Atlantis** (a start over
+the avenue 50 south of the mouth, at 60, facing north up it) and **Atlantis** (a trip to the gate,
+then on down the lane to just before the arrival, flying north).
+
+**Budget.** On Atlantis's ground only Atlantis is drawn (the city's towers, traffic and other ships
+not at all): the same pool, every tower, dome, tube and road an item made once and kept, only its
+distance set each frame; nearest first, thinned with distance (dense to 220, drawn to 1,100).
+Nearly every site is a light, so no grain is spent looking. Measured in the test runner (6,500
+grains, `setFly` + `pieceCamera` + `pieceAt`, the same session): 24–39 ms a frame over Atlantis
+against 44–58 ms in the city.
+
+**Acceptance** (`lib/city-atlantis-rings.test.ts`, `lib/city-speedway.test.ts`,
+`lib/city-sharks.test.ts`): six rings, each ring's lowest tower over the tallest outside it, the
+heart tallest; every gap between towers over 26 and rings more than two blocks apart; the approach
+clear to the heart; spiral towers, helices round towers, floating domes each touched by a tube, four
+complexes on plazas joined by 32 arcs; towers and domes solid, the edge turning you back; no site of
+Atlantis in the lane. The mouth clear of the city's collision in every copy, its bridges under the
+deck; the gate opening only northward between the deck and the top; the lane 12 then 40 or more
+across, clear inside, its walls and top holding you; the push only in the lane and the mouth; the
+lights always faster than the ship and moving north; flying north through the gate lands in the
+lane straight on; the welcome once a session, gone after; flying back south brings you home; the
+map's two places travel there and back; in Atlantis every grain finite, the sharks within the
+traffic's share. Sharks: following beside you for 20 s at 40 a second, gone by 27; returning 60 to
+120 s after each leaving, three times or more in 400 s; leaving at once when you leave Atlantis;
+no frame-to-frame jumps; grains near each shark and mellow.
+
+**Still rough.** Not yet seen in a browser (tests and timings only). The avenue's walls stand two
+closer off the tile's middle column (an older quirk of `blockTower`), so the mouth is 12 across to
+fit every copy. The sharks are light and may pass through the lane's walls if you hug one. Nothing
+lands in Atlantis yet, and its tubes, like PR #465's tunnels, are for show (nobody walks them).
 
 ### Matrix quarter and Neon Market (2026-11-14)
 

@@ -28,6 +28,7 @@ import { BLOCK_Z, C, GROUND, mix, TILE_I, TILE_J, TILE_X, TILE_Z, wrap } from '.
 import { crownKey, crownModel, landmarkHeight } from './city-landmarks';
 import { inRoom } from './city-rooms';
 import { inSpace } from './city-space';
+import { inAtlantis } from './city-speedway';
 import type { FarCloud, FarLayer } from './far-layer';
 
 /** Where the far city is gone: five times a computer's street view (520). */
@@ -217,7 +218,7 @@ export function farCity(): FarCloud {
  * and none by the stratosphere.
  */
 export function farShown(eye: Vec3): number {
-  if (cityQuality() !== 'large' || inRoom() || inSpace()) return 0;
+  if (cityQuality() !== 'large' || inRoom() || inSpace() || inAtlantis()) return 0;
   const high = smooth((eye[1] - SKY) / (STRATOSPHERE - SKY));
   return (1 - 0.5 * planLook(eye[1])) * (1 - high);
 }

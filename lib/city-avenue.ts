@@ -49,6 +49,7 @@ import {
 } from './city-grid';
 import { codeHeight, codeRise } from './city-rise';
 import { type WordSign, wordItem } from './city-signs';
+import { inMouthRows } from './city-speedway';
 
 /** The rows of a band (as lib/city-game.ts BAND_ROWS; the tests hold the two the same). */
 export const AVENUE_BAND_ROWS = 8;
@@ -497,6 +498,8 @@ export function avenueSpans(m: number, J: number, towerAt: (I: number, J: number
   const lz = wrap(J, TILE_J) * BLOCK_Z;
   S.spans.forEach((h, i) => {
     if (i % 2 !== r % 2 || h > top || !clearOfLounges(lz, h)) return;
+    // The speedway's mouth over Chinatown's first rows keeps its lane clear (lib/city-speedway.ts).
+    if (inMouthRows(lz, GROUND + h)) return;
     out.push({
       kind: S.spanKinds[r % 2] as SpanKind,
       x0,
