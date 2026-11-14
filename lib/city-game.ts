@@ -18,8 +18,9 @@
 
 import { fibonacciSphere, hash, type RGB, smooth, type Vec3 } from './bigbang';
 import type { Sign, Tower } from './city';
+import { aliveHeight, aliveItems, canalDesign, spireAt } from './city-alive';
 import { avenueHeight, avenueItems } from './city-avenue';
-import { bigItems, openBlock, studioBlockItems } from './city-big';
+import { BIG_SQUARES, bigItems, openBlock, studioBlockItems } from './city-big';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
 import { canyonHeight, canyonItems, canyonWallAt } from './city-canyon';
 import { carItems } from './city-cars';
@@ -59,6 +60,7 @@ import { crownItem, crownKey } from './city-landmarks';
 import { highwayItems, marketBlockItems } from './city-market';
 import { matrixForm, matrixHolds, matrixTowerItem } from './city-matrix';
 import { CAR_LEN, CARS, carAt, RAIL, railAt, railCeiling, STATIONS, TRAINS } from './city-metro';
+import type { PlazaSpot } from './city-plazas';
 import { besideRiver, inRiver, RIVER_Y, riverClear, riverItems } from './city-rain';
 import { codeHeight, riseClock } from './city-rise';
 import { FACADE_SHARE, FACADES, type Facade, facadeItem, roofItem } from './city-roofs';
@@ -523,9 +525,12 @@ function buildBlock(I: number, J: number, wide: boolean): Block {
     design = null;
     if (h <= 0) h = 14 + 10 * hh;
   }
+  // The Canals' own buildings stand as tall as the Heights' (lib/city-alive.ts, "Alive quarters").
+  if (wide && design && d === 'canals') design = canalDesign(design, k, railCeiling(I, J), I);
   const plaza = plazaOf(I, J);
-  // The big squares and the new buildings' blocks are kept open too (lib/city-big.ts).
-  if (plaza || openBlock(I, J)) shape = 'plaza';
+  // The big squares and the new buildings' blocks are kept open too (lib/city-big.ts), and the
+  // Indian quarter's super-tall spires' (lib/city-alive.ts).
+  if (plaza || openBlock(I, J) || (wide && spireAt(I, J))) shape = 'plaza';
   // An Embassy of Happiness (lib/city-embassy.ts): its own building, in the middle of its block.
   const emb = embassyAt(I, J);
   if (emb) {
@@ -638,6 +643,13 @@ function buildBlock(I: number, J: number, wide: boolean): Block {
   // The Matrix quarter's entrance rows (lib/city-matrix.ts): round tubes and octagons, as wide
   // across as their narrower side, so there is room to fly round them.
   if (wide && shape === 'code' && matrixForm(I, J) !== 'square') hx = hz = Math.min(hx, hz);
+  // The alive quarters (lib/city-alive.ts; 2026-11-14: "ordinary towers in the quarters much
+  // taller"): the plain and business towers off the avenue stand taller, under the high currents
+  // and the big ships' lines, and under a sky lounge's pad.
+  if (wide && !ave && !wall && !thru && (shape === 'box' || shape === 'business')) {
+    const up = aliveHeight(d, k, h, I);
+    if (up > h) h = Math.max(h, Math.min(up, loungeCeiling(x, z, hx, hz)));
+  }
   // Under the metro, lower, so the rail and its hanging carriages clear every roof.
   if (shape === 'box' || shape === 'business' || shape === 'code')
     h = Math.max(8, Math.min(h, railCeiling(I, J)));
@@ -2708,6 +2720,23 @@ function planItems(eye: Vec3, fwd: Vec3, R: number, k: number, t: number, out: I
 const inCode = (x: number, z: number) => districtAt(x + 0.01, z) === 'code';
 /** Cars in the Matrix quarter take its green, their lights too. */
 const codeCars = (x: number, z: number): RGB | null => (inCode(x, z) ? CODE_GREEN : null);
+/**
+ * The plazas the alive quarters compose round their buildings (lib/city-plazas.ts): every
+ * landmark's but the race plaza's, and every big square's (lib/city-big.ts).
+ */
+let plazaSpots: PlazaSpot[] | null = null;
+function alivePlazas(): PlazaSpot[] {
+  if (!plazaSpots)
+    plazaSpots = [
+      ...LANDMARKS.filter((l) => l.kind !== 'race').map((l) => ({ x: l.x, z: l.z, d: l.d })),
+      ...BIG_SQUARES.map((q) => ({
+        x: q.x,
+        z: q.z,
+        d: districtOf(Math.round(q.x / BLOCK_X), Math.round(q.z / BLOCK_Z)),
+      })),
+    ];
+  return plazaSpots;
+}
 /** Sites in a landmark plaza's ring from above, and in its bright heart. */
 const PLAZA_RING = 72;
 const PLAZA_HEART = 24;
@@ -3024,6 +3053,9 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
   // The Grand Avenue (lib/city-avenue.ts): its bridges, galleries, roofs, the features over it and
   // the gateways at every band's edge, on many levels above the road.
   avenueItems(eye, t, NEAR, blockTower, ahead, out);
+  // The alive quarters (lib/city-alive.ts): sky bridges, hanging lights, gates, banners and turned
+  // signs, the plazas' rings and ramps, the canal bridges, the Indian spires, the low-roof highways.
+  aliveItems(eye, t, NEAR, R, blockTower, ahead, out, alivePlazas());
   // The Deep Line under the city (lib/city-under.ts), and its name over the avenue ramp's mouth.
   underItems(eye, t, NEAR, pulseAt, ahead, out);
   for (const m of DEEP_MOUTHS) {

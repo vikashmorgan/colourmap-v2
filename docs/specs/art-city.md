@@ -2051,6 +2051,68 @@ to three quarters of the time, at most two flashes a period; six streams at thre
 and more apart, in the market and in open air, crossings at different levels, every ship one
 way at its stream's speed, evenly spaced.
 
+### Alive quarters (2026-11-14)
+
+The user's asks: ordinary towers much taller and joined at height; roads, ramps and bridges round
+the temples and unique buildings, composed as one design; a big gate in each quarter; banners
+across the streets you fly under; more bridges in the tall streets, which must still breathe;
+signs turned every way; hanging lights in every quarter; bridges over the canals with arched
+undersides; the Canals' unique buildings as big as the Heights'; a much taller Indian quarter with a
+few super-tall spires; and highways of ships just over the low roofs. Code: `lib/city-alive.ts`
+(and its shared ground `lib/city-alive-base.ts`), `lib/city-gates.ts`, `lib/city-banners.ts`,
+`lib/city-plazas.ts`, `lib/city-canal-bridges.ts`, `lib/city-strokes.ts` (structures drawn as
+strokes of light, built once), with small hooks in `lib/city-game.ts` (the towers' heights, the
+spires' open blocks, the Canals' designs, one call in the items) and `lib/city-currents.ts`
+(SKY_STREAMS). Light only, mellow: a slow drift, nothing flashes; nothing new blocks the Ship.
+
+- **Taller towers:** the plain and business towers off the avenue rise per quarter (RISE: the
+  Indian quarter 36 to 72, the Heights 92 to 124, the Canals 38 to 84, Golden, Industrial, Domes
+  and the market up to 90 to 104, about a fifth taller still), never lower than they were. They
+  stay under ALIVE_CAP (128: the high currents dip to 142), ten under a big ship's line over their
+  column (the liner over column -5, the barge over column 4), under the metro and the sky lounges.
+  The first column beside the avenue keeps its height: the quarters step up away from the avenue.
+- **Sky bridges and walkways:** between neighbouring towers of the same quarter, across both kinds
+  of street, at up to three of SKY_LEVELS (38 to 102) under both roofs: glass tubes, trusses and
+  slender arched walkways, lamps along their decks.
+- **Hanging lights:** strings across the side streets of every quarter but Chinatown and the
+  Indian quarter, at 24, 34 or 46, lamps on drops in the quarter's shape (globes, bells, cages,
+  stars, paper drops), a slow swell along them.
+- **Gates:** eleven, one in each quarter but Chinatown, across the wide street two lines off the
+  avenue in the quarter's second row, each its own style (Mughal arch, horseshoe arch, glass
+  portal, Venetian bell towers, half sun, gopuram, steel gantry, onion domes, pylons, neon frames,
+  wireframe), its posts at the walls, every beam 20 or more over the street, the quarter's name on
+  its lintel.
+- **Banners across the streets:** wall to wall on two cables, across the side streets (facing
+  along them) and the cross streets (turned a quarter), feet at 38 to 80 so you fly under or over.
+- **Signs turned every way:** blade signs standing out of the walls into the cross streets (read
+  flying along them), corner signs at forty-five degrees over the crossings, signs on posts over
+  the roofs at their own angles (top 104 at most, never into a highway).
+- **Plazas:** round every landmark (but the race plaza) and big square: a ring road with its dashed
+  line, a pool with rings spreading from it and paving rays, a ring walkway at 22, two ramps
+  curving up to it through opposite quarters, four bridges in to a halo round the building.
+- **Canal bridges:** fifteen over the three canals at the middles of blocks: tall single arches,
+  low three-arch stone bridges, slender footbridges whose deck is a curve, the Gallery Bridge (a
+  wide arch with an arcade on top) and arched sky bridges from tower to tower at 44, 62 or 84.
+  Every arch's underside curves up to its crown, over ten above the water; nothing under it;
+  every street-level top under 11 (the cross street's lowest lane is 15).
+- **Canals' unique buildings:** the Studio's designs in the Canals stretch upward to 92 to 124
+  (their footprint kept), under the metro and any big ship's line.
+- **Indian spires:** the Saffron Shikhara, the Garden of Lamps and the Marigold Dome (Studio
+  buildings stretched to 112 to 126) on blocks of their own kept open, out from under the metro,
+  spread over the quarter, ten under any big ship, under the rings and far under the stations.
+- **Highways over the low roofs:** five, three lanes abreast, one way each, the market's look in
+  their quarter's tone: two over Egypt's pyramids (40, 46), two over the Temples' quarter (86 over
+  its temples, 72), one over the Oriental quarter (42); each over every roof under it by six or
+  more, clear of the street lanes, the big ships, the high currents and the stations.
+- **Lanes:** whatever crosses a street keeps LANE_CLEAR (4) from every street channel's height (5,
+  11, 15, 30, the express 112 and 120), and in the market from its highways'.
+- **Acceptance:** `lib/city-alive.test.ts` and `lib/city-gates.test.ts`: towers raised and capped,
+  the Canals' uniques at the Heights' scale, the spires and their clearances, sky bridges, hanging
+  lights in the new quarters, the highways over the roofs and one way, gates per quarter with room
+  to fly through, banners in both orientations with room to fly under, signs in several
+  orientations, canal arches concave with room under, plazas inside their blocks, no grains in the
+  lanes, a modest budget, and nothing jumping between frames.
+
 ### Still rough, and next
 
 - The Matrix quarter's running lights brighten as the ship comes close but do not speed up (the
