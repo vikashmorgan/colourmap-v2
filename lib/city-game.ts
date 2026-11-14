@@ -53,6 +53,7 @@ import {
 } from './city-grid';
 import { CAR_LEN, CARS, carAt, RAIL, railAt, railCeiling, STATIONS, TRAINS } from './city-metro';
 import { besideRiver, inRiver, RIVER_Y, riverClear, riverItems } from './city-rain';
+import { codeHeight, riseClock } from './city-rise';
 import { FACADE_SHARE, FACADES, type Facade, facadeItem, roofItem } from './city-roofs';
 import { ropeItems } from './city-ropes';
 import {
@@ -594,8 +595,10 @@ export function blocked(q: Vec3): boolean {
     tw.shape !== 'code'
   )
     return false;
+  // A Green Code tower's walls follow it as it rises and sinks (lib/city-rise.ts, 2026-11-14).
+  const h = tw.shape === 'code' ? codeHeight(tw.h, tw.k, riseClock()) : tw.h;
   return (
-    q[1] <= GROUND + tw.h + MARGIN && dx < tw.hx + MARGIN && dz < tw.hz + MARGIN && !inBore(tw, q)
+    q[1] <= GROUND + h + MARGIN && dx < tw.hx + MARGIN && dz < tw.hz + MARGIN && !inBore(tw, q)
   );
 }
 
@@ -2693,7 +2696,8 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
       }
       shopWords(tw, words);
       posterItems(tw, eye, t, out);
-      if (tw.shape === 'code') out.push(codeTowerItem(tw, eye, t, d));
+      if (tw.shape === 'code')
+        out.push(codeTowerItem({ ...tw, h: codeHeight(tw.h, tw.k, t) }, eye, t, d));
       if (tw.d === 'heights' && tw.shape === 'box') {
         const B = blockTower(I + 1, J);
         if (B.shape === 'box' && B.d === 'heights') {
