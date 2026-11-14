@@ -484,7 +484,7 @@ export type NewBuilding = {
  * 30, no landmark within 60, never on a big square, one or two to a quarter.
  */
 export const BUILDING_SPOTS: NewBuilding[] = [
-  { name: 'Lantern Spindle', I: 5, J: 1, d: 'chinatown', hue: C.red, make: lanternSpindle },
+  { name: 'Lantern Spindle', I: 4, J: 5, d: 'chinatown', hue: C.red, make: lanternSpindle },
   { name: 'Lotus Stair', I: -2, J: 10, d: 'indian', hue: C.saffron, make: lotusStair },
   { name: 'Crescent Needle', I: 1, J: 14, d: 'oriental', hue: C.turquoise, make: crescentNeedle },
   { name: 'Helix Exchange', I: -5, J: 18, d: 'heights', hue: C.cyan, make: helixExchange },

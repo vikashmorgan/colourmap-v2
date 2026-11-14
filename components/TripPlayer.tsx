@@ -119,6 +119,11 @@ export type Trip = {
       set: (active: boolean, keys: string[], dt: number, t: number) => void;
       /** Keys the game takes for itself while played, beyond the arrows (the Shark Sim's Space, its boost). */
       claims?: string[];
+      /**
+       * No sentences while it is played (the City's Ship, 2026-11-14: "no sentences and quotes while
+       * we fly in the city, it just takes space"): the step's words and its line are hidden.
+       */
+      wordless?: boolean;
       /** A small bar shown while it is played (the Shark Sim's boost), its value 0 to 1, read every frame. */
       meter?: { label: string; value: () => number };
       /** A short count shown beside the bar while it is played (the Shark Sim's finds), read every frame. */
@@ -155,9 +160,15 @@ export type Trip = {
       /**
        * A panel the game opens over the picture (the City's map): on its key while played, a
        * button in the Design menu and on a phone. Time stands still while it is open; Esc, its
-       * key or `close` shuts it. Where its key is M, the Design menu answers to N instead.
+       * key or `close` shuts it. Where its key is M, the Design menu answers to N instead. `fly`
+       * shuts it and takes the controls back, so a trip begun from it (the City's fast travel,
+       * 2026-11-14) flies on, piloted.
        */
-      sheet?: { key: string; label: string; render: (close: () => void) => ReactNode };
+      sheet?: {
+        key: string;
+        label: string;
+        render: (close: () => void, fly: () => void) => ReactNode;
+      };
     };
     /**
      * A switch to try on a step (the 3D tree all in gold), beside the speeds; off in the Journey.
@@ -1427,6 +1438,7 @@ diffuseColor.rgb *= vDof;`,
     : (trip.wordsShown?.(hud.u, lines.length) ?? lines.map(() => 1));
   const game = trip.pieces?.game;
   const steering = !journey && !stopped && !!game?.has(hud.index);
+  const quiet = steering && !!game?.wordless;
   // The instruments, the same set every frame: read once here for their names and ranges, drawn
   // in the game's style (none hides them all).
   const display = steering ? (game?.display?.() ?? 'dials') : 'none';
@@ -1523,7 +1535,13 @@ diffuseColor.rgb *= vDof;`,
       {/* A game's panel over the picture (the City's map), time standing still under it. */}
       {sheet && gameSheet ? (
         <div className="bb-sheet" role="dialog" aria-label={gameSheet.label}>
-          {gameSheet.render(() => openSheet(false))}
+          {gameSheet.render(
+            () => openSheet(false),
+            () => {
+              openSheet(false);
+              stopGame(false);
+            },
+          )}
         </div>
       ) : null}
       {/* Ink over the picture, when the game asks for it (2026-11-11: "spit ink on your screen"). */}
@@ -1568,7 +1586,7 @@ diffuseColor.rgb *= vDof;`,
           ) : null}
         </div>
       ) : null}
-      {hasWords && words && lines.length > 0 ? (
+      {hasWords && words && !quiet && lines.length > 0 ? (
         <blockquote className="jr-words" aria-live="polite">
           {lines.map((line, k) => (
             <p
@@ -1654,7 +1672,7 @@ diffuseColor.rgb *= vDof;`,
             {variantWord} {variant + 1} of {variantList.length}
           </span>
         ) : null}
-        <p className={`bb-line${chrome ? '' : ' bb-hidden'}`}>{step.line}</p>
+        <p className={`bb-line${chrome && !quiet ? '' : ' bb-hidden'}`}>{step.line}</p>
       </div>
       <button
         type="button"

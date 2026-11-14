@@ -7,12 +7,15 @@
  * flat), the wheel or a pinch zooms, a name hidden to keep the others readable shows when the
  * pointer comes near (on a phone, when tapped). The districts whose race you won glow, edged in
  * gold. Time stands still under it (the trip player holds the frame); M, Esc or ✕
- * closes it. Drawn on a Canvas 2D from lib/city-minimap.ts, only when something changed or the
- * pointer's beat moves on.
+ * closes it. A tap (or click) on a quarter's name, or a place's, flies the ship there: to the
+ * quarter's start on its best road, the sheet closing and the flight going on, piloted
+ * (2026-11-14: "from map i can click to the diff spots and fast travel"); with a mouse, a click
+ * anywhere on a quarter's ground does too. Drawn on a Canvas 2D from lib/city-minimap.ts, only
+ * when something changed or the pointer's beat moves on.
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { shipNow } from '@/lib/city';
+import { shipNow, travelTo } from '@/lib/city';
 import { litDistricts } from '@/lib/city-game';
 import { GROUND } from '@/lib/city-grid';
 import {
@@ -21,12 +24,16 @@ import {
   drawCityMap,
   fitView,
   fitView3D,
+  isClick,
   isTap,
+  type MapLabel,
   type MapView,
   mapHeading,
+  mapPick,
   mapScale,
   tileLocal,
 } from '@/lib/city-minimap';
+import { spotFor } from '@/lib/city-travel';
 
 type Mode = '2d' | '3d';
 /** Flat or tilted, remembered while the page is open. */
@@ -57,7 +64,14 @@ const close = (a: MapView, b: MapView) =>
   Math.abs(a.cx - b.cx) + Math.abs(a.cz - b.cz) < 0.5 &&
   Math.abs((a.ox ?? 0) - (b.ox ?? 0)) + Math.abs((a.oy ?? 0) - (b.oy ?? 0)) < 0.5;
 
-export default function CityDreamsMap({ onClose }: { onClose: () => void }) {
+/** `onFly` closes it and takes the controls back, so a fast trip flies on, piloted. */
+export default function CityDreamsMap({
+  onClose,
+  onFly = onClose,
+}: {
+  onClose: () => void;
+  onFly?: () => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const [mode, setMode] = useState<Mode>(lastMode);
@@ -66,6 +80,9 @@ export default function CityDreamsMap({ onClose }: { onClose: () => void }) {
   const targetRef = useRef<MapView | null>(null);
   const sizeRef = useRef({ w: 1, h: 1 });
   const dirty = useRef(true);
+  // The latest close, for a tap that travels (the canvas's handlers are set up once).
+  const flyOn = useRef(onFly);
+  flyOn.current = onFly;
   // A phone or tablet: names show on a tap, not a hover.
   const [coarse, setCoarse] = useState(false);
 
@@ -94,6 +111,8 @@ export default function CityDreamsMap({ onClose }: { onClose: () => void }) {
     let w = 1;
     let h = 1;
     let hover: { x: number; y: number } | null = null;
+    // The names written last frame, for what a tap travels to.
+    let shown: MapLabel[] = [];
     const size = () => {
       const r = canvas.getBoundingClientRect();
       w = Math.max(1, r.width);
@@ -126,7 +145,7 @@ export default function CityDreamsMap({ onClose }: { onClose: () => void }) {
       }
       // The pointer breathes: a redraw some ten times a second is enough.
       if (dirty.current || now - drawn > 100) {
-        drawCityMap(
+        shown = drawCityMap(
           ctx,
           data,
           viewRef.current as MapView,
@@ -213,6 +232,25 @@ export default function CityDreamsMap({ onClose }: { onClose: () => void }) {
       if (pts.size < 2) pinch = null;
       const from = downs.get(e.pointerId);
       downs.delete(e.pointerId);
+      // A tap or click on a name (with a mouse, on a quarter's ground) flies there (2026-11-14).
+      if (e.type === 'pointerup' && from && isClick(from, { x: e.clientX, y: e.clientY })) {
+        const r = canvas.getBoundingClientRect();
+        const at = { x: e.clientX - r.left, y: e.clientY - r.top };
+        const go = mapPick(
+          shown,
+          data,
+          viewRef.current as MapView,
+          w,
+          h,
+          at,
+          e.pointerType === 'mouse',
+        );
+        if (go) {
+          travelTo(spotFor(go));
+          flyOn.current();
+          return;
+        }
+      }
       // A tap shows the name under the finger, for 3 s or until the next touch.
       if (
         e.type === 'pointerup' &&
@@ -307,6 +345,7 @@ export default function CityDreamsMap({ onClose }: { onClose: () => void }) {
         {mode === '3d' ? 'Drag to spin and tilt' : 'Drag to move'} · wheel or pinch to zoom ·{' '}
         {coarse ? 'tap a place for its name' : 'point at a place for its name'} · M or Esc to close
       </p>
+      <p className="cd-map-hint cd-map-go">Tap a quarter to fly there</p>
     </div>
   );
 }

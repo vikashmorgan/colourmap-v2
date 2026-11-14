@@ -712,7 +712,7 @@ blocks lie along it, a district each side:
 | 1 | **Indian quarter**: low towers crowned by curved temple spires (shikhara: ribs and rings up the curve, a flat stone ring and finial) or four chhatris; Diwali lamps strung across the streets at three heights, twinkling slowly; landmark the **Temple of the curved spire** (a tall shikhara, four small ones, a chhatri, stepped plinth) | **Istanbul**: towers with domes and slender minarets; landmark the **Mosque of the four minarets** (square hall, great dome on its drum with sixteen ribs, four half domes, four minarets with balconies) |
 | 2 | **The Heights**: tall towers (70–128), sky bridges between them at the height both reach (upper streets between the tops), more tunnels; over the avenue a long **tube** whose rings pulse ahead of you, and two **portals** | **The Canals**: the undercity: three cross streets are canals 14 deep under the street, their walls lit with pipes and lamps, water shimmering, arches of pulsing light over them so each reads as a tunnel; you can fly down into them |
 | 3 | **Golden gardens**: golden towers, golden domes, parks of golden trees (gold-leaf crowns shimmering); landmark the **golden spire** (190 high, rings of light, an open sphere of light on top, eight golden trees round it), seen from everywhere | **Temple quarter**: the Studio's temples (lib/golden-buildings.ts, read-only) on blocks; landmark the Studio's **ziggurat**, stairs on every side, 1.7 times its Studio size |
-| 4 | **Industrial quarter**: the Studio's five factories on blocks; landmark the Studio's **foundry**, its chimneys breathing steam | **Solarpunk domes**: the Studio's glasshouses and parks of golden trees; landmark the Studio's **garden of domes** |
+| 4 | **Industrial quarter**: two of the Studio's works on blocks (the rest stand singly through the city, below); landmark the Studio's **foundry**, its chimneys breathing steam | **Solarpunk domes**: the Studio's glasshouses and parks of golden trees; landmark the Studio's **garden of domes** |
 | 5 | **Egyptian quarter**: pyramids on the blocks (the golden slope, courses marked, a light at every apex; they hold you like walls, on their slope), obelisks on the avenue's low towers; landmark the **great pyramid** with a lying sphinx-like figure and two obelisks (our own simple shapes) | **Neon market**: word signs in a small Latin pixel font (BANK, BAR, HOTEL, CAFE, NOODLES, CINEMA, TEA, DREAMS) |
 | 6 | **Green Code quarter** (both sides, below): dark towers with code falling down their faces; landmark the **data spire** | **Green Code quarter** too |
 
@@ -765,6 +765,7 @@ high over the city; the golden spire's beacon. Brighter the higher you fly.
 | Space + W | **super boost**: climbs on at 48 a second while W is held, past the towers' sky (150) up to the **stratosphere** (520); up there W climbs, S dives back down fast; under the towers' sky you fly as before |
 | L (**Look**) | **slow mode**: a gentle drift (0.22 of the pace), the eye rising and tilting down at the city below; L again to fly on |
 | Enter (**Go**) | at a race's start, starts the race |
+| [ / ] | **hop** to the quarter before or after, at its start (below; no phone button: a phone taps the map) |
 
 **From above.** As you climb the eye stands back and rises (up to 150 back and 190 up) and looks
 down ahead; the view opens from the street's 160 to a thousand; the city is drawn as its plan:
@@ -825,6 +826,9 @@ too fast in the city but faster when above."). Every change eases; nothing flash
   measure the further they are behind the distance in focus (the ship, or 45 ahead from the
   cockpit) and when very near the eye, so they soften without adding light; the softening grows
   under the boost and the hyper, and fades out climbing to the plan (none in space).
+- **No sentences while you fly** (2026-11-14: "no sentences and quotes while we fly in the city,
+  it just takes space"): while the Ship is played, its quotes and its line under the name are
+  hidden (the game's `wordless`); the Journey and the Studio pieces keep theirs.
 - **Seeing far, more grains** (2026-11-14: "improve density for the City videogame and visibility
   so buildings can be seen in the distance"). The view reaches 340 in the street (was 160),
   opening as you climb to 1,300 (was 1,000), and tower walls are gathered out to 420 (were only
@@ -833,6 +837,22 @@ too fast in the city but faster when above."). Every change eases; nothing flash
   reaches 460 (was 260, which the other pieces keep). The City draws 13,000 grains on a computer
   and 6,500 on a phone (the other worlds 9,000 and 5,200): each thousand costs about 0.6 ms of a
   frame's 16.7, the wider view about 3%.
+- **Further on a computer** (2026-11-14: "make much more visibility for computer"). The City
+  knows whether it runs on a computer or a phone by the trip player's own rule for its grains (a
+  screen under 700 wide is a phone): components/City.tsx calls `setCityQuality('large' | 'small')`
+  (lib/city-game.ts), a phone until told (so the tests see the phone's). A phone keeps every number
+  above. A computer sees **520** in the street (`STREET_VIEW_LARGE`, opening as you climb to the same
+  1,300), gathers tower walls out to **640** (`TOWER_SIGHT_LARGE`, lib/city.ts), and the flown
+  Ship's fade reaches **680** (`SHIP_FAR_LARGE`); it draws **15,000** grains (was 13,000). Near
+  detail is as fine as before: grains are still dealt densely only out to the old reach (`dreach`,
+  160 in the street), the far towers sparsely. Faces beyond what a phone sees in the street (340)
+  are checked for being hidden at four points instead of twelve (each look along the streets out
+  there is long, and the face gets few grains), so the longer view itself costs next to nothing.
+  Measured (a throwaway bench: `setFly` + `pieceCamera` + `pieceAt` over every grain, 120 frames,
+  four runs, this machine): on the avenue in the Heights 13.0 ms a frame for today's 13,000 with the
+  phone's view, **15.3 ms** for 15,000 with the computer's, 16.1 ms for 16,000; at roof height in
+  the golden gardens (a quarter's start, more city in sight) 16.5, 20.0 and 21.0. 16,000 went past
+  the ~15 ms line on the avenue, so 15,000 it is.
 - **Ring portals, forgiving** ("boost rings don't work for going to space"): a run counts flown
   either way (big ring first, or small first), a ring missed here and there is forgiven (the last
   must be flown), and flying at a portal within about 45° of its way, the ship eases sideways
@@ -840,6 +860,58 @@ too fast in the city but faster when above."). Every change eases; nothing flash
   without threading each ring by hand.
 - **Through a portal** the glow flares and the camera comes along at once, so the jump never snaps
   the view.
+
+### Quarter starts and fast travel (`lib/city-travel.ts`, 2026-11-14)
+
+> "ability to go to main street or main starting point of each quarter. so there is a special road
+> on each quarter that has a great view etc..." and "from map i can click to the diff spots and
+> fast travel."
+
+**A start in every quarter** (`QUARTER_STARTS`, in the plan's order down the avenue). Each stands
+over a street at about roof height (**GROUND + 50**, raised further only if a wall were there, by
+the collision's own `blocked`), facing down its road toward the quarter's view:
+
+- a quarter with a landmark (Chinatown's pagoda, the Indian temple, Istanbul's mosque, the Nova Core
+  of the Heights, the golden spire, the ziggurat, the foundry, the garden of domes, the great
+  pyramid, the data spire): on the street through the landmark's plaza, six short of the band's far
+  edge, the landmark straight ahead some 130 away, the quarter's towers walling the road;
+- **the Canals**: over the middle canal, in from the tile's edge, looking along it to the avenue;
+- **the Neon market**: inside the Neon Canyon near the foot of its long run, looking up between
+  its walls to the bend.
+
+Every start is in its own quarter, clear of every wall (and so in every copy of the tile), and the
+road ahead of it is open at its height. Positions are tile-local; a trip goes to the copy nearest
+the ship.
+
+**Fast travel from the map.** In the map (M), a tap or click on a quarter's name, or a place's
+(a landmark, a race start, a pad, an embassy, the Neon Canyon, the WELCOME panel), flies there: a
+quarter's name to its start; a landmark or the Neon Canyon to the start that looks at it; any other
+place to a clear point some 60 back from it along a street, a little over its height, facing it.
+With a mouse, a click anywhere on a quarter's ground goes to its start too; on a touch screen a
+tap on bare ground still shows the names near it (as before), and a tap on a name flies. A drag
+still pans or spins; only a lift within 8 px of where it came down counts. The sheet closes, the
+controls come back (piloted, even if you had let go), and the ship is carried there in **0.6 to 1
+s** (longer the further), its heading easing round, over a gentle arc above the roofs on a long
+trip (up to 80, a little of the plan glimpsed on the way), the plume glowing; no flash, no cut.
+Leaving a room, space or a race first. One quiet line in the map says so: "Tap a quarter to fly
+there".
+
+**Hops while flying.** **[** and **]** fly to the start of the quarter before or after the one you
+are in, round the plan's order (the Green Code's next is Chinatown), the same short trip. Neither
+key was taken; they get no phone button (a phone taps the map).
+
+**Acceptance (quarter starts and fast travel)**
+
+- Twelve starts, one per quarter, each inside its quarter, over GROUND + 30, not blocked here or
+  in a far copy, facing its view (a landmark, the avenue, the canyon's bend) more than 100 away,
+  the road there open at its height.
+- After a trip the ship is within 3 of the start's nearest copy, clear, piloted, facing its way,
+  in at most a second; no frame moves it more than 60.
+- [ and ] hop to the next and the previous quarter.
+- On the map a tap on any shown name travels to that name's quarter or place; a mouse click on a
+  quarter's ground travels to it; a finger on bare ground does not.
+- A phone keeps 340, 420, 460 and 6,500 grains; a computer sees 520, gathers to 640, fades at 680
+  and draws 15,000.
 
 ### Races (`lib/city-race.ts`)
 
@@ -1163,6 +1235,34 @@ stays lit. **WELCOME TO THE CITY OF DREAMS** in `deco`, gold drifting to warm wh
 over the cross street just ahead of the start; boards in red, gold and saffron hang over the avenue
 from its walls; its roofs carry posters far more often. Then Chinatown's own gate and lanterns.
 
+### Chinatown higher, and the city's names (2026-11-13)
+
+> "make chinatown higher with many levels. i like how it is becoming devlopped. also u can put
+> more banners liek city of dreams. city of hope etc...all around the city."
+
+- **Chinatown, many levels** (`lib/city-game.ts`): its towers now stand 30–58 (the avenue's 30–52;
+  22–38 before), about one in six off the avenue a **tall tiered tower** of 74–104; all still
+  under the metro and under the Chinatown lounge's pad. Storey on storey, one every 6.5 or so,
+  each with its own eave flaring past the walls, corners swept up, every other one further out
+  over a red fascia; every other storey a balcony rail along both street walls and a lantern
+  under each eave corner; a crown of three roofs on top (five and a ringed spire on the tall
+  towers). **Covered walkways** cross the side streets between towers at 20, 32, 44, 57 and 70
+  (about half the heights both walls reach; never over the avenue; light, as the sky bridges).
+  The tall signs climb with them (five levels on towers over 46), the lantern strings too (side
+  streets to 38 and 50, the avenue to 46). Collision is the towers' boxes at their new heights;
+  the avenue, its gates and the opening road stay open.
+- **The city's names** (`CITY_NAMES`, `nameBanner` in `lib/city-signs.ts`; `cityBanners` in
+  `lib/city-game.ts`): CITY OF DREAMS, HOPE, LIGHT, PEACE, LOVE, JOY and FRIENDS, about twenty a
+  tile, framed like the welcome, each in its district's colour drifting slowly to a second hue:
+  over the avenue at the mouths of the Heights (LIGHT), the Golden gardens (PEACE) and the
+  Studio's band (FRIENDS), and high over it in the middle of the Heights (DREAMS) and the Studio's
+  band (JOY), all above the lanes you cruise in; over the roofs at the tile's two edges (FRIENDS
+  by Chinatown, HOPE, LOVE, DREAMS, JOY, LIGHT in the Green Code quarter); on a roof near the
+  avenue in seven quiet districts; and high on the street face of every tall tiered tower in
+  Chinatown, in `brush`. Faces `deco`, `tall`, `sign` and `brush`. Each over a cross street, on a
+  roof or on a face, so none cuts a wall. The Neon market's side and the opening road keep their
+  own signs.
+
 ### The Green Code quarter (`lib/city-code.ts`)
 
 > 2026-11-13: "do a matrix quarter in green".
@@ -1188,6 +1288,28 @@ tile's edge.
   avenue at both its mouths.
 - Green only: everything the game adds there (towers, spire, kerbs, cars, signs) has green its
   strongest channel.
+
+### The Neon Canyon, and factories through the city (`lib/city-canyon.ts`, `lib/city-factories.ts`)
+
+> 2026-11-13: "add a neon part to the city and a canyon in there. if not done allready. think how
+> factories can be better integrated not all together."
+
+- **The Neon Canyon**: a street 12 across and 298 long through the Neon market: down x = 52 from
+  the domes' edge (z 1360), a bend west along z = 1428, then down x = 26 to the Green Code
+  quarter's edge (z 1632). Its walls are the plan's own towers pushed up to the street, 104 to 140
+  high (lower only in its last two rows, where the metro crosses over it), so they hold you like
+  every tower. The city's neon part: bands of neon every six up the faces it sees, a strip up each
+  edge, the light lying on its street in soft streaks, boards hanging over it at five heights,
+  glowing cables strung across it every 8.5 at up to eight heights, and NEON CANYON over both
+  mouths. Every hue drifts slowly round cyan, magenta, amber and violet (a turn in about a minute
+  and a half); nothing flashes. Lit only near the eye and ahead of it, each face at most 3600
+  sites. On the map as a magenta line, named **Neon Canyon**.
+- **Factories through the city**: the Industrial quarter keeps its landmark foundry and two works;
+  the others stand singly, never two on neighbouring blocks: cement works on the Canals' quay,
+  an assembly hall at the city's edge by the Heights, solar works at the desert's edge among the
+  pyramids, kilns beside the domes (their glassworks), and the Green Code quarter's **data
+  foundry**, drawn in its green only. Each has a lit yard, a chimney breathing slow steam with a
+  slow red lamp, and a conveyor of light gliding to its neighbour's wall (`FACTORY_SITES`).
 
 ### Rising, hearts, Atlantis and depth (2026-11-13)
 
@@ -1396,7 +1518,9 @@ The Dawn sky behind, gold lines, district hues. Canvas 2D, redrawn only when the
 about ten times a second for the pointer. New parts of the city add places by appending to
 `MAP_EXTRAS` (the docks and embassies are there now).
 
-**Keys** (Ship, Game side): V cockpit view, M map, N Design menu; the rest as before.
+**Keys** (Ship, Game side): V cockpit view, M map, N Design menu, [ and ] hop between the
+quarters' starts (2026-11-14); the rest as before. A tap on a name in the map flies there
+("Quarter starts and fast travel").
 
 **Acceptance (ships, cockpits, map)**
 
@@ -1425,7 +1549,7 @@ little smaller, the pace pills above them.
 **Map and game polish** (2026-11-13). The map shows every dock's pad (an H in a ring) and every
 Embassy of Happiness (a small triangle), named after the race starts. On a touch screen a tap
 shows the name under the finger for 3 s (the footer says "tap a place for its name"). A quiet
-"You · 52 m" (your height) sits beside your pointer where no name is in the way. A district
+"You · 52 m" (your height) always sits beside your pointer, and names in its way give way to it. Where you are reads at once (2026-11-14: "make it clear on the map where I am"): a larger pointer, two gold rings spreading slowly from it, and faint gold lines across the map through it. A district
 whose race you won is drawn brighter, edged in gold. The Game side has its own hint, once per
 world: "W A S D fly · Space boost · M map · Esc lets go" (on a phone "Stick to fly · Boost · Map
 above the buttons"). Letting go says "Autopilot" for 3 s. Coming in to a pad (within 30, no more

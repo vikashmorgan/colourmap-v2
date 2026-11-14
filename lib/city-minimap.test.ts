@@ -11,17 +11,19 @@ import {
   FIT_SHARE,
   fitView,
   fitView3D,
+  isClick,
   isTap,
   labelBox,
   layoutLabels,
   MAP_EXTRAS,
   type MapLabel,
   mapHeading,
+  mapPick,
   projectedBounds,
   projectMap,
-  shipCaption,
   TILT_3D,
   tileLocal,
+  youCaption,
 } from './city-minimap';
 import { TRACKS } from './city-race';
 
@@ -343,32 +345,16 @@ describe('the map, 2026-11-13: docks, embassies, taps, you and the races won', (
     expect(found).toBeGreaterThan(0);
   });
 
-  it('captions your pointer "You · 52 m", only where no name shown is in the way', () => {
-    const cap = shipCaption([200, 300], 52.4, [], 800, 600);
-    expect(cap?.text).toBe('You · 52 m');
-    expect(cap?.x).toBeGreaterThan(200);
-    const name: MapLabel = {
-      text: 'Golden spire',
-      x: (cap?.x ?? 0) + 4,
-      y: 300,
-      align: 'left',
-      size: 11,
-      w: 70,
-      priority: 1,
-      depth: 0,
-      alpha: 1,
-      colour: '#fff',
-      font: '11px sans-serif',
-    };
-    expect(shipCaption([200, 300], 52, [name], 800, 600)).toBeNull();
-    expect(shipCaption([200, 300], 52, [{ ...name, y: 400 }], 800, 600)).not.toBeNull();
-    // Off the screen's edge: none.
-    expect(shipCaption([790, 300], 52, [], 800, 600)).toBeNull();
-    // Drawn on the map beside the pointer, or not at all where a name is in the way.
+  it('always captions your pointer "You · 52 m", the names it touches giving way (2026-11-14)', () => {
+    const cap = youCaption([200, 300], 52.4, 800, 600);
+    expect(cap.text).toBe('You · 52 m');
+    expect(cap.x).toBeGreaterThan(200);
+    // Near the right edge it sits left of the pointer, on screen.
+    const edge = youCaption([790, 300], 52, 800, 600);
+    expect(edge.x + edge.w).toBeLessThan(790);
+    // Drawn wherever you are, and no name shown touches it.
     const data = cityMapData();
     const v = fitView(400, 800);
-    const shown = drawCityMap(quietCtx(), data, v, 400, 800, null, 0);
-    let drawn = 0;
     for (const [x, z] of [
       [-60, 200],
       [40, 600],
@@ -376,13 +362,12 @@ describe('the map, 2026-11-13: docks, embassies, taps, you and the races won', (
       [60, 1700],
     ]) {
       const { ctx, texts } = recordingCtx();
-      drawCityMap(ctx, data, v, 400, 800, { x, y: 52, z, heading: 0 }, 0);
+      const shown = drawCityMap(ctx, data, v, 400, 800, { x, y: 52, z, heading: 0 }, 0);
+      expect(texts.includes('You · 52 m')).toBe(true);
       const [sx, sy] = projectMap(v, 400, 800, x, 0, z);
-      const free = shipCaption([sx, sy], 52, shown, 400, 800);
-      expect(texts.includes('You · 52 m')).toBe(free !== null);
-      if (free) drawn++;
+      const box = labelBox(youCaption([sx, sy], 52, 400, 800));
+      for (const l of shown) expect(boxesOverlap(labelBox(l), box)).toBe(false);
     }
-    expect(drawn).toBeGreaterThan(0);
   });
 
   it('draws the districts whose race was won brighter, edged in gold', () => {
@@ -398,5 +383,55 @@ describe('the map, 2026-11-13: docks, embassies, taps, you and the races won', (
     const edged = lit.strokes.filter((s) => s.style === gold);
     expect(edged).toHaveLength(data.districts.filter((d) => d.id === id).length);
     for (const e of edged) expect(e.width).toBe(1);
+  });
+});
+
+describe('fast travel from the map (2026-11-14: "from map i can click to the diff spots and fast travel")', () => {
+  it('tells a click or a tap from a drag, any pointer', () => {
+    expect(isClick({ x: 10, y: 10 }, { x: 14, y: 15 })).toBe(true);
+    expect(isClick({ x: 10, y: 10 }, { x: 30, y: 10 })).toBe(false);
+  });
+
+  for (const [w, h] of [
+    [1536, 640],
+    [390, 844],
+  ] as const) {
+    it(`travels to the quarter or place whose name is tapped, on a ${w} × ${h} screen`, () => {
+      const data = cityMapData();
+      for (const v of [fitView(w, h), fitView3D(w, h)]) {
+        const shown = drawCityMap(quietCtx(), data, v, w, h, null, 0);
+        let quarters = 0;
+        for (const l of shown) {
+          const x = l.align === 'left' ? l.x + l.w / 2 : l.x;
+          const go = mapPick(shown, data, v, w, h, { x, y: l.y }, false);
+          expect(go, l.text).toEqual(l.go);
+          if (go && 'd' in go) {
+            quarters++;
+            expect(DISTRICTS[go.d].name.toUpperCase()).toBe(l.text);
+          } else if (go) expect(go.name).toBe(l.text);
+        }
+        expect(quarters).toBeGreaterThanOrEqual(6);
+      }
+    });
+  }
+
+  it('travels to the quarter under a click on its ground (a mouse), never from a finger off a name', () => {
+    const w = 1536;
+    const h = 640;
+    const data = cityMapData();
+    const v = fitView(w, h);
+    const shown = drawCityMap(quietCtx(), data, v, w, h, null, 0);
+    for (const d of data.districts) {
+      // A point inside its patch, off its name.
+      const [x, y] = projectMap(v, w, h, (d.x0 + d.x1) / 2 + 20, 0, (d.z0 + d.z1) / 2 + 40);
+      const go = mapPick(shown, data, v, w, h, { x, y });
+      if (go && 'd' in go) expect(go.d).toBe(d.id);
+    }
+    // Off the city altogether: nothing.
+    expect(mapPick(shown, data, v, w, h, { x: 2, y: 2 })).toBeNull();
+    // A finger on bare ground shows names instead (as before), no trip.
+    const [x, y] = projectMap(v, w, h, 100, 0, 1000);
+    const touch = mapPick(shown, data, v, w, h, { x, y }, false);
+    if (touch) expect(shown.some((l) => l.go === touch)).toBe(true);
   });
 });

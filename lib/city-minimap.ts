@@ -14,6 +14,7 @@
  */
 
 import type { RGB, Vec3 } from './bigbang';
+import { CANYON_PATH } from './city-canyon';
 import { DOCKS, LOUNGES, placeDock } from './city-docks';
 import { EMBASSIES, embassyCentre } from './city-embassy';
 import {
@@ -65,7 +66,7 @@ export type MapBlock = {
 };
 export type MapRoad = { x0: number; z0: number; x1: number; z1: number; main: boolean };
 export type MapPlace = {
-  kind: 'landmark' | 'race' | 'station' | 'portal' | 'welcome' | 'dock' | 'embassy';
+  kind: 'landmark' | 'race' | 'station' | 'portal' | 'welcome' | 'dock' | 'embassy' | 'canyon';
   name: string;
   x: number;
   z: number;
@@ -84,6 +85,8 @@ export type MapData = {
   metro: [number, number][];
   /** The tunnels (the Deep Line under the street, the one through a row of towers), as lines. */
   tunnels?: [number, number][][];
+  /** The Neon Canyon's middle line (lib/city-canyon.ts), tile-local. */
+  canyon?: [number, number][];
 };
 
 const LANDMARK_NAMES: Record<Landmark['kind'], string> = {
@@ -261,6 +264,17 @@ export function cityMapData(): MapData {
   }
   for (const m of DEEP_MOUTHS)
     places.push({ kind: 'portal', name: m.name, x: m.x, z: m.z, y: 0, colour: [0.22, 0.92, 1] });
+  // The Neon Canyon, named at the middle of its long run.
+  const [cx0, cz0] = CANYON_PATH[2] as [number, number];
+  const [, cz1] = CANYON_PATH[3] as [number, number];
+  places.push({
+    kind: 'canyon',
+    name: 'Neon Canyon',
+    x: cx0,
+    z: (cz0 + cz1) / 2,
+    y: 0,
+    colour: [1, 0.28, 0.78],
+  });
   places.push({
     kind: 'welcome',
     name: 'Welcome to the City of Dreams',
@@ -285,6 +299,7 @@ export function cityMapData(): MapData {
     places,
     metro,
     tunnels: tunnelLines(),
+    canyon: CANYON_PATH.map(([x, z]) => [x, z]),
   };
   return cached;
 }
@@ -451,7 +466,14 @@ export type MapLabel = {
   alpha: number;
   colour: string;
   font: string;
+  /** Where a tap on it travels (a quarter, or a place); none for your own caption. */
+  go?: MapGo;
 };
+/**
+ * Where a tap on the map travels (2026-11-14: "from map i can click to the diff spots and fast
+ * travel"): a quarter's start, or a named place (tile-local, `y` over the street).
+ */
+export type MapGo = { d: DistrictId } | { x: number; z: number; y: number; name: string };
 export type LabelBox = { x0: number; y0: number; x1: number; y1: number };
 
 export const labelBox = (l: MapLabel): LabelBox => {
@@ -488,40 +510,87 @@ export const isTap = (
   up: { x: number; y: number },
   pointerType: string,
 ) => pointerType !== 'mouse' && Math.hypot(up.x - down.x, up.y - down.y) < 8;
+/** A click or a tap, any pointer: lifted within 8 px of where it came down (a drag pans instead). */
+export const isClick = (down: { x: number; y: number }, up: { x: number; y: number }) =>
+  Math.hypot(up.x - down.x, up.y - down.y) < 8;
+
+/** Whether screen point q lies inside the polygon pts (any convex or plain quad on the screen). */
+function inside(pts: [number, number][], q: { x: number; y: number }): boolean {
+  let hit = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i] as [number, number];
+    const [xj, yj] = pts[j] as [number, number];
+    if (yi > q.y !== yj > q.y && q.x < ((xj - xi) * (q.y - yi)) / (yj - yi) + xi) hit = !hit;
+  }
+  return hit;
+}
 
 /**
- * The quiet caption beside your pointer, "You · 52 m" (its height over the street), at screen
- * point q, or null where it would touch a name shown or leave the screen (2026-11-13).
+ * What a tap at screen point q travels to (2026-11-14: "from map i can click to the diff spots and
+ * fast travel"): a name shown under it (with its mark, left of a place's name), else, when `area`
+ * (a mouse, which shows names by pointing), the quarter whose ground lies under it; null for none.
  */
-export function shipCaption(
+export function mapPick(
+  shown: MapLabel[],
+  data: MapData,
+  v: MapView,
+  w: number,
+  h: number,
+  q: { x: number; y: number },
+  area = true,
+): MapGo | null {
+  for (const l of shown) {
+    if (!l.go) continue;
+    const b = labelBox(l);
+    const x0 = l.align === 'left' ? b.x0 - 16 : b.x0 - 4;
+    if (q.x >= x0 && q.x <= b.x1 + 4 && q.y >= b.y0 - 3 && q.y <= b.y1 + 3) return l.go;
+  }
+  if (!area) return null;
+  for (const d of data.districts) {
+    const pts = [
+      [d.x0, d.z0],
+      [d.x1, d.z0],
+      [d.x1, d.z1],
+      [d.x0, d.z1],
+    ].map(([x, z]) => projectMap(v, w, h, x as number, 0, z as number).slice(0, 2)) as [
+      number,
+      number,
+    ][];
+    if (inside(pts, q)) return { d: d.id };
+  }
+  return null;
+}
+
+/**
+ * Your caption, "You · 52 m", always shown (2026-11-14): right of the pointer, or left of it near
+ * the right edge, kept on screen; the names it touches give way to it.
+ */
+export function youCaption(
   q: [number, number],
   height: number,
-  shown: MapLabel[],
   w: number,
   h: number,
   measure: (text: string, font: string, size: number) => number = (t, _f, size) =>
     t.length * size * 0.6,
-): MapLabel | null {
+): MapLabel {
   const text = `You · ${Math.max(0, Math.round(height))} m`;
-  const size = 10;
-  const font = `${size}px ui-sans-serif, system-ui, sans-serif`;
-  const label: MapLabel = {
+  const size = 12;
+  const font = `600 ${size}px ui-sans-serif, system-ui, sans-serif`;
+  const tw = measure(text, font, size);
+  const left = q[0] + 24 + tw > w - 4;
+  return {
     text,
-    x: q[0] + 16,
-    y: q[1],
+    x: left ? q[0] - 24 - tw : q[0] + 24,
+    y: Math.max(size + 2, Math.min(h - 4, q[1])),
     align: 'left',
     size,
-    w: measure(text, font, size),
-    priority: 4,
+    w: tw,
+    priority: 5,
     depth: 0,
-    alpha: 0.6,
+    alpha: 0.95,
     colour: 'rgb(255,226,166)',
     font,
   };
-  const b = labelBox(label);
-  if (b.x0 < 2 || b.y0 < 2 || b.x1 > w - 2 || b.y1 > h - 2) return null;
-  if (shown.some((l) => boxesOverlap(labelBox(l), b))) return null;
-  return label;
 }
 
 /* ---------- drawing ---------- */
@@ -708,6 +777,23 @@ export function drawCityMap(
     ctx.stroke();
   });
   ctx.setLineDash([]);
+  // The Neon Canyon: a broad soft magenta line down its street, a fine bright one in it.
+  if (data.canyon) {
+    for (const [width, style] of [
+      [5, 'rgba(255,72,200,0.28)'],
+      [1.6, 'rgba(255,140,225,0.9)'],
+    ] as const) {
+      ctx.beginPath();
+      data.canyon.forEach(([x, z], j) => {
+        const q = P(x, 0, z);
+        if (j) ctx.lineTo(q[0], q[1]);
+        else ctx.moveTo(q[0], q[1]);
+      });
+      ctx.strokeStyle = style;
+      ctx.lineWidth = width;
+      ctx.stroke();
+    }
+  }
 
   // The names, gathered here and written last, none piled on another: districts first, then
   // landmarks, races and the rest.
@@ -724,6 +810,7 @@ export function drawCityMap(
     priority: number,
     colour: string,
     bold = false,
+    go?: MapGo,
   ) => {
     const size = bold ? 10 : 11;
     const font = `${bold ? '600 ' : ''}${size}px ui-sans-serif, system-ui, sans-serif`;
@@ -740,13 +827,14 @@ export function drawCityMap(
       alpha: 1,
       colour,
       font,
+      go,
     });
   };
   ctx.textBaseline = 'middle';
   if (labels) {
     for (const d of data.districts) {
       const q = P((d.x0 + d.x1) / 2, 0, (d.z0 + d.z1) / 2 - BLOCK_Z * 1.5);
-      say(d.name.toUpperCase(), q, 'center', 0, rgba(d.colour, 1.1, 1), true);
+      say(d.name.toUpperCase(), q, 'center', 0, rgba(d.colour, 1.1, 1), true, { d: d.id });
     }
   }
 
@@ -789,6 +877,11 @@ export function drawCityMap(
         ctx.rect(q[0] - 7, q[1] - 1.5, 14, 3);
         ctx.fill();
         break;
+      case 'canyon':
+        // Its line says where it is; a small mark for its name.
+        ctx.arc(q[0], q[1], 2, 0, Math.PI * 2);
+        ctx.fill();
+        break;
       case 'dock':
         ctx.arc(q[0], q[1], 4.5, 0, Math.PI * 2);
         ctx.moveTo(q[0] - 2, q[1] - 2.2);
@@ -819,8 +912,10 @@ export function drawCityMap(
         p.name,
         q,
         'left',
-        p.kind === 'landmark' ? 1 : p.kind === 'race' ? 2 : 3,
+        p.kind === 'landmark' || p.kind === 'canyon' ? 1 : p.kind === 'race' ? 2 : 3,
         'rgb(244,234,216)',
+        false,
+        { x: p.x, z: p.z, y: p.y, name: p.name },
       );
     }
   }
@@ -838,7 +933,12 @@ export function drawCityMap(
         c.priority = -1;
     }
   }
-  const shown = layoutLabels(cands, w, h);
+  let shown = layoutLabels(cands, w, h);
+  // Where you are, on screen, and your caption: it always shows, the names it would touch give way
+  // (2026-11-14: "make it clear on the map where I am").
+  const q = ship ? P(ship.x, raised ? Math.max(0, ship.y) : 0, ship.z) : null;
+  const cap = ship && q && labels ? youCaption([q[0], q[1]], ship.y, w, h, measure) : null;
+  if (cap) shown = shown.filter((l) => !boxesOverlap(labelBox(l), labelBox(cap)));
   for (const l of shown) {
     ctx.font = l.font;
     ctx.textAlign = l.align;
@@ -849,23 +949,40 @@ export function drawCityMap(
   ctx.globalAlpha = 1;
   ctx.textAlign = 'center';
 
-  // You: a gold pointer the way you fly, breathing softly on the city's beat.
-  if (ship) {
-    const q = P(ship.x, raised ? Math.max(0, ship.y) : 0, ship.z);
+  // You: a gold pointer the way you fly, two rings spreading slowly from it and faint lines across
+  // the map through it, so the eye finds it at once. Mellow: the rings ease out, nothing flashes.
+  if (ship && q) {
     const ahead = P(
       ship.x + Math.sin(ship.heading) * 10,
       raised ? Math.max(0, ship.y) : 0,
       ship.z - Math.cos(ship.heading) * 10,
     );
     const a = Math.atan2(ahead[1] - q[1], ahead[0] - q[0]);
-    const glow = 0.55 + 0.25 * Math.sin(t * 2.2);
+    const k = Math.max(0.7, Math.min(1.3, Math.min(w, h) / 480));
+    ctx.strokeStyle = 'rgba(255,214,150,0.16)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(q[0], q[1], 13, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,214,150,${(0.16 * glow).toFixed(3)})`;
+    ctx.moveTo(0, q[1]);
+    ctx.lineTo(w, q[1]);
+    ctx.moveTo(q[0], 0);
+    ctx.lineTo(q[0], h);
+    ctx.stroke();
+    for (const off of [0, 0.5]) {
+      const u = (t / 3.2 + off) % 1;
+      ctx.beginPath();
+      ctx.arc(q[0], q[1], (14 + 34 * u) * k, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255,214,150,${(0.5 * (1 - u) * (1 - u)).toFixed(3)})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(q[0], q[1], 15 * k, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,214,150,0.22)';
     ctx.fill();
     ctx.save();
     ctx.translate(q[0], q[1]);
     ctx.rotate(a);
+    ctx.scale(1.5 * k, 1.5 * k);
     ctx.beginPath();
     ctx.moveTo(10, 0);
     ctx.lineTo(-6, 6);
@@ -874,15 +991,13 @@ export function drawCityMap(
     ctx.closePath();
     ctx.fillStyle = '#ffe2a6';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(40,24,10,0.6)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(40,24,10,0.85)';
+    ctx.lineWidth = 1.2;
     ctx.stroke();
     ctx.restore();
-    // "You · 52 m" beside it, quietly, where no name shown is in the way.
-    const cap = labels ? shipCaption([q[0], q[1]], ship.y, shown, w, h, measure) : null;
     if (cap) {
       ctx.font = cap.font;
-      ctx.textAlign = 'left';
+      ctx.textAlign = cap.align;
       ctx.globalAlpha = cap.alpha;
       ctx.fillStyle = cap.colour;
       ctx.fillText(cap.text, cap.x, cap.y);

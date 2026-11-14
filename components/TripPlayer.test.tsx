@@ -43,6 +43,7 @@ import TripPlayer, {
   swipeStep,
   swipeVariant,
   type Trip,
+  type TripStep,
   VIEW_HOME,
   viewCamera,
 } from './TripPlayer';
@@ -579,6 +580,25 @@ describe('TripPlayer Game and Studio', () => {
     // Back to the studio piece it came from.
     fireEvent.click(screen.getByRole('button', { name: 'Studio' }));
     expect(screen.getByText('2 / 3')).toBeDefined();
+  });
+
+  it('hides the words and the line while a wordless game is played (2026-11-14)', () => {
+    const shown = (wordless: boolean) => {
+      const trip = makeTrip();
+      (trip.phases[2] as TripStep).words = ['A quote while flying.'];
+      if (trip.pieces?.game) trip.pieces.game.wordless = wordless;
+      render(<TripPlayer trip={trip} page="city" />);
+      toGame();
+      const line = screen.getByText('Ship line');
+      const out = {
+        words: screen.queryByText('A quote while flying.') !== null,
+        line: !line.className.includes('bb-hidden'),
+      };
+      cleanup();
+      return out;
+    };
+    expect(shown(true)).toEqual({ words: false, line: false });
+    expect(shown(false)).toEqual({ words: true, line: true });
   });
 
   it('opens a world on the side it was left on', () => {

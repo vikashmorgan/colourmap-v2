@@ -20,12 +20,14 @@ import { fibonacciSphere, hash, type RGB, smooth, type Vec3 } from './bigbang';
 import type { Sign, Tower } from './city';
 import { bigItems, openBlock, studioBlockItems } from './city-big';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
+import { canyonHeight, canyonItems, canyonWallAt } from './city-canyon';
 import { carItems } from './city-cars';
 import { CODE_GREEN, CODE_TEMPO, codeSize, codeTowerItem, dataSpireItem } from './city-code';
 import { type Design, designFor, designHolds, designItem, studioItem } from './city-designs';
-import { dockItems } from './city-docks';
+import { dockItems, LOUNGES, PAD_R, placeDock } from './city-docks';
 import { embassyAt, embassyItems } from './city-embassy';
-import { textPixels } from './city-font';
+import { factoryAt, factoryContextItem } from './city-factories';
+import { type FaceId, textPixels } from './city-font';
 import {
   AVENUE,
   aroundRect,
@@ -58,6 +60,7 @@ import { ropeItems } from './city-ropes';
 import {
   avenueWall,
   boardsOn,
+  nameBanner,
   OPENING,
   openingRow,
   posterBoardItem,
@@ -65,6 +68,7 @@ import {
   posterSigns,
   TORII_Z,
   toriiItem,
+  twoLines,
   type WordSign,
   welcomeSign,
   wordItem,
@@ -313,6 +317,25 @@ export type Block = Tower & {
   facade: Facade | null;
 };
 
+/** Chinatown's tall tiered towers: from this high, about one block in six off the avenue. */
+export const CT_TALL = 66;
+const CT_TALL_SHARE = 0.16;
+/** How many storeys a Chinatown tower has: one every six and a half or so, at least three. */
+export const ctStoreys = (h: number) => Math.max(3, Math.round(h / 6.5));
+/** The highest a tower at (x, z) may stand to keep clear under a sky lounge's pad and room. */
+function loungeCeiling(x: number, z: number, hx: number, hz: number): number {
+  let top = Number.POSITIVE_INFINITY;
+  LOUNGES.forEach((L, i) => {
+    const P = placeDock(i, [x, L.at[1], z]);
+    for (const q of [P.pad, P.c]) {
+      const r = PAD_R + L.w + 2;
+      if (Math.abs(q[0] - x) < hx + r && Math.abs(q[2] - z) < hz + r)
+        top = Math.min(top, q[1] - GROUND - 3);
+    }
+  });
+  return top;
+}
+
 const blockCache = new Map<number, Block>();
 /**
  * The building on block (I, J), from the plan: its district, shape and size, a tunnel through it
@@ -343,7 +366,10 @@ export function blockTower(I: number, J: number): Block {
       hz = Math.min(hz, 12);
       jx = 0;
       jz = 0;
-      h = 22 + 16 * hh;
+      // 2026-11-13: "make chinatown higher with many levels": taller all through, storey on
+      // storey (each with its own flared eave, lib/city-game.ts tieredTower), and now and then a
+      // tall tiered tower standing over the rest as a landmark.
+      h = ave ? 30 + 22 * hh : hash(k, 427) < CT_TALL_SHARE ? CT_TALL + 8 + 30 * hh : 30 + 28 * hh;
       break;
     case 'canals':
       hz = Math.min(hz, 11);
@@ -376,9 +402,8 @@ export function blockTower(I: number, J: number): Block {
       studio = { set: 'temples', i: Math.floor(hash(k, 431) * 5) };
       break;
     case 'industrial':
+      // Its foundry is the landmark; its other works stand singly (lib/city-factories.ts).
       h = 14 + 20 * hh;
-      if (!ave && pick < 0.45) shape = 'studio';
-      studio = { set: 'factories', i: Math.floor(hash(k, 431) * 5) };
       break;
     case 'domes':
       h = 12 + 16 * hh;
@@ -405,6 +430,13 @@ export function blockTower(I: number, J: number): Block {
     }
     default:
       if (!ave && hash(k, 426) < 0.12) h = 9 + 6 * hh;
+  }
+  // The Studio's factories, one to a block where they make sense, never two side by side
+  // (2026-11-13: "think how factories can be better integrated not all together").
+  const works = ave ? null : factoryAt(I, J);
+  if (works) {
+    shape = 'studio';
+    studio = { set: 'factories', i: works.i };
   }
   if (shape !== 'studio') studio = null;
   if (shape === 'box' && !ave && hash(k, 433) < 0.04) shape = 'park';
@@ -457,6 +489,24 @@ export function blockTower(I: number, J: number): Block {
   }
   let z = cz + jz * Math.max(0, BLOCK_Z - 2 * hz - 7);
   if (besideRiver(J)) ({ z, hz } = riverClear(J, z, hz));
+  // Chinatown's towers stand below the Chinatown lounge's pad and room, so you can still land.
+  if (d === 'chinatown') h = Math.min(h, loungeCeiling(x, z, hx, hz));
+  // A wall of the Neon Canyon (lib/city-canyon.ts): pushed up to the canyon's street, very tall
+  // (2026-11-13: "add a neon part to the city and a canyon in there").
+  const wallAt = canyonWallAt(I, J);
+  const wall = wallAt && shape !== 'plaza' && shape !== 'embassy' && !thru ? wallAt : null;
+  if (wall) {
+    const ox = (I - tileCol(I)) * BLOCK_X;
+    const oz = (J - tileRow(J)) * BLOCK_Z;
+    shape = 'box';
+    studio = null;
+    design = null;
+    hx = (wall.x1 - wall.x0) / 2;
+    hz = (wall.z1 - wall.z0) / 2;
+    x = ox + (wall.x0 + wall.x1) / 2;
+    z = oz + (wall.z0 + wall.z1) / 2;
+    h = canyonHeight(k);
+  }
   if (shape === 'park' || shape === 'plaza' || shape === 'studio') {
     h = 0;
     hx = BLOCK_X / 2 - 4;
@@ -468,7 +518,7 @@ export function blockTower(I: number, J: number): Block {
   let bore: Bore | null = null;
   if (thru) bore = { axis: 2, y: THROUGH.y, hw: THROUGH.hw, hh: THROUGH.hh, through: true };
   // More tunnels through towers than there were (2026-11-13: "more tunnels inside buildings").
-  else if (shape === 'box' && h >= 20 && hash(k, 440) < (d === 'heights' ? 0.4 : 0.2)) {
+  else if (shape === 'box' && !wall && h >= 20 && hash(k, 440) < (d === 'heights' ? 0.4 : 0.2)) {
     const hhB = 2.8;
     bore = {
       axis: hash(k, 441) < 0.5 ? 0 : 2,
@@ -479,7 +529,9 @@ export function blockTower(I: number, J: number): Block {
   }
   const style = FACADES[d];
   const facade: Facade | null =
-    style && shape === 'box' && !thru && h >= 14 && hash(k, 480) < FACADE_SHARE ? style : null;
+    style && shape === 'box' && !thru && !wall && h >= 14 && hash(k, 480) < FACADE_SHARE
+      ? style
+      : null;
   const tw: Block = { x, z, hx, hz, h, k, I, J, d, shape, bore, studio, design, facade };
   if (blockCache.size > 20000) blockCache.clear();
   blockCache.set(key, tw);
@@ -689,20 +741,76 @@ const cached = (key: string, make: () => Model) => {
   return m;
 };
 
-/** Chinatown's roofs: eaves turned up at the corners at two floors, and a three-roofed pagoda on top. */
-function pagodaTop(hx: number, hz: number, h: number): Model {
+/** A small round lantern: points spread over a ball, glowing softly. */
+const ball = (c: Vec3, r: number, n: number, rgb: RGB, tw = 0): Part => {
+  const m = Math.max(4, Math.round(n));
+  return {
+    n: m,
+    f: (u) => {
+      const d = fibonacciSphere(Math.floor(u * m), m);
+      return [c[0] + d[0] * r, c[1] + d[1] * r * 1.2, c[2] + d[2] * r];
+    },
+    rgb,
+    tw,
+  };
+};
+const CORNERS = [
+  [-1, -1],
+  [1, -1],
+  [1, 1],
+  [-1, 1],
+] as const;
+/**
+ * Chinatown's towers, storey on storey (2026-11-13: "make chinatown higher with many levels. i
+ * like how it is becoming devlopped"): at every storey an eave flaring out past the walls, its
+ * corners swept up, every other one a little further out over a red fascia; on every other storey
+ * a balcony rail along both street walls and a lantern hanging under each corner of the eave; on
+ * top a pagoda crown of three roofs, five on the tall tiered towers with a spire of rings. Our own
+ * design, from the Chinese roof's idea.
+ */
+function tieredTower(hx: number, hz: number, h: number): Model {
   const parts: Part[] = [];
-  for (const f of [0.36, 0.68])
-    parts.push(eave(hx + 0.7, hz + 0.7, h * f, 0.7, (hx + hz) * 3, C.gold));
-  for (let k = 0; k < 3; k++) {
-    const w = 1.1 - 0.27 * k;
+  const n = ctStoreys(h);
+  const sh = h / n;
+  const tall = h >= CT_TALL;
+  const lantern = mix(C.red, C.amber, 0.2);
+  for (let k = 1; k < n; k++) {
+    const y = k * sh;
+    const odd = k % 2 === 1;
+    const out = odd ? 1.15 : 0.85;
+    parts.push(eave(hx + out, hz + out, y, odd ? 1.1 : 0.8, (hx + hz) * 1.8, C.gold));
+    if (!odd) {
+      parts.push(eave(hx + 0.35, hz + 0.35, y - 0.55, 0.2, (hx + hz) * 0.9, scale(C.red, 0.75)));
+      continue;
+    }
+    // A balcony on both street walls, its rail at waist height over the eave.
+    for (const sx of [-1, 1])
+      parts.push(
+        seg(
+          [sx * (hx + 0.8), y + 1.1, -hz * 0.8],
+          [sx * (hx + 0.8), y + 1.1, hz * 0.8],
+          hz * 1.1,
+          scale(C.warm, 0.8),
+        ),
+      );
+    // A lantern under each corner of the eave, swaying with the light.
+    for (const [a, b] of CORNERS)
+      parts.push(ball([a * (hx + out - 0.2), y - 1.1, b * (hz + out - 0.2)], 0.4, 6, lantern, 0.2));
+  }
+  // The crown: a pagoda of three roofs, five on the tall towers, then its finial.
+  const roofs = tall ? 5 : 3;
+  const step = tall ? 0.15 : 0.27;
+  for (let k = 0; k < roofs; k++) {
+    const w = 1.1 - step * k;
     const y = h + 2.6 * k;
     parts.push(eave(hx * w, hz * w, y, 1.1, (hx + hz) * w * 4, C.gold));
     parts.push(
       ...boxEdges(hx * w * 0.72, hz * w * 0.72, y, y + 1.6, (hx + hz) * w * 2, scale(C.red, 0.8)),
     );
   }
-  parts.push(seg([0, h + 7.4, 0], [0, h + 10.5, 0], 10, C.gold));
+  const top = h + 2.6 * roofs - 0.4;
+  parts.push(seg([0, top, 0], [0, top + (tall ? 8 : 3.1), 0], tall ? 24 : 10, C.gold));
+  if (tall) for (const y of [2, 4, 6]) parts.push(ring([0, top + y, 0], 0.7, 10, C.gold));
   return model(parts);
 }
 /** The pagoda of nine roofs, Chinatown's landmark. */
@@ -1059,7 +1167,7 @@ function ornamentOf(tw: Block): Model | null {
   }
   switch (tw.d) {
     case 'chinatown':
-      return cached(`ct ${key}`, () => pagodaTop(tw.hx, tw.hz, tw.h));
+      return cached(`ct ${key}`, () => tieredTower(tw.hx, tw.hz, tw.h));
     case 'indian':
       return cached(`in ${key}`, () => {
         const r = Math.min(tw.hx, tw.hz);
@@ -1144,7 +1252,8 @@ function strandsNear(eye: Vec3, R: number, out: Strand[]) {
       const x1 = B.x - B.hx;
       const ave = I === -1;
       const tops = Math.min(A.h, B.h) - 3;
-      const levels = ave ? [30, 36] : [9, 17, 26];
+      // At more heights now Chinatown stands taller: wherever both walls reach.
+      const levels = ave ? [30, 36, 46] : [9, 17, 26, 38, 50];
       levels.forEach((lv, n) => {
         if (lv > tops) return;
         for (const f of [0.25, 0.7]) {
@@ -1243,6 +1352,106 @@ function strandItem(st: Strand, eye: Vec3, t: number): Item {
       const u = (s - nl * 10 - lamps + 0.5) / string;
       [o[0], o[1], o[2]] = at(u);
       [o[3], o[4], o[5]] = scale(C.gold, 0.1);
+      return true;
+    },
+  };
+}
+
+/* ---------- Chinatown's walkways, high across its side streets ---------- */
+
+/** A covered walkway across a side street from wall to wall: x0..x1 at height y, its middle at z. */
+export type Walk = { x0: number; x1: number; y: number; z: number; key: number };
+/** The heights Chinatown's walkways may cross at, where both towers reach. */
+export const WALK_LEVELS = [20, 32, 44, 57, 70];
+/**
+ * Chinatown's covered walkways (2026-11-13: "make chinatown higher with many levels"): across its
+ * side streets between neighbouring towers, at several heights, about half the heights both walls
+ * reach; never across the avenue, which stays open to fly down. Light, as the sky bridges are.
+ */
+export function walkwaysNear(eye: Vec3, R: number): Walk[] {
+  const out: Walk[] = [];
+  const I0 = Math.floor((eye[0] - R) / BLOCK_X);
+  const I1 = Math.floor((eye[0] + R) / BLOCK_X);
+  const J0 = Math.floor((eye[2] - R) / BLOCK_Z);
+  const J1 = Math.floor((eye[2] + R) / BLOCK_Z);
+  for (let I = I0; I <= I1; I++) {
+    if (tileCol(I) === -1) continue;
+    for (let J = J0; J <= J1; J++) {
+      if (districtOf(I, J) !== 'chinatown' || districtOf(I + 1, J) !== 'chinatown') continue;
+      const A = blockTower(I, J);
+      const B = blockTower(I + 1, J);
+      if (A.shape !== 'box' || B.shape !== 'box') continue;
+      const z0 = Math.max(A.z - A.hz, B.z - B.hz) + 2;
+      const z1 = Math.min(A.z + A.hz, B.z + B.hz) - 2;
+      if (z1 - z0 < 2) continue;
+      const top = Math.min(A.h, B.h) - 4;
+      WALK_LEVELS.forEach((lv, m) => {
+        const key = mixId(I * 17 + m, J * 29 + 3);
+        if (lv > top || hash(key, 471) > 0.5) return;
+        out.push({
+          x0: A.x + A.hx,
+          x1: B.x - B.hx,
+          y: GROUND + lv,
+          z: lerp(z0, z1, hash(key, 472)),
+          key,
+        });
+      });
+    }
+  }
+  return out;
+}
+/**
+ * A walkway, for the Ship's renderer: its deck's two edges in gold, a red rail along each side,
+ * a roof ridge over it with its ends swept up, and warm lanterns hanging under the ridge.
+ */
+export function walkItem(w: Walk, eye: Vec3, t: number): Item {
+  const len = w.x1 - w.x0;
+  const deck = Math.ceil(len / 0.5);
+  const rail = Math.ceil(len / 0.7);
+  const ridge = Math.ceil(len / 0.5);
+  const lamps = Math.max(1, Math.floor(len / 4));
+  const nL = lamps * 6;
+  return {
+    d: boxDist(eye, [w.x0, w.y, w.z - 1.2], [w.x1, w.y + 3.4, w.z + 1.2]),
+    gid: mixId(w.key, 4711),
+    count: 2 * deck + 2 * rail + ridge + nL,
+    weight: 1.8,
+    probe: [
+      [w.x0, w.y + 1, w.z],
+      [(w.x0 + w.x1) / 2, w.y + 1, w.z],
+      [w.x1, w.y + 1, w.z],
+    ],
+    site: (s, o) => {
+      const breath = 0.88 + 0.12 * beat(t, 1, w.key * 0.01);
+      if (s < 2 * deck) {
+        const u = ((s >> 1) + 0.5) / deck;
+        [o[0], o[1], o[2]] = [lerp(w.x0, w.x1, u), w.y, w.z + (s & 1 ? 1.1 : -1.1)];
+        [o[3], o[4], o[5]] = scale(C.gold, 0.3 * breath);
+        return true;
+      }
+      s -= 2 * deck;
+      if (s < 2 * rail) {
+        const u = ((s >> 1) + 0.5) / rail;
+        [o[0], o[1], o[2]] = [lerp(w.x0, w.x1, u), w.y + 1.05, w.z + (s & 1 ? 1.1 : -1.1)];
+        [o[3], o[4], o[5]] = scale(C.red, 0.32 * breath);
+        return true;
+      }
+      s -= 2 * rail;
+      if (s < ridge) {
+        const u = (s + 0.5) / ridge;
+        const e = Math.abs(2 * u - 1);
+        [o[0], o[1], o[2]] = [lerp(w.x0 - 0.6, w.x1 + 0.6, u), w.y + 2.7 + 0.7 * e ** 4, w.z];
+        [o[3], o[4], o[5]] = scale(C.gold, 0.38 * breath);
+        return true;
+      }
+      s -= ridge;
+      const j = Math.floor(s / 6);
+      const q = fibonacciSphere(s % 6, 6);
+      const sway = 0.08 * Math.sin(t * 0.6 + j + w.key);
+      o[0] = lerp(w.x0, w.x1, (j + 0.5) / lamps) + q[0] * 0.35;
+      o[1] = w.y + 1.9 + q[1] * 0.42;
+      o[2] = w.z + q[2] * 0.35 + sway;
+      [o[3], o[4], o[5]] = scale(mix(C.red, C.amber, 0.25), 0.45 * breath);
       return true;
     },
   };
@@ -1656,6 +1865,195 @@ function wordsNear(eye: Vec3, R: number, out: WordSign[]) {
     });
   }
 }
+/* ---------- the city's names, all round it ---------- */
+
+/**
+ * Where the city's name banners stand (2026-11-13: "u can put more banners liek city of dreams.
+ * city of hope etc...all around the city."), tile-local, each over a cross street (z on a row's
+ * edge, where no tower stands, so they never cut a wall): across the avenue at the districts'
+ * mouths and high in the middle of the Heights and the Studio's band, above the lanes you cruise
+ * in; at the tile's two edges, over the roofs there.
+ */
+type Across = {
+  row: number;
+  text: string;
+  face: FaceId;
+  px: number;
+  y: number;
+  rgb: RGB;
+  rgb2: RGB;
+};
+const AVENUE_NAMES: Across[] = [
+  { row: 16, text: 'CITY OF LIGHT', face: 'deco', px: 0.4, y: 32, rgb: C.cyan, rgb2: C.violet },
+  {
+    row: 20,
+    text: 'CITY OF DREAMS',
+    face: 'tall',
+    px: 0.55,
+    y: 62,
+    rgb: C.cyan,
+    rgb2: mix(C.cyan, C.white, 0.5),
+  },
+  { row: 24, text: 'CITY OF PEACE', face: 'deco', px: 0.4, y: 32, rgb: C.gold, rgb2: C.ivory },
+  {
+    row: 32,
+    text: 'CITY OF FRIENDS',
+    face: 'deco',
+    px: 0.4,
+    y: 32,
+    rgb: C.leaf,
+    rgb2: mix(C.steel, C.white, 0.3),
+  },
+  {
+    row: 36,
+    text: 'CITY OF JOY',
+    face: 'tall',
+    px: 0.55,
+    y: 50,
+    rgb: C.leaf,
+    rgb2: mix(C.leaf, C.gold, 0.5),
+  },
+];
+/** At the tile's edges: -1 its west side, 1 its east. The market's side is left to the market. */
+const EDGE_NAMES: (Omit<Across, 'y'> & { side: -1 | 1 })[] = [
+  { side: 1, row: 4, text: 'CITY OF FRIENDS', face: 'brush', px: 0.5, rgb: C.red, rgb2: C.gold },
+  { side: -1, row: 12, text: 'CITY OF HOPE', face: 'deco', px: 0.5, rgb: C.saffron, rgb2: C.gold },
+  { side: 1, row: 28, text: 'CITY OF LOVE', face: 'deco', px: 0.5, rgb: C.ivory, rgb2: C.gold },
+  {
+    side: -1,
+    row: 36,
+    text: 'CITY OF DREAMS',
+    face: 'deco',
+    px: 0.5,
+    rgb: C.steel,
+    rgb2: C.white,
+  },
+  { side: -1, row: 44, text: 'CITY OF JOY', face: 'brush', px: 0.5, rgb: C.sand, rgb2: C.gold },
+  {
+    side: 1,
+    row: 52,
+    text: 'CITY OF LIGHT',
+    face: 'tall',
+    px: 0.55,
+    rgb: CODE_GREEN,
+    rgb2: mix(CODE_GREEN, C.white, 0.45),
+  },
+];
+/** On a roof in each of these districts, near the avenue: its name and face. */
+const ROOF_NAMES: Partial<Record<DistrictId, [string, FaceId]>> = {
+  indian: ['CITY OF HOPE', 'sign'],
+  oriental: ['CITY OF LOVE', 'deco'],
+  canals: ['CITY OF DREAMS', 'tall'],
+  golden: ['CITY OF DREAMS', 'deco'],
+  temples: ['CITY OF PEACE', 'sign'],
+  industrial: ['CITY OF FRIENDS', 'tall'],
+  domes: ['CITY OF JOY', 'deco'],
+};
+/** The names on Chinatown's tall tiered towers, in turn. */
+const TOWER_NAMES = ['CITY OF JOY', 'CITY OF DREAMS', 'CITY OF LOVE', 'CITY OF HOPE'];
+
+const bannerCache = new Map<number, WordSign[]>();
+/**
+ * The city's name banners of tile (m across, n along): across the avenue, at the tile's edges, on
+ * a roof in each quiet district and high on the face of Chinatown's tall tiered towers, each in
+ * its district's colour drifting slowly toward a second hue.
+ */
+export function cityBanners(n: number, m: number): WordSign[] {
+  const ck = n * 4096 + m;
+  const had = bannerCache.get(ck);
+  if (had) return had;
+  const out: WordSign[] = [];
+  const xc = m * TILE_X;
+  const z0 = n * TILE_Z;
+  const I0 = m * TILE_I;
+  const J0 = n * TILE_J;
+  let key = 9600 + wrap(n * 53 + m * 7, 997) * 40;
+  for (const a of AVENUE_NAMES)
+    out.push(nameBanner({ ...a, x: xc, y: GROUND + a.y, z: z0 + a.row * BLOCK_Z, key: key++ }));
+  for (const e of EDGE_NAMES) {
+    // Over the roofs either side of the edge's street, whatever stands there.
+    const Ia = e.side > 0 ? I0 + TILE_I / 2 - 1 : I0 - TILE_I / 2 - 1;
+    let roof = 28;
+    for (const I of [Ia, Ia + 1])
+      for (const J of [J0 + e.row - 1, J0 + e.row]) roof = Math.max(roof, blockTower(I, J).h);
+    out.push(
+      nameBanner({
+        ...e,
+        x: xc + (e.side * TILE_X) / 2,
+        y: GROUND + roof + 6,
+        z: z0 + e.row * BLOCK_Z,
+        key: key++,
+      }),
+    );
+  }
+  BANDS.forEach((band, b) => {
+    band.forEach((d, side) => {
+      const name = ROOF_NAMES[d];
+      if (!name) return;
+      // The first plain roof two blocks off the avenue, early in the band, else a little later.
+      for (const r of [2, 5]) {
+        const tw = blockTower(I0 + (side ? 2 : -3), J0 + b * BAND_ROWS + r);
+        if (tw.shape !== 'box' || tw.d !== d || tw.h < 12 || posterOn(tw, C.white)) continue;
+        out.push(
+          nameBanner({
+            text: twoLines(name[0]),
+            x: tw.x,
+            y: GROUND + tw.h + 1.4,
+            z: tw.z + tw.hz - 0.6,
+            px: 0.36,
+            maxW: 2 * tw.hx * 1.4,
+            face: name[1],
+            rgb: DISTRICTS[d].colour,
+            rgb2: mix(DISTRICTS[d].colour, C.white, 0.45),
+            key: key++,
+          }),
+        );
+        break;
+      }
+    });
+  });
+  // High on the street face of each of Chinatown's tall tiered towers, in the brush face.
+  let c = 0;
+  for (let r = 0; r < BAND_ROWS; r++)
+    for (let i = -TILE_I / 2; i < TILE_I / 2; i++) {
+      const tw = blockTower(I0 + i, J0 + r);
+      if (tw.d !== 'chinatown' || tw.shape !== 'box' || tw.h < CT_TALL) continue;
+      const text = twoLines(TOWER_NAMES[c++ % TOWER_NAMES.length] as string);
+      const px = Math.min(0.3, (2 * tw.hx * 0.9) / textPixels(text, { face: 'brush' }).w);
+      const H = textPixels(text, { face: 'brush' }).h * px;
+      out.push(
+        nameBanner({
+          text,
+          x: tw.x,
+          y: GROUND + tw.h - 3 - H,
+          z: tw.z + tw.hz + 1.6,
+          px,
+          face: 'brush',
+          rgb: C.red,
+          rgb2: C.gold,
+          key: key++,
+        }),
+      );
+    }
+  if (bannerCache.size > 256) bannerCache.clear();
+  bannerCache.set(ck, out);
+  return out;
+}
+/** The city's name banners within sight, for the Ship's renderer. */
+function bannersNear(eye: Vec3, R: number, t: number, out: Item[]) {
+  const mc = Math.round(eye[0] / TILE_X);
+  const n0 = Math.floor((eye[2] - R) / TILE_Z);
+  const n1 = Math.floor((eye[2] + R) / TILE_Z);
+  for (let n = n0; n <= n1; n++)
+    for (let m = mc - 1; m <= mc + 1; m++)
+      for (const w of cityBanners(n, m)) {
+        // A cheap look first: most of them are far off.
+        if (Math.abs(w.at[2] - eye[2]) > R || Math.abs(w.at[0] - eye[0]) > R + 40) continue;
+        const it = wordItem(w, eye, t);
+        if (it.d < R) out.push(it);
+      }
+}
+
 /**
  * The market's shop words in the tall neon face (now and then elsewhere too), on tower faces that
  * look down the streets (+z); and the market's hanging boards.
@@ -1678,7 +2076,8 @@ function shopWords(tw: Block, out: WordSign[]) {
     frame: 'line',
   });
   // A few hanging boards on the market's side streets, at one or two heights: not every tower.
-  if (tw.d === 'market' && hash(tw.k, 483) < 0.5 && tw.I !== 0)
+  // (The Neon Canyon's walls carry their own, at more heights: lib/city-canyon.ts.)
+  if (tw.d === 'market' && hash(tw.k, 483) < 0.5 && tw.I !== 0 && !canyonWallAt(tw.I, tw.J))
     out.push(
       ...boardsOn(
         tw,
@@ -1752,7 +2151,16 @@ export function towerSigns(tw: Block): Sign[] {
   for (const side of [-1, 1]) {
     // On the avenue, only the side away from it gets low signs here.
     const facesAve = ave && (tw.I === 0 ? side < 0 : side > 0);
-    const levels = facesAve ? [0.55, 0.85] : [0.15, 0.5, 0.82];
+    // Taller towers, signs at more levels up them (2026-11-13: "make chinatown higher with many
+    // levels").
+    const tall = tw.h > 46;
+    const levels = facesAve
+      ? tall
+        ? [0.45, 0.65, 0.85]
+        : [0.55, 0.85]
+      : tall
+        ? [0.12, 0.3, 0.5, 0.7, 0.88]
+        : [0.15, 0.5, 0.82];
     levels.forEach((lv, m) => {
       const j = tw.k * 7 + m * 3 + (side > 0 ? 1 : 0);
       const text = SIGN_WORDS[wrap(j, SIGN_WORDS.length)] as string;
@@ -2169,10 +2577,29 @@ export const NEAR = 160;
  * How far the eye can see at a height: 340 in the street, opening wide as you climb, to 1,300.
  * Was 160 (2026-11-14: "improve density and visibility so buildings can be seen in the distance"):
  * the towers now stand out to twice as far, their details still kept to NEAR.
+ * On a computer it reaches further still (STREET_VIEW_LARGE, below); a phone keeps 340.
  */
 export const STREET_VIEW = 340;
+
+/**
+ * A computer or a phone (2026-11-14: "make much more visibility for computer"): the trip player's
+ * own rule (a screen under 700 wide is a phone) picks it, through setCityQuality. A computer sees
+ * further in the street, gathers tower walls further and fades the far edge later; a phone keeps
+ * every distance it had. Small until told, so the tests see the phone's.
+ */
+export type CityQuality = 'small' | 'large';
+let quality: CityQuality = 'small';
+export function setCityQuality(q: CityQuality) {
+  quality = q;
+}
+export const cityQuality = () => quality;
+/** How far a computer sees in the street (a phone STREET_VIEW). */
+export const STREET_VIEW_LARGE = 520;
+/** How far the eye sees in the street now: the phone's or the computer's. */
+export const streetView = () => (quality === 'large' ? STREET_VIEW_LARGE : STREET_VIEW);
 export function viewAt(y: number): number {
-  return clamp(STREET_VIEW + (y - GROUND - 60) * 1.6, STREET_VIEW, 1300);
+  const s = streetView();
+  return clamp(s + (y - GROUND - 60) * 1.6, s, 1300);
 }
 /** How much the city is drawn as its plan, from above: none low down, all of it high. */
 export const planLook = (y: number) => smooth((y - GROUND - 70) / 90);
@@ -2224,9 +2651,28 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
             [tw.x, top + 2, tw.z],
             [tw.x + tw.hx, top, tw.z + tw.hz],
             [tw.x - tw.hx, top, tw.z + tw.hz],
+            // Chinatown's storeys run down its walls: seen from the street too.
+            ...(tw.d === 'chinatown'
+              ? ([
+                  [tw.x + tw.hx + 1, GROUND + tw.h * 0.5, tw.z],
+                  [tw.x - tw.hx - 1, GROUND + tw.h * 0.5, tw.z],
+                  [tw.x, GROUND + tw.h * 0.5, tw.z + tw.hz + 1],
+                ] as Vec3[])
+              : []),
           ],
           site: (s, o) => modelSite(M, s, t, tw.x, GROUND, tw.z, 1, pulse, o),
         });
+      }
+      // The Studio's building itself is drawn out to 420 (studioBlockItems, lib/city-big.ts); a
+      // factory standing on its own keeps its yard, chimney and conveyor to its neighbour here.
+      if (tw.shape === 'studio' && tw.studio) {
+        const works = factoryAt(I, J);
+        if (works) {
+          const { axis, dir } = works.conveyor;
+          const B = axis === 0 ? blockTower(I + dir, J) : blockTower(I, J + dir);
+          const solid = B.shape === 'box' || B.shape === 'business' || B.shape === 'code';
+          out.push(factoryContextItem(works, tw, solid ? B : null, eye, t));
+        }
       }
       if (tw.shape === 'design' && tw.design)
         out.push(designItem(tw.design, tw, DISTRICTS[tw.d].colour, eye, t));
@@ -2387,7 +2833,10 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
   // big squares' temples, domes and Nova Cores (lib/city-big.ts; 2026-11-14: "BIG TEMPLES. BIG
   // DOMES. AND NOVA CORES IN THE CITY.").
   const colourAt = (x: number, z: number) => DISTRICTS[districtAt(x, z)].colour;
-  if (planLook(eye[1]) < 0.5) studioBlockItems(eye, t, R, blockTower, ahead, colourAt, out);
+  // A factory standing on its own keeps its works' tint (lib/city-factories.ts).
+  const studioColour = (x: number, z: number) =>
+    factoryAt(Math.floor(x / BLOCK_X), Math.floor(z / BLOCK_Z))?.tint ?? colourAt(x, z);
+  if (planLook(eye[1]) < 0.5) studioBlockItems(eye, t, R, blockTower, ahead, studioColour, out);
   bigItems(eye, t, R, ahead, colourAt, out, lift);
   wordsNear(eye, NEAR, words);
   for (const w of words) {
@@ -2395,6 +2844,8 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
     if (it.d < NEAR) out.push(it);
   }
   openingItems(eye, t, out);
+  // The city's names on its big banners, all round it; seen from further off as you climb.
+  bannersNear(eye, Math.min(R, NEAR + 80), t, out);
   const strands: Strand[] = [];
   strandsNear(eye, NEAR, strands);
   for (const st of strands) {
@@ -2402,8 +2853,16 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
     const it = strandItem(st, eye, t);
     if (it.d < NEAR) out.push(it);
   }
+  // Chinatown's covered walkways across its side streets, at several heights.
+  for (const w of walkwaysNear(eye, NEAR)) {
+    if (!ahead((w.x0 + w.x1) / 2, w.z, 12)) continue;
+    const it = walkItem(w, eye, t);
+    if (it.d < NEAR) out.push(it);
+  }
   // Rope lights across the streets (lib/city-ropes.ts), Diwali lanes in the Indian quarter.
   ropeItems(eye, t, NEAR, blockTower, ahead, out);
+  // The Neon Canyon through the market (lib/city-canyon.ts): its walls' neon, cables, boards.
+  canyonItems(eye, t, NEAR, blockTower, ahead, out);
   // The Deep Line under the city (lib/city-under.ts), and its name over the avenue ramp's mouth.
   underItems(eye, t, NEAR, pulseAt, ahead, out);
   for (const m of DEEP_MOUTHS) {

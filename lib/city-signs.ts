@@ -552,6 +552,59 @@ export function welcomeSign(xc: number, z: number, key: number): WordSign {
     frame: 'box',
   };
 }
+/* ---------- the city's names, all round it ---------- */
+
+/**
+ * The names the city gives itself on its big banners (2026-11-13: "u can put more banners liek
+ * city of dreams. city of hope etc...all around the city."): its own words, no brand's.
+ */
+export const CITY_NAMES = [
+  'CITY OF DREAMS',
+  'CITY OF HOPE',
+  'CITY OF LIGHT',
+  'CITY OF PEACE',
+  'CITY OF LOVE',
+  'CITY OF JOY',
+  'CITY OF FRIENDS',
+] as const;
+/** A name set on two lines, "CITY OF" over its word: for a roof or a tower's face. */
+export const twoLines = (name: string) => name.replace('CITY OF ', 'CITY OF\n');
+
+export type NameBanner = {
+  text: string;
+  /** The middle of its foot: it stands across z, its letters running along x. */
+  x: number;
+  y: number;
+  z: number;
+  px: number;
+  face: FaceId;
+  /** Its district's hue, and the hue a slow wave drifts toward along its letters. */
+  rgb: RGB;
+  rgb2: RGB;
+  key: number;
+  /** The widest it may be: its pixel shrinks to fit. */
+  maxW?: number;
+};
+/**
+ * One of the city's name banners, as the welcome is: centred on its x, its foot at its y, framed,
+ * reading from both sides, its colour drifting slowly between its two hues (never a flash).
+ */
+export function nameBanner(b: NameBanner): WordSign {
+  const T = textPixels(b.text, { face: b.face });
+  const px = b.maxW ? Math.min(b.px, b.maxW / T.w) : b.px;
+  return {
+    text: b.text,
+    at: [b.x - (T.w * px) / 2, b.y + T.h * px, b.z],
+    px,
+    rgb: b.rgb,
+    rgb2: b.rgb2,
+    frameRgb: mix(b.rgb, C.white, 0.2),
+    key: b.key,
+    face: b.face,
+    frame: 'box',
+  };
+}
+
 /** The wall a board on the opening road hangs from: the avenue's own, standing out over it. */
 export const avenueWall = (xc: number) => (side: -1 | 1, w: number) =>
   side < 0 ? xc - AVENUE + 0.3 : xc + AVENUE - 0.3 - w;

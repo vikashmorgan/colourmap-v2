@@ -48,18 +48,18 @@ const SQ = (kind: BigKind, side: -1 | 1, row: number, i = 0): BigSquare => ({
 /**
  * The big squares, tile-local: their crossings, left (x −78) and right (x 78) of the avenue, on the
  * rows between the landmarks (the Code quarter's two on row 50, clear of the metro and the through
- * tunnel).
+ * tunnel; none in Chinatown's rows, none on the Neon Canyon's walls).
  */
 export const BIG_SQUARES: BigSquare[] = [
-  SQ('nova', -1, 8),
+  SQ('nova', -1, 12),
   SQ('dome', -1, 16, 0),
   SQ('temple', -1, 32, 0),
   SQ('dome', -1, 40, 2),
   SQ('nova', -1, 50),
-  SQ('temple', 1, 8, 2),
+  SQ('temple', 1, 10, 2),
   SQ('nova', 1, 16),
   SQ('nova', 1, 32),
-  SQ('temple', 1, 40, 4),
+  SQ('temple', 1, 39, 4),
   SQ('dome', 1, 50, 1),
 ];
 
