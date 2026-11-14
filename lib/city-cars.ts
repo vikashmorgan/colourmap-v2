@@ -30,6 +30,7 @@ import {
   TILE_J,
   TILE_X,
   TILE_Z,
+  wideLine,
   wrap,
 } from './city-grid';
 import { inRiver } from './city-rain';
@@ -53,9 +54,18 @@ export function roadColour(r: Road): RGB {
   return pal[wrap(r.line * 3 + (r.axis === 2 ? 1 : 2), pal.length)] as RGB;
 }
 
-/** How far from the road's middle line a car keeps, on its right, by lane. */
+/**
+ * How far from the road's middle line a car keeps, on its right, by lane: further out on the wide
+ * side streets (2026-11-14: "make a lot of the thin streets larger").
+ */
 const laneOff = (r: Road, lane: number) =>
-  r.axis === 2 && r.line === 0 ? (lane === 0 ? AVENUE * 0.3 : AVENUE * 0.68) : 1.7;
+  r.axis === 2 && r.line === 0
+    ? lane === 0
+      ? AVENUE * 0.3
+      : AVENUE * 0.68
+    : wideLine(r.axis, r.line)
+      ? 2.6
+      : 1.7;
 
 export type Car = {
   pos: Vec3;

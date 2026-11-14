@@ -23,6 +23,20 @@ export const TILE_J = 56;
 export const TILE_X = TILE_I * BLOCK_X;
 export const TILE_Z = TILE_J * BLOCK_Z;
 
+/**
+ * The wider streets (2026-11-14: "make a lot of the thin streets larger"; earlier: "side streets
+ * that work well"): every other side street is a boulevard. Along z, the street on every even line
+ * (x = I · BLOCK_X) but the avenue's (I ≡ 0 mod TILE_I, kept as it is): the streets that flow +z.
+ * Along x, the cross street on every odd line (z = J · BLOCK_Z), so the band edges keep theirs. The
+ * towers either side stand back WIDE_FACTOR times as far from such a street as they stood
+ * (lib/city-game.ts blockTower), so wide boulevards and narrower lanes alternate both ways.
+ */
+export const WIDE_FACTOR = 1.75;
+export function wideLine(axis: 0 | 2, line: number): boolean {
+  if (axis === 2) return line % 2 === 0 && line % TILE_I !== 0;
+  return Math.abs(line % 2) === 1;
+}
+
 export const TAU = Math.PI * 2;
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 export const wrap = (x: number, n: number) => ((x % n) + n) % n;

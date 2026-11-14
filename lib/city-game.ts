@@ -51,6 +51,8 @@ import {
   TILE_J,
   TILE_X,
   TILE_Z,
+  WIDE_FACTOR,
+  wideLine,
   wrap,
 } from './city-grid';
 import { crownItem, crownKey } from './city-landmarks';
@@ -341,13 +343,68 @@ function loungeCeiling(x: number, z: number, hx: number, hz: number): number {
 const blockCache = new Map<number, Block>();
 /**
  * The building on block (I, J), from the plan: its district, shape and size, a tunnel through it
- * now and then. Towers leave a street of at least seven all round (ten in Chinatown and on the
- * canals), on the avenue their inner wall on its edge; under the metro they stand lower.
+ * now and then. Towers leave a street of at least nine all round (fourteen across Chinatown's,
+ * ten along them and on the canals; every other side street a wide one, lib/city-grid.ts
+ * wideLine), on the avenue their inner wall on its edge; under the metro they stand lower.
  */
 export function blockTower(I: number, J: number): Block {
   const key = I * 65536 + J;
   const had = blockCache.get(key);
   if (had) return had;
+  const tw = buildBlock(I, J, true);
+  if (blockCache.size > 20000) blockCache.clear();
+  blockCache.set(key, tw);
+  return tw;
+}
+/**
+ * The building on block (I, J) as it stood before the wider streets (2026-11-14), every street
+ * as narrow as it was: for the tests that measure how much wider the boulevards came out.
+ */
+export const blockTowerAsWas = (I: number, J: number): Block => buildBlock(I, J, false);
+
+/** The least half width a tower keeps when it stands back from a street. */
+const WIDE_MIN_HALF = 3.6;
+/**
+ * The least a tower's face stands from the middle of any side street (2026-11-14: "avoid streets
+ * being too narrow where panels almost touch themselves ... needs to breathe"): every side street
+ * nine wide or more (it was six at the narrowest), so the boards on its two walls leave open air
+ * between them and a clear way to fly down the middle.
+ */
+export const STREET_MIN_GAP = 4.5;
+/**
+ * A tower standing back from the streets beside its block (2026-11-14: "make a lot of the thin
+ * streets larger"): each face on a wide line (lib/city-grid.ts wideLine) moves back so the gap
+ * between it and the street's middle is WIDE_FACTOR times what it was; every face stands at
+ * least STREET_MIN_GAP from its street's middle; a face with room to spare stays put. Never
+ * thinner than WIDE_MIN_HALF. `moved`: -1 when only the low face moved, 1 when only the high one
+ * did (a business tower, shrinking further to keep its design's proportions, stands against it).
+ */
+function standBack(
+  I: number,
+  J: number,
+  c: number,
+  half: number,
+  axis: 0 | 2,
+  least: [number, number] = [STREET_MIN_GAP, STREET_MIN_GAP],
+): { c: number; half: number; moved: -1 | 0 | 1 } {
+  const P = axis === 2 ? BLOCK_X : BLOCK_Z;
+  const n = axis === 2 ? I : J;
+  const lo = n * P;
+  const hi = (n + 1) * P;
+  const gap = (g: number, line: number, m: number) =>
+    Math.max(m, wideLine(axis, line) ? WIDE_FACTOR * g : g);
+  const ga = gap(c - half - lo, n, least[0]);
+  const gb = gap(hi - c - half, n + 1, least[1]);
+  // Never thinner than the least half width: what is short comes off both gaps alike.
+  const short = Math.max(0, ga + gb + 2 * WIDE_MIN_HALF - P) / 2;
+  const a = lo + ga - short;
+  const b = hi - gb + short;
+  const ma = a > c - half + 1e-9;
+  const mb = b < c + half - 1e-9;
+  return { c: (a + b) / 2, half: (b - a) / 2, moved: ma === mb ? 0 : ma ? -1 : 1 };
+}
+
+function buildBlock(I: number, J: number, wide: boolean): Block {
   const k = 300 + wrap(I * 37 + J * 101, 9973);
   const d = districtOf(I, J);
   const ave = I === 0 || I === -1;
@@ -364,7 +421,10 @@ export function blockTower(I: number, J: number): Block {
   const pick = hash(k, 430);
   switch (d) {
     case 'chinatown':
-      hx = Math.min(hx, ave ? 6 : 8);
+      // 2026-11-14: "avoid streets being too narrow where panels almost touch themselves": its
+      // side streets fourteen wide (they were ten), so the tall signs on both walls, standing out
+      // nearly four, leave six of open air between them.
+      hx = Math.min(hx, ave || wide ? 6 : 8);
       hz = Math.min(hz, 12);
       jx = 0;
       jz = 0;
@@ -485,13 +545,21 @@ export function blockTower(I: number, J: number): Block {
     shape = 'box';
     studio = null;
     jx = 0;
-    hx = Math.max(hx, 7.5);
+    // Seven either side of its tunnel (2026-11-14: "needs to breathe"): the street between it and
+    // the Neon Canyon's wall nine wide, not seven.
+    hx = wide ? 7 : Math.max(hx, 7.5);
     h = Math.max(h, THROUGH.y + THROUGH.hh + 8 - GROUND + 10 * hh);
   }
   let x = cx + jx * Math.max(0, BLOCK_X - 2 * hx - 7);
   if (ave && (shape === 'box' || shape === 'code')) {
     hx = Math.min(hx, 7);
     x = (I === 0 ? 1 : -1) * (AVENUE + hx);
+  }
+  // Chinatown's first towers off the avenue stand a little slimmer and a step further out, so the
+  // street behind the avenue's wall is fourteen wide too (2026-11-14: "needs to breathe").
+  if (wide && d === 'chinatown' && shape === 'box' && (I === 1 || I === -2)) {
+    hx = 5;
+    x = cx + (I === 1 ? 1 : -1);
   }
   let z = cz + jz * Math.max(0, BLOCK_Z - 2 * hz - 7);
   if (besideRiver(J)) ({ z, hz } = riverClear(J, z, hz));
@@ -518,6 +586,52 @@ export function blockTower(I: number, J: number): Block {
     hx = BLOCK_X / 2 - 4;
     hz = BLOCK_Z / 2 - 4;
   }
+  // The wider streets (2026-11-14: "make a lot of the thin streets larger"): the plain towers,
+  // the business towers and the code towers stand back from every other side street, and from
+  // every side street at least STREET_MIN_GAP ("needs to breathe"). The avenue's
+  // towers, Chinatown's (its lanes and covered walkways are its own), the canyon's walls, the
+  // through tunnel's row and the open, round or one-off buildings keep their places.
+  if (
+    wide &&
+    !ave &&
+    d !== 'chinatown' &&
+    !wall &&
+    !thru &&
+    (shape === 'box' || shape === 'business' || shape === 'code')
+  ) {
+    // Beside the towers that keep their places (the avenue's own, the canyon's walls), the street
+    // is made up to nine from this side alone. (Those never look back here, so no block waits on
+    // itself; the through tunnel's row stands six back already.)
+    const kept = (NI: number, NJ: number) =>
+      NI === 0 || NI === -1 || canyonWallAt(NI, NJ) !== null ? blockTower(NI, NJ) : null;
+    const leastBy = (N: Block | null, gap: (N: Block) => number) =>
+      N && (N.shape === 'box' || N.shape === 'code')
+        ? Math.max(STREET_MIN_GAP, 2 * STREET_MIN_GAP - gap(N))
+        : STREET_MIN_GAP;
+    const least: [number, number] = [
+      leastBy(kept(I - 1, J), (N) => I * BLOCK_X - N.x - N.hx),
+      leastBy(kept(I + 1, J), (N) => N.x - N.hx - (I + 1) * BLOCK_X),
+    ];
+    const leastZ: [number, number] = [
+      leastBy(kept(I, J - 1), (N) => J * BLOCK_Z - N.z - N.hz),
+      leastBy(kept(I, J + 1), (N) => N.z - N.hz - (J + 1) * BLOCK_Z),
+    ];
+    const X = standBack(I, J, x, hx, 2, least);
+    const Z = standBack(I, J, z, hz, 0, leastZ);
+    let [nhx, nhz] = [X.half, Z.half];
+    if (shape === 'business') {
+      // Its design's proportions (lib/city-business.ts businessSize and towerMesh), to the box.
+      const kind = businessSize(I, J, k).kind;
+      const [fx, fz] = kind === 0 ? [1.18, 1.18] : kind === 4 ? [0.62, 1.35] : [1, 1];
+      const w = kind === 0 ? Math.min(nhx, nhz) / 1.18 : Math.min(nhx / fx, nhz / fz);
+      nhx = Math.min(nhx, w * fx);
+      nhz = Math.min(nhz, w * fz);
+    }
+    // Against the one face it gave up; else round the middle of what it kept.
+    x = X.c + X.moved * (X.half - nhx);
+    z = Z.c + Z.moved * (Z.half - nhz);
+    [hx, hz] = [nhx, nhz];
+  }
   // Under the metro, lower, so the rail and its hanging carriages clear every roof.
   if (shape === 'box' || shape === 'business' || shape === 'code')
     h = Math.max(8, Math.min(h, railCeiling(I, J)));
@@ -526,22 +640,25 @@ export function blockTower(I: number, J: number): Block {
   // More tunnels through towers than there were (2026-11-13: "more tunnels inside buildings").
   else if (shape === 'box' && !wall && h >= 20 && hash(k, 440) < (d === 'heights' ? 0.4 : 0.2)) {
     const hhB = 2.8;
-    bore = {
-      axis: hash(k, 441) < 0.5 ? 0 : 2,
-      y: GROUND + 5 + (h - 11) * hash(k, 442),
-      hw: 3.4,
-      hh: hhB,
-    };
+    const hwB = 3.4;
+    // Through a tower slimmed by a wide street, along it, so its walls keep some thickness.
+    const fits = (a: 0 | 2) => (a === 0 ? hz : hx) >= hwB + 1.5;
+    const first: 0 | 2 = hash(k, 441) < 0.5 ? 0 : 2;
+    const axis: 0 | 2 | null = fits(first)
+      ? first
+      : fits(first === 0 ? 2 : 0)
+        ? first === 0
+          ? 2
+          : 0
+        : null;
+    if (axis !== null) bore = { axis, y: GROUND + 5 + (h - 11) * hash(k, 442), hw: hwB, hh: hhB };
   }
   const style = FACADES[d];
   const facade: Facade | null =
     style && shape === 'box' && !thru && !wall && h >= 14 && hash(k, 480) < FACADE_SHARE
       ? style
       : null;
-  const tw: Block = { x, z, hx, hz, h, k, I, J, d, shape, bore, studio, design, facade };
-  if (blockCache.size > 20000) blockCache.clear();
-  blockCache.set(key, tw);
-  return tw;
+  return { x, z, hx, hz, h, k, I, J, d, shape, bore, studio, design, facade };
 }
 
 /** How close to a wall the ship can come. */
@@ -2178,9 +2295,12 @@ export function towerSigns(tw: Block): Sign[] {
       const top = GROUND + Math.max(h + 2, Math.min(tw.h - 1, tw.h * lv + h / 2));
       if (top - h < GROUND + 1.5) return;
       const x0 = side > 0 ? tw.x + tw.hx + 0.3 : tw.x - tw.hx - 0.3 - w;
+      // Staggered (2026-11-14: "needs to breathe"): a level's sign on a +x wall stands where the
+      // -x wall across the street has none, so two never face each other across the street.
+      const back = (m + (side > 0 ? 1 : 0)) % 2;
       out.push({
         text,
-        at: [x0, top, tw.z + tw.hz * (m % 2 ? -0.4 : 0.55)],
+        at: [x0, top, tw.z + tw.hz * (back ? -0.4 : 0.55)],
         vertical: true,
         px,
         tone: SIGN_TONES[wrap(j, SIGN_TONES.length)] as Sign['tone'],
