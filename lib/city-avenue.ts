@@ -47,6 +47,7 @@ import {
   TILE_Z,
   wrap,
 } from './city-grid';
+import { codeHeight, codeRise } from './city-rise';
 import { type WordSign, wordItem } from './city-signs';
 
 /** The rows of a band (as lib/city-game.ts BAND_ROWS; the tests hold the two the same). */
@@ -492,7 +493,7 @@ export function avenueSpans(m: number, J: number, towerAt: (I: number, J: number
   let z0 = Math.max(A.z - A.hz, B.z - B.hz) + 1.5;
   let z1 = Math.min(A.z + A.hz, B.z + B.hz) - 1.5;
   if (z1 - z0 < 2) [z0, z1] = [(J + 0.5) * BLOCK_Z - 1, (J + 0.5) * BLOCK_Z + 1];
-  const top = Math.min(A.h, B.h) - 2;
+  const top = Math.min(lowest(A), lowest(B)) - 2;
   const lz = wrap(J, TILE_J) * BLOCK_Z;
   S.spans.forEach((h, i) => {
     if (i % 2 !== r % 2 || h > top || !clearOfLounges(lz, h)) return;
@@ -510,6 +511,23 @@ export function avenueSpans(m: number, J: number, towerAt: (I: number, J: number
   return out;
 }
 const solid = (tw: AvenueTower) => tw.shape === 'box' || tw.shape === 'code';
+/**
+ * The lowest a tower stands: a Green Code tower that rises and sinks (lib/city-rise.ts) at the
+ * bottom of its cycle, so the bridges and galleries on it never stand over its roof.
+ */
+const lowest = (tw: AvenueTower) =>
+  tw.shape === 'code' ? tw.h * (1 - (codeRise(tw.k)?.drop ?? 0)) : tw.h;
+/** A roof's parts riding up and down with a Green Code tower as it rises and sinks. */
+const riding = (tw: AvenueTower, parts: Part[]): Part[] =>
+  tw.shape !== 'code' || !codeRise(tw.k)
+    ? parts
+    : parts.map((p) => ({
+        ...p,
+        f: (u, j, o, t) => {
+          p.f(u, j, o, t);
+          o[1] = (o[1] as number) + codeHeight(tw.h, tw.k, t) - tw.h;
+        },
+      }));
 
 /** A bridge's parts, in its quarter's design and its two quarters' hues (a left, c right). */
 function spanParts(sp: Span, a: RGB, c: RGB, lamp: RGB): Part[] {
@@ -2251,7 +2269,7 @@ export function avenueItems(
       const other = side ? ha : hb;
       const lz = wrap(J, TILE_J) * BLOCK_Z;
       const levels = (S.galleries[side] as number[]).filter(
-        (lv) => lv < tw.h - 3 && (side === 1 || lv < 40 || clearOfLounges(lz, lv)),
+        (lv) => lv < lowest(tw) - 3 && (side === 1 || lv < 40 || clearOfLounges(lz, lv)),
       );
       if (levels.length) {
         const M = kept(`g${m},${J},${side}`, () =>
@@ -2279,7 +2297,7 @@ export function avenueItems(
       if (roof !== 'none' && eye[1] > GROUND + tw.h - 25) {
         const M = kept(`r${m},${J},${side}`, () =>
           build(
-            roofParts(roof, tw, hue, other, S.lamp),
+            riding(tw, roofParts(roof, tw, hue, other, S.lamp)),
             [[tw.x, GROUND + tw.h + 2, tw.z]],
             tw.k * 0.07,
           ),
@@ -2331,7 +2349,7 @@ export function avenueItems(
           for (let J = Jb + F.r0; J <= Jb + F.r1; J++)
             for (const I of [I0 - 1, I0]) {
               const tw = towerAt(I, J);
-              if (solid(tw)) low = Math.min(low, tw.h);
+              if (solid(tw)) low = Math.min(low, lowest(tw));
             }
           const y = GROUND + Math.max(40, Math.min(F.y, low - 3));
           return build(

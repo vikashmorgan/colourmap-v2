@@ -18,6 +18,7 @@ import { missingChars } from './city-font';
 import { BAND_ROWS, BANDS, blocked, blockTower, MARGIN } from './city-game';
 import { AVENUE, BLOCK_Z, GROUND, type Item, TILE_J, TILE_Z } from './city-grid';
 import { TRACKS } from './city-race';
+import { codeHeight } from './city-rise';
 import { QUARTER_STARTS } from './city-travel';
 
 const finite = (v: number[]) => v.every(Number.isFinite);
@@ -80,6 +81,13 @@ describe('the Grand Avenue (2026-11-14: "make the main street when u go from chi
           expect(sp.x0).toBeCloseTo(-AVENUE, 0);
           expect(sp.x1).toBeCloseTo(AVENUE, 0);
           expect(sp.y).toBeLessThan(GROUND + Math.min(blockTower(-1, J).h, blockTower(0, J).h));
+          // Even as the Green Code's towers sink (lib/city-rise.ts), under their roofs.
+          for (const I of [-1, 0]) {
+            const tw = blockTower(I, J);
+            if (tw.shape === 'code')
+              for (let t = 0; t < 40; t += 1.3)
+                expect(sp.y).toBeLessThan(GROUND + codeHeight(tw.h, tw.k, t));
+          }
           // In the block, never over the cross street.
           const into = sp.z - Math.floor(sp.z / BLOCK_Z) * BLOCK_Z;
           expect(into).toBeGreaterThan(2);

@@ -1504,8 +1504,9 @@ and roof one item each, each feature and gateway one; drawn within 160 ahead (th
 nearest first and thinned with distance by the renderer, each shape built once and kept. About
 35–50 items and 30,000 sites in sight, under a microsecond a site. Timed over 120 frames of
 `setFly` + `pieceCamera` + `pieceAt` at 15,000 grains on the avenue, before and after, in the same
-session: golden gardens 53.8 → 53.3 ms, industrial 51.6 → 51.2 ms, Egypt 50.3 → 50.9 ms (no
-measurable change; this machine's timings vary 3× between sessions).
+session: golden gardens 53.8 → 53.3 ms, industrial 51.6 → 51.2 ms, Egypt 50.3 → 50.9 ms; a
+second pair later, the machine busier, 69.2 → 61–63, 66.8 → 57–61, 65.9 → 55–59 (no measurable
+cost: the frame's grains are a fixed pool; this machine's timings drift threefold between runs).
 
 **Acceptance** (`lib/city-avenue.test.ts`): a design for every band, each its own; the walls high
 (median over 50) in every quarter after Chinatown; bridges at three heights or more over 20 in
