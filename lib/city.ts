@@ -84,6 +84,7 @@ import { AVENUE, BLOCK_X, BLOCK_Z, type Item, TILE_J } from './city-grid';
 import { lifeItems } from './city-life';
 import { aboveAt, aboveEye, CITIES, setCityKind } from './city-plans';
 import { raceBanner, raceStep, resetRace, rival, trackItems } from './city-race';
+import { aboveCityItems, resetRings, ringBanner, ringStep } from './city-rings';
 import { codeHeight, riseClock, setRiseClock } from './city-rise';
 import {
   currentRoom,
@@ -2177,6 +2178,7 @@ function afresh() {
   fly.hyperOn = false;
   clearTrail(trail);
   resetRace();
+  resetRings();
 }
 
 /** The chase camera on the ship's heading at once (a fresh start, a placing, a jump). */
@@ -2374,6 +2376,9 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     fly.vy = 0;
     return;
   }
+  // Through the rings of the parcours high over the city (lib/city-rings.ts; 2026-11-14: "a kind of
+  // tunnel parcours higher up"): each warms and counts, and never opens hyperspace.
+  ringStep(was, fly.pos, t);
   after(dt, t);
 }
 
@@ -2670,6 +2675,9 @@ export function tally(): string {
   if (rings) return rings;
   const r = raceBanner(fly.t);
   if (r) return r;
+  // The parcours' count of rings in a row (2026-11-14), while it lasts.
+  const parcours = ringBanner(fly.t);
+  if (parcours) return parcours;
   // 2026-11-13: once you let go (Esc), "Autopilot" for a moment; near a pad, its name.
   if (fly.mode === 'drift' && fly.t - letGoAt >= 0 && fly.t - letGoAt < 3) return 'Autopilot';
   if (fly.dock) return DOCK_PROMPT;
@@ -3499,6 +3507,10 @@ function gather(P: Plan): { d: number; run: () => void }[] {
     ...trackItems(eye, cur.t, NEAR),
     ...lifeItems(eye, cur.t, P.c, P.f),
     ...fireworkItems(eye, cur.t, viewAt(eye[1])),
+    // The flying stations, the rings of light and the parcours over the towers' sky
+    // (lib/city-stations.ts, lib/city-rings.ts; 2026-11-14: "add 15 cool flying stations ... so
+    // when u fly above there is cool stuff", "and big circles of lights concentric in many parts").
+    ...aboveCityItems(eye, fwd, cur.t, viewAt(eye[1])),
   ];
   for (const g of game) {
     if (seeThrough && g.probe && !g.probe.some((q) => roomBeyond(q[0], q[2], 30))) continue;

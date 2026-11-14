@@ -1529,6 +1529,111 @@ quarter starts and race gates clear; colours drift slowly (no step over 0.03 a f
 every band's edge, the join's naming CHINATOWN and GREEN CODE, crowned over 112, its lintels lit,
 flown through at every height, on every turn of the plan; each band blending into the next.
 
+### Flying stations and rings of light (2026-11-14)
+
+> "add 15 cool flying stations. can be futuristic. circular. etc... like mini cities or buildings
+> or temples or novas above the sky. these will add an element above the city so when u fly above
+> there is cool stuff. ... and big circles of lights concentric in many parts, they look good as
+> decorative element u can fly through. can be part of architecture on top or on side of a tall
+> building or below a flying station. or just in the air creating a kind of tunnel parcours higher
+> up as you fly above the city and try to align flying into them and turning carving to keep on
+> going through that tunnel. but make circles big so not too precise and tiny."
+
+`lib/city-stations.ts` and `lib/city-rings.ts`, hooked into `lib/city.ts` (`gather` draws them,
+`setFly` counts the parcours, `tally` shows the count, a fresh start forgets it). Our own designs
+only, grains from the shared primitives (`lib/city-shapes.ts`) and a few of their own. Mellow: every
+colour drifts slowly toward a warmer shade and back, a few lamps twinkle softly, nothing flashes;
+every motion is a formula of the time (nothing kept frame to frame), so the same moment always
+shows the same picture and nothing jumps.
+
+**Fifteen flying stations**, one to every quarter and two over Chinatown, the Heights and the
+Green Code, floating over the towers' sky (their middles 240 to 420 over the street, all of each
+between 210 and 450): reached with the super boost, under the stratosphere's top, so the super
+boost still opens the whole plan over them. They stand at the tile's sides (x ±115, ±140, left
+quarters left, right quarters right), so the parcours weaves down the middle between them. Each
+turns slowly round the vertical (0.02 to 0.05 radians a second, some each way) and bobs 2 to 3.5
+up and down over 17 to 25 seconds; some have parts of their own turning (orbits, gimbals, discs,
+habitat rings, shuttles) or light flowing (waterfalls, falling light, fading at both ends).
+
+| Station | Quarter | Middle (over the street) | Design | Sites |
+|---------|---------|------|--------|-------|
+| Lantern Harbour | Chinatown | 240 | a gold ring deck, eight great lanterns hung under it round one greater lantern | 1,836 |
+| Orbital Monastery | Chinatown | 360 | a ring walkway with eight small shrines on it, a bell under an arch in its middle | 1,950 |
+| Lotus Rock | Indian quarter | 300 | a temple on a floating rock, terraces round its curved spire, six waterfalls of light | 1,930 |
+| Turquoise Wheel | Istanbul | 420 | a torus on six spokes round a hub, a crescent over its axle | 1,476 |
+| Nova Stack | The Heights | 340 | three Nova Cores stacked on a spine, each wrapped in two turning orbits | 1,616 |
+| Docking Spire | The Heights | 280 | a needle with three docking rings and their pads, shuttles circling it | 1,801 |
+| Violet Disc City | The Canals | 250 | a mini city of tiny towers on a floating disc round a twisting tower | 1,960 |
+| Garden Island | Golden gardens | 260 | an island of gold trees round a great tree, roots trailing under its rock | 1,936 |
+| Sky Ziggurat | Temple quarter | 380 | two stepped ziggurats base to base, a halo round them, a pillar of light under | 1,160 |
+| Gyroscope Foundry | Industrial quarter | 400 | three nested rings turning on their own axes round a furnace core | 1,590 |
+| Biosphere Cluster | Solarpunk domes | 270 | three glass spheres joined by tubes, plants glowing inside | 1,378 |
+| Hanging Pyramid | Egyptian quarter | 340 | a pyramid hanging point down, a sun ring with rays over it | 1,182 |
+| Neon Carousel | Neon market | 300 | four discs on a mast, each turning the other way, boards hung round them | 2,406 |
+| Data Lattice | Green Code | 320 | a lattice cube standing on its corner, a core inside, light falling through it | 1,328 |
+| Twin Ring Habitat | Green Code | 420 | two habitat rings turning opposite ways round a hub, panels over them | 1,844 |
+
+Each wears its quarter's colour, a lighter shade (toward warm, never white), a deeper one and a
+golden one. **Fly-through**: all light, as the Studio's other additions are; no collision, so the
+ship can never be caught on one. They float over every tower (no probes; the street sees them
+looking up) and stand clear of the landmarks and big squares where the fireworks burst (at least
+their reach and 20 more across), the space portals, the Sky Island Loop and one another.
+
+**Concentric rings** (`ringSets`): 28 sets of two to four rings round one middle in one plane,
+radius 16 to 40, every ring dashed (twelve dashes, a warm lamp at every third), turning slowly, each
+the other way to the next, breathing gently, in the quarter's colour:
+
+- **crowns**: halos 30 over six landmarks' crowns (pagoda, temple mountain, stair tower, twisting
+  tower, floating obelisk, data spire), under where their fireworks burst;
+- **halos** round six of the fifteen buildings (Lantern Spindle, Helix Exchange, Sunleaf Column,
+  Sunboat Mast, Neon Prism, Cascade Monolith), some 90 up, under the flocks;
+- **over** four more (Hourglass Tower, Ivory Echo, Cog Tower, Seed Pod), standing 56 over their
+  tops, facing down the city, so you fly through them along it;
+- **under** six stations (Lantern Harbour, Turquoise Wheel, Violet Disc City, Sky Ziggurat, Neon
+  Carousel, Twin Ring Habitat), hanging 16 under them and bobbing with them;
+- **free** in the air: six sets standing at a slant, 205 over the street.
+
+All of them over the flocks (some 120 to 165) or under them, never among them.
+
+**The parcours**: a chain of 45 big rings (radius 20) along one smooth curve down the whole tile,
+weaving across the avenue (x −75 to 75) and rising and falling from 275 to 365 over the street.
+The curve repeats with the plan, so the chain never ends: flown down the city it comes round to its
+start. Rings stand about 46 apart along it, never turning more than 16° from one to the next; each
+leans into the turn (up to 0.46 radians) and has a brighter keel at its foot, so the banking reads.
+Through a ring (its plane crossed within 1.1 of its radius from its middle, either way: big and
+forgiving, never precise) it warms toward gold over half a second and cools over six, a soft halo
+ripples out from it and fades over 1.4 seconds, and **"Rings N"** shows in the quiet words beside
+the bar (after the race's, before a district's name): the rings flown in a row, the count starting
+again after ten seconds without one. The same ring twice within a second and a half counts once.
+These rings are not the space portals: they never open hyperspace, and they stand well clear of
+them (at least the two radii and 20 more), of the stations and the Sky Island Loop. The super
+boost takes you up to them; once up, the ship holds its height while you carve.
+
+**Kept clear**: everything here is 40 and more from the autopilot's route, 20 and more from every
+quarter start, 15 and more from every race gate (the Sky Island Loop's gates 25 and more from the
+stations, the rings' radius and 15 from the parcours).
+
+**Budget**: items in the pool like everything else, dealt nearest first and thinned with the
+distance by the renderer. At most the nearest 6 stations (1,160 to 2,406 sites each, weight 1.8),
+10 decorative sets (about 520 to 1,230 sites each, weight 1.6) and 16 parcours rings (280 sites each,
+weight 2.2) are drawn: some 31,000 sites in all at the very most, far fewer shown. From over the stations (the
+stratosphere, looking down on the plan) they weigh a quarter, so the plan keeps its grains (the
+plan's own test unchanged). Costs measured with a throwaway bench (deleted): 0.6 to 0.9 µs a site,
+as the landmarks' crowns are on the same machine.
+
+**Acceptance** (`lib/city-stations.test.ts`, `lib/city-rings.test.ts`): fifteen stations, each its
+own design and shape; heights in range, over the towers' sky and under the stratosphere's top; each
+in its own quarter and its colours (mean colour within 0.97 of the quarter's); turning and bobbing
+deterministically, no grain moving more than 0.4 a frame unless dark, no brightness step over 0.03;
+clear of the fireworks, portals, Sky Island Loop, one another, the route, starts and races; drawn
+from the street and from far off. Sets concentric (every light its ring's radius from the one
+middle, in one plane), radius 16 and more, turning slowly, clear of the flocks, the under-sets
+bobbing with their stations. The parcours: radius 16 to 25, heights 270 to 370, a steady gap, under
+25° from ring to ring, banked both ways; a pass within 0.8 of the radius counts either way, 1.5
+does not; the tally counts the rings flown in a row and lapses; flown through the whole chain no
+portal opens; the ring warms with no step over 0.06 a frame; the Ship's own flight through a ring
+shows "Rings 1"; only the nearest are drawn, a modest share, thinner from the stratosphere.
+
 ### Still rough, and next
 
 - Atlantis's tunnels are drawn thin in grains, so from the Plan they read as faint lines; up close
@@ -1541,6 +1646,8 @@ flown through at every height, on every turn of the plan; each band blending int
 - The Grand Avenue's bridges, galleries, roofs and gateways are light: nothing to land on, no
   race through its gateways yet; its designs repeat in every turn of the plan (the towers differ).
   The side streets have not had their own round yet.
+- The flying stations are light (no landing, no docks, no rooms) and the map does not show them or
+  the parcours yet; the parcours keeps no best time or record of its own beyond the run in a row.
 - The Canals and the Neon market still have no landmark of their own; the big squares are only in
   the landmarks' columns; the Studio's meshes are stretched upward rather than redrawn tall.
 - The Deep Line has no race of its own yet (the tracks are one a quarter), and no side branches.
