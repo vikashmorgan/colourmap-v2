@@ -2574,10 +2574,29 @@ export const NEAR = 160;
  * How far the eye can see at a height: 340 in the street, opening wide as you climb, to 1,300.
  * Was 160 (2026-11-14: "improve density and visibility so buildings can be seen in the distance"):
  * the towers now stand out to twice as far, their details still kept to NEAR.
+ * On a computer it reaches further still (STREET_VIEW_LARGE, below); a phone keeps 340.
  */
 export const STREET_VIEW = 340;
+
+/**
+ * A computer or a phone (2026-11-14: "make much more visibility for computer"): the trip player's
+ * own rule (a screen under 700 wide is a phone) picks it, through setCityQuality. A computer sees
+ * further in the street, gathers tower walls further and fades the far edge later; a phone keeps
+ * every distance it had. Small until told, so the tests see the phone's.
+ */
+export type CityQuality = 'small' | 'large';
+let quality: CityQuality = 'small';
+export function setCityQuality(q: CityQuality) {
+  quality = q;
+}
+export const cityQuality = () => quality;
+/** How far a computer sees in the street (a phone STREET_VIEW). */
+export const STREET_VIEW_LARGE = 520;
+/** How far the eye sees in the street now: the phone's or the computer's. */
+export const streetView = () => (quality === 'large' ? STREET_VIEW_LARGE : STREET_VIEW);
 export function viewAt(y: number): number {
-  return clamp(STREET_VIEW + (y - GROUND - 60) * 1.6, STREET_VIEW, 1300);
+  const s = streetView();
+  return clamp(s + (y - GROUND - 60) * 1.6, s, 1300);
 }
 /** How much the city is drawn as its plan, from above: none low down, all of it high. */
 export const planLook = (y: number) => smooth((y - GROUND - 70) / 90);

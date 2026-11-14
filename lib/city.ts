@@ -58,6 +58,7 @@ import {
   type Block,
   blocked,
   blockTower,
+  cityQuality,
   cruiser,
   DISTRICTS,
   type DistrictId,
@@ -72,6 +73,7 @@ import {
   STREET_VIEW,
   shipGrain,
   signsNear,
+  streetView,
   touchLanterns,
   viewAt,
   wallTint,
@@ -118,6 +120,7 @@ import {
   tunnelStep,
 } from './city-space';
 import { clearTrail, makeTrail, pushTrail, trailGrain } from './city-trail';
+import { hopFrom, nearestCopy, type TravelSpot } from './city-travel';
 import { underEyeY, underSeeThrough } from './city-under';
 import {
   ATLANTIS_PALETTES,
@@ -1967,6 +1970,8 @@ const fly = {
   entered: Number.NEGATIVE_INFINITY,
   /** The dock whose pad you are on (lib/city-docks.ts), or null. */
   dock: null as DockPlaced | null,
+  /** A fast trip under way (the map, or [ and ]): the short hop to a quarter's start. */
+  travel: null as Travel | null,
 };
 export const hasGame = (k: number) => PHASES[k]?.id === 'ship';
 export const boostLeft = () => fly.boost;
@@ -2137,6 +2142,7 @@ function carryOn(dt: number, t: number) {
 
 /** Starts the route afresh: no super boost, no slow mode, no race. */
 function afresh() {
+  fly.travel = null;
   leaveRoom();
   resetSpace();
   fly.dock = null;
@@ -2214,8 +2220,21 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   const enter = pressed('enter');
   const lookKey = pressed('l');
   const viewKey = pressed('v');
+  const hopKey = pressed(']') ? 1 : pressed('[') ? -1 : 0;
   fly.held = [...keys];
   fly.look += ((fly.slow && fly.mode === 'pilot' ? 1 : 0) - fly.look) * (1 - Math.exp(-2 * dt));
+  // [ and ] while flying: a hop to the quarter before, or the next (2026-11-14).
+  const hop = active && !inRoom() && !inSpace() ? hopKey : 0;
+  if (hop !== 0 && !fly.travel) {
+    const { c } = flier(t);
+    travelTo(hopFrom(c[0], c[2], hop));
+  }
+  // A fast trip under way: the ship carried there, the keys waiting till it lands.
+  if (fly.travel) {
+    travelStep(dt);
+    after(dt, t);
+    return;
+  }
   // Inside a dock's room (lib/city-rooms.ts) the Dot Walker walks; Enter or Esc, back to the ship.
   if (inRoom()) {
     const step = roomStep(active, keys, dt, t);
@@ -2401,6 +2420,74 @@ export function placeShip(q: Vec3, yaw = 0) {
   camOnShip();
 }
 
+/**
+ * A fast trip (2026-11-14: "from map i can click to the diff spots and fast travel"): from where
+ * the ship was to a spot, its heading easing round, over a gentle arc above the roofs, in under a
+ * second; mellow, never a flash.
+ */
+type Travel = {
+  from: Vec3;
+  to: Vec3;
+  fromYaw: number;
+  toYaw: number;
+  arc: number;
+  dur: number;
+  u: number;
+};
+
+/**
+ * Sets off to a spot (tile-local: the copy nearest the ship is the one flown to), piloted: out of
+ * a room, space or a race first. The trip itself runs in setFly's frames.
+ */
+export function travelTo(spot: TravelSpot) {
+  if (inRoom()) leaveRoom();
+  if (inSpace()) resetSpace();
+  resetRace();
+  const { c, f } = flier(fly.t);
+  const to = nearestCopy(spot.pos, c);
+  const d = Math.hypot(to[0] - c[0], to[2] - c[2]);
+  fly.travel = {
+    from: [...c],
+    to,
+    fromYaw: fly.mode === 'route' ? Math.atan2(-f[0], -f[2]) : fly.yaw,
+    toYaw: spot.yaw,
+    // Up over the roofs on a long trip, hardly at all on a short one.
+    arc: Math.min(80, 0.12 * d),
+    dur: 0.6 + 0.4 * Math.min(1, d / 900),
+    u: 0,
+  };
+  fly.mode = 'pilot';
+  fly.dock = null;
+  fly.high = false;
+  fly.vy = 0;
+  fly.slow = false;
+  fly.pitch = 0;
+  fly.turnRate = 0;
+  fly.turning = 0;
+  fly.nudge = 0;
+}
+/** Whether a fast trip is under way. */
+export const travelling = () => fly.travel !== null;
+
+/** A frame of the trip: eased out of the start and into the landing, the plume glowing on the way. */
+function travelStep(dt: number) {
+  const tr = fly.travel as Travel;
+  tr.u = Math.min(1, tr.u + dt / tr.dur);
+  const e = smooth(tr.u);
+  fly.pos = lerp3(tr.from, tr.to, e);
+  fly.pos[1] += tr.arc * Math.sin(Math.PI * e);
+  fly.yaw = turnTo(tr.fromYaw + turnTo(tr.toYaw - tr.fromYaw) * e);
+  fly.pitch = 0;
+  fly.bank *= Math.exp(-4 * dt);
+  fly.speed = FLY_SPEED;
+  glowStep(tr.u < 0.75, dt);
+  if (tr.u >= 1) {
+    fly.pos = [...tr.to];
+    fly.yaw = tr.toYaw;
+    fly.travel = null;
+  }
+}
+
 /** Where the embassies' arcade cabinets lead: the Ocean, opened on its Shark Sim. */
 export const SHARK_SIM_HREF = '/geometry-field/ocean?piece=swim';
 let openLink = (href: string) => {
@@ -2465,10 +2552,15 @@ const highness = (y: number) => smooth((y - SKY + 20) / (STRATOSPHERE - SKY));
 
 /** Whether the eye asked for is the Ship's, flown (set by pieceCamera): it then sees further. */
 let shipFlown = false;
+/** The flown Ship's far edge: 460 on a phone, 680 on a computer. */
+export const SHIP_FAR = 460;
+export const SHIP_FAR_LARGE = 680;
+const shipFar = () => (cityQuality() === 'large' ? SHIP_FAR_LARGE : SHIP_FAR);
 /**
  * The player's fade for the city: the journey's own (light dissolving near the eye and gone by
  * 260 from it) for every eye under the towers' sky, which is every piece but the Ship climbing,
- * and the Ship once flown, which sees to 460.
+ * and the Ship once flown, which sees to 460 (680 on a computer, 2026-11-14: "make much more
+ * visibility for computer").
  * Over the towers' sky the far edge opens with the height, so from the stratosphere (the eye some
  * 700 over the street) the whole plan below stays lit, out to the edge of the view.
  */
@@ -2478,7 +2570,7 @@ export function fade(pos: Vec3, eye: Vec3): number {
   if (inSpace()) return smooth((d - 3) / 9);
   const open = Math.max(0, eye[1] - SKY);
   // Flown, the far edge sits further out, past the view (viewAt), so far towers read (2026-11-14).
-  const far = (shipFlown ? 460 : 260) + 2.4 * open;
+  const far = (shipFlown ? shipFar() : 260) + 2.4 * open;
   // In a room, the walker and the room stand close: only the nearest grains dissolve.
   const near = inRoom() ? smooth((d - 0.5) / 1.2) : smooth((d - 3) / 9);
   return near * smooth((far - d) / ((shipFlown ? 180 : 140) + 0.5 * open));
@@ -3155,16 +3247,25 @@ function deal(P: Plan, prev: Plan) {
   }
 }
 
-/** How much of a face the eye sees, 0..1, from a few points on it. */
-function faceSeen(tw: Tower, face: number, eye: Vec3): number {
+/**
+ * How much of a face the eye sees, 0..1, from a few points on it: twelve, or four for a face far
+ * out (`coarse`), where each look along the streets is long and the face gets few grains anyway.
+ */
+const FACE_AT = [-0.8, 0, 0.8];
+const FACE_YS = [0.08, 0.4, 0.7, 0.97];
+const FACE_AT_FAR = [-0.6, 0.6];
+const FACE_YS_FAR = [0.3, 0.8];
+function faceSeen(tw: Tower, face: number, eye: Vec3, coarse = false): number {
   let seen = 0;
-  for (const a of [-0.8, 0, 0.8]) {
-    for (const y of [0.08, 0.4, 0.7, 0.97]) {
+  const ats = coarse ? FACE_AT_FAR : FACE_AT;
+  const ys = coarse ? FACE_YS_FAR : FACE_YS;
+  for (const a of ats) {
+    for (const y of ys) {
       const q = facePoint(tw, face, a, GROUND + y * tw.h, 0.05);
       if (!hidden(eye, q[0], q[1], q[2])) seen++;
     }
   }
-  return seen / 12;
+  return seen / (ats.length * ys.length);
 }
 /** How much of something the eye sees, 0..1, from a few of its points. */
 function pointsSeen(eye: Vec3, pts: Vec3[]): number {
@@ -3176,8 +3277,13 @@ function boxDistance(e: Vec3, lo: Vec3, hi: Vec3): number {
   return Math.hypot(c(0) - e[0], c(1) - e[1], c(2) - e[2]);
 }
 
-/** How far tower walls are gathered at most. */
-const TOWER_SIGHT = 420;
+/**
+ * How far tower walls are gathered at most: 420 on a phone, 640 on a computer (2026-11-14: "make
+ * much more visibility for computer").
+ */
+export const TOWER_SIGHT = 420;
+export const TOWER_SIGHT_LARGE = 640;
+export const towerSight = () => (cityQuality() === 'large' ? TOWER_SIGHT_LARGE : TOWER_SIGHT);
 /** Everything to draw this frame, nearest first: towers' faces and kerbs, and Chinatown. */
 function gather(P: Plan): { d: number; run: () => void }[] {
   const items: { d: number; run: () => void }[] = [];
@@ -3186,8 +3292,9 @@ function gather(P: Plan): { d: number; run: () => void }[] {
   const hx = fwd[0] / fl;
   const hz = fwd[2] / fl;
   // The towers stand out to the whole view (2026-11-14: "buildings can be seen in the distance"),
-  // up to TOWER_SIGHT: higher up, the plan (lib/city-game.ts) draws the city beyond.
-  const sight = Math.min(reach * VIEW, TOWER_SIGHT);
+  // up to towerSight(): higher up, the plan (lib/city-game.ts) draws the city beyond.
+  const sight = Math.min(reach * VIEW, towerSight());
+  const large = cityQuality() === 'large';
   const I0 = Math.floor((eye[0] - sight) / BLOCK_X);
   const I1 = Math.floor((eye[0] + sight) / BLOCK_X);
   const J0 = Math.floor((eye[2] - sight) / BLOCK_Z);
@@ -3242,10 +3349,13 @@ function gather(P: Plan): { d: number; run: () => void }[] {
           [Math.max(a0[0], a1[0]), GROUND + tw.h, Math.max(a0[2], a1[2])],
         );
         if (d > sight) continue;
+        const far = large && d > STREET_VIEW;
         items.push({
           d,
           run: () => {
-            const seen = faceSeen(tw, face, eye);
+            // A computer's further reach, past all a phone sees in the street, is looked at more
+            // coarsely, so the longer view costs little more (2026-11-14).
+            const seen = faceSeen(tw, face, eye, far);
             if (seen <= 0) return;
             const gid = mix32(id, face * 16);
             Object.assign(cur, { tw, face, w, ct, tint });
@@ -3381,7 +3491,7 @@ function build(P: Plan, t: number) {
   Object.assign(P, { t, v: fly.v, c, f, eye, fwd: norm(sub(target, eye)), n: 0, top: 0 });
   const space = inSpace();
   reach = space ? SPACE_REACH : viewAt(eye[1]) / VIEW;
-  dreach = space ? SPACE_REACH : Math.max(NEAR, viewAt(eye[1]) - (STREET_VIEW - NEAR)) / VIEW;
+  dreach = space ? SPACE_REACH : Math.max(NEAR, viewAt(eye[1]) - (streetView() - NEAR)) / VIEW;
   clear = space ? 1 : smooth((eye[1] - SKY) / 200);
   cur.plan = P;
   cur.t = t;
