@@ -14,6 +14,9 @@
  * far whales live round it; plankton drifts; light shafts fall from the surface; caustics
  * shimmer on the sand and the glass. Everything drifts slowly, never flashes.
  *
+ * 2026-11-14, circular and vertical: great towers, factories and four dome complexes round circle
+ * plazas on the four loops' boulevards, all joined by thin human-sized tunnels (see riseMesh).
+ *
  * Five views on pills: Plan, Domes, Coral gardens, The heart, Harbour.
  *
  * Pure: no three.js, no DOM.
@@ -74,7 +77,7 @@ export type Eye = { eye: Vec3; target: Vec3 };
 export const ATLANTIS_PHASE: Phase & { words: string[] } = {
   id: 'atlantis',
   name: 'Atlantis',
-  line: 'The golden city under the sea: glass domes and compartments on its rings joined by tubes, coral gardens in its canals, its heart glowing through the water, submarines trailing bubbles in their lanes, fish, mantas and jellyfish all round.',
+  line: 'The golden city under the sea: glass domes and compartments on its rings, towers and factories rising toward its heart, four dome complexes round circle plazas, thin tunnels winding between them all, coral gardens in its canals, submarines trailing bubbles in their lanes, fish, mantas and jellyfish all round.',
   words: [
     'A city can keep its light even at the bottom of the sea.',
     'Every bubble rising is someone travelling home.',
@@ -143,8 +146,11 @@ const HEART_DOME_H = 5.2;
 export const isGardenDome = (k: number) => k % 2 === 0;
 /** Reef sectors of the ring of nature; the harbour sits on boulevard 0. */
 export const REEF_SECTORS = [2, 4, 6, 8, 10];
-/** Nature sectors holding a cluster of domes. */
-export const NATURE_DOME_SECTORS = [1, 5, 9];
+/**
+ * Nature sectors holding a cluster of domes: the two diagonals the reefs leave free (the clusters
+ * at 165° and 285° gave way to the south and west dome complexes, 2026-11-14).
+ */
+export const NATURE_DOME_SECTORS = [1, 7];
 export const HARBOUR = { x0: 38.6, x1: 53, gate: 55.5, hall: 36.4 };
 export const BERTHS: Vec3[] = [40.4, 43.4, 46.4, 49.4].flatMap((x) => [
   [x, G + 1.5, 2.7] as Vec3,
@@ -317,7 +323,8 @@ function cityMesh(): Mesh {
       m.geodesic(at, KNOW_R, 2, Tone.glass, Tone.edge, -0.05, { two: true });
       m.dot([at[0], G + 0.6, at[2]], 0.9, Tone.light, { anim: Anim.pulse, key: k, w: 0.5 });
       note({ c: at, r: KNOW_R, kind: 'knowledge' });
-    } else {
+    } else if (!TOWER_SECTORS.includes(k)) {
+      // On the diagonals a great tower stands instead (riseMesh).
       spire(m, at, 0.7, 7.4, k * 1.7);
     }
   }
@@ -439,6 +446,15 @@ function spire(m: Mesh, at: Vec3, r: number, h: number, key: number, y0 = G) {
 
 /** A glass dome of radius r at `at`, a drum of portholes under it, a glass tunnel to `to`. */
 function domeWithTunnel(m: Mesh, at: Vec3, r: number, to: Vec3, toR: number, key: number) {
+  pod(m, at, r, key);
+  const d = norm([to[0] - at[0], 0, to[2] - at[2]]);
+  const a: Vec3 = [at[0] + d[0] * r, TUBE_Y, at[2] + d[2] * r];
+  const b: Vec3 = [to[0] - d[0] * toR, TUBE_Y, to[2] - d[2] * toR];
+  if (dist(a, b) > 0.3) tube(m, a, b, 0.3);
+}
+
+/** A glass dome of radius r at `at` on a drum of portholes, a soft light inside. */
+function pod(m: Mesh, at: Vec3, r: number, key: number) {
   const drum = 0.25 + 0.15 * r;
   m.cylinder(at, r, G, G + drum, Tone.face, Tone.edge, 0, Math.max(12, Math.ceil(r * 7)));
   portholes(
@@ -460,10 +476,6 @@ function domeWithTunnel(m: Mesh, at: Vec3, r: number, to: Vec3, toR: number, key
   );
   m.dot([at[0], G + 0.5, at[2]], r * 0.5, Tone.light, { anim: Anim.pulse, key, w: 0.1 * r });
   note({ c: [at[0], G + drum, at[2]], r: r + drum, kind: 'dome' });
-  const d = norm([to[0] - at[0], 0, to[2] - at[2]]);
-  const a: Vec3 = [at[0] + d[0] * r, TUBE_Y, at[2] + d[2] * r];
-  const b: Vec3 = [to[0] - d[0] * toR, TUBE_Y, to[2] - d[2] * toR];
-  if (dist(a, b) > 0.3) tube(m, a, b, 0.3);
 }
 
 /*
@@ -595,6 +607,595 @@ function harbourMesh(): Mesh {
   return m;
 }
 
+/* ---------- circular and vertical: towers, factories, dome complexes and tunnels ---------- */
+
+/*
+ * 2026-11-14: "make Atlantis more vertical with factories domes towers but all connecting with
+ * human sized tunnels unravelling around it and in circles or spirals around some buildings
+ * (these are for decoration) will be used by humans in the city much later in development. so we
+ * get a whole city that keeps feeling of having been designed from the start. and that isn't
+ * square. adding 4 dome complexes NSEW so it creates this super cool circular design with circle
+ * plazas and complexes at every quarter."
+ *
+ * The skyline rises in rings toward the heart: four great towers on the diagonals of the ring of
+ * knowledge (17 high), a factory out of every compartment of the ring of making (12.5 on the
+ * diagonals, 9.5 between), the homes' spires of the ring of living (7.8), and out in the ring of
+ * nature four dome complexes on the boulevards of the four long loops (north the harbour's, then
+ * east, south and west), each a circle plaza ringed by domes, two of them stacks of four domes
+ * (8.6). One circle road joins the complexes. Thin glass tunnels, human sized beside the
+ * buildings, join everything: in from the heart to the towers, sky tunnels from the towers to the
+ * factories, on over the middle canal to the great domes, out along the boulevards to the
+ * plazas, round each plaza and out to its domes, round the circle from complex to complex; and
+ * for show, helices winding up the towers, the spires and the stacks, and rings round some
+ * domes. A faint pulse of light drifts slowly along each.
+ */
+
+/** The great towers stand on the diagonals of the ring of knowledge, between the four loops. */
+export const TOWER_SECTORS = [1, 4, 7, 10];
+/** How high the great towers rise (the spires of 2026-11-13 reach 7.8). */
+export const GREAT_H = 17;
+const TOWER_R = 0.85;
+const TIER_F = [0, 0.32, 0.56, 0.74, 0.87, 1];
+/** Factories: tall on the diagonals, lower and slimmer between, clear of the loops overhead. */
+const FACTORY_TALL = { h: 12.5, r: 1.0 };
+const FACTORY_LOW = { h: 9.5, r: 0.8 };
+const FACTORY_Y0 = G + 2.2;
+/** The sky tunnels leave the towers this high and reach the factories a little lower. */
+const SKY_Y = G + 10.5;
+const SKY_Y2 = G + 9.8;
+/** The dome complexes' plazas stand this far out, on the boulevards 0, 3, 6 and 9. */
+export const COMPLEX_R = 46;
+export const PLAZA_R = 5;
+/** The complex's domes stand round its plaza this far from its middle. */
+export const COMPLEX_RING = 10;
+const STACK_R = 1.8;
+/** The dome stacks' masts. */
+export const STACK_H = 8.6;
+/** The circle road through every complex's two dome stacks. */
+export const STACK_RING = Math.hypot(COMPLEX_R, COMPLEX_RING);
+/** The tunnels' radius: human sized, under half the boulevards' glass tunnels (0.35). */
+export const TUNNEL_R = 0.14;
+/** The domes round each plaza, by angle from the way out (degrees) and radius; stacks at ±90°. */
+const COMPLEX_PODS: [number, number][] = [
+  [60, 2],
+  [-60, 2],
+  [120, 1.5],
+  [-120, 1.5],
+];
+const rad = (deg: number) => (deg * Math.PI) / 180;
+
+/** The four dome complexes: N on the harbour's boulevard, then E, S and W (the loops' names). */
+export const COMPLEXES = (['N', 'E', 'S', 'W'] as const).map((name, i) => {
+  const a = spokeAngle(3 * i);
+  return { name, a, c: polar(COMPLEX_R, a, G) };
+});
+/** Whether q lies inside a complex's circle (the reefs and meadows leave it clear). */
+const inComplex = (q: Vec3) =>
+  COMPLEXES.some((C) => Math.hypot(q[0] - C.c[0], q[2] - C.c[2]) < COMPLEX_RING + 2.4);
+
+/** A great tower's five tiers, each narrower by φ^¼, from y0 up to its lantern. */
+function towerTiers(y0: number) {
+  const mast = G + GREAT_H - 1.5;
+  return [0, 1, 2, 3, 4].map((i) => ({
+    a: lerp(y0, mast, TIER_F[i] as number),
+    b: lerp(y0, mast, TIER_F[i + 1] as number),
+    r: TOWER_R / PHI ** (i * 0.25),
+  }));
+}
+const towerBase = (k: number) => (k % 2 ? G : G + KNOW_R - 0.2);
+function towerRadiusAt(y: number, y0: number) {
+  const tiers = towerTiers(y0);
+  for (const T of tiers) if (y < T.b) return T.r;
+  return (tiers[4] as { r: number }).r;
+}
+/** A spire's drum radius at height y (as `spire` draws it). */
+function spireRadiusAt(y: number, r: number, y0: number, h: number) {
+  const mast = G + h - 1.2;
+  if (y < lerp(y0, mast, 0.5)) return r;
+  if (y < lerp(y0, mast, 0.8)) return r / PHI ** 0.5;
+  return r / PHI;
+}
+/** A factory's radius at height y. */
+function factoryRadiusAt(y: number, r: number, top: number) {
+  const body = top - 1.6;
+  if (y < lerp(FACTORY_Y0, body, 0.45)) return r;
+  if (y < lerp(FACTORY_Y0, body, 0.8)) return r * 0.86;
+  return r * 0.72;
+}
+
+/*
+ * A great tower: five drums each a little narrower, rings of portholes up them, a balcony with
+ * small lamps at every step, and at the top an open lantern of rings and ribs round a slow light,
+ * a mast above. Its bounding spheres are stacked up it, so submarines keep clear.
+ */
+function greatTower(m: Mesh, at: Vec3, y0: number, key: number) {
+  const tiers = towerTiers(y0);
+  tiers.forEach((T, i) => {
+    m.cylinder(at, T.r, T.a, T.b, Tone.face, Tone.edge, 4, 12);
+    for (let y = T.a + 0.6; y < T.b - 0.3; y += 1.1) portholes(m, at, T.r, y, 5, 0.1, key + y);
+    m.ring([at[0], T.b, at[2]], T.r * 1.3, Tone.edge, { w: 0.45 }, 14);
+    for (let j = 0; j < 6; j++)
+      m.dot(
+        add([at[0], T.b + 0.08, at[2]], polar(T.r * 1.3, (j / 6) * TAU + i, 0)),
+        0.07,
+        Tone.light,
+        {
+          anim: Anim.pulse,
+          key: key + i + j * 0.9,
+          w: 0.05,
+        },
+      );
+  });
+  const L = tiers[4] as { b: number; r: number };
+  const lr = L.r * 0.9;
+  for (const f of [0, 0.5, 1])
+    m.ring([at[0], L.b + f * 0.9, at[2]], lr * (1 - 0.25 * f), Tone.edge, { w: 0.3 }, 12);
+  for (let j = 0; j < 6; j++) {
+    const a = (j / 6) * TAU;
+    m.line(
+      add([at[0], L.b, at[2]], polar(lr, a, 0)),
+      add([at[0], L.b + 0.9, at[2]], polar(lr * 0.75, a, 0)),
+      Tone.edge,
+      { w: 0.25 },
+    );
+  }
+  m.dot([at[0], L.b + 0.45, at[2]], 0.22, Tone.light, { anim: Anim.pulse, key, w: 0.25 });
+  m.line([at[0], L.b + 0.9, at[2]], [at[0], G + GREAT_H, at[2]], Tone.edge, { w: 0.25 });
+  m.dot([at[0], G + GREAT_H, at[2]], 0.14, Tone.light, { anim: Anim.pulse, key: key + 2, w: 0.15 });
+  for (let y = y0 + TOWER_R; y < G + GREAT_H; y += TOWER_R * 1.5)
+    note({ c: [at[0], y, at[2]], r: TOWER_R * 1.35, kind: 'tower' });
+}
+
+/*
+ * A factory rising out of a compartment's glass cap: three drums, each a little narrower, banded,
+ * tall slits of warm light round each, pipes up its sides bent in at the top, a low glass cap and
+ * two chimneys breathing slow bubbles.
+ */
+function factory(m: Mesh, at: Vec3, r: number, top: number, key: number) {
+  const body = top - 1.6;
+  const cuts = [FACTORY_Y0, lerp(FACTORY_Y0, body, 0.45), lerp(FACTORY_Y0, body, 0.8), body];
+  for (let i = 0; i < 3; i++) {
+    const rr = r * [1, 0.86, 0.72][i];
+    const a = cuts[i] as number;
+    const b = cuts[i + 1] as number;
+    m.cylinder(at, rr, a, b, Tone.face, Tone.edge, 6, 14);
+    m.ring([at[0], (a + b) / 2, at[2]], rr + 0.03, Tone.edge, { w: 0.4 }, 14);
+    for (let j = 0; j < 8; j++) {
+      const o = polar(rr + 0.02, (j / 8) * TAU + i * 0.4 + key, 0);
+      m.line(
+        [at[0] + o[0], a + 0.3, at[2] + o[2]],
+        [at[0] + o[0], b - 0.35, at[2] + o[2]],
+        Tone.road,
+        {
+          w: 0.08,
+        },
+      );
+    }
+    portholes(m, at, rr, b - 0.2, 6, 0.08, key + i);
+  }
+  for (let j = 0; j < 6; j++) {
+    const ang = (j / 6) * TAU + 0.26 + key;
+    const o = polar(r + 0.22, ang, 0);
+    const n = polar(r * 0.86, ang, 0);
+    const y1 = cuts[2] as number;
+    m.line([at[0] + o[0], FACTORY_Y0, at[2] + o[2]], [at[0] + o[0], y1, at[2] + o[2]], Tone.edge, {
+      w: 0.3,
+    });
+    m.line([at[0] + o[0], y1, at[2] + o[2]], [at[0] + n[0], y1, at[2] + n[2]], Tone.edge, {
+      w: 0.3,
+    });
+  }
+  const rTop = r * 0.72;
+  glassDome(m, [at[0], body, at[2]], rTop, rTop * 0.5, 10, 2);
+  for (const s of [1, -1]) {
+    const c = add(at, polar(rTop * 0.45, key + (s * Math.PI) / 2, 0));
+    m.cylinder(c, 0.13, body, top - 0.2, Tone.face, Tone.edge, 0, 8);
+    m.dot([c[0], top - 0.1, c[2]], 0.12, Tone.steam, { anim: Anim.rise, key: 2.5, w: 0.35 });
+  }
+  for (let y = FACTORY_Y0 + r; y < top; y += r * 1.4)
+    note({ c: [at[0], y, at[2]], r: r * 1.3, kind: 'factory' });
+}
+
+/** Four glass domes stacked, each 1/√φ smaller on a neck over the last, a mast and lamp on top. */
+function domeStack(m: Mesh, at: Vec3, key: number) {
+  let y = G;
+  let r = STACK_R;
+  for (let i = 0; i < 4; i++) {
+    const drum = 0.25 + 0.2 * r;
+    m.cylinder(at, r, y, y + drum, Tone.face, Tone.edge, 0, Math.max(12, Math.ceil(r * 7)));
+    portholes(
+      m,
+      at,
+      r,
+      y + drum * 0.55,
+      Math.max(4, Math.round(r * 4)),
+      Math.min(0.16, 0.07 + 0.04 * r),
+      key + i,
+    );
+    const h = r * 0.85;
+    glassDome(m, [at[0], y + drum, at[2]], r, h, Math.max(10, Math.round(r * 5)), 3);
+    m.dot([at[0], y + drum + h * 0.4, at[2]], r * 0.4, Tone.light, {
+      anim: Anim.pulse,
+      key: key + i * 1.7,
+      w: 0.08 * r,
+    });
+    note({ c: [at[0], y + drum, at[2]], r: r + drum, kind: 'stack' });
+    y += drum + h;
+    if (i < 3) {
+      const neck = 0.35 + 0.05 * r;
+      m.cylinder(at, r * 0.3, y - 0.15, y + neck, Tone.face, Tone.edge, 3, 8);
+      y += neck;
+      r /= PHI ** 0.5;
+    }
+  }
+  m.line([at[0], y, at[2]], [at[0], G + STACK_H, at[2]], Tone.edge, { w: 0.25 });
+  m.dot([at[0], G + STACK_H, at[2]], 0.13, Tone.light, { anim: Anim.pulse, key, w: 0.15 });
+  note({ c: [at[0], G + STACK_H - 0.4, at[2]], r: 0.6, kind: 'stack' });
+}
+
+/** A circle plaza: rings and a compass rose on the floor, eight lamps, bubbles rising from its middle. */
+function plaza(m: Mesh, c: Vec3, key: number) {
+  const o: Vec3 = [c[0], G + 0.03, c[2]];
+  m.ring(o, PLAZA_R, Tone.road, { w: 0.6 }, 40);
+  m.ring(o, PLAZA_R * 0.62, Tone.edge, { w: 0.4 }, 28);
+  m.ring(o, 1.2, Tone.edge, { w: 0.4 }, 14);
+  for (let j = 0; j < 12; j++) {
+    const a = (j / 12) * TAU;
+    m.line(add(o, polar(1.2, a, 0)), add(o, polar(PLAZA_R * 0.62, a, 0)), Tone.edge, { w: 0.25 });
+  }
+  for (let j = 0; j < 8; j++) {
+    const p = add(o, polar(PLAZA_R - 0.6, (j / 8) * TAU + TAU / 16, 0));
+    m.line(p, [p[0], G + 0.9, p[2]], Tone.edge, { w: 0.2 });
+    m.dot([p[0], G + 0.95, p[2]], 0.08, Tone.light, { anim: Anim.pulse, key: key + j, w: 0.05 });
+  }
+  m.dot([c[0], G + 0.3, c[2]], 0.25, Tone.steam, { anim: Anim.rise, key: 2.2, w: 0.3 });
+}
+
+/* The tunnels, worked out once as paths of points about 0.55 apart. */
+
+export type TunnelKind = 'walk' | 'sky' | 'helix' | 'ring' | 'arc' | 'boulevard' | 'corridor';
+export type Tunnel = {
+  /** The places it joins (the same twice for a helix or ring round one building). */
+  a: string;
+  b: string;
+  kind: TunnelKind;
+  pts: Vec3[];
+  /** Distance along it at each point. */
+  cum: number[];
+  len: number;
+  closed: boolean;
+  /** What a helix or ring winds round. */
+  around?: Vec3;
+  /** False for the boulevards' and the ring of living's glass tunnels, drawn with the city. */
+  drawn: boolean;
+};
+/** The places tunnels join: centre and how far from it a tunnel may end. */
+export const ATLANTIS_NODES: Record<string, { c: Vec3; reach: number }> = {};
+export const TUNNELS: Tunnel[] = [];
+const SEG = 0.55;
+
+/** A straight path from a to b, lifted (or sagging) by `lift` in the middle. */
+function linePath(a: Vec3, b: Vec3, lift = 0): Vec3[] {
+  const n = Math.max(1, Math.ceil(dist(a, b) / SEG));
+  return Array.from({ length: n + 1 }, (_, i) => {
+    const s = i / n;
+    return [
+      lerp(a[0], b[0], s),
+      lerp(a[1], b[1], s) + lift * Math.sin(Math.PI * s),
+      lerp(a[2], b[2], s),
+    ];
+  });
+}
+/** A level arc round c of radius R from angle a0 to a1 (closed when it goes all the way round). */
+function arcPath(c: Vec3, R: number, a0: number, a1: number, y: number): Vec3[] {
+  const n = Math.max(2, Math.ceil((Math.abs(a1 - a0) * R) / SEG));
+  const pts = Array.from({ length: n + 1 }, (_, i) =>
+    add([c[0], y, c[2]], polar(R, lerp(a0, a1, i / n), 0)),
+  );
+  if (Math.abs(Math.abs(a1 - a0) - TAU) < 1e-9) pts[n] = pts[0] as Vec3;
+  return pts;
+}
+/** A helix round c from y0 to y1, `turns` times round at radius rAt(y), stubs in to the wall. */
+function helixPath(
+  c: Vec3,
+  rAt: (y: number) => number,
+  wall: (y: number) => number,
+  y0: number,
+  y1: number,
+  turns: number,
+  th0: number,
+): Vec3[] {
+  const at = (y: number, th: number, r: number): Vec3 => [
+    c[0] + Math.cos(th) * r,
+    y,
+    c[2] + Math.sin(th) * r,
+  ];
+  const n = Math.ceil(turns * 26);
+  const pts: Vec3[] = [at(y0, th0, wall(y0))];
+  for (let i = 0; i <= n; i++) {
+    const y = lerp(y0, y1, i / n);
+    pts.push(at(y, th0 + (i / n) * turns * TAU, rAt(y)));
+  }
+  pts.push(at(y1, th0 + turns * TAU, wall(y1)));
+  return pts;
+}
+
+function addTunnel(
+  a: string,
+  b: string,
+  kind: TunnelKind,
+  pts: Vec3[],
+  o: { closed?: boolean; around?: Vec3; drawn?: boolean } = {},
+) {
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++)
+    cum.push((cum[i - 1] as number) + dist(pts[i - 1] as Vec3, pts[i] as Vec3));
+  TUNNELS.push({
+    a,
+    b,
+    kind,
+    pts,
+    cum,
+    len: cum[cum.length - 1] as number,
+    closed: o.closed ?? false,
+    around: o.around,
+    drawn: o.drawn ?? true,
+  });
+}
+
+(() => {
+  const node = (id: string, c: Vec3, reach: number) => {
+    ATLANTIS_NODES[id] = { c, reach };
+  };
+  node('heart', [0, G, 0], HEART.r1 + 0.5);
+  // The heart's dome wears a ring tunnel high on its shoulders.
+  addTunnel('heart', 'heart', 'ring', arcPath([0, G, 0], 2.07, 0, TAU, G + 4.2), {
+    closed: true,
+    around: [0, G, 0],
+  });
+  // On each diagonal: heart to great tower, a helix up it, a sky tunnel to the factory, a tunnel
+  // on over the middle canal to the great dome of the ring of living.
+  for (const k of TOWER_SECTORS) {
+    const ang = sectorAngle(k);
+    const u: Vec3 = [Math.cos(ang), 0, Math.sin(ang)];
+    const at = polar(mid(KNOW), ang, G);
+    const y0 = towerBase(k);
+    const tower = `tower-${k}`;
+    node(tower, at, 2.4);
+    const foot = k % 2 ? TOWER_R : KNOW_R;
+    addTunnel(
+      'heart',
+      tower,
+      'walk',
+      linePath(polar(2.97, ang, G + 0.8), polar(mid(KNOW) - foot - 0.05, ang, G + 0.8)),
+    );
+    const ya = G + 2.4;
+    const yb = G + 14.6;
+    const turns = 4.5;
+    // Phased so that where the sky tunnel leaves, the helix is round the far side.
+    const th0 = ang + Math.PI - (turns * TAU * (SKY_Y - ya)) / (yb - ya);
+    addTunnel(
+      tower,
+      tower,
+      'helix',
+      helixPath(
+        at,
+        (y) => towerRadiusAt(y, y0) + 0.45,
+        (y) => towerRadiusAt(y, y0),
+        ya,
+        yb,
+        turns,
+        th0,
+      ),
+      { around: at },
+    );
+    const fat = polar(mid(MAKE), ang, G);
+    const fac = `factory-${k}`;
+    node(fac, fat, MAKE_R + 0.5);
+    addTunnel(
+      tower,
+      fac,
+      'sky',
+      linePath(
+        add([at[0], SKY_Y, at[2]], u, towerRadiusAt(SKY_Y, y0) + 0.05),
+        add(
+          [fat[0], SKY_Y2, fat[2]],
+          u,
+          -(factoryRadiusAt(SKY_Y2, FACTORY_TALL.r, G + FACTORY_TALL.h) + 0.05),
+        ),
+        -0.35,
+      ),
+    );
+    const live = `living-${k}`;
+    node(live, polar(mid(LIVE), ang, G), LIVE_R + 0.5);
+    addTunnel(
+      fac,
+      live,
+      'walk',
+      linePath(
+        polar(mid(MAKE) + MAKE_R + 0.05, ang, G + 1),
+        polar(mid(LIVE) - LIVE_R - 0.05, ang, G + 0.4),
+        1,
+      ),
+    );
+  }
+  // The ring of living's own glass corridor (drawn with the city) joins its twelve great domes.
+  for (let k = 0; k < SECTORS; k++) {
+    const id = `living-${k}`;
+    if (!ATLANTIS_NODES[id]) node(id, polar(mid(LIVE), sectorAngle(k), G), LIVE_R + 0.5);
+  }
+  const gap = Math.asin((LIVE_R + 0.1) / mid(LIVE));
+  for (let k = 0; k < SECTORS; k++)
+    addTunnel(
+      `living-${k}`,
+      `living-${(k + 1) % SECTORS}`,
+      'corridor',
+      arcPath([0, 0, 0], mid(LIVE), sectorAngle(k) + gap, sectorAngle(k + 1) - gap, TUBE_Y),
+      { drawn: false },
+    );
+  // Helices up the homes' spires of the ring of living.
+  for (let k = 1; k < SECTORS; k += 2) {
+    const at = polar(mid(LIVE), sectorAngle(k), G);
+    const id = `living-${k}`;
+    const y0 = G + 0.7 + LIVE_R;
+    addTunnel(
+      id,
+      id,
+      'helix',
+      helixPath(
+        at,
+        (y) => spireRadiusAt(y, 0.55, y0, 7.8) + 0.45,
+        (y) => spireRadiusAt(y, 0.55, y0, 7.8),
+        G + 4.6,
+        G + 6.9,
+        1.5,
+        sectorAngle(k),
+      ),
+      { around: at },
+    );
+  }
+  // The boulevards of the four loops, already glass tunnels (drawn with the city).
+  for (const C of COMPLEXES) {
+    const s = Math.round((C.a / TAU) * SECTORS);
+    const gate = s === 0 ? 'harbour' : `gate-${s}`;
+    const r1 = s === 0 ? HARBOUR.hall - 2.4 : OUTER.r1 + 0.4;
+    node(gate, polar(s === 0 ? HARBOUR.hall : OUTER.r1 + 0.8, C.a, G), 3);
+    addTunnel(
+      'heart',
+      gate,
+      'boulevard',
+      linePath(polar(HEART.r1, C.a, TUBE_Y), polar(r1, C.a, TUBE_Y)),
+      {
+        drawn: false,
+      },
+    );
+  }
+  // The complexes: out from the boulevard to the plaza (the north one meets the harbour's pier),
+  // round the plaza, out to each dome, helices up the stacks, rings round the larger domes, and
+  // the circle road from each complex's stack to the next one's.
+  COMPLEXES.forEach((C, i) => {
+    // The circle road leaves from the far side of the stacks.
+    node(C.name, C.c, COMPLEX_RING + STACK_R + 1);
+    if (i > 0)
+      addTunnel(
+        `gate-${3 * i}`,
+        C.name,
+        'walk',
+        linePath(
+          polar(OUTER.r1 + 1.6, C.a, G + 0.6),
+          polar(COMPLEX_R - PLAZA_R - 0.2, C.a, G + 0.45),
+        ),
+      );
+    addTunnel(C.name, C.name, 'ring', arcPath(C.c, PLAZA_R + 0.2, 0, TAU, G + 0.45), {
+      closed: true,
+      around: C.c,
+    });
+    const sites: [number, number][] = [...COMPLEX_PODS, [90, STACK_R], [-90, STACK_R]];
+    for (const [deg, r] of sites)
+      addTunnel(
+        C.name,
+        C.name,
+        'walk',
+        linePath(
+          add(C.c, polar(PLAZA_R + 0.2, C.a + rad(deg), 0.45)),
+          add(C.c, polar(COMPLEX_RING - r - 0.1, C.a + rad(deg), 0.45)),
+        ),
+      );
+    for (const [deg, r] of COMPLEX_PODS) {
+      if (Math.abs(deg) !== 60) continue;
+      const p = add(C.c, polar(COMPLEX_RING, C.a + rad(deg), 0));
+      addTunnel(C.name, C.name, 'ring', arcPath(p, r + 0.3, 0, TAU, G + 0.25 + 0.15 * r + 0.3), {
+        closed: true,
+        around: p,
+      });
+    }
+    for (const s of [1, -1]) {
+      const p = add(C.c, polar(COMPLEX_RING, C.a + (s * Math.PI) / 2, 0));
+      const top = STACK_R / PHI ** 1.5;
+      const rAt = (y: number) => lerp(STACK_R + 0.4, top + 0.4, (y - G - 0.7) / 6.5);
+      addTunnel(
+        C.name,
+        C.name,
+        'helix',
+        helixPath(p, rAt, (y) => rAt(y) - 0.35, G + 0.7, G + 7.2, 3, C.a + s),
+        {
+          around: p,
+        },
+      );
+    }
+    const next = COMPLEXES[(i + 1) % 4] as (typeof COMPLEXES)[number];
+    const d = Math.atan2(COMPLEX_RING, COMPLEX_R) + (STACK_R + 0.15) / STACK_RING;
+    addTunnel(
+      C.name,
+      next.name,
+      'arc',
+      arcPath([0, 0, 0], STACK_RING, C.a + d, C.a + Math.PI / 2 - d, G + 0.45),
+    );
+  });
+})();
+
+/** The towers, factories and dome complexes (the tunnels are drawn on their own). */
+function riseMesh(): Mesh {
+  const m = new CropMesh();
+  m.centre = [0, G - 10, 0];
+  for (const k of TOWER_SECTORS)
+    greatTower(m, polar(mid(KNOW), sectorAngle(k), G), towerBase(k), k * 1.3);
+  for (let k = 0; k < SECTORS; k++) {
+    const F = TOWER_SECTORS.includes(k) ? FACTORY_TALL : FACTORY_LOW;
+    factory(m, polar(mid(MAKE), sectorAngle(k), G), F.r, G + F.h, k * 0.7);
+  }
+  // The circle road on the floor, under the tunnel that runs round it.
+  m.ring([0, G + 0.03, 0], STACK_RING, Tone.road, { w: 0.3 }, 300);
+  COMPLEXES.forEach((C, i) => {
+    plaza(m, C.c, i * 2.3);
+    for (const [deg, r] of COMPLEX_PODS)
+      pod(m, add(C.c, polar(COMPLEX_RING, C.a + rad(deg), 0)), r, i * 5 + deg);
+    for (const s of [1, -1])
+      domeStack(m, add(C.c, polar(COMPLEX_RING, C.a + (s * Math.PI) / 2, 0)), i * 3 + s);
+  });
+  // Every drawn tunnel's bounding spheres, so submarines keep clear of them too.
+  if (!crop)
+    for (const T of TUNNELS)
+      if (T.drawn) for (const q of T.pts) note({ c: q, r: TUNNEL_R + 0.08, kind: 'tunnel' });
+  return m;
+}
+
+/** What a view draws of the tunnels: the segments its crop keeps, and the tunnels they belong to. */
+type TunnelView = { segs: number[]; cum: number[]; tun: number[]; tcum: number[]; length: number };
+function tunnelView(cr: Crop): TunnelView {
+  const segs: number[] = [];
+  const cum: number[] = [];
+  const tun: number[] = [];
+  const tcum: number[] = [];
+  let s = 0;
+  let ts = 0;
+  TUNNELS.forEach((T, j) => {
+    if (!T.drawn) return;
+    let any = false;
+    for (let i = 0; i + 1 < T.pts.length; i++) {
+      const a = T.pts[i] as Vec3;
+      const b = T.pts[i + 1] as Vec3;
+      if (cr && !cr([(a[0] + b[0]) / 2, 0, (a[2] + b[2]) / 2])) continue;
+      any = true;
+      s += dist(a, b);
+      segs.push(j, i);
+      cum.push(s);
+    }
+    if (any) {
+      ts += T.len;
+      tun.push(j);
+      tcum.push(ts);
+    }
+  });
+  return {
+    segs,
+    cum: cum.map((x) => x / (s || 1)),
+    tun,
+    tcum: tcum.map((x) => x / (ts || 1)),
+    length: s,
+  };
+}
+
 /* ---------- coral gardens and kelp ---------- */
 
 /** Coral colours, by the element's key. */
@@ -707,18 +1308,23 @@ function reefMesh(): Mesh {
     for (let i = 0; i < 3; i++) kelp(m, add(c, polar(0.6, i * 2.1, 0)), 2.6, k * 7 + i);
   }
   // The reefs of the ring of nature, in five sectors: corals, fans, anemones, boulder corals.
+  // They leave the dome complexes' circles clear (2026-11-14).
+  const reefColony = (at: Vec3, size: number, kind: number) => {
+    if (inComplex(at)) seed++;
+    else colony(at, size, kind);
+  };
   for (const k of REEF_SECTORS) {
     const a0 = sectorAngle(k);
     for (let i = 0; i < 44; i++) {
       const r = lerp(NATURE.r0 + 2, RIM - 3, Math.sqrt(hash(k * 50 + i, 44)));
       const a = a0 + (hash(k * 50 + i, 45) - 0.5) * 0.42;
-      colony(polar(r, a, G), 2.2 + 1.8 * hash(i, 46), i % 5 === 4 ? 3 : i % 4);
+      reefColony(polar(r, a, G), 2.2 + 1.8 * hash(i, 46), i % 5 === 4 ? 3 : i % 4);
     }
     // A carpet of small colonies between the big ones, so the reef reads thick up close.
     for (let i = 0; i < 40; i++) {
       const r = lerp(NATURE.r0 + 1.5, RIM - 2, hash(k * 70 + i, 50));
       const a = a0 + (hash(k * 70 + i, 51) - 0.5) * 0.46;
-      colony(polar(r, a, G), 0.9 + 0.7 * hash(i, 52), (i % 3) + 1);
+      reefColony(polar(r, a, G), 0.9 + 0.7 * hash(i, 52), (i % 3) + 1);
     }
   }
   // The other nature sectors: kelp meadows.
@@ -726,12 +1332,8 @@ function reefMesh(): Mesh {
     if (REEF_SECTORS.includes(k) || k === 0 || k === 11) continue;
     for (let i = 0; i < 6; i++) {
       const r = lerp(NATURE.r0 + 2, RIM - 3, hash(k * 30 + i, 47));
-      kelp(
-        m,
-        polar(r, sectorAngle(k) + (hash(k * 30 + i, 48) - 0.5) * 0.4, G),
-        3 + 5 * hash(i, 49),
-        k * 31 + i,
-      );
+      const at = polar(r, sectorAngle(k) + (hash(k * 30 + i, 48) - 0.5) * 0.4, G);
+      if (!inComplex(at)) kelp(m, at, 3 + 5 * hash(i, 49), k * 31 + i);
     }
   }
   return m;
@@ -739,7 +1341,14 @@ function reefMesh(): Mesh {
 
 /* ---------- built once ---------- */
 
-type Meshes = { city: Built; temple: Built; harbour: Built; reef: Built };
+type Meshes = {
+  city: Built;
+  temple: Built;
+  harbour: Built;
+  reef: Built;
+  rise: Built;
+  tun: TunnelView;
+};
 const built: (Meshes | undefined)[] = [];
 /** View v's meshes, built the first time it is shown; the full set (view 0) always first. */
 function meshes(v: number): Meshes {
@@ -752,6 +1361,9 @@ function meshes(v: number): Meshes {
     temple: full ? full.temple : templeMesh().build(),
     harbour: full ? full.harbour : harbourMesh().build(),
     reef: reefMesh().build(),
+    // After the city: it notes its own compartments after the city has noted (and reset) them.
+    rise: riseMesh().build(),
+    tun: tunnelView(crop),
   };
   crop = null;
   built[v] = M;
@@ -764,6 +1376,7 @@ const CITY_SHARES: Shares = { lines: 0.62, faces: 0.86 };
 const TEMPLE_SHARES: Shares = { lines: 0.55, faces: 0.82 };
 const HARBOUR_SHARES: Shares = { lines: 0.6, faces: 0.85 };
 const REEF_SHARES: Shares = { lines: 0.86, faces: 0.86 };
+const RISE_SHARES: Shares = { lines: 0.6, faces: 0.85 };
 
 /* ---------- lanes and submarines ---------- */
 
@@ -976,7 +1589,8 @@ type School = {
   spread: number;
 };
 export const SCHOOLS: School[] = [
-  { c: [0, G + 7, 0], r: 6.5, w: 0.16, n: 18, len: 0.5, colour: [1, 0.8, 0.28], spread: 1.6 },
+  // Round the heart inside the great towers' ring (2026-11-14), so it never swims through them.
+  { c: [0, G + 7, 0], r: 4.3, w: 0.16, n: 18, len: 0.5, colour: [1, 0.8, 0.28], spread: 1.2 },
   {
     c: polar(mid(LIVE), sectorAngle(0), G + 5.5),
     r: 5.5,
@@ -1317,92 +1931,107 @@ type Role =
   | 'jelly'
   | 'manta'
   | 'whale'
-  | 'map';
+  | 'map'
+  | 'rise'
+  | 'tunnel';
 
-/** How each view shares out the grains (each row sums to 1). */
+/**
+ * How each view shares out the grains (each row sums to 1). The towers, factories and dome
+ * complexes ('rise') and the tunnels ('tunnel', 2026-11-14) come last in every row.
+ */
 const SHARES: [Role, number][][] = [
   // Plan: the map; more on the buildings and the gardens, no shafts; a share drawn as the map
   // itself (2026-11-12, the user: the Plan "too dark/murky"): bright banks, tunnels, domes, heart.
   [
-    ['plankton', 0.015],
-    ['floor', 0.06],
-    ['city', 0.34],
+    ['plankton', 0.01],
+    ['floor', 0.05],
+    ['city', 0.29],
     ['temple', 0.05],
-    ['harbour', 0.04],
-    ['reef', 0.15],
-    ['sub', 0.07],
+    ['harbour', 0.035],
+    ['reef', 0.125],
+    ['sub', 0.065],
     ['bubble', 0.04],
     ['dock', 0.02],
-    ['fish', 0.03],
+    ['fish', 0.025],
     ['jelly', 0.01],
     ['manta', 0.01],
     ['whale', 0.005],
-    ['map', 0.16],
+    ['map', 0.135],
+    ['rise', 0.07],
+    ['tunnel', 0.06],
   ],
   // Domes: flying between the compartments; most grains on the domes, little on the open water.
   [
-    ['plankton', 0.02],
-    ['shaft', 0.03],
+    ['plankton', 0.015],
+    ['shaft', 0.025],
     ['floor', 0.06],
-    ['city', 0.47],
-    ['temple', 0.04],
-    ['harbour', 0.02],
-    ['reef', 0.12],
+    ['city', 0.42],
+    ['temple', 0.035],
+    ['harbour', 0.015],
+    ['reef', 0.11],
     ['sub', 0.07],
     ['bubble', 0.05],
     ['dock', 0.01],
-    ['fish', 0.06],
-    ['jelly', 0.02],
+    ['fish', 0.05],
+    ['jelly', 0.015],
     ['manta', 0.02],
-    ['whale', 0.01],
+    ['whale', 0.005],
+    ['rise', 0.085],
+    ['tunnel', 0.015],
   ],
   // Coral gardens: the reefs carry most of the grains, fish thick about them.
   [
     ['plankton', 0.02],
     ['shaft', 0.03],
     ['floor', 0.05],
-    ['city', 0.13],
+    ['city', 0.11],
     ['temple', 0.02],
     ['harbour', 0.01],
-    ['reef', 0.48],
+    ['reef', 0.46],
     ['sub', 0.04],
     ['bubble', 0.03],
-    ['fish', 0.12],
+    ['fish', 0.11],
     ['jelly', 0.03],
     ['manta', 0.02],
-    ['whale', 0.02],
+    ['whale', 0.01],
+    ['rise', 0.04],
+    ['tunnel', 0.02],
   ],
-  // The heart: a third of the grains on the temple.
+  // The heart: nearly a third of the grains on the temple, the great towers and factories round it.
   [
-    ['plankton', 0.05],
-    ['shaft', 0.05],
+    ['plankton', 0.03],
+    ['shaft', 0.03],
     ['floor', 0.06],
-    ['city', 0.16],
-    ['temple', 0.34],
-    ['reef', 0.06],
+    ['city', 0.12],
+    ['temple', 0.31],
+    ['reef', 0.04],
     ['sub', 0.07],
     ['bubble', 0.06],
-    ['fish', 0.08],
+    ['fish', 0.06],
     ['jelly', 0.03],
     ['manta', 0.02],
-    ['whale', 0.02],
+    ['whale', 0.01],
+    ['rise', 0.1],
+    ['tunnel', 0.06],
   ],
-  // Harbour: the pier, its berths and the submarines coming and going.
+  // Harbour: the pier, its berths and the submarines coming and going; the north complex round it.
   [
-    ['plankton', 0.05],
-    ['shaft', 0.04],
+    ['plankton', 0.03],
+    ['shaft', 0.03],
     ['floor', 0.07],
-    ['city', 0.14],
+    ['city', 0.11],
     ['temple', 0.01],
     ['harbour', 0.26],
-    ['reef', 0.08],
+    ['reef', 0.05],
     ['sub', 0.06],
     ['bubble', 0.05],
     ['dock', 0.12],
     ['fish', 0.06],
     ['jelly', 0.02],
     ['manta', 0.02],
-    ['whale', 0.02],
+    ['whale', 0.01],
+    ['rise', 0.06],
+    ['tunnel', 0.04],
   ],
 ];
 const BOUNDS: [Role, number, number][][] = SHARES.map((rows) => {
@@ -1530,7 +2159,28 @@ const MAP_KIND: Record<string, RGB> = {
   dome: [0.4, 0.95, 0.9],
   tower: [1, 0.8, 0.45],
   airlock: [1, 0.8, 0.45],
+  factory: [1, 0.62, 0.2],
+  stack: [0.4, 0.95, 0.9],
 };
+/*
+ * The map's discs: one per place (a tower's stacked spheres or a factory on its compartment count
+ * once, the first noted), and none for the tunnels.
+ */
+let mapList: Compartment[] = [];
+let mapFor = -1;
+function mapCompartments(): Compartment[] {
+  if (mapFor === COMPARTMENTS.length) return mapList;
+  const seen = new Set<string>();
+  mapList = COMPARTMENTS.filter((C) => {
+    if (C.kind === 'tunnel') return false;
+    const key = `${Math.round(C.c[0] * 2)},${Math.round(C.c[2] * 2)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  mapFor = COMPARTMENTS.length;
+  return mapList;
+}
 /** The heart's 9 s breath, 0..1, eased: never a flash. */
 const breath = (t: number) => 0.5 - 0.5 * Math.cos((t / 9) * TAU);
 
@@ -1567,9 +2217,8 @@ export function mapSite(p: Particle, q: number, t: number, out: number[]): Vec3 
     k = 0.3 + 0.4 * pulse;
   } else if (q < 0.86) {
     // The domes: every compartment a disc, its rim brighter, breathing on its own beat.
-    const list = COMPARTMENTS.length
-      ? COMPARTMENTS
-      : [{ c: [0, G, 0] as Vec3, r: 1, kind: 'dome' }];
+    const all = mapCompartments();
+    const list = all.length ? all : [{ c: [0, G, 0] as Vec3, r: 1, kind: 'dome' }];
     const j = Math.floor(((q - 0.6) / 0.26) * list.length) % list.length;
     const C0 = list[j] as Compartment;
     const rim = hash(p.i, 212) < 0.55;
@@ -1585,6 +2234,117 @@ export function mapSite(p: Particle, q: number, t: number, out: number[]): Vec3 
     pos = polar(r, ga, G + 0.15);
     c = mix([1, 0.92, 0.75], [1, 0.62, 0.2], r / HEART.r1);
     k = (0.35 + 0.35 * (1 - r / HEART.r1)) * (0.8 + 0.2 * breath(t));
+  }
+  out[0] = Math.min(1, c[0] * k);
+  out[1] = Math.min(1, c[1] * k);
+  out[2] = Math.min(1, c[2] * k);
+  return pos;
+}
+
+/* ---------- the tunnels, grain by grain ---------- */
+
+const PULSE_SPEED = 0.55;
+const PULSE_GAP = 2.6;
+/** The first index whose running total passes q. */
+function firstAbove(cum: number[], q: number): number {
+  let lo = 0;
+  let hi = cum.length - 1;
+  while (lo < hi) {
+    const m = (lo + hi) >> 1;
+    if ((cum[m] as number) < q) lo = m + 1;
+    else hi = m;
+  }
+  return lo;
+}
+/** The point s along tunnel T. */
+function alongTunnel(T: Tunnel, s: number): Vec3 {
+  let lo = 0;
+  let hi = T.pts.length - 2;
+  while (lo < hi) {
+    const m = (lo + hi + 1) >> 1;
+    if ((T.cum[m] as number) <= s) lo = m;
+    else hi = m - 1;
+  }
+  const a = T.pts[lo] as Vec3;
+  const b = T.pts[lo + 1] as Vec3;
+  const c0 = T.cum[lo] as number;
+  const f = Math.min(1, Math.max(0, (s - c0) / ((T.cum[lo + 1] as number) - c0 || 1)));
+  return [lerp(a[0], b[0], f), lerp(a[1], b[1], f), lerp(a[2], b[2], f)];
+}
+/** Two directions square to a tunnel running along f. */
+function tubeFrame(f: Vec3): { side: Vec3; up: Vec3 } {
+  const c = cross(f, [0, 1, 0]);
+  const side = Math.hypot(c[0], c[1], c[2]) < 1e-6 ? ([1, 0, 0] as Vec3) : norm(c);
+  return { side, up: cross(side, f) };
+}
+
+/*
+ * A grain of the tunnels (2026-11-14: "human sized tunnels unravelling around it"): its place,
+ * and its colour into `out`. Most draw the tubes: a faint skin of glass, two gold rails along the
+ * top and a lit walkway along the floor, a gold rib at every other joint. The rest are slow pulses
+ * of light drifting along inside, each tunnel its own way, fading in and out at the open ends so
+ * none jumps where it comes round.
+ */
+function tunnelSite(p: Particle, q: number, t: number, V: TunnelView, out: number[]): Vec3 {
+  if (!V.segs.length) {
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 0;
+    return [0, G, 0];
+  }
+  let pos: Vec3;
+  let c: RGB;
+  let k: number;
+  if (q < 0.7) {
+    const n = firstAbove(V.cum, p.a);
+    const T = TUNNELS[V.segs[2 * n] as number] as Tunnel;
+    const i = V.segs[2 * n + 1] as number;
+    const rib = q >= 0.55;
+    const ii = rib ? i - (i % 2) : i;
+    const a = T.pts[ii] as Vec3;
+    const b = T.pts[ii + 1] as Vec3;
+    const { side, up } = tubeFrame(norm(sub(b, a)));
+    const at: Vec3 = rib
+      ? a
+      : [lerp(a[0], b[0], p.b), lerp(a[1], b[1], p.b), lerp(a[2], b[2], p.b)];
+    let e = p.d * TAU;
+    if (q < 0.4) {
+      c = GLASS;
+      k = 0.15;
+    } else if (q < 0.55) {
+      const rail = Math.floor(p.d * 3);
+      e = rail === 0 ? -Math.PI / 2 : Math.PI / 2 + (rail === 1 ? 0.8 : -0.8);
+      c = rail === 0 ? IVORY_GOLD : GOLD;
+      k = 0.2;
+    } else {
+      c = GOLD;
+      k = 0.2;
+    }
+    if (c !== GLASS) c = mix(c, ROSE_GOLD, 0.22 * (0.5 + 0.5 * Math.sin(t * 0.013 + p.i * 0.0007)));
+    pos = add(add(at, side, Math.cos(e) * TUNNEL_R), up, Math.sin(e) * TUNNEL_R);
+    k *= 0.75 * caustic(pos[0], pos[2], t);
+  } else {
+    const j = V.tun[firstAbove(V.tcum, p.a)] as number;
+    const T = TUNNELS[j] as Tunnel;
+    const dir = hash(j, 1401) < 0.5 ? 1 : -1;
+    const slots = Math.max(1, Math.floor(T.len / PULSE_GAP));
+    const slot = Math.floor(p.b * slots);
+    const off = (hash(p.i, 1402) + hash(p.i, 1403) - 1) * 0.5;
+    const s = wrap((slot + 0.5) * (T.len / slots) + off + dir * PULSE_SPEED * t, T.len);
+    // A little scatter round the axis, fixed in the water (a frame turning at each joint would
+    // nudge it).
+    const at = alongTunnel(T, s);
+    const rr = TUNNEL_R * 0.4;
+    pos = [
+      at[0] + (hash(p.i, 1404) - 0.5) * rr,
+      at[1] + (hash(p.i, 1405) - 0.5) * rr,
+      at[2] + (p.d - 0.5) * rr,
+    ];
+    const pk = Math.exp(-(off * off) / 0.05);
+    const fade = T.closed ? 1 : smooth(s / 0.8) * smooth((T.len - s) / 0.8);
+    // Warm white, as the portholes' light.
+    c = WARM_WHITE;
+    k = 0.3 * pk * fade;
   }
   out[0] = Math.min(1, c[0] * k);
   out[1] = Math.min(1, c[1] * k);
@@ -1692,9 +2452,24 @@ export function atlantisAt(p: Particle, u: number, t: number, v = view): Spot {
     }
     case 'city':
     case 'temple':
-    case 'harbour': {
-      const B = role === 'city' ? M.city : role === 'temple' ? M.temple : M.harbour;
-      const sh = role === 'city' ? CITY_SHARES : role === 'temple' ? TEMPLE_SHARES : HARBOUR_SHARES;
+    case 'harbour':
+    case 'rise': {
+      const B =
+        role === 'city'
+          ? M.city
+          : role === 'temple'
+            ? M.temple
+            : role === 'rise'
+              ? M.rise
+              : M.harbour;
+      const sh =
+        role === 'city'
+          ? CITY_SHARES
+          : role === 'temple'
+            ? TEMPLE_SHARES
+            : role === 'rise'
+              ? RISE_SHARES
+              : HARBOUR_SHARES;
       const h = onMesh(B, p, q, t, E.eye, sh);
       // The heart's gold glows warmer toward its core.
       const warm = role === 'temple' ? 0.2 * Math.exp(-dist(h.pos, TEMPLE_SPHERE.c) / 1.5) : 0;
@@ -1712,6 +2487,14 @@ export function atlantisAt(p: Particle, u: number, t: number, v = view): Spot {
     case 'map': {
       const pos = mapSite(p, q, t, MAP_RGB);
       return { pos, rgb: underwater([MAP_RGB[0], MAP_RGB[1], MAP_RGB[2]] as RGB, pos, E, true) };
+    }
+    case 'tunnel': {
+      const pos = tunnelSite(p, q, t, M.tun, MAP_RGB);
+      const rgb: RGB = [MAP_RGB[0], MAP_RGB[1], MAP_RGB[2]];
+      return {
+        pos,
+        rgb: underwater(v === 0 ? planLift(rgb, pos, false) : scale(rgb, 0.85), pos, E, true),
+      };
     }
     case 'sub': {
       const g = Math.floor(q * SUB_COUNT);

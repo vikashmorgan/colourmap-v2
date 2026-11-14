@@ -60,7 +60,8 @@ describe('Atlantis (2026-11-12: "add Atlantis as a city, with marine life around
     for (let v = 0; v < ATLANTIS_VIEWS.length; v++) {
       // Each view shares out the whole budget.
       const roles = ['plankton', 'shaft', 'floor', 'city', 'temple', 'harbour', 'reef', 'sub'];
-      const more = ['bubble', 'dock', 'fish', 'jelly', 'manta', 'whale', 'map'];
+      // 2026-11-14: the towers, factories and dome complexes ('rise') and the tunnels.
+      const more = ['bubble', 'dock', 'fish', 'jelly', 'manta', 'whale', 'map', 'rise', 'tunnel'];
       const sum = [...roles, ...more].reduce((s, r) => s + roleShare(v, r), 0);
       expect(sum).toBeCloseTo(1, 9);
     }
