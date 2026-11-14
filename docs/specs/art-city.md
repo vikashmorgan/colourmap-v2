@@ -1516,8 +1516,64 @@ quarter starts and race gates clear; colours drift slowly (no step over 0.03 a f
 every band's edge, the join's naming CHINATOWN and GREEN CODE, crowned over 112, its lintels lit,
 flown through at every height, on every turn of the plan; each band blending into the next.
 
+### Wider streets (2026-11-14)
+
+> "make a lot of the thin streets larger."
+>
+> "avoid streets being too narrow where panels almost touch themselves. great when tall streets
+> with lots of pancartes but needs to breathe. u can expand map if necessary, widen it etc..."
+>
+> Earlier: "side streets that work well".
+
+The grid stays as it was (26 × 34 blocks, the tile 12 × 56): changing it would move every
+landmark, square, start, race and the canyon, and the streets could be won inside the blocks.
+`lib/city-grid.ts` (`wideLine`, `WIDE_FACTOR`) chooses the streets; `lib/city-game.ts`
+`blockTower` stands the towers back from them, and everything that reads the towers follows:
+collision, walls, roofs, façades, signs and boards, Chinatown's walkways and lantern strings, the
+sky bridges, the factories' conveyors, the minimap.
+
+- **Boulevards and lanes.** Every other side street is a boulevard: along z the even lines (the
+  streets that flow +z) but the avenue's, across x the odd lines (so the band edges keep theirs).
+  The towers either side stand back 1.75 times as far from a boulevard's middle as they stood, the
+  far face staying put, so wide and narrower streets alternate both ways. Over a tile, where both
+  towers stand back: along z 9.2 → 16.3 in the Canals, 9.8 → 17.1 Indian, 8.8 → 15.5 temples,
+  9.2 → 17.0 Heights, 11.4 → 20.0 Green Code (about 9 → 16 on average); across x 12.5 → 19.7 in the
+  Heights, 10.3 → 15.6 Indian, 9.8 → 14.7 industrial, 13.6 → 21.6 Green Code. A business tower
+  keeps its design's proportions and shrinks to its new box; a tower is never thinner than 7.2;
+  a tunnel through a slimmed tower runs along it when it no longer fits across.
+- **Every side street breathes.** No side street narrower than nine (it was six at the
+  narrowest): each tower stands at least 4.5 from a side street's middle, and beside the towers
+  that keep their places (the avenue's, the canyon's walls, the through tunnel's row, now seven
+  either side of its tunnel) the other side makes the street up to nine alone. The Neon Canyon's
+  first wall stands three further back from the street behind it.
+- **Chinatown** keeps its own lanes, out of the rhythm, but its side streets are fourteen wide
+  (they were ten, twelve behind the avenue's walls): towers six across at most, its first towers
+  off the avenue five and a step out. Its tall signs stand out nearly four from both walls, so six
+  of open air are left between them; its covered walkways are fourteen long.
+- **Staggered signs.** Chinatown's tall signs and the hanging boards (the market, the canyon, the
+  opening road) are staggered by wall: a level's sign on a +x wall hangs where the wall across has
+  none, so no two face each other across a street. Boards (under two out) leave five and more
+  between the walls of any side street, eight across the canyon.
+- **Traffic.** On a boulevard the two streams of ships run 3 off its line (1.8 elsewhere) and the
+  ground cars 2.6 (1.7).
+- **Kept as they were** (tested): the avenue and its towers, galleries and bridges; the canyon,
+  twelve across; the big squares, the fifteen buildings' and the Studio's blocks, the plazas and
+  embassies; the autopilot's route, the race courses and the quarter starts.
+
+**Acceptance** (`lib/city-streets.test.ts`): every boulevard stretch between two towers that
+stand back at least 1.6 times as wide as it was (1.75 on average); the avenue's towers unchanged;
+every side street nine or more but where two kept towers meet, Chinatown's fourteen; collision
+at the drawn walls of the boulevards and their middles clear; walkways and sky bridges meeting
+both walls; facing signs and boards never closer than four, a way of six (Chinatown) or five
+between; the canyon's boards apart; the traffic further out on the boulevards.
+
 ### Still rough, and next
 
+- The wider streets (2026-11-14) leave two kinds of narrow gap as they were: the short cross
+  streets between the avenue's own towers (6.6 to 9, the avenue kept as designed) and the slits
+  between the Neon Canyon's wall blocks (6, no boards in them). The round, open and one-off
+  buildings (the twenty, pyramids, embassies) keep their places, so a boulevard beside one is
+  only widened from the other side.
 - The Studio's domes, minarets and spires on the box towers are light: you fly through them (the
   towers, pyramids, the twenty and the code towers hold you). Sky bridges and the metro are light
   too. So are the landmarks' tall crowns, the big squares, the fifteen new buildings and the
