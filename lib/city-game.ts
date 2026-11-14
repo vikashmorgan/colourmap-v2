@@ -18,6 +18,8 @@
 
 import { fibonacciSphere, hash, type RGB, smooth, type Vec3 } from './bigbang';
 import type { Sign, Tower } from './city';
+import { avenueHeight, avenueItems } from './city-avenue';
+import { bigItems, openBlock, studioBlockItems } from './city-big';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
 import { canyonHeight, canyonItems, canyonWallAt } from './city-canyon';
 import { carItems } from './city-cars';
@@ -51,8 +53,10 @@ import {
   TILE_Z,
   wrap,
 } from './city-grid';
+import { crownItem, crownKey } from './city-landmarks';
 import { CAR_LEN, CARS, carAt, RAIL, railAt, railCeiling, STATIONS, TRAINS } from './city-metro';
 import { besideRiver, inRiver, RIVER_Y, riverClear, riverItems } from './city-rain';
+import { codeHeight, riseClock } from './city-rise';
 import { FACADE_SHARE, FACADES, type Facade, facadeItem, roofItem } from './city-roofs';
 import { ropeItems } from './city-ropes';
 import {
@@ -429,6 +433,10 @@ export function blockTower(I: number, J: number): Block {
     default:
       if (!ave && hash(k, 426) < 0.12) h = 9 + 6 * hh;
   }
+  // The Grand Avenue (lib/city-avenue.ts; 2026-11-14: "make sure these main streets are high with
+  // many vertical levels"): the avenue's own towers stand taller in every quarter, so its galleries
+  // and bridges climb well above the road.
+  if (ave) h = avenueHeight(d, hh, h);
   // The Studio's factories, one to a block where they make sense, never two side by side
   // (2026-11-13: "think how factories can be better integrated not all together").
   const works = ave ? null : factoryAt(I, J);
@@ -453,7 +461,8 @@ export function blockTower(I: number, J: number): Block {
     if (h <= 0) h = 14 + 10 * hh;
   }
   const plaza = plazaOf(I, J);
-  if (plaza) shape = 'plaza';
+  // The big squares and the new buildings' blocks are kept open too (lib/city-big.ts).
+  if (plaza || openBlock(I, J)) shape = 'plaza';
   // An Embassy of Happiness (lib/city-embassy.ts): its own building, in the middle of its block.
   const emb = embassyAt(I, J);
   if (emb) {
@@ -594,8 +603,10 @@ export function blocked(q: Vec3): boolean {
     tw.shape !== 'code'
   )
     return false;
+  // A Green Code tower's walls follow it as it rises and sinks (lib/city-rise.ts, 2026-11-14).
+  const h = tw.shape === 'code' ? codeHeight(tw.h, tw.k, riseClock()) : tw.h;
   return (
-    q[1] <= GROUND + tw.h + MARGIN && dx < tw.hx + MARGIN && dz < tw.hz + MARGIN && !inBore(tw, q)
+    q[1] <= GROUND + h + MARGIN && dx < tw.hx + MARGIN && dz < tw.hz + MARGIN && !inBore(tw, q)
   );
 }
 
@@ -2574,10 +2585,29 @@ export const NEAR = 160;
  * How far the eye can see at a height: 340 in the street, opening wide as you climb, to 1,300.
  * Was 160 (2026-11-14: "improve density and visibility so buildings can be seen in the distance"):
  * the towers now stand out to twice as far, their details still kept to NEAR.
+ * On a computer it reaches further still (STREET_VIEW_LARGE, below); a phone keeps 340.
  */
 export const STREET_VIEW = 340;
+
+/**
+ * A computer or a phone (2026-11-14: "make much more visibility for computer"): the trip player's
+ * own rule (a screen under 700 wide is a phone) picks it, through setCityQuality. A computer sees
+ * further in the street, gathers tower walls further and fades the far edge later; a phone keeps
+ * every distance it had. Small until told, so the tests see the phone's.
+ */
+export type CityQuality = 'small' | 'large';
+let quality: CityQuality = 'small';
+export function setCityQuality(q: CityQuality) {
+  quality = q;
+}
+export const cityQuality = () => quality;
+/** How far a computer sees in the street (a phone STREET_VIEW). */
+export const STREET_VIEW_LARGE = 520;
+/** How far the eye sees in the street now: the phone's or the computer's. */
+export const streetView = () => (quality === 'large' ? STREET_VIEW_LARGE : STREET_VIEW);
 export function viewAt(y: number): number {
-  return clamp(STREET_VIEW + (y - GROUND - 60) * 1.6, STREET_VIEW, 1300);
+  const s = streetView();
+  return clamp(s + (y - GROUND - 60) * 1.6, s, 1300);
 }
 /** How much the city is drawn as its plan, from above: none low down, all of it high. */
 export const planLook = (y: number) => smooth((y - GROUND - 70) / 90);
@@ -2641,23 +2671,10 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
           site: (s, o) => modelSite(M, s, t, tw.x, GROUND, tw.z, 1, pulse, o),
         });
       }
+      // The Studio's building itself is drawn out to 420 (studioBlockItems, lib/city-big.ts); a
+      // factory standing on its own keeps its yard, chimney and conveyor to its neighbour here.
       if (tw.shape === 'studio' && tw.studio) {
-        // The Studio's temples, factories and domes, lit from your eye in their quarter's colours.
-        const st = tw.studio;
         const works = factoryAt(I, J);
-        out.push(
-          studioItem(
-            st.set,
-            st.i,
-            { x: tw.x, z: tw.z, key: tw.k },
-            0.72,
-            2000,
-            eye,
-            t,
-            works?.tint,
-          ),
-        );
-        // A factory standing on its own: its yard, chimney and conveyor to its neighbour.
         if (works) {
           const { axis, dir } = works.conveyor;
           const B = axis === 0 ? blockTower(I + dir, J) : blockTower(I, J + dir);
@@ -2693,7 +2710,8 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
       }
       shopWords(tw, words);
       posterItems(tw, eye, t, out);
-      if (tw.shape === 'code') out.push(codeTowerItem(tw, eye, t, d));
+      if (tw.shape === 'code')
+        out.push(codeTowerItem({ ...tw, h: codeHeight(tw.h, tw.k, t) }, eye, t, d));
       if (tw.d === 'heights' && tw.shape === 'box') {
         const B = blockTower(I + 1, J);
         if (B.shape === 'box' && B.d === 'heights') {
@@ -2703,7 +2721,9 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
       }
     }
   }
-  // Landmarks within sight (from high up, from far off).
+  // Landmarks within sight (from high up, from far off). From high up the tall crowns and the big
+  // squares are lit up to the plan's strength, so they read on it.
+  const lift = 1 + 1.6 * planLook(eye[1]);
   const ox = nearest(0, eye[0], TILE_X);
   const n0 = Math.floor((eye[2] - R) / TILE_Z);
   const n1 = Math.floor((eye[2] + R) / TILE_Z);
@@ -2720,6 +2740,9 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
         [x, GROUND + 8, z + 20],
         [x - 20, GROUND + 8, z],
       ];
+      // Each landmark's tall crown (lib/city-landmarks.ts; 2026-11-14: "they need to be much bigger").
+      const ck = crownKey(L.kind, L.set);
+      if (ck) out.push(crownItem(ck, x, z, eye, t, gid, districtPulse(L.d, t) * lift));
       if (L.kind === 'nova') {
         out.push(coreItem(x, z, eye, t, d, gid));
         return;
@@ -2815,6 +2838,15 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
       }
     }
   }
+  // The Studio's temples, factories and domes on the blocks, much bigger, out to the view, and the
+  // big squares' temples, domes and Nova Cores (lib/city-big.ts; 2026-11-14: "BIG TEMPLES. BIG
+  // DOMES. AND NOVA CORES IN THE CITY.").
+  const colourAt = (x: number, z: number) => DISTRICTS[districtAt(x, z)].colour;
+  // A factory standing on its own keeps its works' tint (lib/city-factories.ts).
+  const studioColour = (x: number, z: number) =>
+    factoryAt(Math.floor(x / BLOCK_X), Math.floor(z / BLOCK_Z))?.tint ?? colourAt(x, z);
+  if (planLook(eye[1]) < 0.5) studioBlockItems(eye, t, R, blockTower, ahead, studioColour, out);
+  bigItems(eye, t, R, ahead, colourAt, out, lift);
   wordsNear(eye, NEAR, words);
   for (const w of words) {
     const it = wordItem(w, eye, t);
@@ -2840,6 +2872,9 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
   ropeItems(eye, t, NEAR, blockTower, ahead, out);
   // The Neon Canyon through the market (lib/city-canyon.ts): its walls' neon, cables, boards.
   canyonItems(eye, t, NEAR, blockTower, ahead, out);
+  // The Grand Avenue (lib/city-avenue.ts): its bridges, galleries, roofs, the features over it and
+  // the gateways at every band's edge, on many levels above the road.
+  avenueItems(eye, t, NEAR, blockTower, ahead, out);
   // The Deep Line under the city (lib/city-under.ts), and its name over the avenue ramp's mouth.
   underItems(eye, t, NEAR, pulseAt, ahead, out);
   for (const m of DEEP_MOUTHS) {

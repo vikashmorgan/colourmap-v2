@@ -766,6 +766,7 @@ high over the city; the golden spire's beacon. Brighter the higher you fly.
 | Space + W | **super boost**: climbs on at 48 a second while W is held, past the towers' sky (150) up to the **stratosphere** (520); up there W climbs, S dives back down fast; under the towers' sky you fly as before |
 | L (**Look**) | **slow mode**: a gentle drift (0.22 of the pace), the eye rising and tilting down at the city below; L again to fly on |
 | Enter (**Go**) | at a race's start, starts the race |
+| [ / ] | **hop** to the quarter before or after, at its start (below; no phone button: a phone taps the map) |
 
 **From above.** As you climb the eye stands back and rises (up to 150 back and 190 up) and looks
 down ahead; the view opens from the street's 160 to a thousand; the city is drawn as its plan:
@@ -837,6 +838,22 @@ too fast in the city but faster when above."). Every change eases; nothing flash
   reaches 460 (was 260, which the other pieces keep). The City draws 13,000 grains on a computer
   and 6,500 on a phone (the other worlds 9,000 and 5,200): each thousand costs about 0.6 ms of a
   frame's 16.7, the wider view about 3%.
+- **Further on a computer** (2026-11-14: "make much more visibility for computer"). The City
+  knows whether it runs on a computer or a phone by the trip player's own rule for its grains (a
+  screen under 700 wide is a phone): components/City.tsx calls `setCityQuality('large' | 'small')`
+  (lib/city-game.ts), a phone until told (so the tests see the phone's). A phone keeps every number
+  above. A computer sees **520** in the street (`STREET_VIEW_LARGE`, opening as you climb to the same
+  1,300), gathers tower walls out to **640** (`TOWER_SIGHT_LARGE`, lib/city.ts), and the flown
+  Ship's fade reaches **680** (`SHIP_FAR_LARGE`); it draws **15,000** grains (was 13,000). Near
+  detail is as fine as before: grains are still dealt densely only out to the old reach (`dreach`,
+  160 in the street), the far towers sparsely. Faces beyond what a phone sees in the street (340)
+  are checked for being hidden at four points instead of twelve (each look along the streets out
+  there is long, and the face gets few grains), so the longer view itself costs next to nothing.
+  Measured (a throwaway bench: `setFly` + `pieceCamera` + `pieceAt` over every grain, 120 frames,
+  four runs, this machine): on the avenue in the Heights 13.0 ms a frame for today's 13,000 with the
+  phone's view, **15.3 ms** for 15,000 with the computer's, 16.1 ms for 16,000; at roof height in
+  the golden gardens (a quarter's start, more city in sight) 16.5, 20.0 and 21.0. 16,000 went past
+  the ~15 ms line on the avenue, so 15,000 it is.
 - **Ring portals, forgiving** ("boost rings don't work for going to space"): a run counts flown
   either way (big ring first, or small first), a ring missed here and there is forgiven (the last
   must be flown), and flying at a portal within about 45° of its way, the ship eases sideways
@@ -844,6 +861,58 @@ too fast in the city but faster when above."). Every change eases; nothing flash
   without threading each ring by hand.
 - **Through a portal** the glow flares and the camera comes along at once, so the jump never snaps
   the view.
+
+### Quarter starts and fast travel (`lib/city-travel.ts`, 2026-11-14)
+
+> "ability to go to main street or main starting point of each quarter. so there is a special road
+> on each quarter that has a great view etc..." and "from map i can click to the diff spots and
+> fast travel."
+
+**A start in every quarter** (`QUARTER_STARTS`, in the plan's order down the avenue). Each stands
+over a street at about roof height (**GROUND + 50**, raised further only if a wall were there, by
+the collision's own `blocked`), facing down its road toward the quarter's view:
+
+- a quarter with a landmark (Chinatown's pagoda, the Indian temple, Istanbul's mosque, the Nova Core
+  of the Heights, the golden spire, the ziggurat, the foundry, the garden of domes, the great
+  pyramid, the data spire): on the street through the landmark's plaza, six short of the band's far
+  edge, the landmark straight ahead some 130 away, the quarter's towers walling the road;
+- **the Canals**: over the middle canal, in from the tile's edge, looking along it to the avenue;
+- **the Neon market**: inside the Neon Canyon near the foot of its long run, looking up between
+  its walls to the bend.
+
+Every start is in its own quarter, clear of every wall (and so in every copy of the tile), and the
+road ahead of it is open at its height. Positions are tile-local; a trip goes to the copy nearest
+the ship.
+
+**Fast travel from the map.** In the map (M), a tap or click on a quarter's name, or a place's
+(a landmark, a race start, a pad, an embassy, the Neon Canyon, the WELCOME panel), flies there: a
+quarter's name to its start; a landmark or the Neon Canyon to the start that looks at it; any other
+place to a clear point some 60 back from it along a street, a little over its height, facing it.
+With a mouse, a click anywhere on a quarter's ground goes to its start too; on a touch screen a
+tap on bare ground still shows the names near it (as before), and a tap on a name flies. A drag
+still pans or spins; only a lift within 8 px of where it came down counts. The sheet closes, the
+controls come back (piloted, even if you had let go), and the ship is carried there in **0.6 to 1
+s** (longer the further), its heading easing round, over a gentle arc above the roofs on a long
+trip (up to 80, a little of the plan glimpsed on the way), the plume glowing; no flash, no cut.
+Leaving a room, space or a race first. One quiet line in the map says so: "Tap a quarter to fly
+there".
+
+**Hops while flying.** **[** and **]** fly to the start of the quarter before or after the one you
+are in, round the plan's order (the Green Code's next is Chinatown), the same short trip. Neither
+key was taken; they get no phone button (a phone taps the map).
+
+**Acceptance (quarter starts and fast travel)**
+
+- Twelve starts, one per quarter, each inside its quarter, over GROUND + 30, not blocked here or
+  in a far copy, facing its view (a landmark, the avenue, the canyon's bend) more than 100 away,
+  the road there open at its height.
+- After a trip the ship is within 3 of the start's nearest copy, clear, piloted, facing its way,
+  in at most a second; no frame moves it more than 60.
+- [ and ] hop to the next and the previous quarter.
+- On the map a tap on any shown name travels to that name's quarter or place; a mouse click on a
+  quarter's ground travels to it; a finger on bare ground does not.
+- A phone keeps 340, 420, 460 and 6,500 grains; a computer sees 520, gathers to 640, fades at 680
+  and draws 15,000.
 
 ### Races (`lib/city-race.ts`)
 
@@ -1264,6 +1333,202 @@ Drawn as its own two roles in every view, `rise` (the buildings, a mesh) and `tu
 - **Submarines keep clear**: every tower, factory, stack, dome and tunnel point has a bounding sphere in `COMPARTMENTS` (the tunnels' 2,545 small ones), and no cruising or harbour submarine comes within 0.3 of any. The tall things stand off the loops (the factories beside them slim enough), the tunnels run low under the lanes, and the yellow school round the heart now swims inside the great towers' ring.
 - The Plan draws each place once as a disc on the map (a tower's stacked spheres count once, tunnels none). Frame cost is as before.
 
+### Life in the city (2026-11-14)
+
+"above chinatown add flying lampions and jelly fish", "for green code make that some buildings are growing up and down so it gives vertical movement", "do some avenues have only traffic in one direction like in canyon. and traffics crossing only left on one street then only right on another street that it crosses. or playing with different levels. but i like feeling of being in a flow.", "make flocks of flying birds creating abstract shapes above the whole city that open up when u fly past them. organically.", "and stars above in the sky when u look up."
+
+All of it mellow, as ever: colours lean slowly, nothing flashes or jumps, and every place is a formula of the thing's number and the time (no state kept frame to frame). Gathered for the Ship's picture by `lib/city-life.ts`.
+
+- **Flying lanterns over Chinatown** (`lib/city-lanterns.ts`): 64 paper lanterns over each Chinatown stretch, red to amber paper a little wider at the top, a warm flame low inside, a gold rim at the open foot. Each rises slowly (a third to two thirds of a unit a second) from eight over the highest roof round it (seventy over the street at least, over the grand pagoda), swaying as it goes, fading in as it starts and out ninety higher, then comes round: always some at every height. 22 sites each.
+- **Jellyfish of light** among and over them: 10 a stretch, a translucent bell of six rings with a brighter rim, eight trailing tendrils and four frilled arms, the bell pulsing slowly and softly (five to eight seconds), drifting a little; each leans round rose, amber and soft violet, about a minute from one to the next. They float high enough that their tendrils clear the roofs. 120 sites each.
+- **The Green Code towers rise and sink** (`lib/city-rise.ts`): a little under half of the quarter's towers sink slowly from their full height by a fifth to nearly half of it and grow back, each on its own cosine cycle of eight to twenty seconds and its own phase. Never above the height they were built to (so under the metro and every ceiling). Their walls follow the drawn height (`blocked` reads the city's clock, set by the Ship each frame and each picture), the towers hide only as high as they stand, and a roof rising under the ship lifts it with it, so the ship is never inside a tower. The autopilot's avenue is untouched.
+- **The traffic's flow** (`lib/city-flow.ts`): the avenue streams one way at each level, the two low levels (5, 11) down the avenue with you, the two high (28, 35) toward you. Every street along z is one way, all of it, alternating street by street (low, 5 and 11); every cross street along x is one way, alternating the same way (one street only to the right, the next only to the left), and higher (15 and 30), so the crossing streams pass over the streets they cross. Express lanes over the roofs (112 along z, 120 along x), each against the street under it and faster. A lane is brought round to the streets ahead two or four at a time, so it never changes its way. Ships coming toward the eye show white headlights, ships going away red tails. None at the cruise height (21) and none low on the avenue through Chinatown, as before.
+- **Murmurations** (`lib/city-flocks.ts`): a flock in most cells of a 360 × 480 grid over the whole city, wandering slowly round its cell some 140 over the street (over the roofs, under the stratosphere), 520 small dark-gold and silver birds each. A flock holds a shape, then eases into the next every sixteen seconds: a twisting ribbon, a ring, a spiral, a wave rolling through a sheet, a sheet folding like a book; it turns slowly, each bird wandering a little, a slow shimmer running across it. As the ship nears, the birds part from the line it flies along in a soft wave, opening some 13 round it, earlier ahead of it than behind, closing again once it is past; a bird is only ever pushed further out than it was, so none crosses another, and from 70 away none moves at all. The nearest five flocks are drawn.
+- **Stars when you look up** (`lib/city-stars.ts`, `lib/city-sky.ts`): the sky keeps its five grains a hundred, and as the eye looks up (the camera's forward over the horizon) it borrows up to six more a hundred from the traffic's eleven, one after another, each easing across from a ship to a star; looking ahead, the city keeps them all. The borrowed grains are a faint Milky Way arching over the city (half of them) and more scattered stars, most faint, a few bright. All stars twinkle slowly and gently (never under 0.82 of their light), are brighter looking up, and are no longer dimmed by the player's fade at the dome's distance.
+- **Budget**: the lanterns, jellyfish and flocks are items in the pool like everything else, dealt nearest first and thinned with distance: at most some 1,400 lantern and 1,200 jellyfish sites over a stretch in full and five flocks of 520, far fewer drawn when far. The sky's share of the frame plan is unchanged (5, 4, 6, 11, the rest the pool); only looking up does it borrow from the traffic.
+
+### Taller landmarks and fireworks (2026-11-14)
+
+> "a lot of landmark buildings are not tall enough. they need to be much bigger like the arch or
+> other innovative buildings."
+>
+> "also add fireworks in some places above the city they pop at random. in the colours of the
+> quarter."
+>
+> "BIG TEMPLES. BIG DOMES. AND NOVA CORES IN THE CITY."
+>
+> "ALL THE COOL BUILDINGS SERIES MUST BE MUCH BIGGER. MAKE 15 MORE OF THEM AND ADD THEM TO THE CITY."
+
+Our own designs only: no real named building, no other game's look. Everything is grains from a
+few primitives (`lib/city-shapes.ts`: lines, rings, spheres, turned surfaces, twisting boxes).
+
+**The landmarks' crowns** (`lib/city-landmarks.ts`). Each landmark keeps its old self as the foot
+and gains a tall crown in its quarter's colour, dense enough to read from 300 and more away (1,000
+to 3,600 sites, weight 1.6, seen over the towers by probes high on it), breathing on its quarter's
+beat; from high up it is lit up to the plan's strength.
+
+| Quarter | Landmark | Was | Now | The crown |
+|---------|----------|-----|-----|-----------|
+| Chinatown | Pagoda of nine roofs | 64 | **190** | the **lantern tower**: six great lanterns stacked on a gold mast over the nine roofs, each smaller, a warm heart breathing in each |
+| Chinatown | Race plaza | 10 | **140** | two great **moon arches** along the plaza's diagonals, crossing at 128 over the crossing, lanterns hung under them, a gold moon where they meet; the race starts under them |
+| Indian quarter | Temple of the curved spire | 55 | **138** | a **temple mountain**: four terraces, four great corner spires to 88, an upper spire over the old one |
+| Istanbul | Mosque of the four minarets | 51 | **142** | four **great minarets** at the plaza's corners (three balconies, turquoise caps), a stack of three domes on the great dome, and a great **floating ring** at 88–120 turning very slowly, its middle open to fly through |
+| The Heights | Nova Core | 24 | **287** | the **sail tower**: two curved blades twisting up from round the Core to a needle, violet rings between them |
+| Golden gardens | Golden spire | 199 | 199 | unchanged: it was already the tallest |
+| Temple quarter | The Studio's ziggurat | 20 | **161** | a **stair tower**: ten receding terraces on the ziggurat, a stair up every side, a light climbing them (a minute from foot to top) |
+| Industrial quarter | The Studio's foundry | 31 | **196** | a **twisting tower** turning a quarter round as it rises from the foundry's roof, furnace light at its foot, slow rings of steam rising off its top |
+| Solarpunk domes | The Studio's garden of domes | 9 | **142** | a **stack of five glass domes** on a stalk, plants glowing under each |
+| Egyptian quarter | The great pyramid | 36 | **178** | a **floating obelisk** over the apex, a thread of light up to it, three rings drifting slowly round it |
+| Green Code quarter | The data spire | 165 | 165 | gains a **cascade of twelve data pillars** spiralling up round it (30 to 140), light falling down their faces |
+
+**Big squares** (`lib/city-big.ts`). Ten open squares, each the four blocks round a crossing in
+the landmarks' columns (x ±78), halfway between two landmarks, hold one of the Studio's temples
+or domes or a Nova Core, stretched to five to seven times its height and half as wide again (the
+Core 0.6 as wide), in its quarter's palette: big temples (Rotunda 98, Ring 97, Lotus 83), big domes
+(Geodesic 76, Palm house 92, Bubbles 55) and four Nova Cores (86). No two of a kind are
+neighbours, along a column or across the avenue (the landmarks counted). They stand clear of the
+metro's rail (the Code quarter's two on row 50, past its loop), the through tunnel, the embassies
+and every race course (no gate within 36).
+
+| Row (z) | Left of the avenue | Right of the avenue |
+|---------|--------------------|---------------------|
+| 8 (272) | Nova Core, saffron | big temple (Ring), turquoise |
+| 16 (544) | big dome (Geodesic), cyan | Nova Core, violet |
+| 32 (1088) | big temple (Rotunda), steel | Nova Core, leaf |
+| 40 (1360) | big dome (Palm house), sand | big temple (Lotus), magenta |
+| 50 (1700) | Nova Core, green | big dome (Bubbles), green |
+
+**The Studio's buildings on the blocks**, the "cool buildings series" (temples, factories, domes):
+much bigger, stretched to 0.8 across and 3.6 up (they stood at 0.72), so 27 to 79 high over
+quarters whose towers stand 12 to 34; drawn out to the whole view (to 420), not only near (from
+high up the plan stands for them).
+
+**Fifteen new buildings** (`lib/city-buildings-15.ts`), one or two to every quarter, each on a
+block of its own kept open for it (off the avenue, out from under the metro, no race gate within
+30, no landmark within 60, never on a big square, never two side by side), slim and tall (125 to
+176 high, within 12 of their axis) in their quarter's colour, a lighter and a deeper shade:
+
+| Building | Quarter (block) | High | Form |
+|----------|-----------------|------|------|
+| Lantern Spindle | Chinatown (5, 1) | 156 | seven six-sided lanterns threaded up a gold spindle |
+| Lotus Stair | Indian quarter (−2, 10) | 144 | twelve petal terraces turning up round a column |
+| Crescent Needle | Istanbul (1, 14) | 162 | a tapering needle, three crescents standing round it, each turned |
+| Helix Exchange | The Heights (−5, 18) | 176 | two strands winding up, rungs between them |
+| Lily Bell | The Canals (2, 18) | 132 | a slim stem opening into a tall flared cup, water light at its foot |
+| Hourglass Tower | The Canals (4, 17) | 155 | straight lines between two turned rings make its waist |
+| Sunleaf Column | Golden gardens (−5, 26) | 150 | leaves fanning out at nine levels, a gold sun on top |
+| Halo Stack | Golden gardens (−2, 29) | 145 | seven tilted halos round a slender column, turning slowly |
+| Ivory Echo | Temple quarter (2, 25) | 157 | square frames rising, each smaller and turned a step more |
+| Cog Tower | Industrial quarter (−2, 33) | 152 | nine gears on a shaft, turning very slowly, each the other way |
+| Vertebra Tower | Industrial quarter (−5, 39) | 155 | discs stacked up a spine swaying in a gentle S |
+| Seed Pod | Solarpunk domes (1, 37) | 145 | four tall lattice pods up a stalk, a glowing seed in each |
+| Sunboat Mast | Egyptian quarter (−6, 44) | 161 | a tapering mast carrying a crescent boat and a sun |
+| Neon Prism | Neon market (4, 45) | 158 | a triangular tower twisting a third round as it rises |
+| Cascade Monolith | Green Code quarter (5, 53) | 150 | six slabs stacked and set back, light falling down them |
+
+Each is 900 to 2,200 sites (weight 1.5), drawn out to the whole view, seen over the towers by
+probes high on it.
+
+**Flying through.** All of it is light, as the Studio's other additions are: the plazas, the big
+squares and the fifteen's blocks are open ground (no tower, nothing holds the Ship), so you fly
+through every crown and new building, under the moon arches and through the floating ring.
+Nothing reaches the avenue (every crown, square and new building stands 25 and more off it), so the autopilot's route and the race courses are untouched (tested).
+
+**Fireworks** (`lib/city-fireworks.ts`). Over every landmark and big square, the three canals and
+either side of the river (26 places a tile; the Ship's game has no canyon, so the river stands in
+for it), each place has its own slot every 9 to 15 seconds, and about half the slots fire, so from
+anywhere a burst goes up every few seconds within sight. Random but only from the time and the
+place's number: the same moment always shows the same bursts.
+
+- A shell (six faint warm grains) rises 1.6 s from 100 over the street, slowing, to its height: never
+  under 200 over the street, at least 60 over the tallest thing at its place, never over 390
+  (the stratosphere is at 520).
+- It blooms into a **sphere** (sparks evenly round) or a **peony** (unevenly, fuller) of 140
+  sparks, each with a fainter grain behind it as its trail, 18 to 30 across; the sparks fly out,
+  slowing, and fall gently (2.6 s² a unit), fading over 2.2 to 3 s.
+- In its quarter's colours: the quarter's colour, a lighter shade (toward warm white, never
+  white) and a deeper one.
+- **Mellow**: it blooms in over 0.4 s (no step of more than 0.08 a frame), fades to dark by its
+  end; each spark is a grain no brighter than a lit window (0.5), so nothing lights the screen.
+- Budget: at most the 8 nearest bursts within sight are drawn, 286 sites each (weight 1.6, as
+  the lanterns), in the same grain pool as everything else; from the cockpit they show too.
+
+### The Grand Avenue (2026-11-14)
+
+> "make the main street when u go from chinatown start forward forever unique. on multiple heights
+> so it is all top quality stuff like chinatown main street part. but not only close to ground
+> level. and make it a loop so when i go to end of map it goes back to the other side. so from
+> china town forward finish game and goes back to china town so u can go infinitely forward."
+>
+> "make sure these main streets are high with many vertical levels. so I don't fly on road level
+> and all good info is on the levels above road level as well."
+>
+> Earlier: "different cool main streets like the china town one. with many layers and levels above
+> or below and long avenues well designed and side streets that work well and potentially open
+> spaces for temples, factories, novas etc.... making sure rooftops aren't boring or just black."
+
+`lib/city-avenue.ts`, hooked into `lib/city-game.ts` (`blockTower` raises the avenue's towers,
+`gameItems` draws the rest). Our own designs only, each in its quarter's colours; every hue drifts
+slowly between the band's two quarters' colours, lamps twinkle softly, nothing flashes.
+
+**High walls.** The avenue's own towers stand taller in every quarter (`avenueHeight`): Chinatown
+36–62, the Indian quarter 64–104, Istanbul 60–100, the Canals 58–94, the golden gardens 70–110,
+the temples 64–100, the industrial quarter 66–102, the domes 60–96, Egypt 52–82, the market
+72–116, the Green Code 66–116 (the Heights were tall already). The metro, the Neon Canyon and the
+Chinatown lounge still set the height where they cross. So the avenue is a deep street all the way,
+its good things climbing from 20 to past 100 over the road.
+
+**Every band's stretch** has, all of it light (fly-through, never in `blocked`):
+
+- **bridges across the avenue** at four heights, two in each block and the other two in the next,
+  staggered along the block, wall to wall under both walls' tops (`avenueSpans`);
+- **galleries up both façades** at four to seven levels, standing out over the avenue;
+- **lit roofs** on its towers (seen from about their height up): gardens, pools, landing pads,
+  stepped crowns, signs, glass domes — no plain black roof;
+- a **feature over the avenue** in places, hung just under the walls' tops where they are lower.
+
+| Band | Bridges (height over the road) | Left façade | Right façade | Roofs | Over the avenue |
+|------|------|------|------|------|------|
+| Chinatown | moon bridges, a swept gold ridge and lanterns under it (24, 32, 40, 50) | lantern balconies, red rails (22, 32, 42, 52) | the same | (its tiered roofs) | — |
+| Indian quarter · Istanbul | carved lattice bridges with lamps at their foot, and arcade bridges on pointed arches with a small dome (30, 44, 58, 74) | carved bay balconies, an arched bay and a little dome over each, a lamp at its foot (22, 36, 50, 64, 78) | domed arcades and terraces in tiers, lamps hung in the arches (20, 34, 48, 62, 76) | a garden with a domed pavilion; a lit pool | a ceiling of hanging lamps on chains (band rows 6–7, up to 96) |
+| The Heights · the Canals | glass skybridges with ribs and a slow shimmer, and arched water bridges with lit water down their middle (36, 52, 70, 92) | glass bands with mullions and a light running along (30, 50, 70, 90, 110) | lit water terraces stepping up, falls running down their edges (20, 32, 44, 56, 68) | landing pads; roof pools | a suspended garden deck with trees and trailing vines (rows 5–6, up to 100) |
+| Golden gardens · temples | colonnade bridges, gardens trailing under them (30, 46, 62, 80) | golden colonnades, hanging gardens below each (24, 44, 64, 84) | ivory colonnades, the same | roof gardens; stepped crowns with a lit apex | a trellis of hanging vines (rows 4–5, up to 104) |
+| Industrial · domes | truss gantries with a lamp at every node, and pipe bridges (28, 42, 56, 72) | catwalks with rails, braces and slow amber lamps (24, 40, 56, 72) | dome balconies of glass, green light inside (22, 38, 54, 70) | landing pads; glass domes over gardens | a long glass tube down the right side with plants in it (rows 1–6, 76) and a travelling crane rolling slowly on rails (rows 3–4, up to 98) |
+| Egypt · Neon market | floating obelisk bridges (on nothing, gold bands, a lit tip), and neon bridges with a board hung under each (28, 42, 56, 72) | stepped terraces, each further out, lamps and small obelisk lamps (18, 30, 42, 54, 66) | neon decks every twelve (20 to 92) | stepped crowns; rooftop sign frames | sun-disc gates to fly through, rays and wings, at rows 1, 3, 5, 7 (54); a neon grid (rows 4–6, up to 104) |
+| Green Code | code bridges, glyph lights streaming along them (30, 46, 62, 80) | glyph ledges, a stream falling along (24, 44, 64, 84, 104) | the same | landing pads | a cascade of glyph columns hanging from a lattice, light falling down each (rows 3–5, up to 112) |
+
+Over the Heights' tube and its two lounges (rows 17–21) nothing of the avenue's stands under 64.
+
+**The loop, seamless.** The plan already repeats every 56 rows, so flying on down the avenue
+always comes back to Chinatown. Now every band's edge has a **gateway** (`GATEWAYS`, seven a turn):
+two pylons on the cross street's corners (x ±10.8) rising 112, rings and lamp beads up them, three
+lintels across the avenue (34, 64, 94), a double arch crowning it (to 128), its light drifting
+between the two bands' hues; the name of the band you fly into going down the avenue (−z) on its
+near face (at 88), the other band's under it (at 60), in the deco face. The join where the plan
+turns (z = 0, the Green Code into Chinatown) and Chinatown's other edge (into the opening road)
+carry a flared red-and-gold roof over the crown and two great lanterns under the top lintel; the
+gateways at the Green Code's two edges have glyphs falling down their pylons; the others a ring in
+the crown. Each band's first and last rows lean 30% toward the neighbouring band's hues, so one
+quarter blends into the next. Gateway words: CHINATOWN, LAMPS & DOMES, THE HEIGHTS, GOLDEN
+GARDENS, FORGE & GLASS, SUN & NEON, GREEN CODE.
+
+**Budget.** Near-eye items like Chinatown's: each block's bridges one item, each tower's galleries
+and roof one item each, each feature and gateway one; drawn within 160 ahead (the gateways 270),
+nearest first and thinned with distance by the renderer, each shape built once and kept. About
+35–50 items and 30,000 sites in sight, under a microsecond a site. Timed over 120 frames of
+`setFly` + `pieceCamera` + `pieceAt` at 15,000 grains on the avenue, before and after, in the same
+session: golden gardens 53.8 → 53.3 ms, industrial 51.6 → 51.2 ms, Egypt 50.3 → 50.9 ms; a
+second pair later, the machine busier, 69.2 → 61–63, 66.8 → 57–61, 65.9 → 55–59 (no measurable
+cost: the frame's grains are a fixed pool; this machine's timings drift threefold between runs).
+
+**Acceptance** (`lib/city-avenue.test.ts`): a design for every band, each its own; the walls high
+(median over 50) in every quarter after Chinatown; bridges at three heights or more over 20 in
+every band, wall to wall, in the block; sites on six or more ten-high levels over 20 in every
+band; the avenue's middle clear at every height to 120 and the autopilot's route clear; the
+quarter starts and race gates clear; colours drift slowly (no step over 0.03 a frame); a gateway at
+every band's edge, the join's naming CHINATOWN and GREEN CODE, crowned over 112, its lintels lit,
+flown through at every height, on every turn of the plan; each band blending into the next.
+
 ### Still rough, and next
 
 - Atlantis's tunnels are drawn thin in grains, so from the Plan they read as faint lines; up close
@@ -1271,7 +1536,13 @@ Drawn as its own two roles in every view, `rise` (the buildings, a mesh) and `tu
   have the towers, factories or complexes yet.
 - The Studio's domes, minarets and spires on the box towers are light: you fly through them (the
   towers, pyramids, the twenty and the code towers hold you). Sky bridges and the metro are light
-  too.
+  too. So are the landmarks' tall crowns, the big squares, the fifteen new buildings and the
+  Studio's buildings on the blocks (2026-11-14).
+- The Grand Avenue's bridges, galleries, roofs and gateways are light: nothing to land on, no
+  race through its gateways yet; its designs repeat in every turn of the plan (the towers differ).
+  The side streets have not had their own round yet.
+- The Canals and the Neon market still have no landmark of their own; the big squares are only in
+  the landmarks' columns; the Studio's meshes are stretched upward rather than redrawn tall.
 - The Deep Line has no race of its own yet (the tracks are one a quarter), and no side branches.
 - The Green Code quarter's towers have no tunnels, docks or race; the code's glyphs do not change.
 - The opening road's boards and gates are only on the Ship's first stretch; Chinatown's avenue
@@ -1356,7 +1627,9 @@ The Dawn sky behind, gold lines, district hues. Canvas 2D, redrawn only when the
 about ten times a second for the pointer. New parts of the city add places by appending to
 `MAP_EXTRAS` (the docks and embassies are there now).
 
-**Keys** (Ship, Game side): V cockpit view, M map, N Design menu; the rest as before.
+**Keys** (Ship, Game side): V cockpit view, M map, N Design menu, [ and ] hop between the
+quarters' starts (2026-11-14); the rest as before. A tap on a name in the map flies there
+("Quarter starts and fast travel").
 
 **Acceptance (ships, cockpits, map)**
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import type { Vec3 } from './bigbang';
 import {
@@ -11,12 +11,18 @@ import {
   pieceAt,
   pieceCamera,
   pieceLook,
+  placeShip,
+  SHIP_FAR,
+  SHIP_FAR_LARGE,
   SHIP_KEYS,
   SKY,
   STRATOSPHERE,
   setFly,
   slowMode,
+  TOWER_SIGHT,
+  TOWER_SIGHT_LARGE,
   tally,
+  towerSight,
 } from './city';
 import { hasChar, textPixels } from './city-font';
 import {
@@ -25,6 +31,7 @@ import {
   blocked,
   blockTower,
   CANAL_DEPTH,
+  cityQuality,
   cruiser,
   DISTRICTS,
   districtAt,
@@ -41,8 +48,12 @@ import {
   pulses,
   SHIP_SLOTS,
   SKY_LANTERNS,
+  STREET_VIEW,
+  STREET_VIEW_LARGE,
+  setCityQuality,
   shipGrain,
   skyLantern,
+  streetView,
   touchLanterns,
   viewAt,
 } from './city-game';
@@ -442,6 +453,49 @@ describe('the game city: flying it', () => {
 
   it('gives L, Enter and V round buttons on a phone, with Space', () => {
     expect(SHIP_KEYS).toEqual([' ', 'tab', 'l', 'enter', 'v']);
+  });
+});
+
+describe('seeing further on a computer (2026-11-14: "make much more visibility for computer")', () => {
+  afterEach(() => setCityQuality('small'));
+
+  it('keeps a phone exactly as it was, and is a phone until told', () => {
+    expect(cityQuality()).toBe('small');
+    expect(streetView()).toBe(STREET_VIEW);
+    expect(STREET_VIEW).toBe(340);
+    expect(viewAt(GROUND + 20)).toBe(340);
+    expect(towerSight()).toBe(TOWER_SIGHT);
+    expect(TOWER_SIGHT).toBe(420);
+    expect(SHIP_FAR).toBe(460);
+  });
+
+  it('sees further on a computer: the street, the towers gathered, the far edge', () => {
+    setCityQuality('large');
+    expect(streetView()).toBe(STREET_VIEW_LARGE);
+    expect(STREET_VIEW_LARGE).toBeGreaterThan(STREET_VIEW + 150);
+    expect(viewAt(GROUND + 20)).toBe(STREET_VIEW_LARGE);
+    // Climbing opens it the same way, to the same 1,300 from high up.
+    expect(viewAt(GROUND + 700)).toBe(1300);
+    expect(towerSight()).toBe(TOWER_SIGHT_LARGE);
+    expect(TOWER_SIGHT_LARGE).toBeGreaterThan(STREET_VIEW_LARGE);
+    expect(SHIP_FAR_LARGE).toBeGreaterThan(TOWER_SIGHT_LARGE);
+  });
+
+  it('fades the flown Ship’s far towers later on a computer, the near ones the same', () => {
+    const k = PHASES.findIndex((p) => p.id === 'ship');
+    setFly(false, [], 0, 300);
+    placeShip([0, GROUND + 21, 900], 0);
+    setFly(true, [], 1 / 60, 300 + 1 / 60);
+    const { eye } = pieceCamera(k, 300 + 1 / 60);
+    const at = (d: number): Vec3 => [eye[0], eye[1], eye[2] - d];
+    const phone = [60, 300, 500].map((d) => fade(at(d), eye));
+    setCityQuality('large');
+    const computer = [60, 300, 500].map((d) => fade(at(d), eye));
+    expect(computer[0]).toBe(phone[0]);
+    expect(computer[1]).toBeGreaterThan(phone[1] as number);
+    expect(phone[2]).toBe(0);
+    expect(computer[2]).toBeGreaterThan(0.1);
+    setFly(false, [], 0, 0);
   });
 });
 
