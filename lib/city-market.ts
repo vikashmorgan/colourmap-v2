@@ -19,9 +19,9 @@ import {
   MARKET_LEVELS,
   MARKET_STREAMS,
   type MarketStream,
-  marketColour,
   marketShip,
   marketShips,
+  streamColour,
 } from './city-currents';
 import { textPixels } from './city-font';
 import {
@@ -297,7 +297,7 @@ export function highwayItem(
   const [dx, dz] = S.axis === 2 ? [0, S.sgn] : [S.sgn, 0];
   // Its side, square to the way it flies.
   const [sx, sz] = [-dz, dx];
-  const colour = marketColour(S.level, t);
+  const colour = streamColour(S, t);
   const tail = 2.4 + 0.08 * S.speed;
   const place = (s: number, o: number[]) => {
     if (S.axis === 2) {
