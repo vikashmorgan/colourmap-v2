@@ -26,6 +26,7 @@ import {
   spireAt,
   spireStretch,
 } from './city-alive';
+import { annexBlocked, annexDistrict, annexItems } from './city-annex';
 import { avenueHeight, avenueItems } from './city-avenue';
 import { BIG_SQUARES, BIG_STRETCH, bigItems, openBlock, studioBlockItems } from './city-big';
 import { BUILDING_SPOTS } from './city-buildings-15';
@@ -50,10 +51,15 @@ import {
   frac,
   GROUND,
   type Item,
+  inAnnex,
   lerp,
   mix,
   mixId,
   nearest,
+  PLAN_X0,
+  planX,
+  STRIP_I,
+  STRIP_X,
   scale,
   TAU,
   TILE_I,
@@ -108,7 +114,10 @@ export type DistrictId =
   | 'domes'
   | 'egypt'
   | 'market'
-  | 'code';
+  | 'code'
+  // 2026-11-14: the annex beside the strip (lib/city-annex.ts).
+  | 'mountain'
+  | 'favela';
 
 export type District = {
   id: DistrictId;
@@ -226,6 +235,24 @@ export const DISTRICTS: Record<DistrictId, District> = {
     landmark: 'The data spire, code falling down its faces',
     signature: 'columns of green glyphs falling slowly down dark towers',
   },
+  // 2026-11-14: "add the mountain and favela above, so the city becomes more square". In the
+  // annex beside the strip (lib/city-annex.ts, lib/city-mountain.ts, lib/city-favela.ts).
+  mountain: {
+    id: 'mountain',
+    tempo: 1 / 4,
+    name: 'Mountain quarter',
+    colour: [1, 0.94, 0.62],
+    landmark: 'The highest peak, its temples and cable cars',
+    signature: 'contour lines glowing up the peaks, cable cars gliding between them',
+  },
+  favela: {
+    id: 'favela',
+    tempo: 3 / 4,
+    name: 'Favela',
+    colour: [1, 0.55, 0.3],
+    landmark: null,
+    signature: 'small stacked houses climbing the hills, strings of lights twinkling',
+  },
 };
 
 /** The six bands along the avenue, eight blocks each: the district left of it, and right. */
@@ -241,13 +268,18 @@ export const BANDS: [DistrictId, DistrictId][] = [
 ];
 export const BAND_ROWS = 8;
 
-/** A block's place in the tile: column -6..5 (the avenue between -1 and 0), row 0..47. */
-export const tileCol = (I: number) => wrap(I + TILE_I / 2, TILE_I) - TILE_I / 2;
+/**
+ * A block's place in the tile: column -6..5 in the strip (the avenue between -1 and 0), 6..17 in
+ * the annex beside it (2026-11-14); row 0..55.
+ */
+export const tileCol = (I: number) => wrap(I + STRIP_I / 2, TILE_I) - STRIP_I / 2;
 export const tileRow = (J: number) => wrap(J, TILE_J);
 
 export function districtOf(I: number, J: number): DistrictId {
+  const li = tileCol(I);
+  if (li >= STRIP_I / 2) return annexDistrict(tileRow(J));
   const band = BANDS[Math.floor(tileRow(J) / BAND_ROWS)] as [DistrictId, DistrictId];
-  return tileCol(I) < 0 ? band[0] : band[1];
+  return li < 0 ? band[0] : band[1];
 }
 /** The district at a point. */
 export const districtAt = (x: number, z: number) =>
@@ -316,7 +348,9 @@ export type Shape =
   | 'business'
   | 'embassy'
   | 'design'
-  | 'code';
+  | 'code'
+  // The annex's open ground (2026-11-14): no building; its peaks and hills are lib/city-annex.ts's.
+  | 'hill';
 /**
  * A lit tunnel through a tower, along x (0) or z (2), at height y, half as wide and high as hw, hh.
  * `through`: part of the one tunnel bored through a whole row of towers (lib/city-under.ts THROUGH).
@@ -422,6 +456,8 @@ function standBack(
 function buildBlock(I: number, J: number, wide: boolean): Block {
   const k = 300 + wrap(I * 37 + J * 101, 9973);
   const d = districtOf(I, J);
+  // The annex (lib/city-annex.ts): open ground, its peaks and hills drawn and held there.
+  if (d === 'mountain' || d === 'favela') return hillBlock(I, J, k, d);
   const ave = I === 0 || I === -1;
   const cx = (I + 0.5) * BLOCK_X;
   const cz = (J + 0.5) * BLOCK_Z;
@@ -690,6 +726,28 @@ function buildBlock(I: number, J: number, wide: boolean): Block {
   return { x, z, hx, hz, h, k, I, J, d, shape, bore, studio, design, facade };
 }
 
+/** A block of the annex: no building, open to its peaks or hills. */
+function hillBlock(I: number, J: number, k: number, d: DistrictId): Block {
+  const [x, z] = [(I + 0.5) * BLOCK_X, (J + 0.5) * BLOCK_Z];
+  const [hx, hz] = [BLOCK_X / 2 - 4, BLOCK_Z / 2 - 4];
+  return {
+    x,
+    z,
+    hx,
+    hz,
+    h: 0,
+    k,
+    I,
+    J,
+    d,
+    shape: 'hill',
+    bore: null,
+    studio: null,
+    design: null,
+    facade: null,
+  };
+}
+
 /** How close to a wall the ship can come. */
 export const MARGIN = 1.2;
 
@@ -713,7 +771,7 @@ export function inCanal(x: number, z: number, room = 0): boolean {
   if (!CANAL_ROWS.includes(tileRow(J))) return false;
   if (Math.abs(z - J * BLOCK_Z) > CANAL_W - room) return false;
   const lx = x - nearest(0, x, TILE_X);
-  return lx > AVENUE + 1 && lx < (TILE_I / 2) * BLOCK_X - 2;
+  return lx > AVENUE + 1 && lx < STRIP_X / 2 - 2;
 }
 /** The lowest the ship can go at (x, z): the street, or down in a canal. */
 export const floorAt = (x: number, z: number) =>
@@ -732,6 +790,8 @@ export function blocked(q: Vec3): boolean {
     if (u !== null) return u;
   }
   if (q[1] < floorAt(q[0], q[2]) + 2 - 1e-6) return true;
+  // The annex (lib/city-annex.ts): its peaks, temples, pylons, hills and houses, a height field.
+  if (inAnnex(q[0])) return annexBlocked(q, MARGIN);
   const tw = blockTower(Math.floor(q[0] / BLOCK_X), Math.floor(q[2] / BLOCK_Z));
   const dx = Math.abs(q[0] - tw.x);
   const dz = Math.abs(q[2] - tw.z);
@@ -1862,7 +1922,7 @@ function portalItem(z: number, eye: Vec3, t: number, key: number): Item {
 function canalItem(J: number, xc: number, eye: Vec3, t: number): Item {
   const z = J * BLOCK_Z;
   const x0 = xc + AVENUE + 1;
-  const x1 = xc + (TILE_I / 2) * BLOCK_X - 2;
+  const x1 = xc + STRIP_X / 2 - 2;
   const len = x1 - x0;
   const walls = Math.ceil(len / 0.9) * 2;
   const pipes = Math.ceil(len / 0.7) * 2;
@@ -2135,14 +2195,15 @@ export function cityBanners(n: number, m: number): WordSign[] {
     out.push(nameBanner({ ...a, x: xc, y: GROUND + a.y, z: z0 + a.row * BLOCK_Z, key: key++ }));
   for (const e of EDGE_NAMES) {
     // Over the roofs either side of the edge's street, whatever stands there.
-    const Ia = e.side > 0 ? I0 + TILE_I / 2 - 1 : I0 - TILE_I / 2 - 1;
+    // At the strip's edges (2026-11-14: the annex lies beyond its +x edge).
+    const Ia = e.side > 0 ? I0 + STRIP_I / 2 - 1 : I0 - STRIP_I / 2 - 1;
     let roof = 28;
     for (const I of [Ia, Ia + 1])
       for (const J of [J0 + e.row - 1, J0 + e.row]) roof = Math.max(roof, blockTower(I, J).h);
     out.push(
       nameBanner({
         ...e,
-        x: xc + (e.side * TILE_X) / 2,
+        x: xc + (e.side * STRIP_X) / 2,
         y: GROUND + roof + 6,
         z: z0 + e.row * BLOCK_Z,
         key: key++,
@@ -2590,6 +2651,7 @@ function planItems(eye: Vec3, fwd: Vec3, R: number, k: number, t: number, out: I
   for (let I = I0; I <= I1; I++) {
     for (let J = J0; J <= J1; J++) {
       const tw = blockTower(I, J);
+      if (tw.shape === 'hill') continue;
       const y = GROUND + tw.h;
       const d = Math.hypot(tw.x - eye[0], y - eye[1], tw.z - eye[2]);
       if (d > R || !V.seen(tw.x, y, tw.z, 30)) continue;
@@ -2677,8 +2739,10 @@ function planItems(eye: Vec3, fwd: Vec3, R: number, k: number, t: number, out: I
   // strong lines, as the Golden plan's boulevards and rings, so the plan reads from far above.
   for (let I = I0; I <= I1 + 1; I++) {
     const x = I * BLOCK_X;
+    // No streets in the annex; the strip's two edges are main roads.
+    if (tileCol(I) > STRIP_I / 2) continue;
     const ave = tileCol(I) === 0;
-    const main = ave || tileCol(I) === -TILE_I / 2;
+    const main = ave || Math.abs(tileCol(I)) === STRIP_I / 2;
     const gap = ave ? 1.2 : main ? 2 : 4;
     const n = Math.ceil((V.z1 - V.z0) / gap);
     out.push({
@@ -2717,6 +2781,7 @@ function planItems(eye: Vec3, fwd: Vec3, R: number, k: number, t: number, out: I
       weight: (main ? 3 : 0.5 + 0.5 * fine) * k,
       site: (s, o) => {
         o[0] = V.x0 + (s + 0.5) * gap;
+        if (inAnnex((o[0] as number) - 0.5)) return false;
         o[1] = GROUND + 0.1;
         o[2] = z;
         const wave = 0.6 + 0.4 * beat(t, 1, -(o[0] as number) / 160);
@@ -3120,7 +3185,17 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
   riverItems(eye, t, R, floorAt, waterAt, out);
   dockItems(eye, t, Math.min(R, NEAR + 40), out, ship);
   embassyItems(eye, t, R, out);
-  carItems(eye, fwd, t, (x, z) => inCanal(x, z) || underOpen(x, z), out, ship, codeCars);
+  carItems(
+    eye,
+    fwd,
+    t,
+    (x, z) => inCanal(x, z) || underOpen(x, z) || inAnnex(x),
+    out,
+    ship,
+    codeCars,
+  );
+  // The Mountain and Favela quarters beside the strip (lib/city-annex.ts, 2026-11-14).
+  annexItems(eye, fwd, t, R, out);
   cityPortalItems(eye, t, out);
   const k = planLook(eye[1]);
   if (k > 0) planItems(eye, fwd, R, k, t, out);
@@ -3201,7 +3276,7 @@ export function cruiser(
   const along = s0 + lane.dir * lane.speed * t - m * 9 * lane.dir;
   const centre = lane.axis === 'z' ? eye[2] : eye[0];
   const a = centre + wrap(along - centre + SHIP_RUN / 2, SHIP_RUN) - SHIP_RUN / 2;
-  const k = smooth((SHIP_RUN / 2 - Math.abs(a - centre)) / 25);
+  let k = smooth((SHIP_RUN / 2 - Math.abs(a - centre)) / 25);
   let c: Vec3;
   if (lane.axis === 'z') {
     const x = nearest(lane.line ?? 0, eye[0], TILE_X) + (m % 2) * 1.5 * lane.dir;
@@ -3209,6 +3284,8 @@ export function cruiser(
   } else {
     const z = Math.round(eye[2] / BLOCK_Z) * BLOCK_Z;
     c = [a, GROUND + lane.y, z];
+    // No cross street runs through the annex's hills (2026-11-14): it fades out there.
+    k *= 1 - smooth((Math.min(planX(a) - STRIP_X / 2, PLAN_X0 + TILE_X - planX(a)) + 12) / 12);
   }
   // Moving aside as you come near: up and away.
   const d = Math.hypot(c[0] - you[0], c[1] - you[1], c[2] - you[2]);

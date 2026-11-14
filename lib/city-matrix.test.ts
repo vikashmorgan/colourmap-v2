@@ -12,7 +12,7 @@ import {
   gameItems,
   SIGN_STRINGS,
 } from './city-game';
-import { GROUND, type Item, TILE_I, TILE_J } from './city-grid';
+import { GROUND, type Item, STRIP_I, TILE_J } from './city-grid';
 import {
   BLINK_LOW,
   BLINK_MAX,
@@ -55,7 +55,7 @@ function greenOnly(it: Item): number {
 function towers() {
   const out = [];
   for (let J = J0; J < J0 + BAND_ROWS; J++)
-    for (let I = -TILE_I / 2; I < TILE_I / 2; I++) {
+    for (let I = -STRIP_I / 2; I < STRIP_I / 2; I++) {
       const tw = blockTower(I, J);
       if (tw.shape === 'code' && I !== 0 && I !== -1) out.push(tw);
     }

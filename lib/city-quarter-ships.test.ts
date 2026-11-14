@@ -21,6 +21,12 @@ import {
  */
 
 const IDS = Object.keys(DISTRICTS) as DistrictId[];
+/**
+ * The quarters along the strip, with streets and a heart on the avenue: not the annex's Mountain
+ * and Favela (2026-11-14), which have no streets (so no currents) and their own life instead,
+ * cable cars and strings of lights (lib/city-mountain.ts, lib/city-favela.ts).
+ */
+const STRIP_IDS = IDS.filter((d) => d !== 'mountain' && d !== 'favela');
 const cosine = (a: RGB, b: RGB) =>
   (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (Math.hypot(...a) * Math.hypot(...b));
 
@@ -89,14 +95,14 @@ describe('Quarter ships: a design of our own for every quarter', () => {
     // A share, not all: the general ships keep flowing among them.
     expect(quarter / all).toBeGreaterThan(0.15);
     expect(quarter / all).toBeLessThan(0.45);
-    for (const d of IDS) expect(seen.has(d)).toBe(true);
+    for (const d of STRIP_IDS) expect(seen.has(d)).toBe(true);
   });
 });
 
 describe('Quarter ships: drones round each quarter’s heart', () => {
   it('has a heart for every district, and finds the nearest', () => {
     const ds = new Set(HOMES.map((h) => h.d));
-    for (const d of IDS) expect(ds.has(d)).toBe(true);
+    for (const d of STRIP_IDS) expect(ds.has(d)).toBe(true);
     const eye: Vec3 = [HOMES[4]?.x ?? 0, 30, (HOMES[4]?.z ?? 0) + 3 * TILE_Z];
     const [h] = homesNear(eye, 2);
     expect(h?.key).toBe(HOMES[4]?.key);

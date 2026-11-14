@@ -17,11 +17,24 @@ export const AVENUE = 9;
  * The plan repeats every TILE_I blocks across and TILE_J along, so the city never ends: seven
  * bands of eight along (2026-11-13: the seventh, the Matrix quarter, added at the far end so
  * every other place keeps its tile-local spot).
+ *
+ * 2026-11-14 ("add the mountain and favela above, so the city becomes more square"): the tile is
+ * two strips wide. The STRIP is the twelve columns the quarters along the avenue always stood in
+ * (columns -6..5, x from -156 to 156 round the avenue at x = 0), unchanged; the ANNEX is twelve
+ * more beside it on +x (x from 156 to 468, the top of the map on a wide screen), holding the
+ * Mountain and Favela quarters (lib/city-annex.ts). Everything that repeats every TILE_X now
+ * repeats every 624; a strip's own column is still wrap(I + TILE_I / 2, TILE_I) - TILE_I / 2
+ * for every column of the strip, the annex's columns falling outside -6..5.
  */
-export const TILE_I = 12;
+export const STRIP_I = 12;
+export const ANNEX_I = 12;
+export const TILE_I = STRIP_I + ANNEX_I;
 export const TILE_J = 56;
+export const STRIP_X = STRIP_I * BLOCK_X;
 export const TILE_X = TILE_I * BLOCK_X;
 export const TILE_Z = TILE_J * BLOCK_Z;
+/** The tile's west edge in its own frame: the strip's west edge (the frame runs to PLAN_X0 + TILE_X). */
+export const PLAN_X0 = -STRIP_X / 2;
 
 /**
  * The wider streets (2026-11-14: "make a lot of the thin streets larger"; earlier: "side streets
@@ -72,6 +85,10 @@ export function aroundRect(e: number, hw: number, hh: number): [number, number] 
 /** The copy of a value repeating every `period` nearest to c. */
 export const nearest = (a: number, c: number, period: number) =>
   a + period * Math.round((c - a) / period);
+/** x brought into the tile's own frame, PLAN_X0 to PLAN_X0 + TILE_X: the strip, then the annex. */
+export const planX = (x: number) => wrap(x - PLAN_X0, TILE_X) + PLAN_X0;
+/** Whether x lies in the annex beside the strip (the Mountain and Favela quarters). */
+export const inAnnex = (x: number) => planX(x) >= STRIP_X / 2;
 
 /**
  * The city's one clock (2026-11-12: "think about ideas of pulse and rhythm in the city"): a slow

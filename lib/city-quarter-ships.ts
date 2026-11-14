@@ -97,6 +97,20 @@ export const QUARTER_DESIGNS: Record<DistrictId, QuarterDesign> = {
     line: 'A square frame holding one glyph of our own.',
     accent: [0.6, 1, 0.68],
   },
+  // 2026-11-14: the annex's two quarters (lib/city-annex.ts). Their streets have no currents, so
+  // these fly only if a current ever reaches them; every district keeps its own design.
+  mountain: {
+    district: 'mountain',
+    name: 'Peak glider',
+    line: 'A triangle of a sail standing like a summit over a slim keel.',
+    accent: [1, 0.82, 0.55],
+  },
+  favela: {
+    district: 'favela',
+    name: 'Rooftop balloon',
+    line: 'A round balloon of rings over a small swinging basket.',
+    accent: [1, 0.45, 0.4],
+  },
 };
 
 /** Which part of a design a grain is: its body, its accent, or its light. */
@@ -260,6 +274,38 @@ export function quarterGrain(
         return { a: -0.6 - 1.2 * f, b: 0.15 * Math.sin(4 * f - 0.8 * t), h: -0.1 * f, part: 1 };
       }
       return { a: 0.1, b: 0, h: 0, part: 2 };
+    }
+    case 'mountain': {
+      // A triangle sail, its apex up like a summit, over a slim keel; a lamp at the apex.
+      if (q < 0.6) {
+        const u = (q / 0.6) * 3;
+        const k = Math.floor(u);
+        const f = u - k;
+        if (k === 0) return { a: -0.8 + 1.6 * f, b: 0, h: -0.2, part: 0 };
+        if (k === 1) return { a: 0.8 - 0.8 * f, b: 0, h: -0.2 + 0.8 * f, part: 0 };
+        return { a: -0.8 * f, b: 0, h: 0.6 - 0.8 * f, part: 0 };
+      }
+      if (q < 0.92) {
+        const f = (q - 0.6) / 0.32;
+        return { a: -0.9 + 1.8 * f, b: e * 0.12, h: -0.32, part: 1 };
+      }
+      return { a: 0, b: 0, h: 0.62, part: 2 };
+    }
+    case 'favela': {
+      // Rings of a round balloon, a basket hanging under it swinging slowly, a warm burner.
+      if (q < 0.62) {
+        const ringN = Math.floor((q / 0.62) * 5);
+        const w = TAU * s;
+        const y = -0.6 + (ringN + 0.5) * 0.24;
+        const rad = 0.55 * Math.sqrt(Math.max(0, 1 - ((y - 0) / 0.62) ** 2));
+        return { a: rad * Math.cos(w), b: rad * Math.sin(w), h: y + 0.3, part: 0 };
+      }
+      if (q < 0.9) {
+        const f = (q - 0.62) / 0.28;
+        const sw = 0.06 * Math.sin(0.7 * t);
+        return { a: (f - 0.5) * 0.3 + sw, b: e * 0.15, h: -0.55, part: 1 };
+      }
+      return { a: 0, b: 0, h: -0.38, part: 2 };
     }
     default: {
       // The Matrix's glyph drone: a square frame upright, a glyph of our own in it.

@@ -17,6 +17,7 @@
  */
 
 import type { Vec3 } from './bigbang';
+import { ANNEX_STARTS } from './city-annex';
 import { CANYON_PATH } from './city-canyon';
 import {
   BAND_ROWS,
@@ -97,11 +98,18 @@ function marketStart(): QuarterStart {
 /**
  * Every quarter's start, in the plan's order down the avenue: Chinatown, the Indian quarter,
  * Istanbul, the Heights, the Canals, the golden gardens, the temples, the industrial quarter, the
- * domes, Egypt, the Neon market and the Matrix quarter.
+ * domes, Egypt, the Neon market and the Matrix quarter; then the annex beside the strip
+ * (lib/city-annex.ts, 2026-11-14): the Mountain quarter, from the river's bank looking up the
+ * valley to the highest peak, and the Favela, from the tile's end looking up to its last hill.
  */
-export const QUARTER_STARTS: QuarterStart[] = BANDS.flatMap(([l, r]) => (l === r ? [l] : [l, r]))
-  .filter((d, i, all) => all.indexOf(d) === i)
-  .map((d) => (d === 'canals' ? canalsStart() : d === 'market' ? marketStart() : landmarkStart(d)));
+export const QUARTER_STARTS: QuarterStart[] = [
+  ...BANDS.flatMap(([l, r]) => (l === r ? [l] : [l, r]))
+    .filter((d, i, all) => all.indexOf(d) === i)
+    .map((d) =>
+      d === 'canals' ? canalsStart() : d === 'market' ? marketStart() : landmarkStart(d),
+    ),
+  ...ANNEX_STARTS.map((a) => startAt(a.d, a.x, a.z, a.view)),
+];
 
 /** A quarter's start. */
 export const quarterStart = (d: DistrictId) =>

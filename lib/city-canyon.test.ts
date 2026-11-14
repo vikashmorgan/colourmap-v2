@@ -18,7 +18,7 @@ import {
 } from './city-canyon';
 import { hasChar } from './city-font';
 import { blocked, blockTower, districtAt, gameItems } from './city-game';
-import { BLOCK_X, BLOCK_Z, GROUND, type Item, TILE_X, TILE_Z } from './city-grid';
+import { BLOCK_X, BLOCK_Z, GROUND, type Item, TILE_I, TILE_X, TILE_Z } from './city-grid';
 import { railCeiling } from './city-metro';
 import { cityMapData } from './city-minimap';
 
@@ -76,7 +76,7 @@ describe('the Neon Canyon (2026-11-13: "add a neon part to the city and a canyon
       expect(east.x - east.hx - (west.x + west.hx)).toBeCloseTo(2 * CANYON_W, 6);
       expect(Math.min(west.h, east.h) / (2 * CANYON_W)).toBeGreaterThan(8);
     }
-    expect(canyonWallAt(1 + 12, 43 + 56)).not.toBeNull();
+    expect(canyonWallAt(1 + TILE_I, 43 + 56)).not.toBeNull();
     expect(canyonWallAt(-3, 43)).toBeNull();
   });
 

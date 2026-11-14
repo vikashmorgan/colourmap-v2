@@ -39,8 +39,10 @@ import {
   BLOCK_X,
   BLOCK_Z,
   GROUND,
+  inAnnex,
   mix,
   nearest,
+  STRIP_X,
   TAU,
   TILE_I,
   TILE_J,
@@ -231,6 +233,8 @@ export function streamShip(j: number, n: number, cx: number, cz: number, t: numb
     k = smooth((RUN / 2 - Math.abs(x - cx)) / 20);
     k *= smooth(((F.streets / 2) * BLOCK_Z - Math.abs(F.line * BLOCK_Z - cz)) / 15);
   }
+  // No street currents in the annex beside the strip (2026-11-14): it has peaks and hills, no streets.
+  if (inAnnex(head[0])) k = 0;
   return { head, dir, F, c, rank, k };
 }
 
@@ -250,7 +254,8 @@ export function quarterEdge(F: Channel, p: Vec3): number {
     const s = wrap(p[2], band);
     return Math.min(s, band - s);
   }
-  const half = TILE_X / 2;
+  // The avenue and the strip's edges (2026-11-14: the strip is half the tile now).
+  const half = STRIP_X / 2;
   const s = wrap(p[0], half);
   return Math.min(s, half - s);
 }
@@ -281,6 +286,8 @@ export function laneLight(
     pos = [a, GROUND + F.y - 0.6, F.line * BLOCK_Z + F.off];
     k *= smooth(((F.streets / 2) * BLOCK_Z - Math.abs(F.line * BLOCK_Z - cz)) / 15);
   }
+  // No street currents in the annex beside the strip (2026-11-14): it has peaks and hills, no streets.
+  if (inAnnex(pos[0])) k = 0;
   // The swell runs along with the ships, at a little over half their speed: a slow, soft wave.
   const wave = 0.5 + 0.5 * Math.cos((TAU * (a - F.sgn * 0.6 * F.speed * t)) / 48);
   return { pos, light: 0.45 + 0.55 * wave, k, F };

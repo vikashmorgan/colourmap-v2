@@ -40,7 +40,7 @@ afterEach(() => {
 });
 
 describe('quarter starts', () => {
-  it('has one start for each of the twelve quarters', () => {
+  it('has one start for each of the fourteen quarters', () => {
     expect(QUARTER_STARTS.map((q) => q.d).sort()).toEqual(
       (Object.keys(DISTRICTS) as DistrictId[]).sort(),
     );
@@ -86,9 +86,12 @@ describe('quarter starts', () => {
   it('hops to the next quarter and the one before, round the plan', () => {
     const c = quarterStart('chinatown');
     expect(hopFrom(c.pos[0], c.pos[2], 1).d).toBe('indian');
-    expect(hopFrom(c.pos[0], c.pos[2], -1).d).toBe('code');
+    // The annex's two quarters (2026-11-14) come after the Matrix quarter, then round again.
+    expect(hopFrom(c.pos[0], c.pos[2], -1).d).toBe('favela');
     const code = quarterStart('code');
-    expect(hopFrom(code.pos[0], code.pos[2], 1).d).toBe('chinatown');
+    expect(hopFrom(code.pos[0], code.pos[2], 1).d).toBe('mountain');
+    const fav = quarterStart('favela');
+    expect(hopFrom(fav.pos[0], fav.pos[2], 1).d).toBe('chinatown');
   });
 
   it('brings a start to the copy nearest the ship', () => {

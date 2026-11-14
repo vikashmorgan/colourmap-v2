@@ -20,7 +20,7 @@ import {
   gameItems,
   LANDMARKS,
 } from './city-game';
-import { BLOCK_X, BLOCK_Z, GROUND, type Item, TILE_I, TILE_J } from './city-grid';
+import { BLOCK_X, BLOCK_Z, GROUND, type Item, STRIP_I, TILE_J } from './city-grid';
 import { cityMapData, landmarkName } from './city-minimap';
 
 const finite = (v: number[]) => v.every(Number.isFinite);
@@ -49,7 +49,7 @@ describe('the Matrix quarter (2026-11-13: "do a matrix quarter in green")', () =
     // The six bands before it are as they were.
     expect(BANDS.slice(0, 6).flat()).not.toContain('code');
     for (let J = 0; J < TILE_J; J++) {
-      for (let I = -TILE_I / 2; I < TILE_I / 2; I++) {
+      for (let I = -STRIP_I / 2; I < STRIP_I / 2; I++) {
         const inBand = J >= CODE_J0 && J < CODE_J0 + BAND_ROWS;
         expect(districtOf(I, J) === 'code').toBe(inBand);
       }
@@ -61,7 +61,7 @@ describe('the Matrix quarter (2026-11-13: "do a matrix quarter in green")', () =
   it('raises dark code towers that hold you, leave streets of six or more and keep off the avenue', () => {
     let towers = 0;
     for (let J = CODE_J0; J < CODE_J0 + BAND_ROWS; J++) {
-      for (let I = -TILE_I / 2; I < TILE_I / 2; I++) {
+      for (let I = -STRIP_I / 2; I < STRIP_I / 2; I++) {
         const tw = blockTower(I, J);
         if (tw.shape === 'plaza') continue;
         // 2026-11-13: "think how factories can be better integrated not all together": one

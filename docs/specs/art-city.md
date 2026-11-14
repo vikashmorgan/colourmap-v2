@@ -2134,6 +2134,88 @@ spires' open blocks, the Canals' designs, one call in the items) and `lib/city-c
   orientations, canal arches concave with room under, plazas inside their blocks, no grains in the
   lanes, a modest budget, and nothing jumping between frames.
 
+### Mountain and Favela quarters (2026-11-14)
+
+> "add the mountain and favela above, so the city becomes more square. doesn't have to be a
+> square map yet." Then: the two quarters need not take the strip's full length; and "draw the
+> mountains NOT as scattered dots but as TOPO LINES, contour lines like a topographic map".
+
+**The plan, wider** (`lib/city-grid.ts`, `lib/city-annex.ts`). The tile is two strips wide now.
+The **strip** is the twelve columns the quarters always stood in (x from -156 to 156 round the
+avenue), every block, landmark, start and street exactly where it was. The **annex** is twelve
+more beside it on +x (x from 156 to 468), the top of the map on a wide screen, so the tile is
+624 across and 1904 along: about three to one, where it was six. The whole city still repeats
+every tile both ways, so everything that repeats every `TILE_X` (the far city's tile, the high
+currents, the stations, the rings, fast travel's copies) now repeats every 624; a strip column's
+own number is unchanged (`STRIP_I`, `tileCol` now runs -6..17, the annex 6..17). The annex holds
+two quarters along the tile: the **Mountain quarter** from the tile's start to the river
+(rows 0 to 23), the **Favela** past it to the tile's end. The river runs on between them. The
+annex has no streets: its blocks are open ground (shape `hill`); no towers, street lights, cars,
+street currents or cross-street cruisers there; the strip's +x edge is a main road.
+
+**The Mountain quarter** (`lib/city-mountain.ts`):
+
+- **Peaks.** Eight rounded cones, steep near the summit and easing out to a wavering foot, 96 to
+  128 high, with valleys to fly between and saddles where their feet meet. Four end in a small
+  plateau for a summit temple. Nothing over 128 (a temple's roof under 142), so the high currents
+  and the long ferry pass over.
+- **Topographic lines.** Each peak is drawn as its contour rings, one at every 8 of height,
+  every fifth an **index contour** (brighter, paler, its points closer): grains sit on the
+  curves, never over the slopes. Where a neighbour's slope stands higher a ring is hidden, so the
+  lines merge round the saddles as a map's do. Three faint ridge lines run from each summit to
+  its foot. Colour: the Art builder's Data Peak ramp, violet at the foot through magenta, amber
+  and pale gold to a white summit; each ring's hue leans slowly up and down the ramp and its
+  light breathes (no flash).
+- **Temples.** On the four plateaus and on a ledge halfway up each other peak, turned toward the
+  strip: a platform's rim, four columns, two eaves and a roof to a tip, a warm lamp inside; gold,
+  ivory and saffron.
+- **Stairways.** From the foot of each temple's peak, zigzagging up its city side, a step about
+  every 1: two rails, a tread and a lamp at every seventh step; the last 8 a flight rising off the
+  slope onto the platform.
+- **Cable cars.** Six stations (a lower and a valley station by the strip's edge street, four on
+  summits) and five cables between them, each two ropes sagging gently. Four cabins a cable glide
+  at 2.2 a second, up one rope and back down the other, evenly spaced, a formula of the time;
+  each a framed box with warm windows on a hanger. Every cable clears the slopes under its cabins
+  by 3 and more.
+
+**The Favela** (`lib/city-favela.ts`): nine low domed hills past the river, cut into terraces 3.6
+apart. Along every terrace small houses stand side by side, each its own width (2.6 to 4.4), one
+to three storeys, so they stack over one another as they climb: about 8,500 houses, hundreds to a
+hill. Our own design, a warm palette: coral, orange, ochre, rose, cream, terracotta, now and
+then turquoise, lime or lilac. Narrow alleys open now and then; four straight stairways climb each
+hill, kept clear of houses, lamps at every eighth step. Over half the windows glow warm, flickering
+slowly; about a third of the roofs carry a water tank, a fifth an antenna with a soft red light;
+strings of small lights hang along every other terrace, sagging between poles, twinkling slowly.
+
+**Collision.** A cheap height field in `blocked`: in the annex, a peak's slope, a temple's or
+pylon's box, or a hill with its houses (its slope plus 8.5) holds the ship, `MARGIN` round. Off
+the slopes the street and the river are the floor as everywhere.
+
+**Gateways, names, fast travel.** Each quarter's name over its way in, as the bands' gates are:
+MOUNTAIN QUARTER on the river's bank, FAVELA at the tile's end, between two glowing posts. Both
+are districts with names (the label as you enter), colours, quarter-ship designs (Peak glider,
+Rooftop balloon) and starts, after the Matrix quarter in the plan's order: the Mountain's on the
+river's bank looking up the valley, the highest peak beside the way; the Favela's at the tile's
+end looking up the open way past its last hills. The map shows the annex above the strip on a
+wide screen, its peaks as contour lines (rising in rings on the 3D map), its hills as terraces,
+the temples and cable stations named; the far city carries a coarse cut of the contours and a
+glow for every eighth house.
+
+**Cost.** The geometry (contour points, steps, about 8,500 houses, string bulbs) is
+laid out once into flat arrays the first time it is asked for; a frame only builds items for what
+is in reach and ahead, and each site writes straight into the renderer's array (no allocation per
+grain). The renderer thins them by distance as everything else.
+
+**Acceptance** (`lib/city-annex.test.ts`, `lib/city-mountain.test.ts`, `lib/city-favela.test.ts`):
+the tile 624 across, every strip quarter and landmark where it was, copies too; the annex's
+blocks open, mountain to the river and favela after; the annex above the strip on a wide map;
+peaks, temples, hills and houses block, valleys and the river open; contour grains on their
+lines (within 0.7 of the slope's height), rings every 8, index every fifth, mellow; temples on
+their slopes, stairs from foot to platform, cables clear, cabins moving slowly along their ropes;
+the favela dense (over 0.05 houses a square metre), warm, tanks and antennas on some, stairs
+clear; no street current or car in the annex; both starts clear and reached by fast travel; the
+grain budget kept at 6,500 and 15,000, every grain finite.
+
 ### Still rough, and next
 
 - The Matrix quarter's running lights brighten as the ship comes close but do not speed up (the
