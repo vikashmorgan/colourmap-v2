@@ -128,7 +128,7 @@ turning and breathing, a slow orbit.
 | 15 | Chinatown | A red gate (four pillars, two beams, three roofs turned up at the ends, a plaque reading 中華街, Chinatown) at the mouth of a narrow street. Tall signs hang down the street side of the towers, standing out into the street, in real Chinese and Japanese characters: ラーメン ramen, 茶 tea, 龍 dragon, 酒 wine, 夢 dream, 麺 noodles, 福 good fortune, 喫茶 café; a 夜市 night-market banner across the street and a small 喫茶 sign over a doorway. Lantern red and gold mixed with cyan and magenta. Rows of round red lanterns strung across the street, swaying a little | Walking pace through the gate and down the street |
 | 16 | Bridges and docks | Sky bridges (tubes of four edges and ribs, lights along the floor) join neighbouring towers high above the street; landing platforms stand out from the faces of the taller towers, lights chasing slowly round their rims. Ships come in on a curve, settle on a deck, rest, lift off and leave the other way | Round the city, from above the bridges |
 | 17 | Canyon | Flying down the middle of an endless street: towers either side (only the faces the street sees are drawn, so every grain shows), feet below the eye and roofs above it; traffic in lanes above and below the eye, all flying forward, one colour per height (amber, cyan, white, violet); high above, one-way cross streets carry ships left to right or right to left, each in its own colour (2026-11-12: "the canyon make it only with lights going forward … each road has one colour of spaceship to keep it coherent"); every third tower carries a tall Chinatown sign, flown past. Towers and ships that pass behind come round to the far end, so the street never ends and no grain is added | Down the middle of the street |
-| 18 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) down an endless avenue of solid, lit towers, with side streets to turn into; the avenue runs through the districts of the City of Dreams, Chinatown first (see **Ship, round two** and **Ship, round three**). **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** or Shift faster, **Q** or X slower, **Space** boosts to three times the cruise while the bar lasts; the bar fills again while you cruise; **Space** with **W** climbs on into the stratosphere; **L** slows to look down; **Enter** starts a race at its start. Towers' walls hold you: you slide along them. Traffic above and below you. Two dials read height and speed. With no one at the controls (the Journey, or before you steer) the ship flies down the avenue; let go with Esc and it carries on from where you were, back to the avenue | Behind the ship and a little above, looking past it |
+| 18 | Ship | A game, keys only, as the Shark Sim: you pilot a small ship (a flat arrowhead, a raised spine, two cyan engines streaming light) down an endless avenue of solid, lit towers, with side streets to turn into; the avenue runs through the districts of the City of Dreams, Chinatown first (see **Ship, round two** and **Ship, round three**). **A** / **D** turn (the ship banks into the turn), **W** / **S** climb and dive, **E** or Shift faster, **Q** or X slower, **Space** boosts to three times the cruise or more, for as long as it is held; **Space** with **W** climbs on into the stratosphere; **L** slows to look down; **Enter** starts a race at its start. Towers' walls hold you: you slide along them. Traffic above and below you. Two dials read height and speed. With no one at the controls (the Journey, or before you steer) the ship flies down the avenue; let go with Esc and it carries on from where you were, back to the avenue | Behind the ship and a little above, looking past it |
 
 The page opens on one piece alone, picked by name, as Ocean's do: it starts
 at its beginning with no ball of stars and loops, each grain gliding back to
@@ -802,7 +802,9 @@ too fast in the city but faster when above."). Every change eases; nothing flash
   looking down and from high up.
 - **The boost by height**: 2.5 times the cruise in the streets, 3.6 at the roofs (the towers'
   sky), 5.5 in the stratosphere, blending smoothly (2026-11-13, later: "add more boost"; it was
-  2, 3 and 4.5); the bar lasts 4.5 s (was 3) and fills in 8 (was 10). Out in space it stays three times
+  2, 3 and 4.5). Since 2026-11-14 ("more boost on all ships so boost is not limited, and
+  abundant") it is 3.2, 4.6 and 7.5, every ship by its own handling, and **the bar never drains**:
+  hold Space as long as you like (it was 4.5 s, filling in 8). Out in space it stays three times
   space's pace; the Speed dial's range holds the fastest you can go, so the needle never runs past it.
 - **The plume**: boosting raises a glow (an afterglow fading over a few seconds after): the trail
   grows up to 1.6 ship lengths longer with a gentle ripple growing from the engines, brighter and
@@ -810,8 +812,8 @@ too fast in the city but faster when above."). Every change eases; nothing flash
   (up to 2.2).
 - **A soft wall bump**: sliding along a wall bleeds a little speed and leans the ship away from it,
   easing back after; never on the autopilot.
-- **The hyperboost** (2026-11-13: "a second faster boost, with tab"): **Tab** with Space, begun
-  from a bar at least 0.15 full, flies 1.8 times the boost and drains the bar 2.2 times as fast; its
+- **The hyperboost** (2026-11-13: "a second faster boost, with tab"): **Tab** with Space flies 1.8 times
+  the boost, as long as both are held; its
   own glow rises and fades more slowly, the eye stands back further (up to 2.8 more). On a phone, a
   **Hyper** button.
 - **The trail along the path** (`lib/city-trail.ts`; "a better boost trail"): the last 1.6 s of
@@ -823,6 +825,14 @@ too fast in the city but faster when above."). Every change eases; nothing flash
   measure the further they are behind the distance in focus (the ship, or 45 ahead from the
   cockpit) and when very near the eye, so they soften without adding light; the softening grows
   under the boost and the hyper, and fades out climbing to the plan (none in space).
+- **Seeing far, more grains** (2026-11-14: "improve density for the City videogame and visibility
+  so buildings can be seen in the distance"). The view reaches 340 in the street (was 160),
+  opening as you climb to 1,300 (was 1,000), and tower walls are gathered out to 420 (were only
+  160); beyond, from high up, the plan draws the city. Grains stay as dense near the eye as before
+  (they are dealt by the old reach), the far towers more sparsely. Once you fly, the player's fade
+  reaches 460 (was 260, which the other pieces keep). The City draws 13,000 grains on a computer
+  and 6,500 on a phone (the other worlds 9,000 and 5,200): each thousand costs about 0.6 ms of a
+  frame's 16.7, the wider view about 3%.
 - **Ring portals, forgiving** ("boost rings don't work for going to space"): a run counts flown
   either way (big ring first, or small first), a ring missed here and there is forgiven (the last
   must be flown), and flying at a portal within about 45° of its way, the ship eases sideways

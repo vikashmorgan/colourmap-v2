@@ -172,8 +172,8 @@ describe('the game city: its plan', () => {
         }
       }
     }
-    expect(viewAt(GROUND + 20)).toBe(160);
-    expect(viewAt(GROUND + 500)).toBeGreaterThan(700);
+    expect(viewAt(GROUND + 20)).toBe(340);
+    expect(viewAt(GROUND + 500)).toBeGreaterThan(1000);
   });
 
   it('spells its word signs from a pixel font, and welcomes you to the City of Dreams', () => {

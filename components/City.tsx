@@ -67,6 +67,8 @@ const TRIP: Trip = {
   total: TOTAL,
   stepColours: STEP_COLOURS,
   makeParticles,
+  // More grains than the other worlds: the towers and the far districts fill in (2026-11-14).
+  grains: { small: 6500, large: 13000 },
   particleAt,
   phaseAt,
   look,
@@ -96,8 +98,8 @@ const TRIP: Trip = {
     variants: { has: hasVariants, names: variantNames, set: setVariant, label: variantLabel },
     // Colour presets for the golden pieces (Gold, Rose gold, …) and the factories (Rust, Steel …).
     palettes: { has: hasPalettes, names: paletteNames, set: setPalette },
-    // Ship: you fly with the keys; Space boosts while the bar lasts, and it fills again as you
-    // cruise (with W, on up into the stratosphere). L slows to a drift and looks down; Enter
+    // Ship: you fly with the keys; Space boosts as long as you hold it, the bar never draining
+    // (2026-11-14; with W, on up into the stratosphere). L slows to a drift and looks down; Enter
     // starts a race at its start. Two dials read your height and speed; the count beside the bar
     // says the race's words, or a district's name as you come into it.
     game: {

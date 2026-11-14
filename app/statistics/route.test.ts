@@ -155,4 +155,22 @@ describe('/statistics class page', () => {
     expect(html).toContain('function romeoSquare()');
     expect(html).toContain('about 1 hour in 55 has no ticket at all');
   });
+
+  it('carries the exam practice on lectures 1 to 5, with tables of Φ worked out on the page', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
+
+    const html = await (await GET(request())).text();
+
+    // A tab of its own beside the cheat sheet, its notes filed in the notepad.
+    expect(html).toContain('data-s="exam"');
+    expect(html).toContain('const examKey = id => `stats|exam|ex-${id}`;');
+    expect(html).toContain("s: 'exam', id: `ex-${x.id}`");
+    // Ten exercises: five on the maths, five company cases.
+    expect(html).toContain("{ id: 'e1', title: 'Two dice'");
+    expect(html).toContain("{ id: 'e10', title: 'A paid membership'");
+    expect(html).toContain('dial = 508 g');
+    // The tables are computed from Φ, never copied, and shown on the cheat sheet too.
+    expect(html).toContain('function phiTablesHtml()');
+    expect(html).toContain('refHtml() + phiTablesHtml()');
+  });
 });

@@ -7,8 +7,6 @@ import {
   BLOCK_X,
   BLOCK_Z,
   BOOST_PACE,
-  BOOST_REFILL,
-  BOOST_SECONDS,
   BRIDGES,
   blocked,
   blockTower,
@@ -74,7 +72,7 @@ import {
   variantLabel,
   variantNames,
 } from './city';
-import { districtAt } from './city-game';
+import { districtAt, viewAt } from './city-game';
 import { CITIES, CITY_K, cityPlan } from './city-plans';
 import { RATIOS } from './golden-buildings';
 import {
@@ -549,7 +547,7 @@ describe('Ship', () => {
     expect(flier(t).c[1]).toBeLessThan(y0 - 3);
   });
 
-  it('goes faster on E, slower on Q, and boosts on Space while the bar lasts', () => {
+  it('goes faster on E, slower on Q, and boosts on Space as long as it is held', () => {
     const speed = () => gauges().find((g) => g.label === 'Speed')?.value as number;
     fresh();
     run(['e'], 3);
@@ -562,30 +560,21 @@ describe('Ship', () => {
     const tb = run([' '], 1);
     expect(speed()).toBeGreaterThan(FLY_SPEED * (boostPaceAt(flier(tb).c[1]) - 0.3));
     expect(boostPaceAt(SKY)).toBeCloseTo(BOOST_PACE, 1);
-    expect(boostLeft()).toBeCloseTo(1 - 1 / BOOST_SECONDS, 1);
-    // Held on, the bar runs dry and the pace falls back; cruising fills it again.
-    run([' '], 6);
-    expect(boostLeft()).toBe(0);
-    expect(speed()).toBeLessThan(FLY_SPEED * 1.3);
-    run([], 4);
-    expect(boostLeft()).toBeGreaterThan(0.3);
+    // 2026-11-14: "boost not limited, and abundant": held on, the bar stays full and the pace holds.
+    run([' '], 12);
+    expect(boostLeft()).toBe(1);
+    expect(speed()).toBeGreaterThan(FLY_SPEED * 2.5);
   });
 
-  it('hyperboosts on Tab with Space: faster again, draining the bar faster (2026-11-13)', () => {
+  it('hyperboosts on Tab with Space: faster again, the bar still full (2026-11-13, 2026-11-14)', () => {
     const speed = () => gauges().find((g) => g.label === 'Speed')?.value as number;
-    // A full bar for each (the tests before leave it low): cruising fills it.
-    fresh();
-    run([], BOOST_REFILL + 1);
     fresh();
     run([' '], 1.2);
     const boosted = speed();
-    const left = boostLeft();
-    fresh();
-    run([], BOOST_REFILL + 1);
     fresh();
     run([' ', 'tab'], 1.2);
     expect(speed()).toBeGreaterThan(boosted * 1.4);
-    expect(boostLeft()).toBeLessThan(left);
+    expect(boostLeft()).toBe(1);
     expect(hyperGlow()).toBeGreaterThan(0.5);
     // Tab alone does nothing; the glow fades after.
     fresh();
@@ -712,11 +701,12 @@ describe('Ship, round two: solid walls, the avenue and Chinatown', () => {
       for (const { pos, rgb } of shot) {
         finite &&= [...pos, ...rgb].every(Number.isFinite);
         // The stars apart, in a dome beyond everything else.
-        if (!lit(rgb) || dist(pos, c) > VIEW + 10) continue;
+        // The view reaches 340 in the street (2026-11-14), wider as you climb.
+        if (!lit(rgb) || dist(pos, c) > viewAt(eye[1]) + 10) continue;
         n++;
         const rel = pos.map((v, i) => v - (eye[i] as number));
         if (rel[0] * fwd[0] + rel[1] * fwd[1] + rel[2] * fwd[2] <= 0) behind++;
-        if (dist(pos, eye) > VIEW) beyond++;
+        if (dist(pos, eye) > viewAt(eye[1])) beyond++;
       }
       expect(finite).toBe(true);
       expect(behind).toBe(0);
