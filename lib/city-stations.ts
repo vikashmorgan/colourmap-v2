@@ -1019,9 +1019,46 @@ export function stationCentre(st: Station, t: number, x = st.x, z = st.z): Vec3 
 /** How far station st has turned round the vertical at time t. */
 export const stationTurn = (st: Station, t: number) => st.spin * t + phaseOf(st);
 
+/* ---------- warming while a ship is docked (lib/city-skyport.ts) ---------- */
+
+/** How long a station takes to warm once docked at, and to cool once left (seconds). */
+export const WARM_IN = 2;
+export const WARM_OUT = 4;
+const warmOn = new Uint8Array(STATIONS.length);
+const warmAt = new Float64Array(STATIONS.length).fill(Number.NEGATIVE_INFINITY);
+const warmFrom = new Float64Array(STATIONS.length);
+
+/**
+ * How warm station i's lights are at time t, 0..1: easing up over WARM_IN while a ship is docked,
+ * back down over WARM_OUT after, from wherever it was (from the time alone, so never a jump).
+ */
+export function stationWarmth(i: number, t: number): number {
+  const from = warmFrom[i] ?? 0;
+  const e = t - (warmAt[i] ?? Number.NEGATIVE_INFINITY);
+  if (e < 0) return from;
+  return warmOn[i] ? from + (1 - from) * smooth(e / WARM_IN) : from * (1 - smooth(e / WARM_OUT));
+}
+/** Station i begins to warm (docked) or to cool (left) at time t. */
+export function setStationWarm(i: number, on: boolean, t: number) {
+  if (i < 0 || i >= STATIONS.length || Boolean(warmOn[i]) === on) return;
+  warmFrom[i] = stationWarmth(i, t);
+  warmAt[i] = t;
+  warmOn[i] = on ? 1 : 0;
+}
+/** Every station cold (a fresh start). */
+export function resetStationWarmth() {
+  warmOn.fill(0);
+  warmAt.fill(Number.NEGATIVE_INFINITY);
+  warmFrom.fill(0);
+}
+
+/** The brightest a station's lamp may be: a lit window's glow, never more (mellow). */
+export const STATION_GLOW_MAX = 0.74;
+
 /**
  * Site s of station st at time t, its middle at c: its place and colour into o, brightness k. The
  * colour drifts slowly between the part's shade and a lighter one; a few lamps twinkle softly.
+ * `warm` (0..1, a ship docked) leans every lamp toward the warm shade and a little brighter.
  */
 export function stationSite(
   st: Station,
@@ -1030,6 +1067,7 @@ export function stationSite(
   c: Vec3,
   k: number,
   o: number[],
+  warm = 0,
 ): boolean {
   const M = stationModel(st);
   const i = partOf(M, s);
@@ -1045,8 +1083,8 @@ export function stationSite(
   const tw = part.tw ? 1 - part.tw * (0.5 + 0.5 * Math.sin(t * 0.8 + s * 1.7)) : 1;
   const drift = 0.5 + 0.5 * Math.sin(t * 0.07 + s * 0.011 + c[2] * 0.01);
   const glow = part.glow ? part.glow(u, t) : 1;
-  const b = 0.46 * k * tw * glow;
-  const w = 0.25 * drift;
+  const b = Math.min(STATION_GLOW_MAX, 0.46 * k * (1 + 0.15 * warm)) * tw * glow;
+  const w = 0.25 * drift * (1 - warm) + 0.6 * warm;
   const rgb = part.rgb;
   o[3] = (rgb[0] + (C.warm[0] - rgb[0]) * w) * b;
   o[4] = (rgb[1] + (C.warm[1] - rgb[1]) * w) * b;
@@ -1078,12 +1116,13 @@ export function stationItems(eye: Vec3, fwd: Vec3, t: number, R: number, out: It
       if (d > R) return;
       // Behind the eye, and not round it: nothing of it can be in view.
       if (rx * fwd[0] + ry * fwd[1] + rz * fwd[2] < -M.r - 10 && d > 0) return;
+      const warm = stationWarmth(i, t);
       out.push({
         d,
         gid: mixId(i * 977 + n, 4747),
         count: M.count,
         weight: 1.8,
-        site: (s, o) => stationSite(st, s, t, c, lift, o),
+        site: (s, o) => stationSite(st, s, t, c, lift, o, warm),
       });
     });
   });

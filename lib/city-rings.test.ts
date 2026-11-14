@@ -19,9 +19,12 @@ import {
   parcoursCopy,
   parcoursRings,
   parcoursSite,
+  RING_BEST_KEY,
   RING_MIN_R,
+  resetRingBest,
   resetRings,
   ringBanner,
+  ringBest,
   ringHeat,
   ringPassedBy,
   ringSets,
@@ -184,6 +187,7 @@ describe('Rings of light: the parcours high over the city (2026-11-14)', () => {
 
   it('counts the rings flown in a row for the tally, and never opens the space portals', () => {
     resetRings();
+    resetRingBest();
     resetSpace();
     const G = parcoursRings();
     // Down a stretch of the city along the curve, at about the boost's pace up there.
@@ -211,9 +215,46 @@ describe('Rings of light: the parcours high over the city (2026-11-14)', () => {
     expect(ringBanner(t + 0.2 + STREAK_WINDOW + 0.5)).toBe('');
     const h = G[20] as ParcoursRing;
     expect(ringStep(along(h, -2), along(h, 2), t + 0.2 + STREAK_WINDOW + 1)).toBe(1);
-    expect(ringBanner(t + 0.2 + STREAK_WINDOW + 1.2)).toBe('Rings 1');
+    // The new run is short of the best (the long run, and the ring flown again): it shows beside it.
+    expect(ringBanner(t + 0.2 + STREAK_WINDOW + 1.2)).toBe(`Rings 1 · best ${passes + 1}`);
     resetRings();
     expect(ringBanner(t + 0.2 + STREAK_WINDOW + 1.2)).toBe('');
+  });
+
+  it('keeps the best run in a row, shows it quietly beside a shorter one, and keeps it on the device', () => {
+    resetRings();
+    resetRingBest();
+    expect(ringBest()).toBe(0);
+    const G = parcoursRings();
+    const through = (i: number, t: number) => {
+      const g = G[i] as ParcoursRing;
+      return ringStep(along(g, -2), along(g, 2), t);
+    };
+    // Three in a row: the best is three, and the banner shows no best while the run is the best.
+    for (let i = 0; i < 3; i++) expect(through(i, 10 + i)).toBe(1);
+    expect(ringBest()).toBe(3);
+    expect(ringBanner(13)).toBe('Rings 3');
+    // A pause, then a new run of two: the best beside it.
+    expect(through(10, 30)).toBe(1);
+    expect(through(11, 31)).toBe(1);
+    expect(ringBanner(31.5)).toBe('Rings 2 · best 3');
+    // Past it, the best goes up with the run.
+    expect(through(12, 32)).toBe(1);
+    expect(through(13, 33)).toBe(1);
+    expect(ringBest()).toBe(4);
+    expect(ringBanner(33.5)).toBe('Rings 4');
+    // A fresh start forgets the run, never the best; the device keeps it for the next visit.
+    resetRings();
+    expect(ringBest()).toBe(4);
+    expect(globalThis.localStorage.getItem(RING_BEST_KEY)).toBe('4');
+    resetRingBest(false);
+    expect(ringBest()).toBe(4);
+    globalThis.localStorage.setItem(RING_BEST_KEY, 'junk');
+    resetRingBest(false);
+    expect(ringBest()).toBe(0);
+    resetRingBest();
+    expect(globalThis.localStorage.getItem(RING_BEST_KEY)).toBeNull();
+    resetRings();
   });
 
   it('flies the whole chain, a whole turn of the plan, without a portal opening', () => {
@@ -274,6 +315,7 @@ describe('Rings of light: the parcours high over the city (2026-11-14)', () => {
 
   it('shows the count beside the bar as the Ship flies through a ring', () => {
     resetSpace();
+    resetRingBest();
     const g = parcoursRings()[12] as ParcoursRing;
     let t = 900;
     setFly(true, [], 1 / 60, t);
@@ -289,6 +331,8 @@ describe('Rings of light: the parcours high over the city (2026-11-14)', () => {
     expect(tally()).toBe('Rings 1');
     expect(inSpace()).toBe(false);
     resetRings();
+    // Leaked fly state breaks the tests after: back on the route.
+    setFly(false, [], 0, 0);
   });
 
   it('draws only the nearest within sight, a modest share of the pool, thinner from the stratosphere', () => {

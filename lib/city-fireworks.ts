@@ -10,7 +10,8 @@
  * Random, but only from the time and each place's own number, so the same moment always shows
  * the same bursts (and tests are stable). Mellow, as all the City's light: the burst blooms in
  * over 0.4 s and fades softly, never white, never a flash; each spark is a grain no brighter than
- * a lit window, so nothing lights the screen.
+ * a lit window, so nothing lights the screen. A burst that would bloom into a flying station or a
+ * ring of the parcours (lib/city-skyport.ts) stays unlit: the sky's architecture is never lost in one.
  */
 
 import { fibonacciSphere, hash, type RGB, smooth, type Vec3 } from './bigbang';
@@ -19,6 +20,7 @@ import { DISTRICTS, districtAt, LANDMARKS } from './city-game';
 import { BLOCK_X, BLOCK_Z, C, GROUND, type Item, mix, mixId, scale } from './city-grid';
 import { crownKey, landmarkHeight } from './city-landmarks';
 import { RIVER_Z } from './city-rain';
+import { burstClear } from './city-skyport';
 
 /** How high the shells burst: never under this (over every roof), never over the top. */
 export const BURST_LOW = GROUND + 200;
@@ -120,6 +122,7 @@ export function burstsAt(t: number, eye: Vec3, R: number): Burst[] {
       if (!b) return;
       const age = t - b.t0;
       if (age < 0 || age >= RISE + b.life) return;
+      if (!burstClear(b.c, b.r)) return;
       if (Math.hypot(b.c[0] - eye[0], b.c[1] - eye[1], b.c[2] - eye[2]) > R) return;
       out.push(b);
     });

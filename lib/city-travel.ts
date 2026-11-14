@@ -29,6 +29,7 @@ import {
 } from './city-game';
 import { BLOCK_X, BLOCK_Z, GROUND, TILE_X, TILE_Z } from './city-grid';
 import type { MapGo } from './city-minimap';
+import { skySpot } from './city-skyport';
 
 /** Where a trip ends: the ship's position and its heading (yaw: 0 flies -z, π/2 flies -x). */
 export type TravelSpot = { pos: Vec3; yaw: number };
@@ -143,6 +144,9 @@ export function placeSpot(x: number, z: number, y: number): TravelSpot {
   return { pos: clearAt(x, h, z + 60), yaw: 0 };
 }
 
-/** Where a tap on the map leads: a quarter's start, or a place's spot. */
+/**
+ * Where a tap on the map leads: a quarter's start, a flying station or the ring parcours' start
+ * (lib/city-skyport.ts), or a place's spot.
+ */
 export const spotFor = (go: MapGo): TravelSpot =>
-  'd' in go ? quarterStart(go.d) : placeSpot(go.x, go.z, go.y);
+  'd' in go ? quarterStart(go.d) : 'sky' in go ? skySpot(go.sky) : placeSpot(go.x, go.z, go.y);
