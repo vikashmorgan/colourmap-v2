@@ -5,7 +5,7 @@
  *
  * - Chinatown's flying lanterns and jellyfish of light (lib/city-lanterns.ts).
  * - The murmurations over the whole city, parting round the ship (lib/city-flocks.ts).
- * (The Green Code quarter's rising towers are in lib/city-rise.ts, the traffic's flow in
+ * (The Matrix quarter's rising towers are in lib/city-rise.ts, the traffic's flow in
  * lib/city-flow.ts, the stars overhead in lib/city-stars.ts and lib/city-sky.ts.)
  *
  * Their budget: each is an item the plan deals grains to like any other, nearest first and thinned

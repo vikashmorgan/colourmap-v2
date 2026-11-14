@@ -23,7 +23,7 @@ import { bigItems, openBlock, studioBlockItems } from './city-big';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
 import { canyonHeight, canyonItems, canyonWallAt } from './city-canyon';
 import { carItems } from './city-cars';
-import { CODE_GREEN, CODE_TEMPO, codeSize, codeTowerItem, dataSpireItem } from './city-code';
+import { CODE_GREEN, CODE_TEMPO, codeSize, dataSpireItem } from './city-code';
 import { type Design, designFor, designHolds, designItem, studioItem } from './city-designs';
 import { dockItems, LOUNGES, PAD_R, placeDock } from './city-docks';
 import { embassyAt, embassyItems } from './city-embassy';
@@ -56,6 +56,8 @@ import {
   wrap,
 } from './city-grid';
 import { crownItem, crownKey } from './city-landmarks';
+import { highwayItems, marketBlockItems } from './city-market';
+import { matrixForm, matrixHolds, matrixTowerItem } from './city-matrix';
 import { CAR_LEN, CARS, carAt, RAIL, railAt, railCeiling, STATIONS, TRAINS } from './city-metro';
 import { besideRiver, inRiver, RIVER_Y, riverClear, riverItems } from './city-rain';
 import { codeHeight, riseClock } from './city-rise';
@@ -203,10 +205,11 @@ export const DISTRICTS: Record<DistrictId, District> = {
     signature: 'word signs: bank, bar, hotel, café',
   },
   // 2026-11-13: "do a matrix quarter in green". A mood only: our own glyphs, our own spire.
+  // 2026-11-14: named the Matrix quarter (it was the Matrix quarter); its id stays 'code'.
   code: {
     id: 'code',
     tempo: CODE_TEMPO,
-    name: 'Green Code quarter',
+    name: 'Matrix quarter',
     colour: CODE_GREEN,
     landmark: 'The data spire, code falling down its faces',
     signature: 'columns of green glyphs falling slowly down dark towers',
@@ -221,7 +224,7 @@ export const BANDS: [DistrictId, DistrictId][] = [
   ['golden', 'temples'],
   ['industrial', 'domes'],
   ['egypt', 'market'],
-  // Beyond the market, where the plan begins again: the Green Code quarter, both sides.
+  // Beyond the market, where the plan begins again: the Matrix quarter, both sides.
   ['code', 'code'],
 ];
 export const BAND_ROWS = 8;
@@ -483,7 +486,7 @@ function buildBlock(I: number, J: number, wide: boolean): Block {
       }
       break;
     case 'code': {
-      // The Green Code quarter (lib/city-code.ts): slim dark towers, code falling down their faces.
+      // The Matrix quarter (lib/city-code.ts): slim dark towers, code falling down their faces.
       shape = 'code';
       const c = codeSize(k, ave);
       [hx, hz, h] = [c.hx, c.hz, c.h];
@@ -632,6 +635,9 @@ function buildBlock(I: number, J: number, wide: boolean): Block {
     z = Z.c + Z.moved * (Z.half - nhz);
     [hx, hz] = [nhx, nhz];
   }
+  // The Matrix quarter's entrance rows (lib/city-matrix.ts): round tubes and octagons, as wide
+  // across as their narrower side, so there is room to fly round them.
+  if (wide && shape === 'code' && matrixForm(I, J) !== 'square') hx = hz = Math.min(hx, hz);
   // Under the metro, lower, so the rail and its hanging carriages clear every roof.
   if (shape === 'box' || shape === 'business' || shape === 'code')
     h = Math.max(8, Math.min(h, railCeiling(I, J)));
@@ -720,8 +726,17 @@ export function blocked(q: Vec3): boolean {
     tw.shape !== 'code'
   )
     return false;
-  // A Green Code tower's walls follow it as it rises and sinks (lib/city-rise.ts, 2026-11-14).
+  // A Matrix tower's walls follow it as it rises and sinks (lib/city-rise.ts, 2026-11-14).
   const h = tw.shape === 'code' ? codeHeight(tw.h, tw.k, riseClock()) : tw.h;
+  // Round and octagonal at the Matrix quarter's entrance: their walls are their own outline.
+  if (tw.shape === 'code') {
+    const form = matrixForm(tw.I, tw.J);
+    if (form !== 'square')
+      return (
+        q[1] <= GROUND + h + MARGIN &&
+        matrixHolds(form, q[0] - tw.x, q[2] - tw.z, tw.hx, tw.hz, MARGIN)
+      );
+  }
   return (
     q[1] <= GROUND + h + MARGIN && dx < tw.hx + MARGIN && dz < tw.hz + MARGIN && !inBore(tw, q)
   );
@@ -1936,12 +1951,12 @@ export type { WordSign };
 
 const MARKET_WORDS = ['BANK', 'BAR', 'HOTEL', 'CAFE', 'NOODLES', 'CINEMA', 'TEA', 'DREAMS'];
 const NEON_TONES: RGB[] = [C.magenta, C.cyan];
-/** The Green Code quarter's welcome, at both its mouths. */
-export const CODE_WELCOME = 'WELCOME TO THE\nGREEN CODE QUARTER';
+/** The Matrix quarter's welcome, at both its mouths. */
+export const CODE_WELCOME = 'WELCOME TO THE\nMATRIX QUARTER';
 /** The words the plan itself writes on its signs (with the districts' names), for the tests. */
 export const SIGN_STRINGS = [CODE_WELCOME, ...MARKET_WORDS, 'METRO', 'RACE'];
 /**
- * The word signs near the eye: district names at their mouths, the Green Code quarter's welcome
+ * The word signs near the eye: district names at their mouths, the Matrix quarter's welcome
  * at both of its; the city's welcome is the opening road's (`openingItems`).
  */
 function wordsNear(eye: Vec3, R: number, out: WordSign[]) {
@@ -1953,7 +1968,7 @@ function wordsNear(eye: Vec3, R: number, out: WordSign[]) {
   const px = 0.34;
   for (let n = n0; n <= n1; n++) {
     const z0 = n * TILE_Z;
-    // The Green Code quarter's welcome, over the avenue at both its mouths, in green.
+    // The Matrix quarter's welcome, over the avenue at both its mouths, in green.
     for (const [z, k] of [
       [z0 + code * BAND_ROWS * BLOCK_Z, 0],
       [z0 + TILE_Z, 1],
@@ -2654,7 +2669,7 @@ function planItems(eye: Vec3, fwd: Vec3, R: number, k: number, t: number, out: I
         o[2] = V.z0 + (s + 0.5) * gap;
         // A slow wave of light running down every street, on the city's beat.
         const wave = 0.6 + 0.4 * beat(t, 1, -(o[2] as number) / 160);
-        // The Green Code quarter's streets are lit green.
+        // The Matrix quarter's streets are lit green.
         const rgb = inCode(x, o[2] as number)
           ? CODE_GREEN
           : ave
@@ -2689,9 +2704,9 @@ function planItems(eye: Vec3, fwd: Vec3, R: number, k: number, t: number, out: I
     });
   }
 }
-/** Whether a point is in the Green Code quarter (its streets lit green). */
+/** Whether a point is in the Matrix quarter (its streets lit green). */
 const inCode = (x: number, z: number) => districtAt(x + 0.01, z) === 'code';
-/** Cars in the Green Code quarter take its green, their lights too. */
+/** Cars in the Matrix quarter take its green, their lights too. */
 const codeCars = (x: number, z: number): RGB | null => (inCode(x, z) ? CODE_GREEN : null);
 /** Sites in a landmark plaza's ring from above, and in its bright heart. */
 const PLAZA_RING = 72;
@@ -2830,8 +2845,20 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
       }
       shopWords(tw, words);
       posterItems(tw, eye, t, out);
+      // The Matrix quarter's towers (lib/city-matrix.ts): their form, blink and running lights.
       if (tw.shape === 'code')
-        out.push(codeTowerItem({ ...tw, h: codeHeight(tw.h, tw.k, t) }, eye, t, d));
+        out.push(
+          matrixTowerItem(
+            { ...tw, h: codeHeight(tw.h, tw.k, t) },
+            matrixForm(I, J),
+            eye,
+            t,
+            d,
+            ship ?? eye,
+          ),
+        );
+      // The Neon market's bridges and its few flashing signs (lib/city-market.ts).
+      if (tw.d === 'market') marketBlockItems(tw, blockTower, eye, t, NEAR, out);
       if (tw.d === 'heights' && tw.shape === 'box') {
         const B = blockTower(I + 1, J);
         if (B.shape === 'box' && B.d === 'heights') {
@@ -2992,6 +3019,8 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
   ropeItems(eye, t, NEAR, blockTower, ahead, out);
   // The Neon Canyon through the market (lib/city-canyon.ts): its walls' neon, cables, boards.
   canyonItems(eye, t, NEAR, blockTower, ahead, out);
+  // The market's flying highways, at three heights (lib/city-market.ts, lib/city-currents.ts).
+  highwayItems(eye, t, NEAR, ahead, out);
   // The Grand Avenue (lib/city-avenue.ts): its bridges, galleries, roofs, the features over it and
   // the gateways at every band's edge, on many levels above the road.
   avenueItems(eye, t, NEAR, blockTower, ahead, out);

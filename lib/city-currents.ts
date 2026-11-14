@@ -34,7 +34,18 @@ import {
   Z_HEIGHTS,
   zStreetWay,
 } from './city-flow';
-import { BLOCK_X, BLOCK_Z, GROUND, mix, nearest, TAU, TILE_I, TILE_X, wrap } from './city-grid';
+import {
+  AVENUE,
+  BLOCK_X,
+  BLOCK_Z,
+  GROUND,
+  mix,
+  nearest,
+  TAU,
+  TILE_I,
+  TILE_X,
+  wrap,
+} from './city-grid';
 
 /* ---------- street channels ---------- */
 
@@ -584,4 +595,88 @@ export function outlierGrain(
     rgb: r < 0.5 ? [0.9, 0.95, 1] : [1, 0.35, 0.3],
     light: 0.55,
   };
+}
+
+/* ---------- the Neon market's flying highways ---------- */
+
+/*
+ * 2026-11-14, the Neon Market (docs/specs/art-city.md, "Matrix quarter and Neon Market"): "ship
+ * currents as flying highways: several one-way streams of ships at clearly different heights (low,
+ * mid, high) through the market". Three levels, two streams each, every stream one way down its own
+ * street at its own level, well clear of the street channels' heights (5 to 35) and the express
+ * lanes' (112, 120); streams that cross run at different levels, so none cut through another.
+ */
+
+export type MarketLevel = 'low' | 'mid' | 'high';
+/**
+ * The highways' three heights over the street: each between two of the Neon Canyon's cable
+ * heights (lib/city-canyon.ts CABLE_YS), so a highway crossing it threads between them.
+ */
+export const MARKET_LEVELS: Record<MarketLevel, number> = { low: 20, mid: 57, high: 94 };
+
+/**
+ * A highway, tile-local: along z (`axis` 2, at x = c) or along x (`axis` 0, at z = c), from s0 to
+ * s1, one way (`sgn`), at its level's height, its ships at one speed and one spacing.
+ */
+export type MarketStream = {
+  level: MarketLevel;
+  axis: 0 | 2;
+  c: number;
+  s0: number;
+  s1: number;
+  y: number;
+  sgn: 1 | -1;
+  speed: number;
+  gap: number;
+};
+
+const MZ0 = 40 * BLOCK_Z;
+const MZ1 = 48 * BLOCK_Z;
+const stream = (
+  level: MarketLevel,
+  axis: 0 | 2,
+  c: number,
+  s0: number,
+  s1: number,
+  sgn: 1 | -1,
+  speed: number,
+  gap: number,
+): MarketStream => ({ level, axis, c, s0, s1, y: MARKET_LEVELS[level], sgn, speed, gap });
+
+export const MARKET_STREAMS: MarketStream[] = [
+  // Low, down the Neon Canyon's long run toward the Matrix quarter, and back up the street at x 104.
+  stream('low', 2, BLOCK_X, 42 * BLOCK_Z + 8, MZ1, 1, 15, 13),
+  stream('low', 2, 4 * BLOCK_X, MZ0, MZ1, -1, 13, 15),
+  // Mid, across the market along two cross streets, opposite ways.
+  stream('mid', 0, 41 * BLOCK_Z, AVENUE + 12, 6 * BLOCK_X, -1, 18, 14),
+  stream('mid', 0, 45 * BLOCK_Z, AVENUE + 12, 6 * BLOCK_X, 1, 18, 14),
+  // High, over most roofs, down x 78 and back up x 130.
+  stream('high', 2, 3 * BLOCK_X, MZ0, MZ1, 1, 22, 17),
+  stream('high', 2, 5 * BLOCK_X, MZ0, MZ1, -1, 22, 17),
+];
+
+/** How many ships fly a highway. */
+export const marketShips = (S: MarketStream) => Math.max(1, Math.floor((S.s1 - S.s0) / S.gap));
+
+/**
+ * Ship i of a highway at time t: how far along it is (tile-local, s0..s1) and how much it shows,
+ * fading in at the highway's start and out at its end. Every ship the highway's one speed, one way.
+ */
+export function marketShip(S: MarketStream, i: number, t: number): { s: number; k: number } {
+  const len = S.s1 - S.s0;
+  const n = marketShips(S);
+  const a = wrap((i * len) / n + hash(S.c + S.axis, 671) * len + S.sgn * S.speed * t, len);
+  return { s: S.s0 + a, k: smooth(Math.min(a, len - a) / 14) };
+}
+
+/** A highway's point at `s` along it, tile-local. */
+export const marketPoint = (S: MarketStream, s: number): Vec3 =>
+  S.axis === 2 ? [S.c, GROUND + S.y, s] : [s, GROUND + S.y, S.c];
+
+/** A highway's colour: warm rose low, magenta in the middle, cyan high, each leaning slowly. */
+export function marketColour(level: MarketLevel, t: number): RGB {
+  const lean = 0.5 + 0.5 * Math.sin(0.05 * t + MARKET_LEVELS[level]);
+  if (level === 'low') return mix([1, 0.55, 0.35], [1, 0.42, 0.5], lean);
+  if (level === 'mid') return mix([1, 0.3, 0.85], [0.85, 0.35, 1], lean);
+  return mix([0.35, 0.9, 1], [0.5, 0.75, 1], lean);
 }

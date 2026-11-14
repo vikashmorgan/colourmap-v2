@@ -81,7 +81,7 @@ describe('the Grand Avenue (2026-11-14: "make the main street when u go from chi
           expect(sp.x0).toBeCloseTo(-AVENUE, 0);
           expect(sp.x1).toBeCloseTo(AVENUE, 0);
           expect(sp.y).toBeLessThan(GROUND + Math.min(blockTower(-1, J).h, blockTower(0, J).h));
-          // Even as the Green Code's towers sink (lib/city-rise.ts), under their roofs.
+          // Even as the Matrix quarter's towers sink (lib/city-rise.ts), under their roofs.
           for (const I of [-1, 0]) {
             const tw = blockTower(I, J);
             if (tw.shape === 'code')
@@ -160,7 +160,7 @@ describe('the Grand Avenue (2026-11-14: "make the main street when u go from chi
 });
 
 describe('the loop, seamless (2026-11-14: "so from china town forward finish game and goes back to china town so u can go infinitely forward")', () => {
-  it('stands a gateway at every band’s edge, the first where the Green Code gives way to Chinatown', () => {
+  it('stands a gateway at every band’s edge, the first where the Matrix quarter gives way to Chinatown', () => {
     expect(GATEWAYS.length).toBe(BANDS.length);
     GATEWAYS.forEach((g, b) => {
       expect(g.z).toBe(b * BAND_ROWS * BLOCK_Z);
@@ -172,7 +172,7 @@ describe('the loop, seamless (2026-11-14: "so from china town forward finish gam
     expect(BANDS[join.to]).toEqual(['chinatown', 'chinatown']);
     const words = gatewayWords(join, 0, 0, 1).map((w) => w.text);
     expect(words).toContain('CHINATOWN');
-    expect(words).toContain('GREEN CODE');
+    expect(words).toContain('MATRIX');
     for (const g of GATEWAYS)
       for (const w of gatewayWords(g, 0, g.z, 1)) {
         expect(missingChars(w.text, 'deco')).toEqual([]);

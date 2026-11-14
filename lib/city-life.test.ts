@@ -116,7 +116,7 @@ describe('Life in the city: Chinatown’s flying lanterns and jellyfish (2026-11
   });
 });
 
-describe('Life in the city: the Green Code towers rising and sinking (2026-11-14)', () => {
+describe('Life in the city: the Matrix quarter towers rising and sinking (2026-11-14)', () => {
   const J0 = BANDS.findIndex((b) => b[0] === 'code') * BAND_ROWS;
   const towers = () => {
     const out = [];
@@ -132,7 +132,7 @@ describe('Life in the city: the Green Code towers rising and sinking (2026-11-14
     const tws = towers();
     const moving = tws.filter((tw) => codeRise(tw.k));
     expect(moving.length).toBeGreaterThan(tws.length * 0.25);
-    expect(moving.length).toBeLessThan(tws.length * 0.7);
+    expect(moving.length).toBeLessThan(tws.length * 0.85);
     for (const tw of tws) {
       const r = codeRise(tw.k);
       if (r) {

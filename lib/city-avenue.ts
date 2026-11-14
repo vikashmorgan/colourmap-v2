@@ -1,7 +1,7 @@
 /*
  * The Grand Avenue of the City of Dreams (docs/specs/art-city.md, "The Grand Avenue"): the main
  * avenue down the middle of the plan, given its own design in every quarter it runs through, on
- * many levels above the street, and a gateway at every band's edge so the plan's turn (Green Code
+ * many levels above the street, and a gateway at every band's edge so the plan's turn (Matrix
  * back into Chinatown) flows on without a seam.
  *
  * 2026-11-14: "make the main street when u go from chinatown start forward forever unique. on
@@ -161,7 +161,7 @@ const CODE_PALE = mix(CODE_GREEN, C.white, 0.45);
 /**
  * The seven designs, band by band down the plan (lib/city-game.ts BANDS): Chinatown, the Indian
  * quarter and Istanbul, the Heights and the Canals, the golden gardens and the temples, the
- * industrial quarter and the domes, Egypt and the Neon market, the Green Code.
+ * industrial quarter and the domes, Egypt and the Neon market, the Matrix quarter.
  */
 export const AVENUE_STYLES: BandStyle[] = [
   {
@@ -268,7 +268,7 @@ export const AVENUE_STYLES: BandStyle[] = [
   {
     // Code bridges with glyphs running along them, glyph ledges up the towers, landing pads, and a
     // cascade of glyph columns hanging from a lattice high over the avenue.
-    name: 'GREEN CODE',
+    name: 'MATRIX',
     hues: [CODE_GREEN, CODE_GREEN],
     lamp: CODE_PALE,
     spans: [30, 46, 62, 80],
@@ -512,12 +512,12 @@ export function avenueSpans(m: number, J: number, towerAt: (I: number, J: number
 }
 const solid = (tw: AvenueTower) => tw.shape === 'box' || tw.shape === 'code';
 /**
- * The lowest a tower stands: a Green Code tower that rises and sinks (lib/city-rise.ts) at the
+ * The lowest a tower stands: a Matrix tower that rises and sinks (lib/city-rise.ts) at the
  * bottom of its cycle, so the bridges and galleries on it never stand over its roof.
  */
 const lowest = (tw: AvenueTower) =>
   tw.shape === 'code' ? tw.h * (1 - (codeRise(tw.k)?.drop ?? 0)) : tw.h;
-/** A roof's parts riding up and down with a Green Code tower as it rises and sinks. */
+/** A roof's parts riding up and down with a Matrix tower as it rises and sinks. */
 const riding = (tw: AvenueTower, parts: Part[]): Part[] =>
   tw.shape !== 'code' || !codeRise(tw.k)
     ? parts
@@ -1966,7 +1966,7 @@ export const GATE_LINTELS = [34, 64, 94];
 export type Gateway = { z: number; from: number; to: number };
 /**
  * The gateways (2026-11-14: "make it a loop ... so u can go infinitely forward"): one at each of
- * the seven band edges, the first (z = 0) the join where the plan turns, the Green Code giving way
+ * the seven band edges, the first (z = 0) the join where the plan turns, the Matrix quarter giving way
  * to Chinatown again.
  */
 export const GATEWAYS: Gateway[] = Array.from({ length: BANDS_N }, (_, b) => ({
@@ -1982,7 +1982,7 @@ const meanHue = (b: number) => {
 /**
  * A gateway's parts: two pylons rising from the cross street's corners, three lintels, a crown
  * arching over the avenue, their light drifting between the two quarters' hues; where Chinatown is
- * one side, a flared roof on the crown and two great lanterns; where the Green Code is, glyphs
+ * one side, a flared roof on the crown and two great lanterns; where the Matrix quarter is, glyphs
  * falling down the pylons; else a ring in the crown.
  */
 function gatewayParts(g: Gateway, xc: number, z: number): Part[] {
