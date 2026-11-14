@@ -59,6 +59,7 @@ import {
   VIEW_NAMES,
   viewIndex,
 } from '@/lib/city-cockpit';
+import { CITY_FAR } from '@/lib/city-far';
 import { setCityQuality } from '@/lib/city-game';
 import { loadShip, SHIP_NAMES, setShip, shipIndex } from '@/lib/city-ships';
 
@@ -77,6 +78,9 @@ const TRIP: Trip = {
   camera,
   fade,
   wordsShown,
+  // The far city on a computer: one tile built once, drawn by the GPU round the eye out to 2,600
+  // (2026-11-14: "what stops u from increasing field depth of vision 5 times on computer?").
+  farLayer: CITY_FAR,
   // A deep blue-violet dawn first, warm low down, so the golden city's gold stands out; then the
   // violet night, black, a deeper night and a dusk.
   backgrounds: [
