@@ -11,6 +11,7 @@ import {
   openBlock,
   studioBlockHeight,
 } from './city-big';
+import { BUILDING_SPOTS, buildingAt, buildingModel, newBuildingItems } from './city-buildings-15';
 import {
   BURST_HIGH,
   BURST_LOW,
@@ -294,3 +295,87 @@ describe('fireworks (2026-11-14: "they pop at random. in the colours of the quar
     expect(fireworkItems([eye[0], eye[1], eye[2] + TILE_Z / 2], 10, 50).length).toBeLessThan(3);
   });
 });
+
+describe('fifteen new buildings (2026-11-14: "MAKE 15 MORE OF THEM AND ADD THEM TO THE CITY")', () => {
+  it('names fifteen, each in its own quarter’s colour, one or two to a quarter', () => {
+    expect(BUILDING_SPOTS).toHaveLength(15);
+    expect(new Set(BUILDING_SPOTS.map((b) => b.name)).size).toBe(15);
+    const per = new Map<string, number>();
+    for (const b of BUILDING_SPOTS) {
+      const [x, z] = buildingAt(b);
+      expect(districtAt(x, z)).toBe(b.d);
+      expect(b.hue).toEqual(DISTRICTS[districtAt(x, z)].colour);
+      per.set(b.d, (per.get(b.d) ?? 0) + 1);
+    }
+    expect(per.size).toBe(Object.keys(DISTRICTS).length);
+    for (const n of per.values()) expect(n).toBeLessThanOrEqual(2);
+  });
+
+  it('stands each on an open block of its own: off the avenue, the rail, the races, the squares', () => {
+    for (const b of BUILDING_SPOTS) {
+      const tw = blockTower(b.I, b.J);
+      expect(tw.shape).toBe('plaza');
+      expect(b.I === 0 || b.I === -1).toBe(false);
+      expect(railCeiling(b.I, b.J)).toBe(Number.POSITIVE_INFINITY);
+      const [x, z] = buildingAt(b);
+      for (const T of TRACKS)
+        for (const g of [T.start, ...T.gates])
+          expect(Math.hypot(g[0] - x, g[2] - z)).toBeGreaterThan(30);
+      for (const L of LANDMARKS) expect(Math.hypot(L.x - x, L.z - z)).toBeGreaterThan(60);
+      for (const q of BIG_SQUARES)
+        expect(Math.abs(q.x - x) > BLOCK_X || Math.abs(q.z - z) > BLOCK_Z).toBe(true);
+      // Never two side by side.
+      for (const c of BUILDING_SPOTS)
+        if (c !== b) expect(Math.abs(c.I - b.I) > 1 || Math.abs(c.J - b.J) > 1).toBe(true);
+      // Light: the Ship flies through.
+      for (const y of [10, 60, 120]) expect(blocked([x, GROUND + y, z])).toBe(false);
+    }
+  });
+
+  it('towers over its quarter, on its block, finite and mellow', () => {
+    const o = [0, 0, 0, 0, 0, 0];
+    for (const b of BUILDING_SPOTS) {
+      const M = buildingModel(b);
+      expect(M.top).toBeGreaterThanOrEqual(125);
+      for (let I = b.I - 3; I <= b.I + 3; I++)
+        for (let J = b.J - 3; J <= b.J + 3; J++) {
+          const tw = blockTower(I, J);
+          if (tw.d === b.d) expect(tw.h).toBeLessThan(M.top);
+        }
+      const [x, z] = buildingAt(b);
+      const it = itemOf(b, x, z);
+      let top = Number.NEGATIVE_INFINITY;
+      for (let s = 0; s < M.count; s++) {
+        expect(it.site(s, o)).toBe(true);
+        top = Math.max(top, (o[1] as number) - GROUND);
+        expect(Math.abs((o[0] as number) - x)).toBeLessThan(BLOCK_X / 2 + 3);
+        expect(Math.abs((o[2] as number) - z)).toBeLessThan(BLOCK_Z / 2 + 3);
+        for (const c of o.slice(3)) {
+          expect(c).toBeGreaterThanOrEqual(0);
+          expect(c).toBeLessThan(0.5);
+        }
+      }
+      expect(top).toBeGreaterThan(M.top - 12);
+      expect(top).toBeLessThan(M.top + 1);
+      expect(M.count).toBeGreaterThan(700);
+    }
+  });
+
+  it('is drawn from 300 away', () => {
+    const b = BUILDING_SPOTS[6] as (typeof BUILDING_SPOTS)[number];
+    const [x, z] = buildingAt(b);
+    const out: ReturnType<typeof gameItems> = [];
+    newBuildingItems([x, GROUND + 20, z - 300], 2, 340, () => true, out);
+    expect(out.some((it) => it.d < 320 && it.count === buildingModel(b).count)).toBe(true);
+  });
+});
+
+/** New building b standing at (x, z), as the Ship's item, seen from 100 off. */
+function itemOf(b: (typeof BUILDING_SPOTS)[number], x: number, z: number) {
+  const out: ReturnType<typeof gameItems> = [];
+  newBuildingItems([x, GROUND + 20, z - 100], 5, 340, () => true, out);
+  const M = buildingModel(b);
+  const it = out.find((i) => i.count === M.count && Math.abs((i.probe?.[0]?.[0] ?? 0) - x) < 1e-6);
+  if (!it) throw new Error(`${b.name} not drawn`);
+  return it;
+}

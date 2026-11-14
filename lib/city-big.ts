@@ -15,6 +15,7 @@
  */
 
 import { makeParticles, type Particle, type RGB, type Vec3 } from './bigbang';
+import { BUILDING_SPOTS, newBuildingItems } from './city-buildings-15';
 import { quarterPalette } from './city-designs';
 import {
   BLOCK_X,
@@ -86,7 +87,7 @@ export function openBlock(I: number, J: number): boolean {
     const cj = Math.round(q.z / BLOCK_Z);
     if ((li === ci - 1 || li === ci) && (lj === cj - 1 || lj === cj)) return true;
   }
-  return false;
+  return BUILDING_SPOTS.some((b) => b.I === li && b.J === lj);
 }
 
 /* ---------- meshes, stretched ---------- */
@@ -205,7 +206,7 @@ export function copiesNear(
   }
 }
 
-/** The big squares' temples, domes and Nova Cores within sight. */
+/** The big squares' temples, domes and Nova Cores within sight, and the fifteen new buildings. */
 export function bigItems(
   eye: Vec3,
   t: number,
@@ -215,6 +216,7 @@ export function bigItems(
   out: Item[],
   lift = 1,
 ) {
+  newBuildingItems(eye, t, R, ahead, out, lift);
   BIG_SQUARES.forEach((q, qi) => {
     copiesNear(q.x, q.z, eye, R, (x, z, n) => {
       const st = BIG_STRETCH[q.kind];

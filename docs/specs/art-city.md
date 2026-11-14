@@ -1254,10 +1254,36 @@ much bigger, stretched to 0.8 across and 3.6 up (they stood at 0.72), so 27 to 7
 quarters whose towers stand 12 to 34; drawn out to the whole view (to 420), not only near (from
 high up the plan stands for them).
 
-**Flying through.** All of it is light, as the Studio's other additions are: the plazas and big
-squares are open ground (no tower, nothing holds the Ship), so you fly through every crown, under
-the moon arches and through the floating ring. Nothing reaches the avenue (every crown and square
-stands 30 and more off it), so the autopilot's route and the race courses are untouched (tested).
+**Fifteen new buildings** (`lib/city-buildings-15.ts`), one or two to every quarter, each on a
+block of its own kept open for it (off the avenue, out from under the metro, no race gate within
+30, no landmark within 60, never on a big square, never two side by side), slim and tall (125 to
+176 high, within 12 of their axis) in their quarter's colour, a lighter and a deeper shade:
+
+| Building | Quarter (block) | High | Form |
+|----------|-----------------|------|------|
+| Lantern Spindle | Chinatown (5, 1) | 156 | seven six-sided lanterns threaded up a gold spindle |
+| Lotus Stair | Indian quarter (−2, 10) | 144 | twelve petal terraces turning up round a column |
+| Crescent Needle | Istanbul (1, 14) | 162 | a tapering needle, three crescents standing round it, each turned |
+| Helix Exchange | The Heights (−5, 18) | 176 | two strands winding up, rungs between them |
+| Lily Bell | The Canals (2, 18) | 132 | a slim stem opening into a tall flared cup, water light at its foot |
+| Hourglass Tower | The Canals (4, 17) | 155 | straight lines between two turned rings make its waist |
+| Sunleaf Column | Golden gardens (−5, 26) | 150 | leaves fanning out at nine levels, a gold sun on top |
+| Halo Stack | Golden gardens (−2, 29) | 145 | seven tilted halos round a slender column, turning slowly |
+| Ivory Echo | Temple quarter (2, 25) | 157 | square frames rising, each smaller and turned a step more |
+| Cog Tower | Industrial quarter (−2, 33) | 152 | nine gears on a shaft, turning very slowly, each the other way |
+| Vertebra Tower | Industrial quarter (−5, 39) | 155 | discs stacked up a spine swaying in a gentle S |
+| Seed Pod | Solarpunk domes (1, 37) | 145 | four tall lattice pods up a stalk, a glowing seed in each |
+| Sunboat Mast | Egyptian quarter (−6, 44) | 161 | a tapering mast carrying a crescent boat and a sun |
+| Neon Prism | Neon market (4, 45) | 158 | a triangular tower twisting a third round as it rises |
+| Cascade Monolith | Green Code quarter (5, 53) | 150 | six slabs stacked and set back, light falling down them |
+
+Each is 900 to 2,200 sites (weight 1.5), drawn out to the whole view, seen over the towers by
+probes high on it.
+
+**Flying through.** All of it is light, as the Studio's other additions are: the plazas, the big
+squares and the fifteen's blocks are open ground (no tower, nothing holds the Ship), so you fly
+through every crown and new building, under the moon arches and through the floating ring.
+Nothing reaches the avenue (every crown, square and new building stands 25 and more off it), so the autopilot's route and the race courses are untouched (tested).
 
 **Fireworks** (`lib/city-fireworks.ts`). Over every landmark and big square, the three canals and
 either side of the river (26 places a tile; the Ship's game has no canyon, so the river stands in
@@ -1282,8 +1308,8 @@ place's number: the same moment always shows the same bursts.
 
 - The Studio's domes, minarets and spires on the box towers are light: you fly through them (the
   towers, pyramids, the twenty and the code towers hold you). Sky bridges and the metro are light
-  too. So are the landmarks' tall crowns, the big squares and the Studio's buildings on the
-  blocks (2026-11-14).
+  too. So are the landmarks' tall crowns, the big squares, the fifteen new buildings and the
+  Studio's buildings on the blocks (2026-11-14).
 - The Canals and the Neon market still have no landmark of their own; the big squares are only in
   the landmarks' columns; the Studio's meshes are stretched upward rather than redrawn tall.
 - The Deep Line has no race of its own yet (the tracks are one a quarter), and no side branches.
