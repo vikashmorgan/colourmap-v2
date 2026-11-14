@@ -87,7 +87,8 @@ export const LANDMARK_CLEAR = 32;
 
 /* ---------- flying lanterns ---------- */
 
-export const FLY_LANTERNS = 64;
+/** 44 a stretch (2026-11-14: "too overloaded with panels and lampions"; there were 64). */
+export const FLY_LANTERNS = 44;
 const LANTERN_SITES = 22;
 
 /**

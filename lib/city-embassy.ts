@@ -59,10 +59,16 @@ export type Embassy = {
   pad: PadDesign;
 };
 
+/*
+ * 2026-11-14 (the racing corridors, lib/city-corridors.ts): the three stood on the blocks beside the
+ * streets at x = ±78, which open to 24 across now; each moved one block out, away from the avenue,
+ * to a block of its own quarter off the metro and the river (Lotus from column -4, Hanging Gardens
+ * from block 3, 14 and Prism from block 2, 42).
+ */
 export const EMBASSIES: Embassy[] = [
   {
     design: 'Lotus',
-    li: -4,
+    li: -5,
     lj: 30,
     hx: 9,
     hz: 9,
@@ -73,8 +79,8 @@ export const EMBASSIES: Embassy[] = [
   },
   {
     design: 'Hanging Gardens',
-    li: 3,
-    lj: 14,
+    li: 4,
+    lj: 11,
     hx: 9,
     hz: 11,
     h: 38,
@@ -84,8 +90,8 @@ export const EMBASSIES: Embassy[] = [
   },
   {
     design: 'Prism',
-    li: 2,
-    lj: 42,
+    li: 4,
+    lj: 46,
     hx: 9,
     hz: 10,
     h: 30,
