@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DOCKS } from './city-docks';
 import { EMBASSIES } from './city-embassy';
 import { DISTRICTS, type DistrictId, LANDMARKS } from './city-game';
-import { TILE_I, TILE_J, TILE_X, TILE_Z } from './city-grid';
+import { PLAN_X0, STRIP_I, TILE_J, TILE_X, TILE_Z } from './city-grid';
 import {
   boxesOverlap,
   cityMapData,
@@ -41,7 +41,9 @@ describe('the map of the City of Dreams', () => {
     expect(m.length).toBe(TILE_Z);
     const ids = new Set(m.districts.map((d) => d.id));
     for (const id of Object.keys(DISTRICTS) as DistrictId[]) expect(ids.has(id)).toBe(true);
-    expect(m.blocks).toHaveLength(TILE_I * TILE_J);
+    // A block per plot of the strip; the annex beside it (2026-11-14) is drawn as its contours.
+    expect(m.blocks).toHaveLength(STRIP_I * TILE_J);
+    expect(m.x0).toBe(PLAN_X0);
     expect(m.roads.filter((r) => r.main).length).toBeGreaterThanOrEqual(10);
     const names = m.places.map((p) => p.name);
     expect(m.places.filter((p) => p.kind === 'landmark')).toHaveLength(LANDMARKS.length);
@@ -50,7 +52,8 @@ describe('the map of the City of Dreams', () => {
     for (const t of TRACKS) expect(names).toContain(t.name);
     expect(m.places.filter((p) => p.kind === 'station')).toHaveLength(4);
     for (const p of m.places) {
-      expect(Math.abs(p.x)).toBeLessThanOrEqual(TILE_X / 2);
+      expect(p.x).toBeGreaterThanOrEqual(PLAN_X0);
+      expect(p.x).toBeLessThanOrEqual(PLAN_X0 + TILE_X);
       expect(p.z).toBeGreaterThanOrEqual(0);
       expect(p.z).toBeLessThanOrEqual(TILE_Z);
     }
@@ -95,8 +98,8 @@ describe('the map of the City of Dreams', () => {
     expect(t1).toBeLessThan(t0 - 10);
     // The whole tile fits the screen, the long way up a tall one.
     for (const [px, pz] of [
-      [-TILE_X / 2, 0],
-      [TILE_X / 2, TILE_Z],
+      [PLAN_X0, 0],
+      [PLAN_X0 + TILE_X, TILE_Z],
     ]) {
       const [sx, sy] = projectMap(flat, w, h, px as number, 0, pz as number);
       expect(sx).toBeGreaterThanOrEqual(0);
@@ -112,7 +115,7 @@ describe('the map of the City of Dreams', () => {
     const v = clampMapView({ tilt: 3, yaw: 1, zoom: 100, cx: 1e5, cz: -1e5 });
     expect(v.tilt).toBeLessThanOrEqual(1.3);
     expect(v.zoom).toBeLessThanOrEqual(12);
-    expect(v.cx).toBe(TILE_X / 2);
+    expect(v.cx).toBe(PLAN_X0 + TILE_X);
     expect(v.cz).toBe(0);
   });
 

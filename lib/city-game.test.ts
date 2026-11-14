@@ -82,8 +82,9 @@ describe('the game city: its plan', () => {
 
   it('lays out six bands of districts, a district each side of the avenue, the same every time', () => {
     expect(BANDS).toHaveLength(TILE_J / 8);
+    // Every district in a band, but the annex's two beside the strip (2026-11-14).
     const seen = new Set(BANDS.flat());
-    expect(seen.size).toBe(Object.keys(DISTRICTS).length);
+    expect(seen.size).toBe(Object.keys(DISTRICTS).length - 2);
     for (let J = 0; J < TILE_J; J++) {
       const band = BANDS[Math.floor(J / 8)] as [string, string];
       expect(districtOf(-1, J)).toBe(band[0]);

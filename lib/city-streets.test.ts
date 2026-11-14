@@ -26,7 +26,7 @@ import {
   towerSigns,
   walkwaysNear,
 } from './city-game';
-import { BLOCK_X, BLOCK_Z, GROUND, TILE_J, WIDE_FACTOR, wideLine } from './city-grid';
+import { BLOCK_X, BLOCK_Z, GROUND, TILE_I, TILE_J, WIDE_FACTOR, wideLine } from './city-grid';
 import { boardsOn, type WordSign } from './city-signs';
 import { THROUGH } from './city-under';
 
@@ -81,7 +81,8 @@ describe('the wider streets (2026-11-14: "make a lot of the thin streets larger"
   it('widens every other side street both ways, each at least 1.6 times as wide as it was', () => {
     expect(WIDE_FACTOR).toBeGreaterThanOrEqual(1.6);
     // Along z the even lines but the avenue's; across x the odd ones: a rhythm both ways.
-    expect([1, 2, 3, 4, 6, 12].map((I) => wideLine(2, I))).toEqual([
+    // (The avenue's line comes round every TILE_I.)
+    expect([1, 2, 3, 4, 6, TILE_I].map((I) => wideLine(2, I))).toEqual([
       false,
       true,
       false,
@@ -91,7 +92,9 @@ describe('the wider streets (2026-11-14: "make a lot of the thin streets larger"
     ]);
     expect([0, 1, 2, 3, -1].map((J) => wideLine(0, J))).toEqual([false, true, false, true, true]);
     const wide = ALL.filter((s) => wideLine(s.axis, s.line) && movable(s.A) && movable(s.B));
-    expect(wide.filter((s) => s.axis === 2).length).toBeGreaterThan(60);
+    // (2026-11-14: the strip's +x edge street now borders the open annex, no towers across it, so
+    // its stretches along z no longer count: some fifty along z, as many again across.)
+    expect(wide.filter((s) => s.axis === 2).length).toBeGreaterThan(45);
     expect(wide.filter((s) => s.axis === 0).length).toBeGreaterThan(60);
     let sum = 0;
     for (const s of wide) {

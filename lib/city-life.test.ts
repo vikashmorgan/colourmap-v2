@@ -25,7 +25,7 @@ import {
   zStreetWay,
 } from './city-flow';
 import { BAND_ROWS, BANDS, blocked, blockTower, LANDMARKS, MARGIN } from './city-game';
-import { BLOCK_X, BLOCK_Z, GROUND, type Item, TILE_I, TILE_Z } from './city-grid';
+import { BLOCK_X, BLOCK_Z, GROUND, type Item, STRIP_I, TILE_Z } from './city-grid';
 import {
   chinatownSkyItems,
   FLY_LANTERNS,
@@ -121,7 +121,7 @@ describe('Life in the city: the Matrix quarter towers rising and sinking (2026-1
   const towers = () => {
     const out = [];
     for (let J = J0; J < J0 + BAND_ROWS; J++)
-      for (let I = -TILE_I / 2; I < TILE_I / 2; I++) {
+      for (let I = -STRIP_I / 2; I < STRIP_I / 2; I++) {
         const tw = blockTower(I, J);
         if (tw.shape === 'code') out.push(tw);
       }

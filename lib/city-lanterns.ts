@@ -27,6 +27,7 @@ import {
   mix,
   mixId,
   nearest,
+  STRIP_X,
   scale,
   TAU,
   TILE_X,
@@ -71,7 +72,8 @@ function floorOver(key: number, x: number, z: number, clear: number): number {
  * from the stretch's ends so all its drift stays over Chinatown.
  */
 function home(n: number, j: number, salt: number, ox: number, m: number): [number, number] {
-  let x = (hash(j, salt) - 0.5) * (TILE_X - 24);
+  // Across the strip (2026-11-14: the tile is wider now, the annex beside it).
+  let x = (hash(j, salt) - 0.5) * (STRIP_X - 24);
   const z = m + hash(j, salt + 1) * (CT_LEN - 2 * m);
   // Clear of Chinatown's landmarks (the lantern tower over the pagoda, the race plaza's arches),
   // which stand tall on their crossings: moved forty aside.
@@ -246,7 +248,7 @@ function jellySite(
 export function chinatownSkyItems(eye: Vec3, t: number, out: Item[]) {
   const R = Math.min(viewAt(eye[1]), 420);
   const ox = nearest(0, eye[0], TILE_X);
-  if (Math.abs(eye[0] - ox) > TILE_X / 2 + R) return;
+  if (Math.abs(eye[0] - ox) > STRIP_X / 2 + R) return;
   for (let n = Math.floor((eye[2] - R - CT_LEN) / TILE_Z); n * TILE_Z <= eye[2] + R; n++) {
     const z0 = n * TILE_Z;
     if (eye[2] < z0 - R || eye[2] > z0 + CT_LEN + R) continue;
