@@ -29,9 +29,13 @@ import {
 } from './city-game';
 import { BLOCK_X, BLOCK_Z, GROUND, TILE_X, TILE_Z } from './city-grid';
 import type { MapGo } from './city-minimap';
+import { ATLANTIS_NAME, MOUTH, SPEEDWAY_NAME } from './city-speedway';
 
-/** Where a trip ends: the ship's position and its heading (yaw: 0 flies -z, π/2 flies -x). */
-export type TravelSpot = { pos: Vec3; yaw: number };
+/**
+ * Where a trip ends: the ship's position and its heading (yaw: 0 flies -z, π/2 flies -x); with
+ * `realm`, on through the speedway's gate it lands at, into Atlantis.
+ */
+export type TravelSpot = { pos: Vec3; yaw: number; realm?: 'atlantis' };
 /** A quarter's start: its district, its name, and the point it looks at (tile-local x, z). */
 export type QuarterStart = TravelSpot & { d: DistrictId; name: string; view: [number, number] };
 
@@ -143,6 +147,21 @@ export function placeSpot(x: number, z: number, y: number): TravelSpot {
   return { pos: clearAt(x, h, z + 60), yaw: 0 };
 }
 
-/** Where a tap on the map leads: a quarter's start, or a place's spot. */
-export const spotFor = (go: MapGo): TravelSpot =>
-  'd' in go ? quarterStart(go.d) : placeSpot(go.x, go.z, go.y);
+/**
+ * The speedway's start (2026-11-14): over the avenue some 50 short of the mouth, at 60, facing
+ * north up the lane; and Atlantis: the same road's gate, on through it to Atlantis's arrival.
+ */
+export const SPEEDWAY_SPOT: TravelSpot = { pos: [0, GROUND + 60, MOUTH.zIn + 50], yaw: 0 };
+export const ATLANTIS_SPOT: TravelSpot = {
+  pos: [0, GROUND + 60, MOUTH.zGate + 4],
+  yaw: 0,
+  realm: 'atlantis',
+};
+
+/** Where a tap on the map leads: a quarter's start, the speedway, Atlantis, or a place's spot. */
+export const spotFor = (go: MapGo): TravelSpot => {
+  if ('d' in go) return quarterStart(go.d);
+  if (go.name === SPEEDWAY_NAME) return SPEEDWAY_SPOT;
+  if (go.name === ATLANTIS_NAME) return ATLANTIS_SPOT;
+  return placeSpot(go.x, go.z, go.y);
+};

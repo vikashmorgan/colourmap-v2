@@ -41,6 +41,7 @@ import {
 import { RAIL, STATIONS } from './city-metro';
 import { TRACKS } from './city-race';
 import { OPENING } from './city-signs';
+import { SPEEDWAY_PLACES } from './city-speedway';
 import { DEEP_MOUTHS, tunnelLines } from './city-under';
 
 /* ---------- the data ---------- */
@@ -311,6 +312,8 @@ export const tileLocal = (x: number, z: number): [number, number] => [
 ];
 // Filled once tileLocal is defined: the docks and embassies join the plan's places.
 MAP_EXTRAS.push(...dockAndEmbassyPlaces());
+// The speedway's mouth at the plan's north end, and Atlantis beyond it (lib/city-speedway.ts).
+MAP_EXTRAS.push(...SPEEDWAY_PLACES);
 
 /** Your ship's heading on the map, radians: 0 up the avenue (-z), round to the right. */
 export const mapHeading = (f: Vec3) => Math.atan2(f[0], -f[2]);

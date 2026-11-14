@@ -44,6 +44,14 @@ import {
   smooth,
   type Vec3,
 } from './bigbang';
+import {
+  ATL_CEIL,
+  ATL_REACH,
+  atlantisItems,
+  edgePull,
+  realmBlocked,
+  realmCeiling,
+} from './city-atlantis-rings';
 import { BUILDINGS, buildingsEye } from './city-buildings';
 import { camView, cockpitEye, toggleView } from './city-cockpit';
 import {
@@ -108,7 +116,7 @@ import {
   quarterShipGrain,
   swarmSeen,
 } from './city-quarter-ships';
-import { raceBanner, raceStep, resetRace, rival, trackItems } from './city-race';
+import { race, raceBanner, raceStep, resetRace, rival, trackItems } from './city-race';
 import { codeHeight, riseClock, setRiseClock } from './city-rise';
 import {
   currentRoom,
@@ -122,6 +130,14 @@ import {
   roomSeeThrough,
   roomStep,
 } from './city-rooms';
+import {
+  moteGrain,
+  resetSchool,
+  schoolJoin,
+  sharkGrain,
+  sharkStep,
+  sharksShowing,
+} from './city-sharks';
 import {
   currentShip,
   engineCut,
@@ -148,6 +164,23 @@ import {
   spaceSky,
   tunnelStep,
 } from './city-space';
+import {
+  ARRIVAL_Z,
+  arrivalStep,
+  enterAtlantis,
+  gateNear,
+  inAtlantis,
+  LANE_LEN,
+  LANE_TOP,
+  laneItems,
+  leaveAtlantis,
+  mouthCrossed,
+  mouthItems,
+  pushAt,
+  speedwayStep,
+  toLocal,
+  toWorld,
+} from './city-speedway';
 import { borrowShare, extraStarSpot, lookUp, STAR_BORROW } from './city-stars';
 import { clearTrail, makeTrail, pushTrail, trailGrain } from './city-trail';
 import { hopFrom, nearestCopy, type TravelSpot } from './city-travel';
@@ -2071,7 +2104,12 @@ export function route(t: number): { c: Vec3; f: Vec3 } {
 }
 
 /** The ceiling now: over every tower, or the stratosphere while the super boost lasts. */
-const ceiling = () => (fly.high ? STRATOSPHERE : SKY);
+const ceiling = () =>
+  inAtlantis() ? realmCeiling(fly.pos, LANE_TOP) : fly.high ? STRATOSPHERE : SKY;
+/** The floor under a point: the street (or a canal's bed), or Atlantis's ground. */
+const floorHere = (x: number, z: number) => (inAtlantis() ? GROUND : floorAt(x, z));
+/** Whether a point is in a wall: the city's, or Atlantis's (the lane's walls, its towers, domes). */
+const wallAt = (q: Vec3) => (inAtlantis() ? realmBlocked(q) : blocked(q));
 
 /**
  * Forward at the ship's pace (and up or down at the super boost's); a wall in the way, slide along
@@ -2083,7 +2121,7 @@ function move(dt: number): number {
   const f = headingOf(fly.yaw, fly.pitch);
   const next: Vec3 = add(was, f, fly.speed * dt);
   next[1] += fly.vy * dt;
-  next[1] = Math.max(floorAt(next[0], next[2]) + 2, Math.min(ceiling(), next[1]));
+  next[1] = Math.max(floorHere(next[0], next[2]) + 2, Math.min(ceiling(), next[1]));
   const tries: Vec3[] = [
     next,
     [next[0], next[1], was[2]],
@@ -2094,7 +2132,7 @@ function move(dt: number): number {
     [next[0], was[1], was[2]],
     [was[0], was[1], next[2]],
   ];
-  fly.pos = tries.find((q) => !blocked(q)) ?? was;
+  fly.pos = tries.find((q) => !wallAt(q)) ?? was;
   // What the wall took from the move along the ground, and which side of the ship it stands.
   const lx = next[0] - fly.pos[0];
   const lz = next[2] - fly.pos[2];
@@ -2188,6 +2226,8 @@ function afresh() {
   fly.travel = null;
   leaveRoom();
   resetSpace();
+  leaveAtlantis();
+  resetSchool();
   fly.dock = null;
   fly.mode = 'route';
   fly.high = false;
@@ -2270,7 +2310,9 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   // [ and ] while flying: a hop to the quarter before, or the next (2026-11-14).
   const hop = active && !inRoom() && !inSpace() ? hopKey : 0;
   if (hop !== 0 && !fly.travel) {
-    const { c } = flier(t);
+    const { c: at } = flier(t);
+    // From Atlantis, the quarters round the gate you came in by.
+    const c = inAtlantis() ? toWorld(at) : at;
     travelTo(hopFrom(c[0], c[2], hop));
   }
   // A fast trip under way: the ship carried there, the keys waiting till it lands.
@@ -2293,13 +2335,19 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     spaceFly(active, keys, dt, t);
     return;
   }
+  // On Atlantis's ground (lib/city-speedway.ts): its own walls, no races, docks or portals.
+  const realm = inAtlantis();
   // A Green Code tower rising under the ship lifts it with its roof, never through it (2026-11-14).
-  if (fly.mode !== 'route') fly.pos = liftOver(fly.pos);
+  if (fly.mode !== 'route' && !realm) fly.pos = liftOver(fly.pos);
   if (!active) {
     glowStep(false, dt);
-    raceStep({ active: false, pos: fly.pos, enter: false, t });
+    if (!realm) raceStep({ active: false, pos: fly.pos, enter: false, t });
     if (fly.mode === 'pilot') startCarryingOn();
-    if (fly.mode === 'drift') carryOn(dt, t);
+    if (fly.mode === 'drift') {
+      if (realm) atlantisDrift(dt);
+      else carryOn(dt, t);
+    }
+    if (inAtlantis()) leaveIfBack();
     after(dt, t);
     return;
   }
@@ -2328,7 +2376,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   const up = held('w', 'arrowup');
   const down = held('s', 'arrowdown');
   let tilt = ((up ? 0.55 : 0) - (down ? 0.55 : 0)) * Math.min(1.4, hd.climb);
-  if (fly.pos[1] <= floorAt(fly.pos[0], fly.pos[2]) + 2.5 && tilt < 0) tilt = 0;
+  if (fly.pos[1] <= floorHere(fly.pos[0], fly.pos[2]) + 2.5 && tilt < 0) tilt = 0;
   if (fly.pos[1] >= ceiling() && tilt > 0) tilt = 0;
   // Slow mode levels out unless you climb or dive.
   fly.pitch += (tilt - fly.pitch) * (1 - Math.exp(-2.5 * dt));
@@ -2337,7 +2385,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   glowStep(boosting, dt, hyper);
   // The super boost: boost and climb together, and you go on up into the stratosphere; up there,
   // W climbs on and S dives back down, fast; below the towers' sky you fly as before.
-  if (boosting && up) fly.high = true;
+  if (boosting && up && !realm) fly.high = true;
   if (fly.high) {
     const want = up ? SUPER_CLIMB : down ? -SUPER_CLIMB : 0;
     fly.vy += (want - fly.vy) * (1 - Math.exp(-1.8 * dt));
@@ -2345,7 +2393,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     if (fly.pos[1] < SKY - 5 && !up) fly.high = false;
   } else fly.vy += (0 - fly.vy) * (1 - Math.exp(-3 * dt));
   // The race: a prompt at its start, held still for the 3, 2, 1, a bar slowing you a moment.
-  const r = raceStep({ active: true, pos: fly.pos, enter, t });
+  const r = realm ? NO_RACE : raceStep({ active: true, pos: fly.pos, enter, t });
   if (r.hold) {
     fly.pos = [...r.hold.c];
     fly.yaw = Math.atan2(-r.hold.f[0], -r.hold.f[2]);
@@ -2356,7 +2404,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     return;
   }
   // On a dock's pad: Enter goes inside; with no key to fly on, the ship settles on the pad.
-  fly.dock = dockAt(fly.pos);
+  fly.dock = realm ? null : dockAt(fly.pos);
   if (fly.dock && enter) {
     enterRoom(fly.dock, t);
     fly.speed = 0;
@@ -2375,7 +2423,9 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
           ? 0.4
           : 1) *
     (fly.slow ? SLOW_PACE : 1) *
-    r.pace;
+    r.pace *
+    // The speedway pushes you on (2026-11-14: "so it feels like full speed").
+    pushAt(fly.pos, realm);
   fly.speed +=
     (FLY_SPEED * pace - fly.speed) * (1 - Math.exp((hyper ? -2.5 : boosting ? -4 : -1.5) * dt));
   const was: Vec3 = [...fly.pos];
@@ -2383,6 +2433,24 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   // A soft bump: sliding along a wall bleeds a little speed and leans the ship away from it.
   if (wall !== 0) fly.speed *= 0.985 ** (dt * 60);
   fly.nudge += (0.15 * wall - fly.nudge) * (1 - Math.exp((wall !== 0 ? -6 : -3) * dt));
+  if (realm) {
+    // Far out, a gentle turn back toward the heart; back out of the lane's start, home.
+    fly.yaw = turnTo(fly.yaw + edgePull(fly.pos, fly.yaw) * dt);
+    leaveIfBack();
+    after(dt, t);
+    return;
+  }
+  // North through the speedway's gate: on to Atlantis, the lane going straight on.
+  if (race.phase !== 'racing' && race.phase !== 'countdown') {
+    const g = mouthCrossed(was, fly.pos);
+    if (g) {
+      enterAtlantis(g.ox, g.oz);
+      fly.pos = toLocal(fly.pos);
+      clearTrail(trail);
+      after(dt, t);
+      return;
+    }
+  }
   // A portal carries you on to another district: the glow flares softly, the camera comes along.
   const jump = portalJump(was, fly.pos);
   if (jump !== 0) {
@@ -2402,6 +2470,40 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   after(dt, t);
 }
 
+/** No race on Atlantis's ground. */
+const NO_RACE = { hold: null, pace: 1 } as const;
+
+/** Flown back south out of the lane's start: home, into the gate's copy of the mouth. */
+function leaveIfBack() {
+  if (fly.pos[2] <= 1) return;
+  fly.pos = toWorld(fly.pos);
+  leaveAtlantis();
+  resetSchool();
+  clearTrail(trail);
+}
+
+/**
+ * Let go on Atlantis's ground: on along the lane's middle to its end, else on as you were, turned
+ * back gently from the edge, at the cruise, levelling out.
+ */
+function atlantisDrift(dt: number) {
+  const p = fly.pos;
+  let want = fly.yaw;
+  if (p[2] > -(LANE_LEN - 80)) want = Math.atan2(p[0] * 0.08, 1);
+  const miss = turnTo(want - fly.yaw);
+  const rate = Math.max(-1, Math.min(1, miss * 2)) + edgePull(p, fly.yaw);
+  fly.yaw = turnTo(fly.yaw + rate * dt);
+  fly.turnRate = -rate;
+  fly.turning = 0;
+  fly.nudge = 0;
+  fly.bank += (rate * 0.45 - fly.bank) * (1 - Math.exp(-4 * dt));
+  fly.pitch += (0 - fly.pitch) * (1 - Math.exp(-2.5 * dt));
+  fly.vy = 0;
+  fly.speed +=
+    (FLY_SPEED * currentShip().handling.speed * pushAt(p, true) - fly.speed) *
+    (1 - Math.exp(-1.5 * dt));
+  move(dt);
+}
 /** How much faster the ship flies out in space than over the city. */
 export const SPACE_PACE = 5;
 
@@ -2479,6 +2581,8 @@ type Travel = {
   arc: number;
   dur: number;
   u: number;
+  /** Landing at the speedway's gate, on into Atlantis (the map's Atlantis). */
+  realm?: 'atlantis';
 };
 
 /**
@@ -2489,7 +2593,14 @@ export function travelTo(spot: TravelSpot) {
   if (inRoom()) leaveRoom();
   if (inSpace()) resetSpace();
   resetRace();
-  const { c, f } = flier(fly.t);
+  const { c: at, f } = flier(fly.t);
+  // From Atlantis's ground, the trip starts from the gate you came in by, in the city.
+  const c = inAtlantis() ? toWorld(at) : at;
+  if (inAtlantis()) {
+    leaveAtlantis();
+    resetSchool();
+    clearTrail(trail);
+  }
   const to = nearestCopy(spot.pos, c);
   const d = Math.hypot(to[0] - c[0], to[2] - c[2]);
   fly.travel = {
@@ -2501,6 +2612,7 @@ export function travelTo(spot: TravelSpot) {
     arc: Math.min(80, 0.12 * d),
     dur: 0.6 + 0.4 * Math.min(1, d / 900),
     u: 0,
+    realm: spot.realm,
   };
   fly.mode = 'pilot';
   fly.dock = null;
@@ -2531,7 +2643,24 @@ function travelStep(dt: number) {
     fly.pos = [...tr.to];
     fly.yaw = tr.toYaw;
     fly.travel = null;
+    if (tr.realm === 'atlantis') intoAtlantis();
   }
+}
+
+/**
+ * The map's Atlantis: through the gate the trip landed at, on down the lane to just short of the
+ * arrival, flying north at a brisk pace (the welcome and the sharks just ahead).
+ */
+function intoAtlantis() {
+  const g = gateNear(fly.pos);
+  enterAtlantis(g.ox, g.oz);
+  fly.pos = [0, GROUND + 60, ARRIVAL_Z + 40];
+  fly.yaw = 0;
+  fly.pitch = 0;
+  fly.speed = FLY_SPEED * 2;
+  fly.glow = 1;
+  clearTrail(trail);
+  camOnShip();
 }
 
 /** Where the embassies' arcade cabinets lead: the Ocean, opened on its Shark Sim. */
@@ -2573,10 +2702,19 @@ function after(dt: number, t: number) {
     fly.camYaw = turnTo(fly.camYaw + turnTo(fly.yaw - fly.camYaw) * k);
     fly.camPitch += (fly.pitch - fly.camPitch) * k;
   }
-  advancePulses(dt, fly.mode === 'route' ? FLY_SPEED : fly.speed, f);
+  const speed = fly.mode === 'route' ? FLY_SPEED : fly.speed;
+  advancePulses(dt, speed, f);
+  // The speedway's racing lights run on, faster than you.
+  speedwayStep(dt, speed);
   // The path behind the ship, for its boost trail; the ship's right is level.
   const fl = Math.hypot(f[0], f[2]) || 1;
   pushTrail(trail, c, [-f[2] / fl, 0, f[0] / fl], t);
+  if (inAtlantis()) {
+    // Arriving (once a visit), the sharks come to swim beside you; they follow, leave, return.
+    if (arrivalStep(c, t)) schoolJoin(c, f, t);
+    sharkStep(c, f, speed, dt, t, true);
+    return;
+  }
   touchLanterns(c, t);
   const d = districtAt(c[0], c[2]);
   if (d !== fly.district) {
@@ -2594,7 +2732,7 @@ export function flier(t: number): { c: Vec3; f: Vec3 } {
 export const shipNow = () => flier(fly.t);
 
 /** How far up into the stratosphere you are, 0 (at the towers' sky) to 1. */
-const highness = (y: number) => smooth((y - SKY + 20) / (STRATOSPHERE - SKY));
+const highness = (y: number) => (inAtlantis() ? 0 : smooth((y - SKY + 20) / (STRATOSPHERE - SKY)));
 
 /** Whether the eye asked for is the Ship's, flown (set by pieceCamera): it then sees further. */
 let shipFlown = false;
@@ -2614,6 +2752,8 @@ export function fade(pos: Vec3, eye: Vec3): number {
   const d = Math.hypot(pos[0] - eye[0], pos[1] - eye[1], pos[2] - eye[2]);
   // Out in space nothing dims with distance: only the nearest grains dissolve.
   if (inSpace()) return smooth((d - 3) / 9);
+  // Atlantis is seen across: its far rings out to its reach.
+  if (inAtlantis()) return smooth((d - 3) / 9) * smooth((ATL_REACH + 50 - d) / 300);
   const open = Math.max(0, eye[1] - SKY);
   // Flown, the far edge sits further out, past the view (viewAt), so far towers read (2026-11-14).
   const far = (shipFlown ? shipFar() : 260) + 2.4 * open;
@@ -2623,7 +2763,8 @@ export function fade(pos: Vec3, eye: Vec3): number {
 }
 
 /** How high the eye is over the towers' sky: 0 under it, 1 at its height over the stratosphere. */
-const clearAt = (eyeY: number) => smooth((eyeY - SKY) / (STRATOSPHERE + 190 - SKY));
+const clearAt = (eyeY: number) =>
+  inAtlantis() ? 0 : smooth((eyeY - SKY) / (STRATOSPHERE + 190 - SKY));
 
 /**
  * How large the Ship's grains are drawn: as every piece's under the towers' sky, larger as the eye
@@ -2654,7 +2795,7 @@ export function gauges(): Gauge[] {
       label: 'Height',
       value: Math.round(c[1] - GROUND),
       min: -CANAL_FLOOR,
-      max: (fly.high || c[1] > SKY ? STRATOSPHERE : SKY) - GROUND,
+      max: (inAtlantis() ? ATL_CEIL : fly.high || c[1] > SKY ? STRATOSPHERE : SKY) - GROUND,
       unit: 'm',
     },
     {
@@ -2673,7 +2814,7 @@ export function gauges(): Gauge[] {
     {
       label: 'District',
       kind: 'text',
-      text: DISTRICTS[districtAt(c[0], c[2])].name,
+      text: inAtlantis() ? 'Atlantis' : DISTRICTS[districtAt(c[0], c[2])].name,
       value: 0,
       max: 1,
     },
@@ -2691,6 +2832,11 @@ let letGoAt = Number.NEGATIVE_INFINITY;
 export function tally(): string {
   if (inRoom()) return roomBanner(fly.t);
   if (inSpace()) return spaceBanner(fly.t);
+  // On Atlantis's ground, wordless (its one sign hangs in the world, lib/city-speedway.ts).
+  if (inAtlantis()) {
+    if (fly.mode === 'drift' && fly.t - letGoAt >= 0 && fly.t - letGoAt < 3) return 'Autopilot';
+    return fly.slow ? 'Slow · looking down' : '';
+  }
   const rings = cityRingBanner(fly.t);
   if (rings) return rings;
   const r = raceBanner(fly.t);
@@ -2726,7 +2872,7 @@ function shipEye(c: Vec3, f: Vec3): Eye {
   const rise = 3.2 + 7 * lk + 190 * hi;
   const eye = add(add(c, lerp3(fc, flat(fc), Math.max(lk, hi)), -back), [0, 1, 0], rise);
   // Down in the Deep Line (lib/city-under.ts) the camera stays inside it; else over the street.
-  eye[1] = underEyeY(c, eye[1]) ?? Math.max(GROUND + 1, eye[1]);
+  eye[1] = (inAtlantis() ? null : underEyeY(c, eye[1])) ?? Math.max(GROUND + 1, eye[1]);
   const near = add(c, f, 6);
   const down = add(add(c, fh, 8 + 4 * lk), [0, 1, 0], -14);
   const plan: Vec3 = [c[0] + fh[0] * 160, GROUND, c[2] + fh[2] * 160];
@@ -3525,6 +3671,8 @@ function gather(P: Plan): { d: number; run: () => void }[] {
     ...lifeItems(eye, cur.t, P.c, P.f),
     ...fireworkItems(eye, cur.t, viewAt(eye[1])),
   ];
+  // The speedway's mouth over the avenue at the plan's north end (lib/city-speedway.ts).
+  mouthItems(eye, fwd, cur.t, game);
   for (const g of game) {
     if (seeThrough && g.probe && !g.probe.some((q) => roomBeyond(q[0], q[2], 30))) continue;
     items.push({
@@ -3545,17 +3693,22 @@ function build(P: Plan, t: number) {
   setRiseClock(t);
   const { c, f } = flier(t);
   const { eye, target } = roomCamera(t) ?? shipView(c, f);
-  seeThrough = roomSeeThrough(eye) ?? underSeeThrough(eye);
+  const realm = inAtlantis();
+  seeThrough = realm ? null : (roomSeeThrough(eye) ?? underSeeThrough(eye));
   Object.assign(P, { t, v: fly.v, c, f, eye, fwd: norm(sub(target, eye)), n: 0, top: 0 });
   const space = inSpace();
-  reach = space ? SPACE_REACH : viewAt(eye[1]) / VIEW;
-  dreach = space ? SPACE_REACH : Math.max(NEAR, viewAt(eye[1]) - (streetView() - NEAR)) / VIEW;
-  clear = space ? 1 : smooth((eye[1] - SKY) / 200);
+  reach = space ? SPACE_REACH : realm ? ATL_REACH / VIEW : viewAt(eye[1]) / VIEW;
+  dreach = space
+    ? SPACE_REACH
+    : realm
+      ? ATL_DENSE / VIEW
+      : Math.max(NEAR, viewAt(eye[1]) - (streetView() - NEAR)) / VIEW;
+  clear = space ? 1 : realm ? 0.6 : smooth((eye[1] - SKY) / 200);
   cur.plan = P;
   cur.t = t;
   // From a room the pool rarely fills (the window shows a part of the city): stop at a distance.
   const far = seeThrough ? ROOM_VIEW : Number.POSITIVE_INFINITY;
-  for (const it of space ? spaceRuns(P) : gather(P)) {
+  for (const it of space ? spaceRuns(P) : realm ? atlantisRuns(P) : gather(P)) {
     if (it.d > far) break;
     it.run();
     if (P.n >= P.size) break;
@@ -3568,6 +3721,22 @@ const SPACE_REACH = 2600 / VIEW;
 /** What space puts before the eye (lib/city-space.ts), as the plan's sites. */
 function spaceRuns(P: Plan): { d: number; run: () => void }[] {
   return spaceItems(P.eye, P.f, cur.t).map((g) => ({
+    d: g.d,
+    run: () => {
+      cur.fn = g.site;
+      group(g.gid, g.count, g.weight, g.d, 1, Kind.Custom);
+    },
+  }));
+}
+/** On Atlantis's ground: how far sites are kept densely (the towers far across, sparser). */
+const ATL_DENSE = 220;
+/** What Atlantis puts before the eye (lib/city-atlantis-rings.ts, lib/city-speedway.ts). */
+function atlantisRuns(P: Plan): { d: number; run: () => void }[] {
+  const out: Item[] = [];
+  laneItems(P.eye, P.fwd, cur.t, out);
+  atlantisItems(P.eye, P.fwd, cur.t, out);
+  out.sort((a, b) => a.d - b.d);
+  return out.map((g) => ({
     d: g.d,
     run: () => {
       cur.fn = g.site;
@@ -3718,6 +3887,18 @@ function trafficAt(p: Particle, P: Plan, t: number): Spot {
   if (inSpace()) {
     const L = Math.floor(p.i / 100) * (POOL_FROM - TRAFFIC_FROM) + (p.i % 100) - TRAFFIC_FROM;
     return spaceDust(L, P.eye);
+  }
+  // On Atlantis's ground, the sharks (when they swim with you), else the sea's faint motes.
+  if (inAtlantis()) {
+    const L = Math.floor(p.i / 100) * (POOL_FROM - TRAFFIC_FROM) + (p.i % 100) - TRAFFIC_FROM;
+    const n =
+      Math.floor(grains / 100) * (POOL_FROM - TRAFFIC_FROM) +
+      Math.max(0, Math.min(POOL_FROM - TRAFFIC_FROM, (grains % 100) - TRAFFIC_FROM));
+    if (sharksShowing()) {
+      const g = sharkGrain(L, Math.max(n, L + 1), t);
+      return { pos: g.pos, rgb: scale(g.rgb, sightOf(g.pos, P, ATL_REACH) > 0 ? 1 : 0) };
+    }
+    return moteGrain(L, P.eye);
   }
   const m = p.i % 100;
   if (m >= STREAM_FROM) return streamGrain(p, P, t);
@@ -3983,6 +4164,9 @@ function shipAt(p: Particle, t: number): Spot {
   const L = Math.floor(p.i / 100) * YOU_FROM + m;
   const n = Math.floor(grains / 100) * YOU_FROM + Math.min(YOU_FROM, grains % 100);
   if (inSpace()) return spaceSky(L, Math.max(n, L + 1), P.eye, t);
+  // Over Atlantis only the plain stars (the city's stations and satellites stay over the city).
+  if (inAtlantis() && L >= Math.floor(Math.max(n, L + 1) * 0.42))
+    return { pos: P.eye, rgb: [0, 0, 0] };
   const { R, up, lift } = skyLook(P);
   const sky = skyGrain(L, Math.max(n, L + 1), P.c, R, highness(P.c[1]), t, up, lift);
   if (seeThrough && !seeThrough(sky.pos[0], sky.pos[1], sky.pos[2])) sky.rgb = [0, 0, 0];
@@ -4008,7 +4192,7 @@ function skyLook(P: Plan): { R: number; up: number; lift: number } {
  */
 const shipSeen = { t: Number.NaN, v: -1, list: [] as boolean[] };
 function otherShipAt(p: Particle, P: Plan, t: number): Spot {
-  if (inSpace()) return { pos: P.eye, rgb: [0, 0, 0] };
+  if (inSpace() || inAtlantis()) return { pos: P.eye, rgb: [0, 0, 0] };
   const per = TRAFFIC_FROM - SHIPS_FROM;
   const L = Math.floor(p.i / 100) * per + (p.i % 100) - SHIPS_FROM;
   const n =
@@ -4344,10 +4528,13 @@ export function pieceCamera(k: number, s: number): Eye {
 export function pieceBackground(k: number): string[] | null {
   const id = PHASES[k]?.id;
   if (id === 'ship' && inSpace()) return SPACE_BACKGROUND;
+  if (id === 'ship' && inAtlantis()) return ATLANTIS_NIGHT;
   return id === 'atlantis' || id === 'atlantis-buildings' ? ATLANTIS_WATER : null;
 }
 /** Out in space: near black, a breath of deep blue low down. */
 const SPACE_BACKGROUND = ['#010108', '#000003', '#020414'];
+/** On Atlantis's ground: a deep sea at night, teal-black above, blue-black below. */
+const ATLANTIS_NIGHT = ['#031820', '#020e16', '#01060c'];
 
 /** Glow and size of piece k on its own. */
 export function pieceLook(k: number): { glow: number; size: number } {
