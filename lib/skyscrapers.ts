@@ -111,6 +111,54 @@ export class Carved extends Mesh {
   }
 }
 
+/**
+ * A mesh drawn `dy` higher into another (a tower set on a gate): every line, face and lamp handed
+ * on, raised, the faces turned from the raised centre.
+ */
+export class Raised extends Mesh {
+  constructor(
+    private readonly to: Mesh,
+    private readonly dy: number,
+  ) {
+    super();
+  }
+  private up = (p: Vec3): Vec3 => [p[0], p[1] + this.dy, p[2]];
+  override line(a: Vec3, b: Vec3, tone: number, o: Opts = {}) {
+    this.to.line(this.up(a), this.up(b), tone, o);
+  }
+  override tri(a: Vec3, b: Vec3, c: Vec3, tone: number, o: Opts = {}) {
+    const keep = this.to.centre;
+    this.to.centre = this.up(this.centre);
+    this.to.tri(this.up(a), this.up(b), this.up(c), tone, o);
+    this.to.centre = keep;
+  }
+  override dot(at: Vec3, r: number, tone: number, o: Opts = {}) {
+    this.to.dot(this.up(at), r, tone, o);
+  }
+}
+
+/**
+ * A gate under a tower (2026-11-14, the Temples' skyscrapers over the barge's line and the
+ * highway): two legs either side of a slot hw wide, `base` high, a lintel over them, lamps up the
+ * slot's walls. The tower stands on its lintel.
+ */
+export function gateBase(m: Mesh, r: number, hw: number, base: number) {
+  const legW = (r - hw) / 2;
+  for (const s of [-1, 1]) {
+    const cx = s * (hw + legW);
+    m.box(P(cx, 0, 0), legW, base, r, face, edge);
+    for (let y = 5; y < base; y += 5) {
+      m.dot(P(s * (hw - 0.05), y, 0), 0.22, light, { anim: Anim.pulse, key: y * 0.3 + s, w: 0.5 });
+      m.line(P(cx - legW, y, r + 0.05), P(cx + legW, y, r + 0.05), glass, { w: 0.5 });
+      m.line(P(cx - legW, y, -r - 0.05), P(cx + legW, y, -r - 0.05), glass, { w: 0.5 });
+    }
+  }
+  m.box(P(0, base, 0), r, GATE_LINTEL, r, face, edge);
+  m.poly(square(r + 0.05, base + GATE_LINTEL / 2, 0), true, fire, { w: 0.5 });
+}
+/** How thick a gate's lintel is. */
+export const GATE_LINTEL = 2;
+
 /* ---------- pieces ---------- */
 
 /** A square's four corners at height y (over the street), half-width w, turned a. */
@@ -351,10 +399,10 @@ function twinCrown(m: Mesh, h: number, r: number, voids: Void[]) {
   const legW = (r - slot.hw) / 2;
   for (const s of [-1, 1]) {
     const cx = s * (slot.hw + legW);
-    m.box(P(cx, 0, 0), legW, join, r * 0.86, face, edge);
+    m.box(P(cx, 0, 0), legW, join, r * 0.98, face, edge);
     for (let y = 4; y < join; y += 4) {
-      m.line(P(cx - legW, y, r * 0.87), P(cx + legW, y, r * 0.87), glass, { w: 0.5 });
-      m.line(P(cx - legW, y, -r * 0.87), P(cx + legW, y, -r * 0.87), glass, { w: 0.5 });
+      m.line(P(cx - legW, y, r * 0.99), P(cx + legW, y, r * 0.99), glass, { w: 0.5 });
+      m.line(P(cx - legW, y, -r * 0.99), P(cx + legW, y, -r * 0.99), glass, { w: 0.5 });
       m.dot(P(cx - s * legW - s * 0.05, y + 2, 0), 0.2, light, {
         anim: Anim.pulse,
         key: y + s,
@@ -366,7 +414,7 @@ function twinCrown(m: Mesh, h: number, r: number, voids: Void[]) {
   const arch: Vec3[] = [];
   for (let j = 0; j <= 12; j++) {
     const u = j / 12;
-    arch.push(P(-slot.hw + 2 * slot.hw * u, join + 0.05 + 2.5 * Math.sin(Math.PI * u), r * 0.86));
+    arch.push(P(-slot.hw + 2 * slot.hw * u, join + 0.05 + 2.5 * Math.sin(Math.PI * u), r * 0.98));
   }
   m.poly(arch, false, edge);
   m.poly(
@@ -374,11 +422,11 @@ function twinCrown(m: Mesh, h: number, r: number, voids: Void[]) {
     false,
     edge,
   );
-  m.box(P(0, join, 0), r, top - join, r * 0.86, glass, edge);
+  m.box(P(0, join, 0), r, top - join, r * 0.98, glass, edge);
   for (let y = join + 3; y < top; y += 3)
     lamps(
       m,
-      square(r + 0.05, y, 0).map((p) => [p[0], p[1], p[2] * 0.86] as Vec3),
+      square(r + 0.05, y, 0).map((p) => [p[0], p[1], p[2] * 0.98] as Vec3),
       3,
       y,
     );
@@ -608,7 +656,7 @@ function archGate(m: Mesh, h: number, r: number, voids: Void[]) {
   };
   const join = slot.y1;
   const hw = slot.hw;
-  const d = r * 0.82;
+  const d = r * 0.98;
   const top = h * 0.86;
   for (const s of [-1, 1]) {
     const mid = (s * (hw + r)) / 2;
@@ -693,7 +741,7 @@ export const SKY_DESIGNS: SkyDesign[] = [
     name: 'Twin Crown',
     idea: 'Two slender legs with a tall slot between them, joined high up by a glass crown with twin masts.',
     build: twinCrown,
-    reach: () => 1,
+    reach: (v) => (v <= 0.9 ? 1 : 0.62),
     voids: (h, r) => [{ y0: 0, y1: h * 0.6, hw: r * 0.35, open: 'z' }],
   },
   {
@@ -735,7 +783,7 @@ export const SKY_DESIGNS: SkyDesign[] = [
     name: 'Arch Gate',
     idea: 'A tower standing on a great arch: two broad legs, a vaulted head you fly under, a ribbed body and a tapered crown.',
     build: archGate,
-    reach: () => 1,
+    reach: (v) => (v <= 0.86 ? 1 : 1 - 0.55 * Math.min(1, (v - 0.86) / 0.09)),
     voids: (h, r) => [{ y0: 0, y1: h * 0.45, hw: r * 0.5, open: 'z' }],
   },
 ];

@@ -58,7 +58,10 @@ describe('Temple skyscrapers: where they stand', () => {
       expect(blockTower(T.I, T.J).shape).toBe('plaza');
       // Its block's middle row, its footprint inside the block, 4.5 or more from every street.
       // Back from the river's bank (z 828) by 4.5 or more.
-      if (T.J === RIVER_ROW) expect(T.z - T.r).toBeGreaterThanOrEqual(RIVER_Z + RIVER_W + 4.5);
+      expect(T.z).toBeCloseTo((T.J + 0.5) * BLOCK_Z, 6);
+      // Off the river's row and its neighbours (their walls stay where they were).
+      expect(Math.abs(T.J - RIVER_ROW)).toBeGreaterThan(1);
+      expect(T.z - T.r).toBeGreaterThan(RIVER_Z + RIVER_W + 20);
       expect(T.x - T.r).toBeGreaterThanOrEqual(T.I * BLOCK_X + 4.4);
       expect(T.x + T.r).toBeLessThanOrEqual((T.I + 1) * BLOCK_X - 4.4);
       expect(T.z - T.r).toBeGreaterThanOrEqual(T.J * BLOCK_Z + 4.4);
@@ -68,8 +71,13 @@ describe('Temple skyscrapers: where they stand', () => {
       for (let j = i + 1; j < TEMPLE_TOWERS.length; j++) {
         const A = TEMPLE_TOWERS[i] as (typeof TEMPLE_TOWERS)[number];
         const B = TEMPLE_TOWERS[j] as (typeof TEMPLE_TOWERS)[number];
-        // Two blocks or more apart: open air round each to fly round.
-        expect(Math.hypot(A.x - B.x, A.z - B.z), `${A.name} / ${B.name}`).toBeGreaterThan(60);
+        // Never on neighbouring blocks: a diagonal block away at the nearest, open air between.
+        expect(Math.abs(A.I - B.I) + Math.abs(A.J - B.J), `${A.name} / ${B.name}`).toBeGreaterThan(
+          1,
+        );
+        expect(Math.hypot(A.x - B.x, A.z - B.z)).toBeGreaterThan(40);
+        const gap = Math.max(Math.abs(A.x - B.x) - A.r - B.r, Math.abs(A.z - B.z) - A.r - B.r);
+        expect(gap).toBeGreaterThanOrEqual(9);
       }
   });
 
@@ -97,8 +105,10 @@ describe('Temple skyscrapers: where they stand', () => {
 
   it('keeps the racing corridors (x ±78) and the avenue clear: no tower, no pier', () => {
     for (const T of TEMPLE_TOWERS) {
-      expect(Math.abs(T.x - CORRIDOR) - T.r).toBeGreaterThanOrEqual(8);
-      expect(Math.abs(T.x + CORRIDOR) - T.r).toBeGreaterThanOrEqual(8);
+      // Out of the corridor (66 to 90) and the slimmed columns beside it (2 and 3).
+      expect(T.I).toBeGreaterThanOrEqual(4);
+      expect(T.x - T.r).toBeGreaterThanOrEqual(4 * BLOCK_X + 4.4);
+      expect(Math.abs(T.x - CORRIDOR) - T.r).toBeGreaterThanOrEqual(12 + 8);
       expect(T.x - T.r).toBeGreaterThan(BLOCK_X);
     }
     // The bridges have no piers: nothing of theirs comes down under 118.
@@ -156,7 +166,8 @@ describe('Temple skyscrapers: the long bridges', () => {
         const z = p[2] + (q[2] - p[2]) * s;
         TEMPLE_TOWERS.forEach((T, ti) => {
           if (ti === B.a || ti === B.b) return;
-          expect(Math.max(Math.abs(x - T.x), Math.abs(z - T.z))).toBeGreaterThan(T.r + 6);
+          // Threading between two towers, five or more from their walls.
+          expect(Math.max(Math.abs(x - T.x), Math.abs(z - T.z))).toBeGreaterThan(T.r + 5);
         });
       }
     }
@@ -260,22 +271,18 @@ describe('Temple skyscrapers: the ways of the sky round them', () => {
 describe('Temple skyscrapers: walls, budget, light', () => {
   it('holds the Ship off their walls, open through their voids', () => {
     for (const T of TEMPLE_TOWERS) {
-      expect(
-        blocked([
-          T.x + T.r * 0.9 * (T.voids.length ? 1 : 0),
-          G + 40 + (T.voids.length ? 80 : 0),
-          T.z,
-        ]),
-      ).toBe(true);
+      expect(blocked([T.x + 0.9 * towerReach(T, 120), G + 120, T.z])).toBe(true);
       expect(blocked([T.x, G + T.top + 3, T.z])).toBe(false);
       expect(blocked([T.x + T.r + 2, G + 60, T.z + T.r + 2])).toBe(false);
     }
     // Through the highway gates and under the barge's arch.
     expect(blocked([143, G + 86, 26.5 * BLOCK_Z])).toBe(false);
-    expect(blocked([143, G + 86, 30.5 * BLOCK_Z])).toBe(false);
-    expect(blocked([117, G + 96, 28.5 * BLOCK_Z])).toBe(false);
+    expect(blocked([143, G + 86, 28.5 * BLOCK_Z])).toBe(false);
+    expect(blocked([143, G + 86, 31.5 * BLOCK_Z])).toBe(false);
+    expect(blocked([117, G + 96, 27.5 * BLOCK_Z])).toBe(false);
+    expect(blocked([117, G + 96, 29.5 * BLOCK_Z])).toBe(false);
     // In the next tile too.
-    expect(blocked([93 + TILE_X, G + 60, 24.5 * BLOCK_Z])).toBe(true);
+    expect(blocked([143 + TILE_X, G + 60, 26.5 * BLOCK_Z])).toBe(true);
   });
 
   it('stops the flying Ship at a tower’s wall', () => {

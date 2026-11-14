@@ -1,14 +1,16 @@
 /*
  * The Temples' skyscrapers and their long bridges (docs/specs/art-city.md, "Temple skyscrapers and
- * the Skyscraper series", 2026-11-14): six towers of the Skyscraper series (lib/skyscrapers.ts)
+ * the Skyscraper series", 2026-11-14): five towers of the Skyscraper series (lib/skyscrapers.ts)
  * standing apart over the Temples' quarter (where, lib/city-skyscrapers-plan.ts), joined in pairs
- * by six long bridges high up, with real walls the Ship slides along.
+ * by five long bridges high up, with real walls the Ship slides along.
  *
  * 2026-11-14: "Temple quarter should have a bunch of awesome unique skyscrapers as well, with a big
  * long bridge between them, so they are not right next to each other. This creates cool spaces to
  * fly around." And: "Perspective is everything and the whole point of this city. Perspective is
- * power, and makes it beautiful": the towers stand in two files that line up flying down the
- * quarter, and the bridges cross it, so each frames the distance as you fly under it.
+ * power, and makes it beautiful": the towers stand in two files (x 117, x 143) that line up flying
+ * down the quarter, the barge and the highway threading their gates; bridges run down each file,
+ * framing the view across the quarter as you fly under them, and one long span crosses between the
+ * files, threading the gap between two towers.
  *
  * Every bridge is at 124 to 142 over the street: over the express lanes (112, 120) by four, under
  * the ceiling of ordinary flight (150), so you fly under, over and between; the high currents climb
@@ -29,7 +31,16 @@ import {
 } from './city-skyscrapers-plan';
 import { type StrokeSet, Strokes, strokeItem } from './city-strokes';
 import type { Built } from './grain-mesh';
-import { buildSky, Carved, inVoid, SKY_DESIGNS, type SkyDesign } from './skyscrapers';
+import {
+  buildSky,
+  Carved,
+  GATE_LINTEL,
+  gateBase,
+  inVoid,
+  Raised,
+  SKY_DESIGNS,
+  type SkyDesign,
+} from './skyscrapers';
 
 const G = GROUND;
 
@@ -50,7 +61,10 @@ const designOf = (T: TempleTower): SkyDesign =>
   SKY_DESIGNS[T.design] ?? (SKY_DESIGNS[0] as SkyDesign);
 /** How far out a tower stands at height y over the street (its square's half-width). */
 export function towerReach(T: TempleTower, y: number): number {
-  return T.r * designOf(T).reach(Math.max(0, Math.min(1, y / T.top)));
+  // On a gate: its legs and lintel the full square, the design over them.
+  if (T.base > 0 && y <= T.base + GATE_LINTEL) return T.r;
+  const foot = T.base > 0 ? T.base + GATE_LINTEL : 0;
+  return T.r * designOf(T).reach(Math.max(0, Math.min(1, (y - foot) / (T.top - foot))));
 }
 
 const meshes = new Map<number, Built>();
@@ -60,7 +74,13 @@ export function towerMesh(ti: number): Built {
   if (had) return had;
   const T = TEMPLE_TOWERS[ti] as TempleTower;
   const m = new Carved(T.voids);
-  buildSky(m, T.design, T.top, T.r, T.voids);
+  if (T.base > 0) {
+    // A gate under it, the design standing on its lintel.
+    const slot = T.voids.find((v) => v.y0 <= 0.01) ?? { hw: T.r * 0.6 };
+    gateBase(m, T.r, slot.hw, T.base);
+    const foot = T.base + GATE_LINTEL;
+    buildSky(new Raised(m, foot), T.design, T.top - foot, T.r, []);
+  } else buildSky(m, T.design, T.top, T.r, T.voids);
   const B = m.build();
   meshes.set(ti, B);
   return B;
@@ -74,17 +94,16 @@ export type BridgeStyle = 'deck' | 'arch' | 'lattice' | 'underarch';
 export type TempleBridge = { a: number; b: number; y: number; style: BridgeStyle };
 
 /**
- * The six (2026-11-14: "a big long bridge between them ... long spans, some arched, some straight
- * decks or lattice"): every tower joined, most spans seventy or more, all crossing the quarter so
- * they frame the view down it. Heights apart where two meet the same tower.
+ * The five (2026-11-14: "a big long bridge between them ... long spans, some arched, some straight
+ * decks or lattice"): every tower joined, every span forty or more (the crossing one about eighty),
+ * none over a racing corridor's column. Heights apart where two meet the same tower.
  */
 export const TEMPLE_BRIDGES: TempleBridge[] = [
-  { a: 1, b: 2, y: 128, style: 'lattice' },
-  { a: 0, b: 2, y: 132, style: 'arch' },
-  { a: 2, b: 3, y: 136, style: 'deck' },
-  { a: 3, b: 4, y: 126, style: 'arch' },
-  { a: 3, b: 5, y: 138, style: 'lattice' },
-  { a: 4, b: 5, y: 134, style: 'underarch' },
+  { a: 0, b: 2, y: 128, style: 'lattice' },
+  { a: 2, b: 4, y: 136, style: 'arch' },
+  { a: 1, b: 3, y: 134, style: 'underarch' },
+  { a: 0, b: 3, y: 140, style: 'deck' },
+  { a: 3, b: 4, y: 130, style: 'lattice' },
 ];
 /** Half a deck's width. */
 export const DECK_HW = 1.3;

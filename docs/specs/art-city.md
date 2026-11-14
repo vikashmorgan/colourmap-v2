@@ -2164,23 +2164,30 @@ small hooks in `lib/city-game.ts` (open blocks, walls, one call in the items),
   tower on a great arch you fly under). Our own designs. Each is a builder of any height and
   footprint, standing inside its square at every height (its reach), cut by voids where asked
   (nothing drawn there); the golden palettes as the other Studio pieces.
-- **Six towers in the Temples quarter,** each on a block of its own, two blocks or more apart,
-  140 to 170 high (every tower in the quarter is under 110; the tallest three over Ivory Echo's
-  157): the Helix of Dawn (Helix Twist, x 93, row 24, back from the river's bank), the Lattice of
-  Vows (x 63, row 26), the Garden of Bells (Garden Void, x 143, row 26), the Gate of the Barge (Arch
-  Gate, x 117, row 28), the Stair of Light (Stepped Temple Tower, x 63, row 29) and the Twin Lanterns
-  (Twin Crown, x 143, row 30). **Perspective:** they stand in files (x 63, x 143) that line up as you
-  fly down the quarter; the Temples' eastern highway (86) threads the gates of both towers on x 143,
-  and the lantern barge (x 117, 96) sails under the Gate of the Barge's arch. The blocks beside them
-  are open, but for the Studio's temples, which stand low and well back.
-- **Clearances:** every footprint inside its block (4.5 or more from each street's middle), eight or
-  more from the racing corridors (x ±78), off the avenue; clear of the landmark's plaza and orbit,
-  Ivory Echo's orbit and the Domes' big square; under the higher streams (186) and the stations.
-- **Six long bridges** joining every tower in pairs (spans of 40 to 80): a lattice truss, two
-  bowstring arches, a straight deck, a second truss and an arch under its deck, decks at 126 to 138,
-  every part between 124 (over the express lanes) and 145 (under ordinary flight's ceiling, 150), no
-  piers: you fly under, over and between. They cross the quarter, so each frames the view down it
-  as you pass under.
+- **Five towers in the Temples quarter,** each on a block of its own in columns 4 and 5, rows 26
+  to 31, staggered like a chessboard so no two stand on neighbouring blocks (a diagonal block apart
+  at the nearest, nine or more of open air between their walls), 150 to 170 high (every tower in
+  the quarter is under 110; the tallest three over Ivory Echo's 157): the Garden of Bells (Garden
+  Void, x 143, row 26), the Gate of the Barge (Arch Gate, x 117, row 27), the Helix of Dawn (Helix
+  Twist on a gate, x 143, row 28), the Twin Lanterns (Twin Crown, x 117, row 29) and the Stair of
+  Light (Stepped Temple Tower on a gate, x 143, row 31). **Perspective:** two files, x 117 and x 143,
+  that line up as you fly down the quarter, two rows of gates receding: the lantern barge (x 117,
+  96) sails through the file on x 117, the Temples' eastern highway (86) through the file on x 143.
+  The blocks beside them in columns 4 and 5 are open, but for the Studio's temples, which stand low
+  and well back. A design that cannot carry a slot stands on a gate: two legs either side of the
+  slot and a lintel, the design on top.
+- **Clearances:** kept off the racing corridors (x 66 to 90) and the slimmed columns beside them (2
+  and 3; nothing opened there, so every corridor obstacle keeps a tower beside it), off the avenue
+  and its own columns (0 and 1), off the river's row and its neighbours (23 to 25, so the river
+  gap's walls stay put); every footprint inside its block (4.5 or more from each street's middle);
+  clear of the landmark's plaza and orbit, Ivory Echo's orbit and the Domes' big square; under the
+  higher streams (186) and the stations.
+- **Five long bridges,** every tower joined, spans of 40 to 80, no piers, none over a corridor's
+  column: a lattice truss and a bowstring arch down the file on x 143, an arch under its deck down
+  the file on x 117 (each framing the view across the quarter as you fly under it), a straight deck
+  crossing between the files and threading the gap between two towers, and a second truss; decks at
+  128 to 140, every part between 124 (over the express lanes) and 145 (under ordinary flight's
+  ceiling, 150): you fly under, over and between.
 - **The high currents climb over them:** over the towers' area (and twelve round it) every loop
   flies at 177 or more (the tallest plus seven), easing back to its own height over 110 round it, a
   soft maximum so the flocks climb without a jolt, still under the higher streams.
@@ -2190,7 +2197,8 @@ small hooks in `lib/city-game.ts` (open blocks, walls, one call in the items),
   leaning slowly to gold, lamps breathing; nothing flashes.
 - **Acceptance:** `lib/skyscrapers.test.ts` and `lib/city-skyscrapers.test.ts`: the series
   registered with eight or more designs, each inside its footprint and out of its voids; the towers
-  apart, in files, the tallest in the quarter; the corridors and the avenue clear; bridges joining
+  apart, in files, the tallest in the quarter; the corridors, their columns, the avenue and the
+  river's rows clear; bridges joining
   pairs with room under and over; the currents lifted and smooth, the highway, the barge, the high
   streams and the orbits clear; walls that stop the Ship; the grain budget; slow light.
 

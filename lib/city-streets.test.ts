@@ -95,8 +95,7 @@ describe('the wider streets (2026-11-14: "make a lot of the thin streets larger"
     const wide = ALL.filter((s) => wideLine(s.axis, s.line) && movable(s.A) && movable(s.B));
     // (2026-11-14: the strip's +x edge street now borders the open annex, no towers across it, so
     // its stretches along z no longer count: some fifty along z, as many again across.)
-    // (2026-11-14: a few blocks round the Temple skyscrapers are open now, lib/city-skyscrapers.ts.)
-    expect(wide.filter((s) => s.axis === 2).length).toBeGreaterThan(40);
+    expect(wide.filter((s) => s.axis === 2).length).toBeGreaterThan(45);
     expect(wide.filter((s) => s.axis === 0).length).toBeGreaterThan(60);
     let sum = 0;
     let n = 0;

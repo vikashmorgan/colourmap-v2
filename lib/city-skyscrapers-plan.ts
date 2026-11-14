@@ -4,9 +4,14 @@
  * small formula, so lib/city-currents.ts can read it without a cycle; the towers' drawing, walls
  * and bridges are lib/city-skyscrapers.ts's. Pure: no three.js, no DOM.
  *
- * "Perspective is everything and the whole point of this city": the six stand in two files along
- * the quarter, x 63 and x 143 (with two between, at 93 and 117), so flying down the quarter they
- * line up into views, the Temples' eastern highway threading the gates of both towers on x 143.
+ * "Perspective is everything and the whole point of this city": the five stand in two files down
+ * the quarter, x 117 and x 143, staggered row by row like a chessboard, so flying down it they line
+ * up into views. The lantern barge (x 117, 96) sails through the gates of the file on x 117, the
+ * Temples' eastern highway (86) through those of the file on x 143: two rows of frames receding.
+ *
+ * Kept off (2026-11-14, with the racing corridors, lib/city-corridors.ts): the corridors (x 66 to
+ * 90) and the slimmed columns beside them (2 and 3), the avenue and its own columns (0, 1), and the
+ * river's row and its neighbours (23 to 25), so every wall there stays where it was.
  */
 
 import { BLOCK_Z, planX, TILE_Z, wrap } from './city-grid';
@@ -27,6 +32,8 @@ export type TempleTower = {
   r: number;
   design: number;
   voids: Void[];
+  /** How high the gate it stands on is (0: none, the design from the street up). */
+  base: number;
 };
 
 const T = (
@@ -38,33 +45,38 @@ const T = (
   r: number,
   design: number,
   voids: Void[] = [],
-  z = (J + 0.5) * BLOCK_Z,
-): TempleTower => ({ name, x, z, I, J, top, r, design, voids });
+  base = 0,
+): TempleTower => ({ name, x, z: (J + 0.5) * BLOCK_Z, I, J, top, r, design, voids, base });
 
 /** The highway gates: the Temples' eastern low-roof highway (86, lanes x 140 to 146) runs through them. */
 const HIGHWAY_GATE: Void = { y0: 78, y1: 96, hw: 6, open: 'all' };
 
+/** The barge's slot (x 117: its hull and lanterns 3.5 either side, 90 to 100 high) and the highway's. */
+const BARGE_SLOT: Void = { y0: 0, y1: 110, hw: 6, open: 'z' };
+const HIGHWAY_SLOT: Void = { y0: 0, y1: 100, hw: 6, open: 'z' };
+
 /**
- * The six (2026-11-14: "a bunch of awesome unique skyscrapers ... not right next to each other"):
- * each on a block of its own, the blocks round it kept open, every pair two blocks or more apart;
- * out of the racing corridor on x 78 (by eight or more) and off the avenue; inside their blocks
- * (4.5 or more from every street's middle); clear of the landmark's plaza and orbit, Ivory Echo's
- * orbit and the Domes' big square. The Arch Gate stands over the lantern barge's line (x 117, 96):
- * the barge sails under its arch. Each taller than every tower in the quarter; the tallest three
- * taller than Ivory Echo (157) too.
+ * The five (2026-11-14: "a bunch of awesome unique skyscrapers ... not right next to each other"):
+ * each on a block of its own in columns 4 and 5, rows 26 to 31, the blocks round it kept open, no
+ * two on neighbouring blocks (each one's nearest a diagonal block away or further); inside their
+ * blocks (4.5 or more from every street's middle); clear of the landmark's plaza and orbit, Ivory
+ * Echo's orbit and the Domes' big square. Each taller than every tower in the quarter; the tallest
+ * three taller than Ivory Echo (157) too. The Helix and the Stair stand on gates of their own.
  */
 export const TEMPLE_TOWERS: TempleTower[] = [
-  // Beside the river (its bank at z 828): to the far side of its block, back from the bank by 4.5.
-  T('Helix of Dawn', 3, 24, 93, 154, 6, 0, [], 839),
-  T('Lattice of Vows', 2, 26, 63, 148, 6.5, 5),
   T('Garden of Bells', 5, 26, 143, 166, 8.5, 3, [
     HIGHWAY_GATE,
     { y0: 146, y1: 154, hw: 6, open: 'all' },
   ]),
-  T('Gate of the Barge', 4, 28, 117, 170, 8.5, 10, [{ y0: 0, y1: 110, hw: 6, open: 'z' }]),
-  T('Stair of Light', 2, 29, 63, 150, 6.5, 7),
-  T('Twin Lanterns', 5, 30, 143, 160, 8.5, 4, [{ y0: 0, y1: 104, hw: 6, open: 'z' }]),
+  T('Gate of the Barge', 4, 27, 117, 158, 8.5, 10, [BARGE_SLOT]),
+  T('Helix of Dawn', 5, 28, 143, 170, 8.5, 0, [HIGHWAY_SLOT], HIGHWAY_SLOT.y1),
+  T('Twin Lanterns', 4, 29, 117, 162, 8.5, 4, [BARGE_SLOT]),
+  T('Stair of Light', 5, 31, 143, 150, 8.5, 7, [HIGHWAY_SLOT], HIGHWAY_SLOT.y1),
 ];
+
+/** The columns and rows the blocks round a tower may open in: never a corridor's or the river's. */
+const OPEN_COLS = new Set([4, 5]);
+const FIRST_OPEN_ROW = 26;
 
 /** The tower standing on block (I, J) (tile-local column and row), if any. */
 export function templeTowerAt(li: number, lj: number): TempleTower | null {
@@ -73,6 +85,7 @@ export function templeTowerAt(li: number, lj: number): TempleTower | null {
 
 /** Whether block (li, lj) is one of the blocks round a tower, kept open so you can fly round it. */
 export function besideTempleTower(li: number, lj: number): boolean {
+  if (!OPEN_COLS.has(li) || lj < FIRST_OPEN_ROW) return false;
   return TEMPLE_TOWERS.some((t) => Math.abs(t.I - li) + Math.abs(t.J - lj) === 1);
 }
 

@@ -18,7 +18,6 @@ import {
   streakHead,
   WIND,
 } from './city-rain';
-import { skyscraperBlock } from './city-skyscrapers';
 
 const sites = (it: Item) => {
   const out: { pos: Vec3; rgb: Vec3 }[] = [];
@@ -54,9 +53,6 @@ describe('the river (2026-11-12: "parts with a river")', () => {
         // The annex beside the strip (2026-11-14) has no towers: the river runs on there between
         // the Mountain quarter and the Favela.
         if (tw.shape === 'hill') continue;
-        // The Temple skyscraper on the river's row (lib/city-skyscrapers.ts) stands on an open
-        // block, back from the bank (lib/city-skyscrapers.test.ts holds it there).
-        if (tw.shape === 'plaza' && skyscraperBlock(I, J) === 'tower') continue;
         expect(['box', 'business']).toContain(tw.shape);
         const zc = Math.round(tw.z / TILE_Z) * TILE_Z + RIVER_Z;
         const zr = tw.z < zc ? zc - RIVER_W - 2 : zc + RIVER_W + 2;
