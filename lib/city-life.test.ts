@@ -24,13 +24,14 @@ import {
   Z_HEIGHTS,
   zStreetWay,
 } from './city-flow';
-import { BAND_ROWS, BANDS, blocked, blockTower, MARGIN } from './city-game';
+import { BAND_ROWS, BANDS, blocked, blockTower, LANDMARKS, MARGIN } from './city-game';
 import { BLOCK_X, BLOCK_Z, GROUND, type Item, TILE_I, TILE_Z } from './city-grid';
 import {
   chinatownSkyItems,
   FLY_LANTERNS,
   flyingLantern,
   JELLY_HANG,
+  LANDMARK_CLEAR,
   LANTERN_FLOOR,
   overChinatown,
   SKY_JELLIES,
@@ -62,6 +63,11 @@ describe('Life in the city: Chinatown’s flying lanterns and jellyfish (2026-11
           expect(overChinatown(L.c[0], L.c[2])).toBe(true);
           expect(L.c[1] - 0.8).toBeGreaterThan(roofUnder(L.c) + 2);
           expect(L.c[1]).toBeGreaterThanOrEqual(LANTERN_FLOOR);
+          // Clear of Chinatown's tall landmarks on their crossings.
+          for (const M of LANDMARKS.filter((m) => m.d === 'chinatown'))
+            expect(Math.hypot(L.c[0] - M.x, L.c[2] - n * TILE_Z - M.z)).toBeGreaterThan(
+              LANDMARK_CLEAR - 3,
+            );
           expect(L.k).toBeGreaterThanOrEqual(0);
           expect(L.k).toBeLessThanOrEqual(1);
           last = L.c;

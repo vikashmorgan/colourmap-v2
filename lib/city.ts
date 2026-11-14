@@ -53,6 +53,7 @@ import {
   dockAt,
   dockNear,
 } from './city-docks';
+import { fireworkItems } from './city-fireworks';
 import { flowLane, LANE_COUNT } from './city-flow';
 import {
   advancePulses,
@@ -3490,11 +3491,14 @@ function gather(P: Plan): { d: number; run: () => void }[] {
   }
   // The game's own: districts, landmarks, lanterns, tunnels, metro, word signs, races, the plan.
   // And the city's life overhead (lib/city-life.ts, 2026-11-14): Chinatown's flying lanterns and
-  // jellyfish, the flocks of birds over the whole city.
+  // jellyfish, the flocks of birds over the whole city. Fireworks over the quarters
+  // (lib/city-fireworks.ts; 2026-11-14: "add fireworks in some places above the city they pop at
+  // random. in the colours of the quarter.").
   const game: Item[] = [
     ...gameItems(eye, fwd, cur.t, P.c),
     ...trackItems(eye, cur.t, NEAR),
     ...lifeItems(eye, cur.t, P.c, P.f),
+    ...fireworkItems(eye, cur.t, viewAt(eye[1])),
   ];
   for (const g of game) {
     if (seeThrough && g.probe && !g.probe.some((q) => roomBeyond(q[0], q[2], 30))) continue;

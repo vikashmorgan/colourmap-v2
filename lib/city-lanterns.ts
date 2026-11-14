@@ -16,7 +16,7 @@
  */
 
 import { hash, type RGB, smooth, type Vec3 } from './bigbang';
-import { BAND_ROWS, blockTower, districtAt, viewAt } from './city-game';
+import { BAND_ROWS, blockTower, districtAt, LANDMARKS, viewAt } from './city-game';
 import {
   BLOCK_X,
   BLOCK_Z,
@@ -71,11 +71,17 @@ function floorOver(key: number, x: number, z: number, clear: number): number {
  * from the stretch's ends so all its drift stays over Chinatown.
  */
 function home(n: number, j: number, salt: number, ox: number, m: number): [number, number] {
-  return [
-    ox + (hash(j, salt) - 0.5) * (TILE_X - 24),
-    n * TILE_Z + m + hash(j, salt + 1) * (CT_LEN - 2 * m),
-  ];
+  let x = (hash(j, salt) - 0.5) * (TILE_X - 24);
+  const z = m + hash(j, salt + 1) * (CT_LEN - 2 * m);
+  // Clear of Chinatown's landmarks (the lantern tower over the pagoda, the race plaza's arches),
+  // which stand tall on their crossings: moved forty aside.
+  for (const L of CT_LANDMARKS)
+    if (Math.hypot(x - L.x, z - L.z) < LANDMARK_CLEAR) x += x < L.x ? -40 : 40;
+  return [ox + x, n * TILE_Z + z];
 }
+/** Chinatown's landmarks, tile-local, and how far the lanterns' homes keep from them. */
+const CT_LANDMARKS = LANDMARKS.filter((L) => L.d === 'chinatown');
+export const LANDMARK_CLEAR = 32;
 
 /* ---------- flying lanterns ---------- */
 

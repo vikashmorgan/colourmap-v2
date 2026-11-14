@@ -91,6 +91,8 @@ describe('the Studio’s twenty buildings in the game city', () => {
       expect(studios.filter((b) => b.studio?.set === set).length).toBeGreaterThan(5);
     const tw = studios.find((b) => b.studio?.set === 'factories') as ReturnType<typeof blockTower>;
     const items = gameItems([tw.x, GROUND + 12, tw.z + 40], [0, -0.2, -1], 3);
-    expect(items.some((it) => it.weight === 1.4 && it.count === 2000)).toBe(true);
+    // Much bigger since 2026-11-14 ("ALL THE COOL BUILDINGS SERIES MUST BE MUCH BIGGER"): drawn
+    // out to the whole view (lib/city-big.ts), with more sites.
+    expect(items.some((it) => it.weight === 1.5 && it.count === 3000)).toBe(true);
   });
 });
