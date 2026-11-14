@@ -11,7 +11,7 @@ import {
 } from './city-currents';
 import { AVE_HEIGHTS, EXPRESS_X, EXPRESS_Z, X_HEIGHTS, Z_HEIGHTS } from './city-flow';
 import { BAND_ROWS, BANDS, blocked, blockTower, districtAt, gameItems } from './city-game';
-import { BLOCK_Z, GROUND, TILE_I } from './city-grid';
+import { BLOCK_Z, GROUND, STRIP_I } from './city-grid';
 import {
   BRIDGE_CLEAR,
   FLASH_EDGE,
@@ -32,7 +32,7 @@ const J0 = B * BAND_ROWS;
 function marketBlocks() {
   const out = [];
   for (let J = J0; J < J0 + BAND_ROWS; J++)
-    for (let I = 0; I < TILE_I / 2; I++) {
+    for (let I = 0; I < STRIP_I / 2; I++) {
       const tw = blockTower(I, J);
       if (tw.d === 'market') out.push(tw);
     }

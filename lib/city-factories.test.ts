@@ -4,12 +4,12 @@ import type { Vec3 } from './bigbang';
 import { studioItem } from './city-designs';
 import { FACTORY_NAMES, FACTORY_SITES, factoryAt, factoryContextItem } from './city-factories';
 import { blockTower, gameItems, LANDMARKS } from './city-game';
-import { GROUND, type Item, mixId, TILE_I, TILE_J } from './city-grid';
+import { GROUND, type Item, mixId, STRIP_I, TILE_I, TILE_J } from './city-grid';
 
 type Block = ReturnType<typeof blockTower>;
 const tile = () => {
   const out: Block[] = [];
-  for (let I = -TILE_I / 2; I < TILE_I / 2; I++)
+  for (let I = -STRIP_I / 2; I < STRIP_I / 2; I++)
     for (let J = 0; J < TILE_J; J++) out.push(blockTower(I, J));
   return out;
 };

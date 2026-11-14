@@ -50,6 +50,9 @@ describe('the river (2026-11-12: "parts with a river")', () => {
     for (let I = -TILE_I; I < TILE_I; I++) {
       for (const J of [23, 24, 23 + TILE_J, 24 - TILE_J]) {
         const tw = blockTower(I, J);
+        // The annex beside the strip (2026-11-14) has no towers: the river runs on there between
+        // the Mountain quarter and the Favela.
+        if (tw.shape === 'hill') continue;
         expect(['box', 'business']).toContain(tw.shape);
         const zc = Math.round(tw.z / TILE_Z) * TILE_Z + RIVER_Z;
         const zr = tw.z < zc ? zc - RIVER_W - 2 : zc + RIVER_W + 2;

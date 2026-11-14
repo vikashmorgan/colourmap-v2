@@ -14,6 +14,7 @@
  */
 
 import type { RGB, Vec3 } from './bigbang';
+import { ANNEX_X, annexContours, annexPlaces, type MapContour, MOUNTAIN_ROWS } from './city-annex';
 import { CANYON_PATH } from './city-canyon';
 import { DOCKS, LOUNGES, placeDock } from './city-docks';
 import { EMBASSIES, embassyCentre } from './city-embassy';
@@ -32,7 +33,10 @@ import {
   BLOCK_X,
   BLOCK_Z,
   GROUND,
-  TILE_I,
+  PLAN_X0,
+  planX,
+  STRIP_I,
+  STRIP_X,
   TILE_J,
   TILE_X,
   TILE_Z,
@@ -78,7 +82,10 @@ export type MapPlace = {
     | 'embassy'
     | 'canyon'
     | 'sky'
-    | 'parcours';
+    | 'parcours'
+    // The Mountain quarter's temples and cable car stations (lib/city-annex.ts, 2026-11-14).
+    | 'temple'
+    | 'cable';
   name: string;
   x: number;
   z: number;
@@ -91,6 +98,8 @@ export type MapPlace = {
 export type MapData = {
   width: number;
   length: number;
+  /** The plan's west edge, x (it runs to x0 + width): the strip's, the annex beyond its +x edge. */
+  x0: number;
   districts: MapDistrict[];
   blocks: MapBlock[];
   roads: MapRoad[];
@@ -103,7 +112,12 @@ export type MapData = {
   canyon?: [number, number][];
   /** The ring parcours' curve (lib/city-rings.ts): x, z and its height in the 3D map. */
   parcours?: [number, number, number][];
+  /** The annex's topographic lines (lib/city-annex.ts): the peaks' contours, the hills' terraces. */
+  contours?: MapContour[];
 };
+
+/** The plan's middle across: the map centres there (the strip and the annex beside it). */
+export const PLAN_MID_X = PLAN_X0 + TILE_X / 2;
 
 const LANDMARK_NAMES: Record<Landmark['kind'], string> = {
   pagoda: 'Pagoda of nine roofs',
@@ -175,25 +189,34 @@ export function cityMapData(): MapData {
         id: left,
         name: d.name,
         colour: d.colour,
-        x0: -TILE_X / 2,
-        x1: TILE_X / 2,
+        x0: -STRIP_X / 2,
+        x1: STRIP_X / 2,
         z0,
         z1,
       });
       return;
     }
     for (const [id, x0, x1] of [
-      [left, -TILE_X / 2, -AVENUE],
-      [right, AVENUE, TILE_X / 2],
+      [left, -STRIP_X / 2, -AVENUE],
+      [right, AVENUE, STRIP_X / 2],
     ] as [DistrictId, number, number][]) {
       const d = DISTRICTS[id];
       districts.push({ id, name: d.name, colour: d.colour, x0, x1, z0, z1 });
     }
   });
+  // The annex beside the strip (2026-11-14): the Mountain quarter to the river, the Favela after.
+  for (const [id, z0, z1] of [
+    ['mountain', 0, MOUNTAIN_ROWS * BLOCK_Z],
+    ['favela', MOUNTAIN_ROWS * BLOCK_Z, TILE_Z],
+  ] as [DistrictId, number, number][]) {
+    const d = DISTRICTS[id];
+    const x0 = STRIP_X / 2;
+    districts.push({ id, name: d.name, colour: d.colour, x0, x1: x0 + ANNEX_X, z0, z1 });
+  }
 
   const blocks: MapBlock[] = [];
   for (let J = 0; J < TILE_J; J++) {
-    for (let I = -TILE_I / 2; I < TILE_I / 2; I++) {
+    for (let I = -STRIP_I / 2; I < STRIP_I / 2; I++) {
       const tw = blockTower(I, J);
       blocks.push({
         x: tw.x,
@@ -220,20 +243,26 @@ export function cityMapData(): MapData {
 
   const roads: MapRoad[] = [];
   // The avenue's two edges, the tile's edges along, and every band's edge across: the main roads.
-  for (const x of [-AVENUE, AVENUE, -TILE_X / 2, TILE_X / 2])
+  for (const x of [-AVENUE, AVENUE, -STRIP_X / 2, STRIP_X / 2])
     roads.push({ x0: x, z0: 0, x1: x, z1: TILE_Z, main: true });
   for (let b = 0; b <= BANDS.length; b++) {
     const z = b * BAND_ROWS * BLOCK_Z;
-    roads.push({ x0: -TILE_X / 2, z0: z, x1: TILE_X / 2, z1: z, main: true });
+    roads.push({ x0: -STRIP_X / 2, z0: z, x1: STRIP_X / 2, z1: z, main: true });
   }
   // The side streets, faint: every block's edge along and across.
-  for (let I = -TILE_I / 2 + 1; I < TILE_I / 2; I++) {
+  for (let I = -STRIP_I / 2 + 1; I < STRIP_I / 2; I++) {
     if (I === 0) continue;
     roads.push({ x0: I * BLOCK_X, z0: 0, x1: I * BLOCK_X, z1: TILE_Z, main: false });
   }
   for (let J = 1; J < TILE_J; J++) {
     if (J % BAND_ROWS === 0) continue;
-    roads.push({ x0: -TILE_X / 2, z0: J * BLOCK_Z, x1: TILE_X / 2, z1: J * BLOCK_Z, main: false });
+    roads.push({
+      x0: -STRIP_X / 2,
+      z0: J * BLOCK_Z,
+      x1: STRIP_X / 2,
+      z1: J * BLOCK_Z,
+      main: false,
+    });
   }
 
   const places: MapPlace[] = [];
@@ -301,6 +330,8 @@ export function cityMapData(): MapData {
   });
   // The fifteen flying stations and the parcours' start (lib/city-skyport.ts, 2026-11-14).
   places.push(...skyPlaces());
+  // The Mountain quarter's temples and cable car stations (lib/city-annex.ts, 2026-11-14).
+  places.push(...annexPlaces());
   basePlaces = places.length;
   places.push(...MAP_EXTRAS);
 
@@ -311,6 +342,7 @@ export function cityMapData(): MapData {
   cached = {
     width: TILE_X,
     length: TILE_Z,
+    x0: PLAN_X0,
     districts,
     blocks,
     roads,
@@ -319,15 +351,13 @@ export function cityMapData(): MapData {
     tunnels: tunnelLines(),
     canyon: CANYON_PATH.map(([x, z]) => [x, z]),
     parcours: parcoursLine(),
+    contours: annexContours(),
   };
   return cached;
 }
 
 /** A point of the endless city brought into the tile the map shows: x across the avenue, z along. */
-export const tileLocal = (x: number, z: number): [number, number] => [
-  wrap(x + TILE_X / 2, TILE_X) - TILE_X / 2,
-  wrap(z, TILE_Z),
-];
+export const tileLocal = (x: number, z: number): [number, number] => [planX(x), wrap(z, TILE_Z)];
 // Filled once tileLocal is defined: the docks and embassies join the plan's places.
 MAP_EXTRAS.push(...dockAndEmbassyPlaces());
 // The speedway's mouth at the plan's north end, and Atlantis beyond it (lib/city-speedway.ts).
@@ -358,7 +388,7 @@ export const ZOOM_RANGE: [number, number] = [0.6, 12];
 
 /** The view that fits the whole tile on a screen w × h: the long way up a tall screen, across a wide one. */
 export function fitView(w: number, h: number, tilt = 0): MapView {
-  return { tilt, yaw: w > h ? -Math.PI / 2 : 0, zoom: 1, cx: 0, cz: TILE_Z / 2 };
+  return { tilt, yaw: w > h ? -Math.PI / 2 : 0, zoom: 1, cx: PLAN_MID_X, cz: TILE_Z / 2 };
 }
 
 /** A view kept within its limits. */
@@ -367,7 +397,7 @@ export function clampMapView(v: MapView): MapView {
     tilt: Math.max(0, Math.min(TILT_MAX, v.tilt)),
     yaw: v.yaw,
     zoom: Math.max(ZOOM_RANGE[0], Math.min(ZOOM_RANGE[1], v.zoom)),
-    cx: Math.max(-TILE_X / 2, Math.min(TILE_X / 2, v.cx)),
+    cx: Math.max(PLAN_X0, Math.min(PLAN_X0 + TILE_X, v.cx)),
     cz: Math.max(0, Math.min(TILE_Z, v.cz)),
     ox: v.ox ?? 0,
     oy: v.oy ?? 0,
@@ -383,7 +413,7 @@ export function projectedBounds(v: MapView, w: number, h: number) {
   let y0 = Number.POSITIVE_INFINITY;
   let x1 = Number.NEGATIVE_INFINITY;
   let y1 = Number.NEGATIVE_INFINITY;
-  for (const x of [-TILE_X / 2, TILE_X / 2]) {
+  for (const x of [PLAN_X0, PLAN_X0 + TILE_X]) {
     for (const z of [0, TILE_Z]) {
       for (const y of [0, 100]) {
         const [sx, sy] = projectMap(v, w, h, x, y, z);
@@ -419,7 +449,7 @@ export function fitView3D(w: number, h: number, tilt = TILT_3D): MapView {
   let best: MapView | null = null;
   let bestScale = 0;
   for (let off = 0.3; off <= 0.91; off += 0.05) {
-    const v = frameView({ tilt, yaw: base + off, zoom: 1, cx: 0, cz: TILE_Z / 2 }, w, h);
+    const v = frameView({ tilt, yaw: base + off, zoom: 1, cx: PLAN_MID_X, cz: TILE_Z / 2 }, w, h);
     // Compared by metres to the pixel: the zoom alone is relative to each turn's own flat fit.
     const scale = mapScale(v, w, h);
     if (scale > bestScale + 1e-9) {
@@ -691,6 +721,20 @@ export function drawCityMap(
   }
   // The avenue, a pale band.
   poly(flat(-AVENUE, 0, AVENUE, data.length), 'rgba(244,234,216,0.07)');
+  // The annex's topography (2026-11-14): the peaks' contour lines and the hills' terraces, each
+  // at its height when tilted, so the mountains rise in rings on the 3D map.
+  for (const c of data.contours ?? []) {
+    ctx.beginPath();
+    c.pts.forEach(([x, z], i) => {
+      const q = P(x, v.tilt > 0.02 ? c.y : 0, z);
+      if (i) ctx.lineTo(q[0], q[1]);
+      else ctx.moveTo(q[0], q[1]);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = rgba(c.colour, 1, c.d === 'mountain' ? 0.55 : 0.45);
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
 
   // The roads: the side streets faint, the main roads in gold.
   ctx.lineCap = 'round';
@@ -918,6 +962,7 @@ export function drawCityMap(
         ctx.fill();
         break;
       case 'station':
+      case 'cable':
         ctx.rect(q[0] - 2.5, q[1] - 2.5, 5, 5);
         ctx.fill();
         break;
@@ -976,7 +1021,7 @@ export function drawCityMap(
         ctx.arc(q[0], q[1], 6.5, 0, Math.PI * 2);
         ctx.stroke();
     }
-    if (labels && p.kind !== 'station' && p.kind !== 'portal') {
+    if (labels && p.kind !== 'station' && p.kind !== 'portal' && p.kind !== 'cable') {
       say(
         p.name,
         q,

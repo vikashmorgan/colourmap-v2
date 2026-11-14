@@ -16,7 +16,7 @@ import {
 } from './city-cars';
 import { DOCKS, placeDock } from './city-docks';
 import { inCanal } from './city-game';
-import { BLOCK_X, BLOCK_Z, C, GROUND, type Item, TILE_Z } from './city-grid';
+import { BLOCK_X, BLOCK_Z, C, GROUND, type Item, TILE_X, TILE_Z } from './city-grid';
 import { RIVER_ROW } from './city-rain';
 
 const street: Road = { axis: 2, line: 3 };
@@ -62,7 +62,9 @@ describe('cars on the ground (queued: "cars on the ground")', () => {
             const B = pos[j] as (typeof pos)[number];
             if (Math.abs(A.pos[r.axis === 2 ? 0 : 2] - B.pos[r.axis === 2 ? 0 : 2]) > 0.5) continue;
             const along = Math.abs(A.pos[r.axis] - B.pos[r.axis]);
-            expect(Math.min(along, (r.axis === 2 ? TILE_Z : 312) - along)).toBeGreaterThan(CAR_LEN);
+            expect(Math.min(along, (r.axis === 2 ? TILE_Z : TILE_X) - along)).toBeGreaterThan(
+              CAR_LEN,
+            );
           }
         }
       }

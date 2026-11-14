@@ -10,11 +10,11 @@ import {
   studioItem,
 } from './city-designs';
 import { blocked, blockTower, DISTRICTS, gameItems } from './city-game';
-import { BLOCK_X, BLOCK_Z, GROUND, TILE_I, TILE_J } from './city-grid';
+import { BLOCK_X, BLOCK_Z, GROUND, STRIP_I, TILE_J } from './city-grid';
 
 const tile = () => {
   const out: ReturnType<typeof blockTower>[] = [];
-  for (let I = -TILE_I / 2; I < TILE_I / 2; I++)
+  for (let I = -STRIP_I / 2; I < STRIP_I / 2; I++)
     for (let J = 0; J < TILE_J; J++) out.push(blockTower(I, J));
   return out;
 };

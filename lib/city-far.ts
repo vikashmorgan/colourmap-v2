@@ -12,6 +12,7 @@
  */
 
 import { hash, type RGB, smooth, type Vec3 } from './bigbang';
+import { annexFar } from './city-annex';
 import { BIG_SQUARES, bigHeight, studioBlockHeight } from './city-big';
 import {
   BAND_ROWS,
@@ -24,7 +25,7 @@ import {
   STREET_VIEW_LARGE,
   viewAt,
 } from './city-game';
-import { BLOCK_Z, C, GROUND, mix, TILE_I, TILE_J, TILE_X, TILE_Z, wrap } from './city-grid';
+import { BLOCK_Z, C, GROUND, mix, STRIP_I, TILE_J, TILE_X, TILE_Z, wrap } from './city-grid';
 import { crownKey, crownModel, landmarkHeight } from './city-landmarks';
 import { inRoom } from './city-rooms';
 import { inSpace } from './city-space';
@@ -87,7 +88,9 @@ export function farCity(): FarCloud {
       }
     }
   };
-  for (let I = -TILE_I / 2; I < TILE_I / 2; I++) {
+  // The strip's blocks; the annex beside it (2026-11-14) its contour lines and its houses' glows.
+  annexFar(put, DISTRICTS.mountain.colour, DISTRICTS.favela.colour);
+  for (let I = -STRIP_I / 2; I < STRIP_I / 2; I++) {
     for (let J = 0; J < TILE_J; J++) {
       const tw = blockTower(I, J);
       const c = DISTRICTS[tw.d].colour;

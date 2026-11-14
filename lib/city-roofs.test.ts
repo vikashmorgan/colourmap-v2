@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec3 } from './bigbang';
 import { blockTower, DISTRICTS } from './city-game';
-import { C, GROUND, TILE_I, TILE_J } from './city-grid';
+import { C, GROUND, STRIP_I, TILE_J } from './city-grid';
 import { FACADES, facadeItem, roofItem, windowOn } from './city-roofs';
 import { skyGrain } from './city-sky';
 
 const towers = () => {
   const out: ReturnType<typeof blockTower>[] = [];
-  for (let I = -TILE_I / 2; I < TILE_I / 2; I++)
+  for (let I = -STRIP_I / 2; I < STRIP_I / 2; I++)
     for (let J = 0; J < TILE_J; J++) out.push(blockTower(I, J));
   return out.filter((t) => t.shape === 'box');
 };
