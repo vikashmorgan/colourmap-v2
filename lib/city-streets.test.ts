@@ -11,6 +11,7 @@ import type { Vec3 } from './bigbang';
 import { signSize } from './city';
 import { skyBridgeItem } from './city-business';
 import { CANYON_W, CANYON_WALLS, canyonWallAt } from './city-canyon';
+import { corridorSide } from './city-corridors';
 import { flowLane, LANE_COUNT, LANE_OFF, WIDE_LANE_OFF } from './city-flow';
 import { textPixels } from './city-font';
 import {
@@ -97,13 +98,23 @@ describe('the wider streets (2026-11-14: "make a lot of the thin streets larger"
     expect(wide.filter((s) => s.axis === 2).length).toBeGreaterThan(45);
     expect(wide.filter((s) => s.axis === 0).length).toBeGreaterThan(60);
     let sum = 0;
+    let n = 0;
     for (const s of wide) {
       const was = clear(s, s.a, s.b);
       const now = clear(s, s.A, s.B);
+      // 2026-11-14 (the racing corridors, lib/city-corridors.ts): a boulevard beside a tower slimmed
+      // for a corridor gives up what the tower cannot (never thinner than 7.2), but is never
+      // narrower than it was before the wider streets, nor than nine. (Across x, a block beside a
+      // corridor holds a plain tower where one of the twenty designs stood: nine or more.)
+      if (corridorSide(s.A.I) !== 0 || corridorSide(s.B.I) !== 0) {
+        expect(now).toBeGreaterThanOrEqual((s.axis === 2 ? Math.max(was, 9) : 9) - 1e-6);
+        continue;
+      }
       expect(now).toBeGreaterThanOrEqual(1.6 * was - 1e-6);
       sum += now / was;
+      n++;
     }
-    expect(sum / wide.length).toBeGreaterThan(1.7);
+    expect(sum / n).toBeGreaterThan(1.7);
   });
 
   it('leaves the avenue and its towers as they were', () => {

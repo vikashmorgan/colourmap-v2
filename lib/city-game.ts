@@ -24,12 +24,21 @@ import { bigItems, openBlock, studioBlockItems } from './city-big';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
 import { canyonHeight, canyonItems, canyonWallAt } from './city-canyon';
 import { carItems } from './city-cars';
+import {
+  CT_SIGN_LEVELS,
+  CT_SIGN_LEVELS_TALL,
+  CT_STRAND_LEVELS,
+  CT_WALK_SHARE,
+  inCtWindow,
+} from './city-chinatown-open';
 import { CODE_GREEN, CODE_TEMPO, codeSize, dataSpireItem } from './city-code';
+import { acrossCorridor, corridorClear, corridorItems, corridorSide } from './city-corridors';
 import { type Design, designFor, designHolds, designItem, studioItem } from './city-designs';
 import { dockItems, LOUNGES, PAD_R, placeDock } from './city-docks';
 import { embassyAt, embassyItems } from './city-embassy';
 import { factoryAt, factoryContextItem } from './city-factories';
 import { type FaceId, textPixels } from './city-font';
+import { gapBridgeItems } from './city-gap-bridges';
 import {
   AVENUE,
   aroundRect,
@@ -548,7 +557,12 @@ function buildBlock(I: number, J: number, wide: boolean): Block {
   // One of the Studio's twenty buildings (lib/city-designs.ts), in the quarter it belongs to
   // (2026-11-13: "use the 20 buildings in the main city, in the quarters they belong to").
   let design: Design | null = null;
-  if (!ave && (shape === 'box' || shape === 'business' || shape === 'pyramid')) {
+  // None beside a racing corridor (lib/city-corridors.ts): a design's round plinth cannot slim.
+  if (
+    !ave &&
+    (!wide || corridorSide(I) === 0) &&
+    (shape === 'box' || shape === 'business' || shape === 'pyramid')
+  ) {
     design = designFor(d, k, railCeiling(I, J));
     if (design) shape = 'design';
   }
@@ -670,6 +684,29 @@ function buildBlock(I: number, J: number, wide: boolean): Block {
     x = X.c + X.moved * (X.half - nhx);
     z = Z.c + Z.moved * (Z.half - nhz);
     [hx, hz] = [nhx, nhz];
+  }
+  // The racing corridors (lib/city-corridors.ts, 2026-11-14: "open up and enlarge the main long
+  // streets ... from far left to far right"): beside them every solid tower steps back and slims,
+  // so each corridor is CORRIDOR_HALF either side of its line all the way. Chinatown keeps its
+  // fourteen-wide lanes on the far side. The through tunnel's row keeps its place (the tower across
+  // stands further back instead; only a block on a corridor's high side looks across, so no block
+  // waits on itself); the canyon's walls are trimmed in lib/city-canyon.ts.
+  if (
+    wide &&
+    !thru &&
+    !wall &&
+    corridorSide(I) !== 0 &&
+    (shape === 'box' || shape === 'business' || shape === 'code' || shape === 'pyramid')
+  ) {
+    const across = corridorSide(I) > 0 ? blockTower(I - 1, J) : null;
+    const kept = across?.bore?.through ? across.x + across.hx : null;
+    const ct = d === 'chinatown';
+    // As thin as a slimmed tower may be (7.2; Chinatown's 7, its lanes staying fourteen wide); where
+    // that is not enough the boulevard on its far side gives up the rest.
+    const c = corridorClear(I, x, hx, ct ? 7 : STREET_MIN_GAP, ct ? 3.5 : WIDE_MIN_HALF, kept);
+    [x, hx] = [c.x, c.hx];
+    // A pyramid stays square and keeps its golden slope, smaller.
+    if (shape === 'pyramid') [hz, h] = [hx, hx * Math.sqrt((1 + Math.sqrt(5)) / 2)];
   }
   // The Matrix quarter's entrance rows (lib/city-matrix.ts): round tubes and octagons, as wide
   // across as their narrower side, so there is room to fly round them.
@@ -1432,9 +1469,9 @@ function modelSite(
 
 /* ---------- lanterns, Diwali lamps, sky lanterns ---------- */
 
-type Strand = { a: Vec3; b: Vec3; kind: 'red' | 'diwali'; key: number };
+export type Strand = { a: Vec3; b: Vec3; kind: 'red' | 'diwali'; key: number };
 /** Strings hung across the streets of Chinatown (red lanterns) and the Indian quarter (Diwali lamps), at three heights. */
-function strandsNear(eye: Vec3, R: number, out: Strand[]) {
+export function strandsNear(eye: Vec3, R: number, out: Strand[]) {
   const I0 = Math.floor((eye[0] - R) / BLOCK_X);
   const I1 = Math.floor((eye[0] + R) / BLOCK_X);
   const J0 = Math.floor((eye[2] - R) / BLOCK_Z);
@@ -1452,8 +1489,17 @@ function strandsNear(eye: Vec3, R: number, out: Strand[]) {
       const x1 = B.x - B.hx;
       const ave = I === -1;
       const tops = Math.min(A.h, B.h) - 3;
-      // At more heights now Chinatown stands taller: wherever both walls reach.
-      const levels = ave ? [30, 36, 46] : [9, 17, 26, 38, 50];
+      // At more heights now Chinatown stands taller: wherever both walls reach. Fewer in Chinatown
+      // now, never into its windows (lib/city-chinatown-open.ts, 2026-11-14: "too overloaded ...
+      // openings so I can fly through"), and never across a racing corridor (lib/city-corridors.ts).
+      const ct = kind === 'red';
+      const levels = acrossCorridor(I)
+        ? []
+        : ave
+          ? [30, 36, 46]
+          : ct
+            ? CT_STRAND_LEVELS
+            : [9, 17, 26, 38, 50];
       levels.forEach((lv, n) => {
         if (lv > tops) return;
         for (const f of [0.25, 0.7]) {
@@ -1462,6 +1508,7 @@ function strandsNear(eye: Vec3, R: number, out: Strand[]) {
             Math.min(A.z + A.hz, B.z + B.hz),
             f + 0.04 * n,
           );
+          if (ct && inCtWindow(...strandBox(x0, x1, GROUND + lv, z, z))) continue;
           out.push({
             a: [x0, GROUND + lv, z],
             b: [x1, GROUND + lv, z],
@@ -1479,6 +1526,7 @@ function strandsNear(eye: Vec3, R: number, out: Strand[]) {
         for (const lv of [12, 22]) {
           if (lv > top2) continue;
           const x = lerp(Math.max(A.x - A.hx, N.x - N.hx), Math.min(A.x + A.hx, N.x + N.hx), 0.5);
+          if (ct && inCtWindow(...strandBox(x, x, GROUND + lv, z0, z1))) continue;
           out.push({
             a: [x, GROUND + lv, z0],
             b: [x, GROUND + lv, z1],
@@ -1489,6 +1537,14 @@ function strandsNear(eye: Vec3, R: number, out: Strand[]) {
       }
     }
   }
+}
+/** The box a string of lanterns fills, hung at y between (x0, z0) and (x1, z1): sag and tassels. */
+function strandBox(x0: number, x1: number, y: number, z0: number, z1: number): [Vec3, Vec3] {
+  const sag = 0.5 + Math.hypot(x1 - x0, z1 - z0) * 0.05;
+  return [
+    [Math.min(x0, x1), y - sag - 2.2, Math.min(z0, z1) - 0.8],
+    [Math.max(x0, x1), y + 0.2, Math.max(z0, z1) + 0.8],
+  ];
 }
 const LANTERN_GAP = 1.7;
 const LAMP_GAP = 0.55;
@@ -1575,7 +1631,8 @@ export function walkwaysNear(eye: Vec3, R: number): Walk[] {
   const J0 = Math.floor((eye[2] - R) / BLOCK_Z);
   const J1 = Math.floor((eye[2] + R) / BLOCK_Z);
   for (let I = I0; I <= I1; I++) {
-    if (tileCol(I) === -1) continue;
+    // Never across the avenue, nor across a racing corridor (lib/city-corridors.ts, 2026-11-14).
+    if (tileCol(I) === -1 || acrossCorridor(I)) continue;
     for (let J = J0; J <= J1; J++) {
       if (districtOf(I, J) !== 'chinatown' || districtOf(I + 1, J) !== 'chinatown') continue;
       const A = blockTower(I, J);
@@ -1587,14 +1644,18 @@ export function walkwaysNear(eye: Vec3, R: number): Walk[] {
       const top = Math.min(A.h, B.h) - 4;
       WALK_LEVELS.forEach((lv, m) => {
         const key = mixId(I * 17 + m, J * 29 + 3);
-        if (lv > top || hash(key, 471) > 0.5) return;
-        out.push({
+        // Fewer than the half they were, and none in Chinatown's windows (lib/city-chinatown-open.ts,
+        // 2026-11-14: "too overloaded ... openings so I can fly through").
+        if (lv > top || hash(key, 471) > CT_WALK_SHARE) return;
+        const w = {
           x0: A.x + A.hx,
           x1: B.x - B.hx,
           y: GROUND + lv,
           z: lerp(z0, z1, hash(key, 472)),
           key,
-        });
+        };
+        if (inCtWindow([w.x0, w.y, w.z - 1.2], [w.x1, w.y + 3.4, w.z + 1.2])) return;
+        out.push(w);
       });
     }
   }
@@ -2355,13 +2416,14 @@ export function towerSigns(tw: Block): Sign[] {
     // Taller towers, signs at more levels up them (2026-11-13: "make chinatown higher with many
     // levels").
     const tall = tw.h > 46;
+    // Fewer up the side streets now (lib/city-chinatown-open.ts, 2026-11-14: "too overloaded").
     const levels = facesAve
       ? tall
         ? [0.45, 0.65, 0.85]
         : [0.55, 0.85]
       : tall
-        ? [0.12, 0.3, 0.5, 0.7, 0.88]
-        : [0.15, 0.5, 0.82];
+        ? CT_SIGN_LEVELS_TALL
+        : CT_SIGN_LEVELS;
     levels.forEach((lv, m) => {
       const j = tw.k * 7 + m * 3 + (side > 0 ? 1 : 0);
       const text = SIGN_WORDS[wrap(j, SIGN_WORDS.length)] as string;
@@ -2374,9 +2436,12 @@ export function towerSigns(tw: Block): Sign[] {
       // Staggered (2026-11-14: "needs to breathe"): a level's sign on a +x wall stands where the
       // -x wall across the street has none, so two never face each other across the street.
       const back = (m + (side > 0 ? 1 : 0)) % 2;
+      const sz = tw.z + tw.hz * (back ? -0.4 : 0.55);
+      // None reaching into Chinatown's windows, so they stay clear to fly through.
+      if (inCtWindow([x0, top - h, sz - 0.5], [x0 + w, top, sz + 0.5])) return;
       out.push({
         text,
-        at: [x0, top, tw.z + tw.hz * (back ? -0.4 : 0.55)],
+        at: [x0, top, sz],
         vertical: true,
         px,
         tone: SIGN_TONES[wrap(j, SIGN_TONES.length)] as Sign['tone'],
@@ -3104,6 +3169,12 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
   }
   railItems(eye, t, Math.min(R, NEAR + 60), out);
   riverItems(eye, t, R, floorAt, waterAt, out);
+  // The bridges high over the river between the Heights and the Golden gardens, and the racing
+  // corridors' obstacles and kerbs (lib/city-gap-bridges.ts, lib/city-corridors.ts, 2026-11-14).
+  gapBridgeItems(eye, t, Math.min(R, 420), out);
+  // Drawn far (2026-11-14: "perspective is everything"): the gates and bridges recede down each
+  // corridor as frames, the kerb lamps converge to its vanishing point.
+  corridorItems(eye, t, Math.min(R, 420), ahead, out);
   dockItems(eye, t, Math.min(R, NEAR + 40), out, ship);
   embassyItems(eye, t, R, out);
   carItems(
