@@ -1440,12 +1440,91 @@ place's number: the same moment always shows the same bursts.
 - Budget: at most the 8 nearest bursts within sight are drawn, 286 sites each (weight 1.6, as
   the lanterns), in the same grain pool as everything else; from the cockpit they show too.
 
+### The Grand Avenue (2026-11-14)
+
+> "make the main street when u go from chinatown start forward forever unique. on multiple heights
+> so it is all top quality stuff like chinatown main street part. but not only close to ground
+> level. and make it a loop so when i go to end of map it goes back to the other side. so from
+> china town forward finish game and goes back to china town so u can go infinitely forward."
+>
+> "make sure these main streets are high with many vertical levels. so I don't fly on road level
+> and all good info is on the levels above road level as well."
+>
+> Earlier: "different cool main streets like the china town one. with many layers and levels above
+> or below and long avenues well designed and side streets that work well and potentially open
+> spaces for temples, factories, novas etc.... making sure rooftops aren't boring or just black."
+
+`lib/city-avenue.ts`, hooked into `lib/city-game.ts` (`blockTower` raises the avenue's towers,
+`gameItems` draws the rest). Our own designs only, each in its quarter's colours; every hue drifts
+slowly between the band's two quarters' colours, lamps twinkle softly, nothing flashes.
+
+**High walls.** The avenue's own towers stand taller in every quarter (`avenueHeight`): Chinatown
+36–62, the Indian quarter 64–104, Istanbul 60–100, the Canals 58–94, the golden gardens 70–110,
+the temples 64–100, the industrial quarter 66–102, the domes 60–96, Egypt 52–82, the market
+72–116, the Green Code 66–116 (the Heights were tall already). The metro, the Neon Canyon and the
+Chinatown lounge still set the height where they cross. So the avenue is a deep street all the way,
+its good things climbing from 20 to past 100 over the road.
+
+**Every band's stretch** has, all of it light (fly-through, never in `blocked`):
+
+- **bridges across the avenue** at four heights, two in each block and the other two in the next,
+  staggered along the block, wall to wall under both walls' tops (`avenueSpans`);
+- **galleries up both façades** at four to seven levels, standing out over the avenue;
+- **lit roofs** on its towers (seen from about their height up): gardens, pools, landing pads,
+  stepped crowns, signs, glass domes — no plain black roof;
+- a **feature over the avenue** in places, hung just under the walls' tops where they are lower.
+
+| Band | Bridges (height over the road) | Left façade | Right façade | Roofs | Over the avenue |
+|------|------|------|------|------|------|
+| Chinatown | moon bridges, a swept gold ridge and lanterns under it (24, 32, 40, 50) | lantern balconies, red rails (22, 32, 42, 52) | the same | (its tiered roofs) | — |
+| Indian quarter · Istanbul | carved lattice bridges with lamps at their foot, and arcade bridges on pointed arches with a small dome (30, 44, 58, 74) | carved bay balconies, an arched bay and a little dome over each, a lamp at its foot (22, 36, 50, 64, 78) | domed arcades and terraces in tiers, lamps hung in the arches (20, 34, 48, 62, 76) | a garden with a domed pavilion; a lit pool | a ceiling of hanging lamps on chains (band rows 6–7, up to 96) |
+| The Heights · the Canals | glass skybridges with ribs and a slow shimmer, and arched water bridges with lit water down their middle (36, 52, 70, 92) | glass bands with mullions and a light running along (30, 50, 70, 90, 110) | lit water terraces stepping up, falls running down their edges (20, 32, 44, 56, 68) | landing pads; roof pools | a suspended garden deck with trees and trailing vines (rows 5–6, up to 100) |
+| Golden gardens · temples | colonnade bridges, gardens trailing under them (30, 46, 62, 80) | golden colonnades, hanging gardens below each (24, 44, 64, 84) | ivory colonnades, the same | roof gardens; stepped crowns with a lit apex | a trellis of hanging vines (rows 4–5, up to 104) |
+| Industrial · domes | truss gantries with a lamp at every node, and pipe bridges (28, 42, 56, 72) | catwalks with rails, braces and slow amber lamps (24, 40, 56, 72) | dome balconies of glass, green light inside (22, 38, 54, 70) | landing pads; glass domes over gardens | a long glass tube down the right side with plants in it (rows 1–6, 76) and a travelling crane rolling slowly on rails (rows 3–4, up to 98) |
+| Egypt · Neon market | floating obelisk bridges (on nothing, gold bands, a lit tip), and neon bridges with a board hung under each (28, 42, 56, 72) | stepped terraces, each further out, lamps and small obelisk lamps (18, 30, 42, 54, 66) | neon decks every twelve (20 to 92) | stepped crowns; rooftop sign frames | sun-disc gates to fly through, rays and wings, at rows 1, 3, 5, 7 (54); a neon grid (rows 4–6, up to 104) |
+| Green Code | code bridges, glyph lights streaming along them (30, 46, 62, 80) | glyph ledges, a stream falling along (24, 44, 64, 84, 104) | the same | landing pads | a cascade of glyph columns hanging from a lattice, light falling down each (rows 3–5, up to 112) |
+
+Over the Heights' tube and its two lounges (rows 17–21) nothing of the avenue's stands under 64.
+
+**The loop, seamless.** The plan already repeats every 56 rows, so flying on down the avenue
+always comes back to Chinatown. Now every band's edge has a **gateway** (`GATEWAYS`, seven a turn):
+two pylons on the cross street's corners (x ±10.8) rising 112, rings and lamp beads up them, three
+lintels across the avenue (34, 64, 94), a double arch crowning it (to 128), its light drifting
+between the two bands' hues; the name of the band you fly into going down the avenue (−z) on its
+near face (at 88), the other band's under it (at 60), in the deco face. The join where the plan
+turns (z = 0, the Green Code into Chinatown) and Chinatown's other edge (into the opening road)
+carry a flared red-and-gold roof over the crown and two great lanterns under the top lintel; the
+gateways at the Green Code's two edges have glyphs falling down their pylons; the others a ring in
+the crown. Each band's first and last rows lean 30% toward the neighbouring band's hues, so one
+quarter blends into the next. Gateway words: CHINATOWN, LAMPS & DOMES, THE HEIGHTS, GOLDEN
+GARDENS, FORGE & GLASS, SUN & NEON, GREEN CODE.
+
+**Budget.** Near-eye items like Chinatown's: each block's bridges one item, each tower's galleries
+and roof one item each, each feature and gateway one; drawn within 160 ahead (the gateways 270),
+nearest first and thinned with distance by the renderer, each shape built once and kept. About
+35–50 items and 30,000 sites in sight, under a microsecond a site. Timed over 120 frames of
+`setFly` + `pieceCamera` + `pieceAt` at 15,000 grains on the avenue, before and after, in the same
+session: golden gardens 53.8 → 53.3 ms, industrial 51.6 → 51.2 ms, Egypt 50.3 → 50.9 ms; a
+second pair later, the machine busier, 69.2 → 61–63, 66.8 → 57–61, 65.9 → 55–59 (no measurable
+cost: the frame's grains are a fixed pool; this machine's timings drift threefold between runs).
+
+**Acceptance** (`lib/city-avenue.test.ts`): a design for every band, each its own; the walls high
+(median over 50) in every quarter after Chinatown; bridges at three heights or more over 20 in
+every band, wall to wall, in the block; sites on six or more ten-high levels over 20 in every
+band; the avenue's middle clear at every height to 120 and the autopilot's route clear; the
+quarter starts and race gates clear; colours drift slowly (no step over 0.03 a frame); a gateway at
+every band's edge, the join's naming CHINATOWN and GREEN CODE, crowned over 112, its lintels lit,
+flown through at every height, on every turn of the plan; each band blending into the next.
+
 ### Still rough, and next
 
 - The Studio's domes, minarets and spires on the box towers are light: you fly through them (the
   towers, pyramids, the twenty and the code towers hold you). Sky bridges and the metro are light
   too. So are the landmarks' tall crowns, the big squares, the fifteen new buildings and the
   Studio's buildings on the blocks (2026-11-14).
+- The Grand Avenue's bridges, galleries, roofs and gateways are light: nothing to land on, no
+  race through its gateways yet; its designs repeat in every turn of the plan (the towers differ).
+  The side streets have not had their own round yet.
 - The Canals and the Neon market still have no landmark of their own; the big squares are only in
   the landmarks' columns; the Studio's meshes are stretched upward rather than redrawn tall.
 - The Deep Line has no race of its own yet (the tracks are one a quarter), and no side branches.
