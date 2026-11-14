@@ -489,8 +489,9 @@ golden city's. Our own design throughout: no names, shapes or symbols from any f
   gardens of coral and kelp under the even ones, terraced homes with lit windows under the odd;
   joined round the ring by a glass tunnel; beside each, two smaller domes (radius 1.1 to 1.8),
   each joined to it by its own tunnel.
-- **Ring of nature**: reefs in five sectors, kelp meadows in the others, and three clusters of
-  three domes (large, middle, small) joined to each other and to the boulevard's end.
+- **Ring of nature**: reefs in five sectors, kelp meadows in the others, and two clusters of
+  three domes (large, middle, small) on the free diagonals, joined to each other and to the
+  boulevard's end (there were three; two gave way to the dome complexes, 2026-11-14).
 - **Glass tunnels** (the boulevards): twelve from the heart's dome out across every ring, each a
   faint skin of glass, a gold rib every 1.5, two gold rails and a lit walkway along its floor;
   lights run along the long ones (on a short one a running light would blink, so it stays steady).
@@ -1251,8 +1252,23 @@ tile's edge.
 - **Atlantis** gains spires of three drums, each narrower, with porthole rings, a lamp at each step and a slow light on a mast: in the ring of knowledge, rising out of the homes' domes, and beside the nature clusters. They stay below the high submarine loops, and their bounding spheres keep submarines clear. Less bloom (glow 0.6), smaller grains in the close views, buildings lit rather than glowing up close, a softer heart.
 - **Depth of field** in the game softens the far city from cruise on, not only under the boost: it starts at 1.35 times the focus distance and ramps over 110.
 
+### Atlantis, circular and vertical (2026-11-14)
+
+"make Atlantis more vertical with factories domes towers but all connecting with human sized tunnels unravelling around it and in circles or spirals around some buildings (these are for decoration) will be used by humans in the city much later in development. so we get a whole city that keeps feeling of having been designed from the start. and that isn't square. adding 4 dome complexes NSEW so it creates this super cool circular design with circle plazas and complexes at every quarter."
+
+Drawn as its own two roles in every view, `rise` (the buildings, a mesh) and `tunnel` (worked out grain by grain), so the old city keeps its budget; in Atlantis's own gold, glass and warm white, no brighter than the city (its tunnels fainter), nothing flashing.
+
+- **The skyline climbs in rings toward the heart**: four **great towers** on the diagonals of the ring of knowledge (45°, 135°, 225°, 315°), 17 high (the spires reached 7.8): five drums each narrower by φ^¼, porthole rings, a balcony with small lamps at every step, an open lantern of rings and ribs round a slow light, a mast. Two stand where the diagonal spires were, two rise out of the knowledge domes. A **factory** rises out of every compartment of the ring of making: three banded drums with tall slits of warm light, pipes up the sides, a low glass cap and two chimneys breathing slow bubbles, 12.5 high on the diagonals and 9.5 (slimmer) between, clear of the long loops above the boulevards. Then the homes' spires (7.8) and the dome stacks (8.6) out in the ring of nature.
+- **Four dome complexes**, N, E, S and W, on the boulevards of the four long loops (north is the harbour's), all 46 from the heart: each a **circle plaza** of radius 5 (rings and a compass rose on the floor, eight lamps, bubbles rising from its middle) ringed at 10 by domes of two sizes (radius 2 and 1.5) and two **stacks of four domes**, each 1/√φ smaller on a neck over the last, to 8.6. Each complex is the last turned a quarter round the heart. A **circle road** (a line on the floor and a tunnel over it) runs round through all eight stacks, complex to complex. The north plaza is the harbour's: its pier crosses it. The reefs and meadows leave the complexes' circles clear; the nature clusters at 165° and 285° gave way to them.
+- **Tunnels** (`TUNNELS`, 74 drawn, about 1,070 long in all): thin glass tubes of radius 0.14, human sized beside the boulevards' (0.35), each a faint skin, two gold rails along the top, a walkway along the floor and a gold rib at every other joint, with soft pulses of warm white drifting along inside at 0.55 a second, each tunnel its own way, fading at the open ends. They join everything (`ATLANTIS_NODES`; with the boulevards and the ring of living's corridor, every place is reachable from the heart): in from the heart's dome to each great tower (4), sky tunnels from the towers to the factories at 10 high (4), on over the middle canal to the great domes (4), out along the loops' boulevards to the plazas (3), round each plaza (4), out from each plaza to its six domes (24), and the circle road (4 arcs). For show: **helices** winding up the four great towers (4½ turns), the six homes' spires (1½) and the eight dome stacks (3), 18 in all, and **rings** round the heart's dome high on its shoulders and round the larger domes of each complex (9).
+- **Submarines keep clear**: every tower, factory, stack, dome and tunnel point has a bounding sphere in `COMPARTMENTS` (the tunnels' 2,545 small ones), and no cruising or harbour submarine comes within 0.3 of any. The tall things stand off the loops (the factories beside them slim enough), the tunnels run low under the lanes, and the yellow school round the heart now swims inside the great towers' ring.
+- The Plan draws each place once as a disc on the map (a tower's stacked spheres count once, tunnels none). Frame cost is as before.
+
 ### Still rough, and next
 
+- Atlantis's tunnels are drawn thin in grains, so from the Plan they read as faint lines; up close
+  the helices read as dotted spirals. Nobody walks them yet. The Atlantis buildings piece does not
+  have the towers, factories or complexes yet.
 - The Studio's domes, minarets and spires on the box towers are light: you fly through them (the
   towers, pyramids, the twenty and the code towers hold you). Sky bridges and the metro are light
   too.
