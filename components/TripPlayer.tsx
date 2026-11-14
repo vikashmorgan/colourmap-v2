@@ -43,6 +43,11 @@ export type Trip = {
   particleAt: (p: Particle, t: number) => { pos: Vec3; rgb: RGB };
   phaseAt: (t: number) => { index: number; u: number };
   look: (t: number) => { glow: number; size: number };
+  /**
+   * How many grains it draws, on a phone and on a computer; without it, 5,200 and 9,000. The City
+   * asks for more (2026-11-14: "improve density"), its towers and far districts filling in.
+   */
+  grains?: { small: number; large: number };
   /** Where the eye stands and looks; without it, the Big Bang's slow sway round the centre. */
   camera?: (t: number) => { eye: Vec3; target: Vec3 };
   /** How much a grain shows by its distance from the eye; without it, the Big Bang's depth fade. */
@@ -879,7 +884,7 @@ export default function TripPlayer({ trip, page }: { trip: Trip; page: TripPage 
     if (!canvas) return;
     const T = tripRef.current;
     const small = window.innerWidth < 700;
-    const N = small ? 5200 : 9000;
+    const N = small ? (T.grains?.small ?? 5200) : (T.grains?.large ?? 9000);
 
     const renderer = new THREE.WebGLRenderer({
       canvas,
