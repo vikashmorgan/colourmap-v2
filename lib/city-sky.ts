@@ -111,25 +111,43 @@ const sats = 3;
 /**
  * Sky grain L of n at time t, round the ship at c, the sky's radius R, `high` (0..1) how far up
  * the stratosphere you are (the stars brighter): stars and constellations first, then satellites,
- * the spire's beacon (when it is far off) and the stations.
+ * the spire's beacon (when it is far off) and the stations. `up` (0..1) how far the eye looks up:
+ * the stars brighter (2026-11-14: "and stars above in the sky when u look up"; lib/city-stars.ts);
+ * `lift` making up for the dome's distance, which the player's fade would otherwise dim.
  */
-export function skyGrain(L: number, n: number, c: Vec3, R: number, high: number, t: number): Spot {
-  const bright = 0.7 + 0.6 * high;
-  const dome = (d: Vec3, k: number, rgb: RGB): Spot => ({
-    pos: [c[0] + d[0] * R, c[1] + d[1] * R, c[2] + d[2] * R],
-    rgb: d[1] > 0.02 || high > 0.3 ? scale(rgb, k * bright) : [0, 0, 0],
-  });
+export function skyGrain(
+  L: number,
+  n: number,
+  c: Vec3,
+  R: number,
+  high: number,
+  t: number,
+  up = 0,
+  lift = 1,
+): Spot {
+  const bright = (0.7 + 0.6 * high) * (1 + 0.5 * up) * lift;
+  const dome = (d: Vec3, k: number, rgb: RGB): Spot => {
+    const c3 = scale(rgb, k * bright);
+    return {
+      pos: [c[0] + d[0] * R, c[1] + d[1] * R, c[2] + d[2] * R],
+      rgb:
+        d[1] > 0.02 || high > 0.3
+          ? [Math.min(1, c3[0]), Math.min(1, c3[1]), Math.min(1, c3[2])]
+          : [0, 0, 0],
+    };
+  };
   // The plain stars: four in ten of the sky's grains (they were sixty in all, too few to read as
   // a starry sky; 2026-11-13: "make sure there are stars above the city"). Most faint, a few
-  // bright, a slow twinkle each, spread evenly over the dome, thicker toward the zenith.
+  // bright, a slow, gentle twinkle each (2026-11-14), spread evenly over the dome, thicker toward
+  // the zenith.
   const plain = Math.floor(n * 0.42);
   if (L < plain) {
     const d = fibonacciSphere(L, plain);
     const up: Vec3 = [d[0], Math.abs(d[1]) * 0.92 + 0.06, d[2]];
     const l = Math.hypot(up[0], up[1], up[2]);
-    const tw = 0.75 + 0.25 * Math.sin(t * (0.4 + 0.6 * hash(L, 2)) + L * 0.37);
+    const tw = 0.86 + 0.14 * Math.sin(t * (0.3 + 0.5 * hash(L, 2)) + L * 0.37);
     const mag = hash(L, 3);
-    const k = mag > 0.93 ? 0.62 : mag > 0.7 ? 0.42 : 0.28;
+    const k = mag > 0.96 ? 0.8 : mag > 0.85 ? 0.55 : mag > 0.55 ? 0.36 : 0.24;
     return dome(
       [up[0] / l, up[1] / l, up[2] / l],
       k * tw,

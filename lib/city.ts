@@ -54,6 +54,7 @@ import {
   dockNear,
 } from './city-docks';
 import { fireworkItems } from './city-fireworks';
+import { flowLane, LANE_COUNT } from './city-flow';
 import {
   advancePulses,
   type Block,
@@ -80,8 +81,10 @@ import {
   wallTint,
 } from './city-game';
 import { AVENUE, BLOCK_X, BLOCK_Z, type Item, TILE_J } from './city-grid';
+import { lifeItems } from './city-life';
 import { aboveAt, aboveEye, CITIES, setCityKind } from './city-plans';
 import { raceBanner, raceStep, resetRace, rival, trackItems } from './city-race';
+import { codeHeight, riseClock, setRiseClock } from './city-rise';
 import {
   currentRoom,
   enterRoom,
@@ -120,6 +123,7 @@ import {
   spaceSky,
   tunnelStep,
 } from './city-space';
+import { borrowShare, extraStarSpot, lookUp, STAR_BORROW } from './city-stars';
 import { clearTrail, makeTrail, pushTrail, trailGrain } from './city-trail';
 import { hopFrom, nearestCopy, type TravelSpot } from './city-travel';
 import { underEyeY, underSeeThrough } from './city-under';
@@ -2073,6 +2077,19 @@ function move(dt: number): number {
   return lx * -f[2] + lz * f[0] >= 0 ? 1 : -1;
 }
 
+/**
+ * Out of a Green Code tower that has grown into the ship's space (lib/city-rise.ts): up onto its
+ * roof, MARGIN over it. The roof rises slowly and smoothly, so the ship rides up with it.
+ */
+function liftOver(q: Vec3): Vec3 {
+  if (!blocked(q)) return q;
+  const tw = blockTower(Math.floor(q[0] / BLOCK_X), Math.floor(q[2] / BLOCK_Z));
+  if (tw.shape !== 'code') return q;
+  const top = GROUND + codeHeight(tw.h, tw.k, riseClock()) + MARGIN + 0.01;
+  const lifted: Vec3 = [q[0], Math.max(q[1], top), q[2]];
+  return blocked(lifted) ? q : lifted;
+}
+
 /** At a crossing, which way the autopilot goes: back toward the avenue, then on down it. */
 function nextWay(way: number, line: number, at: number): number {
   if (way === 0 || way === 2) {
@@ -2216,6 +2233,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   const jumped = Math.abs(t - fly.t - dt) > 0.5;
   fly.t = t;
   fly.v++;
+  setRiseClock(t);
   if (jumped) afresh();
   const pressed = (k: string) => keys.includes(k) && !fly.held.includes(k);
   const enter = pressed('enter');
@@ -2250,6 +2268,8 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     spaceFly(active, keys, dt, t);
     return;
   }
+  // A Green Code tower rising under the ship lifts it with its roof, never through it (2026-11-14).
+  if (fly.mode !== 'route') fly.pos = liftOver(fly.pos);
   if (!active) {
     glowStep(false, dt);
     raceStep({ active: false, pos: fly.pos, enter: false, t });
@@ -2709,7 +2729,9 @@ function crosses(tw: Tower, e: Vec3, dx: number, dy: number, dz: number): boolea
   const x1 = tw.x + tw.hx - s;
   const z0 = tw.z - tw.hz + s;
   const z1 = tw.z + tw.hz - s;
-  const y1 = GROUND + tw.h - s;
+  // A Green Code tower hides only as high as it stands now (lib/city-rise.ts).
+  const h = (tw as Block).shape === 'code' ? codeHeight(tw.h, tw.k, riseClock()) : tw.h;
+  const y1 = GROUND + h - s;
   if (e[0] > x0 && e[0] < x1 && e[2] > z0 && e[2] < z1 && e[1] < y1) return false;
   let lo = 0;
   let hi = 1;
@@ -3468,11 +3490,14 @@ function gather(P: Plan): { d: number; run: () => void }[] {
     });
   }
   // The game's own: districts, landmarks, lanterns, tunnels, metro, word signs, races, the plan.
-  // Fireworks over the quarters (lib/city-fireworks.ts; 2026-11-14: "add fireworks in some places
-  // above the city they pop at random. in the colours of the quarter.").
+  // And the city's life overhead (lib/city-life.ts, 2026-11-14): Chinatown's flying lanterns and
+  // jellyfish, the flocks of birds over the whole city. Fireworks over the quarters
+  // (lib/city-fireworks.ts; 2026-11-14: "add fireworks in some places above the city they pop at
+  // random. in the colours of the quarter.").
   const game: Item[] = [
     ...gameItems(eye, fwd, cur.t, P.c),
     ...trackItems(eye, cur.t, NEAR),
+    ...lifeItems(eye, cur.t, P.c, P.f),
     ...fireworkItems(eye, cur.t, viewAt(eye[1])),
   ];
   for (const g of game) {
@@ -3492,6 +3517,7 @@ function gather(P: Plan): { d: number; run: () => void }[] {
 
 /** Make the plan for time t: where the eye is, then every site it can see, nearest first. */
 function build(P: Plan, t: number) {
+  setRiseClock(t);
   const { c, f } = flier(t);
   const { eye, target } = roomCamera(t) ?? shipView(c, f);
   seeThrough = roomSeeThrough(eye) ?? underSeeThrough(eye);
@@ -3574,25 +3600,17 @@ function planFor(t: number): Plan {
 
 /* ---------- the traffic: streams in the streets round you ---------- */
 
-const NS_HEIGHTS = [5, 11, 28, 35];
-const EW_HEIGHTS = [16, 40];
-const NS_STREETS = 5;
-const EW_STREETS = 6;
-/** The avenue's own lanes, two a side at each height, always there; then the streets round you. */
-const AVE_LANES = NS_HEIGHTS.length * 4;
-const NS_LANES = AVE_LANES + NS_STREETS * NS_HEIGHTS.length * 2;
-const LANE_COUNT = NS_LANES + EW_STREETS * EW_HEIGHTS.length * 2;
 const RUN = 200;
 const DASH = 9;
-/** The whole number ≡ slot (mod n) nearest x: a street slot brought round to the one nearest the eye. */
-const nearestOf = (slot: number, n: number, x: number) => slot + n * Math.round((x - slot) / n);
 const near = (a: number, c: number, period: number) =>
   c + wrap(a - c + period / 2, period) - period / 2;
 
 /**
- * A grain of the traffic: ships stream along the streets at four heights (two across), coming on
- * the left and going on the right; the streets round you, brought round as you fly, fading where
- * they come round. None low on the avenue through Chinatown, under its lanterns.
+ * A grain of the traffic: ships stream along the streets in a designed flow (lib/city-flow.ts,
+ * 2026-11-14: "i like feeling of being in a flow"): the avenue one way at each level, every street
+ * one way, each crossing street the other way and higher, express lanes over the roofs; the streets
+ * round you, brought round as you fly, fading where they come round. None low on the avenue through
+ * Chinatown, under its lanterns.
  */
 function trafficAt(p: Particle, P: Plan, t: number): Spot {
   const L = Math.floor(p.i / 100) * (POOL_FROM - TRAFFIC_FROM) + (p.i % 100) - TRAFFIC_FROM;
@@ -3603,36 +3621,26 @@ function trafficAt(p: Particle, P: Plan, t: number): Spot {
   const lane = j % LANE_COUNT;
   const cx = P.eye[0] + P.fwd[0] * 60;
   const cz = P.eye[2] + P.fwd[2] * 60;
-  const speed = 7 + 4 * hash(lane, 451);
   const s0 = hash(j, 452) * RUN;
+  const F = flowLane(lane, cx, cz, BLOCK_X, BLOCK_Z);
+  const sgn = F.sgn;
   let head: Vec3;
   let dir: Vec3;
   let k: number;
-  let sgn: number;
-  if (lane < NS_LANES) {
-    const ave = lane < AVE_LANES;
-    const n = ave ? lane : lane - AVE_LANES;
-    sgn = ave ? (n & 1 ? 1 : -1) : n >= (NS_LANES - AVE_LANES) / 2 ? 1 : -1;
-    const level = (ave ? n >> 1 : Math.floor(n / NS_STREETS)) % NS_HEIGHTS.length;
-    const I = ave ? 0 : nearestOf(n % NS_STREETS, NS_STREETS, cx / BLOCK_X);
-    const y = (NS_HEIGHTS[level] as number) + (ave && n >= 8 ? 1.2 : 0);
-    const z = near(s0 + sgn * speed * t, cz, RUN);
-    const off = I === 0 ? (ave && n >= 8 ? 6.3 : 3.4) : 2.2;
-    head = [I * BLOCK_X - sgn * off, GROUND + y + (I & 1) * 0.6, z];
+  if (F.axis === 2) {
+    const z = near(s0 + sgn * F.speed * t, cz, RUN);
+    head = [F.line * BLOCK_X + F.off, GROUND + F.y, z];
     dir = [0, 0, sgn];
     k = smooth((RUN / 2 - Math.abs(z - cz)) / 20);
-    k *= smooth(((NS_STREETS / 2) * BLOCK_X - Math.abs(I * BLOCK_X - cx)) / 15);
-    if (I === 0 && y < 16) k *= 1 - chinatownness(z, 12);
+    if (!(F.avenue && F.streets === 1))
+      k *= smooth(((F.streets / 2) * BLOCK_X - Math.abs(F.line * BLOCK_X - cx)) / 15);
+    if (F.line === 0 && F.y < 16) k *= 1 - chinatownness(z, 12);
   } else {
-    const e = lane - NS_LANES;
-    sgn = e >= EW_STREETS * EW_HEIGHTS.length ? 1 : -1;
-    const level = Math.floor(e / EW_STREETS) % EW_HEIGHTS.length;
-    const J = nearestOf(e % EW_STREETS, EW_STREETS, cz / BLOCK_Z);
-    const x = near(s0 + sgn * speed * t, cx, RUN);
-    head = [x, GROUND + (EW_HEIGHTS[level] as number), J * BLOCK_Z + sgn * 2.2];
+    const x = near(s0 + sgn * F.speed * t, cx, RUN);
+    head = [x, GROUND + F.y, F.line * BLOCK_Z + F.off];
     dir = [sgn, 0, 0];
     k = smooth((RUN / 2 - Math.abs(x - cx)) / 20);
-    k *= smooth(((EW_STREETS / 2) * BLOCK_Z - Math.abs(J * BLOCK_Z - cz)) / 15);
+    k *= smooth(((F.streets / 2) * BLOCK_Z - Math.abs(F.line * BLOCK_Z - cz)) / 15);
   }
   const pos = add(head, dir, -(b ** 1.6) * 2.8);
   const r = sub(pos, P.eye);
@@ -3643,7 +3651,9 @@ function trafficAt(p: Particle, P: Plan, t: number): Spot {
   if (k > 0 && hidden(P.eye, pos[0], pos[1], pos[2])) k = 0;
   if (k > 0 && seeThrough && !seeThrough(pos[0], pos[1], pos[2])) k = 0;
   const glow = b < 0.12 ? 1 : 0.55 * (1 - b) ** 2;
-  return { pos, rgb: scale(sgn > 0 ? HEADLIGHT : TAILLIGHT, 0.55 * glow * k) };
+  // Ships coming toward the eye show their white headlights, ships going away their red tails.
+  const coming = dir[0] * P.fwd[0] + dir[2] * P.fwd[2] < 0;
+  return { pos, rgb: scale(coming ? HEADLIGHT : TAILLIGHT, 0.55 * glow * k) };
 }
 
 function shipAt(p: Particle, t: number): Spot {
@@ -3662,7 +3672,24 @@ function shipAt(p: Particle, t: number): Spot {
     // Waiting, unlit, for a site to show.
     return { pos: skyAt(p, [P.c[0], 0, P.c[2]]), rgb: [0, 0, 0] };
   }
-  if (m >= TRAFFIC_FROM) return trafficAt(p, P, t);
+  if (m >= TRAFFIC_FROM) {
+    // Looking up, the last of the traffic's grains a hundred go to the stars (lib/city-stars.ts).
+    const b = m - (POOL_FROM - STAR_BORROW);
+    if (b >= 0 && !inSpace() && !inRoom()) {
+      const { R, up, lift } = skyLook(P);
+      const w = borrowShare(b, up);
+      if (w >= 0.5) {
+        const L = Math.floor(p.i / 100) * STAR_BORROW + b;
+        const n = Math.floor(grains / 100) * STAR_BORROW;
+        return extraStarSpot(L, Math.max(n, L + 1), P.c, R, 2 * w - 1, lift, t);
+      }
+      if (w > 0) {
+        const s = trafficAt(p, P, t);
+        return { pos: s.pos, rgb: scale(s.rgb, 1 - 2 * w) };
+      }
+    }
+    return trafficAt(p, P, t);
+  }
   // In a room, the ships' share draws the room and the Dot Walker.
   if (m >= YOU_FROM && inRoom()) {
     const per = TRAFFIC_FROM - YOU_FROM;
@@ -3706,9 +3733,22 @@ function shipAt(p: Particle, t: number): Spot {
   const L = Math.floor(p.i / 100) * YOU_FROM + m;
   const n = Math.floor(grains / 100) * YOU_FROM + Math.min(YOU_FROM, grains % 100);
   if (inSpace()) return spaceSky(L, Math.max(n, L + 1), P.eye, t);
-  const sky = skyGrain(L, Math.max(n, L + 1), P.c, viewAt(P.eye[1]) + 40, highness(P.c[1]), t);
+  const { R, up, lift } = skyLook(P);
+  const sky = skyGrain(L, Math.max(n, L + 1), P.c, R, highness(P.c[1]), t, up, lift);
   if (seeThrough && !seeThrough(sky.pos[0], sky.pos[1], sky.pos[2])) sky.rgb = [0, 0, 0];
   return sky;
+}
+
+/**
+ * How the sky is seen in a plan: its dome's radius, how far the eye looks up (lib/city-stars.ts),
+ * and how much to make up for the player's fade at the dome's distance, so the stars read clearly
+ * from the street (2026-11-14: "and stars above in the sky when u look up").
+ */
+function skyLook(P: Plan): { R: number; up: number; lift: number } {
+  const R = viewAt(P.eye[1]) + 40;
+  const up = lookUp(P.fwd[1]);
+  const lift = 1 / Math.max(0.35, fade([P.c[0], P.c[1] + R, P.c[2]], P.eye));
+  return { R, up, lift };
 }
 
 /**
