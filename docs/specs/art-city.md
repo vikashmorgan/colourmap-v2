@@ -1575,6 +1575,87 @@ Then: "lets try it. try a light version that doesn't take u too much energy but 
   the reach and skip what is wholly inside the near view; off for `'small'`; the player builds it
   only on a game step, once, and never on a phone.
 
+### Ship currents and quarter ships (2026-11-14)
+
+> "make more channels where ships navigate together in one direction to avoid overload. so u
+> follow linear currents of ships. some of these currents can be above and turn together or be
+> more curvy currents. but mainly one street one direction of ship and a few outliers with the
+> unique big ships. also make some unique ships or drones for each quarter."
+>
+> "a few unique ships become part of the quarter. this doesn't mean only those. feeling of current
+> is to have a cool feeling that you are going in a direction, it feels satisfying."
+>
+> Earlier: "i like feeling of being in a flow."
+
+`lib/city-currents.ts` and `lib/city-quarter-ships.ts`, drawn by the traffic's grains in
+`lib/city.ts` (`trafficAt`). The traffic becomes rivers you can slot into and follow: steady
+streams, aligned, at one speed, smooth curves over the roofs. Every place is a formula of the time;
+colours lean slowly, nothing flashes. Our own designs only.
+
+**Street channels** (on the flow's rules, `lib/city-flow.ts`): the avenue one way at each level,
+two files a level either side of its middle (±4.8, the middle left clear), the two low levels with
+you, the two high toward you; one file down the middle of each street, one way, the next street the
+other way (5 or 11 over the street, alternating); the cross streets higher (15 or 30), alternating
+the same way, so the crossings pass over; express lanes over the roofs (112 and 120). Twenty
+channels round the eye, each brought round two or four streets at a time so it never changes its
+way. In a channel every ship flies at the channel's one speed (7.5–10 in the streets, 9–11 on the
+avenue, 15–18 express), single file, one spacing apart (the stretch of 180 shared evenly), so a
+channel reads as a river; the avenue's files are fuller (half again as many ships), the express
+thinner. A ship's streak is a little longer the faster its channel flows. **Lane lights** mark
+each channel: faint dots fixed over the street, a slow swell of light (some eight seconds a
+wave) running along them the way the channel flows — warm on the avenue, pale blue in the streets,
+violet over the roofs. None at the cruise height (21), none low on the avenue through Chinatown.
+
+**High currents** over the roofs: one long loop a cell (a tile wide, twelve blocks deep), centred on
+the avenue so it crosses it twice and links the quarters either side, 150–174 over the street
+(above every tower), rising and falling a little; its path a sum of a few sines, so smooth
+everywhere. A flock of twelve ships flies each, two abreast nine apart, all turning together and
+banking into the turns (the bank from the loop's curvature, never over 0.7), a bright nose, two
+wingtips and a fading tail each; a faint path of light ahead of the flock shows where it will turn
+(a bridge of light where it crosses the avenue). Pale gold leaning slowly to a soft cyan. The two
+loops nearest are drawn, seen further than the street traffic.
+
+**Outliers**, three big ships of our own, each alone in a stretch of 700–900, slow (2.2–3.6 a
+second), high over the blocks at its own height, never down the avenue low: the **cargo liner**
+(34 long, a spindle hull, a warm row of windows, its bridge toward the bow, three soft engines;
+126, along z over the blocks left of the avenue, with you), the **lantern barge** (22, a flat
+deck, twenty lanterns swaying under its edges, an arched canopy; 96, right of the avenue, toward
+you) and the **long ferry** (40, two decks of windows in soft bands, a slim mast with a soft
+beacon; 142, crossing over the avenue). The two nearest share their grains.
+
+**Quarter ships**: each quarter has its own design in its colours (body in the quarter's colour
+leaning slowly to its accent, a soft light): lantern skiffs (Chinatown), lotus gliders (the
+Indian quarter), crescent wings (Istanbul), glass needles (the Heights), gondola drones (the
+Canals), gilded seed pods (the golden gardens), prayer-flag drones (the temples), cargo haulers
+(the industrial quarter), bubble pods (the domes), sun-sail boats (Egypt), neon kites (the
+market) and glyph drones (the Green Code). About three in ten of the ships in the street channels
+are their quarter's own, flying among the general ones in the same file at the same speed; at a
+quarter's edge one fades out and the next quarter's fades in, so each flies only its own streets.
+And small **swarms of drones**, six each, drift slowly round each quarter's heart (its landmark's
+crossing, or the middle of its side of the avenue), 40–54 out, 48–74 high, hovering a little; the
+two hearts nearest are drawn.
+
+**Out of your way.** A ship near yours moves up and aside (as the other ships do), so none is ever
+inside yours; the avenue's middle stays clear; all of it is light (nothing in `blocked`), so
+nothing traps you.
+
+**Grain shares.** The traffic keeps its eleven grains a hundred, reshared: two for the high
+currents, one for the big ships, one for the drones, one for the lane lights, six for the street
+channels' ships (the last six, the ones the stars borrow when you look up). Whether a ship is in
+sight is found once a frame from its middle, and each street ship once a frame for all its grains.
+Timed over 120 frames at 15,000 grains on the avenue (golden gardens, industrial, Egypt), the
+traffic's grains alone: 5.1–5.4 ms before, 3.8–4.1 ms after.
+
+**Acceptance** (`lib/city-currents.test.ts`, `lib/city-quarter-ships.test.ts`): every channel one
+way on the flow's rules, keeping its way as it comes round, none at the cruise height, the avenue's
+files clear of its middle; single file, one spacing, one heading, moving at the channel's speed;
+lane lights fixed, swelling slowly; high currents over every tower, spanning the avenue, no heading
+or bank step over 0.03 a frame, side-by-side ships heading and banking together; big ships slow,
+long, rare, high and off the avenue; every district its own design, each a different shape,
+every colour in its quarter's family and leaning slowly; quarter ships a share (15–45%) of the
+street ships, every district's seen in its streets; drones drifting slowly round every heart;
+no lit traffic grain inside your ship; all deterministic.
+
 ### Wider streets (2026-11-14)
 
 > "make a lot of the thin streets larger."
@@ -1651,6 +1732,9 @@ between; the canyon's boards apart; the traffic further out on the boulevards.
   keeps its own signs.
 - Sky lanterns and portals are only near the avenue; the Sky Island Loop and four other tracks are
   drafts (gates only); the sky island itself is the platform station, still small.
+- The quarter ships in the street channels are nine grains each (a street ship's share), so they
+  read as small clusters in their quarter's colours; the drones show the designs best. The high
+  currents and big ships are not on the minimap, and you cannot dock with a big ship yet.
 - Traffic does not yet move in platoons on the beat; the beat does not yet travel out from a heart
   (the Nova Cores, another round).
 - Docks are the four lounges and the embassies' rooms; the business towers have none of their own yet.
