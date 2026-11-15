@@ -109,6 +109,7 @@ import {
 } from './city-signs';
 import { skyscraperBlock, skyscraperHolds, skyscraperItems } from './city-skyscrapers';
 import { cityPortalItems } from './city-space';
+import { symbolBlock, symbolHolds, symbolItems } from './city-symbols';
 import { DEEP_MOUTHS, THROUGH, underAt, underBlocked, underItems, underOpen } from './city-under';
 
 /* ---------- the plan: districts ---------- */
@@ -609,10 +610,12 @@ function buildBlock(I: number, J: number, wide: boolean): Block {
   // (lib/city-istanbul.ts).
   // The Temple skyscrapers' blocks, and round them every block but the Studio's temples (those
   // stand low and well back from the towers), kept open (lib/city-skyscrapers.ts).
+  // The Great Arch's pier blocks and the Saturn Tower's (lib/city-symbols.ts, 2026-11-14).
   const sky = wide && d === 'temples' ? skyscraperBlock(I, J) : null;
   if (
     plaza ||
     openBlock(I, J) ||
+    symbolBlock(I, J) ||
     (wide && (spireAt(I, J) || crownBlock(I, J))) ||
     sky === 'tower' ||
     (sky === 'beside' && shape !== 'studio' && !besideRiver(J))
@@ -859,6 +862,8 @@ export function blocked(q: Vec3): boolean {
   if (observatoryHolds(q, MARGIN)) return true;
   // The Temple skyscrapers and their bridges (lib/city-skyscrapers.ts): real walls.
   if (skyscraperHolds(q, MARGIN)) return true;
+  // The Great Arch's two piers (lib/city-symbols.ts): real walls; its opening is free.
+  if (symbolHolds(q, MARGIN)) return true;
   const tw = blockTower(Math.floor(q[0] / BLOCK_X), Math.floor(q[2] / BLOCK_Z));
   const dx = Math.abs(q[0] - tw.x);
   const dz = Math.abs(q[2] - tw.z);
@@ -3231,6 +3236,8 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
   if (planLook(eye[1]) < 0.5) studioBlockItems(eye, t, R, blockTower, ahead, studioColour, out);
   bigItems(eye, t, R, ahead, colourAt, out, lift);
   observatoryItems(eye, t, R, ahead, out);
+  // The Great Arch, the Saturn Tower and the novas round the Golden Spire (lib/city-symbols.ts).
+  symbolItems(eye, t, R, out, lift);
   wordsNear(eye, NEAR, words);
   for (const w of words) {
     const it = wordItem(w, eye, t);

@@ -499,8 +499,40 @@ const MAKERS: Record<CrownKey, () => Model> = {
   pyramid: floatingObelisk,
   dataspire: dataCascade,
 };
-/** The crown on a landmark, built once. */
-export const crownModel = (key: CrownKey): Model => cached(`crown ${key}`, MAKERS[key]);
+/**
+ * The four crowns that read small beside the others (138 to 142 high), raised again on 2026-11-14
+ * ("make sure the buildings with unique designs are properly big and reach high"): everything over
+ * the old landmark's top (`foot`) stretched up `k` times, everything under it kept, so the crown
+ * stays joined to its foot. The moon arches, the temple mountain, the mosque's minarets and the
+ * stack of domes now stand some 190 high, among the city's tallest.
+ */
+export const CROWN_LIFT: Partial<Record<CrownKey, { foot: number; k: number }>> = {
+  race: { foot: 10, k: 1.4 },
+  shikhara: { foot: 55, k: 1.6 },
+  mosque: { foot: 51, k: 1.55 },
+  domes: { foot: 9, k: 1.4 },
+};
+
+/** A crown's model stretched up over its foot (CROWN_LIFT). */
+function lifted(M: Model, foot: number, k: number): Model {
+  const up = (y: number) => (y <= foot ? y : foot + (y - foot) * k);
+  const parts = M.parts.map((p) => ({
+    ...p,
+    f: (u: number, s: number, t: number): Vec3 => {
+      const q = p.f(u, s, t);
+      return [q[0], up(q[1]), q[2]];
+    },
+  }));
+  return model(parts, up(M.top), M.r);
+}
+
+/** The crown on a landmark, built once (lifted where CROWN_LIFT says). */
+export const crownModel = (key: CrownKey): Model =>
+  cached(`crown ${key}`, () => {
+    const M = MAKERS[key]();
+    const L = CROWN_LIFT[key];
+    return L ? lifted(M, L.foot, L.k) : M;
+  });
 
 /**
  * How tall each landmark now stands, foot to tip, crown and all (the golden spire, already the

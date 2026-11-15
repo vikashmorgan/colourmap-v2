@@ -2478,6 +2478,98 @@ the corridors (Lily Bell, Ivory Echo), the Studio's buildings on open blocks and
 buildings are light and still stand in or reach into the corridors. The corridors have no race
 course of their own yet.
 
+### Space bars, the Saturn tower, the great arch (2026-11-14)
+
+> "A space bar in big flying buildings with terraces, warm, beautiful. Add 5 space bars to the
+> designs as a category of its own. Some more elegant with golden lights, with a name above. One is
+> the Flying Saloon, cowboy style."
+>
+> "A giant triumphal arch over one of the main big streets", "a big tall tower with a large Saturn
+> on top of a pole, as the symbol of the city", "add some big novas around the golden spire", and
+> "make sure the buildings with unique designs are properly big and reach high".
+>
+> Over all of it: "Perspective is everything and the whole point of this city."
+
+**The Space Bar series** (`lib/space-bars.ts`): five flying bars of our own, a piece of their own in
+the Studio ("Space bars", after the Canyon, one bar to a pill, label "Space bar", golden palettes),
+and the same five floating in the game's sky. Each is grains from the shared primitives, round its
+main deck, with open terraces, warm amber and gold lamps (a soft twinkle at most, 0.2) and its
+**name glowing over it** on a framed sign, read the right way from the front and from behind.
+
+| Bar | Sign | Form |
+|-----|------|------|
+| Flying Saloon | FLYING SALOON | a wooden western saloon on a floating rock: a stepped false front with a lantern sign, a porch terrace on six posts with lanterns along its roof, swinging doors swaying gently, a water tower on legs behind, wagon-wheel lamps on the deck's corners |
+| Golden Lounge | THE GOLDEN LOUNGE | three round terraces stepping up on slim gold columns, gold rails lined with lamps, glass rings round the lounge, a ribbed crown with a finial, a chandelier hung beneath |
+| Moonlight Terrace | MOONLIGHT TERRACE | a crescent deck of gardens (seven trees), a pergola of nine arches of lamps, a long lit counter on its inner rim, light falling from its tips, a crescent of light standing over it |
+| Lantern Junk | LANTERN JUNK | a sky ship with a bar on its deck: three batten sails as canopies, strings of lanterns from the masts, warm portholes, two great lanterns at the stern |
+| Amber Balloon | AMBER BALLOON | a great balloon of amber gores over a round basket terrace, its burner breathing a soft fire, three little balconies hung round it, sandbags of light |
+
+**In the sky** (`lib/city-bars.ts`). Their decks float 200 to 222 over the street (all of each from
+190 to 260, sign included): over the high currents' flocks (to 182), under the stations' and the
+parcours' layer. They stand a little off the avenue, either side in turn (x ±40 to ±45, at z 262,
+700, 1305, 1560, 1840), so flying up the avenue they float by left and right, framing the long
+view. Each turns slowly (0.018 to 0.03 radians a second) and bobs 2.2 to 3 over 18 to 24 seconds,
+from the time alone. Clear of every station, ring set, parcours ring, portal, of the arch, the
+Saturn Tower and the spire's novas, and 200 or more apart (tested). Light: the ship flies through
+them. The two nearest are drawn with the stations (weight 1.8, thinned with the distance).
+**Docking**: flown slowly into a bar's middle the ship docks as at a station (the same rules,
+`lib/city-skyport.ts`, the bars numbered on after the fifteen stations); "Docked · Flying Saloon";
+its lamps warm. The fireworks keep off them. **The map** shows each as a small warm cup, its name
+beside it; a tap flies there, ending 30 past its reach, level with its deck, facing it.
+
+**The Great Arch** (`lib/city-symbols.ts`): across the avenue at row 13 (z 459), our own design
+after the triumphal arches: two piers on the blocks either side (x ±28 to ±50, 24 deep, kept open
+for them), an opening 56 wide springing at 300 with its crown at 328, a cornice at 350, an attic to
+392 with **CITY OF DREAMS** on both faces, and a crowning sun of thirteen rays and a halo to **436**
+over the street. Pilasters of warm lamps up every pier face, a gold niche high on each, coffers of
+gold across the vault's soffit, lamps round the archivolt. The avenue under it keeps its towers, its
+traffic and its route; the ring parcours passes through the opening (tested clear of the stone).
+**Collision on the piers only**: the opening is free from the street to under the vault. The high
+currents are laid out on cells of their own, not the plan's, so somewhere one always crosses a pier:
+each pier is open right through at a **loggia** from 134 to 198 (only its four corner columns
+standing), where the flocks fly (142 to 182), and the ship may fly through it too. Seen down the
+avenue from 700 off, it frames the street.
+
+**The Saturn Tower**: the city's symbol and its tallest thing, beside the avenue at the plan's heart
+(block 1, 32, kept open; across the avenue from the Golden band). A round stepped plinth, a pole of
+six gold edges tapering from 5 to 1.4 up to 404 (rings every 16, a light climbing it slowly, two lit
+decks at 150 and 280), and on top a **planet** of radius 24 at 430, banded in sand and cream with a
+warm equator, its **eight rings** (radius 32 to 55, a gap between the fifth and sixth) tilted 0.42
+and turning very slowly round it. Its top, 454, is over the arch (436), the sail tower (287) and
+everything else, under the stratosphere (520). Light, like the landmarks. Clear of every station by
+15 and more, of the parcours, of the bars.
+
+**Big novas round the Golden Spire**: six Nova Cores (the Studio's cores, each a different kind,
+without their plaza), 2.4 times the Studio's size (reach some 26), climbing round the spire in a
+slow spiral 38 from its axis, one each sixth of a turn, from 48 to 178 over the street (under the
+spire's tip), off the directions of the Sunleaf Column and the Halo Stack; gold, warm and amber.
+Their feet stay over 20 above the corridor running through the plaza.
+
+**Properly big.** The four crowns that read small beside the others are stretched up over their
+old landmark's top (everything under it kept): the moon arches 140 → **192**, the temple mountain
+138 → **188**, the mosque's crown 142 → **192**, the stack of domes 142 → **195**. The big squares'
+temples, domes and Nova Cores are stretched further up (7.5, 10 and 9 times, were 5.5, 7 and 6):
+**79 to 133** high, were 55 to 98, still under the high currents. No ordinary filler had to go
+beyond the three blocks opened for the arch's piers and the Saturn Tower.
+
+**Cost.** The arch some 9,100 sites, the Saturn Tower some 7,900, each nova 1,500, the bars 3,700 to
+4,400 (the two nearest drawn): all computed from the time, nothing kept, thinned by the renderer like
+everything else; the grain budget kept at 6,500 and 15,000 flying through the arch and by the
+Saturn Tower.
+
+**Acceptance** (`lib/space-bars.test.ts`, `lib/city-bars.test.ts`, `lib/city-symbols.test.ts`, and
+the clearance suites): the series a piece of its own with five bars, the Flying Saloon among them,
+each with a name sign over it read both ways, warm, mellow, finite, its doors swinging smoothly;
+the bars in their band, clear of the stations, rings, parcours, portals and symbols, on the map,
+travelled to, docked at, fireworks kept off; the arch spanning the avenue with the opening free and
+the piers solid (loggia open), the parcours through it, off the metro, the stations and the
+corridors, drawn from 700 off; the Saturn Tower the tallest, ringed, tilted, on its open block,
+clear of the sky; six novas round the spire with no gap over a quarter turn; the four crowns and
+the big squares taller than before; the grain budget kept.
+
+**Still rough.** Not yet seen in a browser. The Saturn Tower, the novas and the bars are light;
+the novas share the air with the high currents where they cross the spire's plaza.
+
 ### UFOs, more flying cars and the space police (2026-11-15)
 
 > "More cool unique UFOs like the current circular orange ones, some bigger UFO ones that fly around
@@ -2504,10 +2596,12 @@ turning rose ring). Eight designs of our own in that spirit, every hull warm ora
   five seconds), **Mothership** (a vast flat disc, three rows of windows, a dome at its heart, a warm
   glow under it). 16, 20 and 28 in radius (more than five times the largest small one), 620 to 820 sites.
 
-The big ones fly long slow loops (4 to 6 a second) stretched along the city, 880 to 1,560 long and
+The big ones fly long slow loops (4 to 6 a second) stretched along the city, 460 to 1,260 long and
 under 60 across, over the strip's middle (rim within |x| 64, well off the Temple skyscrapers),
 between every solid roof (135 at most there) and the stations, ring sets and parcours (198 and up):
-centres at 164 to 172, the Mothership's dome topping out under 190. Drawn out to 900. The small ones
+centres at 164 to 172, the Mothership's dome topping out under 190; all three turn short of the Great
+Arch's row (too broad for its opening), and no small one patrols the stretch beside its piers
+(2026-11-14, `lib/city-symbols.ts`). Drawn out to 900. The small ones
 patrol stretches of four blocks down the wide boulevards (x ±52, ±104) and the corridors (x ±78), 56
 to 84 over the street (over the lantern strings, under the express lanes), in hops: a quick dash
 (fast start, easing in), a hover, the next dash, leaning a little into each. A stretch has one only
