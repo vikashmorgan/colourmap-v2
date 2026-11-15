@@ -102,6 +102,7 @@ describe('the cockpit view', () => {
     // A circle, not an ellipse, and an outer edge far beyond the 1000 x 600 box.
     expect(CANOPIES.ring.frame).toMatch(/A(\d+) \1 /);
     expect(CANOPIES.ring.frame).toContain('M-4000 -4000');
-    for (const id of ['arrow', 'manta', 'hauler'] as const) expect(CANOPIES[id].round).toBeFalsy();
+    for (const id of ['arrow', 'manta', 'hauler', 'cross'] as const)
+      expect(CANOPIES[id].round).toBeFalsy();
   });
 });

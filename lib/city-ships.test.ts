@@ -20,8 +20,8 @@ beforeEach(() => {
 });
 
 describe('the ships', () => {
-  it('are four designs of our own, each with its own instruments', () => {
-    expect(SHIP_NAMES).toEqual(['Arrow', 'Manta', 'Ring racer', 'Hauler']);
+  it('are five designs of our own, in four styles of instruments', () => {
+    expect(SHIP_NAMES).toEqual(['Arrow', 'Manta', 'Ring racer', 'Hauler', 'Crosswing']);
     expect(new Set(SHIPS.map((s) => s.display)).size).toBe(4);
   });
 
@@ -53,7 +53,7 @@ describe('the ships', () => {
     loadShip();
     expect(currentShip().id).toBe('hauler');
     setShip(99);
-    expect(currentShip().id).toBe('hauler');
+    expect(currentShip().id).toBe('cross');
     setShip(-3);
     expect(currentShip().id).toBe('arrow');
   });
@@ -75,6 +75,31 @@ describe('the ships', () => {
       }
       expect([...parts].sort()).toEqual(['engine', 'hull', 'spine', 'trail']);
     }
+  });
+
+  it('spreads the Crosswing’s four wings in an X, an engine on each (2026-11-15)', () => {
+    const ps = makeParticles(1200);
+    const c: Vec3 = [0, 0, 0];
+    const f: Vec3 = [0, 0, -1];
+    const quarters = new Set<string>();
+    const engines = new Set<string>();
+    for (const p of ps) {
+      const g = shipGrainAt('cross', c, f, 2.6, p, 1, 0);
+      // Side is +x heading -z; up is +y.
+      const [x, y] = g.pos;
+      if (g.part === 'hull' && Math.abs(x) > 0.5) {
+        quarters.add(`${Math.sign(x)}${Math.sign(y)}`);
+        // Out along the wing, it climbs (or drops) as it spreads: an X, not a flat wing.
+        expect(Math.abs(y)).toBeGreaterThan(Math.abs(x) * 0.25);
+      }
+      if (g.part === 'engine') engines.add(`${Math.sign(x)}${Math.sign(y)}`);
+    }
+    expect(quarters.size).toBe(4);
+    expect(engines.size).toBe(4);
+    const cross = SHIPS.find((s) => s.id === 'cross');
+    expect(cross?.handling.speed).toBeLessThan(
+      SHIPS.find((s) => s.id === 'ring')?.handling.speed ?? 0,
+    );
   });
 
   it('keeps a sideways axis even flying straight up', () => {

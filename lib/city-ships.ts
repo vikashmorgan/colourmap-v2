@@ -7,14 +7,15 @@
  *
  * Four designs of our own, each made of grains like the first: the Arrow (the first ship), the
  * Manta (a wide gliding wing), the Ring racer (a pod in a ring) and the Hauler (a long cargo
- * frame). Each flies a little differently (pace, turn, boost, climb) and has its own cockpit:
+ * frame), and the Crosswing (2026-11-15: "create an x wing kind of spaceship that i can use": a
+ * fighter of our own, four wings spread in an X). Each flies a little differently (pace, turn, boost, climb) and has its own cockpit:
  * an instrument style and a canopy seen from the pilot's seat. The film is a mood only; no ship
  * here is anyone else's.
  */
 
 import { hash, type Particle, type RGB, type Vec3 } from './bigbang';
 
-export type ShipId = 'arrow' | 'manta' | 'ring' | 'hauler';
+export type ShipId = 'arrow' | 'manta' | 'ring' | 'hauler' | 'cross';
 
 /** How the instruments are drawn on screen. */
 export type DisplayStyle = 'dials' | 'lines' | 'holo' | 'segments';
@@ -87,6 +88,16 @@ export const SHIPS: ShipDesign[] = [
     len: 3.4,
     glow: [1, 0.6, 0.25],
     hull: [1, 0.85, 0.65],
+  },
+  {
+    id: 'cross',
+    name: 'Crosswing',
+    line: 'A fighter of our own: four wings spread in an X, an engine on each, quick and keen.',
+    handling: { speed: 1.15, turn: 1.15, boost: 1.1, climb: 1.1 },
+    display: 'lines',
+    len: 2.6,
+    glow: [1, 0.42, 0.36],
+    hull: [0.92, 0.94, 1],
   },
 ];
 
@@ -285,6 +296,53 @@ export function shipGrainAt(
         return { pos: at(-0.32, Math.cos(a) * 0.06, Math.sin(a) * 0.06), part: 'engine' };
       }
       return trail(-0.34, 0);
+    }
+    case 'cross': {
+      // A long slim nose to a cockpit, and four wings spread in an X from the tail: each a
+      // tapering blade out to a needle at its tip, an engine at its root.
+      const k = pick(4);
+      const ws = k & 1 ? 1 : -1;
+      const wh = k & 2 ? 1 : -1;
+      // The wings open 22 degrees above and below the level.
+      const spread = 0.38;
+      const dirS = ws * Math.cos(spread);
+      const dirH = wh * Math.sin(spread);
+      if (q < 0.4) {
+        // A wing: its leading and trailing edges and its tip, out from the root.
+        const pts: [number, number][] = [
+          [-0.05, 0.06],
+          [-0.18, 0.62],
+          [-0.34, 0.62],
+          [-0.36, 0.06],
+        ];
+        const [a, r] = outline(pts, pick(3), u);
+        return { pos: at(a, dirS * r, dirH * r), part: 'hull' };
+      }
+      if (q < 0.48) {
+        // The needle along each wing's tip, reaching forward past its leading edge.
+        const r = 0.63;
+        return { pos: at(lerp(0.12, -0.3, u), dirS * r, dirH * r), part: 'spine' };
+      }
+      if (q < 0.7) {
+        // The fuselage: a long nose tapering to its point, round in section, the cockpit raised.
+        const a = hash(p.i, 95) * TAU;
+        const along = lerp(0.5, -0.38, u);
+        const r = along > 0.1 ? 0.025 + 0.055 * (0.5 - along) : 0.08;
+        const lift = Math.abs(along + 0.02) < 0.12 ? 0.05 : 0;
+        return {
+          pos: at(along, Math.cos(a) * r, lift + Math.sin(a) * r * 0.85),
+          part: 'spine',
+        };
+      }
+      const er = 0.1;
+      if (q < engineCut(0.7, 0.86, glow)) {
+        const a = hash(p.i, 95) * TAU;
+        return {
+          pos: at(-0.36, dirS * er + Math.cos(a) * 0.035, dirH * er + Math.sin(a) * 0.035),
+          part: 'engine',
+        };
+      }
+      return trail(-0.4, dirS * er, dirH * er);
     }
     case 'hauler': {
       // A long frame: the box's twelve edges, ribs across it, a cab at the front, four engines.
