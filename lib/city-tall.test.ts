@@ -11,6 +11,7 @@ import {
   openBlock,
   studioBlockHeight,
 } from './city-big';
+import { boostClearOfBurst, boostRings } from './city-boost-rings';
 import { BUILDING_SPOTS, buildingAt, buildingModel, newBuildingItems } from './city-buildings-15';
 import {
   BURST_HIGH,
@@ -21,11 +22,15 @@ import {
   fireworkItems,
   fireworkPlaces,
   LIFE_MAX,
+  MAX_BURSTS,
+  morePlaces,
+  R_MAX,
+  R_MIN,
   RISE,
   SPARKS,
 } from './city-fireworks';
 import { blocked, blockTower, DISTRICTS, districtAt, gameItems, LANDMARKS } from './city-game';
-import { AVENUE, BLOCK_X, BLOCK_Z, GROUND, TILE_Z } from './city-grid';
+import { AVENUE, BLOCK_X, BLOCK_Z, GROUND, inAnnex, TILE_X, TILE_Z } from './city-grid';
 import { crownItem, crownKey, crownModel, landmarkHeight } from './city-landmarks';
 import { railCeiling } from './city-metro';
 import { TRACKS } from './city-race';
@@ -211,7 +216,57 @@ describe('fireworks (2026-11-14: "they pop at random. in the colours of the quar
   const eye: Vec3 = [L.x, GROUND + 20, L.z - 120];
 
   it('goes up over the landmarks, the big squares, the canals and the river', () => {
-    expect(fireworkPlaces().length).toBe(LANDMARKS.length + BIG_SQUARES.length + 5);
+    expect(fireworkPlaces().length).toBe(
+      LANDMARKS.length + BIG_SQUARES.length + 5 + morePlaces().length,
+    );
+  });
+
+  it('goes up over every quarter too, the annex’s Mountain, Favela and Industry with them (2026-11-15)', () => {
+    const quarters = new Set(fireworkPlaces().map((P) => districtAt(P.x + 1, P.z + 1)));
+    for (const d of Object.keys(DISTRICTS))
+      expect(quarters.has(d as keyof typeof DISTRICTS), d).toBe(true);
+    const annex = morePlaces().filter((P) => inAnnex(P.x));
+    expect(annex.length).toBeGreaterThanOrEqual(10);
+    for (const d of ['mountain', 'favela', 'industry'])
+      expect(
+        annex.some((P) => districtAt(P.x + 1, P.z + 1) === d),
+        d,
+      ).toBe(true);
+    // In each place's own quarter's colours.
+    for (const P of morePlaces())
+      expect(P.colour).toEqual(DISTRICTS[districtAt(P.x + 1, P.z + 1)].colour);
+  });
+
+  it('bursts much bigger than before (sparks out to 18 to 30), more sparks, more at once', () => {
+    expect(R_MIN).toBeGreaterThanOrEqual(30);
+    expect(R_MAX).toBeGreaterThanOrEqual(50);
+    expect(SPARKS).toBeGreaterThanOrEqual(200);
+    expect(MAX_BURSTS).toBeGreaterThanOrEqual(12);
+    let n = 0;
+    for (let t = 0; t < 120; t += 0.5)
+      for (const b of burstsAt(t, eye, 600)) {
+        n++;
+        expect(b.r).toBeGreaterThanOrEqual(R_MIN);
+        expect(b.r).toBeLessThanOrEqual(R_MAX);
+      }
+    expect(n).toBeGreaterThan(50);
+  });
+
+  it('keeps every burst clear of the boost rings', () => {
+    for (let t = 0; t < 120; t += 1.3)
+      for (const P of fireworkPlaces().filter((_, i) => i % 3 === 0))
+        for (const b of burstsAt(t, [P.x, GROUND + 300, P.z], 200)) {
+          expect(boostClearOfBurst(b.c, b.r)).toBe(true);
+          for (const g of boostRings()) {
+            const flat = Math.hypot(
+              b.c[0] - g.c[0] - TILE_X * Math.round((b.c[0] - g.c[0]) / TILE_X),
+              b.c[2] - g.c[2] - TILE_Z * Math.round((b.c[2] - g.c[2]) / TILE_Z),
+            );
+            const R = Math.max(g.rx, g.ry);
+            const dy = Math.max(b.c[1] - b.r - 24 - (g.c[1] + R), g.c[1] - R - (b.c[1] + b.r));
+            expect(Math.max(flat - b.r - R, dy)).toBeGreaterThan(5);
+          }
+        }
   });
 
   it('is the same for the same moment', () => {
@@ -240,7 +295,7 @@ describe('fireworks (2026-11-14: "they pop at random. in the colours of the quar
     // Over two minutes: many bursts, often one going, never a crowd.
     expect(keys.size).toBeGreaterThanOrEqual(12);
     expect(seen / 240).toBeGreaterThan(0.3);
-    expect(most).toBeLessThanOrEqual(8);
+    expect(most).toBeLessThanOrEqual(MAX_BURSTS);
   });
 
   it('keeps its sparks in its quarter’s colours, above the roofs, below the stratosphere, and fades', () => {
@@ -288,8 +343,9 @@ describe('fireworks (2026-11-14: "they pop at random. in the colours of the quar
   it('spends a modest budget: a few hundred sites a burst, only those in sight', () => {
     for (let t = 0; t < 60; t += 1) {
       const items = fireworkItems(eye, t, 340);
-      expect(items.length).toBeLessThanOrEqual(8);
-      for (const it of items) expect(it.count).toBeLessThanOrEqual(300);
+      expect(items.length).toBeLessThanOrEqual(MAX_BURSTS);
+      for (const it of items) expect(it.count).toBeLessThanOrEqual(2 * SPARKS + 6);
+      expect(items.reduce((n, it) => n + it.count, 0)).toBeLessThanOrEqual(5000);
     }
     // Nothing from a tile away.
     expect(fireworkItems([eye[0], eye[1], eye[2] + TILE_Z / 2], 10, 50).length).toBeLessThan(3);
