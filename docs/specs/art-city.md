@@ -2662,6 +2662,91 @@ and 15,000 with a chase, UFOs and flying cars about, every grain finite.
 **Still rough.** Not yet seen in a browser. The UFOs and cars are light (nothing holds the ship), and
 the big UFOs can cross the high currents' and flocks' heights. The chases keep to the corridors.
 
+### The loop metro and the tube metro (2026-11-15)
+
+> "A metro in a loop; another metro flying through the city in a tube, with a few holding pillars."
+
+> "Perspective is everything and the whole point of this city. Perspective is power, and makes it
+> beautiful."
+
+**The loop metro** (`lib/city-metro.ts`, extended). The suspended monorail was already one closed
+loop; it is now a proper ring line. Three trains of four carriages run round it all the time, evenly
+spaced, never stopping. Each of the four stations glows softly while a train is in: `metroStationGlow`
+eases from 0 to 1 as a carriage comes within 16 of the platform and back as it leaves, never jumping.
+The drawn station brightens its platform edge with it, and sixty lamps over the edge warm from amber
+toward a warm white.
+
+**The tube metro** (`lib/city-tube-metro.ts`, new). A transparent glowing tube, 2.2 in radius, one
+closed loop a tile about 2,030 long. It is a uniform cubic B-spline through 48 control points, so
+its curvature is smooth all the way round: no bend tighter than a radius of 19, and the curvature
+never changes by more than 0.003 a metre.
+
+- **The route is laid for perspective.** The tube crosses the Grand Avenue twice, high over the
+  street: once just past the river and once at the far end of the Matrix quarter, past where the
+  market's lanes end. Flying up or down the avenue, it frames the long view twice, with a station
+  hanging over the street at each crossing. Between the crossings it makes long curves:
+  - up the west side, round the golden spire's novas and between the temples' blocks;
+  - back down the east side, between the market's high lanes and the strip's edge;
+  - under the barge's line twice, once as it turns off the north crossing and once past the
+    Saturn Tower.
+- **Heights.** About 80 to 100 over the street. That is over:
+  - the street channels (to 35) and the metro (35 to 45);
+  - the corridors' obstacles (to 43; cleared by more than 30);
+  - the darting UFOs' patrols (to 84; the glass at least 4 over the top of their sway).
+
+  It is off to the side of the low-roof highways and the market's high lanes, and under:
+  - the barge where it crosses its line (a hull and 6 of air clear);
+  - the express lanes (112, 120), the big ships' lines (126, 142) and the high currents;
+  - the flying stations and space bars (190 and up).
+
+  Kept clear of every wall (a body round it free all the way), of the landmarks' crowns, the spire's
+  novas, the temple towers, the metro's rail (20 or more), the great arch, the Saturn Tower, the
+  stations and the bars.
+- **Pillars.** Seven tall slender columns (0.9 in radius), from the street to the tube's underside.
+  They stand on open ground:
+  - off the avenue, the corridors and the river;
+  - off every car lane's middle and every flying-car lane;
+  - more than 6 off any darter's line.
+
+  The tube is light (you fly through the glass); the pillars are solid. `tubePillarHolds` in
+  `blocked` is a quick reject on z and then seven distance checks.
+- **Capsules.** Three trains of three capsules (5 long, 1.25 in radius) shoot round inside the glass
+  at 36 a second, a lap in about 56 seconds. A capsule warms the glass rings round it as it passes.
+- **Stations.** Two, one over the avenue at each crossing. Each is a stretch of wider, brighter glass
+  that glows softly while a capsule is in, eased the same way as the loop's stations.
+
+**Map and travel.** The tube is drawn on the minimap as a pale blue line at its height (raised in
+the 3D map). Its stations are marks named Tube 1 and Tube 2, beside the four Metro marks. A tap on
+any of the six marks is a fast-travel spot:
+- a loop station places the ship back along the rail, 6 above it, facing the platform;
+- a tube station places it over the avenue, 40 back toward the tile's middle, facing the station.
+
+Picking a map mark now takes the nearest one within reach, so stations beside a landmark do not
+steal its taps.
+
+**Cost.** The glass is drawn in chunks of 24 along the tube, a ring every 2.4: 16 grains a ring near,
+10 farther and 6 far, threads along it only within 140, nothing beyond 700. Near a station some
+7,500 to 10,500 sites are offered, and the plan deals grains from them nearest first like any item,
+so the 6,500 and 15,000 budgets hold. No allocation per grain; every place is a formula of the time.
+
+**Acceptance** (`lib/city-tube-metro.test.ts`, `lib/city-metro.test.ts`, `lib/city-minimap.test.ts`):
+- The loop is closed with even steps, and its trains advance smoothly and lap back to their places.
+- A station glows from 0 to 1 and back without jumps, and is drawn brighter with a train in.
+- The tube is continuous and closed, its curvature smooth, and it crosses the avenue twice with a
+  station at each crossing.
+- Its height sits between the lanes and the express lanes.
+- It is clear of the walls, crowns, novas, temple towers, the metro, the arch, Saturn, the bars and
+  stations, every current and big ship's line, the darters, and the corridors' obstacles.
+- There are 3 to 8 pillars a tile; they block in every tile, are slender, and stand on open ground.
+- Capsules stay inside the glass at their speed.
+- Every grain is finite and mellow (under 0.8), within budget and sight, with far chunks smaller.
+- Both travel spots are clear and face their station; the map has the tube's line and its two
+  named stations, and a tap on a tube mark picks it, flat or tilted.
+
+**Still rough.** Not yet seen in a browser. The capsules do not stop at the stations, and the ship
+cannot board either metro. The pillars are plain columns, and the glass is light everywhere,
+including at the stations.
+
 ### Still rough, and next
 
 - The Matrix quarter's running lights brighten as the ship comes close but do not speed up (the
@@ -2676,8 +2761,8 @@ the big UFOs can cross the high currents' and flocks' heights. The chases keep t
   the helices read as dotted spirals. Nobody walks them yet. The Atlantis buildings piece does not
   have the towers, factories or complexes yet.
 - The Studio's domes, minarets and spires on the box towers are light: you fly through them (the
-  towers, pyramids, the twenty and the code towers hold you). Sky bridges and the metro are light
-  too. So are the landmarks' tall crowns, the big squares, the fifteen new buildings and the
+  towers, pyramids, the twenty and the code towers hold you). Sky bridges, the metro and the tube's
+  glass are light too (only the tube's seven pillars hold you). So are the landmarks' tall crowns, the big squares, the fifteen new buildings and the
   Studio's buildings on the blocks (2026-11-14).
 - The Grand Avenue's bridges, galleries, roofs and gateways are light: nothing to land on, no
   race through its gateways yet; its designs repeat in every turn of the plan (the towers differ).

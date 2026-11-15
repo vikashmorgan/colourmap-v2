@@ -17,12 +17,12 @@
  * edge, dipping under the barge's line as it turns off the crossing and again past the Saturn
  * Tower: long curves that read from far off, the city's towers standing either side.
  *
- * Its height (80 to 100 over the street) keeps it clear of every current where it runs alongside
- * one: over the street channels (to 35), the metro (35 to 45), the corridors' low obstacles (to 43)
- * and the darting UFOs' lines (to 84), off to the side of the low-roof highways and the market's
- * high lanes, under the barge (96, wherever it crosses or runs beside its line), the express lanes (112 and 120), the
- * big ships' lines (126, 142), the high currents (142 and up) and the flying stations and space bars
- * (190 and up). Tested.
+ * Its height (about 80 to 100 over the street) keeps it clear of every current where it runs
+ * alongside one: over the street channels (to 35), the metro (35 to 45), the corridors' low
+ * obstacles (to 43) and the darting UFOs' lines (to 84), off to the side of the low-roof highways
+ * and the market's high lanes, under the barge (96, wherever it crosses or runs beside its line),
+ * the express lanes (112 and 120), the big ships' lines (126, 142), the high currents (142 and up)
+ * and the flying stations and space bars (190 and up). Tested.
  *
  * The tube is light (the ship flies through it); only its few pillars are walls, each a thin round
  * column from the street to the tube: `tubePillarHolds`, a handful of distance checks. Mellow: the
