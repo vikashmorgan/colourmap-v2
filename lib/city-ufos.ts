@@ -37,6 +37,7 @@ import {
   wrap,
 } from './city-grid';
 import { LIFT_AREA } from './city-skyscrapers-plan';
+import { ARCH_PIER, ARCH_Z } from './city-symbols';
 
 export type UfoId = 'ember' | 'halo' | 'twin' | 'lantern' | 'triad' | 'crown' | 'torus' | 'mother';
 
@@ -495,12 +496,13 @@ export type BigLoop = {
 /**
  * The three loops, each over the strip's middle (|x| under 64 with its rim, well off the Temple
  * skyscrapers at x 96 and more), between every roof (135 at most there) and the stations and rings
- * (198 at the lowest): the tallest, the Mothership's dome, tops out under 190.
+ * (198 at the lowest): the tallest, the Mothership's dome, tops out under 190. All three keep off the
+ * Great Arch's row (z 459, lib/city-symbols.ts): too broad for its opening, they turn short of it.
  */
 export const BIG_LOOPS: BigLoop[] = [
-  { id: 'crown', cx: -22, cz: 520, rx: 24, rz: 440, y: 164, bob: 3, speed: 6, sgn: 1, phase: 0.4 },
+  { id: 'crown', cx: -22, cz: 740, rx: 24, rz: 230, y: 164, bob: 3, speed: 6, sgn: 1, phase: 0.4 },
   { id: 'torus', cx: 18, cz: 1330, rx: 22, rz: 500, y: 170, bob: 3, speed: 5, sgn: -1, phase: 2.2 },
-  { id: 'mother', cx: 0, cz: 950, rx: 26, rz: 780, y: 172, bob: 2, speed: 4, sgn: 1, phase: 4.1 },
+  { id: 'mother', cx: 0, cz: 1150, rx: 26, rz: 630, y: 172, bob: 2, speed: 4, sgn: 1, phase: 4.1 },
 ];
 
 /** Big UFO B at time t, tile-local: its middle and its heading (along its loop). */
@@ -595,6 +597,13 @@ function findDarter(li: number, cell: number): { key: number; design: UfoDesign 
   // Only where the street is wide enough all along its stretch: every solid tower either side
   // (whatever its height) stands back from the line by the darter's size, its sway and some air.
   const room = design.size + 0.6 + MARGIN + 0.6;
+  // Off the Great Arch's piers (lib/city-symbols.ts), on the streets beside them.
+  if (
+    Math.abs(Math.abs(x) - ARCH_PIER.x) < ARCH_PIER.hx + room &&
+    z0 + PATROL > ARCH_Z - ARCH_PIER.hz - room &&
+    z0 < ARCH_Z + ARCH_PIER.hz + room
+  )
+    return null;
   for (let J = Math.floor(z0 / BLOCK_Z); J <= Math.floor((z0 + PATROL) / BLOCK_Z); J++)
     if (streetRoom(li, J) < room) return null;
   return { key, design };

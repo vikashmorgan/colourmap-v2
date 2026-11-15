@@ -5,6 +5,7 @@ import { blocked } from './city-game';
 import { BLOCK_X, GROUND, type Item, TILE_X, TILE_Z } from './city-grid';
 import { PARCOURS_LOW, PARCOURS_R, ringSets, setCentre } from './city-rings';
 import { STATIONS, stationCentre, stationModel } from './city-stations';
+import { ARCH_PIER, ARCH_Z } from './city-symbols';
 import {
   BIG_LOOPS,
   bigUfoAt,
@@ -126,6 +127,25 @@ describe('UFOs: the big ones', () => {
       }
     }
   }, 90_000);
+});
+
+describe('UFOs and the Great Arch (lib/city-symbols.ts, 2026-11-14)', () => {
+  it('turns the big ones short of the arch’s row, and keeps the small ones off its piers', () => {
+    for (const B of BIG_LOOPS) {
+      const D = ufoDesign(B.id);
+      expect(B.cz - B.rz - D.size).toBeGreaterThan(ARCH_Z + ARCH_PIER.hz + 4);
+      expect(B.cz + B.rz + D.size).toBeLessThan(TILE_Z + ARCH_Z - ARCH_PIER.hz - 4);
+    }
+    for (const li of [-2, -1, 1, 2]) {
+      const cell = Math.floor(ARCH_Z / PATROL);
+      const dr = darterOf(li, cell);
+      if (!dr) continue;
+      for (let t = 0; t < 30; t += 0.7) {
+        const a = darterAt(li, cell, dr.key, t);
+        expect(Math.abs(Math.abs(a.c[0]) - ARCH_PIER.x) > ARCH_PIER.hx + dr.design.size).toBe(true);
+      }
+    }
+  });
 });
 
 describe('UFOs: the small ones dart round the quarters', () => {

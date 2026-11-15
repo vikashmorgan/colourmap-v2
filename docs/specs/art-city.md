@@ -2596,10 +2596,12 @@ turning rose ring). Eight designs of our own in that spirit, every hull warm ora
   five seconds), **Mothership** (a vast flat disc, three rows of windows, a dome at its heart, a warm
   glow under it). 16, 20 and 28 in radius (more than five times the largest small one), 620 to 820 sites.
 
-The big ones fly long slow loops (4 to 6 a second) stretched along the city, 880 to 1,560 long and
+The big ones fly long slow loops (4 to 6 a second) stretched along the city, 460 to 1,260 long and
 under 60 across, over the strip's middle (rim within |x| 64, well off the Temple skyscrapers),
 between every solid roof (135 at most there) and the stations, ring sets and parcours (198 and up):
-centres at 164 to 172, the Mothership's dome topping out under 190. Drawn out to 900. The small ones
+centres at 164 to 172, the Mothership's dome topping out under 190; all three turn short of the Great
+Arch's row (too broad for its opening), and no small one patrols the stretch beside its piers
+(2026-11-14, `lib/city-symbols.ts`). Drawn out to 900. The small ones
 patrol stretches of four blocks down the wide boulevards (x ±52, ±104) and the corridors (x ±78), 56
 to 84 over the street (over the lantern strings, under the express lanes), in hops: a quick dash
 (fast start, easing in), a hover, the next dash, leaning a little into each. A stretch has one only
