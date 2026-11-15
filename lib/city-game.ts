@@ -83,7 +83,17 @@ import { crownBlock, TURQUOISE_CROWN } from './city-istanbul';
 import { crownItem, crownKey } from './city-landmarks';
 import { highwayItems, marketBlockItems } from './city-market';
 import { matrixForm, matrixHolds, matrixTowerItem } from './city-matrix';
-import { CAR_LEN, CARS, carAt, RAIL, railAt, railCeiling, STATIONS, TRAINS } from './city-metro';
+import {
+  CAR_LEN,
+  CARS,
+  carAt,
+  metroStationGlow,
+  RAIL,
+  railAt,
+  railCeiling,
+  STATIONS,
+  TRAINS,
+} from './city-metro';
 import { observatoryHolds, observatoryItems } from './city-observatory';
 import type { Monument } from './city-orbits';
 import type { PlazaSpot } from './city-plazas';
@@ -110,6 +120,7 @@ import {
 import { skyscraperBlock, skyscraperHolds, skyscraperItems } from './city-skyscrapers';
 import { cityPortalItems } from './city-space';
 import { symbolBlock, symbolHolds, symbolItems } from './city-symbols';
+import { tubeItems, tubePillarHolds } from './city-tube-metro';
 import { DEEP_MOUTHS, THROUGH, underAt, underBlocked, underItems, underOpen } from './city-under';
 
 /* ---------- the plan: districts ---------- */
@@ -862,6 +873,8 @@ export function blocked(q: Vec3): boolean {
   if (observatoryHolds(q, MARGIN)) return true;
   // The Temple skyscrapers and their bridges (lib/city-skyscrapers.ts): real walls.
   if (skyscraperHolds(q, MARGIN)) return true;
+  // The tube metro's few pillars (lib/city-tube-metro.ts, 2026-11-15): thin round walls.
+  if (tubePillarHolds(q, MARGIN)) return true;
   // The Great Arch's two piers (lib/city-symbols.ts): real walls; its opening is free.
   if (symbolHolds(q, MARGIN)) return true;
   const tw = blockTower(Math.floor(q[0] / BLOCK_X), Math.floor(q[2] / BLOCK_Z));
@@ -2593,10 +2606,12 @@ function railItems(eye: Vec3, t: number, R: number, out: Item[]) {
       const c: Vec3 = [r.c[0] + ox + side[0] * 3.4, r.c[1] - 4.4, r.c[2] + oz + side[2] * 3.4];
       const d = Math.hypot(c[0] - eye[0], c[1] - eye[1], c[2] - eye[2]) - 12;
       if (d > R) return;
+      // 2026-11-15: a station glows softly while a train is in (lib/city-metro.ts).
+      const glow = metroStationGlow(k, t);
       out.push({
         d: Math.max(0, d),
         gid: mixId(Math.round(oz / TILE_Z), 7000 + k),
-        count: 360,
+        count: 420,
         weight: 2,
         probe: [c],
         site: (s, o) => {
@@ -2609,7 +2624,18 @@ function railItems(eye: Vec3, t: number, R: number, out: Item[]) {
             o[0] = c[0] + f[0] * along + side[0] * across;
             o[1] = c[1];
             o[2] = c[2] + f[2] * along + side[2] * across;
-            [o[3], o[4], o[5]] = scale(across < 0 ? C.warm : C.steel, across < 0 ? 0.42 : 0.14);
+            const k0 = across < 0 ? 0.42 + 0.22 * glow : 0.14 + 0.1 * glow;
+            [o[3], o[4], o[5]] = scale(across < 0 ? C.warm : C.steel, k0);
+            return true;
+          }
+          if (s >= 360) {
+            // Its lamps: a row of soft lights over the platform's edge, warming as a train pulls in.
+            const q = s - 360;
+            const along = ((q % 30) / 29 - 0.5) * 20;
+            o[0] = c[0] + f[0] * along - side[0] * 1.4;
+            o[1] = c[1] + 2.6 + (q < 30 ? 0 : 0.25);
+            o[2] = c[2] + f[2] * along - side[2] * 1.4;
+            [o[3], o[4], o[5]] = scale(mix(C.amber, C.warm, glow), 0.18 + 0.4 * glow);
             return true;
           }
           const p = s - 240;
@@ -3287,6 +3313,8 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
     if (wi) out.push(wi);
   }
   railItems(eye, t, Math.min(R, NEAR + 60), out);
+  // The tube metro, drawn far, so its curves read from down the avenue (lib/city-tube-metro.ts).
+  tubeItems(eye, t, Math.min(R, 700), out);
   riverItems(eye, t, R, floorAt, waterAt, out);
   // The bridges high over the river between the Heights and the Golden gardens, and the racing
   // corridors' obstacles and kerbs (lib/city-gap-bridges.ts, lib/city-corridors.ts, 2026-11-14).

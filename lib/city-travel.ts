@@ -30,9 +30,11 @@ import {
   LANDMARKS,
 } from './city-game';
 import { BLOCK_X, BLOCK_Z, GROUND, TILE_X, TILE_Z } from './city-grid';
+import { metroSpot } from './city-metro';
 import type { MapGo } from './city-minimap';
 import { skySpot } from './city-skyport';
 import { ATLANTIS_NAME, MOUTH, SPEEDWAY_NAME } from './city-speedway';
+import { tubeSpot } from './city-tube-metro';
 
 /**
  * Where a trip ends: the ship's position and its heading (yaw: 0 flies -z, π/2 flies -x); with
@@ -170,12 +172,14 @@ export const ATLANTIS_SPOT: TravelSpot = {
 
 /**
  * Where a tap on the map leads: a quarter's start, a flying station or the ring parcours' start
- * (lib/city-skyport.ts), the speedway, Atlantis, or a place's spot.
+ * (lib/city-skyport.ts), a space bar, a loop metro or tube metro station (2026-11-15), the
+ * speedway, Atlantis, or a place's spot.
  */
 export const spotFor = (go: MapGo): TravelSpot => {
   if ('d' in go) return quarterStart(go.d);
   if ('sky' in go) return skySpot(go.sky);
   if ('bar' in go) return barSpot(go.bar);
+  if ('metro' in go) return go.metro === 'loop' ? metroSpot(go.i) : tubeSpot(go.i);
   if (go.name === SPEEDWAY_NAME) return SPEEDWAY_SPOT;
   if (go.name === ATLANTIS_NAME) return ATLANTIS_SPOT;
   return placeSpot(go.x, go.z, go.y);
