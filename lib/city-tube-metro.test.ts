@@ -26,7 +26,8 @@ import {
 } from './city-grid';
 import { crownKey, crownModel } from './city-landmarks';
 import { RAIL } from './city-metro';
-import { cityMapData } from './city-minimap';
+import { cityMapData, fitView, fitView3D, mapPick, projectMap } from './city-minimap';
+import { SKY_LANES } from './city-skycars';
 import { TEMPLE_TOWERS } from './city-skyscrapers-plan';
 import { STATION_LOW } from './city-stations';
 import {
@@ -62,6 +63,7 @@ import {
   tubeSpot,
   tubeStationGlow,
 } from './city-tube-metro';
+import { DARTER_HIGH, darterLine, darterOf, PATROL } from './city-ufos';
 
 const at = (s: number) => {
   const o = [0, 0, 0];
@@ -72,6 +74,7 @@ const L = TUBE.length;
 /** Every metre round the loop. */
 const everyMetre = Array.from({ length: Math.floor(L) }, (_, i) => i);
 const wrapd = (d: number, P: number) => d - P * Math.round(d / P);
+const mod = (d: number, P: number) => ((d % P) + P) % P;
 const flat = (ax: number, az: number, bx: number, bz: number) =>
   Math.hypot(wrapd(ax - bx, TILE_X), wrapd(az - bz, TILE_Z));
 /** The nearest the tube's middle comes to a point. */
@@ -241,6 +244,36 @@ describe('the tube metro (2026-11-15: "another metro flying through the city in 
       const lx = wrapd(c[0], TILE_X);
       if (CORRIDOR_X.some((x) => Math.abs(lx - x) < CORRIDOR_HALF + TUBE_R))
         expect(c[1] - TUBE_R - (GROUND + top)).toBeGreaterThan(30);
+    }
+  });
+
+  it('flies over the darting UFOs, and its pillars keep off their lines and the flying cars', () => {
+    // Every darter's stretch: the glass above the top of its sway, with room.
+    for (let li = -12; li <= 12; li++) {
+      if (!darterLine(li)) continue;
+      for (let cell = 0; cell < 14; cell++) {
+        const d = darterOf(li, cell);
+        if (!d) continue;
+        const x = li * BLOCK_X;
+        const z0 = cell * PATROL;
+        for (const s of everyMetre) {
+          const c = at(s);
+          const lz = mod(c[2], TILE_Z);
+          if (Math.abs(wrapd(c[0], TILE_X) - x) > d.design.size + 3 + TUBE_R) continue;
+          if (lz < z0 || lz > z0 + PATROL) continue;
+          expect(c[1] - GROUND - TUBE_R - (DARTER_HIGH + 0.6 + d.design.size)).toBeGreaterThan(4);
+        }
+      }
+    }
+    for (const P of TUBE_PILLARS) {
+      // Off every flying car's lane it would stand in.
+      for (const L of SKY_LANES)
+        if (P.top > GROUND + L.y) expect(Math.abs(P.x - L.x)).toBeGreaterThan(4);
+      // And off every darter's line by more than its sway.
+      const cell = Math.floor(mod(P.z, TILE_Z) / PATROL);
+      for (let li = -12; li <= 12; li++)
+        if (darterLine(li) && darterOf(li, cell))
+          expect(Math.abs(P.x - li * BLOCK_X)).toBeGreaterThan(6);
     }
   });
 });
@@ -427,5 +460,16 @@ describe('travel and the map', () => {
     for (const [, , y] of data.tube ?? []) expect(y).toBeGreaterThan(60);
     const names = data.places.filter((p) => p.kind === 'station').map((p) => p.name);
     expect(names).toEqual(expect.arrayContaining(['Tube 1', 'Tube 2', 'Metro 1']));
+  });
+
+  it('a tap on a tube station mark on the map picks it, flat or tilted', () => {
+    const data = cityMapData();
+    for (const v of [fitView(1536, 640), fitView3D(1536, 640)]) {
+      const raised = v.tilt > 0.02;
+      for (const p of data.places.filter((q) => q.name.startsWith('Tube '))) {
+        const [x, y] = projectMap(v, 1536, 640, p.x, raised ? p.y : 0, p.z);
+        expect(mapPick([], data, v, 1536, 640, { x: x + 1, y: y - 1 }, false)).toEqual(p.go);
+      }
+    }
   });
 });

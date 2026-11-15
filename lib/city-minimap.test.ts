@@ -50,7 +50,8 @@ describe('the map of the City of Dreams', () => {
     expect(names).toContain('Golden spire');
     expect(names).toContain('Great pyramid');
     for (const t of TRACKS) expect(names).toContain(t.name);
-    expect(m.places.filter((p) => p.kind === 'station')).toHaveLength(4);
+    // The loop metro's four stations and the tube metro's two (2026-11-15).
+    expect(m.places.filter((p) => p.kind === 'station')).toHaveLength(6);
     for (const p of m.places) {
       expect(p.x).toBeGreaterThanOrEqual(PLAN_X0);
       expect(p.x).toBeLessThanOrEqual(PLAN_X0 + TILE_X);

@@ -9,18 +9,20 @@
  *
  * Perspective first. The tube is one closed loop per tile, a uniform cubic B-spline through its
  * control points, so its curvature is smooth all the way round (no kink, no sudden bend). It
- * crosses the Grand Avenue twice, high over the street, once just past the river and once over the
- * open row before the Matrix quarter's market edge, so flying up or down the avenue it frames the
- * long view twice, a glowing station hanging over the street at each crossing. Between the
- * crossings it sweeps up the east side, threading between the temples' crown and the Gate of the
- * Barge tower, past the Saturn Tower and the domes, and back down the west side under the golden
- * spire's novas: long curves that read from far off, the city's towers standing either side.
+ * crosses the Grand Avenue twice, high over the street, once just past the river and once at the
+ * far end of the Matrix quarter (past where the market's lanes end), so flying up or down the avenue
+ * it frames the long view twice, a glowing station hanging over the street at each crossing. Between
+ * the crossings it sweeps up the west side, round the golden spire's novas and up between the
+ * temples' blocks, and back down the east side, between the market's high lanes and the strip's
+ * edge, dipping under the barge's line as it turns off the crossing and again past the Saturn
+ * Tower: long curves that read from far off, the city's towers standing either side.
  *
- * Its height (88 to 100 over the street) keeps it clear of every current where it runs alongside
- * one: over the street channels (to 35), the metro (35 to 45), the corridors' low obstacles (to 43),
- * the low-roof highways (to 86) and the market's high lanes (94, never within 18 of them across),
- * under the express lanes (112 and 120), the big ships' lines (126, 142), the high currents (142 and
- * up) and the flying stations and space bars (190 and up). Tested.
+ * Its height (80 to 100 over the street) keeps it clear of every current where it runs alongside
+ * one: over the street channels (to 35), the metro (35 to 45), the corridors' low obstacles (to 43)
+ * and the darting UFOs' lines (to 84), off to the side of the low-roof highways and the market's
+ * high lanes, under the barge (96, wherever it crosses or runs beside its line), the express lanes (112 and 120), the
+ * big ships' lines (126, 142), the high currents (142 and up) and the flying stations and space bars
+ * (190 and up). Tested.
  *
  * The tube is light (the ship flies through it); only its few pillars are walls, each a thin round
  * column from the street to the tube: `tubePillarHolds`, a handful of distance checks. Mellow: the
@@ -50,19 +52,19 @@ import type { TravelSpot } from './city-travel';
 
 /**
  * The tube's control points, tile-local (x, z) and the height over the street, in order round the
- * loop: over the avenue past the river, up the west side, over the avenue again at row 46, down the
- * east side and back. The curve is a closed uniform cubic B-spline through them (it passes near,
+ * loop: over the avenue past the river, up the west side, over the avenue again at z 1690, down
+ * the east side and back. The curve is a closed uniform cubic B-spline through them (it passes near,
  * not through, each point), checked clear of every wall and lit thing along it.
  */
 export const TUBE_POINTS: [number, number, number][] = [
   [60, 836, 100],
   [20, 838, 100],
   [-20, 842, 98],
-  [-45, 862, 94],
-  [-45, 905, 86],
-  [-51, 948, 86],
-  [-81, 975, 94],
-  [-119, 993, 98],
+  [-40, 864, 94],
+  [-38, 905, 88],
+  [-37, 952, 92],
+  [-74, 988, 96],
+  [-119, 995, 98],
   [-132, 1032, 98],
   [-132, 1074, 98],
   [-119, 1113, 98],
@@ -80,17 +82,19 @@ export const TUBE_POINTS: [number, number, number][] = [
   [-32, 1660, 98],
   [-6, 1690, 98],
   [34, 1698, 98],
-  [74, 1690, 98],
-  [100, 1650, 98],
-  [101, 1600, 98],
-  [100, 1550, 96],
-  [104, 1495, 86],
-  [111, 1446, 80],
-  [111, 1404, 80],
-  [113, 1362, 80],
-  [121, 1323, 80],
-  [129, 1284, 80],
-  [129, 1242, 80],
+  [72, 1698, 98],
+  [98, 1688, 96],
+  [116, 1668, 79],
+  [134, 1656, 79],
+  [148, 1642, 86],
+  [151, 1610, 94],
+  [148, 1560, 96],
+  [146, 1500, 96],
+  [145, 1430, 96],
+  [143, 1370, 90],
+  [137, 1320, 84],
+  [131, 1280, 80],
+  [129, 1240, 80],
   [129, 1200, 80],
   [129, 1158, 80],
   [121, 1119, 80],
@@ -229,7 +233,7 @@ export function tubeSkin(s: number, r: number, a: number, o: number[]): void {
 /* ---------- the pillars ---------- */
 
 /** The pillars' places, as fractions of the way round the loop (few: tested at most eight a tile). */
-export const PILLAR_AT = [0.073, 0.14, 0.3342, 0.54, 0.725, 0.844, 0.945];
+export const PILLAR_AT = [0.071, 0.142, 0.345, 0.548, 0.714, 0.848, 0.949];
 /** A pillar's radius: tall and slender. */
 export const PILLAR_R = 0.9;
 

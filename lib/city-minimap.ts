@@ -627,13 +627,21 @@ export function mapPick(
     const x0 = l.align === 'left' ? b.x0 - 16 : b.x0 - 4;
     if (q.x >= x0 && q.x <= b.x1 + 4 && q.y >= b.y0 - 3 && q.y <= b.y1 + 3) return l.go;
   }
-  // A flying station's or the parcours' mark, its name shown or not (2026-11-14).
+  // A flying station's or the parcours' mark, its name shown or not (2026-11-14); the nearest
+  // mark wins when two sit close (the metro and tube stations have marks too, 2026-11-15).
   const raised = v.tilt > 0.02;
+  let pick: MapGo | null = null;
+  let best = MARK_PICK;
   for (const p of data.places) {
     if (!p.go) continue;
     const [sx, sy] = projectMap(v, w, h, p.x, raised ? p.y : 0, p.z);
-    if (Math.hypot(sx - q.x, sy - q.y) <= MARK_PICK) return p.go;
+    const d = Math.hypot(sx - q.x, sy - q.y);
+    if (d <= best) {
+      best = d;
+      pick = p.go;
+    }
   }
+  if (pick) return pick;
   if (!area) return null;
   for (const d of data.districts) {
     const pts = [
