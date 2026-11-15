@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { shipNow, travelTo } from '@/lib/city';
+import { bountiesCaught, shipNow, travelTo } from '@/lib/city';
 import { litDistricts } from '@/lib/city-game';
 import { GROUND } from '@/lib/city-grid';
 import {
@@ -300,6 +300,8 @@ export default function CityDreamsMap({
     };
   }, []);
 
+  const caught = bountiesCaught();
+
   const recentre = () => {
     targetRef.current = homeFor(mode, sizeRef.current.w, sizeRef.current.h);
     dirty.current = true;
@@ -345,7 +347,11 @@ export default function CityDreamsMap({
         {mode === '3d' ? 'Drag to spin and tilt' : 'Drag to move'} · wheel or pinch to zoom ·{' '}
         {coarse ? 'tap a place for its name' : 'point at a place for its name'} · M or Esc to close
       </p>
-      <p className="cd-map-hint cd-map-go">Tap a quarter to fly there</p>
+      <p className="cd-map-hint cd-map-go">
+        Tap a quarter to fly there
+        {/* Wanted ships captured (2026-11-15): only here, quietly, never while flying. */}
+        {caught > 0 ? ` · ${caught} wanted caught` : ''}
+      </p>
     </div>
   );
 }
