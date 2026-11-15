@@ -17,6 +17,7 @@
  */
 
 import { hash, type RGB, smooth, type Vec3 } from './bigbang';
+import { CORRIDOR_HALF } from './city-corridors';
 import { textPixels } from './city-font';
 import {
   BLOCK_X,
@@ -87,6 +88,8 @@ const row = (J: number): [number, number] => [J * BLOCK_Z + 3, (J + 1) * BLOCK_Z
 const X52 = 2 * BLOCK_X;
 const X26 = BLOCK_X;
 const ZB = 42 * BLOCK_Z;
+// The walls on column 2 stop CORRIDOR_HALF short of the street at x = 78, a racing corridor now
+// (lib/city-corridors.ts, 2026-11-14); they reached to three short of it.
 export const CANYON_WALLS: CanyonWall[] = [
   // The first run, down x = 52. Its first wall stands six back from the street behind it, by the
   // avenue's wall (2026-11-14: "avoid streets being too narrow"), so that street is nine wide.
@@ -95,7 +98,7 @@ export const CANYON_WALLS: CanyonWall[] = [
     li: 2,
     lj: 40,
     x0: X52 + W,
-    x1: 3 * BLOCK_X - 3,
+    x1: 3 * BLOCK_X - CORRIDOR_HALF,
     z0: row(40)[0],
     z1: row(40)[1],
     faces: [[-1, 0]],
@@ -116,7 +119,7 @@ export const CANYON_WALLS: CanyonWall[] = [
     li: 2,
     lj: 41,
     x0: X52 + W,
-    x1: 3 * BLOCK_X - 3,
+    x1: 3 * BLOCK_X - CORRIDOR_HALF,
     z0: row(41)[0],
     z1: row(41)[1],
     faces: [[-1, 0]],

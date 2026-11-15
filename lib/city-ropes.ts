@@ -12,6 +12,8 @@
  */
 
 import { hash, type RGB, type Vec3 } from './bigbang';
+import { CT_ROPE_SHARE, inCtWindow } from './city-chinatown-open';
+import { acrossCorridor } from './city-corridors';
 import {
   BLOCK_X,
   BLOCK_Z,
@@ -41,7 +43,8 @@ export type Wall = {
 /** How often a street of each quarter is hung with a corridor of ropes. */
 export const ROPE_SHARE: Record<string, number> = {
   indian: 0.85,
-  chinatown: 0.6,
+  // Fewer in Chinatown (lib/city-chinatown-open.ts, 2026-11-14: "too overloaded"); it was 0.6.
+  chinatown: CT_ROPE_SHARE,
   oriental: 0.45,
   market: 0.4,
   canals: 0.25,
@@ -139,10 +142,13 @@ export function ropeItems(
     for (let J = J0; J <= J1; J++) {
       const A = towerAt(I, J);
       for (const axis of [0, 2] as const) {
-        if (axis === 0 && onAvenue) continue;
+        // Not across the avenue, nor across a racing corridor (lib/city-corridors.ts, 2026-11-14).
+        if (axis === 0 && (onAvenue || acrossCorridor(I))) continue;
         const B = axis === 0 ? towerAt(I + 1, J) : towerAt(I, J + 1);
         const c = corridor(A, B, axis, mixId(I * 3 + axis, J));
         if (!c) continue;
+        // None in Chinatown's windows (lib/city-chinatown-open.ts), kept clear to fly through.
+        if (c.d === 'chinatown' && inCtWindow(c.lo, c.hi)) continue;
         const d = boxDist(eye, c.lo, c.hi);
         if (d > R) continue;
         if (d > 12 && !ahead((c.lo[0] + c.hi[0]) / 2, (c.lo[2] + c.hi[2]) / 2, 20)) continue;

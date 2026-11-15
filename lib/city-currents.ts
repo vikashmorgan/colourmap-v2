@@ -49,6 +49,7 @@ import {
   TILE_X,
   wrap,
 } from './city-grid';
+import { currentLift } from './city-skyscrapers-plan';
 
 /* ---------- street channels ---------- */
 
@@ -358,11 +359,31 @@ export function loopAt(H: HighCurrent, th: number): { p: Vec3; d1: Vec3; d2: Vec
   const s3 = Math.sin(3 * th + H.p2);
   const cy = Math.cos(2 * th + H.p3);
   const sy = Math.sin(2 * th + H.p3);
+  const x = H.cx + H.rx * c1 + H.a * c2;
+  const z = H.cz + H.rz * s1 + H.b * s3;
+  const y = H.y + 8 * sy;
+  const d1: Vec3 = [-H.rx * s1 - 2 * H.a * s2, 16 * cy, H.rz * c1 + 3 * H.b * c3];
+  // Over the Temples' skyscrapers the loop climbs (lib/city-skyscrapers-plan.ts), smoothly; its
+  // climb's slope is found from the loop a hair either side.
+  const ly = currentLift(x, z, y);
+  if (ly !== y) {
+    const e = 1e-3;
+    d1[1] = (liftedY(H, th + e) - liftedY(H, th - e)) / (2 * e);
+  }
   return {
-    p: [H.cx + H.rx * c1 + H.a * c2, GROUND + H.y + 8 * sy, H.cz + H.rz * s1 + H.b * s3],
-    d1: [-H.rx * s1 - 2 * H.a * s2, 16 * cy, H.rz * c1 + 3 * H.b * c3],
+    p: [x, GROUND + ly, z],
+    d1,
     d2: [-H.rx * c1 - 4 * H.a * c2, -32 * sy, -H.rz * s1 - 9 * H.b * s3],
   };
+}
+
+/** The loop's height over the street at θ, lifted over the Temples' skyscrapers. */
+function liftedY(H: HighCurrent, th: number): number {
+  return currentLift(
+    H.cx + H.rx * Math.cos(th) + H.a * Math.cos(2 * th + H.p1),
+    H.cz + H.rz * Math.sin(th) + H.b * Math.sin(3 * th + H.p2),
+    H.y + 8 * Math.sin(2 * th + H.p3),
+  );
 }
 
 const meanR = (H: HighCurrent) => (H.rx + H.rz) / 2;

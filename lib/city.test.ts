@@ -111,7 +111,7 @@ const inside = (q: number[], tw: (typeof CITY)[number]) =>
   Math.abs((q[2] as number) - tw.z) < tw.hz;
 
 describe('the city chapter', () => {
-  it('has eighteen pieces, from the golden plan to the ship, each with words', () => {
+  it('has nineteen pieces, from the golden plan to the ship, each with words', () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       'golden-plan',
       'rising',
@@ -121,6 +121,7 @@ describe('the city chapter', () => {
       'factories',
       'domes',
       'buildings',
+      'skyscrapers',
       'above',
       'atlantis',
       'atlantis-buildings',
@@ -141,6 +142,7 @@ describe('the city chapter', () => {
       'Factories',
       'Domes',
       'Buildings',
+      'Skyscrapers',
       'From above',
       'Atlantis',
       'Atlantis buildings',
@@ -1305,7 +1307,8 @@ describe('From above (moved from Vegetal, 2026-11-12)', () => {
   const all = makeParticles(9000);
 
   it('comes after the golden city and its buildings, before the neon towers, with five cities on pills', () => {
-    expect(PHASES[k - 1]?.id).toBe('buildings');
+    expect(PHASES[k - 1]?.id).toBe('skyscrapers');
+    expect(PHASES[k - 2]?.id).toBe('buildings');
     expect(piece('buildings')).toBe(piece('domes') + 1);
     expect(PHASES[k + 1]?.id).toBe('atlantis');
     expect(PHASES[k + 2]?.id).toBe('atlantis-buildings');

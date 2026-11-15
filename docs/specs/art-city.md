@@ -1689,6 +1689,12 @@ four minutes over every firework place within 5 of a station or a parcours ring.
 
 ### The far city (2026-11-14)
 
+> **Taken off the City, 2026-11-14 (later).** The user: "the horizon drawing is awesome but it feels
+> like a totally different game and makes it all confusing. take it off but add it to the designs".
+> The City's trip no longer passes `farLayer` (components/City.tsx; components/City.test.tsx checks
+> it). `lib/city-far.ts` and `lib/far-layer.ts` stay, ready to become an Art design: a psychedelic,
+> futuristic neon horizon, for a later game of mega speed over quickly generated cities.
+
 The user asked "what stops u from increasing field depth of vision 5 times on computer?" The
 answer: the grains are worked out in JavaScript every frame (about a millisecond a thousand), so a
 longer live view costs frame time. The way round it is a far layer built once and drawn by the GPU.
@@ -2134,6 +2140,68 @@ spires' open blocks, the Canals' designs, one call in the items) and `lib/city-c
   orientations, canal arches concave with room under, plazas inside their blocks, no grains in the
   lanes, a modest budget, and nothing jumping between frames.
 
+### Temple skyscrapers and the Skyscraper series (2026-11-14)
+
+> "Temple quarter should have a bunch of awesome unique skyscrapers as well, with a big long
+> bridge between them, so they are not right next to each other. This creates cool spaces to fly
+> around. Add a skyscraper series to the designs." And: "Perspective is everything and the whole
+> point of this city. Perspective is power, and makes it beautiful."
+
+Code: `lib/skyscrapers.ts` (the series), `lib/city-skyscrapers-plan.ts` (where the towers stand,
+how the high currents climb over them), `lib/city-skyscrapers.ts` (drawing, bridges, walls), with
+small hooks in `lib/city-game.ts` (open blocks, walls, one call in the items),
+`lib/city-currents.ts` (loopAt) and `lib/city.ts` (the Studio piece).
+
+- **The Skyscraper series:** a Studio piece after Buildings, eleven pills (label "Skyscraper"):
+  Helix Twist (36 square floors turning a quarter and a half turn, tapering), Crowned Needle (an
+  eight-sided needle with a crown of eight tines), Offset Stack (five boxes set off one another,
+  garden rails on the terraces), Garden Void (opened right through at its sky gardens, only its
+  corner columns standing, trees and lamps between), Twin Crown (two legs with a slot between,
+  joined high by a glass crown), Lattice Spire (a diagrid of light round a glass core), Orbit Tower
+  (a domed round core, three tilted rings turning very slowly), Stepped Temple Tower (a temple's
+  terraces, a ribbed shaft, a stepped crown, a gold finial), Prism Blade (three-sided, turning, its
+  roof cut on a slant), Lotus Crown (a slim shaft opening into eight glass petals) and Arch Gate (a
+  tower on a great arch you fly under). Our own designs. Each is a builder of any height and
+  footprint, standing inside its square at every height (its reach), cut by voids where asked
+  (nothing drawn there); the golden palettes as the other Studio pieces.
+- **Five towers in the Temples quarter,** each on a block of its own in columns 4 and 5, rows 26
+  to 31, staggered like a chessboard so no two stand on neighbouring blocks (a diagonal block apart
+  at the nearest, nine or more of open air between their walls), 150 to 170 high (every tower in
+  the quarter is under 110; the tallest three over Ivory Echo's 157): the Garden of Bells (Garden
+  Void, x 143, row 26), the Gate of the Barge (Arch Gate, x 117, row 27), the Helix of Dawn (Helix
+  Twist on a gate, x 143, row 28), the Twin Lanterns (Twin Crown, x 117, row 29) and the Stair of
+  Light (Stepped Temple Tower on a gate, x 143, row 31). **Perspective:** two files, x 117 and x 143,
+  that line up as you fly down the quarter, two rows of gates receding: the lantern barge (x 117,
+  96) sails through the file on x 117, the Temples' eastern highway (86) through the file on x 143.
+  The blocks beside them in columns 4 and 5 are open, but for the Studio's temples, which stand low
+  and well back. A design that cannot carry a slot stands on a gate: two legs either side of the
+  slot and a lintel, the design on top.
+- **Clearances:** kept off the racing corridors (x 66 to 90) and the slimmed columns beside them (2
+  and 3; nothing opened there, so every corridor obstacle keeps a tower beside it), off the avenue
+  and its own columns (0 and 1), off the river's row and its neighbours (23 to 25, so the river
+  gap's walls stay put); every footprint inside its block (4.5 or more from each street's middle);
+  clear of the landmark's plaza and orbit, Ivory Echo's orbit and the Domes' big square; under the
+  higher streams (186) and the stations.
+- **Five long bridges,** every tower joined, spans of 40 to 80, no piers, none over a corridor's
+  column: a lattice truss and a bowstring arch down the file on x 143, an arch under its deck down
+  the file on x 117 (each framing the view across the quarter as you fly under it), a straight deck
+  crossing between the files and threading the gap between two towers, and a second truss; decks at
+  128 to 140, every part between 124 (over the express lanes) and 145 (under ordinary flight's
+  ceiling, 150): you fly under, over and between.
+- **The high currents climb over them:** over the towers' area (and twelve round it) every loop
+  flies at 177 or more (the tallest plus seven), easing back to its own height over 110 round it, a
+  soft maximum so the flocks climb without a jolt, still under the higher streams.
+- **Walls:** each tower's square at each height and each bridge's deck hold the Ship off
+  (`blocked`); its voids are open, so you fly through the gates and under the arch.
+- **Light and budget:** 3,600 sites a tower, the bridges as strokes of light built once; ivory
+  leaning slowly to gold, lamps breathing; nothing flashes.
+- **Acceptance:** `lib/skyscrapers.test.ts` and `lib/city-skyscrapers.test.ts`: the series
+  registered with eight or more designs, each inside its footprint and out of its voids; the towers
+  apart, in files, the tallest in the quarter; the corridors, their columns, the avenue and the
+  river's rows clear; bridges joining
+  pairs with room under and over; the currents lifted and smooth, the highway, the barge, the high
+  streams and the orbits clear; walls that stop the Ship; the grain budget; slow light.
+
 ### Mountain and Favela quarters (2026-11-14)
 
 > "add the mountain and favela above, so the city becomes more square. doesn't have to be a
@@ -2312,6 +2380,103 @@ turns, phases summing to whole numbers at the contact, rims never crossing) and 
 turbine blades a third of a turn apart and turning; the atom on the tallest tower, under 142, its
 orbits and electrons moving; the Observatory among the domes and standing solid in the domes
 quarter; the start clear and reached by fast travel; the grain budget kept at 6,500 and 15,000.
+
+### Racing corridors and the Heights–Golden bridges (2026-11-14)
+
+> "I love the space between the Heights and Golden Garden. Add more bridges higher up, so I can fly
+> below them, or above, or in between. That width is perfect for racing and the pleasure of flying."
+>
+> "Some Chinatown parts are getting too overloaded with panels and lampions and stuff. Would be cool
+> to have openings so I can fly through."
+>
+> "Open up and enlarge the main long streets, so it creates other long corridors like the central
+> horizontal one on the map, but three buildings above and three below. Make that long road larger,
+> from far left to far right ... where I can zigzag a bit and go above and below."
+>
+> And over all of it: "Perspective is everything and the whole point of this city. Perspective is
+> power, and makes it beautiful."
+
+**Perspective first.** Each of the three is designed for sightlines: long, straight, open views;
+things that recede into the distance as frames; openings that show what lies beyond.
+
+**The Heights–Golden bridges** (`lib/city-gap-bridges.ts`). The space the user loves is the river's
+strip: the river along x before row 24, the Heights' towers back from its north bank and the Golden
+gardens' from its south, **30 wall to wall**, kept exactly (no tower moves; the walls tested
+against their measured places). West of the avenue, where the two quarters face each other, **six
+bridges** span it bank to bank (x −144, −120, −112, −60, −40, −18: off the street lines' ground
+bridges and the corridor at x −78), each with **two or three decks stacked**: 15 decks from 18 to
+112 over the street, four low (under 35), five middle, five high (over 75, one at 112). The lowest
+deck of each stands 16 or more over the street, and 20 or more of open air separates any two decks
+of one bridge, so you fly under, between or over. Heights are staggered from bridge to bridge, so
+flying along the gap the decks climb and fall like a staircase receding ahead. Three styles in
+turn: **flat** decks with rails, **arched** decks (an arch over each edge rising 5, hangers down),
+**lattice** girders (a top chord 3 up, diagonals zigzagging). Slim posts of light on the embankment
+walks carry them, with a warm lamp where each deck meets a post. Steel toward the Heights warming to
+gold toward the gardens, a slow swell across each deck. Light, like every sky bridge; drawn out to 420.
+
+**Chinatown breathes** (`lib/city-chinatown-open.ts`). Fewer: tall signs four levels up a tall tower
+and two on the rest (were five and three), lantern strings across its side streets at 9, 26 and 50
+(were five heights), walkways on three heights in ten (were half), rope lights on four streets in ten
+(were six), 44 flying lanterns a stretch (were 64). Over one Chinatown that is 358 signs, 229
+strings and 17 walkways where there were 512, 368 and 38 (a third fewer in all). Its character
+stays: storeys, tiered towers, signs at several heights, strings, walkways. **Seven windows**, clear boxes of air from end to
+end of the stretch: three down side streets (x −130 from 10 to 32 high, x −52 from 34 to 56, x 52
+from 20 to 42) and two along each of two cross streets (row 2 from 14 to 36, row 6 from 34 to 56),
+either side of the avenue. No sign, string, walkway or rope reaches into a window, and no tower
+stands in one, so each window frames a long view through to the next quarter. Strings and walkways
+are never strung across a racing corridor either.
+
+**Racing corridors** (`lib/city-corridors.ts`). The street lines **x = ±78** (three blocks either
+side of the avenue; the landmarks' columns) open to **24 wall to wall along the whole tile** (the
+avenue is 18, the widest ordinary street 20, the average 11.5). The towers on the blocks beside them
+step back and slim (`corridorClear`, hooked into `blockTower` after the wider streets): never thinner
+than 7.2 (Chinatown's 7, its lanes still fourteen). Where that is not enough, the boulevard on the
+far side gives up the rest; it is never narrower than it was before the wider streets, nor than nine.
+To make room: none of the twenty designs stands beside a corridor (a round plinth cannot slim);
+Egypt's pyramids there are smaller (the golden slope kept); the Neon Canyon's two walls on column 2
+stop 12 short of x 78 (they stopped 3 short); the three Embassies of Happiness moved one block out
+(Lotus to −5, 30; Hanging Gardens to 4, 11; Prism to 4, 46). The through tunnel's row keeps its place,
+so for its five rows the tower across stands further back and the corridor is 20 there (x 72 to 92).
+The landmarks and big squares stand on the corridors' crossings in their open plazas (52 across),
+light, so the corridors run through them like roundabouts: a tall marker at the end of every long
+view. The gateways, Atlantis's mouth, the stations and the rings are over the avenue or high
+above, so none crosses a corridor.
+
+- **Obstacles, sparse.** Fourteen in a tile, seven on each corridor, taking turns down the plan
+  (never side by side, five rows or more apart on one corridor, never in a plaza or by the river):
+  in turn a **low bridge** (deck at 12: hop it or dive under), a **ring gate** (radius 9 at 24,
+  standing across the corridor) and a **high bridge** (a lattice deck at 40). On the corridor's
+  middle and drawn out to 420, so seen down the corridor they recede as a row of frames, each
+  smaller than the last. Light; rose on the −x corridor, teal on the +x, a slow chase round each gate.
+- **Kerbs.** Lamps along both walls every 8, out to 320 each way: two lines converging on the
+  vanishing point, a slow swell running along them. Spanning lights (lantern strings, walkways, rope
+  lights) are never strung across a corridor.
+- **The map.** Both corridors are main roads in gold, their two walls the whole tile long, on a
+  pale band like the avenue's.
+
+**Cost.** A few items a frame: each obstacle 160 to 450 sites, the kerbs some 160 a corridor, each
+gap bridge about 1,500 (decks and posts); all computed from the time, nothing kept, no allocation
+per grain.
+
+**Acceptance** (`lib/city-corridors.test.ts`, `lib/city-gap-bridges.test.ts`,
+`lib/city-chinatown-open.test.ts`, `lib/city-streets.test.ts`): the Heights–Golden walls where they
+were, 30 apart; six or more bridges off the corridor and the ground bridges, decks stacked with 20
+of air between, the lowest 16 up, low, middle and high bands, all three styles; flying under,
+between and over every deck free; sites bank to bank, finite, mellow. Chinatown's clutter down by a
+third and more, still hundreds of signs and strings; seven windows twenty high, no tower in them and
+no sign, string, walkway or rope reaching in. Both corridors 24 across on every row (20 beside the
+through tunnel), in every copy, flown end to end low, middle and high with nothing solid, wider than
+every ordinary street; landmarks and big squares on open plazas, embassies and canyon walls off them;
+nothing strung across; obstacles sparse, staggered, mid-block, room under and over each; a long view
+down each corridor with frames receding in order and kerbs out past 300; both on the map as main
+roads. The grain budget kept at 6,500 and 15,000 racing a corridor, among the bridges and in a
+Chinatown window, every grain finite.
+
+**Still rough.** Not yet seen in a browser. The bridges, gates and kerbs are light (nothing holds the
+ship, like every sky bridge). The landmarks, big squares, the fifteen buildings on blocks beside
+the corridors (Lily Bell, Ivory Echo), the Studio's buildings on open blocks and the halos round some
+buildings are light and still stand in or reach into the corridors. The corridors have no race
+course of their own yet.
 
 ### Still rough, and next
 
