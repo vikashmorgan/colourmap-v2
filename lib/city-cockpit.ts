@@ -152,4 +152,14 @@ export const CANOPIES: Record<ShipId, Canopy> = {
     glass: 'M90 70 L910 70 L910 440 L90 440 Z',
     dash: 'M90 440 L910 440',
   },
+  // The Crosswing: a fighter's bubble, ribbed in panes, a slim bar down its middle, a low sill.
+  cross: {
+    frame:
+      'M0 600 L0 470 Q250 520 500 524 Q750 520 1000 470 L1000 600 Z ' +
+      'M0 0 L1000 0 L1000 90 Q750 40 500 36 Q250 40 0 90 Z ' +
+      'M492 36 L508 36 L506 524 L494 524 Z ' +
+      'M230 52 L248 50 L292 512 L272 510 Z M770 52 L752 50 L708 512 L728 510 Z',
+    glass: 'M0 90 Q250 40 500 36 Q750 40 1000 90 M0 470 Q250 520 500 524 Q750 520 1000 470',
+    dash: 'M200 500 Q500 548 800 500',
+  },
 };

@@ -2599,8 +2599,14 @@ quarters' starts (2026-11-14); the rest as before. A tap on a name in the map fl
 
 - The map's data comes from the plan and is the same every time; every district, one block per
   plot, every landmark and race start; the metro a closed loop; flat from above, raised when tilted.
-- Four ships; the Ring racer cruises fastest and the Hauler slowest, the Manta turns furthest in a
+- Five ships; the Ring racer cruises fastest and the Hauler slowest, the Manta turns furthest in a
   second; every ship's grains finite and close round it.
+- The Crosswing (2026-11-15: "create an x wing kind of spaceship that i can use"): a fighter of
+  our own, not a copy of any film's. A long slim nose to a raised cockpit, four tapering wings
+  spread in an X from the tail (22 degrees above and below the level), a needle along each wing's
+  tip and an engine at each root, in a warm red glow; quick and keen (pace 1.15, turn 1.15, boost
+  1.1, climb 1.1); the Lines instruments and a ribbed fighter's bubble for its canopy. Chosen from
+  the Ship menu like the others.
 - The Displays choice is remembered; None hides every instrument; each style draws every gauge and
   takes new readings each frame without re-rendering.
 - V moves the eye to within 1 of the ship and back to the chase; holding V does not flicker; the
