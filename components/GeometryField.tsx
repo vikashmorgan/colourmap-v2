@@ -15502,6 +15502,7 @@ export const ART_PILLS: ({ id: ArtTab; label: string } | { href: string; label: 
   { href: '/geometry-field/vegetal', label: 'Vegetal' },
   { href: '/geometry-field/ocean', label: 'Ocean' },
   { href: '/geometry-field/city', label: 'City' },
+  { href: '/geometry-field/hyper-city', label: 'Hyper-speed' },
   ...ART_TABS.filter((t) => t.id === 'experiment'),
 ];
 // 8 Nov 2026: "add all the new ones in an Experiment tab pill after Big Bang, and include Wind,

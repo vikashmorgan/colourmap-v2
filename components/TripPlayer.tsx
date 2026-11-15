@@ -75,8 +75,11 @@ export type Trip = {
     length: (k: number) => number;
     progress: (k: number, s: number) => number;
     particleAt: (p: Particle, k: number, s: number) => { pos: Vec3; rgb: RGB };
-    /** Where the eye stands and looks; `roll` leans the picture (radians, a cockpit's bank). */
-    camera: (k: number, s: number) => { eye: Vec3; target: Vec3; roll?: number };
+    /**
+     * Where the eye stands and looks; `roll` leans the picture (radians, a cockpit's bank), `fov`
+     * widens or narrows the view (degrees; 55 without it; the Hyper-speed city's push).
+     */
+    camera: (k: number, s: number) => { eye: Vec3; target: Vec3; roll?: number; fov?: number };
     look: (k: number) => { glow: number; size: number };
     /**
      * A step's own background, top to bottom, over the chosen one (Atlantis's water); null keeps
@@ -402,9 +405,9 @@ export function viewCamera(eye: Vec3, target: Vec3, v: View): { eye: Vec3; targe
 }
 
 /** The Art pills, the same as the panel's (components/GeometryField.tsx ART_PILLS). */
-export type TripPage = 'big-bang' | 'journey' | 'vegetal' | 'ocean' | 'city';
+export type TripPage = 'big-bang' | 'journey' | 'vegetal' | 'ocean' | 'city' | 'hyper-city';
 
-const ART_LINKS: { href: string; label: string; page?: TripPage }[] = [
+export const ART_LINKS: { href: string; label: string; page?: TripPage }[] = [
   { href: '/geometry-field?tab=stars', label: 'Stars' },
   { href: '/geometry-field?tab=geometry', label: 'Geometry' },
   { href: '/geometry-field?tab=tunnels', label: 'Tunnels' },
@@ -414,6 +417,7 @@ const ART_LINKS: { href: string; label: string; page?: TripPage }[] = [
   { href: '/geometry-field/vegetal', label: 'Vegetal', page: 'vegetal' },
   { href: '/geometry-field/ocean', label: 'Ocean', page: 'ocean' },
   { href: '/geometry-field/city', label: 'City', page: 'city' },
+  { href: '/geometry-field/hyper-city', label: 'Hyper-speed', page: 'hyper-city' },
   { href: '/geometry-field?tab=experiment', label: 'Experiment' },
 ];
 
@@ -480,6 +484,10 @@ function farLayerOf(layer: FarLayer | undefined) {
     uScale: { value: 500 },
     // A point's size, in the world: about a grain and a half on screen where the live view ends.
     uSize: { value: 0.8 },
+    // The palette's turn, and how far each repetition along z is turned besides (radians).
+    uHue: { value: 0 },
+    uRowHue: { value: layer.rowHue ?? 0 },
+    uTileZ: { value: 1 },
   };
   const material = new THREE.ShaderMaterial({
     uniforms,
@@ -491,15 +499,27 @@ uniform float uFar;
 uniform float uShown;
 uniform float uScale;
 uniform float uSize;
+uniform float uHue;
+uniform float uRowHue;
+uniform float uTileZ;
 varying vec3 vCol;
+vec3 turnHue(vec3 c, float a) {
+  const vec3 k = vec3(0.57735);
+  float ca = cos(a);
+  return max(vec3(0.0), c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - ca));
+}
 void main() {
   vec4 world = modelMatrix * vec4(position, 1.0);
+  // Each repetition of the tile along z its own turn, fixed: the copy's place picks it.
+  float row = floor(modelMatrix[3].z / uTileZ + 0.5);
+  float turn = uHue + uRowHue * (fract(sin(row * 12.9898) * 43758.5453) - 0.5) * 2.0;
+  vec3 col = turn == 0.0 ? tint : turnHue(tint, turn);
   float d = distance(world.xyz, uEye);
   float k = clamp((d - uNear) / max(1.0, uFar - uNear), 0.0, 1.0);
   float f = smoothstep(uNear * 0.8, uNear, d) * (1.0 - smoothstep(uFar * 0.7, uFar, d))
     * (1.0 - 0.55 * k) * uShown;
-  vec3 haze = vec3(0.32, 0.42, 0.75) * dot(tint, vec3(0.3333));
-  vCol = mix(tint, haze, 0.55 * k) * f;
+  vec3 haze = vec3(0.32, 0.42, 0.75) * dot(col, vec3(0.3333));
+  vCol = mix(col, haze, 0.55 * k) * f;
   vec4 mv = viewMatrix * world;
   gl_Position = projectionMatrix * mv;
   gl_PointSize = f > 0.0 ? clamp(uSize * uScale / max(1.0, -mv.z), 1.0, 3.0) : 0.0;
@@ -522,8 +542,8 @@ void main() {
   const placed = { x: Number.NaN, z: Number.NaN, near: 0, far: 0 };
   return {
     group,
-    resize(drawingHeight: number) {
-      uniforms.uScale.value = drawingHeight / 2 / Math.tan((55 / 2) * (Math.PI / 180));
+    resize(drawingHeight: number, fov = 55) {
+      uniforms.uScale.value = drawingHeight / 2 / Math.tan((fov / 2) * (Math.PI / 180));
     },
     update(on: boolean, eye: Vec3): number {
       const shown = on ? layer.shown(eye) : 0;
@@ -548,6 +568,8 @@ void main() {
       }
       const near = layer.near(eye);
       const far = layer.far(eye);
+      uniforms.uTileZ.value = cloud.tile[1];
+      uniforms.uHue.value = layer.hue?.(eye) ?? 0;
       uniforms.uEye.value.set(eye[0], eye[1], eye[2]);
       uniforms.uNear.value = near;
       uniforms.uFar.value = far;
@@ -1146,7 +1168,7 @@ diffuseColor.rgb *= vDof;`,
       const h = window.innerHeight;
       renderer.setSize(w, h, false);
       composer.setSize(w, h);
-      far?.resize(h * dpr);
+      far?.resize(h * dpr, camera.fov);
       camera.aspect = w / h;
       back = w / h < 0.8 ? 1 / Math.max(0.55, w / h / 0.8) : 1;
       if (!T.camera) camera.position.z = 58 * back;
@@ -1283,6 +1305,13 @@ diffuseColor.rgb *= vDof;`,
       // A cockpit's bank leans the picture.
       const roll = (c as { roll?: number } | undefined)?.roll ?? 0;
       if (roll) camera.rotateZ(roll);
+      // A step's own field of view (the Hyper-speed city's push), 55 without one.
+      const fov = (c as { fov?: number } | undefined)?.fov ?? 55;
+      if (camera.fov !== fov) {
+        camera.fov = fov;
+        camera.updateProjectionMatrix();
+        far?.resize(window.innerHeight * dpr, fov);
+      }
 
       for (let i = 0; i < N; i++) {
         const p = particles[i] as Particle;
@@ -1299,8 +1328,9 @@ diffuseColor.rgb *= vDof;`,
       }
       geometry.attributes.position.needsUpdate = true;
       geometry.attributes.color.needsUpdate = true;
-      // The far layer, on a game step only: its copies placed round the eye, its fade told where.
-      const reach = far ? far.update(gamePiece, eye) : CAMERA_FAR;
+      // The far layer, on a game step only (or every step, if it asks): its copies placed round
+      // the eye, its fade told where.
+      const reach = far ? far.update(gamePiece || !!T.farLayer?.everyStep, eye) : CAMERA_FAR;
       if (camera.far !== reach) {
         camera.far = reach;
         camera.updateProjectionMatrix();

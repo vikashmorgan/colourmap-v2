@@ -12,15 +12,40 @@
  * over 0.4 s and fades softly, never white, never a flash; each spark is a grain no brighter than
  * a lit window, so nothing lights the screen. A burst that would bloom into a flying station or a
  * ring of the parcours (lib/city-skyport.ts) stays unlit: the sky's architecture is never lost in one.
+ *
+ * 2026-11-15: "Big fireworks above the other parts of the city." The bursts are much bigger (sparks
+ * out to 30 to 52, more of them), up to twelve at once, and they go up over every quarter: two more
+ * places a side in every band of the strip and a spread over the annex's Mountain, Favela and
+ * Industry, still in each quarter's colours. They keep clear of the boost rings too
+ * (lib/city-boost-rings.ts), and of the Golden Spire's surroundings.
  */
 
 import { fibonacciSphere, hash, type RGB, smooth, type Vec3 } from './bigbang';
+import { annexGround } from './city-annex';
 import { BIG_SQUARES, bigHeight, copiesNear } from './city-big';
+import { boostClearOfBurst } from './city-boost-rings';
 import { DISTRICTS, districtAt, LANDMARKS } from './city-game';
-import { BLOCK_X, BLOCK_Z, C, GROUND, type Item, mix, mixId, scale } from './city-grid';
+import {
+  BLOCK_X,
+  BLOCK_Z,
+  C,
+  GROUND,
+  type Item,
+  inAnnex,
+  mix,
+  mixId,
+  STRIP_X,
+  scale,
+  TILE_J,
+  TILE_X,
+  TILE_Z,
+} from './city-grid';
 import { crownKey, landmarkHeight } from './city-landmarks';
 import { RIVER_Z } from './city-rain';
 import { burstClear } from './city-skyport';
+import { STATIONS, stationModel } from './city-stations';
+
+const wrapd = (d: number, P: number) => d - P * Math.round(d / P);
 
 /** How high the shells burst: never under this (over every roof), never over the top. */
 export const BURST_LOW = GROUND + 200;
@@ -30,10 +55,13 @@ export const RISE = 1.6;
 export const LIFE_MIN = 2.2;
 export const LIFE_MAX = 3;
 /** Sparks in one burst (each drawn with a fainter grain behind it, its trail), and the shell's grains. */
-export const SPARKS = 140;
+export const SPARKS = 200;
 const SHELL = 6;
 /** At most this many bursts drawn at once: the nearest. */
-export const MAX_BURSTS = 8;
+export const MAX_BURSTS = 12;
+/** How far a burst's sparks fly out (2026-11-15: "much bigger"): from R_MIN to R_MAX. */
+export const R_MIN = 30;
+export const R_MAX = 52;
 
 export type FireworkPlace = { x: number; z: number; floor: number; colour: RGB };
 let places: FireworkPlace[] | null = null;
@@ -62,8 +90,54 @@ export function fireworkPlaces(): FireworkPlace[] {
       floor: 0,
       colour: colourAt(side * 2 * BLOCK_X, RIVER_Z + 1),
     });
+  // 2026-11-15: "Big fireworks above the other parts of the city": over every quarter of the
+  // strip, both sides of the avenue, and over the annex's Mountain, Favela and Industry.
+  for (const P of morePlaces()) list.push(P);
   places = list;
   return list;
+}
+
+/** The places kept clear of every station (their reach and a wide margin, every tile copy). */
+const STATION_KEEP = 34;
+/** No new place within this of another, nor of the Golden Spire (its surroundings left be). */
+const PLACE_GAP = 60;
+const SPIRE_KEEP = 110;
+
+/** The new places over the rest of the city: a spread over each quarter, clear of the stations. */
+export function morePlaces(): FireworkPlace[] {
+  const out: FireworkPlace[] = [];
+  const old: { x: number; z: number }[] = [
+    ...LANDMARKS.map((l) => ({ x: l.x, z: l.z })),
+    ...BIG_SQUARES.map((q) => ({ x: q.x, z: q.z })),
+  ];
+  const spire = LANDMARKS.find((l) => l.kind === 'spire');
+  const flat = (ax: number, az: number, bx: number, bz: number) =>
+    Math.hypot(wrapd(ax - bx, TILE_X), wrapd(az - bz, TILE_Z));
+  const tryAdd = (x: number, z: number) => {
+    for (const st of STATIONS)
+      if (flat(x, z, st.x, st.z) < stationModel(st).r + STATION_KEEP) return;
+    if (spire && flat(x, z, spire.x, spire.z) < SPIRE_KEEP) return;
+    if ([...old, ...out].some((q) => flat(x, z, q.x, q.z) < PLACE_GAP)) return;
+    const ground = inAnnex(x) ? annexGround(x, z) : 0;
+    out.push({
+      x,
+      z,
+      floor: ground > 0 ? GROUND + ground + 60 : 0,
+      colour: DISTRICTS[districtAt(x + 1, z + 1)].colour,
+    });
+  };
+  // The strip: two places a side in every band, off the avenue, toward its middle and its edge.
+  for (let band = 0; band < TILE_J / 8; band++)
+    for (const side of [-1, 1])
+      for (const [col, row] of [
+        [1.5, 1.5],
+        [5, 6],
+      ] as const)
+        tryAdd(side * col * BLOCK_X, (band * 8 + row) * BLOCK_Z);
+  // The annex: three across, every five rows down the tile.
+  for (let row = 2; row < TILE_J; row += 5)
+    for (const ax of [60, 160, 260]) tryAdd(STRIP_X / 2 + ax, row * BLOCK_Z);
+  return out;
 }
 
 export type Burst = {
@@ -99,14 +173,15 @@ function burstOf(
   const per = period(p);
   const life = LIFE_MIN + (LIFE_MAX - LIFE_MIN) * hash(id, 814);
   const t0 = phase(p) + k * per + (per - RISE - life) * hash(id, 815);
-  const low = Math.max(BURST_LOW, P.floor);
+  // A big burst blooms a little higher, so its lowest sparks still clear every roof.
+  const low = Math.max(BURST_LOW + 30, P.floor);
   const y = Math.min(BURST_HIGH - 30, low + 60 * hash(id, 816));
   return {
     key: mixId(id, 9393),
     c: [x + 24 * (hash(id, 817) - 0.5), y, z + 24 * (hash(id, 818) - 0.5)],
     t0,
     life,
-    r: 18 + 12 * hash(id, 819),
+    r: R_MIN + (R_MAX - R_MIN) * hash(id, 819),
     peony: hash(id, 820) < 0.5,
     colour: P.colour,
   };
@@ -122,7 +197,7 @@ export function burstsAt(t: number, eye: Vec3, R: number): Burst[] {
       if (!b) return;
       const age = t - b.t0;
       if (age < 0 || age >= RISE + b.life) return;
-      if (!burstClear(b.c, b.r)) return;
+      if (!burstClear(b.c, b.r) || !boostClearOfBurst(b.c, b.r)) return;
       if (Math.hypot(b.c[0] - eye[0], b.c[1] - eye[1], b.c[2] - eye[2]) > R) return;
       out.push(b);
     });
