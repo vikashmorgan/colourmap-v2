@@ -36,6 +36,7 @@ export const SLIDE_FILES = [
   'Stats3.pdf',
   'Stats4.pdf',
   'Stats5.pdf',
+  'Stats6.pdf',
   // The Pandas class (/pandas): its session decks.
   'Pandas1.pdf',
   'Pandas2.pdf',
