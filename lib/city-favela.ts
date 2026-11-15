@@ -20,10 +20,15 @@
 
 import { hash, type RGB, type Vec3 } from './bigbang';
 import { GROUND, type Item, mixId, nearest, STRIP_X, TAU, TILE_X, TILE_Z } from './city-grid';
+import { INDUSTRY_Z0 } from './city-industry';
 import { MOUNTAIN_Z1 } from './city-mountain';
 
-/** The Favela quarter runs from the river (row 24) to the tile's end. */
+/**
+ * The Favela quarter runs from the river (row 24) to the Industry superquarter (row 45; it ran to
+ * the tile's end until 2026-11-14, when the industry took the annex's last rows).
+ */
 export const FAVELA_Z0 = MOUNTAIN_Z1;
+export const FAVELA_Z1 = INDUSTRY_Z0;
 
 /* ---------- the hills ---------- */
 
@@ -36,7 +41,10 @@ const hill = (x: number, z: number, h: number, r: number, n: number): Hill => ({
   p1: TAU * hash(n, 801),
   p2: TAU * hash(n, 802),
 });
-/** Nine hills past the river, annex-local, their feet inside the annex. */
+/**
+ * Six hills past the river, annex-local, their feet inside the annex and short of the industry
+ * (2026-11-14: the three beyond the sixth gave their ground to the Industry superquarter).
+ */
 export const HILLS: Hill[] = [
   hill(92, 930, 50, 74, 1),
   hill(228, 960, 62, 68, 2),
@@ -44,9 +52,6 @@ export const HILLS: Hill[] = [
   hill(244, 1230, 44, 54, 4),
   hill(84, 1320, 52, 70, 5),
   hill(200, 1430, 66, 82, 6),
-  hill(96, 1580, 46, 72, 7),
-  hill(236, 1650, 58, 60, 8),
-  hill(140, 1800, 50, 70, 9),
 ];
 /** The houses stand this high at most over the hill's slope (three storeys and a tank). */
 export const HOUSE_TOP = 8.5;

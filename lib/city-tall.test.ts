@@ -307,8 +307,8 @@ describe('fifteen new buildings (2026-11-14: "MAKE 15 MORE OF THEM AND ADD THEM 
       expect(b.hue).toEqual(DISTRICTS[districtAt(x, z)].colour);
       per.set(b.d, (per.get(b.d) ?? 0) + 1);
     }
-    // Every quarter along the strip; the annex's two (2026-11-14) have peaks and hills instead.
-    expect(per.size).toBe(Object.keys(DISTRICTS).length - 2);
+    // Every quarter along the strip; the annex's three (2026-11-14) have peaks, hills, works.
+    expect(per.size).toBe(Object.keys(DISTRICTS).length - 3);
     for (const n of per.values()) expect(n).toBeLessThanOrEqual(2);
   });
 

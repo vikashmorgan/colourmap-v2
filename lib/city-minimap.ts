@@ -42,6 +42,7 @@ import {
   TILE_Z,
   wrap,
 } from './city-grid';
+import { INDUSTRY_Z0 } from './city-industry';
 import { RAIL, STATIONS } from './city-metro';
 import { TRACKS } from './city-race';
 import { OPENING } from './city-signs';
@@ -85,7 +86,9 @@ export type MapPlace = {
     | 'parcours'
     // The Mountain quarter's temples and cable car stations (lib/city-annex.ts, 2026-11-14).
     | 'temple'
-    | 'cable';
+    | 'cable'
+    // The Industry superquarter's Atom tower, clockwork gate and cooling towers (2026-11-14).
+    | 'works';
   name: string;
   x: number;
   z: number;
@@ -204,10 +207,12 @@ export function cityMapData(): MapData {
       districts.push({ id, name: d.name, colour: d.colour, x0, x1, z0, z1 });
     }
   });
-  // The annex beside the strip (2026-11-14): the Mountain quarter to the river, the Favela after.
+  // The annex beside the strip (2026-11-14): the Mountain quarter to the river, the Favela after,
+  // then the Industry superquarter to the tile's end.
   for (const [id, z0, z1] of [
     ['mountain', 0, MOUNTAIN_ROWS * BLOCK_Z],
-    ['favela', MOUNTAIN_ROWS * BLOCK_Z, TILE_Z],
+    ['favela', MOUNTAIN_ROWS * BLOCK_Z, INDUSTRY_Z0],
+    ['industry', INDUSTRY_Z0, TILE_Z],
   ] as [DistrictId, number, number][]) {
     const d = DISTRICTS[id];
     const x0 = STRIP_X / 2;

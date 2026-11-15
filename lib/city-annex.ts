@@ -1,9 +1,10 @@
 /*
  * The annex of the City of Dreams (docs/specs/art-city.md, "Mountain and Favela quarters"): the
  * twelve columns beside the strip on +x (lib/city-grid.ts STRIP_I, ANNEX_I), the top of the map on
- * a wide screen, holding two quarters along the tile: the Mountain quarter from the tile's start
- * to the river (lib/city-mountain.ts), the Favela past it to the tile's end (lib/city-favela.ts).
- * Pure: no three.js, no DOM.
+ * a wide screen, holding three quarters along the tile: the Mountain quarter from the tile's start
+ * to the river (lib/city-mountain.ts), the Favela past it (lib/city-favela.ts), and from row 45 to
+ * the tile's end the Industry superquarter (lib/city-industry.ts, 2026-11-14: "a new INDUSTRY
+ * SUPERQUARTER in the annex alongside Mountain and Favela"). Pure: no three.js, no DOM.
  *
  * 2026-11-14: "add the mountain and favela above, so the city becomes more square. doesn't have to
  * be a square map yet."
@@ -16,7 +17,7 @@
  */
 
 import type { RGB, Vec3 } from './bigbang';
-import { favelaFar, favelaHeight, favelaItems, HILLS, hillFoot } from './city-favela';
+import { FAVELA_Z1, favelaFar, favelaHeight, favelaItems, HILLS, hillFoot } from './city-favela';
 import {
   ANNEX_I,
   BLOCK_X,
@@ -36,6 +37,18 @@ import {
   wrap,
 } from './city-grid';
 import {
+  ATOM,
+  INDUSTRY_ROW0,
+  INDUSTRY_Z0,
+  industryBlocked,
+  industryFar,
+  industryHeight,
+  industryItems,
+  industryOutlines,
+  industryPlaces,
+  LANE_X,
+} from './city-industry';
+import {
   CABLE_STATIONS,
   CONTOUR,
   contourR,
@@ -51,13 +64,17 @@ import {
 } from './city-mountain';
 import { nameBanner, wordItem } from './city-signs';
 
-export type AnnexDistrict = 'mountain' | 'favela';
+export type AnnexDistrict = 'mountain' | 'favela' | 'industry';
 /** The annex's width, across. */
 export const ANNEX_X = ANNEX_I * BLOCK_X;
-/** The Mountain quarter holds the tile's rows up to the river; the Favela the rest. */
+/**
+ * The Mountain quarter holds the tile's rows up to the river; the Favela those to row 45; the
+ * Industry superquarter the rest, to the tile's end.
+ */
 export const MOUNTAIN_ROWS = MOUNTAIN_Z1 / BLOCK_Z;
+export const FAVELA_ROWS = INDUSTRY_ROW0 - MOUNTAIN_ROWS;
 export const annexDistrict = (row: number): AnnexDistrict =>
-  row < MOUNTAIN_ROWS ? 'mountain' : 'favela';
+  row < MOUNTAIN_ROWS ? 'mountain' : row < INDUSTRY_ROW0 ? 'favela' : 'industry';
 
 /** A world point's place in the annex: across from the strip's edge street, and along the tile. */
 export const annexLocal = (x: number, z: number): [number, number] => [
@@ -69,6 +86,7 @@ export const annexLocal = (x: number, z: number): [number, number] => [
 export function annexGround(x: number, z: number): number {
   const [ax, lz] = annexLocal(x, z);
   if (ax < 0) return 0;
+  if (lz >= INDUSTRY_Z0) return industryHeight(ax, lz);
   return lz < MOUNTAIN_Z1 ? mountainHeight(ax, lz) : favelaHeight(ax, lz);
 }
 
@@ -82,6 +100,8 @@ export function annexBlocked(q: Vec3, m: number): boolean {
   const y = q[1] - GROUND;
   // Off the slopes the street (or the river) is the floor, as everywhere (the collision's floorAt).
   if (lz < MOUNTAIN_Z1) return mountainSolid(ax, y, lz, m);
+  // The industry's solid masses; its galleries, rails, pipes and gears are light to fly through.
+  if (lz >= INDUSTRY_Z0) return industryBlocked(ax, y, lz, m);
   const h = favelaHeight(ax, lz);
   return h > 0 && y < h + m;
 }
@@ -91,7 +111,8 @@ export function annexBlocked(q: Vec3, m: number): boolean {
 /**
  * A gateway at the edge of each quarter, as the other quarters' gates stand at their bands'
  * edges: two glowing posts and the quarter's name between them, read from +z as you fly in up the
- * tile (yaw 0). The Mountain's stands on the river's bank, the Favela's at the tile's end.
+ * tile (yaw 0). The Mountain's stands on the river's bank, the Favela's at its edge with the
+ * industry, the Industry superquarter's over its Great Lane at the tile's end.
  */
 export type Gateway = { d: AnnexDistrict; text: string; x: number; z: number; rgb: RGB; rgb2: RGB };
 export const GATEWAYS: Gateway[] = [
@@ -107,9 +128,17 @@ export const GATEWAYS: Gateway[] = [
     d: 'favela',
     text: 'FAVELA',
     x: STRIP_X / 2 + 270,
-    z: TILE_Z - 24,
+    z: FAVELA_Z1 - 24,
     rgb: [1, 0.6, 0.3],
     rgb2: [1, 0.45, 0.55],
+  },
+  {
+    d: 'industry',
+    text: 'INDUSTRY',
+    x: STRIP_X / 2 + LANE_X,
+    z: TILE_Z - 24,
+    rgb: [1, 0.66, 0.32],
+    rgb2: [0.62, 0.7, 0.85],
   },
 ];
 /** How high a gateway's lintel stands, and how far apart its posts. */
@@ -174,6 +203,7 @@ export function annexItems(eye: Vec3, fwd: Vec3, t: number, R: number, out: Item
   if (Math.abs(eye[0] - ax) > ANNEX_X / 2 + R) return;
   mountainItems(eye, fwd, t, R, out);
   favelaItems(eye, fwd, t, R, out);
+  industryItems(eye, fwd, t, R, out);
   gatewayItems(eye, t, R, out);
 }
 
@@ -184,7 +214,9 @@ export type AnnexStart = { d: AnnexDistrict; x: number; z: number; view: [number
 /**
  * The Mountain's start: on the river's bank before its gateway, looking up the valley past it,
  * the highest peak rising beside the way. The Favela's: at the tile's end beside its gateway,
- * looking up the open way past its last hills.
+ * looking up the open way past its last hills. The Industry superquarter's: over its Great Lane at
+ * the tile's end, under its gateway's name, looking down the lane through the receding galleries
+ * and the clockwork gate to the Atom tower.
  */
 export const ANNEX_STARTS: AnnexStart[] = (() => {
   const top = PEAKS.reduce((a, b) => (b.h > a.h ? b : a));
@@ -200,9 +232,16 @@ export const ANNEX_STARTS: AnnexStart[] = (() => {
     {
       d: 'favela',
       x: STRIP_X / 2 + 270,
-      z: TILE_Z - 6,
+      z: FAVELA_Z1 - 6,
       // Up the open way beside the last hills, their houses climbing on the left.
       view: [STRIP_X / 2 + 270, lastHill.z - 60],
+    },
+    {
+      d: 'industry',
+      x: STRIP_X / 2 + LANE_X,
+      z: TILE_Z - 6,
+      // Straight down the Great Lane to the atom.
+      view: [STRIP_X / 2 + LANE_X, ATOM.z],
     },
   ];
 })();
@@ -244,12 +283,15 @@ export function annexContours(): MapContour[] {
       out.push({ d: 'favela', y: f * p.h, colour: mix(C.saffron, C.rose, f), pts });
     }
   }
+  // The industry's footprints (2026-11-14): its works, silos, cooling towers and chimneys.
+  for (const l of industryOutlines())
+    out.push({ d: 'industry', y: l.y, colour: mix(C.amber, C.steel, 0.4), pts: l.pts });
   return out;
 }
 
 /** A named place of the annex for the map (lib/city-minimap.ts MapPlace). */
 export type AnnexPlace = {
-  kind: 'temple' | 'cable';
+  kind: 'temple' | 'cable' | 'works';
   name: string;
   x: number;
   z: number;
@@ -278,15 +320,19 @@ export function annexPlaces(): AnnexPlace[] {
       y: S.head,
       colour: C.white,
     })),
+    // The Industry superquarter's (2026-11-14): the Atom tower, the clockwork gate, the cooling towers.
+    ...industryPlaces().map((P) => ({ kind: 'works' as const, ...P, colour: C.amber })),
   ];
 }
 
-/** The annex's points for the far city (lib/city-far.ts): its contours and its houses' glows. */
+/** The annex's points for the far city (lib/city-far.ts): its contours, its houses' glows, its industry. */
 export function annexFar(
   put: (x: number, y: number, z: number, c: RGB, k: number, salt: number) => void,
   mountain: RGB,
   favela: RGB,
+  industry: RGB,
 ): void {
   mountainFar(put, mountain);
   favelaFar(put, favela);
+  industryFar(put, industry);
 }

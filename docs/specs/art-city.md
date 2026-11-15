@@ -2216,6 +2216,103 @@ the favela dense (over 0.05 houses a square metre), warm, tanks and antennas on 
 clear; no street current or car in the annex; both starts clear and reached by fast travel; the
 grain budget kept at 6,500 and 15,000, every grain finite.
 
+### Industry superquarter and the observatory (2026-11-14)
+
+> "a new INDUSTRY SUPERQUARTER in the annex alongside Mountain and Favela ... a massive giant
+> factory town: factories like the existing ones but much BIGGER, inspired by cement factories
+> (silos, kilns, preheater towers, conveyor galleries), CONNECTED to each other into one mega
+> set", "LOTS of bridges, rails and diagonal conveyor galleries and pipes, so you can fly below
+> them and in between the parts", "big nuclear cooling towers, windmills with turning blades, big
+> spinning wheels, and mechanical clockwork movements", "the ATOM SYMBOL on top of one of the big
+> industry towers", and "also add an OBSERVATORY design to the Domes collection". The principle:
+> "Perspective is everything and the whole point of this city. Perspective is power, and makes it
+> beautiful."
+
+**The annex in three** (`lib/city-annex.ts`). The annex now holds three quarters along the tile:
+the **Mountain quarter** (rows 0 to 23, unchanged), the **Favela** (rows 24 to 44) and the
+**Industry superquarter** (rows 45 to 55, 312 across by 374 along). The Favela keeps its first six
+hills, every one where it stood; the three beyond them gave their ground to the industry (still
+thousands of houses). Its gateway and start moved to its edge with the industry.
+
+**Laid out for perspective** (`lib/city-industry.ts`). One long open lane, the **Great Lane**,
+runs the quarter's length from its gateway at the tile's end to the **Atom tower** at its far
+end, kept clear 16 either side of its middle and lined with sodium lamps and dashed edge lines like
+a runway. Five stations of works stand along it in two rows, a work a side at each: kiln halls
+(sawtooth roofs, warm windows), silo batteries (four silos and a headhouse), preheater towers
+(an open frame of stacked cyclones) and, at the last station, two industry towers. At every
+station a diagonal conveyor gallery crosses the lane, rising one way and then the other at the
+next, so the galleries recede as a run of frames toward the atom; the towers line up behind them.
+Between the stations: two pipe racks, an elevated rail bridge and the **clockwork gate** cross the
+lane too. Everything over the lane stands at least 20 over the street, so the ship flies under all
+of it, at street level and higher, from the gateway to the atom.
+
+**Connected.** Galleries run along each row from work to work (diagonal, from one work's top to
+the next one's middle) and from each row's last tower up to the Atom tower, so all eleven works
+are one set; big pipes join each cooling tower to its nearest work over the rail viaducts. A
+gallery is a truss tube (four chords, a frame every 3, bracing zigzagging on both sides) with a
+conveyor along its floor on which soft sodium pulses glide.
+
+**Outside the rows.** Two rotary kilns roll slowly beside the lane (striped shells turning, riding
+tyres, a burner's ember glow). Two elevated rail viaducts run the quarter's length either side,
+each with a slow ore train of six hoppers fading in and out at its ends. Two pairs of hyperboloid
+**cooling towers** (96 high, drawn by their straight rulings twisting both ways, rings, a warm glow
+in the throat, slow steam rising) frame the rows; between each pair a **big spinning wheel** (26
+across its spokes) turns slowly the opposite way to the other. Two chimneys breathe slow steam.
+Seven **wind turbines** stand along the far edge, three blades each, turning at about a turn every
+twenty seconds.
+
+**Clockwork** (`lib/city-gears.ts`). The clockwork gate hangs a train of five meshing gears on a
+lattice frame over the lane; two more trains turn on the kiln halls' walls facing the lane. Gears
+mesh truly: one tooth pitch for all (teeth in proportion to radius), centres two pitch radii
+apart, neighbours turning the opposite way at speeds in inverse proportion to their radii, started
+at the phase that puts a tooth into the other's gap where they touch, for all time. A big gear
+takes over a minute a turn.
+
+**The atom.** The Atom tower is the quarter's tallest (112, a tapering lattice), its atom on a mast
+over it: a nucleus of light and three orbits turning slowly round the vertical, an electron with a
+short fading trail on each. Its top stays under 142 (the high currents' loops). It is weighed as a
+landmark (drawn densely from the lane's far end) and stands in the far city brightest of the
+quarter.
+
+**Light.** Mellow: sodium orange, steel and cement grey, warm windows. Pulses glide, lamps and
+beacons breathe, steam drifts, nothing flashes.
+
+**Collision.** A bucketed check in `blocked`: the works (boxes), cooling towers (their real
+hyperboloid radius at each height), chimneys, kilns, turbine masts and the tapering Atom tower
+hold the ship, `MARGIN` round. Galleries, rails, pipes, gears, wheels and blades are light, flown
+through as the other sky bridges are.
+
+**Names, travel, map.** The district `industry`, named **Industry superquarter**, its colour a
+warm cement, its quarter ship the **Ore hauler**. INDUSTRY over the Great Lane at the tile's end is
+its gateway; its start stands there looking straight down the lane to the atom, after the Favela
+in the plan's order. The map shows it beside the Favela with its works', silos', cooling towers'
+and chimneys' footprints as lines and the Atom tower, the clockwork gate and the cooling towers
+named; the far city carries its towers' rims, works' roofs, chimneys, turbine hubs and the atom.
+
+**Cost.** About a hundred pieces laid out once, each with flat numbers; a frame builds an item only
+for what is in reach and ahead, and each site writes straight into the renderer's array (no
+allocation per grain). The renderer thins them by distance as everything else.
+
+**The Observatory** (`lib/golden-buildings.ts`, `lib/city-observatory.ts`). A new design in the
+Domes collection, after the Lattice and before the rungs: a round terrace, a drum with lit windows,
+a hemispherical dome cut by an opening slit from its foot over the crown (its edges bright ribs,
+its shutter folded back), and a telescope on a fork mount looking out through the slit at a few
+stars. In the game it stands once, in the Solarpunk domes quarter on the block beside the garden of
+domes' plaza (column 4, row 35, kept open), at its Studio proportions (not stretched, so its dome
+stays round), its slit toward the long way of the city; its drum and dome are solid. The domes'
+landmark and blocks keep their own buildings (the group of domes moved one place along the list).
+
+**Acceptance** (`lib/city-industry.test.ts`, with `lib/city-annex.test.ts`): the annex holds the
+Mountain, the Favela and the industry in order, every hill short of the industry; every work joined
+to every other by galleries, most of them diagonal, their ends on their works' faces; every span
+over the lane at least 20 up, the lane open along its length at street level and higher, open ways
+between rows, towers and turbines; cooling towers hold the ship from wall to throat and let it over;
+works, chimneys, kilns and the Atom tower hold it; gears mesh (one pitch, two radii apart, opposite
+turns, phases summing to whole numbers at the contact, rims never crossing) and turn slowly;
+turbine blades a third of a turn apart and turning; the atom on the tallest tower, under 142, its
+orbits and electrons moving; the Observatory among the domes and standing solid in the domes
+quarter; the start clear and reached by fast travel; the grain budget kept at 6,500 and 15,000.
+
 ### Still rough, and next
 
 - The Matrix quarter's running lights brighten as the ship comes close but do not speed up (the

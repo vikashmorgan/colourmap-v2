@@ -962,6 +962,113 @@ function kilns(m: Mesh) {
   for (let j = 0; j < 14; j++) m.dot(P(-9 + j * 1.4, 1.4, -12.75), 0.24, light, { w: 0.3 });
 }
 
+/* ---------- the observatory (2026-11-14) ---------- */
+
+/** The observatory's sizes: its drum, its dome, the slit's half-width and the telescope's tilt. */
+export const OBSERVATORY = { drum: 6.5, drumH: 5, slit: 1.3, tilt: 0.85, tube: 9 };
+
+/**
+ * Observatory. Rules: a round terrace 1 high, radius 6.5φ^(1/2); a drum of radius 6.5, 5 high,
+ * lit windows round it; on it a hemispherical dome of the drum's radius, cut by an opening slit
+ * 2.6 wide from its foot over the crown, its two edges bright ribs and its shutter folded back
+ * beside it; through the slit a telescope tilted 0.85 rad up from level, its tube 9 long, rings
+ * along it, on a fork mount; a few stars over it. Its own design (2026-11-14: "add an observatory
+ * design to the domes collection").
+ */
+function observatory(m: Mesh) {
+  const { drum: R, drumH: H, slit, tilt, tube } = OBSERVATORY;
+  const base = R * Math.sqrt(PHI);
+  m.centre = P(0, -4, 0);
+  m.cylinder(P(0, 0, 0), base, G, G + 1, face, edge, 0, 48);
+  m.disc(P(0, 1, 0), base, face, R, { w: 0.4 });
+  m.centre = P(0, H / 2, 0);
+  m.cylinder(P(0, 1, 0), R, G + 1, G + 1 + H, face, edge, 12, 40);
+  for (let k = 0; k < 12; k++) {
+    const a = ((k + 0.5) / 12) * TAU;
+    m.dot(P(Math.cos(a) * (R + 0.05), 1 + H * 0.55, Math.sin(a) * (R + 0.05)), 0.35, light, {
+      w: 0.35,
+    });
+  }
+  // The dome, cut by its slit facing +z (toward the strip's long way): the surface spans the
+  // angles round it beyond the slit's half-width at every latitude.
+  const y0 = 1 + H;
+  const half = (lat: number) =>
+    Math.min(Math.PI / 2, Math.asin(Math.min(1, slit / (R * Math.cos(lat) + 1e-3))));
+  m.centre = P(0, y0, 0);
+  m.surface(
+    (u, v) => {
+      const lat = v * (Math.PI / 2) * 0.97;
+      const h = half(lat);
+      const a = Math.PI / 2 + h + u * (TAU - 2 * h);
+      return P(
+        Math.cos(a) * Math.cos(lat) * R,
+        y0 + Math.sin(lat) * R,
+        Math.sin(a) * Math.cos(lat) * R,
+      );
+    },
+    28,
+    8,
+    glass,
+    { two: true },
+    { tone: edge, uEvery: 2, vEvery: 2 },
+  );
+  // The slit's two edges, bright ribs from the foot over the crown.
+  for (const side of [-1, 1]) {
+    const pts: Vec3[] = [];
+    for (let j = 0; j <= 12; j++) {
+      const lat = (j / 12) * (Math.PI / 2) * 0.97;
+      const x = side * slit;
+      const r = Math.cos(lat) * R;
+      const z = Math.sqrt(Math.max(0, r * r - x * x));
+      pts.push(P(x, y0 + Math.sin(lat) * R, z));
+    }
+    m.poly(pts, false, edge, { w: 1.4 });
+  }
+  // The shutter, folded back over the dome's far side: a band of ribs.
+  for (let j = 0; j <= 6; j++) {
+    const lat = Math.PI / 2 - (j / 6) * 0.9;
+    const r = Math.cos(lat) * (R + 0.3);
+    m.line(
+      P(-slit, y0 + Math.sin(lat) * (R + 0.3), -r),
+      P(slit, y0 + Math.sin(lat) * (R + 0.3), -r),
+      edge,
+      { w: 0.8 },
+    );
+  }
+  // The telescope: a fork mount on a pier, its tube through the slit, rings along it.
+  const pivot = P(0, y0 + 1.2, 0);
+  m.line(P(0, 1, 0), pivot, edge, { w: 1.2 });
+  for (const side of [-1, 1]) m.line(P(side * 1, y0 - 0.4, 0), P(side * 1, y0 + 1.6, 0), edge);
+  const dir: Vec3 = [0, Math.sin(tilt), Math.cos(tilt)];
+  const at = (f: number, ox = 0, oy = 0): Vec3 => [
+    pivot[0] + ox,
+    pivot[1] + dir[1] * (f * tube - tube * 0.3) + oy * dir[2],
+    pivot[2] + dir[2] * (f * tube - tube * 0.3) - oy * dir[1],
+  ];
+  for (const [ox, oy] of [
+    [0.55, 0],
+    [-0.55, 0],
+    [0, 0.55],
+    [0, -0.55],
+  ] as [number, number][])
+    m.line(at(0, ox, oy), at(1, ox, oy), edge, { w: 0.9 });
+  for (let k = 0; k <= 5; k++) {
+    const f = k / 5;
+    const pts: Vec3[] = [];
+    for (let j = 0; j < 10; j++) {
+      const a = (j / 10) * TAU;
+      pts.push(at(f, Math.cos(a) * 0.6, Math.sin(a) * 0.6));
+    }
+    m.poly(pts, true, k === 5 ? light : edge, { w: 0.6 });
+  }
+  m.dot(at(1), 0.45, light, { w: 0.6, anim: Anim.pulse, key: 0.3 });
+  // A few stars over it, where the telescope looks.
+  for (let j = 0; j < 9; j++) {
+    const f = 1.6 + 0.5 * hash(j, 961);
+    m.dot(at(f, (hash(j, 962) - 0.5) * 8, (hash(j, 963) - 0.5) * 6), 0.22, light, { w: 0.25 });
+  }
+}
+
 /* ---------- the elements ---------- */
 
 export type Builder = (m: Mesh) => void;
@@ -976,9 +1083,11 @@ export const FACTORY_KINDS = {
   build: [sawtooth, foundry, assembly, workshops, solar, cementWorks, kilns] as Builder[],
 };
 export const DOME_KINDS = {
-  names: ['Geodesic', 'Bubbles', 'Palm house', 'Lattice'],
-  build: [geodesicHouse, bubbles, palmHouse, latticeShell] as Builder[],
+  names: ['Geodesic', 'Bubbles', 'Palm house', 'Lattice', 'Observatory'],
+  build: [geodesicHouse, bubbles, palmHouse, latticeShell, observatory] as Builder[],
 };
+/** The Observatory's place among the domes (2026-11-14): the last single building, before the rungs. */
+export const OBSERVATORY_KIND = 4;
 /** Five domes on a ring round a sixth: the domes' "group" rung. */
 export const domeGroup: Builder = domeGarden;
 export { garden, plaza, tree };
