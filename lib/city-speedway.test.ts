@@ -20,9 +20,12 @@ import { GROUND, type Item, TILE_X, TILE_Z } from './city-grid';
 import { cityMapData } from './city-minimap';
 import { resetSharks, sharksShowing } from './city-sharks';
 import {
+  ARCH_GAP,
   ARRIVAL_Z,
   arrivalStep,
+  DASH_GAP,
   enterAtlantis,
+  headFlash,
   inAtlantis,
   LANE_LEN,
   LANE_TOP,
@@ -32,6 +35,7 @@ import {
   lanePhase,
   leaveAtlantis,
   lightSpeed,
+  MAX_GAIN,
   MOUTH,
   mouthCrossed,
   mouthItems,
@@ -184,6 +188,116 @@ describe('the lane to Atlantis', () => {
     const out: Item[] = [];
     laneItems([0, GROUND + 40, -100], [0, 0, -1], 1, out);
     expect(out.length).toBeGreaterThan(6);
+  });
+});
+
+/*
+ * 2026-11-15: "the speed tunnel to atlantis is bugging. looks good but cuts the fps or feels laggy
+ * not smooth." Measured (lib/city-speedway.bench.test.ts): a frame in the lane costs less than in
+ * the city, so the lag was in the picture: patterns passing faster than half their spacing a frame
+ * (the wagon-wheel judder), a head flash beating with the frame rate, tails cut at fixed places.
+ */
+describe('the speed tunnel runs smooth', () => {
+  it('never lets the lights gain half a streak’s spacing in a frame, and they always outrun you', () => {
+    for (const fps of [20, 30, 45, 60, 120])
+      for (const v of [0, 9, 30, 70, 140, 200]) {
+        const a = lanePhase();
+        speedwayStep(1 / fps, v);
+        const gain = lanePhase() - a - v / fps;
+        expect(gain).toBeGreaterThan(0);
+        expect(gain).toBeLessThanOrEqual(MAX_GAIN + 1e-9);
+        expect(MAX_GAIN).toBeLessThan(DASH_GAP / 2);
+      }
+    // At 60 frames a second and the lane's speeds, the lights run as fast as ever.
+    for (const v of [30, 70, 140]) {
+      const a = lanePhase();
+      speedwayStep(1 / 60, v);
+      expect(lanePhase() - a).toBeCloseTo(lightSpeed(v) / 60, 9);
+    }
+  });
+
+  it('flashes the heads smoothly, never a jump from one frame to the next', () => {
+    let lo = 1;
+    let hi = 0;
+    for (let t = 0; t < 3; t += 1 / 60) {
+      const f = headFlash(t, 3, 7);
+      lo = Math.min(lo, f);
+      hi = Math.max(hi, f);
+      expect(Math.abs(headFlash(t + 1 / 60, 3, 7) - f)).toBeLessThan(0.3);
+    }
+    // Still a flash: from under half to full.
+    expect(lo).toBeLessThan(0.5);
+    expect(hi).toBeGreaterThan(0.95);
+  });
+
+  it('scatters the walls’ rail dots (no lattice to alias), each in its own stretch, standing still', () => {
+    const rows = 16;
+    const nStreak = rows * 6 * 6;
+    const at = (t: number) => {
+      const out: Item[] = [];
+      laneItems([0, GROUND + 40, -100], [0, 0, -1], t, out);
+      const wall = out.find((it) => it.count === nStreak + rows * 20) as Item;
+      const o = [0, 0, 0, 0, 0, 0];
+      const zs: number[] = [];
+      for (let j = 0; j < 20; j++) {
+        expect(wall.site(nStreak + j * rows, o)).toBe(true);
+        zs.push(o[2] as number);
+      }
+      return zs;
+    };
+    const zs = at(1);
+    expect(at(2)).toEqual(zs);
+    const z1 = Math.floor((zs[0] as number) / 2) * 2;
+    zs.forEach((z, j) => {
+      expect(z).toBeGreaterThanOrEqual(z1 + 2 * j);
+      expect(z).toBeLessThan(z1 + 2 * j + 2);
+    });
+    const gaps = zs.slice(1).map((z, j) => z - (zs[j] as number));
+    const mean = gaps.reduce((s, g) => s + g, 0) / gaps.length;
+    const sd = Math.sqrt(gaps.reduce((s, g) => s + (g - mean) ** 2, 0) / gaps.length);
+    expect(sd).toBeGreaterThan(0.3);
+  });
+
+  it('keeps every streak whole across the walls’ stretches (no tails cut at fixed places)', () => {
+    speedwayStep(0.37, 50);
+    const out: Item[] = [];
+    laneItems([0, GROUND + 40, 40], [0, 0, -1], 1, out);
+    const rows = 16;
+    const nStreak = rows * 6 * 6;
+    const walls = out.filter((it) => it.count === nStreak + rows * 20);
+    expect(walls.length).toBeGreaterThanOrEqual(16);
+    const o = [0, 0, 0, 0, 0, 0];
+    // Row 0 of the west wall's stretches (x < 0), every streak grain.
+    const zs: number[] = [];
+    for (const w of walls)
+      for (let s = 0; s < nStreak; s++) {
+        if (Math.floor(s / 6) % rows !== 0 || !w.site(s, o) || (o[0] as number) > 0) continue;
+        zs.push(o[2] as number);
+      }
+    zs.sort((a, b) => a - b);
+    const sizes: number[] = [];
+    let n = 1;
+    for (let i = 1; i < zs.length; i++) {
+      if ((zs[i] as number) - (zs[i - 1] as number) > 1) {
+        sizes.push(n);
+        n = 0;
+      }
+      n++;
+    }
+    // The last streak may run out at the lane's start (z = 0); every other one is whole.
+    expect(sizes.length).toBeGreaterThan(60);
+    for (const s of sizes) expect(s).toBe(6);
+  });
+
+  it('spaces the tunnels’ arches so even a double boost passes under half of one a frame', () => {
+    expect(ARCH_GAP / 2).toBeGreaterThan(140 / 60);
+  });
+
+  it('asks no more of the pool than before: the lane’s sites a frame stay bounded', () => {
+    const out: Item[] = [];
+    laneItems([0, GROUND + 40, 30], [0, 0, -1], 1, out);
+    const sites = out.reduce((s, it) => s + it.count, 0);
+    expect(sites).toBeLessThan(50000);
   });
 });
 

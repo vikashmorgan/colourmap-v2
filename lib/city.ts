@@ -60,6 +60,7 @@ import {
   surgeAt,
   surgePace,
 } from './city-boost-rings';
+import { bountyItems, bountyStep, makeBounty, resetBounty } from './city-bounty';
 import { BUILDINGS, buildingsEye } from './city-buildings';
 import { camView, cockpitEye, toggleView } from './city-cockpit';
 import {
@@ -116,7 +117,16 @@ import {
 import { AVENUE, BLOCK_X, BLOCK_Z, type Item, TILE_J } from './city-grid';
 import { lifeItems } from './city-life';
 import { aboveAt, aboveEye, CITIES, setCityKind } from './city-plans';
-import { policeItems } from './city-police';
+import { flareRedLeft, policeItems } from './city-police';
+import {
+  LOW_FLIGHT,
+  makePursuit,
+  nearPatrol,
+  pursuitDrag,
+  pursuitItems,
+  pursuitStep,
+  resetPursuit,
+} from './city-pursuit';
 import {
   DRONES,
   droneAt,
@@ -2108,6 +2118,50 @@ export function depthOfField(): { at: number; blur: number } | null {
 }
 /** Where the ship has flown lately, for its boost trail (lib/city-trail.ts). */
 const trail = makeTrail();
+/**
+ * The space police after you, and the wanted ships (lib/city-pursuit.ts, lib/city-bounty.ts,
+ * 2026-11-15); this frame's double boost and wall scrape, for the heat.
+ */
+const law = makePursuit();
+const wanted = makeBounty();
+let lawDouble = false;
+let lawWall = 0;
+/** The police flares' glow at the screen's edges now (0..1), and whether red is on the left. */
+export const policeLight = () => ({ k: law.alert, redLeft: flareRedLeft(fly.t) });
+/** How many wanted ships you have captured (shown quietly on the map). */
+export const bountiesCaught = () => wanted.caught;
+/** Whether a cruiser at `a` sees the ship at b: no tower between, nothing solid over it. */
+const policeSee = (a: Vec3, b: Vec3) =>
+  !hidden(a, b[0], b[1], b[2]) &&
+  !blocked([b[0], b[1] + 4, b[2]]) &&
+  !blocked([b[0], b[1] + 9, b[2]]);
+/** The police and the wanted ships, each frame (after the move). */
+function lawStep(c: Vec3, f: Vec3, dt: number, t: number) {
+  const on =
+    fly.mode === 'pilot' &&
+    !inAtlantis() &&
+    !inRoom() &&
+    !inSpace() &&
+    !fly.travel &&
+    race.phase !== 'racing' &&
+    race.phase !== 'countdown';
+  const busy = law.phase !== 'off';
+  bountyStep(wanted, { t, dt, on, busy, pos: c, fwd: f });
+  const speed = fly.mode === 'route' ? FLY_SPEED : fly.speed;
+  pursuitStep(law, {
+    t,
+    dt,
+    on,
+    pos: c,
+    speed,
+    double: lawDouble,
+    low: c[1] - floorAt(c[0], c[2]) < LOW_FLIGHT,
+    wall: lawWall,
+    buzz: on && speed > 20 && nearPatrol(c, t),
+    calm: wanted.phase === 'flee',
+    sees: policeSee,
+  });
+}
 /** Whether slow mode is on. */
 export const slowMode = () => fly.slow;
 /**
@@ -2306,6 +2360,8 @@ function afresh() {
   resetRings();
   resetBoostRings();
   resetSkyDock();
+  resetPursuit(law);
+  resetBounty(wanted);
 }
 
 /** The chase camera on the ship's heading at once (a fresh start, a placing, a jump). */
@@ -2362,6 +2418,8 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   const jumped = Math.abs(t - fly.t - dt) > 0.5;
   fly.t = t;
   fly.v++;
+  lawDouble = false;
+  lawWall = 0;
   setRiseClock(t);
   if (jumped) afresh();
   const pressed = (k: string) => keys.includes(k) && !fly.held.includes(k);
@@ -2448,6 +2506,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   // Shift is the double boost (2026-11-14: "when I press [Shift] ... it makes a double boost that
   // goes twice faster than boost"); Space the plain one.
   const double = held('shift');
+  lawDouble = double;
   const boosting = double || held(' ');
   const hyper = hyperStep(boosting, held('tab'));
   glowStep(boosting, dt, hyper);
@@ -2511,7 +2570,9 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     // The speedway pushes you on (2026-11-14: "so it feels like full speed").
     pushAt(fly.pos, realm) *
     // Through a boost ring, a surge easing off over two or three seconds (lib/city-boost-rings.ts).
-    (realm ? 1 : surgePace(t, boosting));
+    (realm ? 1 : surgePace(t, boosting)) *
+    // Caught by the police: a soft slowdown easing back (lib/city-pursuit.ts).
+    pursuitDrag(law, t);
   const surge = realm ? 0 : surgeAt(t);
   // The surge's warm flare in the ship's plume.
   if (surge > 0) fly.glow = Math.max(fly.glow, 0.7 * surge);
@@ -2520,6 +2581,7 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     (1 - Math.exp((hyper ? -2.5 : boosting || surge > 0.05 ? -4 : -1.5) * dt));
   const was: Vec3 = [...fly.pos];
   const wall = move(dt);
+  lawWall = wall;
   // A soft bump: sliding along a wall bleeds a little speed and leans the ship away from it.
   if (wall !== 0) fly.speed *= 0.985 ** (dt * 60);
   fly.nudge += (0.15 * wall - fly.nudge) * (1 - Math.exp((wall !== 0 ? -6 : -3) * dt));
@@ -2825,6 +2887,7 @@ function after(dt: number, t: number) {
   // The path behind the ship, for its boost trail; the ship's right is level.
   const fl = Math.hypot(f[0], f[2]) || 1;
   pushTrail(trail, c, [-f[2] / fl, 0, f[0] / fl], t);
+  if (dt > 0) lawStep(c, f, dt, t);
   if (inAtlantis()) {
     // Arriving (once a visit), the sharks come to swim beside you; they follow, leave, return.
     if (arrivalStep(c, t)) schoolJoin(c, f, t);
@@ -3808,6 +3871,9 @@ function gather(P: Plan): { d: number; run: () => void }[] {
   ufoItems(eye, fwd, cur.t, game);
   skyCarItems(eye, fwd, cur.t, game);
   policeItems(eye, fwd, cur.t, game);
+  // The police after you, and a wanted ship (2026-11-15; lib/city-pursuit.ts, lib/city-bounty.ts).
+  pursuitItems(law, eye, fwd, cur.t, game);
+  bountyItems(wanted, eye, fwd, cur.t, game);
   for (const g of game) {
     if (seeThrough && g.probe && !g.probe.some((q) => roomBeyond(q[0], q[2], 30))) continue;
     items.push({

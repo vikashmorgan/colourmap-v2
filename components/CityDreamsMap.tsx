@@ -20,7 +20,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { shipNow, travelTo, travelWithin } from '@/lib/city';
+import { bountiesCaught, shipNow, travelTo, travelWithin } from '@/lib/city';
 import {
   type AtlLabel,
   atlFitView,
@@ -331,6 +331,8 @@ export default function CityDreamsMap({
     };
   }, [atl]);
 
+  const caught = bountiesCaught();
+
   const recentre = () => {
     targetRef.current = homeFor(mode, sizeRef.current.w, sizeRef.current.h, atl);
     dirty.current = true;
@@ -394,6 +396,8 @@ export default function CityDreamsMap({
       </p>
       <p className="cd-map-hint cd-map-go">
         {atl ? 'Tap a place to fly there' : 'Tap a quarter to fly there'}
+        {/* Wanted ships captured (2026-11-15): only here, quietly, never while flying. */}
+        {caught > 0 ? ` · ${caught} wanted caught` : ''}
       </p>
     </div>
   );

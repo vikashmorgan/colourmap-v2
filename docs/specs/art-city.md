@@ -1911,8 +1911,9 @@ it never traps you. Its light is the one exception to the City's mellow rule, as
 rows of streaks up each wall and five along the floor run north with the ship's way, each a
 bright flickering head and a fading tail, riding a phase that advances at `lightSpeed(v) =
 2.2v + 12` (always well past the ship; eased from its speed, so a change of pace never makes
-them jump); dim rails between. **Three tunnels** of arches (posts up the walls to 44, a half
-circle over; one every 4 for 72; at 120, 290 and 460 along) light in waves running north faster
+them jump; never gaining more than `MAX_GAIN` 3.6 on the ship in one frame); dim rails between,
+scattered. **Three tunnels** of arches (posts up the walls to 44, a half
+circle over; one every 6 for 72; at 120, 290 and 460 along) light in waves running north faster
 than you. **The push**: in the lane your pace is multiplied by up to 2.25 (`PUSH` 1.25), easing off
 over the last stretch; keys still speed you up, slow you, steer and climb. Fly back south out of
 the lane's start and you are home, in the mouth you left by; the map and [ ] also bring you home
@@ -1979,6 +1980,27 @@ map's two places travel there and back; in Atlantis every grain finite, the shar
 traffic's share. Sharks: following beside you for 20 s at 40 a second, gone by 27; returning 60 to
 120 s after each leaving, three times or more in 400 s; leaving at once when you leave Atlantis;
 no frame-to-frame jumps; grains near each shark and mellow.
+
+**Smooth at speed (2026-11-15).** "the speed tunnel to atlantis is bugging. looks good but cuts
+the fps or feels laggy not smooth. but concept is good." Measured first
+(`lib/city-speedway.bench.test.ts`, off unless `CITY_BENCH=1`: `setFly` + `pieceCamera` +
+`pieceAt` over every grain, after 30 frames to settle): a frame in the lane costs about half the
+city's (6,500 grains: 4.9–5.3 ms against 11.5 in the city and 10.7 in the mouth; 15,000: 10–12 ms
+against 18.5), with fewer grains near the eye and less screen area to fill (0.46–0.68 megapixels
+against 1.28), no hitch at the gate, and the same numbers after the fix. So the lag was in the
+picture, not the work: patterns passing the eye faster than half their spacing a frame read as
+judder (the wagon wheel). The lane's pace is about 70 a second boosting, 140 with Shift: the
+walls' and floor's **rail dots**, every 2 in lockstep rows, passed 1.2 a frame at 60 frames a second
+and crawled back or stood; the **arches**, every 4, did the same under Shift; the **streaks** (9
+apart, gaining 1.6 to 3 a frame at 60, twice that at 30) aliased on a slow frame; the **heads'
+flash**, an on/off square at 7 a second, beat with the frame rate; and every streak's tail was cut
+at each 40-long stretch's edge, blinking at the same places. Now: the rail dots are scattered,
+each somewhere in its own stretch of 2 (stratified, standing still); the arches stand every 6, each
+drawn denser, so the tunnel keeps its grains; the lights never gain more than 3.6 (0.4 of their
+spacing) on the ship in a frame, so they still always outrun you and run exactly as fast as before
+at 60 frames a second below a speed of 170; the heads pulse smoothly at 4.5 a second (0.45 to
+full); a streak's tail runs on into the next stretch. Guarded in `lib/city-speedway.test.ts` ("the
+speed tunnel runs smooth").
 
 **Still rough.** Not yet seen in a browser (tests and timings only). The avenue's walls stand two
 closer off the tile's middle column (an older quirk of `blockTower`), so the mouth is 12 across to
@@ -2666,6 +2688,72 @@ and 15,000 with a chase, UFOs and flying cars about, every grain finite.
 
 **Still rough.** Not yet seen in a browser. The UFOs and cars are light (nothing holds the ship), and
 the big UFOs can cross the high currents' and flocks' heights. The chases keep to the corridors.
+
+### The space police chase you, and the bounties (2026-11-15)
+
+> "Space police with the flare lights ... think how police chases could be and how we could do
+> bounty hunting and try to capture bad guys. And police stops chasing when u hide."
+
+Steps two and three of the police (the hooks above, now built). Fun, never punishing: no game over,
+no count or badge while flying.
+
+**The police chase you** (`lib/city-pursuit.ts`).
+
+- **What brings them** (a heat, filling and cooling): Shift's double boost held low in the streets
+  (under 32 over the street) for 8 seconds; scraping walls at speed (over 20) for 2.5; buzzing a
+  patrol (passing within 12 of a step-one cruiser at speed) at once. Calm flying cools it over 15
+  seconds; no heat while you tail a wanted ship, in a race, a room, space or Atlantis.
+- **The chase**: one to three cruisers come up from 45 behind you and follow **the very path you
+  flew** (breadcrumbs every 1.5, the last 960 or so kept), 7, 12 and 17 behind you, at 24 a second:
+  faster than the cruise (9), slower than the street boost (28.8). Following your own path, they
+  never clip a solid.
+- **Hiding**: they follow only as far as where they last saw you. Seen means within 170, no tower
+  between (`hidden`), and nothing solid over you (a tunnel, a tower's bore, the Deep Line, a sky
+  bridge). Out of sight for 3 seconds, they lose you: they search back and forth along your path round
+  that spot for 7 seconds, then rise and fade away. Seen again within 100 while searching, the chase
+  is on again. Out-boosting them to past 170 loses them too.
+- **Caught**: the leading cruiser within 10 of you, seeing you, for 2.5 seconds: their flares flash
+  brighter a moment, your ship slows softly to 0.45 of its pace, easing back over 3.5 seconds, and
+  they leave. Then 30 seconds before they can come again.
+- **The one cue**: a soft red glow at one screen edge and blue at the other, swapping with their
+  flares (the police light's exception to the mellow rule), at most 0.42 opaque, fading as you hide
+  (`components/CityPoliceGlow.tsx`, in the game's overlay).
+
+**Bounty hunting** (`lib/city-bounty.ts`).
+
+- **A wanted ship**: a dark blunt delta, a dim spine, one red warning light breathing slowly on its
+  back, a faint violet exhaust. In about three of five 70-second slots, while you fly along a racing
+  corridor (within 34 of its middle, in the streets), it breaks out 45 ahead of you and flees down
+  the corridor at 24 over the street, weaving inside 2.5 across and 3 up and down: through the ring
+  gates, under the high bridges, over the low ones, receding down the long view.
+- **Fleeing smartly**: 13 a second while you are 75 or more away, up to 26 as you close within 18:
+  quicker than the cruise, under the street boost, so the boost catches it.
+- **The capture**: within 16 of it and behind it for 3 seconds (the count drains at half speed when
+  you slip off). It slows to a stop, its light turns a soft steady gold, a ring of gold light spreads
+  round it once; two cruisers come down its route, one from ahead turning about to lead, one from
+  behind to follow, and the convoy flies it away down the corridor, fading over its last 3 seconds.
+  Fallen 320 behind, or after 50 seconds, it gets away and fades. The captures show only on the map
+  (M), quietly: "· 2 wanted caught". No wanted ship while the police are after you.
+
+**Cost.** Up to three cruisers (90 sites each) after you; the wanted ship (84, 120 with its ring)
+and two escorts: some 540 sites at most, thinned with the distance by the plan like every item.
+
+**Acceptance** (`lib/city-pursuit.test.ts`, `lib/city-bounty.test.ts`): calm flying never brings
+the police, even boosting; the low double boost does in about 8 seconds, scraping in about 2.5,
+buzzing a patrol at once, never while tailing a wanted ship; the cruisers keep behind you on your
+path, never in a wall, and catch a cruise; caught, a soft slowdown easing back, they leave and cool
+down; out-boosted or hidden 3 seconds they search where they last saw you, never past it, and give
+up; seen close while searching, the chase again; the edge glow fades as you hide; in the city, the
+double boost down a corridor brings them, their glow up, the grain budget kept. A wanted ship breaks
+out in some slots only, by a corridor, along it, never while the police are after you; slow while
+you hang back, fast as you close, between the cruise and the street boost; its route and its
+escorts' clear of every solid down both corridors; tailed close behind 3 seconds, captured, counted,
+escorted away; never from ahead or too far; gets away when left behind or after a while. Its light
+red and slow, gold once captured, the ring spreading.
+
+**Still rough.** Not yet seen in a browser. Wanted ships keep to the racing corridors. The
+breadcrumbs follow you through a portal or fast trip only by starting afresh (the police then let
+you go). The captures are counted for the session only.
 
 ### The loop metro and the tube metro (2026-11-15)
 

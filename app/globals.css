@@ -1796,6 +1796,37 @@ input[type="range"].art-slider.magma {
   /* A round canopy's frame runs on past its box to the screen's edges. */
   overflow: visible;
 }
+/* The police after you: red on one edge, blue on the other, swapping with their flares; the
+   opacity (set every frame) fades as you hide. */
+.cd-police {
+  position: absolute;
+  inset: 0;
+  --police-red: rgba(255, 40, 30, 0.75);
+  --police-blue: rgba(40, 90, 255, 0.75);
+}
+.cd-police-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 26vw;
+  max-width: 280px;
+}
+.cd-police-l {
+  left: 0;
+  background: radial-gradient(ellipse 100% 60% at 0% 50%, var(--edge), transparent 70%);
+}
+.cd-police-r {
+  right: 0;
+  background: radial-gradient(ellipse 100% 60% at 100% 50%, var(--edge), transparent 70%);
+}
+.cd-police[data-red="left"] .cd-police-l,
+.cd-police[data-red="right"] .cd-police-r {
+  --edge: var(--police-red);
+}
+.cd-police[data-red="left"] .cd-police-r,
+.cd-police[data-red="right"] .cd-police-l {
+  --edge: var(--police-blue);
+}
 /* A short landscape phone: the round buttons two by two, smaller, the pace pills above them,
  * so the column never runs up the screen. */
 @media (orientation: landscape) and (max-height: 520px) {
