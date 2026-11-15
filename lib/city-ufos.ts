@@ -20,8 +20,10 @@
 
 import { hash, type RGB, smooth, type Vec3 } from './bigbang';
 import { CORRIDOR_LINES } from './city-corridors';
+import { blockTower, MARGIN } from './city-game';
 import {
   BLOCK_X,
+  BLOCK_Z,
   GROUND,
   type Item,
   mixId,
@@ -522,14 +524,14 @@ export const BIG_SIGHT = 900;
 
 /* ---------- the small ones: darting down the street lines ---------- */
 
-/** A small UFO patrols a stretch this long down a street line (an eighth of the tile), darting from point to point. */
-export const PATROL = TILE_Z / 8;
-const PATROLS = 8;
+/** A small UFO patrols a stretch this long down a street line (a fourteenth of the tile, four blocks), darting from point to point. */
+export const PATROL = TILE_Z / 14;
+const PATROLS = 14;
 /** A hop: dash then hover, this long (seconds); the dash takes the first share of it. */
 export const HOP = 4;
 export const DASH_SHARE = 0.45;
 /** Of every street stretch, about this share has a darter. */
-const DARTER_SHARE = 0.4;
+const DARTER_SHARE = 0.65;
 /** How far the small ones are drawn, and how many at most. */
 export const SMALL_SIGHT = 300;
 export const SMALL_DRAWN = 6;
@@ -547,12 +549,42 @@ export const darterLine = (li: number) =>
 
 /** Whether the stretch `cell` along street line `li` (tile-local) has a darter, and which design. */
 export function darterOf(li: number, cell: number): { key: number; design: UfoDesign } | null {
+  const c = wrap(cell, PATROLS);
+  const memo = darters.get(li * 16 + c);
+  if (memo !== undefined) return memo;
+  const found = findDarter(li, c);
+  darters.set(li * 16 + c, found);
+  return found;
+}
+const darters = new Map<number, { key: number; design: UfoDesign } | null>();
+
+/** Solid shapes a vehicle keeps its distance from (a Studio design is kept clear of altogether). */
+const SOLID = new Set(['box', 'business', 'embassy', 'code', 'pyramid']);
+
+/**
+ * How much room street line li (tile-local) has at row J: the distance from the line to the nearest
+ * face of a solid tower either side, whatever its height (none beside a Studio design).
+ */
+export function streetRoom(li: number, J: number): number {
+  const x = li * BLOCK_X;
+  let room = BLOCK_X;
+  for (const I of [li - 1, li]) {
+    const tw = blockTower(I, J);
+    if (tw.shape === 'design') return 0;
+    if (!SOLID.has(tw.shape)) continue;
+    room = Math.min(room, Math.abs(x - tw.x) - tw.hx);
+  }
+  return room;
+}
+
+function findDarter(li: number, cell: number): { key: number; design: UfoDesign } | null {
   if (!darterLine(li)) return null;
   const key = mixId(li * 131 + 7, cell * 977 + 3);
   if (hash(key % 100003, 1181) >= DARTER_SHARE) return null;
+  const design = SMALL[Math.floor(hash(key % 100003, 1182) * SMALL.length)] as UfoDesign;
   // Off the Temple skyscrapers' block, where the towers rise over every other roof.
   const x = li * BLOCK_X;
-  const z0 = wrap(cell, PATROLS) * PATROL;
+  const z0 = cell * PATROL;
   if (
     x > LIFT_AREA.x0 - 6 &&
     x < LIFT_AREA.x1 + 6 &&
@@ -560,7 +592,11 @@ export function darterOf(li: number, cell: number): { key: number; design: UfoDe
     z0 < LIFT_AREA.z1 + 6
   )
     return null;
-  const design = SMALL[Math.floor(hash(key % 100003, 1182) * SMALL.length)] as UfoDesign;
+  // Only where the street is wide enough all along its stretch: every solid tower either side
+  // (whatever its height) stands back from the line by the darter's size, its sway and some air.
+  const room = design.size + 0.6 + MARGIN + 0.6;
+  for (let J = Math.floor(z0 / BLOCK_Z); J <= Math.floor((z0 + PATROL) / BLOCK_Z); J++)
+    if (streetRoom(li, J) < room) return null;
   return { key, design };
 }
 

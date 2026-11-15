@@ -16,21 +16,25 @@
  */
 
 import { hash, type RGB, smooth, type Vec3 } from './bigbang';
-import { bodyOf, CAR_SITES, type Car, carSite } from './city-cars';
+import { bodyOf, CAR_HALF_W, CAR_SITES, type Car, carSite } from './city-cars';
 import { CORRIDOR_LINES } from './city-corridors';
+import { MARGIN } from './city-game';
 import {
   BLOCK_X,
+  BLOCK_Z,
   C,
   GROUND,
   type Item,
   mix,
   mixId,
   nearest,
+  TILE_J,
   TILE_X,
   TILE_Z,
   wrap,
 } from './city-grid';
 import { LIFT_AREA } from './city-skyscrapers-plan';
+import { streetRoom } from './city-ufos';
 
 /** A sky lane, tile-local: along z at x, at height y over the street, one way, its cars and pace. */
 export type SkyLane = { x: number; line: number; y: number; sgn: 1 | -1; n: number; speed: number };
@@ -84,13 +88,43 @@ export function skyCarAt(i: number, k: number, t: number, near: Vec3): Car {
   };
 }
 
-/** Whether a flying car flies there: not over the Temple skyscrapers' blocks (their towers rise over the boulevards' level). */
+/**
+ * How much a flying car shows there (0 to 1): none over the Temple skyscrapers' blocks (their towers
+ * rise over the boulevards' level), and on a boulevard none where it narrows (a solid tower nearer
+ * its lane than the car's width and some air), easing out and back in over a dozen units.
+ */
 export function skyCarOpen(c: Car): number {
   const x = c.pos[0] - nearest(0, c.pos[0], TILE_X);
   const z = wrap(c.pos[2], TILE_Z);
-  if (x < LIFT_AREA.x0 - 4 || x > LIFT_AREA.x1 + 4) return 1;
-  const e = Math.max(LIFT_AREA.z0 - z, z - LIFT_AREA.z1);
-  return smooth((e - 8) / 12);
+  let k = 1;
+  if (x > LIFT_AREA.x0 - 4 && x < LIFT_AREA.x1 + 4) {
+    const e = Math.max(LIFT_AREA.z0 - z, z - LIFT_AREA.z1);
+    k = smooth((e - 8) / 12);
+  }
+  const li = c.road.line;
+  if (BOULEVARDS.includes(li)) {
+    const J = Math.floor(z / BLOCK_Z);
+    for (let dJ = -1; dJ <= 1; dJ++) {
+      if (!narrow(li, J + dJ)) continue;
+      const z0 = (J + dJ) * BLOCK_Z;
+      const e = Math.max(0, z0 - z, z - z0 - BLOCK_Z);
+      k = Math.min(k, smooth((e - 4) / 12));
+    }
+  }
+  return k;
+}
+
+const narrows = new Map<number, boolean>();
+/** Whether boulevard li is too narrow for its lanes at row J (tile-local), found once. */
+function narrow(li: number, J: number): boolean {
+  const j = wrap(J, TILE_J);
+  const key = li * 100 + j;
+  let n = narrows.get(key);
+  if (n === undefined) {
+    n = streetRoom(li, j) < BOULEVARD_OFF + CAR_HALF_W + MARGIN + 0.6;
+    narrows.set(key, n);
+  }
+  return n;
 }
 
 /** How near flying cars are drawn, and how many at most. */
