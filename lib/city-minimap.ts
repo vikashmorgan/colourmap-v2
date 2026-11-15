@@ -16,6 +16,7 @@
 import type { RGB, Vec3 } from './bigbang';
 import { ANNEX_X, annexContours, annexPlaces, type MapContour, MOUNTAIN_ROWS } from './city-annex';
 import { barPlaces } from './city-bars';
+import { cablePlaces } from './city-cable-cars';
 import { CANYON_PATH } from './city-canyon';
 import { CORRIDOR_HALF, CORRIDOR_LINES, CORRIDOR_X, corridorRoads } from './city-corridors';
 import { DOCKS, LOUNGES, placeDock } from './city-docks';
@@ -353,6 +354,8 @@ export function cityMapData(): MapData {
   places.push(...barPlaces());
   // The Mountain quarter's temples and cable car stations (lib/city-annex.ts, 2026-11-14).
   places.push(...annexPlaces());
+  // The city's cable car stations, down the long streets and up to the Favela (2026-11-15).
+  places.push(...cablePlaces());
   basePlaces = places.length;
   places.push(...MAP_EXTRAS);
 

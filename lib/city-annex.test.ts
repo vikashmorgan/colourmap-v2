@@ -31,6 +31,7 @@ import {
   GATEWAYS,
   MOUNTAIN_ROWS,
 } from './city-annex';
+import { cablePlaces } from './city-cable-cars';
 import { carItems } from './city-cars';
 import { streamShip } from './city-currents';
 import { farCity } from './city-far';
@@ -152,8 +153,9 @@ describe('the plan, wider: the annex beside the strip', () => {
     for (const c of lines) for (const [x] of c.pts) expect(inAnnex(x)).toBe(true);
     // The temples and the cable stations, named.
     expect(m.places.filter((p) => p.kind === 'temple')).toHaveLength(8);
+    // With the city's cable car stations since 2026-11-15 (lib/city-cable-cars.ts).
     expect(m.places.filter((p) => p.kind === 'cable').length).toBe(
-      annexPlaces().filter((p) => p.kind === 'cable').length,
+      annexPlaces().filter((p) => p.kind === 'cable').length + cablePlaces().length,
     );
     // The industry's Atom tower, clockwork gate and cooling towers.
     expect(m.places.filter((p) => p.kind === 'works').map((p) => p.name)).toContain('Atom tower');

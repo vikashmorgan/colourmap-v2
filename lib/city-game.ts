@@ -31,6 +31,7 @@ import { avenueHeight, avenueItems } from './city-avenue';
 import { BIG_SQUARES, BIG_STRETCH, bigItems, openBlock, studioBlockItems } from './city-big';
 import { BUILDING_SPOTS } from './city-buildings-15';
 import { businessSize, coreItem, skyBridgeItem, towerItem } from './city-business';
+import { cableCarItems, cablePylonHolds } from './city-cable-cars';
 import { canyonHeight, canyonItems, canyonWallAt } from './city-canyon';
 import { carItems } from './city-cars';
 import {
@@ -867,6 +868,9 @@ export function blocked(q: Vec3): boolean {
     if (u !== null) return u;
   }
   if (q[1] < floorAt(q[0], q[2]) + 2 - 1e-6) return true;
+  // The cable cars' pylons and stations (lib/city-cable-cars.ts, 2026-11-15): thin columns, in
+  // the strip and up the Favela's first hill; the cables and cabins are light.
+  if (cablePylonHolds(q, MARGIN)) return true;
   // The annex (lib/city-annex.ts): its peaks, temples, pylons, hills and houses, a height field.
   if (inAnnex(q[0])) return annexBlocked(q, MARGIN);
   // The Observatory beside the domes' plaza (lib/city-observatory.ts): its drum and dome.
@@ -3315,6 +3319,9 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
   railItems(eye, t, Math.min(R, NEAR + 60), out);
   // The tube metro, drawn far, so its curves read from down the avenue (lib/city-tube-metro.ts).
   tubeItems(eye, t, Math.min(R, 700), out);
+  // The cable cars down the long streets and up to the Favela, drawn far so their pylons recede
+  // down the street (lib/city-cable-cars.ts, 2026-11-15).
+  cableCarItems(eye, t, Math.min(R, 600), out);
   riverItems(eye, t, R, floorAt, waterAt, out);
   // The bridges high over the river between the Heights and the Golden gardens, and the racing
   // corridors' obstacles and kerbs (lib/city-gap-bridges.ts, lib/city-corridors.ts, 2026-11-14).
