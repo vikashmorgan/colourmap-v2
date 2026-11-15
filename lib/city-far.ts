@@ -89,7 +89,7 @@ export function farCity(): FarCloud {
     }
   };
   // The strip's blocks; the annex beside it (2026-11-14) its contour lines and its houses' glows.
-  annexFar(put, DISTRICTS.mountain.colour, DISTRICTS.favela.colour);
+  annexFar(put, DISTRICTS.mountain.colour, DISTRICTS.favela.colour, DISTRICTS.industry.colour);
   for (let I = -STRIP_I / 2; I < STRIP_I / 2; I++) {
     for (let J = 0; J < TILE_J; J++) {
       const tw = blockTower(I, J);

@@ -111,6 +111,13 @@ export const QUARTER_DESIGNS: Record<DistrictId, QuarterDesign> = {
     line: 'A round balloon of rings over a small swinging basket.',
     accent: [1, 0.45, 0.4],
   },
+  // 2026-11-14: the Industry superquarter's (lib/city-industry.ts).
+  industry: {
+    district: 'industry',
+    name: 'Ore hauler',
+    line: 'A long open hopper hung under two slowly turning rotor rings.',
+    accent: [1, 0.66, 0.32],
+  },
 };
 
 /** Which part of a design a grain is: its body, its accent, or its light. */
@@ -306,6 +313,22 @@ export function quarterGrain(
         return { a: (f - 0.5) * 0.3 + sw, b: e * 0.15, h: -0.55, part: 1 };
       }
       return { a: 0, b: 0, h: -0.38, part: 2 };
+    }
+    case 'industry': {
+      // A long hopper (its outline), two rotor rings over it turning slowly, a sodium lamp ahead.
+      if (q < 0.5) {
+        const u = (q / 0.5) * 4;
+        const k = Math.floor(u);
+        const f = u - k;
+        const h = k & 2 ? 0.05 : -0.25;
+        return { a: -0.9 + 1.8 * f, b: (k & 1 ? 1 : -1) * 0.22, h, part: 0 };
+      }
+      if (q < 0.9) {
+        const w = TAU * s + 0.6 * t;
+        const at = r < 0.5 ? -0.5 : 0.5;
+        return { a: at + 0.3 * Math.cos(w), b: 0.3 * Math.sin(w), h: 0.42, part: 1 };
+      }
+      return { a: 0.98, b: 0, h: -0.1, part: 2 };
     }
     default: {
       // The Matrix's glyph drone: a square frame upright, a glyph of our own in it.
