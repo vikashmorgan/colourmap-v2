@@ -163,3 +163,56 @@ export function carAt(j: number, car: number, t: number): { c: Vec3; f: Vec3; ba
 
 /** The stations: four, evenly round the loop. */
 export const STATIONS = [0.06, 0.31, 0.56, 0.81].map((k) => k * RAIL.length);
+
+/*
+ * 2026-11-15 (docs/specs/art-city.md, "The loop metro and the tube metro"): "a metro in a loop".
+ * The rail was a closed loop already; its stations now glow softly while a train is in, and the
+ * first station is a fast-travel spot on the map.
+ */
+
+/** The shortest way round the loop between two places along it. */
+export function railGap(a: number, b: number): number {
+  const d = wrap(a - b, RAIL.length);
+  return Math.min(d, RAIL.length - d);
+}
+
+/** How far a station's glow reaches past the platform's end, along the rail. */
+export const STATION_GLOW_REACH = 16;
+/** Half a platform's length along the rail. */
+export const PLATFORM_HALF = 11;
+
+/**
+ * How brightly station k glows at time t (0..1): fully while any carriage of a train is beside its
+ * platform, easing off as the train runs on (never a jump).
+ */
+export function metroStationGlow(k: number, t: number): number {
+  const s0 = STATIONS[k] ?? 0;
+  let g = 0;
+  for (let j = 0; j < TRAINS; j++) {
+    for (let car = 0; car < CARS; car++) {
+      const s = (j / TRAINS) * RAIL.length + TRAIN_SPEED * t - car * (CAR_LEN + 0.8);
+      const d = Math.max(0, railGap(s, s0) - PLATFORM_HALF - CAR_LEN / 2);
+      g = Math.max(g, 1 - smoothstep(d / STATION_GLOW_REACH));
+    }
+  }
+  return g;
+}
+const smoothstep = (x: number) => {
+  const c = Math.max(0, Math.min(1, x));
+  return c * c * (3 - 2 * c);
+};
+
+/**
+ * Where a trip to metro station k ends (tile-local): over the rail 30 short of the station, six
+ * above it (the towers under the rail stand lower, so it is clear), facing along the rail to it.
+ */
+export function metroSpot(k: number): { pos: Vec3; yaw: number } {
+  const s0 = STATIONS[k] ?? (STATIONS[0] as number);
+  const from = railAt(s0 - 30).c;
+  const to = railAt(s0).c;
+  return {
+    pos: [from[0], from[1] + 6, from[2]],
+    // yaw 0 flies -z, π/2 flies -x (lib/city-travel.ts yawToward).
+    yaw: Math.atan2(-(to[0] - from[0]), -(to[2] - from[2])),
+  };
+}

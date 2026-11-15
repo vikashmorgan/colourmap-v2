@@ -50,6 +50,7 @@ import { TRACKS } from './city-race';
 import { OPENING } from './city-signs';
 import { parcoursLine, skyPlaces } from './city-skyport';
 import { SPEEDWAY_PLACES } from './city-speedway';
+import { tubeLine, tubePlaces } from './city-tube-metro';
 import { DEEP_MOUTHS, tunnelLines } from './city-under';
 
 /* ---------- the data ---------- */
@@ -113,6 +114,8 @@ export type MapData = {
   places: MapPlace[];
   /** The metro's loop, tile-local (x, z), every few metres. */
   metro: [number, number][];
+  /** The tube metro's loop (lib/city-tube-metro.ts): x, z and its height over the street. */
+  tube?: [number, number, number][];
   /** The tunnels (the Deep Line under the street, the one through a row of towers), as lines. */
   tunnels?: [number, number][][];
   /** The Neon Canyon's middle line (lib/city-canyon.ts), tile-local. */
@@ -307,8 +310,12 @@ export function cityMapData(): MapData {
       z: RAIL.pos[i + 2] as number,
       y: (RAIL.pos[i + 1] as number) - GROUND,
       colour: [1, 0.8, 0.52],
+      // A tap flies to the station along the rail (2026-11-15, lib/city-metro.ts metroSpot).
+      go: { metro: 'loop', i: n, name: `Metro ${n + 1}` },
     });
   });
+  // The tube metro's two stations over the avenue (lib/city-tube-metro.ts, 2026-11-15).
+  places.push(...tubePlaces());
   for (const p of PORTALS) {
     places.push({
       kind: 'portal',
@@ -362,6 +369,7 @@ export function cityMapData(): MapData {
     roads,
     places,
     metro,
+    tube: tubeLine(),
     tunnels: tunnelLines(),
     canyon: CANYON_PATH.map(([x, z]) => [x, z]),
     parcours: parcoursLine(),
@@ -542,7 +550,9 @@ export type MapGo =
   | { d: DistrictId }
   | { x: number; z: number; y: number; name: string }
   | { sky: number | 'parcours'; name: string }
-  | { bar: number; name: string };
+  | { bar: number; name: string }
+  // A loop metro or tube metro station (2026-11-15).
+  | { metro: 'loop' | 'tube'; i: number; name: string };
 export type LabelBox = { x0: number; y0: number; x1: number; y1: number };
 
 export const labelBox = (l: MapLabel): LabelBox => {
@@ -617,13 +627,21 @@ export function mapPick(
     const x0 = l.align === 'left' ? b.x0 - 16 : b.x0 - 4;
     if (q.x >= x0 && q.x <= b.x1 + 4 && q.y >= b.y0 - 3 && q.y <= b.y1 + 3) return l.go;
   }
-  // A flying station's or the parcours' mark, its name shown or not (2026-11-14).
+  // A flying station's or the parcours' mark, its name shown or not (2026-11-14); the nearest
+  // mark wins when two sit close (the metro and tube stations have marks too, 2026-11-15).
   const raised = v.tilt > 0.02;
+  let pick: MapGo | null = null;
+  let best = MARK_PICK;
   for (const p of data.places) {
     if (!p.go) continue;
     const [sx, sy] = projectMap(v, w, h, p.x, raised ? p.y : 0, p.z);
-    if (Math.hypot(sx - q.x, sy - q.y) <= MARK_PICK) return p.go;
+    const d = Math.hypot(sx - q.x, sy - q.y);
+    if (d <= best) {
+      best = d;
+      pick = p.go;
+    }
   }
+  if (pick) return pick;
   if (!area) return null;
   for (const d of data.districts) {
     const pts = [
@@ -857,6 +875,20 @@ export function drawCityMap(
   ctx.strokeStyle = 'rgba(255,190,170,0.55)';
   ctx.lineWidth = 1.2;
   ctx.stroke();
+  // The tube metro's loop, solid and glassy, raised to its height in 3D (2026-11-15).
+  if (data.tube?.length) {
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    data.tube.forEach(([x, z, y], i) => {
+      const q = P(x, raised ? y : 0, z);
+      if (i) ctx.lineTo(q[0], q[1]);
+      else ctx.moveTo(q[0], q[1]);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(120,200,255,0.6)';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+  }
   // The tunnels, dashed in cyan: the Deep Line at the street (it lies under it), the through
   // tunnel at its height in the towers.
   ctx.setLineDash([3, 3]);
