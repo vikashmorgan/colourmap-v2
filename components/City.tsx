@@ -15,6 +15,7 @@
 import { useEffect } from 'react';
 import CityCockpit from '@/components/CityCockpit';
 import CityDreamsMap from '@/components/CityDreamsMap';
+import CityPoliceGlow from '@/components/CityPoliceGlow';
 import TripPlayer, { type Trip } from '@/components/TripPlayer';
 import {
   boostLeft,
@@ -126,7 +127,13 @@ const TRIP: Trip = {
         { label: 'Displays', names: DISPLAY_NAMES, get: displayIndex, set: setDisplay },
         { label: 'View', names: VIEW_NAMES, get: viewIndex, set: setView },
       ],
-      overlay: () => <CityCockpit />,
+      // The canopy, and the police flares' glow at the edges while they are after you (2026-11-15).
+      overlay: () => (
+        <>
+          <CityCockpit />
+          <CityPoliceGlow />
+        </>
+      ),
       sheet: {
         key: 'm',
         label: 'Map',
