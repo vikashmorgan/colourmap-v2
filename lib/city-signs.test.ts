@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Vec3 } from './bigbang';
-import { route } from './city';
+import { FLY_SPEED, route } from './city';
 import { textPixels } from './city-font';
-import { blockTower, gameItems } from './city-game';
+import { blocked, blockTower, gameItems } from './city-game';
 import { GROUND, TILE_Z, wrap } from './city-grid';
 import {
   boardsOn,
@@ -135,11 +135,26 @@ describe('the road you start on (2026-11-13: "a cool entry for the game")', () =
     expect(OPENING.welcome).toBeGreaterThan(OPENING.end);
     expect(OPENING.welcome).toBeLessThan(OPENING.start);
     // The route flies under every lintel, between the posts.
-    for (let t = 0; t < 22; t += 0.5) {
+    for (let t = 0; t < 26; t += 0.5) {
       const c = route(t).c;
       expect(Math.abs(c[0])).toBeLessThan(TORII.post - 1);
       expect(c[1]).toBeLessThan(GROUND + TORII.beam - 1);
     }
+  });
+
+  it('starts far enough back to see the welcome and the gates recede before you reach them (2026-11-15)', () => {
+    // "push ship back a bit. so the cool panels with written letters are a bit further in the
+    // distance": the welcome and the nearest gate some five seconds or more ahead at the cruise.
+    const start = route(0).c;
+    const ahead = (z: number) => wrap(start[2], TILE_Z) - z;
+    const nearestGate = Math.max(...TORII_Z);
+    expect(ahead(OPENING.welcome) / FLY_SPEED).toBeGreaterThanOrEqual(6);
+    expect(ahead(nearestGate) / FLY_SPEED).toBeGreaterThanOrEqual(5);
+    // Nothing in the way, from the start to the welcome: the avenue stays open.
+    expect(blocked(start)).toBe(false);
+    for (let z = start[2]; z > start[2] - ahead(OPENING.end); z -= 2)
+      for (const y of [GROUND + 12, GROUND + 21, GROUND + 30])
+        expect(blocked([0, y, z])).toBe(false);
   });
 
   it('lights a gate softly as you pass through it, and keeps it glowing', () => {

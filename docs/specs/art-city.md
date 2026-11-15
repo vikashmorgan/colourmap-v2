@@ -2920,6 +2920,52 @@ computed from the time. No allocation per grain.
 towers only, so the business towers, designs and Matrix towers have none. The surge does not show
 on the map.
 
+### Atlantis on the map, and a longer run-up (2026-11-15)
+
+> "put atlantis as map when u are in atlantis. with option to go back to big city."
+>
+> "at the start of china town run push ship back a bit. so the cool panels with written letters
+> are a bit further in the distance so it give u time to see before u arrive."
+
+**Atlantis on the map** (`lib/city-atlantis-map.ts`, `components/CityDreamsMap.tsx`). Opened on
+Atlantis's ground, the map (M) shows Atlantis instead of the city, in the same quiet style: a deep
+sea-blue sky behind, the lane from the gate with its three tunnels dashed across it, the avenue in
+to the heart, the ring roads and plazas in faint gold, the towers ring by ring (teal at the rim,
+warming to gold toward the heart), the spiral tubes winding up them, the bubble domes and their
+tubes, the edge where you are turned back dotted, and you (the same gold pointer, its rings and
+"You · 52 m"). It is flat, or tilted into 3D (columns, domes floating at their height), and you can
+drag, pinch and use Fit as on the city's map. Seven places: **The gate**, **Arrival**, **Heart of
+Atlantis** and the **North, East, South and West domes**. A tap on one flies there within Atlantis
+(`travelWithin`), landing clear of every tower and dome: at the lane's start or end facing up it,
+south of the heart facing it, under each complex's great dome facing the heart. The bar's title
+reads ATLANTIS and the hint says "Tap a place to fly there". **Back to the city** is a quiet
+underlined line of text in the bar (no pill). It flies you home to the Ship's own start on the
+opening road (`CITY_START_SPOT`), facing up the avenue toward the welcome, in the copy of the city
+round the gate you came in by. Leaving resets the realm (arrival), the sharks and the trail, as
+every trip out of Atlantis does. A trip from Atlantis to anywhere on the city's map now lands in
+that copy too.
+
+**A longer run-up.** The Ship starts **230** short of Chinatown's gate (190 before; `OPENING.start`
+in `lib/city-signs.ts`, which the route now reads). The welcome (**WELCOME TO THE CITY OF
+DREAMS**) is 60 ahead and the nearest temple gate 48 ahead, six and five seconds at the cruise, so
+they recede down the avenue before you reach them. The avenue there was open already (the Indian
+band's bridges arch over it at 14 and 42, under and over the cruise), so nothing was stretched.
+
+**Acceptance** (`lib/city-atlantis-map.test.ts`, `components/CityDreamsMap.test.tsx`,
+`lib/city-signs.test.ts`):
+- Flat and tilted, Atlantis's whole ground fits a phone's and a computer's screen. A dragged view
+  stays over it.
+- The drawing has the towers, domes and spirals, the places' names and you. A tap on a name or a
+  mark picks its place.
+- Every place's spot is clear of walls, towers and domes, and inside the edge.
+- A trip within Atlantis lands at its spot and stays on Atlantis's ground.
+- Back to the city leaves Atlantis (sharks away), lands at the Ship's start round the gate, clear,
+  piloted. The map shows Atlantis's title and the way back only in Atlantis.
+- From the start, the welcome is six seconds or more ahead and the nearest gate five or more, with
+  the avenue open all the way to Chinatown.
+
+**Still rough.** Not yet seen in a browser. The map has no legend for Atlantis's marks.
+
 ### Still rough, and next
 
 - The Matrix quarter's running lights brighten as the ship comes close but do not speed up (the

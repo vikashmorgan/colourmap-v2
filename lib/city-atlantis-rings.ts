@@ -537,8 +537,8 @@ const TUBE_R = 0.9;
 const scratch: Vec3 = [0, 0, 0];
 const scratch2: Vec3 = [0, 0, 0];
 
-/** The point of a path at u (0..1), into out. */
-function pathPoint(p: AtlPath, u: number, out: Vec3) {
+/** The point of a path at u (0..1), into out (Atlantis's map draws them too). */
+export function pathPoint(p: AtlPath, u: number, out: Vec3) {
   if (p.kind === 'line') {
     out[0] = p.a[0] + (p.b[0] - p.a[0]) * u;
     out[1] = p.a[1] + (p.b[1] - p.a[1]) * u - p.sag * 4 * u * (1 - u);

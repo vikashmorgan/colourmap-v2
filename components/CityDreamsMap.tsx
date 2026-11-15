@@ -12,10 +12,24 @@
  * (2026-11-14: "from map i can click to the diff spots and fast travel"); with a mouse, a click
  * anywhere on a quarter's ground does too. Drawn on a Canvas 2D from lib/city-minimap.ts, only
  * when something changed or the pointer's beat moves on.
+ *
+ * On Atlantis's ground (2026-11-15: "put atlantis as map when u are in atlantis. with option to go
+ * back to big city") it shows Atlantis instead (lib/city-atlantis-map.ts): its rings, towers,
+ * spirals and domes and you, flat or tilted; a tap on a place flies there within Atlantis, and a
+ * quiet "Back to the city" takes you home to the Ship's start on the opening road.
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { bountiesCaught, shipNow, travelTo } from '@/lib/city';
+import { bountiesCaught, shipNow, travelTo, travelWithin } from '@/lib/city';
+import {
+  type AtlLabel,
+  atlFitView,
+  atlFitView3D,
+  atlMapScale,
+  atlPick,
+  clampAtlView,
+  drawAtlantisMap,
+} from '@/lib/city-atlantis-map';
 import { litDistricts } from '@/lib/city-game';
 import { GROUND } from '@/lib/city-grid';
 import {
@@ -33,15 +47,22 @@ import {
   mapScale,
   tileLocal,
 } from '@/lib/city-minimap';
-import { spotFor } from '@/lib/city-travel';
+import { inAtlantis } from '@/lib/city-speedway';
+import { CITY_START_SPOT, spotFor } from '@/lib/city-travel';
 
 type Mode = '2d' | '3d';
 /** Flat or tilted, remembered while the page is open. */
 let lastMode: Mode = '2d';
 
-/** Where each mode opens on a screen w × h: the flat plan, or the framed oblique city. */
-const homeFor = (mode: Mode, w: number, h: number): MapView =>
-  mode === '3d' ? fitView3D(w, h) : { ...fitView(w, h), ox: 0, oy: 0 };
+/** Where each mode opens on a screen w × h: the flat plan, or the framed oblique city (or Atlantis). */
+const homeFor = (mode: Mode, w: number, h: number, atl = false): MapView =>
+  atl
+    ? mode === '3d'
+      ? atlFitView3D(w, h)
+      : atlFitView(w, h)
+    : mode === '3d'
+      ? fitView3D(w, h)
+      : { ...fitView(w, h), ox: 0, oy: 0 };
 
 /** View a eased a share k of the way to b (the turn the short way round). */
 function easeTo(a: MapView, b: MapView, k: number): MapView {
@@ -75,6 +96,8 @@ export default function CityDreamsMap({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const [mode, setMode] = useState<Mode>(lastMode);
+  // On Atlantis's ground, Atlantis's map (time stands still under the map: it cannot change).
+  const [atl] = useState(inAtlantis);
   const viewRef = useRef<MapView | null>(null);
   // Where the view is easing to (a mode's home), or nowhere while the viewer turns it.
   const targetRef = useRef<MapView | null>(null);
@@ -95,9 +118,9 @@ export default function CityDreamsMap({
     lastMode = mode;
     // Before the canvas is measured the view opens on its home straight away.
     if (!viewRef.current) return;
-    targetRef.current = homeFor(mode, sizeRef.current.w, sizeRef.current.h);
+    targetRef.current = homeFor(mode, sizeRef.current.w, sizeRef.current.h, atl);
     dirty.current = true;
-  }, [mode]);
+  }, [mode, atl]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -106,7 +129,10 @@ export default function CityDreamsMap({
     if (!ctx) return;
     const data = cityMapData();
     const { c, f } = shipNow();
-    const [sx, sz] = tileLocal(c[0], c[2]);
+    // Atlantis is drawn in its own (realm-local) ground, the city in its tile.
+    const [sx, sz] = atl ? [c[0], c[2]] : tileLocal(c[0], c[2]);
+    const scaleOf = atl ? atlMapScale : mapScale;
+    const clamp = atl ? clampAtlView : clampMapView;
     const ship = { x: sx, y: c[1] - GROUND, z: sz, heading: mapHeading(f) };
     let w = 1;
     let h = 1;
@@ -122,7 +148,7 @@ export default function CityDreamsMap({
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const home = homeFor(lastMode, w, h);
+      const home = homeFor(lastMode, w, h, atl);
       if (!viewRef.current) viewRef.current = home;
       else targetRef.current = home;
       dirty.current = true;
@@ -145,18 +171,20 @@ export default function CityDreamsMap({
       }
       // The pointer breathes: a redraw some ten times a second is enough.
       if (dirty.current || now - drawn > 100) {
-        shown = drawCityMap(
-          ctx,
-          data,
-          viewRef.current as MapView,
-          w,
-          h,
-          ship,
-          now / 1000,
-          true,
-          hover,
-          litDistricts,
-        );
+        shown = atl
+          ? drawAtlantisMap(ctx, viewRef.current as MapView, w, h, ship, now / 1000, hover)
+          : drawCityMap(
+              ctx,
+              data,
+              viewRef.current as MapView,
+              w,
+              h,
+              ship,
+              now / 1000,
+              true,
+              hover,
+              litDistricts,
+            );
         drawn = now;
         dirty.current = false;
       }
@@ -201,26 +229,26 @@ export default function CityDreamsMap({
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       const v = viewRef.current as MapView;
       if (pinch && pts.size >= 2) {
-        viewRef.current = clampMapView({ ...v, zoom: (pinch.zoom * spread()) / pinch.d });
+        viewRef.current = clamp({ ...v, zoom: (pinch.zoom * spread()) / pinch.d });
         return;
       }
       const dx = e.clientX - was.x;
       const dy = e.clientY - was.y;
       if (v.tilt > 0.05) {
         // Spun round, and tipped between flat and seen from the side.
-        viewRef.current = clampMapView({
+        viewRef.current = clamp({
           ...v,
           yaw: v.yaw + dx * 0.008,
           tilt: v.tilt - dy * 0.006,
         });
       } else {
         // Flat: dragged across the table, under the finger.
-        const k = mapScale(v, w, h);
+        const k = scaleOf(v, w, h);
         const c = Math.cos(v.yaw);
         const s = Math.sin(v.yaw);
         const mx = dx / k;
         const mz = dy / k;
-        viewRef.current = clampMapView({
+        viewRef.current = clamp({
           ...v,
           cx: v.cx - (mx * c + mz * s),
           cz: v.cz - (-mx * s + mz * c),
@@ -236,15 +264,18 @@ export default function CityDreamsMap({
       if (e.type === 'pointerup' && from && isClick(from, { x: e.clientX, y: e.clientY })) {
         const r = canvas.getBoundingClientRect();
         const at = { x: e.clientX - r.left, y: e.clientY - r.top };
-        const go = mapPick(
-          shown,
-          data,
-          viewRef.current as MapView,
-          w,
-          h,
-          at,
-          e.pointerType === 'mouse',
-        );
+        // In Atlantis, a place flies there within it.
+        const place = atl
+          ? atlPick(shown as AtlLabel[], viewRef.current as MapView, w, h, at)
+          : null;
+        if (place) {
+          travelWithin(place.spot);
+          flyOn.current();
+          return;
+        }
+        const go = atl
+          ? null
+          : mapPick(shown, data, viewRef.current as MapView, w, h, at, e.pointerType === 'mouse');
         if (go) {
           travelTo(spotFor(go));
           flyOn.current();
@@ -278,7 +309,7 @@ export default function CityDreamsMap({
       e.preventDefault();
       targetRef.current = null;
       const v = viewRef.current as MapView;
-      viewRef.current = clampMapView({ ...v, zoom: v.zoom * Math.exp(-e.deltaY * 0.0015) });
+      viewRef.current = clamp({ ...v, zoom: v.zoom * Math.exp(-e.deltaY * 0.0015) });
       dirty.current = true;
     };
     canvas.addEventListener('pointerdown', down);
@@ -298,20 +329,24 @@ export default function CityDreamsMap({
       canvas.removeEventListener('pointerleave', leave);
       canvas.removeEventListener('wheel', wheel);
     };
-  }, []);
+  }, [atl]);
 
   const caught = bountiesCaught();
 
   const recentre = () => {
-    targetRef.current = homeFor(mode, sizeRef.current.w, sizeRef.current.h);
+    targetRef.current = homeFor(mode, sizeRef.current.w, sizeRef.current.h, atl);
     dirty.current = true;
   };
 
   return (
     <div className="cd-map">
-      <canvas ref={canvasRef} className="cd-map-canvas" aria-label="Map of the City of Dreams" />
+      <canvas
+        ref={canvasRef}
+        className="cd-map-canvas"
+        aria-label={atl ? 'Map of Atlantis' : 'Map of the City of Dreams'}
+      />
       <div className="cd-map-bar">
-        <span className="cd-map-title">City of Dreams</span>
+        <span className="cd-map-title">{atl ? 'Atlantis' : 'City of Dreams'}</span>
         <span className="bb-pills" role="toolbar" aria-label="Map view">
           <button
             type="button"
@@ -333,6 +368,18 @@ export default function CityDreamsMap({
             Fit
           </button>
         </span>
+        {atl && (
+          <button
+            type="button"
+            className="cd-map-home"
+            onClick={() => {
+              travelTo(CITY_START_SPOT);
+              onFly();
+            }}
+          >
+            Back to the city
+          </button>
+        )}
         <button
           type="button"
           ref={closeRef}
@@ -348,7 +395,7 @@ export default function CityDreamsMap({
         {coarse ? 'tap a place for its name' : 'point at a place for its name'} · M or Esc to close
       </p>
       <p className="cd-map-hint cd-map-go">
-        Tap a quarter to fly there
+        {atl ? 'Tap a place to fly there' : 'Tap a quarter to fly there'}
         {/* Wanted ships captured (2026-11-15): only here, quietly, never while flying. */}
         {caught > 0 ? ` · ${caught} wanted caught` : ''}
       </p>

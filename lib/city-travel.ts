@@ -32,6 +32,7 @@ import {
 import { BLOCK_X, BLOCK_Z, GROUND, TILE_X, TILE_Z } from './city-grid';
 import { metroSpot } from './city-metro';
 import type { MapGo } from './city-minimap';
+import { OPENING } from './city-signs';
 import { skySpot } from './city-skyport';
 import { ATLANTIS_NAME, MOUTH, SPEEDWAY_NAME } from './city-speedway';
 import { tubeSpot } from './city-tube-metro';
@@ -169,6 +170,12 @@ export const ATLANTIS_SPOT: TravelSpot = {
   yaw: 0,
   realm: 'atlantis',
 };
+/**
+ * Back to the city from Atlantis's map (2026-11-15: "with option to go back to big city"): the
+ * Ship's own start, at the head of the opening road at the cruise, facing up the avenue toward the
+ * welcome and Chinatown's gate (the route's first frame, lib/city.ts).
+ */
+export const CITY_START_SPOT: TravelSpot = { pos: [0, GROUND + 21, OPENING.start], yaw: 0 };
 
 /**
  * Where a tap on the map leads: a quarter's start, a flying station or the ring parcours' start

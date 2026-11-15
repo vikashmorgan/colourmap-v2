@@ -342,10 +342,13 @@ describe('the game city: flying it', () => {
     }
     return t;
   };
+  // Where the climbs take off: just past the speedway's gate, north of it (the Ship's start moved
+  // back 40 on 2026-11-15, so 50 s in would have climbed through the gate into Atlantis).
+  const CLIMB_AT = 55;
 
   it('super boosts into the stratosphere on Space and W, sees the whole city, and comes back down', () => {
-    setFly(false, [], 0, 50);
-    let t = run(['w', ' '], 2, 50);
+    setFly(false, [], 0, CLIMB_AT);
+    let t = run(['w', ' '], 2, CLIMB_AT);
     t = run(['w'], 14, t);
     const top = flier(t).c;
     expect(top[1]).toBeGreaterThan(GROUND + 400);
@@ -372,8 +375,8 @@ describe('the game city: flying it', () => {
 
   it('shows the plan clearly from the stratosphere: lit through the player’s fade, large grains, districts in their hues', () => {
     // 2026-11-12: "make city more visible from above".
-    setFly(false, [], 0, 50);
-    let t = run(['w', ' '], 2, 50);
+    setFly(false, [], 0, CLIMB_AT);
+    let t = run(['w', ' '], 2, CLIMB_AT);
     t = run(['w'], 14, t);
     const all = makeParticles(9000);
     for (const f of [0, 1, 2, 3]) {
