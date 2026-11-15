@@ -2662,6 +2662,86 @@ and 15,000 with a chase, UFOs and flying cars about, every grain finite.
 **Still rough.** Not yet seen in a browser. The UFOs and cars are light (nothing holds the ship), and
 the big UFOs can cross the high currents' and flocks' heights. The chases keep to the corridors.
 
+### Boost rings, LED arrows and the big fireworks (2026-11-15)
+
+> "More big unique circles above the city, or in the city, that you can fly into, and they boost
+> you."
+>
+> "A bunch of arrows on some of the buildings that create a feeling of speed, pointing the
+> direction, as an LED design element."
+>
+> "Big fireworks above the other parts of the city."
+>
+> And again: "Perspective is everything and the whole point of this city. Perspective is power, and
+> makes it beautiful."
+
+**Boost rings** (`lib/city-boost-rings.ts`). 65 in a tile, each in one of **four designs**:
+**double** (a second rim inside, drifting the other way), **spokes** (eight spokes to a hub, turning
+slowly), **chevron** (ten chevrons inside the rim pointing in, lit one after another round it) and
+**segmented** (ten turning segments with gaps). They stand upright across long views and are laid
+out **in series** down them, so seen from one end they recede as a row of frames:
+
+- **Down both racing corridors** (37): tall ovals 21 across and 32 high between the walls, centred
+  33 over the street, mid-block, about every other block, clear of the corridor's bridges, gates and
+  races.
+- **Along the Heights–Golden gap** (3, x −134, −100, −52): ovals 22 by 32, centred 62 up, between
+  the bridges and over the cross street's traffic.
+- **High over the avenue** (5, radius 22, at 204): three in Chinatown, two over Egypt. Never over
+  the Golden band: the spire and the avenue's arch are left be.
+- **High over the canals** (3, radius 20), facing along them, and **high over the corridors' lines**
+  (17, radius 24), the length of the tile, all between the high streams (186) and the parcours.
+
+Every ring is checked when the list is made (and tested): no tower, peak or wall on its rim; off the
+stations, the parcours, the decorative sets, the portals, the corridor obstacles, the race gates,
+the quarter starts, the sky streams, the space bars, the Great Arch, the Saturn Tower's pole and
+the Golden Spire's surroundings (100); low ones under the
+big ships (92 at the top) and over the street channels; high ones from 194 to 246. Never two
+crowding one another.
+
+**The surge.** Flown through (its plane crossed within 1.15 of its rim: forgiving), a ring gives a
+surge: the pace rises over a tenth of a second to 2.4 times (1.7 times on top of the boost, so it
+stacks without running away) and eases off to nothing over **2.6 seconds**. The ship takes the push
+fast and glides back. The ring warms to gold, a soft halo ripples out from it, and the ship's plume
+flares warm. Boost rings never count toward the parcours' "Rings 7", and the parcours never surges.
+The hook sits in `setFly` beside the speedway's `pushAt`.
+
+**LED arrows** (`lib/city-arrows.ts`). 119 rows of chevrons on plain towers' faces along the
+streets: 31 on the corridors, the rest on other streets and 39 on cross streets. None are on the
+Grand Avenue or in Chinatown. Some run along a tower's top (62), the rest down the facade. Each row
+points the way its street's traffic flows (`lib/city-flow.ts` `zStreetWay` and `xStreetWay`, which
+the currents share). Each chevron is lit by one soft wave per street that runs in the traffic's
+direction at about 8 a second. The wave uses world coordinates, so the arrows on tower after tower
+run together toward the vanishing point. Mellow: dim always (0.1), brighter as the wave passes
+(0.46 at most), never a blink. Drawn out to 340, the nearest 36 rows, none from high over the city.
+
+**Big fireworks** (`lib/city-fireworks.ts`). Bursts are much bigger: sparks fly out to 30–52 (were
+18–30), with 200 sparks to a burst (were 140) and up to 12 at once (were 8). Each blooms 30 higher so
+its lowest sparks still clear the roofs. There are 45 more places: two more a side in every band of
+the strip, and 33 over the annex's Mountain, Favela and Industry. Each is in its own quarter's
+colours, clear of the stations (by their reach and 34), of each other (60) and of the Golden Spire
+(110). Bursts also stay clear of the boost rings, as they already did of the stations and the
+parcours.
+
+**Cost.** Up to 12 boost rings (some 250 to 500 sites each), 36 arrow rows (30 to 90 sites each)
+and 12 bursts (406 sites each), all thinned by distance like everything else. Everything is
+computed from the time. No allocation per grain.
+
+**Acceptance** (`lib/city-boost-rings.test.ts`, `lib/city-arrows.test.ts`, `lib/city-tall.test.ts`):
+- Boost rings come in four designs, sized 14 to 30, in every one of the five places.
+- Each corridor has runs of three or more, no two neighbours alike.
+- Every placement clearance holds, including the route.
+- A pass surges the pace, which decays smoothly to nothing in 2 to 3 seconds. Less is added under the boost.
+- The parcours tally is untouched. The Ship flown through one speeds up by half and more.
+- Sites are finite and mellow, with a halo after a pass.
+- LED arrows sit on real tower faces over open streets. They point the flow's way (tips leading),
+  and their crest moves along the street that way, dim to bright and never a flash.
+- Fireworks are bigger, over every quarter and the annex's three, and clear of the boost rings.
+- The grain budget is kept at 6,500 and 15,000 flying down a corridor through the rings.
+
+**Still rough.** Not yet seen in a browser. The rings and arrows are light. The arrows sit on box
+towers only, so the business towers, designs and Matrix towers have none. The surge does not show
+on the map.
+
 ### Still rough, and next
 
 - The Matrix quarter's running lights brighten as the ship comes close but do not speed up (the

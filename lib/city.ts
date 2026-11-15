@@ -44,6 +44,7 @@ import {
   smooth,
   type Vec3,
 } from './bigbang';
+import { arrowItems } from './city-arrows';
 import {
   ATL_CEIL,
   ATL_REACH,
@@ -52,6 +53,13 @@ import {
   realmBlocked,
   realmCeiling,
 } from './city-atlantis-rings';
+import {
+  boostRingItems,
+  boostRingStep,
+  resetBoostRings,
+  surgeAt,
+  surgePace,
+} from './city-boost-rings';
 import { BUILDINGS, buildingsEye } from './city-buildings';
 import { camView, cockpitEye, toggleView } from './city-cockpit';
 import {
@@ -2296,6 +2304,7 @@ function afresh() {
   clearTrail(trail);
   resetRace();
   resetRings();
+  resetBoostRings();
   resetSkyDock();
 }
 
@@ -2500,9 +2509,15 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
     (fly.slow ? SLOW_PACE : 1) *
     r.pace *
     // The speedway pushes you on (2026-11-14: "so it feels like full speed").
-    pushAt(fly.pos, realm);
+    pushAt(fly.pos, realm) *
+    // Through a boost ring, a surge easing off over two or three seconds (lib/city-boost-rings.ts).
+    (realm ? 1 : surgePace(t, boosting));
+  const surge = realm ? 0 : surgeAt(t);
+  // The surge's warm flare in the ship's plume.
+  if (surge > 0) fly.glow = Math.max(fly.glow, 0.7 * surge);
   fly.speed +=
-    (FLY_SPEED * pace - fly.speed) * (1 - Math.exp((hyper ? -2.5 : boosting ? -4 : -1.5) * dt));
+    (FLY_SPEED * pace - fly.speed) *
+    (1 - Math.exp((hyper ? -2.5 : boosting || surge > 0.05 ? -4 : -1.5) * dt));
   const was: Vec3 = [...fly.pos];
   const wall = move(dt);
   // A soft bump: sliding along a wall bleeds a little speed and leans the ship away from it.
@@ -2545,6 +2560,8 @@ export function setFly(active: boolean, keys: string[], dt: number, t: number) {
   // Through the rings of the parcours high over the city (lib/city-rings.ts; 2026-11-14: "a kind of
   // tunnel parcours higher up"): each warms and counts, and never opens hyperspace.
   ringStep(was, fly.pos, t);
+  // Through a boost ring (2026-11-15: "they boost you"): a surge, never a count.
+  boostRingStep(was, fly.pos, t);
   after(dt, t);
 }
 
@@ -3766,6 +3783,10 @@ function gather(P: Plan): { d: number; run: () => void }[] {
     // (lib/city-stations.ts, lib/city-rings.ts; 2026-11-14: "add 15 cool flying stations ... so
     // when u fly above there is cool stuff", "and big circles of lights concentric in many parts").
     ...aboveCityItems(eye, fwd, cur.t, viewAt(eye[1])),
+    // The boost rings in series down the long views, and the LED arrows running along the
+    // streets (lib/city-boost-rings.ts, lib/city-arrows.ts; 2026-11-15).
+    ...boostRingItems(eye, fwd, cur.t, viewAt(eye[1])),
+    ...arrowItems(eye, fwd, cur.t, viewAt(eye[1])),
   ];
   // The speedway's mouth over the avenue at the plan's north end (lib/city-speedway.ts).
   mouthItems(eye, fwd, cur.t, game);
