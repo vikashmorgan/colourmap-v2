@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import type { Vec3 } from './bigbang';
 import {
+  CAR_BODIES,
   CAR_EYE_MAX,
   CAR_LEN,
   CAR_R,
+  CARS_ALONG_X,
+  CARS_ALONG_Z,
   carAt,
   carFade,
   carItems,
@@ -50,9 +53,9 @@ describe('cars on the ground (queued: "cars on the ground")', () => {
 
   it('never runs into the car ahead in its lane', () => {
     for (const [r, n] of [
-      [street, 22],
-      [cross, 4],
-      [avenue, 44],
+      [street, CARS_ALONG_Z],
+      [cross, CARS_ALONG_X],
+      [avenue, 2 * CARS_ALONG_Z],
     ] as const) {
       for (const t of [0, 37, 120]) {
         const pos = Array.from({ length: n }, (_, k) => carAt(r, 1, k, t, [0, 0, 0]));
@@ -69,6 +72,20 @@ describe('cars on the ground (queued: "cars on the ground")', () => {
         }
       }
     }
+  });
+
+  it('comes in five silhouettes (2026-11-15), each its own outline, lights at nose and tail', () => {
+    const bodies = new Set<string>();
+    for (let k = 0; k < 40; k++) bodies.add(carAt(street, 1, k, 0, [0, 0, 0]).body as string);
+    expect(bodies.size).toBe(CAR_BODIES.length);
+    const roofs = new Set<string>();
+    const o = [0, 0, 0, 0, 0, 0];
+    for (const body of CAR_BODIES) {
+      const c = { ...carAt(street, 1, 0, 0, [0, 0, 0]), body };
+      carSite(c, 33, o);
+      roofs.add((o[1] - c.pos[1]).toFixed(2));
+    }
+    expect(roofs.size).toBe(CAR_BODIES.length);
   });
 
   it('has one colour a road: the avenue gold, neighbours different', () => {

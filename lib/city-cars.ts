@@ -26,6 +26,7 @@ import {
   mixId,
   nearest,
   scale,
+  TAU,
   TILE_I,
   TILE_J,
   TILE_X,
@@ -38,9 +39,13 @@ import { inRiver } from './city-rain';
 /** A road: along z at x (`axis` 2) or along x at z (`axis` 0); its line's number in the tile. */
 export type Road = { axis: 0 | 2; line: number };
 
-/** Cars a way on a road, a tile long, and how fast they go (units a second). */
-const CARS_ALONG_Z = 22;
-const CARS_ALONG_X = 4;
+/**
+ * Cars a way on a road, a tile long, and how fast they go (units a second). 2026-11-15 ("more
+ * flying cars flying around"): denser, 30 a way down a street (were 22) and 7 along a cross
+ * street (were 4).
+ */
+export const CARS_ALONG_Z = 30;
+export const CARS_ALONG_X = 7;
 export const CAR_SPEED = 9;
 export const CAR_LEN = 4.2;
 export const CAR_HALF_W = 0.95;
@@ -67,11 +72,68 @@ const laneOff = (r: Road, lane: number) =>
       ? 2.6
       : 1.7;
 
+/**
+ * A car's shape (2026-11-15: more variety of car silhouettes): a saloon, a low coupe with its roof
+ * set back, a tall van, a flat wedge, a rounded hover pod.
+ */
+export type CarBody = 'saloon' | 'coupe' | 'van' | 'wedge' | 'pod';
+export const CAR_BODIES: CarBody[] = ['saloon', 'coupe', 'van', 'wedge', 'pod'];
+/** Each body's three outlines, [half length share, half width share, height] for sill, belt, roof, and how far back its roof sits. */
+const BODY_SHAPE: Record<CarBody, { rings: [number, number, number][]; back: number }> = {
+  saloon: {
+    rings: [
+      [1, 1, 0.4],
+      [0.96, 1, 0.95],
+      [0.5, 0.82, 1.5],
+    ],
+    back: -0.3,
+  },
+  coupe: {
+    rings: [
+      [1, 1, 0.35],
+      [0.95, 1, 0.82],
+      [0.36, 0.78, 1.28],
+    ],
+    back: -0.5,
+  },
+  van: {
+    rings: [
+      [1, 1, 0.45],
+      [0.97, 1, 1.1],
+      [0.85, 0.92, 1.95],
+    ],
+    back: -0.08,
+  },
+  wedge: {
+    rings: [
+      [1, 1, 0.3],
+      [0.92, 1, 0.68],
+      [0.3, 0.74, 1.05],
+    ],
+    back: -0.25,
+  },
+  pod: {
+    rings: [
+      [0.8, 0.78, 0.42],
+      [1, 1, 0.92],
+      [0.55, 0.6, 1.55],
+    ],
+    back: 0,
+  },
+};
+/** Car k of a road's way: its body, mostly saloons. */
+export function bodyOf(key: number, k: number): CarBody {
+  const h = hash(key + k * 7, 15);
+  return h < 0.4 ? 'saloon' : (CAR_BODIES[1 + Math.floor(((h - 0.4) / 0.6) * 4)] as CarBody);
+}
+
 export type Car = {
   pos: Vec3;
   dir: Vec3;
   road: Road;
   colour: RGB;
+  /** Its shape: a saloon when unset. */
+  body?: CarBody;
   /** Its head and tail lights, where a district has its own (the Matrix quarter's greens). */
   lights?: [RGB, RGB];
 };
@@ -100,6 +162,7 @@ export function carAt(r: Road, sgn: 1 | -1, k: number, t: number, near: Vec3): C
       dir: [0, 0, sgn],
       road: r,
       colour: roadColour(r),
+      body: bodyOf(key, k),
     };
   }
   const z = r.line * BLOCK_Z;
@@ -110,6 +173,7 @@ export function carAt(r: Road, sgn: 1 | -1, k: number, t: number, near: Vec3): C
     dir: [sgn, 0, 0],
     road: r,
     colour: roadColour(r),
+    body: bodyOf(key, k),
   };
 }
 
@@ -157,13 +221,22 @@ export function carLights(c: Car, ship?: Vec3): number {
 
 /* ---------- drawing ---------- */
 
-const CAR_SITES = 64;
+export const CAR_SITES = 64;
+const HOVER_GLOW: RGB = [0.55, 0.8, 1];
 
 /**
  * Site s of a car: its outline in its road's colour, its lights, the pool of its headlights;
- * `lights` dims the lights alone (carLights).
+ * `lights` dims the lights alone (carLights). A flying car (`hover`, lib/city-skycars.ts) has a soft
+ * glow under it instead of the pool on the street.
  */
-export function carSite(c: Car, s: number, o: number[], fade = 1, lights = 1): boolean {
+export function carSite(
+  c: Car,
+  s: number,
+  o: number[],
+  fade = 1,
+  lights = 1,
+  hover = false,
+): boolean {
   const f = c.dir;
   // Its right: heading -z it is +x.
   const r: Vec3 = [-f[2], 0, f[0]];
@@ -171,7 +244,10 @@ export function carSite(c: Car, s: number, o: number[], fade = 1, lights = 1): b
     o[0] = c.pos[0] + f[0] * a + r[0] * b;
     o[1] = c.pos[1] + y;
     o[2] = c.pos[2] + f[2] * a + r[2] * b;
-    [o[3], o[4], o[5]] = scale(col, k * fade);
+    const lit = k * fade;
+    o[3] = col[0] * lit;
+    o[4] = col[1] * lit;
+    o[5] = col[2] * lit;
     return true;
   };
   const L = CAR_LEN / 2;
@@ -180,9 +256,12 @@ export function carSite(c: Car, s: number, o: number[], fade = 1, lights = 1): b
     // Three outlines: the sill, the belt line, the smaller roof set back.
     const ring = s < 14 ? 0 : s < 28 ? 1 : 2;
     const u = ring === 2 ? (s - 28 + 0.5) / 12 : (s - ring * 14 + 0.5) / 14;
-    const [ha, hb, y] =
-      ring === 0 ? [L, W, 0.4] : ring === 1 ? [L * 0.96, W, 0.95] : [L * 0.5, W * 0.82, 1.5];
-    const da = ring === 2 ? -0.3 : 0;
+    const shape = BODY_SHAPE[c.body ?? 'saloon'];
+    const R = shape.rings[ring] as [number, number, number];
+    const ha = L * R[0];
+    const hb = W * R[1];
+    const y = R[2];
+    const da = ring === 2 ? shape.back : 0;
     const per = 4 * (ha + hb);
     const e = u * per;
     let a: number;
@@ -215,6 +294,12 @@ export function carSite(c: Car, s: number, o: number[], fade = 1, lights = 1): b
       c.lights?.[1] ?? C.red,
       0.6 * lights,
     );
+  }
+  if (hover) {
+    // The glow it hovers on: a soft ellipse of light just under it.
+    const w = TAU * hash(s, 11);
+    const rr = Math.sqrt(hash(s, 12));
+    return put(rr * L * 0.8 * Math.cos(w), rr * W * 0.8 * Math.sin(w), -0.15, HOVER_GLOW, 0.16);
   }
   // A faint pool of its headlights on the street ahead.
   const a = L + 1.2 + 3.5 * hash(s, 9);

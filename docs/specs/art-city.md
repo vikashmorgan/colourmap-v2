@@ -2570,6 +2570,96 @@ the big squares taller than before; the grain budget kept.
 **Still rough.** Not yet seen in a browser. The Saturn Tower, the novas and the bars are light;
 the novas share the air with the high currents where they cross the spire's plaza.
 
+### UFOs, more flying cars and the space police (2026-11-15)
+
+> "More cool unique UFOs like the current circular orange ones, some bigger UFO ones that fly around
+> the city, and more flying cars flying around. They are awesome."
+>
+> "Space police with flare lights; they travel through town sometimes at full speed chasing other
+> spaceships like ours."
+
+Perspective first, as everywhere in the city: every new path runs along the long views (the
+corridors, the boulevards, the city's length), so UFOs, cars and chases recede to the vanishing
+point. All three are items the plan deals grains to like any other, nearest first and thinned with
+the distance, hooked into `gather` in `lib/city.ts` in three lines; every place a formula of the time.
+
+**UFOs** (`lib/city-ufos.ts`). The circular orange ones are the cruisers' ringed orb (a warm orb in a
+turning rose ring). Eight designs of our own in that spirit, every hull warm orange:
+
+- Small, darting: **Ember saucer** (a lens under a small dome, eight rim lights turning), **Halo
+  ring** (an open turning ring, an orb hung at its heart on three spokes), **Twin discs** (two discs
+  with air between, their lights turning opposite ways, a column of light joining them), **Lantern
+  lens** (a thin lens trailing three swaying lights), **Triad** (three orbs turning round a faint
+  ring). 2.2 to 3 in radius, 90 to 110 sites.
+- Big, drifting: **Crown dome** (a wide disc under a tall dome, a rim of 24 lights brightening one
+  after the next, a walk round), **Pulse torus** (a great torus, its core a soft sun breathing over
+  five seconds), **Mothership** (a vast flat disc, three rows of windows, a dome at its heart, a warm
+  glow under it). 16, 20 and 28 in radius (more than five times the largest small one), 620 to 820 sites.
+
+The big ones fly long slow loops (4 to 6 a second) stretched along the city, 880 to 1,560 long and
+under 60 across, over the strip's middle (rim within |x| 64, well off the Temple skyscrapers),
+between every solid roof (135 at most there) and the stations, ring sets and parcours (198 and up):
+centres at 164 to 172, the Mothership's dome topping out under 190. Drawn out to 900. The small ones
+patrol stretches of four blocks down the wide boulevards (x ±52, ±104) and the corridors (x ±78), 56
+to 84 over the street (over the lantern strings, under the express lanes), in hops: a quick dash
+(fast start, easing in), a hover, the next dash, leaning a little into each. A stretch has one only
+where the street is wide enough all along it (every solid tower either side back from the line by
+the UFO's size, its sway and some air; none beside a Studio design or over the Temple skyscrapers'
+blocks). Six at most are drawn, out to 300. Light mellow: colours lean slowly, nothing jumps 0.05 a
+frame, every grain under 0.6 of its colour.
+
+**More flying cars** (`lib/city-cars.ts`, `lib/city-skycars.ts`). The street's cars are denser: 30 a
+way down a street (were 22) and 7 along a cross street (were 4). Five car bodies now, a saloon most
+often, a low coupe, a tall van, a flat wedge and a rounded hover pod, each its own three outlines.
+Flying cars, new: sky lanes down both corridors, a lane each way at two levels (8, under the low decks
+and the gates; 48, over the high decks and under the darting UFOs), and down the four wide
+boulevards at 44; right-hand, one pace a lane so none runs into the next, 18 cars a lane-tile in the
+corridors and 12 on the boulevards (240 in a tile in all). Each one of the five bodies in a cool neon
+tone, floating a little, a soft glow under it instead of the headlight pool. They ease out where a
+boulevard narrows and over the Temple skyscrapers' blocks. 32 at most drawn, out to 240.
+
+**The space police, step one** (`lib/city-police.ts`): chases between others.
+
+- **Cruisers**: an interceptor of our own, a slim swept hull, two tail fins, a light bar across its
+  back with a flare at each end. The flares **alternate red and blue**, swapping every 0.32 s with a
+  quick soft rise: the one flash in the city, asked for, and kept to the police lights alone.
+- **Chases**: in two of three 50-second slots a chase runs for 16 to 24 seconds. A **fugitive** (a flat
+  arrowhead with two engines, the player's Arrow's shape, in a hot amber with its boost plume) races
+  down a racing corridor at the Ship's street boost (9 × 3.2 = 28.8 a second), weaving inside 2.5
+  across and up and down, at 24 over the street: over the low decks, through the ring gates' middles,
+  under the high decks. One to three cruisers follow 0.75, 1.3 and 1.85 seconds behind, each flying
+  the very path the fugitive flew, in a loose file. About two in five chases are laid down the
+  corridor nearest the player so they pass right by; the rest anywhere down either corridor. A chase
+  is planned once at its start (from its slot and where the player is then) and is then a formula
+  of the time; it eases in over a second and out over two, and is drawn out to 520.
+- **Hooks for later, not built**: the police chase a `ChaseTarget`, a path in time; today always a
+  fugitive's run. *Chasing the player*: after wild flying (boosting near traffic, cutting through
+  the lanes), a chase whose target is the player's recent flight (the trail already keeps it); the
+  police lose the player when the line of sight breaks for a while (a tunnel, under a bridge, the
+  Deep Line), where `hidden` in `lib/city.ts` already answers line of sight. *Bounty*: a chase's
+  fugitive becomes a wanted ship; tail it close for a while to capture it, the cruisers arriving to
+  take it away.
+
+**Cost.** Three big UFOs, six small ones, up to 32 flying cars and a chase of up to four ships: at
+most some 2,100 + 660 + 2,050 + 340 sites in full, thinned with the distance by the plan like every
+item, so the pool is never all theirs. No allocation per grain.
+
+**Acceptance** (`lib/city-ufos.test.ts`, `lib/city-skycars.test.ts`, `lib/city-police.test.ts`,
+`lib/city-cars.test.ts`): eight UFO designs, unique, warm, two or more big ones over four times the
+small ones' size, every grain finite, within its size and mellow; the big loops long and slow, every
+grain all the way round clear of each station (outside its reach or under it), each ring's circle,
+the parcours and every solid roof; the small ones on the boulevards and corridors, dashing and
+hovering inside their stretch, no grain in a building. More cars than before by half and more, five
+bodies, flying cars one way a lane on the right, none into the next, under the low decks and over the
+high ones, no grain in a building along any lane. Police flares alternate red and blue, swapping
+every flare, nothing else on the cruiser flashing; a chase is a fugitive and one to three cruisers
+on its path behind it at the street boost, down a corridor inside its walls with nothing solid in
+the way, some passing the player, ending within 16 to 24 seconds. The grain budget kept at 6,500
+and 15,000 with a chase, UFOs and flying cars about, every grain finite.
+
+**Still rough.** Not yet seen in a browser. The UFOs and cars are light (nothing holds the ship), and
+the big UFOs can cross the high currents' and flocks' heights. The chases keep to the corridors.
+
 ### Still rough, and next
 
 - The Matrix quarter's running lights brighten as the ship comes close but do not speed up (the

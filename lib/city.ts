@@ -108,6 +108,7 @@ import {
 import { AVENUE, BLOCK_X, BLOCK_Z, type Item, TILE_J } from './city-grid';
 import { lifeItems } from './city-life';
 import { aboveAt, aboveEye, CITIES, setCityKind } from './city-plans';
+import { policeItems } from './city-police';
 import {
   DRONES,
   droneAt,
@@ -149,6 +150,7 @@ import {
   trailLight,
 } from './city-ships';
 import { skyGrain } from './city-sky';
+import { skyCarItems } from './city-skycars';
 import { resetSkyDock, skyDockBanner, skyDockStep, undockSky } from './city-skyport';
 import {
   type Arrival,
@@ -186,6 +188,7 @@ import {
 import { borrowShare, extraStarSpot, lookUp, STAR_BORROW } from './city-stars';
 import { clearTrail, makeTrail, pushTrail, trailGrain } from './city-trail';
 import { hopFrom, nearestCopy, type TravelSpot } from './city-travel';
+import { ufoItems } from './city-ufos';
 import { underEyeY, underSeeThrough } from './city-under';
 import {
   ATLANTIS_PALETTES,
@@ -3766,6 +3769,11 @@ function gather(P: Plan): { d: number; run: () => void }[] {
   ];
   // The speedway's mouth over the avenue at the plan's north end (lib/city-speedway.ts).
   mouthItems(eye, fwd, cur.t, game);
+  // UFOs, flying cars and the space police (2026-11-15; lib/city-ufos.ts, lib/city-skycars.ts,
+  // lib/city-police.ts): small items near the eye, the big UFOs far down the views.
+  ufoItems(eye, fwd, cur.t, game);
+  skyCarItems(eye, fwd, cur.t, game);
+  policeItems(eye, fwd, cur.t, game);
   for (const g of game) {
     if (seeThrough && g.probe && !g.probe.some((q) => roomBeyond(q[0], q[2], 30))) continue;
     items.push({
