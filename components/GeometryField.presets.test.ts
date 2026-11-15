@@ -293,7 +293,8 @@ describe('GeometryField featured presets', () => {
       'Oils',
       'Experiment',
     ]);
-    // The Journey follows the Big Bang, then the Vegetal, Ocean and City chapters, then Experiment.
+    // The Journey follows the Big Bang, then the Vegetal, Ocean and City chapters and the
+    // Hyper-speed city, then Experiment.
     expect(ART_PILLS.map((p) => p.label)).toEqual([
       'Stars',
       'Geometry',
@@ -304,6 +305,7 @@ describe('GeometryField featured presets', () => {
       'Vegetal',
       'Ocean',
       'City',
+      'Hyper-speed',
       'Experiment',
     ]);
     const tabOf = (name: string) => artTabOf(PRESETS[name].mode);
