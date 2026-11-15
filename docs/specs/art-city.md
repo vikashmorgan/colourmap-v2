@@ -1911,8 +1911,9 @@ it never traps you. Its light is the one exception to the City's mellow rule, as
 rows of streaks up each wall and five along the floor run north with the ship's way, each a
 bright flickering head and a fading tail, riding a phase that advances at `lightSpeed(v) =
 2.2v + 12` (always well past the ship; eased from its speed, so a change of pace never makes
-them jump); dim rails between. **Three tunnels** of arches (posts up the walls to 44, a half
-circle over; one every 4 for 72; at 120, 290 and 460 along) light in waves running north faster
+them jump; never gaining more than `MAX_GAIN` 3.6 on the ship in one frame); dim rails between,
+scattered. **Three tunnels** of arches (posts up the walls to 44, a half
+circle over; one every 6 for 72; at 120, 290 and 460 along) light in waves running north faster
 than you. **The push**: in the lane your pace is multiplied by up to 2.25 (`PUSH` 1.25), easing off
 over the last stretch; keys still speed you up, slow you, steer and climb. Fly back south out of
 the lane's start and you are home, in the mouth you left by; the map and [ ] also bring you home
@@ -1979,6 +1980,27 @@ map's two places travel there and back; in Atlantis every grain finite, the shar
 traffic's share. Sharks: following beside you for 20 s at 40 a second, gone by 27; returning 60 to
 120 s after each leaving, three times or more in 400 s; leaving at once when you leave Atlantis;
 no frame-to-frame jumps; grains near each shark and mellow.
+
+**Smooth at speed (2026-11-15).** "the speed tunnel to atlantis is bugging. looks good but cuts
+the fps or feels laggy not smooth. but concept is good." Measured first
+(`lib/city-speedway.bench.test.ts`, off unless `CITY_BENCH=1`: `setFly` + `pieceCamera` +
+`pieceAt` over every grain, after 30 frames to settle): a frame in the lane costs about half the
+city's (6,500 grains: 4.9–5.3 ms against 11.5 in the city and 10.7 in the mouth; 15,000: 10–12 ms
+against 18.5), with fewer grains near the eye and less screen area to fill (0.46–0.68 megapixels
+against 1.28), no hitch at the gate, and the same numbers after the fix. So the lag was in the
+picture, not the work: patterns passing the eye faster than half their spacing a frame read as
+judder (the wagon wheel). The lane's pace is about 70 a second boosting, 140 with Shift: the
+walls' and floor's **rail dots**, every 2 in lockstep rows, passed 1.2 a frame at 60 frames a second
+and crawled back or stood; the **arches**, every 4, did the same under Shift; the **streaks** (9
+apart, gaining 1.6 to 3 a frame at 60, twice that at 30) aliased on a slow frame; the **heads'
+flash**, an on/off square at 7 a second, beat with the frame rate; and every streak's tail was cut
+at each 40-long stretch's edge, blinking at the same places. Now: the rail dots are scattered,
+each somewhere in its own stretch of 2 (stratified, standing still); the arches stand every 6, each
+drawn denser, so the tunnel keeps its grains; the lights never gain more than 3.6 (0.4 of their
+spacing) on the ship in a frame, so they still always outrun you and run exactly as fast as before
+at 60 frames a second below a speed of 170; the heads pulse smoothly at 4.5 a second (0.45 to
+full); a streak's tail runs on into the next stretch. Guarded in `lib/city-speedway.test.ts` ("the
+speed tunnel runs smooth").
 
 **Still rough.** Not yet seen in a browser (tests and timings only). The avenue's walls stand two
 closer off the tile's middle column (an older quirk of `blockTower`), so the mouth is 12 across to

@@ -128,7 +128,12 @@ export const LANE_WALL = GROUND + 176;
 /** The tunnels along it: where each starts (realm z, going north), how long, its arches. */
 export const TUNNELS_AT = [-120, -290, -460] as const;
 export const TUNNEL_LEN = 72;
-export const ARCH_GAP = 4;
+/**
+ * An arch every 6 (2026-11-15; every 4 before): boosting twice as fast in the lane (some 140 a
+ * second) the ship passed more than half an arch a frame at 60 frames a second, and the tunnel
+ * seemed to crawl back or stand. Each arch is drawn denser, so the tunnel takes the same grains.
+ */
+export const ARCH_GAP = 6;
 export const ARCH_POST = 44;
 /** The extra pace the lane gives at its full (the pace times 1 + PUSH): a push, not a catapult. */
 export const PUSH = 1.25;
@@ -202,11 +207,26 @@ export function resetSpeedway() {
   realm.welcomedAt = Number.NaN;
 }
 
+/** How far apart the streaks run along a line of light, and how long each is (grains, spacing). */
+export const DASH_GAP = 9;
+const STREAK = 6;
+const STREAK_GAP = 0.7;
+
 /** How fast the lane's lights run at a ship's speed: always well ahead of it. */
 export const lightSpeed = (speed: number) => 2.2 * Math.abs(speed) + 12;
-/** Each frame: the lights run on at their speed for the ship's. */
+/**
+ * The most the lights may gain on the ship in one frame (2026-11-15, "the speed tunnel ... feels
+ * laggy not smooth"): under half the streaks' spacing, so each streak overlaps where it was the
+ * frame before and none can seem to stand still or slide back (the wagon-wheel judder a fast light
+ * on a slow frame makes). At 60 frames a second it never bites below a speed of 170; on a slow
+ * frame, or a stall, the lights still outrun the ship, just by less that frame.
+ */
+export const MAX_GAIN = 0.4 * DASH_GAP;
+/** Each frame: the lights run on at their speed for the ship's, never gaining more than MAX_GAIN. */
 export function speedwayStep(dt: number, speed: number) {
-  realm.phase = wrap(realm.phase + lightSpeed(speed) * dt, 1e6);
+  const v = Math.abs(speed) * dt;
+  const gain = Math.min((lightSpeed(speed) - Math.abs(speed)) * dt, MAX_GAIN);
+  realm.phase = wrap(realm.phase + v + gain, 1e6);
 }
 export const lanePhase = () => realm.phase;
 
@@ -287,15 +307,26 @@ export function welcomeItem(eye: Vec3, t: number): Item | null {
 
 /* ---------- the racing light ---------- */
 
-const STREAK = 6;
-const STREAK_GAP = 0.7;
-const DASH_GAP = 9;
 const LANE_HUES: RGB[] = [C.cyan, [0.55, 0.85, 1], C.white, [0.4, 1, 0.85]];
+const HEAD_HUES: RGB[] = LANE_HUES.map((h) => mix(h, C.white, 0.5));
+
+/**
+ * How lit a streak's head is (0.45 to 1) at time t, row r, streak j: a quick pulse, each row at its
+ * own beat. A smooth one (2026-11-15): the on/off square it was beat against the frame rate, a
+ * head lit for two frames then three, read as stutter.
+ */
+export function headFlash(t: number, r: number, j: number): number {
+  const s = 0.5 + 0.5 * Math.cos(TAU * (t * 4.5 + r * 0.37 + j * 0.11));
+  return 0.45 + 0.55 * s * s;
+}
 
 /**
  * A streak's grain on a line along z from z0 (south) to z1 (north): `rows` lines, streaks
  * `DASH_GAP` apart riding the phase north, each STREAK grains, its head bright and flickering.
- * Site s of the line set: false where none falls inside [z1, z0].
+ * Site s of the line set: false where none has its head inside [z1, z0). A tail may run on past z0
+ * (into the next stretch, which draws only the streaks whose heads it holds) up to `zEnd`, the
+ * line's own end: cut at every stretch's edge, the tails blinked off at the same places as they
+ * passed (2026-11-15).
  */
 function streakSite(
   s: number,
@@ -307,6 +338,7 @@ function streakSite(
   phase: number,
   t: number,
   bright: number,
+  zEnd = z0,
 ): boolean {
   const per = Math.ceil((z0 - z1) / DASH_GAP) + 1;
   const g = s % STREAK;
@@ -315,15 +347,18 @@ function streakSite(
   const j = Math.floor(k / rows);
   if (j >= per) return false;
   const off = 13.7 * r;
-  const z = z1 + wrap(-(phase + off) - z1, DASH_GAP) + j * DASH_GAP + g * STREAK_GAP;
-  if (z > z0 || z < z1) return false;
+  const zh = z1 + wrap(-(phase + off) - z1, DASH_GAP) + j * DASH_GAP;
+  if (zh >= z0 || zh < z1) return false;
+  const z = zh + g * STREAK_GAP;
+  if (z > zEnd) return false;
   rowAt(r, o);
   o[2] = z;
   const head = g === 0;
-  // The heads flash (asked for: "lights that flash and stream"), each row at its own beat.
-  const flash = head ? (wrap(t * 7 + r * 0.37 + j * 0.11, 1) < 0.5 ? 1 : 0.45) : 1;
-  const hue = LANE_HUES[r % LANE_HUES.length] as RGB;
-  const c = head ? mix(hue, C.white, 0.5) : hue;
+  // The heads flash (asked for: "lights that flash and stream"), each row at its own beat, each
+  // streak by its own number as it runs (not its place in the stretch, which steps as it moves).
+  const flash = head ? headFlash(t, r, Math.round((zh + phase + off) / DASH_GAP)) : 1;
+  const hue = r % LANE_HUES.length;
+  const c = (head ? HEAD_HUES[hue] : LANE_HUES[hue]) as RGB;
   const k2 = bright * flash * (1 - g / STREAK) ** 1.4;
   o[3] = c[0] * k2;
   o[4] = c[1] * k2;
@@ -331,8 +366,14 @@ function streakSite(
   return true;
 }
 
-/** A dim rail's grain: rows of quiet points along z, every 2, so the walls read between streaks. */
-function railSite(
+/**
+ * A dim rail's grain: rows of quiet points along z, about every 2, so the walls read between
+ * streaks. Each point somewhere in its own stretch of 2 (2026-11-15): on an even lattice, every row
+ * in step, the walls' dots aliased at the lane's pace (the ship gains more than half their spacing
+ * a frame from a speed of 60 at 60 frames a second), crawling back or standing still, the speed
+ * tunnel's "laggy" look; scattered, they stream past at the ship's speed.
+ */
+export function railSite(
   s: number,
   z0: number,
   z1: number,
@@ -340,13 +381,18 @@ function railSite(
   rows: number,
   o: number[],
   rgb: RGB,
+  salt = 0,
 ): boolean {
   const per = Math.ceil((z0 - z1) / 2);
   const r = s % rows;
   const j = Math.floor(s / rows);
   if (j >= per) return false;
+  // Its stretch counted from the world's (or realm's) z = 0, so neighbouring stretches agree.
+  const slot = Math.round(z1 / 2) + j;
+  const z = z1 + (j + 0.05 + 0.9 * hash(slot * 67 + r * 7919 + salt, 4471)) * 2;
+  if (z > z0) return false;
   rowAt(r, o);
-  o[2] = z1 + (j + 0.5) * 2;
+  o[2] = z;
   o[3] = rgb[0];
   o[4] = rgb[1];
   o[5] = rgb[2];
@@ -405,7 +451,7 @@ export function mouthItems(eye: Vec3, fwd: Vec3, t: number, out: Item[]) {
       site: (s, o) =>
         s < nStreak
           ? streakSite(s, z0, z1, row, WALL_ROWS, o, ph, t, 0.75)
-          : railSite(s - nStreak, z0, z1, row, WALL_ROWS, o, RAIL),
+          : railSite(s - nStreak, z0, z1, row, WALL_ROWS, o, RAIL, 11 + side),
     });
   }
   // The deck: three lines of streaks at 26, the avenue running on underneath.
@@ -430,7 +476,7 @@ export function mouthItems(eye: Vec3, fwd: Vec3, t: number, out: Item[]) {
       site: (s, o) =>
         s < n
           ? streakSite(s, z0, z1, deckRow, 3, o, ph, t, 0.55)
-          : railSite(s - n, z0, z1, deckRow, 3, o, RAIL),
+          : railSite(s - n, z0, z1, deckRow, 3, o, RAIL, 20),
     });
   }
   // The gate's frame and the opening's: a glowing rectangle across the avenue, breathing slowly
@@ -484,7 +530,7 @@ export function mouthItems(eye: Vec3, fwd: Vec3, t: number, out: Item[]) {
 
 const SEG = 40;
 const LANE_REACH = 700;
-const ARCH_PER = 0.9;
+const ARCH_PER = 0.6;
 
 /** The arch over the lane at realm z: posts up the walls to ARCH_POST, a half circle over. */
 function archPoint(z: number, u: number, o: number[]) {
@@ -534,8 +580,8 @@ export function laneItems(eye: Vec3, fwd: Vec3, t: number, out: Item[]) {
         weight: 2.2,
         site: (s, o) =>
           s < nStreak
-            ? streakSite(s, z0, z1, row, rows, o, ph, t, 0.8)
-            : railSite(s - nStreak, z0, z1, row, rows, o, RAIL),
+            ? streakSite(s, z0, z1, row, rows, o, ph, t, 0.8, 0)
+            : railSite(s - nStreak, z0, z1, row, rows, o, RAIL, 31 + side),
       });
     }
     // The floor: five lines of streaks, the middle one brightest.
@@ -554,12 +600,12 @@ export function laneItems(eye: Vec3, fwd: Vec3, t: number, out: Item[]) {
         weight: 1.8,
         site: (s, o) =>
           s < n
-            ? streakSite(s, z0, z1, floorRow, 5, o, ph, t, 0.6)
-            : railSite(s - n, z0, z1, floorRow, 5, o, RAIL),
+            ? streakSite(s, z0, z1, floorRow, 5, o, ph, t, 0.6, 0)
+            : railSite(s - n, z0, z1, floorRow, 5, o, RAIL, 40),
       });
     }
   }
-  // The tunnels: arches every 4, each lit by waves running north faster than you.
+  // The tunnels: arches every 6, each lit by waves running north faster than you.
   for (const at of TUNNELS_AT) {
     const zS = at;
     const zN = at - TUNNEL_LEN;
