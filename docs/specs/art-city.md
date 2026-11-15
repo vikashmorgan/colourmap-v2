@@ -2964,8 +2964,9 @@ between tall lattice pylons.
   in from the strip's edge streets (x −130 and 130), from row 1 to row 21: the length of the first
   three bands, ending well before the river and its Heights–Golden bridges. A pylon stands at every
   fourth cross street (136 apart), a station at each end, so flying down either street the pylons
-  recede in an even row and the ropes scallop between them toward the vanishing point. Each line
-  is 680 long with 20 cabins.
+  recede in an even row and the ropes scallop between them toward the vanishing point. The West
+  line starts at row 9, past Chinatown: its street is Chinatown's low West lane window, kept clear
+  of anything solid. The East line is 680 long; each line has 20 cabins.
 - **The Favela line** climbs from the city to the Favela: from a station on the strip's east side,
   along cross street 27, over the edge road, past a pylon at the first hill's foot and one on its
   slope, to a summit station over the houses (116 long, 3 cabins). The hill's houses keep clear of

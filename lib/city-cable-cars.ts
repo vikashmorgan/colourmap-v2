@@ -71,15 +71,26 @@ export type CableLine = { name: string; tint: RGB; supports: CableSupport[] };
 export const CITY_HEAD = 66;
 /** The cross streets the city lines' pylons stand at: every fourth, row 1 to row 21. */
 export const CITY_ROWS = [1, 5, 9, 13, 17, 21];
+/**
+ * The West line starts past Chinatown (rows 0 to 7): its street, x -130, is Chinatown's low West
+ * lane window (lib/city-chinatown-open.ts), kept clear of anything solid to fly end to end.
+ */
+export const WEST_ROWS = CITY_ROWS.filter((J) => J > 7);
 /** How far a pylon's foot stands off the street's middle, across it and along it (at the corner). */
 export const CORNER_X = 3.5;
 export const CORNER_Z = 4.5;
 
-const cityLine = (name: string, x: number, side: 1 | -1, tint: RGB): CableLine => ({
+const cityLine = (
+  name: string,
+  x: number,
+  side: 1 | -1,
+  tint: RGB,
+  rows: number[] = CITY_ROWS,
+): CableLine => ({
   name,
   tint,
-  supports: CITY_ROWS.map((J, i) => {
-    const station = i === 0 || i === CITY_ROWS.length - 1;
+  supports: rows.map((J, i) => {
+    const station = i === 0 || i === rows.length - 1;
     const z = J * BLOCK_Z + CORNER_Z;
     return {
       fx: x + side * CORNER_X,
@@ -103,7 +114,7 @@ const annexSupport = (i: number, hy: number, station: boolean, name: string): Ca
 };
 
 export const CABLE_LINES: CableLine[] = [
-  cityLine('West cable', -130, -1, mix(C.rose, C.ivory, 0.5)),
+  cityLine('West cable', -130, -1, mix(C.rose, C.ivory, 0.5), WEST_ROWS),
   cityLine('East cable', 130, 1, mix(C.turquoise, C.ivory, 0.5)),
   {
     name: 'Favela cable',
