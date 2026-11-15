@@ -32,6 +32,7 @@ import {
   wrap,
 } from './city-grid';
 import { MESH_GRAINS, type Palette } from './city-mesh';
+import { observatoryBlock } from './city-observatory';
 import { DOMES, FACTORIES, building as studioBuilding, TEMPLES } from './golden-city';
 import { type Built, onMesh } from './grain-mesh';
 import { novaCore } from './nova-cores';
@@ -87,7 +88,8 @@ export function openBlock(I: number, J: number): boolean {
     const cj = Math.round(q.z / BLOCK_Z);
     if ((li === ci - 1 || li === ci) && (lj === cj - 1 || lj === cj)) return true;
   }
-  return BUILDING_SPOTS.some((b) => b.I === li && b.J === lj);
+  // And the Observatory's (lib/city-observatory.ts, 2026-11-14).
+  return BUILDING_SPOTS.some((b) => b.I === li && b.J === lj) || observatoryBlock(li, lj);
 }
 
 /* ---------- meshes, stretched ---------- */
@@ -130,10 +132,10 @@ export function bigMesh(q: { kind: BigKind; i: number }): Built {
 /** The Studio sizes (at scale 1): height and reach, measured from the meshes, for the map and tests. */
 const STUDIO_TOP: Record<string, number[]> = {
   temple: [17.8, 13.4, 17.6, 22, 15],
-  dome: [10.8, 7.9, 13.1, 7.4, 5.6],
+  dome: [10.8, 7.9, 13.1, 7.4, 12.5, 5.6],
   nova: [14.3],
   temples: [17.8, 13.4, 17.6, 22, 15],
-  domes: [10.8, 7.9, 13.1, 7.4, 5.6],
+  domes: [10.8, 7.9, 13.1, 7.4, 12.5, 5.6],
   factories: [8.6, 20.6, 8.1, 20.9, 20.9],
 };
 /** How tall a big square's building stands. */

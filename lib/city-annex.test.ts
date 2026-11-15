@@ -27,6 +27,7 @@ import {
   annexItems,
   annexLocal,
   annexPlaces,
+  FAVELA_ROWS,
   GATEWAYS,
   MOUNTAIN_ROWS,
 } from './city-annex';
@@ -61,6 +62,7 @@ import {
   TILE_X,
   TILE_Z,
 } from './city-grid';
+import { INDUSTRY_ROW0 } from './city-industry';
 import { cityMapData, fitView, projectMap, tileLocal } from './city-minimap';
 import { MOUNTAIN_Z1, PEAKS, TEMPLE_H } from './city-mountain';
 import { nearestCopy, QUARTER_STARTS, quarterStart } from './city-travel';
@@ -100,10 +102,14 @@ describe('the plan, wider: the annex beside the strip', () => {
     for (const L of LANDMARKS) expect(Math.abs(L.x)).toBe(3 * BLOCK_X);
   });
 
-  it('lays the Mountain quarter beside the strip up to the river, the Favela after, all open ground', () => {
+  it('lays the Mountain quarter beside the strip up to the river, the Favela after, then the Industry superquarter, all open ground', () => {
     expect(MOUNTAIN_ROWS * BLOCK_Z).toBe(MOUNTAIN_Z1);
+    // Three quarters along the annex (2026-11-14): the Mountain and the Favela kept, the industry last.
+    expect(MOUNTAIN_ROWS + FAVELA_ROWS).toBe(INDUSTRY_ROW0);
+    expect(FAVELA_ROWS).toBeGreaterThan(15);
+    expect(TILE_J - INDUSTRY_ROW0).toBeGreaterThanOrEqual(10);
     for (let J = 0; J < TILE_J; J++) {
-      const want = J < MOUNTAIN_ROWS ? 'mountain' : 'favela';
+      const want = J < MOUNTAIN_ROWS ? 'mountain' : J < INDUSTRY_ROW0 ? 'favela' : 'industry';
       expect(annexDistrict(J)).toBe(want);
       for (let I = STRIP_I / 2; I < STRIP_I / 2 + ANNEX_I; I++) {
         expect(districtOf(I, J)).toBe(want);
@@ -115,6 +121,7 @@ describe('the plan, wider: the annex beside the strip', () => {
     }
     expect(DISTRICTS.mountain.name).toBe('Mountain quarter');
     expect(DISTRICTS.favela.name).toBe('Favela');
+    expect(DISTRICTS.industry.name).toBe('Industry superquarter');
     expect(districtAt(STRIP_X / 2 + 100, 300)).toBe('mountain');
     expect(districtAt(STRIP_X / 2 + 100 - TILE_X, 1500)).toBe('favela');
     expect(inAnnex(STRIP_X / 2 + 1)).toBe(true);
@@ -132,7 +139,7 @@ describe('the plan, wider: the annex beside the strip', () => {
     expect(tileLocal(STRIP_X / 2 + 10 + TILE_X, 5)[0]).toBeCloseTo(STRIP_X / 2 + 10);
     const m = cityMapData();
     expect(m.x0).toBe(PLAN_X0);
-    for (const id of ['mountain', 'favela'] as const) {
+    for (const id of ['mountain', 'favela', 'industry'] as const) {
       const d = m.districts.find((q) => q.id === id);
       expect(d?.x0).toBe(STRIP_X / 2);
       expect(d?.x1).toBe(STRIP_X / 2 + ANNEX_X);
@@ -145,7 +152,11 @@ describe('the plan, wider: the annex beside the strip', () => {
     for (const c of lines) for (const [x] of c.pts) expect(inAnnex(x)).toBe(true);
     // The temples and the cable stations, named.
     expect(m.places.filter((p) => p.kind === 'temple')).toHaveLength(8);
-    expect(m.places.filter((p) => p.kind === 'cable').length).toBe(annexPlaces().length - 8);
+    expect(m.places.filter((p) => p.kind === 'cable').length).toBe(
+      annexPlaces().filter((p) => p.kind === 'cable').length,
+    );
+    // The industry's Atom tower, clockwork gate and cooling towers.
+    expect(m.places.filter((p) => p.kind === 'works').map((p) => p.name)).toContain('Atom tower');
   });
 });
 

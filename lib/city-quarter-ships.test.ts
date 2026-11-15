@@ -22,11 +22,11 @@ import {
 
 const IDS = Object.keys(DISTRICTS) as DistrictId[];
 /**
- * The quarters along the strip, with streets and a heart on the avenue: not the annex's Mountain
- * and Favela (2026-11-14), which have no streets (so no currents) and their own life instead,
+ * The quarters along the strip, with streets and a heart on the avenue: not the annex's Mountain,
+ * Favela and Industry superquarter (2026-11-14), which have no streets (so no currents) and their own life instead,
  * cable cars and strings of lights (lib/city-mountain.ts, lib/city-favela.ts).
  */
-const STRIP_IDS = IDS.filter((d) => d !== 'mountain' && d !== 'favela');
+const STRIP_IDS = IDS.filter((d) => d !== 'mountain' && d !== 'favela' && d !== 'industry');
 const cosine = (a: RGB, b: RGB) =>
   (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (Math.hypot(...a) * Math.hypot(...b));
 

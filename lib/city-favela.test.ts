@@ -8,6 +8,7 @@ import type { Vec3 } from './bigbang';
 import { ANNEX_X } from './city-annex';
 import {
   FAVELA_Z0,
+  FAVELA_Z1,
   favelaGeo,
   favelaHeight,
   favelaItems,
@@ -36,11 +37,15 @@ const sites = (items: Item[], step = 1) => {
     }
   return out;
 };
-/** An eye at the Favela's far end, looking up the tile (−z) over its hills. */
-const EYE: Vec3 = [STRIP_X / 2 + 160, GROUND + 50, TILE_Z - 30];
+/**
+ * An eye at the Favela's far end (its edge with the Industry superquarter since 2026-11-14),
+ * looking up the tile (−z) over its hills.
+ */
+const EYE: Vec3 = [STRIP_X / 2 + 160, GROUND + 50, FAVELA_Z1 - 30];
 
 describe('the Favela: hills past the river', () => {
-  it('raises its hills inside the annex, past the river, before the tile’s end', () => {
+  it('raises its hills inside the annex, past the river, before the industry and the tile’s end', () => {
+    expect(FAVELA_Z1).toBeLessThan(TILE_Z);
     expect(HILLS.length).toBeGreaterThanOrEqual(6);
     for (const p of HILLS) {
       for (let a = 0; a < Math.PI * 2; a += 0.05) {
@@ -51,7 +56,7 @@ describe('the Favela: hills past the river', () => {
         expect(x).toBeGreaterThan(0);
         expect(x).toBeLessThan(ANNEX_X - 5);
         expect(z).toBeGreaterThan(FAVELA_Z0 + RIVER_W);
-        expect(z).toBeLessThan(TILE_Z);
+        expect(z).toBeLessThan(FAVELA_Z1);
       }
       expect(hillSurface(p.x, p.z)).toBeCloseTo(p.h, 6);
     }
@@ -65,7 +70,7 @@ describe('the Favela: hills past the river', () => {
     // Off the hills, open: the river's bank, and the far side of the annex beside the first hill.
     expect(favelaHeight(150, FAVELA_Z0 + RIVER_W + 4)).toBe(0);
     for (let x = 0; x < ANNEX_X; x += 3)
-      for (let z = FAVELA_Z0; z < TILE_Z; z += 3) {
+      for (let z = FAVELA_Z0; z < FAVELA_Z1; z += 3) {
         const h = favelaHeight(x, z);
         expect(h === 0 || h >= HOUSE_TOP).toBe(true);
         expect(h > 0).toBe(hillSurface(x, z) > 0 || h === HOUSE_TOP);
@@ -77,7 +82,8 @@ describe('the Favela: small stacked houses', () => {
   it('covers its hills densely: thousands of houses, hundreds a hill', () => {
     const G = favelaGeo();
     expect(favelaGeo()).toBe(G);
-    expect(houseCount()).toBeGreaterThan(6000);
+    // Six hills since the industry took the annex's last rows (2026-11-14): still thousands.
+    expect(houseCount()).toBeGreaterThan(5000);
     HILLS.forEach((p, hi) => {
       const n = G.rows.filter((r) => r.hill === hi).reduce((s, r) => s + r.n, 0);
       expect(n).toBeGreaterThan(400);

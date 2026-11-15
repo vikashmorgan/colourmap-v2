@@ -84,6 +84,7 @@ import { crownItem, crownKey } from './city-landmarks';
 import { highwayItems, marketBlockItems } from './city-market';
 import { matrixForm, matrixHolds, matrixTowerItem } from './city-matrix';
 import { CAR_LEN, CARS, carAt, RAIL, railAt, railCeiling, STATIONS, TRAINS } from './city-metro';
+import { observatoryHolds, observatoryItems } from './city-observatory';
 import type { Monument } from './city-orbits';
 import type { PlazaSpot } from './city-plazas';
 import { besideRiver, inRiver, RIVER_Y, riverClear, riverItems } from './city-rain';
@@ -127,7 +128,9 @@ export type DistrictId =
   | 'code'
   // 2026-11-14: the annex beside the strip (lib/city-annex.ts).
   | 'mountain'
-  | 'favela';
+  | 'favela'
+  // 2026-11-14: the annex's third, past the Favela to the tile's end (lib/city-industry.ts).
+  | 'industry';
 
 export type District = {
   id: DistrictId;
@@ -263,6 +266,17 @@ export const DISTRICTS: Record<DistrictId, District> = {
     landmark: null,
     signature: 'small stacked houses climbing the hills, strings of lights twinkling',
   },
+  // 2026-11-14: "a new INDUSTRY SUPERQUARTER in the annex alongside Mountain and Favela": a giant
+  // factory town along one long lane (lib/city-industry.ts, lib/city-gears.ts).
+  industry: {
+    id: 'industry',
+    tempo: 1 / 2,
+    name: 'Industry superquarter',
+    colour: [0.85, 0.72, 0.55],
+    landmark: 'The Atom tower, its atom turning over the factory town',
+    signature:
+      'conveyor galleries gliding with light, gears meshing, kilns rolling, turbines turning',
+  },
 };
 
 /** The six bands along the avenue, eight blocks each: the district left of it, and right. */
@@ -327,7 +341,7 @@ export const LANDMARKS: Landmark[] = [
   { d: 'golden', kind: 'spire', ...LM(3, -1) },
   { d: 'temples', kind: 'studio', set: 'temples', i: 1, ...LM(3, 1) },
   { d: 'industrial', kind: 'studio', set: 'factories', i: 1, ...LM(4, -1) },
-  { d: 'domes', kind: 'studio', set: 'domes', i: 4, ...LM(4, 1) },
+  { d: 'domes', kind: 'studio', set: 'domes', i: 5, ...LM(4, 1) },
   { d: 'egypt', kind: 'pyramid', ...LM(5, -1) },
   { d: 'code', kind: 'dataspire', ...LM(6, -1) },
 ];
@@ -467,7 +481,7 @@ function buildBlock(I: number, J: number, wide: boolean): Block {
   const k = 300 + wrap(I * 37 + J * 101, 9973);
   const d = districtOf(I, J);
   // The annex (lib/city-annex.ts): open ground, its peaks and hills drawn and held there.
-  if (d === 'mountain' || d === 'favela') return hillBlock(I, J, k, d);
+  if (d === 'mountain' || d === 'favela' || d === 'industry') return hillBlock(I, J, k, d);
   const ave = I === 0 || I === -1;
   const cx = (I + 0.5) * BLOCK_X;
   const cz = (J + 0.5) * BLOCK_Z;
@@ -532,7 +546,8 @@ function buildBlock(I: number, J: number, wide: boolean): Block {
       h = 12 + 16 * hh;
       if (!ave && pick < 0.45) shape = 'studio';
       else if (!ave && pick < 0.7) shape = 'park';
-      studio = { set: 'domes', i: Math.floor(hash(k, 431) * 5) };
+      // The four glasshouses and the group of domes (the Observatory, DOMES 4, stands once: lib/city-observatory.ts).
+      studio = { set: 'domes', i: [0, 1, 2, 3, 5][Math.floor(hash(k, 431) * 5)] as number };
       break;
     case 'egypt':
       if (ave) h = 8 + 6 * hh;
@@ -840,6 +855,8 @@ export function blocked(q: Vec3): boolean {
   if (q[1] < floorAt(q[0], q[2]) + 2 - 1e-6) return true;
   // The annex (lib/city-annex.ts): its peaks, temples, pylons, hills and houses, a height field.
   if (inAnnex(q[0])) return annexBlocked(q, MARGIN);
+  // The Observatory beside the domes' plaza (lib/city-observatory.ts): its drum and dome.
+  if (observatoryHolds(q, MARGIN)) return true;
   // The Temple skyscrapers and their bridges (lib/city-skyscrapers.ts): real walls.
   if (skyscraperHolds(q, MARGIN)) return true;
   const tw = blockTower(Math.floor(q[0] / BLOCK_X), Math.floor(q[2] / BLOCK_Z));
@@ -3213,6 +3230,7 @@ export function gameItems(eye: Vec3, fwd: Vec3, t: number, ship?: Vec3): Item[] 
     factoryAt(Math.floor(x / BLOCK_X), Math.floor(z / BLOCK_Z))?.tint ?? colourAt(x, z);
   if (planLook(eye[1]) < 0.5) studioBlockItems(eye, t, R, blockTower, ahead, studioColour, out);
   bigItems(eye, t, R, ahead, colourAt, out, lift);
+  observatoryItems(eye, t, R, ahead, out);
   wordsNear(eye, NEAR, words);
   for (const w of words) {
     const it = wordItem(w, eye, t);

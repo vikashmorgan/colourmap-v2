@@ -1068,6 +1068,7 @@ describe('The golden city (2026-11-12: "build the city")', () => {
         'Bubbles',
         'Palm house',
         'Lattice',
+        'Observatory',
         'Group of domes',
         'Dome complex',
         'Dome quarter',
