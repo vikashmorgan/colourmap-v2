@@ -111,7 +111,7 @@ const inside = (q: number[], tw: (typeof CITY)[number]) =>
   Math.abs((q[2] as number) - tw.z) < tw.hz;
 
 describe('the city chapter', () => {
-  it('has nineteen pieces, from the golden plan to the ship, each with words', () => {
+  it('has twenty pieces, from the golden plan to the ship, each with words', () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       'golden-plan',
       'rising',
@@ -131,6 +131,7 @@ describe('the city chapter', () => {
       'chinatown',
       'docks',
       'canyon',
+      'space-bars',
       'ship',
     ]);
     expect(PHASES.map((p) => p.name)).toEqual([
@@ -152,6 +153,7 @@ describe('the city chapter', () => {
       'Chinatown',
       'Bridges and docks',
       'Canyon',
+      'Space bars',
       'Ship',
     ]);
     for (const p of PHASES) {

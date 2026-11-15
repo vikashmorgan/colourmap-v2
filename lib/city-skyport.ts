@@ -9,6 +9,7 @@
  */
 
 import type { RGB, Vec3 } from './bigbang';
+import { barCentre, barName, resetBarWarmth, SKY_BARS, setBarWarm } from './city-bars';
 import { DISTRICTS } from './city-game';
 import { GROUND, TILE_X, TILE_Z } from './city-grid';
 import type { MapPlace } from './city-minimap';
@@ -21,6 +22,7 @@ import {
   stationModel,
 } from './city-stations';
 import type { TravelSpot } from './city-travel';
+import { barModel } from './space-bars';
 
 /* ---------- travel spots ---------- */
 
@@ -123,9 +125,39 @@ const hold: Vec3 = [0, 0, 0];
 const copyX = (sx: number, x: number) => sx + Math.round((x - sx) / TILE_X) * TILE_X;
 const copyZ = (sz: number, z: number) => sz + Math.round((z - sz) / TILE_Z) * TILE_Z;
 
+/*
+ * What can be docked at: the fifteen stations, then the five space bars (lib/city-bars.ts,
+ * 2026-11-14), numbered on from the stations (dock i >= STATIONS.length is bar i - STATIONS.length).
+ */
+const NS = STATIONS.length;
+/** How many places dock: the stations and the bars. */
+export const DOCKS_N = NS + SKY_BARS.length;
+/** Dock i's place, tile-local: where it floats, its height over the street and its bob. */
+function dockOf(i: number): { x: number; z: number; h: number; bob: number } {
+  return i < NS
+    ? (STATIONS[i] as (typeof STATIONS)[number])
+    : (SKY_BARS[i - NS] as (typeof SKY_BARS)[number]);
+}
+/** Dock i's middle at time t, at its copy at (x, z). */
+function dockCentre(i: number, t: number, x: number, z: number): Vec3 {
+  return i < NS
+    ? stationCentre(STATIONS[i] as (typeof STATIONS)[number], t, x, z)
+    : barCentre(SKY_BARS[i - NS] as (typeof SKY_BARS)[number], t, x, z);
+}
+/** Dock i warms (docked) or cools (left). */
+function setDockWarm(i: number, on: boolean, t: number) {
+  if (i < NS) setStationWarm(i, on, t);
+  else setBarWarm(i - NS, on, t);
+}
+/** Dock i's name. */
+export const dockName = (i: number) =>
+  i < NS
+    ? (STATIONS[i] as (typeof STATIONS)[number]).name
+    : barName(SKY_BARS[i - NS] as (typeof SKY_BARS)[number]);
+
 /** Where the docked ship holds at time t (shared, overwritten each call). */
 function holdAt(t: number): Vec3 {
-  const c = stationCentre(STATIONS[dock.i] as (typeof STATIONS)[number], t, dock.x, dock.z);
+  const c = dockCentre(dock.i, t, dock.x, dock.z);
   hold[0] = c[0] + dock.off[0];
   hold[1] = c[1] + dock.off[1];
   hold[2] = c[2] + dock.off[2];
@@ -144,19 +176,18 @@ export function skyDockStep(pos: Vec3, speed: number, steering: boolean, t: numb
     return null;
   }
   if (dock.away >= 0) {
-    const st = STATIONS[dock.away] as (typeof STATIONS)[number];
-    const c = stationCentre(st, t, dock.ax, dock.az);
+    const c = dockCentre(dock.away, t, dock.ax, dock.az);
     if (Math.hypot(pos[0] - c[0], pos[1] - c[1], pos[2] - c[2]) > SKY_DOCK_AWAY) dock.away = -1;
   }
   if (steering || speed > SKY_DOCK_SPEED) return null;
-  for (let i = 0; i < STATIONS.length; i++) {
+  for (let i = 0; i < DOCKS_N; i++) {
     if (i === dock.away) continue;
-    const st = STATIONS[i] as (typeof STATIONS)[number];
+    const st = dockOf(i);
     const x = copyX(st.x, pos[0]);
     const z = copyZ(st.z, pos[2]);
     if (Math.abs(pos[0] - x) > SKY_DOCK_R || Math.abs(pos[2] - z) > SKY_DOCK_R) continue;
     if (Math.abs(pos[1] - GROUND - st.h) > SKY_DOCK_R + st.bob) continue;
-    const c = stationCentre(st, t, x, z);
+    const c = dockCentre(i, t, x, z);
     const dx = pos[0] - c[0];
     const dy = pos[1] - c[1];
     const dz = pos[2] - c[2];
@@ -169,7 +200,7 @@ export function skyDockStep(pos: Vec3, speed: number, steering: boolean, t: numb
     dock.off[0] = dx * k;
     dock.off[1] = dy * k;
     dock.off[2] = dz * k;
-    setStationWarm(i, true, t);
+    setDockWarm(i, true, t);
     return holdAt(t);
   }
   return null;
@@ -178,7 +209,7 @@ export function skyDockStep(pos: Vec3, speed: number, steering: boolean, t: numb
 /** Off the station docked at, if any (steering, letting go, a trip): its lights cool slowly. */
 export function undockSky(t: number) {
   if (dock.i < 0) return;
-  setStationWarm(dock.i, false, t);
+  setDockWarm(dock.i, false, t);
   dock.away = dock.i;
   dock.ax = dock.x;
   dock.az = dock.z;
@@ -190,15 +221,14 @@ export function resetSkyDock() {
   dock.i = -1;
   dock.away = -1;
   resetStationWarmth();
+  resetBarWarmth();
 }
 
-/** The station docked at (its index in STATIONS), or -1. */
+/** What is docked at: a station's index in STATIONS, a bar's past them (STATIONS.length + j), or -1. */
 export const skyDocked = () => dock.i;
 
-/** The quiet words while docked: the station's name; '' otherwise. */
-export const skyDockBanner = () =>
-  dock.i >= 0 ? `Docked · ${(STATIONS[dock.i] as (typeof STATIONS)[number]).name}` : '';
-
+/** The quiet words while docked: the station's or the bar's name; '' otherwise. */
+export const skyDockBanner = () => (dock.i >= 0 ? `Docked · ${dockName(dock.i)}` : '');
 /* ---------- the fireworks kept off them ---------- */
 
 /** How far a burst's sparks fall over its life, at most (lib/city-fireworks.ts: 2.6 t², t ≤ 3). */
@@ -222,6 +252,18 @@ export function burstClear(c: Vec3, r: number): boolean {
     const flat = Math.hypot(c[0] - x, c[2] - z) - r - M.r;
     const lo = GROUND + st.h + M.lo - st.bob;
     const hi = GROUND + st.h + M.hi + st.bob;
+    const dy = low > hi ? low - hi : top < lo ? lo - top : 0;
+    if (Math.max(flat, dy) < BURST_GAP) return false;
+  }
+  // And off the space bars (lib/city-bars.ts), their signs and all.
+  for (let i = 0; i < SKY_BARS.length; i++) {
+    const b = SKY_BARS[i] as (typeof SKY_BARS)[number];
+    const M = barModel(b.design);
+    const x = copyX(b.x, c[0]);
+    const z = copyZ(b.z, c[2]);
+    const flat = Math.hypot(c[0] - x, c[2] - z) - r - M.r;
+    const lo = GROUND + b.h + M.lo - b.bob;
+    const hi = GROUND + b.h + M.top + b.bob;
     const dy = low > hi ? low - hi : top < lo ? lo - top : 0;
     if (Math.max(flat, dy) < BURST_GAP) return false;
   }

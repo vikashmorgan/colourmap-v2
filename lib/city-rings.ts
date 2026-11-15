@@ -26,6 +26,7 @@
  */
 
 import { type RGB, smooth, type Vec3 } from './bigbang';
+import { barItems } from './city-bars';
 import { copiesNear } from './city-big';
 import { BUILDING_SPOTS, buildingAt, buildingModel } from './city-buildings-15';
 import { DISTRICTS, districtAt, LANDMARKS } from './city-game';
@@ -602,11 +603,14 @@ export function parcoursItems(eye: Vec3, fwd: Vec3, t: number, R: number, out: I
 /**
  * At most this many of each are drawn, the nearest: the stations, the decorative sets and the
  * parcours' rings. With the renderer's thinning, that holds them to a modest share of the pool
- * (some 30,000 sites in all at the very most, far fewer drawn), so the city under them keeps its grains.
+ * (some 38,000 sites in all at the very most with the two nearest space bars, far fewer drawn), so
+ * the city under them keeps its grains.
  */
 export const MOST_STATIONS = 6;
 export const MOST_SETS = 10;
 export const MOST_PARCOURS = 16;
+/** And at most this many space bars (lib/city-bars.ts, 2026-11-14). */
+export const MOST_BARS = 2;
 
 /** The nearest n of a list of items. */
 const nearestOf = (items: Item[], n: number) => items.sort((a, b) => a.d - b.d).slice(0, n);
@@ -623,8 +627,11 @@ export function aboveCityItems(eye: Vec3, fwd: Vec3, t: number, R: number): Item
   stationItems(eye, fwd, t, R, st);
   ringSetItems(eye, fwd, t, R, sets);
   parcoursItems(eye, fwd, t, R, parc);
+  const bars: Item[] = [];
+  barItems(eye, fwd, t, R, bars);
   const out = [
     ...nearestOf(st, MOST_STATIONS),
+    ...nearestOf(bars, MOST_BARS),
     ...nearestOf(sets, MOST_SETS),
     ...nearestOf(parc, MOST_PARCOURS),
   ];

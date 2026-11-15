@@ -399,6 +399,19 @@ function plazaAndConduits(m: Mesh, kind: number) {
 }
 
 /**
+ * Nova Core `kind`'s core alone (no plaza, no conduits), round NOVA_CENTRE: for a core floating in
+ * the air (the big novas round the Golden Spire, lib/city-symbols.ts, 2026-11-14).
+ */
+export function novaHeart(kind: number, m: Mesh = new Mesh()): Mesh {
+  const k = ((Math.floor(kind) % CORES.length) + CORES.length) % CORES.length;
+  m.pivot = NOVA_CENTRE;
+  m.centre = NOVA_CENTRE;
+  (CORES[k] as (m: Mesh) => void)(m);
+  m.dot(NOVA_CENTRE, 1, light, { anim: Anim.pulse, key: k, w: 1.2 });
+  return m;
+}
+
+/**
  * Nova Core `kind` (0..7, NOVA_CORES), built into `m`: its plaza, its conduits and the core.
  * At the origin and full size it breathes and turns round its own centre (the mesh's pivot);
  * placed elsewhere (`at` a point on the ground, `s` its size) it is drawn still, as a mesh can

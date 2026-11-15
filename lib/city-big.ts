@@ -64,12 +64,18 @@ export const BIG_SQUARES: BigSquare[] = [
   SQ('dome', 1, 50, 1),
 ];
 
-/** How each kind is stretched: across (sh) and up (sv), from its Studio size. */
+/**
+ * How each kind is stretched: across (sh) and up (sv), from its Studio size. 2026-11-14 ("make sure
+ * the buildings with unique designs are properly big and reach high"): raised from 5.5, 7 and 6
+ * (55 to 98 high) to 7.5, 10 and 9 (79 to 133 high), still under the high currents (150).
+ */
 export const BIG_STRETCH: Record<BigKind, { sh: number; sv: number }> = {
-  temple: { sh: 1.5, sv: 5.5 },
-  dome: { sh: 1.5, sv: 7 },
-  nova: { sh: 0.6, sv: 6 },
+  temple: { sh: 1.5, sv: 7.5 },
+  dome: { sh: 1.5, sv: 10 },
+  nova: { sh: 0.6, sv: 9 },
 };
+/** How they were stretched before 2026-11-14, for the tests. */
+export const BIG_STRETCH_WAS: Record<BigKind, number> = { temple: 5.5, dome: 7, nova: 6 };
 /** The Studio's buildings on the quarters' blocks: much bigger than the 0.72 they stood at. */
 export const BLOCK_STRETCH = { sh: 0.8, sv: 3.6 };
 
@@ -95,7 +101,14 @@ export function openBlock(I: number, J: number): boolean {
 /* ---------- meshes, stretched ---------- */
 
 const GRAINS: Particle[] = makeParticles(MESH_GRAINS);
-type Stretched = { B: Built; at: Vec3; sh: number; sv: number; palette: Palette; k?: number };
+export type Stretched = {
+  B: Built;
+  at: Vec3;
+  sh: number;
+  sv: number;
+  palette: Palette;
+  k?: number;
+};
 const SHARES = { lines: 0.55, faces: 0.74 };
 
 /** Site s of a mesh stretched sh across and sv up, lit from the eye (as lib/city-mesh.ts lights them). */

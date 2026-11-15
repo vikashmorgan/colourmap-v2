@@ -8,6 +8,7 @@ import { GROUND, TILE_X, TILE_Z } from './city-grid';
 import { TRACKS } from './city-race';
 import {
   aboveCityItems,
+  MOST_BARS,
   MOST_PARCOURS,
   MOST_SETS,
   MOST_STATIONS,
@@ -350,9 +351,13 @@ describe('Rings of light: the parcours high over the city (2026-11-14)', () => {
       ],
     ] as [Vec3, Vec3][]) {
       const items = aboveCityItems(eye, fwd, 20, 1300);
-      expect(items.length).toBeLessThanOrEqual(MOST_STATIONS + MOST_SETS + MOST_PARCOURS);
+      // And the space bars (lib/city-bars.ts, 2026-11-14), drawn with them.
+      expect(items.length).toBeLessThanOrEqual(
+        MOST_STATIONS + MOST_SETS + MOST_PARCOURS + MOST_BARS,
+      );
       const sites = items.reduce((n, it) => n + it.count, 0);
-      expect(sites).toBeLessThan(32000);
+      // Some 9,000 more with the two nearest space bars (2026-11-14).
+      expect(sites).toBeLessThan(38000);
       // From over the stations, each weighs a quarter of what it does among them.
       if (eye[1] > SKY + 400) for (const it of items) expect(it.weight).toBeLessThan(0.6);
     }

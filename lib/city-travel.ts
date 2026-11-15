@@ -18,6 +18,7 @@
 
 import type { Vec3 } from './bigbang';
 import { ANNEX_STARTS } from './city-annex';
+import { barSpot } from './city-bars';
 import { CANYON_PATH } from './city-canyon';
 import {
   BAND_ROWS,
@@ -174,6 +175,7 @@ export const ATLANTIS_SPOT: TravelSpot = {
 export const spotFor = (go: MapGo): TravelSpot => {
   if ('d' in go) return quarterStart(go.d);
   if ('sky' in go) return skySpot(go.sky);
+  if ('bar' in go) return barSpot(go.bar);
   if (go.name === SPEEDWAY_NAME) return SPEEDWAY_SPOT;
   if (go.name === ATLANTIS_NAME) return ATLANTIS_SPOT;
   return placeSpot(go.x, go.z, go.y);

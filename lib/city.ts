@@ -215,6 +215,7 @@ import {
   TEMPLES,
 } from './golden-city';
 import { SKYSCRAPERS, skyscraperEye } from './skyscrapers';
+import { SPACE_BARS, spaceBarEye } from './space-bars';
 
 export { wordsShown } from './journey';
 export { makeParticles, type Particle };
@@ -455,6 +456,18 @@ export const PHASES: CityPhase[] = [
     size: 0.8,
   },
   {
+    id: 'space-bars',
+    name: 'Space bars',
+    line: 'Five flying bars of the City of Dreams, one to a pill, each floating with open terraces, warm lamps and its name glowing over it: the Flying Saloon, the Golden Lounge, the Moonlight Terrace, the Lantern Junk and the Amber Balloon.',
+    words: [
+      'High over the streets, a terrace lit for whoever drifts in.',
+      'Every city needs a place to stop, look down, and stay a while.',
+    ],
+    duration: 36,
+    glow: 1,
+    size: 0.95,
+  },
+  {
     id: 'ship',
     name: 'Ship',
     line: 'Pilot a small ship through the City of Dreams: Chinatown, the Indian quarter, Istanbul, the Heights, the canals, golden gardens, temples, factories, domes, pyramids. A and D turn, W and S climb and dive, E faster, Q slower, Space boosts (with W, up into the stratosphere), L slows down to look, Enter starts a race, V flies from the cockpit, M opens the map.',
@@ -509,6 +522,7 @@ export const STEP_COLOURS = [
   '#ff4a3a',
   '#ffb24a',
   '#4ef0ff',
+  '#ffc874',
   '#b48cff',
 ];
 
@@ -4311,6 +4325,7 @@ let domeKind = 0;
 let buildingKind = 0;
 let skyscraperKind = 0;
 let atlantisKind = 0;
+let barKind = 0;
 const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number) => void }> = {
   'golden-plan': { names: PLANS, label: 'Plan', set: setPlanKind },
   rising: { names: RISING_ORDERS, label: 'Rise', set: setRisingKind },
@@ -4332,6 +4347,7 @@ const VARIANTS: Record<string, { names: string[]; label: string; set: (i: number
     label: SKYSCRAPERS.label,
     set: (i) => (skyscraperKind = i),
   },
+  'space-bars': { names: SPACE_BARS.names, label: SPACE_BARS.label, set: (i) => (barKind = i) },
 };
 
 /*
@@ -4348,6 +4364,7 @@ const PALETTE_SETS: Record<string, string[]> = {
   factories: FACTORY_PALETTES,
   domes: GOLDEN_PALETTES,
   skyscrapers: GOLDEN_PALETTES,
+  'space-bars': GOLDEN_PALETTES,
   'atlantis-buildings': ATLANTIS_PALETTES,
 };
 const palettesOf = (k: number) => PALETTE_SETS[PHASES[k]?.id ?? ''];
@@ -4413,6 +4430,8 @@ export function formAt(k: number, p: Particle, u: number, t: number): Spot {
       return buildingAt(BUILDINGS, buildingKind, p, t);
     case 'skyscrapers':
       return buildingAt(SKYSCRAPERS, skyscraperKind, p, t);
+    case 'space-bars':
+      return buildingAt(SPACE_BARS, barKind, p, t);
     default:
       return shipAt(p, t);
   }
@@ -4484,6 +4503,8 @@ export function eyeIn(k: number, u: number, t: number): Eye {
       return buildingsEye(buildingKind, t);
     case 'skyscrapers':
       return skyscraperEye(t);
+    case 'space-bars':
+      return spaceBarEye(t);
     case 'above':
       return aboveEye(t);
     case 'atlantis':

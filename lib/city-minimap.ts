@@ -15,6 +15,7 @@
 
 import type { RGB, Vec3 } from './bigbang';
 import { ANNEX_X, annexContours, annexPlaces, type MapContour, MOUNTAIN_ROWS } from './city-annex';
+import { barPlaces } from './city-bars';
 import { CANYON_PATH } from './city-canyon';
 import { CORRIDOR_HALF, CORRIDOR_LINES, CORRIDOR_X, corridorRoads } from './city-corridors';
 import { DOCKS, LOUNGES, placeDock } from './city-docks';
@@ -85,6 +86,8 @@ export type MapPlace = {
     | 'canyon'
     | 'sky'
     | 'parcours'
+    // The space bars (lib/city-bars.ts, 2026-11-14).
+    | 'bar'
     // The Mountain quarter's temples and cable car stations (lib/city-annex.ts, 2026-11-14).
     | 'temple'
     | 'cable'
@@ -339,6 +342,8 @@ export function cityMapData(): MapData {
   });
   // The fifteen flying stations and the parcours' start (lib/city-skyport.ts, 2026-11-14).
   places.push(...skyPlaces());
+  // The five space bars (lib/city-bars.ts, 2026-11-14).
+  places.push(...barPlaces());
   // The Mountain quarter's temples and cable car stations (lib/city-annex.ts, 2026-11-14).
   places.push(...annexPlaces());
   basePlaces = places.length;
@@ -536,7 +541,8 @@ export type MapLabel = {
 export type MapGo =
   | { d: DistrictId }
   | { x: number; z: number; y: number; name: string }
-  | { sky: number | 'parcours'; name: string };
+  | { sky: number | 'parcours'; name: string }
+  | { bar: number; name: string };
 export type LabelBox = { x0: number; y0: number; x1: number; y1: number };
 
 export const labelBox = (l: MapLabel): LabelBox => {
@@ -948,7 +954,7 @@ export function drawCityMap(
   // parcours' start a small open ring.
   ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
   for (const p of data.places) {
-    const sky = p.kind === 'sky' || p.kind === 'parcours';
+    const sky = p.kind === 'sky' || p.kind === 'parcours' || p.kind === 'bar';
     const base = P(p.x, 0, p.z);
     const q = raised ? P(p.x, p.y, p.z) : base;
     if (raised && p.y > 0) {
@@ -1018,6 +1024,18 @@ export function drawCityMap(
         ctx.beginPath();
         ctx.arc(q[0], q[1], 1.4, 0, Math.PI * 2);
         ctx.fill();
+        break;
+      case 'bar':
+        // A space bar: a small warm cup (a V on a short stem), quiet.
+        ctx.moveTo(q[0] - 3.5, q[1] - 3);
+        ctx.lineTo(q[0], q[1] + 1);
+        ctx.lineTo(q[0] + 3.5, q[1] - 3);
+        ctx.moveTo(q[0], q[1] + 1);
+        ctx.lineTo(q[0], q[1] + 4);
+        ctx.moveTo(q[0] - 2, q[1] + 4);
+        ctx.lineTo(q[0] + 2, q[1] + 4);
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
         break;
       case 'parcours':
         // The parcours' start: a small open ring, as its rings are.
