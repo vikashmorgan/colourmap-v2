@@ -823,6 +823,12 @@ const corrPanel = (rho, seed) => { const pts = corrPairs(rho, seed); return scat
 const likeBuy = p => p ** 6 * (1 - p) ** 34;
 // Delay X in days and support contacts Y of one order, with the marginal PMFs in the margins.
 const jointDelays = () => tbl(['delay X ↓  contacts Y →', 'Y = 0', 'Y = 1', 'Y = 2', 'm_X(x)'], [['X = 0', '0.44', '0.14', '0.02', '0.60'], ['X = 1', '0.13', '0.13', '0.04', '0.30'], ['X = 2', '0.03', '0.03', '*0.04', '0.10'], ['m_Y(y)', '0.60', '0.30', '0.10', '1']]);
+/* Lecture 6: one ticket's handling time is the skewed density of Lecture 4, x e^(−x/5)/25 (mean 10, SD 7.07).
+   The average of n tickets then has an exact density of the same family, with mean 10 and SD 7.07/√n,
+   so the sampling distributions are drawn from it rather than simulated. */
+const ticketMean = n => { const k = 2 * n, th = 5 / n; let lg = 0; for (let i = 2; i < k; i++) lg += Math.log(i); return x => (x <= 0 ? 0 : Math.exp((k - 1) * Math.log(x) - x / th - lg - k * Math.log(th))); };
+// The half-width of the 95 % interval for the tickets, with s = 6.76 minutes, against the number of tickets n.
+const halfWidth = n => (1.96 * 6.76) / Math.sqrt(n);
 // A box plot lying down: the box is Q₁ to Q₃, the line inside is the median, the whiskers reach the farthest usual values.
 /* Romeo and Juliet: each delay 0 to 60 minutes, one point per pair of delays; they meet in the band |R − J| ≤ 15. */
 function romeoSquare() {
@@ -1142,6 +1148,53 @@ const SESSIONS = [
       ['A larger test has 16 joining among 40 customers. Repeat the MLE and the ratio. Launch?', () => `<pre>L(p) = p¹⁶ (1 − p)²⁴\np̂ = 0.4, again\nL(0.4) / L(0.2) = 65.8</pre><p><b>Launch.</b> The same share of members, 40 %, but four times as many answers: the data are now 65.8 times as probable under 0.4 as under 0.2, far above 5.</p>`],
     ] },
   ], recap: ['A joint PMF gives each pair of values a probability. Row and column sums give the marginal PMFs.', 'X and Y are independent if every cell equals m_X(x) m_Y(y).', 'Means always add. Variances add for independent variables.', 'i.i.d. variables: the probability of the whole list is the product.', 'Covariance and correlation measure how two variables move together on a straight line. ρ is between −1 and 1.', 'r = 0 does not mean independent, and a correlation does not show a cause.', 'The likelihood L(θ) = P(data ∣ θ). The MLE θ̂ is the candidate with the largest L. Compare two candidates by their ratio.', 'Use ℓ(θ) = ln L(θ) for many data: it peaks at the same candidate.', 'The MLE is the best on the list, not necessarily a good model.'] },
+  { n: 6, pages: 42, short: 'Sampling, confidence', title: 'Sampling and confidence intervals', lede: 'One sample of tickets, and how far its average can be from the truth. Then a range of plausible values for the mean, and how much data it takes.', groups: [
+    { name: 'Samples and the sample mean', cards: [
+      { id: 'staffing', slide: 4, name: 'The question: is 10.50 minutes safely below 12?', what: 'Nookery plans its support staff for an average handling time of at most 12 minutes per ticket. The team lead times 40 tickets picked at random. On average they took 10.50 minutes.\n\nThat looks safe. But another 40 tickets would give another average, maybe 9 minutes, maybe 12.5. So the real question is: how far from 10.50 can the average of all tickets be? This lecture builds the tools to answer it, and comes back to these 40 tickets in each part.' },
+      { id: 'population', slide: 5, name: 'A random sample stands for the population', what: 'The population is every ticket Nookery handles. Its mean μ and its SD σ are fixed numbers, but nobody knows them. Numbers like these, which describe the whole population, are called parameters.\n\nA random sample picks n tickets so that every ticket has the same chance to be picked, independently of the others. Then the handling times of the sample, X₁ up to Xₙ, are i.i.d., as in Lecture 5: independent, and each one with mean μ and SD σ.', f: 'population:  μ, σ     fixed, unknown\nsample:  X₁, …, Xₙ     i.i.d., each with mean μ and SD σ' },
+      { id: 'see-xbar', slide: 6, name: 'We see x̄, not μ', what: 'A hidden distribution produces the handling times, and we never see its μ and σ. All we see is the sample.\n\nBefore the tickets are timed, their times and their average are random variables, written with capital letters: X₁, …, Xₙ, and the sample mean X̄ₙ. After timing, they are plain numbers, written small: 23.5, 11.3, … and x̄ = 10.50 minutes. That one number x̄ is our estimate of μ.', f: 'before sampling:  X₁, X₂, …, Xₙ  →  X̄ₙ     random\nafter sampling:  23.5, 11.3, …, 13.0  →  x̄ = 10.50     numbers', watch: 'Capital X̄ₙ is the rule "take the average", whose result changes with the sample. Small x̄ is the one number our sample gave.' },
+      { id: 'sample-mean', slide: 7, name: 'The sample mean changes from sample to sample', what: 'The sample mean adds the n observations and divides by n: the ordinary average. Our 40 tickets give x̄ = 10.50 minutes.\n\nAnother random sample of 40 tickets gives another value, such as 8.69 or 11.81. The average depends on which tickets happened to be picked. That is exactly why X̄ₙ is a random variable, with its own mean and its own spread.', f: 'X̄ₙ = (X₁ + … + Xₙ) / n', more: { html: () => tbl(['sample of 40 tickets', 'x̄, minutes'], [['sample 1', '8.69'], ['sample 2, ours', '*10.50'], ['sample 3', '11.81']]) } },
+      { id: 'mean-sd', slide: 8, name: 'The sample mean has mean μ and SD σ/√n', what: 'Two rules from Lecture 5 give the centre and the spread of X̄ₙ. Means add, so the total X₁ + … + Xₙ has mean nμ, and dividing by n brings it back to μ. On average, the sample mean hits the population mean.\n\nThe Xᵢ are independent, so their variances add too: the total has variance nσ². Dividing by n divides the variance by n², because Var(aX) = a² Var(X). What is left is σ²/n, and its root, the SD of X̄ₙ, is σ/√n. The more tickets, the smaller the spread of their average.', f: 'E[X̄ₙ] = nμ / n = μ\nVar(X̄ₙ) = nσ² / n² = σ² / n\nSD of X̄ₙ = σ / √n', watch: 'The spread shrinks with √n, not with n: four times the data only halve the SD.' },
+      { id: 'sampling-dist', slide: 9, name: 'The sampling distribution of the mean', what: 'Suppose the handling times follow the skewed model of Lecture 4, with μ = 10 and σ = 7.07 minutes. Draw 40 tickets, record their average, and repeat this many times. The averages you collect form the sampling distribution of X̄₄₀: how the estimate spreads over repeated samples.\n\nIt centres on μ = 10, with SD 1.12 minutes, as σ/√40 = 7.07/6.32 = 1.12 predicts. The deck simulates 10,000 samples; for this model the curve can also be worked out exactly, and that is the one drawn here.', f: 'centre:  μ = 10     SD:  σ / √40 = 7.07 / 6.32 = 1.12', more: { html: () => curve(ticketMean(40), 6, 16, { ticks: [6, 8, 10, 12, 14, 16], x: 'average of 40 handling times, minutes', cap: 'The sampling distribution of the average of 40 tickets: centre 10, SD 1.12' }) } },
+      { id: 'spread-compare', slide: 10, name: 'Averages vary much less than single tickets', what: 'Put the two spreads side by side. Single tickets vary with SD σ = 7.07 minutes, with a long tail to the right: some tickets take half an hour. Averages of 40 tickets vary with SD σ/√40 = 1.12 minutes, and their curve is close to a bell.\n\nThe two numbers answer two different questions. The first describes the tickets. The second says how far an average of 40 tickets typically falls from μ, and that is the one the staffing plan needs.', watch: 'Do not mix up σ, the spread of single values, with σ/√n, the spread of an average.', more: { html: () => row(curve(ticketMean(1), 0, 30, { ticks: [0, 10, 20, 30], x: 'minutes', cap: 'Single tickets: SD 7.07' }), curve(ticketMean(40), 0, 30, { ticks: [0, 10, 20, 30], x: 'minutes', cap: 'Averages of 40: SD 1.12' })) } },
+      { id: 'lln', slide: 11, name: 'The law of large numbers', what: 'The SD of X̄ₙ is σ/√n, and it shrinks towards 0 as n grows. So with more and more tickets, the running average settles at μ and stays there.\n\nThis is the weak law of large numbers. Pick any small margin ε (epsilon), say 1 minute. The chance that the average misses μ by ε or more goes to 0 as n grows. It is also why, in Lecture 1, a frequency settles near its probability: a frequency is an average of 0s and 1s.', f: 'P(|X̄ₙ − μ| ≥ ε) → 0     as n grows', more: { html: () => tbl(['n tickets', 'SD of X̄ₙ = 7.07 / √n'], [['1', '7.07'], ['4', '3.54'], ['40', '1.12'], ['400', '0.354'], ['4,000', '0.112']]) } },
+    ] },
+    { name: 'The central limit theorem', flowLabel: 'To approximate a probability for a sum', flow: ['Mean nμ and SD σ√n', 'Standardize: z = (c − nμ) / (σ√n)', 'Read Φ(z) in the table'], cards: [
+      { id: 'clt', slide: 13, name: 'The central limit theorem gives the shape', what: 'We know the centre and the spread of X̄ₙ. The central limit theorem, CLT for short, gives its shape. Standardize the average, as in Lecture 4: subtract its mean μ and divide by its SD σ/√n. Call the result Zₙ.\n\nIf the Xᵢ are i.i.d. with a finite variance, the chance that Zₙ is at most z gets closer and closer to Φ(z), the table of the standard Gaussian. So whatever the shape of the data, for large n the average is approximately Gaussian, with mean μ and SD σ/√n.', f: 'Zₙ = (X̄ₙ − μ) / (σ/√n)\nP(Zₙ ≤ z) → Φ(z)\nfor large n:  X̄ₙ ≈ N(μ, σ/√n)', more: { html: () => row(curve(ticketMean(40), 6, 16, { ticks: [6, 10, 14], x: 'average of 40 tickets, minutes', cap: 'The exact curve of the average' }), curve(gauss(10, 7.07 / Math.sqrt(40)), 6, 16, { ticks: [6, 10, 14], x: 'average of 40 tickets, minutes', cap: 'The bell of the CLT, N(10, 1.12)' })) } },
+      { id: 'averages-not-data', slide: 14, name: 'Averages become Gaussian, the data do not', what: 'Look at averages of n handling times for three values of n. For n = 1, single tickets, the shape stays skewed and a bell does not fit at all. For averages of 4 it is less skewed. For averages of 40 it is close to the bell N(10, 7.07/√40).\n\nThe CLT is about averages and sums, not about single values. And the more skewed the data, the larger the n it needs before the bell fits.', watch: 'A single ticket never becomes Gaussian, however many tickets you time. Only their average does.', more: { html: () => row(curve(ticketMean(1), 0, 30, { ticks: [0, 10, 20, 30], x: 'minutes', cap: 'n = 1: single tickets' }), curve(ticketMean(4), 0, 30, { ticks: [0, 10, 20, 30], x: 'minutes', cap: 'Averages of 4' }), curve(ticketMean(40), 0, 30, { ticks: [0, 10, 20, 30], x: 'minutes', cap: 'Averages of 40' })) } },
+      { id: 'any-shape', slide: 15, name: 'With large n, any shape gives Gaussian averages', what: 'The deck tries four very different shapes for a single value: one shaped like a U, one with two bumps, one skewed, and a loaded die. Each time it averages n = 100 values, many times over. The four sets of averages all look like the same bell, N(μ, σ/√n), each with its own μ and σ.\n\nThe only condition is a finite variance. Even a variable with just two values works: one visitor buys or not, 1 or 0, nothing like a bell, yet the number of buyers among 100 visitors is close to one.', more: { html: () => row(bars([[0, 0.8, '0.8'], [1, 0.2, '0.2']], { x: 'one visitor buys: 1, or not: 0', cap: 'One visitor, Ber(0.2): two bars' }), bars(binom(100, 0.2).map((v, k) => [k, v, v.toFixed(3)]).slice(6, 35), { thin: 1, x: 'buyers among 100 visitors', cap: 'The total of 100 visitors: a bell' })) } },
+      { id: 'sum', slide: 16, name: 'A sum of many variables is approximately Gaussian', what: 'A total of n values is n times their average: Sₙ = X₁ + … + Xₙ = n X̄ₙ. So it is close to a Gaussian too. Means add, so its mean is nμ. Variances add, so its variance is nσ² and its SD is σ√n.\n\nTo approximate the chance that the total is at most some value c, use the three steps at the top of this part: compute the mean and the SD of the total, standardize c, and read Φ in the table.', f: 'Sₙ = X₁ + … + Xₙ = n X̄ₙ\nE[Sₙ] = nμ     SD of Sₙ = σ√n\nP(Sₙ ≤ c) ≈ Φ((c − nμ) / (σ√n))', watch: 'The total spreads more as n grows, σ√n, while the average spreads less, σ/√n.' },
+      { id: 'van', slide: 17, name: 'The total weight of a van', what: 'A Nookery van carries 100 parcels whose weights are independent, each uniform between 2 and 20 kg. From Lecture 4, one parcel has mean (2 + 20)/2 = 11 kg and variance 18²/12 = 27 kg². The van’s limit is 1,200 kg. How likely is the total weight S to go over the limit?\n\nThe three steps: the total has mean 100 × 11 = 1,100 kg and SD √(100 × 27) = 51.96 kg. The limit is z = (1,200 − 1,100)/51.96 = 1.92 SDs above the mean. The table gives Φ(1.92) = 0.9726, and we want the area to the right.', f: '1. E[S] = 100 × 11 = 1,100 kg     SD = √(100 × 27) = 51.96 kg\n2. z = (1200 − 1100) / 51.96 = 1.92\n3. P(S > 1200) ≈ 1 − Φ(1.92) = 1 − 0.9726 = 0.027', more: { html: () => curve(gauss(1100, 51.96), 950, 1250, { shade: [1200, 1250], label: '0.027', ticks: [1000, 1100, 1200], x: 'total weight S, kg', cap: 'N(1100, 51.96). Shaded: over the limit of 1,200 kg' }) } },
+    ] },
+    { name: 'Confidence intervals for a mean', flowLabel: 'A 95 % confidence interval in three steps', flow: ['Compute x̄ and s', 'Compute SE = s / √n', 'Go 1.96 SE each side: x̄ ± 1.96 SE'], cards: [
+      { id: 'se', slide: 23, name: 'The standard error measures precision', what: 'The SD of X̄ₙ, σ/√n, says how far an average typically falls from μ. It has its own name: the standard error, SE. But σ is unknown too, so we replace it with the sample SD s of the data, from Lecture 4.\n\nFor the 40 tickets, s = 6.76 minutes, so SE = 6.76/√40 = 1.07 minutes: an average of 40 tickets typically misses μ by about 1 minute. Four times the data halve the SE.', f: 'SE = s / √n', watch: 's is the spread of single tickets; SE is the spread of their average. SE is smaller, by √n.', more: { html: () => tbl(['40 tickets', 'minutes'], [['x̄', '10.50'], ['s', '6.76'], ['SE = s / √40', '*1.07']]) } },
+      { id: 'ci95', slide: 24, name: 'The 95 % confidence interval for a mean', what: 'The goal: from one sample, a range of plausible values for μ that covers μ in 95 % of samples. This range is the 95 % confidence interval.\n\nWhy 1.96? By the CLT, (X̄ₙ − μ)/SE is close to N(0, 1), and the table gives Φ(1.96) = 0.975. That leaves 0.025 in each tail and 0.95 in the middle. So in 95 % of samples X̄ₙ falls within 1.96 SE of μ, which is the same as μ falling within 1.96 SE of X̄ₙ. With about 30 or more i.i.d. observations, go 1.96 standard errors to each side of x̄.', f: 'x̄ ± 1.96 SE     from x̄ − 1.96 SE to x̄ + 1.96 SE\nΦ(1.96) = 0.975', more: { html: () => curve(gauss(0, 1), -3.5, 3.5, { shade: [-1.96, 1.96], label: '0.95', ticks: [-1.96, 0, 1.96], x: 'z, in standard errors from μ', cap: '0.95 in the middle, 0.025 in each tail' }) } },
+      { id: 'ci-not', slide: 25, name: 'What a confidence interval is, and what it is not', what: 'Three sentences to keep straight. The interval is about the mean μ, and the 95 % is about the procedure, not about this one interval.', list: ['It is a range of plausible values for the mean μ, given the data. The procedure that builds it covers μ in 95 % of samples.', 'It is not a probability for μ. "μ lies in the interval with probability 0.95" is wrong: μ is a fixed number, and the computed interval either covers it or not.', 'It is not a range for single values. "95 % of tickets fall in the interval" is wrong: the interval is about the mean, and single tickets vary much more.'], watch: 'Once computed, 8.40 to 12.60 either contains μ or not. The 95 % describes how often the method works.' },
+      { id: 'tickets-ci', slide: 26, name: 'Back to the 40 tickets', what: 'Now the staffing question can be answered. The three steps give an interval from 8.40 to 12.60 minutes.\n\nThe interval contains 12. With these 40 tickets, a true mean of 12 minutes is still plausible, so the data do not show that the staffing plan is safe. The average of 10.50 alone looked reassuring; the interval shows how far off it could be.', f: '1. x̄ = 10.50     s = 6.76 minutes\n2. SE = 6.76 / √40 = 1.07 minutes\n3. 10.50 ± 1.96 × 1.07 = 10.50 ± 2.10  →  8.40 to 12.60', more: { html: () => tbl(['', 'minutes'], [['lower end, x̄ − 2.10', '8.40'], ['x̄', '10.50'], ['the plan', '*12'], ['upper end, x̄ + 2.10', '12.60']]) } },
+      { id: 'many-intervals', slide: 27, name: 'What 95 % means: many samples, many intervals', what: 'Imagine repeating the study. A computer draws 50 samples of 40 tickets from the skewed model, where μ = 10 minutes, and computes a 95 % interval from each one. Each interval is centred on its own x̄, so they jump around.\n\n48 of them cover μ and 2 miss it. In the long run, 95 in 100 cover μ. We only ever have one interval, 8.40 to 12.60, and we cannot tell whether it is one of those that missed.', watch: '95 % is the success rate of the method over many samples, not a chance about this one interval.' },
+      { id: 'levels', slide: 28, name: 'More confidence needs a wider interval', what: 'To cover μ more often, the interval must be wider. Only the 1.96 changes. For a confidence level c, leave (1 − c)/2 in each tail of N(0, 1). The z you need then has the area (1 + c)/2 to its left, which you find in the normal table.\n\nFor 90 %, Φ(z) = 0.95 gives z = 1.645. For 99 %, Φ(z) = 0.995 gives z = 2.576. A wider net catches μ more often, but says less precisely where it is.', f: '1. leave (1 − c) / 2 in each tail\n2. find z with Φ(z) = (1 + c) / 2\n3. x̄ ± z SE', more: { html: () => tbl(['c', 'Φ(z) = (1 + c)/2', 'z', '40 tickets: 10.50 ± z × 1.07'], [['90 %', '0.95', '1.645', '8.74 to 12.26'], ['95 %', '0.975', '1.96', '8.40 to 12.60'], ['99 %', '0.995', '2.576', '7.74 to 13.26']]) } },
+      { id: 'evening', slide: 29, name: 'Would customers pay for evening delivery?', what: 'Of 1,000 random Nookery customers, 230 say they would pay for evening delivery. It pays off if more than 20 % of all customers would pay.\n\nA share is a mean in disguise. Code each yes as 1 and each no as 0: the share p̂ (p-hat) is the average of these values, and their SD is √(p̂(1 − p̂)), the SD of a Bernoulli from Lecture 3. So the interval for a mean applies as it is. Every plausible share, from 0.204 to 0.256, is above 0.20, so evening delivery pays off.', f: '1. p̂ = 230 / 1000 = 0.23\n2. SE = √(0.23 × 0.77 / 1000) = 0.0133\n3. 0.23 ± 1.96 × 0.0133 = 0.23 ± 0.026  →  0.204 to 0.256' },
+    ] },
+    { name: 'Sample sizes', flowLabel: 'The sample size in four steps', flow: ['Find z: 1.96 for 95 %', 'Choose the half-width h', 'Guess the SD s', 'n = (z s / h)², rounded up'], cards: [
+      { id: 'half-width', slide: 36, name: 'Choose the sample size before collecting data', what: 'Data cost time and money, and too few give an interval too wide to decide anything. So before collecting, decide how wide the interval may be. Its width is set by the half-width h, the part after the ±.\n\nThe interval is x̄ ± z SE, so the half-width is h = z SE, and with SE = s/√n it is z s/√n. The n under the root is the lever: four times the data halve h, and sixteen times the data quarter it.', f: 'h = z SE = z s / √n', more: { html: () => curve(halfWidth, 10, 400, { guide: [160, halfWidth(160)], ticks: [40, 160, 400], x: 'number of tickets n', y: 'half-width h, minutes', cap: '40 tickets give h = 2.10; four times as many, 160, give 1.05' }) } },
+      { id: 'n-formula', slide: 37, name: 'The sample size, step by step', what: 'Turn the formula for h around to get n. Multiply both sides by √n and divide by h: √n = z s / h. Square both sides: n = (z s / h)².\n\nFour choices fill it in. The confidence level gives z, 1.96 for 95 %. The decision gives the half-width h, in the units of the data. A first sample or past data give a guess of the SD s. Compute n and round up to the next whole number, so that h stays within what you asked for.', f: 'h = z s / √n\n↓ solve for n\nn = (z s / h)²', watch: 'Always round up, never to the nearest: 175.6 tickets means 176.' },
+      { id: 'which-h', slide: 38, name: 'Which half-width does Nookery need?', what: 'With 40 tickets the half-width is h = 1.96 × 1.07 = 2.10 minutes, and the interval 10.50 ± 2.10 runs from 8.40 to 12.60. It contains 12, so Nookery cannot decide.\n\nThe plan is safe if the upper end, x̄ + h, is below 12. With x̄ = 10.50 this needs h < 12 − 10.50 = 1.50 minutes. Nookery asks for h = 1 minute, keeping a margin in case the new average comes out a little higher.', f: 'x̄ + h < 12\nh < 12 − 10.50 = 1.50     Nookery asks for h = 1' },
+      { id: 'how-many', slide: 39, name: 'How many tickets to time?', what: 'The four steps, with Nookery’s numbers. A 95 % interval leaves 0.025 in each tail, so z = 1.96. The decision asks for h = 1 minute. The guess of the SD is s = 6.76 minutes, from the 40 tickets already timed. Then n = 175.6, rounded up to 176 tickets.\n\nRounding up keeps h at most 1 minute. If the average stays near 10.50, the interval will run from about 9.50 to 11.50, below 12, and the plan would be shown safe.', f: 'n = (1.96 × 6.76 / 1)² = 13.25² = 175.6  →  176 tickets', more: { html: () => curve(halfWidth, 10, 400, { guide: [176, halfWidth(176)], ticks: [40, 176, 400], x: 'number of tickets n', y: 'half-width h, minutes', cap: 'Half-width of the 95 % interval, with s = 6.76 minutes. At 176 tickets it reaches 1' }) } },
+      { id: 'when-holds', slide: 40, name: 'When the 95 % holds', what: 'Two things can break the promise of 95 %. The first is the sample itself: it must be random. Timing only the short chat tickets centres the interval too low, whatever n is, and more data do not fix it.\n\nThe second is s, our guess of the unknown σ. From few observations s is rough and often too small, so the interval comes out too narrow. With only 5 observations, even from Gaussian data, it misses μ about 12 times in 100, not 5. More data bring s close to σ: from about 30 tickets, the interval covers μ more than 92 times in 100, even for the skewed handling times.', watch: 'A bigger sample cannot repair a sample that is not random.' },
+    ] },
+  ], practice: [
+    { id: 'l6-e1', title: 'Daily average order', setup: 'Nookery’s order values have mean 80 euros and SD 50 euros, skewed to the right: most orders are small and a few are large. A day has 100 orders, assumed i.i.d.', parts: [
+      ['Compute the mean and the SD of the day’s average order value.', () => `<pre>E[X̄ₙ] = μ = 80 euros\nSD = σ / √n = 50 / √100 = 50 / 10 = 5 euros</pre><p>The average of 100 orders spreads ten times less than a single order.</p>`],
+      ['Use the CLT to compute the probability that the day’s average exceeds 90 euros.', () => `<pre>X̄₁₀₀ ≈ N(80, 5)\nz = (90 − 80) / 5 = 2\nP(X̄₁₀₀ > 90) ≈ 1 − Φ(2) = 1 − 0.9772 = 0.023</pre>` + curve(gauss(80, 5), 65, 95, { shade: [90, 95], label: '0.023', ticks: [70, 75, 80, 85, 90], x: 'the day’s average, euros', cap: 'N(80, 5). Shaded: a daily average above 90 euros' })],
+      ['Can you use N(80, 50) for the probability that a single order exceeds 90 euros? Explain.', () => `<p><b>No.</b> The CLT describes the average of many orders. A single order keeps its own skewed distribution.</p><pre>N(80, 50) would give negative order values the probability\nΦ((0 − 80) / 50) = Φ(−1.6) = 0.055</pre><p>An order value is never negative, so the bell is the wrong model for one order.</p>` + curve(gauss(80, 50), -50, 230, { shade: [-50, 0], label: '0.055', ticks: [-50, 0, 80, 200], x: 'single order, euros', cap: 'N(80, 50). Shaded: negative order values, which never happen' })],
+    ] },
+    { id: 'l6-e2', title: 'Battery swaps', setup: 'Girandola, an e-bike sharing service, swaps the batteries of its bikes from a van. The crew times 100 random swaps: x̄ = 8.4 minutes and s = 5 minutes. The van routes are planned for swaps of 10 minutes on average. The plan is safe if every plausible mean swap time is below 10 minutes.', parts: [
+      ['Compute the standard error of the average swap time.', () => `<pre>SE = s / √n = 5 / √100 = 5 / 10 = 0.5 minutes</pre><p>The SD of the average, σ/√n, with the sample SD s in place of the unknown σ.</p>`],
+      ['Compute the 95 % confidence interval for the mean swap time μ.', () => `<pre>Φ(z) = 0.975, so z = 1.96\n8.4 ± 1.96 × 0.5 = 8.4 ± 0.98\nfrom 7.42 to 9.38 minutes</pre><p>A central area of 0.95 leaves 0.025 in each tail.</p>`],
+      ['A colleague writes: "95 % of the swaps take from 7.42 to 9.38 minutes." Correct the sentence.', () => `<p>The interval is about the mean swap time μ, not about single swaps. Single swaps vary with SD 5 minutes, so many fall outside it: x̄ ± s alone already runs from 3.4 to 13.4 minutes.</p><p>A correct sentence: "Mean swap times from 7.42 to 9.38 minutes are plausible. The procedure that gives this interval covers μ in 95 % of samples."</p>`],
+      ['Compute the 99 % confidence interval. Is the plan of 10 minutes safe?', () => `<pre>Φ(z) = 0.995, so z = 2.576\n8.4 ± 2.576 × 0.5 = 8.4 ± 1.29\nfrom 7.11 to 9.69 minutes</pre><p>The upper end, 9.69 minutes, is below 10. Every plausible mean swap time is below the plan, so the plan is <b>safe</b>.</p>`],
+    ] },
+  ], recap: ['A random sample gives i.i.d. values. The population’s μ and σ are fixed and unknown; the sample gives x̄ and s.', 'The sample mean X̄ₙ changes from sample to sample. Its mean is μ and its SD σ/√n.', 'Law of large numbers: as n grows, the average settles at μ.', 'CLT: for large n, averages and sums are close to a Gaussian, whatever the data look like. Single values keep their own shape.', 'The standard error is SE = s/√n.', 'The 95 % interval is x̄ ± 1.96 SE. For a level c, find z with Φ(z) = (1 + c)/2.', 'The interval is about μ, not single values, and the 95 % is about the procedure, not this one interval.', 'Sample size: n = (z s / h)², rounded up. Four times the data halve the interval.'] },
 ];
 SESSIONS.forEach(s => { let k = 0; for (const g of s.groups) for (const c of g.cards) c.num = `${s.n}.${++k}`; });
 const readSize = () => Number(document.documentElement.style.getPropertyValue('--read')) || 1;
@@ -1179,6 +1232,14 @@ const PICTURES = {
     + scatter([{ pts: adWeeks.reg }, { pts: adWeeks.hol, hollow: 1 }], { lo: 0, hi: 32, ylo: 600, yhi: 2000, ticks: [0, 10, 20, 30], yticks: [1000, 1500, 2000], x: 'ad spending in the week, thousand euros', y: 'orders in the week', fit: 1, fitEach: 1, cap: 'Filled: regular weeks. Hollow: holiday weeks. Dashed: all weeks. Solid: within each season.' })
     + `<p class="pic-lede"><b>Maximum likelihood</b> asks each candidate model how probable it makes the data, and keeps the best. 6 buyers among 40 visitors: the <b>likelihood</b> peaks at p = 0.15.</p>`
     + curve(p => likeBuy(p) * 1e8, 0, 0.6, { guide: [0.15, likeBuy(0.15) * 1e8], ticks: [0, 0.15, 0.25, 0.4, 0.6], x: 'candidate p', y: 'L(p) × 10⁸', cap: 'L(p) = p⁶ (1 − p)³⁴. The MLE is p̂ = 0.15' }),
+  6: () => `<p class="pic-lede">40 random tickets average <b>x̄ = 10.50</b> minutes; another 40 would give another average. Single tickets spread with SD σ = 7.07. Their <b>sample mean</b> spreads with SD σ/√n = 1.12, and its curve is close to a bell.</p>`
+    + row(curve(ticketMean(1), 0, 30, { ticks: [0, 10, 20, 30], x: 'minutes', cap: 'Single tickets: SD 7.07' }), curve(ticketMean(40), 0, 30, { ticks: [0, 10, 20, 30], x: 'minutes', cap: 'Averages of 40: SD 1.12' }))
+    + `<p class="pic-lede">The <b>central limit theorem</b>: averages and sums of many values are close to a Gaussian, whatever the data look like. A van of 100 parcels goes over 1,200 kg with probability 0.027.</p>`
+    + curve(gauss(1100, 51.96), 950, 1250, { shade: [1200, 1250], label: '0.027', ticks: [1000, 1100, 1200], x: 'total weight S, kg', cap: 'The total of 100 parcels, N(1100, 51.96)' })
+    + `<p class="pic-lede">A <b>95 % confidence interval</b> goes 1.96 standard errors each side of x̄: 10.50 ± 1.96 × 1.07, from 8.40 to 12.60 minutes. It holds 12, so the plan is not shown safe.</p>`
+    + curve(gauss(0, 1), -3.5, 3.5, { shade: [-1.96, 1.96], label: '0.95', ticks: [-1.96, 0, 1.96], x: 'z, in standard errors from μ', cap: 'Φ(1.96) = 0.975: 0.95 in the middle' })
+    + `<p class="pic-lede">The <b>sample size</b>: a half-width of 1 minute needs n = (1.96 × 6.76 / 1)² = 175.6, so 176 tickets.</p>`
+    + curve(halfWidth, 10, 400, { guide: [176, halfWidth(176)], ticks: [40, 176, 400], x: 'number of tickets n', y: 'half-width h, minutes', cap: 'Four times the data halve the half-width' }),
 };
 
 /* ---------- Every formula, piece by piece ----------
@@ -1266,6 +1327,22 @@ const READS = {
   '5|four-steps': { parts: [['f(xᵢ ∣ θ)', 'The PMF or the density of one data point, if θ were true.'], ['×', 'i.i.d. data: one factor per observation, multiplied.'], ['ln', 'The natural logarithm. It turns the product into a sum.'], ['θ̂', 'Theta hat: the maximum likelihood estimate, the MLE.']] },
   '5|log': { parts: [['ℓ(θ)', 'A curly l: the log-likelihood, ln L(θ).'], ['ln(ab) = ln a + ln b', 'The logarithm of a product is the sum of the logarithms.'], ['6 ln p', 'The 6 factors p become 6 times ln p.'], ['34 ln(1 − p)', 'The 34 factors 1 − p become 34 times ln(1 − p).']], walk: { intro: 'The candidate p = 0.15:', steps: [['ln 0.15', '= −1.897'], ['ln 0.85', '= −0.163'], ['6 ln p', '6 × −1.897 = −11.38'], ['34 ln(1 − p)', '34 × −0.163 = −5.53'], ['ℓ(0.15), the sum', '−11.38 − 5.53 = −16.91', 1], ['check: ln L(0.15)', 'ln(4.54 × 10⁻⁸) = −16.91', 1]] } },
   '5|continuous': { parts: [['f(xᵢ ∣ μ)', 'The height of the bell N(μ, 1) at data point xᵢ.'], ['μ', 'The candidate: where the centre of the bell is placed.'], ['×', 'The five heights multiplied.']], walk: { intro: 'The candidate μ = 1, with the heights of N(1, 1):', steps: [['x = 1.5: height', '0.352'], ['x = −0.5: height', '0.130'], ['x = 2.0: height', '0.242'], ['x = 0.5: height', '0.352'], ['x = 1.5: height', '0.352'], ['L(1), the product', '0.352 × 0.130 × 0.242 × 0.352 × 0.352 = 1.37 × 10⁻³', 1]] } },
+  '6|population': { parts: [['μ, σ', 'The mean and the SD of the whole population: its parameters, fixed but unknown.'], ['X₁, …, Xₙ', 'The handling times of the n tickets picked, before they are timed.'], ['i.i.d.', 'Independent and identically distributed: no ticket affects another, and all follow the same model.']] },
+  '6|see-xbar': { parts: [['X̄ₙ', 'X-bar n: the sample mean, before the tickets are timed. A random variable.'], ['x̄', 'x-bar: the number it took for our sample, 10.50 minutes.']] },
+  '6|sample-mean': { parts: [['X̄ₙ', 'X-bar n: the sample mean of n observations, before they are known.'], ['X₁, …, Xₙ', 'The n observations: the handling time of ticket 1, up to ticket n.'], ['/ n', 'Divide the total by how many there are.']], walk: { intro: 'Three tickets, with 1, 2 and 3 minutes:', steps: [['n', '= 3'], ['X₁ + X₂ + X₃', '1 + 2 + 3 = 6'], ['x̄ = the total / n', '6 / 3 = 2 minutes', 1]] } },
+  '6|mean-sd': { parts: [['nμ', 'The mean of the total: n means added.'], ['nσ²', 'The variance of the total: n variances added, since the tickets are independent.'], ['/ n²', 'Dividing the total by n divides its variance by n².'], ['σ / √n', 'The SD of the sample mean: the SD of one ticket, divided by the root of n.']], walk: { intro: 'Four tickets, each with SD σ = 6 minutes:', steps: [['n', '= 4'], ['σ²', '6² = 36'], ['Var(X̄ₙ) = σ² / n', '36 / 4 = 9'], ['SD = σ / √n', '6 / √4 = 6 / 2 = 3 minutes', 1], ['σ = 7.07, n = 40', '7.07 / √40 = 7.07 / 6.32 = 1.12 minutes', 1]] } },
+  '6|lln': { parts: [['|X̄ₙ − μ|', 'How far the average falls from μ, on either side.'], ['ε', 'Epsilon: any margin you choose, however small, as long as it is above 0.'], ['→ 0', 'Gets as close to 0 as you like, once n is large enough.']] },
+  '6|clt': { parts: [['Zₙ', 'The standardized average: how many SDs X̄ₙ is from μ.'], ['σ/√n', 'The SD of the average, from the card on the sample mean.'], ['Φ(z)', 'The area to the left of z under the standard bell, from the table.'], ['≈', '"Approximately": close, and closer as n grows.']], walk: { intro: 'Is the average of 40 tickets at most 11 minutes, with μ = 10 and σ = 7.07?', steps: [['σ/√n', '7.07 / √40 = 1.12'], ['X̄ₙ − μ', '11 − 10 = 1'], ['Zₙ = (X̄ₙ − μ) / (σ/√n)', '1 / 1.12 = 0.89'], ['P(X̄₄₀ ≤ 11) ≈ Φ(0.89)', '= 0.81', 1]] } },
+  '6|sum': { parts: [['S', 'The sum of the n values, Sₙ: their total.'], ['nμ', 'The mean of the total: n means added.'], ['σ√n', 'The SD of the total: n variances added, then the root.'], ['c', 'The value the total must not pass.']], walk: { intro: 'Only to see the steps: four parcels with mean 10 kg and SD 3 kg. Is the total at most 46 kg?', steps: [['n', '= 4'], ['nμ', '4 × 10 = 40 kg'], ['σ√n', '3 × √4 = 6 kg'], ['z = (c − nμ) / (σ√n)', '(46 − 40) / 6 = 1'], ['P(S₄ ≤ 46) ≈ Φ(1)', '= 0.8413', 1]] } },
+  '6|van': { parts: [['S', 'The total weight of the 100 parcels.'], ['100 × 11', 'Means add: 100 parcels of 11 kg on average.'], ['√(100 × 27)', 'Variances add, then take the root.'], ['1 − Φ(z)', 'The area to the right of z: over the limit.']] },
+  '6|se': { parts: [['SE', 'The standard error: the estimated SD of the sample mean.'], ['s', 'The sample SD of the data, with n − 1, as in Lecture 4.'], ['√n', 'The root of the number of observations.']], walk: { intro: 'Nine tickets with s = 6 minutes:', steps: [['s', '= 6'], ['n', '= 9'], ['√n', '√9 = 3'], ['SE = s / √n', '6 / 3 = 2 minutes', 1]] } },
+  '6|ci95': { parts: [['x̄', 'The sample mean: the centre of the interval.'], ['±', '"Plus or minus": once to the left, once to the right.'], ['1.96', 'The z with Φ(z) = 0.975, from the table: 0.025 left in each tail.'], ['SE', 'The standard error, s/√n.']], walk: { intro: 'Only to see the steps: nine tickets with x̄ = 20 minutes and s = 6.', steps: [['SE = s / √n', '6 / 3 = 2'], ['1.96 SE', '1.96 × 2 = 3.92'], ['x̄ − 1.96 SE', '20 − 3.92 = 16.08'], ['x̄ + 1.96 SE', '20 + 3.92 = 23.92'], ['x̄ ± 1.96 SE', 'from 16.08 to 23.92 minutes', 1]] } },
+  '6|tickets-ci': { parts: [['x̄ ± 1.96 SE', 'The 95 % interval.'], ['12', 'The plan: the mean must be at most 12 minutes.']], walk: { intro: 'The 40 tickets:', steps: [['x̄', '= 10.50'], ['s', '= 6.76'], ['n', '= 40'], ['SE = s / √n', '6.76 / 6.32 = 1.07'], ['1.96 SE', '1.96 × 1.07 = 2.10'], ['x̄ ± 1.96 SE', '8.40 to 12.60 minutes', 1], ['is 12 inside?', 'yes, so the plan is not shown safe', 1]] } },
+  '6|levels': { parts: [['c', 'The confidence level, such as 0.95.'], ['(1 − c) / 2', 'The area left out in each tail.'], ['(1 + c) / 2', 'The area to the left of z: the middle c plus one tail.'], ['z', 'How many standard errors to go each side.']], walk: { intro: 'The level c = 0.99:', steps: [['(1 − c) / 2', '(1 − 0.99) / 2 = 0.005'], ['(1 + c) / 2', '(1 + 0.99) / 2 = 0.995'], ['z with Φ(z) = 0.995', '2.576, from the table'], ['x̄ ± z SE for the tickets', '10.50 ± 2.576 × 1.07 = 10.50 ± 2.76', 1]] } },
+  '6|evening': { parts: [['p̂', 'p-hat: the share of yes in the sample, our estimate of the true share p.'], ['√(p̂(1 − p̂))', 'The SD of one 0-or-1 answer.'], ['SE', 'That SD divided by √n: √(p̂(1 − p̂) / n).']], walk: { intro: 'Only to see the steps: 100 customers, 20 of them say yes.', steps: [['p̂', '20 / 100 = 0.2'], ['p̂(1 − p̂)', '0.2 × 0.8 = 0.16'], ['SE = √(p̂(1 − p̂) / n)', '√(0.16 / 100) = 0.4 / 10 = 0.04'], ['p̂ ± 1.96 SE', '0.2 ± 0.078: from 0.122 to 0.278', 1]] } },
+  '6|half-width': { parts: [['h', 'The half-width: how far the interval reaches on each side of x̄.'], ['z', '1.96 for 95 %.'], ['s / √n', 'The standard error.']], walk: { intro: 'The 40 tickets, then four times as many:', steps: [['h with n = 40', '1.96 × 6.76 / √40 = 2.10'], ['h with n = 160', '1.96 × 6.76 / √160 = 1.05', 1]] } },
+  '6|n-formula': { parts: [['z s / h', 'How many half-widths fit into z standard deviations.'], ['( )²', 'Squared: the root of n comes back as n.']], walk: { intro: 'Only to see the steps: z = 2, s = 10 minutes and h = 1 minute.', steps: [['z s', '2 × 10 = 20'], ['z s / h', '20 / 1 = 20'], ['n = (z s / h)²', '20² = 400', 1]] } },
+  '6|how-many': { parts: [['z', '1.96: a 95 % interval.'], ['h', 'The half-width the decision needs: 1 minute.'], ['s', 'The guess of the SD, from the 40 tickets already timed.']], walk: { intro: 'Nookery’s choices:', steps: [['z', '= 1.96'], ['h', '= 1 minute'], ['s', '= 6.76 minutes'], ['z s / h', '1.96 × 6.76 / 1 = 13.25'], ['n = (z s / h)²', '13.25² = 175.6'], ['round up', '176 tickets', 1], ['h with n = 176', '13.25 / √176 = 1.00', 1]] } },
 };
 
 /* ---------- Store: this browser first, then the account ---------- */
@@ -1519,7 +1596,7 @@ document.addEventListener('click', e => {
 });
 
 
-/* ---------- Cheat sheet: every rule and term from lectures 1 to 5 ---------- */
+/* ---------- Cheat sheet: every rule and term from lectures 1 to 6 ---------- */
 const REF = [
   { name: 'Sets', items: [
     ['x ∈ S   x ∉ S', 'x is, or is not, an element of S.', '3 ∈ {1, …, 6}', 1, 'set'],
@@ -1631,11 +1708,32 @@ const REF = [
     ['Likelihood ratio', 'How many times as probable the data are under one candidate as under another.', 'L(0.15) / L(0.25) = 3.3', 5, 'likelihood'],
     ['ℓ(θ)', 'The log-likelihood: a sum instead of a product. It peaks at the same candidate.', 'ℓ(θ) = ln L(θ)     ln(ab) = ln a + ln b', 5, 'log'],
   ] },
+  { name: 'Samples and the sample mean', items: [
+    ['Random sample', 'n cases picked so that each has the same chance, independently: their values are i.i.d., with the population’s μ and σ.', '', 6, 'population'],
+    ['X̄ₙ', 'The sample mean: the average of n observations. A random variable before sampling, the number x̄ after.', 'X̄ₙ = (X₁ + … + Xₙ) / n', 6, 'sample-mean'],
+    ['σ/√n', 'The SD of the sample mean, for i.i.d. data. Its mean is μ.', 'E[X̄ₙ] = μ     Var(X̄ₙ) = σ² / n\n7.07 / √40 = 1.12', 6, 'mean-sd'],
+    ['Sampling distribution', 'How an estimate, such as X̄ₙ, spreads over repeated samples.', '', 6, 'sampling-dist'],
+    ['Law of large numbers', 'As n grows, the average settles at μ.', 'P(|X̄ₙ − μ| ≥ ε) → 0', 6, 'lln'],
+  ] },
+  { name: 'Central limit theorem', items: [
+    ['CLT', 'For large n, the average of i.i.d. values with a finite variance is close to a Gaussian, whatever their shape. Single values keep their own shape.', 'X̄ₙ ≈ N(μ, σ/√n)\nZₙ = (X̄ₙ − μ) / (σ/√n)', 6, 'clt'],
+    ['Sₙ', 'A sum of n i.i.d. values: mean nμ, SD σ√n, close to a Gaussian.', 'P(Sₙ ≤ c) ≈ Φ((c − nμ) / (σ√n))', 6, 'sum'],
+  ] },
+  { name: 'Confidence intervals', items: [
+    ['SE', 'The standard error: the SD of the sample mean, with the sample SD s in place of σ.', 'SE = s / √n\n6.76 / √40 = 1.07', 6, 'se'],
+    ['Confidence interval', 'A range of plausible values for μ. The procedure covers μ in 95 % of samples. Not a probability for μ, and not a range for single values.', 'x̄ ± 1.96 SE\n10.50 ± 1.96 × 1.07 = 8.40 to 12.60', 6, 'ci95'],
+    ['Confidence level c', 'Leave (1 − c)/2 in each tail: find z with Φ(z) = (1 + c)/2. More confidence, a wider interval.', '90 %: z = 1.645     95 %: z = 1.96     99 %: z = 2.576', 6, 'levels'],
+    ['p̂ ± z SE', 'An interval for a share: code yes as 1 and no as 0, then treat it as a mean.', 'SE = √(p̂(1 − p̂) / n)', 6, 'evening'],
+  ] },
+  { name: 'Sample sizes', items: [
+    ['h', 'The half-width of an interval: the part after the ±.', 'h = z SE = z s / √n', 6, 'half-width'],
+    ['n = (z s / h)²', 'The sample size for a half-width h, rounded up. Four times the data halve h.', '(1.96 × 6.76 / 1)² = 175.6  →  176', 6, 'n-formula'],
+  ] },
 ];
 
 /* ---------- A lecture ---------- */
 // Terms in a card's text, and symbols in a formula: hoverable, but not coloured.
-const TERMS = /\b(maximum likelihood|log-likelihood|MLE|joint PMFs?|marginal PMFs?|covariances?|correlations?|sample spaces?|complements?|unions?|intersections?|disjoint|partitions?|De Morgan|axioms?|events?|sample (?:mean|variance|SD)s?|densit(?:y|ies)|PDFs?|CDFs?|quantiles?|medians?|quartiles?|IQR|Gaussian|exponential|robust|standardize|standardization|conditional probabilit(?:y|ies)|total probability|chain rule|multiplication rule|Bayes|priors?|likelihoods?|posteriors?|independent|independence|PMFs?|Bernoulli|binomial|Poisson|expectation|variances?|standard deviation|deviations?|SD|random variables?|frequenc(?:y|ies))\b/gi;
+const TERMS = /\b(central limit theorem|CLT|law of large numbers|standard errors?|confidence intervals?|confidence levels?|sampling distributions?|half-width|sample sizes?|random samples?|maximum likelihood|log-likelihood|MLE|joint PMFs?|marginal PMFs?|covariances?|correlations?|sample spaces?|complements?|unions?|intersections?|disjoint|partitions?|De Morgan|axioms?|events?|sample (?:mean|variance|SD)s?|densit(?:y|ies)|PDFs?|CDFs?|quantiles?|medians?|quartiles?|IQR|Gaussian|exponential|robust|standardize|standardization|conditional probabilit(?:y|ies)|total probability|chain rule|multiplication rule|Bayes|priors?|likelihoods?|posteriors?|independent|independence|PMFs?|Bernoulli|binomial|Poisson|expectation|variances?|standard deviation|deviations?|SD|random variables?|frequenc(?:y|ies))\b/gi;
 /* Asked for 2026-11-05: "X, small x, and n, p terms like that should also reveal what they are when I
    hover, just like Var()". What a letter means in general; the card's own READS can say more (openPeek). */
 const LETTERS = {
@@ -1667,6 +1765,10 @@ const LETTERS = {
   'θ': 'Theta: the unknown number of a model, its parameter. In Lecture 4 it set the scale of a density; in Lecture 5 the candidates of maximum likelihood.',
   'ρ': 'Rho, the Greek r: the correlation of X and Y, from −1 to 1.',
   'ℓ': 'A curly l: the log-likelihood, ln L(θ).',
+  'X̄': 'X-bar: the sample mean before the data are in, a random variable. Written X̄ₙ for n observations; once the data are in, its value is x̄.',
+  SE: 'The standard error: the SD of the sample mean, estimated as s/√n.',
+  h: 'The half-width of a confidence interval: how far it reaches on each side of x̄.',
+  'ε': 'Epsilon: a margin, any number above 0, however small.',
   'Φ': 'Phi, the Greek F: the CDF of the standard Gaussian. Φ(z) is the area to the left of z, read from a table.',
   '∫': 'An integral, a long S for "sum": it adds up very thin strips under a curve, which gives an area. It is Σ for a curve.',
   dx: 'The width of one very thin strip under the curve.',
@@ -1674,9 +1776,9 @@ const LETTERS = {
   'Q₃': 'The third quartile: the median of the upper half of the sorted data.',
 };
 const LETTER_FROM = { 'ᵏ': 'k', 'ⁿ': 'n', 'ₓ': 'x', 'ᵢ': 'i', 'ₙ': 'n', 'ₐ': 'a', 'ᵇ': 'b', 's²': 's', f_X: 'fX', F_X: 'FX' };
-const SYMBOLS = /x̄|Q₁|Q₃|∫|Φ|\bdx\b|Unif\(|Exp\(|(?<![A-Za-z])N\(|∪|∩|∣|∅|Ω|⊂|∼|ᶜ|Σ|E\[|Var\(|Cov\(|m_X|f_X|F_X|σ_X|n_A|e\^\((?:[^()]|\([^()]*\))*\)|P\(|(?<![\p{L}\p{N}_]|carrier )(?:[XxnpkλμσbigABSTωzZqsθρℓ]|a(?=[X²|,]|\s*=|\s*E\[|\s*$))(?![A-Za-z0-9_α-ω])|(?<=a)X(?![A-Za-z0-9_])|[ᵏⁿₓᵢₙₐᵇ]/gu;
+const SYMBOLS = /X̄|x̄|\bSE\b|Q₁|Q₃|∫|Φ|\bdx\b|Unif\(|Exp\(|(?<![A-Za-z])N\(|∪|∩|∣|∅|Ω|⊂|∼|ᶜ|Σ|E\[|Var\(|Cov\(|m_X|f_X|F_X|σ_X|n_A|e\^\((?:[^()]|\([^()]*\))*\)|P\(|(?<![\p{L}\p{N}_]|carrier )(?:[XxnpkλμσbigABSTωzZqsθρℓεh]|a(?=[X²|,]|\s*=|\s*E\[|\s*$))(?![A-Za-z0-9_α-ω])|(?<=a)X(?![A-Za-z0-9_])|[ᵏⁿₓᵢₙₐᵇ]/gu;
 // In running text only the letters that cannot be English words.
-const PROSE_LETTERS = /x̄|Q₁|Q₃|∫|Φ|f_X|F_X|(?<![\p{L}\p{N}_’'-])s²|(?<![\p{L}\p{N}_’'-])[XxnpkλμσzZqθ](?![A-Za-z0-9_α-ω’'-])|[ᵏⁿₓᵢₙ]/gu;
+const PROSE_LETTERS = /X̄|x̄|\bSE\b|Q₁|Q₃|∫|Φ|f_X|F_X|(?<![\p{L}\p{N}_’'-])s²|(?<![\p{L}\p{N}_’'-])[XxnpkλμσzZqθ](?![A-Za-z0-9_α-ω’'-])|[ᵏⁿₓᵢₙ]/gu;
 const letterSpan = (key, shown) => `<span class="kw kw-v" data-kw="${key}">${shown}</span>`;
 function kwText(s) { return subs(esc(s).replace(PROSE_LETTERS, m => letterSpan(LETTER_FROM[m] || m, m)).replace(TERMS, m => `<span class="kw-t" data-kw="${m.toLowerCase()}">${m}</span>`)); }
 function mathHtml(s) {
@@ -1854,6 +1956,18 @@ const PRACTICE_LAWS = {
     [[5, 'likelihood', 'The likelihood ratio', 'L(θ̂) / L(θ)', 'L(0.4) / L(0.2) = 2.85, below 5']],
     [[5, 'likelihood', 'The likelihood ratio, with more data', 'L(p) = p¹⁶ (1 − p)²⁴', 'L(0.4) / L(0.2) = 65.8, above 5']],
   ],
+  'l6-e1': [
+    [[6, 'mean-sd', 'The sample mean has mean μ and SD σ/√n', 'E[X̄ₙ] = μ     SD = σ / √n', 'E[X̄₁₀₀] = 80     SD = 50 / √100 = 5']],
+    [[6, 'clt', 'The central limit theorem', 'for large n:  X̄ₙ ≈ N(μ, σ/√n)', 'X̄₁₀₀ ≈ N(80, 5)'],
+     [4, 'standardize', 'Standardize, then read the table', 'z = (x − μ) / σ,  P(X > x) = 1 − Φ(z)', 'z = (90 − 80) / 5 = 2     1 − Φ(2) = 1 − 0.9772 = 0.023']],
+    [[6, 'averages-not-data', 'Averages become Gaussian, the data do not', 'the CLT is about averages and sums, not single values', 'one order stays skewed;  N(80, 50) would give Φ(−1.6) = 0.055 to negative values']],
+  ],
+  'l6-e2': [
+    [[6, 'se', 'The standard error', 'SE = s / √n', 'SE = 5 / √100 = 0.5']],
+    [[6, 'ci95', 'The 95 % confidence interval', 'x̄ ± 1.96 SE', '8.4 ± 1.96 × 0.5 = 8.4 ± 0.98:  7.42 to 9.38']],
+    [[6, 'ci-not', 'What a confidence interval is not', 'a range of plausible values for μ, not a range for single values', 'single swaps:  x̄ ± s = 8.4 ± 5 = 3.4 to 13.4']],
+    [[6, 'levels', 'Another confidence level', 'Φ(z) = (1 + c) / 2,  then x̄ ± z SE', 'Φ(z) = 0.995:  z = 2.576\n8.4 ± 2.576 × 0.5 = 8.4 ± 1.29:  7.11 to 9.69']],
+  ],
 };
 const cardNo = (n, id) => { const s = SESSIONS.find(x => x.n === n), i = s ? s.groups.flatMap(g => g.cards).findIndex(c => c.id === id) : -1; return i < 0 ? '' : String(i + 1); };
 function lawsHtml(s, laws) {
@@ -1930,6 +2044,10 @@ const PRACTICE_PICS = {
     draw: () => bars([[1, 0.00415, '0.00415'], [2, 0.01322, '0.01322'], [3, 0.0075, '0.00750']], { x: 'candidate λ', y: 'L(λ)', cap: 'The likelihood of each candidate', hi: [2] }),
     read: 'λ = 2 makes the counts 1, 3 and 2 most probable.' },
   'l5-e6': { given: [['n', '10, then 40', 'customers asked'], ['k', '4, then 16', 'customers who joined'], ['g(p)', 'euros', 'profit of 1,000 offers: 15,000p − 4,000'], ['5', 'times', 'the ratio needed to launch']] },
+  'l6-e1': { given: [['μ', '80 euros', 'the mean of one order value'], ['σ', '50 euros', 'the SD of one order value'], ['n', '100 orders', 'the orders of one day'], ['X̄₁₀₀', 'euros', 'the day’s average order value']],
+    draw: () => curve(gauss(80, 5), 65, 95, { ticks: [65, 70, 75, 80, 85, 90, 95], x: 'the day’s average, euros', cap: 'The day’s average by the CLT: N(80, 5)' }),
+    read: 'Each tick is one SD of the average, 5 euros. A single order spreads ten times more, σ = 50, with a skewed shape that this bell does not describe.' },
+  'l6-e2': { given: [['n', '100 swaps', 'the swaps timed'], ['x̄', '8.4 minutes', 'their average'], ['s', '5 minutes', 'their sample SD'], ['10', 'minutes', 'the plan: every plausible mean must be below it']] },
 };
 function picHtml(x) {
   const q = PRACTICE_PICS[x.id];
@@ -2026,9 +2144,25 @@ const CHARTS = [
     f: 'N(10.3, 7.2)\nP(X < 0) = Φ(−10.3 / 7.2) = Φ(−1.43) = 0.076',
     parts: [['N(10.3, 7.2)', 'The Gaussian with the largest likelihood.'], ['P(X < 0)', 'The probability it gives to impossible negative times.']],
     read: 'The shaded area should be 0, since a time is never negative. The best on the list is not a good model.' },
+  { s: 6, card: 'spread-compare', title: 'Single tickets against averages of 40', chart: () => row(curve(ticketMean(1), 0, 30, { ticks: [0, 10, 20, 30], x: 'minutes' }), curve(ticketMean(40), 0, 30, { ticks: [0, 10, 20, 30], x: 'minutes' })),
+    f: 'SD of one ticket:  σ = 7.07\nSD of the average:  σ / √n = 7.07 / √40 = 1.12',
+    parts: [['σ', 'The spread of single tickets, on the left.'], ['σ / √n', 'The spread of an average of 40, on the right.']],
+    read: 'Same axis, same centre at 10 minutes: the averages crowd much closer to it, and their curve is close to a bell.' },
+  { s: 6, card: 'van', title: 'A sum is close to a bell', chart: () => curve(gauss(1100, 51.96), 950, 1250, { shade: [1200, 1250], label: '0.027', ticks: [1000, 1100, 1200], x: 'total weight S, kg' }),
+    f: 'S ≈ N(1100, 51.96)\nz = (1200 − 1100) / 51.96 = 1.92\nP(S > 1200) ≈ 1 − 0.9726 = 0.027',
+    parts: [['1100', 'nμ: 100 parcels of 11 kg on average.'], ['51.96', 'σ√n: √(100 × 27).'], ['the shaded area', 'Over the limit of 1,200 kg.']],
+    read: 'The limit sits 1.92 SDs above the mean, so only a thin tail of loads goes over it.' },
+  { s: 6, card: 'ci95', title: '1.96 standard errors each side', chart: () => curve(gauss(0, 1), -3.5, 3.5, { shade: [-1.96, 1.96], label: '0.95', ticks: [-1.96, 0, 1.96], x: 'z, in standard errors from μ' }),
+    f: 'Φ(1.96) = 0.975\nx̄ ± 1.96 SE = 10.50 ± 1.96 × 1.07 = 8.40 to 12.60',
+    parts: [['0.95', 'The middle area: the confidence level.'], ['1.96', 'Leaves 0.025 in each tail.'], ['SE', 's/√n = 1.07 minutes for the 40 tickets.']],
+    read: 'In 95 % of samples, x̄ falls within 1.96 SE of μ, so μ falls within 1.96 SE of x̄.' },
+  { s: 6, card: 'how-many', title: 'The half-width shrinks with √n', chart: () => curve(halfWidth, 10, 400, { guide: [176, halfWidth(176)], ticks: [40, 176, 400], x: 'number of tickets n', y: 'half-width h, minutes' }),
+    f: 'h = 1.96 × 6.76 / √n\nn = (1.96 × 6.76 / 1)² = 175.6  →  176',
+    parts: [['h', 'The half-width, on the left scale.'], ['n', 'The number of tickets, along the bottom.']],
+    read: 'Find 1 minute on the left, go across to the curve, then down: 176 tickets.' },
 ];
 function chartsHtml() {
-  return `<h1>Charts</h1><p class="lede">The key graph of each topic, lectures 1 to 5. Beside each one: its formula worked out on the example, what each piece is, and how to read the chart.</p>`
+  return `<h1>Charts</h1><p class="lede">The key graph of each topic, lectures 1 to 6. Beside each one: its formula worked out on the example, what each piece is, and how to read the chart.</p>`
     + SESSIONS.map(s => {
       const list = CHARTS.filter(c => c.s === s.n);
       if (!list.length) return '';
@@ -2041,7 +2175,7 @@ function chartsHtml() {
     }).join('');
 }
 function refHtml() {
-  return `<h1>Cheat sheet</h1><p class="lede">Every rule and term from lectures 1 to 5, by topic. The lecture tag opens its card.</p>
+  return `<h1>Cheat sheet</h1><p class="lede">Every rule and term from lectures 1 to 6, by topic. The lecture tag opens its card.</p>
     <input type="search" class="ref-search" id="ref-q" placeholder="Find: bayes, union, variance, poisson…" aria-label="Find a rule or term" autocomplete="off">
     <div id="ref-list">${REF.map(g => `<section class="ref-group"><h2>${esc(g.name)}</h2><dl class="ref">${g.items.map(([t, d, ex, n, id]) => `<div class="ref-row" data-hl="stats|ref|${esc(t)}" data-text="${esc(`${t} ${d} ${ex}`.toLowerCase())}">
       <dt>${mathHtml(t)}</dt><dd><span>${esc(d)}</span>${ex ? `<pre>${mathHtml(ex)}</pre>` : ''}<button type="button" class="ref-go" data-go="${esc(cardKey(n, id))}">Lecture ${n} ›</button></dd></div>`).join('')}</dl></section>`).join('')}</div>
@@ -2053,10 +2187,11 @@ function filterRef(q) {
   for (const g of document.querySelectorAll('.ref-group')) g.hidden = !g.querySelector('.ref-row:not([hidden])');
   document.getElementById('ref-none').hidden = !!document.querySelector('.ref-row:not([hidden])');
 }
-/* ---------- Exam practice: lectures 1 to 5 together ----------
+/* ---------- Exam practice: lectures 1 to 6 together ----------
  * Asked for 2026-11-14: the course's three-page sheet of exercises on lectures 1 to 5, its formulas and its
  * Gaussian tables, on this page. The exercises are in our own words, every number worked out again; the tables
- * are computed here from Φ, not copied. The PDF itself stays private. */
+ * are computed here from Φ, not copied. The PDF itself stays private. Lecture 6 (2026-11-15) adds a third group,
+ * written for this page on sampling and confidence intervals, after the sheet's ten, so their numbers stay. */
 const EXAM = [
   { group: 'Math', items: [
     { id: 'e1', title: 'Two dice', setup: 'A fair 4-sided die and a fair 6-sided die are rolled once each. A = "the sum is 7", B = "the 4-sided die shows 4", C = "the sum is at least 9".', parts: [
@@ -2119,6 +2254,25 @@ const EXAM = [
       ['A larger test: 16 of 40 join. MLE and ratio again. Launch?', () => `<pre>L(p) = p¹⁶ (1 − p)²⁴, largest at p̂ = 0.4\nL(0.4) / L(0.2) = 65.8</pre><p>Same MLE, much stronger evidence: launch. More data make the likelihood peak sharper.</p>`],
     ] },
   ] },
+  { group: 'Sampling and confidence intervals', items: [
+    { id: 'e11', title: 'Averages of a die', setup: 'A fair 6-sided die is rolled 100 times. One roll has mean μ = 3.5 and variance 35/12 = 2.92. X̄ is the average of the 100 rolls and S their total.', parts: [
+      ['Compute the mean and the SD of X̄.', () => `<pre>E[X̄] = μ = 3.5\nσ = √2.92 = 1.71\nSD of X̄ = σ / √n = 1.71 / √100 = 0.171</pre>`],
+      ['Use the CLT to compute P(X̄ > 3.85).', () => `<pre>X̄ ≈ N(3.5, 0.171)\nz = (3.85 − 3.5) / 0.171 = 2.05\nP(X̄ > 3.85) ≈ 1 − Φ(2.05) = 1 − 0.9798 = 0.020</pre><p>One roll is flat, nothing like a bell, yet the average of 100 rolls is close to one.</p>`],
+      ['Compute P(S ≤ 330).', () => `<pre>E[S] = 100 × 3.5 = 350     SD of S = 1.71 × √100 = 17.1\nz = (330 − 350) / 17.1 = −1.17\nP(S ≤ 330) ≈ Φ(−1.17) = 1 − 0.8790 = 0.121</pre>`],
+      ['A friend says: "after 100 rolls, each roll is close to Gaussian." Correct the sentence.', () => `<p>Each roll stays what it is: 1 to 6, each with chance 1/6. The CLT is about the <b>average</b> or the <b>total</b> of many rolls, never about a single roll.</p>`],
+    ] },
+    { id: 'e12', title: 'Parcels from a new depot', setup: 'Tostato promises that parcels from its new depot take at most 28 hours on average. It times 64 random parcels: x̄ = 26.5 hours and s = 8 hours.', parts: [
+      ['Compute the standard error.', () => `<pre>SE = s / √n = 8 / √64 = 8 / 8 = 1 hour</pre>`],
+      ['Compute the 95 % confidence interval for the mean delivery time μ. Can Tostato say the promise is kept?', () => `<pre>26.5 ± 1.96 × 1 = 26.5 ± 1.96\nfrom 24.54 to 28.46 hours</pre><p>The interval reaches above 28: a mean above 28 hours is still plausible. <b>Not yet.</b></p>`],
+      ['A manager writes: "μ is between 24.54 and 28.46 with probability 0.95." Correct the sentence.', () => `<p>μ is a fixed number, and this interval either covers it or not. The 95 % is about the procedure: intervals built this way cover μ in 95 % of samples. A correct sentence: "Mean delivery times from 24.54 to 28.46 hours are plausible."</p>`],
+      ['How many parcels must be timed for a 95 % interval with a half-width of 1 hour, guessing s = 8?', () => `<pre>n = (z s / h)² = (1.96 × 8 / 1)² = 15.68² = 245.9\nround up: 246 parcels</pre><p>If x̄ stays near 26.5, the interval would run from about 25.5 to 27.5, below 28.</p>`],
+    ] },
+    { id: 'e13', title: 'Customers who come back', setup: 'Lunetta asks 400 random customers whether they came back within a month: 88 did. A loyalty card pays off if more than 18 % of all customers come back.', parts: [
+      ['Compute the share p̂ and its standard error.', () => `<pre>p̂ = 88 / 400 = 0.22\nSE = √(0.22 × 0.78 / 400) = 0.0207</pre><p>A share is the average of 1s (came back) and 0s, so the interval for a mean works.</p>`],
+      ['Compute the 95 % interval for the true share p. Does the card pay off?', () => `<pre>0.22 ± 1.96 × 0.0207 = 0.22 ± 0.041\nfrom 0.179 to 0.261</pre><p>The lower end, 0.179, is just below 0.18: a share under 18 % is still plausible, so the data cannot yet say that the card pays off.</p>`],
+      ['How many customers would give a half-width of 0.02?', () => `<pre>n = (z s / h)²,  with  s² = p̂(1 − p̂) = 0.22 × 0.78 = 0.1716\nn = 1.96² × 0.1716 / 0.02² = 1,648.05\nround up: 1,649 customers</pre><p>To halve the half-width from about 0.041 to 0.02, four times the customers, and a little more.</p>`],
+    ] },
+  ] },
 ];
 const examKey = id => `stats|exam|ex-${id}`;
 // The Gaussian tables, computed from Φ (the same Φ the summaries use), so nothing is copied.
@@ -2135,7 +2289,7 @@ function phiTablesHtml() {
 }
 function examHtml() {
   let n = 0;
-  return `<p class="where">Exam practice</p><h1>Lectures 1 to 5, together</h1><p class="lede">Ten exercises that mix the whole course: five on the maths, five company cases. Try each on paper, then open the answer. The tables of Φ are at the end.</p>`
+  return `<p class="where">Exam practice</p><h1>Lectures 1 to 6, together</h1><p class="lede">Thirteen exercises across the whole course: five on the maths and five company cases on lectures 1 to 5, then three on sampling and confidence intervals from Lecture 6. Try each on paper, then open the answer. The tables of Φ are at the end.</p>`
     + EXAM.map(g => `<h2>${esc(g.group)}</h2>` + g.items.map(x => `<section class="ex" id="c-exam-ex-${x.id}" data-key="${esc(examKey(x.id))}" aria-label="Exercise ${++n}"><h3><span class="ex-num">Exercise ${n}</span>${esc(x.title)}</h3><p class="ex-setup" data-hl="stats|exam|${x.id}">${kwText(x.setup)}</p>${x.table ? x.table() : ''}
     <div class="practice">${x.parts.map(([q, a], j) => `<details class="pq" data-hl="stats|exam|${x.id}-${j + 1}"><summary><span class="num">${String.fromCharCode(97 + j)}</span><span>${kwText(q)}</span></summary><div class="ans">${answerHtml(a())}</div></details>`).join('')}</div>
     <div class="notes"></div>
@@ -2151,7 +2305,7 @@ if (!isTab(current) && !SESSIONS.some(s => s.n === current)) current = 1;
 function renderTabs() {
   document.getElementById('sessions').innerHTML = `<button type="button" class="sess sum" role="tab" data-s="sum" aria-selected="${current === 'sum'}"><b>Summary</b><span>Every lecture, start to finish</span></button>`
     + SESSIONS.map(s => `<button type="button" class="sess" role="tab" data-s="${s.n}" aria-selected="${s.n === current}"><b>Lecture ${s.n}</b><span>${esc(s.short)}</span><span class="bar"><i></i></span></button>`).join('')
-    + `<button type="button" class="sess ref" role="tab" data-s="exam" aria-selected="${current === 'exam'}"><b>Exam practice</b><span>Lectures 1 to 5, mixed</span></button>`
+    + `<button type="button" class="sess ref" role="tab" data-s="exam" aria-selected="${current === 'exam'}"><b>Exam practice</b><span>Lectures 1 to 6, mixed</span></button>`
     + `<button type="button" class="sess ref" role="tab" data-s="ref" aria-selected="${current === 'ref'}"><b>Cheat sheet</b><span>Every rule, findable</span></button>`
     + `<button type="button" class="sess ref" role="tab" data-s="charts" aria-selected="${current === 'charts'}"><b>Charts</b><span>Every graph, with its formula</span></button>`;
   paintBars();
@@ -2177,7 +2331,7 @@ function picOpen() { try { return localStorage.getItem('stats-pic-closed') !== '
 document.addEventListener('toggle', e => { if (e.target.id === 'pic') { try { localStorage.setItem('stats-pic-closed', e.target.open ? '' : '1'); } catch (err) {} } }, true);
 /* Every X and x the course writes gets its own look, also where no peek is attached:
    tables, worked rows, "aX + b". Highlights count letters, not tags, so the extra spans do not move them. */
-const BARE_XX = /(?<![\p{L}\p{N}_])[Xx](?![\p{L}\p{N}_])|(?<=(?<![\p{L}])a)X(?![\p{L}\p{N}_])/gu;
+const BARE_XX = /(?<![\p{L}\p{N}_])[Xx](?![\p{L}\p{M}\p{N}_])|(?<=(?<![\p{L}])a)X(?![\p{L}\p{N}_])/gu;
 function markXx(root) {
   const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement.closest('.kw-v, svg, textarea, .note, .own-boxes, button') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
   const hits = [];
@@ -2266,6 +2420,19 @@ const ESSENTIALS = {
     { name: 'Likelihood', is: 'How probable the data are if a candidate θ were the true value. A probability of the data, not of θ.', f: 'L(θ) = P(data ∣ θ)\nL(p) = pᵏ (1 − p)ⁿ⁻ᵏ  for k successes in n', pic: () => curve(p => likeBuy(p) * 1e8, 0, 0.6, { guide: [0.15, likeBuy(0.15) * 1e8], ticks: [0, 0.15, 0.6], x: 'candidate p', y: 'L(p) × 10⁸', cap: '6 buyers among 40' }) },
     { name: 'MLE θ̂', is: 'The candidate with the largest likelihood. Compare two candidates by the ratio of their likelihoods.', f: 'θ̂ = the candidate with the largest L(θ)\nL(θ₁) / L(θ₂)', ex: '6 buyers among 40: p̂ = 0.15, and the data are 3.3 times as probable under 0.15 as under 0.25.' },
     { name: 'Log-likelihood ℓ', is: 'The logarithm turns the product into a sum, so very small numbers stay readable. It peaks at the same candidate.', f: 'ℓ(θ) = ln L(θ)     ln(ab) = ln a + ln b' },
+  ],
+  6: [
+    { name: 'Population and sample', is: 'The population has a fixed, unknown mean μ and SD σ: its parameters. A random sample of n gives i.i.d. values, and from them x̄ and s.', f: 'population:  μ, σ\nsample:  X₁, …, Xₙ  i.i.d.  →  x̄, s', watch: 'The sample must be random: every case with the same chance, independently.' },
+    { name: 'Sample mean X̄ₙ', is: 'The average of the n values. Before sampling it is a random variable, and its value changes from sample to sample.', f: 'X̄ₙ = (X₁ + … + Xₙ) / n\nE[X̄ₙ] = μ     SD = σ / √n', parts: [['σ / √n', 'how far an average typically falls from μ']], pic: () => row(curve(ticketMean(1), 0, 30, { ticks: [0, 10, 20, 30], x: 'minutes', cap: 'Single tickets: SD 7.07' }), curve(ticketMean(40), 0, 30, { ticks: [0, 10, 20, 30], x: 'minutes', cap: 'Averages of 40: SD 1.12' })) },
+    { name: 'Law of large numbers', is: 'As n grows, the SD σ/√n goes to 0, so the average settles at μ.', f: 'P(|X̄ₙ − μ| ≥ ε) → 0' },
+    { name: 'Central limit theorem', is: 'For large n, the average of i.i.d. values with a finite variance is close to a Gaussian, whatever the shape of the data.', f: 'X̄ₙ ≈ N(μ, σ/√n)\nZₙ = (X̄ₙ − μ) / (σ/√n)  →  N(0, 1)', watch: 'It is about averages and sums. A single value keeps its own shape.', pic: () => curve(ticketMean(40), 6, 16, { ticks: [6, 10, 14], x: 'average of 40 tickets, minutes', cap: 'Skewed tickets, yet their average is close to a bell' }) },
+    { name: 'Sum Sₙ', is: 'A total of n i.i.d. values: mean nμ, SD σ√n, close to a Gaussian.', f: 'P(Sₙ ≤ c) ≈ Φ((c − nμ) / (σ√n))', ex: 'A van of 100 parcels, each Unif(2, 20) kg: P(S > 1200) ≈ 1 − Φ(1.92) = 0.027.' },
+    { name: 'Standard error SE', is: 'The SD of the sample mean, with the sample SD s in place of the unknown σ.', f: 'SE = s / √n', ex: '40 tickets with s = 6.76: SE = 6.76 / √40 = 1.07 minutes.' },
+    { name: '95 % confidence interval', is: 'A range of plausible values for μ. The procedure that builds it covers μ in 95 % of samples.', f: 'x̄ ± 1.96 SE', parts: [['1.96', 'Φ(1.96) = 0.975: 0.025 left in each tail']], ex: '10.50 ± 1.96 × 1.07 = 8.40 to 12.60 minutes. It holds 12, so the plan is not shown safe.', pic: () => curve(gauss(0, 1), -3.5, 3.5, { shade: [-1.96, 1.96], label: '0.95', ticks: [-1.96, 0, 1.96], x: 'z, in standard errors from μ', cap: '0.95 in the middle' }) },
+    { name: 'What it is not', is: 'Not a probability for μ, which is a fixed number: the interval covers it or not. Not a range for single values, which vary much more.', watch: '"95 % of tickets fall in the interval" is wrong.' },
+    { name: 'Other levels', is: 'Leave (1 − c)/2 in each tail and find z with Φ(z) = (1 + c)/2. More confidence, a wider interval.', f: '90 %: z = 1.645     95 %: z = 1.96     99 %: z = 2.576' },
+    { name: 'A share p̂', is: 'Code yes as 1 and no as 0: a share is an average, so the same interval works.', f: 'SE = √(p̂(1 − p̂) / n)', ex: '230 yes among 1,000: 0.23 ± 0.026, from 0.204 to 0.256.' },
+    { name: 'Sample size', is: 'Choose the half-width h the decision needs, guess s, then solve h = z s/√n for n and round up.', f: 'n = (z s / h)²', ex: 'h = 1 minute: (1.96 × 6.76 / 1)² = 175.6, so 176 tickets.' },
   ],
 };
 /* Asked for 2026-11-13: "add three dots in school to see what u can understand clear confused for the summary
@@ -2730,6 +2897,7 @@ const PEEK_TERM = {
   independent: 'Independent', independence: 'Independent', pmf: 'PMF', bernoulli: 'Ber(p)', binomial: 'Bin(n, p)', poisson: 'Pois(λ)', expectation: 'E[X]', variance: 'Var(X)', deviation: 'X − μ', 'standard deviation': 'σ_X', sd: 'σ_X', 'random variable': 'Random variable', frequency: 'Relative frequency',
   density: 'PDF', pdf: 'PDF', cdf: 'CDF', quantile: 'Quantile', median: 'Median', quartile: 'Quartiles', iqr: 'IQR', gaussian: 'N(μ, σ)', exponential: 'Exp(λ)', 'sample mean': 'x̄', 'sample variance': 's²', 'sample sd': 's²', robust: 'Robust', standardize: 'Z = (X − μ) / σ', standardization: 'Z = (X − μ) / σ',
   'joint pmf': 'Joint PMF', 'marginal pmf': 'Marginal PMF', covariance: 'Cov(X, Y)', correlation: 'ρ', 'maximum likelihood': 'MLE', mle: 'MLE', 'log-likelihood': 'ℓ(θ)',
+  'central limit theorem': 'CLT', clt: 'CLT', 'law of large numbers': 'Law of large numbers', 'standard error': 'SE', 'confidence interval': 'Confidence interval', 'confidence level': 'Confidence level c', 'sampling distribution': 'Sampling distribution', 'half-width': 'h', 'sample size': 'n = (z s / h)²', 'random sample': 'Random sample',
 };
 const peekKey = w => PEEK_TERM[w] || PEEK_TERM[w.replace(/ies$/, 'y').replace(/s$/, '')] || PEEK_TERM[w.replace(/s$/, '')];
 const refByTerm = term => { for (const g of REF) for (const it of g.items) if (it[0] === term) return it; return null; };
@@ -3014,10 +3182,10 @@ document.addEventListener('mousedown', e => { if (e.target.closest && !e.target.
    The decks are the teacher's material, so they stay out of this public page: each user uploads them once
    to their private folder (the same one as the Python page's slides), and each card's "Slide n ›" opens
    them. Any sensible name works: Stats2.pdf or lecture02_….pdf is filed as Stats2.pdf. */
-const DECK_FILES = ['Stats1.pdf', 'Stats2.pdf', 'Stats3.pdf', 'Stats4.pdf', 'Stats5.pdf'];
+const DECK_FILES = ['Stats1.pdf', 'Stats2.pdf', 'Stats3.pdf', 'Stats4.pdf', 'Stats5.pdf', 'Stats6.pdf'];
 function deckName(name) {
   if (!/\.pdf$/i.test(name)) return null;
-  const m = name.match(/^Stats\s*([1-3])\.pdf$/i) || name.match(/(?:lecture|lesson|session)\s*_?\s*0*([1-3])(?!\d)/i);
+  const m = name.match(/^Stats\s*([1-6])\.pdf$/i) || name.match(/(?:lecture|lesson|session)\s*_?\s*0*([1-6])(?!\d)/i);
   return m ? `Stats${m[1]}.pdf` : null;
 }
 let filesUp = null;

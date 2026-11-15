@@ -26,7 +26,7 @@ describe('/statistics class page', () => {
     expect(response.headers.get('location')).toBe('http://localhost/login?next=%2Fstatistics');
   });
 
-  it('serves the five lectures to a signed-in user, uncached', async () => {
+  it('serves the six lectures to a signed-in user, uncached', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
 
     const response = await GET(request());
@@ -76,7 +76,7 @@ describe('/statistics class page', () => {
     expect(html).toContain('id="rf-dot"');
     expect(html).toContain("const RF_PREFIX = 'dreams|';");
     expect(html).toContain('Not saved. Your words are still here.');
-    for (const n of [1, 2, 3, 4, 5]) expect(html).toContain(`{ n: ${n}, pages: `);
+    for (const n of [1, 2, 3, 4, 5, 6]) expect(html).toContain(`{ n: ${n}, pages: `);
     // The cheat sheet and the highlights, as on the SQL page.
     expect(html).toContain('const REF = [');
     expect(html).toContain('data-s="ref"');
@@ -106,8 +106,17 @@ describe('/statistics class page', () => {
     expect(html).toContain('const SEG_HUE = 95;');
     // Slides come from the user's private files, never from this public page.
     expect(html).toContain(
-      "const DECK_FILES = ['Stats1.pdf', 'Stats2.pdf', 'Stats3.pdf', 'Stats4.pdf', 'Stats5.pdf'];",
+      "const DECK_FILES = ['Stats1.pdf', 'Stats2.pdf', 'Stats3.pdf', 'Stats4.pdf', 'Stats5.pdf', 'Stats6.pdf'];",
     );
+    // Upload slides files lecture01_….pdf up to lecture06_….pdf under their Stats name.
+    const deckSrc = html.match(/function deckName\(name\) \{[\s\S]*?\n\}/)?.[0] ?? '';
+    const deckName = new Function(`${deckSrc}; return deckName;`)() as (
+      name: string,
+    ) => string | null;
+    expect(deckName('lecture06_sampling_confidence.pdf')).toBe('Stats6.pdf');
+    expect(deckName('lecture04_continuous.pdf')).toBe('Stats4.pdf');
+    expect(deckName('Stats5.pdf')).toBe('Stats5.pdf');
+    expect(deckName('lecture07_next.pdf')).toBeNull();
     // Nothing of the SQL course is carried over.
     expect(html).not.toContain('sql|');
     expect(html).not.toContain('Business case');
@@ -128,6 +137,27 @@ describe('/statistics class page', () => {
     expect(html).toContain("'l5-e6': [");
     expect(html).toContain('  5: [\n');
     expect(html).toContain("'Cov(': 'Cov(X, Y)'");
+  });
+
+  it('carries Lecture 6: sampling and confidence intervals', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
+
+    const html = await (await GET(request())).text();
+
+    expect(html).toContain("{ n: 6, pages: 42, short: 'Sampling, confidence'");
+    // Sampling distributions are drawn from the exact density of the average, not simulated.
+    expect(html).toContain('const ticketMean = n => ');
+    expect(html).toContain('const halfWidth = n => ');
+    // Every formula explained piece by piece, the cheat sheet, practice, charts, summary and peeks.
+    expect(html).toContain("'6|ci95': { parts:");
+    expect(html).toContain("{ name: 'Confidence intervals', items: [");
+    expect(html).toContain("'l6-e2': [");
+    expect(html).toContain("{ s: 6, card: 'how-many'");
+    expect(html).toContain('  6: [\n');
+    expect(html).toContain("'standard error': 'SE'");
+    // The exam practice gains three questions on Lecture 6, after the sheet's ten.
+    expect(html).toContain("{ id: 'e13', title: 'Customers who come back'");
+    expect(html).toContain('<span>Lectures 1 to 6, mixed</span>');
   });
 
   it('carries the Lecture 3 notes of 2026-11-08', async () => {
