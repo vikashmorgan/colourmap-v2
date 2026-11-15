@@ -643,6 +643,38 @@ describe('TripPlayer Game and Studio', () => {
     expect(phone.build).not.toHaveBeenCalled();
   });
 
+  it('builds a far layer that asks for every step on any step, turning its hue (Hyper-speed)', () => {
+    const hue = vi.fn(() => 0.3);
+    const layer = {
+      build: vi.fn(() => ({
+        positions: new Float32Array([0, 0, 600, 10, 5, 900]),
+        colours: new Float32Array([0.3, 0.1, 0.1, 0.1, 0.3, 0.1]),
+        tile: [100, 1000] as [number, number],
+        cuts: [0],
+        spans: [[0, 1000]] as [number, number][],
+      })),
+      near: () => 36,
+      far: () => 2400,
+      shown: () => 1,
+      everyStep: true,
+      hue,
+      rowHue: 0.9,
+    };
+    const trip = makeTrip();
+    const pieces = trip.pieces as NonNullable<Trip['pieces']>;
+    const camera = vi.fn((k: number, s: number) => ({ ...pieces.camera(k, s), fov: 74 }));
+    render(
+      <TripPlayer
+        trip={{ ...trip, farLayer: layer, pieces: { ...pieces, camera } }}
+        page="hyper-city"
+      />,
+    );
+    runFrames(3);
+    expect(layer.build).toHaveBeenCalledTimes(1);
+    expect(hue).toHaveBeenCalled();
+    expect(camera).toHaveBeenCalled();
+  });
+
   it('opens a world on the side it was left on', () => {
     const { unmount } = render(<TripPlayer trip={makeTrip()} page="ocean" />);
     fireEvent.click(screen.getByRole('button', { name: 'Design' }));

@@ -34,6 +34,18 @@ export type FarLayer = {
   far: (eye: Vec3) => number;
   /** How much of it shows now, 0 (hidden) to 1. */
   shown: (eye: Vec3) => number;
+  /**
+   * Shown on every step, the Journey too, not only on a game step (the Hyper-speed city, whose
+   * whole picture is the far layer).
+   */
+  everyStep?: boolean;
+  /**
+   * The palette's turn round the colour wheel now, radians (the Hyper-speed city's slow drift); the
+   * colours stay as built without it.
+   */
+  hue?: (eye: Vec3) => number;
+  /** How far each repetition of the tile along z is turned in hue besides, at most (radians). */
+  rowHue?: number;
 };
 
 const smoothstep = (a: number, b: number, x: number) => {

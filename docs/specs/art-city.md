@@ -1694,6 +1694,11 @@ four minutes over every firework place within 5 of a station or a parcours ring.
 > The City's trip no longer passes `farLayer` (components/City.tsx; components/City.test.tsx checks
 > it). `lib/city-far.ts` and `lib/far-layer.ts` stay, ready to become an Art design: a psychedelic,
 > futuristic neon horizon, for a later game of mega speed over quickly generated cities.
+>
+> **Now a design of its own, 2026-11-15:** the **Hyper-speed city** (`/geometry-field/hyper-city`,
+> docs/specs/hyper-speed-city.md) flies on autopilot in a straight line at mega speed above
+> procedurally generated neon cities, drawn through the same far-layer path (`lib/far-layer.ts`),
+> its tiles from `lib/hyper-city.ts`. `lib/city-far.ts` stays unused.
 
 The user asked "what stops u from increasing field depth of vision 5 times on computer?" The
 answer: the grains are worked out in JavaScript every frame (about a millisecond a thousand), so a
