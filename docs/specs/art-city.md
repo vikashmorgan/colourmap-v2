@@ -2283,7 +2283,7 @@ slowly; about a third of the roofs carry a water tank, a fifth an antenna with a
 strings of small lights hang along every other terrace, sagging between poles, twinkling slowly.
 
 **Collision.** A cheap height field in `blocked`: in the annex, a peak's slope, a temple's or
-pylon's box, or a hill with its houses (its slope plus 8.5) holds the ship, `MARGIN` round. Off
+pylon's box, or a hill with its houses (its slope plus 8.8 since 2026-11-15, reaching 1.5 past its foot) holds the ship, `MARGIN` round. Off
 the slopes the street and the river are the floor as everywhere.
 
 **Gateways, names, fast travel.** Each quarter's name over its way in, as the bands' gates are:
@@ -2919,6 +2919,109 @@ computed from the time. No allocation per grain.
 **Still rough.** Not yet seen in a browser. The rings and arrows are light. The arrows sit on box
 towers only, so the business towers, designs and Matrix towers have none. The surge does not show
 on the map.
+
+### Favela boxes and the city's cable cars (2026-11-15)
+
+> "Make sure favelas look like favelas. Add cable cars inside the city. Right now favelas are just
+> dots, not boxes stacked on each other etc..."
+
+> "Perspective is everything ... perspective is power, and makes it beautiful."
+
+**The Favela, redrawn as boxes** (`lib/city-favela.ts`). Same six hills and terraces, same warm
+palette, but every house is now a box outline, lines of grains along its edges, the way the
+Mountain quarter draws its peaks as contour lines. Our own design, no real place copied.
+
+- **Boxes stacked.** Each house draws its flat roof's rim, the rim of the slab its top storey
+  stands on (a one-storey house's foot), and the corner edges of both boxes: 68 sites a house.
+  The top storey of a two- or three-storey house is a box of its own:
+  - half the time the same size, so the slab reads as a storey line;
+  - a quarter of the time narrower and shifted along the terrace, set back a little;
+  - on two-storey houses, a quarter of the time jutting out over the slope (0.4 to 0.8): an
+    overhang.
+
+  Every house is turned a little its own way (±4°) and set back by up to 0.45, so the rows are
+  not ruled lines. The terraces step up, so the boxes stack over one another up the hill.
+- **Flat roofs** carry water tanks (a small drum's lid toward the back of the roof, about a third
+  of them) and antennas (a mast and a soft red light, about a fifth).
+- **Windows** glow in five warm tones (lamp, candle, warm white, rosy, pale gold), each window its
+  own, drifting slowly (a 0.14 swell over about 25 seconds), never flashing.
+- **Wires tangle** from roof to roof: to the next house along the terrace (six in ten), up to a
+  roof on the terrace above (a third), now and then a long one two terraces up. Each sags
+  between its ends: about 5,500 wires, faint, light to fly through.
+- **Stairways wind.** The four a hill now swing round the hill and back as they climb (±0.22 rad,
+  a slow wave from foot to top). Houses keep clear of them across their whole depth.
+- Light strings hang along every third terrace (was every other), so the wires read.
+- **Collision matches the drawing.** The houses' height over the slope is 8.8 (was 8.5), and the
+  height field reaches 1.5 past a hill's foot, so every drawn edge, tank and wire is inside the
+  walls (tested site by site). Only the antennas' tips stand over it.
+- About 5,700 houses (some gave their ground to the stairs and the cable car's pylons). The rows
+  are a little lighter (weight 1.05, was 1.3) because lines need more grains than dots did.
+
+**Cable cars in the city** (`lib/city-cable-cars.ts`, new). Three lines of gondolas on cables
+between tall lattice pylons.
+
+- **West and East lines, laid for perspective.** Each runs straight down a long street one column
+  in from the strip's edge streets (x −130 and 130), from row 1 to row 21: the length of the first
+  three bands, ending well before the river and its Heights–Golden bridges. A pylon stands at every
+  fourth cross street (136 apart), a station at each end, so flying down either street the pylons
+  recede in an even row and the ropes scallop between them toward the vanishing point. The West
+  line starts at row 9, past Chinatown: its street is Chinatown's low West lane window, kept clear
+  of anything solid. The East line is 680 long; each line has 20 cabins.
+- **The Favela line** climbs from the city to the Favela: from a station on the strip's east side,
+  along cross street 27, over the edge road, past a pylon at the first hill's foot and one on its
+  slope, to a summit station over the houses (116 long, 3 cabins). The hill's houses keep clear of
+  its pylons (`FAVELA_PYLONS`, 4.5 round each).
+- **Heights.** The city lines' ropes run at 66 over the street, sagging to about 62 mid-span. That
+  is over the street channels (to 35), the loop metro (35 to 45; where the West and East lines
+  cross the rail the cabins pass well over it, 12 or more from the rail's line), the boulevards' flying cars (44) and the
+  corridors' upper lane (48). It is under the tube (80 and up, and 20 or more away), the barge
+  (96) and the express lanes (112, 120). The Favela line rises from 56 to 71; its cabins pass 3 or
+  more over the hill's houses' height. All of it keeps off the avenue (30 or more), the racing
+  corridors (20 or more past their walls), the darters' lines, the great arch, the Saturn Tower and
+  the landmarks.
+- **Pylons.** Each is a lattice column of four legs tapering up, a zigzag brace on two faces, an
+  arm from its top over the street to the ropes' head, a crossbar carrying the two ropes, and a
+  lamp breathing on top. Each stands at a street corner, off the car lanes, its column clear of
+  every wall. A station adds a deck where the cabins turn, a roof, the bullwheel and warm lamps.
+  The pylons are walls, like the tube's pillars: `cablePylonHolds` in `blocked` is sixteen quick
+  distance checks, before the annex's height field, so the favela pylons hold too. The ropes,
+  cabins, arms, decks and roofs are light: the ship flies through them.
+- **Cabins.** Out along one rope, round the end station's bullwheel (a half circle, no jump), back
+  along the other, at 2.6 a second, evenly spaced: a formula of the time, nothing kept. Each is a
+  framed box in its line's tint (rose, turquoise, saffron, toward ivory) on a hanger and grip, with
+  four warm windows a side, drifting slowly.
+
+**Map.** The six stations are named marks of kind `cable`, beside the Mountain quarter's.
+
+**Cost.** Ropes are drawn a span at a time (a grain every 1.4 on each rope), pylons and stations
+120 and 176 sites, cabins 44, out to 600, at the tile copy nearest the eye. The renderer thins them
+by distance like everything else, so far down a street the pylons and ropes become a dotted
+receding line. No allocation per grain.
+
+**Acceptance** (`lib/city-favela.test.ts`, `lib/city-cable-cars.test.ts`, `lib/city-annex.test.ts`):
+- Every house is a closed roof rim at its roof (no gap over 1.3), a slab rim at its top storey's
+  floor, and plumb corner edges.
+- Top storeys are shifted (over 15%) or jutting out (over 5%, two-storey houses only), and houses
+  are turned.
+- Every house site but the antennas, and every wire, is under the collision's height.
+- Windows are warm, in at least four tones, and drift by under 0.03 in half a second.
+- Wires: over 0.6 a house, a fifth climbing a terrace, every one sagging.
+- Stairways wind (over 0.15 rad) and stay clear of houses; no house stands on a pylon's ground.
+- The cable lines are three, with stations at the ends; the city lines run straight down a street
+  with pylons at even steps.
+- Clear of the avenue, the corridors, the darters' lines, the tube, the rail, every current and big
+  ship's line, the arch, Saturn and the landmarks. Cabins never touch a wall, and pass over the
+  favela's houses.
+- Pylons stand at corners off the car lanes, their columns clear, and block in every tile;
+  everything else is light.
+- Cabins move smoothly at their pace with no jump at the stations, evenly spaced.
+- Every site is finite and mellow (under 0.7), within budget and sight, the nearest tile copy
+  drawn; the stations are named on the map.
+
+**Still rough.** Not yet seen in a browser. The cable lines are not drawn as lines on the minimap,
+and there is no fast travel to their stations. Cabins do not pause at the stations. The favela's
+collision is still the hill's smooth height field, not each box, and the stairs and alleys are
+not open to fly into.
 
 ### Atlantis on the map, and a longer run-up (2026-11-15)
 
