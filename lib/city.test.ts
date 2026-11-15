@@ -657,7 +657,8 @@ describe('Ship, round two: solid walls, the avenue and Chinatown', () => {
     // tube's mouth, its rings filling the near view and starving every far wall).
     let s0 = 0;
     while (districtAt(route(s0).c[0], route(s0).c[2]) !== 'heights') s0 += 0.5;
-    s0 += 4;
+    // 4.5 s on (4 before the Ship's start moved back 40, 2026-11-15: the frame's timing shifted).
+    s0 += 4.5;
     expect(chinatownness(route(s0).c[2], 40)).toBe(0);
     fresh(s0);
     const shot = frame(s0);

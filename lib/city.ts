@@ -167,6 +167,7 @@ import {
   shipGrainColour,
   trailLight,
 } from './city-ships';
+import { OPENING } from './city-signs';
 import { skyGrain } from './city-sky';
 import { skyCarItems } from './city-skycars';
 import { resetSkyDock, skyDockBanner, skyDockStep, undockSky } from './city-skyport';
@@ -2181,10 +2182,9 @@ const cruiseY = (z: number, t: number) =>
  * pour in from the canyon and on into the towers without crossing half the city.
  */
 const ROUTE_Z0 =
-  CT_BLOCKS * BLOCK_Z +
   // 2026-11-13: "a first road that is awesome": it starts at the head of the opening road
-  // (lib/city-signs.ts: its gates, the welcome over it), 190 short of Chinatown's gate.
-  190 +
+  // (lib/city-signs.ts: its gates, the welcome over it), 230 short of Chinatown's gate (2026-11-15).
+  OPENING.start +
   Math.round(
     (FLY_SPEED * (PHASE_START[PHASES.findIndex((p) => p.id === 'ship')] as number)) /
       (CT_EVERY * BLOCK_Z),
@@ -2760,28 +2760,41 @@ export function travelTo(spot: TravelSpot) {
   const { c: at, f } = flier(fly.t);
   // From Atlantis's ground, the trip starts from the gate you came in by, in the city.
   const c = inAtlantis() ? toWorld(at) : at;
+  // Landing in the copy of the city round that gate (2026-11-15).
+  const near = inAtlantis() ? toWorld([0, at[1], 0]) : c;
   if (inAtlantis()) {
     leaveAtlantis();
     resetSchool();
     clearTrail(trail);
   }
-  const to = nearestCopy(spot.pos, c);
+  setOff(c, f, nearestCopy(spot.pos, near), spot.yaw, spot.realm);
+}
+/**
+ * A trip within Atlantis (its map, 2026-11-15): from where you are to a realm-local spot, staying
+ * on its ground (the sharks and the welcome as they were). Outside Atlantis, an ordinary trip.
+ */
+export function travelWithin(spot: TravelSpot) {
+  if (!inAtlantis()) return travelTo(spot);
+  const { c, f } = flier(fly.t);
+  setOff(c, f, [...spot.pos], spot.yaw);
+}
+function setOff(c: Vec3, f: Vec3, to: Vec3, toYaw: number, realm?: 'atlantis') {
   const d = Math.hypot(to[0] - c[0], to[2] - c[2]);
   fly.travel = {
     from: [...c],
     to,
     fromYaw: fly.mode === 'route' ? Math.atan2(-f[0], -f[2]) : fly.yaw,
-    toYaw: spot.yaw,
+    toYaw,
     // Up over the roofs on a long trip, hardly at all on a short one.
     arc: Math.min(80, 0.12 * d),
     dur: 0.6 + 0.4 * Math.min(1, d / 900),
     u: 0,
-    realm: spot.realm,
+    realm,
   };
   fly.mode = 'pilot';
   fly.dock = null;
   // Landing over the towers' sky (a flying station, the parcours), the ship holds its height there.
-  fly.high = to[1] > SKY - 5;
+  fly.high = !inAtlantis() && to[1] > SKY - 5;
   fly.vy = 0;
   fly.slow = false;
   fly.pitch = 0;

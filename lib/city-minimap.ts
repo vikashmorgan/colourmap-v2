@@ -497,7 +497,8 @@ export const HEIGHT_K = 1.6;
 
 /**
  * Where a point of the tile (x, z, `y` over the street) falls on a screen w × h: [sx, sy, depth],
- * the depth growing toward the viewer, for drawing far things first. A gentle perspective.
+ * the depth growing toward the viewer, for drawing far things first. A gentle perspective. `k`, the
+ * pixels to a metre, is the tile's by default (Atlantis's map passes its own).
  */
 export function projectMap(
   v: MapView,
@@ -506,8 +507,8 @@ export function projectMap(
   x: number,
   y: number,
   z: number,
+  k = mapScale(v, w, h),
 ): [number, number, number] {
-  const k = mapScale(v, w, h);
   const X = x - v.cx;
   const Z = z - v.cz;
   const c = Math.cos(v.yaw);
@@ -1128,61 +1129,75 @@ export function drawCityMap(
   ctx.globalAlpha = 1;
   ctx.textAlign = 'center';
 
-  // You: a gold pointer the way you fly, two rings spreading slowly from it and faint lines across
-  // the map through it, so the eye finds it at once. Mellow: the rings ease out, nothing flashes.
   if (ship && q) {
     const ahead = P(
       ship.x + Math.sin(ship.heading) * 10,
       raised ? Math.max(0, ship.y) : 0,
       ship.z - Math.cos(ship.heading) * 10,
     );
-    const a = Math.atan2(ahead[1] - q[1], ahead[0] - q[0]);
-    const k = Math.max(0.7, Math.min(1.3, Math.min(w, h) / 480));
-    ctx.strokeStyle = 'rgba(255,214,150,0.16)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, q[1]);
-    ctx.lineTo(w, q[1]);
-    ctx.moveTo(q[0], 0);
-    ctx.lineTo(q[0], h);
-    ctx.stroke();
-    for (const off of [0, 0.5]) {
-      const u = (t / 3.2 + off) % 1;
-      ctx.beginPath();
-      ctx.arc(q[0], q[1], (14 + 34 * u) * k, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(255,214,150,${(0.5 * (1 - u) * (1 - u)).toFixed(3)})`;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    }
-    ctx.beginPath();
-    ctx.arc(q[0], q[1], 15 * k, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,214,150,0.22)';
-    ctx.fill();
-    ctx.save();
-    ctx.translate(q[0], q[1]);
-    ctx.rotate(a);
-    ctx.scale(1.5 * k, 1.5 * k);
-    ctx.beginPath();
-    ctx.moveTo(10, 0);
-    ctx.lineTo(-6, 6);
-    ctx.lineTo(-2.5, 0);
-    ctx.lineTo(-6, -6);
-    ctx.closePath();
-    ctx.fillStyle = '#ffe2a6';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(40,24,10,0.85)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-    ctx.restore();
-    if (cap) {
-      ctx.font = cap.font;
-      ctx.textAlign = cap.align;
-      ctx.globalAlpha = cap.alpha;
-      ctx.fillStyle = cap.colour;
-      ctx.fillText(cap.text, cap.x, cap.y);
-      ctx.globalAlpha = 1;
-      ctx.textAlign = 'center';
-    }
+    drawYou(ctx, q, Math.atan2(ahead[1] - q[1], ahead[0] - q[0]), w, h, t, cap);
   }
   return shown;
+}
+
+/**
+ * You: a gold pointer at screen point q the way you fly (screen angle `a`), two rings spreading
+ * slowly from it and faint lines across the map through it, so the eye finds it at once, and your
+ * caption. Mellow: the rings ease out, nothing flashes. Atlantis's map draws you the same way.
+ */
+export function drawYou(
+  ctx: CanvasRenderingContext2D,
+  q: [number, number, number],
+  a: number,
+  w: number,
+  h: number,
+  t: number,
+  cap: MapLabel | null,
+) {
+  const k = Math.max(0.7, Math.min(1.3, Math.min(w, h) / 480));
+  ctx.strokeStyle = 'rgba(255,214,150,0.16)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, q[1]);
+  ctx.lineTo(w, q[1]);
+  ctx.moveTo(q[0], 0);
+  ctx.lineTo(q[0], h);
+  ctx.stroke();
+  for (const off of [0, 0.5]) {
+    const u = (t / 3.2 + off) % 1;
+    ctx.beginPath();
+    ctx.arc(q[0], q[1], (14 + 34 * u) * k, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,214,150,${(0.5 * (1 - u) * (1 - u)).toFixed(3)})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.arc(q[0], q[1], 15 * k, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,214,150,0.22)';
+  ctx.fill();
+  ctx.save();
+  ctx.translate(q[0], q[1]);
+  ctx.rotate(a);
+  ctx.scale(1.5 * k, 1.5 * k);
+  ctx.beginPath();
+  ctx.moveTo(10, 0);
+  ctx.lineTo(-6, 6);
+  ctx.lineTo(-2.5, 0);
+  ctx.lineTo(-6, -6);
+  ctx.closePath();
+  ctx.fillStyle = '#ffe2a6';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(40,24,10,0.85)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.restore();
+  if (cap) {
+    ctx.font = cap.font;
+    ctx.textAlign = cap.align;
+    ctx.globalAlpha = cap.alpha;
+    ctx.fillStyle = cap.colour;
+    ctx.fillText(cap.text, cap.x, cap.y);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'center';
+  }
 }

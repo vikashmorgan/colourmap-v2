@@ -1934,6 +1934,24 @@ input[type="range"].art-slider.magma {
   bottom: calc(34px + env(safe-area-inset-bottom));
   color: rgba(255, 226, 166, 0.6);
 }
+/* Atlantis's map: home to the city, a quiet line of text, no pill (2026-11-15). */
+.cd-map-home {
+  background: none;
+  border: 0;
+  padding: 6px 2px;
+  font: inherit;
+  font-size: 12px;
+  color: rgba(244, 234, 216, 0.7);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(244, 234, 216, 0.3);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cd-map-home:hover,
+.cd-map-home:focus-visible {
+  color: #ffe2a6;
+}
 @media (max-width: 640px) {
   .cd-map-title {
     display: none;
