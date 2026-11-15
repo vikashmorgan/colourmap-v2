@@ -386,11 +386,15 @@ export function boardsOn(
  * The opening road (tile-local z): the avenue's stretch the Ship starts on, from where it starts
  * (`start`, lib/city.ts's route) down to Chinatown's gate (`end`, Chinatown's eight blocks): a row
  * of temple gates to fly through, the welcome over it, boards and posters on its walls.
+ * 2026-11-15 ("push ship back a bit. so the cool panels with written letters are a bit further in
+ * the distance"): the start stands 230 short of the gate (190 before), so the welcome and the
+ * last gate are some 50 to 60 ahead, six seconds or so at the cruise, seen receding before you
+ * reach them. The avenue there is open (the band's bridges arch over it, above and under the cruise).
  */
 export const OPENING = {
   end: 8 * BLOCK_Z,
-  start: 8 * BLOCK_Z + 190,
-  /** The welcome hangs over the cross street just ahead of the start. */
+  start: 8 * BLOCK_Z + 230,
+  /** The welcome hangs over the cross street ahead of the start. */
   welcome: 13 * BLOCK_Z,
 };
 /** Whether row J (tile-local) is the opening road's. */
