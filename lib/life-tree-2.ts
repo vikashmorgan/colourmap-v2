@@ -36,6 +36,7 @@ export const AREAS_2: Record<Branch, Area2[]> = {
         '/art/flow',
         '/geometry-field',
         '/geometry-field/city/vision',
+        '/geometry-field/riverdust',
         '/art/butterflies',
         '/art/light',
         '/figures',
