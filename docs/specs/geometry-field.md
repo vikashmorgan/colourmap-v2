@@ -517,7 +517,7 @@ For the Out of the Box projection room.
 
 > "imagine better visuals for ferrari. where a car drives on the Monza circuit. and you get mountains on the sides from the mountains style. think of 10 high quality visuals, put them in experiments in art. can be just a straight road with landscapes on the sides. or winds on the sides. or a city on the sides. with the feeling of speed etc..." · Later the same day: "currents of small triangles streaming over the car, like air flowing over the body at speed … in Chaos Triangles' orange-red".
 
-- **Where:** Experiment tab, under a *Speed* header. Since later on 2026-11-16 ("put it on top"), the newest groups open the tab: *Fire*, then *Speed*, then *Wind*. There is one mode, `speed`, and the **Scene** slider (0–10) picks the piece, the way the Tree slider does for the Star Trees. Saved looks keep the scene with the slider.
+- **Where:** Experiment tab, under a *Speed* header. Since later on 2026-11-16 ("put it on top"), the newest groups open the tab: *Magma*, *Fire*, then *Speed*, then *Wind*. There is one mode, `speed`, and the **Scene** slider (0–10) picks the piece, the way the Tree slider does for the Star Trees. Saved looks keep the scene with the slider.
 - **The pieces:**
   0. **Monza Lap**: the circuit seen from above. The camera circles slowly, high and tilted, so the far side recedes. A red light runs the lap, and its trail is coloured by its speed: violet in the slow corners, then magenta, Ferrari red, and hot amber at the top.
   1. **Monza Chase**: a low camera behind the car, all the way round the lap. Red and white kerbs line the inside of the corners (both sides in the chicanes), with grass, a low barrier and the park's trees close on both sides. The corner name fades in quietly at the lower left.
@@ -548,11 +548,38 @@ For the Out of the Box projection room.
 - **Sliders:** Scene, Speed, Streaks, Detail, Car (0 hides it), Light, Bloom.
 - `Chaos Triangles Rosso` is not in this repo. The Triangle Stream uses Chaos Triangles' look with its own orange-red ramp (`streamColour`).
 
+## Magma Cores: five ways of drawing a core of magma (2026-11-16)
+
+> "create magma cores in 5 different methods. one with lots of small dots from yellow to orange, like boiling magma. in experiments." · Later the same day: "put it on top".
+
+- **Where:** at the top of the Experiment tab, under a *Magma* header, then *Fire*, *Speed* and *Wind*. There is one mode, `magma`, and the **Method** slider (0–4) picks the piece, the way the Scene slider does for Speed. Saved looks keep the method with the slider.
+- **The pieces** (each a different technique, all a glowing core in one palette: pale yellow at the hottest, then yellow, orange, red and near-black):
+  0. **Boiling Magma**: thousands of small dots (6,000 to 26,000 with Detail), added in light. Most of them churn round convection rolls: they rise at a cell's centre, spread along the surface, sink at its edge and come back underneath. A slow warp keeps the cells off a regular lattice. A hot inner ball turns slowly. Bubbles swell at the surface and burst, and their spray pops off and falls back, cooling from yellow to red as it flies. The dots are yellow at the hot centre, orange further out and deep red at the rim.
+  1. **Molten Core**: a shader sphere. Domain-warped fractal noise makes a flowing surface, and dark crust plates form where the noise runs high. The bright interior shows through the gaps, ray-marched in three steps through the shell so it has depth and parallax as the core turns. The crust's edges glow and the limb is warm.
+  2. **Cracked Crust**: a charcoal shell broken by glowing Voronoi veins. Each region's cracks breathe on a cycle of about 50 s, widening and healing again, and light leaks onto the crust round them. Detail adds finer cracks between the plates.
+  3. **Magma Currents**: long glowing filaments that follow a convection field on the surface and on two shells inside it. The field is divergence-free: it is the curl of a stream function made of slowly drifting vortices, so every filament traces a closed convection loop. A slow wave of light travels along each filament. Filaments behind the core are mostly hidden, and the inner shells glow through the body.
+  4. **Eruptive Core**: a granulated core that breathes on a 14 s cycle. Prominence loops arch between pairs of footpoints, with molten particles streaming along them. Each loop rises, holds and fades before it moves somewhere else. Vents throw plumes that fall back on parabolas, and embers drift out, cooling and fading. Anything behind the core is hidden.
+- **Calm by design:**
+  - Nothing flashes.
+  - Bursts, loops and vents ease in and out over seconds, and they only move when unseen.
+  - Edges are anti-aliased with a width worked out from the pixel size and the foreshortening.
+  - No dot is drawn smaller than 1.5 px.
+  - Noise never moves fast at a fine scale.
+  - The core turns once in about two minutes.
+- **How it's drawn:**
+  - Every method has one full-screen shader (`lib/art/magma-shaders.ts`, one source specialised per method) for the warm dark room, the halo and the core.
+  - The dots, the eruption and the currents are each one more layer (`components/geometry-magma.ts`).
+  - The dots and the eruption move entirely on the GPU, from per-dot seeds.
+  - The currents' filaments are traced on the CPU each frame (`traceLines`, a few hundred lines).
+  - The colour ramp, bubbles, loops, vents and field are pure functions in `lib/art/magma.ts`. The shaders' ramp is generated from the same stops.
+- **Bloom:** Magma has its own bloom (`magmaBloom`), so only the hot parts glow and the crust and the room stay dark.
+- **Sliders:** Method, Heat (leans the ramp hotter or colder), Turbulence, Detail (dots, octaves, finer cracks, filaments), Speed (0 stops it), Bloom.
+
 ## Fire: five flames and a flame tool (2026-11-16)
 
 > "do 5 where you try to create fire, with a new tool to make flames. red, yellow, blue, different ones. from a simple match to fire kind of flames. also in experiments." · Later the same day: "put it on top".
 
-- **Where:** at the top of the Experiment tab, under a *Fire* header, followed by *Speed* and then *Wind*. There is one mode, `flames`, and the **Scene** slider (0–4) picks the piece. The builder's older `fire` mode (the *Fire* preset in Geometry) is a different piece and stays where it is.
+- **Where:** in the Experiment tab under a *Fire* header, after *Magma* and before *Speed* and then *Wind*. There is one mode, `flames`, and the **Scene** slider (0–4) picks the piece. The builder's older `fire` mode (the *Fire* preset in Geometry) is a different piece and stays where it is.
 - **The pieces, small to big:**
   0. **Match**: a match struck in still air. It swipes in, strikes with a small flare and a burst of sparks, then settles to a little teardrop flame, blue at the root and yellow above. The stick chars as it burns. After about 15 s the flame dies, the head glows a moment, a thin curl of smoke rises, and the next match fades in. The cycle is 20 s.
   1. **Candle**: a calm candle flame with a blue root, a yellow-orange body and a white-hot core. It sways gently in a soft halo. The wax glows through near the top and the melted pool catches the light.
