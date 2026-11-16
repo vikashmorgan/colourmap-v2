@@ -367,7 +367,7 @@ describe('GeometryField featured presets', () => {
       'Experiment',
     ]);
     // The Journey follows the Big Bang, then the Vegetal, Ocean and City chapters and the
-    // Hyper-speed city, Riverdust's desert town, then Experiment.
+    // Hyper-speed city, the Drive game, Riverdust's desert town, then Experiment.
     expect(ART_PILLS.map((p) => p.label)).toEqual([
       'Stars',
       'Geometry',
@@ -379,6 +379,7 @@ describe('GeometryField featured presets', () => {
       'Ocean',
       'City',
       'Hyper-speed',
+      'Drive',
       'Riverdust',
       'Experiment',
     ]);

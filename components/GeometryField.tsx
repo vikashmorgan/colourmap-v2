@@ -15824,6 +15824,8 @@ export const ART_PILLS: ({ id: ArtTab; label: string } | { href: string; label: 
   { href: '/geometry-field/ocean', label: 'Ocean' },
   { href: '/geometry-field/city', label: 'City' },
   { href: '/geometry-field/hyper-city', label: 'Hyper-speed' },
+  // The Speed pieces as a racing game (docs/specs/drive-game.md).
+  { href: '/geometry-field/drive', label: 'Drive' },
   { href: '/geometry-field/riverdust', label: 'Riverdust' },
   ...ART_TABS.filter((t) => t.id === 'experiment'),
 ];
