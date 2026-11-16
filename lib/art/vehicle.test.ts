@@ -49,6 +49,19 @@ describe('the pull', () => {
 });
 
 describe('driving on the flat', () => {
+  it('holds a drift instead of spinning when a key is held hard over at speed (2026-11-16)', () => {
+    for (const kind of ['car', 'ship'] as const) {
+      const v = run(kind, GO, 12);
+      let most = 0;
+      for (let i = 0; i < 180; i++) {
+        stepVehicle(v, { throttle: 1, steer: 1, boost: 0 }, 1 / 60);
+        most = Math.max(most, Math.abs(v.slip));
+      }
+      expect(most).toBeLessThan(0.35);
+      expect(speedOf(v)).toBeGreaterThan(30);
+    }
+  });
+
   it('accelerates to near its top speed and holds it', () => {
     const v = run('car', GO, 30);
     // Air drag holds it a little under the top (about 300 km/h).
@@ -210,6 +223,58 @@ describe('jumps', () => {
     expect(jump('ship', 50).air).toBeGreaterThan(jump('car', 50).air * 1.8);
   });
 
+  // A smooth crest 4.5 m high (a cosine hump 68 m long), like the night tracks' crests.
+  const hump: World = {
+    ground: (x) => {
+      if (Math.abs(x) > 34) return { h: 0, gx: 0, gy: 0, rough: 0 };
+      const k = Math.PI / 34;
+      return { h: 2.25 * (1 + Math.cos(k * x)), gx: -2.25 * k * Math.sin(k * x), gy: 0, rough: 0 };
+    },
+  };
+
+  it('flies off a smooth crest at speed, not only off a sharp ramp (2026-11-16)', () => {
+    const v = newVehicle('car', -80, 0, 0);
+    v.vx = 55;
+    v.vLong = 55;
+    let air = 0;
+    for (let i = 0; i < 300; i++) {
+      stepVehicle(v, { throttle: 0.3, steer: 0, boost: 0 }, 1 / 60, hump);
+      if (v.air) air += 1 / 60;
+    }
+    expect(air).toBeGreaterThan(0.3);
+  });
+
+  it('keeps the car down over small ripples in the road', () => {
+    const ripples: World = {
+      // 5 cm undulations every 60 m: at 60 m/s they pull about 2 m/s², well under gravity.
+      ground: (x) => ({
+        h: 0.05 * Math.sin(x / 9.5),
+        gx: (0.05 / 9.5) * Math.cos(x / 9.5),
+        gy: 0,
+        rough: 0,
+      }),
+    };
+    const v = newVehicle('car', 0, 0, 0);
+    v.vx = 60;
+    v.vLong = 60;
+    let took = 0;
+    for (let i = 0; i < 300; i++) if (stepVehicle(v, GO, 1 / 60, ripples).tookOff) took++;
+    expect(took).toBe(0);
+  });
+
+  it("never launches off a road's curled-up edge: it is ridden like a wall", () => {
+    const lip: World = {
+      ground: (x) =>
+        x > 0 ? { h: x * 0.9, gx: 0.9, gy: 0, rough: 0, lip: 1 } : { h: 0, gx: 0, gy: 0, rough: 0 },
+    };
+    const v = newVehicle('car', -10, 0, 0);
+    v.vx = 40;
+    v.vLong = 40;
+    let took = 0;
+    for (let i = 0; i < 30; i++) if (stepVehicle(v, GO, 1 / 60, lip).tookOff) took++;
+    expect(took).toBe(0);
+  });
+
   it('costs little speed on a soft landing and more on a slam, never all of it', () => {
     expect(landingLoss(1)).toBe(0);
     expect(landingLoss(10)).toBeGreaterThan(0);
@@ -231,5 +296,19 @@ describe('obstacles', () => {
     expect(bump).toBeGreaterThan(10);
     expect(v.x).toBeLessThanOrEqual(10.5);
     expect(Math.abs(v.yawRate)).toBeGreaterThan(0);
+  });
+
+  it('scrapes along a barrier at a shallow angle and keeps going (2026-11-16)', () => {
+    const rail: World = {
+      ground: FLAT.ground,
+      collide: (v) => (v.y > 5 ? { nx: 0, ny: -1, depth: v.y - 5, loss: 0.08, spin: 0.6 } : null),
+    };
+    const v = newVehicle('car', 0, 0, 0.12);
+    v.vx = 50 * Math.cos(0.12);
+    v.vy = 50 * Math.sin(0.12);
+    v.vLong = 50;
+    for (let i = 0; i < 120; i++) stepVehicle(v, GO, 1 / 60, rail);
+    expect(speedOf(v)).toBeGreaterThan(38);
+    expect(Math.abs(v.h)).toBeLessThan(0.2);
   });
 });

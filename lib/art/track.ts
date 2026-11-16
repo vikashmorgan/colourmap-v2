@@ -205,6 +205,7 @@ export function groundAt(t: Track, px: number, py: number): Ground & { s: number
     gx: dS * c - dU * sn,
     gy: dS * sn + dU * c,
     rough: clamp(out / 0.8, 0, 1),
+    lip: t.def.lip(Math.max(0, s)) > 0 ? clamp((Math.abs(u) - (f.half - 2.5)) / 2.5, 0, 1) : 0,
     s,
     u,
   };
