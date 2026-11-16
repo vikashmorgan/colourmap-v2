@@ -512,3 +512,38 @@ For the Out of the Box projection room.
 - **Heart Wave, Eye Morph, Clock, Mode Sun, Brain Topography and Walking Figure** leave the Geometry tab's All Programs. Their drawing code stays: Build Lab and the Archetype bridge still open Mode Sun and Brain Topography by name.
 - **Pyramid** is the first of All Programs.
 - **Numbers run on in each tab**: All Programs continues from the last featured number instead of starting again at 01, so every visual in a tab has its own number.
+
+## Speed: ten drives and a triangle stream for the Ferrari pitch (2026-11-16)
+
+> "imagine better visuals for ferrari. where a car drives on the Monza circuit. and you get mountains on the sides from the mountains style. think of 10 high quality visuals, put them in experiments in art. can be just a straight road with landscapes on the sides. or winds on the sides. or a city on the sides. with the feeling of speed etc..." · Later the same day: "currents of small triangles streaming over the car, like air flowing over the body at speed … in Chaos Triangles' orange-red".
+
+- **Where:** Experiment tab, under a *Speed* header right after *Wind*. There is one mode, `speed`, and the **Scene** slider (0–10) picks the piece, the way the Tree slider does for the Star Trees. Saved looks keep the scene with the slider.
+- **The pieces:**
+  0. **Monza Lap**: the circuit seen from above. The camera circles slowly, high and tilted, so the far side recedes. A red light runs the lap, and its trail is coloured by its speed: violet in the slow corners, then magenta, Ferrari red, and hot amber at the top.
+  1. **Monza Chase**: a low camera behind the car, all the way round the lap. Red and white kerbs line the inside of the corners (both sides in the chicanes), with grass, a low barrier and the park's trees close on both sides. The corner name fades in quietly at the lower left.
+  2. **Peak Straight**: an endless straight between mountains drawn as topo lines, in the Wire and Data Peak look. Each ridge's lines echo its crest up the Data Peak ramp (violet, magenta, amber, white), and every fifth line is brighter. There are three ridge layers plus a far range. Amber roadside reflectors streak past.
+  3. **Mountain Pass**: a winding road through filled mountains at dusk, in Data Peak colours. Snow sits on the high crests and the far ridges fade into a magenta-amber sky.
+  4. **Wind Corridor**: the Wind series' warm-white smoke lines sit on four cylinders around the car's line. They stream at the camera and bulge outward round the car, brighter where the air speeds up.
+  5. **Neon Run**: a straight between towers built of light, in the City of Dreams look. Their lit floors blur into lines when fast, with neon edges, a taller second row behind, and everything mirrored in the wet road.
+  6. **Tunnel to Light**: a vaulted tunnel with two rows of lamps and structural rings, all streaking as the car accelerates. The far portal opens as a disc of light onto a tree-lined straight, then the next tunnel mouth comes back down the road.
+  7. **Coast Road**: a cliff-top road at sunset. The sea is far below on the left with the sun's path glittering on it, a rail runs along the edge, and warm rock rises on the right. The road winds.
+  8. **Salt Flat**: almost empty. Crazed salt, heat shimmer melting the horizon into a mirage, low violet hills, and one long red streak crossing the flat with its trail lingering. The speed comes from the contrast.
+  9. **Night Rain**: lamps every 32 m on each side streak past and stretch into trembling columns in the wet road. Rain streams at the camera, and spray lifts behind the wheels, lit red by the light bar.
+  10. **Triangle Stream**: the Wind Body from the side (`lib/wind.ts` shape 2), red, driving left over a scrolling road, with a faint mirror of it in the road surface. Rivers of small Chaos Triangles (additive, tumbling, about a third the size of Chaos Triangles') ride the Wind field. They split at the nose, speed up over the roofline and curl into the wake, coloured by the air's speed: deep red where it is slow, Ferrari red-orange in the free stream, hot orange-gold over the roof.
+- **The car:** an original low, wide body seen from behind, in Ferrari red with one light bar. There are no logos and no copied artwork. Monza is an original stylised trace of the layout: long straights, the first chicane, Curva Grande, Roggia, the Lesmos, Serraglio, Ascari and the Parabolica. It is closed exactly and scaled to 4,096 m.
+- **Feeling of speed:**
+  - Near walls slide past fast and far ridges barely move.
+  - Repeated elements (dashes, kerbs, lamps, windows, tunnel lights, puffs of wind) recede to one vanishing point.
+  - The view widens a little as speed builds, and a soft tremor grows with the square of the speed.
+  - Sparse speed lines grow longer with speed.
+  - Monza's speed comes from a real profile: grip limits the speed in each corner, and the car brakes into corners and accelerates out of them.
+  - Light stays mellow: glows rather than flashes, and nothing strobes.
+- **No judder:** anything evenly spaced along the road is box-filtered over the distance travelled in one frame, worked out exactly for a square wave. It turns into a streak as it speeds up instead of juddering. Textures along the road never vary over less than a few metres.
+- **How it's drawn:**
+  - Each piece is one full-screen shader (`lib/art/speed-shaders.ts`, one source specialised per scene) with no ray marching. Every surface is found in closed form: the ground, wall planes beside the road whose top edge is a height profile, a cylinder for the tunnel and the wind, and a plane for the sea.
+  - In the curved scenes, the road ahead is a list of 32 points from `lib/art/speed.ts` (`roadAhead`), and the shader solves walls against it piece by piece.
+  - The world repeats every 2,048 m, so the travelled distance wraps without a seam.
+  - Measured in a test page at 1600×900 (bloom included), each frame takes under 3 ms.
+  - The Triangle Stream adds one instanced mesh (up to 2,600 triangles), stepped in `lib/art/speed.ts` (`stepStream`).
+- **Sliders:** Scene, Speed, Streaks, Detail, Car (0 hides it), Light, Bloom.
+- `Chaos Triangles Rosso` is not in this repo. The Triangle Stream uses Chaos Triangles' look with its own orange-red ramp (`streamColour`).

@@ -45,6 +45,7 @@ import {
 } from './geometry-bigbang-stars';
 import { buildCymatics, isCymaticsMode, updateCymatics } from './geometry-cymatics';
 import { buildLiquidSeries, isLiquidMode, updateLiquidSeries } from './geometry-liquid';
+import { buildSpeed, isSpeedMode, updateSpeed } from './geometry-speed';
 import {
   buildGeometryVisual,
   isGeometryVisualMode,
@@ -230,6 +231,8 @@ type Mode =
   | 'windtunnel'
   | 'startrees'
   | 'adn'
+  // Speed — ten drives and a triangle stream for the Ferrari pitch (components/geometry-speed.ts)
+  | 'speed'
   | 'murmuration'
   | 'fishschool'
   | 'flowmasks'
@@ -839,7 +842,7 @@ const LIGHT_PRESETS: Record<string, Cfg> = Object.fromEntries(
 
 /** The full-screen art shaders (butterflies, light bodies): soft bloom, stars only when asked. */
 const isArtShaderMode = (mode: Mode): boolean =>
-  mode === 'liquidbutterfly' || kindOfBuilderMode(mode) !== undefined;
+  mode === 'liquidbutterfly' || kindOfBuilderMode(mode) !== undefined || isSpeedMode(mode);
 
 export const PRESETS: Record<string, Cfg> = {
   ...BUTTERFLY_PRESETS,
@@ -2772,6 +2775,141 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 1.5,
     stars: 0,
     mode: 'adn',
+  },
+  // 16 Nov 2026, for the Ferrari pitch: "imagine better visuals for ferrari … where a car drives on
+  // the Monza circuit … 10 high quality visuals … with the feeling of speed". One Speed mode, the
+  // Scene slider picking the piece (lib/art/speed.ts SCENES); Triangle Stream added the same day.
+  'Monza Lap': {
+    preset: 'Calm Field',
+    symmetry: 1,
+    complexity: 7,
+    glow: 0,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 0,
+    luminous: 1.4,
+    stars: 0,
+    mode: 'speed',
+  },
+  'Monza Chase': {
+    preset: 'Calm Field',
+    symmetry: 1,
+    complexity: 7,
+    glow: 6,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 1,
+    luminous: 1.2,
+    stars: 0,
+    mode: 'speed',
+  },
+  'Peak Straight': {
+    preset: 'Calm Field',
+    symmetry: 1,
+    complexity: 7,
+    glow: 6,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 2,
+    luminous: 1.4,
+    stars: 0,
+    mode: 'speed',
+  },
+  'Mountain Pass': {
+    preset: 'Calm Field',
+    symmetry: 1,
+    complexity: 7,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 3,
+    luminous: 1.0,
+    stars: 0,
+    mode: 'speed',
+  },
+  'Wind Corridor': {
+    preset: 'Calm Field',
+    symmetry: 1,
+    complexity: 7,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 4,
+    luminous: 1.3,
+    stars: 0,
+    mode: 'speed',
+  },
+  'Neon Run': {
+    preset: 'Calm Field',
+    symmetry: 1,
+    complexity: 7,
+    glow: 6,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 5,
+    luminous: 1.6,
+    stars: 0,
+    mode: 'speed',
+  },
+  'Tunnel to Light': {
+    preset: 'Calm Field',
+    symmetry: 1,
+    complexity: 7,
+    glow: 4,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 6,
+    luminous: 1.4,
+    stars: 0,
+    mode: 'speed',
+  },
+  'Coast Road': {
+    preset: 'Calm Field',
+    symmetry: 1,
+    complexity: 7,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 7,
+    luminous: 1.0,
+    stars: 0,
+    mode: 'speed',
+  },
+  'Salt Flat': {
+    preset: 'Calm Field',
+    symmetry: 1,
+    complexity: 7,
+    glow: 0,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 8,
+    luminous: 1.2,
+    stars: 0,
+    mode: 'speed',
+  },
+  'Night Rain': {
+    preset: 'Calm Field',
+    symmetry: 1,
+    complexity: 7,
+    glow: 6,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 9,
+    luminous: 1.5,
+    stars: 0,
+    mode: 'speed',
+  },
+  'Triangle Stream': {
+    preset: 'Calm Field',
+    symmetry: 1,
+    complexity: 7,
+    glow: 0,
+    breathSpeed: 1,
+    intensity: 8,
+    particles: 10,
+    luminous: 1.6,
+    stars: 0,
+    mode: 'speed',
   },
   'Liquid Quantum': {
     preset: 'Clifford Dream',
@@ -7413,6 +7551,7 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
     return buildGeometryVisual(cfg, PAL[cfg.preset] ?? PAL['Calm Field']);
   }
   if (isCymaticsMode(cfg.mode)) return buildCymatics(cfg);
+  if (isSpeedMode(cfg.mode)) return buildSpeed(cfg);
   if (isLiquidMode(cfg.mode)) return buildLiquidSeries();
   if (isBigBangStarMode(cfg.mode)) return buildBigBangStars();
   switch (cfg.mode) {
@@ -7644,6 +7783,10 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
   }
   if (isCymaticsMode(cfg.mode)) {
     updateCymatics(group, cfg, PAL[cfg.preset] ?? PAL['Calm Field'], t, R);
+    return;
+  }
+  if (isSpeedMode(cfg.mode)) {
+    updateSpeed(group, cfg, t, R);
     return;
   }
   if (isLiquidMode(cfg.mode)) {
@@ -14731,6 +14874,15 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'breathSpeed', label: 'Speed', min: 0.1, max: 2.5, step: 0.05 },
     { key: 'intensity', label: 'Bright', min: 1, max: 10, step: 0.5 },
   ],
+  speed: [
+    { key: 'particles', label: 'Scene', min: 0, max: 10, step: 1 },
+    { key: 'breathSpeed', label: 'Speed', min: 0, max: 2, step: 0.05 },
+    { key: 'glow', label: 'Streaks', min: 0, max: 10, step: 0.5 },
+    { key: 'complexity', label: 'Detail', min: 1, max: 10, step: 1 },
+    { key: 'symmetry', label: 'Car', min: 0, max: 1, step: 1 },
+    { key: 'intensity', label: 'Light', min: 1, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
+  ],
   adn: [
     { key: 'symmetry', label: 'Turns', min: 1.5, max: 5, step: 0.5 },
     { key: 'glow', label: 'Spin', min: 0, max: 10, step: 0.5 },
@@ -15213,6 +15365,7 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   windtunnel: 'Wind',
   startrees: 'Star Willow',
   adn: 'ADN',
+  speed: 'Monza Lap',
   murmuration: 'Murmuration',
   fishschool: 'Fish School',
   flowmasks: 'Flow Masks',
@@ -15397,6 +15550,7 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'windtunnel', label: '≫ Wind' },
   { mode: 'startrees', label: '✦ Star Trees' },
   { mode: 'adn', label: '⌇ ADN' },
+  { mode: 'speed', label: '» Speed' },
   { mode: 'murmuration', label: '⋰ Murmuration' },
   { mode: 'fishschool', label: '⋰ Fish School' },
   { mode: 'flowmasks', label: '◕ Flow Masks' },
@@ -15507,7 +15661,7 @@ export const ART_PILLS: ({ id: ArtTab; label: string } | { href: string; label: 
 ];
 // 8 Nov 2026: "add all the new ones in an Experiment tab pill after Big Bang, and include Wind,
 // Wing and Body in there."
-const EXPERIMENT_TAB_MODES = new Set<Mode>(['windtunnel', 'startrees', 'adn']);
+const EXPERIMENT_TAB_MODES = new Set<Mode>(['windtunnel', 'startrees', 'adn', 'speed']);
 /** Presets kept in Experiment though their mode lives in another tab. */
 const EXPERIMENT_TAB_PRESETS = new Set<string>([
   'Dot Brain Loop',
@@ -15656,6 +15810,19 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Wind', tag: 'WIND' },
   { name: 'Wind Wing', tag: 'WIND' },
   { name: 'Wind Body', tag: 'WIND' },
+  // 16 Nov 2026, for the Ferrari pitch: the Speed pieces (components/geometry-speed.ts).
+  { header: 'Speed' },
+  { name: 'Monza Lap', tag: 'MONZA' },
+  { name: 'Monza Chase', tag: 'MONZA' },
+  { name: 'Peak Straight', tag: 'ROAD' },
+  { name: 'Mountain Pass', tag: 'ROAD' },
+  { name: 'Wind Corridor', tag: 'WIND' },
+  { name: 'Neon Run', tag: 'CITY' },
+  { name: 'Tunnel to Light', tag: 'TUNNEL' },
+  { name: 'Coast Road', tag: 'COAST' },
+  { name: 'Salt Flat', tag: 'DESERT' },
+  { name: 'Night Rain', tag: 'RAIN' },
+  { name: 'Triangle Stream', tag: 'WIND' },
   { header: 'Life' },
   { name: 'Star Willow', tag: 'TREE' },
   { name: 'Sea Wind Tree', tag: 'TREE' },
