@@ -517,7 +517,7 @@ For the Out of the Box projection room.
 
 > "imagine better visuals for ferrari. where a car drives on the Monza circuit. and you get mountains on the sides from the mountains style. think of 10 high quality visuals, put them in experiments in art. can be just a straight road with landscapes on the sides. or winds on the sides. or a city on the sides. with the feeling of speed etc..." · Later the same day: "currents of small triangles streaming over the car, like air flowing over the body at speed … in Chaos Triangles' orange-red".
 
-- **Where:** Experiment tab, under a *Speed* header right after *Wind*. There is one mode, `speed`, and the **Scene** slider (0–10) picks the piece, the way the Tree slider does for the Star Trees. Saved looks keep the scene with the slider.
+- **Where:** Experiment tab, under a *Speed* header. Since later on 2026-11-16 ("put it on top"), the newest groups open the tab: *Fire*, then *Speed*, then *Wind*. There is one mode, `speed`, and the **Scene** slider (0–10) picks the piece, the way the Tree slider does for the Star Trees. Saved looks keep the scene with the slider.
 - **The pieces:**
   0. **Monza Lap**: the circuit seen from above. The camera circles slowly, high and tilted, so the far side recedes. A red light runs the lap, and its trail is coloured by its speed: violet in the slow corners, then magenta, Ferrari red, and hot amber at the top.
   1. **Monza Chase**: a low camera behind the car, all the way round the lap. Red and white kerbs line the inside of the corners (both sides in the chicanes), with grass, a low barrier and the park's trees close on both sides. The corner name fades in quietly at the lower left.
@@ -547,3 +547,53 @@ For the Out of the Box projection room.
   - The Triangle Stream adds one instanced mesh (up to 2,600 triangles), stepped in `lib/art/speed.ts` (`stepStream`).
 - **Sliders:** Scene, Speed, Streaks, Detail, Car (0 hides it), Light, Bloom.
 - `Chaos Triangles Rosso` is not in this repo. The Triangle Stream uses Chaos Triangles' look with its own orange-red ramp (`streamColour`).
+
+## Fire: five flames and a flame tool (2026-11-16)
+
+> "do 5 where you try to create fire, with a new tool to make flames. red, yellow, blue, different ones. from a simple match to fire kind of flames. also in experiments." · Later the same day: "put it on top".
+
+- **Where:** at the top of the Experiment tab, under a *Fire* header, followed by *Speed* and then *Wind*. There is one mode, `flames`, and the **Scene** slider (0–4) picks the piece. The builder's older `fire` mode (the *Fire* preset in Geometry) is a different piece and stays where it is.
+- **The pieces, small to big:**
+  0. **Match**: a match struck in still air. It swipes in, strikes with a small flare and a burst of sparks, then settles to a little teardrop flame, blue at the root and yellow above. The stick chars as it burns. After about 15 s the flame dies, the head glows a moment, a thin curl of smoke rises, and the next match fades in. The cycle is 20 s.
+  1. **Candle**: a calm candle flame with a blue root, a yellow-orange body and a white-hot core. It sways gently in a soft halo. The wax glows through near the top and the melted pool catches the light.
+  2. **Gas Ring**: a ring of 18 small blue gas flames on a steel burner, seen at an angle. Each flame has a crisp cyan inner cone and almost no yellow, with a steady roar flicker. Pan supports sit outside the ring.
+  3. **Campfire**: six tongues of red, orange and yellow weave between crossed logs, over a low bed of flame. Cracks in the logs glow and breathe slowly. Embers rise and fade, smoke drifts above, and a ring of stones and the ground are lit by the fire. Stars and a far tree line sit behind.
+  4. **Wildfire**: a far wall and a near wall of tall, turbulent flames, red and deep orange with yellow cores. Burnt trees stand black between the two walls, sparks stream up and drift with the wind, and the smoke-filled sky glows from below. The air above shimmers and patches of ground smoulder.
+- **The flame tool** (`lib/art/flame.ts`, `lib/art/flame-shaders.ts`): a flame is a plain object that any full-screen shader can draw anywhere, at any size. Its parameters:
+  - **x, y, width, height**: where its base sits and how big it is.
+  - **turbulence**: 0 gives a smooth teardrop, up to 2 a roaring blaze whose tongues break off at the top.
+  - **rise**: how fast the tongues climb, in flame heights a second.
+  - **lean**: wind lean, the tip pushed sideways in flame heights.
+  - **seed**: phase, so neighbouring flames never move in step.
+  - **coreK**: colour temperature of the hottest part, in kelvin.
+  - **blue**: share of blue light. 0 is a wood fire, about 0.3 a candle's root, 1 a gas flame.
+  - **luminous**: the yellow soot glow.
+  - **brightness**.
+  - **shape**: a teardrop, or a wall of tongues. A wall also takes **tongues**, how many tall tongues across it.
+  - **layer**: behind or in front of the scene's middle ground.
+  - **halo**: the soft glow round the flame.
+
+  Palettes: match, candle, gas, wood, blaze and white-hot. Two emitters go with it: **Embers** (where they leave from, how high they climb, density, size, wind drift, climb speed and starting temperature) and **Smoke** (a plume with amount, wind, climb speed and curl).
+- **How a flame is drawn:**
+  - Buoyant noise: domain-warped fBm in flame-height units, stretched upward and scrolling up, eats into a teardrop or wall envelope. It cuts deeper higher up, so the tongues lick and fork at the top and the base stays whole.
+  - Colour: a blackbody ramp. The core is hottest low in the middle and cools to orange and red at the tips. Brightness rises with about T³.
+  - The blue root is the bowl-shaped zone where air mixes in, brightest at the edge. On a gas flame it becomes the whole flame, with an inner cyan cone.
+  - The halo is added in light, and the renderer's bloom lifts the hot parts.
+  - Flicker is smooth value noise (`flicker`), so a flame breathes and gutters but never jumps between frames. Nothing flashes across the screen: the match's flare is local and fades over half a second.
+  - Embers are stretched along their path by one frame of motion and never drawn under about a pixel, so they don't judder.
+- **Smooth:**
+  - Each piece is one full-screen shader (`lib/art/fire-shaders.ts`, one source specialised per piece) fed by `lib/art/fire.ts`. There is no ray marching.
+  - Each flame tests its bounding box first, so a pixel only pays for the flames it is inside.
+  - Noise is one texture fetch per octave, from a seeded random texture, and the blackbody colour is one fetch from a baked ramp.
+  - Busy pieces light the air once, from their fire light, instead of giving every flame a halo.
+  - The shader materials are kept, so moving Turbulence or Wind (which rebuilds the group) never recompiles a shader.
+  - The fire's clock survives rebuilds and wraps hourly, so the noise keeps its precision.
+  - On a narrow screen the view zooms out so each piece fits.
+- **Sliders:**
+  - **Scene.**
+  - **Flicker**: the fire's clock speed. 0 freezes it.
+  - **Turbulence.**
+  - **Wind**: leans the flames and drifts the embers and smoke.
+  - **Heat**: hotter is whiter, brighter and cleaner, with less smoke. Cooler is redder and smokier.
+  - **Embers.**
+  - **Bloom.**

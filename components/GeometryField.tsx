@@ -44,6 +44,7 @@ import {
   updateBigBangStars,
 } from './geometry-bigbang-stars';
 import { buildCymatics, isCymaticsMode, updateCymatics } from './geometry-cymatics';
+import { buildFire, isFireMode, updateFire } from './geometry-fire';
 import { buildLiquidSeries, isLiquidMode, updateLiquidSeries } from './geometry-liquid';
 import { buildSpeed, isSpeedMode, updateSpeed } from './geometry-speed';
 import {
@@ -233,6 +234,8 @@ type Mode =
   | 'adn'
   // Speed — ten drives and a triangle stream for the Ferrari pitch (components/geometry-speed.ts)
   | 'speed'
+  // Fire — five flames from a match to a wildfire, on the flame tool (components/geometry-fire.ts)
+  | 'flames'
   | 'murmuration'
   | 'fishschool'
   | 'flowmasks'
@@ -842,7 +845,10 @@ const LIGHT_PRESETS: Record<string, Cfg> = Object.fromEntries(
 
 /** The full-screen art shaders (butterflies, light bodies): soft bloom, stars only when asked. */
 const isArtShaderMode = (mode: Mode): boolean =>
-  mode === 'liquidbutterfly' || kindOfBuilderMode(mode) !== undefined || isSpeedMode(mode);
+  mode === 'liquidbutterfly' ||
+  kindOfBuilderMode(mode) !== undefined ||
+  isSpeedMode(mode) ||
+  isFireMode(mode);
 
 export const PRESETS: Record<string, Cfg> = {
   ...BUTTERFLY_PRESETS,
@@ -2910,6 +2916,69 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 1.6,
     stars: 0,
     mode: 'speed',
+  },
+  // 16 Nov 2026: "do 5 where you try to create fire, with a new tool to make flames. red, yellow,
+  // blue, different ones. from a simple match to fire kind of flames." One Flames mode, the Scene
+  // slider picking the piece (lib/art/fire.ts FIRE_SCENES).
+  Match: {
+    preset: 'Calm Field',
+    symmetry: 0,
+    complexity: 5.5,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 5,
+    particles: 0,
+    luminous: 1.6,
+    stars: 0,
+    mode: 'flames',
+  },
+  Candle: {
+    preset: 'Calm Field',
+    symmetry: 0,
+    complexity: 5.5,
+    glow: 0,
+    breathSpeed: 1,
+    intensity: 5,
+    particles: 1,
+    luminous: 1.8,
+    stars: 0,
+    mode: 'flames',
+  },
+  'Gas Ring': {
+    preset: 'Calm Field',
+    symmetry: 0,
+    complexity: 5.5,
+    glow: 0,
+    breathSpeed: 1,
+    intensity: 5,
+    particles: 2,
+    luminous: 1.4,
+    stars: 0,
+    mode: 'flames',
+  },
+  Campfire: {
+    preset: 'Calm Field',
+    symmetry: 0,
+    complexity: 5.5,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 5,
+    particles: 3,
+    luminous: 1.6,
+    stars: 0,
+    mode: 'flames',
+  },
+  Wildfire: {
+    preset: 'Calm Field',
+    symmetry: 0,
+    complexity: 5.5,
+    glow: 6,
+    breathSpeed: 1,
+    intensity: 5,
+    particles: 4,
+    luminous: 1.4,
+    stars: 0,
+    mode: 'flames',
   },
   'Liquid Quantum': {
     preset: 'Clifford Dream',
@@ -7552,6 +7621,7 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
   }
   if (isCymaticsMode(cfg.mode)) return buildCymatics(cfg);
   if (isSpeedMode(cfg.mode)) return buildSpeed(cfg);
+  if (isFireMode(cfg.mode)) return buildFire(cfg);
   if (isLiquidMode(cfg.mode)) return buildLiquidSeries();
   if (isBigBangStarMode(cfg.mode)) return buildBigBangStars();
   switch (cfg.mode) {
@@ -7787,6 +7857,10 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
   }
   if (isSpeedMode(cfg.mode)) {
     updateSpeed(group, cfg, t, R);
+    return;
+  }
+  if (isFireMode(cfg.mode)) {
+    updateFire(group, cfg, t);
     return;
   }
   if (isLiquidMode(cfg.mode)) {
@@ -14883,6 +14957,15 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'intensity', label: 'Light', min: 1, max: 10, step: 0.5 },
     { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
   ],
+  flames: [
+    { key: 'particles', label: 'Scene', min: 0, max: 4, step: 1 },
+    { key: 'breathSpeed', label: 'Flicker', min: 0, max: 2, step: 0.05 },
+    { key: 'complexity', label: 'Turbulence', min: 1, max: 10, step: 0.5 },
+    { key: 'symmetry', label: 'Wind', min: -3, max: 3, step: 0.25 },
+    { key: 'intensity', label: 'Heat', min: 0, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Embers', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
+  ],
   adn: [
     { key: 'symmetry', label: 'Turns', min: 1.5, max: 5, step: 0.5 },
     { key: 'glow', label: 'Spin', min: 0, max: 10, step: 0.5 },
@@ -15366,6 +15449,7 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   startrees: 'Star Willow',
   adn: 'ADN',
   speed: 'Monza Lap',
+  flames: 'Match',
   murmuration: 'Murmuration',
   fishschool: 'Fish School',
   flowmasks: 'Flow Masks',
@@ -15551,6 +15635,7 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'startrees', label: '✦ Star Trees' },
   { mode: 'adn', label: '⌇ ADN' },
   { mode: 'speed', label: '» Speed' },
+  { mode: 'flames', label: '♨ Flames' },
   { mode: 'murmuration', label: '⋰ Murmuration' },
   { mode: 'fishschool', label: '⋰ Fish School' },
   { mode: 'flowmasks', label: '◕ Flow Masks' },
@@ -15661,7 +15746,7 @@ export const ART_PILLS: ({ id: ArtTab; label: string } | { href: string; label: 
 ];
 // 8 Nov 2026: "add all the new ones in an Experiment tab pill after Big Bang, and include Wind,
 // Wing and Body in there."
-const EXPERIMENT_TAB_MODES = new Set<Mode>(['windtunnel', 'startrees', 'adn', 'speed']);
+const EXPERIMENT_TAB_MODES = new Set<Mode>(['windtunnel', 'startrees', 'adn', 'speed', 'flames']);
 /** Presets kept in Experiment though their mode lives in another tab. */
 const EXPERIMENT_TAB_PRESETS = new Set<string>([
   'Dot Brain Loop',
@@ -15803,13 +15888,16 @@ export function featuredFor(tab: ArtTab): FeaturedItem[] {
 type FeaturedItem = { name: string; tag: string } | { header: string; dim?: boolean };
 
 export const FEATURED_PRESETS: FeaturedItem[] = [
-  // The Experiment tab: Wind, then the Star Trees and ADN (8 Nov 2026).
-  // 18 Oct 2026, for the Ferrari project: "a star preset called Wind … currents of wind passing over an
-  // object from its left to its right: aerodynamics, the union of science and art. Later with a car."
-  { header: 'Wind' },
-  { name: 'Wind', tag: 'WIND' },
-  { name: 'Wind Wing', tag: 'WIND' },
-  { name: 'Wind Body', tag: 'WIND' },
+  // The Experiment tab (16 Nov 2026, "put it on top"): the newest groups first (Fire, then Speed),
+  // then Wind, then the Star Trees and ADN (8 Nov 2026).
+  // 16 Nov 2026: "do 5 where you try to create fire, with a new tool to make flames … from a simple
+  // match to fire kind of flames" (components/geometry-fire.ts, the flame tool in lib/art/flame.ts).
+  { header: 'Fire' },
+  { name: 'Match', tag: 'MATCH' },
+  { name: 'Candle', tag: 'CANDLE' },
+  { name: 'Gas Ring', tag: 'GAS' },
+  { name: 'Campfire', tag: 'CAMP' },
+  { name: 'Wildfire', tag: 'BLAZE' },
   // 16 Nov 2026, for the Ferrari pitch: the Speed pieces (components/geometry-speed.ts).
   { header: 'Speed' },
   { name: 'Monza Lap', tag: 'MONZA' },
@@ -15823,6 +15911,12 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Salt Flat', tag: 'DESERT' },
   { name: 'Night Rain', tag: 'RAIN' },
   { name: 'Triangle Stream', tag: 'WIND' },
+  // 18 Oct 2026, for the Ferrari project: "a star preset called Wind … currents of wind passing over an
+  // object from its left to its right: aerodynamics, the union of science and art. Later with a car."
+  { header: 'Wind' },
+  { name: 'Wind', tag: 'WIND' },
+  { name: 'Wind Wing', tag: 'WIND' },
+  { name: 'Wind Body', tag: 'WIND' },
   { header: 'Life' },
   { name: 'Star Willow', tag: 'TREE' },
   { name: 'Sea Wind Tree', tag: 'TREE' },

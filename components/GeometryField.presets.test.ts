@@ -25,6 +25,8 @@ const SPEED = [
   'Triangle Stream',
 ];
 
+const FIRE = ['Match', 'Candle', 'Gas Ring', 'Campfire', 'Wildfire'];
+
 function featuredNames() {
   return FEATURED_PRESETS.flatMap((item) => ('name' in item ? [item.name] : []));
 }
@@ -133,9 +135,10 @@ describe('GeometryField featured presets', () => {
     expect(PRESETS.Volcano?.mode).not.toBe('liquidbutterfly');
   });
 
-  it('opens the Experiment tab with the three Wind presets, one object each, out of Stars', () => {
+  it('has the three Wind presets in the Experiment tab after Fire and Speed, out of Stars', () => {
     const names = featuredFor('experiment').flatMap((i) => ('name' in i ? [i.name] : []));
-    expect(names.slice(0, 3)).toEqual(['Wind', 'Wind Wing', 'Wind Body']);
+    const at = FIRE.length + SPEED.length;
+    expect(names.slice(at, at + 3)).toEqual(['Wind', 'Wind Wing', 'Wind Body']);
     expect(['Wind', 'Wind Wing', 'Wind Body'].map((n) => PRESETS[n]?.particles)).toEqual([0, 1, 2]);
     for (const n of ['Wind', 'Wind Wing', 'Wind Body']) {
       expect(PRESETS[n]?.mode).toBe('windtunnel');
@@ -148,10 +151,11 @@ describe('GeometryField featured presets', () => {
   it('puts the three new star trees and ADN in the Experiment tab, after Wind', () => {
     const names = featuredFor('experiment').flatMap((i) => ('name' in i ? [i.name] : []));
     expect(names).toEqual([
+      ...FIRE,
+      ...SPEED,
       'Wind',
       'Wind Wing',
       'Wind Body',
-      ...SPEED,
       'Star Willow',
       'Sea Wind Tree',
       'Star Banyan',
@@ -177,12 +181,30 @@ describe('GeometryField featured presets', () => {
     expect(artTabOf(PRESETS['Star Tree'].mode)).toBe('stars');
   });
 
-  it('lists the Speed pieces after Wind in Experiment, one Speed mode, the Scene slider picking each', () => {
-    const exp = featuredFor('experiment');
-    const headers = exp.flatMap((i) => ('header' in i ? [i.header] : []));
-    expect(headers.slice(0, 3)).toEqual(['Wind', 'Speed', 'Life']);
-    const names = exp.flatMap((i) => ('name' in i ? [i.name] : []));
-    expect(names.slice(3, 3 + SPEED.length)).toEqual(SPEED);
+  it('opens Experiment with Fire, then Speed, then Wind and Life (16 Nov 2026, "put it on top")', () => {
+    const headers = featuredFor('experiment').flatMap((i) => ('header' in i ? [i.header] : []));
+    expect(headers.slice(0, 4)).toEqual(['Fire', 'Speed', 'Wind', 'Life']);
+  });
+
+  it('lists the five Fire pieces first in Experiment, small to big, one Flames mode, the Scene slider picking each', () => {
+    const names = featuredFor('experiment').flatMap((i) => ('name' in i ? [i.name] : []));
+    expect(names.slice(0, FIRE.length)).toEqual(FIRE);
+    FIRE.forEach((n, i) => {
+      expect(PRESETS[n]).toMatchObject({ mode: 'flames', particles: i });
+    });
+    expect(artTabOf('flames')).toBe('experiment');
+    // The older Fire preset keeps its own mode, in its own tab.
+    expect(PRESETS.Fire?.mode).toBe('fire');
+    expect(artTabOf('fire')).not.toBe('experiment');
+    for (const tab of ['stars', 'geometry', 'tunnels', 'oils'] as const) {
+      const others = featuredFor(tab).flatMap((i) => ('name' in i ? [i.name] : []));
+      for (const n of FIRE) expect(others).not.toContain(n);
+    }
+  });
+
+  it('lists the Speed pieces right after Fire in Experiment, one Speed mode, the Scene slider picking each', () => {
+    const names = featuredFor('experiment').flatMap((i) => ('name' in i ? [i.name] : []));
+    expect(names.slice(FIRE.length, FIRE.length + SPEED.length)).toEqual(SPEED);
     SPEED.forEach((n, i) => {
       expect(PRESETS[n]).toMatchObject({ mode: 'speed', particles: i });
     });
