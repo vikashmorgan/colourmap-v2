@@ -11,6 +11,20 @@ import {
   TRIP1_FLOW_SHAPES,
 } from './GeometryField';
 
+const SPEED = [
+  'Monza Lap',
+  'Monza Chase',
+  'Peak Straight',
+  'Mountain Pass',
+  'Wind Corridor',
+  'Neon Run',
+  'Tunnel to Light',
+  'Coast Road',
+  'Salt Flat',
+  'Night Rain',
+  'Triangle Stream',
+];
+
 function featuredNames() {
   return FEATURED_PRESETS.flatMap((item) => ('name' in item ? [item.name] : []));
 }
@@ -137,6 +151,7 @@ describe('GeometryField featured presets', () => {
       'Wind',
       'Wind Wing',
       'Wind Body',
+      ...SPEED,
       'Star Willow',
       'Sea Wind Tree',
       'Star Banyan',
@@ -160,6 +175,23 @@ describe('GeometryField featured presets', () => {
     expect(PRESETS.ADN?.mode).toBe('adn');
     // The Star Tree itself stays in Stars.
     expect(artTabOf(PRESETS['Star Tree'].mode)).toBe('stars');
+  });
+
+  it('lists the Speed pieces after Wind in Experiment, one Speed mode, the Scene slider picking each', () => {
+    const exp = featuredFor('experiment');
+    const headers = exp.flatMap((i) => ('header' in i ? [i.header] : []));
+    expect(headers.slice(0, 3)).toEqual(['Wind', 'Speed', 'Life']);
+    const names = exp.flatMap((i) => ('name' in i ? [i.name] : []));
+    expect(names.slice(3, 3 + SPEED.length)).toEqual(SPEED);
+    SPEED.forEach((n, i) => {
+      expect(PRESETS[n]).toMatchObject({ mode: 'speed', particles: i });
+    });
+    expect(artTabOf('speed')).toBe('experiment');
+    // Speed lives only in Experiment.
+    for (const tab of ['stars', 'geometry', 'tunnels', 'oils'] as const) {
+      const others = featuredFor(tab).flatMap((i) => ('name' in i ? [i.name] : []));
+      for (const n of SPEED) expect(others).not.toContain(n);
+    }
   });
 
   it('keeps weaker depth presets at the bottom of the good list and removes Volcano', () => {
