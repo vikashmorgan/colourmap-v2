@@ -47,6 +47,10 @@ export interface VehicleSpec {
   airPull: number;
   /** Share of the grip-scrubbed sideways speed turned into speed ahead when dropping off a slope. */
   pump: number;
+  /** How far past the grip's own turn rate the body may yaw: a little past it is a drift. */
+  yawGrip: number;
+  /** How hard the hover field holds it down: extra clearance (m) a crest must open to lift it. */
+  cling: number;
 }
 
 export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
@@ -67,6 +71,8 @@ export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
     airSteer: 0.1,
     airPull: 0,
     pump: 0.45,
+    yawGrip: 1.25,
+    cling: 0,
   },
   ship: {
     vTop: 96,
@@ -84,6 +90,8 @@ export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
     airSteer: 0.6,
     airPull: 0.5,
     pump: 0.6,
+    yawGrip: 1.45,
+    cling: 0.06,
   },
 };
 
@@ -118,6 +126,8 @@ export interface Ground {
   gy: number;
   /** 0 the road or the smooth salt, 1 rough ground that drags. */
   rough: number;
+  /** On a road's curled-up edge (0 to 1): a wall to ride, never a ramp that launches. */
+  lip?: number;
 }
 
 /** A hit: push the vehicle out along (nx, ny) by depth; it loses a share of its speed and spins. */
@@ -206,9 +216,24 @@ export function roughDrag(rough: number, speed: number): number {
  * Whether a vehicle on the ground leaves it: its free path (carried on at its vertical speed under
  * gravity) would be above where the ground will be.
  */
-export function leavesGround(z: number, vz: number, groundNext: number, dt: number): boolean {
-  return z + vz * dt - 0.5 * G * dt * dt > groundNext + 0.01;
+export function leavesGround(
+  z: number,
+  vz: number,
+  groundNext: number,
+  dt: number,
+  margin = LIFT_MARGIN,
+): boolean {
+  return z + vz * dt - 0.5 * G * dt * dt > groundNext + margin;
 }
+
+/**
+ * How far ahead (s) and by how much (m) the free path must clear the ground to take off. Judged a
+ * few hundredths of a second ahead rather than over one sub-step: a sub-step opens at most a
+ * millimetre even over a sharp crest (so a fixed centimetre over one step never let anything fly),
+ * while over 0.06 s a crest opens several centimetres and a ripple in the road does not.
+ */
+export const LIFT_LOOK = 0.06;
+export const LIFT_MARGIN = 0.03;
 
 /** Share of the speed a landing costs: nothing for a kiss, up to 12% for a slam. */
 export function landingLoss(impact: number): number {
@@ -216,6 +241,9 @@ export function landingLoss(impact: number): number {
 }
 
 const SUB = 1 / 120;
+
+/** The most upward speed a take-off keeps (m/s): about a second in the air for the car. */
+export const MAX_LAUNCH = 11;
 
 /** Advances the vehicle by dt seconds (in small fixed steps). */
 export function stepVehicle(
@@ -245,7 +273,12 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   v.steer = ease(v.steer, ctl.steer, 7, dt);
   const authority = air ? spec.airSteer : 1;
   const delta = v.steer * steerLimit(v.vLong);
-  const target = ((v.vLong * Math.tan(delta)) / spec.wheelbase) * authority;
+  // The body never turns much faster than the grip can swing the velocity after it, so a held key
+  // at speed is a drift you can hold, not a spin: the yaw is capped near the grip's own turn rate.
+  // A bank adds its own hold (gravity across the slope), so a banked bend can be taken faster.
+  const bankHold = air ? 0 : G * Math.abs(-here.gx * Math.sin(v.h) + here.gy * Math.cos(v.h));
+  const yawCap = (spec.grip * spec.yawGrip + bankHold) / Math.max(Math.abs(v.vLong), 6);
+  const target = clamp((v.vLong * Math.tan(delta)) / spec.wheelbase, -yawCap, yawCap) * authority;
   v.yawRate = ease(v.yawRate, target, air ? 3 : 8, dt);
   v.h = wrapAngle(v.h + v.yawRate * dt);
 
@@ -303,7 +336,10 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     v.vz -= G * spec.airGravity * dt;
     v.z += v.vz * dt;
     v.airTime += dt;
-    if (v.z <= floor) {
+    // The ship's field catches it again near the ground on the way down: it floats over small
+    // rises and the banks' lips instead of leaving the road at every one.
+    const caught = spec.cling > 0 && v.vz <= 0 && v.z - floor < 0.35 && v.airTime < 0.5;
+    if (v.z <= floor || caught) {
       const groundRate = next.gx * v.vx + next.gy * v.vy;
       const impact = Math.max(0, groundRate - v.vz);
       const keep = 1 - landingLoss(impact);
@@ -315,7 +351,18 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
       v.airTime = 0;
       ev.landed = Math.max(ev.landed, impact);
     }
-  } else if (leavesGround(v.z, v.vz, floor, dt)) {
+  } else if (
+    !(next.lip ?? 0) &&
+    leavesGround(
+      v.z,
+      v.vz,
+      world.ground(v.x + v.vx * LIFT_LOOK, v.y + v.vy * LIFT_LOOK).h + spec.hover,
+      LIFT_LOOK,
+      LIFT_MARGIN + spec.cling,
+    )
+  ) {
+    // A crest throws you up, but never harder than a jump you can read and land.
+    v.vz = Math.min(v.vz, MAX_LAUNCH);
     v.z += v.vz * dt - 0.5 * G * dt * dt;
     v.vz -= G * dt;
     v.air = true;
@@ -336,11 +383,21 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
       const bounce = hit.soft ? 1 : 1.25;
       v.vx -= bounce * vn * hit.nx;
       v.vy -= bounce * vn * hit.ny;
-      const keep = 1 - hit.loss;
+      // The loss and the spin go with how hard it struck, not with how long it touches: a glancing
+      // scrape along a barrier (contact every sub-step) keeps its speed and flows on, a head-on hit
+      // (14 m/s or more into it) takes the whole share and the spin.
+      const hard = clamp(-vn / 14, 0, 1);
+      const keep = 1 - hit.loss * hard;
       v.vx *= keep;
       v.vy *= keep;
-      v.yawRate += hit.spin;
+      v.yawRate += hit.spin * hard;
       if (!hit.soft) ev.bump = Math.max(ev.bump, -vn);
+    }
+    // Along a wall the body swings back parallel to it, so a scrape ends pointing down the road.
+    if (!hit.soft) {
+      const along = Math.atan2(v.vy, v.vx);
+      const off = wrapAngle(along - v.h);
+      if (Math.hypot(v.vx, v.vy) > 4 && Math.abs(off) < 1.2) v.yawRate += off * 6 * dt;
     }
   }
 

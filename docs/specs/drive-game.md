@@ -65,11 +65,21 @@ Pure physics in `lib/art/vehicle.ts`, stepped at 120 Hz:
   the air (gravity ×0.38, steerable).
 - **Slopes and banks**: gravity along the ground (20 m/s²); the bank pump turns the sideways speed the
   bank takes away into forward speed going downhill.
-- **Air**: you leave the ground when your path rises above it (crests, the lip of a bank); the car
-  flies briefly, the ship glides. Landing costs up to 12% of speed with a dust puff; the camera
-  lifts while you are in the air.
-- **Hits**: walls and obstacles push you out, bounce you, cost speed, add a spin and a puff. Dust
-  devils only nudge. No game over, ever.
+- **Steering at speed** (2026-11-16): the body never yaws much faster than the grip can swing the
+  velocity after it (car ×1.25, ship ×1.45 of the grip's turn rate, plus what a bank holds), so a
+  key held hard over at full speed is a drift you can hold, not a spin. Before, full steer for 3 s
+  at 280 km/h spun the car to an 86° slide and 49 km/h; now it slides under 15° and keeps ~175.
+- **Air**: you leave the ground when your path a few hundredths of a second ahead rises above it
+  by 3 cm (crests); the ship's hover field needs 6 cm more. A take-off keeps at most 11 m/s
+  upward, so every jump is one you can read and land. The road's curled-up edge (the lip) is ridden
+  like a wall and never launches you. The car flies briefly, the ship glides. Landing costs up to
+  12% of speed with a dust puff; the camera lifts while you are in the air. (Until 2026-11-16 the
+  take-off test, judged over one 1/120 s sub-step against a fixed centimetre, never fired on a
+  crest, while the lips threw the ship off the road every few hundred metres.)
+- **Hits**: walls and obstacles push you out and bounce you. The speed lost and the spin go with
+  how hard you hit (full at 14 m/s into it), so a glancing scrape along a barrier keeps its speed
+  and swings the body back parallel to the wall; a head-on hit costs the whole share and spins.
+  Dust devils only nudge. No game over, ever.
 - **Off the road**: a soft slowdown (rough drag), never a stop.
 
 ## Camera and feel
