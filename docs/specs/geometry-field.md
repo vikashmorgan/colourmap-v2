@@ -547,3 +547,30 @@ For the Out of the Box projection room.
   - The Triangle Stream adds one instanced mesh (up to 2,600 triangles), stepped in `lib/art/speed.ts` (`stepStream`).
 - **Sliders:** Scene, Speed, Streaks, Detail, Car (0 hides it), Light, Bloom.
 - `Chaos Triangles Rosso` is not in this repo. The Triangle Stream uses Chaos Triangles' look with its own orange-red ramp (`streamColour`).
+
+## Magma Cores: five ways of drawing a core of magma (2026-11-16)
+
+> "create magma cores in 5 different methods. one with lots of small dots from yellow to orange, like boiling magma. in experiments." · Later the same day: "put it on top".
+
+- **Where:** at the top of the Experiment tab, under a *Magma* header, with *Speed* right after it and then *Wind*. There is one mode, `magma`, and the **Method** slider (0–4) picks the piece, the way the Scene slider does for Speed. Saved looks keep the method with the slider.
+- **The pieces** (each a different technique, all a glowing core in one palette: pale yellow at the hottest, then yellow, orange, red and near-black):
+  0. **Boiling Magma**: thousands of small dots (6,000 to 26,000 with Detail), added in light. Most of them churn round convection rolls: they rise at a cell's centre, spread along the surface, sink at its edge and come back underneath. A slow warp keeps the cells off a regular lattice. A hot inner ball turns slowly. Bubbles swell at the surface and burst, and their spray pops off and falls back, cooling from yellow to red as it flies. The dots are yellow at the hot centre, orange further out and deep red at the rim.
+  1. **Molten Core**: a shader sphere. Domain-warped fractal noise makes a flowing surface, and dark crust plates form where the noise runs high. The bright interior shows through the gaps, ray-marched in three steps through the shell so it has depth and parallax as the core turns. The crust's edges glow and the limb is warm.
+  2. **Cracked Crust**: a charcoal shell broken by glowing Voronoi veins. Each region's cracks breathe on a cycle of about 50 s, widening and healing again, and light leaks onto the crust round them. Detail adds finer cracks between the plates.
+  3. **Magma Currents**: long glowing filaments that follow a convection field on the surface and on two shells inside it. The field is divergence-free: it is the curl of a stream function made of slowly drifting vortices, so every filament traces a closed convection loop. A slow wave of light travels along each filament. Filaments behind the core are mostly hidden, and the inner shells glow through the body.
+  4. **Eruptive Core**: a granulated core that breathes on a 14 s cycle. Prominence loops arch between pairs of footpoints, with molten particles streaming along them. Each loop rises, holds and fades before it moves somewhere else. Vents throw plumes that fall back on parabolas, and embers drift out, cooling and fading. Anything behind the core is hidden.
+- **Calm by design:**
+  - Nothing flashes.
+  - Bursts, loops and vents ease in and out over seconds, and they only move when unseen.
+  - Edges are anti-aliased with a width worked out from the pixel size and the foreshortening.
+  - No dot is drawn smaller than 1.5 px.
+  - Noise never moves fast at a fine scale.
+  - The core turns once in about two minutes.
+- **How it's drawn:**
+  - Every method has one full-screen shader (`lib/art/magma-shaders.ts`, one source specialised per method) for the warm dark room, the halo and the core.
+  - The dots, the eruption and the currents are each one more layer (`components/geometry-magma.ts`).
+  - The dots and the eruption move entirely on the GPU, from per-dot seeds.
+  - The currents' filaments are traced on the CPU each frame (`traceLines`, a few hundred lines).
+  - The colour ramp, bubbles, loops, vents and field are pure functions in `lib/art/magma.ts`. The shaders' ramp is generated from the same stops.
+- **Bloom:** Magma has its own bloom (`magmaBloom`), so only the hot parts glow and the crust and the room stay dark.
+- **Sliders:** Method, Heat (leans the ramp hotter or colder), Turbulence, Detail (dots, octaves, finer cracks, filaments), Speed (0 stops it), Bloom.
