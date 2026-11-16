@@ -25,6 +25,8 @@ const SPEED = [
   'Triangle Stream',
 ];
 
+const MAGMA = ['Boiling Magma', 'Molten Core', 'Cracked Crust', 'Magma Currents', 'Eruptive Core'];
+
 function featuredNames() {
   return FEATURED_PRESETS.flatMap((item) => ('name' in item ? [item.name] : []));
 }
@@ -133,9 +135,10 @@ describe('GeometryField featured presets', () => {
     expect(PRESETS.Volcano?.mode).not.toBe('liquidbutterfly');
   });
 
-  it('opens the Experiment tab with the three Wind presets, one object each, out of Stars', () => {
+  it('keeps the three Wind presets in the Experiment tab, after Magma and Speed, out of Stars', () => {
     const names = featuredFor('experiment').flatMap((i) => ('name' in i ? [i.name] : []));
-    expect(names.slice(0, 3)).toEqual(['Wind', 'Wind Wing', 'Wind Body']);
+    const at = MAGMA.length + SPEED.length;
+    expect(names.slice(at, at + 3)).toEqual(['Wind', 'Wind Wing', 'Wind Body']);
     expect(['Wind', 'Wind Wing', 'Wind Body'].map((n) => PRESETS[n]?.particles)).toEqual([0, 1, 2]);
     for (const n of ['Wind', 'Wind Wing', 'Wind Body']) {
       expect(PRESETS[n]?.mode).toBe('windtunnel');
@@ -148,10 +151,11 @@ describe('GeometryField featured presets', () => {
   it('puts the three new star trees and ADN in the Experiment tab, after Wind', () => {
     const names = featuredFor('experiment').flatMap((i) => ('name' in i ? [i.name] : []));
     expect(names).toEqual([
+      ...MAGMA,
+      ...SPEED,
       'Wind',
       'Wind Wing',
       'Wind Body',
-      ...SPEED,
       'Star Willow',
       'Sea Wind Tree',
       'Star Banyan',
@@ -177,12 +181,12 @@ describe('GeometryField featured presets', () => {
     expect(artTabOf(PRESETS['Star Tree'].mode)).toBe('stars');
   });
 
-  it('lists the Speed pieces after Wind in Experiment, one Speed mode, the Scene slider picking each', () => {
+  it('lists the Speed pieces right after Magma in Experiment, one Speed mode, the Scene slider picking each', () => {
     const exp = featuredFor('experiment');
     const headers = exp.flatMap((i) => ('header' in i ? [i.header] : []));
-    expect(headers.slice(0, 3)).toEqual(['Wind', 'Speed', 'Life']);
+    expect(headers.slice(0, 4)).toEqual(['Magma', 'Speed', 'Wind', 'Life']);
     const names = exp.flatMap((i) => ('name' in i ? [i.name] : []));
-    expect(names.slice(3, 3 + SPEED.length)).toEqual(SPEED);
+    expect(names.slice(MAGMA.length, MAGMA.length + SPEED.length)).toEqual(SPEED);
     SPEED.forEach((n, i) => {
       expect(PRESETS[n]).toMatchObject({ mode: 'speed', particles: i });
     });
@@ -191,6 +195,22 @@ describe('GeometryField featured presets', () => {
     for (const tab of ['stars', 'geometry', 'tunnels', 'oils'] as const) {
       const others = featuredFor(tab).flatMap((i) => ('name' in i ? [i.name] : []));
       for (const n of SPEED) expect(others).not.toContain(n);
+    }
+  });
+
+  it('opens the Experiment tab with the five Magma Cores, one Magma mode, the Method slider picking each', () => {
+    const exp = featuredFor('experiment');
+    const names = exp.flatMap((i) => ('name' in i ? [i.name] : []));
+    expect(names.slice(0, MAGMA.length)).toEqual(MAGMA);
+    expect(exp[0]).toEqual({ header: 'Magma' });
+    expect(exp[1]).toMatchObject({ name: 'Boiling Magma' });
+    MAGMA.forEach((n, i) => {
+      expect(PRESETS[n]).toMatchObject({ mode: 'magma', particles: i, stars: 0 });
+    });
+    expect(artTabOf('magma')).toBe('experiment');
+    for (const tab of ['stars', 'geometry', 'tunnels', 'oils'] as const) {
+      const others = featuredFor(tab).flatMap((i) => ('name' in i ? [i.name] : []));
+      for (const n of MAGMA) expect(others).not.toContain(n);
     }
   });
 

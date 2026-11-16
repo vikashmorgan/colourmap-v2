@@ -45,6 +45,7 @@ import {
 } from './geometry-bigbang-stars';
 import { buildCymatics, isCymaticsMode, updateCymatics } from './geometry-cymatics';
 import { buildLiquidSeries, isLiquidMode, updateLiquidSeries } from './geometry-liquid';
+import { buildMagma, isMagmaMode, magmaBloom, updateMagma } from './geometry-magma';
 import { buildSpeed, isSpeedMode, updateSpeed } from './geometry-speed';
 import {
   buildGeometryVisual,
@@ -233,6 +234,8 @@ type Mode =
   | 'adn'
   // Speed — ten drives and a triangle stream for the Ferrari pitch (components/geometry-speed.ts)
   | 'speed'
+  // Magma Cores — five ways of drawing a core of magma (components/geometry-magma.ts)
+  | 'magma'
   | 'murmuration'
   | 'fishschool'
   | 'flowmasks'
@@ -842,7 +845,10 @@ const LIGHT_PRESETS: Record<string, Cfg> = Object.fromEntries(
 
 /** The full-screen art shaders (butterflies, light bodies): soft bloom, stars only when asked. */
 const isArtShaderMode = (mode: Mode): boolean =>
-  mode === 'liquidbutterfly' || kindOfBuilderMode(mode) !== undefined || isSpeedMode(mode);
+  mode === 'liquidbutterfly' ||
+  kindOfBuilderMode(mode) !== undefined ||
+  isSpeedMode(mode) ||
+  isMagmaMode(mode);
 
 export const PRESETS: Record<string, Cfg> = {
   ...BUTTERFLY_PRESETS,
@@ -2910,6 +2916,69 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 1.6,
     stars: 0,
     mode: 'speed',
+  },
+  // 16 Nov 2026: "create magma cores in 5 different methods. one with lots of small dots from yellow
+  // to orange, like boiling magma. in experiments." One Magma mode, the Method slider picking the
+  // piece (lib/art/magma.ts METHODS).
+  'Boiling Magma': {
+    preset: 'Golden Source',
+    symmetry: 1,
+    complexity: 6,
+    glow: 6,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 0,
+    luminous: 2.4,
+    stars: 0,
+    mode: 'magma',
+  },
+  'Molten Core': {
+    preset: 'Golden Source',
+    symmetry: 1,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 1,
+    luminous: 2.0,
+    stars: 0,
+    mode: 'magma',
+  },
+  'Cracked Crust': {
+    preset: 'Golden Source',
+    symmetry: 1,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 2,
+    luminous: 1.8,
+    stars: 0,
+    mode: 'magma',
+  },
+  'Magma Currents': {
+    preset: 'Golden Source',
+    symmetry: 1,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 3,
+    luminous: 2.4,
+    stars: 0,
+    mode: 'magma',
+  },
+  'Eruptive Core': {
+    preset: 'Golden Source',
+    symmetry: 1,
+    complexity: 6,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 4,
+    luminous: 2.2,
+    stars: 0,
+    mode: 'magma',
   },
   'Liquid Quantum': {
     preset: 'Clifford Dream',
@@ -7552,6 +7621,7 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
   }
   if (isCymaticsMode(cfg.mode)) return buildCymatics(cfg);
   if (isSpeedMode(cfg.mode)) return buildSpeed(cfg);
+  if (isMagmaMode(cfg.mode)) return buildMagma(cfg);
   if (isLiquidMode(cfg.mode)) return buildLiquidSeries();
   if (isBigBangStarMode(cfg.mode)) return buildBigBangStars();
   switch (cfg.mode) {
@@ -7787,6 +7857,10 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
   }
   if (isSpeedMode(cfg.mode)) {
     updateSpeed(group, cfg, t, R);
+    return;
+  }
+  if (isMagmaMode(cfg.mode)) {
+    updateMagma(group, cfg, t, R);
     return;
   }
   if (isLiquidMode(cfg.mode)) {
@@ -14883,6 +14957,14 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'intensity', label: 'Light', min: 1, max: 10, step: 0.5 },
     { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
   ],
+  magma: [
+    { key: 'particles', label: 'Method', min: 0, max: 4, step: 1 },
+    { key: 'intensity', label: 'Heat', min: 1, max: 10, step: 0.5 },
+    { key: 'glow', label: 'Turbulence', min: 0, max: 10, step: 0.5 },
+    { key: 'complexity', label: 'Detail', min: 1, max: 10, step: 1 },
+    { key: 'breathSpeed', label: 'Speed', min: 0, max: 2, step: 0.05 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 4, step: 0.1 },
+  ],
   adn: [
     { key: 'symmetry', label: 'Turns', min: 1.5, max: 5, step: 0.5 },
     { key: 'glow', label: 'Spin', min: 0, max: 10, step: 0.5 },
@@ -15366,6 +15448,7 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   startrees: 'Star Willow',
   adn: 'ADN',
   speed: 'Monza Lap',
+  magma: 'Boiling Magma',
   murmuration: 'Murmuration',
   fishschool: 'Fish School',
   flowmasks: 'Flow Masks',
@@ -15551,6 +15634,7 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'startrees', label: '✦ Star Trees' },
   { mode: 'adn', label: '⌇ ADN' },
   { mode: 'speed', label: '» Speed' },
+  { mode: 'magma', label: '● Magma' },
   { mode: 'murmuration', label: '⋰ Murmuration' },
   { mode: 'fishschool', label: '⋰ Fish School' },
   { mode: 'flowmasks', label: '◕ Flow Masks' },
@@ -15661,7 +15745,7 @@ export const ART_PILLS: ({ id: ArtTab; label: string } | { href: string; label: 
 ];
 // 8 Nov 2026: "add all the new ones in an Experiment tab pill after Big Bang, and include Wind,
 // Wing and Body in there."
-const EXPERIMENT_TAB_MODES = new Set<Mode>(['windtunnel', 'startrees', 'adn', 'speed']);
+const EXPERIMENT_TAB_MODES = new Set<Mode>(['windtunnel', 'startrees', 'adn', 'speed', 'magma']);
 /** Presets kept in Experiment though their mode lives in another tab. */
 const EXPERIMENT_TAB_PRESETS = new Set<string>([
   'Dot Brain Loop',
@@ -15803,13 +15887,15 @@ export function featuredFor(tab: ArtTab): FeaturedItem[] {
 type FeaturedItem = { name: string; tag: string } | { header: string; dim?: boolean };
 
 export const FEATURED_PRESETS: FeaturedItem[] = [
-  // The Experiment tab: Wind, then the Star Trees and ADN (8 Nov 2026).
-  // 18 Oct 2026, for the Ferrari project: "a star preset called Wind … currents of wind passing over an
-  // object from its left to its right: aerodynamics, the union of science and art. Later with a car."
-  { header: 'Wind' },
-  { name: 'Wind', tag: 'WIND' },
-  { name: 'Wind Wing', tag: 'WIND' },
-  { name: 'Wind Body', tag: 'WIND' },
+  // The Experiment tab, from the top: Magma, Speed, Wind, then the Star Trees and ADN.
+  // 16 Nov 2026: the Magma Cores, five methods (components/geometry-magma.ts). "put it on top":
+  // Magma opens the tab, with Speed right after it.
+  { header: 'Magma' },
+  { name: 'Boiling Magma', tag: 'DOTS' },
+  { name: 'Molten Core', tag: 'SHADER' },
+  { name: 'Cracked Crust', tag: 'CRUST' },
+  { name: 'Magma Currents', tag: 'FLOW' },
+  { name: 'Eruptive Core', tag: 'ERUPT' },
   // 16 Nov 2026, for the Ferrari pitch: the Speed pieces (components/geometry-speed.ts).
   { header: 'Speed' },
   { name: 'Monza Lap', tag: 'MONZA' },
@@ -15823,6 +15909,12 @@ export const FEATURED_PRESETS: FeaturedItem[] = [
   { name: 'Salt Flat', tag: 'DESERT' },
   { name: 'Night Rain', tag: 'RAIN' },
   { name: 'Triangle Stream', tag: 'WIND' },
+  // 18 Oct 2026, for the Ferrari project: "a star preset called Wind … currents of wind passing over an
+  // object from its left to its right: aerodynamics, the union of science and art. Later with a car."
+  { header: 'Wind' },
+  { name: 'Wind', tag: 'WIND' },
+  { name: 'Wind Wing', tag: 'WIND' },
+  { name: 'Wind Body', tag: 'WIND' },
   { header: 'Life' },
   { name: 'Star Willow', tag: 'TREE' },
   { name: 'Sea Wind Tree', tag: 'TREE' },
@@ -21544,6 +21636,12 @@ export default function GeometryField() {
       bloomPass.strength = currentCfg.luminous * (shaderField ? 0.12 : 0.28);
       bloomPass.threshold = shaderField ? 0.55 : 0.05;
       bloomPass.radius = 0.4 + currentCfg.luminous * 0.04;
+      if (isMagmaMode(currentCfg.mode)) {
+        const b = magmaBloom(currentCfg.luminous);
+        bloomPass.strength = b.strength;
+        bloomPass.threshold = b.threshold;
+        bloomPass.radius = b.radius;
+      }
 
       // Rebuild stars when count or viewport changes
       const starsKey = `${Math.round(currentCfg.stars)}-${currentCfg.preset}-${currentCfg.mode}-${Math.round(W)}-${Math.round(H)}`;
