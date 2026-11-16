@@ -177,6 +177,11 @@ export const HUBS: Hub[] = [
         label: 'City vision',
         line: 'How far the City of Dreams can go in a year',
       },
+      {
+        href: '/geometry-field/riverdust',
+        label: 'Riverdust',
+        line: 'A desert town in designs: flags, tents, souk, race gate',
+      },
       { href: '/art/flow', label: 'Flow', line: 'AI Sculptures, the Flow collection' },
       {
         href: '/art/butterflies',

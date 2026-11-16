@@ -405,7 +405,14 @@ export function viewCamera(eye: Vec3, target: Vec3, v: View): { eye: Vec3; targe
 }
 
 /** The Art pills, the same as the panel's (components/GeometryField.tsx ART_PILLS). */
-export type TripPage = 'big-bang' | 'journey' | 'vegetal' | 'ocean' | 'city' | 'hyper-city';
+export type TripPage =
+  | 'big-bang'
+  | 'journey'
+  | 'vegetal'
+  | 'ocean'
+  | 'city'
+  | 'hyper-city'
+  | 'riverdust';
 
 export const ART_LINKS: { href: string; label: string; page?: TripPage }[] = [
   { href: '/geometry-field?tab=stars', label: 'Stars' },
@@ -418,6 +425,7 @@ export const ART_LINKS: { href: string; label: string; page?: TripPage }[] = [
   { href: '/geometry-field/ocean', label: 'Ocean', page: 'ocean' },
   { href: '/geometry-field/city', label: 'City', page: 'city' },
   { href: '/geometry-field/hyper-city', label: 'Hyper-speed', page: 'hyper-city' },
+  { href: '/geometry-field/riverdust', label: 'Riverdust', page: 'riverdust' },
   { href: '/geometry-field?tab=experiment', label: 'Experiment' },
 ];
 
