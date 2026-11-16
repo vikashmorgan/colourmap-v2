@@ -46,7 +46,11 @@ export const SPEED_FLOATS = [
   'uStreakX',
 ] as const;
 
-const SOURCE = /* glsl */ `
+/**
+ * The shared head of every Speed shader: uniforms, noise, lines, the car seen from behind, asphalt,
+ * lane lines and the finish. The racing game (lib/art/drive-shaders.ts) builds on it too.
+ */
+export const SPEED_COMMON = /* glsl */ `
 precision highp float;
 uniform vec2 uRes;
 uniform float uTime;
@@ -361,6 +365,10 @@ vec3 finish(vec3 col, vec2 uv) {
   return max(col * v * (0.35 + 0.9 * uLight), 0.0);
 }
 
+`;
+
+const SOURCE = /* glsl */ `
+${SPEED_COMMON}
 /* ═════ The scenes ═════ */
 
 #if SCENE == 0
@@ -1108,14 +1116,16 @@ vec3 lamps(vec2 p, float f, float hz, bool mirror) {
   vec3 col = vec3(0.0);
   float y0 = p.y - hz;
   float k0 = floor(uTravel / 32.0);
-  for (int s = 0; s < 2; s++) {
-    float off = s == 0 ? 9.5 : -9.5;
-    float ph = s == 0 ? 0.0 : 16.0;
+  // Two rows of lamps on posts beside the road, and a third hung high over its middle, halfway
+  // between, so the lights trace the course down to the vanishing point.
+  for (int s = 0; s < 3; s++) {
+    float off = s == 0 ? 9.5 : s == 1 ? -9.5 : 0.0;
+    float ph = s == 0 ? 0.0 : s == 1 ? 16.0 : 8.0;
     for (int i = 0; i < 12; i++) {
       float k = k0 + float(i);
       float zl = k * 32.0 + ph - uTravel;
       if (zl < 0.6) continue;
-      float hy = mirror ? -8.0 : 8.0;
+      float hy = (mirror ? -1.0 : 1.0) * (s == 2 ? 9.5 : 8.0);
       float x1 = off * f / zl;
       float y1 = hz + (hy - CAMH) * f / zl;
       float zt = zl + max(uBlur, 0.02) * 2.5;
@@ -1133,7 +1143,8 @@ vec3 lamps(vec2 p, float f, float hz, bool mirror) {
       float size = 0.25 * f / zl;
       float sodium = hash11(mod(k, 64.0) + float(s) * 9.0);
       vec3 lc = sodium < 0.7 ? C(1.0, 0.68, 0.32) : C(0.85, 0.9, 1.0);
-      col += lc * (exp(-d / max(size * 0.12, 0.0008)) * 2.0 + exp(-d / max(size, 0.006)) * 0.4) * exp(-zl / 320.0);
+      float row = s == 2 ? 0.75 : 1.0;
+      col += lc * row * (exp(-d / max(size * 0.12, 0.0008)) * 2.0 + exp(-d / max(size, 0.006)) * 0.4) * exp(-zl / 320.0);
     }
   }
   return col;
@@ -1149,8 +1160,9 @@ vec3 scene(vec2 p) {
     float x = p.x * z / f;
     float Zw = uTravel + z;
     col = asphalt(x, Zw, z, C(0.16, 0.15, 0.2), 0.6);
+    // No painted lines (2026-11-16: "I don't like the white lines on the sides"): the lamps
+    // overhead draw the course.
     if (abs(x) > 7.0) col *= 0.5;
-    col = laneLines(col, x, Zw, z, 5.6, vec3(0.5));
     // Puddled streaks on the surface wobble the reflections.
     float rip = (pn2(vec2(x * 1.3, Zw / 4.0), PERIOD / 4.0) - 0.5) * 0.02;
     col += lamps(vec2(p.x + rip, p.y), f, hz, true) * 0.9 * smoothstep(3.0, 30.0, z);
