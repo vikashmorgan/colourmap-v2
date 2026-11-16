@@ -7,13 +7,15 @@
 import { blackbody, FLAME_PALETTES, type FlamePalette } from '@/lib/art/flame';
 import type { VehicleKind } from '@/lib/art/vehicle';
 
-export type WorldId = 'salt' | 'coast' | 'canyon' | 'night';
+export type WorldId = 'salt' | 'coast' | 'canyon' | 'night' | 'chinatown' | 'neon';
 
 export const WORLDS: { id: WorldId; name: string; key: string }[] = [
   { id: 'salt', name: 'Salt Flat', key: '1' },
   { id: 'coast', name: 'Coast Road', key: '2' },
   { id: 'canyon', name: 'Canyon Race', key: '3' },
   { id: 'night', name: 'Night Rain', key: '4' },
+  { id: 'chinatown', name: 'Chinatown Run', key: '5' },
+  { id: 'neon', name: 'Neon District', key: '6' },
 ];
 
 export function isWorld(id: string): id is WorldId {
@@ -141,12 +143,19 @@ export interface Design {
   vehicle: Record<WorldId, VehicleKind>;
 }
 
-/** The red car on the salt and in the rain, the hover ship on the coast. */
+/** The red car on the salt, in the canyon and the night lanes; the hover ship on the coast and in the Neon District. */
 export const DEFAULT_DESIGN: Design = {
   fire: 'speed',
   hull: 'red',
   weather: 'clear',
-  vehicle: { salt: 'car', coast: 'ship', canyon: 'car', night: 'car' },
+  vehicle: {
+    salt: 'car',
+    coast: 'ship',
+    canyon: 'car',
+    night: 'car',
+    chinatown: 'car',
+    neon: 'ship',
+  },
 };
 
 const isVehicle = (v: unknown): v is VehicleKind => v === 'car' || v === 'ship';

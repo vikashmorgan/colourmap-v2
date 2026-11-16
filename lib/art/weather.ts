@@ -180,6 +180,8 @@ export const WORLD_MOTES: Record<WorldId, Rgb> = {
   coast: [1, 0.95, 0.92],
   canyon: [0.78, 0.42, 0.26],
   night: [0.6, 0.65, 0.75],
+  chinatown: [1, 0.7, 0.55],
+  neon: [0.75, 0.6, 1],
 };
 
 export function moteColour(w: Weather, world: WorldId): Rgb {

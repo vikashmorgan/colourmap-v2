@@ -20,7 +20,7 @@
 import { clamp, type Gate } from '@/lib/art/drive';
 import { G, type Ground, type Hit, type Vehicle, type World } from '@/lib/art/vehicle';
 
-export type TrackId = 'coast' | 'canyon' | 'night';
+export type TrackId = 'coast' | 'canyon' | 'night' | 'chinatown' | 'neon';
 
 export interface Wall {
   /** Offset of the barrier from the centre (positive left), and its height over the road. */
@@ -277,7 +277,8 @@ export const COAST: TrackDef = {
   bankSpeed: 55,
   bankMax: 0.6,
   terrain: null,
-  walls: () => ({ left: { u: COAST_RAIL, height: 1.1 }, right: { u: COAST_CLIFF, height: 30 } }),
+  // The rail is 1.1 m to see, but holds you however high a crest throws you: never into the sea.
+  walls: () => ({ left: { u: COAST_RAIL, height: 40 }, right: { u: COAST_CLIFF, height: 30 } }),
 };
 
 /** Coast Road is timed by the kilometre: a gate every 1,000 m. */
@@ -288,6 +289,13 @@ export const COAST_GATE = 1000;
 export const NIGHT_HALF = 10;
 /** Lamps beside the road every 32 m, and a gantry across it every 128 m. */
 export const NIGHT_LAMP = 32;
+/** The night roads' barrier: at the road's edge, under the LED arrows, a kerb you glance off. It
+ * stands tall (unseen) so a jump off the banked lip never carries you into the towers. */
+export const NIGHT_BARRIER = 1.5;
+const barrier = (half: number): { left: Wall; right: Wall } => ({
+  left: { u: half + NIGHT_BARRIER, height: 30 },
+  right: { u: -(half + NIGHT_BARRIER), height: 30 },
+});
 export const NIGHT_GANTRY = 128;
 export const NIGHT_LAMP_U = NIGHT_HALF + 1.5;
 export const NIGHT_LAMP_H = 8;
@@ -310,7 +318,62 @@ export const NIGHT: TrackDef = {
   bankSpeed: 52,
   bankMax: 0.55,
   terrain: 0,
-  walls: () => ({ left: null, right: null }),
+  walls: () => barrier(NIGHT_HALF),
+};
+
+/* ── Chinatown Run and the Neon District ───────────────────── */
+
+/** Chinatown: narrow lanes (half 7.5 m) opening onto wide avenues (half 12 m), 600 m each. */
+export const CHINA_LANE = 7.5;
+export const CHINA_AVENUE = 12;
+
+export function chinatownHalf(s: number): number {
+  const p = ((s % 1200) + 1200) % 1200;
+  const avenue = window01(p, 600, 1200, 70);
+  return CHINA_LANE + (CHINA_AVENUE - CHINA_LANE) * avenue;
+}
+
+export const CHINATOWN: TrackDef = {
+  id: 'chinatown',
+  startH: 0,
+  curv: (s) =>
+    0.55 * (TAU / 1100) * Math.cos((TAU * s) / 1100 + 1.1) +
+    0.45 * (TAU / 480) * Math.cos((TAU * s) / 480 + 0.3),
+  elev: (s) => {
+    const p = ((s % 1200) + 1200) % 1200;
+    return bump(p, 900, 4, 30) + bump(p, 300, -2.5, 45);
+  },
+  half: chinatownHalf,
+  lip: () => 0.7,
+  bankSpeed: 45,
+  bankMax: 0.5,
+  terrain: 0,
+  walls: (s) => {
+    // The shophouses' fronts stop you in the lanes; on the avenues the pavement is open.
+    const half = chinatownHalf(s);
+    if (half > 10) return barrier(half);
+    return { left: { u: half + 2.3, height: 6 }, right: { u: -(half + 2.3), height: 6 } };
+  },
+};
+
+export const NEON_HALF = 13;
+
+export const NEON_TRACK: TrackDef = {
+  id: 'neon',
+  startH: 0,
+  curv: (s) =>
+    0.9 * (TAU / 2100) * Math.cos((TAU * s) / 2100 + 0.2) +
+    0.3 * (TAU / 700) * Math.cos((TAU * s) / 700 + 1.9),
+  elev: (s) => {
+    const p = ((s % 1800) + 1800) % 1800;
+    return bump(p, 700, 5.5, 36) + bump(p, 1400, -3.5, 55) + 2 * Math.sin((TAU * s) / 900);
+  },
+  half: () => NEON_HALF,
+  lip: () => 0.9,
+  bankSpeed: 58,
+  bankMax: 0.6,
+  terrain: 0,
+  walls: () => barrier(NEON_HALF),
 };
 
 /* ── Canyon Race ───────────────────────────────────────────── */

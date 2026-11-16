@@ -9,6 +9,13 @@
 
 import { type Gate, wrapAngle } from '@/lib/art/drive';
 
+/** The camera's height over the salt (the Salt Flat piece's ground). */
+export const CAM_H = 1.2;
+/** The car's real size: the pieces' 2-unit-wide body seen from a 1.45 m camera, here from 1.2 m. */
+export const CAR_SCALE = 1.2 / 1.45;
+/** Metres from the camera to the car's tail: the pieces' car at 7 units, at the same scale. */
+export const CAR_DIST = 7 * CAR_SCALE;
+
 /** Where the car starts: just south of the course, facing north up the line. */
 export const START = { x: 6, y: -70, h: Math.PI / 2 };
 
