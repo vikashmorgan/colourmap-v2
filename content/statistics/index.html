@@ -401,6 +401,14 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .reads dt { font: 600 13.5px/1.5 ui-monospace, 'Cascadia Code', Consolas, monospace; overflow-wrap: anywhere; }
   .reads dd { margin: 0; font-size: 15px; line-height: 1.45; }
   .reads .flow-label { margin: 0 0 2px; }
+  /* What each piece means / Try it with numbers: closed pills, opened on demand */
+  .pill-fold > summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; list-style: none; width: fit-content; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); user-select: none; }
+  .pill-fold > summary::-webkit-details-marker { display: none; }
+  .pill-fold > summary::after { content: '▸'; font-size: 10px; }
+  .pill-fold[open] > summary::after { content: '▾'; }
+  .pill-fold > summary:hover, .pill-fold > summary:focus-visible { color: var(--ink); border-color: var(--soft); }
+  .pill-fold[open] > summary { margin-bottom: 6px; }
+  .reads + .walk { margin-top: 6px; }
   sub, sup { font-size: .72em; line-height: 0; }
   .ex { display: grid; gap: 8px; padding: 12px 0 4px; }
   .ex > .foot { margin-top: 2px; }
@@ -1788,7 +1796,7 @@ function mathHtml(s) {
   }));
 }
 function readsHtml(r) {
-  return `<div class="reads"><p class="flow-label">What each piece means</p><dl>${r.parts.map(([sym, say]) => `<div><dt>${mathHtml(sym)}</dt><dd>${kwText(say)}</dd></div>`).join('')}</dl></div>${r.walk ? `<div class="walk"><p class="flow-label">Worked out, step by step</p><p>${kwText(r.walk.intro)}</p><dl class="steps"><div class="steps-head"><dt>The piece</dt><dd>In numbers</dd></div>${r.walk.steps.map(([piece, nums, result]) => `<div${result ? ' class="result"' : ''}><dt>${mathHtml(piece)}</dt><dd>${mathHtml(nums)}</dd></div>`).join('')}</dl></div>` : ''}`;
+  return `<details class="pill-fold reads"><summary>What each piece means</summary><dl>${r.parts.map(([sym, say]) => `<div><dt>${mathHtml(sym)}</dt><dd>${kwText(say)}</dd></div>`).join('')}</dl></details>${r.walk ? `<details class="pill-fold walk"><summary>Try it with numbers</summary><p>${kwText(r.walk.intro)}</p><dl class="steps"><div class="steps-head"><dt>The piece</dt><dd>In numbers</dd></div>${r.walk.steps.map(([piece, nums, result]) => `<div${result ? ' class="result"' : ''}><dt>${mathHtml(piece)}</dt><dd>${mathHtml(nums)}</dd></div>`).join('')}</dl></details>` : ''}`;
 }
 const PARA = String.fromCharCode(10, 10);
 const paras = t => t.split(PARA).map(p => `<p>${kwText(p)}</p>`).join('');
