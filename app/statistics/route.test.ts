@@ -88,6 +88,14 @@ describe('/statistics class page', () => {
     expect(html).not.toContain('Explain more');
     // A worked example sets each piece of the formula beside its numbers.
     expect(html).toContain('class="steps"');
+    // Both open from closed pills, and the worked example has a plain name.
+    expect(html).toContain(
+      '<details class="pill-fold reads"><summary>What each piece means</summary>',
+    );
+    expect(html).toContain(
+      '<details class="pill-fold walk"><summary>Try it with numbers</summary>',
+    );
+    expect(html).not.toContain('Worked out, step by step');
     expect(html).not.toContain('r.walk.lines');
     // A tab on the left of the boxes marks the part.
     expect(html).toContain('class="seg-tab"');
