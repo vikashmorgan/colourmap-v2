@@ -3035,7 +3035,8 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && peekStack.
 const HL_KEY = 'stats-highlights';
 let highlights = readStore(HL_KEY, []);
 const saveHighlights = () => writeStore(HL_KEY, highlights);
-const HL_HOST = '.card[data-key]:not(.overall), [data-hl]';
+// A summary idea is a host too (asked for 2026-11-18: "I can't highlight in the summary of session 6").
+const HL_HOST = '.card[data-key]:not(.overall), .ess-item[data-key], [data-hl]';
 const HL_SKIP = '.notes, .editor, .foot, .marks, .ref-go, .out-head, .more-rows, #sel-bar';
 const hlKeyOf = host => host.dataset.hl || host.dataset.key;
 function hlTextNodes(host) {
@@ -3137,7 +3138,7 @@ function showSelBar() {
   if (!info) { if (!selBar.dataset.hid) hideSelBar(); return; }
   selInfo = info;
   delete selBar.dataset.hid;
-  const card = info.host.classList.contains('card');
+  const card = info.host.matches('.card, .ess-item');
   selBar.innerHTML = HL_COLOURS.map(([c, v]) => `<button type="button" class="sb-c" data-colour="${c}" style="--hl: ${v}" title="Highlight (${c})" aria-label="Highlight in ${c}"></button>`).join('')
     + (card ? '<span class="sb-sep"></span><button type="button" class="sb-btn sb-ask" data-kind="question">Question</button><button type="button" class="sb-btn sb-ask sb-com" data-kind="comment">Comment</button>' : '');
   selBarAt(info.rect);

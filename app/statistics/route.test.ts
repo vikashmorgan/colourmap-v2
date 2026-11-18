@@ -96,6 +96,10 @@ describe('/statistics class page', () => {
       '<details class="pill-fold walk"><summary>Try it with numbers</summary>',
     );
     expect(html).not.toContain('Worked out, step by step');
+    // The summary's ideas can be highlighted, like the cards (2026-11-18).
+    expect(html).toContain(
+      "const HL_HOST = '.card[data-key]:not(.overall), .ess-item[data-key], [data-hl]';",
+    );
     expect(html).not.toContain('r.walk.lines');
     // A tab on the left of the boxes marks the part.
     expect(html).toContain('class="seg-tab"');
