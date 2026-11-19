@@ -163,7 +163,29 @@ vec3 sky(float az, float yE) {
   float h = hash11(mod(cell.x * 13.0 + cell.y * 157.0, 997.0) + 1.0);
   vec2 fr = fract(vec2(az * 140.0, yE * 140.0)) - 0.5;
   float star = step(0.93, h) * (1.0 - smoothstep(0.05, 0.16, length(fr))) * smoothstep(0.02, 0.1, yE);
-  return c + C(1.0, 0.8, 0.45) * star * (0.4 + 0.6 * fract(h * 37.0));
+  c += C(1.0, 0.8, 0.45) * star * (0.4 + 0.6 * fract(h * 37.0));
+  // A great ringed planet hangs over the track (2026-11-19: "a big Saturn with rings in the sky so
+  // it feels we are on a planet"): banded in golds, lit from one side, its ring tilted, passing
+  // behind the globe above and in front of it below.
+  vec2 q = sunOff(az - 0.35, yE, 0.2);
+  float R = 0.17;
+  float ct = cos(0.38);
+  float st = sin(0.38);
+  vec2 qr = vec2(ct * q.x + st * q.y, -st * q.x + ct * q.y);
+  float ringR = length(vec2(qr.x, qr.y / 0.24)) / R;
+  float ring = smoothstep(1.4, 1.45, ringR) * (1.0 - smoothstep(2.25, 2.35, ringR));
+  ring *= 1.0 - 0.75 * (smoothstep(1.78, 1.8, ringR) - smoothstep(1.86, 1.88, ringR));
+  ring *= 0.55 + 0.45 * sin(ringR * 40.0);
+  vec3 ringC = C(0.75, 0.58, 0.34) * ring;
+  float dP = length(q) / R;
+  float globe = 1.0 - smoothstep(0.985, 1.0, dP);
+  if (qr.y > 0.0) c = mix(c, c + ringC * 0.6, 1.0 - globe);
+  float band = sin(qr.y / R * 15.0 + 0.6 * sin(qr.x / R * 3.0)) * 0.5 + 0.5;
+  vec3 body = mix(C(0.62, 0.42, 0.2), C(0.9, 0.72, 0.42), band);
+  float lit = clamp(0.25 + 0.9 * dot(normalize(vec3(q / R, sqrt(max(0.0, 1.0 - dP * dP)))), normalize(vec3(-0.6, 0.4, 0.7))), 0.0, 1.0);
+  c = mix(c, body * lit * 0.55, globe);
+  if (qr.y <= 0.0) c += ringC * 0.6 * (1.0 - globe * 0.0);
+  return c;
 }
 #else
 /* Night: a dark sky, the city's glow low round the horizon. */

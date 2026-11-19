@@ -775,6 +775,81 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       for (let t = 0; t < Math.PI * 2; t += 0.12)
         put(sr + Math.cos(t) * 0.01, uc + Math.cos(t) * 8, e + 9 + Math.sin(t) * 8, golds[1], 1.4);
     }
+    // The city of gold (2026-11-19: "more graphic elements to decorate it, like a city around"):
+    // towers drawn as dots, their edges and a ring at every floor, set back on both sides; fewer
+    // and lower close to the road, tall far off. None stands on the inside of a tight bend, where
+    // it would land on the road.
+    const P = (s: number, u: number) => {
+      const p = pointAt(track, s, u);
+      return { x: p.x - a.x, y: -(p.y - a.y) };
+    };
+    const dot = (x: number, z: number, y: number, c: V3, sz: number, s: number) => {
+      pos.push(x, z, y);
+      col.push(...c);
+      ss.push(s);
+      size.push(sz);
+    };
+    for (let st = Math.ceil(s0 / 45) * 45; st < s1; st += 45) {
+      for (const side of [1, -1]) {
+        const r = hashN(st * 0.11 + side * 5.7);
+        const u = side * (def.half(st) + 30 + r * 110);
+        if (def.curv(st) * u > 0.45) continue;
+        const c = P(st, u);
+        const e = heightAt(track, st, side * def.half(st));
+        const w = 8 + hashN(st + side * 3) * 14;
+        const d = 8 + hashN(st * 1.7 + side) * 14;
+        const H = 20 + (Math.abs(u) / 160) * 90 * (0.5 + hashN(st * 2.3 + side));
+        const h = frameAt(track, st).h;
+        const ca = Math.cos(h);
+        const sa = Math.sin(h);
+        const corner = (cx: number, cy: number) => ({
+          x: c.x + cx * ca - cy * sa,
+          y: c.y - (cx * sa + cy * ca),
+        });
+        const cs = [
+          corner(-w / 2, -d / 2),
+          corner(w / 2, -d / 2),
+          corner(w / 2, d / 2),
+          corner(-w / 2, d / 2),
+        ];
+        const tint = golds[Math.floor(r * 9) % 3];
+        const dim: V3 = [tint[0] * 0.55, tint[1] * 0.55, tint[2] * 0.55];
+        for (const q of cs) for (let z = 0; z <= H; z += 1.6) dot(q.x, e + z, q.y, tint, 0.7, st);
+        for (let z = 4; z <= H; z += 4.5)
+          for (let k = 0; k < 4; k++) {
+            const qa = cs[k];
+            const qb = cs[(k + 1) % 4];
+            const n = Math.ceil(Math.hypot(qb.x - qa.x, qb.y - qa.y) / 2.2);
+            for (let i = 1; i < n; i++)
+              dot(
+                qa.x + ((qb.x - qa.x) * i) / n,
+                e + z,
+                qa.y + ((qb.y - qa.y) * i) / n,
+                dim,
+                0.5,
+                st,
+              );
+          }
+        // A beacon on the tallest.
+        if (H > 70) dot(c.x, e + H + 3, c.y, golds[2], 3, st);
+      }
+    }
+    // Floating forms over the city: a dotted sphere every 600 m, high on alternate sides.
+    for (let sf = Math.ceil(s0 / 600) * 600 + 300; sf < s1; sf += 600) {
+      const side = Math.round(sf / 600) % 2 ? 1 : -1;
+      const u = side * (def.half(sf) + 45);
+      if (def.curv(sf) * u > 0.45) continue;
+      const c = P(sf, u);
+      const e = heightAt(track, sf, 0) + 38;
+      const R = 12;
+      const N = 260;
+      for (let i = 0; i < N; i++) {
+        const y = 1 - (2 * (i + 0.5)) / N;
+        const rr = Math.sqrt(1 - y * y);
+        const t = i * 2.399963;
+        dot(c.x + Math.cos(t) * rr * R, e + y * R, c.y + Math.sin(t) * rr * R, golds[0], 0.9, sf);
+      }
+    }
     // Constellations on the dark ground either side.
     for (let s = Math.ceil(s0 / 4) * 4; s < s1; s += 4)
       for (const side of [1, -1]) {
