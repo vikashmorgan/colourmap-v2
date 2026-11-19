@@ -90,6 +90,9 @@ describe('the design, remembered', () => {
       fire: 'plasma' as const,
       hull: 'chrome' as const,
       weather: 'snow',
+      gauge: 'timer' as const,
+      flames: false,
+      mode: 'easy' as const,
     };
     d.vehicle = { ...d.vehicle, salt: 'ship' };
     saveDesign(store, d);

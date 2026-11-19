@@ -26,6 +26,7 @@ import {
   ease,
   easeAngle,
   formatTime,
+  gearOf,
   kmh,
   makeTrail,
   NO_CONTROLS,
@@ -33,6 +34,7 @@ import {
   pushTrail,
   type Run,
   speedFeel,
+  speedFlame,
   stepRun,
   type Trail,
   trailFade,
@@ -120,6 +122,9 @@ import { buildVehicle, type VehicleView } from './vehicles';
 
 export interface Hud {
   speed: number;
+  /** The automatic box: the gear, and how far through it (the revs, 0..1). */
+  gear?: number;
+  revs?: number;
   /** The Salt Flat's drift gates: the lap's score (or the last lap's), the best, the combo held. */
   drift: number | null;
   driftBest: number | null;
@@ -835,7 +840,7 @@ export class DriveEngine {
       const py = v.y;
       const s0 = this.s;
       if (this.trackWorld) this.trackWorld.track.hint = this.s;
-      const ev = stepVehicle(v, ctl, dt, this.physics, t);
+      const ev = stepVehicle(v, { ...ctl, mode: this.design.mode }, dt, this.physics, t);
       this.odometer = (this.odometer + Math.hypot(v.x - px, v.y - py)) % 4096;
       let u = 0;
       if (this.trackWorld) {
@@ -950,7 +955,14 @@ export class DriveEngine {
         (ctl.throttle > 0 || ctl.boost > 0 ? 1 : 0.35) +
         ctl.boost * 0.5 +
         (surgeAccel(t - this.surgeAt) > 0 ? 0.8 : 0);
-      vv.update(v, t, dt, power, clamp(speed / spec.vTop, 0, 1.4));
+      vv.update(
+        v,
+        t,
+        dt,
+        power,
+        clamp(speed / spec.vTop, 0, 1.4),
+        this.design.flames ? speedFlame(speed, spec.vTop) : 0,
+      );
     }
     this.trails(t, w);
     for (const r of this.ribbons) r.update(ox, oy, t);
@@ -1234,8 +1246,11 @@ export class DriveEngine {
     const best = gates ? d.bestTime : this.best;
     const running = start !== null;
     const drifting = gates && d.start !== null && d.held > 0 && d.lapse < 0.1;
+    const box = gearOf(this.vehicle.kind, speed, VEHICLES[this.vehicle.kind].vTop);
     const hud: Hud = {
       speed: kmh(speed),
+      gear: box.gear,
+      revs: Math.round(box.revs * 20) / 20,
       time: running ? formatTime(t - (start as number)) : last !== null ? formatTime(last) : null,
       best: best !== null ? formatTime(best) : null,
       record: !running && record,

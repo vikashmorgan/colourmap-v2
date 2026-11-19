@@ -226,3 +226,28 @@ capped at 1.5. Bloom: the builder's Speed setting by day, stronger at night.
 - Storage blocked: the design falls back to the defaults and bests are not kept.
 - `?world=coast` (any world id) opens that world.
 - Focus lost: all keys and touches are released.
+
+## Gears, speedometers, speed flames, driving modes (2026-11-19)
+
+- **Gears** ("different gear speeds on the cars and spaceship, so you have another counter on the
+  cockpit instrument for gear 1, 2, 3, 4"): an automatic box, six gears for the car and five for
+  the ship, each ending at a share of the top speed (`GEARS` in lib/art/drive.ts). The pull is
+  strongest low in each gear and eases toward the shift (`gearPull`), so you feel the gears.
+- **Speedometers** ("one inspired by the timer in School, another more futuristic"), picked under
+  Design → Speedo:
+  - Futuristic (the default): a glass ring dial, its arc glowing cyan to magenta with speed, the
+    gear in a hexagon, the revs as a thin inner arc that turns orange near the shift.
+  - Timer: the School Timer's paper card, its seven-colour rainbow lighting up with speed and its
+    beige-to-brown bars as the revs.
+  - Plain: the number and the gear.
+  All read up to 420 km/h (components/drive/Speedometer.tsx).
+- **Speed flames** ("a mode where flames come out when you are at high speed"): Design → Flames,
+  on by default. Above 72% of the top speed, flames come out of the car's two exhausts and the
+  ship's fire stretches long and hot, rising to full at the top speed, in the chosen fire's colours.
+- **Driving modes** ("4 driving modes for all vehicles. Easy tilt for one, where you can easily
+  slide left right of the track fast but still stay focused on the right direction, so the flow
+  continues"): Design → Mode (`MODES` in lib/art/vehicle.ts).
+  - Easy: wide, quick sideways slides; the nose barely turns on a road.
+  - Flow (the default): as before.
+  - Drift: looser grip, the tail swings wider.
+  - Grip: tight and precise.

@@ -19,7 +19,7 @@
  *   costs speed and spins it a little.
  */
 
-import { boostOf, type Controls, clamp, ease, wrapAngle } from '@/lib/art/drive';
+import { boostOf, type Controls, clamp, ease, gearOf, gearPull, wrapAngle } from '@/lib/art/drive';
 
 /** The game's gravity, m/s²: heavier than Earth's, so jumps are short and snappy. */
 export const G = 20;
@@ -194,6 +194,26 @@ export const PIPE_PULL = { aim: 0.3, slide: 6 };
  * in at `in` and back out at `out` per second, while the heading barely changes. Never past an edge.
  */
 export const DODGE = { speed: 16, in: 9, out: 7, steer: 14 };
+
+/**
+ * Four driving modes for every vehicle (2026-11-19: "4 driving modes for all vehicles. Easy tilt for
+ * one, where you can easily slide left right of the track fast but still stay focused on the right
+ * direction, so the flow continues"). Each scales the grip, how far past it the body may swing, how
+ * much the keys turn the nose on a road, and the sideways move.
+ * - Easy: wide, quick sideways slides; the nose barely turns, so you keep pointing down the road.
+ * - Flow: as it was.
+ * - Drift: looser grip, the tail swings wider; smaller sideways moves.
+ * - Grip: tight and precise.
+ */
+export const MODES: Record<
+  'easy' | 'flow' | 'drift' | 'grip',
+  { grip: number; yaw: number; turn: number; dodge: number; dodgeIn: number }
+> = {
+  easy: { grip: 1.15, yaw: 0.85, turn: 0.35, dodge: 1.5, dodgeIn: 1.5 },
+  flow: { grip: 1, yaw: 1, turn: 1, dodge: 1, dodgeIn: 1 },
+  drift: { grip: 0.72, yaw: 1.4, turn: 1.1, dodge: 0.5, dodgeIn: 0.8 },
+  grip: { grip: 1.3, yaw: 0.85, turn: 1, dodge: 0.8, dodgeIn: 1.2 },
+};
 
 export const ROAD_KEEP = {
   follow: 1,
@@ -389,8 +409,10 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     follow += course * ROAD_KEEP.align * spec.keep * (1 - Math.min(1, Math.abs(ctl.steer)));
     roadHold = Math.abs(road.k) * v.vLong * v.vLong * ROAD_KEEP.hold * spec.keep;
   }
+  const mode = MODES[ctl.mode ?? 'flow'];
   const yawCap =
-    ((spec.grip * spec.yawGrip + bankHold) / Math.max(Math.abs(v.vLong), 6)) *
+    ((spec.grip * mode.grip * spec.yawGrip * mode.yaw + bankHold) /
+      Math.max(Math.abs(v.vLong), 6)) *
     (1 + HANDBRAKE.yaw * hb);
   // A slide straightens itself (the tyres pull the nose round toward where it goes), firmly on a
   // road, gently on open ground, and not while the handbrake holds the tail out.
@@ -399,6 +421,8 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     ? ROAD_KEEP.settle * spec.keep * v.slip
     : HANDBRAKE.settle * (1 - hb) * Math.sign(v.slip) * Math.max(0, Math.abs(v.slip) - 0.12);
   let steerYaw = clamp((v.vLong * Math.tan(delta)) / spec.wheelbase, -yawCap, yawCap);
+  // On a road the mode sets how much the keys turn the nose (Easy: the sideways move does the work).
+  if (road && roadOn) steerYaw *= mode.turn;
   // In the air too, so a glide never turns the ship sideways to the road.
   if (roadOn && guide) {
     const road = guide;
@@ -430,8 +454,13 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   let vLat = -v.vx * fy + v.vy * fx;
   const speed = Math.hypot(vLong, vLat);
 
+  // Through the gears: strongest low in each, easing toward the shift, when pulling forward.
+  const gearK = throttle > 0 && vLong > 0 ? gearPull(gearOf(v.kind, vLong, spec.vTop).revs) : 1;
   let a =
-    pull(spec, vLong, throttle, ctl.boost) * (air ? spec.airPull : 1) * (1 - HANDBRAKE.pull * hb);
+    pull(spec, vLong, throttle, ctl.boost) *
+    gearK *
+    (air ? spec.airPull : 1) *
+    (1 - HANDBRAKE.pull * hb);
   if (hb > 0 && Math.abs(vLong) > 1) a -= Math.sign(vLong) * HANDBRAKE.drag * hb;
   const resist =
     (air ? 0 : spec.rolling) + spec.drag * vLong * vLong + (air ? 0 : roughDrag(here.rough, speed));
@@ -448,7 +477,9 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     const want =
       -vLat *
       (1 - Math.exp(-spec.gripRate * grip * (road ? 2 : 1) * (1 - HANDBRAKE.rate * hb) * dt));
-    const most = (spec.grip * grip * (1 - HANDBRAKE.grip * hb) + roadHold) * dt;
+    const most =
+      (spec.grip * MODES[ctl.mode ?? 'flow'].grip * grip * (1 - HANDBRAKE.grip * hb) + roadHold) *
+      dt;
     const fix = clamp(want, -most, most);
     vLat += fix;
     const sliding = Math.abs(want) - Math.abs(fix);
@@ -472,8 +503,14 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   // The dodge: across the road, beside the velocity (the tyres never scrub it away), easing out
   // as an edge comes near.
   const dodging = !!edgeRoad && !air && vLong > 3 && Math.cos(wrapAngle(edgeRoad.h - v.h)) > 0.3;
-  const wantDodge = dodging ? ctl.steer * DODGE.speed : 0;
-  v.dodge = ease(v.dodge ?? 0, wantDodge, Math.abs(wantDodge) > 0.5 ? DODGE.in : DODGE.out, dt);
+  const dm = MODES[ctl.mode ?? 'flow'];
+  const wantDodge = dodging ? ctl.steer * DODGE.speed * dm.dodge : 0;
+  v.dodge = ease(
+    v.dodge ?? 0,
+    wantDodge,
+    Math.abs(wantDodge) > 0.5 ? DODGE.in * dm.dodgeIn : DODGE.out,
+    dt,
+  );
   if (edgeRoad && v.dodge !== 0) {
     const room = edgeRoad.half - ROAD_KEEP.edge - Math.abs(edgeRoad.u);
     if (Math.sign(v.dodge) === Math.sign(edgeRoad.u || v.dodge))

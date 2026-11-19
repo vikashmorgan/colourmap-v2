@@ -9,6 +9,9 @@ import {
   easeAngle,
   flightFromKeys,
   formatTime,
+  GEARS,
+  gearOf,
+  gearPull,
   kmh,
   makeTrail,
   mergeControls,
@@ -16,6 +19,7 @@ import {
   newRun,
   pushTrail,
   speedFeel,
+  speedFlame,
   stepRun,
   trailFade,
   trailIndex,
@@ -161,5 +165,25 @@ describe('trails', () => {
     expect(trailFade(0, 5)).toBe(1);
     expect(trailFade(2.5, 5)).toBeCloseTo(0.25);
     expect(trailFade(6, 5)).toBe(0);
+  });
+});
+
+describe('gears, speed flames (2026-11-19)', () => {
+  it('climbs through the gears with speed, revs rising within each', () => {
+    expect(gearOf('car', 0, 100)).toEqual({ gear: 1, revs: 0 });
+    expect(gearOf('car', 30, 100).gear).toBe(2);
+    expect(gearOf('car', 90, 100).gear).toBe(GEARS.car.length);
+    expect(gearOf('ship', 50, 100).gear).toBe(3);
+    const a = gearOf('car', 25, 100);
+    const b = gearOf('car', 33, 100);
+    expect(b.gear).toBe(a.gear);
+    expect(b.revs).toBeGreaterThan(a.revs);
+    expect(gearPull(0)).toBeGreaterThan(gearPull(1));
+  });
+
+  it('lights the flames only near the top speed', () => {
+    expect(speedFlame(60, 100)).toBe(0);
+    expect(speedFlame(86, 100)).toBeCloseTo(0.5);
+    expect(speedFlame(130, 100)).toBe(1);
   });
 });

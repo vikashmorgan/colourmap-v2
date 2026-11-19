@@ -33,6 +33,8 @@ export interface Controls {
   handbrake?: boolean;
   /** Climbing (1) or diving (-1): Sky Canyon's free flight, the ship only. */
   climb?: number;
+  /** The driving mode (lib/art/vehicle.ts MODES); Flow when not given. */
+  mode?: 'easy' | 'flow' | 'drift' | 'grip';
 }
 
 export const NO_CONTROLS: Controls = { throttle: 0, steer: 0, boost: 0 };
@@ -306,3 +308,50 @@ export function trailFade(age: number, life: number): number {
   const k = age / life;
   return (1 - k) * (1 - k);
 }
+
+/* ── Gears, speed flames and the dials ─────────────────────── */
+
+/**
+ * Gears (2026-11-19: "different gear speeds on the cars and spaceship, so you have another counter
+ * on the cockpit instrument for gear 1, 2, 3, 4 …"): an automatic box. Each gear ends at a share of
+ * the vehicle's top speed; the last runs on through the boosts.
+ */
+export const GEARS: Record<'car' | 'ship', readonly number[]> = {
+  car: [0.21, 0.36, 0.51, 0.66, 0.83, Number.POSITIVE_INFINITY],
+  ship: [0.25, 0.45, 0.65, 0.85, Number.POSITIVE_INFINITY],
+};
+
+/** The gear (1..n) at a speed, and how far through it (0 at its start, 1 at its shift): the revs. */
+export function gearOf(
+  kind: 'car' | 'ship',
+  speed: number,
+  top: number,
+): { gear: number; revs: number } {
+  const ends = GEARS[kind];
+  const n = clamp(Math.abs(speed) / top, 0, 10);
+  let lo = 0;
+  for (let i = 0; i < ends.length; i++) {
+    if (n < ends[i]) {
+      const hi = Number.isFinite(ends[i]) ? ends[i] : 1.5;
+      return { gear: i + 1, revs: clamp((n - lo) / (hi - lo), 0, 1) };
+    }
+    lo = ends[i];
+  }
+  return { gear: ends.length, revs: 1 };
+}
+
+/** The pull through a gear: strongest low in its range, easing toward the shift (averages 1). */
+export function gearPull(revs: number): number {
+  return 1.12 - 0.24 * revs;
+}
+
+/**
+ * Speed flames (2026-11-19: "a mode where flames come out when you are at high speed"): nothing
+ * below 72% of the top speed, then rising to full at the top.
+ */
+export function speedFlame(speed: number, top: number): number {
+  return clamp((Math.abs(speed) / top - 0.72) / 0.28, 0, 1);
+}
+
+/** The dials read up to this (km/h): past the car's double boost. */
+export const DIAL_MAX = 420;

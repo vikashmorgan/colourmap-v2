@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { DriveEngine, type Hud } from '@/components/drive/engine';
+import { FutureGauge, TimerGauge } from '@/components/drive/Speedometer';
 import {
   controlsFromKeys,
   controlsFromTouches,
@@ -21,7 +22,11 @@ import {
 } from '@/lib/art/drive';
 import {
   type Design,
+  DRIVE_MODES,
+  type DriveMode,
   FIRES,
+  GAUGES,
+  type GaugeId,
   HULLS,
   isWorld,
   loadDesign,
@@ -321,10 +326,21 @@ export default function DriveGame() {
             pointerEvents: 'none',
           }}
         >
-          <div style={{ fontSize: 22, lineHeight: 1 }}>
-            {hud.speed}
-            <span style={{ fontSize: 9, marginLeft: 4, color: `${quiet}0.4)` }}>km/h</span>
-          </div>
+          {design.gauge === 'future' ? (
+            <FutureGauge speed={hud.speed} gear={hud.gear ?? 1} revs={hud.revs ?? 0} />
+          ) : design.gauge === 'timer' ? (
+            <TimerGauge speed={hud.speed} gear={hud.gear ?? 1} revs={hud.revs ?? 0} />
+          ) : (
+            <div style={{ fontSize: 22, lineHeight: 1 }}>
+              {hud.speed}
+              <span style={{ fontSize: 9, marginLeft: 4, color: `${quiet}0.4)` }}>km/h</span>
+              {hud.gear !== undefined && (
+                <span style={{ fontSize: 10, marginLeft: 8, color: `${quiet}0.5)` }}>
+                  gear {hud.gear}
+                </span>
+              )}
+            </div>
+          )}
           {(hud.time || hud.best) && (
             <div style={{ fontSize: 11, marginTop: 4, color: `${quiet}0.5)` }}>
               {hud.time && (
@@ -488,6 +504,21 @@ export default function DriveGame() {
           )}
           {row('Weather', WEATHERS, design.weather, (id) =>
             changeDesign({ ...design, weather: id }),
+          )}
+          {row('Mode', DRIVE_MODES, design.mode, (id) =>
+            changeDesign({ ...design, mode: id as DriveMode }),
+          )}
+          {row('Speedo', GAUGES, design.gauge, (id) =>
+            changeDesign({ ...design, gauge: id as GaugeId }),
+          )}
+          {row(
+            'Flames',
+            [
+              { id: 'on', name: 'At speed' },
+              { id: 'off', name: 'Off' },
+            ],
+            design.flames ? 'on' : 'off',
+            (id) => changeDesign({ ...design, flames: id === 'on' }),
           )}
         </div>
       )}

@@ -7,6 +7,7 @@ import {
   G,
   landingLoss,
   leavesGround,
+  MODES,
   newVehicle,
   pull,
   ROAD_KEEP,
@@ -473,5 +474,14 @@ describe('leaning and flying (2026-11-19)', () => {
     const car = run('car', GO, 2);
     for (let i = 0; i < 60; i++) stepVehicle(car, { ...GO, climb: 1 }, 1 / 60);
     expect(car.lift).toBe(0);
+  });
+});
+
+describe('driving modes (2026-11-19)', () => {
+  it('Easy slides you across the road further than Flow, and Drift less', () => {
+    expect(MODES.easy.dodge).toBeGreaterThan(MODES.flow.dodge);
+    expect(MODES.drift.grip).toBeLessThan(MODES.flow.grip);
+    expect(MODES.grip.grip).toBeGreaterThan(MODES.flow.grip);
+    expect(MODES.easy.turn).toBeLessThan(MODES.flow.turn);
   });
 });
