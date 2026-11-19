@@ -21,6 +21,8 @@ import {
   mergeControls,
 } from '@/lib/art/drive';
 import {
+  BODIES,
+  type BodyId,
   type Design,
   DRIVE_MODES,
   type DriveMode,
@@ -493,6 +495,10 @@ export default function DriveGame() {
           >
             Open the Garage ›
           </a>
+          {kind === 'car' &&
+            row('Body', BODIES, design.body, (id) =>
+              changeDesign({ ...design, body: id as BodyId }),
+            )}
           {row('Fire', FIRES, design.fire, (id) =>
             changeDesign({ ...design, fire: id as Design['fire'] }),
           )}

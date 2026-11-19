@@ -36,7 +36,25 @@ Drive's Design panel ("Open the Garage ›") and the shared tab.
 
 Everything is the one saved design (lib/art/drive-design.ts), so Drive and the Garage always agree.
 
+## Bodies (components/drive/bodies.ts)
+
+Asked: "also a motorbike", "make cars inspired by the 50s Ferrari GTO, and then the same but
+futuristic". The car's **Body** row (Garage and Drive's Design panel; `Design.body`). The physics
+stay the car's; no badges, names or logos.
+
+- **Wedge**: the car as it was.
+- **Classic GT**: a long rounded bonnet over a low oval mouth with a thin chrome lip, faired
+  headlamps, wings swelling over wheels set out at the sides, three vents behind the front wheel,
+  a fastback to a short cut-off tail with two round lamps each side, chrome bumper blades, four
+  exhausts, wire wheels.
+- **Future GT**: the same stance drawn sharp: a blade nose with a light line across it, a glass
+  canopy, wing blades floating over the wheels, covered wheels with rims of light, a cyan line down
+  each side, a full-width bar of light across the tail, two glowing outlets for the flames.
+- **Motorbike**: two wheels, the tank, fairing and the rider's helmet in the paint, a rider tucked
+  over the tank, one exhaust; it leans hard into turns (up to 0.6 rad).
+
+All take the hull, the fire and the speed flames like the others.
+
 ## Next
 
-The motorbike, the 50s GTO-inspired car and its futuristic twin; reactors on the side or on top,
-cockpit bubbles and cores for the ship.
+Reactors on the side or on top, cockpit bubbles and cores for the ship.

@@ -16,6 +16,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { GarageScene } from '@/components/garage/scene';
 import {
+  BODIES,
+  type BodyId,
   DEFAULT_DESIGN,
   type Design,
   DRIVE_MODES,
@@ -219,6 +221,8 @@ export default function Garage() {
           }
         `}</style>
         {row('Ride', RIDES, kind, (id) => change(rideEverywhere(design, id as 'car' | 'ship')))}
+        {kind === 'car' &&
+          row('Body', BODIES, design.body, (id) => change({ ...design, body: id as BodyId }))}
         {row('Hull', HULLS, design.hull, (id) => change({ ...design, hull: id as Design['hull'] }))}
         {design.hull === 'paint' && (
           <label

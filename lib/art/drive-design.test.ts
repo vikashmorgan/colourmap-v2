@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BODIES,
   bestKey,
   DEFAULT_DESIGN,
   DESIGN_KEY,
@@ -82,6 +83,14 @@ describe('hulls', () => {
   });
 });
 
+describe('bodies', () => {
+  it('offers the wedge, the classic and future GTs and the motorbike', () => {
+    expect(BODIES.map((b) => b.name)).toEqual(['Wedge', 'Classic GT', 'Future GT', 'Motorbike']);
+    expect(DEFAULT_DESIGN.body).toBe('wedge');
+    expect(parseDesign('{"body":"tank"}', IDS).body).toBe('wedge');
+  });
+});
+
 describe('one ride everywhere', () => {
   it('puts the same vehicle in every world', () => {
     const d = rideEverywhere(DEFAULT_DESIGN, 'ship');
@@ -108,6 +117,7 @@ describe('the design, remembered', () => {
       flames: false,
       mode: 'easy' as const,
       paint: '#ff8800',
+      body: 'classic' as const,
     };
     d.vehicle = { ...d.vehicle, salt: 'ship' };
     saveDesign(store, d);

@@ -223,7 +223,7 @@ export class GarageScene {
       this.view.dispose();
     }
     const kind = design.vehicle.salt;
-    const view = buildVehicle(kind, hullOf(design), fireById(design.fire), this.env);
+    const view = buildVehicle(kind, hullOf(design), fireById(design.fire), this.env, design.body);
     view.group.traverse((o) => {
       if (o instanceof THREE.Mesh) o.castShadow = true;
     });
