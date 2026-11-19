@@ -63,9 +63,17 @@ easy to stay on it", "same with coast road, make them much wider".
 5. **Chinatown Run**: red and gold. Lantern strings overhead, lanes (20 m) between shophouses opening
    every 600 m onto wide avenues (30 m, eased in over 180 m), Chinatown gates and temple gates, banners and hanging signs with
    letters, CITY OF DREAMS panels. Uncluttered; no flashing.
-6. **Neon District** (32 m road): magenta, cyan and violet. Towers, bridges overhead, three ship highways streaming
-   above at different heights, LED arrows, boost rings, and a few flashing signs (this world only,
-   about one sign in seven).
+6. **Neon District** (32 m road): the City of Dreams' neon (2026-11-19): magenta, cyan, amber and
+   violet. Towers, bridges overhead, three ship highways streaming above at different heights, all
+   one way, the way you drive (2026-11-19: "not back and forth, only in one direction"), LED
+   arrows, a few flashing signs (this world only, about one sign in seven), and **mood rings**
+   (2026-11-19: "make the golden circles transform all lights into golden, orange ones make it all
+   between yellow to red, and pink ones make it neon"): the boost rings come gold, orange, pink in
+   turn, and going through one turns every light in view toward its mood's three colours (gold:
+   warm golds; orange: yellow, orange, red; pink: magenta, cyan, violet). Each light keeps its place
+   along them by its own hue, so the variety stays; the change eases in over half a second, carries
+   into the glow, and holds until a ring of another mood. One screen pass before the bloom
+   (`moodPass` in components/drive/engine.ts, `MOODS` in lib/art/night-course.ts).
 
 7. **Sky Canyon** (2026-11-19: "a racetrack like the canyon but with the path also turning left and
    right like a long road, for spaceships … three vertical levels. It must feel like an infinite

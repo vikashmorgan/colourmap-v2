@@ -4,6 +4,8 @@ import {
   chevronGlow,
   HIGHWAYS,
   highwayShips,
+  MOODS,
+  NEON_DISTRICT,
   type NightTheme,
   palette,
   piecesBetween,
@@ -119,5 +121,41 @@ describe('boost rings', () => {
     expect(surgeAccel(0.3)).toBeGreaterThan(5);
     expect(surgeAccel(SURGE_LIFE * 0.8)).toBeLessThan(surgeAccel(0.3));
     expect(surgeAccel(SURGE_LIFE)).toBe(0);
+  });
+});
+
+describe('the Neon District (2026-11-19)', () => {
+  it('streams every ship highway one way, the way you drive', () => {
+    for (const h of HIGHWAYS) expect(h.speed).toBeGreaterThan(0);
+  });
+
+  it('gives its rings moods in turn, each ring in its mood’s colour: gold, orange, pink', () => {
+    const moods = [0, 1, 2, 3].map((k) => ringAt('neon', k, 16)?.mood);
+    expect(moods).toEqual(['gold', 'fire', 'neon', 'gold']);
+    expect(ringAt('neon', 0, 16)?.colour).toEqual(MOODS.gold.ring);
+    expect(ringAt('neon', 2, 16)?.colour).toEqual(MOODS.neon.ring);
+    // Night Rain's rings only surge.
+    expect(ringAt('rain', 1, 10)?.mood).toBeUndefined();
+  });
+
+  it('gold is all gold, fire runs from yellow to red, neon is magenta, cyan and violet', () => {
+    for (const c of MOODS.gold.stops) {
+      expect(c[0]).toBe(1);
+      expect(c[2]).toBeLessThan(c[1]);
+    }
+    const fire = MOODS.fire.stops;
+    expect(Math.max(...fire.map((c) => c[1]))).toBeGreaterThan(0.8);
+    expect(Math.min(...fire.map((c) => c[1]))).toBeLessThan(0.2);
+    for (const c of fire) expect(c[2]).toBeLessThan(0.2);
+    expect(MOODS.neon.stops).toContainEqual([0.22, 0.92, 1]);
+  });
+
+  it('draws its neon in the City of Dreams’ four: magenta, cyan, amber, violet', () => {
+    expect(NEON_DISTRICT).toEqual([
+      [1, 0.28, 0.78],
+      [0.22, 0.92, 1],
+      [1, 0.64, 0.22],
+      [0.6, 0.4, 1],
+    ]);
   });
 });

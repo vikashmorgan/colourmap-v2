@@ -39,12 +39,50 @@ export const LACQUER: Rgb = [0.75, 0.08, 0.06];
 export const GOLD: Rgb = [1, 0.75, 0.35];
 export const LANTERN: Rgb = [1, 0.22, 0.08];
 export const JADE: Rgb = [0.3, 0.9, 0.6];
-/** The Neon District's own three. */
+/** The Neon District's own: the City of Dreams' neon (lib/city-grid.ts C, the Neon Canyon's four:
+ * magenta, cyan, amber, violet; 2026-11-19: "make neon colours more inspired by the neon in City"). */
 export const NEON_DISTRICT: Rgb[] = [
-  [0.95, 0.2, 0.8],
-  [0.2, 0.85, 1],
-  [0.6, 0.3, 1],
+  [1, 0.28, 0.78],
+  [0.22, 0.92, 1],
+  [1, 0.64, 0.22],
+  [0.6, 0.4, 1],
 ];
+
+/**
+ * The Neon District's rings recolour the world (2026-11-19: "make the golden circles transform all
+ * lights into golden, orange ones make it all between yellow to red, and pink ones make it neon"):
+ * each ring has a mood, and going through it turns every light toward that mood's three colours
+ * (each light keeps its place along them by its own hue, so the variety stays), until a ring of
+ * another mood.
+ */
+export type RingMood = 'gold' | 'fire' | 'neon';
+export const MOODS: Record<RingMood, { ring: Rgb; stops: [Rgb, Rgb, Rgb] }> = {
+  gold: {
+    ring: [1, 0.74, 0.3],
+    stops: [
+      [1, 0.8, 0.38],
+      [1, 0.62, 0.2],
+      [1, 0.9, 0.62],
+    ],
+  },
+  fire: {
+    ring: [1, 0.45, 0.1],
+    stops: [
+      [1, 0.85, 0.15],
+      [1, 0.12, 0.05],
+      [1, 0.45, 0.08],
+    ],
+  },
+  neon: {
+    ring: [1, 0.28, 0.78],
+    stops: [
+      [1, 0.28, 0.78],
+      [0.22, 0.92, 1],
+      [0.6, 0.4, 1],
+    ],
+  },
+};
+export const MOOD_ORDER: RingMood[] = ['gold', 'fire', 'neon'];
 
 export function palette(theme: NightTheme): Rgb[] {
   if (theme === 'chinatown') return [LANTERN, GOLD, LACQUER, JADE];
@@ -342,7 +380,8 @@ export function signLight(p: Pick<Piece, 'flash' | 'id'>, t: number): number {
 /** Three lanes of ships streaming above the track, at their heights, speeds and offsets. */
 export const HIGHWAYS = [
   { lift: 28, u: 6, speed: 70, gap: 38 },
-  { lift: 42, u: -9, speed: -55, gap: 52 },
+  // All one way, the way you drive (2026-11-19: "not going back and forth, only in one direction").
+  { lift: 42, u: -9, speed: 55, gap: 52 },
   { lift: 60, u: 2, speed: 90, gap: 70 },
 ];
 
@@ -364,6 +403,8 @@ export interface Ring {
   lift: number;
   r: number;
   colour: Rgb;
+  /** The Neon District's: what going through it turns the lights to. */
+  mood?: RingMood;
 }
 
 /** A boost ring every 750 m (Night Rain and the Neon District), a little to one side or the other. */
@@ -374,12 +415,14 @@ export function ringAt(theme: NightTheme, k: number, half: number): Ring | null 
   if (theme === 'chinatown') return null;
   const u = (hash(k, 41) - 0.5) * Math.max(0, half - RING_R - 1) * 2;
   const pal = palette(theme);
+  const mood = theme === 'neon' ? MOOD_ORDER[k % MOOD_ORDER.length] : undefined;
   return {
     s: k * RING_STEP + 180,
     u,
     lift: RING_R + 0.4,
     r: RING_R,
-    colour: pal[(k + 2) % pal.length],
+    colour: mood ? MOODS[mood].ring : pal[(k + 2) % pal.length],
+    ...(mood ? { mood } : {}),
   };
 }
 

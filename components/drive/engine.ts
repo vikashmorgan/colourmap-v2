@@ -17,6 +17,7 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { comboOf, type DriftRun, liveScore, newDriftRun, stepDrift } from '@/lib/art/drift-gates';
 import {
@@ -60,7 +61,15 @@ import {
   RIBBON_VERTEX,
 } from '@/lib/art/drive-shaders';
 import { WORLD_CFG, type WorldCfg } from '@/lib/art/drive-worlds';
-import { RING_STEP, ringAt, SURGE_LIFE, surgeAccel, throughRing } from '@/lib/art/night-course';
+import {
+  MOODS,
+  RING_STEP,
+  type RingMood,
+  ringAt,
+  SURGE_LIFE,
+  surgeAccel,
+  throughRing,
+} from '@/lib/art/night-course';
 import {
   CAM_H,
   CAR_DIST,
@@ -382,6 +391,9 @@ export class DriveEngine {
   private renderer: THREE.WebGLRenderer;
   private composer: EffectComposer;
   private bloom: UnrealBloomPass;
+  /** The Neon District's rings recolour every light (lib/art/night-course.ts MOODS). */
+  private moodPass: ShaderPass;
+  private mood: RingMood | null = null;
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera();
   private backdrop: THREE.Mesh;
@@ -448,6 +460,50 @@ export class DriveEngine {
     const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
     this.composer = new EffectComposer(renderer, target);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
+    // Before the bloom, so the glow takes the new colours too.
+    this.moodPass = new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uAmt: { value: 0 },
+        uA: { value: new THREE.Vector3(1, 1, 1) },
+        uB: { value: new THREE.Vector3(1, 1, 1) },
+        uC: { value: new THREE.Vector3(1, 1, 1) },
+      },
+      vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }`,
+      fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float uAmt;
+    uniform vec3 uA;
+    uniform vec3 uB;
+    uniform vec3 uC;
+    varying vec2 vUv;
+    vec3 along(float f) {
+      f = fract(f) * 3.0;
+      if (f < 1.0) return mix(uA, uB, f);
+      if (f < 2.0) return mix(uB, uC, f - 1.0);
+      return mix(uC, uA, f - 2.0);
+    }
+    void main() {
+      vec4 t = texture2D(tDiffuse, vUv);
+      vec3 c = t.rgb;
+      float m = max(c.r, max(c.g, c.b));
+      float lo = min(c.r, min(c.g, c.b));
+      // Only what glows: bright, coloured or white light; the dark road and walls stay as they are.
+      float w = smoothstep(0.16, 0.6, m) * uAmt;
+      // Each light keeps its place along the mood by its own hue, so the variety stays.
+      float h = atan(0.866 * (c.g - c.b), c.r - 0.5 * (c.g + c.b)) / 6.2832 + 0.5;
+      h = mix(h, fract(dot(vUv, vec2(3.1, 1.7))), step(m - lo, 0.04));
+      vec3 target = along(h) * m;
+      gl_FragColor = vec4(mix(c, target, w), t.a);
+    }`,
+    });
+    this.moodPass.enabled = false;
+    this.composer.addPass(this.moodPass);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.144, 0.45, 0.55);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
@@ -628,6 +684,7 @@ export class DriveEngine {
     this.cam.z = this.vehicle.z + (this.pieceCamera() ? CAM_H : 2.4);
     this.run = newRun();
     this.race = newRace();
+    this.mood = null;
     this.best = loadBest(this.store, bestKey(this.cfg.id, kind));
     this.drift = this.newDrift(kind);
     this.surgeAt = -99;
@@ -803,8 +860,10 @@ export class DriveEngine {
         if (this.cfg.theme) {
           const k = Math.round((q.s - 180) / RING_STEP);
           const ring = k >= 0 ? ringAt(this.cfg.theme, k, tr.def.half(k * RING_STEP + 180)) : null;
-          if (ring && throughRing(ring, s0, q.s, u, v.z - spec.hover - heightAt(tr, q.s, u) + 1))
+          if (ring && throughRing(ring, s0, q.s, u, v.z - spec.hover - heightAt(tr, q.s, u) + 1)) {
             this.surgeAt = t;
+            if (ring.mood) this.mood = ring.mood;
+          }
         }
         this.keepBest(this.race.last, this.race.record);
       } else {
@@ -935,6 +994,7 @@ export class DriveEngine {
     this.updateBackdrop(ox, oy, t, w, aspect);
     this.updateMotes(speed, spec.vTop, boost, dt, w, aspect);
 
+    this.paintMood(dt);
     this.composer.render(dt);
     this.emitHud(speed, t);
   }
@@ -944,6 +1004,23 @@ export class DriveEngine {
       loadBest(this.store, `drive.gates.time.${kind}`),
       loadBest(this.store, `drive.gates.score.${kind}`),
     );
+  }
+
+  /** Eases every light toward the last ring's mood (half a second), and away when there is none. */
+  private paintMood(dt: number) {
+    const u = this.moodPass.uniforms;
+    const on = this.mood !== null && this.cfg.theme === 'neon';
+    u.uAmt.value = ease(u.uAmt.value as number, on ? 0.85 : 0, on ? 4 : 6, dt);
+    if (on && this.mood) {
+      const stops = MOODS[this.mood].stops;
+      for (const [i, key] of (['uA', 'uB', 'uC'] as const).entries()) {
+        const vec = u[key].value as THREE.Vector3;
+        vec.x = ease(vec.x, stops[i][0], 4, dt);
+        vec.y = ease(vec.y, stops[i][1], 4, dt);
+        vec.z = ease(vec.z, stops[i][2], 4, dt);
+      }
+    }
+    this.moodPass.enabled = (u.uAmt.value as number) > 0.002;
   }
 
   private keepBest(last: number | null, record: boolean) {
