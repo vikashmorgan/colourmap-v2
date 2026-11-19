@@ -142,13 +142,37 @@ export interface Design {
   hull: HullId;
   weather: string;
   vehicle: Record<WorldId, VehicleKind>;
+  /** The speedometer: futuristic dial, the School Timer's paper card, or the plain number. */
+  gauge: GaugeId;
+  /** Flames out of the exhausts and boosters at high speed. */
+  flames: boolean;
+  /** How every vehicle handles (lib/art/vehicle.ts MODES). */
+  mode: DriveMode;
 }
+
+export type DriveMode = 'easy' | 'flow' | 'drift' | 'grip';
+export const DRIVE_MODES: { id: DriveMode; name: string }[] = [
+  { id: 'easy', name: 'Easy' },
+  { id: 'flow', name: 'Flow' },
+  { id: 'drift', name: 'Drift' },
+  { id: 'grip', name: 'Grip' },
+];
+
+export type GaugeId = 'future' | 'timer' | 'plain';
+export const GAUGES: { id: GaugeId; name: string }[] = [
+  { id: 'future', name: 'Futuristic' },
+  { id: 'timer', name: 'Timer' },
+  { id: 'plain', name: 'Plain' },
+];
 
 /** The red car on the salt, in the canyon and the night lanes; the hover ship on the coast and in the Neon District. */
 export const DEFAULT_DESIGN: Design = {
   fire: 'speed',
   hull: 'red',
   weather: 'clear',
+  gauge: 'future',
+  flames: true,
+  mode: 'flow',
   vehicle: {
     salt: 'car',
     coast: 'ship',
@@ -185,6 +209,9 @@ export function parseDesign(raw: string | null, weathers: readonly string[]): De
         ? o.weather
         : DEFAULT_DESIGN.weather,
     vehicle,
+    gauge: GAUGES.some((g) => g.id === o.gauge) ? (o.gauge as GaugeId) : DEFAULT_DESIGN.gauge,
+    flames: typeof o.flames === 'boolean' ? o.flames : DEFAULT_DESIGN.flames,
+    mode: DRIVE_MODES.some((m) => m.id === o.mode) ? (o.mode as DriveMode) : DEFAULT_DESIGN.mode,
   };
 }
 

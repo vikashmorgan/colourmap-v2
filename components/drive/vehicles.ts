@@ -25,7 +25,8 @@ export interface VehicleView {
   /** Where the fire leaves (vehicle-local) for the trails, and the wheels or pads for the dust. */
   nozzles: THREE.Vector3[];
   feet: THREE.Vector3[];
-  update(v: Vehicle, t: number, dt: number, power: number, speedN: number): void;
+  /** flame: 0..1, the speed flames (lib/art/drive.ts speedFlame), 0 when they are off. */
+  update(v: Vehicle, t: number, dt: number, power: number, speedN: number, flame?: number): void;
   setHull(h: Hull, env: THREE.Texture | null): void;
   setFire(f: Fire): void;
   dispose(): void;
@@ -191,7 +192,7 @@ function groundBlob(
  * In the car's own frame: x across (right +), y up, z forward; the tail at z = 0. Sizes are the
  * carLayer's units times CAR_SCALE, so the car seen from behind matches the pieces' car.
  */
-export function buildCar(hull: Hull, env: THREE.Texture | null): VehicleView {
+export function buildCar(hull: Hull, env: THREE.Texture | null, fire?: Fire): VehicleView {
   const k = CAR_SCALE;
   const group = new THREE.Group();
   const body = new THREE.Group();
@@ -269,6 +270,27 @@ export function buildCar(hull: Hull, env: THREE.Texture | null): VehicleView {
     body.add(ex);
   }
 
+  // Speed flames out of the two exhausts (2026-11-19: "flames come out when you are at high speed"):
+  // a long outer flame and a hot core each, hidden until the speed calls for them.
+  const exFlames: THREE.Mesh[] = [];
+  const exFire = fire ?? null;
+  if (exFire)
+    for (const x of [-0.2, 0.2])
+      for (const [rad, lenK, seed] of [
+        [0.07, 1, x * 7],
+        [0.035, 0.55, x * 13],
+      ] as const) {
+        const mat = fireMaterial(exFire, seed);
+        const flame = new THREE.Mesh(new THREE.ConeGeometry(rad * k, 1, 16, 4, true), mat);
+        flame.userData.lenK = lenK;
+        flame.rotation.x = -Math.PI / 2;
+        flame.position.set(x * k, 0.36 * k, -0.1);
+        flame.renderOrder = 6;
+        flame.visible = false;
+        body.add(flame);
+        exFlames.push(flame);
+      }
+
   // The light bar across the tail: the one red line of light.
   const bar = new THREE.Mesh(
     new THREE.BoxGeometry(1.52 * k, 0.045 * k, 0.04),
@@ -310,8 +332,16 @@ export function buildCar(hull: Hull, env: THREE.Texture | null): VehicleView {
     group,
     nozzles: [],
     feet: [new THREE.Vector3(-0.78 * k, 0, 0.55), new THREE.Vector3(0.78 * k, 0, 0.55)],
-    update(v, _t, dt) {
+    update(v, t, dt, _power, _speedN, flame = 0) {
       spin += (v.vLong / (0.34 * k)) * dt;
+      for (const f of exFlames) {
+        f.visible = flame > 0.02;
+        if (!f.visible) continue;
+        const m = f.material as THREE.ShaderMaterial;
+        m.uniforms.uTime.value = t;
+        m.uniforms.uPower.value = 0.5 + 0.9 * flame;
+        m.uniforms.uLenK.value = (0.4 + 2.4 * flame) * f.userData.lenK;
+      }
       for (const w of wheels) w.rotation.x = spin;
       body.rotation.z = -v.roll * 0.6;
       shadow.visible = !v.air || v.airTime < 0.05;
@@ -320,7 +350,14 @@ export function buildCar(hull: Hull, env: THREE.Texture | null): VehicleView {
     setHull(h, e) {
       applyHull(paint, h, e);
     },
-    setFire() {},
+    setFire(f) {
+      for (const fl of exFlames) {
+        const u = (fl.material as THREE.ShaderMaterial).uniforms;
+        u.uS0.value.setRGB(...f.stops[0]);
+        u.uS1.value.setRGB(...f.stops[1]);
+        u.uS2.value.setRGB(...f.stops[2]);
+      }
+    },
     dispose() {
       group.traverse((o) => {
         if (o instanceof THREE.Mesh || o instanceof THREE.Sprite) {
@@ -516,16 +553,17 @@ export function buildShip(hull: Hull, fire: Fire, env: THREE.Texture | null): Ve
     group,
     nozzles,
     feet: [new THREE.Vector3(-0.8, 0, 1.0), new THREE.Vector3(0.8, 0, 1.0)],
-    update(v, t, dt, power, speedN) {
+    update(v, t, dt, power, speedN, flame = 0) {
       fanSpin += dt * (6 + 30 * speedN);
       for (const f of fans) f.rotation.z = fanSpin;
       const bob = Math.sin(t * 2.1) * 0.05 + Math.sin(t * 3.7) * 0.02;
       body.position.y = v.air ? 0 : bob;
       body.rotation.z = -v.roll * 0.4;
-      const len = 1.2 + 3.2 * speedN + 2.2 * Math.max(0, power - 1);
+      // The speed flames stretch the fire out long and hot.
+      const len = 1.2 + 3.2 * speedN + 2.2 * Math.max(0, power - 1) + 5 * flame;
       for (const m of fires) {
         m.uniforms.uTime.value = t;
-        m.uniforms.uPower.value = 0.45 + 0.55 * Math.min(power, 2);
+        m.uniforms.uPower.value = 0.45 + 0.55 * Math.min(power + flame, 2);
       }
       for (const pod of body.children) {
         for (const c of pod.children) {
@@ -578,5 +616,5 @@ export function buildVehicle(
   env: THREE.Texture | null,
 ): VehicleView {
   const hull = hullById(hullId);
-  return kind === 'car' ? buildCar(hull, env) : buildShip(hull, fire, env);
+  return kind === 'car' ? buildCar(hull, env, fire) : buildShip(hull, fire, env);
 }
