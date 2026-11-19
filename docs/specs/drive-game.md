@@ -22,7 +22,7 @@ excessively and lose control". Then: "I don't want obstacles on the canyon race 
 for now is to make it nice and flowy and clean", "keep very wide roads in canyon race, so it is
 easy to stay on it", "same with coast road, make them much wider".
 
-## Worlds (keys 1–6, or the names at the top)
+## Worlds (keys 1–7, or the names at the top)
 
 1. **Salt Flat**: the piece itself, now open. Endless crazed salt at sunset, heat shimmer, the
    mirage, low violet hills, the red streak crossing the flat now and then (in front of wherever you
@@ -67,6 +67,21 @@ easy to stay on it", "same with coast road, make them much wider".
    above at different heights, LED arrows, boost rings, and a few flashing signs (this world only,
    about one sign in seven).
 
+7. **Sky Canyon** (2026-11-19: "a racetrack like the canyon but with the path also turning left and
+   right like a long road, for spaceships … three vertical levels. It must feel like an infinite
+   race, but you can do a door that is the start or finish of the laps"; "designed for a spaceship
+   that can fly on multiple heights"; "you can use the mechanics of the City of Dreams with dots").
+   An endless canyon in long alternate bends (never tighter than a 250 m radius), the road 60 m
+   wide in red sandstone with a paler middle, 16 m quarter-pipes each side, and walls 130 to 190 m
+   tall. The hover ship flies it as the City's ship flies: always cruising forward, **W S** climb
+   and dive (easing in, up to 26 m/s, from the ground to a 62 m ceiling), **A D** turn, **E**
+   faster, **Q** slower, Space and Shift boost, F the handbrake. Three bands of dots of light run
+   along both walls just above the three flying heights (0, 22 and 44 m): amber, rose, violet, a
+   dot every 5 m, and streams run along them ahead of you, faster than you (the City's pulses:
+   1.7 × your pace + 8 m/s), each head bright with a 14 m tail. Every 6 km a **lap door**: three
+   gold frames of dots, two pillars and an arch, wall to wall; the first is 300 m ahead of the start,
+   each lap is timed door to door. Default vehicle: the ship (the car drives it on the ground).
+
 Why three night tracks: Night Rain stays the plain lamp course the user loved (with the City's
 towers, arch and rings added back from the road); Chinatown and the Neon District are new tracks
 with their own curvature, elevation and furniture from one generator (`lib/art/night-course.ts`),
@@ -84,7 +99,8 @@ District. Night Rain keeps its "no white lines": its lines are dim blue, not whi
 - F or the **Handbrake** button (bottom middle, held): hold it and turn to drift.
 - Space boost (top speed ×1.25); Shift double boost (×1.5).
 - Touch: any touch drives; hold the left or right third to steer; two fingers boost, three double.
-- 1–6 worlds · R restart · Esc closes the Design panel, else back to the builder (Experiment tab).
+- Sky Canyon: W S climb and dive, A D turn, E faster, Q slower (see world 7).
+- 1–7 worlds · R restart · Esc closes the Design panel, else back to the builder (Experiment tab).
 
 ## Driving
 
@@ -115,6 +131,15 @@ Pure physics in `lib/art/vehicle.ts`, stepped at 120 Hz:
   push brings you back toward the middle, on the ground and in the air (a jump follows the bend).
   Off the road (the Salt Flat) none of this applies. Tested on every track, car and ship, keys off
   or slammed, 30 s at full throttle: never more than 2 m past the edge, above 40 m/s, slip under 0.25.
+- **Leaning into the turn** (2026-11-19: "the tilt of the car is inverted … when you turn left you
+  lean left"): the body leans into a turn, like a bike or the ship, up to 0.09 rad for the car and
+  0.4 for the ship, and with the ground's slope.
+- **Quick sideways moves on a road** (2026-11-19: "quicker tilt left right so I can do more small
+  turns … go left right while still moving in the same direction, as if you wanted to skip an
+  obstacle"): on a road the steering answers twice as fast and also slides you straight across it,
+  up to 16 m/s (easing in at 9/s, out at 7/s), apart from the velocity so the tyres never scrub it
+  away and the speed is all kept; the nose turns only a little. The slide fades within 4 m of the
+  road's hold edge and never climbs a pipe. Open ground (the Salt Flat) keeps the plain steering.
 - **Handbrake** (2026-11-19: "a button to brake so I can brake and turn to drift harder"): the rear
   lets go: the grip falls to 55%, the body may swing nearly twice as fast as the grip turns the
   velocity, the front turns 40% further, and the locked wheels drag 5 m/s². It eases on in a

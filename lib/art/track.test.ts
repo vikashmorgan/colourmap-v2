@@ -35,6 +35,10 @@ import {
   pointAt,
   project,
   RACE,
+  SKY,
+  SKY_LAP,
+  SKY_LEVELS,
+  skyWallU,
   stepCanyonRace,
   stepKmRace,
   window01,
@@ -271,7 +275,7 @@ describe('every road keeps you on it (2026-11-17)', () => {
   // "create it so the car stays on track, on the road"; "so the car doesn't drift excessively and
   // lose control all the time". Full throttle for 30 s, hands off, then the keys slammed left and
   // right every 0.7 s: never off the road, never a spin, never slowed to a crawl.
-  for (const def of [COAST, CANYON, NIGHT, CHINATOWN, NEON_TRACK]) {
+  for (const def of [COAST, CANYON, NIGHT, CHINATOWN, NEON_TRACK, SKY]) {
     for (const kind of ['car', 'ship'] as const) {
       for (const hands of ['off', 'slammed'] as const) {
         it(`${def.id}, ${kind}, keys ${hands}`, () => {
@@ -353,7 +357,41 @@ describe('every road keeps you on it (2026-11-17)', () => {
 
   it('banks gently, so a bend never throws you up its outside', () => {
     expect(BANK_MAX).toBeLessThanOrEqual(0.2);
-    for (const def of [COAST, CANYON, NIGHT, CHINATOWN, NEON_TRACK])
+    for (const def of [COAST, CANYON, NIGHT, CHINATOWN, NEON_TRACK, SKY])
       expect(def.bankMax).toBe(BANK_MAX);
+  });
+});
+
+describe('Sky Canyon (2026-11-19)', () => {
+  it('runs on forever in long left and right bends, deep and wide, with pipes and tall walls', () => {
+    const w = makeTrackWorld(SKY);
+    let left = 0;
+    let right = 0;
+    let tightest = 0;
+    for (let s = 0; s < 30000; s += 20) {
+      const k = SKY.curv(s);
+      if (k > 0.001) left++;
+      if (k < -0.001) right++;
+      tightest = Math.max(tightest, Math.abs(k));
+    }
+    expect(left).toBeGreaterThan(50);
+    expect(right).toBeGreaterThan(50);
+    // Long turns: never tighter than a 250 m radius.
+    expect(1 / tightest).toBeGreaterThan(250);
+    const far = frameAt(w.track, 25000);
+    expect(Number.isFinite(far.x)).toBe(true);
+    // Walls far taller than the highest flying height, standing at the top of the pipes.
+    const walls = SKY.walls(1234);
+    expect(walls.left?.height).toBeGreaterThan(SKY_LEVELS[2] + 60);
+    expect(walls.left?.u).toBe(skyWallU());
+    expect(SKY.pipe?.(100)).toBeGreaterThan(0);
+  });
+
+  it('times a lap door to door', () => {
+    let r = newRace();
+    r = stepKmRace(r, SKY_LAP - 5, SKY_LAP + 5, 0, 30, 10, SKY_LAP);
+    expect(r.start).toBe(10);
+    r = stepKmRace(r, 2 * SKY_LAP - 5, 2 * SKY_LAP + 5, 0, 30, 85, SKY_LAP);
+    expect(r.last).toBe(75);
   });
 });

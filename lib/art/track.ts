@@ -21,7 +21,7 @@
 import { clamp, type Gate } from '@/lib/art/drive';
 import { G, type Ground, type Hit, type Vehicle, type World } from '@/lib/art/vehicle';
 
-export type TrackId = 'coast' | 'canyon' | 'night' | 'chinatown' | 'neon';
+export type TrackId = 'coast' | 'canyon' | 'night' | 'chinatown' | 'neon' | 'sky';
 
 export interface Wall {
   /** Offset of the barrier from the centre (positive left), and its height over the road. */
@@ -532,6 +532,59 @@ export function canyonWallU(s: number): number {
   return canyonHalf(s) + CANYON_PIPE * canyonDepth(s) * PIPE_TOP + 1;
 }
 
+/* ── Sky Canyon ────────────────────────────────────────────── */
+
+/**
+ * Sky Canyon (2026-11-19: "a racetrack like the canyon, but with the path also turning left and
+ * right like a long road, for spaceships … with three vertical levels. It must feel like an infinite
+ * race, but you can do a door that is the start or finish of the laps"; the levels: "designed for a
+ * spaceship that can fly on multiple heights"). An endless canyon in long alternate bends, deep and
+ * wide, its edges quarter-pipes, its walls far taller than anything flies. The ship holds one of
+ * three heights over the road (Q and E). A great door spans the canyon every lap.
+ */
+export const SKY_HALF = 30;
+export const SKY_PIPE = 16;
+/** The three heights the ship flies at, over its hover height (m). */
+export const SKY_LEVELS = [0, 22, 44] as const;
+/** A lap, door to door (m). */
+export const SKY_LAP = 6000;
+
+export function skyCurv(s: number): number {
+  return 0.0024 * Math.sin((TAU * s) / 2400) + 0.0011 * Math.sin((TAU * s) / 1100 + 1.3);
+}
+
+export function skyElev(s: number): number {
+  return 14 * Math.sin((TAU * s) / 1900) + 5 * Math.sin((TAU * s) / 760 + 0.5);
+}
+
+/** Where the rock rises: at the top of the pipes. */
+export function skyWallU(): number {
+  return SKY_HALF + SKY_PIPE * PIPE_TOP + 1;
+}
+
+/** The walls' height over the road: 130 to 190 m, varying along. */
+export function skyWallHeight(s: number, side: number): number {
+  const v = 0.5 + 0.3 * Math.sin(s / 83 + side * 1.1) + 0.2 * Math.sin(s / 31 + side * 2.3);
+  return 130 + 60 * clamp(v, 0, 1);
+}
+
+export const SKY: TrackDef = {
+  id: 'sky',
+  startH: Math.PI / 2,
+  curv: skyCurv,
+  elev: skyElev,
+  half: () => SKY_HALF,
+  lip: () => 0,
+  bankSpeed: 55,
+  bankMax: BANK_MAX,
+  terrain: null,
+  pipe: () => SKY_PIPE,
+  walls: (s) => ({
+    left: { u: skyWallU(), height: skyWallHeight(s, 1) },
+    right: { u: -skyWallU(), height: skyWallHeight(s, -1) },
+  }),
+};
+
 export const RACE = {
   start: 150,
   checkpoints: [1000, 2000, 3000, 4000],
@@ -644,8 +697,9 @@ export function stepKmRace(
   u: number,
   half: number,
   t: number,
+  every = COAST_GATE,
 ): Race {
-  const g = Math.ceil(s0 / COAST_GATE) * COAST_GATE;
+  const g = Math.ceil(s0 / every) * every;
   if (g <= 0 || !passes(s0, s1, u, half, g)) return race;
   if (race.start === null) return { ...race, start: t, record: false };
   const time = t - race.start;

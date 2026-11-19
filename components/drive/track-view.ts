@@ -35,8 +35,15 @@ import {
   canyonWallU,
   frameAt,
   heightAt,
+  PIPE_TOP,
+  pipeAt,
   pointAt,
   RACE,
+  SKY_LAP,
+  SKY_LEVELS,
+  SKY_PIPE,
+  skyWallHeight,
+  skyWallU,
   type TrackWorld,
 } from '@/lib/art/track';
 import type { Weather } from '@/lib/art/weather';
@@ -289,6 +296,14 @@ function groundColour(cfg: WorldCfg, s: number, u: number, half: number, snow: n
     c = c.map((v) => v * (1 - 0.35 * rut)) as V3;
     if (Math.abs(u) > half - 2.5 && out <= 0) c = lin(0.5, 0.27, 0.16);
     if (out > 0) c = lin(0.5 + 0.08 * n, 0.38 + 0.06 * n, 0.22);
+  } else if (cfg.id === 'sky') {
+    // Red sandstone, a paler band down the middle so the way reads at speed; the pipes darker rock.
+    const mid = Math.exp(-((u / 7) ** 2));
+    c = lin(0.6 + 0.07 * n, 0.36 + 0.05 * n, 0.26 + 0.03 * n).map(
+      (v) => v * 0.85 * (1 + 0.35 * mid),
+    ) as V3;
+    if (out > 0)
+      c = lin(0.5 + 0.08 * n, 0.27 + 0.05 * n, 0.17 + 0.03 * n).map((v) => v * 0.9) as V3;
   } else if (cfg.id === 'canyon') {
     // Packed salt, worn darker where the wheels run; the salt flat beside it.
     const rut = Math.exp(-(((Math.abs(u) - 3) / 1.4) ** 2));
@@ -328,6 +343,52 @@ interface Chunk {
   ay: number;
 }
 
+/** Sky Canyon's bands, low to high (amber, rose, violet), and the lap door's gold: linear, bright. */
+const SKY_BANDS: V3[] = [
+  [1.4, 0.55, 0.12],
+  [1.35, 0.22, 0.6],
+  [0.55, 0.28, 1.5],
+];
+const SKY_DOOR: V3 = [1.6, 1.05, 0.3];
+
+/** Dots of light, as the City of Dreams draws them: soft round glows; a stream's head bright, its
+ * tail fading over 14 m, a head every 90 m running ahead of you. */
+function makeDots(): THREE.ShaderMaterial {
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uFront: { value: 0 }, uScale: { value: 900 } },
+    vertexShader: `
+      attribute vec3 aCol;
+      attribute float aS;
+      attribute float aSize;
+      uniform float uFront;
+      uniform float uScale;
+      varying vec3 vCol;
+      varying float vGlow;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        float behind = fract((uFront - aS) / 90.0) * 90.0;
+        vGlow = 0.4 + 1.8 * exp(-behind / 14.0);
+        vCol = aCol;
+        gl_PointSize = clamp(aSize * uScale / max(-mv.z, 0.5), 1.0, 48.0);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      varying vec3 vCol;
+      varying float vGlow;
+      void main() {
+        float r = length(gl_PointCoord - 0.5);
+        float a = smoothstep(0.5, 0.05, r);
+        gl_FragColor = vec4(vCol * vGlow * a, a);
+      }`,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+  });
+  m.userData.shared = true;
+  return m;
+}
+
 export interface TrackView {
   group: THREE.Group;
   update(ox: number, oy: number, s: number, t: number, w: Weather): void;
@@ -342,6 +403,16 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
   const group = new THREE.Group();
   const chunks = new Map<number, Chunk>();
   const night = theme !== null;
+  // Rock walls either side: the Canyon's (inside it) and Sky Canyon's (everywhere).
+  const rockWalls =
+    cfg.id === 'canyon'
+      ? { u: canyonWallU, h: canyonWallHeight, on: canyonDepth }
+      : cfg.id === 'sky'
+        ? { u: () => skyWallU(), h: skyWallHeight, on: () => 1 }
+        : null;
+  const dotMat = cfg.id === 'sky' ? makeDots() : null;
+  let streamS = cfg.startS;
+  let streamT = 0;
   const shared: Record<string, THREE.IUniform> = {
     uTime: { value: 0 },
     uFogCol: { value: new THREE.Color(0, 0, 0) },
@@ -386,7 +457,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       return [COAST_CLIFF, -half - 4, ...us, half + 3, COAST_RAIL, COAST_RAIL + 1.5];
     // The canyon's pipes need more columns to curve smoothly up to the rock.
     const outs =
-      cfg.id === 'canyon'
+      cfg.id === 'canyon' || cfg.id === 'sky'
         ? [0.6, 2, 4, 6, 8, 10, 11.5, 12.8, 13.9, 14.7, 15.4, 16.2]
         : [0.6, 3, 8, 16];
     return [...outs.map((o) => -half - o).reverse(), ...us, ...outs.map((o) => half + o)];
@@ -531,15 +602,15 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       g.add(new THREE.Mesh(rail.geometry(), rockMat));
     }
 
-    if (cfg.id === 'canyon' && canyonDepth(s0) + canyonDepth(s1) > 0) {
+    if (rockWalls && rockWalls.on(s0) + rockWalls.on(s1) > 0) {
       // The canyon walls: red-brown rock in strata, leaning back, jagged along the top; a ledge
       // runs back from the top so the walls never look thin from the air.
       for (const side of [1, -1] as const) {
         const wall: V3[][] = [];
         const wc: V3[][] = [];
         for (let s = s0; s <= s1 + 0.01; s += 4) {
-          const wu = canyonWallU(s);
-          const H = canyonWallHeight(s, side);
+          const wu = rockWalls.u(s);
+          const H = rockWalls.h(s, side);
           const base = heightAt(track, s, side * wu);
           const row: V3[] = [];
           const crow: V3[] = [];
@@ -559,7 +630,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         grid(rock, wall, wc);
       }
       // The arches over the canyon.
-      for (const sa of CANYON_ARCHES) {
+      for (const sa of cfg.id === 'canyon' ? CANYON_ARCHES : []) {
         if (sa < s0 || sa >= s1) continue;
         const R = canyonWallU(sa);
         const e = frameAt(track, sa).e;
@@ -596,6 +667,9 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     if (cfg.race === 'canyon') {
       for (const s of [RACE.start, ...RACE.checkpoints, RACE.finish])
         gateS.push({ s, finish: s === RACE.finish });
+    } else if (cfg.race === 'lap') {
+      // Sky Canyon: no posts; the bands of dots and the lap door instead.
+      skyDots(s0, s1, g);
     } else {
       for (let s = Math.ceil(s0 / COAST_GATE) * COAST_GATE; s < s1; s += COAST_GATE)
         gateS.push({ s, finish: false });
@@ -622,6 +696,71 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     if (!solid.empty) g.add(new THREE.Mesh(solid.geometry(), solidMat));
     group.add(g);
     return { i, group: g, ax, ay };
+  }
+
+  /* ── Sky Canyon: bands of dots at the three heights, streams running ahead, the lap door ── */
+
+  /** Where a band hb metres over the road's edge sits: up the pipe, then on the rock face (which
+   * leans back a quarter of its height). Returns [u, height]. */
+  function bandAt(s: number, side: number, hb: number): [number, number] {
+    const half = def.half(s);
+    const edgeH = heightAt(track, s, side * half);
+    const R = SKY_PIPE;
+    const pipeTop = pipeAt(R * PIPE_TOP, R);
+    if (hb < pipeTop) {
+      const x = Math.sqrt(1 - (1 - hb / R) ** 2);
+      return [side * (half + x * R - 0.3), edgeH + hb + 0.4];
+    }
+    const wu = skyWallU();
+    const base = heightAt(track, s, side * wu);
+    const z = edgeH + hb;
+    return [side * (wu + 1 + 0.25 * Math.max(0, z - base) - 0.8), z];
+  }
+
+  function skyDots(s0: number, s1: number, g: THREE.Group) {
+    if (!dotMat) return;
+    const pos: number[] = [];
+    const col: number[] = [];
+    const ss: number[] = [];
+    const size: number[] = [];
+    const a = frameAt(track, s0);
+    const put = (s: number, u: number, z: number, c: V3, sz: number) => {
+      const p = pointAt(track, s, u);
+      pos.push(p.x - a.x, z, -(p.y - a.y));
+      col.push(...c);
+      ss.push(s);
+      size.push(sz);
+    };
+    // A band a little above each flying height, on both sides, a dot every 5 m.
+    SKY_LEVELS.forEach((lift, k) => {
+      for (let s = Math.ceil(s0 / 5) * 5; s < s1; s += 5)
+        for (const side of [1, -1]) {
+          const [u, z] = bandAt(s, side, lift + 4);
+          put(s, u, z, SKY_BANDS[k], 0.9);
+        }
+    });
+    // The lap door: three gold frames of dots across the canyon, pillars and an arch.
+    for (let sd = Math.ceil(s0 / SKY_LAP) * SKY_LAP; sd < s1; sd += SKY_LAP) {
+      if (sd <= 0) continue;
+      const W = skyWallU() - 3;
+      const e = heightAt(track, sd, 0);
+      for (const ds of [-3, 0, 3]) {
+        const s = sd + ds;
+        for (let h = 0; h <= 60; h += 1.4)
+          for (const side of [1, -1]) put(s, side * W, e + h, SKY_DOOR, 1.5);
+        for (let t = 0; t <= Math.PI; t += 1.4 / W)
+          put(s, Math.cos(t) * W, e + 60 + Math.sin(t) * W * 0.5, SKY_DOOR, 1.5);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('aCol', new THREE.Float32BufferAttribute(col, 3));
+    geo.setAttribute('aS', new THREE.Float32BufferAttribute(ss, 1));
+    geo.setAttribute('aSize', new THREE.Float32BufferAttribute(size, 1));
+    const pts = new THREE.Points(geo, dotMat);
+    pts.frustumCulled = false;
+    pts.renderOrder = 6;
+    g.add(pts);
   }
 
   /* ── Night furniture ── */
@@ -1109,6 +1248,13 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     group,
     update(ox, oy, s, t, w) {
       shared.uTime.value = t;
+      if (dotMat) {
+        // The streams run ahead faster than you (the City's pulses: 1.7 times your pace, plus 8).
+        const dt = Math.min(0.1, Math.max(0, t - streamT));
+        dotMat.uniforms.uFront.value += Math.max(0, s - streamS) * 1.7 + 8 * dt;
+        streamS = s;
+        streamT = t;
+      }
       (shared.uFogCol.value as THREE.Color).setRGB(...w.fog);
       shared.uFogDen.value = w.fogDensity;
       (shared.uSun.value as THREE.Vector3).copy(sunDir);

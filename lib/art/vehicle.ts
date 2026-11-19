@@ -123,6 +123,11 @@ export interface Vehicle {
   airTime: number;
   /** How far the handbrake is on (0..1): eased in fast, let off over a few tenths of a second. */
   hand: number;
+  /** The ship's flying height over its hover height (m), and how fast it is climbing (m/s). */
+  lift: number;
+  liftV: number;
+  /** A quick sideways move across a road (m/s, positive to the left), on top of the steering. */
+  dodge: number;
 }
 
 /** What the ground is under a point: its height, its slope (dh/dx, dh/dy) and how rough it is. */
@@ -181,6 +186,14 @@ export const HANDBRAKE = {
 /** On a quarter-pipe, gravity wins in the end: the nose is turned back down (radians at the top),
  * and part of gravity always gets past the tyres (m/s² at the top), so no wall is ridden forever. */
 export const PIPE_PULL = { aim: 0.3, slide: 6 };
+
+/**
+ * Quick sideways moves on a road (2026-11-19: "quicker tilt left right so I can do more small turns
+ * on the track, which allow me to go left right while still moving in the same direction, as if you
+ * wanted to skip an obstacle"): steering slides you across the road at up to `speed` m/s, easing
+ * in at `in` and back out at `out` per second, while the heading barely changes. Never past an edge.
+ */
+export const DODGE = { speed: 16, in: 9, out: 7, steer: 14 };
 
 export const ROAD_KEEP = {
   follow: 1,
@@ -247,6 +260,9 @@ export function newVehicle(kind: VehicleKind, x: number, y: number, h: number, z
     air: false,
     airTime: 0,
     hand: 0,
+    lift: 0,
+    liftV: 0,
+    dodge: 0,
   };
 }
 
@@ -316,6 +332,9 @@ const SUB = 1 / 120;
 /** The most upward speed a take-off keeps (m/s): about a second in the air for the car. */
 export const MAX_LAUNCH = 11;
 
+/** Climbing and diving: the most m/s, how fast it eases in, and the ceiling over the ground (m). */
+export const CLIMB = { rate: 26, ease: 4, top: 62 };
+
 /** Advances the vehicle by dt seconds (in small fixed steps). */
 export function stepVehicle(
   v: Vehicle,
@@ -346,7 +365,8 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   const hb = v.hand * (v.kind === 'car' ? 1 : 0.8);
 
   // Steering turns the body.
-  v.steer = ease(v.steer, ctl.steer, 7, dt);
+  // Quicker on a road, so small left-right moves come at once.
+  v.steer = ease(v.steer, ctl.steer, here.road && !air ? DODGE.steer : 7, dt);
   const authority = air ? spec.airSteer : 1;
   const delta = clamp(v.steer * steerLimit(v.vLong) * (1 + HANDBRAKE.steer * hb), -1, 1);
   // The body never turns much faster than the grip can swing the velocity after it, so a held key
@@ -449,6 +469,18 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   // you back toward the middle, so you ride along the edge instead of up it.
   // It works in the air too, so a jump on a bend lands on the road: the flight curves with it.
   const edgeRoad = spec.keep > 0 ? here.road : undefined;
+  // The dodge: across the road, beside the velocity (the tyres never scrub it away), easing out
+  // as an edge comes near.
+  const dodging = !!edgeRoad && !air && vLong > 3 && Math.cos(wrapAngle(edgeRoad.h - v.h)) > 0.3;
+  const wantDodge = dodging ? ctl.steer * DODGE.speed : 0;
+  v.dodge = ease(v.dodge ?? 0, wantDodge, Math.abs(wantDodge) > 0.5 ? DODGE.in : DODGE.out, dt);
+  if (edgeRoad && v.dodge !== 0) {
+    const room = edgeRoad.half - ROAD_KEEP.edge - Math.abs(edgeRoad.u);
+    if (Math.sign(v.dodge) === Math.sign(edgeRoad.u || v.dodge))
+      v.dodge *= clamp(room / 4, 0, 1) * (1 - (edgeRoad.pipe ?? 0));
+    v.x += -Math.sin(edgeRoad.h) * v.dodge * dt;
+    v.y += Math.cos(edgeRoad.h) * v.dodge * dt;
+  }
   if (edgeRoad && air && vLong > 1 && Math.cos(wrapAngle(edgeRoad.h - v.h)) > 0.3) {
     const turn = vLong * edgeRoad.k * spec.keep * dt;
     const c = Math.cos(turn);
@@ -483,7 +515,19 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
 
   // Up and down: follow the ground, or fly.
   const next = world.ground(v.x, v.y);
-  const floor = next.h + spec.hover;
+  // The ship climbs and dives as the City's does (W and S in Sky Canyon), easing into the climb and
+  // out of it, between the ground and its ceiling; the car stays on the ground.
+  const climb = v.kind === 'ship' ? clamp(ctl.climb ?? 0, -1, 1) : 0;
+  v.liftV = ease(v.liftV ?? 0, climb * CLIMB.rate, CLIMB.ease, dt);
+  v.lift = (v.lift ?? 0) + v.liftV * dt;
+  if (v.lift <= 0 || v.kind !== 'ship') {
+    v.lift = 0;
+    v.liftV = Math.max(0, v.liftV);
+  } else if (v.lift >= CLIMB.top) {
+    v.lift = CLIMB.top;
+    v.liftV = Math.min(0, v.liftV);
+  }
+  const floor = next.h + spec.hover + v.lift;
   if (air) {
     v.vz -= G * spec.airGravity * dt;
     v.z += v.vz * dt;
@@ -508,7 +552,10 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     leavesGround(
       v.z,
       v.vz,
-      world.ground(v.x + v.vx * LIFT_LOOK, v.y + v.vy * LIFT_LOOK).h + spec.hover,
+      world.ground(v.x + v.vx * LIFT_LOOK, v.y + v.vy * LIFT_LOOK).h +
+        spec.hover +
+        v.lift +
+        v.liftV * LIFT_LOOK,
       LIFT_LOOK,
       LIFT_MARGIN + spec.cling,
     )
@@ -576,17 +623,20 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     }
   }
 
-  // The body leans out of the turn and with the ground; the nose follows the slope or the flight.
-  const lateral = vLong * v.yawRate;
+  // The body leans into the turn and with the ground; the nose follows the slope or the flight.
+  const lateral = vLong * v.yawRate + (v.dodge ?? 0) * 3;
   const sideSlope = -next.gx * fy + next.gy * fx;
   const aheadSlope = next.gx * fx + next.gy * fy;
   const lean = v.kind === 'ship' ? 0.012 : 0.0035;
   const rollTo = air
     ? v.roll * 0.98
     : -Math.atan(sideSlope) +
-      clamp(-lateral * lean, v.kind === 'ship' ? -0.4 : -0.07, v.kind === 'ship' ? 0.4 : 0.07);
+      // Into the turn, like a bike or a ship (2026-11-19: "when you turn left you lean left").
+      clamp(lateral * lean, v.kind === 'ship' ? -0.4 : -0.09, v.kind === 'ship' ? 0.4 : 0.09);
   v.roll = ease(v.roll, rollTo, air ? 1 : 6, dt);
-  const pitchTo = air ? Math.atan2(v.vz, Math.max(speed, 5)) * 0.6 : Math.atan(aheadSlope);
+  const pitchTo = air
+    ? Math.atan2(v.vz, Math.max(speed, 5)) * 0.6
+    : Math.atan(aheadSlope) + clamp(Math.atan2(v.liftV, Math.max(speed, 10)) * 0.8, -0.22, 0.22);
   v.pitch = ease(v.pitch, pitchTo, air ? 2 : 8, dt);
 }
 

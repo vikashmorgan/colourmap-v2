@@ -7,6 +7,7 @@ import {
   crosses,
   ease,
   easeAngle,
+  flightFromKeys,
   formatTime,
   kmh,
   makeTrail,
@@ -39,6 +40,16 @@ describe('controls', () => {
     expect(controlsFromKeys(new Set([' '])).boost).toBe(1);
     expect(controlsFromKeys(new Set([' ', 'shift'])).boost).toBe(2);
     expect(controlsFromKeys(new Set())).toEqual({ ...NO_CONTROLS, handbrake: false });
+  });
+
+  it('flies Sky Canyon as the City: always cruising, W S climb and dive, E faster, Q slower', () => {
+    expect(flightFromKeys(new Set())).toMatchObject({ throttle: 1, steer: 0, boost: 0, climb: 0 });
+    expect(flightFromKeys(new Set(['w', 'a'])).climb).toBe(1);
+    expect(flightFromKeys(new Set(['w', 'a'])).steer).toBe(1);
+    expect(flightFromKeys(new Set(['arrowdown'])).climb).toBe(-1);
+    expect(flightFromKeys(new Set(['e'])).boost).toBe(1);
+    expect(flightFromKeys(new Set(['q'])).throttle).toBeLessThan(0);
+    expect(mergeControls(flightFromKeys(new Set(['w'])), NO_CONTROLS).climb).toBe(1);
   });
 
   it('drives on any touch and steers from the outer thirds', () => {

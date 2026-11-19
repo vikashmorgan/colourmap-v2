@@ -17,11 +17,13 @@ import {
   NEON_TRACK,
   NIGHT,
   RACE,
+  SKY,
+  SKY_LAP,
   type TrackDef,
 } from '@/lib/art/track';
 
 export type Rgb = [number, number, number];
-export type RaceKind = 'mile' | 'canyon' | 'km';
+export type RaceKind = 'mile' | 'canyon' | 'km' | 'lap';
 
 export interface WorldCfg {
   id: WorldId;
@@ -117,6 +119,19 @@ export const WORLD_CFG: Record<WorldId, WorldCfg> = {
     race: 'km',
     dust: lin(0.6, 0.55, 0.75),
     wet: true,
+  },
+  sky: {
+    id: 'sky',
+    track: SKY,
+    theme: null,
+    backdrop: 'canyon',
+    sunAz: SKY.startH - 0.3,
+    planeY: -400,
+    // Just short of the first lap door, so the first lap starts at once.
+    startS: SKY_LAP - 300,
+    race: 'lap',
+    dust: lin(0.8, 0.55, 0.45),
+    wet: false,
   },
 };
 
