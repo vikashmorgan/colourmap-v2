@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { type Design3, DesignTab, parseDesign3 } from '@/components/DesignTab';
 import { GridNotes, type GridPlace } from '@/components/GridNotes';
 import { LifeTree } from '@/components/LifeTree';
+import { onRacing, Porthole } from '@/components/Porthole';
 import { StarWheel } from '@/components/StarWheel';
 import {
   GOLD,
@@ -453,6 +454,15 @@ export default function GridMenu() {
           >
             ARROWS · ENTER · ESC
           </p>
+
+          {onRacing(mode === 'tree' ? treePlace.key : '', hub?.id ?? null) && (
+            <Porthole
+              onOpen={() => {
+                setOpen(false);
+                router.push('/geometry-field/drive');
+              }}
+            />
+          )}
 
           <GridNotes
             place={
