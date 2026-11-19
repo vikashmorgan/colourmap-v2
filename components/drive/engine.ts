@@ -45,7 +45,7 @@ import {
   bestKey,
   type Design,
   fireById,
-  hullById,
+  hullOf,
   loadBest,
   type Store,
   saveBest,
@@ -712,7 +712,7 @@ export class DriveEngine {
       r.mesh.geometry.dispose();
     }
     const fire = fireById(this.design.fire);
-    this.vehicleView = buildVehicle(this.vehicle.kind, this.design.hull, fire, this.env);
+    this.vehicleView = buildVehicle(this.vehicle.kind, hullOf(this.design), fire, this.env);
     this.scene.add(this.vehicleView.group);
     if (this.vehicle.kind === 'car') {
       this.ribbons = [0, 1].map(() => new Ribbon(160, 1.5, 0.24, 9, false, this.ribbonFlat));
@@ -753,7 +753,8 @@ export class DriveEngine {
       this.buildVehicleView();
       return;
     }
-    if (d.hull !== prev.hull) this.vehicleView?.setHull(hullById(d.hull), this.env);
+    if (d.hull !== prev.hull || d.paint !== prev.paint)
+      this.vehicleView?.setHull(hullOf(d), this.env);
     if (d.fire !== prev.fire) {
       const fire = fireById(d.fire);
       this.vehicleView?.setFire(fire);

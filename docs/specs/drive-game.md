@@ -251,3 +251,8 @@ capped at 1.5. Bloom: the builder's Speed setting by day, stronger at night.
   - Flow (the default): as before.
   - Drift: looser grip, the tail swings wider.
   - Grip: tight and precise.
+
+## Garage (2026-11-19)
+
+Drive's ride is built in the Garage (docs/specs/garage.md): the same saved design. Hulls gained
+Gold and Paint (your own colour). The Design panel links to it ("Open the Garage ›").

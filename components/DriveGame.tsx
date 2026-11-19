@@ -482,6 +482,17 @@ export default function DriveGame() {
                 vehicle: { ...design.vehicle, [world]: id as 'car' | 'ship' },
               }),
           )}
+          <a
+            href="/geometry-field/garage"
+            style={{
+              fontFamily: font,
+              fontSize: 12,
+              color: `${quiet}0.75)`,
+              textUnderlineOffset: 4,
+            }}
+          >
+            Open the Garage ›
+          </a>
           {row('Fire', FIRES, design.fire, (id) =>
             changeDesign({ ...design, fire: id as Design['fire'] }),
           )}

@@ -53,7 +53,10 @@ export const AREAS_2: Record<Branch, Area2[]> = {
     },
     { label: 'Play', pages: ['/entertainment'] },
     // The spaces you travel through: the City, and the racing worlds out of it (2026-11-19).
-    { label: 'Worlds', pages: ['/geometry-field/city', '/geometry-field/drive'] },
+    {
+      label: 'Worlds',
+      pages: ['/geometry-field/city', '/geometry-field/drive', '/geometry-field/garage'],
+    },
   ],
   admin: [
     { label: 'Money', pages: [] },
