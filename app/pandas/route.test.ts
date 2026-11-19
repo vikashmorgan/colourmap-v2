@@ -77,10 +77,37 @@ describe('/pandas class page', () => {
 
     const html = await (await GET(request())).text();
 
-    expect(html).toContain("const DECK_FILES = ['Pandas1.pdf', 'Pandas2.pdf', 'Pandas3.pdf'];");
+    expect(html).toContain(
+      "const DECK_FILES = ['Pandas1.pdf', 'Pandas2.pdf', 'Pandas3.pdf', 'Pandas4.pdf', 'Pandas5.pdf'];",
+    );
     expect(html).toContain("if (/dataframe/i.test(name)) return 'Pandas1.pdf';");
     expect(html).toContain("if (/selecting|filtering|slicing/i.test(name)) return 'Pandas2.pdf';");
     expect(html).toContain("if (/quality/i.test(name)) return 'Pandas3.pdf';");
+    expect(html).toContain("if (/cleaning/i.test(name)) return 'Pandas4.pdf';");
+    expect(html).toContain("if (/aggregat/i.test(name)) return 'Pandas5.pdf';");
     expect(html).toContain(`/api/coding/slides/Pandas\${s.n}.pdf#page=\${c.slide}`);
+  });
+  it('mirrors each summary at the start, and has the Timer window and the notes cahier', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
+
+    const html = await (await GET(request())).text();
+
+    // The summary pill at the start shares keys with the summary at the end: dots, notes and highlights follow.
+    expect(html).toContain('+ summaryTopHtml(s)');
+    expect(html).toContain(
+      "const HL_HOST = '.card[data-key]:not(.overall), .ess-item[data-key], [data-hl]';",
+    );
+    expect(html).toContain(`\${marksHtml(m)}</div></article>`);
+    // The Timer: a window with a title, moved and sized, with focus and how solid I feel in closed pills.
+    expect(html).toContain('<span class="tw-title" id="tw-title">Timer</span>');
+    expect(html).toContain("pill('focus', 'Focus'");
+    expect(html).toContain("pill('solid', 'How solid I feel'");
+    expect(html).toContain("pill('earlier', 'Earlier sessions'");
+    // The notepad: notes apart from questions, and a rich write box saved as plain text.
+    expect(html).toContain('data-view="notes">Notes</button>');
+    expect(html).toContain("const KIND = { question: 'Question', comment: 'Note' };");
+    expect(html).toContain('contenteditable="true" role="textbox"');
+    // Beige lesson boxes.
+    expect(html).toContain('const SEG_HUE = 70;');
   });
 });

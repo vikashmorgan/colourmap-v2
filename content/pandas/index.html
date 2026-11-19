@@ -17,13 +17,13 @@
   :root, [data-theme="day"] {
     --paper: #f7f3ea; --card: #fbf8f1; --ink: #2b2620; --soft: #6f665a; --line: #e3dccd;
     --accent: #8a5a2b; --code: #efe7d6;
-    --got: #2f7a4f; --mid: #b07a12; --late: #8a5a9e; --q: #985a22; --c: #357a4f;
+    --got: #2f7a4f; --mid: #b07a12; --late: #8a5a9e; --q: #985a22; --c: #8a5a3b;
     --nb-bg: #efe5d2; --nb-top: #e5d6b9; --nb-rule: #d6c3a0;
   }
   [data-theme="night"] {
     --paper: #191714; --card: #201d19; --ink: #ece6da; --soft: #a49b8d; --line: #34302a;
     --accent: #d9a46a; --code: #15130f;
-    --got: #7cc49a; --mid: #e0b45a; --late: #c39be0; --q: #e0a06a; --c: #86c29f;
+    --got: #7cc49a; --mid: #e0b45a; --late: #c39be0; --q: #e0a06a; --c: #d4a27c;
     --nb-bg: #221c15; --nb-top: #2c241a; --nb-rule: #45392a;
     color-scheme: dark;
   }
@@ -49,7 +49,7 @@
   .where { position: sticky; top: 0; z-index: 3; margin: 22px -18px 0;  padding: 8px 18px; background: var(--paper); font: 600 13px/21px  ui-monospace, Consolas, monospace; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
   .lede { margin: 6px 0 0; color: var(--soft); }
 
-  /* The three sessions: one shown at a time. */
+  /* The sessions: one shown at a time. */
   .sessions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 22px 0 6px; }
   .sess.ref { align-content: start; border-style: dashed; }
   .sess.ref[aria-selected="true"] { border-style: solid; }
@@ -277,7 +277,22 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .ess-fold[open] > summary::after { content: 'Hide ▾'; }
   .ess-fold[open] > summary { margin-bottom: 10px; }
   .ess { display: grid; gap: 12px; margin: 4px 0 18px; }
-  .ess-item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 12px; display: grid; gap: 8px; }
+  .ess-item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 26px 10px 16px; display: grid; gap: 8px; position: relative; scroll-margin-top: 20px; }
+  /* The same three dots as a card, and the same bar down the right edge. */
+  .ess-item::after { content: ''; position: absolute; right: 8px; top: 12px; bottom: 12px; width: 5px; border-radius: 3px; background: color-mix(in srgb, var(--line) 70%, transparent); transition: background .3s; }
+  .ess-item[data-mark="got"] { border-color: color-mix(in srgb, var(--got) 55%, var(--line)); }
+  .ess-item[data-mark="mid"] { border-color: color-mix(in srgb, var(--mid) 55%, var(--line)); }
+  .ess-item[data-mark="late"] { border-color: color-mix(in srgb, var(--late) 55%, var(--line)); }
+  .ess-item[data-mark="got"]::after { background: var(--got); }
+  .ess-item[data-mark="mid"]::after { background: var(--mid); }
+  .ess-item[data-mark="late"]::after { background: var(--late); }
+  .ess-item.flash { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+  .ess-item p { margin: 0; }
+  /* The summary again at the start of each lecture: a closed brown pill, the same ideas, dots, notes and highlights as at the end. */
+  .ess-top { --brown: #8a5a3b; margin: 16px 0 4px; border-color: color-mix(in srgb, var(--brown) 45%, var(--line)); background: color-mix(in srgb, var(--brown) 9%, var(--card)); }
+  [data-theme="night"] .ess-top { --brown: #d4a27c; }
+  .ess-top > summary { color: var(--brown); font-weight: 600; }
+  .ess-top > summary::after { color: var(--brown); }
   .ess-item h3 { margin: 0; font-size: 17px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
   .ess-is { margin: 0; font-size: 16px; }
   .ess-ex { margin: 0; }
@@ -291,7 +306,7 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .nb-dot:hover, .nb-dot[aria-expanded="true"] { border-color: var(--accent); }
   .nb-dot.has-notes { background: var(--accent); }
   .nb-dot.on-sheet { right: 5px; }
-  .notebook { position: fixed; z-index: 60; right: 16px; top: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); overflow: auto; background: var(--nb-bg); border: 1px solid var(--nb-rule); border-radius: 16px; box-shadow: 0 18px 48px rgb(0 0 0 / .3); --line: var(--nb-rule); --card: color-mix(in srgb, var(--nb-bg) 70%, #fff 30%); }
+  .notebook { position: fixed; z-index: 60; right: 16px; top: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); overflow: auto; background: var(--nb-bg); border: 1px solid var(--nb-rule); border-radius: 16px; box-shadow: 0 18px 48px rgb(92 58 28 / .32); --line: var(--nb-rule); --card: color-mix(in srgb, var(--nb-bg) 70%, #fff 30%); }
   .rf-dot { position: fixed; z-index: 61; right: 10px; top: calc(50% + 36px); width: 22px; height: 22px; padding: 0; border-radius: 50%; cursor: pointer; border: 2px solid var(--ochre); background: color-mix(in srgb, var(--ochre) 35%, var(--nb-bg)); box-shadow: 0 2px 8px rgb(0 0 0 / .18); }
   .rf-dot::after { content: ''; position: absolute; inset: -7px -11px; }
   .rf-dot:hover, .rf-dot[aria-expanded="true"] { background: var(--ochre); }
@@ -329,6 +344,27 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .nb-write .acts .save { background: var(--accent); border-color: var(--accent); }
   .saved { margin: 0; min-height: 1.2em; font: 13px system-ui, sans-serif; color: var(--got); }
   .nb-list { display: grid; gap: 10px; padding: 12px 16px 16px; }
+  /* The write box shows bold as you type, like the notebooks in colourbrain; it is saved as plain text with **bold**. */
+  .nb-text { min-height: 74px; max-height: 40vh; overflow: auto; font: 15px/1.5 system-ui, sans-serif; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; overflow-wrap: anywhere; outline: none; }
+  .nb-text:focus { border-color: var(--accent); }
+  .nb-text:empty::before { content: attr(data-placeholder); color: var(--soft); pointer-events: none; }
+  .nb-text b, .nb-text strong { font-weight: 700; }
+  .nb-b { margin-left: auto; min-width: 32px; font-weight: 800 !important; }
+  /* All · Notes · Questions: Notes is the study cahier, only what you wrote while revising. */
+  .nb-views { display: flex; gap: 4px; margin: 4px 16px 0; padding: 3px; border: 1px solid var(--nb-rule); border-radius: 999px; width: fit-content; }
+  .nb-views button { border: 0; background: none; color: var(--soft); font: 600 12.5px system-ui, sans-serif; padding: 4px 12px; border-radius: 999px; cursor: pointer; }
+  .nb-views button[aria-selected="true"] { background: var(--q); color: var(--paper); }
+  .nb-views button[data-view="notes"][aria-selected="true"] { background: #8a5a3b; }
+  .nb-list.cahier { background: color-mix(in srgb, var(--paper) 70%, #fff 30%); background-image: repeating-linear-gradient(to bottom, transparent 0 27px, color-mix(in srgb, var(--nb-rule) 70%, transparent) 27px 28px); background-position: 0 6px; margin: 10px 16px 16px; padding: 10px 16px 18px 34px; border: 1px solid var(--nb-rule); border-radius: 4px; box-shadow: inset 24px 0 0 -23px #c98a6a; gap: 4px; }
+  [data-theme="night"] .nb-list.cahier { background-color: color-mix(in srgb, var(--nb-bg) 85%, #fff 15%); }
+  .cahier .nb-group { background: none; border: 0; padding: 0; }
+  .cahier .nb-go { font: 700 14px/28px Georgia, serif; color: #8a5a3b; }
+  [data-theme="night"] .cahier .nb-go { color: #d4a27c; }
+  .cahier .note { background: none; border: 0; padding: 0; box-shadow: none; }
+  .cahier .note-kind { display: none; }
+  .cahier .note-head { justify-content: flex-end; min-height: 0; }
+  .cahier .note-body { font: 15.5px/28px Georgia, serif; }
+  .cahier .nb-date { font: 12px/28px system-ui, sans-serif; color: var(--soft); }
   .nb-group { display: grid; gap: 6px; padding: 9px 11px; border-radius: 12px; border: 1px solid var(--nb-rule); background: var(--card); }
   .nb-group.here { border-color: var(--accent); }
   .nb-fold { display: grid; gap: 10px; }
@@ -347,8 +383,8 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .empty { color: var(--soft); font: 14px system-ui, sans-serif; margin: 0; }
 
   /* Pandas: formulas, exercises and the small drawings. */
-  .seg { --tint: oklch(0.80 0.11 var(--h, 250) / 0.30); --title: oklch(0.45 0.13 var(--h, 250)); }
-  [data-theme="night"] .seg { --tint: oklch(0.62 0.12 var(--h, 250) / 0.20); --title: oklch(0.84 0.11 var(--h, 250)); }
+  .seg { --tint: oklch(0.80 0.075 var(--h, 250) / 0.32); --title: oklch(0.45 0.10 var(--h, 250)); }
+  [data-theme="night"] .seg { --tint: oklch(0.62 0.08 var(--h, 250) / 0.20); --title: oklch(0.84 0.09 var(--h, 250)); }
   .seg > h2 { color: var(--title); }
   .part-no { display: block; margin-bottom: 2px; font: 600 12px system-ui, sans-serif; letter-spacing: .04em; color: var(--ochre); }
   .part-tag { margin-left: auto; flex-shrink: 0; font: 500 11px system-ui, sans-serif; color: var(--ochre); white-space: nowrap; }
@@ -555,17 +591,58 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .timer svg { display: block; width: 38px; height: 21px; }
   .timer span { margin-top: -6px; font: 700 10px/1 ui-monospace, Consolas, monospace; }
   .timer::after { content: ''; position: absolute; inset: -6px -2px; }
-  .timer-card { position: fixed; z-index: 62; right: 46px; top: calc(50% - 70px); width: min(280px, calc(100vw - 60px)); display: grid; gap: 8px; padding: 14px 16px; border-radius: 14px; background: var(--nb-bg); border: 1px solid var(--nb-rule); box-shadow: 0 14px 36px rgb(0 0 0 / .25); font: 14px/1.4 system-ui, sans-serif; color: var(--ink); }
+  /* The Timer window: asked for 2026-11-19, "make it a window that I can move around and expand or reduce. Call it Timer".
+     Dragged by its title bar, − and + step its size, the corner resizes it freely. Kept where you left it. */
+  .timer-card { position: fixed; z-index: 62; right: 46px; top: calc(50% - 70px); width: 290px; min-width: 220px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow: auto; resize: horizontal; display: grid; align-content: start; border-radius: 14px; background: var(--nb-bg); border: 1px solid var(--nb-rule); box-shadow: 0 14px 36px rgb(92 58 28 / .3); font: 14px/1.4 system-ui, sans-serif; color: var(--ink); }
   .timer-card p { margin: 0; }
+  .tw-bar { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 4px; padding: 6px 6px 6px 14px; background: var(--nb-bg); border-bottom: 1px solid var(--nb-rule); cursor: grab; touch-action: none; user-select: none; }
+  .tw-bar.dragging { cursor: grabbing; }
+  .tw-title { font: 700 13px system-ui, sans-serif; letter-spacing: .04em; }
+  .tw-mini { margin-left: 6px; font: 700 12px ui-monospace, Consolas, monospace; }
+  .tw-bar .tw-btn { margin-left: auto; }
+  .tw-bar .tw-btn + .tw-btn { margin-left: 0; }
+  .tw-btn { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--soft); font: 600 16px/1 system-ui, sans-serif; cursor: pointer; }
+  .tw-btn:hover, .tw-btn:focus-visible { background: color-mix(in srgb, var(--nb-rule) 60%, transparent); color: var(--ink); }
+  .tw-btn:disabled { opacity: .35; cursor: default; background: none; }
+  .tw-body { display: grid; gap: 10px; padding: 12px 16px 14px; }
+  .timer-card[data-size="min"] { width: auto !important; min-width: 0; resize: none; }
+  .timer-card[data-size="min"] .tw-body { display: none; }
+  .timer-card[data-size="min"] .tw-bar { border-bottom: 0; }
   .tc-now { font: 700 26px/1.1 Georgia, serif; }
   .tc-wheel { display: grid; justify-items: center; }
-  .tc-wheel svg { display: block; width: 200px; height: 113px; }
+  .tc-wheel svg { display: block; width: min(100%, 200px); height: auto; }
   .tc-wheel .tc-now { margin-top: -44px; }
+  .timer-card[data-size="max"] .tc-wheel svg { width: min(100%, 320px); }
+  .timer-card[data-size="max"] .tc-wheel .tc-now { margin-top: -66px; font-size: 38px; }
   .tc-soft { color: var(--soft); font-size: 13px; }
-  .tc-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 13px; }
-  .tc-list li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--nb-rule); }
+  .tc-list { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 13px; }
+  .tc-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--nb-rule); }
   .tc-list li:last-child { border-bottom: 0; }
+  .tc-list .tc-tags { display: inline-flex; gap: 6px; align-items: center; margin-left: auto; color: var(--soft); font-size: 12px; }
+  .tc-list .tc-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
   .tc-new { justify-self: start; min-height: 30px; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--nb-rule); background: none; color: var(--ink); font: 600 12.5px system-ui, sans-serif; cursor: pointer; }
+  /* Closed pills inside the Timer: earlier sessions, focus, how solid I feel. */
+  .tw-pill > summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; list-style: none; width: fit-content; padding: 4px 12px; border: 1px solid var(--nb-rule); border-radius: 999px; font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); user-select: none; }
+  .tw-pill > summary::-webkit-details-marker { display: none; }
+  .tw-pill > summary::after { content: '▸'; font-size: 10px; }
+  .tw-pill[open] > summary::after { content: '▾'; }
+  .tw-pill > summary:hover, .tw-pill > summary:focus-visible { color: var(--ink); border-color: var(--soft); }
+  .tw-pill > summary .tw-val { text-transform: none; letter-spacing: 0; color: var(--ink); font-weight: 600; }
+  .tw-pill > summary .tc-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .tw-in { display: grid; gap: 6px; margin-top: 8px; }
+  .tw-ends { display: flex; justify-content: space-between; gap: 10px; color: var(--soft); font-size: 11.5px; }
+  .tw-level { text-align: center; font-weight: 600; min-height: 20px; }
+  /* Focus: a rainbow, seven bands from red (weak, getting started) to violet (experienced, ready). */
+  .rb { display: block; width: 100%; height: auto; max-width: 260px; justify-self: center; }
+  .rb path { cursor: pointer; transition: opacity .2s, stroke-width .2s; }
+  .rb path:hover { opacity: 1 !important; }
+  .rb path:focus-visible { outline: none; stroke: var(--ink); stroke-width: 2; }
+  /* How solid I feel: a thick horizontal slider made of bars, rising from left to right. */
+  .solid { position: relative; height: 54px; }
+  .solid-bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 4px; pointer-events: none; }
+  .solid-bars i { flex: 1; border-radius: 4px 4px 2px 2px; background: color-mix(in srgb, var(--nb-rule) 80%, transparent); transition: background .2s; }
+  .solid input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .solid input:focus-visible + .solid-bars { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
   /* Romeo and Juliet's square. */
   .square { margin: 0; width: 230px; max-width: 100%; }
   .square svg { display: block; width: 100%; height: auto; }
@@ -597,7 +674,7 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
 <button type="button" class="map-pill" id="map-pill" aria-expanded="false" aria-controls="map" aria-label="Where you are"></button>
 <nav class="map" id="map" aria-label="Where you are" hidden></nav>
 <button type="button" class="timer" id="timer" aria-expanded="false" aria-controls="timer-card" aria-label="Time on this session"><svg viewBox="0 0 64 36" aria-hidden="true" id="timer-arc"></svg><span id="timer-min">0</span></button>
-<div class="timer-card" id="timer-card" hidden role="dialog" aria-label="Time worked"></div>
+<div class="timer-card" id="timer-card" hidden role="dialog" aria-labelledby="tw-title"></div>
 <aside class="case-pad" id="case-pad" hidden aria-label="The case"><div class="case-top"><p class="case-title">The case</p><button type="button" class="case-close" aria-label="Close the case">×</button></div><button type="button" class="case-from" id="case-from"></button><div class="case-body" id="case-body"></div></aside>
 <button type="button" class="nb-dot" id="nb-dot" aria-expanded="false" aria-controls="notebook" title="Notepad"></button>
 <aside class="notebook" id="notebook" aria-label="Notepad" hidden>
@@ -606,12 +683,14 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
     <label class="about"><span>About</span><select id="nb-about" aria-label="What this note is about"></select></label>
     <div class="kinds" role="radiogroup" aria-label="Kind of note">
       <button type="button" role="radio" data-kind="question" aria-checked="true">Question</button>
-      <button type="button" role="radio" data-kind="comment" aria-checked="false">Comment</button>
+      <button type="button" role="radio" data-kind="comment" aria-checked="false">Note</button>
+      <button type="button" class="nb-b" id="nb-b" aria-label="Bold" title="Bold (Ctrl+B)">B</button>
     </div>
-    <textarea id="nb-text" rows="3" maxlength="2000" aria-label="Your note" placeholder="A question, or a note to yourself"></textarea>
+    <div id="nb-text" class="nb-text" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Write in the notepad" data-placeholder="A question, or a note to yourself"></div>
     <div class="acts"><button type="button" class="save" id="nb-save">Save</button></div>
     <p class="saved" id="nb-saved" role="status"></p>
   </div>
+  <div class="nb-views" role="tablist" aria-label="Show" id="nb-views"><button type="button" role="tab" data-view="all">All</button><button type="button" role="tab" data-view="notes">Notes</button><button type="button" role="tab" data-view="questions">Questions</button></div>
   <div class="nb-list" id="nb-list"></div>
 </aside>
 <button type="button" class="rf-dot" id="rf-dot" aria-expanded="false" aria-controls="reflections" title="Reflections" aria-label="Reflections"></button>
@@ -691,6 +770,22 @@ const clients = (label = '') => cap(label) + tbl(['', 'id', 'city', 'age', 'plan
 const report3 = () => tbl(['check', 'rows', 'pct'], [['missing value', '*3', '*50.0'], ['status unknown', '1', '16.7'], ['country not standard', '2', '33.3'], ['duplicate row', '1', '16.7'], ['age outside 0-110', '1', '16.7'], ['total below 0', '1', '16.7']]);
 const fourLoads = () => tbl(['Load', 'Shape', 'order_id', 'Outcome'], [['df1, no arguments', 'error', '—', 'UnicodeDecodeError: é is not UTF-8'], ['df2, sep="\\t"', 'error', '—', 'the same: decoding fails before the separator is used'], ['df3, + encoding="latin-1"', '(3, 6)', 'int64', 'accents right, but 00417 became 417'], ['*df4, + dtype={"order_id": str}', '*(3, 6)', '*text', '*accents right, 00417 kept']]);
 const sixCalls = () => tbl(['Call', 'The question it answers'], [['.shape', 'How many rows and columns?'], ['.dtypes', 'Which type is each column?'], ['.head(10)', 'What do real rows look like?'], ['.info()', 'Where are the NULLs? How much memory?'], ['.describe()', 'Which range do the numbers span?'], ['.value_counts()', 'Which categories exist, and how often?']]);
+// Lecture 4's people table: 8 people, 2 cities and 2 weights missing. shade lists 'row:column' cells; set replaces
+// a cell's value (a value starting with * is shaded); add puts extra columns on the right.
+const PPL = [['0', 'Ana', 'Paris', '160', '55.0'], ['1', 'Ben', 'Milan', '175', '72.0'], ['2', 'Carla', 'NaN', '168', 'NaN'], ['3', 'Dan', 'Paris', '182', '85.0'], ['4', 'Eva', 'Paris', '155', '50.0'], ['5', 'Fabio', 'Milan', '190', 'NaN'], ['6', 'Gia', 'Rome', '171', '63.0'], ['7', 'Hugo', 'NaN', '178', '76.0']];
+const PPL_COLS = ['name', 'city', 'height', 'weight'];
+function ppl({ shade = [], set = {}, add = [], label = '' } = {}) {
+  const head = ['', ...PPL_COLS, ...add.map(a => a[0])];
+  const body = PPL.map((r, i) => [r[0], ...r.slice(1).map((v, j) => { const at = `${i}:${PPL_COLS[j]}`; return at in set ? set[at] : shade.includes(at) ? `*${v}` : v; }), ...add.map(a => a[1][i])]);
+  return cap(label) + tbl(head, body);
+}
+// Lecture 5's six orders.
+const ORD5 = [['0', '1', 'France', 'web', '30'], ['1', '2', 'Italy', 'shop', '40'], ['2', '3', 'France', 'shop', '10'], ['3', '4', 'Spain', 'web', '40'], ['4', '5', 'Italy', 'web', '70'], ['5', '6', 'France', 'web', '20']];
+const ORD5_COLS = ['order_id', 'country', 'channel', 'total'];
+function ord5({ shade = [], label = '' } = {}) {
+  return cap(label) + tbl(['', ...ORD5_COLS], ORD5.map((r, i) => [r[0], ...r.slice(1).map((v, j) => (shade.includes(`${i}:${ORD5_COLS[j]}`) ? `*${v}` : v))]));
+}
+const fourMoves = () => tbl(['Move', 'pandas', 'When'], [['Drop', 'dropna(), df[~mask]', 'few rows, certain error'], ['Fill', 'fillna(), interpolate(), KNNImputer', 'a plausible value exists'], ['Correct', 's.where(ok, fix), s.abs()', 'the cause is known'], ['Flag', 'df["x_missing"] = mask', 'keep it, decide later']]);
 
 /* ---------- The course, in plain words ----------
  * Written from the lecture decks; the slides themselves stay private.
@@ -1013,6 +1108,200 @@ c["id"].is_unique      # False: id 3 twice`)],
       ['What share of rows are duplicates, in %?', () => code(`c.duplicated().mean() * 100   # 20.0`) + `<p>1 duplicate row of 5: 1 / 5 = 0.2, × 100 = 20 %.</p>`],
     ] },
   ], recap: ['Assess before you clean: today no line changes df.', 'Every check is a mask. mask.sum() counts the rows, mask.mean() gives the share.', 'Missing: isna(), and placeholders with value_counts() and min/max.', 'Spellings: nunique() and value_counts(); normalise a copy with .str.strip().str.upper() to count the variants.', 'Duplicates: duplicated() for whole rows, subset= for a key.', 'Accuracy: describe(), between() with notna() &, isin() for allowed values, the IQR rule for outliers.', 'Collect every count in one quality report; a row can fail several checks.'] },
+  { n: 4, pages: 63, short: 'Data cleaning', title: 'Data cleaning', lede: 'Last week we measured, today we fix. Three families of errors, three toolboxes: fill what is missing, handle what is implausible, merge what is there twice. Every fix is a decision: make it, count it, write it down.', groups: [
+    { name: 'From assessment to cleaning', flowLabel: 'Where this session sits', flow: ['Load', 'Select', 'Assess', 'Clean: today', 'Analyse'], cards: [
+      { id: 'four-moves', slide: 4, name: 'Every fix is one of four moves', what: 'Drop: remove the row or the column. Fill: estimate a plausible value. Correct: undo a known mistake, like 1.75 typed in metres. Flag: keep the value, mark it, decide later.\n\nDetection, last session, tells you where a problem is. Choosing the move is a decision about the analysis, not about the code.', more: { html: () => tbl(['Move', 'What it does', 'Example'], [['Drop', 'removes the row or the column', 'a row with every value missing'], ['Fill', 'puts in a plausible value', 'NaN weight → 63.3'], ['Correct', 'undoes a known mistake', '1.75 m → 175.0 cm'], ['Flag', 'keeps it and marks it', '230 + a flag column']]) } },
+      { id: 'rules', slide: 5, name: 'Four rules make a cleaning step trustworthy', what: 'Never overwrite the raw file: clean a copy. One problem, one decision, with a reason. Count the rows before and after every step. Write each decision down, in a comment or a docstring.\n\nThen a colleague can rerun your script, get the same table, and understand every change.', f: `clean = df.copy()            # the raw df stays as it was
+n0 = len(clean)
+clean = clean.drop_duplicates()
+print(n0, "→", len(clean))   # 6,508 → 6,468 taxi rides
+# exact copies dropped: same ride sent twice` },
+    ] },
+    { name: 'Missing values: imputation', cards: [
+      { id: 'why-missing', slide: 7, name: 'Why a value is missing decides how to fill it', what: 'MCAR, missing completely at random: a sensor drops a reading now and then. The gaps are a fair sample, so a simple fill is unbiased on average.\n\nMAR, missing at random given another column: tips are missing mostly for cash rides. Use that column to fill. MNAR, missing not at random: high earners skip the income question. The value itself hides it, so every fill is biased: flag it and say so.', more: { html: () => tbl(['Kind', 'Example', 'What to do'], [['MCAR', 'a sensor skips a reading', 'any simple fill, or drop a few rows'], ['MAR', 'tips missing for cash rides', 'fill from the related column'], ['MNAR', 'high earners skip income', 'flag it, say so: every fill is biased']]) } },
+      { id: 'dropna', slide: 9, name: 'dropna removes rows or columns with NaN', what: 'The people table has 8 rows: 2 cities and 2 weights are missing. `dropna()` removes every row with at least one NaN. `subset=` looks only at some columns, `thresh=` keeps rows with at least that many values, `axis=1` removes columns instead.\n\nEach dropped row takes its known values with it: 3 rows go to delete 4 missing cells, and 8 known values are thrown away. Hugo has a height and a weight, lost because his city is unknown.', f: `p.dropna()                    # 5 rows left
+p.dropna(subset=["weight"])   # 6 rows left
+p.dropna(thresh=4)            # rows with ≥ 4 values: 5
+p.dropna(axis=1)              # columns left: 2`, more: { html: () => ppl({ shade: ['2:city', '2:weight', '5:weight', '7:city'], label: 'Shaded: the 4 missing cells. dropna() removes rows 2, 5 and 7.' }) }, watch: 'Drop rows only when few are affected and the gaps look random (MCAR). how="all" drops only rows that are completely empty.' },
+      { id: 'fill-flag', slide: 11, name: 'A constant fills text gaps; a flag remembers them', what: 'Text gaps can take a constant: "Unknown" becomes its own category. `fillna(0)` only when 0 is the truth, like no tolls paid.\n\nCreate the flag before filling: a True/False column that says which values were missing. After the fill you can no longer tell.', f: `f = p.copy()
+f["weight_missing"] = f["weight"].isna()   # flag first
+f["city"] = f["city"].fillna("Unknown")`, more: { html: () => ppl({ set: { '2:city': '*Unknown', '7:city': '*Unknown' }, add: [['weight_missing', [F, F, '*True', F, F, '*True', F, F]]] }) } },
+      { id: 'mean-median', slide: 12, name: 'Mean, median or mode: let the shape choose', what: 'Minutes to commute: 10, 12, 15, 15, 18, 20, 25, 90, and one NaN. One 90-minute trip pulls the mean to 25.6, longer than 7 of the 8 commutes. The median, 16.5, is a typical value.\n\nMean for symmetric columns, median for skewed ones or with outliers, mode for categories. But any single number shrinks the spread: 20 missing grades all become 23.6, and the standard deviation drops from 2.86 to 2.32. The table looks more certain than it is.', f: `m = pd.Series([10, 12, 15, 15, 18, 20, 25, 90, None])
+m.mean()                         # 25.6
+m.median()                       # 16.5
+m.fillna(m.median())
+city.fillna(city.mode()[0])      # the most frequent category`, watch: 'Filling with one number makes spread, correlations and tests too optimistic.' },
+      { id: 'ffill', slide: 14, name: 'Ordered data: carry forward or interpolate', what: 'When row order means something, like days, a gap can borrow from its neighbours. `ffill()` repeats the last known value, `bfill()` the next one, `interpolate()` draws a straight line between them.\n\nDay 3 and 4 sit between 13 and 16: the line gives 14 and 15.', f: `t = pd.Series([12, 13, None, None, 16, 15, None, 14])
+t.ffill()         # 12 13 13 13 16 15 15 14
+t.bfill()         # 12 13 16 16 16 15 14 14
+t.interpolate()   # 12 13 14 15 16 15 14.5 14`, more: { html: () => tbl(['day', 'temp', 'ffill', 'bfill', 'interpolate'], [['1', '12.0', '12.0', '12.0', '12.0'], ['2', '13.0', '13.0', '13.0', '13.0'], ['3', 'NaN', '*13.0', '*16.0', '*14.0'], ['4', 'NaN', '*13.0', '*16.0', '*15.0'], ['5', '16.0', '16.0', '16.0', '16.0'], ['6', '15.0', '15.0', '15.0', '15.0'], ['7', 'NaN', '*15.0', '*14.0', '*14.5'], ['8', '14.0', '14.0', '14.0', '14.0']]) }, watch: 'Only on ordered rows: on a shuffled table, ffill copies a random neighbour.' },
+      { id: 'deduce', slide: 15, name: 'Some values can be computed, not guessed', what: 'If total = qty × price, a missing total is not a mystery: compute it. A deduced value is exact, not estimated.\n\nOther rules of the same kind: borough from zone, age from birth date, city from postcode. Always try a business rule before a statistic.', f: `o["total"] = o["total"].fillna(o["qty"] * o["price"])`, more: { html: () => row(cap('before') + tbl(['', 'qty', 'price', 'total'], [['0', '2', '5.0', '10.0'], ['1', '1', '20.0', '*NaN'], ['2', '3', '4.0', '12.0'], ['3', '2', '10.0', '*NaN']]), cap('after') + tbl(['', 'qty', 'price', 'total'], [['0', '2', '5.0', '10.0'], ['1', '1', '20.0', '*20.0'], ['2', '3', '4.0', '12.0'], ['3', '2', '10.0', '*20.0']])) } },
+      { id: 'knn', slide: 16, name: 'KNN fills a gap with the values of similar rows', what: 'Carla is 168 cm, weight unknown. Measure the distance on the known column, height: the 3 closest people are Gia (171), Ben (175) and Ana (160). Their weights are 63, 72 and 55: the average, 63.3, fills the gap.\n\nNo formula to fit: people of similar height have similar weight. KNNImputer does it for a whole table; it works on numbers only and returns a NumPy array, assigned back to the columns. A model can go further: IterativeImputer predicts each column from the others, round after round.', f: `from sklearn.impute import KNNImputer
+cols = ["height", "weight"]
+imp = KNNImputer(n_neighbors=3)
+p[cols] = imp.fit_transform(p[cols])
+# Carla 63.3, Fabio (190 cm): Dan 85, Hugo 76, Ben 72 → 77.7`, more: { html: () => ppl({ set: { '2:weight': '*63.3', '5:weight': '*77.7' }, label: 'After KNNImputer(n_neighbors=3)' }) }, watch: 'Distances need columns on the same scale: standardise first, (X - X.mean()) / X.std(). Otherwise income in euros outweighs height in metres.' },
+    ] },
+    { name: 'Outliers', cards: [
+      { id: 'error-or-news', slide: 22, name: 'An outlier is far from the rest: error or news?', what: 'An error is a wrong value: typed, measured or converted wrongly. Correct it if you know the cause, otherwise treat it as missing. A real outlier is rare but true, often the most interesting row: keep it, and flag it if it would distort an average.\n\nGlobal outliers break a column (13 km for 85.0). Local ones break a pattern (3.2 km for 16.5, odd next to tight neighbours). Multivariate ones are normal on each axis and odd together (21 km for 10.0). Look first: a boxplot, a histogram, a scatter.', more: { html: () => tbl(['Kind', 'Ride', 'Why odd'], [['Global', '13.0 km, 85.0', 'far from every other ride'], ['Local', '3.2 km, 16.5', 'normal overall, odd next to its neighbours'], ['Multivariate', '21.0 km, 10.0', 'each value is common, the pair never happens']]) } },
+      { id: 'zscore', slide: 25, name: 'The z-score counts standard deviations', what: 'z = (x − mean) / std: how many standard deviations a value is from the mean. Flag |z| > 2 or 3; the cut-off is a choice, and the rule assumes a roughly bell-shaped column.\n\nOne extreme value can hide the others: with a typo of 500 instead of 50, the std grows 14-fold and the 5 looks normal (z = −0.42). This is called masking. In small samples |z| cannot even reach 3: with 11 values the largest possible is (n − 1) / √n = 3.02.', f: `s = pd.Series([20, 21, 26, 24, 29, 22, 21, 50, 28, 27, 5])
+z = (s - s.mean()) / s.std()   # mean 24.8, std 10.6
+s[z.abs() > 2]                 # 50 (z = 2.38); 5 has z = -1.87`, watch: 'The mean and std are pulled by the outlier itself: masking.' },
+      { id: 'robust-z', slide: 27, name: 'The robust z-score uses the median and the MAD', what: 'Replace the mean by the median and the std by the MAD, the median of |x − median|. One value cannot drag them. 0.6745 makes the score comparable to a z; flag |robust z| > 3.5.\n\nHere the median is 24 and the MAD 3 minutes: 50 scores 5.8 and 5 scores −4.3, so both are flagged. Even with the 500 typo, the 5 still scores −4.3.', f: `med = s.median()                 # 24
+mad = (s - med).abs().median()   # 3
+rz = 0.6745 * (s - med) / mad
+s[rz.abs() > 3.5]                # 50 and 5`, watch: 'If more than half the values are equal, the MAD is 0 and the score divides by 0.' },
+      { id: 'iqr-fences', slide: 28, name: 'IQR fences: the boxplot rule', what: 'Q1 and Q3 cut off the lowest and highest quarter; IQR = Q3 − Q1 is the width of the middle half. The fences sit 1.5 × IQR outside: here 11.25 and 37.25.\n\nQuartiles ignore how far the extremes are, so there is no masking. The same idea with percentiles: flag below the 1st and above the 99th.', f: `q1, q3 = s.quantile([0.25, 0.75])   # 21.0, 27.5
+iqr = q3 - q1                       # 6.5
+low, high = q1 - 1.5*iqr, q3 + 1.5*iqr
+s[(s < low) | (s > high)]           # 5 and 50` },
+      { id: 'knn-lof', slide: 30, name: 'KNN score and LOF compare whole rows', what: 'A multivariate outlier needs distances between whole rows. KNN score: the mean distance to the k nearest rows; far from everyone, high score. LOF, Local Outlier Factor: the density of my neighbours divided by my density. About 1 is normal, above 1.5 an outlier here.\n\nLOF judges each point locally: a 7 mm gap is normal in a sparse group and odd next to a dense one. It flags all three odd rides; the local one ranks 3rd by LOF and only 6th by KNN score.', f: `from sklearn.neighbors import LocalOutlierFactor
+Z = (X - X.mean()) / X.std()           # standardise first
+lof = LocalOutlierFactor(n_neighbors=5)
+labels = lof.fit_predict(Z)            # -1 = outlier
+score = -lof.negative_outlier_factor_`, more: { html: () => tbl(['ride', 'km', 'fare', 'KNN score', 'LOF'], [['multivariate', '21.0', '10.0', '*1.84', '*9.9'], ['global', '13.0', '85.0', '*1.71', '*4.9'], ['local', '3.2', '16.5', '0.22', '*3.7'], ['airport', '23.6', '62.5', '0.39', '1.4'], ['city', '5.0', '13.8', '0.05', '1.2']]) }, watch: 'Other detectors you will meet: Grubbs test, Isolation Forest, kernel density, DBSCAN. All give a score or a label; the handling decision is the same.' },
+      { id: 'handle', slide: 34, name: 'Detected is not deleted: five ways to handle it', what: 'Remove it when the error is certain and nothing can be recovered. Correct it when the cause is known: units, sign, a lost decimal point. Cap it with `clip()` when it is real but would dominate a mean: every row stays, the extremes stop pulling. Set it to NaN and impute when other columns can help. Keep and flag when it is real and maybe important.\n\n`s.where(cond, other)` keeps the values where cond is True and replaces the others.', f: `s.clip(lower=low, upper=high)          # cap at the fences
+h = h.where(h > 3, h * 100)            # 1.75 m → 175 cm
+price = price.abs()                    # sign typed wrongly
+fare = fare.where(fare < 500, fare / 100)
+df["outlier"] = mask                   # keep and flag`, more: { html: () => tbl(['Move', 'pandas', 'When'], [['remove', 'df[~mask]', 'certain error, nothing to recover'], ['correct', 's.where(ok, fix), s.abs()', 'the cause is known'], ['cap', 's.clip(low, high)', 'real but extreme'], ['set NaN, impute', 's.mask(mask), then fillna', 'wrong value, other columns help'], ['keep and flag', 'df["outlier"] = mask', 'real and maybe important']]) }, watch: 'Correct only with evidence of the cause. A guess dressed as a fix is worse than a flag.' },
+    ] },
+    { name: 'Duplicates', cards: [
+      { id: 'exact-approx', slide: 39, name: 'Duplicates come exact or approximate', what: 'Eight rows of people. `df.duplicated()` finds 1 duplicate; a person sees four: Maria three times, Luca twice, Giulia twice.\n\nVariants come in four kinds: an exact copy; the same with other case and spaces ("maria rossi"); the same with a typo or swapped words ("Maria Rosi", "Verdi Giulia"); and similar but another person ("Mario Rossi").', more: { html: () => tbl(['', 'name', 'city', 'email'], [['0', 'Maria Rossi', 'Milano', 'maria.rossi@mail.it'], ['1', 'Luca Bianchi', 'Roma', 'luca.b@mail.it'], ['2', '*maria rossi', 'milano', 'maria.rossi@mail.it'], ['3', '*Luca Bianchi', 'Roma', 'luca.b@mail.it'], ['4', '*Maria Rosi', 'Milano', 'maria.rossi@mail.it'], ['5', 'Mario Rossi', 'Milano', 'mario.rossi@mail.it'], ['6', 'Giulia Verdi', 'Torino', 'giulia.verdi@mail.it'], ['7', '*Verdi Giulia', 'Torino', 'g.verdi@mail.it']]) } },
+      { id: 'drop-dup', slide: 40, name: 'drop_duplicates keeps one row per group, sort to choose which', what: '`drop_duplicates()` removes repeats of the whole row; `subset="id"` compares the key only. `keep=` says which copy stays: "first", "last", or False to drop every copy.\n\n"first" and "last" follow the row order, so sort first by the column that says which copy is right: the most recent, the most complete, the highest total.', f: `d.drop_duplicates(subset="id")               # 3 rows: row 0 stays for id 7
+d.drop_duplicates(subset="id", keep="last")  # 3 rows: row 4 stays
+d.drop_duplicates(subset="id", keep=False)   # 2 rows: every id 7 gone
+(d.sort_values("updated")
+  .drop_duplicates(subset="id", keep="last"))   # newest per id`, more: { html: () => row(cap('d: id 7 three times') + tbl(['', 'id', 'updated', 'phone'], [['0', '7', '2026-01-10', '0211'], ['1', '8', '2026-02-01', '0655'], ['2', '7', '2026-03-15', '0299'], ['3', '9', '2026-03-20', '0118'], ['4', '7', '2026-02-02', '0233']]), cap('newest per id') + tbl(['', 'id', 'updated', 'phone'], [['1', '8', '2026-02-01', '0655'], ['2', '*7', '*2026-03-15', '*0299'], ['3', '9', '2026-03-20', '0118']])) } },
+      { id: 'normalise-text', slide: 42, name: 'Normalise text before you compare it', what: 'Lower-case and strip the text columns, then look again: "maria rossi, milano" now equals row 0, so exact duplicates go from 1 to 2, and 6 rows are left after drop_duplicates.\n\nTypos, swapped words and abbreviations survive normalisation. For those we need a similarity.', f: `for c in ["name", "city"]:
+    df[c] = df[c].str.strip().str.lower()
+df.duplicated().sum()   # 2` },
+    ] },
+    { name: 'Similarity and record linkage', cards: [
+      { id: 'similarity', slide: 43, name: 'Similarity turns "almost equal" into a number', what: 'A similarity is a number from 0, nothing in common, to 1, identical. Above a threshold, here 0.85, two strings count as the same.\n\nLevenshtein counts the fewest insertions, deletions or substitutions: Rossi / Rosi is 1 edit, similarity 1 − 1/5 = 0.80. Jaro-Winkler rewards a shared beginning and forgives swapped letters: Fritz / Frizt scores 0.95. Soundex codes how a name sounds: Robert and Rupert are both R163. Jaccard compares sets of words in any order: Giulia Verdi / Verdi Giulia scores 1.00.', f: `import jellyfish
+jellyfish.levenshtein_distance("Rossi", "Rosi")          # 1
+jellyfish.jaro_winkler_similarity("Fritz", "Frizt")     # 0.95
+jellyfish.soundex("Robert")                             # 'R163'`, more: { html: () => tbl(['string 1', 'string 2', 'Levenshtein', 'Jaro-W.', 'Soundex =', 'Jaccard'], [['Maria Rossi', 'Maria Rosi', '*0.91', '*0.98', 'True', '0.33'], ['Maria Rossi', 'Mario Rossi', '0.91', '0.94', 'True', '0.33'], ['Giulia Verdi', 'Verdi Giulia', '0.17', '0.47', 'False', '*1.00'], ['Rossi', 'Russo', '0.60', '0.76', 'True', '0.00'], ['Maria Rossi', 'M. Rossi', '0.64', '0.77', 'True', '0.33']]) }, watch: 'Similar is not equal: Mario Rossi passes 0.85 against Maria Rossi. One similarity alone cannot tell two people apart.' },
+      { id: 'linkage', slide: 49, name: 'Record linkage finds the rows of one real entity', what: 'Four steps: clean the text, pick the pairs worth comparing, score each field of a pair, decide match or not and merge.\n\n"maria rossi" and "maria rosi" in Milano with the same e-mail are not identical, so drop_duplicates misses them. Each field that agrees adds one point: 3 out of 3, same person. On one table this is deduplication; on two tables, linkage. Same four steps, with recordlinkage.', more: { html: () => flow(['1 Clean the text', '2 Pick pairs', '3 Score each field', '4 Decide and merge']) } },
+      { id: 'blocking', slide: 51, name: 'Blocking compares only rows that share a key', what: 'Comparing every pair does not scale: n rows give n(n − 1)/2 pairs, 499,500 for 1,000 rows and 20,849,653 for the 6,458 taxi rides. Most pairs are obviously different, Milano against Roma.\n\nBlocking keeps only pairs that share a key, like the city: 15 pairs become 4.', f: `import recordlinkage
+ix = recordlinkage.Index()
+ix.block("city")      # ix.full() would compare every pair
+pairs = ix.index(df)  # 4 pairs instead of 15`, watch: 'A typo in the key ("Milno") puts a row in the wrong block, and that pair is never compared.' },
+      { id: 'score', slide: 52, name: 'Score each field, then add up the points', what: '`Compare()` gives each pair one column per field: 1 when the fields agree, 0 when not. `.string` uses a similarity with a threshold, `.exact` needs equality. Add the points across the row and keep the pairs above a cut-off.\n\nMaria and Mario Rossi agree on name and city (score 2) but not on e-mail: the threshold keeps them apart. One field is never enough.', f: `c = recordlinkage.Compare()
+c.string("name", "name", method="jarowinkler", threshold=0.85)
+c.exact("city", "city")
+c.exact("email", "email")
+f = c.compute(pairs, df)
+f[f.sum(axis=1) >= 3]          # matches: 3 of 3`, more: { html: () => tbl(['pair', 'name 1', 'name 2', 'name', 'city', 'email', 'score'], [['4–0', 'maria rosi', 'maria rossi', '1', '1', '1', '*3'], ['5–0', 'mario rossi', 'maria rossi', '1', '1', '0', '2'], ['5–4', 'mario rossi', 'maria rosi', '0', '1', '0', '1'], ['7–6', 'verdi giulia', 'giulia verdi', '0', '1', '0', '1']]) } },
+      { id: 'golden', slide: 55, name: 'Merge each match into one golden record', what: 'A match becomes one row, the golden record, built field by field with a rule. Most complete: keep the value that is not missing, `a.combine_first(b)`. Most recent: the newest update wins. Most trusted: the spelling of the source you trust, like the CRM.\n\nRecord A, Maria Rossi in Milano with no phone, and record B, maria rosi with phone 02 1234, become Maria Rossi · Milano · 02 1234.', f: `golden = a.combine_first(b)   # a's values, b's where a is NaN`, watch: 'Write the rule down: which source won each field, and why.' },
+    ] },
+  ], practice: [
+    { id: 'l4-e1', title: 'Drop, fill, flag', setup: 'Five taxi rides: t = pd.DataFrame({"city": ["Paris", None, "Lyon", "Paris", None], "km": [3.0, 5.0, None, 4.0, 40.0], "tip": [1.0, None, 0.5, None, 2.0], "pay": ["card", "cash", "card", "cash", "card"]}).', parts: [
+      ['How many rows does t.dropna() keep? Is that a good idea?', () => code(`t.isna().sum()   # city 2, km 1, tip 2, pay 0
+len(t.dropna())  # 1: only row 0 is complete`) + `<p><b>No.</b> Five missing cells spread over four rows: dropping them throws away 80 % of the table.</p>`],
+      ['Fill city with "Unknown" without losing track of the gaps.', () => code(`c = t.copy()
+c["city_missing"] = c["city"].isna()   # flag first
+c["city"] = c["city"].fillna("Unknown")`) + `<p>The flag comes first: after the fill, nothing tells you which cities were missing.</p>`],
+      ['Fill km: mean or median?', () => code(`t["km"].mean()     # 13.0
+t["km"].median()   # 4.5
+t["km"].fillna(t["km"].median())`) + `<p><b>The median.</b> The 40 km ride pulls the mean to 13.0, longer than three of the four known rides.</p>`],
+    ] },
+    { id: 'l4-e2', title: 'Three rules for one outlier', setup: 'Minutes to deliver seven parcels: s = pd.Series([12, 14, 15, 15, 16, 18, 60]).', parts: [
+      ['Which values have |z| > 2? And |z| > 3?', () => code(`z = (s - s.mean()) / s.std()   # mean 21.43, std 17.11
+s[z.abs() > 2]                 # 60 (z = 2.25)
+s[z.abs() > 3]                 # nothing`) + `<p>The 60 inflates the std itself, so its own z stays small: with 7 values a cut-off of 3 never fires.</p>`],
+      ['Which values have |robust z| > 3.5?', () => code(`med = s.median()                 # 15
+mad = (s - med).abs().median()   # 1
+rz = 0.6745 * (s - med) / mad
+s[rz.abs() > 3.5]                # 60 (robust z = 30.4)`) + `<p>The median and the MAD do not move with the 60, so it stands out clearly; 12 and 18 score ±2.02.</p>`],
+      ['Cap the series at the IQR fences. What is the new mean?', () => code(`q1, q3 = s.quantile([0.25, 0.75])   # 14.5, 17.0
+iqr = q3 - q1                       # 2.5
+low, high = q1 - 1.5*iqr, q3 + 1.5*iqr   # 10.75, 20.75
+s.clip(low, high).mean()            # 15.82`) + `<p>The 60 becomes 20.75. Every row stays, and the mean falls from 21.43 to 15.82.</p>`],
+    ] },
+    { id: 'l4-e3', title: 'Which copy survives', setup: 'c = pd.DataFrame({"id": [1, 2, 1, 3, 2], "updated": ["2026-01-05", "2026-01-07", "2026-02-10", "2026-01-09", "2026-01-02"], "email": ["a@x.it", "b@x.it", "a@x.it", "c@x.it", "B@x.it "]}).', parts: [
+      ['How many whole-row duplicates? How many repeated ids?', () => code(`c.duplicated().sum()              # 0: no row repeats entirely
+c.duplicated(subset="id").sum()   # 2: id 1 and id 2 come back`)],
+      ['Keep the newest row of each id.', () => code(`(c.sort_values("updated")
+  .drop_duplicates(subset="id", keep="last"))
+# id 2: 2026-01-07, id 3: 2026-01-09, id 1: 2026-02-10`) + `<p>Sorted by date, the last copy of each id is its newest.</p>`],
+      ['How many e-mails repeat once they are normalised?', () => code(`e = c["email"].str.strip().str.lower()
+e.duplicated().sum()   # 2: a@x.it again, and "B@x.it " is b@x.it`)],
+    ] },
+  ], recap: ['Every fix is one of four moves: drop, fill, correct, flag. Work on a copy, count before and after, write it down.', 'Ask why a value is missing (MCAR, MAR, MNAR) before choosing how to fill it.', 'Prefer a rule (qty × price) or similar rows (KNN) to one global number; flag what you filled.', 'Mean for symmetric columns, median for skewed ones; any single number shrinks the spread.', 'Plot first. Robust rules (median and MAD, IQR) do not suffer from masking; KNN and LOF catch multivariate outliers.', 'Detected is not deleted: remove, correct, cap, set NaN, or keep and flag.', 'Normalise text, then measure similarity. Record linkage: pick pairs, score each field, decide, merge into a golden record.'] },
+  { n: 5, pages: 24, short: 'Data aggregation', title: 'Data aggregation', lede: 'Many rows in, one number per group out. groupby splits, a function applies, pandas combines; agg gives several statistics with clean names, transform keeps every row, value_counts and crosstab count categories.', groups: [
+    { name: 'Split, apply, combine', flowLabel: 'The three steps', flow: ['Split by key', 'Apply a function', 'Combine: one row per group'], cards: [
+      { id: 'toy5', slide: 3, name: 'Six orders, one question: how much per country?', what: 'Every example uses these six orders. The question: the total per country. France has three orders (30 + 10 + 20 = 60), Italy two (40 + 70 = 110), Spain one (40).\n\nAggregation: many rows in, one number per group out.', f: `orders = pd.DataFrame({
+    "order_id": [1, 2, 3, 4, 5, 6],
+    "country":  ["France", "Italy", "France", "Spain", "Italy", "France"],
+    "channel":  ["web", "shop", "shop", "web", "web", "web"],
+    "total":    [30, 40, 10, 40, 70, 20]})`, more: { html: () => row(ord5({ label: 'orders' }), cap('the answer we want') + tbl(['country', 'total'], [['France', '60'], ['Italy', '110'], ['Spain', '40']])) } },
+      { id: 'sac', slide: 4, name: 'groupby splits; a function on a column applies and combines', what: 'Split: `groupby("country")` sorts the rows into one group per country. Apply: `["total"].sum()` runs on each group. Combine: pandas puts the results together, one row per group, automatically.\n\ngroupby alone computes nothing: it gives a plan with 3 groups, a DataFrameGroupBy object. Pick a column and call a function, and pandas computes. The group keys become the index, sorted.', f: `g = orders.groupby("country")   # a plan, nothing computed
+g["total"].sum()                 # France 60, Italy 110, Spain 40
+# SQL: SELECT country, SUM(total) FROM orders GROUP BY country`, more: { html: () => ord5({ shade: ['0:total', '2:total', '5:total'], label: 'The France group: 30 + 10 + 20 = 60' }) } },
+      { id: 'reducers', slide: 6, name: 'Swap the function, keep the groups', what: 'The same groups take any function that returns one number per group: sum, mean, median, min, max, count.\n\n`count()` counts the values that are not missing; `size()` counts every row, NaN included. Here they agree, because no value is missing.', f: `g["total"].mean()     # 20.0, 55.0, 40.0
+g["total"].max()      # 30, 70, 40
+g["total"].count()    # 3, 2, 1
+g.size()              # 3, 2, 1`, more: { html: () => tbl(['g["total"]…', 'France', 'Italy', 'Spain'], [['.sum()', '60', '110', '40'], ['.mean()', '20.0', '55.0', '40.0'], ['.median()', '20.0', '55.0', '40.0'], ['.min() / .max()', '10 / 30', '40 / 70', '40 / 40'], ['.count()', '3', '2', '1'], ['g.size()', '3', '2', '1']]) } },
+      { id: 'two-keys', slide: 7, name: 'Two keys give one row per combination', what: 'Pass a list of columns: one group for each (country, channel) pair that exists. Spain has no shop order, so (Spain, shop) is not a group and gets no row.\n\nThe result has two index levels, a MultiIndex.', f: `orders.groupby(["country", "channel"])["total"].sum()
+# SQL: ... GROUP BY country, channel`, more: { html: () => tbl(['country', 'channel', 'total'], [['France', 'shop', '10'], ['', 'web', '50'], ['Italy', 'shop', '40'], ['', 'web', '70'], ['Spain', 'web', '40']]) } },
+    ] },
+    { name: 'Aggregating with agg', cards: [
+      { id: 'agg-list', slide: 9, name: 'A list in agg gives several statistics at once', what: 'One call, one column per function, named after the function.\n\nRead it: Italy has fewer orders than France, but almost twice the revenue.', f: `orders.groupby("country")["total"].agg(
+    ["sum", "mean", "min", "max", "count"])`, more: { html: () => tbl(['country', 'sum', 'mean', 'min', 'max', 'count'], [['France', '60', '20.0', '10', '30', '3'], ['Italy', '*110', '55.0', '40', '70', '2'], ['Spain', '40', '40.0', '40', '40', '1']]) } },
+      { id: 'agg-dict', slide: 10, name: 'A dict in agg picks functions column by column', what: 'Keys are columns, values are one function or a list of functions.\n\nThe catch: the columns get two header levels, so their names become pairs like ("total", "sum"): hard to read, hard to type.', f: `orders.groupby("country").agg(
+    {"total": ["sum", "mean"], "order_id": "count"})`, more: { html: () => tbl(['country', 'total · sum', 'total · mean', 'order_id · count'], [['France', '60', '20.0', '3'], ['Italy', '110', '55.0', '2'], ['Spain', '40', '40.0', '1']]) } },
+      { id: 'named', slide: 11, name: 'Named aggregation gives clean column names', what: 'Write new_name=(column, function): each keyword becomes an output column, named as you chose. The result is flat and readable.\n\n`pd.NamedAgg(column="total", aggfunc="sum")` is the same tuple, spelled out. Use this form in your project.', f: `orders.groupby("country").agg(
+    n_orders=("order_id", "count"),
+    total_sales=("total", "sum"),
+    avg_order=("total", "mean"))
+# SQL: SUM(total) AS total_sales`, more: { html: () => tbl(['country', 'n_orders', 'total_sales', 'avg_order'], [['France', '3', '60', '20.0'], ['Italy', '2', '110', '55.0'], ['Spain', '1', '40', '40.0']]) } },
+      { id: 'lambda', slide: 12, name: 'Any function returning one number can aggregate', what: 'In a lambda, x is the Series of one group, and the lambda returns one number: here the spread, max − min.\n\nFrance: x = [30, 10, 20], 30 − 10 = 20. Italy: 70 − 40 = 30. Spain: 40 − 40 = 0. Built-in names like "sum" are faster: use a lambda only when no built-in exists.', f: `orders.groupby("country")["total"].agg(lambda x: x.max() - x.min())
+# France 20, Italy 30, Spain 0` },
+    ] },
+    { name: 'Transform and counting', cards: [
+      { id: 'agg-vs-transform', slide: 14, name: 'agg collapses groups, transform keeps all rows', what: '`.agg("mean")` gives one row per group: 3 rows. `.transform("mean")` gives one value per row, the mean of that row’s group: still 6 rows, in the original order.\n\nChoose by shape: a report per group, agg; a new column next to each row, transform.', more: { html: () => row(cap('.agg("mean"): 3 rows') + tbl(['country', 'mean'], [['France', '20.0'], ['Italy', '55.0'], ['Spain', '40.0']]), cap('.transform("mean"): 6 rows') + tbl(['country', 'total', 'country_avg'], [['France', '30', '*20.0'], ['Italy', '40', '*55.0'], ['France', '10', '*20.0'], ['Spain', '40', '*40.0'], ['Italy', '70', '*55.0'], ['France', '20', '*20.0']])) } },
+      { id: 'transform', slide: 15, name: 'transform adds the group average to each row', what: 'The result has the same length as orders, so it can be stored as a new column. Then compare each row to its group: this order against its country’s average, a relative feature.\n\nOrder 1, France, 30: the French average is 20.0, so +10. Order 2, Italy, 40: the Italian average is 55.0, so −15.', f: `orders["country_avg"] = (orders.groupby("country")["total"]
+                          .transform("mean"))
+orders["vs_avg"] = orders["total"] - orders["country_avg"]
+# SQL: AVG(total) OVER (PARTITION BY country)`, more: { html: () => tbl(['', 'country', 'total', 'country_avg', 'vs_avg'], [['0', 'France', '30', '20.0', '*+10.0'], ['1', 'Italy', '40', '55.0', '*−15.0'], ['2', 'France', '10', '20.0', '*−10.0'], ['3', 'Spain', '40', '40.0', '0.0'], ['4', 'Italy', '70', '55.0', '*+15.0'], ['5', 'France', '20', '20.0', '0.0']]) } },
+      { id: 'value-counts', slide: 16, name: 'value_counts counts the categories of one column', what: 'Rows per category, largest first. `normalize=True` gives shares that sum to 1.\n\nThe same counts as `groupby("country").size()`: value_counts is the shortcut for one column.', f: `orders["country"].value_counts()                 # France 3, Italy 2, Spain 1
+orders["country"].value_counts(normalize=True)   # 0.50, 0.33, 0.17
+# SQL: SELECT country, COUNT(*) ... GROUP BY country` },
+      { id: 'crosstab', slide: 17, name: 'crosstab counts two columns at once', what: 'The first column gives the rows, the second the columns, each cell a count. Combinations that never happen show 0, like Spain in a shop.\n\n`normalize="index"` makes each row sum to 1: two thirds of French orders come from the web. The same counts as `groupby(["country", "channel"]).size()`, laid out as a grid.', f: `pd.crosstab(orders["country"], orders["channel"])
+pd.crosstab(orders["country"], orders["channel"], normalize="index")`, more: { html: () => row(cap('counts') + tbl(['', 'shop', 'web'], [['France', '1', '2'], ['Italy', '1', '1'], ['Spain', '*0', '1']]), cap('normalize="index"') + tbl(['', 'shop', 'web'], [['France', '0.33', '0.67'], ['Italy', '0.50', '0.50'], ['Spain', '0.00', '1.00']])) } },
+    ] },
+  ], practice: [
+    { id: 'l5-e1', title: 'One number per group', setup: 'Six sales: d = pd.DataFrame({"region": ["North", "South", "North", "East", "South", "North"], "category": ["Tech", "Office", "Office", "Tech", "Tech", "Tech"], "sales": [200, 50, 80, 120, 300, 100]}).', parts: [
+      ['What are the total sales per region?', () => code(`d.groupby("region")["sales"].sum()
+# East 120, North 380, South 350`) + `<p>The keys come back sorted: East, North, South.</p>`],
+      ['Give each region its number of sales and its average sale, with clean names.', () => code(`d.groupby("region").agg(
+    n=("sales", "count"),
+    avg=("sales", "mean"))
+# East 1, 120.0 · North 3, 126.67 · South 2, 175.0`)],
+      ['Which region has the best average sale, and does it have the most sales?', () => code(`d.groupby("region")["sales"].mean().idxmax()   # 'South'`) + `<p><b>South</b>, 175.0, with only 2 sales. North has the most sales, 3, but a lower average.</p>`],
+    ] },
+    { id: 'l5-e2', title: 'Two keys and agg', setup: 'The same six sales.', parts: [
+      ['Total sales per region and category.', () => code(`d.groupby(["region", "category"])["sales"].sum()
+# East Tech 120 · North Office 80, Tech 300
+# South Office 50, Tech 300`) + `<p>East sold no Office item, so (East, Office) has no row.</p>`],
+      ['The sum and the largest sale per category, in one call.', () => code(`d.groupby("category")["sales"].agg(["sum", "max"])
+# Office 130, 80 · Tech 720, 300`)],
+      ['The spread, max − min, per region.', () => code(`d.groupby("region")["sales"].agg(lambda x: x.max() - x.min())
+# East 0, North 120, South 250`) + `<p>East has one sale, so its spread is 0.</p>`],
+    ] },
+    { id: 'l5-e3', title: 'Keep the rows, then count', setup: 'The same six sales.', parts: [
+      ['Add each row’s region average as a new column.', () => code(`d["region_avg"] = d.groupby("region")["sales"].transform("mean")
+# 126.67, 175.0, 126.67, 120.0, 175.0, 126.67`) + `<p>Still 6 rows: transform gives one value per row. agg would give 3.</p>`],
+      ['What share of the sales does each region have?', () => code(`d["region"].value_counts(normalize=True)
+# North 0.50, South 0.33, East 0.17`)],
+      ['Count the sales per region and category as a grid.', () => code(`pd.crosstab(d["region"], d["category"])
+#        Office  Tech
+# East        0     1
+# North       1     2
+# South       1     1`) + `<p>crosstab shows the 0 that groupby leaves out.</p>`],
+    ] },
+  ], recap: ['Aggregation: many rows in, one number per group out.', 'groupby only splits; a function on a column applies and combines, one row per group, keys sorted in the index.', 'count() skips NaN, size() counts every row.', 'A list of keys gives one row per combination that exists: a MultiIndex.', 'agg: a list for several statistics, named aggregation for clean names, a lambda for anything custom.', 'transform keeps every row: the group value next to each row, to compare.', 'value_counts counts one column, crosstab two; decide the shape first: one row per group, or one value per row.'] },
 ];
 SESSIONS.forEach(s => { let k = 0; for (const g of s.groups) for (const c of g.cards) c.num = `${s.n}.${++k}`; });
 const readSize = () => Number(document.documentElement.style.getPropertyValue('--read')) || 1;
@@ -1044,6 +1333,17 @@ const PICTURES = {
     + dq({ shade: ['3:age'], add: [['age > 110', [F, F, F, '*True', F, F]]] })
     + `<p class="pic-lede"><b>The quality report</b> collects one count per check.</p>`
     + report3(),
+  4: () => `<p class="pic-lede"><b>Last week we measured, today we fix.</b> Three families of errors, three toolboxes.</p>`
+    + tbl(['Family', 'The problem', 'Tools'], [['Impute', 'the value is not there', 'dropna · fillna · interpolate · KNN'], ['Outliers', 'the value is not plausible', 'z · robust z · IQR · LOF'], ['Deduplicate', 'the fact is there twice', 'drop_duplicates · similarity · linkage']])
+    + `<p class="pic-lede"><b>Every fix is one of four moves.</b> Choosing the move is a decision about the analysis, not about the code.</p>`
+    + fourMoves()
+    + `<p class="pic-lede"><b>One table for imputation:</b> 8 people, 2 cities and 2 weights missing. KNN fills each weight from the 3 people of closest height.</p>`
+    + ppl({ shade: ['2:city', '7:city'], set: { '2:weight': '*63.3', '5:weight': '*77.7' } }),
+  5: () => `<p class="pic-lede"><b>Many rows in, one number per group out.</b> Six orders, one question: how much per country?</p>`
+    + row(ord5({ shade: ['0:total', '2:total', '5:total'] }), cap('orders.groupby("country")["total"].sum()') + tbl(['country', 'total'], [['*France', '*60'], ['Italy', '110'], ['Spain', '40']]))
+    + flow(['Split by country', 'Apply sum', 'Combine: one row per group'])
+    + `<p class="pic-lede"><b>Decide the shape first:</b> agg gives one row per group, transform one value per row.</p>`
+    + row(cap('.agg("mean"): 3 rows') + tbl(['country', 'mean'], [['France', '20.0'], ['Italy', '55.0'], ['Spain', '40.0']]), cap('.transform("mean"): 6 rows') + tbl(['country', 'total', 'avg'], [['France', '30', '20.0'], ['Italy', '40', '55.0'], ['France', '10', '20.0'], ['Spain', '40', '40.0'], ['Italy', '70', '55.0'], ['France', '20', '20.0']])),
 };
 
 /* ---------- Every call, piece by piece ----------
@@ -1161,7 +1461,7 @@ function markRead(ref) {
   n.readAt = new Date().toISOString(); saveLocal(); paintNotes();
   if (ON_BRAIN && n.id) fetch(`${NOTES_URL}/${n.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ read: true }) }).catch(() => {});
 }
-const KIND = { question: 'Question', comment: 'Comment' };
+const KIND = { question: 'Question', comment: 'Note' };
 function noteHtml(n) {
   const done = n.kind !== 'question' || (n.answer && n.readAt);
   return `<div class="note${done ? ' done' : ''}" data-kind="${n.kind}" data-ref="${esc(noteRef(n))}">
@@ -1192,7 +1492,7 @@ document.addEventListener('toggle', e => {
 }, true);
 function paintNotes() {
   paintBoxes();
-  for (const card of document.querySelectorAll('.card, .ex[data-key]')) {
+  for (const card of document.querySelectorAll('.card, .ex[data-key], .ess-item')) {
     const list = notesOf(card.dataset.key);
     card.querySelector('.notes').innerHTML = notesFold(card.dataset.key, list);
     const b = card.querySelector('.note-btn');
@@ -1283,14 +1583,18 @@ document.addEventListener('click', e => {
   const t = e.target;
   const k = t.closest('.editor .kinds [data-kind]');
   if (k) { const ed = k.closest('.editor'); ed.dataset.kind = k.dataset.kind; for (const b of ed.querySelectorAll('.kinds button')) b.setAttribute('aria-checked', String(b === k)); return; }
-  const host = t.closest('.card, .ex[data-key], .nb-group');
+  const host = t.closest('.card, .ex[data-key], .ess-item, .nb-group');
   if (!host) return;
   const m = t.closest('.mark');
   if (m) {
     setMark(host.dataset.key, m.dataset.mark);
     const v = marks[host.dataset.key] || '';
-    host.dataset.mark = v;
-    for (const b of host.querySelectorAll('.mark')) b.setAttribute('aria-pressed', String(b.dataset.mark === v));
+    // A summary idea is on the page twice (the pill at the start and the lecture's end): both follow.
+    for (const h of document.querySelectorAll(`[data-key="${CSS.escape(host.dataset.key)}"]`)) {
+      if (!h.querySelector('.marks')) continue;
+      h.dataset.mark = v;
+      for (const b of h.querySelectorAll('.mark')) b.setAttribute('aria-pressed', String(b.dataset.mark === v));
+    }
     paintBars(); renderMap();
     return;
   }
@@ -1330,7 +1634,7 @@ document.addEventListener('click', e => {
 });
 
 
-/* ---------- Cheat sheet: every call and term from lectures 1 to 3 ---------- */
+/* ---------- Cheat sheet: every call and term from lectures 1 to 5 ---------- */
 const REF = [
   { name: 'DataFrames', items: [
     ['DataFrame', 'A table in memory: an index, named columns, one dtype per column.', 'pd.DataFrame({"total": [129.9, 45.0]})', 1, 'dataframe'],
@@ -1395,6 +1699,40 @@ const REF = [
     ['quantile', 'The value below which a share of the data lies.', 's.quantile(0.25)', 3, 'iqr'],
     ['Quality report', 'One row per check: how many rows fail it, and what share.', 'report["pct"] = report["rows"] / len(df) * 100', 3, 'report'],
   ] },
+  { name: 'Cleaning: missing values', items: [
+    ['dropna', 'Removes rows (or columns, axis=1) that contain NaN. subset= looks at some columns, thresh= keeps rows with enough values.', 'p.dropna(subset=["weight"])', 4, 'dropna'],
+    ['fillna', 'Replaces NaN with a value: a constant, the median, the mode, or another column.', 'f["city"].fillna("Unknown")', 4, 'fill-flag'],
+    ['ffill', 'Fills a gap with the last known value above it; bfill uses the next one. Only for ordered rows.', 't.ffill()', 4, 'ffill'],
+    ['interpolate', 'Fills gaps on a straight line between the known neighbours.', 't.interpolate()', 4, 'ffill'],
+    ['MCAR', 'Missing completely at random: the gaps are a fair sample. MAR: missing at random given another column. MNAR: the value itself hides it.', 'tips missing for cash rides: MAR', 4, 'why-missing'],
+    ['KNNImputer', 'Fills each gap with the average of the k most similar rows. Numbers only; standardise first.', 'KNNImputer(n_neighbors=3).fit_transform(p[cols])', 4, 'knn'],
+  ] },
+  { name: 'Cleaning: outliers', items: [
+    ['z-score', 'How many standard deviations a value is from the mean. Flag |z| > 2 or 3.', '(s - s.mean()) / s.std()', 4, 'zscore'],
+    ['Masking', 'One extreme value inflates the std so much that other outliers look normal.', '500 instead of 50: the 5 gets z = −0.42', 4, 'zscore'],
+    ['MAD', 'Median absolute deviation: the median of |x − median|. The robust z is 0.6745 (x − median) / MAD.', '(s - s.median()).abs().median()', 4, 'robust-z'],
+    ['IQR', 'Q3 − Q1, the width of the middle half. The fences sit 1.5 × IQR outside the quartiles.', 'q1, q3 = s.quantile([0.25, 0.75])', 4, 'iqr-fences'],
+    ['LOF', 'Local Outlier Factor: my neighbours’ density divided by mine. About 1 is normal.', 'LocalOutlierFactor(n_neighbors=5).fit_predict(Z)', 4, 'knn-lof'],
+    ['clip', 'Caps values at a lower and an upper bound: every row stays.', 's.clip(lower=low, upper=high)', 4, 'handle'],
+    ['where', 'Keeps the values where the condition is True and replaces the others.', 'h.where(h > 3, h * 100)', 4, 'handle'],
+  ] },
+  { name: 'Cleaning: duplicates', items: [
+    ['drop_duplicates', 'Removes repeated rows; subset= compares a key, keep= says which copy stays.', 'df.drop_duplicates(subset="id", keep="last")', 4, 'drop-dup'],
+    ['Levenshtein', 'The fewest insertions, deletions or substitutions between two strings.', 'Rossi / Rosi: 1 edit', 4, 'similarity'],
+    ['Jaro-Winkler', 'A similarity from 0 to 1 that rewards a shared beginning.', 'jellyfish.jaro_winkler_similarity("Fritz", "Frizt")', 4, 'similarity'],
+    ['Blocking', 'Compares only the pairs that share a key, instead of every pair.', 'ix.block("city")', 4, 'blocking'],
+    ['Record linkage', 'Finds the rows of one real entity: clean, pick pairs, score each field, decide, merge.', 'recordlinkage.Compare()', 4, 'linkage'],
+    ['combine_first', 'Takes a’s values, and b’s where a is missing: the most complete record.', 'a.combine_first(b)', 4, 'golden'],
+  ] },
+  { name: 'Aggregation', items: [
+    ['groupby', 'Splits the rows into groups by one or more keys. Computes nothing until a function is called.', 'orders.groupby("country")["total"].sum()', 5, 'sac'],
+    ['size', 'Rows per group, NaN included; count() counts only values that are there.', 'orders.groupby("country").size()', 5, 'reducers'],
+    ['agg', 'Applies one or several functions per group: a list, a dict, named aggregation or a lambda.', 'g.agg(total_sales=("total", "sum"))', 5, 'named'],
+    ['NamedAgg', 'Named aggregation spelled out: the output name, its column and its function.', 'pd.NamedAgg(column="total", aggfunc="sum")', 5, 'named'],
+    ['transform', 'One value per row: the group result next to each row, same length as the table.', 'g["total"].transform("mean")', 5, 'transform'],
+    ['MultiIndex', 'An index with several levels: one per groupby key.', 'orders.groupby(["country", "channel"])', 5, 'two-keys'],
+    ['crosstab', 'Counts the combinations of two columns in a grid; normalize="index" makes each row sum to 1.', 'pd.crosstab(orders["country"], orders["channel"])', 5, 'crosstab'],
+  ] },
 ];
 
 /* ---------- A lecture ---------- */
@@ -1434,9 +1772,11 @@ function cardHtml(s, c, gi) {
     ${c.watch ? `<p class="watch"><b>Watch out</b>${kwText(c.watch)}</p>` : ''}
     <div class="notes"></div>
     <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>${caseOf(key) ? '<button type="button" class="case-btn" aria-controls="case-pad">The case</button>' : ''}${ON_BRAIN && c.slide ? `<a class="slide-link" href="/api/coding/slides/Pandas${s.n}.pdf#page=${c.slide}" target="_blank" rel="noopener" aria-label="Slide ${c.slide} of ${s.pages}">Slide ${c.slide}<span class="of">/${s.pages}</span> ›</a>` : ''}
-      <span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Confused as fuck']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span></div>
+      ${marksHtml(m)}</div>
   </article>`;
 }
+// The three dots: how well you know a card or a summary idea.
+const marksHtml = m => `<span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Confused as fuck']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span>`;
 /* ---------- The calls each practice answer uses ----------
    Per exercise, one list per part: [lecture, card, name, the call in general, the call with this exercise's names]. */
 const PRACTICE_LAWS = {
@@ -1560,7 +1900,8 @@ function paintBars() {
 // "I love the colour of slides 1 to 10 in Lecture 1": their blue and lavender, in turn, on every lecture.
 /* Asked for 2026-11-06: "boxes to be that ochre beige, the one I liked from class 3, not blue, but with something
    to show what part they are in". One colour everywhere: hue 95, Lecture 3's second segment. The part shows in words. */
-const SEG_HUE = 95;
+// 2026-11-19: "a bit more beige or light brown rather than green": hue 70, softer.
+const SEG_HUE = 70;
 const segHue = () => SEG_HUE;
 const partTag = (s, i) => `<span class="part-tag">Part ${i + 1}/${s.groups.length + 2}</span>`;
 const partHead = (s, i, name) => `<h2><span class="part-no">Part ${i + 1} of ${s.groups.length + 2}</span>${esc(name)}</h2>`;
@@ -1596,21 +1937,56 @@ const ESSENTIALS = {
     { name: 'Accuracy', is: 'Possible and plausible values.', f: 'df["age"].notna() & ~df["age"].between(0, 110)\n~df["status"].isin(allowed)', watch: 'NaN fails between: test only the values that exist.' },
     { name: 'The report', is: 'One row per check, with count and share.', pic: report3 },
   ],
+  4: [
+    { name: 'Four moves', is: 'Every fix drops, fills, corrects or flags. Work on a copy, count before and after, write the reason down.', pic: fourMoves },
+    { name: 'Why missing', is: 'MCAR: a fair sample, any simple fill. MAR: fill from the related column. MNAR: every fill is biased, flag it.' },
+    { name: 'Drop', is: 'dropna() removes rows with NaN; subset=, thresh=, axis=1 refine it. Each dropped row takes its known values with it.', f: 'p.dropna(subset=["weight"])\np.dropna(axis=1)', watch: 'Drop rows only when few are affected and the gaps look random.' },
+    { name: 'Fill', is: 'Flag first, then fill: a constant for text, the median for skewed numbers, ffill or interpolate for ordered rows, a rule when one exists.', f: 'f["w_missing"] = f["w"].isna()\nf["w"] = f["w"].fillna(f["w"].median())\no["total"] = o["total"].fillna(o["qty"] * o["price"])', watch: 'One number for every gap shrinks the spread.' },
+    { name: 'KNN', is: 'Fill a gap with the average of the k most similar rows, measured on standardised columns.', f: 'KNNImputer(n_neighbors=3).fit_transform(p[cols])' },
+    { name: 'Outlier rules', is: 'z counts standard deviations but suffers from masking. Robust z (median, MAD) and IQR fences do not. KNN and LOF compare whole rows.', pic: () => tbl(['Rule', 'Flag when'], [['z-score', '|x − mean| / std > 3'], ['robust z', '0.6745 |x − median| / MAD > 3.5'], ['IQR', 'below Q1 − 1.5 IQR or above Q3 + 1.5 IQR'], ['LOF', 'well above 1: sparser than its neighbours']]) },
+    { name: 'Handle', is: 'Detected is not deleted: remove, correct, cap with clip, set NaN and impute, or keep and flag.', f: 's.clip(low, high)\nh.where(h > 3, h * 100)' },
+    { name: 'Deduplicate', is: 'Sort, then drop_duplicates with subset and keep. Normalise text first; for typos, a similarity.', f: 'df.sort_values("updated").drop_duplicates(subset="id", keep="last")' },
+    { name: 'Record linkage', is: 'Clean, pick pairs (blocking), score each field, decide, merge into a golden record.', f: 'ix.block("city")\nc.string("name", "name", method="jarowinkler", threshold=0.85)\nf[f.sum(axis=1) >= 3]', watch: 'Similar is not equal: one field is never enough.' },
+  ],
+  5: [
+    { name: 'Split, apply, combine', is: 'groupby splits; a function on a column applies and combines: one row per group, keys sorted in the index.', f: 'orders.groupby("country")["total"].sum()', ex: 'France 60, Italy 110, Spain 40.' },
+    { name: 'Reducers', is: 'sum, mean, median, min, max, count; count() skips NaN, size() counts every row.', f: 'g["total"].mean()\ng.size()' },
+    { name: 'Two keys', is: 'A list of keys: one row per combination that exists, in a MultiIndex.', f: 'orders.groupby(["country", "channel"])["total"].sum()' },
+    { name: 'agg', is: 'A list for several statistics, named aggregation for clean names, a lambda for anything custom.', f: 'g.agg(n_orders=("order_id", "count"),\n      total_sales=("total", "sum"))\ng["total"].agg(lambda x: x.max() - x.min())', watch: 'A dict in agg gives two header levels: names become pairs.' },
+    { name: 'transform', is: 'One value per row: the group result next to each row, still 6 rows.', f: 'orders["country_avg"] = g["total"].transform("mean")' },
+    { name: 'Counting', is: 'value_counts for one column, crosstab for two; normalize gives shares.', f: 'orders["country"].value_counts(normalize=True)\npd.crosstab(orders["country"], orders["channel"])' },
+  ],
 };
+/* Asked for 2026-11-19: "add summary pill at the start of each lesson (mirrors one below so note questions
+ * highlights are the same) and put 3 dots for clear, confused etc". Each idea has a card's three dots and its
+ * Question or comment, keyed by its name, so the pill at the start and the lecture's end show the same marks,
+ * notes and highlights. */
+const essId = e => `sum-${e.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+// `own` is the lecture's end: it carries the id that the notepad's links jump to.
+function essItemHtml(s, e, i, own) {
+  const key = cardKey(s.n, essId(e)), m = marks[key] || '';
+  return `<article class="ess-item"${own ? ` id="c-${s.n}-${essId(e)}"` : ''} data-key="${esc(key)}" data-mark="${m}"><h3><span class="num">${i + 1}</span><span>${mathHtml(e.name)}</span></h3><p class="ess-is">${kwText(e.is)}</p>${e.f ? `<pre>${mathHtml(e.f)}</pre>` : ''}${e.parts ? readsHtml({ parts: e.parts }) : ''}${e.ex ? `<p class="ess-ex"><b>For example</b> ${kwText(e.ex)}</p>` : ''}${e.watch ? `<p class="watch"><b>Watch out</b>${kwText(e.watch)}</p>` : ''}${e.pic ? e.pic() : ''}`
+    + `<div class="notes"></div><div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>${marksHtml(m)}</div></article>`;
+}
+const essListHtml = (s, own) => `<div class="ess">${(ESSENTIALS[s.n] || []).map((e, i) => essItemHtml(s, e, i, own)).join('')}</div>`;
+const breathHtml = s => `<p class="flow-label ess-breath">In one breath</p><ul class="recap" data-hl="pandas|s${s.n}|recap">${s.recap.map(r => `<li>${kwText(r)}</li>`).join('')}</ul>`;
 function summaryHtml(s) {
-  const list = ESSENTIALS[s.n] || [];
   // Folded until asked for, so the lecture reads first and the summary waits at the end.
   return `<details class="ess-fold"><summary>The lecture in its essentials: what each idea is, its formula, and what each piece means</summary>`
     + `<p class="group-note">Hover a symbol or a term to open its line from the cheat sheet.</p>`
-    + `<div class="ess">${list.map((e, i) => `<article class="ess-item"><h3><span class="num">${i + 1}</span><span>${mathHtml(e.name)}</span></h3><p class="ess-is">${kwText(e.is)}</p>${e.f ? `<pre>${mathHtml(e.f)}</pre>` : ''}${e.parts ? readsHtml({ parts: e.parts }) : ''}${e.ex ? `<p class="ess-ex"><b>For example</b> ${kwText(e.ex)}</p>` : ''}${e.watch ? `<p class="watch"><b>Watch out</b>${kwText(e.watch)}</p>` : ''}${e.pic ? e.pic() : ''}</article>`).join('')}</div>`
-    + `<p class="flow-label ess-breath">In one breath</p><ul class="recap" data-hl="pandas|s${s.n}|recap">${s.recap.map(r => `<li>${kwText(r)}</li>`).join('')}</ul></details>`;
+    + essListHtml(s, true) + breathHtml(s) + `</details>`;
 }
+// The same summary at the start of the lecture, closed: read it first, or come back to it.
+const summaryTopHtml = s => `<details class="ess-fold ess-top"><summary>Summary: the lecture in its essentials</summary>`
+  + `<p class="group-note">The same ideas as the Summary at the end: dots, questions and highlights are shared.</p>`
+  + essListHtml(s, false) + breathHtml(s) + `</details>`;
 // Answers build their code boxes with code(), already given their peeks.
 const answerHtml = h => h;
 function renderSession() {
   if (current === 'ref') { document.getElementById('session').innerHTML = '<p class="where">Cheat sheet</p>' + refHtml(); applyHighlights(); mapRefresh(); return; }
   const s = SESSIONS.find(x => x.n === current);
   document.getElementById('session').innerHTML = `<p class="where"><button type="button" class="where-btn" id="where-btn">Lecture ${s.n}</button></p><h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
+    + summaryTopHtml(s)
     + `<details class="pic" id="pic" data-seg="pic"${picOpen() ? ' open' : ''}><summary>The picture: the lecture on one page</summary><div class="pic-body">${PICTURES[s.n]()}</div></details>`
     + s.groups.map((g, gi) => `<section class="seg" data-seg="g${gi}" style="--h: ${segHue(gi)}">${segRail(s, gi)}${partHead(s, gi, g.name)}${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c, gi)).join('')}</div><div class="own-boxes" data-box-key="${esc(boxKey(s.n, gi))}" data-part="Part ${gi + 1}/${s.groups.length + 2}"></div></section>`).join('')
     + `<section class="seg" data-seg="practice" style="--h: ${segHue(s.groups.length)}">${segRail(s, s.groups.length)}${partHead(s, s.groups.length, 'Practice')}<p class="group-note">Try each one on paper first, then open the answer.</p>${practiceHtml(s)}</section>`
@@ -1798,18 +2174,82 @@ const notebook = document.getElementById('notebook');
 const nbDot = document.getElementById('nb-dot');
 const nbAbout = document.getElementById('nb-about');
 const nbText = document.getElementById('nb-text');
+/* Asked for 2026-11-19: "a system for bold that works well, like all the notebooks in colourbrain". The write box
+   is rich: B, Ctrl/Cmd+B or **two stars** show bold at once. Its value is still plain text, bold as **…**, so notes
+   stay the same everywhere they are shown. */
+function richText(root) {
+  let out = '';
+  const walk = (node, bold) => {
+    for (const n of node.childNodes) {
+      if (n.nodeType === 3) { out += n.nodeValue.replace(/ /g, ' '); continue; }
+      if (n.nodeType !== 1) continue;
+      const tag = n.tagName;
+      if (tag === 'BR') { out += '\n'; continue; }
+      const block = tag === 'DIV' || tag === 'P';
+      if (block && out && !out.endsWith('\n')) out += '\n';
+      const b = !bold && (tag === 'B' || tag === 'STRONG' || Number(n.style?.fontWeight) >= 600 || n.style?.fontWeight === 'bold');
+      if (b) {
+        const start = out.length;
+        walk(n, true);
+        const inner = out.slice(start);
+        const lead = inner.match(/^\s*/)[0], trail = inner.slice(lead.length).match(/\s*$/)[0], core = inner.trim();
+        out = out.slice(0, start) + (core ? `${lead}**${core}**${trail}` : inner);
+      } else walk(n, bold);
+    }
+  };
+  walk(root, false);
+  return out.replace(/\u200b/g, '').replace(/\*\*\*\*/g, '').replace(/\n+$/, '');
+}
+Object.defineProperty(nbText, 'value', {
+  get() { return richText(nbText); },
+  set(v) { nbText.innerHTML = v ? boldHtml(esc(v)).replace(/\n/g, '<br>') : ''; },
+});
+document.getElementById('nb-b').addEventListener('mousedown', e => e.preventDefault());
+document.getElementById('nb-b').addEventListener('click', () => { nbText.focus(); document.execCommand('bold'); nbText.dispatchEvent(new Event('input', { bubbles: true })); });
+nbText.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'b') { e.preventDefault(); document.execCommand('bold'); } });
+// Pasted text arrives plain, so a copied web page brings no colours or fonts.
+nbText.addEventListener('paste', e => { e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData || window.clipboardData).getData('text/plain')); });
+// Typing **word** turns it bold in place.
+nbText.addEventListener('input', e => {
+  if (e.inputType !== 'insertText' || e.data !== '*') return;
+  const sel = getSelection();
+  const node = sel.anchorNode;
+  if (!node || node.nodeType !== 3) return;
+  const before = node.nodeValue.slice(0, sel.anchorOffset);
+  const m = before.match(/\*\*(?=\S)([^*]*?\S)\*\*$/);
+  if (!m) return;
+  const range = document.createRange();
+  range.setStart(node, sel.anchorOffset - m[0].length);
+  range.setEnd(node, sel.anchorOffset);
+  sel.removeAllRanges(); sel.addRange(range);
+  document.execCommand('insertHTML', false, `<b>${esc(m[1])}</b>​`);
+});
+// The notepad's view: All, Notes (the cahier) or Questions. Kept on this device.
+let nbView = readStore('pandas-nb-view', 'all');
+if (!['all', 'notes', 'questions'].includes(nbView)) nbView = 'all';
+const paintViews = () => { for (const b of document.querySelectorAll('#nb-views [data-view]')) b.setAttribute('aria-selected', String(b.dataset.view === nbView)); };
+paintViews();
+document.getElementById('nb-views').addEventListener('click', e => {
+  const b = e.target.closest('[data-view]');
+  if (!b) return;
+  nbView = b.dataset.view;
+  writeStore('pandas-nb-view', nbView);
+  paintViews();
+  renderNotebook();
+});
 let nbKind = 'question', nbPinned = false, nbEarlierOpen = false;
 function places() {
   return [{ key: 'pandas|notebook', tag: 'Pandas', name: 'The course in general' },
     ...SESSIONS.flatMap(s => [{ key: `pandas|s${s.n}`, tag: `L${s.n}`, name: `Lecture ${s.n} in general`, s: s.n },
       ...s.groups.flatMap(g => g.cards.map(c => ({ key: cardKey(s.n, c.id), tag: c.num, name: c.name, s: s.n, id: c.id }))),
-      ...(s.practice || []).map((x, i) => ({ key: cardKey(s.n, `ex-${x.id}`), tag: `Ex ${i + 1}`, name: x.title, s: s.n, id: `ex-${x.id}` }))])];
+      ...(s.practice || []).map((x, i) => ({ key: cardKey(s.n, `ex-${x.id}`), tag: `Ex ${i + 1}`, name: x.title, s: s.n, id: `ex-${x.id}` })),
+      ...(ESSENTIALS[s.n] || []).map((e, i) => ({ key: cardKey(s.n, essId(e)), tag: `Sum ${i + 1}`, name: e.name, s: s.n, id: essId(e) }))])];
 }
 nbAbout.innerHTML = places().map(p => `<option value="${esc(p.key)}">${p.id ? `${p.tag} · ` : ''}${esc(p.name)}</option>`).join('');
 // Where you are: the card nearest the top of the screen, else the session.
 function currentSpot() {
   let best = null;
-  for (const c of document.querySelectorAll('.card, .ex[data-key]')) {
+  for (const c of document.querySelectorAll('.card, .ex[data-key], .ess-item')) {
     const r = c.getBoundingClientRect();
     if (r.bottom > 80 && r.top < innerHeight * 0.6) { best = c; break; }
   }
@@ -1834,7 +2274,20 @@ function renderNotebook() {
   const here = nbAbout.value;
   const today = new Date().toDateString();
   const isNow = n => !n.createdAt || new Date(n.createdAt).toDateString() === today;
-  const groupsOf = keep => places().map(p => ({ p, list: notesOf(p.key).filter(keep) })).filter(g => g.list.length);
+  const kindOk = n => nbView === 'all' || (nbView === 'notes' ? n.kind !== 'question' : n.kind === 'question');
+  const groupsOf = keep => places().map(p => ({ p, list: notesOf(p.key).filter(n => kindOk(n) && keep(n)) })).filter(g => g.list.length);
+  box.classList.toggle('cahier', nbView === 'notes');
+  if (nbView === 'notes') {
+    // The cahier: every note, lecture by lecture, card by card, on lined paper. No questions, no answers.
+    const day = n => (n.createdAt ? new Date(n.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short' }) : '');
+    const all = groupsOf(() => true);
+    box.innerHTML = all.length
+      ? all.map(({ p, list }) => `<div class="nb-group${p.key === here ? ' here' : ''}" data-key="${esc(p.key)}"><div><button type="button" class="nb-go" data-go="${esc(p.key)}">${p.id ? `${esc(p.tag)} · ` : ''}${esc(p.name)}${p.s ? ' ›' : ''}</button></div>`
+        + `<div class="notes">${list.map(n => noteHtml(n).replace('<span class="tools">', `<span class="nb-date">${esc(day(n))}</span><span class="tools">`)).join('')}</div></div>`).join('')
+      : '<p class="empty">No notes yet. Choose Note above, write, and it is filed under the card you are reading.</p>';
+    applyHighlights();
+    return;
+  }
   const paint = groups => groups.map(({ p, list }) => `<div class="nb-group${p.key === here ? ' here' : ''}" data-key="${esc(p.key)}">
       <div><button type="button" class="nb-go" data-go="${esc(p.key)}"><span class="t">${esc(p.tag)}</span>${esc(p.name)}${p.s ? ' ›' : ''}</button>${p.key === here ? '<span class="nb-here">you are here</span>' : ''}</div>
       <div class="notes">${list.map(noteHtml).join('')}</div></div>`).join('');
@@ -1851,6 +2304,9 @@ function goTo(key) {
   if (p.s !== current) document.querySelector(`.sess[data-s="${p.s}"]`).click();
   const el = p.id ? document.getElementById(`c-${p.s}-${p.id}`) : document.querySelector('h1');
   if (!el) return;
+  // A summary idea at a lecture's end waits in a closed fold: open it first.
+  const fold = el.closest('details');
+  if (fold) fold.open = true;
   if (innerWidth < 760) setNotebook(false);
   el.scrollIntoView({ block: 'start', behavior: 'smooth' });
   if (p.id) { el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
@@ -1980,19 +2436,88 @@ function tmPaint() {
   if (!tmCard.hidden) tmCardPaint();
 }
 const tmLength = min => (min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`);
+/* Focus and how solid I feel: asked for 2026-11-19, "a rainbow (in a closed pill) with how focused I am and how
+   solid I feel, from weak and getting started to experienced and ready", then "how solid I feel: a horizontal
+   thick slider with bars, also a closed pill". Both are kept on the session they were set in. */
+const TM_RAINBOW = ['#d9534f', '#f08a3c', '#f2c14e', '#6fbf8e', '#4fb3b0', '#5b8fd9', '#9b6fd0'];
+const TM_FOCUS = ['Weak, getting started', 'Warming up', 'Finding it', 'Steady', 'Focused', 'Deep', 'Experienced, ready'];
+const TM_SOLID_MAX = 10;
+const tmSolidWord = v => (v <= 2 ? 'Weak, getting started' : v <= 4 ? 'Finding my feet' : v <= 6 ? 'Steady' : v <= 8 ? 'Solid' : 'Experienced, ready');
+// Light beige when weak, deep brown when solid.
+const tmSolidColour = v => tmMix('#e3c9a0', '#7a4a2a', (v - 1) / (TM_SOLID_MAX - 1));
+function tmRainbow(level) {
+  // Seven half rings, red outside to violet inside, as a rainbow. Each band is a button.
+  const cx = 60, cy = 58, w = 6.4;
+  return `<svg class="rb" viewBox="0 0 120 64" role="radiogroup" aria-label="How focused I am">${TM_RAINBOW.map((c, i) => {
+    const r = 54 - i * (w + 0.6);
+    const on = level === i + 1;
+    return `<path d="M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}" fill="none" stroke="${c}" stroke-width="${on ? w + 1.4 : w}" stroke-linecap="round" opacity="${!level || on ? 1 : 0.28}" data-focus="${i + 1}" role="radio" tabindex="0" aria-checked="${on}" aria-label="${TM_FOCUS[i]}"><title>${TM_FOCUS[i]}</title></path>`;
+  }).join('')}</svg>`;
+}
+const tmSolidBars = v => Array.from({ length: TM_SOLID_MAX }, (_, i) => `<i style="height: ${28 + i * 8}%;${v && i < v ? ` background: ${tmSolidColour(v)};` : ''}"></i>`).join('');
+// The window: where it is, how big, which pills are open. Kept on this device.
+const TW_KEY = 'pandas-timer-window';
+let tw = readStore(TW_KEY, {});
+if (typeof tw !== 'object' || !tw) tw = {};
+tw.size = ['min', 'mid', 'max'].includes(tw.size) ? tw.size : 'mid';
+tw.open = tw.open && typeof tw.open === 'object' ? tw.open : {};
+const twSave = () => writeStore(TW_KEY, tw);
+const TW_WIDTH = { mid: 290, max: 400 };
+function twPlace() {
+  tmCard.dataset.size = tw.size;
+  if (tw.size !== 'min') tmCard.style.width = `${tw.w && tw.size === 'mid' ? tw.w : TW_WIDTH[tw.size]}px`;
+  if (Number.isFinite(tw.x) && Number.isFinite(tw.y)) {
+    const r = tmCard.getBoundingClientRect();
+    const x = Math.min(Math.max(8, tw.x), Math.max(8, innerWidth - r.width - 8));
+    const y = Math.min(Math.max(8, tw.y), Math.max(8, innerHeight - 48));
+    Object.assign(tmCard.style, { left: `${x}px`, top: `${y}px`, right: 'auto' });
+  }
+}
+function tmLive() {
+  const now = Date.now(), s = tm.list[tm.list.length - 1], live = !!s && now - s.last <= TM_GAP;
+  return { now, s, live, min: live ? tmMinutes(s) : 0 };
+}
+// The whole window is built when it opens; each second only the clock part is repainted, so pills stay as they are.
+function tmCardBuild() {
+  const { s, live } = tmLive();
+  const focus = live ? s.focus || 0 : 0, solid = live ? s.solid || 0 : 0;
+  const earlier = tm.list.slice(0, live ? -1 : undefined).filter(x => tmMinutes(x) > 0).slice(-8).reverse();
+  const when = x => new Date(x.start).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const pill = (id, label, val, inner) => `<details class="tw-pill" data-pill="${id}"${tw.open[id] ? ' open' : ''}><summary>${label}${val}</summary><div class="tw-in">${inner}</div></details>`;
+  const sz = ['min', 'mid', 'max'].indexOf(tw.size);
+  tmCard.innerHTML = `<div class="tw-bar" id="tw-bar"><span class="tw-title" id="tw-title">Timer</span><span class="tw-mini" id="tw-mini"></span>`
+    + `<button type="button" class="tw-btn" data-tw="smaller" aria-label="Reduce the Timer"${sz === 0 ? ' disabled' : ''}>−</button>`
+    + `<button type="button" class="tw-btn" data-tw="bigger" aria-label="Expand the Timer"${sz === 2 ? ' disabled' : ''}>+</button>`
+    + `<button type="button" class="tw-btn" data-tw="close" aria-label="Close the Timer">×</button></div>`
+    + `<div class="tw-body"><p class="tc-soft">This session</p><div class="tc-wheel" id="tw-wheel"></div><p class="tc-soft" id="tw-since"></p><p id="tw-today"></p>`
+    + pill('focus', 'Focus', focus ? ` <span class="tc-dot" style="background: ${TM_RAINBOW[focus - 1]}"></span><span class="tw-val">${esc(TM_FOCUS[focus - 1])}</span>` : '',
+      tmRainbow(focus) + `<p class="tw-level" id="tw-focus-word">${focus ? esc(TM_FOCUS[focus - 1]) : 'Tap a band'}</p><div class="tw-ends"><span>Weak, getting started</span><span>Experienced, ready</span></div>`)
+    + pill('solid', 'How solid I feel', solid ? ` <span class="tw-val">${solid}/${TM_SOLID_MAX}</span>` : '',
+      `<div class="solid"><input type="range" id="tw-solid" min="1" max="${TM_SOLID_MAX}" step="1" value="${solid || 1}" aria-label="How solid I feel, 1 weak to ${TM_SOLID_MAX} experienced and ready" aria-valuetext="${solid ? `${solid} of ${TM_SOLID_MAX}: ${tmSolidWord(solid)}` : 'not set'}"><div class="solid-bars" id="tw-solid-bars">${tmSolidBars(solid)}</div></div>`
+      + `<p class="tw-level" id="tw-solid-word">${solid ? `${solid}/${TM_SOLID_MAX} · ${esc(tmSolidWord(solid))}` : 'Slide or tap the bars'}</p><div class="tw-ends"><span>Weak, getting started</span><span>Experienced, ready</span></div>`)
+    + (earlier.length ? pill('earlier', 'Earlier sessions', '', `<ul class="tc-list">${earlier.map(x => `<li><span>${esc(when(x))}${x.where ? ` · ${esc(x.where.replace('Lecture ', 'L'))}` : ''}</span><span class="tc-tags">${x.focus ? `<span class="tc-dot" style="background: ${TM_RAINBOW[x.focus - 1]}" title="Focus: ${esc(TM_FOCUS[x.focus - 1])}"></span>` : ''}${x.solid ? `<span title="How solid: ${x.solid}/${TM_SOLID_MAX}">${x.solid}/${TM_SOLID_MAX}</span>` : ''}</span><b>${tmLength(tmMinutes(x))}</b></li>`).join('')}</ul>`) : '')
+    + `<button type="button" class="tc-new">Start a new session</button></div>`;
+  twPlace();
+  tmCardPaint();
+}
 function tmCardPaint() {
-  const now = Date.now(), s = tm.list[tm.list.length - 1], live = s && now - s.last <= TM_GAP;
+  const { s, live, min } = tmLive();
+  const wheel = document.getElementById('tw-wheel');
+  if (!wheel) return;
   const today = new Date().toDateString();
   const todayMin = tm.list.filter(x => new Date(x.start).toDateString() === today).reduce((t, x) => t + tmMinutes(x), 0);
-  const earlier = tm.list.slice(0, live ? -1 : undefined).filter(x => tmMinutes(x) > 0).slice(-6).reverse();
-  const when = x => new Date(x.start).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  // The half wheel again, large, with the session's time sitting in its curve (asked for 2026-11-09).
-  const nowMin = live ? tmMinutes(s) : 0;
-  tmCard.innerHTML = `<p class="tc-soft">This session</p><div class="tc-wheel"><svg viewBox="0 0 64 36" aria-hidden="true">${tmArc(nowMin)}</svg><p class="tc-now" style="color: ${live ? tmColour(nowMin) : 'inherit'}">${tmLength(nowMin)}</p></div>`
-    + (live ? `<p class="tc-soft">Since ${new Date(s.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${s.where ? ` · ${esc(s.where)}` : ''}</p>` : '')
-    + `<p>Today: <b>${tmLength(todayMin)}</b></p>`
-    + (earlier.length ? `<p class="tc-soft">Earlier sessions</p><ul class="tc-list">${earlier.map(x => `<li><span>${esc(when(x))}${x.where ? ` · ${esc(x.where.replace('Lecture ', 'L'))}` : ''}</span><b>${tmLength(tmMinutes(x))}</b></li>`).join('')}</ul>` : '')
-    + `<button type="button" class="tc-new">Start a new session</button>`;
+  // The half wheel, with the session's time sitting in its curve (asked for 2026-11-09).
+  wheel.innerHTML = `<svg viewBox="0 0 64 36" aria-hidden="true">${tmArc(min)}</svg><p class="tc-now" style="color: ${live ? tmColour(min) : 'inherit'}">${tmLength(min)}</p>`;
+  document.getElementById('tw-since').textContent = live ? `Since ${new Date(s.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${s.where ? ` · ${s.where}` : ''}` : '';
+  document.getElementById('tw-today').innerHTML = `Today: <b>${tmLength(todayMin)}</b>`;
+  const mini = document.getElementById('tw-mini');
+  mini.textContent = tmLength(min);
+  mini.style.color = live && min ? tmColour(min) : '';
+}
+function tmSet(field, v) {
+  const s = tmSession(Date.now());
+  s[field] = v;
+  writeStore(TM_KEY, tm);
 }
 setInterval(() => {
   const now = Date.now();
@@ -2008,21 +2533,83 @@ setInterval(() => {
 }, 1000);
 for (const ev of ['pointerdown', 'pointermove', 'keydown', 'scroll', 'wheel']) addEventListener(ev, () => { tmActive = Date.now(); }, { passive: true });
 addEventListener('pagehide', () => writeStore(TM_KEY, tm));
-tmBtn.addEventListener('click', () => {
-  const open = tmCard.hidden;
+function setTimerWindow(open) {
   tmCard.hidden = !open;
   tmBtn.setAttribute('aria-expanded', String(open));
-  if (open) tmCardPaint();
-});
+  if (open) tmCardBuild();
+}
+tmBtn.addEventListener('click', () => setTimerWindow(tmCard.hidden));
 tmCard.addEventListener('click', e => {
+  const b = e.target.closest('[data-tw]');
+  if (b) {
+    if (b.dataset.tw === 'close') { setTimerWindow(false); tmBtn.focus(); return; }
+    const order = ['min', 'mid', 'max'], i = order.indexOf(tw.size) + (b.dataset.tw === 'bigger' ? 1 : -1);
+    tw.size = order[Math.min(2, Math.max(0, i))];
+    if (tw.size !== 'mid') delete tw.w;
+    twSave();
+    tmCard.style.width = '';
+    tmCardBuild();
+    tmCard.querySelector(`[data-tw="${b.dataset.tw}"]:not(:disabled)`)?.focus();
+    return;
+  }
+  const band = e.target.closest('[data-focus]');
+  if (band) { tmSet('focus', Number(band.dataset.focus)); tmCardBuild(); return; }
   if (!e.target.closest('.tc-new')) return;
   const now = Date.now();
   tm.list = [...tm.list, { start: now, last: now, ms: 0, where: tmLecture() }].slice(-40);
   writeStore(TM_KEY, tm);
   tmShown = -1;
   tmPaint();
+  tmCardBuild();
 });
-document.addEventListener('click', e => { if (!tmCard.hidden && !e.target.closest('#timer, #timer-card')) { tmCard.hidden = true; tmBtn.setAttribute('aria-expanded', 'false'); } });
+tmCard.addEventListener('keydown', e => {
+  const band = e.target.closest('[data-focus]');
+  if (band && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); tmSet('focus', Number(band.dataset.focus)); tmCardBuild(); tmCard.querySelector(`[data-focus="${band.dataset.focus}"]`)?.focus(); }
+  if (e.key === 'Escape') { setTimerWindow(false); tmBtn.focus(); }
+});
+tmCard.addEventListener('input', e => {
+  if (e.target.id !== 'tw-solid') return;
+  const v = Number(e.target.value);
+  tmSet('solid', v);
+  document.getElementById('tw-solid-bars').innerHTML = tmSolidBars(v);
+  document.getElementById('tw-solid-word').textContent = `${v}/${TM_SOLID_MAX} · ${tmSolidWord(v)}`;
+  e.target.setAttribute('aria-valuetext', `${v} of ${TM_SOLID_MAX}: ${tmSolidWord(v)}`);
+  const val = tmCard.querySelector('[data-pill="solid"] > summary');
+  if (val) val.innerHTML = `How solid I feel <span class="tw-val">${v}/${TM_SOLID_MAX}</span>`;
+});
+tmCard.addEventListener('toggle', e => { const d = e.target.closest('[data-pill]'); if (d) { tw.open[d.dataset.pill] = d.open; twSave(); } }, true);
+// Drag the window by its title bar.
+let twDrag = null;
+tmCard.addEventListener('pointerdown', e => {
+  const bar = e.target.closest('#tw-bar');
+  if (!bar || e.target.closest('button') || e.button !== 0) return;
+  const r = tmCard.getBoundingClientRect();
+  twDrag = { dx: e.clientX - r.left, dy: e.clientY - r.top, id: e.pointerId };
+  bar.setPointerCapture(e.pointerId);
+  bar.classList.add('dragging');
+});
+tmCard.addEventListener('pointermove', e => {
+  if (!twDrag || e.pointerId !== twDrag.id) return;
+  const r = tmCard.getBoundingClientRect();
+  tw.x = Math.min(Math.max(8, e.clientX - twDrag.dx), innerWidth - r.width - 8);
+  tw.y = Math.min(Math.max(8, e.clientY - twDrag.dy), innerHeight - 48);
+  Object.assign(tmCard.style, { left: `${tw.x}px`, top: `${tw.y}px`, right: 'auto' });
+});
+const twDrop = e => {
+  if (!twDrag || e.pointerId !== twDrag.id) return;
+  twDrag = null;
+  document.getElementById('tw-bar')?.classList.remove('dragging');
+  twSave();
+};
+tmCard.addEventListener('pointerup', twDrop);
+tmCard.addEventListener('pointercancel', twDrop);
+// The corner resizes it; the width is kept for the middle size.
+new ResizeObserver(() => {
+  if (tmCard.hidden || tw.size !== 'mid') return;
+  const w = Math.round(tmCard.getBoundingClientRect().width);
+  if (w && Math.abs(w - (tw.w || TW_WIDTH.mid)) > 2) { tw.w = w; clearTimeout(twPlace.t); twPlace.t = setTimeout(twSave, 300); }
+}).observe(tmCard);
+addEventListener('resize', () => { if (!tmCard.hidden) twPlace(); });
 tmPaint();
 
 /* ---------- Term peek ----------
@@ -2033,6 +2620,8 @@ const PEEK_TERM = {
   loc: '.loc', iloc: '.iloc', str: '.str', dt: '.dt', read_csv: 'read_csv', read_excel: 'read_excel', read_sql: 'read_sql', json_normalize: 'json_normalize', to_csv: 'to_csv', isin: 'isin', between: 'between', isna: 'isna', notna: 'isna', query: 'query',
   dtype: 'dtype', sep: 'sep', encoding: 'encoding', value_counts: 'value_counts', describe: 'describe', info: 'info', nlargest: 'nlargest', copy: '.copy()', reset_index: 'reset_index', sort_values: 'sort_values', select_dtypes: 'select_dtypes',
   dataframe: 'DataFrame', series: 'Series', index: 'Index', mask: 'Mask', nan: 'NaN', 'copy-on-write': 'Copy-on-Write', 'chained assignment': 'Chained assignment', slice: 'Slice', alignment: 'Alignment', profile: 'Profile',
+  dropna: 'dropna', fillna: 'fillna', ffill: 'ffill', bfill: 'ffill', interpolate: 'interpolate', mcar: 'MCAR', knnimputer: 'KNNImputer', 'z-score': 'z-score', masking: 'Masking', mad: 'MAD', iqr: 'IQR', lof: 'LOF', clip: 'clip', where: 'where', drop_duplicates: 'drop_duplicates', levenshtein: 'Levenshtein', blocking: 'Blocking', 'record linkage': 'Record linkage', combine_first: 'combine_first',
+  groupby: 'groupby', size: 'size', agg: 'agg', namedagg: 'NamedAgg', transform: 'transform', multiindex: 'MultiIndex', crosstab: 'crosstab',
   nunique: 'nunique', duplicated: 'duplicated', to_numeric: 'to_numeric', quantile: 'quantile', na_values: 'na_values', placeholder: 'Placeholder', outlier: 'Outlier',
 };
 const peekKey = w => PEEK_TERM[w] || PEEK_TERM[w.replace(/ies$/, 'y').replace(/s$/, '')] || PEEK_TERM[w.replace(/s$/, '')];
@@ -2163,7 +2752,8 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && peekStack.
 const HL_KEY = 'pandas-highlights';
 let highlights = readStore(HL_KEY, []);
 const saveHighlights = () => writeStore(HL_KEY, highlights);
-const HL_HOST = '.card[data-key]:not(.overall), [data-hl]';
+// A summary idea is a host too, as on the Statistics page.
+const HL_HOST = '.card[data-key]:not(.overall), .ess-item[data-key], [data-hl]';
 const HL_SKIP = '.notes, .editor, .foot, .marks, .ref-go, .out-head, .more-rows, #sel-bar';
 const hlKeyOf = host => host.dataset.hl || host.dataset.key;
 function hlTextNodes(host) {
@@ -2265,9 +2855,9 @@ function showSelBar() {
   if (!info) { if (!selBar.dataset.hid) hideSelBar(); return; }
   selInfo = info;
   delete selBar.dataset.hid;
-  const card = info.host.classList.contains('card');
+  const card = info.host.matches('.card, .ess-item');
   selBar.innerHTML = HL_COLOURS.map(([c, v]) => `<button type="button" class="sb-c" data-colour="${c}" style="--hl: ${v}" title="Highlight (${c})" aria-label="Highlight in ${c}"></button>`).join('')
-    + (card ? '<span class="sb-sep"></span><button type="button" class="sb-btn sb-ask" data-kind="question">Question</button><button type="button" class="sb-btn sb-ask sb-com" data-kind="comment">Comment</button>' : '');
+    + (card ? '<span class="sb-sep"></span><button type="button" class="sb-btn sb-ask" data-kind="question">Question</button><button type="button" class="sb-btn sb-ask sb-com" data-kind="comment">Note</button>' : '');
   selBarAt(info.rect);
 }
 const inSelBar = e => !!(e.target.closest && e.target.closest('#sel-bar'));
@@ -2318,7 +2908,7 @@ document.addEventListener('mousedown', e => { if (e.target.closest && !e.target.
    The decks are the teacher's material, so they stay out of this public page: each user uploads them once
    to their private folder (the same one as the Python page's slides), and each card's "Slide n ›" opens
    them. Any sensible name works: SelectingFilteringSlicing_2.pdf or Pandas2.pdf is filed as Pandas2.pdf. */
-const DECK_FILES = ['Pandas1.pdf', 'Pandas2.pdf', 'Pandas3.pdf'];
+const DECK_FILES = ['Pandas1.pdf', 'Pandas2.pdf', 'Pandas3.pdf', 'Pandas4.pdf', 'Pandas5.pdf'];
 function deckName(name) {
   if (!/\.pdf$/i.test(name)) return null;
   // The decks' own names say what they are: (Intro)DataFrames&Loading.pdf, SelectingFilteringSlicing_2.pdf,
@@ -2326,7 +2916,10 @@ function deckName(name) {
   if (/dataframe/i.test(name)) return 'Pandas1.pdf';
   if (/selecting|filtering|slicing/i.test(name)) return 'Pandas2.pdf';
   if (/quality/i.test(name)) return 'Pandas3.pdf';
-  const m = name.match(/^Pandas\s*([1-3])\.pdf$/i) || name.match(/(?:lecture|lesson|session)\s*_?\s*0*([1-3])(?!\d)/i);
+  // Session 4 came as main.pdf: rename it DataCleaning_4.pdf, or pick it with any name that says cleaning.
+  if (/cleaning/i.test(name)) return 'Pandas4.pdf';
+  if (/aggregat/i.test(name)) return 'Pandas5.pdf';
+  const m = name.match(/^Pandas\s*([1-5])\.pdf$/i) || name.match(/(?:lecture|lesson|session)\s*_?\s*0*([1-5])(?!\d)/i);
   return m ? `Pandas${m[1]}.pdf` : null;
 }
 let filesUp = null;
