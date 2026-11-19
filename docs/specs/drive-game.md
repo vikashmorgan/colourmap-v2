@@ -139,9 +139,10 @@ Pure physics in `lib/art/vehicle.ts`, stepped at 120 Hz:
   push brings you back toward the middle, on the ground and in the air (a jump follows the bend).
   Off the road (the Salt Flat) none of this applies. Tested on every track, car and ship, keys off
   or slammed, 30 s at full throttle: never more than 2 m past the edge, above 40 m/s, slip under 0.25.
-- **Leaning into the turn** (2026-11-19: "the tilt of the car is inverted … when you turn left you
-  lean left"): the body leans into a turn, like a bike or the ship, up to 0.09 rad for the car and
-  0.4 for the ship, and with the ground's slope.
+- **Leaning** (2026-11-19): the car's lean was flipped on request ("the tilt of the car is inverted
+  … when you turn left you lean left"), up to 0.09 rad; the ship keeps the bank it always had, an
+  arcade racer's, up to 0.4 rad ("you inverted the sense in which the spaceship should tilt …
+  should be like in Gal Racer"). Both also lean with the ground's slope.
 - **Quick sideways moves on a road** (2026-11-19: "quicker tilt left right so I can do more small
   turns … go left right while still moving in the same direction, as if you wanted to skip an
   obstacle"): on a road the steering answers twice as fast and also slides you straight across it,

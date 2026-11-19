@@ -623,7 +623,7 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     }
   }
 
-  // The body leans into the turn and with the ground; the nose follows the slope or the flight.
+  // The body leans with the turn and with the ground; the nose follows the slope or the flight.
   const lateral = vLong * v.yawRate + (v.dodge ?? 0) * 3;
   const sideSlope = -next.gx * fy + next.gy * fx;
   const aheadSlope = next.gx * fx + next.gy * fy;
@@ -631,8 +631,14 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   const rollTo = air
     ? v.roll * 0.98
     : -Math.atan(sideSlope) +
-      // Into the turn, like a bike or a ship (2026-11-19: "when you turn left you lean left").
-      clamp(lateral * lean, v.kind === 'ship' ? -0.4 : -0.09, v.kind === 'ship' ? 0.4 : 0.09);
+      // The car leans the way asked on 2026-11-19 ("the tilt of the car is inverted … when you turn
+      // left you lean left"); the ship keeps the bank it always had, an arcade racer's ("for racing
+      // you inverted the sense the spaceship should tilt … should be like in Gal Racer").
+      clamp(
+        lateral * lean * (v.kind === 'ship' ? -1 : 1),
+        v.kind === 'ship' ? -0.4 : -0.09,
+        v.kind === 'ship' ? 0.4 : 0.09,
+      );
   v.roll = ease(v.roll, rollTo, air ? 1 : 6, dt);
   const pitchTo = air
     ? Math.atan2(v.vz, Math.max(speed, 5)) * 0.6
