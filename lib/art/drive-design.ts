@@ -187,7 +187,21 @@ export interface Design {
   mode: DriveMode;
   /** The Paint hull's colour (#rrggbb). */
   paint: string;
+  /** The car's body (components/drive/bodies.ts); the ship has its own. */
+  body: BodyId;
 }
+
+/**
+ * The car's bodies (2026-11-19: "a motorbike", "cars inspired by the 50s GTO, and then the same
+ * but futuristic"). The physics stay the car's.
+ */
+export type BodyId = 'wedge' | 'classic' | 'future' | 'bike';
+export const BODIES: { id: BodyId; name: string }[] = [
+  { id: 'wedge', name: 'Wedge' },
+  { id: 'classic', name: 'Classic GT' },
+  { id: 'future', name: 'Future GT' },
+  { id: 'bike', name: 'Motorbike' },
+];
 
 export type DriveMode = 'easy' | 'flow' | 'drift' | 'grip';
 export const DRIVE_MODES: { id: DriveMode; name: string }[] = [
@@ -213,6 +227,7 @@ export const DEFAULT_DESIGN: Design = {
   flames: true,
   mode: 'flow',
   paint: '#2a6cf0',
+  body: 'wedge',
   vehicle: {
     salt: 'car',
     coast: 'ship',
@@ -253,6 +268,7 @@ export function parseDesign(raw: string | null, weathers: readonly string[]): De
     flames: typeof o.flames === 'boolean' ? o.flames : DEFAULT_DESIGN.flames,
     mode: DRIVE_MODES.some((m) => m.id === o.mode) ? (o.mode as DriveMode) : DEFAULT_DESIGN.mode,
     paint: isHex(o.paint) ? o.paint.toLowerCase() : DEFAULT_DESIGN.paint,
+    body: BODIES.some((b) => b.id === o.body) ? (o.body as BodyId) : DEFAULT_DESIGN.body,
   };
 }
 

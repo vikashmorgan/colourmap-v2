@@ -712,7 +712,13 @@ export class DriveEngine {
       r.mesh.geometry.dispose();
     }
     const fire = fireById(this.design.fire);
-    this.vehicleView = buildVehicle(this.vehicle.kind, hullOf(this.design), fire, this.env);
+    this.vehicleView = buildVehicle(
+      this.vehicle.kind,
+      hullOf(this.design),
+      fire,
+      this.env,
+      this.design.body,
+    );
     this.scene.add(this.vehicleView.group);
     if (this.vehicle.kind === 'car') {
       this.ribbons = [0, 1].map(() => new Ribbon(160, 1.5, 0.24, 9, false, this.ribbonFlat));
@@ -750,6 +756,10 @@ export class DriveEngine {
       this.run = newRun();
       this.race = newRace();
       this.drift = this.newDrift(this.vehicle.kind);
+      this.buildVehicleView();
+      return;
+    }
+    if (d.body !== prev.body) {
       this.buildVehicleView();
       return;
     }

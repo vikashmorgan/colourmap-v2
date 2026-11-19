@@ -15,7 +15,8 @@
 
 import * as THREE from 'three';
 
-import type { Fire, Hull } from '@/lib/art/drive-design';
+import { buildBody } from '@/components/drive/bodies';
+import type { BodyId, Fire, Hull } from '@/lib/art/drive-design';
 import { FIRE_FRAGMENT, FIRE_VERTEX } from '@/lib/art/drive-shaders';
 import { CAR_SCALE } from '@/lib/art/salt-flat-game';
 import type { Vehicle } from '@/lib/art/vehicle';
@@ -97,7 +98,7 @@ export function hullMaterial(h: Hull, env: THREE.Texture | null): THREE.MeshPhys
   return m;
 }
 
-function applyHull(target: THREE.MeshPhysicalMaterial, h: Hull, env: THREE.Texture | null) {
+export function applyHull(target: THREE.MeshPhysicalMaterial, h: Hull, env: THREE.Texture | null) {
   const fresh = hullMaterial(h, env);
   target.copy(fresh);
   fresh.dispose();
@@ -164,7 +165,7 @@ export function glowSprite(
 }
 
 /** A flat soft blob on the ground (shadow or glow). */
-function groundBlob(
+export function groundBlob(
   colour: THREE.ColorRepresentation,
   w: number,
   l: number,
@@ -373,7 +374,7 @@ export function buildCar(hull: Hull, env: THREE.Texture | null, fire?: Fire): Ve
 
 /* ── The hover ship ────────────────────────────────────────── */
 
-function fireMaterial(f: Fire, seed: number): THREE.ShaderMaterial {
+export function fireMaterial(f: Fire, seed: number): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     vertexShader: FIRE_VERTEX,
     fragmentShader: FIRE_FRAGMENT,
@@ -614,6 +615,8 @@ export function buildVehicle(
   hull: Hull,
   fire: Fire,
   env: THREE.Texture | null,
+  body: BodyId = 'wedge',
 ): VehicleView {
+  if (kind === 'car' && body !== 'wedge') return buildBody(body, hull, fire, env);
   return kind === 'car' ? buildCar(hull, env, fire) : buildShip(hull, fire, env);
 }
