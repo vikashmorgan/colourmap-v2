@@ -80,6 +80,8 @@ import {
   pointAt,
   project,
   type Race,
+  SKY_LAP,
+  SKY_PIPE,
   stepCanyonRace,
   stepKmRace,
   type TrackWorld,
@@ -795,6 +797,8 @@ export class DriveEngine {
           v.vy = 0;
         }
         if (this.cfg.race === 'canyon') this.race = stepCanyonRace(this.race, s0, q.s, u, half, t);
+        else if (this.cfg.race === 'lap')
+          this.race = stepKmRace(this.race, s0, q.s, u, half + SKY_PIPE, t, SKY_LAP);
         else this.race = stepKmRace(this.race, s0, q.s, u, half, t);
         if (this.cfg.theme) {
           const k = Math.round((q.s - 180) / RING_STEP);

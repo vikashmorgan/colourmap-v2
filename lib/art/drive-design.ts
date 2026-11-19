@@ -7,7 +7,7 @@
 import { blackbody, FLAME_PALETTES, type FlamePalette } from '@/lib/art/flame';
 import type { VehicleKind } from '@/lib/art/vehicle';
 
-export type WorldId = 'salt' | 'coast' | 'canyon' | 'night' | 'chinatown' | 'neon';
+export type WorldId = 'salt' | 'coast' | 'canyon' | 'night' | 'chinatown' | 'neon' | 'sky';
 
 export const WORLDS: { id: WorldId; name: string; key: string }[] = [
   { id: 'salt', name: 'Salt Flat', key: '1' },
@@ -16,6 +16,7 @@ export const WORLDS: { id: WorldId; name: string; key: string }[] = [
   { id: 'night', name: 'Night Rain', key: '4' },
   { id: 'chinatown', name: 'Chinatown Run', key: '5' },
   { id: 'neon', name: 'Neon District', key: '6' },
+  { id: 'sky', name: 'Sky Canyon', key: '7' },
 ];
 
 export function isWorld(id: string): id is WorldId {
@@ -155,6 +156,7 @@ export const DEFAULT_DESIGN: Design = {
     night: 'car',
     chinatown: 'car',
     neon: 'ship',
+    sky: 'ship',
   },
 };
 

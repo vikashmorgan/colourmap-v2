@@ -12,7 +12,13 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { DriveEngine, type Hud } from '@/components/drive/engine';
-import { controlsFromKeys, controlsFromTouches, DRIVE_KEYS, mergeControls } from '@/lib/art/drive';
+import {
+  controlsFromKeys,
+  controlsFromTouches,
+  DRIVE_KEYS,
+  flightFromKeys,
+  mergeControls,
+} from '@/lib/art/drive';
 import {
   type Design,
   FIRES,
@@ -57,18 +63,29 @@ export default function DriveGame() {
   const [failed, setFailed] = useState(false);
   const panelRef = useRef(panel);
   panelRef.current = panel;
+  // Sky Canyon flies as the City does (W S climb and dive, always cruising forward).
+  const worldRef = useRef(world);
+  worldRef.current = world;
 
   const pushControls = useCallback(() => {
     const w = window.innerWidth || 1;
     const xs = [...touches.current.values()].map((x) => x / w);
-    const c = mergeControls(controlsFromKeys(keys.current), controlsFromTouches(xs));
+    const fromKeys =
+      worldRef.current === 'sky' ? flightFromKeys(keys.current) : controlsFromKeys(keys.current);
+    const c = mergeControls(fromKeys, controlsFromTouches(xs));
     engineRef.current?.setControls({ ...c, handbrake: !!c.handbrake || handHeld.current });
   }, []);
 
-  const chooseWorld = useCallback((id: WorldId) => {
-    setWorldState(id);
-    engineRef.current?.setWorld(id);
-  }, []);
+  const chooseWorld = useCallback(
+    (id: WorldId) => {
+      setWorldState(id);
+      if (id === 'sky') setHint(true);
+      worldRef.current = id;
+      engineRef.current?.setWorld(id);
+      pushControls();
+    },
+    [pushControls],
+  );
 
   const changeDesign = useCallback((d: Design) => {
     setDesignState(d);
@@ -343,8 +360,9 @@ export default function DriveGame() {
             pointerEvents: 'none',
           }}
         >
-          ↑ drive · ← → steer · F handbrake: hold it and turn to drift · space boost · shift double
-          · R restart
+          {world === 'sky'
+            ? 'W S climb and dive · A D turn · E faster · Q slower · F handbrake · space boost · R restart'
+            : '↑ drive · ← → steer · F handbrake: hold it and turn to drift · space boost · shift double · R restart'}
         </div>
       )}
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Controls } from './drive';
 import {
+  CLIMB,
   FLAT,
   G,
   landingLoss,
@@ -320,6 +321,27 @@ describe('a road holds you on it (2026-11-17)', () => {
     ground: (_x, y) => ({ h: 0, gx: 0, gy: 0, rough: 0, road: { h: 0, k: 0, u: y, half: 15 } }),
   };
 
+  it('dodges: a quick tap slides you across the road while you keep heading the same way', () => {
+    for (const kind of ['car', 'ship'] as const) {
+      const v = newVehicle(kind, 0, 0, 0);
+      v.vx = 70;
+      let turned = 0;
+      for (let i = 0; i < 30; i++) {
+        stepVehicle(v, { ...GO, steer: 1 }, 1 / 60, ROAD, i / 60);
+        turned = Math.max(turned, Math.abs(v.h));
+      }
+      // Half a second: several metres across, the nose barely turned, the speed all kept.
+      expect(v.y).toBeGreaterThan(4);
+      expect(turned).toBeLessThan(0.3);
+      expect(speedOf(v)).toBeGreaterThan(68);
+      // Let go: the slide stops quickly and it never runs past the edge.
+      for (let i = 0; i < 60; i++) stepVehicle(v, GO, 1 / 60, ROAD, i / 60);
+      expect(Math.abs(v.dodge)).toBeLessThan(0.5);
+      for (let i = 0; i < 60 * 4; i++) stepVehicle(v, { ...GO, steer: 1 }, 1 / 60, ROAD, i / 60);
+      expect(v.y).toBeLessThan(15);
+    }
+  });
+
   it('lets go of the keys and the car lines up with the road, keeping its place across it', () => {
     const v = newVehicle('car', 0, 0, 0.2);
     v.vx = 60 * Math.cos(0.2);
@@ -419,5 +441,34 @@ describe('walls you flow along (2026-11-19: "you can\'t stop if you hit somethin
     expect(slowest).toBeGreaterThan(66);
     expect(v.y).toBeLessThan(5.5);
     expect(Math.abs(v.yawRate)).toBeLessThan(1);
+  });
+});
+
+describe('leaning and flying (2026-11-19)', () => {
+  it('leans into the turn: turning left, the roof leans left', () => {
+    for (const kind of ['car', 'ship'] as const) {
+      const v = run(kind, GO, 5);
+      for (let i = 0; i < 60; i++) stepVehicle(v, { throttle: 1, steer: 1, boost: 0 }, 1 / 60);
+      expect(v.roll).toBeGreaterThan(0);
+    }
+  });
+
+  it('climbs and dives the ship as the City does, easing in, between the ground and the ceiling', () => {
+    const v = run('ship', GO, 3);
+    const z0 = v.z;
+    for (let i = 0; i < 60; i++) stepVehicle(v, { ...GO, climb: 1 }, 1 / 60);
+    expect(v.z - z0).toBeGreaterThan(8);
+    expect(v.air).toBe(false);
+    for (let i = 0; i < 60 * 6; i++) stepVehicle(v, { ...GO, climb: 1 }, 1 / 60);
+    expect(v.lift).toBe(CLIMB.top);
+    // Let go: it holds its height; dive: back down to the ground, never below.
+    for (let i = 0; i < 60; i++) stepVehicle(v, GO, 1 / 60);
+    expect(v.lift).toBeGreaterThan(CLIMB.top - 3);
+    for (let i = 0; i < 60 * 6; i++) stepVehicle(v, { ...GO, climb: -1 }, 1 / 60);
+    expect(v.lift).toBe(0);
+    // The car stays on the ground.
+    const car = run('car', GO, 2);
+    for (let i = 0; i < 60; i++) stepVehicle(car, { ...GO, climb: 1 }, 1 / 60);
+    expect(car.lift).toBe(0);
   });
 });

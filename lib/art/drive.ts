@@ -31,6 +31,8 @@ export interface Controls {
   boost: 0 | 1 | 2;
   /** The handbrake (F, or the Handbrake button): held while turning, the tail lets go to drift. */
   handbrake?: boolean;
+  /** Climbing (1) or diving (-1): Sky Canyon's free flight, the ship only. */
+  climb?: number;
 }
 
 export const NO_CONTROLS: Controls = { throttle: 0, steer: 0, boost: 0 };
@@ -48,6 +50,8 @@ export const DRIVE_KEYS = [
   ' ',
   'shift',
   'f',
+  'e',
+  'q',
 ];
 
 /** Controls from the keys held, lower-cased as KeyboardEvent.key gives them. */
@@ -63,6 +67,25 @@ export function controlsFromKeys(keys: ReadonlySet<string>): Controls {
     steer: (left ? 1 : 0) - (right ? 1 : 0),
     boost,
     handbrake: held('f'),
+  };
+}
+
+/**
+ * Sky Canyon flies as the City of Dreams does (2026-11-19: "you can use the mechanics of the city of
+ * dreams"): the ship always cruises forward; A D or ← → turn, W S or ↑ ↓ climb and dive, E faster,
+ * Q slower, Space boosts, Shift double boosts, F the handbrake.
+ */
+export function flightFromKeys(keys: ReadonlySet<string>): Controls {
+  const held = (...names: string[]) => names.some((n) => keys.has(n));
+  const left = held('a', 'arrowleft');
+  const right = held('d', 'arrowright');
+  const boost: 0 | 1 | 2 = held('shift') ? 2 : held(' ', 'e') ? 1 : 0;
+  return {
+    throttle: held('q') ? -0.4 : 1,
+    steer: (left ? 1 : 0) - (right ? 1 : 0),
+    boost,
+    handbrake: held('f'),
+    climb: (held('w', 'arrowup') ? 1 : 0) - (held('s', 'arrowdown') ? 1 : 0),
   };
 }
 
@@ -92,6 +115,9 @@ export function mergeControls(a: Controls, b: Controls): Controls {
     steer: pick(a.steer, b.steer),
     boost: Math.max(a.boost, b.boost) as 0 | 1 | 2,
     handbrake: !!(a.handbrake || b.handbrake),
+    ...(a.climb !== undefined || b.climb !== undefined
+      ? { climb: pick(a.climb ?? 0, b.climb ?? 0) }
+      : {}),
   };
 }
 
