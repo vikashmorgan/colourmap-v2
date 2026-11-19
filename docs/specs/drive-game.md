@@ -256,3 +256,10 @@ capped at 1.5. Bloom: the builder's Speed setting by day, stronger at night.
 
 Drive's ride is built in the Garage (docs/specs/garage.md): the same saved design. Hulls gained
 Gold and Paint (your own colour). The Design panel links to it ("Open the Garage ›").
+
+## Autopilot (2026-11-19)
+
+`setAutopilot` on the engine: the races play themselves (lib/art/autopilot.ts). On a track it aims
+at a point on the centre line 16 m plus 0.55 s ahead, steering by the heading error, and boosts
+when lined up; on the salt it wanders in long curves; in Sky Canyon it climbs and dives slowly
+through the heights. Used by the Grid's porthole (`/drive-window`, docs/specs/the-grid.md).

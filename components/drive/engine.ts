@@ -19,6 +19,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { autopilotControls } from '@/lib/art/autopilot';
 import { comboOf, type DriftRun, liveScore, newDriftRun, stepDrift } from '@/lib/art/drift-gates';
 import {
   type Controls,
@@ -437,6 +438,7 @@ export class DriveEngine {
 
   private cam = { x: 0, y: 0, z: 1.2, yaw: 0, roll: 0, focal: 1.5 };
   private s = 0;
+  private autopilot = false;
   private odometer = 0;
   private run: Run = newRun();
   private drift: DriftRun = newDriftRun();
@@ -786,6 +788,11 @@ export class DriveEngine {
   }
 
   /** The Design panel's preview: the game holds still and the camera turns slowly round the vehicle. */
+  /** The races playing themselves (the Grid's porthole, lib/art/autopilot.ts). */
+  setAutopilot(on: boolean) {
+    this.autopilot = on;
+  }
+
   setPreview(on: boolean) {
     this.preview = on;
     this.previewYaw = 0;
@@ -840,7 +847,11 @@ export class DriveEngine {
     const w = weatherNow(this.weather, this.cfg.id);
     const v = this.vehicle;
     const spec = VEHICLES[v.kind];
-    const ctl = this.preview ? NO_CONTROLS : this.controls;
+    const ctl = this.preview
+      ? NO_CONTROLS
+      : this.autopilot
+        ? autopilotControls(v, this.trackWorld?.track ?? null, this.s, t, this.cfg.id === 'sky')
+        : this.controls;
 
     if (!this.preview) {
       // A ring's surge and the weather's gusts push before the vehicle moves.
