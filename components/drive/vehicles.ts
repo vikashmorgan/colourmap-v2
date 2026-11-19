@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 
 import { buildBody } from '@/components/drive/bodies';
-import type { BodyId, Fire, Hull } from '@/lib/art/drive-design';
+import type { BodyId, Fire, Hull, ShipParts } from '@/lib/art/drive-design';
 import { FIRE_FRAGMENT, FIRE_VERTEX } from '@/lib/art/drive-shaders';
 import { CAR_SCALE } from '@/lib/art/salt-flat-game';
 import type { Vehicle } from '@/lib/art/vehicle';
@@ -420,7 +420,30 @@ export function buildFireCone(
   return g;
 }
 
-export function buildShip(hull: Hull, fire: Fire, env: THREE.Texture | null): VehicleView {
+/** Where the reactors sit (ship frame), and their size. */
+export function reactorLayout(
+  r: ShipParts['reactors'],
+): { x: number; y: number; z: number; s: number }[] {
+  if (r === 'top') return [{ x: 0, y: 1.45, z: 0.9, s: 1.25 }];
+  if (r === 'quad')
+    return [
+      { x: -1.3, y: 0.45, z: 1.7, s: 0.72 },
+      { x: 1.3, y: 0.45, z: 1.7, s: 0.72 },
+      { x: -0.8, y: 1.2, z: 1.0, s: 0.66 },
+      { x: 0.8, y: 1.2, z: 1.0, s: 0.66 },
+    ];
+  return [
+    { x: -1.45, y: 0.55, z: 1.6, s: 1 },
+    { x: 1.45, y: 0.55, z: 1.6, s: 1 },
+  ];
+}
+
+export function buildShip(
+  hull: Hull,
+  fire: Fire,
+  env: THREE.Texture | null,
+  parts: ShipParts = { reactors: 'side', bubble: 'dome', core: 'none' },
+): VehicleView {
   const group = new THREE.Group();
   const body = new THREE.Group();
   group.add(body);
@@ -444,34 +467,100 @@ export function buildShip(hull: Hull, fire: Fire, env: THREE.Texture | null): Ve
   keel.position.set(0, 0.26, 2.0);
   body.add(keel);
 
-  // The bubble: clear glass over the pilot's seat, the pilot a faint shape inside.
-  const bubble = new THREE.Mesh(
-    new THREE.SphereGeometry(0.62, 32, 18, 0, Math.PI * 2, 0, Math.PI / 2),
-    glassMat(env),
-  );
-  bubble.scale.set(1, 0.85, 1.2);
-  bubble.position.set(0, 0.62, 1.9);
-  bubble.renderOrder = 5;
-  body.add(bubble);
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.5, 0.12), dark);
-  seat.position.set(0, 0.85, 1.55);
-  seat.rotation.x = -0.25;
-  body.add(seat);
-  const pilot = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.25, 4, 10), dark);
-  pilot.position.set(0, 0.88, 1.72);
-  body.add(pilot);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 10), trim);
-  head.position.set(0, 1.12, 1.74);
-  body.add(head);
+  // The cockpit: clear glass over the pilot, in one of four shapes.
+  const pilotAt = (x: number, y: number, z: number) => {
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.5, 0.12), dark);
+    seat.position.set(x, y - 0.03, z - 0.17);
+    seat.rotation.x = -0.25;
+    body.add(seat);
+    const pilot = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.25, 4, 10), dark);
+    pilot.position.set(x, y, z);
+    body.add(pilot);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 10), trim);
+    head.position.set(x, y + 0.24, z + 0.02);
+    body.add(head);
+  };
+  const glassDome = (r: number, scale: [number, number, number], at: [number, number, number]) => {
+    const g = new THREE.Mesh(
+      new THREE.SphereGeometry(r, 32, 18, 0, Math.PI * 2, 0, Math.PI / 2),
+      glassMat(env),
+    );
+    g.scale.set(...scale);
+    g.position.set(...at);
+    g.renderOrder = 5;
+    body.add(g);
+  };
+  if (parts.bubble === 'racer') {
+    // A long low canopy, drawn back like a racer's.
+    glassDome(0.62, [0.78, 0.62, 2.4], [0, 0.6, 2.3]);
+    pilotAt(0, 0.82, 2.0);
+  } else if (parts.bubble === 'twin') {
+    // Two small bubbles side by side.
+    for (const x of [-0.4, 0.4]) {
+      glassDome(0.4, [1, 0.95, 1.2], [x, 0.62, 1.95]);
+      pilotAt(x, 0.82, 1.8);
+    }
+  } else if (parts.bubble === 'visor') {
+    // A low, wide wraparound band of glass at the front.
+    glassDome(0.62, [1.45, 0.45, 1.1], [0, 0.66, 2.75]);
+    pilotAt(0, 0.78, 2.45);
+  } else {
+    glassDome(0.62, [1, 0.85, 1.2], [0, 0.62, 1.9]);
+    pilotAt(0, 0.88, 1.72);
+  }
+
+  // The core: a light that shows the ship's power, in the fire's colour (so it always matches).
+  const coreColour = () => new THREE.Color(...fire.stops[1]).multiplyScalar(2.2);
+  const coreMats: THREE.MeshBasicMaterial[] = [];
+  const coreSprites: THREE.Sprite[] = [];
+  let crystal: THREE.Mesh | null = null;
+  if (parts.core === 'ring') {
+    // A ring of light round the hull's waist.
+    const m = new THREE.MeshBasicMaterial({ color: coreColour(), toneMapped: false });
+    coreMats.push(m);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1, 0.022, 8, 96), m);
+    ring.scale.set(1.07, 2.33, 1);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(0, 0.47, 2.0);
+    body.add(ring);
+  } else if (parts.core === 'orb' || parts.core === 'crystal') {
+    // Behind the cockpit, raised on the hull's back.
+    const at = new THREE.Vector3(0, 0.95, parts.bubble === 'racer' ? 0.55 : 0.75);
+    const m = new THREE.MeshBasicMaterial({ color: coreColour(), toneMapped: false });
+    coreMats.push(m);
+    const cradle = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, 0.22, 20), trim);
+    cradle.position.set(at.x, at.y - 0.3, at.z);
+    body.add(cradle);
+    if (parts.core === 'orb') {
+      const orb = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 16), m);
+      orb.position.copy(at);
+      body.add(orb);
+      const shell = new THREE.Mesh(new THREE.SphereGeometry(0.3, 24, 16), glassMat(env));
+      shell.position.copy(at);
+      body.add(shell);
+    } else {
+      crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.28), m);
+      crystal.scale.set(0.8, 1.3, 0.8);
+      crystal.position.set(at.x, at.y + 0.05, at.z);
+      body.add(crystal);
+    }
+    const glow = glowSprite(new THREE.Color(...fire.stops[1]), 1.3, 0.7);
+    glow.position.copy(at);
+    body.add(glow);
+    coreSprites.push(glow);
+  }
 
   // The two turbine boosters.
   const fans: THREE.Group[] = [];
   const fires: THREE.ShaderMaterial[] = [];
   const glows: THREE.Sprite[] = [];
   const nozzles: THREE.Vector3[] = [];
-  for (const side of [-1, 1]) {
+  const layout = reactorLayout(parts.reactors);
+  for (const [k, pl] of layout.entries()) {
+    const side = Math.sign(pl.x) || 1;
     const pod = new THREE.Group();
-    pod.position.set(side * 1.45, 0.55, 1.6);
+    pod.position.set(pl.x, pl.y, pl.z);
+    pod.scale.setScalar(pl.s);
     body.add(pod);
     const housing = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.36, 2.2, 28, 1, true), paint);
     housing.rotation.x = Math.PI / 2;
@@ -514,13 +603,18 @@ export function buildShip(hull: Hull, fire: Fire, env: THREE.Texture | null): Ve
     nozzle.position.z = -1.22;
     pod.add(nozzle);
     // A strut to the hull.
-    const strut = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.9), paint);
-    strut.position.set(-side * 0.55, -0.05, 0.2);
+    // A strut from the pod to the hull, however the pod sits.
+    const dx = ((pl.x === 0 ? 0 : side * 0.55) - pl.x) / pl.s;
+    const dy = (0.55 - pl.y) / pl.s;
+    const reach = Math.hypot(dx, dy);
+    const strut = new THREE.Mesh(new THREE.BoxGeometry(reach, 0.08, 0.9), paint);
+    strut.position.set(dx / 2, dy / 2, 0.2);
+    strut.rotation.z = Math.atan2(dy, dx);
     pod.add(strut);
     // The fire: a long outer flame and a short hot core, pointing back.
     for (const [rad, lenK, seed] of [
-      [0.3, 1, side * 1.3],
-      [0.16, 0.55, side * 2.7],
+      [0.3, 1, side * 1.3 + k],
+      [0.16, 0.55, side * 2.7 + k],
     ] as const) {
       const geo = new THREE.ConeGeometry(rad, 1, 24, 6, true);
       const mat = fireMaterial(fire, seed);
@@ -538,7 +632,12 @@ export function buildShip(hull: Hull, fire: Fire, env: THREE.Texture | null): Ve
     glow.position.z = -1.35;
     pod.add(glow);
     glows.push(glow);
-    nozzles.push(new THREE.Vector3(side * 1.45, 0.55, -0.2));
+    if (nozzles.length < 2) nozzles.push(new THREE.Vector3(pl.x, pl.y, pl.z - 1.8 * pl.s));
+  }
+  // The engine draws two trails: one reactor gives both, a little apart.
+  if (nozzles.length === 1) {
+    const n = nozzles[0];
+    nozzles.splice(0, 1, n.clone().setX(n.x - 0.3), n.clone().setX(n.x + 0.3));
   }
 
   // The hover glow under it, in the fire's middle colour.
@@ -577,6 +676,11 @@ export function buildShip(hull: Hull, fire: Fire, env: THREE.Texture | null): Ve
         const s = 1 + 0.6 * Math.min(power, 2);
         g.scale.set(s, s, 1);
       }
+      if (crystal) crystal.rotation.y = t * 1.2;
+      for (const g of coreSprites) {
+        const s = 1.1 + 0.25 * Math.sin(t * 3) + 0.5 * speedN;
+        g.scale.set(s, s, 1);
+      }
       // The ground glow and shadow keep to the ground: the vehicle's group sits at its body's height.
       const over = Math.max(0, v.airTime > 0 ? 2 : 0);
       pad.material.opacity = 0.25 / (1 + over);
@@ -596,6 +700,8 @@ export function buildShip(hull: Hull, fire: Fire, env: THREE.Texture | null): Ve
       }
       for (const g of glows) g.material.color.setRGB(...f.stops[0]);
       pad.material.color.setRGB(...f.stops[1]);
+      for (const m of coreMats) m.color.setRGB(...f.stops[1]).multiplyScalar(2.2);
+      for (const g of coreSprites) g.material.color.setRGB(...f.stops[1]);
     },
     dispose() {
       group.traverse((o) => {
@@ -616,7 +722,9 @@ export function buildVehicle(
   fire: Fire,
   env: THREE.Texture | null,
   body: BodyId = 'wedge',
+  parts?: ShipParts,
 ): VehicleView {
   if (kind === 'car' && body !== 'wedge') return buildBody(body, hull, fire, env);
+  if (kind === 'ship') return buildShip(hull, fire, env, parts);
   return kind === 'car' ? buildCar(hull, env, fire) : buildShip(hull, fire, env);
 }

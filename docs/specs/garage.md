@@ -55,6 +55,19 @@ stay the car's; no badges, names or logos.
 
 All take the hull, the fire and the speed flames like the others.
 
-## Next
+## The spaceship creator (the ship's parts)
 
-Reactors on the side or on top, cockpit bubbles and cores for the ship.
+Asked: "a spaceship creator with different reactors I can place on the side or above, different
+bubbles for the cockpit and different cores; the aim is that they match well with each other, and
+that I can change and pick their colours, chrome and gold included". In the Garage when the ride is
+the hover ship (`Design.reactors`, `bubble`, `core`; components/drive/vehicles.ts `buildShip`).
+
+- **Reactors**: Twin side (as it was), One on top (a single bigger reactor on a pylon over the
+  tail), Four (two low at the sides, two smaller ones high behind the cockpit). Each on a strut
+  to the hull, each with its fan, its fire and the speed flames.
+- **Cockpit**: Dome (as it was), Racing canopy (long and low, drawn back), Twin bubbles (two
+  pilots side by side), Visor (a low wide wraparound band at the front).
+- **Core**: None, Light ring (round the hull's waist), Orb (a glowing sphere in a glass shell on a
+  cradle behind the cockpit), Crystal (a slowly turning crystal there).
+- They match by construction: every part takes the hull's paint (chrome, gold, rust, red or your
+  own colour) and the core glows in the fire's colour, changing with it.

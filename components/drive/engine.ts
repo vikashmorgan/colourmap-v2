@@ -49,6 +49,7 @@ import {
   loadBest,
   type Store,
   saveBest,
+  shipParts,
   type WorldId,
 } from '@/lib/art/drive-design';
 import {
@@ -718,6 +719,7 @@ export class DriveEngine {
       fire,
       this.env,
       this.design.body,
+      shipParts(this.design),
     );
     this.scene.add(this.vehicleView.group);
     if (this.vehicle.kind === 'car') {
@@ -759,7 +761,12 @@ export class DriveEngine {
       this.buildVehicleView();
       return;
     }
-    if (d.body !== prev.body) {
+    if (
+      d.body !== prev.body ||
+      d.reactors !== prev.reactors ||
+      d.bubble !== prev.bubble ||
+      d.core !== prev.core
+    ) {
       this.buildVehicleView();
       return;
     }
