@@ -115,7 +115,6 @@ export function TimerGauge({ speed, gear, revs }: GaugeProps) {
       >
         {Array.from({ length: BARS }, (_, i) => (
           <i
-            // biome-ignore lint/suspicious/noArrayIndexKey: fixed bars
             key={i}
             style={{
               flex: 1,
