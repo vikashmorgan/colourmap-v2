@@ -8,10 +8,12 @@ import {
   fireById,
   HULLS,
   hullById,
+  hullOf,
   isWorld,
   loadBest,
   loadDesign,
   parseDesign,
+  rideEverywhere,
   type Store,
   saveBest,
   saveDesign,
@@ -67,13 +69,25 @@ describe('fires', () => {
 });
 
 describe('hulls', () => {
-  it('offers chrome, rust and red', () => {
-    expect(HULLS.map((h) => h.name)).toEqual(['Chrome', 'Rust', 'Red']);
+  it('offers chrome, gold, rust, red and your own paint', () => {
+    expect(HULLS.map((h) => h.name)).toEqual(['Chrome', 'Gold', 'Rust', 'Red', 'Paint']);
+    expect(hullById('gold').metalness).toBe(1);
+    expect(hullOf({ hull: 'paint', paint: '#123456' }).colour).toBe('#123456');
+    expect(hullOf({ hull: 'gold', paint: '#123456' }).colour).toBe(hullById('gold').colour);
     expect(hullById('chrome').metalness).toBe(1);
     expect(hullById('rust').roughness).toBeGreaterThan(0.5);
     expect(hullById('rust').patina).toBeGreaterThan(0);
     expect(hullById('red').clearcoat).toBe(1);
     expect(hullById('nope').id).toBe('red');
+  });
+});
+
+describe('one ride everywhere', () => {
+  it('puts the same vehicle in every world', () => {
+    const d = rideEverywhere(DEFAULT_DESIGN, 'ship');
+    expect(Object.values(d.vehicle).every((k) => k === 'ship')).toBe(true);
+    expect(Object.keys(d.vehicle)).toHaveLength(WORLDS.length);
+    expect(parseDesign('{"paint":"red"}', IDS).paint).toBe(DEFAULT_DESIGN.paint);
   });
 });
 
@@ -93,6 +107,7 @@ describe('the design, remembered', () => {
       gauge: 'timer' as const,
       flames: false,
       mode: 'easy' as const,
+      paint: '#ff8800',
     };
     d.vehicle = { ...d.vehicle, salt: 'ship' };
     saveDesign(store, d);

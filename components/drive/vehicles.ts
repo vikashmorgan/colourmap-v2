@@ -15,7 +15,7 @@
 
 import * as THREE from 'three';
 
-import { type Fire, type Hull, hullById } from '@/lib/art/drive-design';
+import type { Fire, Hull } from '@/lib/art/drive-design';
 import { FIRE_FRAGMENT, FIRE_VERTEX } from '@/lib/art/drive-shaders';
 import { CAR_SCALE } from '@/lib/art/salt-flat-game';
 import type { Vehicle } from '@/lib/art/vehicle';
@@ -611,10 +611,9 @@ export function buildShip(hull: Hull, fire: Fire, env: THREE.Texture | null): Ve
 
 export function buildVehicle(
   kind: 'car' | 'ship',
-  hullId: string,
+  hull: Hull,
   fire: Fire,
   env: THREE.Texture | null,
 ): VehicleView {
-  const hull = hullById(hullId);
   return kind === 'car' ? buildCar(hull, env, fire) : buildShip(hull, fire, env);
 }

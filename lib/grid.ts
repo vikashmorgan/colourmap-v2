@@ -149,6 +149,11 @@ export const HUBS: Hub[] = [
         label: 'Drive',
         line: 'Racing worlds: salt, coast, canyon, night, neon, sky',
       },
+      {
+        href: '/geometry-field/garage',
+        label: 'Garage',
+        line: 'Build your car or ship on the turntable',
+      },
     ],
   },
   {

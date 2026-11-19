@@ -87,7 +87,7 @@ export function fireById(id: string): Fire {
 
 /* ── Hull ──────────────────────────────────────────────────── */
 
-export type HullId = 'chrome' | 'rust' | 'red';
+export type HullId = 'chrome' | 'gold' | 'rust' | 'red' | 'paint';
 
 export interface Hull {
   id: HullId;
@@ -112,6 +112,16 @@ export const HULLS: Hull[] = [
     patina: 0,
   },
   {
+    // 2026-11-19: "user-pickable colours, chrome and gold included".
+    id: 'gold',
+    name: 'Gold',
+    colour: '#e2b04a',
+    metalness: 1,
+    roughness: 0.14,
+    clearcoat: 0,
+    patina: 0,
+  },
+  {
     id: 'rust',
     name: 'Rust',
     colour: '#8a4a26',
@@ -129,10 +139,37 @@ export const HULLS: Hull[] = [
     clearcoat: 1,
     patina: 0,
   },
+  {
+    // Your own colour, picked in the Garage (Design.paint), in a glossy clear-coated paint.
+    id: 'paint',
+    name: 'Paint',
+    colour: '#2a6cf0',
+    metalness: 0.35,
+    roughness: 0.28,
+    clearcoat: 1,
+    patina: 0,
+  },
 ];
 
 export function hullById(id: string): Hull {
-  return HULLS.find((h) => h.id === id) ?? HULLS[2];
+  return HULLS.find((h) => h.id === id) ?? (HULLS.find((h) => h.id === 'red') as Hull);
+}
+
+/** The design's hull, the Paint hull in the design's own colour. */
+export function hullOf(d: Pick<Design, 'hull' | 'paint'>): Hull {
+  const h = hullById(d.hull);
+  return h.id === 'paint' ? { ...h, colour: d.paint } : h;
+}
+
+/** A colour as the Garage's picker writes it: #rrggbb. */
+export const isHex = (v: unknown): v is string =>
+  typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+
+/** One ride everywhere (the Garage): the same vehicle in every world. */
+export function rideEverywhere(d: Design, kind: VehicleKind): Design {
+  const vehicle = { ...d.vehicle };
+  for (const w of WORLDS) vehicle[w.id] = kind;
+  return { ...d, vehicle };
 }
 
 /* ── The design ────────────────────────────────────────────── */
@@ -148,6 +185,8 @@ export interface Design {
   flames: boolean;
   /** How every vehicle handles (lib/art/vehicle.ts MODES). */
   mode: DriveMode;
+  /** The Paint hull's colour (#rrggbb). */
+  paint: string;
 }
 
 export type DriveMode = 'easy' | 'flow' | 'drift' | 'grip';
@@ -173,6 +212,7 @@ export const DEFAULT_DESIGN: Design = {
   gauge: 'future',
   flames: true,
   mode: 'flow',
+  paint: '#2a6cf0',
   vehicle: {
     salt: 'car',
     coast: 'ship',
@@ -212,6 +252,7 @@ export function parseDesign(raw: string | null, weathers: readonly string[]): De
     gauge: GAUGES.some((g) => g.id === o.gauge) ? (o.gauge as GaugeId) : DEFAULT_DESIGN.gauge,
     flames: typeof o.flames === 'boolean' ? o.flames : DEFAULT_DESIGN.flames,
     mode: DRIVE_MODES.some((m) => m.id === o.mode) ? (o.mode as DriveMode) : DEFAULT_DESIGN.mode,
+    paint: isHex(o.paint) ? o.paint.toLowerCase() : DEFAULT_DESIGN.paint,
   };
 }
 
