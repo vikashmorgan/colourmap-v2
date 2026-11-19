@@ -319,3 +319,19 @@ all keep their own menu but connect well", then "keeping a menu tab that looks l
   one shared thing. Drive's own "‹ Art" link gave way to it (Esc still goes back to Art).
 - **Drive** joined the map under Play, and the **City of Dreams** under Art; on the tree both
   hang from a new **Worlds** limb of the Art branch.
+
+## The porthole (2026-11-19)
+
+Asked: "a cool connection to the grid tree with the videogames appearing in autopilot in a small
+porthole that opens when you check the racing part of the game".
+
+- When the map is on the racing part (the Play hub in the wheel or terminal, or the Play or
+  Worlds limb of the tree's design II), a round porthole opens at the bottom right: a brass-gold
+  rim with twelve rivets, a sheen of glass, and inside, Drive playing itself (components/Porthole.tsx).
+- Inside is `/drive-window`: Drive bare, on autopilot (lib/art/autopilot.ts: it aims at the
+  centre line ahead, boosts on the straights, climbs and dives in Sky Canyon), touring Coast Road,
+  Sky Canyon, Neon District, Canyon Race, Chinatown Run and Night Rain, fourteen seconds each,
+  each named as it comes. It uses your saved ride.
+- Tap the porthole to drive.
+- The tree's design I keeps its three Art groups (its evenness rule), so the porthole does not
+  open there.
