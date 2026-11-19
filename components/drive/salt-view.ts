@@ -2,12 +2,14 @@
  * Drive: the Salt Flat's few things (docs/specs/drive-game.md). The salt, the sky, the ranges, the
  * painted line and the gate lines are the backdrop's (lib/art/drive-shaders.ts); here only what
  * stands on the flat: the tenth-mile markers and the gate posts with their lamps, lone survey stakes
- * scattered far apart, the red streak crossing the flat now and then, and in dusty weather a few
- * dust devils wandering.
+ * scattered far apart, the red streak crossing the flat now and then, in dusty weather a few
+ * dust devils wandering, and the drift gates (lib/art/drift-gates.ts): two tall posts each, the next
+ * gate lit gold with a glowing line across the salt, the one after it warm and dim, the rest faint.
  */
 
 import * as THREE from 'three';
 
+import { DRIFT_GATES } from '@/lib/art/drift-gates';
 import {
   COURSE_POLES,
   MAX_STAKES,
@@ -30,6 +32,8 @@ export interface SaltView {
     cam: { x: number; y: number; yaw: number },
     t: number,
     w: Weather,
+    /** The drift gate to go through next. */
+    next?: number,
   ): void;
   dispose(): void;
 }
@@ -60,6 +64,42 @@ export function buildSaltView(): SaltView {
     group.add(g);
     course.push({ obj: g, x: p.x, y: p.y });
   }
+
+  // The drift gates: two posts with a lamp on each, and a glowing line across the next one.
+  const GATE_H = 3.4;
+  const gateMat = new THREE.MeshLambertMaterial({ color: 0x1c1a1f });
+  const gates = DRIFT_GATES.map((g) => {
+    const obj = new THREE.Group();
+    const lamps: THREE.Sprite[] = [];
+    for (const [x, y] of [
+      [g.ax, g.ay],
+      [g.bx, g.by],
+    ]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, GATE_H, 8), gateMat);
+      post.position.set(x - g.ax, GATE_H / 2, -(y - g.ay));
+      obj.add(post);
+      const lamp = glowSprite(0xffc060, 2.4, 0.9);
+      lamp.position.set(x - g.ax, GATE_H + 0.2, -(y - g.ay));
+      obj.add(lamp);
+      lamps.push(lamp);
+    }
+    group.add(obj);
+    return { obj, lamps, g };
+  });
+  const lineGeo = new THREE.PlaneGeometry(1, 0.35);
+  lineGeo.rotateX(-Math.PI / 2);
+  const gateLine = new THREE.Mesh(
+    lineGeo,
+    new THREE.MeshBasicMaterial({
+      color: new THREE.Color(1.6, 1.0, 0.35),
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+    }),
+  );
+  group.add(gateLine);
 
   // Stakes: one instanced mesh, refilled as you drive.
   const stakes = new THREE.InstancedMesh(
@@ -118,8 +158,28 @@ export function buildSaltView(): SaltView {
 
   return {
     group,
-    update(ox, oy, cam, t, w) {
+    update(ox, oy, cam, t, w, next = 0) {
       for (const c of course) c.obj.position.set(c.x - ox, 0, -(c.y - oy));
+      const n = gates.length;
+      gates.forEach(({ obj, lamps, g }, i) => {
+        obj.position.set(g.ax - ox, 0, -(g.ay - oy));
+        const ahead = (i - next + n) % n;
+        // The next gate gold and breathing slowly, the one after warm, the rest faint.
+        const glow = ahead === 0 ? 0.85 + 0.15 * Math.sin(t * 2.4) : ahead === 1 ? 0.45 : 0.14;
+        const size = ahead === 0 ? 3.2 : ahead === 1 ? 2.2 : 1.4;
+        for (const l of lamps) {
+          (l.material as THREE.SpriteMaterial).opacity = glow;
+          l.scale.set(size, size, 1);
+        }
+        if (ahead === 0) {
+          const dx = g.bx - g.ax;
+          const dy = g.by - g.ay;
+          gateLine.position.set((g.ax + g.bx) / 2 - ox, 0.04, -((g.ay + g.by) / 2 - oy));
+          gateLine.scale.set(Math.hypot(dx, dy), 1, 1);
+          gateLine.rotation.set(0, Math.atan2(dy, dx), 0);
+          (gateLine.material as THREE.MeshBasicMaterial).opacity = 0.55 + 0.25 * Math.sin(t * 2.4);
+        }
+      });
       if (!(Math.hypot(cam.x - stakeAt.x, cam.y - stakeAt.y) < 200)) {
         stakeAt = { x: cam.x, y: cam.y };
         stakeList = stakesNear(cam.x, cam.y);

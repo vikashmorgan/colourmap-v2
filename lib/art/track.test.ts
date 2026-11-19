@@ -1,38 +1,42 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BANK_MAX,
   bankFor,
   bump,
   CANYON,
   CANYON_ARCHES,
-  CANYON_HAZARDS,
-  CANYON_OBSTACLES,
+  CANYON_PIPE,
   CANYON_RANGE,
+  CHINATOWN,
   COAST,
   COAST_CLIFF,
   COAST_GATE,
   COAST_RAIL,
   canyonDepth,
   canyonHalf,
+  canyonWallU,
   collideTrack,
   frameAt,
   gateAt,
   groundAt,
-  hazardU,
   heightAt,
   keyed,
   lipAt,
   makeTrack,
   makeTrackWorld,
+  NEON_TRACK,
   NIGHT,
   newRace,
+  PIPE_TOP,
   passes,
+  pipeAt,
+  pipeReach,
   pointAt,
   project,
   RACE,
   stepCanyonRace,
   stepKmRace,
-  toSegment,
   window01,
 } from './track';
 import { G, newVehicle, speedOf, stepVehicle } from './vehicle';
@@ -100,7 +104,7 @@ describe('the centre line', () => {
     const left = { x: -Math.sin(f.h), y: Math.cos(f.h) };
     expect(g.gx * left.x + g.gy * left.y).toBeGreaterThan(0.1);
     expect(g.rough).toBe(0);
-    const off = pointAt(t, 500, 20);
+    const off = pointAt(t, 500, canyonHalf(500) + 8);
     expect(groundAt(t, off.x, off.y).rough).toBe(1);
   });
 });
@@ -145,7 +149,7 @@ describe('Coast Road', () => {
     const p = pointAt(world.track, 300, COAST_RAIL + 0.5);
     const v = newVehicle('ship', p.x, p.y, 0, heightAt(world.track, 300, COAST_RAIL));
     world.track.hint = 300;
-    const hit = collideTrack(world, v, 0);
+    const hit = collideTrack(world, v);
     expect(hit).not.toBeNull();
     // Pushed back toward the road.
     const f = frameAt(world.track, 300);
@@ -197,33 +201,23 @@ describe('Canyon Race', () => {
     expect(CANYON.elev(2480)).toBeLessThan(-3);
   });
 
-  it('puts every obstacle on or by the road, and hazards that drift across it', () => {
-    for (const o of CANYON_OBSTACLES) {
-      expect(Math.abs(o.u)).toBeLessThanOrEqual(canyonHalf(o.s));
-      expect(o.s).toBeGreaterThan(RACE.start);
-      expect(o.s).toBeLessThan(RACE.finish);
-    }
-    const h = CANYON_HAZARDS[0];
-    expect(hazardU(h, 0)).toBeCloseTo(h.u0 + h.amp * Math.sin(h.phase));
-    expect(Math.abs(hazardU(h, h.period / 4) - h.u0)).toBeCloseTo(h.amp, 5);
-  });
-
-  it('costs speed and spins you when you hit a boulder, and lets you fly over it', () => {
+  it('is very wide and clear: nothing stands on it (2026-11-17)', () => {
+    for (let s = 0; s < 5000; s += 25) expect(canyonHalf(s)).toBeGreaterThanOrEqual(18);
     const world = makeTrackWorld(CANYON);
-    const o = world.placed[0];
-    world.track.hint = o.o.s;
-    const v = newVehicle('car', o.x - 0.5, o.y, 0, o.base);
-    const hit = collideTrack(world, v, 0);
-    expect(hit).not.toBeNull();
-    expect(hit?.loss).toBeGreaterThan(0.2);
-    expect(Math.abs(hit?.spin ?? 0)).toBeGreaterThan(1);
-    v.z = o.base + o.o.height + 1;
-    expect(collideTrack(world, v, 0)).toBeNull();
-  });
-
-  it('measures distance to a ridge', () => {
-    expect(toSegment(0, 1, -1, 0, 1, 0).d).toBeCloseTo(1);
-    expect(toSegment(3, 0, -1, 0, 1, 0).d).toBeCloseTo(2);
+    for (let s = RACE.start; s < RACE.finish; s += 10) {
+      for (const u of [-15, 0, 15]) {
+        const p = pointAt(world.track, s, u);
+        world.track.hint = s;
+        const v = newVehicle(
+          'car',
+          p.x,
+          p.y,
+          frameAt(world.track, s).h,
+          heightAt(world.track, s, u),
+        );
+        expect(collideTrack(world, v)).toBeNull();
+      }
+    }
   });
 
   it('starts at the start, needs every checkpoint and stops at the finish', () => {
@@ -270,5 +264,96 @@ describe('Canyon Race', () => {
     expect(flew).toBe(true);
     expect(speedOf(v)).toBeGreaterThan(40);
     expect(world.track.hint).toBeGreaterThan(820);
+  });
+});
+
+describe('every road keeps you on it (2026-11-17)', () => {
+  // "create it so the car stays on track, on the road"; "so the car doesn't drift excessively and
+  // lose control all the time". Full throttle for 30 s, hands off, then the keys slammed left and
+  // right every 0.7 s: never off the road, never a spin, never slowed to a crawl.
+  for (const def of [COAST, CANYON, NIGHT, CHINATOWN, NEON_TRACK]) {
+    for (const kind of ['car', 'ship'] as const) {
+      for (const hands of ['off', 'slammed'] as const) {
+        it(`${def.id}, ${kind}, keys ${hands}`, () => {
+          const world = makeTrackWorld(def);
+          const f = frameAt(world.track, 5);
+          const v = newVehicle(kind, f.x, f.y, f.h, f.e);
+          let worst = -99;
+          let slowest = 1e9;
+          let slip = 0;
+          for (let i = 0; i < 60 * 30; i++) {
+            const t = i / 60;
+            const steer = hands === 'off' ? 0 : Math.floor(t / 0.7) % 2 ? 1 : -1;
+            stepVehicle(v, { throttle: 1, steer, boost: 0 }, 1 / 60, world, t);
+            if (t < 8) continue;
+            const { s, u } = project(world.track, v.x, v.y);
+            // In the canyon the edge is a quarter-pipe you may ride up: free up to its top.
+            worst = Math.max(worst, Math.abs(u) - def.half(s) - pipeReach(world.track, s));
+            slowest = Math.min(slowest, speedOf(v));
+            slip = Math.max(slip, Math.abs(v.slip));
+          }
+          // On the road (or its pipe), at most onto the first of its curled-up edge.
+          expect(worst).toBeLessThan(2);
+          expect(slowest).toBeGreaterThan(40);
+          expect(slip).toBeLessThan(0.25);
+        });
+      }
+    }
+  }
+
+  it('curves the canyon edges up into the walls with no corner anywhere (2026-11-19)', () => {
+    expect(pipeAt(0, 16)).toBe(0);
+    expect(pipeAt(-3, 16)).toBe(0);
+    // Smooth: the slope grows steadily, with no jump, from flat at the edge to steep at the top.
+    let prev = 0;
+    for (let d = 0.25; d < 22; d += 0.25) {
+      const slope = (pipeAt(d + 0.01, 16) - pipeAt(d - 0.01, 16)) / 0.02;
+      expect(slope).toBeGreaterThanOrEqual(prev - 1e-6);
+      expect(slope - prev).toBeLessThan(0.5);
+      prev = slope;
+    }
+    expect(pipeAt(16 * PIPE_TOP, 16)).toBeGreaterThan(10);
+    // In the canyon: no lip, the pipe's full curve, and the rock beyond its top.
+    const w = makeTrackWorld(CANYON);
+    const s = 2500;
+    const half = canyonHalf(s);
+    expect(CANYON.lip(s)).toBe(0);
+    expect(heightAt(w.track, s, half + 12) - heightAt(w.track, s, half)).toBeCloseTo(
+      pipeAt(12, CANYON_PIPE),
+      1,
+    );
+    expect(canyonWallU(s)).toBeGreaterThan(half + CANYON_PIPE * PIPE_TOP);
+  });
+
+  it('lets you ride high up a canyon wall, and gravity brings you back down', () => {
+    const w = makeTrackWorld(CANYON);
+    const s = 2500;
+    w.track.hint = s;
+    const f = frameAt(w.track, s);
+    // At 250 km/h along the road, the left key held 2.5 s into the wall, then let go.
+    const v = newVehicle('car', f.x, f.y, f.h, heightAt(w.track, s, 0));
+    v.vx = Math.cos(f.h) * 70;
+    v.vy = Math.sin(f.h) * 70;
+    let highest = 0;
+    let slowest = 1e9;
+    let back = false;
+    for (let i = 0; i < 60 * 6; i++) {
+      stepVehicle(v, { throttle: 1, steer: i < 150 ? 1 : 0, boost: 0 }, 1 / 60, w, i / 60);
+      const pipe = groundAt(w.track, v.x, v.y).road?.pipe ?? 0;
+      highest = Math.max(highest, pipe);
+      slowest = Math.min(slowest, speedOf(v));
+      if (highest > 0.6 && pipe === 0) back = true;
+    }
+    // High up the curve, never over its top, down on the road again, and never slowed.
+    expect(highest).toBeGreaterThan(0.6);
+    expect(highest).toBeLessThanOrEqual(1);
+    expect(back).toBe(true);
+    expect(slowest).toBeGreaterThan(50);
+  });
+
+  it('banks gently, so a bend never throws you up its outside', () => {
+    expect(BANK_MAX).toBeLessThanOrEqual(0.2);
+    for (const def of [COAST, CANYON, NIGHT, CHINATOWN, NEON_TRACK])
+      expect(def.bankMax).toBe(BANK_MAX);
   });
 });

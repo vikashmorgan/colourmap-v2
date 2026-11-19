@@ -3,7 +3,7 @@
  * ahead of the vehicle and dropped behind it, a couple of chunks a frame so nothing stalls; each
  * chunk carries its piece of road (banked, its edges curling up into lips), the ground beside it,
  * its walls (the Coast Road's cliff, rail and sea cliff; the canyon's rock walls and arches), its
- * obstacles and gates, and on the night worlds their furniture (lib/art/night-course.ts) with a
+ * gates (no obstacles since 2026-11-17), the night roads' glowing lines, and on the night worlds their furniture (lib/art/night-course.ts) with a
  * mirrored copy of every light below the wet road: long, slightly rippled reflections.
  *
  * Chunks hold their vertices relative to their own anchor and are placed relative to the camera
@@ -32,15 +32,15 @@ import {
   COAST_SEA,
   canyonDepth,
   canyonWallHeight,
+  canyonWallU,
   frameAt,
-  hazardU,
   heightAt,
   pointAt,
   RACE,
   type TrackWorld,
 } from '@/lib/art/track';
 import type { Weather } from '@/lib/art/weather';
-import { buildFireCone, glowSprite } from './vehicles';
+import { glowSprite } from './vehicles';
 
 export const CHUNK = 120;
 /** How tall a building's reflection in the wet road may be (m). */
@@ -301,16 +301,19 @@ function groundColour(cfg: WorldCfg, s: number, u: number, half: number, snow: n
     if (rock > 0 && out > 0)
       c = c.map((v, i) => v + (lin(0.5, 0.28, 0.18)[i] - v) * rock * 0.7) as V3;
   } else {
-    // Wet night road: near black, faintly warm, so the lights it mirrors read.
-    // The pavement beyond is paler (no painted lines: the road reads by its edge and the lamps).
+    // Wet night asphalt, a clear grey you can read (2026-11-17: "the road is invisible like a
+    // transparent black shadow, make a road I can see and understand"), its curled-up edges a
+    // shade lighter, the ground beyond darker so the road stands out from it. Glowing edge lines
+    // and lane dashes are laid on top (see `markings`).
     const tint: V3 =
       cfg.theme === 'chinatown'
-        ? [0.06, 0.042, 0.04]
+        ? [0.095, 0.07, 0.062]
         : cfg.theme === 'neon'
-          ? [0.042, 0.038, 0.06]
-          : [0.045, 0.045, 0.055];
-    c = tint.map((v) => v * (0.8 + 0.4 * n)) as V3;
-    if (out > 0) c = c.map((v) => v * 2.2) as V3;
+          ? [0.075, 0.07, 0.1]
+          : [0.08, 0.082, 0.095];
+    c = tint.map((v) => v * (0.85 + 0.3 * n)) as V3;
+    if (Math.abs(u) > half - 2.5 && out <= 0) c = c.map((v) => v * 1.35) as V3;
+    if (out > 0) c = c.map((v) => v * 0.45) as V3;
   }
   if (snow > 0) c = c.map((v) => v + (0.75 - v) * snow * 0.6) as V3;
   return c;
@@ -352,10 +355,11 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
   const groundMat = night
     ? new THREE.MeshStandardMaterial({
         vertexColors: true,
-        roughness: 0.18,
+        roughness: 0.3,
         metalness: 0.1,
         transparent: true,
-        opacity: 0.88,
+        // Mostly solid: the lights' mirror still shows through, the road no longer vanishes.
+        opacity: 0.95,
         depthWrite: true,
         side: THREE.DoubleSide,
       })
@@ -380,8 +384,60 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     const us = fr.map((f) => f * half);
     if (cfg.id === 'coast')
       return [COAST_CLIFF, -half - 4, ...us, half + 3, COAST_RAIL, COAST_RAIL + 1.5];
-    const outs = [0.6, 3, 8, 16];
+    // The canyon's pipes need more columns to curve smoothly up to the rock.
+    const outs =
+      cfg.id === 'canyon'
+        ? [0.6, 2, 4, 6, 8, 10, 11.5, 12.8, 13.9, 14.7, 15.4, 16.2]
+        : [0.6, 3, 8, 16];
     return [...outs.map((o) => -half - o).reverse(), ...us, ...outs.map((o) => half + o)];
+  }
+
+  /** The night roads' lines: a glowing line along each edge (where the road starts to curl up)
+   * and dashes between three lanes, in the world's colours, so the road reads at any speed. */
+  const lineMat = new THREE.MeshBasicMaterial({
+    vertexColors: true,
+    side: THREE.DoubleSide,
+    toneMapped: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+  });
+  lineMat.userData.shared = true;
+  const lineCols: { edge: V3; dash: V3 } =
+    theme === 'chinatown'
+      ? { edge: [1.5, 0.95, 0.35], dash: [0.9, 0.55, 0.25] }
+      : theme === 'neon'
+        ? { edge: [0.3, 1.3, 1.6], dash: [1.2, 0.3, 1.1] }
+        : { edge: [0.55, 0.85, 1.4], dash: [0.5, 0.55, 0.65] };
+  function markings(
+    s0: number,
+    s1: number,
+    L: (s: number, u: number, h?: number) => V3,
+    g: THREE.Group,
+  ) {
+    const b = new Builder();
+    const lift = 0.05;
+    const strip = (sa: number, sb: number, u: number, w: number, col: V3) =>
+      b.quad(
+        L(sa, u - w, lift),
+        L(sb, u - w, lift),
+        L(sb, u + w, lift),
+        L(sa, u + w, lift),
+        [0, 1, 0],
+        col,
+      );
+    for (let s = s0; s < s1 - 0.01; s += ROW) {
+      const half = def.half(s);
+      const edge = half - 2.6;
+      strip(s, s + ROW, edge, 0.22, lineCols.edge);
+      strip(s, s + ROW, -edge, 0.22, lineCols.edge);
+      // Dashes 4 m long every 12 m.
+      if (((s % 12) + 12) % 12 < 4) {
+        for (const f of [-1 / 3, 1 / 3]) strip(s, s + ROW, f * edge, 0.12, lineCols.dash);
+      }
+    }
+    const m = new THREE.Mesh(b.geometry(), lineMat);
+    m.renderOrder = 3;
+    g.add(m);
   }
 
   function buildChunk(i: number): Chunk {
@@ -415,6 +471,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     const gm = new THREE.Mesh(ground.geometry(), groundMat);
     gm.renderOrder = 2;
     g.add(gm);
+    if (night) markings(s0, s1, L, g);
 
     const rock = new Builder();
     if (cfg.id === 'coast') {
@@ -481,16 +538,16 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         const wall: V3[][] = [];
         const wc: V3[][] = [];
         for (let s = s0; s <= s1 + 0.01; s += 4) {
-          const half = def.half(s);
+          const wu = canyonWallU(s);
           const H = canyonWallHeight(s, side);
-          const base = heightAt(track, s, side * (half + 3));
+          const base = heightAt(track, s, side * wu);
           const row: V3[] = [];
           const crow: V3[] = [];
           for (let k = 0; k <= 7; k++) {
             const f = Math.min(k, 6) / 6;
             const jag = 3 * smooth1(s / 7 + k * 3.1, 13 + side);
             const out = k === 7 ? 25 : 1 + f * (0.25 * H) + jag * f;
-            const p = pointAt(track, s, side * (half + 3 + out));
+            const p = pointAt(track, s, side * (wu + out));
             row.push(local(ax, ay, p.x, p.y, base + H * f + (k === 7 ? 0 : jag * f * 0.3)));
             const strata =
               smooth1((base + H * f) / 2.2, 17) * 0.6 + smooth1(s / 20 + f * 4, 19) * 0.4;
@@ -504,8 +561,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       // The arches over the canyon.
       for (const sa of CANYON_ARCHES) {
         if (sa < s0 || sa >= s1) continue;
-        const half = def.half(sa);
-        const R = half + 3;
+        const R = canyonWallU(sa);
         const e = frameAt(track, sa).e;
         const archRows: V3[][] = [];
         const ac: V3[][] = [];
@@ -533,58 +589,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     }
     if (!rock.empty) g.add(new THREE.Mesh(rock.geometry(), rockMat));
 
-    // Obstacles.
     const solid = new Builder();
-    for (const p of world.placed) {
-      if (p.o.s < s0 || p.o.s >= s1) continue;
-      const o = p.o;
-      const c: V3 =
-        o.kind === 'ridge'
-          ? (lin(0.95, 0.88, 0.84).map((v) => v * 0.5) as V3)
-          : lin(0.5 + 0.1 * hash(o.s, 1), 0.3, 0.2);
-      if (o.kind === 'ridge') {
-        // A low crust of salt across part of the road.
-        const u0 = Math.min(o.u, o.u2 ?? o.u);
-        const u1 = Math.max(o.u, o.u2 ?? o.u);
-        for (let u = u0; u < u1; u += 1) {
-          const a0 = L(o.s - o.r, u);
-          const a1 = L(o.s - o.r, u + 1);
-          const top0 = L(o.s, u, o.height);
-          const top1 = L(o.s, u + 1, o.height);
-          const b0 = L(o.s + o.r, u);
-          const b1 = L(o.s + o.r, u + 1);
-          solid.quad(a0, a1, top1, top0, [0, 1, 0], c);
-          solid.quad(top0, top1, b1, b0, [0, 1, 0], c);
-        }
-      } else {
-        // Boulders and pillars: lumpy cylinders, wider at the foot.
-        const n = 10;
-        const rows = o.kind === 'pillar' ? 6 : 3;
-        const rings: V3[][] = [];
-        const rc: V3[][] = [];
-        for (let k = 0; k <= rows; k++) {
-          const f = k / rows;
-          const row: V3[] = [];
-          const crow: V3[] = [];
-          for (let j = 0; j <= n; j++) {
-            const th = (j / n) * Math.PI * 2;
-            const bulge =
-              o.kind === 'pillar'
-                ? 1 - 0.25 * f + 0.15 * Math.sin(f * 5 + j)
-                : Math.sin(Math.PI * (0.15 + 0.85 * f)) * 1.1;
-            const r = o.r * bulge * (0.85 + 0.3 * hash(j + k * 13, o.s));
-            row.push(
-              local(ax, ay, p.x + Math.cos(th) * r, p.y + Math.sin(th) * r, p.base + o.height * f),
-            );
-            const strata = smooth1(o.height * f, o.s);
-            crow.push(c.map((v) => v * (0.75 + 0.4 * strata)) as V3);
-          }
-          rings.push(row);
-          rc.push(crow);
-        }
-        grid(solid, rings, rc);
-      }
-    }
 
     // Gates: two posts with a lamp each, at the race's gates or every kilometre.
     const gateS: { s: number; finish: boolean }[] = [];
@@ -1081,29 +1086,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     void ARCH_STEP;
   }
 
-  /* ── Moving things: hazards (canyon) and ship highways (Neon District) ── */
-
-  const devils: { mesh: THREE.Object3D; idx: number }[] = [];
-  const weeds: { mesh: THREE.Mesh; idx: number }[] = [];
-  world.hazards.forEach((hz, idx) => {
-    if (hz.kind === 'devil') {
-      const cone = buildFireCone(
-        [lin(0.9, 0.75, 0.6), lin(0.8, 0.6, 0.45), lin(0.6, 0.45, 0.35)],
-        hz.r * 1.6,
-        16,
-        0.14,
-      );
-      group.add(cone);
-      devils.push({ mesh: cone, idx });
-    } else {
-      const weed = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(hz.r, 1),
-        new THREE.MeshBasicMaterial({ color: 0x5a3a20, wireframe: true }),
-      );
-      group.add(weed);
-      weeds.push({ mesh: weed, idx });
-    }
-  });
+  /* ── Moving things: the ship highways (Neon District) ── */
 
   let ships: THREE.InstancedMesh | null = null;
   if (theme === 'neon') {
@@ -1157,25 +1140,6 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         built++;
       }
       for (const c of chunks.values()) c.group.position.set(c.ax - ox, 0, -(c.ay - oy));
-      for (const d of devils) {
-        const hz = world.hazards[d.idx];
-        const u = hazardU(hz, t);
-        const p = pointAt(track, hz.s, u);
-        d.mesh.position.set(p.x - ox, heightAt(track, hz.s, u), -(p.y - oy));
-        d.mesh.rotation.y = t * 2;
-        ((d.mesh.userData.fire as THREE.ShaderMaterial).uniforms.uTime as THREE.IUniform).value =
-          t * 0.4;
-        d.mesh.visible = Math.abs(hz.s - s) < AHEAD;
-      }
-      for (const wd of weeds) {
-        const hz = world.hazards[wd.idx];
-        const u = hazardU(hz, t);
-        const p = pointAt(track, hz.s, u);
-        wd.mesh.position.set(p.x - ox, heightAt(track, hz.s, u) + hz.r, -(p.y - oy));
-        wd.mesh.rotation.x = t * 3;
-        wd.mesh.rotation.z = u / hz.r;
-        wd.mesh.visible = Math.abs(hz.s - s) < AHEAD;
-      }
       if (ships) {
         let n = 0;
         for (let lane = 0; lane < HIGHWAYS.length; lane++) {
@@ -1199,7 +1163,16 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       for (const c of chunks.values()) disposeGroup(c.group);
       chunks.clear();
       disposeGroup(group);
-      for (const m of [facade, facadeMirror, neon, neonMirror, groundMat, rockMat, solidMat])
+      for (const m of [
+        facade,
+        facadeMirror,
+        neon,
+        neonMirror,
+        groundMat,
+        rockMat,
+        solidMat,
+        lineMat,
+      ])
         m.dispose();
     },
   };

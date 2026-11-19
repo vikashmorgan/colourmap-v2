@@ -18,7 +18,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-
+import { comboOf, type DriftRun, liveScore, newDriftRun, stepDrift } from '@/lib/art/drift-gates';
 import {
   type Controls,
   clamp,
@@ -109,6 +109,10 @@ import { buildVehicle, type VehicleView } from './vehicles';
 
 export interface Hud {
   speed: number;
+  /** The Salt Flat's drift gates: the lap's score (or the last lap's), the best, the combo held. */
+  drift: number | null;
+  driftBest: number | null;
+  combo: number | null;
   /** The clock: the run under way, or the last finished, and the best. */
   time: string | null;
   best: string | null;
@@ -254,7 +258,8 @@ class Puffs {
   sizes = new Float32Array(PUFFS);
   alphas = new Float32Array(PUFFS);
   material: THREE.ShaderMaterial;
-  constructor() {
+  /** Sparks: bright and additive, shrinking and falling, instead of dust that billows. */
+  constructor(private spark = false) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
     g.setAttribute('aSize', new THREE.BufferAttribute(this.sizes, 1));
@@ -265,6 +270,7 @@ class Puffs {
       uniforms: { uColour: { value: new THREE.Color(1, 1, 1) }, uScale: { value: 600 } },
       transparent: true,
       depthWrite: false,
+      blending: spark ? THREE.AdditiveBlending : THREE.NormalBlending,
     });
     this.points = new THREE.Points(g, this.material);
     this.points.frustumCulled = false;
@@ -304,7 +310,7 @@ class Puffs {
       }
       this.vx[i] *= drag;
       this.vy[i] *= drag;
-      this.vz[i] = this.vz[i] * drag - 0.4 * dt;
+      this.vz[i] = this.vz[i] * drag - (this.spark ? 9 : 0.4) * dt;
       this.x[i] += this.vx[i] * dt;
       this.y[i] += this.vy[i] * dt;
       this.z[i] += this.vz[i] * dt;
@@ -312,8 +318,8 @@ class Puffs {
       this.pos[i * 3] = this.x[i] - ox;
       this.pos[i * 3 + 1] = this.z[i];
       this.pos[i * 3 + 2] = -(this.y[i] - oy);
-      this.sizes[i] = this.size[i] * (0.6 + 2.2 * k);
-      this.alphas[i] = 0.32 * (1 - k) * Math.min(1, a * 8);
+      this.sizes[i] = this.size[i] * (this.spark ? 1 - 0.7 * k : 0.6 + 2.2 * k);
+      this.alphas[i] = this.spark ? 1 - k * k : 0.32 * (1 - k) * Math.min(1, a * 8);
     }
     const g = this.points.geometry;
     g.attributes.position.needsUpdate = true;
@@ -384,6 +390,7 @@ export class DriveEngine {
   private hemi = new THREE.HemisphereLight(0xb8a4c8, 0x8a7068, 0.9);
   private env: THREE.Texture | null = null;
   private puffs = new Puffs();
+  private sparks = new Puffs(true);
   private ribbonFlat: THREE.ShaderMaterial;
   private ribbonGlow: THREE.ShaderMaterial;
   private ribbons: Ribbon[] = [];
@@ -412,6 +419,7 @@ export class DriveEngine {
   private s = 0;
   private odometer = 0;
   private run: Run = newRun();
+  private drift: DriftRun = newDriftRun();
   private race: Race = newRace();
   private best: number | null = null;
   private surgeAt = -99;
@@ -516,6 +524,8 @@ export class DriveEngine {
 
     this.scene.add(this.sun, this.sun.target, this.hemi);
     this.scene.add(this.puffs.points);
+    this.scene.add(this.sparks.points);
+    (this.sparks.material.uniforms.uColour.value as THREE.Color).setRGB(2.4, 1.3, 0.45);
     this.ribbonFlat = new THREE.ShaderMaterial({
       vertexShader: RIBBON_VERTEX,
       fragmentShader: RIBBON_FRAGMENT,
@@ -617,6 +627,7 @@ export class DriveEngine {
     this.run = newRun();
     this.race = newRace();
     this.best = loadBest(this.store, bestKey(this.cfg.id, kind));
+    this.drift = this.newDrift(kind);
     this.surgeAt = -99;
     this.buildVehicleView();
     this.lastHud = '';
@@ -674,6 +685,7 @@ export class DriveEngine {
       this.best = loadBest(this.store, bestKey(this.cfg.id, this.vehicle.kind));
       this.run = newRun();
       this.race = newRace();
+      this.drift = this.newDrift(this.vehicle.kind);
       this.buildVehicleView();
       return;
     }
@@ -794,8 +806,23 @@ export class DriveEngine {
       } else {
         this.run = stepRun(this.run, START_GATE, FINISH_GATE, px, py, v.x, v.y, t);
         this.keepBest(this.run.last, this.run.record);
+        const before = this.drift;
+        this.drift = stepDrift(
+          before,
+          { px, py, qx: v.x, qy: v.y, speed: speedOf(v), slip: v.slip, air: v.air },
+          dt,
+          t,
+        );
+        if (this.drift.lastTime !== before.lastTime) {
+          const k = v.kind;
+          if (this.drift.recordTime && this.drift.lastTime !== null)
+            saveBest(this.store, `drive.gates.time.${k}`, this.drift.lastTime);
+          if (this.drift.recordScore && this.drift.lastScore !== null)
+            saveBest(this.store, `drive.gates.score.${k}`, this.drift.lastScore);
+        }
       }
       this.dust(ev.landed, ev.bump, dt, w);
+      if (ev.scrape) this.spray(ev.scrape, ev.scrapeNx ?? 0, ev.scrapeNy ?? 0, dt);
     }
 
     // The camera.
@@ -865,6 +892,8 @@ export class DriveEngine {
     this.trails(t, w);
     for (const r of this.ribbons) r.update(ox, oy, t);
     this.puffs.update(dt, ox, oy);
+    this.sparks.update(dt, ox, oy);
+    this.sparks.material.uniforms.uScale.value = this.puffs.material.uniforms.uScale.value;
     (this.puffs.material.uniforms.uColour.value as THREE.Color).setRGB(...this.cfg.dust);
     this.puffs.material.uniforms.uScale.value =
       this.renderer.getDrawingBufferSize(new THREE.Vector2()).y * this.cam.focal;
@@ -873,7 +902,15 @@ export class DriveEngine {
     if (this.view) {
       if ('update' in this.view && this.trackWorld)
         (this.view as TrackView).update(ox, oy, this.s, t, w);
-      else (this.view as SaltView).update(ox, oy, { x: ox, y: oy, yaw: this.cam.yaw }, t, w);
+      else
+        (this.view as SaltView).update(
+          ox,
+          oy,
+          { x: ox, y: oy, yaw: this.cam.yaw },
+          t,
+          w,
+          this.drift.next,
+        );
     }
     const night = this.cfg.theme !== null;
     this.sun.intensity = (night ? 0.12 : 1.5) * (0.4 + 0.6 * w.sun) * w.light;
@@ -896,6 +933,13 @@ export class DriveEngine {
 
     this.composer.render(dt);
     this.emitHud(speed, t);
+  }
+
+  private newDrift(kind: string): DriftRun {
+    return newDriftRun(
+      loadBest(this.store, `drive.gates.time.${kind}`),
+      loadBest(this.store, `drive.gates.score.${kind}`),
+    );
   }
 
   private keepBest(last: number | null, record: boolean) {
@@ -940,6 +984,31 @@ export class DriveEngine {
       });
     }
     if (this.trackWorld) this.trackWorld.track.hint = this.s;
+  }
+
+  /** Sparks where the vehicle scrapes a wall: more the faster it slides along it. */
+  private spray(along: number, nx: number, ny: number, dt: number) {
+    const v = this.vehicle;
+    const x = v.x - nx * 1.0;
+    const y = v.y - ny * 1.0;
+    const z = v.z - VEHICLES[v.kind].hover + 0.4;
+    let n = Math.min(220, 40 + along * 4) * dt;
+    while (n > 0) {
+      if (Math.random() < n) {
+        const out = 2 + Math.random() * 6;
+        this.sparks.emit(
+          x,
+          y,
+          z + Math.random() * 0.4,
+          v.vx * (0.55 + Math.random() * 0.3) + nx * out + (Math.random() - 0.5) * 3,
+          v.vy * (0.55 + Math.random() * 0.3) + ny * out + (Math.random() - 0.5) * 3,
+          1.5 + Math.random() * 3.5,
+          0.25 + Math.random() * 0.35,
+          0.12 + Math.random() * 0.12,
+        );
+      }
+      n -= 1;
+    }
   }
 
   private dust(landed: number, bump: number, dt: number, w: Weather) {
@@ -1074,16 +1143,25 @@ export class DriveEngine {
   private emitHud(speed: number, t: number) {
     if (!this.onHud || t - this.hudAt < 0.1) return;
     this.hudAt = t;
-    const start = this.trackWorld ? this.race.start : this.run.start;
-    const last = this.trackWorld ? this.race.last : this.run.last;
-    const record = this.trackWorld ? this.race.record : this.run.record;
+    // On the Salt Flat the clock is the measured mile while one is run, else the drift gates' lap.
+    const d = this.drift;
+    const gates =
+      !this.trackWorld && this.run.start === null && (d.start !== null || d.lastTime !== null);
+    const start = this.trackWorld ? this.race.start : gates ? d.start : this.run.start;
+    const last = this.trackWorld ? this.race.last : gates ? d.lastTime : this.run.last;
+    const record = this.trackWorld ? this.race.record : gates ? d.recordTime : this.run.record;
+    const best = gates ? d.bestTime : this.best;
     const running = start !== null;
+    const drifting = gates && d.start !== null && d.held > 0 && d.lapse < 0.1;
     const hud: Hud = {
       speed: kmh(speed),
       time: running ? formatTime(t - (start as number)) : last !== null ? formatTime(last) : null,
-      best: this.best !== null ? formatTime(this.best) : null,
+      best: best !== null ? formatTime(best) : null,
       record: !running && record,
       running,
+      drift: !gates ? null : d.start !== null ? liveScore(d) : d.lastScore,
+      driftBest: gates ? d.bestScore : null,
+      combo: drifting ? Math.round(comboOf(d.held) * 10) / 10 : null,
     };
     const key = JSON.stringify(hud);
     if (key === this.lastHud) return;

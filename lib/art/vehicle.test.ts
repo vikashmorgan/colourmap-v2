@@ -8,6 +8,7 @@ import {
   leavesGround,
   newVehicle,
   pull,
+  ROAD_KEEP,
   roughDrag,
   slopePull,
   speedOf,
@@ -310,5 +311,113 @@ describe('obstacles', () => {
     for (let i = 0; i < 120; i++) stepVehicle(v, GO, 1 / 60, rail);
     expect(speedOf(v)).toBeGreaterThan(38);
     expect(Math.abs(v.h)).toBeLessThan(0.2);
+  });
+});
+
+describe('a road holds you on it (2026-11-17)', () => {
+  // A straight road east along y = 0, 30 m wide: the road is all the world knows.
+  const ROAD: World = {
+    ground: (_x, y) => ({ h: 0, gx: 0, gy: 0, rough: 0, road: { h: 0, k: 0, u: y, half: 15 } }),
+  };
+
+  it('lets go of the keys and the car lines up with the road, keeping its place across it', () => {
+    const v = newVehicle('car', 0, 0, 0.2);
+    v.vx = 60 * Math.cos(0.2);
+    v.vy = 60 * Math.sin(0.2);
+    for (let i = 0; i < 60 * 4; i++) stepVehicle(v, GO, 1 / 60, ROAD, i / 60);
+    expect(Math.abs(v.h)).toBeLessThan(0.02);
+    expect(Math.abs(v.vy)).toBeLessThan(0.5);
+    expect(Math.abs(v.y)).toBeLessThan(15 - 1);
+  });
+
+  it('turns you no further than the angle from the road, and glides you onto its edge', () => {
+    const v = newVehicle('car', 0, 0, 0);
+    v.vx = 60;
+    let most = 0;
+    for (let i = 0; i < 60 * 6; i++) {
+      stepVehicle(v, { throttle: 1, steer: 1, boost: 0 }, 1 / 60, ROAD, i / 60);
+      most = Math.max(most, v.h);
+    }
+    expect(most).toBeLessThan(ROAD_KEEP.angle + 0.05);
+    expect(v.y).toBeGreaterThan(5);
+    expect(v.y).toBeLessThan(15);
+    expect(speedOf(v)).toBeGreaterThan(55);
+  });
+
+  it('leaves open ground alone: a held key there still turns you round', () => {
+    const v = newVehicle('car', 0, 0, 0);
+    let far = 0;
+    for (let i = 0; i < 60 * 6; i++) {
+      stepVehicle(v, { throttle: 1, steer: 1, boost: 0 }, 1 / 60, FLAT, i / 60);
+      far = Math.max(far, Math.abs(v.y));
+    }
+    // Round in a circle, far across the line it started on (a road would hold it within 15 m).
+    expect(far).toBeGreaterThan(20);
+  });
+});
+
+describe('the handbrake (2026-11-19: "brake and turn to drift harder")', () => {
+  // Full lock at 45 m/s for 2/3 s, with or without the handbrake, then 2 s straight on the throttle.
+  const drift = (kind: 'car' | 'ship', hand: boolean) => {
+    const v = newVehicle(kind, 0, 0, Math.PI / 2);
+    v.vy = 45;
+    let widest = 0;
+    for (let i = 0; i < 60; i++) {
+      stepVehicle(v, { throttle: 1, steer: 1, boost: 0, handbrake: hand && i < 40 }, 1 / 60);
+      widest = Math.max(widest, Math.abs(Math.atan2(v.vLat, v.vLong)));
+    }
+    for (let i = 0; i < 120; i++) stepVehicle(v, GO, 1 / 60);
+    return { widest, v };
+  };
+
+  it('swings the tail out much wider than steering alone', () => {
+    for (const kind of ['car', 'ship'] as const) {
+      const plain = drift(kind, false).widest;
+      const hand = drift(kind, true).widest;
+      expect(hand).toBeGreaterThan(0.25);
+      expect(hand).toBeGreaterThan(plain * 2);
+    }
+  });
+
+  it('straightens once let go, still driving forward, never a spin', () => {
+    for (const kind of ['car', 'ship'] as const) {
+      const { v } = drift(kind, true);
+      expect(Math.abs(Math.atan2(v.vLat, v.vLong))).toBeLessThan(0.05);
+      expect(v.vLong).toBeGreaterThan(25);
+      expect(v.hand).toBeLessThan(0.01);
+    }
+  });
+
+  it('does nothing in the air or at a standstill', () => {
+    const v = newVehicle('car', 0, 0, 0);
+    stepVehicle(v, { ...GO, throttle: 0, handbrake: true }, 0.5);
+    expect(v.hand).toBe(0);
+  });
+});
+
+describe('walls you flow along (2026-11-19: "you can\'t stop if you hit something")', () => {
+  // A wall along y = 6, flowing: driving into it at 20° and 70 m/s.
+  const WALL: World = {
+    ground: FLAT.ground,
+    collide: (v) =>
+      v.y > 5 ? { nx: 0, ny: -1, depth: v.y - 5, loss: 0, spin: 0, flow: true } : null,
+  };
+
+  it('turns the speed along the wall, losing none of it, and throws sparks', () => {
+    const v = newVehicle('car', 0, 0, 0.35);
+    v.vx = Math.cos(0.35) * 70;
+    v.vy = Math.sin(0.35) * 70;
+    let scraped = 0;
+    let slowest = 1e9;
+    for (let i = 0; i < 120; i++) {
+      const ev = stepVehicle(v, { throttle: 1, steer: 0, boost: 0 }, 1 / 60, WALL, i / 60);
+      scraped = Math.max(scraped, ev.scrape ?? 0);
+      if (i > 20) slowest = Math.min(slowest, speedOf(v));
+    }
+    expect(scraped).toBeGreaterThan(50);
+    // Still flying along it: no hit slows you.
+    expect(slowest).toBeGreaterThan(66);
+    expect(v.y).toBeLessThan(5.5);
+    expect(Math.abs(v.yawRate)).toBeLessThan(1);
   });
 });

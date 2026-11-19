@@ -23,15 +23,22 @@ import {
 
 describe('controls', () => {
   it('reads the City game convention from the keys held', () => {
-    expect(controlsFromKeys(new Set(['w', 'a']))).toEqual({ throttle: 1, steer: 1, boost: 0 });
+    expect(controlsFromKeys(new Set(['w', 'a']))).toEqual({
+      throttle: 1,
+      steer: 1,
+      boost: 0,
+      handbrake: false,
+    });
     expect(controlsFromKeys(new Set(['arrowdown', 'arrowright']))).toEqual({
       throttle: -1,
       steer: -1,
       boost: 0,
+      handbrake: false,
     });
+    expect(controlsFromKeys(new Set(['f', 'a'])).handbrake).toBe(true);
     expect(controlsFromKeys(new Set([' '])).boost).toBe(1);
     expect(controlsFromKeys(new Set([' ', 'shift'])).boost).toBe(2);
-    expect(controlsFromKeys(new Set())).toEqual(NO_CONTROLS);
+    expect(controlsFromKeys(new Set())).toEqual({ ...NO_CONTROLS, handbrake: false });
   });
 
   it('drives on any touch and steers from the outer thirds', () => {
@@ -50,7 +57,8 @@ describe('controls', () => {
       { throttle: 1, steer: 0, boost: 0 },
       { throttle: 0, steer: -1, boost: 1 },
     );
-    expect(m).toEqual({ throttle: 1, steer: -1, boost: 1 });
+    expect(m).toEqual({ throttle: 1, steer: -1, boost: 1, handbrake: false });
+    expect(mergeControls(NO_CONTROLS, { ...NO_CONTROLS, handbrake: true }).handbrake).toBe(true);
   });
 
   it('lifts top speed and pull with the boost', () => {
