@@ -41,6 +41,8 @@ export const SLIDE_FILES = [
   'Pandas1.pdf',
   'Pandas2.pdf',
   'Pandas3.pdf',
+  'Pandas4.pdf',
+  'Pandas5.pdf',
 ] as const;
 
 export type SlideFile = (typeof SLIDE_FILES)[number];

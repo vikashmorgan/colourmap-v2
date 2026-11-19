@@ -34,7 +34,7 @@ describe('/pandas/city page', () => {
   it('reads the lessons from the class page and hands them to the map', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
     render(await PandasCityPage());
-    expect(screen.getByTestId('pandas-city').textContent).toBe('1:4 2:6 3:6');
+    expect(screen.getByTestId('pandas-city').textContent).toBe('1:4 2:6 3:6 4:5 5:3');
     expect(metadata.title).toBe('Pandas city');
   });
 });
