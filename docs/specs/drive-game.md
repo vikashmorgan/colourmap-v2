@@ -283,6 +283,17 @@ Canyon's dot material, so their light streams ahead of you. Gold edge lines and 
 wet road that mirrors the gold, and a black sky with a low gold glow and fine gold stars
 (`#define WORLD 5`). Key 9; the ship by default; timed by the kilometre.
 
+## The menu column (2026-11-19)
+
+Asked: "the space garage should be accessible below the menu top right where the tracks can be
+chosen … make that top right menu better, smarter: open/closed column, and the design options for
+racing also available there". The top right holds one button naming the current track (three lines,
+the name, a caret). It opens a column under it: *Tracks* (each world with its key, the current one
+lit), *The Garage ›*, and *Design* (vehicle, body, fire, hull, weather, mode, speedo, flames). The
+Design button at the bottom right is gone; Esc closes the column, Esc again leaves.
+
+The ship now banks into the turn like the car: turning right, its right side goes down ("when I
+turn right the right side should be lower").
 ### The Golden Track, reworked (2026-11-19)
 
 Asked: "more curving on the turns, more tilt on the slope as a curve, and more graphic elements to

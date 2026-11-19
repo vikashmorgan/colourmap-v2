@@ -41,10 +41,17 @@ describe('Drive', () => {
     window.history.replaceState(null, '', '/');
   });
 
-  it('starts the engine on the Salt Flat and names the six worlds quietly', () => {
+  it('starts the engine on the Salt Flat; the menu names it and opens a column of the worlds', () => {
     render(<DriveGame />);
     expect(engine.start).toHaveBeenCalled();
-    const names = screen.getAllByRole('button').map((b) => b.textContent);
+    const menu = screen.getByRole('button', { name: 'Menu' });
+    expect(menu.textContent).toContain('Salt Flat');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(menu);
+    expect(screen.getByRole('dialog', { name: 'Menu' })).toBeDefined();
+    expect(screen.getByRole('link', { name: /The Garage/ }).getAttribute('href')).toBe(
+      '/geometry-field/garage',
+    );
     for (const n of [
       'Salt Flat',
       'Coast Road',
@@ -52,8 +59,11 @@ describe('Drive', () => {
       'Night Rain',
       'Chinatown Run',
       'Neon District',
+      'Sky Canyon',
+      'Mars',
+      'Golden Track',
     ]) {
-      expect(names).toContain(n);
+      expect(screen.getByRole('button', { name: n })).toBeDefined();
     }
     expect(screen.getByRole('button', { name: 'Salt Flat' }).getAttribute('aria-current')).toBe(
       'true',
@@ -63,6 +73,7 @@ describe('Drive', () => {
   it('opens the world asked for in the address', async () => {
     window.history.replaceState(null, '', '/geometry-field/drive?world=coast');
     render(<DriveGame />);
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
     expect(screen.getByRole('button', { name: 'Coast Road' }).getAttribute('aria-current')).toBe(
       'true',
     );
@@ -123,10 +134,10 @@ describe('Drive', () => {
     expect(screen.getByTestId('drive-hud').textContent).toContain('drift 1300 · best 3120');
   });
 
-  it('opens the Design panel, remembers a choice and closes on Esc; Esc again goes back', () => {
+  it('opens the menu, remembers a design choice and closes on Esc; Esc again goes back', () => {
     render(<DriveGame />);
-    fireEvent.click(screen.getByRole('button', { name: 'Design' }));
-    expect(screen.getByRole('dialog', { name: 'Design' })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.getByRole('dialog', { name: 'Menu' })).toBeDefined();
     expect(engine.setPreview).toHaveBeenLastCalledWith(true);
     fireEvent.click(screen.getByRole('button', { name: 'Chrome' }));
     fireEvent.click(screen.getByRole('button', { name: 'Green plasma' }));

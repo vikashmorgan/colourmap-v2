@@ -4,8 +4,8 @@
  * Drive (docs/specs/drive-game.md): the racing game grown from the Speed pieces. Six worlds (Salt
  * Flat, Coast Road, Canyon Race, Night Rain, Chinatown Run, Neon District), the red car or the hover
  * ship, weather. The engine (components/drive/engine.ts) draws and runs it; this is the quiet shell
- * round it: a speed in the corner, the run's time, the worlds named small at the top, a Design
- * button, and the keys.
+ * round it: a speed in the corner, the run's time, a menu at the top right that opens a column
+ * (the tracks, the Garage, the Design rows), and the keys.
  */
 
 import { useRouter } from 'next/navigation';
@@ -52,6 +52,12 @@ function storage(): Store | null {
 
 const quiet = 'rgba(255,248,240,';
 const font = 'var(--font-serif), Georgia, serif';
+const heading = {
+  fontSize: 9,
+  letterSpacing: '0.18em',
+  textTransform: 'uppercase' as const,
+  color: `${quiet}0.4)`,
+};
 
 export default function DriveGame() {
   const router = useRouter();
@@ -262,45 +268,52 @@ export default function DriveGame() {
 
       {/* The way out is the shared tab in this corner (components/GridMenu.tsx); Esc goes to Art. */}
 
-      <nav
-        aria-label="Worlds"
+      {/* The menu (2026-11-19: "the space garage should be accessible below the menu top right where
+          the tracks can be chosen … make that menu smarter, open closed column, and the design
+          options for racing also there"): one button naming the track; it opens a column with the
+          tracks, the Garage and the Design rows. */}
+      <button
+        type="button"
         onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => setPanel((p) => !p)}
+        aria-expanded={panel}
+        aria-label="Menu"
         style={{
           position: 'absolute',
-          top: 14,
+          top: 10,
           right: 16,
-          left: 80,
           display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'flex-end',
-          gap: '2px 4px',
+          alignItems: 'center',
+          gap: 10,
+          padding: '7px 14px',
+          borderRadius: 999,
+          border: `1px solid ${quiet}${panel ? 0.4 : 0.18})`,
+          background: panel ? 'rgba(14,10,14,0.78)' : 'rgba(14,10,14,0.35)',
+          backdropFilter: 'blur(6px)',
+          cursor: 'pointer',
           fontFamily: font,
           fontSize: 12,
+          color: `${quiet}0.85)`,
         }}
       >
-        {WORLDS.map((w, i) => (
-          <span key={w.id} style={{ color: `${quiet}0.3)` }}>
-            {i > 0 && <span aria-hidden="true"> · </span>}
-            <button
-              type="button"
-              onClick={() => chooseWorld(w.id)}
-              aria-current={w.id === world ? 'true' : undefined}
-              title={`${w.name} (${w.key})`}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                fontFamily: font,
-                fontSize: 12,
-                color: `${quiet}${w.id === world ? 0.9 : 0.4})`,
-              }}
-            >
-              {w.name}
-            </button>
-          </span>
-        ))}
-      </nav>
+        <span aria-hidden="true" style={{ display: 'grid', gap: 2.5 }}>
+          {[0, 1, 2].map((k) => (
+            <span key={k} style={{ width: 12, height: 1.2, background: `${quiet}0.7)` }} />
+          ))}
+        </span>
+        <span>{WORLDS.find((w) => w.id === world)?.name}</span>
+        <span
+          aria-hidden="true"
+          style={{
+            fontSize: 9,
+            color: `${quiet}0.5)`,
+            transform: panel ? 'rotate(180deg)' : 'none',
+            transition: 'transform 0.2s',
+          }}
+        >
+          ▼
+        </span>
+      </button>
 
       {hud && (
         <div
@@ -429,48 +442,92 @@ export default function DriveGame() {
         Handbrake
       </button>
 
-      <button
-        type="button"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => setPanel((p) => !p)}
-        aria-expanded={panel}
-        style={{
-          position: 'absolute',
-          right: 16,
-          bottom: 14,
-          background: 'none',
-          border: 'none',
-          padding: 0,
-          cursor: 'pointer',
-          fontFamily: font,
-          fontSize: 12,
-          color: `${quiet}${panel ? 0.9 : 0.5})`,
-        }}
-      >
-        Design
-      </button>
-
       {panel && (
         <div
           role="dialog"
-          aria-label="Design"
+          aria-label="Menu"
           onPointerDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
           style={{
             position: 'absolute',
+            top: 50,
             right: 16,
-            bottom: 40,
+            bottom: 112,
             maxWidth: 'calc(100% - 32px)',
-            width: 420,
+            width: 320,
+            overflowY: 'auto',
             padding: '14px 18px',
             borderRadius: 14,
-            background: 'rgba(14,10,14,0.72)',
+            background: 'rgba(14,10,14,0.78)',
             backdropFilter: 'blur(8px)',
             boxShadow: '0 18px 40px rgba(0,0,0,0.45)',
-            display: 'grid',
+            display: 'flex',
+            flexDirection: 'column',
             gap: 10,
             fontFamily: font,
           }}
         >
+          <div style={heading}>Tracks</div>
+          <nav aria-label="Worlds" style={{ display: 'grid', gap: 2, marginTop: -4 }}>
+            {WORLDS.map((w) => (
+              <button
+                key={w.id}
+                type="button"
+                onClick={() => chooseWorld(w.id)}
+                aria-current={w.id === world ? 'true' : undefined}
+                title={`${w.name} (${w.key})`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: 10,
+                  padding: '5px 8px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: w.id === world ? 'rgba(255,200,120,0.14)' : 'none',
+                  cursor: 'pointer',
+                  fontFamily: font,
+                  fontSize: 13,
+                  textAlign: 'left',
+                  color: `${quiet}${w.id === world ? 0.95 : 0.6})`,
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{
+                    fontSize: 9,
+                    width: 10,
+                    color: `${quiet}0.35)`,
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  {w.key}
+                </span>
+                {w.name}
+              </button>
+            ))}
+          </nav>
+          <a
+            href="/geometry-field/garage"
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '9px 12px',
+              borderRadius: 10,
+              border: '1px solid rgba(255,200,120,0.35)',
+              background: 'linear-gradient(90deg, rgba(255,190,100,0.16), rgba(255,190,100,0.04))',
+              fontFamily: font,
+              fontSize: 13,
+              color: `${quiet}0.9)`,
+              textDecoration: 'none',
+            }}
+          >
+            <span>The Garage</span>
+            <span aria-hidden="true" style={{ color: 'rgba(255,200,120,0.85)' }}>
+              ›
+            </span>
+          </a>
+          <div style={heading}>Design</div>
           {row(
             'Vehicle',
             [
@@ -484,17 +541,6 @@ export default function DriveGame() {
                 vehicle: { ...design.vehicle, [world]: id as 'car' | 'ship' },
               }),
           )}
-          <a
-            href="/geometry-field/garage"
-            style={{
-              fontFamily: font,
-              fontSize: 12,
-              color: `${quiet}0.75)`,
-              textUnderlineOffset: 4,
-            }}
-          >
-            Open the Garage ›
-          </a>
           {kind === 'car' &&
             row('Body', BODIES, design.body, (id) =>
               changeDesign({ ...design, body: id as BodyId }),
