@@ -446,15 +446,15 @@ describe('walls you flow along (2026-11-19: "you can\'t stop if you hit somethin
 });
 
 describe('leaning and flying (2026-11-19)', () => {
-  it('leans the car the way asked, and banks the ship as it always did, like an arcade racer', () => {
+  it('leans the car and banks the ship into the turn: the inside side goes down', () => {
     const lean = (kind: 'car' | 'ship') => {
       const v = run(kind, GO, 5);
       for (let i = 0; i < 60; i++) stepVehicle(v, { throttle: 1, steer: 1, boost: 0 }, 1 / 60);
       return v.roll;
     };
-    // Turning left: the car's roll one way, the ship's the other (as before 2026-11-19).
+    // Turning left: both roll left (positive), the left side lower.
     expect(lean('car')).toBeGreaterThan(0);
-    expect(lean('ship')).toBeLessThan(0);
+    expect(lean('ship')).toBeGreaterThan(0);
   });
 
   it('climbs and dives the ship as the City does, easing in, between the ground and the ceiling', () => {
