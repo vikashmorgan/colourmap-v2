@@ -108,6 +108,42 @@ float saltW(vec2 q, float per) {
   return d2 - d1;
 }
 
+#if WORLD == 4
+/* Mars's craters (2026-11-19: "more craters on Mars"): one layer of a given size, scattered on a
+   grid that wraps with the ground. Each crater: a bowl shadowed on the sun side and lit on the far
+   wall, a raised rim catching the sun, and a pale apron of thrown-out dust round it. Returns how
+   much to darken (x) and how much rim light to add (y). Small ones fade where they would shimmer. */
+vec2 craters(vec2 g, float cs, float per, float seed, float rMin, float rMax, float lod) {
+  vec2 c = floor(g / cs);
+  vec2 sunD = vec2(cos(uSunAz), sin(uSunAz));
+  vec2 o = vec2(0.0);
+  for (int j = -1; j <= 1; j++)
+    for (int i = -1; i <= 1; i++) {
+      vec2 cell = c + vec2(float(i), float(j));
+      vec2 id = mod(cell, per);
+      float h = hash11(id.x * 17.0 + id.y * 131.0 + seed);
+      if (h < 0.2) continue;
+      float h2 = hash11(id.x * 7.3 + id.y * 29.1 + seed * 2.0);
+      vec2 center = (cell + 0.2 + 0.6 * vec2(h2, fract(h2 * 13.7))) * cs;
+      float R = mix(rMin, rMax, fract(h * 7.1));
+      vec2 dv = g - center;
+      float r = length(dv);
+      float d = r / R;
+      if (d > 1.7) continue;
+      float vis = 1.0 - smoothstep(0.15, 0.5, lod / R);
+      float side = dot(dv / max(r, 1e-3), sunD);
+      float bowl = 1.0 - smoothstep(0.82, 0.98, d);
+      o.x += bowl * (0.3 + 0.6 * max(side, 0.0) * smoothstep(0.2, 0.9, d)) * vis;
+      o.y += bowl * max(-side, 0.0) * 0.35 * smoothstep(0.35, 0.95, d) * vis;
+      float rim = exp(-pow((d - 1.0) / 0.09, 2.0));
+      o.y += rim * (0.5 + 0.6 * side) * vis;
+      o.x += rim * max(-side, 0.0) * 0.25 * vis;
+      o.x -= step(1.05, d) * (1.0 - smoothstep(1.05, 1.7, d)) * 0.1 * vis;
+    }
+  return o;
+}
+#endif
+
 float segDist(vec2 p, vec2 a, vec2 b) {
   vec2 pa = p - a;
   vec2 ba = b - a;
@@ -339,6 +375,14 @@ vec3 scene(vec2 p, out float yHz) {
   crack *= 1.0 - smoothstep(0.15, 0.45, length(fwidth(g / 2.0)));
 #if WORLD == 4
   groundC *= 1.0 - 0.3 * crack * exp(-dist / 60.0);
+  {
+    float lod = length(fwidth(g));
+    vec2 cr3 = craters(g, 32.0, 64.0, 3.0, 3.0, 11.0, lod)
+      + craters(g, 128.0, 16.0, 11.0, 12.0, 40.0, lod)
+      + craters(g, 512.0, 4.0, 23.0, 60.0, 170.0, lod);
+    groundC *= 1.0 - clamp(cr3.x, -0.15, 0.75);
+    groundC += C(0.95, 0.6, 0.4) * clamp(cr3.y, 0.0, 1.2) * 0.32;
+  }
 #else
   groundC *= 1.0 - 0.16 * crack * exp(-dist / 60.0);
 #endif
