@@ -96,6 +96,10 @@ easy to stay on it", "same with coast road, make them much wider".
    rose and dark umber, a small white sun in a blue halo (Martian dust scatters blue round the sun),
    Phobos and Deimos as two small grey moons, rust mesas and ranges with pale dust for snow, red
    grit for motes. One shader with the salt (`#define WORLD 4`, lib/art/drive-shaders.ts).
+   Craters (2026-11-19: "more craters on Mars"): three sizes scattered over the plain, 3–11 m,
+   12–40 m and 60–170 m across, each a bowl shadowed on the sun side and lit on its far wall, a rim
+   catching the sun, and a pale apron of dust round it. They are painted on the ground; the plain
+   still drives flat.
 
 Why three night tracks: Night Rain stays the plain lamp course the user loved (with the City's
 towers, arch and rings added back from the road); Chinatown and the Neon District are new tracks
