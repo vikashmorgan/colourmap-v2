@@ -21,7 +21,7 @@
 import { clamp, type Gate } from '@/lib/art/drive';
 import { G, type Ground, type Hit, type Vehicle, type World } from '@/lib/art/vehicle';
 
-export type TrackId = 'coast' | 'canyon' | 'night' | 'chinatown' | 'neon' | 'sky';
+export type TrackId = 'coast' | 'canyon' | 'night' | 'chinatown' | 'neon' | 'sky' | 'gold';
 
 export interface Wall {
   /** Offset of the barrier from the centre (positive left), and its height over the road. */
@@ -420,6 +420,29 @@ export const NEON_TRACK: TrackDef = {
   bankMax: BANK_MAX,
   terrain: 0,
   walls: () => barrier(NEON_HALF),
+};
+
+/* ── Golden Track ──────────────────────────────────────────── */
+
+/**
+ * The Golden Track (2026-11-19: "use the design art elements for the racing games in golden dots
+ * for a golden track"): a wide road at night in long sweeping bends and soft rises, drawn in the
+ * City's and Art's gold dots (components/drive/track-view.ts `goldDots`).
+ */
+export const GOLDEN_HALF = 18;
+export const GOLDEN: TrackDef = {
+  id: 'gold',
+  startH: 0,
+  curv: (s) =>
+    1.1 * (TAU / 3600) * Math.cos((TAU * s) / 3600) +
+    0.35 * (TAU / 1500) * Math.cos((TAU * s) / 1500 + 0.7),
+  elev: (s) => 3 * Math.sin((TAU * s) / 1300) + 1.5 * Math.sin((TAU * s) / 520 + 1.1),
+  half: () => GOLDEN_HALF,
+  lip: () => 0.45,
+  bankSpeed: 60,
+  bankMax: BANK_MAX,
+  terrain: 0,
+  walls: () => barrier(GOLDEN_HALF),
 };
 
 /* ── Canyon Race ───────────────────────────────────────────── */

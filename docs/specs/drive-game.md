@@ -270,3 +270,15 @@ Gold and Paint (your own colour). The Design panel links to it ("Open the Garage
 at a point on the centre line 16 m plus 0.55 s ahead, steering by the heading error, and boosts
 when lined up; on the salt it wanders in long curves; in Sky Canyon it climbs and dives slowly
 through the heights. Used by the Grid's porthole (`/drive-window`, docs/specs/the-grid.md).
+
+## Golden Track (world 9, 2026-11-19)
+
+Asked: "use the design art elements for the racing games in golden dots … for a golden track".
+A wide night road (18 m half-width) of long sweeping bends and soft rises (`GOLDEN`,
+lib/art/track.ts), drawn only in the City's and Art's gold dots (`goldDots`,
+components/drive/track-view.ts): a row of dots along each edge plus a higher, fainter row; a dotted
+arch over the road every 90 m; a standing ring of dots beside the road every 360 m, alternating
+sides; and gold constellations scattered over the dark ground either side. The dots share Sky
+Canyon's dot material, so their light streams ahead of you. Gold edge lines and dashes, a warm dark
+wet road that mirrors the gold, and a black sky with a low gold glow and fine gold stars
+(`#define WORLD 5`). Key 9; the ship by default; timed by the kilometre.
