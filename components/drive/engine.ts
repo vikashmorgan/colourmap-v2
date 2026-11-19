@@ -664,8 +664,9 @@ export class DriveEngine {
     this.sun.position.copy(sunDir).multiplyScalar(100);
     this.sun.target.position.set(0, 0, 0);
     this.sun.color.set(night ? 0x6070a0 : 0xffd2a8);
-    this.hemi.color.set(night ? 0x303050 : 0xd8c0d0);
-    this.hemi.groundColor.set(night ? 0x101018 : 0x8a7068);
+    const mars = this.cfg.id === 'mars';
+    this.hemi.color.set(night ? 0x303050 : mars ? 0xd8a888 : 0xd8c0d0);
+    this.hemi.groundColor.set(night ? 0x101018 : mars ? 0x8a4a30 : 0x8a7068);
     this.bloom.strength = night ? 0.55 : 0.144;
     this.bloom.threshold = night ? 0.4 : 0.55;
     this.bloom.radius = night ? 0.5 : 0.448;
@@ -702,7 +703,7 @@ export class DriveEngine {
 
   /** The Salt Flat's car keeps the piece's own camera: 1.2 m up, level, right behind it. */
   private pieceCamera(): boolean {
-    return this.cfg.id === 'salt' && this.vehicle?.kind === 'car';
+    return this.cfg.track === null && this.vehicle?.kind === 'car';
   }
 
   private buildVehicleView() {
@@ -1212,7 +1213,8 @@ export class DriveEngine {
     u.uWet.value = Math.max(w.wet, this.cfg.wet ? 1 : 0);
     (u.uTint.value as THREE.Color).setRGB(...w.tint);
     u.uTintAmt.value = w.tintAmount;
-    u.uCourse.value = this.cfg.id === 'salt' ? 1 : 0;
+    // The painted mile on the open plains: the Salt Flat and Mars.
+    u.uCourse.value = this.cfg.track === null ? 1 : 0;
     (u.uLine.value as THREE.Vector4).set(LINE.x - ox, LINE.y0 - oy, LINE.x - ox, LINE.y1 - oy);
     const gA = START_GATE;
     const gB = FINISH_GATE;

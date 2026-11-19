@@ -30,7 +30,7 @@ export interface WorldCfg {
   track: TrackDef | null;
   theme: NightTheme | null;
   /** The backdrop's world (lib/art/drive-shaders.ts WORLD_SHADER). */
-  backdrop: 'salt' | 'coast' | 'canyon' | 'night';
+  backdrop: 'salt' | 'coast' | 'canyon' | 'night' | 'mars';
   /** The low sun's azimuth (counter-clockwise from east). */
   sunAz: number;
   /** The plane under everything: its height. */
@@ -57,6 +57,19 @@ export const WORLD_CFG: Record<WorldId, WorldCfg> = {
     startS: 0,
     race: 'mile',
     dust: lin(0.98, 0.9, 0.86),
+    wet: false,
+  },
+  // The Salt Flat's open plain and its course, on Mars: rust regolith, a butterscotch dusk.
+  mars: {
+    id: 'mars',
+    track: null,
+    theme: null,
+    backdrop: 'mars',
+    sunAz: SUN_AZ,
+    planeY: 0,
+    startS: 0,
+    race: 'mile',
+    dust: lin(0.86, 0.46, 0.28),
     wet: false,
   },
   coast: {

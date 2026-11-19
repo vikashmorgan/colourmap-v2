@@ -177,6 +177,7 @@ export function weatherById(id: string): Weather {
 /** Each world's own motes in clear weather: salt-white, warm coast dust, red grit, cool rain. */
 export const WORLD_MOTES: Record<WorldId, Rgb> = {
   salt: [1, 0.96, 0.94],
+  mars: [0.95, 0.56, 0.36],
   coast: [1, 0.95, 0.92],
   canyon: [0.78, 0.42, 0.26],
   night: [0.6, 0.65, 0.75],
