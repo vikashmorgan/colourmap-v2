@@ -83,11 +83,44 @@ describe('Drive', () => {
     fireEvent.keyDown(window, { key: 'ArrowUp' });
     fireEvent.keyDown(window, { key: 'a' });
     fireEvent.keyDown(window, { key: ' ' });
-    expect(engine.setControls).toHaveBeenLastCalledWith({ throttle: 1, steer: 1, boost: 1 });
+    expect(engine.setControls).toHaveBeenLastCalledWith({
+      throttle: 1,
+      steer: 1,
+      boost: 1,
+      handbrake: false,
+    });
     fireEvent.keyUp(window, { key: 'ArrowUp' });
     fireEvent.keyUp(window, { key: 'a' });
     fireEvent.keyUp(window, { key: ' ' });
-    expect(engine.setControls).toHaveBeenLastCalledWith({ throttle: 0, steer: 0, boost: 0 });
+    expect(engine.setControls).toHaveBeenLastCalledWith({
+      throttle: 0,
+      steer: 0,
+      boost: 0,
+      handbrake: false,
+    });
+  });
+
+  it('holds the handbrake with F or the Handbrake button', () => {
+    render(<DriveGame />);
+    fireEvent.keyDown(window, { key: 'f' });
+    expect(engine.setControls.mock.calls.at(-1)?.[0].handbrake).toBe(true);
+    fireEvent.keyUp(window, { key: 'f' });
+    expect(engine.setControls.mock.calls.at(-1)?.[0].handbrake).toBe(false);
+    const b = screen.getByRole('button', { name: /Handbrake/ });
+    fireEvent.pointerDown(b, { pointerId: 3 });
+    expect(engine.setControls.mock.calls.at(-1)?.[0].handbrake).toBe(true);
+    expect(b.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.pointerUp(b, { pointerId: 3 });
+    expect(engine.setControls.mock.calls.at(-1)?.[0].handbrake).toBe(false);
+  });
+
+  it('shows the drift score, its combo while sliding, and the best', () => {
+    render(<DriveGame />);
+    const base = { speed: 180, time: '20.00', best: null, record: false, running: true };
+    act(() => hud?.({ ...base, drift: 1240, driftBest: 3120, combo: 2.5 }));
+    expect(screen.getByTestId('drive-hud').textContent).toContain('drift 1240 ×2.5');
+    act(() => hud?.({ ...base, drift: 1300, driftBest: 3120, combo: null }));
+    expect(screen.getByTestId('drive-hud').textContent).toContain('drift 1300 · best 3120');
   });
 
   it('opens the Design panel, remembers a choice and closes on Esc; Esc again goes back', () => {

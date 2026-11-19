@@ -46,6 +46,9 @@ export default function DriveGame() {
   const engineRef = useRef<DriveEngine | null>(null);
   const keys = useRef(new Set<string>());
   const touches = useRef(new Map<number, number>());
+  // The Handbrake button, held (touch or mouse).
+  const handHeld = useRef(false);
+  const [hand, setHand] = useState(false);
   const [world, setWorldState] = useState<WorldId>('salt');
   const [design, setDesignState] = useState<Design>(() => loadDesign(null, WEATHER_IDS));
   const [panel, setPanel] = useState(false);
@@ -58,9 +61,8 @@ export default function DriveGame() {
   const pushControls = useCallback(() => {
     const w = window.innerWidth || 1;
     const xs = [...touches.current.values()].map((x) => x / w);
-    engineRef.current?.setControls(
-      mergeControls(controlsFromKeys(keys.current), controlsFromTouches(xs)),
-    );
+    const c = mergeControls(controlsFromKeys(keys.current), controlsFromTouches(xs));
+    engineRef.current?.setControls({ ...c, handbrake: !!c.handbrake || handHeld.current });
   }, []);
 
   const chooseWorld = useCallback((id: WorldId) => {
@@ -146,6 +148,8 @@ export default function DriveGame() {
     const blur = () => {
       keys.current.clear();
       touches.current.clear();
+      handHeld.current = false;
+      setHand(false);
       pushControls();
     };
     window.addEventListener('keydown', down);
@@ -313,6 +317,15 @@ export default function DriveGame() {
               {hud.best && !hud.running && <span>best {hud.best}</span>}
             </div>
           )}
+          {hud.drift != null && (
+            <div style={{ fontSize: 11, marginTop: 2, color: `${quiet}0.5)` }}>
+              drift {hud.drift}
+              {hud.combo != null && (
+                <span style={{ color: 'rgba(255,200,110,0.9)' }}> ×{hud.combo.toFixed(1)}</span>
+              )}
+              {hud.combo == null && hud.driftBest != null && <span> · best {hud.driftBest}</span>}
+            </div>
+          )}
         </div>
       )}
 
@@ -322,7 +335,7 @@ export default function DriveGame() {
             position: 'absolute',
             left: 0,
             right: 0,
-            bottom: 52,
+            bottom: 112,
             textAlign: 'center',
             fontFamily: font,
             fontSize: 11,
@@ -330,7 +343,8 @@ export default function DriveGame() {
             pointerEvents: 'none',
           }}
         >
-          ↑ drive · ← → steer · space boost · shift double · R restart
+          ↑ drive · ← → steer · F handbrake: hold it and turn to drift · space boost · shift double
+          · R restart
         </div>
       )}
 
@@ -349,6 +363,49 @@ export default function DriveGame() {
           This game needs WebGL.
         </div>
       )}
+
+      <button
+        type="button"
+        aria-label="Handbrake: hold it and turn to drift"
+        aria-pressed={hand}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+          handHeld.current = true;
+          setHand(true);
+          setHint(false);
+          pushControls();
+        }}
+        onPointerUp={() => {
+          handHeld.current = false;
+          setHand(false);
+          pushControls();
+        }}
+        onPointerCancel={() => {
+          handHeld.current = false;
+          setHand(false);
+          pushControls();
+        }}
+        onContextMenu={(e) => e.preventDefault()}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          bottom: 64,
+          padding: '10px 16px',
+          borderRadius: 999,
+          border: `1px solid ${quiet}${hand ? 0.6 : 0.22})`,
+          background: hand ? 'rgba(255,190,100,0.22)' : 'rgba(14,10,14,0.25)',
+          cursor: 'pointer',
+          fontFamily: font,
+          fontSize: 12,
+          color: `${quiet}${hand ? 0.95 : 0.6})`,
+          touchAction: 'none',
+          userSelect: 'none',
+        }}
+      >
+        Handbrake
+      </button>
 
       <button
         type="button"

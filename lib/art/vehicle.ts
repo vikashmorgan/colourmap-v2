@@ -51,6 +51,8 @@ export interface VehicleSpec {
   yawGrip: number;
   /** How hard the hover field holds it down: extra clearance (m) a crest must open to lift it. */
   cling: number;
+  /** On a road, how much the road holds it (0 none, 1 full): see `ROAD_KEEP`. */
+  keep: number;
 }
 
 export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
@@ -73,6 +75,7 @@ export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
     pump: 0.45,
     yawGrip: 1.25,
     cling: 0,
+    keep: 1,
   },
   ship: {
     vTop: 96,
@@ -81,8 +84,8 @@ export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
     reverseAccel: 5,
     reverseTop: 14,
     wheelbase: 2.4,
-    grip: 10,
-    gripRate: 4.5,
+    grip: 12,
+    gripRate: 6,
     rolling: 0.2,
     drag: 0.0003,
     hover: 0.75,
@@ -92,6 +95,7 @@ export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
     pump: 0.6,
     yawGrip: 1.45,
     cling: 0.06,
+    keep: 1,
   },
 };
 
@@ -117,6 +121,8 @@ export interface Vehicle {
   pitch: number;
   air: boolean;
   airTime: number;
+  /** How far the handbrake is on (0..1): eased in fast, let off over a few tenths of a second. */
+  hand: number;
 }
 
 /** What the ground is under a point: its height, its slope (dh/dx, dh/dy) and how rough it is. */
@@ -128,7 +134,64 @@ export interface Ground {
   rough: number;
   /** On a road's curled-up edge (0 to 1): a wall to ride, never a ramp that launches. */
   lip?: number;
+  /** On a road: its heading and curvature here, where across it the point is (u, positive left)
+   * and its half-width. Roads hold the vehicle on them (see `ROAD_KEEP`); open ground does not. */
+  road?: {
+    h: number;
+    k: number;
+    u: number;
+    half: number;
+    /** How high up a quarter-pipe beside the road (0 on the road, 1 at its top). */
+    pipe?: number;
+  };
 }
+
+/**
+ * How a road holds you on it (2026-11-17: "create it so the car stays on track, on the road";
+ * "so the car doesn't drift excessively and lose control all the time"):
+ * - follow: the body turns with the bend by itself, so with no key held you ride the curve; the
+ *   keys move you across the road and turn you further.
+ * - hold: the grip gets what the bend asks (k v²) on top of its own, so the velocity follows.
+ * - settle: the body swings back toward where it is going, so a slide straightens out (rad/s
+ *   per radian of slip).
+ * - align: with no key held the body lines up with the road again (rad/s per radian off), so you
+ *   keep your place across it: let go and the car holds its lane.
+ * - angle: the keys turn you at most this far from the road's way (radians, about 20°): enough to
+ *   cross the road, never enough to turn into a wall.
+ * - edge: from this far inside the edge (m) the road eases you back in, never past it.
+ */
+/**
+ * The handbrake (2026-11-19, "a button to brake so I can brake and turn to drift harder"): the rear
+ * locks, so the grip falls away, the body may swing much faster than the grip turns the velocity
+ * (the tail steps out), the front turns further, and the locked wheels drag the speed down a
+ * little. Let go, and the grip comes back over a few tenths of a second: the drift straightens.
+ */
+export const HANDBRAKE = {
+  on: 12,
+  off: 6,
+  grip: 0.45,
+  rate: 0.45,
+  yaw: 0.9,
+  steer: 0.4,
+  drag: 5,
+  pull: 0.5,
+  settle: 3,
+};
+
+/** On a quarter-pipe, gravity wins in the end: the nose is turned back down (radians at the top),
+ * and part of gravity always gets past the tyres (m/s² at the top), so no wall is ridden forever. */
+export const PIPE_PULL = { aim: 0.3, slide: 6 };
+
+export const ROAD_KEEP = {
+  follow: 1,
+  hold: 1,
+  settle: 3,
+  align: 2.5,
+  angle: 0.35,
+  edge: 5,
+  push: 14,
+  damp: 10,
+};
 
 /** A hit: push the vehicle out along (nx, ny) by depth; it loses a share of its speed and spins. */
 export interface Hit {
@@ -139,6 +202,9 @@ export interface Hit {
   spin: number;
   /** Soft things (a dust devil) push without a bump. */
   soft?: boolean;
+  /** A wall you flow along (2026-11-19): it takes only the speed into it, never a bounce, a loss
+   * or a spin, and scraping it throws sparks. */
+  flow?: boolean;
 }
 
 export interface World {
@@ -155,6 +221,10 @@ export interface StepEvents {
   /** Speed into an obstacle (m/s), 0 if none. */
   bump: number;
   tookOff: boolean;
+  /** Scraping a flowing wall: the speed along it (m/s, 0 if none) and the wall's normal. */
+  scrape?: number;
+  scrapeNx?: number;
+  scrapeNy?: number;
 }
 
 export function newVehicle(kind: VehicleKind, x: number, y: number, h: number, z = 0): Vehicle {
@@ -176,6 +246,7 @@ export function newVehicle(kind: VehicleKind, x: number, y: number, h: number, z
     pitch: 0,
     air: false,
     airTime: 0,
+    hand: 0,
   };
 }
 
@@ -269,16 +340,57 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   const here = world.ground(v.x, v.y);
   const air = v.air;
 
+  // The handbrake, eased: on fast, off slowly. The ship's field brakes too, a little less.
+  const handOn = !!ctl.handbrake && !air && v.vLong > 1;
+  v.hand = ease(v.hand ?? 0, handOn ? 1 : 0, handOn ? HANDBRAKE.on : HANDBRAKE.off, dt);
+  const hb = v.hand * (v.kind === 'car' ? 1 : 0.8);
+
   // Steering turns the body.
   v.steer = ease(v.steer, ctl.steer, 7, dt);
   const authority = air ? spec.airSteer : 1;
-  const delta = v.steer * steerLimit(v.vLong);
+  const delta = clamp(v.steer * steerLimit(v.vLong) * (1 + HANDBRAKE.steer * hb), -1, 1);
   // The body never turns much faster than the grip can swing the velocity after it, so a held key
   // at speed is a drift you can hold, not a spin: the yaw is capped near the grip's own turn rate.
   // A bank adds its own hold (gravity across the slope), so a banked bend can be taken faster.
   const bankHold = air ? 0 : G * Math.abs(-here.gx * Math.sin(v.h) + here.gy * Math.cos(v.h));
-  const yawCap = (spec.grip * spec.yawGrip + bankHold) / Math.max(Math.abs(v.vLong), 6);
-  const target = clamp((v.vLong * Math.tan(delta)) / spec.wheelbase, -yawCap, yawCap) * authority;
+  // On a road, heading its way: the bend turns the body and the road lends the grip it needs.
+  const guide = spec.keep > 0 ? here.road : undefined;
+  const road = air ? undefined : guide;
+  let follow = 0;
+  let roadHold = 0;
+  const off = guide ? wrapAngle(guide.h - v.h) : 0;
+  const roadOn = !!guide && v.vLong > 1 && Math.cos(off) > 0.3;
+  if (road && roadOn) {
+    follow = v.vLong * road.k * ROAD_KEEP.follow * spec.keep;
+    // Lined up by where it goes (the heading plus the slip), so a slow slide outward is caught too.
+    // High on a pipe, the way to line up with points back down toward the road.
+    const down = -Math.sign(road.u) * PIPE_PULL.aim * (road.pipe ?? 0);
+    const course = wrapAngle(road.h + down - v.h - v.slip);
+    follow += course * ROAD_KEEP.align * spec.keep * (1 - Math.min(1, Math.abs(ctl.steer)));
+    roadHold = Math.abs(road.k) * v.vLong * v.vLong * ROAD_KEEP.hold * spec.keep;
+  }
+  const yawCap =
+    ((spec.grip * spec.yawGrip + bankHold) / Math.max(Math.abs(v.vLong), 6)) *
+    (1 + HANDBRAKE.yaw * hb);
+  // A slide straightens itself (the tyres pull the nose round toward where it goes), firmly on a
+  // road, gently on open ground, and not while the handbrake holds the tail out.
+  // Off the road only the part of a slide past 7° (the drift you hold stays yours; a spin is caught).
+  const settle = road
+    ? ROAD_KEEP.settle * spec.keep * v.slip
+    : HANDBRAKE.settle * (1 - hb) * Math.sign(v.slip) * Math.max(0, Math.abs(v.slip) - 0.12);
+  let steerYaw = clamp((v.vLong * Math.tan(delta)) / spec.wheelbase, -yawCap, yawCap);
+  // In the air too, so a glide never turns the ship sideways to the road.
+  if (roadOn && guide) {
+    const road = guide;
+    // The keys never turn you further than the angle from the road's way, and less as the edge
+    // you are heading for comes near (none in its last metre), so you glide onto it, never into it.
+    const across = Math.sign(-off);
+    let lim = ROAD_KEEP.angle;
+    if (across === Math.sign(road.u)) lim *= clamp((road.half - Math.abs(road.u) - 1) / 10, 0, 1);
+    if (steerYaw * -off >= 0) steerYaw *= clamp((lim - Math.abs(off)) / 0.08, 0, 1);
+    if (Math.abs(off) > lim) follow += (off - Math.sign(off) * lim) * 4 * spec.keep;
+  }
+  const target = (steerYaw + follow + settle) * authority;
   v.yawRate = ease(v.yawRate, target, air ? 3 : 8, dt);
   v.h = wrapAngle(v.h + v.yawRate * dt);
 
@@ -298,7 +410,9 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   let vLat = -v.vx * fy + v.vy * fx;
   const speed = Math.hypot(vLong, vLat);
 
-  let a = pull(spec, vLong, throttle, ctl.boost) * (air ? spec.airPull : 1);
+  let a =
+    pull(spec, vLong, throttle, ctl.boost) * (air ? spec.airPull : 1) * (1 - HANDBRAKE.pull * hb);
+  if (hb > 0 && Math.abs(vLong) > 1) a -= Math.sign(vLong) * HANDBRAKE.drag * hb;
   const resist =
     (air ? 0 : spec.rolling) + spec.drag * vLong * vLong + (air ? 0 : roughDrag(here.rough, speed));
   if (Math.abs(vLong) < resist * dt && throttle === 0) vLong = 0;
@@ -311,8 +425,10 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   // Dropping off a slope, part of what the grip takes back goes into speed ahead: the pump.
   const grip = air ? (v.kind === 'ship' ? 0.15 : 0) : 1;
   if (grip > 0) {
-    const want = -vLat * (1 - Math.exp(-spec.gripRate * grip * dt));
-    const most = spec.grip * grip * dt;
+    const want =
+      -vLat *
+      (1 - Math.exp(-spec.gripRate * grip * (road ? 2 : 1) * (1 - HANDBRAKE.rate * hb) * dt));
+    const most = (spec.grip * grip * (1 - HANDBRAKE.grip * hb) + roadHold) * dt;
     const fix = clamp(want, -most, most);
     vLat += fix;
     const sliding = Math.abs(want) - Math.abs(fix);
@@ -328,6 +444,42 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   v.x += v.vx * dt;
   v.y += v.vy * dt;
   v.slip = Math.atan2(vLat, Math.max(Math.abs(vLong), 1));
+
+  // Near a road's edge, the road eases you back in: the speed outward fades and a soft push turns
+  // you back toward the middle, so you ride along the edge instead of up it.
+  // It works in the air too, so a jump on a bend lands on the road: the flight curves with it.
+  const edgeRoad = spec.keep > 0 ? here.road : undefined;
+  if (edgeRoad && air && vLong > 1 && Math.cos(wrapAngle(edgeRoad.h - v.h)) > 0.3) {
+    const turn = vLong * edgeRoad.k * spec.keep * dt;
+    const c = Math.cos(turn);
+    const sn = Math.sin(turn);
+    const vx = v.vx;
+    v.vx = vx * c - v.vy * sn;
+    v.vy = vx * sn + v.vy * c;
+    v.h = wrapAngle(v.h + turn);
+  }
+  if (edgeRoad && !air && (edgeRoad.pipe ?? 0) > 0) {
+    const p = edgeRoad.pipe ?? 0;
+    const side = Math.sign(edgeRoad.u);
+    const a = PIPE_PULL.slide * p * dt;
+    v.vx -= -Math.sin(edgeRoad.h) * side * a;
+    v.vy -= Math.cos(edgeRoad.h) * side * a;
+  }
+  if (edgeRoad) {
+    const road = edgeRoad;
+    const over = Math.abs(road.u) - (road.half - ROAD_KEEP.edge);
+    if (over > 0) {
+      const side = Math.sign(road.u);
+      const ox = -Math.sin(road.h) * side;
+      const oy = Math.cos(road.h) * side;
+      const k = clamp(over / ROAD_KEEP.edge, 0, 1) * spec.keep;
+      const out = v.vx * ox + v.vy * oy;
+      const back =
+        (out > 0 ? out * (1 - Math.exp(-ROAD_KEEP.damp * k * dt)) : 0) + ROAD_KEEP.push * k * dt;
+      v.vx -= ox * back;
+      v.vy -= oy * back;
+    }
+  }
 
   // Up and down: follow the ground, or fly.
   const next = world.ground(v.x, v.y);
@@ -379,7 +531,23 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     v.x += hit.nx * hit.depth;
     v.y += hit.ny * hit.depth;
     const vn = v.vx * hit.nx + v.vy * hit.ny;
-    if (vn < 0) {
+    if (hit.flow) {
+      // Flow on: the speed into the wall is turned along it, none lost, and sparks fly.
+      if (vn < 0) {
+        const sp = Math.hypot(v.vx, v.vy);
+        v.vx -= vn * hit.nx;
+        v.vy -= vn * hit.ny;
+        const k = sp / (Math.hypot(v.vx, v.vy) || 1);
+        v.vx *= k;
+        v.vy *= k;
+      }
+      const along = Math.abs(-v.vx * hit.ny + v.vy * hit.nx);
+      if (along > (ev.scrape ?? 0)) {
+        ev.scrape = along;
+        ev.scrapeNx = hit.nx;
+        ev.scrapeNy = hit.ny;
+      }
+    } else if (vn < 0) {
       const bounce = hit.soft ? 1 : 1.25;
       v.vx -= bounce * vn * hit.nx;
       v.vy -= bounce * vn * hit.ny;
@@ -397,7 +565,14 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     if (!hit.soft) {
       const along = Math.atan2(v.vy, v.vx);
       const off = wrapAngle(along - v.h);
-      if (Math.hypot(v.vx, v.vy) > 4 && Math.abs(off) < 1.2) v.yawRate += off * 6 * dt;
+      if (Math.hypot(v.vx, v.vy) > 4 && Math.abs(off) < 1.2) {
+        v.yawRate += off * 6 * dt;
+        // A flowing wall turns the nose along it at once, so the tyres never scrub against it.
+        if (hit.flow) {
+          v.h = wrapAngle(v.h + off * (1 - Math.exp(-30 * dt)));
+          v.yawRate *= Math.exp(-10 * dt);
+        }
+      }
     }
   }
 

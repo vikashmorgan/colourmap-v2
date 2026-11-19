@@ -15,6 +15,13 @@ sand, to very dusty, to snowstorm", Night Rain without its white side lines, mou
 horizon, the City's buildings, gates and arches on the wet night course, then a Chinatown track and
 a Neon District track.
 
+2026-11-17, on the roads: the night roads were "invisible like a transparent black shadow"; on the
+Coast and Canyon "the car moves on top of the curves … and then it gets stuck"; "the idea is that
+the car stays on track, on the road … wider roads, longer turns … so the car doesn't drift
+excessively and lose control". Then: "I don't want obstacles on the canyon race or coast. The aim
+for now is to make it nice and flowy and clean", "keep very wide roads in canyon race, so it is
+easy to stay on it", "same with coast road, make them much wider".
+
 ## Worlds (keys 1–6, or the names at the top)
 
 1. **Salt Flat**: the piece itself, now open. Endless crazed salt at sunset, heat shimmer, the
@@ -23,23 +30,40 @@ a Neon District track.
    snow on the tallest, the sunset lighting one flank, a faint mirror in the salt, almost no
    parallax). A painted line runs north; tenth-mile poles stand beside it; two gates time **a
    measured mile**. Sparse survey stakes are scattered over the flat (never in a lattice).
+   **Drift gates** (2026-11-19: "for the salt flat do gates, so it becomes a game on speeding and
+   drifting"): a loop of 12 gates west of the mile, 22 m wide, in long alternate bends 150 to 200 m
+   apart (`lib/art/drift-gates.ts`). The first stands 50 m ahead of the start. The next gate's posts
+   glow gold and breathe, with a gold line across the salt; the one after is warm and dim, the rest
+   faint. Through them in order: a lap is timed from the first gate back to it, and the next starts
+   at once. **Drift score**: a slide past 8° above 43 km/h earns points (speed × angle), a combo
+   grows from ×1 to ×4 the longer it is held, sliding through a gate adds 150 × the combo, and the
+   drift is banked half a second after it ends (so two linked bends keep the combo). The HUD adds
+   one quiet line: "drift 1240 ×2.5" while sliding, "· best 3120" otherwise. Best lap time and best
+   score per vehicle (`drive.gates.time.<vehicle>`, `drive.gates.score.<vehicle>`). While a measured
+   mile is run its clock shows instead.
    The car keeps the piece's camera: 1.2 m up, level, the car's tail 5.8 m ahead.
-2. **Coast Road**: the cliff-top road, wider (24 m), packed brown earth with ruts. Its curves are
-   **banked** (the outer edge raised, to the angle that holds you at about 200 km/h); running down a
+2. **Coast Road**: the cliff-top road, very wide (44 m; 24 m until 2026-11-17), packed brown earth
+   with ruts, in long sweeping curves. Its curves are **banked** (gently, at most 0.2 rad) (the outer edge raised, to the angle that holds you at about 200 km/h); running down a
    bank pumps you forward. The rail on the sea side and the cliff on the other hold you in (a glance,
    never a crash); a gate every kilometre times each km. Default vehicle: the hover ship.
 3. **Canyon Race**: a fixed course, the same every time, on the Salt Flat: out over the salt, into
-   red-brown canyons (narrow passages, two arches), back out. Banked bends, three crests that launch
-   you, dips that compress and speed you up. Obstacles: pillars, boulders, mesas, salt ridges, fallen
-   rock; moving hazards: tumbleweeds and dust devils. Start, four checkpoints, finish; race time and
-   best time.
-4. **Night Rain**: overhead lamp rows drawing the course in three lines, a wet road with long
+   red-brown canyons (passages narrowing only to 36 m, two arches), back out. The road is 44 m wide;
+   the bends are long (tightest radius about 234 m), banked, with three crests that launch you and
+   dips that compress and speed you up. **Quarter-pipes** (2026-11-19: "don't do those borders where
+   the road that went up has a corner … so I can go higher up on the walls … a feeling of freedom,
+   but I can't wallride indefinitely"): inside the canyon the road has no lip; each edge curves up
+   into a 16 m quarter-circle (no corner anywhere), to about 11 m high at 72°, and the rock rises
+   from its top. You ride up as far as your speed takes you; the higher you are, the more the nose is
+   turned back down and part of gravity gets past the tyres, so you always come back to the road.
+   The road's hold (below) reaches the pipe's top, which is the cap on how high you go. Nothing stands on the road: no obstacles or hazards since
+   2026-11-17 ("nice and flowy and clean"). Start, four checkpoints, finish; race time and best time.
+4. **Night Rain**: overhead lamp rows drawing the course in three lines, a wet road (28 m) with long
    reflections, rain and spray, no white lines. Towers in the City's glowing-grain look set well back,
    a Great Arch every 1.5 km, LED arrows on the bends, boost rings. Banked, with crests.
-5. **Chinatown Run**: red and gold. Lantern strings overhead, narrow lanes between shophouses opening
-   every 600 m onto wide avenues, Chinatown gates and temple gates, banners and hanging signs with
+5. **Chinatown Run**: red and gold. Lantern strings overhead, lanes (20 m) between shophouses opening
+   every 600 m onto wide avenues (30 m, eased in over 180 m), Chinatown gates and temple gates, banners and hanging signs with
    letters, CITY OF DREAMS panels. Uncluttered; no flashing.
-6. **Neon District**: magenta, cyan and violet. Towers, bridges overhead, three ship highways streaming
+6. **Neon District** (32 m road): magenta, cyan and violet. Towers, bridges overhead, three ship highways streaming
    above at different heights, LED arrows, boost rings, and a few flashing signs (this world only,
    about one sign in seven).
 
@@ -48,9 +72,16 @@ towers, arch and rings added back from the road); Chinatown and the Neon Distric
 with their own curvature, elevation and furniture from one generator (`lib/art/night-course.ts`),
 rather than merged into Night Rain, so each keeps a clear mood.
 
+**Night roads you can see** (2026-11-17): the three night roads are a lit asphalt, tinted per world
+(cool grey in the rain, warm in Chinatown, violet in the Neon District), lighter at the lips and
+darker off the road, with glowing lines: an edge line 2.6 m in from each side and dashed lane lines
+(4 m every 12 m) between, pale blue in the rain, gold in Chinatown, cyan and magenta in the Neon
+District. Night Rain keeps its "no white lines": its lines are dim blue, not white.
+
 ## Controls
 
 - ↑ / W accelerate; ↓ / S brake, then reverse; ← → / A D steer.
+- F or the **Handbrake** button (bottom middle, held): hold it and turn to drift.
 - Space boost (top speed ×1.25); Shift double boost (×1.5).
 - Touch: any touch drives; hold the left or right third to steer; two fingers boost, three double.
 - 1–6 worlds · R restart · Esc closes the Design panel, else back to the builder (Experiment tab).
@@ -76,10 +107,27 @@ Pure physics in `lib/art/vehicle.ts`, stepped at 120 Hz:
   12% of speed with a dust puff; the camera lifts while you are in the air. (Until 2026-11-16 the
   take-off test, judged over one 1/120 s sub-step against a fixed centimetre, never fired on a
   crest, while the lips threw the ship off the road every few hundred metres.)
-- **Hits**: walls and obstacles push you out and bounce you. The speed lost and the spin go with
-  how hard you hit (full at 14 m/s into it), so a glancing scrape along a barrier keeps its speed
-  and swings the body back parallel to the wall; a head-on hit costs the whole share and spins.
-  Dust devils only nudge. No game over, ever.
+- **The road holds you** (2026-11-17): on a road the vehicle follows the curve under it, lines up
+  with the road's direction when you are not steering, and the bend's pull is added to the grip, so
+  it no longer rides up the outside of a bend and sticks there. Steering is capped at about 20° off
+  the road's direction (less near the edge you are heading for), so a key slammed over carves and
+  glides to the edge instead of spinning. Within 5 m of an edge, outward speed fades and a gentle
+  push brings you back toward the middle, on the ground and in the air (a jump follows the bend).
+  Off the road (the Salt Flat) none of this applies. Tested on every track, car and ship, keys off
+  or slammed, 30 s at full throttle: never more than 2 m past the edge, above 40 m/s, slip under 0.25.
+- **Handbrake** (2026-11-19: "a button to brake so I can brake and turn to drift harder"): the rear
+  lets go: the grip falls to 55%, the body may swing nearly twice as fast as the grip turns the
+  velocity, the front turns 40% further, and the locked wheels drag 5 m/s². It eases on in a
+  twelfth of a second and off in a sixth, and off the road a slide past 7° straightens itself once
+  it is released, so a handbrake turn swings to about 25° and comes out straight, never a spin.
+  Steering alone still slides as before (under 15° at full lock).
+- **Walls you flow along** (2026-11-19: "you can't fail and break … you can't stop if you hit
+  something, maybe just sparks when you scratch against a wall"): every track's barriers turn the
+  speed into them along the wall, losing none of it, and swing the nose parallel at once. Scraping
+  throws orange sparks, more the faster you slide along. No bounce, no spin, no slowdown.
+- **Hits**: there are no obstacles left and every wall flows (above). The physics still knows a
+  hard hit (a loss and spin growing to full at 14 m/s into it) for any world that wants one.
+  No game over, ever.
 - **Off the road**: a soft slowdown (rough drag), never a stop.
 
 ## Camera and feel
@@ -135,7 +183,7 @@ capped at 1.5. Bloom: the builder's Speed setting by day, stronger at night.
 - `components/drive/engine.ts` (renderer, loop, camera, races), `vehicles.ts`, `track-view.ts`,
   `salt-view.ts`
 - Pure: `lib/art/drive.ts` (controls, feel, gates, trails), `vehicle.ts`, `track.ts`,
-  `salt-flat-game.ts`, `night-course.ts`, `weather.ts`, `drive-design.ts`, `drive-worlds.ts`,
+  `salt-flat-game.ts`, `drift-gates.ts`, `night-course.ts`, `weather.ts`, `drive-design.ts`, `drive-worlds.ts`,
   `drive-shaders.ts`; `lib/art/speed-shaders.ts` shares its common head (`SPEED_COMMON`).
 
 ## Edge cases

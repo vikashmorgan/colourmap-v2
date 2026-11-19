@@ -29,6 +29,8 @@ export interface Controls {
   steer: number;
   /** 0 none, 1 boost (Space), 2 double boost (Shift). */
   boost: 0 | 1 | 2;
+  /** The handbrake (F, or the Handbrake button): held while turning, the tail lets go to drift. */
+  handbrake?: boolean;
 }
 
 export const NO_CONTROLS: Controls = { throttle: 0, steer: 0, boost: 0 };
@@ -45,6 +47,7 @@ export const DRIVE_KEYS = [
   'd',
   ' ',
   'shift',
+  'f',
 ];
 
 /** Controls from the keys held, lower-cased as KeyboardEvent.key gives them. */
@@ -59,6 +62,7 @@ export function controlsFromKeys(keys: ReadonlySet<string>): Controls {
     throttle: (up ? 1 : 0) - (down ? 1 : 0),
     steer: (left ? 1 : 0) - (right ? 1 : 0),
     boost,
+    handbrake: held('f'),
   };
 }
 
@@ -87,6 +91,7 @@ export function mergeControls(a: Controls, b: Controls): Controls {
     throttle: pick(a.throttle, b.throttle),
     steer: pick(a.steer, b.steer),
     boost: Math.max(a.boost, b.boost) as 0 | 1 | 2,
+    handbrake: !!(a.handbrake || b.handbrake),
   };
 }
 
