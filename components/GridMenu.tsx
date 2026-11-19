@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { type Design3, DesignTab, parseDesign3 } from '@/components/DesignTab';
@@ -21,6 +21,7 @@ import {
   type MenuMode,
   openNode,
   parseMenuMode,
+  placeOf,
   readVisits,
   step,
   type Visits,
@@ -65,6 +66,22 @@ import { brainOrder, GATHER_SECONDS, WHEEL_HIDDEN, WHEEL_HIDDEN_PAGES } from '@/
 const WHEEL_DESIGN_KEY = 'cb-wheel-design';
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+
+/** The tab: fixed in the header's corner, above the full-screen spaces, never wider than the corner. */
+const TAB_CSS = `
+.grid-tab { position: fixed; top: 8px; left: 16px; z-index: 1250; display: inline-flex; align-items: stretch;
+  max-width: calc(50vw - 70px); min-height: 36px; border: 1px solid #C4A06066; border-radius: 10px;
+  background: rgba(5,5,6,0.62); backdrop-filter: blur(6px); box-shadow: 0 6px 18px rgba(0,0,0,0.28);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; color: #C4A060; overflow: hidden; }
+.grid-tab button { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.grid-tab-open { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px; letter-spacing: .22em; }
+.grid-tab-open:hover, .grid-tab-hub:hover, .grid-tab button:focus-visible { background: rgba(196,160,96,0.14); }
+.grid-tab-hub, .grid-tab-here { display: inline-flex; align-items: center; padding: 0 9px; white-space: nowrap;
+  border-left: 1px solid #C4A06033; letter-spacing: .06em; }
+.grid-tab-hub { opacity: .62; }
+.grid-tab-here { color: #f1dfb4; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+@media (max-width: 640px) { .grid-tab-hub { display: none; } .grid-tab { max-width: calc(50vw - 56px); } }
+`;
 const PHOSPHOR = '#5dff9a';
 
 function isTyping(): boolean {
@@ -76,6 +93,9 @@ function isTyping(): boolean {
 
 export default function GridMenu() {
   const router = useRouter();
+  // Where you are, for the tab (2026-11-19: "a menu tab that looks like a menu tab", the same in
+  // every space, so Art, the City, Drive and the rest keep their own menus but connect).
+  const place = placeOf(usePathname());
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<MenuMode>('tree');
   // The wheel's two designs: I the star wheel, II the wheel as it was (2026-10-30).
@@ -237,31 +257,44 @@ export default function GridMenu() {
 
   return (
     <>
-      <button
-        ref={opener}
-        type="button"
-        onClick={show}
-        aria-label="Open the network menu (G)"
-        title="Network menu · G"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 7,
-          minHeight: 36,
-          padding: '0 10px',
-          borderRadius: 999,
-          border: `1px solid ${GOLD}66`,
-          background: 'rgba(5,5,6,0.55)',
-          color: GOLD,
-          fontFamily: MONO,
-          fontSize: 11,
-          letterSpacing: '0.22em',
-          cursor: 'pointer',
-        }}
-      >
-        <NetIcon />
-        GRID
-      </button>
+      {/*
+       * THE TAB (2026-11-19). The same tab in the same corner on every page, the full-screen
+       * spaces too (Drive, the City), above them: GRID opens the map, then where you are, its hub
+       * opening the map at that hub. Each space keeps its own menu below or beside it.
+       */}
+      <style>{TAB_CSS}</style>
+      <nav aria-label="Where you are" data-testid="place-tab" className="grid-tab">
+        <button
+          ref={opener}
+          type="button"
+          onClick={show}
+          aria-label="Open the network menu (G)"
+          title="Network menu · G"
+          className="grid-tab-open"
+        >
+          <NetIcon />
+          GRID
+        </button>
+        {place && (
+          <>
+            <button
+              type="button"
+              className="grid-tab-hub"
+              onClick={() => {
+                show();
+                setHub(place.hub);
+              }}
+              title={`${place.hub.label}: ${place.hub.line}`}
+            >
+              {place.hub.label}
+              <span aria-hidden="true"> ›</span>
+            </button>
+            <span className="grid-tab-here" aria-current="page" title={place.node.line}>
+              {place.node.label}
+            </span>
+          </>
+        )}
+      </nav>
 
       {open && (
         <div

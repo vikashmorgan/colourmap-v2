@@ -3,7 +3,8 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const push = vi.fn();
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+let pathname = '/geometry-field/drive';
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }), usePathname: () => pathname }));
 
 import { MENU_MODE_KEY } from '@/lib/grid';
 
@@ -218,5 +219,19 @@ describe('GridMenu', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it('shows where you are in the tab, its hub opening the map there; nothing off the map', () => {
+    pathname = '/geometry-field/drive';
+    const { unmount } = render(<GridMenu />);
+    const tab = screen.getByTestId('place-tab');
+    expect(tab.textContent).toContain('Play');
+    expect(tab.textContent).toContain('Drive');
+    fireEvent.click(screen.getByRole('button', { name: /Play/ }));
+    expect(screen.getByRole('dialog', { name: 'Network menu' })).toBeTruthy();
+    unmount();
+    pathname = '/nowhere';
+    render(<GridMenu />);
+    expect(screen.getByTestId('place-tab').textContent).toBe('GRID');
   });
 });

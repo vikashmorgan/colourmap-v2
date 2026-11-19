@@ -258,21 +258,7 @@ export default function DriveGame() {
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
       />
 
-      <a
-        href={BACK_HREF}
-        onPointerDown={(e) => e.stopPropagation()}
-        style={{
-          position: 'absolute',
-          top: 14,
-          left: 16,
-          fontFamily: font,
-          fontSize: 12,
-          color: `${quiet}0.5)`,
-          textDecoration: 'none',
-        }}
-      >
-        ‹ Art
-      </a>
+      {/* The way out is the shared tab in this corner (components/GridMenu.tsx); Esc goes to Art. */}
 
       <nav
         aria-label="Worlds"

@@ -142,7 +142,14 @@ export const HUBS: Hub[] = [
     label: 'Play',
     line: 'Stories to get lost in',
     accent: '#e08a3c',
-    nodes: [{ href: '/entertainment', label: 'Billy', line: "Billy's infinite comic" }],
+    nodes: [
+      { href: '/entertainment', label: 'Billy', line: "Billy's infinite comic" },
+      {
+        href: '/geometry-field/drive',
+        label: 'Drive',
+        line: 'Racing worlds: salt, coast, canyon, night, neon, sky',
+      },
+    ],
   },
   {
     id: 'body',
@@ -171,6 +178,11 @@ export const HUBS: Hub[] = [
         href: '/geometry-field',
         label: 'Geometry',
         line: 'The Geometry Builder: stars, wind, figures',
+      },
+      {
+        href: '/geometry-field/city',
+        label: 'City of Dreams',
+        line: 'The golden city and the neon city, piece by piece; fly through it',
       },
       {
         href: '/geometry-field/city/vision',
@@ -385,6 +397,25 @@ export function isMenuKey(
 ): boolean {
   if (typing || e.ctrlKey || e.metaKey || e.altKey) return false;
   return e.key === 'g' || e.key === 'G' || e.key === '`';
+}
+
+/**
+ * Where a page sits on the map (2026-11-19, the shared menu tab: "they all keep their own menu but
+ * connect well"): its hub and its page, the page whose address is the longest start of the path.
+ * Null off the map.
+ */
+export function placeOf(pathname: string | null): { hub: Hub; node: GridNode } | null {
+  if (!pathname) return null;
+  const path = pathname.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
+  let best: { hub: Hub; node: GridNode } | null = null;
+  for (const hub of HUBS)
+    for (const node of hub.nodes) {
+      if (node.external) continue;
+      const h = node.href.split('?')[0];
+      if (path !== h && !path.startsWith(`${h}/`)) continue;
+      if (!best || h.length > best.node.href.split('?')[0].length) best = { hub, node };
+    }
+  return best;
 }
 
 /** Opens a page: a separate app in a new tab, a standalone page by a full load, an app screen by the router. */

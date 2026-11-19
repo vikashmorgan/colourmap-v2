@@ -303,3 +303,19 @@ off").
   old key, II and III (willow and banyan) come back as II.
 - **The wheel is untouched,** with its I, II, III.
 - The Star Willow and Star Banyan of Art's Star Trees stay where they are.
+
+## The tab: one way round, in every space (2026-11-19)
+
+Asked: "fast to change from spaceship to inner view, and then to City, to race tracks, drive mode
+… so it all connects. Right now the menus are not the same across Art or City … think how they
+all keep their own menu but connect well", then "keeping a menu tab that looks like a menu tab".
+
+- The header's GRID button became a **tab**: fixed in the top-left corner on every page, the
+  full-screen spaces too (Drive, the City of Dreams), above them. Same shape and place everywhere.
+- It reads **GRID · hub › page**: GRID (or G) opens the map; the hub opens the map at that hub;
+  the page is where you are (`placeOf` in lib/grid.ts: the page whose address is the longest start
+  of the path). Off the map it is GRID alone. On a phone the hub is left out.
+- Each space keeps its own menu (Drive's worlds and Design, the City's pieces); the tab is the
+  one shared thing. Drive's own "‹ Art" link gave way to it (Esc still goes back to Art).
+- **Drive** joined the map under Play, and the **City of Dreams** under Art; on the tree both
+  hang from a new **Worlds** limb of the Art branch.

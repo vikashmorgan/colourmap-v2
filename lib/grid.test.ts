@@ -15,6 +15,7 @@ import {
   ONLINE_FOR,
   parseMenuMode,
   parseVisits,
+  placeOf,
   SIGNALS,
   satellitePoint,
   step,
@@ -174,5 +175,23 @@ describe('the quick menu', () => {
     expect(isMenuKey(k('g'), true)).toBe(false);
     expect(isMenuKey(k('g', true), false)).toBe(false);
     expect(isMenuKey(k('h'), false)).toBe(false);
+  });
+});
+
+describe('placeOf: where a page sits on the map', () => {
+  it('finds the hub and page by the longest matching address', () => {
+    expect(placeOf('/geometry-field/drive')?.node.label).toBe('Drive');
+    expect(placeOf('/geometry-field/drive')?.hub.label).toBe('Play');
+    expect(placeOf('/geometry-field/city')?.node.label).toBe('City of Dreams');
+    expect(placeOf('/geometry-field/city/vision')?.node.label).toBe('City vision');
+    expect(placeOf('/geometry-field')?.node.label).toBe('Geometry');
+    expect(placeOf('/notebook/abc')?.node.label).toBe('Notes');
+    expect(placeOf('/day/')?.node.label).toBe('Focus');
+  });
+
+  it('is null off the map, and never matches half a word', () => {
+    expect(placeOf('/nowhere')).toBeNull();
+    expect(placeOf(null)).toBeNull();
+    expect(placeOf('/dayx')).toBeNull();
   });
 });
