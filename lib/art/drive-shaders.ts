@@ -6,7 +6,8 @@
  *   the game's camera and finds, in closed form, the sky, the far mountain ranges and the endless
  *   plane under them: the crazed salt with its mirage (the Salt Flat piece's own formulas, now seen
  *   from a camera that can turn), the sea under the Coast Road's cliff, or the wet night plain. One
- *   source, specialised per world with `#define WORLD n` (0 salt, 1 coast, 2 canyon, 3 night).
+ *   source, specialised per world with `#define WORLD n` (0 salt, 1 coast, 2 canyon, 3 night,
+ *   4 Mars: the salt's plain in Mars colours).
  * - The motes: the Coast Road piece's oncoming dust (one particle per angular bin round the
  *   vanishing point, drawn from where it was a frame ago so it lengthens with speed), added in light
  *   over everything; the weather sets their colour, number, length and width.
@@ -24,8 +25,9 @@ void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
 `;
 
 /** World ids for the backdrop's `#define WORLD`. */
-export const WORLD_SHADER: Record<'salt' | 'coast' | 'canyon' | 'night', number> = {
+export const WORLD_SHADER: Record<'salt' | 'coast' | 'canyon' | 'night' | 'mars', number> = {
   salt: 0,
+  mars: 4,
   coast: 1,
   canyon: 2,
   night: 3,
@@ -116,7 +118,22 @@ vec2 sunOff(float az, float yE, float sunY) {
   return vec2(-F0 * clamp(wrapA(az - uSunAz), -3.0, 3.0), yE - sunY);
 }
 
-#if WORLD == 0 || WORLD == 2
+#if WORLD == 4
+/* Mars at dusk: butterscotch at the horizon, dusty rose, then a dark umber; a small white sun in a
+   blue halo (Martian dust scatters blue round the sun); Phobos and Deimos, two small grey moons. */
+vec3 sky(float az, float yE) {
+  vec3 c = mix(C(0.86, 0.6, 0.4), C(0.6, 0.38, 0.32), smoothstep(0.0, 0.22, yE));
+  c = mix(c, C(0.16, 0.1, 0.11), smoothstep(0.2, 0.7, yE));
+  float d = length(sunOff(az, yE, 0.07));
+  c += C(0.5, 0.68, 1.0) * exp(-d * 9.0) * 0.75 * uSunAmt;
+  c += C(0.95, 0.97, 1.0) * (1.0 - smoothstep(0.018, 0.022, d)) * 1.6 * uSunAmt;
+  float ph = length(sunOff(az - 1.25, yE, 0.24) * vec2(1.0, 1.3));
+  c = mix(c, C(0.62, 0.58, 0.55), (1.0 - smoothstep(0.009, 0.011, ph)) * 0.9);
+  float de = length(sunOff(az + 0.95, yE, 0.42));
+  c = mix(c, C(0.72, 0.7, 0.68), (1.0 - smoothstep(0.004, 0.006, de)) * 0.8);
+  return c;
+}
+#elif WORLD == 0 || WORLD == 2
 /* The Salt Flat piece's sky: warm at the horizon, violet, then deep blue; a big low sun. */
 vec3 sky(float az, float yE) {
   vec3 c = mix(C(1.0, 0.72, 0.52), C(0.62, 0.5, 0.72), smoothstep(0.0, 0.25, yE));
@@ -182,11 +199,20 @@ vec4 range(vec2 dir, float yE, float R, float Hmax, float layer) {
   vec2 face = normalize(-qn + tang * slope * 1.5);
   vec2 sunD = vec2(cos(uSunAz), sin(uSunAz));
   float lit = clamp(0.5 + 0.5 * dot(face, sunD), 0.0, 1.0);
+#if WORLD == 4
+  vec3 base = layer < 0.5 ? C(0.36, 0.17, 0.12) : layer < 1.5 ? C(0.52, 0.3, 0.22) : C(0.7, 0.5, 0.4);
+#else
   vec3 base = layer < 0.5 ? C(0.3, 0.2, 0.33) : layer < 1.5 ? C(0.46, 0.35, 0.52) : C(0.64, 0.56, 0.74);
+#endif
   vec3 col = base * (0.75 + 0.35 * lit) + C(1.0, 0.6, 0.4) * lit * lit * 0.22 * uSunAmt * (1.0 - layer * 0.25);
   // Snow on the tallest, where the height runs high up the peak.
   float snow = smoothstep(0.62, 0.75, H / Hmax) * step(0.5, layer);
+#if WORLD == 4
+  // No snow on Mars: pale dust on the tops.
+  col = mix(col, mix(C(0.62, 0.42, 0.34), C(0.9, 0.7, 0.55), lit), snow * 0.5);
+#else
   col = mix(col, mix(C(0.62, 0.62, 0.8), C(1.0, 0.88, 0.82), lit), snow * 0.85);
+#endif
   // A soft edge on the ridge line, and haze toward the horizon.
   float edge = smoothstep(0.0, 0.0015 * (1.0 + layer), top - yE);
   float haze = 0.18 + 0.22 * layer;
@@ -196,7 +222,7 @@ vec4 range(vec2 dir, float yE, float R, float Hmax, float layer) {
 /* Everything on the horizon at a direction and height: sky, ranges, mesas, hills. */
 vec3 horizon(vec2 dir, float az, float yE) {
   vec3 col = sky(az, yE);
-#if WORLD == 0 || WORLD == 2
+#if WORLD == 0 || WORLD == 2 || WORLD == 4
   vec3 skyH = sky(az, 0.0);
   vec4 m = range(dir, yE, 26000.0, 1500.0, 2.0);
   col = mix(col, mix(m.rgb, skyH, 0.4), m.a);
@@ -209,7 +235,11 @@ vec3 horizon(vec2 dir, float az, float yE) {
   // The low violet hills of the piece, nearest of all.
   vec2 cs = vec2(cos(az), sin(az));
   float hills = 0.008 + 0.022 * (vn(cs * 3.0 + 9.0) * 0.7 + vn(cs * 11.0 + 2.0) * 0.3);
+#if WORLD == 4
+  if (yE > 0.0 && yE < hills) col = mix(col, C(0.55, 0.3, 0.22), 0.7);
+#else
   if (yE > 0.0 && yE < hills) col = mix(col, C(0.55, 0.42, 0.62), 0.7);
+#endif
 #elif WORLD == 1
   // Headlands far across the bay, on the sea side.
   float rel = wrapA(az - uSunAz);
@@ -243,7 +273,7 @@ vec3 scene(vec2 p, out float yHz) {
   float az = atan(dir.y, dir.x);
   float yE = F0 * d.y / hl;
   yHz = yE;
-#if WORLD == 0 || WORLD == 2
+#if WORLD == 0 || WORLD == 2 || WORLD == 4
   // Heat shimmer: the air near the ground wavers, most toward the horizon.
   float sh = exp(-abs(yE) * 40.0);
   yE += (vn(vec2(az * 60.0, uTime * 3.0)) - 0.5) * 0.004 * sh;
@@ -258,16 +288,26 @@ vec3 scene(vec2 p, out float yHz) {
   vec2 rel = dir * t * hl;
   float dist = t * hl;
   vec2 g = uCamW + rel;
-#if WORLD == 0 || WORLD == 2
+#if WORLD == 0 || WORLD == 2 || WORLD == 4
+#if WORLD == 4
+  // Rust regolith, patchy, with darker basalt grit.
+  vec3 groundC = mix(C(0.66, 0.34, 0.2), C(0.82, 0.48, 0.3), pnw(g / 11.0, WRAPP / 11.0));
+  groundC = mix(groundC, C(0.36, 0.2, 0.14), smoothstep(0.62, 0.8, pnw(g / 37.0 + 4.0, WRAPP / 37.0)) * 0.6);
+#else
   vec3 groundC = mix(C(0.92, 0.82, 0.8), C(1.0, 0.9, 0.84), pnw(g / 11.0, WRAPP / 11.0));
+#endif
   float cr = saltW(g / 2.0, WRAPP / 2.0);
   float fw = max(fwidth(cr), 1e-4);
   float crack = 1.0 - smoothstep(0.02, 0.02 + fw * 1.5, cr);
   crack *= 1.0 - smoothstep(0.15, 0.45, length(fwidth(g / 2.0)));
+#if WORLD == 4
+  groundC *= 1.0 - 0.3 * crack * exp(-dist / 60.0);
+#else
   groundC *= 1.0 - 0.16 * crack * exp(-dist / 60.0);
+#endif
   groundC = mix(groundC, C(1.0, 0.98, 1.0), uSnow * 0.6);
   groundC *= 0.42;
-#if WORLD == 0
+#if WORLD == 0 || WORLD == 4
   if (uCourse > 0.5) {
     // The painted line, worn in places, and the start and finish lines across it.
     float ld = segDist(rel, uLine.xy, uLine.zw);
@@ -326,18 +366,19 @@ export function mesaGlsl(mesas: readonly { az: number; half: number; height: num
   return mesas
     .map(
       (m) =>
-        `  { float da = abs(wrapA(az - ${m.az.toFixed(4)})); float mh = ${m.height.toFixed(4)} * (1.0 - smoothstep(${(m.half * 0.8).toFixed(4)}, ${m.half.toFixed(4)}, da)) * (0.93 + 0.07 * vn(vec2(az * 80.0, 3.0)));\n    if (yE > 0.0 && yE < mh) col = mix(col, mix(C(0.42, 0.28, 0.4), sky(az, 0.0), 0.25), 0.9); }`,
+        `  { float da = abs(wrapA(az - ${m.az.toFixed(4)})); float mh = ${m.height.toFixed(4)} * (1.0 - smoothstep(${(m.half * 0.8).toFixed(4)}, ${m.half.toFixed(4)}, da)) * (0.93 + 0.07 * vn(vec2(az * 80.0, 3.0)));\n    if (yE > 0.0 && yE < mh) col = mix(col, mix(MESA_C, sky(az, 0.0), 0.25), 0.9); }`,
     )
     .join('\n');
 }
 
 /** The backdrop for one world. */
 export function backdropFragment(
-  world: 'salt' | 'coast' | 'canyon' | 'night',
+  world: 'salt' | 'coast' | 'canyon' | 'night' | 'mars',
   mesas: readonly { az: number; half: number; height: number }[],
 ): string {
   const src = BACKDROP.replace('/*MESAS*/', mesaGlsl(mesas));
-  return `#define WORLD ${WORLD_SHADER[world]}\n${SPEED_COMMON}\n${src}`;
+  const mesa = world === 'mars' ? 'C(0.5, 0.25, 0.17)' : 'C(0.42, 0.28, 0.4)';
+  return `#define WORLD ${WORLD_SHADER[world]}\n#define MESA_C ${mesa}\n${SPEED_COMMON}\n${src}`;
 }
 
 /* ── The motes ─────────────────────────────────────────────── */

@@ -35,7 +35,7 @@ function memory(): Store & { data: Map<string, string> } {
 }
 
 describe('worlds', () => {
-  it('lists the seven worlds on keys 1 to 7', () => {
+  it('lists the eight worlds on keys 1 to 8', () => {
     expect(WORLDS.map((w) => `${w.key} ${w.name}`)).toEqual([
       '1 Salt Flat',
       '2 Coast Road',
@@ -44,7 +44,9 @@ describe('worlds', () => {
       '5 Chinatown Run',
       '6 Neon District',
       '7 Sky Canyon',
+      '8 Mars',
     ]);
+    expect(isWorld('mars')).toBe(true);
     expect(isWorld('coast')).toBe(true);
     expect(isWorld('neon')).toBe(true);
     expect(isWorld('moon')).toBe(false);

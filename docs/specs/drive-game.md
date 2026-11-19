@@ -90,6 +90,13 @@ easy to stay on it", "same with coast road, make them much wider".
    gold frames of dots, two pillars and an arch, wall to wall; the first is 300 m ahead of the start,
    each lap is timed door to door. Default vehicle: the ship (the car drives it on the ground).
 
+8. **Mars** (key 8; 2026-11-19: "one map becomes Mars, in the style of the salt flats"): the Salt
+   Flat's open plain and its course (the measured mile, the drift gates), in Mars colours: rust
+   regolith with darker basalt grit and deeper polygon cracks, a butterscotch dusk going to dusty
+   rose and dark umber, a small white sun in a blue halo (Martian dust scatters blue round the sun),
+   Phobos and Deimos as two small grey moons, rust mesas and ranges with pale dust for snow, red
+   grit for motes. One shader with the salt (`#define WORLD 4`, lib/art/drive-shaders.ts).
+
 Why three night tracks: Night Rain stays the plain lamp course the user loved (with the City's
 towers, arch and rings added back from the road); Chinatown and the Neon District are new tracks
 with their own curvature, elevation and furniture from one generator (`lib/art/night-course.ts`),
