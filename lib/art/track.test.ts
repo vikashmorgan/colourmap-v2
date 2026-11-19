@@ -18,6 +18,9 @@ import {
   canyonWallU,
   collideTrack,
   frameAt,
+  GOLDEN,
+  GOLDEN_BANK,
+  GOLDEN_HALF,
   gateAt,
   groundAt,
   heightAt,
@@ -72,6 +75,29 @@ describe('banking', () => {
     expect(lipAt(9.5, 12, 1)).toBe(0);
     expect(lipAt(12, 12, 1)).toBeCloseTo(1);
     expect(lipAt(-11, 12, 1)).toBeGreaterThan(0);
+  });
+});
+
+describe('the Golden Track', () => {
+  it('bends tighter and banks steeper than the other tracks, and never crosses itself', () => {
+    const t = makeTrack(GOLDEN);
+    let most = 0;
+    let bank = 0;
+    const pts: { x: number; y: number }[] = [];
+    for (let s = 0; s <= 7200; s += 10) {
+      most = Math.max(most, Math.abs(GOLDEN.curv(s)));
+      bank = Math.max(bank, Math.abs(frameAt(t, s).bank));
+      pts.push(pointAt(t, s, 0));
+    }
+    expect(1 / most).toBeLessThan(150);
+    expect(bank).toBeCloseTo(GOLDEN_BANK, 2);
+    expect(GOLDEN_BANK).toBeGreaterThan(BANK_MAX);
+    // Points more than 300 m apart along the road stay apart across it.
+    let near = Infinity;
+    for (let i = 0; i < pts.length; i++)
+      for (let j = i + 30; j < pts.length; j++)
+        near = Math.min(near, Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y));
+    expect(near).toBeGreaterThan(GOLDEN_HALF * 2 + 10);
   });
 });
 

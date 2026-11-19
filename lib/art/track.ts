@@ -430,17 +430,20 @@ export const NEON_TRACK: TrackDef = {
  * City's and Art's gold dots (components/drive/track-view.ts `goldDots`).
  */
 export const GOLDEN_HALF = 18;
+export const GOLDEN_BANK = 0.34;
 export const GOLDEN: TrackDef = {
   id: 'gold',
   startH: 0,
+  // Tighter bends (2026-11-19: "more curving on the turns, more tilt on the slope"): the tightest
+  // about 130 m across, banked up to 0.34 rad (≈ 20°), against the other tracks' 0.2.
   curv: (s) =>
-    1.1 * (TAU / 3600) * Math.cos((TAU * s) / 3600) +
-    0.35 * (TAU / 1500) * Math.cos((TAU * s) / 1500 + 0.7),
+    1.3 * (TAU / 2400) * Math.cos((TAU * s) / 2400) +
+    0.6 * (TAU / 900) * Math.cos((TAU * s) / 900 + 0.7),
   elev: (s) => 3 * Math.sin((TAU * s) / 1300) + 1.5 * Math.sin((TAU * s) / 520 + 1.1),
   half: () => GOLDEN_HALF,
   lip: () => 0.45,
-  bankSpeed: 60,
-  bankMax: BANK_MAX,
+  bankSpeed: 70,
+  bankMax: GOLDEN_BANK,
   terrain: 0,
   walls: () => barrier(GOLDEN_HALF),
 };

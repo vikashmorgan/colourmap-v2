@@ -294,3 +294,16 @@ Design button at the bottom right is gone; Esc closes the column, Esc again leav
 
 The ship now banks into the turn like the car: turning right, its right side goes down ("when I
 turn right the right side should be lower").
+### The Golden Track, reworked (2026-11-19)
+
+Asked: "more curving on the turns, more tilt on the slope as a curve, and more graphic elements to
+decorate it, like a city around" and "a big Saturn with rings in the sky, so it feels we are on a
+planet".
+
+- Tighter bends: the tightest about 130 m across. The road banks up to 0.34 rad (about 20°; the other
+  tracks stop at 0.2). A test checks the road never crosses itself.
+- The city of gold: towers drawn in dots (their edges and a ring at every floor) every 45 m on
+  both sides, set back 30 to 140 m, taller the farther they stand, a beacon on the tallest; none on
+  the inside of a tight bend. A dotted sphere floats over the city every 600 m.
+- A great ringed planet in the sky: banded in golds, lit from one side, its tilted ring passing
+  behind the globe above and in front of it below; the wet road mirrors it.
