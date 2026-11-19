@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BODIES,
+  BUBBLES,
   bestKey,
+  CORES,
   DEFAULT_DESIGN,
   DESIGN_KEY,
   FIRES,
@@ -14,10 +16,12 @@ import {
   loadBest,
   loadDesign,
   parseDesign,
+  REACTORS,
   rideEverywhere,
   type Store,
   saveBest,
   saveDesign,
+  shipParts,
   WORLDS,
 } from './drive-design';
 import { FLAME_PALETTES } from './flame';
@@ -91,6 +95,16 @@ describe('bodies', () => {
   });
 });
 
+describe('ship parts', () => {
+  it('offers reactors, cockpits and cores, and falls back on anything odd', () => {
+    expect(REACTORS.map((r) => r.id)).toEqual(['side', 'top', 'quad']);
+    expect(BUBBLES.map((b) => b.id)).toEqual(['dome', 'racer', 'twin', 'visor']);
+    expect(CORES.map((c) => c.id)).toEqual(['none', 'ring', 'orb', 'crystal']);
+    const d = parseDesign('{"reactors":"warp","bubble":"tank","core":"sun"}', IDS);
+    expect(shipParts(d)).toEqual({ reactors: 'side', bubble: 'dome', core: 'none' });
+  });
+});
+
 describe('one ride everywhere', () => {
   it('puts the same vehicle in every world', () => {
     const d = rideEverywhere(DEFAULT_DESIGN, 'ship');
@@ -118,6 +132,9 @@ describe('the design, remembered', () => {
       mode: 'easy' as const,
       paint: '#ff8800',
       body: 'classic' as const,
+      reactors: 'quad' as const,
+      bubble: 'visor' as const,
+      core: 'crystal' as const,
     };
     d.vehicle = { ...d.vehicle, salt: 'ship' };
     saveDesign(store, d);

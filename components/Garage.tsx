@@ -18,6 +18,10 @@ import { GarageScene } from '@/components/garage/scene';
 import {
   BODIES,
   type BodyId,
+  BUBBLES,
+  type BubbleId,
+  CORES,
+  type CoreId,
   DEFAULT_DESIGN,
   type Design,
   DRIVE_MODES,
@@ -27,6 +31,8 @@ import {
   type GaugeId,
   HULLS,
   loadDesign,
+  REACTORS,
+  type ReactorId,
   rideEverywhere,
   type Store,
   saveDesign,
@@ -223,6 +229,16 @@ export default function Garage() {
         {row('Ride', RIDES, kind, (id) => change(rideEverywhere(design, id as 'car' | 'ship')))}
         {kind === 'car' &&
           row('Body', BODIES, design.body, (id) => change({ ...design, body: id as BodyId }))}
+        {kind === 'ship' &&
+          row('Reactors', REACTORS, design.reactors, (id) =>
+            change({ ...design, reactors: id as ReactorId }),
+          )}
+        {kind === 'ship' &&
+          row('Cockpit', BUBBLES, design.bubble, (id) =>
+            change({ ...design, bubble: id as BubbleId }),
+          )}
+        {kind === 'ship' &&
+          row('Core', CORES, design.core, (id) => change({ ...design, core: id as CoreId }))}
         {row('Hull', HULLS, design.hull, (id) => change({ ...design, hull: id as Design['hull'] }))}
         {design.hull === 'paint' && (
           <label

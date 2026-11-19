@@ -72,4 +72,16 @@ describe('the Garage', () => {
     expect(scene.pointerMove).toHaveBeenCalledWith(60, 10);
     expect(scene.pointerUp).toHaveBeenCalled();
   });
+
+  it('the ship gets reactors, a cockpit and a core to pick; the car a body', () => {
+    render(<Garage />);
+    expect(screen.getByRole('button', { name: 'Classic GT' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'One on top' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Hover ship' }));
+    fireEvent.click(screen.getByRole('button', { name: 'One on top' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Racing canopy' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Crystal' }));
+    expect(saved()).toMatchObject({ reactors: 'top', bubble: 'racer', core: 'crystal' });
+    expect(screen.queryByRole('button', { name: 'Classic GT' })).toBeNull();
+  });
 });

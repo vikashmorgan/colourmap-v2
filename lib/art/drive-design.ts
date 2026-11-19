@@ -189,7 +189,51 @@ export interface Design {
   paint: string;
   /** The car's body (components/drive/bodies.ts); the ship has its own. */
   body: BodyId;
+  /** The ship's parts (the Garage's spaceship creator). */
+  reactors: ReactorId;
+  bubble: BubbleId;
+  core: CoreId;
 }
+
+/**
+ * The spaceship creator (2026-11-19: "different reactors I can place on the side or above,
+ * different bubbles for the cockpit and different cores; the aim is that they match well with each
+ * other"). Every part takes the hull's paint, and the core glows in the fire's colour, so any
+ * mix matches.
+ */
+export type ReactorId = 'side' | 'top' | 'quad';
+export const REACTORS: { id: ReactorId; name: string }[] = [
+  { id: 'side', name: 'Twin side' },
+  { id: 'top', name: 'One on top' },
+  { id: 'quad', name: 'Four' },
+];
+export type BubbleId = 'dome' | 'racer' | 'twin' | 'visor';
+export const BUBBLES: { id: BubbleId; name: string }[] = [
+  { id: 'dome', name: 'Dome' },
+  { id: 'racer', name: 'Racing canopy' },
+  { id: 'twin', name: 'Twin bubbles' },
+  { id: 'visor', name: 'Visor' },
+];
+export type CoreId = 'none' | 'ring' | 'orb' | 'crystal';
+export const CORES: { id: CoreId; name: string }[] = [
+  { id: 'none', name: 'None' },
+  { id: 'ring', name: 'Light ring' },
+  { id: 'orb', name: 'Orb' },
+  { id: 'crystal', name: 'Crystal' },
+];
+
+export interface ShipParts {
+  reactors: ReactorId;
+  bubble: BubbleId;
+  core: CoreId;
+}
+
+/** The ship's parts out of a design. */
+export const shipParts = (d: ShipParts): ShipParts => ({
+  reactors: d.reactors,
+  bubble: d.bubble,
+  core: d.core,
+});
 
 /**
  * The car's bodies (2026-11-19: "a motorbike", "cars inspired by the 50s GTO, and then the same
@@ -228,6 +272,9 @@ export const DEFAULT_DESIGN: Design = {
   mode: 'flow',
   paint: '#2a6cf0',
   body: 'wedge',
+  reactors: 'side',
+  bubble: 'dome',
+  core: 'none',
   vehicle: {
     salt: 'car',
     coast: 'ship',
@@ -269,6 +316,11 @@ export function parseDesign(raw: string | null, weathers: readonly string[]): De
     mode: DRIVE_MODES.some((m) => m.id === o.mode) ? (o.mode as DriveMode) : DEFAULT_DESIGN.mode,
     paint: isHex(o.paint) ? o.paint.toLowerCase() : DEFAULT_DESIGN.paint,
     body: BODIES.some((b) => b.id === o.body) ? (o.body as BodyId) : DEFAULT_DESIGN.body,
+    reactors: REACTORS.some((r) => r.id === o.reactors)
+      ? (o.reactors as ReactorId)
+      : DEFAULT_DESIGN.reactors,
+    bubble: BUBBLES.some((b) => b.id === o.bubble) ? (o.bubble as BubbleId) : DEFAULT_DESIGN.bubble,
+    core: CORES.some((c) => c.id === o.core) ? (o.core as CoreId) : DEFAULT_DESIGN.core,
   };
 }
 

@@ -16,7 +16,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 import { buildVehicle, type VehicleView } from '@/components/drive/vehicles';
-import { type Design, fireById, hullOf } from '@/lib/art/drive-design';
+import { type Design, fireById, hullOf, shipParts } from '@/lib/art/drive-design';
 import {
   dragTurn,
   newTurntable,
@@ -223,7 +223,14 @@ export class GarageScene {
       this.view.dispose();
     }
     const kind = design.vehicle.salt;
-    const view = buildVehicle(kind, hullOf(design), fireById(design.fire), this.env, design.body);
+    const view = buildVehicle(
+      kind,
+      hullOf(design),
+      fireById(design.fire),
+      this.env,
+      design.body,
+      shipParts(design),
+    );
     view.group.traverse((o) => {
       if (o instanceof THREE.Mesh) o.castShadow = true;
     });
