@@ -19,7 +19,7 @@ import {
 import { CHINATOWN, NEON_TRACK, NIGHT } from './track';
 
 const DEF = { rain: NIGHT, chinatown: CHINATOWN, neon: NEON_TRACK } as const;
-const kinds = (theme: NightTheme, s0 = 0, s1 = 1600) =>
+const kinds = (theme: Exclude<NightTheme, 'gold'>, s0 = 0, s1 = 1600) =>
   new Set(piecesBetween(theme, DEF[theme], s0, s1).map((p) => p.kind));
 
 describe('night furniture', () => {

@@ -323,9 +323,11 @@ function groundColour(cfg: WorldCfg, s: number, u: number, half: number, snow: n
     const tint: V3 =
       cfg.theme === 'chinatown'
         ? [0.095, 0.07, 0.062]
-        : cfg.theme === 'neon'
-          ? [0.075, 0.07, 0.1]
-          : [0.08, 0.082, 0.095];
+        : cfg.theme === 'gold'
+          ? [0.07, 0.055, 0.04]
+          : cfg.theme === 'neon'
+            ? [0.075, 0.07, 0.1]
+            : [0.08, 0.082, 0.095];
     c = tint.map((v) => v * (0.85 + 0.3 * n)) as V3;
     if (Math.abs(u) > half - 2.5 && out <= 0) c = c.map((v) => v * 1.35) as V3;
     if (out > 0) c = c.map((v) => v * 0.45) as V3;
@@ -410,7 +412,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       : cfg.id === 'sky'
         ? { u: () => skyWallU(), h: skyWallHeight, on: () => 1 }
         : null;
-  const dotMat = cfg.id === 'sky' ? makeDots() : null;
+  const dotMat = cfg.id === 'sky' || cfg.id === 'gold' ? makeDots() : null;
   let streamS = cfg.startS;
   let streamT = 0;
   const shared: Record<string, THREE.IUniform> = {
@@ -476,9 +478,11 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
   const lineCols: { edge: V3; dash: V3 } =
     theme === 'chinatown'
       ? { edge: [1.5, 0.95, 0.35], dash: [0.9, 0.55, 0.25] }
-      : theme === 'neon'
-        ? { edge: [0.3, 1.3, 1.6], dash: [1.2, 0.3, 1.1] }
-        : { edge: [0.55, 0.85, 1.4], dash: [0.5, 0.55, 0.65] };
+      : theme === 'gold'
+        ? { edge: [1.6, 1.05, 0.38], dash: [0.95, 0.65, 0.28] }
+        : theme === 'neon'
+          ? { edge: [0.3, 1.3, 1.6], dash: [1.2, 0.3, 1.1] }
+          : { edge: [0.55, 0.85, 1.4], dash: [0.5, 0.55, 0.65] };
   function markings(
     s0: number,
     s1: number,
@@ -692,7 +696,9 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       }
     }
 
-    if (theme) furnish(theme, s0, s1, ax, ay, g, solid);
+    // The Golden Track has no buildings: only its gold dots.
+    if (theme === 'gold') goldDots(s0, s1, g);
+    else if (theme) furnish(theme, s0, s1, ax, ay, g, solid);
     if (!solid.empty) g.add(new THREE.Mesh(solid.geometry(), solidMat));
     group.add(g);
     return { i, group: g, ax, ay };
@@ -715,6 +721,83 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     const base = heightAt(track, s, side * wu);
     const z = edgeH + hb;
     return [side * (wu + 1 + 0.25 * Math.max(0, z - base) - 0.8), z];
+  }
+
+  /**
+   * The Golden Track's dots (the City's and Art's gold dots): a row along each edge, a second
+   * higher and fainter; a dotted arch over the road every 90 m; now and then a ring of dots
+   * standing beside the road; and constellations scattered over the dark ground either side.
+   * All on the shared dot material, so the streams run ahead of you as in Sky Canyon.
+   */
+  function goldDots(s0: number, s1: number, g: THREE.Group) {
+    if (!dotMat) return;
+    const pos: number[] = [];
+    const col: number[] = [];
+    const ss: number[] = [];
+    const size: number[] = [];
+    const a = frameAt(track, s0);
+    const put = (s: number, u: number, z: number, c: V3, sz: number) => {
+      const p = pointAt(track, s, u);
+      pos.push(p.x - a.x, z, -(p.y - a.y));
+      col.push(...c);
+      ss.push(s);
+      size.push(sz);
+    };
+    const golds: V3[] = [
+      [2.2, 1.5, 0.6],
+      [2.0, 1.1, 0.35],
+      [2.4, 1.9, 1.0],
+    ];
+    const hashN = (n: number) => {
+      const x = Math.sin(n * 127.1) * 43758.5453;
+      return x - Math.floor(x);
+    };
+    for (let s = Math.ceil(s0 / 2.5) * 2.5; s < s1; s += 2.5) {
+      const half = def.half(s);
+      for (const side of [1, -1]) {
+        const e = heightAt(track, s, side * (half + 1));
+        put(s, side * (half + 1), e + 0.5, golds[0], 0.8);
+        if (Math.round(s / 2.5) % 2 === 0) put(s, side * (half + 1.6), e + 2.4, golds[1], 0.6);
+      }
+    }
+    // Arches over the road.
+    for (let sa = Math.ceil(s0 / 90) * 90; sa < s1; sa += 90) {
+      const half = def.half(sa) + 2.5;
+      const e = heightAt(track, sa, 0);
+      for (let t = 0; t <= Math.PI + 1e-6; t += 0.9 / half)
+        put(sa, Math.cos(t) * half, e + Math.sin(t) * half * 0.75, golds[2], 1.2);
+    }
+    // A ring of dots standing beside the road, every 360 m, alternating sides.
+    for (let sr = Math.ceil(s0 / 360) * 360 + 180; sr < s1; sr += 360) {
+      const side = Math.round(sr / 360) % 2 ? 1 : -1;
+      const uc = side * (def.half(sr) + 14);
+      const e = heightAt(track, sr, uc);
+      for (let t = 0; t < Math.PI * 2; t += 0.12)
+        put(sr + Math.cos(t) * 0.01, uc + Math.cos(t) * 8, e + 9 + Math.sin(t) * 8, golds[1], 1.4);
+    }
+    // Constellations on the dark ground either side.
+    for (let s = Math.ceil(s0 / 4) * 4; s < s1; s += 4)
+      for (const side of [1, -1]) {
+        const r = hashN(s * 0.37 + side * 11.3);
+        if (r > 0.45) continue;
+        const u = side * (def.half(s) + 6 + hashN(s + side) * 70);
+        put(
+          s,
+          u,
+          heightAt(track, s, u) + 0.15 + hashN(s * 3.1) * 0.6,
+          golds[Math.floor(r * 6.6) % 3],
+          0.5,
+        );
+      }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('aCol', new THREE.Float32BufferAttribute(col, 3));
+    geo.setAttribute('aS', new THREE.Float32BufferAttribute(ss, 1));
+    geo.setAttribute('aSize', new THREE.Float32BufferAttribute(size, 1));
+    const pts = new THREE.Points(geo, dotMat);
+    pts.frustumCulled = false;
+    pts.renderOrder = 6;
+    g.add(pts);
   }
 
   function skyDots(s0: number, s1: number, g: THREE.Group) {

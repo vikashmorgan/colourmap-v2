@@ -24,7 +24,7 @@ import { clamp } from '@/lib/art/drive';
 import type { TrackDef } from '@/lib/art/track';
 
 export type Rgb = [number, number, number];
-export type NightTheme = 'rain' | 'chinatown' | 'neon';
+export type NightTheme = 'rain' | 'chinatown' | 'neon' | 'gold';
 
 /** The City's neon: amber, magenta, cyan, violet, warm white. */
 export const NEON: Rgb[] = [
@@ -84,8 +84,17 @@ export const MOODS: Record<RingMood, { ring: Rgb; stops: [Rgb, Rgb, Rgb] }> = {
 };
 export const MOOD_ORDER: RingMood[] = ['gold', 'fire', 'neon'];
 
+/** The Golden Track's golds: warm, deep, pale and amber. */
+export const GOLDS: Rgb[] = [
+  [1, 0.8, 0.38],
+  [1, 0.62, 0.2],
+  [1, 0.9, 0.62],
+  [0.95, 0.7, 0.3],
+];
+
 export function palette(theme: NightTheme): Rgb[] {
   if (theme === 'chinatown') return [LANTERN, GOLD, LACQUER, JADE];
+  if (theme === 'gold') return GOLDS;
   if (theme === 'neon') return NEON_DISTRICT;
   return NEON;
 }

@@ -14,6 +14,7 @@ import {
   CHINATOWN,
   COAST,
   COAST_SEA,
+  GOLDEN,
   NEON_TRACK,
   NIGHT,
   RACE,
@@ -30,7 +31,7 @@ export interface WorldCfg {
   track: TrackDef | null;
   theme: NightTheme | null;
   /** The backdrop's world (lib/art/drive-shaders.ts WORLD_SHADER). */
-  backdrop: 'salt' | 'coast' | 'canyon' | 'night' | 'mars';
+  backdrop: 'salt' | 'coast' | 'canyon' | 'night' | 'mars' | 'gold';
   /** The low sun's azimuth (counter-clockwise from east). */
   sunAz: number;
   /** The plane under everything: its height. */
@@ -71,6 +72,19 @@ export const WORLD_CFG: Record<WorldId, WorldCfg> = {
     race: 'mile',
     dust: lin(0.86, 0.46, 0.28),
     wet: false,
+  },
+  // The road drawn in gold dots, at night, its wet surface mirroring them.
+  gold: {
+    id: 'gold',
+    track: GOLDEN,
+    theme: 'gold',
+    backdrop: 'gold',
+    sunAz: 0,
+    planeY: 0,
+    startS: 40,
+    race: 'km',
+    dust: lin(0.9, 0.72, 0.4),
+    wet: true,
   },
   coast: {
     id: 'coast',

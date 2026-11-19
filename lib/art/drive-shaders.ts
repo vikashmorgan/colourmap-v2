@@ -7,7 +7,7 @@
  *   plane under them: the crazed salt with its mirage (the Salt Flat piece's own formulas, now seen
  *   from a camera that can turn), the sea under the Coast Road's cliff, or the wet night plain. One
  *   source, specialised per world with `#define WORLD n` (0 salt, 1 coast, 2 canyon, 3 night,
- *   4 Mars: the salt's plain in Mars colours).
+ *   4 Mars: the salt's plain in Mars colours, 5 the Golden Track's gold night).
  * - The motes: the Coast Road piece's oncoming dust (one particle per angular bin round the
  *   vanishing point, drawn from where it was a frame ago so it lengthens with speed), added in light
  *   over everything; the weather sets their colour, number, length and width.
@@ -25,13 +25,15 @@ void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
 `;
 
 /** World ids for the backdrop's `#define WORLD`. */
-export const WORLD_SHADER: Record<'salt' | 'coast' | 'canyon' | 'night' | 'mars', number> = {
-  salt: 0,
-  mars: 4,
-  coast: 1,
-  canyon: 2,
-  night: 3,
-};
+export const WORLD_SHADER: Record<'salt' | 'coast' | 'canyon' | 'night' | 'mars' | 'gold', number> =
+  {
+    salt: 0,
+    mars: 4,
+    gold: 5,
+    coast: 1,
+    canyon: 2,
+    night: 3,
+  };
 
 /** The backdrop's own uniforms (floats), besides SPEED_COMMON's. */
 export const BACKDROP_FLOATS = [
@@ -152,6 +154,18 @@ vec3 sky(float az, float yE) {
   return c;
 }
 #else
+#if WORLD == 5
+/* The Golden Track's night: near black, a low gold glow round the horizon, fine gold stars. */
+vec3 sky(float az, float yE) {
+  vec3 c = mix(C(0.05, 0.035, 0.02), C(0.006, 0.005, 0.004), smoothstep(-0.05, 0.4, yE));
+  c += C(0.9, 0.6, 0.25) * exp(-max(yE, 0.0) * 16.0) * 0.16;
+  vec2 cell = floor(vec2(az * 140.0, yE * 140.0));
+  float h = hash11(mod(cell.x * 13.0 + cell.y * 157.0, 997.0) + 1.0);
+  vec2 fr = fract(vec2(az * 140.0, yE * 140.0)) - 0.5;
+  float star = step(0.93, h) * (1.0 - smoothstep(0.05, 0.16, length(fr))) * smoothstep(0.02, 0.1, yE);
+  return c + C(1.0, 0.8, 0.45) * star * (0.4 + 0.6 * fract(h * 37.0));
+}
+#else
 /* Night: a dark sky, the city's glow low round the horizon. */
 vec3 sky(float az, float yE) {
   vec3 c = mix(C(0.06, 0.06, 0.1), C(0.008, 0.008, 0.016), smoothstep(-0.05, 0.4, yE));
@@ -159,6 +173,7 @@ vec3 sky(float az, float yE) {
   vec3 tint = mix(C(0.5, 0.18, 0.42), C(0.75, 0.45, 0.22), 0.5 + 0.5 * sin(az * 3.0 + 1.0));
   return c + tint * glow * 0.18;
 }
+#endif
 #endif
 
 /* The far ranges: three rings of ridged mountains round a point that drifts with the camera at a
@@ -373,7 +388,7 @@ export function mesaGlsl(mesas: readonly { az: number; half: number; height: num
 
 /** The backdrop for one world. */
 export function backdropFragment(
-  world: 'salt' | 'coast' | 'canyon' | 'night' | 'mars',
+  world: 'salt' | 'coast' | 'canyon' | 'night' | 'mars' | 'gold',
   mesas: readonly { az: number; half: number; height: number }[],
 ): string {
   const src = BACKDROP.replace('/*MESAS*/', mesaGlsl(mesas));
