@@ -351,6 +351,14 @@ export default function DriveGame() {
               {hud.best && !hud.running && <span>best {hud.best}</span>}
             </div>
           )}
+          {hud.place != null && (
+            <div style={{ fontSize: 11, marginTop: 2, color: `${quiet}0.5)` }}>
+              <span style={{ color: hud.place === 1 ? 'rgba(255,200,110,0.95)' : undefined }}>
+                P{hud.place}
+              </span>{' '}
+              / {hud.racers}
+            </div>
+          )}
           {hud.drift != null && (
             <div style={{ fontSize: 11, marginTop: 2, color: `${quiet}0.5)` }}>
               drift {hud.drift}
@@ -527,6 +535,15 @@ export default function DriveGame() {
               ›
             </span>
           </a>
+          {row(
+            'Racers',
+            [
+              { id: 'on', name: '5 rivals' },
+              { id: 'off', name: 'Alone' },
+            ],
+            design.rivals ? 'on' : 'off',
+            (id) => changeDesign({ ...design, rivals: id === 'on' }),
+          )}
           <div style={heading}>Design</div>
           {row(
             'Vehicle',

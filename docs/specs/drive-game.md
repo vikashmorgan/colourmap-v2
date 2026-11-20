@@ -311,3 +311,15 @@ planet".
   the inside of a tight bend. A dotted sphere floats over the city every 600 m.
 - A great ringed planet in the sky: banded in golds, lit from one side, its tilted ring passing
   behind the globe above and in front of it below; the wet road mirrors it.
+
+## Rivals
+
+2026-11-20: "racing more with other racers of another colour and flame, for all the racetracks, can be turned on or off, 5 other racers, in the menu can be activated."
+
+- The menu column's **Racers** row: *5 rivals* or *Alone* (Design.rivals, off by default, kept with the design).
+- On every track world, five rivals line up round your start: Cyan (plasma fire), Violet (gas), Lime (blaze), Orange (white-hot), Pearl (speed). Each is a glossy paint in its own colour and rides what you ride in that world. The cars mix bodies (wedge, Future GT, Classic GT).
+- They hold the grid until you pull away, then drive the autopilot (lib/art/autopilot.ts), each on its own line across the road at its own pace (lib/art/rivals.ts).
+- A gentle elastic keeps the pack near you: a rival more than 160 m ahead eases off, and one more than 160 m behind boosts.
+- Racers bump: touching pushes the two apart and trades the head-on part of their speeds. They never pass through each other.
+- Under the clock, the HUD shows your place, e.g. *P2 / 6* (gold when leading).
+- On the open plains (Salt Flat, Mars) there are no rivals, since there is no road to race on.

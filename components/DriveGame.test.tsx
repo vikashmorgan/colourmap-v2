@@ -70,6 +70,14 @@ describe('Drive', () => {
     );
   });
 
+  it('switches the five rivals on from the menu and keeps it', () => {
+    render(<DriveGame />);
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    fireEvent.click(screen.getByRole('button', { name: '5 rivals' }));
+    expect(engine.setDesign).toHaveBeenLastCalledWith(expect.objectContaining({ rivals: true }));
+    expect(JSON.parse(window.localStorage.getItem(DESIGN_KEY) ?? '{}').rivals).toBe(true);
+  });
+
   it('opens the world asked for in the address', async () => {
     window.history.replaceState(null, '', '/geometry-field/drive?world=coast');
     render(<DriveGame />);

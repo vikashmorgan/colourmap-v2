@@ -21,13 +21,15 @@ export function autopilotControls(
   s: number,
   t: number,
   flying = false,
+  /** The line it holds across the road (m, + left); the rivals each keep their own. */
+  lane = 0,
 ): Controls {
   const speed = Math.hypot(v.vx, v.vy);
   if (!track) {
     // The salt: long, easy curves.
     return { throttle: 1, steer: 0.35 * Math.sin(t * 0.23), boost: 0 };
   }
-  const p = pointAt(track, s + LOOK.base + LOOK.perSpeed * speed, 0);
+  const p = pointAt(track, s + LOOK.base + LOOK.perSpeed * speed, lane);
   const err = wrapAngle(Math.atan2(p.y - v.y, p.x - v.x) - v.h);
   const c: Controls = {
     throttle: 1,
