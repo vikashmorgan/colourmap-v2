@@ -205,6 +205,8 @@ export interface Design {
   reactors: ReactorId;
   bubble: BubbleId;
   core: CoreId;
+  /** The five rivals on the tracks (lib/art/rivals.ts). */
+  rivals: boolean;
 }
 
 /**
@@ -287,6 +289,7 @@ export const DEFAULT_DESIGN: Design = {
   reactors: 'side',
   bubble: 'dome',
   core: 'none',
+  rivals: false,
   vehicle: {
     salt: 'car',
     coast: 'ship',
@@ -335,6 +338,7 @@ export function parseDesign(raw: string | null, weathers: readonly string[]): De
       : DEFAULT_DESIGN.reactors,
     bubble: BUBBLES.some((b) => b.id === o.bubble) ? (o.bubble as BubbleId) : DEFAULT_DESIGN.bubble,
     core: CORES.some((c) => c.id === o.core) ? (o.core as CoreId) : DEFAULT_DESIGN.core,
+    rivals: typeof o.rivals === 'boolean' ? o.rivals : DEFAULT_DESIGN.rivals,
   };
 }
 

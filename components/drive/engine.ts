@@ -74,6 +74,7 @@ import {
   surgeAccel,
   throughRing,
 } from '@/lib/art/night-course';
+import { bump, placeOf, RIVALS, type Rival, rivalControls, rivalHull } from '@/lib/art/rivals';
 import {
   CAM_H,
   CAR_DIST,
@@ -136,6 +137,9 @@ export interface Hud {
   best: string | null;
   record: boolean;
   running: boolean;
+  /** Your place among the racers when the rivals are on (1 = leading), and how many race. */
+  place?: number | null;
+  racers?: number;
 }
 
 export interface EngineOptions {
@@ -426,6 +430,9 @@ export class DriveEngine {
   private view: TrackView | SaltView | null = null;
   private vehicle!: Vehicle;
   private vehicleView: VehicleView | null = null;
+  private rivals: { r: Rival; v: Vehicle; s: number; view: VehicleView }[] = [];
+  /** The rivals hold the grid until you pull away. */
+  private rivalsGo = false;
   private weather: WeatherState;
 
   private controls: Controls = NO_CONTROLS;
@@ -698,7 +705,67 @@ export class DriveEngine {
     this.drift = this.newDrift(kind);
     this.surgeAt = -99;
     this.buildVehicleView();
+    this.buildRivals();
     this.lastHud = '';
+  }
+
+  /** The five rivals, lined up round your start on a track; none on the open plains. */
+  private buildRivals() {
+    for (const rv of this.rivals) {
+      this.scene.remove(rv.view.group);
+      rv.view.dispose();
+    }
+    this.rivals = [];
+    this.rivalsGo = false;
+    if (!this.design.rivals || !this.trackWorld) return;
+    const tr = this.trackWorld.track;
+    const kind = this.vehicle.kind;
+    const bodies = ['wedge', 'future', 'classic', 'future', 'wedge'] as const;
+    this.rivals = RIVALS.map((r, i) => {
+      const s = this.s + r.grid.ds;
+      const u = r.grid.du * tr.def.half(Math.max(0, s)) * 0.7;
+      const p = pointAt(tr, s, u);
+      const v = newVehicle(kind, p.x, p.y, frameAt(tr, s).h, heightAt(tr, s, u));
+      const view = buildVehicle(
+        kind,
+        rivalHull(r),
+        fireById(r.fire),
+        this.env,
+        bodies[i],
+        shipParts(this.design),
+      );
+      this.scene.add(view.group);
+      return { r, v, s, view };
+    });
+    tr.hint = this.s;
+  }
+
+  /** The rivals drive, and bump into you and each other. */
+  private stepRivals(dt: number, t: number) {
+    if (!this.trackWorld || this.rivals.length === 0) return;
+    const tr = this.trackWorld.track;
+    const sky = this.cfg.id === 'sky';
+    if (speedOf(this.vehicle) > 2) this.rivalsGo = true;
+    for (const rv of this.rivals) {
+      if (!this.rivalsGo) break;
+      tr.hint = rv.s;
+      const ctl = rivalControls(rv.r, rv.v, tr, rv.s, t, rv.s - this.s, sky);
+      stepVehicle(rv.v, { ...ctl, mode: this.design.mode }, dt, this.physics, t);
+      const q = project(tr, rv.v.x, rv.v.y, rv.s);
+      if (Math.abs(q.u) > 80 || !Number.isFinite(q.s)) {
+        const p = pointAt(tr, Math.max(0, rv.s), 0);
+        rv.v.x = p.x;
+        rv.v.y = p.y;
+        rv.v.z = heightAt(tr, Math.max(0, rv.s), 0) + VEHICLES[rv.v.kind].hover;
+        rv.v.vx = 0;
+        rv.v.vy = 0;
+      } else rv.s = q.s;
+    }
+    for (let i = 0; i < this.rivals.length; i++) {
+      bump(this.vehicle, this.rivals[i].v);
+      for (let j = i + 1; j < this.rivals.length; j++) bump(this.rivals[i].v, this.rivals[j].v);
+    }
+    tr.hint = this.s;
   }
 
   /** The Salt Flat's car keeps the piece's own camera: 1.2 m up, level, right behind it. */
@@ -747,6 +814,10 @@ export class DriveEngine {
   setDesign(d: Design) {
     const prev = this.design;
     this.design = d;
+    if (d.rivals !== prev.rivals || d.vehicle[this.cfg.id] !== prev.vehicle[this.cfg.id]) {
+      // Rebuilt once the vehicle below is settled.
+      queueMicrotask(() => this.buildRivals());
+    }
     this.weather = setWeather(this.weather, d.weather, this.cfg.id);
     if (d.vehicle[this.cfg.id] !== this.vehicle.kind) {
       // Change vehicle where you are.
@@ -833,6 +904,7 @@ export class DriveEngine {
     this.stop();
     if (this.view) this.view.dispose();
     this.vehicleView?.dispose();
+    for (const rv of this.rivals) rv.view.dispose();
     disposeGroup(this.scene);
     this.env?.dispose();
     this.composer.dispose();
@@ -919,6 +991,7 @@ export class DriveEngine {
             saveBest(this.store, `drive.gates.score.${k}`, this.drift.lastScore);
         }
       }
+      this.stepRivals(dt, t);
       this.dust(ev.landed, ev.bump, dt, w);
       if (ev.scrape) this.spray(ev.scrape, ev.scrapeNx ?? 0, ev.scrapeNy ?? 0, dt);
     }
@@ -992,6 +1065,22 @@ export class DriveEngine {
         power,
         clamp(speed / spec.vTop, 0, 1.4),
         this.design.flames ? speedFlame(speed, spec.vTop) : 0,
+      );
+    }
+    for (const rv of this.rivals) {
+      const g = rv.view.group;
+      const rs = speedOf(rv.v);
+      g.visible = Math.hypot(rv.v.x - ox, rv.v.y - oy) < 700;
+      if (!g.visible) continue;
+      g.position.set(rv.v.x - ox, rv.v.z, -(rv.v.y - oy));
+      g.rotation.set(-rv.v.pitch, rv.v.h + Math.PI / 2, -rv.v.roll, 'YXZ');
+      rv.view.update(
+        rv.v,
+        t,
+        dt,
+        1,
+        clamp(rs / spec.vTop, 0, 1.4),
+        this.design.flames ? speedFlame(rs, spec.vTop) : 0,
       );
     }
     this.trails(t, w);
@@ -1289,6 +1378,13 @@ export class DriveEngine {
       drift: !gates ? null : d.start !== null ? liveScore(d) : d.lastScore,
       driftBest: gates ? d.bestScore : null,
       combo: drifting ? Math.round(comboOf(d.held) * 10) / 10 : null,
+      place: this.rivals.length
+        ? placeOf(
+            this.s,
+            this.rivals.map((rv) => rv.s),
+          )
+        : null,
+      racers: this.rivals.length + 1,
     };
     const key = JSON.stringify(hud);
     if (key === this.lastHud) return;

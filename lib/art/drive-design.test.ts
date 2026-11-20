@@ -108,6 +108,14 @@ describe('ship parts', () => {
   });
 });
 
+describe('rivals', () => {
+  it('are off by default and kept as stored', () => {
+    expect(DEFAULT_DESIGN.rivals).toBe(false);
+    expect(parseDesign('{"rivals":true}', IDS).rivals).toBe(true);
+    expect(parseDesign('{"rivals":"yes"}', IDS).rivals).toBe(false);
+  });
+});
+
 describe('one ride everywhere', () => {
   it('puts the same vehicle in every world', () => {
     const d = rideEverywhere(DEFAULT_DESIGN, 'ship');
