@@ -107,6 +107,7 @@ export const HUBS: Hub[] = [
       { href: '/school', label: 'School', line: 'The way into every class', plain: true },
       { href: '/statistics', label: 'Statistics', line: 'Learn probability', plain: true },
       { href: '/pandas', label: 'Pandas', line: 'Load, select and filter tables', plain: true },
+      { href: '/llms', label: 'LLMs', line: 'Train a model and measure its error', plain: true },
       {
         href: '/dreams-in-action',
         label: 'Dreams in Action',

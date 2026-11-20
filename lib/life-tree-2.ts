@@ -65,7 +65,7 @@ export const AREAS_2: Record<Branch, Area2[]> = {
     { label: 'Masters', pages: ['/education', '/school'] },
     {
       label: 'Skills',
-      pages: ['/statistics', '/pandas', '/dreams-in-action', '/coding', '/git', '/sql'],
+      pages: ['/statistics', '/pandas', '/llms', '/dreams-in-action', '/coding', '/git', '/sql'],
     },
     { label: 'Shipping', pages: ['/research', '/proposal/cma-cgm'] },
     { label: 'Pitches', pages: ['/proposal/ferrari'] },
