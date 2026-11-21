@@ -72,6 +72,12 @@ export const HUBS: Hub[] = [
     nodes: [
       { href: '/music', label: 'Music', line: 'Music Studio, Guitar Studio, Songs' },
       {
+        href: '/harmony',
+        label: 'Harmony Machine',
+        line: 'A ringed planet that plays itself; swipe the rings',
+        prototype: true,
+      },
+      {
         href: 'https://chillmachine.vercel.app',
         label: 'Chill Machine',
         line: 'Piano, pads, beats and visuals: its own app',
