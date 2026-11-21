@@ -372,7 +372,8 @@ function skyEnvironment(
       if (night) {
         // 2026-11-21 ("car doesnt change colour for hull … stays black"): a metal hull shows only
         // what it mirrors, so the night sky carries a warm glow low along the horizon and a soft
-        // light overhead; the sky the eye sees stays dark (this is only what the hull reflects).
+        // warm light overhead, gold and never white ("too white, not connected to the golden warm of
+        // the track"); the sky the eye sees stays dark (this is only what the hull reflects).
         c =
           el > 0
             ? mix([0.18, 0.1, 0.22], [0.02, 0.02, 0.05], Math.min(1, el * 3))
@@ -380,7 +381,7 @@ function skyEnvironment(
         const glow = Math.exp(-Math.abs(el) * 14);
         c = c.map((v, i) => v + glow * [0.85, 0.6, 0.35][i]);
         const top = clamp((el - 1.05) / 0.35, 0, 1);
-        c = c.map((v, i) => v + top * [0.45, 0.42, 0.4][i]);
+        c = c.map((v, i) => v + top * [0.42, 0.3, 0.16][i]);
       } else if (el > 0) {
         c = mix([1, 0.72, 0.52], [0.62, 0.5, 0.72], Math.min(1, el * 4));
         c = mix(c, [0.2, 0.22, 0.45], clamp((el - 0.2) * 2, 0, 1));
@@ -424,7 +425,7 @@ export class DriveEngine {
   private sun = new THREE.DirectionalLight(0xffd2a8, 1.4);
   private hemi = new THREE.HemisphereLight(0xb8a4c8, 0x8a7068, 0.9);
   /** At night, a soft light riding over the vehicle so its hull keeps its colour (off by day). */
-  private carLight = new THREE.PointLight(0xfff0e0, 0, 9, 2);
+  private carLight = new THREE.PointLight(0xffc878, 0, 9, 2);
   private env: THREE.Texture | null = null;
   private puffs = new Puffs();
   private sparks = new Puffs(true);
@@ -682,7 +683,9 @@ export class DriveEngine {
     this.scene.add(this.view.group);
     this.sun.position.copy(sunDir).multiplyScalar(100);
     this.sun.target.position.set(0, 0, 0);
-    this.sun.color.set(night ? 0x6070a0 : 0xffd2a8);
+    // The Golden Track's moon is warm too: no cold white glint on the hull (2026-11-21).
+    const gold = this.cfg.id === 'gold';
+    this.sun.color.set(gold ? 0xc89058 : night ? 0x6070a0 : 0xffd2a8);
     const mars = this.cfg.id === 'mars';
     this.hemi.color.set(night ? 0x303050 : mars ? 0xd8a888 : 0xd8c0d0);
     this.hemi.groundColor.set(night ? 0x101018 : mars ? 0x8a4a30 : 0x8a7068);
