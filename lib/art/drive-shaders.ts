@@ -191,36 +191,119 @@ vec3 sky(float az, float yE) {
 }
 #else
 #if WORLD == 5
-/* The Golden Track's night: near black, a low gold glow round the horizon, fine gold stars. */
+/* The Golden Track's night (2026-11-21: "stars look unnatural … saturn as well … how can it look
+   like a real planet"): a real night sky, not a pattern. Stars jittered off any grid, a steep spread
+   of brightness (many faint, few bright), the colours of real stars, a faint Milky Way with dust
+   lanes; and Saturn as it is: a flattened globe in soft cream and butterscotch bands, darker poles,
+   its limb darkened, the C, B and A rings with the Cassini division and the Encke gap, the rings
+   translucent, the globe's shadow on the rings and the rings' shadow on the globe. */
+
+// One layer of stars over sky coordinates p (x = F0 · azimuth, y = height): at most one per cell,
+// jittered in it. keep: the share of cells holding a star.
+vec3 starLayer(vec2 p, float cells, float seed, float keep) {
+  vec2 g = p * cells;
+  vec2 id = floor(g);
+  id.x = mod(id.x, floor(TAU * F0 * cells));
+  if (hash21(id + seed) > keep) return vec3(0.0);
+  vec2 o = vec2(hash21(id + seed + 31.7), hash21(id + seed + 73.1)) * 0.7 + 0.15;
+  float d = length(fract(g) - o) / cells;
+  float mag = pow(hash21(id + seed + 11.3), 7.0);
+  float w = max(0.0011, fwidth(p.y) * 0.9);
+  float core = exp(-d * d / (w * w));
+  float halo = exp(-d / (w * 3.5)) * mag * 0.35;
+  float tw = 0.88 + 0.12 * sin(uTime * (0.6 + hash21(id + seed + 5.1) * 1.4) + hash21(id) * 40.0);
+  float t = hash21(id + seed + 91.9);
+  vec3 col = t < 0.2 ? C(0.7, 0.8, 1.0) : t < 0.75 ? C(1.0, 0.97, 0.92) : t < 0.93 ? C(1.0, 0.86, 0.62) : C(1.0, 0.68, 0.45);
+  return col * (core * (0.03 + 1.1 * mag) + halo) * tw;
+}
+
+// How much of the light Saturn's rings stop at r (in Saturn radii): C, B, Cassini, A, Encke.
+// fine: how much of the ringlets to draw (0 where they would shimmer).
+float ringOpacity(float r, float fine) {
+  float o = 0.0;
+  o += 0.14 * smoothstep(1.23, 1.26, r) * (1.0 - smoothstep(1.51, 1.53, r));
+  o += mix(0.7, 0.95, smoothstep(1.53, 1.75, r)) * smoothstep(1.52, 1.54, r) * (1.0 - smoothstep(1.94, 1.96, r));
+  o += 0.06 * smoothstep(1.95, 1.96, r) * (1.0 - smoothstep(2.02, 2.03, r));
+  o += 0.55 * smoothstep(2.02, 2.04, r) * (1.0 - smoothstep(2.26, 2.28, r));
+  o *= 1.0 - 0.85 * smoothstep(2.205, 2.21, r) * (1.0 - smoothstep(2.215, 2.22, r));
+  float lets = vn(vec2(r * 90.0, 0.5)) * 0.6 + vn(vec2(r * 260.0, 7.0)) * 0.4;
+  return clamp(o * (1.0 - fine * 0.35 + fine * 0.35 * 2.0 * lets), 0.0, 1.0);
+}
+
 vec3 sky(float az, float yE) {
   vec3 c = mix(C(0.05, 0.035, 0.02), C(0.006, 0.005, 0.004), smoothstep(-0.05, 0.4, yE));
   c += C(0.9, 0.6, 0.25) * exp(-max(yE, 0.0) * 16.0) * 0.16;
-  vec2 cell = floor(vec2(az * 140.0, yE * 140.0));
-  float h = hash11(mod(cell.x * 13.0 + cell.y * 157.0, 997.0) + 1.0);
-  vec2 fr = fract(vec2(az * 140.0, yE * 140.0)) - 0.5;
-  float star = step(0.93, h) * (1.0 - smoothstep(0.05, 0.16, length(fr))) * smoothstep(0.02, 0.1, yE);
-  c += C(1.0, 0.8, 0.45) * star * (0.4 + 0.6 * fract(h * 37.0));
-  // A great ringed planet hangs over the track (2026-11-19: "a big Saturn with rings in the sky so
-  // it feels we are on a planet"): banded in golds, lit from one side, its ring tilted, passing
-  // behind the globe above and in front of it below.
+
+  vec2 p = vec2(F0 * az, yE);
+  // The Milky Way: a faint band tilted across the sky, clumped, cut by dark dust lanes.
+  float mwc = 0.42 + 0.22 * sin(az + 0.8);
+  float mw = exp(-pow((yE - mwc) / 0.16, 2.0));
+  float clump = vn(p * 9.0) * 0.6 + vn(p * 23.0) * 0.4;
+  float lane = smoothstep(0.45, 0.7, vn(p * 6.0 + 3.0)) * exp(-pow((yE - mwc - 0.02) / 0.05, 2.0));
+  float above = smoothstep(0.0, 0.12, yE);
+  c += C(0.75, 0.72, 0.68) * mw * (0.25 + 0.75 * clump) * (1.0 - 0.8 * lane) * 0.035 * above;
+  // Three layers of stars, denser in the Milky Way, dimmed low down by the air.
+  vec3 st = starLayer(p, 50.0, 1.0, 0.1) + starLayer(p, 120.0, 7.0, 0.08 + 0.2 * mw) * 0.7 + starLayer(p, 260.0, 13.0, 0.03 + 0.15 * mw) * 0.4;
+  c += st * above;
+
+  // Saturn: a tilted frame (qr), the ring plane opened to 0.24 (k).
   vec2 q = sunOff(az - 0.35, yE, 0.2);
   float R = 0.17;
   float ct = cos(0.38);
-  float st = sin(0.38);
-  vec2 qr = vec2(ct * q.x + st * q.y, -st * q.x + ct * q.y);
-  float ringR = length(vec2(qr.x, qr.y / 0.24)) / R;
-  float ring = smoothstep(1.4, 1.45, ringR) * (1.0 - smoothstep(2.25, 2.35, ringR));
-  ring *= 1.0 - 0.75 * (smoothstep(1.78, 1.8, ringR) - smoothstep(1.86, 1.88, ringR));
-  ring *= 0.55 + 0.45 * sin(ringR * 40.0);
-  vec3 ringC = C(0.75, 0.58, 0.34) * ring;
-  float dP = length(q) / R;
-  float globe = 1.0 - smoothstep(0.985, 1.0, dP);
-  if (qr.y > 0.0) c = mix(c, c + ringC * 0.6, 1.0 - globe);
-  float band = sin(qr.y / R * 15.0 + 0.6 * sin(qr.x / R * 3.0)) * 0.5 + 0.5;
-  vec3 body = mix(C(0.62, 0.42, 0.2), C(0.9, 0.72, 0.42), band);
-  float lit = clamp(0.25 + 0.9 * dot(normalize(vec3(q / R, sqrt(max(0.0, 1.0 - dP * dP)))), normalize(vec3(-0.6, 0.4, 0.7))), 0.0, 1.0);
-  c = mix(c, body * lit * 0.55, globe);
-  if (qr.y <= 0.0) c += ringC * 0.6 * (1.0 - globe * 0.0);
+  float sn = sin(0.38);
+  vec2 qr = vec2(ct * q.x + sn * q.y, -sn * q.x + ct * q.y) / R;
+  float k = 0.24;
+  float kc = sqrt(1.0 - k * k);
+  vec3 L = normalize(vec3(-0.6, 0.4, 0.7));
+  vec3 N = vec3(0.0, kc, k);
+  // The ring point under this pixel: in-plane x and depth (positive: the far side).
+  float rx = qr.x;
+  float rz = qr.y / k;
+  float r = length(vec2(rx, rz));
+  float fine = 1.0 - smoothstep(0.004, 0.02, fwidth(r));
+  float op = r < 2.4 ? ringOpacity(r, fine) : 0.0;
+  // The globe's shadow on the rings.
+  vec3 P = vec3(rx, k * rz, -kc * rz);
+  float bb = dot(P, L);
+  float disc = bb * bb - (dot(P, P) - 1.0);
+  float shade = disc > 0.0 && -bb + sqrt(max(disc, 0.0)) > 0.0 ? 1.0 - smoothstep(0.0, 0.04, disc) * 0.92 : 1.0;
+  vec3 ringC = mix(C(0.55, 0.5, 0.44), mix(C(0.9, 0.8, 0.62), C(0.76, 0.69, 0.57), step(2.0, r)), smoothstep(1.5, 1.56, r));
+  vec3 ringLit = ringC * 0.5 * shade;
+  // The far half of the rings, behind the globe.
+  if (rz > 0.0) c = mix(c, ringLit, op);
+
+  // The globe, flattened a tenth at the poles.
+  vec2 qg = vec2(qr.x, qr.y / 0.9);
+  float dP = length(qg);
+  float fw = max(fwidth(dP), 1e-4);
+  float globe = 1.0 - smoothstep(1.0 - fw, 1.0 + fw, dP);
+  if (globe > 0.0) {
+    vec3 n = vec3(qg, sqrt(max(0.0, 1.0 - dP * dP)));
+    float lat = n.y;
+    float lon = atan(n.x, n.z);
+    float wl = lat + 0.012 * (vn(vec2(lon * 5.0, lat * 40.0)) - 0.5);
+    float b = vn(vec2(wl * 7.0, 0.3)) * 0.55 + vn(vec2(wl * 19.0, 4.1)) * 0.3 + vn(vec2(wl * 45.0, 9.7)) * 0.15;
+    vec3 body = mix(C(0.8, 0.64, 0.42), C(0.94, 0.86, 0.66), b);
+    body = mix(body, C(0.98, 0.9, 0.72), exp(-pow(wl / 0.12, 2.0)) * 0.5);
+    body = mix(body, C(0.58, 0.58, 0.56), smoothstep(0.7, 0.95, abs(wl)) * 0.6);
+    float lit = max(dot(n, L), 0.0);
+    float term = smoothstep(-0.05, 0.25, dot(n, L));
+    float limb = pow(max(n.z, 0.0), 0.35);
+    // The rings' shadow: follow the light from the globe to the ring plane.
+    float dn = dot(N, L);
+    float tt = -dot(N, n) / dn;
+    float rs = 0.0;
+    if (tt > 0.0) {
+      vec3 H = n + L * tt;
+      rs = ringOpacity(length(H), 0.0);
+    }
+    vec3 bodyC = body * (0.03 + 0.62 * lit * term * limb) * (1.0 - 0.8 * rs);
+    // A little ringshine on the night side.
+    bodyC += body * 0.02 * (1.0 - term);
+    c = mix(c, bodyC, globe);
+  }
+  // The near half of the rings, over the globe.
+  if (rz <= 0.0) c = mix(c, ringLit, op);
   return c;
 }
 #else

@@ -350,6 +350,9 @@ class Puffs {
   }
 }
 
+/** The night light over the vehicle (candela; close over the hull, falling off before it pools much light on the road). */
+export const CAR_LIGHT = 12;
+
 /* ── The sky as an environment, for chrome and glass ───────── */
 
 function skyEnvironment(
@@ -367,10 +370,17 @@ function skyEnvironment(
       const az = ((x + 0.5) / W) * Math.PI * 2 - Math.PI;
       let c: number[];
       if (night) {
+        // 2026-11-21 ("car doesnt change colour for hull … stays black"): a metal hull shows only
+        // what it mirrors, so the night sky carries a warm glow low along the horizon and a soft
+        // light overhead; the sky the eye sees stays dark (this is only what the hull reflects).
         c =
           el > 0
             ? mix([0.18, 0.1, 0.22], [0.02, 0.02, 0.05], Math.min(1, el * 3))
             : [0.03, 0.03, 0.05];
+        const glow = Math.exp(-Math.abs(el) * 14);
+        c = c.map((v, i) => v + glow * [0.85, 0.6, 0.35][i]);
+        const top = clamp((el - 1.05) / 0.35, 0, 1);
+        c = c.map((v, i) => v + top * [0.45, 0.42, 0.4][i]);
       } else if (el > 0) {
         c = mix([1, 0.72, 0.52], [0.62, 0.5, 0.72], Math.min(1, el * 4));
         c = mix(c, [0.2, 0.22, 0.45], clamp((el - 0.2) * 2, 0, 1));
@@ -413,6 +423,8 @@ export class DriveEngine {
   private moteU: Record<string, THREE.IUniform>;
   private sun = new THREE.DirectionalLight(0xffd2a8, 1.4);
   private hemi = new THREE.HemisphereLight(0xb8a4c8, 0x8a7068, 0.9);
+  /** At night, a soft light riding over the vehicle so its hull keeps its colour (off by day). */
+  private carLight = new THREE.PointLight(0xfff0e0, 0, 9, 2);
   private env: THREE.Texture | null = null;
   private puffs = new Puffs();
   private sparks = new Puffs(true);
@@ -595,7 +607,7 @@ export class DriveEngine {
     this.motes.renderOrder = 1000;
     this.scene.add(this.motes);
 
-    this.scene.add(this.sun, this.sun.target, this.hemi);
+    this.scene.add(this.sun, this.sun.target, this.hemi, this.carLight);
     this.scene.add(this.puffs.points);
     this.scene.add(this.sparks.points);
     (this.sparks.material.uniforms.uColour.value as THREE.Color).setRGB(2.4, 1.3, 0.45);
@@ -1053,6 +1065,12 @@ export class DriveEngine {
     const vv = this.vehicleView;
     if (vv) {
       vv.group.position.set(v.x - ox, v.z, -(v.y - oy));
+      // Over the vehicle and a little behind it, toward the camera.
+      this.carLight.position.set(
+        v.x - ox - Math.cos(v.h) * 2.5,
+        v.z + 3,
+        -(v.y - oy - Math.sin(v.h) * 2.5),
+      );
       vv.group.rotation.set(-v.pitch, v.h + Math.PI / 2, -v.roll, 'YXZ');
       const power =
         (ctl.throttle > 0 || ctl.boost > 0 ? 1 : 0.35) +
@@ -1109,6 +1127,7 @@ export class DriveEngine {
     const night = this.cfg.theme !== null;
     this.sun.intensity = (night ? 0.12 : 1.5) * (0.4 + 0.6 * w.sun) * w.light;
     this.hemi.intensity = (night ? 0.35 : 1.0) * w.light;
+    this.carLight.intensity = night ? CAR_LIGHT : 0;
     const fog = this.scene.fog as THREE.FogExp2;
     const base = night ? 0.0012 : this.cfg.id === 'coast' ? 0.0005 : 0.00018;
     const baseCol: [number, number, number] = night
