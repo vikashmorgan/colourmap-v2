@@ -18,10 +18,12 @@ import * as THREE from 'three';
 
 import {
   applyHull,
+  applyRim,
   fireMaterial,
   glowSprite,
   groundBlob,
   hullMaterial,
+  rimMaterial,
   type VehicleView,
 } from '@/components/drive/vehicles';
 import type { BodyId, Fire, Hull } from '@/lib/art/drive-design';
@@ -36,6 +38,18 @@ interface Parts {
   feet: THREE.Vector3[];
   /** How much of the physics' roll the body shows (the bike leans far more). */
   lean: number;
+  /** Rim metal that follows the hull (the leopard's gold), and its colour without one. */
+  rim?: { m: THREE.MeshStandardMaterial; off: RimOff };
+  /** Light lines that follow the hull (the Space Racer's), and how they take its colour. */
+  lights?: { mats: THREE.MeshBasicMaterial[]; colour: (h: Hull) => THREE.Color };
+}
+
+type RimOff = { color: number; metalness: number; roughness: number };
+const CHROME_OFF: RimOff = { color: 0xe8e8ee, metalness: 1, roughness: 0.12 };
+
+/** The Space Racer's light: the hull's own colour (its rim metal when it has one), lit past white. */
+function racerLight(h: Hull): THREE.Color {
+  return new THREE.Color(h.rim ?? h.colour).multiplyScalar(2.4);
 }
 
 const tyreMat = () => new THREE.MeshStandardMaterial({ color: 0x0b0b0b, roughness: 0.9 });
@@ -93,13 +107,12 @@ function exhaustFlames(body: THREE.Group, fire: Fire, at: [number, number, numbe
 }
 
 /** A wire wheel: tyre, chrome rim, spokes, a knock-off hub. */
-function wireWheel(r: number, w: number, env: THREE.Texture | null): THREE.Group {
+function wireWheel(r: number, w: number, chrome: THREE.Material): THREE.Group {
   const g = new THREE.Group();
   const tyre = new THREE.Mesh(new THREE.TorusGeometry(r * 0.8, r * 0.2, 12, 32), tyreMat());
   tyre.rotation.y = Math.PI / 2;
   tyre.scale.set(1, 1, w / (r * 0.4));
   g.add(tyre);
-  const chrome = chromeMat(env);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(r * 0.6, r * 0.05, 8, 32), chrome);
   rim.rotation.y = Math.PI / 2;
   g.add(rim);
@@ -116,7 +129,12 @@ function wireWheel(r: number, w: number, env: THREE.Texture | null): THREE.Group
 }
 
 /** A covered wheel: dark tyre, a smooth disc in the paint, a rim of light. */
-function lightWheel(r: number, w: number, paint: THREE.Material, glow: THREE.Color): THREE.Group {
+function lightWheel(
+  r: number,
+  w: number,
+  paint: THREE.Material,
+  light: THREE.Material,
+): THREE.Group {
   const g = new THREE.Group();
   const tyre = new THREE.Mesh(new THREE.CylinderGeometry(r, r, w, 28), tyreMat());
   tyre.rotation.z = Math.PI / 2;
@@ -126,18 +144,12 @@ function lightWheel(r: number, w: number, paint: THREE.Material, glow: THREE.Col
     disc.rotation.y = (side * Math.PI) / 2;
     disc.position.x = (side * w) / 2 + side * 0.002;
     g.add(disc);
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(r * 0.8, 0.012, 6, 40),
-      new THREE.MeshBasicMaterial({ color: glow, toneMapped: false }),
-    );
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r * 0.8, 0.012, 6, 40), light);
     ring.rotation.y = Math.PI / 2;
     ring.position.x = (side * w) / 2 + side * 0.004;
     g.add(ring);
     // A notch so the spin reads.
-    const notch = new THREE.Mesh(
-      new THREE.BoxGeometry(0.004, r * 0.5, 0.03),
-      new THREE.MeshBasicMaterial({ color: glow, toneMapped: false }),
-    );
+    const notch = new THREE.Mesh(new THREE.BoxGeometry(0.004, r * 0.5, 0.03), light);
     notch.position.set((side * w) / 2 + side * 0.005, r * 0.45, 0);
     g.add(notch);
   }
@@ -253,13 +265,14 @@ function classicGT(hull: Hull, fire: Fire, env: THREE.Texture | null): Parts {
   const flames = exhaustFlames(body, fire, pipes, 0.05);
 
   const wheels: THREE.Object3D[] = [];
+  const rim = rimMaterial(hull, CHROME_OFF, env);
   for (const [x, z] of [
     [-0.7, 0.95],
     [0.7, 0.95],
     [-0.7, 3.45],
     [0.7, 3.45],
   ]) {
-    const w = wireWheel(R, 0.2, env);
+    const w = wireWheel(R, 0.2, rim);
     w.position.set(x, R, z);
     group.add(w);
     wheels.push(w);
@@ -273,19 +286,26 @@ function classicGT(hull: Hull, fire: Fire, env: THREE.Texture | null): Parts {
     flames,
     feet: [new THREE.Vector3(-0.72, 0, 0.95), new THREE.Vector3(0.72, 0, 0.95)],
     lean: 0.6,
+    rim: { m: rim, off: CHROME_OFF },
   };
 }
 
 /* ── Future GT ────────────────────────────────────────────── */
 
-function futureGT(hull: Hull, fire: Fire, env: THREE.Texture | null): Parts {
+/**
+ * The Future GT; as the Space Racer (racer) its light lines take the hull's own colour and more of
+ * them trace the body: along the shoulders, round the wing blades and up the canopy's spine.
+ */
+function futureGT(hull: Hull, fire: Fire, env: THREE.Texture | null, racer = false): Parts {
   const group = new THREE.Group();
   const body = new THREE.Group();
   group.add(body);
   const paint = hullMaterial(hull, env);
   const W = 1.7;
   const R = 0.32;
-  const cyan = new THREE.Color(0.5, 1.6, 2.2);
+  const CYAN = new THREE.Color(0.5, 1.6, 2.2);
+  const lightColour = (h: Hull) => (racer ? racerLight(h) : h.rim ? racerLight(h) : CYAN.clone());
+  const light = new THREE.MeshBasicMaterial({ color: lightColour(hull), toneMapped: false });
 
   // The same lines as the classic, drawn straight and sharp.
   const s = new THREE.Shape();
@@ -336,12 +356,26 @@ function futureGT(hull: Hull, fire: Fire, env: THREE.Texture | null): Parts {
   tailGlow.position.set(0, 0.66, -0.1);
   body.add(tailGlow);
   for (const side of [-1, 1]) {
-    const line = new THREE.Mesh(
-      new THREE.BoxGeometry(0.01, 0.012, 3.2),
-      new THREE.MeshBasicMaterial({ color: cyan, toneMapped: false }),
-    );
+    const line = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.012, 3.2), light);
     line.position.set(side * (W / 2 + 0.005), 0.42, 2.2);
     body.add(line);
+  }
+  if (racer) {
+    // The Space Racer's extra lines: the shoulders, the blades' outer edges, the canopy's spine.
+    for (const side of [-1, 1]) {
+      const shoulder = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.014, 3.9), light);
+      shoulder.position.set(side * (W / 2 + 0.006), 0.66, 2.35);
+      body.add(shoulder);
+      for (const z of [0.95, 3.5]) {
+        const edge = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 1.02), light);
+        edge.position.set(side * (W / 2 + 0.1), 0.72 - 0.02, z);
+        edge.rotation.z = side * 0.25;
+        body.add(edge);
+      }
+    }
+    const spine = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 1.9), light);
+    spine.position.set(0, 1.21, 1.95);
+    body.add(spine);
   }
 
   // Two big outlets in the tail for the flames.
@@ -350,10 +384,7 @@ function futureGT(hull: Hull, fire: Fire, env: THREE.Texture | null): Parts {
     [0.42, 0.4, -0.02],
   ];
   for (const [x, y, z] of outlets) {
-    const o = new THREE.Mesh(
-      new THREE.TorusGeometry(0.07, 0.015, 6, 20),
-      new THREE.MeshBasicMaterial({ color: cyan, toneMapped: false }),
-    );
+    const o = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.015, 6, 20), light);
     o.position.set(x, y, z);
     body.add(o);
   }
@@ -366,7 +397,7 @@ function futureGT(hull: Hull, fire: Fire, env: THREE.Texture | null): Parts {
     [-0.76, 3.5],
     [0.76, 3.5],
   ]) {
-    const w = lightWheel(R, 0.26, paint, cyan);
+    const w = lightWheel(R, 0.26, paint, light);
     w.position.set(x, R, z);
     group.add(w);
     wheels.push(w);
@@ -380,6 +411,7 @@ function futureGT(hull: Hull, fire: Fire, env: THREE.Texture | null): Parts {
     flames,
     feet: [new THREE.Vector3(-0.76, 0, 0.95), new THREE.Vector3(0.76, 0, 0.95)],
     lean: 0.6,
+    lights: { mats: [light], colour: lightColour },
   };
 }
 
@@ -395,6 +427,7 @@ function motorbike(hull: Hull, fire: Fire, env: THREE.Texture | null): Parts {
   const R = 0.33;
 
   const wheels: THREE.Object3D[] = [];
+  const rim = rimMaterial(hull, CHROME_OFF, env);
   for (const z of [0.4, 1.85]) {
     const w = new THREE.Group();
     const tyre = new THREE.Mesh(new THREE.TorusGeometry(R * 0.82, R * 0.18, 12, 32), tyreMat());
@@ -404,7 +437,7 @@ function motorbike(hull: Hull, fire: Fire, env: THREE.Texture | null): Parts {
     disc.rotation.z = Math.PI / 2;
     w.add(disc);
     for (let i = 0; i < 5; i++) {
-      const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.03, R * 1.3, 0.04), chromeMat(env));
+      const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.03, R * 1.3, 0.04), rim);
       spoke.rotation.x = (i / 5) * Math.PI;
       w.add(spoke);
     }
@@ -500,6 +533,7 @@ function motorbike(hull: Hull, fire: Fire, env: THREE.Texture | null): Parts {
     // The engine takes two (dust and tyre marks): the rear wheel's two edges.
     feet: [new THREE.Vector3(-0.05, 0, 0.4), new THREE.Vector3(0.05, 0, 0.4)],
     lean: 4.5,
+    rim: { m: rim, off: CHROME_OFF },
   };
 }
 
@@ -513,8 +547,8 @@ export function buildBody(
   const p =
     id === 'classic'
       ? classicGT(hull, fire, env)
-      : id === 'future'
-        ? futureGT(hull, fire, env)
+      : id === 'future' || id === 'racer'
+        ? futureGT(hull, fire, env, id === 'racer')
         : motorbike(hull, fire, env);
   const shadow = groundBlob(
     0x000000,
@@ -547,6 +581,8 @@ export function buildBody(
     },
     setHull(h, e) {
       applyHull(p.paint, h, e);
+      if (p.rim) applyRim(p.rim.m, h, p.rim.off);
+      if (p.lights) for (const m of p.lights.mats) m.color.copy(p.lights.colour(h));
     },
     setFire(f) {
       for (const fl of p.flames) {

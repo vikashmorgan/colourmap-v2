@@ -99,7 +99,7 @@ export function fireById(id: string): Fire {
 
 /* ── Hull ──────────────────────────────────────────────────── */
 
-export type HullId = 'chrome' | 'gold' | 'rust' | 'red' | 'paint';
+export type HullId = 'chrome' | 'gold' | 'rust' | 'red' | 'leopard' | 'paint';
 
 export interface Hull {
   id: HullId;
@@ -111,6 +111,10 @@ export interface Hull {
   clearcoat: number;
   /** Rust's patina: how much the finish is broken up by a second, darker colour. */
   patina: number;
+  /** A printed coat over the base (the leopard's rosettes). */
+  pattern?: 'leopard';
+  /** The rims and trim in their own metal (sRGB); otherwise each vehicle's own. */
+  rim?: string;
 }
 
 export const HULLS: Hull[] = [
@@ -150,6 +154,19 @@ export const HULLS: Hull[] = [
     roughness: 0.32,
     clearcoat: 1,
     patina: 0,
+  },
+  {
+    // 2026-11-21: "a leopard colour for ships and cars with golden rims". A tawny coat printed with
+    // rosettes under a clear coat; the wheel rims and the ship's trim in gold.
+    id: 'leopard',
+    name: 'Leopard',
+    colour: '#c8923f',
+    metalness: 0.15,
+    roughness: 0.4,
+    clearcoat: 1,
+    patina: 0,
+    pattern: 'leopard',
+    rim: '#e2b04a',
   },
   {
     // Your own colour, picked in the Garage (Design.paint), in a glossy clear-coated paint.
@@ -253,11 +270,14 @@ export const shipParts = (d: ShipParts): ShipParts => ({
  * The car's bodies (2026-11-19: "a motorbike", "cars inspired by the 50s GTO, and then the same
  * but futuristic"). The physics stay the car's.
  */
-export type BodyId = 'wedge' | 'classic' | 'future' | 'bike';
+export type BodyId = 'wedge' | 'classic' | 'future' | 'racer' | 'bike';
 export const BODIES: { id: BodyId; name: string }[] = [
   { id: 'wedge', name: 'Wedge' },
   { id: 'classic', name: 'Classic GT' },
   { id: 'future', name: 'Future GT' },
+  // 2026-11-21: "those tron like cars are awesome i wanna be able to drive them … one called Space
+  // Racer, with the tron designs": the Future GT with its light lines in the hull's own colour.
+  { id: 'racer', name: 'Space Racer' },
   { id: 'bike', name: 'Motorbike' },
 ];
 

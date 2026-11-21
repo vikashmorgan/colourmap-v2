@@ -78,6 +78,129 @@ function rustTexture(): THREE.Texture | null {
   return rustMap;
 }
 
+let leopardMap: THREE.Texture | null = null;
+
+/** A leopard's coat: tawny, paler in places, printed with broken rosettes and small spots. */
+function leopardTexture(): THREE.Texture | null {
+  if (leopardMap) return leopardMap;
+  if (typeof document === 'undefined') return null;
+  if (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent)) return null;
+  const N = 512;
+  const c = document.createElement('canvas');
+  c.width = N;
+  c.height = N;
+  const g = c.getContext('2d');
+  if (!g) return null;
+  g.fillStyle = '#c8923f';
+  g.fillRect(0, 0, N, N);
+  let s = 11;
+  const rnd = () => {
+    s = (s * 16807) % 2147483647;
+    return s / 2147483647;
+  };
+  // Soft paler and deeper patches in the coat.
+  for (let i = 0; i < 40; i++) {
+    const r = 30 + rnd() * 70;
+    g.fillStyle = rnd() < 0.5 ? 'rgba(232,190,110,0.18)' : 'rgba(150,95,35,0.15)';
+    g.beginPath();
+    g.ellipse(rnd() * N, rnd() * N, r, r * 0.7, rnd() * 3, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Drawn three times over (wrapped), so the coat repeats without a seam.
+  const both = (draw: (x: number, y: number) => void, x: number, y: number) => {
+    for (const dx of [-N, 0, N]) for (const dy of [-N, 0, N]) draw(x + dx, y + dy);
+  };
+  // Rosettes: a darker centre, a ring broken into three to five black-brown arcs.
+  for (let i = 0; i < 70; i++) {
+    const x = rnd() * N;
+    const y = rnd() * N;
+    const r = 11 + rnd() * 9;
+    const sq = 0.75 + rnd() * 0.35;
+    const rot = rnd() * Math.PI;
+    const arcs = 3 + Math.floor(rnd() * 3);
+    const gaps = Array.from({ length: arcs }, () => 0.25 + rnd() * 0.35);
+    const start = rnd() * Math.PI * 2;
+    both(
+      (cx, cy) => {
+        g.save();
+        g.translate(cx, cy);
+        g.rotate(rot);
+        g.scale(1, sq);
+        g.fillStyle = 'rgba(160,98,34,0.85)';
+        g.beginPath();
+        g.ellipse(0, 0, r * 0.75, r * 0.75, 0, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = 'rgba(28,16,8,0.92)';
+        g.lineCap = 'round';
+        let a = start;
+        for (let k = 0; k < arcs; k++) {
+          const len = (Math.PI * 2) / arcs - gaps[k];
+          g.lineWidth = r * (0.32 + 0.12 * Math.sin(k * 2.3 + i));
+          g.beginPath();
+          g.arc(0, 0, r, a, a + len);
+          g.stroke();
+          a += len + gaps[k];
+        }
+        g.restore();
+      },
+      x,
+      y,
+    );
+  }
+  // Small solid spots between the rosettes.
+  for (let i = 0; i < 160; i++) {
+    const x = rnd() * N;
+    const y = rnd() * N;
+    const r = 2 + rnd() * 4;
+    const ry = r * (0.6 + rnd() * 0.5);
+    const rot = rnd() * 3;
+    both(
+      (cx, cy) => {
+        g.fillStyle = 'rgba(28,16,8,0.88)';
+        g.beginPath();
+        g.ellipse(cx, cy, r, ry, rot, 0, Math.PI * 2);
+        g.fill();
+      },
+      x,
+      y,
+    );
+  }
+  leopardMap = new THREE.CanvasTexture(c);
+  leopardMap.wrapS = THREE.RepeatWrapping;
+  leopardMap.wrapT = THREE.RepeatWrapping;
+  leopardMap.colorSpace = THREE.SRGBColorSpace;
+  leopardMap.anisotropy = 4;
+  return leopardMap;
+}
+
+/** The rims' and trim's own metal for a hull, or the vehicle's usual colour (fallback). */
+export function rimMaterial(
+  h: Hull,
+  fallback: { color: number; metalness: number; roughness: number },
+  env: THREE.Texture | null,
+): THREE.MeshStandardMaterial {
+  const m = new THREE.MeshStandardMaterial({ envMap: env });
+  applyRim(m, h, fallback);
+  return m;
+}
+
+export function applyRim(
+  m: THREE.MeshStandardMaterial,
+  h: Hull,
+  fallback: { color: number; metalness: number; roughness: number },
+) {
+  if (h.rim) {
+    m.color.set(h.rim);
+    m.metalness = 1;
+    m.roughness = 0.16;
+  } else {
+    m.color.set(fallback.color);
+    m.metalness = fallback.metalness;
+    m.roughness = fallback.roughness;
+  }
+  m.needsUpdate = true;
+}
+
 export function hullMaterial(h: Hull, env: THREE.Texture | null): THREE.MeshPhysicalMaterial {
   const m = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(h.colour),
@@ -90,6 +213,13 @@ export function hullMaterial(h: Hull, env: THREE.Texture | null): THREE.MeshPhys
   });
   if (h.patina > 0) {
     const map = rustTexture();
+    if (map) {
+      m.map = map;
+      m.color.set('#ffffff');
+    }
+  }
+  if (h.pattern === 'leopard') {
+    const map = leopardTexture();
     if (map) {
       m.map = map;
       m.color.set('#ffffff');
@@ -201,6 +331,9 @@ export function buildCar(hull: Hull, env: THREE.Texture | null, fire?: Fire): Ve
   const paint = hullMaterial(hull, env);
   const black = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.6, metalness: 0.2 });
   const tyre = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.9 });
+  // The wheels' faces: tyre-black, or the hull's own rim metal (the leopard's gold).
+  const RIM_OFF = { color: 0x0a0a0a, metalness: 0, roughness: 0.9 };
+  const rim = rimMaterial(hull, RIM_OFF, env);
   const glass = new THREE.MeshPhysicalMaterial({
     color: 0x060608,
     roughness: 0.05,
@@ -314,7 +447,7 @@ export function buildCar(hull: Hull, env: THREE.Texture | null, fire?: Fire): Ve
     [-0.74, 3.55],
     [0.74, 3.55],
   ]) {
-    const w = new THREE.Mesh(wheelGeo, tyre);
+    const w = new THREE.Mesh(wheelGeo, [tyre, rim, rim]);
     w.position.set(x * k, 0.34 * k, z);
     group.add(w);
     wheels.push(w);
@@ -350,6 +483,7 @@ export function buildCar(hull: Hull, env: THREE.Texture | null, fire?: Fire): Ve
     },
     setHull(h, e) {
       applyHull(paint, h, e);
+      applyRim(rim, h, RIM_OFF);
     },
     setFire(f) {
       for (const fl of exFlames) {
@@ -449,7 +583,9 @@ export function buildShip(
   group.add(body);
   const paint = hullMaterial(hull, env);
   const dark = new THREE.MeshStandardMaterial({ color: 0x0b0b10, roughness: 0.45, metalness: 0.7 });
-  const trim = new THREE.MeshStandardMaterial({ color: 0x23232c, roughness: 0.3, metalness: 0.9 });
+  // The trim (the turbines' ribs, lips, hubs and blades): dark metal, or the hull's rim metal.
+  const TRIM_OFF = { color: 0x23232c, metalness: 0.9, roughness: 0.3 };
+  const trim = rimMaterial(hull, TRIM_OFF, env);
 
   // The hull: a low lens, longer than wide, its nose drawn to a point.
   const lens = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 20), paint);
@@ -691,6 +827,7 @@ export function buildShip(
     },
     setHull(h, e) {
       applyHull(paint, h, e);
+      applyRim(trim, h, TRIM_OFF);
     },
     setFire(f) {
       for (const m of fires) {
