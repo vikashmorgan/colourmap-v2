@@ -49,7 +49,12 @@ export const AREAS_2: Record<Branch, Area2[]> = {
     },
     {
       label: 'Music',
-      pages: ['/music', 'https://chillmachine.vercel.app', 'https://tunnelsurfer.vercel.app'],
+      pages: [
+        '/music',
+        '/harmony',
+        'https://chillmachine.vercel.app',
+        'https://tunnelsurfer.vercel.app',
+      ],
     },
     { label: 'Play', pages: ['/entertainment'] },
     // The spaces you travel through: the City, and the racing worlds out of it (2026-11-19).
