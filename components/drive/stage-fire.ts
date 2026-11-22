@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 
 import { BEAT } from '@/lib/art/race-intro';
-import { type Jet, stageJets } from '@/lib/art/stage-fire';
+import { archJets, type Jet, stageJets } from '@/lib/art/stage-fire';
 
 const FLAMES = 90;
 const SPARKS = 60;
@@ -39,7 +39,7 @@ export function makeStageFire(): StageFire {
     seed = (seed * 16807) % 2147483647;
     return seed / 2147483647;
   };
-  const jets = stageJets();
+  const jets = [...stageJets(), ...archJets()];
   jets.forEach((j, ji) => {
     for (const b of j.bursts) {
       const add = (k: number, n: number) => {
