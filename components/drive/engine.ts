@@ -396,6 +396,9 @@ const HELD: StepEvents = { landed: 0, bump: 0, tookOff: false };
 /** Lost to a jump's void: back this far before its gap (m), rolling at this speed (m/s), enough
  * run-up to make it with the throttle down. */
 export const RETRY_BACK = 450;
+
+/** The walls of light behind the racers: how tall (m), how long they last (s), how bright. */
+export const WALL = { HEIGHT: 1.1, LIFE: 2.4, POINTS: 150, SPACING: 1.5, GLOW: 2.2, OPACITY: 0.55 };
 export const RETRY_SPEED = 45;
 
 /* ── The sky as an environment, for chrome and glass ───────── */
@@ -477,6 +480,9 @@ export class DriveEngine {
   private ribbonFlat: THREE.ShaderMaterial;
   private ribbonGlow: THREE.ShaderMaterial;
   private ribbons: Ribbon[] = [];
+  /** The walls of light behind every racer (2026-11-22: "cars leave colour trail behind them,
+   * bikes as well"), by who leaves them ('you', or a rival's name). */
+  private walls = new Map<string, { rib: Ribbon; mat: THREE.ShaderMaterial; colour: string }>();
 
   private cfg: WorldCfg;
   private design: Design;
@@ -886,7 +892,7 @@ export class DriveEngine {
     if (!this.design.rivals || !this.trackWorld) return;
     const tr = this.trackWorld.track;
     const kind = this.vehicle.kind;
-    const bodies = ['wedge', 'future', 'classic', 'future', 'wedge'] as const;
+    const bodies = ['wedge', 'cycle', 'classic', 'future', 'cycle'] as const;
     this.rivals = RIVALS.map((r, i) => {
       const s = this.s + r.grid.ds;
       const u = r.grid.du * tr.def.half(Math.max(0, s)) * 0.7;
@@ -1046,6 +1052,55 @@ export class DriveEngine {
   }
 
   /** Where a point is drawn on a twisting road, or null where the road is not twisting. */
+  /** A wall of light behind each racer, in its colour, fading over WALL.LIFE s. */
+  private lightWalls(t: number, ox: number, oy: number) {
+    const seen = new Set<string>();
+    if (this.design.trail && this.trackWorld && !this.preview) {
+      const racers: { key: string; colour: string; v: Vehicle; s: number }[] = [];
+      if (!this.wreck)
+        racers.push({ key: 'you', colour: hullOf(this.design).colour, v: this.vehicle, s: this.s });
+      for (const rv of this.rivals)
+        racers.push({ key: rv.r.name, colour: rv.r.colour, v: rv.v, s: rv.s });
+      for (const r of racers) {
+        seen.add(r.key);
+        let wall = this.walls.get(r.key);
+        if (!wall) {
+          const mat = this.ribbonGlow.clone();
+          mat.uniforms = {
+            uColour: { value: new THREE.Color() },
+            uOpacity: { value: WALL.OPACITY },
+          };
+          const rib = new Ribbon(WALL.POINTS, WALL.SPACING, WALL.HEIGHT, WALL.LIFE, true, mat);
+          rib.mesh.renderOrder = 7;
+          this.scene.add(rib.mesh);
+          wall = { rib, mat, colour: '' };
+          this.walls.set(r.key, wall);
+        }
+        if (wall.colour !== r.colour) {
+          (wall.mat.uniforms.uColour.value as THREE.Color).set(r.colour).multiplyScalar(WALL.GLOW);
+          wall.colour = r.colour;
+        }
+        const v = r.v;
+        const base = v.z - VEHICLES[v.kind].hover;
+        const p = this.posed(v.x, v.y, base + WALL.HEIGHT / 2, r.s) ?? {
+          x: v.x,
+          y: v.y,
+          z: base + WALL.HEIGHT / 2,
+        };
+        // Behind the tail, so the wall leaves the vehicle rather than standing in it.
+        pushTrail(wall.rib.trail, p.x - Math.cos(v.h) * 0.4, p.y - Math.sin(v.h) * 0.4, p.z, t, 1);
+        wall.rib.update(ox, oy, t);
+      }
+    }
+    for (const [key, wall] of this.walls) {
+      if (seen.has(key)) continue;
+      this.scene.remove(wall.rib.mesh);
+      wall.rib.mesh.geometry.dispose();
+      wall.mat.dispose();
+      this.walls.delete(key);
+    }
+  }
+
   /** Off the twist's edge: the dive starts from where you are drawn, thrown out from its axis. */
   private startWreck(s: number, u: number) {
     const tr = this.trackWorld?.track;
@@ -1527,6 +1582,7 @@ export class DriveEngine {
     }
     this.trails(t, w);
     for (const r of this.ribbons) r.update(ox, oy, t);
+    this.lightWalls(t, ox, oy);
     this.puffs.update(dt, ox, oy);
     this.sparks.update(dt, ox, oy);
     this.sparks.material.uniforms.uScale.value = this.puffs.material.uniforms.uScale.value;

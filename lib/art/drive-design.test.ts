@@ -91,13 +91,14 @@ describe('hulls', () => {
 });
 
 describe('bodies', () => {
-  it('offers the wedge, the classic and future GTs, the Space Racer and the motorbike', () => {
+  it('offers the wedge, the classic and future GTs, the Space Racer, the motorbike and the light cycle', () => {
     expect(BODIES.map((b) => b.name)).toEqual([
       'Wedge',
       'Classic GT',
       'Future GT',
       'Space Racer',
       'Motorbike',
+      'Light Cycle',
     ]);
     expect(DEFAULT_DESIGN.body).toBe('wedge');
     expect(parseDesign('{"body":"tank"}', IDS).body).toBe('wedge');
@@ -137,6 +138,11 @@ describe('the design, remembered', () => {
     expect(DEFAULT_DESIGN.vehicle.coast).toBe('ship');
   });
 
+  it('leaves walls of light behind by default, and offers the light cycle', () => {
+    expect(DEFAULT_DESIGN.trail).toBe(true);
+    expect(BODIES.map((b) => b.id)).toContain('cycle');
+  });
+
   it('reads back what was saved, and falls back on anything odd', () => {
     const store = memory();
     const d = {
@@ -146,6 +152,7 @@ describe('the design, remembered', () => {
       weather: 'snow',
       gauge: 'timer' as const,
       flames: false,
+      trail: false,
       mode: 'easy' as const,
       paint: '#ff8800',
       body: 'classic' as const,
