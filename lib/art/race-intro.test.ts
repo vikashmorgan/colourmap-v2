@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BEAT,
+  CRANE_LOW,
   FLY,
   FLY_HIGH,
   GO_HOLD,
@@ -63,12 +64,12 @@ describe('the intro’s camera', () => {
     const end = trackShot(track, start, 'grid', 1);
     expect(top.cam.z).toBeGreaterThan(end.cam.z + 15);
     const ground = heightAt(track, start, 0);
-    expect(end.cam.z - ground).toBeCloseTo(3.2, 5);
+    expect(end.cam.z - ground).toBeCloseTo(CRANE_LOW, 5);
     // Behind the start line, looking past it.
     const line = pointAt(track, start, 0);
     const dCam = Math.hypot(end.cam.x - line.x, end.cam.y - line.y);
-    expect(dCam).toBeGreaterThan(12);
-    expect(dCam).toBeLessThan(20);
+    expect(dCam).toBeGreaterThan(24);
+    expect(dCam).toBeLessThan(36);
     expect(trackShot(track, start, 'ready', 0)).toEqual(end);
   });
 

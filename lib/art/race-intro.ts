@@ -73,6 +73,9 @@ export const FLY_FROM = 150;
 export const FLY_TO = 1300;
 export const FLY_HIGH = 70;
 
+/** How high the crane stops behind the grid (m): the gantry's lamps and the racers both in shot. */
+export const CRANE_LOW = 4.2;
+
 /** The camera for a phase on a track: the drone along the road, then the crane behind the grid. */
 export function trackShot(track: Track, startS: number, phase: IntroPhase, k: number): Shot {
   if (phase === 'fly') {
@@ -90,18 +93,18 @@ export function trackShot(track: Track, startS: number, phase: IntroPhase, k: nu
   }
   // The crane: from high behind the grid down to the racers' height, looking up the road over them.
   const e = phase === 'grid' ? smooth(k) : 1;
-  const back = mix(60, 16, e);
+  const back = mix(70, 30, e);
   const s = startS - back;
   const p = pointAt(track, Math.max(0, s), 0);
   const f = frameAt(track, Math.max(0, s));
   const x = s < 0 ? p.x + Math.cos(f.h) * s : p.x;
   const y = s < 0 ? p.y + Math.sin(f.h) * s : p.y;
-  const ahead = startS + mix(30, 22, e);
+  const ahead = startS + mix(30, 34, e);
   const q = pointAt(track, ahead, 0);
   const ground = heightAt(track, Math.max(0, startS), 0);
   return {
-    cam: { x, y, z: ground + mix(28, 3.2, e) },
-    look: { x: q.x, y: q.y, z: ground + mix(0, 1.4, e) },
+    cam: { x, y, z: ground + mix(30, CRANE_LOW, e) },
+    look: { x: q.x, y: q.y, z: ground + mix(0, 3.4, e) },
   };
 }
 
