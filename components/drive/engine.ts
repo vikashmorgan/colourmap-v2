@@ -98,7 +98,7 @@ import {
   wrapPeriod,
 } from '@/lib/art/salt-flat-game';
 import { SPEED_FLOATS } from '@/lib/art/speed-shaders';
-import { STAGE_OUT } from '@/lib/art/stage-fire';
+import { archPoint, STAGE_OUT } from '@/lib/art/stage-fire';
 import {
   FALLEN,
   frameAt,
@@ -139,7 +139,14 @@ import {
   type WeatherState,
   weatherNow,
 } from '@/lib/art/weather';
-import { newWreck, offTwist, stepWreck, type Wreck } from '@/lib/art/wreck';
+import {
+  choosesStraight,
+  newWreck,
+  offTwist,
+  stepWreck,
+  twistEntry,
+  type Wreck,
+} from '@/lib/art/wreck';
 import { buildSaltView, type SaltView } from './salt-view';
 import { makeStageFire } from './stage-fire';
 import { buildTrackView, disposeGroup, type TrackView } from './track-view';
@@ -534,6 +541,8 @@ export class DriveEngine {
   private wreck: Wreck | null = null;
   /** On a twist's ribbon since its start (for the boost after it), or null. */
   private riding: { end: number } | null = null;
+  /** Who is going straight through a twist, and where it ends (2026-11-22). */
+  private straight = new Map<Vehicle, number>();
   private hudAt = 0;
   private lastHud = '';
   private size = { w: 1, h: 1 };
@@ -769,51 +778,52 @@ export class DriveEngine {
     this.spawn();
   }
 
-  /** The gantry, built once (1 m wide; scaled to each road). Its frame faces up the road (+x). */
+  /** The start arch, built once; its half circles are sized to each road in placeGantry. Its frame
+   * faces up the road (+x). (2026-11-22: "a real big semicircle with fires, not a bad square
+   * rectangle door".) */
+  private archMetal = new THREE.MeshStandardMaterial({
+    color: 0x17141c,
+    metalness: 0.7,
+    roughness: 0.4,
+  });
+  private archParts: THREE.Mesh[] = [];
   private buildGantry() {
-    const metal = new THREE.MeshStandardMaterial({
-      color: 0x17141c,
-      metalness: 0.7,
-      roughness: 0.4,
-    });
-    const post = new THREE.BoxGeometry(0.6, 8.4, 0.6);
-    for (const side of [-1, 1]) {
-      const m = new THREE.Mesh(post, metal);
-      m.name = side < 0 ? 'post-right' : 'post-left';
-      m.position.set(0, 4.2, 0);
-      this.gantry.add(m);
-    }
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.1, 1), metal);
-    bar.name = 'bar';
-    bar.position.set(0, 8.2, 0);
-    this.gantry.add(bar);
-    // Lines of light along the bar's top and bottom and up the posts' faces, so it reads at night.
-    const strip = new THREE.BoxGeometry(0.12, 0.12, 1);
-    for (const y of [7.1, 9.3]) {
-      const m = new THREE.Mesh(strip, this.gantryGlow);
-      m.name = 'strip';
-      m.position.set(-0.5, y, 0);
-      this.gantry.add(m);
-    }
-    const rail = new THREE.BoxGeometry(0.12, 8.4, 0.12);
-    for (const side of [-1, 1]) {
-      const m = new THREE.Mesh(rail, this.gantryGlow);
-      m.name = side < 0 ? 'rail-right' : 'rail-left';
-      m.position.set(-0.32, 4.2, 0);
-      this.gantry.add(m);
-    }
     const disc = new THREE.CircleGeometry(0.9, 32);
     for (let i = 0; i < 3; i++) {
       const mat = new THREE.MeshBasicMaterial({ color: LAMP_OFF, toneMapped: false });
       const lamp = new THREE.Mesh(disc, mat);
-      // Facing back down the road, toward the grid.
+      // Facing back down the road, toward the grid, hung under the crown.
       lamp.rotation.y = -Math.PI / 2;
-      lamp.position.set(-0.47, 8.2, (i - 1) * 2.6);
+      lamp.name = 'lamp';
+      lamp.userData.i = i;
       this.lamps.push(mat);
       this.gantry.add(lamp);
     }
     this.gantry.add(this.stage.points);
     this.gantry.visible = false;
+  }
+
+  /** The arch's half circles of metal and light, at radius r over the road. */
+  private shapeArch(r: number) {
+    for (const m of this.archParts) {
+      this.gantry.remove(m);
+      m.geometry.dispose();
+    }
+    this.archParts = [];
+    const ring = (radius: number, tube: number, mat: THREE.Material, x: number) => {
+      const m = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 10, 96, Math.PI), mat);
+      // In the plane across the road: its feet on both edges, its crown overhead.
+      m.rotation.y = Math.PI / 2;
+      m.position.x = x;
+      this.gantry.add(m);
+      this.archParts.push(m);
+    };
+    ring(r, 0.55, this.archMetal, 0);
+    ring(r - 0.62, 0.1, this.gantryGlow, -0.2);
+    ring(r + 0.62, 0.1, this.gantryGlow, -0.2);
+    ring(r + 2.2, 0.06, this.gantryGlow, 0.6);
+    for (const c of this.gantry.children)
+      if (c.name === 'lamp') c.position.set(-0.6, r - 2.4, ((c.userData.i as number) - 1) * 2.6);
   }
 
   /** Spans the gantry across this road, just ahead of the grid. */
@@ -823,11 +833,7 @@ export class DriveEngine {
     if (!tw) return;
     const half = tw.track.def.half(Math.max(0, this.cfg.startS + 6));
     const w = half + 1.4;
-    for (const c of this.gantry.children) {
-      if (c.name === 'post-left' || c.name === 'rail-left') c.position.z = -w;
-      if (c.name === 'post-right' || c.name === 'rail-right') c.position.z = w;
-      if (c.name === 'bar' || c.name === 'strip') c.scale.z = 2 * w;
-    }
+    this.shapeArch(w);
     this.gantryGlow.color.set(trackInfo(this.cfg.id).colour).multiplyScalar(1.6);
     // Each burner on the road's edge where it stands, in the gantry's frame (the road may curve).
     const gs = this.cfg.startS + 6;
@@ -835,6 +841,7 @@ export class DriveEngine {
     const ge = heightAt(tw.track, gs, 0);
     this.stage.place(
       this.stage.jets.map((j) => {
+        if (j.arch !== undefined) return archPoint(j.arch, j.side, w + 0.7);
         const s = Math.max(0, gs + j.along);
         const p = pointAt(tw.track, s, j.side * (tw.track.def.half(s) + STAGE_OUT));
         const dx = p.x - g.x;
@@ -871,6 +878,7 @@ export class DriveEngine {
     this.mood = null;
     this.best = loadBest(this.store, bestKey(this.cfg.id, kind));
     this.drift = this.newDrift(kind);
+    this.straight.clear();
     this.surgeAt = -99;
     this.wreck = null;
     this.riding = null;
@@ -936,7 +944,10 @@ export class DriveEngine {
         rv.v.z = heightAt(tr, Math.max(0, rv.s), 0) + VEHICLES[rv.v.kind].hover;
         rv.v.vx = 0;
         rv.v.vy = 0;
-      } else rv.s = q.s;
+      } else {
+        rv.s = q.s;
+        this.trackStraight(rv.v, q.s, q.u);
+      }
     }
     for (let i = 0; i < this.rivals.length; i++) {
       bump(this.vehicle, this.rivals[i].v);
@@ -1082,7 +1093,7 @@ export class DriveEngine {
         }
         const v = r.v;
         const base = v.z - VEHICLES[v.kind].hover;
-        const p = this.posed(v.x, v.y, base + WALL.HEIGHT / 2, r.s) ?? {
+        const p = this.posed(v.x, v.y, base + WALL.HEIGHT / 2, r.s, v) ?? {
           x: v.x,
           y: v.y,
           z: base + WALL.HEIGHT / 2,
@@ -1199,9 +1210,26 @@ export class DriveEngine {
     }
   }
 
-  private posed(x: number, y: number, z: number, near: number) {
+  /** Keeps who is going straight through a twist: chosen at its start, held to its end. */
+  private trackStraight(v: Vehicle, s: number, u: number) {
+    const tr = this.trackWorld?.track;
+    if (!tr?.def.twist) return;
+    const end = this.straight.get(v);
+    if (end !== undefined) {
+      if (s >= end || s < end - 1500) this.straight.delete(v);
+      return;
+    }
+    if (choosesStraight(tr.def, s, u)) {
+      const e = twistEntry(tr.def, s);
+      if (e) this.straight.set(v, e.end);
+    }
+  }
+
+  private posed(x: number, y: number, z: number, near: number, who: Vehicle | null = null) {
     const tr = this.trackWorld?.track;
     if (!tr?.def.twist) return null;
+    // Straight through: drawn flat on the ground, the ribbon rolling round you.
+    if (who && this.straight.has(who)) return null;
     const q = project(tr, x, y, near);
     if ((tr.def.twist(Math.max(0, q.s)) ?? 0) === 0) return null;
     if (Math.abs(q.u) > tr.def.half(Math.max(0, q.s)) + 4 && onBypass(tr, q.s, q.u) !== null)
@@ -1386,10 +1414,14 @@ export class DriveEngine {
         this.s = q.s;
         u = q.u;
         const half = tr.def.half(Math.max(0, q.s));
-        // Off a twist's open edge: gone into the void (2026-11-22).
-        if (!this.wreck && offTwist(tr, q.s, u)) this.startWreck(q.s, u);
-        // Through a twist on its ribbon, start to end: a boost out of it (the bypass gets none).
-        this.rideTwist(q.s, u);
+        this.trackStraight(v, q.s, u);
+        const straight = this.straight.has(v);
+        // Off a twist's open edge: gone into the void (2026-11-22). Not going straight through.
+        if (!this.wreck && !straight && offTwist(tr, q.s, u)) this.startWreck(q.s, u);
+        // Through a twist on its ribbon, start to end: a boost out of it (the bypass and the
+        // straight road get none).
+        if (straight) this.riding = null;
+        else this.rideTwist(q.s, u);
         // Into the void: back on the road before the jump, rolling, for another go.
         if (this.wreck) {
           // The dive is drawn from the wreck; nothing to put back.
@@ -1499,8 +1531,8 @@ export class DriveEngine {
     // A twist turns what is drawn about the road's axis (the physics drives a flat road): the
     // camera rides it too, its up turning with the road, so the world rolls over you.
     const camP =
-      !shot && !piece && !wk ? this.posed(this.cam.x, this.cam.y, this.cam.z, this.s) : null;
-    const vP = wk ? null : this.posed(v.x, v.y, v.z, this.s);
+      !shot && !piece && !wk ? this.posed(this.cam.x, this.cam.y, this.cam.z, this.s, v) : null;
+    const vP = wk ? null : this.posed(v.x, v.y, v.z, this.s, v);
     const ox = camP ? camP.x : this.cam.x;
     const oy = camP ? camP.y : this.cam.y;
     const camera = this.camera;
@@ -1517,7 +1549,7 @@ export class DriveEngine {
       const lz = baseZ + (this.preview ? 0.7 : 0.9);
       const look = wk
         ? { x: wk.x, y: wk.y, z: wk.z }
-        : (this.posed(lx, ly, lz, this.s) ?? { x: lx, y: ly, z: lz });
+        : (this.posed(lx, ly, lz, this.s, v) ?? { x: lx, y: ly, z: lz });
       const th = vP?.th ?? 0;
       // The road's up, turned with it: its left side rises as the twist turns.
       camera.up.set(Math.sin(v.h) * Math.sin(th), Math.cos(th), Math.cos(v.h) * Math.sin(th));
@@ -1568,7 +1600,7 @@ export class DriveEngine {
       const rs = speedOf(rv.v);
       g.visible = Math.hypot(rv.v.x - ox, rv.v.y - oy) < 700;
       if (!g.visible) continue;
-      const rP = this.posed(rv.v.x, rv.v.y, rv.v.z, rv.s);
+      const rP = this.posed(rv.v.x, rv.v.y, rv.v.z, rv.s, rv.v);
       g.position.set((rP?.x ?? rv.v.x) - ox, rP?.z ?? rv.v.z, -((rP?.y ?? rv.v.y) - oy));
       g.rotation.set(-rv.v.pitch, rv.v.h + Math.PI / 2, -(rv.v.roll + (rP?.roll ?? 0)), 'YXZ');
       rv.view.update(

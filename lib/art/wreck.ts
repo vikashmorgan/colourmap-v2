@@ -38,6 +38,43 @@ export function offTwist(t: Track, s: number, u: number): boolean {
   );
 }
 
+/*
+ * STRAIGHT THROUGH (2026-11-22: "straight road option below and inside, straight through the
+ * loopings"). The physics already drives a flat road through a twist; only the roll is drawn. So
+ * the straight road is a choice, not more road: hold the gold centre strip as the twist begins and
+ * you run flat along the ground through its hollow while the ribbon rolls up and over you. No
+ * boost after it (that is the loop's), and no void to fall into.
+ */
+export const STRAIGHT = {
+  /** Half the centre strip that takes you straight through (m). */
+  STRIP: 4.5,
+  /** Half the lane drawn through the hollow (m). */
+  LANE: 7,
+  /** How far before a twist its centre strip is marked (m). */
+  LEAD: 300,
+};
+
+/** Where the twist starting at or just after s ends, if s is at its very start (else null). */
+export function twistEntry(def: TrackDef, s: number): { end: number } | null {
+  const th = def.twist?.(Math.max(0, s)) ?? 0;
+  if (th === 0 || Math.abs(th) >= 0.05) return null;
+  let end = s;
+  while (end < s + 1200 && (def.twist?.(end) ?? 0) !== 0) end += 2;
+  return { end };
+}
+
+/** Whether entering a twist at (s, u) takes you straight through. */
+export function choosesStraight(def: TrackDef, s: number, u: number): boolean {
+  return twistEntry(def, s) !== null && Math.abs(u) <= STRAIGHT.STRIP;
+}
+
+/** Whether s is in a twist or the stretch marked before it. */
+export function nearTwist(def: TrackDef, s: number): boolean {
+  if (!def.twist) return false;
+  for (let a = 0; a <= STRAIGHT.LEAD; a += 20) if (def.twist(Math.max(0, s + a)) !== 0) return true;
+  return false;
+}
+
 export interface Wreck {
   /** Seconds since you left the road. */
   t: number;

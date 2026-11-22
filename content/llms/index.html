@@ -1545,7 +1545,7 @@ function cardHtml(s, c, gi) {
   </article>`;
 }
 // The three dots: how well you know a card or a summary idea.
-const marksHtml = m => `<span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Confused as fuck']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span>`;
+const marksHtml = m => `<span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Super confused']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span>`;
 /* ---------- The ideas each practice answer uses ----------
    Per exercise, one list per part: [session, card, name, the rule in general, the rule with this exercise's numbers]. */
 const PRACTICE_LAWS = {

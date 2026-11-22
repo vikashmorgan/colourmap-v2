@@ -58,7 +58,7 @@ import {
 } from '@/lib/life-tree-2';
 import { nextQuote, POWER_QUOTES } from '@/lib/power-quotes';
 import { along, type Route, routeLength, STEP, type StarTree } from '@/lib/star-tree';
-import { GATHER_SECONDS, RING, stage } from '@/lib/star-wheel';
+import { FORM_SECONDS, GATHER_SECONDS, RING, stage } from '@/lib/star-wheel';
 
 /*
  * THE TREE LOOK OF THE G MENU (lib/life-tree.ts): you at the centre, a pulse
@@ -157,11 +157,21 @@ type Props = {
   arrive?: boolean;
   /** Leaving for the wheel: every star gathers onto the wheel's circle (lib/star-wheel.ts). */
   gather?: boolean;
+  /** Arriving from the ring (the wheel or the terminal gathered onto it): the tree grows out of
+   * the circle, the names come in once it stands (2026-11-22). */
+  fromRing?: boolean;
   /** Where you are, for the menu's notes: a key and a name (components/GridNotes.tsx). */
   onPlace?: (key: string, label: string) => void;
 };
 
-export function LifeTree({ go, close, arrive = false, gather = false, onPlace }: Props) {
+export function LifeTree({
+  go,
+  close,
+  arrive = false,
+  gather = false,
+  fromRing = false,
+  onPlace,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [frame, setFrame] = useState<Frame>({ cx: 0, cy: 0, min: 0 });
   const [design, setDesign] = useState<Design>(1);
@@ -216,6 +226,14 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
   const switchRef = useRef(0);
   // Read once, on arrival.
   const arriveRef = useRef(arrive);
+  // When the tree began growing out of the ring, or 0; its names wait until it stands.
+  const formRef = useRef(fromRing ? performance.now() : 0);
+  const [standing, setStanding] = useState(!fromRing);
+  useEffect(() => {
+    if (standing) return;
+    const t = window.setTimeout(() => setStanding(true), FORM_SECONDS * 800);
+    return () => window.clearTimeout(t);
+  }, [standing]);
   // When the stars began gathering onto the wheel's circle, or 0.
   const gatherRef = useRef(0);
   useEffect(() => {
@@ -721,9 +739,11 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
       const size = 1.1 * dpr;
 
       // Gathering for the wheel: on the wheel's own circle, round the unshifted centre.
-      const gathered = gatherRef.current
-        ? stage((now - gatherRef.current) / 1000, GATHER_SECONDS)
-        : 0;
+      const gathered = Math.max(
+        gatherRef.current ? stage((now - gatherRef.current) / 1000, GATHER_SECONDS) : 0,
+        // Arriving from the ring: on it at first, growing out into the tree.
+        formRef.current ? 1 - stage((now - formRef.current) / 1000, FORM_SECONDS) : 0,
+      );
       const gx = W / 2;
       const gy = H / 2 + 12 * dpr;
       const ringR = RING * Math.min(W, H);
@@ -821,7 +841,7 @@ export function LifeTree({ go, close, arrive = false, gather = false, onPlace }:
     <div
       onKeyDown={onKeyDown}
       // Gathering for the wheel, only the stars stay: names and words fade.
-      className={gather ? 'life-tree gathering' : 'life-tree'}
+      className={gather || !standing ? 'life-tree gathering' : 'life-tree'}
       style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}
     >
       <canvas

@@ -7,6 +7,7 @@ let pathname = '/geometry-field/drive';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }), usePathname: () => pathname }));
 
 import { MENU_MODE_KEY } from '@/lib/grid';
+import { GATHER_SECONDS } from '@/lib/star-wheel';
 
 import GridMenu from './GridMenu';
 
@@ -87,11 +88,18 @@ describe('GridMenu', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('switches to the terminal and remembers it', () => {
+  it('switches to the terminal through the ring, and remembers it', () => {
+    vi.useFakeTimers();
     render(<GridMenu />);
     fireEvent.click(screen.getByRole('button', { name: /open the network menu/i }));
     fireEvent.click(screen.getByRole('button', { name: 'TERMINAL' }));
     expect(window.localStorage.getItem(MENU_MODE_KEY)).toBe('terminal');
+    // The tree gathers onto the ring first (2026-11-22), then the terminal comes.
+    expect(screen.queryByText(/LINK ESTABLISHED/)).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(GATHER_SECONDS * 1000 + 10);
+    });
+    vi.useRealTimers();
     expect(screen.getByText(/LINK ESTABLISHED/)).toBeTruthy();
     const dialog = screen.getByRole('dialog');
     fireEvent.keyDown(dialog, { key: 'ArrowDown' });
@@ -100,6 +108,21 @@ describe('GridMenu', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Notes' }));
     fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
     expect(push).toHaveBeenCalledWith('/notebook');
+  });
+
+  it('goes from the wheel back to the tree through the ring', () => {
+    window.localStorage.setItem(MENU_MODE_KEY, 'wheel');
+    vi.useFakeTimers();
+    const { container } = render(<GridMenu />);
+    fireEvent.click(screen.getByRole('button', { name: /open the network menu/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'TREE' }));
+    expect(container.ownerDocument.querySelector('.life-tree')).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(GATHER_SECONDS * 1000 + 10);
+    });
+    vi.useRealTimers();
+    // The tree grows out of the ring: its names wait until it stands.
+    expect(document.querySelector('.life-tree.gathering')).toBeTruthy();
   });
 
   it('opens on the life tree: three trees and you at the root', () => {

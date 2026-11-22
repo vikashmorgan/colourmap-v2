@@ -5,7 +5,17 @@ import gold from './tracks/gold.json';
 
 const DOCS = { gold: gold as unknown as TrackData };
 
-import { newWreck, offTwist, stepWreck, twistOpen, WRECK } from './wreck';
+import {
+  choosesStraight,
+  nearTwist,
+  newWreck,
+  offTwist,
+  STRAIGHT,
+  stepWreck,
+  twistEntry,
+  twistOpen,
+  WRECK,
+} from './wreck';
 
 describe('off the twist (2026-11-22)', () => {
   const def = compileTrack(DOCS.gold);
@@ -41,5 +51,31 @@ describe('off the twist (2026-11-22)', () => {
     }
     expect(flags).toEqual([`boom ${WRECK.BOOM.toFixed(1)}`, `over ${WRECK.OVER.toFixed(1)}`]);
     expect(w.z).toBeLessThan(-100);
+  });
+});
+
+describe('straight through a twist (2026-11-22)', () => {
+  const def = compileTrack(DOCS.gold);
+  let start = 0;
+  for (let s = 2000; s < 3500; s += 1)
+    if ((def.twist?.(s) ?? 0) !== 0) {
+      start = s;
+      break;
+    }
+
+  it('is chosen on the centre strip at the twist start, not from its sides or mid-twist', () => {
+    expect(choosesStraight(def, start, 0)).toBe(true);
+    expect(choosesStraight(def, start, STRAIGHT.STRIP - 0.5)).toBe(true);
+    expect(choosesStraight(def, start, STRAIGHT.STRIP + 2)).toBe(false);
+    expect(choosesStraight(def, start + 150, 0)).toBe(false);
+    expect(choosesStraight(def, start - 50, 0)).toBe(false);
+    const e = twistEntry(def, start);
+    expect(e && e.end > start + 100).toBe(true);
+  });
+
+  it('marks the stretch before each twist and the twist itself', () => {
+    expect(nearTwist(def, start - 200)).toBe(true);
+    expect(nearTwist(def, start + 100)).toBe(true);
+    expect(nearTwist(def, start - STRAIGHT.LEAD - 100)).toBe(false);
   });
 });
