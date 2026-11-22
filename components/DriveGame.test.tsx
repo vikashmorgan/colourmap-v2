@@ -30,6 +30,12 @@ vi.mock('@/components/drive/engine', () => ({
 import { DESIGN_KEY } from '@/lib/art/drive-design';
 import DriveGame, { BACK_HREF } from './DriveGame';
 
+/** Opens the game and leaves the track ring by racing on the track it shows. */
+function play() {
+  render(<DriveGame />);
+  fireEvent.click(screen.getByRole('button', { name: 'Race' }));
+}
+
 describe('Drive', () => {
   beforeEach(() => {
     for (const f of Object.values(engine)) f.mockClear();
@@ -42,11 +48,11 @@ describe('Drive', () => {
   });
 
   it('starts the engine on the Salt Flat; the menu names it and opens a column of the worlds', () => {
-    render(<DriveGame />);
+    play();
     expect(engine.start).toHaveBeenCalled();
     const menu = screen.getByRole('button', { name: 'Menu' });
     expect(menu.textContent).toContain('Salt Flat');
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Menu' })).toBeNull();
     fireEvent.click(menu);
     expect(screen.getByRole('dialog', { name: 'Menu' })).toBeDefined();
     expect(screen.getByRole('link', { name: /The Garage/ }).getAttribute('href')).toBe(
@@ -71,7 +77,7 @@ describe('Drive', () => {
   });
 
   it('switches the five rivals on from the menu and keeps it', () => {
-    render(<DriveGame />);
+    play();
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
     fireEvent.click(screen.getByRole('button', { name: '5 rivals' }));
     expect(engine.setDesign).toHaveBeenLastCalledWith(expect.objectContaining({ rivals: true }));
@@ -88,7 +94,7 @@ describe('Drive', () => {
   });
 
   it('switches worlds on 1–6 and restarts on R', () => {
-    render(<DriveGame />);
+    play();
     fireEvent.keyDown(window, { key: '3' });
     expect(engine.setWorld).toHaveBeenCalledWith('canyon');
     fireEvent.keyDown(window, { key: '6' });
@@ -98,7 +104,7 @@ describe('Drive', () => {
   });
 
   it('drives with the keys: throttle, steer, boost', () => {
-    render(<DriveGame />);
+    play();
     fireEvent.keyDown(window, { key: 'ArrowUp' });
     fireEvent.keyDown(window, { key: 'a' });
     fireEvent.keyDown(window, { key: ' ' });
@@ -120,7 +126,7 @@ describe('Drive', () => {
   });
 
   it('holds the handbrake with F or the Handbrake button', () => {
-    render(<DriveGame />);
+    play();
     fireEvent.keyDown(window, { key: 'f' });
     expect(engine.setControls.mock.calls.at(-1)?.[0].handbrake).toBe(true);
     fireEvent.keyUp(window, { key: 'f' });
@@ -134,7 +140,7 @@ describe('Drive', () => {
   });
 
   it('shows the drift score, its combo while sliding, and the best', () => {
-    render(<DriveGame />);
+    play();
     const base = { speed: 180, time: '20.00', best: null, record: false, running: true };
     act(() => hud?.({ ...base, drift: 1240, driftBest: 3120, combo: 2.5 }));
     expect(screen.getByTestId('drive-hud').textContent).toContain('drift 1240 ×2.5');
@@ -143,7 +149,7 @@ describe('Drive', () => {
   });
 
   it('opens the menu, remembers a design choice and closes on Esc; Esc again goes back', () => {
-    render(<DriveGame />);
+    play();
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
     expect(screen.getByRole('dialog', { name: 'Menu' })).toBeDefined();
     expect(engine.setPreview).toHaveBeenLastCalledWith(true);
@@ -163,7 +169,7 @@ describe('Drive', () => {
   });
 
   it('shows the speed and the run quietly', () => {
-    render(<DriveGame />);
+    play();
     act(() => hud?.({ speed: 214, time: '41.27', best: '39.80', record: false, running: false }));
     const h = screen.getByTestId('drive-hud');
     expect(h.textContent).toContain('214');
@@ -174,7 +180,7 @@ describe('Drive', () => {
   });
 
   it('drives on touch: hold the left of the screen to steer left', () => {
-    render(<DriveGame />);
+    play();
     const root = screen.getByTestId('drive');
     fireEvent.pointerDown(root, { pointerType: 'touch', pointerId: 1, clientX: 10 });
     const last = engine.setControls.mock.calls.at(-1)?.[0];
@@ -182,5 +188,49 @@ describe('Drive', () => {
     expect(last.steer).toBeGreaterThan(0);
     fireEvent.pointerUp(root, { pointerType: 'touch', pointerId: 1, clientX: 10 });
     expect(engine.setControls.mock.calls.at(-1)?.[0].throttle).toBe(0);
+  });
+
+  it('opens on the track ring: the screens turn, the world behind follows, Race drives in', () => {
+    vi.useFakeTimers();
+    render(<DriveGame />);
+    const ring = screen.getByTestId('track-ring');
+    expect(ring).toBeDefined();
+    expect(engine.setPreview).toHaveBeenLastCalledWith(true);
+    expect(screen.queryByRole('button', { name: 'Menu' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Salt Flat' }).getAttribute('aria-current')).toBe(
+      'true',
+    );
+    expect(screen.getByTestId('track-map')).toBeDefined();
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    expect(screen.getByRole('button', { name: 'Coast Road' }).getAttribute('aria-current')).toBe(
+      'true',
+    );
+    expect(screen.getByText('Banked cliff road over the sea')).toBeDefined();
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(engine.setWorld).toHaveBeenLastCalledWith('coast');
+    // The ring's keys don't drive the car.
+    expect(engine.setControls).not.toHaveBeenCalledWith(expect.objectContaining({ steer: -1 }));
+    fireEvent.keyDown(window, { key: 'ArrowLeft' });
+    fireEvent.keyDown(window, { key: 'ArrowLeft' });
+    expect(screen.getByRole('button', { name: 'Golden Track' }).getAttribute('aria-current')).toBe(
+      'true',
+    );
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(screen.queryByTestId('track-ring')).toBeNull();
+    expect(engine.reset).toHaveBeenCalled();
+    expect(engine.setPreview).toHaveBeenLastCalledWith(false);
+    vi.useRealTimers();
+  });
+
+  it('comes back to the track ring from the menu', () => {
+    play();
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    fireEvent.click(screen.getByRole('button', { name: /Track ring/ }));
+    expect(screen.getByTestId('track-ring')).toBeDefined();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('track-ring')).toBeNull();
+    expect(push).not.toHaveBeenCalled();
   });
 });
