@@ -74,6 +74,17 @@ import {
   surgeAccel,
   throughRing,
 } from '@/lib/art/night-course';
+import {
+  type IntroClock,
+  type IntroPhase,
+  introPhase,
+  lightsAt,
+  newIntro,
+  plainShot,
+  racing,
+  type Shot,
+  trackShot,
+} from '@/lib/art/race-intro';
 import { bump, placeOf, RIVALS, type Rival, rivalControls, rivalHull } from '@/lib/art/rivals';
 import {
   CAM_H,
@@ -100,6 +111,7 @@ import {
   stepKmRace,
   type TrackWorld,
 } from '@/lib/art/track';
+import { trackInfo } from '@/lib/art/track-registry';
 import {
   FLAT,
   MARS_FLAT,
@@ -148,7 +160,20 @@ export interface EngineOptions {
   design: Design;
   store: Store | null;
   onHud?: (h: Hud) => void;
+  /** The race intro's phase and lights as they change; null when it is over (docs/specs/drive-menus.md). */
+  onIntro?: (s: IntroState | null) => void;
 }
+
+export interface IntroState {
+  phase: IntroPhase;
+  /** Red lights lit (0–3), and whether they have turned to GO. */
+  lit: number;
+  go: boolean;
+}
+
+/** The start gantry's lamps: off, red, and GO in the track's colour. */
+const LAMP_OFF = 0x1a0606;
+const LAMP_RED = new THREE.Color(3.2, 0.25, 0.12);
 
 /** The Speed pieces' projection: focal length f (view heights), horizon hz, shake (sx, sy). */
 export function setProjection(
@@ -438,6 +463,15 @@ export class DriveEngine {
   private design: Design;
   private store: Store | null;
   private onHud?: (h: Hud) => void;
+  private onIntro?: (s: IntroState | null) => void;
+  /** The race intro, while it runs (null: driving). */
+  private intro: IntroClock | null = null;
+  private lastIntro = '';
+  /** The start gantry over the line on every road: two posts, a bar, three lamps. */
+  private gantry = new THREE.Group();
+  private lamps: THREE.MeshBasicMaterial[] = [];
+  /** The gantry's edges of light, in the track's colour. */
+  private gantryGlow = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
   private worlds = new Map<WorldId, TrackWorld>();
   private physics: World = FLAT;
   private trackWorld: TrackWorld | null = null;
@@ -474,6 +508,7 @@ export class DriveEngine {
     this.design = opts.design;
     this.store = opts.store;
     this.onHud = opts.onHud;
+    this.onIntro = opts.onIntro;
     this.cfg = WORLD_CFG[opts.world];
     this.weather = newWeather(opts.design.weather);
 
@@ -610,6 +645,8 @@ export class DriveEngine {
     this.scene.add(this.motes);
 
     this.scene.add(this.sun, this.sun.target, this.hemi, this.carLight);
+    this.buildGantry();
+    this.scene.add(this.gantry);
     this.scene.add(this.puffs.points);
     this.scene.add(this.sparks.points);
     (this.sparks.material.uniforms.uColour.value as THREE.Color).setRGB(2.4, 1.3, 0.45);
@@ -697,6 +734,67 @@ export class DriveEngine {
     this.spawn();
   }
 
+  /** The gantry, built once (1 m wide; scaled to each road). Its frame faces up the road (+x). */
+  private buildGantry() {
+    const metal = new THREE.MeshStandardMaterial({
+      color: 0x17141c,
+      metalness: 0.7,
+      roughness: 0.4,
+    });
+    const post = new THREE.BoxGeometry(0.6, 8.4, 0.6);
+    for (const side of [-1, 1]) {
+      const m = new THREE.Mesh(post, metal);
+      m.name = side < 0 ? 'post-right' : 'post-left';
+      m.position.set(0, 4.2, 0);
+      this.gantry.add(m);
+    }
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.1, 1), metal);
+    bar.name = 'bar';
+    bar.position.set(0, 8.2, 0);
+    this.gantry.add(bar);
+    // Lines of light along the bar's top and bottom and up the posts' faces, so it reads at night.
+    const strip = new THREE.BoxGeometry(0.12, 0.12, 1);
+    for (const y of [7.1, 9.3]) {
+      const m = new THREE.Mesh(strip, this.gantryGlow);
+      m.name = 'strip';
+      m.position.set(-0.5, y, 0);
+      this.gantry.add(m);
+    }
+    const rail = new THREE.BoxGeometry(0.12, 8.4, 0.12);
+    for (const side of [-1, 1]) {
+      const m = new THREE.Mesh(rail, this.gantryGlow);
+      m.name = side < 0 ? 'rail-right' : 'rail-left';
+      m.position.set(-0.32, 4.2, 0);
+      this.gantry.add(m);
+    }
+    const disc = new THREE.CircleGeometry(0.9, 32);
+    for (let i = 0; i < 3; i++) {
+      const mat = new THREE.MeshBasicMaterial({ color: LAMP_OFF, toneMapped: false });
+      const lamp = new THREE.Mesh(disc, mat);
+      // Facing back down the road, toward the grid.
+      lamp.rotation.y = -Math.PI / 2;
+      lamp.position.set(-0.47, 8.2, (i - 1) * 2.6);
+      this.lamps.push(mat);
+      this.gantry.add(lamp);
+    }
+    this.gantry.visible = false;
+  }
+
+  /** Spans the gantry across this road, just ahead of the grid. */
+  private placeGantry() {
+    const tw = this.trackWorld;
+    this.gantry.visible = !!tw;
+    if (!tw) return;
+    const half = tw.track.def.half(Math.max(0, this.cfg.startS + 6));
+    const w = half + 1.4;
+    for (const c of this.gantry.children) {
+      if (c.name === 'post-left' || c.name === 'rail-left') c.position.z = -w;
+      if (c.name === 'post-right' || c.name === 'rail-right') c.position.z = w;
+      if (c.name === 'bar' || c.name === 'strip') c.scale.z = 2 * w;
+    }
+    this.gantryGlow.color.set(trackInfo(this.cfg.id).colour).multiplyScalar(1.6);
+  }
+
   private spawn() {
     const kind = this.design.vehicle[this.cfg.id];
     if (this.cfg.track && this.trackWorld) {
@@ -722,6 +820,7 @@ export class DriveEngine {
     this.surgeAt = -99;
     this.buildVehicleView();
     this.buildRivals();
+    this.placeGantry();
     this.lastHud = '';
   }
 
@@ -890,6 +989,62 @@ export class DriveEngine {
     this.spawn();
   }
 
+  /** Back to the start for the race intro: the flyover (or straight to the grid on a restart),
+   * then it waits for `launch`. */
+  startIntro(skipFly = false) {
+    this.spawn();
+    this.intro = newIntro(skipFly);
+    this.lastIntro = '';
+  }
+
+  /** Any key during the flyover: straight to the grid. */
+  skipIntro() {
+    const c = this.intro;
+    if (!c || c.launchedAt !== null) return;
+    const p = introPhase(c);
+    if (p?.phase === 'fly') this.intro = newIntro(true);
+  }
+
+  /** The click to start: the lights count down, then everyone goes. */
+  launch() {
+    const c = this.intro;
+    if (!c || c.launchedAt !== null) return;
+    this.intro = { ...c, launchedAt: c.t };
+  }
+
+  /** The intro's camera now, or null when the chase camera has it. */
+  private introShot(): Shot | null {
+    const c = this.intro;
+    if (!c) return null;
+    const p = introPhase(c);
+    if (!p || p.phase === 'go') return null;
+    const shotPhase = p.phase === 'count' ? 'ready' : p.phase;
+    if (this.trackWorld) return trackShot(this.trackWorld.track, this.cfg.startS, shotPhase, p.k);
+    return plainShot(this.vehicle, shotPhase, p.k);
+  }
+
+  /** Moves the intro on: lamps, the rivals' start, and tells the shell when its phase changes. */
+  private stepIntro(dt: number) {
+    const c = this.intro;
+    if (!c) return;
+    c.t += dt;
+    const p = introPhase(c);
+    const l = lightsAt(c);
+    if (racing(c)) this.rivalsGo = true;
+    const colour = new THREE.Color(trackInfo(this.cfg.id).colour).multiplyScalar(2.6);
+    this.lamps.forEach((m, i) => {
+      if (l.go) m.color.copy(colour);
+      else if (i < l.lit) m.color.copy(LAMP_RED);
+      else m.color.set(LAMP_OFF);
+    });
+    const key = p ? `${p.phase}:${l.lit}:${l.go}` : 'done';
+    if (key !== this.lastIntro) {
+      this.lastIntro = key;
+      this.onIntro?.(p ? { phase: p.phase, lit: l.lit, go: l.go } : null);
+    }
+    if (!p) this.intro = null;
+  }
+
   resize(w: number, h: number) {
     this.size = { w: Math.max(1, w), h: Math.max(1, h) };
     this.renderer.setSize(this.size.w, this.size.h, false);
@@ -936,11 +1091,14 @@ export class DriveEngine {
     const w = weatherNow(this.weather, this.cfg.id);
     const v = this.vehicle;
     const spec = VEHICLES[v.kind];
-    const ctl = this.preview
-      ? NO_CONTROLS
-      : this.autopilot
-        ? autopilotControls(v, this.trackWorld?.track ?? null, this.s, t, this.cfg.id === 'sky')
-        : this.controls;
+    this.stepIntro(dt);
+    const holding = this.intro !== null && !racing(this.intro);
+    const ctl =
+      this.preview || holding
+        ? NO_CONTROLS
+        : this.autopilot
+          ? autopilotControls(v, this.trackWorld?.track ?? null, this.s, t, this.cfg.id === 'sky')
+          : this.controls;
 
     if (!this.preview) {
       // A ring's surge and the weather's gusts push before the vehicle moves.
@@ -1044,12 +1202,22 @@ export class DriveEngine {
       this.cam.z = Math.max(this.cam.z, g + 1.2);
     }
     this.cam.roll = ease(this.cam.roll, piece ? 0 : v.roll * 0.35, 4, dt);
+    const shot = this.preview ? null : this.introShot();
+    if (shot) {
+      this.cam.x = shot.cam.x;
+      this.cam.y = shot.cam.y;
+      this.cam.z = shot.cam.z;
+      this.cam.roll = 0;
+    }
 
     const ox = this.cam.x;
     const oy = this.cam.y;
     const camera = this.camera;
     camera.position.set(0, this.cam.z, 0);
-    if (piece) {
+    if (shot) {
+      camera.up.set(0, 1, 0);
+      camera.lookAt(shot.look.x - ox, shot.look.z, -(shot.look.y - oy));
+    } else if (piece) {
       camera.rotation.set(0, yaw - Math.PI / 2, 0, 'YXZ');
     } else {
       const ahead = this.preview ? 0 : 6;
@@ -1064,6 +1232,15 @@ export class DriveEngine {
     const shake = this.preview ? { x: 0, y: 0 } : { x: feel.shakeX, y: feel.shakeY };
     const hz = piece ? 0.01 : 0;
     setProjection(camera, this.cam.focal, aspect, hz, shake.x, shake.y);
+
+    // The start gantry, just ahead of the grid.
+    if (this.trackWorld) {
+      const gs = this.cfg.startS + 6;
+      const tr = this.trackWorld.track;
+      const gp = pointAt(tr, gs, 0);
+      this.gantry.position.set(gp.x - ox, heightAt(tr, gs, 0), -(gp.y - oy));
+      this.gantry.rotation.set(0, frameAt(tr, gs).h, 0);
+    }
 
     // The vehicle.
     const vv = this.vehicleView;

@@ -11,16 +11,21 @@ const engine = {
   setDesign: vi.fn(),
   setPreview: vi.fn(),
   reset: vi.fn(),
+  startIntro: vi.fn(),
+  skipIntro: vi.fn(),
+  launch: vi.fn(),
   resize: vi.fn(),
   start: vi.fn(),
   dispose: vi.fn(),
 };
 let hud: ((h: unknown) => void) | undefined;
+let intro: ((s: unknown) => void) | undefined;
 // A class (not an arrow), since the shell constructs it with `new`.
 vi.mock('@/components/drive/engine', () => ({
   DriveEngine: class {
-    constructor(_c: unknown, o: { onHud?: (h: unknown) => void }) {
+    constructor(_c: unknown, o: { onHud?: (h: unknown) => void; onIntro?: (s: unknown) => void }) {
       hud = o.onHud;
+      intro = o.onIntro;
       // biome-ignore lint/correctness/noConstructorReturn: hands the shared mock to the shell.
       return engine;
     }
@@ -100,7 +105,7 @@ describe('Drive', () => {
     fireEvent.keyDown(window, { key: '6' });
     expect(engine.setWorld).toHaveBeenCalledWith('neon');
     fireEvent.keyDown(window, { key: 'r' });
-    expect(engine.reset).toHaveBeenCalled();
+    expect(engine.startIntro).toHaveBeenLastCalledWith(true);
   });
 
   it('drives with the keys: throttle, steer, boost', () => {
@@ -219,7 +224,7 @@ describe('Drive', () => {
     );
     fireEvent.keyDown(window, { key: 'Enter' });
     expect(screen.queryByTestId('track-ring')).toBeNull();
-    expect(engine.reset).toHaveBeenCalled();
+    expect(engine.startIntro).toHaveBeenCalledWith();
     expect(engine.setPreview).toHaveBeenLastCalledWith(false);
     vi.useRealTimers();
   });
@@ -232,5 +237,29 @@ describe('Drive', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByTestId('track-ring')).toBeNull();
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it('plays the race intro: the name while flying, any key skips, click to start, the countdown, GO', () => {
+    play();
+    expect(engine.startIntro).toHaveBeenCalledWith();
+    act(() => intro?.({ phase: 'fly', lit: 0, go: false }));
+    expect(screen.getByTestId('race-intro').textContent).toContain('Salt Flat');
+    expect(screen.queryByRole('button', { name: /Handbrake/ })).toBeDefined();
+    fireEvent.keyDown(window, { key: 'x' });
+    expect(engine.skipIntro).toHaveBeenCalled();
+    act(() => intro?.({ phase: 'ready', lit: 0, go: false }));
+    expect(screen.getByText('Click to start')).toBeDefined();
+    fireEvent.pointerDown(screen.getByTestId('race-intro'));
+    expect(engine.launch).toHaveBeenCalledTimes(1);
+    // Holding ↑ at the grid also starts it, and is still held at GO.
+    fireEvent.keyDown(window, { key: 'ArrowUp' });
+    expect(engine.launch).toHaveBeenCalledTimes(2);
+    expect(engine.setControls).toHaveBeenLastCalledWith(expect.objectContaining({ throttle: 1 }));
+    act(() => intro?.({ phase: 'count', lit: 2, go: false }));
+    expect(screen.getByTestId('race-intro').textContent).toContain('2');
+    act(() => intro?.({ phase: 'go', lit: 3, go: true }));
+    expect(screen.getByText('GO')).toBeDefined();
+    act(() => intro?.(null));
+    expect(screen.queryByTestId('race-intro')).toBeNull();
   });
 });
