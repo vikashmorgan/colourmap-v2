@@ -43,8 +43,37 @@ interface P {
   e: number;
 }
 
-/** Fits points in the box (keeping the aspect), north up, rises lifted. */
-function fitBox(pts: P[], width: number, height: number): { x: number; y: number }[] {
+/** Turns the points about their middle so their longest spread lies across the box (the
+ * principal axis), so a course that runs north still fills a wide map. */
+function lieFlat(pts: P[]): P[] {
+  const n = pts.length || 1;
+  let mx = 0;
+  let my = 0;
+  for (const p of pts) {
+    mx += p.x / n;
+    my += p.y / n;
+  }
+  let sxx = 0;
+  let syy = 0;
+  let sxy = 0;
+  for (const p of pts) {
+    sxx += (p.x - mx) ** 2;
+    syy += (p.y - my) ** 2;
+    sxy += (p.x - mx) * (p.y - my);
+  }
+  const a = 0.5 * Math.atan2(2 * sxy, sxx - syy);
+  const c = Math.cos(-a);
+  const s = Math.sin(-a);
+  return pts.map((p) => ({
+    x: (p.x - mx) * c - (p.y - my) * s,
+    y: (p.x - mx) * s + (p.y - my) * c,
+    e: p.e,
+  }));
+}
+
+/** Fits points in the box (keeping the aspect), laid along their longest spread, rises lifted. */
+function fitBox(raw: P[], width: number, height: number): { x: number; y: number }[] {
+  const pts = lieFlat(raw);
   let x0 = Number.POSITIVE_INFINITY;
   let x1 = Number.NEGATIVE_INFINITY;
   let y0 = Number.POSITIVE_INFINITY;

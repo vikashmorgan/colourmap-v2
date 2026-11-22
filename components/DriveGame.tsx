@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { DriveEngine, type Hud, type IntroState } from '@/components/drive/engine';
+import { PauseMenu, RaceResults, TitleScreen } from '@/components/drive/GameSheets';
 import RaceIntro from '@/components/drive/RaceIntro';
 import { FutureGauge, TimerGauge } from '@/components/drive/Speedometer';
 import TrackRing from '@/components/drive/TrackRing';
@@ -39,9 +40,12 @@ import {
   WORLDS,
   type WorldId,
 } from '@/lib/art/drive-design';
+import type { RaceResult } from '@/lib/art/race-result';
 import { WEATHERS } from '@/lib/art/weather';
 
 export const BACK_HREF = '/geometry-field?tab=experiment';
+/** The track you raced last, so the ring opens on it. */
+export const LAST_TRACK_KEY = 'drive.lastTrack';
 const WEATHER_IDS = WEATHERS.map((w) => w.id);
 
 function storage(): Store | null {
@@ -75,6 +79,11 @@ export default function DriveGame() {
   const [panel, setPanel] = useState(false);
   // The track ring (docs/specs/drive-menus.md): the first screen, and from the menu.
   const [ring, setRing] = useState(true);
+  // The title comes first, then the ring; the pause and the results are sheets over the game.
+  const [title, setTitle] = useState(true);
+  const [paused, setPaused] = useState(false);
+  const [results, setResults] = useState<RaceResult | null>(null);
+  const sheetRef = useRef(false);
   // The race intro (flyover, grid, click to start, countdown), while it runs.
   const [intro, setIntro] = useState<IntroState | null>(null);
   const introRef = useRef(intro);
@@ -103,6 +112,11 @@ export default function DriveGame() {
       if (id === 'sky') setHint(true);
       worldRef.current = id;
       engineRef.current?.setWorld(id);
+      try {
+        storage()?.setItem(LAST_TRACK_KEY, id);
+      } catch {
+        // Storage may be blocked: the ring then opens on the Salt Flat.
+      }
       pushControls();
     },
     [pushControls],
@@ -119,10 +133,14 @@ export default function DriveGame() {
     const d = loadDesign(storage(), WEATHER_IDS);
     setDesignState(d);
     const asked = new URLSearchParams(window.location.search).get('world') ?? '';
-    const first: WorldId = isWorld(asked) ? asked : 'salt';
+    const last = storage()?.getItem(LAST_TRACK_KEY) ?? '';
+    const first: WorldId = isWorld(asked) ? asked : isWorld(last) ? last : 'salt';
     setWorldState(first);
     // A link to a world drives straight in; otherwise the ring comes first.
-    if (isWorld(asked)) setRing(false);
+    if (isWorld(asked)) {
+      setRing(false);
+      setTitle(false);
+    }
     const canvas = canvasRef.current;
     if (!canvas) return;
     let engine: DriveEngine;
@@ -133,6 +151,7 @@ export default function DriveGame() {
         store: storage(),
         onHud: setHud,
         onIntro: setIntro,
+        onFinish: setResults,
       });
     } catch {
       setFailed(true);
@@ -153,8 +172,23 @@ export default function DriveGame() {
   }, []);
 
   useEffect(() => {
-    engineRef.current?.setPreview(panel || ring);
-  }, [panel, ring]);
+    engineRef.current?.setPreview(panel || ring || title || paused || results !== null);
+  }, [panel, ring, title, paused, results]);
+  sheetRef.current = title || paused || results !== null;
+
+  const openRing = useCallback(() => {
+    setPaused(false);
+    setResults(null);
+    setPanel(false);
+    setIntro(null);
+    setRing(true);
+  }, []);
+
+  const restart = useCallback(() => {
+    setPaused(false);
+    setResults(null);
+    engineRef.current?.startIntro(true);
+  }, []);
 
   const race = useCallback(() => {
     setRing(false);
@@ -176,9 +210,13 @@ export default function DriveGame() {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
+      // The title, pause and results sheets take their own keys first.
+      if (sheetRef.current) return;
       if (k === 'escape') {
+        // Esc closes the menu; in the intro it goes back to the ring; driving, it pauses.
         if (panelRef.current) setPanel(false);
-        else router.push(BACK_HREF);
+        else if (introRef.current) openRing();
+        else setPaused(true);
         return;
       }
       if (e.target instanceof HTMLInputElement) return;
@@ -191,7 +229,7 @@ export default function DriveGame() {
       }
       if (k === 'r') {
         // A restart goes straight to the grid.
-        engineRef.current?.startIntro(true);
+        restart();
         return;
       }
       if (DRIVE_KEYS.includes(k)) {
@@ -220,7 +258,7 @@ export default function DriveGame() {
       window.removeEventListener('keyup', up);
       window.removeEventListener('blur', blur);
     };
-  }, [router, chooseWorld, pushControls, introKey]);
+  }, [chooseWorld, pushControls, introKey, openRing, restart]);
 
   // Touch: hold the left or right of the screen to steer; any touch drives; two fingers boost.
   const onPointer = (e: React.PointerEvent) => {
@@ -375,7 +413,15 @@ export default function DriveGame() {
             </div>
           )}
           {(hud.time || hud.best) && (
-            <div style={{ fontSize: 11, marginTop: 4, color: `${quiet}0.5)` }}>
+            <div
+              style={{
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                fontVariantNumeric: 'tabular-nums',
+                fontSize: 11,
+                marginTop: 4,
+                color: `${quiet}0.5)`,
+              }}
+            >
               {hud.time && (
                 <span style={{ color: hud.record ? `${quiet}0.9)` : undefined }}>{hud.time}</span>
               )}
@@ -384,7 +430,15 @@ export default function DriveGame() {
             </div>
           )}
           {hud.place != null && (
-            <div style={{ fontSize: 11, marginTop: 2, color: `${quiet}0.5)` }}>
+            <div
+              style={{
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                fontVariantNumeric: 'tabular-nums',
+                fontSize: 11,
+                marginTop: 2,
+                color: `${quiet}0.5)`,
+              }}
+            >
               <span style={{ color: hud.place === 1 ? 'rgba(255,200,110,0.95)' : undefined }}>
                 P{hud.place}
               </span>{' '}
@@ -392,7 +446,15 @@ export default function DriveGame() {
             </div>
           )}
           {hud.drift != null && (
-            <div style={{ fontSize: 11, marginTop: 2, color: `${quiet}0.5)` }}>
+            <div
+              style={{
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                fontVariantNumeric: 'tabular-nums',
+                fontSize: 11,
+                marginTop: 2,
+                color: `${quiet}0.5)`,
+              }}
+            >
               drift {hud.drift}
               {hud.combo != null && (
                 <span style={{ color: 'rgba(255,200,110,0.9)' }}> ×{hud.combo.toFixed(1)}</span>
@@ -403,7 +465,7 @@ export default function DriveGame() {
         </div>
       )}
 
-      {hint && !failed && !ring && !intro && (
+      {hint && !failed && !ring && !intro && !paused && !results && (
         <div
           style={{
             position: 'absolute',
@@ -425,7 +487,23 @@ export default function DriveGame() {
 
       {intro && !ring && !failed && <RaceIntro state={intro} world={world} onClick={introKey} />}
 
-      {ring && !failed && (
+      {title && !failed && <TitleScreen onEnter={() => setTitle(false)} />}
+
+      {paused && !failed && (
+        <PauseMenu
+          world={world}
+          onResume={() => setPaused(false)}
+          onRestart={restart}
+          onTracks={openRing}
+          onLeave={() => router.push(BACK_HREF)}
+        />
+      )}
+
+      {results && !failed && (
+        <RaceResults world={world} result={results} onAgain={restart} onTracks={openRing} />
+      )}
+
+      {ring && !title && !failed && (
         <TrackRing current={world} onPick={chooseWorld} onRace={race} onClose={race} />
       )}
 
@@ -445,7 +523,7 @@ export default function DriveGame() {
         </div>
       )}
 
-      {!ring && !intro && (
+      {!ring && !intro && !title && !paused && !results && (
         <button
           type="button"
           aria-label="Handbrake: hold it and turn to drift"

@@ -12,9 +12,10 @@ Esc goes back one step; in a race it pauses.
 
 ## Title
 
-- Your current vehicle idling in front of Saturn (the Golden Track's sky), its fire breathing.
+- Your current vehicle idling in the world you raced last, the camera turning slowly round it.
 - "Colour Drive" (working title) in the display serif, one line: "Click to enter".
-- Any key or click opens the ring.
+- Any key or click opens the ring, on the track raced last (`drive.lastTrack`). A `?world=` link
+  skips the title and the ring. (Built 2026-11-22, `components/drive/GameSheets.tsx`.)
 
 ## The track ring
 
@@ -30,7 +31,7 @@ Esc goes back one step; in a race it pauses.
   never reach the car.
 - ← → (or swipe, or click a screen) turns the ring; it eases round in 450 ms.
 - Under the ring: the selected track's **map** (`lib/art/track-map.ts`), its road drawn as a glowing line in its colour,
-  seen from above at a slight tilt so the rises show. The line draws itself from the start gate
+  seen from above at a slight tilt so the rises show, turned to lie along its longest spread. The line draws itself from the start gate
   round the track in 1.2 s, then a light dot runs a lap on it, for ever, slowly. Marks on the line:
   the start/finish, banked bends (the line thickens), jumps (a gap), gates (ticks).
 - Beside the map: the name, the tagline, the run label ("4.8 km course"), difficulty as three
@@ -63,12 +64,16 @@ Esc goes back one step; in a race it pauses.
 ## In the race
 
 - HUD: the speedometer (your chosen style), place ("P2 / 6"), lap or km, time, the boost meter.
-- Esc pauses: the frame freezes and blurs behind a lifted sheet: Resume, Restart, Garage, Tracks.
+- Esc pauses: the frame freezes and blurs behind a lifted sheet: Resume, Restart, Tracks, Garage,
+  Leave (Esc or Enter resumes, R restarts at the grid). Esc during the intro goes back to the ring.
+  Leaving the game is in the pause sheet now, not a second Esc.
 
 ## Results
 
-- When a course or lap race ends: the podium (top three in their colours), your time against your
-  best, places for all six, "Race again" (Enter) or "Tracks".
+- When a course race ends (the Canyon, for now; laps when roads close): your place in words, your
+  time, "new best" in gold or your best, everyone in order with their colour (the top three
+  larger), "Race again" (Enter or R, straight to the grid) or "Tracks" (Esc). Built from
+  `lib/art/race-result.ts`; the engine's `onFinish`.
 - On endless roads, results open from the pause menu: best km, top speed.
 
 ## Data
