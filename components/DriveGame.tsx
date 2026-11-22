@@ -523,7 +523,7 @@ export default function DriveGame() {
         </div>
       )}
 
-      {!ring && !intro && (
+      {!ring && !intro && !title && !paused && !results && (
         <button
           type="button"
           aria-label="Handbrake: hold it and turn to drift"

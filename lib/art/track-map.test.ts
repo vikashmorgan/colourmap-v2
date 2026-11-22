@@ -43,6 +43,13 @@ describe('the track maps', () => {
     expect(trackMap('gold').marks.filter((k) => k.kind === 'gate')).toHaveLength(5);
   });
 
+  it('lays every map along its longest spread, so it fills a wide box', () => {
+    for (const id of ['canyon', 'sky', 'coast'] as const) {
+      const xs = coords(trackMap(id, 600, 260).d).map((p) => p.x);
+      expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(400);
+    }
+  });
+
   it('marks the Golden Track’s steep bends', () => {
     expect(trackMap('gold').banks.length).toBeGreaterThan(1);
   });
