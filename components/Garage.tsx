@@ -269,6 +269,15 @@ export default function Garage() {
           design.flames ? 'on' : 'off',
           (id) => change({ ...design, flames: id === 'on' }, false),
         )}
+        {row(
+          'Light trail',
+          [
+            { id: 'on', name: 'On' },
+            { id: 'off', name: 'Off' },
+          ],
+          design.trail ? 'on' : 'off',
+          (id) => change({ ...design, trail: id === 'on' }, false),
+        )}
         {row('Speedo', GAUGES, design.gauge, (id) =>
           change({ ...design, gauge: id as GaugeId }, false),
         )}
