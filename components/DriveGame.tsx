@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { DriveEngine, type Hud } from '@/components/drive/engine';
 import { FutureGauge, TimerGauge } from '@/components/drive/Speedometer';
+import TrackRing from '@/components/drive/TrackRing';
 import {
   controlsFromKeys,
   controlsFromTouches,
@@ -71,6 +72,8 @@ export default function DriveGame() {
   const [world, setWorldState] = useState<WorldId>('salt');
   const [design, setDesignState] = useState<Design>(() => loadDesign(null, WEATHER_IDS));
   const [panel, setPanel] = useState(false);
+  // The track ring (docs/specs/drive-menus.md): the first screen, and from the menu.
+  const [ring, setRing] = useState(true);
   const [hud, setHud] = useState<Hud | null>(null);
   const [hint, setHint] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -113,6 +116,8 @@ export default function DriveGame() {
     const asked = new URLSearchParams(window.location.search).get('world') ?? '';
     const first: WorldId = isWorld(asked) ? asked : 'salt';
     setWorldState(first);
+    // A link to a world drives straight in; otherwise the ring comes first.
+    if (isWorld(asked)) setRing(false);
     const canvas = canvasRef.current;
     if (!canvas) return;
     let engine: DriveEngine;
@@ -142,8 +147,15 @@ export default function DriveGame() {
   }, []);
 
   useEffect(() => {
-    engineRef.current?.setPreview(panel);
-  }, [panel]);
+    engineRef.current?.setPreview(panel || ring);
+  }, [panel, ring]);
+
+  const race = useCallback(() => {
+    setRing(false);
+    setPanel(false);
+    setHint(true);
+    engineRef.current?.reset();
+  }, []);
 
   // The keys: the City game's (arrows or WASD, Space, Shift), 1–6 for the worlds, R to restart, Esc.
   useEffect(() => {
@@ -272,50 +284,52 @@ export default function DriveGame() {
           the tracks can be chosen … make that menu smarter, open closed column, and the design
           options for racing also there"): one button naming the track; it opens a column with the
           tracks, the Garage and the Design rows. */}
-      <button
-        type="button"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => setPanel((p) => !p)}
-        aria-expanded={panel}
-        aria-label="Menu"
-        style={{
-          position: 'absolute',
-          top: 10,
-          right: 16,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '7px 14px',
-          borderRadius: 999,
-          border: `1px solid ${quiet}${panel ? 0.4 : 0.18})`,
-          background: panel ? 'rgba(14,10,14,0.78)' : 'rgba(14,10,14,0.35)',
-          backdropFilter: 'blur(6px)',
-          cursor: 'pointer',
-          fontFamily: font,
-          fontSize: 12,
-          color: `${quiet}0.85)`,
-        }}
-      >
-        <span aria-hidden="true" style={{ display: 'grid', gap: 2.5 }}>
-          {[0, 1, 2].map((k) => (
-            <span key={k} style={{ width: 12, height: 1.2, background: `${quiet}0.7)` }} />
-          ))}
-        </span>
-        <span>{WORLDS.find((w) => w.id === world)?.name}</span>
-        <span
-          aria-hidden="true"
+      {!ring && (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => setPanel((p) => !p)}
+          aria-expanded={panel}
+          aria-label="Menu"
           style={{
-            fontSize: 9,
-            color: `${quiet}0.5)`,
-            transform: panel ? 'rotate(180deg)' : 'none',
-            transition: 'transform 0.2s',
+            position: 'absolute',
+            top: 10,
+            right: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '7px 14px',
+            borderRadius: 999,
+            border: `1px solid ${quiet}${panel ? 0.4 : 0.18})`,
+            background: panel ? 'rgba(14,10,14,0.78)' : 'rgba(14,10,14,0.35)',
+            backdropFilter: 'blur(6px)',
+            cursor: 'pointer',
+            fontFamily: font,
+            fontSize: 12,
+            color: `${quiet}0.85)`,
           }}
         >
-          ▼
-        </span>
-      </button>
+          <span aria-hidden="true" style={{ display: 'grid', gap: 2.5 }}>
+            {[0, 1, 2].map((k) => (
+              <span key={k} style={{ width: 12, height: 1.2, background: `${quiet}0.7)` }} />
+            ))}
+          </span>
+          <span>{WORLDS.find((w) => w.id === world)?.name}</span>
+          <span
+            aria-hidden="true"
+            style={{
+              fontSize: 9,
+              color: `${quiet}0.5)`,
+              transform: panel ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.2s',
+            }}
+          >
+            ▼
+          </span>
+        </button>
+      )}
 
-      {hud && (
+      {hud && !ring && (
         <div
           data-testid="drive-hud"
           style={{
@@ -371,7 +385,7 @@ export default function DriveGame() {
         </div>
       )}
 
-      {hint && !failed && (
+      {hint && !failed && !ring && (
         <div
           style={{
             position: 'absolute',
@@ -391,6 +405,10 @@ export default function DriveGame() {
         </div>
       )}
 
+      {ring && !failed && (
+        <TrackRing current={world} onPick={chooseWorld} onRace={race} onClose={race} />
+      )}
+
       {failed && (
         <div
           style={{
@@ -407,48 +425,50 @@ export default function DriveGame() {
         </div>
       )}
 
-      <button
-        type="button"
-        aria-label="Handbrake: hold it and turn to drift"
-        aria-pressed={hand}
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          e.currentTarget.setPointerCapture?.(e.pointerId);
-          handHeld.current = true;
-          setHand(true);
-          setHint(false);
-          pushControls();
-        }}
-        onPointerUp={() => {
-          handHeld.current = false;
-          setHand(false);
-          pushControls();
-        }}
-        onPointerCancel={() => {
-          handHeld.current = false;
-          setHand(false);
-          pushControls();
-        }}
-        onContextMenu={(e) => e.preventDefault()}
-        style={{
-          position: 'absolute',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          bottom: 64,
-          padding: '10px 16px',
-          borderRadius: 999,
-          border: `1px solid ${quiet}${hand ? 0.6 : 0.22})`,
-          background: hand ? 'rgba(255,190,100,0.22)' : 'rgba(14,10,14,0.25)',
-          cursor: 'pointer',
-          fontFamily: font,
-          fontSize: 12,
-          color: `${quiet}${hand ? 0.95 : 0.6})`,
-          touchAction: 'none',
-          userSelect: 'none',
-        }}
-      >
-        Handbrake
-      </button>
+      {!ring && (
+        <button
+          type="button"
+          aria-label="Handbrake: hold it and turn to drift"
+          aria-pressed={hand}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            e.currentTarget.setPointerCapture?.(e.pointerId);
+            handHeld.current = true;
+            setHand(true);
+            setHint(false);
+            pushControls();
+          }}
+          onPointerUp={() => {
+            handHeld.current = false;
+            setHand(false);
+            pushControls();
+          }}
+          onPointerCancel={() => {
+            handHeld.current = false;
+            setHand(false);
+            pushControls();
+          }}
+          onContextMenu={(e) => e.preventDefault()}
+          style={{
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            bottom: 64,
+            padding: '10px 16px',
+            borderRadius: 999,
+            border: `1px solid ${quiet}${hand ? 0.6 : 0.22})`,
+            background: hand ? 'rgba(255,190,100,0.22)' : 'rgba(14,10,14,0.25)',
+            cursor: 'pointer',
+            fontFamily: font,
+            fontSize: 12,
+            color: `${quiet}${hand ? 0.95 : 0.6})`,
+            touchAction: 'none',
+            userSelect: 'none',
+          }}
+        >
+          Handbrake
+        </button>
+      )}
 
       {panel && (
         <div
@@ -475,7 +495,29 @@ export default function DriveGame() {
             fontFamily: font,
           }}
         >
-          <div style={heading}>Tracks</div>
+          <div style={{ ...heading, display: 'flex', justifyContent: 'space-between' }}>
+            <span>Tracks</span>
+            <button
+              type="button"
+              onClick={() => {
+                setPanel(false);
+                setRing(true);
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                fontFamily: font,
+                fontSize: 11,
+                letterSpacing: '0.04em',
+                textTransform: 'none',
+                color: 'rgba(255,200,120,0.85)',
+              }}
+            >
+              Track ring ›
+            </button>
+          </div>
           <nav aria-label="Worlds" style={{ display: 'grid', gap: 2, marginTop: -4 }}>
             {WORLDS.map((w) => (
               <button
