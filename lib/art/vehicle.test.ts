@@ -7,6 +7,7 @@ import {
   G,
   landingLoss,
   leavesGround,
+  MARS_FLAT,
   MODES,
   newVehicle,
   pull,
@@ -483,5 +484,24 @@ describe('driving modes (2026-11-19)', () => {
     expect(MODES.drift.grip).toBeLessThan(MODES.flow.grip);
     expect(MODES.grip.grip).toBeGreaterThan(MODES.flow.grip);
     expect(MODES.easy.turn).toBeLessThan(MODES.flow.turn);
+  });
+});
+
+describe('Mars handling (2026-11-21: "much more tilt … much quicker turn")', () => {
+  it('turns quicker and sharper, and the car leans further, than on the Salt Flat', () => {
+    const turn = (world: World) => {
+      const v = run('car', GO, 6, world);
+      const h0 = v.h;
+      let roll = 0;
+      for (let i = 0; i < 60; i++) {
+        stepVehicle(v, { throttle: 1, steer: 1, boost: 0 }, 1 / 60, world);
+        roll = Math.max(roll, Math.abs(v.roll));
+      }
+      return { turned: Math.abs(v.h - h0), roll };
+    };
+    const salt = turn(FLAT);
+    const mars = turn(MARS_FLAT);
+    expect(mars.turned).toBeGreaterThan(salt.turned * 1.4);
+    expect(mars.roll).toBeGreaterThan(salt.roll * 1.8);
   });
 });

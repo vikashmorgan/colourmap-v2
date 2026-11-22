@@ -102,6 +102,7 @@ import {
 } from '@/lib/art/track';
 import {
   FLAT,
+  MARS_FLAT,
   newVehicle,
   speedOf,
   stepVehicle,
@@ -677,7 +678,7 @@ export class DriveEngine {
       this.view = buildTrackView(this.cfg, w, sunDir);
     } else {
       this.trackWorld = null;
-      this.physics = FLAT;
+      this.physics = this.cfg.id === 'mars' ? MARS_FLAT : FLAT;
       this.view = buildSaltView();
     }
     this.scene.add(this.view.group);

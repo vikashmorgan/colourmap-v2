@@ -243,9 +243,24 @@ export interface Hit {
 export interface World {
   ground(x: number, y: number): Ground;
   collide?(v: Vehicle, t: number): Hit | null;
+  /** This world's feel: how sharp and quick the turn, how far the body leans (1: as everywhere). */
+  handling?: Handling;
+}
+
+export interface Handling {
+  turn: number;
+  lean: number;
 }
 
 export const FLAT: World = { ground: () => ({ h: 0, gx: 0, gy: 0, rough: 0 }) };
+
+/**
+ * Mars (2026-11-21: "much more tilt on the car and much more turn, much quicker turn. it goes way
+ * too straight and rigid"): the same open plain, but the turn comes quicker and sharper and the body
+ * leans far into it.
+ */
+export const MARS_HANDLING: Handling = { turn: 1.8, lean: 2.6 };
+export const MARS_FLAT: World = { ...FLAT, handling: MARS_HANDLING };
 
 /** What happened in a step, for the dust, the camera and the sound of it. */
 export interface StepEvents {
@@ -386,9 +401,14 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
 
   // Steering turns the body.
   // Quicker on a road, so small left-right moves come at once.
-  v.steer = ease(v.steer, ctl.steer, here.road && !air ? DODGE.steer : 7, dt);
+  const feel = world.handling ?? { turn: 1, lean: 1 };
+  v.steer = ease(v.steer, ctl.steer, (here.road && !air ? DODGE.steer : 7) * feel.turn, dt);
   const authority = air ? spec.airSteer : 1;
-  const delta = clamp(v.steer * steerLimit(v.vLong) * (1 + HANDBRAKE.steer * hb), -1, 1);
+  const delta = clamp(
+    v.steer * steerLimit(v.vLong) * feel.turn * (1 + HANDBRAKE.steer * hb),
+    -1,
+    1,
+  );
   // The body never turns much faster than the grip can swing the velocity after it, so a held key
   // at speed is a drift you can hold, not a spin: the yaw is capped near the grip's own turn rate.
   // A bank adds its own hold (gravity across the slope), so a banked bend can be taken faster.
@@ -413,7 +433,8 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   const yawCap =
     ((spec.grip * mode.grip * spec.yawGrip * mode.yaw + bankHold) /
       Math.max(Math.abs(v.vLong), 6)) *
-    (1 + HANDBRAKE.yaw * hb);
+    (1 + HANDBRAKE.yaw * hb) *
+    feel.turn;
   // A slide straightens itself (the tyres pull the nose round toward where it goes), firmly on a
   // road, gently on open ground, and not while the handbrake holds the tail out.
   // Off the road only the part of a slide past 7° (the drift you hold stays yours; a spin is caught).
@@ -435,7 +456,7 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     if (Math.abs(off) > lim) follow += (off - Math.sign(off) * lim) * 4 * spec.keep;
   }
   const target = (steerYaw + follow + settle) * authority;
-  v.yawRate = ease(v.yawRate, target, air ? 3 : 8, dt);
+  v.yawRate = ease(v.yawRate, target, (air ? 3 : 8) * feel.turn, dt);
   v.h = wrapAngle(v.h + v.yawRate * dt);
 
   // Gravity along the slope, while on the ground.
@@ -664,13 +685,14 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   const lateral = vLong * v.yawRate + (v.dodge ?? 0) * 3;
   const sideSlope = -next.gx * fy + next.gy * fx;
   const aheadSlope = next.gx * fx + next.gy * fy;
-  const lean = v.kind === 'ship' ? 0.012 : 0.0035;
+  const lean = (v.kind === 'ship' ? 0.012 : 0.0035) * feel.lean;
+  const leanMax = (v.kind === 'ship' ? 0.4 : 0.09) * feel.lean;
   const rollTo = air
     ? v.roll * 0.98
     : -Math.atan(sideSlope) +
       // Both lean into the turn: the side you turn toward goes down (the car: "when you turn left
       // you lean left"; the ship, 2026-11-19: "when I turn right the right side should be lower").
-      clamp(lateral * lean, v.kind === 'ship' ? -0.4 : -0.09, v.kind === 'ship' ? 0.4 : 0.09);
+      clamp(lateral * lean, -leanMax, leanMax);
   v.roll = ease(v.roll, rollTo, air ? 1 : 6, dt);
   const pitchTo = air
     ? Math.atan2(v.vz, Math.max(speed, 5)) * 0.6

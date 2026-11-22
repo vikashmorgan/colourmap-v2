@@ -77,8 +77,8 @@ describe('fires', () => {
 });
 
 describe('hulls', () => {
-  it('offers chrome, gold, rust, red and your own paint', () => {
-    expect(HULLS.map((h) => h.name)).toEqual(['Chrome', 'Gold', 'Rust', 'Red', 'Paint']);
+  it('offers chrome, gold, rust, red, leopard and your own paint', () => {
+    expect(HULLS.map((h) => h.name)).toEqual(['Chrome', 'Gold', 'Rust', 'Red', 'Leopard', 'Paint']);
     expect(hullById('gold').metalness).toBe(1);
     expect(hullOf({ hull: 'paint', paint: '#123456' }).colour).toBe('#123456');
     expect(hullOf({ hull: 'gold', paint: '#123456' }).colour).toBe(hullById('gold').colour);
@@ -91,8 +91,14 @@ describe('hulls', () => {
 });
 
 describe('bodies', () => {
-  it('offers the wedge, the classic and future GTs and the motorbike', () => {
-    expect(BODIES.map((b) => b.name)).toEqual(['Wedge', 'Classic GT', 'Future GT', 'Motorbike']);
+  it('offers the wedge, the classic and future GTs, the Space Racer and the motorbike', () => {
+    expect(BODIES.map((b) => b.name)).toEqual([
+      'Wedge',
+      'Classic GT',
+      'Future GT',
+      'Space Racer',
+      'Motorbike',
+    ]);
     expect(DEFAULT_DESIGN.body).toBe('wedge');
     expect(parseDesign('{"body":"tank"}', IDS).body).toBe('wedge');
   });

@@ -344,3 +344,19 @@ a real planet".
 - Racers bump: touching pushes the two apart and trades the head-on part of their speeds. They never pass through each other.
 - Under the clock, the HUD shows your place, e.g. *P2 / 6* (gold when leading).
 - On the open plains (Salt Flat, Mars) there are no rivals, since there is no road to race on.
+
+## Leopard, Space Racer, Mars handling (2026-11-21)
+
+Asked: "a leopard colour for ships and cars with golden rims", "those tron like cars are awesome i
+wanna be able to drive them … one called Space Racer, with the tron designs", and on Mars "much
+more tilt on the car and much more turn, much quicker turn. it goes way too straight and rigid".
+
+- **Leopard** hull: a tawny coat printed with broken rosettes and small spots (drawn once on a
+  canvas, seamless), under a clear coat. Its rims are gold: the wedge's wheel faces, the Classic GT's
+  and the bike's wire wheels and spokes, the ship's turbine trim; on the Future GT and the Space
+  Racer the rims of light glow gold. Any other hull puts the rims back to their own colour.
+- **Space Racer** body: the Future GT with its light lines in the hull's own colour (its rim metal
+  when it has one), and more of them: along the shoulders, on the wing blades' edges and up the
+  canopy's spine.
+- **Mars handling** (`MARS_HANDLING`, lib/art/vehicle.ts): the turn comes 1.8× quicker and sharper
+  and the body leans 2.6× as far; the other worlds are unchanged.
