@@ -27,6 +27,7 @@ import {
   pointAt,
   project,
   RACE,
+  surfPull,
   type TrackDef,
   twistPose,
   VOID_DEPTH,
@@ -592,5 +593,70 @@ describe('the secret high road (2026-11-22)', () => {
 
   it('passes its own checks', () => {
     expect(validateTrackData(DOCS.gold, 10000)).toEqual([]);
+  });
+});
+
+describe('surf: fly off the bend, pulled back (2026-11-22)', () => {
+  const def = compileTrack(DOCS.gold);
+  const t = makeTrack(def);
+  const s = 5200; // a long right-hand bend at full bank, its high side on the right
+
+  it('cuts the curled wall to a kicker: past its lip, no ground to catch you', () => {
+    const f = frameAt(t, s);
+    const high = -Math.sign(f.bank);
+    const edge = heightAt(t, s, high * f.half);
+    expect(heightAt(t, s, high * (f.half + 1))).toBeLessThan(edge + (def.surf ?? 0) + 0.01);
+    expect(heightAt(t, s, high * (f.half + 13))).toBeLessThan(f.e - 100);
+    // Drawn, it is the flat beyond, not a cliff.
+    expect(heightAt(t, s, high * (f.half + 13), true)).toBeGreaterThan(f.e - 100);
+    // The low side is as it was.
+    expect(heightAt(t, s, -high * (f.half + 5))).toBeGreaterThan(f.e - 100);
+  });
+
+  it('pulls you back toward the road and down to it, only where the ground gave way', () => {
+    const f = frameAt(t, s);
+    const high = -Math.sign(f.bank);
+    t.hint = s;
+    const out = pointAt(t, s, high * (f.half + 10));
+    const p = surfPull(t, out.x, out.y, f.e + 30);
+    expect(p).not.toBeNull();
+    const nx = -Math.sin(f.h);
+    const ny = Math.cos(f.h);
+    // Toward the road (against u's side) and down.
+    expect(Math.sign((p?.ax ?? 0) * nx + (p?.ay ?? 0) * ny)).toBe(-high);
+    expect(p?.az ?? 0).toBeLessThan(0);
+    const on = pointAt(t, s, 0);
+    expect(surfPull(t, on.x, on.y, f.e + 5)).toBeNull();
+  });
+
+  it('flat out off the high side, you fly out and come back down on the road', () => {
+    const w = makeTrackWorld(def);
+    const s0 = 6150;
+    const f = frameAt(w.track, s0);
+    w.track.hint = s0;
+    const p = pointAt(w.track, s0, 0);
+    const v = newVehicle('car', p.x, p.y, f.h, heightAt(w.track, s0, 0));
+    v.vx = Math.cos(f.h) * 80;
+    v.vy = Math.sin(f.h) * 80;
+    let at = s0;
+    let flew = false;
+    let lowest = 0;
+    let rolled = 0;
+    for (let i = 0; i < 60 * 9; i++) {
+      stepVehicle(v, { throttle: 1, steer: i < 150 ? -1 : 0, boost: 1 }, 1 / 60, w, i / 60);
+      const q = project(w.track, v.x, v.y, at);
+      w.track.hint = q.s;
+      at = q.s;
+      const fr = frameAt(w.track, q.s);
+      if (Math.abs(q.u) > fr.half + 8 && v.air) flew = true;
+      lowest = Math.min(lowest, v.z - fr.e);
+      rolled = Math.max(rolled, Math.abs(v.roll));
+    }
+    const q = project(w.track, v.x, v.y, at);
+    expect(flew).toBe(true);
+    expect(lowest).toBeGreaterThan(-20); // never lost to the void
+    expect(rolled).toBeGreaterThan(0.9); // the surf's lean
+    expect(Math.abs(q.u)).toBeLessThan(frameAt(w.track, q.s).half + 1);
+    expect(v.air).toBe(false);
   });
 });

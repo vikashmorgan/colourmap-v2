@@ -63,6 +63,9 @@ export interface TrackDef {
   /** On a twist, the slope your line through it adds along the road (negative runs downhill:
    * faster). */
   surge?(s: number, u: number): number;
+  /** Surf (2026-11-22): the curled wall cut down to a kicker this tall (m); past it you fly, pulled
+   * back to the road. */
+  surf?: number;
   /** Which side a high deck runs along the top of the curled wall here (1 left, -1 right, 0 none). */
   deck?(s: number): number;
   /** Where a twist's bypass lane runs here (its centre's u, on the right), or null. */
@@ -308,7 +311,42 @@ export function heightAt(t: Track, s: number, u: number, solid = false): number 
     if (out <= DECK.OUT) return Math.min(wall, top);
     return flat;
   }
+  // Surf: the wall only as high as a kicker; past its lip there is no ground to catch you, only the
+  // pull back to the road (2026-11-22: "you fly out of the track but gravity keeps you coming
+  // back, instead of the big black walls"). Drawn, it is the flat beyond.
+  const surf = t.def.surf;
+  if (surf && t.def.curl && u * f.bank < 0 && wall - edge > surf)
+    return solid ? flat : f.e - VOID_DEPTH;
   return wall;
+}
+
+/** The pull that brings you back from a surf (m/s²), and where it draws you: just inside the edge,
+ * a little over the road. */
+export const SURF = { PULL: 15, IN: 2, OVER: 0.6 };
+
+/** The pull on a vehicle flying off a surf bend, or null where gravity is gravity. */
+export function surfPull(
+  t: Track,
+  x: number,
+  y: number,
+  z: number,
+): { ax: number; ay: number; az: number } | null {
+  if (!t.def.surf || !t.def.curl) return null;
+  const { s, u } = project(t, x, y);
+  const f = frameAt(t, s);
+  if (Math.abs(u) <= f.half + 0.3) return null;
+  if (Math.abs(t.def.twist?.(Math.max(0, s)) ?? 0) > TWIST_OPEN) return null;
+  if (onBypass(t, s, u) !== null || onDeck(t, s, u)) return null;
+  // Only where a surf's ground has given way under you.
+  if (heightAt(t, s, u) > f.e - VOID_DEPTH / 2) return null;
+  const side = Math.sign(u);
+  const du = side * (f.half - SURF.IN) - u;
+  const dz = f.e + SURF.OVER - z;
+  const d = Math.hypot(du, dz) || 1;
+  const a = SURF.PULL;
+  const nx = -Math.sin(f.h);
+  const ny = Math.cos(f.h);
+  return { ax: (nx * du * a) / d, ay: (ny * du * a) / d, az: (dz * a) / d };
 }
 
 /**
@@ -725,6 +763,7 @@ export function makeTrackWorld(def: TrackDef): TrackWorld {
     track,
     ground: (x, y) => groundAt(track, x, y),
     collide: (v) => collideTrack(world, v),
+    pull: (x, y, z) => surfPull(track, x, y, z),
   };
   return world;
 }
