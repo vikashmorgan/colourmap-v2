@@ -45,6 +45,7 @@ import {
   skyWallHeight,
   skyWallU,
   type TrackWorld,
+  twistPose,
 } from '@/lib/art/track';
 import type { Weather } from '@/lib/art/weather';
 import { glowSprite } from './vehicles';
@@ -612,6 +613,8 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
   const hAt = (s: number, u: number) => heightAt(track, s, u, true);
   /** In a jump's gap: no road, no ground, no lines (2026-11-22: "the long jump over the void"). */
   const gapAt = (s: number) => def.gap?.(Math.max(0, s)) ?? false;
+  /** How far the road is turned about its axis here (0 off a twist). */
+  const twistAt = (s: number) => def.twist?.(Math.max(0, s)) ?? 0;
 
   function columns(half: number): number[] {
     const fr = [
@@ -690,6 +693,12 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       const p = pointAt(track, s, u);
       return local(ax, ay, p.x, p.y, hAt(s, u) + h);
     };
+    // The road as drawn: turned about its axis on a twist (the road's lines ride it too).
+    const LR = (s: number, u: number, h = 0): V3 => {
+      if (!twistAt(s)) return L(s, u, h);
+      const p = twistPose(track, s, u, h);
+      return local(ax, ay, p.x, p.y, p.z);
+    };
 
     // The road and the ground beside it.
     const ground = new Builder();
@@ -725,9 +734,12 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       const row: V3[] = [];
       const crow: V3[] = [];
       const nrow: V3[] = [];
+      // On a twist the road has risen away from the ground: what is left under it is ground.
+      const twisting = twistAt(at) > 0.02;
       for (const u of columns(half)) {
-        row.push(L(at, u));
-        crow.push(groundColour(cfg, at, u, half, snowLevel));
+        const onRoad = Math.abs(u) <= half;
+        row.push(twisting && onRoad ? L(at, u, -0.4) : L(at, u));
+        crow.push(groundColour(cfg, at, u, twisting ? -1 : half, snowLevel));
         nrow.push(normalAt(at, u));
       }
       pts.push(row);
@@ -736,6 +748,40 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       if (gapAt(s)) flush();
     }
     flush();
+    // The twist's ribbon: the road turned about its axis, lit by its turned up, its underside dark
+    // so it reads from outside too.
+    {
+      let top: V3[][] = [];
+      let tc: V3[][] = [];
+      let tn: V3[][] = [];
+      const ribbon = () => {
+        if (top.length > 1) {
+          grid(ground, top, tc, tn);
+          const under = top.map((r) => [...r].reverse());
+          const uc = tc.map((r) => r.map(() => lin(0.05, 0.04, 0.035)));
+          const un = tn.map((r) => [...r].reverse().map((n) => [-n[0], -n[1], -n[2]] as V3));
+          grid(ground, under, uc, un);
+        }
+        top = [];
+        tc = [];
+        tn = [];
+      };
+      for (let s = s0; s <= s1 + 0.01; s += ROW) {
+        const th = twistAt(s);
+        if (!th && !twistAt(s - ROW) && !twistAt(s + ROW)) {
+          ribbon();
+          continue;
+        }
+        const half = def.half(s);
+        const f = frameAt(track, s);
+        const up: V3 = [Math.sin(f.h) * Math.sin(th), Math.cos(th), Math.cos(f.h) * Math.sin(th)];
+        const cs = columns(half).filter((u) => Math.abs(u) <= half);
+        top.push(cs.map((u) => LR(s, u, 0.02)));
+        tc.push(cs.map((u) => groundColour(cfg, s, u, half, snowLevel)));
+        tn.push(cs.map(() => up));
+      }
+      ribbon();
+    }
     // The lips of a gap: the road's edge drops away as a dark cliff face.
     for (let s = s0; s < s1; s += ROW) {
       const into = !gapAt(s) && gapAt(s + ROW);
@@ -755,7 +801,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     const gm = new THREE.Mesh(ground.geometry(), groundMat);
     gm.renderOrder = 2;
     g.add(gm);
-    if (night) markings(s0, s1, L, g);
+    if (night) markings(s0, s1, LR, g);
 
     const rock = new Builder();
     if (cfg.id === 'coast') {
@@ -1028,6 +1074,18 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     for (let s = Math.ceil(s0 / 2.5) * 2.5; s < s1; s += 2.5) {
       if (gapAt(s)) continue;
       const half = def.half(s);
+      if (twistAt(s) || twistAt(s + 40) || twistAt(s - 40)) {
+        // On a twist the edge lights ride the road round: two golden helices.
+        if (twistAt(s))
+          for (const side of [1, -1]) {
+            const p = twistPose(track, s, side * (half + 0.6), 0.5);
+            pos.push(p.x - a.x, p.z, -(p.y - a.y));
+            col.push(...golds[0]);
+            ss.push(s);
+            size.push(0.9);
+          }
+        if (twistAt(s)) continue;
+      }
       for (const side of [1, -1]) {
         const e = hAt(s, side * (half + 1));
         put(s, side * (half + 1), e + 0.5, golds[0], 0.8);
@@ -1036,6 +1094,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     }
     // Arches over the road.
     for (let sa = Math.ceil(s0 / 90) * 90; sa < s1; sa += 90) {
+      if (twistAt(sa)) continue;
       const half = def.half(sa) + 2.5;
       const e = hAt(sa, 0);
       for (let t = 0; t <= Math.PI + 1e-6; t += 0.9 / half)

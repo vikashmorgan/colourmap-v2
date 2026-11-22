@@ -14,6 +14,7 @@
     { "kind": "straight", "from": -200, "to": 140 },
     { "kind": "jump", "at": 1900, "length": 140, "every": 6000 },
     { "kind": "fire", "at": 800, "length": 220, "every": 6000 },
+    { "kind": "twist", "at": 2700, "length": 320, "every": 6000 },
     { "kind": "fire", "at": 3300, "length": 320, "every": 6000 },
     { "kind": "fire", "at": 4700, "length": 260, "every": 6000 }
   ]

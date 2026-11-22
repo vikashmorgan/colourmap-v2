@@ -56,6 +56,40 @@ export interface TrackDef {
   gap?(s: number): boolean;
   /** Where a tunnel of blue gas fire stands over the road. */
   fire?(s: number): boolean;
+  /** How far the road has rolled about its axis here (rad, 0 to 2π over a twist; 0 elsewhere). */
+  twist?(s: number): number;
+}
+
+/**
+ * A twist (2026-11-22: "a side looping, as if the road did a full twist while still going
+ * straight"): the road rolls a full turn about an axis one half-width above it. You drive it on
+ * a flat road (the physics never knows); what is drawn there, the road, the racers and the camera,
+ * is turned by this. `above` is the height over the road's surface at (s, u). At no twist it is the
+ * plain road's point. `roll` is how far the body is turned (positive leans the roof left, as
+ * Vehicle.roll).
+ */
+export function twistPose(
+  t: Track,
+  s: number,
+  u: number,
+  above: number,
+): { x: number; y: number; z: number; roll: number; th: number } {
+  const th = t.def.twist?.(Math.max(0, s)) ?? 0;
+  const f = frameAt(t, s);
+  const surf = heightAt(t, s, u, true) - f.e;
+  if (th === 0) {
+    const p = pointAt(t, s, u);
+    return { x: p.x, y: p.y, z: f.e + surf + above, roll: 0, th };
+  }
+  const A = f.half;
+  const c = Math.cos(th);
+  const sn = Math.sin(th);
+  const up = surf + above - A;
+  // Turning the left side up: (u, up) about the axis.
+  const l = u * c - up * sn;
+  const z = A + u * sn + up * c;
+  const p = pointAt(t, s, l);
+  return { x: p.x, y: p.y, z: f.e + z, roll: -th, th };
 }
 
 /** How far the void falls under a jump's gap (m): out of sight, never ground. */
