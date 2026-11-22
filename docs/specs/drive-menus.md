@@ -18,12 +18,18 @@ Esc goes back one step; in a race it pauses.
 
 ## The track ring
 
-- Nine screens stand on a slow ring in the dark, facing its centre, the selected one nearest and
-  largest, the others receding round the circle, dimmer and smaller.
-- Each screen shows its world: a still frame rendered from that world's own camera at the start
-  line (made once, kept), framed in the track's colour.
+- Nine screens stand on a slow ring in the dark, facing out, the selected one nearest and
+  largest, the others receding round the circle, dimmer and smaller (built 2026-11-22,
+  `components/drive/TrackRing.tsx`).
+- The chosen screen is a window onto its world: the game runs that world live behind the ring,
+  holding still with the camera slowly turning round your vehicle (the Design preview); the world
+  follows 0.42 s after the ring settles. The other screens are tinted glass in their track's colour
+  with their road's outline drawn small. (Stills rendered per world may replace the glass later.)
+- The ring is the game's first screen; a link with `?world=` drives straight in. "Track ring ›" at
+  the top of the menu's Tracks opens it again. The ring's keys (arrows, A D, Enter, Space, Esc, 1–9)
+  never reach the car.
 - ← → (or swipe, or click a screen) turns the ring; it eases round in 450 ms.
-- Under the ring: the selected track's **map**, its road drawn as a glowing line in its colour,
+- Under the ring: the selected track's **map** (`lib/art/track-map.ts`), its road drawn as a glowing line in its colour,
   seen from above at a slight tilt so the rises show. The line draws itself from the start gate
   round the track in 1.2 s, then a light dot runs a lap on it, for ever, slowly. Marks on the line:
   the start/finish, banked bends (the line thickens), jumps (a gap), gates (ticks).
