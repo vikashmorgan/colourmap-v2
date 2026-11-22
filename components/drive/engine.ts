@@ -748,13 +748,13 @@ export class DriveEngine {
       m.position.set(0, 4.2, 0);
       this.gantry.add(m);
     }
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 1), metal);
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.1, 1), metal);
     bar.name = 'bar';
     bar.position.set(0, 8.2, 0);
     this.gantry.add(bar);
     // Lines of light along the bar's top and bottom and up the posts' faces, so it reads at night.
     const strip = new THREE.BoxGeometry(0.12, 0.12, 1);
-    for (const y of [7.6, 8.8]) {
+    for (const y of [7.1, 9.3]) {
       const m = new THREE.Mesh(strip, this.gantryGlow);
       m.name = 'strip';
       m.position.set(-0.5, y, 0);
@@ -767,13 +767,13 @@ export class DriveEngine {
       m.position.set(-0.32, 4.2, 0);
       this.gantry.add(m);
     }
-    const disc = new THREE.CircleGeometry(0.55, 24);
+    const disc = new THREE.CircleGeometry(0.9, 32);
     for (let i = 0; i < 3; i++) {
       const mat = new THREE.MeshBasicMaterial({ color: LAMP_OFF, toneMapped: false });
       const lamp = new THREE.Mesh(disc, mat);
       // Facing back down the road, toward the grid.
       lamp.rotation.y = -Math.PI / 2;
-      lamp.position.set(-0.47, 8.2, (i - 1) * 1.7);
+      lamp.position.set(-0.47, 8.2, (i - 1) * 2.6);
       this.lamps.push(mat);
       this.gantry.add(lamp);
     }

@@ -50,6 +50,13 @@ Esc goes back one step; in a race it pauses.
 5. **Countdown:** three lights go red one by one (3 · 2 · 1, 0.8 s each), then all turn the
    track's colour: GO. The racers launch together.
 - Skippable: any key during the flyover jumps to the grid. A restart goes straight to the grid.
+- Built 2026-11-22 (`lib/art/race-intro.ts`, `components/drive/RaceIntro.tsx`, the engine's
+  `startIntro`, `skipIntro`, `launch`): the drone flies 150 m to 1,300 m up the road at 70 m,
+  drifting across it, with film letterbox bars and the name; the crane comes down from 30 m to
+  4.2 m, 30 m behind the line. The gantry (on every road, 6 m past the start) has edges of light in
+  the track's colour and three lamps that light red one by one, then all turn the track's colour.
+  Nobody moves until GO: your controls are held and the rivals launch with you. Holding ↑ at the
+  grid starts the countdown and is still held at GO.
 - The plains (Salt Flat, Mars) have no grid: the flyover ends behind your vehicle at the mile's
   start, then "Click to start".
 
