@@ -12,6 +12,7 @@ import {
   brainAngles,
   CARDINALS,
   FORM_SECONDS,
+  GATHER_SECONDS,
   LABEL_RING,
   NODE_RING,
   pointAt,
@@ -59,6 +60,9 @@ type Props = {
   arrive?: boolean;
   /** Come from the tree, whose stars gathered on the ring: the wheel forms out of the ring. */
   fromRing?: boolean;
+  /** Leaving: every star gathers back onto the ring, the names fade (2026-11-22: "should also go
+   * from wheel back to tree"). */
+  gather?: boolean;
   /** Design III: the wheel as a compass rose. */
   compass?: boolean;
 };
@@ -87,6 +91,7 @@ export function StarWheel({
   close,
   arrive = false,
   fromRing = false,
+  gather = false,
   compass = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -101,6 +106,11 @@ export function StarWheel({
   const selRef = useRef(sel);
   const arriveRef = useRef(arrive);
   const formRef = useRef(fromRing ? performance.now() : 0);
+  // When the stars began gathering back onto the ring, or 0.
+  const gatherRef = useRef(0);
+  useEffect(() => {
+    gatherRef.current = gather ? performance.now() : 0;
+  }, [gather]);
   // The names come in once the wheel has formed out of the ring.
   const [named, setNamed] = useState(!fromRing);
   useEffect(() => {
@@ -245,8 +255,12 @@ export function StarWheel({
       const f: Frame = { cx: W / 2, cy: H / 2 + 12 * dpr, min: Math.min(W, H) };
       const apart = still ? 0 : scatter((now - start) / 1000);
       // Formed out of the ring, coming from the tree: 0 on the ring, 1 on the spokes.
-      const formed =
+      const formedIn =
         still || !formRef.current ? 1 : stage((now - formRef.current) / 1000, FORM_SECONDS);
+      // Leaving, the wheel runs back onto the ring it came out of.
+      const gathered =
+        still || !gatherRef.current ? 0 : stage((now - gatherRef.current) / 1000, GATHER_SECONDS);
+      const formed = Math.min(formedIn, 1 - gathered);
       const angles = anglesRef.current;
       const angleOf = (k: number) => angles[k] ?? spokeAngle(k, count);
       // Spokes grow out from the centre again when the ring changes.
@@ -507,7 +521,7 @@ export function StarWheel({
                 left: x,
                 top: y,
                 pointerEvents: 'auto',
-                opacity: named ? 1 : 0,
+                opacity: named && !gather ? 1 : 0,
                 transition: 'opacity 0.5s ease',
                 borderColor: on ? GOLD : `${GOLD}44`,
                 boxShadow: on ? `0 0 18px ${GOLD}88, inset 0 0 12px ${GOLD}33` : 'none',
@@ -532,7 +546,7 @@ export function StarWheel({
                   left: x,
                   top: y,
                   transform: 'translate(-50%, -50%)',
-                  opacity: named ? 1 : 0,
+                  opacity: named && !gather ? 1 : 0,
                   transition: 'opacity 0.5s ease',
                   // A dark disc under the letter, so the ring of stars breaks round it.
                   background: 'rgba(4, 4, 6, 0.9)',
@@ -562,7 +576,7 @@ export function StarWheel({
                 left: frame.cx + (side === 'left' ? -1 : 1) * Math.max(52, frame.min * 0.1),
                 top: frame.cy - frame.min * RING * 0.82,
                 transform: 'translate(-50%, -50%)',
-                opacity: named ? 1 : 0,
+                opacity: named && !gather ? 1 : 0,
                 transition: 'opacity 0.5s ease',
                 fontSize: 10,
                 letterSpacing: '0.3em',
