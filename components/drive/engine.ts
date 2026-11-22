@@ -99,7 +99,9 @@ import {
 } from '@/lib/art/salt-flat-game';
 import { SPEED_FLOATS } from '@/lib/art/speed-shaders';
 import {
+  FALLEN,
   frameAt,
+  gapAround,
   heightAt,
   makeTrackWorld,
   newRace,
@@ -381,6 +383,11 @@ class Puffs {
 
 /** The night light over the vehicle (candela; close over the hull, falling off before it pools much light on the road). */
 export const CAR_LIGHT = 12;
+
+/** Lost to a jump's void: back this far before its gap (m), rolling at this speed (m/s), enough
+ * run-up to make it with the throttle down. */
+export const RETRY_BACK = 450;
+export const RETRY_SPEED = 45;
 
 /* ── The sky as an environment, for chrome and glass ───────── */
 
@@ -872,7 +879,12 @@ export class DriveEngine {
       const ctl = rivalControls(rv.r, rv.v, tr, rv.s, t, rv.s - this.s, sky);
       stepVehicle(rv.v, { ...ctl, mode: this.design.mode }, dt, this.physics, t);
       const q = project(tr, rv.v.x, rv.v.y, rv.s);
-      if (Math.abs(q.u) > 80 || !Number.isFinite(q.s)) {
+      if (rv.v.z < heightAt(tr, Math.max(0, q.s), q.u, true) - FALLEN) {
+        // A rival lost to the void comes back just past it, still racing.
+        const g = gapAround(tr, q.s);
+        rv.s = (g?.to ?? q.s) + 30;
+        this.placeOnRoad(rv.v, rv.s, Math.max(30, speedOf(rv.v)));
+      } else if (Math.abs(q.u) > 80 || !Number.isFinite(q.s)) {
         const p = pointAt(tr, Math.max(0, rv.s), 0);
         rv.v.x = p.x;
         rv.v.y = p.y;
@@ -992,6 +1004,23 @@ export class DriveEngine {
 
   reset() {
     this.spawn();
+  }
+
+  /** Puts a vehicle on the road's centre at s, facing along it at a speed. */
+  private placeOnRoad(v: Vehicle, s: number, speed: number) {
+    const tr = this.trackWorld?.track;
+    if (!tr) return;
+    const f = frameAt(tr, s);
+    v.x = f.x;
+    v.y = f.y;
+    v.z = heightAt(tr, s, 0) + VEHICLES[v.kind].hover;
+    v.h = f.h;
+    v.vx = Math.cos(f.h) * speed;
+    v.vy = Math.sin(f.h) * speed;
+    v.vz = 0;
+    v.yawRate = 0;
+    v.roll = 0;
+    v.pitch = 0;
   }
 
   /** Back to the start for the race intro: the flyover (or straight to the grid on a restart),
@@ -1142,8 +1171,16 @@ export class DriveEngine {
         this.s = q.s;
         u = q.u;
         const half = tr.def.half(Math.max(0, q.s));
+        // Into the void: back on the road before the jump, rolling, for another go.
+        if (v.z < heightAt(tr, Math.max(0, q.s), u, true) - FALLEN) {
+          const g = gapAround(tr, q.s);
+          const back = Math.max(0, (g?.from ?? q.s) - RETRY_BACK);
+          this.placeOnRoad(v, back, RETRY_SPEED);
+          this.s = back;
+          tr.hint = back;
+        }
         // Lost (should never happen): back onto the road where you are.
-        if (Math.abs(u) > 80 || !Number.isFinite(q.s)) {
+        else if (Math.abs(u) > 80 || !Number.isFinite(q.s)) {
           const p = pointAt(tr, Math.max(0, q.s), 0);
           v.x = p.x;
           v.y = p.y;

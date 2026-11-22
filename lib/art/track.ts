@@ -52,7 +52,14 @@ export interface TrackDef {
   /** A quarter-pipe beyond each edge (its radius in m, 0 none): the ground curves up into the walls,
    * smooth, so you can ride up them and gravity brings you back. */
   pipe?(s: number): number;
+  /** Where the road (and the ground either side) is gone: a jump over the void. */
+  gap?(s: number): boolean;
 }
+
+/** How far the void falls under a jump's gap (m): out of sight, never ground. */
+export const VOID_DEPTH = 400;
+/** Fallen this far under the road in a gap: you are lost to the void and start again before it. */
+export const FALLEN = 30;
 
 /* ── Banking and the surface ───────────────────────────────── */
 
@@ -206,8 +213,26 @@ export function project(t: Track, px: number, py: number, hint = t.hint): { s: n
 }
 
 /** The surface's height at road coordinates (s, u). */
-export function heightAt(t: Track, s: number, u: number): number {
+/** Where the gap that s is in (or just past) begins and ends, or null when s is not near one. */
+export function gapAround(t: Track, s: number): { from: number; to: number } | null {
+  const gap = t.def.gap;
+  if (!gap) return null;
+  let a = s;
+  // Fallen short of the far side, or just past it: look back for the gap.
+  while (a > s - 400 && a > 0 && !gap(a)) a -= 1;
+  if (!gap(a)) return null;
+  let from = a;
+  while (from > 0 && gap(from - 1)) from -= 1;
+  let to = a;
+  while (gap(to + 1)) to += 1;
+  return { from, to: to + 1 };
+}
+
+/** The ground's height at (s, u). In a jump's gap it is the void far below, unless `solid` (the
+ * road as if it went on: for slopes, and for drawing the ramps' edges). */
+export function heightAt(t: Track, s: number, u: number, solid = false): number {
   const f = frameAt(t, s);
+  if (!solid && t.def.gap?.(Math.max(0, s))) return f.e - VOID_DEPTH;
   const lip = t.def.lip(Math.max(0, s));
   const uc = clamp(u, -f.half, f.half);
   const edge = f.e - Math.tan(f.bank) * uc + lipAt(uc, f.half, lip);
@@ -234,8 +259,10 @@ export function groundAt(t: Track, px: number, py: number): Ground & { s: number
   t.hint = s;
   const f = frameAt(t, s);
   const h = heightAt(t, s, u);
-  const dU = (heightAt(t, s, u + 0.25) - heightAt(t, s, u - 0.25)) / 0.5;
-  const dS = (heightAt(t, s + 0.5, u) - heightAt(t, s - 0.5, u)) / Math.max(0.3, 1 - f.k * u);
+  // Slopes from the road as if it went on, so a gap's edge never reads as a cliff to slide down.
+  const dU = (heightAt(t, s, u + 0.25, true) - heightAt(t, s, u - 0.25, true)) / 0.5;
+  const dS =
+    (heightAt(t, s + 0.5, u, true) - heightAt(t, s - 0.5, u, true)) / Math.max(0.3, 1 - f.k * u);
   const c = Math.cos(f.h);
   const sn = Math.sin(f.h);
   const out = Math.abs(u) - f.half;

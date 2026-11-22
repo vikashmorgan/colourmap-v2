@@ -114,7 +114,17 @@ A road of gold dots under Saturn.
       semicircles "flash too much. stressful").
 - [ ] G-force bends: on some turns the outer edge curves up into a steep banked wall you can carry
       speed high along, still part of the track.
-- [ ] A big jump over the void: the road ends, you fly over darkness, land on the far side.
+- [x] The long jump over the void (2026-11-22): at 1.9 km of every 6 km lap the road runs dead
+      straight for 200 m, rises on a 140 m kicker 12 m high, and is gone for 140 m, road and
+      ground both, down to nothing; the far side lands 8 m lower. Flat out you clear it with about
+      2 s in the air; too slow and the void takes you, and you are put back 450 m before the gap
+      rolling at 45 m/s, enough to make it with the throttle down. Rivals lost to it reappear just
+      past it. The lips drop away as dark cliff faces; no lines or dots are drawn over the gap.
+      Data: a `jump` feature in tracks/gold.json (`at`, `length`, `every`), limit 160 m.
+- [x] The STAY WILD portal (2026-11-22: "a kind of portal dome arch with stay wild written on top
+      in golden letters at the end of the track lap"): at the end of every 6 km lap a dome of gold
+      light spans the road, 60 m deep, its ribs rising to a crown and falling away, the words
+      STAY WILD in golden serif capitals standing over the way in.
 - [ ] The gate: blue gas fires along both sides, a ring above drawing the gas up, pulsing harder
       as you come closer; it becomes the start/finish of a lap.
 - [ ] A black ocean round the track and a distant landscape on the horizon.

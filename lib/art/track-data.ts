@@ -31,7 +31,7 @@ export interface Bump {
 export type Feature =
   | { kind: 'gate'; every: number }
   | { kind: 'start'; at: number }
-  | { kind: 'jump'; at: number; length: number }
+  | { kind: 'jump'; at: number; length: number; every?: number }
   | { kind: 'wallride'; from: number; to: number; side: 'left' | 'right' };
 
 export interface TrackData {
@@ -75,6 +75,46 @@ function keysAt(keys: readonly (readonly [number, number])[], s: number): number
   return keys[keys.length - 1][1];
 }
 
+/**
+ * A jump over the void (2026-11-22: "a big jump over the unknown", "the long jump over the void"):
+ * the road runs straight for STRAIGHT m either side, rises on a kicker RAMP m long and RAMP_H high,
+ * then is gone for the jump's length; the far side lands LAND_DROP lower and climbs back over LAND.
+ */
+export const JUMP = { RAMP: 140, RAMP_H: 12, LAND: 220, LAND_DROP: 8, STRAIGHT: 200, EASE: 160 };
+
+/** Where s sits against a jump: metres past its gap's start (negative before it), or null if far. */
+function jumpLocal(j: { at: number; length: number; every?: number }, s: number): number {
+  if (!j.every) return s - j.at;
+  const p = (((s - j.at) % j.every) + j.every) % j.every;
+  // Nearest occurrence: before the gap counts as negative.
+  return p > j.every / 2 ? p - j.every : p;
+}
+
+function jumpRise(x: number, length: number): number {
+  const { RAMP, RAMP_H, LAND, LAND_DROP } = JUMP;
+  if (x >= -RAMP && x < 0) {
+    const k = (x + RAMP) / RAMP;
+    return RAMP_H * k * k;
+  }
+  if (x >= 0 && x < length) return RAMP_H + ((-LAND_DROP - RAMP_H) * x) / length;
+  if (x >= length && x < length + LAND) {
+    const k = (x - length) / LAND;
+    // Back up to the road, easing in and out.
+    return -LAND_DROP * (1 - k * k * (3 - 2 * k));
+  }
+  return 0;
+}
+
+/** 0 on a jump's straight, easing back to 1 away from it. */
+function jumpStraight(x: number, length: number): number {
+  const { STRAIGHT, EASE } = JUMP;
+  const d = x < 0 ? -x - STRAIGHT : x - length - STRAIGHT;
+  if (d <= 0) return 0;
+  if (d >= EASE) return 1;
+  const k = d / EASE;
+  return k * k * (3 - 2 * k);
+}
+
 /** Turns a track document into the TrackDef the physics, views and timing use. */
 export function compileTrack(d: TrackData): TrackDef {
   const cw = d.curve.waves ?? [];
@@ -83,6 +123,7 @@ export function compileTrack(d: TrackData): TrackDef {
   const rb = d.rise.bumps ?? [];
   const rk = d.rise.keys;
   const every = d.rise.every;
+  const jumps = (d.features ?? []).filter((f) => f.kind === 'jump');
   const walls =
     d.walls ??
     (d.barrier !== undefined
@@ -99,6 +140,7 @@ export function compileTrack(d: TrackData): TrackDef {
       for (const w of cw)
         k += w.amp * (TAU / w.period) * Math.cos((TAU * s) / w.period + (w.phase ?? 0));
       if (ck) k += keysAt(ck, s);
+      for (const j of jumps) k *= jumpStraight(jumpLocal(j, s), j.length);
       return k;
     },
     elev: (s) => {
@@ -107,6 +149,7 @@ export function compileTrack(d: TrackData): TrackDef {
       for (const b of rb) e += bumpAt(p, b.at, b.height, b.width);
       for (const w of rw) e += w.amp * Math.sin((TAU * s) / w.period + (w.phase ?? 0));
       if (rk) e += keysAt(rk, s);
+      for (const j of jumps) e += jumpRise(jumpLocal(j, s), j.length);
       return e;
     },
     half: () => d.half,
@@ -115,6 +158,15 @@ export function compileTrack(d: TrackData): TrackDef {
     bankMax: d.bank.max,
     terrain: d.terrain,
     walls: () => walls,
+    ...(jumps.length
+      ? {
+          gap: (s: number) =>
+            jumps.some((j) => {
+              const x = jumpLocal(j, s);
+              return x >= 0 && x < j.length;
+            }),
+        }
+      : {}),
   };
 }
 
@@ -129,7 +181,7 @@ export const LIMITS = {
   half: [8, 40] as const,
   /** Steepest climb or drop (rise per metre): the launch crests reach about 0.24. */
   maxGrade: 0.3,
-  maxJump: 120,
+  maxJump: 160,
 };
 
 const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
