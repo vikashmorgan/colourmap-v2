@@ -52,6 +52,14 @@ stay the car's; no badges, names or logos.
   each side, a full-width bar of light across the tail, two glowing outlets for the flames.
 - **Motorbike**: two wheels, the tank, fairing and the rider's helmet in the paint, a rider tucked
   over the tank, one exhaust; it leans hard into turns (up to 0.6 rad).
+- **Light Cycle** (2026-11-22: "make tron bikes"): an original neon racing bike. A long low shell
+  in the paint swept over two big wheels; dark discs ringed in light; a line of light along the
+  spine and round the nose; a rider lying flat along it in a dark suit traced with light. Every
+  light takes the hull's own colour. Two of the rivals ride one.
+
+**Light trail** (2026-11-22: "cars leave colour trail behind them, bikes as well"): every car and
+bike on a track leaves a wall of light 1.1 m tall in its own colour (yours the hull's), fading over
+2.4 s. On by default; a Light trail row (On / Off) in the garage and the game menu turns it off.
 
 All take the hull, the fire and the speed flames like the others.
 

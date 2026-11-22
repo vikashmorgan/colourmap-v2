@@ -63,6 +63,8 @@ export interface TrackDef {
   /** On a twist, the slope your line through it adds along the road (negative runs downhill:
    * faster). */
   surge?(s: number, u: number): number;
+  /** Which side a high deck runs along the top of the curled wall here (1 left, -1 right, 0 none). */
+  deck?(s: number): number;
   /** Where a twist's bypass lane runs here (its centre's u, on the right), or null. */
   bypass?(s: number): number | null;
   /** The radius (m) of the curved wall past the edge on a banked bend's high side, at full bank. */
@@ -296,7 +298,17 @@ export function heightAt(t: Track, s: number, u: number, solid = false): number 
   if (R <= 0) return flat;
   // A pipe fades in with its radius (the canyon's mouth), from the flat beside the road.
   const w = clamp(R / 8, 0, 1);
-  return flat + (edge + pipeAt(out, R) - flat) * w;
+  const wall = flat + (edge + pipeAt(out, R) - flat) * w;
+  // A high deck: the curled wall rises until it meets it, then it runs flat, then the stands fall
+  // away to the ground beyond (2026-11-22: "you shoot up on the turn tilts and another road offers
+  // itself, like driving on top of grandstands").
+  const side = t.def.deck?.(Math.max(0, s)) ?? 0;
+  if (side !== 0 && Math.sign(u) === side) {
+    const top = f.e + DECK.H;
+    if (out <= DECK.OUT) return Math.min(wall, top);
+    return flat;
+  }
+  return wall;
 }
 
 /**
@@ -311,6 +323,19 @@ export function pipeRadius(t: Track, s: number, u: number, bank = frameAt(t, s).
   const curl = t.def.curl;
   if (!curl || u * bank >= 0) return own;
   return Math.max(own, curl * clamp(Math.abs(bank) / 0.5, 0, 1));
+}
+
+/** The high deck: how far above the road's centre (m), and how far past the edge it reaches. */
+export const DECK = { H: 20, OUT: 30 };
+
+/** Whether (s, u) is up on a high deck (its flat top, not the wall below it). */
+export function onDeck(t: Track, s: number, u: number): boolean {
+  const side = t.def.deck?.(Math.max(0, s)) ?? 0;
+  if (side === 0 || Math.sign(u) !== side) return false;
+  const f = frameAt(t, s);
+  const out = Math.abs(u) - f.half;
+  if (out <= 0 || out > DECK.OUT) return false;
+  return heightAt(t, s, u, true) >= f.e + DECK.H - 0.01;
 }
 
 /** Half a bypass lane's width (m): see BYPASS in track-data. */
@@ -341,12 +366,13 @@ function corridor(
   reach: number,
   out: number,
 ): NonNullable<Ground['road']> {
+  const up = onDeck(t, s, u);
   const base = {
     h: f.h,
     k: f.k,
     u,
-    half: f.half + (reach > 0 ? reach + 1 : 0),
-    pipe: reach > 0 ? clamp(out / reach, 0, 1) : 0,
+    half: up ? f.half + DECK.OUT + 1 : f.half + (reach > 0 ? reach + 1 : 0),
+    pipe: up ? 0 : reach > 0 ? clamp(out / reach, 0, 1) : 0,
   };
   const open = Math.abs(t.def.twist?.(Math.max(0, s)) ?? 0) > TWIST_OPEN;
   const c = t.def.bypass?.(Math.max(0, s));
@@ -378,8 +404,14 @@ export function groundAt(t: Track, px: number, py: number): Ground & { s: number
     h,
     gx: dS * c - dU * sn,
     gy: dS * sn + dU * c,
-    rough: clamp((out - reach) / 0.8, 0, 1),
-    lip: lipped ? clamp((Math.abs(u) - (f.half - 2.5)) / 2.5, 0, 1) : 0,
+    rough: onDeck(t, s, u) ? 0 : clamp((out - reach) / 0.8, 0, 1),
+    // A high deck's wall and top are ridden, never launched from: up the wall and over onto it.
+    lip:
+      (t.def.deck?.(Math.max(0, s)) ?? 0) === Math.sign(u) && out > 0 && out <= DECK.OUT
+        ? 1
+        : lipped
+          ? clamp((Math.abs(u) - (f.half - 2.5)) / 2.5, 0, 1)
+          : 0,
     road: corridor(t, s, u, f, reach, out),
     s,
     u,
@@ -713,7 +745,9 @@ export function collideTrack(w: TrackWorld, v: Vehicle): Hit | null {
   if (Math.abs(tr.def.twist?.(Math.max(0, s)) ?? 0) > TWIST_OPEN) return null;
   // A curled bend's wall stands back past its pipe's top.
   const left = walls.left;
-  const lu = left ? left.u + (tr.def.curl ? pipeReach(tr, s, 1) : 0) : 0;
+  const deckSide = tr.def.deck?.(Math.max(0, s)) ?? 0;
+  let lu = left ? left.u + (tr.def.curl ? pipeReach(tr, s, 1) : 0) : 0;
+  if (left && deckSide === 1) lu = Math.max(lu, f.half + DECK.OUT);
   if (left && u > lu - BODY_R && above < left.height) {
     return { nx: -nx, ny: -ny, depth: u - (lu - BODY_R), loss: 0, spin: 0, flow: true };
   }
@@ -722,6 +756,7 @@ export function collideTrack(w: TrackWorld, v: Vehicle): Hit | null {
   let ru = right ? right.u - (tr.def.curl ? pipeReach(tr, s, -1) : 0) : 0;
   if (right && by !== null && by !== undefined)
     ru = Math.min(ru, by - BYPASS_LANE + right.u + f.half);
+  if (right && deckSide === -1) ru = Math.min(ru, -(f.half + DECK.OUT));
   if (right && u < ru + BODY_R && above < right.height) {
     return { nx, ny, depth: ru + BODY_R - u, loss: 0, spin: 0, flow: true };
   }

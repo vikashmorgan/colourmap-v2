@@ -10,14 +10,15 @@ import { buildVehicle } from './vehicles';
 const fire = fireById(DEFAULT_DESIGN.fire);
 
 describe('the extra bodies', () => {
-  for (const id of ['classic', 'future', 'bike'] as const)
+  for (const id of ['classic', 'future', 'bike', 'cycle'] as const)
     it(`${id}: builds, spins its wheels, shows its flames only when asked, repaints`, () => {
       const view = buildBody(id, hullById('red'), fire, null);
       const box = new THREE.Box3().setFromObject(view.group);
       const size = box.getSize(new THREE.Vector3());
-      expect(size.z).toBeGreaterThan(id === 'bike' ? 1.8 : 4);
+      const twoWheels = id === 'bike' || id === 'cycle';
+      expect(size.z).toBeGreaterThan(twoWheels ? 1.8 : 4);
       // The ground shadow and tail glow included.
-      expect(size.x).toBeLessThan(id === 'bike' ? 1 : 2.7);
+      expect(size.x).toBeLessThan(twoWheels ? 1 : 2.7);
       const v = { ...newVehicle('car', 0, 0, 0), vLong: 20 };
       const flames: THREE.Mesh[] = [];
       view.group.traverse((o) => {
@@ -43,6 +44,25 @@ describe('the extra bodies', () => {
       return Math.abs(view.group.children[0].rotation.z);
     };
     expect(lean('bike')).toBeGreaterThan(lean('classic') * 4);
+  });
+
+  it('the light cycle’s lights take the hull’s own colour, and follow a repaint', () => {
+    const view = buildBody('cycle', hullById('chrome'), fire, null);
+    const lights = new Set<THREE.MeshBasicMaterial>();
+    view.group.traverse((o) => {
+      if (
+        o instanceof THREE.Mesh &&
+        o.material instanceof THREE.MeshBasicMaterial &&
+        !o.material.transparent
+      )
+        lights.add(o.material);
+    });
+    const glow = [...lights].find((m) => Math.max(m.color.r, m.color.g, m.color.b) > 1);
+    expect(glow).toBeTruthy();
+    const before = glow?.color.clone();
+    view.setHull(hullById('red'), null);
+    expect(glow?.color.equals(before as THREE.Color)).toBe(false);
+    view.dispose();
   });
 
   it('buildVehicle picks the body for the car, and ignores it for the ship', () => {

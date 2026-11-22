@@ -9,6 +9,7 @@ import { GridNotes, type GridPlace } from '@/components/GridNotes';
 import { LifeTree } from '@/components/LifeTree';
 import { onRacing, Porthole } from '@/components/Porthole';
 import { StarWheel } from '@/components/StarWheel';
+import { TreeColumns } from '@/components/TreeColumns';
 import {
   GOLD,
   type GridNode,
@@ -404,14 +405,24 @@ export default function GridMenu() {
           ) : null}
 
           {mode === 'tree' ? (
-            <LifeTree
-              go={go}
-              close={close}
-              arrive={switched}
-              gather={gathering}
-              fromRing={fromRing}
-              onPlace={onTreePlace}
-            />
+            <>
+              <LifeTree
+                go={go}
+                close={close}
+                arrive={switched}
+                gather={gathering}
+                fromRing={fromRing}
+                onPlace={onTreePlace}
+              />
+              {!gathering && (
+                <TreeColumns
+                  go={(href) => {
+                    setOpen(false);
+                    router.push(href);
+                  }}
+                />
+              )}
+            </>
           ) : mode === 'wheel' && starWheel ? (
             <StarWheel
               key={wheelDesign}

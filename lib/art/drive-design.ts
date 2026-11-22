@@ -214,6 +214,9 @@ export interface Design {
   gauge: GaugeId;
   /** Flames out of the exhausts and boosters at high speed. */
   flames: boolean;
+  /** A wall of light left behind every car and bike in its own colour (2026-11-22: "cars leave
+   * colour trail behind them, bikes as well"). */
+  trail: boolean;
   /** How every vehicle handles (lib/art/vehicle.ts MODES). */
   mode: DriveMode;
   /** The Paint hull's colour (#rrggbb). */
@@ -272,7 +275,7 @@ export const shipParts = (d: ShipParts): ShipParts => ({
  * The car's bodies (2026-11-19: "a motorbike", "cars inspired by the 50s GTO, and then the same
  * but futuristic"). The physics stay the car's.
  */
-export type BodyId = 'wedge' | 'classic' | 'future' | 'racer' | 'bike';
+export type BodyId = 'wedge' | 'classic' | 'future' | 'racer' | 'bike' | 'cycle';
 export const BODIES: { id: BodyId; name: string }[] = [
   { id: 'wedge', name: 'Wedge' },
   { id: 'classic', name: 'Classic GT' },
@@ -281,6 +284,8 @@ export const BODIES: { id: BodyId; name: string }[] = [
   // Racer, with the tron designs": the Future GT with its light lines in the hull's own colour.
   { id: 'racer', name: 'Space Racer' },
   { id: 'bike', name: 'Motorbike' },
+  // 2026-11-22: "make tron bikes".
+  { id: 'cycle', name: 'Light Cycle' },
 ];
 
 export type DriveMode = 'easy' | 'flow' | 'drift' | 'grip';
@@ -305,6 +310,7 @@ export const DEFAULT_DESIGN: Design = {
   weather: 'clear',
   gauge: 'future',
   flames: true,
+  trail: true,
   mode: 'flow',
   paint: '#2a6cf0',
   body: 'wedge',
@@ -352,6 +358,7 @@ export function parseDesign(raw: string | null, weathers: readonly string[]): De
     vehicle,
     gauge: GAUGES.some((g) => g.id === o.gauge) ? (o.gauge as GaugeId) : DEFAULT_DESIGN.gauge,
     flames: typeof o.flames === 'boolean' ? o.flames : DEFAULT_DESIGN.flames,
+    trail: typeof o.trail === 'boolean' ? o.trail : DEFAULT_DESIGN.trail,
     mode: DRIVE_MODES.some((m) => m.id === o.mode) ? (o.mode as DriveMode) : DEFAULT_DESIGN.mode,
     paint: isHex(o.paint) ? o.paint.toLowerCase() : DEFAULT_DESIGN.paint,
     body: BODIES.some((b) => b.id === o.body) ? (o.body as BodyId) : DEFAULT_DESIGN.body,

@@ -6,12 +6,14 @@ import {
   COAST_CLIFF,
   COAST_HALF,
   COAST_RAIL,
+  DECK,
   FALLEN,
   frameAt,
   GOLDEN,
   GOLDEN_BANK,
   GOLDEN_HALF,
   gapAround,
+  groundAt,
   heightAt,
   makeTrack,
   makeTrackWorld,
@@ -20,6 +22,7 @@ import {
   NIGHT,
   NIGHT_BARRIER,
   NIGHT_HALF,
+  onDeck,
   pipeReach,
   pointAt,
   project,
@@ -537,5 +540,57 @@ describe('the big twist and the curled banks (2026-11-22)', () => {
     // The low side only levels back toward the flat ground (1 in 2), no wall.
     expect(heightAt(t, s, -high * (f.half + 8))).toBeLessThanOrEqual(edgeH(-high) + 4.01);
     expect(pipeReach(t, s, high)).toBeGreaterThan(8);
+  });
+});
+
+describe('the secret high road (2026-11-22)', () => {
+  const def = compileTrack(DOCS.gold);
+  const t = makeTrack(def);
+  const k = (DOCS.gold.features ?? []).find((f) => f.kind === 'deck') as {
+    from: number;
+    to: number;
+  };
+  const mid = (k.from + k.to) / 2;
+
+  it('runs a flat deck along the top of the curled wall on the high side, and nowhere else', () => {
+    const f = frameAt(t, mid);
+    expect(f.bank * 1).toBeLessThan(0); // the high side is the left
+    const top = f.e + DECK.H;
+    expect(heightAt(t, mid, f.half + DECK.OUT - 2)).toBeCloseTo(top, 5);
+    expect(onDeck(t, mid, f.half + DECK.OUT - 2)).toBe(true);
+    // Below it the wall still curls up; beyond it the stands fall away.
+    expect(heightAt(t, mid, f.half + 3)).toBeLessThan(top - 5);
+    expect(heightAt(t, mid, f.half + DECK.OUT + 3)).toBeLessThan(top - 10);
+    expect(onDeck(t, mid, -(f.half + 10))).toBe(false);
+    expect(onDeck(t, k.to + 40, f.half + 20)).toBe(false);
+    t.hint = mid;
+    expect(groundAt(t, pointAt(t, mid, f.half + 20).x, pointAt(t, mid, f.half + 20).y).rough).toBe(
+      0,
+    );
+  });
+
+  it('can be reached: flat out up the wall, you come out on top', () => {
+    const w = makeTrackWorld(def);
+    const s0 = k.from - 120;
+    const f = frameAt(w.track, s0);
+    w.track.hint = s0;
+    const p = pointAt(w.track, s0, 6);
+    const v = newVehicle('car', p.x, p.y, f.h, heightAt(w.track, s0, 6));
+    v.vx = Math.cos(f.h) * 75;
+    v.vy = Math.sin(f.h) * 75;
+    let s = s0;
+    let up = false;
+    for (let i = 0; i < 60 * 12 && s < k.to; i++) {
+      stepVehicle(v, { throttle: 1, steer: 1, boost: 1 }, 1 / 60, w, i / 60);
+      const q = project(w.track, v.x, v.y, s);
+      w.track.hint = q.s;
+      s = q.s;
+      if (onDeck(w.track, q.s, q.u)) up = true;
+    }
+    expect(up).toBe(true);
+  });
+
+  it('passes its own checks', () => {
+    expect(validateTrackData(DOCS.gold, 10000)).toEqual([]);
   });
 });

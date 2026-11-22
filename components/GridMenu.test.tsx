@@ -231,8 +231,10 @@ describe('GridMenu', () => {
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'PLANT A SPARK FOR IT' }));
       });
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      // The tree's columns read their own data; the spark is the one write.
+      const sparks = fetchMock.mock.calls.filter(([u]) => u === '/api/sparks');
+      expect(sparks).toHaveLength(1);
+      const [url, init] = sparks[0] as [string, RequestInit];
       expect(url).toBe('/api/sparks');
       expect(JSON.parse(init.body as string)).toMatchObject({
         isOpen: false,
