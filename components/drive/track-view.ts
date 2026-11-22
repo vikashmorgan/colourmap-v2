@@ -353,6 +353,53 @@ const SKY_BANDS: V3[] = [
 ];
 const SKY_DOOR: V3 = [1.6, 1.05, 0.3];
 
+/** The Golden Track's lap (m): its portal stands at the end of every one. */
+export const GOLD_LAP = 6000;
+/** The words over the Golden Track's portal (2026-11-22: "a kind of portal dome arch with stay
+ * wild written on top in golden letters at the end of the track lap"). */
+export const PORTAL_WORDS = 'STAY WILD';
+
+let portalMat: THREE.MeshBasicMaterial | null = null;
+/** The portal's words, golden serif capitals on a transparent board, drawn once and shared. */
+function portalWords(): THREE.MeshBasicMaterial {
+  if (portalMat) return portalMat;
+  const c = document.createElement('canvas');
+  c.width = 2048;
+  c.height = 320;
+  const x = c.getContext('2d');
+  if (x) {
+    x.font = '600 230px Georgia, "Times New Roman", serif';
+    x.textAlign = 'center';
+    x.textBaseline = 'middle';
+    const g = x.createLinearGradient(0, 40, 0, 280);
+    g.addColorStop(0, '#fff1c4');
+    g.addColorStop(0.5, '#e2b04a');
+    g.addColorStop(1, '#9a6a1c');
+    x.shadowColor = 'rgba(226,176,74,0.9)';
+    x.shadowBlur = 40;
+    x.fillStyle = g;
+    // Letter-spaced by hand: canvas letterSpacing is not everywhere yet.
+    const letters = [...PORTAL_WORDS];
+    const step = 196;
+    letters.forEach((ch, i) => {
+      x.fillText(ch, 1024 + (i - (letters.length - 1) / 2) * step, 165);
+    });
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  portalMat = new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    toneMapped: false,
+  });
+  portalMat.color.setScalar(1.6);
+  portalMat.userData.shared = true;
+  return portalMat;
+}
+
 /** The streams' look in Sky Canyon: a dim rest, a bright head, a 14 m tail. */
 export const DOT_LOOK = { base: 0.4, pulse: 1.8, tail: 14 };
 
@@ -465,6 +512,11 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     -(y - ay),
   ];
 
+  /** Heights for drawing: the road as if it went on over a gap (nothing is drawn in the void). */
+  const hAt = (s: number, u: number) => heightAt(track, s, u, true);
+  /** In a jump's gap: no road, no ground, no lines (2026-11-22: "the long jump over the void"). */
+  const gapAt = (s: number) => def.gap?.(Math.max(0, s)) ?? false;
+
   function columns(half: number): number[] {
     const fr = [
       -1, -0.94, -0.85, -0.77, -0.55, -0.3, -0.12, 0, 0.12, 0.3, 0.55, 0.77, 0.85, 0.94, 1,
@@ -516,6 +568,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         col,
       );
     for (let s = s0; s < s1 - 0.01; s += ROW) {
+      if (gapAt(s) || gapAt(s + ROW)) continue;
       const half = def.half(s);
       const edge = half - 2.6;
       strip(s, s + ROW, edge, 0.22, lineCols.edge);
@@ -539,25 +592,53 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     const g = new THREE.Group();
     const L = (s: number, u: number, h = 0): V3 => {
       const p = pointAt(track, s, u);
-      return local(ax, ay, p.x, p.y, heightAt(track, s, u) + h);
+      return local(ax, ay, p.x, p.y, hAt(s, u) + h);
     };
 
     // The road and the ground beside it.
     const ground = new Builder();
-    const pts: V3[][] = [];
-    const cols: V3[][] = [];
+    let pts: V3[][] = [];
+    let cols: V3[][] = [];
+    const flush = () => {
+      if (pts.length > 1) grid(ground, pts, cols);
+      pts = [];
+      cols = [];
+    };
     for (let s = s0; s <= s1 + 0.01; s += ROW) {
-      const half = def.half(s);
+      // A gap breaks the road: what is before it ends at its lip, what is after starts again.
+      if (gapAt(s) && gapAt(s - ROW + 0.01)) {
+        flush();
+        continue;
+      }
+      const at = gapAt(s) ? s - 0.01 : s;
+      const half = def.half(at);
       const row: V3[] = [];
       const crow: V3[] = [];
       for (const u of columns(half)) {
-        row.push(L(s, u));
-        crow.push(groundColour(cfg, s, u, half, snowLevel));
+        row.push(L(at, u));
+        crow.push(groundColour(cfg, at, u, half, snowLevel));
       }
       pts.push(row);
       cols.push(crow);
+      if (gapAt(s)) flush();
     }
-    grid(ground, pts, cols);
+    flush();
+    // The lips of a gap: the road's edge drops away as a dark cliff face.
+    for (let s = s0; s < s1; s += ROW) {
+      const into = !gapAt(s) && gapAt(s + ROW);
+      const outOf = gapAt(s) && !gapAt(s + ROW);
+      if (!into && !outOf) continue;
+      const sl = into ? s + ROW - 0.01 : s + ROW;
+      const half = def.half(sl);
+      const cs = columns(half);
+      const face: V3[][] = [];
+      const fc: V3[][] = [];
+      for (const d of [0, 6, 40]) {
+        face.push(cs.map((u) => L(sl, u, -d)));
+        fc.push(cs.map(() => (d === 0 ? lin(0.5, 0.36, 0.14) : lin(0.03, 0.025, 0.02))));
+      }
+      grid(ground, into ? face : face.map((r) => [...r].reverse()), fc);
+    }
     const gm = new THREE.Mesh(ground.geometry(), groundMat);
     gm.renderOrder = 2;
     g.add(gm);
@@ -572,7 +653,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       const fc: V3[][] = [];
       for (let s = s0; s <= s1 + 0.01; s += 4) {
         const H = 25 + 55 * smooth1(s / 64, 4) ** 1.5;
-        const base = heightAt(track, s, COAST_CLIFF);
+        const base = hAt(s, COAST_CLIFF);
         const row: V3[] = [];
         const crow: V3[] = [];
         for (let k = 0; k <= 6; k++) {
@@ -591,7 +672,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         }
         cliff.push(row);
         cc.push(crow);
-        const top = heightAt(track, s, COAST_RAIL + 1.5);
+        const top = hAt(s, COAST_RAIL + 1.5);
         const frow: V3[] = [];
         const fcol: V3[] = [];
         for (let k = 0; k <= 3; k++) {
@@ -630,7 +711,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         for (let s = s0; s <= s1 + 0.01; s += 4) {
           const wu = rockWalls.u(s);
           const H = rockWalls.h(s, side);
-          const base = heightAt(track, s, side * wu);
+          const base = hAt(s, side * wu);
           const row: V3[] = [];
           const crow: V3[] = [];
           for (let k = 0; k <= 7; k++) {
@@ -725,7 +806,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
    * leans back a quarter of its height). Returns [u, height]. */
   function bandAt(s: number, side: number, hb: number): [number, number] {
     const half = def.half(s);
-    const edgeH = heightAt(track, s, side * half);
+    const edgeH = hAt(s, side * half);
     const R = SKY_PIPE;
     const pipeTop = pipeAt(R * PIPE_TOP, R);
     if (hb < pipeTop) {
@@ -733,7 +814,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       return [side * (half + x * R - 0.3), edgeH + hb + 0.4];
     }
     const wu = skyWallU();
-    const base = heightAt(track, s, side * wu);
+    const base = hAt(s, side * wu);
     const z = edgeH + hb;
     return [side * (wu + 1 + 0.25 * Math.max(0, z - base) - 0.8), z];
   }
@@ -770,9 +851,10 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       return x - Math.floor(x);
     };
     for (let s = Math.ceil(s0 / 2.5) * 2.5; s < s1; s += 2.5) {
+      if (gapAt(s)) continue;
       const half = def.half(s);
       for (const side of [1, -1]) {
-        const e = heightAt(track, s, side * (half + 1));
+        const e = hAt(s, side * (half + 1));
         put(s, side * (half + 1), e + 0.5, golds[0], 0.8);
         if (Math.round(s / 2.5) % 2 === 0) put(s, side * (half + 1.6), e + 2.4, golds[1], 0.6);
       }
@@ -780,7 +862,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     // Arches over the road.
     for (let sa = Math.ceil(s0 / 90) * 90; sa < s1; sa += 90) {
       const half = def.half(sa) + 2.5;
-      const e = heightAt(track, sa, 0);
+      const e = hAt(sa, 0);
       for (let t = 0; t <= Math.PI + 1e-6; t += 0.9 / half)
         // The light sweeps over the arch, foot to foot, as a stream passes under it.
         put(
@@ -792,11 +874,67 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
           sa - 30 + (t / Math.PI) * 60,
         );
     }
+    // The portal at the end of each lap: a dome of light over the road, its ribs rising to a crown
+    // and falling away, and the words over the way in.
+    for (
+      let sp = Math.max(GOLD_LAP, Math.ceil(s0 / GOLD_LAP) * GOLD_LAP);
+      sp < s1;
+      sp += GOLD_LAP
+    ) {
+      const half = def.half(sp) + 6;
+      const e = hAt(sp, 0);
+      const DEEP = 30;
+      for (let ds = -DEEP; ds <= DEEP + 1e-6; ds += 5) {
+        const k = Math.sqrt(Math.max(0, 1 - (ds / (DEEP + 6)) ** 2));
+        const w = half * (0.7 + 0.3 * k);
+        const tall = half * 1.05 * k;
+        for (let t = 0; t <= Math.PI + 1e-6; t += 0.7 / w)
+          put(
+            sp + ds,
+            Math.cos(t) * w,
+            e + Math.sin(t) * tall,
+            golds[ds === -DEEP ? 2 : 0],
+            ds === -DEEP ? 1.6 : 1,
+            sp + ds,
+          );
+      }
+      // Ribs over the top, along the road, so it reads as a dome and not a row of arches.
+      for (const t of [
+        0.35,
+        0.7,
+        1.05,
+        1.4,
+        Math.PI / 2,
+        Math.PI - 1.4,
+        Math.PI - 1.05,
+        Math.PI - 0.7,
+        Math.PI - 0.35,
+      ])
+        for (let ds = -DEEP; ds <= DEEP; ds += 1.2) {
+          const k = Math.sqrt(Math.max(0, 1 - (ds / (DEEP + 6)) ** 2));
+          const w = half * (0.7 + 0.3 * k);
+          put(sp + ds, Math.cos(t) * w, e + Math.sin(t) * half * 1.05 * k, golds[1], 0.7, sp + ds);
+        }
+      // The words, standing on the crown of the way in, facing whoever comes.
+      const f = frameAt(track, sp - DEEP);
+      const board = new THREE.Mesh(
+        new THREE.PlaneGeometry(half * 1.7, half * 1.7 * (320 / 2048)),
+        portalWords(),
+      );
+      board.position.set(
+        f.x - a.x,
+        e + half * 1.05 * Math.sqrt(1 - (DEEP / (DEEP + 6)) ** 2) + 5,
+        -(f.y - a.y),
+      );
+      board.rotation.y = f.h - Math.PI / 2;
+      board.renderOrder = 7;
+      g.add(board);
+    }
     // A ring of dots standing beside the road, every 360 m, alternating sides.
     for (let sr = Math.ceil(s0 / 360) * 360 + 180; sr < s1; sr += 360) {
       const side = Math.round(sr / 360) % 2 ? 1 : -1;
       const uc = side * (def.half(sr) + 14);
-      const e = heightAt(track, sr, uc);
+      const e = hAt(sr, uc);
       for (let t = 0; t < Math.PI * 2; t += 0.12)
         put(
           sr + Math.cos(t) * 0.01,
@@ -827,7 +965,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         const u = side * (def.half(st) + 30 + r * 110);
         if (def.curv(st) * u > 0.45) continue;
         const c = P(st, u);
-        const e = heightAt(track, st, side * def.half(st));
+        const e = hAt(st, side * def.half(st));
         const w = 8 + hashN(st + side * 3) * 14;
         const d = 8 + hashN(st * 1.7 + side) * 14;
         const H = 20 + (Math.abs(u) / 160) * 90 * (0.5 + hashN(st * 2.3 + side));
@@ -872,7 +1010,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       const u = side * (def.half(sf) + 45);
       if (def.curv(sf) * u > 0.45) continue;
       const c = P(sf, u);
-      const e = heightAt(track, sf, 0) + 38;
+      const e = hAt(sf, 0) + 38;
       const R = 12;
       const N = 260;
       for (let i = 0; i < N; i++) {
@@ -886,15 +1024,9 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     for (let s = Math.ceil(s0 / 4) * 4; s < s1; s += 4)
       for (const side of [1, -1]) {
         const r = hashN(s * 0.37 + side * 11.3);
-        if (r > 0.45) continue;
+        if (r > 0.45 || gapAt(s)) continue;
         const u = side * (def.half(s) + 6 + hashN(s + side) * 70);
-        put(
-          s,
-          u,
-          heightAt(track, s, u) + 0.15 + hashN(s * 3.1) * 0.6,
-          golds[Math.floor(r * 6.6) % 3],
-          0.5,
-        );
+        put(s, u, hAt(s, u) + 0.15 + hashN(s * 3.1) * 0.6, golds[Math.floor(r * 6.6) % 3], 0.5);
       }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -933,7 +1065,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     for (let sd = Math.ceil(s0 / SKY_LAP) * SKY_LAP; sd < s1; sd += SKY_LAP) {
       if (sd <= 0) continue;
       const W = skyWallU() - 3;
-      const e = heightAt(track, sd, 0);
+      const e = hAt(sd, 0);
       for (const ds of [-3, 0, 3]) {
         const s = sd + ds;
         for (let h = 0; h <= 60; h += 1.4)
@@ -990,7 +1122,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       const y = c.y + b.ty * da + b.ny * du;
       return local(ax, ay, x, y, mirror ? base - h * 1.35 : base + h);
     };
-    const groundAt = (s: number, u: number) => heightAt(track, s, u);
+    const groundAt = (s: number, u: number) => hAt(s, u);
     const centre = (s: number) => frameAt(track, s).e;
 
     /** A box in the road frame: (s, u) its middle, half sizes along and across, from h0 to h1. */

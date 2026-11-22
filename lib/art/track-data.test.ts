@@ -6,24 +6,31 @@ import {
   COAST_CLIFF,
   COAST_HALF,
   COAST_RAIL,
+  FALLEN,
   frameAt,
   GOLDEN,
   GOLDEN_BANK,
   GOLDEN_HALF,
+  gapAround,
+  heightAt,
   makeTrack,
+  makeTrackWorld,
   NEON_HALF,
   NEON_TRACK,
   NIGHT,
   NIGHT_BARRIER,
   NIGHT_HALF,
+  project,
   RACE,
   type TrackDef,
+  VOID_DEPTH,
 } from './track';
-import { compileTrack, type TrackData, trackOutline, validateTrackData } from './track-data';
+import { compileTrack, JUMP, type TrackData, trackOutline, validateTrackData } from './track-data';
 import coast from './tracks/coast.json';
 import gold from './tracks/gold.json';
 import neon from './tracks/neon.json';
 import night from './tracks/night.json';
+import { newVehicle, stepVehicle } from './vehicle';
 
 const TAU = Math.PI * 2;
 const bump = (s: number, c: number, a: number, w: number) => {
@@ -76,10 +83,15 @@ const REFERENCE: Record<
 };
 
 const DOCS = { coast, night, neon, gold } as unknown as Record<string, TrackData>;
+/** The Golden Track's waves alone, without its jumps, to compare with how it was by hand. */
+const WAVES_ONLY = (d: TrackData): TrackData => ({
+  ...d,
+  features: (d.features ?? []).filter((f) => f.kind !== 'jump'),
+});
 
 describe('tracks as data', () => {
   it.each(Object.keys(DOCS))('%s compiles to exactly the road it was by hand', (id) => {
-    const def = compileTrack(DOCS[id]);
+    const def = compileTrack(WAVES_ONLY(DOCS[id]));
     const ref = REFERENCE[id];
     for (let s = -50; s < 12000; s += 7.3) {
       expect(def.curv(s)).toBe(ref.curv(s));
@@ -213,5 +225,95 @@ describe('the outline, for the map', () => {
       expect(p.e).toBeLessThanOrEqual(o.max.e);
     }
     expect(o.max.x - o.min.x).toBeGreaterThan(1000);
+  });
+});
+
+describe('the jump over the void (2026-11-22)', () => {
+  const def = compileTrack(DOCS.gold);
+  const jump = (DOCS.gold.features ?? []).find((f) => f.kind === 'jump') as {
+    at: number;
+    length: number;
+    every: number;
+  };
+
+  it('opens a gap across the whole road, every lap of the pattern', () => {
+    for (const k of [0, 1, 2]) {
+      const a = jump.at + k * jump.every;
+      expect(def.gap?.(a - 1)).toBe(false);
+      expect(def.gap?.(a + 1)).toBe(true);
+      expect(def.gap?.(a + jump.length - 1)).toBe(true);
+      expect(def.gap?.(a + jump.length + 1)).toBe(false);
+    }
+    const t = makeTrack(def);
+    const s = jump.at + 50;
+    expect(heightAt(t, s, 0)).toBeLessThan(def.elev(s) - VOID_DEPTH + 1);
+    expect(heightAt(t, s, 30)).toBeLessThan(def.elev(s) - VOID_DEPTH + 1);
+    expect(heightAt(t, s, 0, true)).toBeGreaterThan(def.elev(s) - 5);
+  });
+
+  it('runs straight and flat over the jump, a kicker before it, the far side lower', () => {
+    for (let s = jump.at - JUMP.STRAIGHT; s < jump.at + jump.length + JUMP.STRAIGHT; s += 5)
+      expect(Math.abs(def.curv(s))).toBe(0);
+    const base = (s: number) => compileTrack(WAVES_ONLY(DOCS.gold)).elev(s);
+    expect(def.elev(jump.at - 0.01) - base(jump.at - 0.01)).toBeCloseTo(JUMP.RAMP_H, 1);
+    expect(def.elev(jump.at + jump.length) - base(jump.at + jump.length)).toBeCloseTo(
+      -JUMP.LAND_DROP,
+      5,
+    );
+    expect(def.elev(jump.at + jump.length + JUMP.LAND + 1)).toBeCloseTo(
+      base(jump.at + jump.length + JUMP.LAND + 1),
+      6,
+    );
+  });
+
+  /** Drives straight at the jump at a speed and reports how it ended. */
+  const leap = (kind: 'car' | 'ship', speed: number, throttle = 1, back = 320) => {
+    const w = makeTrackWorld(def);
+    const s0 = jump.at - back;
+    const f = frameAt(w.track, s0);
+    w.track.hint = s0;
+    const v = newVehicle(kind, f.x, f.y, f.h, heightAt(w.track, s0, 0));
+    v.vx = Math.cos(f.h) * speed;
+    v.vy = Math.sin(f.h) * speed;
+    let flew = false;
+    for (let i = 0; i < 60 * 20; i++) {
+      stepVehicle(v, { throttle, steer: 0, boost: 0 }, 1 / 60, w, i / 60);
+      const q = project(w.track, v.x, v.y);
+      w.track.hint = q.s;
+      if (v.air && def.gap?.(q.s)) flew = true;
+      if (v.z < heightAt(w.track, q.s, q.u, true) - FALLEN) return { flew, fell: true, s: q.s };
+      if (q.s > jump.at + jump.length + 300) return { flew, fell: false, s: q.s };
+    }
+    return { flew, fell: false, s: project(w.track, v.x, v.y).s };
+  };
+
+  it('is cleared flat out, by the car and the ship', () => {
+    for (const kind of ['car', 'ship'] as const) {
+      const r = leap(kind, 72);
+      expect(r.flew).toBe(true);
+      expect(r.fell).toBe(false);
+    }
+  });
+
+  it('is made from a retry: 450 m back, rolling at 45 m/s, throttle down', () => {
+    for (const kind of ['car', 'ship'] as const) expect(leap(kind, 45, 1, 450).fell).toBe(false);
+  });
+
+  it('finds the gap you fell into, from inside it or just past it', () => {
+    const t = makeTrack(def);
+    expect(gapAround(t, jump.at + 40)).toEqual({ from: jump.at, to: jump.at + jump.length });
+    expect(gapAround(t, jump.at + jump.length + 20)).toEqual({
+      from: jump.at,
+      to: jump.at + jump.length,
+    });
+    expect(gapAround(t, jump.at - 600)).toBeNull();
+  });
+
+  it('swallows you if you come at it too slowly', () => {
+    expect(leap('car', 25, 0).fell).toBe(true);
+  });
+
+  it('passes its own checks with the jump', () => {
+    expect(validateTrackData(DOCS.gold)).toEqual([]);
   });
 });
