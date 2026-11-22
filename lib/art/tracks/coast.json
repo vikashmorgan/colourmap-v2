@@ -1,0 +1,17 @@
+{
+  "id": "coast",
+  "curve": {
+    "waves": [
+      { "amp": 0.8, "period": 2600 },
+      { "amp": 0.35, "period": 1500, "phase": 1.3 },
+      { "amp": 0.1, "period": 950, "phase": 0.4 }
+    ]
+  },
+  "rise": { "waves": [{ "amp": 4, "period": 1300 }, { "amp": 1.2, "period": 600, "phase": 0.7 }] },
+  "half": 22,
+  "lip": 0.5,
+  "bank": { "speed": 55, "max": 0.2 },
+  "terrain": null,
+  "walls": { "left": { "u": 28, "height": 40 }, "right": { "u": -31, "height": 30 } },
+  "features": [{ "kind": "gate", "every": 1000 }]
+}

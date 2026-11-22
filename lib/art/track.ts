@@ -19,6 +19,11 @@
  */
 
 import { clamp, type Gate } from '@/lib/art/drive';
+import { compileTrack, type TrackData } from '@/lib/art/track-data';
+import coastData from '@/lib/art/tracks/coast.json';
+import goldData from '@/lib/art/tracks/gold.json';
+import neonData from '@/lib/art/tracks/neon.json';
+import nightData from '@/lib/art/tracks/night.json';
 import { G, type Ground, type Hit, type Vehicle, type World } from '@/lib/art/vehicle';
 
 export type TrackId = 'coast' | 'canyon' | 'night' | 'chinatown' | 'neon' | 'sky' | 'gold';
@@ -288,23 +293,6 @@ export function keyed(keys: readonly (readonly [number, number])[], s: number): 
 
 const TAU = Math.PI * 2;
 
-/** Its heading: three slow sways, so the bends come long and flowing (stretched 2026-11-17). */
-export function coastHeading(s: number): number {
-  return (
-    0.8 * Math.sin((TAU * s) / 2600) +
-    0.35 * Math.sin((TAU * s) / 1500 + 1.3) +
-    0.1 * Math.sin((TAU * s) / 950 + 0.4)
-  );
-}
-
-export function coastCurv(s: number): number {
-  return (
-    0.8 * (TAU / 2600) * Math.cos((TAU * s) / 2600) +
-    0.35 * (TAU / 1500) * Math.cos((TAU * s) / 1500 + 1.3) +
-    0.1 * (TAU / 950) * Math.cos((TAU * s) / 950 + 0.4)
-  );
-}
-
 export const COAST_HALF = 22;
 /** The rail on the sea side and the foot of the cliff, from the centre. */
 export const COAST_RAIL = COAST_HALF + 6;
@@ -312,19 +300,10 @@ export const COAST_CLIFF = -(COAST_HALF + 9);
 /** The sea, this far under the road. */
 export const COAST_SEA = -40;
 
-export const COAST: TrackDef = {
-  id: 'coast',
-  startH: 0,
-  curv: coastCurv,
-  elev: (s) => 4 * Math.sin((TAU * s) / 1300) + 1.2 * Math.sin((TAU * s) / 600 + 0.7),
-  half: () => COAST_HALF,
-  lip: () => 0.5,
-  bankSpeed: 55,
-  bankMax: BANK_MAX,
-  terrain: null,
-  // The rail is 1.1 m to see, but holds you however high a crest throws you: never into the sea.
-  walls: () => ({ left: { u: COAST_RAIL, height: 40 }, right: { u: COAST_CLIFF, height: 30 } }),
-};
+/** Three slow sways, so the bends come long and flowing (stretched 2026-11-17); the rail on the
+ * sea side is 1.1 m to see but holds you however high a crest throws you: never into the sea.
+ * The road is data: lib/art/tracks/coast.json. */
+export const COAST: TrackDef = compileTrack(coastData as TrackData);
 
 /** Coast Road is timed by the kilometre: a gate every 1,000 m. */
 export const COAST_GATE = 1000;
@@ -345,26 +324,8 @@ export const NIGHT_GANTRY = 128;
 export const NIGHT_LAMP_U = NIGHT_HALF + 1.5;
 export const NIGHT_LAMP_H = 8;
 
-/** Every 1,500 m: a crest that lifts you at 600 m and a dip at 1,100 m. */
-export function nightElev(s: number): number {
-  const p = ((s % 1500) + 1500) % 1500;
-  return bump(p, 600, 4.5, 34) + bump(p, 1100, -3, 50) + 1.5 * Math.sin((TAU * s) / 640);
-}
-
-export const NIGHT: TrackDef = {
-  id: 'night',
-  startH: 0,
-  curv: (s) =>
-    0.7 * (TAU / 2400) * Math.cos((TAU * s) / 2400 + 0.6) +
-    0.35 * (TAU / 1100) * Math.cos((TAU * s) / 1100 + 2.1),
-  elev: nightElev,
-  half: () => NIGHT_HALF,
-  lip: () => 0.4,
-  bankSpeed: 52,
-  bankMax: BANK_MAX,
-  terrain: 0,
-  walls: () => barrier(NIGHT_HALF),
-};
+/** Every 1,500 m a crest that lifts you at 600 m and a dip at 1,100 m (lib/art/tracks/night.json). */
+export const NIGHT: TrackDef = compileTrack(nightData as TrackData);
 
 /* ── Chinatown Run and the Neon District ───────────────────── */
 
@@ -404,23 +365,8 @@ export const CHINATOWN: TrackDef = {
 
 export const NEON_HALF = 16;
 
-export const NEON_TRACK: TrackDef = {
-  id: 'neon',
-  startH: 0,
-  curv: (s) =>
-    0.9 * (TAU / 3000) * Math.cos((TAU * s) / 3000 + 0.2) +
-    0.3 * (TAU / 1200) * Math.cos((TAU * s) / 1200 + 1.9),
-  elev: (s) => {
-    const p = ((s % 1800) + 1800) % 1800;
-    return bump(p, 700, 5.5, 36) + bump(p, 1400, -3.5, 55) + 2 * Math.sin((TAU * s) / 900);
-  },
-  half: () => NEON_HALF,
-  lip: () => 0.45,
-  bankSpeed: 58,
-  bankMax: BANK_MAX,
-  terrain: 0,
-  walls: () => barrier(NEON_HALF),
-};
+/** Crests every 1,800 m under the ship highways (lib/art/tracks/neon.json). */
+export const NEON_TRACK: TrackDef = compileTrack(neonData as TrackData);
 
 /* ── Golden Track ──────────────────────────────────────────── */
 
@@ -431,22 +377,10 @@ export const NEON_TRACK: TrackDef = {
  */
 export const GOLDEN_HALF = 18;
 export const GOLDEN_BANK = 0.34;
-export const GOLDEN: TrackDef = {
-  id: 'gold',
-  startH: 0,
-  // Tighter bends (2026-11-19: "more curving on the turns, more tilt on the slope"): the tightest
-  // about 130 m across, banked up to 0.34 rad (≈ 20°), against the other tracks' 0.2.
-  curv: (s) =>
-    1.3 * (TAU / 2400) * Math.cos((TAU * s) / 2400) +
-    0.6 * (TAU / 900) * Math.cos((TAU * s) / 900 + 0.7),
-  elev: (s) => 3 * Math.sin((TAU * s) / 1300) + 1.5 * Math.sin((TAU * s) / 520 + 1.1),
-  half: () => GOLDEN_HALF,
-  lip: () => 0.45,
-  bankSpeed: 70,
-  bankMax: GOLDEN_BANK,
-  terrain: 0,
-  walls: () => barrier(GOLDEN_HALF),
-};
+/** Tighter bends (2026-11-19: "more curving on the turns, more tilt on the slope"): the tightest
+ * about 130 m across, banked up to 0.34 rad (≈ 20°), against the other tracks' 0.2
+ * (lib/art/tracks/gold.json). */
+export const GOLDEN: TrackDef = compileTrack(goldData as TrackData);
 
 /* ── Canyon Race ───────────────────────────────────────────── */
 

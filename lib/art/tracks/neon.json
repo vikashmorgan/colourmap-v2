@@ -1,0 +1,23 @@
+{
+  "id": "neon",
+  "curve": {
+    "waves": [
+      { "amp": 0.9, "period": 3000, "phase": 0.2 },
+      { "amp": 0.3, "period": 1200, "phase": 1.9 }
+    ]
+  },
+  "rise": {
+    "every": 1800,
+    "bumps": [
+      { "at": 700, "height": 5.5, "width": 36 },
+      { "at": 1400, "height": -3.5, "width": 55 }
+    ],
+    "waves": [{ "amp": 2, "period": 900 }]
+  },
+  "half": 16,
+  "lip": 0.45,
+  "bank": { "speed": 58, "max": 0.2 },
+  "terrain": 0,
+  "barrier": 1.5,
+  "features": [{ "kind": "gate", "every": 1000 }]
+}
