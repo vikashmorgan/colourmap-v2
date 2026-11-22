@@ -139,7 +139,14 @@ import {
   type WeatherState,
   weatherNow,
 } from '@/lib/art/weather';
-import { newWreck, offTwist, stepWreck, type Wreck } from '@/lib/art/wreck';
+import {
+  choosesStraight,
+  newWreck,
+  offTwist,
+  stepWreck,
+  twistEntry,
+  type Wreck,
+} from '@/lib/art/wreck';
 import { buildSaltView, type SaltView } from './salt-view';
 import { makeStageFire } from './stage-fire';
 import { buildTrackView, disposeGroup, type TrackView } from './track-view';
@@ -396,6 +403,9 @@ const HELD: StepEvents = { landed: 0, bump: 0, tookOff: false };
 /** Lost to a jump's void: back this far before its gap (m), rolling at this speed (m/s), enough
  * run-up to make it with the throttle down. */
 export const RETRY_BACK = 450;
+
+/** The walls of light behind the racers: how tall (m), how long they last (s), how bright. */
+export const WALL = { HEIGHT: 1.1, LIFE: 2.4, POINTS: 150, SPACING: 1.5, GLOW: 2.2, OPACITY: 0.55 };
 export const RETRY_SPEED = 45;
 
 /* ── The sky as an environment, for chrome and glass ───────── */
@@ -477,6 +487,9 @@ export class DriveEngine {
   private ribbonFlat: THREE.ShaderMaterial;
   private ribbonGlow: THREE.ShaderMaterial;
   private ribbons: Ribbon[] = [];
+  /** The walls of light behind every racer (2026-11-22: "cars leave colour trail behind them,
+   * bikes as well"), by who leaves them ('you', or a rival's name). */
+  private walls = new Map<string, { rib: Ribbon; mat: THREE.ShaderMaterial; colour: string }>();
 
   private cfg: WorldCfg;
   private design: Design;
@@ -528,6 +541,8 @@ export class DriveEngine {
   private wreck: Wreck | null = null;
   /** On a twist's ribbon since its start (for the boost after it), or null. */
   private riding: { end: number } | null = null;
+  /** Who is going straight through a twist, and where it ends (2026-11-22). */
+  private straight = new Map<Vehicle, number>();
   private hudAt = 0;
   private lastHud = '';
   private size = { w: 1, h: 1 };
@@ -865,6 +880,7 @@ export class DriveEngine {
     this.mood = null;
     this.best = loadBest(this.store, bestKey(this.cfg.id, kind));
     this.drift = this.newDrift(kind);
+    this.straight.clear();
     this.surgeAt = -99;
     this.wreck = null;
     this.riding = null;
@@ -886,7 +902,7 @@ export class DriveEngine {
     if (!this.design.rivals || !this.trackWorld) return;
     const tr = this.trackWorld.track;
     const kind = this.vehicle.kind;
-    const bodies = ['wedge', 'future', 'classic', 'future', 'wedge'] as const;
+    const bodies = ['wedge', 'cycle', 'classic', 'future', 'cycle'] as const;
     this.rivals = RIVALS.map((r, i) => {
       const s = this.s + r.grid.ds;
       const u = r.grid.du * tr.def.half(Math.max(0, s)) * 0.7;
@@ -930,7 +946,10 @@ export class DriveEngine {
         rv.v.z = heightAt(tr, Math.max(0, rv.s), 0) + VEHICLES[rv.v.kind].hover;
         rv.v.vx = 0;
         rv.v.vy = 0;
-      } else rv.s = q.s;
+      } else {
+        rv.s = q.s;
+        this.trackStraight(rv.v, q.s, q.u);
+      }
     }
     for (let i = 0; i < this.rivals.length; i++) {
       bump(this.vehicle, this.rivals[i].v);
@@ -1046,6 +1065,55 @@ export class DriveEngine {
   }
 
   /** Where a point is drawn on a twisting road, or null where the road is not twisting. */
+  /** A wall of light behind each racer, in its colour, fading over WALL.LIFE s. */
+  private lightWalls(t: number, ox: number, oy: number) {
+    const seen = new Set<string>();
+    if (this.design.trail && this.trackWorld && !this.preview) {
+      const racers: { key: string; colour: string; v: Vehicle; s: number }[] = [];
+      if (!this.wreck)
+        racers.push({ key: 'you', colour: hullOf(this.design).colour, v: this.vehicle, s: this.s });
+      for (const rv of this.rivals)
+        racers.push({ key: rv.r.name, colour: rv.r.colour, v: rv.v, s: rv.s });
+      for (const r of racers) {
+        seen.add(r.key);
+        let wall = this.walls.get(r.key);
+        if (!wall) {
+          const mat = this.ribbonGlow.clone();
+          mat.uniforms = {
+            uColour: { value: new THREE.Color() },
+            uOpacity: { value: WALL.OPACITY },
+          };
+          const rib = new Ribbon(WALL.POINTS, WALL.SPACING, WALL.HEIGHT, WALL.LIFE, true, mat);
+          rib.mesh.renderOrder = 7;
+          this.scene.add(rib.mesh);
+          wall = { rib, mat, colour: '' };
+          this.walls.set(r.key, wall);
+        }
+        if (wall.colour !== r.colour) {
+          (wall.mat.uniforms.uColour.value as THREE.Color).set(r.colour).multiplyScalar(WALL.GLOW);
+          wall.colour = r.colour;
+        }
+        const v = r.v;
+        const base = v.z - VEHICLES[v.kind].hover;
+        const p = this.posed(v.x, v.y, base + WALL.HEIGHT / 2, r.s, v) ?? {
+          x: v.x,
+          y: v.y,
+          z: base + WALL.HEIGHT / 2,
+        };
+        // Behind the tail, so the wall leaves the vehicle rather than standing in it.
+        pushTrail(wall.rib.trail, p.x - Math.cos(v.h) * 0.4, p.y - Math.sin(v.h) * 0.4, p.z, t, 1);
+        wall.rib.update(ox, oy, t);
+      }
+    }
+    for (const [key, wall] of this.walls) {
+      if (seen.has(key)) continue;
+      this.scene.remove(wall.rib.mesh);
+      wall.rib.mesh.geometry.dispose();
+      wall.mat.dispose();
+      this.walls.delete(key);
+    }
+  }
+
   /** Off the twist's edge: the dive starts from where you are drawn, thrown out from its axis. */
   private startWreck(s: number, u: number) {
     const tr = this.trackWorld?.track;
@@ -1144,9 +1212,26 @@ export class DriveEngine {
     }
   }
 
-  private posed(x: number, y: number, z: number, near: number) {
+  /** Keeps who is going straight through a twist: chosen at its start, held to its end. */
+  private trackStraight(v: Vehicle, s: number, u: number) {
+    const tr = this.trackWorld?.track;
+    if (!tr?.def.twist) return;
+    const end = this.straight.get(v);
+    if (end !== undefined) {
+      if (s >= end || s < end - 1500) this.straight.delete(v);
+      return;
+    }
+    if (choosesStraight(tr.def, s, u)) {
+      const e = twistEntry(tr.def, s);
+      if (e) this.straight.set(v, e.end);
+    }
+  }
+
+  private posed(x: number, y: number, z: number, near: number, who: Vehicle | null = null) {
     const tr = this.trackWorld?.track;
     if (!tr?.def.twist) return null;
+    // Straight through: drawn flat on the ground, the ribbon rolling round you.
+    if (who && this.straight.has(who)) return null;
     const q = project(tr, x, y, near);
     if ((tr.def.twist(Math.max(0, q.s)) ?? 0) === 0) return null;
     if (Math.abs(q.u) > tr.def.half(Math.max(0, q.s)) + 4 && onBypass(tr, q.s, q.u) !== null)
@@ -1331,10 +1416,14 @@ export class DriveEngine {
         this.s = q.s;
         u = q.u;
         const half = tr.def.half(Math.max(0, q.s));
-        // Off a twist's open edge: gone into the void (2026-11-22).
-        if (!this.wreck && offTwist(tr, q.s, u)) this.startWreck(q.s, u);
-        // Through a twist on its ribbon, start to end: a boost out of it (the bypass gets none).
-        this.rideTwist(q.s, u);
+        this.trackStraight(v, q.s, u);
+        const straight = this.straight.has(v);
+        // Off a twist's open edge: gone into the void (2026-11-22). Not going straight through.
+        if (!this.wreck && !straight && offTwist(tr, q.s, u)) this.startWreck(q.s, u);
+        // Through a twist on its ribbon, start to end: a boost out of it (the bypass and the
+        // straight road get none).
+        if (straight) this.riding = null;
+        else this.rideTwist(q.s, u);
         // Into the void: back on the road before the jump, rolling, for another go.
         if (this.wreck) {
           // The dive is drawn from the wreck; nothing to put back.
@@ -1444,8 +1533,8 @@ export class DriveEngine {
     // A twist turns what is drawn about the road's axis (the physics drives a flat road): the
     // camera rides it too, its up turning with the road, so the world rolls over you.
     const camP =
-      !shot && !piece && !wk ? this.posed(this.cam.x, this.cam.y, this.cam.z, this.s) : null;
-    const vP = wk ? null : this.posed(v.x, v.y, v.z, this.s);
+      !shot && !piece && !wk ? this.posed(this.cam.x, this.cam.y, this.cam.z, this.s, v) : null;
+    const vP = wk ? null : this.posed(v.x, v.y, v.z, this.s, v);
     const ox = camP ? camP.x : this.cam.x;
     const oy = camP ? camP.y : this.cam.y;
     const camera = this.camera;
@@ -1462,7 +1551,7 @@ export class DriveEngine {
       const lz = baseZ + (this.preview ? 0.7 : 0.9);
       const look = wk
         ? { x: wk.x, y: wk.y, z: wk.z }
-        : (this.posed(lx, ly, lz, this.s) ?? { x: lx, y: ly, z: lz });
+        : (this.posed(lx, ly, lz, this.s, v) ?? { x: lx, y: ly, z: lz });
       const th = vP?.th ?? 0;
       // The road's up, turned with it: its left side rises as the twist turns.
       camera.up.set(Math.sin(v.h) * Math.sin(th), Math.cos(th), Math.cos(v.h) * Math.sin(th));
@@ -1513,7 +1602,7 @@ export class DriveEngine {
       const rs = speedOf(rv.v);
       g.visible = Math.hypot(rv.v.x - ox, rv.v.y - oy) < 700;
       if (!g.visible) continue;
-      const rP = this.posed(rv.v.x, rv.v.y, rv.v.z, rv.s);
+      const rP = this.posed(rv.v.x, rv.v.y, rv.v.z, rv.s, rv.v);
       g.position.set((rP?.x ?? rv.v.x) - ox, rP?.z ?? rv.v.z, -((rP?.y ?? rv.v.y) - oy));
       g.rotation.set(-rv.v.pitch, rv.v.h + Math.PI / 2, -(rv.v.roll + (rP?.roll ?? 0)), 'YXZ');
       rv.view.update(
@@ -1527,6 +1616,7 @@ export class DriveEngine {
     }
     this.trails(t, w);
     for (const r of this.ribbons) r.update(ox, oy, t);
+    this.lightWalls(t, ox, oy);
     this.puffs.update(dt, ox, oy);
     this.sparks.update(dt, ox, oy);
     this.sparks.material.uniforms.uScale.value = this.puffs.material.uniforms.uScale.value;
