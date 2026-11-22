@@ -215,6 +215,15 @@ notes in each of these compartments, bottom right".
   with the study pages' notes (/api/coding/notes, no new table), and Python's
   page leaves `grid|` notes out. A failed save says so and keeps the words.
 
+- **Every switch through the circle (2026-11-22).** "That outer rim … as it
+  locks into the circle and back into the new shape, keep this for all
+  transitions in that grid … should also go from wheel back to tree." Any switch
+  between tree, star wheel and terminal goes through the ring. What is showing
+  gathers onto it, its names fading (1 s), then the new view forms out of it.
+  The tree grows back out of the circle and its names come in once it stands.
+  The terminal has no stars of its own, so leaving it the tree or wheel just
+  forms out of the ring. Reduced motion switches at once.
+
 ## Three designs: willow, banyan, compass rose — 2026-11-08
 
 The user, on the G menu: "make the flux in the grid's first tree more flowy,

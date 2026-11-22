@@ -186,21 +186,32 @@ export default function GridMenu() {
         // Not remembered; still switched.
       }
     };
+    if (m === mode) return;
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    if (mode === 'tree' && m === 'wheel' && starWheel && !hub && !still) {
-      // The tree's stars gather on the circle first; then the wheel forms out of it.
-      setGathering(true);
+    // Every switch goes through the ring (2026-11-22: "that outer rim … as it locks into the
+    // circle and back into the new shape, keep this for all transitions in that grid"): what is
+    // shown gathers onto the circle, then the new one forms out of it. The terminal has no stars
+    // of its own: leaving it, the tree or wheel forms out of the ring; going to it, they gather.
+    const ringed = (k: MenuMode) => k === 'tree' || (k === 'wheel' && starWheel);
+    if (!still && (ringed(mode) || ringed(m))) {
       remember();
-      gatherTimer.current = window.setTimeout(() => {
+      const arrive = () => {
         setGathering(false);
-        setFromRing(true);
+        setFromRing(ringed(m));
         setSwitched(false);
         setSel(0);
-        setMode('wheel');
-      }, GATHER_SECONDS * 1000);
+        setHub(null);
+        setMode(m);
+      };
+      if (!ringed(mode)) {
+        arrive();
+        return;
+      }
+      setGathering(true);
+      gatherTimer.current = window.setTimeout(arrive, GATHER_SECONDS * 1000);
       return;
     }
-    if (m !== mode) setSwitched(true);
+    setSwitched(true);
     setFromRing(false);
     setMode(m);
     remember();
@@ -398,6 +409,7 @@ export default function GridMenu() {
               close={close}
               arrive={switched}
               gather={gathering}
+              fromRing={fromRing}
               onPlace={onTreePlace}
             />
           ) : mode === 'wheel' && starWheel ? (
@@ -414,6 +426,7 @@ export default function GridMenu() {
               close={close}
               arrive={switched}
               fromRing={fromRing}
+              gather={gathering}
             />
           ) : mode === 'wheel' ? (
             <Wheel
