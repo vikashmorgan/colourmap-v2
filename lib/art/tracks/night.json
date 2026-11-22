@@ -1,0 +1,20 @@
+{
+  "id": "night",
+  "curve": {
+    "waves": [
+      { "amp": 0.7, "period": 2400, "phase": 0.6 },
+      { "amp": 0.35, "period": 1100, "phase": 2.1 }
+    ]
+  },
+  "rise": {
+    "every": 1500,
+    "bumps": [{ "at": 600, "height": 4.5, "width": 34 }, { "at": 1100, "height": -3, "width": 50 }],
+    "waves": [{ "amp": 1.5, "period": 640 }]
+  },
+  "half": 14,
+  "lip": 0.4,
+  "bank": { "speed": 52, "max": 0.2 },
+  "terrain": 0,
+  "barrier": 1.5,
+  "features": [{ "kind": "gate", "every": 1000 }]
+}

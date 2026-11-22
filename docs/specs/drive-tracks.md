@@ -14,6 +14,18 @@ intro and grid, the results) and the design language in `docs/specs/drive-design
 - [ ] Tracks as data: the bends, rises, banks, jumps, gates and decor as JSON keyframes instead of
       formulas, checked by the track tests (the map, the intro flyover, Fable and the games site
       all read it).
+      - [x] The format, its compiler and its checks (`lib/art/track-data.ts`): bends as heading
+            waves plus curvature keyframes, rises as waves, repeating bumps and keyframes, width,
+            lip, banking, terrain, walls, features (gates, start, jumps, wall-rides).
+            `validateTrackData` refuses a bend tighter than 110 m, a bank past 0.45 rad, a slope
+            past 30 %, a jump past 120 m, and names the problem in plain words.
+      - [x] Coast Road, Night Rain, the Neon District and the Golden Track are JSON
+            (`lib/art/tracks/*.json`), compiling to exactly the road they were by hand (tested to
+            the last bit) (2026-11-22).
+      - [x] `trackOutline`: the centre line, heights and banks for the ring's map and the flyover,
+            traced as the physics traces it; works for every track, data or not.
+      - [ ] Chinatown (its lanes and avenues), the Canyon (its passages and pipes) and Sky Canyon
+            as data: needs width and pipe keyframes in the format.
 - [ ] A start line and grid on every road: the gantry, six slots, the click to start.
 - [ ] Laps on every road that can close (start/finish gate, lap count chosen in the menu); the
       endless roads keep their timed kilometres as a "Cruise" mode.
