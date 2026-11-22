@@ -20,10 +20,19 @@ const engine = {
 };
 let hud: ((h: unknown) => void) | undefined;
 let intro: ((s: unknown) => void) | undefined;
+let finish: ((r: unknown) => void) | undefined;
 // A class (not an arrow), since the shell constructs it with `new`.
 vi.mock('@/components/drive/engine', () => ({
   DriveEngine: class {
-    constructor(_c: unknown, o: { onHud?: (h: unknown) => void; onIntro?: (s: unknown) => void }) {
+    constructor(
+      _c: unknown,
+      o: {
+        onHud?: (h: unknown) => void;
+        onIntro?: (s: unknown) => void;
+        onFinish?: (r: unknown) => void;
+      },
+    ) {
+      finish = o.onFinish;
       hud = o.onHud;
       intro = o.onIntro;
       // biome-ignore lint/correctness/noConstructorReturn: hands the shared mock to the shell.
@@ -33,11 +42,17 @@ vi.mock('@/components/drive/engine', () => ({
 }));
 
 import { DESIGN_KEY } from '@/lib/art/drive-design';
-import DriveGame, { BACK_HREF } from './DriveGame';
+import DriveGame, { BACK_HREF, LAST_TRACK_KEY } from './DriveGame';
 
 /** Opens the game and leaves the track ring by racing on the track it shows. */
-function play() {
+/** Opens the game past its title, onto the track ring. */
+function open() {
   render(<DriveGame />);
+  fireEvent.pointerDown(screen.getByTestId('title-screen'));
+}
+
+function play() {
+  open();
   fireEvent.click(screen.getByRole('button', { name: 'Race' }));
 }
 
@@ -169,7 +184,10 @@ describe('Drive', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(push).not.toHaveBeenCalled();
+    // Esc again pauses; Leave goes back.
     fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByTestId('pause-menu')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Leave' }));
     expect(push).toHaveBeenCalledWith(BACK_HREF);
   });
 
@@ -197,7 +215,7 @@ describe('Drive', () => {
 
   it('opens on the track ring: the screens turn, the world behind follows, Race drives in', () => {
     vi.useFakeTimers();
-    render(<DriveGame />);
+    open();
     const ring = screen.getByTestId('track-ring');
     expect(ring).toBeDefined();
     expect(engine.setPreview).toHaveBeenLastCalledWith(true);
@@ -261,5 +279,66 @@ describe('Drive', () => {
     expect(screen.getByText('GO')).toBeDefined();
     act(() => intro?.(null));
     expect(screen.queryByTestId('race-intro')).toBeNull();
+  });
+
+  it('opens on the title, then the ring on the track raced last', () => {
+    window.localStorage.setItem(LAST_TRACK_KEY, 'neon');
+    render(<DriveGame />);
+    expect(screen.getByTestId('title-screen').textContent).toContain('Colour Drive');
+    expect(screen.queryByTestId('track-ring')).toBeNull();
+    expect(engine.setPreview).toHaveBeenLastCalledWith(true);
+    fireEvent.keyDown(window, { key: 'x' });
+    expect(screen.queryByTestId('title-screen')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Neon District' }).getAttribute('aria-current')).toBe(
+      'true',
+    );
+  });
+
+  it('pauses on Esc while driving: resume, restart at the grid, or back to the tracks', () => {
+    play();
+    act(() => intro?.(null));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByTestId('pause-menu')).toBeDefined();
+    expect(engine.setPreview).toHaveBeenLastCalledWith(true);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('pause-menu')).toBeNull();
+    expect(engine.setPreview).toHaveBeenLastCalledWith(false);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    engine.startIntro.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
+    expect(engine.startIntro).toHaveBeenCalledWith(true);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'Tracks' }));
+    expect(screen.getByTestId('track-ring')).toBeDefined();
+  });
+
+  it('shows the results when a course is run: place, time, best, everyone, race again', () => {
+    play();
+    act(() =>
+      finish?.({
+        time: '1:41.23',
+        best: '1:39.50',
+        record: false,
+        place: 2,
+        standings: [
+          { name: 'Cyan', colour: '#18c8e0', you: false },
+          { name: 'You', colour: '#c8923f', you: true },
+          { name: 'Rose', colour: '#e04a8a', you: false },
+        ],
+      }),
+    );
+    const sheet = screen.getByTestId('race-results');
+    expect(sheet.textContent).toContain('2nd');
+    expect(sheet.textContent).toContain('1:41.23');
+    expect(sheet.textContent).toContain('best 1:39.50');
+    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+      '1Cyan',
+      '2You',
+      '3Rose',
+    ]);
+    engine.startIntro.mockClear();
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(engine.startIntro).toHaveBeenCalledWith(true);
+    expect(screen.queryByTestId('race-results')).toBeNull();
   });
 });

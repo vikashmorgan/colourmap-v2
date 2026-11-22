@@ -85,6 +85,7 @@ import {
   type Shot,
   trackShot,
 } from '@/lib/art/race-intro';
+import { type RaceResult, raceResult } from '@/lib/art/race-result';
 import { bump, placeOf, RIVALS, type Rival, rivalControls, rivalHull } from '@/lib/art/rivals';
 import {
   CAM_H,
@@ -162,6 +163,8 @@ export interface EngineOptions {
   onHud?: (h: Hud) => void;
   /** The race intro's phase and lights as they change; null when it is over (docs/specs/drive-menus.md). */
   onIntro?: (s: IntroState | null) => void;
+  /** A course finished (the Canyon): your time, best and everyone's places. */
+  onFinish?: (r: RaceResult) => void;
 }
 
 export interface IntroState {
@@ -464,6 +467,7 @@ export class DriveEngine {
   private store: Store | null;
   private onHud?: (h: Hud) => void;
   private onIntro?: (s: IntroState | null) => void;
+  private onFinish?: (r: RaceResult) => void;
   /** The race intro, while it runs (null: driving). */
   private intro: IntroClock | null = null;
   private lastIntro = '';
@@ -509,6 +513,7 @@ export class DriveEngine {
     this.store = opts.store;
     this.onHud = opts.onHud;
     this.onIntro = opts.onIntro;
+    this.onFinish = opts.onFinish;
     this.cfg = WORLD_CFG[opts.world];
     this.weather = newWeather(opts.design.weather);
 
@@ -1012,6 +1017,18 @@ export class DriveEngine {
     this.intro = { ...c, launchedAt: c.t };
   }
 
+  /** The course is run: hand the shell the results. */
+  private finished(time: number) {
+    if (!this.onFinish) return;
+    this.onFinish(
+      raceResult(
+        { time, best: this.race.best, record: this.race.record },
+        { name: 'You', colour: hullOf(this.design).colour, s: this.s },
+        this.rivals.map((rv) => ({ name: rv.r.name, colour: rv.r.colour, s: rv.s })),
+      ),
+    );
+  }
+
   /** The intro's camera now, or null when the chase camera has it. */
   private introShot(): Shot | null {
     const c = this.intro;
@@ -1134,8 +1151,11 @@ export class DriveEngine {
           v.vx = 0;
           v.vy = 0;
         }
-        if (this.cfg.race === 'canyon') this.race = stepCanyonRace(this.race, s0, q.s, u, half, t);
-        else if (this.cfg.race === 'lap')
+        if (this.cfg.race === 'canyon') {
+          const before = this.race.last;
+          this.race = stepCanyonRace(this.race, s0, q.s, u, half, t);
+          if (this.race.last !== null && this.race.last !== before) this.finished(this.race.last);
+        } else if (this.cfg.race === 'lap')
           this.race = stepKmRace(this.race, s0, q.s, u, half + SKY_PIPE, t, SKY_LAP);
         else this.race = stepKmRace(this.race, s0, q.s, u, half, t);
         if (this.cfg.theme) {
