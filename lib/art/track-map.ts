@@ -44,7 +44,7 @@ interface P {
 }
 
 /** Fits points in the box (keeping the aspect), north up, rises lifted. */
-function fit(pts: P[], width: number, height: number): { x: number; y: number }[] {
+function fitBox(pts: P[], width: number, height: number): { x: number; y: number }[] {
   let x0 = Number.POSITIVE_INFINITY;
   let x1 = Number.NEGATIVE_INFINITY;
   let y0 = Number.POSITIVE_INFINITY;
@@ -106,8 +106,8 @@ export function trackMap(world: WorldId, width = 600, height = 260): TrackMap {
   const def = cfg.track;
   if (!def) {
     const loop = driftLoop();
-    const pts = fit(loop, width, height);
-    const gates = fit(
+    const pts = fitBox(loop, width, height);
+    const gates = fitBox(
       DRIFT_PATH.map(([x, y]) => ({ x, y, e: 0 })).concat(loop),
       width,
       height,
@@ -128,7 +128,7 @@ export function trackMap(world: WorldId, width = 600, height = 260): TrackMap {
   const length = cfg.race === 'canyon' ? RACE.finish : cfg.race === 'lap' ? SKY_LAP : MAP_SPAN;
   const step = 20;
   const o = trackOutline(def, length, step);
-  const pts = fit(o.points, width, height);
+  const pts = fitBox(o.points, width, height);
   // Banked stretches: past two thirds of the track's steepest bank.
   const banks: string[] = [];
   let run: { x: number; y: number }[] = [];
