@@ -745,7 +745,6 @@ describe('the blazing deck (2026-11-22)', () => {
 
 describe('the dive after the superloop (2026-11-22)', () => {
   const def = compileTrack(DOCS.gold);
-  const t = makeTrack(def);
   const feats = DOCS.gold.features ?? [];
   const dv = feats.find((f) => f.kind === 'dive') as {
     at: number;
