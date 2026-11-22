@@ -114,6 +114,7 @@ import {
   stepCanyonRace,
   stepKmRace,
   type TrackWorld,
+  twistPose,
 } from '@/lib/art/track';
 import { trackInfo } from '@/lib/art/track-registry';
 import {
@@ -1035,6 +1036,15 @@ export class DriveEngine {
     this.spawn();
   }
 
+  /** Where a point is drawn on a twisting road, or null where the road is not twisting. */
+  private posed(x: number, y: number, z: number, near: number) {
+    const tr = this.trackWorld?.track;
+    if (!tr?.def.twist) return null;
+    const q = project(tr, x, y, near);
+    if ((tr.def.twist(Math.max(0, q.s)) ?? 0) === 0) return null;
+    return twistPose(tr, q.s, q.u, z - heightAt(tr, Math.max(0, q.s), q.u, true));
+  }
+
   /** Puts a vehicle on the road's centre at s, facing along it at a speed. */
   private placeOnRoad(v: Vehicle, s: number, speed: number) {
     const tr = this.trackWorld?.track;
@@ -1306,10 +1316,14 @@ export class DriveEngine {
       this.cam.roll = 0;
     }
 
-    const ox = this.cam.x;
-    const oy = this.cam.y;
+    // A twist turns what is drawn about the road's axis (the physics drives a flat road): the
+    // camera rides it too, its up turning with the road, so the world rolls over you.
+    const camP = !shot && !piece ? this.posed(this.cam.x, this.cam.y, this.cam.z, this.s) : null;
+    const vP = this.posed(v.x, v.y, v.z, this.s);
+    const ox = camP ? camP.x : this.cam.x;
+    const oy = camP ? camP.y : this.cam.y;
     const camera = this.camera;
-    camera.position.set(0, this.cam.z, 0);
+    camera.position.set(0, camP ? camP.z : this.cam.z, 0);
     if (shot) {
       camera.up.set(0, 1, 0);
       camera.lookAt(shot.look.x - ox, shot.look.z, -(shot.look.y - oy));
@@ -1317,10 +1331,14 @@ export class DriveEngine {
       camera.rotation.set(0, yaw - Math.PI / 2, 0, 'YXZ');
     } else {
       const ahead = this.preview ? 0 : 6;
-      const tx = v.x + Math.cos(yaw) * ahead - ox;
-      const ty = v.y + Math.sin(yaw) * ahead - oy;
-      camera.up.set(0, 1, 0);
-      camera.lookAt(tx, baseZ + (this.preview ? 0.7 : 0.9), -ty);
+      const lx = v.x + Math.cos(yaw) * ahead;
+      const ly = v.y + Math.sin(yaw) * ahead;
+      const lz = baseZ + (this.preview ? 0.7 : 0.9);
+      const look = this.posed(lx, ly, lz, this.s) ?? { x: lx, y: ly, z: lz };
+      const th = vP?.th ?? 0;
+      // The road's up, turned with it: its left side rises as the twist turns.
+      camera.up.set(Math.sin(v.h) * Math.sin(th), Math.cos(th), Math.cos(v.h) * Math.sin(th));
+      camera.lookAt(look.x - ox, look.z, -(look.y - oy));
       camera.rotateZ(this.cam.roll);
     }
     camera.updateMatrixWorld();
@@ -1341,14 +1359,14 @@ export class DriveEngine {
     // The vehicle.
     const vv = this.vehicleView;
     if (vv) {
-      vv.group.position.set(v.x - ox, v.z, -(v.y - oy));
+      vv.group.position.set((vP?.x ?? v.x) - ox, vP?.z ?? v.z, -((vP?.y ?? v.y) - oy));
       // Over the vehicle and a little behind it, toward the camera.
       this.carLight.position.set(
         v.x - ox - Math.cos(v.h) * 2.5,
         v.z + 3,
         -(v.y - oy - Math.sin(v.h) * 2.5),
       );
-      vv.group.rotation.set(-v.pitch, v.h + Math.PI / 2, -v.roll, 'YXZ');
+      vv.group.rotation.set(-v.pitch, v.h + Math.PI / 2, -(v.roll + (vP?.roll ?? 0)), 'YXZ');
       const power =
         (ctl.throttle > 0 || ctl.boost > 0 ? 1 : 0.35) +
         ctl.boost * 0.5 +
@@ -1367,8 +1385,9 @@ export class DriveEngine {
       const rs = speedOf(rv.v);
       g.visible = Math.hypot(rv.v.x - ox, rv.v.y - oy) < 700;
       if (!g.visible) continue;
-      g.position.set(rv.v.x - ox, rv.v.z, -(rv.v.y - oy));
-      g.rotation.set(-rv.v.pitch, rv.v.h + Math.PI / 2, -rv.v.roll, 'YXZ');
+      const rP = this.posed(rv.v.x, rv.v.y, rv.v.z, rv.s);
+      g.position.set((rP?.x ?? rv.v.x) - ox, rP?.z ?? rv.v.z, -((rP?.y ?? rv.v.y) - oy));
+      g.rotation.set(-rv.v.pitch, rv.v.h + Math.PI / 2, -(rv.v.roll + (rP?.roll ?? 0)), 'YXZ');
       rv.view.update(
         rv.v,
         t,

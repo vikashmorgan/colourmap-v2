@@ -133,6 +133,12 @@ A road of gold dots under Saturn.
       length as you reach it (from 40 m ahead), dying back once you are 20 m past. In each, an arch of 13 burners over the road every 9 m, each jet shooting a
       blue flame straight outwards, away from the road: white-blue at the nozzle, deep blue, violet
       as it thins, a steady roar, never strobing. Data: a `fire` feature (`at`, `length`, `every`).
+- [x] The twist (2026-11-22: "a side looping, as if the road did a full twist while still going
+      straight"): at 2.7 km of every lap, 320 m long on a straight, the road rolls a full turn about
+      an axis one half-width above it, easing in and out; at the top you ride upside down with the
+      city of gold overhead, the edge lights tracing two golden helices. The physics drives a flat
+      road; the road, the racers and the camera (its up turning with the road) are drawn through
+      `twistPose` (lib/art/track.ts). Data: a `twist` feature (`at`, `length`, `every`).
 - [x] The STAY WILD portal (2026-11-22: "a kind of portal dome arch with stay wild written on top
       in golden letters at the end of the track lap"): at the end of every 6 km lap a dome of gold
       light spans the road, 60 m deep, its ribs rising to a crown and falling away, the words

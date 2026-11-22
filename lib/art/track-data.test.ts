@@ -23,6 +23,7 @@ import {
   project,
   RACE,
   type TrackDef,
+  twistPose,
   VOID_DEPTH,
 } from './track';
 import { compileTrack, JUMP, type TrackData, trackOutline, validateTrackData } from './track-data';
@@ -86,7 +87,9 @@ const DOCS = { coast, night, neon, gold } as unknown as Record<string, TrackData
 /** The Golden Track's waves alone, without its jumps, to compare with how it was by hand. */
 const WAVES_ONLY = (d: TrackData): TrackData => ({
   ...d,
-  features: (d.features ?? []).filter((f) => f.kind !== 'jump' && f.kind !== 'straight'),
+  features: (d.features ?? []).filter(
+    (f) => f.kind !== 'jump' && f.kind !== 'straight' && f.kind !== 'twist',
+  ),
 });
 
 describe('tracks as data', () => {
@@ -362,5 +365,52 @@ describe('the blue fire tunnel (2026-11-22)', () => {
       features: [{ kind: 'fire', at: 100, length: 0 }],
     } as unknown as TrackData;
     expect(validateTrackData(bad).join(' ')).toContain('fire tunnel');
+  });
+});
+
+describe('the twist (2026-11-22)', () => {
+  const def = compileTrack(DOCS.gold);
+  const tw = (DOCS.gold.features ?? []).find((f) => f.kind === 'twist') as {
+    at: number;
+    length: number;
+    every: number;
+  };
+  const t = makeTrack(def);
+
+  it('rolls the road a full turn, easing in and out, on a straight', () => {
+    expect(def.twist?.(tw.at - 1)).toBe(0);
+    expect(def.twist?.(tw.at + tw.length / 2)).toBeCloseTo(Math.PI, 6);
+    expect(def.twist?.(tw.at + tw.length + 1)).toBe(0);
+    expect(def.twist?.(tw.at + tw.every + tw.length / 2)).toBeCloseTo(Math.PI, 6);
+    for (let s = tw.at - 150; s < tw.at + tw.length + 150; s += 5)
+      expect(Math.abs(def.curv(s))).toBe(0);
+  });
+
+  it('draws the plain road off the twist, and upside down over its axis halfway', () => {
+    const s0 = tw.at - 50;
+    const plain = twistPose(t, s0, 5, 1);
+    const f0 = frameAt(t, s0);
+    expect(plain.roll).toBe(0);
+    expect(plain.z).toBeCloseTo(heightAt(t, s0, 5) + 1, 6);
+    const mid = tw.at + tw.length / 2;
+    const f = frameAt(t, mid);
+    const top = twistPose(t, mid, 0, 0);
+    // The road's centre is two half-widths up, and the body is upside down.
+    expect(top.z - f.e).toBeCloseTo(2 * f.half, 1);
+    expect(Math.abs(top.roll)).toBeCloseTo(Math.PI, 6);
+    // Its left side has swung to the right.
+    const left = twistPose(t, mid, 6, 0);
+    const across = (left.x - f.x) * -Math.sin(f.h) + (left.y - f.y) * Math.cos(f.h);
+    expect(across).toBeLessThan(-5);
+    expect(Number.isFinite(f0.x)).toBe(true);
+  });
+
+  it('is checked like the rest', () => {
+    const bad = {
+      ...DOCS.gold,
+      features: [{ kind: 'twist', at: 100, length: 20 }],
+    } as unknown as TrackData;
+    expect(validateTrackData(bad).join(' ')).toContain('twist');
+    expect(validateTrackData(DOCS.gold)).toEqual([]);
   });
 });

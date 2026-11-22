@@ -34,6 +34,8 @@ export type Feature =
   /** A straight, unbanked stretch (the start grid, 2026-11-22: a level grid for the stage fire). */
   | { kind: 'straight'; from: number; to: number }
   | { kind: 'jump'; at: number; length: number; every?: number }
+  /** A full roll of the road about its axis, on a straight (2026-11-22). */
+  | { kind: 'twist'; at: number; length: number; every?: number }
   /** A tunnel of blue gas fire shooting outwards over the road (2026-11-22). */
   | { kind: 'fire'; at: number; length: number; every?: number }
   | { kind: 'wallride'; from: number; to: number; side: 'left' | 'right' };
@@ -137,7 +139,20 @@ export function compileTrack(d: TrackData): TrackDef {
   const every = d.rise.every;
   const jumps = (d.features ?? []).filter((f) => f.kind === 'jump');
   const fires = (d.features ?? []).filter((f) => f.kind === 'fire');
-  const straights = (d.features ?? []).filter((f) => f.kind === 'straight');
+  const twists = (d.features ?? []).filter((f) => f.kind === 'twist');
+  // A twist rolls on a straight: the road runs straight for its length and STRAIGHT m either side.
+  const straights = [...(d.features ?? []).filter((f) => f.kind === 'straight')] as {
+    from: number;
+    to: number;
+  }[];
+  const twistStraight = (s: number) => {
+    let k = 1;
+    for (const tw of twists) {
+      const x = jumpLocal(tw, s);
+      k *= straightAt({ from: -JUMP.STRAIGHT, to: tw.length + JUMP.STRAIGHT }, x);
+    }
+    return k;
+  };
   const within = (list: typeof jumps | typeof fires, s: number) =>
     list.some((j) => {
       const x = jumpLocal(j, s);
@@ -161,6 +176,7 @@ export function compileTrack(d: TrackData): TrackDef {
       if (ck) k += keysAt(ck, s);
       for (const j of jumps) k *= jumpStraight(jumpLocal(j, s), j.length);
       for (const st of straights) k *= straightAt(st, s);
+      if (twists.length) k *= twistStraight(s);
       return k;
     },
     elev: (s) => {
@@ -184,6 +200,17 @@ export function compileTrack(d: TrackData): TrackDef {
         }
       : {}),
     ...(fires.length ? { fire: (s: number) => within(fires, s) } : {}),
+    ...(twists.length
+      ? {
+          twist: (s: number) => {
+            for (const tw of twists) {
+              const x = jumpLocal(tw, s) / tw.length;
+              if (x > 0 && x < 1) return Math.PI * 2 * x * x * x * (x * (6 * x - 15) + 10);
+            }
+            return 0;
+          },
+        }
+      : {}),
   };
 }
 
@@ -255,6 +282,8 @@ export function validateTrackData(d: unknown, span = 6000): string[] {
       out.push(`a jump needs at and a length up to ${LIMITS.maxJump} m`);
     if (f.kind === 'fire' && (!num(f.at) || !num(f.length) || f.length <= 0 || f.length > 1000))
       out.push('a fire tunnel needs at and a length up to 1000 m');
+    if (f.kind === 'twist' && (!num(f.at) || !num(f.length) || f.length < 150 || f.length > 800))
+      out.push('a twist needs at and a length from 150 to 800 m');
     if (f.kind === 'straight' && (!num(f.from) || !num(f.to) || f.to <= f.from))
       out.push('a straight needs from before to');
     if (f.kind === 'gate' && (!num(f.every) || f.every < 200))
