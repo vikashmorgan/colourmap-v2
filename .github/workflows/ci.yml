@@ -156,7 +156,8 @@ jobs:
       - run: bash scripts/validate-agent-system.sh
 
   browser-smoke:
-    runs-on: ubuntu-latest
+    # Playwright 1.58 cannot install Chromium on ubuntu-latest (26.04) yet; pinned until it can.
+    runs-on: ubuntu-24.04
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
