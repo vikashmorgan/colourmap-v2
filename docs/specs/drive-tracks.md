@@ -163,6 +163,20 @@ A road of gold dots under Saturn.
       the sides, so it feels like you are going off track and get back into it"): past the golden
       lines on the high side of a banked bend, a quarter-pipe that grows with the bank (radius up
       to 14 m at full bank, `curl`). The barrier stands back past its top.
+- [x] Surf instead of walls (2026-11-22: "on some of those turns the car moves on the sides above
+      the racetrack and has this awesome surfy flight pattern where it tilts even more and almost
+      flips before coming back down … use that so you fly out of the track but gravity keeps you
+      coming back, instead of the big black unaesthetic walls").
+      - **The kicker:** on the Golden Track (`"surf": 4`) the curled wall on a bend's high side is
+        cut to a kicker 4 m above the edge. Past its lip there is no ground to catch you; it is
+        drawn as the flat beyond.
+      - **The pull:** fly off and gravity stops pointing down. It pulls you back toward the road
+        (just inside the edge, a little over it), so you arc out, up and back onto the track.
+        The body rolls into the pull, near upside down at the top of the arc.
+      - **Physics:** a drop of more than 3 m in one step is now flight, never a snap to the
+        ground. The secret deck keeps its tall wall: that is the way up.
+      - **Code:** `surfPull`, `SURF` in `lib/art/track.ts`; `World.pull`, `DROP_AIR` in
+        `lib/art/vehicle.ts`.
 - [x] Straight through the loop (2026-11-22: "straight road option below and inside, straight
       through the loopings"): every twist now gives three ways through.
       - **The loop:** ride the ribbon, get the boost after.

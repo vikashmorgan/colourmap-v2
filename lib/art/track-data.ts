@@ -94,6 +94,8 @@ export interface TrackData {
   /** The radius (m) of a curved wall past the edge on a banked bend's high side, at full bank (a
    * wall to ride up off the road and boost back down; 2026-11-22). */
   curl?: number;
+  /** Surf: the curled wall cut to a kicker this tall (m); past it you fly, pulled back. */
+  surf?: number;
   /** An endless road's lap (m): its features repeat and its portal stands every lap. */
   lap?: number;
 }
@@ -318,6 +320,7 @@ export function compileTrack(d: TrackData): TrackDef {
         }
       : {}),
     ...(d.curl ? { curl: d.curl } : {}),
+    ...(d.surf ? { surf: d.surf } : {}),
     ...(twists.length
       ? {
           twist: (s: number) => {

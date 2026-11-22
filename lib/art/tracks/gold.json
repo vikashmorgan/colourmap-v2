@@ -10,6 +10,7 @@
   "terrain": 0,
   "barrier": 1.5,
   "curl": 14,
+  "surf": 4,
   "features": [
     { "kind": "gate", "every": 1000 },
     { "kind": "straight", "from": -200, "to": 140 },

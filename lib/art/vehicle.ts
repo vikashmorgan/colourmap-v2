@@ -240,9 +240,14 @@ export interface Hit {
   flow?: boolean;
 }
 
+/** A drop under you this sudden (m, in one step) is flight, not ground to follow. */
+export const DROP_AIR = 3;
+
 export interface World {
   ground(x: number, y: number): Ground;
   collide?(v: Vehicle, t: number): Hit | null;
+  /** Where gravity does not point down: the pull back to the road off a surf bend (m/s²). */
+  pull?(x: number, y: number, z: number): { ax: number; ay: number; az: number } | null;
   /** This world's feel: how sharp and quick the turn, how far the body leans (1: as everywhere). */
   handling?: Handling;
 }
@@ -589,8 +594,19 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     v.liftV = Math.min(0, v.liftV);
   }
   const floor = next.h + spec.hover + v.lift;
+  let surfLean: number | null = null;
   if (air) {
-    v.vz -= G * spec.airGravity * dt;
+    const pull = world.pull?.(v.x, v.y, v.z);
+    if (pull) {
+      // Off a surf bend: drawn back to the road, the body rolling into the pull so you come round
+      // nearly upside down and back onto your wheels (2026-11-22: "this awesome surfy flight
+      // pattern where it tilts even more and almost flips before coming back down").
+      v.vx += pull.ax * dt;
+      v.vy += pull.ay * dt;
+      v.vz += pull.az * dt;
+      const side = -pull.ax * Math.sin(v.h) + pull.ay * Math.cos(v.h);
+      surfLean = clamp(Math.atan2(side, Math.max(0.5, -pull.az + 4)) * 2.8, -2.7, 2.7);
+    } else v.vz -= G * spec.airGravity * dt;
     v.z += v.vz * dt;
     v.airTime += dt;
     // The ship's field catches it again near the ground on the way down: it floats over small
@@ -625,6 +641,13 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     v.vz = Math.min(v.vz, MAX_LAUNCH);
     v.z += v.vz * dt - 0.5 * G * dt * dt;
     v.vz -= G * dt;
+    v.air = true;
+    v.airTime = 0;
+    ev.tookOff = true;
+  } else if (floor < v.z - DROP_AIR) {
+    // The ground gone from under you (a surf's lip, a cliff): you fly from where you are, never
+    // snapped down to wherever the ground went.
+    v.z += v.vz * dt;
     v.air = true;
     v.airTime = 0;
     ev.tookOff = true;
@@ -698,7 +721,8 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
       // Both lean into the turn: the side you turn toward goes down (the car: "when you turn left
       // you lean left"; the ship, 2026-11-19: "when I turn right the right side should be lower").
       clamp(lateral * lean, -leanMax, leanMax);
-  v.roll = ease(v.roll, rollTo, air ? 4 : 6, dt);
+  v.roll =
+    surfLean !== null ? ease(v.roll, surfLean, 3.5, dt) : ease(v.roll, rollTo, air ? 4 : 6, dt);
   const pitchTo = air
     ? Math.atan2(v.vz, Math.max(speed, 5)) * 0.6
     : Math.atan(aheadSlope) + clamp(Math.atan2(v.liftV, Math.max(speed, 10)) * 0.8, -0.22, 0.22);
