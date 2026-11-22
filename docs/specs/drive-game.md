@@ -312,6 +312,27 @@ planet".
 - A great ringed planet in the sky: banded in golds, lit from one side, its tilted ring passing
   behind the globe above and in front of it below; the wet road mirrors it.
 
+### The Golden Track's sky and weather (2026-11-21)
+
+Asked: "weathers bring too much light. i want the snow or sand but keeping dark sky", "car doesnt
+change colour for hull … stays black", "stars look unnatural … saturn as well … how can it look like
+a real planet".
+
+- Dark sky in every weather (`DARK_SKY`, `keepDark`, lib/art/weather.ts): snow and sand keep their
+  falling motes as bright as anywhere, but the haze keeps only its hue at 6% of its brightness, the
+  colour wash is a fifth of its strength, and the ground whitens a third as much.
+- The hull keeps its colour at night (every night world): the reflections a metal hull sees carry a
+  warm glow along the horizon and a soft light overhead (the sky you see is unchanged), and a soft
+  light rides just over the vehicle (`CAR_LIGHT`, components/drive/engine.ts).
+- A real night sky: stars in three layers jittered off any grid, many faint and a few bright, white,
+  blue-white, yellow and orange, a very slow twinkle, fading near the horizon; a faint Milky Way
+  with dust lanes, the stars denser in it.
+- Saturn as it is: flattened a tenth, soft cream and butterscotch bands with a little turbulence, a
+  bright equator, greyer poles, its limb darkened and a soft terminator. Its rings in their real
+  order (faint C, bright B, the dark Cassini division, A with the Encke gap), fine ringlets that
+  fade where they would shimmer, translucent to the stars behind; the globe's shadow falls on the
+  rings and the rings' shadow on the globe.
+
 ## Rivals
 
 2026-11-20: "racing more with other racers of another colour and flame, for all the racetracks, can be turned on or off, 5 other racers, in the menu can be activated."

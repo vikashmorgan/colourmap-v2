@@ -250,10 +250,30 @@ export function stepWeather(s: WeatherState, dt: number): WeatherState {
   return { ...s, k: Math.min(1, s.k + dt / WEATHER_BLEND) };
 }
 
+/**
+ * Worlds whose sky stays dark in every weather (2026-11-21, the Golden Track: "weathers bring too
+ * much light. i want the snow or sand but keeping dark sky"). The motes fall as bright as anywhere;
+ * the haze keeps its hue but turns night-dark, the wash barely shows, the ground whitens only a little.
+ */
+export const DARK_SKY: readonly WorldId[] = ['gold'];
+export const DARK_FOG = 0.06;
+export const DARK_TINT = 0.2;
+export const DARK_SNOW = 0.3;
+
+export function keepDark(w: Weather): Weather {
+  return {
+    ...w,
+    fog: [w.fog[0] * DARK_FOG, w.fog[1] * DARK_FOG, w.fog[2] * DARK_FOG],
+    tintAmount: w.tintAmount * DARK_TINT,
+    snow: w.snow * DARK_SNOW,
+  };
+}
+
 /** The weather now, eased (smoothstep) through the change. */
 export function weatherNow(s: WeatherState, world: WorldId): Weather {
   const e = s.k * s.k * (3 - 2 * s.k);
-  return blendWeather(s.from, s.to, e, world);
+  const w = blendWeather(s.from, s.to, e, world);
+  return DARK_SKY.includes(world) ? keepDark(w) : w;
 }
 
 /** The side gust now (m/s²): slow swells, never a jolt. */

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   blendWeather,
+  DARK_SKY,
   gustAt,
+  keepDark,
   moteAmount,
   moteColour,
   newWeather,
@@ -103,5 +105,27 @@ describe('motes and gusts', () => {
     expect(gustAt(weatherById('clear'), 3)).toBe(0);
     const s = weatherById('sandstorm');
     for (let t = 0; t < 60; t += 0.7) expect(Math.abs(gustAt(s, t))).toBeLessThanOrEqual(s.gust);
+  });
+});
+
+describe('dark-sky worlds (the Golden Track)', () => {
+  it('keeps the snow and sand motes but darkens the haze, the wash and the white ground', () => {
+    expect(DARK_SKY).toContain('gold');
+    for (const id of ['sand', 'sandstorm', 'snow', 'snowstorm']) {
+      const w = weatherById(id);
+      const d = keepDark(w);
+      expect(d.mote).toEqual(w.mote);
+      expect(d.density).toBe(w.density);
+      expect(d.fogDensity).toBe(w.fogDensity);
+      expect(Math.max(...d.fog)).toBeLessThan(0.07);
+      expect(d.tintAmount).toBeLessThan(w.tintAmount || 1);
+      expect(d.snow).toBeLessThanOrEqual(w.snow * 0.3 + 1e-9);
+    }
+  });
+
+  it('applies on the Golden Track only', () => {
+    const s = newWeather('snowstorm');
+    expect(weatherNow(s, 'gold').fog).toEqual(keepDark(weatherById('snowstorm')).fog);
+    expect(weatherNow(s, 'coast').fog).toEqual(weatherById('snowstorm').fog);
   });
 });
