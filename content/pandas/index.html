@@ -288,6 +288,18 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .ess-item[data-mark="late"]::after { background: var(--late); }
   .ess-item.flash { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
   .ess-item p { margin: 0; }
+  /* More on a summary idea (2026-11-22: "add a more button for the summaries … so I can dive deeper when
+   * needed, for each summary box"): the lecture's own cards for that idea, folded under the box. */
+  .ess-more > summary { justify-self: start; width: fit-content; list-style: none; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--nb-rule); color: var(--soft); font: 600 12.5px system-ui, sans-serif; cursor: pointer; }
+  .ess-more > summary::-webkit-details-marker { display: none; }
+  .ess-more > summary::after { content: ' ▸'; }
+  .ess-more[open] > summary::after { content: ' ▾'; }
+  .ess-more > summary:hover { color: var(--ink); }
+  .ess-more[open] { display: grid; gap: 10px; }
+  .ess-deep { display: grid; gap: 8px; padding: 12px 14px; border-radius: 10px; background: color-mix(in srgb, var(--code) 55%, var(--card)); border: 1px solid var(--line); }
+  .ess-deep h4 { margin: 0; font: 600 15px system-ui, sans-serif; display: flex; gap: 10px; align-items: baseline; }
+  .ess-deep h4 a { margin-left: auto; font: 600 12px system-ui, sans-serif; color: var(--accent); text-decoration: none; white-space: nowrap; }
+  .ess-deep h4 a:hover { text-decoration: underline; }
   /* The summary again at the start of each lecture: a closed brown pill, the same ideas, dots, notes and highlights as at the end. */
   .ess-top { --brown: #8a5a3b; margin: 16px 0 4px; border-color: color-mix(in srgb, var(--brown) 45%, var(--line)); background: color-mix(in srgb, var(--brown) 9%, var(--card)); }
   [data-theme="night"] .ess-top { --brown: #d4a27c; }
@@ -1776,7 +1788,7 @@ function cardHtml(s, c, gi) {
   </article>`;
 }
 // The three dots: how well you know a card or a summary idea.
-const marksHtml = m => `<span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Confused as fuck']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span>`;
+const marksHtml = m => `<span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Super confused']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span>`;
 /* ---------- The calls each practice answer uses ----------
    Per exercise, one list per part: [lecture, card, name, the call in general, the call with this exercise's names]. */
 const PRACTICE_LAWS = {
@@ -1962,10 +1974,57 @@ const ESSENTIALS = {
  * Question or comment, keyed by its name, so the pill at the start and the lecture's end show the same marks,
  * notes and highlights. */
 const essId = e => `sum-${e.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+/* The cards an idea comes from: the lecture's cards that share the most of its words, names and
+ * calls, best first (at most two). `e.cards` names them by hand where the words are not enough. */
+const DEEP_STOP = new Set('with that this from into they each than what when your have will only them then there their which every rows row column columns value values df pd the and for are not one two per'.split(' '));
+const deepWords = t => new Set(String(t || '').toLowerCase().match(/[a-z_][a-z0-9_]{2,}/g)?.filter(w => !DEEP_STOP.has(w)) || []);
+function deepCards(s, e) {
+  const cards = (SESSIONS.find(x => x.n === s.n)?.groups || []).flatMap(g => g.cards);
+  if (e.cards) return e.cards.map(id => cards.find(c => c.id === id)).filter(Boolean);
+  const want = deepWords(`${e.name} ${e.is} ${e.f || ''}`);
+  const named = deepWords(e.name);
+  const scored = cards.map(c => {
+    const has = deepWords(`${c.name} ${c.what} ${c.f || ''} ${c.more?.say || ''}`);
+    const title = deepWords(c.name);
+    let score = 0;
+    for (const w of want) if (has.has(w)) score += title.has(w) ? 3 : 1;
+    for (const w of named) if (title.has(w)) score += 4;
+    return { c, score };
+  }).filter(x => x.score >= 4).sort((a, b) => b.score - a.score);
+  return scored.slice(0, 2).map(x => x.c);
+}
+function deeperHtml(s, e) {
+  const cards = deepCards(s, e);
+  if (!cards.length) return '';
+  return `<details class="ess-more"><summary>More</summary>${cards.map(c => {
+    const x = c.more || {};
+    return `<div class="ess-deep"><h4><span>${esc(c.name)}</span><a href="#c-${s.n}-${c.id}" class="ess-go">${c.slide ? `Slide ${c.slide}` : 'The card'} ›</a></h4>`
+      + paras(c.what)
+      + (c.list ? `<ol class="rules">${c.list.map(ruleHtml).join('')}</ol>` : '')
+      + (c.f ? `<pre>${mathHtml(c.f)}</pre>` : '')
+      + (x.html ? x.html() : '')
+      + (x.say ? `<p>${kwText(x.say)}</p>` : '') + (x.f ? `<pre>${mathHtml(x.f)}</pre>` : '')
+      + (c.watch ? `<p class="watch"><b>Watch out</b>${kwText(c.watch)}</p>` : '')
+      + '</div>';
+  }).join('')}</details>`;
+}
+// The card link opens whatever folds hold the card before jumping to it.
+document.addEventListener('click', ev => {
+  const a = ev.target.closest?.('.ess-go');
+  if (!a) return;
+  const card = document.querySelector(a.getAttribute('href'));
+  if (!card) return;
+  ev.preventDefault();
+  for (let d = card.parentElement; d; d = d.parentElement) if (d.tagName === 'DETAILS') d.open = true;
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  card.classList.add('flash');
+  setTimeout(() => card.classList.remove('flash'), 1400);
+});
 // `own` is the lecture's end: it carries the id that the notepad's links jump to.
 function essItemHtml(s, e, i, own) {
   const key = cardKey(s.n, essId(e)), m = marks[key] || '';
   return `<article class="ess-item"${own ? ` id="c-${s.n}-${essId(e)}"` : ''} data-key="${esc(key)}" data-mark="${m}"><h3><span class="num">${i + 1}</span><span>${mathHtml(e.name)}</span></h3><p class="ess-is">${kwText(e.is)}</p>${e.f ? `<pre>${mathHtml(e.f)}</pre>` : ''}${e.parts ? readsHtml({ parts: e.parts }) : ''}${e.ex ? `<p class="ess-ex"><b>For example</b> ${kwText(e.ex)}</p>` : ''}${e.watch ? `<p class="watch"><b>Watch out</b>${kwText(e.watch)}</p>` : ''}${e.pic ? e.pic() : ''}`
+    + deeperHtml(s, e)
     + `<div class="notes"></div><div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>${marksHtml(m)}</div></article>`;
 }
 const essListHtml = (s, own) => `<div class="ess">${(ESSENTIALS[s.n] || []).map((e, i) => essItemHtml(s, e, i, own)).join('')}</div>`;
@@ -3232,6 +3291,255 @@ function followHash() {
 }
 followHash();
 addEventListener('hashchange', followHash);
+</script>
+<style>
+  /* Function names you can hover (2026-11-22: "hover above each function and it explains it … with
+   * a more button and an example"). */
+  .fn-w { border-bottom: 1px dotted var(--accent); cursor: help; border-radius: 3px; }
+  .fn-w:hover, .fn-w:focus-visible { background: color-mix(in oklab, var(--accent) 14%, transparent); outline: none; }
+  .fn-tip { position: fixed; z-index: 9999; max-width: min(360px, calc(100vw - 32px)); padding: 12px 14px; border-radius: 12px;
+    background: var(--card); color: var(--ink); border: 1px solid var(--line);
+    box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 12px 32px rgba(0,0,0,.16); font: 14px/1.45 system-ui, sans-serif; }
+  .fn-tip[hidden] { display: none; }
+  .fn-tip .fn-name { font: 600 13.5px ui-monospace, Menlo, Consolas, monospace; color: var(--accent); }
+  .fn-tip .fn-is { margin: 4px 0 0; }
+  .fn-tip .fn-more { margin-top: 8px; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--nb-rule); background: transparent;
+    color: var(--soft); font: 600 12px system-ui, sans-serif; cursor: pointer; }
+  .fn-tip .fn-more:hover { color: var(--ink); }
+  .fn-tip pre { margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--code); font: 12.5px/1.45 ui-monospace, Menlo, Consolas, monospace;
+    white-space: pre-wrap; overflow-wrap: anywhere; }
+  .fn-tip .fn-out { margin: 6px 0 0; color: var(--soft); font-size: 13px; }
+</style>
+<script>
+/*
+ * HOVER A FUNCTION (2026-11-22): "make sure I can hover above [function names] and it explains the
+ * function when I hover above each, to get some clarity, with a more button and an example …
+ * mainly all the function commands in the summaries, or even in lessons."
+ *
+ * One glossary of the class's pandas functions. Every name in the rendered page (summaries,
+ * lessons, tables, code) is marked as it appears, so content drawn later is covered too. A name
+ * with an underscore is found bare (to_numeric); a plain word only as code, after a dot or before
+ * "(" or "=" (.sum(), subset=), so ordinary prose stays untouched.
+ */
+(() => {
+  const FN = {
+    read_csv: ['Reads a CSV file into a DataFrame.', 'df = pd.read_csv("orders.csv")\ndf.shape', '(1200, 6): 1,200 rows, 6 columns'],
+    read_excel: ['Reads a sheet of an Excel file into a DataFrame.', 'df = pd.read_excel("sales.xlsx", sheet_name="2025")', 'One DataFrame from that sheet'],
+    read_sql: ['Runs a SQL query on a database connection and returns the rows as a DataFrame.', 'df = pd.read_sql("SELECT * FROM orders", conn)', 'The query\'s rows as a DataFrame'],
+    json_normalize: ['Flattens nested JSON (dicts inside dicts) into flat columns.', 'pd.json_normalize([{"id": 1, "user": {"name": "Ana"}}])', 'columns: id, user.name'],
+    to_csv: ['Writes the DataFrame to a CSV file.', 'df.to_csv("clean.csv", index=False)', 'clean.csv, without the index column'],
+    to_excel: ['Writes the DataFrame to an Excel sheet.', 'df.to_excel("out.xlsx", index=False)', 'out.xlsx'],
+    to_json: ['Turns the DataFrame into JSON text or a file.', 'df.to_json(orient="records")', '[{"id":1,"total":20.5}, …]'],
+    head: ['The first rows (5 unless you say).', 'df.head(3)', 'The first 3 rows'],
+    info: ['Each column\'s type and how many non-missing values it has, plus memory.', 'df.info()', 'total  1180 non-null  float64 …'],
+    describe: ['Summary numbers per column: count, mean, std, min, quartiles, max. Good for spotting impossible values.', 'df["age"].describe()', 'count 1000, mean 34.2, min -1, max 212 → -1 and 212 look wrong'],
+    isna: ['True where a value is missing (NaN or None), False elsewhere.', 'df["email"].isna().sum()', '42: forty-two missing emails'],
+    notna: ['The opposite of isna(): True where a value is present.', 'df[df["email"].notna()]', 'Only the rows that have an email'],
+    dropna: ['Drops rows (or columns) with missing values.', 'df.dropna(subset=["email"])', 'Rows without an email removed'],
+    fillna: ['Fills missing values with something you choose.', 'df["qty"].fillna(0)', 'NaN → 0'],
+    ffill: ['Fills a gap with the last value seen before it.', 'pd.Series([1, None, None, 4]).ffill()', '1, 1, 1, 4'],
+    bfill: ['Fills a gap with the next value after it.', 'pd.Series([1, None, 4]).bfill()', '1, 4, 4'],
+    interpolate: ['Fills gaps with values in between their neighbours.', 'pd.Series([1, None, 3]).interpolate()', '1, 2, 3'],
+    value_counts: ['Counts how often each value appears, most common first. Shows placeholders like "N/A" or "?" hiding as real values.', 'df["country"].value_counts()', 'FR 410, fr 37, France 12, ? 5 → inconsistent spellings and a placeholder'],
+    nunique: ['How many different values a column has.', 'df["country"].nunique()', '7, though you expected 4 → spellings differ'],
+    unique: ['The different values themselves, once each.', 'df["status"].unique()', "['paid', 'Paid', 'refunded']"],
+    to_numeric: ['Turns text into numbers. With errors="coerce", what is not a number becomes NaN so you can find it.', 'pd.to_numeric(df["price"], errors="coerce").isna().sum()', '3: three prices were not numbers'],
+    duplicated: ['True for each row that repeats an earlier one. With subset= it compares only those columns.', 'df.duplicated(subset=["order_id"]).sum()', '8 repeated order ids'],
+    drop_duplicates: ['Removes repeated rows, keeping the first (or keep="last").', 'df.drop_duplicates(subset=["order_id"])', 'One row per order id'],
+    subset: ['A parameter: which columns to look at (for duplicated, drop_duplicates, dropna).', 'df.duplicated(subset=["email"])', 'Rows are duplicates if the email repeats, whatever the rest'],
+    keep: ['A parameter: which repeat counts as the original, "first", "last" or False (mark them all).', 'df.duplicated(keep=False)', 'Every copy marked True, the first too'],
+    between: ['True where a value lies inside a range (both ends included).', 'df["age"].between(0, 120)', 'False for -1 and 212'],
+    isin: ['True where a value is one of a list.', 'df["country"].isin(["FR", "IT", "ES"])', 'False for "fr" and "?"'],
+    quantile: ['The value below which a share of the data falls. 0.5 is the median, 0.99 the top 1%.', 'df["total"].quantile(0.99)', '890.0: anything above is rare'],
+    clip: ['Caps values to a lower and/or upper bound.', 'df["age"].clip(0, 120)', '-1 → 0, 212 → 120'],
+    groupby: ['Splits rows into groups by a column so you can sum, count or average each group.', 'df.groupby("country")["total"].sum()', 'FR 41,200, IT 18,900 …'],
+    agg: ['Runs one or more summaries at once, often after groupby.', 'df.groupby("country")["total"].agg(["sum", "mean"])', 'A sum and a mean per country'],
+    transform: ['Like agg, but gives back one value per original row, so you can add it as a column.', 'df["share"] = df["total"] / df.groupby("country")["total"].transform("sum")', 'Each order\'s share of its country\'s total'],
+    crosstab: ['Counts how often each pair of values occurs: a table of two columns against each other.', 'pd.crosstab(df["country"], df["status"])', 'Rows = countries, columns = statuses, cells = counts'],
+    sort_values: ['Sorts the rows by one or more columns.', 'df.sort_values("total", ascending=False)', 'Biggest orders first'],
+    nlargest: ['The n rows with the biggest values in a column.', 'df.nlargest(3, "total")', 'The 3 biggest orders'],
+    query: ['Filters rows with a condition written as text.', 'df.query("total > 100 and country == \'FR\'")', 'French orders over 100'],
+    where: ['Keeps values where a condition holds; elsewhere puts NaN (or what you give).', 'df["total"].where(df["total"] > 0)', 'Negative totals → NaN'],
+    assign: ['Returns a copy with new or changed columns.', 'df.assign(vat=df["total"] * 0.2)', 'A new column vat'],
+    replace: ['Swaps values for others.', 'df["country"].replace({"fr": "FR", "France": "FR"})', 'All three spellings → FR'],
+    map: ['Turns each value into another through a dict or a function.', 'df["code"].map({"FR": "France", "IT": "Italy"})', 'FR → France'],
+    strip: ['(.str.strip) Removes spaces at both ends of text.', 'df["name"].str.strip()', '"  Ana " → "Ana"'],
+    lower: ['(.str.lower) Lowercases text.', 'df["email"].str.lower()', '"Ana@X.com" → "ana@x.com"'],
+    upper: ['(.str.upper) Uppercases text.', 'df["country"].str.upper()', '"fr" → "FR"'],
+    contains: ['(.str.contains) True where the text contains a pattern.', 'df["email"].str.contains("@")', 'False for emails without @'],
+    split: ['(.str.split) Splits text into pieces at a separator.', 'df["full"].str.split(" ", expand=True)', 'First and last name in two columns'],
+    startswith: ['(.str.startswith) True where text begins with something.', 'df["sku"].str.startswith("FR-")', 'True for French product codes'],
+    select_dtypes: ['Keeps only columns of some types.', 'df.select_dtypes("number")', 'Only the numeric columns'],
+    combine_first: ['Fills one Series\'s gaps with another\'s values at the same places.', 'df["phone"].combine_first(df["mobile"])', 'Phone, or mobile when phone is missing'],
+    reset_index: ['Turns the index back into a column and numbers rows 0, 1, 2 …', 'df.groupby("country")["total"].sum().reset_index()', 'A DataFrame with columns country, total'],
+    tolist: ['Turns a column into a plain Python list.', 'df["country"].unique().tolist()', "['FR', 'IT']"],
+    copy: ['A separate copy, so changing it leaves the original alone.', 'clean = df.copy()', 'clean can change, df stays'],
+    std: ['Standard deviation: how spread out values are around the mean.', 'df["total"].std()', '84.3'],
+    median: ['The middle value when sorted; not pulled by extremes like the mean is.', 'df["total"].median()', '42.0'],
+    mean: ['The average.', 'df["total"].mean()', '57.8'],
+    sum: ['Adds up the values. On True/False it counts the Trues.', 'df["email"].isna().sum()', '42'],
+    count: ['How many values are present (missing ones not counted).', 'df["email"].count()', '958'],
+    loc: ['Picks rows and columns by label or condition.', 'df.loc[df["total"] > 100, ["id", "total"]]', 'Big orders, two columns'],
+    iloc: ['Picks rows and columns by position (0 = first).', 'df.iloc[-2:, 0]', 'The last two rows, first column'],
+    astype: ['Changes a column\'s type.', 'df["id"].astype(str)', '7 → "7"'],
+    fit_transform: ['(scikit-learn) Learns from the data and transforms it in one step, e.g. scaling.', 'MinMaxScaler().fit_transform(df[["total"]])', 'Totals squeezed to 0..1'],
+    fit_predict: ['(scikit-learn) Fits a model and returns its labels, e.g. outliers or clusters.', 'IsolationForest().fit_predict(df[["total"]])', '1 normal, -1 outlier'],
+    jaro_winkler_similarity: ['(jellyfish) How alike two strings are, 0 to 1; catches typos.', 'jaro_winkler_similarity("Martha", "Marhta")', '0.96: probably the same name'],
+    soundex: ['(jellyfish) A code for how a word sounds, so different spellings match.', 'soundex("Robert"), soundex("Rupert")', 'R163 and R163'],
+  };
+
+  const names = Object.keys(FN).sort((a, b) => b.length - a.length);
+  const RE = new RegExp(`(\\.)?\\b(${names.join('|')})\\b(\\(\\)?|=)?`, 'g');
+  const SKIP = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'SELECT', 'BUTTON', 'svg']);
+
+  const plainOk = (m) => m[2].includes('_') || m[1] || m[3];
+
+  function mark(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        for (let p = n.parentNode; p && p !== root.parentNode; p = p.parentNode) {
+          if (p.nodeType !== 1) continue;
+          if (SKIP.has(p.nodeName) || p.isContentEditable || p.classList.contains('fn-w') || p.classList.contains('fn-tip'))
+            return NodeFilter.FILTER_REJECT;
+        }
+        RE.lastIndex = 0;
+        return RE.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      },
+    });
+    const hits = [];
+    while (walker.nextNode()) hits.push(walker.currentNode);
+    for (const n of hits) {
+      const text = n.nodeValue;
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      let changed = false;
+      RE.lastIndex = 0;
+      for (let m = RE.exec(text); m; m = RE.exec(text)) {
+        if (!plainOk(m)) continue;
+        const start = m.index + (m[1] ? 1 : 0);
+        const end = m.index + m[0].length;
+        frag.append(text.slice(last, start));
+        const w = document.createElement('span');
+        w.className = 'fn-w';
+        w.dataset.fn = m[2];
+        w.tabIndex = 0;
+        w.textContent = text.slice(start, end);
+        frag.append(w);
+        last = end;
+        changed = true;
+      }
+      if (!changed) continue;
+      frag.append(text.slice(last));
+      n.replaceWith(frag);
+    }
+  }
+
+  // The tip: one for the page, under the name you are on.
+  const tip = document.createElement('div');
+  tip.className = 'fn-tip';
+  tip.hidden = true;
+  tip.setAttribute('role', 'tooltip');
+  document.body.append(tip);
+  let on = null;
+  let hide = 0;
+
+  function show(w) {
+    const f = FN[w.dataset.fn];
+    if (!f) return;
+    clearTimeout(hide);
+    on = w;
+    tip.innerHTML = '';
+    const name = document.createElement('div');
+    name.className = 'fn-name';
+    name.textContent = w.dataset.fn + (w.dataset.fn === 'subset' || w.dataset.fn === 'keep' ? '=' : '()');
+    const is = document.createElement('p');
+    is.className = 'fn-is';
+    is.textContent = f[0];
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'fn-more';
+    more.textContent = 'More ▸';
+    more.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const ex = document.createElement('pre');
+      ex.textContent = f[1];
+      const out = document.createElement('p');
+      out.className = 'fn-out';
+      out.textContent = '→ ' + f[2];
+      more.replaceWith(ex, out);
+      place(w);
+    });
+    tip.append(name, is, more);
+    tip.hidden = false;
+    place(w);
+  }
+
+  function place(w) {
+    const r = w.getBoundingClientRect();
+    const t = tip.getBoundingClientRect();
+    const left = Math.min(Math.max(16, r.left), window.innerWidth - t.width - 16);
+    const below = r.bottom + 8 + t.height < window.innerHeight;
+    tip.style.left = `${left}px`;
+    tip.style.top = `${below ? r.bottom + 8 : Math.max(8, r.top - t.height - 8)}px`;
+  }
+
+  const later = () => {
+    clearTimeout(hide);
+    hide = setTimeout(() => {
+      tip.hidden = true;
+      on = null;
+    }, 220);
+  };
+
+  document.addEventListener('mouseover', (e) => {
+    const w = e.target.closest?.('.fn-w');
+    if (w && w !== on) show(w);
+    else if (w || e.target.closest?.('.fn-tip')) clearTimeout(hide);
+  });
+  document.addEventListener('mouseout', (e) => {
+    if (e.target.closest?.('.fn-w') || e.target.closest?.('.fn-tip')) later();
+  });
+  document.addEventListener('focusin', (e) => {
+    const w = e.target.closest?.('.fn-w');
+    if (w) show(w);
+  });
+  document.addEventListener('focusout', (e) => {
+    if (e.target.closest?.('.fn-w') && !tip.contains(e.relatedTarget)) later();
+  });
+  // Touch: a tap opens it; a tap anywhere else closes it.
+  document.addEventListener('click', (e) => {
+    const w = e.target.closest?.('.fn-w');
+    if (w) {
+      e.preventDefault();
+      e.stopPropagation();
+      show(w);
+    } else if (!e.target.closest?.('.fn-tip')) {
+      tip.hidden = true;
+      on = null;
+    }
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !tip.hidden) {
+      tip.hidden = true;
+      on?.focus();
+      on = null;
+    }
+  });
+  window.addEventListener('scroll', () => { if (!tip.hidden && on) place(on); }, { passive: true });
+
+  // Mark what is there, and whatever is drawn later.
+  const main = document.querySelector('main') || document.body;
+  mark(main);
+  let queued = false;
+  new MutationObserver(() => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      mark(main);
+    });
+  }).observe(main, { childList: true, subtree: true });
+})();
 </script>
 </body>
 </html>

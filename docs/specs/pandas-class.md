@@ -49,3 +49,22 @@ No new table. Marks and notes use the Python page's tables through its API, unde
 ## Not yet
 
 - Sessions 3 onwards, when they have happened.
+
+## Hover a function, dive deeper from a summary (2026-11-22)
+
+- **Hover a function.** "Make sure I can hover above [function names] and it explains the function
+  … with a more button and an example … mainly all the function commands in the summaries, or even
+  in lessons." One glossary of about 65 calls the class uses (`read_csv` … `quantile`,
+  `subset=`, `.loc`, plus the scikit-learn and jellyfish calls it names). Every one in the
+  rendered page is dotted-underlined: summaries, lessons, tables and code.
+  - A name with an underscore is found bare (`to_numeric`). A plain word only as code: after a
+    dot, or before `(` or `=` (`.sum()`, `subset=`). Prose stays untouched.
+  - Hover (or focus, or tap) shows the call and one plain line of what it does. **More ▸** adds a
+    tiny example and its result. Esc closes it.
+  - Content drawn later is marked as it appears.
+- **More on each summary box.** "Add a more button for the summaries … so I can dive deeper when
+  needed, for each summary box." Every summary idea has a **More** pill. It opens, under the box,
+  the lecture's own cards for that idea, at most two: their text, list, formula, table and
+  watch-out, each with a link to its slide. Cards are picked by the words, names and calls they
+  share with the idea, the card titles weighing most. An idea can name its cards by hand
+  (`cards: [...]`) where the words are not enough.
