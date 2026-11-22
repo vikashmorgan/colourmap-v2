@@ -112,8 +112,12 @@ class Builder {
   }
 }
 
-/** A triangle strip grid (rows along, columns across) into a builder, with per-vertex colours. */
-function grid(b: Builder, pts: V3[][], cols: V3[][]) {
+/** A triangle strip grid (rows along, columns across) into a builder, with per-vertex colours.
+ * `smooth` lights it with normals averaged over the grid (or given, one per point), so a banked, curving road reads as one
+ * surface, not a patchwork of flat facets (2026-11-22: "the track floor is not smooth, some parts
+ * seem divided like shades of black"); rock keeps its crisp faces. */
+function grid(b: Builder, pts: V3[][], cols: V3[][], smooth: boolean | V3[][] = false) {
+  const nrm = smooth === true ? gridNormals(pts) : smooth || null;
   for (let i = 0; i + 1 < pts.length; i++) {
     for (let j = 0; j + 1 < pts[i].length; j++) {
       const a = pts[i][j];
@@ -121,15 +125,39 @@ function grid(b: Builder, pts: V3[][], cols: V3[][]) {
       const p1 = pts[i + 1][j];
       const p2 = pts[i][j + 1];
       const n = faceNormal(a, p1, c);
-      const tri = (x: V3, y: V3, z: V3, cx: V3, cy: V3, cz: V3) => {
-        b.vertex(x, n, cx);
-        b.vertex(y, n, cy);
-        b.vertex(z, n, cz);
-      };
-      tri(a, p2, c, cols[i][j], cols[i][j + 1], cols[i + 1][j + 1]);
-      tri(a, c, p1, cols[i][j], cols[i + 1][j + 1], cols[i + 1][j]);
+      const N = (r: number, q: number) => (nrm ? nrm[r][q] : n);
+      b.vertex(a, N(i, j), cols[i][j]);
+      b.vertex(p2, N(i, j + 1), cols[i][j + 1]);
+      b.vertex(c, N(i + 1, j + 1), cols[i + 1][j + 1]);
+      b.vertex(a, N(i, j), cols[i][j]);
+      b.vertex(c, N(i + 1, j + 1), cols[i + 1][j + 1]);
+      b.vertex(p1, N(i + 1, j), cols[i + 1][j]);
     }
   }
+}
+
+/** Each grid point's normal from its neighbours along and across (up-facing, as `faceNormal`). */
+export function gridNormals(pts: V3[][]): V3[][] {
+  const out: V3[][] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const row: V3[] = [];
+    for (let j = 0; j < pts[i].length; j++) {
+      const a = pts[Math.max(0, i - 1)][j];
+      const b = pts[Math.min(pts.length - 1, i + 1)][j];
+      const c = pts[i][Math.max(0, j - 1)];
+      const d = pts[i][Math.min(pts[i].length - 1, j + 1)];
+      const o: V3 = [0, 0, 0];
+      row.push(
+        faceNormal(
+          o,
+          [b[0] - a[0], b[1] - a[1], b[2] - a[2]],
+          [d[0] - c[0], d[1] - c[1], d[2] - c[2]],
+        ),
+      );
+    }
+    out.push(row);
+  }
+  return out;
 }
 
 function faceNormal(a: V3, b: V3, c: V3): V3 {
@@ -328,7 +356,9 @@ function groundColour(cfg: WorldCfg, s: number, u: number, half: number, snow: n
           : cfg.theme === 'neon'
             ? [0.075, 0.07, 0.1]
             : [0.08, 0.082, 0.095];
-    c = tint.map((v) => v * (0.85 + 0.3 * n)) as V3;
+    // A light grain only on the Golden Track, so the road never breaks into dark patches.
+    const grain = cfg.theme === 'gold' ? 0.1 : 0.3;
+    c = tint.map((v) => v * (1 - grain / 2 + grain * n)) as V3;
     if (Math.abs(u) > half - 2.5 && out <= 0) c = c.map((v) => v * 1.35) as V3;
     if (out > 0) c = c.map((v) => v * 0.45) as V3;
   }
@@ -364,6 +394,7 @@ function makeFire(uTime: THREE.IUniform): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime,
+      uYou: { value: 0 },
       uScale: { value: 900 },
       uLong: { value: FIRE.LONG },
       uRate: { value: FIRE.RATE },
@@ -371,28 +402,38 @@ function makeFire(uTime: THREE.IUniform): THREE.ShaderMaterial {
     vertexShader: `
       attribute vec3 aDir;
       attribute float aPhase;
+      attribute float aS;
       uniform float uTime;
+      uniform float uYou;
       uniform float uScale;
       uniform float uLong;
       uniform float uRate;
       varying float vK;
+      varying float vRoar;
       void main() {
         float k = fract(uTime * uRate + aPhase);
         vK = k;
+        // A low pilot flame until you come: each arch roars out as you reach it (2026-11-22: "it
+        // shoots fire outwards as we pass"), from 40 m ahead, and dies back once you are 20 m past.
+        float d = aS - uYou;
+        float roar = smoothstep(45.0, 15.0, d) * smoothstep(-25.0, -8.0, d);
+        vRoar = roar;
+        float reach = 0.3 + 0.7 * roar;
         // Out along the jet, spreading as it goes and lifting a little, as hot gas does.
         vec3 side = normalize(cross(aDir, vec3(0.0, 1.0, 0.0)) + vec3(1e-4));
         float wob = sin(aPhase * 91.0 + uTime * 5.0) * 0.5 * k;
-        vec3 p = position + aDir * (k * uLong * (0.8 + 0.4 * fract(aPhase * 17.0)))
+        vec3 p = position + aDir * (k * uLong * reach * (0.8 + 0.4 * fract(aPhase * 17.0)))
           + side * wob + vec3(0.0, 0.8 * k * k, 0.0);
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        gl_PointSize = clamp((1.1 + 3.2 * k) * uScale / max(-mv.z, 0.5), 1.0, 64.0);
+        gl_PointSize = clamp((0.7 + 3.6 * k * reach) * uScale / max(-mv.z, 0.5), 1.0, 64.0);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
       varying float vK;
+      varying float vRoar;
       void main() {
         float r = length(gl_PointCoord - 0.5);
-        float a = smoothstep(0.5, 0.0, r) * pow(1.0 - vK, 1.4);
+        float a = smoothstep(0.5, 0.0, r) * pow(1.0 - vK, 1.4) * (0.45 + 0.55 * vRoar);
         vec3 core = vec3(0.85, 0.95, 1.6);
         vec3 blue = vec3(0.12, 0.38, 1.7);
         vec3 violet = vec3(0.45, 0.15, 1.1);
@@ -654,10 +695,24 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     const ground = new Builder();
     let pts: V3[][] = [];
     let cols: V3[][] = [];
+    let nrms: V3[][] = [];
     const flush = () => {
-      if (pts.length > 1) grid(ground, pts, cols);
+      if (pts.length > 1) grid(ground, pts, cols, nrms);
       pts = [];
       cols = [];
+      nrms = [];
+    };
+    // The surface's own normal at (s, u), from the track itself, so chunks meet without a seam.
+    const normalAt = (s: number, u: number): V3 => {
+      const a = L(s - 0.5, u);
+      const b = L(s + 0.5, u);
+      const c = L(s, u - 0.25);
+      const d = L(s, u + 0.25);
+      return faceNormal(
+        [0, 0, 0],
+        [b[0] - a[0], b[1] - a[1], b[2] - a[2]],
+        [d[0] - c[0], d[1] - c[1], d[2] - c[2]],
+      );
     };
     for (let s = s0; s <= s1 + 0.01; s += ROW) {
       // A gap breaks the road: what is before it ends at its lip, what is after starts again.
@@ -669,12 +724,15 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       const half = def.half(at);
       const row: V3[] = [];
       const crow: V3[] = [];
+      const nrow: V3[] = [];
       for (const u of columns(half)) {
         row.push(L(at, u));
         crow.push(groundColour(cfg, at, u, half, snowLevel));
+        nrow.push(normalAt(at, u));
       }
       pts.push(row);
       cols.push(crow);
+      nrms.push(nrow);
       if (gapAt(s)) flush();
     }
     flush();
@@ -889,6 +947,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     const pos: number[] = [];
     const dir: number[] = [];
     const ph: number[] = [];
+    const at: number[] = [];
     const nozzle = new Builder();
     const steel = lin(0.12, 0.13, 0.16);
     for (let s = Math.ceil(s0 / FIRE.RING) * FIRE.RING; s < s1; s += FIRE.RING) {
@@ -911,6 +970,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
           pos.push(x, z, -y);
           dir.push(...d);
           ph.push((k + 0.37 * b + 0.61 * (s / FIRE.RING)) / FIRE.FLAMES);
+          at.push(s);
         }
         // A small dark burner head, so the flame comes out of something.
         const p0: V3 = [x - d[0] * 0.4, z - d[1] * 0.4, -y - d[2] * 0.4];
@@ -932,6 +992,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('aDir', new THREE.Float32BufferAttribute(dir, 3));
     geo.setAttribute('aPhase', new THREE.Float32BufferAttribute(ph, 1));
+    geo.setAttribute('aS', new THREE.Float32BufferAttribute(at, 1));
     const pts = new THREE.Points(geo, fireMat);
     pts.frustumCulled = false;
     pts.renderOrder = 6;
@@ -1684,6 +1745,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     group,
     update(ox, oy, s, t, w) {
       shared.uTime.value = t;
+      if (fireMat) fireMat.uniforms.uYou.value = s;
       if (dotMat) {
         // The streams run ahead faster than you (the City's pulses: 1.7 times your pace, plus 8).
         const dt = Math.min(0.1, Math.max(0, t - streamT));

@@ -50,6 +50,13 @@ Esc goes back one step; in a race it pauses.
 4. **Click to start:** a soft pulse under the gantry. Any click or key.
 5. **Countdown:** three lights go red one by one (3 · 2 · 1, 0.8 s each), then all turn the
    track's colour: GO. The racers launch together.
+6. **Stage fire** (2026-11-22: "a 3 2 1 go with big fire shooting on all sides in spectacular
+   fashion. symmetric and well designed stage fire works"): four burner pairs stand mirrored on
+   both edges, from beside the grid up the road. On 3 the nearest pair fires a column of flame, on
+   2 the next, on 1 the next, so the fire runs away up the road with the count; on GO all eight
+   roar at once, taller, the farthest tallest, and gold sparks (the track's colour) arc in from
+   both sides to cross over the road. Plan: `lib/art/stage-fire.ts`; drawn as GPU particles on the
+   gantry (`components/drive/stage-fire.ts`).
 - Skippable: any key during the flyover jumps to the grid. A restart goes straight to the grid.
 - Built 2026-11-22 (`lib/art/race-intro.ts`, `components/drive/RaceIntro.tsx`, the engine's
   `startIntro`, `skipIntro`, `launch`): the drone flies 150 m to 1,300 m up the road at 70 m,

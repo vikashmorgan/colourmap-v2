@@ -31,6 +31,8 @@ export interface Bump {
 export type Feature =
   | { kind: 'gate'; every: number }
   | { kind: 'start'; at: number }
+  /** A straight, unbanked stretch (the start grid, 2026-11-22: a level grid for the stage fire). */
+  | { kind: 'straight'; from: number; to: number }
   | { kind: 'jump'; at: number; length: number; every?: number }
   /** A tunnel of blue gas fire shooting outwards over the road (2026-11-22). */
   | { kind: 'fire'; at: number; length: number; every?: number }
@@ -117,6 +119,14 @@ function jumpStraight(x: number, length: number): number {
   return k * k * (3 - 2 * k);
 }
 
+/** 0 on a straight, easing back to 1 over EASE m either side. */
+function straightAt(st: { from: number; to: number }, s: number): number {
+  const d = s < st.from ? st.from - s : s > st.to ? s - st.to : 0;
+  if (d >= JUMP.EASE) return 1;
+  const k = d / JUMP.EASE;
+  return k * k * (3 - 2 * k);
+}
+
 /** Turns a track document into the TrackDef the physics, views and timing use. */
 export function compileTrack(d: TrackData): TrackDef {
   const cw = d.curve.waves ?? [];
@@ -127,6 +137,7 @@ export function compileTrack(d: TrackData): TrackDef {
   const every = d.rise.every;
   const jumps = (d.features ?? []).filter((f) => f.kind === 'jump');
   const fires = (d.features ?? []).filter((f) => f.kind === 'fire');
+  const straights = (d.features ?? []).filter((f) => f.kind === 'straight');
   const within = (list: typeof jumps | typeof fires, s: number) =>
     list.some((j) => {
       const x = jumpLocal(j, s);
@@ -149,6 +160,7 @@ export function compileTrack(d: TrackData): TrackDef {
         k += w.amp * (TAU / w.period) * Math.cos((TAU * s) / w.period + (w.phase ?? 0));
       if (ck) k += keysAt(ck, s);
       for (const j of jumps) k *= jumpStraight(jumpLocal(j, s), j.length);
+      for (const st of straights) k *= straightAt(st, s);
       return k;
     },
     elev: (s) => {
@@ -181,8 +193,8 @@ export function compileTrack(d: TrackData): TrackDef {
 export const LIMITS = {
   /** Tightest radius any bend may reach (m). */
   minRadius: 110,
-  /** Steepest bank (rad, about 29°). */
-  maxBank: 0.5,
+  /** Steepest bank (rad, about 40°). */
+  maxBank: 0.7,
   half: [8, 40] as const,
   /** Steepest climb or drop (rise per metre): the launch crests reach about 0.24. */
   maxGrade: 0.3,
@@ -243,6 +255,8 @@ export function validateTrackData(d: unknown, span = 6000): string[] {
       out.push(`a jump needs at and a length up to ${LIMITS.maxJump} m`);
     if (f.kind === 'fire' && (!num(f.at) || !num(f.length) || f.length <= 0 || f.length > 1000))
       out.push('a fire tunnel needs at and a length up to 1000 m');
+    if (f.kind === 'straight' && (!num(f.from) || !num(f.to) || f.to <= f.from))
+      out.push('a straight needs from before to');
     if (f.kind === 'gate' && (!num(f.every) || f.every < 200))
       out.push('gates must be at least 200 m apart');
   }

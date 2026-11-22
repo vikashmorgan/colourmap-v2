@@ -107,8 +107,14 @@ The salt flat on Mars.
 A road of gold dots under Saturn.
 - [x] Dark sky in every weather; a real night sky and Saturn; hulls keep their colour at night
       (2026-11-21).
-- [x] Steeper banking: up to 0.46 rad (≈ 26°, was 0.34), design speed 85 m/s, so medium bends
-      bank more too (2026-11-22: "even more tilt to the roads on the turns").
+- [x] Steeper banking: up to 0.62 rad (≈ 36°; 0.34, then 0.46), design speed 85 m/s, so the
+      tightest bends tilt most and gentle ones less (2026-11-22: "even more tilt to the roads on the
+      turns", "some turns with even more tilt").
+- [x] A level start: the first 140 m run straight and unbanked (a `straight` feature), so the grid,
+      the gantry and the stage fire stand level and symmetric; the grid holds still until GO.
+- [x] A smooth floor: the road is lit with the surface's own normals, not flat facets, and its grain
+      is light, so it never breaks into shades of black (2026-11-22: "the track floor is not smooth
+      some parts seem divided like shades of black").
 - [x] Calm arches: the streams' head softer over a brighter rest, a 30 m tail, and the light sweeps
       over each arch foot to foot instead of lighting it all at once (2026-11-22: the light
       semicircles "flash too much. stressful").
@@ -121,8 +127,10 @@ A road of gold dots under Saturn.
       rolling at 45 m/s, enough to make it with the throttle down. Rivals lost to it reappear just
       past it. The lips drop away as dark cliff faces; no lines or dots are drawn over the gap.
       Data: a `jump` feature in tracks/gold.json (`at`, `length`, `every`), limit 160 m.
-- [x] Blue gas-fire tunnel (2026-11-22: "tunnels of blue gas fire shooting outwards"): at 3.3 km
-      of every lap, 320 m long, an arch of 13 burners over the road every 9 m, each jet shooting a
+- [x] Blue gas-fire tunnels (2026-11-22: "tunnels of blue gas fire shooting outwards", "a few
+      more tunnels where it shoots fire outwards as we pass"): three a lap, at 0.8 km (220 m), 3.3
+      km (320 m) and 4.7 km (260 m). Each arch idles on a low pilot flame and roars out to full
+      length as you reach it (from 40 m ahead), dying back once you are 20 m past. In each, an arch of 13 burners over the road every 9 m, each jet shooting a
       blue flame straight outwards, away from the road: white-blue at the nozzle, deep blue, violet
       as it thins, a steady roar, never strobing. Data: a `fire` feature (`at`, `length`, `every`).
 - [x] The STAY WILD portal (2026-11-22: "a kind of portal dome arch with stay wild written on top
