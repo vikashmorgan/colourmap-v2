@@ -335,3 +335,17 @@ porthole that opens when you check the racing part of the game".
 - Tap the porthole to drive.
 - The tree's design I keeps its three Art groups (its evenness rule), so the porthole does not
   open there.
+
+### The two columns: Priorities, and Mood · Feeling · Emotion · Body — 2026-11-22
+
+> "left of art energy admin I want a column with my priorities and right another column with mood, feeling, emotions and body" (for the G tree)
+
+- **Priorities**, left of the tree: today's objectives still open, in their order, then the open missions, soonest due first, at most seven. A mission shows its due date (30 Nov), an objective "today".
+- **Mood · Feeling · Emotion · Body**, right of the tree, from your latest check-in, in words:
+  - the mood slider on a seven-word scale (Very low to Radiant);
+  - the feeling compass when given;
+  - the emotion you named, with its colour;
+  - the body pulse (Disconnected to Powerful).
+  A thin gold bar shows the level where there is one. Nothing is counted, and nothing appears that was not written.
+- Every line goes to Focus (`/day`), where they are written. With none yet: "Nothing set. Set one", "No check-in yet. Check in".
+- Wide screens only (over 1100 px); they fade in with the tree and leave as it gathers into the wheel (`lib/tree-columns.ts`, `components/TreeColumns.tsx`).
