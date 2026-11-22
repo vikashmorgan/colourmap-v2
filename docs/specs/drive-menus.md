@@ -64,8 +64,11 @@ Esc goes back one step; in a race it pauses.
 ## In the race
 
 - HUD: the speedometer (your chosen style), place ("P2 / 6"), lap or km, time, the boost meter.
-- Esc pauses: the frame freezes and blurs behind a lifted sheet: Resume, Restart, Tracks, Garage,
-  Leave (Esc or Enter resumes, R restarts at the grid). Esc during the intro goes back to the ring.
+- Esc pauses: the game holds still and the camera turns slowly round your vehicle, in full view
+  (2026-11-22: "when paused I need to see the image … static but with moving camera is awesome"):
+  no veil or blur, only a slim bar at the foot (Paused · Resume · Restart · Tracks · Garage ·
+  Leave) that fades back to a whisper after three seconds and returns on hover. Esc or Enter
+  resumes, R restarts at the grid. Esc during the intro goes back to the ring.
   Leaving the game is in the pause sheet now, not a second Esc.
 
 ## Results

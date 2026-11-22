@@ -353,23 +353,38 @@ const SKY_BANDS: V3[] = [
 ];
 const SKY_DOOR: V3 = [1.6, 1.05, 0.3];
 
+/** The streams' look in Sky Canyon: a dim rest, a bright head, a 14 m tail. */
+export const DOT_LOOK = { base: 0.4, pulse: 1.8, tail: 14 };
+
 /** Dots of light, as the City of Dreams draws them: soft round glows; a stream's head bright, its
  * tail fading over 14 m, a head every 90 m running ahead of you. */
-function makeDots(): THREE.ShaderMaterial {
+function makeDots(calm = false): THREE.ShaderMaterial {
+  // The Golden Track's are calm (2026-11-22: the arches "flash too much. stressful"): a softer
+  // head over a brighter rest, and a longer tail, so a passing stream glows rather than flashes.
+  const look = calm ? { base: 0.7, pulse: 0.75, tail: 30 } : DOT_LOOK;
   const m = new THREE.ShaderMaterial({
-    uniforms: { uFront: { value: 0 }, uScale: { value: 900 } },
+    uniforms: {
+      uFront: { value: 0 },
+      uScale: { value: 900 },
+      uBase: { value: look.base },
+      uPulse: { value: look.pulse },
+      uTail: { value: look.tail },
+    },
     vertexShader: `
       attribute vec3 aCol;
       attribute float aS;
       attribute float aSize;
       uniform float uFront;
       uniform float uScale;
+      uniform float uBase;
+      uniform float uPulse;
+      uniform float uTail;
       varying vec3 vCol;
       varying float vGlow;
       void main() {
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         float behind = fract((uFront - aS) / 90.0) * 90.0;
-        vGlow = 0.4 + 1.8 * exp(-behind / 14.0);
+        vGlow = uBase + uPulse * exp(-behind / uTail);
         vCol = aCol;
         gl_PointSize = clamp(aSize * uScale / max(-mv.z, 0.5), 1.0, 48.0);
         gl_Position = projectionMatrix * mv;
@@ -412,7 +427,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       : cfg.id === 'sky'
         ? { u: () => skyWallU(), h: skyWallHeight, on: () => 1 }
         : null;
-  const dotMat = cfg.id === 'sky' || cfg.id === 'gold' ? makeDots() : null;
+  const dotMat = cfg.id === 'sky' || cfg.id === 'gold' ? makeDots(cfg.id === 'gold') : null;
   let streamS = cfg.startS;
   let streamT = 0;
   const shared: Record<string, THREE.IUniform> = {
@@ -736,11 +751,13 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     const ss: number[] = [];
     const size: number[] = [];
     const a = frameAt(track, s0);
-    const put = (s: number, u: number, z: number, c: V3, sz: number) => {
+    // `stream` is where a dot sits for the passing streams (its own s unless given), so a shape
+    // standing at one s can take the light across it instead of all at once.
+    const put = (s: number, u: number, z: number, c: V3, sz: number, stream = s) => {
       const p = pointAt(track, s, u);
       pos.push(p.x - a.x, z, -(p.y - a.y));
       col.push(...c);
-      ss.push(s);
+      ss.push(stream);
       size.push(sz);
     };
     const golds: V3[] = [
@@ -765,7 +782,15 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       const half = def.half(sa) + 2.5;
       const e = heightAt(track, sa, 0);
       for (let t = 0; t <= Math.PI + 1e-6; t += 0.9 / half)
-        put(sa, Math.cos(t) * half, e + Math.sin(t) * half * 0.75, golds[2], 1.2);
+        // The light sweeps over the arch, foot to foot, as a stream passes under it.
+        put(
+          sa,
+          Math.cos(t) * half,
+          e + Math.sin(t) * half * 0.75,
+          golds[2],
+          1.2,
+          sa - 30 + (t / Math.PI) * 60,
+        );
     }
     // A ring of dots standing beside the road, every 360 m, alternating sides.
     for (let sr = Math.ceil(s0 / 360) * 360 + 180; sr < s1; sr += 360) {
@@ -773,7 +798,14 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       const uc = side * (def.half(sr) + 14);
       const e = heightAt(track, sr, uc);
       for (let t = 0; t < Math.PI * 2; t += 0.12)
-        put(sr + Math.cos(t) * 0.01, uc + Math.cos(t) * 8, e + 9 + Math.sin(t) * 8, golds[1], 1.4);
+        put(
+          sr + Math.cos(t) * 0.01,
+          uc + Math.cos(t) * 8,
+          e + 9 + Math.sin(t) * 8,
+          golds[1],
+          1.4,
+          sr + (t / (Math.PI * 2)) * 90,
+        );
     }
     // The city of gold (2026-11-19: "more graphic elements to decorate it, like a city around"):
     // towers drawn as dots, their edges and a ring at every floor, set back on both sides; fewer

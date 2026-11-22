@@ -458,6 +458,20 @@ describe('leaning and flying (2026-11-19)', () => {
     expect(lean('ship')).toBeGreaterThan(0);
   });
 
+  it('keeps leaning with the wheel in the air, both ways (2026-11-22)', () => {
+    for (const kind of ['car', 'ship'] as const) {
+      const v = run(kind, GO, 4);
+      v.z += 40;
+      v.vz = 2;
+      for (let i = 0; i < 30; i++) stepVehicle(v, { throttle: 1, steer: 1, boost: 0 }, 1 / 60);
+      expect(v.air).toBe(true);
+      expect(v.roll).toBeGreaterThan(kind === 'car' ? 0.05 : 0.2);
+      for (let i = 0; i < 40; i++) stepVehicle(v, { throttle: 1, steer: -1, boost: 0 }, 1 / 60);
+      expect(v.air).toBe(true);
+      expect(v.roll).toBeLessThan(0);
+    }
+  });
+
   it('climbs and dives the ship as the City does, easing in, between the ground and the ceiling', () => {
     const v = run('ship', GO, 3);
     const z0 = v.z;

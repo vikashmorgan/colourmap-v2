@@ -124,8 +124,8 @@ export function compileTrack(d: TrackData): TrackDef {
 export const LIMITS = {
   /** Tightest radius any bend may reach (m). */
   minRadius: 110,
-  /** Steepest bank (rad, about 26°). */
-  maxBank: 0.45,
+  /** Steepest bank (rad, about 29°). */
+  maxBank: 0.5,
   half: [8, 40] as const,
   /** Steepest climb or drop (rise per metre): the launch crests reach about 0.24. */
   maxGrade: 0.3,

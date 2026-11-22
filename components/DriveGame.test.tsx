@@ -67,11 +67,11 @@ describe('Drive', () => {
     window.history.replaceState(null, '', '/');
   });
 
-  it('starts the engine on the Salt Flat; the menu names it and opens a column of the worlds', () => {
+  it('starts the engine on the top track (the Golden Track); the menu names it and opens a column of the worlds', () => {
     play();
     expect(engine.start).toHaveBeenCalled();
     const menu = screen.getByRole('button', { name: 'Menu' });
-    expect(menu.textContent).toContain('Salt Flat');
+    expect(menu.textContent).toContain('Golden Track');
     expect(screen.queryByRole('dialog', { name: 'Menu' })).toBeNull();
     fireEvent.click(menu);
     expect(screen.getByRole('dialog', { name: 'Menu' })).toBeDefined();
@@ -79,19 +79,19 @@ describe('Drive', () => {
       '/geometry-field/garage',
     );
     for (const n of [
-      'Salt Flat',
-      'Coast Road',
-      'Canyon Race',
-      'Night Rain',
-      'Chinatown Run',
-      'Neon District',
-      'Sky Canyon',
-      'Mars',
       'Golden Track',
+      'Neon District',
+      'Canyon Race',
+      'Sky Canyon',
+      'Chinatown Run',
+      'Night Rain',
+      'Coast Road',
+      'Mars',
+      'Salt Flat',
     ]) {
       expect(screen.getByRole('button', { name: n })).toBeDefined();
     }
-    expect(screen.getByRole('button', { name: 'Salt Flat' }).getAttribute('aria-current')).toBe(
+    expect(screen.getByRole('button', { name: 'Golden Track' }).getAttribute('aria-current')).toBe(
       'true',
     );
   });
@@ -117,7 +117,7 @@ describe('Drive', () => {
     play();
     fireEvent.keyDown(window, { key: '3' });
     expect(engine.setWorld).toHaveBeenCalledWith('canyon');
-    fireEvent.keyDown(window, { key: '6' });
+    fireEvent.keyDown(window, { key: '2' });
     expect(engine.setWorld).toHaveBeenCalledWith('neon');
     fireEvent.keyDown(window, { key: 'r' });
     expect(engine.startIntro).toHaveBeenLastCalledWith(true);
@@ -179,7 +179,7 @@ describe('Drive', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Hover ship' }));
     const saved = JSON.parse(window.localStorage.getItem(DESIGN_KEY) ?? '{}');
     expect(saved).toMatchObject({ hull: 'chrome', fire: 'plasma', weather: 'snowstorm' });
-    expect(saved.vehicle.salt).toBe('ship');
+    expect(saved.vehicle.gold).toBe('ship');
     expect(engine.setDesign).toHaveBeenCalled();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -220,24 +220,25 @@ describe('Drive', () => {
     expect(ring).toBeDefined();
     expect(engine.setPreview).toHaveBeenLastCalledWith(true);
     expect(screen.queryByRole('button', { name: 'Menu' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Salt Flat' }).getAttribute('aria-current')).toBe(
+    expect(screen.getByRole('button', { name: 'Golden Track' }).getAttribute('aria-current')).toBe(
       'true',
     );
     expect(screen.getByTestId('track-map')).toBeDefined();
     fireEvent.keyDown(window, { key: 'ArrowRight' });
-    expect(screen.getByRole('button', { name: 'Coast Road' }).getAttribute('aria-current')).toBe(
+    expect(screen.getByRole('button', { name: 'Neon District' }).getAttribute('aria-current')).toBe(
       'true',
     );
-    expect(screen.getByText('Banked cliff road over the sea')).toBeDefined();
+    expect(screen.getByText('The City of Dreams in neon')).toBeDefined();
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    expect(engine.setWorld).toHaveBeenLastCalledWith('coast');
+    expect(engine.setWorld).toHaveBeenLastCalledWith('neon');
     // The ring's keys don't drive the car.
     expect(engine.setControls).not.toHaveBeenCalledWith(expect.objectContaining({ steer: -1 }));
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    expect(screen.getByRole('button', { name: 'Golden Track' }).getAttribute('aria-current')).toBe(
+    // Past the top it wraps round to the last.
+    expect(screen.getByRole('button', { name: 'Salt Flat' }).getAttribute('aria-current')).toBe(
       'true',
     );
     fireEvent.keyDown(window, { key: 'Enter' });
@@ -261,7 +262,7 @@ describe('Drive', () => {
     play();
     expect(engine.startIntro).toHaveBeenCalledWith();
     act(() => intro?.({ phase: 'fly', lit: 0, go: false }));
-    expect(screen.getByTestId('race-intro').textContent).toContain('Salt Flat');
+    expect(screen.getByTestId('race-intro').textContent).toContain('Golden Track');
     expect(screen.queryByRole('button', { name: /Handbrake/ })).toBeDefined();
     fireEvent.keyDown(window, { key: 'x' });
     expect(engine.skipIntro).toHaveBeenCalled();

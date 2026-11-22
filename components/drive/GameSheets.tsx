@@ -199,45 +199,76 @@ export function PauseMenu({
     else return false;
     return true;
   });
+  // The picture is the point (2026-11-22: "when paused I need to see the image … static but with
+  // moving camera is awesome"): no veil, no blur, only a slim bar at the foot that fades back.
+  const link = {
+    background: 'none',
+    border: 'none',
+    padding: '4px 2px',
+    cursor: 'pointer',
+    fontFamily: serif,
+    fontSize: 13,
+    color: `${quiet}0.7)`,
+    textDecoration: 'none',
+  } as const;
   return (
-    <Veil label="Paused" testId="pause-menu">
-      <div style={sheet(t.colour)}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <span style={{ fontSize: 22 }}>Paused</span>
-          <span style={{ fontSize: 12, color: t.colour }}>{t.name}</span>
-        </div>
-        <Action primary accent={t.colour} onClick={onResume}>
-          Resume
-        </Action>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          <Action accent={t.colour} onClick={onRestart}>
-            Restart
-          </Action>
-          <Action accent={t.colour} onClick={onTracks}>
-            Tracks
-          </Action>
-          <a
-            href="/geometry-field/garage"
-            style={{
-              padding: '8px 14px',
-              borderRadius: 999,
-              border: `1px solid ${quiet}0.2)`,
-              color: `${quiet}0.7)`,
-              fontSize: 13,
-              textDecoration: 'none',
-            }}
-          >
-            Garage
-          </a>
-          <Action accent={t.colour} onClick={onLeave}>
-            Leave
-          </Action>
-        </div>
-        <span style={{ fontFamily: mono, fontSize: 10, color: `${quiet}0.35)` }}>
-          esc resume · r restart
-        </span>
-      </div>
-    </Veil>
+    <div
+      role="dialog"
+      aria-label="Paused"
+      data-testid="pause-menu"
+      onPointerDown={(e) => e.stopPropagation()}
+      className="pause-bar"
+      style={{
+        position: 'absolute',
+        left: '50%',
+        bottom: 22,
+        transform: 'translateX(-50%)',
+        maxWidth: 'calc(100% - 32px)',
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '6px 16px',
+        padding: '8px 18px',
+        borderRadius: 999,
+        background: 'rgba(12,9,12,0.42)',
+        border: `1px solid ${t.colour}33`,
+        fontFamily: serif,
+        color: `${quiet}0.85)`,
+        animation: 'pb-fade 3.2s ease forwards',
+      }}
+    >
+      <style>{`
+        @keyframes pb-fade { 0%, 55% { opacity: 1 } 100% { opacity: .28 } }
+        .pause-bar:hover, .pause-bar:focus-within { animation: none; opacity: 1 }
+        @media (prefers-reduced-motion: reduce) { .pause-bar { animation: none } }
+      `}</style>
+      <span
+        style={{
+          fontSize: 11,
+          letterSpacing: '0.24em',
+          textTransform: 'uppercase',
+          color: t.colour,
+        }}
+      >
+        Paused
+      </span>
+      <button type="button" onClick={onResume} style={{ ...link, color: `${quiet}0.95)` }}>
+        Resume
+      </button>
+      <button type="button" onClick={onRestart} style={link}>
+        Restart
+      </button>
+      <button type="button" onClick={onTracks} style={link}>
+        Tracks
+      </button>
+      <a href="/geometry-field/garage" style={link}>
+        Garage
+      </a>
+      <button type="button" onClick={onLeave} style={link}>
+        Leave
+      </button>
+    </div>
   );
 }
 

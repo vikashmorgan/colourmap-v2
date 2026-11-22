@@ -74,7 +74,7 @@ export default function DriveGame() {
   // The Handbrake button, held (touch or mouse).
   const handHeld = useRef(false);
   const [hand, setHand] = useState(false);
-  const [world, setWorldState] = useState<WorldId>('salt');
+  const [world, setWorldState] = useState<WorldId>(WORLDS[0].id);
   const [design, setDesignState] = useState<Design>(() => loadDesign(null, WEATHER_IDS));
   const [panel, setPanel] = useState(false);
   // The track ring (docs/specs/drive-menus.md): the first screen, and from the menu.
@@ -115,7 +115,7 @@ export default function DriveGame() {
       try {
         storage()?.setItem(LAST_TRACK_KEY, id);
       } catch {
-        // Storage may be blocked: the ring then opens on the Salt Flat.
+        // Storage may be blocked: the ring then opens on the top track.
       }
       pushControls();
     },
@@ -134,7 +134,7 @@ export default function DriveGame() {
     setDesignState(d);
     const asked = new URLSearchParams(window.location.search).get('world') ?? '';
     const last = storage()?.getItem(LAST_TRACK_KEY) ?? '';
-    const first: WorldId = isWorld(asked) ? asked : isWorld(last) ? last : 'salt';
+    const first: WorldId = isWorld(asked) ? asked : isWorld(last) ? last : WORLDS[0].id;
     setWorldState(first);
     // A link to a world drives straight in; otherwise the ring comes first.
     if (isWorld(asked)) {
