@@ -57,6 +57,12 @@ Esc goes back one step; in a race it pauses.
    roar at once, taller, the farthest tallest, and gold sparks (the track's colour) arc in from
    both sides to cross over the road. Plan: `lib/art/stage-fire.ts`; drawn as GPU particles on the
    gantry (`components/drive/stage-fire.ts`).
+7. **The start arch** (2026-11-22: "a real big semicircle with fires, not a bad square
+   rectangle door"): the gantry is a half circle of dark metal spanning the road, its feet on both
+   edges, edged with rings of light in the track's colour. The three lamps hang under the crown.
+   Burners stand along it in mirror pairs. The fire climbs it with the count: the feet on 3,
+   halfway on 2, near the crown on 1. On GO the whole arch roars, the crown tallest with sparks.
+   (`archJets`, `archPoint` in `lib/art/stage-fire.ts`.)
 - Skippable: any key during the flyover jumps to the grid. A restart goes straight to the grid.
 - Built 2026-11-22 (`lib/art/race-intro.ts`, `components/drive/RaceIntro.tsx`, the engine's
   `startIntro`, `skipIntro`, `launch`): the drone flies 150 m to 1,300 m up the road at 70 m,

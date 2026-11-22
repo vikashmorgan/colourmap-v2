@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { BEAT, LIGHTS } from './race-intro';
-import { beatTime, STAGE_ALONG, stageJets } from './stage-fire';
+import { ARCH_ANGLES, archJets, archPoint, beatTime, STAGE_ALONG, stageJets } from './stage-fire';
 
 describe('the start’s stage fire (2026-11-22)', () => {
   const jets = stageJets();
@@ -31,5 +31,33 @@ describe('the start’s stage fire (2026-11-22)', () => {
     const tallest = Math.max(...go.map((b) => b?.height ?? 0));
     for (const j of front) expect(j.bursts.at(-1)?.height).toBe(tallest);
     expect(beatTime(LIGHTS)).toBeCloseTo(BEAT * LIGHTS, 9);
+  });
+});
+
+describe('the start arch (2026-11-22)', () => {
+  const jets = archJets();
+
+  it('climbs the arch with the count, mirror pairs, feet first', () => {
+    for (let beat = 0; beat < LIGHTS; beat++) {
+      const firing = jets.filter((j) => j.bursts.some((b) => b.beat === beat));
+      expect(firing.map((j) => j.arch)).toEqual([ARCH_ANGLES[beat], ARCH_ANGLES[beat]]);
+      expect(firing.map((j) => j.side).sort()).toEqual([-1, 1]);
+    }
+  });
+
+  it('roars all at once on GO, the crown tallest', () => {
+    const go = jets.map((j) => j.bursts.find((b) => b.beat === LIGHTS));
+    expect(go.every(Boolean)).toBe(true);
+    const crown = jets.find((j) => j.arch === Math.PI / 2);
+    expect(crown?.bursts.at(-1)?.height).toBe(Math.max(...go.map((b) => b?.height ?? 0)));
+  });
+
+  it('stands on a half circle over the road', () => {
+    const r = 20;
+    const foot = archPoint(0, 1, r);
+    expect(foot.y).toBeCloseTo(0, 9);
+    expect(foot.z).toBeCloseTo(-r, 9);
+    expect(archPoint(Math.PI / 2, 1, r).y).toBeCloseTo(r, 9);
+    expect(archPoint(0.5, -1, r).z).toBeCloseTo(-archPoint(0.5, 1, r).z, 9);
   });
 });

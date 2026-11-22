@@ -29,6 +29,8 @@ export interface Burst {
 export interface Jet {
   /** Along the road from the gantry (m). */
   along: number;
+  /** On the start arch: the angle up it from the road (rad, 0 at its foot, π/2 its crown). */
+  arch?: number;
   /** Across: +1 left, -1 right. */
   side: 1 | -1;
   bursts: Burst[];
@@ -53,6 +55,40 @@ export function stageJets(): Jet[] {
     }
   });
   return out;
+}
+
+/*
+ * THE START ARCH (2026-11-22: "remember the cool start, with a real big semicircle with fires, not
+ * a bad square rectangle door"). The gantry is a half circle of metal over the road, its feet on
+ * both edges. Burners stand along it in mirror pairs: the fire climbs it with the count, the feet
+ * on 3, halfway on 2, near the crown on 1, and on GO the whole arch roars at once.
+ */
+export const ARCH_ANGLES = [0.3, 0.75, 1.2] as const;
+
+/** The burners on the start arch, both sides, with their bursts. */
+export function archJets(): Jet[] {
+  const out: Jet[] = [];
+  ARCH_ANGLES.forEach((arch, i) => {
+    for (const side of [1, -1] as const) {
+      const bursts: Burst[] = [];
+      if (i < LIGHTS) bursts.push({ beat: i, height: 9, life: 0.9, sparks: false });
+      bursts.push({ beat: LIGHTS, height: 14, life: 2, sparks: false });
+      out.push({ along: 0, arch, side, bursts });
+    }
+  });
+  // The crown: one burner at the top, roaring on GO.
+  out.push({
+    along: 0,
+    arch: Math.PI / 2,
+    side: 1,
+    bursts: [{ beat: LIGHTS, height: 20, life: 2, sparks: true }],
+  });
+  return out;
+}
+
+/** Where an arch burner stands in the gantry's frame (+x up the road, y up, left at -z). */
+export function archPoint(arch: number, side: 1 | -1, radius: number) {
+  return { x: 0, y: radius * Math.sin(arch), z: -side * radius * Math.cos(arch) };
 }
 
 /** When a count's burst starts, in seconds after the click (the first light lights at the click). */

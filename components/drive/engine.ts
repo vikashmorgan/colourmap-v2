@@ -98,7 +98,7 @@ import {
   wrapPeriod,
 } from '@/lib/art/salt-flat-game';
 import { SPEED_FLOATS } from '@/lib/art/speed-shaders';
-import { STAGE_OUT } from '@/lib/art/stage-fire';
+import { archPoint, STAGE_OUT } from '@/lib/art/stage-fire';
 import {
   FALLEN,
   frameAt,
@@ -778,51 +778,52 @@ export class DriveEngine {
     this.spawn();
   }
 
-  /** The gantry, built once (1 m wide; scaled to each road). Its frame faces up the road (+x). */
+  /** The start arch, built once; its half circles are sized to each road in placeGantry. Its frame
+   * faces up the road (+x). (2026-11-22: "a real big semicircle with fires, not a bad square
+   * rectangle door".) */
+  private archMetal = new THREE.MeshStandardMaterial({
+    color: 0x17141c,
+    metalness: 0.7,
+    roughness: 0.4,
+  });
+  private archParts: THREE.Mesh[] = [];
   private buildGantry() {
-    const metal = new THREE.MeshStandardMaterial({
-      color: 0x17141c,
-      metalness: 0.7,
-      roughness: 0.4,
-    });
-    const post = new THREE.BoxGeometry(0.6, 8.4, 0.6);
-    for (const side of [-1, 1]) {
-      const m = new THREE.Mesh(post, metal);
-      m.name = side < 0 ? 'post-right' : 'post-left';
-      m.position.set(0, 4.2, 0);
-      this.gantry.add(m);
-    }
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.1, 1), metal);
-    bar.name = 'bar';
-    bar.position.set(0, 8.2, 0);
-    this.gantry.add(bar);
-    // Lines of light along the bar's top and bottom and up the posts' faces, so it reads at night.
-    const strip = new THREE.BoxGeometry(0.12, 0.12, 1);
-    for (const y of [7.1, 9.3]) {
-      const m = new THREE.Mesh(strip, this.gantryGlow);
-      m.name = 'strip';
-      m.position.set(-0.5, y, 0);
-      this.gantry.add(m);
-    }
-    const rail = new THREE.BoxGeometry(0.12, 8.4, 0.12);
-    for (const side of [-1, 1]) {
-      const m = new THREE.Mesh(rail, this.gantryGlow);
-      m.name = side < 0 ? 'rail-right' : 'rail-left';
-      m.position.set(-0.32, 4.2, 0);
-      this.gantry.add(m);
-    }
     const disc = new THREE.CircleGeometry(0.9, 32);
     for (let i = 0; i < 3; i++) {
       const mat = new THREE.MeshBasicMaterial({ color: LAMP_OFF, toneMapped: false });
       const lamp = new THREE.Mesh(disc, mat);
-      // Facing back down the road, toward the grid.
+      // Facing back down the road, toward the grid, hung under the crown.
       lamp.rotation.y = -Math.PI / 2;
-      lamp.position.set(-0.47, 8.2, (i - 1) * 2.6);
+      lamp.name = 'lamp';
+      lamp.userData.i = i;
       this.lamps.push(mat);
       this.gantry.add(lamp);
     }
     this.gantry.add(this.stage.points);
     this.gantry.visible = false;
+  }
+
+  /** The arch's half circles of metal and light, at radius r over the road. */
+  private shapeArch(r: number) {
+    for (const m of this.archParts) {
+      this.gantry.remove(m);
+      m.geometry.dispose();
+    }
+    this.archParts = [];
+    const ring = (radius: number, tube: number, mat: THREE.Material, x: number) => {
+      const m = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 10, 96, Math.PI), mat);
+      // In the plane across the road: its feet on both edges, its crown overhead.
+      m.rotation.y = Math.PI / 2;
+      m.position.x = x;
+      this.gantry.add(m);
+      this.archParts.push(m);
+    };
+    ring(r, 0.55, this.archMetal, 0);
+    ring(r - 0.62, 0.1, this.gantryGlow, -0.2);
+    ring(r + 0.62, 0.1, this.gantryGlow, -0.2);
+    ring(r + 2.2, 0.06, this.gantryGlow, 0.6);
+    for (const c of this.gantry.children)
+      if (c.name === 'lamp') c.position.set(-0.6, r - 2.4, ((c.userData.i as number) - 1) * 2.6);
   }
 
   /** Spans the gantry across this road, just ahead of the grid. */
@@ -832,11 +833,7 @@ export class DriveEngine {
     if (!tw) return;
     const half = tw.track.def.half(Math.max(0, this.cfg.startS + 6));
     const w = half + 1.4;
-    for (const c of this.gantry.children) {
-      if (c.name === 'post-left' || c.name === 'rail-left') c.position.z = -w;
-      if (c.name === 'post-right' || c.name === 'rail-right') c.position.z = w;
-      if (c.name === 'bar' || c.name === 'strip') c.scale.z = 2 * w;
-    }
+    this.shapeArch(w);
     this.gantryGlow.color.set(trackInfo(this.cfg.id).colour).multiplyScalar(1.6);
     // Each burner on the road's edge where it stands, in the gantry's frame (the road may curve).
     const gs = this.cfg.startS + 6;
@@ -844,6 +841,7 @@ export class DriveEngine {
     const ge = heightAt(tw.track, gs, 0);
     this.stage.place(
       this.stage.jets.map((j) => {
+        if (j.arch !== undefined) return archPoint(j.arch, j.side, w + 0.7);
         const s = Math.max(0, gs + j.along);
         const p = pointAt(tw.track, s, j.side * (tw.track.def.half(s) + STAGE_OUT));
         const dx = p.x - g.x;
