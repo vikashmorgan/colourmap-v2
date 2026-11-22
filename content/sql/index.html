@@ -873,7 +873,7 @@ function cardHtml(s, c) {
     ${MORE[`${s.n}|${c.id}`] ? (m => `<details class="xmore"><summary>Explain more + example</summary><div class="xmore-body"><p>${/<b>/.test(m.say) ? m.say : kwText(m.say)}</p><pre>${sqlHtml(m.sql)}</pre>${m.html}</div></details>`)(MORE[`${s.n}|${c.id}`]) : ''}
     <div class="notes"></div>
     <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>${ON_BRAIN && SLIDE_OF[`${s.n}|${c.id}`] ? `<a class="slide-link" href="/api/coding/slides/SQL${s.n}.pdf#page=${SLIDE_OF[`${s.n}|${c.id}`]}" target="_blank" rel="noopener">Slide ${SLIDE_OF[`${s.n}|${c.id}`]} ›</a>` : ''}
-      <span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Confused as fuck']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span></div>
+      <span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Super confused']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${m === k}"></button>`).join('')}</span></div>
   </article>`;
 }
 function cell(v) { return v === null ? '<span class="null">NULL</span>' : esc(typeof v === 'number' && !Number.isInteger(v) ? String(v) : v); }
@@ -1531,7 +1531,7 @@ function caseHtml(c) {
         }).join('')}</div></details>
         <div class="notes"></div>
         <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>
-          <span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Confused as fuck']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${mk === k}"></button>`).join('')}</span></div>
+          <span class="marks" role="group" aria-label="How well do you know this?">${[['got', 'Got it'], ['mid', 'Confused'], ['late', 'Super confused']].map(([k, l]) => `<button type="button" class="mark m-${k}" data-mark="${k}" data-label="${l}" aria-label="${l}" aria-pressed="${mk === k}"></button>`).join('')}</span></div>
       </article>`;
     }).join('')}</div>`;
 }
