@@ -317,3 +317,39 @@ describe('the jump over the void (2026-11-22)', () => {
     expect(validateTrackData(DOCS.gold)).toEqual([]);
   });
 });
+
+describe('the blue fire tunnel (2026-11-22)', () => {
+  const def = compileTrack(DOCS.gold);
+  const fire = (DOCS.gold.features ?? []).find((f) => f.kind === 'fire') as {
+    at: number;
+    length: number;
+    every: number;
+  };
+
+  it('stands over its stretch of road every lap, nowhere else, and changes no road', () => {
+    for (const k of [0, 1]) {
+      const a = fire.at + k * fire.every;
+      expect(def.fire?.(a - 1)).toBe(false);
+      expect(def.fire?.(a + 1)).toBe(true);
+      expect(def.fire?.(a + fire.length - 1)).toBe(true);
+      expect(def.fire?.(a + fire.length + 1)).toBe(false);
+    }
+    expect(def.gap?.(fire.at + 10)).toBe(false);
+    const plain = compileTrack({
+      ...DOCS.gold,
+      features: (DOCS.gold.features ?? []).filter((f) => f.kind !== 'fire'),
+    });
+    for (let s = fire.at - 50; s < fire.at + fire.length + 50; s += 7) {
+      expect(def.curv(s)).toBe(plain.curv(s));
+      expect(def.elev(s)).toBe(plain.elev(s));
+    }
+  });
+
+  it('is checked like the rest', () => {
+    const bad = {
+      ...DOCS.gold,
+      features: [{ kind: 'fire', at: 100, length: 0 }],
+    } as unknown as TrackData;
+    expect(validateTrackData(bad).join(' ')).toContain('fire tunnel');
+  });
+});

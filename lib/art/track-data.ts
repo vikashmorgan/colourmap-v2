@@ -32,6 +32,8 @@ export type Feature =
   | { kind: 'gate'; every: number }
   | { kind: 'start'; at: number }
   | { kind: 'jump'; at: number; length: number; every?: number }
+  /** A tunnel of blue gas fire shooting outwards over the road (2026-11-22). */
+  | { kind: 'fire'; at: number; length: number; every?: number }
   | { kind: 'wallride'; from: number; to: number; side: 'left' | 'right' };
 
 export interface TrackData {
@@ -82,7 +84,7 @@ function keysAt(keys: readonly (readonly [number, number])[], s: number): number
  */
 export const JUMP = { RAMP: 140, RAMP_H: 12, LAND: 220, LAND_DROP: 8, STRAIGHT: 200, EASE: 160 };
 
-/** Where s sits against a jump: metres past its gap's start (negative before it), or null if far. */
+/** Where s sits against a jump (or a fire tunnel): metres past its gap's start (negative before it), or null if far. */
 function jumpLocal(j: { at: number; length: number; every?: number }, s: number): number {
   if (!j.every) return s - j.at;
   const p = (((s - j.at) % j.every) + j.every) % j.every;
@@ -124,6 +126,12 @@ export function compileTrack(d: TrackData): TrackDef {
   const rk = d.rise.keys;
   const every = d.rise.every;
   const jumps = (d.features ?? []).filter((f) => f.kind === 'jump');
+  const fires = (d.features ?? []).filter((f) => f.kind === 'fire');
+  const within = (list: typeof jumps | typeof fires, s: number) =>
+    list.some((j) => {
+      const x = jumpLocal(j, s);
+      return x >= 0 && x < j.length;
+    });
   const walls =
     d.walls ??
     (d.barrier !== undefined
@@ -160,13 +168,10 @@ export function compileTrack(d: TrackData): TrackDef {
     walls: () => walls,
     ...(jumps.length
       ? {
-          gap: (s: number) =>
-            jumps.some((j) => {
-              const x = jumpLocal(j, s);
-              return x >= 0 && x < j.length;
-            }),
+          gap: (s: number) => within(jumps, s),
         }
       : {}),
+    ...(fires.length ? { fire: (s: number) => within(fires, s) } : {}),
   };
 }
 
@@ -236,6 +241,8 @@ export function validateTrackData(d: unknown, span = 6000): string[] {
       (!num(f.at) || !num(f.length) || f.length <= 0 || f.length > LIMITS.maxJump)
     )
       out.push(`a jump needs at and a length up to ${LIMITS.maxJump} m`);
+    if (f.kind === 'fire' && (!num(f.at) || !num(f.length) || f.length <= 0 || f.length > 1000))
+      out.push('a fire tunnel needs at and a length up to 1000 m');
     if (f.kind === 'gate' && (!num(f.every) || f.every < 200))
       out.push('gates must be at least 200 m apart');
   }

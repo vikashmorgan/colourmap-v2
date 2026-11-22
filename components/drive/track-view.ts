@@ -353,6 +353,59 @@ const SKY_BANDS: V3[] = [
 ];
 const SKY_DOOR: V3 = [1.6, 1.05, 0.3];
 
+/** A fire tunnel: a ring of burners every RING m, BURNERS round each arch, FLAMES particles a
+ * burner, each flame LONG m out from its nozzle over 1 / RATE s. */
+export const FIRE = { RING: 9, BURNERS: 13, FLAMES: 18, LONG: 8, RATE: 1.3 };
+
+/** Blue gas fire (2026-11-22: "tunnels of blue gas fire shooting outwards"): each particle runs
+ * out from its burner and back to the nozzle on a loop, white-blue at the nozzle, then deep blue,
+ * violet as it thins. The jets roar steadily; nothing strobes. */
+function makeFire(uTime: THREE.IUniform): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTime,
+      uScale: { value: 900 },
+      uLong: { value: FIRE.LONG },
+      uRate: { value: FIRE.RATE },
+    },
+    vertexShader: `
+      attribute vec3 aDir;
+      attribute float aPhase;
+      uniform float uTime;
+      uniform float uScale;
+      uniform float uLong;
+      uniform float uRate;
+      varying float vK;
+      void main() {
+        float k = fract(uTime * uRate + aPhase);
+        vK = k;
+        // Out along the jet, spreading as it goes and lifting a little, as hot gas does.
+        vec3 side = normalize(cross(aDir, vec3(0.0, 1.0, 0.0)) + vec3(1e-4));
+        float wob = sin(aPhase * 91.0 + uTime * 5.0) * 0.5 * k;
+        vec3 p = position + aDir * (k * uLong * (0.8 + 0.4 * fract(aPhase * 17.0)))
+          + side * wob + vec3(0.0, 0.8 * k * k, 0.0);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_PointSize = clamp((1.1 + 3.2 * k) * uScale / max(-mv.z, 0.5), 1.0, 64.0);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      varying float vK;
+      void main() {
+        float r = length(gl_PointCoord - 0.5);
+        float a = smoothstep(0.5, 0.0, r) * pow(1.0 - vK, 1.4);
+        vec3 core = vec3(0.85, 0.95, 1.6);
+        vec3 blue = vec3(0.12, 0.38, 1.7);
+        vec3 violet = vec3(0.45, 0.15, 1.1);
+        vec3 c = vK < 0.25 ? mix(core, blue, vK / 0.25) : mix(blue, violet, (vK - 0.25) / 0.75);
+        gl_FragColor = vec4(c * a, a);
+      }`,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+  });
+}
+
 /** The Golden Track's lap (m): its portal stands at the end of every one. */
 export const GOLD_LAP = 6000;
 /** The words over the Golden Track's portal (2026-11-22: "a kind of portal dome arch with stay
@@ -483,6 +536,8 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     uFogDen: { value: 0 },
     uSun: { value: new THREE.Vector3(0.3, 0.9, 0.2).normalize() },
   };
+  const fireMat = def.fire ? makeFire(shared.uTime) : null;
+  if (fireMat) fireMat.userData.shared = true;
   const facade = makeFacade(false, shared);
   const facadeMirror = makeFacade(true, shared);
   const neon = makeNeon(false, shared);
@@ -794,6 +849,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
 
     // The Golden Track has no buildings: only its gold dots.
     if (theme === 'gold') goldDots(s0, s1, g);
+    if (fireMat) fireTunnel(s0, s1, g);
     else if (theme) furnish(theme, s0, s1, ax, ay, g, solid);
     if (!solid.empty) g.add(new THREE.Mesh(solid.geometry(), solidMat));
     group.add(g);
@@ -825,6 +881,64 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
    * standing beside the road; and constellations scattered over the dark ground either side.
    * All on the shared dot material, so the streams run ahead of you as in Sky Canyon.
    */
+  /** The fire tunnels in this stretch: arches of burners over the road, each jet shooting its
+   * blue flame straight outwards, away from the road, so you race through a ring of fire. */
+  function fireTunnel(s0: number, s1: number, g: THREE.Group) {
+    if (!fireMat || !def.fire) return;
+    const a = frameAt(track, s0);
+    const pos: number[] = [];
+    const dir: number[] = [];
+    const ph: number[] = [];
+    const nozzle = new Builder();
+    const steel = lin(0.12, 0.13, 0.16);
+    for (let s = Math.ceil(s0 / FIRE.RING) * FIRE.RING; s < s1; s += FIRE.RING) {
+      if (!def.fire(s) || gapAt(s)) continue;
+      const f = frameAt(track, s);
+      const R = def.half(s) + 3;
+      const e = hAt(s, 0);
+      const nx = -Math.sin(f.h);
+      const ny = Math.cos(f.h);
+      for (let b = 0; b < FIRE.BURNERS; b++) {
+        const t = (Math.PI * b) / (FIRE.BURNERS - 1);
+        const c = Math.cos(t);
+        const sn = Math.sin(t);
+        // The nozzle on the arch, its jet pointing out from the arch's centre.
+        const x = f.x + nx * c * R - a.x;
+        const y = f.y + ny * c * R - a.y;
+        const z = e + sn * R * 0.85;
+        const d: V3 = [nx * c, sn, -(ny * c)];
+        for (let k = 0; k < FIRE.FLAMES; k++) {
+          pos.push(x, z, -y);
+          dir.push(...d);
+          ph.push((k + 0.37 * b + 0.61 * (s / FIRE.RING)) / FIRE.FLAMES);
+        }
+        // A small dark burner head, so the flame comes out of something.
+        const p0: V3 = [x - d[0] * 0.4, z - d[1] * 0.4, -y - d[2] * 0.4];
+        const w = 0.35;
+        const tx = Math.cos(f.h) * w;
+        const ty = Math.sin(f.h) * w;
+        nozzle.quad(
+          [p0[0] - tx, p0[1] - w, p0[2] + ty],
+          [p0[0] + tx, p0[1] - w, p0[2] - ty],
+          [p0[0] + tx, p0[1] + w, p0[2] - ty],
+          [p0[0] - tx, p0[1] + w, p0[2] + ty],
+          [d[0], d[1], d[2]],
+          steel,
+        );
+      }
+    }
+    if (!pos.length) return;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('aDir', new THREE.Float32BufferAttribute(dir, 3));
+    geo.setAttribute('aPhase', new THREE.Float32BufferAttribute(ph, 1));
+    const pts = new THREE.Points(geo, fireMat);
+    pts.frustumCulled = false;
+    pts.renderOrder = 6;
+    g.add(pts);
+    if (!nozzle.empty) g.add(new THREE.Mesh(nozzle.geometry(), solidMat));
+  }
+
   function goldDots(s0: number, s1: number, g: THREE.Group) {
     if (!dotMat) return;
     const pos: number[] = [];
@@ -1642,6 +1756,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         lineMat,
       ])
         m.dispose();
+      fireMat?.dispose();
     },
   };
 }
