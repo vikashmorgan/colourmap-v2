@@ -13,6 +13,7 @@
   "features": [
     { "kind": "gate", "every": 1000 },
     { "kind": "straight", "from": -200, "to": 140 },
+    { "kind": "deck", "from": 1030, "to": 1440, "side": "left", "every": 10000 },
     { "kind": "jump", "at": 1900, "length": 140, "every": 10000 },
     { "kind": "fire", "at": 800, "length": 140, "every": 10000, "style": "roar" },
     { "kind": "twist", "at": 2700, "length": 320, "every": 10000, "bypass": true },

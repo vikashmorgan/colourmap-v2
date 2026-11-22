@@ -537,6 +537,134 @@ function motorbike(hull: Hull, fire: Fire, env: THREE.Texture | null): Parts {
   };
 }
 
+/* ── Light cycle ──────────────────────────────────────────── */
+
+/**
+ * The light cycle (2026-11-22: "make tron bikes"): an original take on the neon racing bike. A
+ * long low shell in the paint swept over two big wheels, the wheels dark discs ringed in light, a
+ * line of light along its spine and round its nose, and a rider lying flat along it in a dark suit
+ * traced with light. Every light takes the hull's own colour, as the Space Racer's do.
+ */
+function lightCycle(hull: Hull, fire: Fire, env: THREE.Texture | null): Parts {
+  const group = new THREE.Group();
+  const body = new THREE.Group();
+  group.add(body);
+  const paint = hullMaterial(hull, env);
+  const dark = new THREE.MeshStandardMaterial({ color: 0x07070a, roughness: 0.35, metalness: 0.8 });
+  const light = new THREE.MeshBasicMaterial({ color: racerLight(hull), toneMapped: false });
+  const R = 0.42;
+
+  // The wheels: dark discs, a tyre, a ring of light round the rim and a smaller one at the hub.
+  const wheels: THREE.Object3D[] = [];
+  for (const z of [0.45, 2.15]) {
+    const w = new THREE.Group();
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.86, R * 0.86, 0.18, 32), dark);
+    disc.rotation.z = Math.PI / 2;
+    w.add(disc);
+    const tyre = new THREE.Mesh(new THREE.TorusGeometry(R * 0.9, R * 0.12, 10, 40), tyreMat());
+    tyre.rotation.y = Math.PI / 2;
+    w.add(tyre);
+    for (const side of [-1, 1]) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(R * 0.72, 0.018, 6, 40), light);
+      ring.rotation.y = Math.PI / 2;
+      ring.position.x = side * 0.095;
+      w.add(ring);
+      const hub = new THREE.Mesh(new THREE.TorusGeometry(R * 0.25, 0.014, 6, 24), light);
+      hub.rotation.y = Math.PI / 2;
+      hub.position.x = side * 0.095;
+      w.add(hub);
+      // A notch in the ring, so you see the wheels turn.
+      const tick = new THREE.Mesh(new THREE.BoxGeometry(0.02, R * 0.4, 0.03), light);
+      tick.position.set(side * 0.096, R * 0.48, 0);
+      w.add(tick);
+    }
+    w.position.set(0, R, z);
+    body.add(w);
+    wheels.push(w);
+  }
+
+  // The shell: one long low capsule over both wheels, a dark skirt beneath it.
+  const shell = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 1.9, 8, 20), paint);
+  shell.rotation.x = Math.PI / 2;
+  shell.scale.set(1, 1, 0.9);
+  shell.position.set(0, 0.72, 1.3);
+  body.add(shell);
+  const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.16, 1.35), dark);
+  skirt.position.set(0, 0.5, 1.3);
+  body.add(skirt);
+  // The nose dips toward the road, the tail rises over the rear wheel.
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), paint);
+  nose.scale.set(0.22, 0.2, 0.42);
+  nose.position.set(0, 0.6, 2.45);
+  body.add(nose);
+  const tail = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), paint);
+  tail.scale.set(0.22, 0.26, 0.45);
+  tail.position.set(0, 0.86, 0.3);
+  body.add(tail);
+  // Lines of light: along the spine both sides, and round the nose.
+  for (const side of [-1, 1]) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.025, 2.5), light);
+    line.position.set(side * 0.235, 0.72, 1.35);
+    body.add(line);
+    const low = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.02, 1.2), light);
+    low.position.set(side * 0.16, 0.44, 1.3);
+    body.add(low);
+  }
+  const brow = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.015, 6, 24, Math.PI), light);
+  brow.position.set(0, 0.62, 2.82);
+  body.add(brow);
+  const tailBar = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.03, 0.02), light);
+  tailBar.position.set(0, 0.9, -0.14);
+  body.add(tailBar);
+
+  // The rider, flat along the shell: a dark suit traced with light, a smooth helmet.
+  const suit = new THREE.MeshStandardMaterial({ color: 0x0c0c10, roughness: 0.45, metalness: 0.3 });
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.55, 4, 10), suit);
+  torso.rotation.x = Math.PI / 2 - 0.12;
+  torso.position.set(0, 1.05, 1.25);
+  body.add(torso);
+  const spineLight = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.7), light);
+  spineLight.position.set(0, 1.2, 1.22);
+  spineLight.rotation.x = -0.12;
+  body.add(spineLight);
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.15, 20, 14), suit);
+  helmet.scale.set(1, 0.95, 1.2);
+  helmet.position.set(0, 1.12, 1.78);
+  body.add(helmet);
+  const visorLine = new THREE.Mesh(new THREE.TorusGeometry(0.152, 0.01, 6, 24, Math.PI), light);
+  visorLine.rotation.set(Math.PI / 2, 0, 0);
+  visorLine.position.set(0, 1.12, 1.8);
+  body.add(visorLine);
+  for (const side of [-1, 1]) {
+    const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.6, 4, 8), suit);
+    leg.rotation.x = Math.PI / 2 + 0.15;
+    leg.position.set(side * 0.16, 0.92, 0.6);
+    body.add(leg);
+    const legLight = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.55), light);
+    legLight.position.set(side * 0.23, 0.92, 0.6);
+    body.add(legLight);
+    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.45, 4, 8), suit);
+    arm.rotation.x = Math.PI / 2 - 0.5;
+    arm.position.set(side * 0.2, 0.95, 1.9);
+    body.add(arm);
+  }
+
+  // The fire comes out under the tail.
+  const flames = exhaustFlames(body, fire, [[0, 0.62, -0.05]], 0.08);
+
+  return {
+    group,
+    body,
+    paint,
+    wheels,
+    wheelR: R,
+    flames,
+    feet: [new THREE.Vector3(-0.06, 0, 0.45), new THREE.Vector3(0.06, 0, 0.45)],
+    lean: 4,
+    lights: { mats: [light], colour: racerLight },
+  };
+}
+
 /** One of the extra bodies, as a VehicleView like the others. */
 export function buildBody(
   id: Exclude<BodyId, 'wedge'>,
@@ -549,15 +677,17 @@ export function buildBody(
       ? classicGT(hull, fire, env)
       : id === 'future' || id === 'racer'
         ? futureGT(hull, fire, env, id === 'racer')
-        : motorbike(hull, fire, env);
+        : id === 'cycle'
+          ? lightCycle(hull, fire, env)
+          : motorbike(hull, fire, env);
   const shadow = groundBlob(
     0x000000,
-    id === 'bike' ? 0.9 : 2.4,
-    id === 'bike' ? 2.6 : 5.4,
+    id === 'bike' || id === 'cycle' ? 0.9 : 2.4,
+    id === 'bike' ? 2.6 : id === 'cycle' ? 3.2 : 5.4,
     false,
     0.5,
   );
-  shadow.position.set(0, 0.02, id === 'bike' ? 1.1 : 2.2);
+  shadow.position.set(0, 0.02, id === 'bike' || id === 'cycle' ? 1.2 : 2.2);
   p.group.add(shadow);
   let spin = 0;
   return {

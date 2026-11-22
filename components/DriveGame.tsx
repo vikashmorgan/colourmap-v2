@@ -726,6 +726,15 @@ export default function DriveGame() {
             design.flames ? 'on' : 'off',
             (id) => changeDesign({ ...design, flames: id === 'on' }),
           )}
+          {row(
+            'Light trail',
+            [
+              { id: 'on', name: 'On' },
+              { id: 'off', name: 'Off' },
+            ],
+            design.trail ? 'on' : 'off',
+            (id) => changeDesign({ ...design, trail: id === 'on' }),
+          )}
         </div>
       )}
     </div>

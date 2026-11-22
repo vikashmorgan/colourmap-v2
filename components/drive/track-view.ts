@@ -34,8 +34,10 @@ import {
   canyonDepth,
   canyonWallHeight,
   canyonWallU,
+  DECK,
   frameAt,
   heightAt,
+  onDeck,
   PIPE_TOP,
   pipeAt,
   pointAt,
@@ -679,6 +681,9 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       cfg.id === 'canyon' || cfg.id === 'sky' || def.curl
         ? [0.6, 2, 4, 6, 8, 10, 11.5, 12.8, 13.9, 14.7, 15.4, 16.2]
         : [0.6, 3, 8, 16];
+    // A high deck needs the ground drawn out past it: its top, then the stands falling away.
+    if (def.deck)
+      outs.push(18, 20, 23, 26, 28.5, DECK.OUT - 0.3, DECK.OUT + 0.3, DECK.OUT + 6, DECK.OUT + 14);
     return [...outs.map((o) => -half - o).reverse(), ...us, ...outs.map((o) => half + o)];
   }
 
@@ -786,7 +791,12 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         if (bridged && Math.abs(u) > half + 0.7) continue;
         const onRoad = Math.abs(u) <= half;
         row.push(twisting && onRoad ? L(at, u, -0.4) : L(at, u));
-        crow.push(groundColour(cfg, at, u, twisting ? -1 : half, snowLevel));
+        crow.push(
+          // Up on a high deck the ground is road again.
+          def.deck && onDeck(track, at, u)
+            ? groundColour(cfg, at, 0, half, snowLevel)
+            : groundColour(cfg, at, u, twisting ? -1 : half, snowLevel),
+        );
         nrow.push(normalAt(at, u));
       }
       pts.push(row);
@@ -1088,6 +1098,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     // The Golden Track has no buildings: only its gold dots.
     if (theme === 'gold') goldDots(s0, s1, g);
     if (fireMat) fireTunnel(s0, s1, g);
+    if (fireMat && def.deck) deckFire(s0, s1, g);
     else if (theme) furnish(theme, s0, s1, ax, ay, g, solid);
     if (!solid.empty) g.add(new THREE.Mesh(solid.geometry(), solidMat));
     group.add(g);
@@ -1121,6 +1132,48 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
    */
   /** The fire tunnels in this stretch: arches of burners over the road, each jet shooting its
    * blue flame straight outwards, away from the road, so you race through a ring of fire. */
+  /** Fire both sides of a high deck: burners on its inner lip and its outer edge every 12 m,
+   * shooting straight up, roaring as you pass (2026-11-22: "with fire on the sides"). */
+  function deckFire(s0: number, s1: number, g: THREE.Group) {
+    if (!fireMat || !def.deck) return;
+    const a = frameAt(track, s0);
+    const pos: number[] = [];
+    const dir: number[] = [];
+    const ph: number[] = [];
+    const at: number[] = [];
+    const sty: number[] = [];
+    const bf: number[] = [];
+    for (let s = Math.ceil(s0 / 12) * 12; s < s1; s += 12) {
+      const side = def.deck(s);
+      if (!side || !def.deck(s - 30) || !def.deck(s + 30)) continue;
+      const f = frameAt(track, s);
+      for (const out of [16, DECK.OUT - 0.8]) {
+        const p = pointAt(track, s, side * (f.half + out));
+        const z = f.e + DECK.H + 0.3;
+        for (let k = 0; k < FIRE.FLAMES; k++) {
+          pos.push(p.x - a.x, z, -(p.y - a.y));
+          dir.push((Math.random() - 0.5) * 0.15, 1, (Math.random() - 0.5) * 0.15);
+          ph.push((k + 0.37 * out + 0.61 * (s / 12)) / FIRE.FLAMES);
+          at.push(s);
+          sty.push(0);
+          bf.push(0);
+        }
+      }
+    }
+    if (!pos.length) return;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('aDir', new THREE.Float32BufferAttribute(dir, 3));
+    geo.setAttribute('aPhase', new THREE.Float32BufferAttribute(ph, 1));
+    geo.setAttribute('aS', new THREE.Float32BufferAttribute(at, 1));
+    geo.setAttribute('aStyle', new THREE.Float32BufferAttribute(sty, 1));
+    geo.setAttribute('aB', new THREE.Float32BufferAttribute(bf, 1));
+    const pts = new THREE.Points(geo, fireMat);
+    pts.frustumCulled = false;
+    pts.renderOrder = 6;
+    g.add(pts);
+  }
+
   function fireTunnel(s0: number, s1: number, g: THREE.Group) {
     if (!fireMat || !def.fire) return;
     const a = frameAt(track, s0);
@@ -1214,6 +1267,9 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         others.push({ s: so, x: p.x, y: p.y });
       }
     const clear = (s: number, u: number, r: number) => {
+      // Nothing stands on a high deck or its stands.
+      const ds = def.deck?.(Math.max(0, s - 40)) || def.deck?.(Math.max(0, s + 40)) || 0;
+      if (ds && Math.sign(u) === ds && Math.abs(u) < def.half(s) + DECK.OUT + 18 + r) return false;
       if (!others.length) return true;
       const p = pointAt(track, s, u);
       for (const o of others)
@@ -1250,6 +1306,36 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         const e = hAt(s, side * (half + 1));
         put(s, side * (half + 1), e + 0.5, golds[0], 0.8);
         if (Math.round(s / 2.5) % 2 === 0) put(s, side * (half + 1.6), e + 2.4, golds[1], 0.6);
+      }
+    }
+    // A high deck: its edges in gold, rows of light down the stands below its outer edge, and
+    // chevrons climbing the wall before it so you know there is a way up.
+    if (def.deck) {
+      for (let s = Math.ceil(s0 / 2.5) * 2.5; s < s1; s += 2.5) {
+        const side = def.deck(s);
+        if (!side) continue;
+        const f = frameAt(track, s);
+        const top = f.e + DECK.H;
+        put(s, side * (f.half + DECK.OUT - 0.3), top + 0.2, golds[0], 0.9);
+        put(s, side * (f.half + 15), top + 0.2, golds[0], 0.7);
+        if (s % 5 === 0)
+          for (let z = top - 3; z > (def.terrain ?? 0) + 0.5; z -= 3)
+            put(s, side * (f.half + DECK.OUT + 1 + (top - z) * 0.5), z, golds[1], 0.6);
+      }
+      for (let s = Math.ceil(s0 / 20) * 20; s < s1; s += 20) {
+        const side = def.deck(s + 80);
+        if (!side || def.deck(s)) continue;
+        const f = frameAt(track, s);
+        for (let o = 1; o < 14; o += 0.8) {
+          const lift = Math.abs(o - 7) * 0.9;
+          put(
+            s - lift,
+            side * (f.half + o),
+            hAt(s - lift, side * (f.half + o)) + 0.25,
+            golds[2],
+            0.9,
+          );
+        }
       }
     }
     // The bypass lane's edges, in gold like the road's.
