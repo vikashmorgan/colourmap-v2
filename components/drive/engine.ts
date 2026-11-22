@@ -470,6 +470,8 @@ export class DriveEngine {
   /** The start gantry over the line on every road: two posts, a bar, three lamps. */
   private gantry = new THREE.Group();
   private lamps: THREE.MeshBasicMaterial[] = [];
+  /** The gantry's edges of light, in the track's colour. */
+  private gantryGlow = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
   private worlds = new Map<WorldId, TrackWorld>();
   private physics: World = FLAT;
   private trackWorld: TrackWorld | null = null;
@@ -750,6 +752,21 @@ export class DriveEngine {
     bar.name = 'bar';
     bar.position.set(0, 8.2, 0);
     this.gantry.add(bar);
+    // Lines of light along the bar's top and bottom and up the posts' faces, so it reads at night.
+    const strip = new THREE.BoxGeometry(0.12, 0.12, 1);
+    for (const y of [7.6, 8.8]) {
+      const m = new THREE.Mesh(strip, this.gantryGlow);
+      m.name = 'strip';
+      m.position.set(-0.5, y, 0);
+      this.gantry.add(m);
+    }
+    const rail = new THREE.BoxGeometry(0.12, 8.4, 0.12);
+    for (const side of [-1, 1]) {
+      const m = new THREE.Mesh(rail, this.gantryGlow);
+      m.name = side < 0 ? 'rail-right' : 'rail-left';
+      m.position.set(-0.32, 4.2, 0);
+      this.gantry.add(m);
+    }
     const disc = new THREE.CircleGeometry(0.55, 24);
     for (let i = 0; i < 3; i++) {
       const mat = new THREE.MeshBasicMaterial({ color: LAMP_OFF, toneMapped: false });
@@ -769,11 +786,13 @@ export class DriveEngine {
     this.gantry.visible = !!tw;
     if (!tw) return;
     const half = tw.track.def.half(Math.max(0, this.cfg.startS + 6));
+    const w = half + 1.4;
     for (const c of this.gantry.children) {
-      if (c.name === 'post-left') c.position.z = -(half + 1.4);
-      if (c.name === 'post-right') c.position.z = half + 1.4;
-      if (c.name === 'bar') c.scale.z = 2 * (half + 1.4);
+      if (c.name === 'post-left' || c.name === 'rail-left') c.position.z = -w;
+      if (c.name === 'post-right' || c.name === 'rail-right') c.position.z = w;
+      if (c.name === 'bar' || c.name === 'strip') c.scale.z = 2 * w;
     }
+    this.gantryGlow.color.set(trackInfo(this.cfg.id).colour).multiplyScalar(1.6);
   }
 
   private spawn() {
