@@ -11,7 +11,8 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { DriveEngine, type Hud } from '@/components/drive/engine';
+import { DriveEngine, type Hud, type IntroState } from '@/components/drive/engine';
+import RaceIntro from '@/components/drive/RaceIntro';
 import { FutureGauge, TimerGauge } from '@/components/drive/Speedometer';
 import TrackRing from '@/components/drive/TrackRing';
 import {
@@ -74,6 +75,10 @@ export default function DriveGame() {
   const [panel, setPanel] = useState(false);
   // The track ring (docs/specs/drive-menus.md): the first screen, and from the menu.
   const [ring, setRing] = useState(true);
+  // The race intro (flyover, grid, click to start, countdown), while it runs.
+  const [intro, setIntro] = useState<IntroState | null>(null);
+  const introRef = useRef(intro);
+  introRef.current = intro;
   const [hud, setHud] = useState<Hud | null>(null);
   const [hint, setHint] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -127,6 +132,7 @@ export default function DriveGame() {
         design: d,
         store: storage(),
         onHud: setHud,
+        onIntro: setIntro,
       });
     } catch {
       setFailed(true);
@@ -154,7 +160,16 @@ export default function DriveGame() {
     setRing(false);
     setPanel(false);
     setHint(true);
-    engineRef.current?.reset();
+    engineRef.current?.startIntro();
+  }, []);
+
+  /** A key or click during the intro: skip the flyover, or start the countdown. True if used. */
+  const introKey = useCallback(() => {
+    const p = introRef.current?.phase;
+    if (p === 'fly') engineRef.current?.skipIntro();
+    else if (p === 'grid' || p === 'ready') engineRef.current?.launch();
+    else return false;
+    return true;
   }, []);
 
   // The keys: the City game's (arrows or WASD, Space, Shift), 1–6 for the worlds, R to restart, Esc.
@@ -167,13 +182,16 @@ export default function DriveGame() {
         return;
       }
       if (e.target instanceof HTMLInputElement) return;
+      // During the intro any key moves it on; the driving keys are still held for the GO.
+      if (introKey() && !DRIVE_KEYS.includes(k)) return;
       const w = WORLDS.find((x) => x.key === k);
       if (w) {
         chooseWorld(w.id);
         return;
       }
       if (k === 'r') {
-        engineRef.current?.reset();
+        // A restart goes straight to the grid.
+        engineRef.current?.startIntro(true);
         return;
       }
       if (DRIVE_KEYS.includes(k)) {
@@ -202,7 +220,7 @@ export default function DriveGame() {
       window.removeEventListener('keyup', up);
       window.removeEventListener('blur', blur);
     };
-  }, [router, chooseWorld, pushControls]);
+  }, [router, chooseWorld, pushControls, introKey]);
 
   // Touch: hold the left or right of the screen to steer; any touch drives; two fingers boost.
   const onPointer = (e: React.PointerEvent) => {
@@ -385,7 +403,7 @@ export default function DriveGame() {
         </div>
       )}
 
-      {hint && !failed && !ring && (
+      {hint && !failed && !ring && !intro && (
         <div
           style={{
             position: 'absolute',
@@ -404,6 +422,8 @@ export default function DriveGame() {
             : '↑ drive · ← → steer · F handbrake: hold it and turn to drift · space boost · shift double · R restart'}
         </div>
       )}
+
+      {intro && !ring && !failed && <RaceIntro state={intro} world={world} onClick={introKey} />}
 
       {ring && !failed && (
         <TrackRing current={world} onPick={chooseWorld} onRace={race} onClose={race} />
