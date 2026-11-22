@@ -60,6 +60,8 @@ export interface TrackDef {
   fireStyle?(s: number): number;
   /** How far the road has rolled about its axis here (rad, 0 to 2π over a twist; 0 elsewhere). */
   twist?(s: number): number;
+  /** Where a twist is a normal looping (end over end), its start and length; null elsewhere. */
+  looping?(s: number): { from: number; length: number } | null;
   /** On a twist, the slope your line through it adds along the road (negative runs downhill:
    * faster). */
   surge?(s: number, u: number): number;
@@ -68,6 +70,8 @@ export interface TrackDef {
   surf?: number;
   /** Which side a high deck runs along the top of the curled wall here (1 left, -1 right, 0 none). */
   deck?(s: number): number;
+  /** Whether the deck here has the stronger fire on its sides. */
+  blaze?(s: number): boolean;
   /** Where a twist's bypass lane runs here (its centre's u, on the right), or null. */
   bypass?(s: number): number | null;
   /** The radius (m) of the curved wall past the edge on a banked bend's high side, at full bank. */
@@ -86,19 +90,28 @@ export interface TrackDef {
  * plain road's point. `roll` is how far the body is turned (positive leans the roof left, as
  * Vehicle.roll).
  */
-export function twistPose(
-  t: Track,
-  s: number,
-  u: number,
-  above: number,
-): { x: number; y: number; z: number; roll: number; th: number } {
+export interface TwistPose {
+  x: number;
+  y: number;
+  z: number;
+  /** Body lean (as Vehicle.roll) and nose pitch (as Vehicle.pitch) added by the twist. */
+  roll: number;
+  pitch: number;
+  th: number;
+  /** The road's up here, in world axes (z up). */
+  up: [number, number, number];
+}
+
+export function twistPose(t: Track, s: number, u: number, above: number): TwistPose {
   const th = t.def.twist?.(Math.max(0, s)) ?? 0;
   const f = frameAt(t, s);
   const surf = heightAt(t, s, u, true) - f.e;
   if (th === 0) {
     const p = pointAt(t, s, u);
-    return { x: p.x, y: p.y, z: f.e + surf + above, roll: 0, th };
+    return { x: p.x, y: p.y, z: f.e + surf + above, roll: 0, pitch: 0, th, up: [0, 0, 1] };
   }
+  const lp = t.def.looping?.(Math.max(0, s));
+  if (lp) return loopPose(t, s, u, surf + above, lp, f.e, th);
   const A = f.half;
   const c = Math.cos(th);
   const sn = Math.sin(th);
@@ -107,7 +120,83 @@ export function twistPose(
   const l = u * c - up * sn;
   const z = A + u * sn + up * c;
   const p = pointAt(t, s, l);
-  return { x: p.x, y: p.y, z: f.e + z, roll: -th, th };
+  // Its surface's up: the road's left, turned up by th.
+  const nu: [number, number, number] = [Math.sin(f.h) * sn, -Math.cos(f.h) * sn, c];
+  return { x: p.x, y: p.y, z: f.e + z, roll: -th, pitch: 0, th, up: nu };
+}
+
+/**
+ * A normal looping (2026-11-22): over its length the road turns a full circle end over end, of
+ * radius LOOP.R × length. Along the road it runs s + R sin ψ, up R (1 - cos ψ), with ψ easing from
+ * 0 to 2π, so it climbs, runs back over itself upside down at the top, and comes down where the
+ * straight carries on. It swings aside by up to W one way going up and the other coming down, so
+ * the two never meet where they cross.
+ */
+export const LOOP = { R: 1 / 7.5 };
+
+export function loopShape(x: number, length: number, half: number) {
+  const L = length;
+  const R = L * LOOP.R;
+  const ease = x * x * x * (x * (6 * x - 15) + 10);
+  const dEase = 30 * x * x * (1 - x) * (1 - x);
+  const psi = Math.PI * 2 * ease;
+  const dPsi = Math.PI * 2 * dEase;
+  const da = L + R * Math.cos(psi) * dPsi;
+  const dz = R * Math.sin(psi) * dPsi;
+  return {
+    a: L * x + R * Math.sin(psi),
+    z: R * (1 - Math.cos(psi)),
+    pitch: Math.atan2(dz, da),
+    side: loopSwing(L, half) * Math.sin(Math.PI * 2 * x),
+  };
+}
+
+const swings = new Map<string, number>();
+/** How far a looping swings aside: where its way up crosses its way down, a road's width apart. */
+function loopSwing(length: number, half: number): number {
+  const key = `${length}:${half}`;
+  const hit = swings.get(key);
+  if (hit !== undefined) return hit;
+  const R = length * LOOP.R;
+  let cross = 0.35;
+  for (let i = 1; i < 500; i++) {
+    const x = i / 1000;
+    const e = x * x * x * (x * (6 * x - 15) + 10);
+    if (length * (x - 0.5) + R * Math.sin(Math.PI * 2 * e) >= 0) {
+      cross = x;
+      break;
+    }
+  }
+  const w = (half + 3) / Math.max(0.3, Math.abs(Math.sin(Math.PI * 2 * cross)));
+  swings.set(key, w);
+  return w;
+}
+
+function loopPose(
+  t: Track,
+  s: number,
+  u: number,
+  above: number,
+  lp: { from: number; length: number },
+  e: number,
+  th: number,
+): TwistPose {
+  const half = t.def.half(Math.max(0, s));
+  const k = loopShape((s - lp.from) / lp.length, lp.length, half);
+  const na = -Math.sin(k.pitch);
+  const nz = Math.cos(k.pitch);
+  const along = lp.from + k.a + na * above;
+  const p = pointAt(t, along, u + k.side);
+  const h = frameAt(t, along).h;
+  return {
+    x: p.x,
+    y: p.y,
+    z: e + k.z + nz * above,
+    roll: 0,
+    pitch: k.pitch,
+    th,
+    up: [Math.cos(h) * na, Math.sin(h) * na, nz],
+  };
 }
 
 /** How far the void falls under a jump's gap (m): out of sight, never ground. */

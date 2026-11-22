@@ -15,6 +15,7 @@ import {
   gapAround,
   groundAt,
   heightAt,
+  loopShape,
   makeTrack,
   makeTrackWorld,
   NEON_HALF,
@@ -36,6 +37,8 @@ import {
   CROSS,
   CROSS_LENGTH,
   compileTrack,
+  DIVE_BACK,
+  diveRise,
   JUMP,
   type TrackData,
   trackOutline,
@@ -103,7 +106,11 @@ const WAVES_ONLY = (d: TrackData): TrackData => ({
   ...d,
   features: (d.features ?? []).filter(
     (f) =>
-      f.kind !== 'jump' && f.kind !== 'straight' && f.kind !== 'twist' && f.kind !== 'crossover',
+      f.kind !== 'jump' &&
+      f.kind !== 'straight' &&
+      f.kind !== 'twist' &&
+      f.kind !== 'crossover' &&
+      f.kind !== 'dive',
   ),
 });
 
@@ -467,7 +474,7 @@ describe('the crossover (2026-11-22)', () => {
     expect(Math.abs(h1 - h0)).toBeLessThan(1e-6);
     expect(def.bridge?.(at + CROSS.LEAD + 1600)).toBe(true);
     expect(def.bridge?.(at - 100)).toBe(false);
-    expect(def.lap).toBe(10000);
+    expect(def.lap).toBe(12000);
   });
 
   it('is driven flat out without losing the road', () => {
@@ -493,7 +500,7 @@ describe('the crossover (2026-11-22)', () => {
   });
 
   it('passes its own checks', () => {
-    expect(validateTrackData(DOCS.gold, 10000)).toEqual([]);
+    expect(validateTrackData(DOCS.gold, 12000)).toEqual([]);
   });
 });
 
@@ -501,13 +508,17 @@ describe('the big twist and the curled banks (2026-11-22)', () => {
   const def = compileTrack(DOCS.gold);
   const t = makeTrack(def);
 
-  it('rolls the other way, longer, and your line through it changes your speed', () => {
-    const big = (DOCS.gold.features ?? []).find((f) => f.kind === 'twist' && f.dir === -1) as {
-      at: number;
-      length: number;
-      surge: number;
-    };
-    expect(big.length).toBeGreaterThan(320);
+  it('can roll the other way, and your line through it changes your speed', () => {
+    // The Golden Track's second one became a normal looping (2026-11-22); a road can still have it.
+    const big = {
+      kind: 'twist',
+      at: 4100,
+      length: 560,
+      every: 10000,
+      dir: -1,
+      surge: 0.14,
+    } as const;
+    const def = compileTrack({ ...DOCS.gold, features: [big] } as unknown as TrackData);
     const mid = big.at + big.length / 2;
     expect(def.twist?.(mid)).toBeCloseTo(-Math.PI, 5);
     // Rolling the other way, the fast side swaps too: the right runs downhill, the left uphill.
@@ -519,7 +530,7 @@ describe('the big twist and the curled banks (2026-11-22)', () => {
   it('curls a wall up past the golden lines on a banked bend’s high side, never the low side', () => {
     let s = 0;
     let best = 0;
-    for (let q = 200; q < 10000; q += 10) {
+    for (let q = 200; q < 12000; q += 10) {
       const b = Math.abs(frameAt(t, q).bank);
       if (b > best && !def.twist?.(q)) {
         best = b;
@@ -592,14 +603,14 @@ describe('the secret high road (2026-11-22)', () => {
   });
 
   it('passes its own checks', () => {
-    expect(validateTrackData(DOCS.gold, 10000)).toEqual([]);
+    expect(validateTrackData(DOCS.gold, 12000)).toEqual([]);
   });
 });
 
 describe('surf: fly off the bend, pulled back (2026-11-22)', () => {
   const def = compileTrack(DOCS.gold);
   const t = makeTrack(def);
-  const s = 5200; // a long right-hand bend at full bank, its high side on the right
+  const s = 11760; // a right-hand bend at full bank, its high side on the right
 
   it('cuts the curled wall to a kicker: past its lip, no ground to catch you', () => {
     const f = frameAt(t, s);
@@ -658,5 +669,126 @@ describe('surf: fly off the bend, pulled back (2026-11-22)', () => {
     expect(rolled).toBeGreaterThan(0.9); // the surf's lean
     expect(Math.abs(q.u)).toBeLessThan(frameAt(w.track, q.s).half + 1);
     expect(v.air).toBe(false);
+  });
+});
+
+describe('the normal looping (2026-11-22)', () => {
+  const def = compileTrack(DOCS.gold);
+  const t = makeTrack(def);
+  const lp = (DOCS.gold.features ?? []).find(
+    (f) => f.kind === 'twist' && (f as { loop?: boolean }).loop,
+  ) as { at: number; length: number };
+
+  it('is the second one, and the first still rolls sideways', () => {
+    const first = (DOCS.gold.features ?? []).find((f) => f.kind === 'twist') as { at: number };
+    expect(first.at).toBeLessThan(lp.at);
+    expect(def.looping?.(first.at + 100)).toBeNull();
+    expect(def.looping?.(lp.at + 100)?.from).toBeCloseTo(lp.at, 6);
+  });
+
+  it('goes over end over end: upside down at the top, back on the straight at its end', () => {
+    const mid = lp.at + lp.length / 2;
+    const f = frameAt(t, mid);
+    const top = twistPose(t, mid, 0, 0);
+    expect(top.z - f.e).toBeGreaterThan(100);
+    expect(top.roll).toBe(0);
+    expect(Math.abs(top.pitch)).toBeCloseTo(Math.PI, 6);
+    expect(top.up[2]).toBeCloseTo(-1, 6);
+    // Past it, the plain road where the straight carries on.
+    const out = twistPose(t, lp.at + lp.length + 5, 0, 0);
+    expect(out.pitch).toBe(0);
+    expect(out.up).toEqual([0, 0, 1]);
+    // Its pose moves smoothly: no jump between neighbouring metres anywhere through it.
+    let prev = twistPose(t, lp.at - 2, 0, 0);
+    for (let s = lp.at - 1; s < lp.at + lp.length + 2; s += 1) {
+      const p = twistPose(t, s, 0, 0);
+      expect(Math.hypot(p.x - prev.x, p.y - prev.y, p.z - prev.z)).toBeLessThan(3);
+      prev = p;
+    }
+  });
+
+  it('never meets itself where the way up crosses the way down', () => {
+    const half = def.half(lp.at);
+    // (Near the top the two halves are one and the same road.)
+    for (let i = 1; i < 440; i++) {
+      const a = loopShape(i / 1000, lp.length, half);
+      const b = loopShape(1 - i / 1000, lp.length, half);
+      if (Math.abs(a.a - b.a) < 4 && Math.abs(a.z - b.z) < 6)
+        expect(Math.abs(a.side - b.side)).toBeGreaterThan(2 * half);
+    }
+  });
+
+  it('has no straight through its middle: the bypass is the way round', () => {
+    expect(def.bypass?.(lp.at + lp.length / 2)).not.toBeNull();
+    expect(def.surge?.(lp.at + lp.length / 2, 10)).toBe(0);
+  });
+});
+
+describe('the blazing deck (2026-11-22)', () => {
+  const def = compileTrack(DOCS.gold);
+  const decks = (DOCS.gold.features ?? []).filter((f) => f.kind === 'deck') as {
+    from: number;
+    to: number;
+    blaze?: boolean;
+  }[];
+
+  it('blazes on the second deck only, high on its bend', () => {
+    const [plain, hot] = decks;
+    expect(hot.blaze).toBe(true);
+    expect(def.blaze?.((plain.from + plain.to) / 2)).toBe(false);
+    expect(def.blaze?.((hot.from + hot.to) / 2)).toBe(true);
+    expect(def.deck?.((hot.from + hot.to) / 2)).toBe(1);
+    const t = makeTrack(def);
+    expect(frameAt(t, (hot.from + hot.to) / 2).bank).toBeLessThan(-0.5);
+  });
+});
+
+describe('the dive after the superloop (2026-11-22)', () => {
+  const def = compileTrack(DOCS.gold);
+  const feats = DOCS.gold.features ?? [];
+  const dv = feats.find((f) => f.kind === 'dive') as {
+    at: number;
+    length: number;
+    depth: number;
+    hold: number;
+  };
+  const loop = feats.find((f) => f.kind === 'twist' && (f as { loop?: boolean }).loop) as {
+    at: number;
+    length: number;
+  };
+
+  it('comes right after the superloop: straight, down, half back up, then the jump', () => {
+    expect(dv.at).toBeGreaterThan(loop.at + loop.length);
+    expect(dv.at - (loop.at + loop.length)).toBeLessThan(200);
+    for (let s = dv.at; s < dv.at + dv.length; s += 10) expect(Math.abs(def.curv(s))).toBe(0);
+    // Downhill all the way to its bottom.
+    for (let s = dv.at + 10; s < dv.at + 0.7 * dv.length; s += 10)
+      expect(diveRise(s - dv.at, dv)).toBeLessThan(diveRise(s - 10 - dv.at, dv));
+    expect(diveRise(0.7 * dv.length, dv)).toBeCloseTo(-dv.depth, 6);
+    expect(diveRise(dv.length, dv)).toBeCloseTo(-dv.depth / 2, 6);
+    expect(diveRise(dv.length + dv.hold + DIVE_BACK, dv)).toBe(0);
+    // The jump's kicker starts where the climb ends, and its gap is within the hold.
+    const jump = feats.find((f) => f.kind === 'jump' && f.at > dv.at) as {
+      at: number;
+      length: number;
+    };
+    expect(jump.at - JUMP.RAMP).toBe(dv.at + dv.length);
+    expect(jump.at + jump.length + JUMP.LAND).toBeLessThan(dv.at + dv.length + dv.hold);
+    expect(def.gap?.(jump.at + 10)).toBe(true);
+  });
+
+  it('gains you speed: coasting down it you are faster at the bottom', () => {
+    const w = makeTrackWorld(def);
+    const f0 = frameAt(w.track, dv.at);
+    w.track.hint = dv.at;
+    const v = newVehicle('car', f0.x, f0.y, f0.h, heightAt(w.track, dv.at, 0));
+    v.vx = Math.cos(f0.h) * 30;
+    v.vy = Math.sin(f0.h) * 30;
+    for (let i = 0; i < 1200; i++) {
+      stepVehicle(v, { throttle: 0, steer: 0, boost: 0 }, 1 / 60, w, i / 60);
+      const q = project(w.track, v.x, v.y, dv.at);
+      if (q.s > dv.at + 0.65 * dv.length) break;
+    }
+    expect(Math.hypot(v.vx, v.vy)).toBeGreaterThan(40);
   });
 });

@@ -14,23 +14,25 @@
   "features": [
     { "kind": "gate", "every": 1000 },
     { "kind": "straight", "from": -200, "to": 140 },
-    { "kind": "deck", "from": 1030, "to": 1440, "side": "left", "every": 10000 },
-    { "kind": "jump", "at": 1900, "length": 140, "every": 10000 },
-    { "kind": "fire", "at": 800, "length": 140, "every": 10000, "style": "roar" },
-    { "kind": "twist", "at": 2700, "length": 320, "every": 10000, "bypass": true },
-    { "kind": "fire", "at": 3480, "length": 120, "every": 10000, "style": "crown" },
+    { "kind": "deck", "from": 1030, "to": 1440, "side": "left", "every": 12000 },
+    { "kind": "jump", "at": 1900, "length": 140, "every": 12000 },
+    { "kind": "fire", "at": 800, "length": 140, "every": 12000, "style": "roar" },
+    { "kind": "twist", "at": 2700, "length": 320, "every": 12000, "bypass": true },
+    { "kind": "fire", "at": 3480, "length": 120, "every": 12000, "style": "crown" },
+    { "kind": "twist", "at": 4100, "length": 560, "every": 12000, "loop": true, "bypass": true },
+    { "kind": "fire", "at": 5150, "length": 140, "every": 12000, "style": "wave" },
+    { "kind": "dive", "at": 4720, "length": 700, "depth": 50, "hold": 900, "every": 12000 },
+    { "kind": "jump", "at": 5560, "length": 140, "every": 12000 },
+    { "kind": "crossover", "at": 7100, "every": 12000 },
     {
-      "kind": "twist",
-      "at": 4100,
-      "length": 560,
-      "every": 10000,
-      "dir": -1,
-      "surge": 0.14,
-      "bypass": true
+      "kind": "deck",
+      "from": 10900,
+      "to": 11300,
+      "side": "left",
+      "every": 12000,
+      "blaze": true
     },
-    { "kind": "fire", "at": 5150, "length": 140, "every": 10000, "style": "wave" },
-    { "kind": "fire", "at": 9300, "length": 120, "every": 10000, "style": "blue" },
-    { "kind": "crossover", "at": 5700, "every": 10000 }
+    { "kind": "fire", "at": 11600, "length": 120, "every": 12000, "style": "blue" }
   ],
-  "lap": 10000
+  "lap": 12000
 }

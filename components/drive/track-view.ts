@@ -422,7 +422,7 @@ function makeFire(uTime: THREE.IUniform): THREE.ShaderMaterial {
       void main() {
         vStyle = aStyle;
         // 0 roar, 1 crown (in toward you), 2 wave (round the arch), 3 blue lances.
-        float rate = aStyle > 2.5 ? uRate * 1.6 : aStyle > 0.5 && aStyle < 1.5 ? uRate * 1.3 : uRate;
+        float rate = aStyle > 2.5 && aStyle < 3.5 ? uRate * 1.6 : aStyle > 0.5 && aStyle < 1.5 ? uRate * 1.3 : uRate;
         float k = fract(uTime * rate + aPhase);
         vK = k;
         float d = aS - uYou;
@@ -432,7 +432,19 @@ function makeFire(uTime: THREE.IUniform): THREE.ShaderMaterial {
         float cone = (1.2 + 4.5 * k);
         float lift = 2.5;
         vec3 dir = aDir;
-        if (aStyle > 0.5 && aStyle < 1.5) {
+        if (aStyle > 4.5) {
+          // Red: the superloop's side fire, long thick red jets out from both edges.
+          len = uLong * 1.6;
+          cone = 1.4 + 5.0 * k;
+          lift = 1.5;
+          reach = 0.6 + 0.4 * roar;
+        } else if (aStyle > 3.5) {
+          // Blaze: the deck's stronger fire, tall thick columns that never die right down.
+          len = uLong * 1.9;
+          cone = 1.8 + 6.5 * k;
+          lift = 4.0;
+          reach = 0.55 + 0.45 * roar;
+        } else if (aStyle > 0.5 && aStyle < 1.5) {
           // Crown: jets in toward the arch's middle, a ring of fire closing round you.
           dir = -aDir;
           len = uLong * 0.5;
@@ -458,7 +470,7 @@ function makeFire(uTime: THREE.IUniform): THREE.ShaderMaterial {
           + (side * cos(ang) + up2 * sin(ang)) * cone * k * reach * fract(aPhase * 7.3)
           + vec3(0.0, lift * k * k * reach, 0.0);
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        float big = aStyle > 2.5 ? 0.55 : 1.0;
+        float big = aStyle > 4.5 ? 1.4 : aStyle > 3.5 ? 1.5 : aStyle > 2.5 ? 0.55 : 1.0;
         gl_PointSize = clamp((1.6 + 10.0 * k) * big * reach * uScale / max(-mv.z, 0.5), 1.0, 140.0);
         gl_Position = projectionMatrix * mv;
       }`,
@@ -470,7 +482,19 @@ function makeFire(uTime: THREE.IUniform): THREE.ShaderMaterial {
         float r = length(gl_PointCoord - 0.5);
         float a = smoothstep(0.5, 0.05, r) * pow(1.0 - vK, 1.2) * (0.4 + 0.6 * vRoar) * 0.55;
         vec3 c;
-        if (vStyle > 2.5) {
+        if (vStyle > 4.5) {
+          vec3 core = vec3(2.3, 0.9, 0.3);
+          vec3 red = vec3(2.0, 0.12, 0.03);
+          vec3 deep = vec3(0.6, 0.02, 0.02);
+          c = vK < 0.2 ? mix(core, red, vK / 0.2) : mix(red, deep, (vK - 0.2) / 0.8);
+          a *= 1.5;
+        } else if (vStyle > 3.5) {
+          vec3 core = vec3(2.4, 2.0, 1.1);
+          vec3 orange = vec3(2.2, 0.75, 0.12);
+          vec3 red = vec3(0.9, 0.12, 0.02);
+          c = vK < 0.25 ? mix(core, orange, vK / 0.25) : mix(orange, red, (vK - 0.25) / 0.75);
+          a *= 1.4;
+        } else if (vStyle > 2.5) {
           vec3 core = vec3(0.85, 0.95, 1.7);
           vec3 blue = vec3(0.12, 0.38, 1.8);
           vec3 violet = vec3(0.45, 0.15, 1.1);
@@ -630,7 +654,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     uFogDen: { value: 0 },
     uSun: { value: new THREE.Vector3(0.3, 0.9, 0.2).normalize() },
   };
-  const fireMat = def.fire ? makeFire(shared.uTime) : null;
+  const fireMat = def.fire || def.deck || def.looping ? makeFire(shared.uTime) : null;
   if (fireMat) fireMat.userData.shared = true;
   const facade = makeFacade(false, shared);
   const facadeMirror = makeFacade(true, shared);
@@ -876,7 +900,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         lc = [];
       };
       for (let s = s0; s <= s1 + 0.01; s += ROW) {
-        if (def.twist(Math.max(0, s)) === 0) {
+        if (def.twist(Math.max(0, s)) === 0 || def.looping?.(Math.max(0, s))) {
           done();
           continue;
         }
@@ -946,8 +970,8 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
           continue;
         }
         const half = def.half(s);
-        const f = frameAt(track, s);
-        const up: V3 = [Math.sin(f.h) * Math.sin(th), Math.cos(th), Math.cos(f.h) * Math.sin(th)];
+        const nu = twistPose(track, s, 0, 0).up;
+        const up: V3 = [nu[0], nu[2], -nu[1]];
         const cs = columns(half).filter((u) => Math.abs(u) <= half);
         top.push(cs.map((u) => LR(s, u, 0.02)));
         tc.push(cs.map((u) => groundColour(cfg, s, u, half, snowLevel)));
@@ -1128,6 +1152,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     if (theme === 'gold') goldDots(s0, s1, g);
     if (fireMat) fireTunnel(s0, s1, g);
     if (fireMat && def.deck) deckFire(s0, s1, g);
+    if (fireMat && def.looping) loopFire(s0, s1, g);
     else if (theme) furnish(theme, s0, s1, ax, ay, g, solid);
     if (!solid.empty) g.add(new THREE.Mesh(solid.geometry(), solidMat));
     group.add(g);
@@ -1162,7 +1187,8 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
   /** The fire tunnels in this stretch: arches of burners over the road, each jet shooting its
    * blue flame straight outwards, away from the road, so you race through a ring of fire. */
   /** Fire both sides of a high deck: burners on its inner lip and its outer edge every 12 m,
-   * shooting straight up, roaring as you pass (2026-11-22: "with fire on the sides"). */
+   * shooting straight up, roaring as you pass (2026-11-22: "with fire on the sides"). A blazing
+   * deck has burners every 6 m, two rows a side, in the taller, thicker blaze. */
   function deckFire(s0: number, s1: number, g: THREE.Group) {
     if (!fireMat || !def.deck) return;
     const a = frameAt(track, s0);
@@ -1172,11 +1198,13 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     const at: number[] = [];
     const sty: number[] = [];
     const bf: number[] = [];
-    for (let s = Math.ceil(s0 / 12) * 12; s < s1; s += 12) {
+    for (let s = Math.ceil(s0 / 6) * 6; s < s1; s += 6) {
       const side = def.deck(s);
       if (!side || !def.deck(s - 30) || !def.deck(s + 30)) continue;
+      const blaze = def.blaze?.(s) ?? false;
+      if (!blaze && s % 12 !== 0) continue;
       const f = frameAt(track, s);
-      for (const out of [16, DECK.OUT - 0.8]) {
+      for (const out of blaze ? [16, 17.4, DECK.OUT - 2.2, DECK.OUT - 0.8] : [16, DECK.OUT - 0.8]) {
         const p = pointAt(track, s, side * (f.half + out));
         const z = f.e + DECK.H + 0.3;
         for (let k = 0; k < FIRE.FLAMES; k++) {
@@ -1184,7 +1212,50 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
           dir.push((Math.random() - 0.5) * 0.15, 1, (Math.random() - 0.5) * 0.15);
           ph.push((k + 0.37 * out + 0.61 * (s / 12)) / FIRE.FLAMES);
           at.push(s);
-          sty.push(0);
+          sty.push(blaze ? 4 : 0);
+          bf.push(0);
+        }
+      }
+    }
+    if (!pos.length) return;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('aDir', new THREE.Float32BufferAttribute(dir, 3));
+    geo.setAttribute('aPhase', new THREE.Float32BufferAttribute(ph, 1));
+    geo.setAttribute('aS', new THREE.Float32BufferAttribute(at, 1));
+    geo.setAttribute('aStyle', new THREE.Float32BufferAttribute(sty, 1));
+    geo.setAttribute('aB', new THREE.Float32BufferAttribute(bf, 1));
+    const pts = new THREE.Points(geo, fireMat);
+    pts.frustumCulled = false;
+    pts.renderOrder = 6;
+    g.add(pts);
+  }
+
+  /** Strong red fire down both sides of the superloop (2026-11-22: "add strong red fire on sides
+   * of the second loop"): burners on each edge every 8 m, riding the loop round, each jet
+   * shooting straight out sideways, away from the road. */
+  function loopFire(s0: number, s1: number, g: THREE.Group) {
+    if (!fireMat || !def.looping) return;
+    const a = frameAt(track, s0);
+    const pos: number[] = [];
+    const dir: number[] = [];
+    const ph: number[] = [];
+    const at: number[] = [];
+    const sty: number[] = [];
+    const bf: number[] = [];
+    for (let s = Math.ceil(s0 / 8) * 8; s < s1; s += 8) {
+      if (!def.looping(Math.max(0, s))) continue;
+      const f = frameAt(track, s);
+      for (const side of [1, -1]) {
+        const p = twistPose(track, s, side * (f.half + 0.8), 0.4);
+        // Out across the road, to its side: the road's left, which the loop never turns.
+        const d: V3 = [-Math.sin(f.h) * side, 0.15, -Math.cos(f.h) * side];
+        for (let k = 0; k < FIRE.FLAMES; k++) {
+          pos.push(p.x - a.x, p.z, -(p.y - a.y));
+          dir.push(d[0] + (Math.random() - 0.5) * 0.15, d[1], d[2] + (Math.random() - 0.5) * 0.15);
+          ph.push((k + 0.53 * side + 0.61 * (s / 8)) / FIRE.FLAMES);
+          at.push(s);
+          sty.push(5);
           bf.push(0);
         }
       }
@@ -1373,6 +1444,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       for (let s = Math.ceil(s0 / 2.5) * 2.5; s < s1; s += 2.5) {
         if (!nearTwist(def, s)) continue;
         const inside = def.twist(Math.max(0, s)) !== 0;
+        if (inside && def.looping?.(Math.max(0, s))) continue;
         const e = frameAt(track, s).e + 0.12;
         const w = inside ? STRAIGHT.LANE : STRAIGHT.STRIP;
         for (const side of [1, -1]) put(s, side * w, e, golds[inside ? 0 : 2], inside ? 1 : 0.8);

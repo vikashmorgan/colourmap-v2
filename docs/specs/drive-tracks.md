@@ -199,8 +199,33 @@ A road of gold dots under Saturn.
       - gold chevrons climb the wall just before it, so you know there is a way up.
       Where it ends you drop back down to the road. Data: a `deck` feature (`from`, `to`, `side`,
       `every`).
+- [x] The blazing deck (2026-11-22: "the fire on turn edges is amazing, add that even stronger on
+      another one of the edges"): a second deck on the left-hand bend at 10.9–11.3 km. Its
+      burners stand every 6 m, two rows a side, and shoot a taller, thicker, hotter fire that never
+      dies right down (`blaze: true`).
+- [x] The superloop (2026-11-22: "make second one a normal looping not a sideways rotation";
+      "1st is side loop, 2nd is superloop"):
+      the second twist, at 4.1 km, is now a vertical loop. Over 560 m the road climbs a circle
+      (radius length/7.5, about 150 m tall), runs back over itself upside down at the top, and
+      comes down where the straight carries on. It swings aside one way going up and the other
+      coming down, so the two never meet where they cross. You and the camera tip over end over
+      end with it. There is no straight through its middle; the bypass on the right is the way
+      round, and riding it to the end still gives the boost (`twist` with `loop: true`,
+      `loopShape`).
+      Strong red fire runs down both its sides ("add strong red fire on sides of the second loop"):
+      burners on each edge every 8 m ride the loop round, shooting long thick red jets straight out
+      sideways, roaring as you reach them.
+- [x] The dive (2026-11-22: "after superloop make slope keep shooting downwards, so it enhances
+      acceleration, then it comes back up and a jump"; "u can make tracks longer"): just past the
+      superloop, at 4.72 km, the road runs straight down a 700 m slope, 50 m deep at its bottom
+      (steepest about 11%), with the wave fire tunnel down in it. Gravity pulls you faster all the
+      way down. It climbs half back up into the kicker of a jump at 5.56 km, holds that height
+      through the landing, then eases back to the road's own height by about 6.9 km (`dive`:
+      `at`, `length`, `depth`, `hold`). To make room the lap grew to 12 km, the crossover moved to
+      7.1 km, and the blue fire tunnel to 11.6 km.
 - [x] The crossover (2026-11-22: "the track passes over the track so you can see it from above, or
-      jump above it"): the lap is now 10 km. At 5.7 km a figure of eight: the road climbs 18 m
+      jump above it"): the lap is now 12 km (it was 10 km until the dive, 2026-11-22). At 7.1 km
+      (5.7 km before the dive) a figure of eight: the road climbs 18 m
       through a 270° left loop, crosses over the road it came in on, comes down through a 270°
       right loop and passes back under that bridge (`crossover`). The bridge (2026-11-22: "more
       aesthetic … a cool bridge … a feeling of grandiose"):

@@ -58,6 +58,8 @@ export const STRAIGHT = {
 export function twistEntry(def: TrackDef, s: number): { end: number } | null {
   const th = def.twist?.(Math.max(0, s)) ?? 0;
   if (th === 0 || Math.abs(th) >= 0.05) return null;
+  // A looping has no hollow to drive straight through: its bypass is the way round.
+  if (def.looping?.(Math.max(0, s))) return null;
   let end = s;
   while (end < s + 1200 && (def.twist?.(end) ?? 0) !== 0) end += 2;
   return { end };
@@ -71,7 +73,10 @@ export function choosesStraight(def: TrackDef, s: number, u: number): boolean {
 /** Whether s is in a twist or the stretch marked before it. */
 export function nearTwist(def: TrackDef, s: number): boolean {
   if (!def.twist) return false;
-  for (let a = 0; a <= STRAIGHT.LEAD; a += 20) if (def.twist(Math.max(0, s + a)) !== 0) return true;
+  for (let a = 0; a <= STRAIGHT.LEAD; a += 20) {
+    const at = Math.max(0, s + a);
+    if (def.twist(at) !== 0) return !def.looping?.(at);
+  }
   return false;
 }
 
