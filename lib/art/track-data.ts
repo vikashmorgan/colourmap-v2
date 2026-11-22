@@ -34,8 +34,21 @@ export type Feature =
   /** A straight, unbanked stretch (the start grid, 2026-11-22: a level grid for the stage fire). */
   | { kind: 'straight'; from: number; to: number }
   | { kind: 'jump'; at: number; length: number; every?: number }
+  /** A dive (2026-11-22: "after superloop make slope keep shooting downwards, so it enhances
+   * acceleration, then it comes back up and a jump"): straight down a long slope, half back up,
+   * held there for the jump, then slowly back to the road's own height. */
+  | { kind: 'dive'; at: number; length: number; depth: number; hold: number; every?: number }
   /** The secret high road: a deck along the top of the curled wall of a banked bend (2026-11-22). */
-  | { kind: 'deck'; from: number; to: number; side: 'left' | 'right'; every?: number }
+  | {
+      kind: 'deck';
+      from: number;
+      to: number;
+      side: 'left' | 'right';
+      every?: number;
+      /** Its side fires twice as thick and far taller (2026-11-22: "the fire on turn edges is
+       * amazing, add that even stronger on another one of the edges"). */
+      blaze?: boolean;
+    }
   /** The road crossing over itself, twice: a figure-of-eight of two loops (2026-11-22). */
   | { kind: 'crossover'; at: number; every?: number }
   /** A full roll of the road about its axis, on a straight (2026-11-22). */
@@ -52,6 +65,9 @@ export type Feature =
       /** A straight lane past it on the right, for those who would rather not (2026-11-22: "a
        * choice to pass straight … but if you do the loopings you get a boost after it"). */
       bypass?: boolean;
+      /** A normal looping instead (2026-11-22: "make second one a normal looping not a sideways
+       * rotation"): the road climbs, goes over upside down and comes back down, end over end. */
+      loop?: boolean;
     }
   /** A tunnel of blue gas fire shooting outwards over the road (2026-11-22). */
   | {
@@ -130,6 +146,23 @@ function jumpLocal(j: { at: number; every?: number }, s: number): number {
   const p = (((s - j.at) % j.every) + j.every) % j.every;
   // Nearest occurrence: before the gap counts as negative.
   return p > j.every / 2 ? p - j.every : p;
+}
+
+/** How long a dive takes to ease back up to the road's own height after its hold (m). */
+export const DIVE_BACK = 600;
+
+/** A dive's drop at x m past its start: down to -depth over 70% of its length (steepest at 1.5 ×
+ * the mean slope), half back up by its end, held for `hold`, then eased back to 0 over DIVE_BACK. */
+export function diveRise(x: number, dv: { length: number; depth: number; hold: number }): number {
+  const ease = (k: number) => k * k * (3 - 2 * k);
+  const L = dv.length;
+  const D = dv.depth;
+  if (x <= 0) return 0;
+  if (x < 0.7 * L) return -D * ease(x / (0.7 * L));
+  if (x < L) return -D + (D / 2) * ease((x - 0.7 * L) / (0.3 * L));
+  if (x < L + dv.hold) return -D / 2;
+  if (x < L + dv.hold + DIVE_BACK) return -D / 2 + (D / 2) * ease((x - L - dv.hold) / DIVE_BACK);
+  return 0;
 }
 
 function jumpRise(x: number, length: number): number {
@@ -211,6 +244,7 @@ export function compileTrack(d: TrackData): TrackDef {
   const every = d.rise.every;
   const jumps = (d.features ?? []).filter((f) => f.kind === 'jump');
   const fires = (d.features ?? []).filter((f) => f.kind === 'fire');
+  const dives = (d.features ?? []).filter((f) => f.kind === 'dive');
   const twists = (d.features ?? []).filter((f) => f.kind === 'twist');
   const crosses = (d.features ?? []).filter((f) => f.kind === 'crossover');
   const decks = (d.features ?? []).filter((f) => f.kind === 'deck');
@@ -258,6 +292,8 @@ export function compileTrack(d: TrackData): TrackDef {
       if (ck) k += keysAt(ck, s);
       for (const j of jumps) k *= jumpStraight(jumpLocal(j, s), j.length);
       for (const st of straights) k *= straightAt(st, s);
+      // A dive runs straight, so all its speed goes ahead.
+      for (const dv of dives) k *= straightAt({ from: 0, to: dv.length }, jumpLocal(dv, s));
       if (twists.length) k *= twistStraight(s);
       // A crossover draws its own bends: the waves step aside for it.
       const x = crosses.length ? inCross(s) : null;
@@ -271,6 +307,7 @@ export function compileTrack(d: TrackData): TrackDef {
       for (const w of rw) e += w.amp * Math.sin((TAU * s) / w.period + (w.phase ?? 0));
       if (rk) e += keysAt(rk, s);
       for (const j of jumps) e += jumpRise(jumpLocal(j, s), j.length);
+      for (const dv of dives) e += diveRise(jumpLocal(dv, s), dv);
       const x = crosses.length ? inCross(s) : null;
       if (x !== null) e += crossParts(x).e;
       return e;
@@ -317,6 +354,11 @@ export function compileTrack(d: TrackData): TrackDef {
             }
             return 0;
           },
+          blaze: (s: number) =>
+            decks.some((k) => {
+              const p = k.every ? (((s - k.from) % k.every) + k.every) % k.every : s - k.from;
+              return k.blaze === true && p >= 0 && p < k.to - k.from;
+            }),
         }
       : {}),
     ...(d.curl ? { curl: d.curl } : {}),
@@ -347,10 +389,18 @@ export function compileTrack(d: TrackData): TrackDef {
             }
             return null;
           },
+          looping: (s: number) => {
+            for (const tw of twists) {
+              if (!tw.loop) continue;
+              const x = jumpLocal(tw, s);
+              if (x > 0 && x < tw.length) return { from: s - x, length: tw.length };
+            }
+            return null;
+          },
           surge: (s: number, u: number) => {
             for (const tw of twists) {
               const x = jumpLocal(tw, s) / tw.length;
-              if (x > 0 && x < 1 && tw.surge)
+              if (x > 0 && x < 1 && tw.surge && !tw.loop)
                 // Rolling left (dir 1) the road turns toward its right (u < 0): that side is fast.
                 return (
                   -(tw.dir ?? 1) *
@@ -439,6 +489,18 @@ export function validateTrackData(d: unknown, span = 6000): string[] {
     if (f.kind === 'deck' && (!num(f.from) || !num(f.to) || f.to <= f.from || f.to - f.from > 1500))
       out.push('a deck needs from before to, at most 1.5 km');
     if (f.kind === 'crossover' && !num(f.at)) out.push('a crossover needs at');
+    if (
+      f.kind === 'dive' &&
+      (!num(f.at) ||
+        !num(f.length) ||
+        !num(f.depth) ||
+        !num(f.hold) ||
+        f.length < 200 ||
+        f.depth <= 0 ||
+        f.depth > 0.15 * f.length ||
+        f.hold < 0)
+    )
+      out.push('a dive needs at, a length of 200 m or more, a depth up to 15% of it, and a hold');
     if (f.kind === 'twist' && (!num(f.at) || !num(f.length) || f.length < 150 || f.length > 800))
       out.push('a twist needs at and a length from 150 to 800 m');
     if (f.kind === 'twist' && f.surge !== undefined && (f.surge < 0 || f.surge > 0.3))

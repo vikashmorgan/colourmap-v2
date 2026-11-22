@@ -1550,9 +1550,10 @@ export class DriveEngine {
       const look = wk
         ? { x: wk.x, y: wk.y, z: wk.z }
         : (this.posed(lx, ly, lz, this.s, v) ?? { x: lx, y: ly, z: lz });
-      const th = vP?.th ?? 0;
-      // The road's up, turned with it: its left side rises as the twist turns.
-      camera.up.set(Math.sin(v.h) * Math.sin(th), Math.cos(th), Math.cos(v.h) * Math.sin(th));
+      // The road's up, turned with it: its left side rises as a twist turns, and it tips over
+      // end over end through a looping.
+      const nu = vP?.up ?? [0, 0, 1];
+      camera.up.set(nu[0], nu[2], -nu[1]);
       camera.lookAt(look.x - ox, look.z, -(look.y - oy));
       camera.rotateZ(this.cam.roll);
     }
@@ -1581,7 +1582,12 @@ export class DriveEngine {
         v.z + 3,
         -(v.y - oy - Math.sin(v.h) * 2.5),
       );
-      vv.group.rotation.set(-v.pitch, v.h + Math.PI / 2, -(v.roll + (vP?.roll ?? 0)), 'YXZ');
+      vv.group.rotation.set(
+        -(v.pitch + (vP?.pitch ?? 0)),
+        v.h + Math.PI / 2,
+        -(v.roll + (vP?.roll ?? 0)),
+        'YXZ',
+      );
       const power =
         (ctl.throttle > 0 || ctl.boost > 0 ? 1 : 0.35) +
         ctl.boost * 0.5 +
@@ -1602,7 +1608,12 @@ export class DriveEngine {
       if (!g.visible) continue;
       const rP = this.posed(rv.v.x, rv.v.y, rv.v.z, rv.s, rv.v);
       g.position.set((rP?.x ?? rv.v.x) - ox, rP?.z ?? rv.v.z, -((rP?.y ?? rv.v.y) - oy));
-      g.rotation.set(-rv.v.pitch, rv.v.h + Math.PI / 2, -(rv.v.roll + (rP?.roll ?? 0)), 'YXZ');
+      g.rotation.set(
+        -(rv.v.pitch + (rP?.pitch ?? 0)),
+        rv.v.h + Math.PI / 2,
+        -(rv.v.roll + (rP?.roll ?? 0)),
+        'YXZ',
+      );
       rv.view.update(
         rv.v,
         t,

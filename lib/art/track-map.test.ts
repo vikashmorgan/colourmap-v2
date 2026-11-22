@@ -35,12 +35,12 @@ describe('the track maps', () => {
     expect(m.banks).toEqual([]);
   });
 
-  it('runs the canyon to its finish, the sky to its lap door, the gold its 10 km lap, the rest 6 km', () => {
+  it('runs the canyon to its finish, the sky to its lap door, the gold its 12 km lap, the rest 6 km', () => {
     expect(trackMap('canyon').length).toBe(RACE.finish);
     expect(trackMap('canyon').marks.map((k) => k.kind)).toEqual(['start', 'finish']);
     expect(trackMap('sky').length).toBe(SKY_LAP);
-    expect(trackMap('gold').length).toBe(10000);
-    expect(trackMap('gold').marks.filter((k) => k.kind === 'gate')).toHaveLength(9);
+    expect(trackMap('gold').length).toBe(12000);
+    expect(trackMap('gold').marks.filter((k) => k.kind === 'gate')).toHaveLength(11);
     expect(trackMap('coast').length).toBe(MAP_SPAN);
   });
 
