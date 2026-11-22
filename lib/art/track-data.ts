@@ -34,6 +34,8 @@ export type Feature =
   /** A straight, unbanked stretch (the start grid, 2026-11-22: a level grid for the stage fire). */
   | { kind: 'straight'; from: number; to: number }
   | { kind: 'jump'; at: number; length: number; every?: number }
+  /** The secret high road: a deck along the top of the curled wall of a banked bend (2026-11-22). */
+  | { kind: 'deck'; from: number; to: number; side: 'left' | 'right'; every?: number }
   /** The road crossing over itself, twice: a figure-of-eight of two loops (2026-11-22). */
   | { kind: 'crossover'; at: number; every?: number }
   /** A full roll of the road about its axis, on a straight (2026-11-22). */
@@ -209,6 +211,7 @@ export function compileTrack(d: TrackData): TrackDef {
   const fires = (d.features ?? []).filter((f) => f.kind === 'fire');
   const twists = (d.features ?? []).filter((f) => f.kind === 'twist');
   const crosses = (d.features ?? []).filter((f) => f.kind === 'crossover');
+  const decks = (d.features ?? []).filter((f) => f.kind === 'deck');
   /** Where s sits in a crossover (m from its start), or null outside every one. */
   const inCross = (s: number) => {
     for (const c of crosses) {
@@ -303,6 +306,17 @@ export function compileTrack(d: TrackData): TrackDef {
         }
       : {}),
     ...(d.lap ? { lap: d.lap } : {}),
+    ...(decks.length
+      ? {
+          deck: (s: number) => {
+            for (const k of decks) {
+              const p = k.every ? (((s - k.from) % k.every) + k.every) % k.every : s - k.from;
+              if (p >= 0 && p < k.to - k.from) return k.side === 'left' ? 1 : -1;
+            }
+            return 0;
+          },
+        }
+      : {}),
     ...(d.curl ? { curl: d.curl } : {}),
     ...(twists.length
       ? {
@@ -419,6 +433,8 @@ export function validateTrackData(d: unknown, span = 6000): string[] {
       out.push('a fire tunnel needs at and a length up to 1000 m');
     if (f.kind === 'fire' && f.style !== undefined && !FIRE_STYLES.includes(f.style))
       out.push(`a fire tunnel's style is one of ${FIRE_STYLES.join(', ')}`);
+    if (f.kind === 'deck' && (!num(f.from) || !num(f.to) || f.to <= f.from || f.to - f.from > 1500))
+      out.push('a deck needs from before to, at most 1.5 km');
     if (f.kind === 'crossover' && !num(f.at)) out.push('a crossover needs at');
     if (f.kind === 'twist' && (!num(f.at) || !num(f.length) || f.length < 150 || f.length > 800))
       out.push('a twist needs at and a length from 150 to 800 m');
