@@ -121,6 +121,10 @@ A road of gold dots under Saturn.
       rolling at 45 m/s, enough to make it with the throttle down. Rivals lost to it reappear just
       past it. The lips drop away as dark cliff faces; no lines or dots are drawn over the gap.
       Data: a `jump` feature in tracks/gold.json (`at`, `length`, `every`), limit 160 m.
+- [x] Blue gas-fire tunnel (2026-11-22: "tunnels of blue gas fire shooting outwards"): at 3.3 km
+      of every lap, 320 m long, an arch of 13 burners over the road every 9 m, each jet shooting a
+      blue flame straight outwards, away from the road: white-blue at the nozzle, deep blue, violet
+      as it thins, a steady roar, never strobing. Data: a `fire` feature (`at`, `length`, `every`).
 - [x] The STAY WILD portal (2026-11-22: "a kind of portal dome arch with stay wild written on top
       in golden letters at the end of the track lap"): at the end of every 6 km lap a dome of gold
       light spans the road, 60 m deep, its ribs rising to a crown and falling away, the words

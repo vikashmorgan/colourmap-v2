@@ -11,6 +11,7 @@
   "barrier": 1.5,
   "features": [
     { "kind": "gate", "every": 1000 },
-    { "kind": "jump", "at": 1900, "length": 140, "every": 6000 }
+    { "kind": "jump", "at": 1900, "length": 140, "every": 6000 },
+    { "kind": "fire", "at": 3300, "length": 320, "every": 6000 }
   ]
 }

@@ -54,6 +54,8 @@ export interface TrackDef {
   pipe?(s: number): number;
   /** Where the road (and the ground either side) is gone: a jump over the void. */
   gap?(s: number): boolean;
+  /** Where a tunnel of blue gas fire stands over the road. */
+  fire?(s: number): boolean;
 }
 
 /** How far the void falls under a jump's gap (m): out of sight, never ground. */
