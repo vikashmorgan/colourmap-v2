@@ -163,6 +163,17 @@ A road of gold dots under Saturn.
       the sides, so it feels like you are going off track and get back into it"): past the golden
       lines on the high side of a banked bend, a quarter-pipe that grows with the bank (radius up
       to 14 m at full bank, `curl`). The barrier stands back past its top.
+- [x] Straight through the loop (2026-11-22: "straight road option below and inside, straight
+      through the loopings"): every twist now gives three ways through.
+      - **The loop:** ride the ribbon, get the boost after.
+      - **The side lane:** the straight bypass beside the loop.
+      - **The straight road:** a centre strip marked in gold for 300 m before the twist, with
+        chevrons pointing in. Be on it (within 4.5 m of the centre) as the twist begins and you
+        go straight through. You run flat along the ground, inside the loop, while the ribbon
+        rolls up and over you. A gold-edged lane 14 m wide is lit through the hollow. There is no
+        void to fall into, and no boost.
+      Rivals choose the same way. Pure rules live in `lib/art/wreck.ts` (`STRAIGHT`,
+      `choosesStraight`, `twistEntry`).
 - [x] The secret high road (2026-11-22: "some place where you shoot up on the turn tilts and
       another road option offers itself, like driving on top of grandstands, with fire on the
       sides … a secret road"): from 1.03 to 1.44 km, on the high (left) side of the long left-hand

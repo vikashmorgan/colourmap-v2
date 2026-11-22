@@ -51,6 +51,7 @@ import {
   twistPose,
 } from '@/lib/art/track';
 import type { Weather } from '@/lib/art/weather';
+import { nearTwist, STRAIGHT } from '@/lib/art/wreck';
 import { glowSprite } from './vehicles';
 
 export const CHUNK = 120;
@@ -864,6 +865,34 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       }
       slab();
     }
+    // The straight road through a twist's hollow: a lane flat on the ground, the ribbon rolling
+    // round it.
+    if (def.twist) {
+      let lane: V3[][] = [];
+      let lc: V3[][] = [];
+      const done = () => {
+        if (lane.length > 1) grid(ground, lane, lc, true);
+        lane = [];
+        lc = [];
+      };
+      for (let s = s0; s <= s1 + 0.01; s += ROW) {
+        if (def.twist(Math.max(0, s)) === 0) {
+          done();
+          continue;
+        }
+        const row: V3[] = [];
+        const crow: V3[] = [];
+        for (const f of [-1, -0.5, 0, 0.5, 1]) {
+          const u = f * STRAIGHT.LANE;
+          const p = pointAt(track, s, u);
+          row.push(local(ax, ay, p.x, p.y, frameAt(track, s).e + 0.04));
+          crow.push(groundColour(cfg, s, u, STRAIGHT.LANE, snowLevel));
+        }
+        lane.push(row);
+        lc.push(crow);
+      }
+      done();
+    }
     // A twist's bypass: a flat lane peeling off to the right, drawn just over the ground.
     if (def.bypass) {
       let lane: V3[][] = [];
@@ -1338,6 +1367,19 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         }
       }
     }
+    // The straight road through a twist (2026-11-22): its centre strip marked in gold for the
+    // stretch before it, chevrons pointing in, and its lane lit right through the hollow.
+    if (def.twist)
+      for (let s = Math.ceil(s0 / 2.5) * 2.5; s < s1; s += 2.5) {
+        if (!nearTwist(def, s)) continue;
+        const inside = def.twist(Math.max(0, s)) !== 0;
+        const e = frameAt(track, s).e + 0.12;
+        const w = inside ? STRAIGHT.LANE : STRAIGHT.STRIP;
+        for (const side of [1, -1]) put(s, side * w, e, golds[inside ? 0 : 2], inside ? 1 : 0.8);
+        if (!inside && s % 20 === 0)
+          for (let o = -STRAIGHT.STRIP + 0.8; o < STRAIGHT.STRIP; o += 0.9)
+            put(s - Math.abs(o) * 0.8, o, e, golds[0], 0.9);
+      }
     // The bypass lane's edges, in gold like the road's.
     if (def.bypass)
       for (let s = Math.ceil(s0 / 2.5) * 2.5; s < s1; s += 2.5) {
