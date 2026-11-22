@@ -154,7 +154,8 @@ export function trackMap(world: WorldId, width = 600, height = 260): TrackMap {
       ),
     };
   }
-  const length = cfg.race === 'canyon' ? RACE.finish : cfg.race === 'lap' ? SKY_LAP : MAP_SPAN;
+  const length =
+    cfg.race === 'canyon' ? RACE.finish : cfg.race === 'lap' ? SKY_LAP : (def.lap ?? MAP_SPAN);
   const step = 20;
   const o = trackOutline(def, length, step);
   const pts = fitBox(o.points, width, height);

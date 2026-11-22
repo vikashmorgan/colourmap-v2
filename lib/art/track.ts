@@ -56,8 +56,21 @@ export interface TrackDef {
   gap?(s: number): boolean;
   /** Where a tunnel of blue gas fire stands over the road. */
   fire?(s: number): boolean;
+  /** Which look a fire tunnel has here (an index into FIRE_STYLES in track-data). */
+  fireStyle?(s: number): number;
   /** How far the road has rolled about its axis here (rad, 0 to 2π over a twist; 0 elsewhere). */
   twist?(s: number): number;
+  /** On a twist, the slope your line through it adds along the road (negative runs downhill:
+   * faster). */
+  surge?(s: number, u: number): number;
+  /** Where a twist's bypass lane runs here (its centre's u, on the right), or null. */
+  bypass?(s: number): number | null;
+  /** The radius (m) of the curved wall past the edge on a banked bend's high side, at full bank. */
+  curl?: number;
+  /** Where the road is raised as a bridge over another stretch of itself (no ground beside it). */
+  bridge?(s: number): boolean;
+  /** An endless road's lap (m). */
+  lap?: number;
 }
 
 /**
@@ -272,9 +285,11 @@ export function heightAt(t: Track, s: number, u: number, solid = false): number 
   const lip = t.def.lip(Math.max(0, s));
   const uc = clamp(u, -f.half, f.half);
   const edge = f.e - Math.tan(f.bank) * uc + lipAt(uc, f.half, lip);
+  // A bypass lane is road too, flat, beside the twist.
+  if (Math.abs(u) > f.half && onBypass(t, s, u) !== null) return f.e;
   const out = Math.abs(u) - f.half;
   if (out <= 0) return edge;
-  const R = t.def.pipe?.(Math.max(0, s)) ?? 0;
+  const R = pipeRadius(t, s, u, f.bank);
   const toward = t.def.terrain;
   // Off the road the ground slopes back to the flat (1 in 2).
   const flat = toward === null ? edge : edge + clamp(toward - edge, -out * 0.5, out * 0.5);
@@ -284,9 +299,62 @@ export function heightAt(t: Track, s: number, u: number, solid = false): number 
   return flat + (edge + pipeAt(out, R) - flat) * w;
 }
 
-/** How far past the edge the pipe's curve reaches (0 without one). */
-export function pipeReach(t: Track, s: number): number {
-  return (t.def.pipe?.(Math.max(0, s)) ?? 0) * PIPE_TOP;
+/**
+ * The pipe beside the road on the side of u: the road's own (the canyon's), or past the golden
+ * lines on the high side of a banked bend, a curved wall growing with the bank (2026-11-22: "the
+ * top side of tilted roads on turns need to curve up higher … so you can drive up those tilts to
+ * boost back down"; "that extra tilt space is after the golden lines on the sides, so it feels
+ * like you are going off track and get back into it").
+ */
+export function pipeRadius(t: Track, s: number, u: number, bank = frameAt(t, s).bank): number {
+  const own = t.def.pipe?.(Math.max(0, s)) ?? 0;
+  const curl = t.def.curl;
+  if (!curl || u * bank >= 0) return own;
+  return Math.max(own, curl * clamp(Math.abs(bank) / 0.5, 0, 1));
+}
+
+/** Half a bypass lane's width (m): see BYPASS in track-data. */
+export const BYPASS_LANE = 9;
+
+/** Across a bypass lane (u from its centre) if (s, u) is on it, else null. */
+export function onBypass(t: Track, s: number, u: number): number | null {
+  const c = t.def.bypass?.(Math.max(0, s));
+  if (c === null || c === undefined) return null;
+  return Math.abs(u - c) <= BYPASS_LANE ? u - c : null;
+}
+
+/** How far a twist must have turned before its edges are open, without barriers (rad). */
+export const TWIST_OPEN = 0.15;
+
+/** How far past the edge the pipe's curve reaches on the side of u (0 without one). */
+export function pipeReach(t: Track, s: number, u = 1): number {
+  return pipeRadius(t, s, u) * PIPE_TOP;
+}
+
+/** What holds you: the road, or over a fork the span from the lane's far edge to the road's left,
+ * and on a twist whose edges are open, room to ride off them. */
+function corridor(
+  t: Track,
+  s: number,
+  u: number,
+  f: Frame,
+  reach: number,
+  out: number,
+): NonNullable<Ground['road']> {
+  const base = {
+    h: f.h,
+    k: f.k,
+    u,
+    half: f.half + (reach > 0 ? reach + 1 : 0),
+    pipe: reach > 0 ? clamp(out / reach, 0, 1) : 0,
+  };
+  const open = Math.abs(t.def.twist?.(Math.max(0, s)) ?? 0) > TWIST_OPEN;
+  const c = t.def.bypass?.(Math.max(0, s));
+  const extra = open ? 8 : 0;
+  if (c === null || c === undefined) return open ? { ...base, half: base.half + extra } : base;
+  const hi = f.half + extra;
+  const lo = Math.min(-f.half, c - BYPASS_LANE) - extra;
+  return { ...base, u: u - (hi + lo) / 2, half: (hi - lo) / 2, pipe: 0 };
 }
 
 /** The ground under a world point, for the physics. */
@@ -298,12 +366,13 @@ export function groundAt(t: Track, px: number, py: number): Ground & { s: number
   // Slopes from the road as if it went on, so a gap's edge never reads as a cliff to slide down.
   const dU = (heightAt(t, s, u + 0.25, true) - heightAt(t, s, u - 0.25, true)) / 0.5;
   const dS =
-    (heightAt(t, s + 0.5, u, true) - heightAt(t, s - 0.5, u, true)) / Math.max(0.3, 1 - f.k * u);
+    (heightAt(t, s + 0.5, u, true) - heightAt(t, s - 0.5, u, true)) / Math.max(0.3, 1 - f.k * u) +
+    (t.def.surge?.(Math.max(0, s), u) ?? 0);
   const c = Math.cos(f.h);
   const sn = Math.sin(f.h);
   const out = Math.abs(u) - f.half;
   // A pipe is ridden like the road (smooth, never rough), and the road's hold reaches its top.
-  const reach = pipeReach(t, s);
+  const reach = pipeReach(t, s, u);
   const lipped = t.def.lip(Math.max(0, s)) > 0 || reach > 0;
   return {
     h,
@@ -311,13 +380,7 @@ export function groundAt(t: Track, px: number, py: number): Ground & { s: number
     gy: dS * sn + dU * c,
     rough: clamp((out - reach) / 0.8, 0, 1),
     lip: lipped ? clamp((Math.abs(u) - (f.half - 2.5)) / 2.5, 0, 1) : 0,
-    road: {
-      h: f.h,
-      k: f.k,
-      u,
-      half: f.half + (reach > 0 ? reach + 1 : 0),
-      pipe: reach > 0 ? clamp(out / reach, 0, 1) : 0,
-    },
+    road: corridor(t, s, u, f, reach, out),
     s,
     u,
   };
@@ -646,13 +709,21 @@ export function collideTrack(w: TrackWorld, v: Vehicle): Hit | null {
   const walls = tr.def.walls(s);
   const ground = heightAt(tr, s, u);
   const above = v.z - ground;
+  // A twist has no barriers (2026-11-22): ride off it and you are gone.
+  if (Math.abs(tr.def.twist?.(Math.max(0, s)) ?? 0) > TWIST_OPEN) return null;
+  // A curled bend's wall stands back past its pipe's top.
   const left = walls.left;
-  if (left && u > left.u - BODY_R && above < left.height) {
-    return { nx: -nx, ny: -ny, depth: u - (left.u - BODY_R), loss: 0, spin: 0, flow: true };
+  const lu = left ? left.u + (tr.def.curl ? pipeReach(tr, s, 1) : 0) : 0;
+  if (left && u > lu - BODY_R && above < left.height) {
+    return { nx: -nx, ny: -ny, depth: u - (lu - BODY_R), loss: 0, spin: 0, flow: true };
   }
   const right = walls.right;
-  if (right && u < right.u + BODY_R && above < right.height) {
-    return { nx, ny, depth: right.u + BODY_R - u, loss: 0, spin: 0, flow: true };
+  const by = tr.def.bypass?.(Math.max(0, s));
+  let ru = right ? right.u - (tr.def.curl ? pipeReach(tr, s, -1) : 0) : 0;
+  if (right && by !== null && by !== undefined)
+    ru = Math.min(ru, by - BYPASS_LANE + right.u + f.half);
+  if (right && u < ru + BODY_R && above < right.height) {
+    return { nx, ny, depth: ru + BODY_R - u, loss: 0, spin: 0, flow: true };
   }
   return null;
 }

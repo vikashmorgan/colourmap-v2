@@ -34,11 +34,38 @@ export type Feature =
   /** A straight, unbanked stretch (the start grid, 2026-11-22: a level grid for the stage fire). */
   | { kind: 'straight'; from: number; to: number }
   | { kind: 'jump'; at: number; length: number; every?: number }
+  /** The road crossing over itself, twice: a figure-of-eight of two loops (2026-11-22). */
+  | { kind: 'crossover'; at: number; every?: number }
   /** A full roll of the road about its axis, on a straight (2026-11-22). */
-  | { kind: 'twist'; at: number; length: number; every?: number }
+  | {
+      kind: 'twist';
+      at: number;
+      length: number;
+      every?: number;
+      /** Which way it rolls: 1 (default) or -1, the other way. */
+      dir?: 1 | -1;
+      /** Your line through it changes your speed: on the side the road rolls toward it runs
+       * downhill by up to this slope (faster), on the other uphill (slower). */
+      surge?: number;
+      /** A straight lane past it on the right, for those who would rather not (2026-11-22: "a
+       * choice to pass straight … but if you do the loopings you get a boost after it"). */
+      bypass?: boolean;
+    }
   /** A tunnel of blue gas fire shooting outwards over the road (2026-11-22). */
-  | { kind: 'fire'; at: number; length: number; every?: number }
+  | {
+      kind: 'fire';
+      at: number;
+      length: number;
+      every?: number;
+      /** Each tunnel its own (2026-11-22: "make different ones have different dynamics and
+       * aesthetics"): roar (orange tongues out from the arch), crown (white-hot jets in toward you,
+       * a closing ring), wave (red fire running round the arch), blue (long blue gas lances). */
+      style?: FireStyle;
+    }
   | { kind: 'wallride'; from: number; to: number; side: 'left' | 'right' };
+
+export const FIRE_STYLES = ['roar', 'crown', 'wave', 'blue'] as const;
+export type FireStyle = (typeof FIRE_STYLES)[number];
 
 export interface TrackData {
   id: TrackId;
@@ -62,6 +89,11 @@ export interface TrackData {
   /** Explicit walls (u positive left). */
   walls?: { left: Wall | null; right: Wall | null };
   features?: Feature[];
+  /** The radius (m) of a curved wall past the edge on a banked bend's high side, at full bank (a
+   * wall to ride up off the road and boost back down; 2026-11-22). */
+  curl?: number;
+  /** An endless road's lap (m): its features repeat and its portal stands every lap. */
+  lap?: number;
 }
 
 function bumpAt(s: number, c: number, a: number, w: number): number {
@@ -89,7 +121,7 @@ function keysAt(keys: readonly (readonly [number, number])[], s: number): number
 export const JUMP = { RAMP: 140, RAMP_H: 12, LAND: 220, LAND_DROP: 8, STRAIGHT: 200, EASE: 160 };
 
 /** Where s sits against a jump (or a fire tunnel): metres past its gap's start (negative before it), or null if far. */
-function jumpLocal(j: { at: number; length: number; every?: number }, s: number): number {
+function jumpLocal(j: { at: number; every?: number }, s: number): number {
   if (!j.every) return s - j.at;
   const p = (((s - j.at) % j.every) + j.every) % j.every;
   // Nearest occurrence: before the gap counts as negative.
@@ -121,6 +153,42 @@ function jumpStraight(x: number, length: number): number {
   return k * k * (3 - 2 * k);
 }
 
+/**
+ * The crossover (2026-11-22: "the track passes over the track so you can see it from above at
+ * some point, or jump above it"): from a straight LEAD m long the road climbs RISE m through a
+ * 270° left loop of radius R, runs MID m straight back across the road it came in on (over it),
+ * then comes down through a 270° right loop and runs out under that straight, heading as it came.
+ * Two overpasses; each loop's curvature eases in and out over RAMP m.
+ */
+export const CROSS = { R: 220, RISE: 18, LEAD: 300, MID: 500, RAMP: 30 };
+const LOOP = 1.5 * Math.PI * CROSS.R + CROSS.RAMP;
+/** How long a crossover is, from its lead straight to the end of its run-out (m). */
+export const CROSS_LENGTH = 2 * CROSS.LEAD + 2 * LOOP + CROSS.MID;
+
+function crossParts(x: number) {
+  const a = CROSS.LEAD;
+  const b = a + LOOP;
+  const c = b + CROSS.MID;
+  const d = c + LOOP;
+  const trap = (y: number) => Math.max(0, Math.min(1, y / CROSS.RAMP, (LOOP - y) / CROSS.RAMP));
+  const ease = (k: number) => {
+    const t = Math.min(1, Math.max(0, k));
+    return t * t * (3 - 2 * t);
+  };
+  let k = 0;
+  if (x >= a && x <= b) k = trap(x - a) / CROSS.R;
+  else if (x >= c && x <= d) k = -trap(x - c) / CROSS.R;
+  const e = CROSS.RISE * (ease((x - a) / LOOP) - ease((x - c) / LOOP));
+  return { k, e };
+}
+
+/**
+ * A twist's bypass: a lane BY_LANE m half-wide that peels off the road's right edge from SPLIT m
+ * before the twist, runs straight BY_OUT m out from the centre beside it (clear of the ribbon's
+ * sweep), and merges back the same way after.
+ */
+export const BYPASS = { LANE: 9, OUT: 46, SPLIT: 420, CLEAR: 60 };
+
 /** 0 on a straight, easing back to 1 over EASE m either side. */
 function straightAt(st: { from: number; to: number }, s: number): number {
   const d = s < st.from ? st.from - s : s > st.to ? s - st.to : 0;
@@ -140,6 +208,15 @@ export function compileTrack(d: TrackData): TrackDef {
   const jumps = (d.features ?? []).filter((f) => f.kind === 'jump');
   const fires = (d.features ?? []).filter((f) => f.kind === 'fire');
   const twists = (d.features ?? []).filter((f) => f.kind === 'twist');
+  const crosses = (d.features ?? []).filter((f) => f.kind === 'crossover');
+  /** Where s sits in a crossover (m from its start), or null outside every one. */
+  const inCross = (s: number) => {
+    for (const c of crosses) {
+      const x = jumpLocal(c, s);
+      if (x >= -JUMP.EASE && x <= CROSS_LENGTH + JUMP.EASE) return x;
+    }
+    return null;
+  };
   // A twist rolls on a straight: the road runs straight for its length and STRAIGHT m either side.
   const straights = [...(d.features ?? []).filter((f) => f.kind === 'straight')] as {
     from: number;
@@ -177,6 +254,9 @@ export function compileTrack(d: TrackData): TrackDef {
       for (const j of jumps) k *= jumpStraight(jumpLocal(j, s), j.length);
       for (const st of straights) k *= straightAt(st, s);
       if (twists.length) k *= twistStraight(s);
+      // A crossover draws its own bends: the waves step aside for it.
+      const x = crosses.length ? inCross(s) : null;
+      if (x !== null) k = k * straightAt({ from: 0, to: CROSS_LENGTH }, x) + crossParts(x).k;
       return k;
     },
     elev: (s) => {
@@ -186,6 +266,8 @@ export function compileTrack(d: TrackData): TrackDef {
       for (const w of rw) e += w.amp * Math.sin((TAU * s) / w.period + (w.phase ?? 0));
       if (rk) e += keysAt(rk, s);
       for (const j of jumps) e += jumpRise(jumpLocal(j, s), j.length);
+      const x = crosses.length ? inCross(s) : null;
+      if (x !== null) e += crossParts(x).e;
       return e;
     },
     half: () => d.half,
@@ -199,13 +281,66 @@ export function compileTrack(d: TrackData): TrackDef {
           gap: (s: number) => within(jumps, s),
         }
       : {}),
-    ...(fires.length ? { fire: (s: number) => within(fires, s) } : {}),
+    ...(fires.length
+      ? {
+          fire: (s: number) => within(fires, s),
+          fireStyle: (s: number) => {
+            for (const f of fires) {
+              const x = jumpLocal(f, s);
+              if (x >= 0 && x < f.length)
+                return Math.max(0, FIRE_STYLES.indexOf(f.style ?? 'roar'));
+            }
+            return 0;
+          },
+        }
+      : {}),
+    ...(crosses.length
+      ? {
+          bridge: (s: number) => {
+            const x = inCross(s);
+            return x !== null && crossParts(x).e > 3;
+          },
+        }
+      : {}),
+    ...(d.lap ? { lap: d.lap } : {}),
+    ...(d.curl ? { curl: d.curl } : {}),
     ...(twists.length
       ? {
           twist: (s: number) => {
             for (const tw of twists) {
               const x = jumpLocal(tw, s) / tw.length;
-              if (x > 0 && x < 1) return Math.PI * 2 * x * x * x * (x * (6 * x - 15) + 10);
+              if (x > 0 && x < 1)
+                return (tw.dir ?? 1) * Math.PI * 2 * x * x * x * (x * (6 * x - 15) + 10);
+            }
+            return 0;
+          },
+          bypass: (s: number) => {
+            for (const tw of twists) {
+              if (!tw.bypass) continue;
+              const x = jumpLocal(tw, s);
+              const { OUT, SPLIT, CLEAR } = BYPASS;
+              if (x < -SPLIT || x > tw.length + SPLIT) continue;
+              const a = Math.min(
+                (x + SPLIT) / (SPLIT - CLEAR),
+                (tw.length + SPLIT - x) / (SPLIT - CLEAR),
+                1,
+              );
+              const k = a * a * (3 - 2 * a);
+              return -OUT * k;
+            }
+            return null;
+          },
+          surge: (s: number, u: number) => {
+            for (const tw of twists) {
+              const x = jumpLocal(tw, s) / tw.length;
+              if (x > 0 && x < 1 && tw.surge)
+                // Rolling left (dir 1) the road turns toward its right (u < 0): that side is fast.
+                return (
+                  -(tw.dir ?? 1) *
+                  tw.surge *
+                  Math.sin(Math.PI * x) *
+                  Math.max(-1, Math.min(1, u / d.half))
+                );
             }
             return 0;
           },
@@ -282,8 +417,13 @@ export function validateTrackData(d: unknown, span = 6000): string[] {
       out.push(`a jump needs at and a length up to ${LIMITS.maxJump} m`);
     if (f.kind === 'fire' && (!num(f.at) || !num(f.length) || f.length <= 0 || f.length > 1000))
       out.push('a fire tunnel needs at and a length up to 1000 m');
+    if (f.kind === 'fire' && f.style !== undefined && !FIRE_STYLES.includes(f.style))
+      out.push(`a fire tunnel's style is one of ${FIRE_STYLES.join(', ')}`);
+    if (f.kind === 'crossover' && !num(f.at)) out.push('a crossover needs at');
     if (f.kind === 'twist' && (!num(f.at) || !num(f.length) || f.length < 150 || f.length > 800))
       out.push('a twist needs at and a length from 150 to 800 m');
+    if (f.kind === 'twist' && f.surge !== undefined && (f.surge < 0 || f.surge > 0.3))
+      out.push('a twist’s surge is a slope from 0 to 0.3');
     if (f.kind === 'straight' && (!num(f.from) || !num(f.to) || f.to <= f.from))
       out.push('a straight needs from before to');
     if (f.kind === 'gate' && (!num(f.every) || f.every < 200))

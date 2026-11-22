@@ -9,13 +9,26 @@
   "bank": { "speed": 85, "max": 0.62 },
   "terrain": 0,
   "barrier": 1.5,
+  "curl": 14,
   "features": [
     { "kind": "gate", "every": 1000 },
     { "kind": "straight", "from": -200, "to": 140 },
-    { "kind": "jump", "at": 1900, "length": 140, "every": 6000 },
-    { "kind": "fire", "at": 800, "length": 220, "every": 6000 },
-    { "kind": "twist", "at": 2700, "length": 320, "every": 6000 },
-    { "kind": "fire", "at": 3300, "length": 320, "every": 6000 },
-    { "kind": "fire", "at": 4700, "length": 260, "every": 6000 }
-  ]
+    { "kind": "jump", "at": 1900, "length": 140, "every": 10000 },
+    { "kind": "fire", "at": 800, "length": 140, "every": 10000, "style": "roar" },
+    { "kind": "twist", "at": 2700, "length": 320, "every": 10000, "bypass": true },
+    { "kind": "fire", "at": 3480, "length": 120, "every": 10000, "style": "crown" },
+    {
+      "kind": "twist",
+      "at": 4100,
+      "length": 560,
+      "every": 10000,
+      "dir": -1,
+      "surge": 0.14,
+      "bypass": true
+    },
+    { "kind": "fire", "at": 5150, "length": 140, "every": 10000, "style": "wave" },
+    { "kind": "fire", "at": 9300, "length": 120, "every": 10000, "style": "blue" },
+    { "kind": "crossover", "at": 5700, "every": 10000 }
+  ],
+  "lap": 10000
 }
