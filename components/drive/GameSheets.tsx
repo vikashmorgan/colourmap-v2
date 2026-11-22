@@ -292,6 +292,45 @@ export function RaceResults({
     else return false;
     return true;
   });
+  if (result.wrecked)
+    return (
+      <Veil label="Race over" testId="race-results">
+        <div style={{ ...sheet('#ff5a1f'), textAlign: 'center', justifyItems: 'center' }}>
+          <div
+            style={{
+              fontSize: 'clamp(30px, 6vw, 46px)',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: '#ff7a2a',
+              textShadow: '0 0 30px rgba(255,90,20,0.55)',
+            }}
+          >
+            U fucked up!
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              letterSpacing: '0.34em',
+              textTransform: 'uppercase',
+              color: `${quiet}0.6)`,
+            }}
+          >
+            Race over
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Action primary accent="#ff5a1f" onClick={onAgain}>
+              Race again
+            </Action>
+            <Action accent="#ff5a1f" onClick={onTracks}>
+              Tracks
+            </Action>
+          </div>
+          <span style={{ fontFamily: mono, fontSize: 10, color: `${quiet}0.35)` }}>
+            enter race again · esc tracks
+          </span>
+        </div>
+      </Veil>
+    );
   return (
     <Veil label="Results" testId="race-results">
       <div style={sheet(t.colour)}>

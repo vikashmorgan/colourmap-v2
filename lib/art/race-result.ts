@@ -18,6 +18,8 @@ export interface RaceResult {
   /** Your place (1 = won), or null racing alone. */
   place: number | null;
   standings: Standing[];
+  /** Off a twist into the void: the race is over, no place. */
+  wrecked?: boolean;
 }
 
 export interface Racer {

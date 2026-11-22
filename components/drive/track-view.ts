@@ -25,6 +25,7 @@ import {
   ringAt,
 } from '@/lib/art/night-course';
 import {
+  BYPASS_LANE,
   CANYON_ARCHES,
   COAST_CLIFF,
   COAST_GATE,
@@ -386,11 +387,12 @@ const SKY_DOOR: V3 = [1.6, 1.05, 0.3];
 
 /** A fire tunnel: a ring of burners every RING m, BURNERS round each arch, FLAMES particles a
  * burner, each flame LONG m out from its nozzle over 1 / RATE s. */
-export const FIRE = { RING: 9, BURNERS: 13, FLAMES: 18, LONG: 8, RATE: 1.3 };
+export const FIRE = { RING: 20, BURNERS: 11, FLAMES: 52, LONG: 22, RATE: 0.85 };
 
-/** Blue gas fire (2026-11-22: "tunnels of blue gas fire shooting outwards"): each particle runs
- * out from its burner and back to the nozzle on a loop, white-blue at the nozzle, then deep blue,
- * violet as it thins. The jets roar steadily; nothing strobes. */
+/** Rings of fire on the golden arches (2026-11-22: "big ass rings of shooting fires", "real big
+ * fire shots, not small mini gases"): every arch in a tunnel carries burners round its curve, each
+ * shooting a great tongue of flame out from the arch, white-yellow at the nozzle, orange, then red
+ * thinning to smoke. Idle they lick low; as you reach an arch it roars out to full length. */
 function makeFire(uTime: THREE.IUniform): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -404,6 +406,8 @@ function makeFire(uTime: THREE.IUniform): THREE.ShaderMaterial {
       attribute vec3 aDir;
       attribute float aPhase;
       attribute float aS;
+      attribute float aStyle;
+      attribute float aB;
       uniform float uTime;
       uniform float uYou;
       uniform float uScale;
@@ -411,34 +415,79 @@ function makeFire(uTime: THREE.IUniform): THREE.ShaderMaterial {
       uniform float uRate;
       varying float vK;
       varying float vRoar;
+      varying float vStyle;
       void main() {
-        float k = fract(uTime * uRate + aPhase);
+        vStyle = aStyle;
+        // 0 roar, 1 crown (in toward you), 2 wave (round the arch), 3 blue lances.
+        float rate = aStyle > 2.5 ? uRate * 1.6 : aStyle > 0.5 && aStyle < 1.5 ? uRate * 1.3 : uRate;
+        float k = fract(uTime * rate + aPhase);
         vK = k;
-        // A low pilot flame until you come: each arch roars out as you reach it (2026-11-22: "it
-        // shoots fire outwards as we pass"), from 40 m ahead, and dies back once you are 20 m past.
         float d = aS - uYou;
-        float roar = smoothstep(45.0, 15.0, d) * smoothstep(-25.0, -8.0, d);
+        float roar = smoothstep(90.0, 30.0, d) * smoothstep(-30.0, -8.0, d);
+        float reach = 0.28 + 0.72 * roar;
+        float len = uLong;
+        float cone = (1.2 + 4.5 * k);
+        float lift = 2.5;
+        vec3 dir = aDir;
+        if (aStyle > 0.5 && aStyle < 1.5) {
+          // Crown: jets in toward the arch's middle, a ring of fire closing round you.
+          dir = -aDir;
+          len = uLong * 0.5;
+          cone = 0.6 + 2.0 * k;
+          lift = 0.6;
+          reach = 0.2 + 0.8 * roar;
+        } else if (aStyle > 1.5 && aStyle < 2.5) {
+          // Wave: a swell of fire running round the arch, foot to foot and back, slow.
+          float w = 0.5 + 0.5 * sin(uTime * 2.2 - aB * 6.283 + aS * 0.05);
+          reach *= 0.25 + 0.95 * w * w;
+          len = uLong * 1.1;
+        } else if (aStyle > 2.5) {
+          // Blue: long thin lances of gas.
+          len = uLong * 1.35;
+          cone = 0.3 + 1.2 * k;
+          lift = 0.4;
+        }
         vRoar = roar;
-        float reach = 0.3 + 0.7 * roar;
-        // Out along the jet, spreading as it goes and lifting a little, as hot gas does.
-        vec3 side = normalize(cross(aDir, vec3(0.0, 1.0, 0.0)) + vec3(1e-4));
-        float wob = sin(aPhase * 91.0 + uTime * 5.0) * 0.5 * k;
-        vec3 p = position + aDir * (k * uLong * reach * (0.8 + 0.4 * fract(aPhase * 17.0)))
-          + side * wob + vec3(0.0, 0.8 * k * k, 0.0);
+        vec3 side = normalize(cross(dir, vec3(0.0, 1.0, 0.0)) + vec3(1e-4));
+        vec3 up2 = normalize(cross(side, dir));
+        float ang = aPhase * 191.0 + uTime * 1.7;
+        vec3 p = position + dir * (k * len * reach * (0.75 + 0.5 * fract(aPhase * 17.0)))
+          + (side * cos(ang) + up2 * sin(ang)) * cone * k * reach * fract(aPhase * 7.3)
+          + vec3(0.0, lift * k * k * reach, 0.0);
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        gl_PointSize = clamp((0.7 + 3.6 * k * reach) * uScale / max(-mv.z, 0.5), 1.0, 64.0);
+        float big = aStyle > 2.5 ? 0.55 : 1.0;
+        gl_PointSize = clamp((1.6 + 10.0 * k) * big * reach * uScale / max(-mv.z, 0.5), 1.0, 140.0);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
       varying float vK;
       varying float vRoar;
+      varying float vStyle;
       void main() {
         float r = length(gl_PointCoord - 0.5);
-        float a = smoothstep(0.5, 0.0, r) * pow(1.0 - vK, 1.4) * (0.45 + 0.55 * vRoar);
-        vec3 core = vec3(0.85, 0.95, 1.6);
-        vec3 blue = vec3(0.12, 0.38, 1.7);
-        vec3 violet = vec3(0.45, 0.15, 1.1);
-        vec3 c = vK < 0.25 ? mix(core, blue, vK / 0.25) : mix(blue, violet, (vK - 0.25) / 0.75);
+        float a = smoothstep(0.5, 0.05, r) * pow(1.0 - vK, 1.2) * (0.4 + 0.6 * vRoar) * 0.55;
+        vec3 c;
+        if (vStyle > 2.5) {
+          vec3 core = vec3(0.85, 0.95, 1.7);
+          vec3 blue = vec3(0.12, 0.38, 1.8);
+          vec3 violet = vec3(0.45, 0.15, 1.1);
+          c = vK < 0.25 ? mix(core, blue, vK / 0.25) : mix(blue, violet, (vK - 0.25) / 0.75);
+        } else if (vStyle > 1.5) {
+          vec3 core = vec3(2.0, 0.9, 0.25);
+          vec3 red = vec3(1.4, 0.18, 0.04);
+          vec3 deep = vec3(0.45, 0.03, 0.02);
+          c = vK < 0.3 ? mix(core, red, vK / 0.3) : mix(red, deep, (vK - 0.3) / 0.7);
+        } else if (vStyle > 0.5) {
+          vec3 white = vec3(2.2, 2.1, 1.7);
+          vec3 gold = vec3(2.0, 1.3, 0.35);
+          vec3 orange = vec3(1.3, 0.4, 0.08);
+          c = vK < 0.3 ? mix(white, gold, vK / 0.3) : mix(gold, orange, (vK - 0.3) / 0.7);
+        } else {
+          vec3 core = vec3(2.0, 1.75, 1.0);
+          vec3 orange = vec3(1.9, 0.7, 0.12);
+          vec3 red = vec3(0.7, 0.1, 0.02);
+          c = vK < 0.2 ? mix(core, orange, vK / 0.2) : mix(orange, red, (vK - 0.2) / 0.8);
+        }
         gl_FragColor = vec4(c * a, a);
       }`,
     transparent: true,
@@ -448,7 +497,7 @@ function makeFire(uTime: THREE.IUniform): THREE.ShaderMaterial {
   });
 }
 
-/** The Golden Track's lap (m): its portal stands at the end of every one. */
+/** A lap (m) for a road whose data names none: the portal stands at the end of every one. */
 export const GOLD_LAP = 6000;
 /** The words over the Golden Track's portal (2026-11-22: "a kind of portal dome arch with stay
  * wild written on top in golden letters at the end of the track lap"). */
@@ -613,6 +662,8 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
   const hAt = (s: number, u: number) => heightAt(track, s, u, true);
   /** In a jump's gap: no road, no ground, no lines (2026-11-22: "the long jump over the void"). */
   const gapAt = (s: number) => def.gap?.(Math.max(0, s)) ?? false;
+  /** Where the road is raised as a bridge over another stretch of itself. */
+  const bridgeAt = (s: number) => def.bridge?.(Math.max(0, s)) ?? false;
   /** How far the road is turned about its axis here (0 off a twist). */
   const twistAt = (s: number) => def.twist?.(Math.max(0, s)) ?? 0;
 
@@ -625,7 +676,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       return [COAST_CLIFF, -half - 4, ...us, half + 3, COAST_RAIL, COAST_RAIL + 1.5];
     // The canyon's pipes need more columns to curve smoothly up to the rock.
     const outs =
-      cfg.id === 'canyon' || cfg.id === 'sky'
+      cfg.id === 'canyon' || cfg.id === 'sky' || def.curl
         ? [0.6, 2, 4, 6, 8, 10, 11.5, 12.8, 13.9, 14.7, 15.4, 16.2]
         : [0.6, 3, 8, 16];
     return [...outs.map((o) => -half - o).reverse(), ...us, ...outs.map((o) => half + o)];
@@ -723,13 +774,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         [d[0] - c[0], d[1] - c[1], d[2] - c[2]],
       );
     };
-    for (let s = s0; s <= s1 + 0.01; s += ROW) {
-      // A gap breaks the road: what is before it ends at its lip, what is after starts again.
-      if (gapAt(s) && gapAt(s - ROW + 0.01)) {
-        flush();
-        continue;
-      }
-      const at = gapAt(s) ? s - 0.01 : s;
+    const rowAt = (at: number, bridged: boolean) => {
       const half = def.half(at);
       const row: V3[] = [];
       const crow: V3[] = [];
@@ -737,6 +782,8 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       // On a twist the road has risen away from the ground: what is left under it is ground.
       const twisting = twistAt(at) > 0.02;
       for (const u of columns(half)) {
+        // On a bridge only the deck is drawn: no ground beside it to hang over the road beneath.
+        if (bridged && Math.abs(u) > half + 0.7) continue;
         const onRoad = Math.abs(u) <= half;
         row.push(twisting && onRoad ? L(at, u, -0.4) : L(at, u));
         crow.push(groundColour(cfg, at, u, twisting ? -1 : half, snowLevel));
@@ -745,9 +792,96 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       pts.push(row);
       cols.push(crow);
       nrms.push(nrow);
+    };
+    let wasBridged: boolean | null = null;
+    for (let s = s0; s <= s1 + 0.01; s += ROW) {
+      // A gap breaks the road: what is before it ends at its lip, what is after starts again.
+      if (gapAt(s) && gapAt(s - ROW + 0.01)) {
+        flush();
+        wasBridged = null;
+        continue;
+      }
+      const at = gapAt(s) ? s - 0.01 : s;
+      const bridged = bridgeAt(at);
+      if (wasBridged !== null && bridged !== wasBridged) {
+        // The deck meets the road with ground: end one on this row, start the other on it.
+        rowAt(at, wasBridged);
+        flush();
+      }
+      wasBridged = bridged;
+      rowAt(at, bridged);
       if (gapAt(s)) flush();
     }
     flush();
+    // A bridge's underside and its sides: a dark slab 1.6 m deep under the deck.
+    {
+      let under: V3[][] = [];
+      let lsideA: V3[][] = [];
+      let rsideA: V3[][] = [];
+      const dark = lin(0.04, 0.032, 0.028);
+      const slab = () => {
+        if (under.length > 1) {
+          const uc = under.map((r) => r.map(() => dark));
+          grid(
+            ground,
+            under.map((r) => [...r].reverse()),
+            uc,
+          );
+          grid(
+            ground,
+            lsideA,
+            lsideA.map((r) => r.map(() => dark)),
+          );
+          grid(
+            ground,
+            rsideA.map((r) => [...r].reverse()),
+            rsideA.map((r) => r.map(() => dark)),
+          );
+        }
+        under = [];
+        lsideA = [];
+        rsideA = [];
+      };
+      for (let s = s0; s <= s1 + 0.01; s += ROW) {
+        if (!bridgeAt(s)) {
+          slab();
+          continue;
+        }
+        const half = def.half(s) + 0.7;
+        under.push([L(s, -half, -1.6), L(s, 0, -1.6), L(s, half, -1.6)]);
+        lsideA.push([L(s, half, 0), L(s, half, -1.6)]);
+        rsideA.push([L(s, -half, 0), L(s, -half, -1.6)]);
+      }
+      slab();
+    }
+    // A twist's bypass: a flat lane peeling off to the right, drawn just over the ground.
+    if (def.bypass) {
+      let lane: V3[][] = [];
+      let lc: V3[][] = [];
+      const done = () => {
+        if (lane.length > 1) grid(ground, lane, lc, true);
+        lane = [];
+        lc = [];
+      };
+      for (let s = s0; s <= s1 + 0.01; s += ROW) {
+        const c = def.bypass(Math.max(0, s));
+        if (c === null) {
+          done();
+          continue;
+        }
+        const row: V3[] = [];
+        const crow: V3[] = [];
+        for (const f of [-1.08, -1, -0.8, -0.4, 0, 0.4, 0.8, 1, 1.08]) {
+          const u = c + f * BYPASS_LANE;
+          const p = pointAt(track, s, u);
+          row.push(local(ax, ay, p.x, p.y, frameAt(track, s).e + 0.05));
+          crow.push(groundColour(cfg, s, f * BYPASS_LANE, BYPASS_LANE, snowLevel));
+        }
+        lane.push(row);
+        lc.push(crow);
+      }
+      done();
+    }
     // The twist's ribbon: the road turned about its axis, lit by its turned up, its underside dark
     // so it reads from outside too.
     {
@@ -994,12 +1128,16 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     const dir: number[] = [];
     const ph: number[] = [];
     const at: number[] = [];
+    const sty: number[] = [];
+    const bf: number[] = [];
     const nozzle = new Builder();
     const steel = lin(0.12, 0.13, 0.16);
     for (let s = Math.ceil(s0 / FIRE.RING) * FIRE.RING; s < s1; s += FIRE.RING) {
-      if (!def.fire(s) || gapAt(s)) continue;
+      if (!def.fire(s) || gapAt(s) || twistAt(s)) continue;
       const f = frameAt(track, s);
-      const R = def.half(s) + 3;
+      const style = def.fireStyle?.(s) ?? 0;
+      // The same arch as the golden ones: half + 2.5 wide, three quarters as tall.
+      const R = def.half(s) + 2.5;
       const e = hAt(s, 0);
       const nx = -Math.sin(f.h);
       const ny = Math.cos(f.h);
@@ -1010,17 +1148,21 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         // The nozzle on the arch, its jet pointing out from the arch's centre.
         const x = f.x + nx * c * R - a.x;
         const y = f.y + ny * c * R - a.y;
-        const z = e + sn * R * 0.85;
-        const d: V3 = [nx * c, sn, -(ny * c)];
+        const z = e + sn * R * 0.75;
+        // Out along the arch's normal (an ellipse's: across by 0.75 c, up by s).
+        const m = Math.hypot(0.75 * c, sn) || 1;
+        const d: V3 = [(nx * 0.75 * c) / m, sn / m, -(ny * 0.75 * c) / m];
         for (let k = 0; k < FIRE.FLAMES; k++) {
           pos.push(x, z, -y);
           dir.push(...d);
           ph.push((k + 0.37 * b + 0.61 * (s / FIRE.RING)) / FIRE.FLAMES);
           at.push(s);
+          sty.push(style);
+          bf.push(b / (FIRE.BURNERS - 1));
         }
         // A small dark burner head, so the flame comes out of something.
         const p0: V3 = [x - d[0] * 0.4, z - d[1] * 0.4, -y - d[2] * 0.4];
-        const w = 0.35;
+        const w = 0.7;
         const tx = Math.cos(f.h) * w;
         const ty = Math.sin(f.h) * w;
         nozzle.quad(
@@ -1039,6 +1181,8 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     geo.setAttribute('aDir', new THREE.Float32BufferAttribute(dir, 3));
     geo.setAttribute('aPhase', new THREE.Float32BufferAttribute(ph, 1));
     geo.setAttribute('aS', new THREE.Float32BufferAttribute(at, 1));
+    geo.setAttribute('aStyle', new THREE.Float32BufferAttribute(sty, 1));
+    geo.setAttribute('aB', new THREE.Float32BufferAttribute(bf, 1));
     const pts = new THREE.Points(geo, fireMat);
     pts.frustumCulled = false;
     pts.renderOrder = 6;
@@ -1062,6 +1206,22 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       ss.push(stream);
       size.push(sz);
     };
+    // Where the road loops back over itself, nothing of this stretch may stand on that one.
+    const others: { s: number; x: number; y: number }[] = [];
+    if (def.bridge)
+      for (let so = Math.max(0, s0 - 3600); so < s1 + 3600; so += 8) {
+        const p = pointAt(track, so, 0);
+        others.push({ s: so, x: p.x, y: p.y });
+      }
+    const clear = (s: number, u: number, r: number) => {
+      if (!others.length) return true;
+      const p = pointAt(track, s, u);
+      for (const o of others)
+        if (Math.abs(o.s - s) > 250 && Math.hypot(o.x - p.x, o.y - p.y) < def.half(o.s) + r)
+          return false;
+      return true;
+    };
+    const pillars: { s: number; u: number; top: number; foot: number }[] = [];
     const golds: V3[] = [
       [2.2, 1.5, 0.6],
       [2.0, 1.1, 0.35],
@@ -1092,9 +1252,45 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         if (Math.round(s / 2.5) % 2 === 0) put(s, side * (half + 1.6), e + 2.4, golds[1], 0.6);
       }
     }
+    // The bypass lane's edges, in gold like the road's.
+    if (def.bypass)
+      for (let s = Math.ceil(s0 / 2.5) * 2.5; s < s1; s += 2.5) {
+        const c = def.bypass(Math.max(0, s));
+        if (c === null) continue;
+        const e = frameAt(track, s).e + 0.25;
+        for (const side of [1, -1]) {
+          const u = c + side * BYPASS_LANE;
+          if (Math.abs(u) < def.half(s) + 1) continue;
+          put(s, u, e, golds[0], 0.9);
+        }
+      }
+    // A bridge over the road below (2026-11-22: "the passage of the road above you more aesthetic
+    // … a cool bridge … a feeling of grandiose"): its edges lit, lines of light under its deck,
+    // and tall pillars of light standing clear of the road beneath.
+    for (let s = Math.ceil(s0 / 2.5) * 2.5; s < s1; s += 2.5) {
+      if (!bridgeAt(s)) continue;
+      const half = def.half(s) + 0.7;
+      const e = hAt(s, 0);
+      for (const side of [1, -1]) put(s, side * half, hAt(s, side * half) - 0.4, golds[1], 0.8);
+      for (const u of [-0.6, 0, 0.6]) put(s, u * half, e - 1.75, golds[0], 0.7);
+    }
+    for (let s = Math.ceil(s0 / 48) * 48; s < s1; s += 48) {
+      if (!bridgeAt(s) || !bridgeAt(s - 30) || !bridgeAt(s + 30)) continue;
+      for (const side of [1, -1]) {
+        const u = side * (def.half(s) - 2);
+        if (!clear(s, u, 6)) continue;
+        const top = hAt(s, u) - 1.6;
+        const foot = Math.min(top - 2, def.terrain ?? 0);
+        for (let z = foot; z < top; z += 0.7)
+          for (const k of [-1, 1]) put(s + k * 0.9, u, z, golds[2], 0.75);
+        pillars.push({ s, u, top, foot });
+      }
+    }
     // Arches over the road.
-    for (let sa = Math.ceil(s0 / 90) * 90; sa < s1; sa += 90) {
-      if (twistAt(sa)) continue;
+    // In a fire tunnel every ring of fire is an arch, so they stand closer: every FIRE.RING m.
+    for (let sa = Math.ceil(s0 / FIRE.RING) * FIRE.RING; sa < s1; sa += FIRE.RING) {
+      if (sa % 90 !== 0 && !def.fire?.(sa)) continue;
+      if (twistAt(sa) || !clear(sa, 0, 24)) continue;
       const half = def.half(sa) + 2.5;
       const e = hAt(sa, 0);
       for (let t = 0; t <= Math.PI + 1e-6; t += 0.9 / half)
@@ -1110,11 +1306,8 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     }
     // The portal at the end of each lap: a dome of light over the road, its ribs rising to a crown
     // and falling away, and the words over the way in.
-    for (
-      let sp = Math.max(GOLD_LAP, Math.ceil(s0 / GOLD_LAP) * GOLD_LAP);
-      sp < s1;
-      sp += GOLD_LAP
-    ) {
+    const lap = def.lap ?? GOLD_LAP;
+    for (let sp = Math.max(lap, Math.ceil(s0 / lap) * lap); sp < s1; sp += lap) {
       const half = def.half(sp) + 6;
       const e = hAt(sp, 0);
       const DEEP = 30;
@@ -1168,6 +1361,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     for (let sr = Math.ceil(s0 / 360) * 360 + 180; sr < s1; sr += 360) {
       const side = Math.round(sr / 360) % 2 ? 1 : -1;
       const uc = side * (def.half(sr) + 14);
+      if (!clear(sr, uc, 12)) continue;
       const e = hAt(sr, uc);
       for (let t = 0; t < Math.PI * 2; t += 0.12)
         put(
@@ -1197,7 +1391,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       for (const side of [1, -1]) {
         const r = hashN(st * 0.11 + side * 5.7);
         const u = side * (def.half(st) + 30 + r * 110);
-        if (def.curv(st) * u > 0.45) continue;
+        if (def.curv(st) * u > 0.45 || !clear(st, u, 30)) continue;
         const c = P(st, u);
         const e = hAt(st, side * def.half(st));
         const w = 8 + hashN(st + side * 3) * 14;
@@ -1242,7 +1436,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     for (let sf = Math.ceil(s0 / 600) * 600 + 300; sf < s1; sf += 600) {
       const side = Math.round(sf / 600) % 2 ? 1 : -1;
       const u = side * (def.half(sf) + 45);
-      if (def.curv(sf) * u > 0.45) continue;
+      if (def.curv(sf) * u > 0.45 || !clear(sf, u, 20)) continue;
       const c = P(sf, u);
       const e = hAt(sf, 0) + 38;
       const R = 12;
@@ -1258,10 +1452,40 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     for (let s = Math.ceil(s0 / 4) * 4; s < s1; s += 4)
       for (const side of [1, -1]) {
         const r = hashN(s * 0.37 + side * 11.3);
-        if (r > 0.45 || gapAt(s)) continue;
+        if (r > 0.45 || gapAt(s) || bridgeAt(s)) continue;
         const u = side * (def.half(s) + 6 + hashN(s + side) * 70);
         put(s, u, hAt(s, u) + 0.15 + hashN(s * 3.1) * 0.6, golds[Math.floor(r * 6.6) % 3], 0.5);
       }
+    // The pillars' bodies: dark columns under the light.
+    if (pillars.length) {
+      const b = new Builder();
+      const dark = lin(0.05, 0.04, 0.035);
+      for (const pl of pillars) {
+        const f = frameAt(track, pl.s);
+        const c = pointAt(track, pl.s, pl.u);
+        const tx = Math.cos(f.h) * 0.9;
+        const ty = Math.sin(f.h) * 0.9;
+        const nx = -ty;
+        const ny = tx;
+        const corners: [number, number][] = [
+          [c.x - tx - nx, c.y - ty - ny],
+          [c.x + tx - nx, c.y + ty - ny],
+          [c.x + tx + nx, c.y + ty + ny],
+          [c.x - tx + nx, c.y - ty + ny],
+        ];
+        for (let k = 0; k < 4; k++) {
+          const [x0, y0] = corners[k];
+          const [x1, y1] = corners[(k + 1) % 4];
+          const p0 = local(a.x, a.y, x0, y0, pl.foot);
+          const p1 = local(a.x, a.y, x1, y1, pl.foot);
+          const p2 = local(a.x, a.y, x1, y1, pl.top);
+          const p3 = local(a.x, a.y, x0, y0, pl.top);
+          const n: V3 = [y1 - y0, 0, x1 - x0];
+          b.quad(p0, p1, p2, p3, n, dark);
+        }
+      }
+      if (!b.empty) g.add(new THREE.Mesh(b.geometry(), solidMat));
+    }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('aCol', new THREE.Float32BufferAttribute(col, 3));

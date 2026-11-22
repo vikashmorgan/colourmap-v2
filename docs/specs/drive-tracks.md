@@ -127,18 +127,51 @@ A road of gold dots under Saturn.
       rolling at 45 m/s, enough to make it with the throttle down. Rivals lost to it reappear just
       past it. The lips drop away as dark cliff faces; no lines or dots are drawn over the gap.
       Data: a `jump` feature in tracks/gold.json (`at`, `length`, `every`), limit 160 m.
-- [x] Blue gas-fire tunnels (2026-11-22: "tunnels of blue gas fire shooting outwards", "a few
-      more tunnels where it shoots fire outwards as we pass"): three a lap, at 0.8 km (220 m), 3.3
-      km (320 m) and 4.7 km (260 m). Each arch idles on a low pilot flame and roars out to full
-      length as you reach it (from 40 m ahead), dying back once you are 20 m past. In each, an arch of 13 burners over the road every 9 m, each jet shooting a
-      blue flame straight outwards, away from the road: white-blue at the nozzle, deep blue, violet
-      as it thins, a steady roar, never strobing. Data: a `fire` feature (`at`, `length`, `every`).
+- [x] Rings of fire on the arches (2026-11-22: "the flames need to be on those arches and be made
+      of real big fire shots … big ass rings of shooting fires"; "shorter but more intense …
+      different ones have different dynamics and aesthetics"): four short tunnels a lap, each a
+      golden arch every 20 m carrying 11 burners round its curve. Each idles low and roars out as
+      you reach it (from 90 m ahead, dying 30 m past). Styles (`fire.style`):
+      - roar (0.8 km): great orange tongues out from the arch, billowing and lifting.
+      - crown (3.5 km): white-hot jets in toward the middle, a ring closing round you.
+      - wave (5.15 km): deep red fire swelling round the arch, foot to foot, slowly.
+      - blue (9.3 km): long thin lances of blue gas.
+      Nothing strobes. Data: a `fire` feature (`at`, `length`, `every`, `style`).
 - [x] The twist (2026-11-22: "a side looping, as if the road did a full twist while still going
       straight"): at 2.7 km of every lap, 320 m long on a straight, the road rolls a full turn about
       an axis one half-width above it, easing in and out; at the top you ride upside down with the
       city of gold overhead, the edge lights tracing two golden helices. The physics drives a flat
       road; the road, the racers and the camera (its up turning with the road) are drawn through
       `twistPose` (lib/art/track.ts). Data: a `twist` feature (`at`, `length`, `every`).
+- [x] The big twist (2026-11-22: "another one even bigger where your driving choice impacts the
+      power of your speed, in the opposite sense"): at 4.1 km, 560 m, rolling the other way. Your
+      line changes your speed: the right side runs downhill (up to a 0.14 slope, faster), the left
+      uphill (`twist.dir`, `twist.surge`).
+- [x] The choice at every twist (2026-11-22: "a choice to pass straight … but if you do the
+      loopings you get a boost after it"): a straight lane 18 m wide peels off the right edge 420 m
+      before each twist, runs 46 m out from the centre beside it (clear of the ribbon), and rejoins
+      420 m after. Ride the twist on its ribbon from start to end and you get a boost out of it; the
+      lane gets none (`twist.bypass`).
+- [x] No rails on a twist (2026-11-22: "loopings without rail so if you exit out you fly into the
+      void and dive into the stars below and accelerate and explode, and it says U FUCKED UP! race
+      over"): once a twist has turned past 0.15 rad its barriers are gone and the road's hold lets
+      you go. Ride off the ribbon (not onto the lane) and you are thrown out from its axis, diving
+      ever faster into the stars (26 m/s²). You explode at 2.4 s; at 3.4 s the race is over: "U
+      fucked up!", Race again or Tracks (lib/art/wreck.ts).
+- [x] Curled walls past the edge (2026-11-22: "the top side of tilted roads on turns need to curve
+      up higher … so you can drive up those tilts to boost back down"; "after the golden lines on
+      the sides, so it feels like you are going off track and get back into it"): past the golden
+      lines on the high side of a banked bend, a quarter-pipe that grows with the bank (radius up
+      to 14 m at full bank, `curl`). The barrier stands back past its top.
+- [x] The crossover (2026-11-22: "the track passes over the track so you can see it from above, or
+      jump above it"): the lap is now 10 km. At 5.7 km a figure of eight: the road climbs 18 m
+      through a 270° left loop, crosses over the road it came in on, comes down through a 270°
+      right loop and passes back under that bridge (`crossover`). The bridge (2026-11-22: "more
+      aesthetic … a cool bridge … a feeling of grandiose"):
+      - only its deck is drawn, on a dark 1.6 m slab;
+      - its edges are lit, with three lines of light under the deck;
+      - tall golden pillars of light stand every 48 m, clear of the road beneath.
+      The city keeps off the road where it loops back.
 - [x] The STAY WILD portal (2026-11-22: "a kind of portal dome arch with stay wild written on top
       in golden letters at the end of the track lap"): at the end of every 6 km lap a dome of gold
       light spans the road, 60 m deep, its ribs rising to a crown and falling away, the words

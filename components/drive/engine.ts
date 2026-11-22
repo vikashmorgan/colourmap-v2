@@ -106,6 +106,7 @@ import {
   heightAt,
   makeTrackWorld,
   newRace,
+  onBypass,
   pointAt,
   project,
   type Race,
@@ -138,6 +139,7 @@ import {
   type WeatherState,
   weatherNow,
 } from '@/lib/art/weather';
+import { newWreck, offTwist, stepWreck, type Wreck } from '@/lib/art/wreck';
 import { buildSaltView, type SaltView } from './salt-view';
 import { makeStageFire } from './stage-fire';
 import { buildTrackView, disposeGroup, type TrackView } from './track-view';
@@ -522,6 +524,10 @@ export class DriveEngine {
   private race: Race = newRace();
   private best: number | null = null;
   private surgeAt = -99;
+  /** Off a twist and diving into the stars, or null (lib/art/wreck.ts). */
+  private wreck: Wreck | null = null;
+  /** On a twist's ribbon since its start (for the boost after it), or null. */
+  private riding: { end: number } | null = null;
   private hudAt = 0;
   private lastHud = '';
   private size = { w: 1, h: 1 };
@@ -860,6 +866,9 @@ export class DriveEngine {
     this.best = loadBest(this.store, bestKey(this.cfg.id, kind));
     this.drift = this.newDrift(kind);
     this.surgeAt = -99;
+    this.wreck = null;
+    this.riding = null;
+    if (this.vehicleView) this.vehicleView.group.visible = true;
     this.buildVehicleView();
     this.buildRivals();
     this.placeGantry();
@@ -1037,11 +1046,111 @@ export class DriveEngine {
   }
 
   /** Where a point is drawn on a twisting road, or null where the road is not twisting. */
+  /** Off the twist's edge: the dive starts from where you are drawn, thrown out from its axis. */
+  private startWreck(s: number, u: number) {
+    const tr = this.trackWorld?.track;
+    const v = this.vehicle;
+    if (!tr) return;
+    const surf = heightAt(tr, Math.max(0, s), u, true);
+    const p = twistPose(tr, s, u, v.z - surf);
+    const axis = twistPose(tr, s, 0, tr.def.half(Math.max(0, s)));
+    this.wreck = newWreck(p, v, axis);
+    this.riding = null;
+  }
+
+  /** The dive: the vehicle falls with it, trailing fire; it blows up, then the race is called. */
+  private stepWreck(dt: number) {
+    const wk = this.wreck;
+    if (!wk) return;
+    const v = this.vehicle;
+    const f = stepWreck(wk, dt);
+    v.x = wk.x;
+    v.y = wk.y;
+    v.z = wk.z;
+    v.vx = wk.vx;
+    v.vy = wk.vy;
+    v.pitch = Math.min(1.2, wk.t * 0.5);
+    if (!wk.boomed && Math.random() < 0.8)
+      this.sparks.emit(wk.x, wk.y, wk.z, wk.vx * 0.6, wk.vy * 0.6, wk.vz * 0.6, 0.5, 0.25);
+    if (f.boom) {
+      for (let i = 0; i < 260; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const b = Math.acos(Math.random() * 2 - 1);
+        const sp = 8 + Math.random() * 30;
+        const dx = Math.sin(b) * Math.cos(a) * sp;
+        const dy = Math.sin(b) * Math.sin(a) * sp;
+        const dz = Math.cos(b) * sp;
+        this.sparks.emit(
+          wk.x,
+          wk.y,
+          wk.z,
+          wk.vx * 0.3 + dx,
+          wk.vy * 0.3 + dy,
+          wk.vz * 0.3 + dz,
+          0.8 + Math.random() * 1.4,
+          0.3 + Math.random() * 0.5,
+        );
+        if (i < 90)
+          this.puffs.emit(
+            wk.x,
+            wk.y,
+            wk.z,
+            dx * 0.3,
+            dy * 0.3,
+            dz * 0.3,
+            1.6 + Math.random(),
+            3 + Math.random() * 4,
+          );
+      }
+      if (this.vehicleView) this.vehicleView.group.visible = false;
+      wk.vx *= 0.2;
+      wk.vy *= 0.2;
+      wk.vz *= 0.2;
+    }
+    if (f.over) this.wrecked();
+  }
+
+  /** The race is over: you went off the twist. */
+  private wrecked() {
+    if (!this.onFinish) return;
+    const r = raceResult(
+      {
+        time: this.race.start !== null ? this.t - this.race.start : 0,
+        best: this.race.best,
+        record: false,
+      },
+      { name: 'You', colour: hullOf(this.design).colour, s: this.s },
+      this.rivals.map((rv) => ({ name: rv.r.name, colour: rv.r.colour, s: rv.s })),
+    );
+    this.onFinish({ ...r, wrecked: true });
+  }
+
+  /** Track a ride through a twist on its ribbon; out of its end still on it, a boost. */
+  private rideTwist(s: number, u: number) {
+    const tr = this.trackWorld?.track;
+    if (!tr?.def.twist || this.wreck) return;
+    const on = Math.abs(u) <= tr.def.half(Math.max(0, s)) + 1;
+    const turning = (tr.def.twist(Math.max(0, s)) ?? 0) !== 0;
+    if (turning && !this.riding && on && Math.abs(tr.def.twist(Math.max(0, s))) < 0.05) {
+      let end = s;
+      while (end < s + 1000 && tr.def.twist(end) !== 0) end += 2;
+      this.riding = { end };
+    }
+    if (!this.riding) return;
+    if (!on) this.riding = null;
+    else if (s >= this.riding.end) {
+      this.surgeAt = this.t;
+      this.riding = null;
+    }
+  }
+
   private posed(x: number, y: number, z: number, near: number) {
     const tr = this.trackWorld?.track;
     if (!tr?.def.twist) return null;
     const q = project(tr, x, y, near);
     if ((tr.def.twist(Math.max(0, q.s)) ?? 0) === 0) return null;
+    if (Math.abs(q.u) > tr.def.half(Math.max(0, q.s)) + 4 && onBypass(tr, q.s, q.u) !== null)
+      return null;
     return twistPose(tr, q.s, q.u, z - heightAt(tr, Math.max(0, q.s), q.u, true));
   }
 
@@ -1209,9 +1318,11 @@ export class DriveEngine {
       if (this.trackWorld) this.trackWorld.track.hint = this.s;
       // On the grid everyone stands still until GO: a steeply banked start would let the cars
       // slide down the bank while the lights count.
-      const ev = holding
-        ? HELD
-        : stepVehicle(v, { ...ctl, mode: this.design.mode }, dt, this.physics, t);
+      const ev =
+        holding || this.wreck
+          ? HELD
+          : stepVehicle(v, { ...ctl, mode: this.design.mode }, dt, this.physics, t);
+      if (this.wreck) this.stepWreck(dt);
       this.odometer = (this.odometer + Math.hypot(v.x - px, v.y - py)) % 4096;
       let u = 0;
       if (this.trackWorld) {
@@ -1220,8 +1331,14 @@ export class DriveEngine {
         this.s = q.s;
         u = q.u;
         const half = tr.def.half(Math.max(0, q.s));
+        // Off a twist's open edge: gone into the void (2026-11-22).
+        if (!this.wreck && offTwist(tr, q.s, u)) this.startWreck(q.s, u);
+        // Through a twist on its ribbon, start to end: a boost out of it (the bypass gets none).
+        this.rideTwist(q.s, u);
         // Into the void: back on the road before the jump, rolling, for another go.
-        if (v.z < heightAt(tr, Math.max(0, q.s), u, true) - FALLEN) {
+        if (this.wreck) {
+          // The dive is drawn from the wreck; nothing to put back.
+        } else if (v.z < heightAt(tr, Math.max(0, q.s), u, true) - FALLEN) {
           const g = gapAround(tr, q.s);
           const back = Math.max(0, (g?.from ?? q.s) - RETRY_BACK);
           this.placeOnRoad(v, back, RETRY_SPEED);
@@ -1229,7 +1346,7 @@ export class DriveEngine {
           tr.hint = back;
         }
         // Lost (should never happen): back onto the road where you are.
-        else if (Math.abs(u) > 80 || !Number.isFinite(q.s)) {
+        else if (Math.abs(u) > 90 || !Number.isFinite(q.s)) {
           const p = pointAt(tr, Math.max(0, q.s), 0);
           v.x = p.x;
           v.y = p.y;
@@ -1298,7 +1415,15 @@ export class DriveEngine {
     const baseZ = piece ? 0 : v.z - spec.hover;
     const wantZ = baseZ + lift + (v.air ? 0.8 : 0);
     this.cam.z = ease(this.cam.z, wantZ, v.air ? 2.5 : 7, dt);
-    if (this.trackWorld && !this.preview) {
+    const wk = this.wreck;
+    if (wk) {
+      // Off the twist: watch the dive from above and behind, falling with it.
+      const sp = Math.hypot(wk.vx, wk.vy) || 1;
+      this.cam.x = wk.x - (wk.vx / sp) * 16;
+      this.cam.y = wk.y - (wk.vy / sp) * 16;
+      this.cam.z = wk.z + 10 + Math.min(20, wk.t * 6);
+      this.cam.roll = 0;
+    } else if (this.trackWorld && !this.preview) {
       // Never under the ground (a banked turn's high side behind you).
       const g = heightAt(
         this.trackWorld.track,
@@ -1318,8 +1443,9 @@ export class DriveEngine {
 
     // A twist turns what is drawn about the road's axis (the physics drives a flat road): the
     // camera rides it too, its up turning with the road, so the world rolls over you.
-    const camP = !shot && !piece ? this.posed(this.cam.x, this.cam.y, this.cam.z, this.s) : null;
-    const vP = this.posed(v.x, v.y, v.z, this.s);
+    const camP =
+      !shot && !piece && !wk ? this.posed(this.cam.x, this.cam.y, this.cam.z, this.s) : null;
+    const vP = wk ? null : this.posed(v.x, v.y, v.z, this.s);
     const ox = camP ? camP.x : this.cam.x;
     const oy = camP ? camP.y : this.cam.y;
     const camera = this.camera;
@@ -1334,7 +1460,9 @@ export class DriveEngine {
       const lx = v.x + Math.cos(yaw) * ahead;
       const ly = v.y + Math.sin(yaw) * ahead;
       const lz = baseZ + (this.preview ? 0.7 : 0.9);
-      const look = this.posed(lx, ly, lz, this.s) ?? { x: lx, y: ly, z: lz };
+      const look = wk
+        ? { x: wk.x, y: wk.y, z: wk.z }
+        : (this.posed(lx, ly, lz, this.s) ?? { x: lx, y: ly, z: lz });
       const th = vP?.th ?? 0;
       // The road's up, turned with it: its left side rises as the twist turns.
       camera.up.set(Math.sin(v.h) * Math.sin(th), Math.cos(th), Math.cos(v.h) * Math.sin(th));
