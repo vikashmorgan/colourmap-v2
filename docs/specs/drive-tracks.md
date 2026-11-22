@@ -1,0 +1,106 @@
+# Drive: the tracks and what each one needs next
+
+Asked 2026-11-21: "push this game to the next level with overall coherence, better menus and a clear
+improvements list for each track". One section per track: what it is, then its improvement list in
+the order we build it. Ticked items have shipped. The data behind the menus (colour, tagline,
+timing, length, highlights) lives in `lib/art/track-registry.ts`; the worlds themselves in
+`docs/specs/drive-game.md`.
+
+Every track also gets the shared work from `docs/specs/drive-menus.md` (the track ring, the race
+intro and grid, the results) and the design language in `docs/specs/drive-design-language.md`.
+
+## Shared across every road track
+
+- [ ] Tracks as data: the bends, rises, banks, jumps, gates and decor as JSON keyframes instead of
+      formulas, checked by the track tests (the map, the intro flyover, Fable and the games site
+      all read it).
+- [ ] A start line and grid on every road: the gantry, six slots, the click to start.
+- [ ] Laps on every road that can close (start/finish gate, lap count chosen in the menu); the
+      endless roads keep their timed kilometres as a "Cruise" mode.
+- [ ] Push and crash between racers: a shove that throws the other into the wall, a crash that
+      bursts in its fire's colours, a respawn a second later (rivals and you alike).
+- [ ] Slipstream: tucked in behind a racer, your boost charges.
+- [ ] Boost meter: a big tank that drains while boosting and refills slowly.
+- [ ] Slow motion (a key and a menu toggle).
+- [ ] A continuous smoke trail behind the car, never puffs.
+
+## 1. Salt Flat (`salt`)
+
+Endless salt at sunset; the measured mile and the drift gates.
+- [ ] Drift gates read as a lap in the ring's map (their loop drawn under the screen).
+- [ ] A ghost of your best mile.
+- [ ] Dust trail that hangs in the low sun.
+
+## 2. Coast Road (`coast`)
+
+Banked cliff road over the sea, timed every km.
+- [ ] A closed lap version with a start/finish over a headland.
+- [ ] Spray off the cliff on the windward bends.
+- [ ] Gulls and a lighthouse as landmarks in the sightlines.
+
+## 3. Canyon Race (`canyon`)
+
+Red rock, quarter-pipes, two arches, crests that launch you.
+- [ ] Low-sun lighting: one wall glowing orange, the other in violet shadow, light shafts through
+      the arches.
+- [ ] Sightlines: each bend opens onto a corridor framing the next arch; spires and mesas outside
+      in two or three layers of haze.
+- [ ] A slot canyon: walls past 100 m closing to about 12 m, then a burst into an open bowl.
+- [ ] The jump: the 6.5 m crest at 3,550 m becomes a gap over a dry riverbed.
+- [ ] A high road on a ledge up the left wall, faster and narrower, rejoining after the slot.
+- [ ] Eagles, pebbles off the walls, an echo inside.
+
+## 4. Night Rain (`night`)
+
+Lamp rows in the rain.
+- [ ] Deeper puddle reflections and spray off the rivals.
+- [ ] Lightning far off now and then, lighting the towers for an instant (mellow, never a strobe).
+
+## 5. Chinatown Run (`chinatown`)
+
+Lanterns, lanes and avenues.
+- [ ] More banking in the bends (as the Neon District).
+- [ ] Push and crash against the shophouse walls.
+- [ ] Bridges built into the buildings and over the road, not floating.
+
+## 6. Neon District (`neon`)
+
+The City of Dreams in neon, mood rings.
+- [ ] More banking in the bends: the outside rises toward a wall you can ride.
+- [ ] Bridges built into the towers and the road.
+- [ ] Push and crash: shove rivals into the barriers; they burst in neon.
+
+## 7. Sky Canyon (`sky`)
+
+An endless canyon on three heights, lap doors.
+- [ ] The lap door as the race's start line (the grid in front of it).
+- [ ] Waterfalls down the walls between the light bands.
+
+## 8. Mars (`mars`)
+
+The salt flat on Mars.
+- [x] Quicker, sharper turns and far more lean (2026-11-21).
+- [ ] Dust devils in rust, a dust storm weather.
+- [ ] A rover track and a lander as landmarks.
+
+## 9. Golden Track (`gold`)
+
+A road of gold dots under Saturn.
+- [x] Dark sky in every weather; a real night sky and Saturn; hulls keep their colour at night
+      (2026-11-21).
+- [ ] G-force bends: on some turns the outer edge curves up into a steep banked wall you can carry
+      speed high along, still part of the track.
+- [ ] A big jump over the void: the road ends, you fly over darkness, land on the far side.
+- [ ] The gate: blue gas fires along both sides, a ring above drawing the gas up, pulsing harder
+      as you come closer; it becomes the start/finish of a lap.
+- [ ] A black ocean round the track and a distant landscape on the horizon.
+- [ ] The rings change with a colour mode: fire rings, or a few neon ones.
+- [ ] The track draws itself ahead of you; the dots breathe slowly with the music.
+
+## Vehicles and garage (shared)
+
+- [x] Leopard hull with gold rims; the Space Racer (2026-11-21).
+- [ ] A four-engine wing fighter (original design), four fires.
+- [ ] Five turbine shapes to choose from (same fire for now).
+- [ ] The hover ship's fire as real gas flame (the Art gas burner's look).
+- [ ] More speedometers: geometric ones (hexagon, ring of segments, triangle).
