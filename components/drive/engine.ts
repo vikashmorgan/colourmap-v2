@@ -98,6 +98,7 @@ import {
   wrapPeriod,
 } from '@/lib/art/salt-flat-game';
 import { SPEED_FLOATS } from '@/lib/art/speed-shaders';
+import { STAGE_OUT } from '@/lib/art/stage-fire';
 import {
   FALLEN,
   frameAt,
@@ -119,6 +120,7 @@ import {
   FLAT,
   MARS_FLAT,
   newVehicle,
+  type StepEvents,
   speedOf,
   stepVehicle,
   VEHICLES,
@@ -136,6 +138,7 @@ import {
   weatherNow,
 } from '@/lib/art/weather';
 import { buildSaltView, type SaltView } from './salt-view';
+import { makeStageFire } from './stage-fire';
 import { buildTrackView, disposeGroup, type TrackView } from './track-view';
 import { buildVehicle, type VehicleView } from './vehicles';
 
@@ -384,6 +387,9 @@ class Puffs {
 /** The night light over the vehicle (candela; close over the hull, falling off before it pools much light on the road). */
 export const CAR_LIGHT = 12;
 
+/** A step that moved nothing (the grid, waiting for GO). */
+const HELD: StepEvents = { landed: 0, bump: 0, tookOff: false };
+
 /** Lost to a jump's void: back this far before its gap (m), rolling at this speed (m/s), enough
  * run-up to make it with the throttle down. */
 export const RETRY_BACK = 450;
@@ -480,6 +486,10 @@ export class DriveEngine {
   private lastIntro = '';
   /** The start gantry over the line on every road: two posts, a bar, three lamps. */
   private gantry = new THREE.Group();
+  /** The start's stage fire, on the gantry; its clock runs from the click (-1000 before). */
+  private stage = makeStageFire();
+  private stageNow = -1000;
+  private sparkColour = new THREE.Color(2, 1.4, 0.5);
   private lamps: THREE.MeshBasicMaterial[] = [];
   /** The gantry's edges of light, in the track's colour. */
   private gantryGlow = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
@@ -789,6 +799,7 @@ export class DriveEngine {
       this.lamps.push(mat);
       this.gantry.add(lamp);
     }
+    this.gantry.add(this.stage.points);
     this.gantry.visible = false;
   }
 
@@ -805,6 +816,24 @@ export class DriveEngine {
       if (c.name === 'bar' || c.name === 'strip') c.scale.z = 2 * w;
     }
     this.gantryGlow.color.set(trackInfo(this.cfg.id).colour).multiplyScalar(1.6);
+    // Each burner on the road's edge where it stands, in the gantry's frame (the road may curve).
+    const gs = this.cfg.startS + 6;
+    const g = frameAt(tw.track, gs);
+    const ge = heightAt(tw.track, gs, 0);
+    this.stage.place(
+      this.stage.jets.map((j) => {
+        const s = Math.max(0, gs + j.along);
+        const p = pointAt(tw.track, s, j.side * (tw.track.def.half(s) + STAGE_OUT));
+        const dx = p.x - g.x;
+        const dy = p.y - g.y;
+        return {
+          x: dx * Math.cos(g.h) + dy * Math.sin(g.h),
+          y: heightAt(tw.track, s, j.side * tw.track.def.half(s)) - ge,
+          z: -(-dx * Math.sin(g.h) + dy * Math.cos(g.h)),
+        };
+      }),
+    );
+    this.sparkColour.set(trackInfo(this.cfg.id).colour).multiplyScalar(2.2);
   }
 
   private spawn() {
@@ -1028,6 +1057,7 @@ export class DriveEngine {
   startIntro(skipFly = false) {
     this.spawn();
     this.intro = newIntro(skipFly);
+    this.stageNow = -1000;
     this.lastIntro = '';
   }
 
@@ -1044,6 +1074,7 @@ export class DriveEngine {
     const c = this.intro;
     if (!c || c.launchedAt !== null) return;
     this.intro = { ...c, launchedAt: c.t };
+    this.stageNow = 0;
   }
 
   /** The course is run: hand the shell the results. */
@@ -1125,6 +1156,7 @@ export class DriveEngine {
     disposeGroup(this.scene);
     this.env?.dispose();
     this.composer.dispose();
+    this.stage.dispose();
     this.renderer.dispose();
   }
 
@@ -1138,6 +1170,9 @@ export class DriveEngine {
     const v = this.vehicle;
     const spec = VEHICLES[v.kind];
     this.stepIntro(dt);
+    // The stage fire's show runs on past GO until its last sparks fall (about 4.5 s in all).
+    if (this.stageNow >= 0 && this.stageNow < 8) this.stageNow += dt;
+    this.stage.set(this.stageNow, this.sparkColour);
     const holding = this.intro !== null && !racing(this.intro);
     const ctl =
       this.preview || holding
@@ -1162,7 +1197,11 @@ export class DriveEngine {
       const py = v.y;
       const s0 = this.s;
       if (this.trackWorld) this.trackWorld.track.hint = this.s;
-      const ev = stepVehicle(v, { ...ctl, mode: this.design.mode }, dt, this.physics, t);
+      // On the grid everyone stands still until GO: a steeply banked start would let the cars
+      // slide down the bank while the lights count.
+      const ev = holding
+        ? HELD
+        : stepVehicle(v, { ...ctl, mode: this.design.mode }, dt, this.physics, t);
       this.odometer = (this.odometer + Math.hypot(v.x - px, v.y - py)) % 4096;
       let u = 0;
       if (this.trackWorld) {

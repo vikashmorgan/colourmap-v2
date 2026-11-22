@@ -86,7 +86,7 @@ const DOCS = { coast, night, neon, gold } as unknown as Record<string, TrackData
 /** The Golden Track's waves alone, without its jumps, to compare with how it was by hand. */
 const WAVES_ONLY = (d: TrackData): TrackData => ({
   ...d,
-  features: (d.features ?? []).filter((f) => f.kind !== 'jump'),
+  features: (d.features ?? []).filter((f) => f.kind !== 'jump' && f.kind !== 'straight'),
 });
 
 describe('tracks as data', () => {
@@ -315,6 +315,17 @@ describe('the jump over the void (2026-11-22)', () => {
 
   it('passes its own checks with the jump', () => {
     expect(validateTrackData(DOCS.gold)).toEqual([]);
+  });
+});
+
+describe('the level start (2026-11-22)', () => {
+  it('runs the Golden grid straight and unbanked, easing into the bends after', () => {
+    const def = compileTrack(DOCS.gold);
+    for (let s = 0; s <= 140; s += 5) {
+      expect(Math.abs(def.curv(s))).toBe(0);
+      expect(Math.abs(frameAt(makeTrack(def), s).bank)).toBeLessThan(1e-9);
+    }
+    expect(Math.abs(def.curv(400))).toBeGreaterThan(0);
   });
 });
 

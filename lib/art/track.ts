@@ -405,11 +405,11 @@ export const NEON_TRACK: TrackDef = compileTrack(neonData as TrackData);
  * City's and Art's gold dots (components/drive/track-view.ts `goldDots`).
  */
 export const GOLDEN_HALF = 18;
-export const GOLDEN_BANK = 0.46;
+export const GOLDEN_BANK = 0.62;
 /** Tighter bends (2026-11-19: "more curving on the turns, more tilt on the slope"): the tightest
- * about 130 m across, banked up to 0.46 rad (≈ 26°; 0.34 until 2026-11-22: "even more tilt to the
- * roads on the turns"), against the other tracks' 0.2
- * (lib/art/tracks/gold.json). */
+ * about 130 m across, banked up to 0.62 rad (≈ 36°), gentler bends less, against the other
+ * tracks' 0.2 (0.34, then 0.46, until 2026-11-22: "even more tilt to the roads on the turns",
+ * "some turns with even more tilt"). Data: lib/art/tracks/gold.json. */
 export const GOLDEN: TrackDef = compileTrack(goldData as TrackData);
 
 /* ── Canyon Race ───────────────────────────────────────────── */
