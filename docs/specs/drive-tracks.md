@@ -6,6 +6,11 @@ the order we build it. Ticked items have shipped. The data behind the menus (col
 timing, length, highlights) lives in `lib/art/track-registry.ts`; the worlds themselves in
 `docs/specs/drive-game.md`.
 
+**Order** (2026-11-22: "golden track on top of the menus. so we have an order from best tracks to
+least cool"): Golden Track, Neon District, Canyon Race, Sky Canyon, Chinatown Run, Night Rain, Coast
+Road, Mars, Salt Flat. The menus, the ring and the number keys 1–9 follow it (`WORLDS`,
+lib/art/drive-design.ts); with nothing remembered the game opens on the Golden Track.
+
 Every track also gets the shared work from `docs/specs/drive-menus.md` (the track ring, the race
 intro and grid, the results) and the design language in `docs/specs/drive-design-language.md`.
 
@@ -34,6 +39,8 @@ intro and grid, the results) and the design language in `docs/specs/drive-design
 - [ ] Slipstream: tucked in behind a racer, your boost charges.
 - [ ] Boost meter: a big tank that drains while boosting and refills slowly.
 - [ ] Slow motion (a key and a menu toggle).
+- [x] Lean in the air: the body leans with the wheel while airborne (up to 1.2× its most on the
+      ground), both car and ship (2026-11-22: "I need tilt to keep working when in the air").
 - [ ] A continuous smoke trail behind the car, never puffs.
 
 ## 1. Salt Flat (`salt`)
@@ -100,6 +107,11 @@ The salt flat on Mars.
 A road of gold dots under Saturn.
 - [x] Dark sky in every weather; a real night sky and Saturn; hulls keep their colour at night
       (2026-11-21).
+- [x] Steeper banking: up to 0.46 rad (≈ 26°, was 0.34), design speed 85 m/s, so medium bends
+      bank more too (2026-11-22: "even more tilt to the roads on the turns").
+- [x] Calm arches: the streams' head softer over a brighter rest, a 30 m tail, and the light sweeps
+      over each arch foot to foot instead of lighting it all at once (2026-11-22: the light
+      semicircles "flash too much. stressful").
 - [ ] G-force bends: on some turns the outer edge curves up into a steep banked wall you can carry
       speed high along, still part of the track.
 - [ ] A big jump over the void: the road ends, you fly over darkness, land on the far side.

@@ -259,6 +259,9 @@ export const FLAT: World = { ground: () => ({ h: 0, gx: 0, gy: 0, rough: 0 }) };
  * too straight and rigid"): the same open plain, but the turn comes quicker and sharper and the body
  * leans far into it.
  */
+/** How far the body leans in the air with full steering, against its most on the ground. */
+export const AIR_LEAN = 1.2;
+
 export const MARS_HANDLING: Handling = { turn: 1.8, lean: 2.6 };
 export const MARS_FLAT: World = { ...FLAT, handling: MARS_HANDLING };
 
@@ -687,13 +690,15 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   const aheadSlope = next.gx * fx + next.gy * fy;
   const lean = (v.kind === 'ship' ? 0.012 : 0.0035) * feel.lean;
   const leanMax = (v.kind === 'ship' ? 0.4 : 0.09) * feel.lean;
+  // In the air it still leans with the wheel (2026-11-22: "I need tilt to keep working when in the
+  // air"): the tyres don't turn you there, so the lean follows your steering, not the turn.
   const rollTo = air
-    ? v.roll * 0.98
+    ? clamp(v.steer * leanMax * AIR_LEAN + lateral * lean, -leanMax * AIR_LEAN, leanMax * AIR_LEAN)
     : -Math.atan(sideSlope) +
       // Both lean into the turn: the side you turn toward goes down (the car: "when you turn left
       // you lean left"; the ship, 2026-11-19: "when I turn right the right side should be lower").
       clamp(lateral * lean, -leanMax, leanMax);
-  v.roll = ease(v.roll, rollTo, air ? 1 : 6, dt);
+  v.roll = ease(v.roll, rollTo, air ? 4 : 6, dt);
   const pitchTo = air
     ? Math.atan2(v.vz, Math.max(speed, 5)) * 0.6
     : Math.atan(aheadSlope) + clamp(Math.atan2(v.liftV, Math.max(speed, 10)) * 0.8, -0.22, 0.22);
