@@ -63,3 +63,10 @@ export function gradeShown(g: Grade): number {
 export function glitchOf(radiation: number): number {
   return 0.6 * radiation * radiation;
 }
+
+/** The Geiger counter's clicks per second for a radiation: a stray tick now and then out on the
+ * plain, a busy patter at a lake's edge (never a buzz). */
+export function geigerRate(radiation: number): number {
+  const r = Math.min(1, Math.max(0, radiation));
+  return 0.15 + 13 * r * r;
+}

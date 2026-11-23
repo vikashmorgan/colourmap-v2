@@ -150,12 +150,14 @@ import {
   twistEntry,
   type Wreck,
 } from '@/lib/art/wreck';
-import { type Marker, MarsRun, type MissionHud } from './mars-run';
+import { easeMask, gMask } from '@/lib/art/g-force';
+import { type Marker, MarsRun, type MarsWhere, type MissionHud } from './mars-run';
 import { buildMarsView, type MarsView } from './mars-view';
 import { buildSaltView, type SaltView } from './salt-view';
 import { makeStageFire } from './stage-fire';
 import { buildTrackView, disposeGroup, type TrackView } from './track-view';
 import { buildVehicle, type VehicleView } from './vehicles';
+import { makeVintagePass } from './vintage-pass';
 
 export interface Hud {
   speed: number;
@@ -176,6 +178,8 @@ export interface Hud {
   racers?: number;
   /** Mars: the mission to follow the Red Bastard. */
   mission?: MissionHud | null;
+  /** Mars: the region you are in, the radiation, you and him on the map. */
+  mars?: MarsWhere | null;
   /** Where you are, when it has its own name on screen: Undertown, under Chinatown Run. */
   zone?: 'undertown' | null;
 }
@@ -501,6 +505,12 @@ export class DriveEngine {
   private bloom: UnrealBloomPass;
   /** The Neon District's rings recolour every light (lib/art/night-course.ts MOODS). */
   private moodPass: ShaderPass;
+  /** The last touches: the G-force mask (every world), Mars's photograph edges, old film, the TV. */
+  private vintagePass = makeVintagePass();
+  private gLevel = 0;
+  private hitAt = -99;
+  private hitPower = 0;
+  private scraping = false;
   private mood: RingMood | null = null;
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera();
@@ -655,6 +665,7 @@ export class DriveEngine {
     this.composer.addPass(this.moodPass);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.144, 0.45, 0.55);
     this.composer.addPass(this.bloom);
+    this.composer.addPass(this.vintagePass);
     this.composer.addPass(new OutputPass());
     this.camera.matrixAutoUpdate = true;
 
@@ -846,6 +857,7 @@ export class DriveEngine {
         env: this.env,
         store: this.store,
         emitDust: (...a) => this.puffs.emit(...a),
+        view: this.marsView,
         makeTrail: (colour) => {
           const mat = this.ribbonGlow.clone();
           mat.uniforms = { uColour: { value: colour }, uOpacity: { value: 0.7 } };
@@ -1589,6 +1601,10 @@ export class DriveEngine {
       }
       this.stepRivals(dt, t);
       this.marsRun?.step(dt, t, v, !holding, this.onRadio);
+      // A hit's soft pulse of the G mask: the start of a scrape on a wall or barrier.
+      const scraping = (ev.scrape ?? 0) > 2;
+      if (scraping && !this.scraping) this.pulse(Math.min(1, (ev.scrape ?? 0) / 18), t);
+      this.scraping = scraping;
       // Rolled over on a twist or Undertown, the spray and sparks would show on the ground the
       // physics drives, not on the road as drawn: none there.
       if (!this.rolled()) {
@@ -1795,9 +1811,32 @@ export class DriveEngine {
     this.updateMotes(speed, spec.vTop, boost, dt, w, aspect);
 
     this.paintMood(dt);
+    this.paintVintage(dt, t, speed);
     this.onFrame?.(dt);
     this.composer.render(dt);
     this.emitHud(speed, t);
+  }
+
+  /** A soft pulse of the G mask (a hit), `power` 0..1. */
+  pulse(power: number, t: number) {
+    this.hitAt = t;
+    this.hitPower = power;
+  }
+
+  /** The last pass's levels: the G mask from the sideways pull (speed × turn rate), Mars's
+   * moods. */
+  private paintVintage(dt: number, t: number, speed: number) {
+    const v = this.vehicle;
+    const lateral = v.air || this.preview ? 0 : speed * v.yawRate;
+    this.gLevel = easeMask(this.gLevel, gMask(lateral, t - this.hitAt, this.hitPower), dt);
+    const mars = this.cfg.id === 'mars';
+    const fx = this.marsRun?.fx() ?? { sepia: 0, glitch: 0 };
+    this.vintagePass.set(
+      { vintage: mars ? 0.85 : 0, sepia: fx.sepia, glitch: fx.glitch, g: this.gLevel },
+      t,
+      this.size.w,
+      this.size.h,
+    );
   }
 
   private newDrift(kind: string): DriftRun {
@@ -2064,6 +2103,7 @@ export class DriveEngine {
         : null,
       racers: this.rivals.length + 1,
       mission: this.marsRun?.hud(t) ?? null,
+      mars: this.marsRun?.where() ?? null,
       zone: this.zone(),
     };
     const key = JSON.stringify(hud);

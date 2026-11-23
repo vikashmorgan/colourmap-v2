@@ -14,7 +14,9 @@
 import { DRIFT_PATH } from '@/lib/art/drift-gates';
 import { clamp } from '@/lib/art/drive';
 import {
+  ARCHES,
   ATOMIC,
+  archGate,
   CRATER,
   LAKE_LEVEL,
   LAKES,
@@ -382,8 +384,22 @@ export function siteClear(x: number, y: number, r: number): boolean {
   if (Math.hypot(x - LINE.x, y - cy) < r + CLEAR.line) return false;
   if (Math.hypot(x - START.x, y - START.y) < r + CLEAR.start) return false;
   if (Math.hypot(x - DRIFT_PAN.x, y - DRIFT_PAN.y) < DRIFT_PAN.full + r + CLEAR.pan) return false;
+  // Out of the crater's bowl and off its rim, out of the lakes, clear of the arches.
+  if (Math.hypot(x - CRATER.x, y - CRATER.y) < CRATER.R * 1.5 + r) return false;
+  for (const l of LAKES) if (Math.hypot(x - l.x, y - l.y) < l.r * 1.35 + r + 20) return false;
+  for (const a of ARCHES) if (Math.hypot(x - a.x, y - a.y) < a.r + r + 60) return false;
   return distToLoop(x, y) >= r + CLEAR.loop;
 }
+
+/** The arches' feet, solid (the way between them is open). */
+export const ARCH_FEET: { x: number; y: number }[] = ARCHES.flatMap((a) => {
+  const g = archGate(a);
+  return [
+    { x: g.ax, y: g.ay },
+    { x: g.bx, y: g.by },
+  ];
+});
+const FOOT_R = 1.9;
 
 /** The stations, placed by the map (lib/art/mars-map.ts): the city's domes and Nova Cores, the
  * factory belt, the derelicts, the atomic plants by the lakes and the lighthouse on the crater's
@@ -459,6 +475,17 @@ export function siteHit(x: number, y: number, radius = 1.2): Hit | null {
     const dx = x - s.x;
     const dy = y - s.y;
     const reach = s.r + radius;
+    if (Math.abs(dx) > reach || Math.abs(dy) > reach) continue;
+    const d = Math.hypot(dx, dy);
+    if (d >= reach) continue;
+    const nx = d > 1e-6 ? dx / d : 1;
+    const ny = d > 1e-6 ? dy / d : 0;
+    return { nx, ny, depth: reach - d, loss: 0, spin: 0, flow: true };
+  }
+  for (const f of ARCH_FEET) {
+    const dx = x - f.x;
+    const dy = y - f.y;
+    const reach = FOOT_R + radius;
     if (Math.abs(dx) > reach || Math.abs(dy) > reach) continue;
     const d = Math.hypot(dx, dy);
     if (d >= reach) continue;

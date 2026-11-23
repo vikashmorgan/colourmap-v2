@@ -1,7 +1,8 @@
 /**
  * Drive, Mars: its own few sounds (docs/specs/drive-game.md, world 8), apart from the game's
- * general sound. Only the radio for now: a soft squelch as a line opens, a band of static under the
- * voice while it speaks, a squelch as it closes. Very quiet. The audio context is made only after a
+ * general sound: the radio (a soft squelch as a line opens, a band of static under the voice while
+ * it speaks, a squelch as it closes), the Geiger counter's clicks and the shot's soft bang. Very
+ * quiet. The audio context is made only after a
  * key or a touch (browsers ask for that), and everything fails silently where audio is missing.
  */
 
@@ -60,6 +61,85 @@ export function radioCrackle(seconds: number, volume = 0.02): void {
     src.connect(band).connect(g).connect(c.destination);
     src.start(now);
     src.stop(end + 0.05);
+  } catch {
+    // No sound, no harm.
+  }
+}
+
+/** One Geiger click: a very short, soft tick of filtered noise. */
+function click(c: AudioContext, at: number, volume: number) {
+  const src = c.createBufferSource();
+  src.buffer = noiseBuffer(c);
+  const hp = c.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 2400;
+  const g = c.createGain();
+  g.gain.setValueAtTime(0, at);
+  g.gain.linearRampToValueAtTime(volume, at + 0.001);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + 0.012);
+  src.connect(hp).connect(g).connect(c.destination);
+  src.start(at, Math.random() * 1.5);
+  src.stop(at + 0.02);
+}
+
+let geigerTimer: ReturnType<typeof setInterval> | null = null;
+let geigerRateNow = 0;
+
+/** The Geiger counter's clicks, `rate` a second (at random, as real ones are); 0 stops them. */
+export function setGeiger(rate: number, volume = 0.05): void {
+  geigerRateNow = rate;
+  if (rate <= 0) {
+    if (geigerTimer) clearInterval(geigerTimer);
+    geigerTimer = null;
+    return;
+  }
+  if (geigerTimer) return;
+  // Every tenth of a second, the clicks for the next tenth, laid out at random.
+  geigerTimer = setInterval(() => {
+    const c = ctx;
+    if (!c || c.state !== 'running') return;
+    try {
+      const now = c.currentTime;
+      let at = 0;
+      for (;;) {
+        at += -Math.log(1 - Math.random()) / Math.max(0.01, geigerRateNow);
+        if (at >= 0.1) break;
+        click(c, now + 0.02 + at, volume);
+      }
+    } catch {
+      // No sound, no harm.
+    }
+  }, 100);
+}
+
+/** A soft synthesized bang (the yellow shot's burst): a thump of low noise and a falling tone. */
+export function softBang(volume = 0.09): void {
+  const c = ctx;
+  if (!c || c.state !== 'running') return;
+  try {
+    const now = c.currentTime;
+    const src = c.createBufferSource();
+    src.buffer = noiseBuffer(c);
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(1400, now);
+    lp.frequency.exponentialRampToValueAtTime(120, now + 0.7);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(volume, now + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+    src.connect(lp).connect(g).connect(c.destination);
+    src.start(now);
+    src.stop(now + 1);
+    const o = c.createOscillator();
+    o.frequency.setValueAtTime(110, now);
+    o.frequency.exponentialRampToValueAtTime(38, now + 0.5);
+    const og = c.createGain();
+    og.gain.setValueAtTime(volume * 0.8, now);
+    og.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+    o.connect(og).connect(c.destination);
+    o.start(now);
+    o.stop(now + 0.6);
   } catch {
     // No sound, no harm.
   }
