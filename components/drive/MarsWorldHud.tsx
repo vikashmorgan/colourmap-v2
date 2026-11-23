@@ -146,7 +146,7 @@ const EXTENT = (() => {
   return { x0: x0 - pad, x1: x1 + pad, y0: y0 - pad, y1: y1 + pad };
 })();
 
-/** The small map, bottom left: the regions as soft rings with their names, the crater, the lakes,
+/** The small map, top right: the regions as soft rings with their names, the crater, the lakes,
  * the lighthouse, his loop as a thin red line, him a red dot, you a warm arrow. */
 export function MarsMap({ where }: { where: MarsWhere | null }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -220,8 +220,8 @@ export function MarsMap({ where }: { where: MarsWhere | null }) {
       data-testid="mars-map"
       style={{
         position: 'absolute',
-        left: 16,
-        bottom: 16,
+        right: 52,
+        top: 56,
         padding: 8,
         borderRadius: 14,
         background: 'rgba(28,16,10,0.62)',
@@ -229,7 +229,7 @@ export function MarsMap({ where }: { where: MarsWhere | null }) {
         pointerEvents: 'none',
       }}
     >
-      <canvas ref={ref} width={220} height={220} style={{ width: 220, height: 220 }} />
+      <canvas ref={ref} width={200} height={200} style={{ width: 200, height: 200 }} />
     </div>
   );
 }

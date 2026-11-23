@@ -37,10 +37,10 @@ export const CRATER = { x: -4500, y: 3000, R: 520, rim: 28, depth: 70 };
 
 /** The radioactive lakes: flat glowing pools, each its middle and radius (m). */
 export const LAKES: { x: number; y: number; r: number }[] = [
-  { x: -150, y: 6500, r: 150 },
-  { x: 520, y: 6920, r: 190 },
-  { x: 280, y: 6250, r: 95 },
-  { x: 950, y: 6450, r: 120 },
+  { x: -150, y: 6500, r: 240 },
+  { x: 520, y: 6920, r: 300 },
+  { x: 280, y: 6250, r: 150 },
+  { x: 950, y: 6450, r: 190 },
 ];
 /** The lakes' surface (m), a little under the plain. */
 export const LAKE_LEVEL = -1.4;

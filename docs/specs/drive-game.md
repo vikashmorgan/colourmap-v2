@@ -173,6 +173,56 @@ easy to stay on it", "same with coast road, make them much wider".
    carve turns about twice as tight, the slide staying under 20°. In the air every mode keeps 60% of
    its steering on Mars and the flight bends with the body, so a crest never locks you straight.
 
+   **The map** (2026-11-23: "make a map for mars so it becomes a world"): named regions placed by
+   lib/art/mars-map.ts — the Landing Plain (the start), Dome City (inside his loop), the Factory
+   Belt, the Glow Lakes, the Field of Arches, the Great Crater, and the Bastard's Run (the band
+   along his loop). Every station, plant, arch and lake stands where the map puts it, kept clear of
+   the course, the start, his loop, the crater, the lakes and the arches (`siteClear`). Entering a
+   region shows its name low on the screen in the display serif, fading in and out over 4.5 s. M
+   shows a small map (top right): the regions, the crater, the lakes, the lighthouse, his loop in
+   thin red, him a red dot, you a warm arrow.
+
+   **The Great Crater**: one bowl 1 km across in the real terrain (physics and backdrop alike), 70 m
+   deep with a rim 28 m high that falls away outside (`craterHeight`). Its walls are under 25°, so
+   you ride down into it and back out; flat out over the rim, the car flies.
+
+   **The Glow Lakes** (2026-11-23: "radioactive lakes that give a slight old tv glitch"): four flat
+   pools a little under the plain, a sickly green-yellow with a slow ripple and a pale rim of salts.
+   Near them the radiation rises (full at the shore, none 450 m out): the picture gets soft scan
+   lines and a slow sideways drift of bands (every motion under 1 Hz), and a Geiger column on the
+   right edge fills from amber to green, with quiet random clicks (a stray tick out on the plain, a
+   busy patter at the shore; components/drive/mars-sound.ts).
+
+   **Atomic plants** (2026-11-23: "usines atomiques"): three by the lakes, each two hyperboloid
+   cooling towers with a faint steady green ring at the mouth and slow steam rising (a 14 s
+   cycle), a reactor dome on a drum, pipe runs between, and the City's star-light dots round the
+   rims and up the dome's ribs.
+
+   **The lighthouse**: on the crater's east rim, a tapering tower in rust and cream bands with a
+   gallery and lantern room; its soft beam sweeps round once in 18 s. Never flashes.
+
+   **Arches and old film** (2026-11-23: "semi circles of rust with fire … tunnels of semi circles
+   shooting fire that make the game become sepia oldschool black and white beige", "find other ones
+   to bring it back to real mars"): in the Field of Arches, lone rust half circles with fire at
+   their feet and crown, two tunnels of six arches, and dark iron arches lined with a steady pale
+   light. Fire idles low and rises for a second as you pass under (no flash). Through a tunnel's
+   arch the picture eases to old film over 1.5 s (sepia, deep shadows, creamy lights, a gentle grain
+   that steps at most twice a second); through an iron arch it eases back to Mars. The arches' feet
+   are solid; the way under is open.
+
+   **Vintage Mars** (2026-11-23: "darker brown blur on edges rounded. like old photographs"): on
+   Mars the screen has rounded dark-brown edges with a soft blur. The sky's dark umber now starts
+   just above the horizon, so it shows when looking straight ahead.
+
+   **Tracks in the dust**: on Mars the car's tyre marks last (fading over 16 s), and a drift lays a
+   wider mark under the car that swirls slowly side to side, with a small plume of dust off the
+   back (only at speed).
+
+   - Pure: lib/art/mars-map.ts (regions, crater, lakes, plants, arches), lib/art/mars.ts
+     (`regionAt`, `radiation`, `siteClear`), lib/art/mars-fx.ts (arch crossing, the grade, the
+     glitch, Geiger rate); the screen pass in components/drive/vintage-pass.ts; the screen layer
+     in components/drive/MarsWorldHud.tsx.
+
 Why three night tracks: Night Rain stays the plain lamp course the user loved (with the City's
 towers, arch and rings added back from the road); Chinatown and the Neon District are new tracks
 with their own curvature, elevation and furniture from one generator (`lib/art/night-course.ts`),
@@ -255,6 +305,14 @@ projection is the Speed pieces' own, so the shader backdrop and the meshes agree
 
 Trails: faint tyre marks that darken in a slide (none in the wet), glowing fire ribbons from the
 ship's boosters; dust, salt or spray puffs from the wheels.
+
+**G-force mask** (every world, 2026-11-23: "when u turn intensely bring a light darker edge blur
+mask to show the g pressure. same when u get hit"): the screen's edges darken and blur a little
+with the sideways pull of a hard turn (speed × turn rate: none under 10 m/s², full at 34 m/s²),
+easing in quickly and out slowly. A hit on a wall gives a brief soft pulse of the same mask
+(swelling in 0.06 s, fading over a third of a second). It stacks with Mars's photograph edges.
+Pure: lib/art/g-force.ts; drawn by components/drive/vintage-pass.ts, one pass after the bloom,
+skipped when nothing shows.
 
 **Oncoming motes**: the Coast Road piece's motes, exactly as they look there, in every world, in each
 world's palette (salt white, earth, red-brown grit, cold night). Density and streak length grow

@@ -81,9 +81,10 @@ void main() {
   // Old film: sepia, beige highlights, a little contrast, a gentle grain stepping twice a second at most.
   if (uSepia > 0.001) {
     float l = dot(col, vec3(0.299, 0.587, 0.114));
-    l = l / (1.0 + l);
-    l = smoothstep(0.0, 1.0, l);
-    vec3 sep = mix(vec3(0.16, 0.11, 0.07), vec3(1.0, 0.9, 0.74), l) * 1.6;
+    // Pressed into 0..1, then an S curve for the old print's contrast (deep shadows, creamy lights).
+    float k = 1.0 - exp(-2.4 * l);
+    k = k * k * (3.0 - 2.0 * k);
+    vec3 sep = mix(vec3(0.035, 0.02, 0.012), vec3(0.95, 0.8, 0.56), k);
     vec2 gp = floor(vUv * uRes / 1.5) + floor(vec2(uTime * 2.0, uTime * 1.3)) * 17.0;
     float grain = (hash(gp) - 0.5) * 0.06;
     col = mix(col, sep * (1.0 + grain), uSepia);

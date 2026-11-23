@@ -768,7 +768,7 @@ export function buildMarsView(): MarsView {
         const k = Math.exp(-Math.max(0, t - ar.flareAt) / 0.7);
         for (const f of ar.fires) {
           f.uniforms.uTime.value = t;
-          f.uniforms.uPower.value = 0.14 + 0.9 * k;
+          f.uniforms.uPower.value = 0.3 + 0.7 * k;
         }
       }
       // The lighthouse's beam sweeps round once in 18 s.

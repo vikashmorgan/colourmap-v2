@@ -1925,22 +1925,26 @@ export class DriveEngine {
       const swirl = this.ribbons[2];
       if (swirl) {
         // The drift's wide mark, swirling slowly side to side, and a plume of dust off the back.
-        const slide = v.air ? 0 : clamp((Math.abs(v.slip) - 0.08) * 4, 0, 1);
+        // Only a real slide at speed (at a crawl the slip angle means nothing).
+        const sp = speedOf(v);
+        const slide =
+          v.air || sp < 10
+            ? 0
+            : clamp((Math.abs(v.slip) - 0.08) * 4, 0, 1) * clamp((sp - 10) / 10, 0, 1);
         const sw = Math.sin(t * 2.4) * 0.7 * slide;
         const x = v.x - fx * 1.4 + lx * sw;
         const y = v.y - fy * 1.4 + ly * sw;
         pushTrail(swirl.trail, x, y, this.physics.ground(x, y).h + 0.035, t, slide * 0.8);
-        if (slide > 0.2 && Math.random() < slide * 0.9) {
-          const sp = speedOf(v);
+        if (slide > 0.2 && Math.random() < slide * 0.25) {
           this.puffs.emit(
             x,
             y,
-            this.physics.ground(x, y).h + 0.4,
-            -fx * sp * 0.15 + (Math.random() - 0.5) * 3,
-            -fy * sp * 0.15 + (Math.random() - 0.5) * 3,
-            1 + Math.random() * 1.5,
-            2.6 + Math.random() * 1.6,
-            3 + slide * 4,
+            this.physics.ground(x, y).h + 0.3,
+            -fx * sp * 0.1 + lx * (Math.random() - 0.5) * 4,
+            -fy * sp * 0.1 + ly * (Math.random() - 0.5) * 4,
+            0.6 + Math.random(),
+            1.8 + Math.random() * 1.2,
+            1.6 + slide * 1.6,
           );
         }
       }
