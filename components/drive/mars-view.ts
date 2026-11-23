@@ -22,13 +22,16 @@ import {
   SITES,
   type Site,
 } from '@/lib/art/mars';
+import { type Arch, ARCHES, LIGHTHOUSE } from '@/lib/art/mars-map';
 import { START } from '@/lib/art/salt-flat-game';
 import { disposeGroup } from './track-view';
-import { glowSprite } from './vehicles';
+import { buildFireCone, glowSprite, glowTexture } from './vehicles';
 
 export interface MarsView {
   group: THREE.Group;
   update(ox: number, oy: number, t: number): void;
+  /** An arch you just went through throws its fire. */
+  flare(arch: Arch, t: number): void;
   dispose(): void;
 }
 
@@ -255,6 +258,121 @@ function ruin(s: Site, parts: THREE.BufferGeometry[], lights: THREE.Vector3[]) {
   if (s.seed > 0.5) lights.push(new THREE.Vector3(-20, 17, 0));
 }
 
+/** An atomic plant (2026-11-23: "usines atomiques"): two hyperboloid cooling towers with a faint
+ * green glow at their mouths, a reactor dome, pipe runs between them. Fills in where the dot lights
+ * go (the City's star-light dots, on the towers' rims and the dome's ribs) and the towers' mouths. */
+function atomic(parts: THREE.BufferGeometry[], dots: THREE.Vector3[], mouths: THREE.Vector3[]) {
+  const concrete = [0x7a5a48, 0x8a6a52, 0x6a4a3a, 0x9a7a5e, 0x5a3a2c];
+  const H = 50;
+  const profile: THREE.Vector2[] = [];
+  for (let i = 0; i <= 12; i++) {
+    const k = i / 12;
+    // Wide at the foot, a waist two thirds up, flaring a little at the mouth.
+    const r = 9.5 + 8 * (k - 0.68) ** 2 * (k < 0.68 ? 1.6 : 2.6);
+    profile.push(new THREE.Vector2(r, k * H));
+  }
+  for (const [x, z] of [
+    [-22, 0],
+    [22, -6],
+  ]) {
+    parts.push(part(new THREE.LatheGeometry(profile, 24), at(x, -1, z), concrete, x));
+    mouths.push(new THREE.Vector3(x, H - 0.5, z));
+    for (const [k, n] of [
+      [0, 18],
+      [8, 12],
+      [12, 16],
+    ] as const) {
+      const r = profile[k].x + 0.4;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        dots.push(new THREE.Vector3(x + Math.cos(a) * r, profile[k].y - 0.6, z + Math.sin(a) * r));
+      }
+    }
+  }
+  // The reactor: a dome on a drum, ribs of dots up its sides.
+  parts.push(part(new THREE.CylinderGeometry(13, 13, 8, 20), at(0, 3, 18), concrete, 3));
+  parts.push(
+    part(new THREE.SphereGeometry(13, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), at(0, 7, 18), concrete, 4),
+  );
+  for (let m = 0; m < 8; m++) {
+    const a = (m / 8) * Math.PI * 2;
+    for (let i = 1; i < 6; i++) {
+      const e = (i / 6) * (Math.PI / 2);
+      dots.push(
+        new THREE.Vector3(
+          Math.cos(a) * Math.cos(e) * 13.4,
+          7 + Math.sin(e) * 13.4,
+          18 + Math.sin(a) * Math.cos(e) * 13.4,
+        ),
+      );
+    }
+  }
+  // Pipe runs from the dome to each tower.
+  for (const x of [-22, 22]) {
+    for (const y of [2.5, 4.5]) {
+      parts.push(
+        strut(
+          new THREE.Vector3(0, y, 18),
+          new THREE.Vector3(x * 0.62, y, x > 0 ? -3 : 2),
+          1.4,
+          [0x5a3424, 0x8a3a1c],
+          x + y,
+        ),
+      );
+    }
+  }
+}
+
+/** The lighthouse on the crater's rim: a tapering tower in rust and cream bands, a gallery, the
+ * lantern room; its beam is added by the caller (it turns). */
+function lighthouse(parts: THREE.BufferGeometry[]) {
+  const H = LIGHTHOUSE.height;
+  const bands = 8;
+  for (let i = 0; i < bands; i++) {
+    const y0 = (i / bands) * H;
+    const y1 = ((i + 1) / bands) * H;
+    const r0 = 6.5 - (i / bands) * 3;
+    const r1 = 6.5 - ((i + 1) / bands) * 3;
+    parts.push(
+      part(
+        new THREE.CylinderGeometry(r1, r0, y1 - y0, 16),
+        at(0, (y0 + y1) / 2, 0),
+        [i % 2 ? 0xe6d6b4 : 0x9a3a1c],
+        i,
+      ),
+    );
+  }
+  parts.push(part(new THREE.CylinderGeometry(5.2, 5.2, 0.8, 16), at(0, H + 0.4, 0), [0x2a1c18], 1));
+  parts.push(part(new THREE.CylinderGeometry(2.6, 2.6, 5, 12), at(0, H + 3.3, 0), [0x3a2620], 2));
+  parts.push(part(new THREE.ConeGeometry(3.2, 3, 12), at(0, H + 7.3, 0), [0x8a3a1c], 3));
+}
+
+/** An arch: a half circle of rust (or iron, for the ones that bring Mars back) you drive under,
+ * its feet on the ground, standing across the way through it. */
+function archGeo(a: Arch): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const real = a.kind === 'real';
+  const rust = real ? [0x2a2420, 0x3a302a, 0x1e1a18] : [0x8a3a1c, 0xa65a2a, 0x5a3424, 0x6a3020];
+  parts.push(part(new THREE.TorusGeometry(a.r, real ? 0.7 : 1.1, 8, 28, Math.PI), M(), rust, a.x));
+  // Ribs along it, and feet.
+  for (let i = 0; i <= 8; i++) {
+    const t = (i / 8) * Math.PI;
+    parts.push(
+      part(
+        new THREE.BoxGeometry(2.6, 0.5, 2.6),
+        place(Math.cos(t) * a.r, Math.sin(t) * a.r, 0, 0, 0, t),
+        rust,
+        i,
+      ),
+    );
+  }
+  for (const s of [-1, 1])
+    parts.push(part(new THREE.BoxGeometry(3.4, 1.4, 3.4), at(s * a.r, 0.2, 0), rust, s));
+  const geo = mergeGeometries(parts) as THREE.BufferGeometry;
+  for (const g of parts) g.dispose();
+  return geo;
+}
+
 /* ── The pipelines ── */
 
 function pipeline(p: Pipe, ox: number, oy: number): THREE.BufferGeometry {
@@ -441,14 +559,21 @@ export function buildMarsView(): MarsView {
     breathing.push({ s, base: o, phase: hash(i, size), period: 3 + 3 * hash(size, i) });
   };
 
+  const steam: { puff: THREE.Sprite; from: THREE.Vector3; phase: number }[] = [];
+  const beams: THREE.Group[] = [];
+
   // The stations.
   const sites = SITES.map((s, si) => {
     const parts: THREE.BufferGeometry[] = [];
     const lights: THREE.Vector3[] = [];
     const cores: THREE.Vector3[] = [];
+    const dots: THREE.Vector3[] = [];
+    const mouths: THREE.Vector3[] = [];
     if (s.kind === 'domes') domes(s, parts, lights);
     else if (s.kind === 'factory') factory(s, parts, lights);
     else if (s.kind === 'nova') nova(s, parts, cores);
+    else if (s.kind === 'atomic') atomic(parts, dots, mouths);
+    else if (s.kind === 'lighthouse') lighthouse(parts);
     else ruin(s, parts, lights);
     const obj = new THREE.Group();
     const geo = mergeGeometries(parts) as THREE.BufferGeometry;
@@ -464,9 +589,78 @@ export function buildMarsView(): MarsView {
       obj.add(core);
       light(obj, c, 26, si * 13 + 7, 0.5);
     }
+    if (dots.length) {
+      // The City's star-light dots: steady, a pale green on the plant.
+      const pts = new THREE.Points(
+        new THREE.BufferGeometry().setFromPoints(dots),
+        new THREE.PointsMaterial({
+          map: glowTexture(),
+          color: new THREE.Color(0.9, 1.4, 0.45),
+          size: 2.4,
+          transparent: true,
+          opacity: 0.8,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          toneMapped: false,
+        }),
+      );
+      obj.add(pts);
+    }
+    for (const [mi, m] of mouths.entries()) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(10.2, 0.5, 6, 32),
+        new THREE.MeshBasicMaterial({ color: new THREE.Color(0.5, 1.2, 0.3), toneMapped: false }),
+      );
+      ring.rotation.x = Math.PI / 2;
+      ring.position.copy(m);
+      obj.add(ring);
+      light(obj, m.clone().setY(m.y + 2), 30, si * 13 + mi, 0.3);
+      for (let k = 0; k < 5; k++) {
+        const puff = new THREE.Sprite(
+          new THREE.SpriteMaterial({
+            map: glowTexture(),
+            color: 0xd8c8b0,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+          }),
+        );
+        obj.add(puff);
+        steam.push({ puff, from: m.clone(), phase: (k / 5 + mi * 0.37) % 1 });
+      }
+    }
+    if (s.kind === 'lighthouse') {
+      const lamp = glowSprite(0xffd8a0, 16, 0.85);
+      lamp.position.set(0, LIGHTHOUSE.height + 3.3, 0);
+      obj.add(lamp);
+      const beam = new THREE.Group();
+      beam.position.set(0, LIGHTHOUSE.height + 3.3, 0);
+      for (const side of [1, -1]) {
+        const geo = new THREE.ConeGeometry(34, 320, 24, 1, true);
+        // The apex at the lantern, the cone lying out along x, dipping a little.
+        geo.translate(0, -160, 0);
+        const cone = new THREE.Mesh(
+          geo,
+          new THREE.MeshBasicMaterial({
+            color: new THREE.Color(1.0, 0.82, 0.55),
+            transparent: true,
+            opacity: 0.07,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+            toneMapped: false,
+          }),
+        );
+        cone.rotation.z = side * (Math.PI / 2 + 0.04);
+        beam.add(cone);
+      }
+      obj.add(beam);
+      beams.push(beam);
+    }
     obj.rotation.y = s.rot;
     // Sunk a little, so a slope never shows daylight under it; the derelicts deeper.
-    const base = marsHeight(s.x, s.y) - (s.kind === 'ruin' ? 3 : 0.8);
+    const sink = s.kind === 'ruin' ? 3 : s.kind === 'lighthouse' ? 1.5 : 0.8;
+    const base = marsHeight(s.x, s.y) - sink;
     group.add(obj);
     return { obj, s, base };
   });
@@ -478,6 +672,52 @@ export function buildMarsView(): MarsView {
     const mesh = new THREE.Mesh(pipeline(p, mx, my), groundMat);
     group.add(mesh);
     return { mesh, mx, my };
+  });
+
+  // The arches, with fire at their feet and crown (none on the iron ones).
+  const fireStops: [[number, number, number], [number, number, number], [number, number, number]] =
+    [
+      [1, 0.85, 0.5],
+      [1, 0.42, 0.12],
+      [0.55, 0.12, 0.04],
+    ];
+  const arches = ARCHES.map((a) => {
+    const obj = new THREE.Group();
+    obj.add(new THREE.Mesh(archGeo(a), groundMat));
+    const fires: THREE.ShaderMaterial[] = [];
+    if (a.kind === 'real') {
+      // The iron arches: a steady line of pale warm light along the inside.
+      obj.add(
+        new THREE.Mesh(
+          new THREE.TorusGeometry(a.r - 0.9, 0.18, 6, 40, Math.PI),
+          new THREE.MeshBasicMaterial({ color: new THREE.Color(1.3, 0.75, 0.55), toneMapped: false }),
+        ),
+      );
+    } else {
+      const spots: [number, number][] =
+        a.kind === 'tunnel'
+          ? [
+              [-a.r, 0.8],
+              [a.r, 0.8],
+              [-a.r * 0.7, a.r * 0.72],
+              [a.r * 0.7, a.r * 0.72],
+            ]
+          : [
+              [-a.r, 0.8],
+              [a.r, 0.8],
+              [0, a.r + 0.6],
+            ];
+      for (const [x, y] of spots) {
+        const f = buildFireCone(fireStops, 1.1, a.kind === 'tunnel' ? 7 : 5, 0.12);
+        f.position.set(x, y, 0);
+        obj.add(f);
+        fires.push(f.userData.fire as THREE.ShaderMaterial);
+      }
+    }
+    // Across the way through it: its plane square to the heading.
+    obj.rotation.y = a.h + Math.PI / 2;
+    group.add(obj);
+    return { obj, a, fires, base: marsHeight(a.x, a.y) - 0.3, flareAt: -99 };
   });
 
   // The craft.
@@ -512,6 +752,26 @@ export function buildMarsView(): MarsView {
         obj.visible = far < 5200;
         obj.position.set(s.x - ox, base, -(s.y - oy));
       }
+      for (const ar of arches) {
+        ar.obj.visible = Math.hypot(ar.a.x - ox, ar.a.y - oy) < 3000;
+        if (!ar.obj.visible) continue;
+        ar.obj.position.set(ar.a.x - ox, ar.base, -(ar.a.y - oy));
+        // The fire idles low and rises to a roar after you pass, easing down over a second.
+        const k = Math.exp(-Math.max(0, t - ar.flareAt) / 0.7);
+        for (const f of ar.fires) {
+          f.uniforms.uTime.value = t;
+          f.uniforms.uPower.value = 0.14 + 0.9 * k;
+        }
+      }
+      // The lighthouse's beam sweeps round once in 18 s.
+      for (const b of beams) b.rotation.y = t * 0.35;
+      for (const st of steam) {
+        // Steam rises slowly from the towers' mouths, swelling and thinning (a 14 s cycle).
+        const k = (t / 14 + st.phase) % 1;
+        st.puff.position.set(st.from.x + k * 9, st.from.y + 4 + k * 46, st.from.z - k * 4);
+        st.puff.scale.setScalar(14 + k * 34);
+        (st.puff.material as THREE.SpriteMaterial).opacity = 0.22 * Math.sin(k * Math.PI);
+      }
       for (const p of pipes) {
         p.mesh.visible = Math.hypot(p.mx - ox, p.my - oy) < 5200;
         p.mesh.position.set(p.mx - ox, 0, -(p.my - oy));
@@ -530,6 +790,10 @@ export function buildMarsView(): MarsView {
         const k = 0.75 + 0.25 * Math.sin((t / b.period + b.phase) * Math.PI * 2);
         (b.s.material as THREE.SpriteMaterial).opacity = b.base * k;
       }
+    },
+    flare(a, t) {
+      const ar = arches.find((x) => x.a === a);
+      if (ar) ar.flareAt = t;
     },
     dispose() {
       disposeGroup(group);

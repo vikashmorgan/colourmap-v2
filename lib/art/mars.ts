@@ -13,6 +13,17 @@
 
 import { DRIFT_PATH } from '@/lib/art/drift-gates';
 import { clamp } from '@/lib/art/drive';
+import {
+  ATOMIC,
+  CRATER,
+  LAKE_LEVEL,
+  LAKES,
+  LIGHTHOUSE,
+  PLACES,
+  RAD_REACH,
+  REGIONS,
+  type Region,
+} from '@/lib/art/mars-map';
 import { LINE, SALT_PERIOD, START } from '@/lib/art/salt-flat-game';
 import { type Ground, type Hit, MARS_HANDLING, type Vehicle, type World } from '@/lib/art/vehicle';
 
@@ -103,36 +114,109 @@ export function duneMask(x: number, y: number): { m: number; mx: number; my: num
   };
 }
 
-/** The ground's height on Mars (m). */
-export function marsHeight(x: number, y: number): number {
-  return waves(x, y).h * duneMask(x, y).m;
+/** The crater's profile at a distance d from its middle: the bowl, then the rim falling away. */
+export function craterHeight(d: number): number {
+  const u = d / CRATER.R;
+  if (u < 1) return -CRATER.depth + (CRATER.depth + CRATER.rim) * u * u;
+  return CRATER.rim * Math.exp(-(((u - 1) / 0.3) ** 2));
 }
+
+/** How much of the dunes stand near the crater and the lakes (0 in them, 1 away). */
+function featureMask(x: number, y: number): number {
+  const dc = Math.hypot(x - CRATER.x, y - CRATER.y);
+  let m = smooth(CRATER.R * 1.05, CRATER.R * 1.6, dc);
+  for (const l of LAKES) m *= smooth(l.r, l.r + 250, Math.hypot(x - l.x, y - l.y));
+  return m;
+}
+
+/** The ground's height on Mars (m): the dunes, flattened on the course, the great crater and the
+ * flat glowing lakes. */
+export function marsHeight(x: number, y: number): number {
+  let h = waves(x, y).h * duneMask(x, y).m * featureMask(x, y);
+  const dc = Math.hypot(x - CRATER.x, y - CRATER.y);
+  if (dc < CRATER.R * 2.5) h += craterHeight(dc);
+  for (const l of LAKES) {
+    const d = Math.hypot(x - l.x, y - l.y);
+    if (d < l.r * 1.35) h += (LAKE_LEVEL - h) * (1 - smooth(l.r, l.r * 1.35, d));
+  }
+  return h;
+}
+
+const EPS = 0.05;
 
 /** The ground on Mars: its height and slope, smooth regolith that never drags. */
 export function marsGround(x: number, y: number): Ground {
-  const w = waves(x, y);
-  const k = duneMask(x, y);
-  return { h: w.h * k.m, gx: w.gx * k.m + w.h * k.mx, gy: w.gy * k.m + w.h * k.my, rough: 0 };
+  return {
+    h: marsHeight(x, y),
+    gx: (marsHeight(x + EPS, y) - marsHeight(x - EPS, y)) / (2 * EPS),
+    gy: (marsHeight(x, y + EPS) - marsHeight(x, y - EPS)) / (2 * EPS),
+    rough: 0,
+  };
+}
+
+/** Whether a point is on a lake's glowing surface. */
+export function onLake(x: number, y: number): boolean {
+  return LAKES.some((l) => Math.hypot(x - l.x, y - l.y) < l.r);
+}
+
+/** How strong the radiation is at a point (0..1): full at a lake's shore, none RAD_REACH past it. */
+export function radiation(x: number, y: number): number {
+  let r = 0;
+  for (const l of LAKES) {
+    const d = Math.hypot(x - l.x, y - l.y) - l.r;
+    r = Math.max(r, 1 - smooth(0, RAD_REACH, d));
+  }
+  return r;
 }
 
 /**
  * The terrain in GLSL for the backdrop (lib/art/drive-shaders.ts, `#define WORLD 4`): the same
  * waves on the wrapped ground g, flattened by distance to the line and the lake bed measured in the
- * camera's frame (rel). `org` is the world origin in that frame (minus the camera's position).
+ * camera's frame (rel), with the crater and the lakes. `org` is the world origin in that frame
+ * (minus the camera's position).
  */
 export function marsTerrainGlsl(): string {
   const f = (v: number) => v.toFixed(6);
   const terms = DUNE_WAVES.map(
     ([n, m, a, p]) => `  h += ${f(a)} * sin(${f(K)} * (${f(n)} * g.x + ${f(m)} * g.y) + ${f(p)});`,
   ).join('\n');
-  return `#define MARS_HMAX ${f(DUNE_MAX + 0.5)}
+  const lakeMask = LAKES.map(
+    (l) => `  m *= smoothstep(${f(l.r)}, ${f(l.r + 250)}, length(a - vec2(${f(l.x)}, ${f(l.y)})));`,
+  ).join('\n');
+  const lakeFill = LAKES.map(
+    (l) =>
+      `  h = mix(h, ${f(LAKE_LEVEL)}, 1.0 - smoothstep(${f(l.r)}, ${f(l.r * 1.35)}, length(a - vec2(${f(l.x)}, ${f(l.y)}))));`,
+  ).join('\n');
+  const lakeIn = LAKES.map(
+    (l) => `  k = max(k, 1.0 - length(a - vec2(${f(l.x)}, ${f(l.y)})) / ${f(l.r)});`,
+  ).join('\n');
+  return `#define MARS_HMAX ${f(Math.max(DUNE_MAX, CRATER.rim) + 0.5)}
+float marsCrater(float d) {
+  float u = d / ${f(CRATER.R)};
+  if (u < 1.0) return ${f(-CRATER.depth)} + ${f(CRATER.depth + CRATER.rim)} * u * u;
+  return ${f(CRATER.rim)} * exp(-pow((u - 1.0) / 0.3, 2.0));
+}
 float marsH(vec2 g, vec2 rel, vec2 org) {
   float h = 0.0;
 ${terms}
   vec2 a = rel - org;
   float dl = length(vec2(a.x - ${f(LINE.x)}, a.y - clamp(a.y, ${f(LINE.y0)}, ${f(LINE.y1)})));
   float dp = length(a - vec2(${f(DRIFT_PAN.x)}, ${f(DRIFT_PAN.y)}));
-  return h * smoothstep(${f(FLAT_LINE.flat)}, ${f(FLAT_LINE.full)}, dl) * smoothstep(${f(DRIFT_PAN.flat)}, ${f(DRIFT_PAN.full)}, dp);
+  float dc = length(a - vec2(${f(CRATER.x)}, ${f(CRATER.y)}));
+  float m = smoothstep(${f(FLAT_LINE.flat)}, ${f(FLAT_LINE.full)}, dl) * smoothstep(${f(DRIFT_PAN.flat)}, ${f(DRIFT_PAN.full)}, dp);
+  m *= smoothstep(${f(CRATER.R * 1.05)}, ${f(CRATER.R * 1.6)}, dc);
+${lakeMask}
+  h *= m;
+  if (dc < ${f(CRATER.R * 2.5)}) h += marsCrater(dc);
+${lakeFill}
+  return h;
+}
+// How far inside a lake a point is (0 at the shore or outside, 1 at its middle).
+float marsLake(vec2 rel, vec2 org) {
+  vec2 a = rel - org;
+  float k = 0.0;
+${lakeIn}
+  return k;
 }
 `;
 }
@@ -249,9 +333,20 @@ export function caught(dx: number, dy: number, dz = 0): boolean {
   return Math.hypot(dx, dy, dz) < BASTARD.catchR;
 }
 
+/** The region a point is in (the map's first that holds it), or null out on open Mars. The run is
+ * the band within 160 m of his loop. */
+export function regionAt(x: number, y: number): Region | null {
+  for (const r of REGIONS) {
+    if (r.id === 'run') {
+      if (distToLoop(x, y) < 160) return r;
+    } else if (Math.hypot(x - r.x, y - r.y) < r.r) return r;
+  }
+  return null;
+}
+
 /* ── The rust stations ─────────────────────────────────────── */
 
-export type SiteKind = 'domes' | 'nova' | 'factory' | 'ruin';
+export type SiteKind = 'domes' | 'nova' | 'factory' | 'ruin' | 'atomic' | 'lighthouse';
 
 export interface Site {
   x: number;
@@ -264,7 +359,14 @@ export interface Site {
 }
 
 /** How big each kind stands (its footprint's radius, m). */
-export const SITE_R: Record<SiteKind, number> = { domes: 34, factory: 42, nova: 18, ruin: 26 };
+export const SITE_R: Record<SiteKind, number> = {
+  domes: 34,
+  factory: 42,
+  nova: 18,
+  ruin: 26,
+  atomic: 48,
+  lighthouse: 7,
+};
 
 /** The clearances: his loop, the line's corridor, the start and the drift lake bed (m). */
 export const CLEAR = { loop: 70, line: 140, start: 420, pan: 60, pipeLoop: 30 };
@@ -283,23 +385,21 @@ export function siteClear(x: number, y: number, r: number): boolean {
   return distToLoop(x, y) >= r + CLEAR.loop;
 }
 
-const SITE_CELL = 720;
-
-/** The stations: one candidate per 720 m cell over the plain round the course, kept where clear. */
+/** The stations, placed by the map (lib/art/mars-map.ts): the city's domes and Nova Cores, the
+ * factory belt, the derelicts, the atomic plants by the lakes and the lighthouse on the crater's
+ * rim; each kept only where it leaves the open ways clear. */
 export const SITES: Site[] = (() => {
   const out: Site[] = [];
-  for (let i = -6; i <= 6; i++) {
-    for (let j = -5; j <= 9; j++) {
-      if (hash(i, j, 1) > 0.42) continue;
-      const k = hash(i, j, 2);
-      const kind: SiteKind = k < 0.34 ? 'domes' : k < 0.58 ? 'factory' : k < 0.8 ? 'nova' : 'ruin';
-      const x = (i + 0.2 + 0.6 * hash(i, j, 3)) * SITE_CELL;
-      const y = (j + 0.2 + 0.6 * hash(i, j, 4)) * SITE_CELL;
-      const r = SITE_R[kind];
-      if (!siteClear(x, y, r)) continue;
-      out.push({ x, y, kind, r, rot: hash(i, j, 5) * Math.PI * 2, seed: hash(i, j, 6) });
-    }
-  }
+  PLACES.forEach(([x, y, kind], i) => {
+    const r = SITE_R[kind];
+    if (!siteClear(x, y, r)) return;
+    out.push({ x, y, kind, r, rot: hash(i, 7, 5) * Math.PI * 2, seed: hash(i, 7, 6) });
+  });
+  ATOMIC.forEach((p, i) => {
+    if (siteClear(p.x, p.y, SITE_R.atomic))
+      out.push({ ...p, kind: 'atomic', r: SITE_R.atomic, seed: hash(i, 9, 6) });
+  });
+  out.push({ x: LIGHTHOUSE.x, y: LIGHTHOUSE.y, kind: 'lighthouse', r: LIGHTHOUSE.r, rot: 0, seed: 0.5 });
   return out;
 })();
 
