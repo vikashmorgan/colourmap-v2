@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05060d">
+<script src="/labs/claude-shim.js"></script>
+</head>
+<body>
+<title>Constellation Frontiers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a full-screen pannable field of cells (blobs) and blocks over a faint grid + flower-of-life; HUD bar on top, glass card at the bottom. */
+:root{
+  color-scheme:dark;
+  --bg:#060d1c; --bg2:#0a1830;
+  --grid:rgba(110,160,230,.07); --grid2:rgba(110,160,230,.13);
+  --hud:#7fb2ff; --hud-dim:rgba(127,178,255,.45); --hud-faint:rgba(127,178,255,.18);
+  --glass:rgba(16,34,62,.58); --glass-hi:rgba(150,195,255,.16);
+  --ink:#e6eefb; --dim:#93a6c4;
+  --gold:#e3bf72; --gold-dim:rgba(227,191,114,.45);
+  --idea:#c9b8ff; --seen:#6f89a8;
+  --serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--mono);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
+#stage{position:fixed;inset:0;background:radial-gradient(120% 90% at 50% 45%,var(--bg2),var(--bg) 70%)}
+#stage::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px),linear-gradient(var(--grid2) 1px,transparent 1px),linear-gradient(90deg,var(--grid2) 1px,transparent 1px);
+  background-size:24px 24px,24px 24px,120px 120px,120px 120px;background-position:var(--gx,0) var(--gy,0)}
+svg#map{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
+svg#map.drag{cursor:grabbing}
+/* HUD corner brackets on the viewport */
+.br{position:fixed;width:22px;height:22px;border-color:var(--hud-dim);border-style:solid;pointer-events:none;z-index:3}
+.br.tl{top:calc(10px + env(safe-area-inset-top,0px));left:calc(10px + env(safe-area-inset-left,0px));border-width:1px 0 0 1px}
+.br.tr{top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));border-width:1px 1px 0 0}
+.br.bl{bottom:calc(10px + env(safe-area-inset-bottom,0px));left:calc(10px + env(safe-area-inset-left,0px));border-width:0 0 1px 1px}
+.br.brr{bottom:calc(10px + env(safe-area-inset-bottom,0px));right:calc(10px + env(safe-area-inset-right,0px));border-width:0 1px 1px 0}
+header{position:fixed;top:0;left:0;right:0;z-index:4;padding-top:calc(18px + env(safe-area-inset-top,0px));padding-left:max(28px,env(safe-area-inset-left,0px));padding-right:max(28px,env(safe-area-inset-right,0px));pointer-events:none;display:flex;flex-direction:column;gap:8px}
+header>*{pointer-events:auto}
+.eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--hud)}
+h1{margin:0;font-family:var(--serif);font-weight:500;font-size:28px;line-height:1.1;letter-spacing:.01em}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{font:500 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);background:var(--glass);border:1px solid var(--hud-faint);border-radius:10px;padding:8px 10px;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:inline-flex;gap:6px;align-items:center}
+.chip b{font-weight:500;color:var(--ink)}
+.chip[aria-pressed="true"]{color:var(--ink);border-color:var(--hud)}
+.chip.gold[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+.chip:focus-visible,.st:focus-visible,.go:focus-visible{outline:1px solid var(--gold);outline-offset:2px}
+.sym{display:inline-block;width:10px;height:10px;border-radius:3px;border:1px solid var(--hud-dim)}
+.sym.i{background:var(--gold);border-color:var(--gold)}
+.sym.v{border-color:var(--seen);background:transparent;position:relative}
+.sym.v::after{content:"V";position:absolute;inset:-1px 0 0;font-size:8px;line-height:10px;text-align:center;color:var(--seen)}
+.hint{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--hud-dim)}
+/* bottom glass card */
+#card{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 32px));background:var(--glass);border:1px solid var(--glass-hi);border-radius:10px;backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);padding:16px 16px 14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+#card::before,#card::after{content:"";position:absolute;width:12px;height:12px;border-color:var(--hud);border-style:solid;pointer-events:none}
+#card::before{top:-1px;left:-1px;border-width:1px 0 0 1px}
+#card::after{bottom:-1px;right:-1px;border-width:0 1px 1px 0}
+#card .k{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--hud)}
+#card h2{margin:0;font-family:var(--serif);font-weight:600;font-size:24px;line-height:1.15;text-wrap:balance}
+#card p{margin:0;font-family:var(--serif);font-size:17px;line-height:1.45;color:var(--ink);max-width:60ch}
+#card .why{color:var(--gold);font-style:italic}
+#card .meta{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px}
+.st{font:500 11px/1 var(--mono);letter-spacing:.08em;padding:10px 12px;border-radius:10px;background:transparent;color:var(--dim);border:1px solid var(--hud-faint);cursor:pointer}
+.st[aria-pressed="true"]{color:var(--ink);border-color:var(--hud);background:rgba(127,178,255,.1)}
+.st.i[aria-pressed="true"]{color:#1b1406;background:var(--gold);border-color:var(--gold)}
+.st.v[aria-pressed="true"]{color:var(--ink);border-color:var(--seen);background:rgba(111,137,168,.22)}
+.go{margin-left:auto;font:500 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--bg);background:var(--hud);border-radius:10px;padding:10px 14px;text-decoration:none}
+.rel{display:flex;gap:6px;flex-wrap:wrap}
+.rel button{font:400 11px/1.2 var(--mono);color:var(--idea);background:rgba(201,184,255,.08);border:1px solid rgba(201,184,255,.3);border-radius:10px;padding:6px 8px;cursor:pointer}
+#x{position:absolute;top:8px;right:8px;width:32px;height:32px;border:0;background:transparent;color:var(--dim);font:400 18px/1 var(--mono);cursor:pointer}
+/* svg */
+.edge{stroke:var(--hud-faint);stroke-width:1;fill:none}
+.edge.rl{stroke:var(--idea);stroke-dasharray:2 9;stroke-linecap:round;opacity:.35;stroke-width:1.2}
+.edge.rl.on{opacity:.85;stroke-width:1.6}
+.flow{fill:none;stroke:#9cc3ff;stroke-linecap:round;stroke-dasharray:1.5 11}
+.ripple{fill:none;pointer-events:none}
+.chip.hot[aria-pressed="true"]{border-color:#9cc3ff;color:#cfe2ff;box-shadow:0 0 14px rgba(127,178,255,.35)}
+.pulse-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#9cc3ff;box-shadow:0 0 0 0 rgba(156,195,255,.7);animation:pd 2s infinite}
+@keyframes pd{70%{box-shadow:0 0 0 7px rgba(156,195,255,0)}100%{box-shadow:0 0 0 0 rgba(156,195,255,0)}}
+.node{cursor:pointer;outline:none}
+.node:focus-visible .body{stroke:#e3bf72;stroke-width:2}
+.node .body{transition:opacity .3s}
+.lbl{font-family:var(--serif);fill:var(--ink);text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:rgba(6,13,28,.85);stroke-width:3px}
+.lbl.cl{font-weight:600}
+.tag{font-family:var(--mono);font-size:7px;letter-spacing:.14em;fill:var(--hud);text-anchor:middle;pointer-events:none;text-transform:uppercase}
+.faded{opacity:.18}
+#learn{position:fixed;z-index:6;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 32px));max-height:min(62vh,640px);overflow:auto;background:rgba(10,24,46,.82);border:1px solid var(--glass-hi);border-radius:10px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+#learn::before{content:"";position:absolute;top:-1px;left:-1px;width:12px;height:12px;border:solid var(--gold);border-width:1px 0 0 1px}
+#learn h2{margin:0;font-family:var(--serif);font-weight:600;font-size:24px;line-height:1.15}
+#learn .intro{margin:0;font-family:var(--serif);font-size:16px;line-height:1.45;color:var(--dim);max-width:60ch}
+.tabs{display:flex;gap:6px}
+.path{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.step{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--hud-faint);border-radius:10px;cursor:pointer;background:rgba(127,178,255,.04);text-align:left;font:inherit;color:inherit;width:100%}
+.step:hover{border-color:var(--hud-dim)}
+.step .n{width:26px;height:26px;border-radius:50%;border:1px solid var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:11px}
+.step.done .n{background:var(--gold);color:#1b1406;border-color:var(--gold)}
+.step.next{border-color:var(--gold-dim);box-shadow:0 0 18px rgba(227,191,114,.12)}
+.step b{display:block;font-family:var(--serif);font-weight:600;font-size:18px;line-height:1.2}
+.step span{display:block;font-family:var(--serif);font-size:14px;line-height:1.35;color:var(--dim)}
+.step em{font-style:normal;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--hud);white-space:nowrap}
+.lsub{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--hud)}
+.meet{margin:0;padding-left:16px;font-family:var(--serif);font-size:15px;line-height:1.45;color:var(--ink)}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) 110px 34px;gap:8px;align-items:center;font-size:11px;color:var(--dim)}
+.bar i{display:block;height:8px;border-radius:4px;background:rgba(127,178,255,.12);overflow:hidden;position:relative}
+.bar i s{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#7fb2ff,#e3bf72);border-radius:4px}
+.bar b{font-weight:400;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+.tl{list-style:none;margin:0;padding:0 0 0 14px;border-left:1px solid var(--hud-faint);display:flex;flex-direction:column;gap:8px}
+.tl li{position:relative;font-family:var(--serif);font-size:15px;line-height:1.3}
+.tl li::before{content:"";position:absolute;left:-18px;top:6px;width:7px;height:7px;border-radius:50%;background:var(--c,#7fb2ff)}
+.tl li small{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.spark{width:100%;height:56px;display:block}
+.empty{font-family:var(--serif);font-size:15px;color:var(--dim);margin:0}
+.chip.star{border-color:var(--gold-dim);color:var(--gold)}
+@media (prefers-reduced-motion:reduce){.node .body{transition:none}.pulse-dot{animation:none}}
+@media (max-width:520px){header{gap:6px}.hint{display:none}.chip{padding:7px 8px;letter-spacing:.06em}.eyebrow{font-size:9px}h1{font-size:23px}#card h2{font-size:21px}#card p{font-size:16px}}
+</style>
+
+<div id="stage"><svg id="map" aria-label="Bubble map of collective intelligence frontiers"><defs>
+  <radialGradient id="gCell" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#9cc3ff" stop-opacity=".30"/><stop offset=".6" stop-color="#3d6fb8" stop-opacity=".16"/><stop offset="1" stop-color="#1a3766" stop-opacity=".30"/></radialGradient>
+  <radialGradient id="gBlock" cx="30%" cy="25%" r="90%"><stop offset="0" stop-color="#b8d4ff" stop-opacity=".22"/><stop offset="1" stop-color="#20406f" stop-opacity=".26"/></radialGradient>
+  <radialGradient id="gGold" cx="35%" cy="30%" r="85%"><stop offset="0" stop-color="#ffe2a0" stop-opacity=".75"/><stop offset="1" stop-color="#b8862e" stop-opacity=".45"/></radialGradient>
+  <radialGradient id="gIdea" cx="35%" cy="30%" r="85%"><stop offset="0" stop-color="#e2d8ff" stop-opacity=".30"/><stop offset="1" stop-color="#5a4a9c" stop-opacity=".22"/></radialGradient>
+  <radialGradient id="gCore" cx="40%" cy="35%" r="75%"><stop offset="0" stop-color="#fff0c8" stop-opacity=".9"/><stop offset=".55" stop-color="#e3bf72" stop-opacity=".5"/><stop offset="1" stop-color="#7a5a1e" stop-opacity=".35"/></radialGradient>
+  <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+</defs><g id="world"><g id="geo"></g><g id="edges"></g><g id="nodes"></g></g></svg></div>
+<span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br brr"></span>
+
+<header>
+  <div class="eyebrow">Constellation Club · frontier scan · Nov 2026</div>
+  <h1 id="ttl">Constellation Frontiers</h1>
+  <div class="row" role="group" aria-label="Page"><button class="chip pg" data-pg="front" aria-pressed="true">◌ Frontiers</button><button class="chip pg" data-pg="act" aria-pressed="false">→ Next moves</button></div>
+  <div class="row" id="filters" role="group" aria-label="Filter by state">
+    <button class="chip" data-f="all" aria-pressed="true">All <b id="cAll">0</b></button>
+    <button class="chip" data-f="todo" aria-pressed="false"><span class="sym"></span><span id="lTodo">To check</span> <b id="cTodo">0</b></button>
+    <button class="chip gold" data-f="i" aria-pressed="false"><span id="lI">★ Interested</span> <b id="cI">0</b></button>
+    <button class="chip" data-f="v" aria-pressed="false"><span id="lV">V Discovered</span> <b id="cV">0</b></button>
+    <button class="chip hot" data-f="hot" aria-pressed="false"><span class="pulse-dot"></span><span id="lH">Pulsing now</span> <b id="cH">0</b></button>
+  </div>
+  <div class="row">
+    <button class="chip" id="bOpen">Grow all</button>
+    <button class="chip" id="bFold">Fold</button>
+    <button class="chip" id="bFit">Fit</button>
+    <button class="chip star" id="bLearn">✦ Start here</button>
+    <button class="chip" id="bGrow">My growth</button>
+    <span class="hint" id="hint">Tap a cell to grow it · pulse = fresh news · rivers = what feeds what</span>
+  </div>
+</header>
+
+<section id="learn" hidden aria-live="polite">
+  <button id="lx" class="x2" aria-label="Close" style="position:absolute;top:8px;right:8px;width:32px;height:32px;border:0;background:transparent;color:var(--dim);font:400 18px/1 var(--mono);cursor:pointer">×</button>
+  <div class="tabs"><button class="chip" data-tab="path" aria-pressed="true">✦ Start here</button><button class="chip" data-tab="grow" aria-pressed="false">My growth</button></div>
+  <div id="lBody"></div>
+</section>
+<section id="card" hidden aria-live="polite">
+  <button id="x" aria-label="Close">×</button>
+  <div class="k" id="cK"></div>
+  <h2 id="cT"></h2>
+  <p id="cS"></p>
+  <p class="why" id="cW"></p>
+  <div class="rel" id="cR"></div>
+  <div class="meta" id="cM"></div>
+  <div class="acts" id="cA">
+    <button class="st" data-s="" aria-pressed="false">○ To check</button>
+    <button class="st i" data-s="i" aria-pressed="false">★ Interested</button>
+    <button class="st v" data-s="v" aria-pressed="false">V Discovered</button>
+    <a class="go" id="cL" href="#" target="_blank" rel="noopener">Open ↗</a>
+  </div>
+</section>
+
+<script>
+/* ---------------- data ---------------- */
+const TC='https://techcrunch.com/2026/';
+const DATA={id:'root',t:'Constellation Club',k:'core',s:'Your creative community in Milan: a map of who is making what, with AI connecting people by what they want to make. Around it: what is moving right now in collective intelligence, community networks and webs of people.',
+c:[
+{id:'sense',t:'Sensemaking machines',k:'cluster',a:200,s:'AI that listens to many people at once and finds where they meet.',c:[
+ {id:'t3c',t:'Talk to the City',k:'project',s:'AI Objectives Institute tool: an LLM turns hundreds of open answers into a clickable map of themes and quotes.',w:'The closest thing to “a map of what Milan creatives want to make”. Feed it Dream cards.',u:'https://ai.objectives.institute/talk-to-the-city',d:'open source'},
+ {id:'polis',t:'Polis',k:'project',s:'Open-source opinion mapping that shows where a crowd agrees across groups. The engine behind vTaiwan.',w:'Teaches “bridging”: show what connects different people, not what divides them.',u:'https://pol.is/home',d:'open source'},
+ {id:'habermas',t:'Habermas Machine',k:'research',s:'Google DeepMind’s AI mediator that drafts group statements people endorse more than human-written ones (Science). Still debated in 2026.',w:'A model for an AI host that writes “what this circle wants” after a gathering.',u:'https://www.science.org/doi/10.1126/science.adq2852',d:'Science paper'},
+ {id:'jigsaw',t:'Jigsaw Sensemaking Tools',k:'project',s:'Google Jigsaw’s open-source library that sorts and summarizes large conversations with LLMs.',w:'Martin could plug this straight into Colour Map.',u:'https://github.com/Jigsaw-Code/sensemaking-tools',d:'GitHub'},
+ {id:'delib',t:'Deliberation.io',k:'project',s:'Stanford Digital Economy Lab platform for deliberation at scale, open source and open science.',w:'Good architecture reference for small group sessions.',u:'https://digitaleconomy.stanford.edu/publication/deliberation-io-facilitating-democratic-and-civilengagement-at-scale-with-open-source-and-open-science/',d:'Stanford'},
+ {id:'interop',t:'Interoperable Deliberative Tools',k:'news',s:'Metagov’s 2026 update: a cohort making deliberation tools share data with each other.',w:'Join the conversation; Metagov is open to newcomers and builders.',u:'https://metagov.substack.com/p/project-update-interoperable-deliberative',d:'2026'},
+ {id:'carnegie',t:'Carnegie: AI-enabled deliberative democracy',k:'research',s:'Report on how AI can make citizen deliberation bigger and better, and what can go wrong.',w:'Fresh vocabulary for a pitch.',u:'https://carnegieendowment.org/research/2026/05/realizing-the-potential-gains-of-ai-enabled-deliberative-democracy',d:'May 2026'},
+ {id:'knight',t:'Can AI mediation improve deliberation?',k:'research',s:'Knight First Amendment Institute essay weighing AI as a mediator.',w:'The honest risks, so your pitch answers them first.',u:'https://knightcolumbia.org/content/can-ai-mediation-improve-democratic-deliberation',d:'essay'},
+ {id:'cipgd',t:'CIP Global Dialogues',k:'project',s:'Recurring worldwide conversations on how people want AI to fit into their lives.',w:'Run a Milan creative edition as a pilot.',u:'https://www.cip.org/global-dialogues',d:'ongoing'}]},
+{id:'people',t:'Minds to learn from',k:'cluster',a:255,s:'People shaping collective intelligence and webs of people.',c:[
+ {id:'tang',t:'Audrey Tang',k:'person',s:'Taiwan’s cyber ambassador. Launched “Civic AI” at Oxford in March 2026, built on the 6-Pack of Care.',w:'Your closest philosophical ally: AI that strengthens relationships.',u:'https://www.radicalxchange.org/updates/announcements/2026-03-civic-ai-launches-at-oxford/',d:'Mar 2026',c:[
+   {id:'sixpack',t:'Civic AI and the 6-Pack of Care',k:'research',s:'Tang and Caroline Green reimagine AI alignment around relational health.',w:'Six care principles you could adopt as the Club’s house rules.',u:'https://afp.oxford-aiethics.ox.ac.uk/article/civic-ai-and-6-pack-care-reimagining-ai-alignment-relational-health',d:'Oxford'},
+   {id:'superint',t:'“We the people are the superintelligence”',k:'news',s:'Audrey Tang talk transcript.',w:'A great line for your TEDx arc “From Fragments to Unity”.',u:'https://archive.tw/2026-05-14-we-the-people-are-truly-the-superintell',d:'May 2026'}]},
+ {id:'siddarth',t:'Divya Siddarth',k:'person',s:'Founder of the Collective Intelligence Project (CIP).',w:'Watch how she turns big ideas into running pilots.',u:'https://www.cip.org/about-cip',d:'CIP'},
+ {id:'weyl',t:'Glen Weyl',k:'person',s:'Co-author of Plurality with Audrey Tang: technology for collaboration across difference.',w:'The book gives the Club a shared language.',u:'https://www.plurality.net',d:'Plurality'},
+ {id:'kleppmann',t:'Martin Kleppmann',k:'person',s:'Local-first software pioneer, co-author of the Bluesky and AT Protocol paper.',w:'One for Martin to read: how to let members own their network.',u:'https://arxiv.org/html/2402.03239v2',d:'paper'},
+ {id:'bainbridge',t:'Tyler Bainbridge',k:'person',s:'Founder of Perfectly Imperfect, on making the internet fun again.',w:'A creative founder who grew a taste community into IRL scenes.',u:'https://thecreativeindependent.com/people/founder-tyler-bainbridge-on-making-the-internet-fun-again/',d:'interview'},
+ {id:'graber',t:'Jay Graber',k:'person',s:'Built Bluesky. Stepped down as CEO in March 2026 to become chief innovation officer.',w:'How a protocol-first social network grows.',u:TC+'03/09/bluesky-ceo-jay-graber-steps-down/',d:'Mar 2026'},
+ {id:'klein',t:'Mark Klein',k:'person',s:'MIT researcher behind the Deliberatorium: argument maps for large-scale deliberation.',w:'Maps of ideas, two decades in. Learn from what worked.',u:'https://www.deliberatorium.org/homepage/news.html',d:'MIT'}]},
+{id:'irl',t:'Social that ends offline',k:'cluster',a:322,s:'2026’s new apps push people off the feed and into rooms together.',c:[
+ {id:'pifyi',t:'PI.FYI Scenes',k:'company',s:'Perfectly Imperfect’s app adds “scenes”: local taste communities.',w:'Closest cousin to the Constellation. Study it closely.',u:'https://pi.fyi/p/introducing-scenes',d:'app',c:[
+   {id:'pievents',t:'PI events feature',k:'news',s:'Events inside the taste network.',w:'Gatherings as the product.',u:'https://pi.fyi/p/pi-events-feature',d:'feature'}]},
+ {id:'sonder',t:'Sonder',k:'company',s:'New connections app with a deliberately slow sign-up, and it is working.',w:'Friction as a filter: “you’re in or out”.',u:TC+'04/01/a-new-dating-app-sonder-has-a-deliberately-annoying-sign-up-process-and-its-working/',d:'Apr 2026'},
+ {id:'shapes',t:'Shapes',k:'company',s:'Humans and AI in the same group chats.',w:'An AI host inside the Club’s WhatsApp-style chat.',u:TC+'04/29/meet-shapes-the-app-bringing-humans-and-ai-into-the-same-group-chats/',d:'Apr 2026'},
+ {id:'imsg',t:'AI social network in iMessage',k:'news',s:'Two students raise a $5.1M pre-seed to build social on top of iMessage.',w:'Build where people already talk, not a new app.',u:TC+'04/24/two-college-kids-raise-a-5-1-million-pre-seed-to-build-an-ai-social-network-in-imessage/',d:'Apr 2026'},
+ {id:'tinder',t:'Tinder Group Hangouts',k:'news',s:'Even dating goes group and IRL.',w:'Proof the market is moving your way.',u:TC+'09/30/tinder-adapts-to-a-social-irl-dating-future-with-group-hangouts-feature/',d:'Sep 2026',c:[
+   {id:'tinderirl',t:'Tinder IRL events in dozens of cities',k:'news',s:'Gen Z reconsiders dating apps; events expand.',w:'Events are now a growth channel.',u:TC+'08/05/as-gen-z-reconsiders-dating-apps-tinders-irl-events-expand-to-dozens-more-cities/',d:'Aug 2026'}]},
+ {id:'status',t:'Status',k:'company',s:'$17M to turn social media into interactive, AI-driven entertainment.',w:'The other direction: more screen. Know it to stand apart.',u:TC+'05/19/gamified-social-media-network-status-announces-17m-funding-to-help-usher-in-new-era-of-social-networking/',d:'May 2026'},
+ {id:'tolan',t:'Tolan',k:'company',s:'$30M for an AI companion that helps people navigate life.',w:'Contrast: AI as friend, versus your AI as introducer.',u:TC+'10/19/tolan-snags-30m-for-its-ai-companion-that-helps-users-navigate-life/',d:'Oct 2026'},
+ {id:'partiful',t:'Partiful',k:'company',s:'Party invites that quietly became a social graph.',w:'Invites are the map. Every Club event could feed it.',u:'https://apps.apple.com/app/id1662982304',d:'app'}]},
+{id:'proto',t:'Open webs of people',k:'cluster',a:18,s:'Protocols and calm tools where people own their network.',c:[
+ {id:'bsky',t:'Bluesky & AT Protocol',k:'company',s:'Open social protocol. Toni Schneider (ex-WordPress) became permanent CEO in July 2026.',w:'Build the Club map on an open graph so members keep their connections.',u:'https://www.fastcompany.com/91508206/bluesky-jay-graber-toni-schneider-at-protocol',d:'2026',c:[
+   {id:'schneider',t:'Toni Schneider named CEO',k:'news',s:'Bluesky drops the interim title.',w:'Watch the next phase of the ecosystem.',u:'https://bsky.social/about/blog/07-10-2026-toni-schneider-ceo',d:'Jul 2026'}]},
+ {id:'arena',t:'Are.na',k:'company',s:'Calm, ad-free tool for collecting and connecting ideas together. Public roadmap.',w:'The aesthetic of a creative “second brain” for groups.',u:'https://www.are.na/about',d:'tool',c:[
+   {id:'arenaroad',t:'Are.na roadmap',k:'news',s:'What they are building next, in public.',w:'A model for building with your community.',u:'https://are.na/roadmap',d:'live'}]},
+ {id:'cosmos',t:'Cosmos',k:'company',s:'Visual curation for creatives, without ads.',w:'Moodboards as identity: a star’s profile could be a cosmos.',u:'https://www.cosmos.so',d:'tool'},
+ {id:'fedi',t:'The fediverse',k:'news',s:'Nieman Lab’s ongoing coverage of decentralized social.',w:'Context for “protocol, not platform”.',u:'https://www.niemanlab.org/tag/fediverse/',d:'ongoing'},
+ {id:'dazed',t:'5 platforms that are actually social',k:'news',s:'Dazed on Perfectly Imperfect, Cosmos and friends.',w:'Where the creative crowd hangs out online.',u:'https://www.dazeddigital.com/life-culture/article/69298/1/5-social-media-platforms-actually-social-perfectly-imperfect-cosmos',d:'Dazed'},
+ {id:'protopol',t:'The politics of social protocols',k:'research',s:'Paper on the values built into decentralized protocols.',w:'Choose your protocol with open eyes.',u:'https://arxiv.org/html/2505.22962v1',d:'arXiv'}]},
+{id:'agents',t:'Machine societies',k:'cluster',a:72,s:'When AI agents talk to each other, and help groups think.',c:[
+ {id:'moltbook',t:'Moltbook',k:'news',s:'A social network where only AI agents post. Went viral in early 2026.',w:'Strange mirror: your agent could meet mine and propose a coffee.',u:'https://www.fortune.com/2026/02/06/moltbook-social-network-ai-agents-cybersecurity-religion-posts-tech',d:'Feb 2026'},
+ {id:'typed',t:'From Debate to Deliberation',k:'research',s:'Structured collective reasoning with “typed epistemic acts” between AI agents.',w:'How to make agent conversations useful, not noisy.',u:'https://arxiv.org/abs/2603.11781',d:'arXiv 2026'},
+ {id:'delite',t:'DELITE 2026 workshop',k:'research',s:'Language-driven deliberation technology at LREC 2026.',w:'The research community, all in one place.',u:'https://aclanthology.org/events/delite-2026/',d:'2026'},
+ {id:'symb',t:'Symbiotic scaffolding',k:'research',s:'Accountable human-AI deliberation: scaling collective intelligence with LLMs.',w:'A frame for “AI helps, humans decide”.',u:'https://lrec.elra.info/lrec2026-ws-delite-02',d:'LREC 2026'},
+ {id:'unanimous',t:'Unanimous AI',k:'company',s:'“Swarm intelligence”: groups answer together in real time, like a flock.',w:'A game for gatherings: the room decides as one swarm.',u:'https://en.wikipedia.org/wiki/Unanimous_A.I.',d:'company'},
+ {id:'dawson',t:'Companies harnessing collective intelligence',k:'news',s:'Ross Dawson’s curated list.',w:'Quick scan for competitors and partners.',u:'https://rossdawson.com/futurist/companies-creating-future/collective-intelligence/',d:'list'}]},
+{id:'code',t:'Vibe coding frontier',k:'cluster',a:112,s:'Between art and tech: building software by talking, the way you build Colour Map.',c:[
+ {id:'cc',t:'Claude Code',k:'company',s:'Agents that build, test and ship from a conversation.',w:'What you are already using. Your studio’s main tool.',u:'https://claude.com/claude-code',d:'tool'},
+ {id:'lovable',t:'Lovable',k:'company',s:'Chat to a full web app. Their 2026 guide compares the field.',w:'Quick prototypes for Club members who don’t code.',u:'https://lovable.dev/guides/best-vibe-coding-tools-2026-build-apps-chatting',d:'2026'},
+ {id:'v0',t:'v0 by Vercel',k:'company',s:'Generate UI from a prompt, deploy on Vercel.',w:'Colour Map already lives on Vercel.',u:'https://v0.dev',d:'tool'},
+ {id:'uxrules',t:'AI writes the code, humans write the rules',k:'news',s:'UX Collective essay on guardrails in AI-built software.',w:'Exactly your repo’s philosophy: rules files and guardrails.',u:'https://uxdesign.cc/ai-writes-the-code-and-humans-still-write-the-rules-a2058ca0734c',d:'essay'},
+ {id:'designlab',t:'Vibe coding for non-developers',k:'news',s:'Designlab’s guide to the tools, for designers and artists.',w:'Share with artists who want their own website.',u:'https://designlab.com/blog/best-vibe-coding-tools',d:'2026'},
+ {id:'anyone',t:'Almost anyone can build an app in 2026',k:'news',s:'…and the part nobody mentions.',w:'The hard parts after the demo: data, users, care.',u:'https://dev.to/singarajatech/almost-anyone-can-build-an-app-in-2026-but-heres-the-part-nobody-mentions-4gkd',d:'2026'}]},
+{id:'doors',t:'Art × tech doors',k:'cluster',a:150,s:'Prizes, festivals and Milan places where art meets AI.',c:[
+ {id:'ars',t:'Ars Electronica',k:'project',s:'Festival for art, technology and society in Linz, spread over 40+ venues in 2026.',w:'Go in September 2027 with the Club as a project.',u:'https://ars.electronica.art/festival/en/',d:'Linz'},
+ {id:'starts',t:'S+T+ARTS Prize',k:'project',s:'EU prize for art × science × technology. 2026 winners shown at Lentos, Linz.',w:'A sculpture-as-key piece could be a candidate.',u:'https://starts.eu/opportunities/starts-prize-2026',d:'2026',c:[
+   {id:'startsw',t:'S+T+ARTS winners 2026',k:'news',s:'This year’s winning projects.',w:'See what juries reward.',u:'https://www.cityofmediaarts.at/?p=3238',d:'2026'}]},
+ {id:'polimt',t:'More-than-human: AI for a living planet',k:'project',s:'Politecnico di Milano Design Department research line.',w:'A door to find your deep-tech teammate at Polimi.',u:'https://www.dipartimentodesign.polimi.it/en/all-news/more-than-human-ai-for-a-living-planet',d:'Polimi'},
+ {id:'aidesign',t:'AI for Design: beyond the instrument',k:'project',s:'Polimi Design on AI as more than a tool.',w:'Speakers and researchers to meet in Milan.',u:'https://dipartimentodesign.polimi.it/en/all-news/ai-for-design-beyond-the-instrument',d:'Polimi'},
+ {id:'notforher',t:'Not For Her',k:'project',s:'Polimi exhibition: when AI holds up a mirror to inequality.',w:'Art about AI, made in Milan.',u:'https://www.frontiere.polimi.it/not-for-her/?lang=en',d:'Milan'},
+ {id:'marangoni',t:'What AI can’t replace',k:'news',s:'Istituto Marangoni inside Milan Design Week 2026 with a new generation of designers.',w:'Your talk theme, already in the Milan air.',u:'https://www.istitutomarangoni.com/en/maze35/game-changers/what-ai-cant-replace-in-design-milan-design-week-2026',d:'MDW 2026'},
+ {id:'triennale',t:'Triennale Milano',k:'project',s:'Talks and events programme, including “Crosswords”.',w:'Where Milan’s design crowd gathers.',u:'https://triennale.org/en/events/crosswords',d:'Milan'},
+ {id:'scenius',t:'Scenius inquiry',k:'research',s:'Aspen Institute inquiry into creative communities: genius as a scene, not a person.',w:'The word for what you are building.',u:'https://www.aspencommunitysolutions.org/scenius/',d:'Aspen'}]},
+{id:'front',t:'Frontiers to explore',k:'cluster',idea:1,a:290,s:'Ideas that come out of this web. Each one points to the cells that feed it.',c:[
+ {id:'f1',t:'Scenes, not feeds',k:'idea',s:'Small local taste communities beat global feeds.',w:'Milan first, one scene at a time.',r:['pifyi','scenius','arena','bainbridge']},
+ {id:'f2',t:'AI as introducer, not companion',k:'idea',s:'The AI’s job is to hand you to people, then step back.',w:'The heart of your pitch.',r:['shapes','imsg','sonder','tolan']},
+ {id:'f3',t:'A map of what people want to make',k:'idea',s:'Dream cards, clustered by AI into a living map of desires.',w:'Your MVP in one sentence.',r:['t3c','polis','jigsaw']},
+ {id:'f4',t:'Own the graph',k:'idea',s:'Members keep their connections on an open protocol.',w:'Trust as a feature.',r:['bsky','kleppmann','fedi','protopol']},
+ {id:'f5',t:'Care as the design rule',k:'idea',s:'Measure relationships strengthened, not time spent.',w:'Where nobody is “too much”.',r:['tang','sixpack','siddarth']},
+ {id:'f6',t:'Bridging, not engagement',k:'idea',s:'Rank what connects different people.',w:'How the Club map decides what to show.',r:['polis','habermas','weyl','carnegie']},
+ {id:'f7',t:'Agents meeting agents',k:'idea',s:'Your AI meets mine and proposes a coffee.',w:'The far frontier. Start by hand.',r:['moltbook','typed','symb']},
+ {id:'f8',t:'Vibe coding as a creative medium',k:'idea',s:'Artists building their own tools and sites by talking.',w:'Every star builds their own website.',r:['cc','lovable','uxrules','designlab']},
+ {id:'f9',t:'Art as proof',k:'idea',s:'Show the idea as a piece before it is a product.',w:'The sculpture-as-key, at a festival.',r:['starts','ars','polimt']}]}
+]};
+
+
+const G='https://www.google.com/search?q=';
+const ACTS={id:'act',t:'Next moves',k:'core',s:'Where to go and who to reach, so the Constellation grows from the map into real rooms. Marks: To reach, Contacted (or Booked), Met (or Went).',c:[
+{id:'evm',t:'Milan events',k:'cluster',a:200,s:'Rooms in your own city where the right people gather.',c:[
+ {id:'e-aifest',t:'AI Festival 2027',k:'event',h:.85,s:'Two days of AI business and training at Superstudio Maxi.',w:'Meet AI founders in Milan; scout a deep-tech teammate.',u:'https://en.aifestival.it/',d:'11–12 Feb 2027 · Superstudio Maxi, Milan'},
+ {id:'e-miart',t:'miart milano 2027',k:'event',h:.6,s:'Milan’s contemporary art fair, renamed “miart milano”, back at Allianz MiCo.',w:'Collectors and galleries: bring the sculpture-as-key idea.',u:'https://www.artribune.com/?p=1258427',d:'9–11 Apr 2027 · Allianz MiCo'},
+ {id:'e-salone',t:'Salone del Mobile + Design Week 2027',k:'event',h:.55,s:'The city’s biggest week. 2027 dates are on the official site once announced.',w:'Run a small Constellation gathering during Fuorisalone.',u:'https://www.salonemilano.it/en/exhibitions',d:'April 2027 · Rho Fiera + the whole city'},
+ {id:'e-polimi',t:'Politecnico di Milano events',k:'event',h:.5,s:'Exhibitions and talks from Polimi, including Design.',w:'Easiest door to the deep-tech teammate.',u:'https://www.eventi.polimi.it/event-type/exhibition/?lang=en',d:'ongoing · Milan'},
+ {id:'e-triennale',t:'Triennale Milano talks',k:'event',h:.45,s:'Design, architecture and culture programme.',w:'Where Milan’s design crowd shows up.',u:'https://triennale.org/en/events/crosswords',d:'ongoing · Triennale'}]},
+{id:'eve',t:'Europe & online',k:'cluster',a:330,s:'A few trips and calls worth making this year.',c:[
+ {id:'e-metagov',t:'Metagov community orientation',k:'event',h:.9,s:'Monthly open Zoom call for newcomers to the Metagov community.',w:'Lowest-effort first step: one call, from home.',u:'https://luma.com/metagov-calendar',d:'monthly · online'},
+ {id:'e-starts',t:'S+T+ARTS Prize 2027 call',k:'event',h:.7,s:'The 2026 call opened in January with a March deadline; expect the 2027 one around the same time.',w:'Submit the sculpture-as-key or the Constellation map.',u:'https://starts.eu/opportunities/starts-prize-2026',d:'watch from Jan 2027'},
+ {id:'e-ct',t:'Communities & Technologies 2027',k:'event',h:.5,s:'The research conference on communities and technology, at TU Delft.',w:'The exact academic tribe of your project.',u:'https://2027.comtech.community/',d:'12–16 Apr 2027 · Delft, NL'},
+ {id:'e-ars',t:'Ars Electronica 2027',k:'event',h:.3,s:'Festival for art, technology and society. Dates from a third-party listing; check the official site.',w:'Go with a project to show.',u:'https://ars.electronica.art/festival/en/',d:'8–12 Sep 2027 (listed) · Linz'}]},
+{id:'rci',t:'Reach: the CI world',k:'cluster',a:60,s:'People and groups to write to. Public contact routes only.',c:[
+ {id:'r-metagov',t:'Metagov',k:'org',h:.6,s:'Open research community for self-governance tech. Join via the orientation call first.',w:'Ask about the deliberation-tools cohort.',u:'https://www.metagov.org',d:'website'},
+ {id:'r-cip',t:'Collective Intelligence Project',k:'org',h:.45,s:'Divya Siddarth’s organisation behind Global Dialogues.',w:'Pitch a Milan creatives dialogue as a pilot.',u:'https://www.cip.org/about-cip',d:'website'},
+ {id:'r-aoi',t:'AI Objectives Institute',k:'org',h:.45,s:'The team behind Talk to the City.',w:'Ask if you can run Talk to the City on your Dream cards.',u:'https://ai.objectives.institute/talk-to-the-city',d:'website'},
+ {id:'r-tang',t:'Audrey Tang',k:'person',h:.35,s:'Her public archive of talks and writing.',w:'Write once you have a small pilot to show.',u:'https://archive.tw/',d:'public archive'},
+ {id:'r-pi',t:'Perfectly Imperfect',k:'org',h:.35,s:'Tyler Bainbridge’s taste network and scenes.',w:'Ask about a Milan scene.',u:'https://pi.fyi',d:'website'}]}
+]};
+/* ---------------- index ---------------- */
+const ALL={},PARENT={};
+(function walk(n,p,depth){ALL[n.id]=n;n.depth=depth;if(p)PARENT[n.id]=p.id;(n.c||[]).forEach(ch=>walk(ch,n,depth+1));})(DATA,null,0);
+const ITEMS=Object.values(ALL).filter(n=>n.depth>=2);
+(function walk(n,p,depth){ALL[n.id]=n;n.depth=depth;if(p)PARENT[n.id]=p.id;(n.c||[]).forEach(ch=>walk(ch,n,depth+1));})(ACTS,null,0);
+const AITEMS=ACTS.c.flatMap(c=>c.c);
+ACTS.c.forEach(c=>{c.heat=Math.max(...c.c.map(x=>x.h))});AITEMS.forEach(x=>x.heat=x.h);ACTS.heat=.9;
+let PAGE='front';try{PAGE=localStorage.getItem('cf-page')==='act'?'act':'front'}catch(e){}
+const ROOTN=()=>PAGE==='act'?ACTS:DATA, PI=()=>PAGE==='act'?AITEMS:ITEMS;
+const LABELS={front:{todo:'To check',i:'★ Interested',v:'V Discovered',hot:'Pulsing now',si:'★',sv:'V',wi:'starred',wv:'discovered'},
+ act:{todo:'To reach',i:'✉ Contacted',v:'✓ Met',hot:'Coming soon',si:'✉',sv:'✓',wi:'contacted',wv:'met'}};
+function lab(n){const L={...LABELS[PAGE]};if(n&&n.k==='event'){L.todo='Maybe';L.i='✓ Booked';L.v='V Went';L.si='✓';L.sv='V';L.wi='booked';L.wv='went'}return L}
+/* heat: how alive a cell is right now. Fresh 2026 news pulses fastest; clusters and ideas take the warmth of what feeds them. */
+const MON={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12},NOW=2026*12+11;
+function ownHeat(n){const m=/([A-Za-z]{3})\w* (20\d\d)/.exec(n.d||'');if(m&&MON[m[1].toLowerCase()]){const ago=NOW-(+m[2]*12+MON[m[1].toLowerCase()]);return Math.max(.1,1-ago/10)}
+  if(/2026/.test(n.d||''))return .45;if(/ongoing|live/.test(n.d||''))return .4;return .15}
+(function heat(n){if(n.c){n.c.forEach(heat);const hs=n.c.map(c=>c.heat).sort((a,b)=>b-a);n.heat=Math.max(n.d?ownHeat(n):0,(hs[0]+(hs[1]||hs[0])+(hs[2]||hs[0]))/3)}else n.heat=n.k==='idea'?0:ownHeat(n)})(DATA);
+Object.values(ALL).filter(n=>n.k==='idea').forEach(n=>{const hs=n.r.map(id=>ALL[id].heat);n.heat=hs.reduce((a,b)=>a+b,0)/hs.length});
+ALL.front.heat=Math.max(...ALL.front.c.map(c=>c.heat));
+const HOT=.55;
+function matches(n){if(filter==='hot')return n.heat>=HOT;const m=marks[n.id]||'';return filter==='todo'?!m:m===filter}
+function hash(s){let h=2166136261;for(const ch of s){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return (h>>>0)/4294967295}
+
+/* ---------------- state (marks persist in db, local copy as cache) ---------------- */
+let marks={}, dates={}, filter='all', sel=null;
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+({m:marks={},t:dates={}}=lsGet('cf-marks',{m:{},t:{}}));
+let open=new Set(lsGet('cf-open',[]));
+let dbDoc=null, writing=false, pending=false;
+async function save(){
+  lsSet('cf-marks',{m:marks,t:dates});
+  if(!dbDoc)return;
+  if(writing){pending=true;return}
+  writing=true;
+  try{await dbDoc.set({m:marks,t:dates})}catch(e){console.warn('save failed',e&&e.code)}
+  writing=false;if(pending){pending=false;save()}
+}
+(async()=>{
+  try{
+    const db=await window.claude?.use?.('db');if(!db)return;
+    dbDoc=db.doc('marks/main');
+    const snap=await dbDoc.get();
+    if(snap.exists){const d=snap.data()||{};marks={...(d.m||{}),...marks};dates={...(d.t||{}),...dates};lsSet('cf-marks',{m:marks,t:dates});refreshAll()}
+    else if(Object.keys(marks).length)save();
+  }catch(e){console.warn('db unavailable',e&&e.code)}
+})();
+
+/* ---------------- simulation ---------------- */
+const svg=document.getElementById('map'),world=document.getElementById('world'),gN=document.getElementById('nodes'),gE=document.getElementById('edges'),gGeo=document.getElementById('geo');
+const SN='http://www.w3.org/2000/svg';
+const sim={}; // id -> {x,y,vx,vy,r,el,...}
+let alpha=1;
+function radius(n){
+  if(n.depth===0)return 46;
+  if(n.depth===1)return 26+Math.min(10,(n.c||[]).length*1.1)+hash(n.id)*6;
+  if(n.k==='idea')return 15+hash(n.id)*5;
+  return 11+hash(n.id+'r')*7+((n.c||[]).length?3:0);
+}
+function shapeOf(n){ // blob (cell) <-> block spectrum
+  if(n.depth<=1||n.k==='idea')return 'blob';
+  return n.k==='person'?'blob':'block';
+}
+function visibleIds(){
+  const R=ROOTN(),out=[R.id];
+  (function add(n){if(n.depth===0||open.has(n.id))(n.c||[]).forEach(ch=>{out.push(ch.id);add(ch)})})(R);
+  return out;
+}
+function el(tag,attrs,parent){const e=document.createElementNS(SN,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
+function wrap(t,max){const w=t.split(' ');const lines=[];let cur='';for(const x of w){if((cur+' '+x).trim().length>max&&cur){lines.push(cur);cur=x}else cur=(cur+' '+x).trim()}if(cur)lines.push(cur);return lines.slice(0,3)}
+function makeNode(n){
+  const p=PARENT[n.id]?sim[PARENT[n.id]]:null;
+  let x=0,y=0;
+  if(p){
+    const gp=PARENT[PARENT[n.id]]?sim[PARENT[PARENT[n.id]]]:null;
+    let base=n.a!=null?n.a*Math.PI/180:(gp?Math.atan2(p.y-gp.y,p.x-gp.x):0);
+    const spread=n.a!=null?0.2:2.6;
+    const ang=base+(hash(n.id+'a')-.5)*spread;
+    const d=n.a!=null?150:p.r+30;
+    x=p.x+Math.cos(ang)*d;y=p.y+Math.sin(ang)*d;
+  }
+  const s={id:n.id,n,x,y,vx:0,vy:0,r:radius(n),shape:shapeOf(n),ph:hash(n.id+'p')*6.28,lob:3+Math.floor(hash(n.id+'l')*3),rest:0};
+  s.rest=n.depth===1?150+hash(n.id+'d')*90:(s.r+(p?p.r:0)+(n.depth===2?44:30)+hash(n.id+'d')*50);
+  s.born=performance.now();
+  const g=el('g',{class:'node','data-id':n.id,tabindex:0,role:'button','aria-label':n.t},gN);
+  s.rip=el('circle',{class:'ripple',r:s.r},g);s.rip2=el('circle',{class:'ripple',r:s.r},g);
+  if(n.depth<=1){el('circle',{class:'halo',r:s.r*1.25,fill:n.depth===0?'#e3bf72':(n.idea?'#c9b8ff':'#7fb2ff'),opacity:n.depth===0?.22:.10,filter:'url(#soft)'},g)}
+  s.body=el('path',{class:'body'},g);
+  if(n.depth<=1||n.k==='idea'){s.nuc=el('circle',{r:Math.max(2.5,s.r*.16),fill:n.depth===0?'#fff4d6':(n.idea||n.k==='idea'?'#e8deff':'#cfe2ff'),opacity:.55},g)}
+  s.mark=el('text',{class:'tag','font-size':Math.max(7,s.r*.55),dy:'.35em'},g);
+  const lines=wrap(n.t,n.depth===0?16:(n.depth===1?16:20));
+  const fs=n.depth===0?17:n.depth===1?15:11.5;
+  const tx=el('text',{class:'lbl'+(n.depth<=1?' cl':''),'font-size':fs},g);
+  const startY=n.depth<=1?(s.r+fs+4):(s.r+fs+1);
+  lines.forEach((ln,i)=>{const ts=el('tspan',{x:0,y:startY+i*fs*1.05},tx);ts.textContent=ln});
+  if(n.depth>=1){const tg=el('text',{class:'tag',y:-(s.r+6)},g);const pi=PATH.findIndex(p=>p.id===n.id);tg.textContent=n.depth===1?((n.c||[]).length+' cells'):(pi>=0?'✦ step '+(pi+1)+' · '+n.k:n.k);if(pi>=0)tg.setAttribute('fill','#e3bf72')}
+  s.g=g;s.line=p?el('line',{class:'edge'},gE):null;s.flow=p?el('line',{class:'flow'},gE):null;
+  sim[n.id]=s;styleNode(s);
+  return s;
+}
+function styleNode(s){
+  const n=s.n,st=marks[n.id];
+  let fill='url(#gBlock)',stroke='rgba(150,195,255,.35)',sw=1;
+  if(n.depth===0){fill='url(#gCore)';stroke='rgba(255,226,160,.8)'}
+  else if(n.depth===1){fill=n.idea?'url(#gIdea)':'url(#gCell)';stroke=n.idea?'rgba(201,184,255,.45)':'rgba(150,195,255,.42)'}
+  else if(n.k==='idea'){fill='url(#gIdea)';stroke='rgba(201,184,255,.4)'}
+  else if(n.k==='person'){fill='url(#gCell)'}
+  if(st==='i'){fill='url(#gGold)';stroke='#e3bf72';sw=1.4}
+  if(st==='v'){stroke='rgba(111,137,168,.8)'}
+  if(sel===n.id){sw=2;stroke=st==='i'?'#ffe2a0':'#cfe2ff'}
+  s.body.setAttribute('fill',fill);s.body.setAttribute('stroke',stroke);s.body.setAttribute('stroke-width',sw);
+  s.body.style.opacity=st==='v'?.55:1;
+  {const L=lab(n);s.mark.textContent=st==='v'?L.sv:st==='i'?L.si:''}
+  s.mark.setAttribute('fill',st==='i'?'#3a2806':'#b9cbe4');
+  // filter dimming (items only)
+  let dim=false;
+  if(filter!=='all'&&n.depth>=2)dim=!matches(n)&&!(n.c||[]).some(matches);
+  if(filter==='hot'&&n.depth===1)dim=!(n.c||[]).some(c=>matches(c)||(c.c||[]).some(matches));
+  s.g.classList.toggle('faded',dim);
+}
+function blobPath(s,t){
+  const pts=[],N=14,r=s.r;
+  for(let i=0;i<N;i++){const th=i/N*6.2832;const w=1+.07*Math.sin(s.lob*th+s.ph+t*.0009)+.04*Math.sin((s.lob+2)*th-s.ph*1.7+t*.0013);pts.push([Math.cos(th)*r*w,Math.sin(th)*r*w])}
+  let d='';for(let i=0;i<N;i++){const p0=pts[(i-1+N)%N],p1=pts[i],p2=pts[(i+1)%N],p3=pts[(i+2)%N];
+    if(i===0)d+=`M${p1[0].toFixed(1)},${p1[1].toFixed(1)}`;
+    const c1=[p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6],c2=[p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6];
+    d+=`C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`}
+  return d+'Z';
+}
+function blockPath(s,t){ // rounded square that breathes slightly toward a cell
+  const a=s.r*.9*(1+.03*Math.sin(t*.001+s.ph)),rr=s.r*(.34+.06*Math.sin(t*.0007+s.ph));
+  return `M${-a+rr},${-a}H${a-rr}Q${a},${-a} ${a},${-a+rr}V${a-rr}Q${a},${a} ${a-rr},${a}H${-a+rr}Q${-a},${a} ${-a},${a-rr}V${-a+rr}Q${-a},${-a} ${-a+rr},${-a}Z`;
+}
+function sync(){
+  const want=visibleIds(),set=new Set(want);
+  for(const id of want)if(!sim[id])makeNode(ALL[id]);
+  for(const id in sim)if(!set.has(id)){sim[id].g.remove();sim[id].line&&sim[id].line.remove();sim[id].flow&&sim[id].flow.remove();delete sim[id]}
+  alpha=Math.max(alpha,.9);
+}
+function step(){
+  const L=Object.values(sim);
+  for(let i=0;i<L.length;i++){const a=L[i];
+    for(let j=i+1;j<L.length;j++){const b=L[j];let dx=b.x-a.x,dy=b.y-a.y;let d2=dx*dx+dy*dy;if(d2<.01){dx=hash(a.id+b.id)-.5;dy=.5-hash(b.id+a.id);d2=.5}
+      const d=Math.sqrt(d2);const pad=(a.n.depth>=2&&b.n.depth>=2)?46:(a.n.depth>=2||b.n.depth>=2)?40:44;const min=a.r+b.r+pad;
+      let f=0;if(d<min)f=(min-d)/d*.28;else f=380/d2*.02;
+      const fx=dx*f,fy=dy*f;a.vx-=fx;a.vy-=fy;b.vx+=fx;b.vy+=fy}}
+  for(const s of L){const pid=PARENT[s.id];if(!pid||!sim[pid])continue;const p=sim[pid];
+    const dx=s.x-p.x,dy=s.y-p.y,d=Math.hypot(dx,dy)||1;const f=(d-s.rest)/d*.05;
+    s.vx-=dx*f;s.vy-=dy*f;if(p.n.depth!==0){p.vx+=dx*f*.3;p.vy+=dy*f*.3}
+    if(s.n.depth===1&&s.n.a!=null){ // keep clusters near their sector so the map stays legible, loosely
+      const ta=s.n.a*Math.PI/180,tx=Math.cos(ta)*d,ty=Math.sin(ta)*d;s.vx+=(tx-dx)*.004;s.vy+=(ty-dy)*.004}}
+  for(const s of L){if(s.n.depth===0){s.x=s.y=0;s.vx=s.vy=0;continue}
+    if(s.drag)continue;
+    s.vx*=.78;s.vy*=.78;s.x+=s.vx*alpha;s.y+=s.vy*alpha}
+  alpha=Math.max(.04,alpha*.985);
+}
+function draw(t){
+  const now=performance.now();
+  for(const id in sim){const s=sim[id],h=s.n.heat||0,st=marks[id];
+    // growth: a new cell swells from a seed, overshoots a little, settles
+    const g=Math.min(1,(now-s.born)/750),grow=reduce?1:(g<1?1+2.4*Math.pow(g-1,3)+1.4*Math.pow(g-1,2):1);
+    // breath: hotter cells breathe deeper and faster
+    const br=1+(reduce?0:.035*(.4+h)*Math.sin(t*(.0012+h*.0022)+s.ph));
+    s.g.setAttribute('transform',`translate(${s.x.toFixed(1)},${s.y.toFixed(1)}) scale(${(grow*br).toFixed(3)})`);
+    s.body.setAttribute('d',s.shape==='blob'?blobPath(s,t):blockPath(s,t));
+    // pulse: ripples leave fresh cells like a heartbeat
+    const col=st==='i'?'227,191,114':(s.n.k==='idea'||s.n.idea?'201,184,255':'156,195,255');
+    [s.rip,s.rip2].forEach((c,k)=>{
+      if(reduce||h<.3||st==='v'){c.setAttribute('stroke-opacity',0);return}
+      const per=5200-3600*h,ph=((t/per)+s.ph/6.28+k*.5)%1;
+      c.setAttribute('r',(s.r*(1+ph*(.6+h))).toFixed(1));c.setAttribute('stroke',`rgb(${col})`);
+      c.setAttribute('stroke-width',(1.4*(1-ph)).toFixed(2));c.setAttribute('stroke-opacity',((1-ph)*.55*h).toFixed(3))});
+    if(s.line){const p=sim[PARENT[id]];if(p){
+      const a=[p.x.toFixed(1),p.y.toFixed(1),s.x.toFixed(1),s.y.toFixed(1)];
+      s.line.setAttribute('x1',a[0]);s.line.setAttribute('y1',a[1]);s.line.setAttribute('x2',a[2]);s.line.setAttribute('y2',a[3]);
+      // river: light flows from the centre outward, faster toward what is alive
+      s.flow.setAttribute('x1',a[0]);s.flow.setAttribute('y1',a[1]);s.flow.setAttribute('x2',a[2]);s.flow.setAttribute('y2',a[3]);
+      s.flow.setAttribute('stroke-dashoffset',reduce?0:(-(t*(.006+h*.03))%125).toFixed(1));
+      s.flow.setAttribute('stroke-opacity',(.18+h*.55*(s.g.classList.contains('faded')?.2:1)).toFixed(2));
+      s.flow.setAttribute('stroke-width',(.8+h*1.4).toFixed(2));
+      s.flow.setAttribute('stroke',st==='i'?'#e3bf72':'#9cc3ff')}}}
+  drawRel(t);
+}
+let relLines=[];
+/* idea rivers: every visible frontier idea draws violet streams from the cells that feed it (source -> idea) */
+function drawRel(t){
+  const pairs=[];
+  for(const id in sim){const n=ALL[id];if(n.k!=='idea')continue;for(const r of n.r)if(sim[r])pairs.push([r,id,id===sel||r===sel])}
+  while(relLines.length<pairs.length)relLines.push(el('line',{class:'edge rl'},gE));
+  relLines.forEach((ln,i)=>{if(i<pairs.length){const [a,b,on]=pairs[i],A=sim[a],B=sim[b];ln.style.display='';
+    ln.setAttribute('x1',A.x.toFixed(1));ln.setAttribute('y1',A.y.toFixed(1));ln.setAttribute('x2',B.x.toFixed(1));ln.setAttribute('y2',B.y.toFixed(1));
+    ln.classList.toggle('on',on);ln.setAttribute('stroke-dashoffset',reduce?0:(-(t*(.012+ALL[a].heat*.02))%110).toFixed(1))}else ln.style.display='none'});
+}
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function loop(t){step();draw(reduce?0:t);requestAnimationFrame(loop)}
+
+/* sacred geometry: flower of life + square grid ring, in world space so it pans */
+(function geo(){
+  const R=120;const c='rgba(127,178,255,.07)';
+  el('circle',{cx:0,cy:0,r:R,fill:'none',stroke:c},gGeo);
+  for(let k=0;k<6;k++){const a=k*Math.PI/3;el('circle',{cx:Math.cos(a)*R,cy:Math.sin(a)*R,r:R,fill:'none',stroke:c},gGeo)}
+  for(let k=0;k<6;k++){const a=k*Math.PI/3+Math.PI/6;el('circle',{cx:Math.cos(a)*R*1.732,cy:Math.sin(a)*R*1.732,r:R,fill:'none',stroke:'rgba(127,178,255,.04)'},gGeo)}
+  el('circle',{cx:0,cy:0,r:R*3,fill:'none',stroke:'rgba(127,178,255,.08)','stroke-dasharray':'2 10'},gGeo);
+  el('circle',{cx:0,cy:0,r:R*4.6,fill:'none',stroke:'rgba(127,178,255,.05)'},gGeo);
+  for(let k=0;k<72;k++){const a=k*Math.PI/36,r1=R*4.6,r2=r1+(k%6?6:14);el('line',{x1:Math.cos(a)*r1,y1:Math.sin(a)*r1,x2:Math.cos(a)*r2,y2:Math.sin(a)*r2,stroke:'rgba(127,178,255,.12)'},gGeo)}
+})();
+
+/* ---------------- view: pan / zoom ---------------- */
+const view={x:0,y:0,k:1};
+function applyView(){world.setAttribute('transform',`translate(${view.x},${view.y}) scale(${view.k})`);
+  const st=document.getElementById('stage').style;st.setProperty('--gx',view.x+'px');st.setProperty('--gy',view.y+'px')}
+function fit(anim,ids){
+  const L=ids?ids.map(i=>sim[i]).filter(Boolean):Object.values(sim);if(!L.length)return;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const s of L){x0=Math.min(x0,s.x-s.r-30);y0=Math.min(y0,s.y-s.r-20);x1=Math.max(x1,s.x+s.r+30);y1=Math.max(y1,s.y+s.r+44)}
+  const W=innerWidth,H=innerHeight,top=document.querySelector('header').getBoundingClientRect().bottom+12,bot=document.getElementById('card').hidden?30:Math.min(260,H*.35);
+  const k=Math.min(ids?1.6:2.2,Math.max(.25,Math.min((W-32)/(x1-x0),(H-top-bot)/(y1-y0))));
+  const tx=W/2-(x0+x1)/2*k,ty=top+(H-top-bot)/2-(y0+y1)/2*k;
+  if(!anim||reduce){view.x=tx;view.y=ty;view.k=k;applyView();return}
+  const s0={...view},t0=performance.now();
+  (function tw(now){const p=Math.min(1,(now-t0)/600),e=1-Math.pow(1-p,3);view.x=s0.x+(tx-s0.x)*e;view.y=s0.y+(ty-s0.y)*e;view.k=s0.k+(k-s0.k)*e;applyView();if(p<1)requestAnimationFrame(tw)})(t0);
+}
+function zoomAt(cx,cy,f){const k=Math.min(4,Math.max(.2,view.k*f));const r=k/view.k;view.x=cx-(cx-view.x)*r;view.y=cy-(cy-view.y)*r;view.k=k;applyView()}
+const ptrs=new Map();let moved=0,downId=null,pinch0=null;
+svg.addEventListener('pointerdown',e=>{svg.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});moved=0;
+  const g=e.target.closest('.node');downId=ptrs.size===1&&g?g.dataset.id:null;
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0={d:Math.hypot(a.x-b.x,a.y-b.y),k:view.k,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2};downId=null}
+  svg.classList.add('drag')});
+svg.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;moved+=Math.abs(dx)+Math.abs(dy);
+  if(ptrs.size===2&&pinch0){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;
+    view.x+=cx-pinch0.cx;view.y+=cy-pinch0.cy;pinch0.cx=cx;pinch0.cy=cy;zoomAt(cx,cy,(pinch0.k*d/pinch0.d)/view.k);return}
+  if(ptrs.size===1){view.x+=dx;view.y+=dy;applyView()}});
+function up(e){if(!ptrs.has(e.pointerId))return;ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=null;if(!ptrs.size)svg.classList.remove('drag');
+  if(e.type==='pointerup'&&downId&&moved<8)tap(downId);downId=null}
+svg.addEventListener('pointerup',up);svg.addEventListener('pointercancel',up);
+svg.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,Math.exp(-e.deltaY*.0015))},{passive:false});
+svg.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.closest('.node')){e.preventDefault();tap(e.target.closest('.node').dataset.id)}});
+addEventListener('resize',()=>fit(false));
+
+/* ---------------- interactions ---------------- */
+function tap(id){
+  const n=ALL[id];
+  if(n.c&&n.c.length){if(open.has(id)&&sel===id){collapse(id);setTimeout(()=>fit(true),700)}else{open.add(id);lsSet('cf-open',[...open]);sync();if(n.depth>0)setTimeout(()=>{if(sel===id)fit(true,[id,...n.c.map(c=>c.id)])},900)}}
+  select(id);
+}
+function collapse(id){(function rm(n){open.delete(n.id);(n.c||[]).forEach(rm)})(ALL[id]);lsSet('cf-open',[...open]);sync()}
+function reveal(id){let p=PARENT[id];while(p){open.add(p);p=PARENT[p]}lsSet('cf-open',[...open]);sync()}
+function select(id){
+  document.getElementById('learn').hidden=true;
+  const prev=sel;sel=id;if(prev&&sim[prev])styleNode(sim[prev]);if(sim[id])styleNode(sim[id]);
+  const n=ALL[id],card=document.getElementById('card');card.hidden=false;
+  document.getElementById('cK').textContent=n.depth===0?'the centre':n.depth===1?'cluster · tap again to fold':n.k+(PARENT[id]?' · '+ALL[PARENT[id]].t:'');
+  document.getElementById('cT').textContent=n.t;
+  document.getElementById('cS').textContent=n.s||'';
+  const w=document.getElementById('cW');w.textContent=n.w?'For you: '+n.w:'';w.hidden=!n.w;
+  const R=document.getElementById('cR');R.innerHTML='';
+  (n.r||[]).forEach(rid=>{const b=document.createElement('button');b.textContent='→ '+ALL[rid].t;b.onclick=()=>{reveal(rid);setTimeout(()=>{select(rid);centerOn(rid)},350)};R.appendChild(b)});
+  R.hidden=!(n.r||[]).length;
+  const isItem=n.depth>=2;
+  document.getElementById('cA').hidden=!isItem;
+  const m=marks[id]||'';
+  document.getElementById('cM').textContent=[n.d,PAGE==='act'?'':(n.heat>=HOT?'◉ pulsing':(n.heat>=.35?'warm':'')),m==='v'&&dates[id]?lab(n).wv+' '+fmt(dates[id]):'',m==='i'&&dates[id]?lab(n).wi+' '+fmt(dates[id]):''].filter(Boolean).join(' · ');
+  const LB=lab(n);document.querySelectorAll('#cA .st').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.s===m));b.textContent=b.dataset.s==='i'?LB.i:b.dataset.s==='v'?LB.v:'○ '+LB.todo});
+  document.getElementById('cL').textContent=PAGE==='act'?(n.k==='event'?'Event ↗':(n.u&&n.u.includes('google.com/search')?'Search ↗':'Contact ↗')):'Open ↗';
+  const L=document.getElementById('cL');if(n.u){L.hidden=false;L.href=n.u}else L.hidden=true;
+}
+/* ---------------- learning: a gentle path + growth view ---------------- */
+const PATH=[
+ {id:'t3c',min:10,why:'See what a living map of what people want looks like.'},
+ {id:'pifyi',min:5,why:'The closest cousin to the Constellation: local scenes.'},
+ {id:'tang',min:10,why:'Care as the design rule, from the person who lived it.'},
+ {id:'shapes',min:5,why:'AI as a host inside a group chat, already shipping.'},
+ {id:'interop',min:10,why:'The open community building these tools. Your first people to meet.'}];
+const MEET=[['Metagov community','open calls, friendly to newcomers',"interop"],['Politecnico di Milano, Design Dept.','for the deep-tech teammate',"polimt"],['Audrey Tang’s Civic AI circle','follow, then write once you have a pilot',"tang"]];
+let tab='path';
+function openLearn(t){tab=t||tab;document.getElementById('card').hidden=true;const L=document.getElementById('learn');L.hidden=false;
+  document.querySelectorAll('#learn .tabs .chip').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===tab)));renderLearn()}
+function goTo(id){document.getElementById('learn').hidden=true;reveal(id);setTimeout(()=>{select(id);centerOn(id)},400)}
+function renderLearn(){
+  const B=document.getElementById('lBody');B.innerHTML='';
+  const h=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;B.appendChild(e);return e};
+  if(tab==='path'){
+    const done=PATH.filter(p=>marks[p.id]).length,next=PATH.find(p=>!marks[p.id]);
+    h('h2','',done===PATH.length?'Path complete. Beautiful.':'Five doors, 40 minutes in all');
+    h('p','intro',done===PATH.length?'Open “My growth” to see what you explored, and what is calling next.':'One a day when you have a pause. Open it, then mark it V Discovered or ★ Interested. No rush this week.');
+    const ol=h('ol','path');
+    PATH.forEach((p,i)=>{const n=ALL[p.id],li=document.createElement('li'),b=document.createElement('button');
+      b.className='step'+(marks[p.id]?' done':'')+(next===p?' next':'');
+      b.innerHTML='<div class="n"></div><div><b></b><span></span></div><em></em>';
+      b.querySelector('.n').textContent=marks[p.id]==='i'?'★':marks[p.id]==='v'?'V':String(i+1);
+      b.querySelector('b').textContent=n.t;b.querySelector('span').textContent=p.why;b.querySelector('em').textContent=p.min+' min';
+      b.onclick=()=>goTo(p.id);li.appendChild(b);ol.appendChild(li)});
+    h('div','lsub','People to meet, later');
+    const ul=h('ul','meet');MEET.forEach(([a,b,id])=>{const li=document.createElement('li');li.textContent=a+': '+b;li.style.cursor='pointer';li.onclick=()=>goTo(id);ul.appendChild(li)});
+    return}
+  // growth
+  const log=Object.keys(marks).filter(id=>ALL[id]&&dates[id]).map(id=>({id,ts:dates[id],m:marks[id]})).sort((a,b)=>b.ts-a.ts);
+  const total=ITEMS.length,nv=log.filter(x=>x.m==='v').length,ni=log.filter(x=>x.m==='i').length;
+  h('h2','',log.length?`${log.length} of ${total} cells explored`:'Your growth starts with one cell');
+  h('p','intro',log.length?`${nv} discovered, ${ni} starred. Each mark is dated, so this page shows how your knowledge grows week by week.`:'Mark a cell V or ★ and it lands here with its date. Start with step 1 of the path.');
+  if(!log.length){const b=document.createElement('button');b.className='chip star';b.textContent='✦ Open step 1';b.onclick=()=>goTo(PATH[0].id);B.appendChild(b);return}
+  // weekly sparkline, last 8 weeks
+  const W=7*864e5,now=Date.now(),wk=Array(8).fill(0);log.forEach(x=>{const k=Math.floor((now-x.ts)/W);if(k<8)wk[7-k]++});
+  h('div','lsub','Cells per week · last 8 weeks');
+  const mx=Math.max(1,...wk),sv=document.createElementNS(SN,'svg');sv.setAttribute('class','spark');sv.setAttribute('viewBox','0 0 320 56');sv.setAttribute('preserveAspectRatio','none');
+  wk.forEach((v,i)=>{const bh=v?Math.max(3,v/mx*44):1,r=el('rect',{x:i*40+6,y:50-bh,width:28,height:bh,rx:3,fill:i===7?'#e3bf72':'rgba(127,178,255,.55)'},sv)});
+  el('line',{x1:0,y1:50.5,x2:320,y2:50.5,stroke:'rgba(127,178,255,.25)'},sv);B.appendChild(sv);
+  // where you explore
+  h('div','lsub','Where you explore');
+  const bars=h('div','bars');DATA.c.forEach(c=>{const items=ITEMS.filter(n=>{let p=PARENT[n.id];while(PARENT[p]&&PARENT[p]!=='root')p=PARENT[p];return p===c.id});const k=items.filter(n=>marks[n.id]).length;
+    const row=document.createElement('div');row.className='bar';row.innerHTML='<span></span><i><s></s></i><b></b>';row.querySelector('span').textContent=c.t;row.querySelector('s').style.width=(k/items.length*100)+'%';row.querySelector('b').textContent=k+'/'+items.length;bars.appendChild(row)});
+  // next
+  const next=PATH.find(p=>!marks[p.id]);
+  let sugg=next?next.id:null;
+  if(!sugg){const fav={};log.filter(x=>x.m==='i').forEach(x=>{const p=PARENT[x.id];fav[p]=(fav[p]||0)+1});
+    const cand=ITEMS.filter(n=>!marks[n.id]&&n.u).sort((a,b)=>((fav[PARENT[b.id]]||0)-(fav[PARENT[a.id]]||0))||(b.heat-a.heat));sugg=cand[0]&&cand[0].id}
+  if(sugg){h('div','lsub','Next for you');const b=document.createElement('button');b.className='step next';b.innerHTML='<div class="n">→</div><div><b></b><span></span></div><em></em>';
+    b.querySelector('b').textContent=ALL[sugg].t;b.querySelector('span').textContent=ALL[sugg].w||ALL[sugg].s;b.querySelector('em').textContent=next?'path':'from your ★';b.onclick=()=>goTo(sugg);B.appendChild(b)}
+  h('div','lsub','Timeline');
+  const tl=h('ul','tl');log.slice(0,30).forEach(x=>{const li=document.createElement('li');li.style.setProperty('--c',x.m==='i'?'#e3bf72':'#6f89a8');li.style.cursor='pointer';
+    const sm=document.createElement('small');sm.textContent=fmt(x.ts)+' · '+(x.m==='i'?'★ interested':'V discovered');li.appendChild(sm);li.appendChild(document.createTextNode(ALL[x.id].t));li.onclick=()=>goTo(x.id);tl.appendChild(li)});
+}
+document.getElementById('bLearn').onclick=()=>openLearn('path');
+document.getElementById('bGrow').onclick=()=>openLearn('grow');
+document.getElementById('lx').onclick=()=>{document.getElementById('learn').hidden=true};
+document.querySelectorAll('#learn .tabs .chip').forEach(b=>b.onclick=()=>openLearn(b.dataset.tab));
+function fmt(ts){try{return new Date(ts).toLocaleDateString(undefined,{day:'numeric',month:'short'})}catch(e){return''}}
+function centerOn(id){const s=sim[id];if(!s)return;const W=innerWidth,H=innerHeight;const tx=W/2-s.x*view.k,ty=H*.42-s.y*view.k;const s0={...view},t0=performance.now();
+  (function tw(now){const p=Math.min(1,(now-t0)/500),e=1-Math.pow(1-p,3);view.x=s0.x+(tx-s0.x)*e;view.y=s0.y+(ty-s0.y)*e;applyView();if(p<1)requestAnimationFrame(tw)})(t0)}
+document.querySelectorAll('#cA .st').forEach(b=>b.addEventListener('click',()=>{
+  if(!sel)return;const s=b.dataset.s;if(s)marks[sel]=s;else delete marks[sel];
+  if(s)dates[sel]=Date.now();else delete dates[sel];
+  save();refreshAll();select(sel);
+  if(s==='i'){const g=sim[sel];g&&g.g.animate&&!reduce&&g.g.animate([{opacity:.4},{opacity:1}],{duration:400})}
+}));
+document.getElementById('x').onclick=()=>{const p=sel;sel=null;document.getElementById('card').hidden=true;if(p&&sim[p])styleNode(sim[p])};
+document.querySelectorAll('#filters .chip').forEach(b=>b.addEventListener('click',()=>{
+  filter=b.dataset.f;document.querySelectorAll('#filters .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  if(filter!=='all'){ // grow clusters that hold matching cells
+    PI().forEach(n=>{if(matches(n)){let p=PARENT[n.id];while(p&&ALL[p].depth>0){open.add(p);p=PARENT[p]}}});
+    if(filter!=='todo')sync();
+    if(filter!=='todo')setTimeout(()=>{const ids=PI().filter(matches).map(n=>n.id);if(ids.length)fit(true,[ROOTN().id,...ids])},1500)}
+  refreshAll();
+}));
+document.getElementById('bOpen').onclick=()=>{Object.values(ALL).forEach(n=>{if(n.c&&n.depth>0)open.add(n.id)});lsSet('cf-open',[...open]);sync();setTimeout(()=>fit(true),1400)};
+document.getElementById('bFold').onclick=()=>{open.clear();lsSet('cf-open',[]);sync();setTimeout(()=>fit(true),900)};
+document.getElementById('bFit').onclick=()=>fit(true);
+function refreshAll(){
+  for(const id in sim)styleNode(sim[id]);
+  const leaf=PI();let i=0,v=0;leaf.forEach(n=>{if(marks[n.id]==='i')i++;else if(marks[n.id]==='v')v++});
+  document.getElementById('cAll').textContent=leaf.length;document.getElementById('cTodo').textContent=leaf.length-i-v;document.getElementById('cI').textContent=i;document.getElementById('cV').textContent=v;document.getElementById('cH').textContent=leaf.filter(n=>n.heat>=HOT).length;
+}
+
+function setPage(pg,first){
+  PAGE=pg;try{localStorage.setItem('cf-page',pg)}catch(e){}
+  document.querySelectorAll('.chip.pg').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.pg===pg)));
+  const L=LABELS[pg];document.getElementById('lTodo').textContent=L.todo;document.getElementById('lI').textContent=L.i;document.getElementById('lV').textContent=L.v;document.getElementById('lH').textContent=L.hot;
+  document.getElementById('ttl').textContent=pg==='act'?'Next Moves':'Constellation Frontiers';
+  document.getElementById('bLearn').hidden=document.getElementById('bGrow').hidden=pg==='act';
+  document.querySelector('.eyebrow').textContent=pg==='act'?'Constellation Club · events and people · Nov 2026':'Constellation Club · frontier scan · Nov 2026';
+  if(first)return;
+  sel=null;document.getElementById('card').hidden=true;document.getElementById('learn').hidden=true;
+  filter='all';document.querySelectorAll('#filters .chip').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.f==='all')));
+  for(const id in sim){sim[id].g.remove();sim[id].line&&sim[id].line.remove();sim[id].flow&&sim[id].flow.remove();delete sim[id]}
+  sync();for(let i=0;i<200;i++)step();alpha=.6;refreshAll();draw(0);fit(false);setTimeout(()=>fit(true),1200);
+}
+document.querySelectorAll('.chip.pg').forEach(b=>b.onclick=()=>{if(b.dataset.pg!==PAGE)setPage(b.dataset.pg)});
+setPage(PAGE,true);
+/* ---------------- boot ---------------- */
+sync();
+for(let i=0;i<260;i++)step();alpha=.6;
+refreshAll();draw(0);fit(false);
+requestAnimationFrame(loop);
+setTimeout(()=>fit(true),1600);
+</script>
+</body>
+</html>
