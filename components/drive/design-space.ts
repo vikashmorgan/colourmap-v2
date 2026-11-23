@@ -10,7 +10,10 @@
 import * as THREE from 'three';
 
 import { CATEGORIES, MARKING, type Pos, SURFACE_STYLE } from '@/lib/art/design-space';
-import { frameAt, pointAt, project, type Track, twistPose } from '@/lib/art/track';
+import { WORLD_CFG } from '@/lib/art/drive-worlds';
+import { frameAt, heightAt, pointAt, project, type Track, twistPose } from '@/lib/art/track';
+import { GATE_STYLES, type GateStyle } from '@/lib/art/track-data';
+import { buildGate } from './gates-view';
 
 type V3 = [number, number, number];
 const PHI = (1 + Math.sqrt(5)) / 2;
@@ -1098,6 +1101,26 @@ function neon(k: Kit, g: THREE.Group, tr: Track, id: string, s0: number, s1: num
 
 /* ── the space ── */
 
+/** The Gates category: a gate of the chosen look every 240 m, in the track's own world. */
+function gates(group: THREE.Group, tr: Track, style: GateStyle, s0: number, s1: number) {
+  const world = WORLD_CFG[tr.def.id];
+  for (const s of every(s0, s1, 240, 120)) {
+    if (!plainSpan(tr, s - 24, s + 24)) continue;
+    const f = frameAt(tr, s);
+    const p = pointAt(tr, s, 0);
+    const g = buildGate(style, {
+      hw: tr.def.half(s) + 2,
+      tall: tr.def.id === 'sky' ? 1.6 : 1,
+      world: world.id,
+      night: world.theme !== null,
+      seed: Math.round(s / 240),
+    });
+    g.position.set(p.x, heightAt(tr, s, 0, true), -p.y);
+    g.rotation.set(0, f.h + Math.PI / 2, -f.bank, 'YXZ');
+    group.add(g);
+  }
+}
+
 interface Chunk {
   group: THREE.Group;
   burners: Burner[];
@@ -1701,6 +1724,8 @@ export class DesignSpace {
       chinatown(k, group, tr, id, s0, s1);
     } else if (cat === 'neon') {
       neon(k, group, tr, id, s0, s1);
+    } else if (cat === 'gates' && (GATE_STYLES as readonly string[]).includes(id)) {
+      gates(group, tr, id as GateStyle, s0, s1);
     }
   }
 
