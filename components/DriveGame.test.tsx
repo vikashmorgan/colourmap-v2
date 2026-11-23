@@ -19,6 +19,7 @@ const engine = {
   start: vi.fn(),
   dispose: vi.fn(),
   setAutopilot: vi.fn(),
+  stop: vi.fn(),
   where: vi.fn(() => null),
   stage3d: new Scene(),
 };
@@ -45,6 +46,30 @@ vi.mock('@/components/drive/engine', () => ({
   },
 }));
 
+// The Garage's turntable needs WebGL too; the menu only has to drive it.
+const garage = {
+  setRide: vi.fn(),
+  setRev: vi.fn(),
+  resize: vi.fn(),
+  start: vi.fn(),
+  dispose: vi.fn(),
+  pointerDown: vi.fn(),
+  pointerMove: vi.fn(),
+  pointerUp: vi.fn(),
+  wheel: vi.fn(),
+};
+const garageArgs = vi.fn();
+vi.mock('@/components/garage/scene', () => ({
+  GarageScene: class {
+    constructor(...args: unknown[]) {
+      garageArgs(...args);
+      // biome-ignore lint/correctness/noConstructorReturn: hands the shared mock to the menu.
+      return garage;
+    }
+  },
+}));
+
+import { MENU_TAB_KEY } from '@/components/drive/DriveMenu';
 import { DESIGN_KEY } from '@/lib/art/drive-design';
 import { driveSound } from '@/lib/audio/drive-sound';
 import { SOUND_KEY } from '@/lib/audio/drive-sound-map';
@@ -66,6 +91,8 @@ function play() {
 describe('Drive', () => {
   beforeEach(() => {
     for (const f of Object.values(engine)) if (typeof f === 'function') f.mockClear();
+    for (const f of Object.values(garage)) f.mockClear();
+    garageArgs.mockClear();
     push.mockClear();
     window.localStorage.clear();
   });
@@ -74,7 +101,7 @@ describe('Drive', () => {
     window.history.replaceState(null, '', '/');
   });
 
-  it('starts the engine on the top track (the Golden Track); the menu names it and opens a column of the worlds', () => {
+  it('starts the engine on the top track (the Golden Track); the menu names it and opens on its tracks', () => {
     play();
     expect(engine.start).toHaveBeenCalled();
     const menu = screen.getByRole('button', { name: 'Menu' });
@@ -82,9 +109,13 @@ describe('Drive', () => {
     expect(screen.queryByRole('dialog', { name: 'Menu' })).toBeNull();
     fireEvent.click(menu);
     expect(screen.getByRole('dialog', { name: 'Menu' })).toBeDefined();
-    expect(screen.getByRole('link', { name: /The Garage/ }).getAttribute('href')).toBe(
-      '/geometry-field/garage',
-    );
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
+      'Tracks',
+      'Garage',
+      'World',
+      'Settings',
+    ]);
+    expect(screen.getByRole('tab', { name: 'Tracks' }).getAttribute('aria-selected')).toBe('true');
     for (const n of [
       'Golden Track',
       'Neon District',
@@ -103,9 +134,10 @@ describe('Drive', () => {
     );
   });
 
-  it('switches the five rivals on from the menu and keeps it', () => {
+  it('switches the five rivals on from the World category and keeps it', () => {
     play();
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'World' }));
     fireEvent.click(screen.getByRole('button', { name: '5 rivals' }));
     expect(engine.setDesign).toHaveBeenLastCalledWith(expect.objectContaining({ rivals: true }));
     expect(JSON.parse(window.localStorage.getItem(DESIGN_KEY) ?? '{}').rivals).toBe(true);
@@ -180,12 +212,23 @@ describe('Drive', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
     expect(screen.getByRole('dialog', { name: 'Menu' })).toBeDefined();
     expect(engine.setPreview).toHaveBeenLastCalledWith(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Chrome' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Garage' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Old chrome' }));
     fireEvent.click(screen.getByRole('button', { name: 'Green plasma' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Snowstorm' }));
     fireEvent.click(screen.getByRole('button', { name: 'Hover ship' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'World' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Snowstorm' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Settings' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Drift' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Plain' }));
     const saved = JSON.parse(window.localStorage.getItem(DESIGN_KEY) ?? '{}');
-    expect(saved).toMatchObject({ hull: 'chrome', fire: 'plasma', weather: 'snowstorm' });
+    expect(saved).toMatchObject({
+      hull: 'oldChrome',
+      fire: 'plasma',
+      weather: 'snowstorm',
+      mode: 'drift',
+      gauge: 'plain',
+    });
     expect(saved.vehicle.gold).toBe('ship');
     expect(engine.setDesign).toHaveBeenCalled();
     fireEvent.keyDown(window, { key: 'Escape' });
@@ -362,6 +405,76 @@ describe('Drive', () => {
     expect(engine.setAutopilot).toHaveBeenLastCalledWith(false);
     expect(screen.getByRole('button', { name: 'Race' })).toBeDefined();
   });
+
+  it('the Garage category: your ride big on the turntable, the game resting, every part remembered', () => {
+    play();
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.queryByTestId('menu-garage')).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Garage' }));
+    expect(screen.getByTestId('menu-garage')).toBeDefined();
+    expect(garage.start).toHaveBeenCalled();
+    expect(engine.stop).toHaveBeenCalled();
+    // The Golden Track's vehicle is the ship by default: the turntable shows it.
+    expect(garageArgs.mock.calls.at(-1)?.[2]).toBe('ship');
+    // The ship's parts, then the car's bodies.
+    fireEvent.click(screen.getByRole('button', { name: 'Four' }));
+    expect(garage.setRide).toHaveBeenLastCalledWith(
+      expect.objectContaining({ reactors: 'quad' }),
+      'ship',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Car' }));
+    for (const n of ['Classic GT', 'UFO Classic', 'Garbage Ride'])
+      expect(screen.getByRole('button', { name: n })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Garbage Ride' }));
+    expect(garage.setRide).toHaveBeenLastCalledWith(
+      expect.objectContaining({ body: 'garbage' }),
+      'car',
+    );
+    // Your own paint: a colour picker.
+    fireEvent.click(screen.getByRole('button', { name: 'Paint' }));
+    fireEvent.change(screen.getByLabelText('Your colour'), { target: { value: '#aa3311' } });
+    const saved = JSON.parse(window.localStorage.getItem(DESIGN_KEY) ?? '{}');
+    expect(saved).toMatchObject({
+      body: 'garbage',
+      hull: 'paint',
+      paint: '#aa3311',
+      reactors: 'quad',
+    });
+    expect(window.localStorage.getItem(MENU_TAB_KEY)).toBe('garage');
+    // Leaving the Garage wakes the game.
+    engine.start.mockClear();
+    fireEvent.click(screen.getByRole('tab', { name: 'Settings' }));
+    expect(screen.queryByTestId('menu-garage')).toBeNull();
+    expect(garage.dispose).toHaveBeenCalled();
+    expect(engine.start).toHaveBeenCalled();
+  });
+
+  it('the menu is keyboard first: left and right change category, up and down move through the choices', () => {
+    play();
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    const tracks = screen.getByRole('tab', { name: 'Tracks' });
+    expect(document.activeElement).toBe(tracks);
+    fireEvent.keyDown(tracks, { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Garage' }).getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Garage' }));
+    fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowLeft' });
+    fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowLeft' });
+    expect(screen.getByRole('tab', { name: 'Settings' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowDown' });
+    expect(document.activeElement?.textContent).toBe('Easy');
+    // The arrows never reach the car while the menu is open.
+    expect(engine.setControls).not.toHaveBeenCalledWith(expect.objectContaining({ steer: 1 }));
+  });
+
+  it('opens the menu on the category used last', () => {
+    window.localStorage.setItem(MENU_TAB_KEY, 'world');
+    play();
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.getByRole('tab', { name: 'World' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Snowstorm' })).toBeDefined();
+  });
 });
 
 describe('Drive sound', () => {
@@ -407,6 +520,7 @@ describe('Drive sound', () => {
   it('mutes from the menu and remembers it, with a master volume', () => {
     play();
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Settings' }));
     const muted = screen.getByRole('button', { name: 'Muted' });
     fireEvent.click(muted);
     expect(muted.getAttribute('aria-pressed')).toBe('true');
@@ -419,6 +533,7 @@ describe('Drive sound', () => {
     cleanup();
     play();
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    // The menu remembers its category, so it opens on Settings again.
     expect(screen.getByRole('button', { name: 'Muted' }).getAttribute('aria-pressed')).toBe('true');
     expect((screen.getByRole('slider', { name: 'Volume' }) as HTMLInputElement).value).toBe('30');
   });

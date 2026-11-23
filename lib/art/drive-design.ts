@@ -101,7 +101,7 @@ export function fireById(id: string): Fire {
 
 /* ── Hull ──────────────────────────────────────────────────── */
 
-export type HullId = 'chrome' | 'gold' | 'rust' | 'red' | 'leopard' | 'paint';
+export type HullId = 'chrome' | 'oldChrome' | 'gold' | 'rust' | 'red' | 'leopard' | 'paint';
 
 export interface Hull {
   id: HullId;
@@ -113,8 +113,8 @@ export interface Hull {
   clearcoat: number;
   /** Rust's patina: how much the finish is broken up by a second, darker colour. */
   patina: number;
-  /** A printed coat over the base (the leopard's rosettes). */
-  pattern?: 'leopard';
+  /** A printed coat over the base: the leopard's rosettes, or old chrome's tarnish and haze. */
+  pattern?: 'leopard' | 'tarnish';
   /** The rims and trim in their own metal (sRGB); otherwise each vehicle's own. */
   rim?: string;
 }
@@ -128,6 +128,18 @@ export const HULLS: Hull[] = [
     roughness: 0.06,
     clearcoat: 0,
     patina: 0,
+  },
+  {
+    // 2026-11-23: "add old chrome as one of the colours." Worn chrome: warmer and greyer than new,
+    // the mirror gone a little hazy (rougher), clouded with tarnish and fine pitting.
+    id: 'oldChrome',
+    name: 'Old chrome',
+    colour: '#c9bca4',
+    metalness: 1,
+    roughness: 0.26,
+    clearcoat: 0,
+    patina: 0,
+    pattern: 'tarnish',
   },
   {
     // 2026-11-19: "user-pickable colours, chrome and gold included".
@@ -275,7 +287,15 @@ export const shipParts = (d: ShipParts): ShipParts => ({
  * The car's bodies (2026-11-19: "a motorbike", "cars inspired by the 50s GTO, and then the same
  * but futuristic"). The physics stay the car's.
  */
-export type BodyId = 'wedge' | 'classic' | 'future' | 'racer' | 'bike' | 'cycle';
+export type BodyId =
+  | 'wedge'
+  | 'classic'
+  | 'future'
+  | 'racer'
+  | 'bike'
+  | 'cycle'
+  | 'ufo'
+  | 'garbage';
 export const BODIES: { id: BodyId; name: string }[] = [
   { id: 'wedge', name: 'Wedge' },
   { id: 'classic', name: 'Classic GT' },
@@ -286,7 +306,15 @@ export const BODIES: { id: BodyId; name: string }[] = [
   { id: 'bike', name: 'Motorbike' },
   // 2026-11-22: "make tron bikes".
   { id: 'cycle', name: 'Light Cycle' },
+  // 2026-11-23: "one of the cars is UFO classic saucer": a 1950s flying saucer, hovering on the
+  // car's physics, its rim lights glowing softly.
+  { id: 'ufo', name: 'UFO Classic' },
+  // 2026-11-23: "call it the garbage ride": an original junkyard flying car bolted from scrap.
+  { id: 'garbage', name: 'Garbage Ride' },
 ];
+
+/** The bodies that float instead of rolling (no wheels; they bob a little over the road). */
+export const HOVER_BODIES: readonly BodyId[] = ['ufo', 'garbage'];
 
 export type DriveMode = 'easy' | 'flow' | 'drift' | 'grip';
 export const DRIVE_MODES: { id: DriveMode; name: string }[] = [

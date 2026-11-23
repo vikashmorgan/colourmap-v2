@@ -362,6 +362,38 @@ more tilt on the car and much more turn, much quicker turn. it goes way too stra
 - **Mars handling** (`MARS_HANDLING`, lib/art/vehicle.ts): the turn comes 1.8× quicker and sharper
   and the body leans 2.6× as far; the other worlds are unchanged.
 
+## Old chrome, the menu, Mars garage, Classic GT, UFO and Garbage Ride (2026-11-23)
+
+Asked: "add old chrome as one of the colours.", "make garage have the mars context around.",
+"make the right hand menu better. like a proper menu that opens with garage a proper category in
+itself.", "improve classic gt design im sure u can do better the front is good", "one of the cars
+is UFO classic saucer. and one make it the rick and morty spaceship. call it the garbage ride".
+
+- **Old chrome** hull (`oldChrome`): worn chrome, warmer and greyer than new, a little hazier
+  (roughness 0.26 against 0.06), mirroring the world a little less, clouded with a tarnish texture
+  (soft warm haze, darker oxide blooms, fine pitting, pale polish streaks) and a faint rubbed
+  sheen. Chosen and remembered like the other hulls, in Drive's menu and the Garage.
+- **The menu**: the right-hand sheet with Tracks, Garage, World and Settings
+  (docs/specs/drive-menus.md, "The menu"). It replaces the menu column.
+- **The Garage on Mars** (docs/specs/garage.md, "The room").
+- **Classic GT**, redrawn behind the front (the front kept as it was): full rear haunches swelling
+  from a hip at the door, a narrower glasshouse on the body's shoulders with side windows, a chrome
+  drip rail and a quarter-window divider, one long fastback rear window down to a Kamm tail with a
+  little ducktail lip, twin round tail lamps in chrome bezels each side (now standing proud of the
+  tail, where before they were mostly buried in it), split chrome bumpers either side of a plain
+  plate recess, four tailpipes in two pairs, door shuts and handles, a chrome sill, a fuel cap on
+  the deck, cross-laced wire wheels with three-eared knock-offs, the rear track a little wider.
+- **UFO Classic** body (`ufo`): a 1950s flying saucer in the hull's finish, a dark band round its
+  waist, a glass dome with a faint pilot, sixteen warm rim lamps breathing in a slow wave (never
+  off, never a flash), a warm glow beneath, two small thrusters for the fire.
+- **Garbage Ride** body (`garbage`): an original junkyard flying car, not the TV show's ship: an
+  open tub in your paint patched with primer, olive, mustard and rust panels set askew, bolts, a
+  dent; a bench seat, a wheel and a bubble windscreen; pipes along the flanks; a big thruster bound
+  with tape; two odd warm headlamps; a crooked fin; an exhaust stack coughing a puff of smoke every
+  1.6 s.
+- Both hovering bodies float on the car's physics (`HOVER_BODIES`): no wheels, a gentle bob and
+  wobble; their trim takes the hull's rim metal (the leopard's gold).
+
 ## Sound (2026-11-23)
 
 "start working on sounds for the game. bring em in." Everything is synthesized with the Web Audio
@@ -388,14 +420,14 @@ follows the design language's sound line (docs/specs/drive-design-language.md).
 - **Finish**: a short rising arpeggio (C E G C) on the results, with a bright top note for a win or
   a record; a soft falling pair for a race ended in the void.
 - **Menus**: a soft low tick for a move (the track ring's turns, the design space's arrows, the
-  menu button, a Design row option, back to the ring, resume) and a warm swell (a root and its
-  fifth) for a choice (title entered, Race, Design opened, a pick in the design space, a world in
-  the menu column, restart).
-- **Ducking**: engine, wind and hiss play only while driving; the menu column, the ring, the
+  menu's categories and ↑ ↓ moves, the menu button, back to the ring, resume) and a warm swell (a root and its
+  fifth) for a choice (title entered, Race, Design opened, a pick in the design space, a world or
+  an option chosen in the menu, restart).
+- **Ducking**: engine, wind and hiss play only while driving; the menu, the ring, the
   title, pause, results and the design space fade them out over about a second.
 - **Mellow**: every level is small and capped, every change glides (0.1-0.35 s), and a gentle
   compressor (−20 dB, 4:1, soft knee) sits before the master volume.
-- **Settings**: the menu column's Design rows end with **Sound** (Sound on / Muted) and a
-  **Volume** slider; both remembered on the device (`drive.sound`, `{ muted, volume }`, read and
+- **Settings**: the menu's **Settings** category (components/drive/DriveMenu.tsx, its `settingsExtra` slot) ends
+  with **Sound** (Sound on / Muted) and a **Volume** slider; both remembered on the device (`drive.sound`, `{ muted, volume }`, read and
   written inside try/catch). The volume is eased (squared) so the slider feels even.
 - Not yet: a whoosh for passing fire arches needs a hook from the engine (none today).
