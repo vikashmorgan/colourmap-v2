@@ -120,7 +120,8 @@ export const ARCHES: Arch[] = (() => {
     [80, -420, -1.4],
     [-560, 140, 0.9],
   ];
-  for (const [dx, dy, h] of lone) out.push({ x: C.x + dx, y: C.y + dy, h, r: ARCH_R, kind: 'fire' });
+  for (const [dx, dy, h] of lone)
+    out.push({ x: C.x + dx, y: C.y + dy, h, r: ARCH_R, kind: 'fire' });
   const tunnels: [number, number, number][] = [
     [-150, -120, 0.5],
     [300, 180, -2.4],
@@ -141,7 +142,8 @@ export const ARCHES: Arch[] = (() => {
     [-620, -520, -0.4],
     [-60, 560, 3.0],
   ];
-  for (const [dx, dy, h] of real) out.push({ x: C.x + dx, y: C.y + dy, h, r: ARCH_R + 2, kind: 'real' });
+  for (const [dx, dy, h] of real)
+    out.push({ x: C.x + dx, y: C.y + dy, h, r: ARCH_R + 2, kind: 'real' });
   return out;
 })();
 

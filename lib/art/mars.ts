@@ -415,7 +415,14 @@ export const SITES: Site[] = (() => {
     if (siteClear(p.x, p.y, SITE_R.atomic))
       out.push({ ...p, kind: 'atomic', r: SITE_R.atomic, seed: hash(i, 9, 6) });
   });
-  out.push({ x: LIGHTHOUSE.x, y: LIGHTHOUSE.y, kind: 'lighthouse', r: LIGHTHOUSE.r, rot: 0, seed: 0.5 });
+  out.push({
+    x: LIGHTHOUSE.x,
+    y: LIGHTHOUSE.y,
+    kind: 'lighthouse',
+    r: LIGHTHOUSE.r,
+    rot: 0,
+    seed: 0.5,
+  });
   return out;
 })();
 

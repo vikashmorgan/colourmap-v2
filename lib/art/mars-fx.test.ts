@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { ARCHES, archGate } from './mars-map';
 import {
   archThrough,
   GRADE_TIME,
@@ -9,6 +8,7 @@ import {
   newGrade,
   stepGrade,
 } from './mars-fx';
+import { ARCHES, archGate } from './mars-map';
 
 const tunnel = ARCHES.find((a) => a.kind === 'tunnel');
 const real = ARCHES.find((a) => a.kind === 'real');

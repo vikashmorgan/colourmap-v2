@@ -99,7 +99,9 @@ void main() {
 }
 `;
 
-export function makeVintagePass(): ShaderPass & { set(l: VintageLevels, t: number, w: number, h: number): void } {
+export function makeVintagePass(): ShaderPass & {
+  set(l: VintageLevels, t: number, w: number, h: number): void;
+} {
   const pass = new ShaderPass({
     uniforms: {
       tDiffuse: { value: null },

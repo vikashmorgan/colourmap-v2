@@ -42,6 +42,20 @@ intro and grid, the results) and the design language in `docs/specs/drive-design
 - [x] Lean in the air: the body leans with the wheel while airborne (up to 1.2× its most on the
       ground), both car and ship (2026-11-22: "I need tilt to keep working when in the air").
 - [ ] A continuous smoke trail behind the car, never puffs.
+- [x] Gear rings, on every world (2026-11-23: "add boost circles visual like speed sound circle
+      wall explosions for each gear u pass bigger and bigger"). `lib/art/gear-rings.ts`,
+      drawn by `components/drive/shift-rings.ts`.
+      - On each upshift a soft band of light bursts out round you, across your way, in your hull's
+        colour, and slides back past you as it grows and fades.
+      - Each gear's ring is bigger, brighter and lasts longer: second gear a 4.5 m radius,
+        the top 22 m, with up to two echoes following.
+      - The top gear is a full sonic boom: three echoes, a wall of rings, and a cone of light
+        opening back from the nose.
+      - Additive and at most 55 % at its peak. Never a flash over the screen.
+      - A gear rings again only after 2.5 s, so a speed hovering at a shift never strobes.
+        Downshifts never ring. Nothing rings in the menus' preview or while diving off a twist.
+      - On a twist or in Undertown the rings turn with you.
+      - The engine calls `onShift(gear, top)` at each ring, for the drive sound to use.
 
 ## 1. Salt Flat (`salt`)
 

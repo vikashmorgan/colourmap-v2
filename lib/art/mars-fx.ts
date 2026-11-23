@@ -13,7 +13,7 @@
  */
 
 import { crosses } from '@/lib/art/drive';
-import { type Arch, ARCHES, archGate } from '@/lib/art/mars-map';
+import { ARCHES, type Arch, archGate } from '@/lib/art/mars-map';
 
 /** Seconds the grade takes to turn all the way. */
 export const GRADE_TIME = 1.5;

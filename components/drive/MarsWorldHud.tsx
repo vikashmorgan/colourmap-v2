@@ -8,10 +8,9 @@
  */
 
 import { useEffect, useRef } from 'react';
-
+import { LOOP_PATH } from '@/lib/art/mars';
 import { geigerRate } from '@/lib/art/mars-fx';
 import { CRATER, LAKES, LIGHTHOUSE, REGIONS } from '@/lib/art/mars-map';
-import { LOOP_PATH } from '@/lib/art/mars';
 import type { MarsWhere } from './mars-run';
 import { setGeiger } from './mars-sound';
 
@@ -119,9 +118,7 @@ export function GeigerColumn({ rad, live }: { rad: number; live: boolean }) {
           />
         ))}
       </div>
-      <div style={{ marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
-        {Math.round(k * 100)}
-      </div>
+      <div style={{ marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>{Math.round(k * 100)}</div>
     </div>
   );
 }

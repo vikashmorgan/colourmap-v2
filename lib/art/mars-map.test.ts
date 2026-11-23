@@ -111,7 +111,9 @@ describe('the great crater', () => {
     expect(craterHeight(CRATER.R * 1.5)).toBeLessThan(CRATER.rim * 0.2);
     expect(craterHeight(CRATER.R * 3)).toBeLessThan(0.01);
     // Smooth across the rim: no step.
-    expect(Math.abs(craterHeight(CRATER.R - 0.01) - craterHeight(CRATER.R + 0.01))).toBeLessThan(0.01);
+    expect(Math.abs(craterHeight(CRATER.R - 0.01) - craterHeight(CRATER.R + 0.01))).toBeLessThan(
+      0.01,
+    );
     expect(marsHeight(CRATER.x, CRATER.y)).toBeLessThan(-CRATER.depth + 1);
   });
 

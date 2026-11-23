@@ -22,7 +22,7 @@ import {
   SITES,
   type Site,
 } from '@/lib/art/mars';
-import { type Arch, ARCHES, LIGHTHOUSE } from '@/lib/art/mars-map';
+import { ARCHES, type Arch, LIGHTHOUSE } from '@/lib/art/mars-map';
 import { START } from '@/lib/art/salt-flat-game';
 import { disposeGroup } from './track-view';
 import { buildFireCone, glowSprite, glowTexture } from './vehicles';
@@ -292,7 +292,12 @@ function atomic(parts: THREE.BufferGeometry[], dots: THREE.Vector3[], mouths: TH
   // The reactor: a dome on a drum, ribs of dots up its sides.
   parts.push(part(new THREE.CylinderGeometry(13, 13, 8, 20), at(0, 3, 18), concrete, 3));
   parts.push(
-    part(new THREE.SphereGeometry(13, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), at(0, 7, 18), concrete, 4),
+    part(
+      new THREE.SphereGeometry(13, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+      at(0, 7, 18),
+      concrete,
+      4,
+    ),
   );
   for (let m = 0; m < 8; m++) {
     const a = (m / 8) * Math.PI * 2;
@@ -690,7 +695,10 @@ export function buildMarsView(): MarsView {
       obj.add(
         new THREE.Mesh(
           new THREE.TorusGeometry(a.r - 0.9, 0.18, 6, 40, Math.PI),
-          new THREE.MeshBasicMaterial({ color: new THREE.Color(1.3, 0.75, 0.55), toneMapped: false }),
+          new THREE.MeshBasicMaterial({
+            color: new THREE.Color(1.3, 0.75, 0.55),
+            toneMapped: false,
+          }),
         ),
       );
     } else {

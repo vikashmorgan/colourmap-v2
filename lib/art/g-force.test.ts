@@ -1,14 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  easeMask,
-  G_FROM,
-  G_FULL,
-  G_MAX,
-  gMask,
-  HIT_PULSE,
-  hitMask,
-  turnMask,
-} from './g-force';
+import { easeMask, G_FROM, G_FULL, G_MAX, gMask, HIT_PULSE, hitMask, turnMask } from './g-force';
 
 describe('the G-force mask', () => {
   it('stays off in gentle turns and grows to its most in hard ones, either way', () => {
@@ -25,7 +16,7 @@ describe('the G-force mask', () => {
     }
   });
 
-  it("pulses softly after a hit: swells fast, fades within a second, nothing before", () => {
+  it('pulses softly after a hit: swells fast, fades within a second, nothing before', () => {
     expect(hitMask(-0.1)).toBe(0);
     expect(hitMask(Number.NaN)).toBe(0);
     expect(hitMask(0)).toBe(0);
