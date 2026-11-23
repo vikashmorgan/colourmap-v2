@@ -3,9 +3,15 @@
  * in the middle and your ride on top. Drag turns the platform, up and down tilts the view, the wheel
  * zooms. The ride is the same one Drive builds (components/drive/vehicles.ts), in the same paint.
  *
- * The room, in the gold-dots-on-dark look of the City and Art: a mirror-dark floor, the platform's
- * rim a ring of light, rings of gold dots on the floor round it, tall strips of warm light round
- * the walls, one soft key light from above and a cool rim light behind.
+ * The pad, in the gold-dots-on-dark look of the City and Art: a mirror-dark floor, the platform's
+ * rim a ring of light, rings of gold dots round it, short warm beacons round its edge, one soft key
+ * light from above and a cool rim light behind.
+ *
+ * Around it, Mars (2026-11-23: "make garage have the mars context around"): the pad stands on rust
+ * regolith under the Drive world's Mars dusk (butterscotch at the horizon, dusty rose, a dark
+ * umber overhead, a small white sun in a blue halo, Phobos), low dunes, flat-topped mesas on the
+ * horizon, an old lattice mast and a rusted tank. All cheap: a gradient dome, plain meshes, fog the
+ * colour of the dust. The ride stays lit by its own key light, the hero.
  */
 
 import * as THREE from 'three';
@@ -27,22 +33,80 @@ import {
   ZOOM,
   zoomBy,
 } from '@/lib/art/garage';
-import { newVehicle } from '@/lib/art/vehicle';
+import { newVehicle, type VehicleKind } from '@/lib/art/vehicle';
 
 const PLATFORM_R = 4.2;
 const PLATFORM_H = 0.42;
 const GOLD = new THREE.Color(1.6, 1.05, 0.38);
+/** The pad's radius: polished dark metal, then Mars beyond. */
+const PAD_R = 12;
+
+/** Mars at dusk, as the Drive world's sky (lib/art/drive-shaders.ts, WORLD 4). */
+export const MARS = {
+  horizon: new THREE.Color(0.86, 0.6, 0.4),
+  rose: new THREE.Color(0.6, 0.38, 0.32),
+  umber: new THREE.Color(0.16, 0.1, 0.11),
+  /** The fog and the far ground: the dust in the air, a darker butterscotch. */
+  dust: 0x8a5a40,
+  ground: 0x7a3e22,
+  rock: 0x5a2c1a,
+  rust: 0x6e3a20,
+  /** The sun's direction: low, ahead and to the left of the camera's start. */
+  sun: new THREE.Vector3(-0.55, 0.12, -0.83).normalize(),
+};
+
+const SKY_VERTEX = `
+varying vec3 vDir;
+void main() {
+  vDir = normalize(position);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+
+/* The Mars dusk: the horizon warm, dusty rose, a dark umber overhead; the sun small and white in a
+   blue halo; Phobos a small grey moon. */
+const SKY_FRAGMENT = `
+uniform vec3 uHorizon;
+uniform vec3 uRose;
+uniform vec3 uUmber;
+uniform vec3 uSun;
+varying vec3 vDir;
+void main() {
+  vec3 d = normalize(vDir);
+  float y = max(d.y, 0.0);
+  vec3 c = mix(uHorizon, uRose, smoothstep(0.0, 0.22, y));
+  c = mix(c, uUmber, smoothstep(0.2, 0.7, y));
+  float s = distance(d, uSun);
+  c += vec3(0.5, 0.68, 1.0) * exp(-s * 9.0) * 0.75;
+  c += vec3(0.95, 0.97, 1.0) * (1.0 - smoothstep(0.018, 0.022, s)) * 1.6;
+  vec3 ph = normalize(vec3(0.62, 0.3, -0.72));
+  c = mix(c, vec3(0.62, 0.58, 0.55), (1.0 - smoothstep(0.009, 0.011, distance(d, ph))) * 0.9);
+  // Below the horizon, the dust.
+  c = mix(c, uHorizon * 0.62, smoothstep(0.0, -0.08, d.y));
+  gl_FragColor = vec4(c, 1.0);
+  #include <colorspace_fragment>
+}`;
+
+/** A small deterministic random, so Mars is the same every visit. */
+function rand(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 16807) % 2147483647;
+    return s / 2147483647;
+  };
+}
 
 export class GarageScene {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
-  private camera = new THREE.PerspectiveCamera(36, 1, 0.1, 200);
+  private camera = new THREE.PerspectiveCamera(36, 1, 0.1, 400);
   private composer: EffectComposer;
   private env: THREE.Texture;
   private turntable: Turntable = newTurntable();
   private pivot = new THREE.Group();
   private view: VehicleView | null = null;
   private design: Design;
+  /** The vehicle on the platform (the Garage page shows the salt's; Drive's menu, the track's). */
+  private kind: VehicleKind;
   private tilt = TILT.start;
   private dist = ZOOM.start;
   private raf = 0;
@@ -53,8 +117,9 @@ export class GarageScene {
   private revving = false;
   private dots: THREE.Points;
 
-  constructor(canvas: HTMLCanvasElement, design: Design) {
+  constructor(canvas: HTMLCanvasElement, design: Design, kind: VehicleKind = design.vehicle.salt) {
     this.design = design;
+    this.kind = kind;
     const r = new THREE.WebGLRenderer({ canvas, antialias: true });
     r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     r.toneMapping = THREE.ACESFilmicToneMapping;
@@ -68,15 +133,16 @@ export class GarageScene {
     pm.dispose();
     this.scene.environment = this.env;
     this.scene.environmentIntensity = 0.4;
-    this.scene.background = new THREE.Color(0x050507);
-    this.scene.fog = new THREE.Fog(0x050507, 18, 46);
+    this.scene.background = new THREE.Color(MARS.dust);
+    this.scene.fog = new THREE.Fog(MARS.dust, 30, 140);
 
     this.buildRoom();
+    this.buildMars();
     this.dots = this.floorDots();
     this.scene.add(this.dots);
     this.scene.add(this.pivot);
     this.pivot.position.y = PLATFORM_H;
-    this.setRide(design);
+    this.setRide(design, kind);
 
     this.composer = new EffectComposer(r);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
@@ -85,20 +151,28 @@ export class GarageScene {
   }
 
   private buildRoom() {
-    // The floor: near-black and polished, so the lights lie in it.
+    // The pad: near-black and polished, so the lights lie in it.
     const floor = new THREE.Mesh(
-      new THREE.CircleGeometry(40, 96),
+      new THREE.CircleGeometry(PAD_R, 96),
       new THREE.MeshStandardMaterial({
         color: 0x0b0b0e,
         metalness: 0.6,
         roughness: 0.4,
-        // Only a faint sheen of the room: the strips and the rim are what lie in it.
+        // Only a faint sheen of the room: the beacons and the rim are what lie in it.
         envMapIntensity: 0.08,
       }),
     );
     floor.rotation.x = -Math.PI / 2;
+    floor.position.y = 0.02;
     floor.receiveShadow = true;
     this.scene.add(floor);
+    const edge = new THREE.Mesh(
+      new THREE.RingGeometry(PAD_R, PAD_R + 0.08, 128),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(0.7, 0.45, 0.18), toneMapped: false }),
+    );
+    edge.rotation.x = -Math.PI / 2;
+    edge.position.y = 0.025;
+    this.scene.add(edge);
 
     // The platform: a dark metal drum, its top a shade lighter, its rim a ring of gold light.
     const drum = new THREE.Mesh(
@@ -149,29 +223,21 @@ export class GarageScene {
     foot.position.y = 0.01;
     this.scene.add(foot);
 
-    // The walls: tall strips of warm light in a ring, a cooler one every fourth.
-    const strips = 28;
-    for (let i = 0; i < strips; i++) {
-      const a = (i / strips) * Math.PI * 2;
+    // Short warm beacons round the pad's edge, a cooler one every fourth.
+    const beacons = 16;
+    for (let i = 0; i < beacons; i++) {
+      const a = (i / beacons) * Math.PI * 2;
       const cool = i % 4 === 0;
-      const strip = new THREE.Mesh(
-        new THREE.BoxGeometry(0.12, 7, 0.12),
+      const post = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, 1.4, 0.1),
         new THREE.MeshBasicMaterial({
           color: cool ? new THREE.Color(0.35, 0.55, 1.1) : new THREE.Color(0.95, 0.62, 0.3),
           toneMapped: false,
         }),
       );
-      strip.position.set(Math.cos(a) * 22, 4.2, Math.sin(a) * 22);
-      this.scene.add(strip);
+      post.position.set(Math.cos(a) * (PAD_R + 0.4), 0.7, Math.sin(a) * (PAD_R + 0.4));
+      this.scene.add(post);
     }
-    // A halo ring overhead.
-    const halo = new THREE.Mesh(
-      new THREE.TorusGeometry(6.5, 0.05, 8, 160),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color(1.1, 0.75, 0.32), toneMapped: false }),
-    );
-    halo.rotation.x = Math.PI / 2;
-    halo.position.y = 9;
-    this.scene.add(halo);
 
     // The key light from above, soft shadows; a cool rim from behind; a little fill.
     const key = new THREE.SpotLight(0xfff1dc, 80, 30, 0.5, 0.7, 1.6);
@@ -185,7 +251,123 @@ export class GarageScene {
     // High, so its gleam on the floor falls below the view (lower, it glared blue across it).
     rimLight.position.set(-4, 16, -9);
     this.scene.add(rimLight);
-    this.scene.add(new THREE.HemisphereLight(0x3a3040, 0x050507, 0.6));
+    // The Mars dusk: a low warm sun, the sky's rose from above, the rust thrown back from below.
+    const sun = new THREE.DirectionalLight(0xffc08a, 0.9);
+    sun.position.copy(MARS.sun).multiplyScalar(60);
+    this.scene.add(sun);
+    this.scene.add(new THREE.HemisphereLight(0x9a6450, 0x2a140c, 0.55));
+  }
+
+  /** Mars round the pad: the sky, the regolith, dunes, mesas on the horizon, rusty relics. */
+  private buildMars() {
+    const sky = new THREE.Mesh(
+      new THREE.SphereGeometry(200, 32, 16),
+      new THREE.ShaderMaterial({
+        vertexShader: SKY_VERTEX,
+        fragmentShader: SKY_FRAGMENT,
+        uniforms: {
+          uHorizon: { value: MARS.horizon },
+          uRose: { value: MARS.rose },
+          uUmber: { value: MARS.umber },
+          uSun: { value: MARS.sun },
+        },
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+      }),
+    );
+    sky.name = 'mars-sky';
+    sky.renderOrder = -1;
+    this.scene.add(sky);
+
+    const ground = new THREE.Mesh(
+      new THREE.CircleGeometry(190, 64),
+      new THREE.MeshStandardMaterial({ color: MARS.ground, roughness: 0.95, metalness: 0 }),
+    );
+    ground.name = 'mars-ground';
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.scene.add(ground);
+
+    const rnd = rand(19);
+    const rock = new THREE.MeshStandardMaterial({
+      color: MARS.rock,
+      roughness: 1,
+      metalness: 0,
+      flatShading: true,
+    });
+    const sand = new THREE.MeshStandardMaterial({ color: 0x8a4a2a, roughness: 1, metalness: 0 });
+    // Low dunes, not too near.
+    for (let i = 0; i < 9; i++) {
+      const a = rnd() * Math.PI * 2;
+      const r = 28 + rnd() * 26;
+      const dune = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), sand);
+      dune.scale.set(6 + rnd() * 8, 0.8 + rnd() * 1.4, 3 + rnd() * 4);
+      dune.position.set(Math.cos(a) * r, -0.2, Math.sin(a) * r);
+      dune.rotation.y = rnd() * Math.PI;
+      this.scene.add(dune);
+    }
+    // Mesas on the horizon: flat tops, steep sides, in a broken ring.
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2 + rnd() * 0.4;
+      const r = 80 + rnd() * 50;
+      const top = 4 + rnd() * 10;
+      const h = 6 + rnd() * 12;
+      const mesa = new THREE.Mesh(new THREE.CylinderGeometry(top, top * 1.5, h, 7), rock);
+      mesa.name = 'mars-mesa';
+      mesa.position.set(Math.cos(a) * r, h / 2 - 0.5, Math.sin(a) * r);
+      mesa.scale.z = 0.6 + rnd() * 0.6;
+      mesa.rotation.y = rnd() * Math.PI;
+      this.scene.add(mesa);
+    }
+
+    // Rusty relics: an old lattice mast and a half-sunk tank.
+    const rust = new THREE.MeshStandardMaterial({
+      color: MARS.rust,
+      roughness: 0.85,
+      metalness: 0.5,
+    });
+    const mast = new THREE.Group();
+    mast.name = 'mars-mast';
+    const H = 11;
+    for (const [x, z] of [
+      [-0.6, -0.6],
+      [0.6, -0.6],
+      [0.6, 0.6],
+      [-0.6, 0.6],
+    ]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, H, 0.12), rust);
+      leg.position.set(x, H / 2, z);
+      mast.add(leg);
+    }
+    for (let k = 1; k < 7; k++) {
+      for (const [w, d, x, z] of [
+        [1.3, 0.08, 0, -0.6],
+        [1.3, 0.08, 0, 0.6],
+        [0.08, 1.3, -0.6, 0],
+        [0.08, 1.3, 0.6, 0],
+      ]) {
+        const brace = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, d), rust);
+        brace.position.set(x, k * (H / 7), z);
+        mast.add(brace);
+      }
+    }
+    // A warm lamp on top, steady.
+    const lamp = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 10, 8),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(1.8, 0.5, 0.2), toneMapped: false }),
+    );
+    lamp.position.y = H + 0.2;
+    mast.add(lamp);
+    mast.position.set(-19, 0, -16);
+    mast.rotation.z = 0.04;
+    this.scene.add(mast);
+
+    const tank = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 7, 20), rust);
+    tank.name = 'mars-tank';
+    tank.rotation.set(0, 0.6, Math.PI / 2, 'YXZ');
+    tank.position.set(21, 1.2, -20);
+    this.scene.add(tank);
   }
 
   /** Rings of gold dots on the floor round the platform, softly breathing. */
@@ -216,13 +398,13 @@ export class GarageScene {
   }
 
   /** Builds the ride on the platform, centred, from the design (vehicle, hull, fire). */
-  setRide(design: Design) {
+  setRide(design: Design, kind: VehicleKind = design.vehicle.salt) {
     this.design = design;
+    this.kind = kind;
     if (this.view) {
       this.pivot.remove(this.view.group);
       this.view.dispose();
     }
-    const kind = design.vehicle.salt;
     const view = buildVehicle(
       kind,
       hullOf(design),
@@ -301,7 +483,7 @@ export class GarageScene {
     this.pivot.rotation.y = this.turntable.angle;
     this.rev += ((this.revving ? 1 : 0) - this.rev) * Math.min(1, dt * (this.revving ? 5 : 3));
     if (this.view) {
-      const v = newVehicle(this.design.vehicle.salt, 0, 0, 0);
+      const v = newVehicle(this.kind, 0, 0, 0);
       const flame = this.design.flames ? this.rev : 0;
       this.view.update(v, t, dt, 0.6 + 0.9 * this.rev, 0.15 + 0.85 * this.rev, flame);
     }
