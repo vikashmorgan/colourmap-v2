@@ -27,6 +27,10 @@ export interface RadioSituation {
   phase: 'card' | 'chase' | 'caught';
   since: number;
   gap: number;
+  /** When an attack last hit him (the game's clock), if ever. */
+  hitAt?: number;
+  /** The region you are in (lib/art/mars-map.ts ids), if any. */
+  region?: string | null;
 }
 
 export interface Cue {
@@ -54,10 +58,12 @@ export interface RadioState {
   count: Map<string, number>;
   lastAt: number;
   id: number;
+  /** Where each cue starts in its lines, so a new run does not open with the same line. */
+  seed: number;
 }
 
-export function newRadio(): RadioState {
-  return { sent: new Set(), last: new Map(), count: new Map(), lastAt: -1e9, id: 0 };
+export function newRadio(seed = 0): RadioState {
+  return { sent: new Set(), last: new Map(), count: new Map(), lastAt: -1e9, id: 0, seed };
 }
 
 /** The line due now, if any (and the state after it). At most one per call. */
@@ -74,13 +80,14 @@ export function stepRadio(
     if (!cue.now && s.t - r.lastAt < voice.gap) continue;
     if (!cue.when(s, r.sent)) continue;
     const n = r.count.get(cue.id) ?? 0;
-    const text = cue.lines[n % cue.lines.length];
+    const text = cue.lines[(n + r.seed) % cue.lines.length];
     const radio: RadioState = {
       sent: new Set(r.sent).add(cue.id),
       last: new Map(r.last).set(cue.id, s.t),
       count: new Map(r.count).set(cue.id, n + 1),
       lastAt: s.t,
       id: r.id + 1,
+      seed: r.seed,
     };
     return {
       radio,

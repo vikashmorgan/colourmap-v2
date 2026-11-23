@@ -223,6 +223,46 @@ easy to stay on it", "same with coast road, make them much wider".
      glitch, Geiger rate); the screen pass in components/drive/vintage-pass.ts; the screen layer
      in components/drive/MarsWorldHud.tsx.
 
+   **Ramps and decks** (2026-11-23: "jump onto space stations or high pipeline tracks. or use
+   factory elements to jump high into the sky"): rust kickers 26 m long rising to a 7 m lip,
+   steeper toward it, two running past each factory and a ring of them out on the Landing Plain,
+   each with a clear run-up. On every long pipeline run lies a flat rust deck 7 m up, with a 40 m
+   ramp at each end and sloping sides, so you can ride the pipes above the dunes. They are part of
+   the ground the physics drives (`marsHeight` = the terrain plus `rampHeight`), drawn as rust
+   sheets with iron bands; the backdrop draws the bare terrain (`marsBase`).
+
+   **Attacks** (2026-11-23: "Dust Sharks … lvl 2 is many sharks", "a shot and explosion after a
+   certain distance. yellow with explosion that goes bang", "lasers as one of the attacks u can
+   unlock"): three attacks on the Red Bastard, each behind one entry, `fireAttack(id)` with ids
+   `'shark' | 'shot' | 'laser'`.
+   - Dust Sharks (Z): a rust fin cuts the dust after him, faster than he runs, turning toward him.
+     Level 2 sends a pack of four that fans out first and then closes in.
+   - The shot (C): a glowing yellow round flies straight ahead and bursts 280 m out, or sooner if
+     it passes within 12 m of him. The burst is a soft yellow glow, a ring of dust and a quiet
+     synthesized bang.
+   - The laser (V, or a click on the crosshair): an amber beam that fades in under half a second.
+     It hits when he is ahead, within 900 m and within 4° of your line.
+   - A hit slows him to 55% of his pace for 2.5 s, and he yelps on the radio.
+   - Cooldowns: shark 6 s, shot 3.5 s, laser 8 s. Low on the left, a quiet strip lists the
+     attacks you have unlocked with their keys, dimmed with the seconds left while cooling.
+   - Unlocks: the shark from the start, the shot after your first catch, the laser and the shark
+     pack after your second. Catches are kept on the device (`drive.mars.catches`).
+   - The gates' weapon charges (lib/art/pickups.ts; X fires the oldest) fire the same attacks
+     through the engine's `onWeapon` hook. A charge needs no unlock and leaves the cooldowns alone.
+
+   **The crosshair**: once the laser is unlocked, an old-school amber ring with four ticks sits at
+   the centre. It eases in as he comes into view ahead and closes to a lock (a smaller ring, warmer
+   amber) when the laser would hit. Nothing blinks.
+
+   **The Red Bastard's lines**: short, cocky, rude but never hateful. Lines for the start, far
+   behind, closing in, on your tail, getting away, hit by an attack, caught, and taunts in the
+   crater and by the lakes. Each cue walks its lines in turn, and each run starts its cues at a
+   different line, so he never says the same thing twice in a row.
+
+   - Pure: lib/art/mars-attacks.ts (unlocks, cooldowns, flight, hits, the lock),
+     lib/art/mars-ramps.ts (kicker and deck heights); live in components/drive/mars-run.ts; drawn
+     by components/drive/mars-attack-view.ts.
+
 Why three night tracks: Night Rain stays the plain lamp course the user loved (with the City's
 towers, arch and rings added back from the road); Chinatown and the Neon District are new tracks
 with their own curvature, elevation and furniture from one generator (`lib/art/night-course.ts`),

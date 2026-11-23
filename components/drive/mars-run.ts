@@ -13,11 +13,26 @@ import { fireById, hullById, loadBest, type Store, saveBest } from '@/lib/art/dr
 import {
   type Bastard,
   bastardPose,
+  marsHeight,
   newBastard,
   radiation,
   regionAt,
   stepBastard,
 } from '@/lib/art/mars';
+import {
+  type AttackEvent,
+  type AttackId,
+  type Attacks,
+  CATCHES_KEY,
+  cooldownLeft,
+  crosshairNear,
+  fireAttack as fireAttackRule,
+  laserLock,
+  newAttacks,
+  SLOW,
+  stepAttacks,
+  unlocked,
+} from '@/lib/art/mars-attacks';
 import {
   archThrough,
   type Grade,
@@ -36,6 +51,8 @@ import {
 } from '@/lib/art/mars-mission';
 import { newRadio, type RadioMessage, type RadioState, stepRadio } from '@/lib/art/radio';
 import type { Vehicle } from '@/lib/art/vehicle';
+import { AttackView } from './mars-attack-view';
+import { softBang } from './mars-sound';
 import type { MarsView } from './mars-view';
 import { buildVehicle, type VehicleView } from './vehicles';
 
@@ -58,6 +75,15 @@ export interface MarsWhere {
   rad: number;
   you: { x: number; y: number; h: number };
   him: { x: number; y: number };
+}
+
+/** The attacks as the shell shows them: what is unlocked, how long each cools, and the laser's
+ * crosshair (how much it shows, and whether it has locked on). */
+export interface AttackHud {
+  open: AttackId[];
+  sharkLevel: 1 | 2;
+  cooling: Record<AttackId, number>;
+  aim: { near: number; lock: boolean } | null;
 }
 
 /** Where he is on the screen: pixels from the top left, whether pinned to the edge (off screen),
@@ -114,8 +140,17 @@ export class MarsRun {
   private rad = 0;
   private last: { x: number; y: number } | null = null;
   private region: string | null = null;
+  private regionId: string | null = null;
   private regionAt = -99;
   private you = { x: 0, y: 0, h: 0 };
+  /** The attacks: in flight, cooling, unlocked by catches (kept on the device). */
+  private attacks: Attacks = newAttacks();
+  private catches = 0;
+  private slowUntil = -99;
+  private hitAt: number | undefined;
+  private attackView: AttackView;
+  private pending: AttackEvent[] = [];
+  private runs = 0;
 
   constructor(
     private deps: MarsDeps,
@@ -130,6 +165,8 @@ export class MarsRun {
     deps.scene.add(this.view.group);
     this.ribbon = deps.makeTrail(new THREE.Color(RED).multiplyScalar(2.6));
     deps.scene.add(this.ribbon.mesh);
+    this.attackView = new AttackView(deps.scene, deps.emitDust, marsHeight);
+    this.catches = Math.round(loadBest(deps.store, CATCHES_KEY) ?? 0);
     // A vehicle-shaped record of him, for the view's own update (fire, bob).
     this.ghost = {
       kind: 'ship',
@@ -161,9 +198,44 @@ export class MarsRun {
     this.kind = kind;
     this.bastard = newBastard();
     this.mission = null;
-    this.radio = newRadio();
+    this.runs += 1;
+    this.radio = newRadio(this.runs);
     this.ribbon.trail.count = 0;
     this.last = null;
+    this.attacks = newAttacks();
+    this.slowUntil = -99;
+    this.hitAt = undefined;
+  }
+
+  /**
+   * The one way in for an attack (the engine's weapon hook calls it): fires it if it is unlocked
+   * and ready. Returns whether it went.
+   */
+  fireAttack(id: AttackId, t: number, charge = false): boolean {
+    if (!this.mission || this.mission.phase === 'caught') return false;
+    const out = fireAttackRule(this.attacks, id, t, this.you, this.pose, this.catches, charge);
+    this.attacks = out.attacks;
+    this.pending.push(...out.events);
+    return out.fired;
+  }
+
+  /** What the shell shows of the attacks. */
+  attackHud(t: number): AttackHud {
+    const open = unlocked(this.catches);
+    const cooling = {
+      shark: Math.ceil(cooldownLeft(this.attacks, 'shark', t)),
+      shot: Math.ceil(cooldownLeft(this.attacks, 'shot', t)),
+      laser: Math.ceil(cooldownLeft(this.attacks, 'laser', t)),
+    };
+    const chasing = this.mission?.phase === 'chase';
+    const aim =
+      open.attacks.includes('laser') && chasing
+        ? {
+            near: Math.round(crosshairNear(this.you, this.pose) * 20) / 20,
+            lock: laserLock(this.you, this.pose) !== null,
+          }
+        : null;
+    return { open: open.attacks, sharkLevel: open.sharkLevel, cooling, aim };
   }
 
   /** The world round you a moment on: the arches you pass (their fire, the grade), the radiation
@@ -179,7 +251,9 @@ export class MarsRun {
     // The region is looked up a few times a second (its run band measures against his loop).
     if (t - this.regionAt > 0.25) {
       this.regionAt = t;
-      this.region = regionAt(you.x, you.y)?.name ?? null;
+      const r = regionAt(you.x, you.y);
+      this.region = r?.name ?? null;
+      this.regionId = r?.id ?? null;
     }
   }
 
@@ -205,7 +279,20 @@ export class MarsRun {
   step(dt: number, t: number, you: Vehicle, live: boolean, onRadio?: (m: RadioMessage) => void) {
     this.stepWorld(dt, t, you, live);
     if (!live && !this.mission) return;
-    this.bastard = stepBastard(this.bastard, dt, this.gap);
+    // The attacks in flight, and what they did (a hit slows him for a while).
+    const flown = stepAttacks(this.attacks, dt, t, this.pose);
+    this.attacks = flown.attacks;
+    const events = [...this.pending, ...flown.events];
+    this.pending = [];
+    for (const e of events) {
+      if (e.kind === 'hit') {
+        this.slowUntil = t + SLOW.time;
+        this.hitAt = t;
+      }
+      if (e.kind === 'burst') softBang();
+    }
+    this.attackView.events(events, t);
+    this.bastard = stepBastard(this.bastard, dt, this.gap, t < this.slowUntil ? SLOW.factor : 1);
     const p = bastardPose(this.bastard);
     this.pose = p;
     this.gap = Math.hypot(p.x - you.x, p.y - you.y, p.z - you.z);
@@ -214,13 +301,20 @@ export class MarsRun {
     }
     const before = this.mission;
     this.mission = stepMission(before, t, this.gap);
-    if (this.mission.phase === 'caught' && before.phase !== 'caught' && this.mission.record)
-      saveBest(this.deps.store, missionKey(this.kind), this.mission.time as number);
+    if (this.mission.phase === 'caught' && before.phase !== 'caught') {
+      if (this.mission.record)
+        saveBest(this.deps.store, missionKey(this.kind), this.mission.time as number);
+      // Each catch unlocks the next attack.
+      this.catches += 1;
+      saveBest(this.deps.store, CATCHES_KEY, this.catches);
+    }
     const { radio, say } = stepRadio(this.radio, RED_BASTARD, {
       t,
       phase: this.mission.phase,
       since: t - this.mission.start,
       gap: this.gap,
+      hitAt: this.hitAt,
+      region: this.regionId,
     });
     this.radio = radio;
     if (say) onRadio?.(say);
@@ -273,6 +367,7 @@ export class MarsRun {
     const k = 1 + Math.max(0, far - 300) / 500;
     grp.scale.setScalar(Math.min(k, 4));
     this.view.update(g, t, dt, 1.3, 1.1, 0.8);
+    this.attackView.update(this.attacks.flying, ox, oy, t, dt);
 
     // The red light trail, from his tail.
     pushTrail(this.ribbon.trail, p.x - Math.cos(p.h) * 2, p.y - Math.sin(p.h) * 2, p.z + 0.6, t, 1);
@@ -328,6 +423,7 @@ export class MarsRun {
   }
 
   dispose() {
+    this.attackView.dispose();
     this.deps.scene.remove(this.view.group);
     this.view.dispose();
     this.deps.scene.remove(this.ribbon.mesh);

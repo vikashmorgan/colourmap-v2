@@ -15,6 +15,9 @@ import {
   CRAFT,
   CRAFT_FOLLOW,
   type Craft,
+  DECKS,
+  KICKERS,
+  marsBase,
   marsHeight,
   PIPE_H,
   PIPES,
@@ -23,6 +26,14 @@ import {
   type Site,
 } from '@/lib/art/mars';
 import { ARCHES, type Arch, LIGHTHOUSE } from '@/lib/art/mars-map';
+import {
+  DECK,
+  type Deck,
+  deckHeight,
+  KICKER,
+  type Kicker,
+  kickerHeight,
+} from '@/lib/art/mars-ramps';
 import { START } from '@/lib/art/salt-flat-game';
 import { disposeGroup } from './track-view';
 import { buildFireCone, glowSprite, glowTexture } from './vehicles';
@@ -378,6 +389,100 @@ function archGeo(a: Arch): THREE.BufferGeometry {
   return geo;
 }
 
+/**
+ * A ramp or deck as a mesh: a sheet over its footprint (local u along, v across, from its origin
+ * on heading h), each vertex at the ground plus the feature's height, rust with darker iron bands
+ * across it every few metres, and a dark skirt down its sides and back so it reads as solid.
+ * Built round (ox, oy).
+ */
+function rampSheet(
+  ax: number,
+  ay: number,
+  h: number,
+  u0: number,
+  u1: number,
+  half: number,
+  height: (x: number, y: number) => number,
+  ox: number,
+  oy: number,
+): THREE.BufferGeometry {
+  const c = Math.cos(h);
+  const s = Math.sin(h);
+  const nu = Math.max(2, Math.ceil((u1 - u0) / 2));
+  const vs = [-half, -half * 0.6, 0, half * 0.6, half];
+  const pos: number[] = [];
+  const col: number[] = [];
+  const rust = new THREE.Color(0x9a4a22);
+  const iron = new THREE.Color(0x3a2620);
+  const skirt = new THREE.Color(0x24160f);
+  const at = (u: number, v: number, drop = 0): [number, number, number] => {
+    const x = ax + c * u - s * v;
+    const y = ay + s * u + c * v;
+    return [x - ox, marsBase(x, y) + height(x, y) + 0.06 - drop, -(y - oy)];
+  };
+  const tri = (a: number[], b: number[], d: number[], k: THREE.Color) => {
+    pos.push(...a, ...b, ...d);
+    for (let i = 0; i < 3; i++) col.push(k.r, k.g, k.b);
+  };
+  for (let i = 0; i < nu; i++) {
+    const ua = u0 + ((u1 - u0) * i) / nu;
+    const ub = u0 + ((u1 - u0) * (i + 1)) / nu;
+    const k = Math.floor(ua / 4) % 3 === 0 ? iron : rust;
+    for (let j = 0; j < vs.length - 1; j++) {
+      const p00 = at(ua, vs[j]);
+      const p01 = at(ua, vs[j + 1]);
+      const p10 = at(ub, vs[j]);
+      const p11 = at(ub, vs[j + 1]);
+      tri(p00, p10, p11, k);
+      tri(p00, p11, p01, k);
+    }
+    // The skirts, from the edge down below the ground.
+    for (const v of [-half, half]) {
+      const a = at(ua, v);
+      const b = at(ub, v);
+      const a2 = at(ua, v, 0.2 + height(a[0] + ox, -a[2] + oy));
+      const b2 = at(ub, v, 0.2 + height(b[0] + ox, -b[2] + oy));
+      tri(a, a2, b2, skirt);
+      tri(a, b2, b, skirt);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+function kickerGeo(k: Kicker, ox: number, oy: number): THREE.BufferGeometry {
+  return rampSheet(
+    k.x,
+    k.y,
+    k.h,
+    0,
+    k.len + KICKER.back,
+    k.width / 2,
+    (x, y) => kickerHeight(k, x, y),
+    ox,
+    oy,
+  );
+}
+
+function deckGeo(d: Deck, ox: number, oy: number): THREE.BufferGeometry {
+  const L = Math.hypot(d.bx - d.ax, d.by - d.ay);
+  const h = Math.atan2(d.by - d.ay, d.bx - d.ax);
+  return rampSheet(
+    d.ax,
+    d.ay,
+    h,
+    0,
+    L,
+    d.width / 2 + DECK.berm,
+    (x, y) => deckHeight(d, x, y),
+    ox,
+    oy,
+  );
+}
+
 /* ── The pipelines ── */
 
 function pipeline(p: Pipe, ox: number, oy: number): THREE.BufferGeometry {
@@ -388,7 +493,7 @@ function pipeline(p: Pipe, ox: number, oy: number): THREE.BufferGeometry {
   for (let i = 0; i <= n; i++) {
     const x = p.ax + ((p.bx - p.ax) * i) / n;
     const y = p.ay + ((p.by - p.ay) * i) / n;
-    pts.push(new THREE.Vector3(x - ox, marsHeight(x, y) + PIPE_H, -(y - oy)));
+    pts.push(new THREE.Vector3(x - ox, marsBase(x, y) + PIPE_H, -(y - oy)));
   }
   const ux = -(p.by - p.ay) / len;
   const uz = -(p.bx - p.ax) / len;
@@ -670,6 +775,24 @@ export function buildMarsView(): MarsView {
     return { obj, s, base };
   });
 
+  // The kickers and the decks on the pipelines, each built round its own middle.
+  const ramps = [
+    ...KICKERS.map((k) => ({
+      geo: (ox: number, oy: number) => kickerGeo(k, ox, oy),
+      mx: k.x,
+      my: k.y,
+    })),
+    ...DECKS.map((d) => ({
+      geo: (ox: number, oy: number) => deckGeo(d, ox, oy),
+      mx: (d.ax + d.bx) / 2,
+      my: (d.ay + d.by) / 2,
+    })),
+  ].map((r) => {
+    const mesh = new THREE.Mesh(r.geo(r.mx, r.my), groundMat);
+    group.add(mesh);
+    return { mesh, mx: r.mx, my: r.my };
+  });
+
   // The pipelines, each built round its own middle.
   const pipes = PIPES.map((p) => {
     const mx = (p.ax + p.bx) / 2;
@@ -779,6 +902,10 @@ export function buildMarsView(): MarsView {
         st.puff.position.set(st.from.x + k * 9, st.from.y + 4 + k * 46, st.from.z - k * 4);
         st.puff.scale.setScalar(14 + k * 34);
         (st.puff.material as THREE.SpriteMaterial).opacity = 0.22 * Math.sin(k * Math.PI);
+      }
+      for (const r of ramps) {
+        r.mesh.visible = Math.hypot(r.mx - ox, r.my - oy) < 4000;
+        r.mesh.position.set(r.mx - ox, 0, -(r.my - oy));
       }
       for (const p of pipes) {
         p.mesh.visible = Math.hypot(p.mx - ox, p.my - oy) < 5200;

@@ -9,10 +9,134 @@
 
 import { useEffect, useRef } from 'react';
 import { LOOP_PATH } from '@/lib/art/mars';
+import type { AttackId } from '@/lib/art/mars-attacks';
 import { geigerRate } from '@/lib/art/mars-fx';
 import { CRATER, LAKES, LIGHTHOUSE, REGIONS } from '@/lib/art/mars-map';
-import type { MarsWhere } from './mars-run';
+import type { AttackHud, MarsWhere } from './mars-run';
 import { setGeiger } from './mars-sound';
+
+const ATTACK_NAMES: Record<AttackId, string> = {
+  shark: 'Dust Sharks',
+  shot: 'Shot',
+  laser: 'Laser',
+};
+
+/** The attacks, quietly, low on the left above the gauge: each unlocked one with its key, dim
+ * while it cools (its seconds left), warm when ready. */
+export function AttackStrip({
+  attacks,
+  keys,
+}: {
+  attacks: AttackHud;
+  keys: Record<AttackId, string>;
+}) {
+  return (
+    <div
+      data-testid="mars-attacks"
+      style={{
+        position: 'absolute',
+        left: 18,
+        bottom: 200,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        pointerEvents: 'none',
+        fontFamily: mono,
+        fontSize: 10,
+        letterSpacing: '0.08em',
+      }}
+    >
+      {attacks.open.map((id) => {
+        const cool = attacks.cooling[id];
+        const name =
+          id === 'shark' && attacks.sharkLevel === 2 ? `${ATTACK_NAMES[id]} II` : ATTACK_NAMES[id];
+        return (
+          <div
+            key={id}
+            style={{
+              color: cool > 0 ? 'rgba(255,226,190,0.35)' : 'rgba(255,214,150,0.85)',
+              transition: 'color 0.6s ease',
+            }}
+          >
+            <span
+              style={{
+                display: 'inline-block',
+                width: 16,
+                textAlign: 'center',
+                marginRight: 6,
+                borderRadius: 4,
+                boxShadow: 'inset 0 0 0 1px rgba(255,226,190,0.3)',
+              }}
+            >
+              {keys[id]}
+            </span>
+            {name}
+            {cool > 0 && <span style={{ fontVariantNumeric: 'tabular-nums' }}> · {cool}</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The laser's crosshair, once it is unlocked: an old-school amber ring and ticks at the centre,
+ * easing in as he comes into view ahead and closing to a lock when the laser would hit. Nothing
+ * blinks. A click fires the laser. */
+export function Crosshair({ aim, onFire }: { aim: AttackHud['aim']; onFire: () => void }) {
+  const near = aim?.near ?? 0;
+  const lock = aim?.lock ?? false;
+  const shown = aim ? 0.25 + 0.65 * near : 0;
+  const colour = lock ? 'rgba(255,170,70,0.95)' : 'rgba(230,150,90,0.8)';
+  const gap = lock ? 6 : 14;
+  return (
+    <button
+      type="button"
+      data-testid="mars-crosshair"
+      aria-label="Fire the laser"
+      onClick={onFire}
+      style={{
+        position: 'absolute',
+        left: '50%',
+        top: '46%',
+        width: 64,
+        height: 64,
+        marginLeft: -32,
+        marginTop: -32,
+        padding: 0,
+        border: 'none',
+        background: 'none',
+        cursor: aim ? 'crosshair' : 'default',
+        pointerEvents: aim ? 'auto' : 'none',
+        opacity: shown,
+        transition: 'opacity 0.6s ease',
+      }}
+    >
+      <svg width={64} height={64} viewBox="-32 -32 64 64" aria-hidden>
+        <circle
+          r={lock ? 13 : 18}
+          fill="none"
+          stroke={colour}
+          strokeWidth={1.4}
+          style={{ transition: 'r 0.35s ease, stroke 0.35s ease' }}
+        />
+        {[0, 90, 180, 270].map((a) => (
+          <line
+            key={a}
+            x1={gap}
+            x2={gap + 9}
+            y1={0}
+            y2={0}
+            stroke={colour}
+            strokeWidth={1.6}
+            transform={`rotate(${a})`}
+            style={{ transition: 'x1 0.35s ease, x2 0.35s ease' }}
+          />
+        ))}
+        <circle r={1.6} fill={colour} />
+      </svg>
+    </button>
+  );
+}
 
 const serif = 'var(--font-serif), Georgia, serif';
 const mono = 'ui-monospace, SFMono-Regular, Menlo, monospace';

@@ -13,6 +13,7 @@ import {
   LOOP_PATH,
   loopAt,
   MARS_TERRAIN,
+  marsBase,
   marsGround,
   marsHeight,
   marsTerrainGlsl,
@@ -65,6 +66,11 @@ describe('the dunes', () => {
     let steepest = 0;
     for (let x = -3000; x < 3000; x += 53)
       for (let y = -2000; y < 6000; y += 61) {
+        // The dunes alone: the ramps and decks are steep on purpose (lib/art/mars-ramps.test.ts).
+        const ramped = [0, 1.5, -1.5].some((d) =>
+          [0, 1.5, -1.5].some((e) => marsHeight(x + d, y + e) - marsBase(x + d, y + e) > 1e-9),
+        );
+        if (ramped) continue;
         const g = marsGround(x, y);
         const e = 0.01;
         expect(g.gx).toBeCloseTo((marsHeight(x + e, y) - marsHeight(x - e, y)) / (2 * e), 3);

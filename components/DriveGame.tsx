@@ -28,7 +28,19 @@ import {
   placeMarker,
   RadioPanel,
 } from '@/components/drive/MarsHud';
-import { GeigerColumn, MarsMap, RegionCard } from '@/components/drive/MarsWorldHud';
+import {
+  AttackStrip,
+  Crosshair,
+  GeigerColumn,
+  MarsMap,
+  RegionCard,
+} from '@/components/drive/MarsWorldHud';
+import type { AttackId } from '@/lib/art/mars-attacks';
+
+/** Mars's attack keys. */
+const ATTACK_KEYS: Record<string, AttackId> = { z: 'shark', c: 'shot', v: 'laser' };
+const ATTACK_LABELS: Record<AttackId, string> = { shark: 'Z', shot: 'C', laser: 'V' };
+
 import { unlockMarsAudio } from '@/components/drive/mars-sound';
 import RaceIntro from '@/components/drive/RaceIntro';
 import { FutureGauge, TimerGauge } from '@/components/drive/Speedometer';
@@ -385,6 +397,12 @@ export default function DriveGame() {
         setMap((v) => !v);
         return;
       }
+      // Mars's attacks on the Red Bastard: Z the Dust Sharks, C the shot, V the laser.
+      const attack = ATTACK_KEYS[k];
+      if (attack) {
+        engineRef.current?.fireAttack(attack);
+        return;
+      }
       if (k === 'x') {
         // Fire a weapon charge from the gates (the attack code handles it).
         engineRef.current?.fireWeapon();
@@ -629,6 +647,15 @@ export default function DriveGame() {
           {!title && <RadioPanel message={radio} />}
           {!title && !paused && <RegionCard region={hud?.mars?.region ?? null} />}
           <GeigerColumn rad={hud?.mars?.rad ?? 0} live={!title && !paused} />
+          {!title && !paused && hud?.attacks && (
+            <>
+              <AttackStrip attacks={hud.attacks} keys={ATTACK_LABELS} />
+              <Crosshair
+                aim={hud.attacks.aim}
+                onFire={() => engineRef.current?.fireAttack('laser')}
+              />
+            </>
+          )}
           {map && !title && <MarsMap where={hud?.mars ?? null} />}
         </>
       )}

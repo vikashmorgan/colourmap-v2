@@ -77,6 +77,7 @@ import { WORLD_CFG, type WorldCfg } from '@/lib/art/drive-worlds';
 import { easeMask, gMask } from '@/lib/art/g-force';
 import { newShiftWatch, ringFor, watchShift } from '@/lib/art/gear-rings';
 import { MARS_TERRAIN, marsHeight } from '@/lib/art/mars';
+import { ATTACKS, type AttackId } from '@/lib/art/mars-attacks';
 import {
   MOODS,
   RING_STEP,
@@ -173,7 +174,7 @@ import {
   type Wreck,
 } from '@/lib/art/wreck';
 import { GatesView, tickGates } from './gates-view';
-import { type Marker, MarsRun, type MarsWhere, type MissionHud } from './mars-run';
+import { type AttackHud, type Marker, MarsRun, type MarsWhere, type MissionHud } from './mars-run';
 import { buildMarsView, type MarsView } from './mars-view';
 import { buildSaltView, type SaltView } from './salt-view';
 import { ShiftRings } from './shift-rings';
@@ -207,6 +208,8 @@ export interface Hud {
   mission?: MissionHud | null;
   /** Mars: the region you are in, the radiation, you and him on the map. */
   mars?: MarsWhere | null;
+  /** Mars: the attacks unlocked, their cooldowns, the laser's crosshair. */
+  attacks?: AttackHud | null;
   /** Where you are, when it has its own name on screen: Undertown, under Chinatown Run. */
   zone?: 'undertown' | null;
 }
@@ -898,6 +901,7 @@ export class DriveEngine {
       this.marsView = null;
     }
     if (this.marsRun && !on) {
+      for (const id of ATTACKS) this.onWeapon(id, null);
       this.marsRun.dispose();
       this.marsRun = null;
       this.onMarker?.(null);
@@ -922,6 +926,9 @@ export class DriveEngine {
       },
       this.design.vehicle.mars,
     );
+    // The gates' weapon charges fire the Mars attacks (a charge needs no unlock).
+    for (const id of ATTACKS)
+      this.onWeapon(id, (f) => this.marsRun?.fireAttack(f.weapon, f.t, true));
   }
 
   /** The start arch, built once; its half circles are sized to each road in placeGantry. Its frame
@@ -1953,6 +1960,12 @@ export class DriveEngine {
     this.emitHud(speed, t);
   }
 
+  /** Mars: fires an attack on the Red Bastard (the one way in: keys, the crosshair, the weapon
+   * hook). Returns whether it went. */
+  fireAttack(id: AttackId): boolean {
+    return this.marsRun?.fireAttack(id, this.t) ?? false;
+  }
+
   /** A soft pulse of the G mask (a hit), `power` 0..1. */
   pulse(power: number, t: number) {
     this.hitAt = t;
@@ -2268,6 +2281,7 @@ export class DriveEngine {
       pickup: this.pickup && t - this.pickup.t < PICKUP_SHOW ? this.pickup.p : null,
       mission: this.marsRun?.hud(t) ?? null,
       mars: this.marsRun?.where() ?? null,
+      attacks: this.marsRun?.attackHud(t) ?? null,
       zone: this.zone(),
     };
     const key = JSON.stringify(hud);
