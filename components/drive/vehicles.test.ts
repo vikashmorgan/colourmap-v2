@@ -12,7 +12,7 @@ import {
 } from '@/lib/art/drive-design';
 import { newVehicle } from '@/lib/art/vehicle';
 
-import { buildShip, buildVehicle, reactorLayout } from './vehicles';
+import { buildShip, buildVehicle, hullMaterial, reactorLayout } from './vehicles';
 
 const fire = fireById(DEFAULT_DESIGN.fire);
 
@@ -120,5 +120,22 @@ describe('the leopard and the Space Racer (2026-11-21)', () => {
     const want2 = new THREE.Color('#7ad62a').multiplyScalar(2.4);
     expect(lit(racer.group).some((m) => m.color.equals(want2))).toBe(true);
     racer.dispose();
+  });
+});
+
+describe('old chrome', () => {
+  it('is a reflecting metal, hazier and warmer than new chrome, with a rubbed sheen', () => {
+    const env = new THREE.Texture();
+    const old = hullMaterial(hullById('oldChrome'), env);
+    const chrome = hullMaterial(hullById('chrome'), env);
+    expect(old.metalness).toBe(1);
+    expect(old.envMap).toBe(env);
+    expect(old.roughness).toBeGreaterThan(chrome.roughness);
+    expect(old.envMapIntensity).toBeLessThan(chrome.envMapIntensity);
+    expect(old.envMapIntensity).toBeGreaterThan(1);
+    expect(old.sheen).toBeGreaterThan(0);
+    expect(old.color.r).toBeGreaterThan(old.color.b);
+    old.dispose();
+    chrome.dispose();
   });
 });

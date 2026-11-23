@@ -50,6 +50,7 @@ import {
   type TrackWorld,
   twistPose,
 } from '@/lib/art/track';
+import { underTint } from '@/lib/art/undertown';
 import type { Weather } from '@/lib/art/weather';
 import { nearTwist, STRAIGHT } from '@/lib/art/wreck';
 import { glowSprite } from './vehicles';
@@ -900,7 +901,9 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         lc = [];
       };
       for (let s = s0; s <= s1 + 0.01; s += ROW) {
-        if (def.twist(Math.max(0, s)) === 0 || def.looping?.(Math.max(0, s))) {
+        const q = Math.max(0, s);
+        // A looping has no hollow, and Undertown no way through it: everyone goes under.
+        if (def.twist(q) === 0 || def.looping?.(q) || def.under?.(q)) {
           done();
           continue;
         }
@@ -974,7 +977,15 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         const up: V3 = [nu[0], nu[2], -nu[1]];
         const cs = columns(half).filter((u) => Math.abs(u) <= half);
         top.push(cs.map((u) => LR(s, u, 0.02)));
-        tc.push(cs.map((u) => groundColour(cfg, s, u, half, snowLevel)));
+        // Undertown's side of the road is darker, toward deep red and purple, the more it has
+        // turned over.
+        const dk = def.under?.(Math.max(0, s)) ? (1 - Math.cos(th)) / 2 : 0;
+        tc.push(
+          cs.map((u) => {
+            const c = groundColour(cfg, s, u, half, snowLevel);
+            return dk ? underTint(c, u / half, dk) : c;
+          }),
+        );
         tn.push(cs.map(() => up));
       }
       ribbon();

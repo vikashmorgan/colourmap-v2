@@ -255,6 +255,11 @@ export const CATEGORIES: Category[] = [
       v('pagodas', 'Pagodas', 'Five-tiered pagodas beside the road, their eaves in gold.'),
       v('dragon', 'Dragon', 'A dragon of light flying just ahead of you, weaving over the road.'),
       v('sky', 'Sky lanterns', 'Paper lanterns rising slowly beside the road.'),
+      v(
+        'undertown',
+        'Undertown',
+        'On the road’s underside, where Chinatown Run flips over its edge: hanging shophouses in deep red and violet, lanterns rising on strings of light, a gate saying UNDERTOWN.',
+      ),
     ],
   },
   {
@@ -351,6 +356,7 @@ const DRESS: Record<string, [CategoryId, string][]> = {
     ['chinatown', 'lanterns'],
     ['chinatown', 'signs'],
     ['chinatown', 'sky'],
+    ['chinatown', 'undertown'],
   ],
   neon: [
     ['neon', 'blades'],
