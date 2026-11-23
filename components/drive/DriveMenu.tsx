@@ -39,6 +39,7 @@ import {
 } from '@/lib/art/drive-design';
 import type { VehicleKind } from '@/lib/art/vehicle';
 import { WEATHERS } from '@/lib/art/weather';
+import { driveSound } from '@/lib/audio/drive-sound';
 
 export type MenuTab = 'tracks' | 'garage' | 'world' | 'settings';
 export const MENU_TABS: { id: MenuTab; name: string }[] = [
@@ -72,7 +73,7 @@ interface Props {
 }
 
 /** One choice: a label, then its options in the display serif; the chosen one warm white, gold-marked. */
-function Row({
+export function Row({
   label,
   items,
   current,
@@ -105,7 +106,10 @@ function Row({
               key={it.id}
               type="button"
               data-menu-item=""
-              onClick={() => pick(it.id)}
+              onClick={() => {
+                driveSound.swell();
+                pick(it.id);
+              }}
               aria-pressed={on}
               className="dm-opt"
               style={{
@@ -293,6 +297,7 @@ export default function DriveMenu({
     (step: number) => {
       const i = MENU_TABS.findIndex((t) => t.id === tab);
       const next = MENU_TABS[(i + step + MENU_TABS.length) % MENU_TABS.length].id;
+      driveSound.tick();
       onTab(next);
       tabRefs.current.get(next)?.focus({ preventScroll: true });
     },
@@ -317,6 +322,7 @@ export default function DriveMenu({
             ? 0
             : items.length - 1
           : (at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      driveSound.tick();
       items[next].focus();
     }
   };
@@ -381,7 +387,10 @@ export default function DriveMenu({
                   className="dm-tab"
                   aria-selected={on}
                   tabIndex={on ? 0 : -1}
-                  onClick={() => onTab(t.id)}
+                  onClick={() => {
+                    driveSound.tick();
+                    onTab(t.id);
+                  }}
                   style={{
                     background: 'none',
                     border: 'none',

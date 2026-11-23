@@ -8,11 +8,11 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-
 import { WORLDS, type WorldId } from '@/lib/art/drive-design';
 import { WORLD_CFG } from '@/lib/art/drive-worlds';
 import { trackMap } from '@/lib/art/track-map';
 import { runLabel, trackList } from '@/lib/art/track-registry';
+import { driveSound } from '@/lib/audio/drive-sound';
 
 const quiet = 'rgba(255,248,240,';
 const serif = 'var(--font-serif), Georgia, serif';
@@ -63,6 +63,7 @@ export default function TrackRing({
   const map = maps.big[t.id];
 
   const step = (d: number) => {
+    driveSound.tick();
     setTurn((v) => v + d);
     setSel((s) => (s + d + n) % n);
   };
