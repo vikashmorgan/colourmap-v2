@@ -13,6 +13,7 @@ import { CATEGORIES, MARKING, type Pos, SURFACE_STYLE } from '@/lib/art/design-s
 import { WORLD_CFG } from '@/lib/art/drive-worlds';
 import { frameAt, heightAt, pointAt, project, type Track, twistPose } from '@/lib/art/track';
 import { GATE_STYLES, type GateStyle } from '@/lib/art/track-data';
+import { onUnderside, UNDER, UNDER_COLOURS, underSpan } from '@/lib/art/undertown';
 import { buildGate } from './gates-view';
 
 type V3 = [number, number, number];
@@ -721,6 +722,10 @@ function wordTexture(
         });
       } else {
         g.font = 'bold 84px "Noto Serif SC", "Yu Mincho", "SimSun", serif';
+        // A long word (UNDERTOWN) is set smaller, to fit inside the frame.
+        const fit = (cv.width - 48) / Math.max(1, g.measureText(word).width);
+        if (fit < 1)
+          g.font = `bold ${Math.floor(84 * fit)}px "Noto Serif SC", "Yu Mincho", "SimSun", serif`;
         g.fillText(word, cv.width / 2, cv.height / 2 + 4);
       }
       tex = new THREE.CanvasTexture(cv);
@@ -895,8 +900,143 @@ function chinatown(k: Kit, g: THREE.Group, tr: Track, id: string, s0: number, s1
       k.line([cx, y, cz], [cx, y + 9, cz], C.gold, 1.2);
       k.dot([cx, y + 9.5, cz], C.warm, 2.5, 4);
     }
-  }
+  } else if (id === 'undertown') undertown(k, g, tr, s0, s1);
   // 'dragon' and 'sky' move, so they are drawn each frame (dragonFly, skyLantern).
+}
+
+/** Undertown's words: 下町 (the low town), UNDERTOWN, night, shadow, moon, upside down. */
+export const UNDER_WORDS = ['下町', 'UNDERTOWN', '夜', '影', '月', '逆'];
+
+/**
+ * Undertown (lib/art/undertown.ts), on the road's underside: built in the road's own frame, so
+ * through twistPose it hangs under the ribbon, roofs down, lanterns rising, to the world, and
+ * stands the right way up to you as you drive it upside down. Deeper reds and purples; nothing
+ * crosses the road but strings of light, and one gate with UNDERTOWN on it as you come under.
+ */
+function undertown(k: Kit, g: THREE.Group, tr: Track, s0: number, s1: number) {
+  const def = tr.def;
+  if (!def.under) return;
+  const half = (s: number) => def.half(s);
+  const under = (s: number) => def.under?.(Math.max(0, s)) ?? false;
+  const flatSpan = (a: number, b: number) => onUnderside(a) && onUnderside(b);
+  // Where the underside starts: the gate stands 30 m in, and the houses leave it room.
+  const gateAt = (s: number) => {
+    const sp = underSpan(s);
+    return sp ? sp.from + UNDER.FLIP + 30 : null;
+  };
+  const nearGate = (s: number) => {
+    const at = gateAt(s);
+    return at !== null && Math.abs(s - at) < 12;
+  };
+  const { violet, crimson } = UNDER_COLOURS;
+  const plum: V3 = [0.45, 0.08, 0.5];
+  // The ribbon's edges, all the way over and back: a string of violet and crimson points that
+  // rolls with it, so the flip reads as a twist of light.
+  for (const s of every(s0, s1, 3)) {
+    if (!under(s)) continue;
+    const i = Math.round(s / 3);
+    for (const sd of [1, -1])
+      k.dot(pose(tr, s, sd * (half(s) + 0.3), 0.45), i % 2 ? violet : crimson, 1.8, 1.6);
+  }
+  // Strings of light across the road (the only thing that crosses it), the lanterns on them
+  // rising instead of hanging: Undertown's are the other way up.
+  for (const s of every(s0, s1, 24, 12)) {
+    if (!flatSpan(s - 2, s + 2)) continue;
+    const w = half(s) + 2;
+    for (let i = 0; i <= 20; i++) {
+      const f = i / 20;
+      const h = 9.5 - 1.8 * Math.sin(Math.PI * f);
+      const p = pose(tr, s, -w + 2 * w * f, h);
+      k.dot(p, plum, 1.2, 0.9);
+      if (i % 2 === 0 && i > 0 && i < 20) {
+        k.dot(pose(tr, s, -w + 2 * w * f, h + 1.1), i % 4 ? crimson : violet, 2.4, 3);
+        k.dot(pose(tr, s, -w + 2 * w * f, h + 2), C.gold, 1, 0.7);
+      }
+    }
+  }
+  // Shophouses along both sides, their roofs turned up at the ends, windows lit red and violet.
+  for (const side of [1, -1]) {
+    for (const s of every(s0, s1, 16, side > 0 ? 0 : 8)) {
+      if (!flatSpan(s - 7, s + 7) || nearGate(s)) continue;
+      const i = Math.round(s / 16) * 2 + (side > 0 ? 0 : 1);
+      const hs = half(s);
+      const u0 = side * (hs + 1.4);
+      const u1 = side * (hs + 7.5);
+      const floors = 2 + (i % 3);
+      const top = floors * 3.2;
+      const corners: [number, number][] = [
+        [-6.5, u0],
+        [6.5, u0],
+        [6.5, u1],
+        [-6.5, u1],
+      ];
+      const lo = corners.map(([t, u]) => pose(tr, s + t, u, 0));
+      const hi = corners.map(([t, u]) => pose(tr, s + t, u, top));
+      const col = i % 2 ? crimson : plum;
+      k.poly(hi, true, col, 0.9);
+      for (let j = 0; j < 4; j++) {
+        k.line(lo[j], hi[j], col, 0.7);
+        k.quad(lo[j], lo[(j + 1) % 4], hi[(j + 1) % 4], hi[j]);
+      }
+      // Floor lines on the street face, and a lit window or two on each floor.
+      for (let f = 1; f < floors; f++)
+        k.line(pose(tr, s - 6.5, u0, f * 3.2), pose(tr, s + 6.5, u0, f * 3.2), col, 0.4);
+      for (let f = 0; f < floors; f++)
+        for (const t of [-3.5, 0, 3.5])
+          if ((i * 7 + f * 3 + t) % 3 !== 0)
+            k.dot(pose(tr, s + t, u0, f * 3.2 + 1.7), f % 2 ? violet : crimson, 1.3, 1.4);
+      // The roof: eaves out over the pavement, ends turned up, a ridge.
+      const uc = (u0 + u1) / 2;
+      const a = Math.abs(u1 - u0) / 2;
+      for (const t of [-7, 7])
+        k.poly(
+          [
+            pose(tr, s + t, uc - a - 1.6, top + 1),
+            pose(tr, s + t, uc - a, top),
+            pose(tr, s + t, uc + a, top),
+            pose(tr, s + t, uc + a + 1.6, top + 1),
+          ],
+          false,
+          violet,
+          0.9,
+        );
+      k.line(pose(tr, s - 6, uc, top + 1.7), pose(tr, s + 6, uc, top + 1.7), violet, 1);
+      // A sign standing out from every other house.
+      if (i % 2 === 0) {
+        const word = UNDER_WORDS[(i / 2) % UNDER_WORDS.length];
+        const ink = i % 3 ? '#d9a6ff' : '#ff5a7a';
+        const tall = word.length > 3 ? 7.5 : 1.6 + 2.2 * [...word].length;
+        board(
+          g,
+          tr,
+          s + 4,
+          side * (hs + 1.2),
+          side * (hs + 3.6),
+          3.2,
+          3.2 + tall,
+          wordTexture(word, ink, '#16031c', true),
+          1.5,
+        );
+      }
+    }
+  }
+  // The gate as you come under, its plaque saying where you are.
+  for (const s of every(s0, s1, 4)) {
+    const at = gateAt(s);
+    if (at === null || at < s || at >= s + 4) continue;
+    const hw = half(at);
+    for (const u of [-(hw + 1.2), hw + 1.2]) column(k, tr, at, u, 0.6, 12, crimson, 1, 0);
+    k.line(pose(tr, at, -hw - 2.5, 11), pose(tr, at, hw + 2.5, 11), crimson, 1.1);
+    const ridge: V3[] = [];
+    for (let i = 0; i <= 16; i++) {
+      const f = i / 16;
+      const u = -hw - 3.5 + (2 * hw + 7) * f;
+      ridge.push(pose(tr, at, u, 12.5 + 1.4 * (2 * f - 1) ** 4));
+    }
+    k.poly(ridge, false, violet, 1.3);
+    board(g, tr, at, -5, 5, 9, 10.8, wordTexture('UNDERTOWN', '#e8c2ff', '#2a0636', false), 1.6);
+    for (const u of [-(hw + 1.2), hw + 1.2]) k.dot(pose(tr, at, u, 12.6), violet, 2.6, 4);
+  }
 }
 
 /** The dragon of light flying just ahead of you over the road, undulating. */

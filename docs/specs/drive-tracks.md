@@ -81,6 +81,37 @@ Lanterns, lanes and avenues.
 - [ ] More banking in the bends (as the Neon District).
 - [ ] Push and crash against the shophouse walls.
 - [ ] Bridges built into the buildings and over the road, not floating.
+- [x] **Undertown** (2026-11-23: "make racetrack two sided and at the edge there is a cool twist
+      edge that makes it flip and u race the other way from under … mirrored … a different decor
+      … called the undertown with undertown letters when u ride there"). `lib/art/undertown.ts`.
+      - Every 2,400 m from 700 m, the road's left edge curls up and over: over 180 m it rolls half
+        a turn about an axis 18 m above it, and you drive its underside upside down, mirrored
+        (your left on the road's right), 36 m over the street, the shophouses hanging over your
+        head. 620 m later it rolls on the same way, another 180 m, and you are back on top.
+      - Built on the twist: the physics drives a flat road, and the road, the racers and the camera
+        are drawn turned (`twistPose`, with the new `axis` and `under` on `TrackDef`). Gravity
+        always holds you to the road.
+      - Unlike a twist it keeps its barriers. They close in to the ribbon's edge (0.4 m past it),
+        easing over 40 m, so nobody falls off and nobody is drawn hanging in the air. No straight
+        road through its hollow: everyone goes under. The boost out of a twist still comes at its
+        end.
+      - Where it flips, nothing crosses the road and nothing stands inside the sweep (the flip
+        reaches out to the axis' height either side). Upside down, the street below keeps all its
+        pieces.
+      - The underside is darker: plum asphalt, crimson edges. Spray and sparks are not drawn while
+        you are rolled over (they would show on the ground below).
+      - Its own decor (the design cell **Chinatown · Undertown**, worn always on Chinatown Run):
+        violet and crimson lights along the ribbon's edges that roll with it, strings of light
+        across the road with their lanterns rising instead of hanging, shophouses with turned-up
+        roofs in deep red and plum, signs (下町, UNDERTOWN, 夜, 影, 月, 逆), and a gate saying
+        UNDERTOWN 30 m into the underside. Built in the road's frame: to the world it hangs under
+        the road roofs down; to you, upside down, it stands the right way up.
+      - Past halfway over, **UNDERTOWN** comes up on screen in big spaced letters (下町 · the other
+        side of the road under it), holds, and fades over 4.6 s. Once each time you go under.
+      - Not built: you keep driving the same way along the road, not back the other way. A road
+        that runs back the other way under itself and then comes up on top again would meet the
+        stretch you just drove (topologically it closes into a band), so it needs a second deck,
+        a separate road. That is a bigger change to the track format.
 
 ## 6. Neon District (`neon`)
 
@@ -292,7 +323,7 @@ flame tool's palettes. Nothing flashes; pulses and flames ease.
   - **Chinatown**: red gate (中華街), lantern strings, tall signs, pagodas, a dragon of light, sky lanterns.
   - **Neon District**: neon towers, blade signs, sky bridges, docks, traffic, jump bridges.
 - On their tracks, Design opens on the district's own category.
-- **Chinatown Run** always wears the gate, lantern strings, signs and sky lanterns. Across the road it stays light only: lanterns and strings are points of light, not solid pieces.
+- **Chinatown Run** always wears the gate, lantern strings, signs, sky lanterns and Undertown. Across the road it stays light only: lanterns and strings are points of light, not solid pieces.
 - **Neon District** always wears blade signs, sky bridges, traffic and jump bridges.
   - Sky bridges never stand over a jump's flight.
 - **Neon jumps:** two a lap. The second lands on a downslope (`down: 30`):
@@ -355,6 +386,8 @@ the plains' loop gates give again 20 s later. The orb goes out once taken.
 - **Charges:** up to three, oldest first; a weapon past three becomes a booster. The HUD shows them
   quietly under the clock (a coloured dot and the name each, then "x"), and names the pickup just
   taken for a moment. **X** fires the oldest charge that has a handler.
+- **Sound:** through a gate, a soft rush of air (the boost's whoosh, a little quieter) and a warm
+  swell for what it gave.
 - **The weapons are the attack code's** (Mars: Dust Sharks, the yellow explosive shot, the laser
   with a crosshair). The engine only carries the charges and hands a spent one over:
   `engine.onWeapon(id, handler)` registers what `'shark' | 'shot' | 'laser'` does;

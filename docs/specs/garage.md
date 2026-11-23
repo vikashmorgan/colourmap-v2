@@ -10,10 +10,16 @@ Drive's Design panel ("Open the Garage ›") and the shared tab.
 
 ## The room (components/garage/scene.ts)
 
-- A dark hangar in the gold-dots-on-dark look: a near-black polished floor, a raised dark metal
-  platform with a ring of gold light round its rim, fine gold rings on its top (turning with it, so
-  the turn reads), rings of softly breathing gold dots on the floor round it, tall strips of warm
-  light round the walls (a cool one every fourth), a halo ring overhead.
+- A pad in the gold-dots-on-dark look: a near-black polished floor 12 m across, edged with a thin
+  line of light, a raised dark metal platform with a ring of gold light round its rim, fine gold
+  rings on its top (turning with it, so the turn reads), rings of softly breathing gold dots round
+  it, short warm beacons round its edge (a cool one every fourth).
+- **Mars around it** (2026-11-23: "make garage have the mars context around"): rust regolith to the
+  horizon under the Drive world's Mars dusk (butterscotch low down, dusty rose, a dark umber
+  overhead, a small white sun in a blue halo, Phobos), low dunes, flat-topped mesas in a broken
+  ring on the horizon, an old rusty lattice mast with a steady warm lamp, a rusted tank lying on
+  its side; fog the colour of the dust; a low warm sun and a rose sky light. A gradient dome and
+  plain meshes, so it stays cheap. The same room shows in Drive's menu under Garage.
 - Light: a soft key spot from above with soft shadows, a cool rim light set high (lower, its gleam
   glared across the floor), a dim fill. The room environment lends the chrome and gold their
   reflections; the floor takes only a faint sheen of it.
