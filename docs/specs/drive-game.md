@@ -98,8 +98,80 @@ easy to stay on it", "same with coast road, make them much wider".
    grit for motes. One shader with the salt (`#define WORLD 4`, lib/art/drive-shaders.ts).
    Craters (2026-11-19: "more craters on Mars"): three sizes scattered over the plain, 3–11 m,
    12–40 m and 60–170 m across, each a bowl shadowed on the sun side and lit on its far wall, a rim
-   catching the sun, and a pale apron of dust round it. They are painted on the ground; the plain
-   still drives flat.
+   catching the sun, and a pale apron of dust round it. They are painted on the ground.
+
+   **Dunes** (2026-11-23: "make the mars world not flat"): the plain rolls. The ground is a sum of
+   seven smooth waves (`DUNE_WAVES`, lib/art/mars.ts), each a whole number of cycles across the
+   ground's 2,048 m period, so the backdrop shader draws exactly the hills the physics drives:
+   swells 380 to 650 m long and 2.4 to 4 m high carrying dunes 120 to 210 m long and up to 1.3 m.
+   Never steeper than 15°; at full throttle the sharpest crests give short airs, cruising never.
+   The measured mile's corridor (flat within 30 m of the painted line, dunes back by 110 m), the
+   start and the drift gates' dry lake bed stay flat, so the mile and the gates race as before.
+   The physics drives the terrain (`MARS_TERRAIN`: height and slope), so you climb, descend and fly.
+   The backdrop marches each pixel's ray over the same waves (`marsTerrainGlsl`), lights the dune
+   faces by the low sun, and writes its depth, so the vehicle, the stations and the Red Bastard hide
+   behind dunes. The poles, stakes, gate posts and dust devils stand on the ground; tyre marks and
+   dust follow it. The chase camera replaces the piece's level camera on Mars and never sinks into
+   a hill. The red streak is off on Mars (the Red Bastard runs instead).
+
+   **Craft in the sky** (2026-11-23: "a bunch of big spaceships in the sky. like cool rusty
+   satellites. with rings around them"): five derelicts (`CRAFT`), 4.8 to 7 km out and 0.5 to
+   1 km up (5° to 12° over the horizon), 600 m to 1.4 km long: two ringed stations (drums on a
+   truss spine, panels, some missing), a carrier with a nose cone, a gyroscope sphere in three
+   rings, a dish. Rust, ochre and dark iron with a little of the haze's glow; a few dim warm
+   lights breathing over 3 to 6 s. Rings turn once in two to five minutes; the hulls drift by
+   hundredths of a degree a second. They follow you at 85% of your travel, so they keep their
+   place in the sky. One merged mesh per hull and per ring (components/drive/mars-view.ts).
+
+   **Rust stations** (2026-11-23: "space stations on the ground. dome clusters … nova cores
+   pipelines. cool factories and tubes. and abandoned stations in the rust"): one candidate per
+   720 m cell over the plain round the course (`SITES`), kept only where it leaves the Red
+   Bastard's loop (70 m), the start (420 m), the mile's corridor (140 m) and the lake bed clear:
+   - dome clusters: a geodesic dome with bubbles round it by the golden angle (the Art City's
+     Domes, in rust), joined by tubes;
+   - Nova Core lattices: a tall iron octahedron on splayed legs round a glowing ember core;
+   - factories: a sawtooth hall, banded chimneys with an ember at each mouth, tubes along the
+     side, a tank;
+   - derelicts: a hull sunk at a slant, a broken ring standing half out of the regolith, fallen
+     panels.
+   Pipelines on trestles 5 m high run from each Nova Core to its two nearest stations, where they
+   stay 30 m clear of his loop; you drive under them. You flow round a station's footprint, as
+   along every wall (no crash). Each station and pipeline is one merged mesh; hidden past 5.2 km.
+
+   **Mission: Follow the Red Bastard** (2026-11-23: "on mars put Mission Unlocked. Follow the Red
+   Bastard. (and u have to find the dude with the red ship red line speeding in the distance. add
+   a cloud of dust behind his trail.)"):
+   - The first time you drive on Mars (and after every restart), a card fades in high in the
+     middle: *Mission Unlocked* over *Follow the Red Bastard* in the display serif, held 4 s.
+   - The Red Bastard: a red hover ship with blaze fire, on a long closed loop over the dunes
+     (`LOOP`: a 1.7 km circle wobbled three and five times round, about 12 km, curves never
+     tighter than 250 m), passing about a kilometre ahead of the start. 216 km/h, 245 when you are
+     within 220 m, always below your top speed. A red light trail rides behind him and a thick
+     cloud of rust dust billows up; far off he is drawn up to four times larger, so he still reads.
+   - A small red caret marks him with the distance under it (*960 m*, *1.5 km*), pinned to the
+     screen's edge pointing his way when he is out of view. Under the clock: *red bastard 0:42.10
+     · 1.2 km · best 1:05.33*.
+   - Within 14 m he is caught: *Caught the Red Bastard* with your time (and the best, or *a
+     record*) for 6 s. Best per vehicle, `drive.mars.bastard.<vehicle>`.
+   - **The radio** (2026-11-23: "a messaging menu where you follow the racers … like old radio
+     communications with a voice graph moving as he speaks"): a small panel at the top left. The
+     sender's name above in his colour, the line typed out at 28 letters a second over a faint
+     static that drifts slowly and still scan lines, a voice graph moving smoothly while he speaks
+     and settling flat when he stops; it lingers 5 s and fades. His lines: on the start *You'll
+     never get me, you loser.*; closing in, close by, falling far behind (in turn, every 35 s),
+     losing you, and caught. At least 9 s between lines; the catch cuts in. A soft squelch and a
+     band of static play under each line (Web Audio, made only after a key or a touch, very
+     quiet; components/drive/mars-sound.ts). Generic: any racer can be given a voice
+     (`Voice`, lib/art/radio.ts).
+   - Pure: lib/art/mars.ts (dunes, loop, stations, craft), lib/art/mars-mission.ts (phases,
+     clock, catch, his voice), lib/art/radio.ts (scheduling, typing); live in
+     components/drive/mars-run.ts; the screen layer in components/drive/MarsHud.tsx.
+
+   **Grip mode on Mars** (2026-11-23: "allow turns to turn more when u are full tilt", "maybe it
+   is when i am full speed or high that it doesnt turn well"): in Grip the grip grows with speed
+   from 40% of the top speed to 1.9× at the top (`fastGrip`, lib/art/vehicle.ts), so a full-speed
+   carve turns about twice as tight, the slide staying under 20°. In the air every mode keeps 60% of
+   its steering on Mars and the flight bends with the body, so a crest never locks you straight.
 
 Why three night tracks: Night Rain stays the plain lamp course the user loved (with the City's
 towers, arch and rings added back from the road); Chinatown and the Neon District are new tracks

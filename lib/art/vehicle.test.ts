@@ -4,10 +4,12 @@ import type { Controls } from './drive';
 import {
   CLIMB,
   FLAT,
+  fastGrip,
   G,
   landingLoss,
   leavesGround,
   MARS_FLAT,
+  MARS_HANDLING,
   MODES,
   newVehicle,
   pull,
@@ -517,5 +519,61 @@ describe('Mars handling (2026-11-21: "much more tilt … much quicker turn")', (
     const mars = turn(MARS_FLAT);
     expect(mars.turned).toBeGreaterThan(salt.turned * 1.4);
     expect(mars.roll).toBeGreaterThan(salt.roll * 1.8);
+  });
+});
+
+describe('Mars in Grip mode (2026-11-23: "allow turns to turn more when u are full tilt")', () => {
+  it('grows the grip with speed in Grip mode only, from 40% of the top speed', () => {
+    const top = VEHICLES.car.vTop;
+    expect(fastGrip(MARS_HANDLING, 'grip', top * 0.3, top)).toBe(1);
+    expect(fastGrip(MARS_HANDLING, 'grip', top * 0.7, top)).toBeCloseTo(1.45, 6);
+    expect(fastGrip(MARS_HANDLING, 'grip', top, top)).toBeCloseTo(1.9, 6);
+    expect(fastGrip(MARS_HANDLING, 'grip', top * 1.5, top)).toBeCloseTo(1.9, 6);
+    expect(fastGrip(MARS_HANDLING, 'flow', top, top)).toBe(1);
+    expect(fastGrip({ turn: 1, lean: 1 }, 'grip', top, top)).toBe(1);
+  });
+
+  /** The way it goes turned in 2 s of full steer from full speed, and the widest slide. */
+  const carve = (mode: 'grip' | 'flow') => {
+    const v = newVehicle('car', 0, 0, 0);
+    v.vx = VEHICLES.car.vTop * 0.97;
+    v.vLong = v.vx;
+    const go: Controls = { throttle: 1, steer: 1, boost: 0, mode };
+    let slip = 0;
+    let turned = 0;
+    let prev = Math.atan2(v.vy, v.vx);
+    for (let i = 0; i < 120; i++) {
+      stepVehicle(v, go, 1 / 60, MARS_FLAT, i / 60);
+      const a = Math.atan2(v.vy, v.vx);
+      let d = a - prev;
+      d -= Math.PI * 2 * Math.round(d / (Math.PI * 2));
+      turned += d;
+      prev = a;
+      slip = Math.max(slip, Math.abs(v.slip));
+    }
+    return { turned: Math.abs(turned), slip, speed: Math.hypot(v.vx, v.vy) };
+  };
+
+  it('carves much tighter at full speed than in Flow, and never spins', () => {
+    const grip = carve('grip');
+    const flow = carve('flow');
+    expect(grip.turned).toBeGreaterThan(flow.turned * 1.5);
+    expect(grip.slip).toBeLessThan(0.35);
+    expect(grip.speed).toBeGreaterThan(40);
+  });
+
+  it('keeps steering in the air on Mars: the flight bends with the wheel', () => {
+    const fly = (world: World) => {
+      const v = newVehicle('car', 0, 0, 0);
+      v.vx = 60;
+      v.z = 6;
+      v.vz = 4;
+      v.air = true;
+      for (let i = 0; i < 30; i++)
+        stepVehicle(v, { throttle: 1, steer: 1, boost: 0 }, 1 / 60, world, i / 60);
+      return Math.abs(Math.atan2(v.vy, v.vx));
+    };
+    expect(fly(MARS_FLAT)).toBeGreaterThan(0.05);
+    expect(fly(FLAT)).toBeLessThan(0.01);
   });
 });

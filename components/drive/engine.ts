@@ -65,6 +65,7 @@ import {
   RIBBON_VERTEX,
 } from '@/lib/art/drive-shaders';
 import { WORLD_CFG, type WorldCfg } from '@/lib/art/drive-worlds';
+import { MARS_TERRAIN, marsHeight } from '@/lib/art/mars';
 import {
   MOODS,
   RING_STEP,
@@ -86,6 +87,7 @@ import {
   trackShot,
 } from '@/lib/art/race-intro';
 import { type RaceResult, raceResult } from '@/lib/art/race-result';
+import type { RadioMessage } from '@/lib/art/radio';
 import { bump, placeOf, RIVALS, type Rival, rivalControls, rivalHull } from '@/lib/art/rivals';
 import {
   CAM_H,
@@ -120,7 +122,6 @@ import {
 import { trackInfo } from '@/lib/art/track-registry';
 import {
   FLAT,
-  MARS_FLAT,
   newVehicle,
   type StepEvents,
   speedOf,
@@ -147,6 +148,8 @@ import {
   twistEntry,
   type Wreck,
 } from '@/lib/art/wreck';
+import { type Marker, MarsRun, type MissionHud } from './mars-run';
+import { buildMarsView, type MarsView } from './mars-view';
 import { buildSaltView, type SaltView } from './salt-view';
 import { makeStageFire } from './stage-fire';
 import { buildTrackView, disposeGroup, type TrackView } from './track-view';
@@ -169,6 +172,8 @@ export interface Hud {
   /** Your place among the racers when the rivals are on (1 = leading), and how many race. */
   place?: number | null;
   racers?: number;
+  /** Mars: the mission to follow the Red Bastard. */
+  mission?: MissionHud | null;
 }
 
 export interface EngineOptions {
@@ -180,6 +185,10 @@ export interface EngineOptions {
   onIntro?: (s: IntroState | null) => void;
   /** A course finished (the Canyon): your time, best and everyone's places. */
   onFinish?: (r: RaceResult) => void;
+  /** Mars: a line on the radio from the racer you follow. */
+  onRadio?: (m: RadioMessage) => void;
+  /** Mars: where the Red Bastard is on the screen, every frame (null: no marker). */
+  onMarker?: (m: Marker | null) => void;
 }
 
 export interface IntroState {
@@ -497,6 +506,11 @@ export class DriveEngine {
   private onHud?: (h: Hud) => void;
   private onIntro?: (s: IntroState | null) => void;
   private onFinish?: (r: RaceResult) => void;
+  private onRadio?: (m: RadioMessage) => void;
+  private onMarker?: (m: Marker | null) => void;
+  /** Mars: the stations and the sky craft, and the Red Bastard's mission. */
+  private marsView: MarsView | null = null;
+  private marsRun: MarsRun | null = null;
   /** The race intro, while it runs (null: driving). */
   private intro: IntroClock | null = null;
   private lastIntro = '';
@@ -553,6 +567,8 @@ export class DriveEngine {
     this.onHud = opts.onHud;
     this.onIntro = opts.onIntro;
     this.onFinish = opts.onFinish;
+    this.onRadio = opts.onRadio;
+    this.onMarker = opts.onMarker;
     this.cfg = WORLD_CFG[opts.world];
     this.weather = newWeather(opts.design.weather);
 
@@ -720,12 +736,15 @@ export class DriveEngine {
   }
 
   private backdropMaterial(): THREE.ShaderMaterial {
+    // Mars's dunes write their depth, so what stands behind a dune is hidden by it.
+    const dunes = this.cfg.id === 'mars';
     return new THREE.ShaderMaterial({
       vertexShader: DRIVE_VERTEX,
       fragmentShader: backdropFragment(this.cfg.backdrop, MESAS),
       uniforms: this.backdropU,
-      depthTest: false,
-      depthWrite: false,
+      depthTest: dunes,
+      depthFunc: THREE.AlwaysDepth,
+      depthWrite: dunes,
     });
   }
 
@@ -759,9 +778,11 @@ export class DriveEngine {
       this.view = buildTrackView(this.cfg, w, sunDir);
     } else {
       this.trackWorld = null;
-      this.physics = this.cfg.id === 'mars' ? MARS_FLAT : FLAT;
-      this.view = buildSaltView();
+      const mars = this.cfg.id === 'mars';
+      this.physics = mars ? MARS_TERRAIN : FLAT;
+      this.view = buildSaltView(mars ? { ground: marsHeight, streak: false } : undefined);
     }
+    this.enterMars();
     this.scene.add(this.view.group);
     this.sun.position.copy(sunDir).multiplyScalar(100);
     this.sun.target.position.set(0, 0, 0);
@@ -776,6 +797,40 @@ export class DriveEngine {
     this.bloom.radius = night ? 0.5 : 0.448;
     this.scene.fog = new THREE.FogExp2(0x000000, 0);
     this.spawn();
+  }
+
+  /** Mars's own things, built on the way in and taken down on the way out. */
+  private enterMars() {
+    const on = this.cfg.id === 'mars';
+    if (this.marsView && !on) {
+      this.scene.remove(this.marsView.group);
+      this.marsView.dispose();
+      this.marsView = null;
+    }
+    if (this.marsRun && !on) {
+      this.marsRun.dispose();
+      this.marsRun = null;
+      this.onMarker?.(null);
+    }
+    if (!on || this.marsView) return;
+    this.marsView = buildMarsView();
+    this.scene.add(this.marsView.group);
+    this.marsRun = new MarsRun(
+      {
+        scene: this.scene,
+        env: this.env,
+        store: this.store,
+        emitDust: (...a) => this.puffs.emit(...a),
+        makeTrail: (colour) => {
+          const mat = this.ribbonGlow.clone();
+          mat.uniforms = { uColour: { value: colour }, uOpacity: { value: 0.7 } };
+          const rib = new Ribbon(260, 2.5, 1.6, 6, true, mat);
+          rib.mesh.renderOrder = 7;
+          return rib;
+        },
+      },
+      this.design.vehicle.mars,
+    );
   }
 
   /** The start arch, built once; its half circles are sized to each road in placeGantry. Its frame
@@ -886,6 +941,7 @@ export class DriveEngine {
     this.buildVehicleView();
     this.buildRivals();
     this.placeGantry();
+    this.marsRun?.reset(kind);
     this.lastHud = '';
   }
 
@@ -958,7 +1014,8 @@ export class DriveEngine {
 
   /** The Salt Flat's car keeps the piece's own camera: 1.2 m up, level, right behind it. */
   private pieceCamera(): boolean {
-    return this.cfg.track === null && this.vehicle?.kind === 'car';
+    // Not on Mars: over the dunes the chase camera looks down at the car and up the slopes.
+    return this.cfg.track === null && this.cfg.id !== 'mars' && this.vehicle?.kind === 'car';
   }
 
   private buildVehicleView() {
@@ -1354,6 +1411,8 @@ export class DriveEngine {
     this.stop();
     if (this.view) this.view.dispose();
     this.vehicleView?.dispose();
+    this.marsRun?.dispose();
+    this.marsView?.dispose();
     for (const rv of this.rivals) rv.view.dispose();
     disposeGroup(this.scene);
     this.env?.dispose();
@@ -1476,6 +1535,7 @@ export class DriveEngine {
         }
       }
       this.stepRivals(dt, t);
+      this.marsRun?.step(dt, t, v, !holding, this.onRadio);
       this.dust(ev.landed, ev.bump, dt, w);
       if (ev.scrape) this.spray(ev.scrape, ev.scrapeNx ?? 0, ev.scrapeNy ?? 0, dt);
     }
@@ -1527,6 +1587,9 @@ export class DriveEngine {
       this.cam.z = shot.cam.z;
       this.cam.roll = 0;
     }
+    // Over the dunes the camera never sinks into a hill behind you.
+    if (this.cfg.id === 'mars')
+      this.cam.z = Math.max(this.cam.z, marsHeight(this.cam.x, this.cam.y) + 1.1);
 
     // A twist turns what is drawn about the road's axis (the physics drives a flat road): the
     // camera rides it too, its up turning with the road, so the world rolls over you.
@@ -1626,6 +1689,11 @@ export class DriveEngine {
     this.trails(t, w);
     for (const r of this.ribbons) r.update(ox, oy, t);
     this.lightWalls(t, ox, oy);
+    this.marsView?.update(ox, oy, t);
+    if (this.marsRun) {
+      const m = this.marsRun.draw(ox, oy, t, dt, camera, this.size.w, this.size.h);
+      this.onMarker?.(this.preview ? null : m);
+    }
     this.puffs.update(dt, ox, oy);
     this.sparks.update(dt, ox, oy);
     this.sparks.material.uniforms.uScale.value = this.puffs.material.uniforms.uScale.value;
@@ -1927,6 +1995,7 @@ export class DriveEngine {
           )
         : null,
       racers: this.rivals.length + 1,
+      mission: this.marsRun?.hud(t) ?? null,
     };
     const key = JSON.stringify(hud);
     if (key === this.lastHud) return;
