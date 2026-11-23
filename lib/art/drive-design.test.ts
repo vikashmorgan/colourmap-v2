@@ -9,6 +9,7 @@ import {
   DESIGN_KEY,
   FIRES,
   fireById,
+  HOVER_BODIES,
   HULLS,
   hullById,
   hullOf,
@@ -77,8 +78,16 @@ describe('fires', () => {
 });
 
 describe('hulls', () => {
-  it('offers chrome, gold, rust, red, leopard and your own paint', () => {
-    expect(HULLS.map((h) => h.name)).toEqual(['Chrome', 'Gold', 'Rust', 'Red', 'Leopard', 'Paint']);
+  it('offers chrome, old chrome, gold, rust, red, leopard and your own paint', () => {
+    expect(HULLS.map((h) => h.name)).toEqual([
+      'Chrome',
+      'Old chrome',
+      'Gold',
+      'Rust',
+      'Red',
+      'Leopard',
+      'Paint',
+    ]);
     expect(hullById('gold').metalness).toBe(1);
     expect(hullOf({ hull: 'paint', paint: '#123456' }).colour).toBe('#123456');
     expect(hullOf({ hull: 'gold', paint: '#123456' }).colour).toBe(hullById('gold').colour);
@@ -88,10 +97,27 @@ describe('hulls', () => {
     expect(hullById('red').clearcoat).toBe(1);
     expect(hullById('nope').id).toBe('red');
   });
+
+  it('old chrome: a metal mirror gone warm and hazy with tarnish, and remembered', () => {
+    const old = hullById('oldChrome');
+    const chrome = hullById('chrome');
+    expect(old.metalness).toBe(1);
+    // Hazier than new chrome, but still a reflecting metal, not a matte paint.
+    expect(old.roughness).toBeGreaterThan(chrome.roughness);
+    expect(old.roughness).toBeLessThan(0.45);
+    expect(old.pattern).toBe('tarnish');
+    // Warmer: more red than blue, where new chrome leans cool.
+    const rgb = (hex: string) => [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
+    const [r, , b] = rgb(old.colour);
+    expect(r).toBeGreaterThan(b);
+    const store = memory();
+    saveDesign(store, { ...DEFAULT_DESIGN, hull: 'oldChrome' });
+    expect(loadDesign(store, IDS).hull).toBe('oldChrome');
+  });
 });
 
 describe('bodies', () => {
-  it('offers the wedge, the classic and future GTs, the Space Racer, the motorbike and the light cycle', () => {
+  it('offers the wedge, the GTs, the Space Racer, the bikes, the UFO and the Garbage Ride', () => {
     expect(BODIES.map((b) => b.name)).toEqual([
       'Wedge',
       'Classic GT',
@@ -99,8 +125,13 @@ describe('bodies', () => {
       'Space Racer',
       'Motorbike',
       'Light Cycle',
+      'UFO Classic',
+      'Garbage Ride',
     ]);
     expect(DEFAULT_DESIGN.body).toBe('wedge');
+    expect(parseDesign('{"body":"ufo"}', IDS).body).toBe('ufo');
+    expect(parseDesign('{"body":"garbage"}', IDS).body).toBe('garbage');
+    expect([...HOVER_BODIES]).toEqual(['ufo', 'garbage']);
     expect(parseDesign('{"body":"tank"}', IDS).body).toBe('wedge');
   });
 });
