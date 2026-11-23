@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-
 import {
   CATEGORIES,
   designStart,
@@ -11,15 +10,22 @@ import {
   safePicks,
   safePos,
 } from './design-space';
+import { GATE_STYLES } from './track-data';
 
 describe('the design space catalogue', () => {
-  it('has ten categories of six or seven variations, ids unique within each', () => {
-    expect(CATEGORIES).toHaveLength(10);
+  it('has eleven categories of six or seven variations, ids unique within each', () => {
+    expect(CATEGORIES).toHaveLength(11);
     for (const c of CATEGORIES) {
       expect(c.vars.length).toBeGreaterThanOrEqual(6);
       expect(new Set(c.vars.map((v) => v.id)).size).toBe(c.vars.length);
       for (const v of c.vars) expect(v.note.length).toBeGreaterThan(10);
     }
+  });
+
+  it('ends on the Gates, one cell for each of the gates’ looks', () => {
+    const gates = CATEGORIES[CATEGORIES.length - 1];
+    expect(gates.id).toBe('gates');
+    expect(gates.vars.map((v) => v.id)).toEqual([...GATE_STYLES]);
   });
 
   it('gives every surface and marking a shader number', () => {

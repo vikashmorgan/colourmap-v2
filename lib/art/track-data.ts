@@ -29,7 +29,11 @@ export interface Bump {
 
 /** Something on the road the menus, timing and later the track's own features read. */
 export type Feature =
-  | { kind: 'gate'; every: number }
+  /** A gate every `every` m: drive through it for a booster or a weapon charge (lib/art/pickups.ts).
+   * Its look (2026-11-23: "some spit fire, some have a semi circle of light, some are filled with
+   * inner light, some are old chrome, some are rusty metal, or local fabric"); left out, the world
+   * picks its own (lib/art/drive-gates.ts). */
+  | { kind: 'gate'; every: number; style?: GateStyle }
   | { kind: 'start'; at: number }
   /** A straight, unbanked stretch (the start grid, 2026-11-22: a level grid for the stage fire). */
   | { kind: 'straight'; from: number; to: number }
@@ -86,6 +90,11 @@ export type Feature =
 
 export const FIRE_STYLES = ['roar', 'crown', 'wave', 'blue'] as const;
 export type FireStyle = (typeof FIRE_STYLES)[number];
+
+/** The gates' looks: fire jets, a half ring of light, an arch filled with light, old chrome, rusty
+ * riveted metal, the place's own cloth. */
+export const GATE_STYLES = ['fire', 'halo', 'glow', 'chrome', 'rust', 'fabric'] as const;
+export type GateStyle = (typeof GATE_STYLES)[number];
 
 export interface TrackData {
   id: TrackId;
@@ -269,6 +278,7 @@ export function compileTrack(d: TrackData): TrackDef {
   const twists = (d.features ?? []).filter((f) => f.kind === 'twist');
   const crosses = (d.features ?? []).filter((f) => f.kind === 'crossover');
   const decks = (d.features ?? []).filter((f) => f.kind === 'deck');
+  const gate = (d.features ?? []).find((f) => f.kind === 'gate');
   /** Where s sits in a crossover (m from its start), or null outside every one. */
   const inCross = (s: number) => {
     for (const c of crosses) {
@@ -366,6 +376,7 @@ export function compileTrack(d: TrackData): TrackDef {
         }
       : {}),
     ...(d.lap ? { lap: d.lap } : {}),
+    ...(gate ? { gate: { every: gate.every, ...(gate.style ? { style: gate.style } : {}) } } : {}),
     ...(decks.length
       ? {
           deck: (s: number) => {
@@ -536,6 +547,8 @@ export function validateTrackData(d: unknown, span = 6000): string[] {
       out.push('a straight needs from before to');
     if (f.kind === 'gate' && (!num(f.every) || f.every < 200))
       out.push('gates must be at least 200 m apart');
+    if (f.kind === 'gate' && f.style !== undefined && !GATE_STYLES.includes(f.style))
+      out.push(`a gate's style is one of ${GATE_STYLES.join(', ')}`);
   }
   if (out.length) return out;
 

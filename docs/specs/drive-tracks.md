@@ -320,6 +320,7 @@ to say which to build into the track for real. The cell and the picks are rememb
 | Bridges | Arcades, Suspension (towers every 260 m), Cable-stayed (pylons every 240 m), Bowstring (every 120 m), Truss, Golden rings (every 16 m) |
 | Tunnels | Lattice tube, Ring of light (a pulse running through), Gallery, Pergola (φ-tall frames), Hex tube, Spiral ribbon |
 | City backdrop (from the City chapter, beside the road) | Golden plan, Temples, Domes, Skyline, Solar tower, Sky lanes (ships white one way, red the other) |
+| Gates (every 240 m, the gates' six looks; see Gates and pickups) | Fire spitters, Halo, Inner light, Old chrome, Rusty metal, Local fabric |
 
 Structures are drawn in the City's grain language: gold lines, grains of light along them, dark
 faces where solid. Fire, sparks and fireworks are one pool of glowing points (24,000) in the
@@ -344,6 +345,74 @@ flame tool's palettes. Nothing flashes; pulses and flames ease.
   - easing back over 600 m
   - `down` is validated from 0 to 40 m
 - Every jump has neon chevron frames up the kicker, a lit bridge across the void under the flight, and arrows down the landing.
+
+## Gates and pickups (2026-11-23)
+
+> "i want different awesome gates some spit fire some have a semi circle of light. some are filled
+> with inner light. some are old chrome some are rusty metal. or local fabric. u pass through them
+> and get the boosters and weapons."
+
+**Where they stand.** On every road a gate stands every `every` m (the track's `gate` feature;
+1 km on the tracks without one), nudged forward up to 600 m (at most half the spacing) off a twist,
+a jump, a deck, a fire tunnel or a bridge so it always stands on plain road; a gate with no plain
+road near enough is left out. The Canyon's stand on its four checkpoints (none past the finish);
+Sky Canyon's every 1.5 km between the lap doors, 1.6 times taller so the top level flies through.
+On the Salt Flat and Mars the drift course's twelve gates wear them.
+
+**Six looks.** `{ "kind": "gate", "every": 1000, "style": "rust" }`: `style` is one of `fire`,
+`halo`, `glow`, `chrome`, `rust`, `fabric`, checked by `validateTrackData`. Left out, gate k wears
+look k of the world's own round:
+
+| World | Round of looks |
+|---|---|
+| Salt Flat | chrome, glow, chrome, fire |
+| Mars | rust, rust, fire |
+| Golden Track | halo, fire, glow, chrome |
+| Coast Road | fabric (sailcloth, sea-blue stripes), chrome, halo |
+| Canyon Race | fire, rust, fire, chrome |
+| Night Rain | glow, chrome, halo |
+| Chinatown Run | fabric (red silk, gold disc and trim), fire, halo |
+| Neon District | fabric (neon mesh, magenta and cyan threads), glow, halo |
+| Sky Canyon | glow, halo, fire |
+
+- **Fire:** two iron pillars, three jets each in toward the road (short of its middle, so the way
+  through stays clear), two out to the sides, a plume off each top.
+- **Halo:** a half ring of light in the world's colour, soft haze round it, a line of light across
+  the road under it.
+- **Glow:** a chrome arch filled with a soft sheet of light, brighter toward its rim, a slow drift
+  inside.
+- **Chrome:** old polished chrome columns and arch; the sky, the horizon band and the ground are
+  faked in its gradients, with dull and pitted patches.
+- **Rust:** a riveted girder portal, rusted through, old paint in patches.
+- **Fabric:** poles and a crossbar hung with two banners and a valance of the place's cloth,
+  swaying from the top.
+
+The light is soft and steady: nothing strobes or flashes, the fire is a continuous stream.
+
+**Pickups.** Driving through a gate (between its posts) gives what its orb shows, the same for
+the same gate every time: a **booster** (warm gold orb) or a weapon charge: **dust shark** (teal),
+**shot** (yellow), **laser** (red). Each look leans its own way: fire arms you with shots, halos
+and glows push, chrome gives lasers, rust sharks, fabric a mix. A road's gate gives once a run;
+the plains' loop gates give again 20 s later. The orb goes out once taken.
+
+- **Booster:** a push ahead of 16 m/s² that comes in over 0.2 s, holds to 0.7 s and eases away by
+  2.2 s (about 60 km/h), with the boost rings' flames and camera.
+- **Charges:** up to three, oldest first; a weapon past three becomes a booster. The HUD shows them
+  quietly under the clock (a coloured dot and the name each, then "x"), and names the pickup just
+  taken for a moment. **X** fires the oldest charge that has a handler.
+- **Sound:** through a gate, a soft rush of air (the boost's whoosh, a little quieter) and a warm
+  swell for what it gave.
+- **The weapons are the attack code's** (Mars: Dust Sharks, the yellow explosive shot, the laser
+  with a crosshair). The engine only carries the charges and hands a spent one over:
+  `engine.onWeapon(id, handler)` registers what `'shark' | 'shot' | 'laser'` does;
+  `engine.fireWeapon(id?)` spends a charge of that weapon (or the oldest with a handler) and calls
+  the handler with a `WeaponFire` (`weapon`, `t`, and the shooter's `x`, `y`, `z`, `h`, `vx`,
+  `vy` in physics coordinates). A charge whose weapon has no handler stays held and shown.
+
+`lib/art/drive-gates.ts` (where they stand, their looks; pure, tested) · `lib/art/pickups.ts`
+(which gate gives what, the inventory, the booster's curve, the weapon hook's types; pure,
+tested) · `components/drive/gates-view.ts` (the six looks drawn, and the gates stood on the track)
+· the Design space's **Gates** category previews each look along the track.
 
 ## Vehicles and garage (shared)
 
