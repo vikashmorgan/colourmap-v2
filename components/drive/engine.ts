@@ -65,6 +65,7 @@ import {
   RIBBON_VERTEX,
 } from '@/lib/art/drive-shaders';
 import { WORLD_CFG, type WorldCfg } from '@/lib/art/drive-worlds';
+import { newShiftWatch, ringFor, watchShift } from '@/lib/art/gear-rings';
 import { MARS_TERRAIN, marsHeight } from '@/lib/art/mars';
 import {
   MOODS,
@@ -153,6 +154,7 @@ import {
 import { type Marker, MarsRun, type MissionHud } from './mars-run';
 import { buildMarsView, type MarsView } from './mars-view';
 import { buildSaltView, type SaltView } from './salt-view';
+import { ShiftRings } from './shift-rings';
 import { makeStageFire } from './stage-fire';
 import { buildTrackView, disposeGroup, type TrackView } from './track-view';
 import { buildVehicle, type VehicleView } from './vehicles';
@@ -195,6 +197,9 @@ export interface EngineOptions {
   onMarker?: (m: Marker | null) => void;
   /** Called every frame before it draws (the design space adds its pieces here). */
   onFrame?: (dt: number) => void;
+  /** The box shifted up into `gear` and its ring burst out (`top`: the top gear's sonic boom).
+   * For the drive sound to hang a whoosh on (lib/art/gear-rings.ts). */
+  onShift?: (gear: number, top: boolean) => void;
 }
 
 export interface IntroState {
@@ -576,6 +581,10 @@ export class DriveEngine {
   private surgeAt = -99;
   /** Off a twist and diving into the stars, or null (lib/art/wreck.ts). */
   private wreck: Wreck | null = null;
+  /** Gear rings (lib/art/gear-rings.ts): the box watched for upshifts, and the rings drawn. */
+  private shiftWatch = newShiftWatch();
+  private shiftRings = new ShiftRings();
+  private onShift?: (gear: number, top: boolean) => void;
   /** On a twist's ribbon since its start (for the boost after it), or null. */
   private riding: { end: number } | null = null;
   /** Who is going straight through a twist, and where it ends (2026-11-22). */
@@ -594,6 +603,7 @@ export class DriveEngine {
     this.onRadio = opts.onRadio;
     this.onMarker = opts.onMarker;
     this.onFrame = opts.onFrame;
+    this.onShift = opts.onShift;
     this.cfg = WORLD_CFG[opts.world];
     this.weather = newWeather(opts.design.weather);
 
@@ -734,6 +744,7 @@ export class DriveEngine {
     this.scene.add(this.gantry);
     this.scene.add(this.puffs.points);
     this.scene.add(this.sparks.points);
+    this.scene.add(this.shiftRings.group);
     (this.sparks.material.uniforms.uColour.value as THREE.Color).setRGB(2.4, 1.3, 0.45);
     this.ribbonFlat = new THREE.ShaderMaterial({
       vertexShader: RIBBON_VERTEX,
@@ -938,6 +949,8 @@ export class DriveEngine {
 
   private spawn() {
     const kind = this.design.vehicle[this.cfg.id];
+    this.shiftRings.clear();
+    this.shiftWatch = newShiftWatch();
     if (this.cfg.track && this.trackWorld) {
       const tr = this.trackWorld.track;
       const s = this.cfg.startS;
@@ -1466,6 +1479,7 @@ export class DriveEngine {
     this.vehicleView?.dispose();
     this.marsRun?.dispose();
     this.marsView?.dispose();
+    this.shiftRings.dispose();
     for (const rv of this.rivals) rv.view.dispose();
     disposeGroup(this.scene);
     this.env?.dispose();
@@ -1693,6 +1707,21 @@ export class DriveEngine {
       this.gantry.position.set(gp.x - ox, heightAt(tr, gs, 0), -(gp.y - oy));
       this.gantry.rotation.set(0, frameAt(tr, gs).h, 0);
     }
+
+    // A ring bursts out round you on each upshift, bigger each gear (2026-11-23).
+    const box = gearOf(v.kind, speed, spec.vTop);
+    const up = this.preview || this.wreck ? null : watchShift(this.shiftWatch, box.gear, t);
+    const ring = up !== null ? ringFor(v.kind, up) : null;
+    if (ring) {
+      this.shiftRings.emit(ring, new THREE.Color(hullOf(this.design).colour));
+      this.onShift?.(ring.gear, ring.wall);
+    }
+    this.shiftRings.update(
+      dt,
+      { x: vP?.x ?? v.x, y: vP?.y ?? v.y, z: vP?.z ?? v.z, h: v.h, up: vP?.up ?? [0, 0, 1] },
+      ox,
+      oy,
+    );
 
     // The vehicle.
     const vv = this.vehicleView;
