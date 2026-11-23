@@ -116,6 +116,7 @@ import {
   SKY_PIPE,
   stepCanyonRace,
   stepKmRace,
+  type Track,
   type TrackWorld,
   twistPose,
 } from '@/lib/art/track';
@@ -189,6 +190,8 @@ export interface EngineOptions {
   onRadio?: (m: RadioMessage) => void;
   /** Mars: where the Red Bastard is on the screen, every frame (null: no marker). */
   onMarker?: (m: Marker | null) => void;
+  /** Called every frame before it draws (the design space adds its pieces here). */
+  onFrame?: (dt: number) => void;
 }
 
 export interface IntroState {
@@ -249,6 +252,8 @@ class Ribbon {
     readonly life: number,
     readonly upright: boolean,
     material: THREE.ShaderMaterial,
+    /** Fade out along its length too, gone this many metres behind (0: by time only). */
+    readonly fadeDist = 0,
   ) {
     this.trail = makeTrail(n, spacing);
     const g = new THREE.BufferGeometry();
@@ -275,6 +280,7 @@ class Ribbon {
     const tr = this.trail;
     const n = tr.x.length;
     this.alpha.fill(0);
+    let run = 0;
     for (let i = 0; i < tr.count; i++) {
       const k = trailIndex(tr, i);
       const j = trailIndex(tr, Math.min(i + 1, tr.count - 1));
@@ -297,7 +303,10 @@ class Ribbon {
         const pz = -dx * w;
         this.pos.set([x - px, y, z - pz, x + px, y, z + pz], o);
       }
-      const a = trailFade(t - tr.t[k], this.life) * tr.w[k];
+      // h and j sit either side of k, so half their gap is one step along.
+      if (i > 0) run += l / 2;
+      const far = this.fadeDist > 0 ? Math.max(0, 1 - run / this.fadeDist) ** 1.6 : 1;
+      const a = trailFade(t - tr.t[k], this.life) * tr.w[k] * far;
       this.alpha[i * 2] = a;
       this.alpha[i * 2 + 1] = a;
     }
@@ -414,7 +423,17 @@ const HELD: StepEvents = { landed: 0, bump: 0, tookOff: false };
 export const RETRY_BACK = 450;
 
 /** The walls of light behind the racers: how tall (m), how long they last (s), how bright. */
-export const WALL = { HEIGHT: 1.1, LIFE: 2.4, POINTS: 150, SPACING: 1.5, GLOW: 2.2, OPACITY: 0.55 };
+/** The racers' walls of light; FADE (m): gone that far behind, whatever the speed (2026-11-23: "the
+ * colour trail behind racers fades after a distance"). */
+export const WALL = {
+  HEIGHT: 1.1,
+  LIFE: 2.4,
+  POINTS: 150,
+  SPACING: 1.5,
+  GLOW: 2.2,
+  OPACITY: 0.55,
+  FADE: 90,
+};
 export const RETRY_SPEED = 45;
 
 /* ── The sky as an environment, for chrome and glass ───────── */
@@ -511,6 +530,7 @@ export class DriveEngine {
   /** Mars: the stations and the sky craft, and the Red Bastard's mission. */
   private marsView: MarsView | null = null;
   private marsRun: MarsRun | null = null;
+  private onFrame?: (dt: number) => void;
   /** The race intro, while it runs (null: driving). */
   private intro: IntroClock | null = null;
   private lastIntro = '';
@@ -560,6 +580,7 @@ export class DriveEngine {
   private hudAt = 0;
   private lastHud = '';
   private size = { w: 1, h: 1 };
+  private origin = { x: 0, y: 0 };
 
   constructor(canvas: HTMLCanvasElement, opts: EngineOptions) {
     this.design = opts.design;
@@ -569,6 +590,7 @@ export class DriveEngine {
     this.onFinish = opts.onFinish;
     this.onRadio = opts.onRadio;
     this.onMarker = opts.onMarker;
+    this.onFrame = opts.onFrame;
     this.cfg = WORLD_CFG[opts.world];
     this.weather = newWeather(opts.design.weather);
 
@@ -1110,6 +1132,19 @@ export class DriveEngine {
     this.autopilot = on;
   }
 
+  /** For the design space (components/drive/design-space.ts): the scene to add pieces to, and the
+   * track and where you are on it (null off a track). */
+  get stage3d(): THREE.Scene {
+    return this.scene;
+  }
+
+  /** The floating origin: everything is drawn relative to (ox, oy), the camera's ground point. */
+  where(): { track: Track; s: number; ox: number; oy: number } | null {
+    return this.trackWorld
+      ? { track: this.trackWorld.track, s: this.s, ox: this.origin.x, oy: this.origin.y }
+      : null;
+  }
+
   setPreview(on: boolean) {
     this.preview = on;
     this.previewYaw = 0;
@@ -1138,7 +1173,15 @@ export class DriveEngine {
             uColour: { value: new THREE.Color() },
             uOpacity: { value: WALL.OPACITY },
           };
-          const rib = new Ribbon(WALL.POINTS, WALL.SPACING, WALL.HEIGHT, WALL.LIFE, true, mat);
+          const rib = new Ribbon(
+            WALL.POINTS,
+            WALL.SPACING,
+            WALL.HEIGHT,
+            WALL.LIFE,
+            true,
+            mat,
+            WALL.FADE,
+          );
           rib.mesh.renderOrder = 7;
           this.scene.add(rib.mesh);
           wall = { rib, mat, colour: '' };
@@ -1598,6 +1641,8 @@ export class DriveEngine {
     const vP = wk ? null : this.posed(v.x, v.y, v.z, this.s, v);
     const ox = camP ? camP.x : this.cam.x;
     const oy = camP ? camP.y : this.cam.y;
+    this.origin.x = ox;
+    this.origin.y = oy;
     const camera = this.camera;
     camera.position.set(0, camP ? camP.z : this.cam.z, 0);
     if (shot) {
@@ -1736,6 +1781,7 @@ export class DriveEngine {
     this.updateMotes(speed, spec.vTop, boost, dt, w, aspect);
 
     this.paintMood(dt);
+    this.onFrame?.(dt);
     this.composer.render(dt);
     this.emitHud(speed, t);
   }

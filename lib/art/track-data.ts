@@ -33,7 +33,9 @@ export type Feature =
   | { kind: 'start'; at: number }
   /** A straight, unbanked stretch (the start grid, 2026-11-22: a level grid for the stage fire). */
   | { kind: 'straight'; from: number; to: number }
-  | { kind: 'jump'; at: number; length: number; every?: number }
+  /** A jump; `down` (m) lands it on a downslope that keeps falling that much further before it
+   * eases back (2026-11-23: "landing zones into downslope"). */
+  | { kind: 'jump'; at: number; length: number; every?: number; down?: number }
   /** A dive (2026-11-22: "after superloop make slope keep shooting downwards, so it enhances
    * acceleration, then it comes back up and a jump"): straight down a long slope, half back up,
    * held there for the jump, then slowly back to the road's own height. */
@@ -138,7 +140,18 @@ function keysAt(keys: readonly (readonly [number, number])[], s: number): number
  * the road runs straight for STRAIGHT m either side, rises on a kicker RAMP m long and RAMP_H high,
  * then is gone for the jump's length; the far side lands LAND_DROP lower and climbs back over LAND.
  */
-export const JUMP = { RAMP: 140, RAMP_H: 12, LAND: 220, LAND_DROP: 8, STRAIGHT: 200, EASE: 160 };
+export const JUMP = {
+  RAMP: 140,
+  RAMP_H: 12,
+  LAND: 220,
+  LAND_DROP: 8,
+  STRAIGHT: 200,
+  EASE: 160,
+  /** A downslope landing: how long the slope runs, how long it takes to ease back, the most drop. */
+  DOWN_RUN: 380,
+  DOWN_BACK: 600,
+  DOWN_MAX: 40,
+};
 
 /** Where s sits against a jump (or a fire tunnel): metres past its gap's start (negative before it), or null if far. */
 function jumpLocal(j: { at: number; every?: number }, s: number): number {
@@ -165,8 +178,16 @@ export function diveRise(x: number, dv: { length: number; depth: number; hold: n
   return 0;
 }
 
-function jumpRise(x: number, length: number): number {
-  const { RAMP, RAMP_H, LAND, LAND_DROP } = JUMP;
+export function jumpRise(x: number, length: number, down = 0): number {
+  const { RAMP, RAMP_H, LAND, LAND_DROP, DOWN_RUN, DOWN_BACK } = JUMP;
+  if (down > 0 && x >= length) {
+    // Landing on a slope that is steepest where you touch down and flattens as it falls.
+    const a = (x - length) / DOWN_RUN;
+    if (a < 1) return -LAND_DROP - down * a * (2 - a);
+    const b = (x - length - DOWN_RUN) / DOWN_BACK;
+    if (b < 1) return (-LAND_DROP - down) * (1 - b * b * (3 - 2 * b));
+    return 0;
+  }
   if (x >= -RAMP && x < 0) {
     const k = (x + RAMP) / RAMP;
     return RAMP_H * k * k;
@@ -181,9 +202,9 @@ function jumpRise(x: number, length: number): number {
 }
 
 /** 0 on a jump's straight, easing back to 1 away from it. */
-function jumpStraight(x: number, length: number): number {
+function jumpStraight(x: number, length: number, down = 0): number {
   const { STRAIGHT, EASE } = JUMP;
-  const d = x < 0 ? -x - STRAIGHT : x - length - STRAIGHT;
+  const d = x < 0 ? -x - STRAIGHT : x - length - STRAIGHT - (down > 0 ? JUMP.DOWN_RUN : 0);
   if (d <= 0) return 0;
   if (d >= EASE) return 1;
   const k = d / EASE;
@@ -290,7 +311,7 @@ export function compileTrack(d: TrackData): TrackDef {
       for (const w of cw)
         k += w.amp * (TAU / w.period) * Math.cos((TAU * s) / w.period + (w.phase ?? 0));
       if (ck) k += keysAt(ck, s);
-      for (const j of jumps) k *= jumpStraight(jumpLocal(j, s), j.length);
+      for (const j of jumps) k *= jumpStraight(jumpLocal(j, s), j.length, j.down);
       for (const st of straights) k *= straightAt(st, s);
       // A dive runs straight, so all its speed goes ahead.
       for (const dv of dives) k *= straightAt({ from: 0, to: dv.length }, jumpLocal(dv, s));
@@ -306,7 +327,7 @@ export function compileTrack(d: TrackData): TrackDef {
       for (const b of rb) e += bumpAt(p, b.at, b.height, b.width);
       for (const w of rw) e += w.amp * Math.sin((TAU * s) / w.period + (w.phase ?? 0));
       if (rk) e += keysAt(rk, s);
-      for (const j of jumps) e += jumpRise(jumpLocal(j, s), j.length);
+      for (const j of jumps) e += jumpRise(jumpLocal(j, s), j.length, j.down);
       for (const dv of dives) e += diveRise(jumpLocal(dv, s), dv);
       const x = crosses.length ? inCross(s) : null;
       if (x !== null) e += crossParts(x).e;
@@ -482,6 +503,12 @@ export function validateTrackData(d: unknown, span = 6000): string[] {
       (!num(f.at) || !num(f.length) || f.length <= 0 || f.length > LIMITS.maxJump)
     )
       out.push(`a jump needs at and a length up to ${LIMITS.maxJump} m`);
+    if (
+      f.kind === 'jump' &&
+      f.down !== undefined &&
+      (!num(f.down) || f.down < 0 || f.down > JUMP.DOWN_MAX)
+    )
+      out.push(`a jump's downslope landing drops 0 to ${JUMP.DOWN_MAX} m`);
     if (f.kind === 'fire' && (!num(f.at) || !num(f.length) || f.length <= 0 || f.length > 1000))
       out.push('a fire tunnel needs at and a length up to 1000 m');
     if (f.kind === 'fire' && f.style !== undefined && !FIRE_STYLES.includes(f.style))

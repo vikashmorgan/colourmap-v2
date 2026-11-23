@@ -19,5 +19,9 @@
   "bank": { "speed": 58, "max": 0.2 },
   "terrain": 0,
   "barrier": 1.5,
-  "features": [{ "kind": "gate", "every": 1000 }]
+  "features": [
+    { "kind": "gate", "every": 1000 },
+    { "kind": "jump", "at": 1000, "length": 100, "every": 3600 },
+    { "kind": "jump", "at": 2850, "length": 120, "every": 3600, "down": 30 }
+  ]
 }
