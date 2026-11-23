@@ -161,7 +161,7 @@ export default function DriveGame() {
         onFrame: (dt) => {
           const sp = spaceRef.current;
           const here = engineRef.current?.where();
-          if (sp?.root.visible && here) sp.update(dt, here.track, here.s);
+          if (sp?.root.visible && here) sp.update(dt, here.track, here.s, here.ox, here.oy);
         },
       });
     } catch {

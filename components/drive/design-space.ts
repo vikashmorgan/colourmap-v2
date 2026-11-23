@@ -736,7 +736,9 @@ export class DesignSpace {
     });
   }
 
-  update(dt: number, tr: Track, s: number) {
+  /** One frame: (ox, oy) is the engine's floating origin, which everything is drawn against. */
+  update(dt: number, tr: Track, s: number, ox = 0, oy = 0) {
+    this.root.position.set(-ox, 0, oy);
     this.t += dt;
     grainMat.uniforms.uTime.value = this.t;
     surfaceMat.uniforms.uTime.value = this.t;
