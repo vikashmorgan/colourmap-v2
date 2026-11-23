@@ -149,9 +149,13 @@ describe('the radioactive lakes', () => {
       expect(marsHeight(l.x, l.y)).toBeCloseTo(LAKE_LEVEL, 6);
       expect(onLake(l.x, l.y)).toBe(true);
       expect(radiation(l.x + l.r, l.y)).toBeCloseTo(1, 6);
-      expect(radiation(l.x + l.r + RAD_REACH / 2, l.y)).toBeGreaterThan(0.2);
-      expect(radiation(l.x + l.r + RAD_REACH / 2, l.y)).toBeLessThan(0.8);
     }
+    // West of the westmost lake, alone: half way out, half strength or so.
+    const w = LAKES[0];
+    const half = radiation(w.x - w.r - RAD_REACH / 2, w.y);
+    expect(half).toBeGreaterThan(0.2);
+    expect(half).toBeLessThan(0.8);
+    expect(radiation(w.x - w.r - RAD_REACH - 1, w.y)).toBe(0);
     expect(radiation(START.x, START.y)).toBe(0);
     expect(onLake(START.x, START.y)).toBe(false);
   });
