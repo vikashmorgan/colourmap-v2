@@ -17,7 +17,8 @@ export type CategoryId =
   | 'tunnels'
   | 'city'
   | 'chinatown'
-  | 'neon';
+  | 'neon'
+  | 'gates';
 
 export interface Variation {
   id: string;
@@ -279,6 +280,32 @@ export const CATEGORIES: Category[] = [
         'jumps',
         'Jump bridges',
         'Neon frames up every kicker, a bridge across the void under your flight, arrows down the landing.',
+      ),
+    ],
+  },
+  {
+    // 2026-11-23: "i want different awesome gates … u pass through them and get the boosters and
+    // weapons." The looks a track's gates can wear (lib/art/drive-gates.ts), one every 240 m here.
+    id: 'gates',
+    name: 'Gates',
+    vars: [
+      v(
+        'fire',
+        'Fire spitters',
+        'Two iron pillars spitting fire in toward the road and out the sides.',
+      ),
+      v('halo', 'Halo', 'A half ring of soft light standing over the road.'),
+      v('glow', 'Inner light', 'An arch filled with a soft sheet of light you drive through.'),
+      v(
+        'chrome',
+        'Old chrome',
+        'Polished chrome columns and arch, the sky and horizon in its curves.',
+      ),
+      v('rust', 'Rusty metal', 'A riveted girder portal, rusted through: Mars’s own.'),
+      v(
+        'fabric',
+        'Local fabric',
+        'Poles hung with the place’s cloth, swaying: red silk, neon mesh, sail.',
       ),
     ],
   },

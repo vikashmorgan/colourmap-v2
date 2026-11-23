@@ -51,6 +51,7 @@ import {
   WORLDS,
   type WorldId,
 } from '@/lib/art/drive-design';
+import { WEAPON_NAME, type WeaponId } from '@/lib/art/pickups';
 import type { RaceResult } from '@/lib/art/race-result';
 import type { RadioMessage } from '@/lib/art/radio';
 import { WEATHERS } from '@/lib/art/weather';
@@ -72,6 +73,12 @@ function storage(): Store | null {
 
 const quiet = 'rgba(255,248,240,';
 const font = 'var(--font-serif), Georgia, serif';
+/** The weapon charges' dots in the HUD, as their orbs in the gates (components/drive/gates-view.ts). */
+const CHARGE_DOT: Record<WeaponId, string> = {
+  shark: 'rgba(110,230,205,0.85)',
+  shot: 'rgba(255,225,100,0.85)',
+  laser: 'rgba(255,110,90,0.85)',
+};
 
 export default function DriveGame() {
   const router = useRouter();
@@ -195,6 +202,7 @@ export default function DriveGame() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     let engine: DriveEngine;
+    let lastPickup: string | null = null;
     try {
       engine = new DriveEngine(canvas, {
         world: first,
@@ -203,6 +211,12 @@ export default function DriveGame() {
         onHud: (h) => {
           setHud(h);
           driveSound.hud(h);
+          // Through a gate: a soft rush of air and a warm swell for what it gave.
+          if (h.pickup && !lastPickup) {
+            driveSound.whoosh(0.8);
+            driveSound.swell();
+          }
+          lastPickup = h.pickup ?? null;
         },
         onIntro: (s) => {
           setIntro(s);
@@ -369,6 +383,11 @@ export default function DriveGame() {
       if (k === 'm') {
         // Mars's small map, on and off.
         setMap((v) => !v);
+        return;
+      }
+      if (k === 'x') {
+        // Fire a weapon charge from the gates (the attack code handles it).
+        engineRef.current?.fireWeapon();
         return;
       }
       if (k === 'r') {
@@ -572,6 +591,34 @@ export default function DriveGame() {
               {hud.combo == null && hud.driftBest != null && <span> · best {hud.driftBest}</span>}
             </div>
           )}
+          {((hud.charges?.length ?? 0) > 0 || hud.pickup) && (
+            <div
+              data-testid="drive-charges"
+              style={{
+                fontSize: 11,
+                marginTop: 4,
+                color: `${quiet}0.5)`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              {hud.charges?.map((c, i) => (
+                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <span
+                    style={{ width: 6, height: 6, borderRadius: 3, background: CHARGE_DOT[c] }}
+                  />
+                  {WEAPON_NAME[c]}
+                </span>
+              ))}
+              {(hud.charges?.length ?? 0) > 0 && <span style={{ color: `${quiet}0.3)` }}>x</span>}
+              {hud.pickup && (
+                <span style={{ color: 'rgba(255,200,110,0.85)' }}>
+                  {hud.pickup === 'booster' ? 'booster' : `+ ${WEAPON_NAME[hud.pickup]}`}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -602,7 +649,7 @@ export default function DriveGame() {
         >
           {world === 'sky'
             ? 'W S climb and dive · A D turn · E faster · Q slower · F handbrake · space boost · R restart'
-            : '↑ drive · ← → steer · F handbrake: hold it and turn to drift · space boost · shift double · R restart'}
+            : '↑ drive · ← → steer · F handbrake: hold it and turn to drift · space boost · shift double · X fire · R restart'}
         </div>
       )}
 

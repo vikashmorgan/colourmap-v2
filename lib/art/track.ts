@@ -19,7 +19,7 @@
  */
 
 import { clamp, type Gate } from '@/lib/art/drive';
-import { compileTrack, type TrackData } from '@/lib/art/track-data';
+import { compileTrack, type GateStyle, type TrackData } from '@/lib/art/track-data';
 import coastData from '@/lib/art/tracks/coast.json';
 import goldData from '@/lib/art/tracks/gold.json';
 import neonData from '@/lib/art/tracks/neon.json';
@@ -86,6 +86,8 @@ export interface TrackDef {
   bridge?(s: number): boolean;
   /** An endless road's lap (m). */
   lap?: number;
+  /** Its gates (lib/art/drive-gates.ts): one every `every` m, in one look or the world's own. */
+  gate?: { every: number; style?: GateStyle };
 }
 
 /**
