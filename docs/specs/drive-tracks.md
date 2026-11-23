@@ -285,6 +285,21 @@ flame tool's palettes. Nothing flashes; pulses and flames ease.
 · `DriveEngine` hands over its scene, the track and where you are (`stage3d`, `where()`) and calls
 `onFrame` before it draws.
 
+### The districts (2026-11-23)
+
+- Two more categories, from the City's own districts:
+  - **Chinatown**: red gate (中華街), lantern strings, tall signs, pagodas, a dragon of light, sky lanterns.
+  - **Neon District**: neon towers, blade signs, sky bridges, docks, traffic, jump bridges.
+- On their tracks, Design opens on the district's own category.
+- **Chinatown Run** always wears the gate, lantern strings, signs and sky lanterns. Across the road it stays light only: lanterns and strings are points of light, not solid pieces.
+- **Neon District** always wears blade signs, sky bridges, traffic and jump bridges.
+  - Sky bridges never stand over a jump's flight.
+- **Neon jumps:** two a lap. The second lands on a downslope (`down: 30`):
+  - steepest where you touch down, falling 30 m further over 380 m
+  - easing back over 600 m
+  - `down` is validated from 0 to 40 m
+- Every jump has neon chevron frames up the kicker, a lit bridge across the void under the flight, and arrows down the landing.
+
 ## Vehicles and garage (shared)
 
 - [x] Leopard hull with gold rims; the Space Racer (2026-11-21).

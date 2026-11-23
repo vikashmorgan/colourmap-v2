@@ -18,7 +18,7 @@ import { PauseMenu, RaceResults, TitleScreen } from '@/components/drive/GameShee
 import RaceIntro from '@/components/drive/RaceIntro';
 import { FutureGauge, TimerGauge } from '@/components/drive/Speedometer';
 import TrackRing from '@/components/drive/TrackRing';
-import type { Pos } from '@/lib/art/design-space';
+import { dressingFor, type Pos } from '@/lib/art/design-space';
 import {
   controlsFromKeys,
   controlsFromTouches,
@@ -118,9 +118,19 @@ export default function DriveGame() {
     driveSound.controls({ boost: c.boost, handbrake, steer: c.steer });
   }, []);
 
+  /** Chinatown Run and the Neon District wear their district's pieces (lib/art/design-space.ts). */
+  const dress = useCallback((id: WorldId) => {
+    const sp = spaceRef.current;
+    if (!sp) return;
+    const cells = dressingFor(id);
+    sp.root.visible = cells.length > 0;
+    if (cells.length) sp.setLayers(cells);
+  }, []);
+
   const chooseWorld = useCallback(
     (id: WorldId) => {
       setWorldState(id);
+      dress(id);
       if (id === 'sky') setHint(true);
       worldRef.current = id;
       engineRef.current?.setWorld(id);
@@ -131,7 +141,7 @@ export default function DriveGame() {
       }
       pushControls();
     },
-    [pushControls],
+    [pushControls, dress],
   );
 
   const changeSound = useCallback((p: SoundPrefs) => {
@@ -185,7 +195,7 @@ export default function DriveGame() {
         onFrame: (dt) => {
           const sp = spaceRef.current;
           const here = engineRef.current?.where();
-          if (sp?.root.visible && here) sp.update(dt, here.track, here.s);
+          if (sp?.root.visible && here) sp.update(dt, here.track, here.s, here.ox, here.oy);
         },
       });
     } catch {
@@ -196,6 +206,11 @@ export default function DriveGame() {
     const space = new DesignSpace(engine.stage3d);
     space.root.visible = false;
     spaceRef.current = space;
+    const cells = dressingFor(first);
+    if (cells.length) {
+      space.setLayers(cells);
+      space.root.visible = true;
+    }
     const fit = () => {
       engine.resize(window.innerWidth, window.innerHeight);
       space.setScale(1.5 * window.innerHeight * Math.min(window.devicePixelRatio || 1, 1.5));
@@ -272,12 +287,9 @@ export default function DriveGame() {
     driveSound.tick();
     setDesigning(false);
     engineRef.current?.setAutopilot(false);
-    if (spaceRef.current) {
-      spaceRef.current.root.visible = false;
-      spaceRef.current.set({ cat: 0, v: 0 });
-    }
+    dress(worldRef.current);
     setRing(true);
-  }, []);
+  }, [dress]);
   const showDesign = useCallback((p: Pos) => spaceRef.current?.set(p), []);
 
   const race = useCallback(() => {
@@ -626,6 +638,7 @@ export default function DriveGame() {
       {designing && !failed && (
         <DesignHud
           trackName={WORLDS.find((w) => w.id === world)?.name ?? ''}
+          world={world}
           onShow={showDesign}
           onClose={closeDesign}
         />

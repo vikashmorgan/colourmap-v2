@@ -7,7 +7,16 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CATEGORIES, move, type Pos, pickKey, safePicks, safePos } from '@/lib/art/design-space';
+
+import {
+  CATEGORIES,
+  designStart,
+  move,
+  type Pos,
+  pickKey,
+  safePicks,
+  safePos,
+} from '@/lib/art/design-space';
 import { driveSound } from '@/lib/audio/drive-sound';
 
 const GOLD = '#f0b54a';
@@ -35,13 +44,15 @@ function write(key: string, v: unknown) {
 
 export interface DesignHudProps {
   trackName: string;
+  /** The world it opens on (Chinatown and the Neon District open on their own category). */
+  world?: string;
   /** The cell to show changed (and once on opening). */
   onShow: (p: Pos) => void;
   onClose: () => void;
 }
 
-export default function DesignHud({ trackName, onShow, onClose }: DesignHudProps) {
-  const [pos, setPos] = useState<Pos>(() => safePos(read(POS_KEY)));
+export default function DesignHud({ trackName, world = '', onShow, onClose }: DesignHudProps) {
+  const [pos, setPos] = useState<Pos>(() => designStart(world, safePos(read(POS_KEY))));
   const [picks, setPicks] = useState<string[]>(() => safePicks(read(PICKS_KEY)));
   const [list, setList] = useState(false);
   const [copied, setCopied] = useState(false);

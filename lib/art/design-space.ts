@@ -15,7 +15,9 @@ export type CategoryId =
   | 'markings'
   | 'bridges'
   | 'tunnels'
-  | 'city';
+  | 'city'
+  | 'chinatown'
+  | 'neon';
 
 export interface Variation {
   id: string;
@@ -233,6 +235,48 @@ export const CATEGORIES: Category[] = [
       ),
     ],
   },
+  {
+    // 2026-11-23: "enrich chinatown run with elements from the city's amazing chinatown, adapted to
+    // the 3d world of the drive", and the same for the Neon District.
+    id: 'chinatown',
+    name: 'Chinatown',
+    vars: [
+      v(
+        'gate',
+        'Red gate',
+        'The City’s red gate across the road every 400 m: four pillars, upturned roofs, 中華街 on its plaque.',
+      ),
+      v('lanterns', 'Lantern strings', 'Strings of red lanterns hung across the road every 28 m.'),
+      v(
+        'signs',
+        'Tall signs',
+        'Signs hanging over the road’s edges: ラーメン, 茶, 龍, 酒, 夢, 麺, 福, 喫茶.',
+      ),
+      v('pagodas', 'Pagodas', 'Five-tiered pagodas beside the road, their eaves in gold.'),
+      v('dragon', 'Dragon', 'A dragon of light flying just ahead of you, weaving over the road.'),
+      v('sky', 'Sky lanterns', 'Paper lanterns rising slowly beside the road.'),
+    ],
+  },
+  {
+    id: 'neon',
+    name: 'Neon District',
+    vars: [
+      v(
+        'towers',
+        'Neon towers',
+        'Towers either side wearing bands of neon, a beacon on every spire.',
+      ),
+      v('blades', 'Blade signs', 'Tall neon blade signs standing out over the road’s edges.'),
+      v('bridges', 'Sky bridges', 'Lit tubes crossing high over the road between two towers.'),
+      v('docks', 'Docks', 'Landing platforms on posts beside the road, lights round their rims.'),
+      v('traffic', 'Traffic', 'Ships in lanes over the road at four heights, one colour each.'),
+      v(
+        'jumps',
+        'Jump bridges',
+        'Neon frames up every kicker, a bridge across the void under your flight, arrows down the landing.',
+      ),
+    ],
+  },
 ];
 
 export interface Pos {
@@ -298,3 +342,40 @@ export const MARKING: Record<string, number> = {
   grid: 5,
   arrows: 6,
 };
+
+/** The cells a track wears for good (2026-11-23: "then use them on the track"): Chinatown Run and
+ * the Neon District dressed in their own district's pieces. */
+const DRESS: Record<string, [CategoryId, string][]> = {
+  chinatown: [
+    ['chinatown', 'gate'],
+    ['chinatown', 'lanterns'],
+    ['chinatown', 'signs'],
+    ['chinatown', 'sky'],
+  ],
+  neon: [
+    ['neon', 'blades'],
+    ['neon', 'bridges'],
+    ['neon', 'traffic'],
+    ['neon', 'jumps'],
+  ],
+};
+
+export function cellOf(cat: CategoryId, id: string): Pos | null {
+  const ci = CATEGORIES.findIndex((c) => c.id === cat);
+  const vi = ci < 0 ? -1 : CATEGORIES[ci].vars.findIndex((x) => x.id === id);
+  return vi < 0 ? null : { cat: ci, v: vi };
+}
+
+/** A world's own dressing (empty for the rest). */
+export function dressingFor(world: string): Pos[] {
+  return (DRESS[world] ?? []).map(([c, id]) => cellOf(c, id)).filter((p): p is Pos => p !== null);
+}
+
+/** Where the design space opens on a world: its own district's category, else where you left it. */
+export function designStart(world: string, saved: Pos): Pos {
+  const own =
+    world === 'chinatown' || world === 'neon'
+      ? cellOf(world, CATEGORIES.find((c) => c.id === world)?.vars[0].id ?? '')
+      : null;
+  return own ?? saved;
+}

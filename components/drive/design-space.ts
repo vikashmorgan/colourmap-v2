@@ -670,6 +670,432 @@ function every(s0: number, s1: number, p: number, o = 0): number[] {
   return out;
 }
 
+/* ── Chinatown and the Neon District (the City's pieces, adapted to the road) ── */
+
+/** The City's neon: cyan, magenta, amber, violet. */
+const NEON: V3[] = [
+  [0.3, 0.9, 1],
+  [1, 0.25, 0.8],
+  [1, 0.6, 0.15],
+  [0.6, 0.35, 1],
+];
+/** Chinatown's words (the City's signs): ramen, tea, dragon, wine, dream, noodles, good fortune, café. */
+export const CT_WORDS = ['ラーメン', '茶', '龍', '酒', '夢', '麺', '福', '喫茶'];
+/** The Neon District's blade signs. */
+export const NEON_WORDS = ['夢', 'NEON', 'ラーメン', 'DREAM', 'CITY', 'バー', 'HOTEL', '酒'];
+
+const texCache = new Map<string, THREE.Texture | null>();
+/** A word on a dark board, drawn once (null without a canvas, as in tests). */
+function wordTexture(
+  word: string,
+  ink: string,
+  bg: string,
+  vertical: boolean,
+): THREE.Texture | null {
+  const key = `${word}|${ink}|${bg}|${vertical}`;
+  if (texCache.has(key)) return texCache.get(key) ?? null;
+  let tex: THREE.Texture | null = null;
+  if (typeof document !== 'undefined') {
+    const cv = document.createElement('canvas');
+    cv.width = vertical ? 128 : 512;
+    cv.height = vertical ? 512 : 128;
+    const g = cv.getContext('2d');
+    if (g) {
+      g.fillStyle = bg;
+      g.fillRect(0, 0, cv.width, cv.height);
+      g.strokeStyle = ink;
+      g.lineWidth = 6;
+      g.strokeRect(6, 6, cv.width - 12, cv.height - 12);
+      g.fillStyle = ink;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      const chars = [...word];
+      if (vertical) {
+        const step = (cv.height - 40) / chars.length;
+        g.font = `bold ${Math.min(96, step * 0.85)}px "Noto Sans JP", "Yu Gothic", "Microsoft YaHei", sans-serif`;
+        chars.forEach((c, i) => {
+          g.fillText(c, cv.width / 2, 20 + step * (i + 0.5));
+        });
+      } else {
+        g.font = 'bold 84px "Noto Serif SC", "Yu Mincho", "SimSun", serif';
+        g.fillText(word, cv.width / 2, cv.height / 2 + 4);
+      }
+      tex = new THREE.CanvasTexture(cv);
+      tex.colorSpace = THREE.SRGBColorSpace;
+    }
+  }
+  texCache.set(key, tex);
+  return tex;
+}
+const css = (c: V3) =>
+  `rgb(${Math.round(c[0] * 255)},${Math.round(c[1] * 255)},${Math.round(c[2] * 255)})`;
+
+/** A board standing out into the street at s: u0 to u1 across, h0 to h1 up, facing along. */
+function board(
+  g: THREE.Group,
+  tr: Track,
+  s: number,
+  u0: number,
+  u1: number,
+  h0: number,
+  h1: number,
+  tex: THREE.Texture | null,
+  glow = 1.6,
+) {
+  if (!tex) return;
+  const pts = [pose(tr, s, u0, h0), pose(tr, s, u1, h0), pose(tr, s, u1, h1), pose(tr, s, u0, h1)];
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts.flat(), 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 1], 2));
+  geo.setIndex([0, 1, 2, 0, 2, 3]);
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    side: THREE.DoubleSide,
+    toneMapped: false,
+    transparent: true,
+  });
+  mat.color.setScalar(glow);
+  const m = new THREE.Mesh(geo, mat);
+  m.userData.ownMaterial = true;
+  m.frustumCulled = false;
+  g.add(m);
+}
+
+/** A roof with its ends turned up, across the road at s: centred at uc, half-width a, eaves at h. */
+function upturnedRoof(
+  k: Kit,
+  tr: Track,
+  s: number,
+  uc: number,
+  a: number,
+  h: number,
+  depth: number,
+) {
+  for (const t of [-depth, depth])
+    k.poly(
+      [
+        pose(tr, s + t, uc - a - 1.8, h + 1.1),
+        pose(tr, s + t, uc - a, h),
+        pose(tr, s + t, uc + a, h),
+        pose(tr, s + t, uc + a + 1.8, h + 1.1),
+      ],
+      false,
+      C.gold,
+      1.2,
+    );
+  const ridgeL = pose(tr, s, uc - a * 0.75, h + 1.8);
+  const ridgeR = pose(tr, s, uc + a * 0.75, h + 1.8);
+  k.line(ridgeL, ridgeR, C.gold, 1.3);
+  for (const t of [-depth, depth]) {
+    k.line(pose(tr, s + t, uc - a, h), ridgeL, C.deep, 0.8);
+    k.line(pose(tr, s + t, uc + a, h), ridgeR, C.deep, 0.8);
+    k.quad(pose(tr, s + t, uc - a, h), pose(tr, s + t, uc + a, h), ridgeR, ridgeL);
+  }
+}
+
+function chinatown(k: Kit, g: THREE.Group, tr: Track, id: string, s0: number, s1: number) {
+  const half = (s: number) => tr.def.half(s);
+  if (id === 'gate') {
+    for (const s of every(s0, s1, 400, 200)) {
+      if (!plainSpan(tr, s - 6, s + 6)) continue;
+      const hw = half(s);
+      for (const u of [-(hw + 1.5), -hw * 0.45, hw * 0.45, hw + 1.5])
+        column(k, tr, s, u, 0.7, Math.abs(u) > hw ? 10 : 12, C.red, 1, 0);
+      k.line(pose(tr, s, -hw - 2.5, 9), pose(tr, s, hw + 2.5, 9), C.red, 1.1);
+      k.line(pose(tr, s, -hw * 0.5, 11), pose(tr, s, hw * 0.5, 11), C.red, 1.1);
+      upturnedRoof(k, tr, s, 0, hw * 0.5, 12.5, 1.6);
+      const side = (hw * 0.55 + 1.5) / 2;
+      for (const sd of [-1, 1]) upturnedRoof(k, tr, s, sd * (hw * 0.45 + side), side, 10.3, 1.3);
+      board(
+        g,
+        tr,
+        s,
+        -3.2,
+        3.2,
+        9.3,
+        10.8,
+        wordTexture('中華街', '#ffcc66', '#7a0c06', false),
+        1.4,
+      );
+      for (const u of [-hw * 0.45, hw * 0.45]) k.dot(pose(tr, s, u, 8), [1, 0.2, 0.08], 2.2, 3.5);
+    }
+  } else if (id === 'lanterns') {
+    for (const s of every(s0, s1, 28, 14)) {
+      if (!plainSpan(tr, s - 2, s + 2)) continue;
+      const w = half(s) + 3;
+      const pts: V3[] = [];
+      for (let i = 0; i <= 16; i++) {
+        const f = i / 16;
+        pts.push(pose(tr, s, -w + 2 * w * f, 12 - 2.6 * Math.sin(Math.PI * f)));
+      }
+      k.poly(pts, false, C.deep, 0.6);
+      for (let i = 2; i <= 14; i += 2) {
+        const p = pts[i];
+        k.dot([p[0], p[1] - 1.2, p[2]], [1, 0.16, 0.06], 2.4, 3.2);
+        k.dot([p[0], p[1] - 2.4, p[2]], C.gold, 1.2, 0.8);
+      }
+    }
+  } else if (id === 'signs') {
+    for (const s of every(s0, s1, 22, 6)) {
+      if (!plainSpan(tr, s - 2, s + 2)) continue;
+      const i = Math.round(s / 22);
+      const sd = i % 2 ? 1 : -1;
+      const hw = half(s);
+      const word = CT_WORDS[i % CT_WORDS.length];
+      const ink = i % 3 ? '#ffd27a' : '#ff6a3a';
+      const top = 5 + 2.2 * [...word].length + 1.5;
+      board(
+        g,
+        tr,
+        s,
+        sd * (hw + 5),
+        sd * (hw + 1.8),
+        5,
+        top,
+        wordTexture(word, ink, '#2a0604', true),
+      );
+      k.line(pose(tr, s, sd * (hw + 6), 5), pose(tr, s, sd * (hw + 6), top + 1), C.deep, 0.6);
+    }
+  } else if (id === 'pagodas') {
+    for (const s of every(s0, s1, 320, 90)) {
+      const i = Math.round(s / 320);
+      const sd = i % 2 ? 1 : -1;
+      const p = pointAt(tr, s, sd * (half(s) + 55 + (i % 3) * 25));
+      if (!clearOfRoad(tr, s, p.x, p.y, 30)) continue;
+      const cx = p.x;
+      const cz = -p.y;
+      const rot = -frameAt(tr, s).h;
+      const cs = Math.cos(rot);
+      const sn = Math.sin(rot);
+      let y = 0;
+      for (let t = 0; t < 5; t++) {
+        const w = 10 * 0.82 ** t;
+        box(k, cx, cz, y, w, w, 5.5, rot, 0, C.red, 0.8);
+        y += 5.5;
+        const ring = [
+          [-1, -1],
+          [1, -1],
+          [1, 1],
+          [-1, 1],
+        ].map(([a, b]): V3 => {
+          const x = a * (w + 2.4);
+          const z = b * (w + 2.4);
+          return [cx + x * cs - z * sn, y + 1.2, cz + x * sn + z * cs];
+        });
+        const eave = ring.map((q): V3 => [cx + (q[0] - cx) * 0.9, y, cz + (q[2] - cz) * 0.9]);
+        k.poly(eave, true, C.gold, 1.1);
+        ring.forEach((q, j) => {
+          k.line(eave[j], q, C.gold, 1.2);
+        });
+        k.dot([cx, y - 2, cz], [1, 0.3, 0.1], 1.4, 2);
+      }
+      k.line([cx, y, cz], [cx, y + 9, cz], C.gold, 1.2);
+      k.dot([cx, y + 9.5, cz], C.warm, 2.5, 4);
+    }
+  }
+  // 'dragon' and 'sky' move, so they are drawn each frame (dragonFly, skyLantern).
+}
+
+/** The dragon of light flying just ahead of you over the road, undulating. */
+function dragonFly(sp: Sparks, tr: Track, s: number, t: number) {
+  const N = 70;
+  for (let j = 0; j < N; j++) {
+    const q = s + 70 + j * 2.4;
+    if (!plain(tr, q)) continue;
+    const hw = tr.def.half(q);
+    const u = Math.sin(t * 0.7 - j * 0.16) * hw * 0.6;
+    const h = 13 + 3 * Math.sin(t * 1.1 - j * 0.22);
+    const head = j === 0;
+    const col: V3 = head ? [1, 0.8, 0.3] : j % 4 === 0 ? [1, 0.62, 0.18] : [0.95, 0.15, 0.06];
+    sp.spawn(
+      pose(tr, q, u, h),
+      [0, 0, 0],
+      0.06,
+      5,
+      head ? 4.5 : 2.6 * (1 - j / N) + 0.8,
+      0,
+      0,
+      0,
+      col,
+    );
+    if (j % 6 === 3)
+      sp.spawn(pose(tr, q, u, h + 1.6), [0, 0, 0], 0.06, 5, 1.1, 0, 0, 0, [1, 0.7, 0.25]);
+  }
+}
+
+/** One sky lantern rising beside the road ahead. */
+function skyLantern(sp: Sparks, tr: Track, s: number) {
+  const q = s + 80 + Math.random() * 600;
+  const u = (Math.random() < 0.5 ? 1 : -1) * (tr.def.half(q) + 8 + Math.random() * 90);
+  sp.spawn(
+    ground(tr, q, u, 2),
+    [rnd(0.4), 2.2 + Math.random(), rnd(0.4)],
+    16,
+    5,
+    2.2,
+    0,
+    0,
+    0,
+    [1, 0.42, 0.1],
+  );
+}
+
+function neon(k: Kit, g: THREE.Group, tr: Track, id: string, s0: number, s1: number) {
+  const half = (s: number) => tr.def.half(s);
+  const steel: V3 = [0.35, 0.3, 0.45];
+  if (id === 'towers') {
+    for (const s of every(s0, s1, 45)) {
+      const rot = -frameAt(tr, s).h;
+      const cs = Math.cos(rot);
+      const sn = Math.sin(rot);
+      for (const sd of [-1, 1]) {
+        const i = Math.round(s / 45) + (sd > 0 ? 7 : 0);
+        const p = pointAt(tr, s, sd * (half(s) + 22 + (i % 3) * 10));
+        if (!clearOfRoad(tr, s, p.x, p.y, 12)) continue;
+        const h = 50 + (i % 5) * 22;
+        box(k, p.x, -p.y, 0, 8, 8, h, rot, 0, steel, 0.5);
+        for (let b = 0; b < 2 + (i % 3); b++) {
+          const y = h * (0.25 + 0.22 * b);
+          const c = NEON[(i + b) % 4];
+          const ring = [
+            [-1, -1],
+            [1, -1],
+            [1, 1],
+            [-1, 1],
+          ].map(
+            ([a, bb]): V3 => [
+              p.x + a * 8.3 * cs - bb * 8.3 * sn,
+              y,
+              -p.y + a * 8.3 * sn + bb * 8.3 * cs,
+            ],
+          );
+          k.poly(ring, true, c, 1.6);
+          k.poly(
+            ring.map((q): V3 => [q[0], y + 0.8, q[2]]),
+            true,
+            c,
+            1.2,
+          );
+        }
+        k.line([p.x, h, -p.y], [p.x, h + 12, -p.y], NEON[i % 4], 1);
+        k.dot([p.x, h + 12.5, -p.y], NEON[(i + 1) % 4], 2.2, 3.5);
+      }
+    }
+  } else if (id === 'blades') {
+    for (const s of every(s0, s1, 35, 10)) {
+      if (!plainSpan(tr, s - 2, s + 2)) continue;
+      const i = Math.round(s / 35);
+      const sd = i % 2 ? 1 : -1;
+      const hw = half(s);
+      const word = NEON_WORDS[i % NEON_WORDS.length];
+      const c = NEON[i % 4];
+      const top = 7 + 2.6 * [...word].length + 2;
+      board(
+        g,
+        tr,
+        s,
+        sd * (hw + 6.5),
+        sd * (hw + 2.5),
+        7,
+        top,
+        wordTexture(word, css(c), '#06040c', true),
+        1.8,
+      );
+    }
+  } else if (id === 'bridges') {
+    for (const s of every(s0, s1, 90, 45)) {
+      if (!plainSpan(tr, s - 3, s + 3)) continue;
+      // Never over a jump's flight: you would fly through it.
+      if (tr.def.gap && [-300, -150, 0, 150, 300, 450].some((d) => tr.def.gap?.(s + d))) continue;
+      const i = Math.round(s / 90);
+      const hw = half(s);
+      const h = 18 + (i % 3) * 8;
+      const W = hw + 22;
+      const c = NEON[i % 4];
+      const at = (u: number, dh: number, dt: number) => pose(tr, s + dt, u, h + dh);
+      for (const [dh, dt] of [
+        [0, -1.6],
+        [0, 1.6],
+        [3, -1.6],
+        [3, 1.6],
+      ])
+        k.line(at(-W, dh, dt), at(W, dh, dt), C.warm, 0.8);
+      for (let u = -W; u <= W; u += 3) {
+        k.poly([at(u, 0, -1.6), at(u, 3, -1.6), at(u, 3, 1.6), at(u, 0, 1.6)], true, C.deep, 0.5);
+        k.dot(at(u, 0.2, 0), c, 1.8, 1.6);
+      }
+      for (const sd of [-1, 1]) {
+        const p = pointAt(tr, s, sd * (W + 4));
+        box(k, p.x, -p.y, 0, 4, 4, h + 10, -frameAt(tr, s).h, 0, steel, 0.6);
+      }
+    }
+  } else if (id === 'docks') {
+    for (const s of every(s0, s1, 160, 80)) {
+      const i = Math.round(s / 160);
+      const sd = i % 2 ? 1 : -1;
+      const p = pointAt(tr, s, sd * (half(s) + 30));
+      if (!clearOfRoad(tr, s, p.x, p.y, 16)) continue;
+      const h = 26 + (i % 3) * 9;
+      const c = NEON[i % 4];
+      k.line([p.x, 0, -p.y], [p.x, h, -p.y], C.deep, 0.7);
+      k.poly(ringXZ(p.x, h, -p.y, 9, 40), true, c, 1.4, s);
+      k.poly(ringXZ(p.x, h - 0.6, -p.y, 7.5, 40), true, C.deep, 0.5);
+      box(k, p.x, -p.y, h, 1.4, 4, 1, -frameAt(tr, s).h, 0, C.warm, 1);
+      k.dot([p.x, h + 1.8, -p.y], NEON[(i + 2) % 4], 2, 3);
+    }
+  } else if (id === 'jumps') {
+    // At every jump: neon chevron frames up the kicker, a bridge across the void under your
+    // flight, and arrows down the landing.
+    const gap = tr.def.gap;
+    if (!gap) return;
+    for (let s = Math.max(4, s0); s < s1; s += 2) {
+      if (!gap(s) || gap(s - 2)) continue;
+      let e = s;
+      while (gap(e) && e < s + 600) e += 2;
+      for (let q = s - 130; q < s; q += 13) {
+        const c = NEON[Math.abs(Math.round(q / 13)) % 4];
+        const w = half(q) + 2;
+        k.poly(
+          [
+            pose(tr, q, -w, 0),
+            pose(tr, q, -w, 7),
+            pose(tr, q, 0, 9),
+            pose(tr, q, w, 7),
+            pose(tr, q, w, 0),
+          ],
+          false,
+          c,
+          1.5,
+          q,
+        );
+      }
+      const mid = (s + e) / 2;
+      const hw = half(s - 10);
+      const W = hw + 40;
+      const a = pose(tr, mid, -W, -14);
+      const b = pose(tr, mid, W, -14);
+      for (const dh of [0, 2.5])
+        k.line([a[0], a[1] + dh, a[2]], [b[0], b[1] + dh, b[2]], C.warm, 1);
+      for (let u = -W; u <= W; u += 4)
+        k.dot(pose(tr, mid, u, -13.6), NEON[Math.abs(Math.round(u / 4)) % 4], 2, 1.8);
+      for (const u of [-W, -hw, hw, W]) {
+        const top = pose(tr, mid, u, -14);
+        k.line(top, [top[0], 0, top[2]], C.deep, 0.7);
+      }
+      for (let q = e + 10; q < e + 220; q += 14) {
+        const w = half(q) * 0.6;
+        k.poly(
+          [pose(tr, q - 4, -w, 0.3), pose(tr, q, 0, 0.3), pose(tr, q - 4, w, 0.3)],
+          false,
+          NEON[0],
+          1.4,
+          q,
+        );
+      }
+    }
+  }
+}
+
 /* ── the space ── */
 
 interface Chunk {
@@ -681,13 +1107,18 @@ export class DesignSpace {
   readonly root = new THREE.Group();
   private sparks = new Sparks();
   private chunks = new Map<number, Chunk>();
-  private pos: Pos = { cat: 0, v: 0 };
+  private layers: Pos[] = [{ cat: 0, v: 0 }];
+  /** The fireworks showing (a variation id), or null. */
+  private show: string | null = null;
+  /** Moving things the layers ask for. */
+  private moving = { ships: false, traffic: false, dragon: false, lanterns: false };
+  private lanternT = 0;
   private rockets: Rocket[] = [];
   private timer = 0;
   private side = 1;
   private t = 0;
   private bend = 0;
-  private ships: { off: number; u: number; y: number; v: number }[] = [];
+  private ships: { off: number; u: number; y: number; v: number; col: V3 }[] = [];
 
   constructor(scene: THREE.Scene) {
     this.root.add(this.sparks.points);
@@ -700,32 +1131,51 @@ export class DesignSpace {
     grainMat.uniforms.uScale.value = px;
   }
 
+  /** Show one cell (the design space). */
   set(p: Pos) {
-    this.pos = p;
+    this.setLayers([p]);
+  }
+
+  /** Show several cells at once (a track's own dressing). */
+  setLayers(ps: Pos[]) {
+    this.layers = ps.length ? ps : [{ cat: 0, v: 0 }];
     for (const c of this.chunks.values()) this.drop(c);
     this.chunks.clear();
     this.sparks.clear();
     this.rockets = [];
     this.timer = 0.3;
-    const v = this.variation();
-    surfaceMat.uniforms.uStyle.value = SURFACE_STYLE[v.id] ?? 5;
-    surfaceMat.uniforms.uMark.value = this.cat().id === 'markings' ? MARKING[v.id] : 0;
-    this.ships =
-      this.cat().id === 'city' && v.id === 'lanes'
-        ? Array.from({ length: 50 }, (_, i) => ({
+    const cells = this.layers.map((p) => ({
+      cat: CATEGORIES[p.cat].id,
+      id: CATEGORIES[p.cat].vars[p.v].id,
+    }));
+    const has = (cat: string, id: string) => cells.some((c) => c.cat === cat && c.id === id);
+    const surf = cells.find((c) => c.cat === 'surface' || c.cat === 'markings');
+    surfaceMat.uniforms.uStyle.value = surf ? (SURFACE_STYLE[surf.id] ?? 5) : 5;
+    surfaceMat.uniforms.uMark.value = surf?.cat === 'markings' ? MARKING[surf.id] : 0;
+    this.show = cells.find((c) => c.cat === 'fireworks')?.id ?? null;
+    this.moving = {
+      ships: has('city', 'lanes'),
+      traffic: has('neon', 'traffic'),
+      dragon: has('chinatown', 'dragon'),
+      lanterns: has('chinatown', 'sky'),
+    };
+    this.ships = this.moving.ships
+      ? Array.from({ length: 50 }, (_, i) => ({
+          off: Math.random() * 1000,
+          u: (i % 2 ? 1 : -1) * (70 + (i % 5) * 35),
+          y: 30 + (i % 4) * 26,
+          v: (i % 2 ? 1 : -1) * (25 + Math.random() * 30),
+          col: (i % 2 ? [0.9, 0.85, 0.75] : [1, 0.15, 0.08]) as V3,
+        }))
+      : this.moving.traffic
+        ? Array.from({ length: 70 }, (_, i) => ({
             off: Math.random() * 1000,
-            u: (i % 2 ? 1 : -1) * (70 + (i % 5) * 35),
-            y: 30 + (i % 4) * 26,
-            v: (i % 2 ? 1 : -1) * (25 + Math.random() * 30),
+            u: rnd(14),
+            y: 14 + (i % 4) * 9,
+            v: 18 + (i % 4) * 9 + Math.random() * 10,
+            col: NEON[i % 4],
           }))
         : [];
-  }
-
-  private cat() {
-    return CATEGORIES[this.pos.cat];
-  }
-  private variation() {
-    return this.cat().vars[this.pos.v];
   }
 
   private drop(c: Chunk) {
@@ -733,10 +1183,14 @@ export class DesignSpace {
     c.group.traverse((o) => {
       if (o instanceof THREE.Mesh || o instanceof THREE.Points || o instanceof THREE.LineSegments)
         o.geometry.dispose();
+      if (o instanceof THREE.Mesh && o.userData.ownMaterial)
+        (o.material as THREE.Material).dispose();
     });
   }
 
-  update(dt: number, tr: Track, s: number) {
+  /** One frame: (ox, oy) is the engine's floating origin, which everything is drawn against. */
+  update(dt: number, tr: Track, s: number, ox = 0, oy = 0) {
+    this.root.position.set(-ox, 0, oy);
     this.t += dt;
     grainMat.uniforms.uTime.value = this.t;
     surfaceMat.uniforms.uTime.value = this.t;
@@ -788,23 +1242,20 @@ export class DesignSpace {
           );
         }
       }
-    if (this.cat().id === 'fireworks') this.fireworks(dt, tr, s);
+    if (this.show) this.fireworks(dt, tr, s, this.show);
+    if (this.moving.dragon) dragonFly(this.sparks, tr, s, this.t);
+    if (this.moving.lanterns) {
+      this.lanternT -= dt;
+      if (this.lanternT < 0) {
+        this.lanternT = 0.25;
+        skyLantern(this.sparks, tr, s);
+      }
+    }
     for (const sh of this.ships) {
       sh.off += sh.v * dt;
       const q = s + (((sh.off % 1100) + 1100) % 1100) - 100;
       const p = ground(tr, q, sh.u, sh.y);
-      const white = sh.v > 0;
-      this.sparks.spawn(
-        p,
-        [0, 0, 0],
-        0.9,
-        5,
-        1.6,
-        0,
-        0,
-        0,
-        white ? [0.9, 0.85, 0.75] : [1, 0.15, 0.08],
-      );
+      this.sparks.spawn(p, [0, 0, 0], 0.9, 5, 1.6, 0, 0, 0, sh.col);
     }
     this.stepRockets(dt);
     this.sparks.step(dt);
@@ -820,10 +1271,9 @@ export class DesignSpace {
 
   /* ── fireworks ── */
 
-  private fireworks(dt: number, tr: Track, s: number) {
+  private fireworks(dt: number, tr: Track, s: number, id: string) {
     this.timer -= dt;
     if (this.timer > 0) return;
-    const id = this.variation().id;
     if (id === 'arch') {
       this.timer = 0.32;
       this.side = -this.side;
@@ -938,8 +1388,25 @@ export class DesignSpace {
     const k = new Kit();
     const burners: Burner[] = [];
     const group = new THREE.Group();
-    const cat = this.cat().id;
-    const id = this.variation().id;
+    for (const p of this.layers) {
+      const c = CATEGORIES[p.cat];
+      this.layer(k, burners, group, tr, s0, s1, c.id, c.vars[p.v].id);
+    }
+    kitToGroup(k, group);
+    this.root.add(group);
+    return { group, burners };
+  }
+
+  private layer(
+    k: Kit,
+    burners: Burner[],
+    group: THREE.Group,
+    tr: Track,
+    s0: number,
+    s1: number,
+    cat: string,
+    id: string,
+  ) {
     const half = (s: number) => tr.def.half(s);
     const edges = () => {
       for (const sd of [1, -1])
@@ -1230,10 +1697,11 @@ export class DesignSpace {
     } else if (cat === 'city') {
       this.city(k, tr, id, s0, s1);
       edges();
+    } else if (cat === 'chinatown') {
+      chinatown(k, group, tr, id, s0, s1);
+    } else if (cat === 'neon') {
+      neon(k, group, tr, id, s0, s1);
     }
-    kitToGroup(k, group);
-    this.root.add(group);
-    return { group, burners };
   }
 
   private bridge(k: Kit, tr: Track, id: string, s0: number, s1: number) {
