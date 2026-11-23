@@ -96,3 +96,31 @@ Esc goes back one step; in a race it pauses.
 
 - Best times per track and vehicle stay where they are (localStorage keys in drive-game.md).
 - The ring remembers the last track chosen.
+
+## The menu (2026-11-23)
+
+Asked: "make the right hand menu better. like a proper menu that opens with garage a proper
+category in itself." Built in `components/drive/DriveMenu.tsx`; replaces the menu column.
+
+- The button at the top right still names the track. It slides a sheet in from the right: a sheet
+  lifted over the game with a soft shadow on its left edge, rounded on that side, the game held
+  still behind it (the Design preview). On a phone the sheet rises from the bottom instead, over
+  the lower half.
+- Four categories along its top, named in the display serif, the chosen one underlined in gold:
+  - **Tracks**: the nine worlds with their keys (the current one lit), and "Track ring ›".
+  - **Garage**: Vehicle (car or hover ship, for this world), then Body for the car or Reactors,
+    Cockpit and Core for the ship, Colour (the hulls, with a colour picker under Paint), Fire and
+    Flames, and "Full garage ›" to the Garage page. Choosing Garage puts your ride big on the
+    Garage's turntable, on Mars (components/garage/scene.ts), filling the screen beside the sheet:
+    drag to turn it, scroll to look closer, "Hold to rev" for the fire at full. Every pick rebuilds
+    the ride on the turntable at once. The game rests (its loop stopped) while the Garage shows,
+    and wakes when you leave it.
+  - **World**: Weather, Light trail, Racers (5 rivals or alone).
+  - **Settings**: Mode, Speedo; the game's sound joins here when it lands.
+- Each choice is a small label over its options in the serif; the chosen one is warm white with a
+  gold dot and a fine gold edge.
+- Keyboard first: the sheet opens with its current category focused; ← → change category, ↑ ↓
+  move through the choices, Enter picks, Esc closes. The arrows never reach the car while it is
+  open. A quiet line at the foot names the keys.
+- The menu reopens on the category used last (`drive.menuTab`). Everything chosen is the same saved
+  design as before (`drive.design`).

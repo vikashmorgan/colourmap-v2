@@ -173,6 +173,86 @@ function leopardTexture(): THREE.Texture | null {
   return leopardMap;
 }
 
+let tarnishMap: THREE.Texture | null = null;
+
+/**
+ * Old chrome's tarnish (2026-11-23): a warm silver clouded with soft brown-grey haze, darker
+ * blooms where it has oxidised, fine pitting, and faint polish streaks still catching the light.
+ * Kept light overall, so the metal still mirrors the world.
+ */
+function tarnishTexture(): THREE.Texture | null {
+  if (tarnishMap) return tarnishMap;
+  if (typeof document === 'undefined') return null;
+  if (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent)) return null;
+  const N = 256;
+  const c = document.createElement('canvas');
+  c.width = N;
+  c.height = N;
+  const g = c.getContext('2d');
+  if (!g) return null;
+  g.fillStyle = '#d8ccb4';
+  g.fillRect(0, 0, N, N);
+  let s = 23;
+  const rnd = () => {
+    s = (s * 16807) % 2147483647;
+    return s / 2147483647;
+  };
+  const wrap = (draw: (x: number, y: number) => void, x: number, y: number) => {
+    for (const dx of [-N, 0, N]) for (const dy of [-N, 0, N]) draw(x + dx, y + dy);
+  };
+  // Broad haze: soft warm-grey clouds.
+  for (let i = 0; i < 70; i++) {
+    const x = rnd() * N;
+    const y = rnd() * N;
+    const r = 18 + rnd() * 50;
+    const warm = rnd() < 0.6;
+    const a = 0.05 + rnd() * 0.09;
+    wrap(
+      (cx, cy) => {
+        const grad = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+        grad.addColorStop(0, warm ? `rgba(150,118,80,${a})` : `rgba(110,106,100,${a})`);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = grad;
+        g.fillRect(cx - r, cy - r, r * 2, r * 2);
+      },
+      x,
+      y,
+    );
+  }
+  // Oxide blooms: small darker brown stains.
+  for (let i = 0; i < 90; i++) {
+    const x = rnd() * N;
+    const y = rnd() * N;
+    const r = 1.5 + rnd() * 6;
+    const rot = rnd() * 3;
+    wrap(
+      (cx, cy) => {
+        g.fillStyle = `rgba(96,72,48,${0.12 + rnd() * 0.18})`;
+        g.beginPath();
+        g.ellipse(cx, cy, r, r * (0.5 + rnd() * 0.5), rot, 0, Math.PI * 2);
+        g.fill();
+      },
+      x,
+      y,
+    );
+  }
+  // Fine pitting.
+  for (let i = 0; i < 700; i++) {
+    g.fillStyle = `rgba(70,60,50,${0.18 + rnd() * 0.25})`;
+    g.fillRect(rnd() * N, rnd() * N, 1, 1);
+  }
+  // Polish streaks, pale and long.
+  for (let i = 0; i < 26; i++) {
+    g.fillStyle = `rgba(250,244,232,${0.06 + rnd() * 0.08})`;
+    g.fillRect(0, rnd() * N, N, 0.6 + rnd() * 1.4);
+  }
+  tarnishMap = new THREE.CanvasTexture(c);
+  tarnishMap.wrapS = THREE.RepeatWrapping;
+  tarnishMap.wrapT = THREE.RepeatWrapping;
+  tarnishMap.colorSpace = THREE.SRGBColorSpace;
+  return tarnishMap;
+}
+
 /** The rims' and trim's own metal for a hull, or the vehicle's usual colour (fallback). */
 export function rimMaterial(
   h: Hull,
@@ -209,8 +289,20 @@ export function hullMaterial(h: Hull, env: THREE.Texture | null): THREE.MeshPhys
     clearcoat: h.clearcoat,
     clearcoatRoughness: 0.08,
     envMap: env,
-    envMapIntensity: h.id === 'chrome' ? 1.4 : 0.8,
+    // New chrome mirrors the most; old chrome a little less, its haze softening the reflection.
+    envMapIntensity: h.id === 'chrome' ? 1.4 : h.id === 'oldChrome' ? 1.15 : 0.8,
   });
+  if (h.pattern === 'tarnish') {
+    const map = tarnishTexture();
+    if (map) {
+      m.map = map;
+      m.color.set('#f2ead8');
+    }
+    // A thin, rubbed sheen over the haze, as polished old metal has.
+    m.sheen = 0.25;
+    m.sheenRoughness = 0.6;
+    m.sheenColor.set('#d9c7a2');
+  }
   if (h.patina > 0) {
     const map = rustTexture();
     if (map) {
