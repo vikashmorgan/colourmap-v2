@@ -26,6 +26,7 @@ import {
   REGIONS,
   type Region,
 } from '@/lib/art/mars-map';
+import { DECK, type Deck, KICKER, type Kicker, rampHeight } from '@/lib/art/mars-ramps';
 import { LINE, SALT_PERIOD, START } from '@/lib/art/salt-flat-game';
 import { type Ground, type Hit, MARS_HANDLING, type Vehicle, type World } from '@/lib/art/vehicle';
 
@@ -131,9 +132,19 @@ function featureMask(x: number, y: number): number {
   return m;
 }
 
-/** The ground's height on Mars (m): the dunes, flattened on the course, the great crater and the
- * flat glowing lakes. */
+/** The kickers and decks (filled in once the stations and pipelines are placed, below). */
+export const KICKERS: Kicker[] = [];
+export const DECKS: Deck[] = [];
+
+/** The ground's height on Mars (m) as the physics drives it: the terrain and the ramps and decks
+ * standing on it. */
 export function marsHeight(x: number, y: number): number {
+  return marsBase(x, y) + rampHeight(KICKERS, DECKS, x, y);
+}
+
+/** The bare terrain (m): the dunes, flattened on the course, the great crater and the flat
+ * glowing lakes. The backdrop draws this; the ramps and decks are meshes on it. */
+export function marsBase(x: number, y: number): number {
   let h = waves(x, y).h * duneMask(x, y).m * featureMask(x, y);
   const dc = Math.hypot(x - CRATER.x, y - CRATER.y);
   if (dc < CRATER.R * 2.5) h += craterHeight(dc);
@@ -475,6 +486,51 @@ export const PIPES: Pipe[] = (() => {
     }
   }
   return out;
+})();
+
+/** Whether a kicker leaves the open ways clear (his loop, the line, the start, the drift pan). */
+export function kickerClear(k: Kicker): boolean {
+  // The run-up too (60 m before it) must miss the stations.
+  for (const u of [-60, -30]) {
+    if (siteHit(k.x + Math.cos(k.h) * u, k.y + Math.sin(k.h) * u, k.width / 2 + 2)) return false;
+  }
+  for (const u of [0, k.len / 2, k.len + KICKER.back]) {
+    const x = k.x + Math.cos(k.h) * u;
+    const y = k.y + Math.sin(k.h) * u;
+    if (distToLoop(x, y) < 40) return false;
+    const cy = clamp(y, LINE.y0, LINE.y1);
+    if (Math.hypot(x - LINE.x, y - cy) < 60) return false;
+    if (Math.hypot(x - START.x, y - START.y) < 120) return false;
+    if (Math.hypot(x - DRIFT_PAN.x, y - DRIFT_PAN.y) < DRIFT_PAN.full + 20) return false;
+    if (siteHit(x, y, k.width / 2 + 4)) return false;
+  }
+  return true;
+}
+
+// Two kickers by each factory, running past it; a ring of them out on the Landing Plain;
+// a deck on top of each pipeline run.
+(() => {
+  const add = (x: number, y: number, h: number) => {
+    const k: Kicker = { x, y, h, len: KICKER.len, height: KICKER.height, width: KICKER.width };
+    if (kickerClear(k)) KICKERS.push(k);
+  };
+  for (const s of SITES) {
+    if (s.kind !== 'factory') continue;
+    for (const a of [s.rot, s.rot + Math.PI]) {
+      const d = s.r + 16;
+      // Tangent to the factory, so the run-up passes beside it, not through it.
+      add(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, a + Math.PI / 2);
+    }
+  }
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + 0.3;
+    add(START.x + Math.cos(a) * 560, START.y + Math.sin(a) * 560, a + Math.PI / 2);
+  }
+  for (const p of PIPES) {
+    const L = Math.hypot(p.bx - p.ax, p.by - p.ay);
+    if (L < DECK.ramp * 2 + 30) continue;
+    DECKS.push({ ...p, height: DECK.height, width: DECK.width, ramp: DECK.ramp });
+  }
 })();
 
 /** You flow round a station's footprint, never crash into it (as along every wall). */

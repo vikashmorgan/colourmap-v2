@@ -9,8 +9,8 @@
 
 import { useEffect, useRef } from 'react';
 import { LOOP_PATH } from '@/lib/art/mars';
-import { geigerRate } from '@/lib/art/mars-fx';
 import type { AttackId } from '@/lib/art/mars-attacks';
+import { geigerRate } from '@/lib/art/mars-fx';
 import { CRATER, LAKES, LIGHTHOUSE, REGIONS } from '@/lib/art/mars-map';
 import type { AttackHud, MarsWhere } from './mars-run';
 import { setGeiger } from './mars-sound';
@@ -36,7 +36,7 @@ export function AttackStrip({
       style={{
         position: 'absolute',
         left: 18,
-        bottom: 170,
+        bottom: 200,
         display: 'flex',
         flexDirection: 'column',
         gap: 4,
@@ -82,13 +82,7 @@ export function AttackStrip({
 /** The laser's crosshair, once it is unlocked: an old-school amber ring and ticks at the centre,
  * easing in as he comes into view ahead and closing to a lock when the laser would hit. Nothing
  * blinks. A click fires the laser. */
-export function Crosshair({
-  aim,
-  onFire,
-}: {
-  aim: AttackHud['aim'];
-  onFire: () => void;
-}) {
+export function Crosshair({ aim, onFire }: { aim: AttackHud['aim']; onFire: () => void }) {
   const near = aim?.near ?? 0;
   const lock = aim?.lock ?? false;
   const shown = aim ? 0.25 + 0.65 * near : 0;

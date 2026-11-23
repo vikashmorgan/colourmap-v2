@@ -211,9 +211,9 @@ export class MarsRun {
    * The one way in for an attack (the engine's weapon hook calls it): fires it if it is unlocked
    * and ready. Returns whether it went.
    */
-  fireAttack(id: AttackId, t: number): boolean {
+  fireAttack(id: AttackId, t: number, charge = false): boolean {
     if (!this.mission || this.mission.phase === 'caught') return false;
-    const out = fireAttackRule(this.attacks, id, t, this.you, this.pose, this.catches);
+    const out = fireAttackRule(this.attacks, id, t, this.you, this.pose, this.catches, charge);
     this.attacks = out.attacks;
     this.pending.push(...out.events);
     return out.fired;

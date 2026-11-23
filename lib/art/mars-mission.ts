@@ -99,7 +99,7 @@ export const RED_BASTARD: Voice = {
       when: (s) => s.since >= CARD_TIME - 0.6,
       lines: [
         "You'll never get me, you loser.",
-        'Catch me if you can. You can\'t.',
+        "Catch me if you can. You can't.",
         'Oh look, the slow one is back.',
       ],
     },
@@ -123,13 +123,13 @@ export const RED_BASTARD: Voice = {
       id: 'crater',
       repeat: 80,
       when: (s, sent) => sent.has('start') && s.phase === 'chase' && s.region === 'crater',
-      lines: ['Nice hole. Stay in it.', 'Mind the rim. Or don\'t.'],
+      lines: ['Nice hole. Stay in it.', "Mind the rim. Or don't."],
     },
     {
       id: 'lakes',
       repeat: 80,
       when: (s, sent) => sent.has('start') && s.phase === 'chase' && s.region === 'lakes',
-      lines: ['Go on, have a swim. You glow better.', 'Hear that clicking? That\'s you, cooking.'],
+      lines: ['Go on, have a swim. You glow better.', "Hear that clicking? That's you, cooking."],
     },
     {
       id: 'behind',
@@ -148,7 +148,11 @@ export const RED_BASTARD: Voice = {
       repeat: 30,
       when: (s, sent) =>
         (sent.has('close') || sent.has('near')) && s.phase === 'chase' && s.gap > 700,
-      lines: ['And… gone. Bye, loser.', 'So long, slowpoke.', 'Was nice while it lasted. It wasn\'t.'],
+      lines: [
+        'And… gone. Bye, loser.',
+        'So long, slowpoke.',
+        "Was nice while it lasted. It wasn't.",
+      ],
     },
   ],
 };

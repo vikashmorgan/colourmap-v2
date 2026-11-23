@@ -98,4 +98,55 @@ describe('the Red Bastard on the radio', () => {
     expect(said.at(-1)?.text).toBe('…Fine. You got me. This time.');
     expect(said.at(-1)?.at).toBe(6);
   });
+
+  it('yelps at once when an attack hits him, a different line each time', () => {
+    const steps: Partial<RadioSituation>[] = Array.from({ length: 30 }, (_, i) => ({
+      gap: 1000,
+      hitAt: i >= 6 && i % 5 === 1 ? i : undefined,
+    }));
+    const said = play(steps);
+    const hits = said.filter((m) =>
+      RED_BASTARD.cues.find((c) => c.id === 'hit')?.lines.includes(m.text),
+    );
+    expect(hits.length).toBeGreaterThanOrEqual(3);
+    for (let i = 1; i < hits.length; i++) expect(hits[i].text).not.toBe(hits[i - 1].text);
+  });
+
+  it('taunts you in the crater and by the lakes', () => {
+    const crater = play(Array.from({ length: 20 }, () => ({ region: 'crater' })));
+    const lines = RED_BASTARD.cues.find((c) => c.id === 'crater')?.lines ?? [];
+    expect(crater.some((m) => lines.includes(m.text))).toBe(true);
+    const lakes = play(Array.from({ length: 20 }, () => ({ region: 'lakes' })));
+    const lakeLines = RED_BASTARD.cues.find((c) => c.id === 'lakes')?.lines ?? [];
+    expect(lakes.some((m) => lakeLines.includes(m.text))).toBe(true);
+  });
+
+  it('keeps every line short, and never opens two runs the same way', () => {
+    for (const c of RED_BASTARD.cues) for (const l of c.lines) expect(l.length).toBeLessThan(48);
+    const open = (seed: number) =>
+      stepRadio(newRadio(seed), RED_BASTARD, { t: 10, phase: 'chase', since: 10, gap: 1000 }).say
+        ?.text;
+    expect(open(1)).not.toBe(open(2));
+  });
+
+  it('never says the same line twice in a row over a long chase', () => {
+    let r = newRadio(3);
+    let last = '';
+    for (let i = 0; i < 600; i++) {
+      const gap = 2000 * Math.abs(Math.sin(i / 40)) + 20;
+      const out = stepRadio(r, RED_BASTARD, {
+        t: i,
+        phase: 'chase',
+        since: i,
+        gap,
+        hitAt: i % 37 === 0 ? i : undefined,
+        region: i % 120 < 20 ? 'crater' : null,
+      });
+      r = out.radio;
+      if (out.say) {
+        expect(out.say.text).not.toBe(last);
+        last = out.say.text;
+      }
+    }
+  });
 });

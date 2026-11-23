@@ -20,10 +20,18 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { autopilotControls } from '@/lib/art/autopilot';
-import { comboOf, type DriftRun, liveScore, newDriftRun, stepDrift } from '@/lib/art/drift-gates';
+import {
+  comboOf,
+  DRIFT_GATES,
+  type DriftRun,
+  liveScore,
+  newDriftRun,
+  stepDrift,
+} from '@/lib/art/drift-gates';
 import {
   type Controls,
   clamp,
+  crosses,
   ease,
   easeAngle,
   formatTime,
@@ -53,6 +61,7 @@ import {
   shipParts,
   type WorldId,
 } from '@/lib/art/drive-design';
+import { gateCrossed, gatePlan } from '@/lib/art/drive-gates';
 import {
   BACKDROP_FLOATS,
   backdropFragment,
@@ -68,6 +77,7 @@ import { WORLD_CFG, type WorldCfg } from '@/lib/art/drive-worlds';
 import { easeMask, gMask } from '@/lib/art/g-force';
 import { newShiftWatch, ringFor, watchShift } from '@/lib/art/gear-rings';
 import { MARS_TERRAIN, marsHeight } from '@/lib/art/mars';
+import { ATTACKS, type AttackId } from '@/lib/art/mars-attacks';
 import {
   MOODS,
   RING_STEP,
@@ -77,6 +87,17 @@ import {
   surgeAccel,
   throughRing,
 } from '@/lib/art/night-course';
+import {
+  boosterAccel,
+  EMPTY_INVENTORY,
+  type Inventory,
+  type Pickup,
+  pickupFor,
+  spend,
+  take,
+  type WeaponHandler,
+  type WeaponId,
+} from '@/lib/art/pickups';
 import {
   type IntroClock,
   type IntroPhase,
@@ -152,14 +173,8 @@ import {
   twistEntry,
   type Wreck,
 } from '@/lib/art/wreck';
-import type { AttackId } from '@/lib/art/mars-attacks';
-import {
-  type AttackHud,
-  type Marker,
-  MarsRun,
-  type MarsWhere,
-  type MissionHud,
-} from './mars-run';
+import { GatesView, tickGates } from './gates-view';
+import { type AttackHud, type Marker, MarsRun, type MarsWhere, type MissionHud } from './mars-run';
 import { buildMarsView, type MarsView } from './mars-view';
 import { buildSaltView, type SaltView } from './salt-view';
 import { ShiftRings } from './shift-rings';
@@ -185,6 +200,10 @@ export interface Hud {
   /** Your place among the racers when the rivals are on (1 = leading), and how many race. */
   place?: number | null;
   racers?: number;
+  /** The weapon charges held from the gates, oldest first, and the pickup just taken (shown for
+   * a moment), lib/art/pickups.ts. */
+  charges?: WeaponId[];
+  pickup?: Pickup | null;
   /** Mars: the mission to follow the Red Bastard. */
   mission?: MissionHud | null;
   /** Mars: the region you are in, the radiation, you and him on the map. */
@@ -436,6 +455,9 @@ class Puffs {
 /** The night light over the vehicle (candela; close over the hull, falling off before it pools much light on the road). */
 export const CAR_LIGHT = 12;
 
+/** How long the HUD names the pickup a gate just gave (s). */
+const PICKUP_SHOW = 1.6;
+
 /** A step that moved nothing (the grid, waiting for GO). */
 const HELD: StepEvents = { landed: 0, bump: 0, tookOff: false };
 
@@ -598,6 +620,13 @@ export class DriveEngine {
   private race: Race = newRace();
   private best: number | null = null;
   private surgeAt = -99;
+  /** The gates on this world (docs/specs/drive-tracks.md, "Gates and pickups"), what they gave. */
+  private gates: GatesView | null = null;
+  private inventory: Inventory = EMPTY_INVENTORY;
+  private boosterAt = -99;
+  private pickup: { p: Pickup; t: number } | null = null;
+  /** The attack code's handlers, one per weapon (feature/mars-mission hooks in here). */
+  private weaponHandlers = new Map<WeaponId, WeaponHandler>();
   /** Off a twist and diving into the stars, or null (lib/art/wreck.ts). */
   private wreck: Wreck | null = null;
   /** Gear rings (lib/art/gear-rings.ts): the box watched for upshifts, and the rings drawn. */
@@ -840,6 +869,14 @@ export class DriveEngine {
     }
     this.enterMars();
     this.scene.add(this.view.group);
+    if (this.gates) this.gates.dispose();
+    // On Mars the gates stand on the dunes.
+    this.gates = new GatesView(
+      this.cfg,
+      this.trackWorld?.track ?? null,
+      this.cfg.id === 'mars' ? marsHeight : undefined,
+    );
+    this.scene.add(this.gates.group);
     this.sun.position.copy(sunDir).multiplyScalar(100);
     this.sun.target.position.set(0, 0, 0);
     // The Golden Track's moon is warm too: no cold white glint on the hull (2026-11-21).
@@ -864,6 +901,7 @@ export class DriveEngine {
       this.marsView = null;
     }
     if (this.marsRun && !on) {
+      for (const id of ATTACKS) this.onWeapon(id, null);
       this.marsRun.dispose();
       this.marsRun = null;
       this.onMarker?.(null);
@@ -888,6 +926,9 @@ export class DriveEngine {
       },
       this.design.vehicle.mars,
     );
+    // The gates' weapon charges fire the Mars attacks (a charge needs no unlock).
+    for (const id of ATTACKS)
+      this.onWeapon(id, (f) => this.marsRun?.fireAttack(f.weapon, f.t, true));
   }
 
   /** The start arch, built once; its half circles are sized to each road in placeGantry. Its frame
@@ -994,6 +1035,10 @@ export class DriveEngine {
     this.drift = this.newDrift(kind);
     this.straight.clear();
     this.surgeAt = -99;
+    this.boosterAt = -99;
+    this.inventory = EMPTY_INVENTORY;
+    this.pickup = null;
+    this.gates?.reset();
     this.wreck = null;
     this.riding = null;
     if (this.vehicleView) this.vehicleView.group.visible = true;
@@ -1185,6 +1230,44 @@ export class DriveEngine {
     return this.trackWorld
       ? { track: this.trackWorld.track, s: this.s, ox: this.origin.x, oy: this.origin.y }
       : null;
+  }
+
+  /** Registers what a weapon does when fired (null removes it). The attack code owns the weapons;
+   * the engine only hands it the shot (lib/art/pickups.ts WeaponFire). */
+  onWeapon(id: WeaponId, handler: WeaponHandler | null) {
+    if (handler) this.weaponHandlers.set(id, handler);
+    else this.weaponHandlers.delete(id);
+  }
+
+  /** Fires a held charge: of that weapon if named, else the oldest held. A charge whose weapon has
+   * no handler yet stays held. True if one was fired. */
+  fireWeapon(id?: WeaponId): boolean {
+    const want = id ?? this.inventory.charges.find((c) => this.weaponHandlers.has(c));
+    const handler = want ? this.weaponHandlers.get(want) : undefined;
+    if (!want || !handler || this.preview) return false;
+    const r = spend(this.inventory, want);
+    if (!r.used) return false;
+    this.inventory = r.inv;
+    const v = this.vehicle;
+    handler({ weapon: r.used, t: this.t, x: v.x, y: v.y, z: v.z, h: v.h, vx: v.vx, vy: v.vy });
+    return true;
+  }
+
+  /** The charges held (oldest first). */
+  get charges(): readonly WeaponId[] {
+    return this.inventory.charges;
+  }
+
+  /** A gate driven through: its pickup, a booster at once or a charge kept. */
+  private passGate(k: number, t: number) {
+    const g = this.gates;
+    if (!g || !g.ready(k, t)) return;
+    g.take(k, t);
+    const p = pickupFor(k, g.styleOf(k));
+    const r = take(this.inventory, p);
+    this.inventory = r.inv;
+    if (r.boost) this.boosterAt = t;
+    this.pickup = { p: r.boost ? 'booster' : p, t };
   }
 
   setPreview(on: boolean) {
@@ -1502,6 +1585,7 @@ export class DriveEngine {
   dispose() {
     this.stop();
     if (this.view) this.view.dispose();
+    this.gates?.dispose();
     this.vehicleView?.dispose();
     this.marsRun?.dispose();
     this.marsView?.dispose();
@@ -1541,6 +1625,12 @@ export class DriveEngine {
       if (surge > 0) {
         v.vx += Math.cos(v.h) * surge * dt;
         v.vy += Math.sin(v.h) * surge * dt;
+      }
+      // A gate's booster pushes the same way.
+      const booster = boosterAccel(t - this.boosterAt);
+      if (booster > 0) {
+        v.vx += Math.cos(v.h) * booster * dt;
+        v.vy += Math.sin(v.h) * booster * dt;
       }
       const gust = gustAt(w, t) * (v.kind === 'ship' ? 1.5 : 1);
       if (gust !== 0 && !v.air) {
@@ -1608,8 +1698,14 @@ export class DriveEngine {
             if (ring.mood) this.mood = ring.mood;
           }
         }
+        const plan = gatePlan(this.cfg.id, tr.def);
+        const gate = plan && !this.wreck ? gateCrossed(plan, tr.def, s0, q.s, u) : null;
+        if (gate) this.passGate(gate.k, t);
         this.keepBest(this.race.last, this.race.record);
       } else {
+        DRIFT_GATES.forEach((g, i) => {
+          if (crosses(px, py, v.x, v.y, g)) this.passGate(i, t);
+        });
         this.run = stepRun(this.run, START_GATE, FINISH_GATE, px, py, v.x, v.y, t);
         this.keepBest(this.run.last, this.run.record);
         const before = this.drift;
@@ -1643,7 +1739,9 @@ export class DriveEngine {
 
     // The camera.
     const speed = speedOf(v);
-    const boost = ctl.boost + (surgeAccel(t - this.surgeAt) > 0 ? 1 : 0);
+    const boost =
+      ctl.boost +
+      (surgeAccel(t - this.surgeAt) > 0 || boosterAccel(t - this.boosterAt) > 0 ? 1 : 0);
     const feel = speedFeel(speed, spec.vTop, t);
     this.cam.focal = ease(this.cam.focal, feel.focal - 0.05 * boost, 3, dt);
     const piece = this.pieceCamera();
@@ -1772,7 +1870,7 @@ export class DriveEngine {
       const power =
         (ctl.throttle > 0 || ctl.boost > 0 ? 1 : 0.35) +
         ctl.boost * 0.5 +
-        (surgeAccel(t - this.surgeAt) > 0 ? 0.8 : 0);
+        (surgeAccel(t - this.surgeAt) > 0 || boosterAccel(t - this.boosterAt) > 0 ? 0.8 : 0);
       vv.update(
         v,
         t,
@@ -1820,6 +1918,8 @@ export class DriveEngine {
       this.renderer.getDrawingBufferSize(new THREE.Vector2()).y * this.cam.focal;
 
     // The world.
+    tickGates(t, this.renderer.getDrawingBufferSize(new THREE.Vector2()).y);
+    this.gates?.update(ox, oy, this.s, t);
     if (this.view) {
       if ('update' in this.view && this.trackWorld)
         (this.view as TrackView).update(ox, oy, this.s, t, w);
@@ -2177,6 +2277,8 @@ export class DriveEngine {
           )
         : null,
       racers: this.rivals.length + 1,
+      charges: [...this.inventory.charges],
+      pickup: this.pickup && t - this.pickup.t < PICKUP_SHOW ? this.pickup.p : null,
       mission: this.marsRun?.hud(t) ?? null,
       mars: this.marsRun?.where() ?? null,
       attacks: this.marsRun?.attackHud(t) ?? null,

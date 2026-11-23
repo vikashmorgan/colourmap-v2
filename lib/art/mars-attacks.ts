@@ -116,7 +116,9 @@ export function crosshairNear(from: Point & { h: number }, him: Point): number {
 
 /**
  * Fires an attack, if it is unlocked and ready. Returns the attacks after, and what happened at
- * once (the laser's beam and hit). Nothing when it is locked or cooling down.
+ * once (the laser's beam and hit). Nothing when it is locked or cooling down. `charge`: a charge
+ * picked up from a gate (lib/art/pickups.ts) fires whatever is unlocked or not, and leaves the
+ * cooldown as it was.
  */
 export function fireAttack(
   a: Attacks,
@@ -125,10 +127,12 @@ export function fireAttack(
   you: Point & { h: number },
   him: Point,
   catches: number,
+  charge = false,
 ): { attacks: Attacks; fired: boolean; events: AttackEvent[] } {
   const open = unlocked(catches);
-  if (!open.attacks.includes(id) || t < a.ready[id]) return { attacks: a, fired: false, events: [] };
-  const ready = { ...a.ready, [id]: t + COOLDOWN[id] };
+  if (!charge && (!open.attacks.includes(id) || t < a.ready[id]))
+    return { attacks: a, fired: false, events: [] };
+  const ready = charge ? a.ready : { ...a.ready, [id]: t + COOLDOWN[id] };
   const flying = [...a.flying];
   let next = a.next;
   const events: AttackEvent[] = [];
@@ -136,10 +140,28 @@ export function fireAttack(
     const n = open.sharkLevel === 2 ? 4 : 1;
     for (let i = 0; i < n; i++) {
       const lane = n === 1 ? 0 : (i - (n - 1) / 2) * 0.35;
-      flying.push({ id: next++, kind: 'shark', x: you.x, y: you.y, h: you.h + lane, dist: 0, born: t, lane });
+      flying.push({
+        id: next++,
+        kind: 'shark',
+        x: you.x,
+        y: you.y,
+        h: you.h + lane,
+        dist: 0,
+        born: t,
+        lane,
+      });
     }
   } else if (id === 'shot') {
-    flying.push({ id: next++, kind: 'shot', x: you.x, y: you.y, h: you.h, dist: 0, born: t, lane: 0 });
+    flying.push({
+      id: next++,
+      kind: 'shot',
+      x: you.x,
+      y: you.y,
+      h: you.h,
+      dist: 0,
+      born: t,
+      lane: 0,
+    });
   } else {
     const lock = laserLock(you, him);
     const end =
@@ -175,7 +197,13 @@ export function stepAttacks(
       const want = Math.atan2(him.y - p.y, him.x - p.x);
       const h = turnToward(p.h, want, SHARK.turn * dt * (t - p.born < 0.6 ? 0.3 : 1));
       const step = SHARK.speed * dt;
-      const q = { ...p, h, x: p.x + Math.cos(h) * step, y: p.y + Math.sin(h) * step, dist: p.dist + step };
+      const q = {
+        ...p,
+        h,
+        x: p.x + Math.cos(h) * step,
+        y: p.y + Math.sin(h) * step,
+        dist: p.dist + step,
+      };
       if (Math.hypot(him.x - q.x, him.y - q.y) < SHARK.reach) {
         events.push({ kind: 'hit', attack: 'shark', x: q.x, y: q.y, projectile: p.id });
         continue;

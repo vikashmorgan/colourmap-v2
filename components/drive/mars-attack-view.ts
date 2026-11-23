@@ -70,11 +70,30 @@ export class AttackView {
         const z = this.height(e.x, e.y) + 3;
         const s = glowSprite(0xffd060, 10, 0.9);
         this.group.add(s);
-        this.fading.push({ obj: s, x: e.x, y: e.y, z, born: t, life: 0.9, grow: 60, base: 10, mat: s.material });
+        this.fading.push({
+          obj: s,
+          x: e.x,
+          y: e.y,
+          z,
+          born: t,
+          life: 0.9,
+          grow: 60,
+          base: 10,
+          mat: s.material,
+        });
         for (let i = 0; i < 26; i++) {
           const a = (i / 26) * Math.PI * 2;
           const v = 14 + Math.random() * 10;
-          this.dust(e.x, e.y, z - 2, Math.cos(a) * v, Math.sin(a) * v, 2 + Math.random() * 3, 2.5, 4);
+          this.dust(
+            e.x,
+            e.y,
+            z - 2,
+            Math.cos(a) * v,
+            Math.sin(a) * v,
+            2 + Math.random() * 3,
+            2.5,
+            4,
+          );
         }
       } else if (e.kind === 'beam' && e.x2 !== undefined && e.y2 !== undefined) {
         const z0 = this.height(e.x, e.y) + 1.4;
@@ -108,9 +127,28 @@ export class AttackView {
         const z = this.height(e.x, e.y) + 1;
         const s = glowSprite(e.attack === 'laser' ? 0xffa040 : 0xffc890, 8, 0.7);
         this.group.add(s);
-        this.fading.push({ obj: s, x: e.x, y: e.y, z, born: t, life: 0.7, grow: 14, base: 8, mat: s.material });
+        this.fading.push({
+          obj: s,
+          x: e.x,
+          y: e.y,
+          z,
+          born: t,
+          life: 0.7,
+          grow: 14,
+          base: 8,
+          mat: s.material,
+        });
         for (let i = 0; i < 14; i++)
-          this.dust(e.x, e.y, z, (Math.random() - 0.5) * 16, (Math.random() - 0.5) * 16, 1 + Math.random() * 3, 2, 3);
+          this.dust(
+            e.x,
+            e.y,
+            z,
+            (Math.random() - 0.5) * 16,
+            (Math.random() - 0.5) * 16,
+            1 + Math.random() * 3,
+            2,
+            3,
+          );
       }
     }
   }
