@@ -40,6 +40,7 @@ import {
   DIVE_BACK,
   diveRise,
   JUMP,
+  jumpRise,
   type TrackData,
   trackOutline,
   validateTrackData,
@@ -790,5 +791,38 @@ describe('the dive after the superloop (2026-11-22)', () => {
       if (q.s > dv.at + 0.65 * dv.length) break;
     }
     expect(Math.hypot(v.vx, v.vy)).toBeGreaterThan(40);
+  });
+});
+
+describe('downslope landings (2026-11-23)', () => {
+  it('lands on a slope steepest at touchdown that falls `down` further, then eases back', () => {
+    const L = 120;
+    const D = 30;
+    expect(jumpRise(L, L, D)).toBeCloseTo(-JUMP.LAND_DROP, 6);
+    const slope0 = jumpRise(L + 1, L, D) - jumpRise(L, L, D);
+    const slope1 = jumpRise(L + JUMP.DOWN_RUN - 1, L, D) - jumpRise(L + JUMP.DOWN_RUN - 2, L, D);
+    expect(slope0).toBeLessThan(slope1);
+    expect(jumpRise(L + JUMP.DOWN_RUN, L, D)).toBeCloseTo(-JUMP.LAND_DROP - D, 6);
+    expect(jumpRise(L + JUMP.DOWN_RUN + JUMP.DOWN_BACK, L, D)).toBeCloseTo(0, 6);
+    // Without `down` the landing climbs back as before.
+    expect(jumpRise(L + JUMP.LAND, L)).toBe(0);
+  });
+
+  it('gives the Neon District two jumps a lap, one landing downhill', () => {
+    const def = compileTrack(neon as TrackData);
+    expect(def.gap?.(1050)).toBe(true);
+    expect(def.gap?.(2900)).toBe(true);
+    expect(def.gap?.(1500)).toBe(false);
+    const e0 = def.elev(2850 + 120);
+    const e1 = def.elev(2850 + 120 + JUMP.DOWN_RUN);
+    expect(e1).toBeLessThan(e0 - 20);
+  });
+
+  it('refuses a downslope deeper than the limit', () => {
+    const bad = {
+      ...(neon as TrackData),
+      features: [{ kind: 'jump', at: 500, length: 80, down: 90 }],
+    };
+    expect(validateTrackData(bad).join(' ')).toMatch(/downslope/);
   });
 });

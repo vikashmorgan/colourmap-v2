@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CATEGORIES,
+  designStart,
+  dressingFor,
   MARKING,
   move,
   pickKey,
@@ -11,8 +13,8 @@ import {
 } from './design-space';
 
 describe('the design space catalogue', () => {
-  it('has eight categories of six or seven variations, ids unique within each', () => {
-    expect(CATEGORIES).toHaveLength(8);
+  it('has ten categories of six or seven variations, ids unique within each', () => {
+    expect(CATEGORIES).toHaveLength(10);
     for (const c of CATEGORIES) {
       expect(c.vars.length).toBeGreaterThanOrEqual(6);
       expect(new Set(c.vars.map((v) => v.id)).size).toBe(c.vars.length);
@@ -57,5 +59,22 @@ describe('saved state', () => {
     expect(k).toBe('Fire arches · Flame pillars');
     expect(safePicks([k, k, 'Nope · Gone', 3])).toEqual([k]);
     expect(safePicks('x')).toEqual([]);
+  });
+});
+
+describe('the districts on their own tracks', () => {
+  it('dresses Chinatown Run and the Neon District in their own pieces, nothing elsewhere', () => {
+    const ct = dressingFor('chinatown').map((p) => CATEGORIES[p.cat].id);
+    expect(ct.length).toBeGreaterThan(2);
+    expect(new Set(ct)).toEqual(new Set(['chinatown']));
+    expect(dressingFor('neon').map((p) => CATEGORIES[p.cat].vars[p.v].id)).toContain('jumps');
+    expect(dressingFor('gold')).toEqual([]);
+  });
+
+  it('opens the design space on the district’s own category there, else where you left it', () => {
+    const saved = { cat: 2, v: 1 };
+    expect(CATEGORIES[designStart('chinatown', saved).cat].id).toBe('chinatown');
+    expect(CATEGORIES[designStart('neon', saved).cat].id).toBe('neon');
+    expect(designStart('gold', saved)).toEqual(saved);
   });
 });
