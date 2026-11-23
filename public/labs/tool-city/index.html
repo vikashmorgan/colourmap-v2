@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05060d">
+<script src="/labs/claude-shim.js"></script>
+</head>
+<body>
+<title>Tool City</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=Courier+Prime&display=swap" rel="stylesheet">
+<style>
+/* Layout: one full-screen 3D instrument. Top bar (name + Design), zoom dial on the right edge, one bottom sheet that holds the tools and every panel. Nothing floats over anything else. */
+:root{
+  --bg:#05060d; --ink:#efe6d2; --dim:#968e7d; --line:rgba(232,194,122,.26); --glass:rgba(11,12,24,.8);
+  --accent:#e8c27a; --hud:#e8c27a; --chip:rgba(232,194,122,.1);
+  --display:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --mono:'Courier Prime','Courier New',ui-monospace,monospace;
+  --rad:10px; --sheet:120px; --top:64px;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;background:var(--bg);overflow:hidden}
+.tc [hidden]{display:none!important}
+.tc{position:relative;height:100%;width:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--mono);-webkit-tap-highlight-color:transparent}
+.tc[data-mode="cream"]{--bg:#efe4cf;--ink:#5c3018;--dim:#80624a;--line:rgba(92,48,24,.28);--glass:rgba(245,236,220,.9);--accent:#9c6b1f;--hud:#9c6b1f;--chip:rgba(156,107,31,.12);color-scheme:light}
+.tc[data-mode="glass"]{--bg:#06121f;--ink:#e6f1f7;--dim:#8fb0c4;--line:rgba(127,211,255,.32);--glass:rgba(8,24,40,.7);--accent:#e8c27a;--hud:#7fd3ff;--chip:rgba(127,211,255,.12)}
+.tc[data-mode="window"]{--bg:#0a0d12;--ink:#e9edf1;--dim:#93a0ad;--line:rgba(200,220,235,.22);--glass:rgba(16,22,30,.72);--accent:#e8c27a;--hud:#cfe3f2;--chip:rgba(200,220,235,.1)}
+.tc[data-mode="alien"]{--bg:#030a06;--ink:#dcf7e4;--dim:#7fa58b;--line:rgba(125,255,176,.3);--glass:rgba(4,18,10,.8);--accent:#b6ff7a;--hud:#7dffb0;--chip:rgba(125,255,176,.1)}
+.tc canvas.scene{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+.tc button,.tc input,.tc textarea{font:inherit;color:var(--ink)}
+.tc button{font-size:13px;letter-spacing:.06em;background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:border-color .2s,color .2s,background .2s;white-space:nowrap}
+.tc button:hover{border-color:var(--accent)}
+.tc button:focus-visible,.tc input:focus-visible,.tc textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tc button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:var(--chip)}
+.tc[data-mode="cream"] button[aria-pressed="true"]{color:var(--ink)}
+
+/* top bar */
+.tc .top{position:absolute;top:0;left:0;right:0;z-index:6;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-top:calc(12px + env(safe-area-inset-top,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none}
+.tc .brand{min-width:0}
+.tc .brand h1{margin:0;font-family:var(--display);font-weight:600;font-size:28px;line-height:1.05;color:var(--accent)}
+.tc[data-mode="cream"] .brand h1{color:var(--ink)}
+.tc .brand p{margin:4px 0 0;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.tc .top .menuBtn{pointer-events:auto}
+.tc .menu{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:calc(var(--top) + 4px);z-index:8;width:min(280px,calc(100% - 32px));background:var(--glass);border:1px solid var(--line);border-radius:var(--rad);padding:12px;display:flex;flex-direction:column;gap:12px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.tc .menu .row{display:flex;flex-wrap:wrap;gap:6px}
+.tc .lab{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+
+/* HUD frame: corner brackets around the scene area */
+.tc .hud{position:absolute;left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));top:calc(var(--top) + 4px);bottom:calc(var(--sheet) + 8px);pointer-events:none;z-index:2;transition:bottom .3s}
+.tc .hud i{position:absolute;width:18px;height:18px;border-color:var(--hud);border-style:solid;opacity:.55}
+.tc .hud i:nth-child(1){left:0;top:0;border-width:1px 0 0 1px}
+.tc .hud i:nth-child(2){right:0;top:0;border-width:1px 1px 0 0}
+.tc .hud i:nth-child(3){left:0;bottom:0;border-width:0 0 1px 1px}
+.tc .hud i:nth-child(4){right:0;bottom:0;border-width:0 1px 1px 0}
+.tc .hint{position:absolute;left:50%;transform:translateX(-50%);top:calc(var(--top) + 10px);z-index:3;max-width:calc(100% - 120px);text-align:center;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);pointer-events:none;text-wrap:balance}
+.tc .hint.loud{color:var(--accent)}
+.tc[data-mode="cream"] .hint.loud{color:var(--ink)}
+
+/* zoom dial */
+.tc .dial{position:absolute;z-index:4;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(var(--sheet) + 20px);display:flex;flex-direction:column;align-items:center;gap:6px;transition:bottom .3s}
+.tc .dial button{width:46px;height:46px;padding:0;display:grid;place-items:center;font-size:18px;letter-spacing:0;border-radius:50%}
+.tc .dial span{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.tc .dial .rail{width:1px;height:10px;background:var(--line)}
+
+/* labels projected from 3D */
+.tc .labels{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.tc .lbl{position:absolute;left:0;top:0;transform:translate(-50%,-100%);text-align:center;white-space:nowrap;padding:3px 8px;border-radius:6px;background:color-mix(in srgb,var(--bg) 62%,transparent);border:1px solid transparent;transition:opacity .25s;will-change:transform}
+.tc .lbl b{display:block;font-family:var(--display);font-weight:600;font-size:16px;line-height:1.1;color:var(--ink)}
+.tc .lbl span{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-top:1px}
+.tc .lbl.big b{font-size:22px}
+.tc .lbl.sel{border-color:var(--accent)}
+.tc .lbl.dist{background:none}
+.tc .lbl.dist b{font-size:20px;letter-spacing:.02em}
+.tc .lbl[hidden]{display:none!important}
+
+/* bottom sheet */
+.tc .sheet{position:absolute;left:0;right:0;bottom:0;z-index:5;background:var(--glass);border-top:1px solid var(--line);border-radius:18px 18px 0 0;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-height:min(48%,440px);display:flex;flex-direction:column}
+.tc .sheet .bar{display:flex;align-items:center;gap:6px;padding-top:10px;padding-bottom:10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.tc .sheet .bar::-webkit-scrollbar{display:none}
+.tc .sheet .bar .grow{flex:1}
+.tc .sheet .fold{width:40px;padding:8px 0;text-align:center}
+.tc .body{overflow:auto;padding-bottom:6px;display:flex;flex-direction:column;gap:12px;min-height:0}
+.tc .body[hidden]{display:none!important}
+.tc .body h2{margin:0;font-family:var(--display);font-weight:600;font-size:22px;line-height:1.15;text-wrap:balance}
+.tc .body p{margin:0;font-size:13px;line-height:1.5;color:var(--dim);max-width:65ch}
+.tc .chips{display:flex;flex-wrap:wrap;gap:6px}
+.tc .chips button{font-size:12px;padding:6px 12px;display:inline-flex;align-items:center;gap:6px}
+.tc .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.tc .field{display:flex;flex-direction:column;gap:4px}
+.tc .field input,.tc .field textarea{background:transparent;border:1px solid var(--line);border-radius:var(--rad);padding:8px 10px;font-size:14px;width:100%;box-sizing:border-box}
+.tc .field textarea{min-height:56px;resize:vertical;font-family:var(--mono)}
+.tc .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tc .two>*{min-width:0}
+.tc .actions{display:flex;flex-wrap:wrap;gap:6px}
+.tc a.open{display:inline-flex;align-items:center;gap:6px;font-size:13px;letter-spacing:.06em;color:var(--bg);background:var(--accent);border-radius:999px;padding:8px 16px;text-decoration:none}
+.tc[data-mode="cream"] a.open{color:#f5ecdc;background:#5c3018}
+.tc .legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.tc .legend button{border-radius:var(--rad);text-align:left;display:flex;align-items:center;gap:8px;white-space:normal}
+.tc .legend small{margin-left:auto;color:var(--dim);font-variant-numeric:tabular-nums}
+.tc .links{display:flex;flex-direction:column;gap:4px}
+.tc .links button{border-radius:var(--rad);text-align:left;display:flex;align-items:center;gap:8px;white-space:normal}
+.tc input[type=range]{width:100%;accent-color:var(--accent)}
+.tc .toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--sheet) + 16px);z-index:7;font-size:12px;letter-spacing:.08em;background:var(--glass);border:1px solid var(--accent);border-radius:999px;padding:8px 14px;max-width:calc(100% - 140px);text-align:center;transition:opacity .3s,bottom .3s}
+.tc .warn{color:#e3895c}
+@media (min-width:760px){
+  .tc .sheet{left:auto;right:max(16px,env(safe-area-inset-right,0px));bottom:16px;width:400px;border:1px solid var(--line);border-radius:16px;max-height:calc(100% - var(--top) - 32px)}
+  .tc .dial{right:calc(max(16px,env(safe-area-inset-right,0px)) + 416px);bottom:24px}
+  .tc .hud{bottom:12px;right:calc(max(16px,env(safe-area-inset-right,0px)) + 412px)}
+  .tc .toast{bottom:24px}
+}
+@media (prefers-reduced-motion:reduce){.tc *{transition:none!important}}
+</style>
+
+<div id="city" class="tc" data-mode="night"></div>
+
+<script src="/labs/vendor/three-r128.min.js"></script>
+<script>
+/*
+  ToolCity(root) — self-contained so it can also mount inside the Mandala later.
+  Level 0 Mandala (top-down on the wheel) → Level 1 City (districts of tools) → Level 2 Sky (your city as one star).
+  Data: blocks [{id,name,kind,shape,x,z,h,note,url}], links [{a,b}] saved in db doc city/main (local fallback).
+*/
+function ToolCity(root){
+  const T = window.THREE;
+  if(!T){ root.textContent = 'The 3D engine did not load. Check the connection and reload.'; return null; }
+
+  const MANDALA_URL = '/labs/mandala';
+  const KINDS = {
+    art:{name:'Art', color:'#e3895c'},
+    mind:{name:'Mind & System', color:'#73a3dc'},
+    energy:{name:'Energy', color:'#7cc794'},
+    constellation:{name:'Constellation', color:'#a98be0'},
+    core:{name:'Core', color:'#d6b26e'}
+  };
+  const SHAPES = {
+    wheel:{name:'Wheel', glyph:'◎'}, tower:{name:'Tower', glyph:'▮'}, block:{name:'Block', glyph:'▬'},
+    cell:{name:'Cell', glyph:'●'}, dome:{name:'Dome', glyph:'◠'}, gear:{name:'Gear', glyph:'⚙'}, orb:{name:'Orb', glyph:'◉'}
+  };
+  const DISTRICT_ANGLE = {art:-Math.PI*0.75, mind:-Math.PI*0.25, energy:Math.PI*0.25, constellation:Math.PI*0.75};
+  const DISTRICT_R = 27;
+
+  // Starter city: the tools that exist today. Positions are offsets inside each district.
+  const STARTER = [
+    ['art','Art wheel','wheel',[0,0],1,'The Art world of the Mandala: sculpture, collections, dreams.',MANDALA_URL],
+    ['art','Writing & Poetry','wheel',[-7,3],.8,'Poems kept as twins: your original beside a polished version.',MANDALA_URL],
+    ['art','Concert Room','dome',[6,4],1,'Colour Brain Live: the 3D room where the visuals react to the beat.',''],
+    ['art','Marble to Machine','block',[-4,-6],.9,'Instagram plan: six talk points toward the TEDx-style talk.',''],
+    ['art','Data Art','tower',[5,-5],1.2,'Data-art pages for a brand pitch.',''],
+    ['mind','Admin wheel','wheel',[0,0],1,'The Admin world of the Mandala: papers, contacts, the week.',MANDALA_URL],
+    ['mind','Connecting Ideas','tower',[6,4],1.6,'The plan for the heart of Colour Brain: five layers of linked ideas.',''],
+    ['mind','Colour Brain app','tower',[-6,4],2,'The real app (Next.js + Supabase) that all of this grows into.','/'],
+    ['mind','One Shell','block',[-4,-6],.8,'One coherent design for the whole app: one shell, one map.',''],
+    ['mind','Flame Room','block',[5,-5],.9,'Shared notes room with Martin and the launch roadmap.',''],
+    ['energy','Energy wheel','wheel',[0,0],1,'The Energy world of the Mandala: body, rest, balance.',MANDALA_URL],
+    ['energy','Fire Map','dome',[-6,4],1,'Magma suns and a breath guide: controlling the fire.',''],
+    ['energy','Harmony Machine','gear',[6,4],1,'Calm study sound with separate layers.',''],
+    ['energy','The Sky orrery','orb',[0,-7],1,'Real planets and your star map, inside the Mandala.',MANDALA_URL],
+    ['constellation','Constellation wheel','wheel',[0,0],1,'The Constellation Club: for those who dream.',MANDALA_URL],
+    ['constellation','Archetypes','wheel',[-7,3],.8,'Eight stars: Seer, Rebel, Maker, Architect, Keeper, Healer, Wanderer, Muse.',MANDALA_URL],
+    ['constellation','Reflection Bubbles','cell',[6,4],1,'Groups of 2, 4, 6 growing to 600: the future of group chats.','/labs/reflection-bubbles'],
+    ['constellation','Frontier Bubbles','cell',[-4,-6],1.1,'Living map of collective intelligence news and people.','/labs/frontier-bubbles'],
+    ['constellation','World Map','block',[5,-6],.9,'AI for Collective Intelligence: the research world map.',''],
+    ['constellation','Collective Brain','cell',[-7,-1],1.2,'Each member’s strengths and intentions as one living map you can ask.','/collective']
+  ];
+  const STARTER_LINKS = [
+    ['mandala','Art wheel'],['mandala','Admin wheel'],['mandala','Energy wheel'],['mandala','Constellation wheel'],
+    ['Art wheel','Writing & Poetry'],['Art wheel','Data Art'],['Writing & Poetry','Marble to Machine'],['Concert Room','Marble to Machine'],
+    ['Concert Room','Harmony Machine'],['Energy wheel','Fire Map'],['Energy wheel','The Sky orrery'],['The Sky orrery','Archetypes'],
+    ['Constellation wheel','Archetypes'],['Reflection Bubbles','Connecting Ideas'],['Reflection Bubbles','Collective Brain'],['Frontier Bubbles','World Map'],['Constellation wheel','Reflection Bubbles'],
+    ['Connecting Ideas','Colour Brain app'],['One Shell','Colour Brain app'],['Flame Room','Connecting Ideas'],['Admin wheel','Flame Room']
+  ];
+  function starterCity(){
+    const blocks = STARTER.map(([kind,name,shape,[ox,oz],h,note,url],i)=>{
+      const a = DISTRICT_ANGLE[kind], cx = Math.sin(a)*DISTRICT_R, cz = Math.cos(a)*DISTRICT_R;
+      // local frame: +oz points away from the centre, +ox to the side
+      const ux = Math.sin(a), uz = Math.cos(a), sx = Math.cos(a), sz = -Math.sin(a);
+      return {id:'b'+i, name, kind, shape, x:+(cx+ux*oz+sx*ox).toFixed(1), z:+(cz+uz*oz+sz*ox).toFixed(1), h, note, url};
+    });
+    const byName = Object.fromEntries(blocks.map(b=>[b.name,b.id]));
+    const links = STARTER_LINKS.map(([a,b])=>({a:a==='mandala'?'mandala':byName[a], b:byName[b]}));
+    return {blocks, links};
+  }
+
+  const MODES = {
+    night:{bg:0x05060d, fog:0x05060d, grid:'232,194,122', geo:'232,194,122', pattern:'flower', glassy:false, light:1, ground:'#05060d'},
+    cream:{bg:0xefe4cf, fog:0xefe4cf, grid:'92,48,24', geo:'156,107,31', pattern:'flower', glassy:false, light:1.25, ground:'#efe4cf'},
+    glass:{bg:0x06121f, fog:0x06121f, grid:'127,211,255', geo:'232,194,122', pattern:'flower', glassy:true, light:1.1, ground:'#06121f'},
+    window:{bg:0x0a0d12, fog:0x0a0d12, grid:'200,220,235', geo:'200,220,235', pattern:'none', glassy:true, light:1.05, ground:'#0a0d12'},
+    alien:{bg:0x030a06, fog:0x030a06, grid:'125,255,176', geo:'182,255,122', pattern:'honey', glassy:false, light:.95, ground:'#030a06'}
+  };
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- state ----------
+  let city = starterCity();
+  let mode = 'night';
+  try{ const m = localStorage.getItem('toolcity.mode'); if(m && MODES[m]) mode = m; }catch(e){}
+  let selected = null;       // block id or 'mandala'
+  let tool = null;           // null | 'connect' | 'move' | 'place'
+  let connectFrom = null;
+  let pending = null;        // new block draft waiting to be placed
+  let sheetOpen = true;
+  let userEdited = false;
+  let dbDoc = null;
+
+  // ---------- DOM ----------
+  root.dataset.mode = mode;
+  root.innerHTML = `
+    <canvas class="scene" aria-label="3D map of your tools"></canvas>
+    <div class="labels"></div>
+    <div class="hud" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <header class="top">
+      <div class="brand"><h1>Tool City</h1><p class="readout"></p></div>
+      <button class="menuBtn" aria-expanded="false" aria-haspopup="true">Design ⋯</button>
+    </header>
+    <div class="menu" hidden>
+      <div class="lab">Mode</div>
+      <div class="row modes"></div>
+      <div class="lab">View</div>
+      <div class="row"><button data-act="reset-view">Reset view</button><button data-act="spin" aria-pressed="false">Slow orbit</button></div>
+      <div class="lab">City</div>
+      <div class="row restoreRow"><button data-act="restore">Restore starter city</button></div>
+    </div>
+    <div class="hint"></div>
+    <nav class="dial" aria-label="Zoom level">
+      <button data-level="2" title="Sky: your city as one star">✦</button><span>Sky</span><div class="rail"></div>
+      <button data-level="1" title="City: all your tools">▦</button><span>City</span><div class="rail"></div>
+      <button data-level="0" title="Mandala: the base">◎</button><span>Mandala</span>
+    </nav>
+    <section class="sheet" aria-label="City panel">
+      <div class="bar">
+        <button data-tool="add">＋ Block</button>
+        <button data-tool="connect" aria-pressed="false">⟷ Connect</button>
+        <button data-tool="move" aria-pressed="false">✥ Move</button>
+        <span class="grow"></span>
+        <button class="fold" aria-label="Collapse panel" aria-expanded="true">▾</button>
+      </div>
+      <div class="body"></div>
+    </section>
+    <div class="toast" hidden></div>`;
+  const $ = s=>root.querySelector(s);
+  const canvas=$('canvas.scene'), labelsEl=$('.labels'), hintEl=$('.hint'), readout=$('.readout'), menu=$('.menu'), menuBtn=$('.menuBtn'),
+        sheet=$('.sheet'), body=$('.body'), fold=$('.fold'), toastEl=$('.toast');
+  const el=(tag,props={},kids=[])=>{ const e=document.createElement(tag); for(const k in props){ if(k==='text') e.textContent=props[k]; else if(k==='class') e.className=props[k]; else if(k.startsWith('on')) e.addEventListener(k.slice(2),props[k]); else e.setAttribute(k,props[k]); } kids.forEach(c=>c&&e.appendChild(c)); return e; };
+
+  // ---------- three setup ----------
+  const renderer = new T.WebGLRenderer({canvas, antialias:true, alpha:false});
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1, 2));
+  const scene = new T.Scene();
+  scene.fog = new T.Fog(0x05060d, 90, 260);
+  const camera = new T.PerspectiveCamera(45, 1, 0.5, 800);
+  const hemi = new T.HemisphereLight(0xfff1d6, 0x101020, 0.75); scene.add(hemi);
+  const sun = new T.DirectionalLight(0xffe6b8, 0.9); sun.position.set(30,60,20); scene.add(sun);
+  const rim = new T.DirectionalLight(0x9fd4ff, 0.35); rim.position.set(-40,25,-30); scene.add(rim);
+
+  const world = new T.Group(); scene.add(world);
+  const cityGroup = new T.Group(); world.add(cityGroup);
+  const linkGroup = new T.Group(); world.add(linkGroup);
+  const skyGroup = new T.Group(); scene.add(skyGroup);
+
+  // canvas texture helpers
+  function canvasTex(size, draw){ const c=document.createElement('canvas'); c.width=c.height=size; draw(c.getContext('2d'), size); const t=new T.CanvasTexture(c); t.anisotropy=4; return t; }
+  function haloTex(){ return canvasTex(128,(g,s)=>{ const r=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2); r.addColorStop(0,'rgba(255,255,255,1)'); r.addColorStop(.25,'rgba(255,255,255,.45)'); r.addColorStop(1,'rgba(255,255,255,0)'); g.fillStyle=r; g.fillRect(0,0,s,s); }); }
+  const HALO = haloTex();
+
+  function drawMandala(g, s, colors, gold, ink, label){
+    const c=s/2; g.clearRect(0,0,s,s);
+    g.save(); g.translate(c,c);
+    // base
+    g.fillStyle='rgba(0,0,0,0)'; g.beginPath(); g.arc(0,0,c*.98,0,7); g.fill();
+    const n=colors.length;
+    for(let i=0;i<n;i++){ const a0=i/n*Math.PI*2-Math.PI/2, a1=(i+1)/n*Math.PI*2-Math.PI/2;
+      g.fillStyle=colors[i]+'55'; g.beginPath(); g.moveTo(0,0); g.arc(0,0,c*.72,a0+.02,a1-.02); g.closePath(); g.fill(); }
+    g.strokeStyle=gold; g.lineWidth=s/170;
+    [.98,.9,.72,.5,.28].forEach(r=>{ g.beginPath(); g.arc(0,0,c*r,0,7); g.stroke(); });
+    // octagon
+    g.beginPath(); for(let i=0;i<=8;i++){ const a=i/8*Math.PI*2+Math.PI/8; g.lineTo(Math.cos(a)*c*.62,Math.sin(a)*c*.62);} g.stroke();
+    // ticks
+    for(let i=0;i<120;i++){ const a=i/120*Math.PI*2, l=i%10?.02:.05; g.beginPath(); g.moveTo(Math.cos(a)*c*.9,Math.sin(a)*c*.9); g.lineTo(Math.cos(a)*c*(.9+l),Math.sin(a)*c*(.9+l)); g.stroke(); }
+    // spokes + petals
+    for(let i=0;i<8;i++){ const a=i/8*Math.PI*2; g.beginPath(); g.moveTo(Math.cos(a)*c*.28,Math.sin(a)*c*.28); g.lineTo(Math.cos(a)*c*.72,Math.sin(a)*c*.72); g.stroke();
+      g.beginPath(); g.arc(Math.cos(a)*c*.4,Math.sin(a)*c*.4,c*.12,0,7); g.stroke(); }
+    g.fillStyle=gold; g.beginPath(); g.arc(0,0,c*.1,0,7); g.fill();
+    if(label){ g.fillStyle=ink; g.font=`${Math.round(s/30)}px "Courier Prime", monospace`; g.textAlign='center'; g.textBaseline='middle';
+      const chars=label.split(''); const span=chars.length*0.055;
+      chars.forEach((ch,i)=>{ const a=-Math.PI/2 - span/2 + i*0.055; g.save(); g.rotate(a+Math.PI/2); g.fillText(ch,0,-c*.81); g.restore(); }); }
+    g.restore();
+  }
+
+  // ---------- ground ----------
+  const GROUND = 200;
+  const groundCanvas = document.createElement('canvas'); groundCanvas.width = groundCanvas.height = 2048;
+  const groundTex = new T.CanvasTexture(groundCanvas); groundTex.anisotropy = 8;
+  const ground = new T.Mesh(new T.PlaneGeometry(GROUND,GROUND), new T.MeshBasicMaterial({map:groundTex, transparent:true, depthWrite:false}));
+  ground.rotation.x = -Math.PI/2; world.add(ground);
+  function drawGround(){
+    const M=MODES[mode], g=groundCanvas.getContext('2d'), s=2048, k=s/GROUND, c=s/2;
+    g.clearRect(0,0,s,s);
+    const grid=a=>`rgba(${M.grid},${a})`, geo=a=>`rgba(${M.geo},${a})`;
+    // blueprint grid, fading toward the edge
+    g.save(); const fade=g.createRadialGradient(c,c,0,c,c,c); fade.addColorStop(0,'#000'); fade.addColorStop(.7,'rgba(0,0,0,.6)'); fade.addColorStop(1,'rgba(0,0,0,0)');
+    g.lineWidth=1;
+    for(let x=0;x<=GROUND;x+=2){ g.strokeStyle=grid(x%10===0?.16:.06); g.beginPath(); g.moveTo(x*k,0); g.lineTo(x*k,s); g.stroke(); g.beginPath(); g.moveTo(0,x*k); g.lineTo(s,x*k); g.stroke(); }
+    g.globalCompositeOperation='destination-in'; g.fillStyle=fade; g.fillRect(0,0,s,s); g.restore();
+    g.save(); g.translate(c,c);
+    // sacred geometry around the plaza
+    if(M.pattern==='flower'){
+      g.strokeStyle=geo(.14); g.lineWidth=1.5; const r=12*k;
+      g.beginPath(); g.arc(0,0,r,0,7); g.stroke();
+      for(let i=0;i<6;i++){ const a=i/6*Math.PI*2; g.beginPath(); g.arc(Math.cos(a)*r,Math.sin(a)*r,r,0,7); g.stroke(); }
+      for(let i=0;i<6;i++){ const a=i/6*Math.PI*2+Math.PI/6; g.beginPath(); g.arc(Math.cos(a)*r*1.732,Math.sin(a)*r*1.732,r,0,7); g.stroke(); }
+      g.strokeStyle=geo(.1); [36,44,62].forEach(R=>{ g.beginPath(); g.arc(0,0,R*k,0,7); g.stroke(); });
+    } else if(M.pattern==='honey'){
+      g.strokeStyle=geo(.12); g.lineWidth=1.2; const h=3.2*k;
+      for(let q=-14;q<=14;q++) for(let r=-14;r<=14;r++){ const x=h*1.5*q, y=h*Math.sqrt(3)*(r+q/2); if(Math.hypot(x,y)>60*k) continue;
+        g.beginPath(); for(let i=0;i<=6;i++){ const a=i/6*Math.PI*2; g.lineTo(x+Math.cos(a)*h*.95,y+Math.sin(a)*h*.95);} g.stroke(); }
+    } else {
+      g.strokeStyle=geo(.1); g.lineWidth=1; [12,36,62].forEach(R=>{ g.beginPath(); g.arc(0,0,R*k,0,7); g.stroke(); });
+    }
+    // avenues from the plaza to each district + district plazas
+    for(const key in DISTRICT_ANGLE){ const a=DISTRICT_ANGLE[key], col=KINDS[key].color;
+      const x=Math.sin(a)*DISTRICT_R*k, y=Math.cos(a)*DISTRICT_R*k;
+      g.strokeStyle=geo(.22); g.lineWidth=2; g.setLineDash([10,8]); g.beginPath(); g.moveTo(Math.sin(a)*10*k,Math.cos(a)*10*k); g.lineTo(x,y); g.stroke(); g.setLineDash([]);
+      g.strokeStyle=col+'66'; g.lineWidth=2; g.beginPath(); g.arc(x,y,11*k,0,7); g.stroke();
+      g.strokeStyle=col+'2a'; g.lineWidth=1; g.beginPath(); g.arc(x,y,13*k,0,7); g.stroke();
+      const rg=g.createRadialGradient(x,y,0,x,y,11*k); rg.addColorStop(0,col+'22'); rg.addColorStop(1,col+'00'); g.fillStyle=rg; g.beginPath(); g.arc(x,y,11*k,0,7); g.fill();
+    }
+    g.restore(); groundTex.needsUpdate = true;
+  }
+
+  // ---------- the Mandala plaza ----------
+  const plaza = new T.Group(); plaza.userData.id='mandala'; world.add(plaza);
+  const mandalaCanvas = document.createElement('canvas'); mandalaCanvas.width=mandalaCanvas.height=1024;
+  const mandalaTex = new T.CanvasTexture(mandalaCanvas); mandalaTex.anisotropy=8;
+  const plazaDisc = new T.Mesh(new T.CircleGeometry(9,96), new T.MeshBasicMaterial({map:mandalaTex, transparent:true, depthWrite:false}));
+  plazaDisc.rotation.x=-Math.PI/2; plazaDisc.position.y=.06; plazaDisc.userData.id='mandala'; plaza.add(plazaDisc);
+  const plazaRing = new T.Mesh(new T.TorusGeometry(9.3,.12,8,120), new T.MeshStandardMaterial({color:0xd6b26e, metalness:.8, roughness:.3, emissive:0x3a2a10}));
+  plazaRing.rotation.x=-Math.PI/2; plazaRing.position.y=.12; plaza.add(plazaRing);
+  const core = new T.Mesh(new T.SphereGeometry(1.1,32,24), new T.MeshStandardMaterial({color:0xe8c27a, emissive:0x8a6420, metalness:.4, roughness:.35}));
+  core.position.y=3; core.userData.id='mandala'; plaza.add(core);
+  const coreHalo = new T.Sprite(new T.SpriteMaterial({map:HALO, color:0xe8c27a, transparent:true, opacity:.6, depthWrite:false, blending:T.AdditiveBlending}));
+  coreHalo.scale.set(7,7,1); coreHalo.position.y=3; plaza.add(coreHalo);
+  const coreOrbit = new T.Mesh(new T.TorusGeometry(2.1,.03,6,96), new T.MeshBasicMaterial({color:0xe8c27a, transparent:true, opacity:.7}));
+  coreOrbit.position.y=3; plaza.add(coreOrbit);
+  for(let i=0;i<8;i++){ const a=i/8*Math.PI*2+Math.PI/8; const pin=new T.Mesh(new T.CylinderGeometry(.08,.08,1.2,8), new T.MeshStandardMaterial({color:0xd6b26e, metalness:.8, roughness:.3}));
+    pin.position.set(Math.sin(a)*9.3,.6,Math.cos(a)*9.3); plaza.add(pin); }
+  function drawPlaza(){ const g=mandalaCanvas.getContext('2d'); const ink=mode==='cream'?'#5c3018':'#efe6d2'; const gold=mode==='cream'?'#9c6b1f':(mode==='alien'?'#b6ff7a':'#e8c27a');
+    drawMandala(g,1024,[KINDS.constellation.color,KINDS.art.color,KINDS.mind.color,KINDS.energy.color],gold,ink,'MANDALA · OF · IDEAS · BASE'); mandalaTex.needsUpdate=true; }
+
+  // ---------- block geometry ----------
+  function roundedBox(w,d,h,r){
+    const sh=new T.Shape(), x=-w/2, y=-d/2;
+    sh.moveTo(x+r,y); sh.lineTo(x+w-r,y); sh.quadraticCurveTo(x+w,y,x+w,y+r); sh.lineTo(x+w,y+d-r); sh.quadraticCurveTo(x+w,y+d,x+w-r,y+d);
+    sh.lineTo(x+r,y+d); sh.quadraticCurveTo(x,y+d,x,y+d-r); sh.lineTo(x,y+r); sh.quadraticCurveTo(x,y,x+r,y);
+    const b=Math.min(r*.5,.25);
+    const geo=new T.ExtrudeGeometry(sh,{depth:Math.max(.05,h-2*b), bevelEnabled:true, bevelSize:b, bevelThickness:b, bevelSegments:3, curveSegments:6});
+    geo.rotateX(-Math.PI/2); geo.translate(0,b,0); return geo;
+  }
+  function gearGeo(r,teeth,thick){
+    const sh=new T.Shape(); const n=teeth*4;
+    for(let i=0;i<=n;i++){ const a=i/n*Math.PI*2; const rr=(i%4<2)?r:r*.82; const fn=i?'lineTo':'moveTo'; sh[fn](Math.cos(a)*rr,Math.sin(a)*rr); }
+    const hole=new T.Path(); hole.absarc(0,0,r*.3,0,Math.PI*2,true); sh.holes.push(hole);
+    const g=new T.ExtrudeGeometry(sh,{depth:thick,bevelEnabled:false,curveSegments:24}); g.translate(0,0,-thick/2); return g;
+  }
+  const wheelTexCache={};
+  function wheelTex(kind){ const key=kind+mode; if(wheelTexCache[key]) return wheelTexCache[key];
+    const gold=mode==='cream'?'#9c6b1f':'#e8c27a';
+    return wheelTexCache[key]=canvasTex(512,(g,s)=>{ g.fillStyle=mode==='cream'?'#f5ecdc':'#0b0c18'; g.fillRect(0,0,s,s); drawMandala(g,s,[KINDS[kind].color,KINDS[kind].color,KINDS[kind].color],gold,'#fff',''); }); }
+
+  function matFor(kind, extra={}){
+    const M=MODES[mode], col=new T.Color(KINDS[kind].color);
+    return new T.MeshStandardMaterial(Object.assign({color:col, roughness:M.glassy?.15:.55, metalness:M.glassy?.1:.15,
+      emissive:col.clone().multiplyScalar(M.glassy?.35:.12), transparent:M.glassy, opacity:M.glassy?.55:1}, extra));
+  }
+  const objects = new Map(); // id -> {group, spin?, cell?, base}
+  function buildBlock(b){
+    const g=new T.Group(); g.userData.id=b.id; g.position.set(b.x,0,b.z);
+    const col=new T.Color(KINDS[b.kind].color), h=b.h||1, M=MODES[mode];
+    const rec={group:g, b, top:3*h};
+    const edge=(geo,y=0)=>{ const l=new T.LineSegments(new T.EdgesGeometry(geo,30), new T.LineBasicMaterial({color:col.clone().lerp(new T.Color(0xffffff),.35), transparent:true, opacity:M.glassy?.9:.5})); l.position.y=y; return l; };
+    // nail at the base (nails and strings)
+    const nail=new T.Mesh(new T.CylinderGeometry(.6,.75,.18,24), new T.MeshStandardMaterial({color:0xd6b26e, metalness:.8, roughness:.35, emissive:0x2a1d08}));
+    nail.position.y=.09; g.add(nail);
+    if(b.shape==='tower'){
+      const hh=4.5*h, geo=roundedBox(2.4,2.4,hh,.5); const m=new T.Mesh(geo,matFor(b.kind)); m.position.y=.18; g.add(m); g.add(edge(geo,.18));
+      const ant=new T.Mesh(new T.CylinderGeometry(.04,.04,1.4,6), new T.MeshBasicMaterial({color:0xe8c27a})); ant.position.y=hh+.9; g.add(ant);
+      const tip=new T.Sprite(new T.SpriteMaterial({map:HALO,color:col,transparent:true,depthWrite:false,blending:T.AdditiveBlending})); tip.scale.set(1.4,1.4,1); tip.position.y=hh+1.6; g.add(tip); rec.blink=tip;
+      rec.top=hh+1.8;
+    } else if(b.shape==='block'){
+      const hh=1.6*h, geo=roundedBox(4,3,hh,.6); const m=new T.Mesh(geo,matFor(b.kind)); m.position.y=.18; g.add(m); g.add(edge(geo,.18));
+      const roof=roundedBox(2.4,1.6,.5,.3); const r=new T.Mesh(roof,matFor(b.kind,{emissive:col.clone().multiplyScalar(.4)})); r.position.y=hh+.18; g.add(r);
+      rec.top=hh+.9;
+    } else if(b.shape==='wheel'){
+      const R=2.2*h, yaw=new T.Group(); yaw.rotation.y=Math.atan2(b.x,b.z); yaw.position.y=R+.7; g.add(yaw);
+      const spin=new T.Group(); yaw.add(spin);
+      const disc=new T.Mesh(new T.CylinderGeometry(R,R,.22,64), [matFor(b.kind,{opacity:M.glassy?.6:1}), new T.MeshStandardMaterial({map:wheelTex(b.kind), roughness:.5, metalness:.2, emissive:0xffffff, emissiveMap:wheelTex(b.kind), emissiveIntensity:.35}), new T.MeshStandardMaterial({map:wheelTex(b.kind), roughness:.5, emissive:0xffffff, emissiveMap:wheelTex(b.kind), emissiveIntensity:.35})]);
+      disc.rotation.x=Math.PI/2; spin.add(disc);
+      const ring=new T.Mesh(new T.TorusGeometry(R+.12,.09,8,80), new T.MeshStandardMaterial({color:0xd6b26e, metalness:.85, roughness:.3}));
+      spin.add(ring);
+      [-1,1].forEach(sd=>{ const leg=new T.Mesh(new T.CylinderGeometry(.09,.12,R+.9,8), new T.MeshStandardMaterial({color:0xd6b26e, metalness:.8, roughness:.35}));
+        leg.position.set(sd*.6,-(R+.7)/2,0); leg.rotation.z=sd*.22; yaw.add(leg); });
+      rec.spin=spin; rec.top=2*R+1.2;
+    } else if(b.shape==='cell'){
+      const R=1.9*h, geo=new T.IcosahedronGeometry(R,3); const m=new T.Mesh(geo,matFor(b.kind,{transparent:true, opacity:.78, roughness:.3}));
+      m.position.y=R+.5; g.add(m);
+      const nucleus=new T.Mesh(new T.SphereGeometry(R*.35,20,16), new T.MeshBasicMaterial({color:col.clone().lerp(new T.Color(0xffffff),.4)})); nucleus.position.copy(m.position); g.add(nucleus);
+      rec.cell={mesh:m, base:Float32Array.from(geo.attributes.position.array), R}; rec.top=2*R+.8;
+    } else if(b.shape==='dome'){
+      const R=2.4*h; const geo=new T.SphereGeometry(R,40,20,0,Math.PI*2,0,Math.PI/2); const m=new T.Mesh(geo,matFor(b.kind,{transparent:true,opacity:.62,side:T.DoubleSide})); m.position.y=.18; g.add(m);
+      const wire=new T.LineSegments(new T.WireframeGeometry(new T.SphereGeometry(R*1.005,12,6,0,Math.PI*2,0,Math.PI/2)), new T.LineBasicMaterial({color:col, transparent:true, opacity:.35})); wire.position.y=.18; g.add(wire);
+      const glow=new T.Sprite(new T.SpriteMaterial({map:HALO,color:col,transparent:true,depthWrite:false,blending:T.AdditiveBlending})); glow.scale.set(R*2.2,R*2.2,1); glow.position.y=R*.4; g.add(glow); rec.blink=glow;
+      rec.top=R+.6;
+    } else if(b.shape==='gear'){
+      const R=1.9*h, yaw=new T.Group(); yaw.rotation.y=Math.atan2(b.x,b.z); yaw.position.y=R+.8; g.add(yaw);
+      const spin=new T.Group(); yaw.add(spin);
+      spin.add(new T.Mesh(gearGeo(R,12,.5), new T.MeshStandardMaterial({color:0xd6b26e, metalness:.85, roughness:.3, emissive:0x2a1d08})));
+      const small=new T.Group(); small.position.set(R*1.35,-R*.55,0); yaw.add(small);
+      small.add(new T.Mesh(gearGeo(R*.5,8,.45), matFor(b.kind,{metalness:.6,roughness:.3,transparent:false,opacity:1})));
+      const post=new T.Mesh(new T.CylinderGeometry(.14,.18,R+.8,8), new T.MeshStandardMaterial({color:0xd6b26e, metalness:.8, roughness:.35})); post.position.y=(R+.8)/2; g.add(post);
+      rec.spin=spin; rec.spin2=small; rec.top=2*R+1;
+    } else { // orb
+      const R=1.5*h; const post=new T.Mesh(new T.CylinderGeometry(.14,.3,1.6,10), new T.MeshStandardMaterial({color:0xd6b26e, metalness:.8, roughness:.35})); post.position.y=.8; g.add(post);
+      const orb=new T.Mesh(new T.SphereGeometry(R,32,24), matFor(b.kind,{roughness:.25,metalness:.3})); orb.position.y=1.6+R; g.add(orb);
+      const ringG=new T.Group(); ringG.position.copy(orb.position); ringG.rotation.x=1.15; g.add(ringG);
+      ringG.add(new T.Mesh(new T.TorusGeometry(R*1.6,.05,6,90), new T.MeshBasicMaterial({color:0xe8c27a})));
+      const moon=new T.Mesh(new T.SphereGeometry(.25,12,10), new T.MeshBasicMaterial({color:0xefe6d2})); moon.position.x=R*1.6; ringG.add(moon);
+      rec.spin=ringG; rec.spinAxis='z'; rec.top=1.6+2*R+.4;
+    }
+    // selection ring (hidden until selected)
+    const sel=new T.Mesh(new T.RingGeometry(3.4,3.6,64), new T.MeshBasicMaterial({color:0xe8c27a, transparent:true, opacity:0, side:T.DoubleSide, depthWrite:false}));
+    sel.rotation.x=-Math.PI/2; sel.position.y=.05; g.add(sel); rec.sel=sel;
+    g.traverse(o=>{ o.userData.id=b.id; });
+    cityGroup.add(g); objects.set(b.id,rec);
+    return rec;
+  }
+  function disposeGroup(g){ g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); const mm=Array.isArray(o.material)?o.material:[o.material]; mm.forEach(m=>{ if(m && m.dispose) m.dispose(); }); }); }
+  function rebuildBlocks(){
+    objects.forEach(r=>{ cityGroup.remove(r.group); disposeGroup(r.group); }); objects.clear();
+    city.blocks.forEach(buildBlock); rebuildLinks(); rebuildLabels(); applySelectionLook();
+  }
+
+  // ---------- strings (links) ----------
+  let linkObjs=[];
+  function endPoint(id){ if(id==='mandala') return new T.Vector3(0,3,0); const r=objects.get(id); if(!r) return null; return new T.Vector3(r.b.x, Math.min(r.top*.55, 4), r.b.z); }
+  function rebuildLinks(){
+    linkObjs.forEach(o=>{ linkGroup.remove(o.line); o.pulses.forEach(p=>linkGroup.remove(p)); o.line.geometry.dispose(); o.line.material.dispose(); }); linkObjs=[];
+    city.links.forEach(L=>{
+      const A=endPoint(L.a), B=endPoint(L.b); if(!A||!B) return;
+      const ka = L.a==='mandala' ? 'core' : objects.get(L.a).b.kind;
+      const col=new T.Color(KINDS[ka].color);
+      const mid=A.clone().add(B).multiplyScalar(.5); mid.y += A.distanceTo(B)*.28 + 1.5;
+      const curve=new T.QuadraticBezierCurve3(A,mid,B);
+      const geo=new T.BufferGeometry().setFromPoints(curve.getPoints(48));
+      const line=new T.Line(geo,new T.LineBasicMaterial({color:col, transparent:true, opacity:.55}));
+      linkGroup.add(line);
+      const pulses=[0,.5].map(off=>{ const p=new T.Sprite(new T.SpriteMaterial({map:HALO,color:col,transparent:true,depthWrite:false,blending:T.AdditiveBlending})); p.scale.set(1,1,1); p.userData.off=off+Math.random()*.2; linkGroup.add(p); return p; });
+      linkObjs.push({L, curve, line, pulses});
+    });
+  }
+  function refreshLink(id){ linkObjs.forEach(o=>{ if(o.L.a===id||o.L.b===id){ const A=endPoint(o.L.a),B=endPoint(o.L.b); const mid=A.clone().add(B).multiplyScalar(.5); mid.y+=A.distanceTo(B)*.28+1.5; o.curve.v0.copy(A); o.curve.v1.copy(mid); o.curve.v2.copy(B); o.line.geometry.setFromPoints(o.curve.getPoints(48)); } }); }
+
+  // ---------- Sky level: your city as one star ----------
+  const SKY_ISLANDS=[['Milan','Your home constellation',0,0,true],['Lisbon','A sister constellation',-60,-100],['Berlin','A constellation to visit',70,95],['Next city','A new constellation',95,-60]];
+  SKY_ISLANDS.forEach(([n,sub,x,z,home])=>{ if(home) return;
+    const g=new T.Group(); g.position.set(x,0,z);
+    const ring=new T.Mesh(new T.RingGeometry(10,10.4,64), new T.MeshBasicMaterial({color:0xe8c27a, transparent:true, opacity:.35, side:T.DoubleSide})); ring.rotation.x=-Math.PI/2; g.add(ring);
+    for(let i=0;i<7;i++){ const s=new T.Sprite(new T.SpriteMaterial({map:HALO,color:0xe8c27a,transparent:true,opacity:.5,depthWrite:false,blending:T.AdditiveBlending})); const a=Math.random()*7, r=Math.random()*8; s.position.set(Math.cos(a)*r,1+Math.random()*3,Math.sin(a)*r); s.scale.set(2,2,1); g.add(s); }
+    skyGroup.add(g); });
+  const cityStar=new T.Sprite(new T.SpriteMaterial({map:HALO,color:0xe8c27a,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending})); cityStar.scale.set(90,90,1); cityStar.position.y=8; scene.add(cityStar);
+  // faint stars all around
+  { const n=900, pos=new Float32Array(n*3); for(let i=0;i<n;i++){ const r=260+Math.random()*200, a=Math.random()*Math.PI*2, y=Math.random()*240-20; pos[i*3]=Math.cos(a)*r; pos[i*3+1]=y; pos[i*3+2]=Math.sin(a)*r; }
+    const sg=new T.BufferGeometry(); sg.setAttribute('position',new T.BufferAttribute(pos,3));
+    scene.add(new T.Points(sg,new T.PointsMaterial({color:0xe8c27a, size:1.4, transparent:true, opacity:.55, sizeAttenuation:true}))); }
+
+  // ---------- camera rig ----------
+  const LEVELS=[{dist:28, polar:.02, name:'Mandala'},{dist:64, polar:.92, name:'City'},{dist:330, polar:.8, name:'Sky'}];
+  const cam={dist:28, polar:.02, az:Math.PI*0.08, target:new T.Vector3(0,0,0)};
+  let tween=null, autoSpin=false;
+  function placeCamera(){
+    const sp=Math.sin(cam.polar), cp=Math.cos(cam.polar);
+    camera.position.set(cam.target.x+cam.dist*sp*Math.sin(cam.az), cam.target.y+cam.dist*cp, cam.target.z+cam.dist*sp*Math.cos(cam.az));
+    camera.up.set(-Math.sin(cam.az)*cp, sp, -Math.cos(cam.az)*cp).normalize(); // keeps top-down stable
+    if(cam.polar>.05) camera.up.set(0,1,0);
+    camera.lookAt(cam.target);
+  }
+  function levelOf(d){ return d<40?0:(d<170?1:2); }
+  function flyTo(to, ms=1200){ tween={from:{dist:cam.dist,polar:cam.polar,az:cam.az,target:cam.target.clone()}, to:Object.assign({dist:cam.dist,polar:cam.polar,az:cam.az,target:cam.target.clone()},to), t0:performance.now(), ms:reduced?1:ms}; }
+  function goLevel(i){ const L=LEVELS[i]; flyTo({dist:L.dist, polar:L.polar, target:new T.Vector3(0,0,0)}); }
+  function flyToBlock(id){ const p=id==='mandala'?new T.Vector3(0,0,0):new T.Vector3(objects.get(id).b.x,0,objects.get(id).b.z); flyTo({target:p, dist:Math.min(cam.dist,42), polar:Math.max(Math.min(cam.polar,1.05),.75)}, 900); }
+
+  // ---------- labels ----------
+  let labelRecs=[];
+  function rebuildLabels(){
+    labelsEl.textContent=''; labelRecs=[];
+    const add=(id,name,sub,color,cls,getPos,levels)=>{ const d=el('div',{class:'lbl '+(cls||'')}); d.appendChild(el('b',{text:name})); const s=el('span',{text:sub}); s.style.color=color; d.appendChild(s); labelsEl.appendChild(d); labelRecs.push({id,el:d,getPos,levels}); };
+    add('mandala','Mandala of Ideas','THE BASE','var(--accent)','big',()=>cam.dist<40?new T.Vector3(0,0,10.9):new T.Vector3(0,5.5,0),[0,1]);
+    city.blocks.forEach(b=>add(b.id,b.name,KINDS[b.kind].name,KINDS[b.kind].color,'',()=>{ const r=objects.get(b.id); return new T.Vector3(r.b.x,r.top+.4,r.b.z); },[1]));
+    for(const k in DISTRICT_ANGLE){ const a=DISTRICT_ANGLE[k]; const n=city.blocks.filter(b=>b.kind===k).length;
+      add('d:'+k,KINDS[k].name,n+' TOOLS',KINDS[k].color,'dist',()=>new T.Vector3(Math.sin(a)*DISTRICT_R,6,Math.cos(a)*DISTRICT_R),[2]);
+      // district names also sit on the ground at mandala level, as a promise of what is outside
+      add('d0:'+k,KINDS[k].name,'ZOOM OUT',KINDS[k].color,'dist',()=>new T.Vector3(Math.sin(a)*11,0,Math.cos(a)*11),[0]); }
+    SKY_ISLANDS.forEach(([n,sub,x,z,home])=>add('i:'+n,n,sub.toUpperCase(),home?'var(--accent)':'var(--dim)',home?'big':'',()=>new T.Vector3(x,home?14:6,z),[2]));
+  }
+  const v3=new T.Vector3();
+  function layoutLabels(w,h,top,bottom,right){
+    const lv=levelOf(cam.dist), placed=[];
+    const order=labelRecs.slice().sort((a,b)=>(b.id===selected)-(a.id===selected) || (a.id==='mandala'?-1:0));
+    order.forEach(r=>{
+      if(!r.levels.includes(lv) && !(r.id===selected && lv===0)){ r.el.hidden=true; return; }
+      v3.copy(r.getPos()).project(camera);
+      if(v3.z>1){ r.el.hidden=true; return; }
+      const x=(v3.x*.5+.5)*w, y=(-v3.y*.5+.5)*h;
+      const bw=r.el.offsetWidth||120, bh=r.el.offsetHeight||36;
+      const rect={l:x-bw/2-4, r:x+bw/2+4, t:y-bh-2, b:y+2};
+      if(rect.t<top || rect.b>bottom || rect.l<4 || rect.r>right || placed.some(p=>!(rect.r<p.l||rect.l>p.r||rect.b<p.t||rect.t>p.b))){ r.el.hidden=true; return; }
+      placed.push(rect); r.el.hidden=false; r.el.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%,-100%)`;
+      r.el.classList.toggle('sel', r.id===selected);
+    });
+  }
+
+  // ---------- selection look ----------
+  function applySelectionLook(){
+    objects.forEach((r,id)=>{ r.sel.material.opacity = id===selected?.9:(id===connectFrom?.6:0); });
+    linkObjs.forEach(o=>{ const on=!selected || o.L.a===selected || o.L.b===selected; o.line.material.opacity = on?(selected?.95:.55):.12; o.pulses.forEach(p=>p.visible=on); });
+  }
+
+  // ---------- persistence ----------
+  let saveTimer=null;
+  function save(){ userEdited=true; clearTimeout(saveTimer); saveTimer=setTimeout(async()=>{
+    const data={v:1, blocks:city.blocks, links:city.links, updated:Date.now()};
+    if(dbDoc){ try{ await dbDoc.set(data); return; }catch(e){ toast('Could not save to the cloud. Kept on this device.'); } }
+    try{ localStorage.setItem('toolcity.city', JSON.stringify(data)); }catch(e){}
+  },500); }
+  function validCity(d){ return d && Array.isArray(d.blocks) && Array.isArray(d.links) && d.blocks.every(b=>b && typeof b.id==='string' && KINDS[b.kind] && SHAPES[b.shape] && isFinite(b.x) && isFinite(b.z)); }
+  try{ const s=JSON.parse(localStorage.getItem('toolcity.city')||'null'); if(validCity(s)) city={blocks:s.blocks, links:s.links}; }catch(e){}
+  (async()=>{ try{
+    const db = window.claude && await window.claude.use('db'); if(!db) return;
+    dbDoc = db.doc('city/main');
+    const snap = await Promise.race([dbDoc.get(), new Promise(r=>setTimeout(()=>r(null),10000))]);
+    if(snap && snap.exists && !userEdited){ const d=snap.data(); if(validCity(d)){ city={blocks:d.blocks, links:d.links}; selected=null; rebuildBlocks(); renderSheet(); } }
+  }catch(e){ dbDoc=null; } })();
+
+  // ---------- sheet (one panel for everything) ----------
+  const tidy=s=>String(s||'').slice(0,80);
+  function safeUrl(u){ u=String(u||'').trim(); return /^https:\/\//.test(u)||/^\/(?!\/)/.test(u)?u:''; }
+  function kindChips(cur,onPick){ const w=el('div',{class:'chips',role:'group'}); ['art','mind','energy','constellation','core'].forEach(k=>{ const bt=el('button',{'aria-pressed':String(cur===k), onclick:()=>onPick(k)},[Object.assign(el('i',{class:'dot'}),{style:`background:${KINDS[k].color}`}), document.createTextNode(KINDS[k].name)]); w.appendChild(bt); }); return w; }
+  function shapeChips(cur,onPick){ const w=el('div',{class:'chips',role:'group'}); Object.keys(SHAPES).forEach(k=>w.appendChild(el('button',{'aria-pressed':String(cur===k), onclick:()=>onPick(k), text:SHAPES[k].glyph+' '+SHAPES[k].name}))); return w; }
+
+  function renderSheet(){
+    body.textContent='';
+    root.querySelector('[data-tool="connect"]').setAttribute('aria-pressed', String(tool==='connect'));
+    root.querySelector('[data-tool="move"]').setAttribute('aria-pressed', String(tool==='move'));
+    if(pending){ return renderNew(); }
+    if(selected==='mandala'){ return renderMandala(); }
+    const b = selected && city.blocks.find(x=>x.id===selected);
+    if(b) return renderBlock(b);
+    renderOverview();
+  }
+  function renderOverview(){
+    body.appendChild(el('h2',{text:'Your tools as a city'}));
+    body.appendChild(el('p',{text:'The Mandala is the base in the middle. Each district is a world, each block a tool, each golden string a connection. Tap a district or any block.'}));
+    const lg=el('div',{class:'legend'});
+    ['art','mind','energy','constellation'].forEach(k=>{ const n=city.blocks.filter(b=>b.kind===k).length;
+      lg.appendChild(el('button',{onclick:()=>{ const a=DISTRICT_ANGLE[k]; flyTo({target:new T.Vector3(Math.sin(a)*DISTRICT_R,0,Math.cos(a)*DISTRICT_R), dist:46, polar:.9, az:a}); }},[Object.assign(el('i',{class:'dot'}),{style:`background:${KINDS[k].color}`}), document.createTextNode(KINDS[k].name), el('small',{text:String(n)})])); });
+    const coreN=city.blocks.filter(b=>b.kind==='core').length; if(coreN) lg.appendChild(el('button',{onclick:()=>goLevel(1)},[Object.assign(el('i',{class:'dot'}),{style:`background:${KINDS.core.color}`}), document.createTextNode('Core'), el('small',{text:String(coreN)})]));
+    body.appendChild(lg);
+  }
+  function renderMandala(){
+    body.appendChild(el('div',{class:'lab',text:'The base'}));
+    body.appendChild(el('h2',{text:'Mandala of Ideas'}));
+    body.appendChild(el('p',{text:'Everything starts here: the worlds, the wheels, your ideas as bubbles. The city grows outward from it. Open it to work inside a wheel.'}));
+    const n=city.links.filter(l=>l.a==='mandala'||l.b==='mandala').length;
+    body.appendChild(el('p',{text:`${n} strings leave the Mandala.`}));
+    const act=el('div',{class:'actions'});
+    act.appendChild(el('a',{class:'open',href:MANDALA_URL,target:'_top',text:'Open the Mandala'}));
+    act.appendChild(el('button',{text:'⟷ String from here',onclick:()=>{ setTool('connect'); connectFrom='mandala'; hint('Now tap the block to connect to',true); applySelectionLook(); }}));
+    act.appendChild(el('button',{text:'Done',onclick:()=>select(null)}));
+    body.appendChild(act);
+    linksList('mandala');
+  }
+  function linksList(id){
+    const ls=city.links.filter(l=>l.a===id||l.b===id); if(!ls.length) return;
+    body.appendChild(el('div',{class:'lab',text:'Connected to'}));
+    const w=el('div',{class:'links'});
+    ls.forEach(l=>{ const other=l.a===id?l.b:l.a; const ob=other==='mandala'?{name:'Mandala of Ideas',kind:'core'}:city.blocks.find(b=>b.id===other); if(!ob) return;
+      w.appendChild(el('button',{onclick:()=>{ select(other); flyToBlock(other); }},[Object.assign(el('i',{class:'dot'}),{style:`background:${KINDS[ob.kind].color}`}), document.createTextNode(ob.name)])); });
+    body.appendChild(w);
+  }
+  function renderBlock(b){
+    body.appendChild(el('div',{class:'lab',text:KINDS[b.kind].name+' · '+SHAPES[b.shape].name}));
+    body.appendChild(el('h2',{text:b.name}));
+    if(b.note) body.appendChild(el('p',{text:b.note}));
+    const act=el('div',{class:'actions'});
+    const u=safeUrl(b.url); if(u) act.appendChild(el('a',u.startsWith('/')?{class:'open',href:u,target:'_top',text:'Open'}:{class:'open',href:u,target:'_blank',rel:'noopener',text:'Open ↗'}));
+    act.appendChild(el('button',{text:'⟷ String from here',onclick:()=>{ setTool('connect'); connectFrom=b.id; hint('Now tap the block to connect to',true); applySelectionLook(); }}));
+    act.appendChild(el('button',{text:'Customize',onclick:()=>renderEdit(b)}));
+    act.appendChild(el('button',{text:'Done',onclick:()=>select(null)}));
+    body.appendChild(act);
+    linksList(b.id);
+  }
+  function renderEdit(b){
+    body.textContent='';
+    body.appendChild(el('div',{class:'lab',text:'Customize block'}));
+    const nameF=el('label',{class:'field'},[el('span',{class:'lab',text:'Name'}), el('input',{id:'tc-edit-name',value:b.name,maxlength:'40'})]);
+    const noteF=el('label',{class:'field'},[el('span',{class:'lab',text:'What it is'}), Object.assign(el('textarea',{id:'tc-edit-note',maxlength:'200'}),{value:b.note||''})]);
+    const urlF=el('label',{class:'field'},[el('span',{class:'lab',text:'Link (https)'}), el('input',{id:'tc-edit-url',value:b.url||'',placeholder:'https://claude.ai/artifact/…',inputmode:'url'})]);
+    body.append(nameF,noteF,urlF);
+    body.appendChild(el('div',{class:'lab',text:'District'}));
+    body.appendChild(kindChips(b.kind,k=>{ b.kind=k; commitBlock(b); renderEdit(b); }));
+    body.appendChild(el('div',{class:'lab',text:'Shape'}));
+    body.appendChild(shapeChips(b.shape,s=>{ b.shape=s; commitBlock(b); renderEdit(b); }));
+    const hF=el('label',{class:'field'},[el('span',{class:'lab',text:'Size'}), el('input',{id:'tc-edit-h',type:'range',min:'0.5',max:'2.5',step:'0.1',value:String(b.h||1)})]);
+    hF.querySelector('input').addEventListener('change',e=>{ b.h=+e.target.value; commitBlock(b); });
+    body.appendChild(hF);
+    const act=el('div',{class:'actions'});
+    act.appendChild(el('button',{text:'Save',onclick:()=>{
+      b.name=tidy(nameF.querySelector('input').value)||b.name; b.note=String(noteF.querySelector('textarea').value).slice(0,200);
+      const nu=urlF.querySelector('input').value.trim(); if(nu && !safeUrl(nu)){ toast('Links need to start with https://'); return; } b.url=nu;
+      commitBlock(b); renderSheet(); toast('Saved'); }}));
+    const del=el('button',{class:'warn',text:'Delete block'});
+    del.addEventListener('click',()=>{ act.textContent=''; act.appendChild(el('span',{class:'lab',text:'Delete “'+b.name+'”?'}));
+      act.appendChild(el('button',{class:'warn',text:'Yes, delete',onclick:()=>{ city.blocks=city.blocks.filter(x=>x.id!==b.id); city.links=city.links.filter(l=>l.a!==b.id&&l.b!==b.id); selected=null; rebuildBlocks(); save(); renderSheet(); toast('Deleted'); }}));
+      act.appendChild(el('button',{text:'Keep it',onclick:()=>renderEdit(b)})); });
+    act.appendChild(el('button',{text:'Back',onclick:renderSheet}));
+    act.appendChild(del);
+    body.appendChild(act);
+  }
+  function commitBlock(b){ const r=objects.get(b.id); if(r){ cityGroup.remove(r.group); disposeGroup(r.group); objects.delete(b.id); } buildBlock(b); rebuildLinks(); rebuildLabels(); applySelectionLook(); save(); }
+  function renderNew(){
+    const p=pending;
+    body.appendChild(el('div',{class:'lab',text:'New block'}));
+    const nameF=el('label',{class:'field'},[el('span',{class:'lab',text:'Name'}), el('input',{id:'tc-new-name',value:p.name,maxlength:'40',placeholder:'e.g. Boxing, Lost Again, Exam prep'})]);
+    nameF.querySelector('input').addEventListener('input',e=>p.name=e.target.value);
+    const urlF=el('label',{class:'field'},[el('span',{class:'lab',text:'Link (optional, https)'}), el('input',{id:'tc-new-url',value:p.url,placeholder:'https://…',inputmode:'url'})]);
+    urlF.querySelector('input').addEventListener('input',e=>p.url=e.target.value);
+    body.append(nameF);
+    body.appendChild(el('div',{class:'lab',text:'District'}));
+    body.appendChild(kindChips(p.kind,k=>{ p.kind=k; body.textContent=''; renderNew(); }));
+    body.appendChild(el('div',{class:'lab',text:'Shape'}));
+    body.appendChild(shapeChips(p.shape,s=>{ p.shape=s; body.textContent=''; renderNew(); }));
+    body.append(urlF);
+    const act=el('div',{class:'actions'});
+    act.appendChild(el('button',{text:tool==='place'?'Tap the map now…':'Place on the map', 'aria-pressed':String(tool==='place'), onclick:()=>{
+      if(!tidy(p.name).trim()){ toast('Give the block a name first'); return; }
+      if(p.url && !safeUrl(p.url)){ toast('Links need to start with https://'); return; }
+      tool='place'; hint('Tap the ground where “'+tidy(p.name)+'” should stand',true); if(cam.dist<40) goLevel(1); body.textContent=''; renderNew(); }}));
+    act.appendChild(el('button',{text:'Cancel',onclick:()=>{ pending=null; tool=null; hint(); renderSheet(); }}));
+    body.appendChild(act);
+  }
+  function placePending(x,z){
+    const p=pending, id='u'+Date.now().toString(36);
+    const b={id, name:tidy(p.name).trim(), kind:p.kind, shape:p.shape, x:+x.toFixed(1), z:+z.toFixed(1), h:1, note:'', url:safeUrl(p.url)};
+    city.blocks.push(b); pending=null; tool=null; buildBlock(b); rebuildLabels(); save(); select(id); hint(); toast('Placed “'+b.name+'”');
+  }
+
+  // ---------- tools ----------
+  function setTool(t){ tool = tool===t ? null : t; connectFrom=null; if(tool==='connect') hint(selected?'Tap the block to connect to':'Tap a block to start a string',true); else if(tool==='move') hint('Drag a block to move it',true); else hint(); applySelectionLook(); renderSheet(); }
+  root.querySelector('[data-tool="add"]').addEventListener('click',()=>{ tool=null; selected=null; const a=Math.atan2(cam.target.x,cam.target.z); let k='core'; let best=1e9; for(const d in DISTRICT_ANGLE){ const dx=Math.sin(DISTRICT_ANGLE[d])*DISTRICT_R-cam.target.x, dz=Math.cos(DISTRICT_ANGLE[d])*DISTRICT_R-cam.target.z, dd=dx*dx+dz*dz; if(dd<best && dd<400){best=dd;k=d;} }
+    pending={name:'', kind:k, shape:'block', url:''}; setSheet(true); applySelectionLook(); renderSheet(); setTimeout(()=>{ const i=root.querySelector('#tc-new-name'); if(i) i.focus({preventScroll:true}); },50); });
+  root.querySelector('[data-tool="connect"]').addEventListener('click',()=>{ pending=null; if(selected && tool!=='connect'){ tool='connect'; connectFrom=selected; hint('Now tap the block to connect to',true); applySelectionLook(); renderSheet(); } else setTool('connect'); });
+  root.querySelector('[data-tool="move"]').addEventListener('click',()=>{ pending=null; setTool('move'); });
+  function link(a,b){ if(a===b) return; const i=city.links.findIndex(l=>(l.a===a&&l.b===b)||(l.a===b&&l.b===a));
+    const nm=id=>id==='mandala'?'Mandala':(city.blocks.find(x=>x.id===id)||{}).name;
+    if(i>=0){ city.links.splice(i,1); toast('String removed: '+nm(a)+' – '+nm(b)); } else { city.links.push({a,b}); toast('Strung: '+nm(a)+' – '+nm(b)); }
+    rebuildLinks(); save(); }
+  function select(id){ selected=id; if(id) setSheet(true); applySelectionLook(); renderSheet(); }
+
+  // ---------- sheet fold + layout vars ----------
+  function setSheet(open){ sheetOpen=open; body.hidden=!open; fold.textContent=open?'▾':'▴'; fold.setAttribute('aria-expanded',String(open)); fold.setAttribute('aria-label',open?'Collapse panel':'Expand panel'); try{ localStorage.setItem('toolcity.sheet',open?'1':'0'); }catch(e){} syncLayout(); }
+  fold.addEventListener('click',()=>setSheet(!sheetOpen));
+  let topPx=64;
+  function syncLayout(){ const wide=innerWidth>=760; topPx=$('.top').offsetHeight||64; root.style.setProperty('--sheet', wide?'0px':sheet.offsetHeight+'px'); root.style.setProperty('--top', topPx+'px'); }
+  new ResizeObserver(syncLayout).observe(sheet);
+
+  // ---------- menu ----------
+  const modeRow=$('.modes');
+  [['night','Night ☾'],['cream','Cream ☀'],['glass','Glass ✧'],['window','Window ▢'],['alien','Alien ⏣']].forEach(([k,n])=>modeRow.appendChild(el('button',{'data-mode':k,'aria-pressed':String(mode===k),text:n,onclick:()=>setMode(k)})));
+  menuBtn.addEventListener('click',e=>{ e.stopPropagation(); menu.hidden=!menu.hidden; menuBtn.setAttribute('aria-expanded',String(!menu.hidden)); });
+  root.addEventListener('pointerdown',e=>{ if(!menu.hidden && !menu.contains(e.target) && e.target!==menuBtn){ menu.hidden=true; menuBtn.setAttribute('aria-expanded','false'); } });
+  menu.addEventListener('click',e=>{ const a=e.target.closest('button'); if(!a) return;
+    if(a.dataset.act==='reset-view'){ goLevel(1); }
+    if(a.dataset.act==='spin'){ autoSpin=!autoSpin; a.setAttribute('aria-pressed',String(autoSpin)); }
+    if(a.dataset.act==='restore'){ const row=$('.restoreRow'); row.textContent=''; row.appendChild(el('span',{class:'lab',text:'Replace your city with the starter?'}));
+      row.appendChild(el('button',{class:'warn',text:'Yes, restore',onclick:()=>{ city=starterCity(); selected=null; pending=null; tool=null; rebuildBlocks(); save(); renderSheet(); resetRestore(); toast('Starter city restored'); }}));
+      row.appendChild(el('button',{text:'Keep mine',onclick:resetRestore})); }
+  });
+  function resetRestore(){ const row=$('.restoreRow'); row.textContent=''; row.appendChild(el('button',{'data-act':'restore',text:'Restore starter city'})); }
+  function setMode(k){ mode=k; root.dataset.mode=k; try{ localStorage.setItem('toolcity.mode',k); }catch(e){}
+    modeRow.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===k)));
+    const M=MODES[k]; scene.background=new T.Color(M.bg); scene.fog.color=new T.Color(M.fog);
+    hemi.intensity=.75*M.light; sun.intensity=.9*M.light; hemi.groundColor=new T.Color(k==='cream'?0xb9a07a:0x101020);
+    coreOrbit.material.color.set(k==='alien'?0xb6ff7a:0xe8c27a);
+    drawGround(); drawPlaza(); rebuildBlocks(); }
+
+  // ---------- dial ----------
+  root.querySelectorAll('.dial button').forEach(b=>b.addEventListener('click',()=>{ goLevel(+b.dataset.level); }));
+
+  // ---------- hint + toast ----------
+  let hintOverride=null;
+  function hint(text,loud){ hintOverride=text?{text,loud}:null; }
+  let toastT=null; function toast(t){ toastEl.textContent=t; toastEl.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>toastEl.hidden=true,2400); }
+
+  // ---------- input: orbit, pinch, pan, tap ----------
+  const ptrs=new Map(); let gesture=null; const ray=new T.Raycaster(); const ndc=new T.Vector2(); const groundPlane=new T.Plane(new T.Vector3(0,1,0),0);
+  function pickAt(cx,cy){ const r=canvas.getBoundingClientRect(); ndc.set((cx-r.left)/r.width*2-1, -((cy-r.top)/r.height*2-1)); ray.setFromCamera(ndc,camera);
+    const hits=ray.intersectObjects([...cityGroup.children, plaza],true).filter(h=>h.object.userData.id && h.object.visible && !(h.object.type==='Sprite'));
+    return hits.length?hits[0].object.userData.id:null; }
+  function groundAt(cx,cy){ const r=canvas.getBoundingClientRect(); ndc.set((cx-r.left)/r.width*2-1, -((cy-r.top)/r.height*2-1)); ray.setFromCamera(ndc,camera); const p=new T.Vector3(); return ray.ray.intersectPlane(groundPlane,p)?p:null; }
+  canvas.addEventListener('pointerdown',e=>{
+    canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    tween=null;
+    if(ptrs.size===1){
+      gesture={type:'orbit', sx:e.clientX, sy:e.clientY, t:performance.now(), moved:false, button:e.button, shift:e.shiftKey};
+      if(tool==='move'){ const id=pickAt(e.clientX,e.clientY); if(id && id!=='mandala'){ gesture.type='drag'; gesture.id=id; select(id); } }
+    } else if(ptrs.size===2){ const [a,b]=[...ptrs.values()]; gesture={type:'pinch', d:Math.hypot(a.x-b.x,a.y-b.y), mx:(a.x+b.x)/2, my:(a.y+b.y)/2, moved:true}; }
+  });
+  canvas.addEventListener('pointermove',e=>{
+    if(!ptrs.has(e.pointerId)) return; const prev=ptrs.get(e.pointerId); const dx=e.clientX-prev.x, dy=e.clientY-prev.y; ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(!gesture) return;
+    if(Math.hypot(e.clientX-(gesture.sx??e.clientX), e.clientY-(gesture.sy??e.clientY))>7) gesture.moved=true;
+    if(gesture.type==='drag'){ const p=groundAt(e.clientX,e.clientY); if(p){ const b=city.blocks.find(x=>x.id===gesture.id), r=objects.get(gesture.id); b.x=+Math.round(p.x*2)/2; b.z=+Math.round(p.z*2)/2; r.group.position.set(b.x,0,b.z); refreshLink(b.id); } return; }
+    if(gesture.type==='orbit' && gesture.moved){
+      if(gesture.button===2 || gesture.shift) pan(dx,dy);
+      else { cam.az -= dx*.006; cam.polar = Math.min(1.35, Math.max(.02, cam.polar - dy*.005)); }
+    } else if(gesture.type==='pinch' && ptrs.size===2){ const [a,b]=[...ptrs.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y), mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+      cam.dist=Math.min(420,Math.max(10,cam.dist*gesture.d/Math.max(d,1))); pan(mx-gesture.mx,my-gesture.my); gesture.d=d; gesture.mx=mx; gesture.my=my; }
+  });
+  function pan(dx,dy){ const s=cam.dist/(canvas.clientHeight||600)*.85, sa=Math.sin(cam.az), ca=Math.cos(cam.az);
+    cam.target.x -= (ca*dx + sa*dy)*s; cam.target.z -= (-sa*dx + ca*dy)*s;
+    const lim=cam.dist>170?200:80; cam.target.x=Math.max(-lim,Math.min(lim,cam.target.x)); cam.target.z=Math.max(-lim,Math.min(lim,cam.target.z)); }
+  function endPtr(e){
+    if(!ptrs.has(e.pointerId)) return; ptrs.delete(e.pointerId);
+    if(gesture && gesture.type==='drag'){ save(); rebuildLinks(); applySelectionLook(); gesture=null; return; }
+    if(gesture && gesture.type==='orbit' && !gesture.moved && performance.now()-gesture.t<500) onTap(e.clientX,e.clientY);
+    if(ptrs.size===0) gesture=null; else if(ptrs.size===1){ const [p]=[...ptrs.values()]; gesture={type:'orbit',sx:p.x,sy:p.y,t:0,moved:true,button:0}; }
+  }
+  canvas.addEventListener('pointerup',endPtr); canvas.addEventListener('pointercancel',endPtr);
+  canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  canvas.addEventListener('wheel',e=>{ e.preventDefault(); tween=null; cam.dist=Math.min(420,Math.max(10,cam.dist*Math.exp(e.deltaY*.0012))); },{passive:false});
+  function onTap(x,y){
+    if(tool==='place' && pending){ const p=groundAt(x,y); if(p && Math.hypot(p.x,p.z)<90){ if(Math.hypot(p.x,p.z)<10.5){ toast('That is the Mandala plaza. Tap a spot outside the gold ring.'); return; } placePending(p.x,p.z); } return; }
+    const id=pickAt(x,y);
+    if(tool==='connect'){ if(!id) return; if(!connectFrom){ connectFrom=id; selected=id; hint('Now tap the block to connect to',true); applySelectionLook(); renderSheet(); return; }
+      link(connectFrom,id); connectFrom=null; tool=null; hint(); selected=id; applySelectionLook(); renderSheet(); return; }
+    if(id){ select(id); if(cam.dist>170) goLevel(1); } else if(selected){ select(null); }
+  }
+  // keyboard: arrows orbit, +/- zoom
+  canvas.tabIndex=0; canvas.addEventListener('keydown',e=>{ const k=e.key; if(k==='ArrowLeft') cam.az+=.1; else if(k==='ArrowRight') cam.az-=.1; else if(k==='ArrowUp') cam.polar=Math.max(.02,cam.polar-.06); else if(k==='ArrowDown') cam.polar=Math.min(1.35,cam.polar+.06); else if(k==='+'||k==='=') cam.dist=Math.max(10,cam.dist*.88); else if(k==='-') cam.dist=Math.min(420,cam.dist*1.14); else return; e.preventDefault(); tween=null; });
+
+  // ---------- loop ----------
+  const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+  let last=performance.now(), frame=0, running=true;
+  const DAYS=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  function tick(now){
+    if(!running) return; requestAnimationFrame(tick);
+    const dt=Math.min(.05,(now-last)/1000); last=now; frame++;
+    const w=canvas.clientWidth, h=canvas.clientHeight;
+    if(canvas.width!==Math.round(w*renderer.getPixelRatio()) || canvas.height!==Math.round(h*renderer.getPixelRatio())){ renderer.setSize(w,h,false); camera.aspect=w/Math.max(h,1); camera.fov = camera.aspect<1 ? 2*Math.atan(Math.tan(20*Math.PI/180)/camera.aspect)*180/Math.PI : 45; camera.updateProjectionMatrix(); }
+    if(tween){ const k=Math.min(1,(now-tween.t0)/tween.ms), e=ease(k);
+      cam.dist=tween.from.dist+(tween.to.dist-tween.from.dist)*e; cam.polar=tween.from.polar+(tween.to.polar-tween.from.polar)*e;
+      let da=tween.to.az-tween.from.az; da=Math.atan2(Math.sin(da),Math.cos(da)); cam.az=tween.from.az+da*e;
+      cam.target.lerpVectors(tween.from.target,tween.to.target,e); if(k>=1) tween=null; }
+    if(autoSpin && !ptrs.size) cam.az+=dt*.06;
+    // keep the scene centred in the free space between the top bar and the sheet
+    { const sh=innerWidth>=760?0:(parseFloat(root.style.getPropertyValue('--sheet'))||0); const off=Math.round((sh-topPx)/2);
+      if(camera.view===null || !camera.view || camera.view.offsetY!==off || camera.view.fullWidth!==w || camera.view.fullHeight!==h){ camera.setViewOffset(w,h,0,off,w,h); } }
+    placeCamera();
+    const t=now/1000, m=reduced?0:1;
+    plazaDisc.rotation.z += dt*.05*m; coreOrbit.rotation.x=Math.PI/2+Math.sin(t*.4)*.3*m; coreOrbit.rotation.y+=dt*.4*m;
+    core.position.y=coreHalo.position.y=3+Math.sin(t*1.2)*.15*m; coreHalo.material.opacity=.45+.15*Math.sin(t*2)*m;
+    objects.forEach(r=>{
+      if(r.spin){ if(r.spinAxis==='z') r.spin.rotation.z+=dt*.5*m; else r.spin.rotation.z+=dt*.25*m; }
+      if(r.spin2) r.spin2.rotation.z-=dt*.25*1.9*m;
+      if(r.blink) r.blink.material.opacity=.55+.35*Math.sin(t*2+r.b.x)*m;
+      if(r.sel.material.opacity>0) r.sel.scale.setScalar(1+.04*Math.sin(t*4)*m);
+      if(r.cell && m && frame%2===0){ const pa=r.cell.mesh.geometry.attributes.position, base=r.cell.base;
+        for(let i=0;i<pa.count;i++){ const x=base[i*3],y=base[i*3+1],z=base[i*3+2]; const n=1+.08*Math.sin(x*1.7+t*1.3)*Math.sin(y*1.9+t)+.05*Math.sin(z*2.3-t*1.6); pa.array[i*3]=x*n; pa.array[i*3+1]=y*n; pa.array[i*3+2]=z*n; }
+        pa.needsUpdate=true; r.cell.mesh.geometry.computeVertexNormals(); }
+    });
+    linkObjs.forEach(o=>o.pulses.forEach(p=>{ const u=((t*.18*m)+p.userData.off)%1; o.curve.getPoint(u,p.position); p.material.opacity=Math.sin(u*Math.PI)*.9; }));
+    // what shows at each level
+    const lv=levelOf(cam.dist);
+    skyGroup.visible = cam.dist>120;
+    cityStar.material.opacity = Math.max(0,Math.min(.55,(cam.dist-160)/300));
+    scene.fog.near = cam.dist*.9; scene.fog.far = cam.dist*2.4+90;
+    linkGroup.visible = cam.dist>30 || selected==='mandala';
+    // readout + hint
+    const d=new Date();
+    readout.textContent=`${LEVELS[lv].name.toUpperCase()} · ${city.blocks.length} BLOCKS · ${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
+    root.querySelectorAll('.dial button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.level===lv)));
+    const ht = hintOverride ? hintOverride : (lv===0?{text:'Pinch out or tap ▦ to zoom out to your city',loud:true}:lv===1?{text:'Tap a block · drag to turn · pinch to zoom'}:{text:'Your city as one star · more constellations later'});
+    if(hintEl.textContent!==ht.text) hintEl.textContent=ht.text; hintEl.classList.toggle('loud',!!ht.loud);
+    renderer.render(scene,camera);
+    const top=Math.max(topPx+8, hintEl.offsetTop+hintEl.offsetHeight+4), sheetH=innerWidth>=760?0:(parseFloat(root.style.getPropertyValue('--sheet'))||0);
+    layoutLabels(w,h,top,h-sheetH-8, innerWidth>=760?w-460:w-70);
+  }
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden){ running=false; } else if(!running){ running=true; last=performance.now(); requestAnimationFrame(tick); } });
+
+  // ---------- boot ----------
+  try{ if(localStorage.getItem('toolcity.sheet')==='0') sheetOpen=false; }catch(e){}
+  setMode(mode); renderSheet(); setSheet(sheetOpen); placeCamera(); requestAnimationFrame(tick);
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ drawPlaza(); Object.keys(wheelTexCache).forEach(k=>delete wheelTexCache[k]); rebuildBlocks(); syncLayout(); });
+  // first view: start on the Mandala, then glide out to the city (the zoom-out is the point)
+  setTimeout(()=>{ if(!ptrs.size && !tween && cam.dist<40) goLevel(1); }, 1400);
+
+  return { setMode, goLevel, flyToBlock, get city(){ return city; } };
+}
+window.ToolCity = ToolCity;
+window.toolCity = ToolCity(document.getElementById('city'));
+</script>
+</body>
+</html>

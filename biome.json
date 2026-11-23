@@ -10,6 +10,7 @@
       "!playwright-report",
       "!lib/generated",
       "!.vercel",
+      "!public/labs/vendor",
       "!!**/.claude/worktrees"
     ]
   },
