@@ -152,7 +152,14 @@ import {
   twistEntry,
   type Wreck,
 } from '@/lib/art/wreck';
-import { type Marker, MarsRun, type MarsWhere, type MissionHud } from './mars-run';
+import type { AttackId } from '@/lib/art/mars-attacks';
+import {
+  type AttackHud,
+  type Marker,
+  MarsRun,
+  type MarsWhere,
+  type MissionHud,
+} from './mars-run';
 import { buildMarsView, type MarsView } from './mars-view';
 import { buildSaltView, type SaltView } from './salt-view';
 import { ShiftRings } from './shift-rings';
@@ -182,6 +189,8 @@ export interface Hud {
   mission?: MissionHud | null;
   /** Mars: the region you are in, the radiation, you and him on the map. */
   mars?: MarsWhere | null;
+  /** Mars: the attacks unlocked, their cooldowns, the laser's crosshair. */
+  attacks?: AttackHud | null;
   /** Where you are, when it has its own name on screen: Undertown, under Chinatown Run. */
   zone?: 'undertown' | null;
 }
@@ -1851,6 +1860,12 @@ export class DriveEngine {
     this.emitHud(speed, t);
   }
 
+  /** Mars: fires an attack on the Red Bastard (the one way in: keys, the crosshair, the weapon
+   * hook). Returns whether it went. */
+  fireAttack(id: AttackId): boolean {
+    return this.marsRun?.fireAttack(id, this.t) ?? false;
+  }
+
   /** A soft pulse of the G mask (a hit), `power` 0..1. */
   pulse(power: number, t: number) {
     this.hitAt = t;
@@ -2164,6 +2179,7 @@ export class DriveEngine {
       racers: this.rivals.length + 1,
       mission: this.marsRun?.hud(t) ?? null,
       mars: this.marsRun?.where() ?? null,
+      attacks: this.marsRun?.attackHud(t) ?? null,
       zone: this.zone(),
     };
     const key = JSON.stringify(hud);

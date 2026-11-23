@@ -317,9 +317,10 @@ export function newBastard(): Bastard {
   return { s: 0, speed: BASTARD.speed };
 }
 
-/** Moves him on round the loop; he sprints while you are within `sprintNear` m. */
-export function stepBastard(b: Bastard, dt: number, gap: number): Bastard {
-  const want = gap < BASTARD.sprintNear ? BASTARD.sprint : BASTARD.speed;
+/** Moves him on round the loop; he sprints while you are within `sprintNear` m. `slow` (0..1) is
+ * the share of his pace he keeps while an attack has him slowed. */
+export function stepBastard(b: Bastard, dt: number, gap: number, slow = 1): Bastard {
+  const want = (gap < BASTARD.sprintNear ? BASTARD.sprint : BASTARD.speed) * slow;
   const speed = b.speed + (want - b.speed) * (1 - Math.exp(-1.5 * dt));
   return { s: (b.s + speed * dt) % LOOP_PATH.length, speed };
 }
