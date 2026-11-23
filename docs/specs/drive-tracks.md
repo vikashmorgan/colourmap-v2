@@ -243,6 +243,48 @@ A road of gold dots under Saturn.
 - [ ] The rings change with a colour mode: fire rings, or a few neon ones.
 - [ ] The track draws itself ahead of you; the dots breathe slowly with the music.
 
+## Design space (2026-11-23)
+
+> "create a design space for the golden racetrack. where u can play with elements u would add.
+> mainly graphical context background constructions bridges. types of roads and road design.
+> bridges or stuff like that inspired by system of city. move up for variation move right for
+> another category of element." Then: "different ones of those arch tunnels with fire. different
+> fires. fireworks. etc... love the fires shooting to the side as we slide on a turn", "use the
+> actual universe of the track in question" and "put design menu on the track selecter on some
+> part next to race button so i can check em from there."
+
+**Where:** the track ring's **Design** button, beside **Race**, on every track world (not the Salt
+Flat or Mars, which have no track). The autopilot drives the chosen track, in its own world, and
+the chosen element is laid along the real road ahead in chunks of 150 m (built up to 1.3 km ahead,
+dropped 200 m behind), placed through `twistPose` so it sits on the road as drawn: banking, rises
+and the dive. Structures skip the twists, the loop, the jumps and the decks.
+
+**Moving:** right/left is the category, up/down the variation, both wrapping (a new category keeps
+the row when it has one). Arrows on the keyboard, swipes on a phone, the buttons, or a click on the
+map of cells. **Space** or ☆ picks a cell; **Picks → Copy list** gives "Category · Variation" lines
+to say which to build into the track for real. The cell and the picks are remembered on the device.
+**Esc** or **Tracks** goes back to the ring.
+
+| Category | Variations |
+|---|---|
+| Fire arches (every 120 m) | Ring of fire, Flame pillars, Blue gothic, Spiral tunnel (rings every 9 m, the burner turning round them), Dragon breath (jets across the road taking turns), Spark curtain |
+| Slide fire (outside of the bends, lit as you pass) | Outer jets, Wave (both edges, riding with the car), Red wall, Blue tongues (trailing back), Fans, Geysers |
+| Fireworks (rockets from beside the road ahead) | Chrysanthemum, Peony, Rings, Willow, Palm, Rocket arch (from both edges in turn, bursting over the road), Grand finale |
+| Road surface (a new skin over the real road) | Gold dots, Glass lit below, Hex tiles, Light rails, Race tarmac, Black mirror |
+| Road markings (on the black mirror) | Chevrons, Flowing dashes, Kerbs, Pulse rings, Light grid, Edge arrows |
+| Bridges | Arcades, Suspension (towers every 260 m), Cable-stayed (pylons every 240 m), Bowstring (every 120 m), Truss, Golden rings (every 16 m) |
+| Tunnels | Lattice tube, Ring of light (a pulse running through), Gallery, Pergola (φ-tall frames), Hex tube, Spiral ribbon |
+| City backdrop (from the City chapter, beside the road) | Golden plan, Temples, Domes, Skyline, Solar tower, Sky lanes (ships white one way, red the other) |
+
+Structures are drawn in the City's grain language: gold lines, grains of light along them, dark
+faces where solid. Fire, sparks and fireworks are one pool of glowing points (24,000) in the
+flame tool's palettes. Nothing flashes; pulses and flames ease.
+
+`lib/art/design-space.ts` (the catalogue, moving, picks; pure, tested) ·
+`components/drive/design-space.ts` (the drawing) · `components/drive/DesignHud.tsx` (the controls)
+· `DriveEngine` hands over its scene, the track and where you are (`stage3d`, `where()`) and calls
+`onFrame` before it draws.
+
 ## Vehicles and garage (shared)
 
 - [x] Leopard hull with gold rims; the Space Racer (2026-11-21).

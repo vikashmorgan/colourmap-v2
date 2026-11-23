@@ -114,6 +114,7 @@ import {
   SKY_PIPE,
   stepCanyonRace,
   stepKmRace,
+  type Track,
   type TrackWorld,
   twistPose,
 } from '@/lib/art/track';
@@ -180,6 +181,8 @@ export interface EngineOptions {
   onIntro?: (s: IntroState | null) => void;
   /** A course finished (the Canyon): your time, best and everyone's places. */
   onFinish?: (r: RaceResult) => void;
+  /** Called every frame before it draws (the design space adds its pieces here). */
+  onFrame?: (dt: number) => void;
 }
 
 export interface IntroState {
@@ -497,6 +500,7 @@ export class DriveEngine {
   private onHud?: (h: Hud) => void;
   private onIntro?: (s: IntroState | null) => void;
   private onFinish?: (r: RaceResult) => void;
+  private onFrame?: (dt: number) => void;
   /** The race intro, while it runs (null: driving). */
   private intro: IntroClock | null = null;
   private lastIntro = '';
@@ -553,6 +557,7 @@ export class DriveEngine {
     this.onHud = opts.onHud;
     this.onIntro = opts.onIntro;
     this.onFinish = opts.onFinish;
+    this.onFrame = opts.onFrame;
     this.cfg = WORLD_CFG[opts.world];
     this.weather = newWeather(opts.design.weather);
 
@@ -1051,6 +1056,16 @@ export class DriveEngine {
   /** The races playing themselves (the Grid's porthole, lib/art/autopilot.ts). */
   setAutopilot(on: boolean) {
     this.autopilot = on;
+  }
+
+  /** For the design space (components/drive/design-space.ts): the scene to add pieces to, and the
+   * track and where you are on it (null off a track). */
+  get stage3d(): THREE.Scene {
+    return this.scene;
+  }
+
+  where(): { track: Track; s: number } | null {
+    return this.trackWorld ? { track: this.trackWorld.track, s: this.s } : null;
   }
 
   setPreview(on: boolean) {
@@ -1668,6 +1683,7 @@ export class DriveEngine {
     this.updateMotes(speed, spec.vTop, boost, dt, w, aspect);
 
     this.paintMood(dt);
+    this.onFrame?.(dt);
     this.composer.render(dt);
     this.emitHud(speed, t);
   }

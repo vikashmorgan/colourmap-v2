@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { WORLDS, type WorldId } from '@/lib/art/drive-design';
+import { WORLD_CFG } from '@/lib/art/drive-worlds';
 import { trackMap } from '@/lib/art/track-map';
 import { runLabel, trackList } from '@/lib/art/track-registry';
 
@@ -29,11 +30,20 @@ export interface TrackRingProps {
   onPick: (id: WorldId) => void;
   onRace: () => void;
   onClose: () => void;
+  /** Open the design space on this track (docs/specs/drive-tracks.md, "Design space"). */
+  onDesign?: () => void;
   /** Your best on a track, as shown in the HUD, or null. */
   best?: (id: WorldId) => string | null;
 }
 
-export default function TrackRing({ current, onPick, onRace, onClose, best }: TrackRingProps) {
+export default function TrackRing({
+  current,
+  onPick,
+  onRace,
+  onClose,
+  onDesign,
+  best,
+}: TrackRingProps) {
   const tracks = useMemo(() => trackList(), []);
   const n = tracks.length;
   const [sel, setSel] = useState(() =>
@@ -361,24 +371,45 @@ export default function TrackRing({ current, onPick, onRace, onClose, best }: Tr
           gap: 10,
         }}
       >
-        <button
-          type="button"
-          onClick={onRace}
-          style={{
-            padding: '12px 30px',
-            borderRadius: 999,
-            border: `1px solid ${t.colour}`,
-            background: `linear-gradient(90deg, ${t.colour}44, ${t.colour}18)`,
-            color: `${quiet}0.95)`,
-            fontFamily: serif,
-            fontSize: 16,
-            letterSpacing: '0.08em',
-            cursor: 'pointer',
-            boxShadow: `0 0 30px ${t.colour}33`,
-          }}
-        >
-          Race
-        </button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {onDesign && WORLD_CFG[t.id].track && (
+            <button
+              type="button"
+              onClick={onDesign}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 999,
+                border: `1px solid ${quiet}0.3)`,
+                background: 'transparent',
+                color: `${quiet}0.8)`,
+                fontFamily: serif,
+                fontSize: 14,
+                letterSpacing: '0.08em',
+                cursor: 'pointer',
+              }}
+            >
+              Design
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onRace}
+            style={{
+              padding: '12px 30px',
+              borderRadius: 999,
+              border: `1px solid ${t.colour}`,
+              background: `linear-gradient(90deg, ${t.colour}44, ${t.colour}18)`,
+              color: `${quiet}0.95)`,
+              fontFamily: serif,
+              fontSize: 16,
+              letterSpacing: '0.08em',
+              cursor: 'pointer',
+              boxShadow: `0 0 30px ${t.colour}33`,
+            }}
+          >
+            Race
+          </button>
+        </div>
         <span style={{ fontFamily: mono, fontSize: 10, color: `${quiet}0.35)` }}>
           ← → choose · enter race · esc close
         </span>

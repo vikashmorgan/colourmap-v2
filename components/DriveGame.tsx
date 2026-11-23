@@ -11,11 +11,14 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import DesignHud from '@/components/drive/DesignHud';
+import { DesignSpace } from '@/components/drive/design-space';
 import { DriveEngine, type Hud, type IntroState } from '@/components/drive/engine';
 import { PauseMenu, RaceResults, TitleScreen } from '@/components/drive/GameSheets';
 import RaceIntro from '@/components/drive/RaceIntro';
 import { FutureGauge, TimerGauge } from '@/components/drive/Speedometer';
 import TrackRing from '@/components/drive/TrackRing';
+import type { Pos } from '@/lib/art/design-space';
 import {
   controlsFromKeys,
   controlsFromTouches,
@@ -91,6 +94,9 @@ export default function DriveGame() {
   const [hud, setHud] = useState<Hud | null>(null);
   const [hint, setHint] = useState(true);
   const [failed, setFailed] = useState(false);
+  /** The design space is open (docs/specs/drive-tracks.md, "Design space"). */
+  const [designing, setDesigning] = useState(false);
+  const spaceRef = useRef<DesignSpace | null>(null);
   const panelRef = useRef(panel);
   panelRef.current = panel;
   // Sky Canyon flies as the City does (W S climb and dive, always cruising forward).
@@ -152,13 +158,24 @@ export default function DriveGame() {
         onHud: setHud,
         onIntro: setIntro,
         onFinish: setResults,
+        onFrame: (dt) => {
+          const sp = spaceRef.current;
+          const here = engineRef.current?.where();
+          if (sp?.root.visible && here) sp.update(dt, here.track, here.s);
+        },
       });
     } catch {
       setFailed(true);
       return;
     }
     engineRef.current = engine;
-    const fit = () => engine.resize(window.innerWidth, window.innerHeight);
+    const space = new DesignSpace(engine.stage3d);
+    space.root.visible = false;
+    spaceRef.current = space;
+    const fit = () => {
+      engine.resize(window.innerWidth, window.innerHeight);
+      space.setScale(1.5 * window.innerHeight * Math.min(window.devicePixelRatio || 1, 1.5));
+    };
     fit();
     engine.start();
     window.addEventListener('resize', fit);
@@ -166,6 +183,8 @@ export default function DriveGame() {
     return () => {
       window.removeEventListener('resize', fit);
       window.clearTimeout(stopHint);
+      space.dispose();
+      spaceRef.current = null;
       engine.dispose();
       engineRef.current = null;
     };
@@ -174,7 +193,7 @@ export default function DriveGame() {
   useEffect(() => {
     engineRef.current?.setPreview(panel || ring || title || paused || results !== null);
   }, [panel, ring, title, paused, results]);
-  sheetRef.current = title || paused || results !== null;
+  sheetRef.current = title || paused || results !== null || designing;
 
   const openRing = useCallback(() => {
     setPaused(false);
@@ -189,6 +208,26 @@ export default function DriveGame() {
     setResults(null);
     engineRef.current?.startIntro(true);
   }, []);
+
+  /** The design space: the autopilot drives the chosen track while its elements are laid on it. */
+  const openDesign = useCallback(() => {
+    setRing(false);
+    setPanel(false);
+    setHint(false);
+    setDesigning(true);
+    engineRef.current?.setAutopilot(true);
+    if (spaceRef.current) spaceRef.current.root.visible = true;
+  }, []);
+  const closeDesign = useCallback(() => {
+    setDesigning(false);
+    engineRef.current?.setAutopilot(false);
+    if (spaceRef.current) {
+      spaceRef.current.root.visible = false;
+      spaceRef.current.set({ cat: 0, v: 0 });
+    }
+    setRing(true);
+  }, []);
+  const showDesign = useCallback((p: Pos) => spaceRef.current?.set(p), []);
 
   const race = useCallback(() => {
     setRing(false);
@@ -504,7 +543,21 @@ export default function DriveGame() {
       )}
 
       {ring && !title && !failed && (
-        <TrackRing current={world} onPick={chooseWorld} onRace={race} onClose={race} />
+        <TrackRing
+          current={world}
+          onPick={chooseWorld}
+          onRace={race}
+          onClose={race}
+          onDesign={openDesign}
+        />
+      )}
+
+      {designing && !failed && (
+        <DesignHud
+          trackName={WORLDS.find((w) => w.id === world)?.name ?? ''}
+          onShow={showDesign}
+          onClose={closeDesign}
+        />
       )}
 
       {failed && (
