@@ -44,7 +44,16 @@ const lin = (r: number, g: number, b: number): [number, number, number] => [
   b ** 2.2,
 ];
 
-export function buildSaltView(): SaltView {
+export interface SaltViewOptions {
+  /** The ground's height under a point (Mars's dunes); flat when absent. */
+  ground?: (x: number, y: number) => number;
+  /** The red streak crossing the plain (off on Mars, where the Red Bastard runs instead). */
+  streak?: boolean;
+}
+
+export function buildSaltView(opts: SaltViewOptions = {}): SaltView {
+  const ground = opts.ground ?? (() => 0);
+  const showStreak = opts.streak ?? true;
   const group = new THREE.Group();
   const poleMat = new THREE.MeshLambertMaterial({ color: 0x15151a });
 
@@ -159,10 +168,10 @@ export function buildSaltView(): SaltView {
   return {
     group,
     update(ox, oy, cam, t, w, next = 0) {
-      for (const c of course) c.obj.position.set(c.x - ox, 0, -(c.y - oy));
+      for (const c of course) c.obj.position.set(c.x - ox, ground(c.x, c.y), -(c.y - oy));
       const n = gates.length;
       gates.forEach(({ obj, lamps, g }, i) => {
-        obj.position.set(g.ax - ox, 0, -(g.ay - oy));
+        obj.position.set(g.ax - ox, ground(g.ax, g.ay), -(g.ay - oy));
         const ahead = (i - next + n) % n;
         // The next gate gold and breathing slowly, the one after warm, the rest faint.
         const glow = ahead === 0 ? 0.85 + 0.15 * Math.sin(t * 2.4) : ahead === 1 ? 0.45 : 0.14;
@@ -174,7 +183,9 @@ export function buildSaltView(): SaltView {
         if (ahead === 0) {
           const dx = g.bx - g.ax;
           const dy = g.by - g.ay;
-          gateLine.position.set((g.ax + g.bx) / 2 - ox, 0.04, -((g.ay + g.by) / 2 - oy));
+          const mx = (g.ax + g.bx) / 2;
+          const my = (g.ay + g.by) / 2;
+          gateLine.position.set(mx - ox, ground(mx, my) + 0.04, -(my - oy));
           gateLine.scale.set(Math.hypot(dx, dy), 1, 1);
           gateLine.rotation.set(0, Math.atan2(dy, dx), 0);
           (gateLine.material as THREE.MeshBasicMaterial).opacity = 0.55 + 0.25 * Math.sin(t * 2.4);
@@ -187,7 +198,7 @@ export function buildSaltView(): SaltView {
       const m = new THREE.Matrix4();
       stakeList.forEach((p, i) => {
         m.makeScale(1, p.height, 1);
-        m.setPosition(p.x - ox, p.height / 2, -(p.y - oy));
+        m.setPosition(p.x - ox, ground(p.x, p.y) + p.height / 2, -(p.y - oy));
         stakes.setMatrixAt(i, m);
       });
       stakes.count = stakeList.length;
@@ -197,7 +208,7 @@ export function buildSaltView(): SaltView {
         streak = newStreak(cam, t, side);
         side = -side;
       }
-      const at = streakAt(streak, t);
+      const at = showStreak ? streakAt(streak, t) : null;
       streakMesh.visible = at !== null;
       head.visible = at !== null;
       headMirror.visible = at !== null;
@@ -247,7 +258,9 @@ export function buildSaltView(): SaltView {
         if (!want) return;
         const a = i * 1.7 + t * 0.03 * (i % 2 ? 1 : -1);
         const r = 260 + 120 * i;
-        d.position.set(cam.x + Math.cos(a) * r - ox, 0, -(cam.y + Math.sin(a) * r - oy));
+        const dx = cam.x + Math.cos(a) * r;
+        const dy = cam.y + Math.sin(a) * r;
+        d.position.set(dx - ox, ground(dx, dy), -(dy - oy));
         d.rotation.y = t * 1.5;
         const fire = d.userData.fire as THREE.ShaderMaterial;
         fire.uniforms.uTime.value = t * 0.4;

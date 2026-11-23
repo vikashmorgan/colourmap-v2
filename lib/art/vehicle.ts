@@ -255,6 +255,11 @@ export interface World {
 export interface Handling {
   turn: number;
   lean: number;
+  /** Grip mode at speed: up to this much more grip (and turn) at the top speed, from 40% of it. */
+  fast?: number;
+  /** Share of steering kept in the air (at least the vehicle's own), and of the turn the velocity
+   * follows there. */
+  air?: number;
 }
 
 export const FLAT: World = { ground: () => ({ h: 0, gx: 0, gy: 0, rough: 0 }) };
@@ -267,7 +272,19 @@ export const FLAT: World = { ground: () => ({ h: 0, gx: 0, gy: 0, rough: 0 }) };
 /** How far the body leans in the air with full steering, against its most on the ground. */
 export const AIR_LEAN = 1.2;
 
-export const MARS_HANDLING: Handling = { turn: 1.8, lean: 2.6 };
+/**
+ * 2026-11-23, on Mars in Grip mode: "allow turns to turn more when u are full tilt", "maybe it is
+ * when i am full speed or high that it doesnt turn well": in Grip the grip grows with speed (up to
+ * 1.9× at the top speed), so a full-speed carve turns about twice as tight; in the air every mode
+ * keeps 60% of its steering and the flight bends with it, so a crest never locks you straight.
+ */
+export const MARS_HANDLING: Handling = { turn: 1.8, lean: 2.6, fast: 0.9, air: 0.6 };
+
+/** How much more grip a world's Grip mode gives at a speed (1: none). */
+export function fastGrip(feel: Handling, mode: string | undefined, speed: number, top: number) {
+  if (mode !== 'grip' || !feel.fast) return 1;
+  return 1 + feel.fast * clamp((speed / top - 0.4) / 0.6, 0, 1);
+}
 export const MARS_FLAT: World = { ...FLAT, handling: MARS_HANDLING };
 
 /** What happened in a step, for the dust, the camera and the sound of it. */
@@ -411,7 +428,8 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   // Quicker on a road, so small left-right moves come at once.
   const feel = world.handling ?? { turn: 1, lean: 1 };
   v.steer = ease(v.steer, ctl.steer, (here.road && !air ? DODGE.steer : 7) * feel.turn, dt);
-  const authority = air ? spec.airSteer : 1;
+  const authority = air ? Math.max(spec.airSteer, feel.air ?? 0) : 1;
+  const fastK = fastGrip(feel, ctl.mode, Math.hypot(v.vx, v.vy), spec.vTop);
   const delta = clamp(
     v.steer * steerLimit(v.vLong) * feel.turn * (1 + HANDBRAKE.steer * hb),
     -1,
@@ -439,7 +457,7 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   }
   const mode = MODES[ctl.mode ?? 'flow'];
   const yawCap =
-    ((spec.grip * mode.grip * spec.yawGrip * mode.yaw + bankHold) /
+    ((spec.grip * mode.grip * (1 + (fastK - 1) * 0.5) * spec.yawGrip * mode.yaw + bankHold) /
       Math.max(Math.abs(v.vLong), 6)) *
     (1 + HANDBRAKE.yaw * hb) *
     feel.turn;
@@ -466,6 +484,15 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   const target = (steerYaw + follow + settle) * authority;
   v.yawRate = ease(v.yawRate, target, (air ? 3 : 8) * feel.turn, dt);
   v.h = wrapAngle(v.h + v.yawRate * dt);
+  // A world that steers in the air bends the flight with the body (Mars).
+  if (air && feel.air) {
+    const turn = v.yawRate * dt * feel.air;
+    const c = Math.cos(turn);
+    const sn = Math.sin(turn);
+    const vx = v.vx;
+    v.vx = vx * c - v.vy * sn;
+    v.vy = vx * sn + v.vy * c;
+  }
 
   // Gravity along the slope, while on the ground.
   let downhill = false;
@@ -507,7 +534,8 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
       -vLat *
       (1 - Math.exp(-spec.gripRate * grip * (road ? 2 : 1) * (1 - HANDBRAKE.rate * hb) * dt));
     const most =
-      (spec.grip * MODES[ctl.mode ?? 'flow'].grip * grip * (1 - HANDBRAKE.grip * hb) + roadHold) *
+      (spec.grip * MODES[ctl.mode ?? 'flow'].grip * fastK * grip * (1 - HANDBRAKE.grip * hb) +
+        roadHold) *
       dt;
     const fix = clamp(want, -most, most);
     vLat += fix;
