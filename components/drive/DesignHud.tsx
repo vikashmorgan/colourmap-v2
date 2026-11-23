@@ -7,8 +7,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-
 import { CATEGORIES, move, type Pos, pickKey, safePicks, safePos } from '@/lib/art/design-space';
+import { driveSound } from '@/lib/audio/drive-sound';
 
 const GOLD = '#f0b54a';
 const quiet = 'rgba(255,240,215,';
@@ -52,8 +52,12 @@ export default function DesignHud({ trackName, onShow, onClose }: DesignHudProps
     write(POS_KEY, [pos.cat, pos.v]);
   }, [pos, onShow]);
 
-  const go = useCallback((dc: number, dv: number) => setPos((p) => move(p, dc, dv)), []);
+  const go = useCallback((dc: number, dv: number) => {
+    driveSound.tick();
+    setPos((p) => move(p, dc, dv));
+  }, []);
   const togglePick = useCallback(() => {
+    driveSound.swell();
     setPicks((ps) => {
       const k = pickKey(pos);
       const next = ps.includes(k) ? ps.filter((x) => x !== k) : [...ps, k];
