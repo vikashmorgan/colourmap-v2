@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Love Wins · For those who dream</title>
+<meta name="description" content="Love Wins is a creative movement born in Milano: AI, 3D art, projections, spaces, parties of freedom and creative gatherings, growing city by city.">
+<meta name="theme-color" content="#EDD6BB">
+<meta property="og:title" content="Love Wins">
+<meta property="og:description" content="A creative movement for those who dream. Born in Milano, open to the world.">
+<meta property="og:image" content="/assets/og.jpg">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<style>html,body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Courier+Prime:wght@400;700&family=Shrikhand&display=swap">
+<style>
+/* Layout: a Mandala-style blueprint wheel at the heart, sections hung on a faded grid, HUD brackets as frames. */
+:root{
+  --bg:#EDD6BB; --bg2:#E4C9A9; --paper:#F3E3CD; --ink:#4A2A18; --ink2:#6E4A33;
+  --grid:rgba(110,74,51,.10); --line:rgba(110,74,51,.32);
+  --rose:#C47F78; --tan:#B8966E; --sage:#8A8C78; --slate:#7A8FA6; --orange:#C0603A; --teal:#6E8A90;
+  --heart:#C0603A;
+  --display:"Cormorant Garamond",Georgia,"Times New Roman",serif;
+  --mono:"Courier Prime","Courier New",Courier,monospace;
+  --round:"Shrikhand","Cooper Black",Georgia,serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]):not([data-lw]){
+  --bg:#1F1B22; --bg2:#29232B; --paper:#2D262E; --ink:#EDD6BB; --ink2:#C9B49B;
+  --grid:rgba(237,214,187,.06); --line:rgba(237,214,187,.24); --heart:#D9744C; color-scheme:dark}}
+:root[data-theme="dark"]:not([data-lw]){
+  --bg:#1F1B22; --bg2:#29232B; --paper:#2D262E; --ink:#EDD6BB; --ink2:#C9B49B;
+  --grid:rgba(237,214,187,.06); --line:rgba(237,214,187,.24); --heart:#D9744C; color-scheme:dark}
+:root[data-lw="beige"]{--bg:#EDD6BB;--bg2:#E4C9A9;--paper:#F3E3CD;--ink:#4A2A18;--ink2:#6E4A33;--grid:rgba(110,74,51,.10);--line:rgba(110,74,51,.32);--heart:#C0603A;color-scheme:light}
+:root[data-lw="cream"]{--bg:#F5ECDC;--bg2:#EDE0C8;--paper:#FBF4E8;--ink:#5C3018;--ink2:#7A5038;--grid:rgba(122,143,166,.13);--line:rgba(92,48,24,.28);--heart:#C0603A;color-scheme:light}
+:root[data-lw="sage"]{--bg:#C9CBB6;--bg2:#BABDA5;--paper:#D8D9C6;--ink:#2F3324;--ink2:#4C5040;--grid:rgba(47,51,36,.10);--line:rgba(47,51,36,.30);--heart:#B4552F;color-scheme:light}
+:root[data-lw="dusk"]{--bg:#E3B9AE;--bg2:#D9A99C;--paper:#EDCCC2;--ink:#4A2420;--ink2:#6C3C35;--grid:rgba(74,36,32,.10);--line:rgba(74,36,32,.30);--heart:#A84A2A;color-scheme:light}
+:root[data-lw="night"]{--bg:#1F1B22;--bg2:#29232B;--paper:#2D262E;--ink:#EDD6BB;--ink2:#C9B49B;--grid:rgba(237,214,187,.06);--line:rgba(237,214,187,.24);--heart:#D9744C;color-scheme:dark}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--display);font-size:20px;line-height:1.5;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px),
+  linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:96px 96px,96px 96px,24px 24px,24px 24px;background-attachment:fixed;
+  transition:background-color .5s,color .5s;overflow-x:hidden}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.label{font-family:var(--mono);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink2)}
+h1,h2,h3{font-weight:600;line-height:1.15;text-wrap:balance;margin:0}
+h2{font-size:clamp(34px,5vw,52px)}
+h3{font-size:26px}
+p{margin:0}
+a{color:inherit}
+:focus-visible{outline:2px dashed var(--heart);outline-offset:4px}
+
+/* top bar */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;gap:16px;padding-block:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;font-family:var(--round);font-size:20px;text-decoration:none;letter-spacing:.02em}
+.brand svg{width:20px;height:20px}
+.nav{display:flex;gap:16px;margin-left:auto;flex-wrap:wrap}
+.nav a{font-family:var(--mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;color:var(--ink2)}
+.nav a:hover{color:var(--heart)}
+.design{display:flex;align-items:center;gap:8px}
+.design button{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);cursor:pointer;padding:0;position:relative}
+.design button[aria-pressed="true"]::after{content:"";position:absolute;inset:-5px;border:1px solid var(--ink);border-radius:50%}
+@media (max-width:720px){.nav{display:none}.design{margin-left:auto}}
+
+/* HUD brackets */
+.hud{position:relative}
+.hud>i{position:absolute;width:24px;height:24px;border-color:var(--ink2);border-style:solid;opacity:.7;pointer-events:none}
+.hud>i:nth-of-type(1){top:0;left:0;border-width:1.5px 0 0 1.5px}
+.hud>i:nth-of-type(2){top:0;right:0;border-width:1.5px 1.5px 0 0}
+.hud>i:nth-of-type(3){bottom:0;left:0;border-width:0 0 1.5px 1.5px}
+.hud>i:nth-of-type(4){bottom:0;right:0;border-width:0 1.5px 1.5px 0}
+
+/* hero */
+.hero{padding-block:32px 64px}
+.hero .frame{padding:32px 16px 40px;display:grid;justify-items:center;gap:24px;text-align:center}
+.readout{display:flex;justify-content:space-between;width:100%;gap:16px;flex-wrap:wrap}
+.wheel{position:relative;width:min(640px,100%);aspect-ratio:1;max-width:100%}
+.wheel svg.geo{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.wheel .spin{transform-origin:50% 50%;animation:spin 240s linear infinite}
+.wheel .spin2{transform-origin:50% 50%;animation:spin 360s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wheel img{position:absolute;left:19%;top:19%;width:62%;height:62%;object-fit:contain;filter:drop-shadow(0 6px 18px rgba(74,42,24,.12))}
+.tag{font-size:clamp(26px,3.6vw,38px);font-style:italic;font-weight:500;max-width:22ch}
+.sub{max-width:52ch;color:var(--ink2)}
+.cta{display:inline-flex;align-items:center;gap:12px;font-family:var(--mono);font-size:14px;letter-spacing:.2em;text-transform:uppercase;
+  text-decoration:none;color:var(--paper);background:var(--heart);padding:16px 24px;border-radius:999px;transition:transform .2s}
+.cta:hover{transform:translateY(-2px)}
+.ghost{background:transparent;color:var(--ink);border:1px solid var(--ink2)}
+
+section{padding-block:64px}
+.head{display:grid;gap:12px;margin-bottom:40px;max-width:720px}
+
+/* manifesto */
+.manifesto ol{list-style:none;margin:0;padding:0;display:grid;gap:4px;counter-reset:m}
+.manifesto li{counter-increment:m;display:grid;grid-template-columns:64px 1fr;gap:16px;align-items:baseline;padding-block:16px;border-top:1px solid var(--line);font-size:clamp(24px,3vw,32px);font-weight:500}
+.manifesto li::before{content:counter(m,upper-roman);font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--ink2)}
+.manifesto li em{color:var(--heart);font-style:italic}
+
+/* pillars */
+.pillars{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+@media (max-width:900px){.pillars{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.pillars{grid-template-columns:1fr}}
+.pillar{display:grid;gap:12px;align-content:start;padding:24px;background:color-mix(in srgb,var(--paper) 70%,transparent);border:1px solid var(--line);border-radius:24px}
+.blob{width:56px;height:56px;display:grid;place-items:center;color:var(--paper);font-family:var(--round);font-size:22px}
+.pillar:nth-child(1) .blob{background:var(--rose);border-radius:58% 42% 55% 45%/48% 60% 40% 52%}
+.pillar:nth-child(2) .blob{background:var(--tan);border-radius:40% 60% 45% 55%/55% 45% 60% 40%}
+.pillar:nth-child(3) .blob{background:var(--sage);border-radius:62% 38% 50% 50%/42% 58% 42% 58%}
+.pillar:nth-child(4) .blob{background:var(--slate);border-radius:45% 55% 38% 62%/60% 40% 55% 45%}
+.pillar:nth-child(5) .blob{background:var(--orange);border-radius:55% 45% 62% 38%/45% 55% 45% 55%}
+.pillar:nth-child(6) .blob{background:var(--teal);border-radius:38% 62% 52% 48%/58% 42% 50% 50%}
+.pillar p{color:var(--ink2);font-size:18px}
+
+/* mood */
+.mood figure{margin:0;padding:12px}
+.mood img{display:block;width:100%;aspect-ratio:1168/784;object-fit:cover;border-radius:16px}
+.mood figcaption{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:12px}
+
+/* goal */
+.gbox{padding:48px 24px;display:grid;gap:16px;justify-items:center;text-align:center;background:color-mix(in srgb,var(--paper) 60%,transparent);border-radius:8px}
+.gtitle{font-size:clamp(36px,6vw,64px)}
+.gtitle span{font-family:var(--round);font-weight:400;color:var(--heart)}
+.gmeta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;width:100%;max-width:880px;margin-top:16px}
+@media (max-width:700px){.gmeta{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.gmeta div{display:grid;gap:4px;padding:16px 8px;border-top:1px solid var(--line)}
+.gmeta b{font-weight:600;font-size:20px}
+
+/* spirit marquee */
+.spirit{overflow:hidden;border-block:1px solid var(--line);padding-block:24px}
+.track{display:flex;gap:48px;width:max-content;animation:slide 40s linear infinite}
+.track span{font-family:var(--round);font-size:clamp(28px,4vw,44px);white-space:nowrap}
+.track span:nth-child(4n+1){color:var(--rose)}.track span:nth-child(4n+2){color:var(--tan)}
+.track span:nth-child(4n+3){color:var(--slate)}.track span:nth-child(4n+4){color:var(--orange)}
+.track b{font-family:var(--mono);font-weight:400;color:var(--ink2);align-self:center}
+@keyframes slide{to{transform:translateX(-50%)}}
+
+/* places */
+.places{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:48px;align-items:start}
+@media (max-width:860px){.places{grid-template-columns:1fr}}
+.home{padding:32px;display:grid;gap:16px}
+.home .city{font-family:var(--round);font-size:clamp(44px,7vw,72px);line-height:1;color:var(--heart)}
+.home ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.home li{display:flex;gap:12px;align-items:baseline;font-size:20px}
+.home li::before{content:"✦";color:var(--heart);font-size:14px}
+.sky{position:relative}
+.sky svg{width:100%;height:auto;display:block}
+.stars{display:grid;gap:16px;margin-top:24px}
+.star{display:grid;grid-template-columns:24px 1fr;gap:12px;align-items:start}
+.star .dot{width:12px;height:12px;border-radius:50%;margin-top:10px}
+.star h3{font-size:24px}
+.star p{color:var(--ink2);font-size:18px}
+.pill{display:inline-block;font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:2px 12px;margin-left:8px;vertical-align:middle;color:var(--ink2)}
+
+/* network */
+.steps{list-style:none;margin:0 auto;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;max-width:1000px;position:relative}
+@media (max-width:760px){.steps{grid-template-columns:1fr}}
+.steps li{display:grid;gap:12px;justify-items:center;text-align:center;padding:24px}
+.steps li p{color:var(--ink2);font-size:18px;max-width:30ch}
+.steps .blob{background:var(--heart);border-radius:58% 42% 55% 45%/48% 60% 40% 52%}
+.steps li:nth-child(2) .blob{background:var(--slate);border-radius:40% 60% 45% 55%/55% 45% 60% 40%}
+.steps li:nth-child(3) .blob{background:var(--rose);border-radius:62% 38% 50% 50%/42% 58% 42% 58%}
+.promise{text-align:center;margin-top:32px}
+
+/* join */
+.join .box{padding:48px 24px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:48px;align-items:center}
+@media (max-width:760px){.join .box{grid-template-columns:1fr;text-align:center;justify-items:center}}
+.join .box>div{display:grid;gap:16px;justify-items:start}
+@media (max-width:760px){.join .box>div{justify-items:center}}
+.inout{font-family:var(--round);font-size:clamp(40px,6vw,64px);line-height:1.05}
+.inout span{color:var(--heart)}
+.qr{width:220px;max-width:100%;aspect-ratio:1;border:1.5px dashed var(--ink2);border-radius:24px;display:grid;place-items:center;align-content:center;gap:8px;text-align:center;padding:24px;justify-self:center}
+.qr svg{width:64px;height:64px}
+.btns{display:flex;gap:12px;flex-wrap:wrap}
+
+footer{padding-block:48px;border-top:1px solid var(--line)}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+/* centred layout */
+.head{margin-left:auto;margin-right:auto;text-align:center;justify-items:center}
+.manifesto ol{max-width:820px;margin:0 auto}
+.manifesto li{grid-template-columns:1fr;gap:4px;text-align:center;justify-items:center}
+.pillar{text-align:center;justify-items:center}
+.places{grid-template-columns:1fr;max-width:820px;margin:0 auto;gap:40px}
+.home{text-align:center;justify-items:center}
+.home ul{justify-items:center}
+.stars{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+@media (max-width:760px){.stars{grid-template-columns:1fr}}
+.star{grid-template-columns:1fr;justify-items:center;text-align:center;gap:8px}
+.star .dot{margin-top:0}
+.star .pill{display:table;margin:8px auto 0}
+.join .box{grid-template-columns:1fr;text-align:center;justify-items:center;gap:32px}
+.join .box>div{justify-items:center}
+.btns{justify-content:center}
+footer .wrap{justify-content:center;text-align:center}
+.mood figcaption{justify-content:center}
+
+@media (prefers-reduced-motion:reduce){.wheel .spin,.wheel .spin2,.track{animation:none}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Love Wins, back to top">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z" fill="var(--heart)"/></svg>
+      Love Wins
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#manifesto">Manifesto</a>
+      <a href="#make">What we make</a>
+      <a href="#base">BASE night</a>
+      <a href="#places">Milano &amp; world</a>
+      <a href="#network">Network</a>
+      <a href="#join">Join</a>
+    </nav>
+    <div class="design" role="group" aria-label="Background colour">
+      <span class="label" aria-hidden="true">Design</span>
+      <button type="button" data-t="beige" title="Beige" aria-label="Beige background" style="background:#EDD6BB"></button>
+      <button type="button" data-t="cream" title="Cream" aria-label="Cream background" style="background:#F5ECDC"></button>
+      <button type="button" data-t="sage" title="Sage" aria-label="Sage background" style="background:#C9CBB6"></button>
+      <button type="button" data-t="dusk" title="Dusk rose" aria-label="Dusk rose background" style="background:#E3B9AE"></button>
+      <button type="button" data-t="night" title="Night" aria-label="Night background" style="background:#1F1B22"></button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <div class="hero wrap">
+    <div class="frame hud"><i></i><i></i><i></i><i></i>
+      <div class="readout label"><span>Milano · 45.464°N 9.190°E</span><span id="date">Est. 2026</span></div>
+      <div class="wheel">
+        <svg class="geo" id="geo" viewBox="0 0 600 600" aria-hidden="true"></svg>
+        <img src="/assets/logo.webp" alt="Love Wins logo: the words Love and Wins in rounded 70s letters arched around a red-orange heart" width="900" height="900">
+      </div>
+      <p class="label">A creative movement · For those who dream</p>
+      <h1 class="tag">Dreamers in action, winning together.</h1>
+      <p class="sub">Love Wins brings together artists, builders, musicians and travellers to make things, open spaces and throw nights of freedom. It starts in Milano and grows city by city, like a constellation.</p>
+      <div class="btns"><a class="cta" href="#join">Join the movement ♥</a><a class="cta ghost" href="#manifesto">Read the manifesto</a></div>
+    </div>
+  </div>
+
+  <section id="manifesto" class="manifesto">
+    <div class="wrap">
+      <div class="head"><span class="label">The manifesto</span><h2>What we believe</h2></div>
+      <ol>
+        <li><span>Imagination steers the world. We choose to steer it toward <em>paradise</em>.</span></li>
+        <li><span>Nobody here is <em>too much</em>. Big ideas are welcome at our table.</span></li>
+        <li><span>Madness becomes wisdom when it is <em>shared</em> and made useful.</span></li>
+        <li><span>We make things with our hands and with new tools. Marble and machine, together.</span></li>
+        <li><span>Freedom is time, movement and finding your people. We build all three.</span></li>
+        <li><span>When we gather, dance and create in the open, <em>love wins</em>.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="make">
+    <div class="wrap">
+      <div class="head"><span class="label">What we make</span><h2>Six ways in</h2><p class="sub">Every member brings one craft and borrows the others.</p></div>
+      <div class="pillars">
+        <article class="pillar"><div class="blob" aria-hidden="true">A</div><span class="label">Tools</span><h3>AI</h3><p>We use AI to connect people by what they want to make, and teach each other to build with it.</p></article>
+        <article class="pillar"><div class="blob" aria-hidden="true">3</div><span class="label">Craft</span><h3>3D art</h3><p>Sculpture, 3D printing and digital forms. Pieces you can hold, wear or walk around.</p></article>
+        <article class="pillar"><div class="blob" aria-hidden="true">P</div><span class="label">Light</span><h3>Projections</h3><p>Live visuals for DJ sets and nights out. Walls, ceilings and crowds turned into moving geometry.</p></article>
+        <article class="pillar"><div class="blob" aria-hidden="true">C</div><span class="label">People &amp; places</span><h3>Community &amp; spaces</h3><p>A circle that grows from the bottom up, with studios and rooms where creatives work side by side and travellers drop in.</p></article>
+        <article class="pillar"><div class="blob" aria-hidden="true">♥</div><span class="label">Nights</span><h3>Parties of freedom</h3><p>Style, music and sunsets. Nights where talking and dancing matter as much as the line-up.</p></article>
+        <article class="pillar"><div class="blob" aria-hidden="true">G</div><span class="label">Days</span><h3>Creative gatherings</h3><p>Show-and-tells, open studios and working sessions where ideas meet the people who can build them.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="mood" aria-label="Mood">
+    <div class="wrap">
+      <figure class="hud"><i></i><i></i><i></i><i></i>
+        <img src="/assets/party.webp" alt="Illustration of an evening party in an alpine meadow: dancers in flowing dresses, Love Wins banners and string lights, snowy peaks behind" width="1168" height="784" loading="lazy">
+        <figcaption><span class="label">Vision board · a night of freedom in the Alps</span><span class="label">Imagined, not yet lived</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="base" class="goal">
+    <div class="wrap">
+      <div class="gbox hud"><i></i><i></i><i></i><i></i>
+        <span class="label">The first big aim · not yet booked</span>
+        <h2 class="gtitle">One massive night<br>at <span>BASE Milano</span></h2>
+        <p class="sub">The goal we are building toward: a Love Wins party at BASE, ideally together with Nothing Cool and their rock and roll crowd. Projections on every wall, live music, art in the room and the whole community in one place.</p>
+        <div class="gmeta">
+          <div><span class="label">Where</span><b>BASE Milano</b></div>
+          <div><span class="label">With</span><b>Nothing Cool (hoped for)</b></div>
+          <div><span class="label">What</span><b>Music · projections · art</b></div>
+          <div><span class="label">Status</span><b>Dreaming it up</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="spirit" aria-label="Our spirit: Dolce Vita, Buena Vida, Free Ride, Rock and Roll">
+    <div class="track" aria-hidden="true">
+      <span>Dolce Vita</span><b>✦</b><span>Buena Vida</span><b>✦</b><span>Free Ride</span><b>✦</b><span>Rock &amp; Roll</span><b>✦</b>
+      <span>Dolce Vita</span><b>✦</b><span>Buena Vida</span><b>✦</b><span>Free Ride</span><b>✦</b><span>Rock &amp; Roll</span><b>✦</b>
+    </div>
+  </div>
+
+  <section id="places">
+    <div class="wrap">
+      <div class="head"><span class="label">Where we are</span><h2>Born in Milano, open to the world</h2></div>
+      <div class="places">
+        <div class="home hud"><i></i><i></i><i></i><i></i>
+          <span class="label">First star · home base</span>
+          <div class="city">Milano</div>
+          <p class="sub">Where it all begins: a map of creative Milan and a way in for newcomers.</p>
+          <ul>
+            <li>Studio and community space</li>
+            <li>Parties of freedom and creative nights</li>
+            <li>AI, 3D art and projection sessions</li>
+            <li>The big aim: a night at BASE</li>
+            <li>A living map of who is making what</li>
+          </ul>
+        </div>
+        <div class="sky">
+          <svg id="sky" viewBox="0 0 560 300" role="img" aria-label="Constellation sketch: Milano lit at the centre, lines reaching to the next stars"></svg>
+          <div class="stars">
+            <div class="star"><span class="dot" style="background:var(--orange)"></span><div><h3>Reconnect tour <span class="pill">On the road</span></h3><p>A rock and roll tour that takes the music out of Milano and gathers the movement wherever it plays.</p></div></div>
+            <div class="star"><span class="dot" style="background:var(--slate)"></span><div><h3>New constellations <span class="pill">Next cities</span></h3><p>Each new city gets its own circle of dreamers, linked back to every other star.</p></div></div>
+            <div class="star"><span class="dot" style="background:var(--sage)"></span><div><h3>Gatherings abroad <span class="pill">Seasonal</span></h3><p>Mountain nights, seaside sunsets and festivals where creatives meet travellers.</p></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="network" class="network">
+    <div class="wrap">
+      <div class="head"><span class="label">The network</span><h2>A label you can trust</h2><p class="sub">Love Wins links people who do amazing things: event makers, artists, musicians, spaces. At the start, every person and every event passes through us, so the name always means the same thing.</p></div>
+      <ol class="steps">
+        <li><span class="blob" aria-hidden="true">1</span><span class="label">Propose</span><h3>Show us what you make</h3><p>An event, a space, a craft. Tell us what you want to bring and who it is for.</p></li>
+        <li><span class="blob" aria-hidden="true">2</span><span class="label">Meet</span><h3>We get to know you</h3><p>A coffee, a studio visit, a night out. We look for people aligned with the spirit, not follower counts.</p></li>
+        <li><span class="blob" aria-hidden="true">3</span><span class="label">Carry the heart</span><h3>You're in the network</h3><p>Your event goes out under the Love Wins label and connects to the right people across the constellation.</p></li>
+      </ol>
+      <p class="promise label">Curated by the founders · small on purpose · well managed</p>
+    </div>
+  </section>
+
+  <section id="join" class="join">
+    <div class="wrap">
+      <div class="box hud"><i></i><i></i><i></i><i></i>
+        <div>
+          <span class="label">Join</span>
+          <p class="inout">You're in<br>or you're <span>out</span>.</p>
+          <p class="sub">The first circle is forming in Milano. Ask a member for the link, propose an event, or scan the code at our next gathering.</p>
+          <div class="btns"><a class="cta" href="#join" aria-disabled="true">Ask to join ♥</a></div>
+        </div>
+        <div class="qr" aria-label="QR code placeholder">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z" fill="var(--heart)"/></svg>
+          <span class="label">QR code</span>
+          <span style="font-size:16px;color:var(--ink2)">Arrives with the first event</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap"><span class="label">Love Wins · For those who dream</span><span class="label">Milano → the world · 2026</span></div>
+</footer>
+
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg";
+  function el(n,a,p){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+  var g=document.getElementById('geo'),C=300,L='var(--line)';
+  var cols=['var(--rose)','var(--tan)','var(--sage)','var(--slate)','var(--orange)','var(--teal)'];
+  var outer=el('g',{'class':'spin'},g);
+  // tick ring
+  for(var i=0;i<120;i++){var a=i*Math.PI/60,r1=i%10?286:274,r2=292;
+    el('line',{x1:C+r1*Math.cos(a),y1:C+r1*Math.sin(a),x2:C+r2*Math.cos(a),y2:C+r2*Math.sin(a),stroke:'var(--ink2)','stroke-width':i%10?.6:1.2,opacity:.55},outer)}
+  el('circle',{cx:C,cy:C,r:296,fill:'none',stroke:L},outer);
+  el('circle',{cx:C,cy:C,r:268,fill:'none',stroke:L,'stroke-dasharray':'2 6'},outer);
+  // ring words
+  var words=['AI','3D ART','PROJECTIONS','COMMUNITY','SPACES','PARTIES','GATHERINGS','MILANO','THE WORLD'];
+  var defs=el('defs',{},g);el('path',{id:'ringp',d:'M '+(C-252)+' '+C+' a252 252 0 1 1 504 0 a252 252 0 1 1 -504 0',fill:'none'},defs);
+  var t=el('text',{'font-family':'Courier Prime, Courier New, monospace','font-size':'12','letter-spacing':'4',fill:'var(--ink2)'},outer);
+  var tp=el('textPath',{href:'#ringp',textLength:String(2*Math.PI*252-10)},t);
+  tp.textContent=words.join('  ✦  ')+'  ✦  ';
+  // flower of life petals
+  var inner=el('g',{'class':'spin2'},g);
+  for(var j=0;j<12;j++){var b=j*Math.PI/6;
+    el('circle',{cx:C+120*Math.cos(b),cy:C+120*Math.sin(b),r:120,fill:'none',stroke:L,'stroke-width':.8},inner)}
+  // octagon
+  var pts=[];for(var k=0;k<8;k++){var c=k*Math.PI/4+Math.PI/8;pts.push((C+232*Math.cos(c)).toFixed(1)+','+(C+232*Math.sin(c)).toFixed(1))}
+  el('polygon',{points:pts.join(' '),fill:'none',stroke:'var(--ink2)','stroke-width':.8,opacity:.5},inner);
+  // coloured nodes on octagon
+  for(var m=0;m<8;m++){var d=m*Math.PI/4+Math.PI/8;
+    el('circle',{cx:C+232*Math.cos(d),cy:C+232*Math.sin(d),r:7,fill:cols[m%6]},inner)}
+  el('circle',{cx:C,cy:C,r:186,fill:'none',stroke:L},g);
+
+  // constellation
+  var s=document.getElementById('sky');
+  var stars=[[280,150,'MILANO',1,'var(--heart)'],[90,70,'NEXT CITY',0,'var(--slate)'],[470,60,'ON TOUR',0,'var(--orange)'],[500,230,'NEXT CITY',0,'var(--teal)'],[110,240,'GATHERING',0,'var(--sage)'],[380,270,'',0,'var(--rose)'],[200,30,'',0,'var(--tan)']];
+  stars.slice(1).forEach(function(p){el('line',{x1:280,y1:150,x2:p[0],y2:p[1],stroke:'var(--ink2)','stroke-width':1,'stroke-dasharray':'3 6',opacity:.6},s)});
+  el('circle',{cx:280,cy:150,r:34,fill:'none',stroke:'var(--heart)',opacity:.35},s);
+  stars.forEach(function(p){el('circle',{cx:p[0],cy:p[1],r:p[3]?12:6,fill:p[4]},s);
+    if(p[2]){var tx=el('text',{x:p[0],y:p[1]+(p[3]?36:24),'text-anchor':'middle','font-family':'Courier Prime, Courier New, monospace','font-size':p[3]?14:11,'letter-spacing':'3',fill:'var(--ink)'},s);tx.textContent=p[2]}});
+
+  // date readout
+  try{var dt=new Date();document.getElementById('date').textContent=dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase()+' · Est. 2026'}catch(e){}
+
+  // design switch
+  var root=document.documentElement,btns=document.querySelectorAll('.design button');
+  function setT(v,save){root.setAttribute('data-lw',v);btns.forEach(function(b){b.setAttribute('aria-pressed',b.dataset.t===v?'true':'false')});
+    if(save){try{localStorage.setItem('lw-theme',v)}catch(e){}}}
+  var saved=null;try{saved=localStorage.getItem('lw-theme')}catch(e){}
+  var dark=root.getAttribute('data-theme')==='dark'||(root.getAttribute('data-theme')!=='light'&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);
+  setT(saved||(dark?'night':'beige'),false);
+  btns.forEach(function(b){b.addEventListener('click',function(){setT(b.dataset.t,true)})});
+})();
+</script>
+</body>
+</html>
