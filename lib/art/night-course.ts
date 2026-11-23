@@ -365,7 +365,24 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
     });
   }
 
-  return out.sort((a, b) => a.s - b.s);
+  return (def.under ? out.filter((p) => clearOfFlip(def, p)) : out).sort((a, b) => a.s - b.s);
+}
+
+/**
+ * Undertown (lib/art/undertown.ts): where the road flips over its edge it sweeps out to its axis'
+ * height either side, so nothing may stand within that (nor cross the road). Upside down it runs
+ * high over the street, and the street keeps all its pieces.
+ */
+export function clearOfFlip(def: TrackDef, p: Pick<Piece, 's' | 'u' | 'd'>): boolean {
+  for (const ds of [-20, 0, 20]) {
+    const s = Math.max(0, p.s + ds);
+    if (!def.under?.(s)) continue;
+    const th = Math.abs(def.twist?.(s) ?? 0);
+    if (th === 0 || th === Math.PI) continue;
+    const axis = def.axis?.(s) ?? def.half(s);
+    if (Math.abs(p.u) - p.d < axis + 2) return false;
+  }
+  return true;
 }
 
 /**
