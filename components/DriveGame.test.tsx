@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { Scene } from 'three';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const push = vi.fn();
@@ -17,6 +18,9 @@ const engine = {
   resize: vi.fn(),
   start: vi.fn(),
   dispose: vi.fn(),
+  setAutopilot: vi.fn(),
+  where: vi.fn(() => null),
+  stage3d: new Scene(),
 };
 let hud: ((h: unknown) => void) | undefined;
 let intro: ((s: unknown) => void) | undefined;
@@ -58,7 +62,7 @@ function play() {
 
 describe('Drive', () => {
   beforeEach(() => {
-    for (const f of Object.values(engine)) f.mockClear();
+    for (const f of Object.values(engine)) if (typeof f === 'function') f.mockClear();
     push.mockClear();
     window.localStorage.clear();
   });
@@ -341,5 +345,18 @@ describe('Drive', () => {
     fireEvent.keyDown(window, { key: 'Enter' });
     expect(engine.startIntro).toHaveBeenCalledWith(true);
     expect(screen.queryByTestId('race-results')).toBeNull();
+  });
+
+  it('opens the design space from the track ring and goes back to it', () => {
+    open();
+    fireEvent.click(screen.getByRole('button', { name: 'Design' }));
+    expect(screen.getByTestId('design-space')).toBeDefined();
+    expect(engine.setAutopilot).toHaveBeenLastCalledWith(true);
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    expect(screen.getByText('Slide fire')).toBeDefined();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('design-space')).toBeNull();
+    expect(engine.setAutopilot).toHaveBeenLastCalledWith(false);
+    expect(screen.getByRole('button', { name: 'Race' })).toBeDefined();
   });
 });
