@@ -21,6 +21,14 @@ import DriveMenu, {
 import { DesignSpace } from '@/components/drive/design-space';
 import { DriveEngine, type Hud, type IntroState } from '@/components/drive/engine';
 import { PauseMenu, RaceResults, TitleScreen } from '@/components/drive/GameSheets';
+import {
+  BastardMarker,
+  MissionCard,
+  MissionLine,
+  placeMarker,
+  RadioPanel,
+} from '@/components/drive/MarsHud';
+import { unlockMarsAudio } from '@/components/drive/mars-sound';
 import RaceIntro from '@/components/drive/RaceIntro';
 import { FutureGauge, TimerGauge } from '@/components/drive/Speedometer';
 import TrackRing from '@/components/drive/TrackRing';
@@ -44,6 +52,7 @@ import {
 } from '@/lib/art/drive-design';
 import { WEAPON_NAME, type WeaponId } from '@/lib/art/pickups';
 import type { RaceResult } from '@/lib/art/race-result';
+import type { RadioMessage } from '@/lib/art/radio';
 import { WEATHERS } from '@/lib/art/weather';
 import { driveSound } from '@/lib/audio/drive-sound';
 import { loadSoundPrefs, type SoundPrefs, saveSoundPrefs } from '@/lib/audio/drive-sound-map';
@@ -96,6 +105,9 @@ export default function DriveGame() {
   const introRef = useRef(intro);
   introRef.current = intro;
   const [hud, setHud] = useState<Hud | null>(null);
+  // Mars: the radio's latest line and the Red Bastard's marker (moved every frame, no render).
+  const [radio, setRadio] = useState<RadioMessage | null>(null);
+  const markerRef = useRef<HTMLDivElement | null>(null);
   /** The sound's mute and volume, remembered on the device (lib/audio/drive-sound-map.ts). */
   const [sound, setSound] = useState<SoundPrefs>(() => loadSoundPrefs(null));
   const [hint, setHint] = useState(true);
@@ -212,6 +224,8 @@ export default function DriveGame() {
           setResults(r);
           driveSound.finish(r);
         },
+        onRadio: setRadio,
+        onMarker: (m) => placeMarker(markerRef.current, m),
         onFrame: (dt) => {
           const sp = spaceRef.current;
           const here = engineRef.current?.where();
@@ -344,6 +358,7 @@ export default function DriveGame() {
       const k = e.key.toLowerCase();
       // A key is a gesture: the audio may start now.
       driveSound.unlock();
+      unlockMarsAudio();
       // The title, pause and results sheets take their own keys first.
       if (sheetRef.current) return;
       if (k === 'escape') {
@@ -403,6 +418,7 @@ export default function DriveGame() {
 
   // Touch: hold the left or right of the screen to steer; any touch drives; two fingers boost.
   const onPointer = (e: React.PointerEvent) => {
+    if (e.type === 'pointerdown') unlockMarsAudio();
     if (e.pointerType !== 'touch') return;
     if (e.type === 'pointerdown' || e.type === 'pointermove')
       touches.current.set(e.pointerId, e.clientX);
@@ -550,6 +566,7 @@ export default function DriveGame() {
               / {hud.racers}
             </div>
           )}
+          {world === 'mars' && <MissionLine mission={hud.mission ?? null} />}
           {hud.drift != null && (
             <div
               style={{
@@ -596,6 +613,14 @@ export default function DriveGame() {
             </div>
           )}
         </div>
+      )}
+
+      {world === 'mars' && !ring && !failed && (
+        <>
+          <BastardMarker ref={markerRef} />
+          {!title && !paused && !results && <MissionCard mission={hud?.mission ?? null} />}
+          {!title && <RadioPanel message={radio} />}
+        </>
       )}
 
       {hint && !failed && !ring && !intro && !paused && !results && (

@@ -17,6 +17,8 @@
  * cells), never a grid, and fades before it can alias.
  */
 
+import { marsTerrainGlsl } from '@/lib/art/mars';
+import { LINE } from '@/lib/art/salt-flat-game';
 import { SPEED_COMMON } from '@/lib/art/speed-shaders';
 
 export const DRIVE_VERTEX = `
@@ -150,6 +152,12 @@ float segDist(vec2 p, vec2 a, vec2 b) {
   float t = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
   return length(pa - ba * t);
 }
+
+#if WORLD == 4
+/*MARS_TERRAIN*/
+// The depth the backdrop writes on Mars, so the vehicle and the stations hide behind the dunes.
+float gDepth = 1.0;
+#endif
 
 // The sun's offset across the view and its height, in the pieces' screen units.
 vec2 sunOff(float az, float yE, float sunY) {
@@ -438,9 +446,48 @@ vec3 scene(vec2 p, out float yHz) {
   vec3 col = horizon(dir, az, yE);
   // Haze over the sky, thickest low down.
   col = mix(col, uFogCol, (1.0 - exp(-6000.0 * uFogDen)) * (1.0 - smoothstep(0.0, 0.6, yE)));
+#if WORLD == 4
+  // The dunes (lib/art/mars.ts): march the ray over the terrain, then refine the crossing.
+  vec2 org = uLine.xy - vec2(MARS_LINE);
+  float t = 0.0;
+  {
+    if (d.y >= 0.0 && uCamY > MARS_HMAX) return col;
+    float a = 0.0;
+    float b = 0.3;
+    bool hit = false;
+    for (int i = 0; i < 110; i++) {
+      vec2 r = dir * b * hl;
+      float gap = uCamY + d.y * b - marsH(uCamW + r, r, org);
+      if (gap < 0.0) { hit = true; break; }
+      if (d.y >= 0.0 && uCamY + d.y * b > MARS_HMAX) break;
+      if (b > 5000.0) break;
+      a = b;
+      b += max(gap / (0.3 * hl + abs(d.y)) * 0.8, 0.05 + 0.01 * b);
+    }
+    if (!hit) {
+      // Past the march: the far plain, flattened into the mirage.
+      if (d.y >= 0.0) return col;
+      b = (uPlaneY - uCamY) / d.y;
+      if (b <= 0.0) return col;
+    } else {
+      for (int i = 0; i < 6; i++) {
+        float m = 0.5 * (a + b);
+        vec2 r = dir * m * hl;
+        if (uCamY + d.y * m - marsH(uCamW + r, r, org) < 0.0) b = m;
+        else a = m;
+      }
+    }
+    t = b;
+    // View depth for the z-buffer, with setProjection's near 0.3 and far 9000.
+    float vz = dv.z * t;
+    float ndc = (-(9000.3 / 8999.7) * vz - (2.0 * 9000.0 * 0.3 / 8999.7)) / -vz;
+    gDepth = clamp(0.5 * ndc + 0.5, 0.0, 0.99999);
+  }
+#else
   if (d.y >= 0.0) return col;
   float t = (uPlaneY - uCamY) / d.y;
   if (t <= 0.0) return col;
+#endif
   vec2 rel = dir * t * hl;
   float dist = t * hl;
   vec2 g = uCamW + rel;
@@ -468,6 +515,19 @@ vec3 scene(vec2 p, out float yHz) {
   }
 #else
   groundC *= 1.0 - 0.16 * crack * exp(-dist / 60.0);
+#endif
+#if WORLD == 4
+  {
+    // The dunes in the low sun: the faces toward it lit, the far sides in shade.
+    vec2 e = vec2(0.6, 0.0);
+    float h0 = marsH(g, rel, org);
+    float hx = marsH(g + e, rel + e, org) - h0;
+    float hy = marsH(g + e.yx, rel + e.yx, org) - h0;
+    vec3 n = normalize(vec3(-hx / 0.6, 1.0, -hy / 0.6));
+    vec3 sunV = normalize(vec3(cos(uSunAz), 0.32, sin(uSunAz)));
+    float lit = max(dot(n, sunV), 0.0) / 0.305;
+    groundC *= clamp(mix(1.0, lit, 0.8), 0.3, 1.9);
+  }
 #endif
   groundC = mix(groundC, C(1.0, 0.98, 1.0), uSnow * 0.6);
   groundC *= 0.42;
@@ -522,6 +582,9 @@ void main() {
   vec3 col = scene(p, yHz);
   col = mix(col, uTint * (0.25 + dot(col, vec3(0.6))), uTintAmt);
   gl_FragColor = vec4(finish(col, uv), 1.0);
+#if WORLD == 4
+  gl_FragDepthEXT = gDepth;
+#endif
 }
 `;
 
@@ -540,7 +603,13 @@ export function backdropFragment(
   world: 'salt' | 'coast' | 'canyon' | 'night' | 'mars' | 'gold',
   mesas: readonly { az: number; half: number; height: number }[],
 ): string {
-  const src = BACKDROP.replace('/*MESAS*/', mesaGlsl(mesas));
+  const src = BACKDROP.replace('/*MESAS*/', mesaGlsl(mesas)).replace(
+    '/*MARS_TERRAIN*/',
+    world === 'mars'
+      ? `#define MARS_LINE ${LINE.x.toFixed(1)}, ${LINE.y0.toFixed(1)}
+${marsTerrainGlsl()}`
+      : '',
+  );
   const mesa = world === 'mars' ? 'C(0.5, 0.25, 0.17)' : 'C(0.42, 0.28, 0.4)';
   return `#define WORLD ${WORLD_SHADER[world]}\n#define MESA_C ${mesa}\n${SPEED_COMMON}\n${src}`;
 }
