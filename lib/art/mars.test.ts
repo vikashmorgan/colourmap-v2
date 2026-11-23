@@ -77,7 +77,7 @@ describe('the dunes', () => {
   it('writes the same waves into the backdrop shader', () => {
     const src = marsTerrainGlsl();
     expect(src).toContain('float marsH(vec2 g, vec2 rel, vec2 org)');
-    expect(src.match(/h \+= /g)?.length).toBe(7);
+    expect(src.match(/h \+= [-\d.]+ \* sin/g)?.length).toBe(7);
     expect(src).toContain('#define MARS_HMAX');
   });
 

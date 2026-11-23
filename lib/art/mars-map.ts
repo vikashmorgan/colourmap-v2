@@ -33,7 +33,7 @@ export const REGIONS: Region[] = [
 ];
 
 /** The crater: its middle, the rim's radius, how high the rim stands and how deep the bowl. */
-export const CRATER = { x: -4500, y: 3000, R: 700, rim: 18, depth: 42 };
+export const CRATER = { x: -4500, y: 3000, R: 520, rim: 28, depth: 70 };
 
 /** The radioactive lakes: flat glowing pools, each its middle and radius (m). */
 export const LAKES: { x: number; y: number; r: number }[] = [
@@ -53,7 +53,7 @@ export const LIGHTHOUSE = { x: CRATER.x + CRATER.R + 14, y: CRATER.y, height: 64
 /** The atomic plants by the lakes: cooling towers, a reactor dome, pipe runs. */
 export const ATOMIC: { x: number; y: number; rot: number }[] = [
   { x: -650, y: 6900, rot: 0.4 },
-  { x: 1450, y: 6900, rot: 2.1 },
+  { x: 1250, y: 6900, rot: 2.1 },
   { x: 700, y: 5900, rot: 4.0 },
 ];
 

@@ -1074,7 +1074,12 @@ export class DriveEngine {
       shipParts(this.design),
     );
     this.scene.add(this.vehicleView.group);
-    if (this.vehicle.kind === 'car') {
+    if (this.vehicle.kind === 'car' && this.cfg.id === 'mars') {
+      // Mars: tyre tracks in the dust that last (fading over 16 s), and a third, wide mark under
+      // the car that only a drift lays down, swirling a little.
+      this.ribbons = [0, 1].map(() => new Ribbon(420, 1.2, 0.3, 16, false, this.ribbonFlat));
+      this.ribbons.push(new Ribbon(300, 1.4, 1.5, 14, false, this.ribbonFlat));
+    } else if (this.vehicle.kind === 'car') {
       this.ribbons = [0, 1].map(() => new Ribbon(160, 1.5, 0.24, 9, false, this.ribbonFlat));
     } else {
       this.ribbons = [0, 1].map(() => new Ribbon(70, 1.2, 0.5, 1.3, false, this.ribbonGlow));
@@ -1888,6 +1893,28 @@ export class DriveEngine {
         const g = this.physics.ground(x, y);
         pushTrail(this.ribbons[i].trail, x, y, g.h + 0.03, t, mark);
       });
+      const swirl = this.ribbons[2];
+      if (swirl) {
+        // The drift's wide mark, swirling slowly side to side, and a plume of dust off the back.
+        const slide = v.air ? 0 : clamp((Math.abs(v.slip) - 0.08) * 4, 0, 1);
+        const sw = Math.sin(t * 2.4) * 0.7 * slide;
+        const x = v.x - fx * 1.4 + lx * sw;
+        const y = v.y - fy * 1.4 + ly * sw;
+        pushTrail(swirl.trail, x, y, this.physics.ground(x, y).h + 0.035, t, slide * 0.8);
+        if (slide > 0.2 && Math.random() < slide * 0.9) {
+          const sp = speedOf(v);
+          this.puffs.emit(
+            x,
+            y,
+            this.physics.ground(x, y).h + 0.4,
+            -fx * sp * 0.15 + (Math.random() - 0.5) * 3,
+            -fy * sp * 0.15 + (Math.random() - 0.5) * 3,
+            1 + Math.random() * 1.5,
+            2.6 + Math.random() * 1.6,
+            3 + slide * 4,
+          );
+        }
+      }
       this.ribbonFlat.uniforms.uOpacity.value = this.cfg.id === 'coast' ? 0.45 : 0.3;
     } else {
       // The fire's glowing trail, from each booster.
