@@ -68,6 +68,9 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .design button{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);cursor:pointer;padding:0;position:relative}
 .design button[aria-pressed="true"]::after{content:"";position:absolute;inset:-5px;border:1px solid var(--ink);border-radius:50%}
 @media (max-width:720px){.nav{display:none}.design{margin-left:auto}}
+.nav{gap:12px}.nav a{letter-spacing:.12em}
+@media (max-width:1360px){.design .label{display:none}}
+@media (max-width:1100px) and (min-width:721px){.nav a[href="#manifesto"],.nav a[href="#places"]{display:none}}
 
 /* HUD brackets */
 .hud{position:relative}
@@ -121,6 +124,25 @@ section{padding-block:64px}
 .mood figure{margin:0;padding:12px}
 .mood img{display:block;width:100%;aspect-ratio:1168/784;object-fit:cover;border-radius:16px}
 .mood figcaption{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:12px}
+
+/* 3D art + stickers */
+.solo{margin:0 auto;padding:12px;display:grid;gap:12px;justify-items:center;max-width:960px}
+.solo img{display:block;width:100%;height:auto;border-radius:16px}
+.sheet{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:32px}
+.stk{margin:0;display:grid;gap:12px;justify-items:center;width:min(280px,100%)}
+.stk img{display:block;width:100%;height:auto;border-radius:20px;background:var(--paper);padding:8px;box-shadow:0 2px 0 var(--line),0 12px 24px rgba(74,42,24,.16);transition:transform .3s}
+.stk:nth-child(1) img{transform:rotate(-4deg)}
+.stk:nth-child(2) img{transform:rotate(2deg)}
+.stk:nth-child(3) img{transform:rotate(-1.5deg)}
+.stk:hover img{transform:rotate(0) scale(1.03)}
+.stk.sq{width:min(240px,100%)}
+
+/* gallery */
+.gal{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;max-width:960px;margin:0 auto}
+.gal figure{margin:0;padding:12px;display:grid;gap:12px;justify-items:center}
+.gal .wide{grid-column:1/-1}
+.gal img{display:block;width:100%;height:auto;border-radius:16px}
+@media (max-width:560px){.gal{grid-template-columns:1fr}}
 
 /* goal */
 .gbox{padding:48px 24px;display:grid;gap:16px;justify-items:center;text-align:center;background:color-mix(in srgb,var(--paper) 60%,transparent);border-radius:8px}
@@ -213,6 +235,8 @@ footer .wrap{justify-content:center;text-align:center}
     <nav class="nav" aria-label="Sections">
       <a href="#manifesto">Manifesto</a>
       <a href="#make">What we make</a>
+      <a href="#art3d">3D art</a>
+      <a href="#stickers">Stickers</a>
       <a href="#base">BASE night</a>
       <a href="#places">Milano &amp; world</a>
       <a href="#network">Network</a>
@@ -268,6 +292,27 @@ footer .wrap{justify-content:center;text-align:center}
         <article class="pillar"><div class="blob" aria-hidden="true">C</div><span class="label">People &amp; places</span><h3>Community &amp; spaces</h3><p>A circle that grows from the bottom up, with studios and rooms where creatives work side by side and travellers drop in.</p></article>
         <article class="pillar"><div class="blob" aria-hidden="true">♥</div><span class="label">Nights</span><h3>Parties of freedom</h3><p>Style, music and sunsets. Nights where talking and dancing matter as much as the line-up.</p></article>
         <article class="pillar"><div class="blob" aria-hidden="true">G</div><span class="label">Days</span><h3>Creative gatherings</h3><p>Show-and-tells, open studios and working sessions where ideas meet the people who can build them.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="art3d" class="gallery">
+    <div class="wrap">
+      <div class="head"><span class="label">3D art</span><h2>The heart, sculpted</h2><p class="sub">Our heart character as a gallery piece: a sculpture you can walk around.</p></div>
+      <figure class="hud solo"><i></i><i></i><i></i><i></i>
+        <img src="/assets/heart-sculpture.webp" alt="3D red heart character with sunglasses, tongue out and peace signs, standing on a white plinth in a gallery" width="960" height="644" loading="lazy">
+        <figcaption class="label">The heart · 3D sculpture concept</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="stickers" class="stickers">
+    <div class="wrap">
+      <div class="head"><span class="label">Stickers · 2D art</span><h2>Stick the heart everywhere</h2><p class="sub">Posters and stickers for laptops, walls, guitars and lampposts.</p></div>
+      <div class="sheet">
+        <figure class="stk"><img src="/assets/heart-poster.webp" alt="Retro sticker of the red heart character in sunglasses walking with peace signs above the words Love Wins" width="640" height="960" loading="lazy"><figcaption class="label">Walking heart</figcaption></figure>
+        <figure class="stk sq"><img src="/assets/logo.webp" alt="Square Love Wins sticker: rounded 70s letters arched around a red-orange heart" width="900" height="900" loading="lazy"><figcaption class="label">The badge</figcaption></figure>
+        <figure class="stk"><img src="/assets/dove-poster.webp" alt="Retro sticker of a blue dove carrying a red heart between the words Love and Wins in pastel rounded letters" width="640" height="951" loading="lazy"><figcaption class="label">Dove and heart · inspiration</figcaption></figure>
       </div>
     </div>
   </section>
