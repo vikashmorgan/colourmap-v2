@@ -71,6 +71,9 @@ vi.mock('@/components/garage/scene', () => ({
 
 import { MENU_TAB_KEY } from '@/components/drive/DriveMenu';
 import { DESIGN_KEY } from '@/lib/art/drive-design';
+import { driveSound } from '@/lib/audio/drive-sound';
+import { SOUND_KEY } from '@/lib/audio/drive-sound-map';
+import { FakeAudioContext } from '@/lib/audio/fake-audio-context';
 import DriveGame, { BACK_HREF, LAST_TRACK_KEY } from './DriveGame';
 
 /** Opens the game and leaves the track ring by racing on the track it shows. */
@@ -471,5 +474,67 @@ describe('Drive', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
     expect(screen.getByRole('tab', { name: 'World' }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('button', { name: 'Snowstorm' })).toBeDefined();
+  });
+});
+
+describe('Drive sound', () => {
+  const w = window as unknown as { AudioContext?: unknown };
+  beforeEach(() => {
+    FakeAudioContext.made = [];
+    w.AudioContext = FakeAudioContext;
+    window.localStorage.clear();
+  });
+  afterEach(() => {
+    cleanup();
+    driveSound.close();
+    delete w.AudioContext;
+  });
+
+  it('starts the audio only on a gesture, then plays the countdown and the finish', () => {
+    render(<DriveGame />);
+    expect(FakeAudioContext.made).toHaveLength(0);
+    fireEvent.pointerDown(screen.getByTestId('title-screen'));
+    expect(FakeAudioContext.made).toHaveLength(1);
+    const ctx = FakeAudioContext.made[0];
+    fireEvent.click(screen.getByRole('button', { name: 'Race' }));
+    const before = ctx.oscs().length;
+    act(() => {
+      intro?.({ phase: 'count', lit: 1, go: false });
+      intro?.({ phase: 'count', lit: 2, go: false });
+      intro?.({ phase: 'count', lit: 3, go: false });
+      intro?.({ phase: 'count', lit: 0, go: true });
+      intro?.(null);
+    });
+    expect(ctx.oscs().length).toBe(before + 4);
+    act(() => {
+      hud?.({ speed: 180, gear: 4, revs: 0.6, drift: null, driftBest: null, combo: null });
+    });
+    expect(ctx.oscs()[0].frequency.value).toBeGreaterThan(46);
+    const beforeFinish = ctx.oscs().length;
+    act(() => {
+      finish?.({ time: '1:02.3', best: null, record: false, place: 2, standings: [] });
+    });
+    expect(ctx.oscs().length).toBeGreaterThan(beforeFinish);
+  });
+
+  it('mutes from the menu and remembers it, with a master volume', () => {
+    play();
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Settings' }));
+    const muted = screen.getByRole('button', { name: 'Muted' });
+    fireEvent.click(muted);
+    expect(muted.getAttribute('aria-pressed')).toBe('true');
+    expect(JSON.parse(window.localStorage.getItem(SOUND_KEY) ?? '{}').muted).toBe(true);
+    fireEvent.change(screen.getByRole('slider', { name: 'Volume' }), { target: { value: '30' } });
+    expect(JSON.parse(window.localStorage.getItem(SOUND_KEY) ?? '{}')).toEqual({
+      muted: true,
+      volume: 0.3,
+    });
+    cleanup();
+    play();
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    // The menu remembers its category, so it opens on Settings again.
+    expect(screen.getByRole('button', { name: 'Muted' }).getAttribute('aria-pressed')).toBe('true');
+    expect((screen.getByRole('slider', { name: 'Volume' }) as HTMLInputElement).value).toBe('30');
   });
 });
