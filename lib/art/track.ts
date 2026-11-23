@@ -24,6 +24,7 @@ import coastData from '@/lib/art/tracks/coast.json';
 import goldData from '@/lib/art/tracks/gold.json';
 import neonData from '@/lib/art/tracks/neon.json';
 import nightData from '@/lib/art/tracks/night.json';
+import { UNDER, underLocal, underTwist, underWall } from '@/lib/art/undertown';
 import { G, type Ground, type Hit, type Vehicle, type World } from '@/lib/art/vehicle';
 
 export type TrackId = 'coast' | 'canyon' | 'night' | 'chinatown' | 'neon' | 'sky' | 'gold';
@@ -60,6 +61,11 @@ export interface TrackDef {
   fireStyle?(s: number): number;
   /** How far the road has rolled about its axis here (rad, 0 to 2π over a twist; 0 elsewhere). */
   twist?(s: number): number;
+  /** How high over the road the axis a twist rolls about runs (m; default the half-width). */
+  axis?(s: number): number;
+  /** Where the road runs upside down as Undertown (lib/art/undertown.ts): a twist that keeps its
+   * barriers and has no straight road through it. */
+  under?(s: number): boolean;
   /** Where a twist is a normal looping (end over end), its start and length; null elsewhere. */
   looping?(s: number): { from: number; length: number } | null;
   /** On a twist, the slope your line through it adds along the road (negative runs downhill:
@@ -112,7 +118,7 @@ export function twistPose(t: Track, s: number, u: number, above: number): TwistP
   }
   const lp = t.def.looping?.(Math.max(0, s));
   if (lp) return loopPose(t, s, u, surf + above, lp, f.e, th);
-  const A = f.half;
+  const A = t.def.axis?.(Math.max(0, s)) ?? f.half;
   const c = Math.cos(th);
   const sn = Math.sin(th);
   const up = surf + above - A;
@@ -424,7 +430,7 @@ export function surfPull(
   const { s, u } = project(t, x, y);
   const f = frameAt(t, s);
   if (Math.abs(u) <= f.half + 0.3) return null;
-  if (Math.abs(t.def.twist?.(Math.max(0, s)) ?? 0) > TWIST_OPEN) return null;
+  if (edgesOpen(t.def, s)) return null;
   if (onBypass(t, s, u) !== null || onDeck(t, s, u)) return null;
   // Only where a surf's ground has given way under you.
   if (heightAt(t, s, u) > f.e - VOID_DEPTH / 2) return null;
@@ -478,6 +484,12 @@ export function onBypass(t: Track, s: number, u: number): number | null {
 /** How far a twist must have turned before its edges are open, without barriers (rad). */
 export const TWIST_OPEN = 0.15;
 
+/** Whether the road's edges are open here: on a twist, turned past TWIST_OPEN (Undertown keeps its
+ * barriers). */
+export function edgesOpen(def: TrackDef, s: number): boolean {
+  return Math.abs(def.twist?.(Math.max(0, s)) ?? 0) > TWIST_OPEN && !def.under?.(Math.max(0, s));
+}
+
 /** How far past the edge the pipe's curve reaches on the side of u (0 without one). */
 export function pipeReach(t: Track, s: number, u = 1): number {
   return pipeRadius(t, s, u) * PIPE_TOP;
@@ -501,7 +513,7 @@ function corridor(
     half: up ? f.half + DECK.OUT + 1 : f.half + (reach > 0 ? reach + 1 : 0),
     pipe: up ? 0 : reach > 0 ? clamp(out / reach, 0, 1) : 0,
   };
-  const open = Math.abs(t.def.twist?.(Math.max(0, s)) ?? 0) > TWIST_OPEN;
+  const open = edgesOpen(t.def, s);
   const c = t.def.bypass?.(Math.max(0, s));
   const extra = open ? 8 : 0;
   if (c === null || c === undefined) return open ? { ...base, half: base.half + extra } : base;
@@ -643,9 +655,21 @@ export const CHINATOWN: TrackDef = {
   walls: (s) => {
     // The shophouses' fronts stop you in the lanes; on the avenues the pavement is open.
     const half = chinatownHalf(s);
-    if (half > CHINA_LANE + 2) return barrier(half);
-    return { left: { u: half + 2.3, height: 6 }, right: { u: -(half + 2.3), height: 6 } };
+    const w =
+      half > CHINA_LANE + 2
+        ? barrier(half)
+        : { left: { u: half + 2.3, height: 6 }, right: { u: -(half + 2.3), height: 6 } };
+    if (underLocal(s) === null) return w;
+    // Undertown: the barriers close in to the ribbon's edge.
+    return {
+      left: { ...w.left, u: underWall(s, w.left.u, half) },
+      right: { ...w.right, u: -underWall(s, -w.right.u, half) },
+    };
   },
+  // Undertown (lib/art/undertown.ts): over the edge onto the road's underside and back.
+  twist: underTwist,
+  axis: (s) => (underLocal(s) === null ? chinatownHalf(s) : UNDER.AXIS),
+  under: (s) => underLocal(s) !== null,
 };
 
 export const NEON_HALF = 16;
@@ -870,7 +894,7 @@ export function collideTrack(w: TrackWorld, v: Vehicle): Hit | null {
   const ground = heightAt(tr, s, u);
   const above = v.z - ground;
   // A twist has no barriers (2026-11-22): ride off it and you are gone.
-  if (Math.abs(tr.def.twist?.(Math.max(0, s)) ?? 0) > TWIST_OPEN) return null;
+  if (edgesOpen(tr.def, s)) return null;
   // A curled bend's wall stands back past its pipe's top.
   const left = walls.left;
   const deckSide = tr.def.deck?.(Math.max(0, s)) ?? 0;

@@ -116,6 +116,7 @@ import {
   stepKmRace,
   type Track,
   type TrackWorld,
+  TWIST_OPEN,
   twistPose,
 } from '@/lib/art/track';
 import { trackInfo } from '@/lib/art/track-registry';
@@ -170,6 +171,8 @@ export interface Hud {
   /** Your place among the racers when the rivals are on (1 = leading), and how many race. */
   place?: number | null;
   racers?: number;
+  /** Where you are, when it has its own name on screen: Undertown, under Chinatown Run. */
+  zone?: 'undertown' | null;
 }
 
 export interface EngineOptions {
@@ -1268,6 +1271,13 @@ export class DriveEngine {
     }
   }
 
+  /** Whether you are drawn rolled over: on a twist's ribbon (not straight through), or under. */
+  private rolled(): boolean {
+    const tr = this.trackWorld?.track;
+    if (!tr?.def.twist || this.straight.has(this.vehicle)) return false;
+    return Math.abs(tr.def.twist(Math.max(0, this.s))) > TWIST_OPEN;
+  }
+
   private posed(x: number, y: number, z: number, near: number, who: Vehicle | null = null) {
     const tr = this.trackWorld?.track;
     if (!tr?.def.twist) return null;
@@ -1519,8 +1529,12 @@ export class DriveEngine {
         }
       }
       this.stepRivals(dt, t);
-      this.dust(ev.landed, ev.bump, dt, w);
-      if (ev.scrape) this.spray(ev.scrape, ev.scrapeNx ?? 0, ev.scrapeNy ?? 0, dt);
+      // Rolled over on a twist or Undertown, the spray and sparks would show on the ground the
+      // physics drives, not on the road as drawn: none there.
+      if (!this.rolled()) {
+        this.dust(ev.landed, ev.bump, dt, w);
+        if (ev.scrape) this.spray(ev.scrape, ev.scrapeNx ?? 0, ev.scrapeNy ?? 0, dt);
+      }
     }
 
     // The camera.
@@ -1941,6 +1955,14 @@ export class DriveEngine {
     (u.uMote.value as THREE.Color).setRGB(...(w.mote ?? [1, 0.95, 0.92]));
   }
 
+  /** Undertown once you are more than halfway over (not while diving off a twist). */
+  private zone(): 'undertown' | null {
+    const def = this.trackWorld?.track.def;
+    const s = Math.max(0, this.s);
+    if (!def?.under?.(s) || this.wreck) return null;
+    return Math.cos(def.twist?.(s) ?? 0) < 0 ? 'undertown' : null;
+  }
+
   private emitHud(speed: number, t: number) {
     if (!this.onHud || t - this.hudAt < 0.1) return;
     this.hudAt = t;
@@ -1973,6 +1995,7 @@ export class DriveEngine {
           )
         : null,
       racers: this.rivals.length + 1,
+      zone: this.zone(),
     };
     const key = JSON.stringify(hud);
     if (key === this.lastHud) return;

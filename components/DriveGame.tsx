@@ -18,6 +18,7 @@ import { PauseMenu, RaceResults, TitleScreen } from '@/components/drive/GameShee
 import RaceIntro from '@/components/drive/RaceIntro';
 import { FutureGauge, TimerGauge } from '@/components/drive/Speedometer';
 import TrackRing from '@/components/drive/TrackRing';
+import ZoneTitle from '@/components/drive/ZoneTitle';
 import { dressingFor, type Pos } from '@/lib/art/design-space';
 import {
   controlsFromKeys,
@@ -535,6 +536,8 @@ export default function DriveGame() {
             : '↑ drive · ← → steer · F handbrake: hold it and turn to drift · space boost · shift double · R restart'}
         </div>
       )}
+
+      {!ring && !intro && !paused && !results && <ZoneTitle zone={hud?.zone} />}
 
       {intro && !ring && !failed && <RaceIntro state={intro} world={world} onClick={introKey} />}
 
