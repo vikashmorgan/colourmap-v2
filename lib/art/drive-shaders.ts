@@ -168,8 +168,10 @@ vec2 sunOff(float az, float yE, float sunY) {
 /* Mars at dusk: butterscotch at the horizon, dusty rose, then a dark umber; a small white sun in a
    blue halo (Martian dust scatters blue round the sun); Phobos and Deimos, two small grey moons. */
 vec3 sky(float az, float yE) {
-  vec3 c = mix(C(0.86, 0.6, 0.4), C(0.6, 0.38, 0.32), smoothstep(0.0, 0.22, yE));
-  c = mix(c, C(0.16, 0.1, 0.11), smoothstep(0.2, 0.7, yE));
+  // The dark umber comes down low (2026-11-23: "bring it a bit lower so we see the darker part
+  // when we dont turn"): it starts just over the horizon and is deep by a third of the way up.
+  vec3 c = mix(C(0.86, 0.6, 0.4), C(0.6, 0.38, 0.32), smoothstep(0.0, 0.1, yE));
+  c = mix(c, C(0.16, 0.1, 0.11), smoothstep(0.06, 0.36, yE));
   float d = length(sunOff(az, yE, 0.07));
   c += C(0.5, 0.68, 1.0) * exp(-d * 9.0) * 0.75 * uSunAmt;
   c += C(0.95, 0.97, 1.0) * (1.0 - smoothstep(0.018, 0.022, d)) * 1.6 * uSunAmt;
@@ -531,6 +533,18 @@ vec3 scene(vec2 p, out float yHz) {
 #endif
   groundC = mix(groundC, C(1.0, 0.98, 1.0), uSnow * 0.6);
   groundC *= 0.42;
+#if WORLD == 4
+  {
+    // The radioactive lakes: a sickly green-yellow glow, a slow ripple, a pale rim of salts.
+    float lk = marsLake(rel, org);
+    if (lk > 0.0) {
+      float rip = vn((rel - org) / 7.0 + vec2(uTime * 0.12, -uTime * 0.08));
+      vec3 glow = mix(C(0.42, 0.78, 0.12), C(0.82, 0.95, 0.3), rip) * (1.1 + 0.5 * lk);
+      groundC = mix(groundC, glow, smoothstep(0.0, 0.06, lk));
+      groundC += C(0.9, 0.95, 0.6) * (1.0 - smoothstep(0.0, 0.03, lk)) * 0.25;
+    }
+  }
+#endif
 #if WORLD == 0 || WORLD == 4
   if (uCourse > 0.5) {
     // The painted line, worn in places, and the start and finish lines across it.

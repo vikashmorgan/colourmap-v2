@@ -74,6 +74,7 @@ import {
   RIBBON_VERTEX,
 } from '@/lib/art/drive-shaders';
 import { WORLD_CFG, type WorldCfg } from '@/lib/art/drive-worlds';
+import { easeMask, gMask } from '@/lib/art/g-force';
 import { newShiftWatch, ringFor, watchShift } from '@/lib/art/gear-rings';
 import { MARS_TERRAIN, marsHeight } from '@/lib/art/mars';
 import {
@@ -172,13 +173,14 @@ import {
   type Wreck,
 } from '@/lib/art/wreck';
 import { GatesView, tickGates } from './gates-view';
-import { type Marker, MarsRun, type MissionHud } from './mars-run';
+import { type Marker, MarsRun, type MarsWhere, type MissionHud } from './mars-run';
 import { buildMarsView, type MarsView } from './mars-view';
 import { buildSaltView, type SaltView } from './salt-view';
 import { ShiftRings } from './shift-rings';
 import { makeStageFire } from './stage-fire';
 import { buildTrackView, disposeGroup, type TrackView } from './track-view';
 import { buildVehicle, type VehicleView } from './vehicles';
+import { makeVintagePass } from './vintage-pass';
 
 export interface Hud {
   speed: number;
@@ -203,6 +205,8 @@ export interface Hud {
   pickup?: Pickup | null;
   /** Mars: the mission to follow the Red Bastard. */
   mission?: MissionHud | null;
+  /** Mars: the region you are in, the radiation, you and him on the map. */
+  mars?: MarsWhere | null;
   /** Where you are, when it has its own name on screen: Undertown, under Chinatown Run. */
   zone?: 'undertown' | null;
 }
@@ -534,6 +538,12 @@ export class DriveEngine {
   private bloom: UnrealBloomPass;
   /** The Neon District's rings recolour every light (lib/art/night-course.ts MOODS). */
   private moodPass: ShaderPass;
+  /** The last touches: the G-force mask (every world), Mars's photograph edges, old film, the TV. */
+  private vintagePass = makeVintagePass();
+  private gLevel = 0;
+  private hitAt = -99;
+  private hitPower = 0;
+  private scraping = false;
   private mood: RingMood | null = null;
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera();
@@ -700,6 +710,7 @@ export class DriveEngine {
     this.composer.addPass(this.moodPass);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.144, 0.45, 0.55);
     this.composer.addPass(this.bloom);
+    this.composer.addPass(this.vintagePass);
     this.composer.addPass(new OutputPass());
     this.camera.matrixAutoUpdate = true;
 
@@ -900,6 +911,7 @@ export class DriveEngine {
         env: this.env,
         store: this.store,
         emitDust: (...a) => this.puffs.emit(...a),
+        view: this.marsView,
         makeTrail: (colour) => {
           const mat = this.ribbonGlow.clone();
           mat.uniforms = { uColour: { value: colour }, uOpacity: { value: 0.7 } };
@@ -1122,7 +1134,12 @@ export class DriveEngine {
       shipParts(this.design),
     );
     this.scene.add(this.vehicleView.group);
-    if (this.vehicle.kind === 'car') {
+    if (this.vehicle.kind === 'car' && this.cfg.id === 'mars') {
+      // Mars: tyre tracks in the dust that last (fading over 16 s), and a third, wide mark under
+      // the car that only a drift lays down, swirling a little.
+      this.ribbons = [0, 1].map(() => new Ribbon(420, 1.2, 0.3, 16, false, this.ribbonFlat));
+      this.ribbons.push(new Ribbon(300, 1.4, 1.5, 14, false, this.ribbonFlat));
+    } else if (this.vehicle.kind === 'car') {
       this.ribbons = [0, 1].map(() => new Ribbon(160, 1.5, 0.24, 9, false, this.ribbonFlat));
     } else {
       this.ribbons = [0, 1].map(() => new Ribbon(70, 1.2, 0.5, 1.3, false, this.ribbonGlow));
@@ -1701,6 +1718,10 @@ export class DriveEngine {
       }
       this.stepRivals(dt, t);
       this.marsRun?.step(dt, t, v, !holding, this.onRadio);
+      // A hit's soft pulse of the G mask: the start of a scrape on a wall or barrier.
+      const scraping = (ev.scrape ?? 0) > 2;
+      if (scraping && !this.scraping) this.pulse(Math.min(1, (ev.scrape ?? 0) / 18), t);
+      this.scraping = scraping;
       // Rolled over on a twist or Undertown, the spray and sparks would show on the ground the
       // physics drives, not on the road as drawn: none there.
       if (!this.rolled()) {
@@ -1926,9 +1947,32 @@ export class DriveEngine {
     this.updateMotes(speed, spec.vTop, boost, dt, w, aspect);
 
     this.paintMood(dt);
+    this.paintVintage(dt, t, speed);
     this.onFrame?.(dt);
     this.composer.render(dt);
     this.emitHud(speed, t);
+  }
+
+  /** A soft pulse of the G mask (a hit), `power` 0..1. */
+  pulse(power: number, t: number) {
+    this.hitAt = t;
+    this.hitPower = power;
+  }
+
+  /** The last pass's levels: the G mask from the sideways pull (speed × turn rate), Mars's
+   * moods. */
+  private paintVintage(dt: number, t: number, speed: number) {
+    const v = this.vehicle;
+    const lateral = v.air || this.preview ? 0 : speed * v.yawRate;
+    this.gLevel = easeMask(this.gLevel, gMask(lateral, t - this.hitAt, this.hitPower), dt);
+    const mars = this.cfg.id === 'mars';
+    const fx = this.marsRun?.fx() ?? { sepia: 0, glitch: 0 };
+    this.vintagePass.set(
+      { vintage: mars ? 0.85 : 0, sepia: fx.sepia, glitch: fx.glitch, g: this.gLevel },
+      t,
+      this.size.w,
+      this.size.h,
+    );
   }
 
   private newDrift(kind: string): DriftRun {
@@ -1980,6 +2024,32 @@ export class DriveEngine {
         const g = this.physics.ground(x, y);
         pushTrail(this.ribbons[i].trail, x, y, g.h + 0.03, t, mark);
       });
+      const swirl = this.ribbons[2];
+      if (swirl) {
+        // The drift's wide mark, swirling slowly side to side, and a plume of dust off the back.
+        // Only a real slide at speed (at a crawl the slip angle means nothing).
+        const sp = speedOf(v);
+        const slide =
+          v.air || sp < 10
+            ? 0
+            : clamp((Math.abs(v.slip) - 0.08) * 4, 0, 1) * clamp((sp - 10) / 10, 0, 1);
+        const sw = Math.sin(t * 2.4) * 0.7 * slide;
+        const x = v.x - fx * 1.4 + lx * sw;
+        const y = v.y - fy * 1.4 + ly * sw;
+        pushTrail(swirl.trail, x, y, this.physics.ground(x, y).h + 0.035, t, slide * 0.8);
+        if (slide > 0.2 && Math.random() < slide * 0.25) {
+          this.puffs.emit(
+            x,
+            y,
+            this.physics.ground(x, y).h + 0.3,
+            -fx * sp * 0.1 + lx * (Math.random() - 0.5) * 4,
+            -fy * sp * 0.1 + ly * (Math.random() - 0.5) * 4,
+            0.6 + Math.random(),
+            1.8 + Math.random() * 1.2,
+            1.6 + slide * 1.6,
+          );
+        }
+      }
       this.ribbonFlat.uniforms.uOpacity.value = this.cfg.id === 'coast' ? 0.45 : 0.3;
     } else {
       // The fire's glowing trail, from each booster.
@@ -2197,6 +2267,7 @@ export class DriveEngine {
       charges: [...this.inventory.charges],
       pickup: this.pickup && t - this.pickup.t < PICKUP_SHOW ? this.pickup.p : null,
       mission: this.marsRun?.hud(t) ?? null,
+      mars: this.marsRun?.where() ?? null,
       zone: this.zone(),
     };
     const key = JSON.stringify(hud);

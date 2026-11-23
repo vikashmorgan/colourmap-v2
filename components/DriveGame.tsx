@@ -28,6 +28,7 @@ import {
   placeMarker,
   RadioPanel,
 } from '@/components/drive/MarsHud';
+import { GeigerColumn, MarsMap, RegionCard } from '@/components/drive/MarsWorldHud';
 import { unlockMarsAudio } from '@/components/drive/mars-sound';
 import RaceIntro from '@/components/drive/RaceIntro';
 import { FutureGauge, TimerGauge } from '@/components/drive/Speedometer';
@@ -107,6 +108,7 @@ export default function DriveGame() {
   const [hud, setHud] = useState<Hud | null>(null);
   // Mars: the radio's latest line and the Red Bastard's marker (moved every frame, no render).
   const [radio, setRadio] = useState<RadioMessage | null>(null);
+  const [map, setMap] = useState(false);
   const markerRef = useRef<HTMLDivElement | null>(null);
   /** The sound's mute and volume, remembered on the device (lib/audio/drive-sound-map.ts). */
   const [sound, setSound] = useState<SoundPrefs>(() => loadSoundPrefs(null));
@@ -378,6 +380,11 @@ export default function DriveGame() {
         chooseWorld(w.id);
         return;
       }
+      if (k === 'm') {
+        // Mars's small map, on and off.
+        setMap((v) => !v);
+        return;
+      }
       if (k === 'x') {
         // Fire a weapon charge from the gates (the attack code handles it).
         engineRef.current?.fireWeapon();
@@ -620,6 +627,9 @@ export default function DriveGame() {
           <BastardMarker ref={markerRef} />
           {!title && !paused && !results && <MissionCard mission={hud?.mission ?? null} />}
           {!title && <RadioPanel message={radio} />}
+          {!title && !paused && <RegionCard region={hud?.mars?.region ?? null} />}
+          <GeigerColumn rad={hud?.mars?.rad ?? 0} live={!title && !paused} />
+          {map && !title && <MarsMap where={hud?.mars ?? null} />}
         </>
       )}
 

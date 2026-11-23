@@ -10,7 +10,22 @@ import * as THREE from 'three';
 
 import { pushTrail, type Trail } from '@/lib/art/drive';
 import { fireById, hullById, loadBest, type Store, saveBest } from '@/lib/art/drive-design';
-import { type Bastard, bastardPose, newBastard, stepBastard } from '@/lib/art/mars';
+import {
+  type Bastard,
+  bastardPose,
+  newBastard,
+  radiation,
+  regionAt,
+  stepBastard,
+} from '@/lib/art/mars';
+import {
+  archThrough,
+  type Grade,
+  glitchOf,
+  gradeShown,
+  newGrade,
+  stepGrade,
+} from '@/lib/art/mars-fx';
 import {
   type Mission,
   missionCard,
@@ -21,6 +36,7 @@ import {
 } from '@/lib/art/mars-mission';
 import { newRadio, type RadioMessage, type RadioState, stepRadio } from '@/lib/art/radio';
 import type { Vehicle } from '@/lib/art/vehicle';
+import type { MarsView } from './mars-view';
 import { buildVehicle, type VehicleView } from './vehicles';
 
 /** What the shell shows of the mission. */
@@ -33,6 +49,15 @@ export interface MissionHud {
   record: boolean;
   /** How far he is (m). */
   gap: number;
+}
+
+/** Where you are on Mars, for the shell: the region's name, the radiation (0..1, the Geiger
+ * counter), and you and him on the map. */
+export interface MarsWhere {
+  region: string | null;
+  rad: number;
+  you: { x: number; y: number; h: number };
+  him: { x: number; y: number };
 }
 
 /** Where he is on the screen: pixels from the top left, whether pinned to the edge (off screen),
@@ -65,6 +90,8 @@ export interface MarsDeps {
     mesh: THREE.Mesh;
     update(ox: number, oy: number, t: number): void;
   };
+  /** The stations and arches, so an arch you pass can throw its fire. */
+  view: MarsView | null;
 }
 
 /** His paint and fire. */
@@ -81,6 +108,14 @@ export class MarsRun {
   private gap = Number.POSITIVE_INFINITY;
   private roll = 0;
   private ghost: Vehicle;
+  /** The picture's moods: old film through the tunnels, the TV glitch near the lakes. */
+  private grade: Grade = newGrade();
+  private glitch = 0;
+  private rad = 0;
+  private last: { x: number; y: number } | null = null;
+  private region: string | null = null;
+  private regionAt = -99;
+  private you = { x: 0, y: 0, h: 0 };
 
   constructor(
     private deps: MarsDeps,
@@ -128,10 +163,47 @@ export class MarsRun {
     this.mission = null;
     this.radio = newRadio();
     this.ribbon.trail.count = 0;
+    this.last = null;
+  }
+
+  /** The world round you a moment on: the arches you pass (their fire, the grade), the radiation
+   * and its glitch, the region you are in. */
+  private stepWorld(dt: number, t: number, you: Vehicle, live: boolean) {
+    const through = live && this.last ? archThrough(this.last.x, this.last.y, you.x, you.y) : null;
+    if (through) this.deps.view?.flare(through, t);
+    this.grade = stepGrade(this.grade, dt, through);
+    this.last = { x: you.x, y: you.y };
+    this.you = { x: you.x, y: you.y, h: you.h };
+    this.rad = radiation(you.x, you.y);
+    this.glitch += (glitchOf(this.rad) - this.glitch) * (1 - Math.exp(-2 * dt));
+    // The region is looked up a few times a second (its run band measures against his loop).
+    if (t - this.regionAt > 0.25) {
+      this.regionAt = t;
+      this.region = regionAt(you.x, you.y)?.name ?? null;
+    }
+  }
+
+  /** The picture's moods now, for the screen pass. */
+  fx(): { sepia: number; glitch: number } {
+    return { sepia: gradeShown(this.grade), glitch: this.glitch };
+  }
+
+  where(): MarsWhere {
+    return {
+      region: this.region,
+      rad: Math.round(this.rad * 100) / 100,
+      you: {
+        x: Math.round(this.you.x),
+        y: Math.round(this.you.y),
+        h: Math.round(this.you.h * 100) / 100,
+      },
+      him: { x: Math.round(this.pose.x), y: Math.round(this.pose.y) },
+    };
   }
 
   /** Moves him and the mission on. `live`: you are driving (not held on the grid or in a menu). */
   step(dt: number, t: number, you: Vehicle, live: boolean, onRadio?: (m: RadioMessage) => void) {
+    this.stepWorld(dt, t, you, live);
     if (!live && !this.mission) return;
     this.bastard = stepBastard(this.bastard, dt, this.gap);
     const p = bastardPose(this.bastard);
