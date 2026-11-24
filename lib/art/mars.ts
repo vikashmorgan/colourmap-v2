@@ -49,6 +49,27 @@ import {
   townXY,
   WORK_R,
 } from '@/lib/art/mars-works';
+import {
+  ARTEFACT_DEFS,
+  ARTEFACT_R,
+  type Artefact,
+  artefactSolids,
+  type Discovery,
+  discoveries,
+  type Hull,
+  hullFloor,
+  hullHit,
+  layWreck,
+  nearHull,
+  type Solid,
+  solidHit,
+  TRENCH,
+  WRECK_DEFS,
+  WRECK_FLATS,
+  WRECK_REACH,
+  type Wreck,
+  wreckSolids,
+} from '@/lib/art/mars-wrecks';
 import { LINE, SALT_PERIOD, START } from '@/lib/art/salt-flat-game';
 import { type Ground, type Hit, MARS_HANDLING, type Vehicle, type World } from '@/lib/art/vehicle';
 
@@ -146,13 +167,16 @@ export function craterHeight(d: number): number {
   return CRATER.rim * Math.exp(-(((u - 1) / 0.3) ** 2));
 }
 
+/** The flattened ground: the towns' (lib/art/mars-works.ts) and the wrecks' (lib/art/mars-wrecks.ts). */
+const GROUND_FLATS = [...FLATS, ...WRECK_FLATS];
+
 /** How much of the dunes stand near the crater and the lakes (0 in them, 1 away). */
 function featureMask(x: number, y: number): number {
   const dc = Math.hypot(x - CRATER.x, y - CRATER.y);
   let m = smooth(CRATER.R * 1.05, CRATER.R * 1.6, dc);
   for (const l of LAKES) m *= smooth(l.r, l.r + 450, Math.hypot(x - l.x, y - l.y));
   // The towns stand on flattened ground (lib/art/mars-works.ts FLATS).
-  for (const f of FLATS) m *= smooth(f.flat, f.full, Math.hypot(x - f.x, y - f.y));
+  for (const f of GROUND_FLATS) m *= smooth(f.flat, f.full, Math.hypot(x - f.x, y - f.y));
   return m;
 }
 
@@ -168,12 +192,20 @@ export const ROCK_ARCHES: RockArch[] = [];
 export const BOXES: Box[] = [];
 export const TANKS: Tank[] = [];
 export const BARRELS: Barrel[] = [];
+/** The crashed stations, their hulls you drive through, the artefacts, what of them is solid and
+ * everything there is to find (filled in below, once clear; lib/art/mars-wrecks.ts). */
+export const WRECKS: Wreck[] = [];
+export const HULLS: Hull[] = [];
+export const ARTEFACTS: Artefact[] = [];
+export const WRECK_SOLIDS: Solid[] = [];
+export const DISCOVERIES: Discovery[] = [];
 
 /** The ground's height on Mars (m) as the physics drives it: the terrain and the ramps, decks
  * and barrel floors on it, or a roof or tank top where one stands higher. */
 export function marsHeight(x: number, y: number): number {
   let h = marsBase(x, y) + rampHeight(KICKERS, DECKS, x, y);
   for (const b of BARRELS) h += barrelAt(b, x, y).h;
+  for (const hl of HULLS) if (nearHull(hl, x, y, 0)) h += hullFloor(hl, x, y);
   if (BOXES.length || TANKS.length) h = Math.max(h, platformTop(BOXES, TANKS, x, y));
   return h;
 }
@@ -236,7 +268,7 @@ export function marsTerrainGlsl(): string {
   const terms = DUNE_WAVES.map(
     ([n, m, a, p]) => `  h += ${f(a)} * sin(${f(K)} * (${f(n)} * g.x + ${f(m)} * g.y) + ${f(p)});`,
   ).join('\n');
-  const flatMask = FLATS.map(
+  const flatMask = GROUND_FLATS.map(
     (q) => `  m *= smoothstep(${f(q.flat)}, ${f(q.full)}, length(a - vec2(${f(q.x)}, ${f(q.y)})));`,
   ).join('\n');
   const lakeMask = LAKES.map(
@@ -714,6 +746,42 @@ export const PORTALS: Portal[] = (() => {
   return out;
 })();
 
+/* ── Things to explore (docs/specs/mars-world.md) ── */
+
+/** Whether a wreck's whole ground (and its trench) leaves the open ways, the stations, the rocks,
+ * the ramps and the portals clear. */
+export function wreckClear(x: number, y: number, h: number, L: number): boolean {
+  if (!siteClear(x, y, WRECK_REACH) || siteHit(x, y, WRECK_REACH)) return false;
+  if (rampNear(x, y, WRECK_REACH)) return false;
+  if (PORTALS.some((p) => Math.hypot(p.x - x, p.y - y) < WRECK_REACH + p.r + 20)) return false;
+  // The trench back from the hull's tail.
+  for (let u = L / 2; u <= L / 2 + TRENCH.len; u += 40) {
+    const px = x - Math.cos(h) * u;
+    const py = y - Math.sin(h) * u;
+    if (!siteClear(px, py, TRENCH.w) || siteHit(px, py, TRENCH.w)) return false;
+  }
+  return true;
+}
+
+(() => {
+  WRECK_DEFS.forEach((d, i) => {
+    if (!wreckClear(d.x, d.y, d.h, d.L)) return;
+    const w = layWreck(d, i);
+    WRECKS.push(w);
+    HULLS.push(w.hull);
+    WRECK_SOLIDS.push(...wreckSolids(w));
+  });
+  ARTEFACT_DEFS.forEach((d, i) => {
+    const r = ARTEFACT_R[d.kind];
+    if (!siteClear(d.x, d.y, r) || siteHit(d.x, d.y, r + 20) || rampNear(d.x, d.y, r)) return;
+    if (PORTALS.some((p) => Math.hypot(p.x - d.x, p.y - d.y) < r + p.r + 30)) return;
+    const a: Artefact = { ...d, seed: hash(i, 13, 6) };
+    ARTEFACTS.push(a);
+    WRECK_SOLIDS.push(...artefactSolids(a));
+  });
+  DISCOVERIES.push(...discoveries(WRECKS, ARTEFACTS));
+})();
+
 /** The mega works that stand (not the towns' own towers). */
 function MEGA_SITES() {
   return MEGA_WORKS.filter((w) => SITES.some((s) => s.x === w.x && s.y === w.y));
@@ -773,6 +841,18 @@ export function siteHit(
     const nx = d > 1e-6 ? dx / d : 1;
     const ny = d > 1e-6 ? dy / d : 0;
     return { nx, ny, depth: reach - d, loss: 0, spin: 0, flow: true };
+  }
+  // The wrecks: their hulls' shells, the ring feet, noses, debris and artefacts, solid below their tops.
+  for (const hl of HULLS) {
+    if (!nearHull(hl, x, y, radius + 2)) continue;
+    const h = hullHit(hl, x, y, radius, z - marsBase(x, y));
+    if (h) return { ...h, loss: 0, spin: 0, flow: true };
+  }
+  for (const s of WRECK_SOLIDS) {
+    const reach = s.r + radius;
+    if (Math.abs(x - s.x) > reach || Math.abs(y - s.y) > reach) continue;
+    const h = solidHit(s, x, y, radius, z - marsBase(x, y));
+    if (h) return { ...h, loss: 0, spin: 0, flow: true };
   }
   for (const f of ARCH_FEET) {
     const dx = x - f.x;

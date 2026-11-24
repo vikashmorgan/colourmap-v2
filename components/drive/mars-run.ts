@@ -13,6 +13,7 @@ import { fireById, hullById, loadBest, type Store, saveBest } from '@/lib/art/dr
 import {
   type Bastard,
   bastardPose,
+  DISCOVERIES,
   marsHeight,
   newBastard,
   PORTALS,
@@ -51,6 +52,7 @@ import {
   RED_BASTARD,
   stepMission,
 } from '@/lib/art/mars-mission';
+import { FOUND_KEY, foundString, newlyFound, parseFound } from '@/lib/art/mars-wrecks';
 import { newRadio, type RadioMessage, type RadioState, stepRadio } from '@/lib/art/radio';
 import type { Vehicle } from '@/lib/art/vehicle';
 import { AttackView } from './mars-attack-view';
@@ -77,7 +79,14 @@ export interface MarsWhere {
   rad: number;
   you: { x: number; y: number; h: number };
   him: { x: number; y: number };
+  /** The wrecks and artefacts found so far (ids, lib/art/mars-wrecks.ts), shown on the map. */
+  found: string[];
+  /** What you have just found (its name, for a few seconds), or null. */
+  news: string | null;
 }
+
+/** How long a find's name stays on the screen (s). */
+const NEWS_SHOW = 5;
 
 /** The attacks as the shell shows them: what is unlocked, how long each cools, and the laser's
  * crosshair (how much it shows, and whether it has locked on). */
@@ -155,6 +164,10 @@ export class MarsRun {
   private runs = 0;
   /** When you last flew through a superboost portal. */
   private superAt = -99;
+  /** What you have found (kept on the device), and the latest find. */
+  private found: string[] = [];
+  private news: { name: string; at: number } | null = null;
+  private t = 0;
 
   constructor(
     private deps: MarsDeps,
@@ -171,6 +184,11 @@ export class MarsRun {
     deps.scene.add(this.ribbon.mesh);
     this.attackView = new AttackView(deps.scene, deps.emitDust, marsHeight);
     this.catches = Math.round(loadBest(deps.store, CATCHES_KEY) ?? 0);
+    try {
+      this.found = parseFound(deps.store?.getItem(FOUND_KEY));
+    } catch {
+      this.found = [];
+    }
     // A vehicle-shaped record of him, for the view's own update (fire, bob).
     this.ghost = {
       kind: 'ship',
@@ -277,7 +295,19 @@ export class MarsRun {
       const r = regionAt(you.x, you.y);
       this.region = r?.name ?? null;
       this.regionId = r?.id ?? null;
+      // A wreck or an artefact you come near is found: on the map from now on.
+      const fresh = live ? newlyFound(this.found, DISCOVERIES, you.x, you.y) : [];
+      if (fresh.length) {
+        this.found = [...this.found, ...fresh.map((d) => d.id)];
+        this.news = { name: fresh[0].name, at: t };
+        try {
+          this.deps.store?.setItem(FOUND_KEY, foundString(this.found));
+        } catch {
+          // Storage may be full or blocked; the finds still count for this run.
+        }
+      }
     }
+    this.t = t;
   }
 
   /** The picture's moods now, for the screen pass. */
@@ -295,6 +325,8 @@ export class MarsRun {
         h: Math.round(this.you.h * 100) / 100,
       },
       him: { x: Math.round(this.pose.x), y: Math.round(this.pose.y) },
+      found: this.found,
+      news: this.news && this.t - this.news.at < NEWS_SHOW ? this.news.name : null,
     };
   }
 

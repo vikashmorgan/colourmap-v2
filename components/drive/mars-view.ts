@@ -38,6 +38,7 @@ import { START } from '@/lib/art/salt-flat-game';
 import { at, hash, M, part, place, RUST, strut } from './mars-parts';
 import { buildRocksView, type RocksView } from './mars-rocks-view';
 import { buildWorksView, isWork, workParts } from './mars-works-view';
+import { buildWrecksView } from './mars-wrecks-view';
 import { disposeGroup } from './track-view';
 import { buildFireCone, glowSprite, glowTexture } from './vehicles';
 
@@ -624,6 +625,10 @@ export function buildMarsView(): MarsView {
   // The factory city's towns and barrel (mars-works-view.ts).
   const works = buildWorksView(groundMat);
   group.add(works.group);
+  // The crashed stations and the artefacts (mars-wrecks-view.ts).
+  const wrecks = buildWrecksView();
+  group.add(wrecks.group);
+  let lastT = 0;
   const beams: THREE.Group[] = [];
 
   // The stations.
@@ -865,6 +870,8 @@ export function buildMarsView(): MarsView {
       }
       rocks.update(ox, oy, t);
       works.update(ox, oy, t);
+      wrecks.update(ox, oy, t, Math.min(0.1, Math.max(0, t - lastT)));
+      lastT = t;
       for (const r of ramps) {
         r.mesh.visible = Math.hypot(r.mx - ox, r.my - oy) < 4000;
         r.mesh.position.set(r.mx - ox, 0, -(r.my - oy));

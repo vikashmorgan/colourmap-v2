@@ -274,7 +274,9 @@ easy to stay on it", "same with coast road, make them much wider".
    gardens, rock arches, rock slabs to jump), the superboost portals (past the top speed for a few
    seconds), the Dust Sharks breaching, the factory city (the Foundry Town with streets, roofs to
    land on, roof ramps, a chimney slalom and a barrel pipe; two nuclear towns; mega works with
-   conveyor galleries to jump), and the explorations, enemies and highways to come.
+   conveyor galleries to jump), the things to explore (five big crashed space stations with hulls
+   you drive through and tilted broken rings; monoliths, dead satellites and alien ruins, each on
+   the map only once found), and the enemies and highways to come.
 
 Why three night tracks: Night Rain stays the plain lamp course the user loved (with the City's
 towers, arch and rings added back from the road); Chinatown and the Neon District are new tracks

@@ -8,7 +8,17 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { BARRELS, BOXES, LOOP_PATH, PORTALS, ROCKS, SITES, TANKS } from '@/lib/art/mars';
+import {
+  BARRELS,
+  BOXES,
+  DISCOVERIES,
+  LOOP_PATH,
+  PORTALS,
+  ROCKS,
+  SITES,
+  TANKS,
+  WRECKS,
+} from '@/lib/art/mars';
 import type { AttackId } from '@/lib/art/mars-attacks';
 import { CANYONS, canyonPoint } from '@/lib/art/mars-canyons';
 import { geigerRate } from '@/lib/art/mars-fx';
@@ -170,6 +180,44 @@ export function RegionCard({ region }: { region: string | null }) {
     >
       <style>{KEYFRAMES}</style>
       {region}
+    </div>
+  );
+}
+
+/** What you have just found (a wreck or an artefact), low and centred under where the region's
+ * name shows: a small kicker and its name, one slow fade. */
+export function FoundCard({ name }: { name: string | null }) {
+  if (!name) return null;
+  return (
+    <div
+      key={name}
+      data-testid="mars-found"
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: '26%',
+        textAlign: 'center',
+        pointerEvents: 'none',
+        fontFamily: serif,
+        color: 'rgba(255,226,190,0.9)',
+        textShadow: '0 2px 16px rgba(0,0,0,0.6)',
+        animation: 'mars-region 5s ease-in-out forwards',
+      }}
+    >
+      <style>{KEYFRAMES}</style>
+      <div
+        style={{
+          fontFamily: mono,
+          fontSize: 10,
+          letterSpacing: '0.3em',
+          textTransform: 'uppercase',
+          color: 'rgba(170,230,215,0.75)',
+        }}
+      >
+        found
+      </div>
+      <div style={{ marginTop: 6, fontSize: 20, letterSpacing: '0.12em' }}>{name}</div>
     </div>
   );
 }
@@ -380,6 +428,41 @@ export function MarsMap({ where }: { where: MarsWhere | null }) {
       g.beginPath();
       g.arc(X(p.x), Y(p.y), 2.2, 0, Math.PI * 2);
       g.stroke();
+    }
+    // What you have found, and only that ("the more u know the more u discover"): a wreck as its
+    // hull's line and its name, an artefact as a small mark in its colour.
+    if (where) {
+      for (const d of DISCOVERIES) {
+        if (!where.found.includes(d.id)) continue;
+        if (d.kind === 'wreck') {
+          const w = WRECKS.find((q) => q.id === d.id);
+          if (!w) continue;
+          g.strokeStyle = 'rgba(220,215,205,0.85)';
+          g.lineWidth = 2.5;
+          g.beginPath();
+          g.moveTo(X(w.hull.ax), Y(w.hull.ay));
+          g.lineTo(X(w.hull.bx), Y(w.hull.by));
+          g.stroke();
+          g.lineWidth = 1;
+          g.beginPath();
+          g.arc(X(w.ring.x), Y(w.ring.y), Math.max(2, w.ring.R * s), 0, Math.PI * 2);
+          g.stroke();
+          g.fillStyle = 'rgba(220,215,205,0.7)';
+          g.fillText(d.name.replace(/^The /, ''), X(d.x), Y(d.y) - 7);
+        } else {
+          g.fillStyle =
+            d.kind === 'monolith'
+              ? 'rgba(180,150,255,0.95)'
+              : d.kind === 'satellite'
+                ? 'rgba(255,140,110,0.95)'
+                : 'rgba(120,240,210,0.95)';
+          g.save();
+          g.translate(X(d.x), Y(d.y));
+          g.rotate(Math.PI / 4);
+          g.fillRect(-2, -2, 4, 4);
+          g.restore();
+        }
+      }
     }
     g.beginPath();
     for (let i = 0; i < LOOP_PATH.x.length; i += 8) {

@@ -38,8 +38,9 @@ lies off them rewards whoever leaves them.
    ride through, gaps between halls to thread, tank tops to land on, a chimney slalom); an
    industrial town with real streets to race through; big nuclear towns (cooling-tower rings,
    reactor domes, workers' blocks, a glow at night).
-3. **Things to explore**: big crashed space stations (broken rings, half-buried hulls you drive
-   through), artefacts (monoliths, dead satellites, alien ruins).
+3. **Things to explore** (shipped, below): big crashed space stations (broken rings, half-buried
+   hulls you drive through), artefacts (monoliths, dead satellites, alien ruins), each on the map
+   only once you have found it.
 4. **Enemies**: ground robots (shoot them or ram them with the turbo and they explode), giant
    spider robots, ghosts, dusty manta rays; in the sky, space squids and UFOs.
 5. **Connect it**: highways and pipelines between the regions, the map showing them, missions that
@@ -206,7 +207,88 @@ bands, to jump high into the sky.
 - Tests: lib/art/mars-works.test.ts (roofs, walls, the barrel, flat ground, clearances, a roof
   ramp onto a roof, a wall never climbed, a run through the barrel, the galleries).
 
+## 3. Things to explore (2026-11-24)
+
+Laid out in lib/art/mars-wrecks.ts; kept clear, made solid and made rideable by lib/art/mars.ts
+(`WRECKS`, `HULLS`, `ARTEFACTS`, `WRECK_SOLIDS`, `DISCOVERIES`).
+
+### The crashed stations
+
+Five big wrecks, each well off the routes on open ground (`WRECK_DEFS`), each kept 230 m clear of
+the loop's band, the line, the start, the stations, the rocks, the ramps and the portals
+(`wreckClear`, its trench too):
+
+| Wreck | Where | Hull | Ring |
+| --- | --- | --- | --- |
+| The Fallen Ark | (-700, -2000), south past the line's end | 200 m, radius 15 | 62 m |
+| Halo Down | (3900, 400), east beyond the canyons' head | 150 m, radius 12 | 86 m, the big one |
+| The Broken Spindle | (-4100, 1500), far west past the Rift | 220 m, radius 16 | 55 m |
+| The Sleeping Leviathan | (1500, 7000), north past the Glow Lakes | 240 m, radius 17 | 70 m |
+| The Last Lantern | (-1600, 6800), north-west past the lakes | 170 m, radius 13 | 50 m |
+
+Each one:
+
+- **Lies on ground flattened by its fall**: flat within 240 m of its middle, the dunes back by
+  470 m (`WRECK_FLATS`), in the physics and the backdrop shader alike, like the towns.
+- **A broken hull you drive through**: a tube open at both torn ends, its axis 0.3 of its radius
+  above the sand (the rest buried). Inside, the sand floor curves up its sides like the barrel's
+  (`hullFloor`, three quarters of the way to its walls, about 4 m), easing in over the first and
+  last 14 m so you drive in at grade. Its shell holds you in and keeps you off from outside
+  (`hullHit`), up to its top: above that you fly over it. Ribs every 12 m inside, stringers along
+  its outside, shards of plate bent out round each mouth, a few lamps along its ceiling.
+- **A torus ring standing tilted out of the sand**: its middle half its radius above the ground,
+  leaning back 0.25 to 0.6 rad, a piece torn away up on its left shoulder and lying in the sand by
+  its foot. Its two feet are solid (`ringFeet`); the way under it is open. Lamps along it.
+- **The nose**, torn off and skidded to one side of the hull's front mouth, half buried, its
+  cockpit windows dim (solid).
+- **A scorched trench** 360 m long running back from the hull's tail, narrow where it hit and
+  widest where it came to rest, a dark strip fading into the sand at its edges. Its line runs
+  straight into the hull: down the trench, through the hull, out of its front.
+- **A debris field**: about 30 pieces (plates, girders, pods, solar panels) along both sides of
+  the trench and scattered round, never on the lane through the hull. Pieces 2.2 m across or
+  more are solid; smaller ones you drive over.
+- **Lights that flicker** (`flicker`): a dim unsteady glow that now and then drops out for an
+  eighth of a second, each lamp on its own beat; **sparks** spit in small bursts from the hull's
+  torn rims and the ring's torn ends (only within 900 m of you).
+
+### The artefacts
+
+Nine, each a little off the routes (`ARTEFACT_DEFS`), standing on the dunes:
+
+- **Monoliths**: a black slab 4 by 1.2 m and 26 m tall, sunk a little and leaning a hair, a
+  violet glow over it. *The Black Monolith* (2200, -2600), *the Second Monolith* (3400, 4400),
+  *the Silent Monolith* (-3800, -1800).
+- **Dead satellites**: a gold-foil body tipped in the sand, a dish 9 m across resting on its rim,
+  one solar wing still on and one snapped off and lying by it, a red lamp. *Vesta* (1200, 1300),
+  *Orpheus* (-1100, 4700), *Juno* (-4000, 4200).
+- **Alien ruins**: ten stone pillars in a ring 26 m across (some broken short), the two pairs
+  either side of the way through carrying lintels (arches you drive under), an altar in the
+  middle; glyphs glow teal up the pillars' outer faces and round the altar, breathing slowly.
+  *The Glyph Circle* (-3700, -400), *the Old Gate* (4300, 4200), *the Sunken Temple* (900, -2600).
+- Solid below their tops (`artefactSolids`, `solidHit`): the slab, the satellite's body and dish
+  foot, each pillar and the altar.
+
+### Finding them
+
+"The more u know the more u discover": a wreck is found when you come within 450 m of it, an
+artefact within 240 m (`REVEAL`, `newlyFound`). The moment you find one its name fades in low on
+the screen under a small *found* (components/drive/MarsWorldHud.tsx `FoundCard`, 5 s), and from
+then on the map shows it: a wreck as its hull's line, its ring and its name; an artefact as a small
+mark in its colour (violet monolith, red satellite, teal ruins). Nothing you have not found is on
+the map. The finds are kept on the device (`drive.mars.found`, their ids).
+
+### Where it lives
+
+- Pure: lib/art/mars-wrecks.ts (the layouts, `hullFloor`, `hullHit`, `ringFeet`, `solidHit`,
+  `flicker`, `newlyFound`), lib/art/mars.ts (`WRECKS`, `HULLS`, `ARTEFACTS`, `WRECK_SOLIDS`,
+  `DISCOVERIES`, the hull floors in `marsHeight`, the walls in `siteHit` with the vehicle's height,
+  the wrecks' flats in the terrain and its GLSL).
+- Live: components/drive/mars-wrecks-view.ts (the wrecks, artefacts, lamps, glyphs, sparks),
+  components/drive/mars-run.ts (finding, `found` and `news` in `MarsWhere`),
+  components/drive/MarsWorldHud.tsx (`FoundCard`, the finds on the map).
+- Tests: lib/art/mars-wrecks.test.ts (the hull's floor and walls, the ring's feet, clearances,
+  flat ground, a run through a hull, finding), components/drive/mars-wrecks-view.test.ts.
+
 ## Still to come
 
-3. Things to explore (crashed stations, artefacts), 4. enemies, 5. highways and missions, as
-planned above.
+4. enemies, 5. highways and missions, as planned above.
