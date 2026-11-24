@@ -326,6 +326,16 @@ export function newVehicle(kind: VehicleKind, x: number, y: number, h: number, z
   };
 }
 
+/**
+ * Off the throttle the engine holds you back (2026-11-24: "if u dont press forward the car goes
+ * slower"): BRAKE m/s² once past FULL m/s, fading to nothing at a standstill so it rolls to a stop.
+ * Never downhill: a slope you coast down still gives you its speed.
+ */
+export const COAST = { BRAKE: 3.2, FULL: 25 };
+export function coastBrake(vLong: number): number {
+  return COAST.BRAKE * Math.min(1, Math.abs(vLong) / COAST.FULL);
+}
+
 /** The pull along the heading for a throttle at a speed: strong off the line, fading near the top. */
 export function pull(spec: VehicleSpec, vLong: number, throttle: number, boost: 0 | 1 | 2): number {
   const b = boostOf(boost);
@@ -519,7 +529,10 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     (1 - HANDBRAKE.pull * hb);
   if (hb > 0 && Math.abs(vLong) > 1) a -= Math.sign(vLong) * HANDBRAKE.drag * hb;
   const resist =
-    (air ? 0 : spec.rolling) + spec.drag * vLong * vLong + (air ? 0 : roughDrag(here.rough, speed));
+    (air ? 0 : spec.rolling) +
+    spec.drag * vLong * vLong +
+    (air ? 0 : roughDrag(here.rough, speed)) +
+    (air || downhill || throttle !== 0 ? 0 : coastBrake(vLong));
   if (Math.abs(vLong) < resist * dt && throttle === 0) vLong = 0;
   else a -= Math.sign(vLong) * resist;
   const before = vLong;

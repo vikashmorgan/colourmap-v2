@@ -458,6 +458,14 @@ the plains' loop gates give again 20 s later. The orb goes out once taken.
 tested) · `components/drive/gates-view.ts` (the six looks drawn, and the gates stood on the track)
 · the Design space's **Gates** category previews each look along the track.
 
+### Stage passages (2026-11-24)
+
+"love the fire sparking on the sides at start do more passages like that": every road (not Salt
+Flat or Mars) carries a stage passage every 900 m where the road is plain: seven mirror pairs of
+burners 18 m apart down both edges, like the start's. Each pair lights as you come within 110 m, so
+the fire runs up the road ahead of you; the last pair stands tallest; gold sparks arc up and over
+the road to cross the other side's. Also in Design: Slide fire · Stage passage.
+
 ## Vehicles and garage (shared)
 
 - [x] Leopard hull with gold rims; the Space Racer (2026-11-21).

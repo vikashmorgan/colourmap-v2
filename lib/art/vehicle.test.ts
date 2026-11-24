@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import type { Controls } from './drive';
 import {
   CLIMB,
+  COAST,
+  coastBrake,
   FLAT,
   fastGrip,
   G,
@@ -575,5 +577,14 @@ describe('Mars in Grip mode (2026-11-23: "allow turns to turn more when u are fu
     };
     expect(fly(MARS_FLAT)).toBeGreaterThan(0.05);
     expect(fly(FLAT)).toBeLessThan(0.01);
+  });
+});
+
+describe('coasting (2026-11-24)', () => {
+  it('slows clearly off the throttle, more than drag alone, and rolls to a stop', () => {
+    expect(coastBrake(0)).toBe(0);
+    expect(coastBrake(60)).toBe(COAST.BRAKE);
+    expect(coastBrake(-60)).toBe(COAST.BRAKE);
+    expect(coastBrake(COAST.FULL / 2)).toBeCloseTo(COAST.BRAKE / 2, 9);
   });
 });

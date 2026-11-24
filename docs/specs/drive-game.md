@@ -340,6 +340,13 @@ Pure physics in `lib/art/vehicle.ts`, stepped at 120 Hz:
   No game over, ever.
 - **Off the road**: a soft slowdown (rough drag), never a stop.
 
+### Coasting and the speedometer (2026-11-24)
+
+- Off the throttle the engine holds you back ("if u dont press forward the car goes slower"):
+  3.2 m/s² above 90 km/h, fading to nothing at a standstill (`COAST` in lib/art/vehicle.ts). Never
+  downhill or in the air, so slopes and dives still give their speed. Sky Canyon always cruises.
+- The futuristic dial's arc runs pale gold to deep gold, never pink ("golden not pink").
+
 ## Camera and feel
 
 Chase camera with lag; the view widens (focal 1.5 → 1.18) and a soft tremor grows with speed;

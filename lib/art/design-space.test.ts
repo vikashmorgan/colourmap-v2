@@ -72,9 +72,15 @@ describe('the districts on their own tracks', () => {
   it('dresses Chinatown Run and the Neon District in their own pieces, nothing elsewhere', () => {
     const ct = dressingFor('chinatown').map((p) => CATEGORIES[p.cat].id);
     expect(ct.length).toBeGreaterThan(2);
-    expect(new Set(ct)).toEqual(new Set(['chinatown']));
+    expect(new Set(ct)).toEqual(new Set(['chinatown', 'slide']));
     expect(dressingFor('neon').map((p) => CATEGORIES[p.cat].vars[p.v].id)).toContain('jumps');
-    expect(dressingFor('gold')).toEqual([]);
+    expect(dressingFor('salt')).toEqual([]);
+    expect(dressingFor('mars')).toEqual([]);
+  });
+
+  it('runs the stage passages on every road (2026-11-24)', () => {
+    for (const w of ['gold', 'coast', 'canyon', 'night', 'chinatown', 'neon', 'sky'])
+      expect(dressingFor(w).map((p) => CATEGORIES[p.cat].vars[p.v].id)).toContain('passage');
   });
 
   it('opens the design space on the district’s own category there, else where you left it', () => {
