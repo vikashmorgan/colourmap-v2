@@ -41,13 +41,13 @@ import { type Ground, type Hit, MARS_HANDLING, type Vehicle, type World } from '
  * [n, m, amplitude (m), phase]: the wave runs along (n, m) cycles per period.
  */
 export const DUNE_WAVES: readonly [number, number, number, number][] = [
-  [3, 1, 4.0, 0.3],
-  [-1, 4, 3.2, 1.7],
-  [2, -5, 2.4, 4.1],
-  [9, 4, 1.3, 2.2],
-  [-6, 11, 1.0, 5.0],
-  [13, -7, 0.7, 0.9],
-  [4, 16, 0.5, 3.3],
+  [1, 2, 9.0, 0.3],
+  [3, 1, 6.5, 2.4],
+  [-1, 4, 5.0, 1.7],
+  [2, -5, 3.6, 4.1],
+  [9, 4, 1.5, 2.2],
+  [-6, 11, 0.8, 5.0],
+  [13, -7, 0.4, 0.9],
 ];
 
 /** Highest the dunes can stand (m): the sum of the amplitudes. */
@@ -59,14 +59,14 @@ const K = (2 * Math.PI) / SALT_PERIOD;
  * Where the plain is kept flat: the measured mile's corridor along the painted line, and the dry
  * lake bed the drift gates stand on. Flat within `flat` m, the dunes back in full by `full` m.
  */
-export const FLAT_LINE = { flat: 30, full: 110 };
+export const FLAT_LINE = { flat: 30, full: 260 };
 export const DRIFT_PAN = (() => {
   const xs = DRIFT_PATH.map((p) => p[0]);
   const ys = DRIFT_PATH.map((p) => p[1]);
   const x = (Math.min(...xs) + Math.max(...xs)) / 2;
   const y = (Math.min(...ys) + Math.max(...ys)) / 2;
   const r = Math.max(...DRIFT_PATH.map((p) => Math.hypot(p[0] - x, p[1] - y)));
-  return { x, y, flat: r + 40, full: r + 140 };
+  return { x, y, flat: r + 40, full: r + 260 };
 })();
 
 function smooth(e0: number, e1: number, v: number): number {
@@ -128,7 +128,7 @@ export function craterHeight(d: number): number {
 function featureMask(x: number, y: number): number {
   const dc = Math.hypot(x - CRATER.x, y - CRATER.y);
   let m = smooth(CRATER.R * 1.05, CRATER.R * 1.6, dc);
-  for (const l of LAKES) m *= smooth(l.r, l.r + 250, Math.hypot(x - l.x, y - l.y));
+  for (const l of LAKES) m *= smooth(l.r, l.r + 450, Math.hypot(x - l.x, y - l.y));
   return m;
 }
 
@@ -194,7 +194,7 @@ export function marsTerrainGlsl(): string {
     ([n, m, a, p]) => `  h += ${f(a)} * sin(${f(K)} * (${f(n)} * g.x + ${f(m)} * g.y) + ${f(p)});`,
   ).join('\n');
   const lakeMask = LAKES.map(
-    (l) => `  m *= smoothstep(${f(l.r)}, ${f(l.r + 250)}, length(a - vec2(${f(l.x)}, ${f(l.y)})));`,
+    (l) => `  m *= smoothstep(${f(l.r)}, ${f(l.r + 450)}, length(a - vec2(${f(l.x)}, ${f(l.y)})));`,
   ).join('\n');
   const lakeFill = LAKES.map(
     (l) =>
