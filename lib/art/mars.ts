@@ -30,6 +30,25 @@ import {
 } from '@/lib/art/mars-map';
 import { DECK, type Deck, KICKER, type Kicker, rampHeight, SLAB } from '@/lib/art/mars-ramps';
 import { placeRocks, type Rock, type RockArch, rockArchFeet } from '@/lib/art/mars-rocks';
+import {
+  type Barrel,
+  type Box,
+  barrelAt,
+  barrelHit,
+  boxHit,
+  CITY,
+  FLATS,
+  galleryFor,
+  MEGA_WORKS,
+  NUKE_RAD,
+  NUKES,
+  platformTop,
+  ROOF_STEP,
+  type Tank,
+  TOWN,
+  townXY,
+  WORK_R,
+} from '@/lib/art/mars-works';
 import { LINE, SALT_PERIOD, START } from '@/lib/art/salt-flat-game';
 import { type Ground, type Hit, MARS_HANDLING, type Vehicle, type World } from '@/lib/art/vehicle';
 
@@ -132,6 +151,8 @@ function featureMask(x: number, y: number): number {
   const dc = Math.hypot(x - CRATER.x, y - CRATER.y);
   let m = smooth(CRATER.R * 1.05, CRATER.R * 1.6, dc);
   for (const l of LAKES) m *= smooth(l.r, l.r + 450, Math.hypot(x - l.x, y - l.y));
+  // The towns stand on flattened ground (lib/art/mars-works.ts FLATS).
+  for (const f of FLATS) m *= smooth(f.flat, f.full, Math.hypot(x - f.x, y - f.y));
   return m;
 }
 
@@ -143,11 +164,18 @@ export const DECKS: Deck[] = [];
 export const ROCKS: Rock[] = [];
 /** The natural arches over the canyons' floors (the way under is open). */
 export const ROCK_ARCHES: RockArch[] = [];
+/** The factory city's buildings, tanks and barrel pipes (filled in below, once clear). */
+export const BOXES: Box[] = [];
+export const TANKS: Tank[] = [];
+export const BARRELS: Barrel[] = [];
 
-/** The ground's height on Mars (m) as the physics drives it: the terrain and the ramps and decks
- * standing on it. */
+/** The ground's height on Mars (m) as the physics drives it: the terrain and the ramps, decks
+ * and barrel floors on it, or a roof or tank top where one stands higher. */
 export function marsHeight(x: number, y: number): number {
-  return marsBase(x, y) + rampHeight(KICKERS, DECKS, x, y);
+  let h = marsBase(x, y) + rampHeight(KICKERS, DECKS, x, y);
+  for (const b of BARRELS) h += barrelAt(b, x, y).h;
+  if (BOXES.length || TANKS.length) h = Math.max(h, platformTop(BOXES, TANKS, x, y));
+  return h;
 }
 
 /** The bare terrain (m): the dunes, flattened on the course, the canyons cut into them, the
@@ -189,6 +217,11 @@ export function radiation(x: number, y: number): number {
     const d = Math.hypot(x - l.x, y - l.y) - l.r;
     r = Math.max(r, 1 - smooth(0, RAD_REACH, d));
   }
+  // The nuclear towns' reactors, milder than the lakes.
+  for (const n of NUKES) {
+    const d = Math.hypot(x - n.x, y - n.y) - 40;
+    r = Math.max(r, NUKE_RAD.peak * (1 - smooth(0, NUKE_RAD.reach, d)));
+  }
   return r;
 }
 
@@ -202,6 +235,9 @@ export function marsTerrainGlsl(): string {
   const f = (v: number) => v.toFixed(6);
   const terms = DUNE_WAVES.map(
     ([n, m, a, p]) => `  h += ${f(a)} * sin(${f(K)} * (${f(n)} * g.x + ${f(m)} * g.y) + ${f(p)});`,
+  ).join('\n');
+  const flatMask = FLATS.map(
+    (q) => `  m *= smoothstep(${f(q.flat)}, ${f(q.full)}, length(a - vec2(${f(q.x)}, ${f(q.y)})));`,
   ).join('\n');
   const lakeMask = LAKES.map(
     (l) => `  m *= smoothstep(${f(l.r)}, ${f(l.r + 450)}, length(a - vec2(${f(l.x)}, ${f(l.y)})));`,
@@ -230,6 +266,7 @@ ${terms}
   float m = smoothstep(${f(FLAT_LINE.flat)}, ${f(FLAT_LINE.full)}, dl) * smoothstep(${f(DRIFT_PAN.flat)}, ${f(DRIFT_PAN.full)}, dp);
   m *= smoothstep(${f(CRATER.R * 1.05)}, ${f(CRATER.R * 1.6)}, dc);
 ${lakeMask}
+${flatMask}
   h *= m;
   float ck;
   h -= marsCanyon(a, ck);
@@ -373,7 +410,18 @@ export function regionAt(x: number, y: number): Region | null {
 
 /* ── The rust stations ─────────────────────────────────────── */
 
-export type SiteKind = 'domes' | 'nova' | 'factory' | 'ruin' | 'atomic' | 'lighthouse';
+export type SiteKind =
+  | 'domes'
+  | 'nova'
+  | 'factory'
+  | 'ruin'
+  | 'atomic'
+  | 'lighthouse'
+  | 'chimney'
+  | 'cooling'
+  | 'reactor'
+  | 'preheater'
+  | 'silos';
 
 export interface Site {
   x: number;
@@ -393,6 +441,7 @@ export const SITE_R: Record<SiteKind, number> = {
   ruin: 26,
   atomic: 48,
   lighthouse: 7,
+  ...WORK_R,
 };
 
 /** The clearances: his loop, the line's corridor, the start and the drift lake bed (m). */
@@ -450,8 +499,33 @@ export const SITES: Site[] = (() => {
     rot: 0,
     seed: 0.5,
   });
+  // The factory city's stacks, towers and reactors (lib/art/mars-works.ts): the towns' own when
+  // the towns are clear, the mega works one by one, off the towns' flat ground.
+  if (cityClear()) {
+    CITY.works.forEach((w, i) => {
+      out.push({ ...w, r: SITE_R[w.kind], seed: hash(i, 11, 6) });
+    });
+  }
+  MEGA_WORKS.forEach((w, i) => {
+    const r = SITE_R[w.kind];
+    if (!siteClear(w.x, w.y, r)) return;
+    if (FLATS.some((f) => Math.hypot(w.x - f.x, w.y - f.y) < f.flat + r + 40)) return;
+    out.push({ ...w, r, seed: hash(i, 12, 6) });
+  });
   return out;
 })();
+
+/** Whether the towns leave the open ways clear (each its whole flat ground). */
+export function cityClear(): boolean {
+  return FLATS.every((f) => siteClear(f.x, f.y, f.full));
+}
+
+// The towns' buildings, tanks and barrel (lib/art/mars-works.ts), when clear.
+if (cityClear()) {
+  BOXES.push(...CITY.boxes);
+  TANKS.push(...CITY.tanks);
+  BARRELS.push(...CITY.barrels);
+}
 
 export interface Pipe {
   ax: number;
@@ -541,6 +615,13 @@ export function kickerClear(k: Kicker): boolean {
     const a = (i / 8) * Math.PI * 2 + 0.3;
     add(START.x + Math.cos(a) * 560, START.y + Math.sin(a) * 560, a + Math.PI / 2);
   }
+  // The factory city's roof ramps and the mega works' conveyor galleries.
+  const big = (r: Omit<Kicker, 'gallery'>) => {
+    const k: Kicker = { ...r, gallery: true };
+    if (kickerClear(k)) KICKERS.push(k);
+  };
+  if (BOXES.length) for (const r of CITY.ramps) big(r);
+  for (const s of MEGA_SITES()) big(galleryFor(s));
   for (const p of PIPES) {
     const L = Math.hypot(p.bx - p.ax, p.by - p.ay);
     if (L < DECK.ramp * 2 + 30) continue;
@@ -625,11 +706,52 @@ export const PORTALS: Portal[] = (() => {
     for (const u of [60, 700, 1200])
       add(last.x1 + Math.cos(last.h1) * u, last.y1 + Math.sin(last.h1) * u, last.h1);
   }
+  // One half way down the Foundry Town's avenue, sending you down the chimney slalom.
+  if (BOXES.length) {
+    const p = townXY(-40, 0);
+    add(p.x, p.y, TOWN.rot);
+  }
   return out;
 })();
 
+/** The mega works that stand (not the towns' own towers). */
+function MEGA_SITES() {
+  return MEGA_WORKS.filter((w) => SITES.some((s) => s.x === w.x && s.y === w.y));
+}
+
 /** You flow round a station's footprint, never crash into it (as along every wall). */
-export function siteHit(x: number, y: number, radius = 1.2): Hit | null {
+export function siteHit(
+  x: number,
+  y: number,
+  radius = 1.2,
+  z = Number.NEGATIVE_INFINITY,
+): Hit | null {
+  // The factory city's walls: a box or tank is solid below its top (above it you drive its roof).
+  for (const b of BOXES) {
+    const h = boxHit(b, x, y, radius, z);
+    if (h) return { ...h, loss: 0, spin: 0, flow: true };
+  }
+  for (const t of TANKS) {
+    if (z > t.h - ROOF_STEP) continue;
+    const dx = x - t.x;
+    const dy = y - t.y;
+    const reach = t.r + radius;
+    if (Math.abs(dx) > reach || Math.abs(dy) > reach) continue;
+    const d = Math.hypot(dx, dy);
+    if (d >= reach) continue;
+    return {
+      nx: d > 1e-6 ? dx / d : 1,
+      ny: d > 1e-6 ? dy / d : 0,
+      depth: reach - d,
+      loss: 0,
+      spin: 0,
+      flow: true,
+    };
+  }
+  for (const b of BARRELS) {
+    const h = barrelHit(b, x, y, radius);
+    if (h) return { ...h, loss: 0, spin: 0, flow: true };
+  }
   for (const s of SITES) {
     const dx = x - s.x;
     const dy = y - s.y;
@@ -669,7 +791,7 @@ export function siteHit(x: number, y: number, radius = 1.2): Hit | null {
 /** Mars's world for the physics: the dunes, the stations to flow round, its own handling. */
 export const MARS_TERRAIN: World = {
   ground: marsGround,
-  collide: (v: Vehicle) => siteHit(v.x, v.y),
+  collide: (v: Vehicle) => siteHit(v.x, v.y, 1.2, v.z),
   handling: MARS_HANDLING,
 };
 

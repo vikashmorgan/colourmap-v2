@@ -37,6 +37,7 @@ import {
 import { START } from '@/lib/art/salt-flat-game';
 import { at, hash, M, part, place, RUST, strut } from './mars-parts';
 import { buildRocksView, type RocksView } from './mars-rocks-view';
+import { buildWorksView, isWork, workParts } from './mars-works-view';
 import { disposeGroup } from './track-view';
 import { buildFireCone, glowSprite, glowTexture } from './vehicles';
 
@@ -347,6 +348,7 @@ function rampSheet(
   ox: number,
   oy: number,
   rock = false,
+  gallery = false,
 ): THREE.BufferGeometry {
   const c = Math.cos(h);
   const s = Math.sin(h);
@@ -355,9 +357,10 @@ function rampSheet(
   const pos: number[] = [];
   const col: number[] = [];
   // Rust sheets with iron bands, or (the slabs) rock with pale strata.
-  const rust = new THREE.Color(rock ? 0x7a3a22 : 0x9a4a22);
-  const iron = new THREE.Color(rock ? 0xb07a4a : 0x3a2620);
-  const skirt = new THREE.Color(rock ? 0x4a2416 : 0x24160f);
+  // The factory city's galleries and roof ramps: dark iron with pale hazard bands.
+  const rust = new THREE.Color(gallery ? 0x3a2c26 : rock ? 0x7a3a22 : 0x9a4a22);
+  const iron = new THREE.Color(gallery ? 0xd8a860 : rock ? 0xb07a4a : 0x3a2620);
+  const skirt = new THREE.Color(gallery ? 0x1e1612 : rock ? 0x4a2416 : 0x24160f);
   const at = (u: number, v: number, drop = 0): [number, number, number] => {
     const x = ax + c * u - s * v;
     const y = ay + s * u + c * v;
@@ -408,6 +411,7 @@ function kickerGeo(k: Kicker, ox: number, oy: number): THREE.BufferGeometry {
     ox,
     oy,
     k.rock,
+    k.gallery,
   );
 }
 
@@ -617,6 +621,9 @@ export function buildMarsView(): MarsView {
   // The rock fields round the canyons and the superboost portals (mars-rocks-view.ts).
   const rocks: RocksView = buildRocksView(groundMat);
   group.add(rocks.group);
+  // The factory city's towns and barrel (mars-works-view.ts).
+  const works = buildWorksView(groundMat);
+  group.add(works.group);
   const beams: THREE.Group[] = [];
 
   // The stations.
@@ -626,7 +633,9 @@ export function buildMarsView(): MarsView {
     const cores: THREE.Vector3[] = [];
     const dots: THREE.Vector3[] = [];
     const mouths: THREE.Vector3[] = [];
-    if (s.kind === 'domes') domes(s, parts, lights);
+    const wide: { p: THREE.Vector3; r: number }[] = [];
+    if (isWork(s.kind)) workParts(s, parts, lights, dots, wide);
+    else if (s.kind === 'domes') domes(s, parts, lights);
     else if (s.kind === 'factory') factory(s, parts, lights);
     else if (s.kind === 'nova') nova(s, parts, cores);
     else if (s.kind === 'atomic') atomic(parts, dots, mouths);
@@ -663,15 +672,19 @@ export function buildMarsView(): MarsView {
       );
       obj.add(pts);
     }
-    for (const [mi, m] of mouths.entries()) {
-      const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(10.2, 0.5, 6, 32),
-        new THREE.MeshBasicMaterial({ color: new THREE.Color(0.5, 1.2, 0.3), toneMapped: false }),
-      );
-      ring.rotation.x = Math.PI / 2;
-      ring.position.copy(m);
-      obj.add(ring);
-      light(obj, m.clone().setY(m.y + 2), 30, si * 13 + mi, 0.3);
+    // The towers' glowing mouths breathe steam (a chimney's mouth, no ring, steam only).
+    const allMouths = [...mouths.map((p) => ({ p, r: 10.2 })), ...wide];
+    for (const [mi, { p: m, r: mr }] of allMouths.entries()) {
+      if (mr > 0) {
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(mr, 0.5, 6, 40),
+          new THREE.MeshBasicMaterial({ color: new THREE.Color(0.5, 1.2, 0.3), toneMapped: false }),
+        );
+        ring.rotation.x = Math.PI / 2;
+        ring.position.copy(m);
+        obj.add(ring);
+        light(obj, m.clone().setY(m.y + 2), mr * 3, si * 13 + mi, 0.3);
+      }
       for (let k = 0; k < 5; k++) {
         const puff = new THREE.Sprite(
           new THREE.SpriteMaterial({
@@ -851,6 +864,7 @@ export function buildMarsView(): MarsView {
         (st.puff.material as THREE.SpriteMaterial).opacity = 0.22 * Math.sin(k * Math.PI);
       }
       rocks.update(ox, oy, t);
+      works.update(ox, oy, t);
       for (const r of ramps) {
         r.mesh.visible = Math.hypot(r.mx - ox, r.my - oy) < 4000;
         r.mesh.position.set(r.mx - ox, 0, -(r.my - oy));

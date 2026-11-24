@@ -272,8 +272,9 @@ easy to stay on it", "same with coast road, make them much wider".
    and every part as it ships lives in docs/specs/mars-world.md: the canyons (the Red Canyons and
    the Rift, cut into the real terrain with banked walls), the rock fields (mesas, spires, boulder
    gardens, rock arches, rock slabs to jump), the superboost portals (past the top speed for a few
-   seconds), the Dust Sharks breaching, and the factory city, explorations, enemies and highways to
-   come.
+   seconds), the Dust Sharks breaching, the factory city (the Foundry Town with streets, roofs to
+   land on, roof ramps, a chimney slalom and a barrel pipe; two nuclear towns; mega works with
+   conveyor galleries to jump), and the explorations, enemies and highways to come.
 
 Why three night tracks: Night Rain stays the plain lamp course the user loved (with the City's
 towers, arch and rings added back from the road); Chinatown and the Neon District are new tracks

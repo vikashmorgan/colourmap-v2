@@ -22,6 +22,8 @@ export interface Kicker {
   width: number;
   /** A natural slab of rock rather than a rust ramp (drawn in rock; the same shape). */
   rock?: boolean;
+  /** An iron conveyor gallery or roof ramp in the factory city (drawn in iron; the same shape). */
+  gallery?: boolean;
 }
 
 export interface Deck {

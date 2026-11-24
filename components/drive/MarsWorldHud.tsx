@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { LOOP_PATH, PORTALS, ROCKS } from '@/lib/art/mars';
+import { BARRELS, BOXES, LOOP_PATH, PORTALS, ROCKS, SITES, TANKS } from '@/lib/art/mars';
 import type { AttackId } from '@/lib/art/mars-attacks';
 import { CANYONS, canyonPoint } from '@/lib/art/mars-canyons';
 import { geigerRate } from '@/lib/art/mars-fx';
@@ -337,6 +337,43 @@ export function MarsMap({ where }: { where: MarsWhere | null }) {
       g.beginPath();
       g.arc(X(r.x), Y(r.y), Math.max(1.2, r.r * s), 0, Math.PI * 2);
       g.fill();
+    }
+    // The factory city: its buildings as small dark blocks, its tanks, the barrel, and the towers
+    // and reactors as pale rings.
+    g.fillStyle = 'rgba(40,24,18,0.85)';
+    for (const b of BOXES) {
+      g.save();
+      g.translate(X(b.x), Y(b.y));
+      g.rotate(-b.rot);
+      g.fillRect(-b.hx * s, -b.hy * s, Math.max(1, b.hx * 2 * s), Math.max(1, b.hy * 2 * s));
+      g.restore();
+    }
+    for (const t of TANKS) {
+      g.beginPath();
+      g.arc(X(t.x), Y(t.y), Math.max(0.8, t.r * s), 0, Math.PI * 2);
+      g.fill();
+    }
+    g.strokeStyle = 'rgba(255,200,140,0.7)';
+    g.lineWidth = 2;
+    for (const b of BARRELS) {
+      g.beginPath();
+      g.moveTo(X(b.ax), Y(b.ay));
+      g.lineTo(X(b.bx), Y(b.by));
+      g.stroke();
+    }
+    g.lineWidth = 1;
+    g.strokeStyle = 'rgba(200,240,150,0.6)';
+    for (const w of SITES) {
+      if (
+        w.kind !== 'cooling' &&
+        w.kind !== 'reactor' &&
+        w.kind !== 'preheater' &&
+        w.kind !== 'silos'
+      )
+        continue;
+      g.beginPath();
+      g.arc(X(w.x), Y(w.y), Math.max(1.4, w.r * s), 0, Math.PI * 2);
+      g.stroke();
     }
     g.strokeStyle = 'rgba(140,220,255,0.85)';
     for (const p of PORTALS) {
