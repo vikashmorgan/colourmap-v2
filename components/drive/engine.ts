@@ -613,6 +613,8 @@ export class DriveEngine {
 
   private cam = { x: 0, y: 0, z: 1.2, yaw: 0, roll: 0, focal: 1.5 };
   private s = 0;
+  /** Where across the road you are (m, + left). */
+  private u = 0;
   private autopilot = false;
   private odometer = 0;
   private run: Run = newRun();
@@ -1450,10 +1452,18 @@ export class DriveEngine {
     }
   }
 
+  /** Whether you are on a lane beside a twist (a bypass, Chinatown's Main Street): drawn flat. */
+  private besideTwist(): boolean {
+    const tr = this.trackWorld?.track;
+    if (!tr) return false;
+    const s = Math.max(0, this.s);
+    return Math.abs(this.u) > tr.def.half(s) + 4 && onBypass(tr, s, this.u) !== null;
+  }
+
   /** Whether you are drawn rolled over: on a twist's ribbon (not straight through), or under. */
   private rolled(): boolean {
     const tr = this.trackWorld?.track;
-    if (!tr?.def.twist || this.straight.has(this.vehicle)) return false;
+    if (!tr?.def.twist || this.straight.has(this.vehicle) || this.besideTwist()) return false;
     return Math.abs(tr.def.twist(Math.max(0, this.s))) > TWIST_OPEN;
   }
 
@@ -1655,6 +1665,7 @@ export class DriveEngine {
         const q = project(tr, v.x, v.y, s0);
         this.s = q.s;
         u = q.u;
+        this.u = q.u;
         const half = tr.def.half(Math.max(0, q.s));
         this.trackStraight(v, q.s, u);
         const straight = this.straight.has(v);
@@ -2241,7 +2252,7 @@ export class DriveEngine {
   private zone(): 'undertown' | null {
     const def = this.trackWorld?.track.def;
     const s = Math.max(0, this.s);
-    if (!def?.under?.(s) || this.wreck) return null;
+    if (!def?.under?.(s) || this.wreck || this.besideTwist()) return null;
     return Math.cos(def.twist?.(s) ?? 0) < 0 ? 'undertown' : null;
   }
 

@@ -72,6 +72,9 @@ function plainAt(def: TrackDef, s: number): boolean {
     if ((def.twist?.(q) ?? 0) !== 0) return false;
     if (def.gap?.(q) || def.fire?.(q) || def.bridge?.(q)) return false;
     if ((def.deck?.(q) ?? 0) !== 0) return false;
+    // Nor across a fork or beside the balcony road (lib/art/chinatown-paths.ts).
+    if ((def.median && (def.bypass?.(q) ?? null) !== null) || def.balcony?.(q)) return false;
+    if ((def.kick?.(q, def.half(q)) ?? 0) > 0) return false;
   }
   return true;
 }

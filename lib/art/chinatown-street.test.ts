@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-
+import { PATH_SIGNS } from './chinatown-paths';
 import {
   bladeUsed,
   CT_ATLAS,
   CT_BLADE_WORDS,
+  CT_BOARD_FREE,
   CT_BOARD_WORDS,
+  CT_PATH_CELLS,
   CT_SIGN_FLOOR,
   CT_STOREY,
   CT_TALL_FLOORS,
@@ -149,7 +151,13 @@ describe('the publicity panels', () => {
     // Every word gets a cell, in more than one tone; the four-character ones fit their cell.
     const words = new Set(lane(32).map((c) => ctCell('blade', c).word));
     expect(words).toEqual(new Set(CT_BLADE_WORDS));
-    expect(new Set(lane(32).map((c) => ctCell('board', c).word))).toEqual(new Set(CT_BOARD_WORDS));
+    expect(new Set(lane(CT_BOARD_FREE).map((c) => ctCell('board', c).word))).toEqual(
+      new Set(CT_BOARD_WORDS),
+    );
+    // The last cells sign the two paths (lib/art/chinatown-paths.ts).
+    expect(ctCell('board', CT_PATH_CELLS.under).word).toBe(PATH_SIGNS.under);
+    expect(ctCell('board', CT_PATH_CELLS.main).word).toBe(PATH_SIGNS.main);
+    expect(ctCell('board', CT_PATH_CELLS.balcony).word).toBe(PATH_SIGNS.balcony);
     expect(new Set(lane(32).map((c) => ctCell('blade', c).tone)).size).toBe(CT_TONES.length);
     for (const w of CT_BLADE_WORDS) expect(bladeUsed(w)).toBeLessThanOrEqual(CT_ATLAS.blade[1]);
     expect(ctCell('blade', -1)).toEqual(ctCell('blade', 31));

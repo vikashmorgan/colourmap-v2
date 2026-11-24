@@ -31,6 +31,8 @@ import {
   NEON_TRACK,
   NIGHT,
   newRace,
+  onBalcony,
+  onBypass,
   PIPE_TOP,
   passes,
   pipeAt,
@@ -317,6 +319,8 @@ describe('every road keeps you on it (2026-11-17)', () => {
             stepVehicle(v, { throttle: 1, steer, boost: 0 }, 1 / 60, world, t);
             if (t < 8) continue;
             const { s, u } = project(world.track, v.x, v.y);
+            // A second path beside the road (Chinatown's Main Street, its balcony road) is road.
+            if (onBypass(world.track, s, u) !== null || onBalcony(world.track, s, u)) continue;
             // In the canyon the edge is a quarter-pipe you may ride up: free up to its top.
             worst = Math.max(worst, Math.abs(u) - def.half(s) - pipeReach(world.track, s));
             slowest = Math.min(slowest, speedOf(v));
@@ -383,8 +387,9 @@ describe('every road keeps you on it (2026-11-17)', () => {
 
   it('banks gently, so a bend never throws you up its outside', () => {
     expect(BANK_MAX).toBeLessThanOrEqual(0.2);
-    for (const def of [COAST, CANYON, NIGHT, CHINATOWN, NEON_TRACK, SKY])
-      expect(def.bankMax).toBe(BANK_MAX);
+    for (const def of [COAST, CANYON, NIGHT, NEON_TRACK, SKY]) expect(def.bankMax).toBe(BANK_MAX);
+    // Chinatown half as steep again (2026-11-24: "a bit more tilt"), still gentle.
+    expect(CHINATOWN.bankMax).toBeLessThanOrEqual(0.3);
   });
 });
 

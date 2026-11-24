@@ -10,6 +10,7 @@
  */
 
 import { autopilotControls } from '@/lib/art/autopilot';
+import type { PathPick } from '@/lib/art/chinatown-paths';
 import { type Controls, clamp } from '@/lib/art/drive';
 import { type FireId, type Hull, hullById } from '@/lib/art/drive-design';
 import type { Track } from '@/lib/art/track';
@@ -79,6 +80,13 @@ export function rivalHull(r: Rival): Hull {
   return { ...hullById('paint'), colour: r.colour };
 }
 
+/** Which second paths a rival takes: those running on the right bear right onto Main Street past
+ * Undertown (and a twist's bypass), the one furthest left goes for the balcony road. */
+export function rivalPick(r: Rival): PathPick {
+  const most = Math.max(...RIVALS.map((o) => o.lane));
+  return { bypass: r.lane < 0, balcony: r.lane === most };
+}
+
 /**
  * How a rival drives this frame. `gap` is its distance along the road ahead of you (m, + ahead).
  */
@@ -92,7 +100,15 @@ export function rivalControls(
   flying = false,
 ): Controls {
   const half = track.def.half(Math.max(0, s));
-  const c = autopilotControls(v, track, s, t + r.pace * 40, flying, r.lane * half * 0.8);
+  const c = autopilotControls(
+    v,
+    track,
+    s,
+    t + r.pace * 40,
+    flying,
+    r.lane * half * 0.8,
+    rivalPick(r),
+  );
   let throttle = r.pace;
   let boost = c.boost;
   if (gap > ELASTIC) {
