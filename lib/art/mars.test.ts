@@ -23,6 +23,7 @@ import {
   siteHit,
   stepBastard,
 } from './mars';
+import { CRATER } from './mars-map';
 import { FINISH_GATE, LINE, SALT_PERIOD, START, START_GATE } from './salt-flat-game';
 import { newVehicle, stepVehicle, VEHICLES } from './vehicle';
 
@@ -56,7 +57,7 @@ describe('the dunes', () => {
   it('repeats every ground period, as the shader sees it', () => {
     for (const [x, y] of [
       [3000, 900],
-      [-2500, 4100],
+      [1800, -1500],
       [5200, -3300],
     ])
       expect(marsHeight(x + SALT_PERIOD, y)).toBeCloseTo(marsHeight(x, y), 6);
@@ -71,6 +72,8 @@ describe('the dunes', () => {
           [0, 1.5, -1.5].some((e) => marsHeight(x + d, y + e) - marsBase(x + d, y + e) > 1e-9),
         );
         if (ramped) continue;
+        // The great crater's bowl and rim are steep on purpose too.
+        if (Math.hypot(x - CRATER.x, y - CRATER.y) < CRATER.R * 1.7) continue;
         const g = marsGround(x, y);
         const e = 0.01;
         expect(g.gx).toBeCloseTo((marsHeight(x + e, y) - marsHeight(x - e, y)) / (2 * e), 3);

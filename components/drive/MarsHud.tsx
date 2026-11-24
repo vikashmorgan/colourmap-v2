@@ -119,8 +119,9 @@ export function distance(m: number): string {
   return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m / 10) * 10} m`;
 }
 
-/** The marker: a small red caret over him, or pinned to the screen's edge pointing his way. The
- * engine moves it every frame through the ref (no React render per frame). */
+/** The marker: nothing over him while he is in view (2026-11-24: "no red triangle above the red
+ * bastard"); pinned to the screen's edge pointing his way when he is out of it. The engine moves
+ * it every frame through the ref (no React render per frame). */
 export const BastardMarker = forwardRef<HTMLDivElement>(function BastardMarker(_, ref) {
   return (
     <div
@@ -168,11 +169,13 @@ export function placeMarker(
     el.style.display = 'none';
     return;
   }
-  el.style.display = 'block';
+  // In view you find him by eye: no caret, no distance over him.
+  el.style.display = m.edge ? 'block' : 'none';
+  if (!m.edge) return;
   el.style.transform = `translate(${m.x}px, ${m.y}px) translate(-50%, ${m.edge ? '-50%' : '-100%'})`;
   const arrow = el.querySelector<HTMLElement>('[data-arrow]');
-  // On screen it points down at him; at the edge it turns toward him (the triangle points down at 0).
-  if (arrow) arrow.style.transform = m.edge ? `rotate(${m.angle - Math.PI / 2}rad)` : 'none';
+  // At the edge it turns toward him (the triangle points down at 0).
+  if (arrow) arrow.style.transform = `rotate(${m.angle - Math.PI / 2}rad)`;
   const gap = el.querySelector<HTMLElement>('[data-gap]');
   if (gap) {
     const text = distance(m.gap);
