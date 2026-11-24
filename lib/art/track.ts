@@ -18,7 +18,16 @@
  * Road coordinates: s along the centre line, u across it (positive to the left).
  */
 
-import { type Balcony, balcony, kickAt, mainMedian, mainStreet } from '@/lib/art/chinatown-paths';
+import {
+  type Balcony,
+  balcony,
+  kickAt,
+  LOWER,
+  pathMedian,
+  SUNK,
+  underpass,
+  underpassDepth,
+} from '@/lib/art/chinatown-paths';
 import { clamp, type Gate } from '@/lib/art/drive';
 import { compileTrack, type GateStyle, type TrackData } from '@/lib/art/track-data';
 import coastData from '@/lib/art/tracks/coast.json';
@@ -81,9 +90,12 @@ export interface TrackDef {
   blaze?(s: number): boolean;
   /** Where a twist's bypass lane runs here (its centre's u, on the right), or null. */
   bypass?(s: number): number | null;
-  /** Once the bypass has parted from the road a median walls the two apart (Chinatown's Main
-   * Street beside Undertown, which keeps its barriers); without it the two share one span. */
+  /** Once the bypass has parted from the road a median walls the two apart (Chinatown's underpass
+   * beside Undertown, which keeps its barriers); without it the two share one span. */
   median?: boolean;
+  /** How far under the street the bypass runs here (m; Chinatown's underpass, which sinks into a
+   * cut and runs on under the road; 0 or left out: level with the road's edge). */
+  lower?(s: number): number;
   /** A raised lane beside the road on its left (Chinatown's balcony road), or null. */
   balcony?(s: number): Balcony | null;
   /** A kicker on the road: extra height at (s, u) over the road's own (m). */
@@ -403,9 +415,13 @@ export function heightAt(t: Track, s: number, u: number, solid = false): number 
   const lip = joined ? 0 : t.def.lip(sc);
   const edge = f.e - Math.tan(f.bank) * uc + lipAt(uc, f.half, lip) + (t.def.kick?.(sc, uc) ?? 0);
   // A bypass lane is road too, flat, beside the twist; walled apart from the road, level with the
-  // road's edge on its side, so where they meet it never steps.
-  if (Math.abs(u) > f.half && onBypass(t, s, u) !== null)
-    return t.def.median ? f.e - Math.tan(f.bank) * Math.sign(u) * f.half : f.e;
+  // road's edge on its side, so where they meet it never steps; or down in its cut (the underpass:
+  // the cut is floor from wall to wall). Under the road the road is what is on top.
+  if (
+    Math.abs(u) > f.half &&
+    (onBypass(t, s, u) !== null || (u < 0 && voidLeft(t.def, sc) !== null))
+  )
+    return t.def.median ? lowerFloor(t.def, sc) : f.e;
   // The balcony road: up on its deck (drawn as its own piece, so not part of the solid road), or
   // down on the street as it merges back, level with the road's left edge.
   if (lane && u > f.half && Math.abs(u - lane.c) <= lane.w) {
@@ -499,11 +515,16 @@ export function onDeck(t: Track, s: number, u: number): boolean {
 /** Half a bypass lane's width (m): see BYPASS in track-data. */
 export const BYPASS_LANE = 9;
 
+/** Half the bypass's width on a track: Chinatown's underpass is a second track, wider. */
+export function laneHalf(def: TrackDef): number {
+  return def.lower ? LOWER.LANE : BYPASS_LANE;
+}
+
 /** Across a bypass lane (u from its centre) if (s, u) is on it, else null. */
 export function onBypass(t: Track, s: number, u: number): number | null {
   const c = t.def.bypass?.(Math.max(0, s));
   if (c === null || c === undefined) return null;
-  return Math.abs(u - c) <= BYPASS_LANE ? u - c : null;
+  return Math.abs(u - c) <= laneHalf(t.def) ? u - c : null;
 }
 
 /** The balcony road under (s, u) if (s, u) is over its raised deck or ramp, else null. */
@@ -517,13 +538,116 @@ export function onBalcony(t: Track, s: number, u: number): Balcony | null {
 /** Whether a walled-apart bypass (Main Street) runs here and still meets the road unwalled. */
 function joins(t: Track, s: number): boolean {
   const c = t.def.bypass?.(s);
-  return c !== null && c !== undefined && mainMedian(c, t.def.half(s)) === null;
+  return c !== null && c !== undefined && pathMedian(c, t.def.half(s)) === null && !sunk(t.def, s);
 }
 
 /** Where the median between the road and its bypass runs here (u), or null where there is none. */
 export function medianAt(t: Track, s: number): number | null {
   if (!t.def.median) return null;
-  return mainMedian(t.def.bypass?.(Math.max(0, s)) ?? null, t.def.half(Math.max(0, s)));
+  return pathMedian(t.def.bypass?.(Math.max(0, s)) ?? null, t.def.half(Math.max(0, s)));
+}
+
+/* ── The underpass: a second level under the street ────────── */
+
+/**
+ * Chinatown's underpass (lib/art/chinatown-paths.ts) runs down beside the road, everything right of
+ * the street falling away with it into an open plain (the void), and then under the road, so over
+ * the same ground there can be two surfaces: the street on top, the underpass's floor below. The physics drives whichever the body is on, as the balcony road's deck is told
+ * apart from the street by the body's height: under the road you are below while you are nearer
+ * the floor than the street (and never more than LOWER_PICK m over the floor counts as the street).
+ */
+export const LOWER_PICK = 3;
+/** Under the road the underpass's roof is the street's deck, this thick (m) under the road. */
+export const LOWER_SLAB = 1.6;
+/** The roof is open once the road has rolled this far (rad): the flip lifts it off. */
+export const ROOF_OPEN = 0.02;
+/** Over the void the street's right edge has a rail this far past it (m). */
+export const LOWER_RAIL = 0.3;
+
+/** Whether the underpass at s is down in its cut (deeper than SUNK). */
+export function sunk(def: TrackDef, s: number): boolean {
+  return (def.lower?.(Math.max(0, s)) ?? 0) > SUNK;
+}
+
+/** Whether (s, u) is over the underpass's track and its kerbs where it is down at all (deeper than
+ * `deeper`). */
+export function inCut(def: TrackDef, s: number, u: number, deeper = SUNK): boolean {
+  if (!def.lower) return false;
+  const sc = Math.max(0, s);
+  if (def.lower(sc) <= deeper) return false;
+  const c = def.bypass?.(sc);
+  return c !== null && c !== undefined && Math.abs(u - c) <= LOWER.LANE + LOWER.KERB;
+}
+
+/** The void's left edge at s (u): the road's right edge, or under the road the track's left kerb
+ * (where the retaining wall stands under the deck). Null where the underpass is not down. */
+export function voidLeft(def: TrackDef, s: number, deeper = SUNK): number | null {
+  if (!def.lower) return null;
+  const sc = Math.max(0, s);
+  if (def.lower(sc) <= deeper) return null;
+  const c = def.bypass?.(sc);
+  if (c === null || c === undefined) return null;
+  return Math.max(-def.half(sc), c + LOWER.LANE + LOWER.KERB);
+}
+
+/** Whether (s, u) is over the void (`deeper` as inCut). */
+export function overVoid(def: TrackDef, s: number, u: number, deeper = SUNK): boolean {
+  const l = voidLeft(def, s, deeper);
+  return l !== null && u <= l;
+}
+
+/**
+ * The underpass's floor at s (its height, flat across): level with the road's right edge at street
+ * level, and sinking to DEPTH under the street's datum (the terrain's height), so down in the cut
+ * it never rides the street's crests and dips over its head.
+ */
+export function lowerFloor(def: TrackDef, s: number): number {
+  const sc = Math.max(0, s);
+  const half = def.half(sc);
+  const bank = bankFor(def.curv(sc), def.bankSpeed, def.bankMax) * (def.level?.(sc) ?? 1);
+  const edge = def.elev(sc) + Math.tan(bank) * half;
+  const d = def.lower?.(sc) ?? 0;
+  if (d <= 0) return edge;
+  const k = clamp(d / LOWER.DEPTH, 0, 1);
+  return edge + ((def.terrain ?? 0) - edge) * k - d;
+}
+
+/** The street's surface at (s, u) on the road (its banked plane, without its lip), from the def
+ * alone: for laying out what hangs under its deck. */
+export function streetAt(def: TrackDef, s: number, u: number): number {
+  const sc = Math.max(0, s);
+  const bank = bankFor(def.curv(sc), def.bankSpeed, def.bankMax) * (def.level?.(sc) ?? 1);
+  return def.elev(sc) - Math.tan(bank) * u;
+}
+
+/** Whether the void is open to the sky at (s, u): beside the road, or under it once the flip has
+ * lifted the road off (`deeper` as inCut). */
+export function lowerOpen(def: TrackDef, s: number, u: number, deeper = SUNK): boolean {
+  if (!overVoid(def, s, u, deeper)) return false;
+  const sc = Math.max(0, s);
+  return Math.abs(u) > def.half(sc) || Math.abs(def.twist?.(sc) ?? 0) > ROOF_OPEN;
+}
+
+/** The underside of the street's deck over the underpass at (s, u), or null where it is open to
+ * the sky. */
+export function lowerCeiling(t: Track, s: number, u: number): number | null {
+  if (!overVoid(t.def, s, u) || lowerOpen(t.def, s, u)) return null;
+  return heightAt(t, s, u, true) - LOWER_SLAB;
+}
+
+/**
+ * Whether a body at height z over (s, u) is down in the underpass rather than up on the street:
+ * over the void, while it is nearer the floor than the street. Without a height: beside the road
+ * only (where nothing but the void is under you).
+ */
+export function belowStreet(t: Track, s: number, u: number, z?: number): boolean {
+  if (!overVoid(t.def, s, u)) return false;
+  const sc = Math.max(0, s);
+  const half = t.def.half(sc);
+  if (z === undefined) return Math.abs(u) > half;
+  const floor = lowerFloor(t.def, sc);
+  const top = heightAt(t, sc, clamp(u, -half, half), true);
+  return z < floor + Math.max(LOWER_PICK, (top - floor) / 2);
 }
 
 /** How far a twist must have turned before its edges are open, without barriers (rad). */
@@ -562,7 +686,10 @@ function corridor(
     pipe: up ? 0 : reach > 0 ? clamp(out / reach, 0, 1) : 0,
   };
   const open = edgesOpen(t.def, s);
-  const c = t.def.bypass?.(Math.max(0, s));
+  // Up on the street over a sunk underpass that has gone in under the road, the road alone holds
+  // you (the cut's wall and the deck part you from it).
+  const lane = t.def.bypass?.(Math.max(0, s));
+  const c = sunk(t.def, s) ? null : lane;
   const extra = open ? 8 : 0;
   // Beside the balcony road (or coming to its kicker) the span reaches out over it, so the road
   // never eases you back in from the left edge as you go for the jump.
@@ -583,19 +710,27 @@ function corridor(
   // Walled apart from the road: on the lane, the lane alone holds you; on the road, the road.
   const mid = medianAt(t, s);
   if (mid !== null) {
-    if (u < mid) return { ...base, u: u - c, half: BYPASS_LANE, pipe: 0 };
+    if (u < mid) return { ...base, u: u - c, half: laneHalf(t.def), pipe: 0 };
     if (reachL === null) return base;
   }
   const hi = Math.max(f.half, reachL ?? f.half) + extra;
-  const lo = (mid !== null ? -f.half : Math.min(-f.half, c - BYPASS_LANE)) - extra;
+  const lo = (mid !== null ? -f.half : Math.min(-f.half, c - laneHalf(t.def))) - extra;
   return { ...base, u: u - (hi + lo) / 2, half: (hi - lo) / 2, pipe: 0 };
 }
 
 /** The ground under a world point, for the physics. */
-export function groundAt(t: Track, px: number, py: number): Ground & { s: number; u: number } {
+export function groundAt(
+  t: Track,
+  px: number,
+  py: number,
+  /** The body's height, which picks the surface where two run one over the other (the street and
+   * the underpass under it). */
+  z?: number,
+): Ground & { s: number; u: number } {
   const { s, u } = project(t, px, py);
   t.hint = s;
   const f = frameAt(t, s);
+  if (belowStreet(t, s, u, z)) return lowerGround(t, s, u, f);
   const h = heightAt(t, s, u);
   // Slopes from the road as if it went on, so a gap's edge never reads as a cliff to slide down.
   // Up on the balcony road, its own: level across, sloping only down its ramp.
@@ -627,6 +762,23 @@ export function groundAt(t: Track, px: number, py: number): Ground & { s: number
             ? clamp((Math.abs(u) - (f.half - 2.5)) / 2.5, 0, 1)
             : 0,
     road: corridor(t, s, u, f, reach, out),
+    s,
+    u,
+  };
+}
+
+/** Down in the underpass: its floor, flat across, sloping only down its dive and up its climb; its
+ * lane alone holds you. */
+function lowerGround(t: Track, s: number, u: number, f: Frame): Ground & { s: number; u: number } {
+  const c = t.def.bypass?.(Math.max(0, s)) ?? 0;
+  const dS = (lowerFloor(t.def, s + 0.5) - lowerFloor(t.def, s - 0.5)) / Math.max(0.3, 1 - f.k * u);
+  return {
+    h: lowerFloor(t.def, s),
+    gx: dS * Math.cos(f.h),
+    gy: dS * Math.sin(f.h),
+    rough: 0,
+    lip: 0,
+    road: { h: f.h, k: f.k, u: u - c, half: LOWER.LANE, pipe: 0 },
     s,
     u,
   };
@@ -773,8 +925,9 @@ export const CHINATOWN: TrackDef = {
   twist: underTwist,
   axis: (s) => (underLocal(s) === null ? chinatownHalf(s) : UNDER.AXIS),
   under: (s) => underLocal(s) !== null,
-  // Main Street, the way past Undertown on top (lib/art/chinatown-paths.ts).
-  bypass: mainStreet,
+  // The underpass, the way under Undertown (lib/art/chinatown-paths.ts).
+  bypass: underpass,
+  lower: underpassDepth,
   median: true,
   // The balcony road at the crests clear of Undertown, and its kicker.
   balcony: (s) => {
@@ -992,7 +1145,7 @@ export function makeTrackWorld(def: TrackDef): TrackWorld {
   const track = makeTrack(def);
   const world: TrackWorld = {
     track,
-    ground: (x, y) => groundAt(track, x, y),
+    ground: (x, y, z) => groundAt(track, x, y, z),
     collide: (v) => collideTrack(world, v),
     pull: (x, y, z) => surfPull(track, x, y, z),
   };
@@ -1021,16 +1174,30 @@ export function collideTrack(w: TrackWorld, v: Vehicle): Hit | null {
       return { nx: -nx, ny: -ny, depth: u - (rail - BODY_R), loss: 0, spin: 0, flow: true };
     return null;
   }
-  // Main Street walled apart from the road: on its lane, the median on the left and its far side
-  // on the right.
+  // Down in the underpass: the cut's two walls, whatever runs over it.
   const by = tr.def.bypass?.(Math.max(0, s));
+  if (by !== null && by !== undefined && belowStreet(tr, s, u, v.z)) {
+    const inner = by + LOWER.LANE + LOWER.KERB;
+    const outer = by - LOWER.LANE - LOWER.KERB;
+    if (u > inner - BODY_R)
+      return { nx: -nx, ny: -ny, depth: u - (inner - BODY_R), loss: 0, spin: 0, flow: true };
+    if (u < outer + BODY_R)
+      return { nx, ny, depth: outer + BODY_R - u, loss: 0, spin: 0, flow: true };
+    return null;
+  }
+  // The underpass walled apart from the road: on its lane, the median on the left and its far side
+  // on the right.
   const mid = by === null || by === undefined ? null : medianAt(tr, s);
-  if (mid !== null && by !== null && by !== undefined && u < mid) {
-    const inner = Math.min(mid, by + BYPASS_LANE + 1);
+  // Up on the street with the underpass sunk: the road's own walls, and a rail along its right edge
+  // over the void.
+  const down = by !== null && by !== undefined && sunk(tr.def, s);
+  const lh = laneHalf(tr.def);
+  if (!down && mid !== null && by !== null && by !== undefined && u < mid) {
+    const inner = Math.min(mid, by + lh + 1);
     if (u > inner - BODY_R)
       return { nx: -nx, ny: -ny, depth: u - (inner - BODY_R), loss: 0, spin: 0, flow: true };
     const r = walls.right;
-    const outer = by - BYPASS_LANE + (r ? r.u + f.half : -1);
+    const outer = by - lh + (r ? r.u + f.half : -1);
     if (u < outer + BODY_R)
       return { nx, ny, depth: outer + BODY_R - u, loss: 0, spin: 0, flow: true };
     return null;
@@ -1058,9 +1225,9 @@ export function collideTrack(w: TrackWorld, v: Vehicle): Hit | null {
   }
   const right = walls.right;
   let ru = right ? right.u - (tr.def.curl ? pipeReach(tr, s, -1) : 0) : 0;
-  if (right && mid !== null) ru = Math.max(mid, ru);
-  else if (right && by !== null && by !== undefined)
-    ru = Math.min(ru, by - BYPASS_LANE + right.u + f.half);
+  if (right && down) ru = Math.max(ru, -(f.half + LOWER_RAIL));
+  else if (right && mid !== null) ru = Math.max(mid, ru);
+  else if (right && by !== null && by !== undefined) ru = Math.min(ru, by - lh + right.u + f.half);
   if (right && deckSide === -1) ru = Math.min(ru, -(f.half + DECK.OUT));
   if (right && u < ru + BODY_R && above < right.height) {
     return { nx, ny, depth: ru + BODY_R - u, loss: 0, spin: 0, flow: true };

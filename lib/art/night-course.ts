@@ -21,7 +21,7 @@
  * courses are roads.
  */
 
-import { BALCONY, balconyLocal, forkNose, MAIN, mainMedian } from '@/lib/art/chinatown-paths';
+import { BALCONY, balconyLocal, forkNose, LOWER, pathMedian } from '@/lib/art/chinatown-paths';
 import {
   CT_BOARD_FREE,
   CT_PATH_CELLS,
@@ -35,7 +35,16 @@ import {
   ctRoofs,
 } from '@/lib/art/chinatown-street';
 import { clamp } from '@/lib/art/drive';
-import { CHINA_LANE, type TrackDef } from '@/lib/art/track';
+import {
+  CHINA_LANE,
+  LOWER_RAIL,
+  LOWER_SLAB,
+  lowerFloor,
+  ROOF_OPEN,
+  streetAt,
+  type TrackDef,
+  voidLeft,
+} from '@/lib/art/track';
 import { UNDER } from '@/lib/art/undertown';
 
 export type Rgb = [number, number, number];
@@ -177,6 +186,8 @@ export interface Piece {
   cell?: number;
   /** On the balcony road: the height over the street's datum it stands at (m), not over the ground. */
   z?: number;
+  /** Down in the underpass's void: the height it stands on (m), in place of the ground's. */
+  base?: number;
 }
 
 const piece = (p: Partial<Piece> & Pick<Piece, 'kind' | 's'>): Piece => ({
@@ -323,7 +334,9 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
         const { half, avenue, under, floors } = shop(side, i);
         const back = 2.5 + (avenue ? 6 : 0);
         const w = SHOP_STEP * 0.48;
-        // Stood back behind Main Street on the right and the balcony road on the left.
+        // None right of the street over the underpass's void (open to the lake), stood back
+        // behind the underpass on the right and the balcony road on the left.
+        if (side < 0 && voidOpen(def, s, w)) return;
         const face = Math.max(half + back, pathClear(def, s, w, side));
         const id = i * 2 + (side > 0 ? 0 : 1);
         out.push(
@@ -403,7 +416,7 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
     // High strings of light across the street, where the towers both sides stand taller than them
     // (the City's strands at three heights); only light crosses the road.
     each(HIGH_LIGHTS_STEP, 60, (s, i) => {
-      if (onPath(def, s)) return;
+      if (onPath(def, s, false) || voidOpen(def, s, 10)) return;
       const iL = Math.round(s / SHOP_STEP);
       const iR = Math.round((s - SHOP_STEP / 2) / SHOP_STEP);
       const low = Math.min(shop(1, iL).floors, shop(-1, iR).floors) * CT_STOREY;
@@ -415,7 +428,7 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
     // Lantern strings overhead every 40 m, gates every 400 m, a temple gate where each avenue opens.
     each(LANTERN_STEP, 20, (s, i) => {
       if (Math.abs(s - Math.round(s / GATE_STEP) * GATE_STEP) < 25) return;
-      if (onPath(def, s)) return;
+      if (onPath(def, s, false)) return;
       out.push(piece({ kind: 'lanterns', s, lift: 8.5, colour: LANTERN, id: i }));
     });
     each(GATE_STEP, 0, (s, i) => {
@@ -483,7 +496,12 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
  * height either side, so nothing may stand within that (nor cross the road). Upside down it runs
  * high over the street, and the street keeps all its pieces.
  */
-export function clearOfFlip(def: TrackDef, p: Pick<Piece, 's' | 'u' | 'd'>): boolean {
+export function clearOfFlip(
+  def: TrackDef,
+  p: Pick<Piece, 's' | 'u' | 'd'> & Partial<Pick<Piece, 'z' | 'base'>>,
+): boolean {
+  // Down in the underpass's void, under the street: the flip sweeps over it, never through it.
+  if ((p.base ?? 0) < -2 || (p.z ?? 0) < -2) return true;
   for (const ds of [-20, 0, 20]) {
     const s = Math.max(0, p.s + ds);
     if (!def.under?.(s)) continue;
@@ -580,23 +598,39 @@ export function surgeAccel(since: number): number {
 
 /* ── Chinatown's two paths (lib/art/chinatown-paths.ts) ────── */
 
-/** Whether s is by the fork (Main Street not yet walled well apart from the road) or the balcony
- * road, with room either side for a span's posts: no span across the road there. */
-function onPath(def: TrackDef, s: number): boolean {
+/** Whether s is by the fork (the underpass not yet walled well apart from the road) or the balcony
+ * road, with room either side for a span's posts: no span across the road there. Where the
+ * underpass is down in its void no span with `posts` stands (they would stand in the void); strings
+ * of light, which have none, still cross. */
+function onPath(def: TrackDef, s: number, posts = true): boolean {
   for (const d of [-25, 0, 25]) {
     const q = Math.max(0, s + d);
     const c = def.bypass?.(q) ?? null;
     const half = def.half(q);
-    const mid = mainMedian(c, half);
-    if (c !== null && (mid === null || mid > -(half + 5))) return true;
+    if (c !== null) {
+      if ((def.lower?.(q) ?? 0) > 0.05) {
+        if (posts) return true;
+      } else {
+        const mid = pathMedian(c, half);
+        if (mid === null || mid > -(half + 5)) return true;
+      }
+    }
     if (def.balcony?.(q) || (def.kick?.(q, def.half(q)) ?? 0) > 0) return true;
   }
   return false;
 }
 
+/** Whether the underpass's void is well down anywhere within w of s: the right side is open there,
+ * no shophouses (2026-11-24: "more emptiness around it"). */
+export function voidOpen(def: TrackDef, s: number, w: number): boolean {
+  for (const d of [-w, 0, w]) if ((def.lower?.(Math.max(0, s + d)) ?? 0) > 2) return true;
+  return false;
+}
+
 /**
- * How far from the centre a shophouse half-length w at s must keep its face on its side: past Main
- * Street's far edge on the right, past the balcony road's rail on the left (0 where neither runs).
+ * How far from the centre a shophouse half-length w at s must keep its face on its side: past the
+ * underpass's far edge on the right (and well past it as it goes down: LOWER.OPEN more at full
+ * depth), past the balcony road's rail on the left (0 where neither runs).
  */
 export function pathClear(def: TrackDef, s: number, w: number, side: 1 | -1): number {
   let need = 0;
@@ -604,7 +638,10 @@ export function pathClear(def: TrackDef, s: number, w: number, side: 1 | -1): nu
     const q = Math.max(0, s + d);
     if (side < 0) {
       const c = def.bypass?.(q);
-      if (c !== null && c !== undefined) need = Math.max(need, -c + MAIN.LANE + 2.5);
+      if (c !== null && c !== undefined) {
+        const k = clamp((def.lower?.(q) ?? 0) / LOWER.DEPTH, 0, 1);
+        need = Math.max(need, -c + LOWER.LANE + 2.5 + LOWER.OPEN * k);
+      }
     } else {
       const bc = def.balcony?.(q);
       if (bc) need = Math.max(need, bc.c + bc.w + 2.5);
@@ -617,11 +654,92 @@ const PATH_GOLD: Rgb = [1, 0.72, 0.3];
 const PATH_VIOLET: Rgb = [0.62, 0.22, 1];
 const PATH_JADE: Rgb = [0.3, 0.95, 0.6];
 
+/** The underpass's void at s (every 3 m, i its count): see pathPieces. */
+function voidPieces(
+  def: TrackDef,
+  s: number,
+  i: number,
+  c: number,
+  half: number,
+  vl: number,
+  out: Piece[],
+): void {
+  const fz = lowerFloor(def, s);
+  const twisting = Math.abs(def.twist?.(Math.max(0, s)) ?? 0) > ROOF_OPEN;
+  const covered = !twisting && vl > -half;
+  // The rail along the street's edge over the void, lit violet.
+  if (!twisting && i % 2 === 0)
+    out.push(
+      piece({
+        kind: 'beacon',
+        s,
+        u: -(half + LOWER_RAIL),
+        w: 0.15,
+        colour: PATH_VIOLET,
+        id: i,
+        z: streetAt(def, s, -half) + 1,
+      }),
+    );
+  // Red lanterns on posts along the far kerb, echoing down the plain.
+  if (i % 8 === 0) {
+    const u = c - LOWER.LANE - LOWER.KERB - 0.6;
+    out.push(piece({ kind: 'pillar', s, u, z: fz + 5, base: fz, colour: LACQUER, id: i }));
+    out.push(
+      piece({ kind: 'beacon', s, u: u + 0.3, w: 0.42, colour: LANTERN, id: i, z: fz + 5.5 }),
+    );
+  }
+  if (covered) {
+    // Under the deck: lacquer columns along the wall, lanterns hung from the deck over the track.
+    const roof = streetAt(def, s, vl) - LOWER_SLAB;
+    if (i % 6 === 0)
+      out.push(
+        piece({ kind: 'pillar', s, u: vl - 0.6, z: roof, base: fz, colour: LACQUER, id: i }),
+      );
+    if (i % 4 === 2)
+      for (const f of [-0.5, 0.5]) {
+        const u = c + f * LOWER.LANE;
+        if (u > -half)
+          out.push(
+            piece({
+              kind: 'beacon',
+              s,
+              u,
+              w: 0.38,
+              colour: LANTERN,
+              id: i,
+              z: streetAt(def, s, u) - LOWER_SLAB - 1.2,
+            }),
+          );
+      }
+  }
+  // Lettered panels along the retaining wall, facing the track.
+  if (i % 24 === 0 && vl - c > LOWER.LANE)
+    out.push(
+      piece({
+        kind: 'billboard',
+        s,
+        u: vl - 0.18,
+        w: 3.6,
+        d: 0.1,
+        h: 1.9,
+        lift: 3.2,
+        base: fz,
+        colour: PATH_GOLD,
+        side: 1,
+        id: i,
+        cell: CT_PATH_CELLS.deep,
+      }),
+    );
+}
+
 /**
  * The fork before each Undertown and the balcony road, lit and signed: over the road before the
- * fork a gantry with 下町 UNDERTOWN ↶ over the road ahead and 大街 MAIN STREET → over the lane
+ * fork a gantry with 下町 UNDERTOWN ↶ over the road ahead and 地下街 UNDERPASS ↘ over the lane
  * peeling off; chevrons of light on the road, violet ahead and gold bearing right; the median's
- * kerbs in violet on the road's side and gold on the lane's, the lane's far edge in gold. Before
+ * kerbs in violet on the road's side and gold on the lane's, the lane's far edge in gold. Down in
+ * the void: violet lights along the street's rail over it, red lanterns on posts along the track's
+ * far kerb, lacquer columns along the retaining wall under the deck and lanterns hung from the
+ * deck's underside over the track, lettered panels (地下街 · 灯 · UNDERPASS) along the wall. Before
  * each balcony road a gantry with 露台 BALCONY ↖ over the left of the road, jade lights along the
  * kicker's lip and its inner side; on the deck lanterns along its rail and gold along its open
  * edge, red columns under it.
@@ -646,13 +764,13 @@ export function pathPieces(def: TrackDef, s0: number, s1: number): Piece[] {
     // The signs: a gantry 60 m before the nose, a board over each way.
     for (let k = Math.max(0, Math.floor((s0 - UNDER.AT) / UNDER.EVERY)); ; k++) {
       const under = UNDER.AT + k * UNDER.EVERY;
-      if (under - MAIN.SPLIT > s1) break;
-      const g = forkNose(under, halfAt(under - MAIN.SPLIT / 2)) - 60;
+      if (under + LOWER.PEEL[0] > s1) break;
+      const g = forkNose(under, halfAt(under + LOWER.PEEL[0] / 2)) - 60;
       if (g < s0 || g >= s1) continue;
       const half = halfAt(g);
       const c = def.bypass(g) ?? 0;
       const uL = half + 1.2;
-      const uR = Math.min(-half, c - MAIN.LANE) - 1.2;
+      const uR = Math.min(-half, c - LOWER.LANE) - 1.2;
       out.push(
         piece({
           kind: 'gantry',
@@ -671,14 +789,19 @@ export function pathPieces(def: TrackDef, s0: number, s1: number): Piece[] {
       const c = def.bypass?.(s);
       if (c === null || c === undefined) return;
       const half = halfAt(s);
-      const mid = mainMedian(c, half);
+      const vl = def.lower ? voidLeft(def, s, 0.05) : null;
+      if (vl !== null) {
+        voidPieces(def, s, i, c, half, vl, out);
+        return;
+      }
+      const mid = pathMedian(c, half);
       if (mid !== null) {
         if (mid > -(half + 1.5)) return;
         // The median's kerbs: violet on the road's side, gold on the lane's; the lane's far edge.
         if (i % 2 === 0) {
           beacon(s, Math.max(mid, -(half + 1)) - 0.2, 0.5, PATH_VIOLET, 0.16, i);
-          beacon(s, Math.min(mid, c + MAIN.LANE + 1) + 0.2, 0.5, PATH_GOLD, 0.16, i);
-        } else beacon(s, c - MAIN.LANE - 0.4, 0.5, PATH_GOLD, 0.16, i);
+          beacon(s, Math.min(mid, c + LOWER.LANE + 1) + 0.2, 0.5, PATH_GOLD, 0.16, i);
+        } else beacon(s, c - LOWER.LANE - 0.4, 0.5, PATH_GOLD, 0.16, i);
       } else if (i % 10 === 0 && c < -2) {
         // Before the nose, chevrons on the road: gold bearing right over the lane, violet ahead.
         for (let o = -3; o <= 3; o++) {

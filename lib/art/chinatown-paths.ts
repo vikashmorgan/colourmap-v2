@@ -1,12 +1,13 @@
 /**
  * Chinatown Run's second paths (2026-11-24). Pure: no three.js, no DOM.
  *
- * - **Main Street** ("give option to keep going normal instead of doing the tilt for the chinatown
- *   run so u can do it both ways and there are 2 paths"): before each Undertown a lane peels off
- *   the road's right edge, runs beside the flip clear of its sweep, and merges back after it. Keep
- *   left and you flip under; bear right at the fork (大街 MAIN STREET →) and you stay on top,
- *   driving normally. Once the two have parted a median walls them apart, so nobody on the ribbon
- *   is ever drawn hanging off its side.
+ * - **The underpass** (地下街, was Main Street: "give option to keep going normal instead of doing
+ *   the tilt … so there are 2 paths", then "below the road of the main chinatown … yet another plot
+ *   twist"): before each Undertown a lane peels off the road's right edge, sinks into a cut, swings
+ *   in under the street and runs beneath it while the road flips over into Undertown above, then
+ *   swings out, climbs and merges back. Keep left and you flip under; bear right at the fork
+ *   (地下街 UNDERPASS ↘) and you go below. Once the two have parted a median walls them apart; down
+ *   under the road the cut's walls and the street's deck do.
  * - **The balcony road** ("on the small jumps allow ability to jump go higher up left and ride a
  *   second slope on the left. that is above the normal slope. like a side track above the first
  *   floor of the buildings"): at a street crest a kicker on the left of the road; jump up-left off
@@ -24,37 +25,95 @@ const smooth = (x: number) => {
   return k * k * (3 - 2 * k);
 };
 
-/* ── Main Street: the way past Undertown ───────────────────── */
+/* ── The underpass: the way under Undertown ────────────────── */
 
 /**
- * Main Street: half its width (as a twist's bypass, BYPASS_LANE in track.ts), how far its centre
- * runs out right of the road's (clear of the flip's sweep, about 23 m from the centre, with room),
- * where it starts to peel off before the flip and how long before the flip it is fully out.
+ * The underpass (地下街, 2026-11-24: "loop that goes to undertown add option to go to the right and
+ * take another road that doesn't go to undertown … but below the road of the main chinatown. so it
+ * is yet another plot twist"). Where Main Street ran level beside the flip, the right-hand fork now
+ * goes down: it peels off the road's right edge, sinks into a cut, swings in under the street and
+ * runs beneath it while the road above flips over into Undertown, then swings back out right,
+ * climbs out of its cut and merges back. In metres from where the Undertown run starts (UNDER.AT):
+ * - PEEL: out to the right at street level, OUT m from the centre (the median forms on the way);
+ * - DIVE: down into the cut, DEPTH m under the street (eased at both ends, gentle enough at full
+ *   boost that nobody is thrown off its brow);
+ * - IN: swings in under the road, its centre to UNDER_C (most of it under the street's deck);
+ * - under the road it stays until BACK: the flip lifts the roof off over your head (0 to 180),
+ *   the ribbon runs upside down high above, and from BACK it swings out right again;
+ * - CLIMB: up out of the cut, done before the median ends;
+ * - MERGE: back onto the road.
+ * LANE is half its width and KERB the kerb past each edge. It is a second track, not a lane
+ * (2026-11-24: "a big ass second track on the right with more emptiness around it"): nearly as
+ * wide as the avenues, and once it is down everything right of the street falls away with it into
+ * a broad open plain, the buildings stood well back (OPEN m more past its far edge), the street
+ * running along the plain's edge on its retaining wall and then over the track as a deck.
  */
-export const MAIN = { LANE: 9, OUT: 38, SPLIT: 420, CLEAR: 60 };
+export const LOWER = {
+  LANE: 14,
+  KERB: 1,
+  OUT: 44,
+  UNDER_C: -6,
+  OPEN: 36,
+  DEPTH: 12,
+  PEEL: [-1000, -700],
+  DIVE: [-790, -450],
+  IN: [-480, -220],
+  BACK: [580, 840],
+  CLIMB: [800, 1140],
+  MERGE: [1100, 1400],
+} as const;
 
-/** Where Main Street's centre runs at s (u, negative: on the right), or null where there is none. */
-export function mainStreet(s: number): number | null {
-  const { OUT, SPLIT, CLEAR } = MAIN;
-  if (!(s >= UNDER.AT - SPLIT)) return null;
-  const k = Math.floor((s - UNDER.AT + SPLIT) / UNDER.EVERY);
+/** How far before the Undertown run the fork starts, and how far past its start the lane is back. */
+export const LOWER_FROM = LOWER.PEEL[0];
+export const LOWER_TO = LOWER.MERGE[1];
+
+const smoother = (x: number) => {
+  const k = Math.min(1, Math.max(0, x));
+  return k * k * k * (k * (6 * k - 15) + 10);
+};
+const along = (x: number, [a, b]: readonly [number, number]) => (x - a) / (b - a);
+
+/** Metres from the start of the Undertown run whose underpass s is on (LOWER_FROM to LOWER_TO), or
+ * null where none runs. */
+export function lowerLocal(s: number): number | null {
+  if (!(s >= UNDER.AT + LOWER_FROM)) return null;
+  const k = Math.floor((s - UNDER.AT - LOWER_FROM) / UNDER.EVERY);
   const x = s - (UNDER.AT + k * UNDER.EVERY);
-  if (x > UNDER_LENGTH + SPLIT) return null;
-  const a = Math.min(
-    (x + SPLIT) / (SPLIT - CLEAR),
-    (UNDER_LENGTH + SPLIT - x) / (SPLIT - CLEAR),
-    1,
-  );
-  return -OUT * smooth(a);
+  return x <= LOWER_TO ? x : null;
 }
 
+/** Where the underpass's centre runs at s (u: negative on the right; UNDER_C under the road),
+ * or null where there is none. */
+export function underpass(s: number): number | null {
+  const x = lowerLocal(s);
+  if (x === null) return null;
+  const { OUT, UNDER_C, PEEL, IN, BACK, MERGE } = LOWER;
+  if (x < IN[0]) return -OUT * smooth(along(x, PEEL));
+  if (x < BACK[0]) return -OUT + (UNDER_C + OUT) * smooth(along(x, IN));
+  if (x < MERGE[0]) return UNDER_C - (UNDER_C + OUT) * smooth(along(x, BACK));
+  return -OUT * (1 - smooth(along(x, MERGE)));
+}
+
+/** How far under the street the underpass's floor runs at s (m, 0 at street level or where none). */
+export function underpassDepth(s: number): number {
+  const x = lowerLocal(s);
+  if (x === null) return 0;
+  const { DEPTH, DIVE, CLIMB } = LOWER;
+  if (x < CLIMB[0]) return DEPTH * smoother(along(x, DIVE));
+  return DEPTH * (1 - smoother(along(x, CLIMB)));
+}
+
+/** Deeper than this (m) the underpass is down in its cut, walled apart from the street above. */
+export const SUNK = 0.3;
+
 /**
- * Where the median between the road and Main Street runs (u: halfway between the road's right edge
- * and the lane's inner edge), or null while the two still overlap or touch.
+ * Where the median between the road and the lane runs (u: halfway between the road's right edge
+ * and the lane's inner edge), or null while the two still overlap or touch (at the fork, at the
+ * merge, and down under the road, where it is the cut's wall and the deck that part them).
  */
-export function mainMedian(c: number | null, half: number): number | null {
+export function pathMedian(c: number | null, half: number): number | null {
   if (c === null) return null;
-  const inner = c + MAIN.LANE;
+  const inner = c + LOWER.LANE;
   if (inner >= -half) return null;
   return (inner - half) / 2;
 }
@@ -62,8 +121,8 @@ export function mainMedian(c: number | null, half: number): number | null {
 /** The fork's nose for the Undertown run that starts at `under` (m along the road): where the lane
  * has just parted from the road (the median begins), for a road `half` wide there. */
 export function forkNose(under: number, half: number): number {
-  for (let s = under - MAIN.SPLIT; s < under; s += 1)
-    if (mainMedian(mainStreet(s), half) !== null) return s;
+  for (let s = under + LOWER_FROM; s < under; s += 1)
+    if (pathMedian(underpass(s), half) !== null) return s;
   return under;
 }
 
@@ -195,6 +254,8 @@ export function pickFor(start: number): boolean {
 /** The fork's and the balcony road's signs: their words and their tone in the sign atlas. */
 export const PATH_SIGNS = {
   under: '下町 UNDERTOWN ↶',
-  main: '大街 MAIN STREET →',
+  main: '地下街 UNDERPASS ↘',
+  /** Lettered along the underpass's walls. */
+  deep: '地下街 · 灯 · UNDERPASS',
   balcony: '露台 BALCONY ↖',
 } as const;

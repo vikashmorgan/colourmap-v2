@@ -125,10 +125,13 @@ import {
 import { SPEED_FLOATS } from '@/lib/art/speed-shaders';
 import { archPoint, STAGE_OUT } from '@/lib/art/stage-fire';
 import {
+  belowStreet,
   FALLEN,
   frameAt,
   gapAround,
   heightAt,
+  lowerCeiling,
+  lowerFloor,
   makeTrackWorld,
   newRace,
   onBypass,
@@ -1422,7 +1425,8 @@ export class DriveEngine {
   private rideTwist(s: number, u: number) {
     const tr = this.trackWorld?.track;
     if (!tr?.def.twist || this.wreck) return;
-    const on = Math.abs(u) <= tr.def.half(Math.max(0, s)) + 1;
+    // On the ribbon (not down in the underpass under it).
+    const on = Math.abs(u) <= tr.def.half(Math.max(0, s)) + 1 && !this.below(this.vehicle);
     const turning = (tr.def.twist(Math.max(0, s)) ?? 0) !== 0;
     if (turning && !this.riding && on && Math.abs(tr.def.twist(Math.max(0, s))) < 0.05) {
       let end = s;
@@ -1457,7 +1461,17 @@ export class DriveEngine {
     const tr = this.trackWorld?.track;
     if (!tr) return false;
     const s = Math.max(0, this.s);
+    if (this.below(this.vehicle)) return true;
     return Math.abs(this.u) > tr.def.half(s) + 4 && onBypass(tr, s, this.u) !== null;
+  }
+
+  /** Whether a racer is down in Chinatown's underpass, under the street (drawn flat, never rolled
+   * with the road over its head). */
+  private below(v: Vehicle | null, near = this.s): boolean {
+    const tr = this.trackWorld?.track;
+    if (!v || !tr?.def.lower) return false;
+    const q = project(tr, v.x, v.y, near);
+    return belowStreet(tr, q.s, q.u, v.z);
   }
 
   /** Whether you are drawn rolled over: on a twist's ribbon (not straight through), or under. */
@@ -1470,8 +1484,9 @@ export class DriveEngine {
   private posed(x: number, y: number, z: number, near: number, who: Vehicle | null = null) {
     const tr = this.trackWorld?.track;
     if (!tr?.def.twist) return null;
-    // Straight through: drawn flat on the ground, the ribbon rolling round you.
-    if (who && this.straight.has(who)) return null;
+    // Straight through: drawn flat on the ground, the ribbon rolling round you. Down in the
+    // underpass too: the road rolls over high above, the cut stays put.
+    if (who && (this.straight.has(who) || this.below(who, near))) return null;
     const q = project(tr, x, y, near);
     if ((tr.def.twist(Math.max(0, q.s)) ?? 0) === 0) return null;
     if (Math.abs(q.u) > tr.def.half(Math.max(0, q.s)) + 4 && onBypass(tr, q.s, q.u) !== null)
@@ -1781,13 +1796,15 @@ export class DriveEngine {
       this.cam.z = wk.z + 10 + Math.min(20, wk.t * 6);
       this.cam.roll = 0;
     } else if (this.trackWorld && !this.preview) {
-      // Never under the ground (a banked turn's high side behind you).
-      const g = heightAt(
-        this.trackWorld.track,
-        project(this.trackWorld.track, this.cam.x, this.cam.y, this.s).s,
-        0,
-      );
-      this.cam.z = Math.max(this.cam.z, g + 1.2);
+      // Never under the ground (a banked turn's high side behind you). Down in the underpass: over
+      // its floor, and under the street's deck where it roofs the cut (never through it).
+      const tr = this.trackWorld.track;
+      const q = project(tr, this.cam.x, this.cam.y, this.s);
+      if (this.below(v)) {
+        this.cam.z = Math.max(this.cam.z, lowerFloor(tr.def, q.s) + 1.2);
+        const roof = lowerCeiling(tr, q.s, q.u) ?? lowerCeiling(tr, this.s, this.u);
+        if (roof !== null) this.cam.z = Math.min(this.cam.z, roof - 0.5);
+      } else this.cam.z = Math.max(this.cam.z, heightAt(tr, q.s, 0) + 1.2);
     }
     this.cam.roll = ease(this.cam.roll, piece ? 0 : v.roll * 0.35, 4, dt);
     const shot = this.preview ? null : this.introShot();
@@ -2045,7 +2062,7 @@ export class DriveEngine {
       vv.feet.forEach((f, i) => {
         const x = v.x + lx * f.x + fx * f.z;
         const y = v.y + ly * f.x + fy * f.z;
-        const g = this.physics.ground(x, y);
+        const g = this.physics.ground(x, y, v.z);
         pushTrail(this.ribbons[i].trail, x, y, g.h + 0.03, t, mark);
       });
       const swirl = this.ribbons[2];
@@ -2060,12 +2077,12 @@ export class DriveEngine {
         const sw = Math.sin(t * 2.4) * 0.7 * slide;
         const x = v.x - fx * 1.4 + lx * sw;
         const y = v.y - fy * 1.4 + ly * sw;
-        pushTrail(swirl.trail, x, y, this.physics.ground(x, y).h + 0.035, t, slide * 0.8);
+        pushTrail(swirl.trail, x, y, this.physics.ground(x, y, v.z).h + 0.035, t, slide * 0.8);
         if (slide > 0.2 && Math.random() < slide * 0.25) {
           this.puffs.emit(
             x,
             y,
-            this.physics.ground(x, y).h + 0.3,
+            this.physics.ground(x, y, v.z).h + 0.3,
             -fx * sp * 0.1 + lx * (Math.random() - 0.5) * 4,
             -fy * sp * 0.1 + ly * (Math.random() - 0.5) * 4,
             0.6 + Math.random(),
@@ -2127,7 +2144,7 @@ export class DriveEngine {
     const ly = Math.cos(v.h);
     const fx = Math.cos(v.h);
     const fy = Math.sin(v.h);
-    const g = this.physics.ground(v.x, v.y);
+    const g = this.physics.ground(v.x, v.y, v.z);
     if (this.trackWorld) this.trackWorld.track.hint = this.s;
     const rate = v.air
       ? 0

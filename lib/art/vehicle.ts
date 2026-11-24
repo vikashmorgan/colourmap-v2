@@ -244,7 +244,9 @@ export interface Hit {
 export const DROP_AIR = 3;
 
 export interface World {
-  ground(x: number, y: number): Ground;
+  /** The ground under (x, y); z, the body's height, picks between two surfaces one over the
+   * other (a street and the underpass under it). */
+  ground(x: number, y: number, z?: number): Ground;
   collide?(v: Vehicle, t: number): Hit | null;
   /** Where gravity does not point down: the pull back to the road off a surf bend (m/s²). */
   pull?(x: number, y: number, z: number): { ax: number; ay: number; az: number } | null;
@@ -426,7 +428,7 @@ export function stepVehicle(
 function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number, ev: StepEvents) {
   const spec = VEHICLES[v.kind];
   const throttle = ctl.boost > 0 ? Math.max(ctl.throttle, 1) : ctl.throttle;
-  const here = world.ground(v.x, v.y);
+  const here = world.ground(v.x, v.y, v.z);
   const air = v.air;
 
   // The handbrake, eased: on fast, off slowly. The ship's field brakes too, a little less.
@@ -621,7 +623,7 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
   }
 
   // Up and down: follow the ground, or fly.
-  const next = world.ground(v.x, v.y);
+  const next = world.ground(v.x, v.y, v.z);
   // The ship climbs and dives as the City's does (W and S in Sky Canyon), easing into the climb and
   // out of it, between the ground and its ceiling; the car stays on the ground.
   const climb = v.kind === 'ship' ? clamp(ctl.climb ?? 0, -1, 1) : 0;
@@ -670,7 +672,7 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     leavesGround(
       v.z,
       v.vz,
-      world.ground(v.x + v.vx * LIFT_LOOK, v.y + v.vy * LIFT_LOOK).h +
+      world.ground(v.x + v.vx * LIFT_LOOK, v.y + v.vy * LIFT_LOOK, v.z).h +
         spec.hover +
         v.lift +
         v.liftV * LIFT_LOOK,
