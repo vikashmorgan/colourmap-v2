@@ -79,7 +79,7 @@ export function lowerLocal(s: number): number | null {
   if (!(s >= UNDER.AT + LOWER_FROM)) return null;
   const k = Math.floor((s - UNDER.AT - LOWER_FROM) / UNDER.EVERY);
   const x = s - (UNDER.AT + k * UNDER.EVERY);
-  return x <= LOWER_TO ? x : null;
+  return x < LOWER_TO ? x : null;
 }
 
 /** Where the underpass's centre runs at s (u: negative on the right; UNDER_C under the road),
@@ -258,4 +258,6 @@ export const PATH_SIGNS = {
   /** Lettered along the underpass's walls. */
   deep: '地下街 · 灯 · UNDERPASS',
   balcony: '露台 BALCONY ↖',
+  /** Over the lake arcade's mouth (lib/art/chinatown-vista.ts). */
+  lake: '望湖廊 LAKE ARCADE',
 } as const;

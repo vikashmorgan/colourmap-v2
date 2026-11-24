@@ -207,6 +207,28 @@ Lanterns, lanes and avenues.
         folds round the road's bends. Built while you are within 2.3 km of it.
       - On top you look out over the plain and the lake to the city; flipped under in Undertown it
         hangs over your head, city and reflection changing places.
+      - The lake arcade (below) looks out over the same lake on the left, to a city of its own.
+- [x] **The lake arcade** (2026-11-24: "also in main china road add a whole part left that is
+      below the buildings in a whole area with a wider view to the left").
+      `lib/art/chinatown-vista.ts` (pure, tested).
+      - Once after each Undertown (four runs in five: where a balcony road leaves no room, none), 600 m long, in the stretch between
+        its underpass merging back and the next fork, 60 m clear of any balcony road: the earliest
+        place on a 20 m grid that fits (`vistaStart`, `vistaLocal`).
+      - The shophouses on the left stand up on a deck over the road's left edge: its underside
+        9.5 m over the street, from 4 m inside the road's edge to 15 m past it, on red columns in
+        two rows (1.6 and 14 m past the edge, every 9 m) receding down the arcade, lanterns hung
+        from its underside between them, a gold line along its front edge, its faces lacquer red.
+        On it, a row of 3 to 6 storey shophouses, their faces just over the road (no reflection in
+        the wet road under them).
+      - Past the columns the street's wall is gone: a paved terrace to a balustrade 18 m past the
+        road's edge (lit red along its rail, gold lights on it), then the drop and the lake, the
+        water out to 240 m and, on its far shore, the arcade's own city (a second skyline, seeded
+        apart, mirrored in the water; `components/drive/lake-city-view.ts` on the left). Nothing
+        stands on the terrace: the view stays open, perspective down the columns and out.
+      - The right side stays the canyon. The road is unchanged: its own wall holds you at the
+        columns' line; nothing stands on it. No gate, temple gate or high string of light through
+        the deck; low lantern strings still cross under it.
+      - Signed: **望湖廊 LAKE ARCADE** hung under the deck's mouth (a fifth reserved sign cell).
 - [x] **The balcony road** (2026-11-24: "on the small jumps allow ability to jump go higher up left
       and ride a second slope on the left. that is above the normal slope. like a side track above
       the first floor of the buildings"). `lib/art/chinatown-paths.ts`.

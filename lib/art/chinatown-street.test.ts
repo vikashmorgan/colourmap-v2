@@ -155,6 +155,7 @@ describe('the publicity panels', () => {
       new Set(CT_BOARD_WORDS),
     );
     // The last cells sign the two paths (lib/art/chinatown-paths.ts).
+    expect(ctCell('board', CT_PATH_CELLS.lake).word).toBe(PATH_SIGNS.lake);
     expect(ctCell('board', CT_PATH_CELLS.deep).word).toBe(PATH_SIGNS.deep);
     expect(ctCell('board', CT_PATH_CELLS.under).word).toBe(PATH_SIGNS.under);
     expect(ctCell('board', CT_PATH_CELLS.main).word).toBe(PATH_SIGNS.main);

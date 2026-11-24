@@ -30,10 +30,10 @@ describe('night furniture', () => {
     expect(rain.has('arch')).toBe(true);
     expect(rain.has('lanterns')).toBe(false);
 
-    // Past the first fork (1 km before Undertown, from 300 m), where the gates stand again.
-    const china = kinds('chinatown', 0, 3600);
+    // Over a longer stretch: the forks, the balcony roads and the lake arcades keep gates out.
+    const china = kinds('chinatown', 0, 12000);
     expect(china.has('lanterns')).toBe(true);
-    expect(china.has('gate')).toBe(true);
+    expect(china.has('gate') || china.has('temple')).toBe(true);
     expect(china.has('shophouse')).toBe(true);
     expect(china.has('blade')).toBe(true);
     expect(china.has('billboard')).toBe(true);

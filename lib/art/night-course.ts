@@ -34,6 +34,7 @@ import {
   ctFloors,
   ctRoofs,
 } from '@/lib/art/chinatown-street';
+import { nearVista, VISTA, vistaLocal, vistaStart } from '@/lib/art/chinatown-vista';
 import { clamp } from '@/lib/art/drive';
 import {
   CHINA_LANE,
@@ -337,6 +338,8 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
         // None right of the street over the underpass's void (open to the lake), stood back
         // behind the underpass on the right and the balcony road on the left.
         if (side < 0 && voidOpen(def, s, w)) return;
+        // Up on the lake arcade's deck on the left (vistaPieces), not on the street.
+        if (side > 0 && def.under && nearVista(s, w + 2)) return;
         const face = Math.max(half + back, pathClear(def, s, w, side));
         const id = i * 2 + (side > 0 ? 0 : 1);
         out.push(
@@ -416,7 +419,7 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
     // High strings of light across the street, where the towers both sides stand taller than them
     // (the City's strands at three heights); only light crosses the road.
     each(HIGH_LIGHTS_STEP, 60, (s, i) => {
-      if (onPath(def, s, false) || voidOpen(def, s, 10)) return;
+      if (onPath(def, s, false) || voidOpen(def, s, 10) || (def.under && nearVista(s, 20))) return;
       const iL = Math.round(s / SHOP_STEP);
       const iR = Math.round((s - SHOP_STEP / 2) / SHOP_STEP);
       const low = Math.min(shop(1, iL).floors, shop(-1, iR).floors) * CT_STOREY;
@@ -432,7 +435,7 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
       out.push(piece({ kind: 'lanterns', s, lift: 8.5, colour: LANTERN, id: i }));
     });
     each(GATE_STEP, 0, (s, i) => {
-      if (i === 0 || onPath(def, s)) return;
+      if (i === 0 || onPath(def, s) || (def.under && nearVista(s, 30))) return;
       const temple = i % 3 === 0;
       out.push(
         piece({
@@ -447,6 +450,7 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
   }
 
   if (theme === 'chinatown') out.push(...pathPieces(def, s0, s1));
+  if (theme === 'chinatown' && def.under) out.push(...vistaPieces(def, s0, s1));
 
   if (theme === 'neon') {
     // Bridges overhead between the towers.
@@ -653,6 +657,105 @@ export function pathClear(def: TrackDef, s: number, w: number, side: 1 | -1): nu
 const PATH_GOLD: Rgb = [1, 0.72, 0.3];
 const PATH_VIOLET: Rgb = [0.62, 0.22, 1];
 const PATH_JADE: Rgb = [0.3, 0.95, 0.6];
+
+/**
+ * The lake arcade (lib/art/chinatown-vista.ts): the left side's shophouses up on the deck over the
+ * road's left edge (3 to 6 storeys, their faces just over the road), red columns in two rows under
+ * it receding down the arcade, lanterns hung from its underside between them, gold lights along
+ * the balustrade at the terrace's edge, and 望湖廊 LAKE ARCADE hung under the deck's mouth. Nothing
+ * on the terrace past the columns: the view out over the lake stays open.
+ */
+export function vistaPieces(def: TrackDef, s0: number, s1: number): Piece[] {
+  const out: Piece[] = [];
+  const deckAt = (s: number) => streetAt(def, s, def.half(Math.max(0, s))) + VISTA.DECK;
+  for (let i = Math.ceil(s0 / 3); i * 3 < s1; i++) {
+    const s = i * 3;
+    const x = vistaLocal(s);
+    if (x === null) continue;
+    const half = def.half(s);
+    const deck = deckAt(s);
+    if (i % 3 === 0)
+      for (const off of VISTA.COLS)
+        out.push(
+          piece({
+            kind: 'pillar',
+            s,
+            u: half + off,
+            z: deck,
+            base: streetAt(def, s, half) - 0.05,
+            colour: LACQUER,
+            id: i,
+          }),
+        );
+    if (i % 3 === 1)
+      for (const off of [-1.2, 7.5])
+        out.push(
+          piece({ kind: 'beacon', s, u: half + off, w: 0.4, colour: LANTERN, id: i, z: deck - 1 }),
+        );
+    if (i % 2 === 0)
+      out.push(
+        piece({
+          kind: 'beacon',
+          s,
+          u: half + VISTA.RAIL - 0.3,
+          w: 0.16,
+          colour: GOLD,
+          id: i,
+          z: streetAt(def, s, half) + 1.3,
+        }),
+      );
+  }
+  // The buildings on the deck, one every SHOP_STEP m.
+  for (let j = Math.ceil(s0 / SHOP_STEP); j * SHOP_STEP < s1; j++) {
+    const s = j * SHOP_STEP;
+    const x = vistaLocal(s);
+    if (x === null || x < SHOP_STEP / 2 || x + SHOP_STEP / 2 > VISTA.LENGTH) continue;
+    const half = def.half(s);
+    const lo = half - VISTA.DECK_IN;
+    const hi = half + VISTA.DEEP + 1;
+    const floors = 3 + Math.floor(hash(j, 71) * 4);
+    out.push(
+      piece({
+        kind: 'shophouse',
+        s,
+        u: (lo + hi) / 2,
+        w: SHOP_STEP * 0.48,
+        d: (hi - lo) / 2 - 0.4,
+        h: floors * CT_STOREY,
+        lift: 1 + Math.floor(hash(j, 72) * 2),
+        base: deckAt(s) + VISTA.SLAB,
+        colour: hash(j, 73) < 0.5 ? LACQUER : GOLD,
+        side: 1,
+        id: j * 2,
+      }),
+    );
+  }
+  // The name, hung under the deck where the arcade opens.
+  for (
+    let k = Math.max(0, Math.floor((s0 - UNDER.AT) / UNDER.EVERY) - 1);
+    UNDER.AT + k * UNDER.EVERY <= s1;
+    k++
+  ) {
+    const a = vistaStart(k);
+    if (a === null || a < s0 || a >= s1) continue;
+    const half = def.half(a);
+    out.push(
+      piece({
+        kind: 'billboard',
+        s: a - 0.4,
+        u: half + 3,
+        w: 0.08,
+        d: 4.2,
+        h: 1.9,
+        lift: VISTA.DECK - 2.3,
+        colour: GOLD,
+        id: k,
+        cell: CT_PATH_CELLS.lake,
+      }),
+    );
+  }
+  return out;
+}
 
 /** The underpass's void at s (every 3 m, i its count): see pathPieces. */
 function voidPieces(
