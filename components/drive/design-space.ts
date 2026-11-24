@@ -1243,6 +1243,61 @@ function neon(k: Kit, g: THREE.Group, tr: Track, id: string, s0: number, s1: num
   }
 }
 
+/* ── stage passages (2026-11-24: "love the fire sparking on the sides at start do more passages
+   like that") ── */
+
+/** A passage every PASSAGE.EVERY m: PAIRS mirror pairs of burners STEP m apart down both edges. */
+export const PASSAGE = { EVERY: 900, OFFSET: 450, PAIRS: 7, STEP: 18, OUT: 1.5 };
+
+function stagePassage(k: Kit, burners: Burner[], tr: Track, s0: number, s1: number) {
+  const len = PASSAGE.PAIRS * PASSAGE.STEP;
+  for (const a of every(s0 - len, s1, PASSAGE.EVERY, PASSAGE.OFFSET)) {
+    // Only on a road plain enough for the whole run (no twist, jump or deck in it).
+    if (!plainSpan(tr, a - 4, a + len + 4)) continue;
+    for (let i = 0; i < PASSAGE.PAIRS; i++) {
+      const s = a + i * PASSAGE.STEP;
+      if (s < s0 || s >= s1) continue;
+      const u = tr.def.half(s) + PASSAGE.OUT;
+      for (const sd of [1, -1]) {
+        // The burner: a short iron post with a hot mouth.
+        column(k, tr, s, sd * u, 0.6, 1.4, C.deep, 0.9, 0);
+        k.dot(pose(tr, s, sd * u, 1.5), C.warm, 1.4, 2.5);
+        // Lit as you come within 110 m, so the pairs ignite one after another up the road ahead.
+        const mouth = pose(tr, s, sd * u, 1.6);
+        const tall = i === PASSAGE.PAIRS - 1 ? 1.35 : 1;
+        burners.push(
+          burner(s, mouth, dir(tr, s, -sd * 0.08, 1, 0), {
+            rate: 110,
+            speed: 21 * tall,
+            life: 0.75,
+            pal: 0,
+            size: 3.4,
+            spread: 0.07,
+            w0: -25,
+            w1: 110,
+          }),
+        );
+        // Gold sparks thrown up and in, to arc over the road and cross the other side's.
+        burners.push(
+          burner(s, mouth, dir(tr, s, -sd * 0.8, 1, 0.1), {
+            rate: 26,
+            speed: 17,
+            life: 2.1,
+            pal: 3,
+            size: 0.9,
+            spread: 0.16,
+            drag: 0.35,
+            buoy: -9.8,
+            grow: 0,
+            w0: -25,
+            w1: 110,
+          }),
+        );
+      }
+    }
+  }
+}
+
 /* ── the space ── */
 
 /** The Gates category: a gate of the chosen look every 240 m, in the track's own world. */
@@ -1751,6 +1806,8 @@ export class DesignSpace {
         }
       }
       edges();
+    } else if (cat === 'slide' && id === 'passage') {
+      stagePassage(k, burners, tr, s0, s1);
     } else if (cat === 'slide') {
       const step = { jets: 7, wave: 5, wall: 4, tongues: 8, fans: 10, geysers: 16 }[id] ?? 8;
       for (const s of every(s0, s1, step)) {

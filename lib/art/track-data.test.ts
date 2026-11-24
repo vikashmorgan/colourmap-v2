@@ -335,8 +335,11 @@ describe('the jump over the void (2026-11-22)', () => {
     expect(gapAround(t, jump.at - 600)).toBeNull();
   });
 
-  it('swallows you if you come at it too slowly', () => {
-    expect(leap('car', 25, 0).fell).toBe(true);
+  it('never lets you over if you come at it too slowly', () => {
+    // Off the throttle the engine brake (lib/art/vehicle.ts COAST) may stop you on the ramp before
+    // the void swallows you; either way you never reach the far side.
+    const r = leap('car', 25, 0);
+    expect(r.fell || r.s < jump.at + jump.length).toBe(true);
   });
 
   it('passes its own checks with the jump', () => {

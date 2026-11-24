@@ -85,6 +85,12 @@ export const CATEGORIES: Category[] = [
       ),
       v('fans', 'Fans', 'Each outside burner sprays three ways in gold fire.'),
       v('geysers', 'Geysers', 'White-hot columns straight up off the outside edge.'),
+      // 2026-11-24: "love the fire sparking on the sides at start do more passages like that".
+      v(
+        'passage',
+        'Stage passage',
+        'Like the start: mirror pairs of flame columns down both edges, lighting one after another as you come in, gold sparks arcing over the road to cross.',
+      ),
     ],
   },
   {
@@ -379,19 +385,22 @@ export const MARKING: Record<string, number> = {
  * the Neon District dressed in their own district's pieces. Chinatown Run's tall signs are its
  * street's own now (lib/art/chinatown-street.ts, 2026-11-24), up every shophouse face, so it no
  * longer wears Design's (still there to pick). */
+/** The stage passages run on every road (2026-11-24). */
+const PASSAGE: [CategoryId, string] = ['slide', 'passage'];
 const DRESS: Record<string, [CategoryId, string][]> = {
+  gold: [PASSAGE],
+  coast: [PASSAGE],
+  canyon: [PASSAGE],
+  night: [PASSAGE],
+  sky: [PASSAGE],
   chinatown: [
+    PASSAGE,
     ['chinatown', 'gate'],
     ['chinatown', 'lanterns'],
     ['chinatown', 'sky'],
     ['chinatown', 'undertown'],
   ],
-  neon: [
-    ['neon', 'blades'],
-    ['neon', 'bridges'],
-    ['neon', 'traffic'],
-    ['neon', 'jumps'],
-  ],
+  neon: [PASSAGE, ['neon', 'blades'], ['neon', 'bridges'], ['neon', 'traffic'], ['neon', 'jumps']],
 };
 
 export function cellOf(cat: CategoryId, id: string): Pos | null {

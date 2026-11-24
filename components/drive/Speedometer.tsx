@@ -135,7 +135,8 @@ export function FutureGauge({ speed, gear, revs }: GaugeProps) {
   const from = -130;
   const span = 260;
   const to = from + span * k;
-  const hot = mixHex('#38e8ff', '#ff48c8', Math.min(1, k * 1.25));
+  // Golden, never pink (2026-11-24: "golden not pink. for the speedo").
+  const hot = mixHex('#ffe6a8', '#ffae2e', Math.min(1, k * 1.25));
   const ticks = Array.from({ length: 22 }, (_, i) => from + (span * i) / 21);
   return (
     <div data-testid="gauge-future" style={{ width: 150, height: 150, position: 'relative' }}>
