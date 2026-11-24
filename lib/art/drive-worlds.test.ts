@@ -39,7 +39,7 @@ describe('world settings', () => {
 
 describe('the night tracks', () => {
   it('open Chinatown from narrow lanes onto wide avenues', () => {
-    const halves = Array.from({ length: 120 }, (_, i) => chinatownHalf(i * 10));
+    const halves = Array.from({ length: 200 }, (_, i) => chinatownHalf(i * 10));
     expect(Math.min(...halves)).toBeCloseTo(CHINA_LANE, 1);
     expect(Math.max(...halves)).toBeCloseTo(CHINA_AVENUE, 1);
   });

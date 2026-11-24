@@ -628,26 +628,32 @@ export const NIGHT: TrackDef = compileTrack(nightData as TrackData);
 
 /* ── Chinatown Run and the Neon District ───────────────────── */
 
-/** Chinatown: lanes (half 10 m) opening onto wide avenues (half 15 m), 600 m each. */
+/** Chinatown: lanes (half 10 m) 1,100 m long opening onto wide avenues (half 15 m) for 900 m
+ * (2026-11-24: "chinatown make it longer": the street was 600 m of each, its bends half as long). */
 export const CHINA_LANE = 10;
 export const CHINA_AVENUE = 15;
+/** One lane and its avenue (m), and where the avenue opens in it. */
+export const CHINA_PERIOD = 2000;
+export const CHINA_OPEN = 1100;
 
 export function chinatownHalf(s: number): number {
-  const p = ((s % 1200) + 1200) % 1200;
+  const p = ((s % CHINA_PERIOD) + CHINA_PERIOD) % CHINA_PERIOD;
   // Widening and narrowing over 180 m, so the edge eases you along (was 70 m).
-  const avenue = window01(p, 600, 1200, 180);
+  const avenue = window01(p, CHINA_OPEN, CHINA_PERIOD, 180);
   return CHINA_LANE + (CHINA_AVENUE - CHINA_LANE) * avenue;
 }
 
 export const CHINATOWN: TrackDef = {
   id: 'chinatown',
   startH: 0,
+  // Long sweeping bends (periods 3,100 and 1,500 m, were 1,900 and 900): the tightest about 320 m
+  // across, so the canyon's walls recede round them in long curves.
   curv: (s) =>
-    0.55 * (TAU / 1900) * Math.cos((TAU * s) / 1900 + 1.1) +
-    0.35 * (TAU / 900) * Math.cos((TAU * s) / 900 + 0.3),
+    0.7 * (TAU / 3100) * Math.cos((TAU * s) / 3100 + 1.1) +
+    0.4 * (TAU / 1500) * Math.cos((TAU * s) / 1500 + 0.3),
   elev: (s) => {
-    const p = ((s % 1200) + 1200) % 1200;
-    return bump(p, 900, 4, 30) + bump(p, 300, -2.5, 45);
+    const p = ((s % CHINA_PERIOD) + CHINA_PERIOD) % CHINA_PERIOD;
+    return bump(p, 1500, 4, 30) + bump(p, 500, -2.5, 45);
   },
   half: chinatownHalf,
   lip: () => 0.4,

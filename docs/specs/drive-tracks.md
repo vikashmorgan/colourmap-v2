@@ -92,13 +92,57 @@ Lamp rows in the rain.
 ## 5. Chinatown Run (`chinatown`)
 
 Lanterns, lanes and avenues.
+- [x] **Longer, and a tall street canyon with many more publicity panels** (2026-11-24: "chinatown
+      make it longer and really think how all the elements form the chinatown in the 3d city.
+      check how streets look and check it to make a taller chinatown streets with more of those
+      chinese publicity panels"). `lib/art/chinatown-street.ts` (pure, tested),
+      `components/drive/chinatown-signs.ts`, the shophouses in `components/drive/track-view.ts`.
+      - **From the City's Chinatown** (`lib/city-game.ts` tieredTower, towerSigns and the tower
+        heights, `lib/city-chinatown-open.ts`, `lib/city-signs.ts`): towers storey on storey, a
+        flared gold eave with swept-up corners on every other storey over a red fascia, a balcony
+        rail and a lantern at the corners on those storeys, a pagoda crown of three roofs (five and
+        a spire on the tall towers); one height band with a tall tiered tower about one in six;
+        tall blade signs of one to four characters (ラーメン, 茶, 龍, 酒, 夢 …) standing out from
+        both street walls at several levels, facing down the street, staggered so two never face
+        each other; name boards high on the tall towers; strings of lights across the streets at a
+        few heights; windows as grains of light; red, gold and lantern red with a little jade, all
+        steady. And its lesson from 2026-11-14 ("too overloaded"): openings and air, so nothing
+        crosses the road but light.
+      - **Longer**: lanes 1,100 m (were 600) opening onto avenues for 900 m (were 600); the bends
+        about 1.6 times as long (periods 3,100 and 1,500 m, were 1,900 and 900; the tightest about
+        320 m across), the crest and dip spaced to match. Undertown first comes after 1.3 km of
+        street, then every 3.6 km (was 700 m, then every 2.4 km), so the canyon has room between
+        flips.
+      - **Taller**: shophouse towers shoulder to shoulder 2.5 m back from the lane's edge, six to
+        eleven storeys (3.4 m each) along a slow swell of the roofline, so the cornices recede as
+        one line; about one in six a tall tiered tower of 13 to 17 storeys with a spire. Two storeys
+        more on the avenues, set further back. Where Undertown hangs over the street they stay at
+        five storeys and a single roof (under 21 m), clear of its hanging houses.
+      - **Panels**: blade signs at three levels up each tower (five on the tall ones, the higher
+        ones bigger), lettered on both faces so they read the right way coming and going, each
+        with a neon edge in its ink; horizontal boards flat on two faces in three, between the
+        blades, on storeys without a balcony (中華街, 福星樓, 金龍, 夜市, 茶樓, 龍門, CITY OF DREAMS
+        …); a name board on the roof of each tall tower, facing you as you come. Eight tones: gold
+        on lacquer, lantern orange, dark red on gold, pale gold, warm white on red, amber, and a
+        jade and a pink neon for a little neon. Glow steady, nothing flashes. No blade in a gate's
+        beams.
+      - Lit windows as points of light up every street face (about a third lit: warm, red, pale
+        gold, a few jade). High strings of light across at 18 and 26 m every 90 m where both towers
+        stand taller; none under Undertown.
+      - Performance: every sign of a chunk is one mesh on one shared atlas (64 cells, lettered once
+        on a 2048 canvas), the windows one cloud of points a chunk, built per 120 m chunk as the
+        rest; decoration above the wet road's mirror cap has no mirrored copy.
+      - Design's own tall signs are no longer worn on Chinatown Run (the street carries its own);
+        still there to pick. Design's boards now read the right way round on both sides of the
+        road (they were mirrored on the right-hand side and on the gates' plaques).
 - [ ] More banking in the bends (as the Neon District).
 - [ ] Push and crash against the shophouse walls.
 - [ ] Bridges built into the buildings and over the road, not floating.
 - [x] **Undertown** (2026-11-23: "make racetrack two sided and at the edge there is a cool twist
       edge that makes it flip and u race the other way from under … mirrored … a different decor
       … called the undertown with undertown letters when u ride there"). `lib/art/undertown.ts`.
-      - Every 2,400 m from 700 m, the road's left edge curls up and over: over 180 m it rolls half
+      - Every 3,600 m from 1,300 m (every 2,400 m from 700 m until 2026-11-24, the longer street),
+        the road's left edge curls up and over: over 180 m it rolls half
         a turn about an axis 18 m above it, and you drive its underside upside down, mirrored
         (your left on the road's right), 36 m over the street, the shophouses hanging over your
         head. 620 m later it rolls on the same way, another 180 m, and you are back on top.
@@ -337,7 +381,7 @@ flame tool's palettes. Nothing flashes; pulses and flames ease.
   - **Chinatown**: red gate (中華街), lantern strings, tall signs, pagodas, a dragon of light, sky lanterns.
   - **Neon District**: neon towers, blade signs, sky bridges, docks, traffic, jump bridges.
 - On their tracks, Design opens on the district's own category.
-- **Chinatown Run** always wears the gate, lantern strings, signs, sky lanterns and Undertown. Across the road it stays light only: lanterns and strings are points of light, not solid pieces.
+- **Chinatown Run** always wears the gate, lantern strings, sky lanterns and Undertown (its tall signs are its street's own since 2026-11-24). Across the road it stays light only: lanterns and strings are points of light, not solid pieces.
 - **Neon District** always wears blade signs, sky bridges, traffic and jump bridges.
   - Sky bridges never stand over a jump's flight.
 - **Neon jumps:** two a lap. The second lands on a downslope (`down: 30`):
