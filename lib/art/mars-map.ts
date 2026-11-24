@@ -23,24 +23,24 @@ export interface Region {
 
 /** The regions, in the order they claim a point (the first that holds it names it). */
 export const REGIONS: Region[] = [
-  { id: 'crater', name: 'The Great Crater', x: -4500, y: 3000, r: 1150 },
-  { id: 'lakes', name: 'The Glow Lakes', x: 300, y: 6700, r: 1000 },
-  { id: 'city', name: 'Dome City', x: -300, y: 2900, r: 900 },
-  { id: 'factory', name: 'The Factory Belt', x: 3700, y: 2600, r: 1100 },
-  { id: 'arches', name: 'The Field of Arches', x: -2100, y: -1100, r: 850 },
+  { id: 'crater', name: 'The Great Crater', x: -2900, y: 3000, r: 1000 },
+  { id: 'lakes', name: 'The Glow Lakes', x: 0, y: 5900, r: 1000 },
+  { id: 'city', name: 'Dome City', x: -300, y: 2900, r: 800 },
+  { id: 'factory', name: 'The Factory Belt', x: 2400, y: 2600, r: 900 },
+  { id: 'arches', name: 'The Field of Arches', x: -1500, y: -500, r: 750 },
   { id: 'plain', name: 'The Landing Plain', x: 0, y: 0, r: 1100 },
   { id: 'run', name: "The Bastard's Run", x: -300, y: 2900, r: 0 },
 ];
 
 /** The crater: its middle, the rim's radius, how high the rim stands and how deep the bowl. */
-export const CRATER = { x: -4500, y: 3000, R: 520, rim: 28, depth: 70 };
+export const CRATER = { x: -2900, y: 3000, R: 520, rim: 28, depth: 70 };
 
 /** The radioactive lakes: flat glowing pools, each its middle and radius (m). */
 export const LAKES: { x: number; y: number; r: number }[] = [
-  { x: -150, y: 6500, r: 240 },
-  { x: 520, y: 6920, r: 300 },
-  { x: 280, y: 6250, r: 150 },
-  { x: 950, y: 6450, r: 190 },
+  { x: -450, y: 5700, r: 240 },
+  { x: 220, y: 6120, r: 300 },
+  { x: -20, y: 5450, r: 150 },
+  { x: 650, y: 5650, r: 190 },
 ];
 /** The lakes' surface (m), a little under the plain. */
 export const LAKE_LEVEL = -1.4;
@@ -52,38 +52,39 @@ export const LIGHTHOUSE = { x: CRATER.x + CRATER.R + 14, y: CRATER.y, height: 64
 
 /** The atomic plants by the lakes: cooling towers, a reactor dome, pipe runs. */
 export const ATOMIC: { x: number; y: number; rot: number }[] = [
-  { x: -650, y: 6900, rot: 0.4 },
-  { x: 1250, y: 6900, rot: 2.1 },
-  { x: 700, y: 5900, rot: 4.0 },
+  { x: -950, y: 6100, rot: 0.4 },
+  { x: 950, y: 6100, rot: 2.1 },
+  { x: 400, y: 5100, rot: 4.0 },
 ];
 
 /** Station places by region: [x, y, kind]. Domes and Nova Cores in the city, factories along the
  * belt, derelicts scattered over the plain and among the arches. Kept only where clear
  * (lib/art/mars.ts siteClear). */
 export const PLACES: [number, number, 'domes' | 'nova' | 'factory' | 'ruin'][] = [
-  // Dome City, inside his loop.
+  // Dome City, inside his loop, packed close (2026-11-24: "make the cities and construction
+  // places closer to each other").
   [-300, 2900, 'nova'],
-  [-650, 3150, 'domes'],
-  [60, 3250, 'domes'],
-  [-500, 2500, 'domes'],
-  [200, 2620, 'domes'],
-  [-900, 2800, 'nova'],
-  [380, 3000, 'nova'],
-  [-250, 3500, 'domes'],
+  [-560, 3090, 'domes'],
+  [-30, 3160, 'domes'],
+  [-450, 2600, 'domes'],
+  [80, 2690, 'domes'],
+  [-750, 2820, 'nova'],
+  [210, 2980, 'nova'],
+  [-260, 3350, 'domes'],
   // The Factory Belt, east of the loop, running north to south.
-  [3500, 3500, 'factory'],
-  [3800, 3000, 'factory'],
-  [3550, 2450, 'nova'],
-  [3900, 1950, 'factory'],
-  [3600, 1450, 'factory'],
-  [4200, 2600, 'factory'],
+  [2260, 3230, 'factory'],
+  [2470, 2880, 'factory'],
+  [2300, 2500, 'nova'],
+  [2540, 2140, 'factory'],
+  [2330, 1800, 'factory'],
+  [2750, 2600, 'factory'],
   // Derelicts in the rust.
-  [1500, -900, 'ruin'],
-  [-1300, 600, 'ruin'],
-  [-2900, -400, 'ruin'],
-  [2400, 600, 'ruin'],
-  [-3300, 5600, 'ruin'],
-  [2600, 5400, 'ruin'],
+  [1050, -630, 'ruin'],
+  [-910, 420, 'ruin'],
+  [-2030, -280, 'ruin'],
+  [1680, 420, 'ruin'],
+  [-2310, 3920, 'ruin'],
+  [1820, 3780, 'ruin'],
 ];
 
 export type ArchKind = 'fire' | 'tunnel' | 'real';
@@ -113,12 +114,12 @@ export const ARCHES: Arch[] = (() => {
   const out: Arch[] = [];
   const C = REGIONS.find((r) => r.id === 'arches') as Region;
   const lone: [number, number, number][] = [
-    [-260, 300, 0.3],
-    [180, 380, -0.6],
-    [420, -60, 1.9],
-    [-420, -260, 2.6],
-    [80, -420, -1.4],
-    [-560, 140, 0.9],
+    [-195, 225, 0.3],
+    [135, 285, -0.6],
+    [315, -45, 1.9],
+    [-315, -195, 2.6],
+    [60, -315, -1.4],
+    [-420, 105, 0.9],
   ];
   for (const [dx, dy, h] of lone)
     out.push({ x: C.x + dx, y: C.y + dy, h, r: ARCH_R, kind: 'fire' });
@@ -138,9 +139,9 @@ export const ARCHES: Arch[] = (() => {
       });
   });
   const real: [number, number, number][] = [
-    [520, 420, 1.2],
-    [-620, -520, -0.4],
-    [-60, 560, 3.0],
+    [390, 315, 1.2],
+    [-465, -390, -0.4],
+    [-45, 420, 3.0],
   ];
   for (const [dx, dy, h] of real)
     out.push({ x: C.x + dx, y: C.y + dy, h, r: ARCH_R + 2, kind: 'real' });

@@ -148,8 +148,9 @@ easy to stay on it", "same with coast road, make them much wider".
      tighter than 250 m), passing about a kilometre ahead of the start. 216 km/h, 245 when you are
      within 220 m, always below your top speed. A red light trail rides behind him and a thick
      cloud of rust dust billows up; far off he is drawn up to four times larger, so he still reads.
-   - A small red caret marks him with the distance under it (*960 m*, *1.5 km*), pinned to the
-     screen's edge pointing his way when he is out of view. Under the clock: *red bastard 0:42.10
+   - Nothing is drawn over him while he is in view (2026-11-24: "no red triangle above the red
+     bastard"): you find him by eye. When he is out of view a small red caret pinned to the
+     screen's edge points his way, with the distance under it (*960 m*, *1.5 km*). Under the clock: *red bastard 0:42.10
      · 1.2 km · best 1:05.33*.
    - Within 14 m he is caught: *Caught the Red Bastard* with your time (and the best, or *a
      record*) for 6 s. Best per vehicle, `drive.mars.bastard.<vehicle>`.
@@ -176,7 +177,9 @@ easy to stay on it", "same with coast road, make them much wider".
    **The map** (2026-11-23: "make a map for mars so it becomes a world"): named regions placed by
    lib/art/mars-map.ts — the Landing Plain (the start), Dome City (inside his loop), the Factory
    Belt, the Glow Lakes, the Field of Arches, the Great Crater, and the Bastard's Run (the band
-   along his loop). Every station, plant, arch and lake stands where the map puts it, kept clear of
+   along his loop). The regions sit close (2026-11-24: "make the cities and construction places
+   closer to each other"): the crater 2.6 km west of Dome City, the Factory Belt 2.7 km east, the
+   lakes 3 km north, the arches 1.6 km south-west; the domes and the factories packed tight. Every station, plant, arch and lake stands where the map puts it, kept clear of
    the course, the start, his loop, the crater, the lakes and the arches (`siteClear`). Entering a
    region shows its name low on the screen in the display serif, fading in and out over 4.5 s. M
    shows a small map (top right): the regions, the crater, the lakes, the lighthouse, his loop in
