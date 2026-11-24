@@ -63,6 +63,9 @@
   .ref-row dd pre { font-size: 13px; padding: 6px 10px; }
   .ref-go { justify-self: start; padding: 0; border: 0; background: none; color: var(--soft); font: 600 12px system-ui, sans-serif; cursor: pointer; min-height: 24px; }
   .ref-go:hover { color: var(--accent); }
+  .links { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 14px; margin: 0; }
+  .links b { flex-basis: 100%; font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+  .links .ref-go { text-align: left; }
   .chart-group { display: grid; gap: 14px; margin-top: 26px; }
   .chart-group h2 { margin: 0; font-size: 19px; color: var(--ochre); }
   .chart-row { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 22px; align-items: start; padding: 16px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
@@ -755,6 +758,10 @@ function bars(title, rows) {
 const PRED_A = ['3', '4', '5', '6'], PRED_B = ['1.5', '3.5', '5.5', '7.5'], PRED_C = ['2.9', '4.3', '5.7', '7.1'], RES_C = ['0.1', '0.7', '−1.7', '0.9'];
 const mseBars = (title = '') => bars(title, [['A: ŷ = x + 2', 1.5, '1.50'], ['B: ŷ = 2x − 0.5', 1.75, '1.75'], ['C: ŷ = 1.4x + 1.5', 1.05, '1.05']]);
 const threeSets = () => tbl(['set', 'share', 'stores', 'its job'], [['training', '60 %', '90', 'each candidate learns its weights'], ['validation', '20 %', '30', 'the candidates are compared, one is chosen'], ['test', '20 %', '30', 'the chosen model is measured, once']]);
+// Session 3: the five rounds of k-fold, leave-one-out on the four stores, and the penalty shrinking line C.
+const kfoldTbl = () => tbl(['round', 'fold 1', 'fold 2', 'fold 3', 'fold 4', 'fold 5', 'gives'], [1, 2, 3, 4, 5].map(r => [String(r), ...[1, 2, 3, 4, 5].map(f => (f === r ? '*validate' : 'train')), `MSE${'₀₁₂₃₄₅'[r]}`]));
+const looTbl = () => cap('Leave-one-out on the four stores: a line on three, judged on the fourth') + tbl(['left out', 'line on the other three', 'ŷ', 'y', 'error²'], [['store 1', 'ŷ = 1.5x + 1.17', '2.67', '3', '0.11'], ['store 2', 'ŷ = 1.5x + 1', '4', '5', '1.00'], ['store 3', 'ŷ = 1.64x + 1.5', '6.43', '4', '5.90'], ['store 4', 'ŷ = 0.5x + 3', '5', '8', '9.00'], ['', '', '', 'mean', '*4.00']]);
+const shrinkTbl = () => cap('scikit-learn on the four stores: the slope w and the intercept b') + tbl(['model', 'alpha', 'w', 'b'], [['least squares', '0', '1.4', '1.5'], ['Ridge', '1', '1.17', '2.08'], ['Ridge', '5', '0.7', '3.25'], ['Lasso', '0.5', '1.0', '2.5'], ['Lasso', '1', '0.6', '3.5'], ['Lasso', '2', '*0', '*5: the mean']]);
 
 /* ---------- The course, in plain words ----------
  * Written from the session deck and the take-home notebook in plain words; the slides themselves stay private.
@@ -1095,6 +1102,225 @@ degree 12:  5.8 − 2.4 = 3.4`) + `<p><b>Degree 12.</b> The lowest training erro
       ['Why not pick the lowest training MSE? And what comes next?', () => `<p>Training error always falls as the degree grows, so it would pick 12, the worst model on new data. Next: refit degree 3 on training and validation together (120 stores), measure it once on the 30 test stores, and report that number.</p>`],
     ] },
   ], recap: ['Split first: the test set is put aside and used once, at the end. Watch for leakage.', 'Linear regression predicts ŷ = w x + b (ŷ = Xw + b with several features); a residual is y − ŷ.', 'Training finds the w and b with the smallest MSE: with the least-squares formula, or step by step with gradient descent, w ← w − η · gradient.', 'Report MAE, RMSE and R², always against the mean baseline, and look at residual plots and outliers.', 'Choose the model on validation, refit it on training plus validation, measure it once on test. Too simple underfits, too flexible overfits.'] },
+  { n: 3, pages: 176, short: 'CV & regularisation', title: 'Cross-validation and regularisation: choosing a model you can trust', lede: 'Why one validation split is not enough and how k-fold cross-validation fixes it, how Ridge and Lasso keep a flexible model in check with a penalty on its weights, and how a grid search chooses the settings. Worked out by hand on the four stores, then done in scikit-learn.', groups: [
+    { name: 'Where we are', flowLabel: 'The path of the session', flow: ['Split', 'Cross-validate', 'Regularise', 'Grid search', 'Test once'], cards: [
+      { id: 'today', slide: 11, name: 'Last time, and the three questions of today', what: 'Last session cut the data in three: training, validation and test. The degree of the polynomial was chosen on the validation set: too simple underfits, too flexible overfits. The test set is used once, at the end.\n\nToday asks three questions. Can we trust a choice made on one validation set? How do we keep a flexible model under control? How do we choose its settings automatically? The example is the same: the 150 stores with their TV, radio and social media budgets and the units they sold, and the four stores for everything done by hand.', more: { html: () => stores({ label: 'The four stores, again: TV budget x and sales y' }) } },
+    ] },
+    { name: 'One split is not enough', cards: [
+      { id: 'one-split', slide: 17, name: 'Five ways to cut the same stores, five different degrees', what: 'Take the 120 training stores and cut them at random into 90 for training and 30 for validation. Fit every degree, keep the one with the lowest validation error. Then do it again with another random cut, five times in all. The five cuts choose degrees 5, 3, 10, 5 and 2.\n\nWhy does the choice move? Only 30 stores judge each model, so a few easy or difficult stores landing in the validation set change its error, and the winner depends on which stores happened to be set aside. The fix: let every store take a turn in the validation set, and average.', more: { html: () => tbl(['cut', 'training / validation', 'degree chosen'], [['1', '90 / 30, at random', '5'], ['2', 'another random cut', '3'], ['3', 'another random cut', '*10'], ['4', 'another random cut', '5'], ['5', 'another random cut', '2']]) }, watch: 'A single validation score is one draw of a random number. Before trusting it, ask how much it would move with another cut.' },
+    ] },
+    { name: 'Cross-validation', cards: [
+      { id: 'kfold', slide: 30, name: 'k-fold cross-validation: every store validates once', what: 'Cut the training set into k equal parts, called folds; here k = 5. Round 1: fold 1 validates and the model trains on the other four. Round 2: fold 2 validates and the others train. And so on, until every fold has validated once. That makes k fits and k validation errors, and every store has been in the validation set exactly once.\n\nThe rows are shuffled before the folds are cut, so that each fold is a fair mix and not, say, the first 24 rows of a sorted file.', more: { html: kfoldTbl } },
+      { id: 'cv-score', slide: 34, name: 'The CV score: the mean of the k errors, and their spread', what: 'The cross-validation score is the mean of the k validation errors: the estimate of how wrong the model will be on new data. Their spread, the standard deviation of the k errors, says how much that estimate depends on the cut.\n\nOn the 120 training stores, the multiple regression of last time (TV, radio, social) gets five fold errors from about 1.9 to 5.4: a CV MSE of 3.62, with a spread of 1.28. Any one fold alone could have told either story; the mean of the five is steadier.', f: `CV MSE = (1/k) Σᵢ MSEᵢ        # i = 1 … k` },
+      { id: 'loo', slide: 54, name: 'Leave-one-out: k = n, one store per fold', what: 'Push k to its limit: as many folds as stores, so each fold holds a single store. That is n fits: 120 on the training stores instead of 5. With one store in a fold R² cannot be computed, so the score is the MSE. On the 120 stores it gives 3.65, against 3.62 with five folds, for 24 times the fits. Use it on small datasets, where every observation counts; otherwise 5 or 10 folds are enough.\n\nThe four stores are small enough to do it by hand: four rounds, each one fits a line on three stores and predicts the fourth.', f: `from sklearn.model_selection import LeaveOneOut, cross_val_score
+X = [[1], [2], [3], [4]]
+y = [3, 5, 4, 8]
+errors = -cross_val_score(LinearRegression(), X, y, cv=LeaveOneOut(),
+                          scoring='neg_mean_squared_error')
+errors.round(3)          # array([0.111, 1.   , 5.898, 9.   ])
+errors.mean().round(2)   # 4.0`, more: { html: looTbl }, watch: 'Line C’s error on the four stores it learned from was 1.05. On stores the line did not see, the error is about four times larger. That gap is exactly what validation is there to catch.' },
+      { id: 'cv-code', slide: 59, name: 'Cross-validation in scikit-learn, and the minus sign', what: 'Two objects do the work. `KFold` decides the folds: how many, shuffled or not, and the seed of the shuffle. `cross_val_score` takes a model, the training data and the folds, and does the k rounds for you: fit on k − 1 folds, score on the one left out, and give back the k scores in an array.\n\nThe minus sign: scikit-learn always maximises a score (higher is better), so errors come back as negative numbers, `neg_mean_squared_error`. A minus in front turns them back into MSEs.', f: `from sklearn.model_selection import KFold, cross_val_score
+kfold = KFold(n_splits=5, shuffle=True, random_state=SEED)
+cv_mse = -cross_val_score(LinearRegression(), X_train, y_train, cv=kfold,
+                          scoring='neg_mean_squared_error')
+cv_mse.mean(), cv_mse.std()     # the CV MSE and its spread`, watch: 'Forget the minus and every “MSE” is negative: the largest number is then the worst model, not the best.' },
+      { id: 'cv-degree', slide: 63, name: 'Choosing the degree with cross-validation: the recipe, updated', what: 'Do it for every degree of the TV polynomial, from 1 to 12. The training error keeps falling. The CV error, drawn with a bar for its spread across the folds, falls and then rises again; its lowest point is degree 2. One function, `validation_curve`, computes both curves in one call: the training and the validation error of each fold, for each value of one setting.\n\nThe recipe changes: there is no separate validation set any more.', list: ['Split. Training and test only.', 'Compare with cross-validation. Every candidate is scored with k-fold CV on the training set.', 'Refit. The chosen candidate is trained again on the whole training set.', 'Test once. Measure it on the test set and report that number.'], f: `train_scores, cv_scores = validation_curve(
+    model, X_train, y_train,
+    param_name='polynomialfeatures__degree', param_range=range(1, 13),
+    cv=kfold, scoring='neg_mean_squared_error')
+# one row per degree, one column per fold`, watch: 'Choose on the CV error, never on the training error: the training curve always prefers the most flexible model.' },
+    ] },
+    { name: 'Many features', cards: [
+      { id: 'poly-many', slide: 73, name: 'Polynomial features of several inputs: squares and products', what: 'With two inputs x₁ and x₂, degree 2 makes five features: the inputs themselves; their squares, a curve instead of a line; and their product x₁x₂, an interaction: the effect of one input depends on the other. TV × radio: a TV campaign might sell more while the radio campaign runs too.\n\n`PolynomialFeatures` builds them all. `include_bias=False` leaves out a column of 1s, because the model already has its intercept b.', f: `from sklearn.preprocessing import PolynomialFeatures
+poly = PolynomialFeatures(degree=2, include_bias=False)
+poly.fit_transform([[2, 3]])      # array([[2., 3., 4., 6., 9.]])
+poly.get_feature_names_out(['x1', 'x2'])
+# array(['x1', 'x2', 'x1^2', 'x1 x2', 'x2^2'], dtype=object)` },
+      { id: 'grow', slide: 82, name: 'How fast the features grow, and why so many overfit', what: 'The count explodes with the degree. Three inputs (the store budgets) give 3, 9, 19 and 34 features at degrees 1 to 4; six inputs (the offices of the exercise) give 6, 27, 83 and 209.\n\nA training fold of the stores holds 96 stores. With 34 features the model has almost one weight for every three stores: enough freedom to follow the noise. On the three budgets with plain least squares, the 5-fold CV MSE is 3.62 at degree 1, 1.35 at degree 2 and 1.26 at degree 3 (they catch the curve of the TV budget), then back up to 2.36 at degree 4. Can we keep a flexible model and still stop it from following the noise?', more: { html: () => tbl(['degree', 'features, 3 inputs', 'features, 6 inputs', '5-fold CV MSE, 3 budgets'], [['1', '3', '6', '3.62'], ['2', '9', '27', '1.35'], ['3', '19', '83', '*1.26'], ['4', '34', '209', '2.36']]) } },
+    ] },
+    { name: 'Regularisation', cards: [
+      { id: 'penalty', slide: 89, name: 'A penalty on the weights', what: 'Keep all the features, but make large weights expensive. Large weights make a model react strongly to small changes in its inputs, which is what following the noise looks like. So training now makes the error plus a penalty on the size of the weights as small as possible.\n\nλ (lambda) sets the strength of the penalty, and it is never negative. λ = 0: no penalty, plain least squares as before. λ very large: every weight is pushed to zero and the model predicts the mean for everyone. In between, the model gives up a little training error for much smaller weights. scikit-learn calls λ `alpha`.', f: `Loss = MSE + λ · penalty on the weights`, watch: 'The intercept b is not penalised: only the weights that multiply features.' },
+      { id: 'ridge-lasso', slide: 96, name: 'Ridge squares the weights, Lasso takes their sizes', what: 'Ridge adds the sum of the squared weights. It shrinks every weight, but none becomes exactly zero. Lasso adds the sum of their absolute values, their sizes without sign. It shrinks them too, and some become exactly zero: Lasso chooses features, dropping the ones it can do without. ElasticNet mixes the two penalties; it is not used in this course.\n\nOn the four stores, with one feature, both pull the slope of line C (w = 1.4) towards 0, and the line towards the mean, ŷ = 5. Ridge never gets there; Lasso does, from α = 1.75.', f: `Ridge:  MSE + λ Σⱼ wⱼ²
+Lasso:  MSE + λ Σⱼ |wⱼ|`, more: { html: shrinkTbl, f: `from sklearn.linear_model import Ridge, Lasso
+Ridge(alpha=1).fit(X, y).coef_     # array([1.16666667])
+Lasso(alpha=1).fit(X, y).coef_     # array([0.6])
+Lasso(alpha=2).fit(X, y).coef_     # array([0.])` }, watch: 'scikit-learn writes the two losses with different scalings: Ridge adds α Σ w² to the sum of the squared errors, Lasso adds α Σ |w| to half the MSE. The same α is not the same strength in Ridge and in Lasso.' },
+      { id: 'two-models', slide: 107, name: 'Two models, one penalty: the trade', what: 'Model A has MSE 1.0 with weights (4, −3.5). Model B has MSE 1.2 with weights (0.5, 0.3). Without a penalty A wins: its error is lower. But two large weights of opposite sign are a sign that A is following the noise.\n\nAdd a penalty with λ = 0.1 and B wins, with Ridge and with Lasso: a slightly larger error, in exchange for much smaller weights.', more: { html: () => tbl(['model', 'MSE', 'weights', 'Ridge loss, λ = 0.1', 'Lasso loss, λ = 0.1'], [['A', '1.0', '(4, −3.5)', '3.825', '1.75'], ['B', '1.2', '(0.5, 0.3)', '*1.234', '*1.28']]) } },
+      { id: 'ridge-poly', slide: 111, name: 'Ridge on a degree-12 polynomial: λ is one more setting', what: 'The degree-12 curve of the TV budget, three times. λ = 0: it wiggles, CV MSE 4.44. Ridge with λ = 10: smooth, CV MSE 3.99. Ridge with λ = 1000: too flat, CV MSE 6.14.\n\nToo little penalty overfits and too much underfits, just as with the degree. So λ is one more setting to choose, and cross-validation chooses it.', more: { html: () => tbl(['λ', 'the curve', '5-fold CV MSE'], [['0', 'wiggles: overfits', '4.44'], ['10', 'smooth', '*3.99'], ['1000', 'too flat: underfits', '6.14']]) } },
+      { id: 'scale-first', slide: 117, name: 'Scale first: the penalty sees numbers, not units', what: 'The penalty only sees the size of each weight, and a weight’s size depends on its feature’s unit. An office’s area in m² gets a weight of 0.015 (thousand € of rent per m²). Measure the same area in thousands of m² and the weight becomes 15. Same model, same predictions, but w² goes from 0.000225 to 225: Ridge would punish the second a million times more.\n\nSo standardise every feature first, to mean 0 and standard deviation 1, and all of them are penalised alike. In code: `StandardScaler()` before the model, inside the same pipeline.', f: `make_pipeline(StandardScaler(), Ridge(alpha=10))` },
+      { id: 'lasso-path', slide: 126, name: 'Reading a Lasso path, and a Ridge path', what: 'A coefficient path fits the model for many values of λ, from tiny to large, and draws each weight against λ on a log scale. The deck’s example: degree 2 of the three budgets, nine weights. At λ = 0.001 all nine are non-zero. As λ grows, the five squares and products other than tv² leave first; at λ = 0.3, tv, radio, social and tv² are left; tv stays the longest, up to about λ = 3.\n\nA Ridge path looks different: all the weights shrink together, smoothly, and none reaches zero. A Lasso path drops them one at a time, so the order in which they leave ranks how much the model needs each feature.', more: { html: () => tbl(['', 'Ridge path', 'Lasso path'], [['as λ grows', 'all shrink together', 'they hit zero one at a time'], ['exactly zero?', 'never', 'yes'], ['what it tells you', 'how strongly each weight resists', 'which features matter most: the last to leave']]) }, watch: 'Draw λ on a log scale: from 0.001 to 1 the interesting part is spread over three powers of ten, and a plain axis would squeeze it into the left edge.' },
+    ] },
+    { name: 'Hyperparameter optimisation', cards: [
+      { id: 'hyper', slide: 136, name: 'Parameters are learned, hyperparameters are chosen', what: 'Parameters are learned by `fit`, from the data: the weights w and the intercept b. Hyperparameters are chosen by us, before `fit`: the degree of the polynomial, the strength λ of the penalty, the learning rate of gradient descent.\n\nWhich combination of hyperparameters works best on new data? Cross-validation answers it.', more: { html: () => tbl(['', 'parameters', 'hyperparameters'], [['who sets them', 'fit, from the data', 'you, before fit'], ['examples', 'the weights w, the intercept b', 'the degree, λ (alpha), the learning rate η'], ['how they are found', 'least squares or gradient descent', 'cross-validation']]) } },
+      { id: 'grid', slide: 146, name: 'Grid search: every combination, scored with cross-validation', what: 'Make a grid: every degree in {1, 2, 3, 4} with every λ in {0.01, 0.1, 1, 10, 100}, so 4 × 5 = 20 combinations. Score each one with 5-fold cross-validation: 20 × 5 = 100 fits. The combination with the lowest CV MSE wins, and it is refitted on the whole training set: one more fit. `GridSearchCV` does all of it in one `fit`.\n\nOn the 120 training stores, Ridge on the three budgets, the winner is degree 3 with λ = 1. Degree 4 gets better as λ grows: the penalty rescues a flexible model. λ = 100 is too strong for every degree.', more: { html: () => cap('5-fold CV MSE of each combination') + tbl(['degree', 'λ = 0.01', '0.1', '1', '10', '100'], [['1', '3.622', '3.622', '3.620', '3.695', '6.467'], ['2', '1.352', '1.352', '1.352', '1.493', '5.197'], ['3', '1.261', '1.260', '*1.256', '1.404', '2.564'], ['4', '2.345', '2.260', '1.900', '2.038', '2.268']]) } },
+      { id: 'pipeline', slide: 152, name: 'A pipeline: the scaler learns inside each fold', what: 'A pipeline chains the steps into one model: `StandardScaler` learns a mean and a standard deviation, `PolynomialFeatures` builds the powers and products, `Ridge` learns w and b. One `fit`, one `predict`, and the steps run in order.\n\nThe point is leakage. Inside cross-validation, in every round the scaler learns its mean and standard deviation from the training folds only. Scaling all the training data before cutting the folds would let the validation fold leak into them.', f: `model = make_pipeline(StandardScaler(),
+                      PolynomialFeatures(include_bias=False),
+                      Ridge())`, watch: 'Do not standardise the data first and cross-validate after: put the scaler in the pipeline, and cross-validate the pipeline.' },
+      { id: 'grid-code', slide: 156, name: 'Grid search in scikit-learn', what: 'The grid is a dictionary. Each key names a step of the pipeline and one of its settings, joined by two underscores (`step__setting`); the step’s name is its class name in lower case. Each value is the list of values to try.\n\nOne `fit` runs the 100 CV fits and the refit. Then `best_params_` holds the winning combination, `best_score_` its CV score (negative, as always), and `best_estimator_` the winner, already refitted on the whole training set.', f: `param_grid = {'polynomialfeatures__degree': [1, 2, 3, 4],
+              'ridge__alpha': [0.01, 0.1, 1, 10, 100]}
+search = GridSearchCV(model, param_grid, cv=kfold,
+                      scoring='neg_mean_squared_error')
+search.fit(X_train, y_train)
+search.best_params_       # the winning degree and alpha
+-search.best_score_       # its CV MSE
+best_model = search.best_estimator_`, watch: 'A single underscore, or a step name spelled differently, and GridSearchCV stops with “Invalid parameter”.' },
+      { id: 'recipe', slide: 162, name: 'The full recipe: cross-validate to choose, test once', what: 'The whole session in one recipe. On the stores it ends with degree 3 and λ = 1, and a test MSE of 1.75: an RMSE of 1.32 thousand units.', list: ['Split. Training and test.', 'Build a pipeline. Scaler, features, model.', 'Grid search on the training set. Every combination, scored with cross-validation.', 'Refit. The best combination is trained again on the whole training set.', 'Test once. Evaluate it on the test set, and report that number.'], watch: 'Cross-validate to choose. Test once.' },
+    ] },
+    { name: 'Today in Colab', cards: [
+      { id: 'guided', slide: 170, name: 'The guided notebook', what: 'The guided notebook goes through the session on the 150 stores, in six steps.', list: ['Split. Training and test only.', 'Cross-validate. Five folds and leave-one-out of the multiple regression.', 'Choose the degree. The degree of the TV polynomial, with cross-validation.', 'Many features. Polynomial features of the three budgets.', 'Regularise. Ridge and Lasso, and their coefficient paths.', 'Grid search. Degree and λ together, then one evaluation on test.'] },
+    ] },
+    { name: 'The exercise: pricing office rents', flowLabel: 'The nine tasks', flow: ['Split', 'Correlations', 'Five folds', 'Leave-one-out', 'The degree', 'Ridge and Lasso', 'Lasso path', 'Grid search', 'Test once'], cards: [
+      { id: 'ex-intro', name: 'The exercise: 200 offices for rent', what: 'An estate agency’s list of 200 offices for rent, made up by a small function in the notebook (synthetic data, written to offices.csv). Six features: floor area in m², number of rooms, distance from the city centre in km, walk to the nearest metro station in minutes, floor, and age of the building in years. The target is the monthly rent, in thousand €. The six feature names are listed once, in `FEATURES`.\n\nThe deck’s hint for this one: look for the features that Lasso sets to zero, and say why.\n\nHand it in: Runtime → Restart session and run all, check that every cell runs, download the .ipynb, rename it S3_<student id>.ipynb and put it in your Drive folder within 24 hours of the end of the lecture.\n\nAI assistants: a help, not a replacement. You must be able to explain every line you submit, which is what the cards below are for. The answers in words are yours to write.', f: `offices = pd.read_csv('offices.csv')
+FEATURES = ['area', 'rooms', 'distance', 'metro', 'floor', 'age']`, more: { html: () => tbl(['column', 'unit', 'role'], [['area', 'm²', 'feature'], ['rooms', 'count', 'feature'], ['distance', 'km from the centre', 'feature'], ['metro', 'minutes on foot', 'feature'], ['floor', 'floor number', 'feature'], ['age', 'years', 'feature'], ['rent', 'thousand € per month', 'target']]) } },
+      { id: 'ex-setup', name: 'The setup cell: what each import is for', what: 'The first cell loads the tools of the whole exercise, seeds NumPy’s random generator with SEED and sets one plot style. Each line brings one library or a few functions; the card says what each one does in this notebook.', f: `SEED = 42
+import time
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split, KFold, LeaveOneOut, cross_val_score, validation_curve, GridSearchCV
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+from sklearn.pipeline import make_pipeline
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+np.random.seed(SEED)` },
+      { id: 'ex-t1', name: 'Task 1 · Two sets', uses: ['cv-degree', 'recipe'], what: 'Split offices into a training set (80 %) and a test set (20 %), with random_state=SEED. Print the size of each set and show the summary statistics of the training set.\n\nWhat it practises: step 1 of the updated recipe. Only two sets now: cross-validation takes the place of the validation set.', f: `train, test = train_test_split(offices, test_size=0.2, random_state=SEED)
+
+X_train, y_train = train[FEATURES], train['rent']
+X_test, y_test = test[FEATURES], test['rent']
+
+print(len(train), len(test))
+train.describe()`, read: 'The two sizes should add up to 200, with four times as many offices in training as in test. In the describe table, read each column’s mean, min and max with its unit: a first check that the data look sensible (no negative area, rents of a few thousand € a month).', watch: 'Describe train, not offices: from here on the test set stays out of sight until Task 9.' },
+      { id: 'ex-t2', name: 'Task 2 · Correlations', uses: ['ridge-lasso'], what: 'Draw a heatmap of the correlation matrix of the training set, the six features and the rent, with the value written in each cell. Use cmap=\'coolwarm\', vmin=-1 and vmax=1, and add a title. Then say which two features carry almost the same information, and which feature is most related to the rent.\n\nWhat it practises: looking before modelling. Two features that move together are exactly where Ridge and Lasso behave differently, which Task 6 shows.', f: `plt.figure(figsize=(9, 7))
+sns.heatmap(train.corr(), annot=True, fmt='.2f', cmap='coolwarm', vmin=-1, vmax=1)
+plt.yticks(rotation=0)
+plt.title('Correlations in the training set')
+plt.show()`, read: 'Each cell is the correlation of two columns: from −1 (one goes up when the other goes down), through 0 (no straight-line link), to +1 (they go up together). Ignore the diagonal of 1s. For the first question, find the cell between two features closest to +1 or −1, and think about why those two would move together. For the second, read the rent row and take the largest value in size, whatever its sign.', watch: 'train.corr(), not offices.corr(): the test set is not looked at.' },
+      { id: 'ex-t3', name: 'Task 3 · Five folds', uses: ['one-split', 'kfold', 'cv-score', 'cv-code'], what: 'Create a KFold with 5 shuffled folds and random_state=SEED. With cross_val_score, compute the MSE of a LinearRegression on the six features in each fold. Print the five MSEs, their mean and their standard deviation. Then say how much the five errors differ, and what could go wrong if you judged the model on a single validation split.\n\nWhat it practises: k-fold cross-validation, the CV score and its spread.', f: `kfold = KFold(n_splits=5, shuffle=True, random_state=SEED)
+
+cv_mse = -cross_val_score(LinearRegression(), X_train, y_train, cv=kfold, scoring='neg_mean_squared_error')
+print(cv_mse.round(3))
+print(cv_mse.mean(), cv_mse.std())`, read: 'Compare the smallest and the largest of the five, and the spread with the mean: a spread that is a large share of the mean means the folds disagree. For the second question, use the lecture’s five cuts: a single split gives one of these five numbers, and you would not know which. The model you choose, and the error you report, would depend on luck.', watch: 'Without the minus sign the MSEs are negative. The same kfold is reused in Tasks 4, 5 and 8, so every comparison is made on the same folds.' },
+      { id: 'ex-t4', name: 'Task 4 · Leave-one-out', uses: ['loo', 'cv-code'], what: 'Score the same model with LeaveOneOut. Print the number of fits, the mean MSE and the time it takes, next to the same three numbers for the five folds of Task 3. Then say whether the two estimates of the error are close, and why leave-one-out takes longer.\n\nWhat it practises: leave-one-out, k = n.', f: `start = time.perf_counter()
+kfold_mse = -cross_val_score(LinearRegression(), X_train, y_train, cv=kfold, scoring='neg_mean_squared_error').mean()
+kfold_time = time.perf_counter() - start
+
+start = time.perf_counter()
+loo_mse = -cross_val_score(LinearRegression(), X_train, y_train, cv=LeaveOneOut(), scoring='neg_mean_squared_error').mean()
+loo_time = time.perf_counter() - start
+
+pd.DataFrame({'fits': [kfold.get_n_splits(), len(X_train)],
+              'mean MSE': [kfold_mse, loo_mse],
+              'seconds': [kfold_time, loo_time]},
+             index=['5-fold', 'leave-one-out']).round(3)`, read: 'Leave-one-out makes one fit per training office; five folds make five. Compare the two mean MSEs: close means five folds were enough here. For the time, link it to the number of fits. Your seconds will not match a classmate’s, but the ratio of the times should be of the same order as the ratio of the fits.', watch: 'Read the clock right after the line it times: time.perf_counter() - start goes before any print. Each leave-one-out fold has one office, so score with the MSE: R² cannot be computed on one value.' },
+      { id: 'ex-t5', name: 'Task 5 · Validation curve', uses: ['poly-many', 'grow', 'cv-degree', 'pipeline'], what: 'Build a pipeline of StandardScaler, PolynomialFeatures(include_bias=False) and LinearRegression. With validation_curve and the folds of Task 3, compute the training and the CV MSE for degrees 1 to 4 of the six features. Plot both against the degree. Then say which degree has the lowest CV error, what happens at degree 4, and why.\n\nWhat it practises: choosing the degree with cross-validation, and how fast polynomial features grow.', f: `poly_model = make_pipeline(StandardScaler(), PolynomialFeatures(include_bias=False), LinearRegression())
+
+DEGREES = range(1, 5)
+train_scores, cv_scores = validation_curve(
+    poly_model, X_train, y_train,
+    param_name='polynomialfeatures__degree', param_range=DEGREES,
+    cv=kfold, scoring='neg_mean_squared_error')
+
+train_mse = -train_scores.mean(axis=1)
+cv_mean = -cv_scores.mean(axis=1)
+
+plt.figure(figsize=(8, 5))
+plt.plot(DEGREES, train_mse, marker='o', label='training')
+plt.errorbar(DEGREES, cv_mean, yerr=cv_scores.std(axis=1), marker='o', capsize=4, label='5-fold CV')
+plt.xticks(list(DEGREES))
+plt.yscale('log')
+plt.xlabel('degree')
+plt.ylabel('MSE')
+plt.legend()
+plt.show()`, read: 'The lowest point of the CV curve is your degree. At degree 4, compare the two curves: the training error keeps falling, and the CV error? Then count: six inputs at degree 4 make 209 features (card “How fast the features grow”), and each round trains on 128 offices. Use the word overfitting.', watch: 'train_scores and cv_scores have one row per degree and one column per fold: average with axis=1, across the row. They are negative: put the minus in front.' },
+      { id: 'ex-t6', name: 'Task 6 · Ridge and Lasso', uses: ['penalty', 'ridge-lasso', 'scale-first'], what: 'On the six standardised features (no polynomial), fit a pipeline with Ridge(alpha=10) and one with Lasso(alpha=0.05) on the training set. Show their coefficients side by side in one table, one row per feature. Then say which coefficients Lasso sets to zero, why that makes sense for those two features, and how Ridge treats area and rooms.\n\nWhat it practises: the two penalties, and why the features are standardised first.', f: `ridge = make_pipeline(StandardScaler(), Ridge(alpha=10))
+ridge.fit(X_train, y_train)
+
+lasso = make_pipeline(StandardScaler(), Lasso(alpha=0.05))
+lasso.fit(X_train, y_train)
+
+coefficients = pd.DataFrame({'Ridge': ridge[-1].coef_, 'Lasso': lasso[-1].coef_}, index=FEATURES)
+coefficients.round(3)`, read: 'The features are standardised, so each coefficient is the change in rent (thousand €) for one standard deviation more of that feature: their sizes can be compared. Look for exact zeros in the Lasso column (−0.0 counts as zero). For the why, go back to Task 2: one zero is a feature that repeats another one; the other is a feature with little link to the rent. For Ridge, compare area and rooms: does it drop one, or share the weight between the two?', watch: 'ridge.coef_ does not exist: the pipeline has no weights, its last step has. Write ridge[-1].coef_, or ridge.named_steps[\'ridge\'].coef_.' },
+      { id: 'ex-t7', name: 'Task 7 · Lasso path', uses: ['lasso-path', 'ridge-lasso'], what: 'For 50 values of α from 0.001 to 1 (np.logspace(-3, 0, 50)), fit the Lasso pipeline of Task 6 and store its six coefficients. Plot each coefficient against α, with a logarithmic x axis and a legend. Then say in which order the features leave the model as α grows, and which one stays the longest.\n\nWhat it practises: reading a Lasso path.', f: `ALPHAS = np.logspace(-3, 0, 50)
+lasso_coefs = []
+for alpha in ALPHAS:
+    model = make_pipeline(StandardScaler(), Lasso(alpha=alpha))
+    model.fit(X_train, y_train)
+    lasso_coefs.append(model[-1].coef_)
+lasso_path = pd.DataFrame(lasso_coefs, index=ALPHAS, columns=FEATURES)
+
+plt.figure(figsize=(8, 5))
+for feature in FEATURES:
+    plt.plot(lasso_path.index, lasso_path[feature], label=feature)
+plt.axhline(0, color='grey', linewidth=1)
+plt.xscale('log')
+plt.xlabel('alpha (log scale)')
+plt.ylabel('coefficient')
+plt.legend()
+plt.show()`, read: 'Read from left to right: each line that reaches the zero line has left the model; note the order. The one still away from zero at the right edge stays the longest. Two checks: α = 0.05 is a point of this path, so it should agree with the Lasso column of Task 6; and the features that leave first should make sense with the correlations of Task 2.', watch: 'Without the log x axis the 50 values of α crowd into the right of the plot: np.logspace spreads them evenly over the powers of ten.' },
+      { id: 'ex-t8', name: 'Task 8 · Grid search', uses: ['hyper', 'grid', 'pipeline', 'grid-code'], what: 'Run a GridSearchCV on a pipeline of StandardScaler, PolynomialFeatures(include_bias=False) and Ridge, with degrees 1, 2, 3 and α in 0.01, 0.1, 1, 10, 100, and the folds of Task 3. Print the best hyperparameters and their CV MSE, then draw the CV MSE of every combination as a heatmap. Then say which degree and α win, and why degree 3 needs a larger α than degree 2.\n\nWhat it practises: hyperparameters, grid search and pipelines.', f: `pipeline = make_pipeline(StandardScaler(), PolynomialFeatures(include_bias=False), Ridge())
+param_grid = {
+    'polynomialfeatures__degree': [1, 2, 3],
+    'ridge__alpha': [0.01, 0.1, 1, 10, 100],
+}
+search = GridSearchCV(pipeline, param_grid, cv=kfold, scoring='neg_mean_squared_error')
+search.fit(X_train, y_train)
+print(search.best_params_)
+print(-search.best_score_)
+
+results = pd.DataFrame(search.cv_results_)
+table = -results.pivot_table(index='param_polynomialfeatures__degree', columns='param_ridge__alpha',
+                             values='mean_test_score')
+plt.figure(figsize=(8, 4))
+sns.heatmap(table, annot=True, fmt='.3f', cmap='viridis_r')
+plt.xlabel('alpha')
+plt.ylabel('degree')
+plt.title('5-fold CV MSE of every combination')
+plt.show()`, read: 'best_params_ names the winners, and the smallest number in the heatmap should be the same combination. For degree 3, read its row from left to right and compare it with the row of degree 2: where is each row lowest? For the why, use the lecture: count the features of each degree (card “How fast the features grow”) and say what a stronger penalty does to a model with more freedom.', watch: 'The keys are step__setting, with two underscores and the step names in lower case: polynomialfeatures, ridge. The grid has 3 × 5 = 15 combinations: 75 CV fits, then the refit.' },
+      { id: 'ex-t9', name: 'Task 9 · Final evaluation', uses: ['recipe', 'grid-code'], what: 'Take the best pipeline of the grid search, already refitted on the whole training set, and compute its metrics on the test set, once. Then say what the test RMSE means in euros per month, and why the test set was kept out of Tasks 3 to 8.\n\nRun the given cell first: regression_metrics is the function of Session 2, giving MAE, MSE, RMSE and R².\n\nWhat it practises: the last step of the recipe, test once.', f: `best_model = search.best_estimator_
+regression_metrics(y_test, best_model.predict(X_test))`, read: 'The rent is in thousand € per month, so the RMSE is too: × 1000 gives a typical error in euros on a month’s rent. Compare the test MSE with the best CV MSE of Task 8: close is normal, a little higher is common. For the why: every choice of Tasks 3 to 8 (the degree, α, the penalty) was made with cross-validation on the training offices; say what that leaves the test set worth.', watch: 'No fit here: best_estimator_ is already refitted. Run the cell once; changing the grid after seeing the test score turns the test set into a validation set.' },
+    ] },
+  ], practice: [
+    { id: 'l3-e1', title: 'Two folds on the four stores', setup: 'The four stores: TV x = 1, 2, 3, 4 and sales y = 3, 5, 4, 8. Cut them into k = 2 folds: fold A is stores 1 and 3, fold B is stores 2 and 4. The model is a straight line, fitted each round on the two training stores.', parts: [
+      ['Round 1: fold A validates. Which line do the training stores give?', () => code(`train on stores 2 and 4: (2, 5) and (4, 8)
+w = (8 − 5) / (4 − 2) = 3 / 2 = 1.5
+b = 5 − 1.5 × 2 = 2
+ŷ = 1.5x + 2`) + `<p>Two points: the line passes exactly through both, so its training error is 0.</p>`],
+      ['What is the validation MSE of round 1?', () => code(`store 1: ŷ = 1.5 × 1 + 2 = 3.5    e = 3 − 3.5 = −0.5
+store 3: ŷ = 1.5 × 3 + 2 = 6.5    e = 4 − 6.5 = −2.5
+MSE₁ = (0.25 + 6.25) / 2 = 3.25`)],
+      ['Round 2: fold B validates. The line, and its validation MSE?', () => code(`train on stores 1 and 3: (1, 3) and (3, 4)
+w = (4 − 3) / (3 − 1) = 0.5      b = 3 − 0.5 × 1 = 2.5
+store 2: ŷ = 3.5    e = 5 − 3.5 = 1.5
+store 4: ŷ = 4.5    e = 8 − 4.5 = 3.5
+MSE₂ = (2.25 + 12.25) / 2 = 7.25`)],
+      ['The CV MSE and its spread? Compare with line C’s training MSE of 1.05.', () => code(`CV MSE = (3.25 + 7.25) / 2 = 5.25
+spread = 2.0      # each error is 2.0 away from the mean`) + `<p>Training error 0 in each round, validation error 5.25 on average: <b>the error on stores a line has not seen is far larger</b> than on the stores it learned from, which is why a model is judged by cross-validation. The two rounds disagree a lot, 3.25 against 7.25: one split alone could have told either story.</p>`],
+    ] },
+    { id: 'l3-e2', title: 'Ridge and Lasso by hand', setup: 'The four stores again. Line C, ŷ = 1.4x + 1.5, has MSE 1.05. A flatter line, ŷ = x + 2.5, also passes through the point of the means (2.5, 5). Use the deck’s form, loss = MSE + λ · penalty, with the one weight w.', parts: [
+      ['Compute the MSE of the flatter line.', () => code(`ŷ   = 3.5, 4.5, 5.5, 6.5
+e   = −0.5, 0.5, −1.5, 1.5
+MSE = (0.25 + 0.25 + 2.25 + 2.25) / 4 = 5 / 4 = 1.25`) + `<p>Higher than line C’s 1.05, as it must be: C is the least-squares line.</p>`],
+      ['Ridge with λ = 1: which line has the lower loss? And with λ = 0.1?', () => code(`λ = 1:    C     1.05 + 1 × 1.4² = 1.05 + 1.96 = 3.01
+          flat  1.25 + 1 × 1²   = 1.25 + 1    = 2.25   ← lower
+λ = 0.1:  C     1.05 + 0.1 × 1.96 = 1.246              ← lower
+          flat  1.25 + 0.1 × 1    = 1.35`) + `<p>A weak penalty keeps the least-squares line; a strong one prefers the smaller weight.</p>`],
+      ['Lasso with λ = 1?', () => code(`C     1.05 + 1 × |1.4| = 2.45
+flat  1.25 + 1 × |1|   = 2.25   ← lower`) + `<p>The flatter line is in fact what scikit-learn’s Lasso finds on these stores with alpha = 0.5: w = 1.0, b = 2.5 (its loss is scaled differently).</p>`],
+      ['What does λ = 0 choose? And a huge λ? How would you pick λ?', () => `<p><b>λ = 0</b>: no penalty, line C wins: least squares. <b>A huge λ</b>: any weight costs too much, so w = 0 and the line is flat at the mean, ŷ = 5, MSE 3.5. In between, <b>λ is a hyperparameter</b>: try several values and keep the one with the lowest cross-validation error, never the lowest training error, which would always pick λ = 0.</p>`],
+    ] },
+    { id: 'l3-e3', title: 'Read a grid', setup: 'A grid search on the degree and λ, each combination scored with 5-fold cross-validation. The CV MSEs (made-up numbers, with the usual shape):', table: () => tbl(['degree', 'λ = 0.1', 'λ = 1', 'λ = 10'], [['1', '4.0', '4.0', '4.2'], ['2', '2.1', '2.0', '2.3'], ['3', '2.6', '1.9', '2.4']]), parts: [
+      ['How many fits does the grid search make?', () => code(`combinations = 3 degrees × 3 values of λ = 9
+CV fits      = 9 × 5 folds = 45
+refit        = 1, on the whole training set
+total        = 46`)],
+      ['Which combination wins?', () => `<p><b>Degree 3 with λ = 1</b>: the lowest CV MSE in the grid, 1.9. It is what best_params_ would hold, and best_estimator_ is that pipeline refitted on the whole training set.</p>`],
+      ['Degree 3 with λ = 0.1 does worse than degree 2. Why, and what rescues it?', () => code(`degree 3, λ = 0.1:  2.6
+degree 2, λ = 0.1:  2.1
+degree 3, λ = 1:    1.9`) + `<p>With a weak penalty degree 3 has more features than it can use, and follows the noise: <b>it overfits</b>. A stronger penalty shrinks its weights and brings it below degree 2. Too strong, λ = 10, and it underfits again.</p>`],
+      ['And degree 1? What comes after the grid search?', () => `<p>Degree 1 stays around 4.0 whatever λ: too simple, <b>it underfits</b>, and a penalty cannot add the curve it lacks. Next: the winner, already refitted on the whole training set, is measured once on the test set, and that number is reported.</p>`],
+    ] },
+  ], recap: ['One validation split is luck: k-fold cross-validation lets every observation validate once and averages the k errors; leave-one-out is k = n.', 'Powers and products of the features multiply fast, and so many features overfit.', 'Regularisation adds a penalty on the weights: Ridge (λ Σ w²) shrinks them all, Lasso (λ Σ |w|) sets some to exactly zero. Standardise first.', 'Parameters are learned by fit; hyperparameters (the degree, λ) are chosen by a grid search with cross-validation, inside a pipeline so the scaler learns within each fold.', 'Cross-validate to choose, refit the best on the whole training set, test once.'] },
 ];
 SESSIONS.forEach(s => { let k = 0; for (const g of s.groups) for (const c of g.cards) c.num = `${s.n}.${++k}`; });
 const readSize = () => Number(document.documentElement.style.getPropertyValue('--read')) || 1;
@@ -1119,6 +1345,16 @@ const PICTURES = {
     + tbl(['step', 'w', 'MSE'], [['0', '0', '15.75'], ['1', '1.05', '1.97'], ['2', '1.31', '1.11'], ['3', '1.38', '1.05']])
     + `<p class="pic-lede"><b>Choose on validation, measure once on test.</b></p>`
     + threeSets(),
+  3: () => `<p class="pic-lede"><b>The path of the session.</b> Split, compare with cross-validation, keep a flexible model in check with a penalty, let a grid search choose the settings, test once.</p>`
+    + flow(['Split', 'Cross-validate', 'Regularise', 'Grid search', 'Test once'])
+    + `<p class="pic-lede"><b>k-fold cross-validation:</b> each fold validates once (shaded) while the model trains on the others; the k errors are averaged.</p>`
+    + kfoldTbl()
+    + `<p class="pic-lede"><b>Leave-one-out on the four stores:</b> on stores it did not see, a line’s error averages 4.00, against 1.05 on the stores it learned from.</p>`
+    + looTbl()
+    + `<p class="pic-lede"><b>A penalty on the weight</b> pulls line C (w = 1.4) towards the mean line ŷ = 5. Ridge shrinks it; Lasso can reach exactly 0.</p>`
+    + shrinkTbl()
+    + `<p class="pic-lede"><b>Cross-validate to choose. Test once.</b></p>`
+    + flow(['Split', 'Pipeline', 'Grid search with CV', 'Refit the best', 'Test once']),
 };
 
 /* ---------- Every formula and every call, piece by piece ----------
@@ -1172,6 +1408,31 @@ const READS = {
   '2|ex-t9': { parts: [["train['age'].mean(), train['age'].std()", 'The first two blanks: mean and std of the TRAINING ages only.'], ['z_train', 'The standardised training ages, as a NumPy array.'], ['LEARNING_RATES', 'The blanks: three rates, for example 0.01 (slow), 0.1 (good), 1.5 (too large: diverges).'], ['runs = {rate: ...}', 'One run of gradient_descent per rate; each gives (w, b, losses).'], ['plt.plot(losses)', 'The MSE at each of the 100 steps.'], ["plt.yscale('log')", 'A log scale up: shows a fall from 1000 to 1 and a climb to 1e30 on one plot.'], ['w / age_std', 'Back to years: a step of 1 in z is age_std years, so the slope per year is w / std.'], ['b − w · age_mean / age_std', 'Back to years: the intercept at age 0 instead of at the mean age.']] },
   '2|ex-t10': { parts: [['z_val, z_test', 'The first two blanks: validation and test ages standardised with the TRAINING mean and std.'], ['polynomial_features(z, degree)', 'The notebook’s helper: columns z, z², …, z^degree.'], ['LinearRegression().fit(...)', 'One model per degree, fitted on the training cars.'], ['mean_squared_error(train[\'price\'], ...)', 'The train blank: the MSE on the cars it learned from.'], ['mean_squared_error(val[\'price\'], ...)', 'The val blank: the MSE on the validation cars, with the validation features.'], ['.set_index(\'degree\')', 'One row per degree.'], ['errors.plot(marker=\'o\')', 'Both MSE curves against the degree.'], ["errors['val'].idxmin()", 'The last blank: the degree (the index) where the validation MSE is lowest.']] },
   '2|ex-t11': { parts: [['np.concatenate([z_train, z_val])', 'Training and validation ages, one after the other.'], ['y_train_val', 'The blank: their prices, in the same order.'], ['final', 'The blank: the chosen degree, fitted on the 120 cars.'], ['polynomial_features(z_test, best_degree)', 'The test ages turned into the same columns.'], ['regression_metrics(test[\'price\'], ...)', 'The four metrics on the test set: computed once, reported as they are.']] },
+  '3|kfold': { parts: [['k', 'The number of folds: 5 here, 3 in the small example below.'], ['fold', 'One of the k equal parts of the training set, cut after shuffling.'], ['validate', 'The fold left out this round: the model is scored on it.'], ['train', 'The other k − 1 folds: the model learns on them this round.'], ['MSEᵢ', 'The validation error of round i.']], walk: { intro: 'The deck’s six training stores, numbered 1 to 6, shuffled into three folds: A = stores 4 and 1, B = 6 and 3, C = 5 and 2.', steps: [['round 1: A validates', 'the model trains on 2, 3, 5, 6'], ['round 2: B validates', 'it trains on 1, 2, 4, 5'], ['round 3: C validates', 'it trains on 1, 3, 4, 6'], ['in all', '3 fits; each store validates once and trains twice', 1]] } },
+  '3|cv-score': { parts: [['k', 'The number of folds, so the number of errors.'], ['MSEᵢ', 'The validation error of round i.'], ['Σᵢ', 'Add them up, for i from 1 to k.'], ['1/k', 'Divide by k: the sum becomes a mean.'], ['spread', 'The standard deviation of the k errors: their typical distance from the mean.']], walk: { intro: 'The deck’s three rounds gave MSE₁ = 2.0, MSE₂ = 3.5 and MSE₃ = 1.5:', steps: [['Σ', '2.0 + 3.5 + 1.5 = 7.0'], ['÷ k', '7.0 / 3'], ['CV MSE', '≈ 2.33', 1], ['spread', 'gaps to 2.33: −0.33, 1.17, −0.83; std ≈ 0.85'], ['one split alone', 'could have reported 1.5, or 3.5']] } },
+  '3|loo': { parts: [['LeaveOneOut()', 'The folds of leave-one-out: n of them, one store each.'], ['cross_val_score(...)', 'Fits the line 4 times, each time on 3 stores, and scores the store left out.'], ['-', 'The scores are negative MSEs: the minus turns them into errors.'], ['errors', 'One squared error per store, since each fold holds a single store.'], ['.mean()', 'The CV MSE: the mean of the four.']], walk: { intro: 'Round 4: leave out store 4 (x = 4, y = 8) and fit on stores 1 to 3:', steps: [['x̄, ȳ', '(1 + 2 + 3) / 3 = 2 and (3 + 5 + 4) / 3 = 4'], ['w', '((−1)(−1) + 0 × 1 + 1 × 0) / (1 + 0 + 1) = 1 / 2 = 0.5'], ['b', '4 − 0.5 × 2 = 3'], ['ŷ₄', '0.5 × 4 + 3 = 5'], ['error²', '(8 − 5)² = 9'], ['all four rounds', '(0.11 + 1 + 5.90 + 9) / 4 ≈ 4.00', 1]] } },
+  '3|cv-code': { parts: [['KFold(n_splits=5, ...)', 'Five folds.'], ['shuffle=True', 'Mixes the rows before cutting, so each fold is a fair sample.'], ['random_state=SEED', 'The same shuffle at every run: the same folds.'], ['cross_val_score(model, X, y, cv=kfold, ...)', 'Fits a fresh copy of the model on 4 folds and scores it on the fifth, five times over.'], ["scoring='neg_mean_squared_error'", 'The score to compute: minus the MSE.'], ['-', 'Flips the signs back: five MSEs.'], ['.mean(), .std()', 'The CV MSE and its spread.']] },
+  '3|cv-degree': { parts: [['validation_curve(model, X, y, ...)', 'Runs cross-validation once for each value of one setting.'], ["param_name='polynomialfeatures__degree'", 'The setting to vary: the degree of the PolynomialFeatures step.'], ['param_range=range(1, 13)', 'The values to try: 1 to 12.'], ['train_scores, cv_scores', 'Two tables, one row per degree and one column per fold: the scores on the training folds, and on the fold left out.'], ['.mean(axis=1)', 'The mean of each row: one number per degree (with a minus, as always).']] },
+  '3|poly-many': { parts: [['PolynomialFeatures(degree=2)', 'Every power and product of the inputs, up to degree 2.'], ['include_bias=False', 'No column of 1s: the model has its own intercept.'], ['fit_transform([[2, 3]])', 'One row with x₁ = 2 and x₂ = 3, turned into its five features.'], ['get_feature_names_out', 'The name of each new column; x1 x2 is the product.']], walk: { intro: 'x₁ = 2, x₂ = 3:', steps: [['x₁, x₂', '2, 3'], ['x₁², x₂²', '4, 9'], ['x₁x₂', '2 × 3 = 6'], ['the five features', '2, 3, 4, 6, 9, in the order x₁, x₂, x₁², x₁x₂, x₂²', 1]] } },
+  '3|grow': { parts: [['inputs', 'The original columns: 3 budgets for the stores, 6 features for the offices.'], ['degree', 'The highest power, or the most inputs multiplied together.'], ['features', 'The columns after PolynomialFeatures: one weight each.']], walk: { intro: 'The three budgets at degree 2 (TV, radio, social):', steps: [['the inputs', '3'], ['their squares', 'TV², radio², social²: 3'], ['the products of two', 'TV·radio, TV·social, radio·social: 3'], ['features', '3 + 3 + 3 = 9', 1], ['at degree 4, per fold', '96 stores for 34 weights: about 3 stores per weight']] } },
+  '3|penalty': { parts: [['Loss', 'What training now makes as small as possible.'], ['MSE', 'The error, as before.'], ['λ', 'Lambda: the strength of the penalty, never negative. alpha in scikit-learn.'], ['penalty on the weights', 'A number that grows with the size of the weights: their squares (Ridge) or their sizes (Lasso).']], walk: { intro: 'The four stores, one weight w:', steps: [['λ = 0', 'line C, w = 1.4: least squares'], ['λ larger', 'w shrinks and the line flattens'], ['λ huge', 'w = 0: ŷ = 5 for every store, the mean', 1]] } },
+  '3|ridge-lasso': { parts: [['Σⱼ', 'Add up over every weight j (the intercept is left out).'], ['wⱼ²', 'Ridge: each weight squared. Large weights cost a lot, small ones almost nothing.'], ['|wⱼ|', 'Lasso: each weight’s size, without its sign. Small weights still cost, so setting one to zero can pay.'], ['alpha', 'scikit-learn’s name for λ.'], ['.coef_', 'The weights after the penalty.'], ['(7 − 4α) / 5', 'Lasso’s slope on the four stores; 4 is the number of stores. Once 4α passes 7, the slope is exactly 0.']], walk: { intro: 'For one feature, scikit-learn’s Ridge gives w = Σ(x − x̄)(y − ȳ) / (Σ(x − x̄)² + α). On the four stores the top is 7 and the bottom 5 + α:', steps: [['α = 0', '7 / 5 = 1.4: line C'], ['Ridge, α = 1', '7 / 6 ≈ 1.17; b = 5 − 1.17 × 2.5 ≈ 2.08'], ['Ridge, α = 5', '7 / 10 = 0.7: smaller, but never 0'], ['Lasso, α = 1', '(7 − 4) / 5 = 0.6'], ['Lasso, α ≥ 1.75', '7 − 4α ≤ 0: w = 0 exactly, and ŷ = 5', 1]] } },
+  '3|two-models': { parts: [['MSE', 'Each model’s error on the data.'], ['(w₁, w₂)', 'Its two weights.'], ['λ = 0.1', 'The strength of the penalty.']], walk: { intro: 'Loss = MSE + 0.1 × penalty:', steps: [['Ridge, A', '4² + 3.5² = 16 + 12.25 = 28.25, so 1.0 + 2.825 = 3.825'], ['Ridge, B', '0.5² + 0.3² = 0.34, so 1.2 + 0.034 = 1.234'], ['Lasso, A', '4 + 3.5 = 7.5, so 1.0 + 0.75 = 1.75'], ['Lasso, B', '0.5 + 0.3 = 0.8, so 1.2 + 0.08 = 1.28'], ['winner', 'B, with both penalties', 1]] } },
+  '3|scale-first': { parts: [['StandardScaler()', 'Puts each feature at mean 0 and standard deviation 1, with the mean and std of the data it is fitted on.'], ['make_pipeline(...)', 'Chains the scaler and the model: one fit, one predict.'], ['Ridge(alpha=10)', 'Ridge with λ = 10, now on features of the same scale.']], walk: { intro: 'The same area, in two units:', steps: [['in m²', 'w = 0.015, w² = 0.000225'], ['in thousands of m²', 'w = 15, w² = 225'], ['ratio', '225 / 0.000225 = 1,000,000', 1]] } },
+  '3|grid': { parts: [['degree', '4 values to try.'], ['λ', '5 values to try.'], ['k', '5 folds for each combination.']], walk: { intro: 'Counting the fits:', steps: [['combinations', '4 × 5 = 20'], ['CV fits', '20 × 5 = 100'], ['refit', '1, on the whole training set'], ['total', '101 fits in one GridSearchCV fit', 1]] } },
+  '3|pipeline': { parts: [['make_pipeline(a, b, c)', 'One model made of steps that run in order.'], ['StandardScaler()', 'Learns each feature’s mean and std, then standardises.'], ['PolynomialFeatures(include_bias=False)', 'Builds the powers and products.'], ['Ridge()', 'Learns w and b with the penalty.'], ['.fit / .predict', 'fit runs every step’s fit in order; predict reuses what each step learned.']] },
+  '3|grid-code': { parts: [['param_grid', 'The values to try for each setting.'], ["'polynomialfeatures__degree'", 'Step polynomialfeatures, setting degree, joined by two underscores.'], ["'ridge__alpha'", 'Step ridge, setting alpha (λ).'], ['GridSearchCV(model, param_grid, cv=kfold, ...)', 'Every combination, each scored on the same folds.'], ['search.fit(X_train, y_train)', 'The 100 CV fits, then the refit of the winner.'], ['best_params_', 'The winning combination, as a dictionary.'], ['-search.best_score_', 'Its CV MSE: the score is negative, the minus flips it.'], ['best_estimator_', 'The winning pipeline, already refitted on the whole training set.']] },
+  '3|ex-intro': { parts: [["pd.read_csv('offices.csv')", 'Loads the file the hidden cell wrote: one row per office.'], ['offices', 'The table of 200 offices.'], ['FEATURES', 'The six feature names, written once and reused in every task.']] },
+  '3|ex-setup': { parts: [['SEED = 42', 'Fixes every random choice: the same split and the same folds at every run.'], ['time', 'A clock, to time leave-one-out in Task 4.'], ['train_test_split', 'Cuts the offices into training and test.'], ['KFold, LeaveOneOut', 'The two ways of making folds: k shuffled folds, or one office per fold.'], ['cross_val_score', 'Fits and scores a model on each fold.'], ['validation_curve', 'Training and CV scores for each degree, in one call.'], ['GridSearchCV', 'Tries every combination of degree and α with cross-validation.'], ['StandardScaler, PolynomialFeatures', 'Standardise the features; build their powers and products.'], ['make_pipeline', 'Chains the steps into one model.'], ['LinearRegression, Ridge, Lasso', 'Least squares, and its two penalised versions.'], ['mean_absolute_error, mean_squared_error, r2_score', 'The metrics of Session 2, used by regression_metrics in Task 9.'], ['np.random.seed(SEED)', 'Seeds NumPy’s random generator.']] },
+  '3|ex-t1': { parts: [['test_size=0.2', 'The blank: 20 % of the offices go to test.'], ['random_state=SEED', 'The same split at every run.'], ["train[FEATURES], train['rent']", 'X and y of the training set: a table of six columns, and the rents.'], ['print(len(train), len(test))', 'The first part of the last “...”: the two sizes.'], ['train.describe()', 'The second part: the summary statistics of the training set only.']], walk: { intro: '200 offices, test_size=0.2:', steps: [['test', '200 × 0.2 = 40'], ['train', '200 − 40 = 160', 1]] } },
+  '3|ex-t2': { parts: [['train.corr()', 'The first blank: the correlation of every pair of columns of the training set, a 7 × 7 table.'], ['annot=True', 'Writes the value in each cell.'], ["fmt='.2f'", 'Two decimals.'], ["cmap='coolwarm'", 'The second blank: blue for negative, red for positive.'], ['vmin=-1, vmax=1', 'The last two blanks: the colours cover the whole range, so 0 is the neutral middle.'], ['plt.yticks(rotation=0)', 'Row names written horizontally.'], ['plt.title(...)', 'The “...”: the title the task asks for.']] },
+  '3|ex-t3': { parts: [['n_splits=5', 'The first blank: five folds.'], ['shuffle=True, random_state=SEED', 'Shuffled, the same way at every run.'], ['LinearRegression()', 'The first blank of cross_val_score: a new, unfitted model; it is fitted once per fold.'], ['cv=kfold', 'The second blank: the folds just made.'], ['-cross_val_score(...)', 'Five negative MSEs, turned positive.'], ['cv_mse.mean(), cv_mse.std()', 'The “...”: the CV MSE and its spread.']], walk: { intro: '160 training offices in 5 folds:', steps: [['each fold', '160 / 5 = 32 offices validate'], ['each round trains on', '160 − 32 = 128 offices'], ['in all', '5 fits, 5 MSEs', 1]] } },
+  '3|ex-t4': { parts: [['time.perf_counter()', 'The time now, in seconds; the difference between two readings is how long the lines between them took.'], ['kfold_mse', 'The first blank: the mean MSE of the five folds.'], ['LeaveOneOut()', 'One office per fold.'], ['loo_mse', 'The second blank: the mean of 160 squared errors.'], ['loo_time', 'The third blank: time.perf_counter() - start.'], ['kfold.get_n_splits()', 'The number of folds: 5. Leave-one-out makes len(X_train) fits.'], ['pd.DataFrame({...}, index=[...])', 'The last “...”: one row per method, three columns, side by side.']] },
+  '3|ex-t5': { parts: [['make_pipeline(StandardScaler(), PolynomialFeatures(include_bias=False), LinearRegression())', 'The three blanks, in that order: scale, expand, fit.'], ["param_name='polynomialfeatures__degree'", 'The setting validation_curve varies.'], ['param_range=DEGREES', 'Degrees 1, 2, 3, 4.'], ['cv=kfold', 'The same five folds as Task 3.'], ['-train_scores.mean(axis=1)', 'The first blank: the training MSE of each degree, averaged over the folds.'], ['-cv_scores.mean(axis=1)', 'The second blank: the CV MSE of each degree.'], ['plt.errorbar(..., yerr=...)', 'The plot’s “...”: the CV curve, with a bar for its spread across the folds.'], ["plt.yscale('log')", 'Optional: a log scale keeps every degree readable when one error is far larger.']] },
+  '3|ex-t6': { parts: [['Ridge(alpha=10)', 'The first blank: Ridge with λ = 10.'], ['make_pipeline(StandardScaler(), Lasso(alpha=0.05))', 'The second blank: the same with Lasso, λ = 0.05.'], ['lasso.fit(X_train, y_train)', 'The “...”: fit it too.'], ['ridge[-1]', 'The last step of the pipeline: the Ridge model itself.'], ['.coef_', 'Its six weights, in the order of FEATURES, on standardised features.'], ["pd.DataFrame({'Ridge': ..., 'Lasso': ...}, index=FEATURES)", 'The two blanks: one column per model, one row per feature.']] },
+  '3|ex-t7': { parts: [['np.logspace(-3, 0, 50)', '50 values from 10⁻³ = 0.001 to 10⁰ = 1, evenly spaced on a log scale.'], ['for alpha in ALPHAS:', 'One fit per value.'], ['make_pipeline(StandardScaler(), Lasso(alpha=alpha))', 'The loop’s “...”: the pipeline of Task 6 with this α.'], ['lasso_coefs.append(model[-1].coef_)', 'Keeps the six weights of this fit.'], ['pd.DataFrame(lasso_coefs, index=ALPHAS, columns=FEATURES)', 'One row per α, one column per feature.'], ['plt.plot(lasso_path.index, lasso_path[feature], label=feature)', 'The plot’s “...”: one line per feature.'], ["plt.xscale('log')", 'The logarithmic x axis the task asks for.']] },
+  '3|ex-t8': { parts: [['make_pipeline(StandardScaler(), PolynomialFeatures(include_bias=False), Ridge())', 'The first blank: Ridge with no alpha yet; the grid sets it.'], ["'polynomialfeatures__degree': [1, 2, 3]", 'The degrees to try.'], ["'ridge__alpha': [0.01, 0.1, 1, 10, 100]", 'The α values to try.'], ["GridSearchCV(pipeline, param_grid, cv=kfold, scoring='neg_mean_squared_error')", 'The blank of GridSearchCV: the model, the grid, the folds of Task 3, the score.'], ['search.best_params_, -search.best_score_', 'The first “...”: the winners and their CV MSE.'], ['search.cv_results_', 'Every combination’s scores; mean_test_score is the mean over the folds (negative).'], ['pivot_table(index=..., columns=..., values=...)', 'Turns the 15 rows into a table: one row per degree, one column per α.'], ['sns.heatmap(table, annot=True, ...)', 'The last “...”: the table as a heatmap, with the values written in.']], walk: { intro: 'Counting the fits:', steps: [['combinations', '3 × 5 = 15'], ['CV fits', '15 × 5 = 75'], ['refit', '1'], ['total', '76 fits', 1]] } },
+  '3|ex-t9': { parts: [['search.best_estimator_', 'The blank: the winning pipeline, already refitted on the 160 training offices.'], ['best_model.predict(X_test)', 'Its rent for each of the 40 test offices.'], ['regression_metrics(y_test, ...)', 'The “...”: MAE, MSE, RMSE and R² on the test set, computed once.']] },
 };
 
 /* ---------- Store: this browser first, then the account ---------- */
@@ -1501,14 +1762,44 @@ const REF = [
     ['Outlier', 'A point far from the others. Squared errors let it pull the whole line.', '(5, 1) turns the slope to −0.1', 2, 'look'],
     ['Residual plot', 'Prediction across, residual up. A curve means a missed shape; a cloud means nothing left.', 'degree 1: a bend · degree 3: a cloud', 2, 'look'],
   ] },
+  { name: 'Cross-validation', items: [
+    ['Cross-validation', 'Every observation takes a turn in the validation set; the k validation errors are averaged.', 'CV MSE = (1/k) Σᵢ MSEᵢ', 3, 'cv-score'],
+    ['k-fold', 'The training set cut into k folds; each fold validates once while the model trains on the other k − 1.', 'k = 5: 5 fits, 5 errors', 3, 'kfold'],
+    ['Fold', 'One of the k equal parts of the training set, cut after shuffling.', '120 stores, k = 5: 24 per fold', 3, 'kfold'],
+    ['CV spread', 'The standard deviation of the k fold errors: how much the estimate depends on the cut.', 'errors 2.0, 3.5, 1.5: spread ≈ 0.85', 3, 'cv-score'],
+    ['Leave-one-out', 'k = n: each fold is a single observation. n fits; the score is the MSE.', 'four stores: 0.11, 1, 5.90, 9 → 4.00', 3, 'loo'],
+    ['KFold', 'Decides the folds: how many, shuffled or not, with which seed.', 'KFold(n_splits=5, shuffle=True, random_state=SEED)', 3, 'cv-code'],
+    ['LeaveOneOut', 'The folds of leave-one-out, one observation each.', 'cv=LeaveOneOut()', 3, 'loo'],
+    ['cross_val_score', 'Fits and scores a model on each fold; gives back the k scores.', "-cross_val_score(model, X, y, cv=kfold, scoring='neg_mean_squared_error')", 3, 'cv-code'],
+    ['neg_mean_squared_error', 'The MSE with a minus sign, because scikit-learn maximises scores.', 'cv_mse = -scores', 3, 'cv-code'],
+    ['validation_curve', 'Training and CV scores for each value of one setting, in one call.', "param_name='polynomialfeatures__degree', param_range=range(1, 13)", 3, 'cv-degree'],
+  ] },
+  { name: 'Regularisation', items: [
+    ['Regularisation', 'A penalty on the size of the weights, added to the error, so a flexible model stops following the noise.', 'Loss = MSE + λ · penalty on the weights', 3, 'penalty'],
+    ['λ (alpha)', 'The strength of the penalty. 0: least squares; very large: every weight goes to 0 and the model predicts the mean.', 'Ridge(alpha=10)', 3, 'penalty'],
+    ['Ridge', 'Penalty on the squared weights: shrinks them all, none to exactly zero.', 'MSE + λ Σⱼ wⱼ²   # four stores, α = 1: w = 1.17', 3, 'ridge-lasso'],
+    ['Lasso', 'Penalty on the absolute weights: some become exactly zero, so it chooses features.', 'MSE + λ Σⱼ |wⱼ|   # four stores, α = 2: w = 0', 3, 'ridge-lasso'],
+    ['Coefficient path', 'Each weight drawn against λ on a log scale. Ridge: all shrink together. Lasso: they leave one at a time.', 'np.logspace(-3, 0, 50)', 3, 'lasso-path'],
+    ['PolynomialFeatures', 'Builds every power and product of the inputs up to a degree.', 'x₁, x₂ → x₁, x₂, x₁², x₁x₂, x₂²', 3, 'poly-many'],
+    ['Interaction', 'The product of two inputs: the effect of one depends on the other.', 'TV × radio', 3, 'poly-many'],
+    ['StandardScaler', 'Learns each feature’s mean and std on the data it is fitted on, then standardises.', 'make_pipeline(StandardScaler(), Ridge())', 3, 'scale-first'],
+  ] },
+  { name: 'Hyperparameters', items: [
+    ['Parameter', 'A value learned by fit, from the data.', 'the weights w and the intercept b', 3, 'hyper'],
+    ['Hyperparameter', 'A setting chosen before fit, not learned from the data. Chosen by cross-validation.', 'the degree, λ, the learning rate', 3, 'hyper'],
+    ['Grid search', 'Every combination of hyperparameter values, each scored with CV; the best is refitted.', '4 degrees × 5 λ = 20 combinations: 100 fits + 1', 3, 'grid'],
+    ['GridSearchCV', 'Grid search in one fit. Then best_params_, best_score_ and best_estimator_.', 'GridSearchCV(pipeline, param_grid, cv=kfold, scoring=...)', 3, 'grid-code'],
+    ['make_pipeline', 'Chains steps into one model: one fit, one predict; the scaler learns inside each fold.', 'make_pipeline(StandardScaler(), PolynomialFeatures(include_bias=False), Ridge())', 3, 'pipeline'],
+    ['step__setting', 'How a grid names a setting of a pipeline step: the step in lower case, two underscores, the setting.', "'ridge__alpha': [0.01, 0.1, 1, 10, 100]", 3, 'grid-code'],
+  ] },
 ];
 
 /* ---------- A lecture ---------- */
 // Terms in a card's text, and calls or symbols in a code box: hoverable, but not coloured.
-const TERMS = /\b(residual plots?|residuals?|RMSE|MSE|MAE|gradient descent|gradients?|learning rate|overfitting|underfitting|baseline|data leakage|leakage|least squares|validation set|test set|training set|outliers?|standardis(?:e|ed|ing)|supervised learning|unsupervised learning|reinforcement learning|self-supervised learning|deep learning|classification|clustering|observations?|categorical|labelled)\b/gi;
+const TERMS = /\b(residual plots?|residuals?|RMSE|MSE|MAE|gradient descent|gradients?|learning rate|overfitting|underfitting|baseline|data leakage|leakage|least squares|validation set|test set|training set|outliers?|standardis(?:e|ed|ing)|supervised learning|unsupervised learning|reinforcement learning|self-supervised learning|deep learning|classification|clustering|observations?|categorical|labelled|cross-validation|k-fold|leave-one-out|folds?|regularisation|ridge|lasso|hyperparameters?|grid search|interactions?)\b/gi;
 // No letters to explain on this page: each formula has its own "What each piece means".
 const LETTERS = {};
-const CODE_TOKENS = /\btrain_test_split\b|\btest_size=|\bLinearRegression\b|\bDummyRegressor\b|\bmean_squared_error\b|\.fit\b|\.predict\b|\.coef_|\.intercept_|\bRMSE\b|\bMSE\b|\bMAE\b|R²|η|\.hist\b|\.scatter\b|\.bar\b|\.plot\b|\bboxplot\b|\.subplots\b|\.savefig\b|\bvalue_counts\b|\bgroupby\b|\.describe\b/g;
+const CODE_TOKENS = /\bneg_mean_squared_error\b|\bKFold\b|\bLeaveOneOut\b|\bcross_val_score\b|\bvalidation_curve\b|\bGridSearchCV\b|\bPolynomialFeatures\b|\bStandardScaler\b|\bmake_pipeline\b|\bRidge\b|\bLasso\b|\btrain_test_split\b|\btest_size=|\bLinearRegression\b|\bDummyRegressor\b|\bmean_squared_error\b|\.fit\b|\.predict\b|\.coef_|\.intercept_|\bRMSE\b|\bMSE\b|\bMAE\b|R²|η|\.hist\b|\.scatter\b|\.bar\b|\.plot\b|\bboxplot\b|\.subplots\b|\.savefig\b|\bvalue_counts\b|\bgroupby\b|\.describe\b/g;
 const codeKey = m => m.replace(/^\./, '').replace(/[()=]+$/, '');
 const symbolize = escaped => escaped.replace(CODE_TOKENS, m => (PEEK_TERM[codeKey(m)] ? `<span class="kw" data-kw="${codeKey(m)}">${m}</span>` : m));
 const letterSpan = (key, shown) => `<span class="kw kw-v" data-kw="${key}">${shown}</span>`;
@@ -1526,6 +1817,16 @@ function ruleHtml(r) {
   const at = r.search(/\.\s/);
   return at < 0 ? `<li>${kwText(r)}</li>` : `<li><b>${kwText(r.slice(0, at + 1))}</b><span>${kwText(r.slice(at + 2))}</span></li>`;
 }
+/* Asked for 2026-11-24: "connect it to the exercise in this notebook". An exercise task lists the lecture cards it
+ * practises (`uses`); each of those cards links back to the tasks, so the two directions always agree. */
+function linksHtml(s, c) {
+  const cards = s.groups.flatMap(g => g.cards);
+  const go = x => `<button type="button" class="ref-go" data-go="${esc(cardKey(s.n, x.id))}">${esc(x.num.split('.')[1])} · ${esc(x.name)} ›</button>`;
+  const used = cards.filter(x => c.uses?.includes(x.id));
+  const by = cards.filter(x => x.uses?.includes(c.id));
+  return (used.length ? `<p class="links"><b>The lecture cards it practises</b>${used.map(go).join('')}</p>` : '')
+    + (by.length ? `<p class="links"><b>Practised in the exercise</b>${by.map(go).join('')}</p>` : '');
+}
 function cardHtml(s, c, gi) {
   const key = cardKey(s.n, c.id), m = marks[key] || '';
   const r = READS[`${s.n}|${c.id}`], x = c.more || {};
@@ -1539,6 +1840,7 @@ function cardHtml(s, c, gi) {
     ${x.say ? `<p>${kwText(x.say)}</p>` : ''}${x.f ? `<pre>${mathHtml(x.f)}</pre>` : ''}
     ${c.read ? `<p class="watch read-res"><b>How to read your result</b>${kwText(c.read)}</p>` : ''}
     ${c.watch ? `<p class="watch"><b>Watch out</b>${kwText(c.watch)}</p>` : ''}
+    ${linksHtml(s, c)}
     <div class="notes"></div>
     <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button>${caseOf(key) ? '<button type="button" class="case-btn" aria-controls="case-pad">The case</button>' : ''}${ON_BRAIN && c.slide ? `<a class="slide-link" href="/api/coding/slides/LLMs${s.n}.pdf#page=${c.slide}" target="_blank" rel="noopener" aria-label="Slide ${c.slide} of ${s.pages}">Slide ${c.slide}<span class="of">/${s.pages}</span> ›</a>` : ''}
       ${marksHtml(m)}</div>
@@ -1585,6 +1887,24 @@ const PRACTICE_LAWS = {
     [[2, 'val-curve', 'Overfitting', 'low training error, much higher validation error', 'degree 12: 2.4 and 5.8']],
     [[2, 'three-sets', 'The recipe', 'fit on training · choose on validation · refit on both · test once', 'degree 3, refit on 90 + 30 = 120 stores, tested on 30']],
   ],
+  'l3-e1': [
+    [[2, 'ols', 'A line through two points', 'w = (y₂ − y₁) / (x₂ − x₁)\nb = y₁ − w x₁', 'w = (8 − 5) / (4 − 2)\nb = 5 − 1.5 × 2']],
+    [[2, 'mse', 'Validation MSE', 'MSE = (1/n) Σᵢ (yᵢ − ŷᵢ)²   # on the fold left out', '((−0.5)² + (−2.5)²) / 2']],
+    [[3, 'kfold', 'The next round', 'the next fold validates, the others train', 'fold B validates; stores 1 and 3 train']],
+    [[3, 'cv-score', 'The CV score', 'CV MSE = (1/k) Σᵢ MSEᵢ', '(3.25 + 7.25) / 2']],
+  ],
+  'l3-e2': [
+    [[2, 'mse', 'MSE', 'MSE = (1/n) Σᵢ (yᵢ − ŷᵢ)²', '(0.25 + 0.25 + 2.25 + 2.25) / 4']],
+    [[3, 'ridge-lasso', 'Ridge loss', 'MSE + λ Σⱼ wⱼ²', '1.05 + 1 × 1.4²  and  1.25 + 1 × 1²']],
+    [[3, 'ridge-lasso', 'Lasso loss', 'MSE + λ Σⱼ |wⱼ|', '1.05 + 1 × 1.4  and  1.25 + 1 × 1']],
+    [[3, 'penalty', 'The two extremes', 'λ = 0: least squares · λ huge: w → 0, the mean', 'line C · ŷ = 5'], [3, 'hyper', 'λ is a hyperparameter', 'chosen by cross-validation', 'the λ with the lowest CV MSE']],
+  ],
+  'l3-e3': [
+    [[3, 'grid', 'Counting fits', 'combinations × k folds + 1 refit', '3 × 3 × 5 + 1']],
+    [[3, 'grid', 'The winner', 'the lowest CV MSE of the grid', 'min = 1.9 → degree 3, λ = 1']],
+    [[3, 'ridge-poly', 'The penalty rescues a flexible model', 'more λ: smaller weights, less noise followed', 'degree 3: 2.6 → 1.9']],
+    [[3, 'recipe', 'The recipe', 'refit the best on all the training data · test once', 'degree 3, λ = 1, then the test set']],
+  ],
 };
 const cardNo = (n, id) => { const s = SESSIONS.find(x => x.n === n), i = s ? s.groups.flatMap(g => g.cards).findIndex(c => c.id === id) : -1; return i < 0 ? '' : String(i + 1); };
 function lawsHtml(s, laws) {
@@ -1605,6 +1925,9 @@ const PRACTICE_PICS = {
   'l2-e1': { given: [['x', '1, 2, 3, 4', 'TV budget of each store, thousand €'], ['y', '3, 5, 4, 8', 'sales of each store, thousand units'], ['line A', 'ŷ = x + 2', 'w = 1, b = 2'], ['ȳ', '5', 'the mean sales, for R²']], draw: () => stores(), read: 'Each row is one store: the line’s guess comes from x, the error from y.' },
   'l2-e2': { given: [['b', '1.5', 'the intercept, fixed'], ['w', '1', 'where you start'], ['η', '0.05', 'the learning rate'], ['n', '4', 'the number of stores']], draw: () => stores(), read: 'The bottom of the bowl is at w = 1.4: check that your step moves towards it.' },
   'l2-e3': { given: [['training', '90 stores', 'where each degree learns'], ['validation', '30 stores', 'where the degrees are compared'], ['test', '30 stores', 'kept for the end']], read: 'Read the two columns side by side: where does validation stop falling?' },
+  'l3-e1': { given: [['fold A', 'stores 1, 3', 'validates in round 1'], ['fold B', 'stores 2, 4', 'validates in round 2'], ['k', '2', 'the number of folds']], draw: () => stores({ extra: [['fold', ['A', 'B', 'A', 'B']]] }), read: 'In each round the line is fitted on the other fold’s two stores, then judged on its own two.' },
+  'l3-e2': { given: [['line C', 'ŷ = 1.4x + 1.5', 'least squares, MSE 1.05'], ['flat line', 'ŷ = x + 2.5', 'w = 1'], ['λ', '1, then 0.1', 'the strength of the penalty']], draw: () => stores({ extra: [['C', PRED_C], ['flat', ['3.5', '4.5', '5.5', '6.5']]] }), read: 'The penalty looks only at w: 1.4 for line C, 1 for the flat line.' },
+  'l3-e3': { given: [['degrees', '1, 2, 3', 'the flexibility'], ['λ', '0.1, 1, 10', 'the strength of the penalty'], ['k', '5', 'folds per combination']], read: 'Read each row from left to right, then compare the rows: where is the smallest number?' },
 };
 function picHtml(x) {
   const q = PRACTICE_PICS[x.id];
@@ -1696,6 +2019,20 @@ const ESSENTIALS = {
     { name: 'Underfitting and overfitting', is: 'Too simple: high error everywhere. Too flexible: low training error, higher validation error.', pic: () => tbl(['', 'training error', 'validation error'], [['underfitting', 'high', 'high'], ['just right', 'low', 'lowest'], ['overfitting', 'lowest', 'higher']]), watch: 'Never choose by training error: it always prefers the most flexible model.' },
     { name: 'The recipe', is: 'Split; fit every candidate on training; compare on validation; refit the winner on training + validation; test once.', watch: 'Choose on validation. Measure once, on test.' },
     { name: 'The exercise in five moves', is: 'The used cars: split, fit, compare on validation, choose the degree, test once.', f: "train_val, test = train_test_split(cars, test_size=0.2, random_state=SEED)\nsimple.fit(train[['age']], train['price'])\nregression_metrics(val['price'], model.predict(val[FEATURES]))\nbest_degree = errors['val'].idxmin()\nregression_metrics(test['price'], final.predict(...))", parts: [['val', 'every comparison and every choice'], ['test', 'one evaluation, at the very end']], watch: 'Standardise with the training mean and std, and keep the test set out until Task 11.' },
+  ],
+  3: [
+    { name: 'One split is not enough', is: 'A choice made on one validation set depends on which observations landed in it.', ex: 'Five random cuts of the 120 stores chose degrees 5, 3, 10, 5 and 2.', watch: 'Let every observation take a turn in validation, and average.' },
+    { name: 'k-fold cross-validation', is: 'Cut the training set into k folds; each validates once while the model trains on the rest. Average the k errors.', f: 'CV MSE = (1/k) Σᵢ MSEᵢ', parts: [['k', 'the number of folds, usually 5 or 10'], ['MSEᵢ', 'the validation error of round i'], ['spread', 'the std of the k errors: how much the cut matters']], ex: 'Errors 2.0, 3.5, 1.5: CV MSE = 7.0 / 3 ≈ 2.33, spread ≈ 0.85.' },
+    { name: 'Leave-one-out', is: 'k = n: each fold is one observation. n fits; score with the MSE.', ex: 'The four stores: squared errors 0.11, 1, 5.90, 9 → CV MSE 4.00, against a training MSE of 1.05.', watch: 'For small datasets; otherwise 5 or 10 folds give almost the same number for far fewer fits.' },
+    { name: 'Cross-validation in code', is: 'KFold makes the folds; cross_val_score fits and scores on each.', f: "kfold = KFold(n_splits=5, shuffle=True, random_state=SEED)\ncv_mse = -cross_val_score(model, X_train, y_train, cv=kfold,\n                          scoring='neg_mean_squared_error')", parts: [['-', 'scores come back negative: the minus turns them into MSEs']], watch: 'Reuse the same kfold for every comparison.' },
+    { name: 'Many features', is: 'PolynomialFeatures adds powers and products. Their number explodes with the degree, and so many weights overfit.', ex: 'x₁ = 2, x₂ = 3 → 2, 3, 4, 6, 9.', pic: () => tbl(['degree', '3 inputs', '6 inputs'], [['1', '3', '6'], ['2', '9', '27'], ['3', '19', '83'], ['4', '34', '209']]) },
+    { name: 'Ridge and Lasso', is: 'Add a penalty on the weights to the error. Ridge shrinks every weight; Lasso sets some to exactly zero.', f: 'Ridge:  MSE + λ Σⱼ wⱼ²\nLasso:  MSE + λ Σⱼ |wⱼ|', parts: [['λ', 'the strength, alpha in scikit-learn: 0 is least squares, huge predicts the mean'], ['wⱼ', 'the weight of feature j; b is not penalised']], ex: 'Four stores: Ridge with α = 1 gives w = 1.17; Lasso with α = 2 gives w = 0, the mean line ŷ = 5.' },
+    { name: 'Scale first', is: 'The penalty sees numbers, not units: standardise every feature, inside the pipeline.', ex: 'Area in m²: w = 0.015; in thousands of m²: w = 15, which Ridge punishes a million times more.' },
+    { name: 'Coefficient paths', is: 'Each weight against λ on a log scale. Ridge: all shrink together. Lasso: they hit zero one at a time, and the last to leave matters most.' },
+    { name: 'Parameters and hyperparameters', is: 'fit learns the parameters (w, b); you choose the hyperparameters (the degree, λ, the learning rate), with cross-validation.' },
+    { name: 'Grid search', is: 'Every combination scored with CV; the best is refitted on the whole training set.', f: "param_grid = {'polynomialfeatures__degree': [1, 2, 3, 4],\n              'ridge__alpha': [0.01, 0.1, 1, 10, 100]}\nsearch = GridSearchCV(pipeline, param_grid, cv=kfold)", parts: [['step__setting', 'the step’s name in lower case, two underscores, the setting'], ['best_estimator_', 'the winner, already refitted']], ex: '4 × 5 = 20 combinations × 5 folds = 100 fits, + 1 refit.', watch: 'The scaler sits in the pipeline, so it learns inside each fold: no leak.' },
+    { name: 'The full recipe', is: 'Split; build a pipeline; grid search with CV on the training set; the best is refitted; test once.', watch: 'Cross-validate to choose. Test once.' },
+    { name: 'The exercise in five moves', is: 'The offices: split, cross-validate, choose the degree, regularise, grid search, test once.', f: "kfold = KFold(n_splits=5, shuffle=True, random_state=SEED)\n-cross_val_score(LinearRegression(), X_train, y_train, cv=kfold, ...)\nmake_pipeline(StandardScaler(), Lasso(alpha=0.05)).fit(X_train, y_train)\nsearch = GridSearchCV(pipeline, param_grid, cv=kfold, ...)\nregression_metrics(y_test, search.best_estimator_.predict(X_test))", watch: 'The test set stays out of sight until Task 9.' },
   ],
 };
 /* Asked for 2026-11-19: "add summary pill at the start of each lesson (mirrors one below so note questions
@@ -2367,6 +2704,11 @@ const PEEK_TERM = {
   'validation set': 'Validation set', 'test set': 'Test set', 'training set': 'Training set', outlier: 'Outlier', standardise: 'Standardise', standardised: 'Standardise', standardising: 'Standardise',
   'supervised learning': 'Supervised learning', 'unsupervised learning': 'Unsupervised learning', 'reinforcement learning': 'Reinforcement learning', 'self-supervised learning': 'Self-supervised learning', 'deep learning': 'Deep learning',
   classification: 'Classification', clustering: 'Clustering', observation: 'Observation', categorical: 'Categorical', labelled: 'Labelled',
+  // Session 3.
+  neg_mean_squared_error: 'neg_mean_squared_error', KFold: 'KFold', LeaveOneOut: 'LeaveOneOut', cross_val_score: 'cross_val_score', validation_curve: 'validation_curve', GridSearchCV: 'GridSearchCV',
+  PolynomialFeatures: 'PolynomialFeatures', StandardScaler: 'StandardScaler', make_pipeline: 'make_pipeline', Ridge: 'Ridge', Lasso: 'Lasso',
+  'cross-validation': 'Cross-validation', 'k-fold': 'k-fold', fold: 'Fold', 'leave-one-out': 'Leave-one-out', regularisation: 'Regularisation', ridge: 'Ridge', lasso: 'Lasso',
+  hyperparameter: 'Hyperparameter', 'grid search': 'Grid search', interaction: 'Interaction',
 };
 const peekKey = w => PEEK_TERM[w] || PEEK_TERM[w.replace(/ies$/, 'y').replace(/s$/, '')] || PEEK_TERM[w.replace(/s$/, '')];
 const refByTerm = term => { for (const g of REF) for (const it of g.items) if (it[0] === term) return it; return null; };
@@ -2652,13 +2994,15 @@ document.addEventListener('mousedown', e => { if (e.target.closest && !e.target.
    The decks are the teacher's material, so they stay out of this public page: each user uploads them once
    to their private folder (the same one as the Python page's slides), and each card's "Slide n ›" opens
    them. A deck is filed as LLMs<session>.pdf: one whose name says Linear Regression, slides2 or session 2
-   becomes LLMs2.pdf; one that says Introduction, slides1 or session 1 becomes LLMs1.pdf. */
+   becomes LLMs2.pdf; Cross-Validation, slides3 or session 3 becomes LLMs3.pdf; one that says Introduction,
+   slides1 or session 1 becomes LLMs1.pdf. */
 const DECK_FILES = SESSIONS.map(s => `LLMs${s.n}.pdf`);
 function deckName(name) {
   if (!/\.pdf$/i.test(name)) return null;
   let file = null;
   const m = name.match(/^LLMs\s*(\d+)\.pdf$/i) || name.match(/(?:slides|lecture|lesson|session)[\s_-]*0*(\d+)(?!\d)/i);
   if (/linear[\s_-]*regression/i.test(name)) file = 'LLMs2.pdf';
+  else if (/cross[\s_-]*validation|regularisation/i.test(name)) file = 'LLMs3.pdf';
   else if (m) file = `LLMs${Number(m[1])}.pdf`;
   else if (/introduction/i.test(name)) file = 'LLMs1.pdf';
   return DECK_FILES.includes(file) ? file : null;

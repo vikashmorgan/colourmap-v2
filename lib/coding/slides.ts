@@ -46,6 +46,7 @@ export const SLIDE_FILES = [
   // The LLMs class (/llms): its session decks.
   'LLMs1.pdf',
   'LLMs2.pdf',
+  'LLMs3.pdf',
 ] as const;
 
 export type SlideFile = (typeof SLIDE_FILES)[number];
