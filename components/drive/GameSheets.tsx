@@ -7,7 +7,9 @@
  */
 
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+
+import { paintTitleArt } from '@/components/drive/title-art';
 
 import type { WorldId } from '@/lib/art/drive-design';
 import { ordinal, type RaceResult } from '@/lib/art/race-result';
@@ -145,8 +147,11 @@ export function TitleScreen({ onEnter }: { onEnter: () => void }) {
         color: `${quiet}0.92)`,
         background: 'linear-gradient(180deg, rgba(8,6,10,0) 40%, rgba(8,6,10,0.75))',
         animation: 'gs-in 900ms ease-out',
+        isolation: 'isolate',
+        overflow: 'hidden',
       }}
     >
+      <TitleArt />
       <style>{`
         @keyframes gs-in { from { opacity: 0 } to { opacity: 1 } }
         @keyframes gs-breathe { 0%,100% { opacity: .45 } 50% { opacity: 1 } }
@@ -174,6 +179,54 @@ export function TitleScreen({ onEnter }: { onEnter: () => void }) {
         Click to enter
       </div>
     </div>
+  );
+}
+
+/**
+ * The title's painted key art (components/drive/title-art.ts), full screen under the words: the
+ * fire flickers at about 30 frames a second, and stands still when motion is reduced.
+ */
+function TitleArt() {
+  const ref = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    const c = ref.current;
+    const ctx = c?.getContext('2d');
+    if (!c || !ctx) return;
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const t0 = performance.now();
+    let raf = 0;
+    let last = -1;
+    const sizeCanvas = () => {
+      const k = Math.min(window.devicePixelRatio || 1, 1.5);
+      c.width = Math.round(c.clientWidth * k);
+      c.height = Math.round(c.clientHeight * k);
+    };
+    const frame = (now: number) => {
+      if (now - last >= 33) {
+        last = now;
+        paintTitleArt(ctx, c.width, c.height, still ? 1.3 : 1.3 + (now - t0) / 1000);
+      }
+      if (!still) raf = requestAnimationFrame(frame);
+    };
+    const resize = () => {
+      sizeCanvas();
+      last = -1;
+      if (still) frame(performance.now());
+    };
+    sizeCanvas();
+    raf = requestAnimationFrame(frame);
+    window.addEventListener('resize', resize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+  return (
+    <canvas
+      ref={ref}
+      data-testid="title-art"
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: -1 }}
+    />
   );
 }
 

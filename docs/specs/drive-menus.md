@@ -13,6 +13,11 @@ Esc goes back one step; in a race it pauses.
 ## Title
 
 - Your current vehicle idling in the world you raced last, the camera turning slowly round it.
+- Over it, full screen, a painted key art (2026-11-24, `components/drive/title-art.ts`): the
+  hover ship boosting through a banked golden bend at sunset, rolled into the turn, both boosters
+  firing with a gear ring just broken, burners along both edges and the sun where the road ends.
+  Drawn on a 2D canvas, the road projected from the ground so the bank keeps its shape; only the
+  fire, the dashes and the sparks move, and nothing moves when motion is reduced.
 - "Colour Drive" (working title) in the display serif, one line: "Click to enter".
 - Any key or click opens the ring, on the track raced last (`drive.lastTrack`). A `?world=` link
   skips the title and the ring. (Built 2026-11-22, `components/drive/GameSheets.tsx`.)
