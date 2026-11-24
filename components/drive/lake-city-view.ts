@@ -134,18 +134,25 @@ function tower(
   }
 }
 
-/** Run k's lake and city, in the road's frame at (x, y) heading h (positions relative to (x, y)). */
+/**
+ * A lake and its city (towers laid out from `seed`), in the road's frame at (x, y) heading h
+ * (positions relative to (x, y)), on the road's right (`side` -1, as u) or its left (1), the water
+ * from `near` m out.
+ */
 export function buildLakeCity(
-  k: number,
+  seed: number,
   h: number,
   water: THREE.Material,
   body: THREE.Material,
   lit: THREE.Material,
+  side: 1 | -1 = -1,
+  near: number = LAKE_CITY.NEAR,
 ): THREE.Group {
   const ca = Math.cos(h);
   const sa = Math.sin(h);
-  // Along the heading, and out to the right of it; scene axes (x, height, -y).
-  const P = (a: number, b: number, z: number): V3 => {
+  // Along the heading, and out to its side; scene axes (x, height, -y).
+  const P = (a: number, b0: number, z: number): V3 => {
+    const b = -side * b0;
     const x = ca * a + sa * b;
     const y = sa * a - ca * b;
     return [x, z, -y];
@@ -153,17 +160,17 @@ export function buildLakeCity(
   const g = new THREE.Group();
   const b = new Mesh();
   const l = new Mesh();
-  lakeTowers(k).forEach((t, i) => {
+  lakeTowers(seed).forEach((t, i) => {
     tower(t, i, P, b, l);
   });
   // The water: a broad sheet from the near shore to past the far one.
   const w = new Mesh();
-  const { NEAR, FAR, SHORE, LENGTH, LEVEL } = LAKE_CITY;
+  const { FAR, SHORE, LENGTH, LEVEL } = LAKE_CITY;
   const deep: V3 = [0.004, 0.006, 0.016];
   const A = LENGTH / 2;
   w.quad(
-    P(-A, NEAR, LEVEL),
-    P(A, NEAR, LEVEL),
+    P(-A, near, LEVEL),
+    P(A, near, LEVEL),
     P(A, FAR + SHORE, LEVEL),
     P(-A, FAR + SHORE, LEVEL),
     deep,

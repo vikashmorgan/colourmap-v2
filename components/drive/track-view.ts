@@ -13,8 +13,9 @@
 import * as THREE from 'three';
 import { LOWER } from '@/lib/art/chinatown-paths';
 import { CT_STOREY, CT_TALL_FLOORS, ctCellRect, ctWindows } from '@/lib/art/chinatown-street';
+import { VISTA, vistaLocal, vistaStart } from '@/lib/art/chinatown-vista';
 import type { WorldCfg } from '@/lib/art/drive-worlds';
-import { lakeAnchor, lakeNear } from '@/lib/art/lake-city';
+import { LAKE_CITY, lakeAnchor, lakeNear } from '@/lib/art/lake-city';
 import {
   ARCH_STEP,
   chevronGlow,
@@ -58,7 +59,7 @@ import {
   twistPose,
   voidLeft,
 } from '@/lib/art/track';
-import { underTint } from '@/lib/art/undertown';
+import { UNDER, underTint } from '@/lib/art/undertown';
 import type { Weather } from '@/lib/art/weather';
 import { nearTwist, STRAIGHT } from '@/lib/art/wreck';
 import { ctSignMaterial, SignBuilder } from './chinatown-signs';
@@ -72,6 +73,9 @@ const VOID = { QUAY: 30, LAKE: -12.4, FAR: 240 };
 const VOID_SHOWS = 0.05;
 /** The lake city is built while you are this near its anchor (m along the road). */
 const LAKE_SEEN = 2300;
+/** The arcade's city is a skyline of its own (seeded apart), its water from this far out (m). */
+const VISTA_SEED = 500;
+const VISTA_NEAR = 60;
 /** How tall a building's reflection in the wet road may be (m). */
 const MIRROR_CAP = 26;
 const AHEAD = 1500;
@@ -716,7 +720,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     side: THREE.DoubleSide,
     toneMapped: false,
   });
-  const lakes = new Map<number, { group: THREE.Group; x: number; y: number }>();
+  const lakes = new Map<string, { group: THREE.Group; x: number; y: number }>();
   const lakeCities = theme === 'chinatown' && !!def.under;
   for (const m of [
     facade,
@@ -1136,6 +1140,92 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       }
       flushVoid();
       flushDeck();
+    }
+    // The lake arcade (lib/art/chinatown-vista.ts, 2026-11-24: "a whole part left that is below the
+    // buildings in a whole area with a wider view to the left"): the left side's shophouses up on a
+    // deck over the road's left edge (they are pieces; the deck is drawn here: dark underside, red
+    // faces, a gold line along its front edge), the terrace past the columns to a balustrade lit
+    // red, the drop, and the lake out to its city.
+    if (lakeCities) {
+      const at = (s: number, u: number, z: number): V3 => {
+        const p = pointAt(track, s, u);
+        return local(ax, ay, p.x, p.y, z);
+      };
+      const rows = { under: [] as V3[][], front: [] as V3[][], back: [] as V3[][] };
+      const terrace = { pts: [] as V3[][], cols: [] as V3[][] };
+      const lake = { pts: [] as V3[][], cols: [] as V3[][] };
+      const dark = lin(0.03, 0.01, 0.01);
+      const red = lin(0.2, 0.025, 0.02);
+      const pave = lin(0.05, 0.03, 0.028);
+      const stone = lin(0.035, 0.022, 0.024);
+      const deep = lin(0.004, 0.006, 0.016);
+      const gold: V3 = [1.4, 0.85, 0.3];
+      const rail: V3 = [1.3, 0.16, 0.08];
+      const paint = (r: V3[][], c: V3) => r.map((q) => q.map(() => c));
+      const flushArcade = () => {
+        if (rows.under.length > 1) {
+          grid(
+            ground,
+            rows.under.map((r) => [...r].reverse()),
+            paint(rows.under, dark),
+          );
+          grid(ground, rows.front, paint(rows.front, red));
+          grid(ground, rows.back, paint(rows.back, red));
+        }
+        if (terrace.pts.length > 1) grid(ground, terrace.pts, terrace.cols, true);
+        if (lake.pts.length > 1) grid(water, lake.pts, lake.cols);
+        rows.under = [];
+        rows.front = [];
+        rows.back = [];
+        terrace.pts = [];
+        terrace.cols = [];
+        lake.pts = [];
+        lake.cols = [];
+      };
+      let was = false;
+      for (let s = s0; s <= s1 + 0.01; s += ROW) {
+        const on = vistaLocal(s) !== null;
+        if (!on) {
+          if (was) flushArcade();
+          was = false;
+          continue;
+        }
+        const half = def.half(s);
+        const lo = half - VISTA.DECK_IN;
+        const hi = half + VISTA.DEEP + 1;
+        const z0 = hAt(s, half) + VISTA.DECK;
+        const z1 = z0 + VISTA.SLAB;
+        const cap = (zA: number, zB: number) =>
+          ground.quad(at(s, lo, zA), at(s, hi, zA), at(s, hi, zB), at(s, lo, zB), [0, 1, 0], red);
+        // The deck's ends, where the arcade starts and stops.
+        if (!was || vistaLocal(s + ROW) === null) cap(z0, z1);
+        was = true;
+        rows.under.push([at(s, lo, z0), at(s, (lo + hi) / 2, z0), at(s, hi, z0)]);
+        rows.front.push([at(s, lo, z1), at(s, lo, z0)]);
+        rows.back.push([at(s, hi, z0), at(s, hi, z1)]);
+        const rim = half + VISTA.RAIL;
+        terrace.pts.push([half + 15.5, half + 17, rim].map((u) => at(s, u, hAt(s, u) + 0.02)));
+        terrace.cols.push([pave, pave, pave]);
+        lake.pts.push([
+          at(s, rim, hAt(s, rim)),
+          at(s, rim, VOID.LAKE),
+          at(s, half + VOID.FAR, VOID.LAKE),
+        ]);
+        lake.cols.push([stone, deep, deep]);
+        const sb = Math.min(s + ROW, s1 + 0.01);
+        const line = (u: number, zA: number, zB: number, w: number, col: V3) =>
+          glow.quad(
+            at(s, u, zA),
+            at(sb, u, zB),
+            at(sb, u, zB - w),
+            at(s, u, zA - w),
+            [0, 1, 0],
+            col,
+          );
+        line(rim, hAt(s, rim) + 1.1, hAt(sb, rim) + 1.1, 0.12, rail);
+        line(lo - 0.05, z0 + 0.25, hAt(sb, half) + VISTA.DECK + 0.25, 0.1, gold);
+      }
+      flushArcade();
     }
     // The balcony road (lib/art/chinatown-paths.ts): a deck one storey up beside the road on the
     // left, its top the road's own colour, its underside dark, its two faces lacquer red; down its
@@ -2054,6 +2144,9 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     const centre = (s: number) => frameAt(track, s).e;
 
     /** A box in the road frame: (s, u) its middle, half sizes along and across, from h0 to h1. */
+    /** Drawing a piece up off the street (the lake arcade's buildings on their deck): no mirror in
+     * the wet road under it. */
+    let lifted = false;
     const box = (
       s: number,
       u: number,
@@ -2066,7 +2159,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       win: V3 | null,
       mirror = true,
     ) => {
-      for (const m of mirror ? [false, true] : [false]) {
+      for (const m of mirror && !lifted ? [false, true] : [false]) {
         // The mirror only shows the lower floors (the rest falls past the road's edge anyway), and
         // every metre of it is additive fill: cap it.
         if (m && h0 >= MIRROR_CAP) continue;
@@ -2115,7 +2208,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       base = groundAt(s, u),
       mirror = true,
     ) => {
-      for (const m of mirror ? [false, true] : [false]) {
+      for (const m of mirror && !lifted ? [false, true] : [false]) {
         const t = m ? nm : nb;
         const A = P(s, u, a[0], a[1], a[2], base, m);
         const B = P(s, u, b[0], b[1], b[2], base, m);
@@ -2155,7 +2248,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       base: number,
       mirror = true,
     ) => {
-      for (const m of mirror ? [false, true] : [false]) {
+      for (const m of mirror && !lifted ? [false, true] : [false]) {
         const t = m ? nm : nb;
         const c = P(s, u, 0, 0, h, base, m);
         const pts: V3[] = [
@@ -2325,8 +2418,10 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     function drawPiece(p: Piece) {
       const s = p.s;
       const half = def.half(s);
-      // Down in the underpass's void a piece stands on its floor, given.
+      // Down in the underpass's void a piece stands on its floor, given; up on the lake arcade's
+      // deck, on the deck.
       const base = p.base ?? groundAt(s, p.u);
+      lifted = base > groundAt(s, p.u) + 1;
       const c = p.colour;
       switch (p.kind) {
         case 'tower': {
@@ -2733,20 +2828,32 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       }
       for (const c of chunks.values()) c.group.position.set(c.ax - ox, 0, -(c.ay - oy));
       if (lakeCities) {
-        // The lake city of the Undertown run you are coming to or in, while it can be seen.
+        // The lake cities while they can be seen: past the underpass's void around each Undertown
+        // (on the right), and past the lake arcade after it (on the left, its own skyline).
+        const want = new Map<string, { at: number; seed: number; side: 1 | -1; near: number }>();
         const k = lakeNear(s);
-        const want = k !== null && Math.abs(s - lakeAnchor(k)) < LAKE_SEEN ? k : null;
-        for (const [i, l] of lakes) {
-          if (i === want) continue;
+        if (k !== null && Math.abs(s - lakeAnchor(k)) < LAKE_SEEN)
+          want.set(`u${k}`, { at: lakeAnchor(k), seed: k, side: -1, near: LAKE_CITY.NEAR });
+        const kk = Math.round((s - UNDER.AT) / UNDER.EVERY);
+        for (let kv = kk - 1; kv <= kk + 1; kv++) {
+          const a = vistaStart(kv);
+          if (a === null) continue;
+          const at = a + VISTA.LENGTH / 2;
+          if (Math.abs(s - at) < LAKE_SEEN)
+            want.set(`v${kv}`, { at, seed: kv + VISTA_SEED, side: 1, near: VISTA_NEAR });
+        }
+        for (const [key, l] of lakes) {
+          if (want.has(key)) continue;
           group.remove(l.group);
           disposeGroup(l.group);
-          lakes.delete(i);
+          lakes.delete(key);
         }
-        if (want !== null && !lakes.has(want)) {
-          const f = frameAt(track, lakeAnchor(want));
-          const lg = buildLakeCity(want, f.h, lakeMat, cityBody, cityLit);
+        for (const [key, w] of want) {
+          if (lakes.has(key)) continue;
+          const f = frameAt(track, w.at);
+          const lg = buildLakeCity(w.seed, f.h, lakeMat, cityBody, cityLit, w.side, w.near);
           group.add(lg);
-          lakes.set(want, { group: lg, x: f.x, y: f.y });
+          lakes.set(key, { group: lg, x: f.x, y: f.y });
         }
         for (const l of lakes.values()) l.group.position.set(l.x - ox, 0, -(l.y - oy));
       }

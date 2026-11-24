@@ -137,14 +137,16 @@ export const CT_BLADE_PAD = 20;
 export const CT_BLADE_STEP = 112;
 
 /**
- * The last four board cells carry the paths' signs (lib/art/chinatown-paths.ts): the underpass's
+ * The last five board cells carry the paths' signs (lib/art/chinatown-paths.ts): the lake
+ * arcade's name (望湖廊 LAKE ARCADE), the underpass's
  * wall panels (地下街 · 灯 · UNDERPASS), 下町 UNDERTOWN in pink neon, 地下街 UNDERPASS ↘ in gold on
  * lacquer, 露台 BALCONY in jade. The street's own boards take the cells before them
  * (CT_BOARD_FREE).
  */
-export const CT_PATH_CELLS = { deep: 28, under: 29, main: 30, balcony: 31 } as const;
-export const CT_BOARD_FREE = 28;
+export const CT_PATH_CELLS = { lake: 27, deep: 28, under: 29, main: 30, balcony: 31 } as const;
+export const CT_BOARD_FREE = 27;
 const PATH_CELL_WORDS: Record<number, { word: string; tone: number }> = {
+  [CT_PATH_CELLS.lake]: { word: PATH_SIGNS.lake, tone: 3 },
   [CT_PATH_CELLS.deep]: { word: PATH_SIGNS.deep, tone: 1 },
   [CT_PATH_CELLS.under]: { word: PATH_SIGNS.under, tone: 7 },
   [CT_PATH_CELLS.main]: { word: PATH_SIGNS.main, tone: 0 },
