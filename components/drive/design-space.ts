@@ -44,10 +44,18 @@ function dir(tr: Track, s: number, du: number, dh: number, dt: number): V3 {
   const sn = Math.sin(h);
   return norm([-sn * du + c * dt, dh, -c * du - sn * dt]);
 }
-/** Plain road here: no twist, loop, jump or deck. */
+/** Plain road here: no twist, loop, jump or deck, nor a second path beside it (Chinatown's
+ * Main Street fork or its balcony road and kicker). */
 function plain(tr: Track, s: number): boolean {
   const d = tr.def;
-  return !(d.twist?.(s) ?? 0) && !d.gap?.(s) && !(d.deck?.(s) ?? 0);
+  return (
+    !(d.twist?.(s) ?? 0) &&
+    !d.gap?.(s) &&
+    !(d.deck?.(s) ?? 0) &&
+    !(d.median && (d.bypass?.(s) ?? null) !== null) &&
+    !d.balcony?.(s) &&
+    !((d.kick?.(s, d.half(s)) ?? 0) > 0)
+  );
 }
 function plainSpan(tr: Track, s0: number, s1: number): boolean {
   for (let s = s0; s <= s1; s += 4) if (!plain(tr, s)) return false;

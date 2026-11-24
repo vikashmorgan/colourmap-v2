@@ -135,7 +135,58 @@ Lanterns, lanes and avenues.
       - Design's own tall signs are no longer worn on Chinatown Run (the street carries its own);
         still there to pick. Design's boards now read the right way round on both sides of the
         road (they were mirrored on the right-hand side and on the gates' plaques).
-- [ ] More banking in the bends (as the Neon District).
+- [x] **More banking in the bends** (2026-11-24: "a bit more tilt on the chinatown track for basic
+      moments"). The ordinary bends bank half as steep again: design speed 55 m/s (was 45), so a
+      gentle bend's bank has 1.5 times the tangent, up to 0.3 rad (about 17°; the other street roads
+      keep 0.2). The grid stays level: the bank is 0 to 120 m and eases in by 320 m
+      (`CHINA_BANK`, `CHINA_LEVEL` in lib/art/track.ts; `TrackDef.level`).
+- [x] **Two paths at Undertown: Main Street** (2026-11-24: "give option to keep going normal instead
+      of doing the tilt for the chinatown run so u can do it both ways and there are 2 paths").
+      `lib/art/chinatown-paths.ts` (pure, tested).
+      - Before each Undertown a lane 18 m wide peels off the road's right edge (from 420 m before the
+        flip, fully out 60 m before it), runs beside the flip with its centre 38 m right of the
+        road's (clear of the flip's sweep, about 23 m out), and merges back the same way after.
+        Keep left and you flip under; bear right and you drive on, on top, the right way up. It is
+        a twist's bypass (`TrackDef.bypass`), level with the road's right edge as the bank carries
+        it, so where the two meet nothing steps.
+      - Once the two have parted a median walls them apart (`TrackDef.median`): on the ribbon the
+        median is your right-hand barrier, on the lane the lane holds you as a road of its own.
+        Before they part the road's edge has no lip on that side, so you cross onto the lane
+        smoothly.
+      - Read at a glance: a gantry over the road 60 m before the fork's nose with **下町 UNDERTOWN ↶**
+        (pink neon) over the road ahead and **大街 MAIN STREET →** (gold on lacquer) over the lane;
+        chevrons of light in the road before it, violet straight ahead, gold bearing right; the
+        median's kerbs lit violet on the road's side and gold on the lane's, the lane's far edge
+        gold. The signs are three reserved cells of the street's sign atlas.
+      - The shophouses on the right stand back behind the lane (its far edge plus 2.5 m), easing
+        back with it as it peels off, so the lane has its own clear corridor. No span crosses the
+        road by the fork until the median is well apart; Design's dressing, the gates and the
+        stage passages keep out of the fork.
+      - On Main Street you are drawn flat (not rolled), no UNDERTOWN title, no boost (that is the
+        flip's). Rivals on the right of the grid bear right, the others go under; the autopilot
+        takes one way or the other at each fork, the same all along it.
+- [x] **The balcony road** (2026-11-24: "on the small jumps allow ability to jump go higher up left
+      and ride a second slope on the left. that is above the normal slope. like a side track above
+      the first floor of the buildings"). `lib/art/chinatown-paths.ts`.
+      - At the street's crests (1,500 m into each 2,000 m) clear of Undertown by 60 m: five crests
+        in every nine (the first at 3.5 km). A kicker on the left of the road (8 m of it, its inner
+        side easing in over 3 m) rises 2 m over the last 36 m up to the crest's top and ends in a
+        lip; the road's edge lip is off there, so you launch right to the edge.
+      - Jump up-left off it onto a deck 9 m wide one storey up (6 m over the road's left edge as
+        the bank carries it), its inner edge 0.5 m past the road's, running 240 m along the
+        shophouse fronts, then a 100 m ramp down to the street and 120 m sliding back onto the
+        road's left lane.
+      - Ground you land and drive on (`TrackDef.balcony`, `onBalcony`): level across, its own road
+        hold, an outer rail; its inner edge is open (you can drop back to the road). Coming over
+        its inner edge you land on it if you are no more than 1.5 m under its top; lower, its edge
+        stops you, and you are simply on the road below. The kicker is `TrackDef.kick`.
+      - Lit: a gantry 140 m before the crest with **露台 BALCONY ↖** in jade over the left of the
+        road, jade lights along the kicker's lip and its inner side, lanterns along the deck's rail
+        and gold along its open edge, red columns under it, its faces lacquer red, its top the
+        road's own colour. The shophouses on the left stand back behind its rail; no span crosses
+        the road along it.
+      - The rival furthest left on the grid goes for it; the autopilot takes it at about half the
+        crests.
 - [ ] Push and crash against the shophouse walls.
 - [ ] Bridges built into the buildings and over the road, not floating.
 - [x] **Undertown** (2026-11-23: "make racetrack two sided and at the edge there is a cool twist
@@ -151,8 +202,8 @@ Lanterns, lanes and avenues.
         always holds you to the road.
       - Unlike a twist it keeps its barriers. They close in to the ribbon's edge (0.4 m past it),
         easing over 40 m, so nobody falls off and nobody is drawn hanging in the air. No straight
-        road through its hollow: everyone goes under. The boost out of a twist still comes at its
-        end.
+        road through its hollow: on the road you go under (since 2026-11-24 Main Street is the way
+        past it on top). The boost out of a twist still comes at its end.
       - Where it flips, nothing crosses the road and nothing stands inside the sweep (the flip
         reaches out to the axis' height either side). Upside down, the street below keeps all its
         pieces.

@@ -18,6 +18,7 @@
  * Road coordinates: s along the centre line, u across it (positive to the left).
  */
 
+import { type Balcony, balcony, kickAt, mainMedian, mainStreet } from '@/lib/art/chinatown-paths';
 import { clamp, type Gate } from '@/lib/art/drive';
 import { compileTrack, type GateStyle, type TrackData } from '@/lib/art/track-data';
 import coastData from '@/lib/art/tracks/coast.json';
@@ -80,6 +81,15 @@ export interface TrackDef {
   blaze?(s: number): boolean;
   /** Where a twist's bypass lane runs here (its centre's u, on the right), or null. */
   bypass?(s: number): number | null;
+  /** Once the bypass has parted from the road a median walls the two apart (Chinatown's Main
+   * Street beside Undertown, which keeps its barriers); without it the two share one span. */
+  median?: boolean;
+  /** A raised lane beside the road on its left (Chinatown's balcony road), or null. */
+  balcony?(s: number): Balcony | null;
+  /** A kicker on the road: extra height at (s, u) over the road's own (m). */
+  kick?(s: number, u: number): number;
+  /** How much of its bank the road carries here (0 level, 1 all of it; default 1). */
+  level?(s: number): number;
   /** The radius (m) of the curved wall past the edge on a banked bend's high side, at full bank. */
   curl?: number;
   /** Where the road is raised as a bridge over another stretch of itself (no ground beside it). */
@@ -333,7 +343,7 @@ export function frameAt(t: Track, s: number): Frame {
     h,
     k,
     e: t.def.elev(sc),
-    bank: bankFor(k, t.def.bankSpeed, t.def.bankMax),
+    bank: bankFor(k, t.def.bankSpeed, t.def.bankMax) * (t.def.level?.(sc) ?? 1),
     half: t.def.half(sc),
   };
 }
@@ -384,11 +394,24 @@ export function gapAround(t: Track, s: number): { from: number; to: number } | n
 export function heightAt(t: Track, s: number, u: number, solid = false): number {
   const f = frameAt(t, s);
   if (!solid && t.def.gap?.(Math.max(0, s))) return f.e - VOID_DEPTH;
-  const lip = t.def.lip(Math.max(0, s));
+  const sc = Math.max(0, s);
   const uc = clamp(u, -f.half, f.half);
-  const edge = f.e - Math.tan(f.bank) * uc + lipAt(uc, f.half, lip);
-  // A bypass lane is road too, flat, beside the twist.
-  if (Math.abs(u) > f.half && onBypass(t, s, u) !== null) return f.e;
+  const lane = t.def.balcony?.(sc) ?? null;
+  // Where a lane joins the road unwalled (the bypass before the median, the balcony road merging
+  // back) the road's edge has no lip on that side, so you cross onto it smoothly.
+  const joined = uc < 0 ? !!t.def.median && joins(t, sc) : !!lane && !lane.raised;
+  const lip = joined ? 0 : t.def.lip(sc);
+  const edge = f.e - Math.tan(f.bank) * uc + lipAt(uc, f.half, lip) + (t.def.kick?.(sc, uc) ?? 0);
+  // A bypass lane is road too, flat, beside the twist; walled apart from the road, level with the
+  // road's edge on its side, so where they meet it never steps.
+  if (Math.abs(u) > f.half && onBypass(t, s, u) !== null)
+    return t.def.median ? f.e - Math.tan(f.bank) * Math.sign(u) * f.half : f.e;
+  // The balcony road: up on its deck (drawn as its own piece, so not part of the solid road), or
+  // down on the street as it merges back, level with the road's left edge.
+  if (lane && u > f.half && Math.abs(u - lane.c) <= lane.w) {
+    if (!lane.raised) return f.e - Math.tan(f.bank) * f.half;
+    if (!solid) return lane.z;
+  }
   const out = Math.abs(u) - f.half;
   if (out <= 0) return edge;
   const R = pipeRadius(t, s, u, f.bank);
@@ -483,6 +506,26 @@ export function onBypass(t: Track, s: number, u: number): number | null {
   return Math.abs(u - c) <= BYPASS_LANE ? u - c : null;
 }
 
+/** The balcony road under (s, u) if (s, u) is over its raised deck or ramp, else null. */
+export function onBalcony(t: Track, s: number, u: number): Balcony | null {
+  const bc = t.def.balcony?.(Math.max(0, s));
+  if (!bc?.raised) return null;
+  const half = t.def.half(Math.max(0, s));
+  return u > half && Math.abs(u - bc.c) <= bc.w ? bc : null;
+}
+
+/** Whether a walled-apart bypass (Main Street) runs here and still meets the road unwalled. */
+function joins(t: Track, s: number): boolean {
+  const c = t.def.bypass?.(s);
+  return c !== null && c !== undefined && mainMedian(c, t.def.half(s)) === null;
+}
+
+/** Where the median between the road and its bypass runs here (u), or null where there is none. */
+export function medianAt(t: Track, s: number): number | null {
+  if (!t.def.median) return null;
+  return mainMedian(t.def.bypass?.(Math.max(0, s)) ?? null, t.def.half(Math.max(0, s)));
+}
+
 /** How far a twist must have turned before its edges are open, without barriers (rad). */
 export const TWIST_OPEN = 0.15;
 
@@ -508,6 +551,9 @@ function corridor(
   out: number,
 ): NonNullable<Ground['road']> {
   const up = onDeck(t, s, u);
+  // Up on the balcony road: held on it, as on a road of its own, until its ramp brings you down.
+  const bc = onBalcony(t, s, u);
+  if (bc) return { h: f.h, k: f.k, u: u - bc.c, half: bc.w, pipe: 0 };
   const base = {
     h: f.h,
     k: f.k,
@@ -518,9 +564,30 @@ function corridor(
   const open = edgesOpen(t.def, s);
   const c = t.def.bypass?.(Math.max(0, s));
   const extra = open ? 8 : 0;
-  if (c === null || c === undefined) return open ? { ...base, half: base.half + extra } : base;
-  const hi = f.half + extra;
-  const lo = Math.min(-f.half, c - BYPASS_LANE) - extra;
+  // Beside the balcony road (or coming to its kicker) the span reaches out over it, so the road
+  // never eases you back in from the left edge as you go for the jump.
+  const side = t.def.balcony?.(Math.max(0, s));
+  const reachL = side
+    ? side.c + side.w
+    : (t.def.kick?.(Math.max(0, s), f.half) ?? 0) > 0
+      ? f.half + 10
+      : null;
+  if (c === null || c === undefined) {
+    if (reachL !== null) {
+      const lo = -f.half;
+      const hi = Math.max(f.half, reachL);
+      return { ...base, u: u - (hi + lo) / 2, half: (hi - lo) / 2, pipe: 0 };
+    }
+    return open ? { ...base, half: base.half + extra } : base;
+  }
+  // Walled apart from the road: on the lane, the lane alone holds you; on the road, the road.
+  const mid = medianAt(t, s);
+  if (mid !== null) {
+    if (u < mid) return { ...base, u: u - c, half: BYPASS_LANE, pipe: 0 };
+    if (reachL === null) return base;
+  }
+  const hi = Math.max(f.half, reachL ?? f.half) + extra;
+  const lo = (mid !== null ? -f.half : Math.min(-f.half, c - BYPASS_LANE)) - extra;
   return { ...base, u: u - (hi + lo) / 2, half: (hi - lo) / 2, pipe: 0 };
 }
 
@@ -531,10 +598,13 @@ export function groundAt(t: Track, px: number, py: number): Ground & { s: number
   const f = frameAt(t, s);
   const h = heightAt(t, s, u);
   // Slopes from the road as if it went on, so a gap's edge never reads as a cliff to slide down.
-  const dU = (heightAt(t, s, u + 0.25, true) - heightAt(t, s, u - 0.25, true)) / 0.5;
-  const dS =
-    (heightAt(t, s + 0.5, u, true) - heightAt(t, s - 0.5, u, true)) / Math.max(0.3, 1 - f.k * u) +
-    (t.def.surge?.(Math.max(0, s), u) ?? 0);
+  // Up on the balcony road, its own: level across, sloping only down its ramp.
+  const bc = onBalcony(t, s, u);
+  const dU = bc ? 0 : (heightAt(t, s, u + 0.25, true) - heightAt(t, s, u - 0.25, true)) / 0.5;
+  const dS = bc
+    ? (heightAt(t, s + 0.5, u) - heightAt(t, s - 0.5, u)) / Math.max(0.3, 1 - f.k * u)
+    : (heightAt(t, s + 0.5, u, true) - heightAt(t, s - 0.5, u, true)) / Math.max(0.3, 1 - f.k * u) +
+      (t.def.surge?.(Math.max(0, s), u) ?? 0);
   const c = Math.cos(f.h);
   const sn = Math.sin(f.h);
   const out = Math.abs(u) - f.half;
@@ -545,18 +615,30 @@ export function groundAt(t: Track, px: number, py: number): Ground & { s: number
     h,
     gx: dS * c - dU * sn,
     gy: dS * sn + dU * c,
-    rough: onDeck(t, s, u) ? 0 : clamp((out - reach) / 0.8, 0, 1),
+    rough: onDeck(t, s, u) || onSideLane(t, s, u) ? 0 : clamp((out - reach) / 0.8, 0, 1),
     // A high deck's wall and top are ridden, never launched from: up the wall and over onto it.
     lip:
       (t.def.deck?.(Math.max(0, s)) ?? 0) === Math.sign(u) && out > 0 && out <= DECK.OUT
         ? 1
-        : lipped
-          ? clamp((Math.abs(u) - (f.half - 2.5)) / 2.5, 0, 1)
-          : 0,
+        : // The kicker launches you right to the edge, and the balcony road has no lip.
+          bc || (t.def.kick?.(Math.max(0, s), f.half) ?? 0) > 0
+          ? 0
+          : lipped
+            ? clamp((Math.abs(u) - (f.half - 2.5)) / 2.5, 0, 1)
+            : 0,
     road: corridor(t, s, u, f, reach, out),
     s,
     u,
   };
+}
+
+/** Whether (s, u) is on a lane beside the road: a bypass or the balcony road (raised or merging). */
+function onSideLane(t: Track, s: number, u: number): boolean {
+  const f = t.def.half(Math.max(0, s));
+  if (Math.abs(u) <= f) return false;
+  if (onBypass(t, s, u) !== null) return true;
+  const bc = t.def.balcony?.(Math.max(0, s));
+  return !!bc && u > f && Math.abs(u - bc.c) <= bc.w;
 }
 
 /* ── Shapes along the road ─────────────────────────────────── */
@@ -643,6 +725,18 @@ export function chinatownHalf(s: number): number {
   return CHINA_LANE + (CHINA_AVENUE - CHINA_LANE) * avenue;
 }
 
+/** Chinatown's banking (2026-11-24: "a bit more tilt on the chinatown track for basic moments"):
+ * half as steep again as the other street roads' (BANK_MAX 0.2 and a design speed of 45 m/s): its
+ * design speed 55 m/s (1.5 times the bank's tangent on a gentle bend), at most 0.3 rad (about 17°). */
+export const CHINA_BANK = 0.3;
+export const CHINA_BANK_SPEED = 55;
+/** The grid stands level: the bank eases in from LEVEL[0] to LEVEL[1] m. */
+export const CHINA_LEVEL: readonly [number, number] = [120, 320];
+
+function chinaLevel(s: number): number {
+  return window01(s, CHINA_LEVEL[0], Number.POSITIVE_INFINITY, CHINA_LEVEL[1] - CHINA_LEVEL[0]);
+}
+
 export const CHINATOWN: TrackDef = {
   id: 'chinatown',
   startH: 0,
@@ -657,8 +751,9 @@ export const CHINATOWN: TrackDef = {
   },
   half: chinatownHalf,
   lip: () => 0.4,
-  bankSpeed: 45,
-  bankMax: BANK_MAX,
+  bankSpeed: CHINA_BANK_SPEED,
+  bankMax: CHINA_BANK,
+  level: (s) => chinaLevel(s),
   terrain: 0,
   walls: (s) => {
     // The shophouses' fronts stop you in the lanes; on the avenues the pavement is open.
@@ -678,6 +773,17 @@ export const CHINATOWN: TrackDef = {
   twist: underTwist,
   axis: (s) => (underLocal(s) === null ? chinatownHalf(s) : UNDER.AXIS),
   under: (s) => underLocal(s) !== null,
+  // Main Street, the way past Undertown on top (lib/art/chinatown-paths.ts).
+  bypass: mainStreet,
+  median: true,
+  // The balcony road at the crests clear of Undertown, and its kicker.
+  balcony: (s) => {
+    const half = chinatownHalf(s);
+    // Over the road's left edge as the bank lifts it (the street's own rises aside).
+    const bank = bankFor(CHINATOWN.curv(s), CHINA_BANK_SPEED, CHINA_BANK) * chinaLevel(s);
+    return balcony(s, half, -Math.tan(bank) * half);
+  },
+  kick: (s, u) => kickAt(s, u, chinatownHalf(s)),
 };
 
 export const NEON_HALF = 16;
@@ -871,6 +977,10 @@ export const RACE = {
 
 /** Half the vehicle's width, for hits. */
 export const BODY_R = 1.0;
+/** Coming over the balcony road's inner edge you need to be no more than this far under its deck
+ * (m) to land on it (you are lifted the rest, as a wheel catching the edge); lower, its edge
+ * stops you. */
+export const BALCONY_CLEAR = 1.5;
 
 /* ── The world for the physics ─────────────────────────────── */
 
@@ -903,18 +1013,53 @@ export function collideTrack(w: TrackWorld, v: Vehicle): Hit | null {
   const above = v.z - ground;
   // A twist has no barriers (2026-11-22): ride off it and you are gone.
   if (edgesOpen(tr.def, s)) return null;
+  // Up on the balcony road: its outer rail holds you; its inner edge is open (you drop to the road).
+  const up = onBalcony(tr, s, u);
+  if (up) {
+    const rail = up.c + up.w + 0.3;
+    if (u > rail - BODY_R)
+      return { nx: -nx, ny: -ny, depth: u - (rail - BODY_R), loss: 0, spin: 0, flow: true };
+    return null;
+  }
+  // Main Street walled apart from the road: on its lane, the median on the left and its far side
+  // on the right.
+  const by = tr.def.bypass?.(Math.max(0, s));
+  const mid = by === null || by === undefined ? null : medianAt(tr, s);
+  if (mid !== null && by !== null && by !== undefined && u < mid) {
+    const inner = Math.min(mid, by + BYPASS_LANE + 1);
+    if (u > inner - BODY_R)
+      return { nx: -nx, ny: -ny, depth: u - (inner - BODY_R), loss: 0, spin: 0, flow: true };
+    const r = walls.right;
+    const outer = by - BYPASS_LANE + (r ? r.u + f.half : -1);
+    if (u < outer + BODY_R)
+      return { nx, ny, depth: outer + BODY_R - u, loss: 0, spin: 0, flow: true };
+    return null;
+  }
   // A curled bend's wall stands back past its pipe's top.
   const left = walls.left;
   const deckSide = tr.def.deck?.(Math.max(0, s)) ?? 0;
   let lu = left ? left.u + (tr.def.curl ? pipeReach(tr, s, 1) : 0) : 0;
   if (left && deckSide === 1) lu = Math.max(lu, f.half + DECK.OUT);
-  if (left && u > lu - BODY_R && above < left.height) {
+  // Beside the balcony road: raised, its inner edge is a wall unless you come over it high enough
+  // to land on the deck; merging, the lane's far side funnels you back onto the road.
+  const side = tr.def.balcony?.(Math.max(0, s));
+  if (left && side) {
+    if (side.raised) {
+      const inner = side.c - side.w;
+      if (u > inner - BODY_R && v.z < side.z - BALCONY_CLEAR)
+        return { nx: -nx, ny: -ny, depth: u - (inner - BODY_R), loss: 0, spin: 0, flow: true };
+    } else {
+      lu = Math.max(lu, side.c + side.w + 0.3);
+      if (u > lu - BODY_R)
+        return { nx: -nx, ny: -ny, depth: u - (lu - BODY_R), loss: 0, spin: 0, flow: true };
+    }
+  } else if (left && u > lu - BODY_R && above < left.height) {
     return { nx: -nx, ny: -ny, depth: u - (lu - BODY_R), loss: 0, spin: 0, flow: true };
   }
   const right = walls.right;
-  const by = tr.def.bypass?.(Math.max(0, s));
   let ru = right ? right.u - (tr.def.curl ? pipeReach(tr, s, -1) : 0) : 0;
-  if (right && by !== null && by !== undefined)
+  if (right && mid !== null) ru = Math.max(mid, ru);
+  else if (right && by !== null && by !== undefined)
     ru = Math.min(ru, by - BYPASS_LANE + right.u + f.half);
   if (right && deckSide === -1) ru = Math.min(ru, -(f.half + DECK.OUT));
   if (right && u < ru + BODY_R && above < right.height) {

@@ -19,6 +19,8 @@
  * horizontal boards between them, and only light across the road, so the view down it stays open.
  */
 
+import { PATH_SIGNS } from './chinatown-paths';
+
 /** A storey (m), and the step from one shophouse to the next along a side (m). */
 export const CT_STOREY = 3.4;
 /** One crown roof's rise (m). */
@@ -134,10 +136,24 @@ export const CT_ATLAS = { size: 2048, cells: 32, blade: [128, 512], board: [512,
 export const CT_BLADE_PAD = 20;
 export const CT_BLADE_STEP = 112;
 
+/**
+ * The last three board cells carry the two paths' signs (lib/art/chinatown-paths.ts): 下町
+ * UNDERTOWN in pink neon, 大街 MAIN STREET in gold on lacquer, 露台 BALCONY in jade. The street's
+ * own boards take the cells before them (CT_BOARD_FREE).
+ */
+export const CT_PATH_CELLS = { under: 29, main: 30, balcony: 31 } as const;
+export const CT_BOARD_FREE = 29;
+const PATH_CELL_WORDS: Record<number, { word: string; tone: number }> = {
+  [CT_PATH_CELLS.under]: { word: PATH_SIGNS.under, tone: 7 },
+  [CT_PATH_CELLS.main]: { word: PATH_SIGNS.main, tone: 0 },
+  [CT_PATH_CELLS.balcony]: { word: PATH_SIGNS.balcony, tone: 5 },
+};
+
 /** Which word and tone atlas cell c (0..31) of a kind carries. */
 export function ctCell(kind: 'blade' | 'board', c: number): { word: string; tone: number } {
   const words = kind === 'blade' ? CT_BLADE_WORDS : CT_BOARD_WORDS;
   const k = ((c % CT_ATLAS.cells) + CT_ATLAS.cells) % CT_ATLAS.cells;
+  if (kind === 'board' && PATH_CELL_WORDS[k]) return PATH_CELL_WORDS[k];
   return { word: words[k % words.length], tone: k % CT_TONES.length };
 }
 
@@ -268,7 +284,7 @@ export function ctBoards(i: number, side: 1 | -1, floors: number, w: number): Ct
       lift: best,
       len,
       h,
-      cell: ((j % CT_ATLAS.cells) + CT_ATLAS.cells) % CT_ATLAS.cells,
+      cell: ((j % CT_BOARD_FREE) + CT_BOARD_FREE) % CT_BOARD_FREE,
     });
   });
   return out;

@@ -47,9 +47,11 @@ describe('night furniture', () => {
     for (const theme of ['rain', 'chinatown', 'neon'] as const) {
       for (const p of piecesBetween(theme, DEF[theme], 0, 3000)) {
         const half = DEF[theme].half(p.s);
+        // The paths' chevrons and the kicker's lip are lights set in the road.
         const overhead =
           p.lift >= 4.5 ||
-          ['arch', 'gate', 'temple', 'bridge', 'lights', 'lanterns'].includes(p.kind);
+          ['arch', 'gate', 'temple', 'bridge', 'lights', 'lanterns', 'gantry'].includes(p.kind) ||
+          (p.kind === 'beacon' && p.lift < 0.3);
         if (!overhead) expect(Math.abs(p.u)).toBeGreaterThan(half);
       }
     }

@@ -950,11 +950,76 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         for (const f of [-1.08, -1, -0.8, -0.4, 0, 0.4, 0.8, 1, 1.08]) {
           const u = c + f * BYPASS_LANE;
           const p = pointAt(track, s, u);
-          row.push(local(ax, ay, p.x, p.y, frameAt(track, s).e + 0.05));
+          // On the lane's own level (where it runs beside a banked road, its edge's).
+          row.push(local(ax, ay, p.x, p.y, hAt(s, u) + 0.05));
           crow.push(groundColour(cfg, s, f * BYPASS_LANE, BYPASS_LANE, snowLevel));
         }
         lane.push(row);
         lc.push(crow);
+      }
+      done();
+    }
+    // The balcony road (lib/art/chinatown-paths.ts): a deck one storey up beside the road on the
+    // left, its top the road's own colour, its underside dark, its two faces lacquer red; down its
+    // ramp, then flat on the street as it merges back.
+    if (def.balcony) {
+      let top: V3[][] = [];
+      let tc: V3[][] = [];
+      let bot: V3[][] = [];
+      let inner: V3[][] = [];
+      let outer: V3[][] = [];
+      const dark = lin(0.05, 0.012, 0.01);
+      const fascia = lin(0.36, 0.05, 0.035);
+      const paint = (rows: V3[][], c: V3) => rows.map((r) => r.map(() => c));
+      const done = () => {
+        if (top.length > 1) {
+          grid(ground, top, tc, true);
+          if (bot.length > 1) {
+            grid(
+              ground,
+              bot.map((r) => [...r].reverse()),
+              paint(bot, dark),
+            );
+            grid(
+              ground,
+              inner.map((r) => [...r].reverse()),
+              paint(inner, fascia),
+            );
+            grid(ground, outer, paint(outer, fascia));
+          }
+        }
+        top = [];
+        tc = [];
+        bot = [];
+        inner = [];
+        outer = [];
+      };
+      let wasRaised: boolean | null = null;
+      for (let s = s0; s <= s1 + 0.01; s += ROW) {
+        const bc = def.balcony(Math.max(0, s));
+        if (!bc || (wasRaised !== null && bc.raised !== wasRaised)) done();
+        if (!bc) {
+          wasRaised = null;
+          continue;
+        }
+        wasRaised = bc.raised;
+        const at = (u: number, z: number): V3 => {
+          const p = pointAt(track, s, u);
+          return local(ax, ay, p.x, p.y, z);
+        };
+        const fs = [-1, -0.6, -0.2, 0.2, 0.6, 1];
+        top.push(
+          fs.map((f) => at(bc.c + f * bc.w, bc.raised ? bc.z : hAt(s, bc.c + f * bc.w) + 0.05)),
+        );
+        tc.push(fs.map((f) => groundColour(cfg, s, f * bc.w, bc.w, snowLevel)));
+        if (bc.raised) {
+          const lo = bc.z - 0.7;
+          const uIn = bc.c - bc.w;
+          const uOut = bc.c + bc.w;
+          bot.push([at(uIn, lo), at(bc.c, lo), at(uOut, lo)]);
+          inner.push([at(uIn, bc.z), at(uIn, lo)]);
+          outer.push([at(uOut, bc.z + 1), at(uOut, lo)]);
+        }
       }
       done();
     }
@@ -2272,6 +2337,43 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         case 'blade':
         case 'billboard':
           lettered(p, base);
+          break;
+        case 'gantry': {
+          // The paths' sign gantry: two dark red posts and a beam, its top edge in gold light.
+          const e = centre(s);
+          const red: V3 = [0.12, 0.012, 0.01];
+          for (const end of [-p.d, p.d])
+            box(s, p.u + end, 0.3, 0.3, 0, p.lift, groundAt(s, p.u + end), red, null);
+          box(s, p.u, 0.25, p.d, p.lift - 0.5, p.lift, e, red, null);
+          bar(
+            s,
+            p.u,
+            [0, -p.d, p.lift + 0.05],
+            [0, p.d, p.lift + 0.05],
+            0.05,
+            glowCol(c, 1.8),
+            [0, 0, 0],
+            e,
+          );
+          break;
+        }
+        case 'beacon':
+          // On the balcony road at its own height; elsewhere over the ground.
+          if (p.z !== undefined) bulb(s, p.u, p.z, p.w, glowCol(c, 2.4), 0, false);
+          else bulb(s, p.u, p.lift, p.w, glowCol(c, 2.4), base);
+          break;
+        case 'pillar':
+          box(
+            s,
+            p.u,
+            0.3,
+            0.3,
+            0,
+            Math.max(0.5, (p.z ?? 0) - base),
+            base,
+            [0.14, 0.014, 0.01],
+            null,
+          );
           break;
         case 'arrow': {
           // A chevron, pointing the way the bend turns, lit by the wave.

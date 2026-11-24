@@ -21,7 +21,10 @@
  * courses are roads.
  */
 
+import { BALCONY, balconyLocal, forkNose, MAIN, mainMedian } from '@/lib/art/chinatown-paths';
 import {
+  CT_BOARD_FREE,
+  CT_PATH_CELLS,
   CT_STOREY,
   CT_TALL_FLOORS,
   CT_TONES,
@@ -33,6 +36,7 @@ import {
 } from '@/lib/art/chinatown-street';
 import { clamp } from '@/lib/art/drive';
 import { CHINA_LANE, type TrackDef } from '@/lib/art/track';
+import { UNDER } from '@/lib/art/undertown';
 
 export type Rgb = [number, number, number];
 export type NightTheme = 'rain' | 'chinatown' | 'neon' | 'gold';
@@ -141,7 +145,13 @@ export type PieceKind =
   | 'blade'
   | 'billboard'
   | 'arrow'
-  | 'bridge';
+  | 'bridge'
+  /** A beam on two posts across from u - d to u + d at `lift` (the paths' signs hang on it). */
+  | 'gantry'
+  /** A small light (w its size) at `lift` over the ground, or with `z` at that height. */
+  | 'beacon'
+  /** A red column from the ground up to `z` (the balcony road's supports). */
+  | 'pillar';
 
 /**
  * One piece of furniture, in road coordinates: at s, its middle u across (positive left), its size
@@ -165,6 +175,8 @@ export interface Piece {
   /** Chinatown's blades and boards: their cell in the sign atlas (lib/art/chinatown-street.ts). A
    * shophouse's `lift` is how many crown roofs it wears. */
   cell?: number;
+  /** On the balcony road: the height over the street's datum it stands at (m), not over the ground. */
+  z?: number;
 }
 
 const piece = (p: Partial<Piece> & Pick<Piece, 'kind' | 's'>): Piece => ({
@@ -311,7 +323,8 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
         const { half, avenue, under, floors } = shop(side, i);
         const back = 2.5 + (avenue ? 6 : 0);
         const w = SHOP_STEP * 0.48;
-        const face = half + back;
+        // Stood back behind Main Street on the right and the balcony road on the left.
+        const face = Math.max(half + back, pathClear(def, s, w, side));
         const id = i * 2 + (side > 0 ? 0 : 1);
         out.push(
           piece({
@@ -368,7 +381,7 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
         }
         // A name board on the roof of each tall tiered tower, facing the way you come.
         if (floors >= CT_TALL_FLOORS && !under) {
-          const cell = (i * 3 + (side > 0 ? 7 : 0)) % 32;
+          const cell = (i * 3 + (side > 0 ? 7 : 0)) % CT_BOARD_FREE;
           out.push(
             piece({
               kind: 'billboard',
@@ -390,6 +403,7 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
     // High strings of light across the street, where the towers both sides stand taller than them
     // (the City's strands at three heights); only light crosses the road.
     each(HIGH_LIGHTS_STEP, 60, (s, i) => {
+      if (onPath(def, s)) return;
       const iL = Math.round(s / SHOP_STEP);
       const iR = Math.round((s - SHOP_STEP / 2) / SHOP_STEP);
       const low = Math.min(shop(1, iL).floors, shop(-1, iR).floors) * CT_STOREY;
@@ -401,10 +415,11 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
     // Lantern strings overhead every 40 m, gates every 400 m, a temple gate where each avenue opens.
     each(LANTERN_STEP, 20, (s, i) => {
       if (Math.abs(s - Math.round(s / GATE_STEP) * GATE_STEP) < 25) return;
+      if (onPath(def, s)) return;
       out.push(piece({ kind: 'lanterns', s, lift: 8.5, colour: LANTERN, id: i }));
     });
     each(GATE_STEP, 0, (s, i) => {
-      if (i === 0) return;
+      if (i === 0 || onPath(def, s)) return;
       const temple = i % 3 === 0;
       out.push(
         piece({
@@ -417,6 +432,8 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
       );
     });
   }
+
+  if (theme === 'chinatown') out.push(...pathPieces(def, s0, s1));
 
   if (theme === 'neon') {
     // Bridges overhead between the towers.
@@ -559,4 +576,179 @@ export function surgeAccel(since: number): number {
   if (since < 0 || since >= SURGE_LIFE) return 0;
   const k = since / SURGE_LIFE;
   return SURGE_PULL * clamp(k * 8, 0, 1) * (1 - k) * (1 - k);
+}
+
+/* ── Chinatown's two paths (lib/art/chinatown-paths.ts) ────── */
+
+/** Whether s is by the fork (Main Street not yet walled well apart from the road) or the balcony
+ * road, with room either side for a span's posts: no span across the road there. */
+function onPath(def: TrackDef, s: number): boolean {
+  for (const d of [-25, 0, 25]) {
+    const q = Math.max(0, s + d);
+    const c = def.bypass?.(q) ?? null;
+    const half = def.half(q);
+    const mid = mainMedian(c, half);
+    if (c !== null && (mid === null || mid > -(half + 5))) return true;
+    if (def.balcony?.(q) || (def.kick?.(q, def.half(q)) ?? 0) > 0) return true;
+  }
+  return false;
+}
+
+/**
+ * How far from the centre a shophouse half-length w at s must keep its face on its side: past Main
+ * Street's far edge on the right, past the balcony road's rail on the left (0 where neither runs).
+ */
+export function pathClear(def: TrackDef, s: number, w: number, side: 1 | -1): number {
+  let need = 0;
+  for (const d of [-w - 2, -w / 2, 0, w / 2, w + 2]) {
+    const q = Math.max(0, s + d);
+    if (side < 0) {
+      const c = def.bypass?.(q);
+      if (c !== null && c !== undefined) need = Math.max(need, -c + MAIN.LANE + 2.5);
+    } else {
+      const bc = def.balcony?.(q);
+      if (bc) need = Math.max(need, bc.c + bc.w + 2.5);
+    }
+  }
+  return need;
+}
+
+const PATH_GOLD: Rgb = [1, 0.72, 0.3];
+const PATH_VIOLET: Rgb = [0.62, 0.22, 1];
+const PATH_JADE: Rgb = [0.3, 0.95, 0.6];
+
+/**
+ * The fork before each Undertown and the balcony road, lit and signed: over the road before the
+ * fork a gantry with 下町 UNDERTOWN ↶ over the road ahead and 大街 MAIN STREET → over the lane
+ * peeling off; chevrons of light on the road, violet ahead and gold bearing right; the median's
+ * kerbs in violet on the road's side and gold on the lane's, the lane's far edge in gold. Before
+ * each balcony road a gantry with 露台 BALCONY ↖ over the left of the road, jade lights along the
+ * kicker's lip and its inner side; on the deck lanterns along its rail and gold along its open
+ * edge, red columns under it.
+ */
+export function pathPieces(def: TrackDef, s0: number, s1: number): Piece[] {
+  const out: Piece[] = [];
+  const halfAt = (s: number) => def.half(Math.max(0, s));
+  const step = (every: number, f: (s: number, i: number) => void) => {
+    for (let i = Math.ceil(s0 / every); i * every < s1; i++) {
+      const s = i * every;
+      if (s >= 0) f(s, i);
+    }
+  };
+  const beacon = (s: number, u: number, lift: number, colour: Rgb, size: number, id: number) =>
+    out.push(piece({ kind: 'beacon', s, u, lift, w: size, colour, id }));
+  const board = (s: number, u: number, cell: number, colour: Rgb, id: number) =>
+    out.push(
+      piece({ kind: 'billboard', s, u, w: 0.08, d: 3.8, h: 1.9, lift: 5.4, colour, id, cell }),
+    );
+
+  if (def.bypass && def.median) {
+    // The signs: a gantry 60 m before the nose, a board over each way.
+    for (let k = Math.max(0, Math.floor((s0 - UNDER.AT) / UNDER.EVERY)); ; k++) {
+      const under = UNDER.AT + k * UNDER.EVERY;
+      if (under - MAIN.SPLIT > s1) break;
+      const g = forkNose(under, halfAt(under - MAIN.SPLIT / 2)) - 60;
+      if (g < s0 || g >= s1) continue;
+      const half = halfAt(g);
+      const c = def.bypass(g) ?? 0;
+      const uL = half + 1.2;
+      const uR = Math.min(-half, c - MAIN.LANE) - 1.2;
+      out.push(
+        piece({
+          kind: 'gantry',
+          s: g,
+          u: (uL + uR) / 2,
+          d: (uL - uR) / 2,
+          lift: 7.6,
+          colour: PATH_GOLD,
+          id: k,
+        }),
+      );
+      board(g, half * 0.3, CT_PATH_CELLS.under, PATH_VIOLET, k);
+      board(g, Math.min(c, -half - 2), CT_PATH_CELLS.main, PATH_GOLD, k);
+    }
+    step(3, (s, i) => {
+      const c = def.bypass?.(s);
+      if (c === null || c === undefined) return;
+      const half = halfAt(s);
+      const mid = mainMedian(c, half);
+      if (mid !== null) {
+        if (mid > -(half + 1.5)) return;
+        // The median's kerbs: violet on the road's side, gold on the lane's; the lane's far edge.
+        if (i % 2 === 0) {
+          beacon(s, Math.max(mid, -(half + 1)) - 0.2, 0.5, PATH_VIOLET, 0.16, i);
+          beacon(s, Math.min(mid, c + MAIN.LANE + 1) + 0.2, 0.5, PATH_GOLD, 0.16, i);
+        } else beacon(s, c - MAIN.LANE - 0.4, 0.5, PATH_GOLD, 0.16, i);
+      } else if (i % 10 === 0 && c < -2) {
+        // Before the nose, chevrons on the road: gold bearing right over the lane, violet ahead.
+        for (let o = -3; o <= 3; o++) {
+          beacon(s + o * 0.9, c - (3 - Math.abs(o)) * 0.9, 0.12, PATH_GOLD, 0.14, i * 8 + o);
+          beacon(s - Math.abs(o) * 0.9, half * 0.4 + o * 0.9, 0.12, PATH_VIOLET, 0.14, i * 8 + o);
+        }
+      }
+    });
+  }
+
+  if (def.balcony && def.kick) {
+    step(2, (s, i) => {
+      const half = halfAt(s);
+      const x = balconyLocal(s);
+      if (x === null) return;
+      if (x < 0) {
+        if (x > -2) {
+          // The kicker's lip in jade, across it.
+          for (let u = half - BALCONY.KICK_W; u <= half - 0.3; u += 0.8)
+            beacon(s, u, 0.18, PATH_JADE, 0.16, i);
+        } else if (i % 3 === 0) beacon(s, half - BALCONY.KICK_W - 1.5, 0.12, PATH_JADE, 0.14, i);
+        return;
+      }
+      const bc = def.balcony?.(s);
+      if (!bc) return;
+      if (bc.raised) {
+        // Gold along the open edge, a lantern every 8 m on the rail, red columns every 12 m.
+        if (i % 2 === 0)
+          out.push(
+            piece({
+              kind: 'beacon',
+              s,
+              u: bc.c - bc.w + 0.2,
+              w: 0.15,
+              colour: PATH_GOLD,
+              id: i,
+              z: bc.z + 0.3,
+            }),
+          );
+        if (i % 4 === 0)
+          out.push(
+            piece({
+              kind: 'beacon',
+              s,
+              u: bc.c + bc.w + 0.2,
+              w: 0.32,
+              colour: LANTERN,
+              id: i,
+              z: bc.z + 1.3,
+            }),
+          );
+        if (i % 6 === 0)
+          for (const du of [-(bc.w - 0.6), bc.w - 0.6])
+            out.push(
+              piece({ kind: 'pillar', s, u: bc.c + du, z: bc.z - 0.6, colour: LACQUER, id: i }),
+            );
+      } else if (i % 2 === 0) beacon(s, bc.c + bc.w + 0.3, 0.4, PATH_GOLD, 0.15, i);
+    });
+    // The sign, 140 m before each crest with a balcony road.
+    for (let n = Math.max(0, Math.floor((s0 - BALCONY.CREST) / BALCONY.PERIOD)); ; n++) {
+      const crest = n * BALCONY.PERIOD + BALCONY.CREST;
+      const g = crest - 140;
+      if (g >= s1) break;
+      if (g < s0 || balconyLocal(crest) === null) continue;
+      const half = halfAt(g);
+      out.push(
+        piece({ kind: 'gantry', s: g, u: 0, d: half + 1.2, lift: 7.6, colour: PATH_GOLD, id: n }),
+      );
+      board(g, half * 0.55, CT_PATH_CELLS.balcony, PATH_JADE, n);
+    }
+  }
+  return out;
 }
