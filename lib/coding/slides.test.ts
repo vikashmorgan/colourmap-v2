@@ -6,6 +6,8 @@ describe('coding slides', () => {
   it('accepts only the known slide files', () => {
     for (const name of SLIDE_FILES) expect(isSlideFile(name)).toBe(true);
     expect(isSlideFile('Session5.pdf')).toBe(false);
+    expect(isSlideFile('LLMs3.pdf')).toBe(true);
+    expect(isSlideFile('LLMs4.pdf')).toBe(false);
     expect(isSlideFile('../other-user/Session1.pdf')).toBe(false);
     expect(isSlideFile('session1.pdf')).toBe(false);
     expect(isSlideFile(42)).toBe(false);

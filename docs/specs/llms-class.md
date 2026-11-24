@@ -14,7 +14,7 @@ Victor's study page for the course he calls *LLMs*: *Introduction to Machine Lea
 
 One self-contained file, `content/llms/index.html`, built on the Pandas page ([spec](pandas-class.md)) and served the same way. It keeps that page's whole system: one lecture at a time, cards with *What each piece means* and worked steps, Practice with answers, the folded Summary, the Cheat sheet, the notepad, Reflections and Focus.
 
-Sessions 1 and 2 so far:
+Sessions 1 to 3 so far:
 
 1. **Introduction to machine learning**: the course, a short history, kinds of learning, the language of data, and a first model. Its exercise, *Exploring a dataset with plots*, has a part of its own.
 2. **Linear regression: training a model and measuring its error.**
@@ -25,16 +25,25 @@ Sessions 1 and 2 so far:
    - MAE, MSE, RMSE and R² against a mean baseline. Residual plots and outliers.
    - Train, validation and test sets. Polynomial degree as the model choice, underfitting and overfitting, and the five-step recipe.
    - Its exercise, *Pricing used cars*, has a part of its own.
+3. **Cross-validation and regularisation: choosing a model you can trust.** Added on 2026-11-24.
+   - Why one validation split is not enough: five random cuts choose five different degrees.
+   - k-fold cross-validation, the CV score and its spread, leave-one-out (worked by hand on the four stores), `KFold` and `cross_val_score` with the minus sign, and `validation_curve` for the degree. The recipe without a validation set.
+   - Polynomial features of several inputs, interactions, and how fast their number grows.
+   - A penalty on the weights: Ridge and Lasso (both worked on the four stores with scikit-learn's own numbers), the deck's two-models trade, Ridge on a degree-12 curve, scaling first, and reading Ridge and Lasso coefficient paths.
+   - Parameters and hyperparameters, grid search, the pipeline that keeps the scaler inside each fold, `GridSearchCV`, and the full recipe: cross-validate to choose, test once.
+   - Its exercise, *Pricing office rents* (200 offices, nine tasks), has a part of its own.
 
 ## The exercises
 
 Each session's take-home notebook has a part of its own. An intro card covers the dataset, the imports, how to submit and the course's AI rule (a help, not a replacement). Then each task has one card: what it asks, the lecture idea it practises, the code with *What each piece means* (including the blanks of the starter cells), *How to read your result* for the written answers, and the classic mistake. The final numbers and the written answers are left to the user.
 
+In session 3 the lecture and the exercise point at each other. Each task card lists the lecture cards it practises, and each of those lecture cards shows *Practised in the exercise* with a link back to the tasks. Both directions come from one list per task (`uses`), so they always agree.
+
 The examples are the deck's own: four stores (TV budget x = 1, 2, 3, 4; sales y = 3, 5, 4, 8), each formula worked out on them by hand. The text is written in plain words. The slides are the teacher's material and this repository is public, so they are never committed. The decks and notebooks are kept in the user's Albert School classes folder under `LLMs`.
 
 ## Your slides
 
-When a deck is missing, *Upload slides* files it as `LLMs1.pdf` or `LLMs2.pdf` in the private `coding-slides` folder, and each card's *Slide n/N ›* then opens its page.
+When a deck is missing, *Upload slides* files it as `LLMs1.pdf`, `LLMs2.pdf` or `LLMs3.pdf` in the private `coding-slides` folder, and each card's *Slide n/N ›* then opens its page.
 
 ## Storage
 
@@ -46,4 +55,4 @@ No new table. Keys start with `llms|` (a card: `llms|s{session}|{card}`) and dev
 
 ## Not yet
 
-- Sessions 3 to 5, when their decks arrive.
+- Sessions 4 and 5, when their decks arrive.
