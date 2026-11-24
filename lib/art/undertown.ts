@@ -4,7 +4,7 @@
  * of the racetrack. mirrored. and it is a different decor. with chinatown but called the undertown
  * with undertown letters when u ride there"). Pure: no three.js, no DOM.
  *
- * Every UNDER.EVERY metres on Chinatown Run the road's left edge curls up and over: the road rolls
+ * Twice a lap on Chinatown Run (lib/art/chinatown-lap.ts LAP_UNDER) the road's left edge curls up and over: the road rolls
  * half a turn about an axis UNDER.AXIS m over it, and you are on its underside, upside down,
  * mirrored (what was on your left is on your right), the street and its shophouses hanging over
  * your head. You stay glued to the road: as on a twist, the physics drives a flat road and only
@@ -15,11 +15,9 @@
  * straight road through its hollow: everyone goes under.
  */
 
+import { LAP_UNDER, lastOf, nthOf } from './chinatown-lap';
+
 export const UNDER = {
-  /** Where the first starts (m along Chinatown Run), and how often one comes round: 1.3 km of
-   * street first, then one every 3.6 km (2026-11-24, the longer street; were 700 and 2,400). */
-  AT: 1300,
-  EVERY: 3600,
   /** The flip over the edge, in and again out (m), and the stretch upside down between. */
   FLIP: 180,
   HOLD: 620,
@@ -36,10 +34,23 @@ export const UNDER = {
 /** One Undertown run, flip in to flip out (m). */
 export const UNDER_LENGTH = UNDER.FLIP * 2 + UNDER.HOLD;
 
+/** Where Undertown run k starts (m along the road; from 0, twice a lap: lib/art/chinatown-lap.ts,
+ * 4 and 14.3 km into each 22 km lap since 2026-11-24, the longer lap). */
+export function underStart(k: number): number {
+  return nthOf(LAP_UNDER, k);
+}
+
+/** The last Undertown run starting at or before s (-1 before the first). */
+export function underRunAt(s: number): number {
+  return lastOf(LAP_UNDER, s);
+}
+
 /** Metres from the start of the Undertown run s is in, or null outside every one. */
 export function underLocal(s: number): number | null {
-  if (!(s >= UNDER.AT)) return null;
-  const x = (s - UNDER.AT) % UNDER.EVERY;
+  if (!(s >= 0)) return null;
+  const k = underRunAt(s);
+  if (k < 0) return null;
+  const x = s - underStart(k);
   return x < UNDER_LENGTH ? x : null;
 }
 

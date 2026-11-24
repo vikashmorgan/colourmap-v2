@@ -21,7 +21,15 @@
  * courses are roads.
  */
 
-import { BALCONY, balconyLocal, forkNose, LOWER, pathMedian } from '@/lib/art/chinatown-paths';
+import { nearRing, nearSpectacle } from '@/lib/art/chinatown-lap';
+import {
+  BALCONY,
+  balconyCrests,
+  balconyLocal,
+  forkNose,
+  LOWER,
+  pathMedian,
+} from '@/lib/art/chinatown-paths';
 import {
   CT_BOARD_FREE,
   CT_PATH_CELLS,
@@ -34,7 +42,7 @@ import {
   ctFloors,
   ctRoofs,
 } from '@/lib/art/chinatown-street';
-import { nearVista, VISTA, vistaLocal, vistaStart } from '@/lib/art/chinatown-vista';
+import { nearVista, VISTA, vistaLocal, vistasBetween } from '@/lib/art/chinatown-vista';
 import { clamp } from '@/lib/art/drive';
 import {
   CHINA_LANE,
@@ -46,7 +54,7 @@ import {
   type TrackDef,
   voidLeft,
 } from '@/lib/art/track';
-import { UNDER } from '@/lib/art/undertown';
+import { underRunAt, underStart } from '@/lib/art/undertown';
 
 export type Rgb = [number, number, number];
 export type NightTheme = 'rain' | 'chinatown' | 'neon' | 'gold';
@@ -338,8 +346,9 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
         // None right of the street over the underpass's void (open to the lake), stood back
         // behind the underpass on the right and the balcony road on the left.
         if (side < 0 && voidOpen(def, s, w)) return;
-        // Up on the lake arcade's deck on the left (vistaPieces), not on the street.
-        if (side > 0 && def.under && nearVista(s, w + 2)) return;
+        // Up on the lake arcade's deck on the left (vistaPieces), not on the street; none where
+        // the canyon parts for an overlook.
+        if (def.under && nearVista(s, w + 2, side)) return;
         const face = Math.max(half + back, pathClear(def, s, w, side));
         const id = i * 2 + (side > 0 ? 0 : 1);
         out.push(
@@ -420,6 +429,7 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
     // (the City's strands at three heights); only light crosses the road.
     each(HIGH_LIGHTS_STEP, 60, (s, i) => {
       if (onPath(def, s, false) || voidOpen(def, s, 10) || (def.under && nearVista(s, 20))) return;
+      if (def.under && nearRing(s, 30)) return;
       const iL = Math.round(s / SHOP_STEP);
       const iR = Math.round((s - SHOP_STEP / 2) / SHOP_STEP);
       const low = Math.min(shop(1, iL).floors, shop(-1, iR).floors) * CT_STOREY;
@@ -431,11 +441,12 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
     // Lantern strings overhead every 40 m, gates every 400 m, a temple gate where each avenue opens.
     each(LANTERN_STEP, 20, (s, i) => {
       if (Math.abs(s - Math.round(s / GATE_STEP) * GATE_STEP) < 25) return;
-      if (onPath(def, s, false)) return;
+      if (onPath(def, s, false) || (def.under && (nearRing(s, 25) || nearVista(s, 10, -1)))) return;
       out.push(piece({ kind: 'lanterns', s, lift: 8.5, colour: LANTERN, id: i }));
     });
     each(GATE_STEP, 0, (s, i) => {
-      if (i === 0 || onPath(def, s) || (def.under && nearVista(s, 30))) return;
+      if (i === 0 || onPath(def, s) || (def.under && (nearVista(s, 30) || nearSpectacle(s, 30))))
+        return;
       const temple = i % 3 === 0;
       out.push(
         piece({
@@ -730,14 +741,27 @@ export function vistaPieces(def: TrackDef, s0: number, s1: number): Piece[] {
       }),
     );
   }
+  // The overlooks: the balustrade's gold lights along the edge of the drop.
+  for (const v of vistasBetween(s0, s1)) {
+    if (v.kind !== 'overlook') continue;
+    for (
+      let i = Math.ceil(Math.max(s0, v.start) / 6);
+      i * 6 < Math.min(s1, v.start + v.length);
+      i++
+    ) {
+      const s = i * 6;
+      const half = def.half(s);
+      const u = v.side * (half + VISTA.RAIL - 0.3);
+      out.push(
+        piece({ kind: 'beacon', s, u, w: 0.16, colour: GOLD, id: i, z: streetAt(def, s, u) + 1.3 }),
+      );
+    }
+  }
   // The name, hung under the deck where the arcade opens.
-  for (
-    let k = Math.max(0, Math.floor((s0 - UNDER.AT) / UNDER.EVERY) - 1);
-    UNDER.AT + k * UNDER.EVERY <= s1;
-    k++
-  ) {
-    const a = vistaStart(k);
-    if (a === null || a < s0 || a >= s1) continue;
+  for (const v of vistasBetween(s0, s1)) {
+    const a = v.start;
+    const k = v.k;
+    if (v.kind !== 'arcade' || a < s0 || a >= s1) continue;
     const half = def.half(a);
     out.push(
       piece({
@@ -865,10 +889,10 @@ export function pathPieces(def: TrackDef, s0: number, s1: number): Piece[] {
 
   if (def.bypass && def.median) {
     // The signs: a gantry 60 m before the nose, a board over each way.
-    for (let k = Math.max(0, Math.floor((s0 - UNDER.AT) / UNDER.EVERY)); ; k++) {
-      const under = UNDER.AT + k * UNDER.EVERY;
+    for (let k = Math.max(0, underRunAt(s0)); ; k++) {
+      const under = underStart(k);
       if (under + LOWER.PEEL[0] > s1) break;
-      const g = forkNose(under, halfAt(under + LOWER.PEEL[0] / 2)) - 60;
+      const g = forkNose(under, halfAt) - 60;
       if (g < s0 || g >= s1) continue;
       const half = halfAt(g);
       const c = def.bypass(g) ?? 0;
@@ -964,11 +988,9 @@ export function pathPieces(def: TrackDef, s0: number, s1: number): Piece[] {
       } else if (i % 2 === 0) beacon(s, bc.c + bc.w + 0.3, 0.4, PATH_GOLD, 0.15, i);
     });
     // The sign, 140 m before each crest with a balcony road.
-    for (let n = Math.max(0, Math.floor((s0 - BALCONY.CREST) / BALCONY.PERIOD)); ; n++) {
-      const crest = n * BALCONY.PERIOD + BALCONY.CREST;
+    for (const crest of balconyCrests(s0 + 140, s1 + 140)) {
       const g = crest - 140;
-      if (g >= s1) break;
-      if (g < s0 || balconyLocal(crest) === null) continue;
+      const n = Math.round(crest);
       const half = halfAt(g);
       out.push(
         piece({ kind: 'gantry', s: g, u: 0, d: half + 1.2, lift: 7.6, colour: PATH_GOLD, id: n }),

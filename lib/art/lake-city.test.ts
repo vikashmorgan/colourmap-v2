@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { LOWER, LOWER_FROM, LOWER_TO } from './chinatown-paths';
 import { LAKE_CITY, lakeAnchor, lakeNear, lakeTowers } from './lake-city';
-import { UNDER, UNDER_LENGTH } from './undertown';
+import { UNDER_LENGTH, underStart } from './undertown';
 
 describe('the lake city past Undertown (2026-11-24: "THAT\'S WHERE U BUILD THE BIG CITY")', () => {
   it('faces each Undertown, inside the stretch where the underpass is down', () => {
     for (const k of [0, 1, 4]) {
       const a = lakeAnchor(k);
-      const run = UNDER.AT + k * UNDER.EVERY;
+      const run = underStart(k);
       expect(a).toBeGreaterThan(run);
       expect(a).toBeLessThan(run + UNDER_LENGTH);
       expect(a - run).toBeGreaterThan(LOWER.DIVE[1]);

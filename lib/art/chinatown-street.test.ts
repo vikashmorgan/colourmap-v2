@@ -24,7 +24,7 @@ import {
 } from './chinatown-street';
 import { piecesBetween, SHOP_STEP } from './night-course';
 import { CHINA_OPEN, CHINA_PERIOD, CHINATOWN, chinatownHalf } from './track';
-import { UNDER, UNDER_LENGTH } from './undertown';
+import { UNDER, UNDER_LENGTH, underLocal, underStart } from './undertown';
 
 const W = SHOP_STEP * 0.48;
 const lane = (n: number) => Array.from({ length: n }, (_, i) => i);
@@ -195,10 +195,10 @@ describe('Chinatown Run, longer (2026-11-24: "chinatown make it longer")', () =>
     expect(CHINA_OPEN).toBeGreaterThan(1000);
   });
 
-  it('lets Undertown come round less often, after 1.3 km of street, never overlapping itself', () => {
-    expect(UNDER.AT).toBeGreaterThanOrEqual(1000);
-    expect(UNDER.EVERY).toBeGreaterThan(3000);
-    expect(UNDER.EVERY - UNDER_LENGTH).toBeGreaterThan(2000);
+  it('lets Undertown come round twice a lap, after 4 km of street, never overlapping itself', () => {
+    expect(underStart(0)).toBeGreaterThanOrEqual(3000);
+    expect(underStart(1) - underStart(0)).toBeGreaterThan(8000);
+    expect(underStart(2) - underStart(1) - UNDER_LENGTH).toBeGreaterThan(5000);
   });
 
   it('furnishes the canyon with blades, boards and high strings of light, nothing in Undertown’s flips', () => {
@@ -212,8 +212,7 @@ describe('Chinatown Run, longer (2026-11-24: "chinatown make it longer")', () =>
     for (const p of ps) {
       if (p.kind === 'blade' || p.kind === 'billboard') expect(p.cell).toBeGreaterThanOrEqual(0);
       // Under Undertown the street stays low (towers, crowns and their signs).
-      const x = (p.s - UNDER.AT) % UNDER.EVERY;
-      if (p.s >= UNDER.AT && x >= 0 && x < UNDER_LENGTH) {
+      if (underLocal(p.s) !== null) {
         if (p.kind === 'shophouse') expect(p.h).toBeLessThanOrEqual(CT_UNDER_FLOORS * CT_STOREY);
         if (p.kind === 'blade' || p.kind === 'billboard')
           expect(p.lift + p.h).toBeLessThanOrEqual(CT_UNDER_TOP);

@@ -18,6 +18,7 @@
  * Road coordinates: s along the centre line, u across it (positive to the left).
  */
 
+import { CHINA_LAP, chinaCurv, chinaElev, chinaTilt } from '@/lib/art/chinatown-lap';
 import {
   type Balcony,
   balcony,
@@ -100,7 +101,8 @@ export interface TrackDef {
   balcony?(s: number): Balcony | null;
   /** A kicker on the road: extra height at (s, u) over the road's own (m). */
   kick?(s: number, u: number): number;
-  /** How much of its bank the road carries here (0 level, 1 all of it; default 1). */
+  /** How much of its bank the road carries here (0 level, 1 all of it; default 1; more than 1 on
+   * a tilt stretch, where it banks past bankMax: Chinatown's sweepers). */
   level?(s: number): number;
   /** The radius (m) of the curved wall past the edge on a banked bend's high side, at full bank. */
   curl?: number;
@@ -889,24 +891,27 @@ function chinaLevel(s: number): number {
   return window01(s, CHINA_LEVEL[0], Number.POSITIVE_INFINITY, CHINA_LEVEL[1] - CHINA_LEVEL[0]);
 }
 
+/** Chinatown's bank at s: the street's own, steeper on the lap's tilt stretches
+ * (lib/art/chinatown-lap.ts, up to 1.7 times: about 29°), level on the grid. */
+export function chinaBank(s: number): number {
+  return bankFor(chinaCurv(s), CHINA_BANK_SPEED, CHINA_BANK) * chinaLevel(s) * chinaTilt(s);
+}
+
 export const CHINATOWN: TrackDef = {
   id: 'chinatown',
   startH: 0,
-  // Long sweeping bends (periods 3,100 and 1,500 m, were 1,900 and 900): the tightest about 320 m
-  // across, so the canyon's walls recede round them in long curves.
-  curv: (s) =>
-    0.7 * (TAU / 3100) * Math.cos((TAU * s) / 3100 + 1.1) +
-    0.4 * (TAU / 1500) * Math.cos((TAU * s) / 1500 + 0.3),
-  elev: (s) => {
-    const p = ((s % CHINA_PERIOD) + CHINA_PERIOD) % CHINA_PERIOD;
-    return bump(p, 1500, 4, 30) + bump(p, 500, -2.5, 45);
-  },
+  // One 22 km lap of bends, swells and spectacle, round and round (lib/art/chinatown-lap.ts,
+  // 2026-11-24: "make whole chinatown run much longer"): long sweeping bends, tighter sweepers on
+  // the tilt stretches, long smooth swells, and a kicker crest at each balcony road.
+  curv: chinaCurv,
+  elev: chinaElev,
   half: chinatownHalf,
   lip: () => 0.4,
   bankSpeed: CHINA_BANK_SPEED,
   bankMax: CHINA_BANK,
-  level: (s) => chinaLevel(s),
+  level: (s) => chinaLevel(s) * chinaTilt(s),
   terrain: 0,
+  lap: CHINA_LAP,
   walls: (s) => {
     // The shophouses' fronts stop you in the lanes; on the avenues the pavement is open.
     const half = chinatownHalf(s);
@@ -929,12 +934,11 @@ export const CHINATOWN: TrackDef = {
   bypass: underpass,
   lower: underpassDepth,
   median: true,
-  // The balcony road at the crests clear of Undertown, and its kicker.
+  // The balcony road at its kicker crests, and its kicker.
   balcony: (s) => {
     const half = chinatownHalf(s);
     // Over the road's left edge as the bank lifts it (the street's own rises aside).
-    const bank = bankFor(CHINATOWN.curv(s), CHINA_BANK_SPEED, CHINA_BANK) * chinaLevel(s);
-    return balcony(s, half, -Math.tan(bank) * half);
+    return balcony(s, half, -Math.tan(chinaBank(s)) * half);
   },
   kick: (s, u) => kickAt(s, u, chinatownHalf(s)),
 };
