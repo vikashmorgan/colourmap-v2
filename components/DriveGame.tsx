@@ -31,6 +31,7 @@ import {
 import {
   AttackStrip,
   Crosshair,
+  FoundCard,
   GeigerColumn,
   MarsMap,
   RegionCard,
@@ -646,6 +647,7 @@ export default function DriveGame() {
           {!title && !paused && !results && <MissionCard mission={hud?.mission ?? null} />}
           {!title && <RadioPanel message={radio} />}
           {!title && !paused && <RegionCard region={hud?.mars?.region ?? null} />}
+          {!title && !paused && <FoundCard name={hud?.mars?.news ?? null} />}
           <GeigerColumn rad={hud?.mars?.rad ?? 0} live={!title && !paused} />
           {!title && !paused && hud?.attacks && (
             <>

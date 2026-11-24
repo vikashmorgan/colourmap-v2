@@ -37,6 +37,7 @@ import {
   TOWN,
   townXY,
 } from './mars-works';
+import { WRECK_FLATS } from './mars-wrecks';
 import { LINE, START } from './salt-flat-game';
 import { newVehicle, stepVehicle } from './vehicle';
 
@@ -107,7 +108,8 @@ describe('the factory city', () => {
       expect(Math.abs(marsBase(f.x + f.flat * 0.7, f.y))).toBe(0);
     }
     const masks = marsTerrainGlsl().match(/m \*= smoothstep\([\d.]+, [\d.]+, length\(a - vec2/g);
-    expect(masks?.length).toBe(FLATS.length + LAKES.length);
+    // The towns' flats, the lakes, and the wrecks' flats (lib/art/mars-wrecks.ts).
+    expect(masks?.length).toBe(FLATS.length + LAKES.length + WRECK_FLATS.length);
     for (const b of BOXES) {
       expect(marsBase(b.x, b.y)).toBeCloseTo(0, 9);
       const inTown =
