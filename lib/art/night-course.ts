@@ -6,10 +6,11 @@
  * - Night Rain: lamps on posts both sides and a row hung high over the middle trace the course to the
  *   vanishing point; towers of glowing grains, the great arch, strings of lights across, banners on
  *   the lamp posts, LED chevrons on the bends, boost rings.
- * - Chinatown Run: red and gold. Shophouses close along narrow lanes that open onto wide avenues,
- *   strings of red lanterns overhead drawing the course, Chinatown gates to race through and a
- *   temple gate at each avenue, upright signs with letters and CITY OF DREAMS panels. Kept
- *   uncluttered: the spans stand well apart and every gate is wide open.
+ * - Chinatown Run: red and gold. A tall street canyon of shophouse towers close along narrow lanes
+ *   that open onto wide avenues (lib/art/chinatown-street.ts), blade signs and boards lettered up
+ *   every face, strings of red lanterns overhead drawing the course and strings of light higher
+ *   up, Chinatown gates to race through and a temple gate at each avenue. Kept uncluttered: only
+ *   light crosses the road, the spans stand well apart and every gate is wide open.
  * - Neon District: magenta, cyan and violet. Tall towers edged in neon, bridges overhead, ship
  *   highways streaming at three heights above, LED chevrons, neon signs (a few of them flash, as the
  *   user allowed in the Neon Market, and nowhere else), boost rings.
@@ -20,8 +21,18 @@
  * courses are roads.
  */
 
+import {
+  CT_STOREY,
+  CT_TALL_FLOORS,
+  CT_TONES,
+  ctBlades,
+  ctBoards,
+  ctCell,
+  ctFloors,
+  ctRoofs,
+} from '@/lib/art/chinatown-street';
 import { clamp } from '@/lib/art/drive';
-import type { TrackDef } from '@/lib/art/track';
+import { CHINA_LANE, type TrackDef } from '@/lib/art/track';
 
 export type Rgb = [number, number, number];
 export type NightTheme = 'rain' | 'chinatown' | 'neon' | 'gold';
@@ -39,6 +50,15 @@ export const LACQUER: Rgb = [0.75, 0.08, 0.06];
 export const GOLD: Rgb = [1, 0.75, 0.35];
 export const LANTERN: Rgb = [1, 0.22, 0.08];
 export const JADE: Rgb = [0.3, 0.9, 0.6];
+/** The sign tones' ink as light (lib/art/chinatown-street.ts CT_TONES), for their neon frames. */
+const CT_TONE_RGB: Rgb[] = CT_TONES.map(({ ink, bg }) => {
+  // The brighter of ink and ground: a dark-on-gold board glows gold.
+  const rgb = (c: string): Rgb =>
+    [1, 3, 5].map((k) => parseInt(c.slice(k, k + 2), 16) / 255) as Rgb;
+  const a = rgb(ink);
+  const b = rgb(bg);
+  return a[0] + a[1] + a[2] >= b[0] + b[1] + b[2] ? a : b;
+});
 /** The Neon District's own: the City of Dreams' neon (lib/city-grid.ts C, the Neon Canyon's four:
  * magenta, cyan, amber, violet; 2026-11-19: "make neon colours more inspired by the neon in City"). */
 export const NEON_DISTRICT: Rgb[] = [
@@ -118,6 +138,8 @@ export type PieceKind =
   | 'banner'
   | 'sign'
   | 'panel'
+  | 'blade'
+  | 'billboard'
   | 'arrow'
   | 'bridge';
 
@@ -140,6 +162,9 @@ export interface Piece {
   /** A sign that flashes (the Neon District only). */
   flash: boolean;
   id: number;
+  /** Chinatown's blades and boards: their cell in the sign atlas (lib/art/chinatown-street.ts). A
+   * shophouse's `lift` is how many crown roofs it wears. */
+  cell?: number;
 }
 
 const piece = (p: Partial<Piece> & Pick<Piece, 'kind' | 's'>): Piece => ({
@@ -161,6 +186,8 @@ export const TOWER_STEP = 46;
 export const SHOP_STEP = 14;
 export const LIGHTS_STEP = 96;
 export const LANTERN_STEP = 40;
+/** Chinatown's high strings of light, at 18 and 26 m in turn. */
+export const HIGH_LIGHTS_STEP = 90;
 export const GATE_STEP = 400;
 export const ARCH_STEP = 1500;
 export const ARCH_AT = 300;
@@ -267,44 +294,110 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
   }
 
   if (theme === 'chinatown') {
-    // Shophouses shoulder to shoulder along the lanes, set back on the avenues.
+    // The street canyon (lib/art/chinatown-street.ts): shophouse towers shoulder to shoulder close
+    // along the lanes, set back on the avenues, storey on storey, their blade signs and boards up
+    // every face. Lower where Undertown hangs over the street.
+    const underNear = (s: number) =>
+      [-12, 0, 12].some((d) => def.under?.(Math.max(0, s + d)) ?? false);
+    const shop = (side: 1 | -1, i: number) => {
+      const s = i * SHOP_STEP + (side > 0 ? 0 : SHOP_STEP / 2);
+      const half = halfAt(s);
+      const avenue = half > CHINA_LANE + 2;
+      const under = underNear(s);
+      return { s, half, avenue, under, floors: ctFloors(i, side, s, avenue, under) };
+    };
     for (const side of [1, -1] as const) {
       each(SHOP_STEP, side > 0 ? 0 : SHOP_STEP / 2, (s, i) => {
-        const half = halfAt(s);
-        const back = 2.5 + (half > 10 ? 6 : 0);
-        const floors = 2 + Math.floor(hash(i, side + 41) * 4);
+        const { half, avenue, under, floors } = shop(side, i);
+        const back = 2.5 + (avenue ? 6 : 0);
+        const w = SHOP_STEP * 0.48;
+        const face = half + back;
+        const id = i * 2 + (side > 0 ? 0 : 1);
         out.push(
           piece({
             kind: 'shophouse',
             s,
-            u: side * (half + back + 4),
-            w: SHOP_STEP * 0.48,
+            u: side * (face + 4),
+            w,
             d: 4,
-            h: floors * 3.4,
+            h: floors * CT_STOREY,
+            lift: ctRoofs(floors, under),
             colour: hash(i, side + 43) < 0.5 ? LACQUER : GOLD,
             side,
-            id: i * 2 + (side > 0 ? 0 : 1),
+            id,
           }),
         );
-        // Upright signs with letters on every third house; CITY OF DREAMS panels now and then.
-        if (i % 3 === 0) {
-          const panel = hash(i, side + 45) < 0.18;
+        // Blade signs standing out from the face, facing down the street.
+        for (const b of ctBlades(i, side, floors, w)) {
+          // None through a gate's beams (these every 400 m, Design's between them).
+          const g = (s + b.da) / (GATE_STEP / 2);
+          if (Math.abs(g - Math.round(g)) * (GATE_STEP / 2) < 3) continue;
           out.push(
             piece({
-              kind: panel ? 'panel' : 'sign',
-              s,
-              u: side * (half + back - 0.2),
-              w: panel ? 5 : 0.9,
-              h: panel ? 1.4 : 3.2,
-              lift: panel ? 7 : 4.2,
-              colour: panel ? GOLD : hash(i, side + 47) < 0.6 ? LANTERN : JADE,
+              kind: 'blade',
+              s: s + b.da,
+              u: side * (face - b.out / 2),
+              w: 0.08,
+              d: b.out / 2,
+              h: b.h,
+              lift: b.lift,
+              colour: CT_TONE_RGB[ctCell('blade', b.cell).tone],
               side,
-              id: i * 2 + (side > 0 ? 0 : 1),
+              id,
+              cell: b.cell,
+            }),
+          );
+        }
+        // Horizontal boards flat on the face, between the blades.
+        for (const b of ctBoards(i, side, floors, w)) {
+          out.push(
+            piece({
+              kind: 'billboard',
+              s: s + b.da,
+              u: side * (face - 0.18),
+              w: b.len / 2,
+              d: 0.1,
+              h: b.h,
+              lift: b.lift,
+              colour: CT_TONE_RGB[ctCell('board', b.cell).tone],
+              side,
+              id,
+              cell: b.cell,
+            }),
+          );
+        }
+        // A name board on the roof of each tall tiered tower, facing the way you come.
+        if (floors >= CT_TALL_FLOORS && !under) {
+          const cell = (i * 3 + (side > 0 ? 7 : 0)) % 32;
+          out.push(
+            piece({
+              kind: 'billboard',
+              s: s - (w - 0.1),
+              u: side * (face + 4),
+              w: 0.08,
+              d: 3.6,
+              h: 1.8,
+              lift: floors * CT_STOREY + 0.3,
+              colour: CT_TONE_RGB[ctCell('board', cell).tone],
+              side,
+              id,
+              cell,
             }),
           );
         }
       });
     }
+    // High strings of light across the street, where the towers both sides stand taller than them
+    // (the City's strands at three heights); only light crosses the road.
+    each(HIGH_LIGHTS_STEP, 60, (s, i) => {
+      const iL = Math.round(s / SHOP_STEP);
+      const iR = Math.round((s - SHOP_STEP / 2) / SHOP_STEP);
+      const low = Math.min(shop(1, iL).floors, shop(-1, iR).floors) * CT_STOREY;
+      if (shop(1, iL).under) return;
+      const lift = i % 2 ? 26 : 18;
+      if (low < lift + 4) return;
+      out.push(piece({ kind: 'lights', s, lift, colour: GOLD, id: i }));
+    });
     // Lantern strings overhead every 40 m, gates every 400 m, a temple gate where each avenue opens.
     each(LANTERN_STEP, 20, (s, i) => {
       if (Math.abs(s - Math.round(s / GATE_STEP) * GATE_STEP) < 25) return;

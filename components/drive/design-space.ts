@@ -751,7 +751,11 @@ function board(
   glow = 1.6,
 ) {
   if (!tex) return;
-  const pts = [pose(tr, s, u0, h0), pose(tr, s, u1, h0), pose(tr, s, u1, h1), pose(tr, s, u0, h1)];
+  // The canvas' left edge at the higher u (your left as you come), so the letters read the right
+  // way round to whoever drives toward it on either side of the road (they were mirrored where
+  // u0 was the lower: every right-hand sign and the gates' plaques).
+  const [uL, uR] = u0 >= u1 ? [u0, u1] : [u1, u0];
+  const pts = [pose(tr, s, uL, h0), pose(tr, s, uR, h0), pose(tr, s, uR, h1), pose(tr, s, uL, h1)];
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pts.flat(), 3));
   geo.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 1], 2));

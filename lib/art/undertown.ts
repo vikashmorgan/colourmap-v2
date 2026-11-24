@@ -16,14 +16,16 @@
  */
 
 export const UNDER = {
-  /** Where the first starts (m along Chinatown Run), and how often one comes round. */
-  AT: 700,
-  EVERY: 2400,
+  /** Where the first starts (m along Chinatown Run), and how often one comes round: 1.3 km of
+   * street first, then one every 3.6 km (2026-11-24, the longer street; were 700 and 2,400). */
+  AT: 1300,
+  EVERY: 3600,
   /** The flip over the edge, in and again out (m), and the stretch upside down between. */
   FLIP: 180,
   HOLD: 620,
   /** The axis the road rolls about, this high over it (m): upside down the road runs twice this
-   * over the street, above the tallest shophouse (17 m) with room for Undertown's own beneath. */
+   * over the street, above the shophouses under it (kept under 21 m there,
+   * lib/art/chinatown-street.ts) with room for Undertown's own beneath. */
   AXIS: 18,
   /** The barriers close in to the ribbon's edge over this much at each end (m). */
   EASE: 40,

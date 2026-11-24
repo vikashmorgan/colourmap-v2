@@ -34,7 +34,8 @@ describe('night furniture', () => {
     expect(china.has('lanterns')).toBe(true);
     expect(china.has('gate')).toBe(true);
     expect(china.has('shophouse')).toBe(true);
-    expect(china.has('panel')).toBe(true);
+    expect(china.has('blade')).toBe(true);
+    expect(china.has('billboard')).toBe(true);
     expect(china.has('tower')).toBe(false);
 
     const neon = kinds('neon');

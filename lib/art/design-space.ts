@@ -376,12 +376,13 @@ export const MARKING: Record<string, number> = {
 };
 
 /** The cells a track wears for good (2026-11-23: "then use them on the track"): Chinatown Run and
- * the Neon District dressed in their own district's pieces. */
+ * the Neon District dressed in their own district's pieces. Chinatown Run's tall signs are its
+ * street's own now (lib/art/chinatown-street.ts, 2026-11-24), up every shophouse face, so it no
+ * longer wears Design's (still there to pick). */
 const DRESS: Record<string, [CategoryId, string][]> = {
   chinatown: [
     ['chinatown', 'gate'],
     ['chinatown', 'lanterns'],
-    ['chinatown', 'signs'],
     ['chinatown', 'sky'],
     ['chinatown', 'undertown'],
   ],

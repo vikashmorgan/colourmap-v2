@@ -11,6 +11,7 @@
  */
 
 import * as THREE from 'three';
+import { CT_STOREY, CT_TALL_FLOORS, ctCellRect, ctWindows } from '@/lib/art/chinatown-street';
 import type { WorldCfg } from '@/lib/art/drive-worlds';
 import {
   ARCH_STEP,
@@ -53,6 +54,7 @@ import {
 import { underTint } from '@/lib/art/undertown';
 import type { Weather } from '@/lib/art/weather';
 import { nearTwist, STRAIGHT } from '@/lib/art/wreck';
+import { ctSignMaterial, SignBuilder } from './chinatown-signs';
 import { glowSprite } from './vehicles';
 
 export const CHUNK = 120;
@@ -577,10 +579,16 @@ export const DOT_LOOK = { base: 0.4, pulse: 1.8, tail: 14 };
 
 /** Dots of light, as the City of Dreams draws them: soft round glows; a stream's head bright, its
  * tail fading over 14 m, a head every 90 m running ahead of you. */
-function makeDots(calm = false): THREE.ShaderMaterial {
+function makeDots(calm: boolean | 'steady' = false): THREE.ShaderMaterial {
   // The Golden Track's are calm (2026-11-22: the arches "flash too much. stressful"): a softer
   // head over a brighter rest, and a longer tail, so a passing stream glows rather than flashes.
-  const look = calm ? { base: 0.7, pulse: 0.75, tail: 30 } : DOT_LOOK;
+  // Chinatown's windows are steady: no stream runs through them.
+  const look =
+    calm === 'steady'
+      ? { base: 1, pulse: 0, tail: 1 }
+      : calm
+        ? { base: 0.7, pulse: 0.75, tail: 30 }
+        : DOT_LOOK;
   const m = new THREE.ShaderMaterial({
     uniforms: {
       uFront: { value: 0 },
@@ -647,6 +655,8 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         ? { u: () => skyWallU(), h: skyWallHeight, on: () => 1 }
         : null;
   const dotMat = cfg.id === 'sky' || cfg.id === 'gold' ? makeDots(cfg.id === 'gold') : null;
+  /** Chinatown's lit windows, points of light as the City draws them. */
+  const winMat = theme === 'chinatown' ? makeDots('steady') : null;
   let streamS = cfg.startS;
   let streamT = 0;
   const shared: Record<string, THREE.IUniform> = {
@@ -1854,8 +1864,9 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       col: V3,
       anim: V3 = [0, 0, 0],
       base = groundAt(s, u),
+      mirror = true,
     ) => {
-      for (const m of [false, true]) {
+      for (const m of mirror ? [false, true] : [false]) {
         const t = m ? nm : nb;
         const A = P(s, u, a[0], a[1], a[2], base, m);
         const B = P(s, u, b[0], b[1], b[2], base, m);
@@ -1886,8 +1897,16 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     };
 
     /** A small glowing bulb (an octahedron) and its mirror. */
-    const bulb = (s: number, u: number, h: number, r: number, col: V3, base: number) => {
-      for (const m of [false, true]) {
+    const bulb = (
+      s: number,
+      u: number,
+      h: number,
+      r: number,
+      col: V3,
+      base: number,
+      mirror = true,
+    ) => {
+      for (const m of mirror ? [false, true] : [false]) {
         const t = m ? nm : nb;
         const c = P(s, u, 0, 0, h, base, m);
         const pts: V3[] = [
@@ -1915,8 +1934,144 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     };
 
     const glowCol = (c: readonly number[], k: number): V3 => [c[0] * k, c[1] * k, c[2] * k];
+    // Chinatown's lettered signs (one mesh a chunk) and lit windows (one cloud of points a chunk).
+    const signs = new SignBuilder();
+    const win = {
+      pos: [] as number[],
+      col: [] as number[],
+      ss: [] as number[],
+      size: [] as number[],
+    };
     const pieces = piecesBetween(th, def, s0, s1);
     for (const p of pieces) drawPiece(p);
+
+    /**
+     * A Chinatown shophouse tower (lib/art/chinatown-street.ts, after the City's tieredTower):
+     * storey on storey, a flared gold eave with its ends swept up on every other storey over a
+     * red fascia, a balcony rail and a lantern at each street corner on the eave storeys, lit
+     * windows as points of light, a red awning at the shop, and a pagoda crown (its roofs in
+     * lift), a spire on the tall towers.
+     */
+    function shophouse(p: Piece, base: number) {
+      const s = p.s;
+      const H = p.h;
+      const n = Math.round(H / CT_STOREY);
+      const tall = n >= CT_TALL_FLOORS;
+      const sd = p.side;
+      box(s, p.u, p.w, p.d, 0, H, base, [0.03, 0.012, 0.01], glowCol(GOLDISH, 0.45));
+      const face = -sd * (p.d + 0.15);
+      const gold = glowCol(GOLDISH, 1.25);
+      const fascia = glowCol(LANTERNISH, 0.55);
+      const rail = glowCol(p.colour, 0.6);
+      const lantern = glowCol(LANTERNISH, 2.1);
+      const z: V3 = [0, 0, 0];
+      // The shop's red awning.
+      bar(s, p.u, [-p.w, face, 2.8], [p.w, face, 2.8], 0.12, glowCol(LANTERNISH, 0.9), z, base);
+      for (let k = 1; k < n; k++) {
+        const y = k * CT_STOREY;
+        const m = y < MIRROR_CAP;
+        if (k % 2 === 0) {
+          bar(s, p.u, [-p.w, face, y], [p.w, face, y], 0.05, fascia, z, base, m);
+          continue;
+        }
+        // The eave, out over the street, its ends swept up.
+        const out = face - sd * 0.9;
+        const e = p.w + 0.5;
+        bar(s, p.u, [-e - 0.7, out, y + 0.45], [-e, out, y], 0.06, gold, z, base, m);
+        bar(s, p.u, [-e, out, y], [e, out, y], 0.07, gold, z, base, m);
+        bar(s, p.u, [e, out, y], [e + 0.7, out, y + 0.45], 0.06, gold, z, base, m);
+        // The balcony rail over it, and a lantern hanging under each street corner.
+        const rl = face - sd * 0.7;
+        bar(s, p.u, [-p.w * 0.8, rl, y + 1.1], [p.w * 0.8, rl, y + 1.1], 0.04, rail, z, base, m);
+        for (const da of [-e + 0.3, e - 0.3])
+          bulb(s + da, p.u + out, y - 0.9, 0.3, lantern, base, m);
+      }
+      // The crown: stepped roofs, each a dark red drum under a flared gold eave.
+      const roofs = Math.max(1, Math.round(p.lift));
+      for (let k = 0; k < roofs; k++) {
+        const wk = 0.8 - 0.12 * k;
+        const y = H + 2.6 * k;
+        const dw = p.w * wk;
+        const dd = p.d * wk;
+        box(s, p.u, dw * 0.85, dd * 0.85, y, y + 1.6, base, [0.09, 0.012, 0.01], null, false);
+        for (const fc of [-1, 1]) {
+          const du = fc * (dd + 0.8);
+          bar(s, p.u, [-dw - 1, du, y + 0.5], [-dw, du, y], 0.06, gold, z, base, false);
+          bar(s, p.u, [-dw, du, y], [dw, du, y], 0.07, gold, z, base, false);
+          bar(s, p.u, [dw, du, y], [dw + 1, du, y + 0.5], 0.06, gold, z, base, false);
+        }
+      }
+      if (tall) {
+        const top = H + 2.6 * roofs;
+        bar(s, p.u, [0, 0, top], [0, 0, top + 8], 0.08, gold, z, base, false);
+        for (const y of [2, 4, 6]) bulb(s, p.u, top + y, 0.35, gold, base, false);
+      }
+      // Lit windows up the street face.
+      const i = Math.floor(p.id / 2);
+      const tones: V3[] = [
+        [1.3, 0.85, 0.42],
+        [1.4, 0.4, 0.16],
+        [1.4, 1.15, 0.8],
+        [0.4, 1.3, 0.8],
+      ];
+      for (const w of ctWindows(i, sd, n, p.w)) {
+        const q = P(s, p.u, w.da, face - sd * 0.05, w.h, base);
+        win.pos.push(q[0], q[1], q[2]);
+        win.col.push(...tones[w.t]);
+        win.ss.push(s);
+        win.size.push(0.34);
+      }
+    }
+
+    /**
+     * A lettered sign from the atlas: a blade standing out from the wall, facing along the road
+     * (lettered on both faces, each reading the right way to whoever it faces), or a board flat
+     * on the face reading to the road; a neon frame along its edges in its ink.
+     */
+    function lettered(p: Piece, base: number) {
+      if (p.cell === undefined) return;
+      const s = p.s;
+      const along = p.w < p.d;
+      const r = ctCellRect(p.kind === 'blade' ? 'blade' : 'board', p.cell).uv;
+      const h0 = p.lift;
+      const h1 = p.lift + p.h;
+      const m = h0 < MIRROR_CAP;
+      const frame = glowCol(p.colour, 1.5);
+      const z: V3 = [0, 0, 0];
+      if (along) {
+        // Its two faces, a hair apart: to who comes (its left at the higher u) and who goes.
+        const hi = p.u + p.d;
+        const lo = p.u - p.d;
+        for (const [ds, uL, uR] of [
+          [-0.03, hi, lo],
+          [0.03, lo, hi],
+        ] as const) {
+          const A = P(s + ds, uL, 0, 0, h0, base);
+          const B = P(s + ds, uR, 0, 0, h0, base);
+          const C = P(s + ds, uR, 0, 0, h1, base);
+          const D = P(s + ds, uL, 0, 0, h1, base);
+          signs.quad(A, B, C, D, r);
+        }
+        bar(s, p.u, [0, -p.d, h0], [0, p.d, h0], 0.05, frame, z, base, m);
+        bar(s, p.u, [0, -p.d, h1], [0, p.d, h1], 0.05, frame, z, base, m);
+        // The edge out over the street (a roof board: both ends).
+        const edges = p.kind === 'blade' ? [-p.side * p.d] : [-p.d, p.d];
+        for (const eu of edges) bar(s, p.u, [0, eu, h0], [0, eu, h1], 0.06, frame, z, base, m);
+      } else {
+        // Flat on a wall facing the road: on the left wall its left is behind you, on the right
+        // wall ahead.
+        const sl = p.side > 0 ? -p.w : p.w;
+        const du = -p.side * p.d;
+        const A = P(s, p.u, sl, du, h0, base);
+        const B = P(s, p.u, -sl, du, h0, base);
+        const C = P(s, p.u, -sl, du, h1, base);
+        const D = P(s, p.u, sl, du, h1, base);
+        signs.quad(A, B, C, D, r);
+        const fu = du * 1.6;
+        bar(s, p.u, [-p.w, fu, h0], [p.w, fu, h0], 0.05, frame, z, base, m);
+        bar(s, p.u, [-p.w, fu, h1], [p.w, fu, h1], 0.05, frame, z, base, m);
+      }
+    }
 
     function drawPiece(p: Piece) {
       const s = p.s;
@@ -1937,21 +2092,11 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
           break;
         }
         case 'shophouse': {
+          if (th === 'chinatown') {
+            shophouse(p, base);
+            break;
+          }
           box(s, p.u, p.w, p.d, 0, p.h, base, [0.03, 0.012, 0.01], glowCol(GOLDISH, 0.8));
-          // A dim warm line under each floor's balcony, and a red awning at the shop.
-          const face = -p.side * (p.d + 0.15);
-          for (let h = 3.4; h < p.h; h += 3.4)
-            bar(s, p.u, [-p.w, face, h], [p.w, face, h], 0.05, glowCol(c, 0.7), [0, 0, 0], base);
-          bar(
-            s,
-            p.u,
-            [-p.w, face, 2.8],
-            [p.w, face, 2.8],
-            0.12,
-            glowCol(LANTERNISH, 0.9),
-            [0, 0, 0],
-            base,
-          );
           break;
         }
         case 'lamp': {
@@ -2124,6 +2269,10 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
             base,
           );
           break;
+        case 'blade':
+        case 'billboard':
+          lettered(p, base);
+          break;
         case 'arrow': {
           // A chevron, pointing the way the bend turns, lit by the wave.
           const col = glowCol(c, 2.4);
@@ -2212,6 +2361,24 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     add(nm, neonMirror, 1);
     add(fb, facade, 3);
     add(nb, neon, 4);
+    const signMat = signs.empty ? null : ctSignMaterial();
+    if (signMat) {
+      const mesh = new THREE.Mesh(signs.geometry(), signMat);
+      mesh.renderOrder = 3;
+      mesh.frustumCulled = false;
+      g.add(mesh);
+    }
+    if (winMat && win.pos.length) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(win.pos, 3));
+      geo.setAttribute('aCol', new THREE.Float32BufferAttribute(win.col, 3));
+      geo.setAttribute('aS', new THREE.Float32BufferAttribute(win.ss, 1));
+      geo.setAttribute('aSize', new THREE.Float32BufferAttribute(win.size, 1));
+      const pts = new THREE.Points(geo, winMat);
+      pts.frustumCulled = false;
+      pts.renderOrder = 4;
+      g.add(pts);
+    }
     void solid;
     void ARCH_STEP;
   }
@@ -2313,6 +2480,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       ])
         m.dispose();
       fireMat?.dispose();
+      winMat?.dispose();
     },
   };
 }
