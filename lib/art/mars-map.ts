@@ -19,6 +19,9 @@ export type RegionId =
   | 'crater'
   | 'canyons'
   | 'rift'
+  | 'foundry'
+  | 'reactor'
+  | 'cooling'
   | 'run';
 
 export interface Region {
@@ -35,6 +38,10 @@ export const REGIONS: Region[] = [
   { id: 'crater', name: 'The Great Crater', x: -2900, y: 3000, r: 1000 },
   { id: 'lakes', name: 'The Glow Lakes', x: 0, y: 5900, r: 1000 },
   { id: 'city', name: 'Dome City', x: -300, y: 2900, r: 800 },
+  // The factory city (lib/art/mars-works.ts): the Foundry Town and the two nuclear towns.
+  { id: 'foundry', name: 'The Foundry Town', x: 3650, y: 2350, r: 600 },
+  { id: 'reactor', name: 'Reactor Town', x: 2700, y: 5350, r: 560 },
+  { id: 'cooling', name: 'The Cooling Ring', x: -3400, y: 5650, r: 560 },
   { id: 'factory', name: 'The Factory Belt', x: 2400, y: 2600, r: 900 },
   { id: 'arches', name: 'The Field of Arches', x: -1500, y: -500, r: 750 },
   // The canyons (lib/art/mars-canyons.ts): the Red Canyons south-east, the Rift west.

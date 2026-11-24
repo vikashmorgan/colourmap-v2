@@ -33,7 +33,7 @@ lies off them rewards whoever leaves them.
 1. **Terrain to race in** (shipped, below): canyons cut into the desert with banked walls you ride
    the tilt of, some opening into wide gorges; rock fields (arches, boulder gardens, mesas, rocks as
    natural jumps); superboost portals at the canyons' exits and along the desert straights.
-2. **The factory city**: huge factories in the City's factory shapes (stacks, tanks, conveyor
+2. **The factory city** (shipped, below): huge factories in the City's factory shapes (stacks, tanks, conveyor
    halls, cooling towers); factory pieces you ride (conveyor ramps to jump, a pipe loop or barrel to
    ride through, gaps between halls to thread, tank tops to land on, a chimney slalom); an
    industrial town with real streets to race through; big nuclear towns (cooling-tower rings,
@@ -133,6 +133,80 @@ Only the look changes: where a shark is and when it hits are as before.
   lib/art/drive-shaders.ts (the strata).
 - Tests: lib/art/mars-canyons.test.ts, lib/art/mars-boost.test.ts, lib/art/mars-attacks.test.ts.
 
-## 2. The factory city
+## 2. The factory city (2026-11-24)
 
-To come (this spec is updated as it ships).
+The shapes come from the City's Industry superquarter (lib/city-industry.ts): sawtooth halls,
+silo batteries, preheater towers of stacked cyclones, hyperboloid cooling towers, chimneys,
+conveyor galleries. Everything is laid out in lib/art/mars-works.ts and kept clear, made solid and
+made rideable by lib/art/mars.ts.
+
+### Flat ground
+
+The towns stand on flattened ground (`FLATS`): flat within 300 to 330 m of each town's middle, the
+dunes back in full by 560 to 600 m, in the physics and the backdrop shader alike (the same pattern
+as the measured mile's corridor). Floors and streets are at height 0.
+
+### The Foundry Town
+
+East of the Factory Belt, round (3650, 2350), on a slight turn (`TOWN`): a grid of 64 m blocks and
+24 m streets, five by five, its middle row left open as an avenue 112 m wide.
+
+- **Blocks**: foundry halls filling a block (16 to 26 m tall; those facing the avenue 12 m), pairs
+  of brick warehouses with an 8 m alley between them to thread, and tank yards (three drums and a
+  chimney). Walls in rust, brick or concrete with an iron band at the roofline, rows of steady warm
+  windows.
+- **Roofs and tank tops you land on**: every building's roof and every tank's top is part of the
+  ground the physics drives (`platformTop`), from 2 m in from its walls (`ROOF_INSET`): dark tar
+  with pale landing stripes. From the street a building is a wall you flow along (`boxHit`); it
+  stops being one only when you are above its top (less than 0.6 m under it), so you never climb a
+  wall from the street, even superboosted. Off a roof's edge you fly down to the street.
+- **Roof ramps**: four iron ramps on the first half of the avenue (30 m long, a 15 m lip),
+  slanting 52° off its line toward the blocks either side, so their run-ups stay on the avenue. At
+  140 to 210 km/h they fling you across the street onto the 12 m roofs.
+- **The chimney slalom**: seven brick stacks (58 to 80 m) down the second half of the avenue,
+  alternating 13 m either side of its line, 30 m apart. A superboost portal stands at its head.
+- **The barrel**: a giant pipe 100 m long and 10 m in radius at the avenue's far end, on its line.
+  A true vertical loop cannot be driven on Mars (the ground is a height field, one height per
+  point, so nothing overhangs), so the "loop to pass through" is this barrel: its floor curves up
+  its sides like a half-pipe (`barrelAt`, three quarters of the way up its radius, about 3.4 m and
+  48°), so off its line you ride high round it; past that its shell holds you in (`barrelHit`).
+  Ribbed rust outside, a lamp ring every 20 m along its ceiling.
+
+### The nuclear towns
+
+*Reactor Town* (2700, 5350), north-east past the Factory Belt, and *the Cooling Ring* (-3400,
+5650), north-west past the crater (`NUKES`), each:
+
+- a reactor dome 64 m across on its drum, ribs of the City's star-light dots;
+- six hyperboloid cooling towers 112 m tall in a ring 215 m out, a glowing green ring at each
+  mouth breathing slow steam, dots round their feet, waists and mouths;
+- twelve workers' blocks (44 by 16 m, 10 to 16 m tall, roofs you can land on) in a ring between
+  the dome and the towers, gaps between them to race through; three tanks by the dome.
+- Their radiation is milder than the lakes': 0.7 at the dome, none 420 m out (`NUKE_RAD`), so the
+  Geiger column and the soft TV glitch rise as you near a reactor.
+
+### The mega works
+
+Seven big works standing alone (`MEGA_WORKS`), on the Factory Belt and round the Foundry Town,
+each kept clear and off the towns' flat ground: preheater towers (a frame of four legs and six
+floors, cyclones stacked down it, 92 m plus its stack), silo batteries (six drums 46 to 50 m tall
+with cone tops and a gallery along them) and lone cooling towers. Each has a **conveyor gallery**
+beside it: an iron ramp 70 m long rising to a 20 m lip (`galleryFor`), dark iron with pale hazard
+bands, to jump high into the sky.
+
+### Where it lives
+
+- Pure: lib/art/mars-works.ts (the layouts, `platformTop`, `boxHit`, `barrelAt`, `barrelHit`,
+  `FLATS`), lib/art/mars.ts (`BOXES`, `TANKS`, `BARRELS`, the works in `SITES`, the surfaces in
+  `marsHeight`, the walls in `siteHit` with the vehicle's height, the flats in the terrain and its
+  GLSL, the reactors in `radiation`).
+- Live: components/drive/mars-works-view.ts (the towns merged per town, the barrel, the works'
+  shapes), components/drive/mars-view.ts (the works among the stations, the galleries' iron),
+  components/drive/MarsWorldHud.tsx (buildings, tanks, the barrel and the towers on the map).
+- Tests: lib/art/mars-works.test.ts (roofs, walls, the barrel, flat ground, clearances, a roof
+  ramp onto a roof, a wall never climbed, a run through the barrel, the galleries).
+
+## Still to come
+
+3. Things to explore (crashed stations, artefacts), 4. enemies, 5. highways and missions, as
+planned above.
