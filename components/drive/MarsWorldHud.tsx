@@ -8,8 +8,9 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { LOOP_PATH } from '@/lib/art/mars';
+import { LOOP_PATH, PORTALS, ROCKS } from '@/lib/art/mars';
 import type { AttackId } from '@/lib/art/mars-attacks';
+import { CANYONS, canyonPoint } from '@/lib/art/mars-canyons';
 import { geigerRate } from '@/lib/art/mars-fx';
 import { CRATER, LAKES, LIGHTHOUSE, REGIONS } from '@/lib/art/mars-map';
 import type { AttackHud, MarsWhere } from './mars-run';
@@ -314,6 +315,35 @@ export function MarsMap({ where }: { where: MarsWhere | null }) {
     }
     g.fillStyle = 'rgba(255,240,220,0.8)';
     g.fillRect(X(LIGHTHOUSE.x) - 1.5, Y(LIGHTHOUSE.y) - 1.5, 3, 3);
+    // The canyons: dark cuts as wide as their floors (at least a stroke you can see), the mesas
+    // as small dark dots beside them, the portals as small pale-blue rings.
+    g.lineCap = 'round';
+    for (const arcs of CANYONS)
+      for (const a of arcs) {
+        g.beginPath();
+        for (let i = 0; i <= 12; i++) {
+          const p = canyonPoint(a, i / 12);
+          if (i === 0) g.moveTo(X(p.x), Y(p.y));
+          else g.lineTo(X(p.x), Y(p.y));
+        }
+        g.strokeStyle = 'rgba(70,24,12,0.8)';
+        g.lineWidth = Math.max(2.5, (a.w0 + a.w1) * s);
+        g.stroke();
+      }
+    g.lineWidth = 1;
+    g.fillStyle = 'rgba(90,40,22,0.85)';
+    for (const r of ROCKS) {
+      if (r.kind !== 'mesa') continue;
+      g.beginPath();
+      g.arc(X(r.x), Y(r.y), Math.max(1.2, r.r * s), 0, Math.PI * 2);
+      g.fill();
+    }
+    g.strokeStyle = 'rgba(140,220,255,0.85)';
+    for (const p of PORTALS) {
+      g.beginPath();
+      g.arc(X(p.x), Y(p.y), 2.2, 0, Math.PI * 2);
+      g.stroke();
+    }
     g.beginPath();
     for (let i = 0; i < LOOP_PATH.x.length; i += 8) {
       if (i === 0) g.moveTo(X(LOOP_PATH.x[i]), Y(LOOP_PATH.y[i]));

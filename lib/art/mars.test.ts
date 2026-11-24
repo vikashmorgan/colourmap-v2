@@ -23,6 +23,7 @@ import {
   siteHit,
   stepBastard,
 } from './mars';
+import { canyonCut } from './mars-canyons';
 import { CRATER } from './mars-map';
 import { FINISH_GATE, LINE, SALT_PERIOD, START, START_GATE } from './salt-flat-game';
 import { newVehicle, stepVehicle, VEHICLES } from './vehicle';
@@ -33,6 +34,8 @@ describe('the dunes', () => {
     let hi = 0;
     for (let x = 400; x < 3000; x += 37)
       for (let y = -2000; y < 2000; y += 41) {
+        // The dunes alone: the canyons cut below them on purpose (lib/art/mars-canyons.test.ts).
+        if (canyonCut(x, y).carve > 0) continue;
         const h = marsHeight(x, y);
         lo = Math.min(lo, h);
         hi = Math.max(hi, h);
@@ -74,6 +77,8 @@ describe('the dunes', () => {
         if (ramped) continue;
         // The great crater's bowl and rim are steep on purpose too.
         if (Math.hypot(x - CRATER.x, y - CRATER.y) < CRATER.R * 1.7) continue;
+        // And the canyons' walls.
+        if (canyonCut(x, y).carve > 0) continue;
         const g = marsGround(x, y);
         const e = 0.01;
         expect(g.gx).toBeCloseTo((marsHeight(x + e, y) - marsHeight(x - e, y)) / (2 * e), 3);

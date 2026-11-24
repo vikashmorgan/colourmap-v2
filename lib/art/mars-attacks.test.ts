@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BREACH,
   COOLDOWN,
   cooldownLeft,
   crosshairNear,
@@ -9,6 +10,7 @@ import {
   newAttacks,
   SHARK,
   SHOT,
+  sharkBreach,
   stepAttacks,
   unlocked,
 } from './mars-attacks';
@@ -150,5 +152,65 @@ describe('the laser', () => {
       crosshairNear(you, { x: 300, y: 0 }),
     );
     expect(crosshairNear(you, { x: 3000, y: 0 })).toBe(0);
+  });
+});
+
+describe('the Dust Sharks breaching', () => {
+  const shark = {
+    id: 3,
+    kind: 'shark' as const,
+    x: 0,
+    y: 0,
+    h: 0,
+    dist: 0,
+    born: 10,
+    lane: 0,
+  };
+
+  it('stays in the dust as it sets off, then leaps now and then', () => {
+    expect(sharkBreach(shark, 10 + BREACH.first - 0.01).out).toBe(false);
+    let out = 0;
+    let top = 0;
+    const n = 60 * 14;
+    for (let i = 0; i < n; i++) {
+      const b = sharkBreach(shark, 10 + i / 60);
+      if (b.out) out++;
+      top = Math.max(top, b.lift);
+    }
+    // Out for about a third of the time, a few metres up at the top of each arc.
+    expect(out / n).toBeGreaterThan(0.15);
+    expect(out / n).toBeLessThan(0.45);
+    expect(top).toBeGreaterThan(BREACH.height * 0.95);
+    expect(top).toBeLessThanOrEqual(BREACH.height);
+  });
+
+  it('rises nose up and comes down nose down', () => {
+    const since = (t: number) => sharkBreach(shark, t);
+    let up: number | null = null;
+    let down: number | null = null;
+    for (let i = 0; i < 60 * 6; i++) {
+      const b = since(10 + i / 60);
+      if (b.out && b.lift < 2 && up === null && b.pitch > 0) up = b.pitch;
+      if (up !== null && b.out && b.pitch < 0) down = b.pitch;
+    }
+    expect(up).toBeGreaterThan(0);
+    expect(down).toBeLessThan(0);
+  });
+
+  it('keeps each shark on its own beat, and never touches the shot', () => {
+    const other = { ...shark, id: 4 };
+    let differ = false;
+    for (let i = 0; i < 60 * 6; i++) {
+      const t = 10 + i / 60;
+      if (sharkBreach(shark, t).out !== sharkBreach(other, t).out) differ = true;
+    }
+    expect(differ).toBe(true);
+    expect(sharkBreach({ ...shark, kind: 'shot' }, 13).out).toBe(false);
+  });
+
+  it('leaves the hit as it was: a breach changes nothing in flight', () => {
+    const a = fireAttack(newAttacks(), 'shark', 0, you, { x: 600, y: 0 }, 0).attacks;
+    const out = fly(a, () => ({ x: 600, y: 0 }), 8);
+    expect(out.events.some((e) => e.kind === 'hit')).toBe(true);
   });
 });

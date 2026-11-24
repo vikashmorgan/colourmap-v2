@@ -144,3 +144,45 @@ export function softBang(volume = 0.09): void {
     // No sound, no harm.
   }
 }
+
+/** The superboost (a portal flown through): a rush of filtered air rising and a low swell under
+ * it, about two seconds, quiet. */
+export function superWhoosh(volume = 0.08): void {
+  const c = ctx;
+  if (!c || c.state !== 'running') return;
+  try {
+    const now = c.currentTime;
+    const src = c.createBufferSource();
+    src.buffer = noiseBuffer(c);
+    src.loop = true;
+    const band = c.createBiquadFilter();
+    band.type = 'bandpass';
+    band.Q.value = 1.4;
+    band.frequency.setValueAtTime(300, now);
+    band.frequency.exponentialRampToValueAtTime(2600, now + 0.9);
+    band.frequency.exponentialRampToValueAtTime(900, now + 2.2);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(volume, now + 0.12);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 2.3);
+    src.connect(band).connect(g).connect(c.destination);
+    src.start(now);
+    src.stop(now + 2.4);
+    const o = c.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(55, now);
+    o.frequency.exponentialRampToValueAtTime(140, now + 1.2);
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 420;
+    const og = c.createGain();
+    og.gain.setValueAtTime(0, now);
+    og.gain.linearRampToValueAtTime(volume * 0.5, now + 0.2);
+    og.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+    o.connect(lp).connect(og).connect(c.destination);
+    o.start(now);
+    o.stop(now + 1.9);
+  } catch {
+    // No sound, no harm.
+  }
+}

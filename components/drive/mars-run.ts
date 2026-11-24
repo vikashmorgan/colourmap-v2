@@ -15,6 +15,7 @@ import {
   bastardPose,
   marsHeight,
   newBastard,
+  PORTALS,
   radiation,
   regionAt,
   stepBastard,
@@ -33,6 +34,7 @@ import {
   stepAttacks,
   unlocked,
 } from '@/lib/art/mars-attacks';
+import { portalCrossed, superAccel, superLook } from '@/lib/art/mars-boost';
 import {
   archThrough,
   type Grade,
@@ -52,7 +54,7 @@ import {
 import { newRadio, type RadioMessage, type RadioState, stepRadio } from '@/lib/art/radio';
 import type { Vehicle } from '@/lib/art/vehicle';
 import { AttackView } from './mars-attack-view';
-import { softBang } from './mars-sound';
+import { softBang, superWhoosh } from './mars-sound';
 import type { MarsView } from './mars-view';
 import { buildVehicle, type VehicleView } from './vehicles';
 
@@ -151,6 +153,8 @@ export class MarsRun {
   private attackView: AttackView;
   private pending: AttackEvent[] = [];
   private runs = 0;
+  /** When you last flew through a superboost portal. */
+  private superAt = -99;
 
   constructor(
     private deps: MarsDeps,
@@ -205,6 +209,17 @@ export class MarsRun {
     this.attacks = newAttacks();
     this.slowUntil = -99;
     this.hitAt = undefined;
+    this.superAt = -99;
+  }
+
+  /** The superboost's push along your heading now (m/s², 0 when none). */
+  superPush(t: number, speed: number, vTop: number): number {
+    return superAccel(t - this.superAt, speed, vTop);
+  }
+
+  /** How much the superboost shows on the screen now (0..1). */
+  superShown(t: number): number {
+    return superLook(t - this.superAt);
   }
 
   /**
@@ -243,6 +258,14 @@ export class MarsRun {
   private stepWorld(dt: number, t: number, you: Vehicle, live: boolean) {
     const through = live && this.last ? archThrough(this.last.x, this.last.y, you.x, you.y) : null;
     if (through) this.deps.view?.flare(through, t);
+    // Through a superboost portal (on the ground or flying, inside its ring).
+    if (live && this.last) {
+      const up = you.z - marsHeight(you.x, you.y);
+      if (portalCrossed(PORTALS, this.last.x, this.last.y, you.x, you.y, up)) {
+        this.superAt = t;
+        superWhoosh();
+      }
+    }
     this.grade = stepGrade(this.grade, dt, through);
     this.last = { x: you.x, y: you.y };
     this.you = { x: you.x, y: you.y, h: you.h };

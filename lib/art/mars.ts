@@ -13,6 +13,8 @@
 
 import { DRIFT_PATH } from '@/lib/art/drift-gates';
 import { clamp } from '@/lib/art/drive';
+import { PORTAL_R, type Portal } from '@/lib/art/mars-boost';
+import { CANYONS, canyonCut, canyonGlsl, canyonNear, canyonPoint } from '@/lib/art/mars-canyons';
 import {
   ARCHES,
   ATOMIC,
@@ -26,7 +28,8 @@ import {
   REGIONS,
   type Region,
 } from '@/lib/art/mars-map';
-import { DECK, type Deck, KICKER, type Kicker, rampHeight } from '@/lib/art/mars-ramps';
+import { DECK, type Deck, KICKER, type Kicker, rampHeight, SLAB } from '@/lib/art/mars-ramps';
+import { placeRocks, type Rock, type RockArch, rockArchFeet } from '@/lib/art/mars-rocks';
 import { LINE, SALT_PERIOD, START } from '@/lib/art/salt-flat-game';
 import { type Ground, type Hit, MARS_HANDLING, type Vehicle, type World } from '@/lib/art/vehicle';
 
@@ -136,16 +139,23 @@ function featureMask(x: number, y: number): number {
 export const KICKERS: Kicker[] = [];
 export const DECKS: Deck[] = [];
 
+/** The rocks round the canyons, solid (filled in below): mesas, spires, boulders, and the rock arches' feet. */
+export const ROCKS: Rock[] = [];
+/** The natural arches over the canyons' floors (the way under is open). */
+export const ROCK_ARCHES: RockArch[] = [];
+
 /** The ground's height on Mars (m) as the physics drives it: the terrain and the ramps and decks
  * standing on it. */
 export function marsHeight(x: number, y: number): number {
   return marsBase(x, y) + rampHeight(KICKERS, DECKS, x, y);
 }
 
-/** The bare terrain (m): the dunes, flattened on the course, the great crater and the flat
- * glowing lakes. The backdrop draws this; the ramps and decks are meshes on it. */
+/** The bare terrain (m): the dunes, flattened on the course, the canyons cut into them, the
+ * great crater and the flat glowing lakes. The backdrop draws this; the ramps and decks are meshes
+ * on it. */
 export function marsBase(x: number, y: number): number {
   let h = waves(x, y).h * duneMask(x, y).m * featureMask(x, y);
+  h -= canyonCut(x, y).carve;
   const dc = Math.hypot(x - CRATER.x, y - CRATER.y);
   if (dc < CRATER.R * 2.5) h += craterHeight(dc);
   for (const l of LAKES) {
@@ -204,6 +214,7 @@ export function marsTerrainGlsl(): string {
     (l) => `  k = max(k, 1.0 - length(a - vec2(${f(l.x)}, ${f(l.y)})) / ${f(l.r)});`,
   ).join('\n');
   return `#define MARS_HMAX ${f(Math.max(DUNE_MAX, CRATER.rim) + 0.5)}
+${canyonGlsl()}
 float marsCrater(float d) {
   float u = d / ${f(CRATER.R)};
   if (u < 1.0) return ${f(-CRATER.depth)} + ${f(CRATER.depth + CRATER.rim)} * u * u;
@@ -220,6 +231,8 @@ ${terms}
   m *= smoothstep(${f(CRATER.R * 1.05)}, ${f(CRATER.R * 1.6)}, dc);
 ${lakeMask}
   h *= m;
+  float ck;
+  h -= marsCanyon(a, ck);
   if (dc < ${f(CRATER.R * 2.5)}) h += marsCrater(dc);
 ${lakeFill}
   return h;
@@ -400,6 +413,8 @@ export function siteClear(x: number, y: number, r: number): boolean {
   if (Math.hypot(x - CRATER.x, y - CRATER.y) < CRATER.R * 1.5 + r) return false;
   for (const l of LAKES) if (Math.hypot(x - l.x, y - l.y) < l.r * 1.35 + r + 20) return false;
   for (const a of ARCHES) if (Math.hypot(x - a.x, y - a.y) < a.r + r + 60) return false;
+  // Off the canyons' cuts.
+  if (canyonNear(x, y, r)) return false;
   return distToLoop(x, y) >= r + CLEAR.loop;
 }
 
@@ -533,12 +548,103 @@ export function kickerClear(k: Kicker): boolean {
   }
 })();
 
+/* ── The rock fields and the portals (docs/specs/mars-world.md) ── */
+
+(() => {
+  const placed = placeRocks((x, y, r) => siteClear(x, y, r) && !rampNear(x, y, r));
+  ROCKS.push(...placed.rocks.filter((r) => !rampNear(r.x, r.y, r.r)));
+  for (const a of placed.arches) {
+    ROCK_ARCHES.push(a);
+    ROCKS.push(...rockArchFeet(a));
+  }
+  // The slabs: natural kickers, kept off the rocks and clear of the open ways.
+  for (const s of placed.slabs) {
+    const k: Kicker = {
+      x: s.x - Math.cos(s.h) * SLAB.len * 0.5,
+      y: s.y - Math.sin(s.h) * SLAB.len * 0.5,
+      h: s.h,
+      len: SLAB.len,
+      height: SLAB.height,
+      width: SLAB.width,
+      rock: true,
+    };
+    if (slabClear(k)) KICKERS.push(k);
+  }
+})();
+
+/** Whether a footprint would sit on a kicker or deck (or its run-up). */
+function rampNear(x: number, y: number, r: number): boolean {
+  for (const k of KICKERS) {
+    for (const u of [-50, -25, 0, k.len / 2, k.len + KICKER.back])
+      if (
+        Math.hypot(x - k.x - Math.cos(k.h) * u, y - k.y - Math.sin(k.h) * u) <
+        r + k.width / 2 + 4
+      )
+        return true;
+  }
+  return false;
+}
+
+/** A slab's run-up and landing must miss the rocks and keep off his loop, the line and start. */
+function slabClear(k: Kicker): boolean {
+  for (const u of [-60, -30, 0, k.len / 2, k.len, k.len + 40]) {
+    const x = k.x + Math.cos(k.h) * u;
+    const y = k.y + Math.sin(k.h) * u;
+    if (distToLoop(x, y) < 60) return false;
+    if (Math.hypot(x - START.x, y - START.y) < CLEAR.start) return false;
+    for (const r of ROCKS) if (Math.hypot(x - r.x, y - r.y) < r.r + k.width / 2 + 4) return false;
+    for (const s of SITES) if (Math.hypot(x - s.x, y - s.y) < s.r + k.width / 2 + 4) return false;
+  }
+  return true;
+}
+
+/**
+ * The superboost portals (lib/art/mars-boost.ts): two on the approach to each canyon, one where
+ * each gorge narrows, one at each canyon's mouth and two more out along the desert straight
+ * beyond it. Each kept off the rocks, the stations and the ramps, and clear of his loop.
+ */
+export const PORTALS: Portal[] = (() => {
+  const out: Portal[] = [];
+  const add = (x: number, y: number, h: number) => {
+    if (distToLoop(x, y) < 60) return;
+    if (Math.hypot(x - START.x, y - START.y) < 300) return;
+    if (siteHit(x, y, PORTAL_R + 6)) return;
+    if (rampNear(x, y, PORTAL_R + 4)) return;
+    out.push({ x, y, h, r: PORTAL_R });
+  };
+  for (const arcs of CANYONS) {
+    const first = arcs[0];
+    const h0 = canyonPoint(first, 0).h;
+    for (const u of [300, 700]) add(first.x0 - Math.cos(h0) * u, first.y0 - Math.sin(h0) * u, h0);
+    for (const a of arcs)
+      if (a.w0 >= 60 && a.w1 < 60) {
+        const p = canyonPoint(a, 0.04);
+        add(p.x, p.y, p.h);
+      }
+    const last = arcs[arcs.length - 1];
+    for (const u of [60, 700, 1200])
+      add(last.x1 + Math.cos(last.h1) * u, last.y1 + Math.sin(last.h1) * u, last.h1);
+  }
+  return out;
+})();
+
 /** You flow round a station's footprint, never crash into it (as along every wall). */
 export function siteHit(x: number, y: number, radius = 1.2): Hit | null {
   for (const s of SITES) {
     const dx = x - s.x;
     const dy = y - s.y;
     const reach = s.r + radius;
+    if (Math.abs(dx) > reach || Math.abs(dy) > reach) continue;
+    const d = Math.hypot(dx, dy);
+    if (d >= reach) continue;
+    const nx = d > 1e-6 ? dx / d : 1;
+    const ny = d > 1e-6 ? dy / d : 0;
+    return { nx, ny, depth: reach - d, loss: 0, spin: 0, flow: true };
+  }
+  for (const r of ROCKS) {
+    const dx = x - r.x;
+    const dy = y - r.y;
+    const reach = r.r + radius;
     if (Math.abs(dx) > reach || Math.abs(dy) > reach) continue;
     const d = Math.hypot(dx, dy);
     if (d >= reach) continue;
