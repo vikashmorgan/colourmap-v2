@@ -10,7 +10,16 @@
  * circles a point at (-300, 2900) at 1.2 to 2.3 km (lib/art/mars.ts LOOP).
  */
 
-export type RegionId = 'plain' | 'city' | 'factory' | 'lakes' | 'arches' | 'crater' | 'run';
+export type RegionId =
+  | 'plain'
+  | 'city'
+  | 'factory'
+  | 'lakes'
+  | 'arches'
+  | 'crater'
+  | 'canyons'
+  | 'rift'
+  | 'run';
 
 export interface Region {
   id: RegionId;
@@ -28,6 +37,9 @@ export const REGIONS: Region[] = [
   { id: 'city', name: 'Dome City', x: -300, y: 2900, r: 800 },
   { id: 'factory', name: 'The Factory Belt', x: 2400, y: 2600, r: 900 },
   { id: 'arches', name: 'The Field of Arches', x: -1500, y: -500, r: 750 },
+  // The canyons (lib/art/mars-canyons.ts): the Red Canyons south-east, the Rift west.
+  { id: 'canyons', name: 'The Red Canyons', x: 1850, y: -1700, r: 1250 },
+  { id: 'rift', name: 'The Rift', x: -2700, y: -950, r: 850 },
   { id: 'plain', name: 'The Landing Plain', x: 0, y: 0, r: 1100 },
   { id: 'run', name: "The Bastard's Run", x: -300, y: 2900, r: 0 },
 ];

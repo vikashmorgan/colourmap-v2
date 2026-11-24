@@ -174,6 +174,32 @@ export function fireAttack(
   return { attacks: { ready, flying, next }, fired: true, events };
 }
 
+/**
+ * The Dust Sharks breach (2026-11-24: "for Mars sharks make them jump into the air sometimes"):
+ * every few seconds a shark leaps out of the dust in an arc a few metres high and dives back in.
+ * Only how it looks: where it is and when it hits are as before. The first leap waits a moment
+ * after it sets off, and each shark keeps its own beat.
+ */
+export const BREACH = { every: 3.4, air: 1.1, height: 6, first: 0.9 };
+
+/** A shark's leap now: how high it is out of the dust (m), its nose up or down (rad), and
+ * whether it is out of the dust at all. */
+export function sharkBreach(
+  p: Projectile,
+  t: number,
+): { lift: number; pitch: number; out: boolean } {
+  const since = t - p.born - BREACH.first;
+  if (p.kind !== 'shark' || since < 0) return { lift: 0, pitch: 0, out: false };
+  const beat = (((p.id * 0.618) % 1) * BREACH.every) / 2;
+  const k = ((since + beat) % BREACH.every) / BREACH.air;
+  if (k >= 1) return { lift: 0, pitch: 0, out: false };
+  const lift = 4 * BREACH.height * k * (1 - k);
+  // The arc's slope at its speed over the ground, a little steeper for the look of it.
+  const rise = (4 * BREACH.height * (1 - 2 * k)) / BREACH.air;
+  const pitch = Math.atan2(rise * 1.8, SHARK.speed);
+  return { lift, pitch, out: lift > 0.3 };
+}
+
 function turnToward(h: number, target: number, max: number): number {
   let d = target - h;
   while (d > Math.PI) d -= Math.PI * 2;

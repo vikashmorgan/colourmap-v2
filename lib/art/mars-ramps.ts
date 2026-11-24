@@ -20,6 +20,8 @@ export interface Kicker {
   len: number;
   height: number;
   width: number;
+  /** A natural slab of rock rather than a rust ramp (drawn in rock; the same shape). */
+  rock?: boolean;
 }
 
 export interface Deck {
@@ -34,6 +36,8 @@ export interface Deck {
 }
 
 export const KICKER = { len: 26, height: 7, width: 9, back: 5 };
+/** The rock slabs round the canyons: shorter, lower, wider than the rust kickers. */
+export const SLAB = { len: 22, height: 5, width: 11 };
 export const DECK = { height: 7, width: 6, ramp: 40, berm: 5 };
 
 /** How high a kicker is at a point (0 off it). The face rises as (u/len)^1.4 to the lip; behind

@@ -1657,6 +1657,12 @@ export class DriveEngine {
         v.vx += Math.cos(v.h) * booster * dt;
         v.vy += Math.sin(v.h) * booster * dt;
       }
+      // Mars: a superboost portal's push, past the top speed (docs/specs/mars-world.md).
+      const sup = this.marsRun?.superPush(t, speedOf(v), spec.vTop) ?? 0;
+      if (sup > 0) {
+        v.vx += Math.cos(v.h) * sup * dt;
+        v.vy += Math.sin(v.h) * sup * dt;
+      }
       const gust = gustAt(w, t) * (v.kind === 'ship' ? 1.5 : 1);
       if (gust !== 0 && !v.air) {
         v.vx += -Math.sin(v.h) * gust * dt;
@@ -1767,7 +1773,8 @@ export class DriveEngine {
     const speed = speedOf(v);
     const boost =
       ctl.boost +
-      (surgeAccel(t - this.surgeAt) > 0 || boosterAccel(t - this.boosterAt) > 0 ? 1 : 0);
+      (surgeAccel(t - this.surgeAt) > 0 || boosterAccel(t - this.boosterAt) > 0 ? 1 : 0) +
+      2 * (this.marsRun?.superShown(t) ?? 0);
     const feel = speedFeel(speed, spec.vTop, t);
     this.cam.focal = ease(this.cam.focal, feel.focal - 0.05 * boost, 3, dt);
     const piece = this.pieceCamera();
@@ -1898,7 +1905,8 @@ export class DriveEngine {
       const power =
         (ctl.throttle > 0 || ctl.boost > 0 ? 1 : 0.35) +
         ctl.boost * 0.5 +
-        (surgeAccel(t - this.surgeAt) > 0 || boosterAccel(t - this.boosterAt) > 0 ? 0.8 : 0);
+        (surgeAccel(t - this.surgeAt) > 0 || boosterAccel(t - this.boosterAt) > 0 ? 0.8 : 0) +
+        (this.marsRun?.superShown(t) ?? 0);
       vv.update(
         v,
         t,

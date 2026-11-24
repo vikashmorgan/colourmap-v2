@@ -529,6 +529,16 @@ vec3 scene(vec2 p, out float yHz) {
     vec3 sunV = normalize(vec3(cos(uSunAz), 0.32, sin(uSunAz)));
     float lit = max(dot(n, sunV), 0.0) / 0.305;
     groundC *= clamp(mix(1.0, lit, 0.8), 0.3, 1.9);
+    // The canyons (lib/art/mars-canyons.ts): banded strata up the walls, the floor a shade deeper.
+    float ck;
+    float cv = marsCanyon(rel - org, ck);
+    if (cv > 0.3) {
+      float wall = smoothstep(0.12, 0.4, 1.0 - n.y);
+      float band = 0.5 + 0.5 * sin(h0 * 1.15 + 1.7 * vn((rel - org) / 40.0));
+      vec3 strata = mix(C(0.5, 0.22, 0.12), C(0.95, 0.62, 0.38), band);
+      groundC = mix(groundC, strata * clamp(mix(1.0, lit, 0.8), 0.35, 1.7), wall * 0.7);
+      groundC *= 1.0 - 0.18 * ck * (1.0 - wall);
+    }
   }
 #endif
   groundC = mix(groundC, C(1.0, 0.98, 1.0), uSnow * 0.6);

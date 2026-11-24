@@ -268,6 +268,13 @@ easy to stay on it", "same with coast road, make them much wider".
      lib/art/mars-ramps.ts (kicker and deck heights); live in components/drive/mars-run.ts; drawn
      by components/drive/mars-attack-view.ts.
 
+   **The wider world** (2026-11-24: "plan how to develop mars"): the plan for Mars's next layers
+   and every part as it ships lives in docs/specs/mars-world.md: the canyons (the Red Canyons and
+   the Rift, cut into the real terrain with banked walls), the rock fields (mesas, spires, boulder
+   gardens, rock arches, rock slabs to jump), the superboost portals (past the top speed for a few
+   seconds), the Dust Sharks breaching, and the factory city, explorations, enemies and highways to
+   come.
+
 Why three night tracks: Night Rain stays the plain lamp course the user loved (with the City's
 towers, arch and rings added back from the road); Chinatown and the Neon District are new tracks
 with their own curvature, elevation and furniture from one generator (`lib/art/night-course.ts`),
