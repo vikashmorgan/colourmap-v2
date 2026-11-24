@@ -125,6 +125,18 @@ section{padding-block:64px}
 .mood img{display:block;width:100%;aspect-ratio:1168/784;object-fit:cover;border-radius:16px}
 .mood figcaption{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:12px}
 
+/* collection */
+.cgroup{display:grid;gap:16px;justify-items:center;margin-top:40px}
+.cgroup h3{font-size:24px}
+.crow{display:flex;flex-wrap:wrap;justify-content:center;gap:24px;width:100%}
+.cw{margin:0;display:grid;gap:8px;justify-items:center;flex:1 1 300px;max-width:460px}
+.crow.two{max-width:960px}
+.crow.two .cw{flex:1 1 calc(50% - 12px);max-width:calc(50% - 12px)}
+@media (max-width:640px){.crow.two .cw{flex-basis:100%;max-width:100%}}
+.cw.big{max-width:880px;flex-basis:100%}
+.cw img{display:block;width:100%;height:auto;border-radius:16px;box-shadow:0 8px 24px rgba(74,42,24,.12)}
+.crow:has(.cw img[height="800"]) .cw{max-width:300px}
+
 /* 3D art + stickers */
 .solo{margin:0 auto;padding:12px;display:grid;gap:12px;justify-items:center;max-width:960px}
 .solo img{display:block;width:100%;height:auto;border-radius:16px}
@@ -235,7 +247,7 @@ footer .wrap{justify-content:center;text-align:center}
     <nav class="nav" aria-label="Sections">
       <a href="#manifesto">Manifesto</a>
       <a href="#make">What we make</a>
-      <a href="#art3d">3D art</a>
+      <a href="#collection">Collection</a>
       <a href="#stickers">Stickers</a>
       <a href="#base">BASE night</a>
       <a href="#places">Milano &amp; world</a>
@@ -261,7 +273,7 @@ footer .wrap{justify-content:center;text-align:center}
         <svg class="geo" id="geo" viewBox="0 0 600 600" aria-hidden="true"></svg>
         <img src="/assets/logo.webp" alt="Love Wins logo: the words Love and Wins in rounded 70s letters arched around a red-orange heart" width="900" height="900">
       </div>
-      <p class="label">A creative movement · For those who dream</p>
+      <p class="label">A creative movement · For those who dream · Embassy of Dreams</p>
       <h1 class="tag">Dreamers in action, winning together.</h1>
       <p class="sub">Love Wins brings together artists, builders, musicians and travellers to make things, open spaces and throw nights of freedom. It starts in Milano and grows city by city, like a constellation.</p>
       <div class="btns"><a class="cta" href="#join">Join the movement ♥</a><a class="cta ghost" href="#manifesto">Read the manifesto</a></div>
@@ -296,13 +308,13 @@ footer .wrap{justify-content:center;text-align:center}
     </div>
   </section>
 
-  <section id="art3d" class="gallery">
+  <section id="collection" class="collection">
     <div class="wrap">
-      <div class="head"><span class="label">3D art</span><h2>The heart, sculpted</h2><p class="sub">Our heart character as a gallery piece: a sculpture you can walk around.</p></div>
-      <figure class="hud solo"><i></i><i></i><i></i><i></i>
-        <img src="/assets/heart-sculpture.webp" alt="3D red heart character with sunglasses, tongue out and peace signs, standing on a white plinth in a gallery" width="960" height="644" loading="lazy">
-        <figcaption class="label">The heart · 3D sculpture concept</figcaption>
-      </figure>
+      <div class="head"><span class="label">Embassy of Dreams · the Love Wins collection</span><h2>The Love Wins collection</h2><p class="sub">One heart with sunglasses and peace signs, made into sculptures, art toys, cushions and keychains. Art for the Embassy of Dreams.</p></div>
+        <div class="cgroup"><h3>Sculptures</h3><div class="crow two"><figure class="cw"><img src="/assets/col-heart-1m.webp" alt="Red heart sculpture in heart-shaped sunglasses making peace signs, on a black plinth labelled Heart, 1 metre tall" width="800" height="538" loading="lazy"><figcaption class="label">Heart · 1 metre</figcaption></figure><figure class="cw"><img src="/assets/col-walker.webp" alt="Red heart sculpture in sunglasses walking calmly on a black plinth labelled Peaceful Walker" width="800" height="537" loading="lazy"><figcaption class="label">Peaceful Walker</figcaption></figure><figure class="cw"><img src="/assets/col-heart-1m-b.webp" alt="Front view of the 1 metre red heart sculpture with heart sunglasses and peace signs" width="800" height="537" loading="lazy"><figcaption class="label">Heart · front</figcaption></figure><figure class="cw"><img src="/assets/col-plinth.webp" alt="Red heart character in sunglasses with peace signs on a white gallery plinth" width="800" height="538" loading="lazy"><figcaption class="label">On the plinth</figcaption></figure></div></div>
+        <div class="cgroup"><h3>Expression & posture study</h3><div class="crow"><figure class="cw big"><img src="/assets/col-study.webp" alt="Sheet of six heart art toy poses: Peaceful Walker, Happy Stroller, Joyful Leaper, Cool Strider, Crowned Optimist, Giggling Bouncer" width="1100" height="738" loading="lazy"><figcaption class="label">Six characters · soft vinyl art toys</figcaption></figure></div></div>
+        <div class="cgroup"><h3>Cushions</h3><div class="crow"><figure class="cw"><img src="/assets/col-cushions-a.webp" alt="Row of six red heart plush cushions with different faces on a bed" width="800" height="537" loading="lazy"><figcaption class="label">Heart cushions</figcaption></figure><figure class="cw"><img src="/assets/col-cushions-b.webp" alt="Six heart cushions in red and pink with sunglasses and a crown on a bed" width="800" height="537" loading="lazy"><figcaption class="label">The family</figcaption></figure></div></div>
+        <div class="cgroup"><h3>Keychains</h3><div class="crow"><figure class="cw"><img src="/assets/col-key-a.webp" alt="Red heart keychain with heart sunglasses and peace signs on a leather strap" width="538" height="800" loading="lazy"><figcaption class="label">Peace keychain</figcaption></figure><figure class="cw"><img src="/assets/col-key-b.webp" alt="Red heart keychain with sunglasses, arms and legs, on a leather strap" width="538" height="800" loading="lazy"><figcaption class="label">Walker keychain</figcaption></figure></div></div>
     </div>
   </section>
 
@@ -400,7 +412,7 @@ footer .wrap{justify-content:center;text-align:center}
 </main>
 
 <footer>
-  <div class="wrap"><span class="label">Love Wins · For those who dream</span><span class="label">Milano → the world · 2026</span></div>
+  <div class="wrap"><span class="label">Love Wins · a collection of the Embassy of Dreams</span><span class="label">Milano → the world · 2026</span></div>
 </footer>
 
 <script>
