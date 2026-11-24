@@ -30,7 +30,8 @@ describe('night furniture', () => {
     expect(rain.has('arch')).toBe(true);
     expect(rain.has('lanterns')).toBe(false);
 
-    const china = kinds('chinatown');
+    // Past the first fork (1 km before Undertown, from 300 m), where the gates stand again.
+    const china = kinds('chinatown', 0, 3600);
     expect(china.has('lanterns')).toBe(true);
     expect(china.has('gate')).toBe(true);
     expect(china.has('shophouse')).toBe(true);
@@ -51,7 +52,9 @@ describe('night furniture', () => {
         const overhead =
           p.lift >= 4.5 ||
           ['arch', 'gate', 'temple', 'bridge', 'lights', 'lanterns', 'gantry'].includes(p.kind) ||
-          (p.kind === 'beacon' && p.lift < 0.3);
+          (p.kind === 'beacon' && p.lift < 0.3) ||
+          // Down in the underpass's void, under the street's deck.
+          (p.base ?? 0) < -2;
         if (!overhead) expect(Math.abs(p.u)).toBeGreaterThan(half);
       }
     }

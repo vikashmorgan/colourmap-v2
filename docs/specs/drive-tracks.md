@@ -140,31 +140,73 @@ Lanterns, lanes and avenues.
       gentle bend's bank has 1.5 times the tangent, up to 0.3 rad (about 17°; the other street roads
       keep 0.2). The grid stays level: the bank is 0 to 120 m and eases in by 320 m
       (`CHINA_BANK`, `CHINA_LEVEL` in lib/art/track.ts; `TrackDef.level`).
-- [x] **Two paths at Undertown: Main Street** (2026-11-24: "give option to keep going normal instead
-      of doing the tilt for the chinatown run so u can do it both ways and there are 2 paths").
-      `lib/art/chinatown-paths.ts` (pure, tested).
-      - Before each Undertown a lane 18 m wide peels off the road's right edge (from 420 m before the
-        flip, fully out 60 m before it), runs beside the flip with its centre 38 m right of the
-        road's (clear of the flip's sweep, about 23 m out), and merges back the same way after.
-        Keep left and you flip under; bear right and you drive on, on top, the right way up. It is
-        a twist's bypass (`TrackDef.bypass`), level with the road's right edge as the bank carries
-        it, so where the two meet nothing steps.
-      - Once the two have parted a median walls them apart (`TrackDef.median`): on the ribbon the
-        median is your right-hand barrier, on the lane the lane holds you as a road of its own.
-        Before they part the road's edge has no lip on that side, so you cross onto the lane
-        smoothly.
+- [x] **Two paths at Undertown: the underpass** (2026-11-24, first "give option to keep going
+      normal instead of doing the tilt … so there are 2 paths" (Main Street, level beside the
+      flip), then "loop that goes to undertown add option to go to the right and take another road
+      that doesn't go to undertown … but below the road of the main chinatown. so it is yet another
+      plot twist", then "a big ass second track on the right with more emptiness around it").
+      `lib/art/chinatown-paths.ts` (pure, tested); the two levels in `lib/art/track.ts`.
+      - The way: bear right at the fork (1,000 m before the flip) and a second track 28 m wide
+        (`LOWER.LANE` 14, nearly an avenue's width) peels off the road's right edge, out to 44 m
+        right of its centre over 300 m, level until the median has formed. Then it dives 12 m
+        under the street over 340 m (eased at both ends: at most 8% and gentle enough over its
+        brow at full boost that nobody is thrown), swings in under the road over 260 m (its centre
+        6 m right of the road's, most of its width under the road's footprint, its left kerb short
+        of the road's left edge) and runs beneath the street from 220 m before the flip to 580 m
+        into Undertown. Then it swings back out right, climbs out over 340 m (done before the
+        median ends) and merges back 1,400 m after the flip began. In metres from the flip:
+        peel -1,000 to -700, dive -790 to -450, in -480 to -220, back 580 to 840, climb 800 to
+        1,140, merge 1,100 to 1,400 (`LOWER`, `underpass`, `underpassDepth`).
+      - The plot twist: under the road the street is a deck over you (dark underside, lacquer
+        columns along its far side, lanterns hung from it); then the flip lifts the roof off over
+        your head and the void opens to the sky, the ribbon rolling over high above with the
+        racers on it upside down (48 m over the floor), and comes back down beside you on the
+        right as you swing out and climb.
+      - Emptiness around it: once it is down, everything right of the street falls away with it
+        into an open plain (the void, `voidLeft`, `overVoid`): the track between gold kerbs, a quay
+        30 m past its far kerb, then the lake (below). No shophouses right of the street over the
+        void; where it is shallow they stand back past its far edge plus 2.5 m, and up to 36 m more
+        as it goes down (`LOWER.OPEN`). The street runs along the plain's edge on a lacquered
+        retaining wall, a rail along its right edge lit violet.
+      - Two surfaces over the same ground, the street on top and the floor below, told apart by
+        the body's height as the balcony road's deck is: below while nearer the floor than the
+        street (`belowStreet`; the physics' `World.ground` takes the body's height). Down there
+        the track alone holds you, walled at its kerbs; up on the street the road holds you and
+        the rail stops you at its edge over the void (`LOWER_RAIL`). The floor is flat across,
+        level with the road's right edge at street level and sinking to 12 m under the street's
+        datum, so it never rides the street's crests and dips (`lowerFloor`). The deck is 1.6 m
+        thick; the roof is open once the road has rolled 0.02 rad (`lowerCeiling`, `lowerOpen`).
+      - Down there you are drawn flat, never rolled with the road over your head (rivals too),
+        and the chase camera stays over the floor and under the deck where it roofs the track.
+        No UNDERTOWN title, no boost (that is the flip's).
+      - Before the dive the two are walled apart by the median (`TrackDef.median`, `pathMedian`);
+        before they part the road's edge has no lip on that side, so you cross onto the lane
+        smoothly. On the ribbon, Undertown keeps its barriers.
       - Read at a glance: a gantry over the road 60 m before the fork's nose with **下町 UNDERTOWN ↶**
-        (pink neon) over the road ahead and **大街 MAIN STREET →** (gold on lacquer) over the lane;
+        (pink neon) over the road ahead and **地下街 UNDERPASS ↘** (gold on lacquer) over the lane;
         chevrons of light in the road before it, violet straight ahead, gold bearing right; the
-        median's kerbs lit violet on the road's side and gold on the lane's, the lane's far edge
-        gold. The signs are three reserved cells of the street's sign atlas.
-      - The shophouses on the right stand back behind the lane (its far edge plus 2.5 m), easing
-        back with it as it peels off, so the lane has its own clear corridor. No span crosses the
-        road by the fork until the median is well apart; Design's dressing, the gates and the
-        stage passages keep out of the fork.
-      - On Main Street you are drawn flat (not rolled), no UNDERTOWN title, no boost (that is the
-        flip's). Rivals on the right of the grid bear right, the others go under; the autopilot
-        takes one way or the other at each fork, the same all along it.
+        median's kerbs lit violet and gold. Down in the void: gold kerb lines, red lanterns on
+        posts along the far kerb, lettered panels **地下街 · 灯 · UNDERPASS** along the retaining
+        wall. The signs are four reserved cells of the street's sign atlas.
+      - No span with posts (gates, temple gates) crosses the road where the void is down; strings
+        of lanterns still do. Design's dressing, the gates and the stage passages keep out of the
+        fork.
+      - Rivals on the right of the grid bear right, the others go under; the autopilot takes one
+        way or the other at each fork, the same all along it.
+- [x] **The lake city** (2026-11-24: "THAT DISTANT LAKE AND REFLECTION AWESOME FOR THE DOUBLE SIDE
+      STUFF. THAT'S WHERE U BUILD THE BIG CITY IN THE DISTANCE"). `lib/art/lake-city.ts` (layout,
+      pure, tested), `components/drive/lake-city-view.ts`.
+      - The "lake" was the night worlds' wet backdrop plain lying in the distance; around each
+        Undertown it is now real water at the void's level (12.4 m under the street's datum),
+        past the underpass's quay out to 240 m right of the road, and a broad sheet from 150 m to
+        840 m out, 1,700 m along.
+      - On its far shore, 620 to 840 m out, a big city: 72 lit towers, 45 to 240 m tall, tallest in
+        the middle, crowns and spires of light on the tallest, windows in gold, lantern red, jade
+        and violet; every tower and its lights mirrored under the water, dimmer, showing through
+        it. Laid out in the road's frame at one point (490 m into the run), so the far shore never
+        folds round the road's bends. Built while you are within 2.3 km of it.
+      - On top you look out over the plain and the lake to the city; flipped under in Undertown it
+        hangs over your head, city and reflection changing places.
 - [x] **The balcony road** (2026-11-24: "on the small jumps allow ability to jump go higher up left
       and ride a second slope on the left. that is above the normal slope. like a side track above
       the first floor of the buildings"). `lib/art/chinatown-paths.ts`.
@@ -202,8 +244,8 @@ Lanterns, lanes and avenues.
         always holds you to the road.
       - Unlike a twist it keeps its barriers. They close in to the ribbon's edge (0.4 m past it),
         easing over 40 m, so nobody falls off and nobody is drawn hanging in the air. No straight
-        road through its hollow: on the road you go under (since 2026-11-24 Main Street is the way
-        past it on top). The boost out of a twist still comes at its end.
+        road through its hollow: on the road you go under (since 2026-11-24 the underpass is the
+        way past it, below). The boost out of a twist still comes at its end.
       - Where it flips, nothing crosses the road and nothing stands inside the sweep (the flip
         reaches out to the axis' height either side). Upside down, the street below keeps all its
         pieces.

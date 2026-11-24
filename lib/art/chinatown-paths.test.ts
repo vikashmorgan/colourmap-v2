@@ -9,18 +9,24 @@ import {
   balconyLocal,
   forkNose,
   kickAt,
-  MAIN,
-  mainMedian,
-  mainStreet,
+  LOWER,
+  LOWER_FROM,
+  LOWER_TO,
   PATH_SIGNS,
+  pathMedian,
   pickFor,
   runStart,
+  underpass,
+  underpassDepth,
 } from './chinatown-paths';
+import { CT_PATH_CELLS } from './chinatown-street';
 import { piecesBetween } from './night-course';
 import { RIVALS, rivalPick } from './rivals';
 import {
-  BYPASS_LANE,
+  belowStreet,
+  CHINA_AVENUE,
   CHINA_BANK,
+  CHINA_LANE,
   CHINA_LEVEL,
   CHINATOWN,
   chinatownHalf,
@@ -28,6 +34,11 @@ import {
   frameAt,
   groundAt,
   heightAt,
+  LOWER_RAIL,
+  LOWER_SLAB,
+  lowerCeiling,
+  lowerFloor,
+  lowerOpen,
   makeTrackWorld,
   medianAt,
   onBalcony,
@@ -59,114 +70,191 @@ function carAt(w: ReturnType<typeof makeTrackWorld>, s: number, u: number, speed
   return v;
 }
 
-describe('Main Street, the way past Undertown (2026-11-24: "there are 2 paths")', () => {
-  it('peels off the right before each Undertown, runs clear of the flip, and merges back after', () => {
+describe('the underpass, the way under Undertown (2026-11-24: "below the road of the main chinatown")', () => {
+  const lane = (s: number) => underpass(s) ?? Number.NaN;
+
+  it('peels off right, goes down, swings in under the road, then out, up and back', () => {
     for (const k of [0, 1, 3]) {
       const at = first + k * UNDER.EVERY;
-      expect(mainStreet(at - MAIN.SPLIT - 1)).toBeNull();
-      expect(mainStreet(at - MAIN.SPLIT + 1)).toBeCloseTo(0, 0);
-      // Fully out before the flip starts and until after it ends.
-      for (let s = at - MAIN.CLEAR; s <= at + UNDER_LENGTH + MAIN.CLEAR; s += 10)
-        expect(mainStreet(s)).toBeCloseTo(-MAIN.OUT, 6);
-      expect(mainStreet(at + UNDER_LENGTH + MAIN.SPLIT + 1)).toBeNull();
+      expect(underpass(at + LOWER_FROM - 1)).toBeNull();
+      expect(underpass(at + LOWER_FROM + 1)).toBeCloseTo(0, 0);
+      expect(underpassDepth(at + LOWER_FROM + 1)).toBe(0);
+      // Out right and still level until the median has formed; then down.
+      expect(lane(at + LOWER.PEEL[1])).toBeCloseTo(-LOWER.OUT, 6);
+      expect(underpassDepth(at + LOWER.DIVE[0])).toBe(0);
+      // Down and under the road from before the flip until well into the underside.
+      for (let s = at + LOWER.IN[1]; s <= at + LOWER.BACK[0]; s += 10) {
+        expect(lane(s)).toBeCloseTo(LOWER.UNDER_C, 6);
+        expect(underpassDepth(s)).toBeCloseTo(LOWER.DEPTH, 6);
+      }
+      // Out again before the ribbon comes back down, up before the median ends, then merged.
+      expect(lane(at + UNDER_LENGTH - UNDER.FLIP)).toBeLessThan(-LOWER.OUT + 4);
+      expect(underpassDepth(at + LOWER.CLIMB[1])).toBe(0);
+      expect(underpass(at + LOWER_TO + 1)).toBeNull();
     }
-    expect(mainStreet(Number.NaN)).toBeNull();
-    expect(mainStreet(first + UNDER.EVERY / 2 + 600)).toBeNull();
-    expect(MAIN.LANE).toBe(BYPASS_LANE);
+    expect(underpass(Number.NaN)).toBeNull();
+    expect(underpass(first + LOWER_TO + 200)).toBeNull();
   });
 
-  it('keeps its lane outside the flip’s sweep (the ribbon’s edge round the axis)', () => {
-    const half = Math.max(...Array.from({ length: 200 }, (_, i) => chinatownHalf(i * 10)));
-    const sweep = Math.hypot(half, UNDER.AXIS);
-    expect(MAIN.OUT - MAIN.LANE).toBeGreaterThan(sweep + 4);
+  it('is a second track, nearly as wide as the avenues, and crosses under the road', () => {
+    expect(LOWER.LANE * 2).toBeGreaterThanOrEqual(CHINA_AVENUE * 2 - 4);
+    const under = first + 300;
+    const half = chinatownHalf(under);
+    // Most of its width lies under the road's footprint, its far kerb short of the left edge.
+    expect(LOWER.UNDER_C + LOWER.LANE).toBeGreaterThan(0);
+    expect(LOWER.UNDER_C + LOWER.LANE + LOWER.KERB).toBeLessThanOrEqual(CHINA_LANE);
+    expect(Math.abs(LOWER.UNDER_C)).toBeLessThan(half);
   });
 
-  it('eases out smoothly, never a jump across', () => {
-    let prev = mainStreet(first - MAIN.SPLIT) ?? 0;
-    for (let s = first - MAIN.SPLIT; s < first + UNDER_LENGTH + MAIN.SPLIT; s += 1) {
-      const c = mainStreet(s) ?? 0;
-      expect(Math.abs(c - prev)).toBeLessThan(0.2);
-      prev = c;
+  it('dives and climbs gently enough at full boost, and swings across smoothly', () => {
+    const fast = 125;
+    let steep = 0;
+    let bend = 0;
+    let side = 0;
+    for (let s = first + LOWER_FROM + 2; s < first + LOWER_TO - 2; s += 1) {
+      const d0 = underpassDepth(s - 1);
+      const d1 = underpassDepth(s);
+      const d2 = underpassDepth(s + 1);
+      steep = Math.max(steep, Math.abs(d2 - d0) / 2);
+      bend = Math.max(bend, Math.abs(d2 - 2 * d1 + d0));
+      side = Math.max(side, Math.abs(lane(s + 1) - 2 * lane(s) + lane(s - 1)));
     }
+    expect(steep).toBeLessThan(0.08);
+    // Over the brow you are never thrown off: the curve asks less than gravity gives.
+    expect(bend * fast * fast).toBeLessThan(9.81);
+    expect(side).toBeLessThan(0.004);
   });
 
-  it('walls the lane apart from the road once they have parted, with the median between', () => {
-    expect(mainMedian(null, 10)).toBeNull();
-    expect(mainMedian(-10, 10)).toBeNull();
-    expect(mainMedian(-MAIN.OUT, 10)).toBeCloseTo((-MAIN.OUT + MAIN.LANE - 10) / 2, 9);
-    const half = chinatownHalf(first - 200);
+  it('is walled apart by the median before it goes down and until it is back up', () => {
+    expect(pathMedian(null, 10)).toBeNull();
+    expect(pathMedian(-10, 10)).toBeNull();
+    expect(pathMedian(-LOWER.OUT, 10)).toBeCloseTo((-LOWER.OUT + LOWER.LANE - 10) / 2, 9);
+    for (const k of [0, 1, 2, 3, 4]) {
+      const at = first + k * UNDER.EVERY;
+      for (const s of [at + LOWER.DIVE[0], at + LOWER.CLIMB[1]])
+        expect(pathMedian(underpass(s), chinatownHalf(s))).not.toBeNull();
+    }
+    const half = chinatownHalf(first - 900);
     const nose = forkNose(first, half);
-    expect(nose).toBeGreaterThan(first - MAIN.SPLIT);
-    expect(nose).toBeLessThan(first - MAIN.CLEAR);
-    expect(medianAt(makeTrackWorld(CHINATOWN).track, nose - 3)).toBeNull();
-    expect(medianAt(makeTrackWorld(CHINATOWN).track, nose + 3)).not.toBeNull();
+    expect(nose).toBeGreaterThan(first + LOWER_FROM);
+    expect(nose).toBeLessThan(first + LOWER.DIVE[0]);
+    const t = makeTrackWorld(CHINATOWN).track;
+    expect(medianAt(t, nose - 3)).toBeNull();
+    expect(medianAt(t, nose + 3)).not.toBeNull();
   });
 
-  it('is road: flat, smooth, drawn flat (not rolled) while the ribbon flips beside it', () => {
+  it('keeps clear of the ribbon as it flips over it, in and out', () => {
     const w = makeTrackWorld(CHINATOWN);
-    const mid = first + UNDER_LENGTH / 2;
-    const c = mainStreet(mid) ?? 0;
-    w.track.hint = mid;
-    // Level with the road's right edge beside it (the bank carries it), flat across.
-    const fm = frameAt(w.track, mid);
-    expect(heightAt(w.track, mid, c)).toBeCloseTo(fm.e + Math.tan(fm.bank) * fm.half, 9);
-    expect(heightAt(w.track, mid, c + 5)).toBeCloseTo(heightAt(w.track, mid, c - 5), 9);
-    const p = frameAt(w.track, mid);
-    const q = groundAt(w.track, p.x - Math.sin(p.h) * c, p.y + Math.cos(p.h) * c);
-    expect(q.rough).toBe(0);
-    // The lane holds you as a road of its own.
-    expect(q.road?.half).toBe(BYPASS_LANE);
-    expect(Math.abs(q.road?.u ?? 9)).toBeLessThan(0.5);
-    // Far from the ribbon even where it sweeps out widest.
-    const flip = first + UNDER.FLIP / 2;
-    const edge = twistPose(w.track, flip, CHINATOWN.half(flip), 0);
-    const e = project(w.track, edge.x, edge.y, flip);
-    expect(e.u).toBeGreaterThan((mainStreet(flip) ?? 0) + MAIN.LANE + 4);
+    let checked = 0;
+    for (const [a, b] of [
+      [first, first + UNDER.FLIP],
+      [first + UNDER_LENGTH - UNDER.FLIP, first + UNDER_LENGTH],
+    ]) {
+      for (let s = a; s <= b; s += 4) {
+        const half = chinatownHalf(s);
+        for (let u = -half; u <= half; u += 1) {
+          const p = twistPose(w.track, s, u, 0);
+          const q = project(w.track, p.x, p.y, s);
+          const c = underpass(q.s);
+          if (c === null || Math.abs(q.u - c) > LOWER.LANE + LOWER.KERB) continue;
+          checked++;
+          expect(p.z - lowerFloor(CHINATOWN, q.s)).toBeGreaterThan(6);
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(50);
   });
 
-  it('a car bearing right at the fork drives Main Street level past Undertown and comes back', () => {
+  it('gives two surfaces under the road, picked by height; beside it, the void', () => {
     const w = makeTrackWorld(CHINATOWN);
-    const start = first - MAIN.SPLIT - 100;
-    const v = carAt(w, start, 0, 45);
-    let onMain = 0;
-    let rolledUnder = 0;
-    for (let i = 0; i < 60 * 40; i++) {
+    const s = first + 400;
+    const c = lane(s);
+    const f = frameAt(w.track, s);
+    const x = f.x - Math.sin(f.h) * c;
+    const y = f.y + Math.cos(f.h) * c;
+    const floor = lowerFloor(CHINATOWN, s);
+    expect(floor).toBeCloseTo(-LOWER.DEPTH, 6);
+    const street = heightAt(w.track, s, c);
+    expect(street - floor).toBeGreaterThan(LOWER.DEPTH - 4);
+    // Up on the street: the street.
+    w.track.hint = s;
+    const top = groundAt(w.track, x, y, street + 0.4);
+    expect(top.h).toBeCloseTo(street, 6);
+    expect(belowStreet(w.track, s, c, street + 0.4)).toBe(false);
+    // Down below: the floor, flat, its track holding you.
+    w.track.hint = s;
+    const low = groundAt(w.track, x, y, floor + 0.4);
+    expect(low.h).toBeCloseTo(floor, 6);
+    expect(low.road?.half).toBe(LOWER.LANE);
+    expect(Math.abs(low.road?.u ?? 9)).toBeLessThan(0.5);
+    expect(low.rough).toBe(0);
+    expect(belowStreet(w.track, s, c, floor + 0.4)).toBe(true);
+    // Without a height the street is what is on top; beside the road it is the void's floor.
+    expect(heightAt(w.track, s, c)).toBeCloseTo(street, 9);
+    const by = first - 600;
+    expect(heightAt(w.track, by, lane(by))).toBeCloseTo(lowerFloor(CHINATOWN, by), 9);
+    expect(heightAt(w.track, by, -chinatownHalf(by) - 3)).toBeCloseTo(lowerFloor(CHINATOWN, by), 9);
+    // The deck roofs it before the flip; the flip lifts it off.
+    expect(lowerCeiling(w.track, first - 100, lane(first - 100))).not.toBeNull();
+    expect(lowerCeiling(w.track, s, c)).toBeNull();
+    expect(lowerOpen(CHINATOWN, s, c)).toBe(true);
+    expect(lowerOpen(CHINATOWN, first - 100, lane(first - 100))).toBe(false);
+  });
+
+  it('a car bearing right drives down, under the road and the flip, and back up onto it', () => {
+    const w = makeTrackWorld(CHINATOWN);
+    const v = carAt(w, first + LOWER_FROM - 100, 0, 60);
+    let below = 0;
+    let underRoad = 0;
+    let flew = 0;
+    let lowest = 0;
+    for (let i = 0; i < 60 * 60; i++) {
       const t = i / 60;
       const { s } = project(w.track, v.x, v.y);
       w.track.hint = s;
       const c = autopilotControls(v, w.track, s, t, false, 0, { bypass: true, balcony: false });
-      stepVehicle(v, { ...c, throttle: 0.7, boost: 0 }, 1 / 60, w, t);
+      // Flat out, boosting where the autopilot would.
+      stepVehicle(v, { ...c, throttle: 1 }, 1 / 60, w, t);
       const q = project(w.track, v.x, v.y);
       w.track.hint = q.s;
-      if (underLocal(q.s) !== null) {
-        const by = mainStreet(q.s) ?? 0;
-        if (Math.abs(q.u - by) <= BYPASS_LANE) onMain++;
-        else rolledUnder++;
+      const x = q.s - first;
+      if (x > LOWER.DIVE[1] && x < LOWER.CLIMB[0]) {
+        // Down on the floor all the way, never up on the street nor on the ribbon.
+        expect(belowStreet(w.track, q.s, q.u, v.z)).toBe(true);
+        expect(Math.abs(v.z - lowerFloor(CHINATOWN, q.s))).toBeLessThan(1.5);
+        below++;
+        if (Math.abs(q.u) < chinatownHalf(q.s)) underRoad++;
       }
-      if (q.s > first + UNDER_LENGTH + MAIN.SPLIT + 200) break;
+      if (x > LOWER.DIVE[0] - 100 && x < LOWER.CLIMB[1] + 100 && v.air) flew++;
+      lowest = Math.min(lowest, v.z);
+      if (x > LOWER_TO + 200) break;
     }
-    expect(onMain).toBeGreaterThan(60 * 10);
-    expect(rolledUnder).toBe(0);
+    // About 1,250 m down on the floor, 800 of them under the road, at up to 100 m/s.
+    expect(below).toBeGreaterThan(60 * 12);
+    expect(underRoad).toBeGreaterThan(60 * 7);
+    expect(flew).toBeLessThan(10);
+    expect(lowest).toBeGreaterThan(-LOWER.DEPTH - 1);
     const end = project(w.track, v.x, v.y);
-    expect(end.s).toBeGreaterThan(first + UNDER_LENGTH + MAIN.SPLIT);
+    expect(end.s).toBeGreaterThan(first + LOWER_TO + 150);
     expect(Math.abs(end.u)).toBeLessThan(CHINATOWN.half(end.s));
+    expect(v.z).toBeGreaterThan(heightAt(w.track, end.s, end.u) - 0.5);
   });
 
-  it('a car keeping left flips under as before, held off the median', () => {
+  it('a car keeping left flips into Undertown over the underpass, never dropping into it', () => {
     const w = makeTrackWorld(CHINATOWN);
-    const start = first - MAIN.SPLIT - 100;
-    const v = carAt(w, start, 3, 45);
+    const v = carAt(w, first + LOWER_FROM - 100, 3, 50);
     let under = 0;
-    for (let i = 0; i < 60 * 30; i++) {
+    for (let i = 0; i < 60 * 45; i++) {
       const t = i / 60;
       const { s } = project(w.track, v.x, v.y);
       w.track.hint = s;
-      // Hard right all the way: the median keeps you on the ribbon.
+      // Hard right all the way through Undertown: the barriers keep you on the ribbon.
       const steer = s > first + 20 ? -1 : 0;
       const c = autopilotControls(v, w.track, s, t, false, 3, { bypass: false, balcony: false });
       stepVehicle(v, { ...c, steer: steer || c.steer, throttle: 0.7, boost: 0 }, 1 / 60, w, t);
       const q = project(w.track, v.x, v.y);
       w.track.hint = q.s;
+      expect(belowStreet(w.track, q.s, q.u, v.z)).toBe(false);
       if (underLocal(q.s) !== null && underLocal(q.s)! > UNDER.FLIP) {
         under++;
         expect(Math.abs(q.u)).toBeLessThan(CHINATOWN.half(q.s) + 1);
@@ -176,18 +264,56 @@ describe('Main Street, the way past Undertown (2026-11-24: "there are 2 paths")'
     expect(under).toBeGreaterThan(60 * 5);
   });
 
-  it('a car against the median on either side is pushed back to its own side', () => {
+  it('a car on the street over the underpass stays on top, held off the void by the rail', () => {
     const w = makeTrackWorld(CHINATOWN);
-    const s = first - MAIN.CLEAR;
+    // Over the deck before the flip, right over the track below, steering hard right at the edge.
+    const s0 = first - 200;
+    const v = carAt(w, s0, lane(s0), 45);
+    for (let i = 0; i < 60 * 4; i++) {
+      const t = i / 60;
+      stepVehicle(v, { throttle: 0.6, steer: -0.6, boost: 0 }, 1 / 60, w, t);
+      const q = project(w.track, v.x, v.y);
+      w.track.hint = q.s;
+      expect(v.z).toBeGreaterThan(lowerFloor(CHINATOWN, q.s) + 6);
+      expect(belowStreet(w.track, q.s, q.u, v.z)).toBe(false);
+      expect(q.u).toBeGreaterThan(-chinatownHalf(q.s) - LOWER_RAIL - 0.1);
+    }
+  });
+
+  it('walls a car below between the track’s kerbs, and one on top at the street’s edge', () => {
+    const w = makeTrackWorld(CHINATOWN);
+    const s = first + 400;
+    const c = lane(s);
+    const floor = lowerFloor(CHINATOWN, s);
+    const low = carAt(w, s, c + LOWER.LANE + 0.5, 30);
+    low.z = floor;
+    const hit = collideTrack(w, low);
+    expect(hit).not.toBeNull();
+    const f = frameAt(w.track, s);
+    // Pushed right (toward -u).
+    expect((hit?.nx ?? 0) * -Math.sin(f.h) + (hit?.ny ?? 0) * Math.cos(f.h)).toBeLessThan(0);
+    const mid = carAt(w, s, c, 30);
+    mid.z = floor;
+    expect(collideTrack(w, mid)).toBeNull();
+    const by = first - 600;
+    const edge = carAt(w, by, -chinatownHalf(by) + 0.2, 30);
+    const push = collideTrack(w, edge);
+    expect(push).not.toBeNull();
+    const g = frameAt(w.track, by);
+    expect((push?.nx ?? 0) * -Math.sin(g.h) + (push?.ny ?? 0) * Math.cos(g.h)).toBeGreaterThan(0);
+  });
+
+  it('a car against the median before the dive is pushed back to its own side', () => {
+    const w = makeTrackWorld(CHINATOWN);
+    const s = first + LOWER.DIVE[0] - 5;
     const mid = medianAt(w.track, s) ?? 0;
-    const onRoad = carAt(w, s, mid + 0.5, 30);
-    expect(collideTrack(w, onRoad)?.ny).toBeDefined();
-    const road = collideTrack(w, onRoad);
-    const lane = collideTrack(w, carAt(w, s, mid - 0.5, 30));
+    const road = collideTrack(w, carAt(w, s, mid + 0.5, 30));
+    const onLane = collideTrack(w, carAt(w, s, mid - 0.5, 30));
     expect(road).not.toBeNull();
-    expect(lane).not.toBeNull();
-    // Opposite pushes: the road's car to the left, the lane's to the right.
-    expect((road?.nx ?? 0) * (lane?.nx ?? 0) + (road?.ny ?? 0) * (lane?.ny ?? 0)).toBeLessThan(0);
+    expect(onLane).not.toBeNull();
+    expect((road?.nx ?? 0) * (onLane?.nx ?? 0) + (road?.ny ?? 0) * (onLane?.ny ?? 0)).toBeLessThan(
+      0,
+    );
   });
 });
 
@@ -341,7 +467,7 @@ describe('choosing a path', () => {
   it('aims along the path picked, and along the road elsewhere', () => {
     const mid = first + UNDER_LENGTH / 2;
     expect(aimLane(CHINATOWN, mid, 2, { bypass: true, balcony: false })).toBeCloseTo(
-      -MAIN.OUT + 2 * 0.3,
+      LOWER.UNDER_C + 2 * 0.3,
       6,
     );
     expect(aimLane(CHINATOWN, mid, 2, { bypass: false, balcony: true })).toBe(2);
@@ -350,10 +476,10 @@ describe('choosing a path', () => {
       CHINATOWN.balcony?.(deck)?.c ?? 0,
       6,
     );
-    expect(aimLane(CHINATOWN, 500, 2, { bypass: true, balcony: true })).toBe(2);
+    expect(aimLane(CHINATOWN, first + LOWER_TO + 300, 2, { bypass: true, balcony: true })).toBe(2);
   });
 
-  it('rivals on the right take Main Street, the one furthest left goes for the balcony', () => {
+  it('rivals on the right take the underpass, the one furthest left goes for the balcony', () => {
     const picks = RIVALS.map(rivalPick);
     expect(picks.some((p) => p.bypass)).toBe(true);
     expect(picks.some((p) => !p.bypass)).toBe(true);
@@ -365,10 +491,10 @@ describe('choosing a path', () => {
 
   it('the autopilot picks one way or the other per fork, the same all along it', () => {
     const at = first + UNDER.EVERY;
-    const on = (s: number) => mainStreet(s) !== null;
+    const on = (s: number) => underpass(s) !== null;
     const a = runStart(on, at);
-    expect(a).toBeLessThanOrEqual(at - MAIN.SPLIT + 10);
-    expect(a).toBeGreaterThanOrEqual(at - MAIN.SPLIT - 10);
+    expect(a).toBeLessThanOrEqual(at + LOWER_FROM + 10);
+    expect(a).toBeGreaterThanOrEqual(at + LOWER_FROM - 10);
     expect(runStart(on, at + 700)).toBe(a);
     const p = forkPick(CHINATOWN, at);
     expect(forkPick(CHINATOWN, at + 900)).toEqual(p);
@@ -379,20 +505,26 @@ describe('choosing a path', () => {
 
   it('names both ways at the fork and the balcony road', () => {
     expect(PATH_SIGNS.under).toContain('UNDERTOWN');
-    expect(PATH_SIGNS.main).toContain('MAIN STREET');
+    expect(PATH_SIGNS.main).toContain('UNDERPASS');
+    expect(PATH_SIGNS.main).toContain('地下街');
     expect(PATH_SIGNS.balcony).toContain('BALCONY');
   });
 });
 
 describe('the street around the two paths', () => {
-  it('stands its towers back clear of Main Street and of the balcony road', () => {
-    const fork = piecesBetween('chinatown', CHINATOWN, first - MAIN.SPLIT, first + UNDER_LENGTH);
+  it('stands its towers back clear of the underpass, none right of the street over its void', () => {
+    const fork = piecesBetween('chinatown', CHINATOWN, first + LOWER_FROM, first + LOWER_TO);
+    let right = 0;
     for (const p of fork) {
       if (p.kind !== 'shophouse' || p.side > 0) continue;
-      const c = mainStreet(p.s);
+      const c = underpass(p.s);
       if (c === null) continue;
-      expect(p.u + p.d).toBeLessThan(c - MAIN.LANE - 1);
+      right++;
+      expect(underpassDepth(p.s)).toBeLessThan(2);
+      expect(p.u + p.d).toBeLessThan(c - LOWER.LANE - 1);
     }
+    // Only by the fork and the merge, where it is not yet (or no longer) down.
+    expect(right).toBeLessThan(60);
     const side = piecesBetween('chinatown', CHINATOWN, crest - 50, crest + BALCONY_LENGTH);
     let near = 0;
     for (const p of side) {
@@ -410,15 +542,19 @@ describe('the street around the two paths', () => {
   it('keeps spans across the road out of the fork and off the balcony road', () => {
     const spans = new Set(['lights', 'lanterns', 'gate', 'temple']);
     for (const [a, b] of [
-      [first - MAIN.SPLIT, first],
+      [first + LOWER_FROM, first + LOWER_TO],
       [crest - BALCONY.KICK, crest + BALCONY_LENGTH],
     ]) {
       for (const p of piecesBetween('chinatown', CHINATOWN, a, b))
         if (spans.has(p.kind)) {
-          // Over the fork only where the lane is walled well apart, never by the balcony road.
-          const c = mainStreet(p.s);
+          // Over the fork only where the lane is walled well apart, never by the balcony road; over
+          // the void only strings of light (no posts to stand in it).
+          const c = underpass(p.s);
           const half = chinatownHalf(p.s);
-          if (c !== null) expect(mainMedian(c, half) ?? 0).toBeLessThan(-(half + 5));
+          if (c !== null && underpassDepth(p.s) <= 0.05)
+            expect(pathMedian(c, half) ?? 0).toBeLessThan(-(half + 5));
+          if (c !== null && underpassDepth(p.s) > 0.05)
+            expect(['lanterns', 'lights']).toContain(p.kind);
           expect(balconyLocal(p.s)).toBeNull();
         }
     }
@@ -434,6 +570,19 @@ describe('the street around the two paths', () => {
     expect(ps.filter((p) => p.kind === 'beacon').length).toBeGreaterThan(20);
     const deck = piecesBetween('chinatown', CHINATOWN, crest - 200, crest);
     expect(deck.some((p) => p.kind === 'billboard' && p.d > 3)).toBe(true);
+  });
+
+  it('lights the void: lanterns down the track, columns and lanterns under the deck, panels', () => {
+    const ps = piecesBetween('chinatown', CHINATOWN, first - 420, first);
+    const below = ps.filter((p) => p.base !== undefined || (p.z ?? 0) < -2);
+    expect(below.some((p) => p.kind === 'pillar' && (p.z ?? 0) < 0)).toBe(true);
+    expect(below.some((p) => p.kind === 'beacon' && (p.z ?? 0) < -LOWER_SLAB)).toBe(true);
+    expect(below.some((p) => p.kind === 'billboard' && p.cell === CT_PATH_CELLS.deep)).toBe(true);
+    // Everything down there stands on the floor and under the deck.
+    for (const p of below) {
+      if (p.base !== undefined) expect(p.base).toBeCloseTo(lowerFloor(CHINATOWN, p.s), 6);
+      if (p.kind === 'pillar') expect((p.z ?? 0) - (p.base ?? 0)).toBeLessThan(LOWER.DEPTH + 2);
+    }
   });
 });
 

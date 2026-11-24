@@ -11,8 +11,10 @@
  */
 
 import * as THREE from 'three';
+import { LOWER } from '@/lib/art/chinatown-paths';
 import { CT_STOREY, CT_TALL_FLOORS, ctCellRect, ctWindows } from '@/lib/art/chinatown-street';
 import type { WorldCfg } from '@/lib/art/drive-worlds';
+import { lakeAnchor, lakeNear } from '@/lib/art/lake-city';
 import {
   ARCH_STEP,
   chevronGlow,
@@ -26,7 +28,6 @@ import {
   ringAt,
 } from '@/lib/art/night-course';
 import {
-  BYPASS_LANE,
   CANYON_ARCHES,
   COAST_CLIFF,
   COAST_GATE,
@@ -38,11 +39,16 @@ import {
   DECK,
   frameAt,
   heightAt,
+  LOWER_RAIL,
+  LOWER_SLAB,
+  laneHalf,
+  lowerFloor,
   onDeck,
   PIPE_TOP,
   pipeAt,
   pointAt,
   RACE,
+  ROOF_OPEN,
   SKY_LAP,
   SKY_LEVELS,
   SKY_PIPE,
@@ -50,14 +56,22 @@ import {
   skyWallU,
   type TrackWorld,
   twistPose,
+  voidLeft,
 } from '@/lib/art/track';
 import { underTint } from '@/lib/art/undertown';
 import type { Weather } from '@/lib/art/weather';
 import { nearTwist, STRAIGHT } from '@/lib/art/wreck';
 import { ctSignMaterial, SignBuilder } from './chinatown-signs';
+import { buildLakeCity } from './lake-city-view';
 import { glowSprite } from './vehicles';
 
 export const CHUNK = 120;
+/** The underpass's void as drawn: the quay past the track's far kerb (m), the lake's level, and how
+ * far right the water reaches (u). Drawn once the floor is this far down (VOID_SHOWS m). */
+const VOID = { QUAY: 30, LAKE: -12.4, FAR: 240 };
+const VOID_SHOWS = 0.05;
+/** The lake city is built while you are this near its anchor (m along the road). */
+const LAKE_SEEN = 2300;
 /** How tall a building's reflection in the wet road may be (m). */
 const MIRROR_CAP = 26;
 const AHEAD = 1500;
@@ -686,7 +700,36 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
   // Two-sided: the grids are laid out in (s, u), which the world's y → −z flip mirrors.
   const rockMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
   const solidMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
-  for (const m of [facade, facadeMirror, neon, neonMirror, groundMat, rockMat, solidMat])
+  /** The lake past the underpass's void: dark water, clear enough that what stands mirrored under
+   * it (lake-city.ts) shows through. */
+  const lakeMat = new THREE.MeshBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.62,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  // The lake city past Undertown (lib/art/lake-city.ts): its towers dark, their lights bright.
+  const cityBody = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  const cityLit = new THREE.MeshBasicMaterial({
+    vertexColors: true,
+    side: THREE.DoubleSide,
+    toneMapped: false,
+  });
+  const lakes = new Map<number, { group: THREE.Group; x: number; y: number }>();
+  const lakeCities = theme === 'chinatown' && !!def.under;
+  for (const m of [
+    facade,
+    facadeMirror,
+    neon,
+    neonMirror,
+    groundMat,
+    rockMat,
+    solidMat,
+    lakeMat,
+    cityBody,
+    cityLit,
+  ])
     m.userData.shared = true;
   let snowLevel = 0;
 
@@ -821,10 +864,15 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       const crow: V3[] = [];
       const nrow: V3[] = [];
       // On a twist the road has risen away from the ground: what is left under it is ground.
-      const twisting = twistAt(at) > 0.02;
-      for (const u of columns(half)) {
+      const twisting = twistAt(at) > ROOF_OPEN;
+      // Over the underpass's void the ground stops at the road's right edge, or once the flip has
+      // lifted the road off, at the void's own edge: the columns past it fold onto it.
+      const hole = voidLeft(def, at, VOID_SHOWS);
+      const hi = hole === null ? null : twisting ? hole : -half;
+      for (const u0 of columns(half)) {
         // On a bridge only the deck is drawn: no ground beside it to hang over the road beneath.
-        if (bridged && Math.abs(u) > half + 0.7) continue;
+        if (bridged && Math.abs(u0) > half + 0.7) continue;
+        const u = hi === null ? u0 : Math.max(u0, hi);
         const onRoad = Math.abs(u) <= half;
         row.push(twisting && onRoad ? L(at, u, -0.4) : L(at, u));
         crow.push(
@@ -939,25 +987,155 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         lane = [];
         lc = [];
       };
+      const lh = laneHalf(def);
       for (let s = s0; s <= s1 + 0.01; s += ROW) {
         const c = def.bypass(Math.max(0, s));
-        if (c === null) {
+        // Down in its void the underpass is drawn with the void, below.
+        if (c === null || voidLeft(def, s, VOID_SHOWS) !== null) {
           done();
           continue;
         }
         const row: V3[] = [];
         const crow: V3[] = [];
         for (const f of [-1.08, -1, -0.8, -0.4, 0, 0.4, 0.8, 1, 1.08]) {
-          const u = c + f * BYPASS_LANE;
+          const u = c + f * lh;
           const p = pointAt(track, s, u);
           // On the lane's own level (where it runs beside a banked road, its edge's).
           row.push(local(ax, ay, p.x, p.y, hAt(s, u) + 0.05));
-          crow.push(groundColour(cfg, s, f * BYPASS_LANE, BYPASS_LANE, snowLevel));
+          crow.push(groundColour(cfg, s, f * lh, lh, snowLevel));
         }
         lane.push(row);
         lc.push(crow);
       }
       done();
+    }
+    // The underpass's void (lib/art/chinatown-paths.ts, 2026-11-24: "a big ass second track on the
+    // right with more emptiness around it"): right of the street the ground falls away into an open
+    // plain, the second track across it between gold kerbs, a quay past its far side and the lake
+    // beyond (its far shore and the city on it: lake-city.ts). The street runs along the plain's edge
+    // on a lacquered retaining wall, a rail along its top; where the track goes in under it, the
+    // street is a deck over it, its underside dark, the wall standing under its far side. Once the
+    // flip lifts the road off, the deck goes with it and the void is open to the sky.
+    const water = new Builder();
+    const glow = new Builder();
+    if (def.lower && def.bypass) {
+      const strip = () => ({ pts: [] as V3[][], cols: [] as V3[][] });
+      let floor = strip();
+      let lake = strip();
+      let wall = strip();
+      let deck = strip();
+      let fascia = strip();
+      const flushVoid = () => {
+        if (floor.pts.length > 1) grid(ground, floor.pts, floor.cols, true);
+        if (lake.pts.length > 1) grid(water, lake.pts, lake.cols);
+        if (wall.pts.length > 1) grid(ground, wall.pts, wall.cols);
+        floor = strip();
+        lake = strip();
+        wall = strip();
+      };
+      const flushDeck = () => {
+        if (deck.pts.length > 1)
+          grid(
+            ground,
+            deck.pts.map((r) => [...r].reverse()),
+            deck.cols,
+          );
+        if (fascia.pts.length > 1) grid(ground, fascia.pts, fascia.cols);
+        deck = strip();
+        fascia = strip();
+      };
+      const at = (s: number, u: number, z: number): V3 => {
+        const p = pointAt(track, s, u);
+        return local(ax, ay, p.x, p.y, z);
+      };
+      const stone = lin(0.035, 0.022, 0.024);
+      const quay = lin(0.06, 0.035, 0.03);
+      const lacquer = lin(0.16, 0.02, 0.016);
+      const under = lin(0.02, 0.008, 0.01);
+      const deep = lin(0.004, 0.006, 0.016);
+      const kerbGold: V3 = [1.4, 0.85, 0.3];
+      const railRed: V3 = [1.3, 0.16, 0.08];
+      const lh = laneHalf(def);
+      for (let s = s0; s <= s1 + 0.01; s += ROW) {
+        const vl = voidLeft(def, s, VOID_SHOWS);
+        const c = def.bypass(Math.max(0, s));
+        if (vl === null || c === null) {
+          flushVoid();
+          flushDeck();
+          continue;
+        }
+        const half = def.half(s);
+        const fz = lowerFloor(def, s);
+        const twisting = twistAt(s) > ROOF_OPEN;
+        const shore = c - lh - LOWER.KERB - VOID.QUAY;
+        // The plain: the track between its kerbs, the quay, then the water at the lake's level.
+        const us = [
+          c + lh + LOWER.KERB,
+          c + lh,
+          c + lh * 0.5,
+          c,
+          c - lh * 0.5,
+          c - lh,
+          c - lh - LOWER.KERB,
+          shore,
+        ].map((u) => Math.min(u, vl));
+        floor.pts.push([at(s, vl, fz), ...us.map((u) => at(s, u, fz + 0.02))]);
+        floor.cols.push([
+          stone,
+          ...us.map((u) =>
+            Math.abs(u - c) <= lh ? groundColour(cfg, s, u - c, lh, snowLevel) : quay,
+          ),
+        ]);
+        lake.pts.push([at(s, shore, fz), at(s, shore, VOID.LAKE), at(s, -VOID.FAR, VOID.LAKE)]);
+        lake.cols.push([quay, deep, deep]);
+        // The retaining wall at the void's edge: up to the street (or the deck's underside, or the
+        // street left under the lifted road).
+        const covered = !twisting && vl > -half;
+        const top = covered
+          ? hAt(s, vl) - LOWER_SLAB
+          : twisting && vl > -half
+            ? hAt(s, vl) - 0.4
+            : hAt(s, -half);
+        wall.pts.push([at(s, vl, top), at(s, vl, fz)]);
+        wall.cols.push([lacquer, stone]);
+        // The deck over the track, and its face along the street's right edge.
+        if (covered) {
+          deck.pts.push([-half, (vl - half) / 2, vl].map((u) => at(s, u, hAt(s, u) - LOWER_SLAB)));
+          deck.cols.push([under, under, under]);
+          fascia.pts.push([at(s, -half, hAt(s, -half)), at(s, -half, hAt(s, -half) - LOWER_SLAB)]);
+          fascia.cols.push([lacquer, lacquer]);
+        } else flushDeck();
+        // Light: the kerbs in gold along the floor, a red line along the wall's top (and the rail on
+        // the street's edge over the plain).
+        const sb = Math.min(s + ROW, s1 + 0.01);
+        const line = (u: number, z0: number, z1: number, w: number, col: V3) =>
+          glow.quad(
+            at(s, u - w, z0),
+            at(sb, u - w, z1),
+            at(sb, u + w, z1),
+            at(s, u + w, z0),
+            [0, 1, 0],
+            col,
+          );
+        const fz1 = lowerFloor(def, sb);
+        for (const u of [c + lh + 0.3, c - lh - 0.3])
+          if (u <= vl) line(u, fz + 0.06, fz1 + 0.06, 0.18, kerbGold);
+        if (!twisting) {
+          const ru = -(half + LOWER_RAIL);
+          const z0 = hAt(s, -half) + 0.9;
+          const z1 = hAt(sb, -half) + 0.9;
+          glow.quad(
+            at(s, ru, z0),
+            at(sb, ru, z1),
+            at(sb, ru, z1 - 0.12),
+            at(s, ru, z0 - 0.12),
+            [0, 1, 0],
+            railRed,
+          );
+        }
+      }
+      flushVoid();
+      flushDeck();
     }
     // The balcony road (lib/art/chinatown-paths.ts): a deck one storey up beside the road on the
     // left, its top the road's own colour, its underside dark, its two faces lacquer red; down its
@@ -1084,6 +1262,12 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     const gm = new THREE.Mesh(ground.geometry(), groundMat);
     gm.renderOrder = 2;
     g.add(gm);
+    if (!water.empty) {
+      const wm = new THREE.Mesh(water.geometry(), lakeMat);
+      wm.renderOrder = 2;
+      g.add(wm);
+    }
+    if (!glow.empty) g.add(new THREE.Mesh(glow.geometry(), lineMat));
     if (night) markings(s0, s1, LR, g);
 
     const rock = new Builder();
@@ -1538,15 +1722,15 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
           for (let o = -STRAIGHT.STRIP + 0.8; o < STRAIGHT.STRIP; o += 0.9)
             put(s - Math.abs(o) * 0.8, o, e, golds[0], 0.9);
       }
-    // The bypass lane's edges, in gold like the road's.
+    // The bypass lane's edges, in gold like the road's (down in the void, at its floor).
     if (def.bypass)
       for (let s = Math.ceil(s0 / 2.5) * 2.5; s < s1; s += 2.5) {
         const c = def.bypass(Math.max(0, s));
         if (c === null) continue;
-        const e = frameAt(track, s).e + 0.25;
+        const e = (def.lower ? lowerFloor(def, s) : frameAt(track, s).e) + 0.25;
         for (const side of [1, -1]) {
-          const u = c + side * BYPASS_LANE;
-          if (Math.abs(u) < def.half(s) + 1) continue;
+          const u = c + side * laneHalf(def);
+          if (Math.abs(u) < def.half(s) + 1 && voidLeft(def, s, VOID_SHOWS) === null) continue;
           put(s, u, e, golds[0], 0.9);
         }
       }
@@ -2141,7 +2325,8 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     function drawPiece(p: Piece) {
       const s = p.s;
       const half = def.half(s);
-      const base = groundAt(s, p.u);
+      // Down in the underpass's void a piece stands on its floor, given.
+      const base = p.base ?? groundAt(s, p.u);
       const c = p.colour;
       switch (p.kind) {
         case 'tower': {
@@ -2547,6 +2732,24 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         built++;
       }
       for (const c of chunks.values()) c.group.position.set(c.ax - ox, 0, -(c.ay - oy));
+      if (lakeCities) {
+        // The lake city of the Undertown run you are coming to or in, while it can be seen.
+        const k = lakeNear(s);
+        const want = k !== null && Math.abs(s - lakeAnchor(k)) < LAKE_SEEN ? k : null;
+        for (const [i, l] of lakes) {
+          if (i === want) continue;
+          group.remove(l.group);
+          disposeGroup(l.group);
+          lakes.delete(i);
+        }
+        if (want !== null && !lakes.has(want)) {
+          const f = frameAt(track, lakeAnchor(want));
+          const lg = buildLakeCity(want, f.h, lakeMat, cityBody, cityLit);
+          group.add(lg);
+          lakes.set(want, { group: lg, x: f.x, y: f.y });
+        }
+        for (const l of lakes.values()) l.group.position.set(l.x - ox, 0, -(l.y - oy));
+      }
       if (ships) {
         let n = 0;
         for (let lane = 0; lane < HIGHWAYS.length; lane++) {
@@ -2569,6 +2772,8 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     dispose() {
       for (const c of chunks.values()) disposeGroup(c.group);
       chunks.clear();
+      for (const l of lakes.values()) disposeGroup(l.group);
+      lakes.clear();
       disposeGroup(group);
       for (const m of [
         facade,
@@ -2579,6 +2784,9 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         rockMat,
         solidMat,
         lineMat,
+        lakeMat,
+        cityBody,
+        cityLit,
       ])
         m.dispose();
       fireMat?.dispose();
