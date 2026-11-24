@@ -38,8 +38,8 @@ import {
 import type { AttackId } from '@/lib/art/mars-attacks';
 
 /** Mars's attack keys. */
-const ATTACK_KEYS: Record<string, AttackId> = { z: 'shark', c: 'shot', v: 'laser' };
-const ATTACK_LABELS: Record<AttackId, string> = { shark: 'Z', shot: 'C', laser: 'V' };
+const ATTACK_KEYS: Record<string, AttackId> = { '1': 'shark', '2': 'shot', '3': 'laser' };
+const ATTACK_LABELS: Record<AttackId, string> = { shark: '1', shot: '2', laser: '3' };
 
 import { unlockMarsAudio } from '@/components/drive/mars-sound';
 import RaceIntro from '@/components/drive/RaceIntro';
@@ -397,7 +397,7 @@ export default function DriveGame() {
         setMap((v) => !v);
         return;
       }
-      // Mars's attacks on the Red Bastard: Z the Dust Sharks, C the shot, V the laser.
+      // Mars's attacks on the Red Bastard: 1 the Dust Sharks, 2 the shot, 3 the laser.
       const attack = ATTACK_KEYS[k];
       if (attack) {
         engineRef.current?.fireAttack(attack);

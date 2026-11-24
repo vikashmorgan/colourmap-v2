@@ -103,9 +103,11 @@ easy to stay on it", "same with coast road, make them much wider".
    **Dunes** (2026-11-23: "make the mars world not flat"): the plain rolls. The ground is a sum of
    seven smooth waves (`DUNE_WAVES`, lib/art/mars.ts), each a whole number of cycles across the
    ground's 2,048 m period, so the backdrop shader draws exactly the hills the physics drives:
-   swells 380 to 650 m long and 2.4 to 4 m high carrying dunes 120 to 210 m long and up to 1.3 m.
+   long swells 380 to 920 m long and 3.6 to 9 m high carrying dunes 160 to 210 m long and up to
+   1.5 m, with the short ripples nearly gone (2026-11-24: "make mars much more wavy less flat"):
+   about 50 m from the deepest trough to the highest crest, so the ground rolls rather than bumps.
    Never steeper than 15°; at full throttle the sharpest crests give short airs, cruising never.
-   The measured mile's corridor (flat within 30 m of the painted line, dunes back by 110 m), the
+   The measured mile's corridor (flat within 30 m of the painted line, dunes back by 260 m, widened with the taller swells), the
    start and the drift gates' dry lake bed stay flat, so the mile and the gates race as before.
    The physics drives the terrain (`MARS_TERRAIN`: height and slope), so you climb, descend and fly.
    The backdrop marches each pixel's ray over the same waves (`marsTerrainGlsl`), lights the dune
@@ -238,12 +240,12 @@ easy to stay on it", "same with coast road, make them much wider".
    certain distance. yellow with explosion that goes bang", "lasers as one of the attacks u can
    unlock"): three attacks on the Red Bastard, each behind one entry, `fireAttack(id)` with ids
    `'shark' | 'shot' | 'laser'`.
-   - Dust Sharks (Z): a rust fin cuts the dust after him, faster than he runs, turning toward him.
+   - Dust Sharks (1): a rust fin cuts the dust after him, faster than he runs, turning toward him.
      Level 2 sends a pack of four that fans out first and then closes in.
-   - The shot (C): a glowing yellow round flies straight ahead and bursts 280 m out, or sooner if
+   - The shot (2): a glowing yellow round flies straight ahead and bursts 280 m out, or sooner if
      it passes within 12 m of him. The burst is a soft yellow glow, a ring of dust and a quiet
      synthesized bang.
-   - The laser (V, or a click on the crosshair): an amber beam that fades in under half a second.
+   - The laser (3, or a click on the crosshair): an amber beam that fades in under half a second.
      It hits when he is ahead, within 900 m and within 4° of your line.
    - A hit slows him to 55% of his pace for 2.5 s, and he yelps on the radio.
    - Cooldowns: shark 6 s, shot 3.5 s, laser 8 s. Low on the left, a quiet strip lists the
