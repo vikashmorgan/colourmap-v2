@@ -354,9 +354,14 @@ describe('ring gates: circles in circles', () => {
   });
 });
 
-function carAt(w: ReturnType<typeof makeTrackWorld>, s: number, speed: number): Vehicle {
+function carAt(
+  w: ReturnType<typeof makeTrackWorld>,
+  s: number,
+  speed: number,
+  kind: 'car' | 'ship' = 'car',
+): Vehicle {
   const f = frameAt(w.track, s);
-  const v = newVehicle('car', f.x, f.y, f.h, heightAt(w.track, s, 0));
+  const v = newVehicle(kind, f.x, f.y, f.h, heightAt(w.track, s, 0));
   v.vx = Math.cos(f.h) * speed;
   v.vy = Math.sin(f.h) * speed;
   w.track.hint = s;
@@ -364,9 +369,12 @@ function carAt(w: ReturnType<typeof makeTrackWorld>, s: number, speed: number): 
 }
 
 describe('a lap on the autopilot', () => {
-  it('drives the whole lap flat out and stays on the road', () => {
+  it.each([
+    'car',
+    'ship',
+  ] as const)('drives the whole lap flat out in the %s and stays on the road', (kind) => {
     const w = makeTrackWorld(SYMPHONY);
-    const v = carAt(w, 40, 30);
+    const v = carAt(w, 40, 30, kind);
     const dt = 1 / 60;
     let wide = 0;
     let top = 0;
