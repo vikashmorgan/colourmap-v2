@@ -25,4 +25,22 @@ describe('proxy', () => {
     expect(await proxy(request)).toBe(response);
     expect(updateSession).toHaveBeenCalledWith(request);
   });
+
+  it('serves the game on its own site, with no session', async () => {
+    const request = new NextRequest('https://colour-drive.vercel.app/anything', {
+      headers: { host: 'colour-drive.vercel.app' },
+    });
+    const response = await proxy(request);
+    expect(updateSession).not.toHaveBeenCalled();
+    expect(response.headers.get('x-middleware-rewrite')).toMatch(/\/play$/);
+  });
+
+  it('lets the game page itself through on its own site', async () => {
+    const request = new NextRequest('https://colour-drive.vercel.app/play', {
+      headers: { host: 'colour-drive.vercel.app' },
+    });
+    const response = await proxy(request);
+    expect(updateSession).not.toHaveBeenCalled();
+    expect(response.headers.get('x-middleware-rewrite')).toBeNull();
+  });
 });

@@ -22,6 +22,16 @@ Esc goes back one step; in a race it pauses.
 - Any key or click opens the ring, on the track raced last (`drive.lastTrack`). A `?world=` link
   skips the title and the ring. (Built 2026-11-22, `components/drive/GameSheets.tsx`.)
 
+## The standalone site
+
+- The game is also a website of its own (2026-11-25: "deploy the drive game on vercel as a
+  website on its own? no accounts or login for now. and hover one is default").
+- On its own domain (`colour-drive.vercel.app`, more through the `DRIVE_HOSTS` variable) every
+  page is the game at `/play`: the proxy rewrites any page there, skips the Supabase session and
+  never asks for a login. Files and `/_next` pass through. On the app's own domain `/play` is a
+  plain public page too. (`lib/drive-site.ts`, `proxy.ts`, `app/play/page.tsx`.)
+- Every world starts in the hover ship; a vehicle picked in the menu is still remembered.
+
 ## The track ring
 
 - Nine screens stand on a slow ring in the dark, facing out, the selected one nearest and
