@@ -203,6 +203,62 @@ Lanterns, lanes and avenues.
         - The towers, the bridges, the columns and the alley's far row stand with the street's
           pieces (lib/art/night-course.ts `sideRoadPieces`). The left row of shophouses parts where a
           road comes through it (`roadThrough`).
+- [x] **The lake behind the start** (2026-11-25: "AND WHEN U 180 ON THE START OF CHINATOWN U GO INTO
+      THE LAKE AND HAVE WATER RIPPLES AND RAIN. AND DRIVE THROUGH IT AND HAVE PORTALS OF LIGHT ON THE
+      LAKE AND A WHOLE WATER CITY RACING TRACK UNLOCKS", "BUT IT IS ALL THE SAME WORLD. SO WE BUILD IT
+      AS RACETRACKS THAT KEEP ON EXPANDING… THE MORE U KNOW THE MORE U DISCOVER. AND ADD A KRAKEN IN
+      THE LAKE. AND SHARKS JUMPING INTO THE AIR AND BACK DOWN"). `lib/art/chinatown-lake.ts` (pure,
+      tested), `components/drive/lake-view.ts`; the physics through `TrackDef.behind`.
+      - **Finding it.** Nothing points to it. On the grid, turn round and drive back past the start:
+        the street runs on straight behind it (`s < 0`), at its width, between low walls with a thin
+        teal line along their tops, and dips down a dark slipway (`SLIP`: level for 30 m, then down
+        12.4 m over 250 m, eased at both ends, never steeper than 10 %) onto the water.
+      - **The lake** (`LAKE`): level with the lake cities' water (12.4 m under the street's datum),
+        2.4 km long past the slipway's foot and 1.64 km across, the quay across the foot with gold
+        lamps, dim gold buoys along its far edges, which hold you (flowed along, like walls).
+        - On the water the tyres find half their grip (`WATER.GRIP`, `Ground.grip`) and a little
+          drag: the nose turns as ever but the car slides, a skim. No road holds you.
+        - Spray streams off the car (more with speed); a ring spreads behind you every 5 m
+          (`RIPPLE`); the rain falls round the camera and dimples the water; the storm's light is
+          darker and its fog closes in teal as you go down the slipway (`storm`).
+        - The water is one shader (`WATER_FRAGMENT`): slow swell, the rings, the rain's dimples, the
+          storm's sky by fresnel, the portals' light pooled round their feet and streaked toward
+          you, and Water City's towers mirrored under it, showing through.
+        - On the far shore Water City stands lit in teal, deep blue, aqua and gold (`WATER_TONES`,
+          the lake city's skyline with its own lights), mirrored in the lake.
+      - **The portals of light** (`PORTALS`): seven rings of light 7.5 m round standing on the water
+        in a long S, 300 m apart, out toward Water City. Through one (anywhere across its width,
+        skimming its foot counts) it turns from cyan to gold and gives the boost rings' surge. Light
+        all seven in one visit and **Water City is found**: its name comes up quietly (水城 · found ·
+        now in the ring, the ZoneTitle card), remembered on this device (`drive.found`,
+        `lib/art/drive-unlocks.ts`), and its track joins the ring (docs/specs/drive-menus.md,
+        "Found tracks"). Found again later, nothing more is said.
+      - **The sharks** (`SHARKS`): two by each portal, each breaching every 6 to 10 s: out of the
+        water nose up, an 18 m leap 7 m high over 1.5 s, back in nose down, a splash and a ring
+        each time it breaks the water.
+      - **The kraken** (`KRAKEN`, `TENTACLES`): it sleeps under the S past the third and the fifth
+        portals. Within 330 m it wakes: seven tentacles rise over 2.6 s, two of them arching over
+        your way from either side, their tips meeting 30 m up; the others curl and sway. Every
+        4.2 s one lifts high and slams down where you were 0.9 s before (`SLAM_LAG`): a burst of
+        spray and a ring; within 9 m of it you are nudged away (up to 9 m/s), harmless. 520 m past
+        it, it sinks again. Faint aqua lights run down each tentacle.
+      - **Back.** Drive up the slipway the street's way and you are on Chinatown Run at its start;
+        the portals go dark and the kraken sleeps for your next visit. The rivals and the autopilot
+        never turn round.
+      - Not built yet: rain on the street itself; the portals as a timed run.
+- [x] **Smooth banked edges** (2026-11-25, after the side roads: "the street's banked edge has a
+      sharp kink on the tilt stretches … a car crossing there (and at the alley's ends) gets
+      jolted"). The bank clipped at its most (0.3 rad) mid-bend, so off the centre line the road's
+      slope broke: at 288 km/h a car 8 m out felt 26 G for an instant on the sweepers and in the
+      furnace. Now (`TrackDef.smooth`, Chinatown only):
+      - the bank saturates smoothly toward its most (`softBankFor`, within 0.1 % of the old bank
+        up to half the most), and the tilt eases in on a smootherstep, so at 288 km/h no line across
+        the road through the tilt stretches asks more than 1.5 G;
+      - past the right edge (and the left where no side road runs) the ground carries on from the
+        road's slope and eases into its own over 8 m (`EDGE_EASE`): no ridge or trough along it;
+      - the left lip fades in and out where the alley, the high road, the deep way and the balcony
+        road join the street (`SideRoad.join`, `Balcony.join`), never a step; the autopilot aims
+        for a side road's far side while it is still joined, so it is well on before it parts.
 - [x] **Longer, and a tall street canyon with many more publicity panels** (2026-11-24: "chinatown
       make it longer and really think how all the elements form the chinatown in the 3d city.
       check how streets look and check it to make a taller chinatown streets with more of those

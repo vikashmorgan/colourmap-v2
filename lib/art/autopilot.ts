@@ -24,7 +24,9 @@ export function aimLane(def: TrackDef, s: number, lane: number, pick: PathPick):
     const sc = Math.max(0, s);
     const e = def.elev(sc);
     const r = def.roads(sc, def.half(sc), e, e)[0];
-    if (r) return r.c + lane * 0.2;
+    // While it still lies joined to the street, toward its far side, so the racer is well onto
+    // it before it parts (its inner side sweeps out past the street's edge as it does).
+    if (r) return r.c + (r.joined ? r.w * 0.8 : 0) + lane * 0.2;
   }
   if (pick.balcony) {
     const bc = def.balcony?.(Math.max(0, s));

@@ -40,4 +40,13 @@ describe('ZoneTitle (Undertown, 2026-11-23)', () => {
     rerender(<ZoneTitle zone="undertown" />);
     expect(screen.getByTestId('zone-title')).toBeTruthy();
   });
+
+  it('names the lake, then Water City the moment it is found (2026-11-25)', () => {
+    const { rerender } = render(<ZoneTitle zone={null} />);
+    rerender(<ZoneTitle zone="lake" />);
+    expect(screen.getByTestId('zone-title').textContent).toContain('The Lake');
+    fade();
+    rerender(<ZoneTitle zone="water-city" />);
+    expect(screen.getByTestId('zone-title').textContent).toContain('Water City');
+  });
 });

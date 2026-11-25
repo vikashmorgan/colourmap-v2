@@ -20,6 +20,27 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { autopilotControls } from '@/lib/art/autopilot';
+import {
+  KRAKEN,
+  krakenRise,
+  LAKE,
+  type LakeRun,
+  lairPoint,
+  newLakeRun,
+  newRipples,
+  onLake,
+  portalThrough,
+  type RippleTrail,
+  SLAM_LAG,
+  SLIP,
+  sharkSplashes,
+  slamLands,
+  slamPush,
+  splashRing,
+  stepLakeRun,
+  stepRipples,
+  wakes,
+} from '@/lib/art/chinatown-lake';
 import { fireRingThrough } from '@/lib/art/chinatown-lap';
 import {
   comboOf,
@@ -74,6 +95,7 @@ import {
   RIBBON_FRAGMENT,
   RIBBON_VERTEX,
 } from '@/lib/art/drive-shaders';
+import { type SecretTrack, saveFound } from '@/lib/art/drive-unlocks';
 import { WORLD_CFG, type WorldCfg } from '@/lib/art/drive-worlds';
 import { easeMask, gMask } from '@/lib/art/g-force';
 import { newShiftWatch, ringFor, watchShift } from '@/lib/art/gear-rings';
@@ -179,6 +201,7 @@ import {
   type Wreck,
 } from '@/lib/art/wreck';
 import { GatesView, tickGates } from './gates-view';
+import { buildLakeView, type LakeView } from './lake-view';
 import { type AttackHud, type Marker, MarsRun, type MarsWhere, type MissionHud } from './mars-run';
 import { buildMarsView, type MarsView } from './mars-view';
 import { buildSaltView, type SaltView } from './salt-view';
@@ -215,9 +238,12 @@ export interface Hud {
   mars?: MarsWhere | null;
   /** Mars: the attacks unlocked, their cooldowns, the laser's crosshair. */
   attacks?: AttackHud | null;
-  /** Where you are, when it has its own name on screen: Undertown, under Chinatown Run. */
-  zone?: 'undertown' | null;
+  /** Where you are, when it has its own name on screen: Undertown, under Chinatown Run; the lake
+   * behind its start; Water City, the moment it is found. */
+  zone?: Zone | null;
 }
+
+export type Zone = 'undertown' | 'lake' | 'water-city';
 
 export interface EngineOptions {
   world: WorldId;
@@ -237,6 +263,8 @@ export interface EngineOptions {
   /** The box shifted up into `gear` and its ring burst out (`top`: the top gear's sonic boom).
    * For the drive sound to hang a whoosh on (lib/art/gear-rings.ts). */
   onShift?: (gear: number, top: boolean) => void;
+  /** A secret track found (Water City, through the lake's portals), the first time on this device. */
+  onFound?: (id: SecretTrack) => void;
 }
 
 export interface IntroState {
@@ -388,7 +416,11 @@ class Puffs {
   alphas = new Float32Array(PUFFS);
   material: THREE.ShaderMaterial;
   /** Sparks: bright and additive, shrinking and falling, instead of dust that billows. */
-  constructor(private spark = false) {
+  constructor(
+    private spark = false,
+    /** Spray: falls like sparks but drawn like dust (water off the car, a breach, a slam). */
+    private spray = false,
+  ) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
     g.setAttribute('aSize', new THREE.BufferAttribute(this.sizes, 1));
@@ -439,7 +471,7 @@ class Puffs {
       }
       this.vx[i] *= drag;
       this.vy[i] *= drag;
-      this.vz[i] = this.vz[i] * drag - (this.spark ? 9 : 0.4) * dt;
+      this.vz[i] = this.vz[i] * drag - (this.spark || this.spray ? 9 : 0.4) * dt;
       this.x[i] += this.vx[i] * dt;
       this.y[i] += this.vy[i] * dt;
       this.z[i] += this.vz[i] * dt;
@@ -448,7 +480,9 @@ class Puffs {
       this.pos[i * 3 + 1] = this.z[i];
       this.pos[i * 3 + 2] = -(this.y[i] - oy);
       this.sizes[i] = this.size[i] * (this.spark ? 1 - 0.7 * k : 0.6 + 2.2 * k);
-      this.alphas[i] = this.spark ? 1 - k * k : 0.32 * (1 - k) * Math.min(1, a * 8);
+      this.alphas[i] = this.spark
+        ? 1 - k * k
+        : (this.spray ? 0.5 : 0.32) * (1 - k) * Math.min(1, a * 8);
     }
     const g = this.points.geometry;
     g.attributes.position.needsUpdate = true;
@@ -566,6 +600,20 @@ export class DriveEngine {
   private env: THREE.Texture | null = null;
   private puffs = new Puffs();
   private sparks = new Puffs(true);
+  private splash = new Puffs(false, true);
+  /* The lake behind Chinatown Run's start (lib/art/chinatown-lake.ts). */
+  private lakeView: LakeView | null = null;
+  private lakeRun: LakeRun = newLakeRun();
+  private ripples: RippleTrail = newRipples();
+  private woke: (number | null)[] = [null, null];
+  private lakeTrail: { t: number; x: number; y: number }[] = [];
+  private lakeAim: { s: number; u: number }[] = [
+    { s: 0, u: 0 },
+    { s: 0, u: 0 },
+  ];
+  private lakeZone: Zone | null = null;
+  private storm = 0;
+  private onFound?: (id: SecretTrack) => void;
   private ribbonFlat: THREE.ShaderMaterial;
   private ribbonGlow: THREE.ShaderMaterial;
   private ribbons: Ribbon[] = [];
@@ -659,6 +707,7 @@ export class DriveEngine {
     this.onMarker = opts.onMarker;
     this.onFrame = opts.onFrame;
     this.onShift = opts.onShift;
+    this.onFound = opts.onFound;
     this.cfg = WORLD_CFG[opts.world];
     this.weather = newWeather(opts.design.weather);
 
@@ -800,6 +849,8 @@ export class DriveEngine {
     this.scene.add(this.gantry);
     this.scene.add(this.puffs.points);
     this.scene.add(this.sparks.points);
+    this.scene.add(this.splash.points);
+    (this.splash.material.uniforms.uColour.value as THREE.Color).setRGB(0.7, 0.85, 0.95);
     this.scene.add(this.shiftRings.group);
     (this.sparks.material.uniforms.uColour.value as THREE.Color).setRGB(2.4, 1.3, 0.45);
     this.ribbonFlat = new THREE.ShaderMaterial({
@@ -875,6 +926,7 @@ export class DriveEngine {
       this.view = buildSaltView(mars ? { ground: marsHeight, streak: false } : undefined);
     }
     this.enterMars();
+    this.enterLake();
     this.scene.add(this.view.group);
     if (this.gates) this.gates.dispose();
     // On Mars the gates stand on the dunes.
@@ -897,6 +949,138 @@ export class DriveEngine {
     this.bloom.radius = night ? 0.5 : 0.448;
     this.scene.fog = new THREE.FogExp2(0x000000, 0);
     this.spawn();
+  }
+
+  /** The lake behind Chinatown Run's start: built on the way in, taken down on the way out. */
+  private enterLake() {
+    if (this.lakeView) {
+      this.scene.remove(this.lakeView.group);
+      this.lakeView.dispose();
+      this.lakeView = null;
+    }
+    const tr = this.trackWorld?.track;
+    if (!tr?.def.behind) return;
+    const f = frameAt(tr, 0);
+    this.lakeView = buildLakeView(f.x, f.y, f.h);
+    this.scene.add(this.lakeView.group);
+  }
+
+  /** Back to a dry start: the portals dark, the kraken asleep. */
+  private leaveLake() {
+    this.lakeRun = newLakeRun();
+    this.ripples = newRipples();
+    this.woke = [null, null];
+    this.lakeTrail = [];
+    this.lakeZone = null;
+  }
+
+  /**
+   * Out on the lake (2026-11-25): rings behind you, the portals lit as you pass and Water City
+   * found at the last, the sharks' splashes, the kraken woken and its slams.
+   */
+  private stepLake(s0: number, u0: number, s1: number, u1: number, dt: number, t: number) {
+    const tr = this.trackWorld?.track;
+    if (!tr?.def.behind) return;
+    const v = this.vehicle;
+    if (s1 > 0) {
+      if (this.lakeZone !== null || this.woke.some((w) => w !== null)) this.leaveLake();
+      this.storm = Math.max(0, this.storm - dt * 0.5);
+      return;
+    }
+    // The storm closes in as you go down the slipway.
+    this.storm = Math.min(1, Math.max(this.storm - dt, Math.min(1, -s1 / SLIP.LEN)));
+    const wet = onLake(s1, u1) && !v.air;
+    if (wet && this.lakeZone === null) this.lakeZone = 'lake';
+    const speed = speedOf(v);
+    this.ripples = stepRipples(this.ripples, v.x, v.y, t, speed, wet);
+    // The portals: lit as you pass, a surge through each; the last finds Water City.
+    const over = v.z - VEHICLES[v.kind].hover - heightAt(tr, s1, u1) + 1;
+    const passed = portalThrough(s0, u0, s1, u1, over);
+    if (passed >= 0 && !this.lakeRun.lit[passed]) {
+      this.surgeAt = t;
+      const was = this.lakeRun.found;
+      this.lakeRun = stepLakeRun(this.lakeRun, passed);
+      if (this.lakeRun.found && !was && saveFound(this.store, 'water')) {
+        this.lakeZone = 'water-city';
+        this.onFound?.('water');
+      }
+    }
+    // Where you have been (for the kraken's aim).
+    this.lakeTrail.push({ t, x: v.x, y: v.y });
+    while (this.lakeTrail.length > 2 && t - this.lakeTrail[1].t > SLAM_LAG) this.lakeTrail.shift();
+    const then = this.lakeTrail[0];
+    const aim = project(tr, then.x, then.y, s1);
+    tr.hint = s1;
+    for (let l = 0; l < KRAKEN.LAIRS.length; l++) {
+      if (this.woke[l] === null && wakes(l, s1, u1)) this.woke[l] = t;
+      const woke = this.woke[l];
+      if (woke === null) continue;
+      const since = t - woke;
+      const lair = lairPoint(l, 0, 0);
+      const past = (s1 - lair.s) * Math.cos(lair.way) + (u1 - lair.u) * Math.sin(lair.way);
+      if (krakenRise(since, past) <= 0.05) continue;
+      this.lakeAim[l] = { s: aim.s, u: aim.u };
+      if (slamLands(since - dt, since)) {
+        const hit = pointAt(tr, aim.s, aim.u);
+        this.ripples = splashRing(this.ripples, hit.x, hit.y, t, 1);
+        this.burst(hit.x, hit.y, 60, 9);
+        const push = slamPush(hit.x, hit.y, v.x, v.y);
+        if (push) {
+          v.vx += push.vx;
+          v.vy += push.vy;
+          this.pulse(0.5, t);
+        }
+      }
+    }
+    // The sharks breaking the water near you: a splash and a ring.
+    for (const sp of sharkSplashes(t - dt, t)) {
+      const p = pointAt(tr, sp.s, sp.u);
+      if (Math.hypot(p.x - v.x, p.y - v.y) > 600) continue;
+      this.ripples = splashRing(this.ripples, p.x, p.y, t, 0.8);
+      this.burst(p.x, p.y, 26, 5);
+    }
+    // Spray off the car skimming the water.
+    if (wet && speed > 4) {
+      let n = Math.min(160, speed * 2.2) * dt;
+      const lx = -Math.sin(v.h);
+      const ly = Math.cos(v.h);
+      while (n > 0) {
+        if (Math.random() < n) {
+          const side = Math.random() < 0.5 ? 1 : -1;
+          const out = 2 + Math.random() * 4;
+          this.splash.emit(
+            v.x - Math.cos(v.h) * 1.6 + lx * side * 0.9,
+            v.y - Math.sin(v.h) * 1.6 + ly * side * 0.9,
+            v.z - VEHICLES[v.kind].hover + 0.2,
+            v.vx * 0.35 + lx * side * out,
+            v.vy * 0.35 + ly * side * out,
+            2 + Math.random() * 3 + speed * 0.03,
+            0.6 + Math.random() * 0.5,
+            0.35 + Math.random() * 0.4,
+          );
+        }
+        n -= 1;
+      }
+    }
+  }
+
+  /** A burst of spray at (x, y) on the lake. */
+  private burst(x: number, y: number, count: number, power: number) {
+    const z = LAKE.LEVEL;
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random();
+      this.splash.emit(
+        x + Math.cos(a) * r * 2,
+        y + Math.sin(a) * r * 2,
+        z + 0.2,
+        Math.cos(a) * power * (0.3 + r),
+        Math.sin(a) * power * (0.3 + r),
+        power * (0.8 + Math.random()),
+        0.8 + Math.random() * 0.8,
+        0.6 + Math.random() * 0.8,
+      );
+    }
   }
 
   /** Mars's own things, built on the way in and taken down on the way out. */
@@ -1053,6 +1237,8 @@ export class DriveEngine {
     this.buildRivals();
     this.placeGantry();
     this.marsRun?.reset(kind);
+    this.leaveLake();
+    this.storm = 0;
     this.lastHud = '';
   }
 
@@ -1616,6 +1802,7 @@ export class DriveEngine {
     this.vehicleView?.dispose();
     this.marsRun?.dispose();
     this.marsView?.dispose();
+    this.lakeView?.dispose();
     this.shiftRings.dispose();
     for (const rv of this.rivals) rv.view.dispose();
     disposeGroup(this.scene);
@@ -1673,6 +1860,7 @@ export class DriveEngine {
       const px = v.x;
       const py = v.y;
       const s0 = this.s;
+      const u0 = this.u;
       if (this.trackWorld) this.trackWorld.track.hint = this.s;
       // On the grid everyone stands still until GO: a steeply banked start would let the cars
       // slide down the bank while the lights count.
@@ -1708,8 +1896,9 @@ export class DriveEngine {
           this.s = back;
           tr.hint = back;
         }
-        // Lost (should never happen): back onto the road where you are.
-        else if (Math.abs(u) > 90 || !Number.isFinite(q.s)) {
+        // Lost (should never happen): back onto the road where you are. (Out on the lake behind
+        // the start you are where you should be.)
+        else if ((Math.abs(u) > 90 && !(q.s < 0 && tr.def.behind)) || !Number.isFinite(q.s)) {
           const p = pointAt(tr, Math.max(0, q.s), 0);
           v.x = p.x;
           v.y = p.y;
@@ -1738,6 +1927,7 @@ export class DriveEngine {
           )
             this.surgeAt = t;
         }
+        this.stepLake(s0, u0, q.s, u, dt, t);
         const plan = gatePlan(this.cfg.id, tr.def);
         const gate = plan && !this.wreck ? gateCrossed(plan, tr.def, s0, q.s, u) : null;
         if (gate) this.passGate(gate.k, t);
@@ -1969,6 +2159,28 @@ export class DriveEngine {
     }
     this.puffs.update(dt, ox, oy);
     this.sparks.update(dt, ox, oy);
+    this.splash.update(dt, ox, oy);
+    this.splash.material.uniforms.uScale.value = this.puffs.material.uniforms.uScale.value;
+    if (this.lakeView) {
+      // Only while the start is near enough to see it.
+      this.lakeView.group.visible = this.s < 2500;
+      if (this.lakeView.group.visible) {
+        const past = KRAKEN.LAIRS.map((_, l) => {
+          const lair = lairPoint(l, 0, 0);
+          return (this.s - lair.s) * Math.cos(lair.way) + (this.u - lair.u) * Math.sin(lair.way);
+        });
+        this.lakeView.update(ox, oy, t, dt, {
+          cam: { x: ox, y: oy, z: camP ? camP.z : this.cam.z },
+          s: this.s,
+          run: this.lakeRun,
+          ripples: this.ripples,
+          woke: this.woke,
+          past,
+          aim: this.lakeAim,
+          storm: this.storm,
+        });
+      }
+    }
     this.sparks.material.uniforms.uScale.value = this.puffs.material.uniforms.uScale.value;
     (this.puffs.material.uniforms.uColour.value as THREE.Color).setRGB(...this.cfg.dust);
     this.puffs.material.uniforms.uScale.value =
@@ -2002,10 +2214,16 @@ export class DriveEngine {
         ? [1, 0.7, 0.55]
         : [0.95, 0.75, 0.62];
     const k = w.fogDensity / (w.fogDensity + base);
-    fog.density = base + w.fogDensity;
+    fog.density = base + w.fogDensity + 0.0007 * this.storm;
+    const storm: [number, number, number] = [0.02, 0.035, 0.05];
     fog.color.setRGB(
-      ...(baseCol.map((c, i) => c + (w.fog[i] - c) * k) as [number, number, number]),
+      ...(baseCol.map((c, i) => {
+        const f = c + (w.fog[i] - c) * k;
+        return f + (storm[i] - f) * this.storm;
+      }) as [number, number, number]),
     );
+    // Darker storm light out on the lake.
+    this.hemi.intensity *= 1 - 0.35 * this.storm;
 
     this.updateBackdrop(ox, oy, t, w, aspect);
     this.updateMotes(speed, spec.vTop, boost, dt, w, aspect);
@@ -2175,12 +2393,13 @@ export class DriveEngine {
     const fy = Math.sin(v.h);
     const g = this.physics.ground(v.x, v.y, v.z);
     if (this.trackWorld) this.trackWorld.track.hint = this.s;
-    const rate = v.air
-      ? 0
-      : (speed > 8 ? speed * (this.cfg.wet ? 1.6 : 0.9) : 0) +
-        Math.abs(v.slip) * 260 +
-        g.rough * speed * 2 +
-        w.wet * speed * 0.8;
+    const rate =
+      v.air || g.water
+        ? 0
+        : (speed > 8 ? speed * (this.cfg.wet ? 1.6 : 0.9) : 0) +
+          Math.abs(v.slip) * 260 +
+          g.rough * speed * 2 +
+          w.wet * speed * 0.8;
     let n = rate * dt;
     while (n > 0) {
       if (Math.random() < n) {
@@ -2295,7 +2514,8 @@ export class DriveEngine {
   }
 
   /** Undertown once you are more than halfway over (not while diving off a twist). */
-  private zone(): 'undertown' | null {
+  private zone(): Zone | null {
+    if (this.lakeZone) return this.lakeZone;
     const def = this.trackWorld?.track.def;
     const s = Math.max(0, this.s);
     if (!def?.under?.(s) || this.wreck || this.besideTwist()) return null;

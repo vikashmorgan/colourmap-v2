@@ -18,6 +18,7 @@
  * Road coordinates: s along the centre line, u across it (positive to the left).
  */
 
+import { lakeCollide, lakeGround, lakeHeight } from '@/lib/art/chinatown-lake';
 import { CHINA_LAP, chinaCurv, chinaElev, chinaTilt } from '@/lib/art/chinatown-lap';
 import {
   type Balcony,
@@ -114,6 +115,18 @@ export interface TrackDef {
   bridge?(s: number): boolean;
   /** An endless road's lap (m). */
   lap?: number;
+  /** What lies behind the start (s < 0) where the road does not simply run on back (Chinatown's
+   * slipway and lake, lib/art/chinatown-lake.ts): its height, its ground for the physics given the
+   * road's heading at the start, and what stops you (nx, ny the road's left). */
+  behind?: {
+    height(s: number, u: number): number;
+    ground(s: number, u: number, h0: number): Ground;
+    collide(s: number, u: number, nx: number, ny: number): Hit | null;
+  };
+  /** Smooth edges (Chinatown): the bank saturates smoothly instead of clipping at bankMax, the
+   * ground past the edge carries on from the road's slope there and eases into its own, and the
+   * lip fades where a side road joins instead of switching off. */
+  smooth?: boolean;
   /** Its gates (lib/art/drive-gates.ts): one every `every` m, in one look or the world's own. */
   gate?: { every: number; style?: GateStyle };
 }
@@ -251,6 +264,23 @@ export function bankFor(k: number, speed: number, most: number): number {
   return clamp(Math.atan((k * speed * speed) / G), -most, most);
 }
 
+/** The bank for a curvature, saturating smoothly toward the most instead of clipping at it, so a
+ * bend's bank never stops growing with a corner (an off-centre car is never jolted where it would
+ * clip): within 0.1 % of the clipped bank up to half the most. */
+export function softBankFor(k: number, speed: number, most: number): number {
+  const a = Math.atan((k * speed * speed) / G);
+  return a / (1 + (a / most) ** 8) ** 0.125;
+}
+
+/** A track's bank at s (s at least 0): its own, times how much of it the road carries there. */
+export function bankOf(def: TrackDef, s: number): number {
+  const k = def.curv(s);
+  const b = def.smooth
+    ? softBankFor(k, def.bankSpeed, def.bankMax)
+    : bankFor(k, def.bankSpeed, def.bankMax);
+  return b * (def.level?.(s) ?? 1);
+}
+
 /** The lip: flat across the road, curling up over its last 2.5 m at each edge. */
 export function lipAt(u: number, half: number, lip: number): number {
   const d = Math.abs(u) - (half - 2.5);
@@ -361,7 +391,7 @@ export function frameAt(t: Track, s: number): Frame {
     h,
     k,
     e: t.def.elev(sc),
-    bank: bankFor(k, t.def.bankSpeed, t.def.bankMax) * (t.def.level?.(sc) ?? 1),
+    bank: bankOf(t.def, sc),
     half: t.def.half(sc),
   };
 }
@@ -410,6 +440,7 @@ export function gapAround(t: Track, s: number): { from: number; to: number } | n
 /** The ground's height at (s, u). In a jump's gap it is the void far below, unless `solid` (the
  * road as if it went on: for slopes, and for drawing the ramps' edges). */
 export function heightAt(t: Track, s: number, u: number, solid = false): number {
+  if (s < 0 && t.def.behind) return t.def.behind.height(s, u);
   const f = frameAt(t, s);
   if (!solid && t.def.gap?.(Math.max(0, s))) return f.e - VOID_DEPTH;
   const sc = Math.max(0, s);
@@ -421,8 +452,18 @@ export function heightAt(t: Track, s: number, u: number, solid = false): number 
   const joined =
     uc < 0
       ? !!t.def.median && joins(t, sc)
-      : (!!lane && !lane.raised) || roads.some((r) => r.joined);
-  const lip = joined ? 0 : t.def.lip(sc);
+      : !t.def.smooth && ((!!lane && !lane.raised) || roads.some((r) => r.joined));
+  // Smooth edges: a side road's or the balcony road's join fades the lip in and out rather than
+  // switching it.
+  const fade =
+    t.def.smooth && uc >= 0
+      ? 1 -
+        roads.reduce(
+          (m, r) => Math.max(m, r.join ?? 0),
+          lane && !lane.raised ? (lane.join ?? 1) : 0,
+        )
+      : 1;
+  const lip = joined ? 0 : t.def.lip(sc) * fade;
   const edge = f.e - Math.tan(f.bank) * uc + lipAt(uc, f.half, lip) + (t.def.kick?.(sc, uc) ?? 0);
   // A bypass lane is road too, flat, beside the twist; walled apart from the road, level with the
   // road's edge on its side, so where they meet it never steps; or down in its cut (the underpass:
@@ -448,7 +489,17 @@ export function heightAt(t: Track, s: number, u: number, solid = false): number 
   const R = pipeRadius(t, s, u, f.bank);
   const toward = t.def.terrain;
   // Off the road the ground slopes back to the flat (1 in 2).
-  const flat = toward === null ? edge : edge + clamp(toward - edge, -out * 0.5, out * 0.5);
+  let flat = toward === null ? edge : edge + clamp(toward - edge, -out * 0.5, out * 0.5);
+  // (Not on the left where a side road or the balcony road runs: their floors meet the ground
+  // there as they always have.)
+  if (t.def.smooth && !(u > 0 && (roads.length > 0 || lane))) {
+    // Carry on from the road's slope at its edge (the bank and the lip's curl), easing into the
+    // ground's own over EDGE_EASE m: no ridge or trough along the edge to jolt a car crossing it.
+    const slope = -Math.tan(f.bank) * Math.sign(u) + (2 * lip) / 2.5;
+    const k = clamp(out / EDGE_EASE, 0, 1);
+    const w = k * k * (3 - 2 * k);
+    flat = edge + slope * out * (1 - w) + (flat - edge) * w;
+  }
   if (R <= 0) return flat;
   // A pipe fades in with its radius (the canyon's mouth), from the flat beside the road.
   const w = clamp(R / 8, 0, 1);
@@ -470,6 +521,9 @@ export function heightAt(t: Track, s: number, u: number, solid = false): number 
     return solid ? flat : f.e - VOID_DEPTH;
   return wall;
 }
+
+/** How far past a smooth road's edge (m) the ground eases from the road's slope into its own. */
+export const EDGE_EASE = 8;
 
 /** The pull that brings you back from a surf (m/s²), and where it draws you: just inside the edge,
  * a little over the road. */
@@ -675,7 +729,7 @@ export function overVoid(def: TrackDef, s: number, u: number, deeper = SUNK): bo
 export function lowerFloor(def: TrackDef, s: number): number {
   const sc = Math.max(0, s);
   const half = def.half(sc);
-  const bank = bankFor(def.curv(sc), def.bankSpeed, def.bankMax) * (def.level?.(sc) ?? 1);
+  const bank = bankOf(def, sc);
   const edge = def.elev(sc) + Math.tan(bank) * half;
   const d = def.lower?.(sc) ?? 0;
   if (d <= 0) return edge;
@@ -687,7 +741,7 @@ export function lowerFloor(def: TrackDef, s: number): number {
  * alone: for laying out what hangs under its deck. */
 export function streetAt(def: TrackDef, s: number, u: number): number {
   const sc = Math.max(0, s);
-  const bank = bankFor(def.curv(sc), def.bankSpeed, def.bankMax) * (def.level?.(sc) ?? 1);
+  const bank = bankOf(def, sc);
   return def.elev(sc) - Math.tan(bank) * u;
 }
 
@@ -805,6 +859,7 @@ export function groundAt(
   const { s, u } = project(t, px, py);
   t.hint = s;
   const f = frameAt(t, s);
+  if (s < 0 && t.def.behind) return { ...t.def.behind.ground(s, u, f.h), s, u };
   if (belowStreet(t, s, u, z)) return lowerGround(t, s, u, f);
   const side = onSideRoad(t, s, u, z);
   if (side) return sideGround(t, s, u, f, side);
@@ -969,7 +1024,7 @@ function chinaLevel(s: number): number {
 /** Chinatown's bank at s: the street's own, steeper on the lap's tilt stretches
  * (lib/art/chinatown-lap.ts, up to 1.7 times: about 29°), level on the grid. */
 export function chinaBank(s: number): number {
-  return bankFor(chinaCurv(s), CHINA_BANK_SPEED, CHINA_BANK) * chinaLevel(s) * chinaTilt(s);
+  return softBankFor(chinaCurv(s), CHINA_BANK_SPEED, CHINA_BANK) * chinaLevel(s) * chinaTilt(s);
 }
 
 export const CHINATOWN: TrackDef = {
@@ -987,6 +1042,9 @@ export const CHINATOWN: TrackDef = {
   level: (s) => chinaLevel(s) * chinaTilt(s),
   terrain: 0,
   lap: CHINA_LAP,
+  smooth: true,
+  // Behind the start: the slipway down to the lake (2026-11-25, lib/art/chinatown-lake.ts).
+  behind: { height: lakeHeight, ground: lakeGround, collide: lakeCollide },
   walls: (s) => {
     // The shophouses' fronts stop you in the lanes; on the avenues the pavement is open.
     const half = chinatownHalf(s);
@@ -1242,6 +1300,7 @@ export function collideTrack(w: TrackWorld, v: Vehicle): Hit | null {
   const f = frameAt(tr, s);
   const nx = -Math.sin(f.h);
   const ny = Math.cos(f.h);
+  if (s < 0 && tr.def.behind) return tr.def.behind.collide(s, u, nx, ny);
   const walls = tr.def.walls(s);
   const ground = heightAt(tr, s, u);
   const above = v.z - ground;
