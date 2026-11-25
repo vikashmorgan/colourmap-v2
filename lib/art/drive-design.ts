@@ -19,22 +19,33 @@ export type WorldId =
   | 'gold'
   | 'symphony';
 
+/** Where a track stands in the menus: the racing tracks, or still being worked on (2026-11-25:
+ * "map what are the good tracks and the secondary ones put them as tracks in development as a
+ * second category not in main racing menu... chinatown golden mars. neon are the good ones"). */
+export type TrackTier = 'race' | 'dev';
+
 /** The worlds in the menus' order, best first (2026-11-22: "golden track on top of the menus. so
- * we have an order from best tracks to least cool"); the number keys follow this order. */
-export const WORLDS: { id: WorldId; name: string; key: string }[] = [
-  { id: 'gold', name: 'Golden Track', key: '1' },
-  // 2026-11-24: "a unique symphony track" of mathematics (docs/specs/symphony-track.md).
-  { id: 'symphony', name: 'The Symphony', key: '2' },
-  { id: 'neon', name: 'Neon District', key: '3' },
-  { id: 'canyon', name: 'Canyon Race', key: '4' },
-  { id: 'sky', name: 'Sky Canyon', key: '5' },
-  { id: 'chinatown', name: 'Chinatown Run', key: '6' },
-  { id: 'night', name: 'Night Rain', key: '7' },
-  { id: 'coast', name: 'Coast Road', key: '8' },
+ * we have an order from best tracks to least cool"): the racing tracks, then those in development.
+ * The number keys follow this order. */
+export const WORLDS: { id: WorldId; name: string; key: string; tier: TrackTier }[] = [
+  { id: 'gold', name: 'Golden Track', key: '1', tier: 'race' },
+  { id: 'chinatown', name: 'Chinatown Run', key: '2', tier: 'race' },
   // 2026-11-19: "one map becomes Mars, in the style of the salt flats".
-  { id: 'mars', name: 'Mars', key: '9' },
-  { id: 'salt', name: 'Salt Flat', key: '0' },
+  { id: 'mars', name: 'Mars', key: '3', tier: 'race' },
+  { id: 'neon', name: 'Neon District', key: '4', tier: 'race' },
+  // 2026-11-24: "a unique symphony track" of mathematics (docs/specs/symphony-track.md).
+  { id: 'symphony', name: 'The Symphony', key: '5', tier: 'dev' },
+  { id: 'canyon', name: 'Canyon Race', key: '6', tier: 'dev' },
+  { id: 'sky', name: 'Sky Canyon', key: '7', tier: 'dev' },
+  { id: 'night', name: 'Night Rain', key: '8', tier: 'dev' },
+  { id: 'coast', name: 'Coast Road', key: '9', tier: 'dev' },
+  { id: 'salt', name: 'Salt Flat', key: '0', tier: 'dev' },
 ];
+
+/** A track's place in the menus. */
+export function tierOf(id: WorldId): TrackTier {
+  return WORLDS.find((w) => w.id === id)?.tier ?? 'dev';
+}
 
 export function isWorld(id: string): id is WorldId {
   return WORLDS.some((w) => w.id === id);
