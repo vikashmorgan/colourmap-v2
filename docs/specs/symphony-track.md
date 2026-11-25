@@ -1,6 +1,6 @@
 # The Symphony: a track made of mathematics
 
-**Status:** Active (1 of 4 built: the road, the bridges, the ring gates, the pillars, the fire rows)
+**Status:** Active (2 of 4 built: the road, the bridges, the ring gates, the pillars, the fire rows; the space ripples and the rainbows)
 **Date:** 2026-11-24
 **Route:** `/drive` (a new world in the track ring, and a place in the one connected world)
 
@@ -148,6 +148,35 @@ speed the rhythm in space becomes one in time: the rows groove instead of tickin
   about every five seconds, never more than seven apart (tested over ten minutes).
 - **The rings brighten** as their gaps close in, and a light gathers where they meet.
 - **Through a gate while it is open,** within the inner ring, you get the boost rings' surge.
+
+### Space ripples
+
+- **Each ripple** is a ring spreading at 150 m/s from where it was born: a wave packet 70 m deep,
+  80 m from crest to crest, fading over 7 s (`rippleAt`). As it passes, what is drawn there lifts
+  and sinks by up to 0.7 m.
+- **Where they come from:** one on its own about every 11 s (± 3 s), 600 to 1,100 m away and
+  somewhere ahead of you within 70° either side, so its rings come toward you; and one from every
+  ring gate as you pass it, stronger if you got the boost. At most four live at once (the newest).
+- **What bends:** the deck and its lines (a few lines spliced into their vertex shaders, exactly
+  the pure function), the ring gates, your vehicle and the rivals (drawn on the swollen deck), the
+  camera (it rides the swell with you, and the view widens a little and settles), the sky (the
+  horizon lifts and falls round you as a ripple passes) and the light (the glow swells with it).
+- **Never thrown:** the physics never feels them. Only what is drawn moves, by the same amount
+  under you as under the deck, so the car rides it smoothly (tested: under 0.15 m a frame).
+- The bridges', pillars' and fire rows' lines of light stay put; the deck swells at most 0.7 m
+  under them.
+
+### Sudden rainbows
+
+- **Rain stretches:** 7.9 to 9.1 km (the build) and 12.9 to 14 km (out of the climax). Rain falls
+  on two laps in five, on one of the two, easing in and out over 150 m: the weather turns to rain
+  there (motes, wet, haze), the sky kept dark.
+- **The bow:** as the rain stops, it rises over 250 m, stands for about a kilometre, and fades.
+  It is drawn as a cone of light round the point opposite the sun, seen from the camera, 3 km off:
+  violet inside at 40.6°, red outside at 42°, so it stands at its real angle, slides as you turn,
+  and shows only when the sun is behind you. Under the horizon it fades away.
+- **The second bow,** on a third of the rainy laps: 50.4° to 53.2°, its colours reversed (red
+  inside), fainter, with the dark band between the two (Alexander's band) left dark.
 
 ### The look
 
