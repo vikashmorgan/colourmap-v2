@@ -133,7 +133,13 @@ export interface SideRoad {
   roof: number | null;
   /** Lying against the road (or still within 3 m of it), level with its edge: no wall between. */
   joined: boolean;
+  /** How joined, 0 to 1, easing with the gap, the floor's height off the edge and the road's
+   * ends: the street's left lip fades by it (never a step where a road joins or parts). */
+  join?: number;
 }
+
+/** Over how many metres of each end the join eases in (m). */
+export const JOIN_EASE = 40;
 
 const smoother = (x: number) => {
   const k = Math.min(1, Math.max(0, x));
@@ -182,6 +188,11 @@ export function sideRoads(s: number, half: number, e: number, edge: number): Sid
       roof,
       // (A negative gap: sliding off or back onto the road's left lane.)
       joined: gap < 3 && Math.abs(z - edge) < 0.6,
+      join:
+        (1 - smoother(gap / 3)) *
+        (1 - smoother(Math.abs(z - edge) / 0.6)) *
+        smoother(x / JOIN_EASE) *
+        smoother((def.length - x) / JOIN_EASE),
     };
   });
 }

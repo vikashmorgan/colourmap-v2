@@ -154,6 +154,9 @@ export const BALCONY = {
   CLEAR: 60,
 };
 
+/** Over how many metres of each end of the merge the street's lip fades out and back (m). */
+export const MERGE_EASE = 30;
+
 /** From the crest's top to the end of the merge (m). */
 export const BALCONY_LENGTH = BALCONY.RUN + BALCONY.RAMP + BALCONY.MERGE;
 
@@ -193,6 +196,9 @@ export interface Balcony {
   z: number;
   /** Up off the street (the deck and the ramp) or down on it (the merge). */
   raised: boolean;
+  /** How far merged with the road, 0 to 1, easing in and out over the merge's ends: the street's
+   * left lip fades by it on a smooth-edged road. */
+  join?: number;
 }
 
 /**
@@ -210,10 +216,17 @@ export function balcony(s: number, half: number, lift = 0): Balcony | null {
     const k = (x - RUN) / RAMP;
     // Down the ramp, eased at both ends.
     const up = H * (1 - k * k * k * (k * (6 * k - 15) + 10));
-    return { c: out, w: W, z: lift + up, raised: up > 0.05 };
+    return { c: out, w: W, z: lift + up, raised: up > 0.05, join: 0 };
   }
   const k = smooth((x - RUN - RAMP) / MERGE);
-  return { c: out + (half - W - out) * k, w: W, z: lift, raised: false };
+  const m = x - RUN - RAMP;
+  return {
+    c: out + (half - W - out) * k,
+    w: W,
+    z: lift,
+    raised: false,
+    join: smoother(m / MERGE_EASE) * smoother((MERGE - m) / MERGE_EASE),
+  };
 }
 
 /** The kicker's height on the road at (s, u) for a road `half` wide (0 off it). */

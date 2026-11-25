@@ -242,7 +242,8 @@ export function chinaTilt(s: number): number {
     const up = Math.min(1, Math.max(0, (x - a) / TILT.EASE));
     const down = Math.min(1, Math.max(0, (b - x) / TILT.EASE));
     const m = Math.min(up, down);
-    k = Math.max(k, m * m * (3 - 2 * m));
+    // Smootherstep: the bank's rate of change eases too, so an off-centre car rides in smoothly.
+    k = Math.max(k, m * m * m * (m * (6 * m - 15) + 10));
   }
   return 1 + (TILT.MORE - 1) * k;
 }

@@ -137,6 +137,10 @@ export interface Ground {
   gy: number;
   /** 0 the road or the smooth salt, 1 rough ground that drags. */
   rough: number;
+  /** The share of the grip the tyres find here (1 or left out: all of it; water: about half). */
+  grip?: number;
+  /** On water (the lake behind Chinatown Run's start): spray and ripples, not dust. */
+  water?: boolean;
   /** On a road's curled-up edge (0 to 1): a wall to ride, never a ramp that launches. */
   lip?: number;
   /** On a road: its heading and curvature here, where across it the point is (u, positive left)
@@ -468,6 +472,8 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
     roadHold = Math.abs(road.k) * v.vLong * v.vLong * ROAD_KEEP.hold * spec.keep;
   }
   const mode = MODES[ctl.mode ?? 'flow'];
+  // Loose ground (water) takes grip from the tyres but not the nose's turn: it slides.
+  const surface = air ? 1 : (here.grip ?? 1);
   const yawCap =
     ((spec.grip * mode.grip * (1 + (fastK - 1) * 0.5) * spec.yawGrip * mode.yaw + bankHold) /
       Math.max(Math.abs(v.vLong), 6)) *
@@ -543,7 +549,7 @@ function subStep(v: Vehicle, ctl: Controls, dt: number, world: World, t: number,
 
   // The grip pulls the slide out up to its limit; past it the vehicle drifts and scrubs speed.
   // Dropping off a slope, part of what the grip takes back goes into speed ahead: the pump.
-  const grip = air ? (v.kind === 'ship' ? 0.15 : 0) : 1;
+  const grip = air ? (v.kind === 'ship' ? 0.15 : 0) : surface;
   if (grip > 0) {
     const want =
       -vLat *

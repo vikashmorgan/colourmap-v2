@@ -1,7 +1,8 @@
 'use client';
 
 /*
- * A place's name over the picture as you ride into it (docs/specs/drive-tracks.md, "Undertown"):
+ * A place's name over the picture as you ride into it (docs/specs/drive-tracks.md, "Undertown",
+ * "The lake behind the start"):
  * big spaced letters that come in slowly, hold, and fade, like the race intro's track name. Shown
  * once each time you enter; never flashing (docs/specs/drive-design-language.md).
  */
@@ -10,6 +11,9 @@ import { useEffect, useRef, useState } from 'react';
 
 const ZONES = {
   undertown: { name: 'Undertown', sub: '下町 · the other side of the road', colour: '#c89cff' },
+  // The lake behind Chinatown Run's start, and Water City found through its portals (2026-11-25).
+  lake: { name: 'The Lake', sub: '湖 · behind the start', colour: '#7fd8e8' },
+  'water-city': { name: 'Water City', sub: '水城 · found · now in the ring', colour: '#e8c060' },
 } as const;
 
 export type ZoneId = keyof typeof ZONES;

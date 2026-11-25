@@ -8,10 +8,10 @@
 import * as THREE from 'three';
 import { LAKE_CITY, type LakeTower, lakeTowers } from '@/lib/art/lake-city';
 
-type V3 = [number, number, number];
+export type V3 = [number, number, number];
 
 /** The city's lights (linear, bright): warm gold, lantern red, jade, violet. */
-const TONES: V3[] = [
+const CITY_TONES: V3[] = [
   [1.5, 1.0, 0.45],
   [1.6, 0.3, 0.12],
   [0.4, 1.3, 0.8],
@@ -53,6 +53,7 @@ function tower(
   P: (a: number, b: number, h: number) => V3,
   body: Mesh,
   lit: Mesh,
+  TONES: V3[] = CITY_TONES,
 ) {
   const L = LAKE_CITY.LEVEL;
   const corners: [number, number][] = [
@@ -147,6 +148,9 @@ export function buildLakeCity(
   lit: THREE.Material,
   side: 1 | -1 = -1,
   near: number = LAKE_CITY.NEAR,
+  /** Its own lights (four tones), and whether it lays its own water (the lake behind Chinatown's
+   * start draws its own). */
+  opts: { tones?: V3[]; water?: boolean } = {},
 ): THREE.Group {
   const ca = Math.cos(h);
   const sa = Math.sin(h);
@@ -161,8 +165,10 @@ export function buildLakeCity(
   const b = new Mesh();
   const l = new Mesh();
   lakeTowers(seed).forEach((t, i) => {
-    tower(t, i, P, b, l);
+    tower(t, i, P, b, l, opts.tones);
   });
+  g.add(new THREE.Mesh(b.geometry(), body), new THREE.Mesh(l.geometry(), lit));
+  if (opts.water === false) return g;
   // The water: a broad sheet from the near shore to past the far one.
   const w = new Mesh();
   const { FAR, SHORE, LENGTH, LEVEL } = LAKE_CITY;
@@ -177,6 +183,6 @@ export function buildLakeCity(
   );
   const wm = new THREE.Mesh(w.geometry(), water);
   wm.renderOrder = 2;
-  g.add(new THREE.Mesh(b.geometry(), body), new THREE.Mesh(l.geometry(), lit), wm);
+  g.add(wm);
   return g;
 }

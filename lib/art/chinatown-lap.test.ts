@@ -227,6 +227,56 @@ describe('the lap (2026-11-24: "make whole chinatown run much longer")', () => {
   });
 });
 
+describe('the banked edge (2026-11-25: a car off-centre on the tilt was jolted)', () => {
+  /** The ground's push up or down on a car holding a line u across the road at speed v (m/s²):
+   * v² times the height's curve along it. */
+  function worstPush(tr: ReturnType<typeof makeTrackWorld>['track'], u: (s: number) => number) {
+    const v = 80;
+    const ds = 0.5;
+    let worst = 0;
+    for (const [a, b] of CHINA_TILT)
+      for (let s = a - 100; s < b + 100; s += ds) {
+        const z0 = heightAt(tr, s - ds, u(s - ds));
+        const z1 = heightAt(tr, s, u(s));
+        const z2 = heightAt(tr, s + ds, u(s + ds));
+        worst = Math.max(worst, Math.abs(((z0 - 2 * z1 + z2) / (ds * ds)) * v * v));
+      }
+    return worst;
+  }
+
+  it('rides smoothly on any line across the road through the tilt stretches', () => {
+    const tr = makeTrackWorld(CHINATOWN).track;
+    // The bank saturates smoothly instead of clipping, so it never stops growing with a corner
+    // (that clip was a kink a car off-centre felt as a jolt: 26 G at 8 m out at 288 km/h).
+    for (const f of [-0.95, -0.8, -0.5, 0.5, 0.8, 0.95])
+      expect(worstPush(tr, (s) => f * chinatownHalf(s))).toBeLessThan(1.5 * G);
+    // Over the lip by the edges too, and just past the right edge (no side road there).
+    expect(worstPush(tr, (s) => chinatownHalf(s) - 0.5)).toBeLessThan(1.5 * G);
+    expect(worstPush(tr, (s) => -(chinatownHalf(s) - 0.5))).toBeLessThan(1.5 * G);
+    expect(worstPush(tr, (s) => -(chinatownHalf(s) + 1))).toBeLessThan(1.5 * G);
+  });
+
+  it('fades the left lip where the alley and the balcony road join, never a step', () => {
+    const tr = makeTrackWorld(CHINATOWN).track;
+    const u = (s: number) => chinatownHalf(s) - 1;
+    // The change in slope from one half metre to the next: a step or a kink shows as a jump.
+    let kink = 0;
+    const ds = 0.5;
+    for (const [a, b] of [
+      [7900, 8200],
+      [10000, 10200],
+      [LAP_BALCONY[0] + BALCONY_LENGTH - 400, LAP_BALCONY[0] + BALCONY_LENGTH + 50],
+    ] as const)
+      for (let s = a; s < b; s += ds) {
+        const z0 = heightAt(tr, s - ds, u(s - ds));
+        const z1 = heightAt(tr, s, u(s));
+        const z2 = heightAt(tr, s + ds, u(s + ds));
+        kink = Math.max(kink, Math.abs(z2 - 2 * z1 + z0) / ds);
+      }
+    expect(kink).toBeLessThan(0.01);
+  });
+});
+
 describe('the spectacle (2026-11-24: "rows of fires shooting up as u pass … circle of fire")', () => {
   it('stands its fire rows, blasts and rings on plain road, out of Undertown and the paths', () => {
     const plain = (x: number) =>
