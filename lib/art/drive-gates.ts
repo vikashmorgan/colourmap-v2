@@ -28,6 +28,7 @@ export const WORLD_GATES: Record<WorldId, readonly GateStyle[]> = {
   chinatown: ['fabric', 'fire', 'halo'],
   neon: ['fabric', 'glow', 'halo'],
   sky: ['glow', 'halo', 'fire'],
+  symphony: ['halo', 'glow', 'chrome'],
 };
 
 /** Where a road's gates stand: s = offset + k × every (k from 0, or from 1 when offset is 0), up

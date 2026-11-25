@@ -58,7 +58,7 @@ import {
 import { underRunAt, underStart } from '@/lib/art/undertown';
 
 export type Rgb = [number, number, number];
-export type NightTheme = 'rain' | 'chinatown' | 'neon' | 'gold';
+export type NightTheme = 'rain' | 'chinatown' | 'neon' | 'gold' | 'symphony';
 
 /** The City's neon: amber, magenta, cyan, violet, warm white. */
 export const NEON: Rgb[] = [
@@ -135,9 +135,18 @@ export const GOLDS: Rgb[] = [
   [0.95, 0.7, 0.3],
 ];
 
+/** The Symphony's: gold over deep violet (docs/specs/symphony-track.md). */
+export const SYMPHONY_LIGHTS: Rgb[] = [
+  [1, 0.78, 0.36],
+  [0.62, 0.38, 1],
+  [1, 0.9, 0.62],
+  [0.95, 0.62, 0.26],
+];
+
 export function palette(theme: NightTheme): Rgb[] {
   if (theme === 'chinatown') return [LANTERN, GOLD, LACQUER, JADE];
   if (theme === 'gold') return GOLDS;
+  if (theme === 'symphony') return SYMPHONY_LIGHTS;
   if (theme === 'neon') return NEON_DISTRICT;
   return NEON;
 }
@@ -585,7 +594,8 @@ export const RING_STEP = 750;
 export const RING_R = 4.2;
 
 export function ringAt(theme: NightTheme, k: number, half: number): Ring | null {
-  if (theme === 'chinatown') return null;
+  // The Symphony has its own ring gates (lib/art/symphony.ts).
+  if (theme === 'chinatown' || theme === 'symphony') return null;
   const u = (hash(k, 41) - 0.5) * Math.max(0, half - RING_R - 1) * 2;
   const pal = palette(theme);
   const mood = theme === 'neon' ? MOOD_ORDER[k % MOOD_ORDER.length] : undefined;

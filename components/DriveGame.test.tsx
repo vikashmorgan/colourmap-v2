@@ -152,12 +152,14 @@ describe('Drive', () => {
     );
   });
 
-  it('switches worlds on 1–6 and restarts on R', () => {
+  it('switches worlds on the number keys and restarts on R', () => {
     play();
-    fireEvent.keyDown(window, { key: '3' });
+    fireEvent.keyDown(window, { key: '4' });
     expect(engine.setWorld).toHaveBeenCalledWith('canyon');
-    fireEvent.keyDown(window, { key: '2' });
+    fireEvent.keyDown(window, { key: '3' });
     expect(engine.setWorld).toHaveBeenCalledWith('neon');
+    fireEvent.keyDown(window, { key: '2' });
+    expect(engine.setWorld).toHaveBeenCalledWith('symphony');
     fireEvent.keyDown(window, { key: 'r' });
     expect(engine.startIntro).toHaveBeenLastCalledWith(true);
   });
@@ -275,14 +277,14 @@ describe('Drive', () => {
     );
     expect(screen.getByTestId('track-map')).toBeDefined();
     fireEvent.keyDown(window, { key: 'ArrowRight' });
-    expect(screen.getByRole('button', { name: 'Neon District' }).getAttribute('aria-current')).toBe(
+    expect(screen.getByRole('button', { name: 'The Symphony' }).getAttribute('aria-current')).toBe(
       'true',
     );
-    expect(screen.getByText('The City of Dreams in neon')).toBeDefined();
+    expect(screen.getByText('A road made of mathematics')).toBeDefined();
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    expect(engine.setWorld).toHaveBeenLastCalledWith('neon');
+    expect(engine.setWorld).toHaveBeenLastCalledWith('symphony');
     // The ring's keys don't drive the car.
     expect(engine.setControls).not.toHaveBeenCalledWith(expect.objectContaining({ steer: -1 }));
     fireEvent.keyDown(window, { key: 'ArrowLeft' });

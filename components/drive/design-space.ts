@@ -23,6 +23,28 @@ import { DEEP_CHAMBERS, deepChamber, type RoadId, roadStarts } from '@/lib/art/c
 import { CATEGORIES, MARKING, type Pos, SURFACE_STYLE } from '@/lib/art/design-space';
 import { WORLD_CFG } from '@/lib/art/drive-worlds';
 import {
+  CABLE_LOW,
+  cableHeight,
+  catenaryA,
+  EPICYCLE,
+  eachSym,
+  epicycloid,
+  euclid,
+  GOLDEN_ANGLE,
+  hangers,
+  phyllotaxis,
+  pillarHeight,
+  SYM_BRIDGES,
+  SYM_EPICYCLES,
+  SYM_FIRE_ROWS,
+  SYM_HUBS,
+  SYM_WAVES,
+  symBridge,
+  towerHeight,
+  VIADUCT,
+  waveLine,
+} from '@/lib/art/symphony';
+import {
   frameAt,
   heightAt,
   pointAt,
@@ -1585,6 +1607,252 @@ function spectacle(k: Kit, burners: Burner[], tr: Track, id: string, s0: number,
 /* ── the space ── */
 
 /** The Gates category: a gate of the chosen look every 240 m, in the track's own world. */
+/* ── Maths: the Symphony's generators (lib/art/symphony.ts) ── */
+
+/** Where a maths piece stands off the Symphony: evenly where the road is plain. */
+const MATHS_EVERY = {
+  catenary: 2600,
+  sunflower: 3400,
+  euclid: 1800,
+  helix: 1500,
+  waves: 2200,
+  epicycle: 1300,
+};
+
+function maths(k: Kit, burners: Burner[], tr: Track, id: string, s0: number, s1: number) {
+  const sym = tr.def.id === 'symphony';
+  const half = (s: number) => tr.def.half(Math.max(0, s));
+  const C_VIOLET: V3 = [0.62, 0.4, 1];
+  /** A point beside the deck at the height of its edge on that side (h over it): bridges stand
+   * on the deck, not on the curled wall past it. */
+  const deck = (s: number, u: number, h: number): V3 => {
+    const e = heightAt(tr, s, Math.sign(u) * half(s), true);
+    const p = pointAt(tr, s, u);
+    return [p.x, e + h, -p.y];
+  };
+  if (id === 'catenary') {
+    const list = sym
+      ? eachSym(SYM_BRIDGES, s0 - 700, s1).map(({ s, item }) => ({ a: s, span: item.span }))
+      : every(s0 - 700, s1, MATHS_EVERY.catenary, 600)
+          .filter((a) => plainSpan(tr, a - 10, a + 387))
+          .map((a) => ({ a, span: 377 }));
+    for (const { a, span } of list) {
+      const H = towerHeight(span);
+      const A = catenaryA(span, H - CABLE_LOW);
+      const off = (s: number) => half(s) + 2.5;
+      for (const ts of [a, a + span]) {
+        if (ts < s0 || ts >= s1) continue;
+        for (const sd of [1, -1]) {
+          // The tower: from the plain below up to H over the deck, gold-edged, dark-faced.
+          const top = deck(ts, sd * off(ts), H);
+          const foot: V3 = [top[0], 0, top[2]];
+          for (const [du, dt] of [
+            [-1.2, -1.2],
+            [1.2, -1.2],
+            [1.2, 1.2],
+            [-1.2, 1.2],
+          ] as const) {
+            const t0 = deck(ts + dt, sd * (off(ts) + du), H);
+            k.line([t0[0], 0, t0[2]], t0, C.gold, 0.9);
+          }
+          k.line(foot, top, C.deep, 0.5);
+          k.dot(top, C.warm, 2.4, 3.5);
+        }
+        // Crossbeams at the top and at the golden section of the tower.
+        for (const h of [H, H / PHI, H / PHI ** 2])
+          k.line(deck(ts, off(ts), h), deck(ts, -off(ts), h), C.gold, h === H ? 1 : 0.7);
+      }
+      // The main cables: a cosh curve from tower top to tower top, clipped to this chunk.
+      const c0 = Math.max(a, s0);
+      const c1 = Math.min(a + span, s1);
+      if (c1 > c0)
+        for (const sd of [1, -1])
+          along(
+            k,
+            tr,
+            c0,
+            c1,
+            Math.min(4, c1 - c0),
+            (s) => sd * off(s),
+            // Over the deck's edge, not over the curled wall past it.
+            (s) =>
+              cableHeight(span, s - a, A) -
+              (heightAt(tr, s, sd * off(s), true) - heightAt(tr, s, sd * half(s), true)),
+            C.gold,
+            1.25,
+            true,
+          );
+      // The hangers, at Fibonacci intervals, quickening toward the towers.
+      for (const x of hangers(span)) {
+        const s = a + x;
+        if (s < s0 || s >= s1) continue;
+        for (const sd of [1, -1]) {
+          const lo = deck(s, sd * off(s), 0.3);
+          const hi = deck(s, sd * off(s), cableHeight(span, x, A));
+          k.line(lo, hi, C.warm, 0.8);
+          k.dot(hi, C.warm, 1.6, 1.6);
+        }
+      }
+    }
+    // The viaduct's piers: every 55 m under the deck, none under a suspended span.
+    if (sym)
+      for (const s of every(s0, s1, 55)) {
+        if (!symBridge(s)) continue;
+        if (
+          eachSym(SYM_BRIDGES, s - 700, s + 1).some(
+            ({ s: a, item }) => s > a - 20 && s < a + item.span + 20,
+          )
+        )
+          continue;
+        const e = frameAt(tr, s).e - 1.6;
+        for (const sd of [1, -1]) {
+          const p = pointAt(tr, s, sd * (half(s) - 3));
+          k.line([p.x, 0, -p.y], [p.x, e, -p.y], C.deep, 0.7);
+        }
+        const l = pointAt(tr, s, half(s) - 3);
+        const r = pointAt(tr, s, -(half(s) - 3));
+        k.line([l.x, e, -l.y], [r.x, e, -r.y], C.deep, 0.6);
+        k.dot(deck(s, 0, -1.8), C_VIOLET, 1.4, 2);
+      }
+  } else if (id === 'sunflower') {
+    const hubs = sym
+      ? eachSym(SYM_HUBS, s0, s1).map(({ s, item }) => ({ s, hub: item }))
+      : every(s0, s1, MATHS_EVERY.sunflower, 1700).map((s, i) => ({
+          s,
+          hub: { at: 0, out: (i % 2 ? 1 : -1) * (half(s) + 140), n: 144, c: 7, h: 50 },
+        }));
+    for (const { s, hub } of hubs) {
+      const c = pointAt(tr, s, hub.out);
+      // The hub: a tall spire of light.
+      k.line([c.x, 0, -c.y], [c.x, hub.h * 1.6, -c.y], C.warm, 1.4);
+      k.dot([c.x, hub.h * 1.6 + 2, -c.y], C.warm, 3, 7);
+      for (let n = 1; n <= hub.n; n++) {
+        const q = phyllotaxis(n, hub.c);
+        const x = c.x + q.x;
+        const y = c.y + q.y;
+        if (!clearOfRoad(tr, s, x, y, 8)) continue;
+        const h = pillarHeight(hub, n);
+        // Every Fibonacci seed in violet: the spiral arms show.
+        const fibSeed = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233].includes(n);
+        box(k, x, -y, 0, 0.7, 0.7, h, q.a, 0, fibSeed ? C_VIOLET : C.gold, 0.8);
+        k.dot([x, h + 1, -y], fibSeed ? C_VIOLET : C.warm, 2, 2.6);
+      }
+    }
+  } else if (id === 'euclid') {
+    const rows = sym
+      ? eachSym(SYM_FIRE_ROWS, s0 - 400, s1).map(({ s, item }) => ({ a: s, row: item }))
+      : every(s0 - 300, s1, MATHS_EVERY.euclid, 900)
+          .filter((a) => plainSpan(tr, a, a + 260))
+          .map((a) => ({ a, row: { ...SYM_FIRE_ROWS[0], at: 0, to: 260 } }));
+    for (const { a, row } of rows) {
+      const len = row.to - row.at;
+      for (let i = 0; i * row.step <= len + 1e-6; i++) {
+        const s = a + i * row.step;
+        if (s < s0 || s >= s1) continue;
+        for (const sd of [1, -1] as const) {
+          const [kk, nn] = sd === 1 ? row.left : row.right;
+          const on = euclid(kk, nn)[i % nn];
+          const u = sd * (half(s) + FIRE_ROW.OUT);
+          // Every step has its stub; the onsets carry a burner and a gold cap, the rests a violet one.
+          column(k, tr, s, u, 0.3, on ? 0.9 : 0.5, C.deep, 0.7, 0);
+          k.dot(pose(tr, s, u, on ? 1 : 0.6), on ? C.warm : C_VIOLET, on ? 1.6 : 1, on ? 1.8 : 1.2);
+          if (!on) continue;
+          burners.push(
+            burner(s, pose(tr, s, u, 1), dir(tr, s, -sd * 0.05, 1, 0), {
+              rate: 160,
+              speed: i % nn === 0 ? 30 : 24,
+              life: 0.7,
+              // The left gold, the right blue gas: the two rhythms read apart.
+              pal: sd === 1 ? 0 : 2,
+              size: 3.4,
+              spread: 0.06,
+              buoy: 4,
+              pop: { lead: FIRE_ROW.LEAD, dur: FIRE_ROW.FIRE },
+            }),
+          );
+        }
+      }
+    }
+  } else if (id === 'helix') {
+    // Lamps round the road, n × the golden angle round from the left, 9 m apart: on the bridges
+    // (the Symphony) or evenly where the road is plain.
+    const spans = sym
+      ? eachSym([{ at: VIADUCT.up }], s0 - 2000, s1).map(({ s }) => ({
+          a: s,
+          b: s + VIADUCT.down - VIADUCT.up,
+        }))
+      : every(s0 - 400, s1, MATHS_EVERY.helix, 300)
+          .filter((a) => plainSpan(tr, a, a + 400))
+          .map((a) => ({ a, b: a + 400 }));
+    for (const { a, b } of spans)
+      for (const s of every(Math.max(a, s0), Math.min(b, s1), 9)) {
+        const n = Math.round((s - a) / 9);
+        const ang = n * GOLDEN_ANGLE;
+        const R = half(s) + 5;
+        const up = 6 + Math.sin(ang) * R;
+        if (up < 2) continue;
+        k.dot(pose(tr, s, Math.cos(ang) * R, up), n % 5 === 0 ? C_VIOLET : C.warm, 2.2, 2.4);
+      }
+  } else if (id === 'waves') {
+    const spans = sym
+      ? eachSym(SYM_WAVES, s0 - 2000, s1).map(({ s, item }) => ({ a: s, b: s + item.to - item.at }))
+      : every(s0 - 600, s1, MATHS_EVERY.waves, 200)
+          .filter((a) => plainSpan(tr, a, a + 600))
+          .map((a) => ({ a, b: a + 600 }));
+    for (const { a, b } of spans) {
+      const c0 = Math.max(a, s0);
+      const c1 = Math.min(b, s1);
+      if (c1 <= c0) continue;
+      for (const sd of [1, -1] as const)
+        along(
+          k,
+          tr,
+          c0,
+          c1,
+          Math.min(3, c1 - c0),
+          (s) => sd * (half(s) + 6),
+          (s) => waveLine(s, sd),
+          sd === 1 ? C.gold : C_VIOLET,
+          1.1,
+          true,
+        );
+    }
+  } else if (id === 'epicycle') {
+    const at = sym
+      ? eachSym(SYM_EPICYCLES, s0, s1).map(({ s, item }) => ({ s, side: item.side }))
+      : every(s0, s1, MATHS_EVERY.epicycle, 600)
+          .filter((s) => plain(tr, s))
+          .map((s, i) => ({ s, side: (i % 2 ? 1 : -1) as 1 | -1 }));
+    const { R, K, OUT } = EPICYCLE;
+    for (const { s, side } of at) {
+      // Standing in a plane along the road, its middle OUT m past the edge and one radius up.
+      const u = side * (half(s) + OUT + R / K);
+      const mid = R + (2 * R) / K + 2;
+      const n = 360;
+      const pts: V3[] = [];
+      for (let j = 0; j <= n; j++) {
+        const [x, y] = epicycloid((j / n) * Math.PI * 2);
+        pts.push(ground(tr, s + x, u, mid + y));
+      }
+      k.poly(pts, false, C.gold, 1.2);
+      // The rolling wheel and the fixed one, faint.
+      const ring = (cx: number, cy: number, r: number, col: V3) =>
+        k.poly(
+          Array.from({ length: 64 }, (_, j): V3 => {
+            const a = (j / 64) * Math.PI * 2;
+            return ground(tr, s + cx + Math.cos(a) * r, u, mid + cy + Math.sin(a) * r);
+          }),
+          true,
+          col,
+          0.45,
+        );
+      ring(0, 0, R, C_VIOLET);
+      ring(R + R / K, 0, R / K, C_VIOLET);
+      k.line(ground(tr, s, u, 0), ground(tr, s, u, mid - R), C.deep, 0.6);
+    }
+  }
+}
+
 function gates(group: THREE.Group, tr: Track, style: GateStyle, s0: number, s1: number) {
   const world = WORLD_CFG[tr.def.id];
   for (const s of every(s0, s1, 240, 120)) {
@@ -2297,6 +2565,8 @@ export class DesignSpace {
       chinatown(k, group, tr, id, s0, s1);
     } else if (cat === 'neon') {
       neon(k, group, tr, id, s0, s1);
+    } else if (cat === 'maths') {
+      maths(k, burners, tr, id, s0, s1);
     } else if (cat === 'gates' && (GATE_STYLES as readonly string[]).includes(id)) {
       gates(group, tr, id as GateStyle, s0, s1);
     }

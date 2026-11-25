@@ -7,9 +7,9 @@ timing, length, highlights) lives in `lib/art/track-registry.ts`; the worlds the
 `docs/specs/drive-game.md`.
 
 **Order** (2026-11-22: "golden track on top of the menus. so we have an order from best tracks to
-least cool"): Golden Track, Neon District, Canyon Race, Sky Canyon, Chinatown Run, Night Rain, Coast
-Road, Mars, Salt Flat. The menus, the ring and the number keys 1–9 follow it (`WORLDS`,
-lib/art/drive-design.ts); with nothing remembered the game opens on the Golden Track.
+least cool"): Golden Track, the Symphony, Neon District, Canyon Race, Sky Canyon, Chinatown Run,
+Night Rain, Coast Road, Mars, Salt Flat. The menus, the ring and the number keys 1–9 and 0 follow it
+(`WORLDS`, lib/art/drive-design.ts); with nothing remembered the game opens on the Golden Track.
 
 Every track also gets the shared work from `docs/specs/drive-menus.md` (the track ring, the race
 intro and grid, the results) and the design language in `docs/specs/drive-design-language.md`.
@@ -559,6 +559,25 @@ A road of gold dots under Saturn.
 - [ ] A black ocean round the track and a distant landscape on the horizon.
 - [ ] The rings change with a colour mode: fire rings, or a few neon ones.
 - [ ] The track draws itself ahead of you; the dots breathe slowly with the music.
+
+## 10. The Symphony (`symphony`)
+
+A road made of mathematics, gold over deep violet (2026-11-24: "use maths and math beauty to create
+a unique symphony track"). The full brief and what is built: `docs/specs/symphony-track.md`; the
+maths: `lib/art/symphony.ts`.
+- [x] The world and the road that never repeats: heading and height as sums of sinusoids in
+      irrational ratios (1, φ, √2, φ²; 1, √3, φ²), shaped over a 16 km lap like a piece of music,
+      the bank following the curvature, straight and level over the grid (2026-11-25).
+- [x] Catenary bridges on a viaduct: spans 233, 377, 610 m, towers span / φ³ tall, Fibonacci
+      hangers quickening toward the towers.
+- [x] Golden-ratio ring gates: three rings nested by φ turning at φ speeds; through one while its
+      gaps line up, a surge.
+- [x] Golden-angle sunflowers of pillars, a golden helix of lamps, Euclidean fire rows (5 in 8
+      against 3 in 8 …), as the design space's Maths category.
+- [ ] Space ripples and rainbows.
+- [ ] The torus knot and the golden spiral climb.
+- [ ] The gyroid tunnel and the linked-ring tunnel.
+- [ ] The way in from the Golden Track's STAY WILD portal.
 
 ## Design space (2026-11-23)
 
