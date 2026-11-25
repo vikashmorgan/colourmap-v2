@@ -12,6 +12,7 @@
 
 import * as THREE from 'three';
 import { LOWER } from '@/lib/art/chinatown-paths';
+import { deepChamber } from '@/lib/art/chinatown-roads';
 import { CT_STOREY, CT_TALL_FLOORS, ctCellRect, ctWindows } from '@/lib/art/chinatown-street';
 import { VISTA, vistaAt, vistasBetween } from '@/lib/art/chinatown-vista';
 import type { WorldCfg } from '@/lib/art/drive-worlds';
@@ -53,6 +54,7 @@ import {
   SKY_LAP,
   SKY_LEVELS,
   SKY_PIPE,
+  sideRoadsAt,
   skyWallHeight,
   skyWallU,
   type TrackWorld,
@@ -1310,6 +1312,181 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         }
       }
       done();
+    }
+    // Chinatown Run's side roads (lib/art/chinatown-roads.ts): each its own surface in the road's
+    // colours, walled once it has left the street. The alley's walls low and lacquer red; the high
+    // road a deck on columns, its rails gold; the deep way a tunnel, roofed, through a dark arch,
+    // its flooded stretch a sheet of water over a deep bed with the kerb lights mirrored in it.
+    if (def.roads) {
+      interface Strip {
+        floor: V3[][];
+        fc: V3[][];
+        inner: V3[][];
+        outer: V3[][];
+        roof: V3[][];
+        top: V3[][];
+        under: V3[][];
+      }
+      const lacquer = lin(0.3, 0.04, 0.03);
+      const dark = lin(0.05, 0.012, 0.01);
+      const rock = lin(0.03, 0.02, 0.02);
+      const bed = lin(0.004, 0.008, 0.02);
+      const kerb: Record<string, V3> = {
+        alley: [1.4, 0.25, 0.8],
+        high: [1.6, 1.05, 0.38],
+        deep: [0.7, 0.12, 0.06],
+        flood: [0.25, 0.7, 1.3],
+      };
+      const paint = (rows: V3[][], c: V3) => rows.map((r) => r.map(() => c));
+      const strips = new Map<string, Strip>();
+      const keyOf = new Map<string, string>();
+      const flush = (key: string) => {
+        const st = strips.get(key);
+        strips.delete(key);
+        if (!st || st.floor.length < 2) return;
+        const flood = key.endsWith(':flood');
+        grid(flood ? water : ground, st.floor, st.fc, !flood);
+        if (st.inner.length > 1) {
+          grid(
+            ground,
+            st.inner.map((r) => [...r].reverse()),
+            paint(st.inner, lacquer),
+          );
+          grid(ground, st.outer, paint(st.outer, lacquer));
+        }
+        if (st.roof.length > 1) {
+          grid(
+            ground,
+            st.roof.map((r) => [...r].reverse()),
+            paint(st.roof, dark),
+          );
+          grid(ground, st.top, paint(st.top, rock));
+        }
+        if (st.under.length > 1)
+          grid(
+            ground,
+            st.under.map((r) => [...r].reverse()),
+            paint(st.under, flood ? bed : dark),
+          );
+      };
+      for (let s = s0; s <= s1 + 0.01; s += ROW) {
+        const half = def.half(Math.max(0, s));
+        const seen = new Set<string>();
+        for (const r of sideRoadsAt(track, s)) {
+          const uIn = Math.max(r.c - r.w, half + 0.05);
+          const uOut = r.c + r.w;
+          if (uOut - uIn < 0.5) continue;
+          const flood = r.id === 'deep' && deepChamber(s)?.id === 'flood';
+          const key = `${r.id}:${r.joined ? 'joined' : flood ? 'flood' : 'apart'}`;
+          const was = keyOf.get(r.id);
+          if (was && was !== key) flush(was);
+          keyOf.set(r.id, key);
+          seen.add(r.id);
+          let st = strips.get(key);
+          if (!st) {
+            st = { floor: [], fc: [], inner: [], outer: [], roof: [], top: [], under: [] };
+            strips.set(key, st);
+          }
+          const at = (u: number, z: number): V3 => {
+            const p = pointAt(track, s, u);
+            return local(ax, ay, p.x, p.y, z);
+          };
+          const fs = [0, 0.25, 0.5, 0.75, 1];
+          const z = r.z + 0.05;
+          st.floor.push(fs.map((f) => at(uIn + (uOut - uIn) * f, z)));
+          st.fc.push(
+            fs.map((f) =>
+              flood
+                ? lin(0.03, 0.08, 0.14)
+                : groundColour(cfg, s, (f * 2 - 1) * r.w, r.w, snowLevel),
+            ),
+          );
+          if (r.joined) continue;
+          // The walls: to the roof in the deep way, rails up on the high road, kerb walls in the
+          // alley; down under the high road's deck and the flood's water.
+          const up = r.roof ?? (r.id === 'high' ? 1.1 : 1.2);
+          const down = r.id === 'high' ? 0.9 : flood ? 3 : 0.4;
+          st.inner.push([at(uIn, r.z + up), at(uIn, r.z - down)]);
+          st.outer.push([at(uOut, r.z + up), at(uOut, r.z - down)]);
+          if (r.roof !== null) {
+            st.roof.push([uIn, (uIn + uOut) / 2, uOut].map((u) => at(u, r.z + r.roof!)));
+            st.top.push(
+              [uIn - 0.3, (uIn + uOut) / 2, uOut + 0.3].map((u) => at(u, r.z + r.roof! + 0.6)),
+            );
+          }
+          if (down > 0.5)
+            st.under.push([uIn, (uIn + uOut) / 2, uOut].map((u) => at(u, r.z - down)));
+          // Its kerb lights (in the flood, mirrored under the water too).
+          const sb = Math.min(s + ROW, s1 + 0.01);
+          const col = kerb[flood ? 'flood' : r.id];
+          const next = sideRoadsAt(track, sb).find((o) => o.id === r.id);
+          if (!next) continue;
+          const nIn = Math.max(next.c - next.w, def.half(Math.max(0, sb)) + 0.05);
+          const nOut = next.c + next.w;
+          const line = (ua: number, ub: number, za: number, zb: number) => {
+            const pa = pointAt(track, s, ua);
+            const pb = pointAt(track, sb, ub);
+            const w = 0.14;
+            glow.quad(
+              local(ax, ay, pa.x, pa.y, za - w),
+              local(ax, ay, pb.x, pb.y, zb - w),
+              local(ax, ay, pb.x, pb.y, zb + w),
+              local(ax, ay, pa.x, pa.y, za + w),
+              [0, 1, 0],
+              col,
+            );
+          };
+          for (const [ua, ub] of [
+            [uIn + 0.25, nIn + 0.25],
+            [uOut - 0.25, nOut - 0.25],
+          ]) {
+            line(ua, ub, r.z + 0.6, next.z + 0.6);
+            if (flood) line(ua, ub, r.z - 0.6, next.z - 0.6);
+          }
+        }
+        for (const [id, key] of keyOf)
+          if (!seen.has(id)) {
+            flush(key);
+            keyOf.delete(id);
+          }
+      }
+      for (const key of [...strips.keys()]) flush(key);
+      // The deep way's arches: a lacquer face round each mouth, its edge glowing faintly.
+      for (let s = s0; s < s1; s += ROW) {
+        const a = sideRoadsAt(track, s).find((o) => o.id === 'deep');
+        const b = sideRoadsAt(track, s + ROW).find((o) => o.id === 'deep');
+        if (!a || !b || (a.roof === null) === (b.roof === null)) continue;
+        const sm = a.roof === null ? s + ROW : s;
+        const r = a.roof === null ? b : a;
+        const roof = r.roof ?? 8;
+        const at = (u: number, z: number): V3 => {
+          const p = pointAt(track, sm, u);
+          return local(ax, ay, p.x, p.y, z);
+        };
+        const uIn = r.c - r.w;
+        const uOut = r.c + r.w;
+        const z0 = r.z - 0.5;
+        const z1 = r.z + roof;
+        const face = (u0: number, u1: number, za: number, zb: number) =>
+          ground.quad(at(u0, za), at(u1, za), at(u1, zb), at(u0, zb), [0, 1, 0], lacquer);
+        face(uIn - 3, uIn, z0, z1 + 4);
+        face(uOut, uOut + 3, z0, z1 + 4);
+        face(uIn, uOut, z1, z1 + 4);
+        // A faint red line round the opening.
+        const red: V3 = [0.5, 0.06, 0.03];
+        const edge = (u0: number, za: number, u1: number, zb: number) =>
+          glow.quad(at(u0, za), at(u1, zb), at(u1, zb + 0.12), at(u0, za + 0.12), [0, 1, 0], red);
+        edge(uIn, z1 - 0.2, uOut, z1 - 0.2);
+        for (const u of [uIn + 0.1, uOut - 0.1])
+          glow.quad(
+            at(u - 0.06, z0 + 0.5),
+            at(u + 0.06, z0 + 0.5),
+            at(u + 0.06, z1 - 0.2),
+            at(u - 0.06, z1 - 0.2),
+            [0, 1, 0],
+            red,
+          );
+      }
     }
     // The twist's ribbon: the road turned about its axis, lit by its turned up, its underside dark
     // so it reads from outside too.

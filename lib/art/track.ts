@@ -29,6 +29,7 @@ import {
   underpass,
   underpassDepth,
 } from '@/lib/art/chinatown-paths';
+import { type SideRoad, sideRoads } from '@/lib/art/chinatown-roads';
 import { clamp, type Gate } from '@/lib/art/drive';
 import { compileTrack, type GateStyle, type TrackData } from '@/lib/art/track-data';
 import coastData from '@/lib/art/tracks/coast.json';
@@ -101,6 +102,9 @@ export interface TrackDef {
   balcony?(s: number): Balcony | null;
   /** A kicker on the road: extra height at (s, u) over the road's own (m). */
   kick?(s: number, u: number): number;
+  /** Side roads off the left (Chinatown's alley, high road and deep way: lib/art/chinatown-roads.ts)
+   * at s beside a road `half` wide, its crown at `e` and its left edge at `edge`. */
+  roads?(s: number, half: number, e: number, edge: number): SideRoad[];
   /** How much of its bank the road carries here (0 level, 1 all of it; default 1; more than 1 on
    * a tilt stretch, where it banks past bankMax: Chinatown's sweepers). */
   level?(s: number): number;
@@ -413,7 +417,11 @@ export function heightAt(t: Track, s: number, u: number, solid = false): number 
   const lane = t.def.balcony?.(sc) ?? null;
   // Where a lane joins the road unwalled (the bypass before the median, the balcony road merging
   // back) the road's edge has no lip on that side, so you cross onto it smoothly.
-  const joined = uc < 0 ? !!t.def.median && joins(t, sc) : !!lane && !lane.raised;
+  const roads = sideRoadsAt(t, sc, f);
+  const joined =
+    uc < 0
+      ? !!t.def.median && joins(t, sc)
+      : (!!lane && !lane.raised) || roads.some((r) => r.joined);
   const lip = joined ? 0 : t.def.lip(sc);
   const edge = f.e - Math.tan(f.bank) * uc + lipAt(uc, f.half, lip) + (t.def.kick?.(sc, uc) ?? 0);
   // A bypass lane is road too, flat, beside the twist; walled apart from the road, level with the
@@ -424,6 +432,11 @@ export function heightAt(t: Track, s: number, u: number, solid = false): number 
     (onBypass(t, s, u) !== null || (u < 0 && voidLeft(t.def, sc) !== null))
   )
     return t.def.median ? lowerFloor(t.def, sc) : f.e;
+  // A side road (drawn as its own piece, so not part of the solid road).
+  if (!solid && u > f.half) {
+    const r = pickRoad(roads, f.half, u);
+    if (r) return r.z;
+  }
   // The balcony road: up on its deck (drawn as its own piece, so not part of the solid road), or
   // down on the street as it merges back, level with the road's left edge.
   if (lane && u > f.half && Math.abs(u - lane.c) <= lane.w) {
@@ -535,6 +548,62 @@ export function onBalcony(t: Track, s: number, u: number): Balcony | null {
   if (!bc?.raised) return null;
   const half = t.def.half(Math.max(0, s));
   return u > half && Math.abs(u - bc.c) <= bc.w ? bc : null;
+}
+
+/* ── The side roads ──────────────────────────────────────── */
+
+/** The side roads at s (none on a track without them). */
+export function sideRoadsAt(t: Track, s: number, f = frameAt(t, s)): SideRoad[] {
+  if (!t.def.roads) return [];
+  return t.def.roads(Math.max(0, s), f.half, f.e, f.e - Math.tan(f.bank) * f.half);
+}
+
+/** Which of the roads (u) is on, for a body at height z (any, left out): joined to the road, from
+ * its edge out; apart, between its walls; a body more than SIDE_PICK m under a road's floor is
+ * not on it. */
+function pickRoad(roads: SideRoad[], half: number, u: number, z?: number): SideRoad | null {
+  for (const r of roads) {
+    const inside = r.joined ? u > half && u <= r.c + r.w : Math.abs(u - r.c) <= r.w;
+    if (inside && (z === undefined || z > r.z - SIDE_PICK)) return r;
+  }
+  return null;
+}
+
+export const SIDE_PICK = 4;
+
+/** The side road under (s, u) for a body at height z, or null. */
+export function onSideRoad(t: Track, s: number, u: number, z?: number): SideRoad | null {
+  if (!t.def.roads) return null;
+  const f = frameAt(t, s);
+  if (u <= f.half) return null;
+  return pickRoad(sideRoadsAt(t, s, f), f.half, u, z);
+}
+
+/** On a side road: its floor, level across, sloping only along; between its walls (joined, the
+ * span from the road's right edge to its far side) it holds you. */
+function sideGround(
+  t: Track,
+  s: number,
+  u: number,
+  f: Frame,
+  r: SideRoad,
+): Ground & { s: number; u: number } {
+  const zAt = (q: number) => sideRoadsAt(t, q).find((o) => o.id === r.id)?.z ?? r.z;
+  const dS = (zAt(s + 0.5) - zAt(s - 0.5)) / Math.max(0.3, 1 - f.k * u);
+  const lo = -f.half;
+  const hi = r.c + r.w;
+  return {
+    h: r.z,
+    gx: dS * Math.cos(f.h),
+    gy: dS * Math.sin(f.h),
+    rough: 0,
+    lip: 0,
+    road: r.joined
+      ? { h: f.h, k: f.k, u: u - (hi + lo) / 2, half: (hi - lo) / 2, pipe: 0 }
+      : { h: f.h, k: f.k, u: u - r.c, half: r.w, pipe: 0 },
+    s,
+    u,
+  };
 }
 
 /** Whether a walled-apart bypass (Main Street) runs here and still meets the road unwalled. */
@@ -696,11 +765,15 @@ function corridor(
   // Beside the balcony road (or coming to its kicker) the span reaches out over it, so the road
   // never eases you back in from the left edge as you go for the jump.
   const side = t.def.balcony?.(Math.max(0, s));
+  // So too where a side road lies joined against it.
+  const joinedRoad = sideRoadsAt(t, s, f).find((r) => r.joined);
   const reachL = side
     ? side.c + side.w
     : (t.def.kick?.(Math.max(0, s), f.half) ?? 0) > 0
       ? f.half + 10
-      : null;
+      : joinedRoad
+        ? joinedRoad.c + joinedRoad.w
+        : null;
   if (c === null || c === undefined) {
     if (reachL !== null) {
       const lo = -f.half;
@@ -733,6 +806,8 @@ export function groundAt(
   t.hint = s;
   const f = frameAt(t, s);
   if (belowStreet(t, s, u, z)) return lowerGround(t, s, u, f);
+  const side = onSideRoad(t, s, u, z);
+  if (side) return sideGround(t, s, u, f, side);
   const h = heightAt(t, s, u);
   // Slopes from the road as if it went on, so a gap's edge never reads as a cliff to slide down.
   // Up on the balcony road, its own: level across, sloping only down its ramp.
@@ -941,6 +1016,8 @@ export const CHINATOWN: TrackDef = {
     return balcony(s, half, -Math.tan(chinaBank(s)) * half);
   },
   kick: (s, u) => kickAt(s, u, chinatownHalf(s)),
+  // The alley behind the tallest towers, the high road and the deep way (chinatown-roads.ts).
+  roads: sideRoads,
 };
 
 export const NEON_HALF = 16;
@@ -1170,6 +1247,17 @@ export function collideTrack(w: TrackWorld, v: Vehicle): Hit | null {
   const above = v.z - ground;
   // A twist has no barriers (2026-11-22): ride off it and you are gone.
   if (edgesOpen(tr.def, s)) return null;
+  // On a side road: its far wall, and its near one once it has left the road.
+  const sr = onSideRoad(tr, s, u, v.z);
+  if (sr) {
+    const outer = sr.c + sr.w + 0.3;
+    const inner = sr.c - sr.w - 0.3;
+    if (u > outer - BODY_R)
+      return { nx: -nx, ny: -ny, depth: u - (outer - BODY_R), loss: 0, spin: 0, flow: true };
+    if (!sr.joined && u < inner + BODY_R)
+      return { nx, ny, depth: inner + BODY_R - u, loss: 0, spin: 0, flow: true };
+    return null;
+  }
   // Up on the balcony road: its outer rail holds you; its inner edge is open (you drop to the road).
   const up = onBalcony(tr, s, u);
   if (up) {
@@ -1211,6 +1299,8 @@ export function collideTrack(w: TrackWorld, v: Vehicle): Hit | null {
   const deckSide = tr.def.deck?.(Math.max(0, s)) ?? 0;
   let lu = left ? left.u + (tr.def.curl ? pipeReach(tr, s, 1) : 0) : 0;
   if (left && deckSide === 1) lu = Math.max(lu, f.half + DECK.OUT);
+  // Where a side road lies joined against the road, no wall between them.
+  for (const r of sideRoadsAt(tr, s, f)) if (r.joined) lu = Math.max(lu, r.c + r.w + 0.3);
   // Beside the balcony road: raised, its inner edge is a wall unless you come over it high enough
   // to land on the deck; merging, the lane's far side funnels you back onto the road.
   const side = tr.def.balcony?.(Math.max(0, s));

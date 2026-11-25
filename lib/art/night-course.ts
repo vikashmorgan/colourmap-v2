@@ -30,6 +30,7 @@ import {
   LOWER,
   pathMedian,
 } from '@/lib/art/chinatown-paths';
+import { ROAD_OUT, roadStarts } from '@/lib/art/chinatown-roads';
 import {
   CT_BOARD_FREE,
   CT_PATH_CELLS,
@@ -349,6 +350,8 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
         // Up on the lake arcade's deck on the left (vistaPieces), not on the street; none where
         // the canyon parts for an overlook.
         if (def.under && nearVista(s, w + 2, side)) return;
+        // None where a side road comes off the street through the row (a gap between the towers).
+        if (side > 0 && roadThrough(def, s, w)) return;
         const face = Math.max(half + back, pathClear(def, s, w, side));
         const id = i * 2 + (side > 0 ? 0 : 1);
         out.push(
@@ -462,6 +465,7 @@ export function piecesBetween(theme: NightTheme, def: TrackDef, s0: number, s1: 
 
   if (theme === 'chinatown') out.push(...pathPieces(def, s0, s1));
   if (theme === 'chinatown' && def.under) out.push(...vistaPieces(def, s0, s1));
+  if (theme === 'chinatown' && def.roads) out.push(...sideRoadPieces(def, s0, s1));
 
   if (theme === 'neon') {
     // Bridges overhead between the towers.
@@ -676,6 +680,108 @@ const PATH_JADE: Rgb = [0.3, 0.95, 0.6];
  * the balustrade at the terrace's edge, and 望湖廊 LAKE ARCADE hung under the deck's mouth. Nothing
  * on the terrace past the columns: the view out over the lake stays open.
  */
+/** The side roads at s, for placing what stands by them (heights: over the street's crown). */
+function roadsAt(def: TrackDef, s: number) {
+  const sc = Math.max(0, s);
+  const e = def.elev(sc) + def.startH;
+  return def.roads?.(sc, def.half(sc), e, e) ?? [];
+}
+
+/** Whether a side road runs through the left row of shophouses within w of s (not yet out behind
+ * it). */
+export function roadThrough(def: TrackDef, s: number, w: number): boolean {
+  return [-w, 0, w].some((d) =>
+    roadsAt(def, s + d).some((r) => r.c - r.w - def.half(Math.max(0, s + d)) < ROAD_OUT - 1),
+  );
+}
+
+/**
+ * What stands by Chinatown Run's side roads (lib/art/chinatown-roads.ts): along the alley a second
+ * row of shophouses facing it across, its back to the first; under the high road red columns, and
+ * up there pairs of slim towers either side of it with a sky bridge between each pair over it.
+ */
+export function sideRoadPieces(def: TrackDef, s0: number, s1: number): Piece[] {
+  const out: Piece[] = [];
+  for (const { s: start, def: road } of roadStarts(s0, s1)) {
+    const a = Math.max(s0, start);
+    const b = Math.min(s1, start + road.length);
+    if (road.id === 'alley') {
+      for (let i = Math.ceil(a / SHOP_STEP); i * SHOP_STEP < b; i++) {
+        const s = i * SHOP_STEP;
+        const r = roadsAt(def, s).find((o) => o.id === 'alley');
+        if (!r || r.c - r.w - def.half(s) < ROAD_OUT - 1) continue;
+        const floors = 6 + Math.floor(hash(i, 91) * 8);
+        out.push(
+          piece({
+            kind: 'shophouse',
+            s,
+            u: r.c + r.w + 1 + 4,
+            w: SHOP_STEP * 0.48,
+            d: 4,
+            h: floors * CT_STOREY,
+            lift: ctRoofs(floors, false),
+            colour: hash(i, 92) < 0.5 ? LACQUER : GOLD,
+            side: -1,
+            id: 90000 + i,
+          }),
+        );
+      }
+    } else if (road.id === 'high') {
+      for (let i = Math.ceil(a / 24); i * 24 < b; i++) {
+        const s = i * 24;
+        const r = roadsAt(def, s).find((o) => o.id === 'high');
+        if (!r || r.joined || r.z - (def.elev(s) + def.startH) < 2) continue;
+        for (const sd of [1, -1])
+          out.push(
+            piece({
+              kind: 'pillar',
+              s,
+              u: r.c + sd * (r.w - 0.6),
+              z: r.z - 0.9,
+              colour: LACQUER,
+              id: i,
+            }),
+          );
+      }
+      // The tower pairs and their bridges, every 160 m along its top.
+      for (let i = Math.ceil((a - start - 1000) / 160); start + 1000 + i * 160 < b; i++) {
+        const s = start + 1000 + i * 160;
+        if (s < a || s - start > 1820) continue;
+        const r = roadsAt(def, s).find((o) => o.id === 'high');
+        if (!r) continue;
+        const crown = def.elev(s) + def.startH;
+        for (const sd of [1, -1])
+          out.push(
+            piece({
+              kind: 'shophouse',
+              s,
+              u: r.c + sd * (r.w + 5),
+              w: 4,
+              d: 3.5,
+              h: (22 + Math.floor(hash(i, sd + 95) * 8)) * CT_STOREY,
+              lift: 5,
+              colour: sd > 0 ? GOLD : LACQUER,
+              side: sd > 0 ? 1 : -1,
+              id: 91000 + i * 2 + (sd > 0 ? 0 : 1),
+            }),
+          );
+        out.push(
+          piece({
+            kind: 'gantry',
+            s,
+            u: r.c,
+            d: r.w + 5,
+            lift: r.z - crown + 9,
+            colour: GOLD,
+            id: 92000 + i,
+          }),
+        );
+      }
+    }
+  }
+  return out;
+}
+
 export function vistaPieces(def: TrackDef, s0: number, s1: number): Piece[] {
   const out: Piece[] = [];
   const deckAt = (s: number) => streetAt(def, s, def.half(Math.max(0, s))) + VISTA.DECK;
