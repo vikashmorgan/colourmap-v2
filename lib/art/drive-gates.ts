@@ -28,6 +28,7 @@ export const WORLD_GATES: Record<WorldId, readonly GateStyle[]> = {
   chinatown: ['fabric', 'fire', 'halo'],
   neon: ['fabric', 'glow', 'halo'],
   sky: ['glow', 'halo', 'fire'],
+  symphony: ['halo', 'glow', 'chrome'],
   water: ['halo', 'glow', 'chrome'],
 };
 

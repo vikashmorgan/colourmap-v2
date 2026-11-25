@@ -185,6 +185,7 @@ export const WORLD_MOTES: Record<WorldId, Rgb> = {
   chinatown: [1, 0.7, 0.55],
   neon: [0.75, 0.6, 1],
   sky: [0.85, 0.5, 0.32],
+  symphony: [1, 0.85, 0.5],
   water: [0.55, 0.8, 0.9],
 };
 
@@ -256,7 +257,7 @@ export function stepWeather(s: WeatherState, dt: number): WeatherState {
  * much light. i want the snow or sand but keeping dark sky"). The motes fall as bright as anywhere;
  * the haze keeps its hue but turns night-dark, the wash barely shows, the ground whitens only a little.
  */
-export const DARK_SKY: readonly WorldId[] = ['gold'];
+export const DARK_SKY: readonly WorldId[] = ['gold', 'symphony'];
 export const DARK_FOG = 0.06;
 export const DARK_TINT = 0.2;
 export const DARK_SNOW = 0.3;

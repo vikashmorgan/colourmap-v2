@@ -149,6 +149,18 @@ import {
 import { SPEED_FLOATS } from '@/lib/art/speed-shaders';
 import { archPoint, STAGE_OUT } from '@/lib/art/stage-fire';
 import {
+  ambientAt,
+  ambientRipple,
+  gateBoost,
+  liveRipples,
+  RIPPLE,
+  type Ripple,
+  rainAt,
+  rainbowAt,
+  swell,
+  gateCrossed as symGateCrossed,
+} from '@/lib/art/symphony';
+import {
   belowStreet,
   FALLEN,
   frameAt,
@@ -183,15 +195,18 @@ import {
   type Vehicle,
   type World,
 } from '@/lib/art/vehicle';
-import { onWaterRoad, rainAt, waterPortalThrough } from '@/lib/art/water-city';
+import { onWaterRoad, waterPortalThrough, rainAt as waterRain } from '@/lib/art/water-city';
 import {
+  blendWeather,
   gustAt,
+  keepDark,
   moteAmount,
   newWeather,
   setWeather,
   stepWeather,
   type Weather,
   type WeatherState,
+  weatherById,
   weatherNow,
 } from '@/lib/art/weather';
 import {
@@ -614,7 +629,7 @@ export class DriveEngine {
   /* The lake behind Chinatown Run's start (lib/art/chinatown-lake.ts). */
   private lakeView: LakeView | null = null;
   private lakeRun: LakeRun = newLakeRun();
-  private ripples: RippleTrail = newRipples();
+  private lakeRipples: RippleTrail = newRipples();
   private woke: (number | null)[] = [null, null];
   private lakeTrail: { t: number; x: number; y: number }[] = [];
   private lakeAim: { s: number; u: number }[] = [
@@ -692,6 +707,9 @@ export class DriveEngine {
   private race: Race = newRace();
   private best: number | null = null;
   private surgeAt = -99;
+  /** The Symphony's space ripples living now, and the next one on its own to come. */
+  private ripples: Ripple[] = [];
+  private rippleK = -1;
   /** The gates on this world (docs/specs/drive-tracks.md, "Gates and pickups"), what they gave. */
   private gates: GatesView | null = null;
   private inventory: Inventory = EMPTY_INVENTORY;
@@ -914,6 +932,8 @@ export class DriveEngine {
 
   private enterWorld(id: WorldId) {
     this.cfg = WORLD_CFG[id];
+    this.ripples = [];
+    this.rippleK = -1;
     (this.backdrop.material as THREE.Material).dispose();
     this.backdrop.material = this.backdropMaterial();
     if (this.view) {
@@ -960,9 +980,11 @@ export class DriveEngine {
     this.sun.target.position.set(0, 0, 0);
     // The Golden Track's moon is warm too: no cold white glint on the hull (2026-11-21).
     const gold = this.cfg.id === 'gold';
-    this.sun.color.set(gold ? 0xc89058 : night ? 0x6070a0 : 0xffd2a8);
+    // The Symphony's low sun is gold, its sky violet (docs/specs/symphony-track.md).
+    const sym = this.cfg.id === 'symphony';
+    this.sun.color.set(sym ? 0xe0a050 : gold ? 0xc89058 : night ? 0x6070a0 : 0xffd2a8);
     const mars = this.cfg.id === 'mars';
-    this.hemi.color.set(night ? 0x303050 : mars ? 0xd8a888 : 0xd8c0d0);
+    this.hemi.color.set(sym ? 0x3a2858 : night ? 0x303050 : mars ? 0xd8a888 : 0xd8c0d0);
     this.hemi.groundColor.set(night ? 0x101018 : mars ? 0x8a4a30 : 0x8a7068);
     this.bloom.strength = night ? 0.55 : 0.144;
     this.bloom.threshold = night ? 0.4 : 0.55;
@@ -1009,10 +1031,10 @@ export class DriveEngine {
     const tr = this.trackWorld?.track;
     if (this.cfg.id !== 'water' || !tr) return;
     const v = this.vehicle;
-    this.storm += (rainAt(s1) - this.storm) * Math.min(1, dt * 0.8);
+    this.storm += (waterRain(s1) - this.storm) * Math.min(1, dt * 0.8);
     const wet = onWaterRoad(s1) && !v.air;
     const speed = speedOf(v);
-    this.ripples = stepRipples(this.ripples, v.x, v.y, t, speed, wet);
+    this.lakeRipples = stepRipples(this.lakeRipples, v.x, v.y, t, speed, wet);
     const over = v.z - VEHICLES[v.kind].hover - heightAt(tr, s1, u1) + 1;
     if (waterPortalThrough(s0, s1, u0, over) >= 0) this.surgeAt = t;
     // Where you have been (for the kraken's aim).
@@ -1032,7 +1054,7 @@ export class DriveEngine {
       this.waterAim.set(key, { s: aim.s, u: aim.u });
       if (slamLands(since - dt, since)) {
         const hit = pointAt(tr, aim.s, aim.u);
-        this.ripples = splashRing(this.ripples, hit.x, hit.y, t, 1);
+        this.lakeRipples = splashRing(this.lakeRipples, hit.x, hit.y, t, 1);
         this.burst(hit.x, hit.y, 60, 9, 0);
         const push = slamPush(hit.x, hit.y, v.x, v.y);
         if (push) {
@@ -1047,7 +1069,7 @@ export class DriveEngine {
     for (const sp of sharkSplashes(t - dt, t, waterSharkSpots(s1))) {
       const p = pointAt(tr, sp.s, sp.u);
       if (Math.hypot(p.x - v.x, p.y - v.y) > 600) continue;
-      this.ripples = splashRing(this.ripples, p.x, p.y, t, 0.8);
+      this.lakeRipples = splashRing(this.lakeRipples, p.x, p.y, t, 0.8);
       this.burst(p.x, p.y, 26, 5, 0);
     }
     if (wet) this.skim(speed, dt);
@@ -1056,7 +1078,7 @@ export class DriveEngine {
   /** Back to a dry start: the portals dark, the kraken asleep. */
   private leaveLake() {
     this.lakeRun = newLakeRun();
-    this.ripples = newRipples();
+    this.lakeRipples = newRipples();
     this.woke = [null, null];
     this.lakeTrail = [];
     this.lakeZone = null;
@@ -1080,7 +1102,7 @@ export class DriveEngine {
     const wet = onLake(s1, u1) && !v.air;
     if (wet && this.lakeZone === null) this.lakeZone = 'lake';
     const speed = speedOf(v);
-    this.ripples = stepRipples(this.ripples, v.x, v.y, t, speed, wet);
+    this.lakeRipples = stepRipples(this.lakeRipples, v.x, v.y, t, speed, wet);
     // The portals: lit as you pass, a surge through each; the last finds Water City.
     const over = v.z - VEHICLES[v.kind].hover - heightAt(tr, s1, u1) + 1;
     const passed = portalThrough(s0, u0, s1, u1, over);
@@ -1117,7 +1139,7 @@ export class DriveEngine {
       this.lakeAim[l] = { s: aim.s, u: aim.u };
       if (slamLands(since - dt, since)) {
         const hit = pointAt(tr, aim.s, aim.u);
-        this.ripples = splashRing(this.ripples, hit.x, hit.y, t, 1);
+        this.lakeRipples = splashRing(this.lakeRipples, hit.x, hit.y, t, 1);
         this.burst(hit.x, hit.y, 60, 9);
         const push = slamPush(hit.x, hit.y, v.x, v.y);
         if (push) {
@@ -1131,7 +1153,7 @@ export class DriveEngine {
     for (const sp of sharkSplashes(t - dt, t)) {
       const p = pointAt(tr, sp.s, sp.u);
       if (Math.hypot(p.x - v.x, p.y - v.y) > 600) continue;
-      this.ripples = splashRing(this.ripples, p.x, p.y, t, 0.8);
+      this.lakeRipples = splashRing(this.lakeRipples, p.x, p.y, t, 0.8);
       this.burst(p.x, p.y, 26, 5);
     }
     if (wet) this.skim(speed, dt);
@@ -1769,6 +1791,36 @@ export class DriveEngine {
     return Math.abs(tr.def.twist(Math.max(0, this.s))) > TWIST_OPEN;
   }
 
+  /** The Symphony's rain stretches (lib/art/symphony.ts): the weather turns to rain as you drive
+   * into one, and back as you leave it, the sky kept dark. */
+  private symphonyRain(w: Weather): Weather {
+    if (this.cfg.id !== 'symphony') return w;
+    const k = rainAt(this.s);
+    if (k <= 0) return w;
+    return keepDark(blendWeather(w, weatherById('rain'), k, this.cfg.id));
+  }
+
+  /** The Symphony's space ripples: one on its own every so often, far ahead of you, and the
+   * gates' (pushed as you pass them); the living ones, newest kept. */
+  private stepRipples(t: number) {
+    if (this.cfg.id !== 'symphony' || this.preview) {
+      this.ripples = liveRipples(this.ripples, t);
+      return;
+    }
+    if (this.rippleK < 0) this.rippleK = Math.max(0, Math.ceil(t / RIPPLE.PERIOD));
+    while (ambientAt(this.rippleK) <= t) {
+      const v = this.vehicle;
+      this.ripples.push(ambientRipple(this.rippleK, v.x, v.y, v.h));
+      this.rippleK++;
+    }
+    this.ripples = liveRipples(this.ripples, t);
+  }
+
+  /** How far the space ripples lift what is drawn at (x, y) now (m; 0 off the Symphony). */
+  private lift(x: number, y: number): number {
+    return this.ripples.length ? swell(this.ripples, x, y, this.t) : 0;
+  }
+
   private posed(x: number, y: number, z: number, near: number, who: Vehicle | null = null) {
     const tr = this.trackWorld?.track;
     if (!tr?.def.twist) return null;
@@ -1919,7 +1971,7 @@ export class DriveEngine {
     this.t += dt;
     const t = this.t;
     this.weather = stepWeather(this.weather, dt);
-    const w = weatherNow(this.weather, this.cfg.id);
+    const w = this.symphonyRain(weatherNow(this.weather, this.cfg.id));
     const v = this.vehicle;
     const spec = VEHICLES[v.kind];
     this.stepIntro(dt);
@@ -2035,6 +2087,23 @@ export class DriveEngine {
             fireRingThrough(s0, q.s, u, v.z - spec.hover - heightAt(tr, q.s, u) + 1)
           )
             this.surgeAt = t;
+          // The Symphony's ring gates (lib/art/symphony.ts): through one while its gaps line up,
+          // the same surge.
+          if (tr.def.id === 'symphony') {
+            const g = symGateCrossed(s0, q.s);
+            if (g) {
+              const boost = gateBoost(g.i, t, u);
+              if (boost) this.surgeAt = t;
+              // Every gate sends a ripple through space as you pass; a boosted pass a stronger one.
+              const p = pointAt(tr, g.s, 0);
+              this.ripples.push({
+                x: p.x,
+                y: p.y,
+                t0: t,
+                amp: boost ? RIPPLE.BOOST : RIPPLE.GATE,
+              });
+            }
+          }
         }
         this.stepLake(s0, u0, q.s, u, dt, t);
         this.stepWater(s0, u0, q.s, u, dt, t);
@@ -2148,6 +2217,10 @@ export class DriveEngine {
 
     // A twist turns what is drawn about the road's axis (the physics drives a flat road): the
     // camera rides it too, its up turning with the road, so the world rolls over you.
+    this.stepRipples(t);
+    // The space ripples: the camera rides the swell with the deck, its view swelling and settling.
+    const camLift = this.lift(this.cam.x, this.cam.y);
+    const carLift = this.lift(v.x, v.y);
     const camP =
       !shot && !piece && !wk ? this.posed(this.cam.x, this.cam.y, this.cam.z, this.s, v) : null;
     const vP = wk ? null : this.posed(v.x, v.y, v.z, this.s, v);
@@ -2156,7 +2229,7 @@ export class DriveEngine {
     this.origin.x = ox;
     this.origin.y = oy;
     const camera = this.camera;
-    camera.position.set(0, camP ? camP.z : this.cam.z, 0);
+    camera.position.set(0, (camP ? camP.z : this.cam.z) + camLift, 0);
     if (shot) {
       camera.up.set(0, 1, 0);
       camera.lookAt(shot.look.x - ox, shot.look.z, -(shot.look.y - oy));
@@ -2166,7 +2239,7 @@ export class DriveEngine {
       const ahead = this.preview ? 0 : 6;
       const lx = v.x + Math.cos(yaw) * ahead;
       const ly = v.y + Math.sin(yaw) * ahead;
-      const lz = baseZ + (this.preview ? 0.7 : 0.9);
+      const lz = baseZ + (this.preview ? 0.7 : 0.9) + carLift;
       const look = wk
         ? { x: wk.x, y: wk.y, z: wk.z }
         : (this.posed(lx, ly, lz, this.s, v) ?? { x: lx, y: ly, z: lz });
@@ -2181,7 +2254,9 @@ export class DriveEngine {
     const aspect = this.size.w / this.size.h;
     const shake = this.preview ? { x: 0, y: 0 } : { x: feel.shakeX, y: feel.shakeY };
     const hz = piece ? 0.01 : 0;
-    setProjection(camera, this.cam.focal, aspect, hz, shake.x, shake.y);
+    // A ripple passing swells the view a little wider and back.
+    const swellView = 1 - (0.05 * camLift) / RIPPLE.AMP;
+    setProjection(camera, this.cam.focal * swellView, aspect, hz, shake.x, shake.y);
 
     // The start gantry, just ahead of the grid.
     if (this.trackWorld) {
@@ -2210,7 +2285,7 @@ export class DriveEngine {
     // The vehicle.
     const vv = this.vehicleView;
     if (vv) {
-      vv.group.position.set((vP?.x ?? v.x) - ox, vP?.z ?? v.z, -((vP?.y ?? v.y) - oy));
+      vv.group.position.set((vP?.x ?? v.x) - ox, (vP?.z ?? v.z) + carLift, -((vP?.y ?? v.y) - oy));
       // Over the vehicle and a little behind it, toward the camera.
       this.carLight.position.set(
         v.x - ox - Math.cos(v.h) * 2.5,
@@ -2243,7 +2318,11 @@ export class DriveEngine {
       g.visible = Math.hypot(rv.v.x - ox, rv.v.y - oy) < 700;
       if (!g.visible) continue;
       const rP = this.posed(rv.v.x, rv.v.y, rv.v.z, rv.s, rv.v);
-      g.position.set((rP?.x ?? rv.v.x) - ox, rP?.z ?? rv.v.z, -((rP?.y ?? rv.v.y) - oy));
+      g.position.set(
+        (rP?.x ?? rv.v.x) - ox,
+        (rP?.z ?? rv.v.z) + this.lift(rv.v.x, rv.v.y),
+        -((rP?.y ?? rv.v.y) - oy),
+      );
       g.rotation.set(
         -(rv.v.pitch + (rP?.pitch ?? 0)),
         rv.v.h + Math.PI / 2,
@@ -2283,7 +2362,7 @@ export class DriveEngine {
           cam: { x: ox, y: oy, z: camP ? camP.z : this.cam.z },
           s: this.s,
           run: this.lakeRun,
-          ripples: this.ripples,
+          ripples: this.lakeRipples,
           woke: this.woke,
           past,
           aim: this.lakeAim,
@@ -2302,7 +2381,7 @@ export class DriveEngine {
       this.waterView.update(ox, oy, t, dt, {
         cam: { x: ox, y: oy, z: camP ? camP.z : this.cam.z },
         s: this.s,
-        ripples: this.ripples,
+        ripples: this.lakeRipples,
         lairs,
         rain: this.storm,
       });
@@ -2316,9 +2395,21 @@ export class DriveEngine {
     tickGates(t, this.renderer.getDrawingBufferSize(new THREE.Vector2()).y);
     this.gates?.update(ox, oy, this.s, t);
     if (this.view) {
-      if ('update' in this.view && this.trackWorld)
-        (this.view as TrackView).update(ox, oy, this.s, t, w);
-      else
+      if ('update' in this.view && this.trackWorld) {
+        const tv = this.view as TrackView;
+        tv.update(ox, oy, this.s, t, w);
+        // The Symphony: its ripples bend the deck, the bow stands after the rain.
+        tv.symphony?.space(
+          this.ripples,
+          ox,
+          oy,
+          t,
+          this.camera.position.y,
+          this.preview ? { k: 0, second: false } : rainbowAt(this.s),
+        );
+        // And the light swells with the ripple passing over you.
+        if (tv.symphony) this.bloom.strength = 0.55 + (0.22 * Math.abs(camLift)) / RIPPLE.AMP;
+      } else
         (this.view as SaltView).update(
           ox,
           oy,
@@ -2581,6 +2672,8 @@ export class DriveEngine {
     u.uCamY.value = this.cam.z;
     u.uPlaneY.value = this.cfg.planeY;
     u.uSunAz.value = this.cfg.sunAz;
+    // The Symphony's sky bends as a ripple passes the camera.
+    u.uRipple.value = this.lift(this.cam.x, this.cam.y) / RIPPLE.AMP;
     u.uSunAmt.value = w.sun;
     u.uFogDen.value = w.fogDensity;
     (u.uFogCol.value as THREE.Color).setRGB(...w.fog);

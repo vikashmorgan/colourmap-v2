@@ -13,8 +13,8 @@ import {
 import { GATE_STYLES } from './track-data';
 
 describe('the design space catalogue', () => {
-  it('has eleven categories of six or seven variations, ids unique within each', () => {
-    expect(CATEGORIES).toHaveLength(11);
+  it('has twelve categories of six or seven variations, ids unique within each', () => {
+    expect(CATEGORIES).toHaveLength(12);
     for (const c of CATEGORIES) {
       expect(c.vars.length).toBeGreaterThanOrEqual(6);
       expect(new Set(c.vars.map((v) => v.id)).size).toBe(c.vars.length);
