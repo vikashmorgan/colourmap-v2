@@ -630,7 +630,11 @@ maths: `lib/art/symphony.ts`.
       gaps line up, a surge.
 - [x] Golden-angle sunflowers of pillars, a golden helix of lamps, Euclidean fire rows (5 in 8
       against 3 in 8 …), as the design space's Maths category.
-- [ ] Space ripples and rainbows.
+- [x] Space ripples: rings spreading through space from far ahead and from each gate you pass,
+      bending the deck, the gates, the vehicles, the camera, the sky and the light, never the
+      physics (2026-11-25).
+- [x] Rainbows: after a rain stretch on two laps in five, a bow at 42° round the point opposite
+      the sun, sliding as you turn; now and then a reversed second bow at 51°.
 - [ ] The torus knot and the golden spiral climb.
 - [ ] The gyroid tunnel and the linked-ring tunnel.
 - [ ] The way in from the Golden Track's STAY WILD portal.

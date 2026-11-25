@@ -4,6 +4,9 @@ import { autopilotControls } from './autopilot';
 import { dressingFor } from './design-space';
 import { WORLD_CFG } from './drive-worlds';
 import {
+  ambientAt,
+  ambientRipple,
+  bowColour,
   burnerAt,
   CABLE_LOW,
   cableHeight,
@@ -20,17 +23,26 @@ import {
   gateSpread,
   hangers,
   lapOf,
+  liveRipples,
   nearGate,
   PHI,
   phyllotaxis,
   pillarHeight,
+  RAIN_STRETCHES,
+  RAINBOW,
+  RIPPLE,
+  rainAt,
+  rainbowAt,
+  rainyStretch,
   ringRadius,
+  rippleAt,
   SYM,
   SYM_BRIDGES,
   SYM_FIRE_ROWS,
   SYM_GATES,
   SYM_HUBS,
   SYM_SECTIONS,
+  swell,
   symBridge,
   symCurv,
   symElev,
@@ -411,5 +423,118 @@ describe('in the game', () => {
     expect(info.name).toBe('The Symphony');
     expect(info.rivals).toBe(true);
     expect(dressingFor('symphony')).toHaveLength(6);
+  });
+});
+
+describe('space ripples', () => {
+  const r = { x: 0, y: 0, t0: 10, amp: 1 };
+  it('spread out as a ring at their speed, gently, fading away', () => {
+    let most = 0;
+    for (let t = 10; t < 10 + RIPPLE.LIFE + 1; t += 0.25)
+      for (let d = 0; d < 1500; d += 5) most = Math.max(most, Math.abs(rippleAt(r, d, 0, t)));
+    expect(most).toBeLessThanOrEqual(RIPPLE.AMP);
+    expect(most).toBeGreaterThan(0.5 * RIPPLE.AMP);
+    // Where it is strongest moves out at SPEED.
+    const peak = (t: number) => {
+      let best = 0;
+      let at = 0;
+      for (let d = 0; d < 1500; d += 1) {
+        const env = Math.max(...[0, 20, 40, 60].map((o) => Math.abs(rippleAt(r, d + o, 0, t))));
+        if (env > best) {
+          best = env;
+          at = d;
+        }
+      }
+      return at;
+    };
+    expect((peak(13) - peak(12)) / 1).toBeGreaterThan(RIPPLE.SPEED - 30);
+    expect((peak(13) - peak(12)) / 1).toBeLessThan(RIPPLE.SPEED + 30);
+    // Nothing before it is born, after it dies, or far from its ring; round, the same every way.
+    expect(rippleAt(r, 100, 0, 9)).toBe(0);
+    expect(rippleAt(r, 100, 0, 10 + RIPPLE.LIFE)).toBe(0);
+    expect(rippleAt(r, 1400, 0, 11)).toBe(0);
+    expect(rippleAt(r, 0, 300, 12)).toBeCloseTo(rippleAt(r, -300, 0, 12), 12);
+    expect(swell([r, { ...r, amp: 0.5 }], 300, 0, 12)).toBeCloseTo(
+      1.5 * rippleAt(r, 300, 0, 12),
+      12,
+    );
+  });
+
+  it('swell smoothly: what is drawn on the deck never jolts', () => {
+    // At a point the deck passes through, the lift changes gently from frame to frame.
+    let step = 0;
+    for (let t = 10; t < 10 + RIPPLE.LIFE; t += 1 / 60)
+      step = Math.max(step, Math.abs(rippleAt(r, 400, 0, t + 1 / 60) - rippleAt(r, 400, 0, t)));
+    expect(step).toBeLessThan(0.15);
+  });
+
+  it('come on their own every so often, far ahead, and never pile up', () => {
+    for (let k = 1; k < 200; k++) {
+      const gap = ambientAt(k) - ambientAt(k - 1);
+      expect(gap).toBeGreaterThan(RIPPLE.PERIOD - RIPPLE.JITTER);
+      expect(gap).toBeLessThan(RIPPLE.PERIOD + RIPPLE.JITTER);
+      const a = ambientRipple(k, 1000, 0, 0);
+      expect(a.x).toBeGreaterThan(1000);
+      expect(Math.hypot(a.x - 1000, a.y)).toBeGreaterThan(0.6 * RIPPLE.FAR);
+    }
+    const many = Array.from({ length: 9 }, (_, i) => ({ x: 0, y: 0, t0: i * 0.1, amp: 1 }));
+    expect(liveRipples(many, 1)).toHaveLength(RIPPLE.MAX);
+    expect(liveRipples(many, 1).at(-1)?.t0).toBeCloseTo(0.8, 9);
+    expect(liveRipples(many, 100)).toHaveLength(0);
+  });
+});
+
+describe('sudden rainbows', () => {
+  it('rain on two laps in five, on one stretch', () => {
+    let wet = 0;
+    for (let n = 0; n < 2000; n++) if (rainyStretch(n) !== null) wet++;
+    expect(wet / 2000).toBeGreaterThan(0.33);
+    expect(wet / 2000).toBeLessThan(0.47);
+    for (const st of RAIN_STRETCHES) expect(st.to - st.at).toBeGreaterThan(800);
+  });
+
+  it('stand the bow only after the rain, rising and fading', () => {
+    let n = 0;
+    while (rainyStretch(n) === null) n++;
+    const st = RAIN_STRETCHES[rainyStretch(n) ?? 0];
+    const base = n * LAP;
+    expect(rainAt(base + (st.at + st.to) / 2)).toBe(1);
+    expect(rainAt(base + st.at - 10)).toBe(0);
+    expect(rainbowAt(base + (st.at + st.to) / 2).k).toBe(0);
+    expect(rainbowAt(base + st.to + 400).k).toBe(1);
+    expect(rainbowAt(base + st.to + RAINBOW.STAYS).k).toBe(0);
+    // Smooth both ways: no sudden step in the rain or the bow.
+    for (let s = base + st.at - 200; s < base + st.to + 1300; s += 1) {
+      expect(Math.abs(rainAt(s + 1) - rainAt(s))).toBeLessThan(0.02);
+      expect(Math.abs(rainbowAt(s + 1).k - rainbowAt(s).k)).toBeLessThan(0.02);
+    }
+    let dry = 0;
+    while (rainyStretch(dry) !== null) dry++;
+    for (let p = 0; p < LAP; p += 50) {
+      expect(rainAt(dry * LAP + p)).toBe(0);
+      expect(rainbowAt(dry * LAP + p).k).toBe(0);
+    }
+  });
+
+  it('colours the bow at its real angles, the second reversed and fainter, dark between', () => {
+    const lum = (c: number[]) => c[0] + c[1] + c[2];
+    // The primary: violet inside (bluer), red outside, at 40.6° to 42°.
+    const inner = bowColour(RAINBOW.VIOLET + 0.25, false);
+    const outer = bowColour(RAINBOW.RED - 0.25, false);
+    expect(inner[2]).toBeGreaterThan(inner[1]);
+    expect(outer[0]).toBeGreaterThan(outer[2]);
+    expect(RAINBOW.RED).toBe(42);
+    // Nothing inside or outside it but the second bow, and Alexander's dark band between.
+    expect(lum(bowColour(30, true))).toBe(0);
+    expect(lum(bowColour(46, true))).toBe(0);
+    expect(lum(bowColour(51, false))).toBe(0);
+    // The second: red inside, violet outside, fainter.
+    const in2 = bowColour(RAINBOW.RED2 + 0.25, true);
+    const out2 = bowColour(RAINBOW.VIOLET2 - 0.25, true);
+    expect(in2[0]).toBeGreaterThan(in2[2]);
+    expect(out2[2]).toBeGreaterThan(out2[1]);
+    const mid = (RAINBOW.VIOLET + RAINBOW.RED) / 2;
+    const mid2 = (RAINBOW.RED2 + RAINBOW.VIOLET2) / 2;
+    expect(lum(bowColour(mid2, true))).toBeLessThan(lum(bowColour(mid, false)));
   });
 });

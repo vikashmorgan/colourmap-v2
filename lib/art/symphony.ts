@@ -497,3 +497,167 @@ export function nearGate(s: number): boolean {
   const p = lapOf(s);
   return SYM_GATES.some((g) => Math.abs(p - g) < GATE_CLEAR);
 }
+
+/* ── Space ripples ─────────────────────────────────────────── */
+
+/**
+ * Ripples in space itself, like gravitational waves (2026-11-24: "ripples like space ripples"):
+ * rings spreading out from a point at SPEED m/s, a wave packet WIDTH m deep of wavelength WAVE m,
+ * fading over LIFE s. As one passes, the road, the sky and the light bend gently with it: the deck
+ * and what rides it swell by up to AMP m, the camera's view swells and settles. Only ever drawn:
+ * the physics never feels them, so they never throw the car.
+ */
+export const RIPPLE = {
+  SPEED: 150,
+  WAVE: 80,
+  WIDTH: 70,
+  LIFE: 7,
+  AMP: 0.7,
+  /** Through a gate: a ripple from it, stronger if you got the boost. */
+  GATE: 0.6,
+  BOOST: 1,
+  /** On their own: one about every PERIOD s (± JITTER), FAR m away, somewhere ahead. */
+  PERIOD: 11,
+  JITTER: 6,
+  FAR: 900,
+  /** At most this many at once (the shader's slots). */
+  MAX: 4,
+};
+
+export interface Ripple {
+  x: number;
+  y: number;
+  /** When it was born (s) and how strong it is (1 the usual). */
+  t0: number;
+  amp: number;
+}
+
+/** How far a ripple lifts the point (x, y) at time t (m). */
+export function rippleAt(r: Ripple, x: number, y: number, t: number): number {
+  const age = t - r.t0;
+  if (age <= 0 || age >= RIPPLE.LIFE) return 0;
+  const z = Math.hypot(x - r.x, y - r.y) - RIPPLE.SPEED * age;
+  const pack = Math.exp(-((z / RIPPLE.WIDTH) ** 2));
+  if (pack < 1e-4) return 0;
+  // Born softly, dying away; wider spread, weaker (as 1/√d, gently).
+  const life = Math.min(1, age / 0.4) * (1 - age / RIPPLE.LIFE) ** 2;
+  return RIPPLE.AMP * r.amp * life * pack * Math.sin((TAU * z) / RIPPLE.WAVE);
+}
+
+/** All the ripples' lift at (x, y) at t (m). */
+export function swell(rs: readonly Ripple[], x: number, y: number, t: number): number {
+  let h = 0;
+  for (const r of rs) h += rippleAt(r, x, y, t);
+  return h;
+}
+
+function hash(n: number, k: number): number {
+  const v = Math.sin(n * 127.1 + k * 311.7) * 43758.5453;
+  return v - Math.floor(v);
+}
+
+/** When the k-th ripple on its own is born (s): about every PERIOD, never two at once. */
+export function ambientAt(k: number): number {
+  return k * RIPPLE.PERIOD + (hash(k, 3) - 0.5) * RIPPLE.JITTER;
+}
+
+/** The k-th ripple on its own, born round a driver at (x, y) heading h: FAR m off, ahead of them
+ * within 70° either side, so its rings come toward them. */
+export function ambientRipple(k: number, x: number, y: number, h: number): Ripple {
+  const a = h + (hash(k, 7) - 0.5) * 2 * ((70 * Math.PI) / 180);
+  const far = RIPPLE.FAR * (0.7 + 0.6 * hash(k, 11));
+  return {
+    x: x + Math.cos(a) * far,
+    y: y + Math.sin(a) * far,
+    t0: ambientAt(k),
+    amp: 0.7 + 0.5 * hash(k, 13),
+  };
+}
+
+/** The living ripples, the newest kept when there are too many. */
+export function liveRipples(rs: readonly Ripple[], t: number): Ripple[] {
+  return rs.filter((r) => t - r.t0 < RIPPLE.LIFE && t >= r.t0).slice(-RIPPLE.MAX);
+}
+
+/* ── Rainbows ──────────────────────────────────────────────── */
+
+/**
+ * Sudden rainbows (2026-11-24: "and sudden rainbows"): after a stretch of rain, with the sun behind
+ * you, a bow stands at its real angle, 42° from the point opposite the sun (red outside, violet
+ * inside at 40°), sliding as you turn; now and then a fainter second bow at 50 to 53° with its
+ * colours reversed. Rare: rain falls on two laps in five, on one of its two stretches, and the
+ * second bow stands on a third of those.
+ */
+export const RAIN_STRETCHES: readonly { at: number; to: number }[] = [
+  { at: 7900, to: 9100 },
+  { at: 12900, to: 14000 },
+];
+export const RAINBOW = {
+  /** The primary's red and violet edges and the secondary's (degrees from the antisolar point). */
+  RED: 42,
+  VIOLET: 40.6,
+  RED2: 50.4,
+  VIOLET2: 53.2,
+  /** Rain eases in and out over this (m); the bow stands this long after it (m). */
+  EASE: 150,
+  STAYS: 1100,
+  /** How many laps in five it rains on. */
+  LAPS: 2,
+  SECOND: 1 / 3,
+};
+
+/** On lap n, which stretch it rains on (an index into RAIN_STRETCHES), or null on a dry lap. */
+export function rainyStretch(n: number): number | null {
+  if (hash(n, 21) * 5 >= RAINBOW.LAPS) return null;
+  return hash(n, 23) < 0.5 ? 0 : 1;
+}
+
+/** How hard it rains at s (0 to 1). */
+export function rainAt(s: number): number {
+  const n = Math.floor(s / SYM.LAP);
+  const k = rainyStretch(n);
+  if (k === null || s < 0) return 0;
+  const { at, to } = RAIN_STRETCHES[k];
+  const p = lapOf(s);
+  const e = RAINBOW.EASE;
+  if (p <= at || p >= to) return 0;
+  return s5(Math.min(1, (p - at) / e, (to - p) / e));
+}
+
+/** How strong the bow is at s (0 to 1): rising as the rain stops, held, fading after STAYS m; and
+ * whether its second bow stands. */
+export function rainbowAt(s: number): { k: number; second: boolean } {
+  const n = Math.floor(s / SYM.LAP);
+  const r = rainyStretch(n);
+  if (r === null || s < 0) return { k: 0, second: false };
+  const { to } = RAIN_STRETCHES[r];
+  const x = lapOf(s) - (to - RAINBOW.EASE);
+  if (x <= 0 || x >= RAINBOW.STAYS) return { k: 0, second: false };
+  const k = s5(Math.min(1, x / 250, (RAINBOW.STAYS - x) / 300));
+  return { k, second: hash(n, 29) < RAINBOW.SECOND };
+}
+
+/** The colour at an angle from the antisolar point (degrees), linear RGB times its share of the
+ * bow's light; zero outside the bows. The primary runs violet (inside) to red (outside), the
+ * secondary the other way and fainter. */
+export function bowColour(deg: number, second: boolean): [number, number, number] {
+  const band = (a: number, b: number) => (deg - a) / (b - a);
+  let x = band(RAINBOW.VIOLET, RAINBOW.RED);
+  let w = 1;
+  if (x < 0 || x > 1) {
+    if (!second) return [0, 0, 0];
+    // Reversed: red inside at 50.4°, violet outside at 53.2°.
+    x = 1 - band(RAINBOW.RED2, RAINBOW.VIOLET2);
+    if (x < 0 || x > 1) return [0, 0, 0];
+    w = 0.42;
+  }
+  // x: 0 violet … 1 red, a soft spectrum, the edges fading.
+  const hueRgb = (h: number): [number, number, number] => {
+    const c = (o: number) => Math.max(0, Math.min(1, Math.abs(((h * 6 + o) % 6) - 3) - 1));
+    return [c(0), c(4), c(2)];
+  };
+  // Red (hue 0) at x = 1, violet (hue 0.78) at x = 0.
+  const rgb = hueRgb((1 - x) * 0.78);
+  const edge = Math.sin(Math.PI * x) ** 0.6;
+  return [rgb[0] * edge * w, rgb[1] * edge * w, rgb[2] * edge * w];
+}

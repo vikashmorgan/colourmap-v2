@@ -66,7 +66,7 @@ import type { Weather } from '@/lib/art/weather';
 import { nearTwist, STRAIGHT } from '@/lib/art/wreck';
 import { ctSignMaterial, SignBuilder } from './chinatown-signs';
 import { buildLakeCity } from './lake-city-view';
-import { buildSymphonyView } from './symphony-view';
+import { buildSymphonyView, type SymphonyView } from './symphony-view';
 import { glowSprite } from './vehicles';
 
 export const CHUNK = 120;
@@ -658,6 +658,8 @@ function makeDots(calm: boolean | 'steady' = false): THREE.ShaderMaterial {
 
 export interface TrackView {
   group: THREE.Group;
+  /** The Symphony's moving pieces (its ripples and rainbows are driven by the engine). */
+  symphony?: SymphonyView;
   update(ox: number, oy: number, s: number, t: number, w: Weather): void;
   /** Whether the ground under the current weather has changed enough to rebuild (snow). */
   dispose(): void;
@@ -2987,8 +2989,13 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     group.add(ships);
   }
   // The Symphony's ring gates (components/drive/symphony-view.ts).
-  const symphony = cfg.id === 'symphony' ? buildSymphonyView(track) : null;
-  if (symphony) group.add(symphony.group);
+  const symphony = cfg.id === 'symphony' ? buildSymphonyView(track, sunDir) : null;
+  if (symphony) {
+    group.add(symphony.group);
+    // The deck and its lines bend with the space ripples.
+    symphony.ripple(groundMat);
+    symphony.ripple(lineMat);
+  }
 
   const m4 = new THREE.Matrix4();
   const q = new THREE.Quaternion();
@@ -2998,6 +3005,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
 
   return {
     group,
+    ...(symphony ? { symphony } : {}),
     update(ox, oy, s, t, w) {
       shared.uTime.value = t;
       if (fireMat) fireMat.uniforms.uYou.value = s;

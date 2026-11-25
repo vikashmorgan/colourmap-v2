@@ -53,6 +53,7 @@ export const BACKDROP_FLOATS = [
   'uWet',
   'uTintAmt',
   'uCourse',
+  'uRipple',
 ] as const;
 
 const BACKDROP = /* glsl */ `
@@ -74,6 +75,7 @@ uniform float uSnow;
 uniform float uWet;
 uniform float uTintAmt;
 uniform float uCourse;
+uniform float uRipple;
 
 // The sky's gradient is drawn in the pieces' screen units at their focal length.
 #define F0 1.5
@@ -466,6 +468,11 @@ vec3 scene(vec2 p, out float yHz) {
   float az = atan(dir.y, dir.x);
   float yE = F0 * d.y / hl;
   yHz = yE;
+#if WORLD == 6
+  // A space ripple passing the camera bends the sky: the horizon lifts and falls round you.
+  yE += uRipple * 0.012 * sin(az * 3.0 + uTime * 1.7);
+  d.y = yE / F0 * hl;
+#endif
 #if WORLD == 0 || WORLD == 2 || WORLD == 4
   // Heat shimmer: the air near the ground wavers, most toward the horizon.
   float sh = exp(-abs(yE) * 40.0);
