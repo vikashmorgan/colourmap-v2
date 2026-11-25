@@ -390,6 +390,11 @@ export default function DriveGame() {
       if (panelRef.current && k.startsWith('arrow')) return;
       // During the intro any key moves it on; the driving keys are still held for the GO.
       if (introKey() && !DRIVE_KEYS.includes(k)) return;
+      // On Mars the number keys 1 2 3 are its attacks, not a change of track.
+      if (worldRef.current === 'mars' && ATTACK_KEYS[k]) {
+        engineRef.current?.fireAttack(ATTACK_KEYS[k]);
+        return;
+      }
       const w = WORLDS.find((x) => x.key === k);
       if (w) {
         chooseWorld(w.id);

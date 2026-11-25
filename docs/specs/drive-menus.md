@@ -34,6 +34,12 @@ Esc goes back one step; in a race it pauses.
 
 ## The track ring
 
+- Two rings (2026-11-25: "put them as tracks in development as a second category not in main
+  racing menu... chinatown golden mars. neon are the good ones"): **Racing** holds the Golden
+  Track, Chinatown Run, Mars and the Neon District (keys 1 to 4); **In development** holds the
+  Symphony, Canyon Race, Sky Canyon, Night Rain, Coast Road and the Salt Flat (keys 5 to 9 and 0).
+  Two tabs over the ring switch them, as do the up and down arrows; a track's number key turns to
+  its ring. The ring opens on the one holding your last track. On Mars, 1 2 3 stay its attacks.
 - Nine screens stand on a slow ring in the dark, facing out, the selected one nearest and
   largest, the others receding round the circle, dimmer and smaller (built 2026-11-22,
   `components/drive/TrackRing.tsx`).
