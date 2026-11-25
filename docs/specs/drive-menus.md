@@ -121,6 +121,10 @@ KNOW THE MORE U DISCOVER." Some tracks are found in another world rather than gi
   then on. The moment it is found its name comes up over the picture, quietly (the ZoneTitle card,
   水城 · found · now in the ring).
 
+- Found, Water City is also reached from the lake: its far gate stands lit on the water and drives
+  you on into it (docs/specs/drive-tracks.md, "Water City").
+- A link to a secret track (`?world=water`) before it is found opens the ring as usual.
+
 ## Data
 
 - Best times per track and vehicle stay where they are (localStorage keys in drive-game.md).

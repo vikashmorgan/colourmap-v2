@@ -16,7 +16,6 @@
  */
 
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-
 import { GarageScene } from '@/components/garage/scene';
 import {
   BODIES,
@@ -37,6 +36,7 @@ import {
   WORLDS,
   type WorldId,
 } from '@/lib/art/drive-design';
+import { shown } from '@/lib/art/drive-unlocks';
 import type { VehicleKind } from '@/lib/art/vehicle';
 import { WEATHERS } from '@/lib/art/weather';
 import { driveSound } from '@/lib/audio/drive-sound';
@@ -68,6 +68,8 @@ interface Props {
   onChange: (d: Design) => void;
   onWorld: (id: WorldId) => void;
   onRing: () => void;
+  /** The secret tracks found on this device (lib/art/drive-unlocks.ts): only those show. */
+  found?: readonly string[];
   /** Room for more settings (the game's sound, when it comes). */
   settingsExtra?: ReactNode;
 }
@@ -282,6 +284,7 @@ export default function DriveMenu({
   onChange,
   onWorld,
   onRing,
+  found = [],
   settingsExtra,
 }: Props) {
   const sheetRef = useRef<HTMLDivElement | null>(null);
@@ -429,7 +432,7 @@ export default function DriveMenu({
           {tab === 'tracks' && (
             <>
               <nav aria-label="Worlds" style={{ display: 'grid', gap: 2 }}>
-                {WORLDS.map((w) => {
+                {WORLDS.filter((w) => shown(w.id, found)).map((w) => {
                   const on = w.id === world;
                   return (
                     <button

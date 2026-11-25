@@ -21,6 +21,7 @@ import {
   SKY,
   SKY_LAP,
   type TrackDef,
+  WATER_TRACK,
 } from '@/lib/art/track';
 
 export type Rgb = [number, number, number];
@@ -145,6 +146,18 @@ export const WORLD_CFG: Record<WorldId, WorldCfg> = {
     startS: 40,
     race: 'km',
     dust: lin(0.6, 0.55, 0.75),
+    wet: true,
+  },
+  water: {
+    id: 'water',
+    track: WATER_TRACK,
+    theme: 'water',
+    backdrop: 'night',
+    sunAz: 0,
+    planeY: 0,
+    startS: 40,
+    race: 'lap',
+    dust: lin(0.5, 0.62, 0.7),
     wet: true,
   },
   sky: {

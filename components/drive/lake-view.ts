@@ -9,6 +9,7 @@
 
 import * as THREE from 'three';
 import {
+  FAR_GATE,
   KRAKEN,
   krakenRise,
   LAKE,
@@ -17,8 +18,6 @@ import {
   PORTAL,
   PORTALS,
   portalFacing,
-  RAIN,
-  RIPPLE,
   type RippleTrail,
   SHARKS,
   SLAMMER,
@@ -30,6 +29,7 @@ import {
   tentaclePoints,
 } from '@/lib/art/chinatown-lake';
 import { buildLakeCity, type V3 } from './lake-city-view';
+import { makeKraken, makePortal, makeRain, makeSharks, makeWater } from './water-parts';
 
 /** Water City's lights on the far shore: teal, deep blue, gold, pale aqua. */
 export const WATER_TONES: V3[] = [
@@ -43,91 +43,6 @@ export const WATER_TONES: V3[] = [
 const CITY_AT = -2080;
 const CITY_SEED = 2600;
 const SEGS = 22;
-const DROPS = 2200;
-const RAIN_BOX = { W: 110, H: 46 };
-
-const WATER_VERTEX = /* glsl */ `
-varying vec2 vP;
-varying float vFog;
-void main() {
-  vP = vec2(position.x, -position.z);
-  vec4 mv = modelViewMatrix * vec4(position, 1.0);
-  vFog = length(mv.xyz);
-  gl_Position = projectionMatrix * mv;
-}
-`;
-
-const WATER_FRAGMENT = /* glsl */ `
-uniform float uTime;
-uniform vec4 uRip[${RIPPLE.MAX}];
-uniform vec4 uPortal[${PORTALS.length}];
-uniform vec3 uCam;
-uniform float uLevel;
-uniform float uRain;
-varying vec2 vP;
-varying float vFog;
-
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-
-// The water's height here: slow swell, the rings from the car and the splashes, the rain's dimples.
-float wave(vec2 p) {
-  float h = 0.05 * sin(p.x * 0.05 + uTime * 0.6) * sin(p.y * 0.043 - uTime * 0.45);
-  h += 0.02 * sin(dot(p, vec2(0.21, 0.13)) + uTime * 1.7);
-  for (int i = 0; i < ${RIPPLE.MAX}; i++) {
-    vec4 q = uRip[i];
-    float age = uTime - q.z;
-    if (q.w <= 0.0 || age < 0.0 || age > ${RIPPLE.LIFE.toFixed(2)}) continue;
-    float r = age * ${RIPPLE.SPEED.toFixed(2)};
-    float d = length(p - q.xy);
-    float x = d - r;
-    float fade = q.w * pow(1.0 - age / ${RIPPLE.LIFE.toFixed(2)}, 2.0);
-    h += 0.16 * fade * sin(x * 2.4) * exp(-x * x * 0.35);
-  }
-  // Rain: a drop lands in each 1.6 m cell now and then, a small ring growing from it.
-  vec2 c = floor(p / 1.6);
-  for (int dx = 0; dx <= 1; dx++) for (int dy = 0; dy <= 1; dy++) {
-    vec2 cell = c + vec2(float(dx), float(dy)) - 0.5;
-    float seed = hash(cell);
-    float period = 0.7 + seed;
-    float age = mod(uTime + seed * 9.0, period);
-    if (age > ${RAIN.DIMPLE_LIFE.toFixed(2)}) continue;
-    vec2 at = (cell + vec2(hash(cell + 3.1), hash(cell + 7.7))) * 1.6;
-    float x = length(p - at) - age * ${(RAIN.DIMPLE / RAIN.DIMPLE_LIFE).toFixed(2)};
-    h += uRain * 0.035 * (1.0 - age / ${RAIN.DIMPLE_LIFE.toFixed(2)}) * sin(x * 18.0) * exp(-x * x * 40.0);
-  }
-  return h;
-}
-
-void main() {
-  vec2 p = vP;
-  float e = 0.12;
-  float h0 = wave(p);
-  vec3 n = normalize(vec3(-(wave(p + vec2(e, 0.0)) - h0) / e, -(wave(p + vec2(0.0, e)) - h0) / e, 1.0));
-  vec3 toEye = normalize(vec3(uCam.xy - p, uCam.z - uLevel));
-  float fres = pow(1.0 - max(dot(n, toEye), 0.0), 4.0);
-  // The storm's sky in it: deep teal-black, lighter toward the horizon.
-  vec3 deep = vec3(0.004, 0.012, 0.02);
-  vec3 sky = vec3(0.03, 0.07, 0.1);
-  vec3 col = mix(deep, sky, fres);
-  // The portals' light lying on the water: a pool round each foot, streaked toward you.
-  for (int i = 0; i < ${PORTALS.length}; i++) {
-    vec4 q = uPortal[i];
-    vec2 d = p - q.xy;
-    vec2 view = normalize(uCam.xy - q.xy);
-    float along = dot(d, view);
-    float across = abs(d.x * view.y - d.y * view.x);
-    float streak = exp(-across * across / 9.0) * exp(-abs(along) / 60.0) * step(0.0, along);
-    float pool = exp(-dot(d, d) / 140.0);
-    vec3 tone = mix(vec3(0.35, 1.1, 1.4), vec3(1.6, 1.1, 0.4), q.z);
-    col += tone * (pool * 0.5 + streak * 0.35) * (0.6 + 0.6 * fres + 2.0 * length(n.xy));
-  }
-  // Glints off the rings and the dimples.
-  col += vec3(0.25, 0.4, 0.45) * pow(length(n.xy) * 4.0, 2.0) * 0.4;
-  float fog = 1.0 - exp(-vFog * 0.0011);
-  col = mix(col, vec3(0.02, 0.035, 0.05), fog);
-  gl_FragColor = vec4(col, 0.8 + 0.15 * fres);
-}
-`;
 
 export interface LakeFrame {
   /** The camera, and where along the road you are. */
@@ -142,6 +57,8 @@ export interface LakeFrame {
   aim: { s: number; u: number }[];
   /** How much of the storm is about you (0 on the street, 1 out on the lake). */
   storm: number;
+  /** Whether Water City is found (its gate on the far shore then stands lit). */
+  found: boolean;
 }
 
 export interface LakeView {
@@ -244,28 +161,12 @@ export function buildLakeView(x0: number, y0: number, h0: number): LakeView {
   }
 
   /* The water. */
-  const ripU: THREE.Vector4[] = Array.from({ length: RIPPLE.MAX }, () => new THREE.Vector4());
-  const portalU: THREE.Vector4[] = PORTALS.map(([s, u]) => {
+  const water = makeWater(PORTALS.length, LAKE.LEVEL);
+  const waterMat = own(water.material);
+  PORTALS.forEach(([s, u], i) => {
     const p = W(s, u);
-    return new THREE.Vector4(p.x, p.y, 0, 0);
+    water.portals[i].set(p.x, p.y, 0, 1);
   });
-  const waterMat = own(
-    new THREE.ShaderMaterial({
-      vertexShader: WATER_VERTEX,
-      fragmentShader: WATER_FRAGMENT,
-      uniforms: {
-        uTime: { value: 0 },
-        uRip: { value: ripU },
-        uPortal: { value: portalU },
-        uCam: { value: new THREE.Vector3() },
-        uLevel: { value: LAKE.LEVEL },
-        uRain: { value: 1 },
-      },
-      transparent: true,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    }),
-  );
   {
     // Wider than the lake's edges and on under the far shore's city, so it meets the horizon.
     const pos: number[] = [];
@@ -306,167 +207,64 @@ export function buildLakeView(x0: number, y0: number, h0: number): LakeView {
   city.position.set(cp.x, 0, -cp.y);
   group.add(city);
 
-  /* The portals of light. */
+  /* The portals of light, and the far shore's gate into Water City (lit once it is found). */
   const ringGeo = own(new THREE.TorusGeometry(PORTAL.R, 0.32, 10, 64));
   const discGeo = own(new THREE.CircleGeometry(PORTAL.R - 0.3, 48));
   const portals = PORTALS.map(([s, u], i) => {
-    const ring = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(0.4, 1.4, 1.7),
-      toneMapped: false,
-    });
-    const veil = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(0.2, 0.7, 0.9),
-      transparent: true,
-      opacity: 0.12,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      toneMapped: false,
-    });
-    own(ring);
-    own(veil);
-    const g = new THREE.Group();
-    g.add(new THREE.Mesh(ringGeo, ring), new THREE.Mesh(discGeo, veil));
-    const p = S(s, u, LAKE.LEVEL + PORTAL.LIFT);
-    g.position.set(...p);
-    g.rotation.y = h0 + portalFacing(i) + Math.PI / 2;
-    group.add(g);
-    return { g, ring, veil };
+    const p = own(makePortal(ringGeo, discGeo));
+    p.group.position.set(...S(s, u, LAKE.LEVEL + PORTAL.LIFT));
+    p.group.rotation.y = h0 + portalFacing(i) + Math.PI / 2;
+    group.add(p.group);
+    return p;
   });
+  const gate = own(makePortal(ringGeo, discGeo));
+  gate.group.scale.setScalar(FAR_GATE.R / PORTAL.R);
+  gate.group.position.set(...S(FAR_GATE.S, 0, LAKE.LEVEL + FAR_GATE.LIFT));
+  gate.group.rotation.y = h0 + Math.PI / 2;
+  group.add(gate.group);
 
-  /* The sharks. */
-  const sharkMat = own(
-    new THREE.MeshStandardMaterial({ color: 0x3a4a58, roughness: 0.4, metalness: 0.1 }),
-  );
-  const bellyMat = own(new THREE.MeshStandardMaterial({ color: 0x9aa8b0, roughness: 0.5 }));
-  const bodyGeo = own(new THREE.SphereGeometry(1, 14, 10));
-  const finGeo = own(new THREE.ConeGeometry(0.5, 1.4, 4));
-  const sharks = SHARKS.map(() => {
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(bodyGeo, sharkMat);
-    body.scale.set(0.75, 0.7, 2.8);
-    const belly = new THREE.Mesh(bodyGeo, bellyMat);
-    belly.scale.set(0.6, 0.45, 2.3);
-    belly.position.y = -0.3;
-    const fin = new THREE.Mesh(finGeo, sharkMat);
-    fin.position.set(0, 0.95, -0.2);
-    fin.rotation.x = -0.35;
-    fin.scale.set(0.35, 1, 1);
-    const tail = new THREE.Mesh(finGeo, sharkMat);
-    tail.position.set(0, 0.4, -2.9);
-    tail.rotation.x = -0.9;
-    tail.scale.set(0.3, 1.3, 1);
-    // The body's long axis is its z: nose toward +z.
-    g.add(body, belly, fin, tail);
-    g.visible = false;
-    group.add(g);
-    return g;
-  });
-
-  /* The kraken: each tentacle a line of spheres, thick at the root, thin at the tip, with a row
-   * of faint lights down it. */
-  const per = TENTACLES.length * SEGS;
-  const fleshMat = own(
-    new THREE.MeshStandardMaterial({
-      color: 0x2a0d1e,
-      roughness: 0.45,
-      metalness: 0.15,
-      emissive: new THREE.Color(0.05, 0.0, 0.03),
-    }),
-  );
-  const glowMat = own(
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 0.9, 1.0), toneMapped: false }),
-  );
-  const ball = own(new THREE.SphereGeometry(1, 10, 8));
-  const flesh = new THREE.InstancedMesh(ball, fleshMat, per * KRAKEN.LAIRS.length);
-  const spots = new THREE.InstancedMesh(ball, glowMat, per * KRAKEN.LAIRS.length);
-  for (const im of [flesh, spots]) {
-    im.frustumCulled = false;
-    im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    im.count = 0;
-    group.add(im);
-  }
-
-  /* The rain: streaks falling round the camera. */
-  const rainPos = new Float32Array(DROPS * 6);
-  const drops = new Float32Array(DROPS * 3);
-  for (let i = 0; i < DROPS; i++) {
-    drops[i * 3] = Math.random() * RAIN_BOX.W;
-    drops[i * 3 + 1] = Math.random() * RAIN_BOX.W;
-    drops[i * 3 + 2] = Math.random() * RAIN_BOX.H;
-  }
-  const rainGeo = own(new THREE.BufferGeometry());
-  rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-  const rainMat = own(
-    new THREE.LineBasicMaterial({
-      color: new THREE.Color(0.55, 0.7, 0.8),
-      transparent: true,
-      opacity: 0.32,
-      depthWrite: false,
-    }),
-  );
-  const rain = new THREE.LineSegments(rainGeo, rainMat);
-  rain.frustumCulled = false;
-  rain.renderOrder = 9;
-  // The rain is drawn round the camera, in the scene's own frame (not the lake's group).
-  const rainGroup = new THREE.Group();
-  rainGroup.add(rain);
-
-  const m4 = new THREE.Matrix4();
-  const q = new THREE.Quaternion();
-  const sc = new THREE.Vector3();
-  const pv = new THREE.Vector3();
-  const e = new THREE.Euler();
+  /* The sharks, the kraken, the rain. */
+  const sharks = own(makeSharks(SHARKS.length, group));
+  const kraken = own(makeKraken(KRAKEN.LAIRS.length * (TENTACLES.length * SEGS + 1), group));
+  const rain = own(makeRain());
 
   return {
     group: (() => {
       const outer = new THREE.Group();
-      outer.add(group, rainGroup);
+      outer.add(group, rain.group);
       return outer;
     })(),
     update(ox, oy, t, dt, f) {
       group.position.set(x0 - ox, 0, -(y0 - oy));
-      const u = waterMat.uniforms;
-      u.uTime.value = t;
-      (u.uCam.value as THREE.Vector3).set(f.cam.x - x0, f.cam.y - y0, f.cam.z);
-      u.uRain.value = 0.4 + 0.6 * f.storm;
-      for (let i = 0; i < RIPPLE.MAX; i++) {
-        const r = f.ripples.rings[i];
-        if (!r) ripU[i].set(0, 0, -99, 0);
-        else ripU[i].set(r.x - x0, r.y - y0, r.t, r.k);
-      }
+      water.update(
+        t,
+        { x: f.cam.x - x0, y: f.cam.y - y0, z: f.cam.z },
+        0.4 + 0.6 * f.storm,
+        f.ripples.rings,
+        x0,
+        y0,
+      );
       PORTALS.forEach((_, i) => {
         const lit = f.run.lit[i];
-        portalU[i].z = lit ? 1 : 0;
-        const p = portals[i];
-        const pulse = 0.85 + 0.15 * Math.sin(t * 2.2 + i);
-        if (lit) p.ring.color.setRGB(1.8 * pulse, 1.2 * pulse, 0.45 * pulse);
-        else p.ring.color.setRGB(0.4 * pulse, 1.4 * pulse, 1.7 * pulse);
-        p.veil.opacity = lit ? 0.2 : 0.1 + 0.04 * Math.sin(t * 1.3 + i);
-        p.veil.color.set(lit ? 0xffb050 : 0x40c8e8);
+        water.portals[i].z = lit ? 1 : 0;
+        portals[i].set(lit, t, i);
       });
+      gate.group.visible = f.found;
+      if (f.found) gate.set(true, t, 0);
 
-      // Sharks in the air.
+      // Sharks in the air: nose along the leap (world heading h0 + way), up out, down back in.
       SHARKS.forEach((_, i) => {
-        const g = sharks[i];
         const p = sharkAt(i, t);
-        g.visible = !!p;
-        if (!p) return;
-        g.position.set(...S(p.s, p.u, LAKE.LEVEL + p.z - 0.4));
-        // Its nose along its leap (world heading h0 + way), pitched up out and down back in.
-        e.set(-p.pitch, h0 + p.way + Math.PI / 2, 0, 'YXZ');
-        g.rotation.copy(e);
+        sharks.place(i, p && S(p.s, p.u, LAKE.LEVEL + p.z - 0.4), h0 + (p?.way ?? 0), p?.pitch);
       });
 
       // The kraken.
-      let n = 0;
-      let ns = 0;
+      kraken.begin();
       for (let l = 0; l < KRAKEN.LAIRS.length; l++) {
         const woke = f.woke[l];
         if (woke === null) continue;
         const since = t - woke;
-        const past = f.past[l];
-        const rise = krakenRise(since, past);
+        const rise = krakenRise(since, f.past[l]);
         if (rise <= 0.001) continue;
         const pose = slamPose(since);
         for (let j = 0; j < TENTACLES.length; j++) {
@@ -480,54 +278,19 @@ export function buildLakeView(x0: number, y0: number, h0: number): LakeView {
               ? { lift: pose.lift, down: pose.down, ts: f.aim[l].s, tu: f.aim[l].u }
               : undefined,
           );
-          const root = 2.6 * (TENTACLES[j].tall / 26);
-          pts.forEach((pt, k) => {
-            const r = root * (1 - 0.85 * (k / (SEGS - 1)));
-            pv.set(...S(pt.s, pt.u, LAKE.LEVEL - 1 + pt.z));
-            sc.set(r, r, r);
-            m4.compose(pv, q.identity(), sc);
-            flesh.setMatrixAt(n++, m4);
-            if (k % 3 === 1) {
-              sc.set(r * 0.28, r * 0.28, r * 0.28);
-              pv.y += r * 0.8;
-              m4.compose(pv, q, sc);
-              spots.setMatrixAt(ns++, m4);
-            }
-          });
+          kraken.tentacle(
+            pts.map((pt) => S(pt.s, pt.u, LAKE.LEVEL - 1 + pt.z)),
+            2.6 * (TENTACLES[j].tall / 26),
+          );
         }
-        // The lair's root bulk, just breaking the water.
+        // The lair's bulk, just breaking the water.
         const mid = lairPoint(l, 0, 0);
-        pv.set(...S(mid.s, mid.u, LAKE.LEVEL - 6 + 3 * rise));
-        sc.set(9, 5, 9);
-        m4.compose(pv, q.identity(), sc);
-        flesh.setMatrixAt(n++, m4);
+        kraken.bulk(S(mid.s, mid.u, LAKE.LEVEL - 6 + 3 * rise));
       }
-      flesh.count = n;
-      spots.count = ns;
-      flesh.instanceMatrix.needsUpdate = true;
-      spots.instanceMatrix.needsUpdate = true;
+      kraken.end();
 
       // The rain round the camera, heavier out on the lake.
-      rain.visible = f.storm > 0.02;
-      rainMat.opacity = 0.32 * f.storm;
-      if (rain.visible) {
-        const fall = RAIN.FALL * dt;
-        const len = 0.9;
-        const W = RAIN_BOX.W;
-        for (let i = 0; i < DROPS; i++) {
-          let z = drops[i * 3 + 2] - fall;
-          if (z < 0) z += RAIN_BOX.H;
-          drops[i * 3 + 2] = z;
-          // Each drop keeps its place on a grid of RAIN_BOX tiles round the camera.
-          const wx = f.cam.x + ((((drops[i * 3] - f.cam.x) % W) + W) % W) - W / 2;
-          const wy = f.cam.y + ((((drops[i * 3 + 1] - f.cam.y) % W) + W) % W) - W / 2;
-          const wz = f.cam.z - RAIN_BOX.H * 0.4 + z;
-          const sx = wx - ox;
-          const sy = wy - oy;
-          rainPos.set([sx, wz, -sy, sx + 0.05, wz + len, -sy], i * 6);
-        }
-        rainGeo.attributes.position.needsUpdate = true;
-      }
+      rain.update(f.cam, ox, oy, dt, f.storm);
     },
     dispose() {
       for (const o of owned) o.dispose();

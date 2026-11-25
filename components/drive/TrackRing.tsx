@@ -9,6 +9,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { WORLDS, type WorldId } from '@/lib/art/drive-design';
+import { shown } from '@/lib/art/drive-unlocks';
 import { WORLD_CFG } from '@/lib/art/drive-worlds';
 import { trackMap } from '@/lib/art/track-map';
 import { runLabel, trackList } from '@/lib/art/track-registry';
@@ -34,6 +35,8 @@ export interface TrackRingProps {
   onDesign?: () => void;
   /** Your best on a track, as shown in the HUD, or null. */
   best?: (id: WorldId) => string | null;
+  /** The secret tracks found on this device (lib/art/drive-unlocks.ts): only those show. */
+  found?: readonly string[];
 }
 
 export default function TrackRing({
@@ -43,8 +46,11 @@ export default function TrackRing({
   onClose,
   onDesign,
   best,
+  found = [],
 }: TrackRingProps) {
-  const tracks = useMemo(() => trackList(), []);
+  const foundKey = found.join(',');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the list's contents, by key.
+  const tracks = useMemo(() => trackList().filter((t) => shown(t.id, found)), [foundKey]);
   const n = tracks.length;
   const [sel, setSel] = useState(() =>
     Math.max(
@@ -89,7 +95,8 @@ export default function TrackRing({
       else if (k === 'enter' || k === ' ') onRace();
       else if (k === 'escape') onClose();
       else {
-        const w = WORLDS.findIndex((x) => x.key === k);
+        const id = WORLDS.find((x) => x.key === k)?.id;
+        const w = tracks.findIndex((x) => x.id === id);
         if (w >= 0) goTo(w);
         else return;
       }
@@ -239,7 +246,7 @@ export default function TrackRing({
                     color: `${quiet}0.45)`,
                   }}
                 >
-                  {WORLDS[i].key}
+                  {WORLDS.find((w) => w.id === tr.id)?.key}
                 </span>
               </button>
             );

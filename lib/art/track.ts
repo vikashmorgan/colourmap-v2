@@ -39,8 +39,26 @@ import neonData from '@/lib/art/tracks/neon.json';
 import nightData from '@/lib/art/tracks/night.json';
 import { UNDER, underLocal, underTwist, underWall } from '@/lib/art/undertown';
 import { G, type Ground, type Hit, type Vehicle, type World } from '@/lib/art/vehicle';
+import {
+  onWaterRoad,
+  WATER_BANK,
+  WATER_LAP,
+  WATER_ROAD_GRIP,
+  waterCurv,
+  waterElev,
+  waterHalf,
+  waterLevel,
+} from '@/lib/art/water-city';
 
-export type TrackId = 'coast' | 'canyon' | 'night' | 'chinatown' | 'neon' | 'sky' | 'gold';
+export type TrackId =
+  | 'coast'
+  | 'canyon'
+  | 'night'
+  | 'chinatown'
+  | 'neon'
+  | 'sky'
+  | 'gold'
+  | 'water';
 
 export interface Wall {
   /** Offset of the barrier from the centre (positive left), and its height over the road. */
@@ -123,6 +141,9 @@ export interface TrackDef {
     ground(s: number, u: number, h0: number): Ground;
     collide(s: number, u: number, nx: number, ny: number): Hit | null;
   };
+  /** What the road is underfoot here, where it is not plain road (Water City's stretches on the
+   * water: less grip, spray and rings). */
+  surface?(s: number): { grip: number; water: boolean } | null;
   /** Smooth edges (Chinatown): the bank saturates smoothly instead of clipping at bankMax, the
    * ground past the edge carries on from the road's slope there and eases into its own, and the
    * lip fades where a side road joins instead of switching off. */
@@ -878,7 +899,9 @@ export function groundAt(
   // A pipe is ridden like the road (smooth, never rough), and the road's hold reaches its top.
   const reach = pipeReach(t, s, u);
   const lipped = t.def.lip(Math.max(0, s)) > 0 || reach > 0;
+  const surface = t.def.surface?.(Math.max(0, s)) ?? null;
   return {
+    ...(surface ?? {}),
     h,
     gx: dS * c - dU * sn,
     gy: dS * sn + dU * c,
@@ -1076,6 +1099,33 @@ export const CHINATOWN: TrackDef = {
   kick: (s, u) => kickAt(s, u, chinatownHalf(s)),
   // The alley behind the tallest towers, the high road and the deep way (chinatown-roads.ts).
   roads: sideRoads,
+};
+
+/* ── Water City ────────────────────────────────────────────── */
+
+/** Water City (2026-11-25, lib/art/water-city.ts): found through the portals on the lake behind
+ * Chinatown Run's start. A 10 km lap of piers, canals on the water, arched bridges, the open lake
+ * and the grand canal; rails along its edges, banked bends saturating smoothly. */
+export const WATER_TRACK: TrackDef = {
+  id: 'water',
+  startH: 0,
+  curv: waterCurv,
+  elev: waterElev,
+  half: waterHalf,
+  // A low curb on the decks; none where the road is the water.
+  lip: (s) => (onWaterRoad(s) ? 0.15 : 0.35),
+  bankSpeed: WATER_BANK.SPEED,
+  bankMax: WATER_BANK.MOST,
+  level: waterLevel,
+  // Off the road the ground slopes down under the water (the water is drawn over it).
+  terrain: -2,
+  lap: WATER_LAP,
+  smooth: true,
+  walls: (s) => {
+    const half = waterHalf(s);
+    return { left: { u: half + 1.6, height: 3 }, right: { u: -(half + 1.6), height: 3 } };
+  },
+  surface: (s) => (onWaterRoad(s) ? { grip: WATER_ROAD_GRIP, water: true } : null),
 };
 
 export const NEON_HALF = 16;

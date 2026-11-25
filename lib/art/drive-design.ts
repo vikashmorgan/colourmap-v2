@@ -16,7 +16,8 @@ export type WorldId =
   | 'neon'
   | 'sky'
   | 'mars'
-  | 'gold';
+  | 'gold'
+  | 'water';
 
 /** The worlds in the menus' order, best first (2026-11-22: "golden track on top of the menus. so
  * we have an order from best tracks to least cool"); the number keys follow this order. */
@@ -31,6 +32,9 @@ export const WORLDS: { id: WorldId; name: string; key: string }[] = [
   // 2026-11-19: "one map becomes Mars, in the style of the salt flats".
   { id: 'mars', name: 'Mars', key: '8' },
   { id: 'salt', name: 'Salt Flat', key: '9' },
+  // 2026-11-25: found, not given: through the portals on the lake behind Chinatown Run's start
+  // (lib/art/drive-unlocks.ts). Hidden from the menus until then.
+  { id: 'water', name: 'Water City', key: '0' },
 ];
 
 export function isWorld(id: string): id is WorldId {
@@ -356,6 +360,7 @@ export const DEFAULT_DESIGN: Design = {
     sky: 'ship',
     mars: 'ship',
     gold: 'ship',
+    water: 'ship',
   },
 };
 

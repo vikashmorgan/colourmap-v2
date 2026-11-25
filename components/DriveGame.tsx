@@ -66,6 +66,7 @@ import {
   WORLDS,
   type WorldId,
 } from '@/lib/art/drive-design';
+import { loadFound, type SecretTrack, shown } from '@/lib/art/drive-unlocks';
 import { WEAPON_NAME, type WeaponId } from '@/lib/art/pickups';
 import type { RaceResult } from '@/lib/art/race-result';
 import type { RadioMessage } from '@/lib/art/radio';
@@ -105,6 +106,10 @@ export default function DriveGame() {
   const handHeld = useRef(false);
   const [hand, setHand] = useState(false);
   const [world, setWorldState] = useState<WorldId>(WORLDS[0].id);
+  /** The secret tracks found on this device (Water City: the lake behind Chinatown's start). */
+  const [found, setFound] = useState<SecretTrack[]>([]);
+  const foundRef = useRef(found);
+  foundRef.current = found;
   const [design, setDesignState] = useState<Design>(() => loadDesign(null, WEATHER_IDS));
   const [panel, setPanel] = useState(false);
   // The menu's category (Tracks, Garage, World, Settings), remembered.
@@ -205,12 +210,16 @@ export default function DriveGame() {
     driveSound.setPrefs(prefs);
     const lastTab = storage()?.getItem(MENU_TAB_KEY);
     if (isMenuTab(lastTab)) setTab(lastTab);
+    const foundNow = loadFound(storage());
+    setFound(foundNow);
+    // A secret track only once found here (a link to it before then opens the ring as usual).
+    const open = (id: string): id is WorldId => isWorld(id) && shown(id, foundNow);
     const asked = new URLSearchParams(window.location.search).get('world') ?? '';
     const last = storage()?.getItem(LAST_TRACK_KEY) ?? '';
-    const first: WorldId = isWorld(asked) ? asked : isWorld(last) ? last : WORLDS[0].id;
+    const first: WorldId = open(asked) ? asked : open(last) ? last : WORLDS[0].id;
     setWorldState(first);
     // A link to a world drives straight in; otherwise the ring comes first.
-    if (isWorld(asked)) {
+    if (open(asked)) {
       setRing(false);
       setTitle(false);
     }
@@ -243,6 +252,19 @@ export default function DriveGame() {
         },
         onRadio: setRadio,
         onMarker: (m) => placeMarker(markerRef.current, m),
+        // Water City found on the lake: it joins the ring and the menus from now on.
+        onFound: (id) => setFound((f) => (f.includes(id) ? f : [...f, id])),
+        // Through the lake's far gate into Water City: the same world, driven on into.
+        onWorld: (id) => {
+          setWorldState(id);
+          worldRef.current = id;
+          dress(id);
+          try {
+            storage()?.setItem(LAST_TRACK_KEY, id);
+          } catch {
+            // Blocked storage: the ring opens on the top track next time.
+          }
+        },
         onFrame: (dt) => {
           const sp = spaceRef.current;
           const here = engineRef.current?.where();
@@ -278,7 +300,7 @@ export default function DriveGame() {
       engine.dispose();
       engineRef.current = null;
     };
-  }, []);
+  }, [dress]);
 
   useEffect(() => {
     engineRef.current?.setPreview(panel || ring || title || paused || results !== null);
@@ -390,7 +412,7 @@ export default function DriveGame() {
       if (panelRef.current && k.startsWith('arrow')) return;
       // During the intro any key moves it on; the driving keys are still held for the GO.
       if (introKey() && !DRIVE_KEYS.includes(k)) return;
-      const w = WORLDS.find((x) => x.key === k);
+      const w = WORLDS.find((x) => x.key === k && shown(x.id, foundRef.current));
       if (w) {
         chooseWorld(w.id);
         return;
@@ -723,6 +745,7 @@ export default function DriveGame() {
           onRace={race}
           onClose={race}
           onDesign={openDesign}
+          found={found}
         />
       )}
 
@@ -805,6 +828,7 @@ export default function DriveGame() {
           onTab={chooseTab}
           onChange={changeDesign}
           onWorld={chooseWorld}
+          found={found}
           onRing={() => {
             setPanel(false);
             setRing(true);

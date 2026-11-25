@@ -283,7 +283,11 @@ export interface SharkPose {
 
 /** Shark i at time t: in the air on its arc, or null while it is under the water. */
 export function sharkAt(i: number, t: number): SharkPose | null {
-  const sp = SHARKS[i];
+  return sharkPose(SHARKS[i], t);
+}
+
+/** A shark keeping to spot `sp` at time t (any spot: Water City's too). */
+export function sharkPose(sp: SharkSpot, t: number): SharkPose | null {
   const p = (((t + sp.phase) % sp.every) + sp.every) % sp.every;
   if (p >= SHARK.AIR) return null;
   const k = p / SHARK.AIR;
@@ -301,10 +305,14 @@ export function sharkAt(i: number, t: number): SharkPose | null {
 }
 
 /** Where sharks broke the water between t0 and t1 (leaping out, splashing back in). */
-export function sharkSplashes(t0: number, t1: number): { s: number; u: number; out: boolean }[] {
+export function sharkSplashes(
+  t0: number,
+  t1: number,
+  spots: readonly SharkSpot[] = SHARKS,
+): { s: number; u: number; out: boolean }[] {
   const out: { s: number; u: number; out: boolean }[] = [];
   if (!(t1 > t0) || t1 - t0 > 1) return out;
-  SHARKS.forEach((sp) => {
+  spots.forEach((sp) => {
     const at = (t: number) => (((t + sp.phase) % sp.every) + sp.every) % sp.every;
     const a = at(t0);
     const b = at(t1);
@@ -423,15 +431,27 @@ export function slamPush(
 
 /** The lair frame at lair l: along the S there (from the portal before to the one after) and its
  * middle, so tentacle (a, b) stands at road (s, u). */
-export function lairPoint(l: number, a: number, b: number): { s: number; u: number; way: number } {
+export function lairPoint(l: number, a: number, b: number): Lair {
   const i = l === 0 ? 2 : 4;
   const p = PORTALS[i];
   const q = PORTALS[i + 1];
-  const way = Math.atan2(q[1] - p[1], q[0] - p[0]);
   const [ls, lu] = KRAKEN.LAIRS[l];
+  return atLair({ s: ls, u: lu, way: Math.atan2(q[1] - p[1], q[0] - p[0]) }, a, b);
+}
+
+/** A lair: its middle (road s, u) and the way it faces (rad, road frame). */
+export interface Lair {
+  s: number;
+  u: number;
+  way: number;
+}
+
+/** The point (a along, b across) of a lair's frame, in road (s, u). */
+export function atLair(lair: Lair, a: number, b: number): Lair {
+  const { s, u, way } = lair;
   return {
-    s: ls + Math.cos(way) * a - Math.sin(way) * b,
-    u: lu + Math.sin(way) * a + Math.cos(way) * b,
+    s: s + Math.cos(way) * a - Math.sin(way) * b,
+    u: u + Math.sin(way) * a + Math.cos(way) * b,
     way,
   };
 }
@@ -449,8 +469,23 @@ export function tentaclePoints(
   n: number,
   slam?: { lift: number; ts: number; tu: number; down: number },
 ): { s: number; u: number; z: number }[] {
+  return tentacleLine(lairPoint(l, 0, 0), j, rise, t, n, slam, l);
+}
+
+/** Tentacle j of the kraken in any lair (Water City's too), as `tentaclePoints`; `seed` varies
+ * its sway. */
+export function tentacleLine(
+  lair: Lair,
+  j: number,
+  rise: number,
+  t: number,
+  n: number,
+  slam?: { lift: number; ts: number; tu: number; down: number },
+  seed = 0,
+): { s: number; u: number; z: number }[] {
+  const l = seed;
   const tc = TENTACLES[j];
-  const root = lairPoint(l, tc.a, tc.b);
+  const root = atLair(lair, tc.a, tc.b);
   const out: { s: number; u: number; z: number }[] = [];
   const tall = tc.tall * rise;
   const sway = 0.25 * Math.sin(t * 0.9 + j * 1.7 + l);
@@ -502,3 +537,16 @@ export function slamPose(since: number): { lift: number; down: number } {
 /** Where the slam lands: where you were LAG s before it (so it strikes behind a car that keeps
  * going, and onto one that dawdles). */
 export const SLAM_LAG = 0.9;
+
+/** The far shore's gate (2026-11-25: "also reachable via the lake"): once Water City is found, a
+ * great gold portal stands on the water before it, at S m behind the start; through it (within R m
+ * of its middle) you drive on into Water City. */
+export const FAR_GATE = { S: -LAKE.BACK + 160, R: 16, LIFT: 15 } as const;
+
+/** Whether going from (s0, u0) to (s1, u1) passes through the far shore's gate (either way). */
+export function farGateThrough(s0: number, u0: number, s1: number, u1: number): boolean {
+  if (Math.abs(s1 - s0) > 60 || Math.sign(s0 - FAR_GATE.S) === Math.sign(s1 - FAR_GATE.S))
+    return false;
+  const k = (FAR_GATE.S - s0) / (s1 - s0);
+  return Math.abs(u0 + (u1 - u0) * k) <= FAR_GATE.R;
+}

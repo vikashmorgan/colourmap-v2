@@ -21,7 +21,7 @@ const BODY: V3 = [0.012, 0.01, 0.018];
 /** The mirror's share of the light. */
 const MIRROR = 0.38;
 
-class Mesh {
+export class CityMesh {
   pos: number[] = [];
   col: number[] = [];
   quad(a: V3, b: V3, c: V3, d: V3, col: V3) {
@@ -47,15 +47,16 @@ function hash(n: number): number {
  * One tower and its reflection into `body` (dark faces) and `lit` (window bands, crown). `P` maps
  * (a, b, height) in the anchor's frame to scene coordinates.
  */
-function tower(
+export function tower(
   t: LakeTower,
   i: number,
   P: (a: number, b: number, h: number) => V3,
-  body: Mesh,
-  lit: Mesh,
+  body: CityMesh,
+  lit: CityMesh,
   TONES: V3[] = CITY_TONES,
+  /** The water it stands in (m). */
+  L: number = LAKE_CITY.LEVEL,
 ) {
-  const L = LAKE_CITY.LEVEL;
   const corners: [number, number][] = [
     [t.a - t.w, t.b - t.d],
     [t.a + t.w, t.b - t.d],
@@ -162,15 +163,15 @@ export function buildLakeCity(
     return [x, z, -y];
   };
   const g = new THREE.Group();
-  const b = new Mesh();
-  const l = new Mesh();
+  const b = new CityMesh();
+  const l = new CityMesh();
   lakeTowers(seed).forEach((t, i) => {
     tower(t, i, P, b, l, opts.tones);
   });
   g.add(new THREE.Mesh(b.geometry(), body), new THREE.Mesh(l.geometry(), lit));
   if (opts.water === false) return g;
   // The water: a broad sheet from the near shore to past the far one.
-  const w = new Mesh();
+  const w = new CityMesh();
   const { FAR, SHORE, LENGTH, LEVEL } = LAKE_CITY;
   const deep: V3 = [0.004, 0.006, 0.016];
   const A = LENGTH / 2;
