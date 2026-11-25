@@ -19,6 +19,8 @@ const engine = {
   start: vi.fn(),
   dispose: vi.fn(),
   setAutopilot: vi.fn(),
+  fireAttack: vi.fn(),
+  setTitleShot: vi.fn(),
   stop: vi.fn(),
   where: vi.fn(() => null),
   stage3d: new Scene(),
@@ -154,12 +156,16 @@ describe('Drive', () => {
 
   it('switches worlds on the number keys and restarts on R', () => {
     play();
-    fireEvent.keyDown(window, { key: '4' });
+    fireEvent.keyDown(window, { key: '6' });
     expect(engine.setWorld).toHaveBeenCalledWith('canyon');
-    fireEvent.keyDown(window, { key: '3' });
+    fireEvent.keyDown(window, { key: '4' });
     expect(engine.setWorld).toHaveBeenCalledWith('neon');
-    fireEvent.keyDown(window, { key: '2' });
-    expect(engine.setWorld).toHaveBeenCalledWith('symphony');
+    fireEvent.keyDown(window, { key: '3' });
+    expect(engine.setWorld).toHaveBeenCalledWith('mars');
+    // On Mars 1 2 3 are its attacks, not a change of track.
+    fireEvent.keyDown(window, { key: '1' });
+    expect(engine.setWorld).toHaveBeenLastCalledWith('mars');
+    expect(engine.fireAttack).toHaveBeenLastCalledWith('shark');
     fireEvent.keyDown(window, { key: 'r' });
     expect(engine.startIntro).toHaveBeenLastCalledWith(true);
   });
@@ -276,23 +282,33 @@ describe('Drive', () => {
       'true',
     );
     expect(screen.getByTestId('track-map')).toBeDefined();
+    // Only the racing tracks stand on the ring; the others wait under In development.
+    expect(screen.queryByRole('button', { name: 'The Symphony' })).toBeNull();
     fireEvent.keyDown(window, { key: 'ArrowRight' });
-    expect(screen.getByRole('button', { name: 'The Symphony' }).getAttribute('aria-current')).toBe(
+    expect(screen.getByRole('button', { name: 'Chinatown Run' }).getAttribute('aria-current')).toBe(
       'true',
     );
-    expect(screen.getByText('A road made of mathematics')).toBeDefined();
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    expect(engine.setWorld).toHaveBeenLastCalledWith('symphony');
+    expect(engine.setWorld).toHaveBeenLastCalledWith('chinatown');
     // The ring's keys don't drive the car.
     expect(engine.setControls).not.toHaveBeenCalledWith(expect.objectContaining({ steer: -1 }));
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    // Past the top it wraps round to the last.
-    expect(screen.getByRole('button', { name: 'Salt Flat' }).getAttribute('aria-current')).toBe(
+    // Past the top it wraps round to the last racing track.
+    expect(screen.getByRole('button', { name: 'Neon District' }).getAttribute('aria-current')).toBe(
       'true',
     );
+    // Down shows the tracks in development.
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(screen.getByRole('tab', { name: 'In development' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'The Symphony' }).getAttribute('aria-current')).toBe(
+      'true',
+    );
+    expect(screen.getByText('A road made of mathematics')).toBeDefined();
     fireEvent.keyDown(window, { key: 'Enter' });
     expect(screen.queryByTestId('track-ring')).toBeNull();
     expect(engine.startIntro).toHaveBeenCalledWith();
@@ -339,9 +355,14 @@ describe('Drive', () => {
     render(<DriveGame />);
     expect(screen.getByTestId('title-screen').textContent).toContain('Colour Drive');
     expect(screen.queryByTestId('track-ring')).toBeNull();
-    expect(engine.setPreview).toHaveBeenLastCalledWith(true);
+    // Behind the title the Golden Track drives itself in the hover ship.
+    expect(engine.setPreview).toHaveBeenLastCalledWith(false);
+    expect(engine.setWorld).toHaveBeenCalledWith('gold');
+    expect(engine.setTitleShot).toHaveBeenLastCalledWith(true);
     fireEvent.keyDown(window, { key: 'x' });
     expect(screen.queryByTestId('title-screen')).toBeNull();
+    expect(engine.setTitleShot).toHaveBeenLastCalledWith(false);
+    expect(engine.setWorld).toHaveBeenLastCalledWith('neon');
     expect(screen.getByRole('button', { name: 'Neon District' }).getAttribute('aria-current')).toBe(
       'true',
     );

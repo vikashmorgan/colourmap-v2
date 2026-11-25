@@ -77,6 +77,8 @@ import { loadSoundPrefs, type SoundPrefs, saveSoundPrefs } from '@/lib/audio/dri
 export const BACK_HREF = '/geometry-field?tab=experiment';
 /** The track you raced last, so the ring opens on it. */
 export const LAST_TRACK_KEY = 'drive.lastTrack';
+/** The world the title plays behind its words. */
+const TITLE_WORLD: WorldId = 'gold';
 const WEATHER_IDS = WEATHERS.map((w) => w.id);
 
 function storage(): Store | null {
@@ -302,8 +304,20 @@ export default function DriveGame() {
     };
   }, [dress]);
 
+  // The title plays the Golden Track in the hover ship, driving itself on boost with fire at the
+  // edges (docs/specs/drive-menus.md, "Title"); entering hands back your track and your ride.
   useEffect(() => {
-    engineRef.current?.setPreview(panel || ring || title || paused || results !== null);
+    const e = engineRef.current;
+    if (!e || !title) return;
+    const d = loadDesign(storage(), WEATHER_IDS);
+    e.setWorld(TITLE_WORLD);
+    dress(TITLE_WORLD);
+    e.setDesign({ ...d, flames: true, vehicle: { ...d.vehicle, [TITLE_WORLD]: 'ship' } });
+    e.setTitleShot(true);
+  }, [title, dress]);
+
+  useEffect(() => {
+    engineRef.current?.setPreview(panel || (ring && !title) || paused || results !== null);
   }, [panel, ring, title, paused, results]);
 
   // The race's sound (engine, wind, hiss) plays while you drive; the menus and sheets duck it.
@@ -412,6 +426,11 @@ export default function DriveGame() {
       if (panelRef.current && k.startsWith('arrow')) return;
       // During the intro any key moves it on; the driving keys are still held for the GO.
       if (introKey() && !DRIVE_KEYS.includes(k)) return;
+      // On Mars the number keys 1 2 3 are its attacks, not a change of track.
+      if (worldRef.current === 'mars' && ATTACK_KEYS[k]) {
+        engineRef.current?.fireAttack(ATTACK_KEYS[k]);
+        return;
+      }
       const w = WORLDS.find((x) => x.key === k && shown(x.id, foundRef.current));
       if (w) {
         chooseWorld(w.id);
@@ -716,6 +735,10 @@ export default function DriveGame() {
         <TitleScreen
           onEnter={() => {
             driveSound.swell();
+            const e = engineRef.current;
+            e?.setTitleShot(false);
+            e?.setDesign(design);
+            chooseWorld(worldRef.current);
             setTitle(false);
           }}
         />

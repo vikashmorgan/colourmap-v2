@@ -13,7 +13,6 @@ import {
   HULLS,
   hullById,
   hullOf,
-  isWorld,
   loadBest,
   loadDesign,
   parseDesign,
@@ -23,6 +22,7 @@ import {
   saveBest,
   saveDesign,
   shipParts,
+  tierOf,
   WORLDS,
 } from './drive-design';
 import { FLAME_PALETTES } from './flame';
@@ -36,24 +36,22 @@ function memory(): Store & { data: Map<string, string> } {
 }
 
 describe('worlds', () => {
-  it('lists the ten worlds on keys 1 to 9 and 0, and Water City (found) on -', () => {
-    expect(WORLDS.map((w) => `${w.key} ${w.name}`)).toEqual([
-      '1 Golden Track',
-      '2 The Symphony',
-      '3 Neon District',
-      '4 Canyon Race',
-      '5 Sky Canyon',
-      '6 Chinatown Run',
-      '7 Night Rain',
-      '8 Coast Road',
-      '9 Mars',
-      '0 Salt Flat',
-      '- Water City',
+  it('lists the ten worlds on keys 1 to 9 and 0, the racing tracks first, then Water City (found)', () => {
+    expect(WORLDS.map((w) => `${w.key} ${w.name} ${w.tier}`)).toEqual([
+      '1 Golden Track race',
+      '2 Chinatown Run race',
+      '3 Mars race',
+      '4 Neon District race',
+      '5 The Symphony dev',
+      '6 Canyon Race dev',
+      '7 Sky Canyon dev',
+      '8 Night Rain dev',
+      '9 Coast Road dev',
+      '0 Salt Flat dev',
+      '- Water City dev',
     ]);
-    expect(isWorld('mars')).toBe(true);
-    expect(isWorld('coast')).toBe(true);
-    expect(isWorld('neon')).toBe(true);
-    expect(isWorld('moon')).toBe(false);
+    expect(tierOf('chinatown')).toBe('race');
+    expect(tierOf('symphony')).toBe('dev');
   });
 });
 
@@ -149,10 +147,11 @@ describe('ship parts', () => {
 });
 
 describe('rivals', () => {
-  it('are off by default and kept as stored', () => {
-    expect(DEFAULT_DESIGN.rivals).toBe(false);
+  it('are on by default and kept as stored', () => {
+    expect(DEFAULT_DESIGN.rivals).toBe(true);
     expect(parseDesign('{"rivals":true}', IDS).rivals).toBe(true);
-    expect(parseDesign('{"rivals":"yes"}', IDS).rivals).toBe(false);
+    expect(parseDesign('{"rivals":false}', IDS).rivals).toBe(false);
+    expect(parseDesign('{"rivals":"yes"}', IDS).rivals).toBe(true);
   });
 });
 
@@ -171,8 +170,8 @@ describe('the design, remembered', () => {
     expect(DEFAULT_DESIGN.vehicle.coast).toBe('ship');
   });
 
-  it('leaves walls of light behind by default, and offers the light cycle', () => {
-    expect(DEFAULT_DESIGN.trail).toBe(true);
+  it('leaves no wall of light behind by default, and offers the light cycle', () => {
+    expect(DEFAULT_DESIGN.trail).toBe(false);
     expect(BODIES.map((b) => b.id)).toContain('cycle');
   });
 

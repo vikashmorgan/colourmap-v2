@@ -701,6 +701,7 @@ export class DriveEngine {
   /** Where across the road you are (m, + left). */
   private u = 0;
   private autopilot = false;
+  private titleShot = false;
   private odometer = 0;
   private run: Run = newRun();
   private drift: DriftRun = newDriftRun();
@@ -708,7 +709,7 @@ export class DriveEngine {
   private best: number | null = null;
   private surgeAt = -99;
   /** The Symphony's space ripples living now, and the next one on its own to come. */
-  private ripples: Ripple[] = [];
+  private spaceRipples: Ripple[] = [];
   private rippleK = -1;
   /** The gates on this world (docs/specs/drive-tracks.md, "Gates and pickups"), what they gave. */
   private gates: GatesView | null = null;
@@ -932,7 +933,7 @@ export class DriveEngine {
 
   private enterWorld(id: WorldId) {
     this.cfg = WORLD_CFG[id];
-    this.ripples = [];
+    this.spaceRipples = [];
     this.rippleK = -1;
     (this.backdrop.material as THREE.Material).dispose();
     this.backdrop.material = this.backdropMaterial();
@@ -1534,6 +1535,13 @@ export class DriveEngine {
     this.autopilot = on;
   }
 
+  /** The title's shot (docs/specs/drive-menus.md, "Title"): the race drives itself flat out on
+   * boost, filmed low from the side so the ship's lean into each bend and the edge fire show. */
+  setTitleShot(on: boolean) {
+    this.titleShot = on;
+    this.autopilot = on;
+  }
+
   /** For the design space (components/drive/design-space.ts): the scene to add pieces to, and the
    * track and where you are on it (null off a track). */
   get stage3d(): THREE.Scene {
@@ -1804,21 +1812,21 @@ export class DriveEngine {
    * gates' (pushed as you pass them); the living ones, newest kept. */
   private stepRipples(t: number) {
     if (this.cfg.id !== 'symphony' || this.preview) {
-      this.ripples = liveRipples(this.ripples, t);
+      this.spaceRipples = liveRipples(this.spaceRipples, t);
       return;
     }
     if (this.rippleK < 0) this.rippleK = Math.max(0, Math.ceil(t / RIPPLE.PERIOD));
     while (ambientAt(this.rippleK) <= t) {
       const v = this.vehicle;
-      this.ripples.push(ambientRipple(this.rippleK, v.x, v.y, v.h));
+      this.spaceRipples.push(ambientRipple(this.rippleK, v.x, v.y, v.h));
       this.rippleK++;
     }
-    this.ripples = liveRipples(this.ripples, t);
+    this.spaceRipples = liveRipples(this.spaceRipples, t);
   }
 
   /** How far the space ripples lift what is drawn at (x, y) now (m; 0 off the Symphony). */
   private lift(x: number, y: number): number {
-    return this.ripples.length ? swell(this.ripples, x, y, this.t) : 0;
+    return this.spaceRipples.length ? swell(this.spaceRipples, x, y, this.t) : 0;
   }
 
   private posed(x: number, y: number, z: number, near: number, who: Vehicle | null = null) {
@@ -1983,7 +1991,16 @@ export class DriveEngine {
       this.preview || holding
         ? NO_CONTROLS
         : this.autopilot
-          ? autopilotControls(v, this.trackWorld?.track ?? null, this.s, t, this.cfg.id === 'sky')
+          ? {
+              ...autopilotControls(
+                v,
+                this.trackWorld?.track ?? null,
+                this.s,
+                t,
+                this.cfg.id === 'sky',
+              ),
+              ...(this.titleShot ? { boost: 2 as const } : {}),
+            }
           : this.controls;
 
     if (!this.preview) {
@@ -2096,7 +2113,7 @@ export class DriveEngine {
               if (boost) this.surgeAt = t;
               // Every gate sends a ripple through space as you pass; a boosted pass a stronger one.
               const p = pointAt(tr, g.s, 0);
-              this.ripples.push({
+              this.spaceRipples.push({
                 x: p.x,
                 y: p.y,
                 t0: t,
@@ -2173,6 +2190,11 @@ export class DriveEngine {
       yaw = v.h + Math.PI + this.previewYaw;
       dist = v.kind === 'ship' ? 7.5 : 6.5;
       lift = 1.9;
+    } else if (this.titleShot) {
+      // Low and off to the side, a little behind: the lean and the fire beside the road show.
+      yaw += 0.62;
+      dist = 7.2;
+      lift = 1.3;
     }
     this.cam.x = v.x - Math.cos(yaw) * dist;
     this.cam.y = v.y - Math.sin(yaw) * dist;
@@ -2203,7 +2225,7 @@ export class DriveEngine {
         if (side.roof !== null) this.cam.z = Math.min(this.cam.z, side.z + side.roof - 0.5);
       } else this.cam.z = Math.max(this.cam.z, heightAt(tr, q.s, 0) + 1.2);
     }
-    this.cam.roll = ease(this.cam.roll, piece ? 0 : v.roll * 0.35, 4, dt);
+    this.cam.roll = ease(this.cam.roll, piece ? 0 : v.roll * (this.titleShot ? 0.6 : 0.35), 4, dt);
     const shot = this.preview ? null : this.introShot();
     if (shot) {
       this.cam.x = shot.cam.x;
@@ -2236,7 +2258,7 @@ export class DriveEngine {
     } else if (piece) {
       camera.rotation.set(0, yaw - Math.PI / 2, 0, 'YXZ');
     } else {
-      const ahead = this.preview ? 0 : 6;
+      const ahead = this.preview ? 0 : this.titleShot ? 2.5 : 6;
       const lx = v.x + Math.cos(yaw) * ahead;
       const ly = v.y + Math.sin(yaw) * ahead;
       const lz = baseZ + (this.preview ? 0.7 : 0.9) + carLift;
@@ -2400,7 +2422,7 @@ export class DriveEngine {
         tv.update(ox, oy, this.s, t, w);
         // The Symphony: its ripples bend the deck, the bow stands after the rain.
         tv.symphony?.space(
-          this.ripples,
+          this.spaceRipples,
           ox,
           oy,
           t,

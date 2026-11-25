@@ -4,11 +4,11 @@
  * The track ring (docs/specs/drive-menus.md): the tracks as screens on a slow 3D ring, the chosen
  * one nearest, a window onto its world (the engine runs it live behind, holding still); under the
  * ring its map draws itself in the track's colour and a light runs a lap on it. ← → turn the ring,
- * Enter races, Esc closes. Follows docs/specs/drive-design-language.md.
+ * ↑ ↓ switch between the racing tracks and those in development, Enter races, Esc closes. Follows docs/specs/drive-design-language.md.
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { WORLDS, type WorldId } from '@/lib/art/drive-design';
+import { type TrackTier, tierOf, WORLDS, type WorldId } from '@/lib/art/drive-design';
 import { shown } from '@/lib/art/drive-unlocks';
 import { WORLD_CFG } from '@/lib/art/drive-worlds';
 import { trackMap } from '@/lib/art/track-map';
@@ -48,9 +48,15 @@ export default function TrackRing({
   best,
   found = [],
 }: TrackRingProps) {
+  // The racing tracks, or the ones still in development: two rings, one at a time. A secret track
+  // only once found on this device (lib/art/drive-unlocks.ts).
+  const [tier, setTier] = useState<TrackTier>(() => tierOf(current));
   const foundKey = found.join(',');
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the list's contents, by key.
-  const tracks = useMemo(() => trackList().filter((t) => shown(t.id, found)), [foundKey]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the found list's contents, by key.
+  const tracks = useMemo(
+    () => trackList().filter((t) => tierOf(t.id) === tier && shown(t.id, found)),
+    [tier, foundKey],
+  );
   const n = tracks.length;
   const [sel, setSel] = useState(() =>
     Math.max(
@@ -60,12 +66,22 @@ export default function TrackRing({
   );
   // The ring's turn, unwrapped, so going past the last screen keeps turning the same way.
   const [turn, setTurn] = useState(sel);
+  const showTier = (next: TrackTier, id?: WorldId) => {
+    if (next === tier && !id) return;
+    driveSound.tick();
+    const list = trackList().filter((t) => tierOf(t.id) === next);
+    const i = Math.max(0, id ? list.findIndex((t) => t.id === id) : 0);
+    setTier(next);
+    setSel(i);
+    setTurn(i);
+  };
   const maps = useMemo(() => {
-    const big = Object.fromEntries(tracks.map((t) => [t.id, trackMap(t.id, MAP_W, MAP_H)]));
-    const small = Object.fromEntries(tracks.map((t) => [t.id, trackMap(t.id, THUMB_W, THUMB_H)]));
+    const all = trackList();
+    const big = Object.fromEntries(all.map((t) => [t.id, trackMap(t.id, MAP_W, MAP_H)]));
+    const small = Object.fromEntries(all.map((t) => [t.id, trackMap(t.id, THUMB_W, THUMB_H)]));
     return { big, small };
-  }, [tracks]);
-  const t = tracks[sel];
+  }, []);
+  const t = tracks[Math.min(sel, n - 1)];
   const map = maps.big[t.id];
 
   const step = (d: number) => {
@@ -82,10 +98,10 @@ export default function TrackRing({
 
   // Show the chosen world behind once the ring has settled on it.
   useEffect(() => {
-    const id = tracks[sel].id;
+    const id = tracks[Math.min(sel, n - 1)].id;
     const h = window.setTimeout(() => onPick(id), 420);
     return () => window.clearTimeout(h);
-  }, [sel, tracks, onPick]);
+  }, [sel, tracks, onPick, n]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -94,11 +110,13 @@ export default function TrackRing({
       else if (k === 'arrowright' || k === 'd') step(1);
       else if (k === 'enter' || k === ' ') onRace();
       else if (k === 'escape') onClose();
+      else if (k === 'arrowup' || k === 'w') showTier('race');
+      else if (k === 'arrowdown' || k === 's') showTier('dev');
       else {
-        const id = WORLDS.find((x) => x.key === k)?.id;
-        const w = tracks.findIndex((x) => x.id === id);
-        if (w >= 0) goTo(w);
-        else return;
+        const w = WORLDS.find((x) => x.key === k && shown(x.id, found));
+        if (!w) return;
+        if (w.tier !== tier) showTier(w.tier, w.id);
+        else goTo(tracks.findIndex((x) => x.id === w.id));
       }
       e.preventDefault();
       e.stopImmediatePropagation();
@@ -110,7 +128,8 @@ export default function TrackRing({
   // Swipe on touch.
   const [swipe, setSwipe] = useState<number | null>(null);
 
-  const R = 520;
+  // A small ring for a few screens, so they stand close.
+  const R = n < 6 ? 340 : 520;
   const angle = 360 / n;
 
   return (
@@ -419,7 +438,7 @@ export default function TrackRing({
           </button>
         </div>
         <span style={{ fontFamily: mono, fontSize: 10, color: `${quiet}0.35)` }}>
-          ← → choose · enter race · esc close
+          ← → choose · ↑ ↓ racing / in development · enter race · esc close
         </span>
       </div>
 
@@ -438,16 +457,38 @@ export default function TrackRing({
           ‹
         </button>
         <span
-          style={{
-            fontSize: 10,
-            letterSpacing: '0.3em',
-            textTransform: 'uppercase',
-            color: `${quiet}0.4)`,
-            alignSelf: 'center',
-            animation: 'tr-breathe 3s ease-in-out infinite',
-          }}
+          role="tablist"
+          aria-label="Tracks"
+          style={{ display: 'flex', gap: 18, alignSelf: 'center' }}
         >
-          Choose your track
+          {(
+            [
+              ['race', 'Racing'],
+              ['dev', 'In development'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tier === id}
+              onClick={() => showTier(id)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '4px 0',
+                cursor: 'pointer',
+                fontFamily: serif,
+                fontSize: 10,
+                letterSpacing: '0.3em',
+                textTransform: 'uppercase',
+                color: tier === id ? `${quiet}0.85)` : `${quiet}0.35)`,
+                borderBottom: `1px solid ${tier === id ? GOLD : 'transparent'}`,
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </span>
         <button type="button" aria-label="Next track" onClick={() => step(1)} style={arrow}>
           ›
