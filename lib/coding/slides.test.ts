@@ -8,6 +8,8 @@ describe('coding slides', () => {
     expect(isSlideFile('Session5.pdf')).toBe(false);
     expect(isSlideFile('LLMs3.pdf')).toBe(true);
     expect(isSlideFile('LLMs4.pdf')).toBe(false);
+    expect(isSlideFile('Pandas6.pdf')).toBe(true);
+    expect(isSlideFile('Pandas7.pdf')).toBe(false);
     expect(isSlideFile('../other-user/Session1.pdf')).toBe(false);
     expect(isSlideFile('session1.pdf')).toBe(false);
     expect(isSlideFile(42)).toBe(false);

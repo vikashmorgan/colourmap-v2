@@ -46,9 +46,35 @@ No new table. Marks and notes use the Python page's tables through its API, unde
 
 `/pandas` redirects a logged-out visitor to `/login?next=/pandas`. Its card is the first on the School menu, and it sits after Statistics in the Grid's Learn hub and in the Skills branch.
 
+## Status of the sessions (2026-11-25)
+
+| Lecture | Cards | Deck exercises | Notebook questions | Slides |
+| --- | --- | --- | --- | --- |
+| 1 · DataFrames and loading | 14 | 3 | 12 | Pandas1.pdf |
+| 2 · Selecting, filtering and slicing | 17 | 3 | 22 | Pandas2.pdf |
+| 3 · Data quality assessment | 19 | 3 | 10 | Pandas3.pdf |
+| 4 · Data cleaning | 23 | 3 | 30 | Pandas4.pdf |
+| 5 · Data aggregation | 13 | 3 | 10 | Pandas5.pdf |
+| 6 · Data fusion | 14 | 3 | 10 | none yet (Pandas6.pdf) |
+
+## The notebooks, with their solutions (2026-11-25)
+
+Asked for on 2026-11-25:
+
+> "pull the panda classes and notebooks" … "i want u to use all the nbs with the solutions"
+
+- **Session 6, Data fusion**, is new, written from the solution notebook's demo (no deck yet, so its cards have no *Slide* link and `pages: 0`): linked tables and `merge` on a key, rows that grow when a key repeats, `how=` (inner, left, right, outer) and finding the unmatched rows with a left merge and `isna`, a chain of merges with the shape checked at each step, two keys and `suffixes=`, aggregating a repeating table before merging, `concat` for rows (`ignore_index=True`, tagging the source) and for columns (`axis=1`, matched by label), `pivot_table`, `melt`, and the total that a reshape never changes. Every example runs on four tiny tables of its own (orders, customers, items, payments), rerun in pandas 3. It has its picture, three deck-style exercises, a summary of six ideas, a *Fusion* group in the cheat sheet and its calls in the hover glossary.
+- **Session 5** gains one card from its notebook: counting orders, not lines, with `nunique` (and `ngroups`).
+- **A Notebook part in every lecture**, between Practice and Summary. It opens with *The data*: a few words and a small table of what the notebook's dataset looks like (columns, an example value, the size), never the dataset itself. Then each of the teacher's exercises, restated in plain words: the task, and folded under *Open the solution* the solution code, *What each piece means* for that code, and the result in words (the notebook's own numbers, on the full files). Questions have keys `pandas|s{n}|nb-q{k}`, so notes, the notepad's place list and deep links (`#c-6-nb-q3`) reach them.
+- **Copyright.** The notebooks and their CSV, Excel and JSON files stay out of this public repository. The tasks are restated, not copied; only the short solution code is kept.
+- Left out: the notebooks' Part 1 demo cells of Sessions 1 to 4 (the lectures already teach them from the decks), the teacher's printouts of whole tables, and their SQL comments, except where one line helps.
+- The hover glossary gains `merge`, `concat`, `pivot_table`, `melt`, `rename`, the parameters `how=`, `on=`, `suffixes=`, `ignore_index=`, `axis=`, `normalize=`, `sheet_name=`, `record_path=`, and the calls the notebooks use (`ngroups`, `idxmax`, `filter`, `mode`, `abs`, `to_datetime`, `sort_index`, `is_unique`, `.dt.dayofweek`, `.dt.hour`, `.str.title`, `levenshtein_distance`).
+- The upload box files a deck whose name says *aggregation* or *groupby* as `Pandas5.pdf`, and *fusion*, *merge* or *join* as `Pandas6.pdf`.
+- The city (`/pandas/city`) lights Lesson 6 on its own; its fountains stay the three deck exercises.
+
 ## Not yet
 
-- Sessions 3 onwards, when they have happened.
+- Sessions 7 and 8, when they have happened; Session 6's slides.
 
 ## Hover a function, dive deeper from a summary (2026-11-22)
 

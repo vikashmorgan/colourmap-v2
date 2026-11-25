@@ -43,6 +43,7 @@ export const SLIDE_FILES = [
   'Pandas3.pdf',
   'Pandas4.pdf',
   'Pandas5.pdf',
+  'Pandas6.pdf',
   // The LLMs class (/llms): its session decks.
   'LLMs1.pdf',
   'LLMs2.pdf',
