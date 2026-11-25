@@ -9,6 +9,7 @@
 
 import { WORLDS, type WorldId } from '@/lib/art/drive-design';
 import { COAST_GATE, RACE, SKY_LAP } from '@/lib/art/track';
+import { WATER_LAP } from '@/lib/art/water-city';
 
 /** How a track is timed: the measured mile and drift gates, a fixed course, every km, or laps. */
 export type Timing = 'mile' | 'course' | 'km' | 'lap';
@@ -125,6 +126,17 @@ export const TRACKS: Record<WorldId, Omit<TrackInfo, 'id' | 'name'>> = {
     rivals: false,
     highlights: ['Craters', 'Phobos and Deimos', 'Quick, leaning turns'],
     night: false,
+  },
+  water: {
+    colour: '#3cc8d8',
+    tagline: 'The city across the lake, raced',
+    timing: 'lap',
+    runLength: WATER_LAP,
+    endless: false,
+    difficulty: 2,
+    rivals: true,
+    highlights: ['Canals on the water', 'Portals of light', 'The kraken'],
+    night: true,
   },
   gold: {
     colour: '#e2b04a',

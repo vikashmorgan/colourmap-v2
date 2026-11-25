@@ -62,6 +62,7 @@ import {
   voidLeft,
 } from '@/lib/art/track';
 import { underTint } from '@/lib/art/undertown';
+import { onWaterRoad } from '@/lib/art/water-city';
 import type { Weather } from '@/lib/art/weather';
 import { nearTwist, STRAIGHT } from '@/lib/art/wreck';
 import { ctSignMaterial, SignBuilder } from './chinatown-signs';
@@ -361,6 +362,13 @@ function groundColour(cfg: WorldCfg, s: number, u: number, half: number, snow: n
     ) as V3;
     if (out > 0)
       c = lin(0.5 + 0.08 * n, 0.27 + 0.05 * n, 0.17 + 0.03 * n).map((v) => v * 0.9) as V3;
+  } else if (cfg.id === 'water') {
+    // Water City (lib/art/water-city.ts): dark wet teal decks; where the road is the water itself,
+    // near-black deep blue so the water's light reads round it (the gold edge lines mark the way).
+    const wet = onWaterRoad(s);
+    c = (wet ? [0.012, 0.03, 0.045] : [0.035, 0.07, 0.085]).map((v) => v * (0.9 + 0.2 * n)) as V3;
+    if (Math.abs(u) > half - 2.5 && out <= 0) c = c.map((v) => v * 1.4) as V3;
+    if (out > 0) c = [0.006, 0.016, 0.024];
   } else if (cfg.id === 'canyon') {
     // Packed salt, worn darker where the wheels run; the salt flat beside it.
     const rut = Math.exp(-(((Math.abs(u) - 3) / 1.4) ** 2));
@@ -796,7 +804,9 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
           ? { edge: [1.6, 1.1, 0.45], dash: [0.62, 0.42, 1.2] }
           : theme === 'neon'
             ? { edge: [0.3, 1.3, 1.6], dash: [1.2, 0.3, 1.1] }
-            : { edge: [0.55, 0.85, 1.4], dash: [0.5, 0.55, 0.65] };
+            : theme === 'water'
+              ? { edge: [1.6, 1.05, 0.4], dash: [0.3, 1.1, 1.3] }
+              : { edge: [0.55, 0.85, 1.4], dash: [0.5, 0.55, 0.65] };
   function markings(
     s0: number,
     s1: number,

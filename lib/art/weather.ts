@@ -186,6 +186,7 @@ export const WORLD_MOTES: Record<WorldId, Rgb> = {
   neon: [0.75, 0.6, 1],
   sky: [0.85, 0.5, 0.32],
   symphony: [1, 0.85, 0.5],
+  water: [0.55, 0.8, 0.9],
 };
 
 export function moteColour(w: Weather, world: WorldId): Rgb {

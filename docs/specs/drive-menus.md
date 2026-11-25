@@ -227,31 +227,19 @@ Esc goes back one step; in a race it pauses.
 
 ## Found tracks (2026-11-25)
 
-
-
 Asked: "BUT IT IS ALL THE SAME WORLD. SO WE BUILD IT AS RACETRACKS THAT KEEP ON EXPANDING… THE MORE U
-
 KNOW THE MORE U DISCOVER." Some tracks are found in another world rather than given
-
 (`lib/art/drive-unlocks.ts`, `SECRET_TRACKS`):
-
-
-
 - **Water City** is found through the seven portals of light on the lake behind Chinatown Run's
-
   start (docs/specs/drive-tracks.md, "The lake behind the start").
-
 - Until found, a secret track is in no menu, no ring and no number key; nothing hints at it.
-
 - Found, it is remembered on this device (`drive.found`, a list of track ids; storage that fails or
-
   holds rubbish reads as nothing found) and joins the ring, the menu's Tracks and the keys from
-
   then on. The moment it is found its name comes up over the picture, quietly (the ZoneTitle card,
-
   水城 · found · now in the ring).
-
-
+- Found, Water City is also reached from the lake: its far gate stands lit on the water and drives
+  you on into it (docs/specs/drive-tracks.md, "Water City").
+- A link to a secret track (`?world=water`) before it is found opens the ring as usual.
 
 ## Data
 

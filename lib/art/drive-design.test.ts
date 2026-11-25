@@ -36,7 +36,7 @@ function memory(): Store & { data: Map<string, string> } {
 }
 
 describe('worlds', () => {
-  it('lists the ten worlds on keys 1 to 9 and 0, the racing tracks first', () => {
+  it('lists the ten worlds on keys 1 to 9 and 0, the racing tracks first, then Water City (found)', () => {
     expect(WORLDS.map((w) => `${w.key} ${w.name} ${w.tier}`)).toEqual([
       '1 Golden Track race',
       '2 Chinatown Run race',
@@ -48,6 +48,7 @@ describe('worlds', () => {
       '8 Night Rain dev',
       '9 Coast Road dev',
       '0 Salt Flat dev',
+      '- Water City dev',
     ]);
     expect(tierOf('chinatown')).toBe('race');
     expect(tierOf('symphony')).toBe('dev');

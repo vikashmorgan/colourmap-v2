@@ -245,6 +245,9 @@ Lanterns, lanes and avenues.
       - **Back.** Drive up the slipway the street's way and you are on Chinatown Run at its start;
         the portals go dark and the kraken sleeps for your next visit. The rivals and the autopilot
         never turn round.
+      - **The far gate.** Once Water City is found, a great gold ring 16 m round stands on the water
+        160 m short of the far shore (`FAR_GATE`). Through it you drive on into Water City, the same
+        world carried on (the HUD's world changes with you; the ring remembers it as your last track).
       - Not built yet: rain on the street itself; the portals as a timed run.
 - [x] **Smooth banked edges** (2026-11-25, after the side roads: "the street's banked edge has a
       sharp kink on the tilt stretches … a car crossing there (and at the alley's ends) gets
@@ -454,6 +457,40 @@ Lanterns, lanes and avenues.
         that runs back the other way under itself and then comes up on top again would meet the
         stretch you just drove (topologically it closes into a band), so it needs a second deck,
         a separate road. That is a bigger change to the track format.
+
+## 10. Water City (`water`, found)
+
+Asked 2026-11-25: "A WHOLE WATER CITY RACING TRACK UNLOCKS", "BUT IT IS ALL THE SAME WORLD. SO WE
+BUILD IT AS RACETRACKS THAT KEEP ON EXPANDING". Found through the seven portals on the lake behind
+Chinatown Run's start (above); hidden from every menu until then (docs/specs/drive-menus.md, "Found
+tracks"). Key `-`. `lib/art/water-city.ts` (pure, tested), `components/drive/water-city-view.ts`,
+the water's shared pieces in `components/drive/water-parts.ts`.
+
+- [x] **The lap**: one 10 km lap (`WATER_LAP`), raced lap after lap (the `lap` race now takes each
+      track's own lap length). Shaped as an arc: net heading nil, never more than 70° off its way;
+      every bend eases in and out, the home bend squares it.
+  - 0–1.6 km **the piers**: a calm deck 3 m over the water, gold lamps on its rails, columns down
+    to the water; level on the grid, the bank easing in from 120 m.
+  - 1.6–3.4 km **the canals**: the road is the water itself between the towers standing in it
+    (teal, deep blue, aqua and gold lights, mirrored under the surface); two portals of light.
+  - 3.4–5 km **the bridges**: up onto a deck 4 m over the water, over two arches (11 m and 8 m),
+    the banked sweepers.
+  - 5–7.3 km **the open lake**: back down on the water, 36 m wide, heavy rain, seven portals of
+    light in a row, sharks breaching beside the road, the kraken at two lairs: its arching pair
+    rise either side and meet over the road, the slammer strikes where you were 0.9 s before.
+  - 7.3–8.7 km **the grand canal**: a deck between the tallest towers (to 190 m), a last portal.
+  - 8.7–10 km **the piers home**.
+- [x] **On the water**: the tyres find 70 % of their grip (`WATER_ROAD_GRIP`); spray streams off
+      the car, rings spread behind it; walls of light 1.6 m past each edge hold you.
+- [x] **Smooth**: heights ease between keys (smootherstep) and the arches are squared cosine
+      bumps: at 300 km/h no rise asks more than half of gravity. The bank (design speed 50 m/s, at
+      most 0.42 rad) saturates smoothly as Chinatown's does.
+- [x] **Portals of light** (`WATER_PORTALS`): through one, the boost rings' surge.
+- [x] **Rain** (`rainAt`) over the canals, the open lake and (lighter) the grand canal, easing in
+      and out over 200 m; the storm's fog and light close in with it.
+- [x] Palette: deep blue and teal with gold lights (`WATER_LIGHTS`, gold edge lines, teal dashes).
+- [x] The autopilot laps it flat out held on the road (tested); the rivals race it.
+- Not built yet: a lap record board of its own; the portals lit as you pass (they glint at random).
 
 ## 6. Neon District (`neon`)
 

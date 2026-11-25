@@ -17,7 +17,8 @@ export type WorldId =
   | 'sky'
   | 'mars'
   | 'gold'
-  | 'symphony';
+  | 'symphony'
+  | 'water';
 
 /** Where a track stands in the menus: the racing tracks, or still being worked on (2026-11-25:
  * "map what are the good tracks and the secondary ones put them as tracks in development as a
@@ -40,6 +41,9 @@ export const WORLDS: { id: WorldId; name: string; key: string; tier: TrackTier }
   { id: 'night', name: 'Night Rain', key: '8', tier: 'dev' },
   { id: 'coast', name: 'Coast Road', key: '9', tier: 'dev' },
   { id: 'salt', name: 'Salt Flat', key: '0', tier: 'dev' },
+  // 2026-11-25: found, not given: through the portals on the lake behind Chinatown Run's start
+  // (lib/art/drive-unlocks.ts). Hidden from the menus until then; no clash with the digits.
+  { id: 'water', name: 'Water City', key: '-', tier: 'dev' },
 ];
 
 /** A track's place in the menus. */
@@ -371,6 +375,7 @@ export const DEFAULT_DESIGN: Design = {
     mars: 'ship',
     gold: 'ship',
     symphony: 'ship',
+    water: 'ship',
   },
 };
 

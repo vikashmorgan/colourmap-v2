@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  FAR_GATE,
+  farGateThrough,
   KRAKEN,
   krakenRise,
   LAKE,
@@ -132,6 +134,17 @@ describe('the portals of light (2026-11-25: "PORTALS OF LIGHT ON THE LAKE")', ()
     run = stepLakeRun(run, PORTALS_NEEDED - 1);
     expect(run.found).toBe(true);
     expect(stepLakeRun(run, -1)).toBe(run);
+  });
+});
+
+describe('the far shore gate (2026-11-25: "also reachable via the lake")', () => {
+  it('stands on the water before Water City; through it either way, not round it', () => {
+    expect(onLake(FAR_GATE.S, 0)).toBe(true);
+    expect(FAR_GATE.S).toBeLessThan(PORTALS[PORTALS.length - 1][0]);
+    expect(farGateThrough(FAR_GATE.S + 2, 0, FAR_GATE.S - 2, 3)).toBe(true);
+    expect(farGateThrough(FAR_GATE.S - 2, 0, FAR_GATE.S + 2, 0)).toBe(true);
+    expect(farGateThrough(FAR_GATE.S + 2, 40, FAR_GATE.S - 2, 40)).toBe(false);
+    expect(farGateThrough(FAR_GATE.S + 10, 0, FAR_GATE.S + 2, 0)).toBe(false);
   });
 });
 

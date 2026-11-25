@@ -9,6 +9,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { type TrackTier, tierOf, WORLDS, type WorldId } from '@/lib/art/drive-design';
+import { shown } from '@/lib/art/drive-unlocks';
 import { WORLD_CFG } from '@/lib/art/drive-worlds';
 import { trackMap } from '@/lib/art/track-map';
 import { runLabel, trackList } from '@/lib/art/track-registry';
@@ -34,6 +35,8 @@ export interface TrackRingProps {
   onDesign?: () => void;
   /** Your best on a track, as shown in the HUD, or null. */
   best?: (id: WorldId) => string | null;
+  /** The secret tracks found on this device (lib/art/drive-unlocks.ts): only those show. */
+  found?: readonly string[];
 }
 
 export default function TrackRing({
@@ -43,10 +46,17 @@ export default function TrackRing({
   onClose,
   onDesign,
   best,
+  found = [],
 }: TrackRingProps) {
-  // The racing tracks, or the ones still in development: two rings, one at a time.
+  // The racing tracks, or the ones still in development: two rings, one at a time. A secret track
+  // only once found on this device (lib/art/drive-unlocks.ts).
   const [tier, setTier] = useState<TrackTier>(() => tierOf(current));
-  const tracks = useMemo(() => trackList().filter((t) => tierOf(t.id) === tier), [tier]);
+  const foundKey = found.join(',');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the found list's contents, by key.
+  const tracks = useMemo(
+    () => trackList().filter((t) => tierOf(t.id) === tier && shown(t.id, found)),
+    [tier, foundKey],
+  );
   const n = tracks.length;
   const [sel, setSel] = useState(() =>
     Math.max(
@@ -103,7 +113,7 @@ export default function TrackRing({
       else if (k === 'arrowup' || k === 'w') showTier('race');
       else if (k === 'arrowdown' || k === 's') showTier('dev');
       else {
-        const w = WORLDS.find((x) => x.key === k);
+        const w = WORLDS.find((x) => x.key === k && shown(x.id, found));
         if (!w) return;
         if (w.tier !== tier) showTier(w.tier, w.id);
         else goTo(tracks.findIndex((x) => x.id === w.id));
