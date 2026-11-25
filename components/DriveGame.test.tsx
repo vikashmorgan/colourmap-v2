@@ -19,6 +19,7 @@ const engine = {
   start: vi.fn(),
   dispose: vi.fn(),
   setAutopilot: vi.fn(),
+  setTitleShot: vi.fn(),
   stop: vi.fn(),
   where: vi.fn(() => null),
   stage3d: new Scene(),
@@ -339,9 +340,14 @@ describe('Drive', () => {
     render(<DriveGame />);
     expect(screen.getByTestId('title-screen').textContent).toContain('Colour Drive');
     expect(screen.queryByTestId('track-ring')).toBeNull();
-    expect(engine.setPreview).toHaveBeenLastCalledWith(true);
+    // Behind the title the Golden Track drives itself in the hover ship.
+    expect(engine.setPreview).toHaveBeenLastCalledWith(false);
+    expect(engine.setWorld).toHaveBeenCalledWith('gold');
+    expect(engine.setTitleShot).toHaveBeenLastCalledWith(true);
     fireEvent.keyDown(window, { key: 'x' });
     expect(screen.queryByTestId('title-screen')).toBeNull();
+    expect(engine.setTitleShot).toHaveBeenLastCalledWith(false);
+    expect(engine.setWorld).toHaveBeenLastCalledWith('neon');
     expect(screen.getByRole('button', { name: 'Neon District' }).getAttribute('aria-current')).toBe(
       'true',
     );

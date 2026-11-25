@@ -148,10 +148,11 @@ describe('ship parts', () => {
 });
 
 describe('rivals', () => {
-  it('are off by default and kept as stored', () => {
-    expect(DEFAULT_DESIGN.rivals).toBe(false);
+  it('are on by default and kept as stored', () => {
+    expect(DEFAULT_DESIGN.rivals).toBe(true);
     expect(parseDesign('{"rivals":true}', IDS).rivals).toBe(true);
-    expect(parseDesign('{"rivals":"yes"}', IDS).rivals).toBe(false);
+    expect(parseDesign('{"rivals":false}', IDS).rivals).toBe(false);
+    expect(parseDesign('{"rivals":"yes"}', IDS).rivals).toBe(true);
   });
 });
 
@@ -170,8 +171,8 @@ describe('the design, remembered', () => {
     expect(DEFAULT_DESIGN.vehicle.coast).toBe('ship');
   });
 
-  it('leaves walls of light behind by default, and offers the light cycle', () => {
-    expect(DEFAULT_DESIGN.trail).toBe(true);
+  it('leaves no wall of light behind by default, and offers the light cycle', () => {
+    expect(DEFAULT_DESIGN.trail).toBe(false);
     expect(BODIES.map((b) => b.id)).toContain('cycle');
   });
 
