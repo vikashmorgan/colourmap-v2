@@ -26,7 +26,7 @@ describe('/pandas class page', () => {
     expect(response.headers.get('location')).toBe('http://localhost/login?next=%2Fpandas');
   });
 
-  it('serves the three sessions to a signed-in user, uncached', async () => {
+  it('serves the six sessions to a signed-in user, uncached', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
 
     const response = await GET(request());
@@ -39,6 +39,10 @@ describe('/pandas class page', () => {
     expect(html).toContain("{ n: 1, pages: 37, short: 'DataFrames & loading'");
     expect(html).toContain("{ n: 2, pages: 51, short: 'Selecting, filtering & slicing'");
     expect(html).toContain("{ n: 3, pages: 42, short: 'Data quality'");
+    expect(html).toContain("{ n: 4, pages: 63, short: 'Data cleaning'");
+    expect(html).toContain("{ n: 5, pages: 24, short: 'Data aggregation'");
+    // Session 6 has no deck yet: its cards carry no slide.
+    expect(html).toContain("{ n: 6, pages: 0, short: 'Data fusion'");
     // Marks and notes share the coding API, kept apart by their pandas| keys.
     expect(html).toContain("const MARKS_URL = '/api/coding/marks';");
     expect(html).toContain("const mine = k => k.startsWith('pandas|');");
@@ -78,15 +82,71 @@ describe('/pandas class page', () => {
     const html = await (await GET(request())).text();
 
     expect(html).toContain(
-      "const DECK_FILES = ['Pandas1.pdf', 'Pandas2.pdf', 'Pandas3.pdf', 'Pandas4.pdf', 'Pandas5.pdf'];",
+      "const DECK_FILES = ['Pandas1.pdf', 'Pandas2.pdf', 'Pandas3.pdf', 'Pandas4.pdf', 'Pandas5.pdf', 'Pandas6.pdf'];",
     );
     expect(html).toContain("if (/dataframe/i.test(name)) return 'Pandas1.pdf';");
     expect(html).toContain("if (/selecting|filtering|slicing/i.test(name)) return 'Pandas2.pdf';");
     expect(html).toContain("if (/quality/i.test(name)) return 'Pandas3.pdf';");
     expect(html).toContain("if (/cleaning/i.test(name)) return 'Pandas4.pdf';");
-    expect(html).toContain("if (/aggregat/i.test(name)) return 'Pandas5.pdf';");
+    expect(html).toContain("if (/aggregat|groupby/i.test(name)) return 'Pandas5.pdf';");
+    expect(html).toContain("if (/fusion|merg|join/i.test(name)) return 'Pandas6.pdf';");
     expect(html).toContain(`/api/coding/slides/Pandas\${s.n}.pdf#page=\${c.slide}`);
   });
+  it('gives every session the notebook exercises with their solutions, folded until opened', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
+
+    const html = await (await GET(request())).text();
+    const sessions = [...html.matchAll(/^ {2}\{ n: (\d+), pages:/gm)].map((m) => Number(m[1]));
+    expect(sessions).toEqual([1, 2, 3, 4, 5, 6]);
+
+    const start = html.indexOf('const NOTEBOOKS = {');
+    expect(start).toBeGreaterThan(0);
+    const body = html.slice(start, html.indexOf('\n};\n', start));
+    const sets = [...body.matchAll(/^ {2}(\d+): \{ about: /gm)];
+    expect(sets.map((m) => Number(m[1]))).toEqual(sessions);
+    // Each set: its questions, each with the task, the solution code, its pieces and the result.
+    const counts = sets.map((m, i) => {
+      const chunk = body.slice(m.index, sets[i + 1]?.index ?? body.length);
+      const qs = [...chunk.matchAll(/\{ id: 'q\d+', title: '[^']+', task: '/g)].length;
+      expect([...chunk.matchAll(/, parts: \[\[/g)].length).toBe(qs);
+      expect([...chunk.matchAll(/\], out: '/g)].length).toBe(qs);
+      return qs;
+    });
+    expect(counts).toEqual([12, 22, 10, 30, 10, 10]);
+
+    // A Notebook part between Practice and Summary; the solution waits in a closed fold.
+    expect(html).toContain('function notebookHtml(s)');
+    expect(html).toContain('data-seg="notebook"');
+    expect(html).toContain('<details class="pq sol"><summary><span>Solution</span></summary>');
+    expect(html).toContain("{ key: 'notebook', name: 'Notebook'");
+    // Notes and deep links reach each question.
+    expect(html).toContain(`key: cardKey(s.n, \`nb-\${q.id}\`)`);
+  });
+
+  it('teaches data fusion in Session 6, with its calls in the cheat sheet and the hover glossary', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
+
+    const html = await (await GET(request())).text();
+
+    for (const id of [
+      'merge',
+      'how',
+      'unmatched',
+      'repeats',
+      'two-keys6',
+      'concat-rows',
+      'concat-cols',
+      'pivot',
+      'melt',
+    ])
+      expect(html).toContain(`{ id: '${id}', name: `);
+    expect(html).toContain("{ name: 'Fusion', items: [");
+    expect(html).toContain("['pivot_table', 'Long to wide");
+    expect(html).toContain('  6: () => `<p class="pic-lede"><b>One question, several tables.');
+    for (const fn of ['merge', 'concat', 'pivot_table', 'melt', 'suffixes', 'ignore_index'])
+      expect(html).toContain(`    ${fn}: ['`);
+  });
+
   it('mirrors each summary at the start, and has the Timer window and the notes cahier', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
 

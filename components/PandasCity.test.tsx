@@ -49,15 +49,15 @@ describe('PandasCity', () => {
     vi.unstubAllGlobals();
   });
 
-  it('draws the region: the plaza, 5 lit cities, 3 plots to come, and reads marks without writing any', async () => {
+  it('draws the region: the plaza, 6 lit cities, 2 plots to come, and reads marks without writing any', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({ marks: { 'pandas|s3|nan': 'got', 'stats|x': 'got' } }),
     });
     const { container } = render(<PandasCity lessons={lessons} />);
     expect(hit(container, 'plaza')).toBeTruthy();
-    expect(container.querySelectorAll('[data-hit^="heart:"]')).toHaveLength(5);
-    expect(screen.getByText('Lesson 6 · to come')).toBeTruthy();
+    expect(container.querySelectorAll('[data-hit^="heart:"]')).toHaveLength(6);
+    expect(screen.getByText('Lesson 7 · to come')).toBeTruthy();
     expect(screen.getByText('Lesson 8 · to come')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Core' }).getAttribute('aria-pressed')).toBe('true');
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/coding/marks'));
@@ -98,7 +98,7 @@ describe('PandasCity', () => {
     const { container } = render(<PandasCity lessons={lessons} />);
     zoomIn(container);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    expect(container.querySelectorAll('[data-hit^="building:"]').length).toBe(85);
+    expect(container.querySelectorAll('[data-hit^="building:"]').length).toBe(100);
     expect(container.querySelector('[data-lit="full"]')).toBeNull();
     expect(container.querySelector('[data-lit="none"]')).toBeTruthy();
   });
@@ -111,8 +111,8 @@ describe('PandasCity', () => {
     expect(box.textContent).toContain('Data quality assessment');
     expect(box.textContent).toContain('Assess before you clean: today no line changes df.');
     expect(screen.getByRole('button', { name: 'Enter the city' })).toBeTruthy();
-    tap(hit(container, 'city:6'));
-    expect(screen.getByRole('dialog', { name: 'Lesson 6' }).textContent).toContain('to come');
+    tap(hit(container, 'city:7'));
+    expect(screen.getByRole('dialog', { name: 'Lesson 7' }).textContent).toContain('to come');
   });
 
   it('stacks sheets by depth: part, card, More; back and Esc pop one level', () => {

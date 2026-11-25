@@ -258,6 +258,12 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .pq > summary::-webkit-details-marker { display: none; }
   .pq > summary::after { content: 'Answer ▸'; margin-left: auto; font: 600 12.5px system-ui, sans-serif; color: var(--accent); white-space: nowrap; }
   .pq[open] > summary::after { content: 'Hide ▾'; }
+  .pq.sol > summary::after { content: 'Open the solution ▸'; }
+  .pq.sol[open] > summary::after { content: 'Hide ▾'; }
+  .nb-data { display: grid; gap: 8px; margin-bottom: 4px; }
+  .nb-data .out-head { margin: 0; }
+  .nb-out { margin: 0; }
+  .nb-out b { display: block; font: 600 12px system-ui, sans-serif; color: var(--ochre); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
   .pq[open] > summary { margin-bottom: 10px; }
   .pq .ans { display: grid; gap: 8px; }
   .out-head { font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
@@ -802,6 +808,11 @@ const fourMoves = () => tbl(['Move', 'pandas', 'When'], [['Drop', 'dropna(), df[
 /* ---------- The course, in plain words ----------
  * Written from the lecture decks; the slides themselves stay private.
  * Every result was rerun in pandas 3. */
+// Lecture 6: four linked tables. Order 4 has no item; the chair's order 5 is not in orders.
+const f6orders = () => cap('orders') + tbl(['order_id', 'customer_id', 'status', 'month'], [['1', 'c1', 'delivered', '2018-01'], ['2', 'c2', 'delivered', '2018-01'], ['3', 'c1', 'canceled', '2018-02'], ['*4', 'c3', 'unavailable', '2018-02']]);
+const f6customers = () => cap('customers') + tbl(['customer_id', 'state'], [['c1', 'SP'], ['c2', 'RJ'], ['c3', 'SP']]);
+const f6items = () => cap('items') + tbl(['order_id', 'product', 'price'], [['1', 'lamp', '50'], ['1', 'mug', '10'], ['2', 'desk', '200'], ['3', 'mug', '10'], ['*5', 'chair', '80']]);
+const f6payments = () => cap('payments') + tbl(['order_id', 'type', 'value'], [['*1', 'voucher', '20'], ['*1', 'card', '40'], ['2', 'card', '200'], ['3', 'card', '10']]);
 const SESSIONS = [
   { n: 1, pages: 37, short: 'DataFrames & loading', title: 'DataFrames and loading data', lede: 'From a raw file to a table you can trust: what a DataFrame is, the three arguments that make a load right, and the six calls to run before changing anything.', groups: [
     { name: 'Why prepare data', flowLabel: 'The path of every dataset', flow: ['Raw file', 'Load', 'Profile', 'Clean', 'Use: chart or model'], cards: [
@@ -1257,6 +1268,10 @@ g["total"].count()    # 3, 2, 1
 g.size()              # 3, 2, 1`, more: { html: () => tbl(['g["total"]…', 'France', 'Italy', 'Spain'], [['.sum()', '60', '110', '40'], ['.mean()', '20.0', '55.0', '40.0'], ['.median()', '20.0', '55.0', '40.0'], ['.min() / .max()', '10 / 30', '40 / 70', '40 / 40'], ['.count()', '3', '2', '1'], ['g.size()', '3', '2', '1']]) } },
       { id: 'two-keys', slide: 7, name: 'Two keys give one row per combination', what: 'Pass a list of columns: one group for each (country, channel) pair that exists. Spain has no shop order, so (Spain, shop) is not a group and gets no row.\n\nThe result has two index levels, a MultiIndex.', f: `orders.groupby(["country", "channel"])["total"].sum()
 # SQL: ... GROUP BY country, channel`, more: { html: () => tbl(['country', 'channel', 'total'], [['France', 'shop', '10'], ['', 'web', '50'], ['Italy', 'shop', '40'], ['', 'web', '70'], ['Spain', 'web', '40']]) } },
+      { id: 'nunique', name: 'Count orders, not lines: nunique', what: 'In a real shop table one row is often one order line, a product in an order, so an order_id can appear on several rows. count() counts lines. To count orders, count the distinct ids: nunique.\n\n`g.ngroups` says how many groups the split made. In the six orders each id appears once, so both counts give 3, 2, 1; on the notebook’s 9,994 lines they differ.', f: `g.ngroups                  # 3 countries
+g["order_id"].count()      # lines per group
+g["order_id"].nunique()    # distinct orders per group
+# SQL: COUNT(DISTINCT order_id)` },
     ] },
     { name: 'Aggregating with agg', cards: [
       { id: 'agg-list', slide: 9, name: 'A list in agg gives several statistics at once', what: 'One call, one column per function, named after the function.\n\nRead it: Italy has fewer orders than France, but almost twice the revenue.', f: `orders.groupby("country")["total"].agg(
@@ -1314,8 +1329,471 @@ pd.crosstab(orders["country"], orders["channel"], normalize="index")`, more: { h
 # South       1     1`) + `<p>crosstab shows the 0 that groupby leaves out.</p>`],
     ] },
   ], recap: ['Aggregation: many rows in, one number per group out.', 'groupby only splits; a function on a column applies and combines, one row per group, keys sorted in the index.', 'count() skips NaN, size() counts every row.', 'A list of keys gives one row per combination that exists: a MultiIndex.', 'agg: a list for several statistics, named aggregation for clean names, a lambda for anything custom.', 'transform keeps every row: the group value next to each row, to compare.', 'value_counts counts one column, crosstab two; decide the shape first: one row per group, or one value per row.'] },
+  { n: 6, pages: 0, short: 'Data fusion', title: 'Data fusion', lede: 'One question, several tables. merge matches rows on a key and adds columns, concat stacks tables and adds rows, pivot_table and melt change the shape. Print the shape before and after every step.', groups: [
+    { name: 'Linked tables and merge', flowLabel: 'Every merge', flow: ['Shape before', 'merge on the key', 'Shape after: the one you expected?'], cards: [
+      { id: 'tables6', name: 'Four small tables, linked by keys', what: 'A marketplace keeps one table per thing: orders, customers, items, payments. Key columns link them: customer_id joins an order to its customer, order_id joins an order to its items and to its payments.\n\nEvery example uses these four. Order 4 has no item. The chair belongs to order 5, which is not in orders. Order 1 has two items and was paid in two parts.', f: `orders = pd.DataFrame({"order_id": [1, 2, 3, 4],
+    "customer_id": ["c1", "c2", "c1", "c3"],
+    "status": ["delivered", "delivered", "canceled", "unavailable"],
+    "month": ["2018-01", "2018-01", "2018-02", "2018-02"]})
+customers = pd.DataFrame({"customer_id": ["c1", "c2", "c3"],
+                          "state": ["SP", "RJ", "SP"]})
+items = pd.DataFrame({"order_id": [1, 1, 2, 3, 5],
+    "product": ["lamp", "mug", "desk", "mug", "chair"],
+    "price": [50, 10, 200, 10, 80]})
+payments = pd.DataFrame({"order_id": [1, 1, 2, 3],
+    "type": ["voucher", "card", "card", "card"], "value": [20, 40, 200, 10]})`, more: { html: () => row(f6orders(), f6customers()) + row(f6items(), f6payments()) } },
+      { id: 'merge', name: 'merge matches rows on a key: more columns, same orders', what: '`pd.merge(orders, customers, on="customer_id")` looks up the customer of each order and adds its columns. Each order has exactly one customer, so the rows stay at 4 and the columns grow from 4 to 5.\n\nThe key column appears once. Without `on=`, pandas joins on every column the two tables share: say which one you mean.', f: `print(orders.shape, customers.shape)   # (4, 4) (3, 2)
+oc = pd.merge(orders, customers, on="customer_id")
+print(oc.shape)                        # (4, 5)
+# SQL: SELECT * FROM orders JOIN customers USING (customer_id)`, more: { html: () => cap('oc: each order with its customer’s state') + tbl(['', 'order_id', 'customer_id', 'status', 'month', 'state'], [['0', '1', 'c1', 'delivered', '2018-01', '*SP'], ['1', '2', 'c2', 'delivered', '2018-01', '*RJ'], ['2', '3', 'c1', 'canceled', '2018-02', '*SP'], ['3', '4', 'c3', 'unavailable', '2018-02', '*SP']]) } },
+      { id: 'grow', name: 'One order, several items: the rows grow', what: 'items repeats order_id: order 1 holds a lamp and a mug. A merge gives one row per matching pair, so order 1 appears twice and its status is copied onto both rows.\n\nThat is right, not a bug: the table now has one row per item. Count orders with `nunique()`, not with `len()`.', f: `m = pd.merge(orders, items, on="order_id")
+m.shape                   # (4, 6): order 1 twice, order 4 gone
+m["order_id"].nunique()   # 3 orders`, watch: 'When the row count grows and you did not expect it, the key repeats on one side. Check it before merging: df["order_id"].duplicated().any().' },
+    ] },
+    { name: 'how= decides the unmatched rows', cards: [
+      { id: 'how', name: 'inner, left, right, outer: who keeps the rows without a partner', what: 'inner keeps only the pairs that match: order 4 and the chair disappear. left keeps every order: order 4 stays, with NaN for product and price. right keeps every item: the chair stays, with NaN for status. outer keeps everything.\n\nThe default is inner, so a merge can lose rows without a word.', f: `pd.merge(orders, items, on="order_id", how="inner")   # 4 rows
+pd.merge(orders, items, on="order_id", how="left")    # 5: + order 4
+pd.merge(orders, items, on="order_id", how="right")   # 5: + the chair
+pd.merge(orders, items, on="order_id", how="outer")   # 6: both
+# SQL: JOIN, LEFT JOIN, RIGHT JOIN, FULL OUTER JOIN`, more: { html: () => cap('how="outer": 6 rows; NaN marks the side with no partner') + tbl(['', 'order_id', 'status', 'product', 'price'], [['0', '1', 'delivered', 'lamp', '50.0'], ['1', '1', 'delivered', 'mug', '10.0'], ['2', '2', 'delivered', 'desk', '200.0'], ['3', '3', 'canceled', 'mug', '10.0'], ['4', '4', 'unavailable', '*NaN', '*NaN'], ['5', '5', '*NaN', 'chair', '80.0']]) + tbl(['how=', 'keeps', 'rows'], [['inner', 'pairs that match', '4'], ['left', 'every order', '5'], ['right', 'every item', '5'], ['outer', 'everything', '6']]) } },
+      { id: 'unmatched', name: 'Find what did not match: a left merge, then isna', what: 'After a left merge, the rows with no partner have NaN in the columns of the right table. Filter them with `isna()`: order 4 has no item, and its status, unavailable, says why.\n\nThe same move finds the categories missing from a translation table, or the customers who never ordered.', f: `left = pd.merge(orders, items, on="order_id", how="left")
+empty = left[left["product"].isna()]
+empty[["order_id", "status"]]          # 4, unavailable
+# SQL: ... LEFT JOIN items i ... WHERE i.product IS NULL` },
+      { id: 'chain', name: 'A chain of merges, the shape checked at every step', what: 'To build one analytical table, start from the finest table, one row per item, and add the others one at a time. Use how="left" when the other table may miss a key, so no item is lost.\n\nAfter each merge the rows must stay at the number of items: 5. The chair keeps its row, with NaN for its order and its state.', f: `sales = pd.merge(items, orders, on="order_id", how="left")
+print(sales.shape)   # (5, 6): still 5 items
+sales = pd.merge(sales, customers, on="customer_id", how="left")
+print(sales.shape)   # (5, 7)` },
+    ] },
+    { name: 'Two keys, suffixes and repeats', cards: [
+      { id: 'two-keys6', name: 'Two keys and suffixes: two years side by side', what: 'Revenue per (month, state), one table for 2017 and one for 2018. Merge on both keys: a row matches only when month and state are both equal.\n\nBoth tables have a revenue column, so pandas renames them revenue_x and revenue_y. `suffixes=("_2017", "_2018")` gives names that say what they are. With how="outer", a pair present in one year only stays, with NaN in the other.', f: `r17 = pd.DataFrame({"month": [1, 1, 2], "state": ["SP", "RJ", "SP"],
+                    "revenue": [100, 40, 120]})
+r18 = pd.DataFrame({"month": [1, 2, 2], "state": ["SP", "SP", "RJ"],
+                    "revenue": [300, 310, 60]})
+pd.merge(r17, r18, on=["month", "state"])   # revenue_x, revenue_y
+pd.merge(r17, r18, on=["month", "state"], how="outer",
+         suffixes=("_2017", "_2018"))`, more: { html: () => cap('how="outer", suffixes=("_2017", "_2018")') + tbl(['', 'month', 'state', 'revenue_2017', 'revenue_2018'], [['0', '1', 'RJ', '40.0', '*NaN'], ['1', '1', 'SP', '100.0', '300.0'], ['2', '2', 'RJ', '*NaN', '60.0'], ['3', '2', 'SP', '120.0', '310.0']]) }, watch: 'When the key has a different name in each table, rename one first: .rename(columns={"seller_state": "state"}).' },
+      { id: 'repeats', name: 'Repeats after a merge: aggregate first, then merge', what: 'payments repeats order_id: order 1 was paid with a voucher and a card. orders merged with payments gives 4 rows for 3 paid orders.\n\nThe two rows of order 1 are not exact copies: they are two real payments. Do not drop them. Sum them per order first, one row per order, then merge.', f: `op = pd.merge(orders, payments, on="order_id")
+op["order_id"].duplicated().sum()   # 1: order 1 twice
+op.duplicated().sum()               # 0: real payments, not copies
+paid = (payments.groupby("order_id")
+                .agg(paid=("value", "sum")).reset_index())
+pd.merge(orders, paid, on="order_id").shape   # (3, 5): one row per order`, more: { html: () => row(cap('paid: one row per order') + tbl(['', 'order_id', 'paid'], [['0', '1', '*60'], ['1', '2', '200'], ['2', '3', '10']])) }, watch: 'Any column of orders summed over op counts order 1 twice. Aggregate the repeating table before the merge, not after.' },
+    ] },
+    { name: 'concat: more rows or more columns', cards: [
+      { id: 'concat-rows', name: 'concat stacks tables with the same columns: more rows', what: 'Monthly exports share their columns. `pd.concat([jan, feb])` puts feb under jan. Each file brings its own index 0, 1…, so labels repeat: `ignore_index=True` numbers the rows again.\n\nCheck it: the rows of the result are the sum of the parts.', f: `jan = pd.DataFrame({"order_id": [1, 2], "customer_id": ["c1", "c2"]})
+feb = pd.DataFrame({"order_id": [3, 4], "customer_id": ["c1", "c3"]})
+pd.concat([jan, feb]).index.is_unique   # False: 0, 1, 0, 1
+q1 = pd.concat([jan, feb], ignore_index=True)   # 0, 1, 2, 3
+# SQL: SELECT * FROM jan UNION ALL SELECT * FROM feb`, more: { html: () => row(cap('pd.concat([jan, feb])') + tbl(['', 'order_id', 'customer_id'], [['*0', '1', 'c1'], ['*1', '2', 'c2'], ['*0', '3', 'c1'], ['*1', '4', 'c3']]), cap('ignore_index=True') + tbl(['', 'order_id', 'customer_id'], [['0', '1', 'c1'], ['1', '2', 'c2'], ['2', '3', 'c1'], ['3', '4', 'c3']])) } },
+      { id: 'tag-source', name: 'Name the source before you stack', what: 'Once stacked, a row no longer says which file it came from. Add a column to each part first, here the month taken from the file name, then concat.\n\nThen `value_counts()` on that column gives the rows per file.', f: `parts = []
+for f in ["orders_2018-01.csv", "orders_2018-02.csv"]:
+    part = pd.read_csv(f)
+    part["month"] = f.split("_")[1][:7]   # "2018-01"
+    parts.append(part)
+q1 = pd.concat(parts, ignore_index=True)` },
+      { id: 'concat-cols', name: 'concat with axis=1: side by side, matched on the index', what: 'Two Series with the same labels, here the states, become two columns of one table. pandas matches them by label, not by position, like the alignment of Lecture 1.\n\nn_orders counts orders per state, n_customers distinct customers. SP has 3 orders from 2 customers: c1 ordered twice.', f: `n_orders = oc["state"].value_counts()                  # SP 3, RJ 1
+n_customers = oc.groupby("state")["customer_id"].nunique()   # RJ 1, SP 2
+pd.concat([n_orders, n_customers], axis=1)`, more: { html: () => tbl(['state', 'count', 'customer_id'], [['SP', '3', '*2'], ['RJ', '1', '1']]) } },
+    ] },
+    { name: 'Reshape: pivot_table and melt', cards: [
+      { id: 'pivot', name: 'pivot_table: long to wide', what: 'One row per order becomes one row per state and one column per month, each cell a count. `values` is the column to aggregate, `index` gives the rows, `columns` the columns, `aggfunc` the function.\n\nRJ has no order in February: the cell is NaN, not 0. `fill_value=0` would write 0.', f: `pivot = pd.pivot_table(oc, values="order_id", index="state",
+                       columns="month", aggfunc="count")
+pivot.shape   # (2, 2): 2 states x 2 months`, more: { html: () => tbl(['state', '2018-01', '2018-02'], [['RJ', '1.0', '*NaN'], ['SP', '1.0', '2.0']]) } },
+      { id: 'melt', name: 'melt: wide back to long', what: '`reset_index()` turns state back into a column. melt keeps the `id_vars` columns as they are and turns every other column into rows: one row per (state, month), the old column name in `var_name`, the cell in `value_name`.\n\n2 states × 2 months = 4 rows.', f: `wide = pivot.reset_index()
+long = wide.melt(id_vars="state", var_name="month",
+                 value_name="n_orders")
+long.shape   # (4, 3)`, more: { html: () => tbl(['', 'state', 'month', 'n_orders'], [['0', 'RJ', '2018-01', '1.0'], ['1', 'SP', '2018-01', '1.0'], ['2', 'RJ', '2018-02', 'NaN'], ['3', 'SP', '2018-02', '2.0']]) } },
+      { id: 'same-total', name: 'A reshape changes the shape, never the total', what: 'A pivot then a melt must give back the same total: 4 orders before, 4 after, since sum skips the NaN. Check it after every reshape, as you check the shape after every merge.', f: `long["n_orders"].sum() == len(oc)   # True: 4 = 4` },
+    ] },
+  ], practice: [
+    { id: 'l6-e1', title: 'Pick the join', setup: 'The four tables of card 6.1: orders (1 to 4), items (orders 1, 1, 2, 3 and 5), customers and payments.', parts: [
+      ['Keep only the orders that have at least one item. How many rows, and which orders?', () => code(`m = pd.merge(orders, items, on="order_id")   # how="inner"
+m.shape                    # (4, 6)
+m["order_id"].unique()     # 1, 2, 3`) + `<p>Order 1 appears twice, once per item; order 4 has none and the chair’s order 5 is not in orders.</p>`],
+      ['Keep every order, items or not. Which order has no item?', () => code(`left = pd.merge(orders, items, on="order_id", how="left")
+left.loc[left["product"].isna(), "order_id"]   # 4`) + `<p><b>Order 4</b>, status unavailable: 5 rows, NaN in product and price.</p>`],
+      ['Which item has no order?', () => code(`right = pd.merge(orders, items, on="order_id", how="right")
+right.loc[right["status"].isna(), "product"]   # chair`) + `<p>The <b>chair</b>, order 5. how="outer" would show order 4 and the chair together: 6 rows.</p>`],
+    ] },
+    { id: 'l6-e2', title: 'Repeats and keys', setup: 'The same four tables.', parts: [
+      ['How many rows does orders merged with payments give, for how many paid orders?', () => code(`op = pd.merge(orders, payments, on="order_id")
+op.shape                    # (4, 6)
+op["order_id"].nunique()    # 3`) + `<p>4 rows for 3 orders: order 1 was paid twice. Order 4 was never paid.</p>`],
+      ['One row per order with the amount paid, keeping order 4.', () => code(`paid = payments.groupby("order_id").agg(paid=("value", "sum")).reset_index()
+pd.merge(orders, paid, on="order_id", how="left")
+# paid: 60, 200, 10, NaN`) + `<p>Aggregate first, then merge: one row per order. how="left" keeps order 4, with NaN.</p>`],
+      ['Revenue per state: merge items, orders and customers.', () => code(`lines = pd.merge(pd.merge(items, orders, on="order_id"),
+                 customers, on="customer_id")
+lines.groupby("state")["price"].sum()   # RJ 200, SP 70`) + `<p>The inner merges drop the chair, which has no order and so no state.</p>`],
+    ] },
+    { id: 'l6-e3', title: 'Stack and reshape', setup: 'jan and feb of card 6.9, and oc, orders merged with customers.', parts: [
+      ['Stack jan and feb with a fresh index. How many rows?', () => code(`q1 = pd.concat([jan, feb], ignore_index=True)
+q1.shape   # (4, 2)`) + `<p>2 + 2 = 4 rows, labelled 0 to 3.</p>`],
+      ['Count the orders per state and month as a grid.', () => code(`pd.pivot_table(oc, values="order_id", index="state",
+               columns="month", aggfunc="count")
+#        2018-01  2018-02
+# RJ         1.0      NaN
+# SP         1.0      2.0`)],
+      ['Melt the grid back. How many rows, and is the total still 4?', () => code(`long = pivot.reset_index().melt(id_vars="state", var_name="month",
+                                value_name="n_orders")
+long.shape, long["n_orders"].sum()   # (4, 3), 4.0`) + `<p>One row per cell of the grid, and the same 4 orders.</p>`],
+    ] },
+  ], recap: ['merge matches rows on a key and adds columns; concat stacks tables and adds rows; pivot_table and melt change the shape.', 'Print the shape before and after every merge, and know which count you expect.', 'how= decides the rows without a partner: inner drops them, left and right keep one side, outer keeps all. The default is inner.', 'A left merge, then isna, finds what did not match.', 'A key that repeats multiplies the rows: aggregate the repeating table first, then merge.', 'Two keys: on=[...]; the same column on both sides: suffixes=.', 'concat: ignore_index=True for a fresh index; axis=1 puts Series side by side, matched by label.', 'pivot_table goes long to wide, melt wide to long; the total never changes.'] },
 ];
 SESSIONS.forEach(s => { let k = 0; for (const g of s.groups) for (const c of g.cards) c.num = `${s.n}.${++k}`; });
+
+/* ---------- The notebooks: the teacher's exercises, with their solutions ----------
+   Asked for 2026-11-25: "pull the panda classes and notebooks … i want u to use all the nbs with the solutions".
+   Each lecture's notebook exercises, restated in plain words: the task, the solution code, what each piece
+   of it means, and the result. The notebooks and their data stay out of this public page; a small table
+   says what the data looks like. Results are the notebook's own, on the full files. */
+const TAXI_COLS = [['pickup, dropoff', '2019-03-23 20:21:09', 'when the ride started and ended (datetime)'], ['passengers', '1', 'people in the cab'], ['distance', '1.60', 'miles'], ['fare, tip, tolls, total', '7.0, 2.15, 0.0, 12.95', 'dollars'], ['color', 'yellow', 'yellow or green cab'], ['payment', 'credit card', 'credit card or cash'], ['pickup_zone, dropoff_zone', 'Lenox Hill West', 'the New York zone'], ['pickup_borough, dropoff_borough', 'Manhattan', 'the borough']];
+const nbCols = (head, rows) => tbl(head || ['column', 'example', 'what it holds'], rows);
+const NOTEBOOKS = {
+  1: { about: 'Three real public files, one per format. Each question profiles one of them, as in the profile block of card 1.12.', data: () => nbCols(['file', 'what it holds', 'size'], [['velib_stations.csv', 'every Vélib bike station in Greater Paris', '1,520 rows'], ['paris_roadworks.xlsx', 'roadworks that disrupt traffic in Paris', '88 rows'], ['pandas_issues.json', 'the latest 100 issues and pull requests of pandas on GitHub, nested', '100 records']]), qs: [
+    { id: 'q1', title: 'Which separator?', task: 'Read the first 150 bytes of velib_stations.csv before pandas touches it. What separates the columns?', f: `with open("data/velib_stations.csv", "rb") as fh:
+    print(fh.read(150))`, parts: [['open(path, "rb")', 'Opens the file in binary mode: raw bytes, nothing decoded.'], ['with … as fh', 'Closes the file on its own at the end of the block.'], ['fh.read(150)', 'The first 150 bytes.']], out: 'Semicolons: stationcode;name;is_installed;… The file starts with three invisible bytes, the UTF-8 byte order mark.' },
+    { id: 'q2', title: 'Load it', task: 'Load the file into a DataFrame called velib. How many rows and columns?', f: `velib = pd.read_csv("data/velib_stations.csv", sep=";")
+velib.shape`, parts: [['sep=";"', 'Splits each line on semicolons. Without it, each row is one wide column.'], ['.shape', '(rows, columns). No brackets: it is not a call.']], out: '(1520, 15): 1,520 stations, 15 columns.' },
+    { id: 'q3', title: 'Where are the NULLs?', task: 'Which columns have missing values, and how many?', f: `velib.info()`, parts: [['.info()', 'One line per column: how many values are there, and the dtype.'], ['non-null', 'The values present. The row count minus it is the number missing.']], out: 'Only station_opening_hours, and it is empty: 1,520 missing out of 1,520.' },
+    { id: 'q4', title: 'Which types are wrong?', task: 'Read the dtypes and the first 10 rows. Which columns have the wrong type? Then reload so that the two identifiers, stationcode and code_insee_commune, stay text.', f: `print(velib.dtypes)
+velib.head(10)
+velib = pd.read_csv("data/velib_stations.csv", sep=";",
+                    dtype={"stationcode": str, "code_insee_commune": str})
+velib.dtypes`, parts: [['.dtypes', 'The type of every column.'], ['.head(10)', 'The first 10 rows, to see real values.'], ['dtype={"stationcode": str, …}', 'Sets those columns to text while loading: leading zeros survive.']], out: 'The two identifiers were read as int64. duedate is a date kept as text, coordonnees_geo glues latitude and longitude into one text, and station_opening_hours is float64 only because it is empty. After the reload both identifiers are str.' },
+    { id: 'q5', title: 'Installed or not?', task: 'The status column is is_installed. Which values does it take, and how often?', f: `velib["is_installed"].value_counts()`, parts: [['velib["is_installed"]', 'One column, as a Series.'], ['.value_counts()', 'Each value with its count, most frequent first.']], out: 'OUI 1,517, NON 3.' },
+    { id: 'q6', title: 'How many sheets?', task: 'How many sheets does paris_roadworks.xlsx contain, and what are their names?', f: `sheets = pd.read_excel("data/paris_roadworks.xlsx", sheet_name=None)
+len(sheets), list(sheets.keys())`, parts: [['sheet_name=None', 'Loads every sheet, as a dict: sheet name → DataFrame.'], ['len(sheets)', 'How many sheets.'], ['list(sheets.keys())', 'Their names.']], out: 'One sheet, Sheet1.' },
+    { id: 'q7', title: 'Load the sheet', task: 'Load it into works. How many rows and columns?', f: `works = pd.read_excel("data/paris_roadworks.xlsx")
+works.shape`, parts: [['pd.read_excel(path)', 'Loads the first sheet when sheet_name is not given.']], out: '(88, 11).' },
+    { id: 'q8', title: 'What happened to the postcode?', task: 'Look at the dtypes and the first rows. What did pandas do to the postcode column, cp_arrondissement? Reload it as text. Which other columns have the wrong type?', f: `print(works.dtypes)
+works = pd.read_excel("data/paris_roadworks.xlsx",
+                      dtype={"cp_arrondissement": str})
+works["cp_arrondissement"].head()`, parts: [['.dtypes', 'Shows cp_arrondissement as float64.'], ['dtype={"cp_arrondissement": str}', 'Keeps the postcode as text, as written.']], out: 'It became float64: 75001 shows as 75001.0. date_debut and date_fin are dates kept as text.' },
+    { id: 'q9', title: 'Open the JSON', task: 'Load pandas_issues.json with the json module into raw. How many records? Print the first: which fields are nested?', f: `import json
+with open("data/pandas_issues.json", encoding="utf-8") as fh:
+    raw = json.load(fh)
+len(raw)
+raw[0]`, parts: [['json.load(fh)', 'Reads the JSON into Python lists and dicts.'], ['encoding="utf-8"', 'How the text was saved.'], ['raw[0]', 'The first record, a dict.']], out: '100 records. user is a nested dict; labels is a nested list of dicts.' },
+    { id: 'q10', title: 'Flatten it', task: 'Flatten the records with json_normalize into issues. How many rows and columns? Which columns come from the nested dict?', f: `issues = pd.json_normalize(raw)
+issues.shape
+issues.columns.tolist()`, parts: [['pd.json_normalize(raw)', 'One row per record; each nested dict becomes dotted columns.'], ['.columns.tolist()', 'The column names, as a plain list.']], out: '(100, 10). user.login and user.type come from user; labels stays a list inside each cell.' },
+    { id: 'q11', title: 'Open or closed?', task: 'Which values does state take, and how often? How many records are pull requests?', f: `issues["state"].value_counts()
+issues["is_pull_request"].value_counts()`, parts: [['.value_counts()', 'Counts each value of the column.']], out: 'open 52, closed 48. 89 pull requests, 11 issues.' },
+    { id: 'q12', title: 'One row per label', task: 'Build a table with one row per label, keeping the issue’s number and state on every row. How many rows? Which label is the most frequent?', f: `labels = pd.json_normalize(raw, record_path="labels",
+                           meta=["number", "state"])
+labels.shape
+labels["name"].value_counts().head()`, parts: [['record_path="labels"', 'The nested list to turn into rows: one row per label.'], ['meta=["number", "state"]', 'Fields of the parent record, copied onto each of its rows.'], ['.head()', 'The first 5: here the 5 most frequent labels.']], out: '(191, 3): 191 labels on 100 records. Bug is the most frequent, 33 rows.' },
+  ] },
+  2: { about: '6,433 New York taxi rides from March 2019 (the seaborn sample, from the city’s trip records). The row label is the ride ID. Never change df: work on what you select.', data: () => nbCols(null, TAXI_COLS), qs: [
+    { id: 'q1', title: 'Money columns', task: 'Keep only fare, tip, tolls and total, with a list of names. Show 5 rows and the shape.', f: `money = df[["fare", "tip", "tolls", "total"]]
+print(money.shape)
+money.head()`, parts: [['df[[…]]', 'A list of names inside the brackets: a DataFrame with those columns, in that order.'], ['.head()', 'The first 5 rows.']], out: '(6433, 4): every ride, four money columns.' },
+    { id: 'q2', title: 'Series or DataFrame?', task: 'Select tip with single brackets, then with double brackets, and print each type. Then the average tip, to 2 decimals.', f: `print(type(df["tip"]))
+print(type(df[["tip"]]))
+round(df["tip"].mean(), 2)`, parts: [['df["tip"]', 'One name: a Series.'], ['df[["tip"]]', 'A list of one name: a DataFrame with one column.'], ['round(x, 2)', 'Rounds to 2 decimals.']], out: 'Series, then DataFrame. The average tip is $1.98.' },
+    { id: 'q3', title: 'Columns without typing their names', task: 'Get the columns whose name contains zone, then the numeric columns. How many of each?', f: `df.filter(like="zone").columns
+df.select_dtypes("number").columns`, parts: [['filter(like="zone")', 'Keeps the columns whose name contains zone.'], ['select_dtypes("number")', 'Keeps the numeric columns.'], ['.columns', 'Their names.']], out: '2 zone columns, pickup_zone and dropoff_zone; 6 numeric: passengers, distance, fare, tip, tolls, total.' },
+    { id: 'q4', title: 'First and last rows', task: 'With positions only, show the first 3 rows, then the last 3. What are their labels?', f: `df.iloc[:3]
+df.iloc[-3:]`, parts: [['.iloc[:3]', 'Positions 0, 1, 2: the stop is left out.'], ['.iloc[-3:]', 'From the third from the end to the end.']], out: 'Labels 0, 1, 2, then 6430, 6431, 6432.' },
+    { id: 'q5', title: 'Three complaints', task: 'Three complaints quote ride IDs 1022, 3051 and 4888, the row labels. Show ride 1022 whole, then the three rides with pickup, pickup_zone, dropoff_zone and total.', f: `df.loc[1022]
+df.loc[[1022, 3051, 4888], ["pickup", "pickup_zone", "dropoff_zone", "total"]]`, parts: [['.loc[1022]', 'One label: one ride, as a Series.'], ['[[1022, …], [...]]', 'A list of row labels, a comma, then a list of columns.']], out: 'Totals $13.00, $18.50 and $20.80. .loc, because the IDs are labels.' },
+    { id: 'q6', title: 'One cell, two ways', task: 'Get the total of the ride labelled 100, then the cell at row position 100, column position 7. Same value? Why?', f: `df.loc[100, "total"]
+df.iloc[100, 7]`, parts: [['.loc[100, "total"]', 'Row label 100, the column named total.'], ['.iloc[100, 7]', 'Row position 100, column position 7, which is total.']], out: 'Both $20.16: the index is 0, 1, 2…, so label 100 sits at position 100.' },
+    { id: 'q7', title: 'The most expensive rides', task: 'Sort by total, highest first, and show the top 3 with their labels. Then read the total of label 0 in the sorted table and compare.', f: `by_total = df.sort_values("total", ascending=False)
+by_total.iloc[:3][["pickup_zone", "dropoff_zone", "distance", "total"]]
+by_total.loc[0, "total"]`, parts: [['sort_values("total", ascending=False)', 'Reorders the rows, largest total first.'], ['.iloc[:3]', 'The first 3 positions of the sorted table.'], ['.loc[0, "total"]', 'The ride labelled 0, wherever it now sits.']], out: 'The top ride is label 5364, $174.82, JFK to JFK. .loc[0] gives $12.95, the ride labelled 0, not the first row: a sort moves positions, and labels travel with their rows.' },
+    { id: 'q8', title: 'Slicing with a step', task: 'Take every 1000th ride; how many? Show the labels of positions 0 to 9, every second one. Show the file reversed, first 3 rows.', f: `sample = df.iloc[::1000]
+len(sample)
+df.iloc[0:10:2].index.tolist()
+df.iloc[::-1].head(3)`, parts: [['::1000', 'From the start to the end, every 1000th position.'], ['0:10:2', 'Positions 0, 2, 4, 6, 8: the stop 10 is left out.'], ['::-1', 'A step of −1: backwards.'], ['.index.tolist()', 'The row labels, as a list.']], out: '7 rides; labels 0, 2, 4, 6, 8; reversed, the file starts with label 6432.' },
+    { id: 'q9', title: 'Expensive rides', task: 'Build a mask for a total above $50. How many rides? Show the first 5 with pickup_zone, dropoff_zone and total.', f: `expensive = df["total"] > 50
+expensive.sum()
+df[expensive][["pickup_zone", "dropoff_zone", "total"]].head()`, parts: [['df["total"] > 50', 'The test on every row: a mask of True and False.'], ['.sum()', 'Counts the True rows.'], ['df[expensive]', 'Keeps the True rows.']], out: '301 rides cost more than $50.' },
+    { id: 'q10', title: 'Green taxis', task: 'How many rides were made by a green cab, and what share of all rides is that?', f: `green = df["color"] == "green"
+green.sum()
+round(green.mean() * 100, 1)`, parts: [['==', 'Equals, row by row.'], ['.mean() * 100', 'The share of True rows, as a percentage.']], out: '982 rides, 15.3% of all.' },
+    { id: 'q11', title: 'Long green rides', task: 'How many rides are green and longer than 5 miles?', f: `green = df["color"] == "green"
+long_ride = df["distance"] > 5
+(green & long_ride).sum()`, parts: [['&', 'And: True where both masks are True.']], out: '184 green rides are longer than 5 miles.' },
+    { id: 'q12', title: 'Bronx or Brooklyn', task: 'How many rides start in the Bronx or in Brooklyn? Write it with | and with isin.', f: `with_or = (df["pickup_borough"] == "Bronx") | (df["pickup_borough"] == "Brooklyn")
+with_isin = df["pickup_borough"].isin(["Bronx", "Brooklyn"])
+with_or.sum(), with_isin.sum()`, parts: [['|', 'Or: True where at least one test is True.'], ['( )', 'Each test in brackets, so it runs before |.'], ['isin([...])', 'True where the value is in the list.']], out: '482 both ways: isin is several == joined by |.' },
+    { id: 'q13', title: 'Big tips and missing payments', task: 'How many tips lie between $5 and $10, both included? How many rides have no payment?', f: `df["tip"].between(5, 10).sum()
+df["payment"].isna().sum()`, parts: [['between(5, 10)', 'True when 5 ≤ tip ≤ 10.'], ['.isna()', 'True where the value is missing.']], out: '390 tips between $5 and $10; 44 rides with no payment.' },
+    { id: 'q14', title: 'Rides to the airport', task: 'How many rides end at a zone whose name contains Airport, with the missing zones handled? Which airports, and how many rides each?', f: `to_airport = df["dropoff_zone"].str.contains("Airport", na=False)
+to_airport.sum()
+df[to_airport]["dropoff_zone"].value_counts()`, parts: [['.str.contains("Airport")', 'True where the text holds Airport.'], ['na=False', 'A missing zone gives False instead of NaN, so the mask can filter.']], out: '121 rides: LaGuardia 65, JFK 56.' },
+    { id: 'q15', title: 'Sunday rides', task: 'How many rides were picked up on a Sunday? Monday is 0, Sunday 6.', f: `sunday = df["pickup"].dt.dayofweek == 6
+sunday.sum()`, parts: [['.dt.dayofweek', 'The weekday of each date: Monday 0 … Sunday 6.']], out: '868 rides.' },
+    { id: 'q16', title: 'Night rides', task: 'How many rides start before 5 in the morning? Their average total, against all rides?', f: `night = df["pickup"].dt.hour < 5
+night.sum()
+round(df.loc[night, "total"].mean(), 2), round(df["total"].mean(), 2)`, parts: [['.dt.hour', 'The hour of each date, 0 to 23.'], ['df.loc[night, "total"]', 'The night rows, total column only.']], out: '540 night rides, $18.70 on average, against $18.52 for all rides.' },
+    { id: 'q17', title: 'Top tips', task: 'Show the 5 rides with the highest tip (pickup_zone, fare, tip), then the 3 longest (pickup_zone, dropoff_zone, distance).', f: `df.nlargest(5, "tip")[["pickup_zone", "fare", "tip"]]
+df.nlargest(3, "distance")[["pickup_zone", "dropoff_zone", "distance"]]`, parts: [['nlargest(5, "tip")', 'The 5 rows with the largest tip, largest first.']], out: 'The biggest tip is $33.20 on a $120 fare. The three longest rides, about 34 to 37 miles, all start at an airport.' },
+    { id: 'q18', title: 'The same filter as a sentence', task: 'Write the green and longer-than-5-miles filter with query. Then put 40 in a variable and count the rides with a total above it.', f: `long_green = df.query("color == 'green' and distance > 5")
+len(long_green)
+min_total = 40
+len(df.query("total > @min_total"))`, parts: [['query("…")', 'The whole filter as one string, with and, or, not.'], ["'green'", 'Text inside the string, in the other quote.'], ['@min_total', 'Reads the Python variable min_total.']], out: '184 rows, as with the masks; 460 rides cost more than $40.' },
+    { id: 'q19', title: 'Strange records', task: 'How many rides have 0 passengers? A distance of 0? At least one of the two? Is that the sum?', f: `no_passengers = df["passengers"] == 0
+no_distance = df["distance"] == 0
+no_passengers.sum(), no_distance.sum()
+(no_passengers | no_distance).sum()
+(no_passengers & no_distance).sum()`, parts: [['|', 'At least one problem.'], ['&', 'Both problems at once.']], out: '96 with 0 passengers, 51 with distance 0, but 146 with at least one, not 147: one ride has both, and | counts it once.' },
+    { id: 'q20', title: 'The JFK flat fare', task: 'Yellow cabs charge a flat $52 from Manhattan to JFK. How many rides start in Manhattan and end at JFK Airport? Is every fare $52?', f: `to_jfk = (df["pickup_borough"] == "Manhattan") & (df["dropoff_zone"] == "JFK Airport")
+to_jfk.sum()
+df.loc[to_jfk, "fare"].value_counts()`, parts: [['&', 'Both conditions on the same ride.'], ['.value_counts()', 'Each fare and how often.']], out: '40 rides, every fare exactly $52: the rule holds.' },
+    { id: 'q21', title: 'Do cash customers tip?', task: 'Count the cash rides with a tip above 0. Then the average tip of card rides and of cash rides.', f: `cash = df["payment"] == "cash"
+card = df["payment"] == "credit card"
+(cash & (df["tip"] > 0)).sum()
+round(df.loc[card, "tip"].mean(), 2), round(df.loc[cash, "tip"].mean(), 2)`, parts: [['cash & (df["tip"] > 0)', 'Cash rides with a recorded tip.'], ['df.loc[card, "tip"]', 'The tips of card rides.']], out: 'No cash ride has a tip: card tips average $2.78, cash $0. Cash tips go into the driver’s hand and are never recorded.' },
+    { id: 'q22', title: 'JFK or LaGuardia? (bonus)', task: 'A Manhattan hotel asks which airport is cheaper by cab. Compare rides, average distance and average total for each.', f: `airport = "JFK Airport"
+rides = df.query("pickup_borough == 'Manhattan' and dropoff_zone == @airport")
+len(rides), round(rides["distance"].mean(), 1), round(rides["total"].mean(), 2)
+airport = "LaGuardia Airport"
+rides = df.query("pickup_borough == 'Manhattan' and dropoff_zone == @airport")
+len(rides), round(rides["distance"].mean(), 1), round(rides["total"].mean(), 2)`, parts: [['@airport', 'The same query, run for each value of the variable.']], out: 'JFK: 40 rides, 18.2 miles, $70.39. LaGuardia: 53 rides, 10.7 miles, $49.31. LaGuardia is about $21 cheaper: it is much closer.' },
+  ] },
+  3: { about: 'A new export of the same taxi rides, taxis_dirty.csv: 15 columns with a ride_id, real problems and some added on purpose. Today you only look and count; keep each mask in a named variable for the report.', data: () => nbCols(null, [['ride_id', '18', 'one id per ride, in principle'], ...TAXI_COLS]), qs: [
+    { id: 'q1', title: 'First look', task: 'How many rows and columns? Which columns hold numbers, text, dates?', f: `df.shape
+df.dtypes`, parts: [['.shape', '(rows, columns).'], ['.dtypes', 'The type of each column: int64 and float64 are numbers, str is text, datetime64 dates.']], out: '(6483, 15). Numbers: ride_id, passengers, distance, fare, tip, tolls, total. Dates: pickup, dropoff. Text: color, payment, zones, boroughs.' },
+    { id: 'q2', title: 'Missing cells per column', task: 'How many missing values in each column? Which has the most? How many in the whole table?', f: `df.isna().sum()
+df.isna().sum().sum()`, parts: [['df.isna()', 'True for every missing cell.'], ['.sum()', 'Counts the Trues of each column.'], ['.sum().sum()', 'Then adds the columns together: the whole table.']], out: 'dropoff_zone and dropoff_borough have the most, 46 each; payment 44. 190 missing cells, all in text columns.' },
+    { id: 'q3', title: 'Share of missing values', task: 'The percentage missing per column, to 2 decimals. How many rows have at least one missing value?', f: `(df.isna().mean() * 100).round(2)
+miss = df.isna().any(axis=1)
+miss.sum()`, parts: [['.mean() * 100', 'The share of Trues per column, in %.'], ['.any(axis=1)', 'Across each row: True if any of its cells is missing.']], out: 'No column misses more than 0.71%. 93 rows, 1.4%, have at least one missing cell.' },
+    { id: 'q4', title: 'Missing in disguise', task: 'Show the counts of payment, NaN included. Which value stands for a missing payment, and how many rides have it? How many have no usable payment in all?', f: `df["payment"].value_counts(dropna=False)
+unknown = df["payment"] == "unknown"
+unknown.sum()
+df["payment"].isna().sum() + unknown.sum()`, parts: [['dropna=False', 'Counts NaN as a value too.'], ['== "unknown"', 'The placeholder: isna does not see it.']], out: '"unknown" is the placeholder, 30 rides. With the 44 NaN, 74 rides have no usable payment.' },
+    { id: 'q5', title: 'One payment, many spellings', task: 'How many distinct payments, before and after stripping spaces and lowering case? How many rides have a non-standard spelling? Does pickup_borough have the same problem?', f: `norm = df["payment"].str.strip().str.lower()
+df["payment"].nunique(), norm.nunique()
+spelling = df["payment"].notna() & (df["payment"] != norm)
+spelling.sum()
+df["pickup_borough"].value_counts(dropna=False)`, parts: [['.str.strip().str.lower()', 'Removes the outer spaces, then lowers every letter.'], ['notna() &', 'Only payments that exist: NaN is never equal to anything, so NaN != norm would be True.'], ['!= norm', 'True where the original differs from its tidy form.']], out: '9 spellings for 3 real values: cash, credit card, unknown. 121 rides spell it another way, like "CASH" or " cash". pickup_borough has "manhattan" (25 rides) next to "Manhattan".' },
+    { id: 'q6', title: 'Exact duplicates', task: 'How many rows copy an earlier row exactly? Show all copies, sorted by ride_id.', f: `dup = df.duplicated()
+dup.sum()
+df[df.duplicated(keep=False)].sort_values("ride_id").head(6)`, parts: [['.duplicated()', 'True when the whole row equals an earlier one.'], ['keep=False', 'Marks every copy, the first too, to see them side by side.']], out: '40 rows are exact copies.' },
+    { id: 'q7', title: 'The same ride twice?', task: 'Is ride_id unique? How many rows repeat an id already seen? How many of them are not exact duplicates?', f: `df["ride_id"].is_unique
+same_id = df.duplicated(subset="ride_id")
+same_id.sum()
+same_id.sum() - dup.sum()`, parts: [['.is_unique', 'True when no value repeats.'], ['subset="ride_id"', 'Compares only that column.']], out: 'Not unique: 50 rows repeat an id. 40 are the exact copies, 10 share the id with another tip and total: which one is right?' },
+    { id: 'q8', title: 'Impossible values', task: 'describe() the numeric columns: which min or max is wrong? Count negative fares, passengers outside 1 to 6, and distances of 0.', f: `df[["passengers", "distance", "fare", "tip", "tolls", "total"]].describe().round(2)
+neg_fare = df["fare"] < 0
+bad_pass = ~df["passengers"].between(1, 6)
+zero_dist = df["distance"] == 0
+neg_fare.sum(), bad_pass.sum(), zero_dist.sum()`, parts: [['.describe()', 'count, mean, std, min, quartiles and max of each column.'], ['~…between(1, 6)', 'Not between 1 and 6: 0 or more than 6.']], out: 'A fare of −21 and 9 passengers are impossible. 8 negative fares, 102 rides outside 1 to 6 passengers, 52 with distance 0.' },
+    { id: 'q9', title: 'Do the dates agree?', task: 'How many rides end before they start? The file should hold only March 2019: how many were picked up in another month?', f: `before = df["dropoff"] < df["pickup"]
+not_march = df["pickup"].dt.month != 3
+before.sum(), not_march.sum()
+df.loc[not_march, ["ride_id", "pickup", "dropoff"]]`, parts: [['df["dropoff"] < df["pickup"]', 'Compares two columns row by row.'], ['.dt.month != 3', 'Picked up outside March.']], out: '6 rides end before they start; 1 was picked up on 28 February, just before midnight.' },
+    { id: 'q10', title: 'The quality report', task: 'Build report: one row per check of Q3 to Q9, with rows (how many fail) and pct (share of all rows, 2 decimals). Sort it, most frequent first.', f: `report = pd.DataFrame({
+    "check": ["missing value", "payment unknown", "payment spelling",
+              "exact duplicate", "repeated ride_id", "negative fare",
+              "passengers outside 1-6", "distance 0",
+              "dropoff before pickup", "pickup not in March"],
+    "rows": [miss.sum(), unknown.sum(), spelling.sum(), dup.sum(),
+             same_id.sum(), neg_fare.sum(), bad_pass.sum(),
+             zero_dist.sum(), before.sum(), not_march.sum()]})
+report["pct"] = (report["rows"] / len(df) * 100).round(2)
+report.sort_values("rows", ascending=False)`, parts: [['pd.DataFrame({...})', 'One row per check: its name and its count.'], ['report["rows"] / len(df) * 100', 'Each count as a share of all rows, in %.'], ['sort_values(…, ascending=False)', 'The most frequent problem first.']], out: 'Payment spelling leads, 121 rows (1.87%), then passengers outside 1 to 6 (102) and missing values (93). Each problem touches under 2% of rows, but together they shift counts, sums and means.' },
+  ] },
+  4: { about: 'The same rides with more problems, taxis_dirty.csv: 6,508 rows, ride_id the key, plus zones.csv, the 213 official zone names. Each answer works on a new Series or a copy; never change df. Section C carries one table d from question to question.', data: () => nbCols(null, [['ride_id', '6054', 'the key'], ...TAXI_COLS]) + nbCols(['file', 'what it holds', 'size'], [['zones.csv', 'official zone names and their borough', '213 rows']]), qs: [
+    { id: 'q1', title: 'Missing values per column', task: 'How many missing values per column? Which has the most?', f: `df.isna().sum().sort_values(ascending=False)`, parts: [['.isna().sum()', 'Missing cells per column.'], ['.sort_values(ascending=False)', 'The largest first.']], out: 'tip has the most, 201; then distance 151 and passengers 82.' },
+    { id: 'q2', title: 'Rides with a gap', task: 'What percentage of rides has at least one missing value?', f: `df.isna().any(axis=1).mean() * 100`, parts: [['.any(axis=1)', 'True for a row with any missing cell.'], ['.mean() * 100', 'Their share, in %.']], out: 'About 7.9%, 514 rides.' },
+    { id: 'q3', title: 'Unknown means missing', task: 'payment hides missing values as "unknown". Turn them into NaN in a new Series pay, and count the missing payments.', f: `pay = df["payment"].replace("unknown", np.nan)
+pay.isna().sum()`, parts: [['.replace("unknown", np.nan)', 'Every "unknown" becomes a real NaN.'], ['np.nan', 'NaN itself, from numpy.']], out: '76: 44 real NaN and 32 "unknown".' },
+    { id: 'q4', title: 'Fill the zones', task: 'Fill the missing pickup and dropoff zones with "Unknown", in a new DataFrame. How many cells were filled in each?', f: `zones_filled = df[["pickup_zone", "dropoff_zone"]].fillna("Unknown")
+(zones_filled == "Unknown").sum()`, parts: [['.fillna("Unknown")', 'Writes "Unknown" into every gap.'], ['== "Unknown"', 'Finds the filled cells to count them.']], out: '27 pickup zones and 46 dropoff zones.' },
+    { id: 'q5', title: 'Drop the rides without a borough', task: 'Drop the rides where either borough is missing. How many remain, and what share did you lose?', f: `kept = df.dropna(subset=["pickup_borough", "dropoff_borough"])
+len(kept), round((1 - len(kept) / len(df)) * 100, 2)`, parts: [['dropna(subset=[...])', 'Drops a row when any of those columns is NaN.'], ['1 - len(kept) / len(df)', 'The share of rows lost.']], out: '6,457 rides remain: 0.78% lost.' },
+    { id: 'q6', title: 'Fill passengers with the mode', task: 'Fill the missing passengers with the most frequent value. Which value, and how many rides?', f: `mode = df["passengers"].mode()[0]
+passengers = df["passengers"].fillna(mode)
+mode, df["passengers"].isna().sum()`, parts: [['.mode()[0]', 'The most frequent value; mode() returns a Series, [0] takes the first.'], ['.fillna(mode)', 'Puts it in every gap.']], out: '1 passenger, in 82 rides.' },
+    { id: 'q7', title: 'Mean or median for distance?', task: 'Compare the mean and median distance. Which would you fill with, and why? Fill it into dist_filled.', f: `df["distance"].mean(), df["distance"].median()
+dist_filled = df["distance"].fillna(df["distance"].median())`, parts: [['.median()', 'The middle value, not pulled by long rides.'], ['.fillna(median)', 'The same typical value in every gap.']], out: 'Mean 3.04, median 1.65: long airport rides and typos pull the mean up. The median is the typical ride: 151 gaps filled with 1.65.' },
+    { id: 'q8', title: 'What a fill does to the spread', task: 'Fill distance with the mean, then with the median. Compare each standard deviation with the original.', f: `df["distance"].std()
+df["distance"].fillna(df["distance"].mean()).std()
+df["distance"].fillna(df["distance"].median()).std()`, parts: [['.std()', 'The spread around the mean.']], out: '3.87 → 3.82 (mean) and 3.83 (median): a single value in every gap shrinks the spread. Only 2.3% are filled, so a little.' },
+    { id: 'q9', title: 'Fill distance with KNN', task: 'On distance, fare and total, let KNNImputer fill each missing distance with the mean of the 5 rides with the closest fare and total. Put the result back in a DataFrame. How many filled, and their mean?', f: `X = df[["distance", "fare", "total"]]
+missing = X["distance"].isna()
+filled = pd.DataFrame(KNNImputer(n_neighbors=5).fit_transform(X),
+                      columns=X.columns, index=X.index)
+missing.sum(), filled.loc[missing, "distance"].mean()`, parts: [['KNNImputer(n_neighbors=5)', 'Fills a gap with the mean of the 5 most similar rows.'], ['.fit_transform(X)', 'Learns from X and fills it; returns a NumPy array.'], ['pd.DataFrame(…, columns=, index=)', 'Gives the array its column names and row labels back.']], out: '151 distances filled, 2.98 miles on average: each one its own value, unlike the median.' },
+    { id: 'q10', title: 'KNN against the median', task: 'For the rides whose distance was missing, put fare, the KNN distance and the median distance side by side; show the 5 highest fares. Which fill is more believable?', f: `comp = df.loc[missing, ["fare"]]
+comp["knn"] = filled.loc[missing, "distance"]
+comp["median"] = df["distance"].median()
+comp.sort_values("fare", ascending=False).head()`, parts: [['df.loc[missing, ["fare"]]', 'The rows with a gap, as a one-column table.'], ['comp["knn"] = …', 'Adds a column, matched by label.']], out: 'A $67.50 fare gets 1.65 miles from the median but about 13.5 from KNN. KNN is more believable: it reads fare and total, which grow with distance.' },
+    { id: 'q11', title: 'Look first', task: 'describe() fare, distance and tip. What is the largest fare?', f: `df[["fare", "distance", "tip"]].describe()`, parts: [['.describe()', 'min, quartiles and max: where impossible values show.']], out: '1,000, against a median of 9.50: clearly an error.' },
+    { id: 'q12', title: 'Negative fares', task: 'How many fares are negative? Correct them with abs() in a new Series fare. The new minimum?', f: `(df["fare"] < 0).sum()
+fare = df["fare"].abs()
+fare.min()`, parts: [['.abs()', 'Drops the minus sign: −21 becomes 21.']], out: '8 negative fares; the minimum is now 1.0.' },
+    { id: 'q13', title: 'Passengers out of range', task: 'A cab carries 1 to 6 people. Set every other value to NaN with where, in a new Series. NaN before and after?', f: `passengers = df["passengers"].where(df["passengers"].between(1, 6))
+df["passengers"].isna().sum(), passengers.isna().sum()`, parts: [['.where(condition)', 'Keeps a value where the condition is True, NaN elsewhere.'], ['between(1, 6)', 'The allowed range.']], out: '82 NaN before, 184 after: 102 impossible values, 0 or 9, became NaN.' },
+    { id: 'q14', title: 'Typed 100 times too big', task: 'Fares above 500 are typos: 950 should be 9.50. How many? Divide them by 100 into fare2. The new maximum?', f: `(fare > 500).sum()
+fare2 = fare.where(fare <= 500, fare / 100)
+fare2.max()`, parts: [['where(fare <= 500, fare / 100)', 'Keeps the plausible fares; the others become fare / 100.']], out: '3 corrected; the maximum is now 150.' },
+    { id: 'q15', title: 'z-scores, before and after', task: 'z-score fare and fare2. How many rides have |z| above 3 in each? Why so different?', f: `z1 = (fare - fare.mean()) / fare.std()
+z2 = (fare2 - fare2.mean()) / fare2.std()
+(z1.abs() > 3).sum(), (z2.abs() > 3).sum()`, parts: [['(x - mean) / std', 'How many standard deviations from the mean.'], ['.abs() > 3', 'More than 3 either side.']], out: '16 with fare, 206 with fare2. The three huge typos inflated the std (22.4 against 11.6) and hid the other high fares: masking.' },
+    { id: 'q16', title: 'The IQR fences on fare2', task: 'Apply the IQR rule to fare2. The two fences, and how many rides outside?', f: `q1, q3 = fare2.quantile([0.25, 0.75])
+iqr = q3 - q1
+low, high = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+low, high
+((fare2 < low) | (fare2 > high)).sum()`, parts: [['quantile([0.25, 0.75])', 'q1 and q3 in one call.'], ['1.5 * iqr', 'How far past a quartile a fence sits.']], out: 'Fences −6.25 and 27.75; 599 rides outside, all above.' },
+    { id: 'q17', title: 'The IQR fences on distance', task: 'Apply the IQR rule to distance. How many outside? Show the 5 longest rides: errors?', f: `q1, q3 = df["distance"].quantile([0.25, 0.75])
+iqr = q3 - q1
+low, high = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+((df["distance"] < low) | (df["distance"] > high)).sum()
+df.sort_values("distance", ascending=False)[["ride_id", "distance", "fare", "pickup_zone", "dropoff_zone"]].head()`, parts: [['sort_values("distance", ascending=False)', 'The longest rides first.']], out: 'Fences −2.37 and 6.56 miles; 729 rides outside, mostly real airport rides. The rule flags the long tail, not errors. Only 30.9 miles for a $12.50 fare looks wrong.' },
+    { id: 'q18', title: 'Cap the tips', task: 'Cap tip at its 99th percentile with clip into tip_capped. The limit, how many lowered, the new max?', f: `hi = df["tip"].quantile(0.99)
+tip_capped = df["tip"].clip(upper=hi)
+hi, (df["tip"] > hi).sum(), tip_capped.max()`, parts: [['quantile(0.99)', 'The value 99% of tips are below.'], ['.clip(upper=hi)', 'Anything above hi becomes hi; every row stays.']], out: 'Limit $12.20: 62 tips lowered, the maximum is now $12.20.' },
+    { id: 'q19', title: 'Odd pairs', task: 'A distance of 0 is possible, a fare above 50 is possible, but not both. How many rides have both? Show them.', f: `odd = (df["distance"] == 0) & (fare2 > 50)
+odd.sum()
+df.loc[odd, ["ride_id", "distance", "fare", "total", "pickup_zone", "dropoff_zone"]]`, parts: [['&', 'Both at once: each fine alone, impossible together.']], out: '11 rides: 0 miles but more than $50.' },
+    { id: 'q20', title: 'Let LOF find the odd rides', task: 'Keep ride_id, distance and fare2 without NaN, standardise distance and fare, and run LocalOutlierFactor with 50 neighbours and 1% contamination. How many flagged?', f: `rides = df[["ride_id", "distance"]].copy()
+rides["fare"] = fare2
+rides = rides.dropna()
+X = rides[["distance", "fare"]]
+Z = (X - X.mean()) / X.std()
+rides["lof_label"] = LocalOutlierFactor(n_neighbors=50, contamination=0.01).fit_predict(Z)
+(rides["lof_label"] == -1).sum()`, parts: [['(X - X.mean()) / X.std()', 'Standardises: both columns on the same scale.'], ['contamination=0.01', 'Expects 1% of rows to be outliers.'], ['.fit_predict(Z)', '−1 for an outlier, 1 for a normal row.']], out: '64 rides, 1%: fares that do not fit their distance.' },
+    { id: 'q21', title: 'Drop the exact duplicates', task: 'How many rows are exact duplicates? Drop them into d. Its shape?', f: `df.duplicated().sum()
+d = df.drop_duplicates()
+d.shape`, parts: [['.drop_duplicates()', 'Keeps the first of each identical group.']], out: '40 duplicates; d is (6468, 15).' },
+    { id: 'q22', title: 'Same id, different values', task: 'In d, how many ride_id values still repeat? Show all copies side by side.', f: `d.duplicated(subset="ride_id").sum()
+d[d.duplicated(subset="ride_id", keep=False)].sort_values("ride_id")[["ride_id", "pickup", "fare", "tip", "total"]]`, parts: [['subset="ride_id"', 'Compares the id only.'], ['keep=False', 'Shows every copy.']], out: '10 ids appear twice: the same ride, a different tip and total.' },
+    { id: 'q23', title: 'Keep the higher total', task: 'For each repeated ride keep the copy with the higher total: sort, then drop duplicates. Rows left?', f: `d = d.sort_values("total").drop_duplicates(subset="ride_id", keep="last")
+d.shape`, parts: [['sort_values("total")', 'Smallest total first, so the largest comes last.'], ['keep="last"', 'Keeps the last copy of each id: the higher total.']], out: '(6458, 15): one row per ride_id.' },
+    { id: 'q24', title: 'Normalise payment', task: 'Strip and lower payment. Distinct values before and after?', f: `d["payment"].nunique()
+d["payment"] = d["payment"].str.strip().str.lower()
+d["payment"].nunique()`, parts: [['.str.strip().str.lower()', 'Removes the outer spaces, lowers the case.']], out: '9 → 3: cash, credit card, unknown.' },
+    { id: 'q25', title: 'Normalise the borough', task: 'Strip pickup_borough and put it in title case. Distinct values before and after? Rides per borough?', f: `d["pickup_borough"].nunique()
+d["pickup_borough"] = d["pickup_borough"].str.strip().str.title()
+d["pickup_borough"].value_counts()`, parts: [['.str.title()', 'Capital first letter in each word: manhattan → Manhattan.']], out: '5 → 4: "manhattan" joins Manhattan, 5,291 rides; then Queens, Brooklyn, Bronx.' },
+    { id: 'q26', title: 'Similar is not equal', task: 'Levenshtein distance and Jaro-Winkler similarity for Gramercy/Gramecy, JFK Airport/JKF Airport and Midtown East/Midtown West. Which pair is a trap?', f: `pairs = [("Gramercy", "Gramecy"), ("JFK Airport", "JKF Airport"),
+         ("Midtown East", "Midtown West")]
+for a, b in pairs:
+    print(a, b, jellyfish.levenshtein_distance(a, b),
+          round(jellyfish.jaro_winkler_similarity(a, b), 2))`, parts: [['levenshtein_distance(a, b)', 'The fewest edits from a to b.'], ['jaro_winkler_similarity(a, b)', '0 to 1, rewarding a shared start.']], out: '1 and 0.97; 2 and 0.97; 2 and 0.93. Midtown East and West look as close as the typos but are two zones: the trap.' },
+    { id: 'q27', title: 'Zones not in the official list', task: 'Load the official zone names. How many pickup zones of d, stripped, are not in it? How many distinct misspellings?', f: `valid = pd.read_csv("data/zones.csv")["zone"].tolist()
+zone = d["pickup_zone"].str.strip()
+bad = zone[~zone.isin(valid)].dropna()
+len(bad), bad.nunique()
+bad.value_counts().head()`, parts: [['~zone.isin(valid)', 'Not in the official list.'], ['.dropna()', 'Leaves out the missing zones, which are not misspellings.']], out: '44 rows, 39 distinct misspellings: lower case, swapped or missing letters.' },
+    { id: 'q28', title: 'How many pairs to compare?', task: 'How many pairs would you compare with every pair, n(n − 1) / 2, and with blocking on dropoff_zone?', f: `n = len(d)
+n * (n - 1) // 2
+ix = recordlinkage.Index()
+ix.block("dropoff_zone")
+len(ix.index(d))`, parts: [['n * (n - 1) // 2', 'Every pair of rows, each once.'], ['ix.block("dropoff_zone")', 'Only pairs that share a dropoff zone.']], out: '20,849,653 pairs, against 332,070 with blocking: about 60 times fewer.' },
+    { id: 'q29', title: 'Sent twice by a second device', task: 'Some rides came twice: new ride_id, pickup seconds later, zone misspelled. Add date, hour and minute of pickup, and count duplicates on those, fare, distance and dropoff_zone. Why not ride_id or pickup_zone?', f: `d["date"] = d["pickup"].dt.date
+d["hour"] = d["pickup"].dt.hour
+d["minute"] = d["pickup"].dt.minute
+same = ["date", "hour", "minute", "fare", "distance", "dropoff_zone"]
+d.duplicated(subset=same).sum()`, parts: [['.dt.date, .dt.hour, .dt.minute', 'The pickup down to the minute: seconds left out.'], ['subset=same', 'Two rows match when all six agree.']], out: '25 rides came twice. ride_id and pickup_zone differ between the copies, so they cannot be in the key.' },
+    { id: 'q30', title: 'Drop the near duplicates', task: 'Drop them. How many rides are left, against the 6,433 of the original file?', f: `d = d.drop_duplicates(subset=same)
+d.shape`, parts: [['drop_duplicates(subset=same)', 'Keeps the first ride of each matching group.']], out: '6,433 rows: exactly the original file.' },
+  ] },
+  5: { about: 'Sample Superstore, a US retailer’s 9,994 order lines from 2015 to 2018. One row is one product in one order, so an order_id can repeat: count orders with nunique, not count. No loops: groupby, agg, transform, value_counts and crosstab do the work.', data: () => nbCols(null, [['order_id', 'CA-2017-152156', 'the order; repeats across its lines'], ['row_id', '1', 'the line'], ['segment', 'Consumer', 'Consumer, Corporate or Home Office'], ['region', 'South', 'Central, East, South or West'], ['category, sub_category', 'Furniture, Tables', 'what was sold'], ['ship_mode', 'Second Class', 'how it shipped'], ['sales, profit', '261.96, 41.91', 'dollars'], ['discount', '0.2', 'share off the price']]), qs: [
+    { id: 'q1', title: 'Where do we sell the most?', task: 'Total sales per region, highest first.', f: `df.groupby("region")["sales"].sum().sort_values(ascending=False).round(2)
+# SQL: SELECT region, SUM(sales) ... GROUP BY region ORDER BY 2 DESC`, parts: [['groupby("region")', 'One group per region.'], ['["sales"].sum()', 'The sales of each group, added.'], ['sort_values(ascending=False)', 'Largest first.']], out: 'The West sells the most, $725,458; the South the least, $391,722.' },
+    { id: 'q2', title: 'Orders, not lines', task: 'How many distinct orders did each segment place?', f: `df.groupby("segment")["order_id"].nunique()
+# SQL: COUNT(DISTINCT order_id)`, parts: [['.nunique()', 'Distinct order ids per group: orders, not lines.']], out: 'Consumer 2,586, Corporate 1,514, Home Office 909: 5,009 orders.' },
+    { id: 'q3', title: 'Sales are not profit', task: 'Total sales and total profit per category, in one table. Which category sells almost as much but earns far less?', f: `df.groupby("category")[["sales", "profit"]].sum().round(2)`, parts: [['[["sales", "profit"]]', 'Two columns, so the result is a table.']], out: 'Furniture: $742,000 of sales but $18,451 of profit. Technology: $836,154 and $145,455.' },
+    { id: 'q4', title: 'Profit statistics per region', task: 'In one agg call, the mean, median, min, max and count of profit per region. Why is the mean so far from the median?', f: `df.groupby("region")["profit"].agg(["mean", "median", "min", "max", "count"]).round(2)`, parts: [['.agg([...])', 'One column per function in the list.']], out: 'Means of $17 to $34 are 3 to 4 times the medians of $5 to $11: a few huge lines, up to $8,400, pull the mean up. Central has the lowest mean, $17.09.' },
+    { id: 'q5', title: 'A clean report per category', task: 'One row per category with named aggregation: n_orders (distinct orders), total_sales, avg_discount, total_profit.', f: `df.groupby("category").agg(
+    n_orders=("order_id", "nunique"),
+    total_sales=("sales", "sum"),
+    avg_discount=("discount", "mean"),
+    total_profit=("profit", "sum")).round(2)`, parts: [['n_orders=("order_id", "nunique")', 'Output name = (column, function).'], ['.round(2)', 'Two decimals, for reading.']], out: 'Furniture has the highest average discount, 17%, and by far the lowest profit, $18,451.' },
+    { id: 'q6', title: 'Which sub-categories lose money?', task: 'Total profit per sub_category; keep the negative ones, worst first.', f: `profit_by_sub = df.groupby("sub_category")["profit"].sum()
+profit_by_sub[profit_by_sub < 0].sort_values()
+# SQL: ... GROUP BY sub_category HAVING SUM(profit) < 0`, parts: [['profit_by_sub < 0', 'A mask on the grouped result: like HAVING.'], ['.sort_values()', 'Smallest first: the worst loss on top.']], out: 'Tables −$17,725, Bookcases −$3,473, Supplies −$1,189.' },
+    { id: 'q7', title: 'How often do we sell at a loss?', task: 'Per region, the share of lines with a negative profit, with agg and a lambda.', f: `df.groupby("region")["profit"].agg(lambda x: (x < 0).mean()).sort_values(ascending=False).round(3)`, parts: [['lambda x:', 'x is the profit of one region’s lines.'], ['(x < 0).mean()', 'The mean of True and False: the share of losses.']], out: 'Central sells 31.9% of its lines at a loss, the West only 9.9%.' },
+    { id: 'q8', title: 'Who pays for speed?', task: 'Count lines by segment and ship_mode in a grid, then as row shares. Which segment uses Same Day least?', f: `pd.crosstab(df["segment"], df["ship_mode"])
+pd.crosstab(df["segment"], df["ship_mode"], normalize="index").round(3)`, parts: [['pd.crosstab(rows, columns)', 'Counts each combination.'], ['normalize="index"', 'Each row sums to 1.']], out: 'About 60% of every segment ships Standard Class. Corporate uses Same Day least: 3.8% against about 6%.' },
+    { id: 'q9', title: 'Unusually large lines', task: 'Add cat_avg_sales, each line’s category average, with transform. Still 9,994 rows? How many lines sell more than 5 times their category average, and in which category?', f: `df["cat_avg_sales"] = df.groupby("category")["sales"].transform("mean")
+df.shape
+big = df[df["sales"] > 5 * df["cat_avg_sales"]]
+len(big)
+big["category"].value_counts()`, parts: [['.transform("mean")', 'The group mean on every row: same length as df.'], ['df["sales"] > 5 * df["cat_avg_sales"]', 'Each line against its own category.']], out: 'Still 9,994 rows. 352 lines, 243 of them Office Supplies, whose average line is small ($119), so a big order stands out quickly.' },
+    { id: 'q10', title: 'Do discounts pay off?', task: 'Per discount level, n_lines, avg_profit and total_profit with named aggregation. From which level does the average line lose money?', f: `df.groupby("discount").agg(
+    n_lines=("row_id", "count"),
+    avg_profit=("profit", "mean"),
+    total_profit=("profit", "sum")).round(2)`, parts: [['groupby("discount")', 'One group per discount level: 0.0, 0.1, 0.15 …']], out: 'Up to 20% the average line makes money; from 30% every level loses, −$95.87 per line at 70%. Advice: cap discounts at 20%.' },
+  ] },
+  6: { about: 'Olist, a Brazilian marketplace: about 100,000 real orders from 2016 to 2018, split into linked tables, one per thing, joined by key columns. Print the shape before and after every merge.', data: () => nbCols(['table', 'one row is', 'key(s)', 'rows'], [['orders', 'one order', 'order_id, customer_id', '99,441'], ['customers', 'the customer of one order', 'customer_id', '99,441'], ['items', 'one product in one order', 'order_id, product_id, seller_id', '112,650'], ['products', 'one product', 'product_id', '32,951'], ['categories', 'a category name, Portuguese → English', 'product_category_name', '71'], ['payments', 'one payment of one order', 'order_id', '103,886'], ['sellers', 'one seller', 'seller_id', '3,095']]), qs: [
+    { id: 'q1', title: 'Who buys?', task: 'Merge orders with customers, with the shapes before and after. Which 3 states place the most orders?', f: `print(orders.shape, customers.shape)
+oc = pd.merge(orders, customers, on="customer_id")
+print(oc.shape)
+oc["customer_state"].value_counts().head(3)`, parts: [['pd.merge(…, on="customer_id")', 'Adds each order’s customer columns.'], ['.value_counts().head(3)', 'The 3 most frequent states.']], out: 'SP 41,746, RJ 12,852, MG 11,635. Still 99,441 rows: one customer per order.' },
+    { id: 'q2', title: 'Orders with nothing inside', task: 'Left-merge orders with items. How many orders have no item, and what status do they have?', f: `q2 = pd.merge(orders, items, on="order_id", how="left")
+print(orders.shape, q2.shape)
+empty = q2[q2["product_id"].isna()]
+len(empty)
+empty["order_status"].value_counts()`, parts: [['how="left"', 'Keeps every order, with NaN where no item matches.'], ['q2["product_id"].isna()', 'The orders that found no item.']], out: '775 orders have no item (113,425 rows = 112,650 items + 775): 603 unavailable, 164 canceled.' },
+    { id: 'q3', title: 'Lost in translation', task: 'Merge products with categories, inner then left. How many products does inner lose? Which Portuguese names are missing from categories?', f: `inner = pd.merge(products, categories, on="product_category_name", how="inner")
+left = pd.merge(products, categories, on="product_category_name", how="left")
+len(products) - len(inner)
+no_en = left[left["product_category_name_english"].isna()]
+no_en["product_category_name"].isna().sum()
+no_en["product_category_name"].value_counts()`, parts: [['len(products) - len(inner)', 'The products inner drops.'], ['no_en', 'Products with no English name after the left merge.'], ['.isna().sum()', 'Of those, the ones with no category at all.']], out: 'Inner loses 623: 610 have no category, 13 have one missing from the table (portateis_cozinha_e_preparadores_de_alimentos 10, pc_gamer 3). Left keeps all 32,951.' },
+    { id: 'q4', title: 'One analytical table', task: 'Build sales from items, then merge orders, customers, products and categories, with the shape after each. It must stay at 112,650. Top 5 categories by revenue?', f: `sales = pd.merge(items, orders, on="order_id")
+sales = pd.merge(sales, customers, on="customer_id")
+sales = pd.merge(sales, products, on="product_id", how="left")
+sales = pd.merge(sales, categories, on="product_category_name", how="left")
+sales.shape
+sales.groupby("product_category_name_english")["price"].sum().sort_values(ascending=False).head(5)`, parts: [['start from items', 'The finest table: one row per item.'], ['how="left"', 'For the tables that may miss a key, so no item is lost.']], out: '112,650 rows after every merge. Top revenue: health_beauty (R$1.26M), watches_gifts (R$1.21M), bed_bath_table, sports_leisure, computers_accessories.' },
+    { id: 'q5', title: 'Who buys, who sells?', task: 'Per year and state, compare what a state’s customers buy with what its sellers sell. Build both revenues, rename the state column, merge on both keys with outer and suffixes. In 2018, who sells more than it buys? Which states have no seller?', f: `q5 = pd.merge(pd.merge(items, oc, on="order_id"), sellers, on="seller_id")
+q5["year"] = pd.to_datetime(q5["order_purchase_timestamp"]).dt.year
+bought = (q5.groupby(["year", "customer_state"]).agg(revenue=("price", "sum"))
+            .reset_index().rename(columns={"customer_state": "state"}))
+sold = (q5.groupby(["year", "seller_state"]).agg(revenue=("price", "sum"))
+          .reset_index().rename(columns={"seller_state": "state"}))
+flows = pd.merge(bought, sold, on=["year", "state"], how="outer",
+                 suffixes=("_bought", "_sold"))
+f18 = flows[flows["year"] == 2018]
+f18[f18["revenue_sold"] > f18["revenue_bought"]]
+f18[f18["revenue_sold"].isna()]["state"].tolist()`, parts: [['pd.to_datetime(…).dt.year', 'Text to dates, then the year.'], ['.rename(columns={...})', 'Gives both tables the same key name, state.'], ['on=["year", "state"]', 'A match needs both keys equal.'], ['how="outer"', 'Keeps states that only buy or only sell.'], ['suffixes=("_bought", "_sold")', 'Names the two revenue columns.']], out: 'In 2018 only PR, SC and SP sell more than they buy (SP: R$4.80M sold, R$2.98M bought). AC, AL, AM, AP, RR and TO have no seller: kept, with NaN, only thanks to the outer join.' },
+    { id: 'q6', title: 'Paid twice?', task: 'Merge orders with payments: rows, and repeated order_id? The most payments for one order? Fix it: one row per order with the total paid, merge again.', f: `q6 = pd.merge(orders, payments, on="order_id")
+q6.shape
+q6["order_id"].duplicated().sum()
+payments.groupby("order_id").size().max()
+paid = payments.groupby("order_id").agg(paid=("payment_value", "sum")).reset_index()
+pd.merge(orders, paid, on="order_id").shape`, parts: [['.duplicated().sum()', 'Rows whose order_id was already seen.'], ['groupby(…).size().max()', 'Payments per order, then the largest.'], ['agg(paid=…).reset_index()', 'One row per order, order_id back as a column to merge on.']], out: '103,886 rows for 99,441 orders: 4,446 repeats, up to 29 payments for one order. After aggregating, 99,440 rows: one order has no payment.' },
+    { id: 'q7', title: 'Three files, one quarter', task: 'Read the three monthly files, add a month column taken from each file name, and stack them with a fresh index. Is the total the sum of the parts? Orders per month?', f: `parts = []
+for f in ["data/orders_2018-01.csv", "data/orders_2018-02.csv", "data/orders_2018-03.csv"]:
+    part = pd.read_csv(f)
+    part["month"] = f.split("_")[1][:7]
+    parts.append(part)
+q7 = pd.concat(parts, ignore_index=True)
+[len(p) for p in parts], q7.shape
+q7["month"].value_counts().sort_index()`, parts: [['f.split("_")[1][:7]', 'From "data/orders_2018-01.csv": the piece after _, its first 7 letters, "2018-01".'], ['ignore_index=True', 'Numbers the stacked rows 0, 1, 2… again.'], ['.sort_index()', 'Sorts by the labels, here the months.']], out: '7,269 + 6,728 + 7,211 = 21,208 rows: nothing lost, nothing doubled. January has the most.' },
+    { id: 'q8', title: 'Side by side', task: 'For the quarter of Q7, per state: n_orders and paid, the total paid from Q6. Put them side by side with concat(axis=1) and add avg_paid. Which state with 100 orders or more pays the most per order?', f: `q8 = pd.merge(pd.merge(q7, customers, on="customer_id"), paid, on="order_id", how="left")
+n_orders = q8["customer_state"].value_counts().rename("n_orders")
+paid_state = q8.groupby("customer_state")["paid"].sum()
+by_state = pd.concat([n_orders, paid_state], axis=1)
+by_state["avg_paid"] = by_state["paid"] / by_state["n_orders"]
+by_state[by_state["n_orders"] >= 100].sort_values("avg_paid", ascending=False).head(3)`, parts: [['.rename("n_orders")', 'Names the Series, so its column is named.'], ['pd.concat([...], axis=1)', 'Side by side, matched on the state label.']], out: 'PA, R$220.42 per order, then PB and MA: far fewer orders than SP, larger baskets.' },
+    { id: 'q9', title: 'A report for the managers', task: 'From sales, keep Q1 2018 and the top 5 categories. Pivot: categories as rows, months as columns, revenue in the cells. Export to Excel. Which category grows most from January to March?', f: `sales["month"] = sales["order_purchase_timestamp"].str[:7]
+top5 = sales.groupby("product_category_name_english")["price"].sum().nlargest(5).index
+q9 = sales[sales["month"].isin(["2018-01", "2018-02", "2018-03"])
+           & sales["product_category_name_english"].isin(top5)]
+report = pd.pivot_table(q9, values="price", index="product_category_name_english",
+                        columns="month", aggfunc="sum")
+report.to_excel("revenue_q1_2018.xlsx")
+report["growth"] = report["2018-03"] - report["2018-01"]
+report.sort_values("growth", ascending=False)`, parts: [['.str[:7]', 'The first 7 characters of the timestamp: "2018-01".'], ['.nlargest(5).index', 'The names of the 5 largest.'], ['pd.pivot_table(…)', 'values summed per (index, columns) cell.'], ['.to_excel(…)', 'Writes the table to an Excel file.']], out: 'watches_gifts grows most, +R$22,240; bed_bath_table and sports_leisure shrink.' },
+    { id: 'q10', title: 'Back to long, same totals', task: 'Melt the pivot of Q9, without growth, back to one row per (category, month). How many rows, and why? Is the total the same as a direct groupby?', f: `q10 = (report.drop(columns="growth").reset_index()
+            .melt(id_vars="product_category_name_english", var_name="month",
+                  value_name="revenue"))
+q10.shape
+direct = q9.groupby(["product_category_name_english", "month"])["price"].sum()
+round(q10["revenue"].sum(), 2), round(direct.sum(), 2)`, parts: [['.drop(columns="growth")', 'Removes the added column first.'], ['.melt(id_vars=…)', 'Every month column becomes rows.'], ['direct', 'The same totals, computed without reshaping.']], out: '15 rows, 5 categories × 3 months: one per cell. The total is unchanged, R$1,215,287.18.' },
+  ] },
+};
 const readSize = () => Number(document.documentElement.style.getPropertyValue('--read')) || 1;
 const cardKey = (s, id) => `pandas|s${s}|${id}`;
 
@@ -1356,6 +1834,13 @@ const PICTURES = {
     + flow(['Split by country', 'Apply sum', 'Combine: one row per group'])
     + `<p class="pic-lede"><b>Decide the shape first:</b> agg gives one row per group, transform one value per row.</p>`
     + row(cap('.agg("mean"): 3 rows') + tbl(['country', 'mean'], [['France', '20.0'], ['Italy', '55.0'], ['Spain', '40.0']]), cap('.transform("mean"): 6 rows') + tbl(['country', 'total', 'avg'], [['France', '30', '20.0'], ['Italy', '40', '55.0'], ['France', '10', '20.0'], ['Spain', '40', '40.0'], ['Italy', '70', '55.0'], ['France', '20', '20.0']])),
+  6: () => `<p class="pic-lede"><b>One question, several tables.</b> Three moves bring them together; the shape tells you if it worked.</p>`
+    + tbl(['Move', 'pandas', 'Gives', 'SQL'], [['Match on a key', 'pd.merge(a, b, on="key")', 'more columns', 'JOIN'], ['Stack', 'pd.concat([a, b])', 'more rows', 'UNION ALL'], ['Reshape', 'pivot_table · melt', 'wide ↔ long', 'PIVOT · UNPIVOT']])
+    + `<p class="pic-lede"><b>Four small tables, linked by keys.</b> Order 4 has no item; the chair’s order 5 is not in orders; order 1 has two items and two payments.</p>`
+    + row(f6orders(), f6items())
+    + `<p class="pic-lede"><b>how= decides the rows without a partner.</b> The default, inner, drops them silently.</p>`
+    + tbl(['how=', 'keeps', 'orders × items'], [['inner', 'pairs that match', '4 rows'], ['left', 'every order: + order 4, NaN', '5 rows'], ['right', 'every item: + the chair, NaN', '5 rows'], ['outer', 'everything', '6 rows']])
+    + flow(['Shape before', 'merge', 'Shape after: as expected?']),
 };
 
 /* ---------- Every call, piece by piece ----------
@@ -1646,7 +2131,7 @@ document.addEventListener('click', e => {
 });
 
 
-/* ---------- Cheat sheet: every call and term from lectures 1 to 5 ---------- */
+/* ---------- Cheat sheet: every call and term from lectures 1 to 6 ---------- */
 const REF = [
   { name: 'DataFrames', items: [
     ['DataFrame', 'A table in memory: an index, named columns, one dtype per column.', 'pd.DataFrame({"total": [129.9, 45.0]})', 1, 'dataframe'],
@@ -1744,6 +2229,19 @@ const REF = [
     ['transform', 'One value per row: the group result next to each row, same length as the table.', 'g["total"].transform("mean")', 5, 'transform'],
     ['MultiIndex', 'An index with several levels: one per groupby key.', 'orders.groupby(["country", "channel"])', 5, 'two-keys'],
     ['crosstab', 'Counts the combinations of two columns in a grid; normalize="index" makes each row sum to 1.', 'pd.crosstab(orders["country"], orders["channel"])', 5, 'crosstab'],
+    ['nunique in agg', 'Counts distinct values per group: orders, when one row is one order line.', 'g["order_id"].nunique()', 5, 'nunique'],
+  ] },
+  { name: 'Fusion', items: [
+    ['merge', 'Matches rows on a key and adds the other table’s columns. Print the shape before and after.', 'pd.merge(orders, customers, on="customer_id")', 6, 'merge'],
+    ['how=', 'Which rows without a partner stay: inner (the default) none, left the left table’s, right the right’s, outer all.', 'pd.merge(orders, items, on="order_id", how="left")', 6, 'how'],
+    ['on=', 'The key column, or a list of keys that must all match.', 'on=["month", "state"]', 6, 'two-keys6'],
+    ['suffixes=', 'Names for the columns both tables share; without it, _x and _y.', 'suffixes=("_2017", "_2018")', 6, 'two-keys6'],
+    ['Repeating key', 'A key that repeats on one side multiplies the rows. Aggregate that table first, then merge.', 'payments.groupby("order_id").agg(paid=("value", "sum"))', 6, 'repeats'],
+    ['concat', 'Stacks tables with the same columns (more rows); axis=1 puts them side by side, matched by label.', 'pd.concat([jan, feb], ignore_index=True)', 6, 'concat-rows'],
+    ['ignore_index=', 'Numbers the rows of the result 0, 1, 2… again, instead of keeping each part’s labels.', 'pd.concat(parts, ignore_index=True)', 6, 'concat-rows'],
+    ['pivot_table', 'Long to wide: values aggregated per (index, columns) cell.', 'pd.pivot_table(oc, values="order_id", index="state", columns="month", aggfunc="count")', 6, 'pivot'],
+    ['melt', 'Wide to long: id_vars stay, every other column becomes rows.', 'wide.melt(id_vars="state", var_name="month", value_name="n_orders")', 6, 'melt'],
+    ['rename', 'Renames columns, for example to give two tables the same key name.', 'df.rename(columns={"seller_state": "state"})', 6, 'two-keys6'],
   ] },
 ];
 
@@ -1752,7 +2250,7 @@ const REF = [
 const TERMS = /\b(DataFrames?|Series|index|masks?|dtypes?|NaN|Copy-on-Write|chained assignment|slices?|alignment|profile|placeholders?|outliers?)\b/g;
 // No letters to explain on this page: the code is the formula.
 const LETTERS = {};
-const CODE_TOKENS = /\.loc\b|\.iloc\b|\.str\b|\.dt\b|\bread_csv\b|\bread_excel\b|\bread_sql\b|\bjson_normalize\b|\bto_csv\b|\bisin\b|\bbetween\b|\bisna\b|\bnotna\b|\bquery\b|\bdtype=|\bsep=|\bencoding=|\bvalue_counts\b|\bdescribe\b|\binfo\b|\bnlargest\b|\.copy\(\)|\breset_index\b|\bsort_values\b|\bselect_dtypes\b|\bnunique\b|\bduplicated\b|\bto_numeric\b|\bquantile\b|\bna_values=/g;
+const CODE_TOKENS = /\.loc\b|\.iloc\b|\.str\b|\.dt\b|\bread_csv\b|\bread_excel\b|\bread_sql\b|\bjson_normalize\b|\bto_csv\b|\bisin\b|\bbetween\b|\bisna\b|\bnotna\b|\bquery\b|\bdtype=|\bsep=|\bencoding=|\bvalue_counts\b|\bdescribe\b|\binfo\b|\bnlargest\b|\.copy\(\)|\breset_index\b|\bsort_values\b|\bselect_dtypes\b|\bnunique\b|\bduplicated\b|\bto_numeric\b|\bquantile\b|\bna_values=|\bmerge\b|\bconcat\b|\bpivot_table\b|\bmelt\b|\bhow=|\bsuffixes=|\bignore_index=/g;
 const codeKey = m => m.replace(/^\./, '').replace(/[()=]+$/, '');
 const symbolize = escaped => escaped.replace(CODE_TOKENS, m => (PEEK_TERM[codeKey(m)] ? `<span class="kw" data-kw="${codeKey(m)}">${m}</span>` : m));
 const letterSpan = (key, shown) => `<span class="kw kw-v" data-kw="${key}">${shown}</span>`;
@@ -1876,8 +2374,19 @@ function practiceHtml(s) {
     <div class="notes"></div>
     <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button><button type="button" class="case-btn" aria-controls="case-pad">The case</button></div></section>`).join('');
 }
+/* The lecture's notebook: each exercise in plain words, its solution folded until opened, as in Practice. */
+function notebookHtml(s) {
+  const nb = NOTEBOOKS[s.n];
+  if (!nb) return '<p class="group-note">No notebook for this lecture yet.</p>';
+  return `<p class="group-note">The exercises of the lecture’s notebook, with their solutions. Try each one in the notebook first, then open the solution.</p>`
+    + `<div class="nb-data"><p class="out-head">The data</p><p class="ex-read">${kwText(nb.about)}</p>${nb.data ? nb.data() : ''}</div>`
+    + nb.qs.map((q, i) => `<section class="ex nb-ex" id="c-${s.n}-nb-${q.id}" data-key="${esc(cardKey(s.n, `nb-${q.id}`))}" aria-label="Notebook question ${i + 1}"><h3><span class="ex-num">Q${i + 1}</span>${esc(q.title)}${partTag(s, s.groups.length + 1)}</h3><p class="ex-setup" data-hl="pandas|nb|${s.n}-${q.id}">${kwText(q.task)}</p>
+    <details class="pq sol"><summary><span>Solution</span></summary><div class="ans"><pre>${mathHtml(q.f)}</pre>${readsHtml({ parts: q.parts })}${q.out ? `<p class="nb-out"><b>Result</b>${kwText(q.out)}</p>` : ''}</div></details>
+    <div class="notes"></div>
+    <div class="foot"><button type="button" class="note-btn" aria-pressed="false">Question or comment</button></div></section>`).join('');
+}
 function refHtml() {
-  return `<h1>Cheat sheet</h1><p class="lede">Every rule and term from lectures 1 to 3, by topic. The lecture tag opens its card.</p>
+  return `<h1>Cheat sheet</h1><p class="lede">Every rule and term from lectures 1 to 6, by topic. The lecture tag opens its card.</p>
     <input type="search" class="ref-search" id="ref-q" placeholder="Find: loc, mask, read_csv, query…" aria-label="Find a rule or term" autocomplete="off">
     <div id="ref-list">${REF.map(g => `<section class="ref-group"><h2>${esc(g.name)}</h2><dl class="ref">${g.items.map(([t, d, ex, n, id]) => `<div class="ref-row" data-hl="pandas|ref|${esc(t)}" data-text="${esc(`${t} ${d} ${ex}`.toLowerCase())}">
       <dt>${mathHtml(t)}</dt><dd><span>${esc(d)}</span>${ex ? `<pre>${mathHtml(ex)}</pre>` : ''}<button type="button" class="ref-go" data-go="${esc(cardKey(n, id))}">Lecture ${n} ›</button></dd></div>`).join('')}</dl></section>`).join('')}</div>
@@ -1915,9 +2424,9 @@ function paintBars() {
 // 2026-11-19: "a bit more beige or light brown rather than green": hue 70, softer.
 const SEG_HUE = 70;
 const segHue = () => SEG_HUE;
-const partTag = (s, i) => `<span class="part-tag">Part ${i + 1}/${s.groups.length + 2}</span>`;
-const partHead = (s, i, name) => `<h2><span class="part-no">Part ${i + 1} of ${s.groups.length + 2}</span>${esc(name)}</h2>`;
-const segRail = (s, i) => `<div class="seg-rail"><button type="button" class="seg-tab" aria-label="Part ${i + 1} of ${s.groups.length + 2}. Open the map">Part ${i + 1}/${s.groups.length + 2}</button></div>`;
+const partTag = (s, i) => `<span class="part-tag">Part ${i + 1}/${s.groups.length + 3}</span>`;
+const partHead = (s, i, name) => `<h2><span class="part-no">Part ${i + 1} of ${s.groups.length + 3}</span>${esc(name)}</h2>`;
+const segRail = (s, i) => `<div class="seg-rail"><button type="button" class="seg-tab" aria-label="Part ${i + 1} of ${s.groups.length + 3}. Open the map">Part ${i + 1}/${s.groups.length + 3}</button></div>`;
 function picOpen() { try { return localStorage.getItem('pandas-pic-closed') !== '1'; } catch (e) { return true; } }
 document.addEventListener('toggle', e => { if (e.target.id === 'pic') { try { localStorage.setItem('pandas-pic-closed', e.target.open ? '' : '1'); } catch (err) {} } }, true);
 /* ---------- Summary: each lecture in its essentials ----------
@@ -1967,6 +2476,14 @@ const ESSENTIALS = {
     { name: 'agg', is: 'A list for several statistics, named aggregation for clean names, a lambda for anything custom.', f: 'g.agg(n_orders=("order_id", "count"),\n      total_sales=("total", "sum"))\ng["total"].agg(lambda x: x.max() - x.min())', watch: 'A dict in agg gives two header levels: names become pairs.' },
     { name: 'transform', is: 'One value per row: the group result next to each row, still 6 rows.', f: 'orders["country_avg"] = g["total"].transform("mean")' },
     { name: 'Counting', is: 'value_counts for one column, crosstab for two; normalize gives shares.', f: 'orders["country"].value_counts(normalize=True)\npd.crosstab(orders["country"], orders["channel"])' },
+  ],
+  6: [
+    { name: 'merge', is: 'Matches rows on a key and adds the other table’s columns. Print the shape before and after.', f: 'oc = pd.merge(orders, customers, on="customer_id")', ex: '(4, 4) and (3, 2) give (4, 5): one customer per order.', cards: ['merge', 'grow'] },
+    { name: 'how=', is: 'Decides the rows without a partner: inner drops them, left keeps every row of the left table, right of the right, outer all.', f: 'pd.merge(orders, items, on="order_id", how="left")', watch: 'The default is inner: rows can vanish without a word.', cards: ['how', 'unmatched'] },
+    { name: 'Repeats after a merge', is: 'A key that repeats multiplies the rows. Real repeats are not duplicates: aggregate first, then merge.', f: 'paid = payments.groupby("order_id").agg(paid=("value", "sum")).reset_index()\npd.merge(orders, paid, on="order_id")', cards: ['repeats', 'grow'] },
+    { name: 'Two keys and suffixes', is: 'on=[...] matches on several keys at once; suffixes= names the columns both tables share.', f: 'pd.merge(r17, r18, on=["month", "state"], suffixes=("_2017", "_2018"))', cards: ['two-keys6'] },
+    { name: 'concat', is: 'Stacks tables with the same columns: more rows, ignore_index=True for a fresh index. axis=1 puts Series side by side, matched by label.', f: 'pd.concat([jan, feb], ignore_index=True)\npd.concat([n_orders, n_customers], axis=1)', cards: ['concat-rows', 'concat-cols'] },
+    { name: 'pivot_table and melt', is: 'pivot_table goes long to wide, one cell per (index, columns) pair; melt goes back. The total never changes.', f: 'pd.pivot_table(oc, values="order_id", index="state", columns="month", aggfunc="count")\nwide.melt(id_vars="state", var_name="month", value_name="n_orders")', cards: ['pivot', 'melt'] },
   ],
 };
 /* Asked for 2026-11-19: "add summary pill at the start of each lesson (mirrors one below so note questions
@@ -2047,9 +2564,10 @@ function renderSession() {
   document.getElementById('session').innerHTML = `<p class="where"><button type="button" class="where-btn" id="where-btn">Lecture ${s.n}</button></p><h1>${esc(s.title)}</h1><p class="lede">${esc(s.lede)}</p>`
     + summaryTopHtml(s)
     + `<details class="pic" id="pic" data-seg="pic"${picOpen() ? ' open' : ''}><summary>The picture: the lecture on one page</summary><div class="pic-body">${PICTURES[s.n]()}</div></details>`
-    + s.groups.map((g, gi) => `<section class="seg" data-seg="g${gi}" style="--h: ${segHue(gi)}">${segRail(s, gi)}${partHead(s, gi, g.name)}${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c, gi)).join('')}</div><div class="own-boxes" data-box-key="${esc(boxKey(s.n, gi))}" data-part="Part ${gi + 1}/${s.groups.length + 2}"></div></section>`).join('')
+    + s.groups.map((g, gi) => `<section class="seg" data-seg="g${gi}" style="--h: ${segHue(gi)}">${segRail(s, gi)}${partHead(s, gi, g.name)}${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c, gi)).join('')}</div><div class="own-boxes" data-box-key="${esc(boxKey(s.n, gi))}" data-part="Part ${gi + 1}/${s.groups.length + 3}"></div></section>`).join('')
     + `<section class="seg" data-seg="practice" style="--h: ${segHue(s.groups.length)}">${segRail(s, s.groups.length)}${partHead(s, s.groups.length, 'Practice')}<p class="group-note">Try each one on paper first, then open the answer.</p>${practiceHtml(s)}</section>`
-    + `<section class="seg" data-seg="recap" style="--h: ${segHue(s.groups.length + 1)}">${segRail(s, s.groups.length + 1)}${partHead(s, s.groups.length + 1, 'Summary')}${summaryHtml(s)}</section>`;
+    + `<section class="seg" data-seg="notebook" style="--h: ${segHue(s.groups.length + 1)}">${segRail(s, s.groups.length + 1)}${partHead(s, s.groups.length + 1, 'Notebook')}${notebookHtml(s)}</section>`
+    + `<section class="seg" data-seg="recap" style="--h: ${segHue(s.groups.length + 2)}">${segRail(s, s.groups.length + 2)}${partHead(s, s.groups.length + 2, 'Summary')}${summaryHtml(s)}</section>`;
   paintNotes();
   applyHighlights();
   mapRefresh();
@@ -2302,6 +2820,7 @@ function places() {
     ...SESSIONS.flatMap(s => [{ key: `pandas|s${s.n}`, tag: `L${s.n}`, name: `Lecture ${s.n} in general`, s: s.n },
       ...s.groups.flatMap(g => g.cards.map(c => ({ key: cardKey(s.n, c.id), tag: c.num, name: c.name, s: s.n, id: c.id }))),
       ...(s.practice || []).map((x, i) => ({ key: cardKey(s.n, `ex-${x.id}`), tag: `Ex ${i + 1}`, name: x.title, s: s.n, id: `ex-${x.id}` })),
+      ...(NOTEBOOKS[s.n]?.qs || []).map((q, i) => ({ key: cardKey(s.n, `nb-${q.id}`), tag: `NB ${i + 1}`, name: q.title, s: s.n, id: `nb-${q.id}` })),
       ...(ESSENTIALS[s.n] || []).map((e, i) => ({ key: cardKey(s.n, essId(e)), tag: `Sum ${i + 1}`, name: e.name, s: s.n, id: essId(e) }))])];
 }
 nbAbout.innerHTML = places().map(p => `<option value="${esc(p.key)}">${p.id ? `${p.tag} · ` : ''}${esc(p.name)}</option>`).join('');
@@ -2681,6 +3200,7 @@ const PEEK_TERM = {
   dataframe: 'DataFrame', series: 'Series', index: 'Index', mask: 'Mask', nan: 'NaN', 'copy-on-write': 'Copy-on-Write', 'chained assignment': 'Chained assignment', slice: 'Slice', alignment: 'Alignment', profile: 'Profile',
   dropna: 'dropna', fillna: 'fillna', ffill: 'ffill', bfill: 'ffill', interpolate: 'interpolate', mcar: 'MCAR', knnimputer: 'KNNImputer', 'z-score': 'z-score', masking: 'Masking', mad: 'MAD', iqr: 'IQR', lof: 'LOF', clip: 'clip', where: 'where', drop_duplicates: 'drop_duplicates', levenshtein: 'Levenshtein', blocking: 'Blocking', 'record linkage': 'Record linkage', combine_first: 'combine_first',
   groupby: 'groupby', size: 'size', agg: 'agg', namedagg: 'NamedAgg', transform: 'transform', multiindex: 'MultiIndex', crosstab: 'crosstab',
+  merge: 'merge', how: 'how=', suffixes: 'suffixes=', concat: 'concat', ignore_index: 'ignore_index=', pivot_table: 'pivot_table', melt: 'melt', rename: 'rename',
   nunique: 'nunique', duplicated: 'duplicated', to_numeric: 'to_numeric', quantile: 'quantile', na_values: 'na_values', placeholder: 'Placeholder', outlier: 'Outlier',
 };
 const peekKey = w => PEEK_TERM[w] || PEEK_TERM[w.replace(/ies$/, 'y').replace(/s$/, '')] || PEEK_TERM[w.replace(/s$/, '')];
@@ -2967,7 +3487,7 @@ document.addEventListener('mousedown', e => { if (e.target.closest && !e.target.
    The decks are the teacher's material, so they stay out of this public page: each user uploads them once
    to their private folder (the same one as the Python page's slides), and each card's "Slide n ›" opens
    them. Any sensible name works: SelectingFilteringSlicing_2.pdf or Pandas2.pdf is filed as Pandas2.pdf. */
-const DECK_FILES = ['Pandas1.pdf', 'Pandas2.pdf', 'Pandas3.pdf', 'Pandas4.pdf', 'Pandas5.pdf'];
+const DECK_FILES = ['Pandas1.pdf', 'Pandas2.pdf', 'Pandas3.pdf', 'Pandas4.pdf', 'Pandas5.pdf', 'Pandas6.pdf'];
 function deckName(name) {
   if (!/\.pdf$/i.test(name)) return null;
   // The decks' own names say what they are: (Intro)DataFrames&Loading.pdf, SelectingFilteringSlicing_2.pdf,
@@ -2977,8 +3497,9 @@ function deckName(name) {
   if (/quality/i.test(name)) return 'Pandas3.pdf';
   // Session 4 came as main.pdf: rename it DataCleaning_4.pdf, or pick it with any name that says cleaning.
   if (/cleaning/i.test(name)) return 'Pandas4.pdf';
-  if (/aggregat/i.test(name)) return 'Pandas5.pdf';
-  const m = name.match(/^Pandas\s*([1-5])\.pdf$/i) || name.match(/(?:lecture|lesson|session)\s*_?\s*0*([1-5])(?!\d)/i);
+  if (/aggregat|groupby/i.test(name)) return 'Pandas5.pdf';
+  if (/fusion|merg|join/i.test(name)) return 'Pandas6.pdf';
+  const m = name.match(/^Pandas\s*([1-6])\.pdf$/i) || name.match(/(?:lecture|lesson|session)\s*_?\s*0*([1-6])(?!\d)/i);
   return m ? `Pandas${m[1]}.pdf` : null;
 }
 let filesUp = null;
@@ -3092,7 +3613,8 @@ let mapLecture = null, mapPlace = { seg: null, card: null };
 function segsOf(s) {
   return [{ key: 'pic', name: 'The picture' },
     ...s.groups.map((g, gi) => ({ key: `g${gi}`, name: g.name, h: segHue(gi), cards: g.cards })),
-    { key: 'practice', name: 'Practice', h: segHue(s.groups.length) }, { key: 'recap', name: 'Summary', h: segHue(s.groups.length + 1) }];
+    { key: 'practice', name: 'Practice', h: segHue(s.groups.length) }, { key: 'notebook', name: 'Notebook', h: segHue(s.groups.length + 1) },
+    { key: 'recap', name: 'Summary', h: segHue(s.groups.length + 2) }];
 }
 function findPlace() {
   let seg = null, card = null;
@@ -3386,7 +3908,38 @@ addEventListener('hashchange', followHash);
     fit_predict: ['(scikit-learn) Fits a model and returns its labels, e.g. outliers or clusters.', 'IsolationForest().fit_predict(df[["total"]])', '1 normal, -1 outlier'],
     jaro_winkler_similarity: ['(jellyfish) How alike two strings are, 0 to 1; catches typos.', 'jaro_winkler_similarity("Martha", "Marhta")', '0.96: probably the same name'],
     soundex: ['(jellyfish) A code for how a word sounds, so different spellings match.', 'soundex("Robert"), soundex("Rupert")', 'R163 and R163'],
+    levenshtein_distance: ['(jellyfish) The fewest single-letter edits that turn one string into the other.', 'levenshtein_distance("Gramercy", "Gramecy")', '1: one letter missing'],
+    // Lecture 6 and the notebooks (2026-11-25).
+    merge: ['Joins two tables on a key column: each row gets the matching row\'s columns from the other table.', 'pd.merge(orders, customers, on="customer_id")', 'Each order with its customer\'s state'],
+    concat: ['Stacks tables: under each other (more rows), or side by side with axis=1.', 'pd.concat([jan, feb], ignore_index=True)', 'The rows of jan, then feb, numbered 0, 1, 2 …'],
+    pivot_table: ['Long to wide: one row per index value, one column per columns value, an aggregate in each cell.', 'pd.pivot_table(df, values="order_id", index="state", columns="month", aggfunc="count")', 'Orders per state (rows) and month (columns)'],
+    melt: ['Wide to long: keeps the id columns and turns every other column into rows.', 'wide.melt(id_vars="state", var_name="month", value_name="n")', 'One row per (state, month)'],
+    rename: ['Renames columns (or index labels) through a dict old → new.', 'df.rename(columns={"seller_state": "state"})', 'The column is now called state'],
+    how: ['A merge parameter: which rows without a partner stay. "inner" (default), "left", "right" or "outer".', 'pd.merge(a, b, on="id", how="left")', 'Every row of a, NaN where b has no match'],
+    on: ['A merge parameter: the key column, or a list of keys that must all match.', 'pd.merge(r17, r18, on=["month", "state"])', 'Rows match when month and state are both equal'],
+    suffixes: ['A merge parameter: endings for the columns both tables share (default _x and _y).', 'pd.merge(r17, r18, on="state", suffixes=("_2017", "_2018"))', 'revenue_2017 and revenue_2018'],
+    ignore_index: ['A concat parameter: numbers the result\'s rows 0, 1, 2 … again.', 'pd.concat([jan, feb], ignore_index=True)', 'No repeated labels'],
+    axis: ['Which way an operation runs: 0 down the rows (per column), 1 across the columns (per row).', 'df.isna().any(axis=1)', 'True for each row with a missing cell'],
+    normalize: ['A parameter of value_counts and crosstab: shares that sum to 1 instead of counts.', 'df["segment"].value_counts(normalize=True)', 'Consumer 0.52, Corporate 0.30 …'],
+    size: ['Rows per group, missing values included.', 'df.groupby("region").size()', 'Central 2323, East 2848 …'],
+    ngroups: ['How many groups a groupby made.', 'df.groupby("region").ngroups', '4'],
+    idxmax: ['The label of the largest value.', 'df.groupby("region")["sales"].mean().idxmax()', "'South'"],
+    filter: ['Keeps the columns whose name matches: like= a piece of text, regex= a pattern.', 'df.filter(like="zone").columns', 'pickup_zone, dropoff_zone'],
+    mode: ['The most frequent value(s), as a Series: take [0] for the first.', 'df["passengers"].mode()[0]', '1.0'],
+    abs: ['Absolute value: drops the minus sign.', 'df["fare"].abs()', '-21.0 → 21.0'],
+    round: ['Rounds to a number of decimals.', 'df["tip"].mean().round(2)', '1.98'],
+    to_datetime: ['Turns text into dates, so .dt works.', 'pd.to_datetime(df["order_purchase_timestamp"]).dt.year', '2017, 2018 …'],
+    sort_index: ['Sorts by the index labels instead of the values.', 'df["month"].value_counts().sort_index()', '2018-01, 2018-02, 2018-03'],
+    is_unique: ['True when no value of the column (or index) repeats.', 'df["ride_id"].is_unique', 'False: some ids repeat'],
+    dayofweek: ['(.dt.dayofweek) The weekday of a date: Monday 0 … Sunday 6.', 'df["pickup"].dt.dayofweek == 6', 'True for Sunday rides'],
+    hour: ['(.dt.hour) The hour of a date, 0 to 23.', 'df["pickup"].dt.hour < 5', 'True for night rides'],
+    title: ['(.str.title) A capital at the start of each word.', 'df["borough"].str.title()', '"manhattan" → "Manhattan"'],
+    sheet_name: ['A read_excel parameter: which sheet to load; None loads them all, as a dict.', 'pd.read_excel("f.xlsx", sheet_name=None)', '{"Sheet1": DataFrame, …}'],
+    record_path: ['A json_normalize parameter: the nested list to turn into rows.', 'pd.json_normalize(raw, record_path="labels", meta=["number"])', 'One row per label, with its issue number'],
   };
+  // Parameters are shown with =, attributes bare, everything else as a call.
+  const PARAMS = new Set(['subset', 'keep', 'how', 'on', 'suffixes', 'ignore_index', 'axis', 'normalize', 'sheet_name', 'record_path']);
+  const ATTRS = new Set(['ngroups', 'is_unique', 'dayofweek', 'hour']);
 
   const names = Object.keys(FN).sort((a, b) => b.length - a.length);
   const RE = new RegExp(`(\\.)?\\b(${names.join('|')})\\b(\\(\\)?|=)?`, 'g');
@@ -3451,7 +4004,7 @@ addEventListener('hashchange', followHash);
     tip.innerHTML = '';
     const name = document.createElement('div');
     name.className = 'fn-name';
-    name.textContent = w.dataset.fn + (w.dataset.fn === 'subset' || w.dataset.fn === 'keep' ? '=' : '()');
+    name.textContent = w.dataset.fn + (PARAMS.has(w.dataset.fn) ? '=' : ATTRS.has(w.dataset.fn) ? '' : '()');
     const is = document.createElement('p');
     is.className = 'fn-is';
     is.textContent = f[0];

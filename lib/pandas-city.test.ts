@@ -18,22 +18,23 @@ const html = readFileSync(path.join(process.cwd(), 'content', 'pandas', 'index.h
 const lessons = parsePandasCourse(html);
 
 describe('parsePandasCourse, on the real class page', () => {
-  it('finds the five lessons in order, with their titles', () => {
-    expect(lessons.map((l) => l.n)).toEqual([1, 2, 3, 4, 5]);
+  it('finds the six lessons in order, with their titles', () => {
+    expect(lessons.map((l) => l.n)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(lessons.map((l) => l.short)).toEqual([
       'DataFrames & loading',
       'Selecting, filtering & slicing',
       'Data quality',
       'Data cleaning',
       'Data aggregation',
+      'Data fusion',
     ]);
     expect(lessons[2].title).toBe('Data quality assessment');
     expect(lessons[2].lede).toMatch(/^Before cleaning anything/);
   });
 
-  it('reads every group and card: 14, 17, 19, 23 and 12 cards; Session 3 has 6 groups', () => {
+  it('reads every group and card: 14, 17, 19, 23, 13 and 14 cards; Session 3 has 6 groups', () => {
     expect(lessons.map((l) => l.groups.flatMap((g) => g.cards).length)).toEqual([
-      14, 17, 19, 23, 12,
+      14, 17, 19, 23, 13, 14,
     ]);
     expect(lessons[2].groups.map((g) => g.name)).toEqual([
       'Assess before you clean',
@@ -76,6 +77,7 @@ describe('parsePandasCourse, on the real class page', () => {
       ['l3-e1', 'l3-e2', 'l3-e3'],
       ['l4-e1', 'l4-e2', 'l4-e3'],
       ['l5-e1', 'l5-e2', 'l5-e3'],
+      ['l6-e1', 'l6-e2', 'l6-e3'],
     ]);
     expect(lessons[0].practice[0].title).toBe('Predict the loads');
     for (const l of lessons) expect(l.remember.length).toBeGreaterThanOrEqual(3);
@@ -92,12 +94,12 @@ describe('parsePandasCourse, on the real class page', () => {
 });
 
 describe('the eight places', () => {
-  it('has 8 slots, lessons 1 to 5 filled and 3 to come', () => {
+  it('has 8 slots, lessons 1 to 6 filled and 2 to come', () => {
     const slots = lessonSlots(lessons);
     expect(LESSON_COUNT).toBe(8);
     expect(slots.map((s) => s.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(slots.filter((s) => s.lesson).length).toBe(5);
-    expect(slots.filter((s) => !s.lesson).length).toBe(3);
+    expect(slots.filter((s) => s.lesson).length).toBe(6);
+    expect(slots.filter((s) => !s.lesson).length).toBe(2);
   });
 });
 
@@ -106,7 +108,7 @@ describe('pandasMap, the adapter for the engine', () => {
 
   it('turns lessons into cities, groups into districts, cards into buildings', () => {
     expect(data.slots).toHaveLength(8);
-    expect(data.slots.slice(5).every((s) => s === null)).toBe(true);
+    expect(data.slots.slice(6).every((s) => s === null)).toBe(true);
     const third = data.slots[2];
     expect(third?.districts).toHaveLength(6);
     expect(third?.districts.flatMap((d) => d.buildings)).toHaveLength(19);
