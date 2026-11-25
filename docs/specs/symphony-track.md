@@ -67,15 +67,15 @@ road is `SYMPHONY` in `lib/art/track.ts`.
 
 | km | Movement |
 |---|---|
-| 0 – 1.7 | The opening: the grid dead straight and level, then a calm line; the first sunflower of pillars on the right at 0.9 |
+| 0 – 1.7 | The opening: the grid dead straight and level, then a calm line between two irrational waves of light; the first sunflower of pillars on the right at 0.9 |
 | 1.7 – 4.6 | The bridges: up a viaduct to 26 m, three catenary bridges of 233, 377 and 610 m (2.38, 2.70, 3.22), the golden helix of lamps all along the top, down again |
 | 4.6 – 6.4 | The ring gates: six, 233 m apart (4.8 to 5.97); the second sunflower on the left at 5.3 |
 | 6.4 – 7.8 | The fire rows: 5 in 8 against 3 in 8 (6.55), 7 in 12 against 5 in 12 (6.99), 5 in 13 against 8 in 13 (7.42) |
-| 7.8 – 9.8 | The build: the road at its liveliest (the torus knot comes here) |
+| 7.8 – 9.8 | The build: the road at its liveliest, three epicycloids standing beside it (8.2, 8.9, 9.5; the torus knot comes here) |
 | 9.8 – 11 | The rise (the golden spiral climb comes here) |
 | 11 – 13 | The climax (the gyroid tunnel comes here) |
 | 13 – 14.3 | The linked rings come here |
-| 14.3 – 16 | The release: the line eases off, the third sunflower on the left at 15.1, straight home |
+| 14.3 – 16 | The release: the line eases off between the waves again, the third sunflower on the left at 15.1, straight home |
 
 ### The road
 
@@ -120,6 +120,15 @@ road is `SYMPHONY` in `lib/art/track.ts`.
 - **The golden helix:** along the viaduct's top, a lamp every 9 m, each 137.5° further round the
   road (radius half-width + 5 m), every fifth violet: a spiral of light you drive through.
 
+### Waves and wheels
+
+- **Irrational waves:** in the opening and the release, a line of light either side of the road
+  (gold on the left, violet on the right), 6 m out, its height a sum of sinusoids in ratios 1, φ,
+  √2 with each side's own phases: it never repeats.
+- **Wheels on wheels:** three epicycloids in the build, each a circle of radius 26 / 5 m rolling
+  round one of 26 m, drawn out as five petals of gold light standing beside the road, the two
+  circles faint in violet.
+
 ### Euclidean fire
 
 Burners down both edges every 5 or 6 m. Each row fires a Euclidean rhythm E(k, n) on the left and
@@ -147,14 +156,14 @@ speed the rhythm in space becomes one in time: the rows groove instead of tickin
 - **Plain:** deep violet glass with the dusk and the sun lying in it. The road is a violet-black
   asphalt, wet, with gold edge lines and violet dashes.
 - The weathers keep the sky dark, as on the Golden Track.
-- **Dressing:** the bridges, sunflowers, fire rows and helix are the design space's new **Maths**
-  category (`components/drive/design-space.ts`), worn by default on the Symphony and placeable on
+- **Dressing:** the bridges, sunflowers, fire rows, helix, waves and epicycloids are the design
+  space's new **Maths** category (`components/drive/design-space.ts`), worn by default on the Symphony and placeable on
   any track (spread evenly where the road is plain). The ring gates turn in
   `components/drive/symphony-view.ts`.
 
 ## Later
 
-- The rest of the generators (the never-repeating line, the ring gates, the gyroid) join the Design space's Maths category (the bridges, sunflowers, Euclidean fire and golden helix are there already).
+- The rest of the generators (the never-repeating line, the ring gates, the gyroid) join the Design space's Maths category (the bridges, sunflowers, Euclidean fire, golden helix, waves and epicycloids are there already).
 - Music driven by the track (pitch from height, harmony from curvature, tempo from speed) is set aside for now at the user's request.
 
 ## Build order
