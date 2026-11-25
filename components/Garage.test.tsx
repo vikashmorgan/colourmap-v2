@@ -75,6 +75,8 @@ describe('the Garage', () => {
 
   it('the ship gets reactors, a cockpit and a core to pick; the car a body', () => {
     render(<Garage />);
+    // The hover ship is the default; the car shows its bodies instead.
+    fireEvent.click(screen.getByRole('button', { name: 'Car' }));
     expect(screen.getByRole('button', { name: 'Classic GT' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'One on top' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Hover ship' }));
