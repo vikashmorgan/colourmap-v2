@@ -7,7 +7,8 @@
  *   plane under them: the crazed salt with its mirage (the Salt Flat piece's own formulas, now seen
  *   from a camera that can turn), the sea under the Coast Road's cliff, or the wet night plain. One
  *   source, specialised per world with `#define WORLD n` (0 salt, 1 coast, 2 canyon, 3 night,
- *   4 Mars: the salt's plain in Mars colours, 5 the Golden Track's gold night).
+ *   4 Mars: the salt's plain in Mars colours, 5 the Golden Track's gold night, 6 the Symphony's
+ *   violet dusk).
  * - The motes: the Coast Road piece's oncoming dust (one particle per angular bin round the
  *   vanishing point, drawn from where it was a frame ago so it lengthens with speed), added in light
  *   over everything; the weather sets their colour, number, length and width.
@@ -27,15 +28,18 @@ void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
 `;
 
 /** World ids for the backdrop's `#define WORLD`. */
-export const WORLD_SHADER: Record<'salt' | 'coast' | 'canyon' | 'night' | 'mars' | 'gold', number> =
-  {
-    salt: 0,
-    mars: 4,
-    gold: 5,
-    coast: 1,
-    canyon: 2,
-    night: 3,
-  };
+export const WORLD_SHADER: Record<
+  'salt' | 'coast' | 'canyon' | 'night' | 'mars' | 'gold' | 'symphony',
+  number
+> = {
+  salt: 0,
+  mars: 4,
+  gold: 5,
+  symphony: 6,
+  coast: 1,
+  canyon: 2,
+  night: 3,
+};
 
 /** The backdrop's own uniforms (floats), besides SPEED_COMMON's. */
 export const BACKDROP_FLOATS = [
@@ -316,6 +320,29 @@ vec3 sky(float az, float yE) {
   if (rz <= 0.0) c = mix(c, ringLit, op);
   return c;
 }
+#elif WORLD == 6
+/* The Symphony (docs/specs/symphony-track.md): gold over deep violet. A violet dusk, rose low
+   down, deepening to near black overhead; a low gold sun with a long gold band along the horizon
+   under it; a few gold-white stars high up, jittered off any grid. */
+vec3 sky(float az, float yE) {
+  vec3 c = mix(C(0.34, 0.15, 0.36), C(0.13, 0.05, 0.22), smoothstep(0.0, 0.16, yE));
+  c = mix(c, C(0.022, 0.01, 0.045), smoothstep(0.12, 0.62, yE));
+  float rel = abs(wrapA(az - uSunAz));
+  c += C(1.0, 0.6, 0.22) * exp(-max(yE, 0.0) * 22.0) * exp(-rel * 1.1) * 0.45 * uSunAmt;
+  float d = length(sunOff(az, yE, 0.07));
+  c += C(1.0, 0.62, 0.24) * exp(-d * 5.0) * 0.8 * uSunAmt;
+  c += C(1.0, 0.86, 0.55) * (1.0 - smoothstep(0.03, 0.035, d)) * 1.5 * uSunAmt;
+  vec2 p = vec2(F0 * az, yE) * 90.0;
+  vec2 id = floor(p);
+  id.x = mod(id.x, floor(TAU * F0 * 90.0));
+  if (hash21(id + 4.0) < 0.07) {
+    vec2 o = vec2(hash21(id + 31.7), hash21(id + 73.1)) * 0.7 + 0.15;
+    float sd = length(fract(p) - o);
+    float mag = pow(hash21(id + 11.3), 5.0);
+    c += mix(C(1.0, 0.85, 0.55), C(0.9, 0.85, 1.0), hash21(id + 5.0)) * exp(-sd * sd * 900.0) * (0.15 + mag) * smoothstep(0.12, 0.3, yE);
+  }
+  return c;
+}
 #else
 /* Night: a dark sky, the city's glow low round the horizon. */
 vec3 sky(float az, float yE) {
@@ -587,6 +614,12 @@ vec3 scene(vec2 p, out float yHz) {
   sea += C(1.0, 0.85, 0.6) * gl * path * 1.6 * (1.0 - smoothstep(1500.0, 5000.0, dist));
   sea += C(1.0, 0.75, 0.5) * path * 0.25;
   col = mix(sea, C(0.9, 0.95, 1.0) * 0.6, uSnow * 0.15);
+#elif WORLD == 6
+  // The Symphony's plain: deep violet glass, the dusk and the sun's gold lying in it.
+  float rip = pnw(g / 4.0, WRAPP / 4.0);
+  vec3 plain = C(0.02, 0.008, 0.035) * (0.8 + 0.4 * rip);
+  plain += horizon(dir, az, -yE * 0.8) * (0.3 + 0.25 * uWet);
+  col = mix(plain, C(0.1, 0.04, 0.16), smoothstep(300.0, 2500.0, dist));
 #else
   // The wet night plain: near black, the city's glow lying in it.
   float rip = pnw(g / 4.0, WRAPP / 4.0);
@@ -624,7 +657,7 @@ export function mesaGlsl(mesas: readonly { az: number; half: number; height: num
 
 /** The backdrop for one world. */
 export function backdropFragment(
-  world: 'salt' | 'coast' | 'canyon' | 'night' | 'mars' | 'gold',
+  world: 'salt' | 'coast' | 'canyon' | 'night' | 'mars' | 'gold' | 'symphony',
   mesas: readonly { az: number; half: number; height: number }[],
 ): string {
   const src = BACKDROP.replace('/*MESAS*/', mesaGlsl(mesas)).replace(

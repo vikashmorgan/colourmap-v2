@@ -18,6 +18,7 @@ export type CategoryId =
   | 'city'
   | 'chinatown'
   | 'neon'
+  | 'maths'
   | 'gates';
 
 export interface Variation {
@@ -314,6 +315,44 @@ export const CATEGORIES: Category[] = [
     ],
   },
   {
+    // The Symphony's generators (docs/specs/symphony-track.md, lib/art/symphony.ts), to place on
+    // any track; on the Symphony each stands where its lap puts it.
+    id: 'maths',
+    name: 'Maths',
+    vars: [
+      v(
+        'catenary',
+        'Catenary bridges',
+        'Cables hanging in a cosh curve, hangers at Fibonacci intervals quickening toward towers one φ³-th of their span tall.',
+      ),
+      v(
+        'sunflower',
+        'Golden-angle pillars',
+        'A sunflower of pillars round a hub, each 137.5° round from the last, lamps on their tops.',
+      ),
+      v(
+        'euclid',
+        'Euclidean fire',
+        'Burners down both edges firing in Euclidean rhythms (5 in 8 against 3 in 8), so the rows groove.',
+      ),
+      v(
+        'helix',
+        'Golden helix',
+        'Lamps round the road, each 137.5° round from the last: a spiral of light you drive through.',
+      ),
+      v(
+        'waves',
+        'Irrational waves',
+        'Two lines of light beside the road, each a sum of sinusoids in ratios 1, φ, √2: never the same twice.',
+      ),
+      v(
+        'epicycle',
+        'Wheels on wheels',
+        'An epicycloid of light standing beside the road: a circle rolling round a circle, five petals.',
+      ),
+    ],
+  },
+  {
     // 2026-11-23: "i want different awesome gates … u pass through them and get the boosters and
     // weapons." The looks a track's gates can wear (lib/art/drive-gates.ts), one every 240 m here.
     id: 'gates',
@@ -429,6 +468,14 @@ const DRESS: Record<string, [CategoryId, string][]> = {
     ['chinatown', 'sideroads'],
   ],
   neon: [PASSAGE, ['neon', 'blades'], ['neon', 'bridges'], ['neon', 'traffic'], ['neon', 'jumps']],
+  symphony: [
+    ['maths', 'catenary'],
+    ['maths', 'sunflower'],
+    ['maths', 'euclid'],
+    ['maths', 'helix'],
+    ['maths', 'waves'],
+    ['maths', 'epicycle'],
+  ],
 };
 
 export function cellOf(cat: CategoryId, id: string): Pos | null {
@@ -447,6 +494,8 @@ export function designStart(world: string, saved: Pos): Pos {
   const own =
     world === 'chinatown' || world === 'neon'
       ? cellOf(world, CATEGORIES.find((c) => c.id === world)?.vars[0].id ?? '')
-      : null;
+      : world === 'symphony'
+        ? cellOf('maths', 'catenary')
+        : null;
   return own ?? saved;
 }

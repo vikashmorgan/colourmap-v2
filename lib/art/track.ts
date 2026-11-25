@@ -31,6 +31,7 @@ import {
 } from '@/lib/art/chinatown-paths';
 import { type SideRoad, sideRoads } from '@/lib/art/chinatown-roads';
 import { clamp, type Gate } from '@/lib/art/drive';
+import { SYM, symBridge, symCurv, symElev } from '@/lib/art/symphony';
 import { compileTrack, type GateStyle, type TrackData } from '@/lib/art/track-data';
 import coastData from '@/lib/art/tracks/coast.json';
 import goldData from '@/lib/art/tracks/gold.json';
@@ -39,7 +40,15 @@ import nightData from '@/lib/art/tracks/night.json';
 import { UNDER, underLocal, underTwist, underWall } from '@/lib/art/undertown';
 import { G, type Ground, type Hit, type Vehicle, type World } from '@/lib/art/vehicle';
 
-export type TrackId = 'coast' | 'canyon' | 'night' | 'chinatown' | 'neon' | 'sky' | 'gold';
+export type TrackId =
+  | 'coast'
+  | 'canyon'
+  | 'night'
+  | 'chinatown'
+  | 'neon'
+  | 'sky'
+  | 'gold'
+  | 'symphony';
 
 export interface Wall {
   /** Offset of the barrier from the centre (positive left), and its height over the road. */
@@ -1039,6 +1048,27 @@ export const GOLDEN_BANK = 0.62;
  * tracks' 0.2 (0.34, then 0.46, until 2026-11-22: "even more tilt to the roads on the turns",
  * "some turns with even more tilt"). Data: lib/art/tracks/gold.json. */
 export const GOLDEN: TrackDef = compileTrack(goldData as TrackData);
+
+/** The Symphony (lib/art/symphony.ts, docs/specs/symphony-track.md): a road that never repeats,
+ * banked to its curvature, raised on a viaduct for its bridges. */
+export const SYMPHONY: TrackDef = {
+  id: 'symphony',
+  startH: 0,
+  curv: symCurv,
+  elev: symElev,
+  half: () => SYM.HALF,
+  lip: () => SYM.LIP,
+  bankSpeed: SYM.BANK_SPEED,
+  bankMax: SYM.BANK_MAX,
+  terrain: 0,
+  walls: () => ({
+    left: { u: SYM.HALF + SYM.BARRIER, height: 30 },
+    right: { u: -(SYM.HALF + SYM.BARRIER), height: 30 },
+  }),
+  curl: SYM.CURL,
+  bridge: symBridge,
+  lap: SYM.LAP,
+};
 
 /* ── Canyon Race ───────────────────────────────────────────── */
 

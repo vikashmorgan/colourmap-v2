@@ -16,21 +16,24 @@ export type WorldId =
   | 'neon'
   | 'sky'
   | 'mars'
-  | 'gold';
+  | 'gold'
+  | 'symphony';
 
 /** The worlds in the menus' order, best first (2026-11-22: "golden track on top of the menus. so
  * we have an order from best tracks to least cool"); the number keys follow this order. */
 export const WORLDS: { id: WorldId; name: string; key: string }[] = [
   { id: 'gold', name: 'Golden Track', key: '1' },
-  { id: 'neon', name: 'Neon District', key: '2' },
-  { id: 'canyon', name: 'Canyon Race', key: '3' },
-  { id: 'sky', name: 'Sky Canyon', key: '4' },
-  { id: 'chinatown', name: 'Chinatown Run', key: '5' },
-  { id: 'night', name: 'Night Rain', key: '6' },
-  { id: 'coast', name: 'Coast Road', key: '7' },
+  // 2026-11-24: "a unique symphony track" of mathematics (docs/specs/symphony-track.md).
+  { id: 'symphony', name: 'The Symphony', key: '2' },
+  { id: 'neon', name: 'Neon District', key: '3' },
+  { id: 'canyon', name: 'Canyon Race', key: '4' },
+  { id: 'sky', name: 'Sky Canyon', key: '5' },
+  { id: 'chinatown', name: 'Chinatown Run', key: '6' },
+  { id: 'night', name: 'Night Rain', key: '7' },
+  { id: 'coast', name: 'Coast Road', key: '8' },
   // 2026-11-19: "one map becomes Mars, in the style of the salt flats".
-  { id: 'mars', name: 'Mars', key: '8' },
-  { id: 'salt', name: 'Salt Flat', key: '9' },
+  { id: 'mars', name: 'Mars', key: '9' },
+  { id: 'salt', name: 'Salt Flat', key: '0' },
 ];
 
 export function isWorld(id: string): id is WorldId {
@@ -356,6 +359,7 @@ export const DEFAULT_DESIGN: Design = {
     sky: 'ship',
     mars: 'ship',
     gold: 'ship',
+    symphony: 'ship',
   },
 };
 

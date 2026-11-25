@@ -66,6 +66,7 @@ import type { Weather } from '@/lib/art/weather';
 import { nearTwist, STRAIGHT } from '@/lib/art/wreck';
 import { ctSignMaterial, SignBuilder } from './chinatown-signs';
 import { buildLakeCity } from './lake-city-view';
+import { buildSymphonyView } from './symphony-view';
 import { glowSprite } from './vehicles';
 
 export const CHUNK = 120;
@@ -381,11 +382,13 @@ function groundColour(cfg: WorldCfg, s: number, u: number, half: number, snow: n
         ? [0.095, 0.07, 0.062]
         : cfg.theme === 'gold'
           ? [0.07, 0.055, 0.04]
-          : cfg.theme === 'neon'
-            ? [0.075, 0.07, 0.1]
-            : [0.08, 0.082, 0.095];
+          : cfg.theme === 'symphony'
+            ? [0.06, 0.042, 0.085]
+            : cfg.theme === 'neon'
+              ? [0.075, 0.07, 0.1]
+              : [0.08, 0.082, 0.095];
     // A light grain only on the Golden Track, so the road never breaks into dark patches.
-    const grain = cfg.theme === 'gold' ? 0.1 : 0.3;
+    const grain = cfg.theme === 'gold' || cfg.theme === 'symphony' ? 0.1 : 0.3;
     c = tint.map((v) => v * (1 - grain / 2 + grain * n)) as V3;
     if (Math.abs(u) > half - 2.5 && out <= 0) c = c.map((v) => v * 1.35) as V3;
     if (out > 0) c = c.map((v) => v * 0.45) as V3;
@@ -787,9 +790,11 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       ? { edge: [1.5, 0.95, 0.35], dash: [0.9, 0.55, 0.25] }
       : theme === 'gold'
         ? { edge: [1.6, 1.05, 0.38], dash: [0.95, 0.65, 0.28] }
-        : theme === 'neon'
-          ? { edge: [0.3, 1.3, 1.6], dash: [1.2, 0.3, 1.1] }
-          : { edge: [0.55, 0.85, 1.4], dash: [0.5, 0.55, 0.65] };
+        : theme === 'symphony'
+          ? { edge: [1.6, 1.1, 0.45], dash: [0.62, 0.42, 1.2] }
+          : theme === 'neon'
+            ? { edge: [0.3, 1.3, 1.6], dash: [1.2, 0.3, 1.1] }
+            : { edge: [0.55, 0.85, 1.4], dash: [0.5, 0.55, 0.65] };
   function markings(
     s0: number,
     s1: number,
@@ -2981,6 +2986,10 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
     ships.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     group.add(ships);
   }
+  // The Symphony's ring gates (components/drive/symphony-view.ts).
+  const symphony = cfg.id === 'symphony' ? buildSymphonyView(track) : null;
+  if (symphony) group.add(symphony.group);
+
   const m4 = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
@@ -3074,6 +3083,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         ships.count = n;
         ships.instanceMatrix.needsUpdate = true;
       }
+      symphony?.update(ox, oy, s, t);
       void chevronGlow;
     },
     dispose() {
@@ -3081,6 +3091,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       chunks.clear();
       for (const l of lakes.values()) disposeGroup(l.group);
       lakes.clear();
+      symphony?.dispose();
       disposeGroup(group);
       for (const m of [
         facade,

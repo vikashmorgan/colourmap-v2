@@ -137,9 +137,20 @@ export const TRACKS: Record<WorldId, Omit<TrackInfo, 'id' | 'name'>> = {
     highlights: ['City of gold', 'Saturn', 'Steep banked bends'],
     night: true,
   },
+  symphony: {
+    colour: '#9d86ff',
+    tagline: 'A road made of mathematics',
+    timing: 'km',
+    runLength: COAST_GATE,
+    endless: true,
+    difficulty: 2,
+    rivals: true,
+    highlights: ['Catenary bridges', 'Ring gates', 'Euclidean fire'],
+    night: true,
+  },
 };
 
-/** Every track, in the menu's order (the worlds' keys, 1 to 9). */
+/** Every track, in the menu's order (the worlds' keys, 1 to 9 and 0). */
 export function trackList(): TrackInfo[] {
   return WORLDS.map((w) => ({ id: w.id, name: w.name, ...TRACKS[w.id] }));
 }

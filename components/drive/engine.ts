@@ -125,6 +125,7 @@ import {
 } from '@/lib/art/salt-flat-game';
 import { SPEED_FLOATS } from '@/lib/art/speed-shaders';
 import { archPoint, STAGE_OUT } from '@/lib/art/stage-fire';
+import { gateBoost, gateCrossed as symGateCrossed } from '@/lib/art/symphony';
 import {
   belowStreet,
   FALLEN,
@@ -888,9 +889,11 @@ export class DriveEngine {
     this.sun.target.position.set(0, 0, 0);
     // The Golden Track's moon is warm too: no cold white glint on the hull (2026-11-21).
     const gold = this.cfg.id === 'gold';
-    this.sun.color.set(gold ? 0xc89058 : night ? 0x6070a0 : 0xffd2a8);
+    // The Symphony's low sun is gold, its sky violet (docs/specs/symphony-track.md).
+    const sym = this.cfg.id === 'symphony';
+    this.sun.color.set(sym ? 0xe0a050 : gold ? 0xc89058 : night ? 0x6070a0 : 0xffd2a8);
     const mars = this.cfg.id === 'mars';
-    this.hemi.color.set(night ? 0x303050 : mars ? 0xd8a888 : 0xd8c0d0);
+    this.hemi.color.set(sym ? 0x3a2858 : night ? 0x303050 : mars ? 0xd8a888 : 0xd8c0d0);
     this.hemi.groundColor.set(night ? 0x101018 : mars ? 0x8a4a30 : 0x8a7068);
     this.bloom.strength = night ? 0.55 : 0.144;
     this.bloom.threshold = night ? 0.4 : 0.55;
@@ -1737,6 +1740,12 @@ export class DriveEngine {
             fireRingThrough(s0, q.s, u, v.z - spec.hover - heightAt(tr, q.s, u) + 1)
           )
             this.surgeAt = t;
+          // The Symphony's ring gates (lib/art/symphony.ts): through one while its gaps line up,
+          // the same surge.
+          if (tr.def.id === 'symphony') {
+            const g = symGateCrossed(s0, q.s);
+            if (g && gateBoost(g.i, t, u)) this.surgeAt = t;
+          }
         }
         const plan = gatePlan(this.cfg.id, tr.def);
         const gate = plan && !this.wreck ? gateCrossed(plan, tr.def, s0, q.s, u) : null;

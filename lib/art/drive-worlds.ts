@@ -20,6 +20,7 @@ import {
   RACE,
   SKY,
   SKY_LAP,
+  SYMPHONY,
   type TrackDef,
 } from '@/lib/art/track';
 
@@ -31,7 +32,7 @@ export interface WorldCfg {
   track: TrackDef | null;
   theme: NightTheme | null;
   /** The backdrop's world (lib/art/drive-shaders.ts WORLD_SHADER). */
-  backdrop: 'salt' | 'coast' | 'canyon' | 'night' | 'mars' | 'gold';
+  backdrop: 'salt' | 'coast' | 'canyon' | 'night' | 'mars' | 'gold' | 'symphony';
   /** The low sun's azimuth (counter-clockwise from east). */
   sunAz: number;
   /** The plane under everything: its height. */
@@ -84,6 +85,20 @@ export const WORLD_CFG: Record<WorldId, WorldCfg> = {
     startS: 40,
     race: 'km',
     dust: lin(0.9, 0.72, 0.4),
+    wet: true,
+  },
+  // Gold over deep violet: a violet dusk, a low gold sun, the road wet (docs/specs/symphony-track.md).
+  symphony: {
+    id: 'symphony',
+    track: SYMPHONY,
+    theme: 'symphony',
+    backdrop: 'symphony',
+    // Low behind you at the start, so the rainbows stand ahead on the way out.
+    sunAz: Math.PI - 0.5,
+    planeY: 0,
+    startS: 40,
+    race: 'km',
+    dust: lin(0.95, 0.8, 0.5),
     wet: true,
   },
   coast: {
