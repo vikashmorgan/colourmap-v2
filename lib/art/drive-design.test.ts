@@ -165,8 +165,8 @@ describe('one ride everywhere', () => {
 });
 
 describe('the design, remembered', () => {
-  it('keeps the red car on the salt and the ship on the coast by default', () => {
-    expect(DEFAULT_DESIGN.vehicle.salt).toBe('car');
+  it('starts every world in the hover ship by default', () => {
+    expect(DEFAULT_DESIGN.vehicle.salt).toBe('ship');
     expect(DEFAULT_DESIGN.vehicle.coast).toBe('ship');
   });
 
