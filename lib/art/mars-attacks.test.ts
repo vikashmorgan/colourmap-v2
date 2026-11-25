@@ -214,3 +214,20 @@ describe('the Dust Sharks breaching', () => {
     expect(out.events.some((e) => e.kind === 'hit')).toBe(true);
   });
 });
+
+describe('the Dust Sharks go for an enemy ahead', () => {
+  it('swims after what it is aimed at, and still only hits him', () => {
+    let a = fireAttack(newAttacks(), 'shark', 0, { x: 0, y: 0, h: 0 }, { x: 600, y: 0 }, 0).attacks;
+    const prey = { x: 0, y: 200 };
+    let events: { kind: string }[] = [];
+    for (let i = 0; i < 60 * 3; i++) {
+      const out = stepAttacks(a, 1 / 60, i / 60, { x: 600, y: 0 }, () => prey);
+      a = out.attacks;
+      events = events.concat(out.events);
+    }
+    const p = a.flying[0];
+    // Turned toward the prey (north), away from him (east).
+    expect(p.y).toBeGreaterThan(50);
+    expect(events.some((e) => e.kind === 'hit')).toBe(false);
+  });
+});

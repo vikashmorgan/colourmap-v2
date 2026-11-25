@@ -1756,7 +1756,15 @@ export class DriveEngine {
         }
       }
       this.stepRivals(dt, t);
-      this.marsRun?.step(dt, t, v, !holding, this.onRadio);
+      // Boosting (the turbo, a gate's booster, a ring's surge) rams Mars's enemies.
+      this.marsRun?.step(
+        dt,
+        t,
+        v,
+        !holding,
+        this.onRadio,
+        ctl.boost > 0 || boosterAccel(t - this.boosterAt) > 0 || surgeAccel(t - this.surgeAt) > 0,
+      );
       // A hit's soft pulse of the G mask: the start of a scrape on a wall or barrier.
       const scraping = (ev.scrape ?? 0) > 2;
       if (scraping && !this.scraping) this.pulse(Math.min(1, (ev.scrape ?? 0) / 18), t);

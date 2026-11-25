@@ -276,7 +276,9 @@ easy to stay on it", "same with coast road, make them much wider".
    land on, roof ramps, a chimney slalom and a barrel pipe; two nuclear towns; mega works with
    conveyor galleries to jump), the things to explore (five big crashed space stations with hulls
    you drive through and tilted broken rings; monoliths, dead satellites and alien ruins, each on
-   the map only once found), and the enemies and highways to come.
+   the map only once found), the enemies (patrol robots to shoot or ram with the turbo, giant
+   spider robots, ghosts only the laser dispels, dusty manta rays, UFOs that swoop, squids high
+   in the sky, a quiet tally of what you wreck), and the highways to come.
 
 Why three night tracks: Night Rain stays the plain lamp course the user loved (with the City's
 towers, arch and rings added back from the road); Chinatown and the Neon District are new tracks
