@@ -30,11 +30,13 @@ import {
 } from '@/components/drive/MarsHud';
 import {
   AttackStrip,
+  ColdFlash,
   Crosshair,
   FoundCard,
   GeigerColumn,
   MarsMap,
   RegionCard,
+  Tally,
 } from '@/components/drive/MarsWorldHud';
 import type { AttackId } from '@/lib/art/mars-attacks';
 
@@ -648,6 +650,8 @@ export default function DriveGame() {
           {!title && <RadioPanel message={radio} />}
           {!title && !paused && <RegionCard region={hud?.mars?.region ?? null} />}
           {!title && !paused && <FoundCard name={hud?.mars?.news ?? null} />}
+          <ColdFlash cold={hud?.mars?.cold ?? 0} />
+          {!title && !paused && <Tally tally={hud?.mars?.tally} />}
           <GeigerColumn rad={hud?.mars?.rad ?? 0} live={!title && !paused} />
           {!title && !paused && hud?.attacks && (
             <>

@@ -90,6 +90,50 @@ export function AttackStrip({
   );
 }
 
+/** The enemies wrecked this run, quietly under the attacks: how many and their score. Nothing
+ * until the first. */
+export function Tally({ tally }: { tally: { kills: number; score: number } | undefined }) {
+  if (!tally || tally.kills <= 0) return null;
+  return (
+    <div
+      data-testid="mars-tally"
+      style={{
+        position: 'absolute',
+        left: 18,
+        bottom: 182,
+        pointerEvents: 'none',
+        fontFamily: mono,
+        fontSize: 10,
+        letterSpacing: '0.08em',
+        fontVariantNumeric: 'tabular-nums',
+        color: 'rgba(255,226,190,0.5)',
+      }}
+    >
+      wrecked {tally.kills} · {tally.score.toLocaleString('en')}
+    </div>
+  );
+}
+
+/** A ghost driven through: a cold breath over the screen's edges, pale blue, fading in under a
+ * second. */
+export function ColdFlash({ cold }: { cold: number }) {
+  return (
+    <div
+      aria-hidden
+      data-testid="mars-cold"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        opacity: Math.min(1, cold) * 0.75,
+        transition: 'opacity 0.2s linear',
+        background:
+          'radial-gradient(ellipse at center, rgba(180,230,255,0) 45%, rgba(170,220,255,0.35) 80%, rgba(220,245,255,0.6) 100%)',
+      }}
+    />
+  );
+}
+
 /** The laser's crosshair, once it is unlocked: an old-school amber ring and ticks at the centre,
  * easing in as he comes into view ahead and closing to a lock when the laser would hit. Nothing
  * blinks. A click fires the laser. */

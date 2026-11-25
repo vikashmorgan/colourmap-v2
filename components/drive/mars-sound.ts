@@ -186,3 +186,76 @@ export function superWhoosh(volume = 0.08): void {
     // No sound, no harm.
   }
 }
+
+/** An enemy blown up: a deep boom (a long low-passed burst of noise and a falling sub tone), its
+ * size (1 a robot, 2.5 a spider) making it longer and deeper. */
+export function boom(size = 1, volume = 0.11): void {
+  const c = ctx;
+  if (!c || c.state !== 'running') return;
+  try {
+    const now = c.currentTime;
+    const len = 0.9 + 0.5 * size;
+    const src = c.createBufferSource();
+    src.buffer = noiseBuffer(c);
+    src.loop = true;
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(2200 / Math.sqrt(size), now);
+    lp.frequency.exponentialRampToValueAtTime(70, now + len);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(volume, now + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + len);
+    src.connect(lp).connect(g).connect(c.destination);
+    src.start(now);
+    src.stop(now + len + 0.05);
+    const o = c.createOscillator();
+    o.frequency.setValueAtTime(90 / Math.sqrt(size), now);
+    o.frequency.exponentialRampToValueAtTime(24, now + len * 0.8);
+    const og = c.createGain();
+    og.gain.setValueAtTime(volume, now);
+    og.gain.exponentialRampToValueAtTime(0.0001, now + len * 0.85);
+    o.connect(og).connect(c.destination);
+    o.start(now);
+    o.stop(now + len);
+  } catch {
+    // No sound, no harm.
+  }
+}
+
+/** Through a ghost: a cold breath, high airy noise falling away, and a faint glassy tone. */
+export function coldBreath(volume = 0.05): void {
+  const c = ctx;
+  if (!c || c.state !== 'running') return;
+  try {
+    const now = c.currentTime;
+    const src = c.createBufferSource();
+    src.buffer = noiseBuffer(c);
+    src.loop = true;
+    const hp = c.createBiquadFilter();
+    hp.type = 'bandpass';
+    hp.Q.value = 3;
+    hp.frequency.setValueAtTime(5200, now);
+    hp.frequency.exponentialRampToValueAtTime(1800, now + 1.2);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(volume, now + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 1.3);
+    src.connect(hp).connect(g).connect(c.destination);
+    src.start(now);
+    src.stop(now + 1.4);
+    const o = c.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(1320, now);
+    o.frequency.exponentialRampToValueAtTime(880, now + 1.1);
+    const og = c.createGain();
+    og.gain.setValueAtTime(0, now);
+    og.gain.linearRampToValueAtTime(volume * 0.3, now + 0.1);
+    og.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+    o.connect(og).connect(c.destination);
+    o.start(now);
+    o.stop(now + 1.25);
+  } catch {
+    // No sound, no harm.
+  }
+}

@@ -41,8 +41,8 @@ lies off them rewards whoever leaves them.
 3. **Things to explore** (shipped, below): big crashed space stations (broken rings, half-buried
    hulls you drive through), artefacts (monoliths, dead satellites, alien ruins), each on the map
    only once you have found it.
-4. **Enemies**: ground robots (shoot them or ram them with the turbo and they explode), giant
-   spider robots, ghosts, dusty manta rays; in the sky, space squids and UFOs.
+4. **Enemies** (shipped, below): ground robots (shoot them or ram them with the turbo and they
+   explode), giant spider robots, ghosts, dusty manta rays; in the sky, space squids and UFOs.
 5. **Connect it**: highways and pipelines between the regions, the map showing them, missions that
    route you through each place.
 
@@ -289,6 +289,76 @@ the map. The finds are kept on the device (`drive.mars.found`, their ids).
 - Tests: lib/art/mars-wrecks.test.ts (the hull's floor and walls, the ring's feet, clearances,
   flat ground, a run through a hull, finding), components/drive/mars-wrecks-view.test.ts.
 
+## 4. Enemies (2026-11-24)
+
+The rules are pure in lib/art/mars-foes.ts (who, how they move, what beats them, what they do to
+you); where they live comes from the world in lib/art/mars-lairs.ts. Fun, never punishing:
+nothing ends a run or stops you dead; the worst is a bounce or a little speed lost.
+
+### Who, where, and how each is beaten
+
+| Kind | How many, where | How it moves | Beaten by |
+| --- | --- | --- | --- |
+| Patrol robots | 30: two round each factory, preheater, silo battery and lone cooling tower, and each wreck | Roll round a ring 24 to 34 m off what they guard (5 m/s); see you within 75 m (on the ground) and roll at you at 15 m/s, never more than 170 m from home | One shot, shark, laser or boosted ram (health 2) |
+| Giant spider robots | 4: one down each canyon's floor (mouth to mouth and back), two round wobbly loops on the open plain at (1650, 250) and (-1300, 1150) | Walk at 8 m/s, the body 9 m up on eight legs | Several hits (health 12): a boosted ram or the laser takes 4, a shot or shark 2 |
+| Ghosts | 24: three round each wreck and each alien ruin | Drift a slow figure eight round their haunt, 2.5 to 4 m up, fading in and out | Only the laser dispels one |
+| Dusty manta rays | 18: three flocks of six, gliding round wide ellipses over the dunes at (1400, 900), (-1900, 900), (900, 4400) | A V that weaves, 3 to 6 m up, wings beating, dust streaming under them | Anything, even a gentle bump (for a little score) |
+| UFOs | 5: over the Landing Plain, Dome City, the Factory Belt, the Field of Arches, the Glow Lakes | Loop their round 90 to 110 m up; every 24 s swoop down to 5 m for 7 s, a beam of light under them | Anything while low (health 3); out of reach up high |
+| Space squids | 8, high over the whole world | Drift a wide circle 190 to 240 m up, pulsing, tentacles of beads of light trailing in slow waves | Out of reach: the sky's life |
+
+Scores: robot 100, spider 600, ghost 150, manta 25, UFO 300. A wrecked one comes back home after
+a while (25 to 90 s), once you are 300 m away.
+
+### What they do to you
+
+- **Ramming while boosting** (the turbo, a gate's booster, a ring's surge, or a superboost) hits
+  a robot or a spider hard (4) and you plough on, losing 8% of your speed. **Without the boost**
+  you bounce off it: the speed into it turned back out and 45% of everything lost
+  (`bounceOff`), a robot knocked back 2 m. Flying over one, nothing.
+- **A ghost driven through**: a cold breath (a high airy noise, a glassy tone) and a pale blue
+  over the screen's edges fading in under a second; you keep 82% of your speed. Each ghost chills
+  you at most every 2.5 s.
+- **A swooping UFO passing over you** lifts you into a little hop (7 m/s up), once in 4 s.
+- **A manta you touch** goes in a puff of dust.
+
+### The attacks on them
+
+- The attacks work on the enemies as on him, and still go after the catch (there are enemies to
+  fight): a **Dust Shark** goes for the nearest robot, spider or manta ahead of it within 240 m
+  when that is nearer than him (`sharkPrey`, the `aim` of `stepAttacks`), and bites the first it
+  reaches; a **shot** bursts on the first it passes close to, and every burst hurts all within
+  its 28 m; the **laser's** beam hurts all along it.
+- Hits show a quick warm brighten on the enemy and a spark; a wreck goes up in a white core gone
+  in a quarter second, an orange ball swelling and fading over a second, a shock ring racing over
+  the ground, debris flung out tumbling and falling, a cloud of dust, and a deep boom (longer and
+  deeper for a spider, components/drive/mars-sound.ts `boom`).
+- The run's tally sits quietly under the attacks once there is one: *wrecked 7 · 1,250*
+  (components/drive/MarsWorldHud.tsx `Tally`). A new run starts it again and brings every enemy
+  home.
+
+### How they are drawn
+
+Robots, ghosts and mantas are one instanced mesh each (the mantas' wings beat in the vertex
+shader); the four spiders, five UFOs and eight squids are their own groups. A spider's legs are
+two bones each, bent at a knee raised above the line from hip to foot (`legKnee`); each foot
+stays planted until it lags 3.4 m behind its rest, then steps there in a 0.32 s arc while the
+other group of four stands (`SPIDER_LEGS`, `STRIDE`). Only enemies within their kind's distance
+are drawn (900 m for ghosts up to 5 km for squids), only those near you are moved (robots,
+ghosts and mantas within 2.5 km of home), and the counts are capped (`CAP`).
+
+### Where it lives
+
+- Pure: lib/art/mars-foes.ts (kinds, placement, paths, movement, hits, touches, bounces, the
+  legs), lib/art/mars-lairs.ts (the habitat from the world, `spawnFoes`), lib/art/mars-attacks.ts
+  (the sharks' `aim`).
+- Live: components/drive/mars-run.ts (moving them, the attacks on them, what you touch, the
+  tally and the cold), components/drive/mars-foes-view.ts (the enemies and the explosions),
+  components/drive/mars-sound.ts (`boom`, `coldBreath`), components/drive/engine.ts (passes
+  whether you are boosting), components/drive/MarsWorldHud.tsx (`Tally`, `ColdFlash`).
+- Tests: lib/art/mars-foes.test.ts, lib/art/mars-attacks.test.ts (the sharks' aim),
+  components/drive/mars-foes-view.test.ts (the view, a boosted ram wrecking a robot and an
+  unboosted one bouncing you off).
+
 ## Still to come
 
-4. enemies, 5. highways and missions, as planned above.
+5. highways and missions, as planned above.

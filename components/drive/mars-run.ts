@@ -31,11 +31,27 @@ import {
   fireAttack as fireAttackRule,
   laserLock,
   newAttacks,
+  SHARK,
+  SHOT,
   SLOW,
   stepAttacks,
   unlocked,
 } from '@/lib/art/mars-attacks';
 import { portalCrossed, superAccel, superLook } from '@/lib/art/mars-boost';
+import {
+  bounceOff,
+  COLD,
+  FOE,
+  type Foe,
+  foesNear,
+  foesOnBeam,
+  type HitBy,
+  hitFoe,
+  SWOOP,
+  sharkPrey,
+  stepFoe,
+  touches,
+} from '@/lib/art/mars-foes';
 import {
   archThrough,
   type Grade,
@@ -44,6 +60,7 @@ import {
   newGrade,
   stepGrade,
 } from '@/lib/art/mars-fx';
+import { spawnFoes } from '@/lib/art/mars-lairs';
 import {
   type Mission,
   missionCard,
@@ -56,7 +73,8 @@ import { FOUND_KEY, foundString, newlyFound, parseFound } from '@/lib/art/mars-w
 import { newRadio, type RadioMessage, type RadioState, stepRadio } from '@/lib/art/radio';
 import type { Vehicle } from '@/lib/art/vehicle';
 import { AttackView } from './mars-attack-view';
-import { softBang, superWhoosh } from './mars-sound';
+import { boomSize, type FoeEvent, FoeView } from './mars-foes-view';
+import { boom, coldBreath, softBang, superWhoosh } from './mars-sound';
 import type { MarsView } from './mars-view';
 import { buildVehicle, type VehicleView } from './vehicles';
 
@@ -83,6 +101,10 @@ export interface MarsWhere {
   found: string[];
   /** What you have just found (its name, for a few seconds), or null. */
   news: string | null;
+  /** The enemies wrecked this run and the score for them. */
+  tally: { kills: number; score: number };
+  /** A ghost's cold flash on the screen (0..1, fading). */
+  cold: number;
 }
 
 /** How long a find's name stays on the screen (s). */
@@ -168,6 +190,14 @@ export class MarsRun {
   private found: string[] = [];
   private news: { name: string; at: number } | null = null;
   private t = 0;
+  /** The enemies (lib/art/mars-foes.ts): where they are, their health, what you have wrecked. */
+  private foes: Foe[] = spawnFoes();
+  private foeView: FoeView;
+  private foeEvents: FoeEvent[] = [];
+  private touchAt = new Map<number, number>();
+  private kills = 0;
+  private score = 0;
+  private coldAt = -99;
 
   constructor(
     private deps: MarsDeps,
@@ -183,6 +213,7 @@ export class MarsRun {
     this.ribbon = deps.makeTrail(new THREE.Color(RED).multiplyScalar(2.6));
     deps.scene.add(this.ribbon.mesh);
     this.attackView = new AttackView(deps.scene, deps.emitDust, marsHeight);
+    this.foeView = new FoeView(deps.scene, this.foes, deps.emitDust, marsHeight);
     this.catches = Math.round(loadBest(deps.store, CATCHES_KEY) ?? 0);
     try {
       this.found = parseFound(deps.store?.getItem(FOUND_KEY));
@@ -228,6 +259,13 @@ export class MarsRun {
     this.slowUntil = -99;
     this.hitAt = undefined;
     this.superAt = -99;
+    // Every enemy back home and whole (in place: the view holds them).
+    const fresh = spawnFoes();
+    this.foes.forEach((f, i) => Object.assign(f, fresh[i]));
+    this.touchAt.clear();
+    this.kills = 0;
+    this.score = 0;
+    this.coldAt = -99;
   }
 
   /** The superboost's push along your heading now (m/s², 0 when none). */
@@ -245,7 +283,8 @@ export class MarsRun {
    * and ready. Returns whether it went.
    */
   fireAttack(id: AttackId, t: number, charge = false): boolean {
-    if (!this.mission || this.mission.phase === 'caught') return false;
+    // After the catch the attacks still go: there are enemies to fight.
+    if (!this.mission) return false;
     const out = fireAttackRule(this.attacks, id, t, this.you, this.pose, this.catches, charge);
     this.attacks = out.attacks;
     this.pending.push(...out.events);
@@ -327,18 +366,138 @@ export class MarsRun {
       him: { x: Math.round(this.pose.x), y: Math.round(this.pose.y) },
       found: this.found,
       news: this.news && this.t - this.news.at < NEWS_SHOW ? this.news.name : null,
+      tally: { kills: this.kills, score: this.score },
+      cold: Math.round(Math.max(0, 1 - (this.t - this.coldAt) / 0.9) * 10) / 10,
     };
   }
 
-  /** Moves him and the mission on. `live`: you are driving (not held on the grid or in a menu). */
-  step(dt: number, t: number, you: Vehicle, live: boolean, onRadio?: (m: RadioMessage) => void) {
+  /** A hit on an enemy: its damage, and if that wrecks it the boom (or the puff), the score. */
+  private strike(f: Foe, by: HitBy, t: number) {
+    const wrecked = hitFoe(f, by, t);
+    const at = {
+      foe: f.kind,
+      x: f.x,
+      y: f.y,
+      z: marsHeight(f.x, f.y) + f.z + FOE[f.kind].tall / 2,
+    };
+    if (wrecked) {
+      this.kills += 1;
+      this.score += FOE[f.kind].score;
+      const puff = f.kind === 'manta' || f.kind === 'ghost';
+      this.foeEvents.push({ kind: puff ? 'poof' : 'boom', ...at });
+      if (puff) softBang(0.03);
+      else boom(boomSize(f.kind));
+    } else if (f.hitAt === t) {
+      this.foeEvents.push({ kind: 'hit', ...at });
+      softBang(0.035);
+    }
+  }
+
+  /**
+   * The enemies a moment on: those near you move (the fliers keep their rounds); then what you
+   * touch: a boosted ram wrecks, an unboosted one bounces you off, a manta is hit, a ghost chills
+   * you, a swooping UFO lifts you. `boosting`: the turbo, a gate's booster or a ring's surge (the
+   * superboost is known here).
+   */
+  private stepFoes(dt: number, t: number, you: Vehicle, live: boolean, boosting: boolean) {
+    const me = { x: you.x, y: you.y, up: you.z - marsHeight(you.x, you.y) };
+    for (const f of this.foes) {
+      if (f.kind === 'robot' || f.kind === 'ghost' || f.kind === 'manta')
+        if (Math.hypot(f.hx - you.x, f.hy - you.y) > 2500 + f.range) continue;
+      stepFoe(f, dt, t, me);
+    }
+    if (!live) return;
+    const boost = boosting || this.superShown(t) > 0;
+    for (const touch of touches(this.foes, me, boost, t)) {
+      const f = touch.f;
+      const last = this.touchAt.get(f.id) ?? -99;
+      if (touch.kind === 'ram') {
+        if (t - f.hitAt < 0.5) continue;
+        this.strike(f, 'ram', t);
+        you.vx *= 0.92;
+        you.vy *= 0.92;
+      } else if (touch.kind === 'bounce') {
+        if (t - last < 0.4) continue;
+        this.touchAt.set(f.id, t);
+        const b = bounceOff(you.vx, you.vy, touch.nx, touch.ny);
+        you.vx = b.vx;
+        you.vy = b.vy;
+        // Out of it, and a robot knocked back a little.
+        const d = Math.hypot(you.x - f.x, you.y - f.y);
+        const out = Math.max(0, FOE[f.kind].r + 1.7 - d);
+        you.x += touch.nx * out;
+        you.y += touch.ny * out;
+        if (f.kind === 'robot') {
+          f.x -= touch.nx * 2;
+          f.y -= touch.ny * 2;
+        }
+        this.foeEvents.push({ kind: 'hit', foe: f.kind, x: f.x, y: f.y, z: you.z + 1 });
+        softBang(0.04);
+      } else if (touch.kind === 'bump') {
+        this.strike(f, 'bump', t);
+      } else if (touch.kind === 'cold') {
+        f.coldAt = t;
+        this.coldAt = t;
+        you.vx *= COLD.keep;
+        you.vy *= COLD.keep;
+        coldBreath();
+      } else if (touch.kind === 'lift') {
+        if (t - last < 4) continue;
+        this.touchAt.set(f.id, t);
+        you.vz = Math.max(you.vz, SWOOP.lift);
+        you.z += 0.1;
+        you.air = true;
+        you.airTime = 0;
+      }
+    }
+  }
+
+  /** The enemies' share of the attacks: a shark that reaches one bites it and is gone, a shot
+   * that passes close to one bursts there, every burst hurts all within its radius and every beam
+   * all along it. Returns the bursts it made (to be drawn and heard like the others). */
+  private strikeFoes(events: readonly AttackEvent[], t: number): AttackEvent[] {
+    const out: AttackEvent[] = [];
+    const keep = this.attacks.flying.filter((p) => {
+      const near = foesNear(this.foes, p.x, p.y, p.kind === 'shark' ? SHARK.reach : SHOT.near);
+      if (!near.length) return true;
+      if (p.kind === 'shark') this.strike(near[0], 'shark', t);
+      else out.push({ kind: 'burst', attack: 'shot', x: p.x, y: p.y, projectile: p.id });
+      return false;
+    });
+    if (keep.length !== this.attacks.flying.length)
+      this.attacks = { ...this.attacks, flying: keep };
+    for (const e of [...events, ...out]) {
+      if (e.kind === 'burst')
+        for (const f of foesNear(this.foes, e.x, e.y, SHOT.radius)) this.strike(f, 'shot', t);
+      if (e.kind === 'beam' && e.x2 !== undefined && e.y2 !== undefined)
+        for (const f of foesOnBeam(this.foes, e.x, e.y, e.x2, e.y2)) this.strike(f, 'laser', t);
+    }
+    return out;
+  }
+
+  /** Moves him and the mission on. `live`: you are driving (not held on the grid or in a menu).
+   * `boosting`: the turbo or a gate's boost is on (for ramming enemies). */
+  step(
+    dt: number,
+    t: number,
+    you: Vehicle,
+    live: boolean,
+    onRadio?: (m: RadioMessage) => void,
+    boosting = false,
+  ) {
     this.stepWorld(dt, t, you, live);
+    this.stepFoes(dt, t, you, live, boosting);
     if (!live && !this.mission) return;
-    // The attacks in flight, and what they did (a hit slows him for a while).
-    const flown = stepAttacks(this.attacks, dt, t, this.pose);
+    // The attacks in flight, and what they did (a hit slows him for a while). A shark goes for
+    // the nearest enemy ahead of it when that is nearer than him.
+    const him = this.pose;
+    const flown = stepAttacks(this.attacks, dt, t, him, (p) =>
+      p.kind === 'shark' ? sharkPrey(this.foes, p, Math.hypot(him.x - p.x, him.y - p.y)) : null,
+    );
     this.attacks = flown.attacks;
     const events = [...this.pending, ...flown.events];
     this.pending = [];
+    events.push(...this.strikeFoes(events, t));
     for (const e of events) {
       if (e.kind === 'hit') {
         this.slowUntil = t + SLOW.time;
@@ -423,6 +582,9 @@ export class MarsRun {
     grp.scale.setScalar(Math.min(k, 4));
     this.view.update(g, t, dt, 1.3, 1.1, 0.8);
     this.attackView.update(this.attacks.flying, ox, oy, t, dt);
+    this.foeView.events(this.foeEvents, t);
+    this.foeEvents = [];
+    this.foeView.update(this.foes, ox, oy, t, dt);
 
     // The red light trail, from his tail.
     pushTrail(this.ribbon.trail, p.x - Math.cos(p.h) * 2, p.y - Math.sin(p.h) * 2, p.z + 0.6, t, 1);
@@ -479,6 +641,7 @@ export class MarsRun {
 
   dispose() {
     this.attackView.dispose();
+    this.foeView.dispose();
     this.deps.scene.remove(this.view.group);
     this.view.dispose();
     this.deps.scene.remove(this.ribbon.mesh);

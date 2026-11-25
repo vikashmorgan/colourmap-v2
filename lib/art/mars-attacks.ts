@@ -207,12 +207,15 @@ function turnToward(h: number, target: number, max: number): number {
   return h + Math.max(-max, Math.min(max, d));
 }
 
-/** Everything in flight a moment on: sharks swim after him, shots fly and burst. */
+/** Everything in flight a moment on: sharks swim after him, shots fly and burst. `aim`: what a
+ * shark goes for instead of him (the nearest enemy ahead, lib/art/mars-foes.ts), or null for him;
+ * only he is hit here (the enemies' hits are tested by the caller). */
 export function stepAttacks(
   a: Attacks,
   dt: number,
   t: number,
   him: Point,
+  aim?: (p: Projectile) => Point | null,
 ): { attacks: Attacks; events: AttackEvent[] } {
   if (!a.flying.length) return { attacks: a, events: [] };
   const events: AttackEvent[] = [];
@@ -220,7 +223,8 @@ export function stepAttacks(
   for (const p of a.flying) {
     if (p.kind === 'shark') {
       // Homing, its turn limited; the pack fans out at first and closes in.
-      const want = Math.atan2(him.y - p.y, him.x - p.x);
+      const goal = aim?.(p) ?? him;
+      const want = Math.atan2(goal.y - p.y, goal.x - p.x);
       const h = turnToward(p.h, want, SHARK.turn * dt * (t - p.born < 0.6 ? 0.3 : 1));
       const step = SHARK.speed * dt;
       const q = {
