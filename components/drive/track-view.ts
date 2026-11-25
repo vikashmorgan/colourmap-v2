@@ -13,7 +13,7 @@
 import * as THREE from 'three';
 import { LOWER } from '@/lib/art/chinatown-paths';
 import { CT_STOREY, CT_TALL_FLOORS, ctCellRect, ctWindows } from '@/lib/art/chinatown-street';
-import { VISTA, vistaLocal, vistaStart } from '@/lib/art/chinatown-vista';
+import { VISTA, vistaAt, vistasBetween } from '@/lib/art/chinatown-vista';
 import type { WorldCfg } from '@/lib/art/drive-worlds';
 import { LAKE_CITY, lakeAnchor, lakeNear } from '@/lib/art/lake-city';
 import {
@@ -59,7 +59,7 @@ import {
   twistPose,
   voidLeft,
 } from '@/lib/art/track';
-import { UNDER, underTint } from '@/lib/art/undertown';
+import { underTint } from '@/lib/art/undertown';
 import type { Weather } from '@/lib/art/weather';
 import { nearTwist, STRAIGHT } from '@/lib/art/wreck';
 import { ctSignMaterial, SignBuilder } from './chinatown-signs';
@@ -1182,15 +1182,36 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         lake.pts = [];
         lake.cols = [];
       };
-      let was = false;
+      // The arcade, or an overlook (lib/art/chinatown-vista.ts): the canyon parted on one side,
+      // the hillside down to the balustrade, the drop and the lake; no deck.
+      let was: string | null = null;
       for (let s = s0; s <= s1 + 0.01; s += ROW) {
-        const on = vistaLocal(s) !== null;
-        if (!on) {
-          if (was) flushArcade();
-          was = false;
+        const va = vistaAt(s);
+        const key = va ? `${va.v.kind}${va.v.start}` : null;
+        if (key !== was && was !== null) flushArcade();
+        was = key;
+        if (!va) continue;
+        const half = def.half(s);
+        const sd = va.v.side;
+        if (va.v.kind === 'overlook') {
+          const rim = sd * (half + VISTA.RAIL);
+          lake.pts.push([
+            at(s, rim, hAt(s, rim)),
+            at(s, rim, VOID.LAKE),
+            at(s, sd * (half + VOID.FAR), VOID.LAKE),
+          ]);
+          lake.cols.push([stone, deep, deep]);
+          const sb = Math.min(s + ROW, s1 + 0.01);
+          glow.quad(
+            at(s, rim, hAt(s, rim) + 1.1),
+            at(sb, rim, hAt(sb, rim) + 1.1),
+            at(sb, rim, hAt(sb, rim) + 0.98),
+            at(s, rim, hAt(s, rim) + 0.98),
+            [0, 1, 0],
+            rail,
+          );
           continue;
         }
-        const half = def.half(s);
         const lo = half - VISTA.DECK_IN;
         const hi = half + VISTA.DEEP + 1;
         const z0 = hAt(s, half) + VISTA.DECK;
@@ -1198,8 +1219,7 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         const cap = (zA: number, zB: number) =>
           ground.quad(at(s, lo, zA), at(s, hi, zA), at(s, hi, zB), at(s, lo, zB), [0, 1, 0], red);
         // The deck's ends, where the arcade starts and stops.
-        if (!was || vistaLocal(s + ROW) === null) cap(z0, z1);
-        was = true;
+        if (va.x < ROW / 2 || va.x + ROW >= va.v.length) cap(z0, z1);
         rows.under.push([at(s, lo, z0), at(s, (lo + hi) / 2, z0), at(s, hi, z0)]);
         rows.front.push([at(s, lo, z1), at(s, lo, z0)]);
         rows.back.push([at(s, hi, z0), at(s, hi, z1)]);
@@ -2420,7 +2440,13 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
       const half = def.half(s);
       // Down in the underpass's void a piece stands on its floor, given; up on the lake arcade's
       // deck, on the deck.
-      const base = p.base ?? groundAt(s, p.u);
+      // A street tower stands down to the lower of the ground at its middle and at its face, so on
+      // a swell or a bank its foot never shows over the slope in front of it.
+      const base =
+        p.base ??
+        (p.kind === 'shophouse'
+          ? Math.min(groundAt(s, p.u), groundAt(s, p.u - p.side * p.d))
+          : groundAt(s, p.u));
       lifted = base > groundAt(s, p.u) + 1;
       const c = p.colour;
       switch (p.kind) {
@@ -2834,13 +2860,10 @@ export function buildTrackView(cfg: WorldCfg, world: TrackWorld, sunDir: THREE.V
         const k = lakeNear(s);
         if (k !== null && Math.abs(s - lakeAnchor(k)) < LAKE_SEEN)
           want.set(`u${k}`, { at: lakeAnchor(k), seed: k, side: -1, near: LAKE_CITY.NEAR });
-        const kk = Math.round((s - UNDER.AT) / UNDER.EVERY);
-        for (let kv = kk - 1; kv <= kk + 1; kv++) {
-          const a = vistaStart(kv);
-          if (a === null) continue;
-          const at = a + VISTA.LENGTH / 2;
+        for (const v of vistasBetween(s - LAKE_SEEN - 1000, s + LAKE_SEEN + 1000)) {
+          const at = v.start + v.length / 2;
           if (Math.abs(s - at) < LAKE_SEEN)
-            want.set(`v${kv}`, { at, seed: kv + VISTA_SEED, side: 1, near: VISTA_NEAR });
+            want.set(`v${v.k}`, { at, seed: v.k + VISTA_SEED, side: v.side, near: VISTA_NEAR });
         }
         for (const [key, l] of lakes) {
           if (want.has(key)) continue;

@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { aimLane, autopilotControls, forkPick } from './autopilot';
+import { CHINA_LAP } from './chinatown-lap';
 import {
   BALCONY,
   BALCONY_LENGTH,
   balcony,
-  balconyAtCrest,
+  balconyCrest,
   balconyLocal,
   forkNose,
   kickAt,
@@ -45,15 +46,12 @@ import {
   project,
   twistPose,
 } from './track';
-import { UNDER, UNDER_LENGTH, underLocal } from './undertown';
+import { UNDER, UNDER_LENGTH, underLocal, underStart } from './undertown';
 import { newVehicle, stepVehicle, type Vehicle } from './vehicle';
 
-const first = UNDER.AT;
+const first = underStart(0);
 /** The first crest with a balcony road. */
-const crest = (() => {
-  for (let n = 0; n < 20; n++) if (balconyAtCrest(n)) return n * BALCONY.PERIOD + BALCONY.CREST;
-  return -1;
-})();
+const crest = balconyCrest(0);
 
 function carAt(w: ReturnType<typeof makeTrackWorld>, s: number, u: number, speed: number): Vehicle {
   const f = frameAt(w.track, s);
@@ -75,7 +73,7 @@ describe('the underpass, the way under Undertown (2026-11-24: "below the road of
 
   it('peels off right, goes down, swings in under the road, then out, up and back', () => {
     for (const k of [0, 1, 3]) {
-      const at = first + k * UNDER.EVERY;
+      const at = underStart(k);
       expect(underpass(at + LOWER_FROM - 1)).toBeNull();
       expect(underpass(at + LOWER_FROM + 1)).toBeCloseTo(0, 0);
       expect(underpassDepth(at + LOWER_FROM + 1)).toBe(0);
@@ -130,12 +128,11 @@ describe('the underpass, the way under Undertown (2026-11-24: "below the road of
     expect(pathMedian(-10, 10)).toBeNull();
     expect(pathMedian(-LOWER.OUT, 10)).toBeCloseTo((-LOWER.OUT + LOWER.LANE - 10) / 2, 9);
     for (const k of [0, 1, 2, 3, 4]) {
-      const at = first + k * UNDER.EVERY;
+      const at = underStart(k);
       for (const s of [at + LOWER.DIVE[0], at + LOWER.CLIMB[1]])
         expect(pathMedian(underpass(s), chinatownHalf(s))).not.toBeNull();
     }
-    const half = chinatownHalf(first - 900);
-    const nose = forkNose(first, half);
+    const nose = forkNose(first, chinatownHalf);
     expect(nose).toBeGreaterThan(first + LOWER_FROM);
     expect(nose).toBeLessThan(first + LOWER.DIVE[0]);
     const t = makeTrackWorld(CHINATOWN).track;
@@ -318,13 +315,12 @@ describe('the underpass, the way under Undertown (2026-11-24: "below the road of
 });
 
 describe('the balcony road (2026-11-24: "a side track above the first floor of the buildings")', () => {
-  it('stands at the crests clear of Undertown, several in every 18 km', () => {
+  it('stands at its kicker crests twice a lap, clear of Undertown', () => {
     expect(crest).toBeGreaterThan(0);
-    let n = 0;
-    for (let k = 0; k < 9; k++) if (balconyAtCrest(k)) n++;
-    expect(n).toBeGreaterThanOrEqual(4);
-    expect(balconyAtCrest(-1)).toBe(false);
-    for (let s = 0; s < 40000; s += 5) {
+    expect(balconyCrest(2) - crest).toBe(CHINA_LAP);
+    expect(balconyLocal(crest - BALCONY.KICK - 1)).toBeNull();
+    expect(balconyLocal(crest)).toBe(0);
+    for (let s = 0; s < 2 * CHINA_LAP; s += 5) {
       if (balconyLocal(s) === null) continue;
       expect(underLocal(s)).toBeNull();
       expect(underLocal(s - BALCONY.CLEAR)).toBeNull();
@@ -490,7 +486,7 @@ describe('choosing a path', () => {
   });
 
   it('the autopilot picks one way or the other per fork, the same all along it', () => {
-    const at = first + UNDER.EVERY;
+    const at = underStart(1);
     const on = (s: number) => underpass(s) !== null;
     const a = runStart(on, at);
     expect(a).toBeLessThanOrEqual(at + LOWER_FROM + 10);
@@ -561,8 +557,7 @@ describe('the street around the two paths', () => {
   });
 
   it('lights the fork: a sign over each way and lights down the median', () => {
-    const half = chinatownHalf(first - 200);
-    const nose = forkNose(first, half);
+    const nose = forkNose(first, chinatownHalf);
     const ps = piecesBetween('chinatown', CHINATOWN, nose - 200, nose + 200);
     const boards = ps.filter((p) => p.kind === 'billboard' && p.d > 3);
     expect(boards.length).toBeGreaterThanOrEqual(2);
@@ -590,12 +585,13 @@ describe('more banking on Chinatown (2026-11-24: "a bit more tilt")', () => {
   it('banks its bends half as steep again as before, never past 0.3 rad', () => {
     const tr = makeTrackWorld(CHINATOWN).track;
     let most = 0;
-    for (let s = 400; s < 8000; s += 10) most = Math.max(most, Math.abs(frameAt(tr, s).bank));
+    // Off the lap's tilt stretches (lib/art/chinatown-lap.ts), which bank steeper.
+    for (let s = 400; s < 6000; s += 10) most = Math.max(most, Math.abs(frameAt(tr, s).bank));
     expect(most).toBeGreaterThan(0.25);
     expect(most).toBeLessThanOrEqual(CHINA_BANK + 1e-9);
     // On a gentle bend the bank's tangent is 1.5 times what it was (design speed 45, now 55).
     const was = (k: number) => Math.atan((k * 45 * 45) / 20);
-    for (let s = 400; s < 8000; s += 37) {
+    for (let s = 400; s < 6000; s += 37) {
       const f = frameAt(tr, s);
       if (Math.abs(was(f.k)) > 0.12 || Math.abs(f.k) < 2e-4) continue;
       expect(Math.tan(Math.abs(f.bank)) / Math.tan(Math.abs(was(f.k)))).toBeCloseTo(1.5, 1);

@@ -20,6 +20,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { autopilotControls } from '@/lib/art/autopilot';
+import { fireRingThrough } from '@/lib/art/chinatown-lap';
 import {
   comboOf,
   DRIFT_GATES,
@@ -1729,6 +1730,12 @@ export class DriveEngine {
             this.surgeAt = t;
             if (ring.mood) this.mood = ring.mood;
           }
+          // Chinatown's rings of fire (lib/art/chinatown-lap.ts): through one, the same surge.
+          if (
+            tr.def.id === 'chinatown' &&
+            fireRingThrough(s0, q.s, u, v.z - spec.hover - heightAt(tr, q.s, u) + 1)
+          )
+            this.surgeAt = t;
         }
         const plan = gatePlan(this.cfg.id, tr.def);
         const gate = plan && !this.wreck ? gateCrossed(plan, tr.def, s0, q.s, u) : null;

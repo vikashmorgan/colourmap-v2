@@ -10,7 +10,7 @@
  * far shore never folds round the road's bends.
  */
 
-import { UNDER } from './undertown';
+import { underRunAt, underStart } from './undertown';
 
 export const LAKE_CITY = {
   /** Where along each Undertown run the city faces (m from the run's start). */
@@ -49,13 +49,15 @@ function hash(n: number, k: number): number {
 
 /** Where along the road the city of Undertown run k faces (m). */
 export function lakeAnchor(k: number): number {
-  return UNDER.AT + k * UNDER.EVERY + LAKE_CITY.AT;
+  return underStart(k) + LAKE_CITY.AT;
 }
 
-/** The Undertown run whose lake city is nearest s, or null before the first. */
+/** The Undertown run whose lake city is nearest s, or null off the road (before its start). */
 export function lakeNear(s: number): number | null {
-  const k = Math.round((s - UNDER.AT - LAKE_CITY.AT) / UNDER.EVERY);
-  return k < 0 ? null : k || 0;
+  if (!(s >= 0)) return null;
+  const k0 = underRunAt(s - LAKE_CITY.AT);
+  const ks = [k0, k0 + 1].filter((k) => k >= 0);
+  return ks.reduce((a, b) => (Math.abs(s - lakeAnchor(b)) < Math.abs(s - lakeAnchor(a)) ? b : a));
 }
 
 /**

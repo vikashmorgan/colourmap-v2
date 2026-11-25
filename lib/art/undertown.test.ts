@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { CHINA_LAP } from './chinatown-lap';
 import { clearOfFlip, piecesBetween } from './night-course';
 import {
   CHINATOWN,
@@ -19,7 +20,9 @@ import {
   UNDER_LENGTH,
   underDepth,
   underLocal,
+  underRunAt,
   underSpan,
+  underStart,
   underTint,
   underTwist,
   underWall,
@@ -27,19 +30,23 @@ import {
 import { newVehicle, stepVehicle } from './vehicle';
 import { choosesStraight, nearTwist, offTwist, twistEntry } from './wreck';
 
-const first = UNDER.AT;
+const first = underStart(0);
 const mid = first + UNDER.FLIP + UNDER.HOLD / 2;
 
 describe('where Undertown runs (2026-11-23)', () => {
-  it('comes round every UNDER.EVERY m from UNDER.AT, flip in, underside, flip out', () => {
+  it('comes round twice a lap, flip in, underside, flip out', () => {
     expect(underLocal(first - 1)).toBeNull();
     expect(underLocal(first + 10)).toBe(10);
     expect(underLocal(first + UNDER_LENGTH + 1)).toBeNull();
-    expect(underLocal(first + UNDER.EVERY + 10)).toBe(10);
+    expect(underLocal(underStart(1) + 10)).toBe(10);
+    expect(underLocal(underStart(2) + 10)).toBe(10);
+    expect(underStart(2) - first).toBe(CHINA_LAP);
     expect(underLocal(Number.NaN)).toBeNull();
     expect(underSpan(mid)).toEqual({ from: first, to: first + UNDER_LENGTH });
     expect(underSpan(first - 5)).toBeNull();
-    expect(UNDER_LENGTH).toBeLessThan(UNDER.EVERY);
+    expect(UNDER_LENGTH).toBeLessThan(underStart(1) - first);
+    expect(underRunAt(first - 1)).toBe(-1);
+    expect(underRunAt(first)).toBe(0);
   });
 
   it('rolls over the edge to π, holds upside down, and rolls on the same way to 2π', () => {

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { autopilotControls } from './autopilot';
+import { CHINA_LAP } from './chinatown-lap';
 import { balconyLocal, PATH_SIGNS, underpass } from './chinatown-paths';
 import { CT_PATH_CELLS, ctCell } from './chinatown-street';
-import { nearVista, VISTA, vistaLocal, vistaStart } from './chinatown-vista';
+import { nearVista, VISTA, vistaLocal, vistasBetween } from './chinatown-vista';
 import { piecesBetween } from './night-course';
 import {
   CHINATOWN,
@@ -13,21 +14,19 @@ import {
   project,
   streetAt,
 } from './track';
-import { UNDER, underLocal } from './undertown';
+import { underLocal, underStart } from './undertown';
 import { newVehicle, stepVehicle } from './vehicle';
 
-const starts = Array.from({ length: 10 }, (_, k) => vistaStart(k));
-const first = starts.find((a) => a !== null) ?? 0;
+const arcades = vistasBetween(0, 3 * CHINA_LAP).filter((v) => v.kind === 'arcade');
+const first = arcades[0].start;
 
 describe('the lake arcade (2026-11-24: "a whole part left that is below the buildings")', () => {
-  it('comes after most Undertowns, clear of the underpass, Undertown and the balcony road', () => {
-    expect(starts.filter((a) => a !== null).length).toBeGreaterThanOrEqual(7);
-    expect(vistaStart(-1)).toBeNull();
-    starts.forEach((a, k) => {
-      if (a === null) return;
-      const run = UNDER.AT + k * UNDER.EVERY;
-      expect(a).toBeGreaterThanOrEqual(run + VISTA.FROM);
-      expect(a + VISTA.LENGTH).toBeLessThanOrEqual(run + VISTA.TO);
+  it('comes after every Undertown, clear of the underpass, Undertown and the balcony road', () => {
+    expect(arcades.length).toBe(6);
+    arcades.forEach((v, k) => {
+      const a = v.start;
+      expect(v.side).toBe(1);
+      expect(a).toBe(underStart(k) + VISTA.FROM);
       for (let s = a - VISTA.CLEAR + 1; s < a + VISTA.LENGTH + VISTA.CLEAR; s += 5) {
         expect(balconyLocal(s)).toBeNull();
         expect(underpass(s)).toBeNull();

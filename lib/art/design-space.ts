@@ -267,6 +267,23 @@ export const CATEGORIES: Category[] = [
         'Undertown',
         'On the road’s underside, where Chinatown Run flips over its edge: hanging shophouses in deep red and violet, lanterns rising on strings of light, a gate saying UNDERTOWN.',
       ),
+      // 2026-11-24: "other parts with rows of fires shooting up as u pass … explosions. and circle
+      // of fire to pass through". Placed by Chinatown Run's lap (lib/art/chinatown-lap.ts).
+      v(
+        'firerows',
+        'Fire rows',
+        'Burners down both edges that shoot up one after another as you come to them: a wave of fire running just ahead of you.',
+      ),
+      v(
+        'blasts',
+        'Explosions',
+        'Drums beside the road that blow as you come: a flash, a fireball, sparks flung high and a shock ring along the ground.',
+      ),
+      v(
+        'firerings',
+        'Rings of fire',
+        'Burning rings standing over the road; through one, a surge, and it flares as you pass.',
+      ),
     ],
   },
   {
@@ -399,6 +416,9 @@ const DRESS: Record<string, [CategoryId, string][]> = {
     ['chinatown', 'lanterns'],
     ['chinatown', 'sky'],
     ['chinatown', 'undertown'],
+    ['chinatown', 'firerows'],
+    ['chinatown', 'blasts'],
+    ['chinatown', 'firerings'],
   ],
   neon: [PASSAGE, ['neon', 'blades'], ['neon', 'bridges'], ['neon', 'traffic'], ['neon', 'jumps']],
 };
