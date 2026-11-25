@@ -18,7 +18,8 @@
  * balcony's height is given over that datum.
  */
 
-import { UNDER, UNDER_LENGTH } from './undertown';
+import { CHINA_LAP, LAP_BALCONY, lapX, nthOf } from './chinatown-lap';
+import { underRunAt, underStart } from './undertown';
 
 const smooth = (x: number) => {
   const k = Math.min(1, Math.max(0, x));
@@ -33,7 +34,7 @@ const smooth = (x: number) => {
  * is yet another plot twist"). Where Main Street ran level beside the flip, the right-hand fork now
  * goes down: it peels off the road's right edge, sinks into a cut, swings in under the street and
  * runs beneath it while the road above flips over into Undertown, then swings back out right,
- * climbs out of its cut and merges back. In metres from where the Undertown run starts (UNDER.AT):
+ * climbs out of its cut and merges back. In metres from where the Undertown run starts (underStart):
  * - PEEL: out to the right at street level, OUT m from the centre (the median forms on the way);
  * - DIVE: down into the cut, DEPTH m under the street (eased at both ends, gentle enough at full
  *   boost that nobody is thrown off its brow);
@@ -76,10 +77,11 @@ const along = (x: number, [a, b]: readonly [number, number]) => (x - a) / (b - a
 /** Metres from the start of the Undertown run whose underpass s is on (LOWER_FROM to LOWER_TO), or
  * null where none runs. */
 export function lowerLocal(s: number): number | null {
-  if (!(s >= UNDER.AT + LOWER_FROM)) return null;
-  const k = Math.floor((s - UNDER.AT - LOWER_FROM) / UNDER.EVERY);
-  const x = s - (UNDER.AT + k * UNDER.EVERY);
-  return x < LOWER_TO ? x : null;
+  if (!Number.isFinite(s)) return null;
+  const k = underRunAt(s - LOWER_FROM);
+  if (k < 0) return null;
+  const x = s - underStart(k);
+  return x >= LOWER_FROM && x < LOWER_TO ? x : null;
 }
 
 /** Where the underpass's centre runs at s (u: negative on the right; UNDER_C under the road),
@@ -119,28 +121,27 @@ export function pathMedian(c: number | null, half: number): number | null {
 }
 
 /** The fork's nose for the Undertown run that starts at `under` (m along the road): where the lane
- * has just parted from the road (the median begins), for a road `half` wide there. */
-export function forkNose(under: number, half: number): number {
+ * has just parted from the road (the median begins), for the road's half-width `half` along it. */
+export function forkNose(under: number, half: (s: number) => number): number {
   for (let s = under + LOWER_FROM; s < under; s += 1)
-    if (pathMedian(underpass(s), half) !== null) return s;
+    if (pathMedian(underpass(s), half(s)) !== null) return s;
   return under;
 }
 
 /* ── The balcony road ──────────────────────────────────────── */
 
 /**
- * The balcony road, at a street crest (CREST m into each 2,000 m period, lib/art/track.ts):
+ * The balcony road, at its kicker crest (twice a lap, lib/art/chinatown-lap.ts LAP_BALCONY: the
+ * street's only sharp crests since 2026-11-24, the rest are long smooth swells):
  * - the kicker: KICK m of ramp up to the crest's top on the left of the road (KICK_W m of it, its
  *   inner side easing in over 3 m), KICK_H m tall, ending in a lip;
  * - the deck: from the crest's top, H m over the street (a storey and a bit: the first floor of
  *   the shophouses), half-width W, its inner edge GAP m past the road's edge, for RUN m;
  * - the ramp: RAMP m down to the street;
  * - the merge: MERGE m sliding back onto the road's left lane.
- * Only where no Undertown (nor its flips' sweep) is within CLEAR m.
+ * Kept CLEAR m clear of any Undertown (nor its flips' sweep).
  */
 export const BALCONY = {
-  PERIOD: 2000,
-  CREST: 1500,
   KICK: 36,
   KICK_H: 2,
   KICK_W: 8,
@@ -156,33 +157,32 @@ export const BALCONY = {
 /** From the crest's top to the end of the merge (m). */
 export const BALCONY_LENGTH = BALCONY.RUN + BALCONY.RAMP + BALCONY.MERGE;
 
-/** Whether an Undertown run (flip in to flip out) comes within CLEAR m of [a, b]. */
-function nearUndertown(a: number, b: number): boolean {
-  const lo = a - BALCONY.CLEAR - UNDER_LENGTH;
-  const hi = b + BALCONY.CLEAR;
-  const k0 = Math.ceil((lo - UNDER.AT) / UNDER.EVERY);
-  for (let k = Math.max(0, k0); UNDER.AT + k * UNDER.EVERY <= hi; k++) {
-    const from = UNDER.AT + k * UNDER.EVERY;
-    if (from + UNDER_LENGTH >= a - BALCONY.CLEAR && from <= hi) return true;
-  }
-  return false;
-}
-
-/** Whether crest n (at n × PERIOD + CREST) carries a balcony road. */
-export function balconyAtCrest(n: number): boolean {
-  if (n < 0) return false;
-  const c = n * BALCONY.PERIOD + BALCONY.CREST;
-  return !nearUndertown(c - BALCONY.KICK, c + BALCONY_LENGTH);
+/** Where balcony road k's crest is (m along the road; from 0, twice a lap). */
+export function balconyCrest(k: number): number {
+  return nthOf(LAP_BALCONY, k);
 }
 
 /** Metres from the top of the crest whose balcony road s is on or coming to (from -KICK to
  * BALCONY_LENGTH), or null. */
 export function balconyLocal(s: number): number | null {
-  if (!Number.isFinite(s)) return null;
-  const n = Math.round((s - BALCONY.CREST) / BALCONY.PERIOD);
-  const x = s - (n * BALCONY.PERIOD + BALCONY.CREST);
-  if (x < -BALCONY.KICK || x >= BALCONY_LENGTH) return null;
-  return balconyAtCrest(n) ? x : null;
+  if (!Number.isFinite(s) || s < 0) return null;
+  const x = lapX(s);
+  for (const c of LAP_BALCONY) {
+    const d = x - c;
+    if (d >= -BALCONY.KICK && d < BALCONY_LENGTH) return d;
+  }
+  return null;
+}
+
+/** The balcony crests between s0 and s1 (m along the road). */
+export function balconyCrests(s0: number, s1: number): number[] {
+  const out: number[] = [];
+  for (let n = Math.max(0, Math.floor(s0 / CHINA_LAP)); n * CHINA_LAP < s1; n++)
+    for (const c of LAP_BALCONY) {
+      const s = n * CHINA_LAP + c;
+      if (s >= s0 && s < s1) out.push(s);
+    }
+  return out;
 }
 
 export interface Balcony {

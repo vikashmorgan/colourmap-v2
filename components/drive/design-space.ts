@@ -9,6 +9,16 @@
 
 import * as THREE from 'three';
 
+import {
+  BLAST,
+  eachIn,
+  FIRE_RING,
+  FIRE_ROW,
+  LAP_BLASTS,
+  LAP_FIRE_ROWS,
+  LAP_RINGS,
+  nearSpectacle,
+} from '@/lib/art/chinatown-lap';
 import { CATEGORIES, MARKING, type Pos, SURFACE_STYLE } from '@/lib/art/design-space';
 import { WORLD_CFG } from '@/lib/art/drive-worlds';
 import { frameAt, heightAt, pointAt, project, type Track, twistPose } from '@/lib/art/track';
@@ -459,8 +469,13 @@ interface Burner {
   grow: number;
   /** Lit only when this says so (taking turns). */
   gate?: (t: number) => boolean;
+  /** Fired by you coming: when you come within `lead` m it fires for `dur` s (a row of fire, a
+   * ring's flare), or with `blast` it blows once (an explosion). */
+  pop?: { lead: number; dur: number; blast?: boolean };
+  /** Firing until then (the clock of the space). */
+  until?: number;
 }
-type BurnerOpts = Partial<Omit<Burner, 's' | 'pos' | 'dir' | 'acc'>> &
+type BurnerOpts = Partial<Omit<Burner, 's' | 'pos' | 'dir' | 'acc' | 'until'>> &
   Pick<Burner, 'rate' | 'speed' | 'life' | 'pal' | 'size'>;
 function burner(s: number, pos: V3, d: V3, o: BurnerOpts): Burner {
   return {
@@ -1260,8 +1275,10 @@ export const PASSAGE = { EVERY: 900, OFFSET: 450, PAIRS: 7, STEP: 18, OUT: 1.5 }
 function stagePassage(k: Kit, burners: Burner[], tr: Track, s0: number, s1: number) {
   const len = PASSAGE.PAIRS * PASSAGE.STEP;
   for (const a of every(s0 - len, s1, PASSAGE.EVERY, PASSAGE.OFFSET)) {
-    // Only on a road plain enough for the whole run (no twist, jump or deck in it).
+    // Only on a road plain enough for the whole run (no twist, jump or deck in it), and out of
+    // Chinatown's rows and rings of fire.
     if (!plainSpan(tr, a - 4, a + len + 4)) continue;
+    if (tr.def.id === 'chinatown' && nearSpectacle(a + len / 2, len / 2 + 40)) continue;
     for (let i = 0; i < PASSAGE.PAIRS; i++) {
       const s = a + i * PASSAGE.STEP;
       if (s < s0 || s >= s1) continue;
@@ -1306,6 +1323,133 @@ function stagePassage(k: Kit, burners: Burner[], tr: Track, s0: number, s1: numb
   }
 }
 
+/* ── Chinatown's spectacle (2026-11-24: "rows of fires shooting up as u pass … explosions. and
+   circle of fire to pass through") ── */
+
+function spectacle(k: Kit, burners: Burner[], tr: Track, id: string, s0: number, s1: number) {
+  const half = (s: number) => tr.def.half(s);
+  // Chinatown Run's lap places it all (lib/art/chinatown-lap.ts); on any other road (the design
+  // space's preview) it comes round evenly where the road is plain.
+  const china = tr.def.id === 'chinatown';
+  if (id === 'firerows') {
+    const rows = china
+      ? eachIn(LAP_FIRE_ROWS, s0 - 2000, s1).map(({ s, item }) => ({
+          a: s,
+          b: s + item[1] - item[0],
+          hot: item[1] - item[0] > 1000,
+        }))
+      : every(s0 - 300, s1, 1500, 700).map((a) => ({ a, b: a + 300, hot: false }));
+    // A pair of burners every STEP m down both edges, each firing a column of flame for a moment
+    // as you come within LEAD m: the fire runs up the road just ahead of you, both sides at once.
+    for (const row of rows) {
+      for (const s of every(Math.max(s0, row.a), Math.min(s1, row.b + 1), FIRE_ROW.STEP)) {
+        if (!plain(tr, s)) continue;
+        const i = Math.round(s / FIRE_ROW.STEP);
+        for (const sd of [1, -1]) {
+          const u = sd * (half(s) + FIRE_ROW.OUT);
+          column(k, tr, s, u, 0.35, 0.8, C.deep, 0.8, 0);
+          k.dot(pose(tr, s, u, 0.9), C.warm, 1.3, 1.6);
+          burners.push(
+            burner(s, pose(tr, s, u, 1), dir(tr, s, -sd * 0.04, 1, 0), {
+              rate: 150,
+              speed: (row.hot ? 28 : 24) * (i % 4 === 0 ? 1.25 : 1),
+              life: 0.75,
+              // In the furnace every other pair burns red.
+              pal: row.hot && i % 2 ? 1 : 0,
+              size: 3.6,
+              spread: 0.06,
+              buoy: 4,
+              pop: { lead: FIRE_ROW.LEAD, dur: FIRE_ROW.FIRE },
+            }),
+          );
+        }
+      }
+    }
+  } else if (id === 'blasts') {
+    const at: { s: number; side: number }[] = china
+      ? eachIn(LAP_BLASTS, s0, s1).map(({ s, item }) => ({ s, side: item[1] }))
+      : every(s0, s1, 420, 210)
+          .filter((s) => plain(tr, s))
+          .map((s) => ({ s, side: Math.round(s / 420) % 2 ? -1 : 1 }));
+    for (const { s, side } of at) {
+      const u = side * (half(s) + BLAST.OUT);
+      // A squat lacquer drum with a hot band: what blows.
+      column(k, tr, s, u, 0.8, 1.4, C.red, 1, 0);
+      k.dot(pose(tr, s, u, 1.5), C.warm, 1.6, 2.2);
+      burners.push(
+        burner(s, pose(tr, s, u, 1.2), [0, 1, 0], {
+          rate: 0,
+          speed: 0,
+          life: 0,
+          pal: 0,
+          size: 0,
+          pop: { lead: BLAST.LEAD, dur: 0, blast: true },
+        }),
+      );
+    }
+  } else if (id === 'firerings') {
+    const at: { s: number; u: number }[] = china
+      ? eachIn(LAP_RINGS, s0, s1).map(({ s, item }) => ({ s, u: item[1] }))
+      : every(s0, s1, 900, 450)
+          .filter((s) => plainSpan(tr, s - 4, s + 4))
+          .map((s) => ({ s, u: 0 }));
+    const { R, LIFT } = FIRE_RING;
+    for (const { s, u } of at) {
+      const ringAt = (a: number, r: number) =>
+        pose(tr, s, u + Math.cos(a) * r, LIFT + Math.sin(a) * r);
+      for (const [r, c, b] of [
+        [R, C.gold, 1.5],
+        [R + 0.6, C.red, 1],
+        [R - 0.5, C.deep, 0.7],
+      ] as [number, V3, number][])
+        k.poly(
+          Array.from({ length: 64 }, (_, j) => ringAt((Math.PI * 2 * j) / 64, r)),
+          true,
+          c,
+          b,
+        );
+      // Two legs down to the road.
+      for (const sd of [1, -1]) {
+        const a = -Math.PI / 2 + sd * 0.75;
+        k.line(ringAt(a, R + 0.3), pose(tr, s, u + sd * R * 0.95, 0), C.deep, 0.9);
+      }
+      for (let j = 0; j < 24; j++) {
+        const a = (Math.PI * 2 * j) / 24;
+        // Not where the ring meets the road.
+        if (LIFT + Math.sin(a) * R < 1.4) continue;
+        const p = ringAt(a, R);
+        const out = dir(tr, s, Math.cos(a), Math.sin(a), 0);
+        // It burns all the time, licking outward.
+        burners.push(
+          burner(s, p, out, {
+            rate: 32,
+            speed: 6,
+            life: 0.6,
+            pal: 0,
+            size: 2.8,
+            buoy: 5,
+            w0: -30,
+            w1: 450,
+          }),
+        );
+        // And flares as you pass through: white-hot, thrown out round the ring.
+        burners.push(
+          burner(s, p, out, {
+            rate: 220,
+            speed: 20,
+            life: 0.7,
+            pal: 4,
+            size: 3.2,
+            spread: 0.2,
+            buoy: 3,
+            pop: { lead: 2, dur: 0.35 },
+          }),
+        );
+      }
+    }
+  }
+}
+
 /* ── the space ── */
 
 /** The Gates category: a gate of the chosen look every 240 m, in the track's own world. */
@@ -1343,6 +1487,8 @@ export class DesignSpace {
   /** Moving things the layers ask for. */
   private moving = { ships: false, traffic: false, dragon: false, lanterns: false };
   private lanternT = 0;
+  /** Where you were last frame (the spectacle fires as you pass), null after a change. */
+  private lastS: number | null = null;
   private rockets: Rocket[] = [];
   private timer = 0;
   private side = 1;
@@ -1374,6 +1520,7 @@ export class DesignSpace {
     this.sparks.clear();
     this.rockets = [];
     this.timer = 0.3;
+    this.lastS = null;
     const cells = this.layers.map((p) => ({
       cat: CATEGORIES[p.cat].id,
       id: CATEGORIES[p.cat].vars[p.v].id,
@@ -1445,10 +1592,22 @@ export class DesignSpace {
       this.chunks.set(i, this.build(tr, i * DS_CHUNK.LEN, (i + 1) * DS_CHUNK.LEN));
       built++;
     }
+    const prev = this.lastS;
+    this.lastS = s;
     for (const c of this.chunks.values())
       for (const b of c.burners) {
-        const ds = b.s - s;
-        if (ds < b.w0 || ds > b.w1 || (b.gate && !b.gate(this.t))) continue;
+        if (b.pop) {
+          // Fired by you coming: the moment you come within its lead (driving on, not jumping).
+          const at = b.s - b.pop.lead;
+          if (prev !== null && prev < at && s >= at && s - prev < 60) {
+            if (b.pop.blast) this.explode(b.pos);
+            else b.until = this.t + b.pop.dur;
+          }
+          if (b.pop.blast || !(this.t < (b.until ?? -1))) continue;
+        } else {
+          const ds = b.s - s;
+          if (ds < b.w0 || ds > b.w1 || (b.gate && !b.gate(this.t))) continue;
+        }
         b.acc += b.rate * dt;
         let n = 0;
         while (b.acc >= 1 && n < 24) {
@@ -1497,6 +1656,52 @@ export class DesignSpace {
     this.root.parent?.remove(this.root);
     this.sparks.geo.dispose();
     this.sparks.mat.dispose();
+  }
+
+  /**
+   * An explosion at p: a flash, a fireball rolling up, sparks flung high and falling, and a shock
+   * ring racing out along the ground (the fx of the start's stage fire and the shift rings).
+   */
+  private explode(p: V3) {
+    const sp = this.sparks;
+    const at = (): V3 => [p[0] + rnd(0.6), p[1] + rnd(0.4), p[2] + rnd(0.6)];
+    for (let j = 0; j < 8; j++) sp.spawn(at(), [rnd(1), 1 + rnd(1), rnd(1)], 0.18, 4, 22, 3, 0, 1);
+    for (let j = 0; j < 170; j++) {
+      const d = sphere();
+      d[1] = Math.abs(d[1]) * 0.8 + 0.25;
+      const v = 7 + Math.random() * 9;
+      sp.spawn(at(), [d[0] * v, d[1] * v, d[2] * v], 0.9 + Math.random() * 0.5, 0, 4.2, 2.4, 6, 1);
+    }
+    for (let j = 0; j < 150; j++) {
+      const d = sphere();
+      d[1] = Math.abs(d[1]) * 0.9 + 0.35;
+      const v = 20 + Math.random() * 20;
+      sp.spawn(
+        at(),
+        [d[0] * v, d[1] * v, d[2] * v],
+        1.6 + Math.random() * 0.8,
+        3,
+        0.9,
+        0.4,
+        -9.8,
+        0,
+      );
+    }
+    const ring: V3 = [1, 0.7, 0.35];
+    for (let j = 0; j < 120; j++) {
+      const a = (Math.PI * 2 * j) / 120;
+      sp.spawn(
+        [p[0], p[1] - 0.8, p[2]],
+        [Math.cos(a) * 46, 0.6, Math.sin(a) * 46],
+        0.55,
+        5,
+        2.2,
+        3,
+        0,
+        0,
+        ring,
+      );
+    }
   }
 
   /* ── fireworks ── */
@@ -1929,6 +2134,11 @@ export class DesignSpace {
     } else if (cat === 'city') {
       this.city(k, tr, id, s0, s1);
       edges();
+    } else if (
+      cat === 'chinatown' &&
+      (id === 'firerows' || id === 'blasts' || id === 'firerings')
+    ) {
+      spectacle(k, burners, tr, id, s0, s1);
     } else if (cat === 'chinatown') {
       chinatown(k, group, tr, id, s0, s1);
     } else if (cat === 'neon') {

@@ -92,6 +92,63 @@ Lamp rows in the rain.
 ## 5. Chinatown Run (`chinatown`)
 
 Lanterns, lanes and avenues.
+- [x] **The 22 km lap** (2026-11-24: "make whole chinatown run much longer … some parts with more
+      tilt or also more up downs that are smoother not a sudden bump", "rows of fires shooting up
+      as u pass", "make it all longer and think how it develops in fun ways with more tilt parts
+      and more fire rows and explosions. and circle of fire to pass through. and a view over a
+      beautiful city in the distance"). `lib/art/chinatown-lap.ts` (pure, tested): the street is
+      still endless, but laid out as one 22 km lap that comes round again (about six minutes),
+      shaped as an arc: a calm opening, a build, two climaxes, a release. Every feature of the run
+      is placed there, in metres into the lap:
+
+      | km | Section |
+      |---|---|
+      | 0 – 1.6 | The lanes: a calm opening, long gentle bends, level, nothing burning |
+      | 1.6 – 2.4 | The first swell: a long rise of 6 m and down again |
+      | 2.4 – 3.0 | The first fire row (2.45 – 2.75) on a tighter bend |
+      | 3.0 – 5.4 | Undertown I: the fork at 3.0, the flip at 4.0, the lake city on the right at 4.49 |
+      | 5.4 – 6.2 | Lake arcade I (5.46 – 6.06), the view left |
+      | 6.2 – 8.0 | Balcony road I: the kicker crest at 7.5, mid-avenue, the deck on a straight |
+      | 8.0 – 10.1 | The sweepers: four 48° bends right and left on the tilt, fire rows through two |
+      | 10.1 – 11.8 | The rollers: up 8 m with fire on the crest, down into a dip with fire and three blasts |
+      | 11.8 – 12.7 | The summit, 10 m up: the canyon parts on the right for the city across the lake (12.05 – 12.45) |
+      | 12.7 – 13.3 | Four rings of fire (12.78 – 13.2), a blast beside each |
+      | 13.3 – 15.7 | Undertown II: the fork at 13.3, the flip at 14.3, its lake city at 14.79 |
+      | 15.7 – 16.4 | Lake arcade II (15.76 – 16.36) |
+      | 16.4 – 17.95 | Balcony road II: the kicker crest at 17.5 |
+      | 17.95 – 20.25 | The furnace: four sweepers on the tilt, fire down both edges all the way, ten blasts, three rings, a swell |
+      | 20.25 – 22 | The release: the lanes home, a last swell and the city once more from its top (20.9 – 21.3) |
+
+      - **Bends** (`CHINA_BENDS`): each eases in and out (curvature sin² across it) so the bank
+        follows it smoothly; long gentle ones (radius 450 to 2,500 m) and the sweepers (300 m).
+        Net heading over a lap is nil and it never swings past 70° off the lap's way, so the road
+        never turns back on itself. Around Undertown the bends turn away from its lake city.
+      - **Tilt** (`CHINA_TILT`): on the sweepers and in the furnace the bank is 1.7 times the
+        street's, up to 0.51 rad (about 29°), easing in over 250 m (`TrackDef.level` past 1).
+      - **Swells** (`CHINA_SWELLS`): cosine bumps squared, so slope and curve both ease to nothing
+        at their ends; 400 to 500 m long each side. At 360 km/h a crest asks at most a quarter of
+        the game's gravity, so nobody is thrown off one; driven flat out over the rollers the car never
+        leaves the road. The old crest and dip every 2 km are gone: the two balcony kickers (4 m
+        over 60 m) are the street's only sharp crests. The street is at its datum wherever another
+        level is laid against it (Undertown and its underpass, the arcades, the balcony decks).
+      - **Fire rows** (`LAP_FIRE_ROWS`, Design: Chinatown · Fire rows): a pair of burners every
+        10 m down both edges, each shooting a column of flame for 0.6 s as you come within 22 m:
+        the fire runs up the road just ahead of you, both sides at once. In the furnace every other
+        pair burns red and they run its whole 2.1 km.
+      - **Explosions** (`LAP_BLASTS`, Design: Chinatown · Explosions): lacquer drums beside the road
+        that blow as you come within 70 m: a flash, a fireball rolling up, gold sparks flung high
+        and falling, a shock ring racing out along the ground.
+      - **Rings of fire** (`LAP_RINGS`, Design: Chinatown · Rings of fire): burning rings 6.4 m
+        round standing over the road on two legs, their foot just clear of it, some to one side;
+        fire licks out round them; through one you get the boost rings' surge and it flares
+        white-hot as you pass. Gates, temple gates and strings of light keep 25 m clear.
+      - **Overlooks** (`LAP_OVERLOOK`, `lib/art/chinatown-vista.ts`): at the summit of the rollers
+        and of the last swell the canyon parts on the right for 400 m: no shophouses, signs, gates
+        or strings there, the hillside falling away to a balustrade lit red with gold lights, the
+        drop, the lake and a city of its own across it (as the arcade's, mirrored in the water).
+      - Stage passages keep out of the fire rows and rings. The shophouses stand down to the lower
+        of the ground at their middle and at their face, so their foot never shows on a swell or a
+        bank.
 - [x] **Longer, and a tall street canyon with many more publicity panels** (2026-11-24: "chinatown
       make it longer and really think how all the elements form the chinatown in the 3d city.
       check how streets look and check it to make a taller chinatown streets with more of those
@@ -110,9 +167,8 @@ Lanterns, lanes and avenues.
         crosses the road but light.
       - **Longer**: lanes 1,100 m (were 600) opening onto avenues for 900 m (were 600); the bends
         about 1.6 times as long (periods 3,100 and 1,500 m, were 1,900 and 900; the tightest about
-        320 m across), the crest and dip spaced to match. Undertown first comes after 1.3 km of
-        street, then every 3.6 km (was 700 m, then every 2.4 km), so the canyon has room between
-        flips.
+        320 m across). Undertown first came after 1.3 km of street, then every 3.6 km (was 700 m,
+        then every 2.4 km); since the 22 km lap (above) twice a lap, at 4.0 and 14.3 km.
       - **Taller**: shophouse towers shoulder to shoulder 2.5 m back from the lane's edge, six to
         eleven storeys (3.4 m each) along a slow swell of the roofline, so the cornices recede as
         one line; about one in six a tall tiered tower of 13 to 17 storeys with a spire. Two storeys
@@ -139,7 +195,8 @@ Lanterns, lanes and avenues.
       moments"). The ordinary bends bank half as steep again: design speed 55 m/s (was 45), so a
       gentle bend's bank has 1.5 times the tangent, up to 0.3 rad (about 17°; the other street roads
       keep 0.2). The grid stays level: the bank is 0 to 120 m and eases in by 320 m
-      (`CHINA_BANK`, `CHINA_LEVEL` in lib/art/track.ts; `TrackDef.level`).
+      (`CHINA_BANK`, `CHINA_LEVEL` in lib/art/track.ts; `TrackDef.level`). Steeper still on the
+      lap's tilt stretches (above): `chinaBank`.
 - [x] **Two paths at Undertown: the underpass** (2026-11-24, first "give option to keep going
       normal instead of doing the tilt … so there are 2 paths" (Main Street, level beside the
       flip), then "loop that goes to undertown add option to go to the right and take another road
@@ -211,9 +268,9 @@ Lanterns, lanes and avenues.
 - [x] **The lake arcade** (2026-11-24: "also in main china road add a whole part left that is
       below the buildings in a whole area with a wider view to the left").
       `lib/art/chinatown-vista.ts` (pure, tested).
-      - Once after each Undertown (four runs in five: where a balcony road leaves no room, none), 600 m long, in the stretch between
-        its underpass merging back and the next fork, 60 m clear of any balcony road: the earliest
-        place on a 20 m grid that fits (`vistaStart`, `vistaLocal`).
+      - Once after each Undertown, 600 m long, 60 m after its underpass has merged back (1,460 m
+        after the flip begins; laid by the lap, so always, clear of the balcony roads:
+        `vistasBetween`, `vistaAt`, `vistaLocal`).
       - The shophouses on the left stand up on a deck over the road's left edge: its underside
         9.5 m over the street, from 4 m inside the road's edge to 15 m past it, on red columns in
         two rows (1.6 and 14 m past the edge, every 9 m) receding down the arcade, lanterns hung
@@ -232,8 +289,9 @@ Lanterns, lanes and avenues.
 - [x] **The balcony road** (2026-11-24: "on the small jumps allow ability to jump go higher up left
       and ride a second slope on the left. that is above the normal slope. like a side track above
       the first floor of the buildings"). `lib/art/chinatown-paths.ts`.
-      - At the street's crests (1,500 m into each 2,000 m) clear of Undertown by 60 m: five crests
-        in every nine (the first at 3.5 km). A kicker on the left of the road (8 m of it, its inner
+      - At its kicker crests, twice a lap (7.5 and 17.5 km, mid-avenue, on a straight so its deck is
+        level, `LAP_BALCONY`; were the street's crests every 2 km clear of Undertown), well clear of
+        Undertown. A kicker on the left of the road (8 m of it, its inner
         side easing in over 3 m) rises 2 m over the last 36 m up to the crest's top and ends in a
         lip; the road's edge lip is off there, so you launch right to the edge.
       - Jump up-left off it onto a deck 9 m wide one storey up (6 m over the road's left edge as
@@ -256,8 +314,9 @@ Lanterns, lanes and avenues.
 - [x] **Undertown** (2026-11-23: "make racetrack two sided and at the edge there is a cool twist
       edge that makes it flip and u race the other way from under … mirrored … a different decor
       … called the undertown with undertown letters when u ride there"). `lib/art/undertown.ts`.
-      - Every 3,600 m from 1,300 m (every 2,400 m from 700 m until 2026-11-24, the longer street),
-        the road's left edge curls up and over: over 180 m it rolls half
+      - Twice a lap, at 4.0 and 14.3 km (`LAP_UNDER`, `underStart`; every 3,600 m from 1,300 m
+        until the 22 km lap, every 2,400 m from 700 m before that), the road's left edge curls up
+        and over: over 180 m it rolls half
         a turn about an axis 18 m above it, and you drive its underside upside down, mirrored
         (your left on the road's right), 36 m over the street, the shophouses hanging over your
         head. 620 m later it rolls on the same way, another 180 m, and you are back on top.

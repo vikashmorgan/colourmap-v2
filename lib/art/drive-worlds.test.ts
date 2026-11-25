@@ -49,7 +49,8 @@ describe('the night tracks', () => {
       const w = makeTrackWorld(def);
       let maxBank = 0;
       let rise = 0;
-      for (let s = 0; s < 1800; s += 10) {
+      // Chinatown opens calm: its first swell is 2 km in (lib/art/chinatown-lap.ts).
+      for (let s = 0; s < (def === CHINATOWN ? 2400 : 1800); s += 10) {
         const l = pointAt(w.track, s, 4);
         const r = pointAt(w.track, s, -4);
         maxBank = Math.max(maxBank, Math.abs(w.ground(l.x, l.y).h - w.ground(r.x, r.y).h));
