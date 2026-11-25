@@ -136,6 +136,7 @@ import {
   makeTrackWorld,
   newRace,
   onBypass,
+  onSideRoad,
   pointAt,
   project,
   type Race,
@@ -1814,10 +1815,15 @@ export class DriveEngine {
       // its floor, and under the street's deck where it roofs the cut (never through it).
       const tr = this.trackWorld.track;
       const q = project(tr, this.cam.x, this.cam.y, this.s);
+      // On a side road: over its floor, and in the deep way under its roof.
+      const side = onSideRoad(tr, this.s, this.u, v.z - spec.hover);
       if (this.below(v)) {
         this.cam.z = Math.max(this.cam.z, lowerFloor(tr.def, q.s) + 1.2);
         const roof = lowerCeiling(tr, q.s, q.u) ?? lowerCeiling(tr, this.s, this.u);
         if (roof !== null) this.cam.z = Math.min(this.cam.z, roof - 0.5);
+      } else if (side) {
+        this.cam.z = Math.max(this.cam.z, side.z + 1.2);
+        if (side.roof !== null) this.cam.z = Math.min(this.cam.z, side.z + side.roof - 0.5);
       } else this.cam.z = Math.max(this.cam.z, heightAt(tr, q.s, 0) + 1.2);
     }
     this.cam.roll = ease(this.cam.roll, piece ? 0 : v.roll * 0.35, 4, dt);

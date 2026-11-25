@@ -81,10 +81,12 @@ export function rivalHull(r: Rival): Hull {
 }
 
 /** Which second paths a rival takes: those running on the right bear right onto Main Street past
- * Undertown (and a twist's bypass), the one furthest left goes for the balcony road. */
+ * Undertown (and a twist's bypass), the one furthest left goes for the balcony road,
+ * and the one left of the middle nearest it (Lime) knows the side roads. */
 export function rivalPick(r: Rival): PathPick {
   const most = Math.max(...RIVALS.map((o) => o.lane));
-  return { bypass: r.lane < 0, balcony: r.lane === most };
+  const least = Math.min(...RIVALS.filter((o) => o.lane > 0).map((o) => o.lane));
+  return { bypass: r.lane < 0, balcony: r.lane === most, side: r.lane === least };
 }
 
 /**

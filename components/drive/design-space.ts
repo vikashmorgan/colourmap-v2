@@ -19,9 +19,18 @@ import {
   LAP_RINGS,
   nearSpectacle,
 } from '@/lib/art/chinatown-lap';
+import { DEEP_CHAMBERS, deepChamber, type RoadId, roadStarts } from '@/lib/art/chinatown-roads';
 import { CATEGORIES, MARKING, type Pos, SURFACE_STYLE } from '@/lib/art/design-space';
 import { WORLD_CFG } from '@/lib/art/drive-worlds';
-import { frameAt, heightAt, pointAt, project, type Track, twistPose } from '@/lib/art/track';
+import {
+  frameAt,
+  heightAt,
+  pointAt,
+  project,
+  sideRoadsAt,
+  type Track,
+  twistPose,
+} from '@/lib/art/track';
 import { GATE_STYLES, type GateStyle } from '@/lib/art/track-data';
 import { onUnderside, UNDER, UNDER_COLOURS, underSpan } from '@/lib/art/undertown';
 import { buildGate } from './gates-view';
@@ -1326,12 +1335,135 @@ function stagePassage(k: Kit, burners: Burner[], tr: Track, s0: number, s1: numb
 /* ── Chinatown's spectacle (2026-11-24: "rows of fires shooting up as u pass … explosions. and
    circle of fire to pass through") ── */
 
+/** The side road `id` at s (its centre, half-width, floor and roof), or null. */
+function roadOf(tr: Track, s: number, id: RoadId) {
+  return sideRoadsAt(tr, s).find((r) => r.id === id) ?? null;
+}
+
+/** The high road's stage fire passages (m into it): burners down both its rails. */
+export const STAGE_FIRE: readonly (readonly [number, number])[] = [
+  [1000, 1120],
+  [1350, 1470],
+  [1700, 1820],
+];
+
+/**
+ * Chinatown Run's side roads dressed (lib/art/chinatown-roads.ts, 2026-11-24): the alley's neon down
+ * both walls; the high road's gold rails and its stage fire passages; in the deep way, the lantern
+ * cavern's lanterns, the hall's giant dragon in gold lines, and the vault's fireworks (shot as you
+ * come: `DesignSpace.vault`).
+ */
+function sideRoads(k: Kit, burners: Burner[], tr: Track, s0: number, s1: number) {
+  const neon: V3[] = [
+    [1, 0.2, 0.6],
+    [0.2, 0.9, 1],
+  ];
+  for (const { s: start, def } of roadStarts(s0, s1)) {
+    const a = Math.max(s0, start);
+    const b = Math.min(s1, start + def.length);
+    if (def.id === 'alley') {
+      for (const s of every(a, b, 5)) {
+        const r = roadOf(tr, s, 'alley');
+        if (!r || r.joined) continue;
+        const i = Math.round(s / 5);
+        for (const sd of [1, -1]) {
+          const u = r.c + sd * (r.w + 0.3);
+          k.dot(
+            ground(tr, s, u, r.z + 2.2 + (i % 3) * 1.4),
+            neon[(i + (sd > 0 ? 1 : 0)) % 2],
+            1.6,
+            1.3,
+          );
+        }
+      }
+    } else if (def.id === 'high') {
+      for (const s of every(a, b, 8)) {
+        const r = roadOf(tr, s, 'high');
+        if (!r || r.joined) continue;
+        for (const sd of [1, -1])
+          k.dot(ground(tr, s, r.c + sd * (r.w + 0.2), r.z + 1.1), C.gold, 1.3, 1);
+      }
+      for (const [x0, x1] of STAGE_FIRE)
+        for (const s of every(Math.max(a, start + x0), Math.min(b, start + x1), 12)) {
+          const r = roadOf(tr, s, 'high');
+          if (!r) continue;
+          for (const sd of [1, -1]) {
+            const u = r.c + sd * (r.w + 0.2);
+            burners.push(
+              burner(s, ground(tr, s, u, r.z + 1.2), dir(tr, s, -sd * 0.05, 1, 0), {
+                rate: 150,
+                speed: 22,
+                life: 0.7,
+                pal: Math.round(s / 12) % 2 ? 4 : 0,
+                size: 3.2,
+                spread: 0.06,
+                buoy: 4,
+                pop: { lead: 26, dur: 0.6 },
+              }),
+            );
+          }
+        }
+    } else {
+      const [lanterns, dragon] = DEEP_CHAMBERS;
+      // The lanterns: rows of them under the cavern's roof, down both walls and across.
+      for (const s of every(
+        Math.max(a, start + lanterns.from),
+        Math.min(b, start + lanterns.to),
+        6,
+      )) {
+        const r = roadOf(tr, s, 'deep');
+        if (!r || r.roof === null) continue;
+        for (const f of [-0.9, -0.45, 0, 0.45, 0.9]) {
+          const sway = Math.sin(s * 0.7 + f * 5);
+          k.dot(
+            ground(tr, s, r.c + f * r.w, r.z + r.roof - 2.5 - Math.abs(sway) * 2),
+            f === 0 ? C.warm : C.red,
+            1.8,
+            1.6,
+          );
+        }
+      }
+      // The dragon: a giant gold statue winding down the hall, its spine in dots, its head at the
+      // far end with two red eyes.
+      const x0 = start + dragon.from + 40;
+      const x1 = start + dragon.to - 40;
+      if (x1 > s0 && x0 < s1) {
+        const spine = (s: number, off = 0): V3 | null => {
+          const r = roadOf(tr, s, 'deep');
+          if (!r) return null;
+          const ph = ((s - x0) / 90) * Math.PI * 2;
+          const u = r.c + r.w * 0.55 * Math.sin(ph) + off;
+          return ground(tr, s, u, r.z + 7 + 3 * Math.sin(ph * 0.5 + 1) + off * 0.3);
+        };
+        for (const off of [-0.9, 0, 0.9]) {
+          const pts = every(x0, x1, 3)
+            .map((s) => spine(s, off))
+            .filter((p): p is V3 => p !== null);
+          k.poly(pts, false, off === 0 ? C.gold : C.deep, off === 0 ? 1.6 : 1);
+        }
+        for (const s of every(x0, x1, 6)) {
+          const p = spine(s);
+          if (p) k.dot(p, C.gold, 1.4, 1.8);
+        }
+        const head = spine(x1);
+        if (head) {
+          for (const sd of [1, -1])
+            k.dot([head[0], head[1] + 1.2, head[2] + sd * 0.8], C.red, 3, 2.4);
+          k.dot(head, C.gold, 2.2, 5);
+        }
+      }
+    }
+  }
+}
+
 function spectacle(k: Kit, burners: Burner[], tr: Track, id: string, s0: number, s1: number) {
   const half = (s: number) => tr.def.half(s);
   // Chinatown Run's lap places it all (lib/art/chinatown-lap.ts); on any other road (the design
   // space's preview) it comes round evenly where the road is plain.
   const china = tr.def.id === 'chinatown';
-  if (id === 'firerows') {
+  if (id === 'sideroads') {
+    if (china) sideRoads(k, burners, tr, s0, s1);
+  } else if (id === 'firerows') {
     const rows = china
       ? eachIn(LAP_FIRE_ROWS, s0 - 2000, s1).map(({ s, item }) => ({
           a: s,
@@ -1492,6 +1624,7 @@ export class DesignSpace {
   private rockets: Rocket[] = [];
   private timer = 0;
   private side = 1;
+  private vaultT = 0;
   private t = 0;
   private bend = 0;
   private ships: { off: number; u: number; y: number; v: number; col: V3 }[] = [];
@@ -1632,6 +1765,7 @@ export class DesignSpace {
         }
       }
     if (this.show) this.fireworks(dt, tr, s, this.show);
+    if (tr.def.id === 'chinatown') this.vault(dt, tr, s);
     if (this.moving.dragon) dragonFly(this.sparks, tr, s, this.t);
     if (this.moving.lanterns) {
       this.lanternT -= dt;
@@ -1705,6 +1839,26 @@ export class DesignSpace {
   }
 
   /* ── fireworks ── */
+
+  /** The deep way's fireworks vault: shells shot up from its floor just ahead of you, bursting
+   * under its roof. */
+  private vault(dt: number, tr: Track, s: number) {
+    this.vaultT -= dt;
+    if (this.vaultT > 0) return;
+    this.vaultT = 0.18 + Math.random() * 0.2;
+    const q = s + 40 + Math.random() * 160;
+    if (deepChamber(q)?.id !== 'vault') return;
+    const r = roadOf(tr, q, 'deep');
+    if (!r || r.roof === null) return;
+    const pats = ['chrys', 'peony', 'ring', 'willow', 'palm'];
+    // Up to burst a few metres under the roof (it bursts as it slows to 4 m/s).
+    const up = Math.sqrt(16 + 44 * Math.max(4, r.roof - 6));
+    this.rockets.push({
+      p: ground(tr, q, r.c + rnd(r.w * 0.8), r.z),
+      v: [rnd(2), up, rnd(2)],
+      pat: pats[Math.floor(Math.random() * pats.length)],
+    });
+  }
 
   private fireworks(dt: number, tr: Track, s: number, id: string) {
     this.timer -= dt;
@@ -2136,7 +2290,7 @@ export class DesignSpace {
       edges();
     } else if (
       cat === 'chinatown' &&
-      (id === 'firerows' || id === 'blasts' || id === 'firerings')
+      (id === 'firerows' || id === 'blasts' || id === 'firerings' || id === 'sideroads')
     ) {
       spectacle(k, burners, tr, id, s0, s1);
     } else if (cat === 'chinatown') {

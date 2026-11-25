@@ -20,6 +20,12 @@ export const LOOK = { base: 16, perSpeed: 0.55 };
 /** Where to aim across the road at s for a racer holding `lane`: on the bypass or the balcony road
  * if it picked that way and one runs there, else its own line. */
 export function aimLane(def: TrackDef, s: number, lane: number, pick: PathPick): number {
+  if (pick.side && def.roads) {
+    const sc = Math.max(0, s);
+    const e = def.elev(sc);
+    const r = def.roads(sc, def.half(sc), e, e)[0];
+    if (r) return r.c + lane * 0.2;
+  }
   if (pick.balcony) {
     const bc = def.balcony?.(Math.max(0, s));
     if (bc) return bc.c;
@@ -41,7 +47,15 @@ export function forkPick(def: TrackDef, s: number): PathPick {
   return {
     bypass: by(Math.max(0, s)) && pickFor(runStart(by, s)),
     balcony: bc(Math.max(0, s)) && pickFor(runStart(bc, s) + 1),
+    side: sideStart(def, s) !== null && pickFor((sideStart(def, s) ?? 0) + 2),
   };
+}
+
+/** Where the side road s is on starts (m along the road), or null. */
+function sideStart(def: TrackDef, s: number): number | null {
+  const sc = Math.max(0, s);
+  const r = def.roads?.(sc, def.half(sc), 0, 0)[0];
+  return r ? Math.round(sc - r.x) : null;
 }
 
 export function autopilotControls(

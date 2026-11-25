@@ -149,6 +149,60 @@ Lanterns, lanes and avenues.
       - Stage passages keep out of the fire rows and rings. The shophouses stand down to the lower
         of the ground at their middle and at their face, so their foot never shows on a swell or a
         bank.
+- [x] **The side roads: the alley, the high road and the deep way** (2026-11-24: "a whole side road
+      that goes on the left side of those tallest buildings. another side road that goes high and is
+      longer with cool passages", "a tunnel u can enter on the left of main normal chinatrack which
+      leads left and makes u have deep unique adventures"; the world: "the more u know the more u
+      discover"). `lib/art/chinatown-roads.ts` (pure, tested). Three roads off the left of the street,
+      found rather than signposted: no sign, no arrow, just a gap in the row of towers or a dark arch.
+      - **How each is laid out.** Each road has keyframes along its length: the gap from the street's
+        left edge, its half-width, its floor (over the street's crown, or level with its left edge)
+        and its roof. Everything eases between keys (smootherstep), so the floor's slope and curve
+        fade at each one.
+        - At each end the road lies over the street's left lane (`ROAD_IN` 10 m), level with it and
+          unwalled. You bear left onto it and it slides off; at the far end it slides back on.
+        - Once off the street it runs out behind the front row of shophouses (`ROAD_OUT` 18 m past
+          the edge), walled at both sides.
+        - Within 80 m of the street's middle everywhere. Clear of Undertown, the balcony roads, the
+          arcades and each other.
+        - At 360 km/h its floor asks at most half of gravity, swells included.
+      - **The alley** (後巷), 8.04 – 10.1 km: off the left through a gap between the tallest towers
+        as the sweepers start, then behind them all the way. A second row of shophouses faces it
+        across, and neon runs pink and cyan down both its walls. It comes back in at 10.1 km, right
+        where the high road leaves.
+      - **The high road** (天路), 10.15 – 12.83 km: up a long ramp off the left edge to 22 m over the
+        street's crown. It rides the rollers' swells, on red columns, its rails gold, for 900 m on
+        top (over three times the balcony road's height and five times its length). Six pairs of
+        slim towers stand either side of it, a sky bridge over it between each pair. Three stage fire
+        passages (`STAGE_FIRE`) burst up both its rails as you come. Down again past the summit, back
+        onto the street's left lane as the rings of fire begin.
+      - **The deep way** (深道), from 20.3 km into the next lap's lanes (3.76 km):
+        - **The entrance.** Off the left at the end of the furnace, through a dark lacquer arch with
+          only a faint red line round its opening, then down under the ground.
+        - **Four chambers** (`DEEP_CHAMBERS`), wider and taller than the way between them:
+          - The lantern cavern: rows of red and warm lanterns swaying under its roof.
+          - The hall of the dragon: a giant gold dragon in lines winding down the hall, its spine in
+            dots, two red eyes.
+          - The flooded way: you drive on a sheet of water over a deep bed, the blue kerb lights
+            mirrored under it.
+          - The fireworks vault: shells shot up from the floor just ahead of you, bursting under its
+            roof.
+        - **The way out.** Up through a second arch and out onto the street 2 km into the next lap.
+          The arches sit at its mouths; between them it is roofed.
+      - **Physics** (`lib/art/track.ts`, `TrackDef.roads`, `onSideRoad`, `sideGround`):
+        - Each road is a real surface. Where its floor runs over or under other ground, the body's
+          height picks it: more than 4 m under a road's floor, you are not on it (`SIDE_PICK`).
+        - Apart from the street, its walls hold you (flowing along them, as everywhere). Joined to
+          the street, the street's left wall opens and the road's hold spans both.
+        - The camera stays over its floor, and under the deep way's roof.
+      - **Who takes them.** The autopilot takes the side roads it comes to on its own coin (`side` in
+        `PathPick`, like its fork and balcony picks). Of the rivals, Lime knows them.
+      - **Dressing:** in the design space as Chinatown's 'Side roads', worn by default (`DRESS`).
+        - The surfaces, walls, roof, arches and water are drawn with the road
+          (components/drive/track-view.ts).
+        - The towers, the bridges, the columns and the alley's far row stand with the street's
+          pieces (lib/art/night-course.ts `sideRoadPieces`). The left row of shophouses parts where a
+          road comes through it (`roadThrough`).
 - [x] **Longer, and a tall street canyon with many more publicity panels** (2026-11-24: "chinatown
       make it longer and really think how all the elements form the chinatown in the 3d city.
       check how streets look and check it to make a taller chinatown streets with more of those

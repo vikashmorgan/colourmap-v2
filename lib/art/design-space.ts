@@ -284,6 +284,13 @@ export const CATEGORIES: Category[] = [
         'Rings of fire',
         'Burning rings standing over the road; through one, a surge, and it flares as you pass.',
       ),
+      // 2026-11-24: "a whole side road … another side road that goes high … a tunnel u can enter
+      // on the left". The roads are lib/art/chinatown-roads.ts; this dresses them.
+      v(
+        'sideroads',
+        'Side roads',
+        'Their light: neon down the alley, gold rails and stage fire on the high road, lanterns, a giant dragon and fireworks in the deep way.',
+      ),
     ],
   },
   {
@@ -419,6 +426,7 @@ const DRESS: Record<string, [CategoryId, string][]> = {
     ['chinatown', 'firerows'],
     ['chinatown', 'blasts'],
     ['chinatown', 'firerings'],
+    ['chinatown', 'sideroads'],
   ],
   neon: [PASSAGE, ['neon', 'blades'], ['neon', 'bridges'], ['neon', 'traffic'], ['neon', 'jumps']],
 };

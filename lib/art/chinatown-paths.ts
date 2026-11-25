@@ -231,6 +231,8 @@ export function kickAt(s: number, u: number, half: number): number {
 export interface PathPick {
   bypass: boolean;
   balcony: boolean;
+  /** Off down the side roads it comes to (the alley, the high road, the deep way). */
+  side?: boolean;
 }
 
 function hash(n: number): number {
