@@ -31,6 +31,9 @@ Esc goes back one step; in a race it pauses.
   never asks for a login. Files and `/_next` pass through. On the app's own domain `/play` is a
   plain public page too. (`lib/drive-site.ts`, `proxy.ts`, `app/play/page.tsx`.)
 - Every world starts in the hover ship; a vehicle picked in the menu is still remembered.
+- Races come with the five rivals on, and without the wall of light behind your ship (2026-11-25:
+  "make the race mode with other racers default. and none of that colour light below"); both
+  stay switches in the menu.
 
 ## The track ring
 
