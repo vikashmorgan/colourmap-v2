@@ -47,6 +47,7 @@ export const SLIDE_FILES = [
   'LLMs1.pdf',
   'LLMs2.pdf',
   'LLMs3.pdf',
+  'LLMs4.pdf',
 ] as const;
 
 export type SlideFile = (typeof SLIDE_FILES)[number];
