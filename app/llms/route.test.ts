@@ -26,7 +26,7 @@ describe('/llms class page', () => {
     expect(response.headers.get('location')).toBe('http://localhost/login?next=%2Fllms');
   });
 
-  it('serves sessions 1 to 3 to a signed-in user, uncached', async () => {
+  it('serves sessions 1 to 4 to a signed-in user, uncached', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
 
     const response = await GET(request());
@@ -42,6 +42,9 @@ describe('/llms class page', () => {
     expect(html).toContain('{ n: 3,');
     // Session 3's exercise tasks link to the lecture cards they practise.
     expect(html).toContain("uses: ['one-split', 'kfold', 'cv-score', 'cv-code']");
+    expect(html).toContain('{ n: 4,');
+    // Session 4's exercise tasks link back to the lecture too.
+    expect(html).toContain("uses: ['two-prices', 'cheapest']");
     expect(html).toContain('llms|');
     expect(html).not.toMatch(/pandas\|/);
   });

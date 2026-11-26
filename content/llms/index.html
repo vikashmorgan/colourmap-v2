@@ -766,6 +766,11 @@ const shrinkTbl = () => cap('scikit-learn on the four stores: the slope w and th
 /* ---------- The course, in plain words ----------
  * Written from the session deck and the take-home notebook in plain words; the slides themselves stay private.
  * Every number on the four stores was worked out again by hand. */
+// Session 4: the ten customers of the deck (Example 2), their scores, and who really left.
+const TEN = [['0.05', 'stays'], ['0.15', 'stays'], ['0.25', 'stays'], ['0.32', '*leaves'], ['0.35', 'stays'], ['0.45', 'stays'], ['0.55', '*leaves'], ['0.62', 'stays'], ['0.72', '*leaves'], ['0.90', '*leaves']];
+const tenTbl = () => cap('The ten customers of the deck, by score: four leave (shaded), six stay') + tbl(['score p', 'really', 'at 0.3', 'at 0.5', 'at 0.7'], TEN.map(([p, who]) => { const v = Number(p), l = who.startsWith('*'); const at = t => (v >= t ? (l ? 'TP' : '*FP') : (l ? '*FN' : 'TN')); return [p, who, at(0.3), at(0.5), at(0.7)]; }));
+const confTbl = () => tbl(['', 'predicted negative', 'predicted positive'], [['actually negative', 'TN: true negative', '*FP: false positive, a false alarm'], ['actually positive', '*FN: false negative, a missed case', 'TP: true positive']]);
+const costTbl = () => cap('The 200 validation customers: cost = 50 × FP + 150 × FN') + tbl(['threshold', 'FP', 'FN', 'accuracy', 'cost (€)'], [['0.1', '45', '1', '0.770', '2,400'], ['0.2', '32', '3', '0.825', '2,050'], ['0.3', '18', '6', '0.880', '*1,800'], ['0.4', '13', '8', '*0.895', '1,850'], ['0.5', '8', '13', '*0.895', '2,350'], ['0.6', '5', '19', '0.880', '3,100'], ['0.7', '3', '23', '0.870', '3,600'], ['0.8', '0', '27', '0.865', '4,050'], ['0.9', '0', '33', '0.835', '4,950']]);
 const SESSIONS = [
   { n: 1, pages: 197, short: 'Intro & data', title: 'Introduction to machine learning', lede: 'How the course works, seventy years of machine learning in a few cards, the kinds of learning and their tasks, the vocabulary of a dataset, and a first straight line through restaurant tips.', groups: [
     { name: 'The course', flowLabel: 'The thread of the five sessions', flow: ['Data', 'Model', 'Training', 'Evaluation'], cards: [
@@ -1321,6 +1326,228 @@ degree 3, λ = 1:    1.9`) + `<p>With a weak penalty degree 3 has more features 
       ['And degree 1? What comes after the grid search?', () => `<p>Degree 1 stays around 4.0 whatever λ: too simple, <b>it underfits</b>, and a penalty cannot add the curve it lacks. Next: the winner, already refitted on the whole training set, is measured once on the test set, and that number is reported.</p>`],
     ] },
   ], recap: ['One validation split is luck: k-fold cross-validation lets every observation validate once and averages the k errors; leave-one-out is k = n.', 'Powers and products of the features multiply fast, and so many features overfit.', 'Regularisation adds a penalty on the weights: Ridge (λ Σ w²) shrinks them all, Lasso (λ Σ |w|) sets some to exactly zero. Standardise first.', 'Parameters are learned by fit; hyperparameters (the degree, λ) are chosen by a grid search with cross-validation, inside a pipeline so the scaler learns within each fold.', 'Cross-validate to choose, refit the best on the whole training set, test once.'] },
+  { n: 4, pages: 133, short: 'Classification', title: 'Linear models for classification: from probabilities to decisions', lede: 'A yes-or-no question: will this customer leave? Logistic regression turns a linear score into a probability, a threshold turns the probability into a decision, and the confusion matrix counts what each kind of error costs. Worked out by hand on ten customers, then done in scikit-learn on a thousand.', groups: [
+    { name: 'Where we are', flowLabel: 'The path of the session', flow: ['Probability', 'Threshold', 'Decision', 'Count the errors', 'Their cost'], cards: [
+      { id: 'today', slide: 10, name: 'Last time, and a yes-or-no question', what: 'Last session: cross-validation lets every observation validate once; Ridge and Lasso keep the weights small with a penalty; a grid search with cross-validation chooses the hyperparameters; the test set is used once, at the end.\n\nToday the target is not a number but an answer, yes or no. Three steps. Will this customer leave? The model gives a probability. Do we act? A threshold turns the probability into a decision. Was it a good decision? We count the errors and what they cost.', list: ['Probability. The model says how likely the customer is to leave, a number between 0 and 1.', 'Decision. Above a threshold we act: we offer the customer a discount.', 'Cost. A needless discount and a lost customer are two different errors, with two different prices.'] },
+    ] },
+    { name: 'From regression to classification', cards: [
+      { id: 'two-targets', slide: 16, name: 'Two kinds of target: a number or a category', what: 'In regression the target is a number: the units a store sells, the price of a used car. In classification it is a category: a customer leaves or stays, a card payment is a fraud or not.\n\nWith two categories the task is binary. They are coded 1 and 0, and class 1 is the positive class: the one we are looking for. Here, a customer who leaves. “Positive” does not mean good; it means “the thing we are hunting for”.', more: { html: () => tbl(['', 'regression', 'classification'], [['the target', 'a number', 'a category'], ['examples', 'units sold, the price of a car', 'leaves or stays, fraud or not'], ['the model gives', 'ŷ, a number', 'p, a probability of class 1'], ['the error measured with', 'MSE, MAE, R²', 'the confusion matrix, precision, recall, ROC-AUC']]) }, watch: 'Choose the positive class on purpose: every metric of the session (precision, recall, the ROC curve) is about class 1.' },
+      { id: 'customers', slide: 19, name: 'The customers: 1,000 subscribers, 189 who left', what: 'The example of the whole session: 1,000 customers of a streaming service, with three features: months as a customer, hours watched per week, calls to customer support in the last three months. The target, `churn`, is 1 if the customer left the following month and 0 if they stayed.\n\n811 stayed and 189 left. The classes are imbalanced: about four stay for every one who leaves. Remember that number, it will matter for accuracy.', more: { html: () => tbl(['months', 'hours watched', 'support calls', 'churn'], [['33', '6.5', '1', '0'], ['39', '15.3', '1', '0'], ['38', '8.2', '1', '0'], ['25', '23.1', '0', '0'], ['27', '1.3', '1', '*1']]) } },
+      { id: 'not-a-line', slide: 22, name: 'Why not a straight line?', what: 'Plot churn (0 or 1) against the months as a customer and fit a straight line through the dots, as in Session 2. For long-time customers the line goes below 0, and for some it would go above 1. But we want a probability, and a probability is never below 0 or above 1.\n\nWe want a curve that stays between 0 and 1: close to 1 where customers leave, close to 0 where they stay, and passing through 0.5 somewhere in between.', watch: 'A straight line can give −0.3 as a “probability of leaving”. That number means nothing.' },
+    ] },
+    { name: 'Logistic regression', cards: [
+      { id: 'sigmoid', slide: 27, name: 'The sigmoid squeezes any score into a probability', what: 'The sigmoid, written σ, takes any number z, from very negative to very positive, and gives back a number between 0 and 1. At z = 0 it gives exactly 0.5. As z grows it climbs towards 1; as z goes very negative it falls towards 0. It is never exactly 0 or 1.\n\nIts shape is an S: flat at both ends, steep in the middle. Near z = 0 a small change in the score moves the probability a lot; far from 0 it hardly moves it.', f: `σ(z) = 1 / (1 + e⁻ᶻ)`, more: { html: () => tbl(['z', '−4', '−2', '0', '2', '4'], [['σ(z)', '0.02', '0.12', '*0.5', '0.88', '0.98']]) } },
+      { id: 'logit-model', slide: 31, name: 'The model: a linear score, then the sigmoid, then a threshold', what: 'Logistic regression has three steps. First a score, exactly as in linear regression: z = b + w₁x₁ + … + w_dx_d. Then the sigmoid turns the score into a probability p = σ(z). Then a decision: positive (leaves) if p is at or above a threshold, negative (stays) otherwise.\n\nThe name is misleading: logistic regression predicts a probability, but we use it to classify.', f: `p = σ(b + w₁x₁ + w₂x₂ + … + w_dx_d)
+decision = 1 if p ≥ threshold, else 0` },
+      { id: 'calls', slide: 36, name: 'Example 1: support calls and churn, by hand', what: 'A model with one feature, the calls to customer support: z = −2.5 + 0.8 × calls. With no calls, the score is −2.5 and the probability of leaving 0.08: the customer stays. With 3 calls, z = −0.1 and p = 0.48: just under the threshold of 0.5, almost a coin toss. With 5 calls, z = 1.5 and p = 0.82: the customer is predicted to leave.\n\nEvery call adds 0.8 to the score. On the probability its effect is not constant: it depends on where on the S curve the customer already is.', more: { html: () => tbl(['calls', 'score z', 'p = σ(z)', 'decision at 0.5'], [['0', '−2.5', '0.08', 'stays'], ['3', '−0.1', '0.48', 'stays'], ['5', '1.5', '*0.82', '*leaves']]) } },
+      { id: 'weights', slide: 41, name: 'Reading the weights', what: 'On the 600 training customers, with standardised features, the weights are −1.52 for months, −1.61 for hours watched and +0.63 for support calls. A positive weight pushes the score up, so the probability of leaving goes up; a negative weight pushes it down.\n\nBecause the features are standardised, the weights can be compared: each one is the change in the score for one standard deviation more of its feature. New customers and those who watch little leave more; support calls push towards leaving. A name you will meet: the score z is also called the log-odds.', more: { html: () => bars('Weights of the standardised features', [['months', -1.52, '−1.52'], ['hours watched', -1.61, '−1.61'], ['support calls', 0.63, '+0.63']]) }, watch: 'Compare weights only on standardised features. In raw units, a weight per month and a weight per call are not on the same scale.' },
+      { id: 'boundary', slide: 45, name: 'The decision boundary is a straight line', what: 'Fit a model on two features only, months and hours watched, so that it can be drawn on a plane. Where p = 0.5 the score is exactly 0, and b + w₁x₁ + w₂x₂ = 0 is the equation of a straight line. That line is the decision boundary.\n\nOn our customers it runs from about 13.6 hours at month 0 down to 0 hours at about month 42. Below the line (new customers who watch little) p > 0.5: predicted to leave. Above it, predicted to stay. With three features the boundary is a plane; with more, its higher-dimensional version. That is why the model is called linear.', watch: 'Linear means a straight boundary, not a straight probability: p itself follows the S curve.' },
+      { id: 'log-loss', slide: 50, name: 'The log-loss: what training makes small', what: 'For a regression the error was the MSE. For probabilities it is the log-loss. For a customer who left (y = 1) the loss is −log p: small when p is close to 1, huge when p is close to 0. For a customer who stayed (y = 0) it is −log(1 − p): small when p is close to 0.\n\nA confident mistake costs the most: saying 0.01 for a customer who leaves costs 4.6, saying 0.5 costs 0.69. Training finds the weights with the smallest average log-loss, as least squares found the smallest MSE. On our customers it is 0.289 on training and 0.237 on validation.', f: `Log-loss = −(1/n) Σᵢ [ yᵢ log pᵢ + (1 − yᵢ) log(1 − pᵢ) ]`, watch: 'log here is the natural logarithm, ln. And the formula has two halves, but for each customer only one of them is not zero.' },
+      { id: 'logit-c', slide: 54, name: 'Regularised by default: C', what: 'LogisticRegression adds a penalty on the weights without being asked: the same penalty as Ridge, the sum of the squared weights. Its strength is set by C, and C is the inverse of λ: a small C is a strong penalty. The default is C = 1.\n\nOn our customers, C = 0.01 shrinks the three weights to about a third; C = 100 barely changes them from C = 1. C is a hyperparameter, like λ: chosen by cross-validation.', f: `Log-loss + (1/C) Σⱼ wⱼ²`, more: { html: () => tbl(['C', 'months', 'hours', 'calls'], [['0.01', '−0.46', '−0.49', '0.20'], ['1', '−1.52', '−1.61', '0.63'], ['100', '−1.60', '−1.69', '0.66']]) }, watch: 'C goes the other way from alpha: to regularise more, make C smaller.' },
+      { id: 'logit-code', slide: 58, name: 'Logistic regression in scikit-learn', what: 'Scaler and model in one pipeline, fitted on the training set, as in Session 3. Then two ways to ask the model. `predict_proba` gives two columns, the probability of class 0 and of class 1; `[:, 1]` keeps the second, the probability of leaving. `predict` gives the class directly, with the threshold fixed at 0.5.', f: `model = make_pipeline(StandardScaler(), LogisticRegression())
+model.fit(X_train, y_train)
+proba_val = model.predict_proba(X_val)[:, 1]   # probability of leaving
+pred_val = model.predict(X_val)                # 1 if the probability is at least 0.5`, watch: 'predict always uses 0.5. To use another threshold, compare predict_proba yourself: (proba_val >= 0.3).astype(int).' },
+    ] },
+    { name: 'Decisions', cards: [
+      { id: 'threshold', slide: 63, name: 'Threshold and accuracy', what: 'The model says: this customer leaves with probability 0.35. Do we offer a discount? A threshold t decides: we act on every customer with p ≥ t. The default is 0.5, but nothing forces it.\n\nThe accuracy is the share of right decisions. It changes with the threshold. The threshold is a hyperparameter, so it is chosen on the validation set, never on the test set.', f: `Accuracy = right decisions / all decisions`, watch: 'Choosing the threshold on the test set is the same leak as choosing the degree there.' },
+      { id: 'ten-customers', slide: 68, name: 'Example 2: ten customers, three thresholds', what: 'Ten customers, their scores, and who really left (four of them). At 0.3: three false alarms, nobody missed, accuracy 0.7. At 0.5: one false alarm, one missed, accuracy 0.8. At 0.7: no false alarm, two missed, accuracy 0.8.\n\n0.5 and 0.7 have the same accuracy but make different errors. Accuracy alone cannot tell them apart; the kind of error matters.', more: { html: tenTbl } },
+    ] },
+    { name: 'Evaluation', cards: [
+      { id: 'confusion', slide: 75, name: 'The confusion matrix: four outcomes', what: 'Every decision falls in one of four boxes. TN, true negative: a customer who stays, predicted to stay. FP, false positive: a false alarm, someone who stays but was flagged. FN, false negative: a missed case, someone who leaves but was not flagged. TP, true positive: someone who leaves, flagged.\n\nIn scikit-learn the rows are what happened and the columns what the model said, negative first. `.ravel()` reads the four boxes row by row: tn, fp, fn, tp.', more: { html: confTbl, f: `cm = confusion_matrix(y_val, pred_val)
+tn, fp, fn, tp = cm.ravel()` }, watch: 'Some books put the positive class first or swap rows and columns. In scikit-learn, top left is TN.' },
+      { id: 'two-prices', slide: 79, name: 'Two errors, two prices', what: 'A false positive and a false negative do not cost the same. For churn, a false positive is a needless discount; a false negative is a lost customer. For fraud, a false positive is an honest card blocked; a false negative is a fraud paid.\n\nGive each error its price and add them up. For our customers a discount costs 50 € and a lost customer 150 €. At the threshold 0.5 the validation set has 8 false positives and 13 false negatives: 8 × 50 + 13 × 150 = 2,350 €.', f: `cost = c_FP × FP + c_FN × FN` },
+      { id: 'metrics4', slide: 84, name: 'Four metrics: accuracy, precision, recall, F1', what: 'Accuracy: the share of right decisions. Precision: of the cases we flag, how many are positive? Recall: of the positive cases, how many do we flag? F1: one number that is high only if both precision and recall are.\n\nWhich one? Precision matters when false alarms are expensive; recall when missed cases are. On the 200 validation customers at 0.5 the model gets accuracy 0.895, precision 0.758, recall 0.658 and F1 0.704. A model that says “nobody leaves” gets accuracy 0.81, and 0 for the three others.', f: `accuracy  = (TP + TN) / all
+precision = TP / (TP + FP)
+recall    = TP / (TP + FN)
+F1        = 2 · precision · recall / (precision + recall)`, more: { html: () => tbl(['', 'logistic regression', 'nobody leaves'], [['accuracy', '0.895', '0.81'], ['precision', '0.758', '*0.00'], ['recall', '0.658', '*0.00'], ['F1', '0.704', '*0.00']]) }, watch: 'With imbalanced classes a high accuracy can mean nothing: “nobody leaves” is right 81 % of the time and finds no one.' },
+      { id: 'fraud', slide: 87, name: 'Example 3: card payments, where accuracy lies', what: '1,000 card payments, 10 of them frauds. At the threshold 0.5 the model catches 1 fraud and misses 9, with 2 false alarms: accuracy 0.989. Never saying “fraud” at all would score 0.990.\n\nLower the threshold to 0.1: 8 frauds caught out of 10, at the price of 30 false alarms. The accuracy goes down, to 0.968, but recall goes from 0.10 to 0.80 and F1 from 0.15 to 0.33. For a bank that pays every missed fraud, the second model is far better.', more: { html: () => tbl(['', 'at 0.5', 'at 0.1'], [['TN, FP', '988, 2', '960, 30'], ['FN, TP', '9, 1', '2, 8'], ['accuracy', '*0.989', '0.968'], ['precision', '0.33', '0.21'], ['recall', '0.10', '*0.80'], ['F1', '0.15', '*0.33']]) } },
+      { id: 'roc', slide: 91, name: 'The ROC curve: every threshold at once', what: 'Two rates. The true positive rate, TP / (TP + FN), is the recall: the share of positives found. The false positive rate, FP / (FP + TN), is the share of negatives flagged by mistake.\n\nEach threshold gives one point (false positive rate, true positive rate). A threshold above every score flags nobody: the point (0, 0). A threshold of 0 flags everybody: (1, 1). The ROC curve joins the points in between. The diagonal is what random scores give; the top-left corner, every positive found and no false alarm, is perfect.', f: `TPR = TP / (TP + FN)     # the recall
+FPR = FP / (FP + TN)     # negatives flagged by mistake` },
+      { id: 'auc', slide: 95, name: 'The area under the ROC curve', what: 'ROC-AUC is the area under the ROC curve: 1 for a perfect model, 0.5 for random scores. It has a plain meaning: pick one positive and one negative at random; the AUC is the chance that the positive has the higher score.\n\nThe ten customers: 4 who leave × 6 who stay = 24 pairs. In 20 of them the one who leaves scores higher, so the AUC is 20 / 24 = 0.83. It is one number for all thresholds: it judges the order of the scores, not any one decision.', f: `roc_auc_score(y_val, proba_val)`, watch: 'Pass the probabilities, not the 0/1 decisions: with decisions there is only one threshold left, and the AUC no longer measures the ranking.' },
+      { id: 'roc-ours', slide: 98, name: 'Our customers: ROC-AUC 0.95', what: 'On the 200 validation customers the ROC-AUC is 0.946. At the threshold 0.5, 66 % of those who leave are found (25 of 38) and 5 % of those who stay are flagged (8 of 162). At 0.3, 84 % are found and 11 % flagged: further up the curve, and further right.', more: { html: () => tbl(['threshold', 'TPR: found', 'FPR: flagged by mistake'], [['0.5', '25 / 38 = 0.66', '8 / 162 = 0.05'], ['0.3', '32 / 38 = 0.84', '18 / 162 = 0.11']]) } },
+      { id: 'pr-curve', slide: 101, name: 'The precision-recall curve', what: 'Another curve, one point per threshold: recall across, precision up. Finding more positives usually costs precision. Random scores give a flat line at the share of positives, here 0.19: flag customers at random and 19 % of them will be leavers.\n\nIt ignores the true negatives. That makes it useful when the positive class is rare: with 990 honest payments, the true negatives make the ROC curve look good easily; the precision-recall curve does not let them.', f: `precision, recall, _ = precision_recall_curve(y_val, proba_val)` },
+    ] },
+    { name: 'Imbalance and costs', cards: [
+      { id: 'stratify', slide: 105, name: 'Stratified splits', what: 'A random split can leave, by chance, few positives in a small set: 200 customers with 30 leavers instead of 38 would make every metric jump. A stratified split keeps the share of each class in every set. In code, `stratify=` the target column.\n\nOur sets: 600, 200 and 200 customers, with 18.8 %, 19.0 % and 19.0 % who leave.', f: `train, rest = train_test_split(customers, test_size=0.4, stratify=customers['churn'], random_state=SEED)
+val, test = train_test_split(rest, test_size=0.5, stratify=rest['churn'], random_state=SEED)`, watch: 'The second split stratifies on rest[\'churn\'], not customers[\'churn\']: the column must have the same rows as the table being split.' },
+      { id: 'cheapest', slide: 109, name: 'The cheapest threshold', what: 'For every threshold from 0.1 to 0.9, count the false positives and false negatives on the validation set and price them: 50 € each FP, 150 € each FN. The cheapest is 0.3, at 1,800 €, against 2,350 € at 0.5.\n\nThe highest accuracy (0.895, at 0.4 and 0.5) is not the lowest cost. A lost customer costs three times a discount, so it pays to flag more customers and accept more false alarms. The threshold comes from the costs of the business, not from the model.', more: { html: costTbl }, watch: 'If the costs change, the threshold changes, with the same model.' },
+      { id: 'class-weights', slide: 114, name: 'Class weights', what: 'Four stay for each one who leaves, so the model learns mostly from those who stay. With `class_weight=\'balanced\'` each customer who leaves counts about four times as much in the log-loss: on the 600 training customers, 2.65 against 0.62.\n\nThe probabilities go up, so at 0.5 more customers are flagged: recall rises from 0.658 to 0.947, precision falls from 0.758 to 0.522. It acts like a lower threshold. The ROC-AUC hardly moves, 0.946 against 0.945: the order of the customers hardly changes.', f: `weight of a class = n / (2 × count of that class)`, more: { html: () => tbl(['at 0.5', 'default weights', 'balanced'], [['precision', '0.758', '0.522'], ['recall', '0.658', '*0.947'], ['ROC-AUC', '0.946', '0.945']]) } },
+      { id: 'recipe', slide: 119, name: 'The full recipe', what: 'The whole session in four steps. On our customers: the threshold 0.3, applied once to the test set, finds 34 of the 38 customers who leave, and the errors cost 1,900 €.', list: ['Stratified split. Training, validation, test.', 'Fit. A pipeline of scaler and logistic regression, on the training set.', 'Choose the threshold. On the validation set, from the costs of the errors.', 'Test once. With that threshold, and report what you get.'], watch: 'The model gives probabilities. The costs give the decision.' },
+    ] },
+    { name: 'Today in Colab', cards: [
+      { id: 'guided', slide: 127, name: 'The guided notebook', what: 'The guided notebook goes through the session on the 1,000 customers, in six steps.', list: ['Look. The customers and their class balance.', 'Split. Stratified training, validation and test sets.', 'Fit. Logistic regression: the weights, the decision boundary, the log-loss and C.', 'Decide. Probabilities, the threshold and the accuracy.', 'Evaluate. Confusion matrix, the four metrics, ROC and precision-recall curves.', 'Choose and test. The cheapest threshold, balanced weights, one evaluation on the test set.'] },
+    ] },
+    { name: 'The exercise: approving loans', flowLabel: 'The nine tasks', flow: ['Class balance', 'Three sets', 'Weights', 'Probabilities', 'Confusion matrix', 'ROC and PR', 'Cheapest threshold', 'Balanced weights', 'Test once'], cards: [
+      { id: 'ex-intro', name: 'The exercise: 1,500 loans of a bank', what: 'A bank’s 1,500 past personal loans, made up by a small function in the notebook (synthetic data, written to loans.csv). Five features: the borrower’s yearly income (thousand €), the amount of the loan (thousand €), its duration (months), years in the current job, and late payments in the last two years. The target, `default`, is 1 if the loan was not repaid and 0 if it was.\n\nThe model flags defaults, and the bank refuses the loans it flags. A loan that defaults costs about 5,000 €; a good borrower refused costs about 1,000 € of lost interest. So here a false negative costs five times a false positive. The deck’s hint: look for the threshold that costs the bank the least, and how far it is from 0.5.\n\nHand it in: Runtime → Restart session and run all, check that every cell runs, download the .ipynb, rename it S4_<student id>.ipynb and put it in your Drive folder within 24 hours of the end of the lecture.\n\nAI assistants: a help, not a replacement. You must be able to explain every line you submit. Written answers: two or three sentences in your own words, with the numbers from your notebook; a long answer that is obviously AI-generated loses the points of its task.', f: `loans = pd.read_csv('loans.csv')
+FEATURES = ['income', 'amount', 'duration', 'years_employed', 'late_payments']`, more: { html: () => tbl(['column', 'unit', 'role'], [['income', 'thousand € a year', 'feature'], ['amount', 'thousand €', 'feature'], ['duration', 'months: 12, 24, 36, 48 or 60', 'feature'], ['years_employed', 'years in the current job', 'feature'], ['late_payments', 'count, last two years', 'feature'], ['default', '1 not repaid, 0 repaid', 'target']]) } },
+      { id: 'ex-setup', name: 'The setup cell: what each import is for', what: 'The first cell loads the tools of the whole exercise, seeds NumPy’s random generator with SEED and sets one plot style. Every scikit-learn name in it is used in one of the nine tasks.', f: `SEED = 42
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (log_loss, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score,
+                             roc_curve, roc_auc_score, precision_recall_curve)
+np.random.seed(SEED)` },
+      { id: 'ex-t1', name: 'Task 1 · Class balance', uses: ['two-targets', 'customers', 'metrics4'], what: 'Count the repaid and the defaulted loans, and print the default rate. Draw the two counts as a bar plot, with a label on the y axis and a title. Then say what share of the loans defaulted, and what accuracy a model would reach if it predicted “repaid” for every loan.\n\nWhat it practises: the positive class, and imbalance.', f: `counts = loans['default'].value_counts().sort_index()
+print(f"Default rate: {loans['default'].mean():.1%}")
+
+plt.figure(figsize=(6, 4))
+bars = plt.bar(['repaid (0)', 'default (1)'], counts.values)
+plt.bar_label(bars)
+plt.ylabel('Loans')
+plt.title('Class balance')
+plt.show()`, read: 'The mean of a 0/1 column is the share of 1s: that is the default rate. A model that always says “repaid” is right on every repaid loan and wrong on every default, so its accuracy is 1 minus the default rate. Compare it with the 81 % of “nobody leaves” in the lecture: a high number that finds no one.', watch: 'value_counts() sorts by count, largest first; .sort_index() puts 0 before 1 so the labels match the bars.' },
+      { id: 'ex-t2', name: 'Task 2 · Three stratified sets', uses: ['stratify'], what: 'Split loans into a training (60 %), a validation (20 %) and a test set (20 %), stratified on `default`, with random_state=SEED. Print the size and the default rate of each set.\n\nWhat it practises: stratified splits.', f: `train, rest = train_test_split(loans, test_size=0.4, stratify=loans['default'], random_state=SEED)
+val, test = train_test_split(rest, test_size=0.5, stratify=rest['default'], random_state=SEED)
+
+X_train, y_train = train[FEATURES], train['default']
+X_val, y_val = val[FEATURES], val['default']
+X_test, y_test = test[FEATURES], test['default']
+
+for name, part in [('Training', train), ('Validation', val), ('Test', test)]:
+    print(f"{name:10s} {len(part):4d} loans, default rate {part['default'].mean():.1%}")`, read: 'The sizes should be 900, 300 and 300, and the three default rates almost equal, and close to the rate of Task 1: that is what stratify buys you.', watch: 'Second split: test_size=0.5 of the 40 % left, which is 20 % of the whole. And stratify on rest[\'default\'], the table being split.' },
+      { id: 'ex-t3', name: 'Task 3 · Weights', uses: ['logit-model', 'weights', 'logit-code'], what: 'Fit a pipeline of StandardScaler and LogisticRegression on the training set. Print the weight of each feature and draw the weights as a horizontal bar plot, with a vertical line at 0, a label on the x axis and a title. Then say which feature raises the probability of default the most, which lowers it the most, and which hardly matters.\n\nWhat it practises: the model, and reading its weights.', f: `model = make_pipeline(StandardScaler(), LogisticRegression())
+model.fit(X_train, y_train)
+
+weights = pd.Series(model[-1].coef_[0], index=FEATURES)
+print(weights.round(3))
+
+plt.figure(figsize=(7, 3.5))
+plt.barh(FEATURES, weights)
+plt.axvline(0, color='grey', linewidth=1)
+plt.xlabel('Weight')
+plt.title('Weights of the standardised features')
+plt.show()`, read: 'The features are standardised, so the sizes can be compared. “Raises the most”: the largest positive weight. “Lowers the most”: the most negative. “Hardly matters”: the weight closest to 0. Then check that each sign makes sense for a bank: should a larger loan, or more late payments, make a default more or less likely?', watch: 'coef_ is a table with one row for a binary model: coef_[0] is that row. And model.coef_ does not exist: the weights are in the last step, model[-1].' },
+      { id: 'ex-t4', name: 'Task 4 · Predicted probabilities', uses: ['logit-code', 'threshold'], what: 'Compute the predicted probability of default of the validation loans. In one figure, plot the histogram of these probabilities for the repaid loans and for the defaulted loans (bins from 0 to 1, alpha=0.6), with a vertical line at 0.5 and a legend. Then say whether the two histograms overlap, and on which side of 0.5 most defaulted loans fall.\n\nWhat it practises: probabilities, and the threshold.', f: `proba_val = model.predict_proba(X_val)[:, 1]
+
+bins = np.linspace(0, 1, 21)
+plt.figure(figsize=(9, 5))
+plt.hist(proba_val[y_val == 0], bins=bins, alpha=0.6, label='Repaid')
+plt.hist(proba_val[y_val == 1], bins=bins, alpha=0.6, label='Default')
+plt.axvline(0.5, color='black', linestyle='--', label='Threshold 0.5')
+plt.xlabel('Predicted probability of default')
+plt.ylabel('Validation loans')
+plt.legend()
+plt.show()`, read: 'Where the two colours sit on top of each other, no threshold can separate them without errors. For the second question, look at the defaults histogram: is most of it left or right of the dashed line? Everything left of it is a default the bank would approve at 0.5.', watch: 'proba_val[y_val == 1] works because both have the same order: the mask picks the probabilities of the defaulted loans.' },
+      { id: 'ex-t5', name: 'Task 5 · Confusion matrix', uses: ['confusion', 'metrics4'], what: 'Predict the class of the validation loans with the threshold at 0.5. Draw the confusion matrix as a heatmap, with the labels repaid and default, and print the four metrics with classification_metrics. Then say how many of the defaulted loans the model misses, and why the accuracy is high anyway.\n\nRun the given cell first: classification_metrics is the function of the guided notebook.\n\nWhat it practises: the confusion matrix and the four metrics.', f: `pred_val = (proba_val >= 0.5).astype(int)
+cm = confusion_matrix(y_val, pred_val)
+
+plt.figure(figsize=(5.5, 4.5))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
+            xticklabels=['repaid', 'default'], yticklabels=['repaid', 'default'])
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.title('Validation set, threshold 0.5')
+plt.show()
+
+classification_metrics(y_val, pred_val)`, read: 'The missed defaults are the false negatives: bottom left, actual default, predicted repaid. Compare them with all the defaults of the bottom row: that ratio is 1 − recall. For the why, go back to Task 1: most loans are repaid, so a model that is right on nearly all of them scores a high accuracy even while it misses defaults.', watch: 'confusion_matrix(y_true, y_pred): the true values first. Swapped, the FP and FN boxes trade places.' },
+      { id: 'ex-t6', name: 'Task 6 · ROC and precision-recall curves', uses: ['roc', 'auc', 'pr-curve'], what: 'Compute the ROC curve and the ROC-AUC of the validation probabilities. Plot the ROC curve with the diagonal of random scores and, next to it, the precision-recall curve with a horizontal line at the default rate of the validation set. Then say what the ROC-AUC is, and what it says about how the model ranks the loans.\n\nWhat it practises: the two curves and the AUC.', f: `fpr, tpr, _ = roc_curve(y_val, proba_val)
+precision, recall, _ = precision_recall_curve(y_val, proba_val)
+auc = roc_auc_score(y_val, proba_val)
+
+fig, axes = plt.subplots(1, 2, figsize=(14, 5.5))
+axes[0].plot(fpr, tpr, label=f'Logistic regression (AUC = {auc:.3f})')
+axes[0].plot([0, 1], [0, 1], color='grey', linestyle='--', label='Random scores')
+axes[0].set_xlabel('False positive rate')
+axes[0].set_ylabel('True positive rate (recall)')
+axes[0].set_title('ROC curve')
+axes[0].legend()
+
+axes[1].plot(recall, precision, label='Logistic regression')
+axes[1].axhline(y_val.mean(), color='grey', linestyle='--', label='Random scores')
+axes[1].set_xlabel('Recall')
+axes[1].set_ylabel('Precision')
+axes[1].set_title('Precision-recall curve')
+axes[1].legend()
+plt.tight_layout()
+plt.show()`, read: 'Use the plain meaning of the AUC: take one defaulted and one repaid loan at random; the AUC is the chance that the default gets the higher probability. Place it between 0.5 (random) and 1 (perfect). On the right, the curve should stay above the dashed line: better than flagging loans at random.', watch: 'Pass proba_val, not pred_val: the curves need the probabilities, to try every threshold. And precision_recall_curve gives precision first, then recall: plot recall across.' },
+      { id: 'ex-t7', name: 'Task 7 · The cheapest threshold', uses: ['two-prices', 'cheapest'], what: 'A false negative (a loan approved that then defaults) costs 5,000 €; a false positive (a good borrower refused) costs 1,000 €. For the thresholds 0.1, 0.2, …, 0.9, compute on the validation set the four metrics, the number of false positives and false negatives, and the cost of the errors. Show them in one table, print the threshold with the lowest cost, and plot the cost against the threshold. Then say which threshold costs the bank the least, and how precision and recall change between that threshold and 0.5.\n\nWhat it practises: the cost of the errors, and choosing the threshold.', f: `COST_FP, COST_FN = 1000, 5000
+
+rows = []
+for threshold in np.linspace(0.1, 0.9, 9).round(1):
+    pred = (proba_val >= threshold).astype(int)
+    tn, fp, fn, tp = confusion_matrix(y_val, pred).ravel()
+    rows.append({'threshold': threshold, **classification_metrics(y_val, pred),
+                 'FP': fp, 'FN': fn, 'cost (€)': COST_FP * fp + COST_FN * fn})
+thresholds = pd.DataFrame(rows).set_index('threshold')
+
+best_threshold = thresholds['cost (€)'].idxmin()
+print(f"Threshold with the lowest cost: {best_threshold}")
+display(thresholds.round(3))
+
+plt.figure(figsize=(8, 5))
+plt.plot(thresholds.index, thresholds['cost (€)'], marker='o')
+plt.xlabel('Threshold')
+plt.ylabel('Cost of the errors (€)')
+plt.title('Cost against the threshold')
+plt.show()`, read: 'A missed default costs five times a refused good borrower, so expect the cheapest threshold well below 0.5: the bank should flag more loans and accept more false alarms. Then read the two rows side by side: going down from 0.5, recall goes up (more defaults caught) and precision goes down (more good borrowers refused).', watch: 'idxmin() gives the index of the smallest cost, the threshold itself; min() would give the cost. The row of 0.5 in your table should agree with Task 5.' },
+      { id: 'ex-t8', name: 'Task 8 · Balanced weights', uses: ['class-weights', 'auc'], what: 'Fit the same pipeline with LogisticRegression(class_weight=\'balanced\'). In one table, compare the model of Task 3 and the balanced model on the validation set: the four metrics with the threshold at 0.5, and the ROC-AUC. Then say what changes with the threshold at 0.5, what stays about the same, and why.\n\nWhat it practises: class weights.', f: `balanced = make_pipeline(StandardScaler(), LogisticRegression(class_weight='balanced'))
+balanced.fit(X_train, y_train)
+proba_val_bal = balanced.predict_proba(X_val)[:, 1]
+
+comparison = pd.DataFrame({
+    'Default weights': {**classification_metrics(y_val, (proba_val >= 0.5).astype(int)),
+                        'ROC-AUC': roc_auc_score(y_val, proba_val)},
+    'Balanced weights': {**classification_metrics(y_val, (proba_val_bal >= 0.5).astype(int)),
+                         'ROC-AUC': roc_auc_score(y_val, proba_val_bal)},
+})
+comparison.round(3)`, read: 'Expect the lecture’s pattern: at 0.5 the balanced model flags more loans, so recall goes up and precision down, as with a lower threshold. The ROC-AUC barely moves. For the why: the weights push every probability up, but the order of the loans hardly changes, and the AUC only judges the order.', watch: 'Balanced weights are not a free improvement: they move the threshold for you. Task 7 already chose a threshold from the costs.' },
+      { id: 'ex-t9', name: 'Task 9 · Final evaluation', uses: ['recipe', 'confusion', 'two-prices'], what: 'Apply the model of Task 3, with the threshold chosen in Task 7, to the test set, once. Print TP, FP, FN, TN, the cost of the errors and the four metrics. Then say how much the errors cost the bank on the test loans, and what a false negative means for the bank, and a false positive for the borrower.\n\nWhat it practises: the last step of the recipe, test once.', f: `proba_test = model.predict_proba(X_test)[:, 1]
+pred_test = (proba_test >= best_threshold).astype(int)
+
+tn, fp, fn, tp = confusion_matrix(y_test, pred_test).ravel()
+print(f"Threshold {best_threshold}: TP = {tp}, FP = {fp}, FN = {fn}, TN = {tn}")
+print(f"Cost of the errors: {COST_FP * fp + COST_FN * fn} € on {len(y_test)} loans")
+pd.Series(classification_metrics(y_test, pred_test)).round(3)`, read: 'The cost is 1,000 × FP + 5,000 × FN on the 300 test loans; compare it with the validation cost of the same threshold in Task 7 (both sets have 300 loans): close is normal. For the meanings, say it in people’s terms: a false negative is a loan approved that is never repaid; a false positive is a borrower who would have repaid and was refused a loan.', watch: 'No fit and no new threshold here: both were fixed on training and validation. Changing the threshold after seeing the test cost turns the test set into a validation set.' },
+    ] },
+  ], practice: [
+    { id: 'l4-e1', title: 'A probability by hand', setup: 'The deck’s one-feature model: z = −2.5 + 0.8 × calls, and p = σ(z) = 1 / (1 + e⁻ᶻ). e^0.9 ≈ 2.460 and e^−0.7 ≈ 0.497.', parts: [
+      ['A customer made 2 calls. Score, probability, decision at 0.5?', () => code(`z = −2.5 + 0.8 × 2 = −2.5 + 1.6 = −0.9
+p = 1 / (1 + e^0.9) = 1 / (1 + 2.460) = 1 / 3.460 ≈ 0.29
+0.29 < 0.5  →  stays`)],
+      ['Another made 4 calls?', () => code(`z = −2.5 + 0.8 × 4 = −2.5 + 3.2 = 0.7
+p = 1 / (1 + e^−0.7) = 1 / (1 + 0.497) = 1 / 1.497 ≈ 0.67
+0.67 ≥ 0.5  →  leaves`)],
+      ['From how many calls is a customer predicted to leave at 0.5?', () => code(`p = 0.5  ⟺  z = 0
+−2.5 + 0.8 × calls = 0
+calls = 2.5 / 0.8 = 3.125`) + `<p>3 calls give p = 0.48, just under; <b>4 calls or more</b> cross the line. At p = 0.5 the score is 0: that is the decision boundary, here a single number of calls.</p>`],
+      ['The customer with 2 calls in fact left. Their log-loss? And if they had stayed?', () => code(`left,   y = 1:  −log p       = −log 0.29 ≈ 1.24
+stayed, y = 0:  −log(1 − p) = −log 0.71 ≈ 0.34`) + `<p>The model gave this customer a low probability of leaving, so being wrong costs more than being right: <b>a confident mistake costs the most</b>.</p>`],
+    ] },
+    { id: 'l4-e2', title: 'Count the errors at 0.4', setup: 'The ten customers of the deck, with the scores 0.05, 0.15, 0.25, 0.32, 0.35, 0.45, 0.55, 0.62, 0.72, 0.90. Four left: those at 0.32, 0.55, 0.72 and 0.90. Take the threshold t = 0.4.', table: tenTbl, parts: [
+      ['Fill the confusion matrix at 0.4.', () => code(`flagged (p ≥ 0.4): 0.45, 0.55, 0.62, 0.72, 0.90
+TP = 3      # 0.55, 0.72, 0.90 left
+FP = 2      # 0.45, 0.62 stayed
+FN = 1      # 0.32 left, not flagged
+TN = 4      # 0.05, 0.15, 0.25, 0.35`) + `<p>Check: 3 + 2 + 1 + 4 = 10 customers.</p>`],
+      ['Accuracy, precision, recall and F1?', () => code(`accuracy  = (3 + 4) / 10 = 0.7
+precision = 3 / (3 + 2) = 0.6
+recall    = 3 / (3 + 1) = 0.75
+F1        = 2 × 0.6 × 0.75 / (0.6 + 0.75) = 0.9 / 1.35 ≈ 0.67`)],
+      ['A discount costs 50 €, a lost customer 150 €. The cost at 0.4, and at 0.3, 0.5 and 0.7?', () => code(`0.3:  3 FP, 0 FN  →  3 × 50 + 0 × 150 = 150 €
+0.4:  2 FP, 1 FN  →  2 × 50 + 1 × 150 = 250 €
+0.5:  1 FP, 1 FN  →  1 × 50 + 1 × 150 = 200 €
+0.7:  0 FP, 2 FN  →  0 × 50 + 2 × 150 = 300 €`) + `<p><b>0.3 is the cheapest</b>, though its accuracy, 0.7, is below the 0.8 of 0.5 and 0.7. A missed customer costs three times a false alarm, so flagging more pays.</p>`],
+      ['Where is the threshold 0.4 on the ROC curve?', () => code(`TPR = TP / (TP + FN) = 3 / 4 = 0.75
+FPR = FP / (FP + TN) = 2 / 6 ≈ 0.33`) + `<p>The point (0.33, 0.75): three quarters of the leavers found, a third of those who stay flagged by mistake.</p>`],
+    ] },
+    { id: 'l4-e3', title: 'The AUC by counting pairs', setup: 'The same ten customers: four who leave (0.32, 0.55, 0.72, 0.90) and six who stay (0.05, 0.15, 0.25, 0.35, 0.45, 0.62).', parts: [
+      ['How many pairs of one leaver and one stayer are there?', () => code(`4 leavers × 6 stayers = 24 pairs`)],
+      ['In how many does the leaver have the higher score? The AUC?', () => code(`0.32 beats 0.05, 0.15, 0.25          → 3
+0.55 beats all but 0.62              → 5
+0.72 beats all six                   → 6
+0.90 beats all six                   → 6
+total = 3 + 5 + 6 + 6 = 20
+AUC = 20 / 24 ≈ 0.83`) + `<p>The deck’s number, and what roc_auc_score gives on these ten.</p>`],
+      ['Every score is replaced by its square root: 0.05 becomes 0.22, 0.90 becomes 0.95. What happens to the AUC? To the decisions at 0.5?', () => `<p><b>The AUC does not change</b>: a square root keeps the order, so the same 20 pairs are won. <b>The decisions do</b>: every score goes up, so at 0.5 more customers are flagged (0.32 becomes 0.57). That is what balanced class weights do: higher probabilities, almost the same order.</p>`],
+      ['Which customer would you have to move, and where, to get an AUC of 1?', () => `<p>The leaver at 0.32 must score above every stayer, and so must the one at 0.55: above 0.62. With all four leavers above all six stayers, every one of the 24 pairs is won: 24 / 24 = 1, and a threshold between the two groups makes no error at all.</p>`],
+    ] },
+  ], recap: ['Classification predicts a category; class 1 is the positive class, the one we look for.', 'Logistic regression: a linear score z, the sigmoid p = σ(z), then a threshold. The boundary p = 0.5 is a straight line. Training makes the log-loss small; C (the inverse of λ) sets its built-in penalty.', 'The confusion matrix counts TN, FP, FN, TP. Precision: of those flagged, how many are positive. Recall: of the positives, how many are flagged. With imbalanced classes accuracy can lie.', 'The ROC curve shows every threshold; ROC-AUC is the chance that a positive outscores a negative. The precision-recall curve ignores the true negatives.', 'Stratify the splits; choose the threshold on validation from the costs of the errors; test once.'] },
 ];
 SESSIONS.forEach(s => { let k = 0; for (const g of s.groups) for (const c of g.cards) c.num = `${s.n}.${++k}`; });
 const readSize = () => Number(document.documentElement.style.getPropertyValue('--read')) || 1;
@@ -1355,6 +1582,16 @@ const PICTURES = {
     + shrinkTbl()
     + `<p class="pic-lede"><b>Cross-validate to choose. Test once.</b></p>`
     + flow(['Split', 'Pipeline', 'Grid search with CV', 'Refit the best', 'Test once']),
+  4: () => `<p class="pic-lede"><b>The path of the session.</b> A linear score, squeezed into a probability, turned into a decision by a threshold; then the errors are counted and priced.</p>`
+    + flow(['Score z', 'Probability σ(z)', 'Threshold', 'Decision', 'Cost of the errors'])
+    + `<p class="pic-lede"><b>The sigmoid</b> keeps every score between 0 and 1. Example 1: z = −2.5 + 0.8 × calls.</p>`
+    + tbl(['calls', 'score z', 'p', 'at 0.5'], [['0', '−2.5', '0.08', 'stays'], ['3', '−0.1', '0.48', 'stays'], ['5', '1.5', '*0.82', '*leaves']])
+    + `<p class="pic-lede"><b>The confusion matrix:</b> rows are what happened, columns what the model said. The two errors (shaded) have two prices.</p>`
+    + confTbl()
+    + `<p class="pic-lede"><b>The highest accuracy is not the lowest cost.</b> A discount costs 50 €, a lost customer 150 €.</p>`
+    + costTbl()
+    + `<p class="pic-lede"><b>The model gives probabilities. The costs give the decision.</b></p>`
+    + flow(['Stratified split', 'Fit on training', 'Threshold from the costs, on validation', 'Test once']),
 };
 
 /* ---------- Every formula and every call, piece by piece ----------
@@ -1433,6 +1670,38 @@ const READS = {
   '3|ex-t7': { parts: [['np.logspace(-3, 0, 50)', '50 values from 10⁻³ = 0.001 to 10⁰ = 1, evenly spaced on a log scale.'], ['for alpha in ALPHAS:', 'One fit per value.'], ['make_pipeline(StandardScaler(), Lasso(alpha=alpha))', 'The loop’s “...”: the pipeline of Task 6 with this α.'], ['lasso_coefs.append(model[-1].coef_)', 'Keeps the six weights of this fit.'], ['pd.DataFrame(lasso_coefs, index=ALPHAS, columns=FEATURES)', 'One row per α, one column per feature.'], ['plt.plot(lasso_path.index, lasso_path[feature], label=feature)', 'The plot’s “...”: one line per feature.'], ["plt.xscale('log')", 'The logarithmic x axis the task asks for.']] },
   '3|ex-t8': { parts: [['make_pipeline(StandardScaler(), PolynomialFeatures(include_bias=False), Ridge())', 'The first blank: Ridge with no alpha yet; the grid sets it.'], ["'polynomialfeatures__degree': [1, 2, 3]", 'The degrees to try.'], ["'ridge__alpha': [0.01, 0.1, 1, 10, 100]", 'The α values to try.'], ["GridSearchCV(pipeline, param_grid, cv=kfold, scoring='neg_mean_squared_error')", 'The blank of GridSearchCV: the model, the grid, the folds of Task 3, the score.'], ['search.best_params_, -search.best_score_', 'The first “...”: the winners and their CV MSE.'], ['search.cv_results_', 'Every combination’s scores; mean_test_score is the mean over the folds (negative).'], ['pivot_table(index=..., columns=..., values=...)', 'Turns the 15 rows into a table: one row per degree, one column per α.'], ['sns.heatmap(table, annot=True, ...)', 'The last “...”: the table as a heatmap, with the values written in.']], walk: { intro: 'Counting the fits:', steps: [['combinations', '3 × 5 = 15'], ['CV fits', '15 × 5 = 75'], ['refit', '1'], ['total', '76 fits', 1]] } },
   '3|ex-t9': { parts: [['search.best_estimator_', 'The blank: the winning pipeline, already refitted on the 160 training offices.'], ['best_model.predict(X_test)', 'Its rent for each of the 40 test offices.'], ['regression_metrics(y_test, ...)', 'The “...”: MAE, MSE, RMSE and R² on the test set, computed once.']] },
+  '4|sigmoid': { parts: [['σ', 'Sigma, the name of the sigmoid function.'], ['z', 'The score: any number, negative or positive.'], ['e', 'The number e ≈ 2.718.'], ['e⁻ᶻ', 'e to the power −z: huge when z is very negative, close to 0 when z is large.'], ['1 / (1 + …)', 'Divides 1 by something bigger than 1: always between 0 and 1.']], walk: { intro: 'Three scores:', steps: [['z = 0', 'e⁰ = 1, so 1 / (1 + 1) = 0.5'], ['z = 2', 'e⁻² ≈ 0.135, so 1 / 1.135 ≈ 0.88'], ['z = −2', 'e² ≈ 7.39, so 1 / 8.39 ≈ 0.12'], ['the pattern', 'σ(−z) = 1 − σ(z): the S is symmetric around 0.5', 1]] } },
+  '4|logit-model': { parts: [['x₁ … x_d', 'The d features of one customer, standardised.'], ['w₁ … w_d', 'One weight per feature, learned by fit.'], ['b', 'The intercept: the score of an average customer.'], ['b + w₁x₁ + …', 'The score z, built exactly as in linear regression.'], ['σ( )', 'Turns the score into a probability.'], ['threshold', 'The cut-off: at or above it, the decision is 1.']], walk: { intro: 'Our model (b = −2.60; weights −1.52, −1.61, 0.63) and a customer of 12 months, 5 hours a week, 3 calls. Standardised: −1.21, −1.14, 2.17.', steps: [['months', '−1.52 × −1.21 ≈ 1.84'], ['hours', '−1.61 × −1.14 ≈ 1.84'], ['calls', '0.63 × 2.17 ≈ 1.36'], ['z', '−2.60 + 1.84 + 1.84 + 1.36 ≈ 2.43'], ['p = σ(z)', '≈ 0.92'], ['decision at 0.5', 'leaves: new, watches little, calls a lot', 1]] } },
+  '4|calls': { parts: [['−2.5', 'The intercept: the score with no calls.'], ['0.8', 'The weight: each call adds 0.8 to the score.'], ['calls', 'The one feature: calls to customer support.'], ['p', 'σ of the score: the probability of leaving.']], walk: { intro: '3 calls:', steps: [['z', '−2.5 + 0.8 × 3 = −2.5 + 2.4 = −0.1'], ['e^0.1', '≈ 1.105'], ['p', '1 / (1 + 1.105) ≈ 0.48'], ['at 0.5', 'stays, by a hair', 1]] } },
+  '4|weights': { parts: [['weight > 0', 'More of this feature, higher score, higher probability of leaving.'], ['weight < 0', 'More of this feature, lower probability of leaving.'], ['size', 'On standardised features: how much one standard deviation more moves the score.'], ['log-odds', 'Another name for the score z.']], walk: { intro: 'One standard deviation is 21 months, 7 hours a week, 0.93 calls:', steps: [['+21 months', 'z goes down by 1.52'], ['+7 hours a week', 'z goes down by 1.61'], ['+0.93 calls', 'z goes up by 0.63'], ['strongest', 'hours watched, then months; calls the weakest', 1]] } },
+  '4|boundary': { parts: [['p = 0.5', 'Exactly undecided.'], ['z = 0', 'Where σ(z) = 0.5.'], ['b + w₁x₁ + w₂x₂ = 0', 'One equation in two unknowns: a straight line on the plane.'], ['below the line', 'z > 0, p > 0.5: predicted to leave.']], walk: { intro: 'The two-feature model in raw units: z ≈ 2.88 − 0.068 × months − 0.212 × hours. A customer of 10 months who watches 5 hours:', steps: [['months', '−0.068 × 10 = −0.68'], ['hours', '−0.212 × 5 ≈ −1.06'], ['z', '2.88 − 0.68 − 1.06 ≈ 1.14'], ['p', 'σ(1.14) ≈ 0.76: below the line, predicted to leave', 1], ['the line', 'z = 0: hours ≈ 13.6 − 0.32 × months']] } },
+  '4|log-loss': { parts: [['yᵢ', 'What happened to customer i: 1 left, 0 stayed.'], ['pᵢ', 'The probability of leaving the model gave customer i.'], ['yᵢ log pᵢ', 'Counts only when yᵢ = 1: −log pᵢ is the loss of a leaver.'], ['(1 − yᵢ) log(1 − pᵢ)', 'Counts only when yᵢ = 0: −log(1 − pᵢ) is the loss of a stayer.'], ['−(1/n) Σᵢ', 'Add up, change the sign (logs of numbers below 1 are negative), average.']], walk: { intro: 'Four customers: left with p = 0.9; stayed with p = 0.2; left with p = 0.4; stayed with p = 0.6.', steps: [['customer 1', '−log 0.9 ≈ 0.105'], ['customer 2', '−log(1 − 0.2) = −log 0.8 ≈ 0.223'], ['customer 3', '−log 0.4 ≈ 0.916'], ['customer 4', '−log(1 − 0.6) = −log 0.4 ≈ 0.916'], ['log-loss', '(0.105 + 0.223 + 0.916 + 0.916) / 4 ≈ 0.54', 1]] } },
+  '4|logit-c': { parts: [['Log-loss', 'The error on the training data.'], ['Σⱼ wⱼ²', 'The Ridge penalty: the squared weights, added up.'], ['1/C', 'The strength of the penalty. C small: 1/C large, strong penalty.'], ['C=1', 'The default of LogisticRegression.']], walk: { intro: 'The weight of months on our customers:', steps: [['C = 100', '−1.60: almost no penalty'], ['C = 1', '−1.52'], ['C = 0.01', '−0.46: about 3.3 times smaller', 1]] } },
+  '4|logit-code': { parts: [['make_pipeline(StandardScaler(), LogisticRegression())', 'Standardise, then fit the logistic model: one model, one fit.'], ['.fit(X_train, y_train)', 'Learns the scaler’s means and the weights, on the training set.'], ['.predict_proba(X_val)', 'Two columns per customer: P(class 0), P(class 1). They add up to 1.'], ['[:, 1]', 'Every row, column 1: the probability of leaving.'], ['.predict(X_val)', 'The class, 0 or 1, with the threshold fixed at 0.5.']], walk: { intro: 'The first validation customers:', steps: [['customer 1', 'p = 0.003 → 0, stayed'], ['customer 3', 'p = 0.276 → 0, but left: a false negative'], ['customer 4', 'p = 0.665 → 1, left: a true positive', 1]] } },
+  '4|threshold': { parts: [['t', 'The threshold, between 0 and 1.'], ['p ≥ t', 'Act: predict class 1.'], ['right decisions', 'Customers whose prediction matches what happened.'], ['all decisions', 'Every customer judged.']], walk: { intro: 'The 200 validation customers:', steps: [['t = 0.1', 'accuracy 0.770'], ['t = 0.3', '0.880'], ['t = 0.5', '0.895'], ['t = 0.9', '0.835'], ['chosen on', 'the validation set, like any hyperparameter', 1]] } },
+  '4|ten-customers': { parts: [['TP', 'Left and flagged.'], ['FP', 'Stayed but flagged: a false alarm.'], ['FN', 'Left but not flagged: missed.'], ['TN', 'Stayed, not flagged.']], walk: { intro: 'Threshold 0.5: flagged are 0.55, 0.62, 0.72, 0.90.', steps: [['TP', '0.55, 0.72, 0.90: 3'], ['FP', '0.62: 1'], ['FN', '0.32: 1'], ['TN', '0.05, 0.15, 0.25, 0.35, 0.45: 5'], ['accuracy', '(3 + 5) / 10 = 0.8', 1]] } },
+  '4|confusion': { parts: [['rows', 'What really happened: negative on top, positive below.'], ['columns', 'What the model said: negative left, positive right.'], ['confusion_matrix(y_true, y_pred)', 'Counts the four boxes; the true values first.'], ['.ravel()', 'Flattens the 2 × 2 table row by row: tn, fp, fn, tp.']], walk: { intro: 'Our 200 validation customers at 0.5:', steps: [['TN', '154 stayed, predicted to stay'], ['FP', '8 stayed, flagged'], ['FN', '13 left, missed'], ['TP', '25 left, flagged'], ['check', '154 + 8 + 13 + 25 = 200', 1]] } },
+  '4|two-prices': { parts: [['c_FP', 'The price of a false positive: a needless discount, 50 €.'], ['c_FN', 'The price of a false negative: a lost customer, 150 €.'], ['FP, FN', 'How many of each error.']], walk: { intro: 'The validation set at 0.5:', steps: [['false positives', '8 × 50 = 400 €'], ['false negatives', '13 × 150 = 1,950 €'], ['cost', '400 + 1,950 = 2,350 €', 1]] } },
+  '4|metrics4': { parts: [['TP + TN', 'Every right decision.'], ['TP + FP', 'Everyone flagged.'], ['TP + FN', 'Every real positive.'], ['precision', 'Of the flagged, the share that are positive.'], ['recall', 'Of the positives, the share that are flagged.'], ['F1', 'The harmonic mean of the two: dragged down by the smaller one.']], walk: { intro: 'Our validation customers at 0.5: TP 25, FP 8, FN 13, TN 154.', steps: [['accuracy', '(25 + 154) / 200 = 0.895'], ['precision', '25 / (25 + 8) = 25 / 33 ≈ 0.758'], ['recall', '25 / (25 + 13) = 25 / 38 ≈ 0.658'], ['F1', '2 × 0.758 × 0.658 / (0.758 + 0.658) ≈ 0.704', 1]] } },
+  '4|fraud': { parts: [['988, 2', 'Honest payments: let through, blocked.'], ['9, 1', 'Frauds: missed, caught.'], ['accuracy', 'Right decisions out of 1,000.'], ['recall', 'Frauds caught out of 10.']], walk: { intro: 'At the threshold 0.1: TN 960, FP 30, FN 2, TP 8.', steps: [['accuracy', '(8 + 960) / 1,000 = 0.968'], ['precision', '8 / (8 + 30) = 8 / 38 ≈ 0.21'], ['recall', '8 / (8 + 2) = 0.80'], ['F1', '2 × 0.21 × 0.80 / (0.21 + 0.80) ≈ 0.33', 1]] } },
+  '4|roc': { parts: [['TPR', 'True positive rate: positives found, out of all positives. The recall.'], ['FPR', 'False positive rate: negatives flagged, out of all negatives.'], ['(0, 0)', 'A threshold above every score: nobody flagged.'], ['(1, 1)', 'A threshold of 0: everybody flagged.'], ['diagonal', 'Random scores: as many negatives flagged as positives, in share.']], walk: { intro: 'The ten customers, lowering the threshold one score at a time:', steps: [['t = 0.90', 'TPR 1/4, FPR 0: (0, 0.25)'], ['t = 0.72', '(0, 0.5)'], ['t = 0.62', 'a stayer: (0.17, 0.5)'], ['t = 0.55', '(0.17, 0.75)'], ['t = 0.32', 'after 0.45 and 0.35: (0.5, 1)'], ['t = 0.05', 'everyone flagged: (1, 1)', 1]] } },
+  '4|auc': { parts: [['ROC-AUC', 'The area under the ROC curve, between 0 and 1.'], ['1', 'Every positive scores above every negative.'], ['0.5', 'Random scores.'], ['a pair', 'One positive and one negative, picked at random.']], walk: { intro: 'The ten customers: 4 leave, 6 stay.', steps: [['pairs', '4 × 6 = 24'], ['won by 0.32', '3'], ['won by 0.55', '5'], ['won by 0.72 and 0.90', '6 + 6'], ['AUC', '(3 + 5 + 6 + 6) / 24 = 20 / 24 ≈ 0.83', 1]] } },
+  '4|pr-curve': { parts: [['precision_recall_curve(y, proba)', 'For every threshold, precision and recall.'], ['precision, recall, _', 'Two arrays, one value per threshold; the thresholds themselves are not needed here.'], ['baseline', 'The share of positives: what random scores give for precision.']], walk: { intro: 'The validation customers:', steps: [['positives', '38 of 200'], ['baseline', '38 / 200 = 0.19'], ['at 0.5', 'recall 0.66, precision 0.76: well above the baseline', 1]] } },
+  '4|stratify': { parts: [["stratify=customers['churn']", 'Keeps the share of each class of this column in both parts.'], ['test_size=0.4', '40 % to rest: 400 customers.'], ['test_size=0.5', 'Half of rest each: 200 validation, 200 test.']], walk: { intro: '1,000 customers, 189 who leave (18.9 %):', steps: [['training', '600, of whom 113 leave: 18.8 %'], ['validation', '200, of whom 38 leave: 19.0 %'], ['test', '200, of whom 38 leave: 19.0 %', 1]] } },
+  '4|cheapest': { parts: [['FP, FN', 'The two errors at each threshold, on validation.'], ['50 × FP + 150 × FN', 'Their cost in euros.'], ['idxmin', 'The threshold where the cost is lowest.']], walk: { intro: 'From 0.5 down to 0.3:', steps: [['0.5', '8 × 50 + 13 × 150 = 400 + 1,950 = 2,350 €'], ['0.4', '13 × 50 + 8 × 150 = 650 + 1,200 = 1,850 €'], ['0.3', '18 × 50 + 6 × 150 = 900 + 900 = 1,800 €', 1], ['0.2', '32 × 50 + 3 × 150 = 1,600 + 450 = 2,050 €: too many false alarms']] } },
+  '4|class-weights': { parts: [['n', 'The training customers: 600.'], ['2', 'The number of classes.'], ['count of that class', '487 who stay, 113 who leave.'], ["class_weight='balanced'", 'Gives each class that weight in the log-loss.']], walk: { intro: 'The 600 training customers:', steps: [['stays', '600 / (2 × 487) ≈ 0.62'], ['leaves', '600 / (2 × 113) ≈ 2.65'], ['ratio', '2.65 / 0.62 ≈ 4.3: a leaver counts about four times as much', 1]] } },
+  '4|recipe': { parts: [['TP, FN', 'Customers who leave: found, missed.'], ['FP', 'Discounts given for nothing.']], walk: { intro: 'The test set, threshold 0.3: TP 34, FP 26, FN 4, TN 136.', steps: [['found', '34 of 34 + 4 = 38 who leave'], ['cost', '26 × 50 + 4 × 150 = 1,300 + 600'], ['total', '1,900 € on 200 customers', 1]] } },
+  '4|ex-intro': { parts: [["pd.read_csv('loans.csv')", 'Loads the file the hidden cell wrote: one row per loan.'], ['loans', 'The table of 1,500 loans.'], ['FEATURES', 'The five feature names, written once and reused in every task.']] },
+  '4|ex-setup': { parts: [['SEED = 42', 'Fixes every random choice: the same split at every run.'], ['train_test_split', 'Cuts the loans into the three sets, with stratify.'], ['StandardScaler, make_pipeline', 'Standardise the features, inside one model with the classifier.'], ['LogisticRegression', 'The classifier of the session.'], ['log_loss', 'The error training makes small.'], ['confusion_matrix', 'The four boxes TN, FP, FN, TP.'], ['accuracy_score, precision_score, recall_score, f1_score', 'The four metrics, used by classification_metrics.'], ['roc_curve, roc_auc_score', 'The ROC curve and the area under it.'], ['precision_recall_curve', 'The precision-recall curve.'], ['np.random.seed(SEED)', 'Seeds NumPy’s random generator.']] },
+  '4|ex-t1': { parts: [["loans['default'].value_counts()", 'How many loans of each class.'], ['.sort_index()', 'Puts class 0 first, then 1.'], ["loans['default'].mean()", 'The mean of a 0/1 column: the share of 1s, the default rate.'], [':.1%', 'Prints it as a percentage with one decimal.'], ['plt.bar(labels, counts.values)', 'The first “...” of the plot: one bar per class.'], ['plt.bar_label(bars)', 'Writes each count on its bar.'], ['plt.ylabel, plt.title', 'The label and title the task asks for.']] },
+  '4|ex-t2': { parts: [['test_size=0.4', 'The first blank: 40 % goes to rest, to be split again.'], ["stratify=loans['default']", 'The second blank: keep the default rate in both parts.'], ['test_size=0.5', 'The third blank: half of rest, 20 % of the whole, to test.'], ["stratify=rest['default']", 'The fourth blank: stratify on the table being split.'], ['for name, part in [...]', 'The last “...”: one line per set, its size and default rate.']], walk: { intro: '1,500 loans:', steps: [['rest', '1,500 × 0.4 = 600'], ['training', '1,500 − 600 = 900'], ['validation, test', '600 × 0.5 = 300 each', 1]] } },
+  '4|ex-t3': { parts: [['make_pipeline(StandardScaler(), LogisticRegression())', 'The two blanks of the pipeline.'], ['model.fit(X_train, y_train)', 'The two blanks of fit: training features and answers.'], ['model[-1].coef_[0]', 'The blank of the Series: the five weights of the last step.'], ['index=FEATURES', 'Names each weight by its feature.'], ['plt.barh(FEATURES, weights)', 'Horizontal bars, one per feature.'], ['plt.axvline(0, ...)', 'The vertical line at 0: left of it lowers the risk, right of it raises it.']] },
+  '4|ex-t4': { parts: [['model.predict_proba(X_val)[:, 1]', 'The blank: the probability of default of each validation loan.'], ['np.linspace(0, 1, 21)', '21 edges from 0 to 1: 20 bins of width 0.05.'], ['proba_val[y_val == 0]', 'The probabilities of the repaid loans only.'], ['proba_val[y_val == 1]', 'The “...”: the same for the defaulted loans.'], ["plt.axvline(0.5, linestyle='--', ...)", 'The threshold line.'], ['plt.legend()', 'Names the two histograms and the line.']] },
+  '4|ex-t5': { parts: [['(proba_val >= 0.5)', 'The blank: True where the probability reaches the threshold.'], ['.astype(int)', 'True and False become 1 and 0: the predicted classes.'], ['confusion_matrix(y_val, pred_val)', 'The two blanks: true values first, then predictions.'], ["xticklabels=['repaid', 'default']", 'The labels of the columns, the predictions; the same for the rows.'], ["fmt='d'", 'Writes the counts as whole numbers.'], ['classification_metrics(y_val, pred_val)', 'The last “...”: accuracy, precision, recall and F1.']] },
+  '4|ex-t6': { parts: [['roc_curve(y_val, proba_val)', 'The blanks: false and true positive rates for every threshold.'], ['precision_recall_curve(y_val, proba_val)', 'Precision and recall for every threshold.'], ['roc_auc_score(y_val, proba_val)', 'The blank of auc: the area under the ROC curve.'], ['[0, 1], [0, 1]', 'The diagonal of random scores.'], ['axhline(y_val.mean(), ...)', 'The baseline of the precision-recall curve: the default rate.'], ["f'... {auc:.3f}'", 'Writes the AUC in the legend with three decimals.']] },
+  '4|ex-t7': { parts: [['np.linspace(0.1, 0.9, 9).round(1)', 'The thresholds 0.1, 0.2, …, 0.9.'], ['(proba_val >= threshold).astype(int)', 'The blank of pred: the decisions at this threshold.'], ['**classification_metrics(...)', 'Spreads the four metrics into the row.'], ['COST_FP * fp + COST_FN * fn', 'The blank of the cost.'], ["thresholds['cost (€)'].idxmin()", 'The blank of best_threshold: the threshold of the lowest cost.'], ['plt.plot(thresholds.index, ...)', 'The plot’s “...”: the cost against the threshold.']], walk: { intro: 'If one threshold gave 40 false positives and 8 false negatives:', steps: [['false positives', '40 × 1,000 = 40,000 €'], ['false negatives', '8 × 5,000 = 40,000 €'], ['cost', '80,000 €: one missed default weighs as much as five refusals', 1]] } },
+  '4|ex-t8': { parts: [["LogisticRegression(class_weight='balanced')", 'The second blank of the pipeline: defaults count more in the log-loss.'], ['balanced.predict_proba(X_val)[:, 1]', 'The blank of proba_val_bal.'], ['(proba_val >= 0.5).astype(int)', 'The decisions of the model of Task 3 at 0.5.'], ['roc_auc_score(y_val, ...)', 'Each model’s AUC, from its probabilities.'], ['pd.DataFrame({...})', 'One column per model, one row per metric.']], walk: { intro: 'The 900 training loans, 145 defaults:', steps: [['repaid', '900 / (2 × 755) ≈ 0.60'], ['default', '900 / (2 × 145) ≈ 3.10'], ['ratio', 'a default counts about five times as much', 1]] } },
+  '4|ex-t9': { parts: [['model.predict_proba(X_test)[:, 1]', 'The blank of proba_test: the model of Task 3, no new fit.'], ['(proba_test >= best_threshold).astype(int)', 'The blank of pred_test: the threshold of Task 7.'], ['confusion_matrix(y_test, pred_test).ravel()', 'The four counts of the test set.'], ['COST_FP * fp + COST_FN * fn', 'The cost on the 300 test loans.'], ['classification_metrics(y_test, pred_test)', 'The four metrics, computed once.']] },
 };
 
 /* ---------- Store: this browser first, then the account ---------- */
@@ -1792,14 +2061,45 @@ const REF = [
     ['make_pipeline', 'Chains steps into one model: one fit, one predict; the scaler learns inside each fold.', 'make_pipeline(StandardScaler(), PolynomialFeatures(include_bias=False), Ridge())', 3, 'pipeline'],
     ['step__setting', 'How a grid names a setting of a pipeline step: the step in lower case, two underscores, the setting.', "'ridge__alpha': [0.01, 0.1, 1, 10, 100]", 3, 'grid-code'],
   ] },
+  { name: 'Logistic regression', items: [
+    ['Positive class', 'Class 1: the one we are looking for. Every metric of classification is about it.', 'a customer who leaves; a fraud; a default', 4, 'two-targets'],
+    ['Sigmoid', 'σ(z) = 1 / (1 + e⁻ᶻ): squeezes any score into a probability between 0 and 1. σ(0) = 0.5.', 'σ(−2.5) = 0.08 · σ(1.5) = 0.82', 4, 'sigmoid'],
+    ['Logistic regression', 'A linear score, then the sigmoid: a probability of class 1. With a threshold, a classifier.', 'p = σ(b + w₁x₁ + … + w_dx_d)', 4, 'logit-model'],
+    ['Log-odds', 'Another name for the score z of logistic regression.', 'z = −2.5 + 0.8 × calls', 4, 'weights'],
+    ['Decision boundary', 'Where p = 0.5, so z = 0: a straight line with two features, a plane with three.', 'hours ≈ 13.6 − 0.32 × months', 4, 'boundary'],
+    ['Log-loss', 'The error of predicted probabilities: −log p for a positive, −log(1 − p) for a negative, averaged. A confident mistake costs the most.', '−log 0.01 = 4.6 · −log 0.5 = 0.69', 4, 'log-loss'],
+    ['C', 'The inverse of the penalty strength of LogisticRegression. Small C, strong penalty. Default C=1.', 'C=0.01: weights about 3 times smaller', 4, 'logit-c'],
+    ['LogisticRegression', 'Logistic regression in scikit-learn, with a Ridge penalty by default.', 'make_pipeline(StandardScaler(), LogisticRegression())', 4, 'logit-code'],
+    ['predict_proba', 'The probability of each class: [:, 1] keeps the probability of class 1.', 'model.predict_proba(X_val)[:, 1]', 4, 'logit-code'],
+    ['Threshold', 'The cut-off that turns a probability into a decision: 1 if p ≥ t. A hyperparameter, chosen on validation.', '(proba_val >= 0.3).astype(int)', 4, 'threshold'],
+  ] },
+  { name: 'Classification metrics', items: [
+    ['Confusion matrix', 'The four outcomes. Rows: what happened. Columns: what the model said. Top left is TN.', 'tn, fp, fn, tp = confusion_matrix(y, pred).ravel()', 4, 'confusion'],
+    ['False positive', 'A negative flagged as positive: a false alarm.', 'a needless discount; an honest card blocked', 4, 'confusion'],
+    ['False negative', 'A positive the model missed.', 'a lost customer; a fraud paid', 4, 'confusion'],
+    ['Accuracy', 'The share of right decisions. Misleading when one class is rare.', '(TP + TN) / all   # “nobody leaves”: 0.81', 4, 'metrics4'],
+    ['Precision', 'Of the cases we flag, the share that are positive. Matters when false alarms are expensive.', 'TP / (TP + FP)   # 25 / 33 = 0.758', 4, 'metrics4'],
+    ['Recall', 'Of the positive cases, the share we flag. Matters when missed cases are expensive. Also the true positive rate.', 'TP / (TP + FN)   # 25 / 38 = 0.658', 4, 'metrics4'],
+    ['F1', 'High only if precision and recall both are.', '2 · precision · recall / (precision + recall)', 4, 'metrics4'],
+    ['Cost of the errors', 'Each error times its price, added up. It chooses the threshold.', 'cost = 50 × FP + 150 × FN', 4, 'two-prices'],
+    ['ROC curve', 'One point per threshold: false positive rate across, true positive rate up. The diagonal is random.', 'roc_curve(y_val, proba_val)', 4, 'roc'],
+    ['ROC-AUC', 'The area under the ROC curve: the chance that a random positive scores above a random negative. 1 perfect, 0.5 random.', 'ten customers: 20 / 24 = 0.83', 4, 'auc'],
+    ['Precision-recall curve', 'One point per threshold: recall across, precision up. Ignores the true negatives; random gives the share of positives.', 'precision_recall_curve(y_val, proba_val)', 4, 'pr-curve'],
+  ] },
+  { name: 'Imbalance', items: [
+    ['Imbalanced classes', 'One class much rarer than the other. Accuracy rewards ignoring it.', '811 stay, 189 leave', 4, 'customers'],
+    ['Stratified split', 'Every set keeps the share of each class.', "train_test_split(data, stratify=data['churn'])", 4, 'stratify'],
+    ['stratify', 'The argument of train_test_split that keeps the class shares.', "stratify=rest['churn']", 4, 'stratify'],
+    ['Class weights', "class_weight='balanced': the rare class counts more in the log-loss. Like a lower threshold; the AUC hardly changes.", 'n / (2 × count): 2.65 for a leaver, 0.62 for a stayer', 4, 'class-weights'],
+  ] },
 ];
 
 /* ---------- A lecture ---------- */
 // Terms in a card's text, and calls or symbols in a code box: hoverable, but not coloured.
-const TERMS = /\b(residual plots?|residuals?|RMSE|MSE|MAE|gradient descent|gradients?|learning rate|overfitting|underfitting|baseline|data leakage|leakage|least squares|validation set|test set|training set|outliers?|standardis(?:e|ed|ing)|supervised learning|unsupervised learning|reinforcement learning|self-supervised learning|deep learning|classification|clustering|observations?|categorical|labelled|cross-validation|k-fold|leave-one-out|folds?|regularisation|ridge|lasso|hyperparameters?|grid search|interactions?)\b/gi;
+const TERMS = /\b(residual plots?|residuals?|RMSE|MSE|MAE|gradient descent|gradients?|learning rate|overfitting|underfitting|baseline|data leakage|leakage|least squares|validation set|test set|training set|outliers?|standardis(?:e|ed|ing)|supervised learning|unsupervised learning|reinforcement learning|self-supervised learning|deep learning|classification|clustering|observations?|categorical|labelled|cross-validation|k-fold|leave-one-out|folds?|regularisation|ridge|lasso|logistic regression|sigmoid|log-loss|log-odds|thresholds?|confusion matrix|false positives?|false negatives?|precision-recall curve|precision|recall|F1|ROC-AUC|ROC curve|positive class|decision boundary|stratified|class weights?|imbalanced|accuracy|hyperparameters?|grid search|interactions?)\b/gi;
 // No letters to explain on this page: each formula has its own "What each piece means".
 const LETTERS = {};
-const CODE_TOKENS = /\bneg_mean_squared_error\b|\bKFold\b|\bLeaveOneOut\b|\bcross_val_score\b|\bvalidation_curve\b|\bGridSearchCV\b|\bPolynomialFeatures\b|\bStandardScaler\b|\bmake_pipeline\b|\bRidge\b|\bLasso\b|\btrain_test_split\b|\btest_size=|\bLinearRegression\b|\bDummyRegressor\b|\bmean_squared_error\b|\.fit\b|\.predict\b|\.coef_|\.intercept_|\bRMSE\b|\bMSE\b|\bMAE\b|R²|η|\.hist\b|\.scatter\b|\.bar\b|\.plot\b|\bboxplot\b|\.subplots\b|\.savefig\b|\bvalue_counts\b|\bgroupby\b|\.describe\b/g;
+const CODE_TOKENS = /\bLogisticRegression\b|\.predict_proba\b|\bconfusion_matrix\b|\broc_curve\b|\broc_auc_score\b|\bprecision_recall_curve\b|\blog_loss\b|\bstratify=|\bclass_weight=|\bneg_mean_squared_error\b|\bKFold\b|\bLeaveOneOut\b|\bcross_val_score\b|\bvalidation_curve\b|\bGridSearchCV\b|\bPolynomialFeatures\b|\bStandardScaler\b|\bmake_pipeline\b|\bRidge\b|\bLasso\b|\btrain_test_split\b|\btest_size=|\bLinearRegression\b|\bDummyRegressor\b|\bmean_squared_error\b|\.fit\b|\.predict\b|\.coef_|\.intercept_|\bRMSE\b|\bMSE\b|\bMAE\b|R²|η|\.hist\b|\.scatter\b|\.bar\b|\.plot\b|\bboxplot\b|\.subplots\b|\.savefig\b|\bvalue_counts\b|\bgroupby\b|\.describe\b/g;
 const codeKey = m => m.replace(/^\./, '').replace(/[()=]+$/, '');
 const symbolize = escaped => escaped.replace(CODE_TOKENS, m => (PEEK_TERM[codeKey(m)] ? `<span class="kw" data-kw="${codeKey(m)}">${m}</span>` : m));
 const letterSpan = (key, shown) => `<span class="kw kw-v" data-kw="${key}">${shown}</span>`;
@@ -1905,6 +2205,24 @@ const PRACTICE_LAWS = {
     [[3, 'ridge-poly', 'The penalty rescues a flexible model', 'more λ: smaller weights, less noise followed', 'degree 3: 2.6 → 1.9']],
     [[3, 'recipe', 'The recipe', 'refit the best on all the training data · test once', 'degree 3, λ = 1, then the test set']],
   ],
+  'l4-e1': [
+    [[4, 'logit-model', 'The score', 'z = b + w x', 'z = −2.5 + 0.8 × 2'], [4, 'sigmoid', 'The sigmoid', 'p = 1 / (1 + e⁻ᶻ)', 'p = 1 / (1 + e^0.9)']],
+    [[4, 'sigmoid', 'The sigmoid', 'p = 1 / (1 + e⁻ᶻ)', 'p = 1 / (1 + e^−0.7)'], [4, 'threshold', 'The decision', '1 if p ≥ 0.5', '0.67 ≥ 0.5 → leaves']],
+    [[4, 'boundary', 'The boundary', 'p = 0.5  ⟺  z = 0', '−2.5 + 0.8 × calls = 0']],
+    [[4, 'log-loss', 'The log-loss of one customer', 'y = 1: −log p · y = 0: −log(1 − p)', '−log 0.29 · −log 0.71']],
+  ],
+  'l4-e2': [
+    [[4, 'confusion', 'The four boxes', 'TP, FP: flagged · FN, TN: not flagged', 'flagged: 0.45, 0.55, 0.62, 0.72, 0.90']],
+    [[4, 'metrics4', 'Four metrics', 'accuracy = (TP + TN) / all\nprecision = TP / (TP + FP)\nrecall = TP / (TP + FN)', '(3 + 4) / 10\n3 / 5\n3 / 4']],
+    [[4, 'two-prices', 'The cost of the errors', 'cost = c_FP × FP + c_FN × FN', '50 × 2 + 150 × 1'], [4, 'cheapest', 'The cheapest threshold', 'the threshold with the lowest cost', 'min(150, 250, 200, 300) → 0.3']],
+    [[4, 'roc', 'A point of the ROC curve', 'TPR = TP / (TP + FN) · FPR = FP / (FP + TN)', '3 / 4 · 2 / 6']],
+  ],
+  'l4-e3': [
+    [[4, 'auc', 'The pairs', 'positives × negatives', '4 × 6']],
+    [[4, 'auc', 'The AUC', 'pairs where the positive scores higher / all pairs', '(3 + 5 + 6 + 6) / 24']],
+    [[4, 'class-weights', 'Same order, higher scores', 'the AUC judges the order only', '√ keeps the order: AUC 0.83 still']],
+    [[4, 'auc', 'A perfect ranking', 'every positive above every negative: AUC 1', '24 / 24']],
+  ],
 };
 const cardNo = (n, id) => { const s = SESSIONS.find(x => x.n === n), i = s ? s.groups.flatMap(g => g.cards).findIndex(c => c.id === id) : -1; return i < 0 ? '' : String(i + 1); };
 function lawsHtml(s, laws) {
@@ -1928,6 +2246,9 @@ const PRACTICE_PICS = {
   'l3-e1': { given: [['fold A', 'stores 1, 3', 'validates in round 1'], ['fold B', 'stores 2, 4', 'validates in round 2'], ['k', '2', 'the number of folds']], draw: () => stores({ extra: [['fold', ['A', 'B', 'A', 'B']]] }), read: 'In each round the line is fitted on the other fold’s two stores, then judged on its own two.' },
   'l3-e2': { given: [['line C', 'ŷ = 1.4x + 1.5', 'least squares, MSE 1.05'], ['flat line', 'ŷ = x + 2.5', 'w = 1'], ['λ', '1, then 0.1', 'the strength of the penalty']], draw: () => stores({ extra: [['C', PRED_C], ['flat', ['3.5', '4.5', '5.5', '6.5']]] }), read: 'The penalty looks only at w: 1.4 for line C, 1 for the flat line.' },
   'l3-e3': { given: [['degrees', '1, 2, 3', 'the flexibility'], ['λ', '0.1, 1, 10', 'the strength of the penalty'], ['k', '5', 'folds per combination']], read: 'Read each row from left to right, then compare the rows: where is the smallest number?' },
+  'l4-e1': { given: [['−2.5', 'the intercept b', 'the score with no calls'], ['0.8', 'the weight w', 'added to the score per call'], ['0.5', 'the threshold', 'at or above it: leaves']], draw: () => tbl(['z', '−2', '−0.9', '0', '0.7', '2'], [['σ(z)', '0.12', '0.29', '*0.5', '0.67', '0.88']]), read: 'The score is a straight line in the calls; the sigmoid bends it into a probability.' },
+  'l4-e2': { given: [['scores', '10', 'one per customer'], ['leavers', '0.32, 0.55, 0.72, 0.90', 'the positives'], ['t', '0.4', 'the threshold'], ['50 €, 150 €', 'c_FP, c_FN', 'a discount, a lost customer']], read: 'Everyone at 0.4 or above is flagged. Then sort each customer into one of the four boxes.' },
+  'l4-e3': { given: [['positives', '4', 'customers who leave'], ['negatives', '6', 'customers who stay']], draw: tenTbl, read: 'Take each leaver in turn and count the stayers below them.' },
 };
 function picHtml(x) {
   const q = PRACTICE_PICS[x.id];
@@ -2033,6 +2354,19 @@ const ESSENTIALS = {
     { name: 'Grid search', is: 'Every combination scored with CV; the best is refitted on the whole training set.', f: "param_grid = {'polynomialfeatures__degree': [1, 2, 3, 4],\n              'ridge__alpha': [0.01, 0.1, 1, 10, 100]}\nsearch = GridSearchCV(pipeline, param_grid, cv=kfold)", parts: [['step__setting', 'the step’s name in lower case, two underscores, the setting'], ['best_estimator_', 'the winner, already refitted']], ex: '4 × 5 = 20 combinations × 5 folds = 100 fits, + 1 refit.', watch: 'The scaler sits in the pipeline, so it learns inside each fold: no leak.' },
     { name: 'The full recipe', is: 'Split; build a pipeline; grid search with CV on the training set; the best is refitted; test once.', watch: 'Cross-validate to choose. Test once.' },
     { name: 'The exercise in five moves', is: 'The offices: split, cross-validate, choose the degree, regularise, grid search, test once.', f: "kfold = KFold(n_splits=5, shuffle=True, random_state=SEED)\n-cross_val_score(LinearRegression(), X_train, y_train, cv=kfold, ...)\nmake_pipeline(StandardScaler(), Lasso(alpha=0.05)).fit(X_train, y_train)\nsearch = GridSearchCV(pipeline, param_grid, cv=kfold, ...)\nregression_metrics(y_test, search.best_estimator_.predict(X_test))", watch: 'The test set stays out of sight until Task 9.' },
+  ],
+  4: [
+    { name: 'A category, not a number', is: 'Classification predicts a category. With two, they are 1 and 0, and class 1 is the positive class: the one we look for.', ex: 'Churn: 1 if the customer leaves. 189 of 1,000 do.', watch: 'Imbalanced classes: about four stay for each one who leaves.' },
+    { name: 'The sigmoid', is: 'Squeezes any score into a probability between 0 and 1.', f: 'σ(z) = 1 / (1 + e⁻ᶻ)', parts: [['z', 'the score, any number'], ['σ(0)', '0.5']], ex: 'z = −2.5 + 0.8 × calls: 0 calls → 0.08, 3 → 0.48, 5 → 0.82.' },
+    { name: 'Logistic regression', is: 'A linear score, the sigmoid, then a threshold. The boundary p = 0.5 is a straight line.', f: 'p = σ(b + w₁x₁ + … + w_dx_d)', parts: [['wⱼ > 0', 'raises the probability'], ['wⱼ < 0', 'lowers it']], ex: 'Months −1.52, hours −1.61, calls +0.63 on standardised features.' },
+    { name: 'Log-loss and C', is: 'Training makes the log-loss small, plus a Ridge penalty whose strength is 1/C.', f: 'Log-loss = −(1/n) Σᵢ [ yᵢ log pᵢ + (1 − yᵢ) log(1 − pᵢ) ]', watch: 'A confident mistake costs the most. A smaller C is a stronger penalty.' },
+    { name: 'Threshold', is: 'Turns the probability into a decision: act if p ≥ t. A hyperparameter, chosen on validation.', f: 'pred = (proba >= t).astype(int)', ex: 'Ten customers: at 0.5 and 0.7 the same accuracy, 0.8, with different errors.' },
+    { name: 'The confusion matrix', is: 'TN, FP, FN, TP. Rows: what happened. Columns: what the model said.', pic: () => confTbl() },
+    { name: 'Four metrics', is: 'Accuracy, precision, recall, F1.', f: 'precision = TP / (TP + FP)\nrecall    = TP / (TP + FN)', parts: [['precision', 'of those flagged, how many are positive'], ['recall', 'of the positives, how many are flagged']], watch: 'Accuracy can lie: never saying “fraud” scores 0.990.' },
+    { name: 'ROC and AUC', is: 'The ROC curve shows every threshold; the AUC is the chance a positive outscores a negative.', ex: 'Ten customers: 20 of 24 pairs, AUC 0.83. Our customers: 0.95.', watch: 'The precision-recall curve is better when the positive class is rare.' },
+    { name: 'Costs choose the threshold', is: 'Price each error, add them up, and keep the cheapest threshold on validation.', f: 'cost = c_FP × FP + c_FN × FN', ex: '50 € and 150 €: 0.3 costs 1,800 €, 0.5 costs 2,350 €.', watch: 'The highest accuracy is not the lowest cost.' },
+    { name: 'Stratify and weigh', is: 'Stratified splits keep the class shares; balanced class weights act like a lower threshold.', f: "train_test_split(data, stratify=data['churn'])\nLogisticRegression(class_weight='balanced')" },
+    { name: 'The exercise in five moves', is: 'The loans: class balance, stratified sets, the weights, the confusion matrix and curves, the cheapest threshold, test once.', f: "model = make_pipeline(StandardScaler(), LogisticRegression()).fit(X_train, y_train)\nproba_val = model.predict_proba(X_val)[:, 1]\ncost = COST_FP * fp + COST_FN * fn\nbest_threshold = thresholds['cost (€)'].idxmin()", watch: 'A missed default costs five times a refusal: expect a threshold well below 0.5.' },
   ],
 };
 /* Asked for 2026-11-19: "add summary pill at the start of each lesson (mirrors one below so note questions
@@ -2709,6 +3043,13 @@ const PEEK_TERM = {
   PolynomialFeatures: 'PolynomialFeatures', StandardScaler: 'StandardScaler', make_pipeline: 'make_pipeline', Ridge: 'Ridge', Lasso: 'Lasso',
   'cross-validation': 'Cross-validation', 'k-fold': 'k-fold', fold: 'Fold', 'leave-one-out': 'Leave-one-out', regularisation: 'Regularisation', ridge: 'Ridge', lasso: 'Lasso',
   hyperparameter: 'Hyperparameter', 'grid search': 'Grid search', interaction: 'Interaction',
+  // Session 4.
+  LogisticRegression: 'LogisticRegression', predict_proba: 'predict_proba', confusion_matrix: 'Confusion matrix', roc_curve: 'ROC curve', roc_auc_score: 'ROC-AUC',
+  precision_recall_curve: 'Precision-recall curve', log_loss: 'Log-loss', stratify: 'stratify', class_weight: 'Class weights',
+  'logistic regression': 'Logistic regression', sigmoid: 'Sigmoid', 'log-loss': 'Log-loss', 'log-odds': 'Log-odds', threshold: 'Threshold', 'confusion matrix': 'Confusion matrix',
+  'false positive': 'False positive', 'false negative': 'False negative', 'precision-recall curve': 'Precision-recall curve', precision: 'Precision', recall: 'Recall', f1: 'F1',
+  'roc-auc': 'ROC-AUC', 'roc curve': 'ROC curve', 'positive class': 'Positive class', 'decision boundary': 'Decision boundary', stratified: 'Stratified split',
+  'class weight': 'Class weights', imbalanced: 'Imbalanced classes', accuracy: 'Accuracy',
 };
 const peekKey = w => PEEK_TERM[w] || PEEK_TERM[w.replace(/ies$/, 'y').replace(/s$/, '')] || PEEK_TERM[w.replace(/s$/, '')];
 const refByTerm = term => { for (const g of REF) for (const it of g.items) if (it[0] === term) return it; return null; };
@@ -2994,7 +3335,8 @@ document.addEventListener('mousedown', e => { if (e.target.closest && !e.target.
    The decks are the teacher's material, so they stay out of this public page: each user uploads them once
    to their private folder (the same one as the Python page's slides), and each card's "Slide n ›" opens
    them. A deck is filed as LLMs<session>.pdf: one whose name says Linear Regression, slides2 or session 2
-   becomes LLMs2.pdf; Cross-Validation, slides3 or session 3 becomes LLMs3.pdf; one that says Introduction,
+   becomes LLMs2.pdf; Cross-Validation, slides3 or session 3 becomes LLMs3.pdf; Logistic Regression, Classification, slides4
+   or session 4 becomes LLMs4.pdf; one that says Introduction,
    slides1 or session 1 becomes LLMs1.pdf. */
 const DECK_FILES = SESSIONS.map(s => `LLMs${s.n}.pdf`);
 function deckName(name) {
@@ -3003,6 +3345,7 @@ function deckName(name) {
   const m = name.match(/^LLMs\s*(\d+)\.pdf$/i) || name.match(/(?:slides|lecture|lesson|session)[\s_-]*0*(\d+)(?!\d)/i);
   if (/linear[\s_-]*regression/i.test(name)) file = 'LLMs2.pdf';
   else if (/cross[\s_-]*validation|regularisation/i.test(name)) file = 'LLMs3.pdf';
+  else if (/logistic|classification/i.test(name)) file = 'LLMs4.pdf';
   else if (m) file = `LLMs${Number(m[1])}.pdf`;
   else if (/introduction/i.test(name)) file = 'LLMs1.pdf';
   return DECK_FILES.includes(file) ? file : null;
