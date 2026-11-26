@@ -40,6 +40,12 @@ Sessions 1 to 4 so far:
    - Imbalance and costs: stratified splits, the cheapest threshold (0.3 at 1,800 € against 2,350 € at 0.5), balanced class weights, and the full recipe.
    - Its exercise, *Approving loans* (1,500 loans, nine tasks), has a part of its own.
 
+## Charts
+
+Asked for on 2026-11-26: "add visuals and graphs for the lessons so we can visualise, when needed." A card whose idea is a shape gets a chart, drawn as inline SVG in the page's own colours, in day and night: a two-colour series pair (brown and teal) checked for colour-blind separation and contrast on both papers, a quiet grid, labels in text ink, and a hover tip on each dot and bar. Each chart sits in its card under the formula; cards whose idea is a table or a list keep their table.
+
+22 charts so far. Session 1: the tip line through the first bills. Session 2: line C through the four stores, the residuals, the MSE bowl with the gradient-descent steps, three learning rates, the outlier that flips the slope, training against validation error. Session 3: leave-one-out on store 4, CV error by degree, the Ridge and Lasso slopes as α grows. Session 4: churn by months against a straight line and a sigmoid, the sigmoid, Example 1 on the S curve, the decision boundary through the 200 validation customers, the log-loss, the histogram of predicted probabilities, the ten customers and three thresholds, both ROC curves, the AUC, the precision-recall curve and the cost against the threshold. Session 4's data are the guided notebook's own, re-run.
+
 ## The exercises
 
 Each session's take-home notebook has a part of its own. An intro card covers the dataset, the imports, how to submit and the course's AI rule (a help, not a replacement). Then each task has one card: what it asks, the lecture idea it practises, the code with *What each piece means* (including the blanks of the starter cells), *How to read your result* for the written answers, and the classic mistake. The final numbers and the written answers are left to the user.
