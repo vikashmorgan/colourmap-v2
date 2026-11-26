@@ -45,6 +45,9 @@ describe('/llms class page', () => {
     expect(html).toContain('{ n: 4,');
     // Session 4's exercise tasks link back to the lecture too.
     expect(html).toContain("uses: ['two-prices', 'cheapest']");
+    // The lessons' charts: one per card whose idea is a shape.
+    expect(html).toContain('const VIZ = {');
+    expect(html).toContain("'4|roc': () => plot(");
     expect(html).toContain('llms|');
     expect(html).not.toMatch(/pandas\|/);
   });

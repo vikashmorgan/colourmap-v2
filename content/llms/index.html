@@ -19,12 +19,14 @@
     --accent: #8a5a2b; --code: #efe7d6;
     --got: #2f7a4f; --mid: #b07a12; --late: #8a5a9e; --q: #985a22; --c: #8a5a3b;
     --nb-bg: #efe5d2; --nb-top: #e5d6b9; --nb-rule: #d6c3a0;
+    --va: #a0602a; --vb: #00889c;   /* chart series: validated pair, day */
   }
   [data-theme="night"] {
     --paper: #191714; --card: #201d19; --ink: #ece6da; --soft: #a49b8d; --line: #34302a;
     --accent: #d9a46a; --code: #15130f;
     --got: #7cc49a; --mid: #e0b45a; --late: #c39be0; --q: #e0a06a; --c: #d4a27c;
     --nb-bg: #221c15; --nb-top: #2c241a; --nb-rule: #45392a;
+    --va: #bf8240; --vb: #1aa3b0;   /* chart series: validated pair, night */
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -177,6 +179,27 @@
   .key-new { background: color-mix(in srgb, var(--mid) 18%, transparent); }
   .key-off { text-decoration: line-through; opacity: .5; }
   .key-grp { background: color-mix(in srgb, var(--q) 12%, transparent); }
+  /* Charts drawn in the cards (2026-11-26). Thin marks, a quiet grid, labels in text ink. */
+  .viz { margin: 14px 0 6px; }
+  .viz figcaption { font: 12.5px system-ui, sans-serif; color: var(--soft); margin: 0 0 4px; }
+  .viz svg { display: block; width: 100%; height: auto; max-width: 640px; }
+  .vz-grid { stroke: var(--line); stroke-width: 1; }
+  .vz-axis { stroke: var(--soft); stroke-width: 1; opacity: .6; }
+  .vz-tick { font: 11px ui-monospace, Consolas, monospace; fill: var(--soft); }
+  .vz-lab { font: 12px system-ui, sans-serif; fill: var(--soft); }
+  .vz-note { font: 12px system-ui, sans-serif; fill: var(--ink); }
+  .vz-soft { fill: var(--soft); }
+  .vz-ref { stroke: var(--soft); stroke-width: 1; stroke-dasharray: 4 4; }
+  .vz-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .vz-seg { stroke-width: 2; stroke-linecap: round; }
+  .vz-line.vz-a, .vz-seg.vz-a { stroke: var(--va); } .vz-line.vz-b, .vz-seg.vz-b { stroke: var(--vb); } .vz-line.vz-ink, .vz-seg.vz-ink { stroke: var(--soft); }
+  .vz-pt { stroke: var(--card); stroke-width: 2; }
+  .vz-pt.vz-a, .vz-bar.vz-a, .vz-area.vz-a { fill: var(--va); } .vz-pt.vz-b, .vz-bar.vz-b, .vz-area.vz-b { fill: var(--vb); } .vz-pt.vz-ink { fill: var(--soft); }
+  .vz-area { opacity: .2; }
+  .vz-pt:hover, .vz-bar:hover { stroke: var(--ink); }
+  .vz-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 12px system-ui, sans-serif; color: var(--soft); margin-top: 2px; }
+  .vz-k { display: inline-block; width: 16px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; background: var(--soft); }
+  .vz-k.vz-a { background: var(--va); } .vz-k.vz-b { background: var(--vb); } .vz-k.dot { width: 9px; height: 9px; border-radius: 50%; }
   .pic-chart { display: grid; gap: 4px; min-width: min(320px, 100%); }
   .pic-title { margin: 0 0 4px; font: 600 14px system-ui, sans-serif; }
   .pic-bar { display: grid; grid-template-columns: 8.5em 1fr auto; align-items: center; gap: 8px; font: 12.5px system-ui, sans-serif; }
@@ -1704,6 +1727,137 @@ const READS = {
   '4|ex-t9': { parts: [['model.predict_proba(X_test)[:, 1]', 'The blank of proba_test: the model of Task 3, no new fit.'], ['(proba_test >= best_threshold).astype(int)', 'The blank of pred_test: the threshold of Task 7.'], ['confusion_matrix(y_test, pred_test).ravel()', 'The four counts of the test set.'], ['COST_FP * fp + COST_FN * fn', 'The cost on the 300 test loans.'], ['classification_metrics(y_test, pred_test)', 'The four metrics, computed once.']] },
 };
 
+/* ---------- Charts: the lessons drawn ----------
+ * Asked for 2026-11-26: "add visuals and graphs for the lessons so we can visualise, when needed".
+ * plot() draws one small SVG chart in the page's own colours (day and night): a grid, two axes and its series.
+ * Series kinds: line, pts (dots, with a hover tip), segs (short lines between two points), bars ([x0, x1, y]),
+ * area (filled down to the axis). Colours: 'a' (brown), 'b' (teal), 'ink' (grey). Each chart is one card's idea. */
+let vizId = 0;
+const fnPts = (f, a, b, n = 80) => Array.from({ length: n + 1 }, (_, i) => { const x = a + ((b - a) * i) / n; return [x, f(x)]; });
+const sigma = z => 1 / (1 + Math.exp(-z));
+const vnum = v => String(+(+v).toFixed(2)).replace('-', '−');
+function plot({ x, y, series = [], vlines = [], hlines = [], notes = [], title = '', h = 290 }) {
+  const W = 560, H = h, L = 50, R = 18, T = 14, B = 44, id = `vz${++vizId}`;
+  const sx = v => L + ((v - x.min) / (x.max - x.min)) * (W - L - R);
+  const sy = v => H - B - ((v - y.min) / (y.max - y.min)) * (H - T - B);
+  const r1 = v => Math.round(v * 10) / 10;
+  const fmt = (ax, v) => (ax.fmt ? ax.fmt(v) : vnum(v));
+  let g = `<defs><clipPath id="${id}"><rect x="${L}" y="${T - 6}" width="${W - L - R}" height="${H - T - B + 6}"/></clipPath></defs>`;
+  for (const t of y.ticks) g += `<line class="vz-grid" x1="${L}" x2="${W - R}" y1="${r1(sy(t))}" y2="${r1(sy(t))}"/><text class="vz-tick" x="${L - 7}" y="${r1(sy(t)) + 4}" text-anchor="end">${esc(fmt(y, t))}</text>`;
+  for (const t of x.ticks) g += `<line class="vz-grid" x1="${r1(sx(t))}" x2="${r1(sx(t))}" y1="${H - B}" y2="${H - B + 4}"/><text class="vz-tick" x="${r1(sx(t))}" y="${H - B + 17}" text-anchor="middle">${esc(fmt(x, t))}</text>`;
+  g += `<line class="vz-axis" x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}"/><line class="vz-axis" x1="${L}" x2="${L}" y1="${T}" y2="${H - B}"/>`;
+  if (x.label) g += `<text class="vz-lab" x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle">${esc(x.label)}</text>`;
+  if (y.label) g += `<text class="vz-lab" transform="translate(13 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">${esc(y.label)}</text>`;
+  let body = '';
+  for (const v of hlines) body += `<line class="vz-ref" x1="${L}" x2="${W - R}" y1="${r1(sy(v.y))}" y2="${r1(sy(v.y))}"/>${v.label ? `<text class="vz-note vz-soft" x="${W - R - 4}" y="${r1(sy(v.y)) - 5}" text-anchor="end">${esc(v.label)}</text>` : ''}`;
+  for (const v of vlines) body += `<line class="vz-ref" x1="${r1(sx(v.x))}" x2="${r1(sx(v.x))}" y1="${T}" y2="${H - B}"/>${v.label ? `<text class="vz-note vz-soft" x="${r1(sx(v.x)) + 4}" y="${T + 10}">${esc(v.label)}</text>` : ''}`;
+  for (const s of series) {
+    const c = `vz-${s.c || 'a'}`, tip = s.tip || (p => `${fmt(x, p[0])}, ${fmt(y, p[1])}`);
+    if (s.kind === 'line' || s.kind === 'area') {
+      const d = s.data.map((p, i) => `${i ? 'L' : 'M'}${r1(sx(p[0]))} ${r1(sy(p[1]))}`).join('');
+      if (s.kind === 'area') body += `<path class="vz-area ${c}" d="${d}L${r1(sx(s.data[s.data.length - 1][0]))} ${r1(sy(y.min))}L${r1(sx(s.data[0][0]))} ${r1(sy(y.min))}Z"/>`;
+      if (s.kind === 'line' || s.edge) body += `<path class="vz-line ${c}"${s.dash ? ' stroke-dasharray="6 5"' : ''} d="${d}"/>`;
+    } else if (s.kind === 'segs') {
+      body += s.data.map(([a, b, p, q]) => `<line class="vz-seg ${c}"${s.dash ? ' stroke-dasharray="3 3"' : ''} x1="${r1(sx(a))}" y1="${r1(sy(b))}" x2="${r1(sx(p))}" y2="${r1(sy(q))}"/>`).join('');
+    } else if (s.kind === 'bars') {
+      body += s.data.map(p => { const top = sy(p[2]), base = sy(Math.max(y.min, 0)); return `<rect class="vz-bar ${c}" x="${r1(sx(p[0]) + 1)}" y="${r1(Math.min(top, base))}" width="${r1(Math.max(1, sx(p[1]) - sx(p[0]) - 2))}" height="${r1(Math.abs(base - top))}" rx="2"><title>${esc(s.tip ? s.tip(p) : vnum(p[2]))}</title></rect>`; }).join('');
+    } else if (s.kind === 'pts') {
+      body += s.data.map(p => `<circle class="vz-pt ${c}" cx="${r1(sx(p[0]))}" cy="${r1(sy(p[1]))}" r="${s.r || 4.5}"><title>${esc(tip(p))}</title></circle>`).join('');
+    }
+    if (s.at) body += `<text class="vz-note vz-t${s.c || 'a'}" x="${r1(sx(s.at[0]))}" y="${r1(sy(s.at[1]))}"${s.anchor ? ` text-anchor="${s.anchor}"` : ''}>${esc(s.name)}</text>`;
+  }
+  for (const n of notes) body += `<text class="vz-note${n.soft ? ' vz-soft' : ''}" x="${r1(sx(n.at[0]))}" y="${r1(sy(n.at[1]))}"${n.anchor ? ` text-anchor="${n.anchor}"` : ''}>${esc(n.text)}</text>`;
+  const keyed = series.filter(s => s.name && s.key !== false);
+  const legend = keyed.length >= 2 ? `<div class="vz-legend">${keyed.map(s => `<span><i class="vz-k vz-${s.c || 'a'}${s.kind === 'pts' ? ' dot' : ''}"></i>${esc(s.name)}</span>`).join('')}</div>` : '';
+  return `<figure class="viz">${title ? `<figcaption>${esc(title)}</figcaption>` : ''}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">${g}<g clip-path="url(#${id})">${body}</g></svg>${legend}</figure>`;
+}
+const TICKS = (a, b, step) => { const out = []; for (let v = a; v <= b + 1e-9; v += step) out.push(+v.toFixed(6)); return out; };
+const STORE_PTS = STORES.map(([sx_, sy_]) => [sx_, sy_]);
+const storeTip = p => `store at x = ${p[0]}: sold ${p[1]}`;
+const STORE_AXES = { x: { min: 0, max: 5, ticks: TICKS(0, 5, 1), label: 'TV budget x (thousand €)' }, y: { min: 0, max: 9, ticks: TICKS(0, 9, 3), label: 'sales y' } };
+// Session 4, from the guided notebook: the 200 validation customers (months, hours watched, churn).
+const VAL_CUSTOMERS = [[66,15.7,0],[26,18.6,0],[19,8.8,1],[40,0.9,1],[40,14.0,0],[53,1.8,1],[68,9.3,0],[43,19.7,0],[37,21.0,0],[5,2.7,1],[13,22.5,0],[45,17.2,0],[66,24.1,0],[33,0.8,1],[49,24.1,0],[8,8.8,1],[4,0.6,1],[59,7.7,0],[52,9.4,0],[26,17.2,0],[56,20.9,0],[31,20.1,0],[51,8.3,0],[15,4.0,1],[55,13.3,0],[43,22.5,0],[40,20.1,0],[40,5.3,0],[4,4.7,1],[22,4.8,1],[31,15.1,0],[8,0.4,1],[20,21.9,0],[15,10.9,0],[60,20.8,0],[14,4.2,0],[49,2.0,1],[63,16.1,0],[59,7.7,0],[51,0.6,1],[21,22.4,0],[26,15.1,0],[14,10.5,0],[54,23.9,0],[11,10.7,0],[67,17.9,0],[72,21.4,0],[46,8.9,0],[5,4.3,0],[7,2.5,1],[31,18.2,0],[30,22.9,0],[59,10.3,0],[42,6.8,0],[32,21.1,0],[27,7.5,0],[1,0.3,1],[66,21.3,0],[28,17.9,0],[71,16.4,0],[70,14.2,0],[31,6.3,0],[53,9.3,0],[57,7.0,0],[59,4.8,0],[53,15.3,0],[59,15.1,0],[43,13.9,0],[50,0.3,1],[49,8.2,0],[22,10.6,0],[57,6.4,0],[58,12.8,0],[59,13.3,0],[15,14.6,0],[8,24.3,0],[39,22.3,0],[28,10.8,0],[30,8.8,1],[1,11.3,0],[23,8.0,1],[15,23.9,0],[51,13.7,0],[53,11.0,0],[16,8.4,0],[16,22.3,1],[63,3.8,0],[29,19.4,0],[49,6.6,0],[15,6.8,1],[48,18.9,0],[26,21.9,0],[51,13.2,0],[32,13.0,0],[61,23.3,0],[23,0.4,0],[35,7.0,0],[57,3.5,0],[14,7.4,0],[61,10.5,0],[48,13.3,0],[31,2.0,1],[52,12.0,0],[34,2.8,1],[66,15.7,0],[39,9.7,1],[61,24.2,0],[17,15.7,0],[66,13.0,0],[55,8.5,0],[63,20.4,0],[16,16.9,0],[42,15.0,0],[38,1.9,1],[44,21.2,0],[8,18.2,1],[66,10.6,0],[72,5.2,0],[32,23.0,0],[23,12.5,0],[22,9.1,0],[57,8.2,0],[69,10.1,0],[69,23.6,0],[32,15.1,0],[19,10.1,0],[43,14.0,0],[63,4.5,0],[71,5.0,0],[59,22.5,0],[67,2.5,0],[40,24.8,0],[42,8.8,0],[31,17.2,0],[2,1.0,1],[19,2.4,1],[13,7.2,0],[51,18.3,0],[37,4.8,0],[57,16.4,0],[6,15.5,0],[6,7.5,1],[9,22.7,0],[66,22.5,0],[2,12.9,1],[4,15.8,1],[7,13.1,0],[8,5.5,1],[68,18.0,0],[63,3.0,0],[47,23.5,0],[13,8.0,1],[52,4.1,0],[18,8.8,0],[58,22.9,0],[3,24.0,0],[5,20.0,0],[7,13.0,1],[35,4.4,0],[26,15.4,0],[7,2.4,1],[49,14.6,0],[38,11.5,0],[58,3.4,0],[23,24.3,0],[71,14.2,0],[22,8.6,0],[55,23.7,0],[68,20.0,0],[9,21.6,0],[11,5.7,1],[1,3.8,1],[50,14.1,0],[52,5.5,0],[62,18.7,0],[15,17.2,0],[58,17.3,0],[8,21.8,0],[62,22.9,0],[32,3.9,0],[6,11.6,1],[45,18.8,0],[43,10.7,0],[59,7.5,0],[43,8.7,0],[56,11.5,0],[4,10.8,0],[55,22.0,0],[20,19.8,0],[7,11.7,1],[48,11.2,0],[45,21.5,0],[64,6.3,0],[49,24.4,0],[30,15.1,0],[29,13.2,0],[55,8.8,0],[27,13.6,0],[35,13.8,0],[70,8.0,0]];
+// Their predicted probabilities of leaving, in 20 bins of 0.05: how many stay, how many leave.
+const PROBA_STAY = [87, 30, 9, 4, 9, 5, 1, 4, 2, 3, 2, 1, 2, 0, 2, 1, 0, 0, 0, 0];
+const PROBA_LEAVE = [0, 1, 1, 1, 1, 2, 2, 0, 2, 3, 2, 4, 2, 2, 2, 2, 0, 6, 3, 2];
+const ROC_OURS = [[0,0],[0,0.026],[0,0.316],[0.006,0.316],[0.006,0.342],[0.012,0.342],[0.012,0.368],[0.019,0.368],[0.019,0.474],[0.025,0.474],[0.025,0.5],[0.031,0.5],[0.031,0.526],[0.037,0.526],[0.037,0.632],[0.049,0.632],[0.049,0.711],[0.062,0.711],[0.062,0.737],[0.074,0.737],[0.074,0.763],[0.08,0.763],[0.08,0.789],[0.105,0.789],[0.105,0.816],[0.111,0.816],[0.111,0.842],[0.13,0.842],[0.13,0.895],[0.142,0.895],[0.142,0.921],[0.204,0.921],[0.204,0.947],[0.228,0.947],[0.228,0.974],[0.352,0.974],[0.352,1],[1,1]];
+// Recall, precision and the threshold, every 0.05.
+const PR_OURS = [[1,0.336,0.05],[0.974,0.451,0.1],[0.947,0.5,0.15],[0.921,0.522,0.2],[0.895,0.596,0.25],[0.842,0.64,0.3],[0.789,0.638,0.35],[0.789,0.698,0.4],[0.737,0.718,0.45],[0.658,0.758,0.5],[0.605,0.793,0.55],[0.5,0.792,0.6],[0.447,0.85,0.65],[0.395,0.833,0.7],[0.342,0.929,0.75],[0.289,1,0.8],[0.289,1,0.85],[0.132,1,0.9],[0.053,1,0.95]];
+// The share who leave, by bands of six months as a customer (all 1,000).
+const CHURN_BY_MONTHS = [[3.8,0.486],[9.3,0.484],[15.2,0.341],[21.3,0.25],[27.6,0.181],[33.3,0.182],[39.6,0.136],[45,0.083],[51.2,0.104],[57.5,0.03],[63.6,0.032],[69.6,0.013]];
+const TEN_PTS = TEN.map(([p, who]) => [Number(p), who.startsWith('*') ? 1 : 0]);
+const PROB_AXIS = { min: 0, max: 1, ticks: TICKS(0, 1, 0.25), label: 'predicted probability of leaving' };
+const RATE_AXIS = label => ({ min: 0, max: 1, ticks: TICKS(0, 1, 0.25), label });
+
+const VIZ = {
+  '1|first-line': () => plot({ title: 'The first five bills and the line tip ≈ 0.105 × bill + 0.92', x: { min: 0, max: 40, ticks: TICKS(0, 40, 10), label: 'total bill ($)' }, y: { min: 0, max: 6, ticks: TICKS(0, 6, 2), label: 'tip ($)' },
+    series: [{ kind: 'line', c: 'ink', data: fnPts(b => 0.105 * b + 0.92, 0, 40, 2), name: 'the line', at: [33, 5.2] }, { kind: 'pts', data: [[16.99, 1.01], [10.34, 1.66], [21.01, 3.5], [23.68, 3.31], [24.59, 3.61]], tip: p => `bill ${p[0]}, tip ${p[1]}` }, { kind: 'pts', c: 'b', data: [[30, 4.07]], tip: () => 'a new bill of 30: the line says 4.07' }],
+    notes: [{ at: [30.8, 3.6], text: 'bill 30 → 4.07' }] }),
+  '2|line': () => plot({ title: 'The four stores and line C, ŷ = 1.4x + 1.5', ...STORE_AXES,
+    series: [{ kind: 'line', c: 'ink', data: fnPts(v => 1.4 * v + 1.5, 0, 5, 1), name: 'line C', at: [4.2, 8.7] }, { kind: 'pts', data: STORE_PTS, tip: storeTip }, { kind: 'pts', c: 'b', data: [[2, 4.3]], tip: () => 'store 2: the line predicts 4.3' }],
+    notes: [{ at: [0.15, 0.8], text: 'b = 1.5 at x = 0', soft: true }, { at: [2.15, 3.9], text: 'ŷ = 4.3 at x = 2' }] }),
+  '2|residual': () => plot({ title: 'Each residual is a vertical gap to line C', ...STORE_AXES,
+    series: [{ kind: 'line', c: 'ink', data: fnPts(v => 1.4 * v + 1.5, 0, 5, 1) }, { kind: 'segs', c: 'b', data: STORE_PTS.map(([px, py]) => [px, py, px, 1.4 * px + 1.5]) }, { kind: 'pts', data: STORE_PTS, tip: p => `store at x = ${p[0]}: residual ${vnum(p[1] - (1.4 * p[0] + 1.5))}` }],
+    notes: [{ at: [3.1, 3.4], text: 'e₃ = −1.7' }, { at: [3.88, 8.2], text: 'e₄ = +0.9', anchor: 'end' }] }),
+  '2|descent': () => plot({ title: 'The bowl: MSE of the four stores for each slope w (b fixed at 1.5)', x: { min: -0.2, max: 2.8, ticks: TICKS(0, 2.5, 0.5), label: 'slope w' }, y: { min: 0, max: 16, ticks: TICKS(0, 16, 4), label: 'MSE' },
+    series: [{ kind: 'line', c: 'ink', data: fnPts(w => 7.5 * w * w - 21 * w + 15.75, -0.2, 2.8) }, { kind: 'pts', data: [0, 1.05, 1.3125, 1.3781].map(w => [w, 7.5 * w * w - 21 * w + 15.75]), tip: p => `w = ${vnum(p[0])}, MSE ${vnum(p[1])}` }],
+    vlines: [{ x: 1.4, label: 'bottom: w = 1.4' }], notes: [{ at: [0.07, 15.4], text: 'start, w = 0' }, { at: [0.45, 3.6], text: 'step 1: w = 1.05' }] }),
+  '2|rate': () => plot({ title: 'w after each step, for three learning rates (the best w is 1.4)', x: { min: 0, max: 6, ticks: TICKS(0, 6, 1), label: 'step' }, y: { min: -1, max: 3.5, ticks: TICKS(-1, 3, 1), label: 'w' },
+    series: [[0.01, 'ink', 'η = 0.01: slow'], [0.05, 'a', 'η = 0.05: right'], [0.15, 'b', 'η = 0.15: runs away']].map(([eta, c, name]) => ({ kind: 'line', c, name, dash: c === 'ink', data: Array.from({ length: 7 }, (_, k) => [k, 1.4 - 1.4 * (1 - 15 * eta) ** k]) })),
+    hlines: [{ y: 1.4, label: 'w = 1.4' }] }),
+  '2|look': () => plot({ title: 'One bad week flips the slope: a fifth store at (5, 1)', x: { min: 0, max: 6, ticks: TICKS(0, 6, 1), label: 'TV budget x' }, y: { min: 0, max: 9, ticks: TICKS(0, 9, 3), label: 'sales y' },
+    series: [{ kind: 'line', c: 'ink', dash: true, data: fnPts(v => 1.4 * v + 1.5, 0, 6, 1), name: 'line C, four stores' }, { kind: 'line', c: 'b', data: fnPts(v => -0.1 * v + 4.5, 0, 6, 1), name: 'with the fifth store: ŷ = −0.1x + 4.5' }, { kind: 'pts', data: STORE_PTS, tip: storeTip, key: false }, { kind: 'pts', c: 'b', data: [[5, 1]], tip: () => 'the outlier: x = 5, y = 1', key: false }],
+    notes: [{ at: [5.1, 1.5], text: 'outlier' }] }),
+  '2|val-curve': () => plot({ title: 'Training and validation error by degree (illustrative numbers, the usual shape)', x: { min: 0, max: 13, ticks: [1, 2, 3, 6, 12], label: 'degree' }, y: { min: 0, max: 7, ticks: TICKS(0, 6, 2), label: 'MSE' },
+    series: [{ kind: 'line', c: 'ink', dash: true, name: 'training', data: [[1, 5.6], [2, 4.1], [3, 3.2], [6, 2.9], [12, 2.4]] }, { kind: 'line', c: 'a', name: 'validation', data: [[1, 5.9], [2, 4.4], [3, 3.5], [6, 3.9], [12, 5.8]] }, { kind: 'pts', c: 'a', key: false, data: [[3, 3.5]], tip: () => 'lowest validation error: degree 3' }],
+    notes: [{ at: [0.6, 6.5], text: 'underfits', soft: true }, { at: [10, 6.5], text: 'overfits', soft: true }, { at: [3.3, 2.6], text: 'choose degree 3' }] }),
+  '3|loo': () => plot({ title: 'Leave out store 4: the line on the other three predicts 5, it sold 8', ...STORE_AXES,
+    series: [{ kind: 'line', c: 'ink', dash: true, data: fnPts(v => 1.4 * v + 1.5, 0, 5, 1), name: 'line C, all four stores' }, { kind: 'line', c: 'b', data: fnPts(v => 0.5 * v + 3, 0, 5, 1), name: 'line on stores 1 to 3: ŷ = 0.5x + 3' }, { kind: 'segs', c: 'a', data: [[4, 8, 4, 5]], key: false }, { kind: 'pts', data: STORE_PTS, tip: storeTip, key: false }],
+    notes: [{ at: [4.12, 6.6], text: 'error 3, squared 9' }] }),
+  '3|grow': () => plot({ title: 'Five-fold CV MSE of the three budgets, by degree', x: { min: 0.5, max: 4.5, ticks: [1, 2, 3, 4], label: 'degree' }, y: { min: 0, max: 4, ticks: TICKS(0, 4, 1), label: 'CV MSE' },
+    series: [{ kind: 'bars', data: [[0.7, 1.3, 3.62], [1.7, 2.3, 1.35], [2.7, 3.3, 1.26], [3.7, 4.3, 2.36]], tip: p => `CV MSE ${p[2]}` }],
+    notes: [{ at: [3, 1.45], text: '1.26', anchor: 'middle' }, { at: [4, 2.55], text: '34 features', anchor: 'middle', soft: true }] }),
+  '3|ridge-lasso': () => plot({ title: 'The slope of the four stores as the penalty grows', x: { min: 0, max: 5, ticks: TICKS(0, 5, 1), label: 'alpha (λ)' }, y: { min: 0, max: 1.6, ticks: TICKS(0, 1.6, 0.4), label: 'slope w' },
+    series: [{ kind: 'line', c: 'a', name: 'Ridge: 7 / (5 + α), never 0', data: fnPts(a => 7 / (5 + a), 0, 5) }, { kind: 'line', c: 'b', name: 'Lasso: (7 − 4α) / 5, 0 from α = 1.75', data: fnPts(a => Math.max(0, (7 - 4 * a) / 5), 0, 5, 100) }],
+    notes: [{ at: [0.08, 1.48], text: 'least squares: 1.4' }, { at: [1.85, 0.08], text: 'Lasso reaches 0' }] }),
+  '4|not-a-line': () => plot({ title: 'The share who leave by months as a customer, a straight line, and a sigmoid', x: { min: 0, max: 72, ticks: TICKS(0, 72, 12), label: 'months as a customer' }, y: { min: -0.1, max: 0.6, ticks: [0, 0.2, 0.4, 0.6], label: 'share who leave' },
+    series: [{ kind: 'pts', c: 'ink', data: CHURN_BY_MONTHS, name: 'share who left, six-month bands', tip: p => `around month ${p[0]}: ${Math.round(p[1] * 100)} % left` }, { kind: 'line', c: 'b', name: 'straight line', data: fnPts(m => 0.4424 - 0.00678 * m, 0, 72, 1) }, { kind: 'line', c: 'a', name: 'logistic regression', data: fnPts(m => sigma(-1.798 - 1.076 * (m - 37.46) / 21.01), 0, 72) }],
+    hlines: [{ y: 0 }], notes: [{ at: [71, -0.08], text: 'the line goes below 0', soft: true, anchor: 'end' }] }),
+  '4|sigmoid': () => plot({ title: 'The sigmoid σ(z) = 1 / (1 + e⁻ᶻ)', x: { min: -6, max: 6, ticks: TICKS(-6, 6, 2), label: 'score z' }, y: { min: 0, max: 1, ticks: TICKS(0, 1, 0.25), label: 'σ(z)' },
+    series: [{ kind: 'line', data: fnPts(sigma, -6, 6) }, { kind: 'pts', c: 'b', data: [[0, 0.5]], tip: () => 'z = 0: exactly 0.5' }],
+    hlines: [{ y: 0.5 }], notes: [{ at: [0.3, 0.44], text: 'z = 0 → 0.5' }, { at: [2.6, 0.9], text: 'close to 1', soft: true }, { at: [-5.8, 0.08], text: 'close to 0', soft: true }] }),
+  '4|calls': () => plot({ title: 'z = −2.5 + 0.8 × calls: three customers on the S curve', x: { min: -4, max: 4, ticks: TICKS(-4, 4, 2), label: 'score z' }, y: { min: 0, max: 1, ticks: TICKS(0, 1, 0.25), label: 'probability of leaving' },
+    series: [{ kind: 'line', c: 'ink', data: fnPts(sigma, -4, 4) }, { kind: 'pts', data: [[-2.5, 0.0759, 0], [-0.1, 0.475, 3], [1.5, 0.8176, 5]], tip: p => `${p[2]} calls: z = ${vnum(p[0])}, p = ${vnum(p[1])}` }],
+    hlines: [{ y: 0.5, label: 'threshold 0.5' }], notes: [{ at: [-3.9, 0.17], text: '0 calls: 0.08' }, { at: [-0.05, 0.36], text: '3 calls: 0.48' }, { at: [1.6, 0.74], text: '5 calls: 0.82' }] }),
+  '4|boundary': () => plot({ title: 'The 200 validation customers and the line where p = 0.5: below it, p > 0.5 (predicted to leave)', h: 330, x: { min: 0, max: 73, ticks: TICKS(0, 72, 12), label: 'months as a customer' }, y: { min: 0, max: 25, ticks: TICKS(0, 25, 5), label: 'hours watched per week' },
+    series: [{ kind: 'pts', c: 'b', r: 3.5, name: 'stayed', data: VAL_CUSTOMERS.filter(p => !p[2]), tip: p => `${p[0]} months, ${p[1]} h: stayed` }, { kind: 'pts', c: 'a', r: 3.5, name: 'left', data: VAL_CUSTOMERS.filter(p => p[2]), tip: p => `${p[0]} months, ${p[1]} h: left` }, { kind: 'line', c: 'ink', data: [[0, 13.56], [42.34, 0]], key: false }],
+    notes: [{ at: [44, 1.2], text: 'p = 0.5' }] }),
+  '4|log-loss': () => plot({ title: 'The loss of one customer, against the probability the model gave', x: { min: 0, max: 1, ticks: TICKS(0, 1, 0.25), label: 'predicted probability of leaving p' }, y: { min: 0, max: 4.6, ticks: TICKS(0, 4, 1), label: 'loss' },
+    series: [{ kind: 'line', c: 'a', name: 'left (y = 1): −log p', data: fnPts(p => -Math.log(p), 0.01, 0.995) }, { kind: 'line', c: 'b', name: 'stayed (y = 0): −log(1 − p)', data: fnPts(p => -Math.log(1 - p), 0.005, 0.99) }],
+    notes: [{ at: [0.03, 4.3], text: 'confident and wrong: 4.6' }, { at: [0.36, 1.25], text: 'p = 0.5: 0.69 either way' }] }),
+  '4|threshold': () => plot({ title: 'Predicted probabilities of the 200 validation customers', x: PROB_AXIS, y: { min: 0, max: 90, ticks: TICKS(0, 90, 30), label: 'customers' },
+    series: [{ kind: 'bars', c: 'b', name: 'stayed', data: PROBA_STAY.map((n, i) => [i * 0.05, i * 0.05 + 0.025, n]), tip: p => `${vnum(p[0])} to ${vnum(p[0] + 0.05)}: ${p[2]} stayed` }, { kind: 'bars', c: 'a', name: 'left', data: PROBA_LEAVE.map((n, i) => [i * 0.05 + 0.025, i * 0.05 + 0.05, n]), tip: p => `${vnum(p[0] - 0.025)} to ${vnum(p[0] + 0.025)}: ${p[2]} left` }],
+    vlines: [{ x: 0.5, label: 'threshold 0.5' }] }),
+  '4|ten-customers': () => plot({ title: 'The ten customers by score, and three thresholds', h: 200, x: { min: 0, max: 1, ticks: TICKS(0, 1, 0.25), label: 'score p' }, y: { min: -0.6, max: 1.6, ticks: [], label: '' },
+    series: [{ kind: 'pts', c: 'b', r: 6, name: 'stays', data: TEN_PTS.filter(p => !p[1]).map(p => [p[0], 0]), tip: p => `${vnum(p[0])}: stays` }, { kind: 'pts', c: 'a', r: 6, name: 'leaves', data: TEN_PTS.filter(p => p[1]).map(p => [p[0], 1]), tip: p => `${vnum(p[0])}: leaves` }],
+    vlines: [{ x: 0.3, label: '0.3' }, { x: 0.5, label: '0.5' }, { x: 0.7, label: '0.7' }], notes: [{ at: [0.01, 0.25], text: 'stays', soft: true }, { at: [0.01, 1.25], text: 'leaves', soft: true }] }),
+  '4|roc': () => plot({ title: 'The ROC curve of the ten customers', h: 320, x: RATE_AXIS('false positive rate'), y: RATE_AXIS('true positive rate (recall)'),
+    series: [{ kind: 'line', c: 'ink', dash: true, data: [[0, 0], [1, 1]], name: 'random scores', at: [0.62, 0.55] }, { kind: 'line', data: [[0, 0], [0, 0.25], [0, 0.5], [0.167, 0.5], [0.167, 0.75], [0.333, 0.75], [0.5, 0.75], [0.5, 1], [1, 1]] }, { kind: 'pts', data: [[0, 0.5, 0.7], [0.167, 0.75, 0.5], [0.5, 1, 0.3]], tip: p => `threshold ${p[2]}: FPR ${vnum(p[0])}, TPR ${vnum(p[1])}` }],
+    notes: [{ at: [0.03, 0.44], text: 't = 0.7' }, { at: [0.19, 0.7], text: 't = 0.5' }, { at: [0.52, 0.94], text: 't = 0.3' }] }),
+  '4|auc': () => plot({ title: 'The area under the curve of the ten customers: 20 / 24 ≈ 0.83', h: 320, x: RATE_AXIS('false positive rate'), y: RATE_AXIS('true positive rate'),
+    series: [{ kind: 'area', edge: true, data: [[0, 0.5], [0.167, 0.5], [0.167, 0.75], [0.5, 0.75], [0.5, 1], [1, 1]] }, { kind: 'line', c: 'ink', dash: true, data: [[0, 0], [1, 1]] }],
+    notes: [{ at: [0.6, 0.45], text: 'AUC ≈ 0.83' }, { at: [0.72, 0.62], text: 'random: 0.5', soft: true }] }),
+  '4|roc-ours': () => plot({ title: 'ROC curve of the 200 validation customers, AUC 0.946', h: 320, x: RATE_AXIS('false positive rate'), y: RATE_AXIS('true positive rate (recall)'),
+    series: [{ kind: 'line', c: 'ink', dash: true, data: [[0, 0], [1, 1]], name: 'random scores', at: [0.62, 0.55] }, { kind: 'line', data: ROC_OURS }, { kind: 'pts', c: 'b', data: [[0.049, 0.658, 0.5], [0.111, 0.842, 0.3]], tip: p => `threshold ${p[2]}: ${Math.round(p[1] * 100)} % found, ${Math.round(p[0] * 100)} % flagged` }],
+    notes: [{ at: [0.07, 0.6], text: 't = 0.5' }, { at: [0.13, 0.79], text: 't = 0.3' }] }),
+  '4|pr-curve': () => plot({ title: 'Precision-recall curve of the validation customers, one dot every 0.05 of threshold', h: 320, x: RATE_AXIS('recall'), y: RATE_AXIS('precision'),
+    series: [{ kind: 'line', data: PR_OURS }, { kind: 'pts', data: PR_OURS, r: 3.5, tip: p => `threshold ${p[2]}: recall ${p[0]}, precision ${p[1]}` }],
+    hlines: [{ y: 0.19, label: 'random scores: 0.19' }], notes: [{ at: [0.6, 0.81], text: 't = 0.5' }, { at: [0.85, 0.66], text: 't = 0.3' }] }),
+  '4|cheapest': () => plot({ title: 'Cost of the errors on validation, 50 × FP + 150 × FN', x: { min: 0.05, max: 0.95, ticks: TICKS(0.1, 0.9, 0.2), label: 'threshold' }, y: { min: 0, max: 5000, ticks: TICKS(0, 5000, 1000), label: 'cost (€)', fmt: v => v.toLocaleString('en') },
+    series: [{ kind: 'line', c: 'ink', data: [[0.1, 2400], [0.2, 2050], [0.3, 1800], [0.4, 1850], [0.5, 2350], [0.6, 3100], [0.7, 3600], [0.8, 4050], [0.9, 4950]] }, { kind: 'pts', data: [[0.1, 2400], [0.2, 2050], [0.3, 1800], [0.4, 1850], [0.5, 2350], [0.6, 3100], [0.7, 3600], [0.8, 4050], [0.9, 4950]], tip: p => `threshold ${p[0]}: ${p[1].toLocaleString('en')} €` }],
+    notes: [{ at: [0.3, 1450], text: 'cheapest: 0.3, 1,800 €', anchor: 'middle' }, { at: [0.52, 2150], text: '0.5: 2,350 €' }] }),
+};
+
 /* ---------- Store: this browser first, then the account ---------- */
 // The same marks and notes as the Python page, under keys that start with llms|.
 const ON_BRAIN = location.pathname.startsWith('/llms');
@@ -2135,6 +2289,7 @@ function cardHtml(s, c, gi) {
     ${paras(c.what)}
     ${c.list ? `<ol class="rules">${c.list.map(ruleHtml).join('')}</ol>` : ''}
     ${c.f ? `<pre>${mathHtml(c.f)}</pre>` : ''}
+    ${VIZ[`${s.n}|${c.id}`] ? VIZ[`${s.n}|${c.id}`]() : ''}
     ${x.html ? x.html() : ''}
     ${r ? readsHtml(r) : ''}
     ${x.say ? `<p>${kwText(x.say)}</p>` : ''}${x.f ? `<pre>${mathHtml(x.f)}</pre>` : ''}
