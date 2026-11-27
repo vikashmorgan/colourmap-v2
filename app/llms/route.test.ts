@@ -53,6 +53,9 @@ describe('/llms class page', () => {
     expect(html).toContain('<summary>How to read your result</summary>');
     // The lines you write, in orange, and the twins card.
     expect(html).toContain('const EX_MINE = {');
+    // The exercise at a glance: what they ask, what you fill, what to remember.
+    expect(html).toContain('const GLANCE = {');
+    expect(html).toContain('<summary>The exercise at a glance</summary>');
     expect(html).toContain("id: 'twins'");
     expect(html).toContain('<summary>The story: the session as one read</summary>');
     // Start or pause the Timer, today's sessions as a graph, and the formula blocks as closed pills.

@@ -314,6 +314,19 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .ess-item.flash { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
   .ess-item p { margin: 0; }
   /* The summary again at the start of each lecture: a closed brown pill, the same ideas, dots, notes and highlights as at the end. */
+  /* The exercise at a glance (2026-11-27). */
+  .glance { margin: 0 0 14px; }
+  .glance > summary { font-weight: 600; color: var(--accent); }
+  .glance-data { margin: 4px 0 10px; font-style: italic; }
+  .glance-tbl { width: 100%; table-layout: fixed; }
+  .glance-tbl th:first-child { width: 72px; }
+  .glance-tbl th:nth-child(2) { width: 42%; }
+  .glance-tbl td { vertical-align: top; font: 15px/1.45 Georgia, 'Times New Roman', serif; white-space: normal; padding: 5px 12px 5px 0; }
+  .glance-tbl code { font-size: 12.5px; white-space: normal; overflow-wrap: anywhere; }
+  .glance-rem { margin: 4px 0 10px; padding-left: 20px; line-height: 1.6; }
+  .glance-rem li { margin-bottom: 4px; }
+  .glance-pattern { padding-top: 10px; border-top: 1px solid var(--line); margin: 0; }
+  .glance-pattern b { display: block; font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
   /* The story: the session as one read (2026-11-27). */
   .story { margin: 16px 0 4px; }
   .story > summary { font-weight: 600; color: var(--accent); }
@@ -2708,6 +2721,106 @@ const STORY = {
     ],
     next: "Session 5: learning without answers, and a mock exam." },
 };
+/* ---------- The exercise at a glance ----------
+   Asked for 2026-11-27: "for all the exercise sessions, what did they ask, what should we fill, and then a small part:
+   what is there to remember from the process, so I get the pattern of what they need me to learn". One closed fold
+   at the top of each session's exercise: per task, what is asked and the line you write, then the lesson of the
+   process. Each task links to its card. */
+const GLANCE = {
+  1: { data: '54,000 diamonds: is the price explained by weight and quality?',
+    rows: [
+      ['ex-t1', 'How big is the table, and which columns are categories?', 'diamonds.head(10), diamonds.shape'],
+      ['ex-t2', 'What range do the numbers cover?', 'diamonds.describe()'],
+      ['ex-t3', 'How is the price spread?', "plt.hist(diamonds['price'], bins=50)"],
+      ['ex-t4', 'How does the price move with the weight?', "plt.scatter(carat, price, s=5, alpha=0.1)"],
+      ['ex-t5', 'How many diamonds of each cut?', "value_counts()[CUT_ORDER], then plt.bar"],
+      ['ex-t6', 'Do better cuts cost more?', "sns.boxplot(x='cut', y='price', order=CUT_ORDER)"],
+      ['ex-t7', 'Does the mean price grow with clarity?', "groupby('clarity')['price'].mean(), then plt.plot"],
+      ['ex-t8', 'Price against weight, coloured by cut', "sns.scatterplot(..., hue='cut')"],
+      ['ex-t9', 'Two panels in one figure', 'fig, axes = plt.subplots(1, 2)'],
+      ['ex-t10', 'Save the figure', "fig.savefig('diamonds_overview.png', dpi=150)"],
+    ],
+    remember: [
+      'Look before any model: shape, describe, then one plot per question.',
+      'The question picks the plot. One column’s spread: histogram. Two numbers together: scatter. Counts per category: bar. A number across groups: box plot. A value along an order: line.',
+      'Order the categories by meaning (CUT_ORDER), not by the alphabet.',
+      'Every plot gets axis labels and a title, and every task ends with a sentence that says what you see.',
+      'Two variables can hide a third: clarity seems to lower the price only because clear diamonds are smaller (Task 4).',
+    ] },
+  2: { data: '150 used cars: predict the price from age, mileage and power.',
+    rows: [
+      ['ex-t1', 'What is in the table?', 'cars.shape, cars.head(), cars.describe()'],
+      ['ex-t2', 'Which feature goes with the price, and is it a straight line?', 'one scatter per feature, in subplots'],
+      ['ex-t3', 'Three sets: 60 / 20 / 20', 'train_test_split twice, the test set first'],
+      ['ex-t4', 'A line from age alone: what is w?', "LinearRegression().fit(train[['age']], …), coef_, intercept_"],
+      ['ex-t5', 'Draw the line over the points', 'plt.plot(grid, simple.predict(grid))'],
+      ['ex-t6', 'All three features: one weight each', 'fit(train[FEATURES], …), coef_'],
+      ['ex-t7', 'Which model is best on validation?', 'regression_metrics for baseline, simple, multiple'],
+      ['ex-t8', 'Does the error show a pattern?', 'residuals = y − predicted, scatter, line at 0'],
+      ['ex-t9', 'Gradient descent: three learning rates', 'standardise age, run gradient_descent, plot the losses'],
+      ['ex-t10', 'Which polynomial degree?', 'train and val MSE for degrees 1 to 10, idxmin'],
+      ['ex-t11', 'Final score', 'refit on train + val, regression_metrics on the test set, once'],
+    ],
+    remember: [
+      'The recipe: look, split (test set first), fit on training, compare on validation, choose, refit, test once.',
+      'Always beat a baseline: the mean price for everyone. A model that does not is useless.',
+      'Read a weight in words and units: “one more year takes w thousand € off the price”.',
+      'One number is not enough: look at the residuals. A pattern means the model misses a shape.',
+      'Training error always falls with more flexibility; the validation error tells you when to stop.',
+    ] },
+  3: { data: '200 offices for rent: predict the monthly rent from six features.',
+    rows: [
+      ['ex-t1', 'Two sets only: 80 / 20', 'train_test_split(offices, test_size=0.2)'],
+      ['ex-t2', 'Which features move together?', "sns.heatmap(train.corr(), annot=True)"],
+      ['ex-t3', 'One model, five folds', 'KFold(5, shuffle=True), −cross_val_score(…), mean and std'],
+      ['ex-t4', 'Leave-one-out: same error, more time?', 'cross_val_score(…, cv=LeaveOneOut())'],
+      ['ex-t5', 'Which degree?', 'pipeline(scaler, PolynomialFeatures, LinearRegression), validation_curve'],
+      ['ex-t6', 'Ridge against Lasso', 'make_pipeline(StandardScaler(), Ridge / Lasso), [-1].coef_'],
+      ['ex-t7', 'In what order does Lasso drop the features?', 'loop over α, store coef_, plot with a log x axis'],
+      ['ex-t8', 'Best degree and α together', 'GridSearchCV(pipeline, param_grid, cv=kfold)'],
+      ['ex-t9', 'Final score', 'search.best_estimator_ on the test set, once'],
+    ],
+    remember: [
+      'Cross-validation replaces the validation set: every candidate gets the same folds, and you read the mean and the spread.',
+      'scikit-learn maximises scores, so errors come back negative: put a minus sign in front.',
+      'Put the scaler inside a pipeline, so each fold learns its own mean and spread: no leakage.',
+      'A flexible model needs a penalty. Ridge shrinks every weight; Lasso turns some off. Twins: Ridge splits, Lasso picks one.',
+      'Hyperparameters (degree, α) are chosen by cross-validation, never by the test set. Step names in a grid: polynomialfeatures__degree, ridge__alpha.',
+    ] },
+  4: { data: '1,500 bank loans: predict whether a borrower will default.',
+    rows: [
+      ['ex-t1', 'How rare are defaults?', "loans['default'].mean(), a bar plot of the two counts"],
+      ['ex-t2', 'Three sets that keep the default rate', 'train_test_split(…, stratify=…) twice'],
+      ['ex-t3', 'Which features push towards default?', 'pipeline(StandardScaler, LogisticRegression), coef_, barh'],
+      ['ex-t4', 'How do the probabilities split the two groups?', 'predict_proba(X_val)[:, 1], two histograms, line at 0.5'],
+      ['ex-t5', 'What does it get wrong at 0.5?', 'confusion_matrix, heatmap, classification_metrics'],
+      ['ex-t6', 'How well does it rank the loans?', 'roc_curve, precision_recall_curve, roc_auc_score'],
+      ['ex-t7', 'Which threshold costs the bank least?', 'loop 0.1 … 0.9: FP, FN, cost = 1000·FP + 5000·FN, idxmin'],
+      ['ex-t8', 'Do balanced weights help?', "LogisticRegression(class_weight='balanced'), compare"],
+      ['ex-t9', 'Final score', 'the chosen threshold on the test set, once'],
+    ],
+    remember: [
+      'Start with the class balance: when defaults are rare, always saying “repaid” already scores a high accuracy.',
+      'The model gives a probability; the threshold is a business decision, chosen on validation.',
+      'Accuracy can lie when the positive class is rare: read the confusion matrix, recall and precision.',
+      'The AUC judges the ranking, at every threshold at once; the cost table picks one threshold.',
+      'Stratify every split, so each set keeps the same share of defaults.',
+    ] },
+};
+// The pattern behind all the exercises, the same every session.
+const GLANCE_PATTERN = 'Every exercise follows the same arc: look at the data, split it, fit on training, compare candidates on data the model has not seen, choose, then test once and say what the number means in euros or units. What changes from session to session is the comparing step: validation (2), cross-validation and penalties (3), thresholds and costs (4).';
+function glanceHtml(s) {
+  const g = GLANCE[s.n];
+  if (!g) return '';
+  const cards = s.groups.flatMap(x => x.cards);
+  const name = id => { const c = cards.find(x => x.id === id); return c ? `<button type="button" class="ref-go" data-go="${esc(cardKey(s.n, id))}">${esc(c.name.split(' · ')[0])} ›</button>` : ''; };
+  return `<details class="ess-fold glance" id="glance"><summary>The exercise at a glance</summary>`
+    + `<p class="glance-data">${esc(g.data)}</p>`
+    + `<div class="tbl-wrap"><table class="glance-tbl"><thead><tr><th>Task</th><th>What they ask</th><th>What you fill</th></tr></thead><tbody>`
+    + g.rows.map(([id, ask, fill]) => `<tr><td>${name(id)}</td><td>${esc(ask)}</td><td><code>${esc(fill)}</code></td></tr>`).join('')
+    + `</tbody></table></div><p class="flow-label">What to remember from the process</p><ul class="glance-rem">${g.remember.map(r => `<li>${kwText(r)}</li>`).join('')}</ul>`
+    + `<p class="glance-pattern"><b>The pattern</b>${esc(GLANCE_PATTERN)}</p></details>`;
+}
 function storyHtml(s) {
   const st = STORY[s.n];
   if (!st) return '';
@@ -2733,7 +2846,7 @@ function renderSession() {
     + storyHtml(s)
     + summaryTopHtml(s)
     + `<details class="pic" id="pic" data-seg="pic"${picOpen() ? ' open' : ''}><summary>The picture: the session on one page</summary><div class="pic-body">${(PICTURES[s.n] || (() => ''))()}</div></details>`
-    + s.groups.map((g, gi) => `<section class="seg" data-seg="g${gi}" style="--h: ${segHue(gi)}">${segRail(s, gi)}${partHead(s, gi, g.name)}${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c, gi)).join('')}</div><div class="own-boxes" data-box-key="${esc(boxKey(s.n, gi))}" data-part="Part ${gi + 1}/${s.groups.length + 2}"></div></section>`).join('')
+    + s.groups.map((g, gi) => `<section class="seg" data-seg="g${gi}" style="--h: ${segHue(gi)}">${segRail(s, gi)}${partHead(s, gi, g.name)}${g.flow ? `<p class="flow-label">${esc(g.flowLabel)}</p><p class="flow">${g.flow.map(f => `<span>${esc(f)}</span>`).join('<em>→</em>')}</p><div style="height: 10px"></div>` : ''}${g.cards.some(c => c.id.startsWith('ex-')) ? glanceHtml(s) : ''}<div class="cards">${g.cards.map(c => cardHtml(s, c, gi)).join('')}</div><div class="own-boxes" data-box-key="${esc(boxKey(s.n, gi))}" data-part="Part ${gi + 1}/${s.groups.length + 2}"></div></section>`).join('')
     + `<section class="seg" data-seg="practice" style="--h: ${segHue(s.groups.length)}">${segRail(s, s.groups.length)}${partHead(s, s.groups.length, 'Practice')}<p class="group-note">Try each one on paper first, then open the answer.</p>${practiceHtml(s)}</section>`
     + `<section class="seg" data-seg="recap" style="--h: ${segHue(s.groups.length + 1)}">${segRail(s, s.groups.length + 1)}${partHead(s, s.groups.length + 1, 'Summary')}${summaryHtml(s)}</section>`;
   paintNotes();
