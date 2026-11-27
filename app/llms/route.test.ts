@@ -47,6 +47,9 @@ describe('/llms class page', () => {
     expect(html).toContain("uses: ['two-prices', 'cheapest']");
     // The lessons' charts: one per card whose idea is a shape.
     expect(html).toContain('const VIZ = {');
+    // The story: each session as one read, with its charts.
+    expect(html).toContain('const STORY = {');
+    expect(html).toContain('<summary>The story: the session as one read</summary>');
     // Start or pause the Timer, today's sessions as a graph, and the formula blocks as closed pills.
     expect(html).toContain('class="tc-play"');
     expect(html).toContain('function tmDayGraph(day)');
