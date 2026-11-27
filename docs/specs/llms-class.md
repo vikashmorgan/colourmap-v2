@@ -68,6 +68,7 @@ Asked for: "add ability to start or pause the sessions, and a counter that shows
 - Under the clock: **Today: N sessions · total time**. A session counts once it has a minute.
 - A closed **More** pill holds a bar graph of today's sessions: one bar per session, its height the minutes, coloured like the clock, the start time under it, the session and length on hover.
 - On every card, **What each piece means** and **Worked out, step by step** are closed pills side by side; a click opens one, and it takes the full width.
+- On the exercise task cards, **How to read your result** and **Watch out** join the same row of closed pills (asked for: "make sure the open closable stuff also for the exercises"). The code stays visible. Lecture cards keep their Watch out open.
 
 ## Your slides
 
