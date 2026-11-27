@@ -55,6 +55,9 @@ describe('/llms class page', () => {
     expect(html).toContain('const EX_MINE = {');
     // The exercise at a glance: what they ask, what you fill, what to remember.
     expect(html).toContain('const GLANCE = {');
+    // Exercise tasks: the gaps first, then the answer and its result as closed pills.
+    expect(html).toContain('const EX_RUN = {');
+    expect(html).toContain('<summary>My answer</summary>');
     expect(html).toContain('<summary>The exercise at a glance</summary>');
     expect(html).toContain("id: 'twins'");
     expect(html).toContain('<summary>The story: the session as one read</summary>');

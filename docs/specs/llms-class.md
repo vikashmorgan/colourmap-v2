@@ -64,6 +64,16 @@ Card 3.12 explains why two features that move together are where Ridge and Lasso
 
 Asked for: "for all the exercise sessions, what did they ask, what should we fill, and what is there to remember from the process, so I get the pattern of what they need me to learn". At the top of each session's exercise part sits a closed fold, **The exercise at a glance**. It opens with one line on the dataset, then a table with one row per task: the task (a link to its card), what they ask as a question, and the call you write. Below the table are five points to remember from the process, and the pattern every exercise shares: look, split, fit on training, compare on unseen data, choose, test once, say what the number means. Only the comparing step changes between sessions: validation (2), cross-validation and penalties (3), thresholds and costs (4).
 
+## Gaps, answer and result (2026-11-27)
+
+Asked for: "generate the graphs for these exercise sessions, and keep first the code lines with gaps they gave us and then your answer so I can compare, with open closable tabs". On every exercise task card (sessions 1 to 4):
+
+- **The notebook's code, with the gaps** is shown first, as the course notebook gives it, with its `...` (sessions 2 to 4; session 1's empty notebook is not available).
+- **My answer** is a closed pill holding the full answer, with the lines you write in orange.
+- **The result** is a closed pill with the graph the answer draws and what it prints.
+
+Graphs and printed outputs come from running each course notebook top to bottom with the answers in place of the gaps (`EX_RUN` in the page). The 27 figures are PNGs in `public/llms-ex/`.
+
 ## The exercises
 
 Each session's take-home notebook has a part of its own. An intro card covers the dataset, the imports, how to submit and the course's AI rule (a help, not a replacement). Then each task has one card: what it asks, the lecture idea it practises, the code with *What each piece means* (including the blanks of the starter cells), *How to read your result* for the written answers, and the classic mistake. The final numbers and the written answers are left to the user.
