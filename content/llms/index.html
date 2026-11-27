@@ -333,8 +333,15 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .glance-pattern { padding-top: 10px; border-top: 1px solid var(--line); margin: 0; }
   .glance-pattern b { display: block; font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
   /* The story: the session as one read (2026-11-27). */
-  .story { margin: 16px 0 4px; }
-  .story > summary { font-weight: 600; color: var(--accent); }
+  .story { --mine: #c0643f; margin: 18px 0 8px; padding: 14px 18px; border: 1px solid color-mix(in srgb, var(--mine) 35%, var(--line)); border-left: 4px solid var(--mine); background: color-mix(in srgb, var(--mine) 9%, var(--card)); box-shadow: 0 6px 18px -10px color-mix(in srgb, var(--mine) 45%, transparent); }
+  [data-theme="night"] .story { --mine: #e08a62; }
+  .story > summary { align-items: center; }
+  .story > summary::after { align-self: center; color: var(--mine); }
+  .story-head { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .story-eye { font: 700 11px system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--mine); }
+  .story-title { font-size: 20px; font-weight: 600; color: var(--ink); }
+  .story-peek { font-size: 15px; line-height: 1.5; color: var(--soft); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .story[open] .story-peek { display: none; }
   .story-lead { font-size: 17px; line-height: 1.6; margin: 0 0 6px; }
   .story-part { padding: 12px 0 4px; border-top: 1px solid var(--line); }
   .story-part h3 { display: flex; gap: 10px; align-items: baseline; margin: 0 0 6px; font-size: 18px; font-weight: 600; }
@@ -2838,7 +2845,9 @@ function storyHtml(s) {
   if (!st) return '';
   const cards = s.groups.flatMap(g => g.cards);
   const go = id => { const c = cards.find(x => x.id === id); return c ? `<button type="button" class="ref-go" data-go="${esc(cardKey(s.n, c.id))}">${esc(c.num.split('.')[1])} · ${esc(c.name)} ›</button>` : ''; };
-  return `<details class="ess-fold story" id="story"${storyOpen() ? ' open' : ''}><summary>The story: the session as one read</summary>`
+  // Highlighted (2026-11-27, "need to highlight that first quick summary story part"): start here, reading time, and the lead shows while closed.
+  const words = [st.lead, ...st.parts.flatMap(x => x.p), st.next].join(' ').split(/\s+/).length;
+  return `<details class="ess-fold story" id="story"${storyOpen() ? ' open' : ''}><summary><span class="story-head"><span class="story-eye">Start here · ${Math.max(1, Math.round(words / 200))} min read</span><span class="story-title">The story: the session as one read</span><span class="story-peek">${esc(st.lead)}</span></span></summary>`
     + `<p class="story-lead">${kwText(st.lead)}</p>`
     + st.parts.map((x, i) => `<section class="story-part"><h3><span class="num">${i + 1}</span>${esc(x.h)}</h3>${x.p.map(t => `<p>${kwText(t)}</p>`).join('')}${(x.viz || []).map(k => (VIZ[k] ? VIZ[k]() : '')).join('')}<p class="story-go">${go(x.go)}</p></section>`).join('')
     + `<p class="story-next"><b>Next</b>${kwText(st.next)}</p></details>`;

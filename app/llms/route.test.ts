@@ -49,6 +49,7 @@ describe('/llms class page', () => {
     expect(html).toContain('const VIZ = {');
     // The story: each session as one read, with its charts.
     expect(html).toContain('const STORY = {');
+    expect(html).toContain('class="story-eye">Start here');
     // Exercise cards: reading the result and the watch-out are closed pills too.
     expect(html).toContain('<summary>How to read your result</summary>');
     // The lines you write, in orange, and the twins card.
