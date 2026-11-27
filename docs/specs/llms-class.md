@@ -52,6 +52,14 @@ Asked for after comparing with summaries written by the desktop agent: "summarie
 
 A chart was added for it on card 3.2: the degree each of five random cuts chooses (5, 3, 10, 5, 2).
 
+## The lines you write (2026-11-27)
+
+Asked for: "mark in warm orange the lines of code that you put in, so we understand". On the exercise task cards of sessions 2 to 4, the answer's lines that the notebook leaves as `...` or does not give at all are marked in warm orange: a tinted band with a bar on the left, plus a small key above the code ("The lines you write; the rest is given in the notebook"). The marks come from comparing each answer with the course's template notebooks (`EX_MINE`). Session 1's template is not available, so its code is not marked.
+
+## Twins: Ridge splits, Lasso picks (2026-11-27)
+
+Card 3.12 explains why two features that move together are where Ridge and Lasso behave differently. Say the pair needs a total weight of 2. Squared, sharing costs 1² + 1² = 2 against 2² = 4, so Ridge splits the weight. In absolute values both cost 2, so Lasso picks one. A chart of the penalty for each way of sharing goes with it. The story of session 3 tells the same, and exercise Task 6 links to the card.
+
 ## The exercises
 
 Each session's take-home notebook has a part of its own. An intro card covers the dataset, the imports, how to submit and the course's AI rule (a help, not a replacement). Then each task has one card: what it asks, the lecture idea it practises, the code with *What each piece means* (including the blanks of the starter cells), *How to read your result* for the written answers, and the classic mistake. The final numbers and the written answers are left to the user.

@@ -457,6 +457,12 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   /* What each piece means / Worked out, step by step: closed pills, opened on demand (asked for 2026-11-27). */
   .pill-fold > summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; list-style: none; width: fit-content; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); user-select: none; }
   .pill-fold > summary::-webkit-details-marker { display: none; }
+  /* The lines you write, in warm orange (2026-11-27). */
+  :root, [data-theme="day"] { --mine: #c0643f; }
+  [data-theme="night"] { --mine: #e08a62; }
+  .ln-mine { display: inline-block; min-width: 100%; background: color-mix(in srgb, var(--mine) 16%, transparent); box-shadow: -10px 0 0 color-mix(in srgb, var(--mine) 16%, transparent), -13px 0 0 var(--mine); border-radius: 0 3px 3px 0; }
+  .mine-key { display: flex; align-items: center; gap: 8px; margin: 0 0 -4px; font: 12px system-ui, sans-serif; color: var(--soft); }
+  .mine-key i { width: 14px; height: 10px; border-radius: 2px; background: color-mix(in srgb, var(--mine) 22%, transparent); border-left: 3px solid var(--mine); }
   .pill-fold > summary::after { content: '▸'; font-size: 10px; }
   .pill-fold[open] > summary::after { content: '▾'; }
   .pill-fold > summary:hover, .pill-fold > summary:focus-visible { color: var(--ink); border-color: var(--soft); }
@@ -1205,6 +1211,12 @@ Lasso:  MSE + λ Σⱼ |wⱼ|`, more: { html: shrinkTbl, f: `from sklearn.linear
 Ridge(alpha=1).fit(X, y).coef_     # array([1.16666667])
 Lasso(alpha=1).fit(X, y).coef_     # array([0.6])
 Lasso(alpha=2).fit(X, y).coef_     # array([0.])` }, watch: 'scikit-learn writes the two losses with different scalings: Ridge adds α Σ w² to the sum of the squared errors, Lasso adds α Σ |w| to half the MSE. The same α is not the same strength in Ridge and in Lasso.' },
+      // Asked for 2026-11-27: "two features that move together are exactly where Ridge and Lasso behave differently, why".
+      { id: 'twins', slide: 96, name: 'Two features that move together: Ridge splits, Lasso picks', what: 'When two features carry nearly the same information, such as an office’s area and its number of rooms, the model can give the credit to either one, or share it. The error barely changes either way, so plain least squares cannot choose, and its two weights can swing wildly. Ridge and Lasso break the tie in opposite ways, and the reason is the shape of each penalty.\n\nSay the two features together need a total weight of 2. Ridge charges the squares: all on one, 2² + 0² = 4; shared evenly, 1² + 1² = 2. Sharing is half the price, so Ridge splits the weight between the twins. Lasso charges the sizes: 2 + 0 = 2 and 1 + 1 = 2, the same price. Its penalty does not care how the weight is shared, so the smallest edge in the data decides, and the weight goes to one feature while the other drops to exactly 0.', f: `the two twins need a total weight of 2, shared as (w₁, w₂)
+
+          all on one (2, 0)    shared (1, 1)
+Ridge:    2² + 0² = 4          1² + 1² = 2   → sharing is cheaper: it splits
+Lasso:    2 + 0 = 2            1 + 1 = 2     → no preference: it picks one`, watch: 'Which twin Lasso keeps can change with a small change in the data, so do not read its choice as “the other feature does not matter”: it only says that one of the two was enough. In Task 6 of the exercise, area and rooms are such a pair.' },
       { id: 'two-models', slide: 107, name: 'Two models, one penalty: the trade', what: 'Model A has MSE 1.0 with weights (4, −3.5). Model B has MSE 1.2 with weights (0.5, 0.3). Without a penalty A wins: its error is lower. But two large weights of opposite sign are a sign that A is following the noise.\n\nAdd a penalty with λ = 0.1 and B wins, with Ridge and with Lasso: a slightly larger error, in exchange for much smaller weights.', more: { html: () => tbl(['model', 'MSE', 'weights', 'Ridge loss, λ = 0.1', 'Lasso loss, λ = 0.1'], [['A', '1.0', '(4, −3.5)', '3.825', '1.75'], ['B', '1.2', '(0.5, 0.3)', '*1.234', '*1.28']]) } },
       { id: 'ridge-poly', slide: 111, name: 'Ridge on a degree-12 polynomial: λ is one more setting', what: 'The degree-12 curve of the TV budget, three times. λ = 0: it wiggles, CV MSE 4.44. Ridge with λ = 10: smooth, CV MSE 3.99. Ridge with λ = 1000: too flat, CV MSE 6.14.\n\nToo little penalty overfits and too much underfits, just as with the degree. So λ is one more setting to choose, and cross-validation chooses it.', more: { html: () => tbl(['λ', 'the curve', '5-fold CV MSE'], [['0', 'wiggles: overfits', '4.44'], ['10', 'smooth', '*3.99'], ['1000', 'too flat: underfits', '6.14']]) } },
       { id: 'scale-first', slide: 117, name: 'Scale first: the penalty sees numbers, not units', what: 'The penalty only sees the size of each weight, and a weight’s size depends on its feature’s unit. An office’s area in m² gets a weight of 0.015 (thousand € of rent per m²). Measure the same area in thousands of m² and the weight becomes 15. Same model, same predictions, but w² goes from 0.000225 to 225: Ridge would punish the second a million times more.\n\nSo standardise every feature first, to mean 0 and standard deviation 1, and all of them are penalised alike. In code: `StandardScaler()` before the model, inside the same pipeline.', f: `make_pipeline(StandardScaler(), Ridge(alpha=10))` },
@@ -1293,7 +1305,7 @@ plt.xlabel('degree')
 plt.ylabel('MSE')
 plt.legend()
 plt.show()`, read: 'The lowest point of the CV curve is your degree. At degree 4, compare the two curves: the training error keeps falling, and the CV error? Then count: six inputs at degree 4 make 209 features (card “How fast the features grow”), and each round trains on 128 offices. Use the word overfitting.', watch: 'train_scores and cv_scores have one row per degree and one column per fold: average with axis=1, across the row. They are negative: put the minus in front.' },
-      { id: 'ex-t6', name: 'Task 6 · Ridge and Lasso', uses: ['penalty', 'ridge-lasso', 'scale-first'], what: 'On the six standardised features (no polynomial), fit a pipeline with Ridge(alpha=10) and one with Lasso(alpha=0.05) on the training set. Show their coefficients side by side in one table, one row per feature. Then say which coefficients Lasso sets to zero, why that makes sense for those two features, and how Ridge treats area and rooms.\n\nWhat it practises: the two penalties, and why the features are standardised first.', f: `ridge = make_pipeline(StandardScaler(), Ridge(alpha=10))
+      { id: 'ex-t6', name: 'Task 6 · Ridge and Lasso', uses: ['penalty', 'ridge-lasso', 'twins', 'scale-first'], what: 'On the six standardised features (no polynomial), fit a pipeline with Ridge(alpha=10) and one with Lasso(alpha=0.05) on the training set. Show their coefficients side by side in one table, one row per feature. Then say which coefficients Lasso sets to zero, why that makes sense for those two features, and how Ridge treats area and rooms.\n\nWhat it practises: the two penalties, and why the features are standardised first.', f: `ridge = make_pipeline(StandardScaler(), Ridge(alpha=10))
 ridge.fit(X_train, y_train)
 
 lasso = make_pipeline(StandardScaler(), Lasso(alpha=0.05))
@@ -1822,6 +1834,9 @@ const PROB_AXIS = { min: 0, max: 1, ticks: TICKS(0, 1, 0.25), label: 'predicted 
 const RATE_AXIS = label => ({ min: 0, max: 1, ticks: TICKS(0, 1, 0.25), label });
 
 const VIZ = {
+  '3|twins': () => plot({ title: 'Two twin features sharing a total weight of 2: the penalty for each way of sharing', h: 250, x: { min: 0, max: 1, ticks: [0, 0.25, 0.5, 0.75, 1], label: 'share of the weight given to the first twin', fmt: v => (v === 0 ? 'all on 2nd' : v === 1 ? 'all on 1st' : `${Math.round(v * 100)} %`) }, y: { min: 0, max: 4.5, ticks: TICKS(0, 4, 1), label: 'penalty' },
+    series: [{ kind: 'line', c: 'a', name: 'Ridge: w₁² + w₂², cheapest when shared', data: fnPts(s => 4 * (s * s + (1 - s) * (1 - s)), 0, 1) }, { kind: 'line', c: 'b', name: 'Lasso: |w₁| + |w₂|, the same everywhere', data: [[0, 2], [1, 2]] }, { kind: 'pts', c: 'a', key: false, data: [[0.5, 2]], tip: () => 'shared evenly: Ridge pays 2, its lowest' }],
+    notes: [{ at: [0.5, 1.55], text: 'Ridge: shared 1 + 1 = 2', anchor: 'middle' }, { at: [0.03, 4.15], text: 'Ridge: all on one = 4' }, { at: [0.97, 1.7], text: 'Lasso: 2 whatever the share', anchor: 'end' }] }),
   '3|one-split': () => plot({ title: 'Five random cuts of the same 120 stores: the degree each one chooses', h: 230, x: { min: 0.4, max: 5.6, ticks: [1, 2, 3, 4, 5], label: 'cut', fmt: v => `cut ${v}` }, y: { min: 0, max: 12, ticks: TICKS(0, 12, 3), label: 'chosen degree' },
     series: [{ kind: 'bars', data: [[0.65, 1.35, 5], [1.65, 2.35, 3], [2.65, 3.35, 10], [3.65, 4.35, 5], [4.65, 5.35, 2]], tip: p => `this cut chooses degree ${p[2]}` }],
     notes: [[1, 5], [2, 3], [3, 10], [4, 5], [5, 2]].map(([c, d]) => ({ at: [c, d + 0.5], text: String(d), anchor: 'middle' })) }),
@@ -2316,6 +2331,17 @@ function linksHtml(s, c) {
   return (used.length ? `<p class="links"><b>The lecture cards it practises</b>${used.map(go).join('')}</p>` : '')
     + (by.length ? `<p class="links"><b>Practised in the exercise</b>${by.map(go).join('')}</p>` : '');
 }
+/* The lines you write: asked for 2026-11-27, "mark in warm orange the lines of code that you put in, so we understand".
+   For each exercise task, the lines of the answer that are not in the notebook's template (where the template has
+   ... or nothing): computed from the course notebooks of sessions 2 to 4. Session 1's template is not available. */
+const EX_MINE = {"2|ex-t1":[0,1,2],"2|ex-t2":[2,3,4],"2|ex-t3":[0,1,2],"2|ex-t4":[1,2,3],"2|ex-t5":[2,3,4,5,6],"2|ex-t6":[1,2,3],"2|ex-t7":[1,4,5,6],"2|ex-t8":[0,1,3,4,5,6],"2|ex-t9":[0,4,7,8,9,10,11,12,13,14,16,17,18,19],"2|ex-t10":[0,1,8,9,13,14,15,17],"2|ex-t11":[1,2,4,5],"3|ex-t1":[0,5,6],"3|ex-t2":[1,3],"3|ex-t3":[0,2,3,4],"3|ex-t4":[1,5,6,8,9,10,11],"3|ex-t5":[0,8,9,12,13,14,15,16,17,18],"3|ex-t6":[0,3,4,6],"3|ex-t7":[3,4,5,9,10,11,12,13,14,15],"3|ex-t8":[0,2,3,5,7,8,13,14,15,16,17,18],"3|ex-t9":[0,1],"4|ex-t1":[1,4,5,6,7],"4|ex-t2":[0,1,7,8],"4|ex-t3":[0,1,3,7,8,9,10],"4|ex-t4":[0,5,6,7,8,9],"4|ex-t5":[0,1,4,5,6,7,8,11],"4|ex-t6":[0,1,2,5,6,7,8,9,10,12,13,14,15,16,17],"4|ex-t7":[4,7,10,11,12,15,16,17,18],"4|ex-t8":[0,2,5,6,7,8],"4|ex-t9":[0,1,3,4,5,6]};
+const NL = String.fromCharCode(10);
+function codeHtml(s, c) {
+  const mine = EX_MINE[`${s.n}|${c.id}`];
+  if (!mine) return `<pre>${mathHtml(c.f)}</pre>`;
+  const on = new Set(mine);
+  return `<p class="mine-key"><i></i>The lines you write; the rest is given in the notebook</p><pre class="has-mine">${mathHtml(c.f).split(NL).map((l, i) => (on.has(i) ? `<span class="ln-mine">${l}</span>` : l)).join(NL)}</pre>`;
+}
 function cardHtml(s, c, gi) {
   const key = cardKey(s.n, c.id), m = marks[key] || '';
   const r = READS[`${s.n}|${c.id}`], x = c.more || {};
@@ -2326,7 +2352,7 @@ function cardHtml(s, c, gi) {
     <h3><span class="num">${c.num.split('.')[1]}</span><span>${esc(c.name)}</span>${partTag(s, gi)}</h3>
     ${paras(c.what)}
     ${c.list ? `<ol class="rules">${c.list.map(ruleHtml).join('')}</ol>` : ''}
-    ${c.f ? `<pre>${mathHtml(c.f)}</pre>` : ''}
+    ${c.f ? codeHtml(s, c) : ''}
     ${VIZ[`${s.n}|${c.id}`] ? VIZ[`${s.n}|${c.id}`]() : ''}
     ${x.html ? x.html() : ''}
     ${r ? readsHtml(r, exPills) : exPills ? `<div class="pill-folds">${exPills}</div>` : ''}
@@ -2643,9 +2669,10 @@ const STORY = {
         "In code, cross_val_score returns errors as negative numbers (scikit-learn always maximises), so a minus sign turns them back into MSEs. For the degree of the TV curve, the CV error is lowest at degree 2."] },
       { h: "Too many features", go: 'grow', viz: ['3|grow'], p: [
         "Polynomials of several inputs add squares and products: with three budgets, 3, 9, 19 and 34 features at degrees 1 to 4. A training fold holds 96 stores, so 34 features is almost one weight for every three stores: enough freedom to follow the noise, and the CV error jumps."] },
-      { h: "A penalty on the weights: Ridge and Lasso", go: 'ridge-lasso', viz: ['3|ridge-lasso'], p: [
+      { h: "A penalty on the weights: Ridge and Lasso", go: 'ridge-lasso', viz: ['3|ridge-lasso', '3|twins'], p: [
         "Keep the features, but make large weights expensive: training minimises the error plus λ × the size of the weights. λ = 0 is plain least squares; a huge λ crushes every weight and predicts the mean.",
-        "Ridge measures size with squares: a volume knob that turns every weight down, none to exactly zero. Lasso uses absolute values: a switch that turns some weights off completely, choosing the features. On the degree-12 TV curve, Ridge with λ = 0 wiggles (CV MSE 4.44), λ = 10 is smooth (3.99), λ = 1000 is too flat (6.14). Scale the features first: the penalty sees numbers, not units."] },
+        "Ridge measures size with squares: a volume knob that turns every weight down, none to exactly zero. Lasso uses absolute values: a switch that turns some weights off completely, choosing the features. On the degree-12 TV curve, Ridge with λ = 0 wiggles (CV MSE 4.44), λ = 10 is smooth (3.99), λ = 1000 is too flat (6.14). Scale the features first: the penalty sees numbers, not units.",
+        "Twins show the difference best: two features that move together, like area and rooms. Ridge splits the weight between them, because sharing is cheaper when weights are squared (1² + 1² = 2 against 2² = 4). For Lasso both cost the same (1 + 1 = 2), so it picks one and drops the other."] },
       { h: "Grid search: every setting at once", go: 'grid', p: [
         "Parameters are learned by fit (w and b); hyperparameters are chosen by us (the degree, λ). A grid of 4 degrees × 5 values of λ is 20 combinations; with 5 folds, 100 fits, plus one refit of the winner. On the stores: degree 3 with λ = 1. The penalty rescues degree 4, and λ = 100 is too strong for all.",
         "Put the scaler in a pipeline, so in each round it learns its mean and spread from the training folds only: otherwise the validation fold leaks into training."] },
