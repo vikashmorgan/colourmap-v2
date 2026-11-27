@@ -54,6 +54,15 @@ From session 3 on, the lecture and the exercise point at each other. Each task c
 
 The examples are the deck's own: four stores (TV budget x = 1, 2, 3, 4; sales y = 3, 5, 4, 8) in sessions 2 and 3, and ten customers with their scores in session 4, each formula worked out on them by hand. The text is written in plain words. The slides are the teacher's material and this repository is public, so they are never committed. The decks and notebooks are kept in the user's Albert School classes folder under `LLMs`.
 
+## The Timer and the formula pills (2026-11-27)
+
+Asked for: "add ability to start or pause the sessions, and a counter that shows the sessions of the day and sum of the day; a more button with a graph that puts each session in. What each means and worked out step by step should be closed by default, with open/closable pills."
+
+- The Timer window has a **❚❚ Pause / ▶ Start** button. Paused, nothing counts even while you scroll or type; the clock button on the page dims. Start resumes the session (after a break of 30 minutes or more it becomes a new one). **New session** still starts a fresh one.
+- Under the clock: **Today: N sessions · total time**. A session counts once it has a minute.
+- A closed **More** pill holds a bar graph of today's sessions: one bar per session, its height the minutes, coloured like the clock, the start time under it, the session and length on hover.
+- On every card, **What each piece means** and **Worked out, step by step** are closed pills side by side; a click opens one, and it takes the full width.
+
 ## Your slides
 
 When a deck is missing, *Upload slides* files it as `LLMs1.pdf` to `LLMs4.pdf` in the private `coding-slides` folder, and each card's *Slide n/N ›* then opens its page.
