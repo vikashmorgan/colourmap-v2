@@ -27,6 +27,13 @@ const SPEED = [
 
 const MAGMA = ['Boiling Magma', 'Molten Core', 'Cracked Crust', 'Magma Currents', 'Eruptive Core'];
 const FIRE = ['Match', 'Candle', 'Gas Ring', 'Campfire', 'Wildfire'];
+const MANDALA = [
+  'Circuit Mandala',
+  'Cracked Mandala',
+  'Living Mandala',
+  'Lotus of Light',
+  'Star Gate',
+];
 
 function featuredNames() {
   return FEATURED_PRESETS.flatMap((item) => ('name' in item ? [item.name] : []));
@@ -138,7 +145,7 @@ describe('GeometryField featured presets', () => {
 
   it('has the three Wind presets in the Experiment tab after Magma, Fire and Speed, out of Stars', () => {
     const names = featuredFor('experiment').flatMap((i) => ('name' in i ? [i.name] : []));
-    const at = MAGMA.length + FIRE.length + SPEED.length;
+    const at = MANDALA.length + MAGMA.length + FIRE.length + SPEED.length;
     expect(names.slice(at, at + 3)).toEqual(['Wind', 'Wind Wing', 'Wind Body']);
     expect(['Wind', 'Wind Wing', 'Wind Body'].map((n) => PRESETS[n]?.particles)).toEqual([0, 1, 2]);
     for (const n of ['Wind', 'Wind Wing', 'Wind Body']) {
@@ -152,6 +159,7 @@ describe('GeometryField featured presets', () => {
   it('puts the three new star trees and ADN in the Experiment tab, after Wind', () => {
     const names = featuredFor('experiment').flatMap((i) => ('name' in i ? [i.name] : []));
     expect(names).toEqual([
+      ...MANDALA,
       ...MAGMA,
       ...FIRE,
       ...SPEED,
@@ -183,14 +191,30 @@ describe('GeometryField featured presets', () => {
     expect(artTabOf(PRESETS['Star Tree'].mode)).toBe('stars');
   });
 
-  it('opens Experiment with Magma, Fire, then Speed, then Wind and Life (16 Nov 2026, "put it on top")', () => {
+  it('opens Experiment with Mandala, then Magma, Fire, Speed, Wind and Life (newest on top)', () => {
     const headers = featuredFor('experiment').flatMap((i) => ('header' in i ? [i.header] : []));
-    expect(headers.slice(0, 5)).toEqual(['Magma', 'Fire', 'Speed', 'Wind', 'Life']);
+    expect(headers.slice(0, 6)).toEqual(['Mandala', 'Magma', 'Fire', 'Speed', 'Wind', 'Life']);
+  });
+
+  it('opens the Experiment tab with the five Mandalas, one Mandala mode, the Scene slider picking each (27 Nov 2026)', () => {
+    const exp = featuredFor('experiment');
+    const names = exp.flatMap((i) => ('name' in i ? [i.name] : []));
+    expect(exp[0]).toEqual({ header: 'Mandala' });
+    expect(names.slice(0, MANDALA.length)).toEqual(MANDALA);
+    MANDALA.forEach((n, i) => {
+      expect(PRESETS[n]).toMatchObject({ mode: 'mandala', particles: i, stars: 0 });
+    });
+    expect(artTabOf('mandala')).toBe('experiment');
+    for (const tab of ['stars', 'geometry', 'tunnels', 'oils'] as const) {
+      const others = featuredFor(tab).flatMap((i) => ('name' in i ? [i.name] : []));
+      for (const n of MANDALA) expect(others).not.toContain(n);
+    }
   });
 
   it('lists the five Fire pieces after Magma in Experiment, small to big, one Flames mode, the Scene slider picking each', () => {
     const names = featuredFor('experiment').flatMap((i) => ('name' in i ? [i.name] : []));
-    expect(names.slice(MAGMA.length, MAGMA.length + FIRE.length)).toEqual(FIRE);
+    const fireAt = MANDALA.length + MAGMA.length;
+    expect(names.slice(fireAt, fireAt + FIRE.length)).toEqual(FIRE);
     FIRE.forEach((n, i) => {
       expect(PRESETS[n]).toMatchObject({ mode: 'flames', particles: i });
     });
@@ -206,7 +230,7 @@ describe('GeometryField featured presets', () => {
 
   it('lists the Speed pieces right after Fire in Experiment, one Speed mode, the Scene slider picking each', () => {
     const names = featuredFor('experiment').flatMap((i) => ('name' in i ? [i.name] : []));
-    const at = MAGMA.length + FIRE.length;
+    const at = MANDALA.length + MAGMA.length + FIRE.length;
     expect(names.slice(at, at + SPEED.length)).toEqual(SPEED);
     SPEED.forEach((n, i) => {
       expect(PRESETS[n]).toMatchObject({ mode: 'speed', particles: i });
@@ -219,12 +243,13 @@ describe('GeometryField featured presets', () => {
     }
   });
 
-  it('opens the Experiment tab with the five Magma Cores, one Magma mode, the Method slider picking each', () => {
+  it('lists the five Magma Cores right after the Mandalas, one Magma mode, the Method slider picking each', () => {
     const exp = featuredFor('experiment');
     const names = exp.flatMap((i) => ('name' in i ? [i.name] : []));
-    expect(names.slice(0, MAGMA.length)).toEqual(MAGMA);
-    expect(exp[0]).toEqual({ header: 'Magma' });
-    expect(exp[1]).toMatchObject({ name: 'Boiling Magma' });
+    expect(names.slice(MANDALA.length, MANDALA.length + MAGMA.length)).toEqual(MAGMA);
+    // After the Mandala header and its five pieces.
+    expect(exp[MANDALA.length + 1]).toEqual({ header: 'Magma' });
+    expect(exp[MANDALA.length + 2]).toMatchObject({ name: 'Boiling Magma' });
     MAGMA.forEach((n, i) => {
       expect(PRESETS[n]).toMatchObject({ mode: 'magma', particles: i, stars: 0 });
     });

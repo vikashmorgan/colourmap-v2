@@ -47,6 +47,7 @@ import { buildCymatics, isCymaticsMode, updateCymatics } from './geometry-cymati
 import { buildFire, isFireMode, updateFire } from './geometry-fire';
 import { buildLiquidSeries, isLiquidMode, updateLiquidSeries } from './geometry-liquid';
 import { buildMagma, isMagmaMode, magmaBloom, updateMagma } from './geometry-magma';
+import { buildMandala, isMandalaMode, updateMandala } from './geometry-mandala';
 import { buildSpeed, isSpeedMode, updateSpeed } from './geometry-speed';
 import {
   buildGeometryVisual,
@@ -239,6 +240,8 @@ type Mode =
   | 'magma'
   // Fire — five flames from a match to a wildfire, on the flame tool (components/geometry-fire.ts)
   | 'flames'
+  // Mandala — five gold mandalas with light pulsing through them (components/geometry-mandala.ts)
+  | 'mandala'
   | 'murmuration'
   | 'fishschool'
   | 'flowmasks'
@@ -852,7 +855,8 @@ const isArtShaderMode = (mode: Mode): boolean =>
   kindOfBuilderMode(mode) !== undefined ||
   isSpeedMode(mode) ||
   isMagmaMode(mode) ||
-  isFireMode(mode);
+  isFireMode(mode) ||
+  isMandalaMode(mode);
 
 export const PRESETS: Record<string, Cfg> = {
   ...BUTTERFLY_PRESETS,
@@ -3046,6 +3050,69 @@ export const PRESETS: Record<string, Cfg> = {
     luminous: 1.4,
     stars: 0,
     mode: 'flames',
+  },
+  // 27 Nov 2026, from the gold mandala behind a Buddha portrait: "light pulsing through it. Like a
+  // cracked mandala that evolves continuously although it has a shape that reappears." One Mandala
+  // mode, the Scene slider picking the piece (lib/art/mandala-shaders.ts MANDALA_SCENES).
+  'Circuit Mandala': {
+    preset: 'Golden Source',
+    symmetry: 12,
+    complexity: 4,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 0,
+    luminous: 1.6,
+    stars: 0,
+    mode: 'mandala',
+  },
+  'Cracked Mandala': {
+    preset: 'Golden Source',
+    symmetry: 12,
+    complexity: 8,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 1,
+    luminous: 1.6,
+    stars: 0,
+    mode: 'mandala',
+  },
+  'Living Mandala': {
+    preset: 'Golden Source',
+    symmetry: 8,
+    complexity: 5,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 2,
+    luminous: 1.6,
+    stars: 0,
+    mode: 'mandala',
+  },
+  'Lotus of Light': {
+    preset: 'Golden Source',
+    symmetry: 8,
+    complexity: 4,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 3,
+    luminous: 1.6,
+    stars: 0,
+    mode: 'mandala',
+  },
+  'Star Gate': {
+    preset: 'Golden Source',
+    symmetry: 12,
+    complexity: 5,
+    glow: 5,
+    breathSpeed: 1,
+    intensity: 7,
+    particles: 4,
+    luminous: 1.6,
+    stars: 0,
+    mode: 'mandala',
   },
   'Liquid Quantum': {
     preset: 'Clifford Dream',
@@ -7690,6 +7757,7 @@ function buildModeGroup(cfg: Cfg, R: number): THREE.Group {
   if (isSpeedMode(cfg.mode)) return buildSpeed(cfg);
   if (isMagmaMode(cfg.mode)) return buildMagma(cfg);
   if (isFireMode(cfg.mode)) return buildFire(cfg);
+  if (isMandalaMode(cfg.mode)) return buildMandala(cfg);
   if (isLiquidMode(cfg.mode)) return buildLiquidSeries();
   if (isBigBangStarMode(cfg.mode)) return buildBigBangStars();
   switch (cfg.mode) {
@@ -7933,6 +8001,10 @@ function updateModeGroup(group: THREE.Group, cfg: Cfg, dots: Dot[], t: number, R
   }
   if (isFireMode(cfg.mode)) {
     updateFire(group, cfg, t);
+    return;
+  }
+  if (isMandalaMode(cfg.mode)) {
+    updateMandala(group, cfg, t);
     return;
   }
   if (isLiquidMode(cfg.mode)) {
@@ -15037,6 +15109,15 @@ const MODE_SLIDERS: Partial<Record<Mode, SliderDef[]>> = {
     { key: 'breathSpeed', label: 'Speed', min: 0, max: 2, step: 0.05 },
     { key: 'luminous', label: 'Bloom', min: 0, max: 4, step: 0.1 },
   ],
+  mandala: [
+    { key: 'particles', label: 'Scene', min: 0, max: 4, step: 1 },
+    { key: 'breathSpeed', label: 'Pulse', min: 0, max: 2, step: 0.05 },
+    { key: 'intensity', label: 'Light', min: 0, max: 10, step: 0.5 },
+    { key: 'complexity', label: 'Cracks', min: 0, max: 10, step: 0.5 },
+    { key: 'symmetry', label: 'Folds', min: 6, max: 16, step: 2 },
+    { key: 'glow', label: 'Gold Dust', min: 0, max: 10, step: 0.5 },
+    { key: 'luminous', label: 'Bloom', min: 0, max: 3, step: 0.1 },
+  ],
   flames: [
     { key: 'particles', label: 'Scene', min: 0, max: 4, step: 1 },
     { key: 'breathSpeed', label: 'Flicker', min: 0, max: 2, step: 0.05 },
@@ -15531,6 +15612,7 @@ const MODE_TO_PRESET: Partial<Record<Mode, string>> = {
   speed: 'Monza Lap',
   magma: 'Boiling Magma',
   flames: 'Match',
+  mandala: 'Circuit Mandala',
   murmuration: 'Murmuration',
   fishschool: 'Fish School',
   flowmasks: 'Flow Masks',
@@ -15718,6 +15800,7 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'speed', label: '» Speed' },
   { mode: 'magma', label: '● Magma' },
   { mode: 'flames', label: '♨ Flames' },
+  { mode: 'mandala', label: '✺ Mandala' },
   { mode: 'murmuration', label: '⋰ Murmuration' },
   { mode: 'fishschool', label: '⋰ Fish School' },
   { mode: 'flowmasks', label: '◕ Flow Masks' },
@@ -15838,6 +15921,7 @@ const EXPERIMENT_TAB_MODES = new Set<Mode>([
   'speed',
   'magma',
   'flames',
+  'mandala',
 ]);
 /** Presets kept in Experiment though their mode lives in another tab. */
 const EXPERIMENT_TAB_PRESETS = new Set<string>([
@@ -15982,6 +16066,13 @@ type FeaturedItem = { name: string; tag: string } | { header: string; dim?: bool
 export const FEATURED_PRESETS: FeaturedItem[] = [
   // The Experiment tab, from the top (16 Nov 2026, "put it on top"): Magma, Fire, Speed, Wind,
   // then the Star Trees and ADN.
+  // 27 Nov 2026: the Mandalas (components/geometry-mandala.ts), newest on top.
+  { header: 'Mandala' },
+  { name: 'Circuit Mandala', tag: 'CIRCUIT' },
+  { name: 'Cracked Mandala', tag: 'CRACKS' },
+  { name: 'Living Mandala', tag: 'LOOP' },
+  { name: 'Lotus of Light', tag: 'LOTUS' },
+  { name: 'Star Gate', tag: 'STARS' },
   // 16 Nov 2026: the Magma Cores, five methods (components/geometry-magma.ts). "put it on top":
   // Magma opens the tab, with Speed right after it.
   { header: 'Magma' },

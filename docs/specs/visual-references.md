@@ -103,6 +103,7 @@ The references Martin has pinned for the generative art, with what each one teac
 | Psychedelic circle | Liquid Forms · Psychedelic Circle | Chill Machine · Butterflies, design Circle |
 | Sacred geometry | Liquid Forms · Sacred Geometry | Chill Machine: music geometry (next) |
 | Digital mountains, floating island | Liquid Forms · Digital Peaks, Floating Island, Volcano | Chill Machine · Butterflies, designs |
+| Pulsing circuit mandala | Geometry Field · Experiment · Mandala (5 pieces) | Chill Machine: pulses on the beat (next) |
 
 ### 13. Eclipses with energy above and below (Martin's screenshots, 2026-10-26)
 - Files: `Desktop\ADMIN\ART\COLOURBRAIN\Eclipse\` (220523, 220621, 220711, 220725).
@@ -122,3 +123,7 @@ The references Martin has pinned for the generative art, with what each one teac
   - **Mountains:** data and wireframe peaks, a glass peak mirrored on water → Data Peak and Wire Peaks (Peak and Wire palettes).
   - **Butterfly:** rainbow wings with a cyan lace edge → Prism Wings (Prism palette).
   - **Bubble** and **Big Bang:** kept for reference; the Light Bubble and Big Bang categories already cover them.
+
+### 15. The pulsing circuit mandala (Martin, 2026-11-27)
+
+From the thumbnail of a meditation video ("Clear Mind"): behind a gold Buddha, a mandala of fine gold lines on black. It has concentric rings, radial spokes, triangle teeth and circuit-board traces, with gold dust around it. Martin: "light pulsing through it. Like a cracked mandala that evolves continuously although it has a shape that reappears." What it teaches: thin lines and black space carry it, the light should travel along the lines rather than wash over them, and the motion must loop so the shape returns. Live in Geometry Field · Experiment · Mandala.

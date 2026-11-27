@@ -625,3 +625,18 @@ For the Out of the Box projection room.
   - **Heat**: hotter is whiter, brighter and cleaner, with less smoke. Cooler is redder and smokier.
   - **Embers.**
   - **Bloom.**
+
+## Mandala: five gold mandalas with light pulsing through them (2026-11-27)
+
+Asked for: "can you see the mandala from this image, not the Buddha portrait but behind. There is light pulsing through it, like a cracked mandala that evolves continuously although it has a shape that reappears. Can you put some art visuals like that in experiments." The reference is the gold circuit mandala behind a meditation video's Buddha (docs/specs/visual-references.md, 15).
+
+- **Where:** at the top of the Experiment tab, under a *Mandala* header, before *Magma*, *Fire*, *Speed* and *Wind* (newest on top). There is one mode, `mandala`, and the **Scene** slider (0–4) picks the piece.
+- **The pieces:**
+  1. **Circuit Mandala**: the reference. Gold rings (some doubled), spokes, two sawtooth stars and bands of circuit-board traces with pads, folded into N mirrored wedges on black. Light runs out from the centre in soft fronts, pulses run along each trace at its own phase, a few faint cracks leak light, and gold dust twinkles.
+  2. **Cracked Mandala**: the same mandala as a gold plate in bands, broken by jagged fractures that ignore the symmetry, as a real crack would. Light pours through the cracks, which open and narrow over the loop.
+  3. **Living Mandala**: two symmetries (N and N + 4 folds) cross-fade, the layers turn a whole wedge per loop and the rings breathe, so the shape keeps changing and comes back.
+  4. **Lotus of Light**: six rings of petals with their veins, each lighting up in turn from the centre outwards.
+  5. **Star Gate**: nested hexagrams and hexagons, alternate layers turning the other way. They line up at the start of each loop and twist apart.
+- **The shape comes back:** every piece's shape follows a loop of 48 seconds at Pulse 1. All its motion (turns, breathing, cracks moving) is periodic on that loop, so the same mandala reappears. The light pulses run on their own clock over it.
+- **Sliders:** Scene, Pulse (the speed of both clocks; 0 stills it), Light (how much light runs through the lines), Cracks, Folds (6–16, even), Gold Dust, Bloom.
+- **Code:** components/geometry-mandala.ts builds one full-screen shader per piece, from lib/art/mandala-shaders.ts. Materials are made once and kept, so a slider move never recompiles a shader or restarts the loop.
