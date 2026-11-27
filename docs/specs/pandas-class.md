@@ -34,6 +34,15 @@ The text is written from the decks in plain words. The slides are the teacher's 
 
 *City* in the header opens `/pandas/city` ([spec](pandas-city.md)): the lessons as cities seen from above, every part in its own place and shape, read from this page itself. The page follows `#s-3` (a lecture) and `#c-3-nan` (a card or exercise) so the city can link straight in.
 
+## The Timer and the formula pills (2026-11-27)
+
+Asked for: "add ability to start or pause the sessions, and a counter that shows the sessions of the day and sum of the day; a more button with a graph that puts each session in. What each means and worked out step by step should be closed by default, with open/closable pills."
+
+- The Timer window has a **❚❚ Pause / ▶ Start** button. Paused, nothing counts even while you scroll or type; the clock button on the page dims. Start resumes the session (after a break of 30 minutes or more it becomes a new one). **New session** still starts a fresh one.
+- Under the clock: **Today: N sessions · total time**. A session counts once it has a minute.
+- A closed **More** pill holds a bar graph of today's sessions: one bar per session, its height the minutes, coloured like the clock, the start time under it, the session and length on hover.
+- On every card, **What each piece means** and **Worked out, step by step** are closed pills side by side; a click opens one, and it takes the full width.
+
 ## Your slides
 
 When a deck is missing, a dashed box at the bottom of the page offers *Upload slides*. The decks keep their own names: a PDF whose name has *DataFrames* is filed as `Pandas1.pdf`, one with *Selecting*, *Filtering* or *Slicing* as `Pandas2.pdf`, one with *Quality* as `Pandas3.pdf`, in the private `coding-slides` folder. `Pandas1.pdf`, or *session* and its number, works too. Each card's *Slide n/N ›* then opens its page.

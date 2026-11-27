@@ -109,5 +109,11 @@ describe('/pandas class page', () => {
     expect(html).toContain('contenteditable="true" role="textbox"');
     // Beige lesson boxes.
     expect(html).toContain('const SEG_HUE = 70;');
+    // Start or pause the Timer, today's sessions as a graph, and the formula blocks as closed pills.
+    expect(html).toContain('class="tc-play"');
+    expect(html).toContain('function tmDayGraph(day)');
+    expect(html).toContain(
+      '<details class="pill-fold reads"><summary>What each piece means</summary>',
+    );
   });
 });
