@@ -60,6 +60,10 @@ Asked for: "mark in warm orange the lines of code that you put in, so we underst
 
 Card 3.12 explains why two features that move together are where Ridge and Lasso behave differently. Say the pair needs a total weight of 2. Squared, sharing costs 1² + 1² = 2 against 2² = 4, so Ridge splits the weight. In absolute values both cost 2, so Lasso picks one. A chart of the penalty for each way of sharing goes with it. The story of session 3 tells the same, and exercise Task 6 links to the card.
 
+## The exercise at a glance (2026-11-27)
+
+Asked for: "for all the exercise sessions, what did they ask, what should we fill, and what is there to remember from the process, so I get the pattern of what they need me to learn". At the top of each session's exercise part sits a closed fold, **The exercise at a glance**. It opens with one line on the dataset, then a table with one row per task: the task (a link to its card), what they ask as a question, and the call you write. Below the table are five points to remember from the process, and the pattern every exercise shares: look, split, fit on training, compare on unseen data, choose, test once, say what the number means. Only the comparing step changes between sessions: validation (2), cross-validation and penalties (3), thresholds and costs (4).
+
 ## The exercises
 
 Each session's take-home notebook has a part of its own. An intro card covers the dataset, the imports, how to submit and the course's AI rule (a help, not a replacement). Then each task has one card: what it asks, the lecture idea it practises, the code with *What each piece means* (including the blanks of the starter cells), *How to read your result* for the written answers, and the classic mistake. The final numbers and the written answers are left to the user.
