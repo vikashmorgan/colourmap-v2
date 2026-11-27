@@ -78,6 +78,16 @@ Asked for: "generate the graphs for these exercise sessions, and keep first the 
 
 Graphs and printed outputs come from running each course notebook top to bottom with the answers in place of the gaps (`EX_RUN` in the page). The 27 figures are PNGs in `public/llms-ex/`.
 
+## In the notebook: the lecture notebooks' graphs (2026-11-27)
+
+Asked for: "add the graphs from the coding … starting with lecture 4" (the lecture notebook graphs, on the LLMs page). The lecture cards whose idea the guided notebook draws get a closed pill, **In the notebook**. It holds the notebook's own graph (its saved output, the real plot from the course) and, folded under it, **The code that draws it**: the notebook cell.
+
+- Lecture 4 (9 graphs): customers (class balance, the features by class), weights, boundary, threshold (probabilities, accuracy against the threshold), two-prices (confusion matrix and cost), roc-ours (ROC and precision-recall), cheapest.
+- Lecture 3 (4): cv-score, cv-degree, lasso-path, grid.
+- Lecture 2 (6): features, line, rate, look, poly, val-curve.
+
+The graphs are PNGs in `public/llms-lec/`, listed in `LEC_FIGS` in the page. Lecture 1's notebook is not available yet.
+
 ## The exercises
 
 Each session's take-home notebook has a part of its own. An intro card covers the dataset, the imports, how to submit and the course's AI rule (a help, not a replacement). Then each task has one card: what it asks, the lecture idea it practises, the code with *What each piece means* (including the blanks of the starter cells), *How to read your result* for the written answers, and the classic mistake. The final numbers and the written answers are left to the user.

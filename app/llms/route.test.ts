@@ -60,6 +60,9 @@ describe('/llms class page', () => {
     expect(html).toContain('const GLANCE = {');
     // Exercise tasks: the gaps first, then the answer and its result as closed pills.
     expect(html).toContain('const EX_RUN = {');
+    // The lecture notebooks' graphs, on their cards.
+    expect(html).toContain('const LEC_FIGS = {');
+    expect(html).toContain('<summary>In the notebook</summary>');
     expect(html).toContain('<summary>My answer</summary>');
     expect(html).toContain('<summary>The exercise at a glance</summary>');
     expect(html).toContain("id: 'twins'");
