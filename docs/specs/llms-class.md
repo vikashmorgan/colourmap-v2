@@ -46,6 +46,12 @@ Asked for on 2026-11-26: "add visuals and graphs for the lessons so we can visua
 
 22 charts so far. Session 1: the tip line through the first bills. Session 2: line C through the four stores, the residuals, the MSE bowl with the gradient-descent steps, three learning rates, the outlier that flips the slope, training against validation error. Session 3: leave-one-out on store 4, CV error by degree, the Ridge and Lasso slopes as α grows. Session 4: churn by months against a straight line and a sigmoid, the sigmoid, Example 1 on the S curve, the decision boundary through the 200 validation customers, the log-loss, the histogram of predicted probabilities, the ten customers and three thresholds, both ROC curves, the AUC, the precision-recall curve and the cost against the threshold. Session 4's data are the guided notebook's own, re-run.
 
+## The story (2026-11-27)
+
+Asked for after comparing with summaries written by the desktop agent: "summaries that really give a clear overview as text, and then a few graph examples". Each session opens with a closed fold, **The story: the session as one read**, above the essentials summary. It tells the session as one connected text: a lead, then 6 to 8 short parts (the problem, the fix, the running example's numbers), with the session's charts placed where an idea is a shape, a link at the end of each part to its card, and a last line on how it leads to the next session. The story is for understanding; the essentials summary stays for checking. Every number in a story is the one on its card. Sessions 1 to 4 have one; the fold remembers whether you left it open.
+
+A chart was added for it on card 3.2: the degree each of five random cuts chooses (5, 3, 10, 5, 2).
+
 ## The exercises
 
 Each session's take-home notebook has a part of its own. An intro card covers the dataset, the imports, how to submit and the course's AI rule (a help, not a replacement). Then each task has one card: what it asks, the lecture idea it practises, the code with *What each piece means* (including the blanks of the starter cells), *How to read your result* for the written answers, and the classic mistake. The final numbers and the written answers are left to the user.
@@ -62,6 +68,7 @@ Asked for: "add ability to start or pause the sessions, and a counter that shows
 - Under the clock: **Today: N sessions · total time**. A session counts once it has a minute.
 - A closed **More** pill holds a bar graph of today's sessions: one bar per session, its height the minutes, coloured like the clock, the start time under it, the session and length on hover.
 - On every card, **What each piece means** and **Worked out, step by step** are closed pills side by side; a click opens one, and it takes the full width.
+- On the exercise task cards, **How to read your result** and **Watch out** join the same row of closed pills (asked for: "make sure the open closable stuff also for the exercises"). The code stays visible. Lecture cards keep their Watch out open.
 
 ## Your slides
 
