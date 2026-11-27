@@ -2836,9 +2836,9 @@ function glanceHtml(s) {
   return `<details class="ess-fold glance" id="glance"><summary>The exercise at a glance</summary>`
     + `<p class="glance-data">${esc(g.data)}</p>`
     + `<div class="tbl-wrap"><table class="glance-tbl"><thead><tr><th>Task</th><th>What they ask</th><th>What you fill</th></tr></thead><tbody>`
-    + g.rows.map(([id, ask, fill]) => `<tr><td>${name(id)}</td><td>${esc(ask)}</td><td><code>${esc(fill)}</code></td></tr>`).join('')
-    + `</tbody></table></div><p class="flow-label">What to remember from the process</p><ul class="glance-rem">${g.remember.map(r => `<li>${kwText(r)}</li>`).join('')}</ul>`
-    + `<p class="glance-pattern"><b>The pattern</b>${esc(GLANCE_PATTERN)}</p></details>`;
+    + g.rows.map(([id, ask, fill]) => `<tr data-hl="glance-${s.n}-${id}"><td>${name(id)}</td><td>${esc(ask)}</td><td><code>${esc(fill)}</code></td></tr>`).join('')
+    + `</tbody></table></div><p class="flow-label">What to remember from the process</p><ul class="glance-rem">${g.remember.map((r, i) => `<li data-hl="glance-${s.n}-rem${i + 1}">${kwText(r)}</li>`).join('')}</ul>`
+    + `<p class="glance-pattern" data-hl="glance-pattern"><b>The pattern</b>${esc(GLANCE_PATTERN)}</p></details>`;
 }
 function storyHtml(s) {
   const st = STORY[s.n];
@@ -2848,9 +2848,9 @@ function storyHtml(s) {
   // Highlighted (2026-11-27, "need to highlight that first quick summary story part"): start here, reading time, and the lead shows while closed.
   const words = [st.lead, ...st.parts.flatMap(x => x.p), st.next].join(' ').split(/\s+/).length;
   return `<details class="ess-fold story" id="story"${storyOpen() ? ' open' : ''}><summary><span class="story-head"><span class="story-eye">Start here · ${Math.max(1, Math.round(words / 200))} min read</span><span class="story-title">The story: the session as one read</span><span class="story-peek">${esc(st.lead)}</span></span></summary>`
-    + `<p class="story-lead">${kwText(st.lead)}</p>`
-    + st.parts.map((x, i) => `<section class="story-part"><h3><span class="num">${i + 1}</span>${esc(x.h)}</h3>${x.p.map(t => `<p>${kwText(t)}</p>`).join('')}${(x.viz || []).map(k => (VIZ[k] ? VIZ[k]() : '')).join('')}<p class="story-go">${go(x.go)}</p></section>`).join('')
-    + `<p class="story-next"><b>Next</b>${kwText(st.next)}</p></details>`;
+    + `<p class="story-lead" data-hl="story-${s.n}-lead">${kwText(st.lead)}</p>`
+    + st.parts.map((x, i) => `<section class="story-part" data-hl="story-${s.n}-${i + 1}"><h3><span class="num">${i + 1}</span>${esc(x.h)}</h3>${x.p.map(t => `<p>${kwText(t)}</p>`).join('')}${(x.viz || []).map(k => (VIZ[k] ? VIZ[k]() : '')).join('')}<p class="story-go">${go(x.go)}</p></section>`).join('')
+    + `<p class="story-next" data-hl="story-${s.n}-next"><b>Next</b>${kwText(st.next)}</p></details>`;
 }
 const storyOpen = () => { try { return localStorage.getItem('llms-story-open') === '1'; } catch (e) { return false; } };
 document.addEventListener('toggle', e => { if (e.target.id === 'story') { try { localStorage.setItem('llms-story-open', e.target.open ? '1' : ''); } catch (err) {} } }, true);

@@ -52,6 +52,8 @@ Asked for after comparing with summaries written by the desktop agent: "summarie
 
 The story is the highlighted box of the session (asked for: "need to highlight that first quick summary story part"): a warm tint with an orange bar on the left, a small "Start here · N min read" line, and the story's opening sentence visible while it is closed.
 
+The story and the exercise at a glance take the highlighter like the cards (asked for: "add the highlighting colours for school"): select text in the lead, a part, the last line, a task row, a point to remember or the pattern, and the same six colours appear. Highlights are kept on this device and come back after every redraw.
+
 A chart was added for it on card 3.2: the degree each of five random cuts chooses (5, 3, 10, 5, 2).
 
 ## The lines you write (2026-11-27)
