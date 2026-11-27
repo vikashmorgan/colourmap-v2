@@ -61,7 +61,7 @@ describe('/llms class page', () => {
     expect(html).toContain('<summary>My answer</summary>');
     expect(html).toContain('<summary>The exercise at a glance</summary>');
     expect(html).toContain("id: 'twins'");
-    expect(html).toContain('<summary>The story: the session as one read</summary>');
+    expect(html).toContain('<span class="story-title">The story: the session as one read</span>');
     // Start or pause the Timer, today's sessions as a graph, and the formula blocks as closed pills.
     expect(html).toContain('class="tc-play"');
     expect(html).toContain('function tmDayGraph(day)');
