@@ -43,6 +43,10 @@ Asked for: "add ability to start or pause the sessions, and a counter that shows
 - A closed **More** pill holds a bar graph of today's sessions: one bar per session, its height the minutes, coloured like the clock, the start time under it, the session and length on hover.
 - On every card, **What each piece means** and **Worked out, step by step** are closed pills side by side; a click opens one, and it takes the full width.
 
+## Finish session (2026-11-28)
+
+Asked for: "add a finish session button for the studying meter". Next to Pause, the Timer has **■ Finish session** while a session is running. It closes the session at once: the clock stops, the session joins *Earlier sessions* and today's count, the wheel goes back to 0, and the card says "Finished at 14:05 · 52 min". The next ▶ Start opens a new session instead of adding time to the finished one.
+
 ## Your slides
 
 When a deck is missing, a dashed box at the bottom of the page offers *Upload slides*. The decks keep their own names: a PDF whose name has *DataFrames* is filed as `Pandas1.pdf`, one with *Selecting*, *Filtering* or *Slicing* as `Pandas2.pdf`, one with *Quality* as `Pandas3.pdf`, in the private `coding-slides` folder. `Pandas1.pdf`, or *session* and its number, works too. Each card's *Slide n/N ›* then opens its page.

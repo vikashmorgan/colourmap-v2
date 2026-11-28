@@ -70,6 +70,8 @@ describe('/llms class page', () => {
     // Start or pause the Timer, today's sessions as a graph, and the formula blocks as closed pills.
     expect(html).toContain('class="tc-play"');
     expect(html).toContain('function tmDayGraph(day)');
+    // Finish session: closes the session; the next Start opens a new one.
+    expect(html).toContain('class="tc-finish">■ Finish session');
     expect(html).toContain(
       '<details class="pill-fold reads"><summary>What each piece means</summary>',
     );

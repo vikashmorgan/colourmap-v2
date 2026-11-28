@@ -647,6 +647,8 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .tc-play[aria-pressed="true"] { background: var(--accent); color: var(--nb-bg); }
   .tc-play:hover, .tc-play:focus-visible { filter: brightness(1.08); }
   .tc-paused { color: var(--soft); font-style: italic; }
+  .tc-finish { min-height: 30px; padding: 3px 14px; border-radius: 999px; border: 1px solid var(--nb-rule); background: none; color: var(--ink); font: 700 12.5px system-ui, sans-serif; cursor: pointer; }
+  .tc-finish:hover, .tc-finish:focus-visible { border-color: var(--accent); color: var(--accent); }
   .tc-day { display: block; width: 100%; height: auto; }
   .tc-day .tc-grid { stroke: var(--nb-rule); stroke-width: 1; }
   .tc-day text { font: 10px system-ui, sans-serif; fill: var(--soft); }
@@ -2489,7 +2491,8 @@ const tmMinutes = s => Math.floor((s?.ms || 0) / 60e3);
 const tmLecture = () => (isTab(current) ? '' : `Lecture ${current}`);
 function tmSession(now) {
   let s = tm.list[tm.list.length - 1];
-  if (!s || now - s.last > TM_GAP) {
+  // A finished session never takes more time: the next minute opens a new one.
+  if (!s || s.done || now - s.last > TM_GAP) {
     s = { start: now, last: now, ms: 0, where: tmLecture() };
     tm.list = [...tm.list, s].slice(-40);
   }
@@ -2504,7 +2507,7 @@ function tmArc(min) {
   return `<g fill="none" stroke-width="7">${Array.from({ length: TM_FULL }, (_, i) => seg(i)).join('')}</g>`;
 }
 function tmPaint() {
-  const s = tm.list[tm.list.length - 1], min = s && Date.now() - s.last <= TM_GAP ? tmMinutes(s) : 0;
+  const s = tm.list[tm.list.length - 1], min = s && !s.done && Date.now() - s.last <= TM_GAP ? tmMinutes(s) : 0;
   tmBtn.classList.toggle('paused', !!tm.paused);
   if (`${min}${tm.paused ? 'p' : ''}` !== tmShown) {
     tmShown = `${min}${tm.paused ? 'p' : ''}`;
@@ -2555,7 +2558,7 @@ function twPlace() {
   }
 }
 function tmLive() {
-  const now = Date.now(), s = tm.list[tm.list.length - 1], live = !!s && now - s.last <= TM_GAP;
+  const now = Date.now(), s = tm.list[tm.list.length - 1], live = !!s && !s.done && now - s.last <= TM_GAP;
   return { now, s, live, min: live ? tmMinutes(s) : 0 };
 }
 // The whole window is built when it opens; each second only the clock part is repainted, so pills stay as they are.
@@ -2578,7 +2581,7 @@ function tmCardBuild() {
       + `<p class="tw-level" id="tw-solid-word">${solid ? `${solid}/${TM_SOLID_MAX} · ${esc(tmSolidWord(solid))}` : 'Slide or tap the bars'}</p><div class="tw-ends"><span>Weak, getting started</span><span>Experienced, ready</span></div>`)
     + (earlier.length ? pill('earlier', 'Earlier sessions', '', `<ul class="tc-list">${earlier.map(x => `<li><span>${esc(when(x))}${x.where ? ` · ${esc(x.where.replace('Lecture ', 'L'))}` : ''}</span><span class="tc-tags">${x.focus ? `<span class="tc-dot" style="background: ${TM_RAINBOW[x.focus - 1]}" title="Focus: ${esc(TM_FOCUS[x.focus - 1])}"></span>` : ''}${x.solid ? `<span title="How solid: ${x.solid}/${TM_SOLID_MAX}">${x.solid}/${TM_SOLID_MAX}</span>` : ''}</span><b>${tmLength(tmMinutes(x))}</b></li>`).join('')}</ul>`) : '')
     + pill('day', 'More', '', '<p class="tc-soft">Today, one bar per session</p><div id="tw-day"></div>')
-    + `<div class="tc-ctrl"><button type="button" class="tc-play" aria-pressed="${!tm.paused}">${tm.paused ? '▶ Start' : '❚❚ Pause'}</button><button type="button" class="tc-new">New session</button></div></div>`;
+    + `<div class="tc-ctrl"><button type="button" class="tc-play" aria-pressed="${!tm.paused}">${tm.paused ? '▶ Start' : '❚❚ Pause'}</button>${live ? '<button type="button" class="tc-finish">■ Finish session</button>' : ''}<button type="button" class="tc-new">New session</button></div></div>`;
   twPlace();
   tmCardPaint();
 }
@@ -2590,8 +2593,9 @@ function tmCardPaint() {
   const day = tmToday(), todayMin = day.reduce((t, x) => t + tmMinutes(x), 0);
   // The half wheel, with the session's time sitting in its curve (asked for 2026-11-09).
   wheel.innerHTML = `<svg viewBox="0 0 64 36" aria-hidden="true">${tmArc(min)}</svg><p class="tc-now" style="color: ${live ? tmColour(min) : 'inherit'}">${tmLength(min)}</p>`;
-  document.getElementById('tw-since').textContent = live ? `Since ${new Date(s.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${s.where ? ` · ${s.where}` : ''}` : '';
-  document.getElementById('tw-today').innerHTML = `Today: <b>${day.length} ${day.length === 1 ? 'session' : 'sessions'}</b> · <b>${tmLength(todayMin)}</b>${tm.paused ? ' <span class="tc-paused">· paused</span>' : ''}`;
+  const hm = x => new Date(x).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('tw-since').textContent = live ? `Since ${hm(s.start)}${s.where ? ` · ${s.where}` : ''}` : s && s.done && Date.now() - s.last <= TM_GAP ? `Finished at ${hm(s.last)} · ${tmLength(tmMinutes(s))}` : '';
+  document.getElementById('tw-today').innerHTML = `Today: <b>${day.length} ${day.length === 1 ? 'session' : 'sessions'}</b> · <b>${tmLength(todayMin)}</b>${tm.paused && !(s && s.done) ? ' <span class="tc-paused">· paused</span>' : ''}`;
   const graph = document.getElementById('tw-day'), sig = day.map(x => `${x.start}:${tmMinutes(x)}`).join();
   if (graph && graph.dataset.sig !== sig) { graph.dataset.sig = sig; graph.innerHTML = tmDayGraph(day); }
   const mini = document.getElementById('tw-mini');
@@ -2664,6 +2668,17 @@ tmCard.addEventListener('click', e => {
     tm.paused = !tm.paused;
     if (!tm.paused) { tmActive = Date.now(); tmTick = Date.now(); tmSession(Date.now()); }
     writeStore(TM_KEY, tm);
+    tmPaint();
+    tmCardBuild();
+    tmCard.querySelector('.tc-play')?.focus();
+    return;
+  }
+  if (e.target.closest('.tc-finish')) {
+    const s = tm.list[tm.list.length - 1];
+    if (s && !s.done) { s.done = true; s.last = Date.now(); }
+    tm.paused = true;
+    writeStore(TM_KEY, tm);
+    tmShown = -1;
     tmPaint();
     tmCardBuild();
     tmCard.querySelector('.tc-play')?.focus();
