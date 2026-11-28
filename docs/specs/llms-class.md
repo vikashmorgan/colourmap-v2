@@ -86,7 +86,7 @@ Asked for: "add the graphs from the coding … starting with lecture 4" (the lec
 - Lecture 3 (4): cv-score, cv-degree, lasso-path, grid.
 - Lecture 2 (6): features, line, rate, look, poly, val-curve.
 
-The graphs are PNGs in `public/llms-lec/`, listed in `LEC_FIGS` in the page. Lecture 1's notebook is not available yet.
+Under each graph, **How to read it** says what is across and up, what every colour and line means, and what to see (asked for after card 13: "you didn't explain what blue and brown was"; the brown is blue and orange bars overlapping). The graphs are PNGs in `public/llms-lec/`, listed in `LEC_FIGS` in the page. Lecture 1's notebook is not available yet.
 
 ## The exercises
 

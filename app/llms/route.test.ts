@@ -68,6 +68,7 @@ describe('/llms class page', () => {
     expect(html).toContain(
       "['Flagged', 'Flagged means the model predicts this customer will leave",
     );
+    expect(html).toContain('so where both overlap they look brown');
     expect(html).toContain('<summary>My answer</summary>');
     expect(html).toContain('<summary>The exercise at a glance</summary>');
     expect(html).toContain("id: 'twins'");
