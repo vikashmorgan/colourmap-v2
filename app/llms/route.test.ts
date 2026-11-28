@@ -63,6 +63,7 @@ describe('/llms class page', () => {
     // The lecture notebooks' graphs, on their cards.
     expect(html).toContain('const LEC_FIGS = {');
     expect(html).toContain('<summary>In the notebook</summary>');
+    expect(html).toContain('so where both overlap they look brown');
     expect(html).toContain('<summary>My answer</summary>');
     expect(html).toContain('<summary>The exercise at a glance</summary>');
     expect(html).toContain("id: 'twins'");
