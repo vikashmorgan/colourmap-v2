@@ -47,6 +47,10 @@ No new table. Marks and notes use the Python page's tables (`coding_marks`, `cod
 
 The Python page leaves notes with `sql|` keys out of its own lists and Review. The browser copy is written first (`sql-marks`, `sql-notes`). Marks made before signing in are sent up once and never overwrite the account. Served outside Colour Brain, the page works on its own in the browser. Answers can be written with `scripts/coding-answer.ts`, like the Python questions.
 
+## The Timer (2026-11-28)
+
+Asked for: "i need ability to pause, finish session, and to see how many minutes I put in my day". The Timer is the same as on the LLMs and Pandas pages. The clock on the right opens a window that can be moved and resized. It has **❚❚ Pause / ▶ Start**, **■ Finish session** (closes the session; the next Start opens a new one), **Today: N sessions · total minutes**, and a **More** pill with one bar per session today. Focus and How solid I feel are there too, as on the other classes. Kept on this device under `sql-timer`.
+
 ## Access
 
 `/sql` redirects a logged-out visitor to `/login?next=/sql`. The School menu's SQL card, until now *Coming soon*, opens it.

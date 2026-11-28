@@ -187,6 +187,9 @@ describe('/statistics class page', () => {
     expect(html).toContain(
       "const TM_KEY = 'stats-timer', TM_IDLE = 3 * 60e3, TM_GAP = 30 * 60e3, TM_FULL = 70;",
     );
+    // The full Timer: pause, finish a session, today's sessions and minutes.
+    expect(html).toContain('class="tc-finish">■ Finish session');
+    expect(html).toContain('function tmDayGraph(day)');
     // The case pad on the left, and a peek placed at the word.
     expect(html).toContain('id="case-pad"');
     expect(html).toContain('function caseOf(key)');

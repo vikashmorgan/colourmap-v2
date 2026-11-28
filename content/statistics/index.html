@@ -582,17 +582,72 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
   .timer svg { display: block; width: 38px; height: 21px; }
   .timer span { margin-top: -6px; font: 700 10px/1 ui-monospace, Consolas, monospace; }
   .timer::after { content: ''; position: absolute; inset: -6px -2px; }
-  .timer-card { position: fixed; z-index: 62; right: 46px; top: calc(50% - 70px); width: min(280px, calc(100vw - 60px)); display: grid; gap: 8px; padding: 14px 16px; border-radius: 14px; background: var(--nb-bg); border: 1px solid var(--nb-rule); box-shadow: 0 14px 36px rgb(0 0 0 / .25); font: 14px/1.4 system-ui, sans-serif; color: var(--ink); }
+  /* The Timer window: asked for 2026-11-19, "make it a window that I can move around and expand or reduce. Call it Timer".
+     Dragged by its title bar, − and + step its size, the corner resizes it freely. Kept where you left it. */
+  .timer-card { position: fixed; z-index: 62; right: 46px; top: calc(50% - 70px); width: 290px; min-width: 220px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow: auto; resize: horizontal; display: grid; align-content: start; border-radius: 14px; background: var(--nb-bg); border: 1px solid var(--nb-rule); box-shadow: 0 14px 36px rgb(92 58 28 / .3); font: 14px/1.4 system-ui, sans-serif; color: var(--ink); }
   .timer-card p { margin: 0; }
+  .tw-bar { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 4px; padding: 6px 6px 6px 14px; background: var(--nb-bg); border-bottom: 1px solid var(--nb-rule); cursor: grab; touch-action: none; user-select: none; }
+  .tw-bar.dragging { cursor: grabbing; }
+  .tw-title { font: 700 13px system-ui, sans-serif; letter-spacing: .04em; }
+  .tw-mini { margin-left: 6px; font: 700 12px ui-monospace, Consolas, monospace; }
+  .tw-bar .tw-btn { margin-left: auto; }
+  .tw-bar .tw-btn + .tw-btn { margin-left: 0; }
+  .tw-btn { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--soft); font: 600 16px/1 system-ui, sans-serif; cursor: pointer; }
+  .tw-btn:hover, .tw-btn:focus-visible { background: color-mix(in srgb, var(--nb-rule) 60%, transparent); color: var(--ink); }
+  .tw-btn:disabled { opacity: .35; cursor: default; background: none; }
+  .tw-body { display: grid; gap: 10px; padding: 12px 16px 14px; }
+  .timer-card[data-size="min"] { width: auto !important; min-width: 0; resize: none; }
+  .timer-card[data-size="min"] .tw-body { display: none; }
+  .timer-card[data-size="min"] .tw-bar { border-bottom: 0; }
   .tc-now { font: 700 26px/1.1 Georgia, serif; }
   .tc-wheel { display: grid; justify-items: center; }
-  .tc-wheel svg { display: block; width: 200px; height: 113px; }
+  .tc-wheel svg { display: block; width: min(100%, 200px); height: auto; }
   .tc-wheel .tc-now { margin-top: -44px; }
+  .timer-card[data-size="max"] .tc-wheel svg { width: min(100%, 320px); }
+  .timer-card[data-size="max"] .tc-wheel .tc-now { margin-top: -66px; font-size: 38px; }
   .tc-soft { color: var(--soft); font-size: 13px; }
-  .tc-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 13px; }
-  .tc-list li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--nb-rule); }
+  .tc-list { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 13px; }
+  .tc-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--nb-rule); }
   .tc-list li:last-child { border-bottom: 0; }
+  .tc-list .tc-tags { display: inline-flex; gap: 6px; align-items: center; margin-left: auto; color: var(--soft); font-size: 12px; }
+  .tc-list .tc-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  /* Start or pause, and today's sessions as bars (asked for 2026-11-27). */
+  .tc-ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .tc-play { min-height: 30px; padding: 3px 14px; border-radius: 999px; border: 1px solid var(--accent); background: none; color: var(--accent); font: 700 12.5px system-ui, sans-serif; cursor: pointer; }
+  .tc-play[aria-pressed="true"] { background: var(--accent); color: var(--nb-bg); }
+  .tc-play:hover, .tc-play:focus-visible { filter: brightness(1.08); }
+  .tc-paused { color: var(--soft); font-style: italic; }
+  .tc-finish { min-height: 30px; padding: 3px 14px; border-radius: 999px; border: 1px solid var(--nb-rule); background: none; color: var(--ink); font: 700 12.5px system-ui, sans-serif; cursor: pointer; }
+  .tc-finish:hover, .tc-finish:focus-visible { border-color: var(--accent); color: var(--accent); }
+  .tc-day { display: block; width: 100%; height: auto; }
+  .tc-day .tc-grid { stroke: var(--nb-rule); stroke-width: 1; }
+  .tc-day text { font: 10px system-ui, sans-serif; fill: var(--soft); }
+  .tc-day .tc-v { fill: var(--ink); font-weight: 600; }
+  .tc-day rect:hover { stroke: var(--ink); stroke-width: 1.5; }
+  .timer.paused #timer-min { opacity: .55; }
   .tc-new { justify-self: start; min-height: 30px; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--nb-rule); background: none; color: var(--ink); font: 600 12.5px system-ui, sans-serif; cursor: pointer; }
+  /* Closed pills inside the Timer: earlier sessions, focus, how solid I feel. */
+  .tw-pill > summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; list-style: none; width: fit-content; padding: 4px 12px; border: 1px solid var(--nb-rule); border-radius: 999px; font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); user-select: none; }
+  .tw-pill > summary::-webkit-details-marker { display: none; }
+  .tw-pill > summary::after { content: '▸'; font-size: 10px; }
+  .tw-pill[open] > summary::after { content: '▾'; }
+  .tw-pill > summary:hover, .tw-pill > summary:focus-visible { color: var(--ink); border-color: var(--soft); }
+  .tw-pill > summary .tw-val { text-transform: none; letter-spacing: 0; color: var(--ink); font-weight: 600; }
+  .tw-pill > summary .tc-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .tw-in { display: grid; gap: 6px; margin-top: 8px; }
+  .tw-ends { display: flex; justify-content: space-between; gap: 10px; color: var(--soft); font-size: 11.5px; }
+  .tw-level { text-align: center; font-weight: 600; min-height: 20px; }
+  /* Focus: a rainbow, seven bands from red (weak, getting started) to violet (experienced, ready). */
+  .rb { display: block; width: 100%; height: auto; max-width: 260px; justify-self: center; }
+  .rb path { cursor: pointer; transition: opacity .2s, stroke-width .2s; }
+  .rb path:hover { opacity: 1 !important; }
+  .rb path:focus-visible { outline: none; stroke: var(--ink); stroke-width: 2; }
+  /* How solid I feel: a thick horizontal slider made of bars, rising from left to right. */
+  .solid { position: relative; height: 54px; }
+  .solid-bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 4px; pointer-events: none; }
+  .solid-bars i { flex: 1; border-radius: 4px 4px 2px 2px; background: color-mix(in srgb, var(--nb-rule) 80%, transparent); transition: background .2s; }
+  .solid input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .solid input:focus-visible + .solid-bars { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
   /* Romeo and Juliet's square. */
   .square { margin: 0; width: 230px; max-width: 100%; }
   .square svg { display: block; width: 100%; height: auto; }
@@ -621,7 +676,7 @@ textarea[aria-label="Your note"] { padding-right: 40px !important; }
 <button type="button" class="map-pill" id="map-pill" aria-expanded="false" aria-controls="map" aria-label="Where you are"></button>
 <nav class="map" id="map" aria-label="Where you are" hidden></nav>
 <button type="button" class="timer" id="timer" aria-expanded="false" aria-controls="timer-card" aria-label="Time on this session"><svg viewBox="0 0 64 36" aria-hidden="true" id="timer-arc"></svg><span id="timer-min">0</span></button>
-<div class="timer-card" id="timer-card" hidden role="dialog" aria-label="Time worked"></div>
+<div class="timer-card" id="timer-card" hidden role="dialog" aria-labelledby="tw-title"></div>
 <aside class="case-pad" id="case-pad" hidden aria-label="The case"><div class="case-top"><p class="case-title">The case</p><button type="button" class="case-close" aria-label="Close the case">×</button></div><button type="button" class="case-from" id="case-from"></button><div class="case-body" id="case-body"></div></aside>
 <button type="button" class="nb-dot" id="nb-dot" aria-expanded="false" aria-controls="notebook" title="Notepad"></button>
 <aside class="notebook" id="notebook" aria-label="Notepad" hidden>
@@ -2822,7 +2877,8 @@ const tmMinutes = s => Math.floor((s?.ms || 0) / 60e3);
 const tmLecture = () => (isTab(current) ? '' : `Lecture ${current}`);
 function tmSession(now) {
   let s = tm.list[tm.list.length - 1];
-  if (!s || now - s.last > TM_GAP) {
+  // A finished session never takes more time: the next minute opens a new one.
+  if (!s || s.done || now - s.last > TM_GAP) {
     s = { start: now, last: now, ms: 0, where: tmLecture() };
     tm.list = [...tm.list, s].slice(-40);
   }
@@ -2837,35 +2893,131 @@ function tmArc(min) {
   return `<g fill="none" stroke-width="7">${Array.from({ length: TM_FULL }, (_, i) => seg(i)).join('')}</g>`;
 }
 function tmPaint() {
-  const s = tm.list[tm.list.length - 1], min = s && Date.now() - s.last <= TM_GAP ? tmMinutes(s) : 0;
-  if (min !== tmShown) {
-    tmShown = min;
+  const s = tm.list[tm.list.length - 1], min = s && !s.done && Date.now() - s.last <= TM_GAP ? tmMinutes(s) : 0;
+  tmBtn.classList.toggle('paused', !!tm.paused);
+  if (`${min}${tm.paused ? 'p' : ''}` !== tmShown) {
+    tmShown = `${min}${tm.paused ? 'p' : ''}`;
     document.getElementById('timer-arc').innerHTML = tmArc(min);
     const label = document.getElementById('timer-min');
     label.textContent = min;
     label.style.color = min ? tmColour(min) : '';
-    tmBtn.title = `${min} minutes on this session`;
+    tmBtn.title = `${min} minutes on this session${tm.paused ? ' · paused' : ''}`;
   }
   if (!tmCard.hidden) tmCardPaint();
 }
 const tmLength = min => (min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`);
-function tmCardPaint() {
-  const now = Date.now(), s = tm.list[tm.list.length - 1], live = s && now - s.last <= TM_GAP;
-  const today = new Date().toDateString();
-  const todayMin = tm.list.filter(x => new Date(x.start).toDateString() === today).reduce((t, x) => t + tmMinutes(x), 0);
-  const earlier = tm.list.slice(0, live ? -1 : undefined).filter(x => tmMinutes(x) > 0).slice(-6).reverse();
+/* Focus and how solid I feel: asked for 2026-11-19, "a rainbow (in a closed pill) with how focused I am and how
+   solid I feel, from weak and getting started to experienced and ready", then "how solid I feel: a horizontal
+   thick slider with bars, also a closed pill". Both are kept on the session they were set in. */
+const TM_RAINBOW = ['#d9534f', '#f08a3c', '#f2c14e', '#6fbf8e', '#4fb3b0', '#5b8fd9', '#9b6fd0'];
+const TM_FOCUS = ['Weak, getting started', 'Warming up', 'Finding it', 'Steady', 'Focused', 'Deep', 'Experienced, ready'];
+const TM_SOLID_MAX = 10;
+const tmSolidWord = v => (v <= 2 ? 'Weak, getting started' : v <= 4 ? 'Finding my feet' : v <= 6 ? 'Steady' : v <= 8 ? 'Solid' : 'Experienced, ready');
+// Light beige when weak, deep brown when solid.
+const tmSolidColour = v => tmMix('#e3c9a0', '#7a4a2a', (v - 1) / (TM_SOLID_MAX - 1));
+function tmRainbow(level) {
+  // Seven half rings, red outside to violet inside, as a rainbow. Each band is a button.
+  const cx = 60, cy = 58, w = 6.4;
+  return `<svg class="rb" viewBox="0 0 120 64" role="radiogroup" aria-label="How focused I am">${TM_RAINBOW.map((c, i) => {
+    const r = 54 - i * (w + 0.6);
+    const on = level === i + 1;
+    return `<path d="M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}" fill="none" stroke="${c}" stroke-width="${on ? w + 1.4 : w}" stroke-linecap="round" opacity="${!level || on ? 1 : 0.28}" data-focus="${i + 1}" role="radio" tabindex="0" aria-checked="${on}" aria-label="${TM_FOCUS[i]}"><title>${TM_FOCUS[i]}</title></path>`;
+  }).join('')}</svg>`;
+}
+const tmSolidBars = v => Array.from({ length: TM_SOLID_MAX }, (_, i) => `<i style="height: ${28 + i * 8}%;${v && i < v ? ` background: ${tmSolidColour(v)};` : ''}"></i>`).join('');
+// The window: where it is, how big, which pills are open. Kept on this device.
+const TW_KEY = 'stats-timer-window';
+let tw = readStore(TW_KEY, {});
+if (typeof tw !== 'object' || !tw) tw = {};
+tw.size = ['min', 'mid', 'max'].includes(tw.size) ? tw.size : 'mid';
+tw.open = tw.open && typeof tw.open === 'object' ? tw.open : {};
+const twSave = () => writeStore(TW_KEY, tw);
+const TW_WIDTH = { mid: 290, max: 400 };
+function twPlace() {
+  tmCard.dataset.size = tw.size;
+  if (tw.size !== 'min') tmCard.style.width = `${tw.w && tw.size === 'mid' ? tw.w : TW_WIDTH[tw.size]}px`;
+  if (Number.isFinite(tw.x) && Number.isFinite(tw.y)) {
+    const r = tmCard.getBoundingClientRect();
+    const x = Math.min(Math.max(8, tw.x), Math.max(8, innerWidth - r.width - 8));
+    const y = Math.min(Math.max(8, tw.y), Math.max(8, innerHeight - 48));
+    Object.assign(tmCard.style, { left: `${x}px`, top: `${y}px`, right: 'auto' });
+  }
+}
+function tmLive() {
+  const now = Date.now(), s = tm.list[tm.list.length - 1], live = !!s && !s.done && now - s.last <= TM_GAP;
+  return { now, s, live, min: live ? tmMinutes(s) : 0 };
+}
+// The whole window is built when it opens; each second only the clock part is repainted, so pills stay as they are.
+function tmCardBuild() {
+  const { s, live } = tmLive();
+  const focus = live ? s.focus || 0 : 0, solid = live ? s.solid || 0 : 0;
+  const earlier = tm.list.slice(0, live ? -1 : undefined).filter(x => tmMinutes(x) > 0).slice(-8).reverse();
   const when = x => new Date(x.start).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  // The half wheel again, large, with the session's time sitting in its curve (asked for 2026-11-09).
-  const nowMin = live ? tmMinutes(s) : 0;
-  tmCard.innerHTML = `<p class="tc-soft">This session</p><div class="tc-wheel"><svg viewBox="0 0 64 36" aria-hidden="true">${tmArc(nowMin)}</svg><p class="tc-now" style="color: ${live ? tmColour(nowMin) : 'inherit'}">${tmLength(nowMin)}</p></div>`
-    + (live ? `<p class="tc-soft">Since ${new Date(s.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${s.where ? ` · ${esc(s.where)}` : ''}</p>` : '')
-    + `<p>Today: <b>${tmLength(todayMin)}</b></p>`
-    + (earlier.length ? `<p class="tc-soft">Earlier sessions</p><ul class="tc-list">${earlier.map(x => `<li><span>${esc(when(x))}${x.where ? ` · ${esc(x.where.replace('Lecture ', 'L'))}` : ''}</span><b>${tmLength(tmMinutes(x))}</b></li>`).join('')}</ul>` : '')
-    + `<button type="button" class="tc-new">Start a new session</button>`;
+  const pill = (id, label, val, inner) => `<details class="tw-pill" data-pill="${id}"${tw.open[id] ? ' open' : ''}><summary>${label}${val}</summary><div class="tw-in">${inner}</div></details>`;
+  const sz = ['min', 'mid', 'max'].indexOf(tw.size);
+  tmCard.innerHTML = `<div class="tw-bar" id="tw-bar"><span class="tw-title" id="tw-title">Timer</span><span class="tw-mini" id="tw-mini"></span>`
+    + `<button type="button" class="tw-btn" data-tw="smaller" aria-label="Reduce the Timer"${sz === 0 ? ' disabled' : ''}>−</button>`
+    + `<button type="button" class="tw-btn" data-tw="bigger" aria-label="Expand the Timer"${sz === 2 ? ' disabled' : ''}>+</button>`
+    + `<button type="button" class="tw-btn" data-tw="close" aria-label="Close the Timer">×</button></div>`
+    + `<div class="tw-body"><p class="tc-soft">This session</p><div class="tc-wheel" id="tw-wheel"></div><p class="tc-soft" id="tw-since"></p><p id="tw-today"></p>`
+    + pill('focus', 'Focus', focus ? ` <span class="tc-dot" style="background: ${TM_RAINBOW[focus - 1]}"></span><span class="tw-val">${esc(TM_FOCUS[focus - 1])}</span>` : '',
+      tmRainbow(focus) + `<p class="tw-level" id="tw-focus-word">${focus ? esc(TM_FOCUS[focus - 1]) : 'Tap a band'}</p><div class="tw-ends"><span>Weak, getting started</span><span>Experienced, ready</span></div>`)
+    + pill('solid', 'How solid I feel', solid ? ` <span class="tw-val">${solid}/${TM_SOLID_MAX}</span>` : '',
+      `<div class="solid"><input type="range" id="tw-solid" min="1" max="${TM_SOLID_MAX}" step="1" value="${solid || 1}" aria-label="How solid I feel, 1 weak to ${TM_SOLID_MAX} experienced and ready" aria-valuetext="${solid ? `${solid} of ${TM_SOLID_MAX}: ${tmSolidWord(solid)}` : 'not set'}"><div class="solid-bars" id="tw-solid-bars">${tmSolidBars(solid)}</div></div>`
+      + `<p class="tw-level" id="tw-solid-word">${solid ? `${solid}/${TM_SOLID_MAX} · ${esc(tmSolidWord(solid))}` : 'Slide or tap the bars'}</p><div class="tw-ends"><span>Weak, getting started</span><span>Experienced, ready</span></div>`)
+    + (earlier.length ? pill('earlier', 'Earlier sessions', '', `<ul class="tc-list">${earlier.map(x => `<li><span>${esc(when(x))}${x.where ? ` · ${esc(x.where.replace('Lecture ', 'L'))}` : ''}</span><span class="tc-tags">${x.focus ? `<span class="tc-dot" style="background: ${TM_RAINBOW[x.focus - 1]}" title="Focus: ${esc(TM_FOCUS[x.focus - 1])}"></span>` : ''}${x.solid ? `<span title="How solid: ${x.solid}/${TM_SOLID_MAX}">${x.solid}/${TM_SOLID_MAX}</span>` : ''}</span><b>${tmLength(tmMinutes(x))}</b></li>`).join('')}</ul>`) : '')
+    + pill('day', 'More', '', '<p class="tc-soft">Today, one bar per session</p><div id="tw-day"></div>')
+    + `<div class="tc-ctrl"><button type="button" class="tc-play" aria-pressed="${!tm.paused}">${tm.paused ? '▶ Start' : '❚❚ Pause'}</button>${live ? '<button type="button" class="tc-finish">■ Finish session</button>' : ''}<button type="button" class="tc-new">New session</button></div></div>`;
+  twPlace();
+  tmCardPaint();
+}
+function tmCardPaint() {
+  const { s, live, min } = tmLive();
+  const wheel = document.getElementById('tw-wheel');
+  if (!wheel) return;
+  const today = new Date().toDateString();
+  const day = tmToday(), todayMin = day.reduce((t, x) => t + tmMinutes(x), 0);
+  // The half wheel, with the session's time sitting in its curve (asked for 2026-11-09).
+  wheel.innerHTML = `<svg viewBox="0 0 64 36" aria-hidden="true">${tmArc(min)}</svg><p class="tc-now" style="color: ${live ? tmColour(min) : 'inherit'}">${tmLength(min)}</p>`;
+  const hm = x => new Date(x).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('tw-since').textContent = live ? `Since ${hm(s.start)}${s.where ? ` · ${s.where}` : ''}` : s && s.done && Date.now() - s.last <= TM_GAP ? `Finished at ${hm(s.last)} · ${tmLength(tmMinutes(s))}` : '';
+  document.getElementById('tw-today').innerHTML = `Today: <b>${day.length} ${day.length === 1 ? 'session' : 'sessions'}</b> · <b>${tmLength(todayMin)}</b>${tm.paused && !(s && s.done) ? ' <span class="tc-paused">· paused</span>' : ''}`;
+  const graph = document.getElementById('tw-day'), sig = day.map(x => `${x.start}:${tmMinutes(x)}`).join();
+  if (graph && graph.dataset.sig !== sig) { graph.dataset.sig = sig; graph.innerHTML = tmDayGraph(day); }
+  const mini = document.getElementById('tw-mini');
+  mini.textContent = tmLength(min);
+  mini.style.color = live && min ? tmColour(min) : '';
+}
+// Today's sessions: those started today with at least a minute, plus the one running now.
+function tmToday() {
+  const today = new Date().toDateString(), last = tm.list[tm.list.length - 1];
+  return tm.list.filter(x => new Date(x.start).toDateString() === today && (tmMinutes(x) > 0 || (x === last && Date.now() - x.last <= TM_GAP)));
+}
+// One bar per session, its height its length, coloured like the clock; the start time under it.
+function tmDayGraph(day) {
+  if (!day.length) return '<p class="tc-soft">No session yet today.</p>';
+  const W = 260, H = 130, L = 30, B = 22, T = 14, top = Math.max(30, ...day.map(tmMinutes));
+  const step = Math.ceil(top / 30) * 10, max = step * 3, bw = Math.min(34, (W - L - 6) / day.length - 6);
+  const y = v => H - B - (v / max) * (H - B - T);
+  let g = '';
+  for (let v = 0; v <= max; v += step) g += `<line class="tc-grid" x1="${L}" x2="${W}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text x="${L - 4}" y="${(y(v) + 3).toFixed(1)}" text-anchor="end">${v}</text>`;
+  day.forEach((x, i) => {
+    const m = tmMinutes(x), cx = L + 6 + i * ((W - L - 6) / day.length) + ((W - L - 6) / day.length - bw) / 2;
+    const at = new Date(x.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    g += `<rect x="${cx.toFixed(1)}" y="${y(m).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, y(0) - y(m)).toFixed(1)}" rx="3" fill="${tmColour(m)}"><title>${esc(`${at}${x.where ? ` · ${x.where}` : ''}: ${tmLength(m)}`)}</title></rect>`
+      + `<text class="tc-v" x="${(cx + bw / 2).toFixed(1)}" y="${(y(m) - 3).toFixed(1)}" text-anchor="middle">${m}</text>`
+      + `<text x="${(cx + bw / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle">${at}</text>`;
+  });
+  return `<svg class="tc-day" viewBox="0 0 ${W} ${H}" role="img" aria-label="Today's sessions in minutes: ${day.map(x => tmMinutes(x)).join(', ')}">${g}</svg>`;
+}
+function tmSet(field, v) {
+  const s = tmSession(Date.now());
+  s[field] = v;
+  writeStore(TM_KEY, tm);
 }
 setInterval(() => {
   const now = Date.now();
-  if (document.visibilityState === 'visible' && now - tmActive < TM_IDLE) {
+  if (!tm.paused && document.visibilityState === 'visible' && now - tmActive < TM_IDLE) {
     const s = tmSession(now);
     s.ms += Math.min(now - tmTick, 5e3);
     s.last = now;
@@ -2877,21 +3029,104 @@ setInterval(() => {
 }, 1000);
 for (const ev of ['pointerdown', 'pointermove', 'keydown', 'scroll', 'wheel']) addEventListener(ev, () => { tmActive = Date.now(); }, { passive: true });
 addEventListener('pagehide', () => writeStore(TM_KEY, tm));
-tmBtn.addEventListener('click', () => {
-  const open = tmCard.hidden;
+function setTimerWindow(open) {
   tmCard.hidden = !open;
   tmBtn.setAttribute('aria-expanded', String(open));
-  if (open) tmCardPaint();
-});
+  if (open) tmCardBuild();
+}
+tmBtn.addEventListener('click', () => setTimerWindow(tmCard.hidden));
 tmCard.addEventListener('click', e => {
+  const b = e.target.closest('[data-tw]');
+  if (b) {
+    if (b.dataset.tw === 'close') { setTimerWindow(false); tmBtn.focus(); return; }
+    const order = ['min', 'mid', 'max'], i = order.indexOf(tw.size) + (b.dataset.tw === 'bigger' ? 1 : -1);
+    tw.size = order[Math.min(2, Math.max(0, i))];
+    if (tw.size !== 'mid') delete tw.w;
+    twSave();
+    tmCard.style.width = '';
+    tmCardBuild();
+    tmCard.querySelector(`[data-tw="${b.dataset.tw}"]:not(:disabled)`)?.focus();
+    return;
+  }
+  const band = e.target.closest('[data-focus]');
+  if (band) { tmSet('focus', Number(band.dataset.focus)); tmCardBuild(); return; }
+  if (e.target.closest('.tc-play')) {
+    tm.paused = !tm.paused;
+    if (!tm.paused) { tmActive = Date.now(); tmTick = Date.now(); tmSession(Date.now()); }
+    writeStore(TM_KEY, tm);
+    tmPaint();
+    tmCardBuild();
+    tmCard.querySelector('.tc-play')?.focus();
+    return;
+  }
+  if (e.target.closest('.tc-finish')) {
+    const s = tm.list[tm.list.length - 1];
+    if (s && !s.done) { s.done = true; s.last = Date.now(); }
+    tm.paused = true;
+    writeStore(TM_KEY, tm);
+    tmShown = -1;
+    tmPaint();
+    tmCardBuild();
+    tmCard.querySelector('.tc-play')?.focus();
+    return;
+  }
   if (!e.target.closest('.tc-new')) return;
+  tm.paused = false;
   const now = Date.now();
   tm.list = [...tm.list, { start: now, last: now, ms: 0, where: tmLecture() }].slice(-40);
   writeStore(TM_KEY, tm);
   tmShown = -1;
   tmPaint();
+  tmCardBuild();
 });
-document.addEventListener('click', e => { if (!tmCard.hidden && !e.target.closest('#timer, #timer-card')) { tmCard.hidden = true; tmBtn.setAttribute('aria-expanded', 'false'); } });
+tmCard.addEventListener('keydown', e => {
+  const band = e.target.closest('[data-focus]');
+  if (band && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); tmSet('focus', Number(band.dataset.focus)); tmCardBuild(); tmCard.querySelector(`[data-focus="${band.dataset.focus}"]`)?.focus(); }
+  if (e.key === 'Escape') { setTimerWindow(false); tmBtn.focus(); }
+});
+tmCard.addEventListener('input', e => {
+  if (e.target.id !== 'tw-solid') return;
+  const v = Number(e.target.value);
+  tmSet('solid', v);
+  document.getElementById('tw-solid-bars').innerHTML = tmSolidBars(v);
+  document.getElementById('tw-solid-word').textContent = `${v}/${TM_SOLID_MAX} · ${tmSolidWord(v)}`;
+  e.target.setAttribute('aria-valuetext', `${v} of ${TM_SOLID_MAX}: ${tmSolidWord(v)}`);
+  const val = tmCard.querySelector('[data-pill="solid"] > summary');
+  if (val) val.innerHTML = `How solid I feel <span class="tw-val">${v}/${TM_SOLID_MAX}</span>`;
+});
+tmCard.addEventListener('toggle', e => { const d = e.target.closest('[data-pill]'); if (d) { tw.open[d.dataset.pill] = d.open; twSave(); } }, true);
+// Drag the window by its title bar.
+let twDrag = null;
+tmCard.addEventListener('pointerdown', e => {
+  const bar = e.target.closest('#tw-bar');
+  if (!bar || e.target.closest('button') || e.button !== 0) return;
+  const r = tmCard.getBoundingClientRect();
+  twDrag = { dx: e.clientX - r.left, dy: e.clientY - r.top, id: e.pointerId };
+  bar.setPointerCapture(e.pointerId);
+  bar.classList.add('dragging');
+});
+tmCard.addEventListener('pointermove', e => {
+  if (!twDrag || e.pointerId !== twDrag.id) return;
+  const r = tmCard.getBoundingClientRect();
+  tw.x = Math.min(Math.max(8, e.clientX - twDrag.dx), innerWidth - r.width - 8);
+  tw.y = Math.min(Math.max(8, e.clientY - twDrag.dy), innerHeight - 48);
+  Object.assign(tmCard.style, { left: `${tw.x}px`, top: `${tw.y}px`, right: 'auto' });
+});
+const twDrop = e => {
+  if (!twDrag || e.pointerId !== twDrag.id) return;
+  twDrag = null;
+  document.getElementById('tw-bar')?.classList.remove('dragging');
+  twSave();
+};
+tmCard.addEventListener('pointerup', twDrop);
+tmCard.addEventListener('pointercancel', twDrop);
+// The corner resizes it; the width is kept for the middle size.
+new ResizeObserver(() => {
+  if (tmCard.hidden || tw.size !== 'mid') return;
+  const w = Math.round(tmCard.getBoundingClientRect().width);
+  if (w && Math.abs(w - (tw.w || TW_WIDTH.mid)) > 2) { tw.w = w; clearTimeout(twPlace.t); twPlace.t = setTimeout(twSave, 300); }
+}).observe(tmCard);
+addEventListener('resize', () => { if (!tmCard.hidden) twPlace(); });
 tmPaint();
 
 /* ---------- Term peek ----------

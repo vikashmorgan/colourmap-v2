@@ -36,6 +36,9 @@ describe('/sql class page', () => {
     expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8');
     expect(response.headers.get('cache-control')).toBe('private, no-store');
     expect(html).toContain('<title>SQL · School</title>');
+    // The Timer: pause, finish a session, today's sessions and minutes.
+    expect(html).toContain("const TM_KEY = 'sql-timer'");
+    expect(html).toContain('class="tc-finish">■ Finish session');
     // Marks and notes share the coding API, kept apart by their sql| keys.
     expect(html).toContain("const MARKS_URL = '/api/coding/marks';");
     expect(html).toContain("const mine = k => k.startsWith('sql|');");
