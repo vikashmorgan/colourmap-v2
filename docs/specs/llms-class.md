@@ -125,3 +125,9 @@ No new table. Keys start with `llms|` (a card: `llms|s{session}|{card}`) and dev
 ## Not yet
 
 - Session 5, when its deck arrives (the Lecture 5 download of 2026-11-26 was an empty folder).
+
+## How to read each chart (2026-11-28)
+
+Asked for: "slides never clear on what is what ... I get graphs and never connect how they relate and what they mean and what is the point". Under every chart drawn in a card or a story, a box gives two things. **How to read it** says what is across and up, and what every colour, line and dot is: brown is series a, blue is series b, grey is a reference line. **The point** says why the chart is there and how it links to the cards around it. The text lives in `VIZ_READ`, keyed like `VIZ`, and is rendered by `vizHtml`.
+
+**Flagged** is defined wherever it first appears: card 13, the confusion matrix card, the glossary, and as a tappable term. It means the model predicts the customer will leave (score ≥ threshold); not flagged means predicted to stay.

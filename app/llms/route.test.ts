@@ -63,6 +63,11 @@ describe('/llms class page', () => {
     // The lecture notebooks' graphs, on their cards.
     expect(html).toContain('const LEC_FIGS = {');
     expect(html).toContain('<summary>In the notebook</summary>');
+    // Every chart says how to read it and what it is for; flagged is defined.
+    expect(html).toContain('const VIZ_READ = {');
+    expect(html).toContain(
+      "['Flagged', 'Flagged means the model predicts this customer will leave",
+    );
     expect(html).toContain('<summary>My answer</summary>');
     expect(html).toContain('<summary>The exercise at a glance</summary>');
     expect(html).toContain("id: 'twins'");

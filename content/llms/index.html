@@ -199,6 +199,9 @@
   .vz-pt:hover, .vz-bar:hover { stroke: var(--ink); }
   .vz-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 12px system-ui, sans-serif; color: var(--soft); margin-top: 2px; }
   .vz-k { display: inline-block; width: 16px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; background: var(--soft); }
+  .viz-read { margin: -4px 0 14px; padding: 10px 14px; border-left: 3px solid var(--va); background: color-mix(in srgb, var(--va) 6%, transparent); border-radius: 0 8px 8px 0; font-size: 15px; line-height: 1.6; }
+  .viz-read p { margin: 0; } .viz-read p + p { margin-top: 6px; }
+  .viz-read b { display: block; font: 600 11px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
   .vz-k.vz-a { background: var(--va); } .vz-k.vz-b { background: var(--vb); } .vz-k.dot { width: 9px; height: 9px; border-radius: 50%; }
   .pic-chart { display: grid; gap: 4px; min-width: min(320px, 100%); }
   .pic-title { margin: 0 0 4px; font: 600 14px system-ui, sans-serif; }
@@ -1445,11 +1448,11 @@ proba_val = model.predict_proba(X_val)[:, 1]   # probability of leaving
 pred_val = model.predict(X_val)                # 1 if the probability is at least 0.5`, watch: 'predict always uses 0.5. To use another threshold, compare predict_proba yourself: (proba_val >= 0.3).astype(int).' },
     ] },
     { name: 'Decisions', cards: [
-      { id: 'threshold', slide: 63, name: 'Threshold and accuracy', what: 'The model says: this customer leaves with probability 0.35. Do we offer a discount? A threshold t decides: we act on every customer with p ≥ t. The default is 0.5, but nothing forces it.\n\nThe accuracy is the share of right decisions. It changes with the threshold. The threshold is a hyperparameter, so it is chosen on the validation set, never on the test set.', f: `Accuracy = right decisions / all decisions`, watch: 'Choosing the threshold on the test set is the same leak as choosing the degree there.' },
+      { id: 'threshold', slide: 63, name: 'Threshold and accuracy', what: 'The model says: this customer leaves with probability 0.35. Do we offer a discount? A threshold t decides: we act on every customer with p ≥ t. Those customers are flagged: the model predicts they will leave. Everyone below t is not flagged: predicted to stay. The default is 0.5, but nothing forces it.\n\nThe accuracy is the share of right decisions. It changes with the threshold. The threshold is a hyperparameter, so it is chosen on the validation set, never on the test set.', f: `Accuracy = right decisions / all decisions`, watch: 'Choosing the threshold on the test set is the same leak as choosing the degree there.' },
       { id: 'ten-customers', slide: 68, name: 'Example 2: ten customers, three thresholds', what: 'Ten customers, their scores, and who really left (four of them). At 0.3: three false alarms, nobody missed, accuracy 0.7. At 0.5: one false alarm, one missed, accuracy 0.8. At 0.7: no false alarm, two missed, accuracy 0.8.\n\n0.5 and 0.7 have the same accuracy but make different errors. Accuracy alone cannot tell them apart; the kind of error matters.', more: { html: tenTbl } },
     ] },
     { name: 'Evaluation', cards: [
-      { id: 'confusion', slide: 75, name: 'The confusion matrix: four outcomes', what: 'Every decision falls in one of four boxes. TN, true negative: a customer who stays, predicted to stay. FP, false positive: a false alarm, someone who stays but was flagged. FN, false negative: a missed case, someone who leaves but was not flagged. TP, true positive: someone who leaves, flagged.\n\nIn scikit-learn the rows are what happened and the columns what the model said, negative first. `.ravel()` reads the four boxes row by row: tn, fp, fn, tp.', more: { html: confTbl, f: `cm = confusion_matrix(y_val, pred_val)
+      { id: 'confusion', slide: 75, name: 'The confusion matrix: four outcomes', what: 'Flagged means the model predicts the customer will leave (their score is at or above the threshold); not flagged means it predicts they stay. Then we compare with what really happened, and every decision falls in one of four boxes. TN, true negative: a customer who stays, predicted to stay. FP, false positive: a false alarm, someone who stays but was flagged. FN, false negative: a missed case, someone who leaves but was not flagged. TP, true positive: someone who leaves, flagged.\n\nIn scikit-learn the rows are what happened and the columns what the model said, negative first. `.ravel()` reads the four boxes row by row: tn, fp, fn, tp.', more: { html: confTbl, f: `cm = confusion_matrix(y_val, pred_val)
 tn, fp, fn, tp = cm.ravel()` }, watch: 'Some books put the positive class first or swap rows and columns. In scikit-learn, top left is TN.' },
       { id: 'two-prices', slide: 79, name: 'Two errors, two prices', what: 'A false positive and a false negative do not cost the same. For churn, a false positive is a needless discount; a false negative is a lost customer. For fraud, a false positive is an honest card blocked; a false negative is a fraud paid.\n\nGive each error its price and add them up. For our customers a discount costs 50 € and a lost customer 150 €. At the threshold 0.5 the validation set has 8 false positives and 13 false negatives: 8 × 50 + 13 × 150 = 2,350 €.', f: `cost = c_FP × FP + c_FN × FN` },
       { id: 'metrics4', slide: 84, name: 'Four metrics: accuracy, precision, recall, F1', what: 'Accuracy: the share of right decisions. Precision: of the cases we flag, how many are positive? Recall: of the positive cases, how many do we flag? F1: one number that is high only if both precision and recall are.\n\nWhich one? Precision matters when false alarms are expensive; recall when missed cases are. On the 200 validation customers at 0.5 the model gets accuracy 0.895, precision 0.758, recall 0.658 and F1 0.704. A model that says “nobody leaves” gets accuracy 0.81, and 0 for the three others.', f: `accuracy  = (TP + TN) / all
@@ -1936,6 +1939,108 @@ const VIZ = {
     notes: [{ at: [0.3, 1450], text: 'cheapest: 0.3, 1,800 €', anchor: 'middle' }, { at: [0.52, 2150], text: '0.5: 2,350 €' }] }),
 };
 
+/* How to read each chart and what it is for: asked for 2026-11-28, "slides never clear on what is what ... I get graphs and
+   never connect how they relate and what they mean and what is the point". Every axis, colour and line, then the point. */
+const VIZ_READ = {
+"1|first-line": [
+"Across: the total bill in dollars. Up: the tip. Brown dots: the first five real bills from the data. Grey line: the line the model found, tip ≈ 0.105 × bill + 0.92. Blue dot: a new bill of 30 dollars, read off the line: 4.07.",
+"Once you have the line, you can give a tip for a bill you have never seen. That is what a model is for."
+],
+"2|line": [
+"Across: the TV budget. Up: the sales. Brown dots: the four stores. Grey line: line C, ŷ = 1.4x + 1.5. It crosses x = 0 at 1.5, which is b. Blue dot: the prediction for store 2, the point on the line above x = 2, which is 4.3.",
+"w is the slope: every extra thousand € of TV adds 1.4 sales. b is where the line starts. A prediction is just the height of the line above a budget."
+],
+"2|residual": [
+"Brown dots: the four stores. Grey line: line C. Blue vertical strokes: the residuals, the gap from each store up or down to the line. A store above the line has a positive residual, a store below it a negative one.",
+"Training picks the line that makes these gaps, squared and averaged (the MSE), as small as possible. Every regression card after this one is about those gaps."
+],
+"2|descent": [
+"Across: the slope w we try. Up: the error (MSE) that slope gives on the four stores. Grey curve: the bowl, one height for every w. Brown dots: where gradient descent stands, at the start (w = 0) and after each step. Vertical line: the bottom, w = 1.4.",
+"Each step walks downhill. Steps are big where the bowl is steep and small near the bottom, until it settles on the best w. No formula needed, only the slope of the bowl."
+],
+"2|rate": [
+"Across: the step number. Up: the value of w after that step. Flat line: the best w, 1.4. Grey dashed: η = 0.01, it creeps up and is still far off after 6 steps. Brown: η = 0.05, it reaches 1.4 in a few steps. Blue: η = 0.15, it jumps over 1.4, then further each time, and runs away.",
+"The learning rate is the size of the step. Too small wastes time, too big overshoots and never lands. You tune it until the error falls steadily."
+],
+"2|look": [
+"Brown dots: the four stores. Grey dashed: line C, fitted on those four. Blue dot: a fifth store at (5, 1), one bad week. Blue line: the line fitted with it, ŷ = −0.1x + 4.5. It now slopes down.",
+"A single odd point can flip the whole line, and the MSE alone will not tell you. Always plot the points and the residuals before you trust the number."
+],
+"2|val-curve": [
+"Across: the degree of the polynomial (more degree, more bendy). Up: the error. Grey dashed: the training error. Brown: the validation error, on stores the model did not see. Brown dot: its lowest point, degree 3. Left side: underfits, both errors are high. Right side: overfits, training keeps falling while validation climbs back up.",
+"Training error always flatters a bigger model. Choose the model by the validation error: the bottom of the brown line."
+],
+"3|one-split": [
+"One brown bar for each of five random ways of cutting the same 120 stores into training and validation. Up: the degree that cut picked as the best. The number on top is that degree.",
+"The same data picks degree 2 on one cut and degree 10 on another. One split is luck. That is why cross-validation averages over several folds."
+],
+"3|loo": [
+"Brown dots: the four stores. Grey dashed: line C, fitted on all four. Blue line: the line fitted on stores 1 to 3 only, store 4 left out. Brown vertical stroke: its error on store 4, which sold 8 while the line predicts 5. That is an error of 3, squared 9.",
+"Leave-one-out does this for every store in turn, then averages the squared errors. Every store is tested exactly once, by a model that never saw it."
+],
+"3|grow": [
+"One brown bar per degree, using all three budgets. Up: the cross-validated error (MSE). The number on a bar is its value. Lowest at degree 3, 1.26. At degree 4 there are already 34 features, and the error jumps back to 2.36.",
+"With several inputs, features multiply fast as the degree rises. Past a point there are too many for the rows, and the model learns noise. This is the problem Ridge and Lasso fix."
+],
+"3|twins": [
+"Two features that carry the same information share a total weight of 2. Across: how it is shared, from all on the 2nd twin, through half each, to all on the 1st. Up: the penalty paid. Brown curve, Ridge: lowest in the middle (1² + 1² = 2), 4 at either end. Blue flat line, Lasso: 2 whatever the split.",
+"Ridge pays less when twins share, so it splits the weight. Lasso pays the same for any split, so the smallest push sends everything to one twin, and it picks."
+],
+"3|ridge-lasso": [
+"Across: the penalty α, from none to strong. Up: the slope w on the four stores. At α = 0 both are the plain least-squares slope, 1.4. Brown, Ridge: falls slowly and never reaches 0. Blue, Lasso: falls in a straight line and hits exactly 0 at α = 1.75, then stays there.",
+"Ridge shrinks a weight. Lasso can switch it off entirely. That is why Lasso doubles as feature selection."
+],
+"4|not-a-line": [
+"Across: months as a customer. Up: the share of customers who left. Grey dots: the real share in each six-month band. Blue: a straight line through them, which goes below 0 on the right. Brown: logistic regression, which bends and stays between 0 and 1.",
+"A probability cannot be below 0 or above 1, but a straight line keeps going. We need a curve that flattens at both ends. That is the sigmoid on the next card."
+],
+"4|sigmoid": [
+"Across: any score z, from very negative to very positive. Up: σ(z), always between 0 and 1. Brown curve: the S shape. Flat line and blue dot: z = 0 gives exactly 0.5. Far left it hugs 0, far right it hugs 1.",
+"Logistic regression is a linear score z squeezed by this curve into a probability. A positive z means over 0.5, a negative z under."
+],
+"4|calls": [
+"Across: the score z = −2.5 + 0.8 × calls. Up: the probability of leaving. Grey curve: the sigmoid. Brown dots: three customers, with 0, 3 and 5 support calls. Flat line: the threshold 0.5.",
+"Each call adds 0.8 to the score and moves the customer up the S. At 3 calls they are just under 0.5, at 5 calls well over it, so they are flagged as likely to leave."
+],
+"4|boundary": [
+"Each dot is one validation customer. Across: months as a customer. Up: hours watched per week. Blue: stayed. Brown: really left. Grey line: where the model gives exactly p = 0.5. Below and left of it the model says leaves; above and right, stays. Brown dots above the line are leavers it misses; blue dots below it are false alarms.",
+"With two inputs, logistic regression cuts the plane with a straight line. New customers are judged by which side they land on."
+],
+"4|log-loss": [
+"Across: the probability of leaving the model gave one customer. Up: the loss for that customer. Brown: a customer who really left, the loss is small near p = 1 and shoots up as p goes to 0 (4.6 at p = 0.01). Blue: a customer who stayed, the mirror image. Both cost 0.69 at p = 0.5.",
+"Being confident and wrong costs far more than being unsure. Training finds the weights that make the average of this loss smallest."
+],
+"4|threshold": [
+"A bar chart of the 200 validation customers, sorted by the probability the model gave them. Across: the predicted chance of leaving, from 0 to 1. Up: how many customers got that probability. Blue bars: customers who really stayed. Brown bars: customers who really left. Dashed line: the threshold 0.5. Everyone right of it is flagged, which means the model predicts they will leave and the company acts on them. Blue bars right of the line are false alarms; brown bars left of it are leavers the model misses.",
+"The model gives scores, the threshold turns them into decisions. Moving the line trades false alarms for missed leavers, and accuracy alone hides which mistakes you make."
+],
+"4|ten-customers": [
+"Card 13 shrunk to 10 customers, so you can count by hand. Each dot sits at its score p. Top row, brown: the 4 who really left. Bottom row, blue: the 6 who stayed. Dashed lines: three possible thresholds, 0.3, 0.5 and 0.7. For each, everyone right of the line is flagged (predicted to leave) and everyone left of it is not flagged (predicted to stay). At 0.5: 3 leavers caught, 1 missed (0.32), 1 false alarm (0.62).",
+"The same scores give different mistakes at each threshold. At 0.3 all 4 leavers are caught, with 3 false alarms. At 0.7 there are no false alarms, but only 2 leavers are caught. The next cards count these in a confusion matrix and draw them as the ROC curve."
+],
+"4|roc": [
+"Across: the false positive rate, the share of stayers flagged by mistake. Up: the recall, the share of leavers found. Brown steps: the ten customers, one corner per threshold. Brown dots: the three thresholds from card 14. Grey dashed diagonal: random scores.",
+"One curve shows every threshold at once. The closer it hugs the top-left corner, finding leavers without flagging stayers, the better the model ranks."
+],
+"4|auc": [
+"The same ROC curve, with the area under it shaded brown: 20 / 24 ≈ 0.83. Grey dashed diagonal: random scores, area 0.5.",
+"AUC is the chance that a random leaver gets a higher score than a random stayer. Here 20 of the 24 leaver-stayer pairs are in the right order. It judges the ranking, before any threshold is chosen."
+],
+"4|roc-ours": [
+"The ROC curve of our 200 real validation customers. Across: stayers flagged by mistake. Up: leavers found. Brown: the model, AUC 0.946. Grey dashed: random. Blue dots: threshold 0.5 (66 % found, 5 % flagged) and 0.3 (84 % found, 11 % flagged).",
+"The model ranks customers very well. Choosing a threshold is just choosing a spot on this curve, and 0.3 buys many more leavers for a few more false alarms."
+],
+"4|pr-curve": [
+"Across: recall, the share of leavers found. Up: precision, the share of flagged customers who really leave. Brown dots: one per threshold, every 0.05. Flat line at 0.19: what random scores give, the share of leavers.",
+"When leavers are rare, precision says how much of your effort lands on real leavers. Moving right finds more leavers but lowers precision. Pick the trade you can afford."
+],
+"4|cheapest": [
+"Across: the threshold. Up: what the mistakes cost on validation, with a false alarm at 50 € and a missed leaver at 150 €. Grey line and brown dots: the cost at each threshold. Lowest at 0.3, 1,800 €; at the default 0.5 it is 2,350 €.",
+"Missing a leaver costs three times a false alarm, so the cheapest threshold sits below 0.5. Choose the threshold by the cost of each mistake, not by habit."
+]
+};
+const vizHtml = k => (VIZ[k] ? VIZ[k]() + (VIZ_READ[k] ? `<div class="viz-read"><p><b>How to read it</b>${kwText(VIZ_READ[k][0])}</p><p><b>The point</b>${kwText(VIZ_READ[k][1])}</p></div>` : '') : '');
+
 /* ---------- Store: this browser first, then the account ---------- */
 // The same marks and notes as the Python page, under keys that start with llms|.
 const ON_BRAIN = location.pathname.startsWith('/llms');
@@ -2307,6 +2412,7 @@ const REF = [
   ] },
   { name: 'Classification metrics', items: [
     ['Confusion matrix', 'The four outcomes. Rows: what happened. Columns: what the model said. Top left is TN.', 'tn, fp, fn, tp = confusion_matrix(y, pred).ravel()', 4, 'confusion'],
+    ['Flagged', 'Flagged means the model predicts this customer will leave: their score is at or above the threshold, so the company acts on them (a call, a discount). Not flagged means predicted to stay. Flagged says nothing about what really happens: a flagged customer may still stay (a false positive).', 'flagged = proba_val >= 0.5', 4, 'confusion'],
     ['False positive', 'A negative flagged as positive: a false alarm.', 'a needless discount; an honest card blocked', 4, 'confusion'],
     ['False negative', 'A positive the model missed.', 'a lost customer; a fraud paid', 4, 'confusion'],
     ['Accuracy', 'The share of right decisions. Misleading when one class is rare.', '(TP + TN) / all   # “nobody leaves”: 0.81', 4, 'metrics4'],
@@ -2328,7 +2434,7 @@ const REF = [
 
 /* ---------- A lecture ---------- */
 // Terms in a card's text, and calls or symbols in a code box: hoverable, but not coloured.
-const TERMS = /\b(residual plots?|residuals?|RMSE|MSE|MAE|gradient descent|gradients?|learning rate|overfitting|underfitting|baseline|data leakage|leakage|least squares|validation set|test set|training set|outliers?|standardis(?:e|ed|ing)|supervised learning|unsupervised learning|reinforcement learning|self-supervised learning|deep learning|classification|clustering|observations?|categorical|labelled|cross-validation|k-fold|leave-one-out|folds?|regularisation|ridge|lasso|logistic regression|sigmoid|log-loss|log-odds|thresholds?|confusion matrix|false positives?|false negatives?|precision-recall curve|precision|recall|F1|ROC-AUC|ROC curve|positive class|decision boundary|stratified|class weights?|imbalanced|accuracy|hyperparameters?|grid search|interactions?)\b/gi;
+const TERMS = /\b(residual plots?|residuals?|RMSE|MSE|MAE|gradient descent|gradients?|learning rate|overfitting|underfitting|baseline|data leakage|leakage|least squares|validation set|test set|training set|outliers?|standardis(?:e|ed|ing)|supervised learning|unsupervised learning|reinforcement learning|self-supervised learning|deep learning|classification|clustering|observations?|categorical|labelled|cross-validation|k-fold|leave-one-out|folds?|regularisation|ridge|lasso|logistic regression|sigmoid|log-loss|log-odds|thresholds?|not flagged|flagged|confusion matrix|false positives?|false negatives?|precision-recall curve|precision|recall|F1|ROC-AUC|ROC curve|positive class|decision boundary|stratified|class weights?|imbalanced|accuracy|hyperparameters?|grid search|interactions?)\b/gi;
 // No letters to explain on this page: each formula has its own "What each piece means".
 const LETTERS = {};
 const CODE_TOKENS = /\bLogisticRegression\b|\.predict_proba\b|\bconfusion_matrix\b|\broc_curve\b|\broc_auc_score\b|\bprecision_recall_curve\b|\blog_loss\b|\bstratify=|\bclass_weight=|\bneg_mean_squared_error\b|\bKFold\b|\bLeaveOneOut\b|\bcross_val_score\b|\bvalidation_curve\b|\bGridSearchCV\b|\bPolynomialFeatures\b|\bStandardScaler\b|\bmake_pipeline\b|\bRidge\b|\bLasso\b|\btrain_test_split\b|\btest_size=|\bLinearRegression\b|\bDummyRegressor\b|\bmean_squared_error\b|\.fit\b|\.predict\b|\.coef_|\.intercept_|\bRMSE\b|\bMSE\b|\bMAE\b|R²|η|\.hist\b|\.scatter\b|\.bar\b|\.plot\b|\bboxplot\b|\.subplots\b|\.savefig\b|\bvalue_counts\b|\bgroupby\b|\.describe\b/g;
@@ -2394,7 +2500,7 @@ function cardHtml(s, c, gi) {
     ${paras(c.what)}
     ${c.list ? `<ol class="rules">${c.list.map(ruleHtml).join('')}</ol>` : ''}
     ${run ? (run.t ? `<p class="flow-label">The notebook’s code, with the gaps</p><pre class="ex-tmpl">${mathHtml(run.t)}</pre>` : '') : c.f ? codeHtml(s, c) : ''}
-    ${VIZ[`${s.n}|${c.id}`] ? VIZ[`${s.n}|${c.id}`]() : ''}
+    ${vizHtml(`${s.n}|${c.id}`)}
     ${x.html ? x.html() : ''}
     ${r ? readsHtml(r, exPills) : exPills ? `<div class="pill-folds">${exPills}</div>` : ''}
     ${x.say ? `<p>${kwText(x.say)}</p>` : ''}${x.f ? `<pre>${mathHtml(x.f)}</pre>` : ''}
@@ -2858,7 +2964,7 @@ function storyHtml(s) {
   const words = [st.lead, ...st.parts.flatMap(x => x.p), st.next].join(' ').split(/\s+/).length;
   return `<details class="ess-fold story" id="story"${storyOpen() ? ' open' : ''}><summary><span class="story-head"><span class="story-eye">Start here · ${Math.max(1, Math.round(words / 200))} min read</span><span class="story-title">The story: the session as one read</span><span class="story-peek">${esc(st.lead)}</span></span></summary>`
     + `<p class="story-lead" data-hl="story-${s.n}-lead">${kwText(st.lead)}</p>`
-    + st.parts.map((x, i) => `<section class="story-part" data-hl="story-${s.n}-${i + 1}"><h3><span class="num">${i + 1}</span>${esc(x.h)}</h3>${x.p.map(t => `<p>${kwText(t)}</p>`).join('')}${(x.viz || []).map(k => (VIZ[k] ? VIZ[k]() : '')).join('')}<p class="story-go">${go(x.go)}</p></section>`).join('')
+    + st.parts.map((x, i) => `<section class="story-part" data-hl="story-${s.n}-${i + 1}"><h3><span class="num">${i + 1}</span>${esc(x.h)}</h3>${x.p.map(t => `<p>${kwText(t)}</p>`).join('')}${(x.viz || []).map(vizHtml).join('')}<p class="story-go">${go(x.go)}</p></section>`).join('')
     + `<p class="story-next" data-hl="story-${s.n}-next"><b>Next</b>${kwText(st.next)}</p></details>`;
 }
 const storyOpen = () => { try { return localStorage.getItem('llms-story-open') === '1'; } catch (e) { return false; } };
@@ -3555,7 +3661,7 @@ tmPaint();
 const PEEK_TERM = {
   // Calls and symbols in code boxes and formulas.
   train_test_split: 'train_test_split', test_size: 'test_size', LinearRegression: 'LinearRegression', DummyRegressor: 'DummyRegressor', mean_squared_error: 'mean_squared_error', fit: 'fit', predict: 'predict', coef_: 'coef_', intercept_: 'intercept_',
-  MSE: 'MSE', MAE: 'MAE', RMSE: 'RMSE', 'R²': 'R²', 'η': 'Learning rate',
+  MSE: 'MSE', MAE: 'MAE', flagged: 'Flagged', 'not flagged': 'Flagged', RMSE: 'RMSE', 'R²': 'R²', 'η': 'Learning rate',
   hist: 'plt.hist', scatter: 'plt.scatter', bar: 'plt.bar', plot: 'plt.plot', boxplot: 'sns.boxplot', subplots: 'plt.subplots', savefig: 'savefig', value_counts: 'value_counts', groupby: 'groupby', describe: 'describe',
   // Words in the text.
   residual: 'Residual', 'residual plot': 'Residual plot', mse: 'MSE', mae: 'MAE', rmse: 'RMSE', 'gradient descent': 'Gradient descent', gradient: 'Gradient', 'learning rate': 'Learning rate',
