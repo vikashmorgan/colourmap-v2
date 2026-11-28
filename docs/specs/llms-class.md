@@ -106,6 +106,10 @@ Asked for: "add ability to start or pause the sessions, and a counter that shows
 - On every card, **What each piece means** and **Worked out, step by step** are closed pills side by side; a click opens one, and it takes the full width.
 - On the exercise task cards, **How to read your result** and **Watch out** join the same row of closed pills (asked for: "make sure the open closable stuff also for the exercises"). The code stays visible. Lecture cards keep their Watch out open.
 
+## Finish session (2026-11-28)
+
+Asked for: "add a finish session button for the studying meter". Next to Pause, the Timer has **■ Finish session** while a session is running. It closes the session at once: the clock stops, the session joins *Earlier sessions* and today's count, the wheel goes back to 0, and the card says "Finished at 14:05 · 52 min". The next ▶ Start opens a new session instead of adding time to the finished one.
+
 ## Your slides
 
 When a deck is missing, *Upload slides* files it as `LLMs1.pdf` to `LLMs4.pdf` in the private `coding-slides` folder, and each card's *Slide n/N ›* then opens its page.
